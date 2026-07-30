@@ -5,6 +5,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const workflowsRoot = path.join(repoRoot, ".github", "workflows");
 const remediationWorkflow = ".github/workflows/remediation-analysis.yml";
+const generatedArtifactIgnoreMarkers = [
+  "**/contracts/generated/*.bundle.openapi.yaml",
+  "**/clients/generated/*-api.ts",
+];
 
 const forbiddenPatterns = [
   {
@@ -30,7 +34,7 @@ const forbiddenPatterns = [
   {
     id: "SOURCE_MUTATING_GH_COMMAND",
     regex: /^\s*(?:-\s*)?(?:run:\s*)?gh\s+(?:pr\s+(?:create|merge)|api\s+.*(?:--method|-X)\s*(?:POST|PUT|PATCH|DELETE).*\/(?:contents|git\/refs|merges)(?:\b|\/))/i,
-    reason: "workflows must not mutate repository source through GitHub CLI",
+    reason: "verification workflows must not mutate repository source through GitHub CLI",
   },
   {
     id: "SOURCE_MUTATING_REST_ENDPOINT",
@@ -51,11 +55,6 @@ const forbiddenPatterns = [
     id: "GO_SOURCE_FORMAT_WRITE",
     regex: /^\s*(?:-\s*)?(?:run:\s*)?(?:gofmt|goimports)\s+.*(?:^|\s)-w(?:\s|$)/i,
     reason: "verification workflows must not rewrite Go source with gofmt or goimports",
-  },
-  {
-    id: "SOURCE_GENERATION_COMMAND",
-    regex: /^\s*(?:-\s*)?(?:run:\s*)?(?:pnpm|npm|npx|yarn|bunx?)\b.*\bopenapi:(?:generate|compose)(?::[A-Za-z0-9_-]+)?\b/i,
-    reason: "verification workflows must validate committed OpenAPI artifacts without regenerating tracked source",
   },
   {
     id: "SOURCE_REPAIR_SCRIPT_EXECUTION",
@@ -84,6 +83,28 @@ function listWorkflowFiles(directory, output = []) {
     if (/\.ya?ml$/i.test(entry.name)) output.push(absolute);
   }
   return output;
+}
+
+function generatedArtifactPolicyViolations() {
+  const gitignorePath = path.join(repoRoot, ".gitignore");
+  if (!fs.existsSync(gitignorePath)) {
+    return [{
+      file: ".gitignore",
+      line: 0,
+      id: "GENERATED_ARTIFACT_IGNORE_POLICY_MISSING",
+      reason: "deterministic OpenAPI build artifacts must be excluded from tracked source",
+    }];
+  }
+
+  const content = fs.readFileSync(gitignorePath, "utf8");
+  return generatedArtifactIgnoreMarkers
+    .filter((marker) => !content.split(/\r?\n/).includes(marker))
+    .map((marker) => ({
+      file: ".gitignore",
+      line: 0,
+      id: "GENERATED_ARTIFACT_IGNORE_POLICY_MISSING",
+      reason: `required generated-artifact ignore marker is missing: ${marker}`,
+    }));
 }
 
 function remediationViolations(content, relative) {
@@ -147,11 +168,6 @@ export function scanWorkflowContent(content, relative = "workflow.yml") {
 
     for (const rule of forbiddenPatterns) {
       if (!rule.regex.test(line)) continue;
-      // Wave R (GAP-0002) removed every general auto-repair step (mobile sync,
-      // OpenAPI generation, dedupe, lint --fix, go mod tidy, gofmt) from the
-      // remediation workflow, so only the defensive `git restore` used to freeze
-      // .github/** still needs an exception; source-rewriting formatters are no
-      // longer present and are no longer excused here.
       const remediationException = isRemediation && rule.id === "SOURCE_MUTATING_GIT_COMMAND";
       if (remediationException) continue;
       violations.push({
@@ -175,7 +191,7 @@ export function scanWorkflowDirectory(directory = workflowsRoot) {
     }];
   }
 
-  const violations = [];
+  const violations = [...generatedArtifactPolicyViolations()];
   for (const absolute of listWorkflowFiles(directory)) {
     const relative = path.relative(repoRoot, absolute).replaceAll(path.sep, "/");
     violations.push(...scanWorkflowContent(fs.readFileSync(absolute, "utf8"), relative));
