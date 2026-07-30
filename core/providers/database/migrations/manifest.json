@@ -3,7 +3,7 @@
   "service": "providers",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "providers-002_operator_execution_context.sql",
+  "cutover": "providers-002_tenant_execution_context.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -21,7 +21,7 @@
     },
     {
       "ordinal": 3,
-      "file": "providers-002_operator_execution_context.sql",
+      "file": "providers-002_tenant_execution_context.sql",
       "sha256": "7128400630522811f153b4d0695f77e4cc73abf4df409e9ae3f3e52ce99a0a2a",
       "historicalPrefix": "002",
       "state": "HISTORICAL_IMMUTABLE"
