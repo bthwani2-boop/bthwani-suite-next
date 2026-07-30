@@ -115,6 +115,7 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("PUT /dsh/operator/catalog/nodes/{nodeId}/attributes/{attributeId}", s.handleUpsertCatalogNodeAttributeRule)
 	mux.HandleFunc("GET /dsh/operator/catalog/master-products", s.handleListCatalogMasterProducts)
 	mux.HandleFunc("POST /dsh/operator/catalog/master-products", s.handleCreateCatalogMasterProduct)
+	mux.HandleFunc("GET /dsh/operator/catalog/master-products/{productId}", s.handleGetCatalogMasterProduct)
 	mux.HandleFunc("PATCH /dsh/operator/catalog/master-products/{productId}", s.handleUpdateCatalogMasterProductAtomic)
 	mux.HandleFunc("GET /dsh/operator/catalog/master-products/{productId}/attribute-values", s.handleListMasterProductAttributeValues)
 	mux.HandleFunc("PUT /dsh/operator/catalog/master-products/{productId}/attribute-values/{attributeId}", s.handleUpsertMasterProductAttributeValue)
@@ -178,11 +179,4 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("PUT /dsh/operator/catalog/domains/{domainId}/images/{role}", s.handlePutDomainImageSafe)
 	mux.HandleFunc("PUT /dsh/operator/catalog/nodes/{nodeId}/images/{role}", s.handlePutNodeImageSafe)
 	mux.HandleFunc("PUT /dsh/operator/catalog/master-products/{productId}/images/{role}", s.handlePutMasterProductImageSafe)
-	mux.HandleFunc("PUT /dsh/operator/catalog/product-proposals/{proposalId}/images/{role}", s.handlePutProductProposalImageSafe)
-	mux.HandleFunc("PUT /dsh/operator/catalog/stores/{storeId}/images/{role}", s.handlePutStoreImageSafe)
-
-	// Governed short-video submissions.
-	mux.HandleFunc("POST /dsh/partner/reels", s.handleSubmitReelSafe)
-	mux.HandleFunc("GET /dsh/operator/reels", s.handleListReels)
-	mux.HandleFunc("POST /dsh/operator/reels/{reelId}/review", s.handleReviewReelSafe)
 }
