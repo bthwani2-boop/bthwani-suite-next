@@ -72,14 +72,14 @@ pnpm run contracts:lint       # foundation invariants + diagnostic integrity + s
 
 ## Layout ownership
 
-The master owns no shared components. Reusable headers, error envelopes, security
-schemes, and primitives currently live inside each context.
+The master owns no shared components. Bounded contexts continue to own their
+domain schemas, operations, runtime bindings, and context-specific transport
+constraints.
 
-`contracts/shared/common.openapi.yaml` holds the canonical proposed shape for
-these (`Error`, `Money`, `PageInfo`, the trust headers) matching what the Go
-backends already emit on the wire. It is not yet referenced by any context —
-none of the three bundlers currently resolve a `$ref` outside their own
-context directory, and wiring it in means extending all three, replacing every
-local re-declaration it supersedes, and regenerating all six clients. That
-remains its own slice; see `contracts/shared/common.openapi.yaml`'s own
-description for the exact remaining steps.
+`contracts/shared/common.openapi.yaml` is the cross-context transport-component
+source for shapes that have been migrated deliberately. WLT currently consumes
+its canonical `Error` schema through `services/wlt/contracts/wlt.common.openapi.yaml`.
+Other contexts keep their local transport declarations until their composers,
+contracts, generated clients, backend bindings, and consumers are migrated in one
+verified slice. The shared file does not authorize parallel variants or automatic
+cross-context ownership of domain schemas.
