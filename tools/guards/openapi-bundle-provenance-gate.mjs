@@ -66,7 +66,7 @@ for (const context of contexts) {
 }
 
 if (failures.length > 0) {
-  console.erron("openapi-bundle-provenance-gate: FAILED");
+  console.error("openapi-bundle-provenance-gate: FAILED");
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
