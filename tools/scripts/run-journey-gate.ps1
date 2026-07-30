@@ -37,8 +37,11 @@ function Invoke-Step {
   Write-Host "[ RUN ] $Name"
   $global:LASTEXITCODE = 0
   try {
-    & $Block
+    $stepOutput = & $Block 2>&1
     $nativeExitCode = $global:LASTEXITCODE
+    foreach ($line in @($stepOutput)) {
+      Write-Host $line
+    }
     if ($nativeExitCode -ne 0) { throw "exit $nativeExitCode" }
     Write-Host "[ OK  ] $Name"
   }
