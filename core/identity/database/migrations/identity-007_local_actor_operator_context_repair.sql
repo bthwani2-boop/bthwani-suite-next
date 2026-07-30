@@ -19,14 +19,17 @@ WHERE id = ANY (ARRAY[
 
 DO $$
 BEGIN
+  -- PostgreSQL folds unquoted constraint identifiers to lowercase. The prior
+  -- mixed-case pg_constraint lookup did not see the already-created constraint,
+  -- so a migration rerun attempted to add it again and failed.
   IF NOT EXISTS (
     SELECT 1
     FROM pg_constraint
-    WHERE conname = 'identity_actors_OperatorContext_nonblank_chk'
+    WHERE conname = 'identity_actors_operatorcontext_nonblank_chk'
       AND conrelid = 'identity_actors'::regclass
   ) THEN
     ALTER TABLE identity_actors
-      ADD CONSTRAINT identity_actors_OperatorContext_nonblank_chk
+      ADD CONSTRAINT identity_actors_operatorcontext_nonblank_chk
       CHECK (btrim(operator_context_id) <> '') NOT VALID;
   END IF;
 END
