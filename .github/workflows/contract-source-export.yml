@@ -5,8 +5,9 @@ on:
     paths:
       - '.github/workflows/contract-source-export.yml'
       - 'tools/scripts/repair-workforce-refund-contracts.mjs'
+      - 'tools/scripts/repair-cod-catalog-bindings.py'
       - 'core/workforce/contracts/**'
-      - 'services/dsh/contracts/**'
+      - 'services/dsh/**'
       - 'services/wlt/contracts/**'
 
 permissions:
@@ -14,9 +15,9 @@ permissions:
 
 jobs:
   export:
-    name: Verify Workforce and DSH contract repair
+    name: Verify canonical contract and COD runtime repair
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Checkout immutable PR head
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -31,7 +32,7 @@ jobs:
         run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Transform contract sources
+      - name: Transform contract and runtime sources
         shell: bash
         run: |
           python - <<'PY'
@@ -40,18 +41,26 @@ jobs:
           source = path.read_text(encoding='utf-8')
           old = 'source = source.replace(anchor, block + anchor);'
           new = 'source = source.replace(anchor, () => block + anchor);'
-          if old not in source:
-              raise SystemExit('Expected replacement statement is missing')
-          path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          if old in source:
+              path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          elif new not in source:
+              raise SystemExit('Expected Workforce replacement statement is missing')
           PY
           node tools/scripts/repair-workforce-refund-contracts.mjs
+          python tools/scripts/repair-cod-catalog-bindings.py
+          gofmt -w \
+            services/dsh/backend/internal/http/cod_finance_handlers.go \
+            services/dsh/backend/internal/http/cod_finance_routes.go \
+            services/dsh/backend/internal/http/cod_reconciliation_routes_test.go \
+            services/dsh/backend/internal/wlt/finance_proxy.go \
+            services/dsh/backend/internal/wlt/finance_proxy_test.go
       - name: Regenerate canonical artifacts
         run: |
           pnpm run openapi:generate:workforce
           pnpm run openapi:generate:dsh
           pnpm run openapi:generate:wlt
           pnpm run contracts:registry
-      - name: Verify contract repair
+      - name: Verify contract and runtime repair
         run: |
           git diff --check
           pnpm run guard:contract-registry-drift
@@ -61,16 +70,24 @@ jobs:
           pnpm run guard:api-binding
           pnpm run guard:backend-api-binding
           pnpm --dir services/dsh test
+          (cd services/dsh/backend && go test ./...)
           (cd core/workforce/backend && go test ./...)
-      - name: Upload verified contract repair
+      - name: Upload verified repair
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: verified-contract-repair-${{ github.run_id }}
+          name: verified-contract-runtime-repair-${{ github.run_id }}
           path: |
             core/workforce/contracts/workforce.sovereign-leadership.openapi.yaml
             core/workforce/contracts/generated/workforce.bundle.openapi.yaml
             core/workforce/clients/generated/workforce-api.ts
+            services/dsh/frontend/shared/catalog/central-catalog.api.ts
+            services/dsh/backend/internal/http/cod_finance_handlers.go
+            services/dsh/backend/internal/http/cod_finance_routes.go
+            services/dsh/backend/internal/http/cod_reconciliation_routes_test.go
+            services/dsh/backend/internal/wlt/finance_proxy.go
+            services/dsh/backend/internal/wlt/finance_proxy_test.go
             services/dsh/contracts/dsh.openapi.yaml
+            services/dsh/contracts/dsh.cod-custody.openapi.yaml
             services/dsh/contracts/contract.manifest.yaml
             services/dsh/contracts/contract-registry.ts
             services/dsh/contracts/paths/misc.paths.yaml
