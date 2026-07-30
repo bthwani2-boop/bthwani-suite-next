@@ -41,7 +41,7 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
     WHERE schemaname = 'public'
-      AND indexname = 'uq_dsh_partners_OperatorContext_legal_identity'
+      AND indexname = 'uq_dsh_partners_operatorcontext_legal_identity'
   ) THEN
     RAISE EXCEPTION 'OperatorContext-scoped partner legal identity unique index is missing';
   END IF;
@@ -49,14 +49,14 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
     WHERE schemaname = 'public'
-      AND indexname = 'idx_dsh_store_actor_scopes_OperatorContext_actor'
+      AND indexname = 'idx_dsh_store_actor_scopes_operatorcontext_actor'
   ) THEN
     RAISE EXCEPTION 'OperatorContext-aware actor scope index is missing';
   END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_trigger
-    WHERE tgname = 'trg_dsh_stores_OperatorContext'
+    WHERE tgname = 'trg_dsh_stores_operatorcontext'
       AND NOT tgisinternal
   ) THEN
     RAISE EXCEPTION 'dsh_stores OperatorContext enforcement trigger is missing';
@@ -64,7 +64,7 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_trigger
-    WHERE tgname = 'trg_dsh_store_actor_scopes_OperatorContext'
+    WHERE tgname = 'trg_dsh_store_actor_scopes_operatorcontext'
       AND NOT tgisinternal
   ) THEN
     RAISE EXCEPTION 'dsh_store_actor_scopes OperatorContext enforcement trigger is missing';
