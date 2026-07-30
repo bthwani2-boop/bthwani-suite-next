@@ -48,6 +48,26 @@ const forbiddenPatterns = [
     reason: "verification workflows must check formatting and linting without rewriting source",
   },
   {
+    id: "GO_SOURCE_FORMAT_WRITE",
+    regex: /^\s*(?:-\s*)?(?:run:\s*)?(?:gofmt|goimports)\s+.*(?:^|\s)-w(?:\s|$)/i,
+    reason: "verification workflows must not rewrite Go source with gofmt or goimports",
+  },
+  {
+    id: "SOURCE_GENERATION_COMMAND",
+    regex: /^\s*(?:-\s*)?(?:run:\s*)?(?:pnpm|npm|npx|yarn|bunx?)\b.*\bopenapi:(?:generate|compose)(?::[A-Za-z0-9_-]+)?\b/i,
+    reason: "verification workflows must validate committed OpenAPI artifacts without regenerating tracked source",
+  },
+  {
+    id: "SOURCE_REPAIR_SCRIPT_EXECUTION",
+    regex: /^\s*(?:-\s*)?(?:run:\s*)?(?:node|python(?:3)?|pnpm\s+(?:exec|run)|npm\s+(?:exec|run)|npx|yarn|bun)\b.*\btools\/scripts\/(?:repair|normalize|consolidate|remove-unowned)[^\s"']*\.(?:mjs|cjs|js|py)\b/i,
+    reason: "verification workflows must not execute one-off source-repair transformations",
+  },
+  {
+    id: "INLINE_SOURCE_WRITE",
+    regex: /\b(?:write_text|writeFileSync|unlinkSync|rmSync|renameSync)\s*\(/i,
+    reason: "inline Python or Node code in verification workflows must not rewrite, remove, or rename source files",
+  },
+  {
     id: "IN_PLACE_SOURCE_EDIT",
     regex: /^\s*(?:-\s*)?(?:run:\s*)?(?:sed\s+-i|perl\s+-pi)\b/i,
     reason: "in-place source editing is forbidden in verification workflows",
