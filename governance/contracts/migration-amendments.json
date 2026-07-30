@@ -47,6 +47,185 @@
         "productionApprovalEvidence": false
       },
       "requiredCorrection": "Use the exact sovereign settlement identifier type and retain the existing restrictive foreign key."
+    },
+    {
+      "service": "identity",
+      "migrationId": "identity-007_local_actor_operator_context_repair.sql",
+      "originalBlobSha": "7bb4eea0484590800fdeab16104080ce8004f6c6",
+      "replacementSha256": "c0fdea1e9015582d5d904350856586e1f3defae5a41d8a0b7117fee79e18865b",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The active Identity baseline defines operator_context_id and no tenant_id column. Replaying the tenant repair fails a clean installation and contradicts the canonical non-SaaS platform model.",
+      "evidence": {
+        "cleanInstallCommitSha": "ecb24d4bae6025ff8946ecd02ea89b734177212d",
+        "cleanInstallResult": "TENANT_BASELINE_FAILED_COLUMN_MISSING",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Keep the repair bounded to operator_context_id and fail closed for blank operator context values."
+    },
+    {
+      "service": "providers",
+      "migrationId": "providers-002_operator_execution_context.sql",
+      "originalBlobSha": "191ab23a055720124ecd50cdc9148178b880907f",
+      "replacementSha256": "5895b0e0941679efe2844fb494c1043678b4861bbe7d56227c56cb2176c77008",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Providers audit and idempotency are scoped by trusted operator context in the active baseline; the tenant-column version is incompatible with the canonical schema and product model.",
+      "evidence": {
+        "cleanInstallCommitSha": "ecb24d4bae6025ff8946ecd02ea89b734177212d",
+        "cleanInstallResult": "TENANT_BASELINE_INCOMPATIBLE_WITH_ACTIVE_SCHEMA",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Use operator_context_id for audit and idempotency ownership without creating tenant semantics."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-906_client_address_geofence_binding.sql",
+      "originalBlobSha": "adc02faa9ef38f0acfbb5a416e5319b1507b3a95",
+      "replacementSha256": "4814469c49133b30a3024c7ef9ccb3e64476ab850cef0d0998576817a0c99e4f",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The migration filename and comments were normalized away from internal journey identifiers without changing the geofence enforcement logic.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_BASELINE_REACHED_MIGRATION_VERIFICATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Retain the exact governed geofence trigger and only normalize non-semantic metadata."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-907_address_mutation_receipts.sql",
+      "originalBlobSha": "754ce7d2e51fdd960c69ea0c5f32a3a458c615c5",
+      "replacementSha256": "c0475e9a62c2bc5b9f83dcc9329fb2d46af55b596f9a6dd29c66533848cb0474",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The pre-release migration metadata was normalized while preserving durable PII-free mutation receipt semantics.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_BASELINE_REACHED_MIGRATION_VERIFICATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Preserve receipt idempotency and privacy invariants exactly."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-907_service_area_topology.sql",
+      "originalBlobSha": "f2f92603a2fdcb369f0b5a316bdd398606ce5ed5",
+      "replacementSha256": "4d21a22bda7fb4e3f982d629f7d670df640b584907cd476e6020e2cd00e6864d",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The pre-release migration metadata was normalized without weakening malformed or self-intersecting geofence rejection.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_BASELINE_REACHED_MIGRATION_VERIFICATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Keep topology validation fail closed."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-908_mutation_receipt_retention.sql",
+      "originalBlobSha": "a451fd324f5e2d0d8cd26a223699a80cfb3ec270",
+      "replacementSha256": "9ecd41f4e1167ad538df28514cdd8fea940696741f61a7cc18dc2ddb18508eb6",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The pre-release migration metadata was normalized while retaining bounded pseudonymous receipt retention.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_BASELINE_REACHED_MIGRATION_VERIFICATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Retain bounded retention and deletion behavior."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-908_privacy_audit_projection.sql",
+      "originalBlobSha": "960d95b944da74ff217fb9f4946734dcf75846dd",
+      "replacementSha256": "1b38dd684cbf34ffcaffb94636a28174e8453409f7f2b853d3b08a8e7a8b8188",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The pre-release migration metadata was normalized while preserving the hashed-subject privacy projection and structural PII exclusion.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_BASELINE_REACHED_MIGRATION_VERIFICATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Keep raw client and address PII absent from the projection."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-024_payment_session_operator_context.sql",
+      "originalBlobSha": "a17efb0bba6705cc078a8c1b3b0af6be94f7aae9",
+      "replacementSha256": "17fa0324dff406719541e00a146ab77d1f4a2d01b651ce55b86821abf1997069",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The active WLT baseline scopes payment sessions and DSH outbox events by operator_context_id; tenant_id is not part of the canonical platform model.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_OPERATOR_CONTEXT_BASELINE",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Keep payment-session uniqueness scoped by operator_context_id."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-105_financial_operator_context_context_and_ledger.sql",
+      "originalBlobSha": "d67ddc5d08798a9761fa4f1d42805812db0656cc",
+      "replacementSha256": "66015d35a3a665a0b8bcf3ce7a53c41d5c9b47f63736c4abbdd18a994b5f7d52",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Active financial writes and ledger ownership use trusted operator context rather than tenant truth.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_OPERATOR_CONTEXT_BASELINE",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Preserve WLT as the sole financial owner and scope writes by trusted operator context."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-106_settlement_operator_context.sql",
+      "originalBlobSha": "8fb40dff4f90c8679f239d54633219beb5a1d747",
+      "replacementSha256": "be8785bd5863e271d294e850405badf1570d293d6297e3af9e9effd6d05d16b7",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Settlement policy, evidence and idempotency are operator-context scoped in the non-SaaS baseline.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_OPERATOR_CONTEXT_BASELINE",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Keep settlement state and evidence isolated by operator context."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-108_wallet_operator_context_identity.sql",
+      "originalBlobSha": "55d751028ecb8ab0e27ec0c397ac60e592686610",
+      "replacementSha256": "fc8d428499d909963cd8a406ba61ea275f84469cd3443ba1bc8f7ffcf93b7baa",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Wallet identity is operator-context scoped and no tenant entity exists in the active platform model.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_OPERATOR_CONTEXT_BASELINE",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Keep wallet uniqueness and lookup scoped by operator context."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-902_contextual_finance_object_names.sql",
+      "replacementSha256": "27d318c2ea95d8b1ccd46c94c1833f3ba8f30a4123de54de15091e28813c6168",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The pre-release cleanup migration was normalized to contextual financial object names after the canonical platform model removed tenant terminology.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_OPERATOR_CONTEXT_BASELINE",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Rename only obsolete database object names while preserving financial truth and data."
     }
   ]
 }
