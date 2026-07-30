@@ -7,22 +7,16 @@ info:
     trust headers, the runtime error envelope, pagination, and money. Domain
     schemas remain owned by their bounded-context contracts.
 
-    This file is the single source of truth these shapes should converge to.
-    It models services/wlt/contracts/wlt.common.openapi.yaml, the one context
-    that already centralizes its own shared components, and matches the wire
-    shapes the Go backends actually emit today (the {code, message} error
-    body every `sendError` helper writes; the amountMinorUnits + currency
-    pair every financial handler already uses) rather than introducing a new
-    convention.
+    WLT currently references the canonical Error schema from this document.
+    The remaining bounded contexts still carry local transport declarations
+    and must migrate deliberately through their governed composers before
+    those declarations can be removed. This document therefore owns only the
+    components already consumed by an active context; it is not permission to
+    create parallel local variants.
 
-    NOT YET WIRED: no context currently $refs into this file. Wiring it in
-    requires teaching each of the three bundlers
-    (tools/scripts/openapi-context-composer.mjs,
-    tools/scripts/dsh-openapi-modular-lib.mjs,
-    tools/scripts/wlt-openapi-bundle-lib.mjs) to resolve a $ref outside its
-    own context directory, then replacing every local re-declaration this
-    file supersedes and regenerating all six clients. That is its own slice,
-    consistent with contracts/README.md's existing "Layout ownership" note.
+    The wire shapes match the Go backends currently emit: the {code, message}
+    error body used by sendError helpers and the amountMinorUnits + currency
+    pair used by financial handlers.
 x-bthwani-owner: contracts/shared
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED
@@ -84,9 +78,9 @@ components:
       additionalProperties: false
       required: [code, message]
       description: >-
-        The wire shape every Go `sendError(w, status, code, message)` helper
-        already emits across all six backends. Domain-specific error schemas
-        (DshError, WltError, ...) should $ref this instead of redeclaring it.
+        The wire shape every Go sendError(w, status, code, message) helper
+        emits across the governed backends. Domain-specific error schemas
+        should reference this component instead of redefining it.
       properties:
         code: { type: string }
         message: { type: string }
@@ -95,9 +89,8 @@ components:
       additionalProperties: false
       required: [amountMinorUnits, currency]
       description: >-
-        Matches the amountMinorUnits (int64) + currency (ISO 4217) pair
-        already used throughout services/wlt/backend and services/dsh/backend
-        (e.g. internal/cod/cod.go). Never a floating-point amount.
+        Matches the amountMinorUnits int64 plus ISO 4217 currency pair used by
+        WLT and DSH. Monetary values must never use floating-point numbers.
       properties:
         amountMinorUnits: { type: integer, format: int64 }
         currency: { type: string, minLength: 3, maxLength: 3 }
