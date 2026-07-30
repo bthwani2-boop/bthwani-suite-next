@@ -14,6 +14,7 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $RuntimeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
 $RuntimeSmokeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime-dispatch.ps1"
 $CatalogSeedScript = Join-Path $RepoRoot "services/dsh/database/scripts/apply-central-catalog-seed.ps1"
+$LocalMediaSeedScript = Join-Path $RepoRoot "tools/scripts/runtime/seed-local-media.ps1"
 $CatalogReadbackScript = Join-Path $RepoRoot "tools/scripts/verify-catalog.ps1"
 $AuthenticatedWltSmokeScript = Join-Path $RepoRoot "tools/scripts/finance/smoke-wlt-authenticated-runtime.ps1"
 $DshSmokeDiagnosticScript = Join-Path $RepoRoot "tools/scripts/runtime/diagnose-dsh-smoke-auth-boundary.ps1"
@@ -173,10 +174,9 @@ try {
     }
   }
 
-  # Development catalog convergence has a governed prerequisite: the canonical
-  # local seeds must create baseline stores and WLT references before store-level
-  # catalog bindings can be upserted. Running the complete selected-profile seed
-  # phase avoids partial, order-dependent SQL execution on fresh volumes.
+  # Development catalog convergence has governed prerequisites: canonical SQL
+  # seeds establish relational truth and the media seed mirrors the exact
+  # governed fixture objects into the private MinIO bucket before readback.
   if ($Action -eq "up" -and $ProfileList -contains "dsh") {
     Write-Host "`n=== runtime:seed-prerequisites ==="
     $global:LASTEXITCODE = 0
@@ -185,7 +185,17 @@ try {
       throw "Runtime seed prerequisites failed with exit code $LASTEXITCODE"
     }
 
-    if (-not (Test-Path -LiteralPath $CatalogSeedScript)) {
+    if (-not (Test-Path -LiteralPath $LocalMediaSeedScript -PathType Leaf)) {
+      throw "Local media seed script not found: $LocalMediaSeedScript"
+    }
+    Write-Host "`n=== runtime:media-convergence ==="
+    $global:LASTEXITCODE = 0
+    & $LocalMediaSeedScript 2>&1 | Tee-Object -FilePath $LogPath -Append
+    if ($LASTEXITCODE -ne 0) {
+      throw "Local media convergence failed with exit code $LASTEXITCODE"
+    }
+
+    if (-not (Test-Path -LiteralPath $CatalogSeedScript -PathType Leaf)) {
       throw "Central catalog convergence script not found: $CatalogSeedScript"
     }
     Write-Host "`n=== runtime:catalog-convergence ==="
