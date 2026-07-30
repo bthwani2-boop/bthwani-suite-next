@@ -201,7 +201,6 @@ func registerRepresentativeFinanceRoutes(mux *http.ServeMux, s *protectedStoreSe
 
 	mux.HandleFunc("GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}", s.handleControlPanelRepresentativeWallet)
 	mux.HandleFunc("GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries", s.handleControlPanelRepresentativeLedger)
-	mux.HandleFunc("GET /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/timeline", s.handleFinancePaymentSessionTimeline)
 	mux.HandleFunc("POST /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status", s.handleRefreshFinancePaymentSessionProviderStatus)
 	mux.HandleFunc("POST /dsh/control-panel/finance/settlements/from-delivered-orders", s.handleCreateFinanceSettlementFromDeliveredOrders)
 	mux.HandleFunc("GET /dsh/control-panel/finance/settlement-policies/{partnerId}", s.handleGetFinanceSettlementPolicy)
