@@ -4,15 +4,15 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(path, "utf8");
 
-describe("partner unified full-stack platform closure", () => {
-  test("models tenant-scoped legal partner, brand, store, transfer audit and readiness", () => {
+describe("partner unified multi-surface platform closure", () => {
+  test("models OperatorContext-scoped legal partner, brand, store, transfer audit and readiness", () => {
     const migration = read("services/dsh/database/migrations/dsh-958_partner_workspace_store_ownership.sql");
     assert.match(migration, /CREATE TABLE IF NOT EXISTS dsh_partner_brands/);
     assert.match(migration, /operator_context_id\s+TEXT\s+NOT NULL/);
     assert.match(migration, /brand_id TEXT REFERENCES dsh_partner_brands/);
     assert.match(migration, /dsh_partner_store_transfer_audit/);
     assert.match(migration, /expected_store_version/);
-    assert.match(migration, /dsh_enforce_partner_store_tenant_match/);
+    assert.match(migration, /dsh_enforce_partner_store_OperatorContext_match/);
     assert.match(migration, /dsh_partner_store_readiness_v/);
   });
 
@@ -34,15 +34,15 @@ describe("partner unified full-stack platform closure", () => {
     assert.match(seed, /partner-local-007'.*store-test-electronics/s);
   });
 
-  test("enforces tenant/category pagination and governed ownership transfer", () => {
-    const tenantList = read("services/dsh/backend/internal/partner/tenant_list_closure.go");
-    const tenantHandler = read("services/dsh/backend/internal/partner/tenant_handler.go");
+  test("enforces OperatorContext/category pagination and governed ownership transfer", () => {
+    const contextList = read("services/dsh/backend/internal/partner/operator_context_list_closure.go");
+    const contextHandler = read("services/dsh/backend/internal/partner/operator_context_handler.go");
     const transfer = read("services/dsh/backend/internal/partner/store_ownership_closure.go");
 
-    assert.match(tenantList, /operator_context_id = \$1/);
-    assert.match(tenantList, /category = \$/);
-    assert.match(tenantList, /query\.Limit = 50/);
-    assert.match(tenantHandler, /r\.URL\.Query\(\)\.Get\("category"\)/);
+    assert.match(contextList, /operator_context_id = \$1/);
+    assert.match(contextList, /category = \$/);
+    assert.match(contextList, /query\.Limit = 50/);
+    assert.match(contextHandler, /r\.URL\.Query\(\)\.Get\("category"\)/);
     assert.match(transfer, /FOR UPDATE/);
     assert.match(transfer, /ErrStoreOwnershipConflict/);
     assert.match(transfer, /ErrOpenStoreOperations/);
