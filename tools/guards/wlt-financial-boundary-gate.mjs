@@ -214,13 +214,23 @@ if (!/PUT \/wlt\/settlement-policies\/\{partnerId\}/.test(wltServer)) {
 }
 
 const dshServerFile = "services/dsh/backend/internal/http/server.go";
+const dshCompositionFile = "services/dsh/backend/internal/http/catalog_unified_routes.go";
+const dshFinanceRoutesFile = "services/dsh/backend/internal/http/representative_finance_routes.go";
 const dshServer = read(dshServerFile);
+const dshComposition = read(dshCompositionFile);
+const dshFinanceRoutes = read(dshFinanceRoutesFile);
+if (!dshServer.includes("registerUnifiedCatalogRoutes(mux, protected)")) {
+  violations.push({ file: dshServerFile, line: 0, message: "DSH_PROTECTED_ROUTE_COMPOSITION_MISSING" });
+}
+if (!dshComposition.includes("registerRepresentativeFinanceRoutes(mux, s)")) {
+  violations.push({ file: dshCompositionFile, line: 0, message: "DSH_FINANCE_REGISTRAR_NOT_COMPOSED" });
+}
 for (const marker of [
   "POST /dsh/control-panel/finance/settlements/from-delivered-orders",
   "PUT /dsh/control-panel/finance/settlement-policies/{partnerId}",
 ]) {
-  if (!dshServer.includes(marker)) {
-    violations.push({ file: dshServerFile, line: 0, message: `DSH_SETTLEMENT_ROUTE_MISSING ${marker}` });
+  if (!dshFinanceRoutes.includes(marker)) {
+    violations.push({ file: dshFinanceRoutesFile, line: 0, message: `DSH_SETTLEMENT_ROUTE_MISSING ${marker}` });
   }
 }
 
