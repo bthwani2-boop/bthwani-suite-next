@@ -15,23 +15,73 @@ servers:
 paths:
   /dsh/control-panel/finance/cod-reconciliation-cases:
     get:
-      tags: [ "dsh-control-panel" ]
+      tags: ["dsh-control-panel"]
       operationId: listDshControlPanelCodReconciliationCases
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, investigating, resolved]
       responses:
-        '200': { description: WLT COD reconciliation cases }
-        '403': { description: Missing finance read permission }
-        '502': { description: WLT unavailable }
+        "200": { description: WLT COD reconciliation cases }
+        "403": { description: Missing finance read permission }
+        "502": { description: WLT unavailable }
       security:
         - bearerAuth: []
 
+  /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign:
+    parameters:
+      - $ref: "#/components/parameters/CaseId"
+    post:
+      tags: ["dsh-control-panel"]
+      operationId: assignDshControlPanelCodReconciliationCase
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CodReconciliationAssignmentRequest"
+      responses:
+        "200": { description: COD reconciliation case assigned }
+        "400": { description: Invalid assignment request }
+        "403": { description: Missing finance manage permission }
+        "404": { description: Reconciliation case not found }
+        "409": { description: Reconciliation case state conflict }
+        "502": { description: WLT unavailable }
+
+  /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/resolve:
+    parameters:
+      - $ref: "#/components/parameters/CaseId"
+    post:
+      tags: ["dsh-control-panel"]
+      operationId: resolveDshControlPanelCodReconciliationCase
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CodReconciliationResolutionRequest"
+      responses:
+        "200": { description: COD reconciliation case resolved }
+        "400": { description: Invalid resolution request }
+        "403": { description: Missing finance manage permission }
+        "404": { description: Reconciliation case not found }
+        "409": { description: Reconciliation case state conflict }
+        "502": { description: WLT unavailable }
+
   /dsh/partner/me/finance/cod-records:
     get:
-      tags: [ "dsh-partner" ]
+      tags: ["dsh-partner"]
       operationId: listDshPartnerCodRecords
       responses:
-        '200': { description: Partner-owned COD records }
-        '403': { description: Actor is not a partner }
-        '502': { description: WLT unavailable }
+        "200": { description: Partner-owned COD records }
+        "403": { description: Actor is not a partner }
+        "502": { description: WLT unavailable }
       security:
         - bearerAuth: []
 
@@ -40,16 +90,32 @@ components:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
   parameters:
     CaseId:
-      {
-        name: caseId,
-        in: path,
-        required: true,
-        schema: { type: string, minLength: 1 }
-      }
+      name: caseId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
     RecordId:
-      {
-        name: recordId,
-        in: path,
-        required: true,
-        schema: { type: string, minLength: 1 }
-      }
+      name: recordId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+  schemas:
+    CodReconciliationAssignmentRequest:
+      type: object
+      additionalProperties: false
+      required: [investigationNote]
+      properties:
+        investigationNote:
+          type: string
+          minLength: 1
+    CodReconciliationResolutionRequest:
+      type: object
+      additionalProperties: false
+      required: [resolutionAction, resolutionNote]
+      properties:
+        resolutionAction:
+          type: string
+          enum: [confirmed_variance, cash_adjustment, collector_recovery, write_off]
+        resolutionNote:
+          type: string
+          minLength: 1
