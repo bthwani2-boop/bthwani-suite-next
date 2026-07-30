@@ -56,10 +56,12 @@ test("Dispatch and Captain Delivery routes are implemented and registered at run
   assert.match(contract, /updateDshDeliveryStatus/);
   assert.match(contract, /submitDshPoD/);
   assert.match(contract, /getDshClientOrderTracking/);
+  assert.match(contract, /collectDshCaptainCodRecord/);
+  assert.match(contract, /WLT remains the sole financial truth owner/);
   assert.match(router, /dsh\/operator\/dispatch\/assignments/);
   assert.match(router, /dsh\/captain\/dispatch\/assignments/);
   assert.match(router, /dsh\/client\/orders\/\{orderId\}\/tracking/);
-  assert.doesNotMatch(contract, /\bcaptain earnings\b|\bCOD collection\b|\bledger mutation\b|\bsettlement posting\b/i);
+  assert.doesNotMatch(contract, /\bledger mutation\b|\bsettlement posting\b/i);
 });
 
 test("Checkout and WLT handoff routes are implemented", async () => {
