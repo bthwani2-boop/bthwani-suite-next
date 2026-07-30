@@ -90,7 +90,10 @@ node-gates*.log
 *_HANDOFF.zip
 .claude/settings.local.json
 
-# Generated Swagger / OpenAPI bundles
+# OpenAPI bundles and clients are deterministic build artifacts. Canonical
+# entry contracts, modules, overlays and manifests are the only tracked truth.
+**/contracts/generated/*.bundle.openapi.yaml
+**/clients/generated/*-api.ts
 *.bundled.json
 
 # Explicitly track bthwani-deep-diagnostic-input.md
