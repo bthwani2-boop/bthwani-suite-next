@@ -52,16 +52,16 @@
       "service": "identity",
       "migrationId": "identity-007_local_actor_operator_context_repair.sql",
       "originalBlobSha": "7bb4eea0484590800fdeab16104080ce8004f6c6",
-      "replacementSha256": "c0fdea1e9015582d5d904350856586e1f3defae5a41d8a0b7117fee79e18865b",
+      "replacementSha256": "174cd31b102c53013c1767cf3d9cf9192028658856dc55f4c8e175598759a63a",
       "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
-      "reason": "The active Identity baseline defines operator_context_id and no tenant_id column. Replaying the tenant repair fails a clean installation and contradicts the canonical non-SaaS platform model.",
+      "reason": "The active Identity baseline defines operator_context_id and no tenant_id column. The corrected repair must also use PostgreSQL's folded lowercase constraint identifier when probing pg_constraint; the prior mixed-case literal missed the existing unquoted constraint and made direct replay attempt to add it again.",
       "evidence": {
         "cleanInstallCommitSha": "ecb24d4bae6025ff8946ecd02ea89b734177212d",
         "cleanInstallResult": "TENANT_BASELINE_FAILED_COLUMN_MISSING",
         "sameCommitRuntimeEvidence": false,
         "productionApprovalEvidence": false
       },
-      "requiredCorrection": "Keep the repair bounded to operator_context_id and fail closed for blank operator context values."
+      "requiredCorrection": "Keep the repair bounded to operator_context_id, use the folded lowercase constraint identifier consistently, and fail closed for blank operator context values."
     },
     {
       "service": "providers",
