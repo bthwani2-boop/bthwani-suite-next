@@ -46,7 +46,6 @@ func (s *protectedStoreServer) requirePartnerCodRecord(w http.ResponseWriter, r 
 	return true
 }
 
-
 func (s *protectedStoreServer) handleFinanceCodReconciliationCases(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
 	if !ok {
@@ -54,4 +53,3 @@ func (s *protectedStoreServer) handleFinanceCodReconciliationCases(w http.Respon
 	}
 	s.proxyFinanceRead(w, r, "/wlt/cod-reconciliation-cases", financeQuery(r, "status"), actor.OperatorContextID)
 }
-
