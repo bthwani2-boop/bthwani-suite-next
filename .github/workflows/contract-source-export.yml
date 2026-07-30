@@ -10,6 +10,7 @@ on:
       - 'tools/scripts/consolidate-dsh-cod-contract.py'
       - 'tools/scripts/repair-payment-remit-bindings.py'
       - 'tools/scripts/normalize-refund-fragment-refs.py'
+      - 'tools/scripts/remove-unowned-settlement-ui.py'
       - 'tools/scripts/repair-final-backend-bindings.py'
       - 'core/workforce/contracts/**'
       - 'services/dsh/**'
@@ -76,6 +77,7 @@ jobs:
           python tools/scripts/consolidate-dsh-cod-contract.py
           python tools/scripts/repair-field-catalog-detail.py
           python tools/scripts/repair-payment-remit-bindings.py
+          python tools/scripts/remove-unowned-settlement-ui.py
           python tools/scripts/repair-final-backend-bindings.py
           gofmt -w \
             services/dsh/backend/internal/http/server.go \
@@ -116,6 +118,7 @@ jobs:
             core/workforce/contracts/generated/workforce.bundle.openapi.yaml
             core/workforce/clients/generated/workforce-api.ts
             services/dsh/frontend/shared/catalog/central-catalog.api.ts
+            services/dsh/frontend/shared/finance-wlt-link/finance/finance-hub-runtime.api.ts
             services/dsh/frontend/app-field/components/DshFieldAssortmentPauseScreen.tsx
             services/dsh/backend/internal/http/server.go
             services/dsh/backend/internal/http/catalog_unified_routes.go
