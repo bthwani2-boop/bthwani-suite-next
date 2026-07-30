@@ -7,8 +7,6 @@ import (
 	"testing"
 )
 
-
-
 func internalActorRequest(method, path string) *http.Request {
 	request := httptest.NewRequest(method, path, nil)
 	request.Header.Set("Authorization", "Bearer service-token")
@@ -16,10 +14,7 @@ func internalActorRequest(method, path string) *http.Request {
 	return request
 }
 
-
-
 func TestInternalOperatorContextRequestRequiresHeader(t *testing.T) {
-	
 	configureIdentity(t)
 	request := internalActorRequest(http.MethodGet, "/internal/actors/search")
 	response := httptest.NewRecorder()
@@ -33,7 +28,6 @@ func TestInternalOperatorContextRequestRequiresHeader(t *testing.T) {
 }
 
 func TestInternalOperatorContextRequestRejectsCrossOperatorContextHeader(t *testing.T) {
-	
 	configureIdentity(t)
 	request := internalActorRequest(http.MethodGet, "/internal/actors/search")
 	request.Header.Set("X-Operator-Context-ID", "OperatorContext-other")
@@ -63,10 +57,7 @@ func TestProvisionOperatorContextOverrideIsRejectedBeforeDatabaseAccess(t *testi
 	}
 }
 
-
-
 func TestOperatorBoundaryIgnoresNonActorRoutes(t *testing.T) {
-	
 	nextCalled := false
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		nextCalled = true
@@ -95,9 +86,9 @@ func TestActorIDExtractionDoesNotTreatSearchOrProvisionAsActors(t *testing.T) {
 		t.Fatalf("expected field-1, got %q", actorID)
 	}
 }
+
 func configureIdentity(t *testing.T) {
 	t.Helper()
 	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "OperatorContext-main")
 	t.Setenv("IDENTITY_WORKFORCE_SERVICE_TOKEN", "service-token")
 }
-
