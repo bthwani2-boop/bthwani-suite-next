@@ -8,6 +8,7 @@ on:
       - 'tools/scripts/repair-cod-catalog-bindings.py'
       - 'tools/scripts/repair-field-catalog-detail.py'
       - 'tools/scripts/consolidate-dsh-cod-contract.py'
+      - 'tools/scripts/repair-payment-remit-bindings.py'
       - 'core/workforce/contracts/**'
       - 'services/dsh/**'
       - 'services/wlt/contracts/**'
@@ -71,12 +72,15 @@ jobs:
           python tools/scripts/repair-cod-catalog-bindings.py
           python tools/scripts/consolidate-dsh-cod-contract.py
           python tools/scripts/repair-field-catalog-detail.py
+          python tools/scripts/repair-payment-remit-bindings.py
           gofmt -w \
+            services/dsh/backend/internal/http/server.go \
             services/dsh/backend/internal/http/catalog_unified_routes.go \
             services/dsh/backend/internal/http/cod_finance_handlers.go \
             services/dsh/backend/internal/http/cod_finance_routes.go \
             services/dsh/backend/internal/http/cod_reconciliation_routes_test.go \
             services/dsh/backend/internal/http/field_catalog_detail_route_test.go \
+            services/dsh/backend/internal/http/payment_partner_cod_routes_test.go \
             services/dsh/backend/internal/wlt/finance_proxy.go \
             services/dsh/backend/internal/wlt/finance_proxy_test.go
       - name: Regenerate canonical artifacts
@@ -107,15 +111,18 @@ jobs:
             core/workforce/clients/generated/workforce-api.ts
             services/dsh/frontend/shared/catalog/central-catalog.api.ts
             services/dsh/frontend/app-field/components/DshFieldAssortmentPauseScreen.tsx
+            services/dsh/backend/internal/http/server.go
             services/dsh/backend/internal/http/catalog_unified_routes.go
             services/dsh/backend/internal/http/cod_finance_handlers.go
             services/dsh/backend/internal/http/cod_finance_routes.go
             services/dsh/backend/internal/http/cod_reconciliation_routes_test.go
             services/dsh/backend/internal/http/field_catalog_detail_route_test.go
+            services/dsh/backend/internal/http/payment_partner_cod_routes_test.go
             services/dsh/backend/internal/wlt/finance_proxy.go
             services/dsh/backend/internal/wlt/finance_proxy_test.go
             services/dsh/contracts/dsh.openapi.yaml
             services/dsh/contracts/dsh.catalog.openapi.yaml
+            services/dsh/contracts/dsh.payment-sessions.openapi.yaml
             services/dsh/contracts/contract.manifest.yaml
             services/dsh/contracts/contract-registry.ts
             services/dsh/contracts/paths/catalog.paths.yaml
