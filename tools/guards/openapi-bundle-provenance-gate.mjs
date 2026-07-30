@@ -4,6 +4,9 @@
 // are intentionally untracked build artifacts; their materialized byte-level
 // provenance is owned centrally by generated-client-provenance-gate.mjs.
 import { composeContext, contextManifests } from "../scripts/openapi-context-composer.mjs";
+import {
+  assertNoUnresolvedLocalOpenApiReferences,
+} from "../scripts/openapi-composition-integrity.mjs";
 
 const contexts = ["identity", "workforce", "platform-control", "providers"];
 const failures = [];
@@ -17,6 +20,13 @@ for (const context of contexts) {
   const first = await composeContext(context, { write: false });
   const second = await composeContext(context, { write: false });
 
+  try {
+    assertNoUnresolvedLocalOpenApiReferences(first.bundle, first);
+    assertNoUnresolvedLocalOpenApiReferences(second.bundle, second);
+  } catch (error) {
+    failures.push(error instanceof Error ? error.message : String(error));
+    continue;
+  }
   if (first.bundle !== second.bundle) {
     failures.push(`${context}: composition is not deterministic`);
     continue;
@@ -56,7 +66,7 @@ for (const context of contexts) {
 }
 
 if (failures.length > 0) {
-  console.error("openapi-bundle-provenance-gate: FAILED");
+  console.erron("openapi-bundle-provenance-gate: FAILED");
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }

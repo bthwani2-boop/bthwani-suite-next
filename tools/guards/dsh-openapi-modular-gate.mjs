@@ -2,10 +2,15 @@ import assert from "node:assert/strict";
 import {
   composeContext,
 } from "../scripts/openapi-context-composer.mjs";
+import {
+  assertNoUnresolvedLocalOpenApiReferences,
+} from "../scripts/openapi-composition-integrity.mjs";
 
 const first = await composeContext("dsh", { write: false });
 const second = await composeContext("dsh", { write: false });
 
+assertNoUnresolvedLocalOpenApiReferences(first.bundle, first);
+assertNoUnresolvedLocalOpenApiReferences(second.bundle, second);
 assert.equal(
   first.bundle,
   second.bundle,
@@ -22,16 +27,6 @@ assert.equal(
   new Set(first.operationIds).size,
   first.operationIds.length,
   "DSH composed bundle contains duplicate operationIds",
-);
-assert.doesNotMatch(
-  first.bundle,
-  /\.\/paths\/[^\s"']+\.paths\.yaml/,
-  "DSH composed bundle must not retain modular path references",
-);
-assert.doesNotMatch(
-  first.bundle,
-  /\.\/components\/[^\s"']+\.yaml/,
-  "DSH composed bundle must not retain modular component references",
 );
 assert.match(
   first.bundle,

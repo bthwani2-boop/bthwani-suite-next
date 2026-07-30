@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import {
   composeContext,
 } from "../scripts/openapi-context-composer.mjs";
+import {
+  assertNoUnresolvedLocalOpenApiReferences,
+} from "../scripts/openapi-composition-integrity.mjs";
 
 // Generated-client provenance is owned centrally by
 // generated-client-provenance-gate.mjs after deterministic materialization.
@@ -9,6 +12,8 @@ import {
 const first = await composeContext("wlt", { write: false });
 const second = await composeContext("wlt", { write: false });
 
+assertNoUnresolvedLocalOpenApiReferences(first.bundle, first);
+assertNoUnresolvedLocalOpenApiReferences(second.bundle, second);
 assert.equal(
   first.bundle,
   second.bundle,
