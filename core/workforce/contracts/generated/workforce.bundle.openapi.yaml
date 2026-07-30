@@ -912,6 +912,7 @@ paths:
         - workforce-reference
       operationId: createWorkforceCity
       summary: Create a governed workforce city reference
+      x-bthwani-required-scope: reference:manage
       responses:
         "201":
           description: Created
@@ -1342,6 +1343,7 @@ paths:
         - workforce-reference
       operationId: updateWorkforceCity
       summary: Update or activate/deactivate a workforce city reference
+      x-bthwani-required-scope: reference:manage
       parameters:
         - in: path
           name: code
@@ -1357,6 +1359,7 @@ paths:
         - workforce-collection
       operationId: appendWorkforceProviderDocument
       summary: Link an opaque DSH media reference to a Workforce profile
+      x-bthwani-required-scope: provider:update
       parameters:
         - in: path
           name: collection
@@ -3072,4 +3075,4 @@ x-bthwani-source-files:
   - core/workforce/contracts/workforce.operational-core.openapi.yaml
   - core/workforce/contracts/workforce.reference-mutations.openapi.yaml
   - core/workforce/contracts/workforce.sovereign-leadership.openapi.yaml
-x-bthwani-source-sha256: 5066043cfb89544e05680818fbf085c1489bf223e66d4b4a039d673cb51d3ed8
+x-bthwani-source-sha256: 65cdaf5ff7a1ac55712cba81c556143244edc60f9e8e66c60479786843fb8763

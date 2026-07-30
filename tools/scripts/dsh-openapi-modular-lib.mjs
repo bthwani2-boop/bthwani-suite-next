@@ -7,7 +7,6 @@ export const repositoryRoot = path.resolve(__dirname, '../..');
 export const contractsDirectory = path.join(repositoryRoot, 'services/dsh/contracts');
 export const entryContractPath = path.join(contractsDirectory, 'dsh.openapi.yaml');
 export const generatedBundlePath = path.join(contractsDirectory, 'generated/dsh.bundle.openapi.yaml');
-export const manifestPath = path.join(contractsDirectory, 'dsh.modular.manifest.json');
 export const ownershipReportPath = path.join(contractsDirectory, 'dsh.contract-ownership.json');
 export const ownershipCollisionAllowlistPath = path.join(contractsDirectory, 'dsh.contract-ownership-allowlist.json');
 
@@ -786,7 +785,6 @@ function verifyReferenceTargets(structure) {
 export function verifyDshOpenApiModular() {
   const failures = [];
   if (!fs.existsSync(entryContractPath)) failures.push('Missing DSH OpenAPI entry contract.');
-  if (!fs.existsSync(manifestPath)) failures.push('Missing DSH modular manifest.');
   if (failures.length > 0) throw new Error(failures.join('\n'));
 
   const rootText = readText(entryContractPath);
@@ -817,19 +815,6 @@ export function verifyDshOpenApiModular() {
       assertUnique(operationIds, 'DSH operationId list');
     } catch (error) {
       failures.push(error.message);
-    }
-    const manifest = JSON.parse(readText(manifestPath));
-    if (manifest.pathCount !== bundleStructure.pathEntries.length) {
-      failures.push(`Manifest pathCount=${manifest.pathCount} but bundle has ${bundleStructure.pathEntries.length}.`);
-    }
-    if (manifest.operationIdCount !== operationIds.length) {
-      failures.push(`Manifest operationIdCount=${manifest.operationIdCount} but bundle has ${operationIds.length}.`);
-    }
-    for (const section of bundleStructure.componentSections) {
-      const expected = manifest.componentCounts?.[section.name];
-      if (expected !== section.entries.length) {
-        failures.push(`Manifest components.${section.name}=${expected} but bundle has ${section.entries.length}.`);
-      }
     }
     if (fs.existsSync(generatedBundlePath)) {
       const existing = readText(generatedBundlePath);
@@ -889,7 +874,6 @@ export function migrateDshOpenApi() {
   if (originalText.includes('x-bthwani-contract-layout: MODULAR')) {
     const bundle = composeDshOpenApi({ write: true });
     const structure = parseContractStructure(bundle);
-    writeText(manifestPath, JSON.stringify(buildManifest(structure.pathEntries, structure.componentSections), null, 2));
     writeText(ownershipReportPath, JSON.stringify(collectSiblingContractOwnership(structure.pathEntries.map((entry) => entry.key)), null, 2));
     return verifyDshOpenApiModular();
   }
@@ -916,7 +900,6 @@ export function migrateDshOpenApi() {
     componentIndex,
   );
   writeText(entryContractPath, root);
-  writeText(manifestPath, JSON.stringify(buildManifest(structure.pathEntries, structure.componentSections), null, 2));
   writeText(ownershipReportPath, JSON.stringify(collectSiblingContractOwnership(pathKeys), null, 2));
   composeDshOpenApi({ write: true });
 

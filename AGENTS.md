@@ -26,13 +26,6 @@ Product-visible, role-sensitive, cross-surface, commercial, or workflow changes 
 governance/policies/product.md
 ```
 
-Partner SaaS capability and partner-scope isolation are encoded in:
-
-```text
-governance/saas/saas-governance.json
-governance/saas/saas-governance.schema.json
-```
-
 The repository-owner approval model is encoded in:
 
 ```text
@@ -205,8 +198,6 @@ Use `FIX_REQUIRED` when in-scope acceptance fails, `NEEDS_EVIDENCE` when the imp
 
 `CLOSED_WITH_EVIDENCE` requires every applicable same-commit evidence scope: `static`, `product`, `runtime`, `visual`, `qa`, `security`, `finance`, `isolation`, `governance`, `ci`, `release`, and `production`. It also requires every approval required after applying the sole-owner contract, evidence-backed stage exclusion, no open blocker, and proven GitHub enforcement for protected high-risk closure. Sole-owner authorization never supplies protected security, finance, isolation, release, production, residual-risk, or final-closure evidence. Closure cannot be issued by an implementation skill or inferred from documentation, configuration, schemas, guard names, or prior workflow runs.
 
-The Partner SaaS model is a product classification and capability boundary, not a release or closure decision. It cannot imply deployment, security, isolation, financial, or production evidence.
-
 ## High-risk escalation
 
 Formal SDLC routing and independent review are required for:
@@ -217,7 +208,6 @@ Formal SDLC routing and independent review are required for:
 - migrations and production data;
 - governance contracts, CI workflows, infrastructure, release, rollback, and signing;
 - critical or high vulnerabilities;
-- Partner SaaS role boundaries, subscriptions, billing terms, metering, white-labeling, and custom domains;
 - final release or production closure.
 
 ## Final response contract

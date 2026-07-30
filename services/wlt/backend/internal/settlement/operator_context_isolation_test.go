@@ -34,7 +34,7 @@ func openSettlementOperatorContextDB(t *testing.T) *sql.DB {
 	return db
 }
 
-func TestSettlementPolicyActiveSaaSFailsClosedWithoutOperatorContext(t *testing.T) {
+func TestSettlementPolicyFailsClosedWithoutOperatorContext(t *testing.T) {
 	_, err := UpsertGovernedSettlementPolicyIdempotent(
 		context.Background(),
 		nil,

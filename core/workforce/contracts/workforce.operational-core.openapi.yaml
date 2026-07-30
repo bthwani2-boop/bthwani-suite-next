@@ -5,7 +5,7 @@ info:
   description: Progressive independent-provider onboarding, availability, incidents, appeals, and evidence-backed captain classification.
 x-bthwani-owner: core/workforce
 servers:
-  - url: /api/workforce
+  - url: http://localhost:58086
 security:
   - bearerAuth: []
 paths:

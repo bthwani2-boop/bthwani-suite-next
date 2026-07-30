@@ -1,6 +1,6 @@
 -- WLT-108: make wallet identity OperatorContext-local.
 --
--- WLT-013 introduced a global UNIQUE(actor_type, actor_id), predating SaaS
+-- WLT-013 introduced a global UNIQUE(actor_type, actor_id), predating platform isolation
 -- tenancy. WLT-038 added operator_context_id but left that global authority in place.
 -- The canonical wallet identity is now (operator_context_id, actor_type, actor_id), so
 -- the same external actor identifier cannot couple two OperatorContexts' balances.

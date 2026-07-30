@@ -124,10 +124,10 @@ func TestScopedActivationIdempotencyKeyIncludesTypeAndSurface(t *testing.T) {
 	}
 }
 
-func TestRequestOtpForTenantRejectsWorkforceManagedRolesBeforeDatabaseAccess(t *testing.T) {
+func TestRequestOtpForOperatorContextRejectsWorkforceManagedRolesBeforeDatabaseAccess(t *testing.T) {
 	repo := &Repository{}
 	for _, role := range []string{"field", "captain"} {
-		_, err := repo.RequestOtpForTenant(context.Background(), "tenant-1", OtpInput{
+		_, err := repo.RequestOtpForOperatorContext(context.Background(), "OperatorContext-1", OtpInput{
 			ActorType: role,
 			Phone:     "+967777123456",
 		})
@@ -145,7 +145,7 @@ func TestConsumeActivationRejectsRetiredCodeWithoutChallenge(t *testing.T) {
 		phone: {
 			ID:        "field-actor-1",
 			Username:  "field-actor",
-			OperatorContextID:  "tenant-1",
+			OperatorContextID:  "OperatorContext-1",
 			PhoneE164: phone,
 			Roles:     []string{"field"},
 			Permissions: []Permission{
@@ -170,7 +170,7 @@ func TestActorIdentityDerivesSurfaceAndServiceAccess(t *testing.T) {
 	expiresAt := time.Now().Add(time.Minute)
 	resolved := toIdentity(Actor{
 		ID:       "partner-1",
-		OperatorContextID: "tenant-1",
+		OperatorContextID: "OperatorContext-1",
 		Roles:    []string{"partner"},
 		Permissions: []Permission{
 			{Service: "dsh", Surface: "app-partner", Action: "store:write", Scope: "own"},

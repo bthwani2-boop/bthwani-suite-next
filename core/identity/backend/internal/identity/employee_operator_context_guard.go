@@ -7,11 +7,12 @@ import (
 	"strings"
 )
 
-// ValidateEmployeePhoneTenant enforces a create-only employee provisioning
-// boundary. A phone already attached to any actor is rejected before roles or
-// permissions can be mutated. Reassignment of an existing employee requires a
-// separate, audited Identity operation rather than an implicit phone upgrade.
-func (r *Repository) ValidateEmployeePhoneTenant(ctx context.Context, rawPhone, operatorContextID string) error {
+// ValidateEmployeePhoneOperatorContext enforces a create-only employee
+// provisioning boundary. A phone already attached to any actor is rejected
+// before roles or permissions can be mutated. Reassignment of an existing
+// employee requires a separate, audited Identity operation rather than an
+// implicit phone upgrade.
+func (r *Repository) ValidateEmployeePhoneOperatorContext(ctx context.Context, rawPhone, operatorContextID string) error {
 	phone, err := NormalizePhoneE164(rawPhone)
 	if err != nil {
 		return err

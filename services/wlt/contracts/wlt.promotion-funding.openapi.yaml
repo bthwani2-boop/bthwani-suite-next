@@ -20,9 +20,9 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       requestBody:
         required: true
         content:
@@ -41,7 +41,7 @@ paths:
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/ReservationId'
       responses:
         '200': { $ref: '#/components/responses/ReservationResponse' }
@@ -58,9 +58,9 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/ReservationId'
       requestBody:
         required: true
@@ -83,9 +83,9 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/ReservationId'
       requestBody:
         required: true
@@ -108,9 +108,9 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/ReservationId'
       requestBody:
         required: true

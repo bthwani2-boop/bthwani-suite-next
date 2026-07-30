@@ -90,7 +90,7 @@ func OtpBoundary(repository OperatorContextOtpRepository, next http.Handler) htt
 
 		operatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
 		if operatorContextID == "" {
-			sendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", "BTHWANI_OPERATOR_CONTEXT_ID is required for OTP requests")
+			sendError(w, http.StatusServiceUnavailable, "OPERATOR_CONTEXT_RUNTIME_CONFIG_INVALID", "BTHWANI_OPERATOR_CONTEXT_ID is required for OTP requests")
 			return
 		}
 

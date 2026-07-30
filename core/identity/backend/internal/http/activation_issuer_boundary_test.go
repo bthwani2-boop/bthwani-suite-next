@@ -43,7 +43,7 @@ func targetAccess(operatorContextID string) activationActorAccess {
 }
 
 func TestActivationIssuerBoundaryAcceptsAuthorizedSameOperatorContextIssuerAndRestoresBody(t *testing.T) {
-	configureIdentityActiveSaaS(t)
+	configureIdentity(t)
 	lookup := &fakeActorAccessLookup{accessByActor: map[string]activationActorAccess{
 		"operator-1": issuerAccess("OperatorContext-main", "provider.activation:issue"),
 		"field-1":    targetAccess("OperatorContext-main"),
@@ -67,7 +67,7 @@ func TestActivationIssuerBoundaryAcceptsAuthorizedSameOperatorContextIssuerAndRe
 	)
 	response := httptest.NewRecorder()
 
-	saasActivationIssuerBoundary(lookup, next).ServeHTTP(response, request)
+	activationIssuerBoundary(lookup, next).ServeHTTP(response, request)
 
 	if !nextCalled || response.Code != http.StatusCreated {
 		t.Fatalf("expected forwarded request called=%v status=%d body=%s", nextCalled, response.Code, response.Body.String())
@@ -81,7 +81,7 @@ func TestActivationIssuerBoundaryAcceptsAuthorizedSameOperatorContextIssuerAndRe
 }
 
 func TestActivationIssuerBoundaryRejectsCrossOperatorContextIssuer(t *testing.T) {
-	configureIdentityActiveSaaS(t)
+	configureIdentity(t)
 	lookup := &fakeActorAccessLookup{accessByActor: map[string]activationActorAccess{
 		"operator-2": issuerAccess("OperatorContext-other", "provider.activation:issue"),
 		"field-1":    targetAccess("OperatorContext-main"),
@@ -93,14 +93,14 @@ func TestActivationIssuerBoundaryRejectsCrossOperatorContextIssuer(t *testing.T)
 	)
 	response := httptest.NewRecorder()
 
-	saasActivationIssuerBoundary(lookup, http.NotFoundHandler()).ServeHTTP(response, request)
+	activationIssuerBoundary(lookup, http.NotFoundHandler()).ServeHTTP(response, request)
 
 	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
 		t.Fatalf("expected OPERATOR_CONTEXT_FORBIDDEN, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
-func TestActivationIssuerBoundaryRejectsCrossOperatorContextIssuerOutsideActiveSaaS(t *testing.T) {
+func TestActivationIssuerBoundaryRejectsCrossOperatorContextIssuerOutsideActivepartner_platform(t *testing.T) {
 	lookup := &fakeActorAccessLookup{accessByActor: map[string]activationActorAccess{
 		"operator-2": issuerAccess("OperatorContext-other", "provider.activation:issue"),
 		"field-1":    targetAccess("OperatorContext-main"),
@@ -112,7 +112,7 @@ func TestActivationIssuerBoundaryRejectsCrossOperatorContextIssuerOutsideActiveS
 	)
 	response := httptest.NewRecorder()
 
-	saasActivationIssuerBoundary(lookup, http.NotFoundHandler()).ServeHTTP(response, request)
+	activationIssuerBoundary(lookup, http.NotFoundHandler()).ServeHTTP(response, request)
 
 	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
 		t.Fatalf("expected fail-closed OperatorContext rejection, got status=%d body=%s", response.Code, response.Body.String())
@@ -120,7 +120,7 @@ func TestActivationIssuerBoundaryRejectsCrossOperatorContextIssuerOutsideActiveS
 }
 
 func TestActivationIssuerBoundaryRejectsInactiveIssuer(t *testing.T) {
-	configureIdentityActiveSaaS(t)
+	configureIdentity(t)
 	inactiveIssuer := issuerAccess("OperatorContext-main", "provider.activation:issue")
 	inactiveIssuer.Active = false
 	lookup := &fakeActorAccessLookup{accessByActor: map[string]activationActorAccess{
@@ -134,7 +134,7 @@ func TestActivationIssuerBoundaryRejectsInactiveIssuer(t *testing.T) {
 	)
 	response := httptest.NewRecorder()
 
-	saasActivationIssuerBoundary(lookup, http.NotFoundHandler()).ServeHTTP(response, request)
+	activationIssuerBoundary(lookup, http.NotFoundHandler()).ServeHTTP(response, request)
 
 	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "issuing actor is not active") {
 		t.Fatalf("expected inactive issuer rejection, got status=%d body=%s", response.Code, response.Body.String())
@@ -142,7 +142,7 @@ func TestActivationIssuerBoundaryRejectsInactiveIssuer(t *testing.T) {
 }
 
 func TestActivationIssuerBoundaryRejectsIssuerWithoutRequiredPermission(t *testing.T) {
-	configureIdentityActiveSaaS(t)
+	configureIdentity(t)
 	lookup := &fakeActorAccessLookup{accessByActor: map[string]activationActorAccess{
 		"operator-1": issuerAccess("OperatorContext-main", "employee:read"),
 		"field-1":    targetAccess("OperatorContext-main"),
@@ -154,7 +154,7 @@ func TestActivationIssuerBoundaryRejectsIssuerWithoutRequiredPermission(t *testi
 	)
 	response := httptest.NewRecorder()
 
-	saasActivationIssuerBoundary(lookup, http.NotFoundHandler()).ServeHTTP(response, request)
+	activationIssuerBoundary(lookup, http.NotFoundHandler()).ServeHTTP(response, request)
 
 	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "lacks activation permission") {
 		t.Fatalf("expected permission rejection, got status=%d body=%s", response.Code, response.Body.String())
@@ -162,7 +162,7 @@ func TestActivationIssuerBoundaryRejectsIssuerWithoutRequiredPermission(t *testi
 }
 
 func TestActivationIssuerBoundaryRequiresEmployeeActivationPermissionForEmployee(t *testing.T) {
-	configureIdentityActiveSaaS(t)
+	configureIdentity(t)
 	lookup := &fakeActorAccessLookup{accessByActor: map[string]activationActorAccess{
 		"operator-1": issuerAccess("OperatorContext-main", "provider.activation:issue"),
 		"employee-1": targetAccess("OperatorContext-main"),
@@ -174,7 +174,7 @@ func TestActivationIssuerBoundaryRequiresEmployeeActivationPermissionForEmployee
 	)
 	response := httptest.NewRecorder()
 
-	saasActivationIssuerBoundary(lookup, http.NotFoundHandler()).ServeHTTP(response, request)
+	activationIssuerBoundary(lookup, http.NotFoundHandler()).ServeHTTP(response, request)
 
 	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "lacks activation permission") {
 		t.Fatalf("expected employee permission separation, got status=%d body=%s", response.Code, response.Body.String())
@@ -182,7 +182,7 @@ func TestActivationIssuerBoundaryRequiresEmployeeActivationPermissionForEmployee
 }
 
 func TestActivationIssuerBoundaryRejectsSelfIssuance(t *testing.T) {
-	configureIdentityActiveSaaS(t)
+	configureIdentity(t)
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/internal/actors/operator-1/activations",
@@ -190,7 +190,7 @@ func TestActivationIssuerBoundaryRejectsSelfIssuance(t *testing.T) {
 	)
 	response := httptest.NewRecorder()
 
-	saasActivationIssuerBoundary(&fakeActorAccessLookup{}, http.NotFoundHandler()).ServeHTTP(response, request)
+	activationIssuerBoundary(&fakeActorAccessLookup{}, http.NotFoundHandler()).ServeHTTP(response, request)
 
 	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "cannot issue its own activation") {
 		t.Fatalf("expected self-issuance rejection, got status=%d body=%s", response.Code, response.Body.String())
@@ -198,7 +198,7 @@ func TestActivationIssuerBoundaryRejectsSelfIssuance(t *testing.T) {
 }
 
 func TestActivationIssuerBoundaryRejectsMissingIssuer(t *testing.T) {
-	configureIdentityActiveSaaS(t)
+	configureIdentity(t)
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/internal/actors/field-1/activations",
@@ -206,7 +206,7 @@ func TestActivationIssuerBoundaryRejectsMissingIssuer(t *testing.T) {
 	)
 	response := httptest.NewRecorder()
 
-	saasActivationIssuerBoundary(&fakeActorAccessLookup{}, http.NotFoundHandler()).ServeHTTP(response, request)
+	activationIssuerBoundary(&fakeActorAccessLookup{}, http.NotFoundHandler()).ServeHTTP(response, request)
 
 	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "INVALID_REQUEST") {
 		t.Fatalf("expected INVALID_REQUEST, got status=%d body=%s", response.Code, response.Body.String())
@@ -214,7 +214,7 @@ func TestActivationIssuerBoundaryRejectsMissingIssuer(t *testing.T) {
 }
 
 func TestActivationIssuerBoundaryReturnsNotFoundForMissingIssuerActor(t *testing.T) {
-	configureIdentityActiveSaaS(t)
+	configureIdentity(t)
 	lookup := &fakeActorAccessLookup{
 		accessByActor: map[string]activationActorAccess{"field-1": targetAccess("OperatorContext-main")},
 		errByActor:    map[string]error{"missing-operator": sql.ErrNoRows},
@@ -226,7 +226,7 @@ func TestActivationIssuerBoundaryReturnsNotFoundForMissingIssuerActor(t *testing
 	)
 	response := httptest.NewRecorder()
 
-	saasActivationIssuerBoundary(lookup, http.NotFoundHandler()).ServeHTTP(response, request)
+	activationIssuerBoundary(lookup, http.NotFoundHandler()).ServeHTTP(response, request)
 
 	if response.Code != http.StatusNotFound || !strings.Contains(response.Body.String(), "ACTOR_NOT_FOUND") {
 		t.Fatalf("expected ACTOR_NOT_FOUND, got status=%d body=%s", response.Code, response.Body.String())
@@ -234,7 +234,7 @@ func TestActivationIssuerBoundaryReturnsNotFoundForMissingIssuerActor(t *testing
 }
 
 func TestActivationIssuerBoundaryIgnoresRevokeRoute(t *testing.T) {
-	configureIdentityActiveSaaS(t)
+	configureIdentity(t)
 	nextCalled := false
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		nextCalled = true
@@ -247,7 +247,7 @@ func TestActivationIssuerBoundaryIgnoresRevokeRoute(t *testing.T) {
 	)
 	response := httptest.NewRecorder()
 
-	saasActivationIssuerBoundary(&fakeActorAccessLookup{}, next).ServeHTTP(response, request)
+	activationIssuerBoundary(&fakeActorAccessLookup{}, next).ServeHTTP(response, request)
 
 	if !nextCalled || response.Code != http.StatusNoContent {
 		t.Fatalf("expected revoke passthrough called=%v status=%d", nextCalled, response.Code)

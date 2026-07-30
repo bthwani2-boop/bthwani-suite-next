@@ -1,7 +1,7 @@
 -- WLT-105: converge active financial writes on trusted per-request OperatorContext truth.
 --
 -- Historical rows that cannot be attributed without external reconciliation stay
--- explicitly classified as legacy-unscoped. Active-SaaS code must never select
+-- explicitly classified as legacy-unscoped. Embedded code must never select
 -- that scope. Wallet accounts are attributed only when one unambiguous WLT
 -- wallet owner exists; transaction and line attribution follows those wallet legs.
 
@@ -200,6 +200,6 @@ COMMENT ON COLUMN wlt_ledger_accounts.operator_context_id IS
 COMMENT ON COLUMN wlt_field_commission_category_policy_versions.operator_context_id IS
   'OperatorContext owning this WLT commission policy; active policy uniqueness is OperatorContext-local.';
 COMMENT ON COLUMN wlt_audit_events.operator_context_id IS
-  'OperatorContext owning the audited financial aggregate. legacy-unscoped is compatibility-only and cannot prove SaaS isolation.';
+  'OperatorContext owning the audited financial aggregate. legacy-unscoped is compatibility-only and cannot prove isolation.';
 
 COMMIT;

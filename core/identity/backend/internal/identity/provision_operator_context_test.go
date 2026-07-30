@@ -6,27 +6,27 @@ import (
 	"testing"
 )
 
-func TestProvisionActorRejectsMissingTenantBeforeDatabaseAccess(t *testing.T) {
+func TestProvisionActorRejectsMissingOperatorContextBeforeDatabaseAccess(t *testing.T) {
 	repo := &Repository{}
 
 	view, err := repo.ProvisionActor(context.Background(), ProvisionActorInput{
-		Username:  "field-without-tenant",
+		Username:  "field-without-OperatorContext",
 		PhoneE164: "+967777123456",
 		Role:      "field",
 	})
 	if !errors.Is(err, ErrInvalidActivation) {
-		t.Fatalf("missing trusted tenant must be rejected before database access, view=%#v err=%v", view, err)
+		t.Fatalf("missing trusted OperatorContext must be rejected before database access, view=%#v err=%v", view, err)
 	}
 }
 
-func TestProvisionActorRejectsExistingPhoneFromDifferentTenant(t *testing.T) {
+func TestProvisionActorRejectsExistingPhoneFromDifferentOperatorContext(t *testing.T) {
 	phone := "+967777123457"
 	repo := newTestRepository(t, nil)
 	fakeDriverInst.setActors(t.Name(), map[string]Actor{
 		phone: {
-			ID:        "field-tenant-a",
+			ID:        "field-OperatorContext-a",
 			Username:  "field-a",
-			OperatorContextID:  "tenant-a",
+			OperatorContextID:  "OperatorContext-a",
 			PhoneE164: phone,
 			Roles:     []string{"field"},
 			Permissions: []Permission{
@@ -37,12 +37,12 @@ func TestProvisionActorRejectsExistingPhoneFromDifferentTenant(t *testing.T) {
 	})
 
 	view, err := repo.ProvisionActor(context.Background(), ProvisionActorInput{
-		Username:  "field-tenant-b",
+		Username:  "field-OperatorContext-b",
 		PhoneE164: phone,
 		Role:      "field",
-		OperatorContextID:  "tenant-b",
+		OperatorContextID:  "OperatorContext-b",
 	})
 	if !errors.Is(err, ErrForbidden) {
-		t.Fatalf("cross-tenant phone reuse must be forbidden, view=%#v err=%v", view, err)
+		t.Fatalf("cross-OperatorContext phone reuse must be forbidden, view=%#v err=%v", view, err)
 	}
 }

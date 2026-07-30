@@ -33,7 +33,7 @@ func (f *fakeAuthOperatorContextRepository) Logout(_ context.Context, accessToke
 }
 
 func TestAuthOperatorContextBoundaryPassesMatchingLoginSession(t *testing.T) {
-	configureIdentityActiveSaaS(t)
+	configureIdentity(t)
 	repository := &fakeAuthOperatorContextRepository{}
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("X-Correlation-ID", "corr-1")
@@ -46,7 +46,7 @@ func TestAuthOperatorContextBoundaryPassesMatchingLoginSession(t *testing.T) {
 	request := httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(`{}`))
 	response := httptest.NewRecorder()
 
-	SaaSAuthOperatorContextBoundary(repository, next).ServeHTTP(response, request)
+	AuthOperatorContextBoundary(repository, next).ServeHTTP(response, request)
 
 	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "access-1") {
 		t.Fatalf("expected matching session response, status=%d body=%s", response.Code, response.Body.String())
@@ -60,7 +60,7 @@ func TestAuthOperatorContextBoundaryPassesMatchingLoginSession(t *testing.T) {
 }
 
 func TestAuthOperatorContextBoundaryRejectsAndRevokesCrossOperatorContextLogin(t *testing.T) {
-	configureIdentityActiveSaaS(t)
+	configureIdentity(t)
 	repository := &fakeAuthOperatorContextRepository{}
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		sendJSON(w, http.StatusOK, map[string]any{
@@ -72,7 +72,7 @@ func TestAuthOperatorContextBoundaryRejectsAndRevokesCrossOperatorContextLogin(t
 	request := httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(`{}`))
 	response := httptest.NewRecorder()
 
-	SaaSAuthOperatorContextBoundary(repository, next).ServeHTTP(response, request)
+	AuthOperatorContextBoundary(repository, next).ServeHTTP(response, request)
 
 	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
 		t.Fatalf("expected OPERATOR_CONTEXT_FORBIDDEN, status=%d body=%s", response.Code, response.Body.String())
@@ -86,7 +86,7 @@ func TestAuthOperatorContextBoundaryRejectsAndRevokesCrossOperatorContextLogin(t
 }
 
 func TestAuthOperatorContextBoundaryRejectsMissingOperatorContextAndRevokesToken(t *testing.T) {
-	configureIdentityActiveSaaS(t)
+	configureIdentity(t)
 	repository := &fakeAuthOperatorContextRepository{}
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		sendJSON(w, http.StatusOK, map[string]any{
@@ -98,7 +98,7 @@ func TestAuthOperatorContextBoundaryRejectsMissingOperatorContextAndRevokesToken
 	request := httptest.NewRequest(http.MethodPost, "/auth/refresh", strings.NewReader(`{}`))
 	response := httptest.NewRecorder()
 
-	SaaSAuthOperatorContextBoundary(repository, next).ServeHTTP(response, request)
+	AuthOperatorContextBoundary(repository, next).ServeHTTP(response, request)
 
 	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_REQUIRED") {
 		t.Fatalf("expected OPERATOR_CONTEXT_REQUIRED, status=%d body=%s", response.Code, response.Body.String())
@@ -109,7 +109,7 @@ func TestAuthOperatorContextBoundaryRejectsMissingOperatorContextAndRevokesToken
 }
 
 func TestAuthOperatorContextBoundaryRejectsCrossOperatorContextSessionProjection(t *testing.T) {
-	configureIdentityActiveSaaS(t)
+	configureIdentity(t)
 	repository := &fakeAuthOperatorContextRepository{}
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		sendJSON(w, http.StatusOK, identity.ActorIdentity{
@@ -119,7 +119,7 @@ func TestAuthOperatorContextBoundaryRejectsCrossOperatorContextSessionProjection
 	request := httptest.NewRequest(http.MethodGet, "/auth/session", nil)
 	response := httptest.NewRecorder()
 
-	SaaSAuthOperatorContextBoundary(repository, next).ServeHTTP(response, request)
+	AuthOperatorContextBoundary(repository, next).ServeHTTP(response, request)
 
 	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
 		t.Fatalf("expected session OperatorContext rejection, status=%d body=%s", response.Code, response.Body.String())
@@ -127,7 +127,7 @@ func TestAuthOperatorContextBoundaryRejectsCrossOperatorContextSessionProjection
 }
 
 func TestAuthOperatorContextBoundaryPrechecksProtectedBearerRoutes(t *testing.T) {
-	configureIdentityActiveSaaS(t)
+	configureIdentity(t)
 	repository := &fakeAuthOperatorContextRepository{resolvedByToken: map[string]identity.ActorIdentity{
 		"cross-token": {Subject: "actor-1", OperatorContextID: "OperatorContext-other", AuthState: "authenticated"},
 	}}
@@ -140,7 +140,7 @@ func TestAuthOperatorContextBoundaryPrechecksProtectedBearerRoutes(t *testing.T)
 	request.Header.Set("Authorization", "Bearer cross-token")
 	response := httptest.NewRecorder()
 
-	SaaSAuthOperatorContextBoundary(repository, next).ServeHTTP(response, request)
+	AuthOperatorContextBoundary(repository, next).ServeHTTP(response, request)
 
 	if nextCalled {
 		t.Fatal("cross-OperatorContext protected request reached handler")
@@ -151,13 +151,13 @@ func TestAuthOperatorContextBoundaryPrechecksProtectedBearerRoutes(t *testing.T)
 }
 
 func TestAuthOperatorContextBoundaryRejectsInvalidBearerBeforeHandler(t *testing.T) {
-	configureIdentityActiveSaaS(t)
+	configureIdentity(t)
 	repository := &fakeAuthOperatorContextRepository{resolveErr: errors.New("invalid")}
 	request := httptest.NewRequest(http.MethodPost, "/auth/password/change", strings.NewReader(`{}`))
 	request.Header.Set("Authorization", "Bearer invalid-token")
 	response := httptest.NewRecorder()
 
-	SaaSAuthOperatorContextBoundary(repository, http.NotFoundHandler()).ServeHTTP(response, request)
+	AuthOperatorContextBoundary(repository, http.NotFoundHandler()).ServeHTTP(response, request)
 
 	if response.Code != http.StatusUnauthorized || !strings.Contains(response.Body.String(), "UNAUTHENTICATED") {
 		t.Fatalf("expected UNAUTHENTICATED, status=%d body=%s", response.Code, response.Body.String())
@@ -165,7 +165,7 @@ func TestAuthOperatorContextBoundaryRejectsInvalidBearerBeforeHandler(t *testing
 }
 
 func TestAuthOperatorContextBoundaryAllowsLogoutToRevokeStaleSession(t *testing.T) {
-	configureIdentityActiveSaaS(t)
+	configureIdentity(t)
 	nextCalled := false
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		nextCalled = true
@@ -175,7 +175,7 @@ func TestAuthOperatorContextBoundaryAllowsLogoutToRevokeStaleSession(t *testing.
 	request.Header.Set("Authorization", "Bearer stale-token")
 	response := httptest.NewRecorder()
 
-	SaaSAuthOperatorContextBoundary(&fakeAuthOperatorContextRepository{}, next).ServeHTTP(response, request)
+	AuthOperatorContextBoundary(&fakeAuthOperatorContextRepository{}, next).ServeHTTP(response, request)
 
 	if !nextCalled || response.Code != http.StatusNoContent {
 		t.Fatalf("expected logout passthrough called=%v status=%d", nextCalled, response.Code)
@@ -191,7 +191,7 @@ func TestAuthOperatorContextBoundaryPassesThroughWhenDeferred(t *testing.T) {
 	request := httptest.NewRequest(http.MethodGet, "/auth/sessions", nil)
 	response := httptest.NewRecorder()
 
-	SaaSAuthOperatorContextBoundary(&fakeAuthOperatorContextRepository{}, next).ServeHTTP(response, request)
+	AuthOperatorContextBoundary(&fakeAuthOperatorContextRepository{}, next).ServeHTTP(response, request)
 
 	if !nextCalled || response.Code != http.StatusNoContent {
 		t.Fatalf("expected deferred passthrough called=%v status=%d", nextCalled, response.Code)

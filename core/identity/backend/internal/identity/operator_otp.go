@@ -9,7 +9,7 @@ import (
 	"github.com/lib/pq"
 )
 
-var ErrTenantMismatch = errors.New("actor operator context does not match active runtime operator context")
+var ErrOperatorContextMismatch = errors.New("actor operator context does not match active runtime operator context")
 
 // otpRoleSurface and otpRolePermissions delegate to the single central
 // activation registry so the public OTP path can never diverge from it —
@@ -31,18 +31,18 @@ func otpRolePermissions(role, surface string) ([]byte, error) {
 	return publicActorPermissions(role, surface)
 }
 
-// RequestOtpForTenant is the SaaS-safe OTP provisioning path. The tenant is
-// supplied by trusted server runtime configuration, not by the mobile request.
-// A phone already bound to another tenant is rejected before any role or
-// permission can be merged into that actor.
-func (r *Repository) RequestOtpForTenant(
+// RequestOtpForOperatorContext is the trusted OTP provisioning path. The
+// operator context is supplied by trusted server runtime configuration, not
+// by the mobile request. A phone already bound to another operator context
+// is rejected before any role or permission can be merged into that actor.
+func (r *Repository) RequestOtpForOperatorContext(
 	ctx context.Context,
 	operatorContextID string,
 	input OtpInput,
 ) (IssueActivationResult, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if operatorContextID == "" {
-		return IssueActivationResult{}, ErrTenantMismatch
+		return IssueActivationResult{}, ErrOperatorContextMismatch
 	}
 	phone, err := NormalizePhoneE164(input.Phone)
 	if err != nil {
@@ -90,7 +90,7 @@ func (r *Repository) RequestOtpForTenant(
 		}
 	} else {
 		if strings.TrimSpace(actor.OperatorContextID) != operatorContextID {
-			return IssueActivationResult{}, ErrTenantMismatch
+			return IssueActivationResult{}, ErrOperatorContextMismatch
 		}
 		if !hasRole(actor.Roles, role) {
 			_, err = tx.ExecContext(ctx, `

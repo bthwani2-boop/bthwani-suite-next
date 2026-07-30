@@ -32,7 +32,7 @@ x-bthwani-generated-from:
   - services/wlt/contracts/wlt.commercial-summary.openapi.yaml
   - services/wlt/contracts/wlt.promotion-funding.openapi.yaml
   - services/wlt/contracts/wlt.workforce-finance.openapi.yaml
-x-bthwani-source-digest: b9fc50c7dbd50219676e54e916c6aab0b3f64d2794328d2eec90fdab6d61608f
+x-bthwani-source-digest: 20759704065949ce3c440919a5ca17e59033028496bbac59e8df556ba76dee05
 
 paths:
   /wlt/health:
@@ -729,7 +729,7 @@ paths:
       summary: List OperatorContext-scoped refunds
       parameters:
         - $ref: '#/components/parameters/Authorization'
-        - $ref: '#/components/parameters/OperatorContextHeader'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/CorrelationIdOptional'
         - name: orderId
@@ -755,10 +755,10 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/Authorization'
-        - $ref: '#/components/parameters/OperatorContextHeader'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/CorrelationHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -789,7 +789,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/OperatorContextHeader'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/CorrelationIdOptional'
       responses:
@@ -812,10 +812,10 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/OperatorContextHeader'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/CorrelationHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -842,10 +842,10 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/OperatorContextHeader'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/CorrelationHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -876,10 +876,10 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/OperatorContextHeader'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/CorrelationHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -912,10 +912,10 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/OperatorContextHeader'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/CorrelationHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -941,7 +941,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/OperatorContextHeader'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/CorrelationIdOptional'
       responses:
@@ -2056,9 +2056,9 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/OperatorContextHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
-        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: '#/components/parameters/OperatorContextId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
       requestBody:
         required: true
         content:
@@ -2078,7 +2078,7 @@ paths:
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/OperatorContextHeader'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/ReservationId'
       responses:
         '200': { $ref: '#/components/responses/ReservationResponse' }
@@ -2096,9 +2096,9 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/OperatorContextHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
-        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: '#/components/parameters/OperatorContextId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/ReservationId'
       requestBody:
         required: true
@@ -2122,9 +2122,9 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/OperatorContextHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
-        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: '#/components/parameters/OperatorContextId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/ReservationId'
       requestBody:
         required: true
@@ -2148,9 +2148,9 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/OperatorContextHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
-        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: '#/components/parameters/OperatorContextId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/ReservationId'
       requestBody:
         required: true
@@ -2321,18 +2321,6 @@ components:
       required: true
       schema: { type: string, minLength: 1 }
 
-    CorrelationHeader:
-      name: X-Correlation-ID
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
-
-    IdempotencyHeader:
-      name: Idempotency-Key
-      in: header
-      required: true
-      schema: { type: string, minLength: 8, maxLength: 255 }
-
     PayoutId:
       name: payoutId
       in: path
@@ -2342,12 +2330,6 @@ components:
     SettlementId:
       name: settlementId
       in: path
-      required: true
-      schema: { type: string, minLength: 1 }
-
-    OperatorContextHeader:
-      name: X-Operator-Context-ID
-      in: header
       required: true
       schema: { type: string, minLength: 1 }
 

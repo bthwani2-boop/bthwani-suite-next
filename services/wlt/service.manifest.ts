@@ -15,7 +15,6 @@ export const wltServiceManifest = {
 
   contracts: [
     "contracts/wlt.openapi.yaml",
-    "contracts/wlt.saas-reference-auth.overlay.yaml",
   ],
 
   implementationReadiness: {
@@ -25,8 +24,7 @@ export const wltServiceManifest = {
     frontend: true,
     frontendDshBoundary: true,
     paymentSessionReference: true,
-    saasReferenceAuthentication: true,
-    trustedTenantServiceBoundary: true,
+    trustedOperatorContextServiceBoundary: true,
     localSimulatorMutations: false,
     stagingProviderLabMutations: false,
   },
@@ -40,14 +38,14 @@ export const wltServiceManifest = {
     productionMutationsVerified: false,
     evidenceState: "NEEDS_EVIDENCE",
     reason:
-      "Implementation exists, but database migration, generated/manual clients, reference, mutation, reconciliation, tenant-isolation, and cross-service journeys require fresh same-commit evidence.",
+      "Implementation exists, but database migration, generated/manual clients, reference, mutation, reconciliation, operator-context-isolation, and cross-service journeys require fresh same-commit evidence.",
   },
 
   productionReadiness: {
     productionMutationsReady: false,
     productionProviderDefaultEnabled: false,
     blocker:
-      "Production provider mutations remain fail-closed unless WLT_ALLOW_PRODUCTION_PROVIDER is explicitly true and independent finance, security, release, tenant-isolation, and same-commit runtime evidence are complete.",
+      "Production provider mutations remain fail-closed unless WLT_ALLOW_PRODUCTION_PROVIDER is explicitly true and independent finance, security, release, operator-context-isolation, and same-commit runtime evidence are complete.",
   },
 
   // Compatibility fields are deliberately evidence-safe. Static source or
@@ -60,8 +58,7 @@ export const wltServiceManifest = {
   referenceRuntimeVerified: false,
   journeyRuntimeVerified: false,
   paymentSessionReferenceReady: true,
-  saasReferenceAuthenticationReady: true,
-  trustedTenantServiceBoundaryReady: true,
+  trustedOperatorContextServiceBoundaryReady: true,
   localSimulatorMutationsReady: false,
   stagingProviderLabMutationsReady: false,
   productionMutationsReady: false,
@@ -84,8 +81,7 @@ export const wltServiceManifest = {
       "reconciliation",
       "finance_reports",
       "audit_references",
-      "saas_financial_reference_authentication",
-      "trusted_financial_tenant_context",
+      "trusted_financial_OperatorContext_context",
     ],
     forbiddenOutsideWlt: [
       "wallet_balance_mutation",
@@ -97,7 +93,7 @@ export const wltServiceManifest = {
       "commission_finalization",
       "collection_custody_mutation",
       "unauthenticated_financial_reference_read",
-      "client_asserted_financial_tenant_ownership",
+      "client_asserted_financial_OperatorContext_ownership",
     ],
     allowedForDsh: [
       "wlt_reference",
@@ -106,7 +102,7 @@ export const wltServiceManifest = {
       "settlement_status_reference",
       "refund_status_reference",
       "delivery_collection_reference",
-      "trusted_tenant_scoped_reference_read",
+      "trusted_OperatorContext_scoped_reference_read",
     ],
   },
 } as const;

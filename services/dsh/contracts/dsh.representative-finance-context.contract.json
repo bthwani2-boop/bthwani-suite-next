@@ -3,12 +3,12 @@
   "capabilityId": "REPRESENTATIVE_FINANCE_CONTEXT",
   "parentContract": "services/dsh/contracts/dsh.representative-finance.openapi.yaml",
   "truthOwner": "WLT",
-  "OperatorContextBoundary": {
+  "operatorContextBoundary": {
     "source": "core.identity.session.operatorContextId",
     "clientSuppliedOperatorContextAccepted": false,
     "description": "The OperatorContext is derived from the authenticated Identity session and forwarded server-to-server by DSH. Browser query, path, and header values cannot select the WLT OperatorContext.",
-    "walletLookupKey": ["OperatorContext_id", "actor_type", "actor_id"],
-    "ledgerLookupKey": ["OperatorContext_id", "actor_type", "actor_id"],
+    "walletLookupKey": ["operator_context_id", "actor_type", "actor_id"],
+    "ledgerLookupKey": ["operator_context_id", "actor_type", "actor_id"],
     "crossOperatorContextWalletBehavior": "NOT_FOUND",
     "crossOperatorContextLedgerBehavior": "EMPTY_COLLECTION"
   },

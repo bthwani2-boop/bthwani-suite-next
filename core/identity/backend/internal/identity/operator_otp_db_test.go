@@ -53,14 +53,14 @@ func cleanupTestPhone(t *testing.T, db *sql.DB, phone string) {
 	}
 }
 
-func TestRequestOtpForTenantIssuesChallengeForNewConsumerDBIntegration(t *testing.T) {
+func TestRequestOtpForOperatorContextIssuesChallengeForNewConsumerDBIntegration(t *testing.T) {
 	db := openIdentityTestDB(t)
 	const phone = "+967700000901"
 	cleanupTestPhone(t, db, phone)
 	t.Cleanup(func() { cleanupTestPhone(t, db, phone) })
 
 	repository := newOtpTestRepository(t, db)
-	result, err := repository.RequestOtpForTenant(context.Background(), "local-dsh", OtpInput{
+	result, err := repository.RequestOtpForOperatorContext(context.Background(), "local-dsh", OtpInput{
 		ActorType: "client",
 		Phone:     phone,
 	})
@@ -93,28 +93,28 @@ func TestRequestOtpForTenantIssuesChallengeForNewConsumerDBIntegration(t *testin
 	}
 }
 
-func TestRequestOtpForTenantRejectsAnotherTenantsPhoneDBIntegration(t *testing.T) {
+func TestRequestOtpForOperatorContextRejectsAnotherOperatorContextsPhoneDBIntegration(t *testing.T) {
 	db := openIdentityTestDB(t)
 	const phone = "+967700000902"
 	cleanupTestPhone(t, db, phone)
 	t.Cleanup(func() { cleanupTestPhone(t, db, phone) })
 
 	repository := newOtpTestRepository(t, db)
-	if _, err := repository.RequestOtpForTenant(context.Background(), "local-dsh", OtpInput{
+	if _, err := repository.RequestOtpForOperatorContext(context.Background(), "local-dsh", OtpInput{
 		ActorType: "client",
 		Phone:     phone,
 	}); err != nil {
-		t.Fatalf("seed the first tenant's consumer: %v", err)
+		t.Fatalf("seed the first OperatorContext's consumer: %v", err)
 	}
 
-	_, err := repository.RequestOtpForTenant(context.Background(), "other-tenant", OtpInput{
+	_, err := repository.RequestOtpForOperatorContext(context.Background(), "other-OperatorContext", OtpInput{
 		ActorType: "client",
 		Phone:     phone,
 	})
 	if err == nil {
-		t.Fatal("a phone bound to one tenant must not be claimable by another")
+		t.Fatal("a phone bound to one OperatorContext must not be claimable by another")
 	}
-	if !strings.Contains(err.Error(), ErrTenantMismatch.Error()) {
-		t.Fatalf("expected a tenant mismatch, got %v", err)
+	if !strings.Contains(err.Error(), ErrOperatorContextMismatch.Error()) {
+		t.Fatalf("expected OperatorContext mismatch, got %v", err)
 	}
 }

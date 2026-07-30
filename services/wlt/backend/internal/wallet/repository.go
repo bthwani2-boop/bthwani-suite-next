@@ -121,7 +121,6 @@ func EnsureWalletForOperatorContextTx(ctx context.Context, tx *sql.Tx, actorType
 }
 
 // EnsureWalletTx preserves package compatibility for deferred/local callers.
-// In active SaaS mode it fails closed because no trusted OperatorContext is present.
 func EnsureWalletTx(tx *sql.Tx, actorType, actorID, currency string) (*Wallet, error) {
 	return EnsureWalletForOperatorContextTx(context.Background(), tx, actorType, actorID, currency)
 }

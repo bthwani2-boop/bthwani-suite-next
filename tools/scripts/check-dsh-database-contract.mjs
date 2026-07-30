@@ -104,20 +104,20 @@ for (const migration of migrations) {
   }
 }
 
-const trustedOperatorContextMigrationPath = "services/dsh/database/migrations/dsh-954_trusted_OperatorContext_session_context.sql";
+const trustedOperatorContextMigrationPath = "services/dsh/database/migrations/dsh-954_trusted_operator_context_session_context.sql";
 const trustedOperatorContextMigration = read(trustedOperatorContextMigrationPath);
 requireText(trustedOperatorContextMigration, "dsh_trusted_OperatorContext_context", trustedOperatorContextMigrationPath);
-requireText(trustedOperatorContextMigration, "current_setting('bthwani.OperatorContext_id', TRUE)", trustedOperatorContextMigrationPath);
+requireText(trustedOperatorContextMigration, "current_setting('bthwani.operator_context_id', TRUE)", trustedOperatorContextMigrationPath);
 requireText(trustedOperatorContextMigration, "OperatorContext_OWNERSHIP_IMMUTABLE", trustedOperatorContextMigrationPath);
 requireText(trustedOperatorContextMigration, "trg_dsh_partners_OperatorContext", trustedOperatorContextMigrationPath);
 requireText(trustedOperatorContextMigration, "trg_dsh_stores_OperatorContext", trustedOperatorContextMigrationPath);
 
-const testOperatorContextHelperPath = "services/dsh/backend/internal/testdb/OperatorContext_context.go";
+const testOperatorContextHelperPath = "services/dsh/backend/internal/testdb/operator_context_context.go";
 const testOperatorContextHelper = read(testOperatorContextHelperPath);
 requireText(testOperatorContextHelper, "DSH_REQUIRE_DB_TESTS", testOperatorContextHelperPath);
-requireText(testOperatorContextHelper, "DSH_TEST_OperatorContext_ID", testOperatorContextHelperPath);
+requireText(testOperatorContextHelper, "DSH_TEST_operator_context_id", testOperatorContextHelperPath);
 requireText(testOperatorContextHelper, "PGOPTIONS", testOperatorContextHelperPath);
-requireText(testOperatorContextHelper, "bthwani.OperatorContext_id", testOperatorContextHelperPath);
+requireText(testOperatorContextHelper, "bthwani.operator_context_id", testOperatorContextHelperPath);
 requireText(testOperatorContextHelper, 'os.Getenv("CI") == "true"', testOperatorContextHelperPath);
 
 const databaseTestPackages = [
@@ -138,7 +138,7 @@ const databaseTestPackages = [
   "wltoutbox",
 ];
 for (const packageName of databaseTestPackages) {
-  const activatorPath = `services/dsh/backend/internal/${packageName}/OperatorContext_context_test.go`;
+  const activatorPath = `services/dsh/backend/internal/${packageName}/operator_context_context_test.go`;
   const activator = read(activatorPath);
   requireText(activator, `package ${packageName}`, activatorPath);
   requireText(activator, "testdb.ConfigureTrustedOperatorContext()", activatorPath);
@@ -204,7 +204,7 @@ requireText(workflow, runnerPath, "DSH database workflow");
 requireText(workflow, runnerVerificationPath, "DSH database workflow runner verification");
 requireText(workflow, '"package.json"', "DSH database workflow path routing");
 requireText(workflow, "permissions:\n  contents: read", "DSH database workflow read-only permissions");
-requireText(workflow, "DSH_TEST_OperatorContext_ID: ci-dsh", "DSH database workflow test OperatorContext");
+requireText(workflow, "DSH_TEST_operator_context_id: ci-dsh", "DSH database workflow test OperatorContext");
 requireText(workflow, "Apply canonical DSH migrations", "DSH database workflow");
 requireText(workflow, "Re-run canonical DSH migrations", "DSH database workflow");
 requireText(workflow, "Verify DSH migration runner failure contracts", "DSH database workflow");
@@ -214,7 +214,7 @@ requireText(workflow, "Run DSH seed database contracts", "DSH database workflow"
 forbidText(workflow, "statuses: write", "DSH database workflow");
 forbidText(workflow, "gh api --method POST", "DSH database workflow");
 forbidText(workflow, "bthwani/dsh-database", "DSH database workflow");
-forbidText(workflow, "ALTER DATABASE dsh_runtime SET bthwani.OperatorContext_id", "DSH database workflow");
+forbidText(workflow, "ALTER DATABASE dsh_runtime SET bthwani.operator_context_id", "DSH database workflow");
 forbidText(workflow, "Capture canonical contextual workflow source", "DSH database workflow");
 
 if (failures.length > 0) {

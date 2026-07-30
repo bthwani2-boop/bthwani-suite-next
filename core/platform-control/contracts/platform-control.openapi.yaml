@@ -16,6 +16,9 @@ x-bthwani-contracts:
   progressiveRollout: ./platform-progressive-rollout.openapi.yaml
 x-bthwani-overlays: {}
 
+security:
+  - bearerAuth: []
+
 paths:
   /platform/health:
     get:
@@ -40,6 +43,7 @@ paths:
       operationId: getPlatformRuntimeConfig
       summary: Return the current platform-control runtime snapshot.
       tags: [PlatformRuntime]
+      x-bthwani-required-scope: platform:read
       responses:
         "200":
           description: Platform runtime snapshot.
@@ -51,6 +55,7 @@ paths:
       operationId: getEffectiveRuntimeConfig
       summary: Return effective persisted variables and feature flags.
       tags: [PlatformRuntime]
+      x-bthwani-required-scope: platform:read
       responses:
         "200":
           description: Effective runtime configuration.
@@ -63,6 +68,7 @@ paths:
       operationId: listPlatformVariables
       summary: List persisted platform variables.
       tags: [PlatformVariables]
+      x-bthwani-required-scope: platform:read
       responses:
         "200":
           description: Platform variables.
@@ -81,6 +87,7 @@ paths:
       operationId: getPlatformVariable
       summary: Get a scoped platform variable.
       tags: [PlatformVariables]
+      x-bthwani-required-scope: platform:read
       parameters:
         - name: key
           in: path
@@ -108,6 +115,7 @@ paths:
       operationId: listPlatformFeatureFlags
       summary: List persisted platform feature flags.
       tags: [PlatformFlags]
+      x-bthwani-required-scope: platform:read
       responses:
         "200":
           description: Feature flags.
@@ -126,6 +134,7 @@ paths:
       operationId: listPlatformServices
       summary: List live platform service posture.
       tags: [PlatformServices]
+      x-bthwani-required-scope: platform:read
       responses:
         "200":
           description: Platform services.
@@ -143,6 +152,7 @@ paths:
       operationId: getPlatformHealth
       summary: Return authorized aggregated platform health posture.
       tags: [PlatformHealth]
+      x-bthwani-required-scope: platform:health:read
       responses:
         "200":
           description: Health posture.
@@ -154,6 +164,7 @@ paths:
       operationId: listPlatformAuditEvents
       summary: List immutable platform audit events.
       tags: [PlatformAudit]
+      x-bthwani-required-scope: platform:audit:read
       responses:
         "200":
           description: Audit events.
@@ -169,6 +180,10 @@ paths:
         "500": { $ref: "#/components/responses/PlatformError" }
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
   responses:
     PublicHealth:
       description: Process health or readiness state.

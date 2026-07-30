@@ -45,7 +45,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Return the tenant-bound payment status reference for an order. */
+        /** Return the OperatorContext-bound payment status reference for an order. */
         get: operations["getWltPaymentStatusRef"];
         put?: never;
         post?: never;
@@ -62,7 +62,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Return the tenant-bound settlement status reference for an order. */
+        /** Return the OperatorContext-bound settlement status reference for an order. */
         get: operations["getWltSettlementStatusRef"];
         put?: never;
         post?: never;
@@ -79,7 +79,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Return the tenant-bound refund status reference for an order. */
+        /** Return the OperatorContext-bound refund status reference for an order. */
         get: operations["getWltRefundStatusRef"];
         put?: never;
         post?: never;
@@ -96,7 +96,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Return the tenant-bound wallet status reference for an actor. */
+        /** Return the OperatorContext-bound wallet status reference for an actor. */
         get: operations["getWltWalletStatusRef"];
         put?: never;
         post?: never;
@@ -113,7 +113,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Return the tenant-local operational wallet for an actor. */
+        /** Return the OperatorContext-local operational wallet for an actor. */
         get: operations["getWltWallet"];
         put?: never;
         post?: never;
@@ -130,7 +130,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List tenant-local reconciliation cases. */
+        /** List OperatorContext-local reconciliation cases. */
         get: operations["listWltReconciliationCases"];
         put?: never;
         post?: never;
@@ -147,7 +147,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read one tenant-local reconciliation case. */
+        /** Read one OperatorContext-local reconciliation case. */
         get: operations["getWltReconciliationCase"];
         put?: never;
         post?: never;
@@ -166,7 +166,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Assign a tenant-local reconciliation case. */
+        /** Assign a OperatorContext-local reconciliation case. */
         post: operations["assignWltReconciliationCase"];
         delete?: never;
         options?: never;
@@ -183,7 +183,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Resolve a tenant-local reconciliation case. */
+        /** Resolve a OperatorContext-local reconciliation case. */
         post: operations["resolveWltReconciliationCase"];
         delete?: never;
         options?: never;
@@ -198,7 +198,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List tenant-local immutable ledger entries. */
+        /** List OperatorContext-local immutable ledger entries. */
         get: operations["listWltLedgerEntries"];
         put?: never;
         post?: never;
@@ -215,7 +215,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read one tenant-local immutable ledger entry. */
+        /** Read one OperatorContext-local immutable ledger entry. */
         get: operations["getWltLedgerEntry"];
         put?: never;
         post?: never;
@@ -232,7 +232,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Return account-type-aware tenant-local financial totals. */
+        /** Return account-type-aware OperatorContext-local financial totals. */
         get: operations["getWltLedgerFinancialSummary"];
         put?: never;
         post?: never;
@@ -251,7 +251,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create or replay a tenant-bound payment-session reference. */
+        /** Create or replay a OperatorContext-bound payment-session reference. */
         post: operations["createWltPaymentSession"];
         delete?: never;
         options?: never;
@@ -266,7 +266,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read one payment session in the trusted tenant. */
+        /** Read one payment session in the trusted OperatorContext. */
         get: operations["getWltPaymentSession"];
         put?: never;
         post?: never;
@@ -387,7 +387,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Let WLT choose expiry or governed refund according to captured tenant truth. */
+        /** Let WLT choose expiry or governed refund according to captured OperatorContext truth. */
         post: operations["cancelWltPaymentSessionForOrder"];
         delete?: never;
         options?: never;
@@ -404,7 +404,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Apply the tenant-bound expiry-or-refund decision for an order. */
+        /** Apply the OperatorContext-bound expiry-or-refund decision for an order. */
         post: operations["cancelWltOrderFinancially"];
         delete?: never;
         options?: never;
@@ -436,10 +436,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List tenant-local delivery collection custody records. */
+        /** List OperatorContext-local delivery collection custody records. */
         get: operations["listWltDeliveryCollections"];
         put?: never;
-        /** Derive tenant-local collection custody from WLT payment-session truth. */
+        /** Derive OperatorContext-local collection custody from WLT payment-session truth. */
         post: operations["createWltDeliveryCollectionHandoff"];
         delete?: never;
         options?: never;
@@ -454,7 +454,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read one tenant-local delivery collection custody record. */
+        /** Read one OperatorContext-local delivery collection custody record. */
         get: operations["getWltDeliveryCollection"];
         put?: never;
         post?: never;
@@ -505,7 +505,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List tenant-scoped refunds */
+        /** List OperatorContext-scoped refunds */
         get: operations["listWltRefunds"];
         put?: never;
         /** Create a partial or full remaining refund request */
@@ -523,7 +523,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read one tenant-scoped refund */
+        /** Read one OperatorContext-scoped refund */
         get: operations["getWltRefund"];
         put?: never;
         post?: never;
@@ -628,7 +628,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List tenant-local settlements. */
+        /** List OperatorContext-local settlements. */
         get: operations["listWltSettlements"];
         put?: never;
         post: operations["createWltEvidenceBackedSettlement"];
@@ -805,7 +805,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Return the tenant-local settlement summary computed by WLT. */
+        /** Return the OperatorContext-local settlement summary computed by WLT. */
         get: operations["getWltSettlementSummary"];
         put?: never;
         post?: never;
@@ -822,7 +822,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read one tenant-local settlement. */
+        /** Read one OperatorContext-local settlement. */
         get: operations["getWltSettlement"];
         put?: never;
         post?: never;
@@ -841,7 +841,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Post a pending tenant-local settlement and its balanced journal atomically. */
+        /** Post a pending OperatorContext-local settlement and its balanced journal atomically. */
         post: operations["postWltSettlement"];
         delete?: never;
         options?: never;
@@ -1124,10 +1124,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List tenant-local COD records by one governed filter. */
+        /** List OperatorContext-local COD records by one governed filter. */
         get: operations["listWltCodRecords"];
         put?: never;
-        /** Create or replay tenant-local COD custody from WLT payment truth. */
+        /** Create or replay OperatorContext-local COD custody from WLT payment truth. */
         post: operations["createWltCodRecord"];
         delete?: never;
         options?: never;
@@ -1142,7 +1142,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read one tenant-local COD record. */
+        /** Read one OperatorContext-local COD record. */
         get: operations["getWltCodRecord"];
         put?: never;
         post?: never;
@@ -2298,7 +2298,7 @@ export interface components {
             };
             content?: never;
         };
-        /** @description Delivery collection or tenant-local payment session not found */
+        /** @description Delivery collection or OperatorContext-local payment session not found */
         CollectionNotFound: {
             headers: {
                 [name: string]: unknown;
@@ -2330,7 +2330,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description Tenant, feature gate, or authority denied */
+        /** @description OperatorContext, feature gate, or authority denied */
         RefundForbidden: {
             headers: {
                 [name: string]: unknown;
@@ -2348,7 +2348,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description Refund not found in the trusted tenant */
+        /** @description Refund not found in the trusted OperatorContext */
         RefundNotFound: {
             headers: {
                 [name: string]: unknown;
@@ -2598,11 +2598,8 @@ export interface components {
         IdempotencyKey: string;
         CaseId: string;
         CodRecordId: string;
-        CorrelationHeader: string;
-        IdempotencyHeader: string;
         PayoutId: string;
         SettlementId: string;
-        TenantHeader: string;
         PaymentSessionId: string;
         RefundId: string;
         CommissionId: string;
@@ -2765,7 +2762,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Tenant-local actor wallet. */
+            /** @description OperatorContext-local actor wallet. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2793,7 +2790,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Tenant-local reconciliation cases. */
+            /** @description OperatorContext-local reconciliation cases. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2822,7 +2819,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Tenant-local reconciliation case. */
+            /** @description OperatorContext-local reconciliation case. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2924,7 +2921,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Tenant-local immutable ledger entries */
+            /** @description OperatorContext-local immutable ledger entries */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2951,7 +2948,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Tenant-local immutable ledger entry */
+            /** @description OperatorContext-local immutable ledger entry */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2976,7 +2973,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Tenant-local financial summary */
+            /** @description OperatorContext-local financial summary */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3388,7 +3385,7 @@ export interface operations {
                     "application/json": components["schemas"]["DeliveryCollectionHandoffResponse"];
                 };
             };
-            /** @description Tenant-local COD custody record created from WLT payment truth */
+            /** @description OperatorContext-local COD custody record created from WLT payment truth */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -3510,7 +3507,7 @@ export interface operations {
             };
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
                 "X-Correlation-ID"?: components["parameters"]["CorrelationIdOptional"];
             };
@@ -3538,10 +3535,10 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path?: never;
             cookie?: never;
@@ -3582,7 +3579,7 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
                 "X-Correlation-ID"?: components["parameters"]["CorrelationIdOptional"];
             };
@@ -3612,10 +3609,10 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
                 refundId: components["parameters"]["RefundId"];
@@ -3648,10 +3645,10 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
                 refundId: components["parameters"]["RefundId"];
@@ -3684,10 +3681,10 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
                 refundId: components["parameters"]["RefundId"];
@@ -3730,10 +3727,10 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
                 refundId: components["parameters"]["RefundId"];
@@ -3767,7 +3764,7 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
                 "X-Correlation-ID"?: components["parameters"]["CorrelationIdOptional"];
             };
@@ -3808,7 +3805,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Tenant-local settlements */
+            /** @description OperatorContext-local settlements */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4174,7 +4171,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Tenant-local settlement summary */
+            /** @description OperatorContext-local settlement summary */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4201,7 +4198,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Tenant-local settlement */
+            /** @description OperatorContext-local settlement */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4767,7 +4764,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Tenant-local COD records */
+            /** @description OperatorContext-local COD records */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4805,7 +4802,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Tenant-local COD record created */
+            /** @description OperatorContext-local COD record created */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -4832,7 +4829,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Tenant-local COD record */
+            /** @description OperatorContext-local COD record */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5139,9 +5136,9 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
             path?: never;
             cookie?: never;
@@ -5164,7 +5161,7 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
             };
             path: {
                 reservationId: components["parameters"]["ReservationId"];
@@ -5185,9 +5182,9 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
             path: {
                 reservationId: components["parameters"]["ReservationId"];
@@ -5213,9 +5210,9 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
             path: {
                 reservationId: components["parameters"]["ReservationId"];
@@ -5241,9 +5238,9 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
             path: {
                 reservationId: components["parameters"]["ReservationId"];

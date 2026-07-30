@@ -21,7 +21,7 @@ authorities:
     owns: [architecture_contracts, data_flow, dependency_direction, adr_decisions]
     may_block: true
   governance_contract_authority:
-    owns: [authority_precedence, decision_vocabulary, agent_and_skill_contracts, guard_registration, sdlc_control_plane, saas_governance]
+    owns: [authority_precedence, decision_vocabulary, agent_and_skill_contracts, guard_registration, sdlc_control_plane]
     may_block: true
     must_not_be_implementation_executor: true
   ci_workflow_authority:
