@@ -29,6 +29,7 @@ jobs:
       - name: Checkout immutable source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Set up locked Node workspace
@@ -39,12 +40,18 @@ jobs:
         shell: pwsh
         env:
           RUNTIME_PROFILE: ${{ inputs.runtime_profile }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           $ErrorActionPreference = "Stop"
           $profile = if ([string]::IsNullOrWhiteSpace($env:RUNTIME_PROFILE)) { "none" } else { $env:RUNTIME_PROFILE }
+          $sourceSha = if ([string]::IsNullOrWhiteSpace($env:SOURCE_SHA)) { throw "SOURCE_SHA is required" } else { $env:SOURCE_SHA }
+          $checkedOutSha = (git rev-parse HEAD).Trim()
+          if ($checkedOutSha -ne $sourceSha) {
+            throw "Runtime checkout SHA mismatch: expected $sourceSha, got $checkedOutSha"
+          }
           $logPath = Join-Path $PWD "runtime-smoke.log"
           $resultPath = Join-Path $PWD "runtime-proof.json"
-          "Runtime proof started for $env:GITHUB_SHA profile=$profile" | Set-Content -LiteralPath $logPath
+          "Runtime proof started for $sourceSha profile=$profile" | Set-Content -LiteralPath $logPath
 
           function Invoke-Phase {
             param([string] $Name, [scriptblock] $Command)
@@ -102,7 +109,7 @@ jobs:
 
             @{
               schemaVersion = 1
-              sourceSha = $env:GITHUB_SHA
+              sourceSha = $sourceSha
               profile = $profile
               result = "PASS"
             } | ConvertTo-Json | Set-Content -LiteralPath $resultPath
@@ -110,7 +117,7 @@ jobs:
           } catch {
             @{
               schemaVersion = 1
-              sourceSha = $env:GITHUB_SHA
+              sourceSha = $sourceSha
               profile = $profile
               result = "FAIL"
               error = $_.Exception.Message
