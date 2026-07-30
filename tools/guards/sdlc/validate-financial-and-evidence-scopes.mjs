@@ -68,7 +68,7 @@ if (skills) {
 }
 
 for (const marker of ["financial_control_authority:", "- finance_approval", "may_approve_finance: false"]) if (!roles.includes(marker)) violations.push({ file: rolesRelative, message: `FINANCIAL_ROLE_MARKER_MISSING ${marker}` });
-for (const marker of ['"wltFinance"', '"OperatorContext"', '"visual"', '"qa"', '"release"', '"production"']) if (!impactSchema.includes(marker)) violations.push({ file: impactSchemaRelative, message: `IMPACT_SCHEMA_MARKER_MISSING ${marker}` });
+for (const marker of ['"wltFinance"', '"operatorContext"', '"visual"', '"qa"', '"release"', '"production"']) if (!impactSchema.includes(marker)) violations.push({ file: impactSchemaRelative, message: `IMPACT_SCHEMA_MARKER_MISSING ${marker}` });
 for (const marker of ['"applicableEvidenceScopes"', '"passedEvidenceScopes"', '"notApplicableStages"', '"stageExclusions"', '"finance"', '"isolation"']) if (!artifactSchema.includes(marker)) violations.push({ file: artifactSchemaRelative, message: `ARTIFACT_SCHEMA_MARKER_MISSING ${marker}` });
 for (const marker of ["FINANCIAL_CONTROL_AUTHORITY", "finance", "isolation", "notApplicableStages", "stageExclusions"]) if (!authorityDoc.includes(marker)) violations.push({ file: authorityDocRelative, message: `SDLC_AUTHORITY_MARKER_MISSING ${marker}` });
 
