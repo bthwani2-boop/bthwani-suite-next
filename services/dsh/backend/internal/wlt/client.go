@@ -35,14 +35,17 @@ type Client struct {
 type CreatePaymentSessionInput struct {
 	CheckoutIntentID string `json:"checkoutIntentId,omitempty"`
 	SpecialRequestID string `json:"specialRequestId,omitempty"`
-	ClientID         string `json:"clientId"`
-	StoreID          string `json:"storeId"`
-	PaymentMethod    string `json:"paymentMethod"`
-	AmountMinorUnits int64  `json:"amountMinorUnits"`
-	Currency         string `json:"currency"`
-	CartSnapshotHash string `json:"cartSnapshotHash"`
-	CorrelationID    string `json:"-"`
-	IdempotencyKey   string `json:"-"`
+	// OperatorContextID is compile-only while legacy DSH call sites are cleaned.
+	// It is excluded from JSON and cannot select WLT financial ownership.
+	OperatorContextID string `json:"-"`
+	ClientID          string `json:"clientId"`
+	StoreID           string `json:"storeId"`
+	PaymentMethod     string `json:"paymentMethod"`
+	AmountMinorUnits  int64  `json:"amountMinorUnits"`
+	Currency          string `json:"currency"`
+	CartSnapshotHash  string `json:"cartSnapshotHash"`
+	CorrelationID     string `json:"-"`
+	IdempotencyKey    string `json:"-"`
 }
 
 type PaymentSession struct {
@@ -172,9 +175,6 @@ type NotifyDeliveryCollectionInput struct {
 	IdempotencyKey   string `json:"-"`
 }
 
-// NotifyDeliveryCollection creates one WLT-owned COD custody record after a
-// governed delivery proof. WLT derives amount/currency from its own payment
-// session. DSH sends only operational identities and never a monetary amount.
 func (c *Client) NotifyDeliveryCollection(ctx context.Context, input NotifyDeliveryCollectionInput) error {
 	if !c.Configured() {
 		return fmt.Errorf("WLT COD custody handoff is not configured")
@@ -235,8 +235,6 @@ type DeliverFieldCommissionInput struct {
 	CorrelationID        string `json:"-"`
 }
 
-// DeliverFieldCommission tells WLT a field agent completed an onboarding
-// visit so it can derive the commission amount itself from a commission policy.
 func (c *Client) DeliverFieldCommission(ctx context.Context, input DeliverFieldCommissionInput) error {
 	if !c.Configured() {
 		return fmt.Errorf("WLT payment-session handoff is not configured")
@@ -272,7 +270,6 @@ func (c *Client) DeliverFieldCommission(ctx context.Context, input DeliverFieldC
 	if err := setRequiredMutationHeaders(req, correlationID, input.IdempotencyKey); err != nil {
 		return fmt.Errorf("prepare WLT field commission request: %w", err)
 	}
-
 	response, err := c.http.Do(req)
 	if err != nil {
 		return fmt.Errorf("call WLT field commission: %w", err)
@@ -284,9 +281,6 @@ func (c *Client) DeliverFieldCommission(ctx context.Context, input DeliverFieldC
 	return nil
 }
 
-// ExpireSession tells WLT to expire a payment session that was created but
-// never captured. A 409 means the session is already terminal and is treated
-// as successful convergence.
 func (c *Client) ExpireSession(ctx context.Context, paymentSessionID, correlationID string) error {
 	if !c.Configured() {
 		return fmt.Errorf("WLT payment-session handoff is not configured")
@@ -311,7 +305,6 @@ func (c *Client) ExpireSession(ctx context.Context, paymentSessionID, correlatio
 	if err := setRequiredMutationHeaders(req, correlationID, deterministicMutationKey("payment-session-expire", paymentSessionID)); err != nil {
 		return fmt.Errorf("prepare WLT expire-session request: %w", err)
 	}
-
 	response, err := c.http.Do(req)
 	if err != nil {
 		return fmt.Errorf("call WLT expire-session: %w", err)
