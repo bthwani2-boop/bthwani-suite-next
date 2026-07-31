@@ -9,6 +9,7 @@ function source(relativePath) {
 describe("mobile local database convergence", () => {
   const convergence = source("../../../apps/mobile/converge-local-runtime-database.ps1");
   const ensureRuntime = source("../../../apps/mobile/ensure-mobile-dev-runtime.ps1");
+  const runtimeWrapper = source("../../../apps/mobile/invoke-runtime-phase.ps1");
 
   it("keeps the canonical migration runner as the only positive ledger writer", () => {
     assert.doesNotMatch(convergence, /INSERT\s+INTO\s+runtime_schema_migrations/i);
@@ -31,6 +32,14 @@ describe("mobile local database convergence", () => {
     assert.match(convergence, /pg_get_userbyid\(p\.proowner\) = '\$legacyOwner'/);
     assert.doesNotMatch(convergence, /pg_get_userbyid\(c\.relowner\) <> '\$role'/);
     assert.doesNotMatch(convergence, /REASSIGN OWNED BY/);
+  });
+
+  it("uses one ownership repair path for every service migration failure", () => {
+    assert.match(runtimeWrapper, /DatabaseConvergenceScript = Join-Path \$PSScriptRoot 'converge-local-runtime-database\.ps1'/);
+    assert.match(runtimeWrapper, /\(Identity\|Workforce\|DSH\|WLT\) migration failed/);
+    assert.match(runtimeWrapper, /Invoke-LocalDatabaseConvergence/);
+    assert.doesNotMatch(runtimeWrapper, /REASSIGN OWNED BY/);
+    assert.doesNotMatch(runtimeWrapper, /ALTER DATABASE identity_runtime OWNER TO identity_runtime/);
   });
 
   it("blocks every canonical production-mode signal before Docker execution", () => {
