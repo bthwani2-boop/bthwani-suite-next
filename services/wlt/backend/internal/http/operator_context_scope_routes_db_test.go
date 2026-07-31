@@ -144,19 +144,20 @@ func TestCodRecordRoutesUseServerOwnedFinancialScope(t *testing.T) {
 	suffix := uniqueSuffix()
 	serverScope := "server-cod-" + suffix
 	foreignScope := "foreign-cod-" + suffix
+	sharedPartnerID := "partner-shared-" + suffix
 	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", serverScope)
 
 	var ownID, foreignID string
 	if err := db.QueryRow(`
 		INSERT INTO wlt_cod_records (order_id, collector_type, collector_id, partner_id, amount_minor_units, currency, operator_context_id)
 		VALUES ($1, 'captain', $2, $3, 1000, 'YER', $4)
-		RETURNING id`, "order-own-"+suffix, "captain-own-"+suffix, "partner-own-"+suffix, serverScope).Scan(&ownID); err != nil {
+		RETURNING id`, "order-own-"+suffix, "captain-own-"+suffix, sharedPartnerID, serverScope).Scan(&ownID); err != nil {
 		t.Fatalf("failed to insert server-owned COD record: %v", err)
 	}
 	if err := db.QueryRow(`
 		INSERT INTO wlt_cod_records (order_id, collector_type, collector_id, partner_id, amount_minor_units, currency, operator_context_id)
 		VALUES ($1, 'captain', $2, $3, 1000, 'YER', $4)
-		RETURNING id`, "order-foreign-"+suffix, "captain-foreign-"+suffix, "partner-foreign-"+suffix, foreignScope).Scan(&foreignID); err != nil {
+		RETURNING id`, "order-foreign-"+suffix, "captain-foreign-"+suffix, sharedPartnerID, foreignScope).Scan(&foreignID); err != nil {
 		t.Fatalf("failed to insert foreign compatibility COD record: %v", err)
 	}
 	defer db.Exec(`DELETE FROM wlt_cod_records WHERE id IN ($1,$2)`, ownID, foreignID)
@@ -165,7 +166,7 @@ func TestCodRecordRoutesUseServerOwnedFinancialScope(t *testing.T) {
 	assertServerOwnedScopeRoute(t, router,
 		"/wlt/cod-records/"+ownID,
 		"/wlt/cod-records/"+foreignID,
-		"/wlt/cod-records",
+		"/wlt/cod-records?partnerId="+sharedPartnerID,
 		ownID, foreignID,
 	)
 }
