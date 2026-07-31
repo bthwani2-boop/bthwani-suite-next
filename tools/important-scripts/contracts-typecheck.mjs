@@ -6,7 +6,7 @@ import { normalizeOpenApiMetadata } from "../contracts/normalize-openapi-metadat
 import { composeContext } from "../scripts/openapi-context-composer.mjs";
 
 const contracts = [
-  "contracts/master.openapi.yaml",
+  "contracts/openapi/index.yaml",
   "core/identity/contracts/identity.openapi.yaml",
   "core/platform-control/contracts/platform-control.openapi.yaml",
   "core/providers/contracts/providers.openapi.yaml",
@@ -37,10 +37,6 @@ rules:
         schema:
           type: array
           uniqueItems: true
-  # Disable false-positive unused-component warnings. Modular bundles inline
-  # cross-file $refs so shared component declarations (parameters, responses)
-  # appear unreferenced in the flattened output even though they are genuinely
-  # used by every path item in the source.
   oas3-unused-component: off
 `,
   "utf8",
@@ -72,8 +68,7 @@ function run(label, command, args, options = {}) {
     const combined = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.trim();
     if (result.stdout) process.stdout.write(result.stdout);
     if (result.stderr) process.stderr.write(result.stderr);
-    const diagnostic = firstActionableDiagnostic(combined);
-    throw new Error(`${label}: ${diagnostic}`);
+    throw new Error(`${label}: ${firstActionableDiagnostic(combined)}`);
   }
 
   if (options.stdio !== "pipe") return;
@@ -88,12 +83,24 @@ function materializeNormalizedContract(contract) {
   return output;
 }
 
+async function verifyGeneratedBundle(context) {
+  const result = await composeContext(context, { write: false });
+  const committed = readFileSync(new URL(result.bundlePath, repoRoot), "utf8").replace(/\r\n/g, "\n");
+  const expected = result.bundle.replace(/\r\n/g, "\n");
+  if (committed !== expected) {
+    throw new Error(
+      `${context} generated bundle drift: run 'pnpm openapi:compose:${context}' and commit the deterministic output`,
+    );
+  }
+  console.log(`${context} generated bundle: PASS (${result.sourceDigest})`);
+}
+
 try {
   run("contracts-foundation", "node", ["tools/important-scripts/contracts-foundation.mjs"], {
     stdio: "inherit",
   });
-  await composeContext("dsh", { write: true });
-  await composeContext("wlt", { write: true });
+  await verifyGeneratedBundle("dsh");
+  await verifyGeneratedBundle("wlt");
 
   const verificationContracts = contracts.map((contract) => ({
     source: contract,
@@ -124,7 +131,7 @@ try {
     ]);
   }
 
-  console.log("contracts-typecheck: OK (zero warnings)");
+  console.log("contracts-typecheck: PASS (read-only, zero warnings)");
 } finally {
   for (const contract of normalizedContracts) rmSync(new URL(contract, repoRoot), { force: true });
   rmSync(tempDir, { recursive: true, force: true });
