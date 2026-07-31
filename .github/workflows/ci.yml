@@ -61,7 +61,6 @@ on:
 
 permissions:
   contents: read
-  statuses: write
 
 concurrency:
   group: contextual-ci-${{ github.event.pull_request.number || github.ref }}
