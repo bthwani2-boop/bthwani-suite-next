@@ -5,8 +5,10 @@ info:
   description: >-
     Canonical cross-contract transport components for the WLT service. Domain
     schemas remain owned by their journey contracts; authentication headers,
-    operator context, correlation, idempotency and the runtime error envelope are
-    defined exactly once here.
+    correlation, idempotency and the runtime error envelope are defined exactly
+    once here. The legacy operator-context header remains only as an optional
+    compatibility field while its database columns are retired; callers do not
+    control financial ownership through it.
 x-bthwani-owner: services/wlt
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED
@@ -33,7 +35,12 @@ components:
     OperatorContextId:
       name: X-Operator-Context-ID
       in: header
-      required: true
+      required: false
+      deprecated: true
+      description: >-
+        Ignored caller compatibility header. WLT overwrites this value after
+        service authentication with the server-owned compatibility scope. It
+        is not a tenant, organization, partner, store or ownership selector.
       schema: { type: string, minLength: 1, maxLength: 120 }
     CorrelationId:
       name: X-Correlation-ID
