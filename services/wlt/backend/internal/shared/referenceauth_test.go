@@ -11,42 +11,51 @@ import (
 func configureReferenceAuth(t *testing.T) {
 	t.Helper()
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "service-token")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "server-owned-context")
 }
 
 func referenceRequest() *http.Request {
 	return httptest.NewRequest(http.MethodGet, "/wlt/references/payment-status?orderId=order-1", nil)
 }
 
-func TestReferenceReaderAcceptsDistinctTrustedDshOperatorContexts(t *testing.T) {
+func trustedDshReferenceRequestForTest() *http.Request {
+	request := referenceRequest()
+	request.Header.Set("Authorization", "Bearer service-token")
+	request.Header.Set("X-Service-Caller", "dsh")
+	return request
+}
+
+func TestReferenceReaderCollapsesDistinctTrustedDshContextsToServerScope(t *testing.T) {
 	configureReferenceAuth(t)
-	for _, operatorContextID := range []string{"OperatorContext-a", "OperatorContext-b"} {
-		request := referenceRequest()
-		request.Header.Set("Authorization", "Bearer service-token")
-		request.Header.Set("X-Service-Caller", "dsh")
-		request.Header.Set("X-Operator-Context-ID", operatorContextID)
+	for _, callerContextID := range []string{"OperatorContext-a", "OperatorContext-b", ""} {
+		request := trustedDshReferenceRequestForTest()
+		request.Header.Set("X-Operator-Context-ID", callerContextID)
 		response := httptest.NewRecorder()
 
 		if !RequireReferenceReader(response, request) {
-			t.Fatalf("trusted DSH OperatorContext %s was rejected status=%d body=%s", operatorContextID, response.Code, response.Body.String())
+			t.Fatalf("trusted DSH request with caller context %q was rejected status=%d body=%s", callerContextID, response.Code, response.Body.String())
 		}
-		if request.Header.Get("X-Operator-Context-ID") != operatorContextID {
-			t.Fatalf("trusted service OperatorContext changed: got %q want %q", request.Header.Get("X-Operator-Context-ID"), operatorContextID)
+		if got := request.Header.Get("X-Operator-Context-ID"); got != "server-owned-context" {
+			t.Fatalf("caller context %q was not replaced by server scope: got %q", callerContextID, got)
 		}
-		if contextualOperatorContext, ok := OperatorContextIDFromContext(request.Context()); !ok || contextualOperatorContext != operatorContextID {
-			t.Fatalf("OperatorContext context not installed: OperatorContext=%q ok=%v", contextualOperatorContext, ok)
+		if contextualOperatorContext, ok := OperatorContextIDFromContext(request.Context()); !ok || contextualOperatorContext != "server-owned-context" {
+			t.Fatalf("server OperatorContext context not installed: OperatorContext=%q ok=%v", contextualOperatorContext, ok)
 		}
 	}
 }
 
-func TestReferenceReaderRejectsTrustedDshWithoutOperatorContext(t *testing.T) {
+func TestReferenceReaderFailsClosedWithoutConfiguredServerScope(t *testing.T) {
 	configureReferenceAuth(t)
-	request := referenceRequest()
-	request.Header.Set("Authorization", "Bearer service-token")
-	request.Header.Set("X-Service-Caller", "dsh")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
+	request := trustedDshReferenceRequestForTest()
+	request.Header.Set("X-Operator-Context-ID", "caller-selected-context")
 	response := httptest.NewRecorder()
 
 	if RequireReferenceReader(response, request) {
-		t.Fatal("trusted DSH request without OperatorContext was accepted")
+		t.Fatal("trusted DSH request was accepted without the server-owned financial scope")
+	}
+	if response.Code != http.StatusServiceUnavailable || !strings.Contains(response.Body.String(), "FINANCIAL_SCOPE_NOT_CONFIGURED") {
+		t.Fatalf("expected FINANCIAL_SCOPE_NOT_CONFIGURED, status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
@@ -142,12 +151,13 @@ func TestReferenceReaderDoesNotBypassAuthInDeferredMode(t *testing.T) {
 
 func TestReferenceReaderAcceptsTrustedDshInDeferredMode(t *testing.T) {
 	configureReferenceAuth(t)
-	request := referenceRequest()
-	request.Header.Set("Authorization", "Bearer service-token")
-	request.Header.Set("X-Service-Caller", "dsh")
-	request.Header.Set("X-Operator-Context-ID", "OperatorContext-deferred")
+	request := trustedDshReferenceRequestForTest()
+	request.Header.Set("X-Operator-Context-ID", "caller-selected-deferred-context")
 	response := httptest.NewRecorder()
 	if !RequireReferenceReader(response, request) {
 		t.Fatalf("deferred trusted service read rejected status=%d body=%s", response.Code, response.Body.String())
+	}
+	if got := request.Header.Get("X-Operator-Context-ID"); got != "server-owned-context" {
+		t.Fatalf("deferred caller context was not replaced by server scope: got %q", got)
 	}
 }
