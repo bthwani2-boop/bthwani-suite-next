@@ -35,7 +35,6 @@ type Client struct {
 type CreatePaymentSessionInput struct {
 	CheckoutIntentID string `json:"checkoutIntentId,omitempty"`
 	SpecialRequestID string `json:"specialRequestId,omitempty"`
-	OperatorContextID         string `json:"operatorContextId,omitempty"`
 	ClientID         string `json:"clientId"`
 	StoreID          string `json:"storeId"`
 	PaymentMethod    string `json:"paymentMethod"`
@@ -50,7 +49,7 @@ type PaymentSession struct {
 	ID                string `json:"id"`
 	CheckoutIntentID  string `json:"checkoutIntentId"`
 	SpecialRequestID  string `json:"specialRequestId"`
-	OperatorContextID          string `json:"operatorContextId"`
+	OperatorContextID string `json:"operatorContextId"`
 	ClientID          string `json:"clientId"`
 	StoreID           string `json:"storeId"`
 	PaymentMethod     string `json:"paymentMethod"`
@@ -62,17 +61,14 @@ type PaymentSession struct {
 	UpdatedAt         string `json:"updatedAt"`
 }
 
-// NewClient builds a DSH-to-WLT client. Every financial request must receive a
-// trusted OperatorContext through its server-side context; process-wide or payload-only
-// OperatorContext defaults are never ownership authorities.
+// NewClient builds the authenticated DSH-to-WLT service client. Financial
+// ownership is resolved inside WLT after service authentication; DSH does not
+// select it through a request header or payment-session payload.
 func NewClient(baseURL, serviceToken string) *Client {
 	return &Client{
 		baseURL:      strings.TrimRight(baseURL, "/"),
 		serviceToken: serviceToken,
-		http: &http.Client{
-			Timeout:   10 * time.Second,
-			Transport: OperatorContextRoundTripper{base: http.DefaultTransport},
-		},
+		http:         &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
@@ -80,11 +76,14 @@ func (c *Client) Configured() bool {
 	return c != nil && c.baseURL != "" && c.serviceToken != ""
 }
 
+// resolveTrustedOperatorContext and setTrustedOperatorContextHeader are
+// temporary compatibility helpers for WLT routes not migrated yet. New or
+// migrated calls must not use them.
 func (c *Client) resolveTrustedOperatorContext(ctx context.Context, requested string) (string, error) {
 	requested = strings.TrimSpace(requested)
 	trustedOperatorContextID, hasTrustedOperatorContext := OperatorContextIDFromContext(ctx)
 	if !hasTrustedOperatorContext {
-		return "", fmt.Errorf("trusted OperatorContext context is required for every WLT request")
+		return "", fmt.Errorf("trusted OperatorContext context is required for this legacy WLT request")
 	}
 	if requested != "" && requested != trustedOperatorContextID {
 		return "", fmt.Errorf("requested OperatorContext does not match trusted request context")
@@ -105,11 +104,6 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	if !c.Configured() {
 		return nil, fmt.Errorf("WLT payment-session handoff is not configured")
 	}
-	resolvedOperatorContextID, err := c.resolveTrustedOperatorContext(ctx, input.OperatorContextID)
-	if err != nil {
-		return nil, fmt.Errorf("resolve WLT payment OperatorContext: %w", err)
-	}
-	input.OperatorContextID = resolvedOperatorContextID
 	body, err := json.Marshal(input)
 	if err != nil {
 		return nil, fmt.Errorf("encode WLT payment session request: %w", err)
@@ -122,9 +116,6 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedOperatorContextHeader(req, resolvedOperatorContextID); err != nil {
-		return nil, fmt.Errorf("prepare WLT payment OperatorContext: %w", err)
-	}
 	correlationID := strings.TrimSpace(input.CorrelationID)
 	if correlationID == "" {
 		if input.SpecialRequestID != "" {
