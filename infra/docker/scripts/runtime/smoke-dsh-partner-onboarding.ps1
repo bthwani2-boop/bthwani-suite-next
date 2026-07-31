@@ -46,15 +46,29 @@ $partnerDraftBody = @{
 $partnerDraft = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/drafts" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $partnerDraftBody -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($partnerDraft.id)) { throw "Partner Onboarding & Store Publication draft create did not return partner id" }
 
-$submitBody = @{ reason = "field submitted Partner Onboarding & Store Publication smoke partner" } | ConvertTo-Json
-$submitted = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/submit" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $submitBody -TimeoutSec 10
-if ($submitted.partner.activationStatus -ne "submitted") { throw "Partner Onboarding & Store Publication submit did not reach submitted" }
-
-$partnerStores = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/stores" -Headers $operatorHeaders -TimeoutSec 10
-if ($partnerStores.total -lt 1) { throw "Partner Onboarding & Store Publication partner has no auto-created store" }
-
-$smokeStoreId = @($partnerStores.stores)[0].id
+# Draft creation owns the first store immediately. Complete the field-owned
+# location and operating profile before submission because those readiness
+# gates are server-enforced and must not be bypassed by the smoke flow.
+$fieldStore = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/store" -Headers $fieldHeaders -TimeoutSec 10
+$smokeStoreId = [string]$fieldStore.storeId
 if ([string]::IsNullOrWhiteSpace($smokeStoreId)) { throw "Partner Onboarding & Store Publication auto-created store id is empty" }
+
+$storeProfileBody = @{
+  displayName = "متجر فحص الشريك $partnerSuffix"
+  cityCode = "sanaa"
+  serviceAreaCode = "sanaa-haddah"
+  addressLine = "حدة، شارع الخمسين، صنعاء"
+  coverageSummary = "نطاق توصيل محلي ضمن حدة والمناطق المجاورة"
+  operatingHours = "السبت-الخميس 08:00-23:00"
+  deliveryReadiness = "ready"
+  storefrontPhotoRef = "media_smoke_storefront.jpg"
+  interiorPhotoRef = "media_smoke_interior.jpg"
+  signagePhotoRef = "media_smoke_signage.jpg"
+} | ConvertTo-Json
+$updatedStore = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/store" -Method Patch -Headers $fieldHeaders -ContentType "application/json" -Body $storeProfileBody -TimeoutSec 10
+if ($updatedStore.storeId -ne $smokeStoreId) { throw "Partner Onboarding & Store Publication store profile update returned another store" }
+if ([string]::IsNullOrWhiteSpace($updatedStore.store.addressLine)) { throw "Partner Onboarding & Store Publication store location was not persisted" }
+if ([string]::IsNullOrWhiteSpace($updatedStore.store.operatingHours)) { throw "Partner Onboarding & Store Publication store operating profile was not persisted" }
 
 $visitBody = @{
   storeId = $smokeStoreId
@@ -74,6 +88,14 @@ $docBody = @{
 } | ConvertTo-Json
 $doc = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/documents" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $docBody -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($doc.id)) { throw "Partner Onboarding & Store Publication document upload did not return document id" }
+
+$submitBody = @{ reason = "field submitted Partner Onboarding & Store Publication smoke partner" } | ConvertTo-Json
+$submitted = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/submit" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $submitBody -TimeoutSec 10
+if ($submitted.partner.activationStatus -ne "submitted") { throw "Partner Onboarding & Store Publication submit did not reach submitted" }
+
+$partnerStores = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/stores" -Headers $operatorHeaders -TimeoutSec 10
+if ($partnerStores.total -lt 1) { throw "Partner Onboarding & Store Publication partner has no auto-created store" }
+if (-not (@($partnerStores.stores).id -contains $smokeStoreId)) { throw "Partner Onboarding & Store Publication operator readback did not include the first store" }
 
 $transitionHeaders = @{
   Authorization = "Bearer $operatorToken"
