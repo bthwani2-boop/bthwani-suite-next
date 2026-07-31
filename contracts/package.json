@@ -5,6 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "scripts": {
+    "foundation": "pnpm run typecheck",
     "typecheck": "node ../tools/important-scripts/contracts-typecheck.mjs && node ../tools/important-scripts/contracts-foundation.mjs && node ../tools/guards/generated-client-provenance-gate.mjs && node ../tools/guards/control-panel-architecture-gate.mjs && node ../tools/guards/service-workspace-gate.mjs",
     "build": "pnpm run typecheck",
     "test": "node ../tools/important-scripts/contracts-foundation.mjs && node ../tools/guards/generated-client-provenance-gate.mjs",
