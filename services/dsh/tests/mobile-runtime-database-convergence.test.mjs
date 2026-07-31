@@ -33,6 +33,18 @@ describe("mobile local database convergence", () => {
     assert.doesNotMatch(convergence, /REASSIGN OWNED BY/);
   });
 
+  it("blocks every canonical production-mode signal before Docker execution", () => {
+    assert.match(convergence, /\[string\]\$env:NODE_ENV/);
+    assert.match(convergence, /\[string\]\$env:ENVIRONMENT/);
+    assert.match(convergence, /\[string\]\$env:BTHWANI_RUNTIME_MODE/);
+    assert.match(convergence, /\$productionSignals -contains "production"/);
+    assert.ok(
+      convergence.indexOf('$productionSignals -contains "production"')
+        < convergence.indexOf('docker compose @composeArgs up -d postgres'),
+      "production guard must execute before Docker startup",
+    );
+  });
+
   it("runs database precondition convergence before starting application backends", () => {
     const convergenceStep = ensureRuntime.indexOf('mobile-runtime-database-convergence');
     const runtimeUpStep = ensureRuntime.indexOf('mobile-runtime-up');
