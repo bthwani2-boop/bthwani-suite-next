@@ -768,12 +768,18 @@ importers:
 
   apps/control-panel/runtime:
     dependencies:
-      '@bthwani/app-shell':
+      '@bthwani/control-panel':
         specifier: workspace:*
-        version: link:../../../shared/app-shell
+        version: link:../../../shared/control-panel
       '@bthwani/core-identity':
         specifier: workspace:*
         version: link:../../../core/identity
+      '@bthwani/dsh':
+        specifier: workspace:*
+        version: link:../../../services/dsh
+      '@bthwani/ui-kit':
+        specifier: workspace:*
+        version: link:../../../shared/ui-kit
       next:
         specifier: 16.2.11
         version: 16.2.11(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.10.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -854,13 +860,19 @@ importers:
     dependencies:
       '@bthwani/control-panel':
         specifier: workspace:*
-        version: link:../../apps/control-panel/runtime
+        version: link:../../shared/control-panel
       '@bthwani/core-identity':
         specifier: workspace:*
         version: link:../../core/identity
       '@bthwani/core-platform-control':
         specifier: workspace:*
         version: link:../../core/platform-control
+      '@bthwani/core-providers':
+        specifier: workspace:*
+        version: link:../../core/providers
+      '@bthwani/data-runtime':
+        specifier: workspace:*
+        version: link:../../shared/data-runtime
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../shared/ui-kit
@@ -901,6 +913,19 @@ importers:
         version: 6.0.3
 
   shared/app-shell:
+    devDependencies:
+      '@types/react':
+        specifier: 19.2.17
+        version: 19.2.17
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+
+  shared/control-panel:
+    dependencies:
+      '@bthwani/ui-kit':
+        specifier: workspace:*
+        version: link:../ui-kit
     devDependencies:
       '@types/react':
         specifier: 19.2.17
@@ -9770,7 +9795,9 @@ snapshots:
       metro-config: 0.84.4
       metro-runtime: 0.84.4
     transitivePeerDependencies:
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-color@2.1.0': {}
 
