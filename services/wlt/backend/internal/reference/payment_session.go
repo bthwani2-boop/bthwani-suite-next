@@ -12,7 +12,6 @@ import (
 )
 
 var ErrIdempotencyConflict = errors.New("payment session idempotency conflict")
-var ErrOperatorContextMismatch = errors.New("payment session OperatorContext does not match trusted DSH OperatorContext")
 
 const paymentSessionCols = `id, checkout_intent_id, special_request_id,
 	 subscription_purchase_id, commercial_product_reference,
@@ -26,7 +25,7 @@ type PaymentSession struct {
 	SpecialRequestID           *string `json:"specialRequestId,omitempty"`
 	SubscriptionPurchaseID     *string `json:"subscriptionPurchaseId,omitempty"`
 	CommercialProductReference *string `json:"commercialProductReference,omitempty"`
-	OperatorContextID                   string  `json:"operatorContextId"`
+	OperatorContextID          string  `json:"operatorContextId"`
 	ClientID                   string  `json:"clientId"`
 	StoreID                    string  `json:"storeId"`
 	PaymentMethod              string  `json:"paymentMethod"`
@@ -47,15 +46,18 @@ type CreatePaymentSessionInput struct {
 	SpecialRequestID           string `json:"specialRequestId"`
 	SubscriptionPurchaseID     string `json:"subscriptionPurchaseId"`
 	CommercialProductReference string `json:"commercialProductReference"`
-	OperatorContextID                   string `json:"operatorContextId"`
-	ClientID                   string `json:"clientId"`
-	StoreID                    string `json:"storeId"`
-	PaymentMethod              string `json:"paymentMethod"`
-	AmountMinorUnits           int64  `json:"amountMinorUnits"`
-	Currency                   string `json:"currency"`
-	CartSnapshotHash           string `json:"cartSnapshotHash"`
-	IdempotencyKey             string `json:"-"`
-	CorrelationID              string `json:"-"`
+	// OperatorContextID is a temporary persistence compatibility field. The
+	// HTTP handler ignores any caller value and overwrites it from authenticated
+	// server configuration before validation or database access.
+	OperatorContextID string `json:"operatorContextId"`
+	ClientID           string `json:"clientId"`
+	StoreID            string `json:"storeId"`
+	PaymentMethod      string `json:"paymentMethod"`
+	AmountMinorUnits   int64  `json:"amountMinorUnits"`
+	Currency           string `json:"currency"`
+	CartSnapshotHash   string `json:"cartSnapshotHash"`
+	IdempotencyKey     string `json:"-"`
+	CorrelationID      string `json:"-"`
 }
 
 func sourceCount(input CreatePaymentSessionInput) int {
@@ -84,7 +86,7 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	}
 	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	if input.OperatorContextID == "" || input.ClientID == "" || input.StoreID == "" {
-		return nil, fmt.Errorf("operatorContextId, clientId and storeId are required")
+		return nil, fmt.Errorf("financial compatibility scope, clientId and storeId are required")
 	}
 	if input.PaymentMethod == "" {
 		input.PaymentMethod = "official_wallet"
@@ -190,16 +192,12 @@ func HandleCreatePaymentSession(db *sql.DB) http.HandlerFunc {
 		if !decodeJSON(w, r, &input) {
 			return
 		}
-		trustedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
-		if trustedOperatorContextID == "" {
-			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "X-Operator-Context-ID is required for payment-session creation")
+		compatibilityScope, err := shared.RequireOperatorContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_BOUND", "server-owned financial compatibility scope is unavailable")
 			return
 		}
-		if trustedOperatorContextID != strings.TrimSpace(input.OperatorContextID) {
-			shared.SendError(w, http.StatusForbidden, "OperatorContext_MISMATCH", ErrOperatorContextMismatch.Error())
-			return
-		}
-		input.OperatorContextID = trustedOperatorContextID
+		input.OperatorContextID = compatibilityScope
 		input.IdempotencyKey = r.Header.Get("Idempotency-Key")
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
 		if input.IdempotencyKey == "" {
@@ -225,8 +223,8 @@ func HandleCreatePaymentSession(db *sql.DB) http.HandlerFunc {
 
 // GetPaymentSessionByCheckoutIntent looks up the payment session WLT created
 // for a given DSH checkout intent. This service-only compatibility read is safe
-// in the current single-OperatorContext deployment; OperatorContext-scoped creation and source
-// uniqueness remain mandatory.
+// in the current single-platform deployment; server-scoped creation and source
+// uniqueness remain mandatory while legacy columns are retired.
 func GetPaymentSessionByCheckoutIntent(db *sql.DB, checkoutIntentID string) (*PaymentSession, error) {
 	return getPaymentSessionByCheckoutIntent(db, "", checkoutIntentID)
 }
