@@ -11,24 +11,20 @@ import (
 )
 
 type referenceIdentity struct {
-	Subject   string `json:"subject"`
-	OperatorContextID  string `json:"operatorContextId"`
-	AuthState string `json:"authState"`
+	Subject           string `json:"subject"`
+	OperatorContextID string `json:"operatorContextId"`
+	AuthState         string `json:"authState"`
 }
 
-func trustedDshReferenceRequest(r *http.Request) (string, bool) {
+func trustedDshReferenceRequest(r *http.Request) bool {
 	expectedToken := strings.TrimSpace(os.Getenv("WLT_DSH_SERVICE_TOKEN"))
 	if expectedToken == "" || r.Header.Get("X-Service-Caller") != "dsh" {
-		return "", false
+		return false
 	}
-	if subtle.ConstantTimeCompare(
+	return subtle.ConstantTimeCompare(
 		[]byte(strings.TrimSpace(r.Header.Get("Authorization"))),
 		[]byte("Bearer "+expectedToken),
-	) != 1 {
-		return "", false
-	}
-	operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
-	return operatorContextID, operatorContextID != ""
+	) == 1
 }
 
 func resolveReferenceIdentity(ctx context.Context, authorization string) (referenceIdentity, error) {
@@ -76,11 +72,17 @@ const (
 )
 
 // RequireReferenceReader protects WLT reference projections in every runtime
-// mode. Authenticated DSH requests carry their server-owned OperatorContext. End-user
-// requests derive the OperatorContext from Identity; a client-supplied conflicting
-// OperatorContext is rejected. Development and deferred modes never bypass this boundary.
+// mode. Authenticated DSH requests are bound to the server-owned compatibility
+// scope; caller-supplied X-Operator-Context-ID values are ignored. End-user
+// requests derive the OperatorContext from Identity, and conflicting client
+// context remains rejected. Development and deferred modes never bypass this
+// boundary.
 func RequireReferenceReader(w http.ResponseWriter, r *http.Request) bool {
-	if operatorContextID, ok := trustedDshReferenceRequest(r); ok {
+	if trustedDshReferenceRequest(r) {
+		operatorContextID, ok := configuredFinancialCompatibilityScope(w)
+		if !ok {
+			return false
+		}
 		r.Header.Set("X-Operator-Context-ID", operatorContextID)
 		*r = *r.WithContext(WithOperatorContext(r.Context(), operatorContextID))
 		return true
