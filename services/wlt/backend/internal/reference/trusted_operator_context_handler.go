@@ -9,11 +9,9 @@ import (
 	"wlt-api/internal/shared"
 )
 
-// HandleCreatePaymentSessionTrustedDsh accepts OperatorContext identity only from an
-// authenticated DSH service request. The generic payment-session route is
-// intentionally restricted to checkout and special-request sources because
-// that is the source union documented by wlt.openapi.yaml. Subscription
-// purchases use the dedicated /wlt/commercial/payment-sessions route.
+// HandleCreatePaymentSessionTrustedDsh accepts payment-session creation only
+// from authenticated DSH. Financial ownership is bound by WLT after service
+// authentication; payload and transport scope selectors are ignored.
 func HandleCreatePaymentSessionTrustedDsh(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !requireDshServiceCaller(w, r) {
@@ -27,17 +25,13 @@ func HandleCreatePaymentSessionTrustedDsh(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_PAYMENT_SOURCE", "subscription purchases must use /wlt/commercial/payment-sessions")
 			return
 		}
-		payloadOperatorContextID := strings.TrimSpace(input.OperatorContextID)
-		assertedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
-		if payloadOperatorContextID == "" {
-			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "operatorContextId is required for payment-session creation")
+
+		compatibilityScope, err := shared.RequireOperatorContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_BOUND", "server-owned financial compatibility scope is unavailable")
 			return
 		}
-		if assertedOperatorContextID != "" && assertedOperatorContextID != payloadOperatorContextID {
-			shared.SendError(w, http.StatusForbidden, "OperatorContext_MISMATCH", ErrOperatorContextMismatch.Error())
-			return
-		}
-		input.OperatorContextID = payloadOperatorContextID
+		input.OperatorContextID = compatibilityScope
 		input.IdempotencyKey = r.Header.Get("Idempotency-Key")
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
 		if input.IdempotencyKey == "" {
