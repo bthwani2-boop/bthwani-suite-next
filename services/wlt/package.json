@@ -14,7 +14,7 @@
     "lint": "pnpm --dir ../.. run guard:fullstack-boundary && pnpm --dir ../.. run guard:wlt-financial-boundary && pnpm --dir ../.. run guard:wlt-openapi-bundle"
   },
   "dependencies": {
-    "react": "19.2.3"
+    "react": "19.2.8"
   },
   "devDependencies": {
     "@types/node": "24.10.1",
