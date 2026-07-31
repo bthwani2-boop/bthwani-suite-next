@@ -9,6 +9,7 @@ import {
   CpPageHeader,
   CpRetryButton,
   CpStatePanel,
+  CpStateView,
   CpTabs,
 } from "@bthwani/control-panel/components";
 import { MetricsPageFrame } from "@bthwani/control-panel/shell";
@@ -155,7 +156,7 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = "jrn-032-operational-analytics.csv";
+      anchor.download = "operational-analytics.csv";
       anchor.style.display = "none";
       document.body.appendChild(anchor);
       anchor.click();
@@ -220,7 +221,7 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
         </Box>
       }
     >
-      {state.kind === "loading" ? <CpStatePanel role="status" title="جاري احتساب المؤشرات من السجلات التشغيلية…" /> : null}
+      {state.kind === "loading" ? <CpStateView kind="loading" title="جاري احتساب المؤشرات من السجلات التشغيلية…" /> : null}
       {state.kind === "error" ? (
         <CpStatePanel role="alert" title="تعذر تحميل التحليلات الممتدة" description={state.message}>
           <CpRetryButton onClick={() => setReloadToken((value) => value + 1)}>إعادة المحاولة</CpRetryButton>

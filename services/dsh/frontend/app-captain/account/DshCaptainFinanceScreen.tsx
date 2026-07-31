@@ -3,8 +3,9 @@ import { View } from 'react-native';
 import { Box, MobileScrollView, TopBar, useTheme } from '@bthwani/ui-kit';
 import { WltDshCaptainBridge } from '../../shared/finance-wlt-link/wlt/generated/wlt_frontend_dsh_app_captain.facade';
 import { ActorWalletPanel } from '../../shared/finance-wlt-link/actor-wallet';
-import { RepresentativeCommissionPanel } from '../../shared/finance-wlt-link/jrn036';
-import { PayoutDestinationPanel } from '../../shared/finance-wlt-link/jrn037';
+import { RepresentativeCommissionPanel } from '../../shared/finance-wlt-link/commissions';
+import { PayoutDestinationPanel } from '../../shared/finance-wlt-link/payouts';
+import { CaptainFinancialEligibilityPanel } from '../../shared/dispatch';
 import { ProviderIncidentsPanel } from '../../shared/workforce/ProviderIncidentsPanel';
 import { DshOperationScreen } from '../DshOperationScreen';
 import { DshCaptainCodCustodyScreen } from './DshCaptainCodCustodyScreen';
@@ -25,6 +26,7 @@ export type DshCaptainFinanceScreenProps = {
 function EarningsContent() {
 	return (
 		<Box gap={4}>
+			<CaptainFinancialEligibilityPanel />
 			<ActorWalletPanel actorType="captain" title="الرصيد والضمانة المالية والأرباح" embedded />
 			<DshCaptainCodCustodyScreen embedded />
 			<RepresentativeCommissionPanel actorType="captain" title="أجور وعمولات التوصيل" embedded />

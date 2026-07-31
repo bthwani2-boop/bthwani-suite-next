@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "service": "platform-control",
+  "ordering": "explicit",
+  "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
+  "cutover": "platform-007_audit_actor_roles_normalization.sql",
+  "migrations": [
+    {
+      "ordinal": 1,
+      "file": "platform-001_control_plane_store.sql",
+      "sha256": "28d2a5fe2c1a20ee220208bdd196efbb741f899d108aa82e79b93d4b771014fd",
+      "historicalPrefix": "001",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 2,
+      "file": "platform-002_progressive_rollouts.sql",
+      "sha256": "ddfa37f559ff9552d2ed97f71b001aa9fb419e40ba2efa103f35da7d746f7a18",
+      "historicalPrefix": "002",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 3,
+      "file": "platform-003_rollout_invariants.sql",
+      "sha256": "aac8e49330968480cb226d2189b614f08d4fa09d3c7054490a652f90b6a9ce15",
+      "historicalPrefix": "003",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 4,
+      "file": "platform-004_jrn041_rollout_governance.sql",
+      "sha256": "76b7b3ebdfa975bad5f42c6c5a3663a6b7fc3355851489246ae7f9e3d6196d8a",
+      "historicalPrefix": "004",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 5,
+      "file": "platform-005_change_set_validation.sql",
+      "sha256": "d48801d7d9dcd0affeb96bd570927ccb0c3b4512c084230f49fdafcad66c22f7",
+      "historicalPrefix": "005",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 6,
+      "file": "platform-006_sensitive_change_boundary.sql",
+      "sha256": "27a83d1ab81ac55616443978836ac3ddef5b96f21f3e60532e17948df9c898b8",
+      "historicalPrefix": "006",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 7,
+      "file": "platform-007_audit_actor_roles_normalization.sql",
+      "sha256": "9395e48444826b06cc2e79f44f86e5f4b0dc7a917a25eee77d47739e471b4a5a",
+      "historicalPrefix": "007",
+      "state": "HISTORICAL_IMMUTABLE"
+    }
+  ]
+}

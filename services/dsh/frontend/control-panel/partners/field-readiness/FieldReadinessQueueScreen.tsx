@@ -10,6 +10,7 @@ import {
   CpPageHeader,
   CpRetryButton,
   CpStatePanel,
+  CpStateView,
   CpTabs,
   CpTextInput,
 } from "@bthwani/control-panel/components";
@@ -82,7 +83,7 @@ export function FieldReadinessQueueScreen() {
   }
 
   const stateView =
-    listState.kind === "loading" ? <CpStatePanel role="status" title="جاري تحميل التصعيدات…" /> :
+    listState.kind === "loading" ? <CpStateView kind="loading" title="جاري تحميل التصعيدات…" /> :
     listState.kind === "error" ? (
       <CpStatePanel role="alert" title="تعذر التحميل" code={listState.message}>
         <CpRetryButton onClick={() => void loadOperatorEscalations(activeFilter || undefined)}>إعادة المحاولة</CpRetryButton>

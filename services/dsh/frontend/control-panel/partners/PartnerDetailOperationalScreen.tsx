@@ -11,6 +11,7 @@ import {
   CpPageHeader,
   CpRetryButton,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -79,13 +80,13 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
   const [selectedPricingStoreId, setSelectedPricingStoreId] = useState<string | null>(null);
 
   if (detail.detailState.kind === "idle" || detail.detailState.kind === "loading") {
-    return <DetailPageFrame stateView={<CpStatePanel role="status" title="جاري تحميل بيانات الشريك…" />}>{null}</DetailPageFrame>;
+    return <DetailPageFrame stateView={<CpStateView kind="loading" title="جاري تحميل بيانات الشريك…" />}>{null}</DetailPageFrame>;
   }
   if (detail.detailState.kind === "not_found") {
     return <DetailPageFrame stateView={<CpStatePanel role="status" title="الشريك غير موجود." />}>{null}</DetailPageFrame>;
   }
   if (detail.detailState.kind === "forbidden") {
-    return <DetailPageFrame stateView={<CpStatePanel role="alert" title="غير مصرح لك بعرض هذا الشريك." />}>{null}</DetailPageFrame>;
+    return <DetailPageFrame stateView={<CpStateView kind="error" title="غير مصرح لك بعرض هذا الشريك." />}>{null}</DetailPageFrame>;
   }
   if (detail.detailState.kind === "error") {
     return (
@@ -158,7 +159,7 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
 
       <div style={{ display: "grid", gap: 16, padding: 16 }}>
         {vm.nextAction ? <CpStatePanel role="status" title={`الإجراء التالي: ${vm.nextAction}`} /> : null}
-        {vm.blockedReason ? <CpStatePanel role="alert" title="سبب التعطل" code={vm.blockedReason} /> : null}
+        {vm.blockedReason ? <CpStateView kind="error" title="سبب التعطل" code={vm.blockedReason} /> : null}
 
         {tab === "overview" ? (
           <>
@@ -206,7 +207,7 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
                     <CpRetryButton onClick={() => setTab("readiness")}>فتح تبويب الجاهزية</CpRetryButton>
                   </CpStatePanel>
                 ) : detail.mutationState.kind === "error" ? (
-                  <CpStatePanel role="alert" title="تعذر تطبيق قرار دورة الحياة" code={detail.mutationState.message} />
+                  <CpStateView kind="error" title="تعذر تطبيق قرار دورة الحياة" code={detail.mutationState.message} />
                 ) : null}
               </>
             ))}
@@ -214,7 +215,7 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
         ) : null}
 
         {tab === "documents" ? (
-          docs.state.kind === "loading" || docs.state.kind === "idle" ? <CpStatePanel role="status" title="جاري تحميل الوثائق…" />
+          docs.state.kind === "loading" || docs.state.kind === "idle" ? <CpStateView kind="loading" title="جاري تحميل الوثائق…" />
             : docs.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد وثائق مرفوعة بعد."><CpRetryButton onClick={() => void docs.load()}>تحديث</CpRetryButton></CpStatePanel>
               : docs.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل الوثائق" code={docs.state.message}><CpRetryButton onClick={() => void docs.load()}>إعادة المحاولة</CpRetryButton></CpStatePanel>
                 : (
@@ -246,13 +247,13 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
                         </div>
                       </div>
                     ) : null}
-                    {docs.actionState.kind === "error" ? <CpStatePanel role="alert" title={docs.actionState.message} /> : null}
+                    {docs.actionState.kind === "error" ? <CpStateView kind="error" title={docs.actionState.message} /> : null}
                   </div>
                 )
         ) : null}
 
         {tab === "visits" ? (
-          visits.state.kind === "loading" || visits.state.kind === "idle" ? <CpStatePanel role="status" title="جاري تحميل الزيارات الميدانية…" />
+          visits.state.kind === "loading" || visits.state.kind === "idle" ? <CpStateView kind="loading" title="جاري تحميل الزيارات الميدانية…" />
             : visits.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد زيارات ميدانية مسجلة بعد." />
               : visits.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل الزيارات الميدانية" code={visits.state.message}><CpRetryButton onClick={() => void visits.reload()}>إعادة المحاولة</CpRetryButton></CpStatePanel>
                 : (
@@ -270,9 +271,9 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
               <CpButton disabled={!storeIdToLink.trim() || stores.actionState.kind === "loading"} onClick={() => void confirmStoreLink()}>
                 {stores.actionState.kind === "loading" ? "جارٍ الربط…" : "ربط المتجر بالشريك"}
               </CpButton>
-              {stores.actionState.kind === "error" ? <CpStatePanel role="alert" title={stores.actionState.message} /> : null}
+              {stores.actionState.kind === "error" ? <CpStateView kind="error" title={stores.actionState.message} /> : null}
             </section>
-            {stores.state.kind === "loading" || stores.state.kind === "idle" ? <CpStatePanel role="status" title="جاري تحميل المتاجر…" />
+            {stores.state.kind === "loading" || stores.state.kind === "idle" ? <CpStateView kind="loading" title="جاري تحميل المتاجر…" />
               : stores.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد متاجر مرتبطة بهذا الشريك بعد." />
                 : stores.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل المتاجر" code={stores.state.message}><CpRetryButton onClick={() => void stores.reload()}>إعادة المحاولة</CpRetryButton></CpStatePanel>
                   : (
@@ -302,7 +303,7 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
         ) : null}
 
         {tab === "readiness" ? (
-          readiness.state.kind === "loading" || readiness.state.kind === "idle" ? <CpStatePanel role="status" title="جاري تحميل الجاهزية…" />
+          readiness.state.kind === "loading" || readiness.state.kind === "idle" ? <CpStateView kind="loading" title="جاري تحميل الجاهزية…" />
             : readiness.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل الجاهزية" code={readiness.state.message}><CpRetryButton onClick={() => void readiness.reload()}>إعادة المحاولة</CpRetryButton></CpStatePanel>
               : readiness.viewModel ? (
                 <div style={{ display: "grid", gap: 8 }}>
@@ -313,7 +314,7 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
         ) : null}
 
         {tab === "audit" ? (
-          audit.state.kind === "loading" || audit.state.kind === "idle" ? <CpStatePanel role="status" title="جاري تحميل سجل التدقيق…" />
+          audit.state.kind === "loading" || audit.state.kind === "idle" ? <CpStateView kind="loading" title="جاري تحميل سجل التدقيق…" />
             : audit.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد أحداث مسجلة بعد." />
               : audit.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل سجل التدقيق" code={audit.state.message}><CpRetryButton onClick={() => void audit.reload()}>إعادة المحاولة</CpRetryButton></CpStatePanel>
                 : (

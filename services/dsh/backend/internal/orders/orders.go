@@ -39,6 +39,7 @@ type OrderItem struct {
 	ProductName string
 	Quantity    int
 	UnitPrice   float64
+	Currency    string
 }
 
 type Order struct {
@@ -50,6 +51,7 @@ type Order struct {
 	Status           OrderStatus
 	RejectionReason  string
 	WltPaymentRefID  string
+	Currency         string
 	Items            []OrderItem
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
@@ -58,7 +60,7 @@ type Order struct {
 type CreateOrderInput struct {
 	CheckoutIntentID string
 	ClientID         string
-	TenantID         string
+	OperatorContextID         string
 }
 
 type CreateOrderItemInput struct {
@@ -66,11 +68,12 @@ type CreateOrderItemInput struct {
 	ProductName string
 	Quantity    int
 	UnitPrice   float64
+	Currency    string
 }
 
 func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
-	input.TenantID = strings.TrimSpace(input.TenantID)
-	if input.CheckoutIntentID == "" || input.ClientID == "" || input.TenantID == "" {
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
+	if input.CheckoutIntentID == "" || input.ClientID == "" || input.OperatorContextID == "" {
 		return nil, ErrInvalid
 	}
 
@@ -80,30 +83,34 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 	}
 	defer tx.Rollback()
 
-	var cartID, storeID, wltPaymentSessionID string
+	var cartID, storeID, wltPaymentSessionID, checkoutCurrency string
 	err = tx.QueryRow(`
-		SELECT cart_id::text, store_id, wlt_payment_session_id
+		SELECT cart_id::text, store_id, wlt_payment_session_id, currency
 		FROM dsh_checkout_intents
 		WHERE id = $1::uuid
 		  AND client_id = $2
-		  AND tenant_id = $3
+		  AND operator_context_id = $3
 		  AND wlt_payment_session_id <> ''
 		  AND (
 		        (state = 'payment_pending' AND payment_method = 'cod')
 		        OR state = 'payment_confirmed'
 		      )
 		FOR UPDATE`,
-		input.CheckoutIntentID, input.ClientID, input.TenantID,
-	).Scan(&cartID, &storeID, &wltPaymentSessionID)
+		input.CheckoutIntentID, input.ClientID, input.OperatorContextID,
+	).Scan(&cartID, &storeID, &wltPaymentSessionID, &checkoutCurrency)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: checkout intent is not ready for order creation in tenant", ErrConflict)
+		return nil, fmt.Errorf("%w: checkout intent is not ready for order creation in OperatorContext", ErrConflict)
 	}
 	if err != nil {
 		return nil, err
 	}
+	checkoutCurrency = strings.ToUpper(strings.TrimSpace(checkoutCurrency))
+	if len(checkoutCurrency) != 3 {
+		return nil, fmt.Errorf("%w: checkout currency snapshot is invalid", ErrInvalid)
+	}
 
 	rows, err := tx.Query(`
-		SELECT product_id, product_name, unit_price, quantity
+		SELECT product_id, product_name, unit_price, currency, quantity
 		FROM dsh_cart_items
 		WHERE cart_id = $1::uuid
 		ORDER BY created_at`, cartID)
@@ -114,13 +121,18 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 	var items []CreateOrderItemInput
 	for rows.Next() {
 		var item CreateOrderItemInput
-		if err := rows.Scan(&item.ProductID, &item.ProductName, &item.UnitPrice, &item.Quantity); err != nil {
+		if err := rows.Scan(&item.ProductID, &item.ProductName, &item.UnitPrice, &item.Currency, &item.Quantity); err != nil {
 			rows.Close()
 			return nil, err
 		}
-		if item.UnitPrice <= 0 || item.Quantity <= 0 {
+		item.Currency = strings.ToUpper(strings.TrimSpace(item.Currency))
+		if item.UnitPrice <= 0 || item.Quantity <= 0 || len(item.Currency) != 3 {
 			rows.Close()
-			return nil, fmt.Errorf("%w: cart item is missing a price snapshot", ErrInvalid)
+			return nil, fmt.Errorf("%w: cart item is missing a commercial snapshot", ErrInvalid)
+		}
+		if item.Currency != checkoutCurrency {
+			rows.Close()
+			return nil, fmt.Errorf("%w: cart item currency does not match checkout currency", ErrConflict)
 		}
 		items = append(items, item)
 	}
@@ -135,33 +147,39 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 
 	var order Order
 	err = tx.QueryRow(`
-		INSERT INTO dsh_orders (tenant_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status, wlt_payment_ref_id)
-		VALUES ($3, $1::uuid, $2, (SELECT fulfillment_mode FROM dsh_checkout_intents WHERE id = $1::uuid AND tenant_id=$3), $4, $5, $6)
+		INSERT INTO dsh_orders (operator_context_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status, wlt_payment_ref_id)
+		VALUES ($3, $1::uuid, $2, (SELECT fulfillment_mode FROM dsh_checkout_intents WHERE id = $1::uuid AND operator_context_id=$3), $4, $5, $6)
 		RETURNING id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
-		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at`,
-		input.CheckoutIntentID, storeID, input.TenantID, input.ClientID, string(StatusPending), wltPaymentSessionID,
+		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at`,
+		input.CheckoutIntentID, storeID, input.OperatorContextID, input.ClientID, string(StatusPending), wltPaymentSessionID,
 	).Scan(
 		&order.ID, &order.CheckoutIntentID, &order.StoreID, &order.FulfillmentMode, &order.ClientID,
-		&order.Status, &order.RejectionReason, &order.WltPaymentRefID,
+		&order.Status, &order.RejectionReason, &order.WltPaymentRefID, &order.Currency,
 		&order.CreatedAt, &order.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
+	if order.Currency != checkoutCurrency {
+		return nil, fmt.Errorf("%w: order currency does not match checkout currency", ErrConflict)
+	}
 
 	for _, item := range items {
 		var orderItem OrderItem
 		err = tx.QueryRow(`
-			INSERT INTO dsh_order_items (order_id, product_id, product_name, quantity, unit_price)
-			VALUES ($1::uuid, $2, $3, $4, $5)
-			RETURNING id::text, order_id::text, product_id, product_name, quantity, unit_price`,
-			order.ID, item.ProductID, item.ProductName, item.Quantity, item.UnitPrice,
+			INSERT INTO dsh_order_items (order_id, product_id, product_name, quantity, unit_price, currency)
+			VALUES ($1::uuid, $2, $3, $4, $5, $6)
+			RETURNING id::text, order_id::text, product_id, product_name, quantity, unit_price, currency`,
+			order.ID, item.ProductID, item.ProductName, item.Quantity, item.UnitPrice, item.Currency,
 		).Scan(
 			&orderItem.ID, &orderItem.OrderID, &orderItem.ProductID,
-			&orderItem.ProductName, &orderItem.Quantity, &orderItem.UnitPrice,
+			&orderItem.ProductName, &orderItem.Quantity, &orderItem.UnitPrice, &orderItem.Currency,
 		)
 		if err != nil {
 			return nil, err
+		}
+		if orderItem.Currency != order.Currency {
+			return nil, fmt.Errorf("%w: order item currency does not match order currency", ErrConflict)
 		}
 		order.Items = append(order.Items, orderItem)
 	}
@@ -177,9 +195,9 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 	result, err := tx.Exec(`
 		UPDATE dsh_checkout_intents
 		SET state = 'confirmed', version = version + 1, updated_at = NOW()
-		WHERE id = $1::uuid AND tenant_id=$2 AND client_id = $3
+		WHERE id = $1::uuid AND operator_context_id=$2 AND client_id = $3
 		  AND state IN ('payment_pending','payment_confirmed')`,
-		input.CheckoutIntentID, input.TenantID, input.ClientID,
+		input.CheckoutIntentID, input.OperatorContextID, input.ClientID,
 	)
 	if err != nil {
 		return nil, err
@@ -205,7 +223,7 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 func GetOrder(db *sql.DB, orderID string) (*Order, error) {
 	order, err := scanOrderRow(db.QueryRow(`
 		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
-		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
+		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at
 		FROM dsh_orders
 		WHERE id = $1::uuid`, orderID))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -222,12 +240,12 @@ func GetOrder(db *sql.DB, orderID string) (*Order, error) {
 	return order, nil
 }
 
-func GetClientOrder(db *sql.DB, orderID, tenantID, clientID string) (*Order, error) {
+func GetClientOrder(db *sql.DB, orderID, operatorContextID, clientID string) (*Order, error) {
 	order, err := scanOrderRow(db.QueryRow(`
 		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
-		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
+		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at
 		FROM dsh_orders
-		WHERE id = $1::uuid AND tenant_id=$2 AND client_id = $3`, orderID, tenantID, clientID))
+		WHERE id = $1::uuid AND operator_context_id=$2 AND client_id = $3`, orderID, operatorContextID, clientID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -242,8 +260,8 @@ func GetClientOrder(db *sql.DB, orderID, tenantID, clientID string) (*Order, err
 	return order, nil
 }
 
-func ListClientOrders(db *sql.DB, tenantID, clientID string, limit int) ([]Order, error) {
-	if strings.TrimSpace(tenantID) == "" || clientID == "" {
+func ListClientOrders(db *sql.DB, operatorContextID, clientID string, limit int) ([]Order, error) {
+	if strings.TrimSpace(operatorContextID) == "" || clientID == "" {
 		return nil, ErrInvalid
 	}
 	if limit <= 0 || limit > 200 {
@@ -251,11 +269,11 @@ func ListClientOrders(db *sql.DB, tenantID, clientID string, limit int) ([]Order
 	}
 	rows, err := db.Query(`
 		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
-		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
+		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at
 		FROM dsh_orders
-		WHERE tenant_id=$1 AND client_id = $2
+		WHERE operator_context_id=$1 AND client_id = $2
 		ORDER BY created_at DESC
-		LIMIT $3`, tenantID, clientID, limit)
+		LIMIT $3`, operatorContextID, clientID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +296,7 @@ func ListPartnerOrders(db *sql.DB, storeID, statusFilter string, limit int) ([]O
 	if strings.TrimSpace(statusFilter) != "" {
 		rows, err = db.Query(`
 			SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
-			       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
+			       COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at
 			FROM dsh_orders
 			WHERE store_id = $1 AND status = $2
 			ORDER BY created_at ASC
@@ -286,7 +304,7 @@ func ListPartnerOrders(db *sql.DB, storeID, statusFilter string, limit int) ([]O
 	} else {
 		rows, err = db.Query(`
 			SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
-			       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
+			       COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at
 			FROM dsh_orders
 			WHERE store_id = $1
 			ORDER BY
@@ -332,7 +350,7 @@ func ListOperatorOrders(db *sql.DB, statusFilter string, limit int) ([]Order, er
 	if statusFilter != "" {
 		rows, err = db.Query(`
 			SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
-			       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
+			       COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at
 			FROM dsh_orders
 			WHERE status = $1
 			ORDER BY created_at DESC
@@ -340,7 +358,7 @@ func ListOperatorOrders(db *sql.DB, statusFilter string, limit int) ([]Order, er
 	} else {
 		rows, err = db.Query(`
 			SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
-			       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
+			       COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at
 			FROM dsh_orders
 			ORDER BY created_at DESC
 			LIMIT $1`, limit)

@@ -23,7 +23,7 @@ export type CouponFundingLifecycleRecord = {
   readonly redemptionId: string;
   readonly couponId: string;
   readonly checkoutIntentId: string;
-  readonly tenantId: string;
+  readonly operatorContextId: string;
   readonly partnerId?: string;
   readonly platformFundedMinorUnits: number;
   readonly partnerFundedMinorUnits: number;

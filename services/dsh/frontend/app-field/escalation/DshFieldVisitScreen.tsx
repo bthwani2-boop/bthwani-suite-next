@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   Card,
+  InlineNotice,
   StateView,
   Text,
   Header,
@@ -20,6 +21,7 @@ import {
   buildVisitViewModel,
   type DshLocationEvidence,
 } from "../../shared/field-readiness";
+import { DshFieldReferenceTag } from "../components/DshFieldReferenceTag";
 
 type Props = {
   readonly storeId: string;
@@ -31,21 +33,19 @@ type Props = {
 async function captureGovernedLocation(): Promise<DshLocationEvidence> {
   const permission = await Location.requestForegroundPermissionsAsync();
   if (permission.status !== "granted") {
-    throw new Error("يجب منح صلاحية الموقع لبدء الزيارة أو إكمالها.");
+    throw new Error("يجب السماح بالوصول إلى موقعك لبدء الزيارة أو إكمالها.");
   }
   const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
   if (position.mocked === true) {
-    throw new Error("تم رفض الموقع لأن الجهاز أبلغ أنه موقع وهمي.");
+    throw new Error("تعذر تأكيد موقعك. أوقف أي تطبيق لمحاكاة الموقع وحاول مجددًا.");
   }
   const { latitude, longitude, accuracy } = position.coords;
-  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-    throw new Error("إحداثي خط العرض غير صالح.");
-  }
-  if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-    throw new Error("إحداثي خط الطول غير صالح.");
-  }
-  if (!Number.isFinite(accuracy) || accuracy === null || accuracy <= 0) {
-    throw new Error("تعذر الحصول على دقة موقع قابلة للتحقق.");
+  const isValidLocation =
+    Number.isFinite(latitude) && latitude >= -90 && latitude <= 90 &&
+    Number.isFinite(longitude) && longitude >= -180 && longitude <= 180 &&
+    Number.isFinite(accuracy) && accuracy !== null && accuracy > 0;
+  if (!isValidLocation) {
+    throw new Error("تعذر تأكيد موقعك بدقة كافية. تأكد من تفعيل GPS واتصال الإنترنت وحاول من داخل موقع المتجر.");
   }
   return {
     latitude,
@@ -103,7 +103,7 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
   if (identity.state.kind !== "authenticated") {
     return (
       <View style={styles.root}>
-        <Header title="تسجيل الدخول مطلوب" />
+        <Header title="تسجيل الدخول مطلوب" {...(onBack ? { onBack } : {})} />
         <StateView
           tone="danger"
           title="تسجيل الدخول مطلوب"
@@ -117,7 +117,7 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
   if (listState.kind === "idle" || listState.kind === "loading") {
     return (
       <View style={styles.root}>
-        <Header title="تحميل الزيارات" />
+        <Header title="زيارات التأهيل الميداني" {...(onBack ? { onBack } : {})} />
         <StateView title="جاري تحميل الزيارات…" loading />
       </View>
     );
@@ -126,7 +126,7 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
   if (listState.kind === "error") {
     return (
       <View style={styles.root}>
-        <Header title="خطأ في التحميل" />
+        <Header title="زيارات التأهيل الميداني" {...(onBack ? { onBack } : {})} />
         <StateView
           tone="danger"
           title="تعذر تحميل الزيارات"
@@ -140,10 +140,7 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
 
   return (
     <View style={styles.root}>
-      <View style={styles.topActions}>
-        {onBack ? <Button label="رجوع" tone="ghost" size="sm" fullWidth={false} onPress={onBack} /> : null}
-      </View>
-      <Header title="زيارات التأهيل الميداني" />
+      <Header title="زيارات التأهيل الميداني" {...(onBack ? { onBack } : {})} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -170,53 +167,58 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
         </Card>
 
         {locationError ? (
-          <Card style={styles.noticeCard}>
-            <View style={styles.noticeRow}>
-              <Text tone="danger">{locationError}</Text>
-              <Button label="إغلاق" tone="ghost" onPress={() => setLocationError(null)} />
-            </View>
-          </Card>
+          <InlineNotice
+            tone="danger"
+            title="تعذر تحديد الموقع"
+            description={locationError}
+            action={<Button label="إغلاق" tone="ghost" onPress={() => setLocationError(null)} />}
+          />
         ) : null}
 
         {actionState.kind === "error" ? (
-          <Card style={styles.noticeCard}>
-            <View style={styles.noticeRow}>
-              <Text tone="danger">{actionState.message}</Text>
-              <Button label="إغلاق" tone="ghost" onPress={resetAction} />
-            </View>
-          </Card>
+          <InlineNotice
+            tone="danger"
+            title="تعذر تنفيذ العملية"
+            description={actionState.message}
+            action={<Button label="إغلاق" tone="ghost" onPress={resetAction} />}
+          />
         ) : null}
 
         {actionState.kind === "queued" ? (
-          <Card style={styles.queuedCard}>
-            <View style={styles.noticeRow}>
-              <View style={styles.noticeText}>
-                <Text tone="warning">{actionState.message}</Text>
-                <Text role="caption" tone="muted">المرجع المحلي: {actionState.operationId}</Text>
+          <InlineNotice
+            tone="info"
+            title="تم الحفظ وستُزامَن العملية تلقائيًا"
+            description={actionState.message}
+            action={
+              <View style={{ gap: spacing[2], alignItems: "flex-end" }}>
+                <DshFieldReferenceTag label="رقم العملية" value={actionState.operationId} />
+                <Button label="إغلاق" tone="ghost" onPress={resetAction} />
               </View>
-              <Button label="إغلاق" tone="ghost" onPress={resetAction} />
-            </View>
-          </Card>
+            }
+          />
         ) : null}
 
         {actionState.kind === "success" ? (
-          <Card style={styles.successCard}>
-            <View style={styles.noticeRow}>
-              <Text tone="success">
-                {actionState.visit.status === "complete"
-                  ? "تم إكمال الزيارة الميدانية"
-                  : "تم بدء الزيارة الميدانية بنجاح"}
-              </Text>
-              {actionState.visit.status === "complete" && onGoToVerification ? (
-                <Button
-                  label="رفع نتيجة التحقق"
-                  tone="primary"
-                  onPress={() => onGoToVerification(actionState.visit.id)}
-                />
-              ) : null}
-              <Button label="إغلاق" tone="ghost" onPress={resetAction} />
-            </View>
-          </Card>
+          <InlineNotice
+            tone="success"
+            title={
+              actionState.visit.status === "complete"
+                ? "تم إكمال الزيارة الميدانية"
+                : "تم بدء الزيارة الميدانية بنجاح"
+            }
+            action={
+              <View style={{ flexDirection: "row-reverse", gap: spacing[2] }}>
+                {actionState.visit.status === "complete" && onGoToVerification ? (
+                  <Button
+                    label="رفع نتيجة التحقق"
+                    tone="primary"
+                    onPress={() => onGoToVerification(actionState.visit.id)}
+                  />
+                ) : null}
+                <Button label="إغلاق" tone="ghost" onPress={resetAction} />
+              </View>
+            }
+          />
         ) : null}
 
         {listState.kind === "empty" ? (
@@ -284,7 +286,6 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colorRoles.surfaceBase },
   scroll: { flex: 1 },
-  topActions: { alignItems: "flex-start", paddingHorizontal: spacing[4], paddingTop: spacing[2] },
   content: { padding: spacing[4], gap: spacing[4] },
   headerCard: {
     padding: spacing[4],
@@ -311,9 +312,4 @@ const styles = StyleSheet.create({
   visitDate: { marginTop: 2 },
   visitActions: { alignItems: "flex-start", gap: spacing[1] },
   inlineActions: { flexDirection: "row-reverse", gap: spacing[2], marginTop: spacing[2] },
-  noticeCard: { borderColor: colorRoles.danger, borderWidth: 1, padding: spacing[2] },
-  queuedCard: { borderColor: colorRoles.warning, borderWidth: 1, padding: spacing[2] },
-  successCard: { borderColor: colorRoles.success, borderWidth: 1, padding: spacing[2] },
-  noticeRow: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", gap: spacing[2] },
-  noticeText: { flex: 1, gap: spacing[1] },
 });

@@ -1,7 +1,7 @@
 -- DSH-959: reconcile immutable ownership protection with governed transfers.
 --
 -- Direct partner replacement remains forbidden. The governed backend path may
--- open a transaction-local transfer context only after validating tenant,
+-- open a transaction-local transfer context only after validating OperatorContext,
 -- version, reason, and open operations. A deferred constraint trigger then
 -- requires the matching durable audit row before the transaction can commit.
 
@@ -30,7 +30,7 @@ BEGIN
      AND NOT EXISTS (
        SELECT 1
        FROM dsh_partner_store_transfer_audit audit
-       WHERE audit.tenant_id = NEW.tenant_id
+       WHERE audit.operator_context_id = NEW.operator_context_id
          AND audit.store_id = NEW.id
          AND audit.from_partner_id = OLD.partner_id
          AND audit.to_partner_id = NEW.partner_id

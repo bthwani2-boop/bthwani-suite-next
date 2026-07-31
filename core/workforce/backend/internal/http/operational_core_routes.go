@@ -78,7 +78,7 @@ func (s *operationalCoreServer) getOperatorCore(w http.ResponseWriter, r *http.R
 		writeWorkforceError(w, err)
 		return
 	}
-	readiness, err := s.repo.ActivationReadiness(r.Context(), actorID)
+	readiness, err := s.repo.GovernedActivationReadiness(r.Context(), actorID)
 	if err != nil {
 		writeWorkforceError(w, err)
 		return
@@ -100,7 +100,7 @@ func (s *operationalCoreServer) patchOperatorCore(w http.ResponseWriter, r *http
 	}
 	_ = s.repo.RecordAudit(r.Context(), identity.Subject, firstRole(identity), actorID,
 		"provider.operational_core.updated", before, core, "", r.Header.Get("X-Correlation-ID"))
-	readiness, err := s.repo.ActivationReadiness(r.Context(), actorID)
+	readiness, err := s.repo.GovernedActivationReadiness(r.Context(), actorID)
 	if err != nil {
 		writeWorkforceError(w, err)
 		return
@@ -114,7 +114,7 @@ func (s *operationalCoreServer) getOwnCore(w http.ResponseWriter, r *http.Reques
 		writeWorkforceError(w, err)
 		return
 	}
-	readiness, err := s.repo.ActivationReadiness(r.Context(), identity.Subject)
+	readiness, err := s.repo.GovernedActivationReadiness(r.Context(), identity.Subject)
 	if err != nil {
 		writeWorkforceError(w, err)
 		return
@@ -188,7 +188,9 @@ func (s *operationalCoreServer) listOwnIncidents(w http.ResponseWriter, r *http.
 }
 
 func (s *operationalCoreServer) appealOwnIncident(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-	var input struct { Note string `json:"note"` }
+	var input struct {
+		Note string `json:"note"`
+	}
 	if !decodeJSON(w, r, &input) {
 		return
 	}
@@ -238,15 +240,15 @@ func OperationalCoreGateMiddleware(next http.Handler, repo *workforce.Repository
 			}
 		}
 		if gate {
-			readiness, err := repo.ActivationReadiness(r.Context(), actorID)
+			readiness, err := repo.GovernedActivationReadiness(r.Context(), actorID)
 			if err != nil {
 				writeWorkforceError(w, err)
 				return
 			}
 			if !readiness.Ready {
 				sendJSON(w, http.StatusConflict, map[string]any{
-					"code": "OPERATIONAL_CORE_INCOMPLETE",
-					"message": "provider operational requirements are incomplete",
+					"code":                "OPERATIONAL_CORE_INCOMPLETE",
+					"message":             "provider operational requirements are incomplete",
 					"activationReadiness": readiness,
 				})
 				return

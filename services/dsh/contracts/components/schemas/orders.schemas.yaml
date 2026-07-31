@@ -40,17 +40,21 @@ DshOrderStatus:
 
 DshOrderItem:
   type: object
-  required: [id, productId, productName, quantity, unitPrice]
+  required: [id, productId, productName, quantity, unitPrice, currency]
   properties:
     id: { type: string }
     productId: { type: string }
     productName: { type: string }
     quantity: { type: integer, minimum: 1 }
     unitPrice: { type: number, format: double, minimum: 0 }
+    currency:
+      type: string
+      pattern: "^[A-Z]{3}$"
+      description: Immutable currency copied from the governed checkout and order snapshot.
 
 DshOrder:
   type: object
-  required: [id, checkoutIntentId, storeId, fulfillmentMode, clientId, status, wltPaymentRefId, createdAt, updatedAt]
+  required: [id, checkoutIntentId, storeId, fulfillmentMode, clientId, status, wltPaymentRefId, currency, createdAt, updatedAt]
   properties:
     id: { type: string }
     checkoutIntentId: { type: string }
@@ -73,6 +77,10 @@ DshOrder:
     wltPaymentRefId:
       type: string
       description: "Opaque WLT payment reference. DSH never mutates financial truth."
+    currency:
+      type: string
+      pattern: "^[A-Z]{3}$"
+      description: Immutable currency copied from the checkout pricing snapshot.
     items:
       type: array
       items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrderItem" }
@@ -234,8 +242,8 @@ DshPickupSession:
     status:
       type: string
       enum: [active, verified, no_show, consumed, cancelled]
-    cancelledAt: { type: [string, "null"], format: date-time }
-    cancellationReason: { type: [string, "null"] }
+    cancelledAt: { type: ["string", "null"], format: date-time }
+    cancellationReason: { type: ["string", "null"] }
     verificationMethod:
       type: ["string", "null"]
       description: "Known values: otp, no_show."

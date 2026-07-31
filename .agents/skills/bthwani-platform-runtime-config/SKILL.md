@@ -22,9 +22,9 @@ Own verification of runtime configuration boundaries so environment, provider, s
 
 ## Read before
 
-- `governance/04_API_RUNTIME_BINDING.md`
-- `governance/05_DOCKER_AND_DATA_PLANE.md`
-- `governance/07_SECURITY_AND_SECRETS.md`
+- `governance/policies/contracts.md`
+- `governance/policies/runtime.md`
+- `governance/policies/security.md`
 - applicable shared configuration owners, runtime manifests, and consumers
 
 ## Authority boundary

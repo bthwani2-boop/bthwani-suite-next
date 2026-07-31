@@ -87,7 +87,7 @@ func (s *protectedStoreServer) handleClientCancelOrder(w http.ResponseWriter, r 
 		return
 	}
 	orderID := r.PathValue("orderId")
-	if _, err := orders.GetClientOrder(s.db, orderID, actor.TenantID, actor.ID); err != nil {
+	if _, err := orders.GetClientOrder(s.db, orderID, actor.OperatorContextID, actor.ID); err != nil {
 		writeOrderCancellationError(w, err)
 		return
 	}
@@ -97,7 +97,7 @@ func (s *protectedStoreServer) handleClientCancelOrder(w http.ResponseWriter, r 
 	}
 	order, err := orders.CancelOrder(s.db, orders.CancellationInput{
 		OrderID:       orderID,
-		TenantID:      actor.TenantID,
+		OperatorContextID:      actor.OperatorContextID,
 		ActorID:       actor.ID,
 		ActorRole:     "client",
 		ReasonCode:    body.ReasonCode,
@@ -127,7 +127,7 @@ func (s *protectedStoreServer) handlePartnerCancelOrder(w http.ResponseWriter, r
 	}
 	order, err := orders.CancelOrder(s.db, orders.CancellationInput{
 		OrderID:       ownedOrder.ID,
-		TenantID:      actor.TenantID,
+		OperatorContextID:      actor.OperatorContextID,
 		ActorID:       actor.ID,
 		ActorRole:     "partner",
 		ReasonCode:    body.ReasonCode,
@@ -172,7 +172,7 @@ func (s *protectedStoreServer) handleOperatorCancelOrderGoverned(w http.Response
 	}
 	reported, err := incident.NewService(s.db).Report(r.Context(), incident.ReportInput{
 		OrderID:          orderID,
-		TenantID:         actor.TenantID,
+		OperatorContextID:         actor.OperatorContextID,
 		TargetEntityType: incident.TargetOrder,
 		TargetEntityID:   orderID,
 		IncidentType:     incident.TypeCancel,
@@ -211,7 +211,7 @@ func (s *protectedStoreServer) handleClientOrderCancellation(w http.ResponseWrit
 		return
 	}
 	orderID := r.PathValue("orderId")
-	if _, err := orders.GetClientOrder(s.db, orderID, actor.TenantID, actor.ID); err != nil {
+	if _, err := orders.GetClientOrder(s.db, orderID, actor.OperatorContextID, actor.ID); err != nil {
 		writeOrderCancellationError(w, err)
 		return
 	}

@@ -25,17 +25,15 @@ import (
 	"time"
 )
 
-// Event types this outbox understands. See dsh-048_checkout_financial_closure_outbox.sql.
 const (
 	EventTypeExpireSession  = "expire_session"
 	EventTypeCancelForOrder = "cancel_for_order"
 )
 
-// Event represents a pending or retried financial-closure notification bound
-// for WLT.
 type Event struct {
 	ID               string
 	EventType        string
+	OperatorContextID         string
 	CheckoutIntentID string
 	PaymentSessionID string
 	OrderID          string
@@ -45,27 +43,19 @@ type Event struct {
 	AttemptCount     int
 }
 
-// EnqueueInput is the set of fields required when writing a financial closure
-// event inside a checkout-intent-cancellation or order-rejection/cancellation
-// transaction.
 type EnqueueInput struct {
 	EventType        string
 	CheckoutIntentID string
 	PaymentSessionID string
-	// OrderID is nil for expire_session events raised before any order
-	// exists, and set for cancel_for_order events raised against an order.
-	OrderID       *string
-	ClientID      string
-	Reason        string
-	CorrelationID string
+	OrderID          *string
+	ClientID         string
+	Reason           string
+	CorrelationID    string
 }
 
-// Enqueue writes a financial closure event inside tx. It must be called
-// within the same transaction that commits the checkout intent cancellation
-// or order rejection/cancellation so the event is guaranteed to be durable
-// even if WLT is unreachable. A duplicate (payment_session_id, event_type)
-// pair is silently discarded (ON CONFLICT DO NOTHING) so re-entrant calls are
-// safe.
+// Enqueue writes a financial closure event inside tx. OperatorContext ownership is not
+// accepted from the caller: ClaimBatch derives it later from the immutable
+// checkout-intent owner before any WLT delivery or retry.
 func Enqueue(tx *sql.Tx, input EnqueueInput) error {
 	if input.EventType == "" || input.CheckoutIntentID == "" || input.PaymentSessionID == "" || input.ClientID == "" {
 		return fmt.Errorf("checkout finance outbox: eventType, checkoutIntentId, paymentSessionId, and clientId are required")
@@ -88,24 +78,25 @@ func Enqueue(tx *sql.Tx, input EnqueueInput) error {
 	return nil
 }
 
-// ClaimBatch leases up to limit pending events due for delivery.
-// It updates next_retry_at so concurrent workers skip leased rows.
 func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck
 
 	rows, err := tx.Query(`
-		SELECT id, event_type, checkout_intent_id::text, payment_session_id,
-		       COALESCE(order_id::text, ''), client_id, reason,
-		       COALESCE(correlation_id, checkout_intent_id::text), attempt_count
-		FROM dsh_checkout_financial_closure_outbox
-		WHERE status = 'pending' AND next_retry_at <= NOW()
-		ORDER BY created_at
+		SELECT outbox.id, outbox.event_type, btrim(intent.operator_context_id),
+		       outbox.checkout_intent_id::text, outbox.payment_session_id,
+		       COALESCE(outbox.order_id::text, ''), outbox.client_id, outbox.reason,
+		       COALESCE(outbox.correlation_id, outbox.checkout_intent_id::text), outbox.attempt_count
+		FROM dsh_checkout_financial_closure_outbox outbox
+		JOIN dsh_checkout_intents intent ON intent.id=outbox.checkout_intent_id
+		WHERE outbox.status = 'pending' AND outbox.next_retry_at <= NOW()
+		  AND btrim(intent.operator_context_id) <> ''
+		ORDER BY outbox.created_at
 		LIMIT $1
-		FOR UPDATE SKIP LOCKED`,
+		FOR UPDATE OF outbox SKIP LOCKED`,
 		limit,
 	)
 	if err != nil {
@@ -115,7 +106,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	for rows.Next() {
 		var e Event
 		if err := rows.Scan(
-			&e.ID, &e.EventType, &e.CheckoutIntentID, &e.PaymentSessionID,
+			&e.ID, &e.EventType, &e.OperatorContextID, &e.CheckoutIntentID, &e.PaymentSessionID,
 			&e.OrderID, &e.ClientID, &e.Reason, &e.CorrelationID, &e.AttemptCount,
 		); err != nil {
 			rows.Close()
@@ -124,6 +115,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 		events = append(events, e)
 	}
 	if err := rows.Err(); err != nil {
+		rows.Close()
 		return nil, err
 	}
 	rows.Close()
@@ -149,7 +141,6 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	return events, nil
 }
 
-// MarkSent marks the event as successfully delivered.
 func MarkSent(db *sql.DB, id string) error {
 	_, err := db.Exec(`
 		UPDATE dsh_checkout_financial_closure_outbox
@@ -160,10 +151,6 @@ func MarkSent(db *sql.DB, id string) error {
 	return err
 }
 
-// MarkFailed records a delivery failure and schedules the next retry with
-// exponential backoff capped at 30 minutes. The row remains 'pending' so
-// retries continue indefinitely — a dangling WLT payment session is a
-// financial bug.
 func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
 	next := attemptCount + 1
 	backoff := time.Duration(1<<uint(min(next, 10))) * time.Second
@@ -186,7 +173,6 @@ func min(a, b int) int {
 	return b
 }
 
-// pqStringArray formats a []string as a Postgres array literal for ANY($1::uuid[]).
 func pqStringArray(values []string) string {
 	out := "{"
 	for i, v := range values {

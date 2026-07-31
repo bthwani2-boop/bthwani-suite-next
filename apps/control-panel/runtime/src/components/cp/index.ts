@@ -6,6 +6,7 @@ export * from "./CpSearchInput";
 export * from "./CpTextInput";
 export * from "./CpTable";
 export * from "./CpKpi";
+export * from "./CpLaneTabs";
 export * from "./CpPageHeader";
 export * from "./CpFilterBar";
 export * from "./CpStatePanel";

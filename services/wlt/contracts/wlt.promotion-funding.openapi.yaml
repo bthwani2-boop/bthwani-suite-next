@@ -2,7 +2,8 @@ openapi: 3.1.0
 info:
   title: BThwani WLT Promotion Funding API
   version: 1.0.0
-  description: WLT-owned monetary reservation lifecycle for platform-, partner-, and shared-funded coupon discounts.
+  description: WLT-owned monetary reservation lifecycle for platform-, partner-,
+    and shared-funded coupon discounts.
 x-bthwani-owner: services/wlt
 x-bthwani-parent-contract: services/wlt/contracts/wlt.openapi.yaml
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -14,15 +15,15 @@ paths:
   /wlt/promotion-funding/reservations:
     post:
       operationId: reserveWltPromotionFunding
-      tags: [WltPromotionFunding]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltPromotionFunding ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/TenantHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
-        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       requestBody:
         required: true
         content:
@@ -30,37 +31,37 @@ paths:
             schema: { $ref: '#/components/schemas/ReservePromotionFundingRequest' }
       responses:
         '201': { $ref: '#/components/responses/ReservationResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
   /wlt/promotion-funding/reservations/{reservationId}:
     get:
       operationId: getWltPromotionFundingReservation
-      tags: [WltPromotionFunding]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltPromotionFunding ]
+      security: [ { bearerAuth: [] } ]
       parameters:
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/ReservationId'
       responses:
         '200': { $ref: '#/components/responses/ReservationResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
   /wlt/promotion-funding/reservations/{reservationId}/commit:
     post:
       operationId: commitWltPromotionFunding
-      tags: [WltPromotionFunding]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltPromotionFunding ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/TenantHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
-        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/ReservationId'
       requestBody:
         required: true
@@ -69,23 +70,23 @@ paths:
             schema: { $ref: '#/components/schemas/CommitPromotionFundingRequest' }
       responses:
         '200': { $ref: '#/components/responses/ReservationResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
   /wlt/promotion-funding/reservations/{reservationId}/release:
     post:
       operationId: releaseWltPromotionFunding
-      tags: [WltPromotionFunding]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltPromotionFunding ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/TenantHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
-        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/ReservationId'
       requestBody:
         required: true
@@ -94,23 +95,23 @@ paths:
             schema: { $ref: '#/components/schemas/ReleasePromotionFundingRequest' }
       responses:
         '200': { $ref: '#/components/responses/ReservationResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
   /wlt/promotion-funding/reservations/{reservationId}/reverse:
     post:
       operationId: reverseWltPromotionFunding
-      tags: [WltPromotionFunding]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltPromotionFunding ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/TenantHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
-        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/ReservationId'
       requestBody:
         required: true
@@ -119,35 +120,15 @@ paths:
             schema: { $ref: '#/components/schemas/ReversePromotionFundingRequest' }
       responses:
         '200': { $ref: '#/components/responses/ReservationResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer }
   parameters:
-    ServiceCallerHeader:
-      name: X-Service-Caller
-      in: header
-      required: true
-      schema: { type: string, enum: [dsh] }
-    TenantHeader:
-      name: X-Tenant-ID
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
-    IdempotencyHeader:
-      name: Idempotency-Key
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
-    CorrelationHeader:
-      name: X-Correlation-ID
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
     ReservationId:
       name: reservationId
       in: path
@@ -161,28 +142,33 @@ components:
           schema:
             type: object
             additionalProperties: false
-            required: [reservation]
+            required: [ reservation ]
             properties:
               reservation: { $ref: '#/components/schemas/PromotionFundingReservation' }
     ErrorResponse:
       description: Governed error response.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+          schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
   schemas:
-    Error:
-      type: object
-      additionalProperties: false
-      required: [code, message]
-      properties:
-        code: { type: string }
-        message: { type: string }
     ReservePromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [tenantId, externalReference, checkoutIntentId, couponRedemptionId, couponId, clientId, platformFundedMinorUnits, partnerFundedMinorUnits, totalDiscountMinorUnits, currency]
+      required:
+        [
+          operatorContextId,
+          externalReference,
+          checkoutIntentId,
+          couponRedemptionId,
+          couponId,
+          clientId,
+          platformFundedMinorUnits,
+          partnerFundedMinorUnits,
+          totalDiscountMinorUnits,
+          currency
+        ]
       properties:
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         externalReference: { type: string, minLength: 1 }
         checkoutIntentId: { type: string, minLength: 1 }
         couponRedemptionId: { type: string, minLength: 1 }
@@ -196,32 +182,48 @@ components:
     CommitPromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [tenantId, orderId]
+      required: [ operatorContextId, orderId ]
       properties:
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         orderId: { type: string, minLength: 1 }
     ReleasePromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [tenantId, reason]
+      required: [ operatorContextId, reason ]
       properties:
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         reason: { type: string, minLength: 1 }
     ReversePromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [tenantId, orderId, reason]
+      required: [ operatorContextId, orderId, reason ]
       properties:
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         orderId: { type: string, minLength: 1 }
         reason: { type: string, minLength: 1 }
     PromotionFundingReservation:
       type: object
       additionalProperties: false
-      required: [id, tenantId, externalReference, checkoutIntentId, couponRedemptionId, couponId, clientId, platformFundedMinorUnits, partnerFundedMinorUnits, totalDiscountMinorUnits, currency, status, createdAt, updatedAt]
+      required:
+        [
+          id,
+          operatorContextId,
+          externalReference,
+          checkoutIntentId,
+          couponRedemptionId,
+          couponId,
+          clientId,
+          platformFundedMinorUnits,
+          partnerFundedMinorUnits,
+          totalDiscountMinorUnits,
+          currency,
+          status,
+          createdAt,
+          updatedAt
+        ]
       properties:
         id: { type: string, pattern: '^pfr_[a-f0-9]{32}$' }
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         externalReference: { type: string }
         checkoutIntentId: { type: string }
         couponRedemptionId: { type: string }
@@ -232,7 +234,7 @@ components:
         partnerFundedMinorUnits: { type: integer, format: int64 }
         totalDiscountMinorUnits: { type: integer, format: int64 }
         currency: { type: string }
-        status: { type: string, enum: [reserved, committed, released, reversed] }
+        status: { type: string, enum: [ reserved, committed, released, reversed ] }
         orderId: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }

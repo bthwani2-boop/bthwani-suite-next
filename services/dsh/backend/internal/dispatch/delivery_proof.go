@@ -225,7 +225,7 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 		return nil, err
 	}
 	if current.OrderID == "" {
-		return nil, fmt.Errorf("%w: JRN-018 proof applies to customer orders only", ErrInvalid)
+		return nil, fmt.Errorf("%w: delivery proof applies to customer orders only", ErrInvalid)
 	}
 	if current.Status != AssignmentAccepted || current.Delivery.Status != DeliveryArrivedCustomer {
 		return nil, fmt.Errorf("%w: proof requires an accepted assignment at arrived_customer", ErrConflict)
@@ -645,10 +645,10 @@ func finalizeAcceptedDeliveryProof(tx *sql.Tx, current *Assignment, proof *Deliv
 			return fmt.Errorf("%w: delivery PIN was already consumed", ErrConflict)
 		}
 	}
-	return enqueueJRN018WltCompletion(tx, current.OrderID, captainID)
+	return enqueueWltDeliveryCompletion(tx, current.OrderID, captainID)
 }
 
-func enqueueJRN018WltCompletion(tx *sql.Tx, orderID, captainID string) error {
+func enqueueWltDeliveryCompletion(tx *sql.Tx, orderID, captainID string) error {
 	ctx, err := orders.GetOrderDeliveryContext(tx, orderID)
 	if err != nil {
 		return fmt.Errorf("resolve delivery context for WLT completion: %w", err)

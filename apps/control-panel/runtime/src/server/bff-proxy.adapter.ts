@@ -12,12 +12,6 @@ export const BFF_REFRESH_COOKIE = REFRESH_TOKEN_COOKIE;
 export const BFF_OPAQUE_TOKEN = "BFF_HTTP_ONLY_COOKIE_SESSION";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
-const WLT_BROWSER_REFERENCE_PATHS = new Set([
-  "/wlt/references/payment-status",
-  "/wlt/references/settlement-status",
-  "/wlt/references/refund-status",
-  "/wlt/references/wallet-status",
-]);
 const FORWARDED_REQUEST_HEADERS = [
   "accept",
   "accept-language",
@@ -36,10 +30,6 @@ const SERVICE_CONFIG = {
   identity: {
     env: "IDENTITY_API_BASE_URL",
     fallback: "http://127.0.0.1:58082",
-  },
-  wlt: {
-    env: "WLT_API_BASE_URL",
-    fallback: "http://127.0.0.1:58083",
   },
   workforce: {
     env: "WORKFORCE_API_BASE_URL",
@@ -63,15 +53,6 @@ function serviceBaseUrl(service: ControlPanelBffService): string | null {
   if (configured?.trim()) return configured.trim().replace(/\/$/, "");
   if (process.env.NODE_ENV === "production") return null;
   return config.fallback;
-}
-
-function servicePathAllowed(
-  service: ControlPanelBffService,
-  method: string,
-  upstreamPath: string,
-): boolean {
-  if (service !== "wlt") return true;
-  return method === "GET" && WLT_BROWSER_REFERENCE_PATHS.has(upstreamPath);
 }
 
 function requestIsSameSite(request: NextRequest): boolean {
@@ -164,14 +145,6 @@ export async function proxyControlPanelRequest(
   const accessToken = cookieStore.get(BFF_ACCESS_COOKIE)?.value;
   const refreshToken = cookieStore.get(BFF_REFRESH_COOKIE)?.value;
   const upstreamPath = `/${pathSegments.map(encodeURIComponent).join("/")}`;
-
-  if (!servicePathAllowed(service, request.method, upstreamPath)) {
-    return jsonError(
-      403,
-      "BFF_SERVICE_PATH_FORBIDDEN",
-      "The requested service path is not exposed to the control-panel browser.",
-    );
-  }
 
   if (
     service === "identity" &&

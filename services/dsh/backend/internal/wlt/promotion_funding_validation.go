@@ -20,7 +20,7 @@ func validatePromotionFundingReserveResponse(
 	if expectedCurrency == "" {
 		expectedCurrency = "YER"
 	}
-	if reservation.TenantID != strings.TrimSpace(input.TenantID) ||
+	if reservation.OperatorContextID != strings.TrimSpace(input.OperatorContextID) ||
 		reservation.ExternalReference != strings.TrimSpace(input.ExternalReference) ||
 		reservation.CheckoutIntentID != strings.TrimSpace(input.CheckoutIntentID) ||
 		reservation.CouponRedemptionID != strings.TrimSpace(input.CouponRedemptionID) ||
@@ -46,8 +46,8 @@ func validatePromotionFundingTransitionResponse(
 	if reservation == nil || reservation.ID != strings.TrimSpace(reservationID) {
 		return fmt.Errorf("WLT promotion funding transition returned a different reservation")
 	}
-	if reservation.TenantID != strings.TrimSpace(input.TenantID) {
-		return fmt.Errorf("WLT promotion funding transition returned a different tenant")
+	if reservation.OperatorContextID != strings.TrimSpace(input.OperatorContextID) {
+		return fmt.Errorf("WLT promotion funding transition returned a different OperatorContext")
 	}
 	expectedStatus := map[string]string{
 		"commit":  "committed",

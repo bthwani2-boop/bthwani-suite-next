@@ -17,9 +17,9 @@ function isRelativeWltUrl(url: string): boolean {
 }
 
 /**
- * Shared GET+parse helper for WLT tenant-protected reference projections.
+ * Shared GET+parse helper for WLT OperatorContext-protected reference projections.
  * Control-panel calls use the same-origin HttpOnly BFF. Native applications
- * send their Identity bearer token directly; no client-supplied tenant header
+ * send their Identity bearer token directly; no client-supplied OperatorContext header
  * is used as an ownership signal.
  *
  * Broad financial reads and all mutations remain service-authenticated and MUST

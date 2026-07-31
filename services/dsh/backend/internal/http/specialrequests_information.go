@@ -46,11 +46,11 @@ func (s *protectedStoreServer) handleGetClientSpecialRequestInformation(w http.R
 	}
 	requestID := r.PathValue("requestId")
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
-	if _, err := svc.GetForClientInTenant(r.Context(), actor.TenantID, requestID, actor.ID); err != nil {
+	if _, err := svc.GetForClientInOperatorContext(r.Context(), actor.OperatorContextID, requestID, actor.ID); err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
 	}
-	exchange, err := svc.LatestInformationExchangeInTenant(r.Context(), actor.TenantID, requestID)
+	exchange, err := svc.LatestInformationExchangeInOperatorContext(r.Context(), actor.OperatorContextID, requestID)
 	writeLatestInformationExchange(w, exchange, err)
 }
 
@@ -62,11 +62,11 @@ func (s *protectedStoreServer) handleGetOperatorSpecialRequestInformation(w http
 	}
 	requestID := r.PathValue("requestId")
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
-	if _, err := svc.GetForOperatorInTenant(r.Context(), actor.TenantID, requestID); err != nil {
+	if _, err := svc.GetForOperatorInOperatorContext(r.Context(), actor.OperatorContextID, requestID); err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
 	}
-	exchange, err := svc.LatestInformationExchangeInTenant(r.Context(), actor.TenantID, requestID)
+	exchange, err := svc.LatestInformationExchangeInOperatorContext(r.Context(), actor.OperatorContextID, requestID)
 	writeLatestInformationExchange(w, exchange, err)
 }
 
@@ -91,8 +91,8 @@ func (s *protectedStoreServer) handleRequestSpecialRequestInformation(w http.Res
 	}
 	requestID := r.PathValue("requestId")
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
-	request, exchange, err := svc.RequestClientInformationInTenant(
-		r.Context(), actor.TenantID, requestID, actor.ID, *body.ExpectedVersion, body.Question,
+	request, exchange, err := svc.RequestClientInformationInOperatorContext(
+		r.Context(), actor.OperatorContextID, requestID, actor.ID, *body.ExpectedVersion, body.Question,
 	)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
@@ -126,8 +126,8 @@ func (s *protectedStoreServer) handleRespondSpecialRequestInformation(w http.Res
 	}
 	requestID := r.PathValue("requestId")
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
-	request, exchange, err := svc.RespondClientInformationInTenant(
-		r.Context(), actor.TenantID, requestID, actor.ID, body.ExchangeID, *body.ExpectedVersion, body.Response,
+	request, exchange, err := svc.RespondClientInformationInOperatorContext(
+		r.Context(), actor.OperatorContextID, requestID, actor.ID, body.ExchangeID, *body.ExpectedVersion, body.Response,
 	)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")

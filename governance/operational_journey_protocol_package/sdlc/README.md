@@ -2,7 +2,7 @@
 
 Status: DERIVED_SUPPORT
 
-These machine-readable files derive from `governance/26_SDLC_TEAM_AND_STAGE_GATES.md`. They do not create a second authority. Any conflict must be corrected in this package.
+These machine-readable files derive from `governance/policies/release.md`. They do not create a second authority. Any conflict must be corrected in this package.
 
 ## Files
 

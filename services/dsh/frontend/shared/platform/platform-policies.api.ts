@@ -1,7 +1,10 @@
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshCapacityConfig,
+  DshCaptainFinancialEligibility,
   DshCreateZoneInput,
+  DshDispatchBalancePolicy,
+  DshDispatchBalancePolicyInput,
   DshSlaRule,
   DshStoreOnboardingFeePolicy,
   DshStoreOnboardingFeePolicyInput,
@@ -93,4 +96,34 @@ export const upsertStoreOnboardingFeePolicy = (
 export const fetchStoreOnboardingFeeReference = () =>
   req<{ policy: DshStoreOnboardingFeePolicy }>(
     "/dsh/platform/store-onboarding-fee",
+  );
+
+export const fetchDispatchBalancePolicy = () =>
+  req<{ policy: DshDispatchBalancePolicy }>(
+    "/dsh/operator/platform/dispatch-balance-policy",
+  );
+
+export const upsertDispatchBalancePolicy = (body: DshDispatchBalancePolicyInput) =>
+  req<{ policy: DshDispatchBalancePolicy }>(
+    "/dsh/operator/platform/dispatch-balance-policy",
+    {
+      method: "PUT",
+      body,
+      idempotencyKey: stableMutationKey("dispatch-balance-policy", body),
+    },
+  );
+
+export const fetchOperatorCaptainFinancialEligibility = (operatorContextId: string, captainId: string) =>
+  req<{ financialEligibility: DshCaptainFinancialEligibility }>(
+    `/dsh/operator/dispatch/captains/${encodeURIComponent(captainId)}/financial-eligibility?operatorContextId=${encodeURIComponent(operatorContextId)}`,
+  );
+
+export const refreshOperatorCaptainFinancialEligibility = (operatorContextId: string, captainId: string) =>
+  req<{ financialEligibility: DshCaptainFinancialEligibility }>(
+    `/dsh/operator/dispatch/captains/${encodeURIComponent(captainId)}/financial-eligibility/refresh`,
+    {
+      method: "POST",
+      body: { operatorContextId },
+      idempotencyKey: stableMutationKey(`captain:${captainId}:financial-eligibility`, { operatorContextId }),
+    },
   );

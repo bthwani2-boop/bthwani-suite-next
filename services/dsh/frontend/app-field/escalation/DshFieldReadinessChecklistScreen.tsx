@@ -6,6 +6,8 @@ import {
   Badge,
   Button,
   Card,
+  Header,
+  InlineNotice,
   ScrollScreen,
   StateView,
   Text,
@@ -16,10 +18,12 @@ import {
   useFieldChecklistController,
   buildChecklistViewModel,
   CHECK_TYPE_LABELS,
+  VISIT_STATUS_LABELS,
   type DshCheckType,
   type DshCheckStatus,
 } from "../../shared/field-readiness";
 import { uploadFieldStoreMedia } from "../../shared/media";
+import { DshFieldReferenceTag } from "../components/DshFieldReferenceTag";
 
 type Props = {
   readonly storeId: string;
@@ -122,11 +126,9 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
   }
 
   return (
-    <ScrollScreen>
-      <View style={styles.topActions}>
-        <Button label="رجوع" tone="ghost" size="sm" fullWidth={false} onPress={onBack} />
-      </View>
-
+    <View style={{ flex: 1 }}>
+      <Header title="قائمة الجاهزية" subtitle={VISIT_STATUS_LABELS[visit.status]} onBack={onBack} />
+      <ScrollScreen>
       <Card padding="$4" style={styles.summaryCard}>
         <View style={styles.summaryRow}>
           <View>
@@ -142,28 +144,32 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
         </View>
         {!editable ? (
           <Text role="caption" tone="muted" style={styles.rtl}>
-            الزيارة حالتها {visit.status}؛ القائمة للقراءة فقط ولا تقبل تعديلات جديدة.
+            الزيارة {VISIT_STATUS_LABELS[visit.status]}؛ القائمة للقراءة فقط ولا تقبل تعديلات جديدة.
           </Text>
         ) : null}
       </Card>
 
       {checkActionState.kind === "error" ? (
-        <Card>
-          <View style={styles.notice}>
-            <Text tone="danger">{checkActionState.message}</Text>
-            <Button label="إغلاق" tone="ghost" onPress={resetCheckAction} />
-          </View>
-        </Card>
+        <InlineNotice
+          tone="danger"
+          title="تعذر تسجيل الفحص"
+          description={checkActionState.message}
+          action={<Button label="إغلاق" tone="ghost" onPress={resetCheckAction} />}
+        />
       ) : null}
 
       {checkActionState.kind === "queued" ? (
-        <Card>
-          <View style={styles.notice}>
-            <Text tone="warning">{checkActionState.message}</Text>
-            <Text role="caption" tone="muted">المرجع المحلي: {checkActionState.operationId}</Text>
-            <Button label="إغلاق" tone="ghost" onPress={resetCheckAction} />
-          </View>
-        </Card>
+        <InlineNotice
+          tone="info"
+          title="تم حفظ الفحص وسيُزامَن تلقائيًا"
+          description={checkActionState.message}
+          action={
+            <View style={{ gap: spacing[2], alignItems: "flex-end" }}>
+              <DshFieldReferenceTag label="رقم العملية" value={checkActionState.operationId} />
+              <Button label="إغلاق" tone="ghost" onPress={resetCheckAction} />
+            </View>
+          }
+        />
       ) : null}
 
       {vm.checks.map((item) => (
@@ -185,7 +191,7 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
           {activeCheck === item.checkType && editable ? (
             <View style={styles.checkForm}>
               <Text role="caption" tone={evidenceUrl ? "success" : "muted"} style={styles.rtl}>
-                {evidenceUrl ? `تم رفع الدليل: ${evidenceUrl}` : "لم يُرفع دليل بعد."}
+                {evidenceUrl ? "تم إرفاق الدليل ✓" : "لم يُرفع دليل بعد."}
               </Text>
               <View style={styles.formActions}>
                 <Button
@@ -233,12 +239,12 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
           </View>
         </Card>
       ) : null}
-    </ScrollScreen>
+      </ScrollScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  topActions: { alignItems: "flex-start", marginBottom: spacing[2] },
   summaryCard: { marginBottom: spacing[2] },
   summaryRow: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" },
   rtl: { textAlign: "right" },

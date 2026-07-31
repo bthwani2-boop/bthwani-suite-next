@@ -9,12 +9,11 @@ export const dynamic = "force-dynamic";
 
 // DSH, Workforce, Providers and Platform Control have explicit static BFF
 // routes that share one authenticated refresh/reauthorization proxy. The
-// dynamic route is deliberately limited to Identity and read-only WLT
-// reference projections so a missing static route cannot degrade into a broad
-// browser-to-service proxy.
+// dynamic route is deliberately limited to Identity so a missing static route
+// cannot degrade into a broad browser-to-service proxy. Financial projections
+// are exposed only by DSH's authenticated static BFF route.
 const allowedPathPrefixes = {
   identity: new Set(["auth", "identity"]),
-  wlt: new Set(["wlt"]),
 } satisfies Partial<Record<ControlPanelBffService, ReadonlySet<string>>>;
 
 type DynamicBffService = keyof typeof allowedPathPrefixes;

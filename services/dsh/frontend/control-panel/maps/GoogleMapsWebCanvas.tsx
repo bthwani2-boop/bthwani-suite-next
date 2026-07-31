@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CpStatePanel } from "@bthwani/control-panel/components";
+import { CpStatePanel, CpStateView } from "@bthwani/control-panel/components";
 import {
   buildGoogleMapsJavaScriptApiUrl,
   readGoogleMapsBrowserApiKey,
@@ -188,7 +188,7 @@ export function GoogleMapsWebCanvas({
 
   return (
     <div style={{ position: "relative", minHeight: height }} aria-label={ariaLabel}>
-      {state === "loading" ? <CpStatePanel role="status" title="جارٍ تحميل الخريطة…" /> : null}
+      {state === "loading" ? <CpStateView kind="loading" title="جارٍ تحميل الخريطة…" /> : null}
       <div
         ref={containerRef}
         style={{ width: "100%", height, borderRadius: 16, overflow: "hidden" }}

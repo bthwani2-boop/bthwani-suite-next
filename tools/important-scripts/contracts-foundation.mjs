@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fail, listFiles, repoRoot } from "../guards/_guard-utils.mjs";
+import { fail, listFiles, repoRoot, toPosix } from "../guards/_guard-utils.mjs";
+import { parseIndexedContractModules } from "../guards/_openapi-utils.mjs";
 
 const guardId = "contracts-foundation";
 const violations = [];
@@ -84,7 +85,30 @@ if (fs.existsSync(rootAuthPath)) {
   });
 }
 
-// 3. Validate that services/auth directory does not exist
+// 3. The repository has exactly one master API index. A root-level
+// openapi.yaml is a parallel source of truth even when it contains no paths.
+const parallelRootMasterPath = path.join(repoRoot, "openapi.yaml");
+if (fs.existsSync(parallelRootMasterPath)) {
+  violations.push({
+    file: "openapi.yaml",
+    message: "parallel master OpenAPI index is forbidden; use contracts/master.openapi.yaml only"
+  });
+}
+
+// A removed operation must be absent from the active contract and runtime.
+// A subtractive registry creates a second mutable definition of API truth.
+const retiredWltRegistryPath = path.join(
+  repoRoot,
+  "services/wlt/contracts/retired-runtime-operations.json",
+);
+if (fs.existsSync(retiredWltRegistryPath)) {
+  violations.push({
+    file: "services/wlt/contracts/retired-runtime-operations.json",
+    message: "subtractive WLT retirement registries are forbidden; retired operations must be absent from contract and runtime"
+  });
+}
+
+// 4. Validate that services/auth directory does not exist
 const servicesAuthPath = path.join(repoRoot, "services/auth");
 if (fs.existsSync(servicesAuthPath)) {
   violations.push({
@@ -93,9 +117,13 @@ if (fs.existsSync(servicesAuthPath)) {
   });
 }
 
-// 4. Validate contracts/master.openapi.yaml and collect referenced files
+// 5. Validate contracts/master.openapi.yaml and collect referenced files
 const masterRelPath = "contracts/master.openapi.yaml";
 const masterFullPath = path.join(repoRoot, masterRelPath);
+
+// Entry contracts the master indexes, repo-relative. Populated in section 5 and
+// consumed by the entry/module sovereignty checks in section 5b.
+const masterEntryFiles = [];
 
 if (!fs.existsSync(masterFullPath)) {
   violations.push({
@@ -133,6 +161,13 @@ if (!fs.existsSync(masterFullPath)) {
         });
       }
 
+      if (masterParsed["x-bthwani-contract-role"] !== "MASTER_INDEX_ONLY") {
+        violations.push({
+          file: masterRelPath,
+          message: "canonical master contract must declare x-bthwani-contract-role: MASTER_INDEX_ONLY"
+        });
+      }
+
       // Validate referenced contracts under x-bthwani-contracts
       const contractsGroup = masterParsed["x-bthwani-contracts"];
       if (!contractsGroup) {
@@ -161,14 +196,144 @@ if (!fs.existsSync(masterFullPath)) {
               file: masterRelPath,
               message: `Referenced contract '${refPath}' does not exist physically`
             });
+            continue;
           }
+          masterEntryFiles.push(toPosix(path.relative(repoRoot, fullRefPath)));
         }
       }
     }
   }
 }
 
-// 5. Gather all contract files and validate metadata rules
+// 5b. Entry/module sovereignty.
+//
+// The master indexes one canonical entry contract per bounded context. Each
+// context indexes its own internals under 'x-bthwani-contracts'. A file must be
+// exactly one of the two: an entry the master names, or a module a context owns.
+// Without this, the master silently regrows references into context internals.
+const moduleOwners = new Map();
+
+// Reads the flat scalar keys and the `modules:` / `overlays:` lists of a manifest.
+function parseContractManifest(relPath) {
+  const values = {};
+  const lists = {};
+  let currentList = null;
+
+  for (const line of fs.readFileSync(path.join(repoRoot, relPath), "utf8").split(/\r?\n/)) {
+    if (!line.trim() || line.trim().startsWith("#")) continue;
+
+    const item = line.match(/^\s+-\s+(\S+)\s*$/);
+    if (item && currentList) {
+      lists[currentList].push(item[1]);
+      continue;
+    }
+
+    const kv = line.match(/^([a-zA-Z]+):\s*(.*?)\s*$/);
+    if (!kv) continue;
+    currentList = null;
+    if (kv[2] === "" || kv[2] === "[]") {
+      lists[kv[1]] = [];
+      currentList = kv[1];
+    } else {
+      values[kv[1]] = kv[2];
+    }
+  }
+  return { values, lists };
+}
+
+const clientRegistryRelPath = "governance/contracts/generated-client-registry.json";
+let clientRegistryEntries = [];
+try {
+  clientRegistryEntries = JSON.parse(fs.readFileSync(path.join(repoRoot, clientRegistryRelPath), "utf8")).entries;
+} catch (err) {
+  violations.push({ file: clientRegistryRelPath, message: `Could not read client registry: ${err.message}` });
+}
+
+for (const entryFile of masterEntryFiles) {
+  // Every master-indexed context declares a manifest, and the manifest must agree
+  // with the entry it describes. A manifest nobody checks is decoration.
+  const manifestRelPath = toPosix(path.join(path.dirname(entryFile), "contract.manifest.yaml"));
+  if (!fs.existsSync(path.join(repoRoot, manifestRelPath))) {
+    violations.push({
+      file: manifestRelPath,
+      message: `master-indexed context '${entryFile}' is missing contract.manifest.yaml`
+    });
+  } else {
+    const manifest = parseContractManifest(manifestRelPath);
+    const declaredEntry = manifest.values.entry
+      ? toPosix(path.normalize(path.join(path.dirname(entryFile), manifest.values.entry)))
+      : "";
+    if (declaredEntry !== entryFile) {
+      violations.push({
+        file: manifestRelPath,
+        message: `manifest 'entry' resolves to '${declaredEntry || "(missing)"}' but the master indexes '${entryFile}'`
+      });
+    }
+
+    const declaredModules = new Set(
+      (manifest.lists.modules ?? []).map((value) =>
+        toPosix(path.normalize(path.join(path.dirname(entryFile), value)))),
+    );
+    const indexedModules = new Set(parseIndexedContractModules(entryFile).map((module) => module.file));
+    const missingFromManifest = [...indexedModules].filter((file) => !declaredModules.has(file));
+    const missingFromEntry = [...declaredModules].filter((file) => !indexedModules.has(file));
+    if (missingFromManifest.length > 0 || missingFromEntry.length > 0) {
+      violations.push({
+        file: manifestRelPath,
+        message:
+          `manifest 'modules' does not match the entry's x-bthwani-contracts` +
+          (missingFromManifest.length > 0 ? `; indexed but not declared: ${missingFromManifest.join(", ")}` : "") +
+          (missingFromEntry.length > 0 ? `; declared but not indexed: ${missingFromEntry.join(", ")}` : "")
+      });
+    }
+
+    const declaredClient = manifest.values.client
+      ? toPosix(path.normalize(path.join(path.dirname(entryFile), manifest.values.client)))
+      : "";
+    if (declaredClient && !clientRegistryEntries.some((entry) => entry.client === declaredClient)) {
+      violations.push({
+        file: manifestRelPath,
+        message: `manifest 'client' '${declaredClient}' is not registered in ${clientRegistryRelPath}`
+      });
+    }
+  }
+
+  for (const module of parseIndexedContractModules(entryFile)) {
+    if (!module.exists) {
+      violations.push({
+        file: entryFile,
+        message: `ENTRY_MODULE_REFERENCE_MISSING ${module.file}`
+      });
+      continue;
+    }
+
+    if (masterEntryFiles.includes(module.file)) {
+      violations.push({
+        file: masterRelPath,
+        message: `'${module.file}' is indexed by the master and is also a module of '${entryFile}'; the master must index entry contracts only`
+      });
+    }
+
+    const previousOwner = moduleOwners.get(module.file);
+    if (previousOwner && previousOwner !== entryFile) {
+      violations.push({
+        file: module.file,
+        message: `module is indexed by two entry contracts: '${previousOwner}' and '${entryFile}'`
+      });
+    }
+    moduleOwners.set(module.file, entryFile);
+
+    // Depth is one by definition: a module is a leaf.
+    if (parseIndexedContractModules(module.file).length > 0) {
+      violations.push({
+        file: module.file,
+        message: `module of '${entryFile}' must not declare its own 'x-bthwani-contracts' index`
+      });
+    }
+  }
+}
+
+// 6. Gather all contract files and validate metadata rules
 const contractFiles = listFiles().filter((file) => {
   return file.endsWith(".openapi.yaml") ||
          file.endsWith(".openapi.yml") ||
@@ -205,6 +370,14 @@ for (const contractFile of contractFiles) {
       message: `Failed to parse contract YAML: ${err.message}`
     });
     continue;
+  }
+
+  // Any second MASTER_INDEX_ONLY declaration is a parallel source of truth.
+  if (parsed["x-bthwani-contract-role"] === "MASTER_INDEX_ONLY" && contractFile !== masterRelPath) {
+    violations.push({
+      file: contractFile,
+      message: `MASTER_INDEX_ONLY is reserved for ${masterRelPath}`
+    });
   }
 
   // Validate x-bthwani-contract-state
@@ -248,8 +421,8 @@ for (const contractFile of contractFiles) {
   }
 }
 
-// 6. Validate that WltPaymentSession statuses in wlt.openapi.yaml match DB migrations
-const wltOpenApiPath = path.join(repoRoot, "services/wlt/contracts/wlt.openapi.yaml");
+// 7. Validate that WltPaymentSession statuses in the canonical WLT bundle match DB migrations
+const wltOpenApiPath = path.join(repoRoot, "services/wlt/contracts/generated/wlt.bundle.openapi.yaml");
 const wltMigrationPath = path.join(repoRoot, "services/wlt/database/migrations/wlt-002_payment_capture.sql");
 
 if (fs.existsSync(wltOpenApiPath) && fs.existsSync(wltMigrationPath)) {
@@ -260,26 +433,26 @@ if (fs.existsSync(wltOpenApiPath) && fs.existsSync(wltMigrationPath)) {
       const dbStatuses = statusChkMatch[1]
         .split(",")
         .map(s => s.trim().replace(/['"]/g, ""));
-      
+
       const openApiContent = fs.readFileSync(wltOpenApiPath, "utf8");
       const openApiLines = openApiContent.split(/\r?\n/);
       let insideWltPaymentSession = false;
       let insideStatus = false;
       let insideEnum = false;
       const schemaStatusEnum = [];
-      
+
       for (const line of openApiLines) {
         const indentMatch = line.match(/^(\s*)/);
         const indent = indentMatch ? indentMatch[1].length : 0;
         const trimmed = line.trim();
-        
+
         if (trimmed.startsWith("WltPaymentSession:")) {
           insideWltPaymentSession = true;
           insideStatus = false;
           insideEnum = false;
           continue;
         }
-        
+
         if (insideWltPaymentSession) {
           if (indent <= 4 && trimmed !== "" && !trimmed.startsWith("WltPaymentSession:") && !trimmed.startsWith("properties:") && !trimmed.startsWith("required:")) {
             insideWltPaymentSession = false;
@@ -287,7 +460,7 @@ if (fs.existsSync(wltOpenApiPath) && fs.existsSync(wltMigrationPath)) {
             insideEnum = false;
           }
         }
-        
+
         if (insideWltPaymentSession) {
           if (trimmed.startsWith("status:")) {
             insideStatus = true;
@@ -302,6 +475,16 @@ if (fs.existsSync(wltOpenApiPath) && fs.existsSync(wltMigrationPath)) {
           }
           if (insideStatus) {
             if (trimmed.startsWith("enum:")) {
+              const inlineMatch = trimmed.match(/^enum:\s*\[([^\]]*)\]\s*$/);
+              if (inlineMatch) {
+                for (const value of inlineMatch[1].split(",")) {
+                  const cleaned = value.trim().replace(/^['"]|['"]$/g, "");
+                  if (cleaned !== "") schemaStatusEnum.push(cleaned);
+                }
+                insideEnum = false;
+                insideStatus = false;
+                continue;
+              }
               insideEnum = true;
               continue;
             }
@@ -315,19 +498,19 @@ if (fs.existsSync(wltOpenApiPath) && fs.existsSync(wltMigrationPath)) {
           }
         }
       }
-      
+
       if (schemaStatusEnum.length > 0) {
         for (const dbStatus of dbStatuses) {
           if (!schemaStatusEnum.includes(dbStatus)) {
             violations.push({
-              file: "services/wlt/contracts/wlt.openapi.yaml",
+              file: "services/wlt/contracts/generated/wlt.bundle.openapi.yaml",
               message: `OpenAPI WltPaymentSession.status enum is missing state '${dbStatus}' defined in DB migration wlt-002_payment_capture.sql`
             });
           }
         }
       } else {
         violations.push({
-          file: "services/wlt/contracts/wlt.openapi.yaml",
+          file: "services/wlt/contracts/generated/wlt.bundle.openapi.yaml",
           message: "Failed to find WltPaymentSession.status enum in OpenAPI schema"
         });
       }
@@ -339,7 +522,7 @@ if (fs.existsSync(wltOpenApiPath) && fs.existsSync(wltMigrationPath)) {
     }
   } catch (err) {
     violations.push({
-      file: "services/wlt/contracts/wlt.openapi.yaml",
+      file: "services/wlt/contracts/generated/wlt.bundle.openapi.yaml",
       message: `Error validating OpenAPI statuses against DB migrations: ${err.message}`
     });
   }

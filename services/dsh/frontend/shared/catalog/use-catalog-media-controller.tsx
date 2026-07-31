@@ -1,4 +1,4 @@
-﻿/**
+/**
  * use-catalog-media-controller.tsx
  *
  * React hook binding the catalog-media controller-core.

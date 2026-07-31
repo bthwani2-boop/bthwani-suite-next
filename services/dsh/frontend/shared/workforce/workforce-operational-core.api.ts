@@ -34,14 +34,14 @@ export function patchProviderOperationalCore(
 export type CreateProviderIncidentInput = {
   readonly actorId: string;
   readonly incidentCode: string;
-  readonly sourceType?: string;
-  readonly sourceId?: string;
+  readonly sourceType?: string | undefined;
+  readonly sourceId?: string | undefined;
   readonly description: string;
-  readonly evidenceMediaRefs?: readonly string[];
+  readonly evidenceMediaRefs?: readonly string[] | undefined;
   readonly severity: "minor" | "major" | "critical";
-  readonly policyId?: string;
-  readonly proposedPenaltyMinorUnits?: number;
-  readonly currency?: string;
+  readonly policyId?: string | undefined;
+  readonly proposedPenaltyMinorUnits?: number | undefined;
+  readonly currency?: string | undefined;
 };
 
 export async function createProviderIncident(input: CreateProviderIncidentInput): Promise<ProviderIncident> {

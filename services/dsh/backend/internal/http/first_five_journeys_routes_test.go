@@ -16,17 +16,17 @@ func TestFirstFiveJourneysExposeGovernedDSHRoutes(t *testing.T) {
 		path    string
 		pattern string
 	}{
-		{journey: "JRN-001 partner intake", method: http.MethodPost, path: "/dsh/operator/partners", pattern: "POST /dsh/operator/partners"},
-		{journey: "JRN-001 field draft", method: http.MethodPost, path: "/dsh/field/partners/drafts", pattern: "POST /dsh/field/partners/drafts"},
-		{journey: "JRN-001 partner readback", method: http.MethodGet, path: "/dsh/partner/activation/status", pattern: "GET /dsh/partner/activation/status"},
-		{journey: "JRN-004 public discovery", method: http.MethodGet, path: "/dsh/stores", pattern: "GET /dsh/stores"},
-		{journey: "JRN-004 public detail", method: http.MethodGet, path: "/dsh/stores/store-1", pattern: "GET /dsh/stores/{storeId}"},
-		{journey: "JRN-004 operator governance", method: http.MethodPost, path: "/dsh/operator/stores/store-1/governance", pattern: "POST /dsh/operator/stores/{storeId}/governance"},
-		{journey: "JRN-005 address list", method: http.MethodGet, path: "/dsh/client/addresses", pattern: "GET /dsh/client/addresses"},
-		{journey: "JRN-005 address create", method: http.MethodPost, path: "/dsh/client/addresses", pattern: "POST /dsh/client/addresses"},
-		{journey: "JRN-005 address update", method: http.MethodPatch, path: "/dsh/client/addresses/address-1", pattern: "PATCH /dsh/client/addresses/{addressId}"},
-		{journey: "JRN-005 address delete", method: http.MethodDelete, path: "/dsh/client/addresses/address-1", pattern: "DELETE /dsh/client/addresses/{addressId}"},
-		{journey: "JRN-005 default address", method: http.MethodPost, path: "/dsh/client/addresses/address-1/default", pattern: "POST /dsh/client/addresses/{addressId}/default"},
+		{journey: " partner intake", method: http.MethodPost, path: "/dsh/operator/partners", pattern: "POST /dsh/operator/partners"},
+		{journey: " field draft", method: http.MethodPost, path: "/dsh/field/partners/drafts", pattern: "POST /dsh/field/partners/drafts"},
+		{journey: " partner readback", method: http.MethodGet, path: "/dsh/partner/activation/status", pattern: "GET /dsh/partner/activation/status"},
+		{journey: " public discovery", method: http.MethodGet, path: "/dsh/stores", pattern: "GET /dsh/stores"},
+		{journey: " public detail", method: http.MethodGet, path: "/dsh/stores/store-1", pattern: "GET /dsh/stores/{storeId}"},
+		{journey: " operator governance", method: http.MethodPost, path: "/dsh/operator/stores/store-1/governance", pattern: "POST /dsh/operator/stores/{storeId}/governance"},
+		{journey: " address list", method: http.MethodGet, path: "/dsh/client/addresses", pattern: "GET /dsh/client/addresses"},
+		{journey: " address create", method: http.MethodPost, path: "/dsh/client/addresses", pattern: "POST /dsh/client/addresses"},
+		{journey: " address update", method: http.MethodPatch, path: "/dsh/client/addresses/address-1", pattern: "PATCH /dsh/client/addresses/{addressId}"},
+		{journey: " address delete", method: http.MethodDelete, path: "/dsh/client/addresses/address-1", pattern: "DELETE /dsh/client/addresses/{addressId}"},
+		{journey: " default address", method: http.MethodPost, path: "/dsh/client/addresses/address-1/default", pattern: "POST /dsh/client/addresses/{addressId}/default"},
 	}
 
 	for _, tc := range cases {

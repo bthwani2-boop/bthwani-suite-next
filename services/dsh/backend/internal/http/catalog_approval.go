@@ -35,13 +35,13 @@ func catalogApprovalOrigin(role string) (source, stage string, ok bool) {
 	}
 }
 
-func requireCatalogApprovalTenant(w http.ResponseWriter, actor store.StoreActor) (string, bool) {
-	tenantID := strings.TrimSpace(actor.TenantID)
-	if tenantID == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "catalog approval access requires tenant context")
+func requireCatalogApprovalOperatorContext(w http.ResponseWriter, actor store.StoreActor) (string, bool) {
+	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
+	if operatorContextID == "" {
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "catalog approval access requires OperatorContext context")
 		return "", false
 	}
-	return tenantID, true
+	return operatorContextID, true
 }
 
 // POST /dsh/catalog-approvals
@@ -50,7 +50,7 @@ func (s *protectedStoreServer) handleCreateCatalogApproval(w http.ResponseWriter
 	if !ok {
 		return
 	}
-	tenantID, ok := requireCatalogApprovalTenant(w, actor)
+	operatorContextID, ok := requireCatalogApprovalOperatorContext(w, actor)
 	if !ok {
 		return
 	}
@@ -78,7 +78,7 @@ func (s *protectedStoreServer) handleCreateCatalogApproval(w http.ResponseWriter
 		metadata = encoded
 	}
 	rec, err := catalogapproval.Create(s.db, catalogapproval.CreateInput{
-		TenantID:     tenantID,
+		OperatorContextID:     operatorContextID,
 		EntityType:   body.EntityType,
 		EntityID:     body.EntityID,
 		OwnerActorID: actor.ID,
@@ -88,7 +88,7 @@ func (s *protectedStoreServer) handleCreateCatalogApproval(w http.ResponseWriter
 		Metadata:     metadata,
 	})
 	if errors.Is(err, catalogapproval.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "tenant, entityType, actor, and title are required")
+		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "OperatorContext, entityType, actor, and title are required")
 		return
 	}
 	if err != nil {
@@ -104,12 +104,12 @@ func (s *protectedStoreServer) handleListCatalogApprovals(w http.ResponseWriter,
 	if !ok {
 		return
 	}
-	tenantID, ok := requireCatalogApprovalTenant(w, actor)
+	operatorContextID, ok := requireCatalogApprovalOperatorContext(w, actor)
 	if !ok {
 		return
 	}
 	q := r.URL.Query()
-	records, err := catalogapproval.List(s.db, tenantID, q.Get("entityType"), q.Get("stage"), q.Get("source"), 100)
+	records, err := catalogapproval.List(s.db, operatorContextID, q.Get("entityType"), q.Get("stage"), q.Get("source"), 100)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list catalog approval records")
 		return
@@ -126,11 +126,11 @@ func (s *protectedStoreServer) handleListPartnerCatalogApprovals(w http.Response
 	if !ok {
 		return
 	}
-	tenantID, ok := requireCatalogApprovalTenant(w, actor)
+	operatorContextID, ok := requireCatalogApprovalOperatorContext(w, actor)
 	if !ok {
 		return
 	}
-	records, err := catalogapproval.ListPartnerQueue(s.db, tenantID, actor.ID, 100)
+	records, err := catalogapproval.ListPartnerQueue(s.db, operatorContextID, actor.ID, 100)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list partner queue records")
 		return
@@ -148,11 +148,11 @@ func (s *protectedStoreServer) handleGetCatalogApproval(w http.ResponseWriter, r
 	if !ok {
 		return
 	}
-	tenantID, ok := requireCatalogApprovalTenant(w, actor)
+	operatorContextID, ok := requireCatalogApprovalOperatorContext(w, actor)
 	if !ok {
 		return
 	}
-	rec, err := catalogapproval.Get(s.db, tenantID, r.PathValue("recordId"))
+	rec, err := catalogapproval.Get(s.db, operatorContextID, r.PathValue("recordId"))
 	if errors.Is(err, catalogapproval.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "catalog approval record not found")
 		return
@@ -170,7 +170,7 @@ func (s *protectedStoreServer) handleTransitionCatalogApproval(w http.ResponseWr
 	if !ok {
 		return
 	}
-	tenantID, ok := requireCatalogApprovalTenant(w, actor)
+	operatorContextID, ok := requireCatalogApprovalOperatorContext(w, actor)
 	if !ok {
 		return
 	}
@@ -183,14 +183,14 @@ func (s *protectedStoreServer) handleTransitionCatalogApproval(w http.ResponseWr
 	}
 	rec, err := catalogapproval.Transition(
 		s.db,
-		tenantID,
+		operatorContextID,
 		r.PathValue("recordId"),
 		body.ToStage,
 		"control-panel-"+actor.Role,
 		body.ActionLabel,
 	)
 	if errors.Is(err, catalogapproval.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "tenant, toStage, and actionLabel are required")
+		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "OperatorContext, toStage, and actionLabel are required")
 		return
 	}
 	if errors.Is(err, catalogapproval.ErrInvalidTransition) {

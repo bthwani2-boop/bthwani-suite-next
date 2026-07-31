@@ -60,7 +60,7 @@ foreach ($dir in $GoDirs) {
 # ── 2. Verify OpenAPI generation ──────────────────────────────────────────────
 $results += [pscustomobject]@{
   step = "openapi-generate"
-  ok = Run-Step "openapi-generate" { pnpm run openapi:generate }
+  ok = Run-Step "openapi-generate" { pnpm run openapi:generate:all }
 }
 
 # ── 3. Verify frontend typechecking ───────────────────────────────────────────

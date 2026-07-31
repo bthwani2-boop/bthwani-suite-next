@@ -25,12 +25,12 @@ func TestStoreIDFromContextIgnoresSpoofableHeader(t *testing.T) {
 	}
 }
 
-func TestTenantIDFromContextIgnoresSpoofableHeadersAndQuery(t *testing.T) {
-	req := httptest.NewRequest("GET", "/dsh/operator/partners?tenantId=spoofed-query", nil)
-	req.Header.Set("X-Tenant-ID", "spoofed-header")
+func TestOperatorContextIDFromContextIgnoresSpoofableHeadersAndQuery(t *testing.T) {
+	req := httptest.NewRequest("GET", "/dsh/operator/partners?operatorContextId=spoofed-query", nil)
+	req.Header.Set("X-Operator-Context-ID", "spoofed-header")
 	req.Header.Set("X-Organization-ID", "spoofed-organization")
 
-	if tenantID, ok := TenantIDFromContext(req.Context()); ok || tenantID != "" {
-		t.Fatalf("TenantIDFromContext must ignore client-controlled tenant selectors, got tenantID=%q ok=%v", tenantID, ok)
+	if operatorContextID, ok := OperatorContextIDFromContext(req.Context()); ok || operatorContextID != "" {
+		t.Fatalf("OperatorContextIDFromContext must ignore client-controlled OperatorContext selectors, got operatorContextID=%q ok=%v", operatorContextID, ok)
 	}
 }

@@ -911,9 +911,9 @@ func HandleListStoreCoverageZones(db *sql.DB) http.HandlerFunc {
 // their partner, then lists all of that partner's stores as scopes.
 func HandleListPartnerScopes(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, ok := TenantIDFromContext(r.Context())
+		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
 		if !ok {
-			sendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", "trusted tenant context is required")
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 			return
 		}
 		storeID := storeIDFromContext(r)
@@ -923,7 +923,7 @@ func HandleListPartnerScopes(db *sql.DB) http.HandlerFunc {
 		}
 		actorID, _ := actorFromContext(r)
 		var partnerID sql.NullString
-		if err := db.QueryRow(`SELECT partner_id FROM dsh_stores WHERE id = $1 AND tenant_id = $2`, storeID, tenantID).Scan(&partnerID); err != nil {
+		if err := db.QueryRow(`SELECT partner_id FROM dsh_stores WHERE id = $1 AND operator_context_id = $2`, storeID, operatorContextID).Scan(&partnerID); err != nil {
 			sendError(w, http.StatusNotFound, "NOT_FOUND", "store not found")
 			return
 		}
@@ -931,7 +931,7 @@ func HandleListPartnerScopes(db *sql.DB) http.HandlerFunc {
 			sendJSON(w, http.StatusOK, map[string]any{"scopes": []OperationalScope{}})
 			return
 		}
-		scopes, err := ListPartnerScopesForActorForTenant(db, tenantID, partnerID.String, actorID)
+		scopes, err := ListPartnerScopesForActorForOperatorContext(db, operatorContextID, partnerID.String, actorID)
 		if err != nil {
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list partner scopes")
 			return

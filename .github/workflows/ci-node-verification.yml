@@ -38,24 +38,74 @@ jobs:
             nx-${{ inputs.verification_tier }}-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
             nx-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
       - name: Verify immutable diff
-        run: git diff --check "${{ inputs.base_sha }}" "${{ inputs.head_sha }}"
+        id: immutable_diff
+        continue-on-error: true
+        shell: bash
+        env:
+          BASE_SHA: ${{ inputs.base_sha }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          set +e
+          log="${RUNNER_TEMP}/immutable-diff.log"
+          git diff --check "${BASE_SHA}" "${HEAD_SHA}" 2>&1 | tee "${log}"
+          status=${PIPESTATUS[0]}
+          echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
+          exit "${status}"
+      - name: Upload immutable diff diagnostics
+        if: ${{ steps.immutable_diff.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: immutable-diff-${{ github.run_id }}
+          path: ${{ runner.temp }}/immutable-diff.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce immutable diff result
+        if: ${{ steps.immutable_diff.outcome == 'failure' }}
+        run: exit 1
       - name: Verify exact affected or full Node graph
+        id: node_graph
+        continue-on-error: true
         env:
           NX_BASE: ${{ inputs.base_sha }}
           NX_HEAD: ${{ inputs.head_sha }}
           FULL_VERIFICATION: ${{ inputs.full_verification }}
           VERIFICATION_TIER: ${{ inputs.verification_tier }}
+        shell: bash
         run: |
+          set +e
+          log="${RUNNER_TEMP}/node-graph-verification.log"
+          : >"${log}"
+          run_check() {
+            echo "===== $* =====" | tee -a "${log}"
+            "$@" 2>&1 | tee -a "${log}"
+            return "${PIPESTATUS[0]}"
+          }
+          status=0
           if [[ "${FULL_VERIFICATION}" == "true" ]]; then
-            pnpm run nx:typecheck
-            pnpm run nx:lint
-            pnpm run nx:test
-            pnpm run nx:build
+            run_check pnpm run nx:typecheck || status=$?
+            run_check pnpm run nx:lint || status=$?
+            run_check pnpm exec nx run-many -t test --all --outputStyle=stream || status=$?
+            run_check pnpm run nx:build || status=$?
           elif [[ "${VERIFICATION_TIER}" == "fast" ]]; then
-            node tools/scripts/run-affected-verification.mjs typecheck lint test
+            run_check node tools/scripts/run-affected-verification.mjs typecheck lint || status=$?
+            run_check pnpm exec nx affected -t test --outputStyle=stream || status=$?
           else
-            node tools/scripts/run-affected-verification.mjs typecheck lint test build
+            run_check node tools/scripts/run-affected-verification.mjs typecheck lint build || status=$?
+            run_check pnpm exec nx affected -t test --outputStyle=stream || status=$?
           fi
+          echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
+          exit "${status}"
+      - name: Upload Node graph diagnostics
+        if: ${{ steps.node_graph.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: node-graph-verification-${{ github.run_id }}
+          path: ${{ runner.temp }}/node-graph-verification.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce Node graph result
+        if: ${{ steps.node_graph.outcome == 'failure' }}
+        run: exit 1
       - name: Verify Expo configuration for deep frontend changes
         if: ${{ inputs.frontend == 'true' && inputs.verification_tier == 'deep' }}
         run: pnpm run mobile:expo:verify
@@ -74,15 +124,38 @@ jobs:
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Run detected journey gates
+        id: journey_gates
+        continue-on-error: true
         shell: pwsh
         env:
           JOURNEY_SCOPE: ${{ inputs.journey_scope }}
         run: |
+          $log = Join-Path $env:RUNNER_TEMP "journey-gates.log"
+          Set-Content -Path $log -Value ""
+          $exitCode = 0
           $journeys = $env:JOURNEY_SCOPE -split ',' | Where-Object { $_ -and $_.Trim() }
           foreach ($journey in $journeys) {
-            & ./tools/scripts/run-journey-gate.ps1 -Journey $journey.Trim()
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            "===== $($journey.Trim()) =====" | Tee-Object -FilePath $log -Append
+            $journeyOutput = & ./tools/scripts/run-journey-gate.ps1 -Journey $journey.Trim() 2>&1
+            $journeyExitCode = $LASTEXITCODE
+            $journeyOutput | Tee-Object -FilePath $log -Append
+            if ($journeyExitCode -ne 0) {
+              $exitCode = $journeyExitCode
+              break
+            }
           }
+          exit $exitCode
+      - name: Upload journey gate diagnostics
+        if: ${{ steps.journey_gates.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: journey-gates-${{ github.run_id }}
+          path: ${{ runner.temp }}/journey-gates.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce journey gate result
+        if: ${{ steps.journey_gates.outcome == 'failure' }}
+        run: exit 1
 
   platform_change_sets:
     name: Verify platform change-set binding
@@ -98,4 +171,35 @@ jobs:
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Verify platform change-set binding
-        run: pnpm exec tsc --noEmit -p services/dsh/tsconfig.jrn-040.json
+        id: platform_change_sets
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          log="${RUNNER_TEMP}/platform-change-sets.log"
+          generated="${RUNNER_TEMP}/platform-control-api.ts"
+          status=0
+          run_check() {
+            echo "===== $* =====" | tee -a "${log}"
+            "$@" 2>&1 | tee -a "${log}"
+            code=${PIPESTATUS[0]}
+            if [[ "${code}" -ne 0 ]]; then status="${code}"; fi
+          }
+          run_check pnpm --dir services/dsh exec tsc -p tsconfig.platform-change-sets.json --noEmit --pretty false
+          run_check pnpm --dir services/dsh exec openapi-typescript ../../core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml -o "${generated}"
+          run_check diff -u core/platform-control/clients/generated/platform-control-api.ts "${generated}"
+          run_check node tools/guards/platform-change-sets-gate.mjs
+          exit "${status}"
+      - name: Upload platform change-set diagnostics
+        if: ${{ steps.platform_change_sets.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: platform-change-sets-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/platform-change-sets.log
+            ${{ runner.temp }}/platform-control-api.ts
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce platform change-set result
+        if: ${{ steps.platform_change_sets.outcome == 'failure' }}
+        run: exit 1

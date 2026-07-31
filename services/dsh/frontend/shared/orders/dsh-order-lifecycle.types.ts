@@ -7,6 +7,8 @@ export type DshOrderRecord = {
   readonly client_id: string;
   readonly status: DshOrderStatus;
   readonly total_price: number;
+  /** Present for governed DSH orders; omitted only for dispatch-only projections. */
+  readonly currency?: string;
   readonly checkout_intent_id?: string;
   readonly wlt_payment_ref_id?: string;
   readonly wlt_refund_ref_id?: string;
@@ -36,6 +38,7 @@ export type DshOrderItemRecord = {
   readonly product_name?: string;
   readonly quantity: number;
   readonly price: number;
+  readonly currency: string;
 };
 
 export type DshOrderStatusEventRecord = {
@@ -158,6 +161,7 @@ export type BackendOrderItem = {
   readonly quantity?: number;
   readonly unitPrice?: number;
   readonly price?: number;
+  readonly currency?: string;
 };
 
 export type BackendOrder = {
@@ -173,6 +177,7 @@ export type BackendOrder = {
   readonly status?: string;
   readonly totalPrice?: number;
   readonly total_price?: number;
+  readonly currency?: string;
   readonly wltPaymentRefId?: string;
   readonly wlt_payment_ref_id?: string;
   readonly captainId?: string;

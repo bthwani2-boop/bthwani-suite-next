@@ -88,7 +88,9 @@ test("one governed command owns Android EAS initialization, preflight, and build
 
   const compatibilityEntrypoint = fs.readFileSync(path.join(repoRoot, "tools/scripts/mobile-eas.ps1"), "utf8");
   const sharedEntrypoint = fs.readFileSync(path.join(repoRoot, "apps/mobile.ps1"), "utf8");
-  const easImplementation = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas.ps1"), "utf8");
+  const easEntrypoint = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas.ps1"), "utf8");
+  const workflow = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas/workflow.ps1"), "utf8");
+  const providers = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas/providers.ps1"), "utf8");
   for (const appKey of mobileApps) {
     assert.ok(compatibilityEntrypoint.includes(`'${appKey}'`));
     assert.ok(sharedEntrypoint.includes(`'${appKey}'`));
@@ -97,12 +99,15 @@ test("one governed command owns Android EAS initialization, preflight, and build
   for (const mode of ["Initialize", "Preflight", "Build"]) {
     assert.ok(compatibilityEntrypoint.includes(`'${mode}'`));
     assert.ok(sharedEntrypoint.includes(`'${mode}'`));
-    assert.ok(easImplementation.includes(`'${mode}'`));
+    assert.ok(easEntrypoint.includes(`'${mode}'`));
+    assert.ok(workflow.includes(`'${mode}'`));
   }
-  assert.equal(easImplementation.includes("foreach ($home in"), false);
-  assert.equal(easImplementation.includes("--all"), false);
-  assert.ok(easImplementation.includes("GOOGLE_SERVICES_JSON"));
-  assert.ok(easImplementation.includes("GOOGLE_MAPS_ANDROID_API_KEY"));
+  assert.match(easEntrypoint, /eas\\workflow\.ps1/);
+  assert.equal(workflow.includes("foreach ($home in"), false);
+  assert.equal(workflow.includes("--all"), false);
+  assert.ok(providers.includes("GOOGLE_SERVICES_JSON"));
+  assert.ok(providers.includes("GOOGLE_MAPS_ANDROID_API_KEY"));
+  assert.ok(providers.includes("Sync-EasDevelopmentEnvironment"));
 });
 
 test("every app uses isolated local signing and EAS file variables for providers", () => {

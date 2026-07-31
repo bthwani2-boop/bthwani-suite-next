@@ -19,12 +19,67 @@ export type DshSessionRequestResult<T> = {
   readonly message?: string;
 };
 
+export const CONTROL_PANEL_SESSION_EXPIRED_EVENT =
+  "bthwani:control-panel-session-expired";
+
 let correlationFallbackSequence = 0;
+let controlPanelRefreshInFlight: Promise<boolean> | null = null;
+
 export function corrId(prefix: string): string {
   const uuid = globalThis.crypto?.randomUUID?.();
   if (uuid) return `${prefix}-${uuid}`;
   correlationFallbackSequence += 1;
   return `${prefix}-${Date.now().toString(36)}-${correlationFallbackSequence.toString(36)}`;
+}
+
+function notifyControlPanelSessionExpired(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(CONTROL_PANEL_SESSION_EXPIRED_EVENT));
+}
+
+async function refreshControlPanelCookieSession(): Promise<boolean> {
+  if (controlPanelRefreshInFlight) return controlPanelRefreshInFlight;
+
+  const refresh = fetch("/api/auth/refresh", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+      "X-Correlation-ID": corrId("cp-refresh"),
+    },
+    signal: AbortSignal.timeout(10000),
+  })
+    .then((response) => response.ok)
+    .catch(() => false);
+
+  controlPanelRefreshInFlight = refresh;
+  try {
+    return await refresh;
+  } finally {
+    if (controlPanelRefreshInFlight === refresh) {
+      controlPanelRefreshInFlight = null;
+    }
+  }
+}
+
+async function fetchWithControlPanelSessionRetry(
+  execute: () => Promise<Response>,
+  cookieMode: boolean,
+): Promise<Response> {
+  let response = await execute();
+  if (!cookieMode || response.status !== 401) return response;
+
+  const refreshed = await refreshControlPanelCookieSession();
+  if (!refreshed) {
+    notifyControlPanelSessionExpired();
+    return response;
+  }
+
+  response = await execute();
+  if (response.status === 401) notifyControlPanelSessionExpired();
+  return response;
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -82,30 +137,35 @@ export function createDshHttpClient(
       };
     }
 
-    let response: Response;
-    try {
-      response = await fetch(resolveRequestUrl(path, baseUrl), {
+    const requestUrl = resolveRequestUrl(path, baseUrl);
+    const correlationId = options.correlationId ?? corrId(corrPrefix);
+    const requestBody =
+      options.body !== undefined ? JSON.stringify(options.body) : undefined;
+    const execute = () =>
+      fetch(requestUrl, {
         method: options.method ?? "GET",
         headers: {
           Accept: "application/json",
           ...(!cookieMode && token ? { Authorization: `Bearer ${token}` } : {}),
-          "X-Correlation-ID": options.correlationId ?? corrId(corrPrefix),
+          "X-Correlation-ID": correlationId,
           ...(options.idempotencyKey
             ? { "Idempotency-Key": options.idempotencyKey }
             : {}),
           ...(options.expectedVersion !== undefined
             ? { "If-Match-Version": String(options.expectedVersion) }
             : {}),
-          ...(options.body !== undefined
+          ...(requestBody !== undefined
             ? { "Content-Type": "application/json" }
             : {}),
         },
-        ...(options.body !== undefined
-          ? { body: JSON.stringify(options.body) }
-          : {}),
+        ...(requestBody !== undefined ? { body: requestBody } : {}),
         ...requestCredentials(cookieMode),
         signal: AbortSignal.timeout(timeoutMs),
       });
+
+    let response: Response;
+    try {
+      response = await fetchWithControlPanelSessionRetry(execute, cookieMode);
     } catch (error) {
       if (
         typeof error === "object" &&

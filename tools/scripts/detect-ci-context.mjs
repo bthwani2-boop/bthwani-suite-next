@@ -10,8 +10,11 @@ function normalizePath(value) {
 }
 
 function normalizeJourney(value) {
-  const match = String(value ?? "").trim().toUpperCase().match(/(?:JRN[-_ ]?)?(\d{1,3})/);
-  return match ? `JRN-${match[1].padStart(3, "0")}` : "";
+  return String(value ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function uniqueSorted(values) {
@@ -94,10 +97,10 @@ export function classifyFiles(inputFiles, options = {}) {
   const secretsChanged = full || starts("governance/security/", "tools/security/") || has((file) =>
     /(^|\/)(secret|secrets|credential|credentials|signing|keystore|certificate)(\/|[-_.])/i.test(file)
   );
-  const tenantContextChanged = full || starts("governance/saas/") || has((file) =>
-    /(^|\/)(tenant|tenancy|tenant-context|tenant-isolation|cross-tenant)(\/|[-_.])/i.test(file)
+  const operatorContextChanged = full || starts("governance/partner_platform/") || has((file) =>
+    /(^|\/)(OperatorContext|tenancy|OperatorContext-context|OperatorContext-isolation|cross-OperatorContext)(\/|[-_.])/i.test(file)
   );
-  const protectedSecurityChanged = authChanged || sessionChanged || rbacChanged || privacyChanged || piiChanged || secretsChanged || tenantContextChanged;
+  const protectedSecurityChanged = authChanged || sessionChanged || rbacChanged || privacyChanged || piiChanged || secretsChanged || operatorContextChanged;
   const security = workflow || protectedSecurityChanged || starts("governance/security/", "tools/security/");
 
   const financialChanged = full || wlt || starts(
@@ -135,24 +138,24 @@ export function classifyFiles(inputFiles, options = {}) {
     "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md"
   );
 
-  const journeyIds = new Set();
-  for (const file of files) {
-    for (const match of file.matchAll(/jrn[-_ ]?(\d{3})/gi)) journeyIds.add(`JRN-${match[1]}`);
-  }
-
   const productJourneyGovernance = has((file) =>
     file.startsWith("governance/product/") ||
     file.startsWith("governance/product-truth/") ||
     file.startsWith("governance/evidence/") ||
-    /tools\/guards\/jrn[-_]?\d{3}/i.test(file) ||
     file === "tools/scripts/run-journey-gate.ps1"
   );
-  const journey = full || Boolean(manualJourney) || journeyIds.size > 0 || productJourneyGovernance;
+  const journey = full || Boolean(manualJourney) || productJourneyGovernance;
 
-  const jrn040 = manualJourney === "JRN-040" || journeyIds.has("JRN-040") || has((file) =>
-    /jrn[-_]?040/i.test(file) ||
-    file === "services/dsh/tsconfig.jrn-040.json" ||
-    file === "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx"
+  const platformChangeSets = full || has((file) =>
+    file === "governance/product/contracts/platform-change-sets.product-truth.json" ||
+    file.startsWith("core/platform-control/backend/internal/platformcontrol/change_set_") ||
+    file.startsWith("core/platform-control/database/migrations/platform-005_") ||
+    file.startsWith("core/platform-control/database/migrations/platform-006_") ||
+    file === "core/platform-control/contracts/platform-change-sets.openapi.yaml" ||
+    file === "core/platform-control/clients/generated/platform-control-api.ts" ||
+    file === "services/dsh/tsconfig.platform-change-sets.json" ||
+    file === "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx" ||
+    file === "tools/guards/platform-change-sets-gate.mjs"
   );
 
   const cleanupChanged = full || starts("governance/cleanup/") || equals(
@@ -180,7 +183,7 @@ export function classifyFiles(inputFiles, options = {}) {
   const infrastructurePolicy = infrastructure;
   const nomenclatureRequired = workflow || governance || frontend || contracts || dsh || wlt || identity || workforce || platform || providers;
   const policy = governancePolicy || workflowPolicy || securityPolicy || infrastructurePolicy;
-  const node = frontend || contracts || journey || jrn040;
+  const node = frontend || contracts || journey || platformChangeSets;
   const backendChanged = dsh || wlt || identity || workforce || platform || providers;
   const deepRisk = full || workflow || security || infrastructure || workspaceManifest || mobileTooling || runtimeTooling || financialChanged || migrationChanged || nativeChanged || recoveryChanged;
   const standardRisk = deepRisk || policy || sharedBrain || database || contracts || backendChanged || journey;
@@ -191,13 +194,12 @@ export function classifyFiles(inputFiles, options = {}) {
   let journeyScope = "";
   if (full || productJourneyGovernance) journeyScope = "PROJECT-WIDE";
   else if (manualJourney) journeyScope = manualJourney;
-  else if (journeyIds.size > 0) journeyScope = uniqueSorted([...journeyIds]).join(",");
 
   const nodeScope = uniqueSorted([
     frontend ? "frontend" : "",
     contracts ? "contracts" : "",
     journey ? "journey" : "",
-    jrn040 ? "jrn040" : ""
+    platformChangeSets ? "platform-change-sets" : ""
   ]).join("-") || "none";
 
   return {
@@ -231,12 +233,11 @@ export function classifyFiles(inputFiles, options = {}) {
     heavy,
     verification_tier: verificationTier,
     diagnostics,
-    jrn040,
-    platform_change_sets: jrn040,
+    platform_change_sets: platformChangeSets,
     cleanup_changed: cleanupChanged,
     native_changed: nativeChanged,
     visual_changed: visualChanged,
-    tenant_isolation_changed: tenantContextChanged,
+    OperatorContext_isolation_changed: operatorContextChanged,
     financial_changed: financialChanged,
     migration_changed: migrationChanged,
     shared_contract_changed: sharedContractChanged,
@@ -248,7 +249,7 @@ export function classifyFiles(inputFiles, options = {}) {
     privacy_changed: privacyChanged,
     pii_changed: piiChanged,
     secrets_changed: secretsChanged,
-    tenant_context_changed: tenantContextChanged
+    OperatorContext_context_changed: operatorContextChanged
   };
 }
 

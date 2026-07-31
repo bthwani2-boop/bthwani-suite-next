@@ -7,13 +7,17 @@
  * Side contracts that are not present in contracts/master.openapi.yaml are not
  * accepted as runtime truth. This prevents contract-only features from making
  * frontend adapters appear bound while no router, repository, or migration exists.
+ *
+ * The master indexes one entry contract per bounded context and never its
+ * internals. Each entry indexes its own modules under `x-bthwani-contracts`, so
+ * reachability is resolved transitively: master -> entry -> module, one level deep.
  */
 
 import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { fail, listCodeFiles, read, repoRoot, toPosix } from "./_guard-utils.mjs";
-import { parseOpenApiContract } from "./_openapi-utils.mjs";
+import { parseIndexedContractModules, parseOpenApiContract } from "./_openapi-utils.mjs";
 
 const guardId = "api-binding-gate";
 const violations = [];
@@ -42,10 +46,28 @@ function loadMasterContractReferences() {
   return references;
 }
 
-const masterReferences = loadMasterContractReferences();
-const knownPaths = new Set(
-  masterReferences.flatMap((relative) => parseOpenApiContract(relative).map((operation) => operation.path)),
-);
+// Expands each master-indexed entry contract with the modules it indexes itself.
+// One level only: modules are leaves by definition.
+function expandEntryModules(entryReferences) {
+  const expanded = new Set(entryReferences);
+  for (const entry of entryReferences) {
+    for (const module of parseIndexedContractModules(entry)) {
+      if (!module.exists) {
+        violations.push({
+          file: entry,
+          message: `ENTRY_MODULE_REFERENCE_MISSING ${module.file}`,
+        });
+        continue;
+      }
+      expanded.add(module.file);
+    }
+  }
+  return [...expanded];
+}
+
+const masterReferences = expandEntryModules(loadMasterContractReferences());
+const contractOperations = masterReferences.flatMap((relative) => parseOpenApiContract(relative));
+const knownPaths = new Set(contractOperations.map((operation) => operation.path));
 
 function normalizePath(rawPath) {
   return rawPath
@@ -77,6 +99,15 @@ function isKnownPath(rawPath) {
   return false;
 }
 
+function isKnownOperation(method, rawPath) {
+  const normalizedMethod = String(method ?? "").toUpperCase();
+  return contractOperations.some(
+    (operation) =>
+      operation.method === normalizedMethod &&
+      pathsAreCompatible(rawPath, operation.path),
+  );
+}
+
 function scriptKindFor(file) {
   if (file.endsWith(".tsx")) return ts.ScriptKind.TSX;
   if (file.endsWith(".jsx")) return ts.ScriptKind.JSX;
@@ -96,6 +127,49 @@ function materializeTemplatePath(node) {
     value += `{param}${span.literal.text}`;
   }
   return value;
+}
+
+function staticPathValue(node) {
+  if (ts.isStringLiteralLike(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+    return node.text;
+  }
+  if (ts.isTemplateExpression(node)) {
+    return materializeTemplatePath(node);
+  }
+  return null;
+}
+
+function propertyNameText(name) {
+  if (!name) return "";
+  if (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) return name.text;
+  return "";
+}
+
+function callName(node) {
+  if (ts.isIdentifier(node.expression)) return node.expression.text;
+  if (ts.isPropertyAccessExpression(node.expression)) return node.expression.name.text;
+  return "";
+}
+
+function staticMethodFromCall(node) {
+  const name = callName(node).toLowerCase();
+  if (["get", "post", "put", "patch", "delete", "options", "head"].includes(name)) {
+    return name.toUpperCase();
+  }
+
+  const options = node.arguments[1];
+  if (!options) return "GET";
+  if (!ts.isObjectLiteralExpression(options)) return null;
+
+  for (const property of options.properties) {
+    if (!ts.isPropertyAssignment(property) || propertyNameText(property.name) !== "method") continue;
+    const initializer = property.initializer;
+    if (ts.isStringLiteralLike(initializer) || ts.isNoSubstitutionTemplateLiteral(initializer)) {
+      return initializer.text.toUpperCase();
+    }
+    return null;
+  }
+  return "GET";
 }
 
 function extractApiPathLiterals(file, content) {
@@ -118,6 +192,41 @@ function extractApiPathLiterals(file, content) {
 
   visit(sourceFile);
   return paths;
+}
+
+function extractApiOperationCalls(file, content) {
+  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindFor(file));
+  const operations = new Map();
+  const approvedCallNames = new Set([
+    "request",
+    "wltfetchjson",
+    "fetch",
+    "get",
+    "post",
+    "put",
+    "patch",
+    "delete",
+    "options",
+    "head",
+  ]);
+
+  function visit(node) {
+    if (ts.isCallExpression(node) && node.arguments.length > 0) {
+      const name = callName(node).toLowerCase();
+      if (approvedCallNames.has(name)) {
+        const rawPath = staticPathValue(node.arguments[0]);
+        if (rawPath && /^\/(?:dsh|wlt|identity|providers)\//.test(rawPath.replace(/[?#].*$/, ""))) {
+          const method = staticMethodFromCall(node);
+          const key = `${method ?? "DYNAMIC"} ${rawPath}`;
+          operations.set(key, { method, path: rawPath });
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return [...operations.values()];
 }
 
 const DSH_HTTP_CLIENT_PATTERN = /\bcreate(?:Dsh|DshPublic|DshFlexible|DshRaw)HttpClient\b/;
@@ -192,6 +301,16 @@ for (const file of apiFiles) {
         violations.push({
           file,
           message: `UNREGISTERED PATH: "${rawPath}" not found in master-indexed OpenAPI contracts`,
+        });
+      }
+    }
+
+    for (const operation of extractApiOperationCalls(file, content)) {
+      if (!operation.method) continue;
+      if (!isKnownOperation(operation.method, operation.path)) {
+        violations.push({
+          file,
+          message: `UNREGISTERED OPERATION: "${operation.method} ${operation.path}" not found in master-indexed OpenAPI contracts`,
         });
       }
     }

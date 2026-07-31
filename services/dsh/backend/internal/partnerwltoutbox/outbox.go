@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"strings"
 	"time"
 
 	"dsh-api/internal/wlt"
@@ -19,6 +20,7 @@ const (
 
 type Event struct {
 	ID              string
+	OperatorContextID        string
 	PartnerID       string
 	ActivationEvent string
 	EventType       string
@@ -29,6 +31,7 @@ type Event struct {
 }
 
 type partnerReadback struct {
+	OperatorContextID          string
 	PartnerID         string
 	PayoutDestination string
 	MaskedAccount     string
@@ -81,12 +84,16 @@ func ProcessNext(ctx context.Context, db *sql.DB, client *wlt.Client) (bool, err
 	if err != nil {
 		return false, err
 	}
+	if strings.TrimSpace(event.OperatorContextID) == "" {
+		return true, recordDeliveryFailure(ctx, db, event, fmt.Errorf("partner WLT event has no OperatorContext context"))
+	}
 
+	deliveryCtx := wlt.WithOperatorContext(ctx, event.OperatorContextID)
 	var deliveryErr error
 	switch event.EventType {
 	case EventDeactivatePayout:
 		deliveryErr = client.DeactivatePayoutDestination(
-			ctx,
+			deliveryCtx,
 			event.PartnerID,
 			event.ActorID,
 			event.CorrelationID,
@@ -97,30 +104,35 @@ func ProcessNext(ctx context.Context, db *sql.DB, client *wlt.Client) (bool, err
 	}
 	if deliveryErr == nil {
 		_, err = db.ExecContext(ctx, `
-			UPDATE dsh_partner_wlt_outbox
+			UPDATE dsh_partner_wlt_outbox outbox
 			SET status = 'delivered', delivered_at = now(), last_error = '', updated_at = now()
-			WHERE id = $1::uuid`, event.ID)
+			FROM dsh_partners partner
+			WHERE outbox.id = $1::uuid AND partner.id=outbox.partner_id AND partner.operator_context_id=$2`, event.ID, event.OperatorContextID)
 		return true, err
 	}
+	return true, recordDeliveryFailure(ctx, db, event, deliveryErr)
+}
 
+func recordDeliveryFailure(ctx context.Context, db *sql.DB, event Event, deliveryErr error) error {
 	status := "retry"
 	if event.AttemptCount >= maxAttempts {
 		status = "dead_letter"
 	}
 	backoff := retryDelay(event.AttemptCount)
 	_, updateErr := db.ExecContext(ctx, `
-		UPDATE dsh_partner_wlt_outbox
+		UPDATE dsh_partner_wlt_outbox outbox
 		SET status = $2,
 		    last_error = left($3, 1000),
 		    available_at = now() + ($4 * interval '1 second'),
 		    updated_at = now()
-		WHERE id = $1::uuid`,
-		event.ID, status, deliveryErr.Error(), int(backoff.Seconds()),
+		FROM dsh_partners partner
+		WHERE outbox.id = $1::uuid AND partner.id=outbox.partner_id AND partner.operator_context_id=$5`,
+		event.ID, status, deliveryErr.Error(), int(backoff.Seconds()), event.OperatorContextID,
 	)
 	if updateErr != nil {
-		return true, fmt.Errorf("record partner WLT retry after %v: %w", deliveryErr, updateErr)
+		return fmt.Errorf("record partner WLT retry after %v: %w", deliveryErr, updateErr)
 	}
-	return true, nil
+	return nil
 }
 
 func claimNext(ctx context.Context, db *sql.DB) (Event, error) {
@@ -132,16 +144,20 @@ func claimNext(ctx context.Context, db *sql.DB) (Event, error) {
 
 	var event Event
 	err = tx.QueryRowContext(ctx, `
-		SELECT id::text, partner_id, activation_event_id::text, event_type,
-		       actor_id, correlation_id, idempotency_key, attempt_count + 1
-		FROM dsh_partner_wlt_outbox
-		WHERE status IN ('pending','retry')
-		  AND available_at <= now()
-		ORDER BY created_at ASC
-		FOR UPDATE SKIP LOCKED
+		SELECT outbox.id::text, btrim(partner.operator_context_id), outbox.partner_id,
+		       outbox.activation_event_id::text, outbox.event_type,
+		       outbox.actor_id, outbox.correlation_id, outbox.idempotency_key,
+		       outbox.attempt_count + 1
+		FROM dsh_partner_wlt_outbox outbox
+		JOIN dsh_partners partner ON partner.id=outbox.partner_id
+		WHERE outbox.status IN ('pending','retry')
+		  AND outbox.available_at <= now()
+		  AND btrim(partner.operator_context_id) <> ''
+		ORDER BY outbox.created_at ASC
+		FOR UPDATE OF outbox SKIP LOCKED
 		LIMIT 1`,
 	).Scan(
-		&event.ID, &event.PartnerID, &event.ActivationEvent, &event.EventType,
+		&event.ID, &event.OperatorContextID, &event.PartnerID, &event.ActivationEvent, &event.EventType,
 		&event.ActorID, &event.CorrelationID, &event.IdempotencyKey,
 		&event.AttemptCount,
 	)
@@ -149,9 +165,10 @@ func claimNext(ctx context.Context, db *sql.DB) (Event, error) {
 		return Event{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `
-		UPDATE dsh_partner_wlt_outbox
+		UPDATE dsh_partner_wlt_outbox outbox
 		SET status = 'processing', attempt_count = $2, updated_at = now()
-		WHERE id = $1::uuid`, event.ID, event.AttemptCount); err != nil {
+		FROM dsh_partners partner
+		WHERE outbox.id = $1::uuid AND partner.id=outbox.partner_id AND partner.operator_context_id=$3`, event.ID, event.AttemptCount, event.OperatorContextID); err != nil {
 		return Event{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -173,13 +190,14 @@ func retryDelay(attempt int) time.Duration {
 
 func Reconcile(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 	rows, err := db.QueryContext(ctx, `
-		SELECT id,
+		SELECT btrim(operator_context_id), id,
 		       COALESCE(payout_destination_id,''),
 		       COALESCE(masked_account_number,''),
 		       COALESCE(masked_iban,''),
 		       COALESCE(masked_mobile_number,''),
 		       activation_status
 		FROM dsh_partners
+		WHERE btrim(operator_context_id) <> ''
 		ORDER BY updated_at ASC
 		LIMIT 500`)
 	if err != nil {
@@ -191,6 +209,7 @@ func Reconcile(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 	for rows.Next() {
 		var partner partnerReadback
 		if err := rows.Scan(
+			&partner.OperatorContextID,
 			&partner.PartnerID,
 			&partner.PayoutDestination,
 			&partner.MaskedAccount,
@@ -207,13 +226,14 @@ func Reconcile(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 	}
 
 	for _, partner := range partners {
-		ref, readErr := client.GetPayoutDestination(ctx, partner.PartnerID)
+		readCtx := wlt.WithOperatorContext(ctx, partner.OperatorContextID)
+		ref, readErr := client.GetPayoutDestination(readCtx, partner.PartnerID)
 		if errors.Is(readErr, wlt.ErrPayoutDestinationNotFound) {
 			if partner.PayoutDestination != "" && partner.ActivationStatus != "partner_deactivated" {
 				if err := upsertCase(ctx, db, partner, "wlt_destination_missing", nil); err != nil {
 					return err
 				}
-			} else if err := resolvePartnerCases(ctx, db, partner.PartnerID); err != nil {
+			} else if err := resolvePartnerCases(ctx, db, partner.OperatorContextID, partner.PartnerID); err != nil {
 				return err
 			}
 			continue
@@ -234,7 +254,7 @@ func Reconcile(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 			issue = "masked_readback_mismatch"
 		}
 		if issue == "" {
-			if err := resolvePartnerCases(ctx, db, partner.PartnerID); err != nil {
+			if err := resolvePartnerCases(ctx, db, partner.OperatorContextID, partner.PartnerID); err != nil {
 				return err
 			}
 			continue
@@ -259,7 +279,9 @@ func upsertCase(ctx context.Context, db *sql.DB, partner partnerReadback, issue 
 			partner_id, issue_type, dsh_payout_destination_id,
 			wlt_payout_destination_id, wlt_masked_account_number,
 			wlt_masked_iban, wlt_masked_mobile_number
-		) VALUES ($1,$2,$3,$4,$5,$6,$7)
+		)
+		SELECT $1,$2,$3,$4,$5,$6,$7
+		WHERE EXISTS (SELECT 1 FROM dsh_partners WHERE id=$1 AND operator_context_id=$8)
 		ON CONFLICT (partner_id, issue_type) DO UPDATE SET
 			dsh_payout_destination_id = EXCLUDED.dsh_payout_destination_id,
 			wlt_payout_destination_id = EXCLUDED.wlt_payout_destination_id,
@@ -269,17 +291,19 @@ func upsertCase(ctx context.Context, db *sql.DB, partner partnerReadback, issue 
 			status = 'open', resolved_at = NULL, resolution_note = '',
 			last_detected_at = now()`,
 		partner.PartnerID, issue, partner.PayoutDestination,
-		wltID, account, iban, mobile,
+		wltID, account, iban, mobile, partner.OperatorContextID,
 	)
 	return err
 }
 
-func resolvePartnerCases(ctx context.Context, db *sql.DB, partnerID string) error {
+func resolvePartnerCases(ctx context.Context, db *sql.DB, operatorContextID, partnerID string) error {
 	_, err := db.ExecContext(ctx, `
-		UPDATE dsh_partner_wlt_reconciliation_cases
+		UPDATE dsh_partner_wlt_reconciliation_cases cases
 		SET status = 'resolved', resolved_at = now(),
 		    resolution_note = 'DSH and WLT masked readback are aligned',
 		    last_detected_at = now()
-		WHERE partner_id = $1 AND status = 'open'`, partnerID)
+		FROM dsh_partners partner
+		WHERE cases.partner_id = $1 AND cases.status = 'open'
+		  AND partner.id=cases.partner_id AND partner.operator_context_id=$2`, partnerID, operatorContextID)
 	return err
 }

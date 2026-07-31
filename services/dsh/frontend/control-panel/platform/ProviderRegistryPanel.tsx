@@ -7,6 +7,7 @@ import {
   CpButton,
   CpPageHeader,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -73,7 +74,7 @@ export function ProviderRegistryPanel() {
     return (
       <DataTablePageFrame
         header={header}
-        stateView={<CpStatePanel role="status" title="جاري تحميل المزودين…" />}
+        stateView={<CpStateView kind="loading" title="جاري تحميل المزودين…" />}
       >
         <View />
       </DataTablePageFrame>
@@ -199,7 +200,7 @@ export function ProviderRegistryPanel() {
 
         {registry.detailState.kind === "loading" ? (
           <View style={styles.section}>
-            <CpStatePanel role="status" title="جاري تحميل تفاصيل المزود…" />
+            <CpStateView kind="loading" title="جاري تحميل تفاصيل المزود…" />
           </View>
         ) : null}
 

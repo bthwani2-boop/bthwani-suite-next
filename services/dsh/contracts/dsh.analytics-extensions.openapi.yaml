@@ -3,7 +3,7 @@ info:
   title: BThwani DSH Analytics Extensions API
   version: 1.0.0
   description: >-
-    Active standalone index for analytics path-items implemented by JRN-032 but
+    Active standalone index for operational analytics path-items
     not yet composed into the primary generated DSH document. The path-item
     definitions remain sovereign in paths/analytics.paths.yaml.
 x-bthwani-owner: services/dsh

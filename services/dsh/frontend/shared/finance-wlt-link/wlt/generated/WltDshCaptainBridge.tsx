@@ -14,9 +14,8 @@ import {
   useDirection,
   spacing,
 } from '@bthwani/ui-kit';
-import { useWltDshCaptainCodReferenceController } from '@bthwani/wlt/frontend/shared/dsh/use-wlt-dsh-captain-cod-reference-controller';
-import type { WltDshCodReference } from '@bthwani/wlt/frontend/shared/dsh/wlt-dsh-boundary.types';
-import { fetchDshCaptainOwnCodRecords } from '../../wlt-cod/wlt-cod.api';
+import { fetchDshCaptainOwnCodRecords, type WltDshCodReference } from '../../wlt-cod/wlt-cod.api';
+import { useDshCaptainCodController } from '../../wlt-cod/use-dsh-captain-cod-controller';
 
 function ChevronDownIcon() {
   return <Icon name="chevron-down" tone="muted" size={18} />;
@@ -178,8 +177,7 @@ export function WltDshCaptainBridge({
   // reference controller. Transport goes through the governed DSH finance proxy
   // (/dsh/captain/finance/cod-records) because WLT's internal read is
   // service-authenticated — never fetched directly from the browser.
-  const captainId = dshClientId ?? null;
-  const codController = useWltDshCaptainCodReferenceController(captainId, fetchDshCaptainOwnCodRecords);
+  const codController = useDshCaptainCodController(Boolean(dshClientId), fetchDshCaptainOwnCodRecords);
 
   const codRecords: WltDshFinanceSummaryRecord[] =
     codController.state.kind === 'loaded'

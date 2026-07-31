@@ -24,7 +24,7 @@ ALTER TABLE dsh_coupons
     );
 
 ALTER TABLE dsh_coupon_redemptions
-    ADD COLUMN IF NOT EXISTS funding_tenant_id TEXT,
+    ADD COLUMN IF NOT EXISTS funding_operator_context_id TEXT,
     ADD COLUMN IF NOT EXISTS platform_funded_minor_units BIGINT NOT NULL DEFAULT 0
         CHECK (platform_funded_minor_units >= 0),
     ADD COLUMN IF NOT EXISTS partner_funded_minor_units BIGINT NOT NULL DEFAULT 0
@@ -63,8 +63,8 @@ ALTER TABLE dsh_coupon_redemptions
     ADD CONSTRAINT dsh_coupon_redemptions_wlt_reference_chk CHECK (
         funding_status NOT IN ('reserved', 'committed', 'released', 'reversed')
         OR (
-            funding_tenant_id IS NOT NULL
-            AND btrim(funding_tenant_id) <> ''
+            funding_operator_context_id IS NOT NULL
+            AND btrim(funding_operator_context_id) <> ''
             AND wlt_funding_reservation_id IS NOT NULL
             AND btrim(wlt_funding_reservation_id) <> ''
         )
@@ -100,9 +100,9 @@ BEGIN
             USING ERRCODE = '23514';
     END IF;
 
-    IF OLD.funding_tenant_id IS NOT NULL
-       AND NEW.funding_tenant_id IS DISTINCT FROM OLD.funding_tenant_id THEN
-        RAISE EXCEPTION 'coupon funding tenant is immutable'
+    IF OLD.funding_operator_context_id IS NOT NULL
+       AND NEW.funding_operator_context_id IS DISTINCT FROM OLD.funding_operator_context_id THEN
+        RAISE EXCEPTION 'coupon funding OperatorContext is immutable'
             USING ERRCODE = '23514';
     END IF;
 
@@ -128,7 +128,7 @@ $$;
 DROP TRIGGER IF EXISTS trg_dsh_guard_coupon_funding_projection
     ON dsh_coupon_redemptions;
 CREATE TRIGGER trg_dsh_guard_coupon_funding_projection
-BEFORE UPDATE OF funding_tenant_id, platform_funded_minor_units,
+BEFORE UPDATE OF funding_operator_context_id, platform_funded_minor_units,
     partner_funded_minor_units, funding_partner_id, funding_status,
     wlt_funding_reservation_id
 ON dsh_coupon_redemptions

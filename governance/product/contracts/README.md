@@ -8,4 +8,4 @@ Rules:
 - The filename must be `<capability-id>.product-truth.json` using lowercase filesystem-safe form.
 - Do not commit runtime logs, screenshots, generated reports, or evidence packs here.
 - A contract records product intent and acceptance ownership; it does not prove runtime, QA, security, release, or production status.
-- SaaS and tenancy implementation are explicitly outside the current execution scope.
+- platform and isolation implementation are explicitly outside the current execution scope.

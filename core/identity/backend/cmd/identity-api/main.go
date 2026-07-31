@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -22,6 +23,7 @@ func main() {
 	if databaseURL == "" {
 		log.Fatal("[identity-api] DATABASE_URL is required")
 	}
+	bootstrapOperatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
 
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
@@ -35,8 +37,13 @@ func main() {
 
 	repository := identity.NewRepository(db)
 	localBootstrap := identity.LocalBootstrap{
-		Enabled:  os.Getenv("IDENTITY_LOCAL_BOOTSTRAP") == "true",
+		Enabled:  strings.EqualFold(strings.TrimSpace(os.Getenv("IDENTITY_LOCAL_BOOTSTRAP")), "true"),
 		Password: os.Getenv("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD"),
+		OperatorContextID: bootstrapOperatorContextID,
+	}
+
+	if localBootstrap.Enabled && localBootstrap.OperatorContextID == "" {
+		log.Fatal("[identity-api] BTHWANI_OPERATOR_CONTEXT_ID is required when local bootstrap is enabled")
 	}
 	if err := repository.BootstrapLocalActors(context.Background(), localBootstrap); err != nil {
 		log.Fatalf("[identity-api] local bootstrap: %v", err)
@@ -44,19 +51,16 @@ func main() {
 	if err := repository.BootstrapLocalPlatformActors(context.Background(), localBootstrap); err != nil {
 		log.Fatalf("[identity-api] local platform separation bootstrap: %v", err)
 	}
-	if err := repository.RepairLocalBootstrapTenant(
-		context.Background(),
-		localBootstrap,
-		envOr("BTHWANI_DEFAULT_TENANT_ID", "local-dsh"),
-	); err != nil {
-		log.Fatalf("[identity-api] local tenant repair: %v", err)
+	if err := repository.BootstrapSovereignLeadershipAccess(context.Background(), localBootstrap); err != nil {
+		log.Fatalf("[identity-api] local sovereign leadership bootstrap: %v", err)
 	}
 
 	router := identityhttp.NewRouter(db, repository)
-	authTenantScopedRouter := identityhttp.SaaSAuthTenantBoundary(repository, router)
-	issuerScopedRouter := identityhttp.SaaSActivationIssuerBoundary(db, authTenantScopedRouter)
-	tenantScopedRouter := identityhttp.SaaSTenantBoundary(db, issuerScopedRouter)
-	otpScopedRouter := identityhttp.SaaSOtpBoundary(repository, tenantScopedRouter)
+	identityhttp.RegisterEmployeeAccessRoutes(router, repository)
+	authRouter := identityhttp.AuthOperatorContextBoundary(repository, router)
+	issuerScopedRouter := identityhttp.ActivationIssuerBoundary(db, authRouter)
+	internalRouter := identityhttp.OperatorBoundary(db, issuerScopedRouter)
+	otpScopedRouter := identityhttp.OtpBoundary(repository, internalRouter)
 	server := &http.Server{
 		Addr: ":" + port,
 		Handler: identityhttp.BrowserOriginGuard(

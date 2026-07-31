@@ -26,10 +26,30 @@ func legacyRefundView(item *GovernedRefund) *Refund {
 	}
 }
 
-// CreateRefundAtomic preserves order-cancellation compatibility while using
-// the JRN-035 amount reservation, tenant isolation, audit and idempotency
-// engine. A missing amount means "refund the full remaining amount".
-func CreateRefundAtomic(db *sql.DB, input CreateRefundInput) (*Refund, bool, error) {
+func refundOperatorContextForSession(ctx context.Context, db *sql.DB, paymentSessionID string) (context.Context, string, error) {
+	if operatorContextID, ok := shared.OperatorContextIDFromContext(ctx); ok {
+		return ctx, operatorContextID, nil
+	}
+	var operatorContextID string
+	if err := db.QueryRowContext(ctx, `
+		SELECT operator_context_id FROM wlt_payment_sessions WHERE id=$1`, paymentSessionID).Scan(&operatorContextID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ctx, "", fmt.Errorf("payment session not found")
+		}
+		return ctx, "", err
+	}
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return ctx, "", fmt.Errorf("payment session OperatorContext is missing")
+	}
+	return shared.WithOperatorContext(ctx, operatorContextID), operatorContextID, nil
+}
+
+// CreateRefundAtomicForOperatorContext preserves order-cancellation compatibility while
+// using the governed amount reservation, context isolation, audit and idempotency
+// engine. OperatorContext ownership comes from the authenticated request context. The
+// compatibility path may derive it only from WLT's own payment-session record.
+func CreateRefundAtomicForOperatorContext(ctx context.Context, db *sql.DB, input CreateRefundInput) (*Refund, bool, error) {
 	input.PaymentSessionID = strings.TrimSpace(input.PaymentSessionID)
 	input.OrderID = strings.TrimSpace(input.OrderID)
 	input.ClientID = strings.TrimSpace(input.ClientID)
@@ -37,8 +57,13 @@ func CreateRefundAtomic(db *sql.DB, input CreateRefundInput) (*Refund, bool, err
 	if input.PaymentSessionID == "" || input.OrderID == "" || input.ClientID == "" || input.Reason == "" {
 		return nil, false, fmt.Errorf("paymentSessionId, orderId, clientId, and reason are required")
 	}
+	trustedCtx, operatorContextID, err := refundOperatorContextForSession(ctx, db, input.PaymentSessionID)
+	if err != nil {
+		return nil, false, err
+	}
 	key := "order-cancellation:" + input.PaymentSessionID + ":" + input.OrderID
-	item, replayed, err := CreateGovernedRefund(context.Background(), db, GovernedCreateRefundInput{
+	item, replayed, err := CreateGovernedRefund(trustedCtx, db, GovernedCreateRefundInput{
+		OperatorContextID: operatorContextID,
 		PaymentSessionID: input.PaymentSessionID,
 		OrderID: input.OrderID,
 		ClientID: input.ClientID,
@@ -51,6 +76,12 @@ func CreateRefundAtomic(db *sql.DB, input CreateRefundInput) (*Refund, bool, err
 	return legacyRefundView(item), !replayed, err
 }
 
+// CreateRefundAtomic is the package-level compatibility adapter. It never
+// invents a OperatorContext; it resolves ownership from the referenced WLT session.
+func CreateRefundAtomic(db *sql.DB, input CreateRefundInput) (*Refund, bool, error) {
+	return CreateRefundAtomicForOperatorContext(context.Background(), db, input)
+}
+
 func HandleCreateRefundAtomic(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var input CreateRefundInput
@@ -60,7 +91,7 @@ func HandleCreateRefundAtomic(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
-		created, wasCreated, err := CreateRefundAtomic(db, input)
+		created, wasCreated, err := CreateRefundAtomicForOperatorContext(r.Context(), db, input)
 		if errors.Is(err, ErrRefundReferenceConflict) {
 			shared.SendError(w, http.StatusConflict, "REFUND_REFERENCE_CONFLICT", err.Error())
 			return
@@ -74,7 +105,9 @@ func HandleCreateRefundAtomic(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		status := http.StatusOK
-		if wasCreated { status = http.StatusCreated }
+		if wasCreated {
+			status = http.StatusCreated
+		}
 		shared.SendJSON(w, status, map[string]any{"refund": created, "replayed": !wasCreated})
 	}
 }

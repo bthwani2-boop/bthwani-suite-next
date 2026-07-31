@@ -11,7 +11,9 @@ import {
   type ReactNode,
 } from "react";
 import type { ActorIdentity } from "@bthwani/core-identity";
+import { CONTROL_PANEL_SESSION_EXPIRED_EVENT } from "../_kernel/dsh-http-request";
 import {
+  activateControlPanelSession,
   fetchControlPanelSession,
   loginControlPanelSession,
   logoutControlPanelSession,
@@ -26,6 +28,7 @@ export type ControlPanelSessionState =
 
 export type ControlPanelSession = {
   readonly state: ControlPanelSessionState;
+  activate(phone: string, code: string): Promise<boolean>;
   login(username: string, password: string): Promise<boolean>;
   logout(): Promise<void>;
 };
@@ -44,6 +47,16 @@ export function ControlPanelSessionProvider({ children }: { readonly children: R
   }, []);
 
   useEffect(() => {
+    const handleExpiredSession = () => {
+      if (mounted.current) setState({ kind: "signed_out" });
+    };
+    window.addEventListener(CONTROL_PANEL_SESSION_EXPIRED_EVENT, handleExpiredSession);
+    return () => {
+      window.removeEventListener(CONTROL_PANEL_SESSION_EXPIRED_EVENT, handleExpiredSession);
+    };
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     (async () => {
       const result = await fetchControlPanelSession();
@@ -57,6 +70,18 @@ export function ControlPanelSessionProvider({ children }: { readonly children: R
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  const activate = useCallback(async (phone: string, code: string): Promise<boolean> => {
+    setState({ kind: "authenticating" });
+    const result = await activateControlPanelSession(phone, code);
+    if (!mounted.current) return false;
+    if (result.ok && result.body) {
+      setState({ kind: "authenticated", identity: result.body.identity });
+      return true;
+    }
+    setState({ kind: "error", code: result.body?.code ?? "ACCESS_CODE_FAILED" });
+    return false;
   }, []);
 
   const login = useCallback(async (username: string, password: string): Promise<boolean> => {
@@ -77,8 +102,8 @@ export function ControlPanelSessionProvider({ children }: { readonly children: R
   }, []);
 
   const value = useMemo<ControlPanelSession>(
-    () => ({ state, login, logout }),
-    [state, login, logout],
+    () => ({ state, activate, login, logout }),
+    [state, activate, login, logout],
   );
 
   return (

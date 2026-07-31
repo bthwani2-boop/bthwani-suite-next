@@ -52,7 +52,7 @@ export function ProductOverridesScreen({
   const [pauseState, setPauseState] = React.useState<AssortmentPauseState | null>(null);
   const [masterProduct, setMasterProduct] = React.useState<MasterProduct | null>(null);
   const [unitPrice, setUnitPrice] = React.useState('');
-  const [stockStatus, setStockStatus] = React.useState<"in_stock" | "low_stock" | "out_of_stock">('in_stock');
+  const [stockStatus, setStockStatus] = React.useState<'in_stock' | 'low_stock' | 'out_of_stock'>('in_stock');
   const [available, setAvailable] = React.useState(true);
   const [localNote, setLocalNote] = React.useState('');
   const [pauseReason, setPauseReason] = React.useState('');
@@ -107,7 +107,7 @@ export function ProductOverridesScreen({
       const priceNum = parseFloat(unitPrice) || 0.0;
       const saved = await upsertPartnerStoreAssortmentOCC(storeId, productId, {
         unitPrice: priceNum,
-        currency: assortment?.currency ?? 'YER',
+        currency: assortment?.currency ?? '',
         available,
         stockStatus,
         localNote,
@@ -196,7 +196,7 @@ export function ProductOverridesScreen({
           <Surface tone="inset" padding={3} gap={2} radiusToken="md">
             <Text role="bodyStrong" align="start">هوية المنتج المركزي</Text>
             <Box style={{ flexDirection: resolveRowDirection(direction), gap: spacing[2], flexWrap: 'wrap' }}>
-              <Text role="bodySm" align="start">📦 {masterProduct.canonicalNameAr}</Text>
+              <Text role="bodySm" align="start">{masterProduct.canonicalNameAr}</Text>
               {masterProduct.sku && <Text role="caption" tone="muted">SKU: {masterProduct.sku}</Text>}
             </Box>
           </Surface>
@@ -214,6 +214,9 @@ export function ProductOverridesScreen({
         {screenState === 'saved' && (
           <Surface tone="success" padding={3} radiusToken="md">
             <Text role="bodyStrong" tone="success" align="start">تم حفظ التجاوزات المحلية بنجاح</Text>
+            <Text role="caption" tone="muted" align="start">
+              العملة المعتمدة من الخادم: {assortment?.currency || 'قيد القراءة الراجعة'}
+            </Text>
             {onBack && <Button label="العودة للكتالوج" tone="primary" size="sm" fullWidth={false} onPress={onBack} style={{ marginTop: spacing[2] }} />}
           </Surface>
         )}
@@ -223,7 +226,7 @@ export function ProductOverridesScreen({
             <Text role="bodyStrong" align="start">القيم المحلية المعدلة</Text>
 
             <TextField
-              label="تجاوز السعر المحلي (ر.ي)"
+              label={assortment?.currency ? `تجاوز السعر المحلي (${assortment.currency})` : 'تجاوز السعر المحلي'}
               value={unitPrice}
               onChangeText={setUnitPrice}
               placeholder="مثال: 15.00"
@@ -294,7 +297,7 @@ export function ProductOverridesScreen({
                 label="وقت الاستئناف ISO (اختياري)"
                 value={pausedUntil}
                 onChangeText={setPausedUntil}
-                placeholder="2026-07-22T12:00:00+03:00"
+                placeholder="2026-07-28T18:00:00Z"
                 disabled={pauseSaving}
               />
               <Button

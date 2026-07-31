@@ -1,7 +1,7 @@
 param(
   [string]$BaseUrl = $env:WLT_BASE_URL,
   [string]$WiremockUrl = "http://localhost:58090",
-  [string]$TenantId = $env:BTHWANI_DEFAULT_TENANT_ID,
+  [string]$OperatorContextId = $env:BTHWANI_OPERATOR_CONTEXT_ID,
   [string]$ServiceToken = $env:WLT_DSH_SERVICE_TOKEN
 )
 
@@ -11,8 +11,8 @@ Set-StrictMode -Version Latest
 if ([string]::IsNullOrWhiteSpace($BaseUrl)) {
   $BaseUrl = "http://localhost:58083"
 }
-if ([string]::IsNullOrWhiteSpace($TenantId)) {
-  throw "BTHWANI_DEFAULT_TENANT_ID or -TenantId is required for WLT provider smoke"
+if ([string]::IsNullOrWhiteSpace($OperatorContextId)) {
+  throw "BTHWANI_OPERATOR_CONTEXT_ID or -OperatorContextId is required for WLT provider smoke"
 }
 if ([string]::IsNullOrWhiteSpace($ServiceToken)) {
   throw "WLT_DSH_SERVICE_TOKEN or -ServiceToken is required for WLT provider smoke"
@@ -41,7 +41,7 @@ function Invoke-WltJson {
     "Idempotency-Key" = $OperationIdempotencyKey
     "Authorization" = "Bearer $ServiceToken"
     "X-Service-Caller" = "dsh"
-    "X-Tenant-ID" = $TenantId
+    "X-Operator-Context-ID" = $OperatorContextId
   }
   $uri = "$BaseUrl$Path"
   try {
@@ -55,7 +55,7 @@ function Invoke-WltJson {
     try {
       $responseBody = $_.ErrorDetails.Message
     } catch { }
-    throw "WLT request failed: method=$Method path=$Path tenant=$TenantId status=$statusCode body=$responseBody"
+    throw "WLT request failed: method=$Method path=$Path OperatorContext=$OperatorContextId status=$statusCode body=$responseBody"
   }
 }
 
@@ -64,7 +64,7 @@ if ($health.status -ne "healthy") { throw "WLT health failed" }
 
 $session = Invoke-WltJson -Method "POST" -Path "/wlt/payment-sessions" -Body @{
   checkoutIntentId = $CheckoutIntentId
-  tenantId = $TenantId
+  operatorContextId = $OperatorContextId
   clientId = $ClientId
   storeId = "store-test-grocery"
   paymentMethod = "official_wallet"
@@ -87,10 +87,10 @@ if ($capture.paymentSession.currency -ne "YER") { throw "WLT capture did not ret
 
 $readback = Invoke-WltJson -Method "GET" -Path "/wlt/payment-sessions/$sessionId"
 if ($readback.paymentSession.status -ne "captured") { throw "WLT readback did not preserve captured status" }
-if ($readback.paymentSession.tenantId -ne $TenantId) { throw "WLT readback did not preserve tenant identity" }
+if ($readback.paymentSession.operatorContextId -ne $OperatorContextId) { throw "WLT readback did not preserve OperatorContext identity" }
 
 $refund = Invoke-WltJson -Method "POST" -Path "/wlt/refunds" -OperationIdempotencyKey "$IdempotencyKey-refund-create" -Body @{
-  tenantId = $TenantId
+  operatorContextId = $OperatorContextId
   paymentSessionId = $sessionId
   orderId = $OrderId
   clientId = $ClientId

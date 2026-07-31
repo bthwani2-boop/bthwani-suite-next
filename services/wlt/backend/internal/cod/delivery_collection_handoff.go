@@ -12,7 +12,8 @@ import (
 
 // HandleCreateDeliveryCollectionHandoff accepts every completed delivery event.
 // For prepaid orders the event is acknowledged as not applicable; for COD the
-// monetary record is derived and created atomically inside WLT.
+// monetary record is derived and created atomically inside the authenticated
+// OperatorContext. Checkout identifiers from another OperatorContext are treated as missing.
 func HandleCreateDeliveryCollectionHandoff(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !requireDshServiceCaller(w, r) {
@@ -29,7 +30,12 @@ func HandleCreateDeliveryCollectionHandoff(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
 		}
-		session, err := reference.GetPaymentSessionByCheckoutIntent(db, normalized.CheckoutIntentID)
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", err.Error())
+			return
+		}
+		session, err := reference.GetPaymentSessionByCheckoutIntentForOperatorContext(db, operatorContextID, normalized.CheckoutIntentID)
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
@@ -47,7 +53,7 @@ func HandleCreateDeliveryCollectionHandoff(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		record, created, err := CreateDeliveryCollection(db, normalized)
+		record, created, err := CreateDeliveryCollectionForOperatorContext(r.Context(), db, normalized)
 		if errors.Is(err, ErrCodReferenceConflict) {
 			shared.SendError(w, http.StatusConflict, "COD_REFERENCE_CONFLICT", err.Error())
 			return

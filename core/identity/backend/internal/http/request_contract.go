@@ -10,7 +10,7 @@ import (
 const maxGovernanceHeaderLength = 200
 
 // RequestContractMiddleware enforces the public HTTP envelope shared by all
-// JRN-002 operations without duplicating domain validation in handlers.
+// identity operations without duplicating domain validation in handlers.
 func RequestContractMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))

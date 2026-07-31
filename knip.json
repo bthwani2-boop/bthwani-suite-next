@@ -59,6 +59,7 @@
         "apps/mobile/eas-build-mobile.mjs",
         "apps/mobile/mobile-dev-data.mjs",
         "apps/mobile/sentry-env.js",
+        "apps/mobile/verify-mobile-native.mjs",
         "tools/guards/**/*.mjs",
         "tools/scripts/*.mjs",
         "tools/scripts/**/*.mjs",
@@ -207,8 +208,10 @@
       "ignoreDependencies": [
         "expo-constants",
         "expo-crypto",
+        "expo-document-picker",
         "expo-notifications",
-        "expo-secure-store"
+        "expo-secure-store",
+        "expo-video"
       ],
       "ignoreIssues": {
         "frontend/shared/**/generated/**": [
@@ -248,8 +251,8 @@
     },
     "core/identity": {
       "entry": [
-        "clients/index.js",
-        "clients/use-identity-session.js"
+        "clients/index.ts",
+        "clients/use-identity-session.ts"
       ]
     },
     "core/platform-control": {

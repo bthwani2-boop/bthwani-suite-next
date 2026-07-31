@@ -11,6 +11,7 @@ import {
   CpButton,
   CpRetryButton,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -92,7 +93,7 @@ export function ClientAddressPrivacySection() {
         العناوين النشطة تبقى حقيقة تشغيلية. بعد الحذف تُجدول البيانات الحساسة للإخفاء النهائي حسب مدة الاحتفاظ، بينما سجل التدقيق يعرض hash للعميل ولا يعرض الهاتف أو العنوان أو الإحداثيات.
       </Text>
 
-      {controller.state.kind === "loading" ? <CpStatePanel role="status" title="جارٍ تحميل سياسة الخصوصية وطابور الإخفاء…" /> : null}
+      {controller.state.kind === "loading" ? <CpStateView kind="loading" title="جارٍ تحميل سياسة الخصوصية وطابور الإخفاء…" /> : null}
       {controller.state.kind === "error" ? (
         <CpStatePanel role="alert" title="تعذر تحميل خصوصية العناوين" description={controller.state.message}>
           <CpRetryButton onClick={controller.reload}>إعادة المحاولة</CpRetryButton>

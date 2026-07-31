@@ -104,7 +104,14 @@ export const ProductCard = memo(function ProductCard({
   onImagePress,
 }: ProductCardProps) {
   const isNumericPrice = price?.value != null && !Number.isNaN(price.value);
-  const priceStr = price?.label ?? (isNumericPrice ? `${price.value} ${price.currency ?? "د.ي"}` : "");
+  const normalizedCurrency = price?.currency?.trim() ?? "";
+  const priceStr = price?.label ?? (
+    isNumericPrice
+      ? normalizedCurrency
+        ? `${price.value} ${normalizedCurrency}`
+        : `${price.value}`
+      : ""
+  );
 
   return (
     <YStack style={styles.productCard}>
@@ -219,35 +226,34 @@ const styles = {
     color: colorRoles.brandStructure,
     fontSize: 16,
     fontFamily: "Outfit-Bold",
-    fontWeight: "900",
+    fontWeight: "800",
     textAlign: "right",
   },
   productMetaBadge: {
-    backgroundColor: colorPalette.grayBorder,
-    paddingHorizontal: 12,
+    borderRadius: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    backgroundColor: "rgba(244, 154, 25, 0.12)",
     alignSelf: "flex-end",
   },
   productCategoryText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: colorRoles.textSecondary,
+    color: colorRoles.brandAction,
+    fontWeight: "700",
   },
   productImageWrap: {
-    width: 176, // Match target image width ratio
-    height: "100%",
+    width: 148,
+    height: 130,
     position: "relative",
+    overflow: "visible",
+    justifyContent: "center",
+    alignItems: "center",
   },
   imageInnerContainer: {
     width: "100%",
     height: "100%",
-    borderTopRightRadius: 24, // Match card corner radius
+    overflow: "hidden",
+    borderTopRightRadius: 24,
     borderBottomRightRadius: 24,
-    borderTopLeftRadius: 0,
-    borderBottomLeftRadius: 0,
-    overflow: "hidden", // Clip image
-    backgroundColor: colorPalette.tanBg, // Sand placeholder color
   },
   productImage: {
     width: "100%",
@@ -257,24 +263,21 @@ const styles = {
   productImagePlaceholder: {
     width: "100%",
     height: "100%",
-    backgroundColor: colorPalette.tanBg,
-    alignItems: "center",
+    backgroundColor: colorRoles.surfaceMuted,
     justifyContent: "center",
+    alignItems: "center",
   },
   productFavoriteButton: {
     position: "absolute",
-    top: 0,
-    right: 0,
-    width: 36,
-    height: 36,
-    borderTopRightRadius: 24, // Hugs top-right card corner radius
-    borderBottomLeftRadius: 24,
-    backgroundColor: colorRoles.surfaceBase,
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colorPalette.white,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(10, 47, 92, 0.08)",
-    shadowColor: colorRoles.shadowBase,
+    shadowColor: colorRoles.brandStructure,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -282,49 +285,49 @@ const styles = {
     zIndex: 10,
   },
   heartIcon: {
-    fontSize: 18,
-    color: colorRoles.brandAction,
+    color: colorRoles.textMuted,
+    fontSize: 20,
   },
   heartIconActive: {
-    color: colorRoles.brandAction,
+    color: colorRoles.danger,
   },
   productAddButton: {
     position: "absolute",
-    bottom: 0,
-    left: 0,
-    width: 44,
-    height: 36,
-    borderBottomLeftRadius: 24, // Hugs bottom-left card corner radius
-    borderTopRightRadius: 24,
+    left: 10,
+    bottom: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: colorRoles.brandAction,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: colorRoles.brandAction,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 4,
-    zIndex: 10,
+    zIndex: 20,
   },
   cartBtnIcon: {
-    color: colorRoles.textInverse,
-    fontSize: 16,
+    fontSize: 18,
   },
   addPlusBadge: {
     position: "absolute",
-    top: 2,
-    left: 2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    top: -5,
+    left: -5,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: colorPalette.white,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: colorRoles.brandAction,
   },
   addPlusText: {
     color: colorRoles.brandAction,
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: "900",
-    lineHeight: 11,
+    lineHeight: 13,
   },
 } as const;

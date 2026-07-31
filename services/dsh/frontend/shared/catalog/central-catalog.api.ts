@@ -209,6 +209,13 @@ export async function updateMasterProduct(
   return resp.masterProduct;
 }
 
+export async function fetchMasterProductById(productId: string): Promise<MasterProduct> {
+  const resp = await request<{ masterProduct: MasterProduct }>(
+    `/dsh/operator/catalog/master-products/${encodeURIComponent(productId)}`,
+  );
+  return resp.masterProduct;
+}
+
 export async function fetchProductProposalsPage(query?: {
   status?: string;
   storeId?: string;

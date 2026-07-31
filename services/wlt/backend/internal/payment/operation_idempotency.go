@@ -14,7 +14,7 @@ import (
 
 type operationReceipt struct {
 	ID          string
-	TenantID    string
+	OperatorContextID    string
 	RequestHash string
 	State       string
 }
@@ -42,8 +42,8 @@ func (w *bufferedResponseWriter) Write(body []byte) (int, error) {
 	return w.body.Write(body)
 }
 
-func paymentOperationHash(tenantID, sessionID, operation string) string {
-	sum := sha256.Sum256([]byte(tenantID + "\x1f" + sessionID + "\x1f" + operation))
+func paymentOperationHash(operatorContextID, sessionID, operation string) string {
+	sum := sha256.Sum256([]byte(operatorContextID + "\x1f" + sessionID + "\x1f" + operation))
 	return hex.EncodeToString(sum[:])
 }
 
@@ -57,13 +57,13 @@ func HandleGovernedPaymentOperation(db *sql.DB, operation string, next http.Hand
 		sessionID := strings.TrimSpace(r.PathValue("paymentSessionId"))
 		idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 		correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
-		trustedTenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+		trustedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 		if sessionID == "" {
 			shared.SendError(w, http.StatusBadRequest, "MISSING_PAYMENT_SESSION_ID", "paymentSessionId is required")
 			return
 		}
-		if trustedTenantID == "" {
-			shared.SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Tenant-ID is required")
+		if trustedOperatorContextID == "" {
+			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "X-Operator-Context-ID is required")
 			return
 		}
 		if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
@@ -84,8 +84,8 @@ func HandleGovernedPaymentOperation(db *sql.DB, operation string, next http.Hand
 			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payment session not found")
 			return
 		}
-		if session.TenantID != trustedTenantID {
-			shared.SendError(w, http.StatusForbidden, "TENANT_MISMATCH", "payment session does not belong to the trusted tenant")
+		if session.OperatorContextID != trustedOperatorContextID {
+			shared.SendError(w, http.StatusForbidden, "OperatorContext_MISMATCH", "payment session does not belong to the trusted OperatorContext")
 			return
 		}
 		if session.PaymentMethod == "cod" {
@@ -93,8 +93,8 @@ func HandleGovernedPaymentOperation(db *sql.DB, operation string, next http.Hand
 			return
 		}
 
-		requestHash := paymentOperationHash(trustedTenantID, sessionID, operation)
-		receipt, inserted, err := claimOperationReceipt(db, trustedTenantID, sessionID, operation, idempotencyKey, requestHash, correlationID)
+		requestHash := paymentOperationHash(trustedOperatorContextID, sessionID, operation)
+		receipt, inserted, err := claimOperationReceipt(db, trustedOperatorContextID, sessionID, operation, idempotencyKey, requestHash, correlationID)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "IDEMPOTENCY_RECEIPT_FAILED", "failed to claim payment operation")
 			return
@@ -127,16 +127,16 @@ func HandleGovernedPaymentOperation(db *sql.DB, operation string, next http.Hand
 	}
 }
 
-func claimOperationReceipt(db *sql.DB, tenantID, sessionID, operation, key, requestHash, correlationID string) (operationReceipt, bool, error) {
+func claimOperationReceipt(db *sql.DB, operatorContextID, sessionID, operation, key, requestHash, correlationID string) (operationReceipt, bool, error) {
 	var receipt operationReceipt
 	err := db.QueryRow(`
 		INSERT INTO wlt_payment_operation_receipts
-			(tenant_id, payment_session_id, operation, idempotency_key, request_hash, correlation_id)
+			(operator_context_id, payment_session_id, operation, idempotency_key, request_hash, correlation_id)
 		VALUES ($1, $2, $3, $4, $5, $6)
-		ON CONFLICT (tenant_id, payment_session_id, operation, idempotency_key) DO NOTHING
-		RETURNING id, tenant_id, request_hash, state`,
-		tenantID, sessionID, operation, key, requestHash, correlationID,
-	).Scan(&receipt.ID, &receipt.TenantID, &receipt.RequestHash, &receipt.State)
+		ON CONFLICT (operator_context_id, payment_session_id, operation, idempotency_key) DO NOTHING
+		RETURNING id, operator_context_id, request_hash, state`,
+		operatorContextID, sessionID, operation, key, requestHash, correlationID,
+	).Scan(&receipt.ID, &receipt.OperatorContextID, &receipt.RequestHash, &receipt.State)
 	if err == nil {
 		return receipt, true, nil
 	}
@@ -144,11 +144,11 @@ func claimOperationReceipt(db *sql.DB, tenantID, sessionID, operation, key, requ
 		return operationReceipt{}, false, err
 	}
 	err = db.QueryRow(`
-		SELECT id, tenant_id, request_hash, state
+		SELECT id, operator_context_id, request_hash, state
 		FROM wlt_payment_operation_receipts
-		WHERE tenant_id = $1 AND payment_session_id = $2 AND operation = $3 AND idempotency_key = $4`,
-		tenantID, sessionID, operation, key,
-	).Scan(&receipt.ID, &receipt.TenantID, &receipt.RequestHash, &receipt.State)
+		WHERE operator_context_id = $1 AND payment_session_id = $2 AND operation = $3 AND idempotency_key = $4`,
+		operatorContextID, sessionID, operation, key,
+	).Scan(&receipt.ID, &receipt.OperatorContextID, &receipt.RequestHash, &receipt.State)
 	return receipt, false, err
 }
 

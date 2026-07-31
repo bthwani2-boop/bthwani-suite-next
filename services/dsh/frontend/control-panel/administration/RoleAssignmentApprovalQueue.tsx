@@ -5,6 +5,7 @@ import {
   CpButton,
   CpPageHeader,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -74,8 +75,8 @@ export function RoleAssignmentApprovalQueue() {
       dir="rtl"
       header={<CpPageHeader title="تغييرات أدوار الموظفين — Maker / Checker" />}
       stateView={
-        approvals.state.kind === "loading" ? <CpStatePanel role="status" title="جارٍ تحميل طلبات الاعتماد…" />
-          : approvals.state.kind === "error" ? <CpStatePanel role="alert" title={approvals.state.message} />
+        approvals.state.kind === "loading" ? <CpStateView kind="loading" title="جارٍ تحميل طلبات الاعتماد…" />
+          : approvals.state.kind === "error" ? <CpStateView kind="error" title={approvals.state.message} />
           : undefined
       }
     >
@@ -107,7 +108,7 @@ export function RoleAssignmentApprovalQueue() {
         </CpButton>
       </section>
 
-      {actionError ? <CpStatePanel role="alert" title={actionError} /> : null}
+      {actionError ? <CpStateView kind="error" title={actionError} /> : null}
 
       {approvals.state.kind === "success" && approvals.state.data.length === 0 ? (
         <CpStatePanel role="status" title="لا توجد طلبات تغيير أدوار معلقة." />

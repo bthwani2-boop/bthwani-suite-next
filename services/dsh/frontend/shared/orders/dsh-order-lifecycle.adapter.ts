@@ -45,6 +45,17 @@ function contractStatusError(value: string, source = 'order'): DshOrderApiContra
   };
 }
 
+function normalizeCurrency(value: unknown, source: string): string {
+  const currency = String(value ?? '').trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(currency)) {
+    throw {
+      kind: 'contract',
+      message: `missing or invalid DSH ${source} currency "${currency}" — commercial snapshot drift must be fixed, not defaulted`,
+    } as DshOrderApiContractError;
+  }
+  return currency;
+}
+
 export function normalizeDshOrderStatus(status: unknown): DshOrderStatus {
   const value = String(status ?? '').trim().toLowerCase();
   if (SOVEREIGN_ORDER_STATUSES.has(value as DshOrderStatus)) {
@@ -101,6 +112,7 @@ export function normalizeOrderItem(raw: BackendOrderItem, orderId = ''): DshOrde
     ...(productName !== undefined ? { product_name: productName } : {}),
     quantity,
     price,
+    currency: normalizeCurrency(raw.currency, 'order item'),
   };
 }
 
@@ -133,6 +145,7 @@ export function normalizeOrder(raw: BackendOrder): DshOrderRecord {
     client_id: String(raw.client_id ?? raw.clientId ?? ''),
     status: normalizeDshOrderStatus(raw.status),
     total_price: deriveTotalPrice(raw),
+    currency: normalizeCurrency(raw.currency, 'order'),
     ...(checkoutIntentId !== undefined ? { checkout_intent_id: checkoutIntentId } : {}),
     ...(wltPaymentRefId !== undefined ? { wlt_payment_ref_id: wltPaymentRefId } : {}),
     ...(captainId !== undefined ? { captain_id: captainId } : {}),
@@ -148,6 +161,14 @@ export function normalizeOrderResponse<T extends { readonly order?: BackendOrder
 export function normalizeOrderDetails(resp: { readonly order?: BackendOrder; readonly items?: readonly BackendOrderItem[] }): DshOrderDetailsResponse {
   const order = normalizeOrder(resp.order ?? {});
   const items = (resp.items ?? resp.order?.items ?? []).map((item) => normalizeOrderItem(item, order.id));
+  for (const item of items) {
+    if (item.currency !== order.currency) {
+      throw {
+        kind: 'contract',
+        message: `DSH order item currency "${item.currency}" does not match order currency "${order.currency}"`,
+      } as DshOrderApiContractError;
+    }
+  }
   return {
     order,
     items,

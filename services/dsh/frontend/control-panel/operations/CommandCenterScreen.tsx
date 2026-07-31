@@ -10,7 +10,7 @@ import {
 import { DSH_NAV_ITEMS, OverviewPageFrame } from '@bthwani/control-panel/shell';
 import { CpMutedInline, CpPageHeader } from '@bthwani/control-panel/components';
 import { getDshControlPanelGovernanceEntry } from '../../shared/orders/orders.contract';
-import { buildOperationsHref, NON_OPERATIONS_SECTION_SHORTCUTS } from '../../shared/operations';
+import { buildOperationsHref, NON_OPERATIONS_SECTION_SHORTCUTS, resolveDshOnDemandPolicyLabel } from '../../shared/operations';
 import { useZonesController } from '../../shared/platform/use-platform-policies-controller';
 import { useOperatorAnalyticsDashboardController } from '../../shared/analytics/use-analytics-controller';
 import styles from '../shared/control-panel-surface.module.css';
@@ -29,7 +29,7 @@ function LiveZonesStatusRow({ router }: { router: Router }) {
   if (zonesState.kind === 'idle' || zonesState.kind === 'loading') {
     return (
       <WebControlPanelDecisionRow
-        entityId="ZONES-CAPACITY"
+        entityId="مناطق"
         entityLabel="مراقبة الأحمال والمناطق"
         status="جاري التحميل"
         statusTone="neutral"
@@ -43,7 +43,7 @@ function LiveZonesStatusRow({ router }: { router: Router }) {
   if (zonesState.kind === 'error') {
     return (
       <WebControlPanelDecisionRow
-        entityId="ZONES-CAPACITY"
+        entityId="مناطق"
         entityLabel="مراقبة الأحمال والمناطق"
         status="غير متاح"
         statusTone="danger"
@@ -58,7 +58,7 @@ function LiveZonesStatusRow({ router }: { router: Router }) {
   const activeCount = zonesState.data.filter((zone) => zone.isActive).length;
   return (
     <WebControlPanelDecisionRow
-      entityId="ZONES-CAPACITY"
+      entityId="مناطق"
       entityLabel="مراقبة الأحمال والمناطق"
       status="متصل بالخادم"
       statusTone="success"
@@ -95,7 +95,7 @@ export function CommandCenterScreen({ subGroup = 'overview' }: CommandCenterScre
   if (analyticsError) {
     content = (
       <WebControlPanelDecisionRow
-        entityId="COMMAND-CENTER-ANALYTICS"
+        entityId="تحليلات"
         entityLabel="مؤشرات القيادة التشغيلية"
         status="تعذر التحميل"
         statusTone="danger"
@@ -148,7 +148,7 @@ export function CommandCenterScreen({ subGroup = 'overview' }: CommandCenterScre
           <h3 className={styles.surfacePanelTitleCompact}>المؤشرات التشغيلية الحية</h3>
           <div className={styles.surfaceStackSmall}>
             <WebControlPanelDecisionRow
-              entityId="ORDERS_TOTAL"
+              entityId="طلبات"
               entityLabel="طلبات اليوم"
               status={analyticsLoading ? 'جاري التحميل' : String(orders?.totalOrders ?? 0)}
               statusTone="neutral"
@@ -157,7 +157,7 @@ export function CommandCenterScreen({ subGroup = 'overview' }: CommandCenterScre
               sla={orders?.generatedAt ?? '—'}
             />
             <WebControlPanelDecisionRow
-              entityId="OPEN_INCIDENTS"
+              entityId="حوادث"
               entityLabel="الحوادث المفتوحة"
               status={analyticsLoading ? 'جاري التحميل' : String(platform?.openIncidents ?? 0)}
               statusTone={(platform?.openIncidents ?? 0) > 0 ? 'danger' : 'success'}
@@ -166,7 +166,7 @@ export function CommandCenterScreen({ subGroup = 'overview' }: CommandCenterScre
               sla={platform?.generatedAt ?? '—'}
             />
             <WebControlPanelDecisionRow
-              entityId="OPEN_ESCALATIONS"
+              entityId="تصعيد"
               entityLabel="التصعيدات المفتوحة"
               status={analyticsLoading ? 'جاري التحميل' : String(platform?.openEscalations ?? 0)}
               statusTone={(platform?.openEscalations ?? 0) > 0 ? 'warning' : 'success'}
@@ -185,7 +185,7 @@ export function CommandCenterScreen({ subGroup = 'overview' }: CommandCenterScre
         <h3 className={styles.surfacePanelTitleCompact}>الشواذ والتصعيد</h3>
         <div className={styles.surfaceStackSmall}>
           <WebControlPanelDecisionRow
-            entityId="ANOMALY-INCIDENTS"
+            entityId="شواذ"
             entityLabel="حوادث مفتوحة"
             status={analyticsLoading ? 'جاري التحميل' : String(platform?.openIncidents ?? 0)}
             statusTone={(platform?.openIncidents ?? 0) > 0 ? 'danger' : 'success'}
@@ -250,7 +250,7 @@ export function CommandCenterScreen({ subGroup = 'overview' }: CommandCenterScre
             </div>
             <div className={styles.surfaceMetaWrapCompact}>
               {operationsGovernance.onDemandPolicySummary.map((policy) => (
-                <span key={policy} className={styles.surfaceMetaChipCompact}>{policy}</span>
+                <span key={policy} className={styles.surfaceMetaChipCompact}>{resolveDshOnDemandPolicyLabel(policy)}</span>
               ))}
             </div>
           </div>

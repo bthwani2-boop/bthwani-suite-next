@@ -9,6 +9,7 @@ import {
   CpKpiCard,
   CpKpiStrip,
   CpStatePanel,
+  CpStateView,
 } from "@bthwani/control-panel/components";
 import {
   usePlatformChangeWorkflowController,
@@ -53,7 +54,7 @@ export function PlatformGovernanceVisual() {
   const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
   const canRead = hasControlPanelPermission(identity, "platform:read");
   const workflow = usePlatformChangeWorkflowController(canRead);
-  const tenantId = identity?.tenantId.trim() ?? "";
+  const operatorContextId = identity?.operatorContextId.trim() ?? "";
   const changeSets = workflow.state.kind === "success" ? workflow.state.changeSets : [];
 
   const metrics = useMemo(() => {
@@ -72,13 +73,13 @@ export function PlatformGovernanceVisual() {
     <View style={styles.root} aria-label="المسار التنفيذي لتغييرات المنصة السيادية">
       <View style={styles.headingRow}>
         <View style={styles.headingCopy}>
-          <Text role="titleSm">المسار التنفيذي للفول ستاك SaaS</Text>
+          <Text role="titleSm">المسار التنفيذي للفول ستاك partner_platform</Text>
           <Text role="caption">
             قراءة حية لدورة تغييرات المنصة من الجلسة الموثوقة إلى platform-control ثم PostgreSQL؛ لا توجد قيم تجريبية أو مستأجر محلي مفروض من الواجهة.
           </Text>
         </View>
-        <CpBadge tone={tenantId ? "info" : "danger"}>
-          {tenantId ? `المستأجر: ${tenantId}` : "سياق المستأجر غير متاح"}
+        <CpBadge tone={operatorContextId ? "info" : "danger"}>
+          {operatorContextId ? `المستأجر: ${operatorContextId}` : "سياق المستأجر غير متاح"}
         </CpBadge>
       </View>
 
@@ -90,7 +91,7 @@ export function PlatformGovernanceVisual() {
           code="PLATFORM_PERMISSION_REQUIRED"
         />
       ) : workflow.state.kind === "loading" || workflow.state.kind === "idle" ? (
-        <CpStatePanel role="status" title="جاري تحميل دورة التغيير الحية…" />
+        <CpStateView kind="loading" title="جاري تحميل دورة التغيير الحية…" />
       ) : workflow.state.kind === "error" ? (
         <CpStatePanel
           role="alert"
@@ -133,7 +134,7 @@ export function PlatformGovernanceVisual() {
             <Card>
               <View style={styles.boundaryCard}>
                 <Text role="titleSm">1. هوية المستأجر</Text>
-                <Text role="caption">tenantId من ActorIdentity الموثوق</Text>
+                <Text role="caption">operatorContextId من ActorIdentity الموثوق</Text>
               </View>
             </Card>
             <Card>
@@ -158,7 +159,7 @@ export function PlatformGovernanceVisual() {
 
           <View style={styles.footerRow}>
             <Text role="caption">
-              المصدر: GET /platform/v1/change-sets عبر جلسة لوحة التحكم وحد SaaS الموثوق.
+              المصدر: GET /platform/v1/change-sets عبر جلسة لوحة التحكم وحد partner_platform الموثوق.
             </Text>
             <CpButton onClick={() => void workflow.reload()}>تحديث القراءة</CpButton>
           </View>

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/store"
@@ -17,7 +18,7 @@ func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.Res
 	}
 	var body struct {
 		OrderID                string `json:"orderId"`
-		TenantID               string `json:"tenantId"`
+		OperatorContextID               string `json:"operatorContextId"`
 		CaptainID              string `json:"captainId"`
 		ServiceAreaCode        string `json:"serviceAreaCode"`
 		IdempotencyKey         string `json:"idempotencyKey"`
@@ -29,12 +30,21 @@ func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.Res
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	financialEligibility, err := s.refreshCaptainFinancialEligibility(r, body.OperatorContextID, body.CaptainID)
+	if err != nil {
+		writeCaptainFinancialEligibilityError(w, err)
+		return
+	}
+	if !financialEligibility.Eligible {
+		store.SendError(w, http.StatusConflict, financialEligibility.IneligibilityReason, "captain does not meet the WLT-backed dispatch balance requirement")
+		return
+	}
 	idempotencyKey := strings.TrimSpace(body.IdempotencyKey)
 	if idempotencyKey == "" {
 		idempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	}
 	assignment, replayed, err := dispatch.CreateGovernedAssignment(s.db, dispatch.GovernedCreateAssignmentInput{
-		OrderID: body.OrderID, TenantID: body.TenantID, CaptainID: body.CaptainID,
+		OrderID: body.OrderID, OperatorContextID: body.OperatorContextID, CaptainID: body.CaptainID,
 		ActorID: actor.ID, ServiceAreaCode: body.ServiceAreaCode, IdempotencyKey: idempotencyKey,
 		Priority: body.Priority, DistanceMeters: body.DistanceMeters, OfferReason: body.OfferReason,
 		ResponseTimeoutSecond: body.ResponseTimeoutSeconds,
@@ -60,12 +70,12 @@ func (s *protectedStoreServer) handleListGovernedOperatorDispatchAssignments(w h
 	if !ok {
 		return
 	}
-	tenantID := r.URL.Query().Get("tenantId")
-	if _, err := dispatch.ExpireOverdueAssignments(s.db, tenantID, actor.ID, 100); err != nil {
+	operatorContextID := r.URL.Query().Get("operatorContextId")
+	if _, err := dispatch.ExpireOverdueAssignments(s.db, operatorContextID, actor.ID, 100); err != nil {
 		writeGovernedDispatchError(w, err)
 		return
 	}
-	list, err := dispatch.ListOperatorAssignmentsInTenant(s.db, tenantID, 200)
+	list, err := dispatch.ListOperatorAssignmentsInOperatorContext(s.db, operatorContextID, 200)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
@@ -83,12 +93,12 @@ func (s *protectedStoreServer) handleListGovernedCaptainDispatchAssignments(w ht
 	if !ok {
 		return
 	}
-	tenantID := r.URL.Query().Get("tenantId")
-	if _, err := dispatch.ExpireOverdueAssignments(s.db, tenantID, "dispatch-captain-inbox", 100); err != nil {
+	operatorContextID := r.URL.Query().Get("operatorContextId")
+	if _, err := dispatch.ExpireOverdueAssignments(s.db, operatorContextID, "dispatch-captain-inbox", 100); err != nil {
 		writeGovernedDispatchError(w, err)
 		return
 	}
-	list, err := dispatch.ListCaptainAssignmentsInTenant(s.db, tenantID, actor.ID, 100)
+	list, err := dispatch.ListCaptainAssignmentsInOperatorContext(s.db, operatorContextID, actor.ID, 100)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
@@ -104,6 +114,19 @@ func (s *protectedStoreServer) handleListGovernedCaptainDispatchAssignments(w ht
 func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "captain")
 	if !ok {
+		return
+	}
+	if strings.TrimSpace(actor.OperatorContextID) == "" {
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "captain OperatorContext context is required")
+		return
+	}
+	financialEligibility, err := s.refreshCaptainFinancialEligibility(r, actor.OperatorContextID, actor.ID)
+	if err != nil {
+		writeCaptainFinancialEligibilityError(w, err)
+		return
+	}
+	if !financialEligibility.Eligible {
+		store.SendError(w, http.StatusConflict, financialEligibility.IneligibilityReason, "captain does not meet the WLT-backed dispatch balance requirement")
 		return
 	}
 	assignment, err := dispatch.AcceptGovernedAssignment(s.db, r.PathValue("assignmentId"), actor.ID)
@@ -152,7 +175,7 @@ func (s *protectedStoreServer) handleUpsertCaptainDispatchProfile(w http.Respons
 		return
 	}
 	var body struct {
-		TenantID             string `json:"tenantId"`
+		OperatorContextID             string `json:"operatorContextId"`
 		AccreditationStatus  string `json:"accreditationStatus"`
 		AvailabilityStatus   string `json:"availabilityStatus"`
 		MaxActiveAssignments int    `json:"maxActiveAssignments"`
@@ -163,7 +186,7 @@ func (s *protectedStoreServer) handleUpsertCaptainDispatchProfile(w http.Respons
 		return
 	}
 	candidate, err := dispatch.UpsertCaptainDispatchProfile(s.db, dispatch.CaptainDispatchProfileInput{
-		TenantID: body.TenantID, CaptainID: r.PathValue("captainId"),
+		OperatorContextID: body.OperatorContextID, CaptainID: r.PathValue("captainId"),
 		AccreditationStatus: body.AccreditationStatus, AvailabilityStatus: body.AvailabilityStatus,
 		MaxActiveAssignments: body.MaxActiveAssignments, PriorityScore: body.PriorityScore,
 		ExpectedVersion: body.ExpectedVersion, ActorID: actor.ID,
@@ -171,6 +194,14 @@ func (s *protectedStoreServer) handleUpsertCaptainDispatchProfile(w http.Respons
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
+	}
+	financial, financialErr := dispatch.GetCaptainFinancialEligibilitySnapshot(r.Context(), s.db, body.OperatorContextID, r.PathValue("captainId"))
+	if financialErr != nil || !financial.Eligible || !financial.ExpiresAt.After(time.Now()) {
+		candidate.Eligible = false
+		candidate.IneligibilityReason = "CAPTAIN_FINANCIAL_ELIGIBILITY_REQUIRED"
+		if financialErr == nil && financial.IneligibilityReason != "" {
+			candidate.IneligibilityReason = financial.IneligibilityReason
+		}
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"candidate": candidate})
 }
@@ -180,13 +211,25 @@ func (s *protectedStoreServer) handleListCaptainDispatchCandidates(w http.Respon
 	if !ok {
 		return
 	}
+	operatorContextID := r.URL.Query().Get("operatorContextId")
 	limit := parseDispatchLimit(r.URL.Query().Get("limit"), 100)
 	items, err := dispatch.ListCaptainDispatchCandidates(
-		s.db, r.URL.Query().Get("tenantId"), r.URL.Query().Get("serviceAreaCode"), limit,
+		s.db, operatorContextID, r.URL.Query().Get("serviceAreaCode"), limit,
 	)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
+	}
+	now := time.Now()
+	for index := range items {
+		financial, financialErr := dispatch.GetCaptainFinancialEligibilitySnapshot(r.Context(), s.db, operatorContextID, items[index].CaptainID)
+		if financialErr != nil || !financial.Eligible || !financial.ExpiresAt.After(now) {
+			items[index].Eligible = false
+			items[index].IneligibilityReason = "CAPTAIN_FINANCIAL_ELIGIBILITY_REQUIRED"
+			if financialErr == nil && financial.IneligibilityReason != "" {
+				items[index].IneligibilityReason = financial.IneligibilityReason
+			}
+		}
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"candidates": items})
 }
@@ -197,7 +240,7 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 		return
 	}
 	var body struct {
-		TenantID               string `json:"tenantId"`
+		OperatorContextID               string `json:"operatorContextId"`
 		CaptainID              string `json:"captainId"`
 		ServiceAreaCode        string `json:"serviceAreaCode"`
 		IdempotencyKey         string `json:"idempotencyKey"`
@@ -209,12 +252,21 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	financialEligibility, err := s.refreshCaptainFinancialEligibility(r, body.OperatorContextID, body.CaptainID)
+	if err != nil {
+		writeCaptainFinancialEligibilityError(w, err)
+		return
+	}
+	if !financialEligibility.Eligible {
+		store.SendError(w, http.StatusConflict, financialEligibility.IneligibilityReason, "captain does not meet the WLT-backed dispatch balance requirement")
+		return
+	}
 	idempotencyKey := strings.TrimSpace(body.IdempotencyKey)
 	if idempotencyKey == "" {
 		idempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	}
 	assignment, err := dispatch.ReassignGovernedAssignment(s.db, dispatch.ReassignAssignmentInput{
-		AssignmentID: r.PathValue("assignmentId"), TenantID: body.TenantID,
+		AssignmentID: r.PathValue("assignmentId"), OperatorContextID: body.OperatorContextID,
 		CaptainID: body.CaptainID, ActorID: actor.ID, ServiceAreaCode: body.ServiceAreaCode,
 		IdempotencyKey: idempotencyKey, Priority: body.Priority, DistanceMeters: body.DistanceMeters,
 		Reason: body.Reason, ResponseTimeoutSecond: body.ResponseTimeoutSeconds,
@@ -258,13 +310,13 @@ func (s *protectedStoreServer) handleExpireGovernedDispatchAssignments(w http.Re
 		return
 	}
 	var body struct {
-		TenantID string `json:"tenantId"`
+		OperatorContextID string `json:"operatorContextId"`
 		Limit    int    `json:"limit"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	count, err := dispatch.ExpireOverdueAssignments(s.db, body.TenantID, actor.ID, body.Limit)
+	count, err := dispatch.ExpireOverdueAssignments(s.db, body.OperatorContextID, actor.ID, body.Limit)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
@@ -278,7 +330,7 @@ func (s *protectedStoreServer) handleListDispatchDecisions(w http.ResponseWriter
 		return
 	}
 	items, err := dispatch.ListDispatchDecisions(
-		s.db, r.URL.Query().Get("tenantId"), r.URL.Query().Get("assignmentId"),
+		s.db, r.URL.Query().Get("operatorContextId"), r.URL.Query().Get("assignmentId"),
 		r.URL.Query().Get("orderId"), parseDispatchLimit(r.URL.Query().Get("limit"), 100),
 	)
 	if err != nil {
@@ -294,7 +346,7 @@ func (s *protectedStoreServer) marshalGovernedDispatchAssignment(item *dispatch.
 	if err != nil {
 		return nil, err
 	}
-	payload["tenantId"] = governance.TenantID
+	payload["operatorContextId"] = governance.OperatorContextID
 	payload["serviceAreaCode"] = governance.ServiceAreaCode
 	payload["priority"] = governance.Priority
 	payload["distanceMeters"] = governance.DistanceMeters
@@ -324,7 +376,7 @@ func (s *protectedStoreServer) marshalGovernedDispatchAssignments(items []dispat
 		if !ok {
 			return nil, errors.New("dispatch assignment governance readback missing")
 		}
-		row["tenantId"] = meta.TenantID
+		row["operatorContextId"] = meta.OperatorContextID
 		row["serviceAreaCode"] = meta.ServiceAreaCode
 		row["priority"] = meta.Priority
 		row["distanceMeters"] = meta.DistanceMeters
@@ -355,7 +407,7 @@ func writeGovernedDispatchError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, dispatch.ErrNotFound):
 		store.SendError(w, http.StatusNotFound, "DISPATCH_NOT_FOUND", err.Error())
-	case errors.Is(err, dispatch.ErrCaptainNotEligible):
+	case errors.Is(err, dispatch.ErrCaptainNotEligible) || strings.Contains(err.Error(), "CAPTAIN_FINANCIAL_ELIGIBILITY_REQUIRED"):
 		store.SendError(w, http.StatusConflict, "CAPTAIN_NOT_ELIGIBLE", err.Error())
 	case errors.Is(err, dispatch.ErrCaptainAtCapacity):
 		store.SendError(w, http.StatusConflict, "CAPTAIN_AT_CAPACITY", err.Error())

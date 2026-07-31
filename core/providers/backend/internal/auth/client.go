@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 )
@@ -26,30 +25,29 @@ type Permission struct {
 
 type Identity struct {
 	Subject     string       `json:"subject"`
-	TenantID    string       `json:"tenantId"`
+	OperatorContextID    string       `json:"operatorContextId"`
 	Roles       []string     `json:"roles"`
 	Permissions []Permission `json:"permissions"`
 	AuthState   string       `json:"authState"`
 }
 
 type Client struct {
-	baseURL         string
-	defaultTenantID string
-	saasActive      bool
-	http            *http.Client
+	baseURL string
+	http    *http.Client
 }
 
 func NewClient(baseURL string) *Client {
 	return &Client{
-		baseURL:         strings.TrimRight(baseURL, "/"),
-		defaultTenantID: strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID")),
-		saasActive:      strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active"),
-		http:            &http.Client{Timeout: 3 * time.Second},
+		baseURL: strings.TrimRight(baseURL, "/"),
+		http:    &http.Client{Timeout: 3 * time.Second},
 	}
 }
 
+// Resolve accepts only authenticated Identity assertions with an explicit
+// operator context. Identity owns operator context membership; process-wide defaults cannot select
+// or reject a valid context-scoped provider session.
 func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, error) {
-	if c.baseURL == "" || (c.saasActive && c.defaultTenantID == "") {
+	if c.baseURL == "" {
 		return Identity{}, ErrIdentityUnavailable
 	}
 	if !strings.HasPrefix(strings.TrimSpace(authorization), "Bearer ") {
@@ -75,10 +73,9 @@ func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, e
 	if err := json.NewDecoder(resp.Body).Decode(&identity); err != nil {
 		return Identity{}, ErrIdentityUnavailable
 	}
-	if identity.AuthState != "authenticated" || identity.Subject == "" {
-		return Identity{}, ErrUnauthenticated
-	}
-	if c.saasActive && strings.TrimSpace(identity.TenantID) != c.defaultTenantID {
+	identity.Subject = strings.TrimSpace(identity.Subject)
+	identity.OperatorContextID = strings.TrimSpace(identity.OperatorContextID)
+	if identity.AuthState != "authenticated" || identity.Subject == "" || identity.OperatorContextID == "" {
 		return Identity{}, ErrUnauthenticated
 	}
 	return identity, nil

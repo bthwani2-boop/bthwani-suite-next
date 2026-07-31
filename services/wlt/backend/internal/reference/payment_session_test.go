@@ -62,6 +62,7 @@ func TestHandleCreatePaymentSessionRequiresDshCaller(t *testing.T) {
 
 func TestHandleCreatePaymentSessionRequiresIdempotencyAndCorrelation(t *testing.T) {
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", testDshServiceToken)
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "test-financial-scope")
 	req := httptest.NewRequest(http.MethodPost, "/wlt/payment-sessions", strings.NewReader(`{}`))
 	req.Header.Set("Authorization", "Bearer "+testDshServiceToken)
 	req.Header.Set("X-Service-Caller", "dsh")

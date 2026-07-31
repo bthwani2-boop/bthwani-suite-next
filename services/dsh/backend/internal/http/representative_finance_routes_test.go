@@ -23,7 +23,7 @@ func representativeFinanceRouter(
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(auth.Identity{
 			Subject:   actorID,
-			TenantID:  "dsh",
+			OperatorContextID:  "dsh",
 			Roles:     []string{role},
 			AuthState: "authenticated",
 		})
@@ -58,11 +58,11 @@ func TestRepresentativeOwnWalletRoutesResolveAuthenticatedActor(t *testing.T) {
 		t.Run(tc.actorType, func(t *testing.T) {
 			var mu sync.Mutex
 			gotPath := ""
-			gotTenant := ""
+			gotOperatorContext := ""
 			router := representativeFinanceRouter(t, tc.actorType, tc.actorID, func(w http.ResponseWriter, r *http.Request) {
 				mu.Lock()
 				gotPath = r.URL.Path
-				gotTenant = r.Header.Get("X-Tenant-ID")
+				gotOperatorContext = r.Header.Get("X-Operator-Context-ID")
 				mu.Unlock()
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = w.Write([]byte(`{"wallet":{"actorId":"` + tc.actorID + `","actorType":"` + tc.actorType + `"}}`))
@@ -82,8 +82,8 @@ func TestRepresentativeOwnWalletRoutesResolveAuthenticatedActor(t *testing.T) {
 			if gotPath != expected {
 				t.Fatalf("expected WLT path %q, got %q", expected, gotPath)
 			}
-			if gotTenant != "dsh" {
-				t.Fatalf("expected Identity tenant dsh, got %q", gotTenant)
+			if gotOperatorContext != "dsh" {
+				t.Fatalf("expected Identity OperatorContext dsh, got %q", gotOperatorContext)
 			}
 			if rec.Header().Get("Cache-Control") != "private, no-store" {
 				t.Fatalf("expected no-store response, got %q", rec.Header().Get("Cache-Control"))
@@ -94,10 +94,10 @@ func TestRepresentativeOwnWalletRoutesResolveAuthenticatedActor(t *testing.T) {
 
 func TestRepresentativeOwnLedgerRoutesOverrideActorQuery(t *testing.T) {
 	var gotQuery string
-	var gotTenant string
+	var gotOperatorContext string
 	router := representativeFinanceRouter(t, "captain", "captain-7", func(w http.ResponseWriter, r *http.Request) {
 		gotQuery = r.URL.RawQuery
-		gotTenant = r.Header.Get("X-Tenant-ID")
+		gotOperatorContext = r.Header.Get("X-Operator-Context-ID")
 		_, _ = w.Write([]byte(`{"ledgerEntries":[]}`))
 	})
 
@@ -119,8 +119,8 @@ func TestRepresentativeOwnLedgerRoutesOverrideActorQuery(t *testing.T) {
 	if strings.Contains(gotQuery, "other") || strings.Contains(gotQuery, "actorType=field") {
 		t.Fatalf("frontend actor query must not pass through, got %q", gotQuery)
 	}
-	if gotTenant != "dsh" {
-		t.Fatalf("expected Identity tenant dsh, got %q", gotTenant)
+	if gotOperatorContext != "dsh" {
+		t.Fatalf("expected Identity OperatorContext dsh, got %q", gotOperatorContext)
 	}
 	if rec.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("expected no-store ledger response, got %q", rec.Header().Get("Cache-Control"))
@@ -129,10 +129,10 @@ func TestRepresentativeOwnLedgerRoutesOverrideActorQuery(t *testing.T) {
 
 func TestControlPanelRepresentativeWalletValidatesTypeAndUsesPermissionFallback(t *testing.T) {
 	var gotPath string
-	var gotTenant string
+	var gotOperatorContext string
 	router := representativeFinanceRouter(t, "operator", "operator-1", func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
-		gotTenant = r.Header.Get("X-Tenant-ID")
+		gotOperatorContext = r.Header.Get("X-Operator-Context-ID")
 		_, _ = w.Write([]byte(`{"wallet":{"actorId":"client-9","actorType":"client"}}`))
 	})
 
@@ -146,8 +146,8 @@ func TestControlPanelRepresentativeWalletValidatesTypeAndUsesPermissionFallback(
 	if gotPath != "/wlt/wallets/client/client-9" {
 		t.Fatalf("unexpected WLT wallet path %q", gotPath)
 	}
-	if gotTenant != "dsh" {
-		t.Fatalf("expected operator Identity tenant dsh, got %q", gotTenant)
+	if gotOperatorContext != "dsh" {
+		t.Fatalf("expected operator Identity OperatorContext dsh, got %q", gotOperatorContext)
 	}
 
 	invalid := httptest.NewRequest(http.MethodGet, "/dsh/control-panel/finance/wallets/operator/operator-2", nil)
@@ -162,11 +162,11 @@ func TestControlPanelRepresentativeWalletValidatesTypeAndUsesPermissionFallback(
 func TestControlPanelRepresentativeLedgerPinsActorAndNoStore(t *testing.T) {
 	var gotPath string
 	var gotQuery string
-	var gotTenant string
+	var gotOperatorContext string
 	router := representativeFinanceRouter(t, "operator", "operator-1", func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		gotQuery = r.URL.RawQuery
-		gotTenant = r.Header.Get("X-Tenant-ID")
+		gotOperatorContext = r.Header.Get("X-Operator-Context-ID")
 		_, _ = w.Write([]byte(`{"ledgerEntries":[]}`))
 	})
 
@@ -194,8 +194,8 @@ func TestControlPanelRepresentativeLedgerPinsActorAndNoStore(t *testing.T) {
 	if !strings.Contains(gotQuery, "entryType=settlement") || !strings.Contains(gotQuery, "limit=25") {
 		t.Fatalf("expected allowlisted ledger filters, got %q", gotQuery)
 	}
-	if gotTenant != "dsh" {
-		t.Fatalf("expected operator Identity tenant dsh, got %q", gotTenant)
+	if gotOperatorContext != "dsh" {
+		t.Fatalf("expected operator Identity OperatorContext dsh, got %q", gotOperatorContext)
 	}
 	if rec.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("expected no-store operator ledger response, got %q", rec.Header().Get("Cache-Control"))

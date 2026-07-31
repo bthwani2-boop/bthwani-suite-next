@@ -34,7 +34,7 @@ import { DELIVERY_STATUS_LABELS } from "../../shared/dispatch";
 import type { DshPartnerDeliveryTaskStatus } from "../../shared/partner-delivery/partner-delivery.types";
 import { ClientLiveTrackingCard } from "./ClientLiveTrackingCard";
 import { ClientPreparationDecisionPanel } from "./ClientPreparationDecisionPanel";
-import { useClientOrderJourneyController } from "./useClientOrderJourneyController";
+import { useClientOrderController } from "./useClientOrderController";
 
 const PARTNER_DELIVERY_STATUS_LABELS: Readonly<Record<DshPartnerDeliveryTaskStatus, string>> = {
   unassigned: "بانتظار تعيين سائق من المتجر",
@@ -231,7 +231,7 @@ function ClientCancellationPanel({
 }
 
 export function OrderTrackingScreen({ orderId, onBack, onOpenPickup }: Props) {
-  const { state, reload } = useClientOrderJourneyController(orderId);
+  const { state, reload } = useClientOrderController(orderId);
 
   if (state.kind === "loading") {
     return <StateView title="جارٍ تحميل رحلة الطلب" description="نقرأ حقيقة الطلب والتجهيز والمشكلات والتتبع من مصادر DSH المقيدة بالحساب." loading />;

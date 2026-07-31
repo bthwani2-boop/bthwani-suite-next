@@ -11,6 +11,7 @@ import {
   CpPageHeader,
   CpRetryButton,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -116,13 +117,13 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
   }
 
   if (detail.detailState.kind === "idle" || detail.detailState.kind === "loading") {
-    return <DetailPageFrame stateView={<CpStatePanel role="status" title="جاري تحميل ملف الشريك…" />}>{null}</DetailPageFrame>;
+    return <DetailPageFrame stateView={<CpStateView kind="loading" title="جاري تحميل ملف الشريك…" />}>{null}</DetailPageFrame>;
   }
   if (detail.detailState.kind === "not_found") {
     return <DetailPageFrame stateView={<CpStatePanel role="status" title="الشريك غير موجود ضمن المستأجر الحالي." />}>{null}</DetailPageFrame>;
   }
   if (detail.detailState.kind === "forbidden") {
-    return <DetailPageFrame stateView={<CpStatePanel role="alert" title="غير مصرح لك بعرض هذا الشريك." />}>{null}</DetailPageFrame>;
+    return <DetailPageFrame stateView={<CpStateView kind="error" title="غير مصرح لك بعرض هذا الشريك." />}>{null}</DetailPageFrame>;
   }
   if (detail.detailState.kind === "error") {
     return (
@@ -240,18 +241,18 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                     </div>
                   </>
                 ) : null}
-                {detail.mutationState.kind === "version_conflict" ? <CpStatePanel role="alert" title="تعارض الإصدار" code="أعد تحميل الملف قبل تكرار القرار." /> : null}
-                {detail.mutationState.kind === "invalid_transition" ? <CpStatePanel role="alert" title="القرار محجوب" code={detail.mutationState.message} /> : null}
-                {detail.mutationState.kind === "error" ? <CpStatePanel role="alert" title="تعذر تطبيق القرار" code={detail.mutationState.message} /> : null}
+                {detail.mutationState.kind === "version_conflict" ? <CpStateView kind="error" title="تعارض الإصدار" code="أعد تحميل الملف قبل تكرار القرار." /> : null}
+                {detail.mutationState.kind === "invalid_transition" ? <CpStateView kind="error" title="القرار محجوب" code={detail.mutationState.message} /> : null}
+                {detail.mutationState.kind === "error" ? <CpStateView kind="error" title="تعذر تطبيق القرار" code={detail.mutationState.message} /> : null}
               </div>
             ))}
           </>
         ) : null}
 
         {tab === "documents" ? (
-          documents.state.kind === "loading" || documents.state.kind === "idle" ? <CpStatePanel role="status" title="جاري تحميل الوثائق…" />
+          documents.state.kind === "loading" || documents.state.kind === "idle" ? <CpStateView kind="loading" title="جاري تحميل الوثائق…" />
             : documents.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد وثائق مرفوعة." />
-              : documents.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل الوثائق" code={documents.state.message} />
+              : documents.state.kind === "error" ? <CpStateView kind="error" title="تعذر تحميل الوثائق" code={documents.state.message} />
                 : section("مراجعة الوثائق", (
                   <div style={{ display: "grid", gap: 12 }}>
                     <CpTable aria-label="وثائق الشريك">
@@ -282,9 +283,9 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
         ) : null}
 
         {tab === "visits" ? (
-          visits.state.kind === "loading" || visits.state.kind === "idle" ? <CpStatePanel role="status" title="جاري تحميل الزيارات…" />
+          visits.state.kind === "loading" || visits.state.kind === "idle" ? <CpStateView kind="loading" title="جاري تحميل الزيارات…" />
             : visits.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد زيارات ميدانية." />
-              : visits.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل الزيارات" code={visits.state.message} />
+              : visits.state.kind === "error" ? <CpStateView kind="error" title="تعذر تحميل الزيارات" code={visits.state.message} />
                 : <CpTable aria-label="الزيارات الميدانية"><thead><tr><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>الفرع</CpTableHeaderCell><CpTableHeaderCell>الملاحظات</CpTableHeaderCell><CpTableHeaderCell>التاريخ</CpTableHeaderCell></tr></thead><tbody>{visits.state.visits.map((visit) => <tr key={visit.id}><CpTableCell>{visit.visitStatus}</CpTableCell><CpTableCell>{visit.storeId || "—"}</CpTableCell><CpTableCell>{visit.visitNotes || "—"}</CpTableCell><CpTableCell>{visit.submittedAt ? new Date(visit.submittedAt).toLocaleString("ar-SA") : "—"}</CpTableCell></tr>)}</tbody></CpTable>
         ) : null}
 
@@ -299,19 +300,19 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                 <CpButton disabled={!storeId.trim() || stores.actionState.kind === "loading"} onClick={() => void confirmStoreOwnership()}>
                   {stores.actionState.kind === "loading" ? "جاري التنفيذ…" : "تنفيذ العملية المحكومة"}
                 </CpButton>
-                {stores.actionState.kind === "error" ? <CpStatePanel role="alert" title="تعذر تنفيذ ملكية المتجر" code={stores.actionState.message} /> : null}
+                {stores.actionState.kind === "error" ? <CpStateView kind="error" title="تعذر تنفيذ ملكية المتجر" code={stores.actionState.message} /> : null}
               </div>
             ))}
-            {stores.state.kind === "loading" || stores.state.kind === "idle" ? <CpStatePanel role="status" title="جاري تحميل الفروع…" />
+            {stores.state.kind === "loading" || stores.state.kind === "idle" ? <CpStateView kind="loading" title="جاري تحميل الفروع…" />
               : stores.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد فروع مرتبطة." />
-                : stores.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل الفروع" code={stores.state.message} />
+                : stores.state.kind === "error" ? <CpStateView kind="error" title="تعذر تحميل الفروع" code={stores.state.message} />
                   : <><CpTable aria-label="فروع الشريك"><thead><tr><CpTableHeaderCell>الفرع</CpTableHeaderCell><CpTableHeaderCell>المدينة</CpTableHeaderCell><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>ظهور العميل</CpTableHeaderCell><CpTableHeaderCell>التسعير</CpTableHeaderCell></tr></thead><tbody>{stores.state.stores.map((store) => <tr key={store.id}><CpTableCell>{store.displayName}</CpTableCell><CpTableCell>{store.cityCode}</CpTableCell><CpTableCell>{store.status}</CpTableCell><CpTableCell>{store.isVisible ? "ظاهر" : "مخفي"}</CpTableCell><CpTableCell><CpButton onClick={() => setPricingStoreId((current) => current === store.id ? null : store.id)}>{pricingStoreId === store.id ? "إغلاق" : "إدارة التسعير"}</CpButton></CpTableCell></tr>)}</tbody></CpTable>{pricingStoreId ? <OperatorDeliveryPricingPanel storeId={pricingStoreId} /> : null}</>
             }
           </div>
         ) : null}
 
         {tab === "readiness" ? (
-          readiness.state.kind === "loading" || readiness.state.kind === "idle" ? <CpStatePanel role="status" title="جاري حساب جاهزية الشريك وجميع الفروع…" />
+          readiness.state.kind === "loading" || readiness.state.kind === "idle" ? <CpStateView kind="loading" title="جاري حساب جاهزية الشريك وجميع الفروع…" />
             : readiness.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل الجاهزية" code={readiness.state.message}><CpRetryButton onClick={() => void readiness.reload()}>إعادة المحاولة</CpRetryButton></CpStatePanel>
               : aggregate ? (
                 <div style={{ display: "grid", gap: 12 }}>
@@ -323,9 +324,9 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
         ) : null}
 
         {tab === "audit" ? (
-          audit.state.kind === "loading" || audit.state.kind === "idle" ? <CpStatePanel role="status" title="جاري تحميل سجل التدقيق…" />
+          audit.state.kind === "loading" || audit.state.kind === "idle" ? <CpStateView kind="loading" title="جاري تحميل سجل التدقيق…" />
             : audit.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد أحداث." />
-              : audit.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل سجل التدقيق" code={audit.state.message} />
+              : audit.state.kind === "error" ? <CpStateView kind="error" title="تعذر تحميل سجل التدقيق" code={audit.state.message} />
                 : <div style={{ display: "grid", gap: 8 }}>{audit.state.events.map((event) => section(`${event.fromStatus || "حدث"} ← ${event.toStatus}`, <p style={{ margin: 0 }}>{event.actorSurface}{event.actorId ? ` • ${event.actorId}` : ""}{event.reason ? ` • ${event.reason}` : ""} • {new Date(event.createdAt).toLocaleString("ar-SA")}</p>))}</div>
         ) : null}
       </div>

@@ -9,7 +9,7 @@ import "encoding/json"
 func (reservation Reservation) MarshalJSON() ([]byte, error) {
 	type governedReservation struct {
 		ID                       string  `json:"id"`
-		TenantID                 string  `json:"tenantId"`
+		OperatorContextID                 string  `json:"operatorContextId"`
 		ExternalReference        string  `json:"externalReference"`
 		CheckoutIntentID         string  `json:"checkoutIntentId"`
 		CouponRedemptionID       string  `json:"couponRedemptionId"`
@@ -28,7 +28,7 @@ func (reservation Reservation) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(governedReservation{
 		ID:                       reservation.ID,
-		TenantID:                 reservation.TenantID,
+		OperatorContextID:                 reservation.OperatorContextID,
 		ExternalReference:        reservation.ExternalReference,
 		CheckoutIntentID:         reservation.CheckoutIntentID,
 		CouponRedemptionID:       reservation.CouponRedemptionID,

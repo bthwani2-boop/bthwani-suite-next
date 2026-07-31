@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,110 +15,86 @@ func authorizedServiceRequest(path string) *http.Request {
 	return request
 }
 
-func configureActiveSaaS(t *testing.T) {
-	t.Helper()
-	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "authorized")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-main")
-}
-
-func TestRequireServiceCallerRequiresPromotionFundingTenant(t *testing.T) {
+func TestRequireServiceCallerFailsClosedWithoutConfiguredFinancialScope(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
 
-	missing := httptest.NewRecorder()
-	if RequireServiceCaller(
-		missing,
-		authorizedServiceRequest("/wlt/promotion-funding/reservations/pfr_123"),
-		"TEST_WLT_SERVICE_TOKEN",
-		"dsh",
-	) {
-		t.Fatal("promotion funding request without X-Tenant-ID was accepted")
-	}
-	if missing.Code != http.StatusBadRequest {
-		t.Fatalf("missing tenant status=%d, want %d", missing.Code, http.StatusBadRequest)
-	}
-
-	presentRequest := authorizedServiceRequest("/wlt/promotion-funding/reservations/pfr_123")
-	presentRequest.Header.Set("X-Tenant-ID", "tenant-1")
-	present := httptest.NewRecorder()
-	if !RequireServiceCaller(present, presentRequest, "TEST_WLT_SERVICE_TOKEN", "dsh") {
-		t.Fatalf("asserted tenant was rejected with status=%d", present.Code)
-	}
-}
-
-func TestRequireServiceCallerDoesNotRequireTenantOutsideActiveSaaS(t *testing.T) {
-	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
-	t.Setenv("BTHWANI_SAAS_MODE", "deferred")
-	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "blocked")
-	recorder := httptest.NewRecorder()
-	if !RequireServiceCaller(
-		recorder,
-		authorizedServiceRequest("/wlt/settlements"),
-		"TEST_WLT_SERVICE_TOKEN",
-		"dsh",
-	) {
-		t.Fatalf("unrelated governed read was rejected with status=%d", recorder.Code)
-	}
-}
-
-func TestRequireServiceCallerRequiresTenantForEveryActiveSaaSCall(t *testing.T) {
-	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
-	configureActiveSaaS(t)
-
-	recorder := httptest.NewRecorder()
-	if RequireServiceCaller(
-		recorder,
-		authorizedServiceRequest("/wlt/settlements"),
-		"TEST_WLT_SERVICE_TOKEN",
-		"dsh",
-	) {
-		t.Fatal("active SaaS service call without tenant was accepted")
-	}
-	if recorder.Code != http.StatusBadRequest || !strings.Contains(recorder.Body.String(), "MISSING_TENANT_ID") {
-		t.Fatalf("expected MISSING_TENANT_ID, got status=%d body=%s", recorder.Code, recorder.Body.String())
-	}
-}
-
-func TestRequireServiceCallerRejectsCrossTenantServiceCall(t *testing.T) {
-	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
-	configureActiveSaaS(t)
 	request := authorizedServiceRequest("/wlt/settlements")
-	request.Header.Set("X-Tenant-ID", "tenant-other")
+	request.Header.Set("X-Operator-Context-ID", "caller-selected-scope")
 	recorder := httptest.NewRecorder()
 
 	if RequireServiceCaller(recorder, request, "TEST_WLT_SERVICE_TOKEN", "dsh") {
-		t.Fatal("cross-tenant service call was accepted")
+		t.Fatal("caller-selected financial scope was accepted without server configuration")
 	}
-	if recorder.Code != http.StatusForbidden || !strings.Contains(recorder.Body.String(), "TENANT_CONTEXT_FORBIDDEN") {
-		t.Fatalf("expected TENANT_CONTEXT_FORBIDDEN, got status=%d body=%s", recorder.Code, recorder.Body.String())
+	if recorder.Code != http.StatusServiceUnavailable || !strings.Contains(recorder.Body.String(), "FINANCIAL_SCOPE_NOT_CONFIGURED") {
+		t.Fatalf("expected FINANCIAL_SCOPE_NOT_CONFIGURED, got status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
 }
 
-func TestRequireServiceCallerAcceptsTrustedActiveSaaSTenant(t *testing.T) {
+func TestRequireServiceCallerOverridesCallerSelectedFinancialScope(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
-	configureActiveSaaS(t)
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "local-dsh")
+
 	request := authorizedServiceRequest("/wlt/settlements")
-	request.Header.Set("X-Tenant-ID", "tenant-main")
+	request.Header.Set("X-Operator-Context-ID", "untrusted-caller-scope")
 	recorder := httptest.NewRecorder()
 
 	if !RequireServiceCaller(recorder, request, "TEST_WLT_SERVICE_TOKEN", "dsh") {
-		t.Fatalf("trusted tenant was rejected with status=%d body=%s", recorder.Code, recorder.Body.String())
+		t.Fatalf("authenticated service request was rejected status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	if got := request.Header.Get("X-Operator-Context-ID"); got != "local-dsh" {
+		t.Fatalf("caller header was not replaced by server scope: got %q", got)
+	}
+	if scopeID, ok := OperatorContextIDFromContext(request.Context()); !ok || scopeID != "local-dsh" {
+		t.Fatalf("server scope was not propagated, scope=%q ok=%v", scopeID, ok)
 	}
 }
 
-func TestRequireServiceCallerFailsClosedWhenActiveTenantIsUnconfigured(t *testing.T) {
+func TestRequireServiceCallerCollapsesDistinctCallerScopesToServerScope(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
-	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "authorized")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "local-dsh")
+
+	for _, callerScope := range []string{"tenant-a", "tenant-b", "partner-42", ""} {
+		request := authorizedServiceRequest("/wlt/settlements")
+		request.Header.Set("X-Operator-Context-ID", callerScope)
+		recorder := httptest.NewRecorder()
+		if !RequireServiceCaller(recorder, request, "TEST_WLT_SERVICE_TOKEN", "dsh") {
+			t.Fatalf("authenticated request with caller scope %q was rejected status=%d body=%s", callerScope, recorder.Code, recorder.Body.String())
+		}
+		if got := request.Header.Get("X-Operator-Context-ID"); got != "local-dsh" {
+			t.Fatalf("caller scope %q survived authentication as %q", callerScope, got)
+		}
+	}
+}
+
+func TestRequireServiceCallerAuthenticatesBeforeBindingScope(t *testing.T) {
+	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "local-dsh")
 	request := authorizedServiceRequest("/wlt/settlements")
-	request.Header.Set("X-Tenant-ID", "tenant-main")
+	request.Header.Set("Authorization", "Bearer wrong-token")
+	request.Header.Set("X-Operator-Context-ID", "caller-selected-scope")
 	recorder := httptest.NewRecorder()
 
 	if RequireServiceCaller(recorder, request, "TEST_WLT_SERVICE_TOKEN", "dsh") {
-		t.Fatal("active SaaS call was accepted without configured runtime tenant")
+		t.Fatal("financial scope header bypassed service authentication")
 	}
-	if recorder.Code != http.StatusServiceUnavailable || !strings.Contains(recorder.Body.String(), "SAAS_TENANT_NOT_CONFIGURED") {
-		t.Fatalf("expected SAAS_TENANT_NOT_CONFIGURED, got status=%d body=%s", recorder.Code, recorder.Body.String())
+	if recorder.Code != http.StatusForbidden || !strings.Contains(recorder.Body.String(), "SERVICE_TOKEN_INVALID") {
+		t.Fatalf("expected SERVICE_TOKEN_INVALID, got status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	if got := request.Header.Get("X-Operator-Context-ID"); got != "caller-selected-scope" {
+		t.Fatalf("unauthenticated request was mutated before authentication: got %q", got)
+	}
+}
+
+func TestRequireOperatorContextCompatibilityAccessorFailsClosedWithoutBoundScope(t *testing.T) {
+	scopeID, err := RequireOperatorContext(context.Background())
+	if err == nil || scopeID != "" {
+		t.Fatalf("missing compatibility scope returned scope=%q err=%v", scopeID, err)
+	}
+
+	ctx := WithOperatorContext(context.Background(), "local-dsh")
+	scopeID, err = RequireOperatorContext(ctx)
+	if err != nil || scopeID != "local-dsh" {
+		t.Fatalf("bound compatibility scope returned scope=%q err=%v", scopeID, err)
 	}
 }

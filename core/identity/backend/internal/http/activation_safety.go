@@ -5,16 +5,18 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 )
 
 const activationRequestLimit = 32 * 1024
 
-// ActivationSafetyMiddleware prevents the local bootstrap code from becoming
-// an authentication bypass outside an explicitly enabled local environment.
-// The request body is restored unchanged so the canonical activation handler
-// remains the sole owner of validation and session creation.
+// ActivationSafetyMiddleware permanently rejects the retired universal
+// bootstrap activation code before it can reach Identity's repository. Local
+// development already has the explicit username/password bootstrap path, so a
+// shared activation code is never a valid authentication mechanism in any
+// runtime mode. The request body is restored unchanged for all other codes so
+// the canonical activation handler remains the sole owner of validation and
+// session creation.
 func ActivationSafetyMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost || r.URL.Path != "/auth/activate" {
@@ -32,7 +34,7 @@ func ActivationSafetyMiddleware(next http.Handler) http.Handler {
 		var request struct {
 			Code string `json:"code"`
 		}
-		if json.Unmarshal(body, &request) == nil && strings.TrimSpace(request.Code) == "000000" && os.Getenv("IDENTITY_LOCAL_BOOTSTRAP") != "true" {
+		if json.Unmarshal(body, &request) == nil && strings.TrimSpace(request.Code) == "000000" {
 			sendError(w, http.StatusUnauthorized, "INVALID_ACTIVATION", "activation code is invalid or expired")
 			return
 		}

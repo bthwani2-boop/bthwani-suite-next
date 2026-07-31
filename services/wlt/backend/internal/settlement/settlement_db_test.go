@@ -1,6 +1,7 @@
 package settlement
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -9,7 +10,11 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+
+	"wlt-api/internal/shared"
 )
+
+const settlementTestOperatorContext = "OperatorContext-settlement-tests"
 
 func getTestDB(t *testing.T) *sql.DB {
 	t.Helper()
@@ -37,6 +42,10 @@ func getTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
+func settlementTestContext() context.Context {
+	return shared.WithOperatorContext(context.Background(), settlementTestOperatorContext)
+}
+
 func insertPendingSettlement(
 	t *testing.T,
 	db *sql.DB,
@@ -48,9 +57,10 @@ func insertPendingSettlement(
 	partnerID := fmt.Sprintf("partner-%d", time.Now().UnixNano())
 	row := db.QueryRow(`
 		INSERT INTO wlt_settlements
-			(partner_id, period_start, period_end, gross_amount, platform_fee, net_amount, currency, order_count, status)
-		VALUES ($1, '2026-01-01', '2026-01-31', $2, $3, $4, 'YER', 1, 'pending')
+			(operator_context_id, partner_id, period_start, period_end, gross_amount, platform_fee, net_amount, currency, order_count, status)
+		VALUES ($1, $2, '2026-01-01', '2026-01-31', $3, $4, $5, 'YER', 1, 'pending')
 		RETURNING `+settlementCols,
+		settlementTestOperatorContext,
 		partnerID,
 		grossAmount,
 		platformFee,
@@ -88,12 +98,13 @@ func TestPostSettlement_DoublePostConflict(t *testing.T) {
 		return
 	}
 	defer db.Close()
+	ctx := settlementTestContext()
 
 	settlement := insertPendingSettlement(t, db, 1000, 100, 900)
-	if _, err := PostSettlement(db, settlement.ID); err != nil {
-		t.Fatalf("first PostSettlement should succeed, got error: %v", err)
+	if _, err := postSettlement(ctx, db, settlement.ID); err != nil {
+		t.Fatalf("first postSettlement should succeed, got error: %v", err)
 	}
-	if _, err := PostSettlement(db, settlement.ID); !errors.Is(err, ErrAlreadySettled) {
+	if _, err := postSettlement(ctx, db, settlement.ID); !errors.Is(err, ErrAlreadySettled) {
 		t.Fatalf("expected ErrAlreadySettled on double-post, got %v", err)
 	}
 }
@@ -104,9 +115,10 @@ func TestPostSettlement_PostsBalancedGrossJournal(t *testing.T) {
 		return
 	}
 	defer db.Close()
+	ctx := settlementTestContext()
 
 	settlement := insertPendingSettlement(t, db, 2000, 200, 1800)
-	posted, err := PostSettlement(db, settlement.ID)
+	posted, err := postSettlement(ctx, db, settlement.ID)
 	if err != nil {
 		t.Fatalf("failed to post settlement: %v", err)
 	}
@@ -116,7 +128,8 @@ func TestPostSettlement_PostsBalancedGrossJournal(t *testing.T) {
 
 	var transactionID string
 	if err := db.QueryRow(
-		"SELECT id FROM wlt_ledger_transactions WHERE reference_type = 'settlement' AND reference_id = $1",
+		"SELECT id FROM wlt_ledger_transactions WHERE operator_context_id = $1 AND reference_type = 'settlement' AND reference_id = $2",
+		settlementTestOperatorContext,
 		settlement.ID,
 	).Scan(&transactionID); err != nil {
 		t.Fatalf("expected a ledger transaction referencing this settlement: %v", err)
@@ -124,13 +137,15 @@ func TestPostSettlement_PostsBalancedGrossJournal(t *testing.T) {
 
 	var debitTotal, creditTotal int64
 	if err := db.QueryRow(
-		"SELECT COALESCE(SUM(amount_minor_units),0) FROM wlt_ledger_lines WHERE ledger_transaction_id = $1 AND debit_credit = 'debit'",
+		"SELECT COALESCE(SUM(amount_minor_units),0) FROM wlt_ledger_lines WHERE operator_context_id = $1 AND ledger_transaction_id = $2 AND debit_credit = 'debit'",
+		settlementTestOperatorContext,
 		transactionID,
 	).Scan(&debitTotal); err != nil {
 		t.Fatalf("failed to sum debit lines: %v", err)
 	}
 	if err := db.QueryRow(
-		"SELECT COALESCE(SUM(amount_minor_units),0) FROM wlt_ledger_lines WHERE ledger_transaction_id = $1 AND debit_credit = 'credit'",
+		"SELECT COALESCE(SUM(amount_minor_units),0) FROM wlt_ledger_lines WHERE operator_context_id = $1 AND ledger_transaction_id = $2 AND debit_credit = 'credit'",
+		settlementTestOperatorContext,
 		transactionID,
 	).Scan(&creditTotal); err != nil {
 		t.Fatalf("failed to sum credit lines: %v", err)
@@ -146,14 +161,15 @@ func TestPostSettlement_InconsistentAmountsRollback(t *testing.T) {
 		return
 	}
 	defer db.Close()
+	ctx := settlementTestContext()
 
 	settlement := insertPendingSettlement(t, db, 1000, 100, 999)
-	if _, err := PostSettlement(db, settlement.ID); !errors.Is(err, ErrSettlementAmountsInconsistent) {
+	if _, err := postSettlement(ctx, db, settlement.ID); !errors.Is(err, ErrSettlementAmountsInconsistent) {
 		t.Fatalf("expected ErrSettlementAmountsInconsistent, got %v", err)
 	}
 
 	var status string
-	if err := db.QueryRow(`SELECT status FROM wlt_settlements WHERE id = $1`, settlement.ID).Scan(&status); err != nil {
+	if err := db.QueryRow(`SELECT status FROM wlt_settlements WHERE operator_context_id = $1 AND id = $2`, settlementTestOperatorContext, settlement.ID).Scan(&status); err != nil {
 		t.Fatalf("failed to read settlement status: %v", err)
 	}
 	if status != "pending" {
@@ -162,7 +178,8 @@ func TestPostSettlement_InconsistentAmountsRollback(t *testing.T) {
 
 	var ledgerCount int
 	if err := db.QueryRow(
-		`SELECT COUNT(*) FROM wlt_ledger_transactions WHERE reference_type = 'settlement' AND reference_id = $1`,
+		`SELECT COUNT(*) FROM wlt_ledger_transactions WHERE operator_context_id = $1 AND reference_type = 'settlement' AND reference_id = $2`,
+		settlementTestOperatorContext,
 		settlement.ID,
 	).Scan(&ledgerCount); err != nil {
 		t.Fatalf("failed to count settlement journals: %v", err)

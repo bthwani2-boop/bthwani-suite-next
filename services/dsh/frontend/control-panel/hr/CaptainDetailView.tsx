@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
+import { CpButton, CpMutedInline, CpPageHeader, CpStateView, CpTextInput } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
 import { Text } from "@bthwani/ui-kit";
 
@@ -14,9 +14,10 @@ import {
 } from "../../shared/workforce";
 import { uploadProviderMedia } from "../../shared/media/field-document-media";
 import { ProviderActivationWorkspace } from "../shared";
+import { ProviderOperationalCorePanel } from "./ProviderOperationalCorePanel";
 import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState";
 import { SupervisorPicker } from "./SupervisorPicker";
-import { WorkforceScopeManager } from "./WorkforceScopeManager";
+
 import { ZonePicker } from "./ZonePicker";
 
 const LICENSE_LABEL: Record<LicenseStatus, string> = {
@@ -63,7 +64,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
 
   if (controller.state.kind === "loading") {
     return (
-      <DetailPageFrame stateView={<CpStatePanel role="status" title="جارٍ تحميل ملف الكابتن…" />}>
+      <DetailPageFrame stateView={<CpStateView kind="loading" title="جارٍ تحميل ملف الكابتن…" />}>
         <div />
       </DetailPageFrame>
     );
@@ -163,7 +164,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
           </div>
           <div>
             <Text role="bodySm">تاريخ بداية الارتباط</Text>
-            <CpTextInput value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية الارتباط" />
+            <CpTextInput type="date" value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية الارتباط" />
           </div>
           <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} />
           <div>
@@ -180,12 +181,12 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
           </div>
           <div>
             <Text role="bodySm">تاريخ انتهاء الرخصة</Text>
-            <CpTextInput value={licenseExpiresAt} onChange={setLicenseExpiresAt} placeholder="YYYY-MM-DD" aria-label="تاريخ انتهاء الرخصة" />
+            <CpTextInput type="date" value={licenseExpiresAt} onChange={setLicenseExpiresAt} placeholder="YYYY-MM-DD" aria-label="تاريخ انتهاء الرخصة" />
           </div>
 
           <Text role="bodySm" style={{ fontWeight: "bold" }}>المشرف</Text>
           <SupervisorPicker kind="captain" selected={supervisor} onSelect={setSupervisor} />
-          {controller.actionError ? <CpStatePanel role="alert" title={controller.actionError} /> : null}
+          {controller.actionError ? <CpStateView kind="error" title={controller.actionError} /> : null}
 
           <CpButton
             variant="primary"
@@ -214,7 +215,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
           <Text role="bodySm">الصورة: {captain.photoMediaRef ? "مرتبطة" : "مفقودة"}</Text>
           <Text role="bodySm">الوثائق: {documentCount}</Text>
           <Text role="bodySm">حالة الرخصة: {LICENSE_LABEL[profile?.licenseStatus ?? "missing"]}</Text>
-          {uploadError ? <CpStatePanel role="alert" title={uploadError} /> : null}
+          {uploadError ? <CpStateView kind="error" title={uploadError} /> : null}
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("photo")}>
               {uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}
@@ -233,7 +234,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
           </div>
         </div>
 
-        <WorkforceScopeManager actorId={captain.actorId} actorRole="captain" />
+        <ProviderOperationalCorePanel actorId={captain.actorId} kind="captain" />
         <ProviderActivationWorkspace providerKind="captain" initialActorId={captain.actorId} entrySource="hr" />
       </div>
     </DetailPageFrame>

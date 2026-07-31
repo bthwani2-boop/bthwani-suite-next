@@ -3,6 +3,7 @@ package cart
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"os"
 	"strconv"
 	"testing"
@@ -31,9 +32,9 @@ func openRequiredDB(t *testing.T) *sql.DB {
 	return db
 }
 
-// TestComputeCheckoutSnapshotDBIntegration proves the real gap this integration
-// closed: DSH now derives a non-zero, verifiable cart total from its own
-// catalog price snapshot, instead of handing WLT an amount of 0.
+// TestComputeCheckoutSnapshotDBIntegration proves DSH derives amount and
+// currency from the same sovereign assortment snapshot instead of handing WLT
+// a zero amount or a locally hardcoded currency.
 func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
@@ -86,8 +87,8 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	}
 
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_store_assortments (id, store_id, master_product_id, unit_price, available)
-		VALUES ($1, $2, $3, 25.50, true)`,
+		INSERT INTO dsh_store_assortments (id, store_id, master_product_id, unit_price, currency, available)
+		VALUES ($1, $2, $3, 25.50, 'USD', true)`,
 		"assortment-"+suffix, storeID, productID,
 	); err != nil {
 		t.Fatalf("failed to insert test store assortment: %v", err)
@@ -110,6 +111,9 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	if item.UnitPrice != 25.50 {
 		t.Fatalf("expected cart item to snapshot catalog unitPrice=25.50, got %v", item.UnitPrice)
 	}
+	if item.Currency != "USD" {
+		t.Fatalf("expected cart item to snapshot assortment currency=USD, got %q", item.Currency)
+	}
 	if item.ProductName != "Test Widget" {
 		t.Fatalf("expected cart item productName derived from catalog, got %q", item.ProductName)
 	}
@@ -122,6 +126,9 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	if snapshot.AmountMinorUnits != expectedMinorUnits {
 		t.Fatalf("expected amountMinorUnits=%d for 3x 25.50, got %d", expectedMinorUnits, snapshot.AmountMinorUnits)
 	}
+	if snapshot.Currency != "USD" {
+		t.Fatalf("expected checkout currency=USD from assortment snapshot, got %q", snapshot.Currency)
+	}
 	if snapshot.AmountMinorUnits <= 0 {
 		t.Fatalf("checkout snapshot amount must be > 0 for a priced cart, got %d", snapshot.AmountMinorUnits)
 	}
@@ -131,8 +138,8 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 }
 
 // TestComputeCheckoutSnapshotRejectsUnpricedItemDBIntegration proves a cart
-// item without a catalog price (unit_price left at its 0 default) blocks
-// checkout instead of silently handing WLT amount=0.
+// item without a catalog price blocks checkout independently of its valid
+// persisted currency snapshot.
 func TestComputeCheckoutSnapshotRejectsUnpricedItemDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
@@ -146,7 +153,11 @@ func TestComputeCheckoutSnapshotRejectsUnpricedItemDBIntegration(t *testing.T) {
 		storeID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
-	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID) })
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_cart_items WHERE cart_id IN (SELECT id FROM dsh_carts WHERE store_id = $1)`, storeID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_carts WHERE store_id = $1`, storeID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID)
+	})
 
 	var cartID string
 	if err := db.QueryRowContext(ctx, `
@@ -158,17 +169,52 @@ func TestComputeCheckoutSnapshotRejectsUnpricedItemDBIntegration(t *testing.T) {
 		t.Fatalf("failed to insert test cart: %v", err)
 	}
 
-	// Insert a cart item directly (bypassing UpsertItem/catalog lookup) with
-	// unit_price left at its zero default, simulating legacy/unpriced data.
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_cart_items (cart_id, product_id, product_name, price_reference, unit_price, quantity)
-		VALUES ($1, 'unpriced-product', 'Unpriced Product', 'n/a', 0, 1)`,
+		INSERT INTO dsh_cart_items (cart_id, product_id, product_name, price_reference, unit_price, currency, quantity)
+		VALUES ($1, 'unpriced-product', 'Unpriced Product', 'n/a', 0, 'USD', 1)`,
 		cartID); err != nil {
 		t.Fatalf("failed to insert unpriced cart item: %v", err)
 	}
 
 	_, err := ComputeCheckoutSnapshot(ctx, db, cartID)
-	if err != ErrCartItemMissingPrice {
+	if !errors.Is(err, ErrCartItemMissingPrice) {
 		t.Fatalf("expected ErrCartItemMissingPrice, got %v", err)
+	}
+}
+
+func TestComputeCheckoutSnapshotRejectsMixedCurrenciesDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	ctx := context.Background()
+	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+	storeID := "cart-currency-test-store-" + suffix
+	clientID := "cart-currency-test-client-" + suffix
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
+		VALUES ($1, $1, 'Cart Currency Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true)`, storeID); err != nil {
+		t.Fatalf("failed to insert test store: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_cart_items WHERE cart_id IN (SELECT id FROM dsh_carts WHERE store_id = $1)`, storeID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_carts WHERE store_id = $1`, storeID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID)
+	})
+
+	var cartID string
+	if err := db.QueryRowContext(ctx, `
+		INSERT INTO dsh_carts (client_id, store_id, fulfillment_mode, state)
+		VALUES ($1, $2, 'pickup', 'active') RETURNING id::text`, clientID, storeID).Scan(&cartID); err != nil {
+		t.Fatalf("failed to insert test cart: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_cart_items (cart_id, product_id, product_name, price_reference, unit_price, currency, quantity)
+		VALUES ($1, 'product-usd', 'USD Product', '10.00', 10, 'USD', 1),
+		       ($1, 'product-eur', 'EUR Product', '12.00', 12, 'EUR', 1)`, cartID); err != nil {
+		t.Fatalf("failed to insert mixed-currency cart items: %v", err)
+	}
+
+	_, err := ComputeCheckoutSnapshot(ctx, db, cartID)
+	if !errors.Is(err, ErrCartItemCurrency) {
+		t.Fatalf("expected ErrCartItemCurrency, got %v", err)
 	}
 }

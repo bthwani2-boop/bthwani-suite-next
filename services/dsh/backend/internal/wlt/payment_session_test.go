@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+func paymentSessionTestContext() context.Context {
+	return WithOperatorContext(context.Background(), "OperatorContext-a")
+}
+
 func TestGetPaymentSessionUsesServiceTokenAndParsesTruth(t *testing.T) {
 	updatedAt := time.Date(2026, 7, 21, 1, 2, 3, 0, time.UTC)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -19,6 +23,9 @@ func TestGetPaymentSessionUsesServiceTokenAndParsesTruth(t *testing.T) {
 		}
 		if got := r.Header.Get("Authorization"); got != "Bearer service-secret" {
 			t.Fatalf("authorization=%q", got)
+		}
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "OperatorContext-a" {
+			t.Fatalf("OperatorContext=%q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"paymentSession": {
@@ -38,7 +45,7 @@ func TestGetPaymentSessionUsesServiceTokenAndParsesTruth(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-secret")
-	session, err := client.GetPaymentSession(context.Background(), "session-1")
+	session, err := client.GetPaymentSession(paymentSessionTestContext(), "session-1")
 	if err != nil {
 		t.Fatalf("GetPaymentSession: %v", err)
 	}
@@ -58,7 +65,7 @@ func TestGetPaymentSessionRejectsIncompleteResponse(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-secret")
-	if _, err := client.GetPaymentSession(context.Background(), "session-1"); err == nil {
+	if _, err := client.GetPaymentSession(paymentSessionTestContext(), "session-1"); err == nil {
 		t.Fatal("incomplete WLT response must fail closed")
 	}
 }

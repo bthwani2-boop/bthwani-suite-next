@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { CpBadge, CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
+import { CpBadge, CpButton, CpMutedInline, CpPageHeader, CpStateView, CpTextInput } from "@bthwani/control-panel/components";
 import { SettingsPageFrame } from "@bthwani/control-panel/shell";
 import { Text } from "@bthwani/ui-kit";
 import {
@@ -10,8 +10,7 @@ import {
   updateWorkforceCity,
   updateWorkforceShift,
   useWorkforceReferenceData,
-  workforceErrorMessage,
-} from "../../shared/workforce";
+  workforceErrorMessage } from "../../shared/workforce";
 import type { WorkforceCity, WorkforceShift } from "../../shared/workforce";
 
 export function WorkforceReferenceView(props: { readonly onBack: () => void }) {
@@ -55,8 +54,8 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void }) {
         <CpMutedInline>
           المدن التشغيلية والورديات مرجعيات سيادية. المدن المشتقة من مناطق DSH تُضاف تلقائيًا، ويمكن للإدارة تصحيح مسمياتها أو تعطيلها عند توقف التشغيل.
         </CpMutedInline>
-        {error ? <CpStatePanel role="alert" title={error} /> : null}
-        {reference.error ? <CpStatePanel role="alert" title={reference.error} /> : null}
+        {error ? <CpStateView kind="error" title={error} /> : null}
+        {reference.error ? <CpStateView kind="error" title={reference.error} /> : null}
 
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           <Text role="bodyStrong">المدن</Text>
@@ -133,8 +132,7 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void }) {
                 nameAr: shiftName.trim(),
                 ...(shiftStartsAt.trim() ? { startsAt: shiftStartsAt.trim() } : {}),
                 ...(shiftEndsAt.trim() ? { endsAt: shiftEndsAt.trim() } : {}),
-                active: true,
-              })).then((ok) => {
+                active: true })).then((ok) => {
                 if (ok) {
                   setShiftCode("");
                   setShiftName("");

@@ -103,38 +103,25 @@ if (!fs.existsSync(path.join(repoRoot, envExample))) {
     });
   }
 
-  const saasMode = env.get("BTHWANI_SAAS_MODE");
   const activationState = env.get("BTHWANI_COMMERCIAL_ACTIVATION_STATE");
   const productionDeploymentAuthorized = env.get("BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED");
-  const defaultTenantId = env.get("BTHWANI_DEFAULT_TENANT_ID") ?? "";
+  const defaultOperatorContextId = env.get("BTHWANI_OPERATOR_CONTEXT_ID") ?? "";
 
-  if (!new Set(["deferred", "active"]).has(saasMode)) {
-    violations.push({ file: envExample, message: "SAAS_MODE_INVALID: expected deferred or active" });
-  }
   if (!new Set(["blocked", "eligible", "authorized", "active"]).has(activationState)) {
-    violations.push({ file: envExample, message: "SAAS_ACTIVATION_STATE_INVALID" });
+    violations.push({ file: envExample, message: "partner_activation_STATE_INVALID" });
   }
   if (!new Set(["true", "false"]).has(productionDeploymentAuthorized)) {
     violations.push({ file: envExample, message: "PRODUCTION_DEPLOYMENT_AUTHORIZATION_FLAG_INVALID" });
   }
-  if (saasMode === "active" && activationState === "blocked") {
-    violations.push({ file: envExample, message: "ACTIVE_SAAS_RUNTIME_CANNOT_BE_POLICY_BLOCKED" });
-  }
   if (activationState === "authorized") {
-    if (saasMode !== "active") {
-      violations.push({ file: envExample, message: "AUTHORIZED_ACTIVATION_REQUIRES_ACTIVE_SAAS_MODE" });
-    }
     if (productionDeploymentAuthorized !== "false") {
       violations.push({ file: envExample, message: "AUTHORIZED_RUNTIME_MUST_NOT_IMPLY_PRODUCTION_DEPLOYMENT" });
     }
-    if (!/^[a-z0-9][a-z0-9-]{2,62}$/.test(defaultTenantId)) {
-      violations.push({ file: envExample, message: "AUTHORIZED_SAAS_RUNTIME_REQUIRES_GOVERNED_DEFAULT_TENANT_ID" });
+    if (!/^[a-z0-9][a-z0-9-]{2,62}$/.test(defaultOperatorContextId)) {
+      violations.push({ file: envExample, message: "AUTHORIZED_partner_platform_RUNTIME_REQUIRES_GOVERNED_DEFAULT_OperatorContext_ID" });
     }
   }
   if (activationState === "active") {
-    if (saasMode !== "active") {
-      violations.push({ file: envExample, message: "COMMERCIAL_ACTIVE_REQUIRES_ACTIVE_SAAS_MODE" });
-    }
     if (mode !== "production" || productionDeploymentAuthorized !== "true") {
       violations.push({ file: envExample, message: "COMMERCIAL_ACTIVE_REQUIRES_PRODUCTION_MODE_AND_DEPLOYMENT_AUTHORIZATION" });
     }

@@ -12,6 +12,7 @@ import {
   CpRetryButton,
   CpSelect,
   CpStatePanel,
+  CpStateView,
 } from '@bthwani/control-panel/components';
 import { OperationsRoomFrame } from '@bthwani/control-panel/shell';
 import {
@@ -294,7 +295,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
     return (
       <OperationsRoomFrame
         header={<CpPageHeader title={PAGE_TITLE} />}
-        stateView={<CpStatePanel role="status" title="جارٍ تحميل الاستثناءات الحية من DSH" />}
+        stateView={<CpStateView kind="loading" title="جارٍ تحميل الاستثناءات الحية من DSH" />}
       >
         {null}
       </OperationsRoomFrame>

@@ -3,7 +3,7 @@ info:
   title: BThwani DSH Captain Live Tracking API
   version: 1.1.0
   description: >
-    Canonical JRN-017 contract for trusted foreground captain location, privacy-aware
+    Canonical contract for trusted foreground captain location, privacy-aware
     client tracking, partner reference-only readback, and authorized operator tracking
     alerts plus live map locations. DSH owns operational truth; Providers owns route
     computation; no financial mutation is allowed.
@@ -17,7 +17,7 @@ x-bthwani-runtime-dependency: true
 paths:
   /dsh/captain/dispatch/assignments/{assignmentId}/location:
     post:
-      operationId: pushTrustedCaptainDispatchLocation
+      operationId: pushDshCaptainLocation
       tags: [DshLiveTracking]
       summary: Store the authenticated captain's latest trusted foreground sample only.
       security: [{ bearerAuth: [] }]
@@ -44,7 +44,7 @@ paths:
 
   /dsh/client/orders/{orderId}/tracking:
     get:
-      operationId: getClientPrivacyAwareLiveTracking
+      operationId: getDshClientOrderTracking
       tags: [DshLiveTracking]
       summary: Read assignment state, rounded delivery-window location, freshness, and governed ETA.
       security: [{ bearerAuth: [] }]
@@ -62,7 +62,7 @@ paths:
 
   /dsh/partner/orders/{orderId}/dispatch-tracking:
     get:
-      operationId: getPartnerDispatchTrackingReference
+      operationId: getDshPartnerDispatchTracking
       tags: [DshLiveTracking]
       summary: Read delivery state and ETA reference without captain coordinates or mutations.
       security: [{ bearerAuth: [] }]

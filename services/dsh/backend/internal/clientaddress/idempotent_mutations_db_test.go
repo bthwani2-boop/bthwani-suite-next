@@ -12,7 +12,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const integrationServiceAreaCode = "jrn005-integration-area"
+const integrationServiceAreaCode = "integration-area"
 
 func openAddressIntegrationDB(t *testing.T) *sql.DB {
 	t.Helper()
@@ -36,7 +36,7 @@ func ensureIntegrationServiceArea(t *testing.T, db *sql.DB) {
 	t.Helper()
 	_, err := db.Exec(`INSERT INTO dsh_service_area_geofences
 		(service_area_code, display_name, polygon, active, priority)
-		VALUES ($1, 'JRN-005 integration area', '[[44,15],[45,15],[45,16],[44,16]]'::jsonb, TRUE, 1000)
+		VALUES ($1, ' integration area', '[[44,15],[45,15],[45,16],[44,16]]'::jsonb, TRUE, 1000)
 		ON CONFLICT (service_area_code) DO UPDATE SET
 			display_name = EXCLUDED.display_name,
 			polygon = EXCLUDED.polygon,
@@ -119,8 +119,8 @@ func TestIdempotentAddressMutationsAreExactlyOnceAndClientScoped(t *testing.T) {
 	ensureIntegrationServiceArea(t, db)
 	ctx := context.Background()
 	suffix := fmt.Sprintf("%08d", time.Now().UnixNano()%100000000)
-	clientA := "jrn005-client-a-" + suffix
-	clientB := "jrn005-client-b-" + suffix
+	clientA := "client-a-" + suffix
+	clientB := "client-b-" + suffix
 
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM dsh_client_address_mutation_receipts WHERE client_id IN ($1,$2)`, clientA, clientB)

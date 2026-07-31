@@ -61,19 +61,15 @@ export function PartnerListScreen({ onSelectPartner, onCreatePartner }: Props) {
 
   const stateView =
     sessionState.kind !== "authenticated" ? (
-      <CpStatePanel role="alert" title="جلسة مصادق عليها مطلوبة" description="يجب استعادة جلسة المشغل قبل قراءة الشركاء." />
+      <CpStateView kind="unauthenticated" description="يجب استعادة جلسة المشغل قبل قراءة الشركاء." />
     ) : controller.listState.kind === "loading" || controller.listState.kind === "idle" ? (
-      <CpStatePanel role="status" title="جاري تحميل الشركاء…" />
+      <CpStateView kind="loading" title="جاري تحميل الشركاء…" />
     ) : controller.listState.kind === "offline" ? (
-      <CpStatePanel role="alert" title="DSH غير متاح حاليًا">
-        <CpRetryButton onClick={controller.retry}>إعادة المحاولة</CpRetryButton>
-      </CpStatePanel>
+      <CpStateView kind="offline" title="DSH غير متاح حاليًا" onRetry={controller.retry} />
     ) : controller.listState.kind === "empty" ? (
-      <CpStatePanel role="status" title="لا يوجد شركاء مطابقون" description="جرّب تغيير الحالة أو الفئة." />
+      <CpStateView kind="empty" title="لا يوجد شركاء مطابقون" description="جرّب تغيير الحالة أو الفئة." />
     ) : controller.listState.kind === "error" ? (
-      <CpStatePanel role="alert" title="تعذر تحميل الشركاء" code={controller.listState.message}>
-        <CpRetryButton onClick={controller.retry}>إعادة المحاولة</CpRetryButton>
-      </CpStatePanel>
+      <CpStateView kind="error" title="تعذر تحميل الشركاء" code={controller.listState.message} onRetry={controller.retry} />
     ) : undefined;
 
   const start = controller.total === 0 ? 0 : controller.page * controller.pageSize + 1;

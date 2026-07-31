@@ -1,0 +1,99 @@
+openapi: 3.1.0
+info:
+  title: BThwani WLT COD Record Core API
+  version: 1.0.0
+  description: OperatorContext-scoped COD record creation and read surface. Amount
+    and currency are derived from WLT payment-session truth.
+x-bthwani-owner: services/wlt
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: ENABLED
+x-bthwani-runtime-dependency: true
+x-bthwani-financial-owner: true
+servers:
+  - url: http://localhost:58083
+paths:
+  /wlt/cod-records:
+    post:
+      operationId: createWltCodRecord
+      tags: [ WltCodRecords ]
+      summary: Create or replay OperatorContext-local COD custody from WLT payment
+        truth.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCodRecordRequest' }
+      responses:
+        '201': { description: OperatorContext-local COD record created }
+        '200': { description: Exact replay of the existing COD record }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - serviceBearer: []
+    get:
+      operationId: listWltCodRecords
+      tags: [ WltCodRecords ]
+      summary: List OperatorContext-local COD records by one governed filter.
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - name: captainId
+          in: query
+          schema: { type: string }
+        - name: partnerId
+          in: query
+          schema: { type: string }
+        - name: orderId
+          in: query
+          schema: { type: string }
+      responses:
+        '200': { description: OperatorContext-local COD records }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - serviceBearer: []
+  /wlt/cod-records/{codRecordId}:
+    get:
+      operationId: getWltCodRecord
+      tags: [ WltCodRecords ]
+      summary: Read one OperatorContext-local COD record.
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - name: codRecordId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200': { description: OperatorContext-local COD record }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - serviceBearer: []
+components:
+  securitySchemes: {}
+  schemas:
+    CreateCodRecordRequest:
+      type: object
+      additionalProperties: false
+      required: [ orderId, collectorType, collectorId, partnerId, checkoutIntentId ]
+      properties:
+        orderId: { type: string, minLength: 1 }
+        captainId: { type: string }
+        collectorType: { type: string, enum: [ captain, store_courier, partner_store ] }
+        collectorId: { type: string, minLength: 1 }
+        partnerId: { type: string, minLength: 1 }
+        checkoutIntentId: { type: string, minLength: 1 }

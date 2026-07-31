@@ -3,10 +3,7 @@
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, StateView, Text } from '@bthwani/ui-kit';
-import {
-  WebControlPanelLaneTabs,
-  WebControlPanelSubTabs,
-} from '@bthwani/ui-kit/web';
+import { CpLaneTabs, CpSubTabs } from '@bthwani/control-panel/components';
 import type {
   CanonicalOperationsGroupId,
   OperationsFocusParams,
@@ -273,12 +270,12 @@ export function ControlPanelDshOperationsScreen({
       </header>
 
       <nav className={styles.navigationDock} aria-label="مجموعات العمليات">
-        <WebControlPanelLaneTabs items={tabItems} onSelect={handleSelectTab} />
+        <CpLaneTabs items={tabItems} onSelect={handleSelectTab} />
       </nav>
 
       <div className={styles.filterDock}>
         {subTabItems.length > 0 ? (
-          <WebControlPanelSubTabs
+          <CpSubTabs
             items={subTabItems}
             ariaLabel="تصفية مجموعة العمليات"
             onSelect={handleSelectSubTab}

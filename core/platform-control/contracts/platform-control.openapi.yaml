@@ -1,19 +1,27 @@
 openapi: 3.1.0
 info:
   title: BThwani Core Platform Control API
-  version: 0.3.0
-  description: Sovereign platform-control read model, governed maker-checker changes, live health aggregation, and progressive feature-flag delivery.
+  version: 0.4.0
+  description: >-
+    Sovereign platform-control read model and live health aggregation. Governed
+    change-set and progressive-rollout mutation operations are owned by the
+    canonical modules listed under x-bthwani-contracts and are not duplicated
+    here.
 
 x-bthwani-owner: core/platform-control
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-scope: platform-runtime-control
+x-bthwani-contracts:
+  changeSets: ./platform-change-sets.openapi.yaml
+  progressiveRollout: ./platform-progressive-rollout.openapi.yaml
+x-bthwani-overlays: {}
 
 paths:
   /platform/health:
     get:
       operationId: getPlatformControlProcessHealth
       summary: Return process and database liveness.
-      tags: [PlatformRuntime]
+      tags: [ PlatformRuntime ]
       security: []
       responses:
         "200": { $ref: "#/components/responses/PublicHealth" }
@@ -22,7 +30,7 @@ paths:
     get:
       operationId: getPlatformControlReadiness
       summary: Return platform-control readiness.
-      tags: [PlatformRuntime]
+      tags: [ PlatformRuntime ]
       security: []
       responses:
         "200": { $ref: "#/components/responses/PublicHealth" }
@@ -31,18 +39,22 @@ paths:
     get:
       operationId: getPlatformRuntimeConfig
       summary: Return the current platform-control runtime snapshot.
-      tags: [PlatformRuntime]
+      tags: [ PlatformRuntime ]
+      x-bthwani-required-scope: platform:read
       responses:
         "200":
           description: Platform runtime snapshot.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/PlatformRuntimeSnapshot" }
+      security:
+        - bearerAuth: []
   /platform/v1/runtime-config/effective:
     get:
       operationId: getEffectiveRuntimeConfig
       summary: Return effective persisted variables and feature flags.
-      tags: [PlatformRuntime]
+      tags: [ PlatformRuntime ]
+      x-bthwani-required-scope: platform:read
       responses:
         "200":
           description: Effective runtime configuration.
@@ -50,11 +62,14 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/PlatformEffectiveRuntimeConfig" }
         "500": { $ref: "#/components/responses/PlatformError" }
+      security:
+        - bearerAuth: []
   /platform/v1/variables:
     get:
       operationId: listPlatformVariables
       summary: List persisted platform variables.
-      tags: [PlatformVariables]
+      tags: [ PlatformVariables ]
+      x-bthwani-required-scope: platform:read
       responses:
         "200":
           description: Platform variables.
@@ -62,17 +77,20 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [variables]
+                required: [ variables ]
                 properties:
                   variables:
                     type: array
                     items: { $ref: "#/components/schemas/PlatformVariable" }
         "500": { $ref: "#/components/responses/PlatformError" }
+      security:
+        - bearerAuth: []
   /platform/v1/variables/{key}:
     get:
       operationId: getPlatformVariable
       summary: Get a scoped platform variable.
-      tags: [PlatformVariables]
+      tags: [ PlatformVariables ]
+      x-bthwani-required-scope: platform:read
       parameters:
         - name: key
           in: path
@@ -91,15 +109,18 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [variable]
+                required: [ variable ]
                 properties:
                   variable: { $ref: "#/components/schemas/PlatformVariable" }
         "404": { $ref: "#/components/responses/PlatformError" }
+      security:
+        - bearerAuth: []
   /platform/v1/feature-flags:
     get:
       operationId: listPlatformFeatureFlags
       summary: List persisted platform feature flags.
-      tags: [PlatformFlags]
+      tags: [ PlatformFlags ]
+      x-bthwani-required-scope: platform:read
       responses:
         "200":
           description: Feature flags.
@@ -107,17 +128,20 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [flags]
+                required: [ flags ]
                 properties:
                   flags:
                     type: array
                     items: { $ref: "#/components/schemas/PlatformFeatureFlag" }
         "500": { $ref: "#/components/responses/PlatformError" }
+      security:
+        - bearerAuth: []
   /platform/v1/services:
     get:
       operationId: listPlatformServices
       summary: List live platform service posture.
-      tags: [PlatformServices]
+      tags: [ PlatformServices ]
+      x-bthwani-required-scope: platform:read
       responses:
         "200":
           description: Platform services.
@@ -125,27 +149,33 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [services]
+                required: [ services ]
                 properties:
                   services:
                     type: array
                     items: { $ref: "#/components/schemas/PlatformServicePosture" }
+      security:
+        - bearerAuth: []
   /platform/v1/health:
     get:
       operationId: getPlatformHealth
       summary: Return authorized aggregated platform health posture.
-      tags: [PlatformHealth]
+      tags: [ PlatformHealth ]
+      x-bthwani-required-scope: platform:health:read
       responses:
         "200":
           description: Health posture.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/PlatformHealthSnapshot" }
+      security:
+        - bearerAuth: []
   /platform/v1/audit-events:
     get:
       operationId: listPlatformAuditEvents
       summary: List immutable platform audit events.
-      tags: [PlatformAudit]
+      tags: [ PlatformAudit ]
+      x-bthwani-required-scope: platform:audit:read
       responses:
         "200":
           description: Audit events.
@@ -153,201 +183,20 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [events]
+                required: [ events ]
                 properties:
                   events:
                     type: array
                     items: { $ref: "#/components/schemas/PlatformAuditEvent" }
         "500": { $ref: "#/components/responses/PlatformError" }
-  /platform/v1/change-sets:
-    get:
-      operationId: listPlatformChangeSets
-      summary: List governed platform change sets.
-      tags: [PlatformChangeSets]
-      responses:
-        "200":
-          description: Change sets.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [changeSets]
-                properties:
-                  changeSets:
-                    type: array
-                    items: { $ref: "#/components/schemas/PlatformChangeSet" }
-        "500": { $ref: "#/components/responses/PlatformError" }
-    post:
-      operationId: createPlatformChangeSet
-      summary: Create a draft platform change set.
-      tags: [PlatformChangeSets]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/CreatePlatformChangeSetInput" }
-      responses:
-        "201": { $ref: "#/components/responses/PlatformChangeSetResponse" }
-        "422": { $ref: "#/components/responses/PlatformError" }
-  /platform/v1/change-sets/{id}:
-    get:
-      operationId: getPlatformChangeSet
-      summary: Get one platform change set with items.
-      tags: [PlatformChangeSets]
-      parameters: [{ $ref: "#/components/parameters/ChangeSetId" }]
-      responses:
-        "200": { $ref: "#/components/responses/PlatformChangeSetResponse" }
-        "404": { $ref: "#/components/responses/PlatformError" }
-  /platform/v1/change-sets/{id}/validate:
-    post:
-      operationId: validatePlatformChangeSet
-      summary: Validate a draft change set.
-      tags: [PlatformChangeSets]
-      parameters: [{ $ref: "#/components/parameters/ChangeSetId" }]
-      responses:
-        "200": { $ref: "#/components/responses/PlatformChangeSetResponse" }
-        "409": { $ref: "#/components/responses/PlatformError" }
-        "422": { $ref: "#/components/responses/PlatformError" }
-  /platform/v1/change-sets/{id}/submit:
-    post:
-      operationId: submitPlatformChangeSet
-      summary: Submit a validated change set for independent approval.
-      tags: [PlatformChangeSets]
-      parameters: [{ $ref: "#/components/parameters/ChangeSetId" }]
-      responses:
-        "200": { $ref: "#/components/responses/PlatformChangeSetResponse" }
-        "409": { $ref: "#/components/responses/PlatformError" }
-  /platform/v1/change-sets/{id}/approve:
-    post:
-      operationId: approvePlatformChangeSet
-      summary: Independently approve a submitted change set.
-      tags: [PlatformChangeSets]
-      parameters: [{ $ref: "#/components/parameters/ChangeSetId" }]
-      responses:
-        "200": { $ref: "#/components/responses/PlatformChangeSetResponse" }
-        "409": { $ref: "#/components/responses/PlatformError" }
-  /platform/v1/change-sets/{id}/reject:
-    post:
-      operationId: rejectPlatformChangeSet
-      summary: Reject a submitted change set with a reason.
-      tags: [PlatformChangeSets]
-      parameters: [{ $ref: "#/components/parameters/ChangeSetId" }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/RejectPlatformChangeSetInput" }
-      responses:
-        "200": { $ref: "#/components/responses/PlatformChangeSetResponse" }
-        "409": { $ref: "#/components/responses/PlatformError" }
-        "422": { $ref: "#/components/responses/PlatformError" }
-  /platform/v1/change-sets/{id}/apply:
-    post:
-      operationId: applyPlatformChangeSet
-      summary: Atomically apply an approved change set with revision checks.
-      tags: [PlatformChangeSets]
-      parameters: [{ $ref: "#/components/parameters/ChangeSetId" }]
-      responses:
-        "200": { $ref: "#/components/responses/PlatformChangeSetResponse" }
-        "409": { $ref: "#/components/responses/PlatformError" }
-  /platform/v1/change-sets/{id}/rollback:
-    post:
-      operationId: rollbackPlatformChangeSet
-      summary: Atomically roll back an applied change set from captured snapshots.
-      tags: [PlatformChangeSets]
-      parameters: [{ $ref: "#/components/parameters/ChangeSetId" }]
-      responses:
-        "200": { $ref: "#/components/responses/PlatformChangeSetResponse" }
-        "409": { $ref: "#/components/responses/PlatformError" }
-  /platform/v1/rollouts:
-    get:
-      operationId: listPlatformRollouts
-      summary: List progressive feature-flag rollouts.
-      tags: [PlatformRollouts]
-      responses:
-        "200":
-          description: Progressive rollouts.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [rollouts]
-                properties:
-                  rollouts:
-                    type: array
-                    items: { $ref: "#/components/schemas/PlatformRollout" }
-        "500": { $ref: "#/components/responses/PlatformError" }
-    post:
-      operationId: createPlatformRollout
-      summary: Create a health-gated rollout for an applied disabled feature flag.
-      tags: [PlatformRollouts]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/CreatePlatformRolloutInput" }
-      responses:
-        "201": { $ref: "#/components/responses/PlatformRolloutResponse" }
-        "409": { $ref: "#/components/responses/PlatformError" }
-        "422": { $ref: "#/components/responses/PlatformError" }
-  /platform/v1/rollouts/{id}:
-    get:
-      operationId: getPlatformRollout
-      summary: Get one progressive rollout.
-      tags: [PlatformRollouts]
-      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
-      responses:
-        "200": { $ref: "#/components/responses/PlatformRolloutResponse" }
-        "404": { $ref: "#/components/responses/PlatformError" }
-  /platform/v1/rollouts/{id}/advance:
-    post:
-      operationId: advancePlatformRollout
-      summary: Advance a rollout after evaluating its configured health gate.
-      tags: [PlatformRollouts]
-      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
-      responses:
-        "200": { $ref: "#/components/responses/PlatformRolloutResponse" }
-        "409": { $ref: "#/components/responses/PlatformError" }
-  /platform/v1/rollouts/{id}/pause:
-    post:
-      operationId: pausePlatformRollout
-      summary: Pause a running rollout.
-      tags: [PlatformRollouts]
-      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
-      responses:
-        "200": { $ref: "#/components/responses/PlatformRolloutResponse" }
-        "409": { $ref: "#/components/responses/PlatformError" }
-  /platform/v1/rollouts/{id}/abort:
-    post:
-      operationId: abortPlatformRollout
-      summary: Abort an active rollout and restore its captured baseline.
-      tags: [PlatformRollouts]
-      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
-      responses:
-        "200": { $ref: "#/components/responses/PlatformRolloutResponse" }
-        "409": { $ref: "#/components/responses/PlatformError" }
-  /platform/v1/rollouts/{id}/rollback:
-    post:
-      operationId: rollbackPlatformRollout
-      summary: Roll back a completed rollout and restore its captured baseline.
-      tags: [PlatformRollouts]
-      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
-      responses:
-        "200": { $ref: "#/components/responses/PlatformRolloutResponse" }
-        "409": { $ref: "#/components/responses/PlatformError" }
+      security:
+        - bearerAuth: []
 
 components:
-  parameters:
-    ChangeSetId:
-      name: id
-      in: path
-      required: true
-      schema: { type: string, format: uuid }
-    RolloutId:
-      name: id
-      in: path
-      required: true
-      schema: { type: string, format: uuid }
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
   responses:
     PublicHealth:
       description: Process health or readiness state.
@@ -355,7 +204,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [status, service]
+            required: [ status, service ]
             properties:
               status: { type: string }
               service: { type: string }
@@ -365,40 +214,35 @@ components:
       content:
         application/json:
           schema: { $ref: "#/components/schemas/PlatformApiError" }
-    PlatformChangeSetResponse:
-      description: Platform change set readback.
-      content:
-        application/json:
-          schema:
-            type: object
-            required: [changeSet]
-            properties:
-              changeSet: { $ref: "#/components/schemas/PlatformChangeSet" }
-    PlatformRolloutResponse:
-      description: Progressive rollout readback.
-      content:
-        application/json:
-          schema:
-            type: object
-            required: [rollout]
-            properties:
-              rollout: { $ref: "#/components/schemas/PlatformRollout" }
   schemas:
     PlatformControlState:
       type: string
-      enum: [FIX_REQUIRED, PARTIALLY_BOUND, UNKNOWN_HEALTH, ROLLBACK_UNAVAILABLE, CONTRACT_REQUIRED, READ_ONLY_BOUND, OPERATIONAL]
-    PlatformChangeSetStatus:
-      type: string
-      enum: [draft, validated, submitted, approved, rejected, applied, rolled_back, failed]
-    PlatformChangeTargetType:
-      type: string
-      enum: [variable, feature_flag]
-    PlatformRolloutStatus:
-      type: string
-      enum: [running, paused, completed, aborted, rolled_back, failed]
+      enum:
+        [
+          FIX_REQUIRED,
+          PARTIALLY_BOUND,
+          UNKNOWN_HEALTH,
+          ROLLBACK_UNAVAILABLE,
+          CONTRACT_REQUIRED,
+          READ_ONLY_BOUND,
+          OPERATIONAL
+        ]
     PlatformRuntimeSnapshot:
       type: object
-      required: [status, revision, generatedAt, variablesState, flagsState, rolloutsState, healthState, auditState, rollbackState, servicesState, evidence]
+      required:
+        [
+          status,
+          revision,
+          generatedAt,
+          variablesState,
+          flagsState,
+          rolloutsState,
+          healthState,
+          auditState,
+          rollbackState,
+          servicesState,
+          evidence
+        ]
       properties:
         status: { $ref: "#/components/schemas/PlatformControlState" }
         revision: { type: string }
@@ -415,7 +259,7 @@ components:
           items: { type: string }
     PlatformEffectiveRuntimeConfig:
       type: object
-      required: [revision, stale, fallbackUsed, evaluationTrace, values]
+      required: [ revision, stale, fallbackUsed, evaluationTrace, values ]
       properties:
         revision: { type: string }
         stale: { type: boolean }
@@ -428,7 +272,16 @@ components:
           additionalProperties: true
     PlatformVariable:
       type: object
-      required: [key, ownerService, valueType, classification, scopeType, revision, status]
+      required:
+        [
+          key,
+          ownerService,
+          valueType,
+          classification,
+          scopeType,
+          revision,
+          status
+        ]
       properties:
         key: { type: string }
         ownerService: { type: string }
@@ -443,7 +296,7 @@ components:
         expiresAt: { type: string, format: date-time }
     PlatformFeatureFlag:
       type: object
-      required: [key, ownerService, status, revision]
+      required: [ key, ownerService, status, revision ]
       properties:
         key: { type: string }
         ownerService: { type: string }
@@ -455,7 +308,7 @@ components:
           additionalProperties: true
     PlatformServicePosture:
       type: object
-      required: [service, state, evidenceSource]
+      required: [ service, state, evidenceSource ]
       properties:
         service: { type: string }
         state: { $ref: "#/components/schemas/PlatformControlState" }
@@ -466,7 +319,7 @@ components:
         message: { type: string }
     PlatformHealthSnapshot:
       type: object
-      required: [state, checkedAt, services]
+      required: [ state, checkedAt, services ]
       properties:
         state: { $ref: "#/components/schemas/PlatformControlState" }
         checkedAt: { type: string, format: date-time }
@@ -475,7 +328,7 @@ components:
           items: { $ref: "#/components/schemas/PlatformServicePosture" }
     PlatformAuditEvent:
       type: object
-      required: [id, action, actorId, createdAt, status]
+      required: [ id, action, actorId, createdAt, status ]
       properties:
         id: { type: string, format: uuid }
         changeSetId: { type: string, format: uuid }
@@ -488,143 +341,9 @@ components:
         status: { type: string }
         reason: { type: string }
         correlationId: { type: string }
-    PlatformChangeSetItem:
-      type: object
-      required: [id, targetType, targetKey, ownerService, scopeType, valueType, classification, expectedRevision, proposedValue]
-      properties:
-        id: { type: string, format: uuid }
-        targetType: { $ref: "#/components/schemas/PlatformChangeTargetType" }
-        targetKey: { type: string }
-        ownerService: { type: string }
-        scopeType: { type: string }
-        scopeId: { type: string }
-        valueType: { type: string }
-        classification: { type: string }
-        expectedRevision: { type: integer, format: int64, minimum: 0 }
-        beforeValue: {}
-        proposedValue: {}
-        appliedRevision: { type: integer, format: int64 }
-    PlatformChangeSet:
-      type: object
-      required: [id, title, reason, impactAssessment, rollbackPlan, status, proposerActorId, version, createdAt, updatedAt, items]
-      properties:
-        id: { type: string, format: uuid }
-        title: { type: string }
-        reason: { type: string }
-        impactAssessment: { type: string }
-        rollbackPlan: { type: string }
-        status: { $ref: "#/components/schemas/PlatformChangeSetStatus" }
-        proposerActorId: { type: string }
-        approverActorId: { type: string }
-        appliedByActorId: { type: string }
-        rejectedByActorId: { type: string }
-        rejectionReason: { type: string }
-        version: { type: integer, format: int64 }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-        validatedAt: { type: string, format: date-time }
-        submittedAt: { type: string, format: date-time }
-        approvedAt: { type: string, format: date-time }
-        rejectedAt: { type: string, format: date-time }
-        appliedAt: { type: string, format: date-time }
-        rolledBackAt: { type: string, format: date-time }
-        items:
-          type: array
-          items: { $ref: "#/components/schemas/PlatformChangeSetItem" }
-    PlatformRollout:
-      type: object
-      required: [id, changeSetId, featureFlagKey, status, targetScope, steps, currentStepIndex, currentPercentage, healthGate, baselineEnabled, baselineTargeting, flagRevision, createdByActorId, updatedByActorId, version, createdAt, updatedAt]
-      properties:
-        id: { type: string, format: uuid }
-        changeSetId: { type: string, format: uuid }
-        featureFlagKey: { type: string }
-        status: { $ref: "#/components/schemas/PlatformRolloutStatus" }
-        targetScope:
-          type: object
-          additionalProperties: true
-        steps:
-          type: array
-          minItems: 1
-          items: { type: integer, format: int64, minimum: 1, maximum: 100 }
-        currentStepIndex: { type: integer, minimum: -1 }
-        currentPercentage: { type: integer, format: int64, minimum: 0, maximum: 100 }
-        healthGate:
-          type: object
-          additionalProperties: true
-        baselineEnabled: { type: boolean }
-        baselineTargeting:
-          type: object
-          additionalProperties: true
-        flagRevision: { type: integer, format: int64, minimum: 1 }
-        createdByActorId: { type: string }
-        updatedByActorId: { type: string }
-        version: { type: integer, format: int64, minimum: 1 }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-        startedAt: { type: string, format: date-time }
-        pausedAt: { type: string, format: date-time }
-        completedAt: { type: string, format: date-time }
-        abortedAt: { type: string, format: date-time }
-        rolledBackAt: { type: string, format: date-time }
-    CreatePlatformChangeSetItemInput:
-      type: object
-      required: [targetType, targetKey, ownerService, expectedRevision, proposedValue]
-      properties:
-        targetType: { $ref: "#/components/schemas/PlatformChangeTargetType" }
-        targetKey: { type: string, minLength: 1 }
-        ownerService: { type: string, minLength: 1 }
-        scopeType: { type: string, default: global }
-        scopeId: { type: string, default: "" }
-        valueType: { type: string, default: json }
-        classification: { type: string, default: internal }
-        expectedRevision: { type: integer, format: int64, minimum: 0 }
-        proposedValue: {}
-    CreatePlatformChangeSetInput:
-      type: object
-      required: [title, reason, impactAssessment, rollbackPlan, items]
-      properties:
-        title: { type: string, minLength: 1 }
-        reason: { type: string, minLength: 1 }
-        impactAssessment: { type: string, minLength: 1 }
-        rollbackPlan: { type: string, minLength: 1 }
-        items:
-          type: array
-          minItems: 1
-          items: { $ref: "#/components/schemas/CreatePlatformChangeSetItemInput" }
-    RejectPlatformChangeSetInput:
-      type: object
-      required: [reason]
-      properties:
-        reason: { type: string, minLength: 1 }
-    CreatePlatformRolloutInput:
-      type: object
-      required: [changeSetId, featureFlagKey, targetScope, steps, healthGate]
-      properties:
-        changeSetId: { type: string, format: uuid }
-        featureFlagKey: { type: string, minLength: 1 }
-        targetScope:
-          type: object
-          additionalProperties: true
-        steps:
-          type: array
-          minItems: 1
-          items: { type: integer, format: int64, minimum: 1, maximum: 100 }
-        healthGate:
-          type: object
-          required: [requiredState]
-          properties:
-            requiredState:
-              type: string
-              enum: [OPERATIONAL]
-            requiredServices:
-              type: array
-              minItems: 1
-              items: { type: string, minLength: 1 }
-            maxLatencyMs: { type: integer, format: int64, minimum: 1 }
-          additionalProperties: false
     PlatformApiError:
       type: object
-      required: [code, message]
+      required: [ code, message ]
       properties:
         code: { type: string }
         message: { type: string }

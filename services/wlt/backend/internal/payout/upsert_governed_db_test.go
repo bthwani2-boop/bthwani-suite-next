@@ -2,6 +2,7 @@ package payout
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -12,9 +13,10 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+
+	"wlt-api/internal/shared"
 )
 
-// This suite is the canonical FS-05 rerun after PostgreSQL-safe advisory lock keys.
 func openPayoutRequiredDB(t *testing.T) *sql.DB {
 	t.Helper()
 	if os.Getenv("WLT_REQUIRE_DB_TESTS") != "true" {
@@ -35,13 +37,17 @@ func openPayoutRequiredDB(t *testing.T) *sql.DB {
 	return db
 }
 
-func governedPayoutPartnerID() string {
+func governedPayoutActorID() string {
 	return "partner-payout-db-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 }
 
-func executeGovernedPayoutRequest(t *testing.T, db *sql.DB, partnerID, idempotencyKey, account string) *httptest.ResponseRecorder {
+func executeCanonicalPayoutDestinationRequest(
+	t *testing.T,
+	db *sql.DB,
+	operatorContextID, actorType, actorID, idempotencyKey, account string,
+) *httptest.ResponseRecorder {
 	t.Helper()
-	payload := UpsertPayoutDestinationInput{
+	payload := governedDestinationInput{
 		BeneficiaryName:               "DB Partner Owner",
 		BankName:                      "DB Test Bank",
 		BankBranch:                    "Main",
@@ -50,81 +56,110 @@ func executeGovernedPayoutRequest(t *testing.T, db *sql.DB, partnerID, idempoten
 		SettlementPreference:          "bank",
 		BankAccountHolderMatchesOwner: true,
 		BankNotes:                     "integration proof",
-		CreatedByActorID:              "field-db-001",
+		OperatorID:                    "field-db-001",
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatal(err)
 	}
-	req := httptest.NewRequest(http.MethodPut, "/wlt/payout-destinations/"+partnerID, bytes.NewReader(body))
-	req.SetPathValue("partnerId", partnerID)
+	path := "/wlt/payout-destinations/" + actorType + "/" + actorID
+	req := httptest.NewRequest(http.MethodPut, path, bytes.NewReader(body))
+	req = req.WithContext(shared.WithOperatorContext(context.Background(), operatorContextID))
+	req.SetPathValue("actorType", actorType)
+	req.SetPathValue("actorId", actorID)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Idempotency-Key", idempotencyKey)
-	req.Header.Set("X-Correlation-ID", "correlation-"+idempotencyKey)
+	req.Header.Set("X-Correlation-ID", "correlation-"+operatorContextID+"-"+idempotencyKey)
 	recorder := httptest.NewRecorder()
-	HandleUpsertPayoutDestinationGoverned(db)(recorder, req)
+	HandleUpsertCanonicalPayoutDestination(db)(recorder, req)
 	return recorder
 }
 
-func decodePayoutRef(t *testing.T, recorder *httptest.ResponseRecorder) PayoutDestinationRef {
+func decodeCanonicalPayoutRef(t *testing.T, recorder *httptest.ResponseRecorder) governedDestinationRef {
 	t.Helper()
-	var ref PayoutDestinationRef
-	if err := json.Unmarshal(recorder.Body.Bytes(), &ref); err != nil {
+	var envelope struct {
+		PayoutDestination governedDestinationRef `json:"payoutDestination"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &envelope); err != nil {
 		t.Fatalf("decode payout response %d: %v; body=%s", recorder.Code, err, recorder.Body.String())
 	}
-	return ref
+	return envelope.PayoutDestination
 }
 
-func TestGovernedPayoutDestinationIdempotencyAndSingleActiveDBIntegration(t *testing.T) {
+func TestCanonicalPayoutDestinationIdempotencyAndSingleActiveAreOperatorContextLocal(t *testing.T) {
 	db := openPayoutRequiredDB(t)
-	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", "jrn-001-db-test-encryption-key")
-	partnerID := governedPayoutPartnerID()
+	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", "db-test-encryption-key")
+	actorID := governedPayoutActorID()
+	OperatorContextA := "OperatorContext-payout-a-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	OperatorContextB := "OperatorContext-payout-b-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	t.Cleanup(func() {
-		_, _ = db.Exec(`DELETE FROM wlt_payout_destination_requests WHERE partner_id = $1`, partnerID)
-		_, _ = db.Exec(`DELETE FROM wlt_payout_destinations WHERE partner_id = $1`, partnerID)
+		_, _ = db.Exec(`DELETE FROM wlt_payout_destination_requests WHERE operator_context_id IN ($1,$2)`, OperatorContextA, OperatorContextB)
+		_, _ = db.Exec(`DELETE FROM wlt_payout_audit_events WHERE operator_context_id IN ($1,$2) AND aggregate_type='payout_destination'`, OperatorContextA, OperatorContextB)
+		_, _ = db.Exec(`DELETE FROM wlt_payout_destinations WHERE operator_context_id IN ($1,$2) AND owner_actor_id=$3`, OperatorContextA, OperatorContextB, actorID)
 	})
 
-	first := executeGovernedPayoutRequest(t, db, partnerID, "payout-key-0001", "123456789")
+	first := executeCanonicalPayoutDestinationRequest(t, db, OperatorContextA, "partner", actorID, "payout-key-0001", "123456789")
 	if first.Code != http.StatusCreated {
 		t.Fatalf("first payout status = %d, want 201; body=%s", first.Code, first.Body.String())
 	}
-	firstRef := decodePayoutRef(t, first)
+	firstRef := decodeCanonicalPayoutRef(t, first)
 	if firstRef.ID == "" || firstRef.MaskedAccountNumber == "123456789" {
 		t.Fatalf("first payout response is not masked: %#v", firstRef)
 	}
 
-	replay := executeGovernedPayoutRequest(t, db, partnerID, "payout-key-0001", "123456789")
+	replay := executeCanonicalPayoutDestinationRequest(t, db, OperatorContextA, "partner", actorID, "payout-key-0001", "123456789")
 	if replay.Code != http.StatusOK {
 		t.Fatalf("identical replay status = %d, want 200; body=%s", replay.Code, replay.Body.String())
 	}
-	replayRef := decodePayoutRef(t, replay)
+	replayRef := decodeCanonicalPayoutRef(t, replay)
 	if replayRef.ID != firstRef.ID {
 		t.Fatalf("identical replay created a new destination: first=%s replay=%s", firstRef.ID, replayRef.ID)
 	}
 
-	conflict := executeGovernedPayoutRequest(t, db, partnerID, "payout-key-0001", "987654321")
+	conflict := executeCanonicalPayoutDestinationRequest(t, db, OperatorContextA, "partner", actorID, "payout-key-0001", "987654321")
 	if conflict.Code != http.StatusConflict {
 		t.Fatalf("payload-divergent replay status = %d, want 409; body=%s", conflict.Code, conflict.Body.String())
 	}
 
-	second := executeGovernedPayoutRequest(t, db, partnerID, "payout-key-0002", "987654321")
+	second := executeCanonicalPayoutDestinationRequest(t, db, OperatorContextA, "partner", actorID, "payout-key-0002", "987654321")
 	if second.Code != http.StatusCreated {
 		t.Fatalf("second payout status = %d, want 201; body=%s", second.Code, second.Body.String())
 	}
-	secondRef := decodePayoutRef(t, second)
+	secondRef := decodeCanonicalPayoutRef(t, second)
 	if secondRef.ID == firstRef.ID {
 		t.Fatal("new idempotency key did not create a new payout destination")
 	}
 
-	var activeCount, requestCount int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM wlt_payout_destinations WHERE partner_id = $1 AND active = true`, partnerID).Scan(&activeCount); err != nil {
+	// The same actor identity and idempotency key are independent in another OperatorContext.
+	otherOperatorContext := executeCanonicalPayoutDestinationRequest(t, db, OperatorContextB, "partner", actorID, "payout-key-0001", "555555555")
+	if otherOperatorContext.Code != http.StatusCreated {
+		t.Fatalf("cross-OperatorContext same actor/key status = %d, want 201; body=%s", otherOperatorContext.Code, otherOperatorContext.Body.String())
+	}
+	otherOperatorContextRef := decodeCanonicalPayoutRef(t, otherOperatorContext)
+	if otherOperatorContextRef.ID == firstRef.ID || otherOperatorContextRef.ID == secondRef.ID {
+		t.Fatal("cross-OperatorContext request reused another OperatorContext's destination")
+	}
+
+	for _, operatorContextID := range []string{OperatorContextA, OperatorContextB} {
+		var activeCount int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM wlt_payout_destinations
+			WHERE operator_context_id=$1 AND owner_actor_type='partner' AND owner_actor_id=$2 AND active=true`, operatorContextID, actorID).Scan(&activeCount); err != nil {
+			t.Fatal(err)
+		}
+		if activeCount != 1 {
+			t.Fatalf("OperatorContext %s active destination count=%d, want 1", operatorContextID, activeCount)
+		}
+	}
+
+	var OperatorContextARequestCount, OperatorContextBRequestCount int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM wlt_payout_destination_requests WHERE operator_context_id=$1`, OperatorContextA).Scan(&OperatorContextARequestCount); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.QueryRow(`SELECT COUNT(*) FROM wlt_payout_destination_requests WHERE partner_id = $1`, partnerID).Scan(&requestCount); err != nil {
+	if err := db.QueryRow(`SELECT COUNT(*) FROM wlt_payout_destination_requests WHERE operator_context_id=$1`, OperatorContextB).Scan(&OperatorContextBRequestCount); err != nil {
 		t.Fatal(err)
 	}
-	if activeCount != 1 || requestCount != 2 {
-		t.Fatalf("payout invariants failed: active=%d requests=%d", activeCount, requestCount)
+	if OperatorContextARequestCount != 2 || OperatorContextBRequestCount != 1 {
+		t.Fatalf("OperatorContext-local request counts are wrong: OperatorContextA=%d OperatorContextB=%d", OperatorContextARequestCount, OperatorContextBRequestCount)
 	}
 
 	var rawAccount, rawIBAN, rawMobile string
@@ -135,7 +170,7 @@ func TestGovernedPayoutDestinationIdempotencyAndSingleActiveDBIntegration(t *tes
 		       iban_encrypted IS NOT NULL,
 		       payout_mobile_number_encrypted IS NOT NULL
 		FROM wlt_payout_destinations
-		WHERE id = $1`, secondRef.ID,
+		WHERE operator_context_id=$1 AND id=$2`, OperatorContextA, secondRef.ID,
 	).Scan(&rawAccount, &rawIBAN, &rawMobile, &accountEncrypted, &ibanEncrypted, &mobileEncrypted); err != nil {
 		t.Fatal(err)
 	}

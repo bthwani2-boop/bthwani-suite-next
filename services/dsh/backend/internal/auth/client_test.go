@@ -35,7 +35,7 @@ func TestResolveSuccess(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(Identity{
 			Subject:   "user-1",
-			TenantID:  "dsh",
+			OperatorContextID:  "OperatorContext-a",
 			Roles:     []string{"client"},
 			AuthState: "authenticated",
 		})
@@ -47,8 +47,8 @@ func TestResolveSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if identity.Subject != "user-1" {
-		t.Fatalf("expected subject=user-1, got %q", identity.Subject)
+	if identity.Subject != "user-1" || identity.OperatorContextID != "OperatorContext-a" {
+		t.Fatalf("unexpected identity subject=%q OperatorContext=%q", identity.Subject, identity.OperatorContextID)
 	}
 	if !identity.HasRole("client") {
 		t.Fatalf("expected identity to have role client")
@@ -78,7 +78,7 @@ func TestResolveForbiddenStatusIsUnauthenticated(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL)
-	_, err := c.Resolve(context.Background(), "Bearer cross-tenant-token")
+	_, err := c.Resolve(context.Background(), "Bearer cross-OperatorContext-token")
 	if err != ErrUnauthenticated {
 		t.Fatalf("expected ErrUnauthenticated for HTTP 403, got %v", err)
 	}
@@ -100,7 +100,7 @@ func TestResolveOtherErrorStatus(t *testing.T) {
 func TestResolveRejectsUnauthenticatedState(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(Identity{Subject: "user-1", AuthState: "pending"})
+		_ = json.NewEncoder(w).Encode(Identity{Subject: "user-1", OperatorContextID: "OperatorContext-a", AuthState: "pending"})
 	}))
 	defer server.Close()
 
@@ -114,7 +114,7 @@ func TestResolveRejectsUnauthenticatedState(t *testing.T) {
 func TestResolveRejectsMissingSubject(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(Identity{AuthState: "authenticated"})
+		_ = json.NewEncoder(w).Encode(Identity{OperatorContextID: "OperatorContext-a", AuthState: "authenticated"})
 	}))
 	defer server.Close()
 
@@ -125,44 +125,31 @@ func TestResolveRejectsMissingSubject(t *testing.T) {
 	}
 }
 
-func TestActiveSaaSResolveAcceptsMatchingRuntimeTenant(t *testing.T) {
-	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-main")
+func TestResolveRejectsMissingOperatorContext(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(Identity{Subject: "user-1", AuthState: "authenticated"})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	if _, err := client.Resolve(context.Background(), "Bearer token-1"); err != ErrUnauthenticated {
+		t.Fatalf("expected session without OperatorContext to be rejected, got %v", err)
+	}
+}
+
+func TestResolveAcceptsSessionOperatorContextInsteadOfProcessDefault(t *testing.T) {
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "OperatorContext-main")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(Identity{
-			Subject: "user-1", TenantID: "tenant-main", Roles: []string{"client"}, AuthState: "authenticated",
+			Subject: "user-2", OperatorContextID: "OperatorContext-other", Roles: []string{"client"}, AuthState: "authenticated",
 		})
 	}))
 	defer server.Close()
 
 	client := NewClient(server.URL)
-	if _, err := client.Resolve(context.Background(), "Bearer token-1"); err != nil {
-		t.Fatalf("expected matching tenant to resolve, got %v", err)
-	}
-}
-
-func TestActiveSaaSResolveRejectsCrossTenantIdentity(t *testing.T) {
-	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-main")
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewEncoder(w).Encode(Identity{
-			Subject: "user-2", TenantID: "tenant-other", Roles: []string{"client"}, AuthState: "authenticated",
-		})
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL)
-	if _, err := client.Resolve(context.Background(), "Bearer cross-token"); err != ErrUnauthenticated {
-		t.Fatalf("expected cross-tenant identity rejection, got %v", err)
-	}
-}
-
-func TestActiveSaaSResolveFailsClosedWithoutRuntimeTenant(t *testing.T) {
-	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "")
-	client := NewClient("https://identity.internal")
-	if _, err := client.Resolve(context.Background(), "Bearer token-1"); err != ErrIdentityUnavailable {
-		t.Fatalf("expected missing SaaS tenant configuration failure, got %v", err)
+	identity, err := client.Resolve(context.Background(), "Bearer OperatorContext-other-token")
+	if err != nil || identity.OperatorContextID != "OperatorContext-other" {
+		t.Fatalf("expected authenticated session OperatorContext to remain authoritative, identity=%#v err=%v", identity, err)
 	}
 }
 

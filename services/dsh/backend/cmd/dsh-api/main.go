@@ -73,7 +73,7 @@ func main() {
 	router := dshHttp.NewRouter(db, identityClient, wltClient, mediaProvider, respCache)
 	dshHttp.RegisterPartnerLifecycleRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPartnerSelfRoutes(router, db, identityClient, wltClient, mediaProvider)
-	dshHttp.RegisterJRN032AnalyticsRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterOperationalAnalyticsRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterActorNotificationRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterFieldReadinessRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPartnerFleetMembershipRoutes(router, db, identityClient, wltClient, mediaProvider)
@@ -90,6 +90,7 @@ func main() {
 	dshHttp.RegisterLegacyContractCompatibilityRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterGovernedIncidentRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterProviderRatingRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterOperationsIntelligenceRoutes(router, db, identityClient, wltClient, mediaProvider)
 	operationalPolicyGuardedRouter := dshHttp.OperationalPolicyEffectsMiddleware(db, router)
 	pickupGuardedRouter := dshHttp.PickupMutationPathContext(
 		dshHttp.PickupMutationGuard(db, identityClient, wltClient, mediaProvider, operationalPolicyGuardedRouter),
@@ -108,7 +109,9 @@ func main() {
 		mediaProvider,
 		deliveryExceptionGovernedRouter,
 	)
-	handler := dshHttp.CorsMiddleware(authMode, governedIncidentRouter)
+	availabilityGuardedRouter := dshHttp.OperationsAvailabilityMiddleware(db, governedIncidentRouter)
+	OperatorContextGuardedRouter := dshHttp.TrustedOperatorContextMiddleware(identityClient, availabilityGuardedRouter)
+	handler := dshHttp.CorsMiddleware(authMode, OperatorContextGuardedRouter)
 
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
 	go orders.RunOrderEventBridgeWorker(outboxCtx, db, 5*time.Second)
@@ -197,7 +200,7 @@ func newMediaProvider(ctx context.Context) *media.Provider {
 		PublicEndpoint: publicEndpoint,
 		AccessKey:      accessKey,
 		SecretKey:      secretKey,
-		Bucket:          bucket,
+		Bucket:         bucket,
 		UseSSL:         useSSL,
 		PublicUseSSL:    publicUseSSL,
 	}, 15*time.Second)

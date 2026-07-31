@@ -2,7 +2,7 @@ package support
 
 import "testing"
 
-func TestJRN021IncidentTransitions(t *testing.T) {
+func TestIncidentTransitions(t *testing.T) {
 	allowed := []struct {
 		from IncidentStatus
 		to   IncidentStatus
@@ -34,7 +34,7 @@ func TestJRN021IncidentTransitions(t *testing.T) {
 	}
 }
 
-func TestJRN021IncidentValidationVocabulary(t *testing.T) {
+func TestIncidentValidationVocabulary(t *testing.T) {
 	for _, severity := range []IncidentSeverity{SeverityLow, SeverityMedium, SeverityHigh, SeverityCritical} {
 		if !validIncidentSeverity(severity) {
 			t.Fatalf("expected severity %s to be valid", severity)

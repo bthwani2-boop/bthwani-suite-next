@@ -4,8 +4,8 @@ BEGIN;
 
 DO $$
 DECLARE
-  v_actor_id text := 'jrn-023-' || replace(gen_random_uuid()::text, '-', '');
-  v_topic text := 'jrn-023.policy.' || replace(gen_random_uuid()::text, '-', '');
+  v_actor_id text := '' || replace(gen_random_uuid()::text, '-', '');
+  v_topic text := '.policy.' || replace(gen_random_uuid()::text, '-', '');
   v_notification_id uuid := gen_random_uuid();
   v_push_token text := 'ExponentPushToken[' || replace(gen_random_uuid()::text, '-', '') || ']';
   v_invalid boolean := false;
@@ -113,7 +113,7 @@ BEGIN
     v_topic,
     ARRAY['client', 'partner']::text[],
     true,
-    'JRN-023 policy invariant',
+    ' policy invariant',
     ARRAY['in_app', 'push']::text[],
     'تحديث {{entityId}}',
     'تغيرت الحالة إلى {{status}}',
@@ -121,7 +121,7 @@ BEGIN
     'Status changed to {{status}}',
     ARRAY['entityId', 'status']::text[],
     '/orders/{{entityId}}',
-    'jrn-023-test'
+    'test'
   );
 
   v_invalid := false;

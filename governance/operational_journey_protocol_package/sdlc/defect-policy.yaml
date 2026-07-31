@@ -1,5 +1,5 @@
 version: 1
-authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+authority: governance/policies/release.md
 severities:
   Critical:
     examples: security_breach_financial_corruption_data_loss_broad_privilege_bypass

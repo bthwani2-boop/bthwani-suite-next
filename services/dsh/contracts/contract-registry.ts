@@ -15,6 +15,8 @@ export type DshContractRegistration = {
     | "dsh-main"
     | "dsh-administration"
     | "dsh-analytics-extensions"
+    | "dsh-reels"
+    | "dsh-runtime-extensions"
     | "dsh-catalog"
     | "dsh-catalog-proposal-readback"
     | "dsh-catalog-governance"
@@ -35,7 +37,6 @@ export type DshContractRegistration = {
     | "dsh-partner-commercial"
     | "dsh-partner-fleet"
     | "dsh-partner-delivery"
-    | "dsh-fulfillment-operations"
     | "dsh-home-marketing-governance"
     | "dsh-home-marketing-events"
     | "dsh-client-address"
@@ -49,6 +50,7 @@ export type DshContractRegistration = {
     | "dsh-order-rescue"
     | "dsh-store-captain-handoff"
     | "dsh-dispatch-governance"
+    | "dsh-captain-financial-eligibility"
     | "dsh-live-tracking"
     | "dsh-delivery-exceptions"
     | "dsh-delivery-proof-media"
@@ -95,12 +97,28 @@ export const DSH_CONTRACT_REGISTRY = [
     adapterOwner: "frontend/shared/analytics",
   },
   {
+    id: "dsh-reels",
+    path: "contracts/dsh.reels.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/catalog/reels.api.ts",
+  },
+  {
+    id: "dsh-runtime-extensions",
+    path: "contracts/dsh.runtime-extensions.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/dispatch",
+  },
+  {
     id: "dsh-catalog",
     path: "contracts/dsh.catalog.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
-    clientStrategy: "STANDALONE_GENERATED",
-    generatedClient: "clients/generated/dsh-catalog-api.ts",
+    clientStrategy: "BOUNDED_CONTEXT_GENERATED",
+    generatedClient: "clients/generated/dsh-api.ts",
   },
   {
     id: "dsh-catalog-proposal-readback",
@@ -128,7 +146,7 @@ export const DSH_CONTRACT_REGISTRY = [
   },
   {
     id: "dsh-workforce-scopes",
-    path: "contracts/dsh.jrn-003-workforce-scopes.openapi.yaml",
+    path: "contracts/dsh.workforce-scopes.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
@@ -136,7 +154,7 @@ export const DSH_CONTRACT_REGISTRY = [
   },
   {
     id: "dsh-checkout",
-    path: "contracts/dsh.jrn-010-checkout.openapi.yaml",
+    path: "contracts/dsh.checkout.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
@@ -160,7 +178,7 @@ export const DSH_CONTRACT_REGISTRY = [
   },
   {
     id: "dsh-operational-policy",
-    path: "contracts/dsh.jrn-029.openapi.yaml",
+    path: "contracts/dsh.operational-policy.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
@@ -168,7 +186,7 @@ export const DSH_CONTRACT_REGISTRY = [
   },
   {
     id: "dsh-representative-finance",
-    path: "contracts/jrn-033-representative-finance.openapi.yaml",
+    path: "contracts/dsh.representative-finance.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
@@ -176,7 +194,7 @@ export const DSH_CONTRACT_REGISTRY = [
   },
   {
     id: "dsh-refunds",
-    path: "contracts/jrn-035-refunds.openapi.yaml",
+    path: "contracts/dsh.refunds.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
@@ -201,23 +219,23 @@ export const DSH_CONTRACT_REGISTRY = [
   },
   {
     id: "dsh-settlement-commissions",
-    path: "contracts/dsh.jrn-036-settlements-commissions.openapi.yaml",
+    path: "contracts/dsh.settlements-commissions.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
-    adapterOwner: "frontend/shared/finance-wlt-link/jrn036",
+    adapterOwner: "frontend/shared/finance-wlt-link/commissions",
   },
   {
     id: "dsh-payout-destinations",
-    path: "contracts/dsh.jrn-037-payouts-destinations.openapi.yaml",
+    path: "contracts/dsh.payouts-destinations.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
-    adapterOwner: "frontend/shared/finance-wlt-link/jrn037",
+    adapterOwner: "frontend/shared/finance-wlt-link/payouts",
   },
   {
     id: "dsh-cod-custody",
-    path: "contracts/dsh.jrn-038-cod-custody.openapi.yaml",
+    path: "contracts/dsh.cod-custody.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
@@ -254,14 +272,6 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/partner-delivery",
-  },
-  {
-    id: "dsh-fulfillment-operations",
-    path: "contracts/dsh.fulfillment-operations.openapi.yaml",
-    state: "CONTRACT_ACTIVE",
-    runtimeDependency: true,
-    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
-    adapterOwner: "frontend/shared",
   },
   {
     id: "dsh-home-marketing-governance",
@@ -362,6 +372,14 @@ export const DSH_CONTRACT_REGISTRY = [
   {
     id: "dsh-dispatch-governance",
     path: "contracts/dsh.dispatch-governance.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/dispatch",
+  },
+  {
+    id: "dsh-captain-financial-eligibility",
+    path: "contracts/dsh.captain-financial-eligibility.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",

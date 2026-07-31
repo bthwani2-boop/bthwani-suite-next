@@ -6,7 +6,8 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const appIndex = process.argv.indexOf("--app");
 const appKey = appIndex >= 0 ? process.argv[appIndex + 1] : "";
-const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, "apps/mobile/mobile-apps.manifest.json"), "utf8"));
+const manifestPath = path.join(repoRoot, "tools/mobile/mobile-apps.manifest.json");
+const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 const app = manifest.apps?.[appKey];
 const appDir = path.join(repoRoot, "apps", appKey, "runtime");
 

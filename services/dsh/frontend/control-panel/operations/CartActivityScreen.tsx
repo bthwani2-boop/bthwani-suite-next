@@ -1,6 +1,6 @@
 "use client";
 
-import { CpPageHeader, CpStatePanel, CpTable, CpTableCell, CpTableHeaderCell } from "@bthwani/control-panel/components";
+import { CpPageHeader, CpStatePanel, CpStateView, CpTable, CpTableCell, CpTableHeaderCell } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import { useOperatorCartsController } from "../../shared/cart";
 import type { DshCart, DshFulfillmentMode } from "../../shared/cart";
@@ -41,7 +41,7 @@ export function CartActivityScreen() {
         </CpPageHeader>
       )}
       stateView={
-        controller.loadState === "loading" ? <CpStatePanel role="status" title="جاري تحميل السلال…" />
+        controller.loadState === "loading" ? <CpStateView kind="loading" title="جاري تحميل السلال…" />
           : controller.loadState === "empty" ? <CpStatePanel role="status" title="لا توجد سلال في هذه الحالة." />
           : controller.loadState === "error" ? <CpStatePanel role="alert" title="تعذر تحميل السلال" description="تحقق من الصلاحيات." />
           : undefined

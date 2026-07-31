@@ -19,7 +19,7 @@ func (c *Client) FinanceRefundWrite(
 	body []byte,
 	correlationID string,
 	idempotencyKey string,
-	tenantID string,
+	operatorContextID string,
 ) (int, []byte, error) {
 	if !c.Configured() {
 		return 0, nil, fmt.Errorf("WLT integration is not configured")
@@ -29,9 +29,9 @@ func (c *Client) FinanceRefundWrite(
 	}
 	correlationID = strings.TrimSpace(correlationID)
 	idempotencyKey = strings.TrimSpace(idempotencyKey)
-	tenantID = strings.TrimSpace(tenantID)
-	if correlationID == "" || idempotencyKey == "" || tenantID == "" {
-		return 0, nil, fmt.Errorf("refund correlation id, idempotency key and tenant id are required")
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if correlationID == "" || idempotencyKey == "" || operatorContextID == "" {
+		return 0, nil, fmt.Errorf("refund correlation id, idempotency key and OperatorContext id are required")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(body))
 	if err != nil {
@@ -39,7 +39,7 @@ func (c *Client) FinanceRefundWrite(
 	}
 	setServiceHeaders(req, c.serviceToken)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Tenant-ID", tenantID)
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
 	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
 		return 0, nil, fmt.Errorf("prepare WLT refund request: %w", err)
 	}

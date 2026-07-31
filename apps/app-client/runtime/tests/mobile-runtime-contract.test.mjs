@@ -15,15 +15,20 @@ const mobileApps = new Map([
 ]);
 
 test("all mobile wrappers bind their canonical app key and fixed Metro port", () => {
+  const shared = read("apps/mobile/mobile.ps1");
   for (const [appKey, port] of mobileApps) {
-    const wrapper = read(`apps/${appKey}/runtime/start.ps1`);
-    assert.match(wrapper, new RegExp(`-AppKey\\s+"${appKey}"`));
-    assert.match(wrapper, new RegExp(`-MetroPort\\s+${port}\\b`));
+    const start = read(`apps/${appKey}/runtime/start.ps1`);
+    const appWrapper = read(`apps/${appKey}/runtime/mobile.ps1`);
+    assert.match(start, /mobile\.ps1/);
+    assert.match(appWrapper, new RegExp(`-App\\s+'${appKey}'`));
+    assert.match(shared, new RegExp(`'${appKey}'\\s*=\\s*${port}\\b`));
   }
 });
 
 test("the shared launcher is deterministic and declares verified adb reverse", () => {
-  const launcher = read("tools/scripts/start-mobile-runtime.ps1");
+  const compatibility = read("tools/scripts/start-mobile-runtime.ps1");
+  const launcher = read("apps/mobile/start-mobile-runtime.ps1");
+  assert.match(compatibility, /apps\\mobile\\start-mobile-runtime\.ps1/);
 
   for (const marker of [
     "Get-NetTCPConnection",
@@ -41,7 +46,9 @@ test("the shared launcher is deterministic and declares verified adb reverse", (
 });
 
 test("the ADB helper selects transports deliberately and verifies reverse mappings", () => {
-  const helper = read("tools/scripts/mobile-adb.ps1");
+  const compatibility = read("tools/scripts/mobile-adb.ps1");
+  const helper = read("apps/mobile/mobile-adb.ps1");
+  assert.match(compatibility, /apps\\mobile\\mobile-adb\.ps1/);
 
   for (const marker of [
     "BTHWANI_ANDROID_TRANSPORT",
@@ -69,8 +76,15 @@ test("PowerShell parses every governed application launcher", (t) => {
   const scripts = [
     "tools/scripts/mobile-adb.ps1",
     "tools/scripts/start-mobile-runtime.ps1",
+    "apps/mobile/mobile-adb.ps1",
+    "apps/mobile/start-mobile-runtime.ps1",
+    "apps/mobile/mobile.ps1",
     "apps/reverse-all.ps1",
-    ...[...mobileApps.keys()].map((appKey) => `apps/${appKey}/runtime/start.ps1`),
+    "apps/mobile/reverse-all.ps1",
+    ...[...mobileApps.keys()].flatMap((appKey) => [
+      `apps/${appKey}/runtime/start.ps1`,
+      `apps/${appKey}/runtime/mobile.ps1`,
+    ]),
   ];
 
   for (const relativePath of scripts) {

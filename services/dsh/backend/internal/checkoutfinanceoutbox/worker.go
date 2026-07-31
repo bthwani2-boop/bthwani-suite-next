@@ -37,12 +37,20 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 		return err
 	}
 	for _, event := range events {
-		deliverCtx, cancel := context.WithTimeout(ctx, notifyTimeout)
+		if event.OperatorContextID == "" {
+			deliverErr := fmt.Errorf("checkout finance event %s has no OperatorContext context", event.ID)
+			if markErr := MarkFailedWithProjection(db, event.ID, event.AttemptCount, deliverErr); markErr != nil {
+				log.Printf("[checkout-finance-outbox] failed to record missing OperatorContext for event %s: %v", event.ID, markErr)
+			}
+			continue
+		}
+		deliverCtx, cancel := context.WithTimeout(wlt.WithOperatorContext(ctx, event.OperatorContextID), notifyTimeout)
 		result, deliverErr := dispatch(deliverCtx, client, event)
 		cancel()
 		if deliverErr != nil {
 			log.Printf(
-				"[checkout-finance-outbox] delivery failed for payment session %s event %s (attempt %d): %v",
+				"[checkout-finance-outbox] delivery failed for OperatorContext %s payment session %s event %s (attempt %d): %v",
+				event.OperatorContextID,
 				event.PaymentSessionID,
 				event.EventType,
 				event.AttemptCount+1,

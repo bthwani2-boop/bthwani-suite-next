@@ -1,4 +1,4 @@
--- WLT-036: JRN-034 governed payment-operation replay, provider events and
+-- WLT-036:  governed payment-operation replay, provider events and
 -- capture-ledger cross references.
 --
 -- Authorize/capture provider calls are high-risk at-most-once operations. The
@@ -18,7 +18,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS wlt_payment_sessions_capture_ledger_uq
 
 CREATE TABLE IF NOT EXISTS wlt_payment_operation_receipts (
   id                    text PRIMARY KEY DEFAULT ('wpor_' || gen_random_uuid()::text),
-  tenant_id             text NOT NULL,
+  operator_context_id             text NOT NULL,
   payment_session_id    text NOT NULL REFERENCES wlt_payment_sessions(id),
   operation             text NOT NULL,
   idempotency_key       text NOT NULL,
@@ -44,10 +44,10 @@ CREATE TABLE IF NOT EXISTS wlt_payment_operation_receipts (
 
 CREATE UNIQUE INDEX IF NOT EXISTS wlt_payment_operation_receipts_replay_uq
   ON wlt_payment_operation_receipts
-    (tenant_id, payment_session_id, operation, idempotency_key);
+    (operator_context_id, payment_session_id, operation, idempotency_key);
 
 CREATE INDEX IF NOT EXISTS wlt_payment_operation_receipts_session_idx
-  ON wlt_payment_operation_receipts (tenant_id, payment_session_id, created_at DESC);
+  ON wlt_payment_operation_receipts (operator_context_id, payment_session_id, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS wlt_payment_operation_receipts_in_progress_idx
   ON wlt_payment_operation_receipts (updated_at)
@@ -55,7 +55,7 @@ CREATE INDEX IF NOT EXISTS wlt_payment_operation_receipts_in_progress_idx
 
 CREATE TABLE IF NOT EXISTS wlt_payment_provider_events (
   provider_event_id     text PRIMARY KEY,
-  tenant_id             text NOT NULL,
+  operator_context_id             text NOT NULL,
   payment_session_id    text NOT NULL REFERENCES wlt_payment_sessions(id),
   event_type            text NOT NULL,
   provider_status       text NOT NULL,
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS wlt_payment_provider_events (
 );
 
 CREATE INDEX IF NOT EXISTS wlt_payment_provider_events_session_idx
-  ON wlt_payment_provider_events (tenant_id, payment_session_id, received_at DESC);
+  ON wlt_payment_provider_events (operator_context_id, payment_session_id, received_at DESC);
 
 CREATE INDEX IF NOT EXISTS wlt_payment_provider_events_unprocessed_idx
   ON wlt_payment_provider_events (received_at)

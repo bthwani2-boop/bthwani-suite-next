@@ -29,6 +29,8 @@ export * from "./SectionHeader";
 export * from "./SearchField";
 export * from "./SegmentedControl";
 export * from "./FilterRail";
-
+export * from "./TabBar";
+export * from "./DateTimeField";
+export * from "./InlineNotice";
 
 export * from "./Checkbox";

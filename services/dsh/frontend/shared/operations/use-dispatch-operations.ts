@@ -101,14 +101,14 @@ export function useDispatchOperations() {
       message: '',
     }));
     try {
-      const tenantId = assignment.tenantId ?? 'default';
+      const operatorContextId = assignment.operatorContextId ?? 'default';
       const decisionsPromise = fetchDispatchDecisions({
-        tenantId,
+        operatorContextId,
         assignmentId: assignment.id,
         limit: 100,
       });
       const candidates = assignment.serviceAreaCode
-        ? await fetchCaptainDispatchCandidates(assignment.serviceAreaCode, tenantId)
+        ? await fetchCaptainDispatchCandidates(assignment.serviceAreaCode, operatorContextId)
         : [];
       const decisions = await decisionsPromise;
 
@@ -183,7 +183,7 @@ export function useDispatchOperations() {
     setState((current) => ({ ...current, mutationKind: 'reassigning', message: '' }));
     try {
       await reassignDispatchAssignment(assignment.id, {
-        tenantId: assignment.tenantId ?? 'default',
+        operatorContextId: assignment.operatorContextId ?? 'default',
         captainId: normalizedCaptainId,
         serviceAreaCode,
         idempotencyKey: buildDispatchAssignmentIdempotencyKey(assignment.orderId, normalizedCaptainId),

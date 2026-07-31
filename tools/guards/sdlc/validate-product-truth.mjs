@@ -19,7 +19,7 @@ const artifactPath = getArg("--artifact");
 const impactPath = getArg("--impact");
 const requestedStage = getArg("--stage");
 const schemaRelative = "governance/product/product-truth.schema.json";
-const policyRelative = "governance/product/PRODUCT_TRUTH_POLICY.md";
+const policyRelative = "governance/policies/product.md";
 
 for (const required of [schemaRelative, policyRelative]) {
   if (!fs.existsSync(path.join(repoRoot, required))) {

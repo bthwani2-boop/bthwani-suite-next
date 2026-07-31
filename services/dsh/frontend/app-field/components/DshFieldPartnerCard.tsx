@@ -3,51 +3,25 @@
 // ملتزم بالكامل بالمسار السيادي shared كحاكم وعقل للواجهات
 import React from 'react';
 import { Pressable, View } from 'react-native';
-import { Text, spacing, radius, colorRoles } from '@bthwani/ui-kit';
+import { Badge, Text, spacing, radius, colorRoles } from '@bthwani/ui-kit';
 import { buildPartnerListRowViewModel, getDshPartnerActivationProgress } from '../../shared/partner';
 import type { DshPartnerSummary } from '../../shared/partner';
-import type { DshPartnerActivationStatus } from '../../shared/partner';
 
 type DshFieldPartnerCardProps = {
   readonly partner: DshPartnerSummary;
   readonly onPress: () => void;
 };
 
-// ── Badge color mapper driven by shared statusTone ──────────────────────────
-function resolveBadgeColors(tone: 'success' | 'warning' | 'danger' | 'info' | 'muted'): { bg: string; fg: string } {
-  const styles = {
-    success: { bg: colorRoles.surfaceBase, fg: colorRoles.brandStructure },
-    danger:  { bg: colorRoles.surfaceBase, fg: colorRoles.brandAction },
-    warning: { bg: colorRoles.surfaceBase, fg: colorRoles.brandAction },
-    info:    { bg: colorRoles.surfaceBase, fg: colorRoles.brandStructure },
-    muted:   { bg: colorRoles.surfaceBase, fg: colorRoles.brandStructure },
-  };
-  return styles[tone] ?? styles.muted;
-}
-
-// ── Inline badge ───────────────────────────────────────────────────────────
-function InlineBadge({ label, bg, fg }: { label: string; bg: string; fg: string }) {
-  return (
-    <View
-      style={{
-        backgroundColor: bg,
-        borderRadius: radius.round,
-        paddingHorizontal: 10,
-        paddingVertical: 3,
-      }}
-    >
-      <Text style={{ fontSize: 11, color: fg, fontWeight: '600' }}>{label}</Text>
-    </View>
-  );
+function toBadgeTone(tone: 'success' | 'warning' | 'danger' | 'info' | 'muted'): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
+  return tone === 'muted' ? 'neutral' : tone;
 }
 
 // ── Main card ──────────────────────────────────────────────────────────────
 export function DshFieldPartnerCard({ partner, onPress }: DshFieldPartnerCardProps) {
   // Leverage the shared brain to build the view model
   const vm = buildPartnerListRowViewModel(partner);
-  
+
   const progress = getDshPartnerActivationProgress(partner.activationStatus);
-  const badgeColors = resolveBadgeColors(vm.statusTone);
 
   // Use nextAction and blockedReason directly from shared brain (or fallback if empty)
   const nextStep = vm.nextAction || 'إكمال النواقص';
@@ -99,12 +73,8 @@ export function DshFieldPartnerCard({ partner, onPress }: DshFieldPartnerCardPro
           <View style={{ flex: 1, gap: spacing[2], alignItems: 'flex-end' }}>
             {/* Badges row */}
             <View style={{ flexDirection: 'row-reverse', gap: spacing[1], flexWrap: 'wrap' }}>
-              <InlineBadge label={vm.statusLabel} bg={badgeColors.bg} fg={badgeColors.fg} />
-              <InlineBadge
-                label={`اكتمال ${progress}%`}
-                bg={colorRoles.borderSubtle}
-                fg={colorRoles.textMuted}
-              />
+              <Badge label={vm.statusLabel} tone={toBadgeTone(vm.statusTone)} />
+              <Badge label={`اكتمال ${progress}%`} tone="neutral" />
             </View>
             {/* Store name */}
             <Text

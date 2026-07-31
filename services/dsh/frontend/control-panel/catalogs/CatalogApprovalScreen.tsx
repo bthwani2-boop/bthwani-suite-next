@@ -7,6 +7,7 @@ import {
   CpMutedInline,
   CpPageHeader,
   CpStatePanel,
+  CpStateView,
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
@@ -40,10 +41,10 @@ export function CatalogApprovalScreen() {
       dir="rtl"
       header={<CpPageHeader title="اعتماد كتالوجات المتاجر" />}
       stateView={
-        controller.state.kind === "loading" ? <CpStatePanel role="status" title="جاري تحميل طلبات الاعتماد…" />
+        controller.state.kind === "loading" ? <CpStateView kind="loading" title="جاري تحميل طلبات الاعتماد…" />
           : controller.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد طلبات اعتماد معلقة." />
           : controller.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل طلبات الاعتماد" description={controller.state.message} />
-          : controller.state.kind === "permission_denied" ? <CpStatePanel role="alert" title="لا تملك الصلاحية." />
+          : controller.state.kind === "permission_denied" ? <CpStateView kind="error" title="لا تملك الصلاحية." />
           : undefined
       }
     >

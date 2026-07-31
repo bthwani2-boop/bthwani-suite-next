@@ -1,10 +1,10 @@
 // Field onboarding types — for the app-field partner draft creation flow.
 // No JSX. No ui-kit.
 
-import { DOCUMENT_TYPE_LABELS, REQUIRED_DOCUMENT_TYPES, type DshPartnerDocumentType, type PartnerOnboardingFailure } from "../partner";
+import { type DshPartnerDocumentType, type PartnerOnboardingFailure } from "../partner";
 
 export type FieldPartnerDraftForm = {
-  // ── Identity (Step 1) ──────────────────────────────────────────
+  // ── Identity ────────────────────────────────────────────────────────
   legalNameAr: string;
   legalNameEn: string;
   displayName: string;
@@ -17,25 +17,25 @@ export type FieldPartnerDraftForm = {
   category: "restaurant" | "grocery" | "pharmacy" | "bakery" | "default";
   notes: string;
 
-  // ── Location (Step 2) ──────────────────────────────────────────
+  // ── Location ────────────────────────────────────────────────────────
   city: string;
   serviceAreaCode: string;
   addressLine: string;
   coverageSummary: string;
 
-  // ── Photos (Step 2) ───────────────────────────────────────────
+  // ── Store photos ────────────────────────────────────────────────────
   storefrontPhotoRef: string;
   interiorPhotoRef: string;
   signagePhotoRef: string;
 
-  // ── Operational agreement (Step 4) — non-financial only.
-  // Commission/financial terms are owned by WLT and are never captured here.
+  // ── Operational readiness ──────────────────────────────────────────
   operatingHours: string;
   deliveryReadiness: string;
 
-  // ── Bank account (Partner-level readiness/metadata — Step "bank_account") ──
-  // Captured by app-field as declared payout details for control-panel review.
-  // Never a WLT mutation: WLT stays the sole owner of financial truth.
+  // ── Optional settlement metadata ───────────────────────────────────
+  // These fields remain readable for backward compatibility, but app-field
+  // no longer blocks partner intake on sensitive payout data. The partner or
+  // an authorized operator completes and verifies it after intake.
   beneficiaryName: string;
   bankName: string;
   bankBranch: string;
@@ -51,24 +51,58 @@ export type FieldPartnerDraftStep =
   | "basics_profile"
   | "location_media"
   | "evidence"
-  | "bank_account"
+  | "catalog_setup"
   | "agreement_review";
 
 export const FIELD_ONBOARDING_STEPS: readonly FieldPartnerDraftStep[] = [
   "basics_profile",
   "location_media",
   "evidence",
-  "bank_account",
+  "catalog_setup",
   "agreement_review",
 ];
 
 export const FIELD_ONBOARDING_STEP_LABELS: Record<FieldPartnerDraftStep, string> = {
   basics_profile: "البيانات الأساسية للمتجر",
   location_media: "الموقع الجغرافي",
-  evidence: "المستندات والصور المرفقة",
-  bank_account: "معلومات الحساب البنكي للشريك",
-  agreement_review: "الاتفاق والمراجعة النهائية",
+  evidence: "المستندات والصور",
+  catalog_setup: "إعداد منتجات المتجر",
+  agreement_review: "التشغيل والمراجعة النهائية",
 };
+
+export type FieldRequiredDocument = {
+  readonly key: string;
+  readonly documentType: DshPartnerDocumentType;
+  readonly label: string;
+};
+
+/**
+ * Required evidence follows the legal identity selected in the same draft.
+ * The current database contract has no dedicated freelancer-certificate
+ * document enum, so that certificate is stored as `other` with a precise UI
+ * label until the cross-surface document taxonomy is versioned centrally.
+ */
+export function getRequiredPartnerDocuments(
+  form: Partial<FieldPartnerDraftForm>,
+): readonly FieldRequiredDocument[] {
+  switch (form.legalIdentityType) {
+    case "national_id":
+      return [
+        { key: "identity_proof", documentType: "national_id", label: "الهوية الوطنية للمالك" },
+      ];
+    case "freelancer_certificate":
+      return [
+        { key: "identity_proof", documentType: "national_id", label: "الهوية الوطنية للمالك" },
+        { key: "freelancer_certificate", documentType: "other", label: "وثيقة العمل الحر" },
+      ];
+    case "commercial_register":
+    default:
+      return [
+        { key: "commercial_registration", documentType: "commercial_register", label: "السجل التجاري" },
+        { key: "identity_proof", documentType: "national_id", label: "الهوية الوطنية للمالك" },
+      ];
+  }
+}
 
 export type FieldOnboardingLoadStatus = "idle" | "hydrating" | "ready" | "error";
 
@@ -125,8 +159,8 @@ export type FieldOnboardingValidationErrors = Partial<Record<keyof FieldPartnerD
 
 export function validateIdentityStep(form: Partial<FieldPartnerDraftForm>): FieldOnboardingValidationErrors {
   const errors: FieldOnboardingValidationErrors = {};
-  if (!form.legalNameAr?.trim()) errors.legalNameAr = "الاسم التجاري بالعربية مطلوب";
-  if (!form.legalIdentityNumber?.trim()) errors.legalIdentityNumber = "رقم الهوية التجارية مطلوب";
+  if (!form.legalNameAr?.trim()) errors.legalNameAr = "اسم المتجر مطلوب";
+  if (!form.legalIdentityNumber?.trim()) errors.legalIdentityNumber = "رقم الهوية القانونية مطلوب";
   if (!form.displayName?.trim()) errors.displayName = "اسم العرض مطلوب";
   return errors;
 }
@@ -137,8 +171,6 @@ export function validateOwnerStep(form: Partial<FieldPartnerDraftForm>): FieldOn
   if (!form.primaryPhone?.trim()) errors.primaryPhone = "رقم جوال المالك مطلوب للتواصل المباشر";
   return errors;
 }
-
-// ── Group-level missing count helpers (mirrors donor groupSummaries logic) ──
 
 export function getBasicsProfileMissingCount(form: Partial<FieldPartnerDraftForm>): number {
   let count = 0;
@@ -158,66 +190,53 @@ export function getLocationMediaMissingCount(form: Partial<FieldPartnerDraftForm
 
 export function getDocumentsMissingCount(
   uploadedDocumentTypes: DshPartnerDocumentType[],
-  _form: Partial<FieldPartnerDraftForm> = {},
+  form: Partial<FieldPartnerDraftForm> = {},
 ): number {
-  return REQUIRED_DOCUMENT_TYPES.filter(
-    (documentType) => !uploadedDocumentTypes.includes(documentType),
+  return getRequiredPartnerDocuments(form).filter(
+    (item) => !uploadedDocumentTypes.includes(item.documentType),
   ).length;
+}
+
+/** Settlement data is intentionally optional during field intake. */
+export function getBankAccountMissingCount(_form: Partial<FieldPartnerDraftForm>): number {
+  return 0;
+}
+
+/** Catalog setup is accelerated in the same visit but does not block intake. */
+export function getCatalogSetupMissingCount(): number {
+  return 0;
 }
 
 export function getAgreementReviewMissingCount(
   form: Partial<FieldPartnerDraftForm>,
-  uploadedDocumentTypes: DshPartnerDocumentType[]
+  uploadedDocumentTypes: DshPartnerDocumentType[],
 ): number {
   let count = 0;
   if (!form.operatingHours?.trim()) count++;
   if (!form.deliveryReadiness?.trim()) count++;
-  // + basics missing forwarded
   count += getBasicsProfileMissingCount(form);
   count += getLocationMediaMissingCount(form);
   count += getDocumentsMissingCount(uploadedDocumentTypes, form);
-  count += getBankAccountMissingCount(form);
   return count;
 }
 
-// ── Bank account missing-count helper ──
-export function getBankAccountMissingCount(form: Partial<FieldPartnerDraftForm>): number {
-  let count = 0;
-  if (!form.beneficiaryName?.trim()) count++;
-  if (!form.bankName?.trim()) count++;
-  if (!form.accountNumber?.trim()) count++;
-  if (!form.settlementPreference) count++;
-  if (form.settlementPreference === "mobile_wallet" && !form.payoutMobileNumber?.trim()) {
-    count++;
-  }
-  return count;
-}
-
-// ── Global required missing items list (mirrors donor getPartnerRequiredMissingItems) ──
 export function getFieldRequiredMissingItems(
   form: Partial<FieldPartnerDraftForm>,
-  uploadedDocumentTypes: DshPartnerDocumentType[]
+  uploadedDocumentTypes: DshPartnerDocumentType[],
 ): string[] {
   const missing: string[] = [];
-  if (!form.legalNameAr?.trim()) missing.push("الاسم التجاري بالعربية");
-  if (!form.legalIdentityNumber?.trim()) missing.push("رقم الهوية التجارية");
+  if (!form.legalNameAr?.trim()) missing.push("اسم المتجر");
+  if (!form.legalIdentityNumber?.trim()) missing.push("رقم الهوية القانونية");
   if (!form.ownerName?.trim()) missing.push("اسم المالك");
   if (!form.primaryPhone?.trim()) missing.push("جوال المالك");
   if (!form.city?.trim()) missing.push("المدينة");
   if (!form.addressLine?.trim()) missing.push("العنوان");
-  for (const documentType of REQUIRED_DOCUMENT_TYPES) {
-    if (!uploadedDocumentTypes.includes(documentType)) {
-      missing.push(DOCUMENT_TYPE_LABELS[documentType]);
+  for (const document of getRequiredPartnerDocuments(form)) {
+    if (!uploadedDocumentTypes.includes(document.documentType)) {
+      missing.push(document.label);
     }
   }
   if (!form.operatingHours?.trim()) missing.push("ساعات العمل");
-  if (!form.deliveryReadiness?.trim()) missing.push("جاهزية التوصيل");
-  if (!form.beneficiaryName?.trim()) missing.push("اسم صاحب الحساب البنكي");
-  if (!form.bankName?.trim()) missing.push("اسم البنك");
-  if (!form.accountNumber?.trim()) missing.push("رقم الحساب البنكي");
-  if (!form.settlementPreference) missing.push("طريقة التسوية المفضلة");
-  if (form.settlementPreference === "mobile_wallet" && !form.payoutMobileNumber?.trim()) {
-    missing.push("رقم محفظة الدفع");
-  }
+  if (!form.deliveryReadiness?.trim()) missing.push("طريقة التوصيل والاستلام");
   return missing;
 }

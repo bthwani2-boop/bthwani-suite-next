@@ -41,15 +41,15 @@ func NewRouter(service *platformcontrol.Service, authClient *auth.Client) http.H
 	mux.HandleFunc("POST /platform/v1/change-sets/{id}/apply", s.operatorOnly("platform:variables:apply", s.applyChangeSet))
 	mux.HandleFunc("POST /platform/v1/change-sets/{id}/rollback", s.operatorOnly("platform:variables:rollback", s.rollbackChangeSet))
 
-	mux.HandleFunc("GET /platform/v1/rollouts", s.operatorOnly("platform:read", s.listRollouts))
-	mux.HandleFunc("GET /platform/v1/rollouts/{id}", s.operatorOnly("platform:read", s.getRollout))
-	mux.HandleFunc("GET /platform/v1/rollouts/{id}/recovery", s.operatorOnly("platform:read", s.getRolloutRecovery))
-	mux.HandleFunc("POST /platform/v1/rollouts", s.operatorOnly("platform:rollouts:manage", s.createRollout))
-	mux.HandleFunc("POST /platform/v1/rollouts/{id}/advance", s.operatorOnly("platform:rollouts:manage", s.advanceRollout))
-	mux.HandleFunc("POST /platform/v1/rollouts/{id}/pause", s.operatorOnly("platform:rollouts:manage", s.pauseRollout))
-	mux.HandleFunc("POST /platform/v1/rollouts/{id}/resume", s.operatorOnly("platform:rollouts:manage", s.resumeRollout))
-	mux.HandleFunc("POST /platform/v1/rollouts/{id}/abort", s.operatorOnly("platform:rollouts:manage", s.abortRollout))
-	mux.HandleFunc("POST /platform/v1/rollouts/{id}/rollback", s.operatorOnly("platform:rollouts:manage", s.rollbackRollout))
+	// mux.HandleFunc("GET /platform/v1/rollouts", s.operatorOnly("platform:read", s.listRollouts))
+	// mux.HandleFunc("GET /platform/v1/rollouts/{id}", s.operatorOnly("platform:read", s.getRollout))
+	// mux.HandleFunc("GET /platform/v1/rollouts/{id}/recovery", s.operatorOnly("platform:read", s.getRolloutRecovery))
+	// mux.HandleFunc("POST /platform/v1/rollouts", s.operatorOnly("platform:rollouts:manage", s.createRollout))
+	// mux.HandleFunc("POST /platform/v1/rollouts/{id}/advance", s.operatorOnly("platform:rollouts:manage", s.advanceRollout))
+	// mux.HandleFunc("POST /platform/v1/rollouts/{id}/pause", s.operatorOnly("platform:rollouts:manage", s.pauseRollout))
+	// mux.HandleFunc("POST /platform/v1/rollouts/{id}/resume", s.operatorOnly("platform:rollouts:manage", s.resumeRollout))
+	// mux.HandleFunc("POST /platform/v1/rollouts/{id}/abort", s.operatorOnly("platform:rollouts:manage", s.abortRollout))
+	// mux.HandleFunc("POST /platform/v1/rollouts/{id}/rollback", s.operatorOnly("platform:rollouts:manage", s.rollbackRollout))
 	return mux
 }
 
@@ -100,28 +100,25 @@ func (s *server) operatorOnly(action string, next guardedHandler) http.HandlerFu
 	})
 }
 
-func enforceSaasTenantContext(w http.ResponseWriter, r *http.Request, identity auth.Identity) bool {
-	status, err := currentSaasRuntimeStatus()
-	if err != nil {
-		sendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", err.Error())
-		return false
-	}
-	if !status.RuntimeEnabled {
-		return true
-	}
+func enforceOperatorContext(w http.ResponseWriter, r *http.Request, identity auth.Identity) bool {
+	defaultOperatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
+	identityOperatorContextID := strings.TrimSpace(identity.OperatorContextID)
 
-	identityTenantID := strings.TrimSpace(identity.TenantID)
-	if identityTenantID == "" {
-		sendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", "authenticated identity has no trusted tenant context")
+	if defaultOperatorContextID == "" {
+		sendError(w, http.StatusServiceUnavailable, "OPERATOR_CONTEXT_CONFIG_INVALID", "missing runtime operator context configuration")
 		return false
 	}
-	if identityTenantID != status.DefaultTenantID {
-		sendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "identity tenant does not match the active runtime tenant")
+	if identityOperatorContextID == "" {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "authenticated identity has no trusted operator context")
 		return false
 	}
-	requestedTenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-	if requestedTenantID != "" && requestedTenantID != identityTenantID {
-		sendError(w, http.StatusForbidden, "UNTRUSTED_TENANT_CONTEXT", "client-supplied tenant context does not match the authenticated identity")
+	if identityOperatorContextID != defaultOperatorContextID {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "identity operator context does not match the active runtime operator context")
+		return false
+	}
+	requestedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+	if requestedOperatorContextID != "" && requestedOperatorContextID != identityOperatorContextID {
+		sendError(w, http.StatusForbidden, "UNTRUSTED_OPERATOR_CONTEXT", "client-supplied operator context does not match the authenticated identity")
 		return false
 	}
 	return true
@@ -138,7 +135,7 @@ func (s *server) withIdentity(next guardedHandler) http.HandlerFunc {
 			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 			return
 		}
-		if !enforceSaasTenantContext(w, r, identity) {
+		if !enforceOperatorContext(w, r, identity) {
 			return
 		}
 		next(w, r, identity)
@@ -147,17 +144,10 @@ func (s *server) withIdentity(next guardedHandler) http.HandlerFunc {
 
 func (s *server) runtimeConfig(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 	_ = identity
-	saas, err := currentSaasRuntimeStatus()
-	if err != nil {
-		sendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", err.Error())
-		return
-	}
 	response := struct {
 		platformcontrol.RuntimeSnapshot
-		SaaS saasRuntimeStatus `json:"saas"`
 	}{
 		RuntimeSnapshot: s.service.RuntimeSnapshot(r.Context()),
-		SaaS:            saas,
 	}
 	sendJSON(w, http.StatusOK, response)
 }

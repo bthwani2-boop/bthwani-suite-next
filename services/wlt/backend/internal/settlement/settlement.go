@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"wlt-api/internal/ledger"
 	"wlt-api/internal/shared"
@@ -17,6 +18,7 @@ var ErrSettlementCalculationSourceRequired = errors.New("settlement must be calc
 
 type Settlement struct {
 	ID          string  `json:"id"`
+	OperatorContextID    string  `json:"operatorContextId,omitempty"`
 	PartnerID   string  `json:"partnerId"`
 	PeriodStart string  `json:"periodStart"`
 	PeriodEnd   string  `json:"periodEnd"`
@@ -58,13 +60,14 @@ type CreateSettlementInput struct {
 	OrderCount  int    `json:"orderCount"`
 }
 
-const settlementCols = `id, partner_id, period_start, period_end, gross_amount, platform_fee,
+const settlementCols = `id, operator_context_id, partner_id, period_start, period_end, gross_amount, platform_fee,
 	net_amount, currency, order_count, status, settled_at, created_at, updated_at`
 
 func scanSettlement(row *sql.Row) (*Settlement, error) {
 	var s Settlement
 	err := row.Scan(
 		&s.ID,
+		&s.OperatorContextID,
 		&s.PartnerID,
 		&s.PeriodStart,
 		&s.PeriodEnd,
@@ -88,6 +91,7 @@ func scanSettlementRow(rows *sql.Rows) (*Settlement, error) {
 	var s Settlement
 	err := rows.Scan(
 		&s.ID,
+		&s.OperatorContextID,
 		&s.PartnerID,
 		&s.PeriodStart,
 		&s.PeriodEnd,
@@ -116,35 +120,44 @@ func CreateSettlement(db *sql.DB, input CreateSettlementInput) (*Settlement, err
 	return nil, ErrSettlementCalculationSourceRequired
 }
 
-func GetSettlement(db *sql.DB, settlementID string) (*Settlement, error) {
+func getSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Settlement, error) {
+	settlementID = strings.TrimSpace(settlementID)
 	if settlementID == "" {
 		return nil, fmt.Errorf("settlementId is required")
 	}
-	const q = `SELECT ` + settlementCols + ` FROM wlt_settlements WHERE id = $1`
-	row := db.QueryRow(q, settlementID)
-	s, err := scanSettlement(row)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	const q = `SELECT ` + settlementCols + ` FROM wlt_settlements WHERE operator_context_id = $1 AND id = $2`
+	s, err := scanSettlement(db.QueryRowContext(ctx, q, operatorContextID, settlementID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	return s, err
 }
 
-// ListPartnerSettlements requires a tenantID: the tenant_id predicate is
-// mandatory and is never dropped, regardless of whether partnerID is
-// supplied. This is what makes /wlt/settlements tenant-scoped rather than an
-// optional filter a caller can omit.
-func ListPartnerSettlements(db *sql.DB, tenantID, partnerID string) ([]*Settlement, error) {
-	if tenantID == "" {
-		return nil, fmt.Errorf("tenantId is required")
+// GetSettlement retains deferred-runtime compatibility. Embedded callers use
+// the HTTP handler, which provides the authenticated OperatorContext context.
+func GetSettlement(db *sql.DB, settlementID string) (*Settlement, error) {
+	return getSettlement(context.Background(), db, settlementID)
+}
+
+func ListPartnerSettlements(ctx context.Context, db *sql.DB, requestedOperatorContextID, partnerID string) ([]*Settlement, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return nil, err
 	}
-	var (
-		rows *sql.Rows
-		err  error
-	)
+	requestedOperatorContextID = strings.TrimSpace(requestedOperatorContextID)
+	if requestedOperatorContextID != "" && requestedOperatorContextID != operatorContextID {
+		return nil, fmt.Errorf("OperatorContext filter does not match trusted OperatorContext context")
+	}
+	partnerID = strings.TrimSpace(partnerID)
+	var rows *sql.Rows
 	if partnerID == "" {
-		rows, err = db.Query(`SELECT `+settlementCols+` FROM wlt_settlements WHERE tenant_id = $1 ORDER BY period_start DESC LIMIT 50`, tenantID)
+		rows, err = db.QueryContext(ctx, `SELECT `+settlementCols+` FROM wlt_settlements WHERE operator_context_id = $1 ORDER BY period_start DESC LIMIT 50`, operatorContextID)
 	} else {
-		rows, err = db.Query(`SELECT `+settlementCols+` FROM wlt_settlements WHERE tenant_id = $1 AND partner_id = $2 ORDER BY period_start DESC`, tenantID, partnerID)
+		rows, err = db.QueryContext(ctx, `SELECT `+settlementCols+` FROM wlt_settlements WHERE operator_context_id = $1 AND partner_id = $2 ORDER BY period_start DESC`, operatorContextID, partnerID)
 	}
 	if err != nil {
 		return nil, err
@@ -162,28 +175,32 @@ func ListPartnerSettlements(db *sql.DB, tenantID, partnerID string) ([]*Settleme
 	return settlements, rows.Err()
 }
 
-func ListSettlementSummary(db *sql.DB, partnerID, periodStart, periodEnd string) (*SettlementSummary, error) {
+func ListSettlementSummary(ctx context.Context, db *sql.DB, partnerID, periodStart, periodEnd string) (*SettlementSummary, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	partnerID = strings.TrimSpace(partnerID)
 	if partnerID == "" {
 		return nil, fmt.Errorf("partnerId is required")
 	}
 	const q = `
 		SELECT
-			partner_id,
-			MIN(period_start)::text,
-			MAX(period_end)::text,
+			$2::text,
+			COALESCE(MIN(period_start)::text, ''),
+			COALESCE(MAX(period_end)::text, ''),
 			COALESCE(SUM(gross_amount), 0),
 			COALESCE(SUM(platform_fee), 0),
 			COALESCE(SUM(net_amount), 0),
 			COALESCE(SUM(order_count), 0),
 			COUNT(*),
-			MAX(currency)
+			COALESCE(MAX(currency), 'YER')
 		FROM wlt_settlements
-		WHERE partner_id = $1
-		  AND ($2 = '' OR period_start >= $2::date)
-		  AND ($3 = '' OR period_end <= $3::date)`
-	row := db.QueryRow(q, partnerID, periodStart, periodEnd)
+		WHERE operator_context_id = $1 AND partner_id = $2
+		  AND ($3 = '' OR period_start >= $3::date)
+		  AND ($4 = '' OR period_end <= $4::date)`
 	var summary SettlementSummary
-	err := row.Scan(
+	err = db.QueryRowContext(ctx, q, operatorContextID, partnerID, periodStart, periodEnd).Scan(
 		&summary.PartnerID,
 		&summary.PeriodStart,
 		&summary.PeriodEnd,
@@ -200,16 +217,20 @@ func ListSettlementSummary(db *sql.DB, partnerID, periodStart, periodEnd string)
 	return &summary, nil
 }
 
-// PostSettlement moves one pending settlement to settled and posts its balanced
-// journal in the same database transaction. No state transition is committed
-// unless the journal succeeds.
+// PostSettlement retains deferred-runtime compatibility for package-level tests.
+// Embedded mutations enter through postSettlement with authenticated context.
 func PostSettlement(db *sql.DB, settlementID string) (*Settlement, error) {
 	return postSettlement(context.Background(), db, settlementID)
 }
 
 func postSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Settlement, error) {
+	settlementID = strings.TrimSpace(settlementID)
 	if settlementID == "" {
 		return nil, fmt.Errorf("settlementId is required")
+	}
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	tx, err := db.BeginTx(ctx, nil)
@@ -221,12 +242,12 @@ func postSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Sett
 	row := tx.QueryRowContext(ctx, `
 		UPDATE wlt_settlements
 		SET status = 'settled', settled_at = NOW(), updated_at = NOW()
-		WHERE id = $1 AND status = 'pending'
-		RETURNING `+settlementCols, settlementID)
+		WHERE operator_context_id = $1 AND id = $2 AND status = 'pending'
+		RETURNING `+settlementCols, operatorContextID, settlementID)
 	settlement, err := scanSettlement(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		var status string
-		lookupErr := tx.QueryRowContext(ctx, `SELECT status FROM wlt_settlements WHERE id = $1`, settlementID).Scan(&status)
+		lookupErr := tx.QueryRowContext(ctx, `SELECT status FROM wlt_settlements WHERE operator_context_id = $1 AND id = $2`, operatorContextID, settlementID).Scan(&status)
 		if errors.Is(lookupErr, sql.ErrNoRows) {
 			return nil, nil
 		}
@@ -310,7 +331,7 @@ func HandleCreateSettlement(db *sql.DB) http.HandlerFunc {
 
 func HandleGetSettlement(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		settlement, err := GetSettlement(db, r.PathValue("settlementId"))
+		settlement, err := getSettlement(r.Context(), db, r.PathValue("settlementId"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
@@ -325,9 +346,8 @@ func HandleGetSettlement(db *sql.DB) http.HandlerFunc {
 
 func HandleListSettlements(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := r.URL.Query().Get("tenantId")
-		partnerID := r.URL.Query().Get("partnerId")
-		settlements, err := ListPartnerSettlements(db, tenantID, partnerID)
+		query := r.URL.Query()
+		settlements, err := ListPartnerSettlements(r.Context(), db, query.Get("operatorContextId"), query.Get("partnerId"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
@@ -356,22 +376,5 @@ func HandlePostSettlement(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		shared.SendJSON(w, http.StatusOK, map[string]any{"settlement": settlement})
-	}
-}
-
-func HandleGetSettlementSummary(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		query := r.URL.Query()
-		summary, err := ListSettlementSummary(
-			db,
-			query.Get("partnerId"),
-			query.Get("periodStart"),
-			query.Get("periodEnd"),
-		)
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"summary": summary})
 	}
 }

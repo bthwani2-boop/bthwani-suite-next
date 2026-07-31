@@ -1,0 +1,16 @@
+# Bounded-context contract manifest.
+#
+# Declares what this context asserts about its own contract surface. The
+# master indexes `entry` and nothing below it; `modules` must match the
+# entry's x-bthwani-contracts exactly. Enforced by contracts-foundation.mjs.
+
+context: core/providers
+entry: ./providers.openapi.yaml
+owner: core/providers
+contractState: CONTRACT_ACTIVE
+layout: INDEXED
+bundle: ./generated/providers.bundle.openapi.yaml
+client: ../clients/generated/providers-api.ts
+regenerateScript: pnpm run openapi:generate:providers
+modules: []
+overlays: []

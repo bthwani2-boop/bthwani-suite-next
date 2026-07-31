@@ -1,7 +1,6 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import { execSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { hasBinary, repoRoot } from "./_external-tool-runner.mjs";
 
 const version = "1.27.0";
@@ -29,6 +28,21 @@ function execute(binary, binaryArgs) {
   });
 }
 
+function findPython() {
+  const candidates = process.platform === "win32"
+    ? [["python", []], ["py", ["-3"]], ["python3", []]]
+    : [["python3", []], ["python", []]];
+
+  for (const [binary, prefixArgs] of candidates) {
+    const probe = execute(binary, [...prefixArgs, "--version"]);
+    if (!probe.error && probe.status === 0) {
+      return { binary, prefixArgs };
+    }
+  }
+
+  throw new Error("Python 3 is required to install the pinned zizmor fallback.");
+}
+
 function runPinned() {
   if (hasBinary("zizmor")) return execute("zizmor", args);
   if (hasBinary("uvx")) {
@@ -38,12 +52,28 @@ function runPinned() {
     return execute("pipx", ["run", "--spec", `zizmor==${version}`, "zizmor", ...args]);
   }
 
-  const userBin = path.join(os.homedir(), ".local", "bin");
-  execSync(
-    `python3 -m pip install --user --disable-pip-version-check --break-system-packages "zizmor==${version}"`,
-    { cwd: repoRoot, stdio: "inherit", shell: true },
-  );
-  return execute(path.join(userBin, "zizmor"), args);
+  const python = findPython();
+  const install = execute(python.binary, [
+    ...python.prefixArgs,
+    "-m",
+    "pip",
+    "install",
+    "--user",
+    "--disable-pip-version-check",
+    `zizmor==${version}`,
+  ]);
+  if (install.error || install.status !== 0) return install;
+
+  const scriptsPathResult = execute(python.binary, [
+    ...python.prefixArgs,
+    "-c",
+    "import os,sysconfig; print(sysconfig.get_path('scripts', scheme='nt_user' if os.name == 'nt' else 'posix_user'))",
+  ]);
+  if (scriptsPathResult.error || scriptsPathResult.status !== 0) return scriptsPathResult;
+
+  const executable = process.platform === "win32" ? "zizmor.exe" : "zizmor";
+  const scriptsPath = String(scriptsPathResult.stdout).trim();
+  return execute(path.join(scriptsPath, executable), args);
 }
 
 function normalizeReport(stdout, stderr) {

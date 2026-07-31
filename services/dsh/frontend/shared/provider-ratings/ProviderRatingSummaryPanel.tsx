@@ -98,5 +98,3 @@ const styles = StyleSheet.create({
     backgroundColor: colorRoles.surfaceBase,
   },
 });
-
-export default ProviderRatingSummaryPanel;

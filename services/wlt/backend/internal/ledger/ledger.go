@@ -1,6 +1,7 @@
 package ledger
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -84,7 +85,14 @@ func scanEntryRow(rows *sql.Rows) (*LedgerEntry, error) {
 	return &e, nil
 }
 
-func AppendLedgerEntry(db *sql.DB, input CreateLedgerEntryInput) (*LedgerEntry, error) {
+// AppendLedgerEntryForOperatorContext is retained only for controlled compatibility
+// and migration tooling. Runtime financial mutations must use the balanced
+// PostLedgerTransaction kernel; no HTTP route registers this function.
+func AppendLedgerEntryForOperatorContext(ctx context.Context, db *sql.DB, input CreateLedgerEntryInput) (*LedgerEntry, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if input.EntryType == "" || input.ActorID == "" || input.SourceType == "" || input.SourceID == "" {
 		return nil, fmt.Errorf("entryType, actorId, sourceType, and sourceId are required")
 	}
@@ -102,12 +110,12 @@ func AppendLedgerEntry(db *sql.DB, input CreateLedgerEntryInput) (*LedgerEntry, 
 	}
 	const q = `
 		INSERT INTO wlt_ledger_entries
-			(entry_type, actor_id, actor_type, source_type, source_id, order_id, visit_id, store_id, partner_id, commission_event_id, reference_id, reference_type,
+			(operator_context_id, entry_type, actor_id, actor_type, source_type, source_id, order_id, visit_id, store_id, partner_id, commission_event_id, reference_id, reference_type,
 			 amount_minor_units, currency, debit_credit, balance_after, description, idempotency_key)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 		RETURNING ` + ledgerCols
-	row := db.QueryRow(q,
-		input.EntryType, input.ActorID, actorType, input.SourceType, input.SourceID, input.OrderID, input.VisitID, input.StoreID, input.PartnerID, input.CommissionEventID,
+	row := db.QueryRowContext(ctx, q,
+		operatorContextID, input.EntryType, input.ActorID, actorType, input.SourceType, input.SourceID, input.OrderID, input.VisitID, input.StoreID, input.PartnerID, input.CommissionEventID,
 		input.ReferenceID, input.ReferenceType,
 		input.AmountMinorUnits, currency, debitCredit,
 		input.BalanceAfter, input.Description, input.IdempotencyKey,
@@ -115,21 +123,38 @@ func AppendLedgerEntry(db *sql.DB, input CreateLedgerEntryInput) (*LedgerEntry, 
 	return scanEntry(row)
 }
 
-func GetLedgerEntry(db *sql.DB, entryID string) (*LedgerEntry, error) {
+func AppendLedgerEntry(db *sql.DB, input CreateLedgerEntryInput) (*LedgerEntry, error) {
+	return AppendLedgerEntryForOperatorContext(context.Background(), db, input)
+}
+
+func GetLedgerEntryForOperatorContext(ctx context.Context, db *sql.DB, entryID string) (*LedgerEntry, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	entryID = strings.TrimSpace(entryID)
 	if entryID == "" {
 		return nil, fmt.Errorf("entryId is required")
 	}
-	const q = `SELECT ` + ledgerCols + ` FROM wlt_ledger_entries WHERE id = $1`
-	row := db.QueryRow(q, entryID)
+	const q = `SELECT ` + ledgerCols + ` FROM wlt_ledger_entries WHERE operator_context_id = $1 AND id = $2`
+	row := db.QueryRowContext(ctx, q, operatorContextID, entryID)
 	e, err := scanEntry(row)
-	if err == sql.ErrNoRows {
+	if errorsIsNoRows(err) {
 		return nil, nil
 	}
 	return e, err
 }
 
+func GetLedgerEntry(db *sql.DB, entryID string) (*LedgerEntry, error) {
+	return GetLedgerEntryForOperatorContext(context.Background(), db, entryID)
+}
+
+func errorsIsNoRows(err error) bool {
+	return err == sql.ErrNoRows
+}
+
 type ListLedgerEntriesParams struct {
-	TenantID  string
+	OperatorContextID  string
 	ActorID   string
 	ActorType string
 	OrderID   string
@@ -139,17 +164,17 @@ type ListLedgerEntriesParams struct {
 }
 
 func ListLedgerEntries(db *sql.DB, params ListLedgerEntriesParams) ([]*LedgerEntry, error) {
-	tenantID := strings.TrimSpace(params.TenantID)
-	if tenantID == "" {
-		return nil, fmt.Errorf("tenantId is required")
+	operatorContextID := strings.TrimSpace(params.OperatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("operatorContextId is required")
 	}
 	limit := params.Limit
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
 
-	q := `SELECT ` + ledgerCols + ` FROM wlt_ledger_entries WHERE tenant_id = $1`
-	args := []any{tenantID}
+	q := `SELECT ` + ledgerCols + ` FROM wlt_ledger_entries WHERE operator_context_id = $1`
+	args := []any{operatorContextID}
 	idx := 2
 
 	if params.ActorID != "" {
@@ -173,7 +198,7 @@ func ListLedgerEntries(db *sql.DB, params ListLedgerEntriesParams) ([]*LedgerEnt
 		idx++
 	}
 	if params.Cursor != "" {
-		q += fmt.Sprintf(" AND created_at < (SELECT created_at FROM wlt_ledger_entries WHERE id = $%d AND tenant_id = $1)", idx)
+		q += fmt.Sprintf(" AND created_at < (SELECT created_at FROM wlt_ledger_entries WHERE id = $%d AND operator_context_id = $1)", idx)
 		args = append(args, params.Cursor)
 		idx++
 	}
@@ -204,11 +229,12 @@ func HandleAppendLedgerEntry(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var input CreateLedgerEntryInput
 		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
+		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&input); err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
-		e, err := AppendLedgerEntry(db, input)
+		e, err := AppendLedgerEntryForOperatorContext(r.Context(), db, input)
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
@@ -219,7 +245,7 @@ func HandleAppendLedgerEntry(db *sql.DB) http.HandlerFunc {
 
 func HandleGetLedgerEntry(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		e, err := GetLedgerEntry(db, r.PathValue("entryId"))
+		e, err := GetLedgerEntryForOperatorContext(r.Context(), db, r.PathValue("entryId"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
@@ -234,9 +260,9 @@ func HandleGetLedgerEntry(db *sql.DB) http.HandlerFunc {
 
 func HandleListLedgerEntries(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-		if tenantID == "" {
-			shared.SendError(w, http.StatusBadRequest, "TENANT_REQUIRED", "X-Tenant-ID is required for ledger reads")
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "OperatorContext_REQUIRED", err.Error())
 			return
 		}
 		q := r.URL.Query()
@@ -247,7 +273,7 @@ func HandleListLedgerEntries(db *sql.DB) http.HandlerFunc {
 			}
 		}
 		params := ListLedgerEntriesParams{
-			TenantID:  tenantID,
+			OperatorContextID:  operatorContextID,
 			ActorID:   q.Get("actorId"),
 			ActorType: q.Get("actorType"),
 			OrderID:   q.Get("orderId"),

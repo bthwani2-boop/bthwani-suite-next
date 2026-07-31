@@ -23,12 +23,12 @@ func normalizeRepresentativeActorType(value string) (string, bool) {
 
 func HandleGetWallet(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+		operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 		actorType, ok := normalizeRepresentativeActorType(r.PathValue("actorType"))
 		actorID := strings.TrimSpace(r.PathValue("actorId"))
 
-		if tenantID == "" {
-			shared.SendError(w, http.StatusBadRequest, "TENANT_REQUIRED", "X-Tenant-ID is required for representative finance reads")
+		if operatorContextID == "" {
+			shared.SendError(w, http.StatusBadRequest, "OperatorContext_REQUIRED", "X-Operator-Context-ID is required for representative finance reads")
 			return
 		}
 		if !ok {
@@ -40,13 +40,13 @@ func HandleGetWallet(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		wallet, err := GetWalletForTenant(db, tenantID, actorType, actorID)
+		wallet, err := GetWalletForOperatorContext(db, operatorContextID, actorType, actorID)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to fetch wallet")
 			return
 		}
 		if wallet == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "wallet not found in the authenticated tenant")
+			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "wallet not found in the authenticated OperatorContext")
 			return
 		}
 

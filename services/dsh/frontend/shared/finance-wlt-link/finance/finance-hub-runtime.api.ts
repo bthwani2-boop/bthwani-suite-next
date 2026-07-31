@@ -1,6 +1,6 @@
 import { resolveDshApiBaseUrl } from "../../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../../_kernel/dsh-http-request";
-import type { WltDshFinanceRuntimeResult, WltFinancialSummaryRaw } from "@bthwani/wlt";
+import type { WltDshFinanceRuntimeResult, WltFinancialSummaryRaw } from "./finance-hub.types";
 
 const { request: financeRequest } = createDshHttpClient(resolveDshApiBaseUrl(), "finance-hub");
 

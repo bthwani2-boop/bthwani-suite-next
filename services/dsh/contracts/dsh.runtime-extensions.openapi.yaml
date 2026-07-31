@@ -1,0 +1,114 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Runtime Extensions API
+  version: 0.1.0
+  description: >-
+    Governed runtime extensions for Workforce availability projection and
+    operator dispatch capacity readback. DSH owns operational truth only.
+x-bthwani-owner: services/dsh
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-runtime-dependency: true
+x-bthwani-client-generation: DISABLED
+x-bthwani-adapter-owner: frontend/shared/dispatch + core/workforce availability outbox
+servers:
+  - url: http://localhost:58080
+paths:
+  /dsh/internal/workforce/availability-projections:
+    post:
+      operationId: projectWorkforceAvailabilityIntoDsh
+      security: [{ serviceToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/OperatorContextId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '204': { description: Availability projection accepted idempotently. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /dsh/operator/dispatch/capacity-forecast:
+    get:
+      operationId: getDispatchCapacityForecast
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OperatorContextId'
+      responses:
+        '200':
+          description: Governed capacity forecast for dispatch operators.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /dsh/operator/dispatch/capacity-policies/{serviceAreaCode}:
+    put:
+      operationId: upsertDispatchCapacityPolicy
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ServiceAreaCode'
+        - $ref: '#/components/parameters/OperatorContextId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200': { description: Capacity policy updated under operator authority. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /dsh/operator/dispatch/heatmap:
+    get:
+      operationId: getDispatchHeatmap
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OperatorContextId'
+      responses:
+        '200':
+          description: Dispatch demand and supply heatmap readback.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    serviceToken:
+      type: http
+      scheme: bearer
+  parameters:
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    ServiceCaller:
+      name: X-Service-Caller
+      in: header
+      required: true
+      schema: { const: workforce }
+    OperatorContextId:
+      name: X-Operator-Context-ID
+      in: header
+      required: false
+      schema: { type: string }
+    ServiceAreaCode:
+      name: serviceAreaCode
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+  responses:
+    BadRequest: { description: Invalid request. }
+    Unauthorized: { description: Authentication required. }
+    Forbidden: { description: Caller lacks required authority. }
+    Conflict: { description: Version or idempotency conflict. }

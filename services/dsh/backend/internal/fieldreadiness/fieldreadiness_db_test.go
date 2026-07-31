@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"strconv"
 	"testing"
@@ -14,18 +15,18 @@ import (
 	"dsh-api/internal/store"
 )
 
-func requiredTestTenantID(t *testing.T) string {
+func requiredTestOperatorContextID(t *testing.T) string {
 	t.Helper()
-	tenantID := os.Getenv("DSH_TEST_TENANT_ID")
-	if tenantID == "" {
-		t.Fatal("DSH_TEST_TENANT_ID is required when DSH_REQUIRE_DB_TESTS=true")
+	operatorContextID := os.Getenv("DSH_TEST_operator_context_id")
+	if operatorContextID == "" {
+		t.Fatal("DSH_TEST_operator_context_id is required when DSH_REQUIRE_DB_TESTS=true")
 	}
-	return tenantID
+	return operatorContextID
 }
 
 func testFieldActor(t *testing.T, actorID string) store.StoreActor {
 	t.Helper()
-	return store.StoreActor{ID: actorID, Role: "field", TenantID: requiredTestTenantID(t)}
+	return store.StoreActor{ID: actorID, Role: "field", OperatorContextID: requiredTestOperatorContextID(t)}
 }
 
 func openRequiredDB(t *testing.T) *sql.DB {
@@ -48,14 +49,28 @@ func openRequiredDB(t *testing.T) *sql.DB {
 	return db
 }
 
-// seedFieldStore creates a store and grants an active field-role scope to agentID.
+// seedFieldStore creates a partner-backed store and grants an active field-role
+// scope to agentID. Partner truth is mandatory because visit completion emits a
+// category-derived financial commission event.
 func seedFieldStore(t *testing.T, db *sql.DB, storeID, agentID string) {
 	t.Helper()
 	ctx := context.Background()
+	partnerID := uniqueID("field-store-partner")
+	phone := fmt.Sprintf("7%09d", time.Now().UnixNano()%1_000_000_000)
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
-		VALUES ($1, $1, 'Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true)
-		ON CONFLICT (id) DO NOTHING`, storeID); err != nil {
+		INSERT INTO dsh_partners
+			(id, legal_name_ar, display_name, legal_identity_number, primary_phone, category, created_by_actor_id)
+		VALUES ($1, 'شريك متجر اختبار ميداني', 'Field Store Test Partner', $1, $2, 'restaurant', $3)`,
+		partnerID, phone, agentID); err != nil {
+		t.Fatalf("seed store partner: %v", err)
+	}
+	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_partners WHERE id = $1`, partnerID) })
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_stores
+			(id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, partner_id)
+		VALUES ($1, $1, 'Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true, $2)
+		ON CONFLICT (id) DO UPDATE SET partner_id=COALESCE(dsh_stores.partner_id, EXCLUDED.partner_id)`, storeID, partnerID); err != nil {
 		t.Fatalf("seed store: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID) })
@@ -90,11 +105,12 @@ func seedPartner(t *testing.T, db *sql.DB, agentID string) string {
 	t.Helper()
 	ctx := context.Background()
 	partnerID := uniqueID("prt")
+	phone := fmt.Sprintf("7%09d", time.Now().UnixNano()%1_000_000_000)
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_partners
-			(id, legal_name_ar, display_name, legal_identity_number, primary_phone, created_by_actor_id)
-		VALUES ($1, 'شريك اختبار', 'شريك اختبار', $2, '777000000', $3)`,
-		partnerID, partnerID, agentID); err != nil {
+			(id, legal_name_ar, display_name, legal_identity_number, primary_phone, category, created_by_actor_id)
+		VALUES ($1, 'شريك اختبار', 'شريك اختبار', $2, $3, 'restaurant', $4)`,
+		partnerID, partnerID, phone, agentID); err != nil {
 		t.Fatalf("seed partner: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_partners WHERE id = $1`, partnerID) })

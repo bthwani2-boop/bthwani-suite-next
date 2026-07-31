@@ -7,6 +7,7 @@ import {
   CpKpiStrip,
   CpMutedInline,
   CpStatePanel,
+  CpStateView,
 } from "@bthwani/control-panel/components";
 import { useAdministrationDiagnosticsController } from "../../shared/administration";
 
@@ -14,12 +15,12 @@ export function AdministrationDiagnosticsPanel() {
   const diagnostics = useAdministrationDiagnosticsController("authenticated");
 
   if (diagnostics.state.kind === "loading" || diagnostics.state.kind === "idle") {
-    return <CpStatePanel role="status" title="جارٍ تحميل تشخيص الإدارة…" />;
+    return <CpStateView kind="loading" title="جارٍ تحميل تشخيص الإدارة…" />;
   }
   if (diagnostics.state.kind === "error") {
     return (
       <>
-        <CpStatePanel role="alert" title={diagnostics.state.message} />
+        <CpStateView kind="error" title={diagnostics.state.message} />
         <CpButton onClick={() => void diagnostics.reload()}>إعادة المحاولة</CpButton>
       </>
     );

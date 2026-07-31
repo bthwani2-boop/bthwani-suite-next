@@ -18,7 +18,6 @@ $env:ANDROID_SERIAL = $SelectedSerial
 $Ports = @(
     58080,
     58082,
-    58083,
     58086,
     59000,
     18101,

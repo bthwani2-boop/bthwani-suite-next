@@ -1,25 +1,30 @@
 package settlement
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"wlt-api/internal/shared"
 )
 
-// ListSettlementSummaryGoverned returns one deterministic aggregate row for the
-// requested partner. The partner identifier is sourced from the authenticated
-// query argument rather than selected as a non-aggregated table column, so the
-// query remains valid without a misleading GROUP BY and also returns a stable
-// zero-value summary when no settlements exist.
-func ListSettlementSummaryGoverned(db *sql.DB, partnerID, periodStart, periodEnd string) (*SettlementSummary, error) {
+// ListSettlementSummaryGoverned returns a deterministic aggregate row scoped
+// to the authenticated request OperatorContext. Identical partner identifiers may exist
+// in different OperatorContexts without sharing financial totals.
+func ListSettlementSummaryGoverned(ctx context.Context, db *sql.DB, partnerID, periodStart, periodEnd string) (*SettlementSummary, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	partnerID = strings.TrimSpace(partnerID)
 	if partnerID == "" {
 		return nil, fmt.Errorf("partnerId is required")
 	}
 	const q = `
 		SELECT
-			$1::text,
+			$2::text,
 			COALESCE(MIN(period_start)::text, ''),
 			COALESCE(MAX(period_end)::text, ''),
 			COALESCE(SUM(gross_amount), 0),
@@ -29,12 +34,13 @@ func ListSettlementSummaryGoverned(db *sql.DB, partnerID, periodStart, periodEnd
 			COUNT(*),
 			COALESCE(MAX(currency), 'YER')
 		FROM wlt_settlements
-		WHERE partner_id = $1
-		  AND ($2 = '' OR period_start >= $2::date)
-		  AND ($3 = '' OR period_end <= $3::date)`
+		WHERE operator_context_id = $1
+		  AND partner_id = $2
+		  AND ($3 = '' OR period_start >= $3::date)
+		  AND ($4 = '' OR period_end <= $4::date)`
 
 	var summary SettlementSummary
-	if err := db.QueryRow(q, partnerID, periodStart, periodEnd).Scan(
+	if err := db.QueryRowContext(ctx, q, operatorContextID, partnerID, periodStart, periodEnd).Scan(
 		&summary.PartnerID,
 		&summary.PeriodStart,
 		&summary.PeriodEnd,
@@ -54,6 +60,7 @@ func HandleGetSettlementSummaryGoverned(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query()
 		summary, err := ListSettlementSummaryGoverned(
+			r.Context(),
 			db,
 			query.Get("partnerId"),
 			query.Get("periodStart"),

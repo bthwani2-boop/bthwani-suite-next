@@ -124,7 +124,7 @@ function CheckoutIntentRow({
 
   return (
     <tr>
-      <CpTableCell>{intent.tenantId || "غير متاح"}</CpTableCell>
+      <CpTableCell>{intent.operatorContextId || "غير متاح"}</CpTableCell>
       <CpTableCell>{intent.clientId}</CpTableCell>
       <CpTableCell>{intent.storeId}</CpTableCell>
       <CpTableCell>{FULFILLMENT_LABELS[intent.fulfillmentMode] ?? intent.fulfillmentMode}</CpTableCell>

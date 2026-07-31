@@ -1,3277 +1,398 @@
 openapi: 3.1.0
 info:
-  title: BThwani WLT Service API
-  version: 0.3.0
-  description: WLT owns wallet and financial mutation endpoints. DSH and frontend surfaces must not call external financial providers directly.
-
+  title: BThwani WLT Core Service API
+  version: 1.1.0
+  description: >-
+    Canonical WLT core contract for liveness, trusted financial references,
+    actor wallets, reconciliation administration and read-only ledger
+    inspection. Specialized financial journeys remain in the indexed module
+    contracts. Retired runtime operations are not declared here.
 x-bthwani-owner: services/wlt
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: ENABLED
 x-bthwani-runtime-dependency: true
+x-bthwani-contract-layout: INDEXED
+x-bthwani-bundle: ./generated/wlt.bundle.openapi.yaml
 x-bthwani-financial-owner: true
-
+x-bthwani-contracts:
+  common: ./wlt.common.openapi.yaml
+  payments: ./wlt.payments.openapi.yaml
+  deliveryCollections: ./wlt.delivery-collections.openapi.yaml
+  refunds: ./wlt.refunds.openapi.yaml
+  settlementsCommissions: ./wlt.settlements-commissions.openapi.yaml
+  settlementOperations: ./wlt.settlement-operations.openapi.yaml
+  payoutsDestinations: ./wlt.payouts-destinations.openapi.yaml
+  payoutFailureBoundary: ./wlt.payout-failure-boundary.openapi.yaml
+  codCustody: ./wlt.cod-custody.openapi.yaml
+  codRecords: ./wlt.cod-records.openapi.yaml
+  commercial: ./wlt.commercial.openapi.yaml
+  commercialSummary: ./wlt.commercial-summary.openapi.yaml
+  promotionFunding: ./wlt.promotion-funding.openapi.yaml
+  workforceFinance: ./wlt.workforce-finance.openapi.yaml
+servers:
+  - url: http://localhost:58083
 paths:
   /wlt/health:
     get:
       operationId: getWltHealth
       summary: Return WLT liveness state.
-      tags:
-        - WltSystem
+      tags: [ WltSystem ]
       responses:
-        "200":
+        '200':
           description: WLT process is alive.
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/WltHealthResponse"
-
+              schema: { $ref: '#/components/schemas/HealthResponse' }
+      security:
+        - bearerAuth: []
   /wlt/readiness:
     get:
       operationId: getWltReadiness
-      summary: Return WLT readiness state.
-      tags:
-        - WltSystem
+      summary: Return WLT dependency readiness.
+      tags: [ WltSystem ]
       responses:
-        "200":
+        '200':
           description: WLT dependencies are ready.
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/WltReadinessResponse"
-        "503":
-          description: WLT is not ready.
-
+              schema: { $ref: '#/components/schemas/HealthResponse' }
+        '503': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - bearerAuth: []
   /wlt/references/payment-status:
     get:
       operationId: getWltPaymentStatusRef
-      summary: Return payment status reference for a given orderId. Read-only display surface for DSH.
-      tags:
-        - WltReferences
+      summary: Return the OperatorContext-bound payment status reference for an order.
+      tags: [ WltReferences ]
       parameters:
-        - name: orderId
-          in: query
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/OrderIdQuery'
       responses:
-        "200":
-          description: Payment status reference found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltPaymentStatusRefResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
+        '200': { $ref: '#/components/responses/ReferenceResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - bearerAuth: []
   /wlt/references/settlement-status:
     get:
       operationId: getWltSettlementStatusRef
-      summary: Return settlement status reference for a given orderId. Read-only display surface for DSH.
-      tags:
-        - WltReferences
+      summary: Return the OperatorContext-bound settlement status reference for an
+        order.
+      tags: [ WltReferences ]
       parameters:
-        - name: orderId
-          in: query
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/OrderIdQuery'
       responses:
-        "200":
-          description: Settlement status reference found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltSettlementStatusRefResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
+        '200': { $ref: '#/components/responses/ReferenceResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - bearerAuth: []
   /wlt/references/refund-status:
     get:
       operationId: getWltRefundStatusRef
-      summary: Return refund status reference for a given orderId. Read-only display surface for DSH.
-      tags:
-        - WltReferences
+      summary: Return the OperatorContext-bound refund status reference for an order.
+      tags: [ WltReferences ]
       parameters:
-        - name: orderId
-          in: query
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/OrderIdQuery'
       responses:
-        "200":
-          description: Refund status reference found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltRefundStatusRefResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
+        '200': { $ref: '#/components/responses/ReferenceResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - bearerAuth: []
   /wlt/references/wallet-status:
     get:
       operationId: getWltWalletStatusRef
-      summary: Return wallet status reference for a given actor. Read-only display surface for DSH.
-      tags:
-        - WltReferences
+      summary: Return the OperatorContext-bound wallet status reference for an actor.
+      tags: [ WltReferences ]
       parameters:
-        - name: actorId
-          in: query
-          required: true
-          schema:
-            type: string
         - name: actorType
           in: query
           required: true
-          schema:
-            type: string
-            enum:
-              - client
-              - partner
-              - captain
-              - field
+          schema: { $ref: '#/components/schemas/ActorType' }
+        - name: actorId
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
       responses:
-        "200":
-          description: Wallet status reference found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltWalletStatusRefResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-
+        '200': { $ref: '#/components/responses/ReferenceResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - bearerAuth: []
   /wlt/wallets/{actorType}/{actorId}:
     get:
       operationId: getWltWallet
-      summary: Return the full operational wallet for an actor.
-      tags:
-        - WltWallets
+      summary: Return the OperatorContext-local operational wallet for an actor.
+      tags: [ WltWallets ]
+      security: [ { serviceBearer: [] } ]
       parameters:
-        - name: actorType
-          in: path
-          required: true
-          schema:
-            type: string
-            enum:
-              - client
-              - partner
-              - captain
-              - field
-        - name: actorId
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: '#/components/parameters/ActorTypePath'
+        - $ref: '#/components/parameters/ActorIdPath'
       responses:
-        "200":
-          description: Wallet returned successfully.
+        '200':
+          description: OperatorContext-local actor wallet.
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/WltWalletResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
+              schema: { $ref: '#/components/schemas/WalletEnvelope' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/reconciliation-cases:
     get:
       operationId: listWltReconciliationCases
-      summary: List reconciliation cases.
-      tags:
-        - WltReconciliation
+      summary: List OperatorContext-local reconciliation cases.
+      tags: [ WltReconciliation ]
+      security: [ { serviceBearer: [] } ]
       parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - name: status
           in: query
-          schema:
-            type: string
-            enum: [open, resolved]
+          schema: { type: string, enum: [ open, resolved ] }
       responses:
-        "200":
-          description: List of reconciliation cases.
+        '200':
+          description: OperatorContext-local reconciliation cases.
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/WltReconciliationCaseListResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-
+              schema: { type: object, additionalProperties: true }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/reconciliation-cases/{caseId}:
     get:
       operationId: getWltReconciliationCase
-      summary: Get a reconciliation case by ID.
-      tags:
-        - WltReconciliation
+      summary: Read one OperatorContext-local reconciliation case.
+      tags: [ WltReconciliation ]
+      security: [ { serviceBearer: [] } ]
       parameters:
-        - name: caseId
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CaseId'
       responses:
-        "200":
-          description: Reconciliation case details.
+        '200':
+          description: OperatorContext-local reconciliation case.
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/WltReconciliationCaseResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
+              schema: { type: object, additionalProperties: true }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/reconciliation-cases/{caseId}/assign:
     post:
       operationId: assignWltReconciliationCase
-      summary: Assign a reconciliation case.
-      tags:
-        - WltReconciliation
+      summary: Assign a OperatorContext-local reconciliation case.
+      tags: [ WltReconciliation ]
+      security: [ { serviceBearer: [] } ]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       parameters:
-        - name: caseId
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CaseId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: "#/components/schemas/WltAssignReconciliationCaseRequest"
+            schema: { type: object, additionalProperties: true }
       responses:
-        "200":
-          description: Reconciliation case assigned.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltReconciliationCaseResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
+        '200': { description: Reconciliation case assigned }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/reconciliation-cases/{caseId}/resolve:
     post:
       operationId: resolveWltReconciliationCase
-      summary: Resolve a reconciliation case.
-      tags:
-        - WltReconciliation
-      parameters:
-        - name: caseId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltResolveReconciliationCaseRequest"
-      responses:
-        "200":
-          description: Reconciliation case resolved.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltReconciliationCaseResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-
-  /wlt/payout-requests:
-    post:
-      operationId: createWltPayoutRequest
-      summary: Create a payout request.
-      tags:
-        - WltPayouts
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltCreatePayoutRequest"
-      responses:
-        "201":
-          description: Payout request created.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltPayoutRequestResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "409":
-          $ref: "#/components/responses/Conflict"
-    get:
-      operationId: listWltPayoutRequests
-      summary: List payout requests.
-      description: >-
-        beneficiaryActorId and beneficiaryActorType must be supplied
-        together and scope results to that beneficiary. If neither is
-        supplied, the caller must be an internal/service caller (e.g.
-        X-Service-Caller: dsh) to list across all beneficiaries.
-      tags:
-        - WltPayouts
-      parameters:
-        - name: beneficiaryActorId
-          in: query
-          schema: { type: string }
-        - name: beneficiaryActorType
-          in: query
-          schema: { type: string }
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [pending, approved, rejected, provider_pending, processing, provider_result_unknown, completed, failed]
-      responses:
-        "200":
-          description: List of payout requests.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltPayoutRequestListResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-
-  /wlt/payout-requests/{payoutId}:
-    get:
-      operationId: getWltPayoutRequest
-      summary: Get a payout request.
-      tags:
-        - WltPayouts
-      parameters:
-        - name: payoutId
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        "200":
-          description: Payout request found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltPayoutRequestResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /wlt/payout-requests/{payoutId}/approve:
-    post:
-      operationId: approveWltPayoutRequest
-      summary: Approve a payout request.
-      tags:
-        - WltPayouts
-      parameters:
-        - name: payoutId
-          in: path
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltPayoutOperatorRequest"
-      responses:
-        "200":
-          description: Approved.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltPayoutRequestResponse"
-
-  /wlt/payout-requests/{payoutId}/reject:
-    post:
-      operationId: rejectWltPayoutRequest
-      summary: Reject a payout request.
-      tags:
-        - WltPayouts
-      parameters:
-        - name: payoutId
-          in: path
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltPayoutOperatorRequest"
-      responses:
-        "200":
-          description: Rejected.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltPayoutRequestResponse"
-
-  /wlt/payout-requests/{payoutId}/process:
-    post:
-      operationId: processWltPayoutRequest
-      summary: Start processing payout request.
-      tags:
-        - WltPayouts
-      parameters:
-        - name: payoutId
-          in: path
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltPayoutOperatorRequest"
-      responses:
-        "200":
-          description: Processing.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltPayoutRequestResponse"
-
-  /wlt/payout-requests/{payoutId}/complete:
-    post:
-      operationId: completeWltPayoutRequest
-      summary: Complete payout request.
-      tags:
-        - WltPayouts
-      parameters:
-        - name: payoutId
-          in: path
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltPayoutOperatorRequest"
-      responses:
-        "200":
-          description: Completed.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltPayoutRequestResponse"
-
-  /wlt/payout-requests/{payoutId}/fail:
-    post:
-      operationId: failWltPayoutRequest
-      summary: Fail payout request.
-      tags:
-        - WltPayouts
-      parameters:
-        - name: payoutId
-          in: path
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltPayoutOperatorRequest"
-      responses:
-        "200":
-          description: Failed.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltPayoutRequestResponse"
-
-  /wlt/payment-sessions:
-    post:
-      operationId: createWltPaymentSessionReference
-      summary: Create a WLT-owned payment-session reference for DSH checkout handoff.
-      description: Creates an opaque payment-session reference only. No wallet debit, ledger posting, provider capture, refund, or settlement occurs here.
-      tags:
-        - WltPaymentSessions
-      parameters:
-        - name: Authorization
-          in: header
-          required: true
-          schema: { type: string }
-        - name: X-Service-Caller
-          in: header
-          required: true
-          schema:
-            type: string
-            enum: [dsh]
-        - name: X-Correlation-ID
-          in: header
-          required: true
-          schema: { type: string }
-        - name: Idempotency-Key
-          in: header
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltCreatePaymentSessionRequest"
-      responses:
-        "201":
-          description: Payment-session reference created.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltPaymentSessionResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "409":
-          $ref: "#/components/responses/Conflict"
-
-  /wlt/payment-sessions/{paymentSessionId}:
-    get:
-      operationId: getWltPaymentSessionReference
-      summary: Read a WLT-owned payment-session reference.
-      tags:
-        - WltPaymentSessions
-      parameters:
-        - name: paymentSessionId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Payment-session reference.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltPaymentSessionResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /wlt/payment-sessions/{paymentSessionId}/authorize:
-    post:
-      operationId: authorizeWltPaymentSession
-      summary: Authorize a payment session with an amount.
-      description: >-
-        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
-        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+      summary: Resolve a OperatorContext-local reconciliation case.
+      tags: [ WltReconciliation ]
+      security: [ { serviceBearer: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
-      tags:
-        - WltPaymentSessions
       parameters:
-        - name: paymentSessionId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltAuthorizePaymentSessionRequest"
-      responses:
-        "200":
-          description: Payment session authorized.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltPaymentSessionResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-
-  /wlt/payment-sessions/{paymentSessionId}/capture:
-    post:
-      operationId: captureWltPaymentSession
-      summary: Capture an authorized payment session.
-      description: >-
-        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
-        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
-      x-bthwani-mutation-approved: false
-      x-bthwani-default-enabled: false
-      tags:
-        - WltPaymentSessions
-      parameters:
-        - name: paymentSessionId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Payment session captured.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltCapturePaymentSessionResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /wlt/payment-sessions/{paymentSessionId}/expire:
-    post:
-      operationId: expireWltPaymentSession
-      summary: Expire a payment session.
-      description: >-
-        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
-        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
-      x-bthwani-mutation-approved: false
-      x-bthwani-default-enabled: false
-      tags:
-        - WltPaymentSessions
-      parameters:
-        - name: paymentSessionId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Payment session expired.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltPaymentSessionResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-
-  /wlt/payment-sessions/{paymentSessionId}/cancel-for-order:
-    post:
-      operationId: cancelWltPaymentSessionForOrder
-      summary: >-
-        Signal that the order behind this payment session was cancelled;
-        WLT decides whether to expire (not yet captured) or request a refund
-        (already captured/cod_collected).
-      description: >-
-        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
-        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime. WLT
-        -- not the caller -- owns the session's true state, so this endpoint
-        lets DSH signal a cancellation without itself having to decide
-        between expiring an unfunded session or refunding a funded one. If
-        the session is captured or cod_collected, this creates a
-        requested-status refund for human review; it never auto-completes
-        or moves money. If the session is already in a terminal state
-        (expired/failed/etc.), this returns action "none" rather than an
-        error, since a cancellation racing an already-terminal session is
-        normal, not a client error.
-      x-bthwani-mutation-approved: false
-      x-bthwani-default-enabled: false
-      tags:
-        - WltPaymentSessions
-      parameters:
-        - name: paymentSessionId
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CaseId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: "#/components/schemas/WltCancelPaymentSessionForOrderRequest"
+            schema: { type: object, additionalProperties: true }
       responses:
-        "200":
-          description: >-
-            Either the session was expired, a refund was requested, or no
-            action was needed because the session was already terminal.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltCancelPaymentSessionForOrderResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-
-  /wlt/order-cancellations:
-    post:
-      operationId: closeWltOrderCancellation
-      summary: Resolve the WLT-owned financial consequence of a governed DSH order cancellation.
-      description: >-
-        Internal DSH-only mutation. WLT derives all monetary values from the referenced payment session.
-        It expires an uncollected session, creates one idempotent refund for captured or COD-collected money,
-        or returns no action for an already terminal session.
-      tags: [WltPaymentSessions]
-      parameters:
-        - name: Authorization
-          in: header
-          required: true
-          schema: { type: string, minLength: 1 }
-        - name: X-Service-Caller
-          in: header
-          required: true
-          schema: { type: string, enum: [dsh] }
-        - name: Idempotency-Key
-          in: header
-          required: true
-          schema: { type: string, minLength: 1 }
-        - name: X-Correlation-ID
-          in: header
-          required: true
-          schema: { type: string, minLength: 1 }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltGovernedOrderCancellationRequest"
-      responses:
-        "200":
-          description: Financial cancellation decision returned.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltGovernedOrderCancellationResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-
-  /wlt/payment-sessions/{paymentSessionId}/cod-collect:
-    post:
-      operationId: markWltCodCollected
-      summary: Mark a COD payment session as collected.
-      description: >-
-        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
-        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
-      x-bthwani-mutation-approved: false
-      x-bthwani-default-enabled: false
-      tags:
-        - WltPaymentSessions
-      parameters:
-        - name: paymentSessionId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: COD payment session marked as collected.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltPaymentSessionResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /wlt/refunds:
-    post:
-      operationId: createWltRefund
-      summary: Create a refund for a captured payment session.
-      description: >-
-        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
-        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
-      x-bthwani-mutation-approved: false
-      x-bthwani-default-enabled: false
-      tags:
-        - WltRefunds
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltCreateRefundRequest"
-      responses:
-        "200":
-          description: Existing active refund returned for an idempotent replay.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltCreateRefundResponse"
-        "201":
-          description: Refund created.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltCreateRefundResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-    get:
-      operationId: listWltRefunds
-      summary: List refunds by orderId or clientId.
-      tags:
-        - WltRefunds
-      parameters:
-        - name: Authorization
-          in: header
-          required: true
-          schema: { type: string }
-        - name: X-Service-Caller
-          in: header
-          required: true
-          schema:
-            type: string
-            enum: [dsh]
-        - name: orderId
-          in: query
-          schema:
-            type: string
-        - name: clientId
-          in: query
-          schema:
-            type: string
-      responses:
-        "200":
-          description: List of refunds.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltRefundListResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-
-  /wlt/refunds/{refundId}:
-    get:
-      operationId: getWltRefund
-      summary: Get a refund by ID.
-      tags:
-        - WltRefunds
-      parameters:
-        - name: Authorization
-          in: header
-          required: true
-          schema: { type: string }
-        - name: X-Service-Caller
-          in: header
-          required: true
-          schema:
-            type: string
-            enum: [dsh]
-        - name: refundId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Refund found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltRefundResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /wlt/refunds/{refundId}/approve:
-    post:
-      operationId: approveWltRefund
-      summary: Approve a requested refund.
-      description: >-
-        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
-        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
-      x-bthwani-mutation-approved: false
-      x-bthwani-default-enabled: false
-      tags:
-        - WltRefunds
-      parameters:
-        - name: refundId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Refund approved.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltRefundResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /wlt/refunds/{refundId}/complete:
-    post:
-      operationId: completeWltRefund
-      summary: Complete an approved refund.
-      description: >-
-        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
-        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
-      x-bthwani-mutation-approved: false
-      x-bthwani-default-enabled: false
-      tags:
-        - WltRefunds
-      parameters:
-        - name: refundId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Refund completed.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltRefundResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /wlt/refunds/{refundId}/reject:
-    post:
-      operationId: rejectWltRefund
-      summary: Reject a refund.
-      description: >-
-        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
-        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
-      x-bthwani-mutation-approved: false
-      x-bthwani-default-enabled: false
-      tags:
-        - WltRefunds
-      parameters:
-        - name: refundId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Refund rejected.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltRefundResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /wlt/settlements:
-    post:
-      operationId: createWltSettlement
-      summary: Create a partner settlement from immutable delivered-order sources.
-      description: >-
-        DSH supplies server-derived delivered order identities, immutable gross snapshots and delivery timestamps.
-        WLT owns the active fee policy and computes gross, platform fee, partner net and order count.
-        Caller-supplied financial totals are forbidden. The mutation remains disabled unless WLT_MUTATIONS_ENABLED=true.
-      x-bthwani-mutation-approved: true
-      x-bthwani-default-enabled: false
-      tags:
-        - WltSettlements
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltCreateSettlementRequest"
-      responses:
-        "201":
-          description: Governed settlement created.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltSettlementResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "409":
-          $ref: "#/components/responses/Conflict"
-    get:
-      operationId: listWltSettlements
-      summary: List settlements by partnerId.
-      tags:
-        - WltSettlements
-      parameters:
-        - name: Authorization
-          in: header
-          required: true
-          schema: { type: string }
-        - name: X-Service-Caller
-          in: header
-          required: true
-          schema:
-            type: string
-            enum: [dsh]
-        - name: partnerId
-          in: query
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: List of settlements.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltSettlementListResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-
-  /wlt/settlements/summary:
-    get:
-      operationId: getWltSettlementSummary
-      summary: Get aggregated settlement summary for a partner over a period.
-      tags:
-        - WltSettlements
-      parameters:
-        - name: Authorization
-          in: header
-          required: true
-          schema: { type: string }
-        - name: X-Service-Caller
-          in: header
-          required: true
-          schema:
-            type: string
-            enum: [dsh]
-        - name: partnerId
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: periodStart
-          in: query
-          schema:
-            type: string
-            format: date
-        - name: periodEnd
-          in: query
-          schema:
-            type: string
-            format: date
-      responses:
-        "200":
-          description: Settlement summary.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltSettlementSummaryResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-
-  /wlt/settlements/{settlementId}:
-    get:
-      operationId: getWltSettlement
-      summary: Get a settlement by ID.
-      tags:
-        - WltSettlements
-      parameters:
-        - name: Authorization
-          in: header
-          required: true
-          schema: { type: string }
-        - name: X-Service-Caller
-          in: header
-          required: true
-          schema:
-            type: string
-            enum: [dsh]
-        - name: settlementId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Settlement found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltSettlementResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /wlt/settlements/{settlementId}/post:
-    post:
-      operationId: postWltSettlement
-      summary: Post (settle) a pending settlement.
-      description: >-
-        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
-        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
-      x-bthwani-mutation-approved: false
-      x-bthwani-default-enabled: false
-      tags:
-        - WltSettlements
-      parameters:
-        - name: settlementId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Settlement posted.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltSettlementResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-
-  /wlt/settlement-policies/{partnerId}:
-    put:
-      operationId: upsertWltSettlementPolicy
-      summary: Upsert a partner settlement fee policy owned by WLT.
-      description: Mutation-gated and service-authenticated.
-      x-bthwani-mutation-approved: true
-      x-bthwani-default-enabled: false
-      tags: [WltSettlements]
-      parameters:
-        - name: partnerId
-          in: path
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltSettlementPolicyRequest"
-      responses:
-        "200":
-          description: Settlement policy persisted.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltSettlementPolicyResponse"
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
-  /wlt/delivery-collections:
-    post:
-      operationId: createWltDeliveryCollectionHandoff
-      summary: Accept a governed DSH delivery-completion handoff.
-      description: >-
-        DSH sends delivery and collector identities only. WLT resolves the payment
-        session, returns applicable=false for prepaid orders, and creates one COD
-        custody record for COD orders without trusting caller-supplied money.
-      tags: [WltCod]
-      parameters:
-        - name: Authorization
-          in: header
-          required: true
-          schema: { type: string }
-        - name: X-Service-Caller
-          in: header
-          required: true
-          schema:
-            type: string
-            enum: [dsh]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltCreateCodRecordRequest"
-      responses:
-        "200":
-          description: Handoff replayed or not applicable to a prepaid order.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [applicable, replayed]
-                properties:
-                  codRecord:
-                    anyOf:
-                      - $ref: "#/components/schemas/WltCodRecord"
-                      - type: "null"
-                  applicable: { type: boolean }
-                  replayed: { type: boolean }
-        "201":
-          description: COD custody record created from WLT payment-session truth.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [codRecord, applicable, replayed]
-                properties:
-                  codRecord: { $ref: "#/components/schemas/WltCodRecord" }
-                  applicable: { type: boolean, const: true }
-                  replayed: { type: boolean, const: false }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { $ref: "#/components/responses/Conflict" }
-
-  /wlt/cod-records:
-    post:
-      operationId: createWltCodRecord
-      summary: DSH-only. Opens a COD collection record for a delivered order.
-      description: >
-        Called by DSH once a COD order is delivered. WLT derives amountMinorUnits/
-        currency from its own payment session for the given checkoutIntentId rather
-        than trusting the caller. Idempotent on orderId: replays return the existing
-        record.
-      tags:
-        - WltCod
-      parameters:
-        - name: Authorization
-          in: header
-          required: true
-          schema: { type: string }
-        - name: X-Service-Caller
-          in: header
-          required: true
-          schema:
-            type: string
-            enum: [dsh]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltCreateCodRecordRequest"
-      responses:
-        "201":
-          description: COD record created (or already existed for this orderId).
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltCodRecordResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-    get:
-      operationId: listWltCodRecords
-      summary: List COD records by captainId or partnerId.
-      tags:
-        - WltCod
-      parameters:
-        - name: Authorization
-          in: header
-          required: true
-          schema: { type: string }
-        - name: X-Service-Caller
-          in: header
-          required: true
-          schema:
-            type: string
-            enum: [dsh]
-        - name: captainId
-          in: query
-          schema:
-            type: string
-        - name: partnerId
-          in: query
-          schema:
-            type: string
-      responses:
-        "200":
-          description: List of COD records.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltCodRecordListResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-
-  /wlt/cod-records/{codRecordId}:
-    get:
-      operationId: getWltCodRecord
-      summary: Get a COD record by ID.
-      tags:
-        - WltCod
-      parameters:
-        - name: Authorization
-          in: header
-          required: true
-          schema: { type: string }
-        - name: X-Service-Caller
-          in: header
-          required: true
-          schema:
-            type: string
-            enum: [dsh]
-        - name: codRecordId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: COD record found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltCodRecordResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /wlt/cod-records/{codRecordId}/collect:
-    post:
-      operationId: collectWltCod
-      summary: Mark a COD record as collected.
-      description: >-
-        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
-        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
-      x-bthwani-mutation-approved: false
-      x-bthwani-default-enabled: false
-      tags:
-        - WltCod
-      parameters:
-        - name: codRecordId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: COD record marked as collected.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltCodRecordResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-
-  /wlt/cod-records/{codRecordId}/remit:
-    post:
-      operationId: remitWltCod
-      summary: Mark a COD record as remitted.
-      description: >-
-        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
-        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
-      x-bthwani-mutation-approved: false
-      x-bthwani-default-enabled: false
-      tags:
-        - WltCod
-      parameters:
-        - name: codRecordId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: COD record marked as remitted.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltCodRecordResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-
-  /wlt/commissions:
-    post:
-      operationId: createWltCommission
-      summary: DSH-only. Create a commission record.
-      description: >-
-        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
-        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
-      x-bthwani-mutation-approved: false
-      x-bthwani-default-enabled: false
-      tags:
-        - WltCod
-      parameters:
-        - name: Authorization
-          in: header
-          required: true
-          schema: { type: string }
-        - name: X-Service-Caller
-          in: header
-          required: true
-          schema:
-            type: string
-            enum: [dsh]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltCreateCommissionRequest"
-      responses:
-        "201":
-          description: Commission created.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltCommissionResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-    get:
-      operationId: listWltCommissions
-      summary: List commissions by sourceId, or by beneficiaryActorId+beneficiaryActorType.
-      description: >-
-        beneficiaryActorId and beneficiaryActorType must be supplied
-        together; supplying only one is rejected with 400.
-      tags:
-        - WltCod
-      parameters:
-        - name: Authorization
-          in: header
-          required: true
-          schema: { type: string }
-        - name: X-Service-Caller
-          in: header
-          required: true
-          schema:
-            type: string
-            enum: [dsh]
-        - name: sourceId
-          in: query
-          schema:
-            type: string
-        - name: beneficiaryActorId
-          in: query
-          schema:
-            type: string
-        - name: beneficiaryActorType
-          in: query
-          schema:
-            type: string
-      responses:
-        "200":
-          description: List of commissions.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltCommissionListResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-
-  /wlt/commissions/{commissionId}/confirm:
-    post:
-      operationId: confirmWltCommission
-      summary: Confirm a commission record.
-      description: Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
-      tags:
-        - WltCod
-      parameters:
-        - name: commissionId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Commission confirmed.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltCommissionResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /wlt/commissions/{commissionId}/settle:
-    post:
-      operationId: settleWltCommission
-      summary: Settle a commission record.
-      description: Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
-      tags:
-        - WltCod
-      parameters:
-        - name: commissionId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Commission settled.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltCommissionResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /wlt/commissions/{commissionId}/reject:
-    post:
-      operationId: rejectWltCommission
-      summary: Reject a commission record.
-      description: Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
-      tags:
-        - WltCod
-      parameters:
-        - name: commissionId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - resolutionNote
-              properties:
-                resolutionNote:
-                  type: string
-      responses:
-        "200":
-          description: Commission rejected.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltCommissionResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /wlt/commissions/{commissionId}/reverse:
-    post:
-      operationId: reverseWltCommission
-      summary: Reverse a commission record.
-      description: Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
-      tags:
-        - WltCod
-      parameters:
-        - name: commissionId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - resolutionNote
-              properties:
-                resolutionNote:
-                  type: string
-      responses:
-        "200":
-          description: Commission reversed.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltCommissionResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
+        '200': { description: Reconciliation case resolved }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/ledger/entries:
-    post:
-      operationId: appendWltLedgerEntry
-      summary: Append an immutable ledger entry.
-      description: >-
-        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
-        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
-      x-bthwani-mutation-approved: false
-      x-bthwani-default-enabled: false
-      tags:
-        - WltLedger
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltCreateLedgerEntryRequest"
-      responses:
-        "201":
-          description: Ledger entry appended.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltLedgerEntryResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
     get:
       operationId: listWltLedgerEntries
-      summary: List ledger entries with optional filters and cursor pagination.
-      tags:
-        - WltLedger
+      summary: List OperatorContext-local immutable ledger entries.
+      tags: [ WltLedger ]
+      security: [ { serviceBearer: [] } ]
       parameters:
-        - name: Authorization
-          in: header
-          required: true
-          schema: { type: string }
-        - name: X-Service-Caller
-          in: header
-          required: true
-          schema:
-            type: string
-            enum: [dsh]
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - name: actorId
           in: query
-          schema:
-            type: string
+          schema: { type: string }
         - name: actorType
           in: query
-          schema:
-            type: string
-            enum:
-              - client
-              - partner
-              - captain
-              - system
-              - platform
-              - field
+          schema: { $ref: '#/components/schemas/ActorType' }
         - name: orderId
           in: query
-          schema:
-            type: string
+          schema: { type: string }
         - name: entryType
           in: query
-          schema:
-            type: string
+          schema: { type: string }
         - name: limit
           in: query
-          schema:
-            type: integer
-            default: 50
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
         - name: cursor
           in: query
-          schema:
-            type: string
+          schema: { type: string }
       responses:
-        "200":
-          description: List of ledger entries.
+        '200':
+          description: OperatorContext-local immutable ledger entries
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/WltLedgerEntryListResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-
+              schema: { $ref: '#/components/schemas/LedgerEntryListResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/ledger/entries/{entryId}:
     get:
       operationId: getWltLedgerEntry
-      summary: Get a ledger entry by ID.
-      tags:
-        - WltLedger
+      summary: Read one OperatorContext-local immutable ledger entry.
+      tags: [ WltLedger ]
+      security: [ { serviceBearer: [] } ]
       parameters:
-        - name: Authorization
-          in: header
-          required: true
-          schema: { type: string }
-        - name: X-Service-Caller
-          in: header
-          required: true
-          schema:
-            type: string
-            enum: [dsh]
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - name: entryId
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string, minLength: 1 }
       responses:
-        "200":
-          description: Ledger entry found.
+        '200':
+          description: OperatorContext-local immutable ledger entry
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/WltLedgerEntryResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
+              schema: { $ref: '#/components/schemas/LedgerEntry' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/ledger/financial-summary:
     get:
       operationId: getWltLedgerFinancialSummary
-      summary: >-
-        Account-type-aware financial summary (Assets/Liabilities/Revenue/
-        Expense/Net Position per currency) computed from the double-entry
-        ledger kernel (wlt_ledger_accounts/transactions/lines), with each
-        account type's normal balance side applied server-side. Consumers
-        must not re-derive debit/credit or account categorization
-        client-side.
-      tags:
-        - WltLedger
+      summary: Return account-type-aware OperatorContext-local financial totals.
+      tags: [ WltLedger ]
+      security: [ { serviceBearer: [] } ]
       parameters:
-        - name: Authorization
-          in: header
-          required: true
-          schema: { type: string }
-        - name: X-Service-Caller
-          in: header
-          required: true
-          schema:
-            type: string
-            enum: [dsh]
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
       responses:
-        "200":
-          description: Financial summary grouped by currency.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltFinancialSummaryResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-
-  /wlt/payout-destinations/{partnerId}:
-    put:
-      operationId: upsertWltPayoutDestination
-      summary: Create or replace active payout destination for a partner.
-      description: Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
-      x-bthwani-mutation-approved: true
-      x-bthwani-default-enabled: true
-      tags:
-        - WltPayoutDestinations
-      parameters:
-        - name: partnerId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WltUpsertPayoutDestinationRequest"
-      responses:
-        "201":
-          description: Payout destination upserted.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltPayoutDestinationRefResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-    get:
-      operationId: getWltPayoutDestination
-      summary: Get active payout destination for a partner.
-      tags:
-        - WltPayoutDestinations
-      parameters:
-        - name: partnerId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Payout destination found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltPayoutDestinationRefResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /wlt/payout-destinations/{partnerId}/deactivate:
-    post:
-      operationId: deactivateWltPayoutDestination
-      summary: Deactivate active payout destination for a partner.
-      description: Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
-      x-bthwani-mutation-approved: true
-      x-bthwani-default-enabled: true
-      tags:
-        - WltPayoutDestinations
-      parameters:
-        - name: partnerId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "204":
-          description: Payout destination deactivated.
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-
+        '200': { description: OperatorContext-local financial summary }
 components:
+  securitySchemes: {}
+  parameters:
+    OrderIdQuery:
+      name: orderId
+      in: query
+      required: true
+      schema: { type: string, minLength: 1 }
+    ActorTypePath:
+      name: actorType
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/ActorType' }
+    ActorIdPath:
+      name: actorId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
   responses:
-    BadRequest:
-      description: Invalid request parameters.
+    ReferenceResponse:
+      description: Canonical WLT reference.
       content:
         application/json:
-          schema:
-            $ref: "#/components/schemas/WltApiError"
-    Unauthorized:
-      description: Service authorization is missing or invalid.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/WltApiError"
-    Forbidden:
-      description: Caller is not allowed to perform this operation.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/WltApiError"
-    Conflict:
-      description: Request conflicts with an existing idempotent operation.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/WltApiError"
-    NotFound:
-      description: Resource not found.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/WltApiError"
-
+          schema: { type: object, additionalProperties: true }
   schemas:
-    WltApiError:
+    ActorType:
+      type: string
+      enum: [ client, partner, captain, field, system, platform ]
+    HealthResponse:
       type: object
-      required:
-        - code
-        - message
+      required: [ service, status ]
       properties:
-        code:
-          type: string
-        message:
-          type: string
-
-    WltHealthResponse:
+        service: { type: string, const: wlt }
+        status: { type: string }
+    WalletEnvelope:
+      type: object
+      additionalProperties: true
+    LedgerEntry:
       type: object
       required:
-        - service
-        - status
-        - checkedAt
-      properties:
-        service:
-          type: string
-          const: wlt
-        status:
-          type: string
-          enum:
-            - healthy
-        checkedAt:
-          type: string
-          format: date-time
-
-    WltReadinessResponse:
-      type: object
-      required:
-        - service
-        - status
-        - dependencies
-        - checkedAt
-      properties:
-        service:
-          type: string
-          const: wlt
-        status:
-          type: string
-          enum:
-            - ready
-            - not_ready
-        dependencies:
-          type: object
-          additionalProperties:
-            type: string
-            enum:
-              - ready
-              - degraded
-              - down
-              - not_configured
-        checkedAt:
-          type: string
-          format: date-time
-
-    WltPaymentStatusRef:
-      type: object
-      required:
-        - id
-        - orderId
-        - status
-        - updatedAt
-      properties:
-        id:
-          type: string
-        orderId:
-          type: string
-        status:
-          type: string
-          enum:
-            - pending
-            - authorized
-            - captured
-            - failed
-            - refunded
-            - partially_refunded
-        updatedAt:
-          type: string
-          format: date-time
-
-    WltSettlementStatusRef:
-      type: object
-      required:
-        - id
-        - orderId
-        - status
-        - updatedAt
-      properties:
-        id:
-          type: string
-        orderId:
-          type: string
-        status:
-          type: string
-          enum:
-            - pending
-            - processing
-            - settled
-            - failed
-        updatedAt:
-          type: string
-          format: date-time
-
-    WltRefundStatusRef:
-      type: object
-      required:
-        - id
-        - orderId
-        - status
-        - updatedAt
-      properties:
-        id:
-          type: string
-        orderId:
-          type: string
-        status:
-          type: string
-          enum:
-            - none
-            - requested
-            - approved
-            - completed
-            - rejected
-        updatedAt:
-          type: string
-          format: date-time
-
-    WltWalletStatusRef:
-      type: object
-      required:
-        - id
-        - actorId
-        - actorType
-        - status
-        - currency
-        - updatedAt
-      properties:
-        id:
-          type: string
-        actorId:
-          type: string
-        actorType:
-          type: string
-          enum:
-            - client
-            - partner
-            - captain
-            - field
-        status:
-          type: string
-          enum:
-            - active
-            - suspended
-            - frozen
-            - closed
-        updatedAt:
-          type: string
-          format: date-time
-
-    WltFieldCommissionRef:
-      type: object
-      required:
-        - id
-        - partnerId
-        - partnerName
-        - amountMinorUnits
-        - currency
-        - status
-        - description
-        - evidenceRequired
-        - settledAt
-        - createdAt
-        - updatedAt
-      properties:
-        id:
-          type: string
-        partnerId:
-          type: string
-        partnerName:
-          type: string
-        amountMinorUnits:
-          type: integer
-          format: int64
-        currency:
-          type: string
-        status:
-          type: string
-          enum:
-            - eligible_pending_review
-            - approved_pending_settlement
-            - settled
-            - held_for_evidence
-            - rejected
-        description:
-          type: string
-        evidenceRequired:
-          type: boolean
-        settledAt:
-          type: [string, 'null']
-          format: date-time
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    WltFieldCommissionRefResponse:
-      type: object
-      required:
-        - reference
-      properties:
-        reference:
-          $ref: "#/components/schemas/WltFieldCommissionRef"
-
-
-    WltPaymentSession:
-      type: object
-      required:
-        - id
-        - tenantId
-        - clientId
-        - storeId
-        - paymentMethod
-        - status
-        - providerReference
-        - createdAt
-        - updatedAt
-      properties:
-        id:
-          type: string
-        checkoutIntentId:
-          type: string
-          nullable: true
-          description: >-
-            Set when this session originated from a DSH checkout-intent
-            handoff. Mutually exclusive with specialRequestId -- exactly one
-            of the two is always non-null.
-        specialRequestId:
-          type: string
-          nullable: true
-          description: >-
-            Set when this session originated from a DSH special-request
-            (Shein/Awnak) quote approval. Mutually exclusive with
-            checkoutIntentId -- exactly one of the two is always non-null.
-        tenantId:
-          type: string
-          description: Trusted tenant context propagated from Identity through DSH.
-        clientId:
-          type: string
-        storeId:
-          type: string
-        paymentMethod:
-          type: string
-          enum:
-            - cod
-            - wallet
-            - mixed
-            - official_wallet
-        status:
-          type: string
-          enum:
-            - reference_created
-            - pending_provider
-            - authorized
-            - captured
-            - cod_pending
-            - cod_collected
-            - failed
-            - expired
-            - provider_result_unknown
-        providerReference:
-          type: string
-          description: Empty unless a future WLT-owned provider integration attaches an external reference.
-        amountMinorUnits:
-          type: integer
-          format: int64
-        currency:
-          type: string
-        capturedAt:
-          type: string
-          format: date-time
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    WltCreatePaymentSessionRequest:
-      type: object
-      required:
-        - tenantId
-        - clientId
-        - storeId
-        - amountMinorUnits
-        - currency
-      properties:
-        checkoutIntentId:
-          type: string
-          description: >-
-            Exactly one of checkoutIntentId or specialRequestId must be
-            provided.
-        specialRequestId:
-          type: string
-          description: >-
-            Exactly one of checkoutIntentId or specialRequestId must be
-            provided.
-        tenantId:
-          type: string
-          description: Trusted tenant context propagated by DSH; not selected by client UI.
-        clientId:
-          type: string
-        storeId:
-          type: string
-        paymentMethod:
-          type: string
-          enum:
-            - cod
-            - wallet
-            - mixed
-            - official_wallet
-        amountMinorUnits:
-          type: integer
-          format: int64
-          minimum: 0
-        currency:
-          type: string
-          default: YER
-        cartSnapshotHash:
-          type: string
-
-    WltPaymentStatusRefResponse:
-      type: object
-      required:
-        - reference
-      properties:
-        reference:
-          $ref: "#/components/schemas/WltPaymentStatusRef"
-
-    WltSettlementStatusRefResponse:
-      type: object
-      required:
-        - reference
-      properties:
-        reference:
-          $ref: "#/components/schemas/WltSettlementStatusRef"
-
-    WltRefundStatusRefResponse:
-      type: object
-      required:
-        - reference
-      properties:
-        reference:
-          $ref: "#/components/schemas/WltRefundStatusRef"
-
-    WltWalletResponse:
-      type: object
-      required:
-        - wallet
-      properties:
-        wallet:
-          $ref: "#/components/schemas/WltWallet"
-
-    WltWallet:
-      type: object
-      required:
-        - id
-        - actorId
-        - actorType
-        - status
-        - currency
-        - availableBalanceMinorUnits
-        - pendingBalanceMinorUnits
-        - heldBalanceMinorUnits
-        - earnedTotalMinorUnits
-        - settledTotalMinorUnits
-        - paidTotalMinorUnits
-        - updatedAt
+        [
+          id,
+          entryType,
+          actorId,
+          actorType,
+          sourceType,
+          sourceId,
+          referenceId,
+          referenceType,
+          amountMinorUnits,
+          currency,
+          debitCredit,
+          balanceAfter,
+          description,
+          createdAt
+        ]
       properties:
         id: { type: string }
+        entryType: { type: string }
         actorId: { type: string }
         actorType: { type: string }
-        status: { type: string }
-        currency: { type: string }
-        availableBalanceMinorUnits: { type: integer, format: int64 }
-        pendingBalanceMinorUnits: { type: integer, format: int64 }
-        heldBalanceMinorUnits: { type: integer, format: int64 }
-        earnedTotalMinorUnits: { type: integer, format: int64 }
-        settledTotalMinorUnits: { type: integer, format: int64 }
-        paidTotalMinorUnits: { type: integer, format: int64 }
-        lastLedgerEntryAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-
-    WltCreatePayoutRequest:
-      type: object
-      required: [beneficiaryActorId, beneficiaryActorType, amountMinorUnits, currency, idempotencyKey]
-      properties:
-        beneficiaryActorId: { type: string }
-        beneficiaryActorType: { type: string }
+        sourceType: { type: string }
+        sourceId: { type: string }
+        orderId: { type: string, nullable: true }
+        visitId: { type: string, nullable: true }
+        storeId: { type: string, nullable: true }
+        partnerId: { type: string, nullable: true }
+        commissionEventId: { type: string, nullable: true }
+        referenceId: { type: string }
+        referenceType: { type: string }
         amountMinorUnits: { type: integer, format: int64 }
         currency: { type: string }
-        idempotencyKey: { type: string }
-
-    WltPayoutOperatorRequest:
+        debitCredit: { type: string }
+        balanceAfter: { type: integer, format: int64 }
+        description: { type: string }
+        idempotencyKey: { type: string, nullable: true }
+        createdAt: { type: string }
+    LedgerEntryListResponse:
       type: object
-      required: [operatorId]
-      additionalProperties: false
-      properties:
-        operatorId:
-          type: string
-          minLength: 1
-          description: Authenticated DSH operator identity. Maker/checker separation is enforced by WLT.
-
-    WltPayoutRequestResponse:
-      type: object
-      required: [payoutRequest]
-      properties:
-        payoutRequest:
-          $ref: "#/components/schemas/WltPayoutRequest"
-
-    WltPayoutRequestListResponse:
-      type: object
-      required: [payoutRequests, total]
-      properties:
-        payoutRequests:
-          type: array
-          items:
-            $ref: "#/components/schemas/WltPayoutRequest"
-        total: { type: integer }
-
-    WltPayoutRequest:
-      type: object
-      required:
-        - id
-        - beneficiaryActorId
-        - beneficiaryActorType
-        - amountMinorUnits
-        - currency
-        - status
-        - requestedAt
-      properties:
-        id: { type: string }
-        beneficiaryActorId: { type: string }
-        beneficiaryActorType: { type: string }
-        amountMinorUnits: { type: integer, format: int64 }
-        currency: { type: string }
-        status:
-          type: string
-          enum: [pending, approved, rejected, provider_pending, processing, provider_result_unknown, completed, failed]
-        requestedAt: { type: string, format: date-time }
-        approvedAt: { type: [string, 'null'], format: date-time }
-        rejectedAt: { type: [string, 'null'], format: date-time }
-        processedAt: { type: [string, 'null'], format: date-time }
-        completedAt: { type: [string, 'null'], format: date-time }
-        failedAt: { type: [string, 'null'], format: date-time }
-        failureReason: { type: string }
-        operatorId: { type: string }
-        approvedByOperatorId: { type: string }
-        rejectedByOperatorId: { type: string }
-        processedByOperatorId: { type: string }
-        completedByOperatorId: { type: string }
-        failedByOperatorId: { type: string }
-        providerReference:
-          type: string
-          description: Persisted provider or simulator transaction reference required before completion.
-        providerStatus:
-          type: string
-          enum: ['', unknown, declined, processed, succeeded]
-        providerProcessedAt: { type: [string, 'null'], format: date-time }
-        idempotencyKey: { type: string }
-
-    WltWalletStatusRefResponse:
-      type: object
-      required:
-        - reference
-      properties:
-        reference:
-          $ref: "#/components/schemas/WltWalletStatusRef"
-
-    WltPaymentSessionResponse:
-      type: object
-      required:
-        - paymentSession
-      properties:
-        paymentSession:
-          $ref: "#/components/schemas/WltPaymentSession"
-
-    WltAuthorizePaymentSessionRequest:
-      type: object
-      description: >-
-        Intentionally empty: the amount/currency to authorize are always
-        read from the payment session's own row (set at reference-creation
-        time), never from the request body -- this prevents amount
-        tampering by the caller. Any body is ignored.
-      properties: {}
-
-    WltCapturePaymentSessionResponse:
-      type: object
-      required:
-        - paymentSession
-      properties:
-        paymentSession:
-          $ref: "#/components/schemas/WltPaymentSession"
-
-    WltRefund:
-      type: object
-      required:
-        - id
-        - paymentSessionId
-        - orderId
-        - clientId
-        - amountMinorUnits
-        - currency
-        - reason
-        - status
-        - createdAt
-        - updatedAt
-      properties:
-        id:
-          type: string
-        paymentSessionId:
-          type: string
-        orderId:
-          type: string
-        clientId:
-          type: string
-        amountMinorUnits:
-          type: integer
-          format: int64
-        currency:
-          type: string
-        reason:
-          type: string
-        status:
-          type: string
-          enum:
-            - requested
-            - approved
-            - processing
-            - completed
-            - rejected
-            - reversed
-        resolvedAt:
-          type: [string, 'null']
-          format: date-time
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    WltCreateRefundRequest:
-      type: object
-      additionalProperties: false
-      description: >-
-        amountMinorUnits/currency are intentionally not accepted here -- the
-        refunded amount is always derived from the referenced payment
-        session's own row, never from caller input, to prevent amount
-        tampering. The session must be captured or cod_collected.
-      required:
-        - paymentSessionId
-        - orderId
-        - clientId
-        - reason
-      properties:
-        paymentSessionId:
-          type: string
-        orderId:
-          type: string
-        clientId:
-          type: string
-        reason:
-          type: string
-          minLength: 1
-          maxLength: 1000
-
-
-    WltGovernedOrderCancellationRequest:
-      type: object
-      additionalProperties: false
-      required: [paymentSessionId, orderId, clientId, reason]
-      properties:
-        paymentSessionId: { type: string, minLength: 1 }
-        orderId: { type: string, minLength: 1 }
-        clientId: { type: string, minLength: 1 }
-        reason: { type: string, minLength: 1, maxLength: 1000 }
-
-    WltGovernedOrderCancellationAction:
-      type: string
-      enum: [expired, refund_requested, none]
-
-    WltGovernedOrderCancellationResponse:
-      type: object
-      additionalProperties: false
-      required: [action]
-      properties:
-        action:
-          $ref: "#/components/schemas/WltGovernedOrderCancellationAction"
-        paymentSession:
-          $ref: "#/components/schemas/WltPaymentSession"
-        refund:
-          $ref: "#/components/schemas/WltRefund"
-        sessionStatus:
-          type: string
-
-    WltCancelPaymentSessionForOrderRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - orderId
-        - clientId
-        - reason
-      properties:
-        orderId:
-          type: string
-        clientId:
-          type: string
-        reason:
-          type: string
-          minLength: 1
-          maxLength: 1000
-
-    WltCancelPaymentSessionForOrderResponse:
-      type: object
-      required:
-        - action
-      properties:
-        action:
-          type: string
-          enum:
-            - expired
-            - refund_requested
-            - none
-        paymentSession:
-          $ref: "#/components/schemas/WltPaymentSession"
-        refund:
-          $ref: "#/components/schemas/WltRefund"
-        sessionStatus:
-          type: string
-
-    WltCreateRefundResponse:
-      type: object
-      additionalProperties: false
-      required:
-        - refund
-        - replayed
-      properties:
-        refund:
-          $ref: "#/components/schemas/WltRefund"
-        replayed:
-          type: boolean
-          description: True when the existing active refund was returned idempotently.
-
-    WltRefundResponse:
-      type: object
-      required:
-        - refund
-      properties:
-        refund:
-          $ref: "#/components/schemas/WltRefund"
-
-    WltRefundListResponse:
-      type: object
-      required:
-        - refunds
-      properties:
-        refunds:
-          type: array
-          items:
-            $ref: "#/components/schemas/WltRefund"
-
-    WltSettlement:
-      type: object
-      required:
-        - id
-        - partnerId
-        - periodStart
-        - periodEnd
-        - grossAmount
-        - platformFee
-        - netAmount
-        - currency
-        - orderCount
-        - status
-        - createdAt
-        - updatedAt
-      properties:
-        id:
-          type: string
-        partnerId:
-          type: string
-        periodStart:
-          type: string
-          format: date
-        periodEnd:
-          type: string
-          format: date
-        grossAmount:
-          type: integer
-          format: int64
-        platformFee:
-          type: integer
-          format: int64
-        netAmount:
-          type: integer
-          format: int64
-        currency:
-          type: string
-        orderCount:
-          type: integer
-        status:
-          type: string
-          enum:
-            - pending
-            - processing
-            - settled
-            - failed
-            - reversed
-        settledAt:
-          type: [string, 'null']
-          format: date-time
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    WltCreateSettlementRequest:
-      type: object
-      additionalProperties: false
-      required: [partnerId, periodStart, periodEnd, orderSources, operatorId]
-      properties:
-        partnerId: { type: string, minLength: 1 }
-        periodStart: { type: string, format: date }
-        periodEnd: { type: string, format: date }
-        operatorId: { type: string, minLength: 1 }
-        orderSources:
-          type: array
-          minItems: 1
-          items:
-            $ref: "#/components/schemas/WltDeliveredOrderSettlementSource"
-
-    WltDeliveredOrderSettlementSource:
-      type: object
-      additionalProperties: false
-      required: [orderId, grossAmountMinorUnits, currency, deliveredAt]
-      properties:
-        orderId: { type: string, minLength: 1 }
-        grossAmountMinorUnits: { type: integer, format: int64, minimum: 1 }
-        currency: { type: string, minLength: 1 }
-        deliveredAt: { type: string, format: date-time }
-
-    WltSettlementPolicyRequest:
-      type: object
-      additionalProperties: false
-      required: [feeBasisPoints, operatorId]
-      properties:
-        feeBasisPoints: { type: integer, minimum: 0, maximum: 10000 }
-        currency: { type: string, default: YER }
-        status: { type: string, enum: [active, inactive], default: active }
-        operatorId: { type: string, minLength: 1 }
-
-    WltSettlementPolicy:
-      type: object
-      required: [partnerId, feeBasisPoints, currency, status, updatedByOperatorId, updatedAt]
-      properties:
-        partnerId: { type: string }
-        feeBasisPoints: { type: integer }
-        currency: { type: string }
-        status: { type: string, enum: [active, inactive] }
-        updatedByOperatorId: { type: string }
-        updatedAt: { type: string, format: date-time }
-
-    WltSettlementPolicyResponse:
-      type: object
-      required: [settlementPolicy]
-      properties:
-        settlementPolicy:
-          $ref: "#/components/schemas/WltSettlementPolicy"
-
-    WltSettlementResponse:
-      type: object
-      required:
-        - settlement
-      properties:
-        settlement:
-          $ref: "#/components/schemas/WltSettlement"
-
-    WltSettlementListResponse:
-      type: object
-      required:
-        - settlements
-      properties:
-        settlements:
-          type: array
-          items:
-            $ref: "#/components/schemas/WltSettlement"
-
-    WltSettlementSummary:
-      type: object
-      required:
-        - partnerId
-        - totalGross
-        - totalFee
-        - totalNet
-        - totalOrders
-        - settlementCount
-        - currency
-      properties:
-        partnerId:
-          type: string
-        periodStart:
-          type: string
-          format: date
-        periodEnd:
-          type: string
-          format: date
-        totalGross:
-          type: integer
-          format: int64
-        totalFee:
-          type: integer
-          format: int64
-        totalNet:
-          type: integer
-          format: int64
-        totalOrders:
-          type: integer
-        settlementCount:
-          type: integer
-        currency:
-          type: string
-
-    WltSettlementSummaryResponse:
-      type: object
-      required:
-        - summary
-      properties:
-        summary:
-          $ref: "#/components/schemas/WltSettlementSummary"
-
-    WltCodRecord:
-      type: object
-      required:
-        - id
-        - orderId
-        - collectorType
-        - collectorId
-        - partnerId
-        - amountMinorUnits
-        - currency
-        - status
-        - createdAt
-        - updatedAt
-      properties:
-        id: { type: string }
-        orderId: { type: string }
-        captainId:
-          type: string
-          description: Compatibility projection, present only when collectorType is captain.
-        collectorType:
-          type: string
-          enum: [captain, store_courier, partner_store]
-        collectorId: { type: string, minLength: 1 }
-        partnerId: { type: string }
-        amountMinorUnits: { type: integer, format: int64, minimum: 1 }
-        currency: { type: string }
-        status:
-          type: string
-          enum: [pending_collection, collected, remitted, disputed, resolved]
-        collectedAt: { type: [string, 'null'], format: date-time }
-        remittedAt: { type: [string, 'null'], format: date-time }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-
-    WltCreateCodRecordRequest:
-      type: object
-      additionalProperties: false
-      description: >-
-        Internal DSH-only custody handoff. Monetary values are forbidden in the
-        request and are always derived from WLT's payment session.
-      required: [orderId, collectorType, collectorId, partnerId, checkoutIntentId]
-      properties:
-        orderId: { type: string, minLength: 1 }
-        collectorType:
-          type: string
-          enum: [captain, store_courier, partner_store]
-        collectorId: { type: string, minLength: 1 }
-        captainId:
-          type: string
-          description: Deprecated compatibility input for captain collectors.
-        partnerId: { type: string, minLength: 1 }
-        checkoutIntentId: { type: string, minLength: 1 }
-
-    WltCodRecordResponse:
-      type: object
-      required:
-        - codRecord
-      properties:
-        codRecord:
-          $ref: "#/components/schemas/WltCodRecord"
-
-    WltCodRecordListResponse:
-      type: object
-      required:
-        - codRecords
-      properties:
-        codRecords:
-          type: array
-          items:
-            $ref: "#/components/schemas/WltCodRecord"
-
-    WltCommission:
-      type: object
-      required:
-        - id
-        - orderId
-        - captainId
-        - partnerId
-        - commissionType
-        - amountMinorUnits
-        - currency
-        - status
-        - createdAt
-      properties:
-        id:
-          type: string
-        orderId:
-          type: string
-        captainId:
-          type: string
-        partnerId:
-          type: string
-        commissionType:
-          type: string
-          enum:
-            - delivery_fee
-            - platform_fee
-            - cod_fee
-            - partner_discount
-        amountMinorUnits:
-          type: integer
-          format: int64
-        currency:
-          type: string
-        status:
-          type: string
-          enum:
-            - pending
-            - confirmed
-            - settled
-            - reversed
-        settledAt:
-          type: [string, 'null']
-          format: date-time
-        createdAt:
-          type: string
-          format: date-time
-
-    WltCreateCommissionRequest:
-      type: object
-      required:
-        - orderId
-        - captainId
-        - partnerId
-        - amountMinorUnits
-      properties:
-        orderId:
-          type: string
-        captainId:
-          type: string
-        partnerId:
-          type: string
-        commissionType:
-          type: string
-          enum:
-            - delivery_fee
-            - platform_fee
-            - cod_fee
-            - partner_discount
-          default: delivery_fee
-        amountMinorUnits:
-          type: integer
-          format: int64
-        currency:
-          type: string
-          default: YER
-
-    WltCommissionResponse:
-      type: object
-      required:
-        - commission
-      properties:
-        commission:
-          $ref: "#/components/schemas/WltCommission"
-
-    WltCommissionListResponse:
-      type: object
-      required:
-        - commissions
-      properties:
-        commissions:
-          type: array
-          items:
-            $ref: "#/components/schemas/WltCommission"
-
-    WltLedgerEntry:
-      type: object
-      required:
-        - id
-        - entryType
-        - actorId
-        - actorType
-        - referenceId
-        - referenceType
-        - amountMinorUnits
-        - currency
-        - debitCredit
-        - balanceAfter
-        - description
-        - createdAt
-      properties:
-        id:
-          type: string
-        entryType:
-          type: string
-        actorId:
-          type: string
-        actorType:
-          type: string
-          enum:
-            - client
-            - partner
-            - captain
-            - system
-            - platform
-            - field
-        orderId:
-          type: [string, 'null']
-        referenceId:
-          type: string
-        referenceType:
-          type: string
-        amountMinorUnits:
-          type: integer
-          format: int64
-        currency:
-          type: string
-        debitCredit:
-          type: string
-          enum:
-            - debit
-            - credit
-        balanceAfter:
-          type: integer
-          format: int64
-        description:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-
-    WltCreateLedgerEntryRequest:
-      type: object
-      required:
-        - entryType
-        - actorId
-        - amountMinorUnits
-        - debitCredit
-        - balanceAfter
-      properties:
-        entryType:
-          type: string
-        actorId:
-          type: string
-        actorType:
-          type: string
-          enum:
-            - client
-            - partner
-            - captain
-            - system
-            - platform
-            - field
-          default: system
-        orderId:
-          type: [string, 'null']
-        referenceId:
-          type: string
-        referenceType:
-          type: string
-        amountMinorUnits:
-          type: integer
-          format: int64
-        currency:
-          type: string
-          default: YER
-        debitCredit:
-          type: string
-          enum:
-            - debit
-            - credit
-        balanceAfter:
-          type: integer
-          format: int64
-        description:
-          type: string
-
-    WltLedgerEntryResponse:
-      type: object
-      required:
-        - ledgerEntry
-      properties:
-        ledgerEntry:
-          $ref: "#/components/schemas/WltLedgerEntry"
-
-    WltLedgerEntryListResponse:
-      type: object
-      required:
-        - ledgerEntries
+      required: [ ledgerEntries ]
       properties:
         ledgerEntries:
           type: array
-          items:
-            $ref: "#/components/schemas/WltLedgerEntry"
-
-    WltLedgerAccountBalance:
+          items: { $ref: '#/components/schemas/LedgerEntry' }
+    WltPaymentSession:
       type: object
-      required:
-        - accountType
-        - category
-        - normalBalanceSide
-        - currency
-        - balanceMinorUnits
       properties:
-        accountType:
-          type: string
-          enum:
-            - wallet
-            - platform_revenue
-            - platform_payable
-            - provider_clearing
-            - cash_in_transit
-            - platform_commission_receivable
-        category:
-          type: string
-          enum:
-            - asset
-            - liability
-            - revenue
-            - expense
-        normalBalanceSide:
-          type: string
-          enum:
-            - debit
-            - credit
-        currency:
-          type: string
-        balanceMinorUnits:
-          type: integer
-          format: int64
-          description: Correctly signed per accountType's normal balance side, not the raw debit-adds/credit-subtracts kernel column.
-
-    WltLedgerCurrencySummary:
-      type: object
-      required:
-        - currency
-        - assetsMinorUnits
-        - liabilitiesMinorUnits
-        - revenueMinorUnits
-        - expensesMinorUnits
-        - netPositionMinorUnits
-        - accounts
-      properties:
-        currency:
-          type: string
-        assetsMinorUnits:
-          type: integer
-          format: int64
-        liabilitiesMinorUnits:
-          type: integer
-          format: int64
-        revenueMinorUnits:
-          type: integer
-          format: int64
-        expensesMinorUnits:
-          type: integer
-          format: int64
-        netPositionMinorUnits:
-          type: integer
-          format: int64
-        accounts:
-          type: array
-          items:
-            $ref: "#/components/schemas/WltLedgerAccountBalance"
-
-    WltFinancialSummary:
-      type: object
-      required:
-        - currencies
-        - dataCompleteness
-      properties:
-        currencies:
-          type: array
-          items:
-            $ref: "#/components/schemas/WltLedgerCurrencySummary"
-        dataCompleteness:
-          type: array
-          description: >-
-            Known financial events not yet posted to this kernel (e.g.
-            payment capture), so consumers can render a caveat instead of
-            treating the summary as complete.
-          items:
-            type: string
-
-    WltFinancialSummaryResponse:
-      type: object
-      required:
-        - financialSummary
-      properties:
-        financialSummary:
-          $ref: "#/components/schemas/WltFinancialSummary"
-
-    WltUpsertPayoutDestinationRequest:
-      type: object
-      required: [beneficiaryName, bankName, bankBranch, accountNumber, iban, payoutMobileNumber, settlementPreference]
-      properties:
-        beneficiaryName:
-          type: string
-        bankName:
-          type: string
-        bankBranch:
-          type: string
-        accountNumber:
-          type: string
-        iban:
-          type: string
-        payoutMobileNumber:
-          type: string
-        settlementPreference:
-          type: string
-        bankAccountHolderMatchesOwner:
-          type: boolean
-        bankNotes:
-          type: string
-        createdByActorId:
-          type: string
-
-    WltPayoutDestinationRefResponse:
-      type: object
-      required: [id, partnerId, settlementPreference, maskedAccountNumber, maskedIban, maskedMobileNumber, beneficiaryName, bankName, bankBranch, active, updatedAt]
-      properties:
-        id:
-          type: string
-        partnerId:
-          type: string
-        settlementPreference:
-          type: string
-        maskedAccountNumber:
-          type: string
-        maskedIban:
-          type: string
-        maskedMobileNumber:
-          type: string
-        beneficiaryName:
-          type: string
-        bankName:
-          type: string
-        bankBranch:
-          type: string
-        active:
-          type: boolean
-        updatedAt:
-          type: string
-
-    WltReconciliationCase:
-      type: object
-      required:
-        - id
-        - paymentSessionId
-        - operation
-        - triggerReason
-        - status
-        - createdAt
-        - updatedAt
-      properties:
-        id:
-          type: string
-        paymentSessionId:
-          type: string
-        operation:
-          type: string
-        triggerReason:
-          type: string
         status:
           type: string
-          enum: [open, resolved]
-        assignedToOperatorId:
-          type: string
-        assignedAt:
-          type: [string, 'null']
-          format: date-time
-        resolvedByOperatorId:
-          type: string
-        resolutionAction:
-          type: string
-        resolutionNote:
-          type: string
-        resolution:
-          type: string
-        resolvedAt:
-          type: [string, 'null']
-          format: date-time
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    WltReconciliationCaseResponse:
-      type: object
-      required:
-        - reconciliationCase
-      properties:
-        reconciliationCase:
-          $ref: "#/components/schemas/WltReconciliationCase"
-
-    WltReconciliationCaseListResponse:
-      type: object
-      required:
-        - reconciliationCases
-      properties:
-        reconciliationCases:
-          type: array
-          items:
-            $ref: "#/components/schemas/WltReconciliationCase"
-
-    WltAssignReconciliationCaseRequest:
-      type: object
-      required:
-        - operatorId
-      properties:
-        operatorId:
-          type: string
-
-    WltResolveReconciliationCaseRequest:
-      type: object
-      required:
-        - operatorId
-        - resolutionAction
-      properties:
-        operatorId:
-          type: string
-        resolutionAction:
-          type: string
-          enum: [confirmed_success, confirmed_failed, manual_adjustment, ignored]
-        resolutionNote:
-          type: string
+          enum:
+            [
+              reference_created,
+              pending_provider,
+              authorization_pending,
+              authorized,
+              capture_pending,
+              captured,
+              cod_pending,
+              cod_collected,
+              failed,
+              expired,
+              provider_result_unknown
+            ]

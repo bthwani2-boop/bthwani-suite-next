@@ -9,6 +9,7 @@ import (
 
 func TestDeliveryCollectionMutationAliasesRequireSovereignEvidence(t *testing.T) {
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-token")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "operator-context-delivery-collection-test")
 	mux := http.NewServeMux()
 	RegisterDeliveryCollectionRoutes(mux, nil, true)
 
@@ -20,6 +21,7 @@ func TestDeliveryCollectionMutationAliasesRequireSovereignEvidence(t *testing.T)
 			request := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{}`))
 			request.Header.Set("Authorization", "Bearer test-token")
 			request.Header.Set("X-Service-Caller", "dsh")
+			request.Header.Set("X-Operator-Context-ID", "caller-controlled-context-must-be-ignored")
 			request.Header.Set("X-Correlation-ID", "correlation-1")
 			request.Header.Set("Idempotency-Key", "idempotency-1")
 			response := httptest.NewRecorder()

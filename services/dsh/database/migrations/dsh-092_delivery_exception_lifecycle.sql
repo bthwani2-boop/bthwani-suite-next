@@ -7,7 +7,7 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS dsh_delivery_exceptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id TEXT NOT NULL,
+    operator_context_id TEXT NOT NULL,
     assignment_id UUID NOT NULL REFERENCES dsh_assignments(id) ON DELETE CASCADE,
     order_id UUID NOT NULL REFERENCES dsh_orders(id) ON DELETE CASCADE,
     captain_id TEXT NOT NULL,
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS dsh_delivery_exceptions (
         (status <> 'resolved' AND resolved_at IS NULL AND resolved_by_actor_id IS NULL
          AND resolution_action IS NULL AND resolution_note IS NULL)
     ),
-    CONSTRAINT dsh_delivery_exceptions_correlation_unique UNIQUE (tenant_id, correlation_id)
+    CONSTRAINT dsh_delivery_exceptions_correlation_unique UNIQUE (operator_context_id, correlation_id)
 );
 
 

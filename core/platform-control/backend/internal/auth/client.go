@@ -23,7 +23,7 @@ type Permission struct {
 
 type Identity struct {
 	Subject     string       `json:"subject"`
-	TenantID    string       `json:"tenantId"`
+	OperatorContextID    string       `json:"operatorContextId"`
 	Roles       []string     `json:"roles"`
 	Permissions []Permission `json:"permissions"`
 	AuthState   string       `json:"authState"`

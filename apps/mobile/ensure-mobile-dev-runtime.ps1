@@ -8,11 +8,12 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $RuntimePhase = Join-Path $PSScriptRoot "invoke-runtime-phase.ps1"
 $RuntimeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
+$DatabaseConvergenceScript = Join-Path $PSScriptRoot "converge-local-runtime-database.ps1"
 $DataScript = Join-Path $PSScriptRoot "mobile-dev-data.mjs"
 $MobileEnvFile = Join-Path $RepoRoot "infra/local/mobile.env"
 $Profiles = "identity,workforce,dsh,wlt,media"
 
-foreach ($requiredPath in @($RuntimePhase, $RuntimeScript, $DataScript)) {
+foreach ($requiredPath in @($RuntimePhase, $RuntimeScript, $DatabaseConvergenceScript, $DataScript)) {
   if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
     throw "Required mobile runtime file not found: $requiredPath"
   }
@@ -62,7 +63,6 @@ function Test-BthwaniMobileBackend {
   $checks = @(
     @{ Uri = "http://127.0.0.1:58082/identity/health"; Status = "healthy" },
     @{ Uri = "http://127.0.0.1:58086/workforce/health"; Status = "healthy" },
-    @{ Uri = "http://127.0.0.1:58083/wlt/health"; Status = "healthy" },
     @{ Uri = "http://127.0.0.1:58080/dsh/health"; Status = "healthy" }
   )
 
@@ -103,6 +103,13 @@ function Ensure-BthwaniMobileBackend {
   }
 
   Invoke-BthwaniProcess `
+    -Description "mobile-runtime-database-convergence" `
+    -FilePath "pwsh" `
+    -Arguments @(
+      "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $DatabaseConvergenceScript
+    )
+
+  Invoke-BthwaniProcess `
     -Description "mobile-runtime-up" `
     -FilePath "pwsh" `
     -Arguments @(
@@ -110,8 +117,21 @@ function Ensure-BthwaniMobileBackend {
       "-Action", "up", "-Profiles", $Profiles
     )
 
-  if (-not (Test-BthwaniMobileBackend)) {
-    throw "Mobile backend startup completed, but Identity, Workforce, WLT or DSH is still unhealthy."
+  $maxWaitSeconds = 30
+  $sw = [System.Diagnostics.Stopwatch]::StartNew()
+  $isHealthy = $false
+
+  while ($sw.Elapsed.TotalSeconds -lt $maxWaitSeconds) {
+    if (Test-BthwaniMobileBackend) {
+      $isHealthy = $true
+      break
+    }
+    Write-Host "Waiting for Mobile backend to become healthy..."
+    Start-Sleep -Seconds 2
+  }
+
+  if (-not $isHealthy) {
+    throw "Mobile backend startup completed, but an application-facing Identity, Workforce, or DSH endpoint is still unhealthy after $maxWaitSeconds seconds."
   }
 }
 
@@ -145,7 +165,8 @@ function Repair-BthwaniMobileDevData {
 
 Import-BthwaniMobileEnvironment
 
-$mutex = [Threading.Mutex]::new($false, "BthwaniMobileDevRuntimeBootstrap")
+$mutexName = if ($IsWindows) { "Global\BthwaniMobileDevRuntimeBootstrap" } else { "BthwaniMobileDevRuntimeBootstrap" }
+$mutex = [Threading.Mutex]::new($false, $mutexName)
 $mutexAcquired = $false
 try {
   try {

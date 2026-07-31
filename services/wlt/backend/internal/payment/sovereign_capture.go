@@ -74,7 +74,7 @@ func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, client
 		    updated_at = NOW()
 		WHERE id = $1 AND status = 'capture_pending'
 		RETURNING id, checkout_intent_id, special_request_id,
-		          tenant_id,
+		          operator_context_id,
 		          client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
@@ -85,7 +85,7 @@ func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, client
 	if err != nil {
 		return finalizationFailure(fmt.Errorf("finalize captured session: %w", err))
 	}
-	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeCaptured, s.ID, s.TenantID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
+	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeCaptured, s.ID, s.OperatorContextID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
 		return finalizationFailure(fmt.Errorf("enqueue captured DSH projection: %w", err))
 	}
 	if err := tx.Commit(); err != nil {

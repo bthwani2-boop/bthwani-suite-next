@@ -3,7 +3,7 @@
   "service": "wlt",
   "operations": [
     {
-      "operationId": "createWltSettlement",
+      "operationId": "createWltEvidenceBackedSettlement",
       "method": "POST",
       "path": "/wlt/settlements",
       "state": "CONTRACT_ACTIVE",

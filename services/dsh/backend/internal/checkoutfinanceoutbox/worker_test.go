@@ -46,7 +46,7 @@ func uniqueID(prefix string) string {
 func seedCheckoutIntentFixture(t *testing.T, db *sql.DB, paymentSessionID string) (storeID, clientID, intentID string) {
 	t.Helper()
 	ctx := context.Background()
-	tenantID := uniqueID("tenant-checkout-finance-outbox")
+	operatorContextID := uniqueID("OperatorContext-checkout-finance-outbox")
 	storeID = uniqueID("checkout-finance-outbox-store")
 	clientID = uniqueID("checkout-finance-outbox-client")
 
@@ -59,11 +59,11 @@ func seedCheckoutIntentFixture(t *testing.T, db *sql.DB, paymentSessionID string
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID) })
 
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_checkout_intents (tenant_id, client_id, cart_id, store_id, state, payment_method, wlt_payment_session_id, subtotal_minor_units, delivery_fee_minor_units, discount_minor_units, total_minor_units, currency, pricing_snapshot_hash)
+		INSERT INTO dsh_checkout_intents (operator_context_id, client_id, cart_id, store_id, state, payment_method, wlt_payment_session_id, subtotal_minor_units, delivery_fee_minor_units, discount_minor_units, total_minor_units, currency, pricing_snapshot_hash)
 		VALUES ($1, $2, gen_random_uuid(), $3, 'payment_pending', 'cod', $4,
 		        1000, 0, 0, 1000, 'YER', repeat('e', 64))
 		RETURNING id::text`,
-		tenantID, clientID, storeID, paymentSessionID,
+		operatorContextID, clientID, storeID, paymentSessionID,
 	).Scan(&intentID); err != nil {
 		t.Fatalf("failed to insert test checkout intent: %v", err)
 	}
@@ -164,8 +164,8 @@ func TestProcessOnceDispatchesCancelForOrderDBIntegration(t *testing.T) {
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_stores WHERE id = $1`, storeID) })
 
 	if err := db.QueryRow(`
-		INSERT INTO dsh_orders (tenant_id, checkout_intent_id, store_id, client_id, status, wlt_payment_ref_id)
-		SELECT tenant_id, $1::uuid, $2, $3, 'cancelled_by_operator', $4
+		INSERT INTO dsh_orders (operator_context_id, checkout_intent_id, store_id, client_id, status, wlt_payment_ref_id)
+		SELECT operator_context_id, $1::uuid, $2, $3, 'cancelled_by_operator', $4
 		FROM dsh_checkout_intents
 		WHERE id = $1::uuid
 		RETURNING id::text`,

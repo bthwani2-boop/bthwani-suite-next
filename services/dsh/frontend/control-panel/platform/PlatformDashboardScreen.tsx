@@ -10,6 +10,7 @@ import {
   CpPageHeader,
   CpRetryButton,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -27,6 +28,7 @@ import {
 import { hasControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import { useControlPanelSession } from "../../shared/session/control-panel-session";
 import { PlatformChangeWorkflowPanel } from "./PlatformChangeWorkflowPanel";
+import { PlatformGovernanceVisual } from "./PlatformGovernanceVisual";
 import { PlatformPoliciesContent } from "./PlatformPoliciesScreen";
 import { PlatformRolloutPanel } from "./PlatformRolloutPanel";
 import { ProviderRegistryPanel } from "./ProviderRegistryPanel";
@@ -60,6 +62,25 @@ function statusTone(status: string): "success" | "warning" | "danger" | "neutral
   return "neutral";
 }
 
+const STATUS_LABEL_AR: Record<string, string> = {
+  OPERATIONAL: "تعمل بكامل طاقتها",
+  READ_ONLY_BOUND: "متاحة للقراءة فقط",
+  PARTIALLY_BOUND: "متاحة جزئيًا",
+  UNKNOWN_HEALTH: "حالة الصحة غير معروفة",
+  CONTRACT_REQUIRED: "بانتظار توفيق العقد",
+  FIX_REQUIRED: "يتطلب إصلاحًا",
+  ROLLBACK_UNAVAILABLE: "التراجع غير متاح",
+};
+
+function statusLabelAr(status: string): string {
+  return STATUS_LABEL_AR[status] ?? status;
+}
+
+function formatGeneratedAt(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? iso : date.toLocaleString("ar-YE");
+}
+
 function EmptyRuntimeState({
   title,
   state,
@@ -81,22 +102,44 @@ function OverviewTab({ data }: { readonly data: PlatformControlReadModel }) {
   const effective = data.effectiveConfig;
   return (
     <View style={styles.stack}>
-      <CpStatePanel
-        role="status"
-        title={`الحالة السيادية: ${data.snapshot.status}`}
-        description={data.snapshot.evidence.join(" / ")}
-        code={`revision=${data.snapshot.revision}; generatedAt=${data.snapshot.generatedAt}`}
-      />
+      <View style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: spacing[2] }}>
+        <Text role="titleSm">الحالة السيادية</Text>
+        <CpBadge tone={statusTone(data.snapshot.status)}>{statusLabelAr(data.snapshot.status)}</CpBadge>
+      </View>
+
+      {data.snapshot.evidence.length > 0 ? (
+        <Card>
+          <View style={styles.cardContent}>
+            <Text role="label">تفاصيل تقنية (Evidence)</Text>
+            {data.snapshot.evidence.map((entry, index) => (
+              <Text key={index} role="caption" tone="muted">— {entry}</Text>
+            ))}
+            <Text role="caption" tone="muted">
+              مراجعة {data.snapshot.revision} · آخر تحديث {formatGeneratedAt(data.snapshot.generatedAt)}
+            </Text>
+          </View>
+        </Card>
+      ) : null}
 
       {effective ? (
         <Card>
           <View style={styles.cardContent}>
             <Text role="titleSm">الإعداد الفعلي المطبق</Text>
             <Text role="caption">المراجعة: {effective.revision}</Text>
-            <Text role="caption">
-              stale={String(effective.stale)} / fallback={String(effective.fallbackUsed)}
-            </Text>
-            <Text role="caption">{effective.evaluationTrace.join(" / ")}</Text>
+            <View style={{ display: "flex", flexDirection: "row", gap: spacing[2] }}>
+              <CpBadge tone={effective.stale ? "warning" : "success"}>
+                {effective.stale ? "غير محدَّث" : "محدَّث"}
+              </CpBadge>
+              {effective.fallbackUsed ? <CpBadge tone="warning">قيمة احتياطية مُستخدمة</CpBadge> : null}
+            </View>
+            {effective.evaluationTrace.length > 0 ? (
+              <View style={styles.cardContent}>
+                <Text role="label">مسار التقييم</Text>
+                {effective.evaluationTrace.map((step, index) => (
+                  <Text key={index} role="caption" tone="muted">— {step}</Text>
+                ))}
+              </View>
+            ) : null}
           </View>
         </Card>
       ) : (
@@ -129,7 +172,7 @@ function VariablesTab({ data }: { readonly data: PlatformControlReadModel }) {
     <View style={styles.stack}>
       <Text role="titleSm">المتغيرات السيادية المطبقة</Text>
       {variablesFailure ? (
-        <CpStatePanel role="alert" title="تعذر تحميل المتغيرات" code={variablesFailure} />
+        <CpStateView kind="error" title="تعذر تحميل المتغيرات" code={variablesFailure} />
       ) : data.variables.length === 0 ? (
         <EmptyRuntimeState title="لا توجد متغيرات مطبقة" state={data.snapshot.variablesState} />
       ) : (
@@ -161,7 +204,7 @@ function VariablesTab({ data }: { readonly data: PlatformControlReadModel }) {
 
       <Text role="titleSm">أعلام الميزات المطبقة</Text>
       {flagsFailure ? (
-        <CpStatePanel role="alert" title="تعذر تحميل أعلام الميزات" code={flagsFailure} />
+        <CpStateView kind="error" title="تعذر تحميل أعلام الميزات" code={flagsFailure} />
       ) : data.featureFlags.length === 0 ? (
         <EmptyRuntimeState title="لا توجد أعلام ميزات مطبقة" state={data.snapshot.flagsState} />
       ) : (
@@ -202,7 +245,7 @@ function VariablesTab({ data }: { readonly data: PlatformControlReadModel }) {
 function ServicesTab({ data }: { readonly data: PlatformControlReadModel }) {
   const failure = resourceFailure(data, "services");
   if (failure) {
-    return <CpStatePanel role="alert" title="تعذر تحميل حالة الخدمات" code={failure} />;
+    return <CpStateView kind="error" title="تعذر تحميل حالة الخدمات" code={failure} />;
   }
   if (data.services.length === 0) {
     return <EmptyRuntimeState title="لا توجد خدمات مرصودة" state={data.snapshot.servicesState} />;
@@ -236,11 +279,11 @@ function ServicesTab({ data }: { readonly data: PlatformControlReadModel }) {
 
 function HealthTab({ data }: { readonly data: PlatformControlReadModel }) {
   if (isRestricted(data, "health")) {
-    return <CpStatePanel role="alert" title="صلاحية صحة المنصة مطلوبة" code="PLATFORM_HEALTH_PERMISSION_REQUIRED" />;
+    return <CpStateView kind="error" title="صلاحية صحة المنصة مطلوبة" code="PLATFORM_HEALTH_PERMISSION_REQUIRED" />;
   }
   const failure = resourceFailure(data, "health");
   if (failure) {
-    return <CpStatePanel role="alert" title="تعذر تحميل صحة المنصة" code={failure} />;
+    return <CpStateView kind="error" title="تعذر تحميل صحة المنصة" code={failure} />;
   }
   if (!data.health) {
     return <EmptyRuntimeState title="لا توجد قراءة صحة" state={data.snapshot.healthState} />;
@@ -261,11 +304,11 @@ function HealthTab({ data }: { readonly data: PlatformControlReadModel }) {
 
 function AuditTrail({ data }: { readonly data: PlatformControlReadModel }) {
   if (isRestricted(data, "audit-events")) {
-    return <CpStatePanel role="alert" title="صلاحية سجل التدقيق مطلوبة" code="PLATFORM_AUDIT_PERMISSION_REQUIRED" />;
+    return <CpStateView kind="error" title="صلاحية سجل التدقيق مطلوبة" code="PLATFORM_AUDIT_PERMISSION_REQUIRED" />;
   }
   const failure = resourceFailure(data, "audit-events");
   if (failure) {
-    return <CpStatePanel role="alert" title="تعذر تحميل سجل التدقيق" code={failure} />;
+    return <CpStateView kind="error" title="تعذر تحميل سجل التدقيق" code={failure} />;
   }
   if (data.auditEvents.length === 0) {
     return <EmptyRuntimeState title="لا توجد أحداث تدقيق بعد" state={data.snapshot.auditState} />;
@@ -312,6 +355,7 @@ function ChangeAndRollbackTab({
         description="التطبيق والتراجع يستخدمان معاملات PostgreSQL ومراجعات متوقعة ولقطات قبلية وسجل تدقيق."
         code={`audit=${data.snapshot.auditState}`}
       />
+      <PlatformGovernanceVisual />
       <PlatformChangeWorkflowPanel onChanged={onChanged} />
       <Text role="titleSm">سجل التدقيق</Text>
       <AuditTrail data={data} />
@@ -372,29 +416,29 @@ export function PlatformDashboardScreen({
           <Text role="caption">
             مركز قرار موحد للخدمات والمتغيرات والأعلام والمزودين والسياسات ومناطق الخدمة والصحة ودورة التغيير والإطلاق التدريجي؛ لا يحتوي أعمالًا تشغيلية يومية.
           </Text>
-          <CpKpiStrip>
-            <CpKpiCard label="المتغيرات المطبقة" value={metrics.variables} />
-            <CpKpiCard label="الأعلام المفعّلة" value={metrics.flags} />
-            <CpKpiCard label="الخدمات المرصودة" value={metrics.services} />
-            <CpKpiCard label="طلبات قيد المعالجة" value={metrics.pendingChanges} />
-          </CpKpiStrip>
         </CpPageHeader>
       }
-    >
-      <View style={styles.tabsWrap}>
+      toolbar={
         <CpTabs
           items={EXECUTIVE_TABS.map((tab) => ({ value: tab.id, label: tab.label }))}
           value={mainTab}
           onChange={(value) => setMainTab(value as ExecutiveTabId)}
           aria-label="تبويبات المنصة السيادية"
         />
-      </View>
+      }
+    >
+      <CpKpiStrip>
+        <CpKpiCard label="المتغيرات المطبقة" value={metrics.variables} />
+        <CpKpiCard label="الأعلام المفعّلة" value={metrics.flags} />
+        <CpKpiCard label="الخدمات المرصودة" value={metrics.services} />
+        <CpKpiCard label="طلبات قيد المعالجة" value={metrics.pendingChanges} />
+      </CpKpiStrip>
 
       <View style={styles.content}>
         {mainTab === "policies" ? (
           <PlatformPoliciesContent embedded />
         ) : runtime.state.kind === "loading" ? (
-          <CpStatePanel role="status" title="جاري تحميل الحقيقة السيادية…" />
+          <CpStateView kind="loading" title="جاري تحميل الحقيقة السيادية…" />
         ) : runtime.state.kind === "error" ? (
           <CpStatePanel
             role="alert"

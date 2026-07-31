@@ -6,7 +6,7 @@
 
 CREATE TABLE IF NOT EXISTS dsh_subscription_purchases (
     id TEXT PRIMARY KEY,
-    tenant_id TEXT NOT NULL,
+    operator_context_id TEXT NOT NULL,
     client_id TEXT NOT NULL,
     plan_id UUID NOT NULL REFERENCES dsh_subscription_plans(id),
     wlt_product_reference TEXT NOT NULL,
@@ -20,12 +20,12 @@ CREATE TABLE IF NOT EXISTS dsh_subscription_purchases (
     activated_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (tenant_id, client_id, idempotency_key),
+    UNIQUE (operator_context_id, client_id, idempotency_key),
     UNIQUE (wlt_payment_session_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_dsh_subscription_purchases_client
-    ON dsh_subscription_purchases(tenant_id, client_id, created_at DESC);
+    ON dsh_subscription_purchases(operator_context_id, client_id, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_dsh_subscription_purchases_status
     ON dsh_subscription_purchases(status, updated_at DESC);
@@ -41,7 +41,7 @@ BEGIN
     END IF;
     IF NEW.plan_id <> OLD.plan_id
        OR NEW.client_id <> OLD.client_id
-       OR NEW.tenant_id <> OLD.tenant_id
+       OR NEW.operator_context_id <> OLD.operator_context_id
        OR NEW.wlt_product_reference <> OLD.wlt_product_reference
        OR NEW.wlt_payment_session_id <> OLD.wlt_payment_session_id
        OR NEW.idempotency_key <> OLD.idempotency_key THEN

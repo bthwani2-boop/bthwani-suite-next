@@ -4,7 +4,7 @@ export type OfflineMutationEnvelope = {
   readonly id: string;
   readonly kind: string;
   readonly payload: unknown;
-  readonly tenantScope: string;
+  readonly operatorContextScope: string;
   readonly createdAt: number;
   readonly attempts: number;
 };

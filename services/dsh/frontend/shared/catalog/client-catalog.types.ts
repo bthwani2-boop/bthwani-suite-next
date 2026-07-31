@@ -18,6 +18,7 @@ export type CatalogProduct = {
   readonly description: string;
   readonly sku: string;
   readonly priceReference: string;
+  readonly currency: string;
   readonly originalPriceReference?: string | undefined;
   readonly discountPercent?: number | undefined;
   readonly unitLabel?: string | undefined;

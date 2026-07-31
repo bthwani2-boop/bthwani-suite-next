@@ -11,10 +11,6 @@ export * from './finance-boundary/dsh-wlt-boundary';
 export * from './finance-boundary/dsh-client-wlt-payment-bridge';
 export * from './finance-boundary/dsh-wlt-settlement-bridge.contract';
 
-export * from './finance-visibility/finance-visibility.types';
-export * from './finance-visibility/finance-visibility.states';
-export * from './finance-visibility/finance-visibility.view-model';
-
 export * from './wlt-ledger/wlt-ledger.types';
 
 export * from './wlt-refund/wlt-refund.types';
@@ -22,5 +18,4 @@ export * from './wlt-refund/wlt-refund.types';
 export * from './wlt-settlement/wlt-settlement.types';
 
 export * from './payment';
-export * from './field-commission';
 export * from './field-finance';

@@ -64,12 +64,12 @@ jobs:
               <<< "${entries}")"
           }
 
-          add_backend "${DSH}" dsh services/dsh/backend/go.mod 'services/dsh/database/migrations/*.sql' services/dsh/backend
-          add_backend "${WLT}" wlt services/wlt/backend/go.mod 'services/wlt/database/migrations/*.sql' services/wlt/backend
-          add_backend "${IDENTITY}" identity core/identity/backend/go.mod 'core/identity/database/migrations/*.sql' core/identity/backend
-          add_backend "${WORKFORCE}" workforce core/workforce/backend/go.mod 'core/workforce/database/migrations/*.sql' core/workforce/backend
-          add_backend "${PLATFORM}" platform core/platform-control/backend/go.mod 'core/platform-control/database/migrations/*.sql' core/platform-control/backend
-          add_backend "${PROVIDERS}" providers core/providers/backend/go.mod 'core/providers/database/migrations/*.sql' core/providers/backend
+          add_backend "${DSH}" dsh services/dsh/backend/go.mod services/dsh/database/migrations services/dsh/backend
+          add_backend "${WLT}" wlt services/wlt/backend/go.mod services/wlt/database/migrations services/wlt/backend
+          add_backend "${IDENTITY}" identity core/identity/backend/go.mod core/identity/database/migrations core/identity/backend
+          add_backend "${WORKFORCE}" workforce core/workforce/backend/go.mod core/workforce/database/migrations core/workforce/backend
+          add_backend "${PLATFORM}" platform core/platform-control/backend/go.mod core/platform-control/database/migrations core/platform-control/backend
+          add_backend "${PROVIDERS}" providers core/providers/backend/go.mod core/providers/database/migrations core/providers/backend
 
           count="$(jq 'length' <<< "${entries}")"
           echo "count=${count}" >> "${GITHUB_OUTPUT}"
@@ -100,6 +100,7 @@ jobs:
       PGPASSWORD: ci_runtime_password
       DSH_REQUIRE_DB_TESTS: ${{ matrix.key == 'dsh' && 'true' || 'false' }}
       WLT_REQUIRE_DB_TESTS: ${{ matrix.key == 'wlt' && 'true' || 'false' }}
+      BTHWANI_OPERATOR_CONTEXT_ID: ${{ matrix.key == 'wlt' && 'ci-wlt' || '' }}
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -113,21 +114,24 @@ jobs:
           cache-dependency-path: ${{ matrix.workdir }}/go.sum
       - name: Install PostgreSQL client
         run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
-      - name: Apply migrations
-        shell: bash
+      - name: Apply migrations and verify safety contracts
+        shell: pwsh
         env:
-          MIGRATIONS: ${{ matrix.migrations }}
+          MIGRATION_DIRECTORY: ${{ matrix.migrations }}
+          BACKEND_KEY: ${{ matrix.key }}
         run: |
-          set -euo pipefail
-          found=0
-          for migration in ${MIGRATIONS}; do
-            found=1
-            psql "${DATABASE_URL}" -q -v ON_ERROR_STOP=1 -f "${migration}" >/dev/null
-          done
-          if [[ "${found}" -ne 1 ]]; then
-            echo "::error title=Migration discovery failed::No migrations matched ${MIGRATIONS}"
-            exit 1
-          fi
+          $log = Join-Path $env:RUNNER_TEMP "$env:BACKEND_KEY-migration.log"
+          $output = & pwsh -NoProfile -ExecutionPolicy Bypass `
+            -File tools/scripts/test-service-migration-runner.ps1 `
+            -ServiceKey $env:BACKEND_KEY `
+            -MigrationDirectory $env:MIGRATION_DIRECTORY `
+            -DatabaseUrl $env:DATABASE_URL 2>&1
+          $exitCode = $LASTEXITCODE
+          $output | Tee-Object -FilePath $log
+          if ($exitCode -ne 0) {
+            Write-Error "$env:BACKEND_KEY migration safety verification failed; complete output is retained as an artifact."
+            exit $exitCode
+          }
       - name: Test and build backend
         working-directory: ${{ matrix.workdir }}
         shell: bash
@@ -144,11 +148,13 @@ jobs:
             tail -n 160 "${log}"
             exit 1
           fi
-      - name: Upload verification log
+      - name: Upload verification logs
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ${{ matrix.key }}-go-verification-${{ github.run_id }}
-          path: ${{ runner.temp }}/${{ matrix.key }}-go-verification.log
+          name: ${{ matrix.key }}-backend-verification-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/${{ matrix.key }}-migration.log
+            ${{ runner.temp }}/${{ matrix.key }}-go-verification.log
           if-no-files-found: warn
           retention-days: 7

@@ -26,7 +26,6 @@ func TestMutationRoutesDisabledByDefault(t *testing.T) {
 		{http.MethodPost, "/wlt/cod-records/c-1/collect"},
 		{http.MethodPost, "/wlt/cod-records/c-1/remit"},
 		{http.MethodPost, "/wlt/commissions"},
-		{http.MethodPost, "/wlt/ledger/entries"},
 	}
 
 	for _, route := range gatedRoutes {
@@ -35,6 +34,18 @@ func TestMutationRoutesDisabledByDefault(t *testing.T) {
 		router.ServeHTTP(rec, req)
 		if rec.Code != http.StatusForbidden {
 			t.Fatalf("%s %s: expected 403 FEATURE_NOT_ENABLED, got %d", route.method, route.path, rec.Code)
+		}
+	}
+}
+
+func TestRetiredLedgerMutationRouteIsNotRegistered(t *testing.T) {
+	for _, mutationsEnabled := range []bool{false, true} {
+		router := NewRouter(nil, mutationsEnabled)
+		req := httptest.NewRequest(http.MethodPost, "/wlt/ledger/entries", nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("mutationsEnabled=%t: retired POST /wlt/ledger/entries must return 404, got %d", mutationsEnabled, rec.Code)
 		}
 	}
 }
@@ -84,7 +95,6 @@ func TestMutationRoutesRequireServiceAuth(t *testing.T) {
 		{http.MethodPost, "/wlt/cod-records/c-1/collect"},
 		{http.MethodPost, "/wlt/cod-records/c-1/remit"},
 		{http.MethodPost, "/wlt/commissions"},
-		{http.MethodPost, "/wlt/ledger/entries"},
 		{http.MethodPost, "/wlt/payout-requests"},
 		{http.MethodPost, "/wlt/payout-requests/p-1/approve"},
 		{http.MethodPost, "/wlt/payout-requests/p-1/reject"},

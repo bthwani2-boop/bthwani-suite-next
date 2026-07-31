@@ -11,6 +11,7 @@ import {
   CpPageHeader,
   CpRetryButton,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -21,7 +22,8 @@ import {
   useZonesController,
 } from "../../shared/platform";
 import { ClientAddressPrivacySection } from "./ClientAddressPrivacySection";
-import { Jrn029OperationalPolicySection } from "./Jrn029OperationalPolicySection";
+import { DispatchBalancePolicySection } from "./DispatchBalancePolicySection";
+import { OperationalPolicySection } from "./OperationalPolicySection";
 import { MapProviderHealthCard } from "./MapProviderHealthCard";
 import { OperationalPolicyGovernanceSection } from "./OperationalPolicyGovernanceSection";
 import { ServiceAreaGovernanceSection } from "./ServiceAreaGovernanceSection";
@@ -41,7 +43,7 @@ export function PlatformPoliciesContent({ embedded = false }: PlatformPoliciesCo
         <View style={styles.section}>
           <Text role="titleSm">سياسات المنصة ومناطق الخدمة</Text>
           <Text role="caption" tone="muted">
-            حقيقة DSH التشغيلية للخرائط والمناطق وخصوصية العناوين وSLA والسعة.
+            حقيقة DSH التشغيلية للخرائط والمناطق وخصوصية العناوين وSLA والسعة وأهلية الإسناد.
           </Text>
         </View>
       ) : null}
@@ -49,6 +51,7 @@ export function PlatformPoliciesContent({ embedded = false }: PlatformPoliciesCo
       <MapProviderHealthCard />
       <ServiceAreaGovernanceSection />
       <ClientAddressPrivacySection />
+      <DispatchBalancePolicySection />
 
       <View style={styles.section}>
         <Text role="titleSm">مناطق التشغيل المنطقية</Text>
@@ -60,7 +63,7 @@ export function PlatformPoliciesContent({ embedded = false }: PlatformPoliciesCo
           <Text tone="danger">{zonesController.mutationError}</Text>
         ) : null}
         {zonesController.state.kind === "loading" ? (
-          <CpStatePanel role="status" title="جارٍ تحميل المناطق…" />
+          <CpStateView kind="loading" title="جارٍ تحميل المناطق…" />
         ) : null}
         {zonesController.state.kind === "error" ? (
           <CpStatePanel role="alert" title="تعذر تحميل المناطق" description={zonesController.state.message}>
@@ -107,7 +110,7 @@ export function PlatformPoliciesContent({ embedded = false }: PlatformPoliciesCo
         <Text role="titleSm">قواعد SLA</Text>
         {slaController.mutationError ? <Text tone="danger">{slaController.mutationError}</Text> : null}
         {slaController.state.kind === "loading" ? (
-          <CpStatePanel role="status" title="جارٍ تحميل قواعد SLA…" />
+          <CpStateView kind="loading" title="جارٍ تحميل قواعد SLA…" />
         ) : null}
         {slaController.state.kind === "error" ? (
           <CpStatePanel role="alert" title="تعذر تحميل قواعد SLA" description={slaController.state.message}>
@@ -149,7 +152,7 @@ export function PlatformPoliciesContent({ embedded = false }: PlatformPoliciesCo
       </View>
 
       <OperationalPolicyGovernanceSection />
-      <Jrn029OperationalPolicySection />
+      <OperationalPolicySection />
       <StoreOnboardingFeePolicySection authKind="authenticated" />
     </View>
   );
@@ -160,7 +163,7 @@ export function PlatformPoliciesScreen() {
     <SettingsPageFrame
       header={
         <CpPageHeader title="سياسات المنصة ومناطق الخدمة">
-          <CpMutedInline>حقيقة DSH التشغيلية للخرائط والمناطق وخصوصية العناوين وSLA والسعة</CpMutedInline>
+          <CpMutedInline>حقيقة DSH التشغيلية للخرائط والمناطق وخصوصية العناوين وSLA والسعة وأهلية الإسناد</CpMutedInline>
         </CpPageHeader>
       }
     >

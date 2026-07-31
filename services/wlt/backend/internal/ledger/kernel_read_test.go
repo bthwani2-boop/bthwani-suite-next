@@ -1,7 +1,6 @@
 package ledger
 
 import (
-	"context"
 	"testing"
 )
 
@@ -41,7 +40,7 @@ func TestBuildFinancialSummary_NormalBalanceSideMatchesRealWalletDirection(t *te
 	if db == nil {
 		return
 	}
-	ctx := context.Background()
+	ctx := trustedLedgerTestContext()
 	actorID := uniqueActorID("field-agent")
 	currency := "TST"
 
@@ -113,6 +112,6 @@ func TestBuildFinancialSummary_NormalBalanceSideMatchesRealWalletDirection(t *te
 		t.Fatalf("expected wallet account metadata {liability, credit}, got {%s, %s}", walletAfter.Category, walletAfter.NormalBalanceSide)
 	}
 	if receivableAfter.Category != "asset" || receivableAfter.NormalBalanceSide != "debit" {
-		t.Fatalf("expected platform_commission_receivable metadata {asset, debit}, got {%s, %s}", receivableAfter.Category, receivableAfter.NormalBalanceSide)
+		t.Fatalf("expected platform_commission_receivable account metadata {asset, debit}, got {%s, %s}", receivableAfter.Category, receivableAfter.NormalBalanceSide)
 	}
 }

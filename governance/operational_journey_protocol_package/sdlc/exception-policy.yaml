@@ -1,5 +1,5 @@
 version: 1
-authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+authority: governance/policies/release.md
 allowed_exception_decisions:
   - HARD_BLOCKED_EXTERNAL_ONLY
   - risk_accepted_non_critical

@@ -8,7 +8,7 @@ import (
 )
 
 type OrderTruthDiagnostics struct {
-	TenantID                       string     `json:"tenantId"`
+	OperatorContextID                       string     `json:"operatorContextId"`
 	GeneratedAt                    time.Time  `json:"generatedAt"`
 	OrdersCreatedLastFiveMinutes   int64      `json:"ordersCreatedLastFiveMinutes"`
 	OrdersCreatedLastHour          int64      `json:"ordersCreatedLastHour"`
@@ -25,16 +25,16 @@ type OrderTruthDiagnostics struct {
 	Alerts                         []string   `json:"alerts"`
 }
 
-// LoadOrderTruthDiagnostics returns tenant-scoped operational facts only. It
+// LoadOrderTruthDiagnostics returns OperatorContext-scoped operational facts only. It
 // intentionally excludes client identity, address snapshots and payment data.
-func LoadOrderTruthDiagnostics(db *sql.DB, tenantID string) (*OrderTruthDiagnostics, error) {
-	tenantID = strings.TrimSpace(tenantID)
-	if tenantID == "" {
+func LoadOrderTruthDiagnostics(db *sql.DB, operatorContextID string) (*OrderTruthDiagnostics, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
 		return nil, ErrInvalid
 	}
 
 	result := &OrderTruthDiagnostics{
-		TenantID:    tenantID,
+		OperatorContextID:    operatorContextID,
 		GeneratedAt: time.Now().UTC(),
 		Health:      "healthy",
 		Alerts:      []string{},
@@ -45,23 +45,23 @@ func LoadOrderTruthDiagnostics(db *sql.DB, tenantID string) (*OrderTruthDiagnost
 		  COUNT(*) FILTER (WHERE o.created_at >= NOW() - INTERVAL '5 minutes'),
 		  COUNT(*) FILTER (WHERE o.created_at >= NOW() - INTERVAL '1 hour'),
 		  (SELECT COUNT(*) FROM dsh_order_create_idempotency i
-		    WHERE i.tenant_id=$1 AND i.order_id IS NULL AND i.created_at < NOW()-INTERVAL '2 minutes'),
-		  (SELECT COUNT(*) FROM dsh_order_event_outbox x WHERE x.tenant_id=$1 AND x.status='pending'),
-		  (SELECT COUNT(*) FROM dsh_order_event_outbox x WHERE x.tenant_id=$1 AND x.status='retry'),
-		  (SELECT COUNT(*) FROM dsh_order_event_outbox x WHERE x.tenant_id=$1 AND x.status='dead_letter'),
+		    WHERE i.operator_context_id=$1 AND i.order_id IS NULL AND i.created_at < NOW()-INTERVAL '2 minutes'),
+		  (SELECT COUNT(*) FROM dsh_order_event_outbox x WHERE x.operator_context_id=$1 AND x.status='pending'),
+		  (SELECT COUNT(*) FROM dsh_order_event_outbox x WHERE x.operator_context_id=$1 AND x.status='retry'),
+		  (SELECT COUNT(*) FROM dsh_order_event_outbox x WHERE x.operator_context_id=$1 AND x.status='dead_letter'),
 		  (SELECT MIN(x.created_at) FROM dsh_order_event_outbox x
-		    WHERE x.tenant_id=$1 AND x.status IN ('pending','processing','retry')),
+		    WHERE x.operator_context_id=$1 AND x.status IN ('pending','processing','retry')),
 		  COUNT(*) FILTER (WHERE o.payment_status_projection='unknown'),
 		  COUNT(*) FILTER (WHERE o.payment_projection_reconciled_at IS NULL
 		    OR o.payment_projection_reconciled_at < NOW()-INTERVAL '2 minutes'),
 		  (SELECT COUNT(*) FROM dsh_order_truth_audit a
-		    WHERE a.tenant_id=$1 AND a.event_type='order.idempotency_conflict'
+		    WHERE a.operator_context_id=$1 AND a.event_type='order.idempotency_conflict'
 		      AND a.created_at >= NOW()-INTERVAL '1 hour'),
 		  (SELECT COUNT(*) FROM dsh_order_truth_audit a
-		    WHERE a.tenant_id=$1 AND a.event_type='order.snapshot_write_blocked'
+		    WHERE a.operator_context_id=$1 AND a.event_type='order.snapshot_write_blocked'
 		      AND a.created_at >= NOW()-INTERVAL '1 hour')
 		FROM dsh_orders o
-		WHERE o.tenant_id=$1`, tenantID,
+		WHERE o.operator_context_id=$1`, operatorContextID,
 	).Scan(
 		&result.OrdersCreatedLastFiveMinutes,
 		&result.OrdersCreatedLastHour,

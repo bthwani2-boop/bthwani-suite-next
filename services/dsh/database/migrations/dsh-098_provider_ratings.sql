@@ -7,7 +7,7 @@
 
 CREATE TABLE IF NOT EXISTS dsh_provider_ratings (
   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id         text NOT NULL DEFAULT 'default',
+  operator_context_id         text NOT NULL DEFAULT 'default',
   rater_kind        text NOT NULL CHECK (rater_kind IN ('partner','client')),
   rater_actor_id    text NOT NULL,
   target_kind       text NOT NULL CHECK (target_kind IN ('field','captain','order')),
@@ -30,19 +30,19 @@ CREATE TABLE IF NOT EXISTS dsh_provider_ratings (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_provider_ratings_rater_source_target
-  ON dsh_provider_ratings(tenant_id, rater_actor_id, source_kind, source_id, target_kind);
+  ON dsh_provider_ratings(operator_context_id, rater_actor_id, source_kind, source_id, target_kind);
 
 CREATE INDEX IF NOT EXISTS idx_dsh_provider_ratings_target
-  ON dsh_provider_ratings(tenant_id, target_kind, target_actor_id, created_at DESC)
+  ON dsh_provider_ratings(operator_context_id, target_kind, target_actor_id, created_at DESC)
   WHERE status = 'active';
 
 CREATE INDEX IF NOT EXISTS idx_dsh_provider_ratings_source
-  ON dsh_provider_ratings(tenant_id, source_kind, source_id, created_at DESC);
+  ON dsh_provider_ratings(operator_context_id, source_kind, source_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS dsh_provider_rating_events (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   rating_id       uuid NOT NULL REFERENCES dsh_provider_ratings(id) ON DELETE CASCADE,
-  tenant_id       text NOT NULL DEFAULT 'default',
+  operator_context_id       text NOT NULL DEFAULT 'default',
   action          text NOT NULL CHECK (action IN ('created','updated','retracted')),
   actor_id        text NOT NULL,
   score           smallint NOT NULL CHECK (score BETWEEN 1 AND 5),

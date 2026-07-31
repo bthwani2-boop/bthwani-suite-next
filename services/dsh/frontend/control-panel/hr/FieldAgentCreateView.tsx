@@ -19,6 +19,12 @@ export function FieldAgentCreateView(props: {
   const [zoneId, setZoneId] = useState("");
 
   const createdAgent = state.kind === "created" ? state.provider : null;
+
+  React.useEffect(() => {
+    if (createdAgent) {
+      props.onCreated(createdAgent);
+    }
+  }, [createdAgent, props]);
   const canSubmit =
     fullNameAr.trim().length > 0 &&
     phone.trim().length >= 9 &&
@@ -70,13 +76,7 @@ export function FieldAgentCreateView(props: {
       {state.kind === "error" ? <CpStatePanel role="alert" title="تعذر إنشاء الميداني" description={state.message} /> : null}
 
       {createdAgent ? (
-        <CpStatePanel role="status" title="تم إنشاء ملف الميداني الأولي.">
-          <Text role="bodySm">افتح الملف لاستكمال مصدر الترشيح والضمين والهوية والعقد ثم اعتماد الشراكات قبل إصدار كود الدخول.</Text>
-          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "1rem" }}>
-            <CpButton variant="primary" onClick={() => props.onCreated(createdAgent)}>فتح ملف الميداني</CpButton>
-            <CpButton variant="secondary" onClick={resetForm}>إضافة ميداني جديد</CpButton>
-          </div>
-        </CpStatePanel>
+        <CpStatePanel role="status" title="جارٍ تجهيز ملف الميداني..." />
       ) : (
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
           <div style={{ minWidth: "240px" }}>

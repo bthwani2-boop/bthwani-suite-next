@@ -18,12 +18,12 @@ var (
 	ErrNotFound          = errors.New("promotion funding reservation not found")
 	ErrConflict          = errors.New("promotion funding conflict")
 	ErrInvalidTransition = errors.New("invalid promotion funding transition")
-	ErrTenantMismatch    = errors.New("promotion funding tenant mismatch")
+	ErrOperatorContextMismatch    = errors.New("promotion funding OperatorContext mismatch")
 )
 
 type Reservation struct {
 	ID                       string  `json:"id"`
-	TenantID                 string  `json:"tenantId"`
+	OperatorContextID                 string  `json:"operatorContextId"`
 	ExternalReference        string  `json:"externalReference"`
 	CheckoutIntentID         string  `json:"checkoutIntentId"`
 	CouponRedemptionID       string  `json:"couponRedemptionId"`
@@ -47,7 +47,7 @@ type Reservation struct {
 	UpdatedAt                string  `json:"updatedAt"`
 }
 
-const reservationColumns = `id,tenant_id,external_reference,checkout_intent_id,
+const reservationColumns = `id,operator_context_id,external_reference,checkout_intent_id,
 	coupon_redemption_id,coupon_id,client_id,partner_id,
 	platform_funded_minor_units,partner_funded_minor_units,total_discount_minor_units,
 	currency,status,order_id,idempotency_key,correlation_id,
@@ -59,7 +59,7 @@ func scanReservation(row interface{ Scan(dest ...any) error }) (*Reservation, er
 	var partnerID, orderID, committedAt, releasedAt, reversedAt sql.NullString
 	err := row.Scan(
 		&reservation.ID,
-		&reservation.TenantID,
+		&reservation.OperatorContextID,
 		&reservation.ExternalReference,
 		&reservation.CheckoutIntentID,
 		&reservation.CouponRedemptionID,
@@ -107,7 +107,7 @@ func scanReservation(row interface{ Scan(dest ...any) error }) (*Reservation, er
 }
 
 type ReserveInput struct {
-	TenantID                 string `json:"tenantId"`
+	OperatorContextID                 string `json:"operatorContextId"`
 	ExternalReference        string `json:"externalReference"`
 	CheckoutIntentID         string `json:"checkoutIntentId"`
 	CouponRedemptionID       string `json:"couponRedemptionId"`
@@ -123,7 +123,7 @@ type ReserveInput struct {
 }
 
 func normalizeReserve(input ReserveInput) ReserveInput {
-	input.TenantID = strings.TrimSpace(input.TenantID)
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.ExternalReference = strings.TrimSpace(input.ExternalReference)
 	input.CheckoutIntentID = strings.TrimSpace(input.CheckoutIntentID)
 	input.CouponRedemptionID = strings.TrimSpace(input.CouponRedemptionID)
@@ -140,7 +140,7 @@ func normalizeReserve(input ReserveInput) ReserveInput {
 }
 
 func validateReserve(input ReserveInput) error {
-	if input.TenantID == "" || input.ExternalReference == "" || input.CheckoutIntentID == "" ||
+	if input.OperatorContextID == "" || input.ExternalReference == "" || input.CheckoutIntentID == "" ||
 		input.CouponRedemptionID == "" || input.CouponID == "" || input.ClientID == "" ||
 		input.TotalDiscountMinorUnits <= 0 || input.PlatformFundedMinorUnits < 0 ||
 		input.PartnerFundedMinorUnits < 0 || input.IdempotencyKey == "" || input.CorrelationID == "" {
@@ -163,7 +163,7 @@ func sameReserve(existing *Reservation, input ReserveInput) bool {
 	if existing.PartnerID != nil {
 		partnerID = *existing.PartnerID
 	}
-	return existing.TenantID == input.TenantID &&
+	return existing.OperatorContextID == input.OperatorContextID &&
 		existing.ExternalReference == input.ExternalReference &&
 		existing.CheckoutIntentID == input.CheckoutIntentID &&
 		existing.CouponRedemptionID == input.CouponRedemptionID &&
@@ -176,10 +176,10 @@ func sameReserve(existing *Reservation, input ReserveInput) bool {
 		existing.Currency == input.Currency
 }
 
-func getByIdempotency(ctx context.Context, db *sql.DB, tenantID, key string) (*Reservation, error) {
+func getByIdempotency(ctx context.Context, db *sql.DB, operatorContextID, key string) (*Reservation, error) {
 	reservation, err := scanReservation(db.QueryRowContext(ctx, `SELECT `+reservationColumns+`
 		FROM wlt_promotion_funding_reservations
-		WHERE tenant_id=$1 AND idempotency_key=$2`, tenantID, key))
+		WHERE operator_context_id=$1 AND idempotency_key=$2`, operatorContextID, key))
 	if errors.Is(err, ErrNotFound) {
 		return nil, nil
 	}
@@ -194,7 +194,7 @@ func Reserve(ctx context.Context, db *sql.DB, input ReserveInput) (*Reservation,
 	if err := validateReserve(input); err != nil {
 		return nil, err
 	}
-	if existing, err := getByIdempotency(ctx, db, input.TenantID, input.IdempotencyKey); err != nil {
+	if existing, err := getByIdempotency(ctx, db, input.OperatorContextID, input.IdempotencyKey); err != nil {
 		return nil, err
 	} else if existing != nil {
 		if !sameReserve(existing, input) {
@@ -211,13 +211,13 @@ func Reserve(ctx context.Context, db *sql.DB, input ReserveInput) (*Reservation,
 
 	reservation, err := scanReservation(tx.QueryRowContext(ctx, `
 		INSERT INTO wlt_promotion_funding_reservations
-			(tenant_id,external_reference,checkout_intent_id,coupon_redemption_id,
+			(operator_context_id,external_reference,checkout_intent_id,coupon_redemption_id,
 			 coupon_id,client_id,partner_id,platform_funded_minor_units,
 			 partner_funded_minor_units,total_discount_minor_units,currency,
 			 status,idempotency_key,correlation_id)
 		VALUES ($1,$2,$3,$4,$5,$6,NULLIF($7,''),$8,$9,$10,$11,'reserved',$12,$13)
 		RETURNING `+reservationColumns,
-		input.TenantID,
+		input.OperatorContextID,
 		input.ExternalReference,
 		input.CheckoutIntentID,
 		input.CouponRedemptionID,
@@ -249,17 +249,17 @@ func Reserve(ctx context.Context, db *sql.DB, input ReserveInput) (*Reservation,
 	return reservation, nil
 }
 
-func Get(ctx context.Context, db *sql.DB, tenantID, reservationID string) (*Reservation, error) {
-	if db == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(reservationID) == "" {
+func Get(ctx context.Context, db *sql.DB, operatorContextID, reservationID string) (*Reservation, error) {
+	if db == nil || strings.TrimSpace(operatorContextID) == "" || strings.TrimSpace(reservationID) == "" {
 		return nil, ErrInvalid
 	}
 	return scanReservation(db.QueryRowContext(ctx, `SELECT `+reservationColumns+`
-		FROM wlt_promotion_funding_reservations WHERE id=$1 AND tenant_id=$2`,
-		strings.TrimSpace(reservationID), strings.TrimSpace(tenantID)))
+		FROM wlt_promotion_funding_reservations WHERE id=$1 AND operator_context_id=$2`,
+		strings.TrimSpace(reservationID), strings.TrimSpace(operatorContextID)))
 }
 
 type TransitionInput struct {
-	TenantID       string `json:"tenantId"`
+	OperatorContextID       string `json:"operatorContextId"`
 	OrderID        string `json:"orderId"`
 	Reason         string `json:"reason"`
 	IdempotencyKey string `json:"-"`
@@ -283,13 +283,13 @@ func completedTransitionMatches(current *Reservation, target string, input Trans
 }
 
 func transition(ctx context.Context, db *sql.DB, reservationID, target string, input TransitionInput) (*Reservation, error) {
-	input.TenantID = strings.TrimSpace(input.TenantID)
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.OrderID = strings.TrimSpace(input.OrderID)
 	input.Reason = strings.TrimSpace(input.Reason)
 	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
 	reservationID = strings.TrimSpace(reservationID)
-	if db == nil || reservationID == "" || input.TenantID == "" || input.IdempotencyKey == "" || input.CorrelationID == "" {
+	if db == nil || reservationID == "" || input.OperatorContextID == "" || input.IdempotencyKey == "" || input.CorrelationID == "" {
 		return nil, ErrInvalid
 	}
 	if target == "committed" && input.OrderID == "" {
@@ -309,8 +309,8 @@ func transition(ctx context.Context, db *sql.DB, reservationID, target string, i
 	defer func() { _ = tx.Rollback() }()
 
 	current, err := scanReservation(tx.QueryRowContext(ctx, `SELECT `+reservationColumns+`
-		FROM wlt_promotion_funding_reservations WHERE id=$1 AND tenant_id=$2 FOR UPDATE`,
-		reservationID, input.TenantID))
+		FROM wlt_promotion_funding_reservations WHERE id=$1 AND operator_context_id=$2 FOR UPDATE`,
+		reservationID, input.OperatorContextID))
 	if err != nil {
 		return nil, err
 	}
@@ -331,21 +331,21 @@ func transition(ctx context.Context, db *sql.DB, reservationID, target string, i
 	case "committed":
 		updated, err = scanReservation(tx.QueryRowContext(ctx, `UPDATE wlt_promotion_funding_reservations
 			SET status='committed',order_id=$3,committed_at=NOW(),updated_at=NOW()
-			WHERE id=$1 AND tenant_id=$2 AND status='reserved'
-			RETURNING `+reservationColumns, reservationID, input.TenantID, input.OrderID))
+			WHERE id=$1 AND operator_context_id=$2 AND status='reserved'
+			RETURNING `+reservationColumns, reservationID, input.OperatorContextID, input.OrderID))
 	case "released":
 		updated, err = scanReservation(tx.QueryRowContext(ctx, `UPDATE wlt_promotion_funding_reservations
 			SET status='released',released_at=NOW(),release_reason=$3,updated_at=NOW()
-			WHERE id=$1 AND tenant_id=$2 AND status='reserved'
-			RETURNING `+reservationColumns, reservationID, input.TenantID, input.Reason))
+			WHERE id=$1 AND operator_context_id=$2 AND status='reserved'
+			RETURNING `+reservationColumns, reservationID, input.OperatorContextID, input.Reason))
 	case "reversed":
 		if current.OrderID == nil || *current.OrderID != input.OrderID {
 			return nil, ErrConflict
 		}
 		updated, err = scanReservation(tx.QueryRowContext(ctx, `UPDATE wlt_promotion_funding_reservations
 			SET status='reversed',reversed_at=NOW(),reversal_reason=$3,updated_at=NOW()
-			WHERE id=$1 AND tenant_id=$2 AND status='committed'
-			RETURNING `+reservationColumns, reservationID, input.TenantID, input.Reason))
+			WHERE id=$1 AND operator_context_id=$2 AND status='committed'
+			RETURNING `+reservationColumns, reservationID, input.OperatorContextID, input.Reason))
 	default:
 		return nil, ErrInvalid
 	}
@@ -394,18 +394,18 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 	return true
 }
 
-func tenantAssertion(w http.ResponseWriter, r *http.Request, payloadTenantID string) (string, bool) {
-	payloadTenantID = strings.TrimSpace(payloadTenantID)
-	assertedTenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-	if payloadTenantID == "" {
-		shared.SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "tenantId is required")
+func OperatorContextAssertion(w http.ResponseWriter, r *http.Request, payloadOperatorContextID string) (string, bool) {
+	payloadOperatorContextID = strings.TrimSpace(payloadOperatorContextID)
+	assertedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+	if payloadOperatorContextID == "" {
+		shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "operatorContextId is required")
 		return "", false
 	}
-	if assertedTenantID != "" && assertedTenantID != payloadTenantID {
-		shared.SendError(w, http.StatusForbidden, "TENANT_MISMATCH", ErrTenantMismatch.Error())
+	if assertedOperatorContextID != "" && assertedOperatorContextID != payloadOperatorContextID {
+		shared.SendError(w, http.StatusForbidden, "OperatorContext_MISMATCH", ErrOperatorContextMismatch.Error())
 		return "", false
 	}
-	return payloadTenantID, true
+	return payloadOperatorContextID, true
 }
 
 func writeError(w http.ResponseWriter, err error) {
@@ -429,7 +429,7 @@ func HandleReserve(db *sql.DB) http.HandlerFunc {
 		if !decodeJSON(w, r, &input) {
 			return
 		}
-		if _, ok := tenantAssertion(w, r, input.TenantID); !ok {
+		if _, ok := OperatorContextAssertion(w, r, input.OperatorContextID); !ok {
 			return
 		}
 		input.IdempotencyKey = r.Header.Get("Idempotency-Key")
@@ -445,8 +445,8 @@ func HandleReserve(db *sql.DB) http.HandlerFunc {
 
 func HandleGet(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-		reservation, err := Get(r.Context(), db, tenantID, r.PathValue("reservationId"))
+		operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		reservation, err := Get(r.Context(), db, operatorContextID, r.PathValue("reservationId"))
 		if err != nil {
 			writeError(w, err)
 			return
@@ -461,7 +461,7 @@ func transitionHandler(db *sql.DB, target string) http.HandlerFunc {
 		if !decodeJSON(w, r, &input) {
 			return
 		}
-		if _, ok := tenantAssertion(w, r, input.TenantID); !ok {
+		if _, ok := OperatorContextAssertion(w, r, input.OperatorContextID); !ok {
 			return
 		}
 		input.IdempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))

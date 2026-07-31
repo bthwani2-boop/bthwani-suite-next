@@ -66,7 +66,7 @@ for (const invariant of [
   'TestNotifyDeliveryCollectionAddsDeterministicHeaders',
   'TestActorFinanceMutationRejectsMissingCorrelation',
   'TestSettlementMutationAddsRequiredHeaders',
-  'TestPromotionFundingRejectsMissingTenantBeforeNetwork',
+  'TestPromotionFundingRejectsMissingOperatorContextBeforeNetwork',
 ]) {
   if (!tests.includes(invariant)) {
     failures.push(`mutation_headers_test.go: missing ${invariant}`);

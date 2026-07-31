@@ -7,8 +7,7 @@ import {
   CpDescriptionRow,
   CpMutedInline,
   CpPageHeader,
-  CpStatePanel,
-} from "@bthwani/control-panel/components";
+  CpStateView } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
 import { Text } from "@bthwani/ui-kit";
 import {
@@ -18,8 +17,7 @@ import {
   useCaptainDetailController,
   useFieldAgentDetailController,
   useServiceZoneReference,
-  useWorkforceReferenceData,
-} from "../../shared/workforce";
+  useWorkforceReferenceData } from "../../shared/workforce";
 import type { ProviderKind, LicenseStatus } from "../../shared/workforce";
 import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState";
 import { uploadProviderMedia } from "../../shared/media/field-document-media";
@@ -39,8 +37,7 @@ const LICENSE_STATUS_LABEL_AR: LicenseStatusLabelAr = {
   pending_review: "بانتظار المراجعة",
   valid: "صالحة ومقبولة",
   expired: "منتهية الصلاحية",
-  rejected: "مرفوضة",
-};
+  rejected: "مرفوضة" };
 
 function isCurrentOrFutureDate(value?: string): boolean {
   if (!value) return false;
@@ -189,8 +186,7 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
         await uploadProviderMedia(props.actorId, "captain", {
           uri: objectUrl,
           name: file.name,
-          mimeType: file.type || "application/octet-stream",
-        });
+          mimeType: file.type || "application/octet-stream" });
         await controller.reload();
       } catch {
         setUploadError("تعذر رفع الملف — حاول مجددًا");
@@ -224,7 +220,7 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
 
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           <Text role="titleSm">الوثائق المرفوعة</Text>
-          {uploadError ? <CpStatePanel role="alert" title={uploadError} /> : null}
+          {uploadError ? <CpStateView kind="error" title={uploadError} /> : null}
           <CpMutedInline>{documentCount > 0 ? `${documentCount} ملف مرفوع` : "لا توجد ملفات مرفوعة بعد"}</CpMutedInline>
           <CpButton variant="secondary" disabled={isBusy} onClick={() => void pickAndUpload()}>
             {uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة"}
@@ -243,7 +239,7 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
                 {licenceApprovalBlockers.map((reason) => <CpMutedInline key={reason}>• {reason}</CpMutedInline>)}
               </div>
             ) : null}
-            {controller.actionError ? <CpStatePanel role="alert" title={controller.actionError} /> : null}
+            {controller.actionError ? <CpStateView kind="error" title={controller.actionError} /> : null}
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
               <CpButton variant="primary" disabled={isBusy || !canApproveLicence} onClick={() => void handleUpdateLicense("valid")}>اعتماد الرخصة</CpButton>
               <CpButton variant="danger" disabled={isBusy} onClick={() => void handleUpdateLicense("rejected")}>رفض الرخصة</CpButton>
@@ -261,7 +257,7 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
 
 function LoadingScreen() {
   return (
-    <DetailPageFrame stateView={<CpStatePanel role="status" title="جارٍ تحميل الملف…" />}>
+    <DetailPageFrame stateView={<CpStateView kind="loading" title="جارٍ تحميل الملف…" />}>
       <div />
     </DetailPageFrame>
   );

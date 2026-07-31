@@ -13,7 +13,7 @@
     },
     "journeyId": {
       "type": "string",
-      "pattern": "^JRN-[0-9]{3}$"
+      "pattern": "^[0-9]{3}$"
     },
     "title": { "type": "string", "minLength": 1 },
     "owner": { "type": "string", "minLength": 1 },

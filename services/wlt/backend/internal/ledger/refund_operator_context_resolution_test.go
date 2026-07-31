@@ -1,0 +1,98 @@
+package ledger
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+	"testing"
+	"time"
+
+	"wlt-api/internal/shared"
+)
+
+func seedRefundLedgerReference(t *testing.T, operatorContextID string) (*sqlTestReference, func()) {
+	t.Helper()
+	db := getTestDB(t)
+	if db == nil {
+		return nil, func() {}
+	}
+	ctx := context.Background()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("begin refund ledger fixture: %v", err)
+	}
+	suffix := fmt.Sprint(time.Now().UnixNano())
+	sessionID := "refund-session-" + suffix
+	refundID := "refund-ledger-" + suffix
+	orderID := "refund-order-" + suffix
+	clientID := "refund-client-" + suffix
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO wlt_payment_sessions
+			(id,operator_context_id,checkout_intent_id,client_id,store_id,payment_method,status,amount_minor_units,currency)
+		VALUES($1,$2,$3,$4,'store-refund-ledger','official_wallet','captured',1000,'YER')`,
+		sessionID, operatorContextID, "checkout-"+suffix, clientID); err != nil {
+		_ = tx.Rollback()
+		_ = db.Close()
+		t.Fatalf("seed payment session: %v", err)
+	}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO wlt_refunds
+			(id,operator_context_id,payment_session_id,order_id,client_id,amount_minor_units,currency,reason,status,idempotency_key,provider_idempotency_key)
+		VALUES($1,$2,$3,$4,$5,1000,'YER','OperatorContext resolution test','approved',$6,$7)`,
+		refundID, operatorContextID, sessionID, orderID, clientID, "refund-test-"+suffix, "provider-refund-test-"+suffix); err != nil {
+		_ = tx.Rollback()
+		_ = db.Close()
+		t.Fatalf("seed refund: %v", err)
+	}
+	return &sqlTestReference{db: db, tx: tx, refundID: refundID, operatorContextID: operatorContextID}, func() {
+		_ = tx.Rollback()
+		_ = db.Close()
+	}
+}
+
+type sqlTestReference struct {
+	db                interface{ Close() error }
+	tx                *sql.Tx
+	refundID          string
+	operatorContextID string
+}
+
+func TestPostLedgerTransactionDerivesRefundOperatorContextFromPersistedTruth(t *testing.T) {
+	fixture, cleanup := seedRefundLedgerReference(t, "OperatorContext-refund-ledger")
+	defer cleanup()
+	if fixture == nil {
+		return
+	}
+	lines := []LedgerLine{
+		{AccountType: "platform_payable", DebitCredit: "debit", AmountMinorUnits: 1000, Currency: "YER"},
+		{AccountType: "provider_clearing", DebitCredit: "credit", AmountMinorUnits: 1000, Currency: "YER"},
+	}
+	transactionID, err := PostLedgerTransaction(context.Background(), fixture.tx, "refund_completed", "refund", fixture.refundID, lines, Actor{ID: "wlt", Type: "service"})
+	if err != nil {
+		t.Fatalf("refund ledger OperatorContext derivation failed: %v", err)
+	}
+	var operatorContextID string
+	if err := fixture.tx.QueryRow(`SELECT operator_context_id FROM wlt_ledger_transactions WHERE id=$1`, transactionID).Scan(&operatorContextID); err != nil {
+		t.Fatalf("read refund ledger OperatorContext: %v", err)
+	}
+	if operatorContextID != fixture.operatorContextID {
+		t.Fatalf("ledger OperatorContext=%q want %q", operatorContextID, fixture.operatorContextID)
+	}
+}
+
+func TestPostLedgerTransactionRejectsRefundOperatorContextMismatch(t *testing.T) {
+	fixture, cleanup := seedRefundLedgerReference(t, "OperatorContext-refund-owner")
+	defer cleanup()
+	if fixture == nil {
+		return
+	}
+	ctx := shared.WithOperatorContext(context.Background(), "OperatorContext-refund-attacker")
+	lines := []LedgerLine{
+		{AccountType: "platform_payable", DebitCredit: "debit", AmountMinorUnits: 1000, Currency: "YER"},
+		{AccountType: "provider_clearing", DebitCredit: "credit", AmountMinorUnits: 1000, Currency: "YER"},
+	}
+	if _, err := PostLedgerTransaction(ctx, fixture.tx, "refund_completed", "refund", fixture.refundID, lines, Actor{ID: "wlt", Type: "service"}); !errors.Is(err, ErrLedgerOperatorContextConflict) {
+		t.Fatalf("expected ErrLedgerOperatorContextConflict, got %v", err)
+	}
+}

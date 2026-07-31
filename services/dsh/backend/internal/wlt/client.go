@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
@@ -28,32 +27,32 @@ func IsPaymentSessionOutcomeUnknown(err error) bool {
 }
 
 type Client struct {
-	baseURL         string
-	serviceToken    string
-	defaultTenantID string
-	saasActive      bool
-	http            *http.Client
+	baseURL      string
+	serviceToken string
+	http         *http.Client
 }
 
 type CreatePaymentSessionInput struct {
 	CheckoutIntentID string `json:"checkoutIntentId,omitempty"`
 	SpecialRequestID string `json:"specialRequestId,omitempty"`
-	TenantID         string `json:"tenantId,omitempty"`
-	ClientID         string `json:"clientId"`
-	StoreID          string `json:"storeId"`
-	PaymentMethod    string `json:"paymentMethod"`
-	AmountMinorUnits int64  `json:"amountMinorUnits"`
-	Currency         string `json:"currency"`
-	CartSnapshotHash string `json:"cartSnapshotHash"`
-	CorrelationID    string `json:"-"`
-	IdempotencyKey   string `json:"-"`
+	// OperatorContextID is compile-only while legacy DSH call sites are cleaned.
+	// It is excluded from JSON and cannot select WLT financial ownership.
+	OperatorContextID string `json:"-"`
+	ClientID          string `json:"clientId"`
+	StoreID           string `json:"storeId"`
+	PaymentMethod     string `json:"paymentMethod"`
+	AmountMinorUnits  int64  `json:"amountMinorUnits"`
+	Currency          string `json:"currency"`
+	CartSnapshotHash  string `json:"cartSnapshotHash"`
+	CorrelationID     string `json:"-"`
+	IdempotencyKey    string `json:"-"`
 }
 
 type PaymentSession struct {
 	ID                string `json:"id"`
 	CheckoutIntentID  string `json:"checkoutIntentId"`
 	SpecialRequestID  string `json:"specialRequestId"`
-	TenantID          string `json:"tenantId"`
+	OperatorContextID string `json:"operatorContextId"`
 	ClientID          string `json:"clientId"`
 	StoreID           string `json:"storeId"`
 	PaymentMethod     string `json:"paymentMethod"`
@@ -65,61 +64,52 @@ type PaymentSession struct {
 	UpdatedAt         string `json:"updatedAt"`
 }
 
-// NewClient builds a client for calling WLT. The tenant is resolved from the
-// trusted DSH runtime environment, never from a browser header. In active SaaS
-// mode every WLT call is required to carry that tenant and explicit request
-// tenant values may only confirm, never override, the runtime tenant.
+// NewClient builds the authenticated DSH-to-WLT service client. Financial
+// ownership is resolved inside WLT after service authentication; DSH does not
+// select it through the payment-session payload.
 func NewClient(baseURL, serviceToken string) *Client {
 	return &Client{
-		baseURL:         strings.TrimRight(baseURL, "/"),
-		serviceToken:    serviceToken,
-		defaultTenantID: strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID")),
-		saasActive:      strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active"),
-		http:            &http.Client{Timeout: 10 * time.Second},
+		baseURL:      strings.TrimRight(baseURL, "/"),
+		serviceToken: serviceToken,
+		http: &http.Client{
+			Timeout:   10 * time.Second,
+			Transport: OperatorContextRoundTripper{base: http.DefaultTransport},
+		},
 	}
 }
 
 func (c *Client) Configured() bool {
-	return c != nil && c.baseURL != "" && c.serviceToken != "" && (!c.saasActive || c.defaultTenantID != "")
+	return c != nil && c.baseURL != "" && c.serviceToken != ""
 }
 
-func (c *Client) resolveTrustedTenant(requested string) (string, error) {
+// resolveTrustedOperatorContext and setTrustedOperatorContextHeader are
+// temporary compatibility helpers for WLT routes not migrated yet. WLT
+// overwrites this deprecated transport value after service authentication.
+func (c *Client) resolveTrustedOperatorContext(ctx context.Context, requested string) (string, error) {
 	requested = strings.TrimSpace(requested)
-	if c.saasActive {
-		if c.defaultTenantID == "" {
-			return "", fmt.Errorf("active SaaS WLT client requires BTHWANI_DEFAULT_TENANT_ID")
-		}
-		if requested != "" && requested != c.defaultTenantID {
-			return "", fmt.Errorf("requested tenant does not match active SaaS runtime tenant")
-		}
-		return c.defaultTenantID, nil
+	trustedOperatorContextID, hasTrustedOperatorContext := OperatorContextIDFromContext(ctx)
+	if !hasTrustedOperatorContext {
+		return "", fmt.Errorf("trusted OperatorContext context is required for this legacy WLT request")
 	}
-	if requested != "" {
-		return requested, nil
+	if requested != "" && requested != trustedOperatorContextID {
+		return "", fmt.Errorf("requested OperatorContext does not match trusted request context")
 	}
-	return c.defaultTenantID, nil
+	return trustedOperatorContextID, nil
 }
 
-func (c *Client) setTrustedTenantHeader(req *http.Request, requested string) (string, error) {
-	tenantID, err := c.resolveTrustedTenant(requested)
+func (c *Client) setTrustedOperatorContextHeader(req *http.Request, requested string) (string, error) {
+	operatorContextID, err := c.resolveTrustedOperatorContext(req.Context(), requested)
 	if err != nil {
 		return "", err
 	}
-	if tenantID != "" {
-		req.Header.Set("X-Tenant-ID", tenantID)
-	}
-	return tenantID, nil
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	return operatorContextID, nil
 }
 
 func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSessionInput) (*PaymentSession, error) {
 	if !c.Configured() {
 		return nil, fmt.Errorf("WLT payment-session handoff is not configured")
 	}
-	resolvedTenantID, err := c.resolveTrustedTenant(input.TenantID)
-	if err != nil {
-		return nil, fmt.Errorf("resolve WLT payment tenant: %w", err)
-	}
-	input.TenantID = resolvedTenantID
 	body, err := json.Marshal(input)
 	if err != nil {
 		return nil, fmt.Errorf("encode WLT payment session request: %w", err)
@@ -132,8 +122,8 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedTenantHeader(req, resolvedTenantID); err != nil {
-		return nil, fmt.Errorf("prepare WLT payment tenant: %w", err)
+	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+		return nil, fmt.Errorf("prepare deprecated WLT payment scope bridge: %w", err)
 	}
 	correlationID := strings.TrimSpace(input.CorrelationID)
 	if correlationID == "" {
@@ -188,9 +178,6 @@ type NotifyDeliveryCollectionInput struct {
 	IdempotencyKey   string `json:"-"`
 }
 
-// NotifyDeliveryCollection creates one WLT-owned COD custody record after a
-// governed delivery proof. WLT derives amount/currency from its own payment
-// session. DSH sends only operational identities and never a monetary amount.
 func (c *Client) NotifyDeliveryCollection(ctx context.Context, input NotifyDeliveryCollectionInput) error {
 	if !c.Configured() {
 		return fmt.Errorf("WLT COD custody handoff is not configured")
@@ -215,8 +202,8 @@ func (c *Client) NotifyDeliveryCollection(ctx context.Context, input NotifyDeliv
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedTenantHeader(req, ""); err != nil {
-		return fmt.Errorf("prepare WLT COD tenant: %w", err)
+	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+		return fmt.Errorf("prepare WLT COD OperatorContext: %w", err)
 	}
 	correlationID := strings.TrimSpace(input.CorrelationID)
 	if correlationID == "" {
@@ -251,8 +238,6 @@ type DeliverFieldCommissionInput struct {
 	CorrelationID        string `json:"-"`
 }
 
-// DeliverFieldCommission tells WLT a field agent completed an onboarding
-// visit so it can derive the commission amount itself from a commission policy.
 func (c *Client) DeliverFieldCommission(ctx context.Context, input DeliverFieldCommissionInput) error {
 	if !c.Configured() {
 		return fmt.Errorf("WLT payment-session handoff is not configured")
@@ -282,13 +267,12 @@ func (c *Client) DeliverFieldCommission(ctx context.Context, input DeliverFieldC
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedTenantHeader(req, ""); err != nil {
-		return fmt.Errorf("prepare WLT commission tenant: %w", err)
+	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+		return fmt.Errorf("prepare WLT commission OperatorContext: %w", err)
 	}
 	if err := setRequiredMutationHeaders(req, correlationID, input.IdempotencyKey); err != nil {
 		return fmt.Errorf("prepare WLT field commission request: %w", err)
 	}
-
 	response, err := c.http.Do(req)
 	if err != nil {
 		return fmt.Errorf("call WLT field commission: %w", err)
@@ -300,9 +284,6 @@ func (c *Client) DeliverFieldCommission(ctx context.Context, input DeliverFieldC
 	return nil
 }
 
-// ExpireSession tells WLT to expire a payment session that was created but
-// never captured. A 409 means the session is already terminal and is treated
-// as successful convergence.
 func (c *Client) ExpireSession(ctx context.Context, paymentSessionID, correlationID string) error {
 	if !c.Configured() {
 		return fmt.Errorf("WLT payment-session handoff is not configured")
@@ -318,8 +299,8 @@ func (c *Client) ExpireSession(ctx context.Context, paymentSessionID, correlatio
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedTenantHeader(req, ""); err != nil {
-		return fmt.Errorf("prepare WLT expire tenant: %w", err)
+	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+		return fmt.Errorf("prepare WLT expire OperatorContext: %w", err)
 	}
 	if strings.TrimSpace(correlationID) == "" {
 		correlationID = paymentSessionID
@@ -327,7 +308,6 @@ func (c *Client) ExpireSession(ctx context.Context, paymentSessionID, correlatio
 	if err := setRequiredMutationHeaders(req, correlationID, deterministicMutationKey("payment-session-expire", paymentSessionID)); err != nil {
 		return fmt.Errorf("prepare WLT expire-session request: %w", err)
 	}
-
 	response, err := c.http.Do(req)
 	if err != nil {
 		return fmt.Errorf("call WLT expire-session: %w", err)

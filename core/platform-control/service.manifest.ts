@@ -20,23 +20,19 @@ export const platformControlServiceManifest = {
   rolloutRuntimeReady: true,
   rollbackRuntimeReady: true,
   healthAggregationReady: true,
-  saasRuntimeProjectionReady: true,
-  tenantContextEnforcementReady: true,
+  operatorContextEnforcementReady: true,
 
   contracts: [
     "contracts/platform-control.openapi.yaml",
-    "contracts/platform-control.saas.overlay.yaml",
   ],
   generatedClients: [
     "clients/generated/platform-control-api.ts",
-    "clients/generated/platform-control-saas-runtime.ts",
   ],
 
   boundaries: {
     owns: [
       "platform_runtime_snapshot",
-      "platform_saas_runtime_status",
-      "platform_trusted_tenant_context",
+      "platform_trusted_operator_context",
       "platform_variable_resolution_contract",
       "platform_feature_flag_contract",
       "platform_change_workflow_contract",
@@ -59,12 +55,10 @@ export const platformControlServiceManifest = {
       "platform_rollout_rollback",
       "platform_rollout_recovery_derive",
       "platform_rollback_execute",
-      "platform_saas_runtime_status_fabrication",
-      "platform_tenant_context_override",
+      "platform_operator_context_override",
     ],
     allowedForDshControlPanel: [
       "platform_runtime_snapshot_read",
-      "platform_saas_runtime_status_read",
       "platform_effective_config_read",
       "platform_posture_display",
       "platform_change_workflow_operate_when_authorized",
@@ -79,7 +73,7 @@ export const platformControlServiceManifest = {
     requiredBeforeRelease: [
       "same_commit_ci_success",
       "docker_runtime_smoke_success",
-      "cross_tenant_isolation_evidence",
+      "cross_operator_context_isolation_evidence",
       "visual_evidence",
       "product_owner_acceptance",
       "qa_acceptance",

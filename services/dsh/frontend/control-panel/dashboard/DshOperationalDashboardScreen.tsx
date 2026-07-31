@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Box, spacing } from "@bthwani/ui-kit";
 import { WebControlPanelKpiStrip, WebCompactSurfaceHeader } from "@bthwani/ui-kit/web";
-import { CpMutedInline, CpRetryButton, CpStatePanel } from "@bthwani/control-panel/components";
+import { CpMutedInline, CpRetryButton, CpStatePanel, CpStateView } from "@bthwani/control-panel/components";
 import { OverviewPageFrame } from "@bthwani/control-panel/shell";
 import { useOperatorAnalyticsDashboardController, buildPlatformKpisViewModel } from "../../shared/analytics";
 import { usePartnerAdminController } from "../../shared/partner";
@@ -29,7 +29,7 @@ export function DshOperationalDashboardScreen() {
   }, [partnerAdmin.listState]);
 
   if (platformState.kind === "loading" || platformState.kind === "idle") {
-    return <CpStatePanel role="status" title="جارٍ تحميل مؤشرات المنصة…" />;
+    return <CpStateView kind="loading" title="جارٍ تحميل مؤشرات المنصة…" />;
   }
 
   if (platformState.kind === "error") {

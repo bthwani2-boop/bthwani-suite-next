@@ -5,7 +5,7 @@
 import React, { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ProviderKind } from "../../shared/workforce";
-import { CpButton, CpPageHeader, CpTabs } from "@bthwani/control-panel/components";
+import { CpBadge, CpButton, CpPageHeader, CpTabs } from "@bthwani/control-panel/components";
 import { EditorPageFrame } from "@bthwani/control-panel/shell";
 
 import { ProviderListView } from "./ProviderListView";
@@ -22,6 +22,12 @@ const KIND_TABS: Array<{ label: string; value: ProviderKind }> = [
   { label: "ميداني", value: "field" },
   { label: "موظف إداري", value: "employee" },
 ];
+
+function providerKindLabel(kind: ProviderKind): string {
+  if (kind === "captain") return "الكابتن";
+  if (kind === "employee") return "الموظف";
+  return "الميداني";
+}
 
 function WorkforceHrScreenInner() {
   const router = useRouter();
@@ -40,47 +46,74 @@ function WorkforceHrScreenInner() {
     router.push(`?${params.toString()}`);
   };
 
-  if (view === "create" || view === "manage" || view === "type-select" || view === "activation") {
+  if (view === "create") {
+    if (kind === "employee") {
+      return (
+        <EditorPageFrame header={<CpPageHeader title="إضافة موظف إداري"><CpButton variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع</CpButton></CpPageHeader>}>
+          <EmployeeCreateView inline onCreated={(employee) => navigateTo("created-success", "employee", employee.actorId)} />
+        </EditorPageFrame>
+      );
+    }
+    if (kind === "captain") {
+      return (
+        <EditorPageFrame header={<CpPageHeader title="إضافة كابتن"><CpButton variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع</CpButton></CpPageHeader>}>
+          <CaptainCreateView inline onCreated={(captain) => navigateTo("created-success", "captain", captain.actorId)} />
+        </EditorPageFrame>
+      );
+    }
     return (
-      <EditorPageFrame
-        header={
-          <CpPageHeader title="إضافة عضو Workforce">
-            <CpButton variant="ghost" onClick={() => navigateTo("list")}>رجوع</CpButton>
-          </CpPageHeader>
-        }
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <CpTabs aria-label="نوع العضو" value={kind} onChange={(value) => navigateTo("create", value as ProviderKind)} items={KIND_TABS} />
+      <EditorPageFrame header={<CpPageHeader title="إضافة ميداني"><CpButton variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع</CpButton></CpPageHeader>}>
+        <FieldAgentCreateView inline onCreated={(agent) => navigateTo("created-success", "field", agent.actorId)} />
+      </EditorPageFrame>
+    );
+  }
 
-          {kind === "captain" ? (
-            <CaptainCreateView inline onCreated={(captain) => navigateTo("detail", "captain", captain.actorId)} />
-          ) : kind === "employee" ? (
-            <EmployeeCreateView inline onCreated={(employee) => navigateTo("detail", "employee", employee.actorId)} />
-          ) : (
-            <FieldAgentCreateView inline onCreated={(agent) => navigateTo("detail", "field", agent.actorId)} />
-          )}
+  if (view === "created-success") {
+    return (
+      <EditorPageFrame header={<CpPageHeader title="تمت الإضافة بنجاح"><CpButton variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع للقائمة</CpButton></CpPageHeader>}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px", alignItems: "center", justifyContent: "center", padding: "64px 20px" }}>
+          <CpBadge tone="success">تمت إضافة {providerKindLabel(kind)} بنجاح!</CpBadge>
+          <CpButton variant="primary" onClick={() => navigateTo("detail", kind, actorId)}>
+            تفعيل
+          </CpButton>
         </div>
       </EditorPageFrame>
     );
   }
 
   if (view === "detail") {
-    if (kind === "employee") return <EmployeeDetailView actorId={actorId} onBack={() => navigateTo("list")} />;
-    if (kind === "captain") return <CaptainDetailView actorId={actorId} onBack={() => navigateTo("list")} />;
-    return <FieldAgentDetailView actorId={actorId} onBack={() => navigateTo("list")} />;
+    if (kind === "employee") return <EmployeeDetailView actorId={actorId} onBack={() => navigateTo("list", kind)} />;
+    if (kind === "captain") return <CaptainDetailView actorId={actorId} onBack={() => navigateTo("list", kind)} />;
+    return <FieldAgentDetailView actorId={actorId} onBack={() => navigateTo("list", kind)} />;
   }
 
   if (view === "reference") {
-    return <WorkforceReferenceView onBack={() => navigateTo("list")} />;
+    return <WorkforceReferenceView onBack={() => navigateTo("list", kind)} />;
   }
 
+  // view === "list"
   return (
-    <ProviderListView
-      onCreate={() => navigateTo("create", "field")}
-      onOpen={(actorIdVal, providerKindVal) => navigateTo("detail", providerKindVal, actorIdVal)}
-      onReference={() => navigateTo("reference")}
-      onActivation={() => navigateTo("create", "field")}
-    />
+    <EditorPageFrame
+      header={
+        <CpPageHeader title="مقدمي الخدمة">
+          <CpButton variant="primary" onClick={() => navigateTo("create", kind)}>إضافة {kind === "captain" ? "كابتن" : kind === "field" ? "ميداني" : "موظف"}</CpButton>
+        </CpPageHeader>
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <CpTabs aria-label="نوع مقدم الخدمة" value={kind} onChange={(value) => navigateTo("list", value as ProviderKind)} items={KIND_TABS} />
+
+        <div style={{ marginTop: "16px" }}>
+          <ProviderListView
+            forcedKind={kind}
+            onCreate={() => navigateTo("create", kind)}
+            onOpen={(actorIdVal, providerKindVal) => navigateTo("detail", providerKindVal, actorIdVal)}
+            onReference={() => navigateTo("reference")}
+            onActivation={() => navigateTo("create", kind)}
+          />
+        </div>
+      </div>
+    </EditorPageFrame>
   );
 }
 

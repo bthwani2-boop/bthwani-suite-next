@@ -55,7 +55,6 @@ test("identity and service clients switch to cookie transport for relative bases
     ["services/dsh/frontend/shared/_kernel/dsh-api-base-url.ts", "/api/dsh"],
     ["services/dsh/frontend/shared/_kernel/workforce-api-base-url.ts", "/api/workforce"],
     ["services/dsh/frontend/shared/_kernel/providers-api-base-url.ts", "/api/providers"],
-    ["services/wlt/frontend/shared/dsh/wlt-dsh-api-base-url.ts", "/api/wlt"],
     ["services/dsh/frontend/shared/_kernel/platform-control-api-base-url.ts", "/api/platform-control"],
   ];
   for (const [file, expected] of resolvers) {
@@ -95,7 +94,7 @@ test("all identity token rotation paths require control-panel operator role", ()
   assert.match(sessionRoute, /resolved\.identity\.roles\.includes\("operator"\)/);
 });
 
-test("dynamic BFF is limited to Identity and read-only WLT references", () => {
+test("dynamic BFF is limited to Identity and excludes direct WLT access", () => {
   const proxy = read(bffProxyPath);
   const route = read("apps/control-panel/runtime/src/app/api/[service]/[...path]/route.ts");
   const forwardedHeaders = proxy.match(
@@ -111,7 +110,7 @@ test("dynamic BFF is limited to Identity and read-only WLT references", () => {
   assert.match(proxy, /redirect:\s*"manual"/);
   assert.doesNotMatch(proxy, /redirect:\s*"follow"/);
   assert.match(route, /identity:\s*new Set\(\["auth", "identity"\]\)/);
-  assert.match(route, /wlt:\s*new Set\(\["wlt"\]\)/);
+  assert.doesNotMatch(route, /wlt:\s*new Set/);
   assert.doesNotMatch(route, /dsh:\s*new Set/);
   assert.doesNotMatch(route, /workforce:\s*new Set/);
   assert.doesNotMatch(route, /providers:\s*new Set/);
@@ -136,9 +135,10 @@ test("authenticated business services use explicit static BFF routes", () => {
 
 test("production BFF upstreams are server-only and fail closed when absent", () => {
   const proxy = read(bffProxyPath);
-  for (const variable of ["IDENTITY_API_BASE_URL", "WLT_API_BASE_URL"]) {
+  for (const variable of ["IDENTITY_API_BASE_URL"]) {
     assert.match(proxy, new RegExp(`env: "${variable}"`));
   }
+  assert.doesNotMatch(proxy, /WLT_API_BASE_URL/);
   assert.doesNotMatch(proxy, /NEXT_PUBLIC_[A-Z_]+_API_BASE_URL/);
   assert.match(proxy, /process\.env\.NODE_ENV === "production"/);
   assert.match(proxy, /BFF_UPSTREAM_NOT_CONFIGURED/);

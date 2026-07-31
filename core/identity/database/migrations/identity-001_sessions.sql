@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS identity_actors (
   id            text PRIMARY KEY,
   username      text NOT NULL UNIQUE,
   password_hash text NOT NULL,
-  tenant_id     text NOT NULL,
+  operator_context_id     text NOT NULL,
   roles         text[] NOT NULL,
   permissions   jsonb NOT NULL DEFAULT '[]'::jsonb,
   active        boolean NOT NULL DEFAULT true,

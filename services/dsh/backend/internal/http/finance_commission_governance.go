@@ -105,7 +105,7 @@ func (s *protectedStoreServer) handleFinanceCommissionDetail(w http.ResponseWrit
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "commissionId is required")
 		return
 	}
-	s.proxyFinanceRead(w, r, "/wlt/commissions/"+url.PathEscape(commissionID), nil, actor.TenantID)
+	s.proxyFinanceRead(w, r, "/wlt/commissions/"+url.PathEscape(commissionID), nil, actor.OperatorContextID)
 }
 
 // POST /dsh/control-panel/finance/commissions/{commissionId}/adjust
@@ -223,5 +223,5 @@ func (s *protectedStoreServer) handleFinanceSettlementEvidence(w http.ResponseWr
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "settlementId is required")
 		return
 	}
-	s.proxyFinanceRead(w, r, "/wlt/settlements/"+url.PathEscape(settlementID)+"/evidence", nil, actor.TenantID)
+	s.proxyFinanceRead(w, r, "/wlt/settlements/"+url.PathEscape(settlementID)+"/evidence", nil, actor.OperatorContextID)
 }

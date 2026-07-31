@@ -79,7 +79,7 @@ func (s *protectedStoreServer) handleReportOperationalIncident(w http.ResponseWr
 	}
 	reported, err := incident.NewService(s.db).Report(r.Context(), incident.ReportInput{
 		OrderID:            strings.TrimSpace(body.OrderID),
-		TenantID:           actor.TenantID,
+		OperatorContextID:           actor.OperatorContextID,
 		TargetEntityType:   incident.TargetEntityType(strings.TrimSpace(body.TargetEntityType)),
 		TargetEntityID:     strings.TrimSpace(body.TargetEntityID),
 		IncidentType:       incident.IncidentType(strings.TrimSpace(body.IncidentType)),

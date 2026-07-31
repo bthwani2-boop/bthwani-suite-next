@@ -13,7 +13,6 @@
       "governance-schema",
       "agent-governance",
       "authority-separation",
-      "saas-governance",
       "guard-registry",
       "sdlc",
       "required-command-integrity",
@@ -29,7 +28,6 @@
       "governance-schema",
       "agent-governance",
       "authority-separation",
-      "saas-governance",
       "guard-registry",
       "sdlc",
       "required-command-integrity",
@@ -42,14 +40,12 @@
       "frontend-feature-binding",
       "fullstack-boundary",
       "wlt-financial-boundary",
-      "runtime-real-bindings",
-      "live-cross-journey-integrity"
+      "runtime-real-bindings"
     ],
     "governance": [
       "governance-schema",
       "agent-governance",
       "authority-separation",
-      "saas-governance",
       "guard-registry",
       "sdlc",
       "required-command-integrity",

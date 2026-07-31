@@ -10,19 +10,19 @@ import (
 )
 
 // GetPromotionFundingReservation reads sovereign WLT state for DSH
-// reconciliation. It never accepts a tenant inferred from the reservation ID.
+// reconciliation. It never accepts a OperatorContext inferred from the reservation ID.
 func (c *Client) GetPromotionFundingReservation(
 	ctx context.Context,
 	reservationID string,
-	tenantID string,
+	operatorContextID string,
 ) (*PromotionFundingReservation, error) {
 	if !c.Configured() {
 		return nil, fmt.Errorf("WLT promotion funding is not configured")
 	}
 	reservationID = strings.TrimSpace(reservationID)
-	tenantID = strings.TrimSpace(tenantID)
-	if reservationID == "" || tenantID == "" {
-		return nil, fmt.Errorf("promotion funding reservation and tenant are required")
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if reservationID == "" || operatorContextID == "" {
+		return nil, fmt.Errorf("promotion funding reservation and OperatorContext are required")
 	}
 
 	req, err := http.NewRequestWithContext(
@@ -37,7 +37,7 @@ func (c *Client) GetPromotionFundingReservation(
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Tenant-ID", tenantID)
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
 
 	response, err := c.http.Do(req)
 	if err != nil {
@@ -63,7 +63,7 @@ func (c *Client) GetPromotionFundingReservation(
 	if err := json.NewDecoder(response.Body).Decode(&envelope); err != nil {
 		return nil, fmt.Errorf("decode WLT promotion funding read: %w", err)
 	}
-	if envelope.Reservation.ID != reservationID || envelope.Reservation.TenantID != tenantID {
+	if envelope.Reservation.ID != reservationID || envelope.Reservation.OperatorContextID != operatorContextID {
 		return nil, fmt.Errorf("WLT promotion funding readback identity mismatch")
 	}
 	return &envelope.Reservation, nil

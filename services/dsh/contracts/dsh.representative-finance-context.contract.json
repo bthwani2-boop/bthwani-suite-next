@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "REPRESENTATIVE_FINANCE_CONTEXT",
+  "parentContract": "services/dsh/contracts/dsh.representative-finance.openapi.yaml",
+  "truthOwner": "WLT",
+  "operatorContextBoundary": {
+    "source": "core.identity.session.operatorContextId",
+    "clientSuppliedOperatorContextAccepted": false,
+    "description": "The OperatorContext is derived from the authenticated Identity session and forwarded server-to-server by DSH. Browser query, path, and header values cannot select the WLT OperatorContext.",
+    "walletLookupKey": ["operator_context_id", "actor_type", "actor_id"],
+    "ledgerLookupKey": ["operator_context_id", "actor_type", "actor_id"],
+    "crossOperatorContextWalletBehavior": "NOT_FOUND",
+    "crossOperatorContextLedgerBehavior": "EMPTY_COLLECTION"
+  },
+  "invariants": [
+    "Self-service representative finance uses the actor and OperatorContext resolved from the bearer session.",
+    "Control-panel representative finance uses the operator OperatorContext resolved from the bearer session.",
+    "DSH forwards X-Operator-Context-ID only from trusted Identity context.",
+    "WLT rejects representative wallet and ledger reads without X-Operator-Context-ID.",
+    "No frontend can override actorId, actorType, or operatorContextId for a self-service financial read.",
+    "WLT remains the sole owner of wallet balance and ledger truth."
+  ],
+  "negativeEvidence": [
+    "anonymous request rejected",
+    "cross-role request rejected",
+    "unsupported representative actor rejected",
+    "cross-OperatorContext wallet hidden as not found",
+    "cross-OperatorContext ledger hidden as empty",
+    "direct browser-style WLT call rejected",
+    "DSH and frontend balance mutation absent"
+  ]
+}

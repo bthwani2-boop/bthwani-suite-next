@@ -3,7 +3,7 @@ import type { components } from "../../../clients/generated/dsh-api";
 export type DshDispatchAssignment = components["schemas"]["DshDispatchAssignment"] & {
   specialRequestId?: string;
   requestType?: string;
-  tenantId?: string;
+  operatorContextId?: string;
   serviceAreaCode?: string;
   priority?: number;
   distanceMeters?: number | null;
@@ -52,7 +52,7 @@ export type DshPartnerDispatchReference = components["schemas"]["DshPartnerDispa
 
 export type DshGovernedCreateAssignmentInput = {
   readonly orderId: string;
-  readonly tenantId?: string;
+  readonly operatorContextId?: string;
   readonly captainId: string;
   readonly serviceAreaCode: string;
   readonly idempotencyKey: string;
@@ -63,7 +63,7 @@ export type DshGovernedCreateAssignmentInput = {
 };
 
 export type DshCaptainDispatchProfileInput = {
-  readonly tenantId?: string;
+  readonly operatorContextId?: string;
   readonly accreditationStatus: "pending" | "approved" | "suspended" | "expired";
   readonly availabilityStatus: "available" | "busy" | "offline" | "suspended";
   readonly maxActiveAssignments: number;
@@ -72,7 +72,7 @@ export type DshCaptainDispatchProfileInput = {
 };
 
 export type DshCaptainDispatchCandidate = {
-  readonly tenantId: string;
+  readonly operatorContextId: string;
   readonly captainId: string;
   readonly serviceAreaCode: string;
   readonly accreditationStatus: "pending" | "approved" | "suspended" | "expired";
@@ -93,7 +93,7 @@ export type DshReassignAssignmentInput = Omit<DshGovernedCreateAssignmentInput, 
 
 export type DshDispatchDecision = {
   readonly id: string;
-  readonly tenantId: string;
+  readonly operatorContextId: string;
   readonly assignmentId?: string;
   readonly orderId?: string;
   readonly captainId?: string;

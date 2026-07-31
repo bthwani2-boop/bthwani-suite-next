@@ -56,7 +56,7 @@ function Assert-ProviderResponseIsSecretSafe {
   }
 }
 
-function Invoke-Jrn039ProviderSmoke {
+function Invoke-ProviderGovernanceSmoke {
   param(
     [Parameter(Mandatory = $true)][string]$AccessToken,
     [Parameter(Mandatory = $true)][string]$CorrelationId
@@ -80,7 +80,7 @@ function Invoke-Jrn039ProviderSmoke {
   }
 
   $provider = @($providers | Where-Object { $_.code -ne "wlt-mock" })[0]
-  if ($null -eq $provider) { throw "no non-mock provider is available for JRN-039 smoke" }
+  if ($null -eq $provider) { throw "no non-mock provider is available for provider-governance smoke" }
   $providerId = $provider.providerId
   $originalActive = [bool]$provider.active
   $targetActive = -not $originalActive
@@ -138,7 +138,7 @@ function Invoke-PlatformP3Smoke {
   $applierHeaders = New-PlatformAuthHeaders -AccessToken $applierToken -CorrelationId $correlationId
   $rolloutHeaders = New-PlatformAuthHeaders -AccessToken $rolloutToken -CorrelationId $correlationId
 
-  Invoke-Jrn039ProviderSmoke -AccessToken $operatorToken -CorrelationId $correlationId
+  Invoke-ProviderGovernanceSmoke -AccessToken $operatorToken -CorrelationId $correlationId
 
   $snapshot = Invoke-RestMethod "http://localhost:58088/platform/v1/runtime-config" -Headers $operatorHeaders -TimeoutSec 10
   if ($snapshot.status -ne "OPERATIONAL" -or $snapshot.rolloutsState -ne "OPERATIONAL") {
@@ -216,5 +216,5 @@ function Invoke-PlatformP3Smoke {
   $audit = Invoke-RestMethod "http://localhost:58088/platform/v1/audit-events" -Headers $rolloutHeaders -TimeoutSec 10
   $journeyEvents = @($audit.events | Where-Object { $_.correlationId -eq $correlationId })
   if ($journeyEvents.Count -ne 10) { throw "expected ten persisted P3 workflow events, got $($journeyEvents.Count)" }
-  Write-Host "Platform-control P3 multi-service runtime smoke including JRN-039 providers: PASS"
+  Write-Host "Platform-control multi-service runtime smoke including provider governance: PASS"
 }

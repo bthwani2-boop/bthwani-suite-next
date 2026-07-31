@@ -15,6 +15,8 @@ export type DshCartItem = {
   readonly priceReference: string;
   /** Snapshotted server-side from the store assortment at add-to-cart time. */
   readonly unitPrice: number;
+  /** Snapshotted with unitPrice from the same sovereign store assortment row. */
+  readonly currency: string;
   readonly quantity: number;
   readonly version: number;
   readonly createdAt: string;
@@ -37,6 +39,8 @@ export type DshCartItemValidation = {
   readonly reasonCode?: string;
   readonly snapshotUnitPrice: number;
   readonly currentUnitPrice?: number;
+  readonly snapshotCurrency: string;
+  readonly currentCurrency?: string;
   readonly snapshotAssortmentId?: string;
   readonly currentAssortmentId?: string;
 };

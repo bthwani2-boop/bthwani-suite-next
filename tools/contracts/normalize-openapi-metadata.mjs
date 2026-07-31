@@ -75,8 +75,19 @@ function collectSchemaNames(lines) {
   const componentsEnd = findTopLevelBlockEnd(lines, componentsIndex);
   const schemasIndex = lines.findIndex((line, index) => index > componentsIndex && index < componentsEnd && line === "  schemas:");
   if (schemasIndex < 0) return [];
-  const names = [];
+  // schemas: is not necessarily the last components subsection (a composed
+  // bundle's section order depends on which contract first introduces each
+  // section name), so stop at the next 2-space-indented sibling key
+  // (requestBodies:, responses:, ...), not at the end of components: itself.
+  let schemasEnd = componentsEnd;
   for (let index = schemasIndex + 1; index < componentsEnd; index += 1) {
+    if (/^ {2}\S/.test(lines[index])) {
+      schemasEnd = index;
+      break;
+    }
+  }
+  const names = [];
+  for (let index = schemasIndex + 1; index < schemasEnd; index += 1) {
     const match = lines[index].match(/^ {4}([^\s#][^:]*):\s*$/);
     if (match) names.push(match[1].trim());
   }

@@ -3,7 +3,6 @@ import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshCaptainDispatchCandidate,
   DshCaptainDispatchProfileInput,
-  DshCreateAssignmentInput,
   DshDeliveryException,
   DshDeliveryExceptionResolutionAction,
   DshDeliveryStatus,
@@ -17,15 +16,6 @@ import type {
 } from "./dispatch.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "dispatch");
-
-/** @deprecated JRN-014 operator surfaces must call createGovernedDispatchAssignment. */
-export async function createDispatchAssignment(input: DshCreateAssignmentInput): Promise<DshDispatchAssignment> {
-  const data = await request<{ assignment: DshDispatchAssignment }>("/dsh/operator/dispatch/assignments", {
-    method: "POST",
-    body: input,
-  });
-  return data.assignment;
-}
 
 export async function createGovernedDispatchAssignment(
   input: DshGovernedCreateAssignmentInput,
@@ -49,9 +39,9 @@ export async function fetchCaptainDispatchAssignments(): Promise<readonly DshDis
 
 export async function fetchCaptainDispatchCandidates(
   serviceAreaCode: string,
-  tenantId = "default",
+  operatorContextId = "default",
 ): Promise<readonly DshCaptainDispatchCandidate[]> {
-  const params = new URLSearchParams({ serviceAreaCode, tenantId });
+  const params = new URLSearchParams({ serviceAreaCode, operatorContextId });
   const data = await request<{ candidates: DshCaptainDispatchCandidate[] }>(
     `/dsh/operator/dispatch/candidates?${params.toString()}`,
   );
@@ -112,24 +102,24 @@ export async function cancelDispatchAssignment(
 }
 
 export async function expireDispatchAssignments(
-  tenantId = "default",
+  operatorContextId = "default",
   limit = 100,
 ): Promise<number> {
   const data = await request<{ expiredCount: number }>(
     "/dsh/operator/dispatch/assignments/expire",
-    { method: "POST", body: { tenantId, limit } },
+    { method: "POST", body: { operatorContextId, limit } },
   );
   return Math.max(0, Number(data.expiredCount ?? 0));
 }
 
 export async function fetchDispatchDecisions(input: {
-  readonly tenantId?: string;
+  readonly operatorContextId?: string;
   readonly assignmentId?: string;
   readonly orderId?: string;
   readonly limit?: number;
 }): Promise<readonly DshDispatchDecision[]> {
   const params = new URLSearchParams();
-  if (input.tenantId) params.set("tenantId", input.tenantId);
+  if (input.operatorContextId) params.set("operatorContextId", input.operatorContextId);
   if (input.assignmentId) params.set("assignmentId", input.assignmentId);
   if (input.orderId) params.set("orderId", input.orderId);
   if (input.limit) params.set("limit", String(input.limit));

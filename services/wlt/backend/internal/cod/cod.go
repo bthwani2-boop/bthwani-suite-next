@@ -256,28 +256,28 @@ func GetCodRecord(db *sql.DB, codRecordID string) (*CodRecord, error) {
 	return c, err
 }
 
-// ListCodRecords requires a tenantID: the tenant_id predicate is mandatory
+// ListCodRecords requires a operatorContextID: the operator_context_id predicate is mandatory
 // and is always ANDed onto whichever caller-supplied filter is used, so a
-// caller can never see another tenant's COD records via this query.
-func ListCodRecords(db *sql.DB, tenantID, captainID, partnerID, orderID string) ([]*CodRecord, error) {
-	if tenantID = strings.TrimSpace(tenantID); tenantID == "" {
-		return nil, fmt.Errorf("tenantId is required")
+// caller can never see another OperatorContext's COD records via this query.
+func ListCodRecords(db *sql.DB, operatorContextID, captainID, partnerID, orderID string) ([]*CodRecord, error) {
+	if operatorContextID = strings.TrimSpace(operatorContextID); operatorContextID == "" {
+		return nil, fmt.Errorf("operatorContextId is required")
 	}
 	var q string
 	var arg string
 	if captainID = strings.TrimSpace(captainID); captainID != "" {
-		q = `SELECT ` + codCols + ` FROM wlt_cod_records WHERE tenant_id = $1 AND collector_type='captain' AND collector_id = $2 ORDER BY created_at DESC`
+		q = `SELECT ` + codCols + ` FROM wlt_cod_records WHERE operator_context_id = $1 AND collector_type='captain' AND collector_id = $2 ORDER BY created_at DESC`
 		arg = captainID
 	} else if partnerID = strings.TrimSpace(partnerID); partnerID != "" {
-		q = `SELECT ` + codCols + ` FROM wlt_cod_records WHERE tenant_id = $1 AND partner_id = $2 ORDER BY created_at DESC`
+		q = `SELECT ` + codCols + ` FROM wlt_cod_records WHERE operator_context_id = $1 AND partner_id = $2 ORDER BY created_at DESC`
 		arg = partnerID
 	} else if orderID = strings.TrimSpace(orderID); orderID != "" {
-		q = `SELECT ` + codCols + ` FROM wlt_cod_records WHERE tenant_id = $1 AND order_id = $2 ORDER BY created_at DESC`
+		q = `SELECT ` + codCols + ` FROM wlt_cod_records WHERE operator_context_id = $1 AND order_id = $2 ORDER BY created_at DESC`
 		arg = orderID
 	} else {
 		return nil, fmt.Errorf("captainId, partnerId, or orderId query parameter is required")
 	}
-	rows, err := db.Query(q, tenantID, arg)
+	rows, err := db.Query(q, operatorContextID, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -811,7 +811,7 @@ func HandleGetCodRecord(db *sql.DB) http.HandlerFunc {
 func HandleListCodRecords(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
-		records, err := ListCodRecords(db, q.Get("tenantId"), q.Get("captainId"), q.Get("partnerId"), q.Get("orderId"))
+		records, err := ListCodRecords(db, q.Get("operatorContextId"), q.Get("captainId"), q.Get("partnerId"), q.Get("orderId"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return

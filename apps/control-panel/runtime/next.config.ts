@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const developmentConnectSources =
   process.env.NODE_ENV === "production"
@@ -51,6 +52,7 @@ const nextConfig: NextConfig = {
     ];
   },
   turbopack: {
+    root: path.join(__dirname, "../../.."),
     resolveAlias: {
       "react-native": "react-native-web",
       "@expo/vector-icons/Ionicons": "./stubs/ionicons-stub.js",

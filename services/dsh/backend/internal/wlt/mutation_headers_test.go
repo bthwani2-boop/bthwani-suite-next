@@ -10,6 +10,10 @@ import (
 	"testing"
 )
 
+func trustedMutationTestContext() context.Context {
+	return WithOperatorContext(context.Background(), "OperatorContext-a")
+}
+
 func requireMutationHeaders(t *testing.T, r *http.Request) {
 	t.Helper()
 	if strings.TrimSpace(r.Header.Get("X-Correlation-ID")) == "" {
@@ -17,6 +21,9 @@ func requireMutationHeaders(t *testing.T, r *http.Request) {
 	}
 	if strings.TrimSpace(r.Header.Get("Idempotency-Key")) == "" {
 		t.Fatal("missing Idempotency-Key")
+	}
+	if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-a" {
+		t.Fatalf("unexpected X-Operator-Context-ID %q", r.Header.Get("X-Operator-Context-ID"))
 	}
 }
 
@@ -56,7 +63,7 @@ func TestNotifyDeliveryCollectionAddsDeterministicHeaders(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	if err := client.NotifyDeliveryCollection(context.Background(), NotifyDeliveryCollectionInput{
+	if err := client.NotifyDeliveryCollection(trustedMutationTestContext(), NotifyDeliveryCollectionInput{
 		OrderID:          "order-1",
 		CollectorType:    "captain",
 		CollectorID:      "captain-1",
@@ -82,7 +89,7 @@ func TestDeliverFieldCommissionUsesSameBodyAndHeaderIdempotencyKey(t *testing.T)
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	if err := client.DeliverFieldCommission(context.Background(), DeliverFieldCommissionInput{
+	if err := client.DeliverFieldCommission(trustedMutationTestContext(), DeliverFieldCommissionInput{
 		BeneficiaryActorID: "field-1",
 		VisitID:            "visit-1",
 		SourceID:           "visit-1",
@@ -107,7 +114,7 @@ func TestActorFinanceCodMutationAddsFallbackCorrelation(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	status, _, err := client.FinanceWriteCodRecord(context.Background(), "cod-1", "collect", proof, "")
+	status, _, err := client.FinanceWriteCodRecord(trustedMutationTestContext(), "cod-1", "collect", proof, "")
 	if err != nil {
 		t.Fatalf("expected governed fallback correlation: %v", err)
 	}
@@ -125,7 +132,7 @@ func TestSettlementMutationAddsRequiredHeaders(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	if _, _, err := client.FinanceWriteSettlement(context.Background(), http.MethodPost, "/wlt/settlements", []byte(`{}`), "order-1"); err != nil {
+	if _, _, err := client.FinanceWriteSettlement(trustedMutationTestContext(), http.MethodPost, "/wlt/settlements", []byte(`{}`), "order-1"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -139,7 +146,7 @@ func TestCommercialProductWriteAddsRequiredHeaders(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	product, err := client.CreateCommercialProduct(context.Background(), CreateCommercialProductInput{Reference: "plus"})
+	product, err := client.CreateCommercialProduct(trustedMutationTestContext(), CreateCommercialProductInput{Reference: "plus"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -148,7 +155,7 @@ func TestCommercialProductWriteAddsRequiredHeaders(t *testing.T) {
 	}
 }
 
-func TestPromotionFundingRejectsMissingTenantBeforeNetwork(t *testing.T) {
+func TestPromotionFundingRejectsMissingOperatorContextBeforeNetwork(t *testing.T) {
 	called := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
@@ -162,10 +169,10 @@ func TestPromotionFundingRejectsMissingTenantBeforeNetwork(t *testing.T) {
 		CouponRedemptionID: "redemption-1",
 	}, "", "")
 	if err == nil {
-		t.Fatal("expected missing tenant to fail")
+		t.Fatal("expected missing OperatorContext to fail")
 	}
 	if called {
-		t.Fatal("promotion funding request reached network without tenant")
+		t.Fatal("promotion funding request reached network without OperatorContext")
 	}
 }
 
@@ -178,7 +185,7 @@ func TestSubscriptionPaymentSessionAddsFallbackHeaders(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	session, err := client.CreateSubscriptionPaymentSession(context.Background(), CreateSubscriptionPaymentSessionInput{
+	session, err := client.CreateSubscriptionPaymentSession(trustedMutationTestContext(), CreateSubscriptionPaymentSessionInput{
 		SubscriptionPurchaseID: "purchase-1",
 		ProductReference:       "plus",
 		ClientID:               "client-1",

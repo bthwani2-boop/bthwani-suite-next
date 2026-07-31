@@ -15,7 +15,7 @@ Human-readable status summaries in this README are intentionally avoided because
 - DSH runtime evidence state: `services/dsh/runtime-map.ts`
 - DSH service manifest: `services/dsh/service.manifest.ts`
 - WLT service manifest: `services/wlt/service.manifest.ts`
-- SaaS activation evidence: `governance/saas/saas-governance.json`
+- Commercial activation evidence: `governance/commercialization/commercial-governance.json`
 - GitHub enforcement evidence: `governance/github/repository-enforcement.json`
 - Canonical decision vocabulary: `governance/contracts/decision-vocabulary.json`
 

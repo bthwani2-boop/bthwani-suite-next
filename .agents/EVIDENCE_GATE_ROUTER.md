@@ -1,90 +1,59 @@
 # Evidence Gate Router
 
-Goal: choose the smallest sufficient code-based check.
+Choose the smallest check that can prove the requested claim.
 
-## Default mode — CODE_BASED_LEAN
+## Default
 
-The canonical policy for default execution is detailed in [LEAN_CODE_BASED_CHECK.md](../governance/LEAN_CODE_BASED_CHECK.md).
+For `CODE_BASED_LEAN` work:
 
-Use this for normal implementation.
+- inspect the directly relevant implementation;
+- apply the smallest safe diff;
+- run one targeted check when a check is useful and available;
+- report changed paths, result, and remaining risk.
 
-Required:
-- inspect directly relevant code paths
-- implement the smallest safe diff
-- run one targeted package/type/build/test/guard check only when useful and available
-- summarize changed paths, check result, and remaining risk
+LeanCTX, Graphify, Nx graphs, full workspace checks, runtime environments, screenshots, evidence packs, and command logs are not default requirements.
 
-Not required by default:
-- evidence packs
-- handoff ZIPs
-- command logs
-- screenshots or recordings
-- visual evidence packs
-- Graphify
-- Nx graph
-- full repository typecheck/test/build
-- full guard suite
-- repeated status/diff artifacts
-
-All token-drain path and file exclusions from [LEAN_CODE_BASED_CHECK.md](../governance/LEAN_CODE_BASED_CHECK.md) apply to all scans and file checks.
-
-## Automation and Sizing Policy
-* **LeanCTX Lifecycle Integration**: Sizing down a gate does not bypass LeanCTX. LeanCTX must be utilized in the understanding and diagnostic phase of all tasks. Automated execution scripts or guards are strictly for the execution and verification/evidence phase as required.
-* **Automation is Mandatory**: Choosing the smallest sufficient verification level (e.g. `LOW` or `FOCUSED`) does NOT bypass the requirement for automated verification. It does not mean a script is always created (as per the Smart Automation Selection levels), nor does it permit manual edits without verification. It demands code-based automated verification appropriate to the scope (such as targeted guard runs, `git diff --check`, or precise status tools).
-* **No Manual Chasing**: Sizing down a gate must never be used to justify arbitrary manual files modifications without automated validation checks.
-
-
-## Gate levels
+## Evidence levels
 
 ### LOW
-Text/doc/agent wording only.
-No evidence files.
-Use direct text review.
+
+Text or documentation with no behavioral claim. Use direct review and a diff check.
 
 ### FOCUSED
-Source code within one clear module.
-Use targeted code-based check only when useful.
+
+One bounded module. Use its nearest type, lint, test, build, or registered guard check.
 
 ### STANDARD
-Multi-file or cross-layer but ownership is clear.
-Use affected/touched-area checks only.
+
+Multiple files or layers with clear ownership. Use affected checks only.
 
 ### UI
-Code-based check first.
-Normal UI work uses code-based validation. Do not block implementation or closure due to lack of screenshots.
-Screenshot/recording required only for final visual closure, visual parity approval, release/store visual requirements, or explicit user request.
+
+Verify affected code and bindings. Add screenshots or recordings only for an explicit visual request, visual parity, release evidence, or final visual closure.
 
 ### API
-Contract/client checks only when OpenAPI, generated client, adapter, or backend binding changed.
+
+Verify only affected contracts, backend routes, generated clients, and consumers.
 
 ### RUNTIME
-Runtime smoke only when runtime behavior changed or is claimed.
+
+Run targeted startup or smoke proof only when runtime behavior changed or is claimed.
 
 ### HIGH
-Move/delete/refactor/boundary/public API.
-Use targeted verification and rollback awareness.
-Evidence pack only when requested or review-critical.
 
-### CRITICAL
-Remote writes, branch mutation, destructive operations.
-Blocked unless explicitly requested.
+For public boundaries, security, finance, migrations, move/delete operations, CI, governance, release, or production, add the specialist evidence required by that risk. Do not replace targeted checks with an automatic repository-wide suite.
 
-## Decision output
+## Decisions
 
-Every review must end with one canonical decision from `governance/contracts/decision-vocabulary.json`:
+Map the result through `governance/contracts/decision-vocabulary.json`.
 
-`PASS`, `FIX_REQUIRED`, `BLOCKED_EXTERNAL`, `NEEDS_EVIDENCE`, `READY_FOR_REVIEW`, `PROTOCOL_VIOLATION`.
+Use:
 
-Use `NEEDS_EVIDENCE` with the visual scope declared when visual evidence is required for an explicit visual request, final visual closure, visual parity approval, or release/store visual requirements; otherwise use `NEEDS_EVIDENCE` only when escalation rules make evidence files mandatory.
+- `PASS` for the exact scope proven;
+- `FIX_REQUIRED` when an in-scope check fails;
+- `NEEDS_EVIDENCE` when the requested claim lacks current proof;
+- `BLOCKED_EXTERNAL` only for a real external dependency;
+- `READY_FOR_REVIEW` when implementation is complete but protected approval remains;
+- `PROTOCOL_VIOLATION` for authority, safety, scope, or evidence breaches.
 
-## Closure Vocabulary Alignment
-
-When the task is code-only, do not return a generic `PASS` if it can be misread as runtime proof. Use precise closure results instead, matched to the evidence actually produced:
-
-- `CODE_CHECK_PASS`: static/code checks passed, no runtime claim.
-- `CODE_CHECK_FAIL`: static/code checks failed.
-- `RUNTIME_SMOKE_PASS`: runtime smoke was executed and passed.
-- `RUNTIME_SMOKE_FAIL`: runtime smoke failed.
-- `UI_VISUAL_PASS`: visual proof was produced and accepted.
-- `BLOCKED_EXTERNAL`: blocked by secret, permission, device, external service, or unavailable environment.
-- `PROTOCOL_VIOLATION`: required governance or command policy was skipped.
+A static pass never upgrades runtime, visual, security, finance, isolation, release, production, or final closure evidence.

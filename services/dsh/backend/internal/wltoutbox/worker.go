@@ -55,6 +55,11 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 }
 
 func deliverEvent(ctx context.Context, client *wlt.Client, event Event) (string, error) {
+	if event.OperatorContextID == "" {
+		return "", fmt.Errorf("WLT outbox event %s has no OperatorContext context", event.ID)
+	}
+	ctx = wlt.WithOperatorContext(ctx, event.OperatorContextID)
+
 	switch event.EventType {
 	case EventTypeDeliveryCompleted:
 		collectorType := event.CollectorType
@@ -97,7 +102,7 @@ func deliverEvent(ctx context.Context, client *wlt.Client, event Event) (string,
 		reason, _ := event.Payload["reason"].(string)
 		orderID, _ := event.Payload["orderId"].(string)
 		transition := map[string]string{EventTypePromotionFundingCommit: "commit", EventTypePromotionFundingRelease: "release", EventTypePromotionFundingReverse: "reverse"}[event.EventType]
-		result, err := client.TransitionPromotionFundingFromOutbox(ctx, reservationID, transition, wlt.PromotionFundingOutboxInput{TenantID: event.TenantID, OrderID: orderID, Reason: reason, IdempotencyKey: "coupon-redemption:" + redemptionID + ":funding:" + transition, CorrelationID: "dsh-promotion-funding-" + redemptionID})
+		result, err := client.TransitionPromotionFundingFromOutbox(ctx, reservationID, transition, wlt.PromotionFundingOutboxInput{OperatorContextID: event.OperatorContextID, OrderID: orderID, Reason: reason, IdempotencyKey: "coupon-redemption:" + redemptionID + ":funding:" + transition, CorrelationID: "dsh-promotion-funding-" + redemptionID})
 		if err != nil {
 			return "", err
 		}

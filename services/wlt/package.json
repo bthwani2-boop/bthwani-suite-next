@@ -5,10 +5,13 @@
   "main": "frontend/shared/dsh/index.ts",
   "types": "frontend/shared/dsh/index.ts",
   "scripts": {
+    "openapi:compose": "node ../../tools/scripts/compose-openapi-context.mjs wlt",
+    "openapi:generate": "pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/wlt.bundle.openapi.yaml -o clients/generated/wlt-api.ts",
+    "openapi:verify": "node ../../tools/guards/wlt-openapi-bundle-gate.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "pnpm run typecheck && cd backend && go build ./...",
-    "test": "node --test tests/*.test.mjs && cd backend && go test ./...",
-    "lint": "pnpm --dir ../.. run guard:fullstack-boundary && pnpm --dir ../.. run guard:wlt-financial-boundary"
+    "test": "node --test tests/*.test.mjs ../../tools/scripts/wlt-openapi-bundle-lib.test.mjs && cd backend && go test ./...",
+    "lint": "pnpm --dir ../.. run guard:fullstack-boundary && pnpm --dir ../.. run guard:wlt-financial-boundary && pnpm --dir ../.. run guard:wlt-openapi-bundle"
   },
   "dependencies": {
     "react": "19.2.3"

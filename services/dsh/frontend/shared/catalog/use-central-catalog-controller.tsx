@@ -27,6 +27,18 @@ export type CatalogMasterProductUpdateInput = Omit<
   Parameters<typeof occApi.updateMasterProductOCC>[1],
   "expectedVersion"
 >;
+export type CatalogMasterProductsQuery = Parameters<typeof api.fetchMasterProductsPage>[0];
+
+export type CatalogMasterProductBulkMutationFailure = {
+  readonly productId: string;
+  readonly message: string;
+};
+
+export type CatalogMasterProductBulkMutationResult = {
+  readonly requested: number;
+  readonly succeededProductIds: readonly string[];
+  readonly failures: readonly CatalogMasterProductBulkMutationFailure[];
+};
 
 function resolveCatalogError(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim()) return error.message;
@@ -141,11 +153,15 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     }
   }, []);
 
-  const loadMasterProducts = useCallback(async (query?: Parameters<typeof api.fetchMasterProductsPage>[0]) => {
+  const readbackMasterProducts = useCallback(async (query?: CatalogMasterProductsQuery) => {
+    const { items, total } = await api.fetchMasterProductsPage(query);
+    setState((prev) => ({ ...prev, masterProducts: { items, total, loading: false, error: null } }));
+  }, []);
+
+  const loadMasterProducts = useCallback(async (query?: CatalogMasterProductsQuery) => {
     setState((prev) => ({ ...prev, masterProducts: { ...prev.masterProducts, loading: true, error: null } }));
     try {
-      const { items, total } = await api.fetchMasterProductsPage(query);
-      setState((prev) => ({ ...prev, masterProducts: { items, total, loading: false, error: null } }));
+      await readbackMasterProducts(query);
     } catch (error) {
       setState((prev) => ({
         ...prev,
@@ -156,7 +172,7 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
         },
       }));
     }
-  }, []);
+  }, [readbackMasterProducts]);
 
   const loadProposals = useCallback(async (query?: Parameters<typeof api.fetchProductProposalsPage>[0]) => {
     setState((prev) => ({ ...prev, proposals: { ...prev.proposals, loading: true, error: null } }));
@@ -251,6 +267,49 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
       );
     },
 
+    bulkSetMasterProductsActive: async (
+      productIds: readonly string[],
+      isActive: boolean,
+      readbackQuery?: CatalogMasterProductsQuery,
+    ): Promise<CatalogMasterProductBulkMutationResult> => {
+      const uniqueProductIds = [...new Set(productIds.map((id) => id.trim()).filter(Boolean))];
+      const succeededProductIds: string[] = [];
+      const failures: CatalogMasterProductBulkMutationFailure[] = [];
+
+      for (const productId of uniqueProductIds) {
+        try {
+          const expectedVersion = requireCatalogVersion(state.masterProducts.items, productId, "master_product");
+          await occApi.updateMasterProductOCC(productId, { isActive, expectedVersion });
+          succeededProductIds.push(productId);
+        } catch (error) {
+          failures.push({
+            productId,
+            message: resolveCatalogError(error, "CATALOG_MASTER_PRODUCT_BULK_UPDATE_FAILED"),
+          });
+        }
+      }
+
+      try {
+        await readbackMasterProducts(readbackQuery);
+      } catch (error) {
+        setState((prev) => ({
+          ...prev,
+          masterProducts: {
+            ...prev.masterProducts,
+            loading: false,
+            error: resolveCatalogError(error, "Failed to read back master products after bulk update"),
+          },
+        }));
+        throw new Error("CATALOG_MASTER_PRODUCT_BULK_READBACK_FAILED");
+      }
+
+      return {
+        requested: uniqueProductIds.length,
+        succeededProductIds,
+        failures,
+      };
+    },
+
     decideProposal: async (proposalId: string, input: Parameters<typeof api.decideProductProposal>[1]) => {
       const expectedVersion = requireCatalogVersion(state.proposals.items, proposalId, "proposal");
       return runMutationWithReadback(
@@ -284,6 +343,7 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
       return runMutationWithReadback(
         () => occApi.upsertOperatorStoreAssortmentOCC(storeId, masterProductId, {
           ...input,
+          currency: current?.currency ?? "",
           expectedVersion: current?.version,
         }),
         () => loadStoreAssortment(storeId),

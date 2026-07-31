@@ -2,7 +2,7 @@
 
 These tests validate PostgreSQL invariants independently from Go repository tests.
 
-- `schema/`: migration ledger, required tables and columns, identifier compatibility, indexes, constraints, triggers, and tenant ownership.
+- `schema/`: migration ledger, required tables and columns, identifier compatibility, indexes, constraints, triggers, and OperatorContext ownership.
 - `seed/`: local fixture ownership and seed-run audit invariants. Run only after local seeds.
 
 Execution:

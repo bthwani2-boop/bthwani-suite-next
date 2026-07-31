@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// FinanceWriteCommission calls only JRN-036 commission policy, adjustment and
+// FinanceWriteCommission calls only governed commission policy, adjustment and
 // lifecycle routes. It is intentionally separate from the generic finance
 // proxy so adding one governed action cannot expose arbitrary WLT mutations.
 func (c *Client) FinanceWriteCommission(
@@ -35,6 +35,9 @@ func (c *Client) FinanceWriteCommission(
 		return 0, nil, fmt.Errorf("build WLT governed commission request: %w", err)
 	}
 	setServiceHeaders(req, c.serviceToken)
+	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+		return 0, nil, fmt.Errorf("prepare WLT governed commission OperatorContext: %w", err)
+	}
 	req.Header.Set("Content-Type", "application/json")
 	if err := setRequiredMutationHeaders(
 		req,

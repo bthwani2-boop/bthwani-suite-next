@@ -13,6 +13,7 @@ import {
   spacing,
 } from "@bthwani/ui-kit";
 import {
+  ProductProposalAdapter,
   fetchPartnerMasterProducts,
   fetchPartnerProductProposals,
   fetchPartnerStoreAssortment,
@@ -30,17 +31,6 @@ import { PartnerReelsManagementSection } from "./PartnerReelsManagementSection";
 
 type Props = {
   readonly storeId: string;
-};
-
-const PROPOSAL_STATUS_LABELS: Record<string, string> = {
-  submitted: "مرسل",
-  "partner-review": "مراجعة الشريك",
-  "marketing-review": "مراجعة التسويق",
-  "catalog-adopted": "تم التبني",
-  "catalog-approved": "معتمد",
-  "client-visible": "ظاهر للعملاء",
-  "needs-fix": "يحتاج تصحيحاً",
-  rejected: "مرفوض",
 };
 
 export function PartnerCatalogManagementScreen({ storeId }: Props) {
@@ -111,7 +101,7 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
         selectedProductId,
         {
           unitPrice,
-          currency: "YER",
+          currency: current?.currency ?? "",
           available: current?.available ?? false,
           stockStatus: current?.stockStatus ?? "out_of_stock",
           localNote: note.trim(),
@@ -245,9 +235,9 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
               {namesByProduct.get(selectedProductId) ?? selectedProductId}
             </Text>
             <Text tone="secondary" align="start">
-              الإضافة الجديدة تبدأ كمسودة غير متاحة وبحالة نفاد مخزون؛ يجب تفعيل التوفر والنشر في مسار منفصل محكوم.
+              الإضافة الجديدة تبدأ كمسودة غير متاحة وبحالة نفاد مخزون؛ يحدد الخادم المركزي عملة التشكيلة ويعيدها مع نتيجة الحفظ.
             </Text>
-            <TextField label="سعر المتجر (YER)" value={price} onChangeText={setPrice} />
+            <TextField label="سعر المتجر" value={price} onChangeText={setPrice} />
             <TextField label="ملاحظة المتجر" value={note} onChangeText={setNote} />
             <View style={styles.actions}>
               <Button
@@ -279,19 +269,22 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
             <Text tone="secondary" align="center">لا توجد اقتراحات منتجات مرسلة من هذا المتجر.</Text>
           </View>
         ) : (
-          proposals.map((proposal) => (
-            <ListItem
-              key={proposal.id}
-              title={proposal.proposedNameAr}
-              subtitle={proposal.reviewNote || "بانتظار تحديث المراجعة"}
-              trailing={
-                <Badge
-                  label={PROPOSAL_STATUS_LABELS[proposal.status] ?? proposal.status}
-                  tone={proposal.status === "rejected" || proposal.status === "needs-fix" ? "warning" : "info"}
-                />
-              }
-            />
-          ))
+          proposals.map((proposal) => {
+            const presentation = new ProductProposalAdapter(proposal);
+            return (
+              <ListItem
+                key={proposal.id}
+                title={proposal.proposedNameAr}
+                subtitle={proposal.reviewNote || "بانتظار تحديث المراجعة"}
+                trailing={
+                  <Badge
+                    label={presentation.getArabicLabel()}
+                    tone={presentation.getTone()}
+                  />
+                }
+              />
+            );
+          })
         )}
       </Card>
 

@@ -18,11 +18,11 @@ describe("authenticated WLT runtime smoke", () => {
     assert.match(phase, /Authenticated WLT runtime smoke failed with exit code/);
   });
 
-  it("requires the governed DSH service identity for every protected WLT read", () => {
+  it("requires the governed DSH service identity while leaving financial scope server-owned", () => {
     assert.match(smoke, /WLT_DSH_SERVICE_TOKEN is required/);
     assert.match(smoke, /Authorization = "Bearer \$serviceToken"/);
     assert.match(smoke, /"X-Service-Caller" = "dsh"/);
-    assert.match(smoke, /"X-Tenant-ID" = \$TenantId/);
+    assert.doesNotMatch(smoke, /X-Operator-Context-ID/);
     assert.match(smoke, /Invoke-WltRead -Path "\/wlt\/references\/payment-status/);
     assert.match(smoke, /Invoke-WltRead -Path "\/wlt\/references\/wallet-status/);
     assert.match(smoke, /Invoke-WltRead -Path "\/wlt\/payment-sessions\/\$\(\[Uri\]::EscapeDataString/);

@@ -38,7 +38,7 @@ const (
 
 type DeliveryException struct {
 	ID                      string
-	TenantID                string
+	OperatorContextID                string
 	AssignmentID            string
 	OrderID                 string
 	SpecialRequestID        string
@@ -160,16 +160,16 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 		return nil, fmt.Errorf("%w: delivery exception source is missing", ErrConflict)
 	}
 
-	var tenantID string
+	var operatorContextID string
 	if current.OrderID != "" {
-		if err := tx.QueryRow(`SELECT tenant_id FROM dsh_orders WHERE id=$1::uuid FOR UPDATE`, current.OrderID).Scan(&tenantID); err != nil {
+		if err := tx.QueryRow(`SELECT operator_context_id FROM dsh_orders WHERE id=$1::uuid FOR UPDATE`, current.OrderID).Scan(&operatorContextID); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return nil, ErrNotFound
 			}
 			return nil, err
 		}
 	} else {
-		if err := tx.QueryRow(`SELECT tenant_id FROM dsh_special_requests WHERE id=$1::uuid FOR UPDATE`, current.SpecialRequestID).Scan(&tenantID); err != nil {
+		if err := tx.QueryRow(`SELECT operator_context_id FROM dsh_special_requests WHERE id=$1::uuid FOR UPDATE`, current.SpecialRequestID).Scan(&operatorContextID); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return nil, ErrNotFound
 			}
@@ -180,7 +180,7 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 	// Idempotency is evaluated before current-state eligibility so a retried
 	// command returns its original result even after operations has moved the
 	// assignment or resolved the exception.
-	existing, err := getDeliveryExceptionByCorrelationTx(tx, tenantID, input.CorrelationID)
+	existing, err := getDeliveryExceptionByCorrelationTx(tx, operatorContextID, input.CorrelationID)
 	if err == nil {
 		if existing.AssignmentID != assignmentID || existing.CaptainID != captainID || existing.ReasonCode != input.ReasonCode {
 			return nil, fmt.Errorf("%w: correlationId already belongs to a different exception command", ErrConflict)
@@ -210,12 +210,12 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 	var id string
 	err = tx.QueryRow(`
 		INSERT INTO dsh_delivery_exceptions (
-			tenant_id, assignment_id, order_id, special_request_id, captain_id, reason_code, note,
+			operator_context_id, assignment_id, order_id, special_request_id, captain_id, reason_code, note,
 			delivery_status_at_report, severity, correlation_id,
 			reported_latitude, reported_longitude
 		) VALUES ($1,$2::uuid,NULLIF($3,'')::uuid,NULLIF($4,'')::uuid,$5,$6,$7,$8,$9,$10,$11,$12)
 		RETURNING id::text`,
-		tenantID, assignmentID, current.OrderID, current.SpecialRequestID, captainID, string(input.ReasonCode), input.Note,
+		operatorContextID, assignmentID, current.OrderID, current.SpecialRequestID, captainID, string(input.ReasonCode), input.Note,
 		string(current.Delivery.Status), string(severityForDeliveryException(input.ReasonCode)), input.CorrelationID,
 		input.Latitude, input.Longitude,
 	).Scan(&id)
@@ -858,7 +858,7 @@ func ListOperatorDeliveryExceptions(db *sql.DB, status DeliveryExceptionStatus, 
 }
 
 const deliveryExceptionColumns = `
-	e.id::text, e.tenant_id, e.assignment_id::text, COALESCE(e.order_id::text, ''), COALESCE(e.special_request_id::text, ''), e.captain_id,
+	e.id::text, e.operator_context_id, e.assignment_id::text, COALESCE(e.order_id::text, ''), COALESCE(e.special_request_id::text, ''), e.captain_id,
 	e.reason_code, e.note, e.delivery_status_at_report, e.severity, e.status,
 	e.correlation_id, e.reported_latitude, e.reported_longitude, e.reported_at,
 	e.acknowledged_at, e.acknowledged_by_actor_id, e.resolved_at, e.resolved_by_actor_id, e.resolution_action,
@@ -869,7 +869,7 @@ type deliveryExceptionScanner func(dest ...any) error
 func scanDeliveryException(scan deliveryExceptionScanner) (*DeliveryException, error) {
 	var item DeliveryException
 	err := scan(
-		&item.ID, &item.TenantID, &item.AssignmentID, &item.OrderID, &item.SpecialRequestID, &item.CaptainID,
+		&item.ID, &item.OperatorContextID, &item.AssignmentID, &item.OrderID, &item.SpecialRequestID, &item.CaptainID,
 		&item.ReasonCode, &item.Note, &item.DeliveryStatusAtReport, &item.Severity, &item.Status,
 		&item.CorrelationID, &item.ReportedLatitude, &item.ReportedLongitude, &item.ReportedAt,
 		&item.AcknowledgedAt, &item.AcknowledgedByActorID, &item.ResolvedAt, &item.ResolvedByActorID, &item.ResolutionAction,
@@ -878,7 +878,7 @@ func scanDeliveryException(scan deliveryExceptionScanner) (*DeliveryException, e
 	return &item, err
 }
 
-func getDeliveryExceptionByCorrelationTx(tx *sql.Tx, tenantID, correlationID string) (*DeliveryException, error) {
-	row := tx.QueryRow(`SELECT `+deliveryExceptionColumns+` FROM dsh_delivery_exceptions e WHERE e.tenant_id=$1 AND e.correlation_id=$2`, tenantID, correlationID)
+func getDeliveryExceptionByCorrelationTx(tx *sql.Tx, operatorContextID, correlationID string) (*DeliveryException, error) {
+	row := tx.QueryRow(`SELECT `+deliveryExceptionColumns+` FROM dsh_delivery_exceptions e WHERE e.operator_context_id=$1 AND e.correlation_id=$2`, operatorContextID, correlationID)
 	return scanDeliveryException(row.Scan)
 }

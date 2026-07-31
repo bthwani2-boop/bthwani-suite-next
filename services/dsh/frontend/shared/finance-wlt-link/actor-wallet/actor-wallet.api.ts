@@ -62,6 +62,22 @@ const ledgerPathByActor: Record<RepresentativeActorType, string> = {
   field: "/dsh/field/me/finance/ledger-entries",
 };
 
+function normalizeRepresentativeActorId(actorId: string): string {
+  const normalized = actorId.trim();
+  if (!normalized || normalized.length > 200) {
+    throw new Error("INVALID_REPRESENTATIVE_ACTOR_ID");
+  }
+  return normalized;
+}
+
+function safeLedgerLimit(limit: number): number {
+  return Number.isInteger(limit) && limit > 0 && limit <= 100 ? limit : 30;
+}
+
+function controlPanelWalletPath(actorType: RepresentativeActorType, actorId: string): string {
+  return `/dsh/control-panel/finance/wallets/${actorType}/${encodeURIComponent(normalizeRepresentativeActorId(actorId))}`;
+}
+
 export async function fetchOwnRepresentativeWallet(
   actorType: RepresentativeActorType,
 ): Promise<RepresentativeWallet> {
@@ -75,9 +91,33 @@ export async function fetchOwnRepresentativeLedger(
   actorType: RepresentativeActorType,
   limit = 30,
 ): Promise<readonly RepresentativeLedgerEntry[]> {
-  const safeLimit = Number.isInteger(limit) && limit > 0 && limit <= 100 ? limit : 30;
   const response = await request<{ readonly ledgerEntries: RepresentativeLedgerEntry[] }>(
-    `${ledgerPathByActor[actorType]}?limit=${safeLimit}`,
+    `${ledgerPathByActor[actorType]}?limit=${safeLedgerLimit(limit)}`,
+  );
+  return response.ledgerEntries ?? [];
+}
+
+/**
+ * Operator-only read boundary. The backend resolves the operator OperatorContext from
+ * the authenticated session and rejects unsupported actor types and IDs.
+ */
+export async function fetchRepresentativeWallet(
+  actorType: RepresentativeActorType,
+  actorId: string,
+): Promise<RepresentativeWallet> {
+  const response = await request<{ readonly wallet: RepresentativeWallet }>(
+    controlPanelWalletPath(actorType, actorId),
+  );
+  return response.wallet;
+}
+
+export async function fetchRepresentativeLedger(
+  actorType: RepresentativeActorType,
+  actorId: string,
+  limit = 50,
+): Promise<readonly RepresentativeLedgerEntry[]> {
+  const response = await request<{ readonly ledgerEntries: RepresentativeLedgerEntry[] }>(
+    `${controlPanelWalletPath(actorType, actorId)}/ledger-entries?limit=${safeLedgerLimit(limit)}`,
   );
   return response.ledgerEntries ?? [];
 }

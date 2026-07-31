@@ -125,6 +125,7 @@ func (s *server) withIdentity(next guardedHandler) http.HandlerFunc {
 			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 			return
 		}
+		r = r.WithContext(providers.WithOperatorContext(r.Context(), identity.OperatorContextID))
 		next(w, r, identity)
 	}
 }

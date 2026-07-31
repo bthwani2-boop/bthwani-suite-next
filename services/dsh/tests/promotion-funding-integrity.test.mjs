@@ -4,9 +4,9 @@ import test from "node:test";
 
 const read = (path) => fs.readFileSync(path, "utf8");
 
-const wltMigration = read("services/wlt/database/migrations/wlt-096_jrn_028_promotion_funding_audit_integrity.sql");
-const integrityProof = read("services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh");
-const concurrencyProof = read("services/wlt/database/tests/jrn-028-promotion-funding-concurrency.sh");
+const wltMigration = read("services/wlt/database/migrations/wlt-096_promotion_funding_audit_integrity.sql");
+const integrityProof = read("services/wlt/database/tests/promotion-funding-integrity.sh");
+const concurrencyProof = read("services/wlt/database/tests/promotion-funding-concurrency.sh");
 const wltServer = read("services/wlt/backend/internal/http/server.go");
 const wltJSON = read("services/wlt/backend/internal/promotionfunding/reservation_json.go");
 const serviceAuth = read("services/wlt/backend/internal/shared/serviceauth.go");
@@ -38,7 +38,7 @@ const cases = [
     assert.match(lifecycleHTTP, /releaseCouponFunding/);
     assert.match(lifecycleHTTP, /reverseCouponFunding/);
   }],
-  ["Promotion Funding transition, monetary, tenant, idempotency, and concurrency integrity", () => {
+  ["Promotion Funding transition, monetary, server-owned financial scope, idempotency, and concurrency integrity", () => {
     assert.match(wltMigration, /DEFERRABLE INITIALLY DEFERRED/);
     assert.match(wltMigration, /same-transaction append-only event/);
     assert.match(wltMigration, /transaction_id = txid_current\(\)/);
@@ -50,7 +50,10 @@ const cases = [
     assert.match(concurrencyProof, /BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE/);
     assert.match(concurrencyProof, /concurrent transitions produced more than one financial event/);
     assert.doesNotMatch(wltJSON, /IdempotencyKey\s+string/);
-    assert.match(serviceAuth, /MISSING_TENANT_ID/);
+    assert.match(serviceAuth, /BTHWANI_OPERATOR_CONTEXT_ID/);
+    assert.match(serviceAuth, /r\.Header\.Set\(legacyOperatorContextHeader, scopeID\)/);
+    assert.match(serviceAuth, /WithOperatorContext\(r\.Context\(\), scopeID\)/);
+    assert.doesNotMatch(serviceAuth, /MISSING_operator_context_id/);
   }],
   ["Promotion Funding outbox, recovery, reconciliation, and operator read model", () => {
     assert.match(couponsHTTP, /coupons\.ListFundingLifecycleDiagnostics/);

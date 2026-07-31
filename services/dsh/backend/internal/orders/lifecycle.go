@@ -8,7 +8,7 @@ import (
 )
 
 // AcceptOrder is the compatibility entry point used by existing HTTP routes.
-// It delegates to the JRN-012 implementation so acceptance always initializes
+// It delegates to the canonical acceptance implementation so acceptance always initializes
 // the store policy snapshot and authoritative preparation SLA timestamps.
 func AcceptOrder(db *sql.DB, orderID, actorID string) (*Order, error) {
 	return AcceptOrderWithPreparation(db, orderID, actorID)
@@ -139,7 +139,7 @@ func transitionOrderTx(
 		SET status = $1, updated_at = NOW()
 		WHERE id = $2::uuid AND status = $3
 		RETURNING id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
-		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at`,
+		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at`,
 		string(toStatus),
 		orderID,
 		fromStatus,
@@ -167,7 +167,7 @@ func transitionOrderTx(
 
 func listOrderItems(db *sql.DB, orderID string) ([]OrderItem, error) {
 	rows, err := db.Query(`
-		SELECT id::text, order_id::text, product_id, product_name, quantity, unit_price
+		SELECT id::text, order_id::text, product_id, product_name, quantity, unit_price, currency
 		FROM dsh_order_items
 		WHERE order_id = $1::uuid
 		ORDER BY created_at, id`, orderID)
@@ -185,6 +185,7 @@ func listOrderItems(db *sql.DB, orderID string) ([]OrderItem, error) {
 			&item.ProductName,
 			&item.Quantity,
 			&item.UnitPrice,
+			&item.Currency,
 		); err != nil {
 			return nil, err
 		}
@@ -204,6 +205,7 @@ func scanOrderRow(row *sql.Row) (*Order, error) {
 		&order.Status,
 		&order.RejectionReason,
 		&order.WltPaymentRefID,
+		&order.Currency,
 		&order.CreatedAt,
 		&order.UpdatedAt,
 	)
@@ -226,6 +228,7 @@ func scanOrders(rows *sql.Rows) ([]Order, error) {
 			&order.Status,
 			&order.RejectionReason,
 			&order.WltPaymentRefID,
+			&order.Currency,
 			&order.CreatedAt,
 			&order.UpdatedAt,
 		); err != nil {

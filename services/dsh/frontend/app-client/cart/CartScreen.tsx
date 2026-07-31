@@ -26,7 +26,7 @@ import type {
 } from "../../shared/cart";
 import type { DshPaymentMethod } from "../../shared/checkout";
 import type { DshClientAddress } from "../../shared/client-address";
-import { useWltDshPaymentController } from "../../shared/finance-wlt-link";
+import { useDshPaymentController } from "../../shared/finance-wlt-link";
 import { PaymentDecisionSection } from "./PaymentDecisionSection";
 
 type Props = {
@@ -56,10 +56,10 @@ function fulfillmentLabel(mode: DshFulfillmentMode): string {
   }
 }
 
-function ServerPrice({ value }: { readonly value: number }) {
+function ServerPrice({ value, currency }: { readonly value: number; readonly currency: string }) {
   return (
     <Text role="caption" style={styles.priceText}>
-      سعر الوحدة المثبت: {new Intl.NumberFormat("ar").format(value)} د.ي
+      سعر الوحدة المثبت: {new Intl.NumberFormat("ar").format(value)} {currency}
     </Text>
   );
 }
@@ -92,7 +92,9 @@ function AddressSummary({ address }: { readonly address: DshClientAddress }) {
 function validationMessage(validation: DshCartItemValidation): string {
   switch (validation.status) {
     case "price_changed":
-      return "تغير سعر التشكيلة منذ إضافة المنتج. اعتمد السعر الحالي صراحةً قبل المتابعة.";
+      return validation.reasonCode === "CURRENCY_CHANGED"
+        ? "تغيرت عملة تشكيلة المتجر منذ إضافة المنتج. اعتمد الحقيقة الحالية صراحةً قبل المتابعة."
+        : "تغير سعر التشكيلة منذ إضافة المنتج. اعتمد السعر الحالي صراحةً قبل المتابعة.";
     case "unavailable":
       return "أوقف المتجر توفر هذا المنتج. احذفه أو أعد المحاولة بعد عودته.";
     case "assortment_unavailable":
@@ -100,7 +102,9 @@ function validationMessage(validation: DshCartItemValidation): string {
     case "assortment_changed":
       return "تغير مرجع تشكيلة المتجر. حدّث السطر قبل المتابعة.";
     case "unpriced":
-      return "لا يوجد سعر تشغيلي صالح لهذا المنتج.";
+      return validation.reasonCode?.includes("CURRENCY")
+        ? "لا توجد عملة تشغيلية صالحة لهذا المنتج."
+        : "لا يوجد سعر تشغيلي صالح لهذا المنتج.";
     case "product_unlinked":
       return "فقد السطر ارتباطه بالمنتج المركزي.";
     case "ready":
@@ -124,10 +128,10 @@ function CartItemValidationNotice({
       {validation.status === "price_changed" && validation.currentUnitPrice !== undefined ? (
         <>
           <Text role="caption" style={styles.mutedText}>
-            السعر الحالي: {new Intl.NumberFormat("ar").format(validation.currentUnitPrice)} د.ي
+            الحقيقة الحالية: {new Intl.NumberFormat("ar").format(validation.currentUnitPrice)} {validation.currentCurrency ?? validation.snapshotCurrency}
           </Text>
           <Button
-            label="اعتماد السعر الحالي"
+            label="اعتماد السعر والعملة الحاليين"
             tone="secondary"
             size="sm"
             disabled={disabled}
@@ -150,7 +154,7 @@ export function CartScreen({
 }: Props) {
   const controller = useCartController(storeId, authKind);
   const serviceabilityController = useServiceabilityController();
-  const wltPayment = useWltDshPaymentController();
+  const wltPayment = useDshPaymentController();
   const [note, setNote] = useState("");
   const [couponCode, setCouponCode] = useState("");
   const [validationMessageText, setValidationMessageText] = useState<string | null>(null);
@@ -197,7 +201,7 @@ export function CartScreen({
     if (!cart || !onProceedToCheckout) return;
     setValidationMessageText(null);
     if (!cartReady) {
-      setValidationMessageText("راجع تغيرات السعر أو التوفر في عناصر السلة قبل checkout.");
+      setValidationMessageText("راجع تغيرات السعر أو العملة أو التوفر في عناصر السلة قبل checkout.");
       return;
     }
     if (requiresDeliveryAddress && !selectedAddress) {
@@ -294,7 +298,7 @@ export function CartScreen({
           <Surface tone="default" style={styles.alertSection}>
             <Text role="bodyStrong" style={styles.errorText}>تحتاج السلة إلى مراجعة</Text>
             <Text role="caption" style={styles.mutedText}>
-              اكتشف DSH تغيرًا في السعر أو التوفر أو مرجع التشكيلة. لم تُعدّل اللقطة القديمة تلقائيًا.
+              اكتشف DSH تغيرًا في السعر أو العملة أو التوفر أو مرجع التشكيلة. لم تُعدّل اللقطة القديمة تلقائيًا.
             </Text>
           </Surface>
         ) : null}
@@ -311,7 +315,7 @@ export function CartScreen({
               <View key={item.id} style={styles.itemCard}>
                 <View style={styles.itemText}>
                   <Text role="bodyStrong" style={styles.itemTitle}>{item.productName}</Text>
-                  <ServerPrice value={item.unitPrice} />
+                  <ServerPrice value={item.unitPrice} currency={item.currency} />
                   <Text role="caption" style={styles.mutedText}>الكمية الحالية: {item.quantity}</Text>
                   <Text role="caption" style={styles.mutedText}>
                     مرجع التشكيلة: {item.storeAssortmentId ?? "غير مرتبط"}

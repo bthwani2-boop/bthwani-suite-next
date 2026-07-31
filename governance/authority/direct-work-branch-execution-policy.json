@@ -41,7 +41,7 @@
       "authentication",
       "authorization",
       "secrets",
-      "tenant_isolation",
+      "operator_context_isolation",
       "finance",
       "database_migrations",
       "ci",
@@ -58,5 +58,5 @@
     "FORCE_PUSH",
     "STALE_SHA_OVERWRITE"
   ],
-  "humanReadablePolicy": "governance/28_DIRECT_WORK_BRANCH_EXECUTION_POLICY.md"
+  "humanReadablePolicy": "governance/policies/release.md"
 }

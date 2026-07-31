@@ -2,7 +2,7 @@ param(
   [switch]$Full,
   [switch]$Runtime,
   [string]$Guard,
-  [string]$Journey = "UNSPECIFIED_JOURNEY"
+  [string]$Journey = "UNSPECIFIED_CAPABILITY"
 )
 
 Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
@@ -25,16 +25,6 @@ foreach ($entry in @($registry.entries)) {
   if ($entry.id) { $guardEntries[[string]$entry.id] = $entry }
 }
 
-$journeySpecificGuardIds = @(
-  $registry.entries |
-    Where-Object { $_.id -match '^jrn-\d{3}-' -and $_.source_file -match '\.(mjs|cjs|js)$' } |
-    ForEach-Object { [string]$_.id }
-)
-$unregisteredJourneyGuards = @($journeySpecificGuardIds | Where-Object { $registeredJourneyGuards -notcontains $_ })
-if ($unregisteredJourneyGuards.Count -gt 0) {
-  throw "Journey-specific guards are missing from the journey manifest: $($unregisteredJourneyGuards -join ', ')"
-}
-
 if ($Guard) {
   if ($registeredJourneyGuards -notcontains $Guard) {
     throw "Requested guard is not registered in the journey set: $Guard"
@@ -42,35 +32,31 @@ if ($Guard) {
   $journeyGuards = @($Guard)
 }
 
-$results = @()
-
-function Run-Step {
+function Invoke-Step {
   param([Parameter(Mandatory)][string]$Name, [Parameter(Mandatory)][scriptblock]$Block)
-  Write-Host "[ RUN ] $Name" -ForegroundColor Cyan
+  Write-Host "[ RUN ] $Name"
   $global:LASTEXITCODE = 0
   try {
-    & $Block 2>&1 | ForEach-Object { Write-Host $_ }
+    $stepOutput = & $Block 2>&1
     $nativeExitCode = $global:LASTEXITCODE
+    foreach ($line in @($stepOutput)) {
+      Write-Host $line
+    }
     if ($nativeExitCode -ne 0) { throw "exit $nativeExitCode" }
-    Write-Host "[ OK  ] $Name" -ForegroundColor Green
-    return $true
+    Write-Host "[ OK  ] $Name"
   }
   catch {
-    Write-Host "[ FAIL] $Name — $_" -ForegroundColor Red
-    return $false
+    Write-Host "[ FAIL] $Name — $_"
+    throw
   }
 }
 
 function Test-JourneyGuardSelected {
   param([Parameter(Mandatory)][string]$GuardId)
-  if ($Guard) { return $true }
-  if ($GuardId -notmatch '^jrn-\d{3}-') { return $true }
-  $normalizedJourney = $Journey.Trim().ToLowerInvariant().Replace('_', '-')
-  if ($normalizedJourney -notmatch '^jrn-\d{3}$') { return $true }
-  return $GuardId.StartsWith("$normalizedJourney-")
+  return $true
 }
 
-$results += [pscustomobject]@{ step = "git-diff-check"; ok = (Run-Step "git-diff-check" { git --no-pager diff --check }) }
+Invoke-Step "git-diff-check" { git --no-pager diff --check }
 
 if ($Full) {
   foreach ($step in @(
@@ -81,7 +67,7 @@ if ($Full) {
     @{ Name = "test"; Command = { pnpm run test } },
     @{ Name = "build"; Command = { pnpm run build } }
   )) {
-    $results += [pscustomobject]@{ step = $step.Name; ok = (Run-Step $step.Name $step.Command) }
+    Invoke-Step $step.Name $step.Command
   }
 }
 
@@ -94,10 +80,7 @@ foreach ($guardName in $journeyGuards) {
   $stepName = "guard:$guardName"
   if ($entry.script) {
     $scriptName = [string]$entry.script
-    $results += [pscustomobject]@{
-      step = $stepName
-      ok = Run-Step $stepName { pnpm run $scriptName }
-    }
+    Invoke-Step $stepName { pnpm run $scriptName }
     continue
   }
 
@@ -105,10 +88,7 @@ foreach ($guardName in $journeyGuards) {
   if (-not $sourceFile -or $sourceFile -notmatch '\.(mjs|cjs|js)$') {
     throw "Journey guard has no executable package script or Node source: $guardName"
   }
-  $results += [pscustomobject]@{
-    step = $stepName
-    ok = Run-Step $stepName { node $sourceFile }
-  }
+  Invoke-Step $stepName { node $sourceFile }
 }
 
 if ($Runtime) {
@@ -117,20 +97,12 @@ if ($Runtime) {
     @{ Name = "runtime-full-smoke"; Command = { pnpm run runtime:full:smoke } },
     @{ Name = "wiremock-financial-smoke"; Command = { pnpm run runtime:wiremock:financial:smoke } }
   )) {
-    $results += [pscustomobject]@{ step = $step.Name; ok = (Run-Step $step.Name $step.Command) }
+    Invoke-Step $step.Name $step.Command
   }
-}
-
-$failed = @($results | Where-Object { -not $_.ok })
-if ($failed.Count -gt 0) {
-  Write-Host ""
-  Write-Host "RESULT: FIX_REQUIRED journey=$Journey" -ForegroundColor Red
-  Write-Host "Failed steps: $($failed.step -join ', ')" -ForegroundColor Red
-  throw "Journey gate failed: $($failed.step -join ', ')"
 }
 
 $scope = if ($Runtime) { "runtime" } else { "static" }
 $mode = if ($Full) { "full-explicit" } else { "targeted-default" }
-Write-Host ""
-Write-Host "RESULT: PASS scope=$scope mode=$mode journey=$Journey" -ForegroundColor Green
-Write-Host "PASS is scoped evidence only and does not imply CLOSED_WITH_EVIDENCE." -ForegroundColor Yellow
+Write-Output ""
+Write-Output "RESULT: PASS scope=$scope mode=$mode capability=$Journey"
+Write-Output "PASS is scoped evidence only and does not imply CLOSED_WITH_EVIDENCE."

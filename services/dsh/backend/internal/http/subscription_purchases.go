@@ -16,7 +16,7 @@ import (
 
 type subscriptionPurchase struct {
 	ID                    string `json:"id"`
-	TenantID              string `json:"tenantId"`
+	OperatorContextID              string `json:"operatorContextId"`
 	ClientID              string `json:"clientId"`
 	PlanID                string `json:"planId"`
 	WLTProductReference   string `json:"wltProductReference"`
@@ -37,7 +37,7 @@ type subscriptionPurchase struct {
 	UpdatedAt             string `json:"updatedAt"`
 }
 
-const subscriptionPurchaseSelect = `id, tenant_id, client_id, plan_id::TEXT,
+const subscriptionPurchaseSelect = `id, operator_context_id, client_id, plan_id::TEXT,
 	wlt_product_reference, wlt_payment_session_id, wlt_subscription_id,
 	renewal_of_purchase_id, payment_method, status, lifecycle_version,
 	failure_code, activated_at::TEXT, expires_at::TEXT, cancelled_at::TEXT,
@@ -51,7 +51,7 @@ func scanSubscriptionPurchase(row interface{ Scan(dest ...any) error }) (*subscr
 	var compensationReference sql.NullString
 	if err := row.Scan(
 		&item.ID,
-		&item.TenantID,
+		&item.OperatorContextID,
 		&item.ClientID,
 		&item.PlanID,
 		&item.WLTProductReference,
@@ -92,8 +92,8 @@ func subscriptionNullString(value sql.NullString) string {
 	return strings.TrimSpace(value.String)
 }
 
-func deterministicSubscriptionPurchaseID(tenantID, clientID, idempotencyKey string) string {
-	digest := sha256.Sum256([]byte(tenantID + "\x00" + clientID + "\x00" + idempotencyKey))
+func deterministicSubscriptionPurchaseID(operatorContextID, clientID, idempotencyKey string) string {
+	digest := sha256.Sum256([]byte(operatorContextID + "\x00" + clientID + "\x00" + idempotencyKey))
 	return "subp-" + hex.EncodeToString(digest[:16])
 }
 
@@ -125,13 +125,13 @@ func requireSubscriptionMutationHeaders(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s *protectedStoreServer) getSubscriptionPurchase(
-	tenantID string,
+	operatorContextID string,
 	clientID string,
 	purchaseID string,
 ) (*subscriptionPurchase, error) {
 	item, err := scanSubscriptionPurchase(s.db.QueryRow(`SELECT `+subscriptionPurchaseSelect+`
 		FROM dsh_subscription_purchases
-		WHERE id=$1 AND tenant_id=$2 AND client_id=$3`, purchaseID, tenantID, clientID))
+		WHERE id=$1 AND operator_context_id=$2 AND client_id=$3`, purchaseID, operatorContextID, clientID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, marketing.ErrNotFound
 	}
@@ -139,13 +139,13 @@ func (s *protectedStoreServer) getSubscriptionPurchase(
 }
 
 func (s *protectedStoreServer) getSubscriptionPurchaseByIdempotency(
-	tenantID string,
+	operatorContextID string,
 	clientID string,
 	idempotencyKey string,
 ) (*subscriptionPurchase, error) {
 	item, err := scanSubscriptionPurchase(s.db.QueryRow(`SELECT `+subscriptionPurchaseSelect+`
 		FROM dsh_subscription_purchases
-		WHERE tenant_id=$1 AND client_id=$2 AND idempotency_key=$3`, tenantID, clientID, idempotencyKey))
+		WHERE operator_context_id=$1 AND client_id=$2 AND idempotency_key=$3`, operatorContextID, clientID, idempotencyKey))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -153,15 +153,15 @@ func (s *protectedStoreServer) getSubscriptionPurchaseByIdempotency(
 }
 
 func (s *protectedStoreServer) getSubscriptionPurchaseByWLTSubscription(
-	tenantID string,
+	operatorContextID string,
 	clientID string,
 	subscriptionID string,
 ) (*subscriptionPurchase, error) {
 	item, err := scanSubscriptionPurchase(s.db.QueryRow(`SELECT `+subscriptionPurchaseSelect+`
 		FROM dsh_subscription_purchases
-		WHERE tenant_id=$1 AND client_id=$2 AND wlt_subscription_id=$3
+		WHERE operator_context_id=$1 AND client_id=$2 AND wlt_subscription_id=$3
 		ORDER BY CASE WHEN renewal_of_purchase_id IS NULL THEN 0 ELSE 1 END, created_at
-		LIMIT 1`, tenantID, clientID, subscriptionID))
+		LIMIT 1`, operatorContextID, clientID, subscriptionID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, marketing.ErrNotFound
 	}
@@ -190,12 +190,12 @@ func appendSubscriptionLifecycleEvent(
 		return err
 	}
 	_, err = tx.Exec(`INSERT INTO dsh_subscription_lifecycle_events
-		(purchase_id, tenant_id, client_id, event_type, from_status, to_status,
+		(purchase_id, operator_context_id, client_id, event_type, from_status, to_status,
 		 wlt_payment_session_id, wlt_subscription_id, idempotency_key,
 		 correlation_id, actor_id, metadata)
 		VALUES ($1,$2,$3,$4,NULLIF($5,''),$6,NULLIF($7,''),NULLIF($8,''),$9,$10,$11,$12)
 		ON CONFLICT (purchase_id, idempotency_key, event_type) DO NOTHING`,
-		item.ID, item.TenantID, item.ClientID, eventType, fromStatus, toStatus,
+		item.ID, item.OperatorContextID, item.ClientID, eventType, fromStatus, toStatus,
 		item.WLTPaymentSessionID, item.WLTSubscriptionID, idempotencyKey,
 		correlationID, actorID, encoded)
 	return err
@@ -243,7 +243,7 @@ func writeSubscriptionPlanValidationError(w http.ResponseWriter, err error) {
 }
 
 func (s *protectedStoreServer) initializeSubscriptionPurchase(
-	tenantID, clientID string,
+	operatorContextID, clientID string,
 	plan *marketing.SubscriptionPlan,
 	paymentMethod, idempotencyKey, correlationID, renewalOfPurchaseID string,
 ) (*subscriptionPurchase, error) {
@@ -253,12 +253,12 @@ func (s *protectedStoreServer) initializeSubscriptionPurchase(
 	}
 	defer func() { _ = tx.Rollback() }()
 	item, err := scanSubscriptionPurchase(tx.QueryRow(`INSERT INTO dsh_subscription_purchases
-		(id, tenant_id, client_id, plan_id, wlt_product_reference,
+		(id, operator_context_id, client_id, plan_id, wlt_product_reference,
 		 payment_method, status, idempotency_key, correlation_id, renewal_of_purchase_id)
 		VALUES ($1,$2,$3,$4,$5,$6,'initiated',$7,$8,NULLIF($9,''))
 		RETURNING `+subscriptionPurchaseSelect,
-		deterministicSubscriptionPurchaseID(tenantID, clientID, idempotencyKey),
-		tenantID, clientID, plan.ID, plan.WLTProductReference,
+		deterministicSubscriptionPurchaseID(operatorContextID, clientID, idempotencyKey),
+		operatorContextID, clientID, plan.ID, plan.WLTProductReference,
 		paymentMethod, idempotencyKey, correlationID, renewalOfPurchaseID))
 	if err != nil {
 		return nil, err
@@ -286,7 +286,7 @@ func (s *protectedStoreServer) bindSubscriptionPaymentSession(
 	session, err := s.wlt.CreateBoundSubscriptionPaymentSession(r.Context(), wltclient.BoundSubscriptionPaymentInput{
 		SubscriptionPurchaseID: item.ID,
 		ProductReference:       product.Reference,
-		TenantID:               item.TenantID,
+		OperatorContextID:               item.OperatorContextID,
 		ClientID:               item.ClientID,
 		PaymentMethod:          item.PaymentMethod,
 		AmountMinorUnits:       product.PriceMinorUnits,
@@ -350,12 +350,12 @@ func (s *protectedStoreServer) handleCreateSubscriptionPurchase(w http.ResponseW
 		writeSubscriptionPlanValidationError(w, err)
 		return
 	}
-	tenantID := strings.TrimSpace(actor.TenantID)
-	if tenantID == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "authenticated client tenant is required")
+	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
+	if operatorContextID == "" {
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "authenticated client OperatorContext is required")
 		return
 	}
-	item, err := s.getSubscriptionPurchaseByIdempotency(tenantID, actor.ID, idempotencyKey)
+	item, err := s.getSubscriptionPurchaseByIdempotency(operatorContextID, actor.ID, idempotencyKey)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve subscription purchase idempotency")
 		return
@@ -371,7 +371,7 @@ func (s *protectedStoreServer) handleCreateSubscriptionPurchase(w http.ResponseW
 		}
 	} else {
 		item, err = s.initializeSubscriptionPurchase(
-			tenantID, actor.ID, plan, paymentMethod, idempotencyKey, correlationID, "")
+			operatorContextID, actor.ID, plan, paymentMethod, idempotencyKey, correlationID, "")
 		if err != nil {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to initialize subscription purchase")
 			return
@@ -391,12 +391,12 @@ func (s *protectedStoreServer) handleGetSubscriptionPurchase(w http.ResponseWrit
 	if !ok || !s.requireWLTCommercial(w) {
 		return
 	}
-	tenantID := strings.TrimSpace(actor.TenantID)
-	if tenantID == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "authenticated client tenant is required")
+	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
+	if operatorContextID == "" {
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "authenticated client OperatorContext is required")
 		return
 	}
-	item, err := s.getSubscriptionPurchase(tenantID, actor.ID, r.PathValue("purchaseId"))
+	item, err := s.getSubscriptionPurchase(operatorContextID, actor.ID, r.PathValue("purchaseId"))
 	if err != nil {
 		writeSubscriptionPurchaseError(w, err)
 		return
@@ -448,12 +448,12 @@ func (s *protectedStoreServer) handleActivateSubscriptionPurchase(w http.Respons
 	if !ok {
 		return
 	}
-	tenantID := strings.TrimSpace(actor.TenantID)
-	if tenantID == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "authenticated client tenant is required")
+	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
+	if operatorContextID == "" {
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "authenticated client OperatorContext is required")
 		return
 	}
-	item, err := s.getSubscriptionPurchase(tenantID, actor.ID, r.PathValue("purchaseId"))
+	item, err := s.getSubscriptionPurchase(operatorContextID, actor.ID, r.PathValue("purchaseId"))
 	if err != nil {
 		writeSubscriptionPurchaseError(w, err)
 		return
@@ -488,7 +488,7 @@ func (s *protectedStoreServer) handleActivateSubscriptionPurchase(w http.Respons
 			PaymentSessionID: item.WLTPaymentSessionID, SubscriptionPurchaseID: item.ID,
 		}, correlationID)
 	} else {
-		original, loadErr := s.getSubscriptionPurchase(tenantID, actor.ID, item.RenewalOfPurchaseID)
+		original, loadErr := s.getSubscriptionPurchase(operatorContextID, actor.ID, item.RenewalOfPurchaseID)
 		if loadErr != nil || original.WLTSubscriptionID == "" {
 			store.SendError(w, http.StatusConflict, "SUBSCRIPTION_REFERENCE_REQUIRED", "renewal source does not have an active WLT subscription reference")
 			return
@@ -554,9 +554,9 @@ func (s *protectedStoreServer) handleRenewSubscriptionPurchase(w http.ResponseWr
 	if !ok {
 		return
 	}
-	tenantID := strings.TrimSpace(actor.TenantID)
-	if tenantID == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "authenticated client tenant is required")
+	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
+	if operatorContextID == "" {
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "authenticated client OperatorContext is required")
 		return
 	}
 	subscription, err := s.wlt.GetCommercialSubscriptionLifecycle(r.Context(), r.PathValue("subscriptionId"))
@@ -572,7 +572,7 @@ func (s *protectedStoreServer) handleRenewSubscriptionPurchase(w http.ResponseWr
 		store.SendError(w, http.StatusConflict, "SUBSCRIPTION_NOT_ACTIVE", "only an active subscription can be renewed")
 		return
 	}
-	original, err := s.getSubscriptionPurchaseByWLTSubscription(tenantID, actor.ID, subscription.ID)
+	original, err := s.getSubscriptionPurchaseByWLTSubscription(operatorContextID, actor.ID, subscription.ID)
 	if err != nil {
 		writeSubscriptionPurchaseError(w, err)
 		return
@@ -593,7 +593,7 @@ func (s *protectedStoreServer) handleRenewSubscriptionPurchase(w http.ResponseWr
 		store.SendError(w, http.StatusBadRequest, "INVALID_PAYMENT_METHOD", "subscription payment method is not supported")
 		return
 	}
-	item, err := s.getSubscriptionPurchaseByIdempotency(tenantID, actor.ID, idempotencyKey)
+	item, err := s.getSubscriptionPurchaseByIdempotency(operatorContextID, actor.ID, idempotencyKey)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve renewal idempotency")
 		return
@@ -609,7 +609,7 @@ func (s *protectedStoreServer) handleRenewSubscriptionPurchase(w http.ResponseWr
 		}
 	} else {
 		item, err = s.initializeSubscriptionPurchase(
-			tenantID, actor.ID, plan, paymentMethod, idempotencyKey, correlationID, original.ID)
+			operatorContextID, actor.ID, plan, paymentMethod, idempotencyKey, correlationID, original.ID)
 		if err != nil {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to initialize subscription renewal")
 			return
@@ -633,9 +633,9 @@ func (s *protectedStoreServer) handleCancelSubscriptionPurchase(w http.ResponseW
 	if !ok {
 		return
 	}
-	tenantID := strings.TrimSpace(actor.TenantID)
-	if tenantID == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "authenticated client tenant is required")
+	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
+	if operatorContextID == "" {
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "authenticated client OperatorContext is required")
 		return
 	}
 	var body struct {
@@ -659,7 +659,7 @@ func (s *protectedStoreServer) handleCancelSubscriptionPurchase(w http.ResponseW
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "subscription not found")
 		return
 	}
-	original, err := s.getSubscriptionPurchaseByWLTSubscription(tenantID, actor.ID, subscriptionID)
+	original, err := s.getSubscriptionPurchaseByWLTSubscription(operatorContextID, actor.ID, subscriptionID)
 	if err != nil {
 		writeSubscriptionPurchaseError(w, err)
 		return
@@ -691,9 +691,9 @@ func (s *protectedStoreServer) handleCancelSubscriptionPurchase(w http.ResponseW
 		SET status=$4, cancelled_at=NOW(), cancellation_reason=$5,
 		    compensation_status=COALESCE(NULLIF($6,''),'not_required'),
 		    compensation_reference=$7, expires_at=$8
-		WHERE tenant_id=$1 AND client_id=$2 AND wlt_subscription_id=$3
+		WHERE operator_context_id=$1 AND client_id=$2 AND wlt_subscription_id=$3
 		  AND status NOT IN ('cancelled','expired','compensated','failed')`,
-		tenantID, actor.ID, subscription.ID, targetStatus, body.Reason,
+		operatorContextID, actor.ID, subscription.ID, targetStatus, body.Reason,
 		compensationStatus, compensationReference, subscription.EndsAt); err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "WLT cancellation committed but DSH projection update failed")
 		return

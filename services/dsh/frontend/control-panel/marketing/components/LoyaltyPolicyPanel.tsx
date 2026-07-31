@@ -2,6 +2,7 @@
 
 import React from "react";
 import { colorRoles } from "@bthwani/ui-kit";
+import { CpButton } from "@bthwani/control-panel/components";
 import {
   useLoyaltyPolicyController,
   type LoyaltyEarningPolicy,
@@ -95,7 +96,7 @@ export function LoyaltyPolicyPanel() {
         <input value={denominatorYer} onChange={(event) => setDenominatorYer(event.target.value)} inputMode="decimal" placeholder="لكل مبلغ ر.ي" style={inputStyle} />
         <input value={minimumPoints} onChange={(event) => setMinimumPoints(event.target.value)} inputMode="numeric" placeholder="الحد الأدنى" style={inputStyle} />
         <input value={maximumPoints} onChange={(event) => setMaximumPoints(event.target.value)} inputMode="numeric" placeholder="الأقصى لكل طلب — صفر بلا حد" style={inputStyle} />
-        <button type="button" disabled={controller.mutationLoading} onClick={() => void create()} style={primaryButtonStyle}>إنشاء مسودة سياسة</button>
+        <CpButton disabled={controller.mutationLoading} onClick={() => void create()} variant="brand">إنشاء مسودة سياسة</CpButton>
       </div>
 
       {controller.state.kind === "loading" ? <p>جاري تحميل السياسات…</p> : null}
@@ -122,16 +123,16 @@ export function LoyaltyPolicyPanel() {
                 </div>
                 <div style={{ display: "flex", gap: "0.45rem", flexWrap: "wrap" }}>
                   {termsEditable ? (
-                    <button type="button" disabled={controller.mutationLoading} onClick={() => beginEdit(policy)} style={secondaryButtonStyle}>تعديل الشروط</button>
+                    <CpButton disabled={controller.mutationLoading} onClick={() => beginEdit(policy)} variant="secondary">تعديل الشروط</CpButton>
                   ) : null}
                   {policy.status === "draft" || policy.status === "paused" ? (
-                    <button type="button" disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "active")} style={primaryButtonStyle}>اعتماد وتفعيل</button>
+                    <CpButton disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "active")} variant="brand">اعتماد وتفعيل</CpButton>
                   ) : null}
                   {policy.status === "active" ? (
-                    <button type="button" disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "paused")} style={secondaryButtonStyle}>إيقاف</button>
+                    <CpButton disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "paused")} variant="secondary">إيقاف</CpButton>
                   ) : null}
                   {policy.status !== "archived" ? (
-                    <button type="button" disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "archived")} style={secondaryButtonStyle}>أرشفة</button>
+                    <CpButton disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "archived")} variant="secondary">أرشفة</CpButton>
                   ) : null}
                 </div>
               </div>
@@ -144,8 +145,8 @@ export function LoyaltyPolicyPanel() {
                   <input value={editDraft.minimumPoints} onChange={(event) => patchEdit({ minimumPoints: event.target.value })} inputMode="numeric" placeholder="الحد الأدنى" style={inputStyle} />
                   <input value={editDraft.maximumPoints} onChange={(event) => patchEdit({ maximumPoints: event.target.value })} inputMode="numeric" placeholder="الأقصى لكل طلب" style={inputStyle} />
                   <div style={{ display: "flex", gap: "0.45rem", alignItems: "center" }}>
-                    <button type="button" disabled={controller.mutationLoading} onClick={() => void saveEdit(policy)} style={primaryButtonStyle}>حفظ الشروط</button>
-                    <button type="button" disabled={controller.mutationLoading} onClick={() => setEditDraft(null)} style={secondaryButtonStyle}>إلغاء</button>
+                    <CpButton disabled={controller.mutationLoading} onClick={() => void saveEdit(policy)} variant="brand">حفظ الشروط</CpButton>
+                    <CpButton disabled={controller.mutationLoading} onClick={() => setEditDraft(null)} variant="secondary">إلغاء</CpButton>
                   </div>
                 </div>
               ) : null}
@@ -162,23 +163,4 @@ const inputStyle: React.CSSProperties = {
   border: `1px solid ${colorRoles.borderSubtle}`,
   borderRadius: "0.5rem",
   background: colorRoles.surfaceBase,
-};
-
-const primaryButtonStyle: React.CSSProperties = {
-  padding: "0.6rem 0.8rem",
-  border: 0,
-  borderRadius: "0.5rem",
-  background: colorRoles.brandAction,
-  color: colorRoles.surfaceBase,
-  cursor: "pointer",
-  fontWeight: 700,
-};
-
-const secondaryButtonStyle: React.CSSProperties = {
-  padding: "0.55rem 0.75rem",
-  border: `1px solid ${colorRoles.borderSubtle}`,
-  borderRadius: "0.5rem",
-  background: colorRoles.surfaceBase,
-  cursor: "pointer",
-  fontWeight: 700,
 };

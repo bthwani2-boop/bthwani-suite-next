@@ -199,7 +199,7 @@ func deletePendingPickupCommand(ctx context.Context, conn *sql.Conn, commandID s
 }
 
 // PickupMutationGuard makes commandId and expectedVersion authoritative for all
-// JRN-015 mutations. A per-order advisory lock serializes partner and operator
+// pickup mutations. A per-order advisory lock serializes partner and operator
 // writes, completed command receipts are replayed, and stale surface versions
 // are rejected before the domain mutation executes.
 func PickupMutationGuard(

@@ -23,7 +23,7 @@ const providerWebhookMaxSkew = 5 * time.Minute
 type providerWebhookEnvelope struct {
 	EventID           string `json:"eventId"`
 	Type              string `json:"type"`
-	TenantID          string `json:"tenantId"`
+	OperatorContextID          string `json:"operatorContextId"`
 	PaymentSessionID  string `json:"paymentSessionId"`
 	Status            string `json:"status"`
 	ProviderReference string `json:"providerReference"`
@@ -98,8 +98,8 @@ func HandlePaymentProviderWebhook(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		expectedType := providerEventTypeForStatus(envelope.Status)
-		if envelope.EventID == "" || envelope.TenantID == "" || envelope.PaymentSessionID == "" || expectedType == "" || envelope.Type != expectedType {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_WEBHOOK", "provider webhook identity type status tenant and paymentSessionId must be valid")
+		if envelope.EventID == "" || envelope.OperatorContextID == "" || envelope.PaymentSessionID == "" || expectedType == "" || envelope.Type != expectedType {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_WEBHOOK", "provider webhook identity type status OperatorContext and paymentSessionId must be valid")
 			return
 		}
 		payloadHashBytes := sha256.Sum256(body)
@@ -114,9 +114,10 @@ func HandlePaymentProviderWebhook(db *sql.DB) http.HandlerFunc {
 			parsed = parsed.UTC()
 			occurredAt = &parsed
 		}
-		application, err := ApplyAuthoritativeProviderEvent(r.Context(), db, ProviderEventInput{
+		providerCtx := shared.WithOperatorContext(r.Context(), envelope.OperatorContextID)
+		application, err := ApplyAuthoritativeProviderEvent(providerCtx, db, ProviderEventInput{
 			EventID:           envelope.EventID,
-			TenantID:          envelope.TenantID,
+			OperatorContextID:          envelope.OperatorContextID,
 			PaymentSessionID:  envelope.PaymentSessionID,
 			EventType:         envelope.Type,
 			ProviderStatus:    envelope.Status,
@@ -130,8 +131,8 @@ func HandlePaymentProviderWebhook(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusConflict, "PROVIDER_EVENT_REPLAY_CONFLICT", err.Error())
 			return
 		}
-		if errors.Is(err, ErrProviderTenantMismatch) {
-			shared.SendError(w, http.StatusConflict, "PROVIDER_TENANT_MISMATCH", err.Error())
+		if errors.Is(err, ErrProviderOperatorContextMismatch) {
+			shared.SendError(w, http.StatusConflict, "PROVIDER_OperatorContext_MISMATCH", err.Error())
 			return
 		}
 		if errors.Is(err, ErrIllegalProviderTransition) {

@@ -6,7 +6,7 @@
 -- store IDs used by runtime/e2e fixtures.
 
 INSERT INTO dsh_partners (
-    id, tenant_id, legal_name_ar, legal_name_en, display_name,
+    id, operator_context_id, legal_name_ar, legal_name_en, display_name,
     legal_identity_type, legal_identity_number, owner_name,
     primary_phone, secondary_phone, email, category,
     activation_status, created_by_actor_id, created_by_surface,
@@ -48,7 +48,7 @@ INSERT INTO dsh_partners (
         'شريك محلي مستقل لإلكترونيات المستقبل', 8, NOW() - INTERVAL '2 days', NOW()
     )
 ON CONFLICT (id) DO UPDATE SET
-    tenant_id = EXCLUDED.tenant_id,
+    operator_context_id = EXCLUDED.operator_context_id,
     legal_name_ar = EXCLUDED.legal_name_ar,
     legal_name_en = EXCLUDED.legal_name_en,
     display_name = EXCLUDED.display_name,
@@ -63,7 +63,7 @@ ON CONFLICT (id) DO UPDATE SET
     updated_at = NOW();
 
 INSERT INTO dsh_partner_brands (
-    id, tenant_id, partner_id, name_ar, name_en, category, status
+    id, operator_context_id, partner_id, name_ar, name_en, category, status
 ) VALUES
     ('pbr_local_haddah',      'local-dsh', 'prt_partner_local_001', 'أسواق حدة المركزية', 'Haddah Central Market', 'grocery', 'active'),
     ('pbr_local_sabeen',      'local-dsh', 'prt_partner_local_002', 'مخبز السبعين', 'Al Sabeen Bakery', 'bakery', 'active'),
@@ -72,7 +72,7 @@ INSERT INTO dsh_partner_brands (
     ('pbr_local_maeen',       'local-dsh', 'prt_partner_local_006', 'صيدلية معين', 'Maeen Pharmacy', 'pharmacy', 'active'),
     ('pbr_local_electronics', 'local-dsh', 'prt_partner_local_007', 'إلكترونيات المستقبل', 'Future Electronics', 'electronics', 'active')
 ON CONFLICT (id) DO UPDATE SET
-    tenant_id = EXCLUDED.tenant_id,
+    operator_context_id = EXCLUDED.operator_context_id,
     partner_id = EXCLUDED.partner_id,
     name_ar = EXCLUDED.name_ar,
     name_en = EXCLUDED.name_en,
@@ -86,7 +86,7 @@ SET partner_id = 'prt_partner_local_001',
     brand_id = 'pbr_local_haddah',
     updated_at = NOW()
 WHERE id = 'store-test-grocery'
-  AND tenant_id = 'local-dsh';
+  AND operator_context_id = 'local-dsh';
 
 -- Partner replacement is opened only for this atomic seed transaction. The
 -- deferred database constraint still requires an exact transfer-audit row for
@@ -102,7 +102,7 @@ WITH transfer_plan(store_id, to_partner_id, brand_id) AS (
         ('store-test-electronics', 'prt_partner_local_007', 'pbr_local_electronics')
 ), current_rows AS MATERIALIZED (
     SELECT
-        store.tenant_id,
+        store.operator_context_id,
         store.id AS store_id,
         store.partner_id AS from_partner_id,
         store.version AS expected_store_version,
@@ -110,7 +110,7 @@ WITH transfer_plan(store_id, to_partner_id, brand_id) AS (
         plan.brand_id
     FROM dsh_stores store
     JOIN transfer_plan plan ON plan.store_id = store.id
-    WHERE store.tenant_id = 'local-dsh'
+    WHERE store.operator_context_id = 'local-dsh'
       AND store.partner_id IS DISTINCT FROM plan.to_partner_id
     FOR UPDATE OF store
 ), updated AS (
@@ -125,10 +125,10 @@ WITH transfer_plan(store_id, to_partner_id, brand_id) AS (
         updated_at = NOW()
     FROM current_rows
     WHERE store.id = current_rows.store_id
-      AND store.tenant_id = current_rows.tenant_id
+      AND store.operator_context_id = current_rows.operator_context_id
       AND store.version = current_rows.expected_store_version
     RETURNING
-        current_rows.tenant_id,
+        current_rows.operator_context_id,
         store.id AS store_id,
         current_rows.from_partner_id,
         current_rows.to_partner_id,
@@ -136,12 +136,12 @@ WITH transfer_plan(store_id, to_partner_id, brand_id) AS (
         store.version AS resulting_store_version
 )
 INSERT INTO dsh_partner_store_transfer_audit (
-    tenant_id, store_id, from_partner_id, to_partner_id,
+    operator_context_id, store_id, from_partner_id, to_partner_id,
     actor_id, actor_surface, reason,
     expected_store_version, resulting_store_version, correlation_id
 )
 SELECT
-    tenant_id,
+    operator_context_id,
     store_id,
     from_partner_id,
     to_partner_id,
@@ -156,7 +156,7 @@ FROM updated;
 SELECT set_config('bthwani.governed_store_partner_transfer', 'off', true);
 
 -- Keep the canonical local partner actor scoped only to the legal entity/store
--- represented by its session. Tenant ownership is derived through dsh_stores,
+-- represented by its session. OperatorContext ownership is derived through dsh_stores,
 -- matching the canonical scope table and backend authorization queries.
 DELETE FROM dsh_store_actor_scopes
 WHERE actor_id = 'partner-local-001'

@@ -20,13 +20,13 @@ paths:
   /wlt/commercial/products:
     post:
       operationId: createWltCommercialProduct
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
       requestBody:
         required: true
         content:
@@ -34,33 +34,33 @@ paths:
             schema: { $ref: '#/components/schemas/CommercialProductWrite' }
       responses:
         '201': { $ref: '#/components/responses/ObjectResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
   /wlt/commercial/products/{productReference}:
     get:
       operationId: getWltCommercialProduct
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/ProductReference'
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
     patch:
       operationId: updateWltCommercialProduct
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/ProductReference'
       requestBody:
         required: true
@@ -69,38 +69,38 @@ paths:
             schema: { $ref: '#/components/schemas/CommercialProductWrite' }
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
   /wlt/commercial/clients/{clientId}/benefits:
     get:
       operationId: getWltClientCommercialBenefits
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - name: clientId
           in: path
           required: true
           schema: { type: string, minLength: 1 }
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
   /wlt/commercial/payment-sessions:
     post:
       operationId: createWltSubscriptionPaymentSession
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - name: Idempotency-Key
           in: header
           required: true
@@ -116,21 +116,21 @@ paths:
             schema: { $ref: '#/components/schemas/SubscriptionPaymentSessionCreate' }
       responses:
         '201': { $ref: '#/components/responses/ObjectResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
   /wlt/commercial/loyalty-entries:
     post:
       operationId: appendWltLoyaltyEntry
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - name: Idempotency-Key
           in: header
           required: true
@@ -142,21 +142,21 @@ paths:
             schema: { $ref: '#/components/schemas/LoyaltyEntryWrite' }
       responses:
         '201': { $ref: '#/components/responses/ObjectResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
   /wlt/commercial/subscriptions:
     post:
       operationId: activateWltCommercialSubscription
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - name: X-Correlation-ID
           in: header
           required: true
@@ -172,38 +172,38 @@ paths:
             schema: { $ref: '#/components/schemas/SubscriptionActivation' }
       responses:
         '201': { $ref: '#/components/responses/ObjectResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
   /wlt/commercial/subscriptions/{subscriptionId}/lifecycle:
     get:
       operationId: getWltCommercialSubscriptionLifecycle
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - name: subscriptionId
           in: path
           required: true
           schema: { type: string, format: uuid }
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
   /wlt/commercial/subscriptions/{subscriptionId}/renew:
     post:
       operationId: renewWltCommercialSubscription
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - name: subscriptionId
           in: path
           required: true
@@ -223,21 +223,21 @@ paths:
             schema: { $ref: '#/components/schemas/SubscriptionActivation' }
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
   /wlt/commercial/subscriptions/{subscriptionId}/cancel:
     post:
       operationId: cancelWltCommercialSubscription
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - name: subscriptionId
           in: path
           required: true
@@ -257,27 +257,27 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [clientId, reason]
+              required: [ clientId, reason ]
               properties:
                 clientId: { type: string, minLength: 1 }
                 reason: { type: string, minLength: 1 }
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
   /wlt/commercial/subscriptions/expire-due:
     post:
       operationId: expireDueWltCommercialSubscriptions
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - name: Idempotency-Key
           in: header
           required: true
@@ -288,23 +288,13 @@ paths:
           schema: { type: string, minLength: 1 }
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer }
   parameters:
-    AuthorizationHeader:
-      name: Authorization
-      in: header
-      required: true
-      schema: { type: string, pattern: '^Bearer .+' }
-    ServiceCallerHeader:
-      name: X-Service-Caller
-      in: header
-      required: true
-      schema: { type: string, enum: [dsh] }
     ProductReference:
       name: productReference
       in: path
@@ -320,15 +310,8 @@ components:
       description: Governed error response.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+          schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
   schemas:
-    Error:
-      type: object
-      additionalProperties: false
-      required: [code, message]
-      properties:
-        code: { type: string }
-        message: { type: string }
     CommercialProductWrite:
       type: object
       additionalProperties: true
@@ -336,10 +319,10 @@ components:
     LoyaltyEntryWrite:
       type: object
       additionalProperties: true
-      required: [clientId, direction, points, sourceType, sourceId]
+      required: [ clientId, direction, points, sourceType, sourceId ]
       properties:
         clientId: { type: string, minLength: 1 }
-        direction: { type: string, enum: [earn, burn, expire, reverse] }
+        direction: { type: string, enum: [ earn, burn, expire, reverse ] }
         points: { type: integer, format: int64, minimum: 1 }
         sourceType: { type: string, minLength: 1 }
         sourceId: { type: string, minLength: 1 }
@@ -350,17 +333,17 @@ components:
     SubscriptionPaymentSessionCreate:
       type: object
       additionalProperties: false
-      required: [subscriptionPurchaseId, productReference, tenantId, clientId]
+      required: [ subscriptionPurchaseId, productReference, operatorContextId, clientId ]
       properties:
         subscriptionPurchaseId: { type: string, minLength: 1 }
         productReference: { type: string, minLength: 1 }
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         clientId: { type: string, minLength: 1 }
-        paymentMethod: { type: string, enum: [official_wallet] }
+        paymentMethod: { type: string, enum: [ official_wallet ] }
     SubscriptionActivation:
       type: object
       additionalProperties: false
-      required: [clientId, productReference, paymentSessionId, subscriptionPurchaseId]
+      required: [ clientId, productReference, paymentSessionId, subscriptionPurchaseId ]
       properties:
         clientId: { type: string, minLength: 1 }
         productReference: { type: string, minLength: 1 }

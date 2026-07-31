@@ -10,7 +10,7 @@ import { PayoutRequestsPanel } from "./PayoutRequestsPanel";
 import { ReconciliationCasesPanel } from "./ReconciliationCasesPanel";
 import { CodReconciliationCasesPanel } from "./CodReconciliationCasesPanel";
 import { RefundsCommandPanel } from "./RefundsCommandPanel";
-import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from "@bthwani/wlt";
+import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from "../../shared/finance-wlt-link/finance/finance-hub.types";
 
 type FinanceTabItem = { readonly id: string; readonly label: string; readonly active: boolean };
 
@@ -31,12 +31,12 @@ const FINANCE_BLOCK_REASON_COPY: Record<string, { readonly title: string; readon
     title: "الجلسة غير مصادق عليها (AUTH_MISSING)",
     description: "لا يوجد رمز دخول صالح لهذا المشغّل. سجّل الدخول من جديد ثم أعد المحاولة.",
   },
-  MISSING_TENANT_ID: {
-    title: "سياق المستأجر غير مكتمل (MISSING_TENANT_ID)",
+  MISSING_OperatorContext_ID: {
+    title: "سياق المستأجر غير مكتمل (MISSING_OperatorContext_ID)",
     description: "لم تُرجع جلسة المشغّل سياق المستأجر الموثوق. سجّل الدخول من جديد؛ لا تُدخل معرّف مستأجر يدويًا.",
   },
-  TENANT_MISMATCH: {
-    title: "تعارض سياق المستأجر (TENANT_MISMATCH)",
+  OperatorContext_MISMATCH: {
+    title: "تعارض سياق المستأجر (OperatorContext_MISMATCH)",
     description: "رُفض الطلب لأن محدد المستأجر لا يطابق سياق جلسة المشغّل الموثوق.",
   },
   RUNTIME_PORT_MISMATCH: {

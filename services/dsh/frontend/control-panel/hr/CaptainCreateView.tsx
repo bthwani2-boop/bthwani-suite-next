@@ -26,6 +26,12 @@ export function CaptainCreateView(props: {
   const [vehicleType, setVehicleType] = useState("");
 
   const createdCaptain = state.kind === "created" ? state.provider : null;
+
+  React.useEffect(() => {
+    if (createdCaptain) {
+      props.onCreated(createdCaptain);
+    }
+  }, [createdCaptain, props]);
   const canSubmit =
     fullNameAr.trim().length > 0 &&
     phone.trim().length >= 9 &&
@@ -93,13 +99,7 @@ export function CaptainCreateView(props: {
       {state.kind === "error" ? <CpStatePanel role="alert" title="تعذر إنشاء الكابتن" description={state.message} /> : null}
 
       {createdCaptain ? (
-        <CpStatePanel role="status" title="تم إنشاء ملف الكابتن الأولي بتصنيف Joker.">
-          <Text role="bodySm">افتح الملف لاستكمال مصدر الترشيح والضمين والهوية والرخصة والعقد والتجهيز والضمانة المالية قبل التفعيل.</Text>
-          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "1rem" }}>
-            <CpButton variant="primary" onClick={() => props.onCreated(createdCaptain)}>فتح ملف الكابتن</CpButton>
-            <CpButton variant="secondary" onClick={resetForm}>إضافة كابتن جديد</CpButton>
-          </div>
-        </CpStatePanel>
+        <CpStatePanel role="status" title="جارٍ تجهيز ملف الكابتن..." />
       ) : (
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
           <div style={{ minWidth: "240px" }}>

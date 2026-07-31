@@ -1,38 +1,25 @@
 import React from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
-import { Icon, StateView, Text, colorRoles, spacing } from "@bthwani/ui-kit";
+import { Pressable, TextInput, View } from "react-native";
+import { DateTimeField, Icon, StateView, Text, colorRoles, formatDateTime, spacing } from "@bthwani/ui-kit";
 import {
   createOwnAvailabilityNotice,
   listOwnAvailabilityNotices,
 } from "./workforce-me-operational.api";
 import type { ProviderAvailabilityNotice } from "./workforce.types";
 
-const TYPE_OPTIONS: ReadonlyArray<{
-  readonly value: ProviderAvailabilityNotice["noticeType"];
-  readonly label: string;
-}> = [
-  { value: "planned_unavailability", label: "عدم توفر مخطط" },
-  { value: "immediate_unavailability", label: "عدم توفر فوري" },
-  { value: "short_break", label: "توقف قصير" },
-  { value: "emergency", label: "طارئ" },
-  { value: "temporary_restriction", label: "تقييد مؤقت" },
-];
+const STATUS_LABEL: Record<ProviderAvailabilityNotice["status"], string> = {
+  scheduled: "مجدول",
+  active: "سارٍ الآن",
+  completed: "انتهى",
+  cancelled: "أُلغي",
+};
 
-function localInputDate(offsetHours: number): string {
-  const date = new Date(Date.now() + offsetHours * 60 * 60 * 1000);
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function parseLocalDate(value: string): string | null {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
-}
-
-function noticeTypeLabel(value: ProviderAvailabilityNotice["noticeType"]): string {
-  return TYPE_OPTIONS.find((option) => option.value === value)?.label ?? value;
-}
-
+/**
+ * Deliberately minimal by design (not a missing feature): press "غير متوفر",
+ * pick the time you'll be back, optionally add a note. No report-type taxonomy,
+ * no free-text reason code, no raw ISO input — those existed for backend
+ * bookkeeping, not because a field agent needs them.
+ */
 export function ProviderAvailabilityNoticesPanel(props: {
   readonly providerLabel: "الميداني" | "الكابتن";
   readonly hasActiveAssignment?: boolean;
@@ -42,10 +29,8 @@ export function ProviderAvailabilityNoticesPanel(props: {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
-  const [noticeType, setNoticeType] = React.useState<ProviderAvailabilityNotice["noticeType"]>("planned_unavailability");
-  const [startsAt, setStartsAt] = React.useState(localInputDate(1));
-  const [endsAt, setEndsAt] = React.useState(localInputDate(5));
-  const [reasonCode, setReasonCode] = React.useState("personal");
+  const [reporting, setReporting] = React.useState(false);
+  const [until, setUntil] = React.useState<Date | null>(null);
   const [note, setNote] = React.useState("");
 
   const load = React.useCallback(async () => {
@@ -63,14 +48,17 @@ export function ProviderAvailabilityNoticesPanel(props: {
   React.useEffect(() => { void load(); }, [load]);
 
   const submit = async () => {
-    const start = parseLocalDate(startsAt);
-    const end = parseLocalDate(endsAt);
-    if (!start || !end || new Date(end).getTime() <= new Date(start).getTime()) {
-      setError("أدخل فترة صحيحة، ويجب أن يكون وقت النهاية بعد البداية.");
+    if (!until) {
+      setError("اختر الوقت الذي ستعود فيه متاحًا.");
       return;
     }
-    if (props.hasActiveAssignment && (noticeType === "immediate_unavailability" || new Date(start).getTime() <= Date.now())) {
-      setError("لديك مهمة نشطة. أكملها أو افتح استثناء تشغيليًا قبل بدء عدم التوفر الفوري.");
+    const start = new Date();
+    if (until.getTime() <= start.getTime()) {
+      setError("يجب أن يكون وقت العودة بعد الآن.");
+      return;
+    }
+    if (props.hasActiveAssignment) {
+      setError("لديك مهمة نشطة. أكملها أولًا قبل تسجيل عدم التوفر.");
       return;
     }
     setBusy(true);
@@ -78,17 +66,17 @@ export function ProviderAvailabilityNoticesPanel(props: {
     setSuccess(null);
     try {
       const created = await createOwnAvailabilityNotice({
-        noticeType,
-        startsAt: start,
-        endsAt: end,
-        reasonCode: reasonCode.trim() || "personal",
+        noticeType: "immediate_unavailability",
+        startsAt: start.toISOString(),
+        endsAt: until.toISOString(),
+        reasonCode: "personal",
         note: note.trim(),
       });
       setNotices((current) => [created, ...current]);
-      setSuccess("تم تسجيل فترة عدم التوفر. لن تُعامل كوردية أو حضور وظيفي.");
-      setNote("");
+      setSuccess("تم تسجيل عدم توفرك. لن تصلك مهام جديدة حتى الوقت المحدد.");
+      setNote(""); setUntil(null); setReporting(false);
     } catch {
-      setError("تعذر تسجيل فترة عدم التوفر.");
+      setError("تعذر تسجيل عدم التوفر.");
     } finally {
       setBusy(false);
     }
@@ -98,61 +86,60 @@ export function ProviderAvailabilityNoticesPanel(props: {
     <View style={styles.root}>
       <View style={styles.headerRow}>
         <View style={styles.headerText}>
-          <Text role="titleSm" style={styles.rtl}>الإبلاغ عن عدم التوفر</Text>
+          <Text role="titleSm" style={styles.rtl}>التوفر</Text>
           <Text role="bodySm" tone="muted" style={styles.rtl}>
-            {props.providerLabel} مقدم خدمة مستقل. هذا بلاغ لتخطيط التغطية وليس طلب إجازة وظيفية أو تسجيل دوام.
+            سجّل عدم توفرك مؤقتًا حتى لا تصلك مهام جديدة.
           </Text>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="تحديث بلاغات عدم التوفر" onPress={() => void load()} style={styles.iconButton}>
+        <Pressable accessibilityRole="button" accessibilityLabel="تحديث" onPress={() => void load()} style={styles.iconButton}>
           <Icon name="refresh-outline" size={21} tone="brand" />
         </Pressable>
       </View>
 
-      <View style={styles.options}>
-        {TYPE_OPTIONS.map((option) => (
-          <Pressable
-            key={option.value}
-            accessibilityRole="radio"
-            accessibilityState={{ selected: noticeType === option.value }}
-            onPress={() => setNoticeType(option.value)}
-            style={[styles.option, noticeType === option.value && styles.optionSelected]}
-          >
-            <Text role="bodySm" style={noticeType === option.value ? styles.selectedText : undefined}>{option.label}</Text>
-          </Pressable>
-        ))}
-      </View>
+      {reporting ? (
+        <View style={styles.form}>
+          <DateTimeField label="حتى متى ستكون غير متاح؟" value={until} onChange={setUntil} placeholder="اختر وقت العودة" />
+          <TextInput
+            value={note}
+            onChangeText={setNote}
+            placeholder="ملاحظة اختيارية"
+            multiline
+            maxLength={300}
+            style={styles.noteInput}
+            textAlign="right"
+          />
+          {error ? <StateView tone="danger" title="تعذر تسجيل البلاغ" description={error} /> : null}
+          <View style={styles.formActions}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={busy}
+              onPress={() => void submit()}
+              style={[styles.primaryButton, busy && styles.disabled]}
+            >
+              <Text role="bodyStrong" style={styles.primaryLabel}>{busy ? "جارٍ التسجيل…" : "تأكيد عدم التوفر"}</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" onPress={() => { setReporting(false); setError(null); }} style={styles.cancelButton}>
+              <Text role="bodyStrong">إلغاء</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <Pressable accessibilityRole="button" onPress={() => setReporting(true)} style={styles.declareButton}>
+          <Icon name="pause-circle-outline" size={20} color={colorRoles.textInverse} />
+          <Text role="bodyStrong" style={styles.declareLabel}>غير متوفر</Text>
+        </Pressable>
+      )}
 
-      <Text role="caption" tone="muted" style={styles.rtl}>البداية بصيغة YYYY-MM-DDTHH:mm</Text>
-      <TextInput value={startsAt} onChangeText={setStartsAt} placeholder="2026-07-27T10:00" style={styles.input} textAlign="right" autoCapitalize="none" />
-      <Text role="caption" tone="muted" style={styles.rtl}>النهاية بصيغة YYYY-MM-DDTHH:mm</Text>
-      <TextInput value={endsAt} onChangeText={setEndsAt} placeholder="2026-07-27T14:00" style={styles.input} textAlign="right" autoCapitalize="none" />
-      <TextInput value={reasonCode} onChangeText={setReasonCode} placeholder="رمز السبب" style={styles.input} textAlign="right" />
-      <TextInput value={note} onChangeText={setNote} placeholder="ملاحظة اختيارية" multiline maxLength={1000} style={[styles.input, styles.noteInput]} textAlign="right" />
-
-      {error ? <StateView tone="danger" title="تعذر تسجيل البلاغ" description={error} /> : null}
       {success ? <StateView tone="success" title={success} /> : null}
 
-      <Pressable accessibilityRole="button" disabled={busy} onPress={() => void submit()} style={[styles.primaryButton, busy && styles.disabled]}>
-        <Text role="bodyStrong" style={styles.primaryLabel}>{busy ? "جارٍ التسجيل…" : "تسجيل عدم التوفر"}</Text>
-      </Pressable>
-
-      <View style={styles.divider} />
-      <Text role="titleSm" style={styles.rtl}>السجل</Text>
-      {loading ? (
-        <Text role="bodySm" tone="muted" style={styles.rtl}>جارٍ التحميل…</Text>
-      ) : notices.length === 0 ? (
-        <StateView tone="neutral" title="لا توجد بلاغات" description="ستظهر الفترات المسجلة هنا." />
-      ) : (
+      {loading ? null : notices.length === 0 ? null : (
         <View style={styles.list}>
-          {notices.map((notice) => (
+          {notices.filter((n) => n.status === "scheduled" || n.status === "active").map((notice) => (
             <View key={notice.id} style={styles.noticeCard}>
               <View style={styles.noticeHeader}>
-                <Text role="bodyStrong">{noticeTypeLabel(notice.noticeType)}</Text>
-                <Text role="caption" tone={notice.status === "active" ? "warning" : "muted"}>{notice.status}</Text>
+                <Text role="bodyStrong">{STATUS_LABEL[notice.status]}</Text>
+                <Text role="caption" tone="muted">حتى {formatDateTime(notice.endsAt)}</Text>
               </View>
-              <Text role="bodySm" tone="muted" style={styles.rtl}>
-                من {new Date(notice.startsAt).toLocaleString("ar-YE")} إلى {new Date(notice.endsAt).toLocaleString("ar-YE")}
-              </Text>
               {notice.note ? <Text role="bodySm" style={styles.rtl}>{notice.note}</Text> : null}
             </View>
           ))}
@@ -162,25 +149,25 @@ export function ProviderAvailabilityNoticesPanel(props: {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = {
   root: { gap: spacing[3] },
-  headerRow: { flexDirection: "row-reverse", alignItems: "center", gap: spacing[3] },
-  headerText: { flex: 1, alignItems: "flex-end", gap: spacing[1] },
-  rtl: { textAlign: "right" },
-  iconButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center" },
-  options: { flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[2] },
-  option: {
-    borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
-    borderRadius: 999,
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-    backgroundColor: colorRoles.surfaceBase,
+  headerRow: { flexDirection: "row-reverse" as const, alignItems: "center" as const, gap: spacing[3] },
+  headerText: { flex: 1, alignItems: "flex-end" as const, gap: spacing[1] },
+  rtl: { textAlign: "right" as const },
+  iconButton: { width: 42, height: 42, alignItems: "center" as const, justifyContent: "center" as const },
+  declareButton: {
+    flexDirection: "row-reverse" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: spacing[2],
+    minHeight: 48,
+    borderRadius: 12,
+    backgroundColor: colorRoles.warning,
   },
-  optionSelected: { backgroundColor: colorRoles.brandAction, borderColor: colorRoles.brandAction },
-  selectedText: { color: colorRoles.surfaceBase },
-  input: {
-    minHeight: 46,
+  declareLabel: { color: colorRoles.textInverse },
+  form: { gap: spacing[3] },
+  noteInput: {
+    minHeight: 60,
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
     borderRadius: 12,
@@ -188,15 +175,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
     backgroundColor: colorRoles.surfaceMuted,
     color: colorRoles.textPrimary,
+    textAlignVertical: "top" as const,
   },
-  noteInput: { minHeight: 78, textAlignVertical: "top" },
-  primaryButton: { minHeight: 48, borderRadius: 12, backgroundColor: colorRoles.brandAction, alignItems: "center", justifyContent: "center" },
+  formActions: { flexDirection: "row-reverse" as const, gap: spacing[2] },
+  primaryButton: { flex: 1, minHeight: 48, borderRadius: 12, backgroundColor: colorRoles.brandAction, alignItems: "center" as const, justifyContent: "center" as const },
   primaryLabel: { color: colorRoles.surfaceBase },
+  cancelButton: { minHeight: 48, paddingHorizontal: spacing[4], borderRadius: 12, alignItems: "center" as const, justifyContent: "center" as const, borderWidth: 1, borderColor: colorRoles.borderSubtle },
   disabled: { opacity: 0.5 },
-  divider: { height: 1, backgroundColor: colorRoles.borderSubtle },
   list: { gap: spacing[2] },
   noticeCard: { borderWidth: 1, borderColor: colorRoles.borderSubtle, borderRadius: 12, padding: spacing[3], gap: spacing[2], backgroundColor: colorRoles.surfaceMuted },
-  noticeHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" },
-});
-
-export default ProviderAvailabilityNoticesPanel;
+  noticeHeader: { flexDirection: "row-reverse" as const, justifyContent: "space-between" as const, alignItems: "center" as const },
+};

@@ -6,6 +6,7 @@ import {
   CpMutedInline,
   CpPageHeader,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -105,8 +106,8 @@ export function RoleDefinitionApprovalQueue() {
       dir="rtl"
       header={<CpPageHeader title="تعريف الأدوار — Maker / Checker" />}
       stateView={
-        roleRequests.state.kind === "loading" ? <CpStatePanel role="status" title="جارٍ تحميل طلبات تعريف الأدوار…" />
-          : roleRequests.state.kind === "error" ? <CpStatePanel role="alert" title={roleRequests.state.message} />
+        roleRequests.state.kind === "loading" ? <CpStateView kind="loading" title="جارٍ تحميل طلبات تعريف الأدوار…" />
+          : roleRequests.state.kind === "error" ? <CpStateView kind="error" title={roleRequests.state.message} />
           : undefined
       }
     >
@@ -171,7 +172,7 @@ export function RoleDefinitionApprovalQueue() {
         </CpButton>
       </section>
 
-      {actionError ? <CpStatePanel role="alert" title={actionError} /> : null}
+      {actionError ? <CpStateView kind="error" title={actionError} /> : null}
 
       {roleRequests.state.kind === "success" && roleRequests.state.data.length === 0 ? (
         <CpStatePanel role="status" title="لا توجد طلبات تعريف أدوار معلقة." />

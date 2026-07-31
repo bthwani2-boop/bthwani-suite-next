@@ -2,6 +2,7 @@
 
 import { type CSSProperties } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
+import { CpButton } from "@bthwani/control-panel/components";
 import type { CouponFundingLifecycleRecord } from "../../../shared/marketing/coupons.types";
 
 type CouponFundingReconciliationPanelProps = {
@@ -36,7 +37,7 @@ export function CouponFundingReconciliationPanel({
           <h3 id="coupon-funding-reconciliation-title" style={styles.title}>مصالحة تمويل العروض</h3>
           <p style={styles.muted}>مقارنة فورية بين إسقاط DSH التشغيلي وحجز WLT المالي، مع حالة صندوق التسليم وإعادة المحاولة.</p>
         </div>
-        <button type="button" disabled={loading} onClick={onReload} style={styles.button}>إعادة التحقق</button>
+        <CpButton disabled={loading} onClick={onReload} variant="secondary">إعادة التحقق</CpButton>
       </div>
 
       {loading ? <p aria-live="polite">جارٍ التحقق من DSH وWLT…</p> : null}
@@ -77,7 +78,6 @@ const styles: Record<string, CSSProperties> = {
   header: { display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "flex-start", flexWrap: "wrap" },
   title: { margin: 0 },
   muted: { margin: "0.35rem 0", opacity: 0.72, overflowWrap: "anywhere" },
-  button: { border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.5rem", padding: "0.5rem 0.75rem", background: "transparent", cursor: "pointer" },
   list: { display: "grid", gap: "0.75rem", marginTop: "1rem" },
   card: { border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.625rem", padding: "0.75rem" },
   cardHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" },

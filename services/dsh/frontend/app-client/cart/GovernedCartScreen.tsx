@@ -14,7 +14,7 @@ import {
 import { useCartController, useServiceabilityController } from "../../shared/cart";
 import type { DshCart, DshFulfillmentMode } from "../../shared/cart";
 import type { DshPaymentMethod } from "../../shared/checkout";
-import { useWltDshPaymentController } from "../../shared/finance-wlt-link";
+import { useDshPaymentController } from "../../shared/finance-wlt-link";
 import { PaymentDecisionSection } from "./PaymentDecisionSection";
 
 type Props = {
@@ -38,12 +38,6 @@ const FULFILLMENT_OPTIONS: readonly { value: DshFulfillmentMode; label: string; 
   { value: "pickup", label: "استلم بنفسك", description: "تستلم الطلب من المتجر دون توصيل." },
 ];
 
-function parseItemPrice(reference?: string): number {
-  if (!reference) return 0;
-  const parsed = Number.parseFloat(reference.replace(/[^\d.]/g, ""));
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
 export function GovernedCartScreen({
   storeId,
   serviceAreaCode = "",
@@ -61,10 +55,16 @@ export function GovernedCartScreen({
 
   const cart = cartController.state.kind === "success" ? cartController.state.cart : null;
   const presentationSubtotal = React.useMemo(
-    () => cart?.items.reduce((sum, item) => sum + parseItemPrice(item.priceReference) * item.quantity, 0) ?? 0,
+    () => cart?.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0) ?? 0,
     [cart],
   );
-  const payment = useWltDshPaymentController();
+  const cartCurrencies = React.useMemo(
+    () => new Set((cart?.items ?? []).map((item) => item.currency.trim()).filter(Boolean)),
+    [cart],
+  );
+  const presentationCurrency = cartCurrencies.size === 1 ? [...cartCurrencies][0] ?? "" : "";
+  const currencySnapshotValid = cartCurrencies.size === 1 && presentationCurrency.length === 3;
+  const payment = useDshPaymentController();
 
   React.useEffect(() => {
     if (cart) setFulfillmentMode(cart.fulfillmentMode);
@@ -93,7 +93,7 @@ export function GovernedCartScreen({
 
   const fulfillmentRequiresAddress = fulfillmentMode !== "pickup";
   const serviceabilityReady = fulfillmentMode === "pickup" || serviceability.serviceability.kind === "serviceable";
-  const canProceed = serviceabilityReady && (!fulfillmentRequiresAddress || deliveryAddress.trim().length >= 5);
+  const canProceed = currencySnapshotValid && serviceabilityReady && (!fulfillmentRequiresAddress || deliveryAddress.trim().length >= 5);
 
   return (
     <View style={{ flex: 1 }}>
@@ -105,6 +105,14 @@ export function GovernedCartScreen({
             رسوم التوصيل والخصم والإجمالي لا تُحسب داخل التطبيق. يثبتها DSH من السلة وسياسة المتجر والكوبون ثم يرسل الإجمالي نفسه إلى WLT.
           </Text>
         </Card>
+
+        {!currencySnapshotValid ? (
+          <StateView
+            tone="danger"
+            title="لقطة العملة غير صالحة"
+            description="تحتوي السلة عملة مفقودة أو أكثر من عملة. أعد تحميل الحقيقة من DSH قبل المتابعة."
+          />
+        ) : null}
 
         <Card padding={3} gap={3}>
           <Text role="bodyStrong" align="start">طريقة التنفيذ</Text>
@@ -169,7 +177,9 @@ export function GovernedCartScreen({
               <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", gap: spacing[2] }}>
                 <View style={{ flex: 1 }}>
                   <Text role="bodyStrong" align="start">{item.productName}</Text>
-                  <Text role="caption" tone="muted" align="start">{parseItemPrice(item.priceReference).toLocaleString("ar")} ر.ي × {item.quantity}</Text>
+                  <Text role="caption" tone="muted" align="start">
+                    {item.unitPrice.toLocaleString("ar")} {item.currency} × {item.quantity}
+                  </Text>
                 </View>
                 <View style={{ flexDirection: "row-reverse", gap: spacing[1] }}>
                   <Button label="+" size="sm" fullWidth={false} onPress={() => void cartController.updateItemQuantity(item.masterProductId, item.productName, item.quantity + 1, item.priceReference)} />
@@ -179,7 +189,9 @@ export function GovernedCartScreen({
               <Divider />
             </View>
           ))}
-          <Text role="bodySm" align="start">إجمالي المنتجات التقديري: {presentationSubtotal.toLocaleString("ar")} ر.ي</Text>
+          <Text role="bodySm" align="start">
+            إجمالي المنتجات التقديري: {presentationSubtotal.toLocaleString("ar")} {presentationCurrency}
+          </Text>
           <Text role="caption" tone="muted" align="start">الإجمالي النهائي يظهر بعد إنشاء intent من DSH.</Text>
           <Button label="حذف جميع العناصر" tone="secondary" onPress={() => void cartController.clear(cart)} />
         </Card>

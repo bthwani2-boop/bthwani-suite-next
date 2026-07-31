@@ -1,27 +1,11 @@
 # Claude Code Instructions
 
-This adapter is thin. `AGENTS.md` is the governing instruction source.
+`AGENTS.md` is the governing instruction source. This file is a compatibility adapter only.
 
-Before any task, apply, in order: `AGENTS.md`, `.agents/INDEX.md`, `.agents/AUTHORITY_BOUNDARY.md`, `.agents/COMMAND_SAFETY_POLICY.md`.
+For normal work, read `AGENTS.md`. Read `.agents/COMMAND_SAFETY_POLICY.md` before writes or destructive commands. Load `.agents/INDEX.md` only when a governed skill must be selected, then load the smallest applicable `SKILL.md`.
 
-Do not duplicate global policy here. If this file conflicts with `AGENTS.md`, `AGENTS.md` wins.
+Use direct scoped repository inspection first. Do not preload every skill, governance document, adapter, diagnostic, or historical report.
 
-All agent commands must respect the [Command Safety Policy](.agents/COMMAND_SAFETY_POLICY.md).
+Graphify, LeanCTX, Nx, runtime environments, and full verification suites are optional tools. Never use Graphify first by default; use it only when direct inspection cannot resolve ownership, dependencies, duplication, or dead code.
 
-Use shared project skills from:
-
-    .agents/skills
-
-Also refer to [BThwani Harness Patterns](.agents/BTHWANI_HARNESS_PATTERNS.md).
-
-For Graphify, read and follow:
-
-    .agents/skills/graphify/SKILL.md
-
-Graphify is a tool, not an agent.
-
-Do not create or use:
-
-    .claude/skills/graphify
-
-When repository understanding is needed, use Graphify first, then verify with actual files and Git evidence.
+If this adapter conflicts with `AGENTS.md`, `AGENTS.md` wins.

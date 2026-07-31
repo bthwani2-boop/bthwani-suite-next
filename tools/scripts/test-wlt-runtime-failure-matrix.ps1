@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $Timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-$TenantId = "tenant-runtime-matrix"
+$OperatorContextId = "OperatorContext-runtime-matrix"
 $CorrelationId = "wlt-runtime-matrix-$Timestamp"
 $ServiceToken = "dev-only-dsh-wlt-shared-secret"
 
@@ -24,7 +24,7 @@ function Invoke-WltResponse {
   $Headers = @{
     Authorization = "Bearer $Token"
     "X-Service-Caller" = "dsh"
-    "X-Tenant-ID" = $TenantId
+    "X-Operator-Context-ID" = $OperatorContextId
     "X-Correlation-ID" = $CorrelationId
   }
   if (-not $OmitIdempotency) {
@@ -77,7 +77,7 @@ function New-SessionBody {
   )
   return @{
     checkoutIntentId = $CheckoutIntentId
-    tenantId = $TenantId
+    operatorContextId = $OperatorContextId
     clientId = $ClientId
     storeId = "store-test-grocery"
     paymentMethod = "official_wallet"

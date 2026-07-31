@@ -38,7 +38,7 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *dshnotify.Client) erro
 	for _, e := range events {
 		notifyCtx, cancel := context.WithTimeout(ctx, notifyTimeout)
 		err := client.NotifyEvent(notifyCtx, dshnotify.Event{
-			EventID: e.ID, CorrelationID: e.CorrelationID, TenantID: e.TenantID,
+			EventID: e.ID, CorrelationID: e.CorrelationID, OperatorContextID: e.OperatorContextID,
 			CheckoutIntentID: e.CheckoutIntentID, SpecialRequestID: e.SpecialRequestID,
 			PaymentSessionID: e.PaymentSessionID, Status: e.EventType,
 			OrderID: e.OrderID, RefundReference: e.RefundReference, Reason: e.Reason,

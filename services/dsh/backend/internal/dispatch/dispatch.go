@@ -78,7 +78,7 @@ type Delivery struct {
 type CreateAssignmentInput struct {
 	OrderID          string
 	SpecialRequestID string
-	TenantID         string
+	OperatorContextID         string
 	CaptainID        string
 	ActorID          string
 }
@@ -159,8 +159,8 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 	if input.SpecialRequestID == "" || input.CaptainID == "" || input.ActorID == "" {
 		return nil, fmt.Errorf("%w: specialRequestId, captainId, and actor are required", ErrInvalid)
 	}
-	if input.TenantID == "" {
-		input.TenantID = specialrequests.DefaultTenantID
+	if input.OperatorContextID == "" {
+		input.OperatorContextID = specialrequests.DefaultOperatorContextID
 	}
 	tx, err := db.Begin()
 	if err != nil {
@@ -168,10 +168,10 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 	}
 	defer tx.Rollback()
 
-	if err = specialrequests.CheckSheinDispatchReadiness(tx, input.TenantID, input.SpecialRequestID); err != nil {
+	if err = specialrequests.CheckSheinDispatchReadiness(tx, input.OperatorContextID, input.SpecialRequestID); err != nil {
 		return nil, mapSpecialRequestError(err)
 	}
-	if err = specialrequests.TransitionDispatchStatusInTenant(tx, input.TenantID, input.SpecialRequestID,
+	if err = specialrequests.TransitionDispatchStatusInOperatorContext(tx, input.OperatorContextID, input.SpecialRequestID,
 		[]specialrequests.RequestStatus{specialrequests.StatusApproved}, specialrequests.StatusAssigned); err != nil {
 		return nil, mapSpecialRequestError(err)
 	}
@@ -209,8 +209,8 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 	if _, err = tx.Exec(`
 		UPDATE dsh_special_requests
 		SET dispatch_assignment_id = $1, version = version + 1
-		WHERE id = $2 AND tenant_id = $3`,
-		assignment.ID, input.SpecialRequestID, input.TenantID); err != nil {
+		WHERE id = $2 AND operator_context_id = $3`,
+		assignment.ID, input.SpecialRequestID, input.OperatorContextID); err != nil {
 		return nil, err
 	}
 
@@ -271,7 +271,7 @@ func GetClientTracking(db *sql.DB, orderID, clientID string) (*Assignment, error
 }
 
 // GetPartnerTracking returns the store's reference view of the captain
-// assignment for a bthwani_delivery order it owns. JRN-017 restricts the
+// assignment for a bthwani_delivery order it owns. The client boundary restricts the
 // partner to reference status only — the HTTP layer must not marshal the
 // captain's live coordinates from this read the way it does for the client.
 func GetPartnerTracking(db *sql.DB, orderID, storeID string) (*Assignment, error) {

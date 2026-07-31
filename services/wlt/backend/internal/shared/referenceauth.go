@@ -11,32 +11,19 @@ import (
 )
 
 type referenceIdentity struct {
-	Subject   string `json:"subject"`
-	TenantID  string `json:"tenantId"`
-	AuthState string `json:"authState"`
+	Subject           string `json:"subject"`
+	OperatorContextID string `json:"operatorContextId"`
+	AuthState         string `json:"authState"`
 }
 
-func activeReferenceTenant() (string, bool) {
-	if !strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active") {
-		return "", false
-	}
-	return strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID")), true
-}
-
-func trustedDshReferenceRequest(r *http.Request, tenantID string) bool {
+func trustedDshReferenceRequest(r *http.Request) bool {
 	expectedToken := strings.TrimSpace(os.Getenv("WLT_DSH_SERVICE_TOKEN"))
 	if expectedToken == "" || r.Header.Get("X-Service-Caller") != "dsh" {
 		return false
 	}
-	if subtle.ConstantTimeCompare(
+	return subtle.ConstantTimeCompare(
 		[]byte(strings.TrimSpace(r.Header.Get("Authorization"))),
 		[]byte("Bearer "+expectedToken),
-	) != 1 {
-		return false
-	}
-	return subtle.ConstantTimeCompare(
-		[]byte(strings.TrimSpace(r.Header.Get("X-Tenant-ID"))),
-		[]byte(tenantID),
 	) == 1
 }
 
@@ -84,21 +71,20 @@ const (
 	ErrReferenceIdentityUnavailable referenceAuthError = "reference identity unavailable"
 )
 
-// RequireReferenceReader protects formerly public WLT projections in active
-// SaaS mode. A trusted DSH service request may use service authentication and a
-// server-owned tenant header. End-user callers must present an Identity bearer
-// session whose tenant matches the runtime tenant; their X-Tenant-ID header is
-// ignored as an ownership signal.
+// RequireReferenceReader protects WLT reference projections in every runtime
+// mode. Authenticated DSH requests are bound to the server-owned compatibility
+// scope; caller-supplied X-Operator-Context-ID values are ignored. End-user
+// requests derive the OperatorContext from Identity, and conflicting client
+// context remains rejected. Development and deferred modes never bypass this
+// boundary.
 func RequireReferenceReader(w http.ResponseWriter, r *http.Request) bool {
-	tenantID, active := activeReferenceTenant()
-	if !active {
-		return true
-	}
-	if tenantID == "" {
-		SendError(w, http.StatusServiceUnavailable, "SAAS_TENANT_NOT_CONFIGURED", "BTHWANI_DEFAULT_TENANT_ID is required in active SaaS mode")
-		return false
-	}
-	if trustedDshReferenceRequest(r, tenantID) {
+	if trustedDshReferenceRequest(r) {
+		operatorContextID, ok := configuredFinancialCompatibilityScope(w)
+		if !ok {
+			return false
+		}
+		r.Header.Set("X-Operator-Context-ID", operatorContextID)
+		*r = *r.WithContext(WithOperatorContext(r.Context(), operatorContextID))
 		return true
 	}
 	identity, err := resolveReferenceIdentity(r.Context(), r.Header.Get("Authorization"))
@@ -110,9 +96,17 @@ func RequireReferenceReader(w http.ResponseWriter, r *http.Request) bool {
 		SendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "identity session is required")
 		return false
 	}
-	if strings.TrimSpace(identity.TenantID) != tenantID {
-		SendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "identity belongs to another tenant")
+	identityOperatorContextID := strings.TrimSpace(identity.OperatorContextID)
+	if identityOperatorContextID == "" {
+		SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "identity session has no trusted OperatorContext context")
 		return false
 	}
+	requestOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+	if requestOperatorContextID != "" && requestOperatorContextID != identityOperatorContextID {
+		SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "client OperatorContext does not match the authenticated identity")
+		return false
+	}
+	r.Header.Set("X-Operator-Context-ID", identityOperatorContextID)
+	*r = *r.WithContext(WithOperatorContext(r.Context(), identityOperatorContextID))
 	return true
 }

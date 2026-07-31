@@ -12,7 +12,7 @@ import (
 // RegisterFieldReadinessRoutes mounts the unified field-visit and readiness
 // journey once for app-field, app-partner, and control-panel consumers.
 // Governed handlers remain the sole authorization and persistence boundary for
-// every state-changing operation in JRN-024.
+// every state-changing field-readiness operation.
 func RegisterFieldReadinessRoutes(
 	mux *http.ServeMux,
 	db *sql.DB,

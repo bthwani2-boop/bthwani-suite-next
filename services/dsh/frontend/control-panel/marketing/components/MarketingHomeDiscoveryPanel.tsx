@@ -8,6 +8,7 @@ import {
   CpEmptyTableMessage,
   CpSelect,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -49,7 +50,7 @@ export function MarketingHomeDiscoveryPanel({ kind }: { readonly kind: DshHomeAd
   const meta = KIND_META[kind];
 
   if (controller.state.kind === "loading") {
-    return <CpStatePanel role="status" title="جاري تحميل المحتوى..." />;
+    return <CpStateView kind="loading" title="جاري تحميل المحتوى..." />;
   }
   if (controller.state.kind === "permission_denied") {
     return (

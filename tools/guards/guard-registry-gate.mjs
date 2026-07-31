@@ -39,10 +39,6 @@ const aggregateScripts = new Set([
   "guard:journey:full",
 ]);
 
-const canonicalSourceById = new Map([
-  ["jrn-040-platform-change-sets", "tools/guards/platform-change-sets-gate.mjs"],
-]);
-
 function readJson(relativePath) {
   const fullPath = path.join(repoRoot, relativePath);
   if (!fs.existsSync(fullPath)) {
@@ -151,14 +147,14 @@ for (const entry of entries) {
     if (/\|\|\s*true|continue-on-error|catch\s*\(/i.test(scripts[entry.script] ?? "")) violations.push({ file: packageRelative, line: 0, message: `FAIL_GUARD_SCRIPT_SWALLOWS_FAILURE ${entry.script}` });
   }
 
-  const canonicalSource = canonicalSourceById.get(entry.id) ?? entry.source_file;
+  const canonicalSource = entry.source_file;
   if (canonicalSource) {
     if (!fs.existsSync(path.join(repoRoot, canonicalSource))) violations.push({ file: registryRelative, line: 0, message: `MISSING_SOURCE_FILE ${entry.id} -> ${canonicalSource}` });
     if (entry.source_file && entry.source_file !== canonicalSource) warnings.push(`registry source migration pending: ${entry.id} -> ${canonicalSource}`);
   }
 }
 
-for (const requiredId of ["governance-schema", "agent-governance", "authority-separation", "saas-governance", "guard-registry", "sdlc", "workflow-lint", "workflow-security", "actions-pin", "a11y-runtime"]) {
+for (const requiredId of ["governance-schema", "agent-governance", "authority-separation", "guard-registry", "sdlc", "workflow-lint", "workflow-security", "actions-pin", "a11y-runtime"]) {
   if (entryById.get(requiredId)?.exit_level !== "fail") violations.push({ file: registryRelative, line: 0, message: `REQUIRED_FAIL_LEVEL_GUARD_DRIFT ${requiredId}` });
 }
 
@@ -192,7 +188,7 @@ if (!fs.existsSync(workflowsDir)) {
   }
 
   requireMarkers(`${workflowsRoot}/ci.yml`, readText(`${workflowsRoot}/ci.yml`), ["workflow_dispatch:", "pull_request:", "push:", "branches: [\"**\"]", "BThwani CI result", "uses: ./.github/workflows/ci-policy.yml"]);
-  requireMarkers(`${workflowsRoot}/ci-policy.yml`, readText(`${workflowsRoot}/ci-policy.yml`), ["guard:governance-schema", "guard:agent-governance", "guard:authority-separation", "guard:saas-governance", "guard:guard-registry", "guard:sdlc", "guard:workflow-lint", "guard:workflow-security", "guard:actions-pin", "direct-work-branch-execution-gate.test.mjs", "direct-work-branch-execution-gate.mjs", "check-ci-source-immutability.mjs", "check-repository-hygiene.mjs", "check-portable-tracked-config.mjs"]);
+  requireMarkers(`${workflowsRoot}/ci-policy.yml`, readText(`${workflowsRoot}/ci-policy.yml`), ["guard:governance-schema", "guard:agent-governance", "guard:authority-separation", "guard:guard-registry", "guard:sdlc", "guard:workflow-lint", "guard:workflow-security", "guard:actions-pin", "direct-work-branch-execution-gate.test.mjs", "direct-work-branch-execution-gate.mjs", "check-ci-source-immutability.mjs", "check-repository-hygiene.mjs", "check-portable-tracked-config.mjs"]);
   requireMarkers(`${workflowsRoot}/lockfile-snapshot.yml`, readText(`${workflowsRoot}/lockfile-snapshot.yml`), ["name: BThwani Lockfile Snapshot", "contents: read", "persist-credentials: false", "Upload lockfile candidate"]);
   requireMarkers(`${workflowsRoot}/manual-deep-verification.yml`, readText(`${workflowsRoot}/manual-deep-verification.yml`), ["name: BThwani Manual Deep Verification", "default: affected", "Resolve affected and risk-expanded mode", "Reject tracked source mutation", "read-only-exact-sha-verification", "persist-credentials: false"]);
 }

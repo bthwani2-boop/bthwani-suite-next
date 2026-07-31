@@ -3,6 +3,7 @@ package fieldcommissionoutbox
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"time"
 
@@ -15,10 +16,6 @@ const (
 	notifyTimeout = 10 * time.Second
 )
 
-// RunWorker polls for pending field commission outbox events until ctx is
-// cancelled. It is meant to run as a single background goroutine per dsh-api
-// process; ClaimBatch's row-level locking makes it safe to run more than one
-// instance concurrently too, but a single poller is enough at current volume.
 func RunWorker(ctx context.Context, db *sql.DB, client *wlt.Client, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -34,34 +31,39 @@ func RunWorker(ctx context.Context, db *sql.DB, client *wlt.Client, interval tim
 	}
 }
 
-// ProcessOnce claims and attempts delivery of one batch of pending events.
 func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 	events, err := ClaimBatch(db, batchSize, claimLease)
 	if err != nil {
 		return err
 	}
-	for _, e := range events {
-		notifyCtx, cancel := context.WithTimeout(ctx, notifyTimeout)
-		err := client.DeliverFieldCommission(notifyCtx, wlt.DeliverFieldCommissionInput{
-			BeneficiaryActorID:   e.FieldActorID,
-			BeneficiaryActorType: "field",
-			SourceType:           "field_visit",
-			SourceID:             e.VisitID,
-			VisitID:              e.VisitID,
-			StoreID:              e.StoreID,
-			IdempotencyKey:       e.IdempotencyKey,
-			CorrelationID:        e.CorrelationID,
-		})
-		cancel()
-		if err != nil {
-			log.Printf("[field-commission-outbox] delivery failed for visit %s (attempt %d): %v", e.VisitID, e.AttemptCount+1, err)
-			if markErr := MarkFailed(db, e.ID, e.AttemptCount, err); markErr != nil {
-				log.Printf("[field-commission-outbox] failed to record retry state for event %s: %v", e.ID, markErr)
+	for _, event := range events {
+		if event.OperatorContextID == "" {
+			err := fmt.Errorf("field commission event %s has no OperatorContext context", event.ID)
+			if markErr := MarkFailed(db, event.ID, event.AttemptCount, err); markErr != nil {
+				log.Printf("[field-commission-outbox] failed to record missing OperatorContext for event %s: %v", event.ID, markErr)
 			}
 			continue
 		}
-		if markErr := MarkSent(db, e.ID); markErr != nil {
-			log.Printf("[field-commission-outbox] failed to mark event %s sent after successful delivery: %v", e.ID, markErr)
+		notifyCtx, cancel := context.WithTimeout(wlt.WithOperatorContext(ctx, event.OperatorContextID), notifyTimeout)
+		err := client.DeliverFieldCategoryCommission(notifyCtx, wlt.DeliverFieldCategoryCommissionInput{
+			BeneficiaryActorID: event.FieldActorID,
+			VisitID:            event.VisitID,
+			StoreID:            event.StoreID,
+			PartnerID:          event.PartnerID,
+			PartnerCategory:    event.PartnerCategory,
+			IdempotencyKey:     event.IdempotencyKey,
+			CorrelationID:      event.CorrelationID,
+		})
+		cancel()
+		if err != nil {
+			log.Printf("[field-commission-outbox] delivery failed for OperatorContext %s visit %s category %s (attempt %d): %v", event.OperatorContextID, event.VisitID, event.PartnerCategory, event.AttemptCount+1, err)
+			if markErr := MarkFailed(db, event.ID, event.AttemptCount, err); markErr != nil {
+				log.Printf("[field-commission-outbox] failed to record retry state for event %s: %v", event.ID, markErr)
+			}
+			continue
+		}
+		if markErr := MarkSent(db, event.ID); markErr != nil {
+			log.Printf("[field-commission-outbox] failed to mark event %s sent after successful delivery: %v", event.ID, markErr)
 		}
 	}
 	return nil

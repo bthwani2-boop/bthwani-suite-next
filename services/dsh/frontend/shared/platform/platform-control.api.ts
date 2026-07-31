@@ -1,27 +1,19 @@
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import { resolvePlatformControlApiBaseUrl } from "../_kernel/platform-control-api-base-url";
 import type { components } from "@bthwani/core-platform-control";
-import type {
-  PlatformRuntimeSnapshotWithSaaS,
-  PlatformSaasRuntimeStatus,
-} from "@bthwani/core-platform-control/clients/generated/platform-control-saas-runtime";
-import type {
-  CreatePlatformChangeSetInput,
-  PlatformChangeSet,
-  RejectPlatformChangeSetInput,
-  RollbackPlatformChangeSetInput,
-} from "@bthwani/core-platform-control/clients/generated/platform-change-sets-api";
 
 export type PlatformControlState = components["schemas"]["PlatformControlState"];
-export type { PlatformSaasRuntimeStatus };
-export type PlatformRuntimeSnapshot = PlatformRuntimeSnapshotWithSaaS;
+export type PlatformRuntimeSnapshot = components["schemas"]["PlatformRuntimeSnapshot"];
 export type PlatformEffectiveRuntimeConfig = components["schemas"]["PlatformEffectiveRuntimeConfig"];
 export type PlatformVariable = components["schemas"]["PlatformVariable"];
 export type PlatformFeatureFlag = components["schemas"]["PlatformFeatureFlag"];
 export type PlatformServicePosture = components["schemas"]["PlatformServicePosture"];
 export type PlatformHealthSnapshot = components["schemas"]["PlatformHealthSnapshot"];
 export type PlatformAuditEvent = components["schemas"]["PlatformAuditEvent"];
-export type { CreatePlatformChangeSetInput, PlatformChangeSet, RejectPlatformChangeSetInput, RollbackPlatformChangeSetInput };
+export type CreatePlatformChangeSetInput = components["schemas"]["CreatePlatformChangeSetInput"];
+export type PlatformChangeSet = components["schemas"]["PlatformChangeSet"];
+export type RejectPlatformChangeSetInput = components["schemas"]["ReviewReasonInput"];
+export type RollbackPlatformChangeSetInput = components["schemas"]["RollbackPlatformChangeSetInput"];
 export type PlatformRollout = components["schemas"]["PlatformRollout"];
 type GeneratedCreatePlatformRolloutInput = components["schemas"]["CreatePlatformRolloutInput"];
 export type CreatePlatformRolloutInput = Omit<GeneratedCreatePlatformRolloutInput, "healthGate"> & {
