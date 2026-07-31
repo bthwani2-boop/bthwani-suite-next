@@ -78,7 +78,55 @@ foreach ($entry in $databaseOwners.GetEnumerator()) {
   Invoke-AdminSql -Database $database -Sql @"
 ALTER DATABASE $database OWNER TO $role;
 ALTER SCHEMA public OWNER TO $role;
-REASSIGN OWNED BY bthwani_runtime TO $role;
+
+DO `$ownership_repair`$
+DECLARE
+  object_record RECORD;
+BEGIN
+  FOR object_record IN
+    SELECT c.relkind, n.nspname, c.relname
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
+      AND pg_get_userbyid(c.relowner) <> '$role'
+  LOOP
+    EXECUTE format(
+      'ALTER %s %I.%I OWNER TO %I',
+      CASE object_record.relkind
+        WHEN 'v' THEN 'VIEW'
+        WHEN 'm' THEN 'MATERIALIZED VIEW'
+        WHEN 'S' THEN 'SEQUENCE'
+        WHEN 'f' THEN 'FOREIGN TABLE'
+        ELSE 'TABLE'
+      END,
+      object_record.nspname,
+      object_record.relname,
+      '$role'
+    );
+  END LOOP;
+
+  FOR object_record IN
+    SELECT p.oid, p.prokind
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND pg_get_userbyid(p.proowner) <> '$role'
+  LOOP
+    EXECUTE format(
+      'ALTER %s %s OWNER TO %I',
+      CASE object_record.prokind
+        WHEN 'p' THEN 'PROCEDURE'
+        WHEN 'a' THEN 'AGGREGATE'
+        ELSE 'FUNCTION'
+      END,
+      object_record.oid::regprocedure,
+      '$role'
+    );
+  END LOOP;
+END
+`$ownership_repair`$;
+
 GRANT ALL ON SCHEMA public TO $role;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $role;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $role;
