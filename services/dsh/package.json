@@ -21,7 +21,7 @@
   "peerDependencies": {
     "expo-document-picker": "~56.0.4",
     "expo-video": "~56.1.4",
-    "react": "19.2.3"
+    "react": "19.2.8"
   },
   "peerDependenciesMeta": {
     "expo-document-picker": {
@@ -36,13 +36,13 @@
     "@bthwani/core-identity": "workspace:*",
     "@bthwani/core-platform-control": "workspace:*",
     "@bthwani/ui-kit": "workspace:*",
-    "react-native-safe-area-context": "~5.7.0",
-    "react-native-svg": "15.15.4"
+    "react-native-safe-area-context": "~5.8.0",
+    "react-native-svg": "15.15.5"
   },
   "devDependencies": {
     "@types/node": "24.10.1",
     "@types/react": "19.2.17",
-    "next": "^16.2.11",
-    "react": "19.2.3"
+    "next": "^16.2.12",
+    "react": "19.2.8"
   }
 }

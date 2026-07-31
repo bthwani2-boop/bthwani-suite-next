@@ -22,11 +22,11 @@
     "@types/react": "19.2.17",
     "typescript": "~6.0.3",
     "@expo/vector-icons": "15.1.1",
-    "@react-native/metro-config": "0.85.3"
+    "@react-native/metro-config": "0.86.2"
   },
   "dependencies": {
-    "@tamagui/config": "2.0.0-rc.41",
-    "tamagui": "2.0.0-rc.41"
+    "@tamagui/config": "2.5.3",
+    "tamagui": "2.5.3"
   },
   "peerDependencies": {
     "react": "19.2.3",
