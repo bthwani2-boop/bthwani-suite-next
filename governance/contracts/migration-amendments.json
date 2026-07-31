@@ -202,16 +202,44 @@
       "service": "wlt",
       "migrationId": "wlt-108_wallet_operator_context_identity.sql",
       "originalBlobSha": "55d751028ecb8ab0e27ec0c397ac60e592686610",
-      "replacementSha256": "fc8d428499d909963cd8a406ba61ea275f84469cd3443ba1bc8f7ffcf93b7baa",
+      "replacementSha256": "9b853be93ed0a56d92a6f7affcadad11c4649e9ec4d1a8765410fd627338b307",
       "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
-      "reason": "Wallet identity is operator-context scoped and no tenant entity exists in the active platform model.",
+      "reason": "Wallet identity is operator-context scoped and the migration now drops its governed uniqueness constraint before recreating it so replay remains safe across pre-release databases that recorded an earlier constraint shape.",
       "evidence": {
-        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
-        "cleanInstallResult": "CURRENT_OPERATOR_CONTEXT_BASELINE",
+        "cleanInstallCommitSha": "ed77c73d1952e05005436b69da9cf73e1e0a7ba6",
+        "cleanInstallResult": "CURRENT_WLT_DATABASE_VERIFICATION_PASSED",
         "sameCommitRuntimeEvidence": false,
         "productionApprovalEvidence": false
       },
-      "requiredCorrection": "Keep wallet uniqueness and lookup scoped by operator context."
+      "requiredCorrection": "Keep wallet uniqueness and lookup scoped by operator context while making constraint recreation idempotent."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-109_cod_custody_operator_context.sql",
+      "replacementSha256": "e14cb987338829e8213c717760c60fbf35c4aaa2c97d6ab6b1154b84238710ef",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The COD custody migration must drop both legacy and governed uniqueness constraints before recreating the canonical operator-context constraints, otherwise replay against pre-release databases fails on duplicate constraint names.",
+      "evidence": {
+        "cleanInstallCommitSha": "ed77c73d1952e05005436b69da9cf73e1e0a7ba6",
+        "cleanInstallResult": "CURRENT_WLT_DATABASE_VERIFICATION_PASSED",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Preserve COD custody and reconciliation uniqueness by operator context and make constraint recreation idempotent."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-112_payout_operator_context.sql",
+      "replacementSha256": "71425d7bf316e90c36c03e8e7aab8f21d0464373713b14a8a7fcd0aa3ea6aaf1",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The payout operator-context migration must drop previously created composite uniqueness and foreign-key constraints before recreating them, preventing replay failures across pre-release databases with partially applied payout governance.",
+      "evidence": {
+        "cleanInstallCommitSha": "ed77c73d1952e05005436b69da9cf73e1e0a7ba6",
+        "cleanInstallResult": "CURRENT_WLT_DATABASE_VERIFICATION_PASSED",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Preserve payout ownership and referential integrity by operator context while making constraint recreation idempotent."
     },
     {
       "service": "wlt",
