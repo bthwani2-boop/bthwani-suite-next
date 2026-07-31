@@ -23,7 +23,6 @@ BEGIN
   END IF;
 END $$;
 
-ALTER TABLE wlt_payout_requests DROP CONSTRAINT IF EXISTS wlt_payout_requests_status_chk;
 ALTER TABLE wlt_payout_requests
   ADD CONSTRAINT wlt_payout_requests_status_chk CHECK (
     status IN (

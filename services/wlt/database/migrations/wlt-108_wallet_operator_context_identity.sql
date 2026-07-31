@@ -26,7 +26,7 @@ ALTER TABLE wlt_wallets
   ADD CONSTRAINT wlt_wallets_OperatorContext_actor_key
   UNIQUE (operator_context_id, actor_type, actor_id);
 
-CREATE INDEX IF NOT EXISTS wlt_wallets_OperatorContext_status_updated_idx
+CREATE INDEX wlt_wallets_OperatorContext_status_updated_idx
   ON wlt_wallets (operator_context_id, status, updated_at DESC, actor_type, actor_id);
 
 COMMENT ON CONSTRAINT wlt_wallets_OperatorContext_actor_key ON wlt_wallets IS

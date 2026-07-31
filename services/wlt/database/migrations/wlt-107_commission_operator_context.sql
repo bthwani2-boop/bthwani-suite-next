@@ -36,15 +36,15 @@ ALTER TABLE wlt_commission_policy_versions
   ADD CONSTRAINT wlt_commission_policy_versions_pkey
   PRIMARY KEY (operator_context_id, policy_id, version);
 DROP INDEX IF EXISTS wlt_commission_policy_active_uidx;
-CREATE UNIQUE INDEX IF NOT EXISTS wlt_commission_policy_active_OperatorContext_uidx
+CREATE UNIQUE INDEX wlt_commission_policy_active_OperatorContext_uidx
   ON wlt_commission_policy_versions
     (operator_context_id, commission_type, source_type, beneficiary_actor_type)
   WHERE status = 'active';
-CREATE INDEX IF NOT EXISTS wlt_commission_policy_OperatorContext_history_idx
+CREATE INDEX wlt_commission_policy_OperatorContext_history_idx
   ON wlt_commission_policy_versions (operator_context_id, policy_id, version DESC);
 
 DROP INDEX IF EXISTS wlt_commissions_idempotency_idx;
-CREATE UNIQUE INDEX IF NOT EXISTS wlt_commissions_operator_context_idempotency_idx
+CREATE UNIQUE INDEX wlt_commissions_operator_context_idempotency_idx
   ON wlt_commissions (operator_context_id, idempotency_key)
   WHERE idempotency_key IS NOT NULL;
 
@@ -64,11 +64,11 @@ ALTER TABLE wlt_commission_adjustments
   DROP CONSTRAINT IF EXISTS wlt_commission_adjustments_idempotency_key_key;
 DROP INDEX IF EXISTS wlt_commission_adjustments_request_hash_idx;
 DROP INDEX IF EXISTS wlt_commission_adjustments_commission_created_idx;
-CREATE UNIQUE INDEX IF NOT EXISTS wlt_commission_adjustments_operator_context_idempotency_uq
+CREATE UNIQUE INDEX wlt_commission_adjustments_operator_context_idempotency_uq
   ON wlt_commission_adjustments (operator_context_id, idempotency_key);
-CREATE INDEX IF NOT EXISTS wlt_commission_adjustments_OperatorContext_request_hash_idx
+CREATE INDEX wlt_commission_adjustments_OperatorContext_request_hash_idx
   ON wlt_commission_adjustments (operator_context_id, request_hash);
-CREATE INDEX IF NOT EXISTS wlt_commission_adjustments_OperatorContext_commission_created_idx
+CREATE INDEX wlt_commission_adjustments_OperatorContext_commission_created_idx
   ON wlt_commission_adjustments (operator_context_id, commission_id, created_at, id);
 
 COMMENT ON COLUMN wlt_commission_policy_versions.operator_context_id IS

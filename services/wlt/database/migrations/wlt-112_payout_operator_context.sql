@@ -58,13 +58,13 @@ DROP INDEX IF EXISTS wlt_payout_destinations_owner_created_idx;
 
 ALTER TABLE wlt_payout_destinations
   ADD CONSTRAINT wlt_payout_destinations_operator_context_id_key UNIQUE (operator_context_id, id);
-CREATE UNIQUE INDEX IF NOT EXISTS wlt_payout_destinations_one_active_OperatorContext_owner_idx
+CREATE UNIQUE INDEX wlt_payout_destinations_one_active_OperatorContext_owner_idx
   ON wlt_payout_destinations (operator_context_id, owner_actor_type, owner_actor_id)
   WHERE active = true;
-CREATE INDEX IF NOT EXISTS wlt_payout_destinations_OperatorContext_owner_created_idx
+CREATE INDEX wlt_payout_destinations_OperatorContext_owner_created_idx
   ON wlt_payout_destinations
     (operator_context_id, owner_actor_type, owner_actor_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS wlt_payout_destinations_OperatorContext_partner_idx
+CREATE INDEX wlt_payout_destinations_OperatorContext_partner_idx
   ON wlt_payout_destinations (operator_context_id, partner_id, created_at DESC);
 
 ALTER TABLE wlt_payout_destination_requests
@@ -84,18 +84,18 @@ ALTER TABLE wlt_payout_destination_requests
   ALTER COLUMN operator_context_id SET NOT NULL,
   DROP CONSTRAINT IF EXISTS wlt_payout_destination_requests_idempotency_key_key;
 DROP INDEX IF EXISTS wlt_payout_destination_requests_owner_created_idx;
-CREATE UNIQUE INDEX IF NOT EXISTS wlt_payout_destination_requests_operator_context_idempotency_uq
+CREATE UNIQUE INDEX wlt_payout_destination_requests_operator_context_idempotency_uq
   ON wlt_payout_destination_requests (operator_context_id, idempotency_key);
-CREATE INDEX IF NOT EXISTS wlt_payout_destination_requests_OperatorContext_owner_created_idx
+CREATE INDEX wlt_payout_destination_requests_OperatorContext_owner_created_idx
   ON wlt_payout_destination_requests
     (operator_context_id, partner_id, created_at DESC);
 
 DROP INDEX IF EXISTS wlt_payout_requests_idempotency_idx;
 DROP INDEX IF EXISTS wlt_payout_requests_request_hash_idx;
-CREATE UNIQUE INDEX IF NOT EXISTS wlt_payout_requests_operator_context_idempotency_uq
+CREATE UNIQUE INDEX wlt_payout_requests_operator_context_idempotency_uq
   ON wlt_payout_requests (operator_context_id, idempotency_key)
   WHERE idempotency_key IS NOT NULL;
-CREATE INDEX IF NOT EXISTS wlt_payout_requests_OperatorContext_request_hash_idx
+CREATE INDEX wlt_payout_requests_OperatorContext_request_hash_idx
   ON wlt_payout_requests (operator_context_id, request_hash)
   WHERE request_hash IS NOT NULL;
 ALTER TABLE wlt_payout_requests
@@ -130,10 +130,10 @@ ALTER TABLE wlt_payout_audit_events
   ALTER COLUMN operator_context_id SET NOT NULL;
 DROP INDEX IF EXISTS wlt_payout_audit_aggregate_idx;
 DROP INDEX IF EXISTS wlt_payout_audit_correlation_idx;
-CREATE INDEX IF NOT EXISTS wlt_payout_audit_OperatorContext_aggregate_idx
+CREATE INDEX wlt_payout_audit_OperatorContext_aggregate_idx
   ON wlt_payout_audit_events
     (operator_context_id, aggregate_type, aggregate_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS wlt_payout_audit_OperatorContext_correlation_idx
+CREATE INDEX wlt_payout_audit_OperatorContext_correlation_idx
   ON wlt_payout_audit_events
     (operator_context_id, correlation_id, created_at DESC);
 
@@ -150,10 +150,10 @@ WHERE operator_context_id IS NULL OR btrim(operator_context_id) = '';
 ALTER TABLE wlt_payout_outbox
   ALTER COLUMN operator_context_id SET NOT NULL,
   DROP CONSTRAINT IF EXISTS wlt_payout_outbox_payout_request_id_event_type_key;
-CREATE UNIQUE INDEX IF NOT EXISTS wlt_payout_outbox_OperatorContext_event_uq
+CREATE UNIQUE INDEX wlt_payout_outbox_OperatorContext_event_uq
   ON wlt_payout_outbox (operator_context_id, payout_request_id, event_type);
 DROP INDEX IF EXISTS wlt_payout_outbox_pending_idx;
-CREATE INDEX IF NOT EXISTS wlt_payout_outbox_OperatorContext_pending_idx
+CREATE INDEX wlt_payout_outbox_OperatorContext_pending_idx
   ON wlt_payout_outbox (operator_context_id, created_at, id)
   WHERE delivered_at IS NULL;
 ALTER TABLE wlt_payout_outbox
@@ -176,10 +176,10 @@ ALTER TABLE wlt_payout_reconciliations
   ALTER COLUMN operator_context_id SET NOT NULL;
 DROP INDEX IF EXISTS wlt_payout_reconciliation_request_idx;
 DROP INDEX IF EXISTS wlt_payout_reconciliation_single_claim_idx;
-CREATE INDEX IF NOT EXISTS wlt_payout_reconciliation_OperatorContext_request_idx
+CREATE INDEX wlt_payout_reconciliation_OperatorContext_request_idx
   ON wlt_payout_reconciliations
     (operator_context_id, payout_request_id, created_at DESC);
-CREATE UNIQUE INDEX IF NOT EXISTS wlt_payout_reconciliation_OperatorContext_single_claim_idx
+CREATE UNIQUE INDEX wlt_payout_reconciliation_OperatorContext_single_claim_idx
   ON wlt_payout_reconciliations (operator_context_id, payout_request_id)
   WHERE resolved_at IS NULL;
 ALTER TABLE wlt_payout_reconciliations

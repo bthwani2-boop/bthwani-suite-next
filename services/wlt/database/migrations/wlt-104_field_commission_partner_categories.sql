@@ -28,50 +28,23 @@ ALTER TABLE wlt_commissions
 CREATE INDEX IF NOT EXISTS wlt_commissions_partner_category_idx
   ON wlt_commissions(operator_context_id, partner_category, created_at DESC);
 
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_field_commission_category_policy_versions' AND column_name = 'operator_context_id') THEN
-    EXECUTE '
-      INSERT INTO wlt_field_commission_category_policy_versions(
-        operator_context_id,policy_id,partner_category,version,fixed_amount_minor_units,currency,status,
-        change_reason,updated_by_actor_id
-      )
-      SELECT
-        ''legacy-unscoped'', ''field-category-default'', ''default'', 1,
-        fixed_amount_minor_units, currency, ''active'',
-        ''default category policy migrated from active field policy'',
-        updated_by_actor_id
-      FROM wlt_commission_policy_versions
-      WHERE commission_type=''field_visit_fee''
-        AND source_type=''field_visit''
-        AND beneficiary_actor_type=''field''
-        AND status=''active''
-      ORDER BY version DESC
-      LIMIT 1
-      ON CONFLICT DO NOTHING;
-    ';
-  ELSE
-    EXECUTE '
-      INSERT INTO wlt_field_commission_category_policy_versions(
-        policy_id,partner_category,version,fixed_amount_minor_units,currency,status,
-        change_reason,updated_by_actor_id
-      )
-      SELECT
-        ''field-category-default'', ''default'', 1,
-        fixed_amount_minor_units, currency, ''active'',
-        ''default category policy migrated from active field policy'',
-        updated_by_actor_id
-      FROM wlt_commission_policy_versions
-      WHERE commission_type=''field_visit_fee''
-        AND source_type=''field_visit''
-        AND beneficiary_actor_type=''field''
-        AND status=''active''
-      ORDER BY version DESC
-      LIMIT 1
-      ON CONFLICT DO NOTHING;
-    ';
-  END IF;
-END $$;
+INSERT INTO wlt_field_commission_category_policy_versions(
+  policy_id,partner_category,version,fixed_amount_minor_units,currency,status,
+  change_reason,updated_by_actor_id
+)
+SELECT
+  'field-category-default', 'default', 1,
+  fixed_amount_minor_units, currency, 'active',
+  'default category policy migrated from active  field policy',
+  updated_by_actor_id
+FROM wlt_commission_policy_versions
+WHERE commission_type='field_visit_fee'
+  AND source_type='field_visit'
+  AND beneficiary_actor_type='field'
+  AND status='active'
+ORDER BY version DESC
+LIMIT 1
+ON CONFLICT (policy_id,version) DO NOTHING;
 
 COMMENT ON TABLE wlt_field_commission_category_policy_versions IS
   'Versioned WLT-owned fixed commission policy selected by DSH partner category evidence.';

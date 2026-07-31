@@ -33,7 +33,7 @@ ALTER TABLE wlt_settlement_policies
   DROP CONSTRAINT IF EXISTS wlt_settlement_policies_pkey;
 ALTER TABLE wlt_settlement_policies
   ADD CONSTRAINT wlt_settlement_policies_pkey PRIMARY KEY (operator_context_id, partner_id);
-CREATE INDEX IF NOT EXISTS wlt_settlement_policies_OperatorContext_status_idx
+CREATE INDEX wlt_settlement_policies_OperatorContext_status_idx
   ON wlt_settlement_policies (operator_context_id, status, partner_id);
 
 ALTER TABLE wlt_settlement_policy_versions
@@ -57,7 +57,7 @@ ALTER TABLE wlt_settlement_policy_versions
   ADD CONSTRAINT wlt_settlement_policy_versions_pkey
   PRIMARY KEY (operator_context_id, partner_id, version);
 DROP INDEX IF EXISTS wlt_settlement_policy_current_idx;
-CREATE INDEX IF NOT EXISTS wlt_settlement_policy_OperatorContext_current_idx
+CREATE INDEX wlt_settlement_policy_OperatorContext_current_idx
   ON wlt_settlement_policy_versions (operator_context_id, partner_id, version DESC);
 
 ALTER TABLE wlt_settlement_source_orders
@@ -75,9 +75,9 @@ ALTER TABLE wlt_settlement_source_orders
   DROP CONSTRAINT IF EXISTS wlt_settlement_source_orders_pkey;
 ALTER TABLE wlt_settlement_source_orders
   ADD CONSTRAINT wlt_settlement_source_orders_pkey PRIMARY KEY (operator_context_id, order_id);
-CREATE INDEX IF NOT EXISTS wlt_settlement_source_orders_OperatorContext_settlement_idx
+CREATE INDEX wlt_settlement_source_orders_OperatorContext_settlement_idx
   ON wlt_settlement_source_orders (operator_context_id, settlement_id, order_id);
-CREATE INDEX IF NOT EXISTS wlt_settlement_source_orders_OperatorContext_partner_period_idx
+CREATE INDEX wlt_settlement_source_orders_OperatorContext_partner_period_idx
   ON wlt_settlement_source_orders (operator_context_id, partner_id, delivered_at DESC);
 
 ALTER TABLE wlt_settlement_source_evidence
@@ -97,9 +97,9 @@ ALTER TABLE wlt_settlement_source_evidence
   ADD CONSTRAINT wlt_settlement_source_evidence_pkey
   PRIMARY KEY (operator_context_id, order_id);
 DROP INDEX IF EXISTS wlt_settlement_completion_event_uidx;
-CREATE UNIQUE INDEX IF NOT EXISTS wlt_settlement_completion_event_OperatorContext_uidx
+CREATE UNIQUE INDEX wlt_settlement_completion_event_OperatorContext_uidx
   ON wlt_settlement_source_evidence (operator_context_id, completion_event_id);
-CREATE INDEX IF NOT EXISTS wlt_settlement_evidence_OperatorContext_settlement_idx
+CREATE INDEX wlt_settlement_evidence_OperatorContext_settlement_idx
   ON wlt_settlement_source_evidence (operator_context_id, settlement_id, order_id);
 
 ALTER TABLE wlt_settlement_requests
@@ -119,9 +119,9 @@ ALTER TABLE wlt_settlement_requests
   ADD CONSTRAINT wlt_settlement_requests_pkey
   PRIMARY KEY (operator_context_id, idempotency_key);
 DROP INDEX IF EXISTS wlt_settlement_request_hash_uidx;
-CREATE UNIQUE INDEX IF NOT EXISTS wlt_settlement_request_OperatorContext_hash_uidx
+CREATE UNIQUE INDEX wlt_settlement_request_OperatorContext_hash_uidx
   ON wlt_settlement_requests (operator_context_id, request_hash);
-CREATE INDEX IF NOT EXISTS wlt_settlement_request_OperatorContext_partner_idx
+CREATE INDEX wlt_settlement_request_OperatorContext_partner_idx
   ON wlt_settlement_requests (operator_context_id, partner_id, created_at DESC);
 
 COMMENT ON COLUMN wlt_settlement_policies.operator_context_id IS

@@ -140,46 +140,21 @@ CREATE INDEX IF NOT EXISTS wlt_audit_correlation_idx
 
 -- Backfill the existing WLT-owned fixed field-visit policies into a versioned
 --  policy without changing or trusting any DSH-supplied amount.
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_commission_policy_versions' AND column_name = 'operator_context_id') THEN
-    EXECUTE '
-      INSERT INTO wlt_commission_policy_versions (
-        operator_context_id, policy_id, version, commission_type, source_type, beneficiary_actor_type,
-        calculation_type, fixed_amount_minor_units, basis_points,
-        minimum_amount_minor_units, maximum_amount_minor_units, currency, status,
-        change_reason, updated_by_actor_id, created_at
-      )
-      SELECT
-        ''legacy-unscoped'', p.id, 1, p.commission_type, ''field_visit'', ''field'',
-        p.calculation_type, p.amount_minor_units, 0,
-        p.amount_minor_units, p.amount_minor_units, p.currency, p.status,
-        ''migrated from sovereign WLT commission policy'', p.created_by_actor_id, p.created_at
-      FROM wlt_commission_policies p
-      WHERE p.commission_type = ''field_visit_fee''
-        AND p.calculation_type = ''fixed''
-      ON CONFLICT DO NOTHING;
-    ';
-  ELSE
-    EXECUTE '
-      INSERT INTO wlt_commission_policy_versions (
-        policy_id, version, commission_type, source_type, beneficiary_actor_type,
-        calculation_type, fixed_amount_minor_units, basis_points,
-        minimum_amount_minor_units, maximum_amount_minor_units, currency, status,
-        change_reason, updated_by_actor_id, created_at
-      )
-      SELECT
-        p.id, 1, p.commission_type, ''field_visit'', ''field'',
-        p.calculation_type, p.amount_minor_units, 0,
-        p.amount_minor_units, p.amount_minor_units, p.currency, p.status,
-        ''migrated from sovereign WLT commission policy'', p.created_by_actor_id, p.created_at
-      FROM wlt_commission_policies p
-      WHERE p.commission_type = ''field_visit_fee''
-        AND p.calculation_type = ''fixed''
-      ON CONFLICT DO NOTHING;
-    ';
-  END IF;
-END $$;
+INSERT INTO wlt_commission_policy_versions (
+  policy_id, version, commission_type, source_type, beneficiary_actor_type,
+  calculation_type, fixed_amount_minor_units, basis_points,
+  minimum_amount_minor_units, maximum_amount_minor_units, currency, status,
+  change_reason, updated_by_actor_id, created_at
+)
+SELECT
+  p.id, 1, p.commission_type, 'field_visit', 'field',
+  p.calculation_type, p.amount_minor_units, 0,
+  p.amount_minor_units, p.amount_minor_units, p.currency, p.status,
+  'migrated from sovereign WLT commission policy', p.created_by_actor_id, p.created_at
+FROM wlt_commission_policies p
+WHERE p.commission_type = 'field_visit_fee'
+  AND p.calculation_type = 'fixed'
+ON CONFLICT (policy_id, version) DO NOTHING;
 
 COMMENT ON TABLE wlt_settlement_source_evidence IS
   'Immutable DSH completion/cancellation evidence enriched by WLT-owned completed refund truth.';
