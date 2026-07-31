@@ -7,20 +7,25 @@ import (
 	"strings"
 )
 
-func requireTrustedOperatorContext(w http.ResponseWriter, r *http.Request) bool {
-	requestOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+const legacyOperatorContextHeader = "X-Operator-Context-ID"
 
-	if requestOperatorContextID == "" {
-		SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "X-Operator-Context-ID is required for every WLT financial request")
-		return false
+// configuredFinancialCompatibilityScope returns the server-owned compatibility
+// value required by the current WLT schema while operator_context_id is removed
+// from the financial domain model. It is configuration, not caller-selected
+// ownership and not an active tenant boundary.
+func configuredFinancialCompatibilityScope(w http.ResponseWriter) (string, bool) {
+	scopeID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
+	if scopeID == "" {
+		SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_CONFIGURED", "BTHWANI_OPERATOR_CONTEXT_ID is required while the legacy WLT scope columns are being retired")
+		return "", false
 	}
-	return true
+	return scopeID, true
 }
 
 // RequireServiceCaller validates the shared-secret bearer token and expected
-// service identity before accepting X-Operator-Context-ID as a service-to-service OperatorContext
-// context. Every WLT financial request fails closed when the authenticated
-// caller omits its OperatorContext; no process-wide, local, or legacy fallback is used.
+// service identity. After authentication, WLT replaces any caller-supplied
+// X-Operator-Context-ID with the server-owned compatibility value. Callers
+// cannot select financial ownership or isolation scope.
 func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, expectedCaller string) bool {
 	expectedToken := os.Getenv(tokenEnvVar)
 	if expectedToken == "" {
@@ -40,10 +45,12 @@ func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, e
 		SendError(w, http.StatusForbidden, "SERVICE_CALLER_FORBIDDEN", "unexpected service caller")
 		return false
 	}
-	if !requireTrustedOperatorContext(w, r) {
+
+	scopeID, ok := configuredFinancialCompatibilityScope(w)
+	if !ok {
 		return false
 	}
-	operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
-	*r = *r.WithContext(WithOperatorContext(r.Context(), operatorContextID))
+	r.Header.Set(legacyOperatorContextHeader, scopeID)
+	*r = *r.WithContext(WithOperatorContext(r.Context(), scopeID))
 	return true
 }
