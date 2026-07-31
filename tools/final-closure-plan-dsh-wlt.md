@@ -5,9 +5,9 @@
 ```yaml
 repository: bthwani2-boop/bthwani-suite-next
 work_branch: ala
-pinned_head_at_planning: 5edaac5f7fe5cc492f64735850de8f5945436688
+pinned_head_at_planning: 
 base_branch: master
-base_sha_at_planning: d27791729eb8ab21b05ce0e88bb39769c92cc33e
+base_sha_at_planning: 
 pull_request: 199
 pull_request_mode: draft
 merge_authorized: false
