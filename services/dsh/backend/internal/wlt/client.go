@@ -71,7 +71,10 @@ func NewClient(baseURL, serviceToken string) *Client {
 	return &Client{
 		baseURL:      strings.TrimRight(baseURL, "/"),
 		serviceToken: serviceToken,
-		http:         &http.Client{Timeout: 10 * time.Second},
+		http: &http.Client{
+			Timeout:   10 * time.Second,
+			Transport: OperatorContextRoundTripper{base: http.DefaultTransport},
+		},
 	}
 }
 
