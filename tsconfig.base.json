@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "strict": true,
@@ -19,84 +15,36 @@
     "baseUrl": ".",
     "ignoreDeprecations": "6.0",
     "paths": {
-      "@bthwani/ui-kit": [
-        "shared/ui-kit/src/index.ts"
-      ],
-      "@bthwani/ui-kit/web": [
-        "shared/ui-kit/src/web.ts"
-      ],
-      "@bthwani/ui-kit/tokens": [
-        "shared/ui-kit/src/tokens/index.ts"
-      ],
-      "@bthwani/app-shell": [
-        "shared/app-shell/src/index.ts"
-      ],
-      "@bthwani/data-runtime": [
-        "shared/data-runtime/src/index.ts"
-      ],
-      "@bthwani/media-runtime": [
-        "shared/media-runtime/src/index.ts"
-      ],
-      "@bthwani/core-identity": [
-        "core/identity/clients/index.ts"
-      ],
-      "@bthwani/core-platform-control": [
-        "core/platform-control/clients/generated/platform-control-api.ts"
-      ],
-      "@bthwani/core-platform-control/*": [
-        "core/platform-control/*"
-      ],
-      "@bthwani/core-providers": [
-        "core/providers/clients/generated/providers-api.ts"
-      ],
-      "@bthwani/app-captain-runtime": [
-        "apps/app-captain/runtime/src/index.ts"
-      ],
-      "@bthwani/app-client-runtime": [
-        "apps/app-client/runtime/src/index.ts"
-      ],
-      "@bthwani/app-field-runtime": [
-        "apps/app-field/runtime/src/index.ts"
-      ],
-      "@bthwani/app-partner-runtime": [
-        "apps/app-partner/runtime/src/index.ts"
-      ],
-      "react-native": [
-        "apps/app-field/runtime/node_modules/react-native",
-        "apps/app-captain/runtime/node_modules/react-native",
-        "apps/app-partner/runtime/node_modules/react-native",
-        "apps/app-client/runtime/node_modules/react-native"
-      ],
-      "react-native-maps": [
-        "apps/app-field/runtime/node_modules/react-native-maps",
-        "apps/app-captain/runtime/node_modules/react-native-maps",
-        "apps/app-partner/runtime/node_modules/react-native-maps",
-        "apps/app-client/runtime/node_modules/react-native-maps"
-      ],
-      "@tanstack/react-query": [
-        "apps/app-client/runtime/node_modules/@tanstack/react-query"
-      ],
-      "expo-image-picker": [
-        "apps/app-field/runtime/node_modules/expo-image-picker"
-      ],
-      "expo-location": [
-        "apps/app-field/runtime/node_modules/expo-location"
-      ],
-      "expo-notifications": [
-        "apps/app-field/runtime/node_modules/expo-notifications"
-      ],
-      "expo-secure-store": [
-        "apps/app-field/runtime/node_modules/expo-secure-store"
-      ],
-      "expo-constants": [
-        "apps/app-client/runtime/node_modules/expo-constants"
-      ],
-      "expo-crypto": [
-        "apps/app-client/runtime/node_modules/expo-crypto"
-      ],
-      "@dsh-shared/*": [
-        "services/dsh/frontend/shared/*"
-      ]
+      "@bthwani/ui-kit": ["shared/ui-kit/src/index.ts"],
+      "@bthwani/ui-kit/web": ["shared/ui-kit/src/web.ts"],
+      "@bthwani/ui-kit/tokens": ["shared/ui-kit/src/tokens/index.ts"],
+      "@bthwani/app-shell": ["shared/app-shell/src/index.ts"],
+      "@bthwani/data-runtime": ["shared/data-runtime/src/index.ts"],
+      "@bthwani/media-runtime": ["shared/media-runtime/src/index.ts"],
+      "@bthwani/core-identity": ["core/identity/clients/index.ts"],
+      "@bthwani/core-identity/server": ["core/identity/clients/identity-client.ts"],
+      "@bthwani/core-platform-control": ["core/platform-control/clients/generated/platform-control-api.ts"],
+      "@bthwani/core-platform-control/*": ["core/platform-control/*"],
+      "@bthwani/core-providers": ["core/providers/clients/generated/providers-api.ts"],
+      "@bthwani/app-captain-runtime": ["apps/app-captain/runtime/src/index.ts"],
+      "@bthwani/app-client-runtime": ["apps/app-client/runtime/src/index.ts"],
+      "@bthwani/app-field-runtime": ["apps/app-field/runtime/src/index.ts"],
+      "@bthwani/app-partner-runtime": ["apps/app-partner/runtime/src/index.ts"],
+      "react-native": ["apps/app-field/runtime/node_modules/react-native", "apps/app-captain/runtime/node_modules/react-native", "apps/app-partner/runtime/node_modules/react-native", "apps/app-client/runtime/node_modules/react-native"],
+      "react-native-maps": ["apps/app-field/runtime/node_modules/react-native-maps", "apps/app-captain/runtime/node_modules/react-native-maps", "apps/app-partner/runtime/node_modules/react-native-maps", "apps/app-client/runtime/node_modules/react-native-maps"],
+      "@tanstack/react-query": ["apps/app-client/runtime/node_modules/@tanstack/react-query"],
+      "expo-image-picker": ["apps/app-field/runtime/node_modules/expo-image-picker"],
+      "expo-location": ["apps/app-field/runtime/node_modules/expo-location"],
+      "expo-notifications": ["apps/app-field/runtime/node_modules/expo-notifications"],
+      "expo-secure-store": ["apps/app-field/runtime/node_modules/expo-secure-store"],
+      "expo-constants": ["apps/app-client/runtime/node_modules/expo-constants"],
+      "expo-crypto": ["apps/app-client/runtime/node_modules/expo-crypto"],
+      "@dsh-shared/*": ["services/dsh/frontend/shared/*"],
+      "@bthwani/dsh/control-panel": ["services/dsh/frontend/control-panel/index.ts"],
+      "@bthwani/dsh/control-panel/*": ["services/dsh/frontend/control-panel/*"],
+      "@bthwani/control-panel": ["shared/control-panel/src/index.ts"],
+      "@bthwani/control-panel/components": ["shared/control-panel/src/components/index.ts"],
+      "@bthwani/control-panel/shell": ["shared/control-panel/src/shell/index.ts"]
     }
   }
 }

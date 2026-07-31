@@ -1,6 +1,6 @@
 "use client";
 
-import ControlPanelDshClosureHubScreen from "@dsh-cp/dashboard";
+import ControlPanelDshClosureHubScreen from "@bthwani/dsh/control-panel/dashboard";
 
 export default function DshDashboardPage() {
   return <ControlPanelDshClosureHubScreen />;

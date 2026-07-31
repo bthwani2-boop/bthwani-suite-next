@@ -1,6 +1,6 @@
 "use client";
 
-import { SupportDashboardScreen } from "@dsh-cp/support";
+import { SupportDashboardScreen } from "@bthwani/dsh/control-panel/support";
 
 export default function DshSupportPage() {
   return <SupportDashboardScreen />;

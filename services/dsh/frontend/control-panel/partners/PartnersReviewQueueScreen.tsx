@@ -12,7 +12,7 @@ import {
   CpTabs,
 } from "@bthwani/control-panel/components";
 import { QueuePageFrame } from "@bthwani/control-panel/shell";
-import { useControlPanelSession } from "@dsh-shared/session/control-panel-session";
+import { useControlPanelSession } from "../../shared/session/control-panel-session";
 import { usePartnersController } from "../../shared/partner";
 import { PartnerListScreen } from "./PartnerListScreen";
 import { StoreManagementScreen } from "./stores/StoreManagementScreen";

@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { OperationalAnalyticsExtensionsScreen } from "@dsh-cp/analytics";
+import { OperationalAnalyticsExtensionsScreen } from "@bthwani/dsh/control-panel/analytics";
 
 export default function OperationalAnalyticsPage() {
   return (

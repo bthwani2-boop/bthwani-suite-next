@@ -2,18 +2,18 @@
 
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { DSH_NAV_ITEMS } from "@bthwani/dsh/control-panel/navigation";
 import {
   ControlPanelShell,
   ControlPanelNavigation,
   ControlPanelTopBar,
   useDshNavigation,
-  DSH_NAV_ITEMS,
 } from "../../shell";
-import { ControlPanelSessionProvider } from "@dsh-shared/session/control-panel-session";
-import { ControlPanelAuthBoundary } from "@dsh-shared/session/ControlPanelAuthBoundary";
-import { ControlPanelUserMenu } from "@dsh-shared/session/ControlPanelUserMenu";
-import { ControlPanelNotificationsBell } from "@dsh-shared/session/ControlPanelNotificationsBell";
-import { useControlPanelServiceHealth } from "@dsh-shared/session/use-control-panel-service-health";
+import { ControlPanelSessionProvider } from "@bthwani/dsh/control-panel/session";
+import { ControlPanelAuthBoundary } from "@bthwani/dsh/control-panel/session";
+import { ControlPanelUserMenu } from "@bthwani/dsh/control-panel/session";
+import { ControlPanelNotificationsBell } from "@bthwani/dsh/control-panel/session";
+import { useControlPanelServiceHealth } from "@bthwani/dsh/control-panel/session";
 
 function resolveActiveSection(pathname: string | null): string | undefined {
   if (!pathname) return undefined;

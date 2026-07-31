@@ -10,7 +10,7 @@ import type {
   OperationsPanelId,
   OperationsViewState,
 } from './operations.types';
-import { DSH_NAV_ITEMS } from '@bthwani/control-panel/shell';
+import { DSH_NAV_ITEMS } from "../navigation";
 import styles from '../shared/control-panel-surface.module.css';
 import {
   buildOperationsHref,

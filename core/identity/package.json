@@ -12,12 +12,7 @@
     "build": "cd backend && go build ./...",
     "typecheck": "tsc --noEmit -p tsconfig.json && pnpm --dir ../../apps/app-client/runtime typecheck && pnpm --dir ../../apps/app-partner/runtime typecheck && pnpm --dir ../../apps/app-captain/runtime typecheck && pnpm --dir ../../apps/app-field/runtime typecheck && pnpm --dir ../../apps/control-panel/runtime typecheck"
   },
-  "peerDependencies": {
-    "react": "19.2.3"
-  },
-  "devDependencies": {
-    "@types/react": "19.2.17",
-    "react": "19.2.3",
-    "typescript": "~6.0.3"
-  }
+  "peerDependencies": { "react": "19.2.3" },
+  "devDependencies": { "@types/react": "19.2.17", "react": "19.2.3", "typescript": "~6.0.3" },
+  "exports": { ".": "./clients/index.ts", "./server": "./clients/identity-client.ts" }
 }

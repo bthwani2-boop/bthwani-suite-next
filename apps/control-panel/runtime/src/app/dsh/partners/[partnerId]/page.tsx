@@ -1,6 +1,6 @@
 "use client";
 
-import { PartnerDetailScreen } from "@dsh-cp/partners";
+import { PartnerDetailScreen } from "@bthwani/dsh/control-panel/partners";
 import { useRouter, useParams } from "next/navigation";
 
 export default function DshPartnerDetailPage() {

@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { AnalyticsDashboardScreen } from "@dsh-cp/analytics";
+import { AnalyticsDashboardScreen } from "@bthwani/dsh/control-panel/analytics";
 
 export default function AnalyticsPage() {
   return (

@@ -42,7 +42,14 @@ const nextConfig: NextConfig = {
     // Upstream service URLs remain server-only inside src/server/bff-proxy.ts.
     NEXT_PUBLIC_CONTROL_PANEL_BFF_ENABLED: "true",
   },
-  transpilePackages: ["tamagui", "@tamagui/core", "@tamagui/config", "@bthwani/ui-kit"],
+  transpilePackages: [
+    "tamagui",
+    "@tamagui/core",
+    "@tamagui/config",
+    "@bthwani/ui-kit",
+    "@bthwani/control-panel",
+    "@bthwani/dsh",
+  ],
   async headers() {
     return [
       {

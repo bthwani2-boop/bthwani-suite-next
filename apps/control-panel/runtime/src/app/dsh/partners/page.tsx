@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { PartnersReviewQueueScreen } from "@dsh-cp/partners";
+import { PartnersReviewQueueScreen } from "@bthwani/dsh/control-panel/partners";
 import { useRouter } from "next/navigation";
 
 export default function DshPartnersPage() {

@@ -14,7 +14,7 @@ import {
   CpTableHeaderCell,
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame, PaginationToolbar } from "@bthwani/control-panel/shell";
-import { useControlPanelSession } from "@dsh-shared/session/control-panel-session";
+import { useControlPanelSession } from "../../shared/session/control-panel-session";
 import { usePartnerWorkspaceListController } from "../../shared/partner";
 
 const STATUS_OPTIONS = [

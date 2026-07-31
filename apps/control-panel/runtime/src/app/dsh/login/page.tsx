@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useControlPanelSession } from "@dsh-shared/session/control-panel-session";
+import { useControlPanelSession } from "@bthwani/dsh/control-panel/session";
 import { colorRoles, alpha } from "@bthwani/ui-kit";
 
 type LoginMode = "access-code" | "password";

@@ -1,6 +1,6 @@
 "use client";
 
-import { StoreManagementScreen } from "@dsh-cp/partners/stores/StoreManagementScreen";
+import { StoreManagementScreen } from "@bthwani/dsh/control-panel/partners/stores";
 
 export default function DshStoresPage() {
   return <StoreManagementScreen />;

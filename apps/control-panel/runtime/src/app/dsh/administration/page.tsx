@@ -1,6 +1,6 @@
 "use client";
 
-import { GovernedAdministrationScreen } from "@dsh-cp/administration";
+import { GovernedAdministrationScreen } from "@bthwani/dsh/control-panel/administration";
 
 export default function AdministrationPage() {
   return <GovernedAdministrationScreen />;

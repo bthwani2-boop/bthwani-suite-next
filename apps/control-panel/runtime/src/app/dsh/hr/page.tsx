@@ -1,6 +1,6 @@
 "use client";
 
-import ControlPanelHrScreen from "@dsh-cp/hr";
+import ControlPanelHrScreen from "@bthwani/dsh/control-panel/hr";
 
 export default function DshHrPage() {
   return <ControlPanelHrScreen />;

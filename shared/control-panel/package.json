@@ -1,0 +1,29 @@
+{
+  "name": "@bthwani/control-panel",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./components": "./src/components/index.ts",
+    "./shell": "./src/shell/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "tsc --noEmit -p tsconfig.json",
+    "lint": "pnpm --dir ../.. run guard:ui-kit-boundary"
+  },
+  "dependencies": {
+    "@bthwani/ui-kit": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "19.2.3"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "typescript": "~6.0.3"
+  }
+}

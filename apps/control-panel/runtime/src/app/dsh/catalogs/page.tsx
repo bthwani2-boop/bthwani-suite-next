@@ -1,6 +1,6 @@
 "use client";
 
-import { CatalogDashboardScreen } from "@dsh-cp/catalogs/CatalogDashboardScreen";
+import { CatalogDashboardScreen } from "@bthwani/dsh/control-panel/catalogs";
 
 export default function DshCatalogsPage() {
   return <CatalogDashboardScreen />;

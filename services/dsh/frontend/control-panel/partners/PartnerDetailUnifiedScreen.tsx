@@ -19,7 +19,7 @@ import {
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
-import { useControlPanelSession } from "@dsh-shared/session/control-panel-session";
+import { useControlPanelSession } from "../../shared/session/control-panel-session";
 import {
   useGovernedPartnerStoresController,
   usePartnerAuditController,
@@ -234,9 +234,7 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                   <>
                     <CpTextInput value={transitionReason} onChange={setTransitionReason} placeholder="سبب القرار أو الملاحظة التشغيلية" aria-label="سبب انتقال حالة الشريك" />
                     <div style={{ display: "flex", gap: 8 }}>
-                      <CpButton disabled={detail.mutationState.kind === "loading" || (REASON_REQUIRED.has(transitionTarget) && !transitionReason.trim())} onClick={() => void confirmTransition()}>
-                        {detail.mutationState.kind === "loading" ? "جاري الحفظ…" : "تأكيد القرار"}
-                      </CpButton>
+                      <CpButton disabled={detail.mutationState.kind === "loading" || (REASON_REQUIRED.has(transitionTarget) && !transitionReason.trim())} onClick={() => void confirmTransition()}>تأكيد</CpButton>
                       <CpButton onClick={() => setTransitionTarget(null)}>إلغاء</CpButton>
                     </div>
                   </>

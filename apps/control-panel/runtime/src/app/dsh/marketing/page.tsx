@@ -1,6 +1,6 @@
 "use client";
 
-import { MarketingDashboardScreen } from "@dsh-cp/marketing/MarketingDashboardScreen";
+import { MarketingDashboardScreen } from "@bthwani/dsh/control-panel/marketing";
 
 export default function MarketingPage() {
   return <MarketingDashboardScreen />;

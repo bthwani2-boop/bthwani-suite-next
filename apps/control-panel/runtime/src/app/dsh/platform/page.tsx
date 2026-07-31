@@ -5,7 +5,7 @@ import { CpTabs } from "@bthwani/control-panel/components";
 import {
   PlatformDashboardScreen,
   SovereignLeadershipPanel,
-} from "@dsh-cp/platform";
+} from "@bthwani/dsh/control-panel/platform";
 
 type PlatformSection = "control" | "leadership";
 

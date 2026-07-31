@@ -7,7 +7,8 @@ import {
   WebControlPanelRecommendation,
   WebControlPanelDecisionRow,
 } from '@bthwani/ui-kit/web';
-import { DSH_NAV_ITEMS, OverviewPageFrame } from '@bthwani/control-panel/shell';
+import { OverviewPageFrame } from "@bthwani/control-panel/shell";
+import { DSH_NAV_ITEMS } from "../navigation";
 import { CpMutedInline, CpPageHeader } from '@bthwani/control-panel/components';
 import { getDshControlPanelGovernanceEntry } from '../../shared/orders/orders.contract';
 import { buildOperationsHref, NON_OPERATIONS_SECTION_SHORTCUTS, resolveDshOnDemandPolicyLabel } from '../../shared/operations';

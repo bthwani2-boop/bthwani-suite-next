@@ -1,6 +1,6 @@
 "use client";
 
-import { PlatformDashboardScreen } from "@dsh-cp/platform";
+import { PlatformDashboardScreen } from "@bthwani/dsh/control-panel/platform";
 
 export default function PlatformPoliciesPage() {
   return <PlatformDashboardScreen initialTab="policies" />;

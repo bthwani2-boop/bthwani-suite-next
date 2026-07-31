@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { OperationsHubScreen } from "@dsh-cp/operations/OperationsHubScreen";
+import { OperationsHubScreen } from "@bthwani/dsh/control-panel/operations";
 
 export default function DshOperationsPage() {
   return (

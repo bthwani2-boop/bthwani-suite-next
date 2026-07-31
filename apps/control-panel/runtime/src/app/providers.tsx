@@ -3,7 +3,7 @@
 import { BthwaniUiProvider, BThwaniAppearanceProvider, PortalLayer } from "@bthwani/ui-kit";
 import type { ReactNode } from "react";
 import { configureIdentitySession } from "@bthwani/core-identity";
-import { resolveIdentityApiBaseUrl } from "@dsh-shared/_kernel/identity-api-base-url";
+import { resolveIdentityApiBaseUrl } from "@bthwani/dsh/control-panel/session";
 
 configureIdentitySession(resolveIdentityApiBaseUrl());
 
