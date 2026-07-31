@@ -38,7 +38,7 @@ const cases = [
     assert.match(lifecycleHTTP, /releaseCouponFunding/);
     assert.match(lifecycleHTTP, /reverseCouponFunding/);
   }],
-  ["Promotion Funding transition, monetary, OperatorContext, idempotency, and concurrency integrity", () => {
+  ["Promotion Funding transition, monetary, server-owned financial scope, idempotency, and concurrency integrity", () => {
     assert.match(wltMigration, /DEFERRABLE INITIALLY DEFERRED/);
     assert.match(wltMigration, /same-transaction append-only event/);
     assert.match(wltMigration, /transaction_id = txid_current\(\)/);
@@ -50,7 +50,10 @@ const cases = [
     assert.match(concurrencyProof, /BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE/);
     assert.match(concurrencyProof, /concurrent transitions produced more than one financial event/);
     assert.doesNotMatch(wltJSON, /IdempotencyKey\s+string/);
-    assert.match(serviceAuth, /MISSING_operator_context_id/);
+    assert.match(serviceAuth, /BTHWANI_OPERATOR_CONTEXT_ID/);
+    assert.match(serviceAuth, /r\.Header\.Set\(legacyOperatorContextHeader, scopeID\)/);
+    assert.match(serviceAuth, /WithOperatorContext\(r\.Context\(\), scopeID\)/);
+    assert.doesNotMatch(serviceAuth, /MISSING_operator_context_id/);
   }],
   ["Promotion Funding outbox, recovery, reconciliation, and operator read model", () => {
     assert.match(couponsHTTP, /coupons\.ListFundingLifecycleDiagnostics/);
