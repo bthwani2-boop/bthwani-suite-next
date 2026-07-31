@@ -10,7 +10,7 @@ BEGIN;
 
 ALTER TABLE wlt_cod_records
   DROP CONSTRAINT IF EXISTS wlt_cod_records_order_id_key;
-CREATE UNIQUE INDEX wlt_cod_records_OperatorContext_order_uq
+CREATE UNIQUE INDEX IF NOT EXISTS wlt_cod_records_OperatorContext_order_uq
   ON wlt_cod_records (operator_context_id, order_id);
 
 ALTER TABLE wlt_cod_custody_evidence
@@ -38,7 +38,7 @@ ALTER TABLE wlt_cod_custody_evidence
   ADD CONSTRAINT wlt_cod_custody_evidence_OperatorContext_proof_key
     UNIQUE (operator_context_id, event_type, proof_reference);
 DROP INDEX IF EXISTS wlt_cod_custody_evidence_record_created_idx;
-CREATE INDEX wlt_cod_custody_evidence_OperatorContext_record_created_idx
+CREATE INDEX IF NOT EXISTS wlt_cod_custody_evidence_OperatorContext_record_created_idx
   ON wlt_cod_custody_evidence (operator_context_id, cod_record_id, created_at DESC);
 ALTER TABLE wlt_cod_custody_evidence
   ENABLE TRIGGER wlt_cod_custody_evidence_immutable_trigger;
@@ -65,7 +65,7 @@ ALTER TABLE wlt_cod_reconciliation_cases
   ADD CONSTRAINT wlt_cod_reconciliation_cases_OperatorContext_evidence_key
     UNIQUE (operator_context_id, custody_evidence_id);
 DROP INDEX IF EXISTS wlt_cod_reconciliation_status_created_idx;
-CREATE INDEX wlt_cod_reconciliation_OperatorContext_status_created_idx
+CREATE INDEX IF NOT EXISTS wlt_cod_reconciliation_OperatorContext_status_created_idx
   ON wlt_cod_reconciliation_cases (operator_context_id, status, created_at DESC);
 
 ALTER TABLE wlt_cod_reconciliation_audit_events
@@ -83,7 +83,7 @@ WHERE operator_context_id IS NULL OR btrim(operator_context_id) = '';
 ALTER TABLE wlt_cod_reconciliation_audit_events
   ALTER COLUMN operator_context_id SET NOT NULL;
 DROP INDEX IF EXISTS wlt_cod_reconciliation_audit_case_created_idx;
-CREATE INDEX wlt_cod_reconciliation_audit_OperatorContext_case_created_idx
+CREATE INDEX IF NOT EXISTS wlt_cod_reconciliation_audit_OperatorContext_case_created_idx
   ON wlt_cod_reconciliation_audit_events
     (operator_context_id, reconciliation_case_id, created_at, id);
 ALTER TABLE wlt_cod_reconciliation_audit_events

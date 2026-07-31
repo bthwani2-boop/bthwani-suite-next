@@ -26,11 +26,11 @@ DROP INDEX IF EXISTS wlt_reconciliation_cases_session_idx;
 DROP INDEX IF EXISTS wlt_reconciliation_cases_open_idx;
 DROP INDEX IF EXISTS wlt_reconciliation_cases_open_unique_idx;
 
-CREATE INDEX wlt_reconciliation_cases_OperatorContext_session_idx
+CREATE INDEX IF NOT EXISTS wlt_reconciliation_cases_OperatorContext_session_idx
   ON wlt_reconciliation_cases (operator_context_id, payment_session_id, created_at DESC);
-CREATE INDEX wlt_reconciliation_cases_OperatorContext_status_idx
+CREATE INDEX IF NOT EXISTS wlt_reconciliation_cases_OperatorContext_status_idx
   ON wlt_reconciliation_cases (operator_context_id, status, created_at DESC);
-CREATE UNIQUE INDEX wlt_reconciliation_cases_OperatorContext_open_uq
+CREATE UNIQUE INDEX IF NOT EXISTS wlt_reconciliation_cases_OperatorContext_open_uq
   ON wlt_reconciliation_cases (operator_context_id, payment_session_id, operation)
   WHERE status = 'open';
 

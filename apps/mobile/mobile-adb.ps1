@@ -30,7 +30,7 @@ function Start-BthwaniAdbServer {
     if (-not $proc.WaitForExit(15000)) {
         $proc.Kill()
         [void] $stdoutTask; [void] $stderrTask
-        Write-Warning "ADB server did not respond in 15 s — killing stale daemon and retrying."
+        Write-Warning "ADB server did not respond in 15 s - killing stale daemon and retrying."
         Get-Process -Name adb -ErrorAction SilentlyContinue |
             Stop-Process -Force -ErrorAction SilentlyContinue
         Start-Sleep -Milliseconds 800
@@ -42,14 +42,16 @@ function Start-BthwaniAdbServer {
         }
         if ($proc2.ExitCode -ne 0) {
             $err = $stderrTask2.Result.Trim()
-            throw "ADB server failed to start after retry (exit $($proc2.ExitCode))$(if ($err) { ": $err" })."
+            $suffix = if ($err) { ": $err" } else { "" }
+            throw "ADB server failed to start after retry (exit $($proc2.ExitCode))$suffix."
         }
         return
     }
 
     if ($proc.ExitCode -ne 0) {
         $err = $stderrTask.Result.Trim()
-        throw "ADB server failed to start (exit $($proc.ExitCode))$(if ($err) { ": $err" })."
+        $suffix = if ($err) { ": $err" } else { "" }
+        throw "ADB server failed to start (exit $($proc.ExitCode))$suffix."
     }
 }
 
@@ -255,7 +257,8 @@ function Get-BthwaniAdbReverseMappings {
 
     $RawOutput = @(& $AdbPath -s $Serial reverse --list 2>&1)
     if ($LASTEXITCODE -ne 0) {
-        throw "adb reverse --list failed for $Serial`: $($RawOutput -join [Environment]::NewLine)"
+        $out = $RawOutput -join [Environment]::NewLine
+        throw "adb reverse --list failed for ${Serial}: $out"
     }
 
     return @($RawOutput | ForEach-Object { [string] $_ })
@@ -307,7 +310,8 @@ function Invoke-BthwaniAdbReverse {
         )
 
         if ($LASTEXITCODE -ne 0) {
-            throw "adb reverse failed for $Serial on port $Port`: $($RawOutput -join [Environment]::NewLine)"
+            $out = $RawOutput -join [Environment]::NewLine
+            throw "adb reverse failed for $Serial on port ${Port}: $out"
         }
     }
 

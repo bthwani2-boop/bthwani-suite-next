@@ -8,11 +8,11 @@
 BEGIN;
 
 DROP INDEX IF EXISTS wlt_ledger_idempotency_idx;
-CREATE UNIQUE INDEX wlt_ledger_entries_operator_context_idempotency_uq
+CREATE UNIQUE INDEX IF NOT EXISTS wlt_ledger_entries_operator_context_idempotency_uq
   ON wlt_ledger_entries (operator_context_id, idempotency_key)
   WHERE idempotency_key IS NOT NULL;
 
-CREATE INDEX wlt_ledger_entries_OperatorContext_created_idx
+CREATE INDEX IF NOT EXISTS wlt_ledger_entries_OperatorContext_created_idx
   ON wlt_ledger_entries (operator_context_id, created_at DESC, id DESC);
 
 COMMENT ON INDEX wlt_ledger_entries_operator_context_idempotency_uq IS

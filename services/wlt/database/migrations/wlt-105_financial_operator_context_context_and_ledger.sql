@@ -66,9 +66,17 @@ ALTER TABLE wlt_ledger_transactions ALTER COLUMN operator_context_id SET NOT NUL
 ALTER TABLE wlt_ledger_lines ALTER COLUMN operator_context_id SET NOT NULL;
 
 ALTER TABLE wlt_ledger_accounts
+  DROP CONSTRAINT IF EXISTS wlt_ledger_accounts_OperatorContext_nonempty;
+ALTER TABLE wlt_ledger_accounts
   ADD CONSTRAINT wlt_ledger_accounts_OperatorContext_nonempty CHECK (btrim(operator_context_id) <> '') NOT VALID;
+
+ALTER TABLE wlt_ledger_transactions
+  DROP CONSTRAINT IF EXISTS wlt_ledger_transactions_OperatorContext_nonempty;
 ALTER TABLE wlt_ledger_transactions
   ADD CONSTRAINT wlt_ledger_transactions_OperatorContext_nonempty CHECK (btrim(operator_context_id) <> '') NOT VALID;
+
+ALTER TABLE wlt_ledger_lines
+  DROP CONSTRAINT IF EXISTS wlt_ledger_lines_OperatorContext_nonempty;
 ALTER TABLE wlt_ledger_lines
   ADD CONSTRAINT wlt_ledger_lines_OperatorContext_nonempty CHECK (btrim(operator_context_id) <> '') NOT VALID;
 ALTER TABLE wlt_ledger_accounts VALIDATE CONSTRAINT wlt_ledger_accounts_OperatorContext_nonempty;
@@ -79,20 +87,20 @@ DROP INDEX IF EXISTS wlt_ledger_accounts_wallet_uq;
 DROP INDEX IF EXISTS wlt_ledger_accounts_system_uq;
 DROP INDEX IF EXISTS wlt_ledger_transactions_source_uq;
 
-CREATE UNIQUE INDEX wlt_ledger_accounts_wallet_OperatorContext_uq
+CREATE UNIQUE INDEX IF NOT EXISTS wlt_ledger_accounts_wallet_OperatorContext_uq
   ON wlt_ledger_accounts (operator_context_id, account_type, actor_type, actor_id, currency)
   WHERE account_type = 'wallet';
-CREATE UNIQUE INDEX wlt_ledger_accounts_system_OperatorContext_uq
+CREATE UNIQUE INDEX IF NOT EXISTS wlt_ledger_accounts_system_OperatorContext_uq
   ON wlt_ledger_accounts (operator_context_id, account_type, currency)
   WHERE account_type <> 'wallet';
-CREATE UNIQUE INDEX wlt_ledger_transactions_source_OperatorContext_uq
+CREATE UNIQUE INDEX IF NOT EXISTS wlt_ledger_transactions_source_OperatorContext_uq
   ON wlt_ledger_transactions (operator_context_id, transaction_type, reference_type, reference_id)
   WHERE reference_type <> '' AND reference_id <> '';
-CREATE INDEX wlt_ledger_transactions_OperatorContext_created_idx
+CREATE INDEX IF NOT EXISTS wlt_ledger_transactions_OperatorContext_created_idx
   ON wlt_ledger_transactions (operator_context_id, created_at DESC, id DESC);
-CREATE INDEX wlt_ledger_lines_OperatorContext_transaction_idx
+CREATE INDEX IF NOT EXISTS wlt_ledger_lines_OperatorContext_transaction_idx
   ON wlt_ledger_lines (operator_context_id, ledger_transaction_id);
-CREATE INDEX wlt_ledger_lines_OperatorContext_account_idx
+CREATE INDEX IF NOT EXISTS wlt_ledger_lines_OperatorContext_account_idx
   ON wlt_ledger_lines (operator_context_id, account_id, created_at DESC);
 
 ALTER TABLE wlt_field_commission_category_policy_versions
@@ -108,12 +116,12 @@ ALTER TABLE wlt_field_commission_category_policy_versions
 ALTER TABLE wlt_field_commission_category_policy_versions
   ADD CONSTRAINT wlt_field_commission_category_policy_versions_pkey
   PRIMARY KEY (operator_context_id, policy_id, version);
-DROP INDEX IF EXISTS wlt_field_commission_category_policy_active_uq;
+DROP INDEX IF EXISTS wlt_field_commission_category_policy_active_uidx;
 DROP INDEX IF EXISTS wlt_field_commission_category_policy_history_idx;
-CREATE UNIQUE INDEX wlt_field_commission_category_policy_active_OperatorContext_uq
+CREATE UNIQUE INDEX IF NOT EXISTS wlt_field_commission_category_policy_active_OperatorContext_uq
   ON wlt_field_commission_category_policy_versions (operator_context_id, partner_category)
   WHERE status = 'active';
-CREATE INDEX wlt_field_commission_category_policy_OperatorContext_history_idx
+CREATE INDEX IF NOT EXISTS wlt_field_commission_category_policy_OperatorContext_history_idx
   ON wlt_field_commission_category_policy_versions (operator_context_id, partner_category, version DESC);
 
 WITH known_OperatorContexts AS (
@@ -139,7 +147,7 @@ SELECT OperatorContext.operator_context_id, policy.policy_id, policy.partner_cat
        policy.updated_by_actor_id, policy.created_at
 FROM known_OperatorContexts OperatorContext
 CROSS JOIN legacy_policies policy
-ON CONFLICT (operator_context_id, policy_id, version) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 ALTER TABLE wlt_commission_evidence ADD COLUMN IF NOT EXISTS operator_context_id text;
 UPDATE wlt_commission_evidence evidence
@@ -157,11 +165,11 @@ ALTER TABLE wlt_commission_evidence
 ALTER TABLE wlt_commission_evidence
   DROP CONSTRAINT IF EXISTS wlt_commission_evidence_idempotency_key_key;
 DROP INDEX IF EXISTS wlt_commission_request_hash_uidx;
-CREATE UNIQUE INDEX wlt_commission_evidence_operator_context_idempotency_uq
+CREATE UNIQUE INDEX IF NOT EXISTS wlt_commission_evidence_operator_context_idempotency_uq
   ON wlt_commission_evidence (operator_context_id, idempotency_key);
-CREATE UNIQUE INDEX wlt_commission_evidence_OperatorContext_request_hash_uq
+CREATE UNIQUE INDEX IF NOT EXISTS wlt_commission_evidence_OperatorContext_request_hash_uq
   ON wlt_commission_evidence (operator_context_id, request_hash);
-CREATE INDEX wlt_commission_evidence_OperatorContext_commission_idx
+CREATE INDEX IF NOT EXISTS wlt_commission_evidence_OperatorContext_commission_idx
   ON wlt_commission_evidence (operator_context_id, commission_id);
 
 ALTER TABLE wlt_audit_events ADD COLUMN IF NOT EXISTS operator_context_id text;
@@ -172,7 +180,7 @@ ALTER TABLE wlt_audit_events
   ALTER COLUMN operator_context_id SET DEFAULT 'legacy-unscoped';
 ALTER TABLE wlt_audit_events
   ALTER COLUMN operator_context_id SET NOT NULL;
-CREATE INDEX wlt_audit_OperatorContext_aggregate_idx
+CREATE INDEX IF NOT EXISTS wlt_audit_OperatorContext_aggregate_idx
   ON wlt_audit_events (operator_context_id, aggregate_type, aggregate_id, created_at DESC);
 
 ALTER TABLE wlt_mutation_receipts ADD COLUMN IF NOT EXISTS operator_context_id text;
@@ -190,9 +198,9 @@ ALTER TABLE wlt_mutation_receipts
   PRIMARY KEY (operator_context_id, idempotency_key);
 DROP INDEX IF EXISTS wlt_mutation_receipts_aggregate_idx;
 DROP INDEX IF EXISTS wlt_mutation_receipts_request_hash_idx;
-CREATE INDEX wlt_mutation_receipts_OperatorContext_aggregate_idx
+CREATE INDEX IF NOT EXISTS wlt_mutation_receipts_OperatorContext_aggregate_idx
   ON wlt_mutation_receipts (operator_context_id, mutation_type, aggregate_id, created_at DESC);
-CREATE INDEX wlt_mutation_receipts_OperatorContext_request_hash_idx
+CREATE INDEX IF NOT EXISTS wlt_mutation_receipts_OperatorContext_request_hash_idx
   ON wlt_mutation_receipts (operator_context_id, request_hash);
 
 COMMENT ON COLUMN wlt_ledger_accounts.operator_context_id IS

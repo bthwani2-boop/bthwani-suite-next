@@ -33,11 +33,9 @@ type Client struct {
 }
 
 type CreatePaymentSessionInput struct {
-	CheckoutIntentID string `json:"checkoutIntentId,omitempty"`
-	SpecialRequestID string `json:"specialRequestId,omitempty"`
-	// OperatorContextID is compile-only while legacy DSH call sites are cleaned.
-	// It is excluded from JSON and cannot select WLT financial ownership.
-	OperatorContextID string `json:"-"`
+	CheckoutIntentID  string `json:"checkoutIntentId,omitempty"`
+	SpecialRequestID  string `json:"specialRequestId,omitempty"`
+	OperatorContextID string `json:"operatorContextId,omitempty"`
 	ClientID          string `json:"clientId"`
 	StoreID           string `json:"storeId"`
 	PaymentMethod     string `json:"paymentMethod"`

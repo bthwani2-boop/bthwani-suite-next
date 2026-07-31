@@ -12,6 +12,7 @@ import (
 )
 
 var ErrIdempotencyConflict = errors.New("payment session idempotency conflict")
+var ErrOperatorContextMismatch = errors.New("operator context id in payload does not match X-Operator-Context-ID header")
 
 const paymentSessionCols = `id, checkout_intent_id, special_request_id,
 	 subscription_purchase_id, commercial_product_reference,
