@@ -62,9 +62,6 @@ func CreateCodRecordForOperatorContext(
 	if session == nil {
 		return nil, fmt.Errorf("no WLT payment session found for checkoutIntentId %q in trusted OperatorContext", input.CheckoutIntentID)
 	}
-	if session.OperatorContextID != operatorContextID {
-		return nil, reference.ErrOperatorContextMismatch
-	}
 	if session.PaymentMethod != "cod" {
 		return nil, fmt.Errorf("checkoutIntentId %q is not a COD payment session", input.CheckoutIntentID)
 	}
@@ -135,9 +132,6 @@ func HandleCreateCodRecordOperatorContext(db *sql.DB) http.HandlerFunc {
 		}
 		record, err := CreateCodRecordForOperatorContext(r.Context(), db, input)
 		switch {
-		case errors.Is(err, reference.ErrOperatorContextMismatch):
-			shared.SendError(w, http.StatusForbidden, "OperatorContext_MISMATCH", err.Error())
-			return
 		case errors.Is(err, ErrCodStateConflict):
 			shared.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", err.Error())
 			return
