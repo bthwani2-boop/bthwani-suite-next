@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import type { BThwaniAppearanceMode } from "@bthwani/ui-kit";
 import { useMemo } from "react";
 import { alpha, useBThwaniAppearance } from "@bthwani/ui-kit";
 import { WebStyleSheet } from "@bthwani/ui-kit/web";
@@ -7,9 +8,57 @@ import { cpElevation, cpRadius, cpSpace, cpType } from "./cpScale";
 export type CpAppearanceTokens = ReturnType<typeof useBThwaniAppearance>["tokens"];
 type CpAppearanceShadow = CpAppearanceTokens["shadowSoft"];
 export function shadowToBoxShadow(shadow: CpAppearanceShadow): string { const { shadowOffset, shadowRadius, shadowColor, shadowOpacity } = shadow; return `${shadowOffset.width}px ${shadowOffset.height}px ${shadowRadius}px ${alpha(shadowColor, shadowOpacity)}`; }
-export function useCpTokens() {
+export type CpStyleName =
+  | "select"
+  | "searchInput"
+  | "searchWide"
+  | "textInput"
+  | "table"
+  | "tableHeaderCell"
+  | "tableCell"
+  | "kpiCard"
+  | "kpiValue"
+  | "kpiLabel"
+  | "kpiStrip"
+  | "pageHeader"
+  | "pageHeaderTitle"
+  | "filterBar"
+  | "statePanel"
+  | "statePanelAlert"
+  | "statePanelTitle"
+  | "statePanelDesc"
+  | "statePanelCode"
+  | "retryButton"
+  | "emptyTableMessage"
+  | "selectableTableRow"
+  | "selectableTableRowHover"
+  | "selectableTableRowSelected"
+  | "inlineCode"
+  | "mutedInline"
+  | "detailPanel"
+  | "detailPanelHeader"
+  | "detailPanelTitle"
+  | "detailPanelCloseButton"
+  | "detailMessage"
+  | "detailErrorTitle"
+  | "detailErrorCode"
+  | "descriptionList"
+  | "descriptionRow"
+  | "descriptionRowLabel"
+  | "descriptionRowValue"
+  | "externalLink"
+  | "amountDisplay"
+;
+export type CpWebStyles = Readonly<Record<CpStyleName, CSSProperties>>;
+export type CpTokensResult = Readonly<{
+  tokens: CpAppearanceTokens;
+  mode: BThwaniAppearanceMode;
+  styles: CpWebStyles;
+}>;
+
+export function useCpTokens(): CpTokensResult {
   const { tokens, mode } = useBThwaniAppearance();
-  const styles = useMemo(() => {
+  const styles = useMemo<CpWebStyles>(() => {
     const cp = tokens.components.controlPanel; const input = tokens.components.inputs;
     const inputBase: CSSProperties = { minHeight: "2.75rem", padding: `${cpSpace[2]} ${cpSpace[3]}`, border: `1px solid ${input.border}`, borderRadius: cpRadius.md, background: input.background, color: tokens.textPrimary, fontSize: cpType.body.fontSize };
     return WebStyleSheet.create({
