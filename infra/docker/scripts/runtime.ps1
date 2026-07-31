@@ -691,7 +691,7 @@ function Invoke-DshMediaSeed {
 
 function Invoke-DshDevBootstrap {
   Write-Host "`n--- DSH API Dev Bootstrap ---"
-  node tools/scripts/bootstrap-dev-data.mjs
+  node tools/scripts/mobile-dev-data.mjs --repair
   if ($LASTEXITCODE -ne 0) { throw "DSH API Dev Bootstrap failed (exit $LASTEXITCODE)" }
   Write-Host "DSH API Dev Bootstrap: PASS"
 }

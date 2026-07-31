@@ -26,7 +26,7 @@ function Get-ForwardedArgumentValue {
 function Invoke-RuntimePhaseChild {
   $invokeArgs = @($script:ForwardedArgs)
   $global:LASTEXITCODE = 0
-  & pwsh -NoProfile -ExecutionPolicy Bypass -File $script:Target @invokeArgs 2>&1 | Out-Host
+  & pwsh -NoProfile -ExecutionPolicy Bypass -File $script:Target @invokeArgs
   $childExitCode = $LASTEXITCODE
   return [int]$childExitCode
 }

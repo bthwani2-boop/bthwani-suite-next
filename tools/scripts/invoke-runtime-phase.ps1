@@ -1,6 +1,6 @@
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet("up", "catalog-readback", "smoke")]
+  [ValidateSet("up", "catalog-readback", "smoke", "bootstrap-dev")]
   [string]$Action,
 
   [Parameter(Mandatory = $true)]

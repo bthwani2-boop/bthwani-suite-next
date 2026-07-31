@@ -367,7 +367,7 @@ async function repairCaptain(operatorToken, zone) {
     {
       ...commonOperationalCore('captain'),
       captain: {
-        classification: 'basic',
+        classification: 'joker',
         financialGuaranteeMinorUnits: 100000,
         financialGuaranteeCurrency: 'YER',
         financialGuaranteeStatus: 'funded',
