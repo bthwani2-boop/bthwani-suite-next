@@ -188,7 +188,7 @@ jobs:
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
       head_sha: ${{ needs.context.outputs.head_sha }}
-      governance_policy: ${{ needs.context.outputs.govenance_policy }}
+      governance_policy: ${{ needs.context.outputs.governance_policy }}
       workflow_policy: ${{ needs.context.outputs.workflow_policy }}
       security_policy: ${{ needs.context.outputs.security_policy }}
       infrastructure_policy: ${{ needs.context.outputs.infrastructure_policy }}
