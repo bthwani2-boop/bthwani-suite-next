@@ -13,6 +13,7 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $RuntimeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
 $RuntimeSmokeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime-dispatch.ps1"
+$RuntimeEnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
 $CatalogSeedScript = Join-Path $RepoRoot "services/dsh/database/scripts/apply-central-catalog-seed.ps1"
 $LocalMediaSeedScript = Join-Path $RepoRoot "tools/scripts/runtime/seed-local-media.ps1"
 $CatalogReadbackScript = Join-Path $RepoRoot "tools/scripts/verify-catalog.ps1"
@@ -21,6 +22,35 @@ $DshSmokeDiagnosticScript = Join-Path $RepoRoot "tools/scripts/runtime/diagnose-
 $LogRoot = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [System.IO.Path]::GetTempPath() }
 $LogPath = Join-Path $LogRoot "bthwani-runtime-$Action.log"
 $ProfileList = @($Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+
+function Import-CanonicalRuntimeEnvironment {
+  if (-not (Test-Path -LiteralPath $script:RuntimeEnvFile -PathType Leaf)) {
+    throw "Canonical runtime environment file not found: $script:RuntimeEnvFile"
+  }
+
+  foreach ($rawLine in Get-Content -LiteralPath $script:RuntimeEnvFile) {
+    $line = $rawLine.Trim()
+    if (-not $line -or $line.StartsWith("#") -or -not $line.Contains("=")) {
+      continue
+    }
+
+    $parts = $line.Split("=", 2)
+    $key = $parts[0].Trim()
+    $value = $parts[1].Trim()
+    if ($value.StartsWith('"') -and $value.EndsWith('"')) {
+      $value = $value.Substring(1, $value.Length - 2)
+    } elseif ($value.StartsWith("'") -and $value.EndsWith("'")) {
+      $value = $value.Substring(1, $value.Length - 2)
+    }
+
+    $current = [System.Environment]::GetEnvironmentVariable($key, "Process")
+    if ([string]::IsNullOrWhiteSpace($current)) {
+      [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
+    }
+  }
+}
+
+Import-CanonicalRuntimeEnvironment
 
 function ConvertTo-StatusText {
   param([string]$Value, [int]$Limit = 140)
