@@ -18,7 +18,7 @@ paths:
   /wlt/payment-sessions:
     post:
       operationId: createWltPaymentSession
-      summary: Create or replay a OperatorContext-bound payment-session reference.
+      summary: Create or replay a server-scoped payment-session reference.
       tags: [ WltPayments ]
       security: [ { serviceBearer: [] } ]
       x-bthwani-mutation-approved: false
@@ -352,7 +352,7 @@ components:
         specialRequestId: { type: [ string, 'null' ] }
         subscriptionPurchaseId: { type: [ string, 'null' ] }
         commercialProductReference: { type: [ string, 'null' ] }
-        operatorContextId: { type: string }
+        operatorContextId: { type: string, description: Server-owned financial compatibility scope. }
         clientId: { type: string }
         storeId: { type: string }
         paymentMethod: { type: string, enum: [ cod, wallet, mixed, official_wallet ] }
@@ -365,9 +365,9 @@ components:
         updatedAt: { type: string, format: date-time }
     CreatePaymentSessionRequest:
       type: object
+      additionalProperties: false
       required:
         [
-          operatorContextId,
           clientId,
           storeId,
           paymentMethod,
@@ -379,7 +379,6 @@ components:
         specialRequestId: { type: string }
         subscriptionPurchaseId: { type: string }
         commercialProductReference: { type: string }
-        operatorContextId: { type: string }
         clientId: { type: string }
         storeId: { type: string }
         paymentMethod: { type: string, enum: [ cod, wallet, mixed, official_wallet ] }
