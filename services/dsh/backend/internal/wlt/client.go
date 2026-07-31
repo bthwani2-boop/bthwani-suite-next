@@ -63,7 +63,7 @@ type PaymentSession struct {
 
 // NewClient builds the authenticated DSH-to-WLT service client. Financial
 // ownership is resolved inside WLT after service authentication; DSH does not
-// select it through a request header or payment-session payload.
+// select it through the payment-session payload.
 func NewClient(baseURL, serviceToken string) *Client {
 	return &Client{
 		baseURL:      strings.TrimRight(baseURL, "/"),
@@ -77,8 +77,8 @@ func (c *Client) Configured() bool {
 }
 
 // resolveTrustedOperatorContext and setTrustedOperatorContextHeader are
-// temporary compatibility helpers for WLT routes not migrated yet. New or
-// migrated calls must not use them.
+// temporary compatibility helpers for WLT routes not migrated yet. WLT
+// overwrites this deprecated transport value after service authentication.
 func (c *Client) resolveTrustedOperatorContext(ctx context.Context, requested string) (string, error) {
 	requested = strings.TrimSpace(requested)
 	trustedOperatorContextID, hasTrustedOperatorContext := OperatorContextIDFromContext(ctx)
@@ -116,6 +116,9 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
+	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+		return nil, fmt.Errorf("prepare deprecated WLT payment scope bridge: %w", err)
+	}
 	correlationID := strings.TrimSpace(input.CorrelationID)
 	if correlationID == "" {
 		if input.SpecialRequestID != "" {
