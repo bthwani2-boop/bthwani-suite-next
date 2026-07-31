@@ -134,7 +134,7 @@ export function classifyFiles(inputFiles, options = {}) {
   const runtime = runtimeProfile !== "none";
 
   const sharedBrain = full || starts("shared/", "services/dsh/frontend/shared/", "services/wlt/frontend/shared/") || equals(
-    "contracts/master.openapi.yaml",
+    "contracts/openapi/index.yaml",
     "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md"
   );
 

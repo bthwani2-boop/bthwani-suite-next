@@ -121,6 +121,30 @@
       "mayUseSecrets": false,
       "requiredPinnedActions": true,
       "purpose": "Core read-only exact-SHA affected and risk-expanded manual verification with optional full runtime proof and a machine-readable decision artifact."
+    },
+    {
+      "id": "foundation-00-snapshot",
+      "path": ".github/workflows/foundation-00-snapshot.yml",
+      "class": "READ_ONLY_DIAGNOSTIC",
+      "name": "FOUNDATION-00 Architecture Snapshot",
+      "triggers": ["pull_request"],
+      "permissions": { "contents": "read" },
+      "mayMutateSource": false,
+      "mayUseSecrets": false,
+      "requiredPinnedActions": true,
+      "purpose": "Read-only export of the bounded control-panel/dsh/core-identity/core-platform-control architecture source as a pull-request artifact for FOUNDATION-00 diagnosis."
+    },
+    {
+      "id": "foundation-00-git-bundle",
+      "path": ".github/workflows/foundation-00-git-bundle.yml",
+      "class": "READ_ONLY_DIAGNOSTIC",
+      "name": "FOUNDATION-00 Git Bundle",
+      "triggers": ["pull_request"],
+      "permissions": { "contents": "read" },
+      "mayMutateSource": false,
+      "mayUseSecrets": false,
+      "requiredPinnedActions": true,
+      "purpose": "Read-only export of an exact-HEAD git bundle as a pull-request artifact for FOUNDATION-00 same-SHA evidence."
     }
   ]
 }

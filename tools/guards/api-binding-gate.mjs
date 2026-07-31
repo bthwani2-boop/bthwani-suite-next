@@ -4,7 +4,7 @@
  * Verifies the OpenAPI-first binding chain:
  *   Master contract index → active contract → generated/shared client → API adapter.
  *
- * Side contracts that are not present in contracts/master.openapi.yaml are not
+ * Side contracts that are not present in contracts/openapi/index.yaml are not
  * accepted as runtime truth. This prevents contract-only features from making
  * frontend adapters appear bound while no router, repository, or migration exists.
  *
@@ -16,29 +16,25 @@
 import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
-import { fail, listCodeFiles, read, repoRoot, toPosix } from "./_guard-utils.mjs";
+import { fail, listCodeFiles, read, repoRoot } from "./_guard-utils.mjs";
 import { parseIndexedContractModules, parseOpenApiContract } from "./_openapi-utils.mjs";
 
 const guardId = "api-binding-gate";
 const violations = [];
-const masterContractPath = "contracts/master.openapi.yaml";
+const masterContractPath = "contracts/openapi/index.yaml";
 
 function loadMasterContractReferences() {
-  const master = read(masterContractPath);
+  const modules = parseIndexedContractModules(masterContractPath);
   const references = [];
-  for (const line of master.split(/\r?\n/)) {
-    const match = line.match(/^\s+[A-Za-z0-9_-]+:\s+(\.\.\/[^\s]+\.openapi\.yaml)\s*$/);
-    if (!match) continue;
-    const absolute = path.resolve(repoRoot, "contracts", match[1]);
-    const relative = toPosix(path.relative(repoRoot, absolute));
-    if (!fs.existsSync(absolute)) {
+  for (const module of modules) {
+    if (!module.exists) {
       violations.push({
         file: masterContractPath,
-        message: `MASTER_CONTRACT_REFERENCE_MISSING ${relative}`,
+        message: `MASTER_CONTRACT_REFERENCE_MISSING ${module.file}`,
       });
       continue;
     }
-    references.push(relative);
+    references.push(module.file);
   }
   if (references.length === 0) {
     violations.push({ file: masterContractPath, message: "MASTER_CONTRACT_INDEX_EMPTY" });

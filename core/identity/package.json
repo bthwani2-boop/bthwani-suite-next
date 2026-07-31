@@ -6,6 +6,8 @@
   "main": "clients/index.ts",
   "types": "clients/index.ts",
   "scripts": {
+    "openapi:compose": "node ../../tools/scripts/compose-openapi-context.mjs identity",
+    "openapi:generate": "pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/identity.bundle.openapi.yaml -o clients/generated/identity-api.ts",
     "test": "cd backend && go test ./...",
     "build": "cd backend && go build ./...",
     "typecheck": "tsc --noEmit -p tsconfig.json && pnpm --dir ../../apps/app-client/runtime typecheck && pnpm --dir ../../apps/app-partner/runtime typecheck && pnpm --dir ../../apps/app-captain/runtime typecheck && pnpm --dir ../../apps/app-field/runtime typecheck && pnpm --dir ../../apps/control-panel/runtime typecheck"

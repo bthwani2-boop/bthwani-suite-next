@@ -6,6 +6,8 @@
   "main": "clients/generated/providers-api.ts",
   "types": "clients/generated/providers-api.ts",
   "scripts": {
+    "openapi:compose": "node ../../tools/scripts/compose-openapi-context.mjs providers",
+    "openapi:generate": "pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/providers.bundle.openapi.yaml -o clients/generated/providers-api.ts",
     "test": "cd backend && go test ./...",
     "build": "cd backend && go build ./...",
     "typecheck": "tsc --noEmit -p tsconfig.json"
