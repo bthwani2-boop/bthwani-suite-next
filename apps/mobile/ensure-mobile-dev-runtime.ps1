@@ -117,8 +117,21 @@ function Ensure-BthwaniMobileBackend {
       "-Action", "up", "-Profiles", $Profiles
     )
 
-  if (-not (Test-BthwaniMobileBackend)) {
-    throw "Mobile backend startup completed, but an application-facing Identity, Workforce, or DSH endpoint is still unhealthy."
+  $maxWaitSeconds = 30
+  $sw = [System.Diagnostics.Stopwatch]::StartNew()
+  $isHealthy = $false
+
+  while ($sw.Elapsed.TotalSeconds -lt $maxWaitSeconds) {
+    if (Test-BthwaniMobileBackend) {
+      $isHealthy = $true
+      break
+    }
+    Write-Host "Waiting for Mobile backend to become healthy..."
+    Start-Sleep -Seconds 2
+  }
+
+  if (-not $isHealthy) {
+    throw "Mobile backend startup completed, but an application-facing Identity, Workforce, or DSH endpoint is still unhealthy after $maxWaitSeconds seconds."
   }
 }
 

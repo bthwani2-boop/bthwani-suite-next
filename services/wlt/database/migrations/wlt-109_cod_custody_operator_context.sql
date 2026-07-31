@@ -29,7 +29,10 @@ ALTER TABLE wlt_cod_custody_evidence
   ALTER COLUMN operator_context_id SET NOT NULL,
   DROP CONSTRAINT IF EXISTS wlt_cod_custody_evidence_cod_record_id_event_type_key,
   DROP CONSTRAINT IF EXISTS wlt_cod_custody_evidence_event_type_idempotency_key_key,
-  DROP CONSTRAINT IF EXISTS wlt_cod_custody_evidence_event_type_proof_reference_key;
+  DROP CONSTRAINT IF EXISTS wlt_cod_custody_evidence_event_type_proof_reference_key,
+  DROP CONSTRAINT IF EXISTS wlt_cod_custody_evidence_OperatorContext_record_event_key,
+  DROP CONSTRAINT IF EXISTS wlt_cod_custody_evidence_operator_context_idempotency_key,
+  DROP CONSTRAINT IF EXISTS wlt_cod_custody_evidence_OperatorContext_proof_key;
 ALTER TABLE wlt_cod_custody_evidence
   ADD CONSTRAINT wlt_cod_custody_evidence_OperatorContext_record_event_key
     UNIQUE (operator_context_id, cod_record_id, event_type),
@@ -58,7 +61,9 @@ WHERE operator_context_id IS NULL OR btrim(operator_context_id) = '';
 ALTER TABLE wlt_cod_reconciliation_cases
   ALTER COLUMN operator_context_id SET NOT NULL,
   DROP CONSTRAINT IF EXISTS wlt_cod_reconciliation_cases_cod_record_id_key,
-  DROP CONSTRAINT IF EXISTS wlt_cod_reconciliation_cases_custody_evidence_id_key;
+  DROP CONSTRAINT IF EXISTS wlt_cod_reconciliation_cases_custody_evidence_id_key,
+  DROP CONSTRAINT IF EXISTS wlt_cod_reconciliation_cases_OperatorContext_record_key,
+  DROP CONSTRAINT IF EXISTS wlt_cod_reconciliation_cases_OperatorContext_evidence_key;
 ALTER TABLE wlt_cod_reconciliation_cases
   ADD CONSTRAINT wlt_cod_reconciliation_cases_OperatorContext_record_key
     UNIQUE (operator_context_id, cod_record_id),

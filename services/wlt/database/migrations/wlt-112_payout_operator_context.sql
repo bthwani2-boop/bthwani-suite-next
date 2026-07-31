@@ -57,6 +57,9 @@ DROP INDEX IF EXISTS wlt_payout_destinations_one_active_owner_idx;
 DROP INDEX IF EXISTS wlt_payout_destinations_owner_created_idx;
 
 ALTER TABLE wlt_payout_destinations
+  DROP CONSTRAINT IF EXISTS wlt_payout_destinations_operator_context_id_key CASCADE;
+
+ALTER TABLE wlt_payout_destinations
   ADD CONSTRAINT wlt_payout_destinations_operator_context_id_key UNIQUE (operator_context_id, id);
 CREATE UNIQUE INDEX wlt_payout_destinations_one_active_OperatorContext_owner_idx
   ON wlt_payout_destinations (operator_context_id, owner_actor_type, owner_actor_id)
@@ -98,6 +101,9 @@ CREATE UNIQUE INDEX wlt_payout_requests_operator_context_idempotency_uq
 CREATE INDEX wlt_payout_requests_OperatorContext_request_hash_idx
   ON wlt_payout_requests (operator_context_id, request_hash)
   WHERE request_hash IS NOT NULL;
+ALTER TABLE wlt_payout_requests
+  DROP CONSTRAINT IF EXISTS wlt_payout_requests_operator_context_id_key CASCADE;
+
 ALTER TABLE wlt_payout_requests
   ADD CONSTRAINT wlt_payout_requests_operator_context_id_key UNIQUE (operator_context_id, id);
 ALTER TABLE wlt_payout_requests
@@ -157,6 +163,9 @@ CREATE INDEX wlt_payout_outbox_OperatorContext_pending_idx
   ON wlt_payout_outbox (operator_context_id, created_at, id)
   WHERE delivered_at IS NULL;
 ALTER TABLE wlt_payout_outbox
+  DROP CONSTRAINT IF EXISTS wlt_payout_outbox_request_OperatorContext_fk;
+
+ALTER TABLE wlt_payout_outbox
   ADD CONSTRAINT wlt_payout_outbox_request_OperatorContext_fk
   FOREIGN KEY (operator_context_id, payout_request_id)
   REFERENCES wlt_payout_requests (operator_context_id, id)
@@ -182,6 +191,9 @@ CREATE INDEX wlt_payout_reconciliation_OperatorContext_request_idx
 CREATE UNIQUE INDEX wlt_payout_reconciliation_OperatorContext_single_claim_idx
   ON wlt_payout_reconciliations (operator_context_id, payout_request_id)
   WHERE resolved_at IS NULL;
+ALTER TABLE wlt_payout_reconciliations
+  DROP CONSTRAINT IF EXISTS wlt_payout_reconciliation_request_OperatorContext_fk;
+
 ALTER TABLE wlt_payout_reconciliations
   ADD CONSTRAINT wlt_payout_reconciliation_request_OperatorContext_fk
   FOREIGN KEY (operator_context_id, payout_request_id)

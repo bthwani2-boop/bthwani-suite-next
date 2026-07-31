@@ -23,6 +23,9 @@ BEGIN
 END $$;
 
 ALTER TABLE wlt_wallets
+  DROP CONSTRAINT IF EXISTS wlt_wallets_OperatorContext_actor_key;
+
+ALTER TABLE wlt_wallets
   ADD CONSTRAINT wlt_wallets_OperatorContext_actor_key
   UNIQUE (operator_context_id, actor_type, actor_id);
 
