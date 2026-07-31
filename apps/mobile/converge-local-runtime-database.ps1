@@ -13,7 +13,12 @@ foreach ($requiredPath in @($ComposeFile, $EnvFile)) {
   }
 }
 
-if ($env:NODE_ENV -eq "production" -or $env:ENVIRONMENT -eq "production") {
+$productionSignals = @(
+  [string]$env:NODE_ENV,
+  [string]$env:ENVIRONMENT,
+  [string]$env:BTHWANI_RUNTIME_MODE
+) | ForEach-Object { $_.Trim().ToLowerInvariant() }
+if ($productionSignals -contains "production") {
   throw "Local runtime database convergence is forbidden in production."
 }
 
