@@ -100,6 +100,7 @@ jobs:
       PGPASSWORD: ci_runtime_password
       DSH_REQUIRE_DB_TESTS: ${{ matrix.key == 'dsh' && 'true' || 'false' }}
       WLT_REQUIRE_DB_TESTS: ${{ matrix.key == 'wlt' && 'true' || 'false' }}
+      BTHWANI_OPERATOR_CONTEXT_ID: ${{ matrix.key == 'wlt' && 'ci-wlt' || '' }}
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
