@@ -74,7 +74,7 @@ func TestPartnerDeactivationTriggerAndOutboxDeliveryDBIntegration(t *testing.T) 
 		gotCaller = r.Header.Get("X-Service-Caller")
 		gotIdempotency = r.Header.Get("Idempotency-Key")
 		gotCorrelation = r.Header.Get("X-Correlation-ID")
-		if r.Method != http.MethodPost || r.URL.Path != "/wlt/payout-destinations/"+partnerID+"/deactivate" {
+		if r.Method != http.MethodPost || r.URL.Path != "/wlt/payout-destinations/partner/"+partnerID+"/deactivate" {
 			t.Fatalf("unexpected WLT deactivation request: %s %s", r.Method, r.URL.Path)
 		}
 		w.WriteHeader(http.StatusNoContent)
@@ -141,23 +141,26 @@ func TestPartnerWltReconciliationCreatesAndResolvesMaskedReadbackCaseDBIntegrati
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		requestedPartnerID := strings.TrimPrefix(r.URL.Path, "/wlt/payout-destinations/")
+		requestedPartnerID := strings.TrimPrefix(r.URL.Path, "/wlt/payout-destinations/partner/")
 		if requestedPartnerID != partnerID {
 			http.Error(w, "not found", http.StatusNotFound)
 			return
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"id":                   "wpd-reconciliation-ref",
-			"partnerId":            partnerID,
-			"settlementPreference": "bank",
-			"maskedAccountNumber":  "*****1234",
-			"maskedIban":           "********5678",
-			"maskedMobileNumber":   "",
-			"beneficiaryName":      "Partner Owner",
-			"bankName":             "Test Bank",
-			"bankBranch":           "Main",
-			"active":               active,
-			"updatedAt":            time.Now().UTC().Format(time.RFC3339Nano),
+			"payoutDestination": map[string]any{
+				"id":                   "wpd-reconciliation-ref",
+				"ownerActorId":         partnerID,
+				"ownerActorType":       "partner",
+				"settlementPreference": "bank",
+				"maskedAccountNumber":  "*****1234",
+				"maskedIban":           "********5678",
+				"maskedMobileNumber":   "",
+				"beneficiaryName":      "Partner Owner",
+				"bankName":             "Test Bank",
+				"bankBranch":           "Main",
+				"active":               active,
+				"updatedAt":            time.Now().UTC().Format(time.RFC3339Nano),
+			},
 		})
 	}))
 	defer server.Close()

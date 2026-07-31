@@ -1,7 +1,7 @@
 version: 3
-authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+authority: governance/policies/release.md
 decision_vocabulary: governance/contracts/decision-vocabulary.json
-product_truth_authority: governance/product/PRODUCT_TRUTH_POLICY.md
+product_truth_authority: governance/policies/product.md
 authorities:
   sdlc_program_authority:
     owns: [stage_state, transition_legality]
@@ -21,7 +21,7 @@ authorities:
     owns: [architecture_contracts, data_flow, dependency_direction, adr_decisions]
     may_block: true
   governance_contract_authority:
-    owns: [authority_precedence, decision_vocabulary, agent_and_skill_contracts, guard_registration, sdlc_control_plane, saas_governance]
+    owns: [authority_precedence, decision_vocabulary, agent_and_skill_contracts, guard_registration, sdlc_control_plane]
     may_block: true
     must_not_be_implementation_executor: true
   ci_workflow_authority:
@@ -75,7 +75,7 @@ single_owner_human_identity_exception:
   protected_domains_remain_independent_or_unclosed:
     - authentication_authorization_sessions
     - pii_privacy_secrets_credentials
-    - tenant_isolation
+    - operator_context_isolation
     - security_approval
     - financial_control
     - migrations_and_production_data

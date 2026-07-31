@@ -94,14 +94,14 @@ func scanCaseRow(rows *sql.Rows) (*Case, error) {
 	return &c, nil
 }
 
-func ListCasesForTenant(ctx context.Context, db *sql.DB, status string) ([]*Case, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+func ListCasesForOperatorContext(ctx context.Context, db *sql.DB, status string) ([]*Case, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 	status = strings.TrimSpace(status)
-	query := `SELECT ` + caseCols + ` FROM wlt_reconciliation_cases WHERE tenant_id=$1`
-	args := []any{tenantID}
+	query := `SELECT ` + caseCols + ` FROM wlt_reconciliation_cases WHERE operator_context_id=$1`
+	args := []any{operatorContextID}
 	if status != "" {
 		query += ` AND status=$2`
 		args = append(args, status)
@@ -124,11 +124,11 @@ func ListCasesForTenant(ctx context.Context, db *sql.DB, status string) ([]*Case
 }
 
 func ListCases(db *sql.DB, status string) ([]*Case, error) {
-	return ListCasesForTenant(context.Background(), db, status)
+	return ListCasesForOperatorContext(context.Background(), db, status)
 }
 
-func GetCaseForTenant(ctx context.Context, db *sql.DB, caseID string) (*Case, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+func GetCaseForOperatorContext(ctx context.Context, db *sql.DB, caseID string) (*Case, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func GetCaseForTenant(ctx context.Context, db *sql.DB, caseID string) (*Case, er
 		return nil, fmt.Errorf("caseId is required")
 	}
 	row := db.QueryRowContext(ctx, `SELECT `+caseCols+`
-		FROM wlt_reconciliation_cases WHERE tenant_id=$1 AND id=$2`, tenantID, caseID)
+		FROM wlt_reconciliation_cases WHERE operator_context_id=$1 AND id=$2`, operatorContextID, caseID)
 	c, err := scanCase(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -146,11 +146,11 @@ func GetCaseForTenant(ctx context.Context, db *sql.DB, caseID string) (*Case, er
 }
 
 func GetCase(db *sql.DB, caseID string) (*Case, error) {
-	return GetCaseForTenant(context.Background(), db, caseID)
+	return GetCaseForOperatorContext(context.Background(), db, caseID)
 }
 
-func AssignCaseForTenant(ctx context.Context, db *sql.DB, caseID, operatorID string) (*Case, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+func AssignCaseForOperatorContext(ctx context.Context, db *sql.DB, caseID, operatorID string) (*Case, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -165,11 +165,11 @@ func AssignCaseForTenant(ctx context.Context, db *sql.DB, caseID, operatorID str
 	row := db.QueryRowContext(ctx, `
 		UPDATE wlt_reconciliation_cases
 		SET assigned_to_operator_id=$3,assigned_at=NOW(),updated_at=NOW()
-		WHERE tenant_id=$1 AND id=$2 AND status='open'
-		RETURNING `+caseCols, tenantID, caseID, operatorID)
+		WHERE operator_context_id=$1 AND id=$2 AND status='open'
+		RETURNING `+caseCols, operatorContextID, caseID, operatorID)
 	c, err := scanCase(row)
 	if errors.Is(err, sql.ErrNoRows) {
-		existing, getErr := GetCaseForTenant(ctx, db, caseID)
+		existing, getErr := GetCaseForOperatorContext(ctx, db, caseID)
 		if getErr != nil {
 			return nil, getErr
 		}
@@ -182,11 +182,11 @@ func AssignCaseForTenant(ctx context.Context, db *sql.DB, caseID, operatorID str
 }
 
 func AssignCase(db *sql.DB, caseID, operatorID string) (*Case, error) {
-	return AssignCaseForTenant(context.Background(), db, caseID, operatorID)
+	return AssignCaseForOperatorContext(context.Background(), db, caseID, operatorID)
 }
 
-func ResolveCaseForTenant(ctx context.Context, db *sql.DB, caseID, operatorID, resolutionAction, resolutionNote string) (*Case, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+func ResolveCaseForOperatorContext(ctx context.Context, db *sql.DB, caseID, operatorID, resolutionAction, resolutionNote string) (*Case, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -210,11 +210,11 @@ func ResolveCaseForTenant(ctx context.Context, db *sql.DB, caseID, operatorID, r
 		UPDATE wlt_reconciliation_cases
 		SET status='resolved',resolved_by_operator_id=$3,resolution_action=$4,
 		    resolution_note=$5,resolution=$4,resolved_at=NOW(),updated_at=NOW()
-		WHERE tenant_id=$1 AND id=$2 AND status='open'
-		RETURNING `+caseCols, tenantID, caseID, operatorID, resolutionAction, resolutionNote)
+		WHERE operator_context_id=$1 AND id=$2 AND status='open'
+		RETURNING `+caseCols, operatorContextID, caseID, operatorID, resolutionAction, resolutionNote)
 	c, err := scanCase(row)
 	if errors.Is(err, sql.ErrNoRows) {
-		existing, getErr := GetCaseForTenant(ctx, db, caseID)
+		existing, getErr := GetCaseForOperatorContext(ctx, db, caseID)
 		if getErr != nil {
 			return nil, getErr
 		}
@@ -227,12 +227,12 @@ func ResolveCaseForTenant(ctx context.Context, db *sql.DB, caseID, operatorID, r
 }
 
 func ResolveCase(db *sql.DB, caseID, operatorID, resolutionAction, resolutionNote string) (*Case, error) {
-	return ResolveCaseForTenant(context.Background(), db, caseID, operatorID, resolutionAction, resolutionNote)
+	return ResolveCaseForOperatorContext(context.Background(), db, caseID, operatorID, resolutionAction, resolutionNote)
 }
 
 func HandleListCases(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		cases, err := ListCasesForTenant(r.Context(), db, r.URL.Query().Get("status"))
+		cases, err := ListCasesForOperatorContext(r.Context(), db, r.URL.Query().Get("status"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
@@ -243,7 +243,7 @@ func HandleListCases(db *sql.DB) http.HandlerFunc {
 
 func HandleGetCase(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c, err := GetCaseForTenant(r.Context(), db, r.PathValue("caseId"))
+		c, err := GetCaseForOperatorContext(r.Context(), db, r.PathValue("caseId"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
@@ -267,7 +267,7 @@ func HandleAssignCase(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
-		c, err := AssignCaseForTenant(r.Context(), db, r.PathValue("caseId"), input.OperatorID)
+		c, err := AssignCaseForOperatorContext(r.Context(), db, r.PathValue("caseId"), input.OperatorID)
 		if errors.Is(err, ErrCaseNotOpen) {
 			shared.SendError(w, http.StatusConflict, "INVALID_STATE", "reconciliation case is not open")
 			return
@@ -297,7 +297,7 @@ func HandleResolveCase(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
-		c, err := ResolveCaseForTenant(r.Context(), db, r.PathValue("caseId"), input.OperatorID, input.ResolutionAction, input.ResolutionNote)
+		c, err := ResolveCaseForOperatorContext(r.Context(), db, r.PathValue("caseId"), input.OperatorID, input.ResolutionAction, input.ResolutionNote)
 		if errors.Is(err, ErrCaseNotOpen) {
 			shared.SendError(w, http.StatusConflict, "INVALID_STATE", "reconciliation case is not open")
 			return

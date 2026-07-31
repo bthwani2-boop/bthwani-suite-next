@@ -15,47 +15,47 @@ import (
 )
 
 var (
-	ErrPhoneAlreadyBound = errors.New("phone already bound to another actor")
-	ErrUsernameTaken     = errors.New("username already taken")
-	ErrActorNotFound     = errors.New("actor not found")
-	ErrRateLimited       = errors.New("activation rate limited")
-	ErrInvalidActor      = errors.New("actor input invalid")
-	ErrTenantForbidden   = errors.New("tenant context forbidden")
-	ErrUnavailable       = errors.New("identity unavailable")
+	ErrPhoneAlreadyBound        = errors.New("phone already bound to another actor")
+	ErrUsernameTaken            = errors.New("username already taken")
+	ErrActorNotFound            = errors.New("actor not found")
+	ErrRateLimited              = errors.New("activation rate limited")
+	ErrInvalidActor             = errors.New("actor input invalid")
+	ErrOperatorContextForbidden = errors.New("operator context forbidden")
+	ErrUnavailable              = errors.New("identity unavailable")
 )
 
 type Client struct {
-	baseURL      string
-	serviceToken string
-	tenantID     string
-	http         *http.Client
+	baseURL           string
+	serviceToken      string
+	operatorContextID string
+	http              *http.Client
 }
 
-// NewClient requires an explicit trusted tenant. Runtime callers must resolve
-// the tenant once at composition time; individual Workforce operations cannot
-// silently substitute or override it.
-func NewClient(baseURL, serviceToken, tenantID string) *Client {
+// NewClient requires an explicit trusted operator context. Runtime callers
+// must resolve it once at composition time; individual Workforce operations
+// cannot silently substitute or override it.
+func NewClient(baseURL, serviceToken, operatorContextID string) *Client {
 	return &Client{
-		baseURL:      strings.TrimRight(baseURL, "/"),
-		serviceToken: serviceToken,
-		tenantID:     strings.TrimSpace(tenantID),
-		http:         &http.Client{Timeout: 10 * time.Second},
+		baseURL:           strings.TrimRight(baseURL, "/"),
+		serviceToken:      serviceToken,
+		operatorContextID: strings.TrimSpace(operatorContextID),
+		http:              &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
 func (c *Client) Configured() bool {
-	return c != nil && c.baseURL != "" && c.serviceToken != "" && c.tenantID != ""
+	return c != nil && c.baseURL != "" && c.serviceToken != "" && c.operatorContextID != ""
 }
 
-func (c *Client) trustedTenant(requested string) (string, error) {
-	if c == nil || c.tenantID == "" {
+func (c *Client) trustedOperatorContext(requested string) (string, error) {
+	if c == nil || c.operatorContextID == "" {
 		return "", ErrUnavailable
 	}
 	requested = strings.TrimSpace(requested)
-	if requested != "" && requested != c.tenantID {
-		return "", ErrTenantForbidden
+	if requested != "" && requested != c.operatorContextID {
+		return "", ErrOperatorContextForbidden
 	}
-	return c.tenantID, nil
+	return c.operatorContextID, nil
 }
 
 type ActorView struct {
@@ -67,10 +67,10 @@ type ActorView struct {
 }
 
 type ProvisionInput struct {
-	Username  string `json:"username"`
-	PhoneE164 string `json:"phoneE164"`
-	Role      string `json:"role"`
-	TenantID  string `json:"tenantId,omitempty"`
+	Username          string `json:"username"`
+	PhoneE164         string `json:"phoneE164"`
+	Role              string `json:"role"`
+	OperatorContextID string `json:"operatorContextId,omitempty"`
 }
 
 type ActivationCode struct {
@@ -90,11 +90,11 @@ type ActivationMetadata struct {
 
 func (c *Client) Provision(ctx context.Context, input ProvisionInput) (ActorView, error) {
 	var view ActorView
-	tenantID, err := c.trustedTenant(input.TenantID)
+	operatorContextID, err := c.trustedOperatorContext(input.OperatorContextID)
 	if err != nil {
 		return view, err
 	}
-	input.TenantID = tenantID
+	input.OperatorContextID = operatorContextID
 	err = c.do(ctx, http.MethodPost, "/internal/actors/provision", input, &view, nil)
 	return view, err
 }
@@ -193,7 +193,7 @@ func (c *Client) do(ctx context.Context, method, path string, body, target any, 
 	}
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "workforce")
-	req.Header.Set("X-Tenant-ID", c.tenantID)
+	req.Header.Set("X-Operator-Context-ID", c.operatorContextID)
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
@@ -228,8 +228,8 @@ func (c *Client) do(ctx context.Context, method, path string, body, target any, 
 		return ErrRateLimited
 	case "INVALID_ACTOR_INPUT":
 		return ErrInvalidActor
-	case "TENANT_CONTEXT_REQUIRED", "TENANT_CONTEXT_FORBIDDEN", "PHONE_BOUND_TO_ANOTHER_TENANT":
-		return ErrTenantForbidden
+	case "OPERATOR_CONTEXT_REQUIRED", "OPERATOR_CONTEXT_FORBIDDEN":
+		return ErrOperatorContextForbidden
 	}
 	if response.StatusCode == http.StatusNotFound {
 		return ErrActorNotFound

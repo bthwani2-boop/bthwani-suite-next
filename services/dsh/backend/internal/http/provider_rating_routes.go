@@ -28,7 +28,7 @@ func RegisterProviderRatingRoutes(mux *http.ServeMux, db *sql.DB, identityClient
 func (s *protectedStoreServer) handlePartnerFieldRatingPrompt(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "partner")
 	if !ok { return }
-	prompt, err := ratings.PartnerFieldRatingPrompt(r.Context(), s.db, actor.TenantID, actor.ID)
+	prompt, err := ratings.PartnerFieldRatingPrompt(r.Context(), s.db, actor.OperatorContextID, actor.ID)
 	if err != nil { writeRatingError(w, err); return }
 	store.SendJSON(w, http.StatusOK, map[string]any{"prompt": prompt})
 }
@@ -41,7 +41,7 @@ func (s *protectedStoreServer) handleSubmitPartnerFieldRating(w http.ResponseWri
 		Comment string `json:"comment"`
 	}
 	if !decodeProtectedJSON(w, r, &input) { return }
-	rating, err := ratings.SubmitPartnerFieldRating(r.Context(), s.db, actor.TenantID, actor.ID, input.Score, input.Comment, correlationID(r))
+	rating, err := ratings.SubmitPartnerFieldRating(r.Context(), s.db, actor.OperatorContextID, actor.ID, input.Score, input.Comment, correlationID(r))
 	if err != nil { writeRatingError(w, err); return }
 	store.SendJSON(w, http.StatusOK, map[string]any{"rating": rating})
 }
@@ -49,7 +49,7 @@ func (s *protectedStoreServer) handleSubmitPartnerFieldRating(w http.ResponseWri
 func (s *protectedStoreServer) handlePendingClientOrderRatingPrompt(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
 	if !ok { return }
-	prompt, err := ratings.PendingClientOrderRatingPrompt(r.Context(), s.db, actor.TenantID, actor.ID)
+	prompt, err := ratings.PendingClientOrderRatingPrompt(r.Context(), s.db, actor.OperatorContextID, actor.ID)
 	if err != nil { writeRatingError(w, err); return }
 	store.SendJSON(w, http.StatusOK, map[string]any{"prompt": prompt})
 }
@@ -57,7 +57,7 @@ func (s *protectedStoreServer) handlePendingClientOrderRatingPrompt(w http.Respo
 func (s *protectedStoreServer) handleClientOrderRatingPrompt(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
 	if !ok { return }
-	prompt, err := ratings.ClientOrderRatingPrompt(r.Context(), s.db, actor.TenantID, actor.ID, r.PathValue("orderId"))
+	prompt, err := ratings.ClientOrderRatingPrompt(r.Context(), s.db, actor.OperatorContextID, actor.ID, r.PathValue("orderId"))
 	if err != nil { writeRatingError(w, err); return }
 	store.SendJSON(w, http.StatusOK, map[string]any{"prompt": prompt})
 }
@@ -67,7 +67,7 @@ func (s *protectedStoreServer) handleSubmitClientOrderRatings(w http.ResponseWri
 	if !ok { return }
 	var input ratings.OrderRatingInput
 	if !decodeProtectedJSON(w, r, &input) { return }
-	result, err := ratings.SubmitClientOrderRatings(r.Context(), s.db, actor.TenantID, actor.ID, r.PathValue("orderId"), input, correlationID(r))
+	result, err := ratings.SubmitClientOrderRatings(r.Context(), s.db, actor.OperatorContextID, actor.ID, r.PathValue("orderId"), input, correlationID(r))
 	if err != nil { writeRatingError(w, err); return }
 	store.SendJSON(w, http.StatusOK, map[string]any{"ratings": result})
 }
@@ -75,7 +75,7 @@ func (s *protectedStoreServer) handleSubmitClientOrderRatings(w http.ResponseWri
 func (s *protectedStoreServer) handleFieldRatingSummary(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "field")
 	if !ok { return }
-	summary, err := ratings.Summary(r.Context(), s.db, actor.TenantID, "field", actor.ID)
+	summary, err := ratings.Summary(r.Context(), s.db, actor.OperatorContextID, "field", actor.ID)
 	if err != nil { writeRatingError(w, err); return }
 	store.SendJSON(w, http.StatusOK, map[string]any{"summary": summary})
 }
@@ -83,7 +83,7 @@ func (s *protectedStoreServer) handleFieldRatingSummary(w http.ResponseWriter, r
 func (s *protectedStoreServer) handleCaptainRatingSummary(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "captain")
 	if !ok { return }
-	summary, err := ratings.Summary(r.Context(), s.db, actor.TenantID, "captain", actor.ID)
+	summary, err := ratings.Summary(r.Context(), s.db, actor.OperatorContextID, "captain", actor.ID)
 	if err != nil { writeRatingError(w, err); return }
 	store.SendJSON(w, http.StatusOK, map[string]any{"summary": summary})
 }

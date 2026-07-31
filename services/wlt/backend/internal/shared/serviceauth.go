@@ -7,26 +7,25 @@ import (
 	"strings"
 )
 
-func requireTrustedSaaSTenant(w http.ResponseWriter, r *http.Request) bool {
-	mode := strings.ToLower(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")))
-	activation := strings.ToLower(strings.TrimSpace(os.Getenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE")))
-	requestTenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+const legacyOperatorContextHeader = "X-Operator-Context-ID"
 
-	if mode == "active" && activation != "authorized" && activation != "active" {
-		SendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", "active SaaS mode requires authorized or active commercial state")
-		return false
+// configuredFinancialCompatibilityScope returns the server-owned compatibility
+// value required by the current WLT schema while operator_context_id is removed
+// from the financial domain model. It is configuration, not caller-selected
+// ownership and not an active tenant boundary.
+func configuredFinancialCompatibilityScope(w http.ResponseWriter) (string, bool) {
+	scopeID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
+	if scopeID == "" {
+		SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_CONFIGURED", "BTHWANI_OPERATOR_CONTEXT_ID is required while the legacy WLT scope columns are being retired")
+		return "", false
 	}
-	if requestTenantID == "" {
-		SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Tenant-ID is required for every WLT financial request")
-		return false
-	}
-	return true
+	return scopeID, true
 }
 
 // RequireServiceCaller validates the shared-secret bearer token and expected
-// service identity before accepting X-Tenant-ID as a service-to-service tenant
-// context. Every WLT financial request fails closed when the authenticated
-// caller omits its tenant; no process-wide, local, or legacy fallback is used.
+// service identity. After authentication, WLT replaces any caller-supplied
+// X-Operator-Context-ID with the server-owned compatibility value. Callers
+// cannot select financial ownership or isolation scope.
 func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, expectedCaller string) bool {
 	expectedToken := os.Getenv(tokenEnvVar)
 	if expectedToken == "" {
@@ -46,10 +45,12 @@ func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, e
 		SendError(w, http.StatusForbidden, "SERVICE_CALLER_FORBIDDEN", "unexpected service caller")
 		return false
 	}
-	if !requireTrustedSaaSTenant(w, r) {
+
+	scopeID, ok := configuredFinancialCompatibilityScope(w)
+	if !ok {
 		return false
 	}
-	tenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-	*r = *r.WithContext(WithTenantContext(r.Context(), tenantID))
+	r.Header.Set(legacyOperatorContextHeader, scopeID)
+	*r = *r.WithContext(WithOperatorContext(r.Context(), scopeID))
 	return true
 }

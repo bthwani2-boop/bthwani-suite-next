@@ -1,0 +1,41 @@
+schemaVersion: 2
+state: READY_FOR_IMPLEMENTATION
+classification: UNIFIED_MULTI_SURFACE_B2B2C_COMMERCE_FULFILLMENT_FINANCIAL_PLATFORM
+operatingModel: BTHWANI_OPERATED_PLATFORM
+softwareDeliveryModel: UNIFIED_PLATFORM
+actors:
+  - OPERATOR
+  - PARTNER
+  - CAPTAIN
+  - FIELD
+  - CUSTOMER
+captainAffiliations:
+  - BTHWANI
+  - PARTNER
+fulfillmentModes:
+  - BTHWANI_CAPTAIN
+  - PARTNER_CAPTAIN
+  - PARTNER_SELF_FULFILLMENT
+  - CUSTOMER_PICKUP
+partnerCommercialModels:
+  - COMMISSION
+  - SUBSCRIPTION
+  - HYBRID
+  - OPERATOR_MANAGED
+commercial:
+  partnerSubscriptions:
+    meaning: PRICING_AND_BILLING_RELATIONSHIP_ONLY
+    createsIndependentPlatformInstance: false
+context:
+  isolationBoundary: PLATFORM_CONTEXT
+  operatorContextPurpose: TRUST_AND_DATA_ISOLATION
+  partnerOrganization: BUSINESS_SCOPE_NOT_OPERATOR_CONTEXT
+  store: BUSINESS_SCOPE_NOT_OPERATOR_CONTEXT
+ownership:
+  operationalTruth: DSH
+  financialTruth: WLT
+  applicationFinancialAccess: DSH_FACADE_ONLY
+approvals:
+  productManager: APPROVED_BY_CURRENT_OWNER_INSTRUCTION
+  productOwnerReadiness: APPROVED_BY_CURRENT_OWNER_INSTRUCTION
+  productAcceptance: PENDING_EXACT_COMMIT_EVIDENCE

@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestFinanceWriteCommissionRequiresTrustedTenant(t *testing.T) {
+func TestFinanceWriteCommissionRequiresTrustedOperatorContext(t *testing.T) {
 	client := NewClient("http://127.0.0.1:1", "service-token")
 	_, _, err := client.FinanceWriteCommission(
 		context.Background(),
@@ -18,14 +18,14 @@ func TestFinanceWriteCommissionRequiresTrustedTenant(t *testing.T) {
 		"correlation-1",
 	)
 	if err == nil {
-		t.Fatal("expected missing trusted tenant to fail closed")
+		t.Fatal("expected missing trusted OperatorContext to fail closed")
 	}
 }
 
-func TestFinanceWriteCommissionSendsTrustedTenantAndMutationHeaders(t *testing.T) {
+func TestFinanceWriteCommissionSendsTrustedOperatorContextAndMutationHeaders(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.Header.Get("X-Tenant-ID"); got != "tenant-commission-test" {
-			t.Fatalf("expected trusted tenant header, got %q", got)
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "OperatorContext-commission-test" {
+			t.Fatalf("expected trusted OperatorContext header, got %q", got)
 		}
 		if got := r.Header.Get("X-Service-Caller"); got != "dsh" {
 			t.Fatalf("expected DSH service caller, got %q", got)
@@ -50,7 +50,7 @@ func TestFinanceWriteCommissionSendsTrustedTenantAndMutationHeaders(t *testing.T
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	ctx := WithTenantContext(context.Background(), "tenant-commission-test")
+	ctx := WithOperatorContext(context.Background(), "OperatorContext-commission-test")
 	status, body, err := client.FinanceWriteCommission(
 		ctx,
 		http.MethodPut,

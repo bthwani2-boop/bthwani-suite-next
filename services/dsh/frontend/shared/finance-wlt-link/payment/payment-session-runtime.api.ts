@@ -1,7 +1,4 @@
-import type {
-  WltPaymentOperationEnvelope,
-  WltPaymentTimelineEnvelope,
-} from "@bthwani/wlt";
+import type { WltPaymentOperationEnvelope, WltPaymentTimelineEnvelope } from "./payment-session.types";
 import { resolveDshApiBaseUrl } from "../../_kernel/dsh-api-base-url";
 import { corrId, createDshHttpClient } from "../../_kernel/dsh-http-request";
 
@@ -22,7 +19,7 @@ function classify(error: unknown): PaymentSessionRuntimeError {
     return { state: "forbidden", code: value.code ?? "FORBIDDEN", message: "لا تملك الجلسة الحالية صلاحية قراءة أو إدارة جلسة الدفع." };
   }
   if (value.status === 404) {
-    return { state: "not_found", code: value.code ?? "NOT_FOUND", message: "لم تُعثر جلسة الدفع داخل المستأجر المحدد." };
+    return { state: "not_found", code: value.code ?? "NOT_FOUND", message: "لم تُعثر جلسة الدفع داخل نطاق التشغيل المحدد." };
   }
   if (value.status === 409) {
     return { state: "conflict", code: value.code ?? "CONFLICT", message: value.message ?? "الجلسة في انتقال مالي لا يسمح بتكرار العملية." };
@@ -30,16 +27,15 @@ function classify(error: unknown): PaymentSessionRuntimeError {
   return { state: "error", code: value.code ?? `HTTP_${value.status ?? "ERROR"}`, message: value.message ?? "تعذر تحميل الحقيقة المالية الحاكمة." };
 }
 
-function timelinePath(paymentSessionId: string, tenantId: string): string {
-  return `/dsh/control-panel/finance/payment-sessions/${encodeURIComponent(paymentSessionId)}/timeline?tenantId=${encodeURIComponent(tenantId)}`;
+function timelinePath(paymentSessionId: string): string {
+  return `/dsh/control-panel/finance/payment-sessions/${encodeURIComponent(paymentSessionId)}/timeline`;
 }
 
 export async function loadPaymentSessionTimeline(
   paymentSessionId: string,
-  tenantId: string,
 ): Promise<{ readonly ok: true; readonly data: WltPaymentTimelineEnvelope } | { readonly ok: false; readonly error: PaymentSessionRuntimeError }> {
   try {
-    const data = await request<WltPaymentTimelineEnvelope>(timelinePath(paymentSessionId, tenantId));
+    const data = await request<WltPaymentTimelineEnvelope>(timelinePath(paymentSessionId));
     return { ok: true, data };
   } catch (error) {
     return { ok: false, error: classify(error) };
@@ -48,12 +44,11 @@ export async function loadPaymentSessionTimeline(
 
 export async function refreshPaymentSessionProviderStatus(
   paymentSessionId: string,
-  tenantId: string,
 ): Promise<{ readonly ok: true; readonly data: WltPaymentOperationEnvelope } | { readonly ok: false; readonly error: PaymentSessionRuntimeError }> {
   const correlationId = corrId("payment-status-refresh");
   try {
     const data = await request<WltPaymentOperationEnvelope>(
-      `/dsh/control-panel/finance/payment-sessions/${encodeURIComponent(paymentSessionId)}/refresh-provider-status?tenantId=${encodeURIComponent(tenantId)}`,
+      `/dsh/control-panel/finance/payment-sessions/${encodeURIComponent(paymentSessionId)}/refresh-provider-status`,
       {
         method: "POST",
         correlationId,

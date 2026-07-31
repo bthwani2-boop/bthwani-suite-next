@@ -25,7 +25,7 @@ export type SubscriptionPaymentMethod = "official_wallet" | "wallet" | "mixed";
 
 export type SubscriptionPurchaseRecord = {
   readonly id: string;
-  readonly tenantId: string;
+  readonly operatorContextId: string;
   readonly clientId: string;
   readonly planId: string;
   readonly wltProductReference: string;
@@ -50,7 +50,7 @@ export type SubscriptionPaymentSession = {
   readonly id: string;
   readonly subscriptionPurchaseId?: string;
   readonly commercialProductReference?: string;
-  readonly tenantId: string;
+  readonly operatorContextId: string;
   readonly clientId: string;
   readonly paymentMethod: SubscriptionPaymentMethod;
   readonly status: SubscriptionPaymentStatus;

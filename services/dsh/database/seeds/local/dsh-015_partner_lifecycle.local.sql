@@ -4,7 +4,7 @@
 
 INSERT INTO dsh_partners (
     id,
-    tenant_id,
+    operator_context_id,
     legal_name_ar,
     legal_name_en,
     display_name,
@@ -69,7 +69,7 @@ SET partner_id = 'prt_partner_local_001',
     marketing_visibility = 'visible',
     updated_at = now()
 WHERE id = 'store-test-grocery'
-  AND tenant_id = 'local-dsh';
+  AND operator_context_id = 'local-dsh';
 
 INSERT INTO dsh_partner_documents (
     id,

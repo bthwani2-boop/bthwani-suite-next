@@ -10,7 +10,7 @@ const dashboard = fs.readFileSync(
 test("catalog dashboard authorizes from the authenticated Identity object", () => {
   assert.match(dashboard, /const currentUserIdentity = state\.kind === "authenticated" \? state\.identity : undefined/);
   assert.match(dashboard, /hasCatalogPermission\(currentUserIdentity, "catalog\.taxonomy\.manage"\)/);
-  assert.match(dashboard, /hasCatalogPermission\(currentUserIdentity, "catalog\.product\.approve"\)/);
+  assert.match(dashboard, /hasCatalogPermission\(currentUserIdentity, "catalog\.product\.manage"\)/);
   assert.match(dashboard, /hasCatalogPermission\(currentUserIdentity, "catalog\.media\.manage"\)/);
   assert.doesNotMatch(dashboard, /hasCatalogPermission\(currentUserRole,/);
 });

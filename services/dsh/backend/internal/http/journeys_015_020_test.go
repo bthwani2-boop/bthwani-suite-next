@@ -14,17 +14,17 @@ func TestJourneys015Through020ExposeGovernedRoutes(t *testing.T) {
 		path    string
 		pattern string
 	}{
-		{journey: "JRN-015 pickup state", method: http.MethodGet, path: "/dsh/partner/orders/order-1/pickup", pattern: "GET /dsh/partner/orders/{orderId}/pickup"},
-		{journey: "JRN-015 client pickup state", method: http.MethodGet, path: "/dsh/client/orders/order-1/pickup", pattern: "GET /dsh/client/orders/{orderId}/pickup"},
-		{journey: "JRN-015 pickup verify", method: http.MethodPost, path: "/dsh/partner/orders/order-1/pickup/verify", pattern: "POST /dsh/partner/orders/{orderId}/pickup/verify"},
-		{journey: "JRN-016 partner proof", method: http.MethodPost, path: "/dsh/partner/orders/order-1/partner-delivery/proof", pattern: "POST /dsh/partner/orders/{orderId}/partner-delivery/proof"},
-		{journey: "JRN-017 captain location", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/location", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/location"},
-		{journey: "JRN-017 client tracking", method: http.MethodGet, path: "/dsh/client/orders/order-1/tracking", pattern: "GET /dsh/client/orders/{orderId}/tracking"},
-		{journey: "JRN-018 captain proof", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/pod", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/pod"},
-		{journey: "JRN-019 operator cancellation", method: http.MethodPost, path: "/dsh/operator/orders/order-1/cancel", pattern: "POST /dsh/operator/orders/{orderId}/cancel"},
-		{journey: "JRN-020 exception report", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/exceptions", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/exceptions"},
-		{journey: "JRN-020 return arrival", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/return-to-store/arrive", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive"},
-		{journey: "JRN-020 partner receipt", method: http.MethodPost, path: "/dsh/partner/orders/order-1/return-to-store/accept", pattern: "POST /dsh/partner/orders/{orderId}/return-to-store/accept"},
+		{journey: " pickup state", method: http.MethodGet, path: "/dsh/partner/orders/order-1/pickup", pattern: "GET /dsh/partner/orders/{orderId}/pickup"},
+		{journey: " client pickup state", method: http.MethodGet, path: "/dsh/client/orders/order-1/pickup", pattern: "GET /dsh/client/orders/{orderId}/pickup"},
+		{journey: " pickup verify", method: http.MethodPost, path: "/dsh/partner/orders/order-1/pickup/verify", pattern: "POST /dsh/partner/orders/{orderId}/pickup/verify"},
+		{journey: " partner proof", method: http.MethodPost, path: "/dsh/partner/orders/order-1/partner-delivery/proof", pattern: "POST /dsh/partner/orders/{orderId}/partner-delivery/proof"},
+		{journey: " captain location", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/location", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/location"},
+		{journey: " client tracking", method: http.MethodGet, path: "/dsh/client/orders/order-1/tracking", pattern: "GET /dsh/client/orders/{orderId}/tracking"},
+		{journey: " captain proof", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/pod", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/pod"},
+		{journey: " operator cancellation", method: http.MethodPost, path: "/dsh/operator/orders/order-1/cancel", pattern: "POST /dsh/operator/orders/{orderId}/cancel"},
+		{journey: " exception report", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/exceptions", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/exceptions"},
+		{journey: " return arrival", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/return-to-store/arrive", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive"},
+		{journey: " partner receipt", method: http.MethodPost, path: "/dsh/partner/orders/order-1/return-to-store/accept", pattern: "POST /dsh/partner/orders/{orderId}/return-to-store/accept"},
 	}
 
 	for _, tc := range cases {

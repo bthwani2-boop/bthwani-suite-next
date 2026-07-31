@@ -11,7 +11,7 @@ import (
 
 // GET /dsh/client/orders/{orderId}/partner-delivery
 //
-// The client-facing reference status for JRN-016: the client never sees this
+// The client-facing partner-delivery reference status never exposes
 // for bthwani_delivery orders (those use dispatch tracking instead), only for
 // orders the store fulfils through its own fleet.
 func (s *protectedStoreServer) handleGetClientPartnerDeliveryTask(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +24,7 @@ func (s *protectedStoreServer) handleGetClientPartnerDeliveryTask(w http.Respons
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderId is required")
 		return
 	}
-	order, err := orders.GetClientOrder(s.db, orderID, actor.TenantID, actor.ID)
+	order, err := orders.GetClientOrder(s.db, orderID, actor.OperatorContextID, actor.ID)
 	if errors.Is(err, orders.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return

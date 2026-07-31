@@ -1,19 +1,18 @@
 openapi: 3.1.0
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: services/dsh
-x-bthwani-journey: JRN-031
+x-bthwani-capability: administration-governance
 info:
   title: DSH Administration Governance API
   version: 2.0.0
-  description: Governed roles, maker-checker approvals, append-only audit, rollback, and privacy-safe diagnostics.
+  description: Governed roles, maker-checker approvals, append-only audit,
+    rollback, and privacy-safe diagnostics.
 servers:
   - url: /dsh
-security:
-  - bearerAuth: []
 paths:
   /operator/admin/roles:
     get:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: listDshAdministrationRoles
       responses:
         "200":
@@ -22,16 +21,19 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [roles]
+                required: [ roles ]
                 properties:
                   roles:
                     type: array
                     items: { $ref: "#/components/schemas/Role" }
+      security:
+        - bearerAuth: []
   /operator/admin/roles/requests:
     post:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: requestDshAdministrationRoleDefinition
-      description: Creates a pending role-definition request; it never creates a role directly.
+      description: Creates a pending role-definition request; it never creates a role
+        directly.
       requestBody:
         required: true
         content:
@@ -44,13 +46,15 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [request]
+                required: [ request ]
                 properties:
                   request: { $ref: "#/components/schemas/RoleDefinitionRequest" }
         "409": { description: Role exists or an equivalent request is pending. }
+      security:
+        - bearerAuth: []
   /operator/admin/role-requests:
     get:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: listDshAdministrationRoleDefinitionRequests
       parameters:
         - $ref: "#/components/parameters/ApprovalStatus"
@@ -61,16 +65,19 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [requests]
+                required: [ requests ]
                 properties:
                   requests:
                     type: array
                     items: { $ref: "#/components/schemas/RoleDefinitionRequest" }
+      security:
+        - bearerAuth: []
   /operator/admin/role-requests/{requestId}/review:
     post:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: reviewDshAdministrationRoleDefinitionRequest
-      description: Creates a role only after an independent checker approves the pending request.
+      description: Creates a role only after an independent checker approves the
+        pending request.
       parameters:
         - $ref: "#/components/parameters/RequestId"
       requestBody:
@@ -85,7 +92,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [request]
+                required: [ request ]
                 properties:
                   request: { $ref: "#/components/schemas/RoleDefinitionRequest" }
                   role:
@@ -94,9 +101,11 @@ paths:
                       - type: "null"
         "403": { description: Self-approval is forbidden. }
         "409": { description: Version, lifecycle, or duplicate-role conflict. }
+      security:
+        - bearerAuth: []
   /operator/admin/staff:
     get:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: listDshAdministrationStaff
       responses:
         "200":
@@ -105,16 +114,19 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [staff]
+                required: [ staff ]
                 properties:
                   staff:
                     type: array
                     items: { $ref: "#/components/schemas/StaffAssignment" }
+      security:
+        - bearerAuth: []
   /operator/admin/staff/{staffId}/roles:
     post:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: requestDshStaffRoleChange
-      description: Creates a pending maker-checker request for assignment or revocation; it never mutates the approved assignment directly.
+      description: Creates a pending maker-checker request for assignment or
+        revocation; it never mutates the approved assignment directly.
       parameters:
         - $ref: "#/components/parameters/StaffId"
       requestBody:
@@ -129,14 +141,20 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [approval]
+                required: [ approval ]
                 properties:
                   approval: { $ref: "#/components/schemas/RoleAssignmentApproval" }
         "403": { description: Self-change or authorization is forbidden. }
-        "409": { description: Requested assignment state is no longer valid or an equivalent request is pending. }
+        "409":
+          {
+            description: Requested assignment state is no longer valid or an equivalent
+              request is pending.
+          }
+      security:
+        - bearerAuth: []
   /operator/admin/approvals:
     get:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: listDshRoleAssignmentApprovals
       parameters:
         - $ref: "#/components/parameters/ApprovalStatus"
@@ -147,16 +165,19 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [approvals]
+                required: [ approvals ]
                 properties:
                   approvals:
                     type: array
                     items: { $ref: "#/components/schemas/RoleAssignmentApproval" }
+      security:
+        - bearerAuth: []
   /operator/admin/approvals/{approvalId}/review:
     post:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: reviewDshStaffRoleChange
-      description: Applies assignment or revocation only when checker differs from maker and beneficiary.
+      description: Applies assignment or revocation only when checker differs from
+        maker and beneficiary.
       parameters:
         - $ref: "#/components/parameters/ApprovalId"
       requestBody:
@@ -171,7 +192,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [approval]
+                required: [ approval ]
                 properties:
                   approval: { $ref: "#/components/schemas/RoleAssignmentApproval" }
                   assignment:
@@ -180,11 +201,14 @@ paths:
                       - type: "null"
         "403": { description: Self-approval is forbidden. }
         "409": { description: Version, lifecycle, or role-state conflict. }
+      security:
+        - bearerAuth: []
   /operator/admin/approvals/{approvalId}/rollback-requests:
     post:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: requestDshAdministrationDecisionRollback
-      description: Appends a pending inverse decision without deleting the source approval or audit history.
+      description: Appends a pending inverse decision without deleting the source
+        approval or audit history.
       parameters:
         - $ref: "#/components/parameters/ApprovalId"
       requestBody:
@@ -194,7 +218,7 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [reason]
+              required: [ reason ]
               properties:
                 reason: { type: string, minLength: 5, maxLength: 1000 }
       responses:
@@ -204,14 +228,20 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [request]
+                required: [ request ]
                 properties:
                   request: { $ref: "#/components/schemas/RollbackRequest" }
         "403": { description: Beneficiary cannot request a self-affecting rollback. }
-        "409": { description: A pending rollback already exists or source state is no longer valid. }
+        "409":
+          {
+            description: A pending rollback already exists or source state is no longer
+              valid.
+          }
+      security:
+        - bearerAuth: []
   /operator/admin/rollback-requests:
     get:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: listDshAdministrationRollbackRequests
       parameters:
         - $ref: "#/components/parameters/ApprovalStatus"
@@ -222,16 +252,19 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [requests]
+                required: [ requests ]
                 properties:
                   requests:
                     type: array
                     items: { $ref: "#/components/schemas/RollbackRequest" }
+      security:
+        - bearerAuth: []
   /operator/admin/rollback-requests/{requestId}/review:
     post:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: reviewDshAdministrationDecisionRollback
-      description: Applies the inverse action only when checker differs from rollback maker, beneficiary, and original checker.
+      description: Applies the inverse action only when checker differs from rollback
+        maker, beneficiary, and original checker.
       parameters:
         - $ref: "#/components/parameters/RequestId"
       requestBody:
@@ -246,7 +279,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [request]
+                required: [ request ]
                 properties:
                   request: { $ref: "#/components/schemas/RollbackRequest" }
                   assignment:
@@ -255,11 +288,14 @@ paths:
                       - type: "null"
         "403": { description: Independent checker rule violated. }
         "409": { description: Version or role-state conflict. }
+      security:
+        - bearerAuth: []
   /operator/admin/diagnostics:
     get:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: getDshAdministrationDiagnostics
-      description: Returns aggregate operational counts only and never PII, credentials, documents, tokens, or secrets.
+      description: Returns aggregate operational counts only and never PII,
+        credentials, documents, tokens, or secrets.
       responses:
         "200":
           description: Privacy-safe administration diagnostics.
@@ -267,14 +303,17 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [diagnostics]
+                required: [ diagnostics ]
                 properties:
                   diagnostics: { $ref: "#/components/schemas/AdministrationDiagnostics" }
+      security:
+        - bearerAuth: []
   /operator/admin/partners:
     get:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: listDshAdministrationPartnerActivationProjections
-      description: Read-only projection; activation and blocking remain owned by the partner lifecycle route.
+      description: Read-only projection; activation and blocking remain owned by the
+        partner lifecycle route.
       parameters:
         - name: status
           in: query
@@ -282,11 +321,14 @@ paths:
           schema: { type: string }
       responses:
         "200": { description: Partner activation projections. }
+      security:
+        - bearerAuth: []
   /operator/admin/captains:
     get:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: listDshAdministrationCaptainCredentialProjections
-      description: Read-only projection; credential creation and update remain owned by Workforce.
+      description: Read-only projection; credential creation and update remain owned
+        by Workforce.
       parameters:
         - name: status
           in: query
@@ -294,11 +336,14 @@ paths:
           schema: { type: string }
       responses:
         "200": { description: Captain credential projections. }
+      security:
+        - bearerAuth: []
   /operator/admin/audit:
     get:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: listDshAdministrationAudit
-      description: Returns append-only audit events with allowlisted, redacted metadata only.
+      description: Returns append-only audit events with allowlisted, redacted
+        metadata only.
       parameters:
         - name: actorId
           in: query
@@ -311,21 +356,28 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [audit]
+                required: [ audit ]
                 properties:
                   audit:
                     type: array
                     items: { $ref: "#/components/schemas/AuditEntry" }
+      security:
+        - bearerAuth: []
   /operator/admin/support-sessions:
     get:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: listDshAdministrationSupportSessionRequests
-      description: Lists governed support-session requests without exposing issued bearer tokens.
+      description: Lists governed support-session requests without exposing issued
+        bearer tokens.
       parameters:
         - name: status
           in: query
           required: false
-          schema: { type: string, enum: [pending, approved, rejected, issued, revoked, expired] }
+          schema:
+            {
+              type: string,
+              enum: [ pending, approved, rejected, issued, revoked, expired ]
+            }
       responses:
         "200":
           description: Support-session request queue.
@@ -333,16 +385,19 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [requests]
+                required: [ requests ]
                 properties:
                   requests: { type: array, items: { type: object, additionalProperties: true } }
         "400": { description: Invalid status filter. }
         "401": { description: Authentication required. }
         "403": { description: Administration read permission required. }
+      security:
+        - bearerAuth: []
     post:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: createDshAdministrationSupportSessionRequest
-      description: Creates a pending support-session request; issuance requires an independent checker.
+      description: Creates a pending support-session request; issuance requires an
+        independent checker.
       requestBody:
         required: true
         content:
@@ -350,7 +405,7 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [targetActorId, reason, durationMinutes]
+              required: [ targetActorId, reason, durationMinutes ]
               properties:
                 targetActorId: { type: string, minLength: 1 }
                 reason: { type: string, minLength: 5, maxLength: 1000 }
@@ -362,9 +417,11 @@ paths:
         "403": { description: Administration manage permission required. }
         "409": { description: Equivalent request is active or source state changed. }
         "503": { description: Identity support-session integration is not configured. }
+      security:
+        - bearerAuth: []
   /operator/admin/support-sessions/{requestId}/review:
     post:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: reviewDshAdministrationSupportSessionRequest
       description: Independently approves or rejects a pending support-session request.
       parameters:
@@ -376,23 +433,30 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [decision, expectedVersion]
+              required: [ decision, expectedVersion ]
               properties:
-                decision: { type: string, enum: [approved, rejected] }
+                decision: { type: string, enum: [ approved, rejected ] }
                 reviewNote: { type: string, maxLength: 1000 }
                 expectedVersion: { type: integer, minimum: 1 }
       responses:
-        "200": { description: Request reviewed; an approved response may include the one-time Identity handoff result. }
+        "200":
+          {
+            description: Request reviewed; an approved response may include the one-time
+              Identity handoff result.
+          }
         "400": { description: Invalid review. }
         "403": { description: Self-approval or missing approval permission. }
         "404": { description: Request not found. }
         "409": { description: Version or lifecycle conflict. }
         "502": { description: Identity denied the support-session handoff. }
+      security:
+        - bearerAuth: []
   /operator/admin/support-sessions/{requestId}/revoke:
     post:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: revokeDshAdministrationSupportSessionRequest
-      description: Revokes the Identity support session and appends the DSH request lifecycle evidence.
+      description: Revokes the Identity support session and appends the DSH request
+        lifecycle evidence.
       parameters:
         - $ref: "#/components/parameters/RequestId"
       requestBody:
@@ -402,7 +466,7 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [reason]
+              required: [ reason ]
               properties:
                 reason: { type: string, minLength: 3, maxLength: 1000 }
       responses:
@@ -411,16 +475,25 @@ paths:
         "403": { description: Administration approval permission required. }
         "404": { description: Request not found. }
         "409": { description: Request is no longer revocable. }
+      security:
+        - bearerAuth: []
   /operator/admin/support/snapshot:
     get:
-      tags: ["operator-admin"]
+      tags: [ "operator-admin" ]
       operationId: getDshAdministrationSupportSnapshot
-      description: Returns a privacy-scoped snapshot only for a valid Identity support session with actor-bound support.read permission.
+      description: Returns a privacy-scoped snapshot only for a valid Identity support
+        session with actor-bound support.read permission.
       responses:
-        "200": { description: Identity support-session context and privacy-scoped operational snapshot. }
+        "200":
+          {
+            description: Identity support-session context and privacy-scoped operational
+              snapshot.
+          }
         "401": { description: Support bearer session required. }
         "403": { description: Session invalid, expired, or outside its actor scope. }
         "503": { description: Identity support-session integration is not configured. }
+      security:
+        - bearerAuth: []
 
 components:
   securitySchemes:
@@ -451,7 +524,7 @@ components:
   schemas:
     ApprovalStatus:
       type: string
-      enum: [pending, approved, rejected]
+      enum: [ pending, approved, rejected ]
     AdministrationPermission:
       type: string
       enum:
@@ -468,14 +541,33 @@ components:
         - administration.rollback.approve
     AdministrationSurface:
       type: string
-      enum: [control-panel, app-client, app-partner, app-captain, app-field, webapp, website]
+      enum:
+        [
+          control-panel,
+          app-client,
+          app-partner,
+          app-captain,
+          app-field,
+          webapp,
+          website
+        ]
     RoleChangeAction:
       type: string
-      enum: [staff_role_assignment, staff_role_revocation]
+      enum: [ staff_role_assignment, staff_role_revocation ]
     Role:
       type: object
       additionalProperties: false
-      required: [id, name, description, permissions, surfaces, active, version, createdAt]
+      required:
+        [
+          id,
+          name,
+          description,
+          permissions,
+          surfaces,
+          active,
+          version,
+          createdAt
+        ]
       properties:
         id: { type: string, format: uuid }
         name: { type: string, pattern: "^[a-z][a-z0-9-]{2,79}$" }
@@ -497,7 +589,7 @@ components:
     RoleDefinitionRequestInput:
       type: object
       additionalProperties: false
-      required: [name, description, permissions, surfaces, reason]
+      required: [ name, description, permissions, surfaces, reason ]
       properties:
         name: { type: string, pattern: "^[a-z][a-z0-9-]{2,79}$" }
         description: { type: string, maxLength: 1000 }
@@ -516,7 +608,22 @@ components:
     RoleDefinitionRequest:
       type: object
       additionalProperties: false
-      required: [id, roleName, description, permissions, surfaces, requestedBy, reason, status, reviewedBy, reviewNote, version, createdAt, updatedAt]
+      required:
+        [
+          id,
+          roleName,
+          description,
+          permissions,
+          surfaces,
+          requestedBy,
+          reason,
+          status,
+          reviewedBy,
+          reviewNote,
+          version,
+          createdAt,
+          updatedAt
+        ]
       properties:
         id: { type: string, format: uuid }
         roleName: { type: string }
@@ -540,11 +647,11 @@ components:
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        reviewedAt: { type: [string, "null"], format: date-time }
+        reviewedAt: { type: [ string, "null" ], format: date-time }
     StaffAssignment:
       type: object
       additionalProperties: false
-      required: [id, actorId, roleId, roleName, assignedBy, assignedAt]
+      required: [ id, actorId, roleId, roleName, assignedBy, assignedAt ]
       properties:
         id: { type: string, format: uuid }
         actorId: { type: string }
@@ -555,7 +662,7 @@ components:
     RoleChangeRequestInput:
       type: object
       additionalProperties: false
-      required: [roleId, actionType, reason]
+      required: [ roleId, actionType, reason ]
       properties:
         roleId: { type: string, format: uuid }
         actionType: { $ref: "#/components/schemas/RoleChangeAction" }
@@ -563,15 +670,30 @@ components:
     ApprovalReviewInput:
       type: object
       additionalProperties: false
-      required: [decision, reviewNote, expectedVersion]
+      required: [ decision, reviewNote, expectedVersion ]
       properties:
-        decision: { type: string, enum: [approved, rejected] }
+        decision: { type: string, enum: [ approved, rejected ] }
         reviewNote: { type: string, maxLength: 1000 }
         expectedVersion: { type: integer, minimum: 1 }
     RoleAssignmentApproval:
       type: object
       additionalProperties: false
-      required: [id, actionType, targetActorId, roleId, roleName, requestedBy, reason, status, reviewedBy, reviewNote, version, createdAt, updatedAt]
+      required:
+        [
+          id,
+          actionType,
+          targetActorId,
+          roleId,
+          roleName,
+          requestedBy,
+          reason,
+          status,
+          reviewedBy,
+          reviewNote,
+          version,
+          createdAt,
+          updatedAt
+        ]
       properties:
         id: { type: string, format: uuid }
         actionType: { $ref: "#/components/schemas/RoleChangeAction" }
@@ -586,11 +708,29 @@ components:
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        reviewedAt: { type: [string, "null"], format: date-time }
+        reviewedAt: { type: [ string, "null" ], format: date-time }
     RollbackRequest:
       type: object
       additionalProperties: false
-      required: [id, sourceApprovalId, sourceActionType, inverseActionType, targetActorId, roleId, roleName, requestedBy, reason, status, reviewedBy, reviewNote, version, createdAt, updatedAt, sourceApprovedBy]
+      required:
+        [
+          id,
+          sourceApprovalId,
+          sourceActionType,
+          inverseActionType,
+          targetActorId,
+          roleId,
+          roleName,
+          requestedBy,
+          reason,
+          status,
+          reviewedBy,
+          reviewNote,
+          version,
+          createdAt,
+          updatedAt,
+          sourceApprovedBy
+        ]
       properties:
         id: { type: string, format: uuid }
         sourceApprovalId: { type: string, format: uuid }
@@ -607,14 +747,24 @@ components:
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        reviewedAt: { type: [string, "null"], format: date-time }
+        reviewedAt: { type: [ string, "null" ], format: date-time }
         sourceApprovedBy: { type: string }
     AdministrationDiagnostics:
       type: object
       additionalProperties: false
-      required: [status, activeRoleCount, approvedAssignmentCount, pendingRoleDefinitionCount, pendingRoleAssignmentCount, pendingRollbackCount, recentRestrictedAuditCount, generatedAt]
+      required:
+        [
+          status,
+          activeRoleCount,
+          approvedAssignmentCount,
+          pendingRoleDefinitionCount,
+          pendingRoleAssignmentCount,
+          pendingRollbackCount,
+          recentRestrictedAuditCount,
+          generatedAt
+        ]
       properties:
-        status: { type: string, enum: [healthy, attention] }
+        status: { type: string, enum: [ healthy, attention ] }
         activeRoleCount: { type: integer, minimum: 0 }
         approvedAssignmentCount: { type: integer, minimum: 0 }
         pendingRoleDefinitionCount: { type: integer, minimum: 0 }
@@ -625,7 +775,17 @@ components:
     AuditEntry:
       type: object
       additionalProperties: false
-      required: [id, actorId, action, targetId, detail, sensitivity, correlationId, createdAt]
+      required:
+        [
+          id,
+          actorId,
+          action,
+          targetId,
+          detail,
+          sensitivity,
+          correlationId,
+          createdAt
+        ]
       properties:
         id: { type: string, format: uuid }
         actorId: { type: string }
@@ -633,7 +793,8 @@ components:
         targetId: { type: string }
         detail:
           type: string
-          description: Redacted allowlisted metadata only; never raw reason, review note, phone, credential, document, token, or secret.
-        sensitivity: { type: string, enum: [internal, restricted] }
+          description: Redacted allowlisted metadata only; never raw reason, review note,
+            phone, credential, document, token, or secret.
+        sensitivity: { type: string, enum: [ internal, restricted ] }
         correlationId: { type: string }
         createdAt: { type: string, format: date-time }

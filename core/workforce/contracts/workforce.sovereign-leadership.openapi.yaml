@@ -115,11 +115,192 @@ paths:
           description: Department employee and one-time control-panel activation created.
         '403':
           description: employee:create with matching department scope is required.
+  /workforce/department-employees/{actorId}:
+    parameters:
+      - $ref: '#/components/parameters/ActorId'
+    get:
+      operationId: getDepartmentEmployee
+      tags: [department-employees]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Department employee visible to the caller department scope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeSummary'
+        '403':
+          description: employee:read with matching department scope is required.
+        '404':
+          description: Employee not found.
+    patch:
+      operationId: updateDepartmentEmployee
+      tags: [department-employees]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDepartmentEmployeeRequest'
+      responses:
+        '200':
+          description: Updated department employee.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeSummary'
+        '403':
+          description: employee:update with matching department scope is required.
+        '404':
+          description: Employee not found.
+  /workforce/department-employees/{actorId}/suspend:
+    parameters:
+      - $ref: '#/components/parameters/ActorId'
+    post:
+      operationId: suspendDepartmentEmployee
+      tags: [department-employees]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepartmentEmployeeStatusChangeRequest'
+      responses:
+        '200':
+          description: Suspended department employee.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeSummary'
+        '403':
+          description: employee:suspend with matching department scope is required.
+        '409':
+          description: Optimistic-lock conflict.
+  /workforce/department-employees/{actorId}/reactivate:
+    parameters:
+      - $ref: '#/components/parameters/ActorId'
+    post:
+      operationId: reactivateDepartmentEmployee
+      tags: [department-employees]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepartmentEmployeeStatusChangeRequest'
+      responses:
+        '200':
+          description: Reactivated department employee.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeSummary'
+        '403':
+          description: employee:reactivate with matching department scope is required.
+        '409':
+          description: Optimistic-lock conflict.
+  /workforce/department-employees/{actorId}/activation-codes:
+    parameters:
+      - $ref: '#/components/parameters/ActorId'
+    post:
+      operationId: issueDepartmentEmployeeActivation
+      tags: [department-employees]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+      responses:
+        '201':
+          description: One-time control-panel activation code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivationCodeResult'
+        '403':
+          description: employee.activation:issue with matching department scope is required.
+    delete:
+      operationId: revokeDepartmentEmployeeActivation
+      tags: [department-employees]
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Activation revoked.
+        '403':
+          description: employee.activation:issue with matching department scope is required.
+  /workforce/employees/{actorId}/governance:
+    parameters:
+      - $ref: '#/components/parameters/ActorId'
+    get:
+      operationId: getEmployeeGovernance
+      tags: [department-employees]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Employee governance profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [employeeGovernance]
+                properties:
+                  employeeGovernance:
+                    $ref: '#/components/schemas/SovereignLeadershipGovernance'
+        '403':
+          description: provider:read is required.
+    put:
+      operationId: putEmployeeGovernance
+      tags: [department-employees]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertEmployeeGovernanceRequest'
+      responses:
+        '200':
+          description: Updated employee governance profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [employeeGovernance]
+                properties:
+                  employeeGovernance:
+                    $ref: '#/components/schemas/SovereignLeadershipGovernance'
+        '403':
+          description: provider:update is required.
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
+  parameters:
+    ActorId:
+      name: actorId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
   schemas:
     PermissionBundleCode:
       type: string

@@ -34,7 +34,7 @@ const skillRelative = "governance/skills/skills-registry.json";
 const rolesRelative = "governance/operational_journey_protocol_package/sdlc/roles-and-authority.yaml";
 const impactSchemaRelative = "governance/operational_journey_protocol_package/sdlc/change-impact.schema.json";
 const artifactSchemaRelative = "governance/operational_journey_protocol_package/sdlc/artifact-manifest.schema.json";
-const authorityDocRelative = "governance/26_SDLC_TEAM_AND_STAGE_GATES.md";
+const authorityDocRelative = "governance/policies/release.md";
 
 const decisions = readJson(decisionRelative);
 const agents = readJson(agentRelative);
@@ -68,7 +68,7 @@ if (skills) {
 }
 
 for (const marker of ["financial_control_authority:", "- finance_approval", "may_approve_finance: false"]) if (!roles.includes(marker)) violations.push({ file: rolesRelative, message: `FINANCIAL_ROLE_MARKER_MISSING ${marker}` });
-for (const marker of ['"wltFinance"', '"tenant"', '"visual"', '"qa"', '"release"', '"production"']) if (!impactSchema.includes(marker)) violations.push({ file: impactSchemaRelative, message: `IMPACT_SCHEMA_MARKER_MISSING ${marker}` });
+for (const marker of ['"wltFinance"', '"operatorContext"', '"visual"', '"qa"', '"release"', '"production"']) if (!impactSchema.includes(marker)) violations.push({ file: impactSchemaRelative, message: `IMPACT_SCHEMA_MARKER_MISSING ${marker}` });
 for (const marker of ['"applicableEvidenceScopes"', '"passedEvidenceScopes"', '"notApplicableStages"', '"stageExclusions"', '"finance"', '"isolation"']) if (!artifactSchema.includes(marker)) violations.push({ file: artifactSchemaRelative, message: `ARTIFACT_SCHEMA_MARKER_MISSING ${marker}` });
 for (const marker of ["FINANCIAL_CONTROL_AUTHORITY", "finance", "isolation", "notApplicableStages", "stageExclusions"]) if (!authorityDoc.includes(marker)) violations.push({ file: authorityDocRelative, message: `SDLC_AUTHORITY_MARKER_MISSING ${marker}` });
 

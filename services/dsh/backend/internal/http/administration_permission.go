@@ -31,7 +31,7 @@ func (s *protectedStoreServer) requireAdministrationPermission(
 	actor := store.StoreActor{
 		ID:       identity.Subject,
 		Role:     "permission:" + action,
-		TenantID: identity.TenantID,
+		OperatorContextID: identity.OperatorContextID,
 	}
 	candidates := administration.AdministrationPermissionCandidates(action)
 	for _, permission := range identity.Permissions {

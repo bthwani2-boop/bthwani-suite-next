@@ -52,9 +52,9 @@ for (const marker of [
   "governance_and_ci_authorities_remain_logically_separate",
   "single_owner_authorization_never_satisfies_protected_closure",
   "wlt_finance_change_requires_financial_control_authority",
-  "tenant_or_isolation_change_requires_isolation_security_approval",
+  "operator_context_or_isolation_change_requires_isolation_security_approval",
   "residual_risk_requires_risk_acceptance_authority",
-  "saas_activation_requires_explicit_product_security_finance_isolation_release_and_production_evidence",
+  "partner_commercialization_activation_requires_explicit_product_security_finance_isolation_release_and_production_evidence",
   "static_product_runtime_visual_qa_security_finance_isolation_governance_ci_release_and_production_scopes_remain_independent",
 ]) if (!lifecycle.includes(marker)) violations.push({ file: lifecycleRelative, message: `MISSING_LIFECYCLE_RULE ${marker}` });
 

@@ -1,0 +1,144 @@
+openapi: 3.1.0
+info:
+  title: BThwani Shared Contract Components
+  version: 1.0.0
+  description: >-
+    Canonical cross-context transport components: authentication schemes,
+    trust headers, the runtime error envelope, pagination, and money. Domain
+    schemas remain owned by their bounded-context contracts.
+
+    WLT currently references the canonical Error schema from this document.
+    The remaining bounded contexts still carry local transport declarations
+    and must migrate deliberately through their governed composers before
+    those declarations can be removed. This document therefore owns only the
+    components already consumed by an active context; it is not permission to
+    create parallel local variants.
+
+    The wire shapes match the Go backends currently emit: the {code, message}
+    error body used by sendError helpers and the amountMinorUnits + currency
+    pair used by financial handlers.
+x-bthwani-owner: contracts/shared
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: DISABLED
+x-bthwani-runtime-dependency: false
+paths:
+  x-bthwani-components-only: true
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    serviceBearer:
+      type: http
+      scheme: bearer
+  parameters:
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, pattern: '^Bearer .+' }
+    ServiceCaller:
+      name: X-Service-Caller
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    OperatorContextId:
+      name: X-Operator-Context-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 120 }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
+    CorrelationIdOptional:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema: { type: string, minLength: 1, maxLength: 200 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 200 }
+    PageCursor:
+      name: cursor
+      in: query
+      required: false
+      schema: { type: string, minLength: 1 }
+    PageLimit:
+      name: limit
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      description: >-
+        The wire shape every Go sendError(w, status, code, message) helper
+        emits across the governed backends. Domain-specific error schemas
+        should reference this component instead of redefining it.
+      properties:
+        code: { type: string }
+        message: { type: string }
+    Money:
+      type: object
+      additionalProperties: false
+      required: [amountMinorUnits, currency]
+      description: >-
+        Matches the amountMinorUnits int64 plus ISO 4217 currency pair used by
+        WLT and DSH. Monetary values must never use floating-point numbers.
+      properties:
+        amountMinorUnits: { type: integer, format: int64 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+    PageInfo:
+      type: object
+      additionalProperties: false
+      required: [hasNextPage]
+      properties:
+        nextCursor: { type: string }
+        hasNextPage: { type: boolean }
+  responses:
+    Error:
+      description: Governed error response.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    BadRequest:
+      description: The request failed validation.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthenticated:
+      description: The request is missing or carries an invalid credential.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: The authenticated caller is not permitted to perform this operation.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: The requested resource does not exist or is not visible to the caller.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: The request conflicts with the current state of the resource.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TooManyRequests:
+      description: The caller has exceeded the allowed request rate.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ServerError:
+      description: An unexpected server-side failure occurred.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }

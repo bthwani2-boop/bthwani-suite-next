@@ -17,6 +17,14 @@
       "source_file": "tools/scripts/run-journey-gate.ps1"
     },
     {
+      "id": "journey-runtime",
+      "name": "Journey Runtime Guard Set",
+      "script": "guard:journey-runtime",
+      "exit_level": "fail",
+      "description": "Runs the journey guard set with explicit runtime verification; a pass remains scoped runtime evidence.",
+      "source_file": "tools/scripts/run-journey-gate.ps1"
+    },
+    {
       "id": "ui-kit-boundary",
       "name": "UI Kit Boundary Gate",
       "script": "guard:ui-kit-boundary",
@@ -63,6 +71,54 @@
       "exit_level": "fail",
       "description": "Rejects forbidden local roots, retired labels, deprecated guards, and transient or fake truth patterns in governed scopes.",
       "source_file": "tools/guards/cleanup-policy-gate.mjs"
+    },
+    {
+      "id": "contract-registry-drift",
+      "name": "Contract Registry Drift Gate",
+      "script": "guard:contract-registry-drift",
+      "exit_level": "fail",
+      "description": "Regenerates contracts/generated/contract-registry.json from the master index, each context's entry contract and manifest, and the generated-client registry, and rejects any difference from the committed file.",
+      "source_file": "tools/guards/contract-registry-drift-gate.mjs"
+    },
+    {
+      "id": "migration-manifest-drift",
+      "name": "Migration Manifest Drift Gate",
+      "script": "guard:migration-manifest-drift",
+      "exit_level": "fail",
+      "description": "Rejects unregistered, missing, renamed, checksum-drifted, or newly prefix-colliding SQL migrations against each service's committed migrations/manifest.json.",
+      "source_file": "tools/guards/migration-manifest-drift-gate.mjs"
+    },
+    {
+      "id": "generated-client-provenance",
+      "name": "Generated Client Provenance Gate",
+      "script": "guard:generated-client-provenance",
+      "exit_level": "fail",
+      "description": "Requires every tracked file under a clients/generated directory to declare its provenance, and proves each openapi-typescript client byte-identical to a fresh run against its committed contract.",
+      "source_file": "tools/guards/generated-client-provenance-gate.mjs"
+    },
+    {
+      "id": "contract-scope-binding",
+      "name": "Contract Scope Binding Gate",
+      "script": "guard:contract-scope-binding",
+      "exit_level": "fail",
+      "description": "Verifies that authorization scopes enforced by Go route guards are declared in the canonical scope vocabulary.",
+      "source_file": "tools/guards/contract-scope-binding-gate.mjs"
+    },
+    {
+      "id": "openapi-bundle-provenance",
+      "name": "OpenAPI Bundle Provenance Gate",
+      "script": "guard:openapi-bundle-provenance",
+      "exit_level": "fail",
+      "description": "Recomposes every governed bounded-context OpenAPI bundle and rejects committed bundle drift from canonical source files.",
+      "source_file": "tools/guards/openapi-bundle-provenance-gate.mjs"
+    },
+    {
+      "id": "wlt-openapi-bundle",
+      "name": "WLT OpenAPI Bundle Gate",
+      "script": "guard:wlt-openapi-bundle",
+      "exit_level": "fail",
+      "description": "Verifies the composed WLT OpenAPI bundle and its generated artifacts against the modular contract sources.",
+      "source_file": "tools/guards/wlt-openapi-bundle-gate.mjs"
     },
     {
       "id": "api-binding",
@@ -297,14 +353,6 @@
       "source_file": "tools/guards/authority-separation-gate.mjs"
     },
     {
-      "id": "saas-governance",
-      "name": "SaaS Governance Gate",
-      "script": "guard:saas-governance",
-      "exit_level": "fail",
-      "description": "Validates SaaS readiness state, tenant-governance constraints, deferred commercial policy, canonical decisions, and activation evidence boundaries.",
-      "source_file": "tools/guards/saas-governance-gate.mjs"
-    },
-    {
       "id": "guard-registry",
       "name": "Guard Registry and CI Policy Gate",
       "script": "guard:guard-registry",
@@ -317,7 +365,7 @@
       "name": "Objective Nomenclature Guard",
       "script": "guard:nomenclature",
       "exit_level": "fail",
-      "description": "Rejects new files or new code lines containing annoying .jrn or JRN- naming conventions to ensure objective and contextual naming.",
+      "description": "Rejects new files or new code lines containing legacy phase identifiers to ensure objective and contextual naming.",
       "source_file": "tools/guards/nomenclature-guard.mjs"
     },
     {
@@ -445,21 +493,6 @@
       "exit_level": "fail",
       "description": "Rejects selected fake, preview, placeholder, and in-memory success patterns in runtime-facing source; it does not prove runtime execution.",
       "source_file": "tools/guards/runtime-real-bindings-gate.mjs"
-    },
-    {
-      "id": "live-cross-journey-integrity",
-      "name": "Cross-Journey Regression Gate",
-      "script": "guard:live-cross-journey-integrity",
-      "exit_level": "fail",
-      "description": "Enforces selected named cross-journey regression invariants without claiming complete runtime coverage.",
-      "source_file": "tools/guards/live-cross-journey-integrity-gate.mjs"
-    },
-    {
-      "id": "product-truth-dispatcher",
-      "name": "Journey Product Truth Dispatcher",
-      "exit_level": "fail",
-      "description": "Runs the journey-specific Product Truth validators discovered by the governed dispatcher.",
-      "source_file": "tools/guards/product-truth-gate.mjs"
     },
     {
       "id": "dsh-openapi-modular",

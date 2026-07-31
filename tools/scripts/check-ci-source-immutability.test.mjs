@@ -111,6 +111,35 @@ steps:
   assert.deepEqual(ids(workflow), ["SOURCE_FORMAT_WRITE", "SOURCE_FORMAT_WRITE"]);
 });
 
+test("allows deterministic OpenAPI artifact generation but rejects Go source rewrites", () => {
+  const workflow = `
+steps:
+  - run: gofmt -w services/dsh/backend/internal/http/server.go
+  - run: pnpm run openapi:generate:dsh
+  - run: pnpm --dir services/wlt openapi:compose
+`;
+  assert.deepEqual(ids(workflow), ["GO_SOURCE_FORMAT_WRITE"]);
+});
+
+test("detects one-off repair scripts and inline source writes", () => {
+  const workflow = `
+steps:
+  - run: python tools/scripts/repair-field-catalog-detail.py
+  - run: node tools/scripts/normalize-refund-fragment-refs.mjs
+  - run: |
+      source.write_text(updated, encoding="utf-8")
+      fs.writeFileSync(file, content)
+      fs.unlinkSync(retired)
+`;
+  assert.deepEqual(ids(workflow), [
+    "SOURCE_REPAIR_SCRIPT_EXECUTION",
+    "SOURCE_REPAIR_SCRIPT_EXECUTION",
+    "INLINE_SOURCE_WRITE",
+    "INLINE_SOURCE_WRITE",
+    "INLINE_SOURCE_WRITE",
+  ]);
+});
+
 test("allows only the hardened manual read-only remediation workflow", () => {
   assert.deepEqual(ids(validRemediation, ".github/workflows/remediation-analysis.yml"), []);
 });

@@ -1,4 +1,4 @@
-import type { components } from "../../../clients/generated/dsh-catalog-api";
+import type { operations } from "../../../clients/generated/dsh-api";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import * as catalogApi from "./central-catalog.api";
@@ -14,16 +14,23 @@ import type {
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "central-catalog-occ-corr");
 
-type DomainMutationInput = components["schemas"]["UpdateDomainRequest"];
-type NodeMutationInput = components["schemas"]["UpdateNodeRequest"];
-type ProductMutationInput = components["schemas"]["UpdateMasterProductRequest"];
-type ProposalDecisionInput = components["schemas"]["ProposalDecisionRequest"];
-type ProposalTransitionInput = components["schemas"]["ProposalTransitionRequest"];
-type PolicyMutationInput = components["schemas"]["UpdatePolicyRequest"];
-type AssortmentMutationInput = components["schemas"]["UpsertAssortmentRequest"];
-type ProposalMutationInput = components["schemas"]["UpdateProposalRequest"];
-type AssetMutationInput = components["schemas"]["UpdateAssetRequest"];
-type AssetReviewInput = components["schemas"]["ReviewAssetRequest"];
+type DomainMutationInput = NonNullable<operations["updateCatalogDomain"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
+type NodeMutationInput = NonNullable<operations["updateCatalogNode"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
+type ProductMutationInput = NonNullable<operations["updateMasterProduct"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
+type ProposalDecisionInput = Parameters<typeof catalogApi.decideProductProposal>[1] & { readonly expectedVersion: number };
+type ProposalTransitionInput = Parameters<typeof catalogApi.transitionProductProposal>[1] & { readonly expectedVersion: number };
+type PolicyMutationInput = NonNullable<operations["patchCatalogPlatformPolicy"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
+type AssortmentMutationInput = Parameters<typeof catalogApi.upsertOperatorStoreAssortment>[2] & { readonly expectedVersion?: number };
+type ProposalMutationInput = {
+  readonly expectedVersion: number;
+  readonly proposedNameAr?: string;
+  readonly proposedNameEn?: string;
+  readonly brand?: string;
+  readonly barcode?: string | null;
+  readonly imageObjectKey?: string | null;
+};
+type AssetMutationInput = NonNullable<operations["updateCatalogAsset"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
+type AssetReviewInput = NonNullable<operations["reviewCatalogAsset"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
 
 export async function updateCatalogDomainOCC(domainId: string, input: DomainMutationInput): Promise<CentralCatalogDomain> {
   const response = await request<{ domain: CentralCatalogDomain }>(

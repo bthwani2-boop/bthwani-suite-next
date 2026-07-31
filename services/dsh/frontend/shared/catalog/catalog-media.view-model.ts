@@ -1,4 +1,4 @@
-﻿/**
+/**
  * catalog-media.view-model.ts
  *
  * View model helpers for catalog media UI.
@@ -12,7 +12,7 @@ import type {
   ClientVisibleCatalogEntry,
 } from "./central-catalog.types";
 
-// ─── Upload state labels ───────────────────────────────────────────────────────
+// --- Upload state labels -------------------------------------------------------
 
 export function uploadStageLabel(progress: AssetUploadProgress): string {
   switch (progress.stage) {
@@ -39,7 +39,7 @@ export function isUploadTerminal(progress: AssetUploadProgress): boolean {
   return progress.stage === "linked" || progress.stage === "failed";
 }
 
-// ─── Asset card states ─────────────────────────────────────────────────────────
+// --- Asset card states ---------------------------------------------------------
 
 export type AssetCardState =
   | { kind: "draft"; asset: CatalogAsset }
@@ -64,7 +64,7 @@ export function assetCardStateFromAsset(asset: CatalogAsset, link?: CatalogAsset
   }
 }
 
-// ─── Effective image resolution ────────────────────────────────────────────────
+// --- Effective image resolution ------------------------------------------------
 
 /**
  * Resolve the effective image URL for a catalog product entry.
@@ -92,7 +92,7 @@ export function buildPublicMediaUrl(baseUrl: string, assetId: string, variant: "
   return `${baseUrl}/dsh/public/media/${encodeURIComponent(assetId)}/${variant}`;
 }
 
-// ─── Gallery ordering ──────────────────────────────────────────────────────────
+// --- Gallery ordering ----------------------------------------------------------
 
 export function sortLinksByOrder(links: readonly CatalogAssetLink[]): readonly CatalogAssetLink[] {
   return [...links].sort((a, b) => {
@@ -102,7 +102,7 @@ export function sortLinksByOrder(links: readonly CatalogAssetLink[]): readonly C
   });
 }
 
-// ─── Alt text validation ───────────────────────────────────────────────────────
+// --- Alt text validation -------------------------------------------------------
 
 export function validateAltText(altAr: string): string | null {
   if (!altAr || altAr.trim().length === 0) {

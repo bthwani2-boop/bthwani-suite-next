@@ -34,6 +34,7 @@ async function requestJson(operation, url, options = {}) {
   const response = await fetch(url, options);
   const text = await response.text();
   if (!response.ok) {
+    if (options.body) console.error(`Payload failed: ${options.body}`);
     throw new HttpError(operation, response.status, text);
   }
   if (!text.trim()) return null;
@@ -117,9 +118,8 @@ async function collectClientStorefrontFailures() {
 async function collectReadinessFailures() {
   const failures = await collectClientStorefrontFailures();
 
-  let partnerToken;
   try {
-    partnerToken = await getToken(LOCAL_ACTORS.partner.username);
+    const partnerToken = await getToken(LOCAL_ACTORS.partner.username);
     const scopes = await requestJson('dsh:partner-scopes', `${DSH_API_BASE}/dsh/partner/scopes`, {
       headers: authorization(partnerToken),
     });
@@ -169,34 +169,6 @@ async function ensureActiveZone(operatorToken) {
   return created.zone;
 }
 
-async function ensureActiveShift(operatorToken) {
-  const result = await requestJson('workforce:list-shifts', `${WORKFORCE_API_BASE}/workforce/reference/shifts`, {
-    headers: authorization(operatorToken),
-  });
-  const active = list(result?.shifts).find((shift) => shift?.active !== false);
-  if (active) return active;
-
-  const payload = {
-    code: 'LOCAL-DAY',
-    nameAr: 'الوردية النهارية المحلية',
-    nameEn: 'Local day shift',
-    startsAt: '08:00',
-    endsAt: '17:00',
-    active: true,
-  };
-  const created = await requestJson('workforce:create-shift', `${WORKFORCE_API_BASE}/workforce/reference/shifts`, {
-    method: 'POST',
-    headers: {
-      ...authorization(operatorToken),
-      'Content-Type': 'application/json',
-      'X-Correlation-ID': `mobile-dev-shift-${stableToken(payload.code)}`,
-    },
-    body: JSON.stringify(payload),
-  });
-  if (!created?.code) throw new Error('workforce:create-shift returned no shift');
-  return created;
-}
-
 async function createOrAttachProvider(operatorToken, kind, payload) {
   const endpoint = kind === 'field' ? 'field-agents' : 'captains';
   try {
@@ -231,11 +203,47 @@ async function patchProvider(operatorToken, kind, actorId, payload) {
   });
 }
 
-function fieldSovereignMatches(person, zoneId, shiftCode) {
+async function patchOperationalCore(operatorToken, kind, actorId, payload) {
+  const endpoint = kind === 'field' ? 'field-agents' : 'captains';
+  return requestJson(
+    `workforce:${kind}:operational-core`,
+    `${WORKFORCE_API_BASE}/workforce/${endpoint}/${encodeURIComponent(actorId)}/operational-core`,
+    {
+      method: 'PATCH',
+      headers: {
+        ...authorization(operatorToken),
+        'Content-Type': 'application/json',
+        'X-Correlation-ID': `mobile-dev-${kind}-operational-core-${stableToken(actorId)}`,
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+function commonOperationalCore(kind) {
+  return {
+    referralSourceType: 'direct',
+    referralChannel: 'local_development',
+    referralNote: `Governed local ${kind} development bootstrap`,
+    guarantorFullName: kind === 'field' ? 'ضامن المندوب المحلي' : 'ضامن الكابتن المحلي',
+    guarantorRelationship: 'relative',
+    guarantorPhoneE164: kind === 'field' ? '+967770000011' : '+967770000012',
+    guarantorPhoneVerified: true,
+    nationalIdNumber: kind === 'field' ? 'LOCAL-FIELD-NID-001' : 'LOCAL-CAPTAIN-NID-001',
+    identityFrontMediaRef: `local-dev/workforce/${kind}-identity-front.jpg`,
+    identityBackMediaRef: `local-dev/workforce/${kind}-identity-back.jpg`,
+    identityVerificationStatus: 'approved',
+    contractMediaRef: `local-dev/workforce/${kind}-contract.pdf`,
+    contractReviewStatus: 'approved',
+    onboardingStage: 'activation_ready',
+    reviewedByActorId: LOCAL_ACTORS.operator.actorId,
+  };
+}
+
+function fieldSovereignMatches(person, zoneId) {
   return person?.fullNameAr === 'مندوب بثواني المحلي'
     && person?.photoMediaRef === 'local-dev/workforce/field-profile.jpg'
-    && person?.fieldProfile?.serviceZoneId === zoneId
-    && person?.fieldProfile?.shiftCode === shiftCode;
+    && person?.fieldProfile?.serviceZoneId === zoneId;
 }
 
 function captainSovereignMatches(person, zoneId) {
@@ -247,7 +255,7 @@ function captainSovereignMatches(person, zoneId) {
     && person?.captainProfile?.licenseStatus === 'valid';
 }
 
-async function repairField(operatorToken, fieldToken, zone, shift) {
+async function repairField(operatorToken, fieldToken, zone) {
   const createPayload = {
     fullNameAr: 'مندوب بثواني المحلي',
     fullNameEn: 'BThwani Local Field Agent',
@@ -255,13 +263,16 @@ async function repairField(operatorToken, fieldToken, zone, shift) {
     engagementType: 'independent_contractor',
     engagementStartDate: '2026-01-01',
     serviceZoneId: zone.id,
-    shiftCode: shift.code,
     photoMediaRef: 'local-dev/workforce/field-profile.jpg',
+    documentMediaRefs: [
+      'local-dev/workforce/field-identity-front.jpg',
+      'local-dev/workforce/field-contract.pdf',
+    ],
   };
   await createOrAttachProvider(operatorToken, 'field', createPayload);
 
   let detail = await getProvider(operatorToken, 'field', LOCAL_ACTORS.field.actorId);
-  if (!fieldSovereignMatches(detail, zone.id, shift.code)) {
+  if (!fieldSovereignMatches(detail, zone.id)) {
     detail = await patchProvider(operatorToken, 'field', LOCAL_ACTORS.field.actorId, {
       expectedVersion: detail.version,
       fullNameAr: createPayload.fullNameAr,
@@ -269,12 +280,24 @@ async function repairField(operatorToken, fieldToken, zone, shift) {
       engagementType: createPayload.engagementType,
       engagementStartDate: createPayload.engagementStartDate,
       serviceZoneId: zone.id,
-      shiftCode: shift.code,
       photoMediaRef: createPayload.photoMediaRef,
     });
   }
 
-  let me = await requestJson('workforce:field:me-before-repair', `${WORKFORCE_API_BASE}/workforce/me`, {
+  const operational = await patchOperationalCore(
+    operatorToken,
+    'field',
+    LOCAL_ACTORS.field.actorId,
+    {
+      ...commonOperationalCore('field'),
+      partnershipsApproved: true,
+    },
+  );
+  if (operational?.activationReadiness?.ready !== true) {
+    throw new Error(`field operational core remained incomplete: ${JSON.stringify(operational?.activationReadiness)}`);
+  }
+
+  let me = await requestJson('workforce:field:me-before-self-repair', `${WORKFORCE_API_BASE}/workforce/me`, {
     headers: authorization(fieldToken),
   });
   if (me?.profileComplete !== true) {
@@ -311,13 +334,17 @@ async function repairCaptain(operatorToken, zone) {
     licenseExpiresAt: '2035-12-31',
     serviceZoneId: zone.id,
     operatingScopeCode: 'local-dsh',
-    documentMediaRefs: ['local-dev/workforce/captain-license.jpg'],
+    documentMediaRefs: [
+      'local-dev/workforce/captain-license.jpg',
+      'local-dev/workforce/captain-identity-front.jpg',
+      'local-dev/workforce/captain-contract.pdf',
+    ],
   };
   await createOrAttachProvider(operatorToken, 'captain', createPayload);
 
-  const detail = await getProvider(operatorToken, 'captain', LOCAL_ACTORS.captain.actorId);
+  let detail = await getProvider(operatorToken, 'captain', LOCAL_ACTORS.captain.actorId);
   if (!captainSovereignMatches(detail, zone.id)) {
-    await patchProvider(operatorToken, 'captain', LOCAL_ACTORS.captain.actorId, {
+    detail = await patchProvider(operatorToken, 'captain', LOCAL_ACTORS.captain.actorId, {
       expectedVersion: detail.version,
       fullNameAr: createPayload.fullNameAr,
       fullNameEn: createPayload.fullNameEn,
@@ -332,6 +359,31 @@ async function repairCaptain(operatorToken, zone) {
       operatingScopeCode: createPayload.operatingScopeCode,
     });
   }
+
+  const operational = await patchOperationalCore(
+    operatorToken,
+    'captain',
+    LOCAL_ACTORS.captain.actorId,
+    {
+      ...commonOperationalCore('captain'),
+      captain: {
+        classification: 'joker',
+        financialGuaranteeMinorUnits: 100000,
+        financialGuaranteeCurrency: 'YER',
+        financialGuaranteeStatus: 'funded',
+        financialGuaranteeReference: 'local-dev/wlt/captain-guarantee-001',
+        deliveryBagCustodyStatus: 'issued',
+        deliveryBagCustodyReference: 'local-dev/assets/delivery-bag-001',
+        mandatoryPurchasesStatus: 'paid_and_delivered',
+        mandatoryPurchasesReference: 'local-dev/wlt/captain-purchases-001',
+        trainingStatus: 'passed',
+        operationsAccreditationStatus: 'approved',
+      },
+    },
+  );
+  if (operational?.activationReadiness?.ready !== true) {
+    throw new Error(`captain operational core remained incomplete: ${JSON.stringify(operational?.activationReadiness)}`);
+  }
 }
 
 async function repairWorkforce() {
@@ -344,8 +396,7 @@ async function repairWorkforce() {
     getToken(LOCAL_ACTORS.field.username),
   ]);
   const zone = await ensureActiveZone(operatorToken);
-  const shift = await ensureActiveShift(operatorToken);
-  await repairField(operatorToken, fieldToken, zone, shift);
+  await repairField(operatorToken, fieldToken, zone);
   await repairCaptain(operatorToken, zone);
 }
 

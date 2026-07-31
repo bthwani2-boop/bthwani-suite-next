@@ -73,8 +73,8 @@ func (c *Client) DeliverFieldCategoryCommission(ctx context.Context, input Deliv
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedTenantHeader(req, ""); err != nil {
-		return fmt.Errorf("prepare WLT field commission tenant: %w", err)
+	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+		return fmt.Errorf("prepare WLT field commission OperatorContext: %w", err)
 	}
 	if err := setRequiredMutationHeaders(req, correlationID, input.IdempotencyKey); err != nil {
 		return fmt.Errorf("prepare WLT field category commission request: %w", err)

@@ -1,6 +1,6 @@
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet("up", "catalog-readback", "smoke")]
+  [ValidateSet("up", "catalog-readback", "smoke", "bootstrap-dev")]
   [string]$Action,
 
   [Parameter(Mandatory = $true)]
@@ -13,13 +13,44 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $RuntimeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
 $RuntimeSmokeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime-dispatch.ps1"
+$RuntimeEnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
 $CatalogSeedScript = Join-Path $RepoRoot "services/dsh/database/scripts/apply-central-catalog-seed.ps1"
+$LocalMediaSeedScript = Join-Path $RepoRoot "tools/scripts/runtime/seed-local-media.ps1"
 $CatalogReadbackScript = Join-Path $RepoRoot "tools/scripts/verify-catalog.ps1"
 $AuthenticatedWltSmokeScript = Join-Path $RepoRoot "tools/scripts/finance/smoke-wlt-authenticated-runtime.ps1"
 $DshSmokeDiagnosticScript = Join-Path $RepoRoot "tools/scripts/runtime/diagnose-dsh-smoke-auth-boundary.ps1"
 $LogRoot = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [System.IO.Path]::GetTempPath() }
 $LogPath = Join-Path $LogRoot "bthwani-runtime-$Action.log"
 $ProfileList = @($Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+
+function Import-CanonicalRuntimeEnvironment {
+  if (-not (Test-Path -LiteralPath $script:RuntimeEnvFile -PathType Leaf)) {
+    throw "Canonical runtime environment file not found: $script:RuntimeEnvFile"
+  }
+
+  foreach ($rawLine in Get-Content -LiteralPath $script:RuntimeEnvFile) {
+    $line = $rawLine.Trim()
+    if (-not $line -or $line.StartsWith("#") -or -not $line.Contains("=")) {
+      continue
+    }
+
+    $parts = $line.Split("=", 2)
+    $key = $parts[0].Trim()
+    $value = $parts[1].Trim()
+    if ($value.StartsWith('"') -and $value.EndsWith('"')) {
+      $value = $value.Substring(1, $value.Length - 2)
+    } elseif ($value.StartsWith("'") -and $value.EndsWith("'")) {
+      $value = $value.Substring(1, $value.Length - 2)
+    }
+
+    $current = [System.Environment]::GetEnvironmentVariable($key, "Process")
+    if ([string]::IsNullOrWhiteSpace($current)) {
+      [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
+    }
+  }
+}
+
+Import-CanonicalRuntimeEnvironment
 
 function ConvertTo-StatusText {
   param([string]$Value, [int]$Limit = 140)
@@ -103,11 +134,20 @@ function Invoke-RuntimeBasePhase {
 
   $global:LASTEXITCODE = 0
   if ($Append) {
-    & $phaseRuntimeScript @runtimeParameters 2>&1 | Tee-Object -FilePath $LogPath -Append
+    & $phaseRuntimeScript @runtimeParameters 2>&1 |
+      Tee-Object -FilePath $LogPath -Append |
+      Out-Host
   } else {
-    & $phaseRuntimeScript @runtimeParameters 2>&1 | Tee-Object -FilePath $LogPath
+    & $phaseRuntimeScript @runtimeParameters 2>&1 |
+      Tee-Object -FilePath $LogPath |
+      Out-Host
   }
-  return $LASTEXITCODE
+
+  # A PowerShell function emits every uncaptured pipeline object. Without
+  # Out-Host above, callers receive the complete runtime log plus the integer
+  # exit code, and the non-empty log is incorrectly treated as a failed code.
+  $exitCode = $LASTEXITCODE
+  return [int]$exitCode
 }
 
 function Test-TransientPostgresBootstrapRestart {
@@ -164,10 +204,9 @@ try {
     }
   }
 
-  # Development catalog convergence has a governed prerequisite: the canonical
-  # local seeds must create baseline stores and WLT references before store-level
-  # catalog bindings can be upserted. Running the complete selected-profile seed
-  # phase avoids partial, order-dependent SQL execution on fresh volumes.
+  # Development catalog convergence has governed prerequisites: canonical SQL
+  # seeds establish relational truth and the media seed mirrors the exact
+  # governed fixture objects into the private MinIO bucket before readback.
   if ($Action -eq "up" -and $ProfileList -contains "dsh") {
     Write-Host "`n=== runtime:seed-prerequisites ==="
     $global:LASTEXITCODE = 0
@@ -176,7 +215,17 @@ try {
       throw "Runtime seed prerequisites failed with exit code $LASTEXITCODE"
     }
 
-    if (-not (Test-Path -LiteralPath $CatalogSeedScript)) {
+    if (-not (Test-Path -LiteralPath $LocalMediaSeedScript -PathType Leaf)) {
+      throw "Local media seed script not found: $LocalMediaSeedScript"
+    }
+    Write-Host "`n=== runtime:media-convergence ==="
+    $global:LASTEXITCODE = 0
+    & $LocalMediaSeedScript 2>&1 | Tee-Object -FilePath $LogPath -Append
+    if ($LASTEXITCODE -ne 0) {
+      throw "Local media convergence failed with exit code $LASTEXITCODE"
+    }
+
+    if (-not (Test-Path -LiteralPath $CatalogSeedScript -PathType Leaf)) {
       throw "Central catalog convergence script not found: $CatalogSeedScript"
     }
     Write-Host "`n=== runtime:catalog-convergence ==="

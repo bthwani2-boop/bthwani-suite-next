@@ -105,7 +105,7 @@ function isValidActorIdentity(value: unknown): value is ActorIdentity {
   if (!isRecord(value)) return false;
   if (
     !isNonEmptyString(value.subject)
-    || !isNonEmptyString(value.tenantId)
+    || !isNonEmptyString(value.operatorContextId)
     || !isNonEmptyString(value.phoneE164)
     || value.authState !== "authenticated"
     || !isNonEmptyString(value.sessionId)

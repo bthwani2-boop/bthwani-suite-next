@@ -24,7 +24,7 @@ func (s *protectedStoreServer) authorizePreparationIssueRead(
 	}
 	switch actor.Role {
 	case "client":
-		if _, err := orders.GetClientOrder(s.db, orderID, actor.TenantID, actor.ID); errors.Is(err, orders.ErrNotFound) {
+		if _, err := orders.GetClientOrder(s.db, orderID, actor.OperatorContextID, actor.ID); errors.Is(err, orders.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 			return "", false
 		} else if err != nil {
@@ -36,7 +36,7 @@ func (s *protectedStoreServer) authorizePreparationIssueRead(
 			return "", false
 		}
 	case "captain":
-		allowed, err := captainCanReadOrderPreparation(r.Context(), s.db, orderID, actor.TenantID, actor.ID)
+		allowed, err := captainCanReadOrderPreparation(r.Context(), s.db, orderID, actor.OperatorContextID, actor.ID)
 		if err != nil {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to authorize captain order")
 			return "", false
@@ -163,7 +163,7 @@ func (s *protectedStoreServer) handleDecidePreparationIssue(w http.ResponseWrite
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderId and issueId are required")
 		return
 	}
-	if _, err := orders.GetClientOrder(s.db, orderID, actor.TenantID, actor.ID); errors.Is(err, orders.ErrNotFound) {
+	if _, err := orders.GetClientOrder(s.db, orderID, actor.OperatorContextID, actor.ID); errors.Is(err, orders.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return
 	} else if err != nil {

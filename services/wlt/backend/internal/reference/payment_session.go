@@ -12,11 +12,10 @@ import (
 )
 
 var ErrIdempotencyConflict = errors.New("payment session idempotency conflict")
-var ErrTenantMismatch = errors.New("payment session tenant does not match trusted DSH tenant")
 
 const paymentSessionCols = `id, checkout_intent_id, special_request_id,
 	 subscription_purchase_id, commercial_product_reference,
-	 tenant_id,
+	 operator_context_id,
 	 client_id, store_id, payment_method, status, provider_reference, amount_minor_units,
 	 currency, captured_at, created_at, updated_at`
 
@@ -26,7 +25,7 @@ type PaymentSession struct {
 	SpecialRequestID           *string `json:"specialRequestId,omitempty"`
 	SubscriptionPurchaseID     *string `json:"subscriptionPurchaseId,omitempty"`
 	CommercialProductReference *string `json:"commercialProductReference,omitempty"`
-	TenantID                   string  `json:"tenantId"`
+	OperatorContextID          string  `json:"operatorContextId"`
 	ClientID                   string  `json:"clientId"`
 	StoreID                    string  `json:"storeId"`
 	PaymentMethod              string  `json:"paymentMethod"`
@@ -47,15 +46,18 @@ type CreatePaymentSessionInput struct {
 	SpecialRequestID           string `json:"specialRequestId"`
 	SubscriptionPurchaseID     string `json:"subscriptionPurchaseId"`
 	CommercialProductReference string `json:"commercialProductReference"`
-	TenantID                   string `json:"tenantId"`
-	ClientID                   string `json:"clientId"`
-	StoreID                    string `json:"storeId"`
-	PaymentMethod              string `json:"paymentMethod"`
-	AmountMinorUnits           int64  `json:"amountMinorUnits"`
-	Currency                   string `json:"currency"`
-	CartSnapshotHash           string `json:"cartSnapshotHash"`
-	IdempotencyKey             string `json:"-"`
-	CorrelationID              string `json:"-"`
+	// OperatorContextID is a temporary persistence compatibility field. The
+	// HTTP handler ignores any caller value and overwrites it from authenticated
+	// server configuration before validation or database access.
+	OperatorContextID string `json:"operatorContextId"`
+	ClientID           string `json:"clientId"`
+	StoreID            string `json:"storeId"`
+	PaymentMethod      string `json:"paymentMethod"`
+	AmountMinorUnits   int64  `json:"amountMinorUnits"`
+	Currency           string `json:"currency"`
+	CartSnapshotHash   string `json:"cartSnapshotHash"`
+	IdempotencyKey     string `json:"-"`
+	CorrelationID      string `json:"-"`
 }
 
 func sourceCount(input CreatePaymentSessionInput) int {
@@ -82,9 +84,9 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	if input.SubscriptionPurchaseID == "" && input.CommercialProductReference != "" {
 		return nil, fmt.Errorf("commercialProductReference is only valid for a subscription purchase")
 	}
-	input.TenantID = strings.TrimSpace(input.TenantID)
-	if input.TenantID == "" || input.ClientID == "" || input.StoreID == "" {
-		return nil, fmt.Errorf("tenantId, clientId and storeId are required")
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
+	if input.OperatorContextID == "" || input.ClientID == "" || input.StoreID == "" {
+		return nil, fmt.Errorf("financial compatibility scope, clientId and storeId are required")
 	}
 	if input.PaymentMethod == "" {
 		input.PaymentMethod = "official_wallet"
@@ -108,18 +110,18 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	var err error
 	switch {
 	case input.CheckoutIntentID != "":
-		existing, err = getPaymentSessionByCheckoutIntent(db, input.TenantID, input.CheckoutIntentID)
+		existing, err = getPaymentSessionByCheckoutIntent(db, input.OperatorContextID, input.CheckoutIntentID)
 	case input.SpecialRequestID != "":
-		existing, err = getPaymentSessionBySpecialRequest(db, input.TenantID, input.SpecialRequestID)
+		existing, err = getPaymentSessionBySpecialRequest(db, input.OperatorContextID, input.SpecialRequestID)
 	default:
-		existing, err = getPaymentSessionBySubscriptionPurchase(db, input.TenantID, input.SubscriptionPurchaseID)
+		existing, err = getPaymentSessionBySubscriptionPurchase(db, input.OperatorContextID, input.SubscriptionPurchaseID)
 	}
 	if err != nil {
 		return nil, err
 	}
 	if existing != nil {
 		if existing.ClientID != input.ClientID ||
-			existing.TenantID != input.TenantID ||
+			existing.OperatorContextID != input.OperatorContextID ||
 			existing.StoreID != input.StoreID ||
 			existing.PaymentMethod != input.PaymentMethod ||
 			existing.AmountMinorUnits != input.AmountMinorUnits ||
@@ -133,7 +135,7 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	const q = `
 		INSERT INTO wlt_payment_sessions
 			(checkout_intent_id, special_request_id, subscription_purchase_id,
-			 commercial_product_reference, tenant_id, client_id, store_id,
+			 commercial_product_reference, operator_context_id, client_id, store_id,
 			 payment_method, status, amount_minor_units, currency, cart_snapshot_hash,
 			 idempotency_key, correlation_id)
 		VALUES (NULLIF($1, ''), NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''),
@@ -145,7 +147,7 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 		input.SpecialRequestID,
 		input.SubscriptionPurchaseID,
 		input.CommercialProductReference,
-		input.TenantID,
+		input.OperatorContextID,
 		input.ClientID,
 		input.StoreID,
 		input.PaymentMethod,
@@ -190,16 +192,12 @@ func HandleCreatePaymentSession(db *sql.DB) http.HandlerFunc {
 		if !decodeJSON(w, r, &input) {
 			return
 		}
-		trustedTenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-		if trustedTenantID == "" {
-			shared.SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Tenant-ID is required for payment-session creation")
+		compatibilityScope, err := shared.RequireOperatorContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_BOUND", "server-owned financial compatibility scope is unavailable")
 			return
 		}
-		if trustedTenantID != strings.TrimSpace(input.TenantID) {
-			shared.SendError(w, http.StatusForbidden, "TENANT_MISMATCH", ErrTenantMismatch.Error())
-			return
-		}
-		input.TenantID = trustedTenantID
+		input.OperatorContextID = compatibilityScope
 		input.IdempotencyKey = r.Header.Get("Idempotency-Key")
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
 		if input.IdempotencyKey == "" {
@@ -225,18 +223,18 @@ func HandleCreatePaymentSession(db *sql.DB) http.HandlerFunc {
 
 // GetPaymentSessionByCheckoutIntent looks up the payment session WLT created
 // for a given DSH checkout intent. This service-only compatibility read is safe
-// in the current single-tenant deployment; tenant-scoped creation and source
-// uniqueness remain mandatory.
+// in the current single-platform deployment; server-scoped creation and source
+// uniqueness remain mandatory while legacy columns are retired.
 func GetPaymentSessionByCheckoutIntent(db *sql.DB, checkoutIntentID string) (*PaymentSession, error) {
 	return getPaymentSessionByCheckoutIntent(db, "", checkoutIntentID)
 }
 
-func getPaymentSessionByCheckoutIntent(db *sql.DB, tenantID string, checkoutIntentID string) (*PaymentSession, error) {
+func getPaymentSessionByCheckoutIntent(db *sql.DB, operatorContextID string, checkoutIntentID string) (*PaymentSession, error) {
 	q := `SELECT ` + paymentSessionCols + ` FROM wlt_payment_sessions WHERE checkout_intent_id = $1`
 	args := []any{checkoutIntentID}
-	if tenantID != "" {
-		q += ` AND tenant_id = $2`
-		args = append(args, tenantID)
+	if operatorContextID != "" {
+		q += ` AND operator_context_id = $2`
+		args = append(args, operatorContextID)
 	}
 	session, err := scanPaymentSession(db.QueryRow(q, args...))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -245,12 +243,12 @@ func getPaymentSessionByCheckoutIntent(db *sql.DB, tenantID string, checkoutInte
 	return session, err
 }
 
-func getPaymentSessionBySpecialRequest(db *sql.DB, tenantID string, specialRequestID string) (*PaymentSession, error) {
+func getPaymentSessionBySpecialRequest(db *sql.DB, operatorContextID string, specialRequestID string) (*PaymentSession, error) {
 	q := `SELECT ` + paymentSessionCols + ` FROM wlt_payment_sessions WHERE special_request_id = $1`
 	args := []any{specialRequestID}
-	if tenantID != "" {
-		q += ` AND tenant_id = $2`
-		args = append(args, tenantID)
+	if operatorContextID != "" {
+		q += ` AND operator_context_id = $2`
+		args = append(args, operatorContextID)
 	}
 	session, err := scanPaymentSession(db.QueryRow(q, args...))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -259,12 +257,12 @@ func getPaymentSessionBySpecialRequest(db *sql.DB, tenantID string, specialReque
 	return session, err
 }
 
-func getPaymentSessionBySubscriptionPurchase(db *sql.DB, tenantID string, purchaseID string) (*PaymentSession, error) {
+func getPaymentSessionBySubscriptionPurchase(db *sql.DB, operatorContextID string, purchaseID string) (*PaymentSession, error) {
 	q := `SELECT ` + paymentSessionCols + ` FROM wlt_payment_sessions WHERE subscription_purchase_id = $1`
 	args := []any{purchaseID}
-	if tenantID != "" {
-		q += ` AND tenant_id = $2`
-		args = append(args, tenantID)
+	if operatorContextID != "" {
+		q += ` AND operator_context_id = $2`
+		args = append(args, operatorContextID)
 	}
 	session, err := scanPaymentSession(db.QueryRow(q, args...))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -300,7 +298,7 @@ func scanPaymentSession(row *sql.Row) (*PaymentSession, error) {
 		&session.SpecialRequestID,
 		&session.SubscriptionPurchaseID,
 		&session.CommercialProductReference,
-		&session.TenantID,
+		&session.OperatorContextID,
 		&session.ClientID,
 		&session.StoreID,
 		&session.PaymentMethod,

@@ -7,7 +7,7 @@ DECLARE
   v_suffix text := replace(gen_random_uuid()::text, '-', '');
   v_store_id text := 'currency-store-' || v_suffix;
   v_client_id text := 'currency-client-' || v_suffix;
-  v_tenant_id text := 'currency-tenant-' || v_suffix;
+  v_operator_context_id text := 'currency-OperatorContext-' || v_suffix;
   v_cart_id uuid;
   v_checkout_id uuid;
   v_order_id uuid;
@@ -56,21 +56,21 @@ BEGIN
   );
 
   INSERT INTO dsh_checkout_intents (
-    tenant_id, client_id, cart_id, store_id, state, fulfillment_mode,
+    operator_context_id, client_id, cart_id, store_id, state, fulfillment_mode,
     payment_method, wlt_payment_session_id,
     subtotal_minor_units, delivery_fee_minor_units, discount_minor_units,
     total_minor_units, currency, pricing_snapshot_hash
   ) VALUES (
-    v_tenant_id, v_client_id, v_cart_id, v_store_id,
+    v_operator_context_id, v_client_id, v_cart_id, v_store_id,
     'payment_pending', 'pickup', 'cod', 'currency-session-' || v_suffix,
     5100, 0, 0, 5100, 'USD', repeat('c', 64)
   ) RETURNING id INTO v_checkout_id;
 
   INSERT INTO dsh_orders (
-    tenant_id, checkout_intent_id, store_id, fulfillment_mode,
+    operator_context_id, checkout_intent_id, store_id, fulfillment_mode,
     client_id, status, wlt_payment_ref_id
   ) VALUES (
-    v_tenant_id, v_checkout_id, v_store_id, 'pickup',
+    v_operator_context_id, v_checkout_id, v_store_id, 'pickup',
     v_client_id, 'pending', 'currency-session-' || v_suffix
   ) RETURNING id INTO v_order_id;
 

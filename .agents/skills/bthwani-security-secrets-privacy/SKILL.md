@@ -24,8 +24,8 @@ Own security-evidence routing and sanitized review for authentication, authoriza
 ## Read before
 
 - `AGENTS.md`
-- `governance/07_SECURITY_AND_SECRETS.md`
-- `governance/26_SDLC_TEAM_AND_STAGE_GATES.md`
+- `governance/policies/security.md`
+- `governance/policies/release.md`
 - applicable contracts, configuration, logs, and data-flow paths
 
 ## Authority boundary

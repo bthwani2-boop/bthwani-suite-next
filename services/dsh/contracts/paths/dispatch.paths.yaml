@@ -208,7 +208,7 @@
     operationId: getDshPartnerDispatchTracking
     summary: Partner reads reference-only bthwani_delivery captain assignment status.
     description: >-
-      JRN-017: the partner never sees the captain's live location or proof
+      The partner never sees the captain's live location or proof
       of delivery here — only lifecycle status, for orders it owns.
     tags: [DshDispatch]
     security: [{ bearerAuth: [] }]

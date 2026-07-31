@@ -3,7 +3,7 @@
 -- capacity and shortage truth derived from those notices.
 
 CREATE TABLE IF NOT EXISTS dsh_provider_availability_projections (
-  tenant_id             text NOT NULL CHECK (btrim(tenant_id) <> ''),
+  operator_context_id             text NOT NULL CHECK (btrim(operator_context_id) <> ''),
   notice_id             text NOT NULL CHECK (btrim(notice_id) <> ''),
   actor_type            text NOT NULL CHECK (actor_type IN ('captain','field')),
   actor_id              text NOT NULL CHECK (btrim(actor_id) <> ''),
@@ -14,16 +14,16 @@ CREATE TABLE IF NOT EXISTS dsh_provider_availability_projections (
   reason                text NOT NULL DEFAULT '',
   source_updated_at     timestamptz NOT NULL,
   synced_at             timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (tenant_id, notice_id),
+  PRIMARY KEY (operator_context_id, notice_id),
   CHECK (ends_at > starts_at)
 );
 
 CREATE INDEX IF NOT EXISTS dsh_provider_availability_actor_window_idx
-  ON dsh_provider_availability_projections(tenant_id, actor_type, actor_id, starts_at, ends_at)
+  ON dsh_provider_availability_projections(operator_context_id, actor_type, actor_id, starts_at, ends_at)
   WHERE status='active';
 
 CREATE TABLE IF NOT EXISTS dsh_service_area_capacity_policies (
-  tenant_id                         text NOT NULL,
+  operator_context_id                         text NOT NULL,
   service_area_code                 text NOT NULL,
   minimum_available_captains        integer NOT NULL DEFAULT 1 CHECK (minimum_available_captains >= 0),
   target_available_captains         integer NOT NULL DEFAULT 2 CHECK (target_available_captains >= minimum_available_captains),
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS dsh_service_area_capacity_policies (
   version                           integer NOT NULL DEFAULT 1 CHECK (version > 0),
   created_at                        timestamptz NOT NULL DEFAULT now(),
   updated_at                        timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (tenant_id, service_area_code)
+  PRIMARY KEY (operator_context_id, service_area_code)
 );
 
 CREATE OR REPLACE FUNCTION dsh_assert_no_active_captain_absence()
@@ -48,7 +48,7 @@ BEGIN
   IF EXISTS (
     SELECT 1
     FROM dsh_provider_availability_projections absence
-    WHERE absence.tenant_id=NEW.tenant_id
+    WHERE absence.operator_context_id=NEW.operator_context_id
       AND absence.actor_type='captain'
       AND absence.actor_id=NEW.captain_id
       AND absence.status='active'
@@ -63,7 +63,7 @@ $$;
 
 DROP TRIGGER IF EXISTS trg_dsh_assignment_captain_absence ON dsh_assignments;
 CREATE TRIGGER trg_dsh_assignment_captain_absence
-BEFORE INSERT OR UPDATE OF status,captain_id,tenant_id,idempotency_key
+BEFORE INSERT OR UPDATE OF status,captain_id,operator_context_id,idempotency_key
 ON dsh_assignments
 FOR EACH ROW EXECUTE FUNCTION dsh_assert_no_active_captain_absence();
 

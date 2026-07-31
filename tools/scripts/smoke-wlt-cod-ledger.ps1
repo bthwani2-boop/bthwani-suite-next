@@ -15,7 +15,7 @@ if ([string]::IsNullOrWhiteSpace($DatabaseUser)) { $DatabaseUser = 'wlt_runtime'
 if ([string]::IsNullOrWhiteSpace($DatabaseName)) { $DatabaseName = 'wlt_runtime' }
 
 $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-$tenantId = 'tenant-dev-001'
+$operatorContextId = 'OperatorContext-dev-001'
 $checkoutIntentId = "cod-smoke-checkout-$timestamp"
 $orderId = "cod-smoke-order-$timestamp"
 $captainId = "cod-smoke-captain-$timestamp"
@@ -43,7 +43,7 @@ function Invoke-WltJson {
     'X-Service-Caller' = 'dsh'
     'X-Correlation-ID' = $correlationId
     'Idempotency-Key' = $OperationIdempotencyKey
-    'X-Tenant-ID' = $tenantId
+    'X-Operator-Context-ID' = $operatorContextId
   }
   $uri = "$BaseUrl$Path"
   if ($null -eq $Body) {
@@ -54,7 +54,7 @@ function Invoke-WltJson {
 
 $session = Invoke-WltJson -Method POST -Path '/wlt/payment-sessions' -Body @{
   checkoutIntentId = $checkoutIntentId
-  tenantId = $tenantId
+  operatorContextId = $operatorContextId
   clientId = "cod-smoke-client-$timestamp"
   storeId = "cod-smoke-store-$timestamp"
   paymentMethod = 'cod'

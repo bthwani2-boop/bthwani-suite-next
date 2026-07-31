@@ -5,25 +5,56 @@ import (
 	"testing"
 )
 
-func TestSupportMessageDeliveryRoutesExposeActorAndOperatorBoundaries(t *testing.T) {
+func TestSupportMessageDeliveryRoutes(t *testing.T) {
 	router := NewRouter(nil, nil, nil, nil, nil)
 	RegisterSupportMessageDeliveryRoutes(router, nil, nil, nil, nil)
 
 	cases := []struct {
+		name    string
 		method  string
 		path    string
 		pattern string
 	}{
-		{http.MethodPost, "/dsh/support/tickets/t-1/messages/m-1/attachments", "POST /dsh/support/tickets/{ticketId}/messages/{messageId}/attachments"},
-		{http.MethodGet, "/dsh/support/tickets/t-1/messages/m-1/attachments", "GET /dsh/support/tickets/{ticketId}/messages/{messageId}/attachments"},
-		{http.MethodPost, "/dsh/support/tickets/t-1/messages/read", "POST /dsh/support/tickets/{ticketId}/messages/read"},
-		{http.MethodPost, "/dsh/operator/support/tickets/t-1/messages/m-1/attachments", "POST /dsh/operator/support/tickets/{ticketId}/messages/{messageId}/attachments"},
-		{http.MethodGet, "/dsh/operator/support/tickets/t-1/messages/m-1/attachments", "GET /dsh/operator/support/tickets/{ticketId}/messages/{messageId}/attachments"},
-		{http.MethodPost, "/dsh/operator/support/tickets/t-1/messages/read", "POST /dsh/operator/support/tickets/{ticketId}/messages/read"},
+		{
+			name:    "actor attaches media",
+			method:  http.MethodPost,
+			path:    "/dsh/support/tickets/ticket-1/messages/message-1/attachments",
+			pattern: "POST /dsh/support/tickets/{ticketId}/messages/{messageId}/attachments",
+		},
+		{
+			name:    "actor lists media",
+			method:  http.MethodGet,
+			path:    "/dsh/support/tickets/ticket-1/messages/message-1/attachments",
+			pattern: "GET /dsh/support/tickets/{ticketId}/messages/{messageId}/attachments",
+		},
+		{
+			name:    "actor marks messages read",
+			method:  http.MethodPost,
+			path:    "/dsh/support/tickets/ticket-1/messages/read",
+			pattern: "POST /dsh/support/tickets/{ticketId}/messages/read",
+		},
+		{
+			name:    "operator attaches media",
+			method:  http.MethodPost,
+			path:    "/dsh/operator/support/tickets/ticket-1/messages/message-1/attachments",
+			pattern: "POST /dsh/operator/support/tickets/{ticketId}/messages/{messageId}/attachments",
+		},
+		{
+			name:    "operator lists media",
+			method:  http.MethodGet,
+			path:    "/dsh/operator/support/tickets/ticket-1/messages/message-1/attachments",
+			pattern: "GET /dsh/operator/support/tickets/{ticketId}/messages/{messageId}/attachments",
+		},
+		{
+			name:    "operator marks messages read",
+			method:  http.MethodPost,
+			path:    "/dsh/operator/support/tickets/ticket-1/messages/read",
+			pattern: "POST /dsh/operator/support/tickets/{ticketId}/messages/read",
+		},
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			request, err := http.NewRequest(tc.method, tc.path, nil)
 			if err != nil {
 				t.Fatal(err)

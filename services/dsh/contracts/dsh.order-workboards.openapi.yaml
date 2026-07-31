@@ -4,19 +4,18 @@ info:
   version: 1.0.0
   description: >-
     Actor-scoped operational read models for partner preparation and operator
-    oversight. DSH derives scope and executable actions from the authenticated actor.
+    oversight. DSH derives scope and executable actions from the authenticated
+    actor.
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: MANUAL_TYPED_ADAPTER
 x-bthwani-runtime-dependency: true
 servers:
   - url: http://localhost:58080
-security:
-  - bearerAuth: []
 paths:
   /dsh/partner/order-workboard:
     get:
-      tags: ["dsh-partner"]
+      tags: [ "dsh-partner" ]
       operationId: getDshPartnerOrderWorkboard
       summary: Return the authenticated partner order workboard and executable actions.
       parameters:
@@ -25,9 +24,11 @@ paths:
         '200': { $ref: '#/components/responses/WorkboardResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/operator/order-workboard:
     get:
-      tags: ["dsh-operator"]
+      tags: [ "dsh-operator" ]
       operationId: getDshOperatorOrderWorkboard
       summary: Return the governed cross-store operator order workboard.
       parameters:
@@ -36,6 +37,8 @@ paths:
         '200': { $ref: '#/components/responses/WorkboardResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -55,7 +58,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [orders, total]
+            required: [ orders, total ]
             properties:
               orders:
                 type: array

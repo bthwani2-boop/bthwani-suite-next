@@ -1,7 +1,25 @@
 import { resolveDshApiBaseUrl } from "../../_kernel/dsh-api-base-url";
 import { corrId, createDshHttpClient } from "../../_kernel/dsh-http-request";
-import type { WltDshCodReference } from "@bthwani/wlt";
-import type { WltReferenceApiResult } from "@bthwani/wlt/frontend/shared/dsh/wlt-dsh-http-request";
+
+export type WltDshCodReference = {
+  readonly id: string;
+  readonly orderId: string;
+  readonly captainId?: string;
+  readonly collectorType: "captain" | "store_courier" | "partner_store";
+  readonly collectorId: string;
+  readonly partnerId: string;
+  readonly amountMinorUnits: number;
+  readonly currency: string;
+  readonly status: "pending_collection" | "collected" | "remitted" | "disputed" | "resolved";
+  readonly collectedAt: string | null;
+  readonly remittedAt: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+export type WltReferenceApiResult<T> =
+  | { readonly ok: true; readonly data: T }
+  | { readonly ok: false; readonly kind: "http" | "network"; readonly status?: number; readonly message: string };
 
 // WLT internal financial reads and writes are service-authenticated; DSH
 // surfaces use the governed DSH proxy and never call WLT directly.

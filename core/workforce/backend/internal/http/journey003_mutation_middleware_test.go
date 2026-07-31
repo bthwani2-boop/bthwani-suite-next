@@ -2,7 +2,7 @@ package http
 
 import "testing"
 
-func TestJRN003ProviderDocumentPathParsing(t *testing.T) {
+func TestProviderDocumentPathParsing(t *testing.T) {
 	cases := []struct {
 		path    string
 		kind    string

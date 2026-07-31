@@ -14,7 +14,7 @@ func TestEmployeeExactPermissionDoesNotCrossDshDomains(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
 			Subject:   "operations-manager-1",
-			TenantID:  "tenant-main",
+			OperatorContextID:  "OperatorContext-main",
 			Roles:     []string{"employee", "workforce.supervise.employee"},
 			AuthState: "authenticated",
 			Permissions: []auth.Permission{
@@ -68,7 +68,7 @@ func TestRegularEmployeeHasNoImplicitOperatorAuthority(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
 			Subject:   "staff-1",
-			TenantID:  "tenant-main",
+			OperatorContextID:  "OperatorContext-main",
 			Roles:     []string{"employee"},
 			AuthState: "authenticated",
 		})

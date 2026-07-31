@@ -8,7 +8,7 @@ Rules:
 2. Files execute in lexical filename order through the canonical database runner.
 3. Every file is wrapped in one PostgreSQL transaction together with its migration-ledger record.
 4. `CREATE INDEX CONCURRENTLY` is forbidden in this atomic lane and requires a separately governed online procedure.
-5. Runtime indexes, constraints, triggers, functions, and tenant-safe backfills belong here.
+5. Runtime indexes, constraints, triggers, functions, and OperatorContext-safe backfills belong here.
 6. DSH identifiers used in relationships must use the same PostgreSQL type as their owning primary or unique key.
 7. WLT financial schema is forbidden.
 
@@ -19,3 +19,5 @@ dsh-NNN[_or_legacy_letter]_descriptive_name.sql
 ```
 
 Existing historical names remain valid. New migrations must use the next unallocated numeric sequence and a descriptive snake-case suffix.
+
+`manifest.json` is a generated, committed snapshot of the exact execution order above (file, sha256, historical numeric prefix), regenerated with `node tools/scripts/generate-migration-manifest.mjs --service dsh` and checked for drift with `node tools/guards/migration-manifest-drift-gate.mjs --service dsh`. The numeric prefix has not been a unique ordering key since duplicate prefixes were introduced historically (see `historicalPrefix` collisions in the manifest); the manifest's `ordinal` and file order are the source of truth for "what ran before what," not the number in the filename.

@@ -1,4 +1,4 @@
--- DSH-096: JRN-021 support message attachments and actor read receipts.
+-- DSH-096:  support message attachments and actor read receipts.
 -- DSH owns support conversation state and media references only; binary media
 -- remains owned by the governed media provider.
 

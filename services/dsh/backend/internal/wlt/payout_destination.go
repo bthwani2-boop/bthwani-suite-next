@@ -13,6 +13,16 @@ import (
 
 var ErrPayoutDestinationNotFound = errors.New("WLT payout destination not found")
 
+// partnerPayoutDestinationPath addresses the canonical WLT typed payout
+// destination resource for a partner. WLT retired the partner-only
+// /wlt/payout-destinations/{partnerId} shape (see
+// services/wlt/backend/internal/http/retired_financial_routes_test.go); the
+// governed contract is wlt.payouts-destinations.openapi.yaml, keyed by
+// {actorType}/{actorId}, and "partner" is one actor type among several.
+func partnerPayoutDestinationPath(partnerID string) string {
+	return "/wlt/payout-destinations/partner/" + url.PathEscape(partnerID)
+}
+
 // PayoutDestinationUpsertInput contains raw payout details only while the
 // request is in flight to WLT. DSH must never persist these raw values.
 type PayoutDestinationUpsertInput struct {
@@ -25,14 +35,18 @@ type PayoutDestinationUpsertInput struct {
 	SettlementPreference          string `json:"settlementPreference"`
 	BankAccountHolderMatchesOwner bool   `json:"bankAccountHolderMatchesOwner"`
 	BankNotes                     string `json:"bankNotes"`
-	CreatedByActorID              string `json:"createdByActorId"`
+	CreatedByActorID              string `json:"operatorId"`
 	CorrelationID                 string `json:"-"`
 	IdempotencyKey                string `json:"-"`
 }
 
+// PayoutDestinationRef mirrors PayoutDestination in
+// services/wlt/contracts/wlt.payouts-destinations.openapi.yaml. Ownership is
+// expressed as an actor pair, not as a bare partner id.
 type PayoutDestinationRef struct {
 	ID                   string `json:"id"`
-	PartnerID            string `json:"partnerId"`
+	OwnerActorID         string `json:"ownerActorId"`
+	OwnerActorType       string `json:"ownerActorType"`
 	SettlementPreference string `json:"settlementPreference"`
 	MaskedAccountNumber  string `json:"maskedAccountNumber"`
 	MaskedIBAN           string `json:"maskedIban"`
@@ -42,6 +56,12 @@ type PayoutDestinationRef struct {
 	BankBranch           string `json:"bankBranch"`
 	Active               bool   `json:"active"`
 	UpdatedAt            string `json:"updatedAt"`
+}
+
+// payoutDestinationEnvelope mirrors PayoutDestinationEnvelope; WLT wraps every
+// destination response in a single named member.
+type payoutDestinationEnvelope struct {
+	PayoutDestination PayoutDestinationRef `json:"payoutDestination"`
 }
 
 func (c *Client) UpsertPayoutDestination(ctx context.Context, partnerID string, input PayoutDestinationUpsertInput) (*PayoutDestinationRef, error) {
@@ -66,7 +86,7 @@ func (c *Client) UpsertPayoutDestination(ctx context.Context, partnerID string, 
 	if err != nil {
 		return nil, fmt.Errorf("encode WLT payout destination request: %w", err)
 	}
-	path := "/wlt/payout-destinations/" + url.PathEscape(partnerID)
+	path := partnerPayoutDestinationPath(partnerID)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, c.baseURL+path, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("build WLT payout destination request: %w", err)
@@ -118,7 +138,7 @@ func (c *Client) GetPayoutDestination(ctx context.Context, partnerID string) (*P
 	if partnerID == "" {
 		return nil, fmt.Errorf("partner is required for payout readback")
 	}
-	path := "/wlt/payout-destinations/" + url.PathEscape(partnerID)
+	path := partnerPayoutDestinationPath(partnerID)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
 		return nil, fmt.Errorf("build WLT payout readback request: %w", err)
@@ -141,11 +161,12 @@ func (c *Client) GetPayoutDestination(ctx context.Context, partnerID string) (*P
 }
 
 func decodePayoutDestinationRef(response *http.Response, partnerID string) (*PayoutDestinationRef, error) {
-	var ref PayoutDestinationRef
-	if err := json.NewDecoder(response.Body).Decode(&ref); err != nil {
+	var envelope payoutDestinationEnvelope
+	if err := json.NewDecoder(response.Body).Decode(&envelope); err != nil {
 		return nil, fmt.Errorf("decode WLT payout destination response: %w", err)
 	}
-	if ref.ID == "" || ref.PartnerID != partnerID || !ref.Active {
+	ref := envelope.PayoutDestination
+	if ref.ID == "" || ref.OwnerActorType != "partner" || ref.OwnerActorID != partnerID || !ref.Active {
 		return nil, fmt.Errorf("WLT payout destination response is incomplete")
 	}
 	return &ref, nil
@@ -160,7 +181,7 @@ func (c *Client) DeactivatePayoutDestination(ctx context.Context, partnerID, act
 	if partnerID == "" || actorID == "" {
 		return fmt.Errorf("partner and actor are required to deactivate a payout destination")
 	}
-	path := "/wlt/payout-destinations/" + url.PathEscape(partnerID) + "/deactivate"
+	path := partnerPayoutDestinationPath(partnerID) + "/deactivate"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, nil)
 	if err != nil {
 		return fmt.Errorf("build WLT payout destination deactivation request: %w", err)

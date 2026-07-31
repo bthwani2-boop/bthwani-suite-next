@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 2,
+  "decision": "EXACTLY_ONE_OPENAPI_TYPESCRIPT_CLIENT_PER_BOUNDED_CONTEXT",
+  "generatedRoots": [
+    "core/identity/clients/generated",
+    "core/platform-control/clients/generated",
+    "core/providers/clients/generated",
+    "core/workforce/clients/generated",
+    "services/dsh/clients/generated",
+    "services/wlt/clients/generated"
+  ],
+  "ignoredFiles": [".gitkeep", "README.md"],
+  "entries": [
+    {
+      "context": "identity",
+      "client": "core/identity/clients/generated/identity-api.ts",
+      "mode": "OPENAPI_TYPESCRIPT",
+      "contract": "core/identity/contracts/generated/identity.bundle.openapi.yaml",
+      "regenerateScript": "openapi:generate:identity"
+    },
+    {
+      "context": "workforce",
+      "client": "core/workforce/clients/generated/workforce-api.ts",
+      "mode": "OPENAPI_TYPESCRIPT",
+      "contract": "core/workforce/contracts/generated/workforce.bundle.openapi.yaml",
+      "regenerateScript": "openapi:generate:workforce"
+    },
+    {
+      "context": "platform-control",
+      "client": "core/platform-control/clients/generated/platform-control-api.ts",
+      "mode": "OPENAPI_TYPESCRIPT",
+      "contract": "core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml",
+      "regenerateScript": "openapi:generate:platform-control"
+    },
+    {
+      "context": "providers",
+      "client": "core/providers/clients/generated/providers-api.ts",
+      "mode": "OPENAPI_TYPESCRIPT",
+      "contract": "core/providers/contracts/generated/providers.bundle.openapi.yaml",
+      "regenerateScript": "openapi:generate:providers"
+    },
+    {
+      "context": "dsh",
+      "client": "services/dsh/clients/generated/dsh-api.ts",
+      "mode": "OPENAPI_TYPESCRIPT",
+      "contract": "services/dsh/contracts/generated/dsh.bundle.openapi.yaml",
+      "regenerateScript": "openapi:generate:dsh"
+    },
+    {
+      "context": "wlt",
+      "client": "services/wlt/clients/generated/wlt-api.ts",
+      "mode": "OPENAPI_TYPESCRIPT",
+      "contract": "services/wlt/contracts/generated/wlt.bundle.openapi.yaml",
+      "regenerateScript": "openapi:generate:wlt"
+    }
+  ]
+}

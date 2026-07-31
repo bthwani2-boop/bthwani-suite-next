@@ -2,7 +2,7 @@
 -- DSH owns operational dispatch truth; financial truth remains outside this scope.
 
 ALTER TABLE dsh_assignments
-  ADD COLUMN IF NOT EXISTS tenant_id text NOT NULL DEFAULT 'default',
+  ADD COLUMN IF NOT EXISTS operator_context_id text NOT NULL DEFAULT 'default',
   ADD COLUMN IF NOT EXISTS service_area_code text,
   ADD COLUMN IF NOT EXISTS idempotency_key text,
   ADD COLUMN IF NOT EXISTS priority smallint NOT NULL DEFAULT 0,
@@ -27,20 +27,20 @@ ALTER TABLE dsh_assignments DROP CONSTRAINT IF EXISTS dsh_assignments_version_ch
 ALTER TABLE dsh_assignments ADD CONSTRAINT dsh_assignments_version_check
   CHECK (version > 0);
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_assignments_tenant_idempotency
-  ON dsh_assignments(tenant_id, idempotency_key)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_assignments_operator_context_idempotency
+  ON dsh_assignments(operator_context_id, idempotency_key)
   WHERE idempotency_key IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_dsh_assignments_active_captain
-  ON dsh_assignments(tenant_id, captain_id, response_deadline_at)
+  ON dsh_assignments(operator_context_id, captain_id, response_deadline_at)
   WHERE status IN ('offered', 'accepted');
 
 CREATE INDEX IF NOT EXISTS idx_dsh_assignments_active_order
-  ON dsh_assignments(tenant_id, order_id, created_at DESC)
+  ON dsh_assignments(operator_context_id, order_id, created_at DESC)
   WHERE order_id IS NOT NULL AND status IN ('offered', 'accepted');
 
 CREATE TABLE IF NOT EXISTS dsh_captain_dispatch_profiles (
-  tenant_id             text        NOT NULL DEFAULT 'default',
+  operator_context_id             text        NOT NULL DEFAULT 'default',
   captain_id            text        NOT NULL,
   accreditation_status  text        NOT NULL DEFAULT 'pending'
     CHECK (accreditation_status IN ('pending', 'approved', 'suspended', 'expired')),
@@ -54,12 +54,12 @@ CREATE TABLE IF NOT EXISTS dsh_captain_dispatch_profiles (
   version               integer     NOT NULL DEFAULT 1 CHECK (version > 0),
   created_at            timestamptz NOT NULL DEFAULT now(),
   updated_at            timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (tenant_id, captain_id)
+  PRIMARY KEY (operator_context_id, captain_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_dsh_captain_dispatch_profiles_candidate
   ON dsh_captain_dispatch_profiles(
-    tenant_id,
+    operator_context_id,
     accreditation_status,
     availability_status,
     priority_score DESC,
@@ -68,7 +68,7 @@ CREATE INDEX IF NOT EXISTS idx_dsh_captain_dispatch_profiles_candidate
 
 CREATE TABLE IF NOT EXISTS dsh_dispatch_decisions (
   id             uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id      text        NOT NULL DEFAULT 'default',
+  operator_context_id      text        NOT NULL DEFAULT 'default',
   assignment_id  uuid        REFERENCES dsh_assignments(id),
   order_id       uuid        REFERENCES dsh_orders(id),
   captain_id     text,
@@ -91,10 +91,10 @@ CREATE TABLE IF NOT EXISTS dsh_dispatch_decisions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_dsh_dispatch_decisions_assignment
-  ON dsh_dispatch_decisions(tenant_id, assignment_id, created_at DESC);
+  ON dsh_dispatch_decisions(operator_context_id, assignment_id, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_dsh_dispatch_decisions_order
-  ON dsh_dispatch_decisions(tenant_id, order_id, created_at DESC);
+  ON dsh_dispatch_decisions(operator_context_id, order_id, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_dsh_dispatch_decisions_captain
-  ON dsh_dispatch_decisions(tenant_id, captain_id, created_at DESC);
+  ON dsh_dispatch_decisions(operator_context_id, captain_id, created_at DESC);

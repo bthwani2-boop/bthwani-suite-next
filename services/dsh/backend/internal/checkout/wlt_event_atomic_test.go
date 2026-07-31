@@ -7,7 +7,7 @@ import (
 
 func TestWltPaymentEventIdentityUsesStableDerivedKey(t *testing.T) {
 	input := WltPaymentEventEnvelope{
-		TenantID:         " tenant-a ",
+		OperatorContextID:         " OperatorContext-a ",
 		CheckoutIntentID: "11111111-1111-1111-1111-111111111111",
 		PaymentSessionID: " session-a ",
 		Status:           " captured ",
@@ -31,7 +31,7 @@ func TestWltPaymentEventIdentityUsesStableDerivedKey(t *testing.T) {
 func TestWltPaymentEventIdentityHonorsAuthorityEventID(t *testing.T) {
 	key, _, err := WltPaymentEventIdentity(WltPaymentEventEnvelope{
 		EventID:          "evt-authority-0001",
-		TenantID:         "tenant-a",
+		OperatorContextID:         "OperatorContext-a",
 		CheckoutIntentID: "11111111-1111-1111-1111-111111111111",
 		PaymentSessionID: "session-a",
 		Status:           "authorized",
@@ -46,7 +46,7 @@ func TestWltPaymentEventIdentityHonorsAuthorityEventID(t *testing.T) {
 
 func TestWltPaymentEventIdentityRejectsUnsupportedStatus(t *testing.T) {
 	_, _, err := WltPaymentEventIdentity(WltPaymentEventEnvelope{
-		TenantID:         "tenant-a",
+		OperatorContextID:         "OperatorContext-a",
 		CheckoutIntentID: "11111111-1111-1111-1111-111111111111",
 		PaymentSessionID: "session-a",
 		Status:           "invented",
@@ -59,7 +59,7 @@ func TestWltPaymentEventIdentityRejectsUnsupportedStatus(t *testing.T) {
 func TestWltPaymentEventIdentityRejectsShortAuthorityEventID(t *testing.T) {
 	_, _, err := WltPaymentEventIdentity(WltPaymentEventEnvelope{
 		EventID:          "tiny",
-		TenantID:         "tenant-a",
+		OperatorContextID:         "OperatorContext-a",
 		CheckoutIntentID: "11111111-1111-1111-1111-111111111111",
 		PaymentSessionID: "session-a",
 		Status:           "captured",

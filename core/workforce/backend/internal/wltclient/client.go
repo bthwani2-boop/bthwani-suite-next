@@ -14,15 +14,15 @@ import (
 type Client struct {
 	baseURL  string
 	token    string
-	tenantID string
+	operatorContextID string
 	http     *http.Client
 }
 
-func NewClient(baseURL, token, tenantID string) *Client {
+func NewClient(baseURL, token, operatorContextID string) *Client {
 	return &Client{
 		baseURL:  strings.TrimRight(strings.TrimSpace(baseURL), "/"),
 		token:    strings.TrimSpace(token),
-		tenantID: strings.TrimSpace(tenantID),
+		operatorContextID: strings.TrimSpace(operatorContextID),
 		http:     &http.Client{Timeout: 12 * time.Second},
 	}
 }
@@ -60,7 +60,7 @@ type errorResponse struct {
 }
 
 func (c *Client) request(ctx context.Context, method, path, idempotencyKey, correlationID string, body any) (ProviderPenalty, error) {
-	if c.baseURL == "" || c.token == "" || c.tenantID == "" {
+	if c.baseURL == "" || c.token == "" || c.operatorContextID == "" {
 		return ProviderPenalty{}, fmt.Errorf("WLT workforce client is not configured")
 	}
 	encoded, err := json.Marshal(body)
@@ -74,7 +74,7 @@ func (c *Client) request(ctx context.Context, method, path, idempotencyKey, corr
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("X-Service-Caller", "workforce")
-	req.Header.Set("X-Tenant-ID", c.tenantID)
+	req.Header.Set("X-Operator-Context-ID", c.operatorContextID)
 	if strings.TrimSpace(idempotencyKey) != "" {
 		req.Header.Set("Idempotency-Key", idempotencyKey)
 	}

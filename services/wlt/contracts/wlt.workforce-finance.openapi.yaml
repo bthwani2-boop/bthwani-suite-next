@@ -15,7 +15,8 @@ paths:
   /wlt/field-commission-category-policies/{partnerCategory}:
     put:
       operationId: upsertFieldCommissionCategoryPolicy
-      security: [{ bearerAuth: [] }]
+      tags: [ WltWorkforceFinance ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/PartnerCategory'
       requestBody:
@@ -25,13 +26,14 @@ paths:
             schema: { type: object, additionalProperties: true }
       responses:
         '200': { description: Category commission policy stored. }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '400': { $ref: '#/components/responses/WorkforceFinanceBadRequest' }
+        '401': { $ref: '#/components/responses/WorkforceFinanceUnauthorized' }
+        '403': { $ref: '#/components/responses/WorkforceFinanceForbidden' }
   /wlt/field-commissions:
     post:
       operationId: createFieldCategoryCommission
-      security: [{ bearerAuth: [] }]
+      tags: [ WltWorkforceFinance ]
+      security: [ { bearerAuth: [] } ]
       requestBody:
         required: true
         content:
@@ -39,14 +41,15 @@ paths:
             schema: { type: object, additionalProperties: true }
       responses:
         '201': { description: Field commission recorded idempotently. }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '400': { $ref: '#/components/responses/WorkforceFinanceBadRequest' }
+        '401': { $ref: '#/components/responses/WorkforceFinanceUnauthorized' }
+        '403': { $ref: '#/components/responses/WorkforceFinanceForbidden' }
+        '409': { $ref: '#/components/responses/WorkforceFinanceConflict' }
   /wlt/provider-penalties:
     post:
       operationId: createProviderPenalty
-      security: [{ bearerAuth: [] }]
+      tags: [ WltWorkforceFinance ]
+      security: [ { bearerAuth: [] } ]
       requestBody:
         required: true
         content:
@@ -54,14 +57,15 @@ paths:
             schema: { type: object, additionalProperties: true }
       responses:
         '201': { description: Provider penalty ledger effect recorded. }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '400': { $ref: '#/components/responses/WorkforceFinanceBadRequest' }
+        '401': { $ref: '#/components/responses/WorkforceFinanceUnauthorized' }
+        '403': { $ref: '#/components/responses/WorkforceFinanceForbidden' }
+        '409': { $ref: '#/components/responses/WorkforceFinanceConflict' }
   /wlt/provider-penalties/{penaltyId}/reverse:
     post:
       operationId: reverseProviderPenalty
-      security: [{ bearerAuth: [] }]
+      tags: [ WltWorkforceFinance ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/PenaltyId'
       requestBody:
@@ -71,11 +75,11 @@ paths:
             schema: { type: object, additionalProperties: true }
       responses:
         '200': { description: Provider penalty reversed through a compensating ledger entry. }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '400': { $ref: '#/components/responses/WorkforceFinanceBadRequest' }
+        '401': { $ref: '#/components/responses/WorkforceFinanceUnauthorized' }
+        '403': { $ref: '#/components/responses/WorkforceFinanceForbidden' }
+        '404': { $ref: '#/components/responses/WorkforceFinanceNotFound' }
+        '409': { $ref: '#/components/responses/WorkforceFinanceConflict' }
 components:
   securitySchemes:
     bearerAuth:
@@ -93,8 +97,13 @@ components:
       required: true
       schema: { type: string, minLength: 1 }
   responses:
-    BadRequest: { description: Invalid request. }
-    Unauthorized: { description: Authentication or service authorization required. }
-    Forbidden: { description: Caller lacks the required financial authority. }
-    NotFound: { description: Financial record not found. }
-    Conflict: { description: Idempotency or lifecycle conflict. }
+    WorkforceFinanceBadRequest:
+      description: Invalid request.
+    WorkforceFinanceUnauthorized:
+      description: Authentication or service authorization required.
+    WorkforceFinanceForbidden:
+      description: Caller lacks the required financial authority.
+    WorkforceFinanceNotFound:
+      description: Financial record not found.
+    WorkforceFinanceConflict:
+      description: Idempotency or lifecycle conflict.

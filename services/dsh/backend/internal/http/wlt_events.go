@@ -14,7 +14,7 @@ import (
 )
 
 // POST /dsh/internal/wlt/payment-session-events
-// WLT is the payment and refund authority. Every event is tenant-scoped before
+// WLT is the payment and refund authority. Every event is OperatorContext-scoped before
 // DSH changes checkout, order, coupon, loyalty, or promotion-funding state.
 func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWriter, r *http.Request) {
 	if !requireWltServiceCaller(w, r) {
@@ -28,7 +28,7 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		OrderID          string `json:"orderId"`
 		RefundReference  string `json:"refundReference"`
 		Reason           string `json:"reason"`
-		TenantID         string `json:"tenantId"`
+		OperatorContextID         string `json:"operatorContextId"`
 		PaymentSessionID string `json:"paymentSessionId"`
 		Status           string `json:"status"`
 	}
@@ -40,20 +40,20 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 	}
 	body.EventID = strings.TrimSpace(body.EventID)
 	body.CorrelationID = strings.TrimSpace(body.CorrelationID)
-	body.TenantID = strings.TrimSpace(body.TenantID)
+	body.OperatorContextID = strings.TrimSpace(body.OperatorContextID)
 	body.CheckoutIntentID = strings.TrimSpace(body.CheckoutIntentID)
 	body.SpecialRequestID = strings.TrimSpace(body.SpecialRequestID)
 	body.PaymentSessionID = strings.TrimSpace(body.PaymentSessionID)
 	body.Status = strings.TrimSpace(body.Status)
-	if body.TenantID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "tenantId is required")
+	if body.OperatorContextID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required")
 		return
 	}
 	if body.Status == "refunded" {
 		handleConfirmedRefundEffect(
 			w,
 			s,
-			body.TenantID,
+			body.OperatorContextID,
 			strings.TrimSpace(body.OrderID),
 			strings.TrimSpace(body.RefundReference),
 			strings.TrimSpace(body.Reason),
@@ -63,12 +63,12 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 	if body.PaymentSessionID == "" || body.Status == "" ||
 		(body.CheckoutIntentID == "" && body.SpecialRequestID == "") ||
 		(body.CheckoutIntentID != "" && body.SpecialRequestID != "") {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "tenantId, exactly one payment source, paymentSessionId and status are required")
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId, exactly one payment source, paymentSessionId and status are required")
 		return
 	}
 
 	if body.SpecialRequestID != "" {
-		req, err := specialrequests.ApplyWltPaymentEvent(s.db, body.TenantID, body.SpecialRequestID, body.PaymentSessionID, body.Status)
+		req, err := specialrequests.ApplyWltPaymentEvent(s.db, body.OperatorContextID, body.SpecialRequestID, body.PaymentSessionID, body.Status)
 		if errors.Is(err, specialrequests.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "special request not found")
 			return
@@ -105,13 +105,13 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 	intent, err := checkout.ApplyWltPaymentEventTx(
 		r.Context(),
 		tx,
-		body.TenantID,
+		body.OperatorContextID,
 		body.CheckoutIntentID,
 		body.PaymentSessionID,
 		body.Status,
 	)
 	if errors.Is(err, checkout.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found in tenant")
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found in OperatorContext")
 		return
 	}
 	if errors.Is(err, checkout.ErrPaymentSessionMismatch) {
@@ -133,7 +133,7 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 
 	eventEnvelope := checkout.WltPaymentEventEnvelope{
 		EventID:          body.EventID,
-		TenantID:         body.TenantID,
+		OperatorContextID:         body.OperatorContextID,
 		CheckoutIntentID: body.CheckoutIntentID,
 		PaymentSessionID: body.PaymentSessionID,
 		Status:           body.Status,
@@ -177,20 +177,20 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 	})
 }
 
-func handleConfirmedRefundEffect(w http.ResponseWriter, s *protectedStoreServer, tenantID, orderID, refundReference, reason string) {
-	if tenantID == "" || orderID == "" || refundReference == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "tenantId, orderId and refundReference are required for refunded status")
+func handleConfirmedRefundEffect(w http.ResponseWriter, s *protectedStoreServer, operatorContextID, orderID, refundReference, reason string) {
+	if operatorContextID == "" || orderID == "" || refundReference == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId, orderId and refundReference are required for refunded status")
 		return
 	}
 	var exists bool
 	if err := s.db.QueryRow(`SELECT EXISTS(
-		SELECT 1 FROM dsh_orders WHERE id=$1::uuid AND tenant_id=$2
-	)`, orderID, tenantID).Scan(&exists); err != nil {
-		store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to verify refund order tenant")
+		SELECT 1 FROM dsh_orders WHERE id=$1::uuid AND operator_context_id=$2
+	)`, orderID, operatorContextID).Scan(&exists); err != nil {
+		store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to verify refund order OperatorContext")
 		return
 	}
 	if !exists {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found in tenant")
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found in OperatorContext")
 		return
 	}
 

@@ -38,7 +38,7 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-	tenantID := "tenant-order-price-" + suffix
+	operatorContextID := "OperatorContext-order-price-" + suffix
 	storeID := "order-price-test-store-" + suffix
 	clientID := "order-price-test-client-" + suffix
 
@@ -70,13 +70,13 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 	var intentID string
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_checkout_intents (
-			tenant_id, client_id, cart_id, store_id, state, fulfillment_mode,
+			operator_context_id, client_id, cart_id, store_id, state, fulfillment_mode,
 			payment_method, wlt_payment_session_id, subtotal_minor_units, delivery_fee_minor_units, discount_minor_units, total_minor_units, currency, pricing_snapshot_hash
 		)
 		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'bthwani_delivery', 'cod', $5,
 		        8400, 0, 0, 8400, 'USD', repeat('a', 64))
 		RETURNING id::text`,
-		tenantID, clientID, cartID, storeID, "wlt-ps-"+suffix,
+		operatorContextID, clientID, cartID, storeID, "wlt-ps-"+suffix,
 	).Scan(&intentID); err != nil {
 		t.Fatalf("failed to insert test checkout intent: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 	order, err := CreateOrder(db, CreateOrderInput{
 		CheckoutIntentID: intentID,
 		ClientID:         clientID,
-		TenantID:         tenantID,
+		OperatorContextID:         operatorContextID,
 	})
 	if err != nil {
 		t.Fatalf("CreateOrder failed: %v", err)
@@ -113,14 +113,14 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 	}
 }
 
-// seedOrderFixture creates a tenant-scoped store, checkout intent, and order
+// seedOrderFixture creates a OperatorContext-scoped store, checkout intent, and order
 // row with a WLT payment session reference already attached, mirroring the
 // governed CreateOrder path used by wallet/COD orders.
 func seedOrderFixture(t *testing.T, db *sql.DB, status string) (order *Order, paymentSessionID string) {
 	t.Helper()
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-	tenantID := "tenant-order-outbox-" + suffix
+	operatorContextID := "OperatorContext-order-outbox-" + suffix
 	storeID := "order-outbox-test-store-" + suffix
 	clientID := "order-outbox-test-client-" + suffix
 	paymentSessionID = "order-outbox-test-ps-" + suffix
@@ -136,13 +136,13 @@ func seedOrderFixture(t *testing.T, db *sql.DB, status string) (order *Order, pa
 	var intentID string
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_checkout_intents (
-			tenant_id, client_id, cart_id, store_id, state, fulfillment_mode,
+			operator_context_id, client_id, cart_id, store_id, state, fulfillment_mode,
 			payment_method, wlt_payment_session_id, subtotal_minor_units, delivery_fee_minor_units, discount_minor_units, total_minor_units, currency, pricing_snapshot_hash
 		)
 		VALUES ($1, $2, gen_random_uuid(), $3, 'confirmed', 'bthwani_delivery', 'wallet', $4,
 		        1000, 0, 0, 1000, 'YER', repeat('b', 64))
 		RETURNING id::text`,
-		tenantID, clientID, storeID, paymentSessionID,
+		operatorContextID, clientID, storeID, paymentSessionID,
 	).Scan(&intentID); err != nil {
 		t.Fatalf("failed to insert test checkout intent: %v", err)
 	}
@@ -150,13 +150,13 @@ func seedOrderFixture(t *testing.T, db *sql.DB, status string) (order *Order, pa
 	var o Order
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_orders (
-			tenant_id, checkout_intent_id, store_id, fulfillment_mode,
+			operator_context_id, checkout_intent_id, store_id, fulfillment_mode,
 			client_id, status, wlt_payment_ref_id
 		)
 		VALUES ($1, $2::uuid, $3, 'bthwani_delivery', $4, $5, $6)
 		RETURNING id::text, checkout_intent_id::text, store_id, client_id, status,
 		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at`,
-		tenantID, intentID, storeID, clientID, status, paymentSessionID,
+		operatorContextID, intentID, storeID, clientID, status, paymentSessionID,
 	).Scan(
 		&o.ID, &o.CheckoutIntentID, &o.StoreID, &o.ClientID,
 		&o.Status, &o.RejectionReason, &o.WltPaymentRefID,

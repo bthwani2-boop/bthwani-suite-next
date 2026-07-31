@@ -12,7 +12,7 @@ BEGIN
     IF NEW.state = 'cancelled' AND OLD.state IS DISTINCT FROM NEW.state THEN
         INSERT INTO dsh_promotion_funding_outbox (
             event_type,
-            tenant_id,
+            operator_context_id,
             checkout_intent_id,
             coupon_redemption_id,
             wlt_funding_reservation_id,
@@ -23,7 +23,7 @@ BEGIN
         )
         SELECT
             'release',
-            r.funding_tenant_id,
+            r.funding_operator_context_id,
             r.checkout_intent_id,
             r.id,
             r.wlt_funding_reservation_id,
@@ -34,7 +34,7 @@ BEGIN
         FROM dsh_coupon_redemptions r
         WHERE r.checkout_intent_id = NEW.id
           AND r.funding_status = 'reserved'
-          AND r.funding_tenant_id IS NOT NULL
+          AND r.funding_operator_context_id IS NOT NULL
           AND r.wlt_funding_reservation_id IS NOT NULL
         ON CONFLICT (idempotency_key) DO NOTHING;
     END IF;
@@ -57,7 +57,7 @@ BEGIN
     IF NEW.status = 'cancelled' AND OLD.status IS DISTINCT FROM NEW.status THEN
         INSERT INTO dsh_promotion_funding_outbox (
             event_type,
-            tenant_id,
+            operator_context_id,
             checkout_intent_id,
             coupon_redemption_id,
             wlt_funding_reservation_id,
@@ -68,7 +68,7 @@ BEGIN
         )
         SELECT
             'reverse',
-            r.funding_tenant_id,
+            r.funding_operator_context_id,
             r.checkout_intent_id,
             r.id,
             r.wlt_funding_reservation_id,
@@ -79,7 +79,7 @@ BEGIN
         FROM dsh_coupon_redemptions r
         WHERE r.checkout_intent_id = NEW.checkout_intent_id
           AND r.funding_status = 'committed'
-          AND r.funding_tenant_id IS NOT NULL
+          AND r.funding_operator_context_id IS NOT NULL
           AND r.wlt_funding_reservation_id IS NOT NULL
         ON CONFLICT (idempotency_key) DO NOTHING;
     END IF;

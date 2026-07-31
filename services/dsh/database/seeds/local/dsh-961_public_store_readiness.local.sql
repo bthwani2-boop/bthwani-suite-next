@@ -65,7 +65,7 @@ SET address_line = CASE id
       ELSE signage_photo_ref
     END,
     updated_at = NOW()
-WHERE tenant_id = 'local-dsh'
+WHERE operator_context_id = 'local-dsh'
   AND id IN (
     'store-test-grocery',
     'store-1002',
@@ -111,7 +111,7 @@ SET address_line = CASE
       ELSE signage_photo_ref
     END,
     updated_at = NOW()
-WHERE tenant_id = 'local-dsh'
+WHERE operator_context_id = 'local-dsh'
   AND status = 'active'
   AND is_visible = true
   AND partner_readiness = 'ready'

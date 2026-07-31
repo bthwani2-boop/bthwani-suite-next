@@ -33,7 +33,7 @@ const (
 type Event struct {
 	ID               string
 	EventType        string
-	TenantID         string
+	OperatorContextID         string
 	CheckoutIntentID string
 	PaymentSessionID string
 	OrderID          string
@@ -53,7 +53,7 @@ type EnqueueInput struct {
 	CorrelationID    string
 }
 
-// Enqueue writes a financial closure event inside tx. Tenant ownership is not
+// Enqueue writes a financial closure event inside tx. OperatorContext ownership is not
 // accepted from the caller: ClaimBatch derives it later from the immutable
 // checkout-intent owner before any WLT delivery or retry.
 func Enqueue(tx *sql.Tx, input EnqueueInput) error {
@@ -86,14 +86,14 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	defer tx.Rollback() //nolint:errcheck
 
 	rows, err := tx.Query(`
-		SELECT outbox.id, outbox.event_type, btrim(intent.tenant_id),
+		SELECT outbox.id, outbox.event_type, btrim(intent.operator_context_id),
 		       outbox.checkout_intent_id::text, outbox.payment_session_id,
 		       COALESCE(outbox.order_id::text, ''), outbox.client_id, outbox.reason,
 		       COALESCE(outbox.correlation_id, outbox.checkout_intent_id::text), outbox.attempt_count
 		FROM dsh_checkout_financial_closure_outbox outbox
 		JOIN dsh_checkout_intents intent ON intent.id=outbox.checkout_intent_id
 		WHERE outbox.status = 'pending' AND outbox.next_retry_at <= NOW()
-		  AND btrim(intent.tenant_id) <> ''
+		  AND btrim(intent.operator_context_id) <> ''
 		ORDER BY outbox.created_at
 		LIMIT $1
 		FOR UPDATE OF outbox SKIP LOCKED`,
@@ -106,7 +106,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	for rows.Next() {
 		var e Event
 		if err := rows.Scan(
-			&e.ID, &e.EventType, &e.TenantID, &e.CheckoutIntentID, &e.PaymentSessionID,
+			&e.ID, &e.EventType, &e.OperatorContextID, &e.CheckoutIntentID, &e.PaymentSessionID,
 			&e.OrderID, &e.ClientID, &e.Reason, &e.CorrelationID, &e.AttemptCount,
 		); err != nil {
 			rows.Close()

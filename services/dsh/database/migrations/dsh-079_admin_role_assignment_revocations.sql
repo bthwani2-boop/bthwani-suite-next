@@ -1,4 +1,4 @@
--- JRN-031: governed rollback for approved staff role assignments.
+-- : governed rollback for approved staff role assignments.
 
 ALTER TABLE dsh_admin_approval_requests
   DROP CONSTRAINT IF EXISTS dsh_admin_approval_requests_action_type_check;

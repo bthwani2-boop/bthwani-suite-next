@@ -1,31 +1,18 @@
 # BThwani Suite Next — Copilot Instructions
 
-Read first:
+`AGENTS.md` is the governing instruction source.
 
-1. `AGENTS.md`
-2. `.agents/INDEX.md`
-3. `.agents/AUTHORITY_BOUNDARY.md`
-4. `.agents/COMMAND_SAFETY_POLICY.md`
-5. `.agents/adapters/copilot.md`
+For normal work, read only `AGENTS.md`. Read `.agents/COMMAND_SAFETY_POLICY.md` before writes or destructive commands. Load `.agents/INDEX.md` only when a governed skill is actually required.
 
-Copilot is an implementation assistant only. It must not decide architecture, widen scope, delete/move/rename files, change dependencies, or claim final acceptance. All commands must follow the safety policy.
-
-This adapter is thin. Do not duplicate global policy here. If this file conflicts with `AGENTS.md`, `AGENTS.md` wins.
-
-Before editing, state the exact files you intend to touch. After editing, provide changed paths and ask for Git evidence.
-
-## BThwani Ponytail / YAGNI
-
-Also apply:
-
-1. `.agents/rules/bthwani-ponytail-yagni.md`
-2. `.agents/skills/bthwani-ponytail-yagni/SKILL.md`
+Copilot is an implementation assistant. It must not widen scope, invent architecture, change dependencies, delete or move files without explicit task need, or claim protected approval.
 
 Default behavior:
 
-- smallest correct diff
-- reuse existing code first
-- no unrequested abstractions
-- no new dependency without proof
-- no preview/demo/mock runtime paths
-- no scans of generated/cache/output folders
+- inspect the smallest relevant surface;
+- reuse existing code first;
+- make the smallest correct diff;
+- run an affected check only;
+- avoid generated, cache, output, and historical folders unless directly relevant;
+- do not preload adapters, catalogs, skills, diagnostics, or governance documents.
+
+Graphify, LeanCTX, Nx, full verification, and runtime tooling are conditional tools, not default prerequisites.

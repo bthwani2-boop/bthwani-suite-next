@@ -1,33 +1,27 @@
 # BThwani Agent Layer
 
-Version: 2026.06.24-v1
+`AGENTS.md` is the only default instruction entry point.
 
-This directory supports agent routing, boundaries, adapters, and task-specific skills. `AGENTS.md` remains the main entry contract.
+## Minimal read order
 
-## Command Safety Policy
+For normal repository work, read only:
 
-All operations must strictly conform to the [Command Safety Policy](./COMMAND_SAFETY_POLICY.md).
+1. `AGENTS.md`
+2. `.agents/COMMAND_SAFETY_POLICY.md` before a write or destructive command
+
+Read `.agents/INDEX.md` only when a governed skill must be selected. Load one task-specific `SKILL.md`; load a second only when a separate risk domain is actually affected.
+
+Do not preload every skill, adapter, catalog, governance document, journey file, diagnostic report, or historical audit.
 
 ## Branch rule
 
-Every agent must use the current local branch as the execution branch:
+- Local task: use the active local branch unless the user names another branch.
+- Remote task: use the exact user-named remote branch and pin its current commit SHA.
+- Never replace an explicit remote target with the local branch, default branch, stale diagnostics, or a prior pull request.
+- Re-pin before each write batch and after the final push.
 
-```text
-ACTIVE_BRANCH = git branch --show-current
-TARGET_BRANCH = ACTIVE_BRANCH
-DEFAULT_BRANCH = ACTIVE_BRANCH
-```
+## Tool adapters
 
-No tool may assume, switch, or prefer a remote metadata branch during execution. Local execution uses the active local branch only. Remote metadata may be used only for explicit remote audit, PR review, or GitHub diagnosis, and must never cause automatic local branch switching.
+Adapters are compatibility shims only. They must defer to `AGENTS.md`, may not add mandatory tools, and may not widen the default read order.
 
-## Read order
-
-1. `AGENTS.md`
-2. `.agents/COMMAND_SAFETY_POLICY.md`
-3. `.agents/AUTOMATED_EXECUTION_POLICY.md` (Mandatory automated execution policy)
-4. `.agents/INDEX.md`
-5. `.agents/AUTHORITY_BOUNDARY.md`
-6. `.agents/EVIDENCE_GATE_ROUTER.md` when choosing verification
-7. One or two task-specific skills only
-
-Do not read every skill by default.
+Graphify, LeanCTX, Nx, runtime environments, and full verification suites are conditional tools. Use them only when the task evidence requires them.

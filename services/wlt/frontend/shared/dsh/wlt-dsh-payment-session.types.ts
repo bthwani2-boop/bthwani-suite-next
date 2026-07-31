@@ -17,7 +17,7 @@ export type WltPaymentSession = {
   readonly specialRequestId?: string | null;
   readonly subscriptionPurchaseId?: string | null;
   readonly commercialProductReference?: string | null;
-  readonly tenantId: string;
+  readonly operatorContextId: string;
   readonly clientId: string;
   readonly storeId: string;
   readonly paymentMethod: "cod" | "wallet" | "mixed" | "official_wallet";

@@ -1,4 +1,4 @@
--- JRN-031: controlled access-only support sessions owned by Identity.
+-- : controlled access-only support sessions owned by Identity.
 --
 -- This migration was originally introduced with the already-occupied 004
 -- identifier. Its SQL is intentionally convergence-safe so databases that ran

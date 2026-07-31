@@ -24,7 +24,7 @@ type Client struct {
 type Event struct {
 	EventID          string
 	CorrelationID    string
-	TenantID         string
+	OperatorContextID         string
 	CheckoutIntentID *string
 	SpecialRequestID *string
 	PaymentSessionID string
@@ -47,9 +47,9 @@ func (c *Client) Configured() bool {
 }
 
 // Notify preserves the established payment-event call contract.
-func (c *Client) Notify(ctx context.Context, tenantID string, checkoutIntentID, specialRequestID *string, paymentSessionID, status string) error {
+func (c *Client) Notify(ctx context.Context, operatorContextID string, checkoutIntentID, specialRequestID *string, paymentSessionID, status string) error {
 	return c.NotifyEvent(ctx, Event{
-		TenantID: tenantID, CheckoutIntentID: checkoutIntentID, SpecialRequestID: specialRequestID,
+		OperatorContextID: operatorContextID, CheckoutIntentID: checkoutIntentID, SpecialRequestID: specialRequestID,
 		PaymentSessionID: paymentSessionID, Status: status,
 	})
 }
@@ -68,8 +68,8 @@ func (c *Client) NotifyEvent(ctx context.Context, event Event) error {
 	if event.EventID != "" {
 		payload["eventId"] = event.EventID
 	}
-	if event.TenantID != "" {
-		payload["tenantId"] = event.TenantID
+	if event.OperatorContextID != "" {
+		payload["operatorContextId"] = event.OperatorContextID
 	}
 	if event.OrderID != "" {
 		payload["orderId"] = event.OrderID

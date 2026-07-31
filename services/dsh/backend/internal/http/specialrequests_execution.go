@@ -47,7 +47,7 @@ func (s *protectedStoreServer) specialRequestFinancialReadback(ctx context.Conte
 		"readState":               "not_started",
 		"paymentSession":          nil,
 		"settlementApplicability": "not_applicable",
-		"settlementReason":        "JRN-022 has no partner settlement source; WLT payment-session status is the complete applicable financial readback.",
+		"settlementReason":        "Special requests have no partner settlement source; WLT payment-session status is the complete applicable financial readback.",
 	}
 	if request.WltPaymentSessionID == nil || *request.WltPaymentSessionID == "" {
 		return result
@@ -86,12 +86,12 @@ func (s *protectedStoreServer) handleGetClientSpecialRequestExecution(w http.Res
 	}
 	requestID := r.PathValue("requestId")
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
-	request, err := svc.GetForClientInTenant(r.Context(), actor.TenantID, requestID, actor.ID)
+	request, err := svc.GetForClientInOperatorContext(r.Context(), actor.OperatorContextID, requestID, actor.ID)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
 	}
-	evidence, err := svc.ExecutionEvidenceInTenant(r.Context(), actor.TenantID, requestID)
+	evidence, err := svc.ExecutionEvidenceInOperatorContext(r.Context(), actor.OperatorContextID, requestID)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
@@ -110,12 +110,12 @@ func (s *protectedStoreServer) handleGetOperatorSpecialRequestExecution(w http.R
 	}
 	requestID := r.PathValue("requestId")
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
-	request, err := svc.GetForOperatorInTenant(r.Context(), actor.TenantID, requestID)
+	request, err := svc.GetForOperatorInOperatorContext(r.Context(), actor.OperatorContextID, requestID)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
 	}
-	evidence, err := svc.ExecutionEvidenceInTenant(r.Context(), actor.TenantID, requestID)
+	evidence, err := svc.ExecutionEvidenceInOperatorContext(r.Context(), actor.OperatorContextID, requestID)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return

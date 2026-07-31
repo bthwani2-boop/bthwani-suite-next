@@ -2,9 +2,9 @@ package http
 
 import "net/http"
 
-// registerRefundFinanceRoutes keeps financial bounded registrars composed from
-// one extension point. WLT remains the financial owner; DSH enforces actor,
-// tenant and privacy boundaries before proxying canonical commands or reads.
+// registerRefundFinanceRoutes is the single composition point for governed DSH
+// financial mutation registrars. WLT remains the sole owner of financial truth;
+// DSH enforces actor, OperatorContext and privacy boundaries before proxying.
 func registerRefundFinanceRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("POST /dsh/control-panel/finance/refunds", s.handleCreateFinanceRefund)
 	mux.HandleFunc("POST /dsh/control-panel/finance/refunds/{refundId}/approve", s.handleApproveFinanceRefund)
@@ -15,5 +15,7 @@ func registerRefundFinanceRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}/refunds", s.handleClientOrderRefunds)
 	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/refunds", s.handlePartnerOrderRefunds)
 
-	registerJRN038CodFinanceRoutes(mux, s)
+	registerPayoutFinanceRoutes(mux, s)
+	registerReconciliationFinanceRoutes(mux, s)
+	registerCodFinanceRoutes(mux, s)
 }

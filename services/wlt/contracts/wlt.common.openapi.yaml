@@ -1,0 +1,87 @@
+openapi: 3.1.0
+info:
+  title: BThwani WLT Shared Transport Components
+  version: 1.0.0
+  description: >-
+    Canonical cross-contract transport components for the WLT service. Domain
+    schemas remain owned by their journey contracts; authentication headers,
+    correlation, idempotency and the runtime error envelope are defined exactly
+    once here. The legacy operator-context header remains only as an optional
+    compatibility field while its database columns are retired; callers do not
+    control financial ownership through it.
+x-bthwani-owner: services/wlt
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: DISABLED
+x-bthwani-runtime-dependency: true
+x-bthwani-financial-owner: true
+paths:
+  x-bthwani-components-only: true
+components:
+  securitySchemes:
+    serviceBearer:
+      type: http
+      scheme: bearer
+  parameters:
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, pattern: '^Bearer .+' }
+    ServiceCaller:
+      name: X-Service-Caller
+      in: header
+      required: true
+      schema: { type: string, const: dsh }
+    OperatorContextId:
+      name: X-Operator-Context-ID
+      in: header
+      required: false
+      deprecated: true
+      description: >-
+        Ignored caller compatibility header. WLT overwrites this value after
+        service authentication with the server-owned compatibility scope. It
+        is not a tenant, organization, partner, store or ownership selector.
+      schema: { type: string, minLength: 1, maxLength: 120 }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
+    CorrelationIdOptional:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema: { type: string, minLength: 1, maxLength: 200 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 200 }
+    CaseId:
+      name: caseId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    CodRecordId:
+      name: codRecordId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    PayoutId:
+      name: payoutId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    SettlementId:
+      name: settlementId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+  schemas:
+    Error: { $ref: '../../../contracts/shared/common.openapi.yaml#/components/schemas/Error' }
+  responses:
+    Error:
+      description: Governed WLT error response.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }

@@ -29,18 +29,18 @@ func (p *governedRuntimeProvider) Post(_ context.Context, path string, _ any, me
 
 func createGovernedRuntimeRefund(t *testing.T, db *sql.DB, sessionID, orderID string, amount int64, suffix string) *GovernedRefund {
 	t.Helper()
-	var tenantID, clientID string
-	if err := db.QueryRow(`SELECT tenant_id, client_id FROM wlt_payment_sessions WHERE id=$1`, sessionID).Scan(&tenantID, &clientID); err != nil {
+	var operatorContextID, clientID string
+	if err := db.QueryRow(`SELECT operator_context_id, client_id FROM wlt_payment_sessions WHERE id=$1`, sessionID).Scan(&operatorContextID, &clientID); err != nil {
 		t.Fatalf("read runtime payment session identity: %v", err)
 	}
-	key := fmt.Sprintf("jrn035-runtime-%s-%d", suffix, time.Now().UnixNano())
+	key := fmt.Sprintf("runtime-%s-%d", suffix, time.Now().UnixNano())
 	created, replayed, err := CreateGovernedRefund(context.Background(), db, GovernedCreateRefundInput{
-		TenantID:              tenantID,
+		OperatorContextID:              operatorContextID,
 		PaymentSessionID:      sessionID,
 		OrderID:               orderID,
 		ClientID:              clientID,
 		AmountMinorUnits:      amount,
-		Reason:                "JRN-035 runtime evidence " + suffix,
+		Reason:                " runtime evidence " + suffix,
 		EligibilityReference: "runtime-evidence:" + suffix,
 		RequestedByOperatorID: "maker-" + suffix,
 		IdempotencyKey:        key,
@@ -112,7 +112,7 @@ func TestGovernedRefundRuntimeProviderSuccessLedgerAndOutboxRetry(t *testing.T) 
 	defer db.Close()
 
 	sessionID := insertTestSession(t, db, "captured", 5000, "YER")
-	orderID := fmt.Sprintf("jrn035-success-order-%d", time.Now().UnixNano())
+	orderID := fmt.Sprintf("success-order-%d", time.Now().UnixNano())
 	approved := createGovernedRuntimeRefund(t, db, sessionID, orderID, 2000, "success")
 	stub := &governedRuntimeProvider{result: provider.ProviderResult{Status: "refunded", ProviderReference: "provider-success-" + approved.ID}}
 
@@ -173,7 +173,7 @@ func TestGovernedRefundRuntimeDefinitiveProviderFailureHasNoLedgerOrOutbox(t *te
 	defer db.Close()
 
 	sessionID := insertTestSession(t, db, "captured", 3000, "YER")
-	orderID := fmt.Sprintf("jrn035-failure-order-%d", time.Now().UnixNano())
+	orderID := fmt.Sprintf("failure-order-%d", time.Now().UnixNano())
 	approved := createGovernedRuntimeRefund(t, db, sessionID, orderID, 700, "failure")
 	stub := &governedRuntimeProvider{err: provider.Error{Code: "REFUND_DECLINED", StatusCode: 422, Message: "simulated definitive decline"}}
 
@@ -206,7 +206,7 @@ func TestGovernedRefundRuntimeAmbiguousResultRequiresReconciliationAndNoRetry(t 
 	defer db.Close()
 
 	sessionID := insertTestSession(t, db, "captured", 4000, "YER")
-	orderID := fmt.Sprintf("jrn035-unknown-order-%d", time.Now().UnixNano())
+	orderID := fmt.Sprintf("unknown-order-%d", time.Now().UnixNano())
 	approved := createGovernedRuntimeRefund(t, db, sessionID, orderID, 900, "unknown")
 	stub := &governedRuntimeProvider{err: errors.New("simulated provider transport timeout")}
 
@@ -262,7 +262,7 @@ func TestGovernedRefundRuntimePartialThenRemainingFullPreventsOverRefund(t *test
 	defer db.Close()
 
 	sessionID := insertTestSession(t, db, "captured", 1000, "YER")
-	orderID := fmt.Sprintf("jrn035-partial-order-%d", time.Now().UnixNano())
+	orderID := fmt.Sprintf("partial-order-%d", time.Now().UnixNano())
 	first := createGovernedRuntimeRefund(t, db, sessionID, orderID, 400, "partial-first")
 	firstProvider := &governedRuntimeProvider{result: provider.ProviderResult{Status: "refunded", ProviderReference: "provider-partial-first-" + first.ID}}
 	if _, err := CompleteGovernedRefundWithProvider(context.Background(), db, firstProvider, first.ID, "executor-partial-first", "corr-partial-first"); err != nil {
@@ -278,12 +278,12 @@ func TestGovernedRefundRuntimePartialThenRemainingFullPreventsOverRefund(t *test
 		t.Fatalf("complete remaining refund: %v", err)
 	}
 
-	var tenantID, clientID string
-	if err := db.QueryRow(`SELECT tenant_id,client_id FROM wlt_payment_sessions WHERE id=$1`, sessionID).Scan(&tenantID, &clientID); err != nil {
+	var operatorContextID, clientID string
+	if err := db.QueryRow(`SELECT operator_context_id,client_id FROM wlt_payment_sessions WHERE id=$1`, sessionID).Scan(&operatorContextID, &clientID); err != nil {
 		t.Fatalf("read completed session identity: %v", err)
 	}
 	_, _, err := CreateGovernedRefund(context.Background(), db, GovernedCreateRefundInput{
-		TenantID: tenantID, PaymentSessionID: sessionID, OrderID: orderID, ClientID: clientID,
+		OperatorContextID: operatorContextID, PaymentSessionID: sessionID, OrderID: orderID, ClientID: clientID,
 		AmountMinorUnits: 1, Reason: "over refund", EligibilityReference: "runtime-over-refund",
 		RequestedByOperatorID: "maker-over-refund", IdempotencyKey: fmt.Sprintf("over-refund-%d", time.Now().UnixNano()),
 	})

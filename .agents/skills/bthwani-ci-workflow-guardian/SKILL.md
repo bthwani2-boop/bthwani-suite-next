@@ -26,7 +26,7 @@ Own CI workflow policy only: triggers, branch and path coverage, permissions, im
 - `CI_WORKFLOW_AUTHORITY` owns CI workflow approval.
 - This skill is separate from `GOVERNANCE_CONTRACT_AUTHORITY`, the engineering executor, and the final closure judge.
 - It may verify and approve CI workflow policy only when the approver is independent from the change author and from the governance approver when both domains change.
-- It cannot approve governance contracts, product acceptance, QA, application security, finance, release, production, residual risk, or SaaS commercial activation.
+- It cannot approve governance contracts, product acceptance, QA, application security, finance, release, production, residual risk, or commercial platform activation.
 
 ## Required method
 

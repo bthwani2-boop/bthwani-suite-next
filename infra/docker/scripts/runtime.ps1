@@ -63,7 +63,7 @@ $ProfileList = @()
 if ($Profiles -ne "") {
   $ProfileList = $Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ }
 }
-$AllowedProfiles = @("identity", "workforce", "dsh", "media", "wlt", "financial-simulators", "mail", "cache", "observability")
+$AllowedProfiles = @("identity", "workforce", "dsh", "media", "wlt", "financial-simulators", "mail", "cache", "observability", "platform", "providers")
 foreach ($p in $ProfileList) {
   if ($AllowedProfiles -notcontains $p) {
     throw "Unsupported profile: '$p'. Allowed: $($AllowedProfiles -join ', ')"
@@ -183,6 +183,8 @@ function Wait-ForPostgres {
   for ($i = 1; $i -le $max; $i++) {
     Write-Host "Waiting for Postgres ($i/$max)..."
 
+    $oldEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     docker compose @(Get-ComposeBase) exec -T postgres pg_isready -U bthwani_runtime -d bthwani_runtime 2>$null
     if ($LASTEXITCODE -eq 0) {
       $Missing = @()
@@ -196,6 +198,7 @@ function Wait-ForPostgres {
       }
 
       if ($Missing.Count -eq 0) {
+        $ErrorActionPreference = $oldEap
         Start-Sleep -Seconds 2
         Write-Host "Postgres: healthy"
         return
@@ -203,6 +206,7 @@ function Wait-ForPostgres {
 
       Write-Host "Postgres is up but missing DB(s): $($Missing -join ', ')"
     }
+    $ErrorActionPreference = $oldEap
 
     Start-Sleep -Seconds 3
   }
@@ -445,7 +449,10 @@ function Wait-ForValkey {
   $max = 20
   for ($i = 1; $i -le $max; $i++) {
     Write-Host "Waiting for Valkey ($i/$max)..."
+    $oldEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     docker compose @(Get-ComposeBase) exec -T valkey valkey-cli ping 2>$null
+    $ErrorActionPreference = $oldEap
     if ($LASTEXITCODE -eq 0) { Write-Host "Valkey: healthy"; return }
     Start-Sleep -Seconds 3
   }
@@ -574,19 +581,27 @@ function Invoke-WltSmoke {
   Write-Host "  /wlt/readiness: $($readiness | ConvertTo-Json -Compress)"
   if ($readiness.status -ne "ready") { throw "/wlt/readiness not ready: $($readiness.status)" }
 
-  $payRef = Invoke-RestMethod "http://localhost:58083/wlt/references/payment-status?orderId=order-dev-0001" -TimeoutSec 10 -ErrorAction Stop
-  Write-Host "  /wlt/references/payment-status: $($payRef.reference.status)"
-  if ($payRef.reference.status -ne "captured") { throw "/wlt/references/payment-status wrong status" }
-
-  $walRef = Invoke-RestMethod "http://localhost:58083/wlt/references/wallet-status?actorId=partner-dev-0001&actorType=partner" -TimeoutSec 10 -ErrorAction Stop
-  Write-Host "  /wlt/references/wallet-status: $($walRef.reference.status)"
-  if ($walRef.reference.status -ne "active") { throw "/wlt/references/wallet-status wrong status" }
-
   $wltDshServiceToken = $env:WLT_DSH_SERVICE_TOKEN
   if ([string]::IsNullOrWhiteSpace($wltDshServiceToken)) { throw "WLT_DSH_SERVICE_TOKEN is required for WLT smoke" }
 
+  $wltHeaders = @{
+    "Authorization" = "Bearer $wltDshServiceToken"
+    "X-Service-Caller" = "dsh"
+    "X-Operator-Context-ID" = "context-yemen"
+  }
+
+  $payRef = Invoke-RestMethod "http://localhost:58083/wlt/references/payment-status?orderId=order-dev-0001" -Headers $wltHeaders -TimeoutSec 10 -ErrorAction Stop
+  Write-Host "  /wlt/references/payment-status: $($payRef.reference.status)"
+  if ($payRef.reference.status -ne "captured") { throw "/wlt/references/payment-status wrong status" }
+
+  $walRef = Invoke-RestMethod "http://localhost:58083/wlt/references/wallet-status?actorId=partner-dev-0001&actorType=partner" -Headers $wltHeaders -TimeoutSec 10 -ErrorAction Stop
+  Write-Host "  /wlt/references/wallet-status: $($walRef.reference.status)"
+  if ($walRef.reference.status -ne "active") { throw "/wlt/references/wallet-status wrong status" }
+
+
+
   $sessionBody = @{
-    tenantId = "tenant-yemen"
+    operatorContextId = "context-yemen"
     checkoutIntentId = "checkout-smoke-0001"
     clientId = "client-local-001"
     storeId = "store-test-grocery"
@@ -691,7 +706,7 @@ function Invoke-DshMediaSeed {
 
 function Invoke-DshDevBootstrap {
   Write-Host "`n--- DSH API Dev Bootstrap ---"
-  node tools/scripts/bootstrap-dev-data.mjs
+  node tools/scripts/mobile-dev-data.mjs --repair
   if ($LASTEXITCODE -ne 0) { throw "DSH API Dev Bootstrap failed (exit $LASTEXITCODE)" }
   Write-Host "DSH API Dev Bootstrap: PASS"
 }

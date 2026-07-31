@@ -7,7 +7,7 @@ info:
     payment sessions. DSH proxies WLT truth and never persists a second ledger
     or provider state.
 x-bthwani-owner: services/dsh
-x-bthwani-journey: JRN-034
+x-bthwani-capability: payment-sessions
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: ENABLED
 servers:
@@ -21,7 +21,6 @@ paths:
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
-        - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/CorrelationId'
       responses:
         '200':
@@ -35,29 +34,31 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
         '502': { $ref: '#/components/responses/Error' }
         '503': { $ref: '#/components/responses/Error' }
+
   /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status:
     post:
       operationId: refreshDshPaymentSessionProviderStatus
-      summary: Ask WLT to query provider status without repeating authorize or capture.
+      summary: Ask WLT to reconcile the current provider status without creating DSH financial truth.
       tags: [DshFinancePaymentSessions]
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
-        - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
       responses:
         '200':
-          description: Authoritative WLT payment state.
+          description: Refreshed WLT-owned payment session state.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PaymentOperationEnvelope' }
         '400': { $ref: '#/components/responses/Error' }
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
         '502': { $ref: '#/components/responses/Error' }
         '503': { $ref: '#/components/responses/Error' }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -70,11 +71,6 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 1, maxLength: 200 }
-    TenantId:
-      name: tenantId
-      in: query
-      required: true
-      schema: { type: string, minLength: 1, maxLength: 120 }
     IdempotencyKey:
       name: Idempotency-Key
       in: header
@@ -91,12 +87,12 @@ components:
       enum: [reference_created, pending_provider, authorization_pending, authorized, capture_pending, captured, cod_pending, cod_collected, failed, expired, provider_result_unknown]
     PaymentSession:
       type: object
-      required: [id, tenantId, clientId, storeId, paymentMethod, status, providerReference, amountMinorUnits, currency, createdAt, updatedAt]
+      required: [id, operatorContextId, clientId, storeId, paymentMethod, status, providerReference, amountMinorUnits, currency, createdAt, updatedAt]
       properties:
         id: { type: string }
         checkoutIntentId: { type: [string, 'null'] }
         specialRequestId: { type: [string, 'null'] }
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         clientId: { type: string }
         storeId: { type: string }
         paymentMethod: { type: string, enum: [cod, wallet, mixed, official_wallet] }

@@ -188,7 +188,7 @@ requireMarkers(`${workflowsRoot}/ci-policy.yml`, [
   "guard:governance-schema",
   "guard:agent-governance",
   "guard:authority-separation",
-  "guard:saas-governance",
+
   "guard:guard-registry",
   "guard:sdlc",
   "guard:cleanup-policy",

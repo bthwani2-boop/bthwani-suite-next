@@ -9,20 +9,10 @@ const proxy = fs.readFileSync(
   "utf8",
 );
 
-test("control-panel exposes only read-only WLT reference projections", () => {
-  assert.match(proxy, /const WLT_BROWSER_REFERENCE_PATHS = new Set/);
-  for (const referencePath of [
-    "/wlt/references/payment-status",
-    "/wlt/references/settlement-status",
-    "/wlt/references/refund-status",
-    "/wlt/references/wallet-status",
-  ]) {
-    assert.match(proxy, new RegExp(referencePath.replaceAll("/", "\\/")));
-  }
-  assert.match(proxy, /service !== "wlt"/);
-  assert.match(proxy, /method === "GET"/);
-  assert.match(proxy, /BFF_SERVICE_PATH_FORBIDDEN/);
-  assert.doesNotMatch(proxy, /WLT_BROWSER_REFERENCE_PATHS[\s\S]*?cod-records/);
-  assert.doesNotMatch(proxy, /WLT_BROWSER_REFERENCE_PATHS[\s\S]*?settlements/);
-  assert.doesNotMatch(proxy, /WLT_BROWSER_REFERENCE_PATHS[\s\S]*?payout/);
+test("control-panel has no direct WLT upstream or browser route", () => {
+  assert.match(proxy, /dsh:\s*\{/);
+  assert.doesNotMatch(proxy, /\bwlt:\s*\{/);
+  assert.doesNotMatch(proxy, /WLT_API_BASE_URL/);
+  assert.doesNotMatch(proxy, /\/api\/wlt/);
+  assert.doesNotMatch(proxy, /58083/);
 });

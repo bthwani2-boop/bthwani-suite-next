@@ -27,6 +27,10 @@ func (r *Repository) BootstrapLocalPlatformActors(ctx context.Context, input Loc
 	if len(input.Password) < 6 {
 		return errors.New("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD must contain at least 6 characters")
 	}
+	operatorContextID := strings.TrimSpace(input.OperatorContextID)
+	if operatorContextID == "" {
+		return errors.New("BTHWANI_OPERATOR_CONTEXT_ID is required when IDENTITY_LOCAL_BOOTSTRAP=true")
+	}
 	if err := r.restrictLocalOperatorPlatformPermissions(ctx); err != nil {
 		return err
 	}
@@ -88,11 +92,12 @@ func (r *Repository) BootstrapLocalPlatformActors(ctx context.Context, input Loc
 		}
 		if _, err := r.db.ExecContext(ctx, `
 INSERT INTO identity_actors
-    (id, username, password_hash, tenant_id, phone_e164, roles, permissions, active, updated_at)
-VALUES ($1, $2, $3, 'local-dsh', $4, $5, $6::jsonb, true, NOW())
+    (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, active, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, true, NOW())
 ON CONFLICT (id) DO UPDATE SET
     username = EXCLUDED.username,
     password_hash = EXCLUDED.password_hash,
+    operator_context_id = EXCLUDED.operator_context_id,
     phone_e164 = EXCLUDED.phone_e164,
     roles = EXCLUDED.roles,
     permissions = EXCLUDED.permissions,
@@ -101,6 +106,7 @@ ON CONFLICT (id) DO UPDATE SET
 			actor.id,
 			actor.username,
 			string(hash),
+			operatorContextID,
 			actor.phone,
 			pq.Array([]string{actor.role}),
 			string(permissions),

@@ -11,7 +11,7 @@
     "frontend/shared/_kernel/**/*.ts",
     "frontend/shared/orders/orders.api.ts",
     "frontend/shared/orders/orders.types.ts",
-    "frontend/shared/orders/use-client-order-journey-controller.ts",
+    "frontend/shared/orders/use-client-order-controller.ts",
     "frontend/shared/dispatch/**/*.ts",
     "frontend/shared/dispatch/**/*.tsx",
     "frontend/shared/delivery/captain.surface-model.ts",

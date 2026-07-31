@@ -13,7 +13,7 @@ import (
 
 type governedCommissionFixture struct {
 	ctx      context.Context
-	tenantID string
+	operatorContextID string
 	actorID  string
 	item     *Commission
 }
@@ -21,10 +21,10 @@ type governedCommissionFixture struct {
 func createGovernedCommissionLifecycleFixture(t *testing.T, db *sql.DB) governedCommissionFixture {
 	t.Helper()
 	suffix := fmt.Sprint(time.Now().UnixNano())
-	tenantID := "tenant-commission-lifecycle-" + suffix
+	operatorContextID := "OperatorContext-commission-lifecycle-" + suffix
 	actorID := "field-actor-" + suffix
 	visitID := "visit-" + suffix
-	ctx := shared.WithTenantContext(context.Background(), tenantID)
+	ctx := shared.WithOperatorContext(context.Background(), operatorContextID)
 	maximum := int64(1000)
 
 	_, err := UpsertGovernedCommissionPolicyIdempotent(
@@ -41,7 +41,7 @@ func createGovernedCommissionLifecycleFixture(t *testing.T, db *sql.DB) governed
 			MaximumAmountMinorUnits: &maximum,
 			Currency:                "YER",
 			Status:                  "active",
-			ChangeReason:            "tenant-governed commission lifecycle test",
+			ChangeReason:            "OperatorContext-governed commission lifecycle test",
 			OperatorID:              "operator-test",
 		},
 		"policy-correlation-"+suffix,
@@ -75,10 +75,10 @@ func createGovernedCommissionLifecycleFixture(t *testing.T, db *sql.DB) governed
 	if commission == nil || commission.Status != "pending" {
 		t.Fatalf("expected pending governed commission, got %+v", commission)
 	}
-	return governedCommissionFixture{ctx: ctx, tenantID: tenantID, actorID: actorID, item: commission}
+	return governedCommissionFixture{ctx: ctx, operatorContextID: operatorContextID, actorID: actorID, item: commission}
 }
 
-func TestGovernedCommissionLifecycleConfirmSettleMovesTenantWalletBuckets(t *testing.T) {
+func TestGovernedCommissionLifecycleConfirmSettleMovesOperatorContextWalletBuckets(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
@@ -100,12 +100,12 @@ func TestGovernedCommissionLifecycleConfirmSettleMovesTenantWalletBuckets(t *tes
 		t.Fatalf("expected confirmed status, got %q", confirmed.Status)
 	}
 
-	before, err := wallet.GetWalletForTenant(db, fixture.tenantID, "field", fixture.actorID)
+	before, err := wallet.GetWalletForOperatorContext(db, fixture.operatorContextID, "field", fixture.actorID)
 	if err != nil {
-		t.Fatalf("read tenant wallet before settle: %v", err)
+		t.Fatalf("read OperatorContext wallet before settle: %v", err)
 	}
 	if before == nil || before.PendingBalanceMinorUnits != fixture.item.AmountMinorUnits {
-		t.Fatalf("unexpected tenant wallet before settle: %+v", before)
+		t.Fatalf("unexpected OperatorContext wallet before settle: %+v", before)
 	}
 
 	settled, err := SettleGovernedCommission(
@@ -122,14 +122,14 @@ func TestGovernedCommissionLifecycleConfirmSettleMovesTenantWalletBuckets(t *tes
 		t.Fatalf("expected settled status, got %q", settled.Status)
 	}
 
-	after, err := wallet.GetWalletForTenant(db, fixture.tenantID, "field", fixture.actorID)
+	after, err := wallet.GetWalletForOperatorContext(db, fixture.operatorContextID, "field", fixture.actorID)
 	if err != nil {
-		t.Fatalf("read tenant wallet after settle: %v", err)
+		t.Fatalf("read OperatorContext wallet after settle: %v", err)
 	}
 	if after.PendingBalanceMinorUnits != 0 ||
 		after.AvailableBalanceMinorUnits != fixture.item.AmountMinorUnits ||
 		after.SettledTotalMinorUnits != fixture.item.AmountMinorUnits {
-		t.Fatalf("unexpected tenant wallet after settle: %+v", after)
+		t.Fatalf("unexpected OperatorContext wallet after settle: %+v", after)
 	}
 }
 
@@ -152,7 +152,7 @@ func TestGovernedCommissionLifecycleSettleRequiresConfirmedFirst(t *testing.T) {
 	}
 }
 
-func TestGovernedCommissionLifecycleRejectReversesTenantWalletAndLedger(t *testing.T) {
+func TestGovernedCommissionLifecycleRejectReversesOperatorContextWalletAndLedger(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
@@ -175,19 +175,19 @@ func TestGovernedCommissionLifecycleRejectReversesTenantWalletAndLedger(t *testi
 		t.Fatalf("unexpected rejected commission: %+v", rejected)
 	}
 
-	after, err := wallet.GetWalletForTenant(db, fixture.tenantID, "field", fixture.actorID)
+	after, err := wallet.GetWalletForOperatorContext(db, fixture.operatorContextID, "field", fixture.actorID)
 	if err != nil {
-		t.Fatalf("read tenant wallet after reject: %v", err)
+		t.Fatalf("read OperatorContext wallet after reject: %v", err)
 	}
 	if after.PendingBalanceMinorUnits != 0 || after.EarnedTotalMinorUnits != 0 {
-		t.Fatalf("tenant wallet was not reversed: %+v", after)
+		t.Fatalf("OperatorContext wallet was not reversed: %+v", after)
 	}
 
 	var ledgerTxnCount int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM wlt_ledger_transactions
-		WHERE tenant_id=$1 AND reference_type='commission' AND reference_id=$2`,
-		fixture.tenantID, fixture.item.ID).Scan(&ledgerTxnCount); err != nil {
-		t.Fatalf("count tenant commission ledger transactions: %v", err)
+		WHERE operator_context_id=$1 AND reference_type='commission' AND reference_id=$2`,
+		fixture.operatorContextID, fixture.item.ID).Scan(&ledgerTxnCount); err != nil {
+		t.Fatalf("count OperatorContext commission ledger transactions: %v", err)
 	}
 	if ledgerTxnCount != 2 {
 		t.Fatalf("expected earn and rejection journal entries, got %d", ledgerTxnCount)
@@ -228,12 +228,12 @@ func TestGovernedCommissionLifecycleReverseAfterSettled(t *testing.T) {
 		t.Fatalf("expected reversed status, got %q", reversed.Status)
 	}
 
-	after, err := wallet.GetWalletForTenant(db, fixture.tenantID, "field", fixture.actorID)
+	after, err := wallet.GetWalletForOperatorContext(db, fixture.operatorContextID, "field", fixture.actorID)
 	if err != nil {
-		t.Fatalf("read tenant wallet after reverse: %v", err)
+		t.Fatalf("read OperatorContext wallet after reverse: %v", err)
 	}
 	if after.AvailableBalanceMinorUnits != 0 || after.SettledTotalMinorUnits != 0 {
-		t.Fatalf("tenant wallet was not reversed: %+v", after)
+		t.Fatalf("OperatorContext wallet was not reversed: %+v", after)
 	}
 
 	if _, err := ReverseGovernedCommission(

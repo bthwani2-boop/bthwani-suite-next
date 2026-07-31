@@ -4,52 +4,6 @@ import { read, repoRoot, toPosix } from "./_guard-utils.mjs";
 
 export const HTTP_METHODS = new Set(["get", "post", "put", "patch", "delete", "options"]);
 
-const runtimeRetirementRegistryFile =
-  "services/wlt/contracts/retired-runtime-operations.json";
-let runtimeRetirementRegistryCache;
-
-function runtimeRetirementRegistry() {
-  if (runtimeRetirementRegistryCache) return runtimeRetirementRegistryCache;
-  const absolute = path.join(repoRoot, runtimeRetirementRegistryFile);
-  if (!fs.existsSync(absolute)) {
-    runtimeRetirementRegistryCache = {
-      sourceContract: "",
-      operationKeys: new Set(),
-    };
-    return runtimeRetirementRegistryCache;
-  }
-
-  const document = JSON.parse(read(runtimeRetirementRegistryFile));
-  if (
-    document?.schemaVersion !== 1 ||
-    document?.service !== "WLT" ||
-    document?.state !== "CONTRACT_COMPATIBILITY_ONLY_RUNTIME_REMOVED" ||
-    typeof document?.sourceContract !== "string" ||
-    !Array.isArray(document?.operations)
-  ) {
-    throw new Error(
-      `${runtimeRetirementRegistryFile} must define the governed WLT runtime retirement contract`,
-    );
-  }
-
-  const operationKeys = new Set();
-  for (const item of document.operations) {
-    if (!item || typeof item.operation !== "string" || !item.operation.trim()) {
-      throw new Error(`${runtimeRetirementRegistryFile} contains an invalid operation`);
-    }
-    if (operationKeys.has(item.operation)) {
-      throw new Error(`${runtimeRetirementRegistryFile} contains duplicate ${item.operation}`);
-    }
-    operationKeys.add(item.operation);
-  }
-
-  runtimeRetirementRegistryCache = {
-    sourceContract: document.sourceContract,
-    operationKeys,
-  };
-  return runtimeRetirementRegistryCache;
-}
-
 function unquote(value) {
   const trimmed = value.trim();
   if (
@@ -175,12 +129,15 @@ function parseComponentParameters(lines) {
     const parameter = { name: "", in: "", required: false, ref: "" };
     const applyField = (value) => {
       const field = String(value ?? "").trim();
-      const nameMatch = field.match(/^name:\s*(.+?)\s*$/);
+      const nameMatch = field.match(/^name:\s*([^},\s]+)/);
       if (nameMatch) parameter.name = String(parseScalar(nameMatch[1]));
-      const inMatch = field.match(/^in:\s*(.+?)\s*$/);
+      const inMatch = field.match(/^in:\s*([^},\s]+)/);
       if (inMatch) parameter.in = String(parseScalar(inMatch[1]));
       const requiredMatch = field.match(/^required:\s*(.+?)\s*$/);
       if (requiredMatch) parameter.required = parseScalar(requiredMatch[1]) === true;
+    };
+    const applyRefField = (value) => {
+      const field = String(value ?? "").trim();
       const refMatch = field.match(/^\$ref:\s*["']?([^"']+)["']?\s*$/);
       if (refMatch) parameter.ref = refMatch[1];
     };
@@ -188,6 +145,7 @@ function parseComponentParameters(lines) {
     if (entryMatch[2]) {
       for (const match of entryMatch[2].matchAll(/(?:^|,)\s*(name|in|required|\$ref):\s*([^,}]+)/g)) {
         applyField(`${match[1]}: ${match[2]}`);
+        applyRefField(`${match[1]}: ${match[2]}`);
       }
     } else {
       for (let j = i + 1; j < lines.length; j += 1) {
@@ -196,6 +154,9 @@ function parseComponentParameters(lines) {
         if (!blockTrimmed || blockTrimmed.startsWith("#")) continue;
         if (countIndent(blockLine) <= entryIndent) break;
         applyField(blockTrimmed);
+        if (countIndent(blockLine) === entryIndent + 2) {
+          applyRefField(blockTrimmed);
+        }
       }
     }
     parameters.set(entryMatch[1], parameter);
@@ -453,17 +414,51 @@ export function parseOpenApiContract(file, visited = new Set()) {
     const key = `${operation.method} ${operation.path}`;
     if (!deduplicated.has(key)) deduplicated.set(key, operation);
   }
-
-  const retirement = runtimeRetirementRegistry();
-  return [...deduplicated.values()].filter((operation) => {
-    const key = `${operation.method} ${operation.path}`;
-    return !(
-      file === retirement.sourceContract &&
-      retirement.operationKeys.has(key)
-    );
-  });
+  return [...deduplicated.values()];
 }
 
 export function operationKey(operation) {
   return `${operation.method} ${operation.path}`;
+}
+
+/**
+ * Reads a contract's own module index (`x-bthwani-contracts` by default) and
+ * resolves each entry to a repo-relative path.
+ *
+ * A bounded context indexes its internal modules here so that the master
+ * contract never has to name them. Resolution is deliberately shallow: callers
+ * expand a master-indexed entry exactly one level. A module that itself
+ * declares an index is a structural error, not a recursion case.
+ */
+export function parseIndexedContractModules(file, section = "x-bthwani-contracts") {
+  const absolute = path.join(repoRoot, file);
+  if (!fs.existsSync(absolute)) return [];
+
+  const lines = read(file).split(/\r?\n/);
+  const start = lines.findIndex((line) => line.trim() === `${section}:`);
+  if (start === -1) return [];
+
+  const modules = [];
+  for (let index = start + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    if (countIndent(line) === 0) break;
+
+    // Group headers such as `core:` / `services:` carry no value and are skipped;
+    // only leaves that name a contract file are collected.
+    const match = trimmed.match(/^([A-Za-z0-9_.-]+):\s*["']?(\.{1,2}\/[^"'#\s]+\.yaml)["']?\s*(?:#.*)?$/);
+    if (!match) continue;
+
+    const resolved = toPosix(
+      path.relative(repoRoot, path.resolve(repoRoot, path.dirname(file), match[2])),
+    );
+    modules.push({
+      name: match[1],
+      source: match[2],
+      file: resolved,
+      exists: fs.existsSync(path.join(repoRoot, resolved)),
+    });
+  }
+  return modules;
 }

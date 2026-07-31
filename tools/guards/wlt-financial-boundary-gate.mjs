@@ -3,6 +3,39 @@ import { fail, lineNumber, listCodeFiles, listFiles, read } from "./_guard-utils
 const guardId = "wlt-financial-boundary-gate";
 const violations = [];
 
+// 0. Applications and the control panel may consume finance only through DSH.
+// WLT remains an internal service-to-service dependency of DSH.
+const directAppWltPatterns = [
+  [/@bthwani\/wlt\b/, "APPLICATION_IMPORTS_WLT_DIRECTLY"],
+  [/\bWLT_API_BASE_URL\b/, "APPLICATION_CONFIGURES_WLT_DIRECTLY"],
+  [/\/api\/wlt(?:\/|["'`])/, "APPLICATION_EXPOSES_WLT_ROUTE"],
+  [/\b58083\b/, "APPLICATION_EXPOSES_WLT_PORT"],
+  [/services\/wlt\b/, "APPLICATION_REFERENCES_WLT_SOURCE"],
+];
+const appBoundaryFiles = [
+  ...listFiles().filter(
+    (file) =>
+      file.startsWith("apps/") &&
+      !file.includes("/tests/") &&
+      !file.includes("/test/") &&
+      !file.includes(".test.") &&
+      !file.includes(".spec."),
+  ),
+  "apps/control-panel/runtime/start.ps1",
+  "apps/mobile/ensure-mobile-dev-runtime.ps1",
+  "apps/mobile/reverse-all.ps1",
+  "apps/mobile/start-mobile-runtime.ps1",
+];
+for (const file of new Set(appBoundaryFiles)) {
+  const content = read(file);
+  for (const [pattern, message] of directAppWltPatterns) {
+    const match = pattern.exec(content);
+    if (match) {
+      violations.push({ file, line: lineNumber(content, match.index), message });
+    }
+  }
+}
+
 // 1. no-financial-mutation-outside-wlt. Frontend command names are callers of
 // the WLT-owned API and are not financial truth owners; this rule protects
 // backend/domain persistence and mutation code.
@@ -26,7 +59,7 @@ for (const file of listCodeFiles()) {
     violations.push({
       file,
       line: lineNumber(content, match.index),
-      message: "financial mutation belongs to WLT only. Policy source: governance/02_SERVICES_AND_SURFACES.md",
+      message: "financial mutation belongs to WLT only. Policy source: governance/policies/contracts.md",
     });
   }
 }
@@ -90,7 +123,7 @@ try {
 }
 
 const settlementOperation = operationState?.operations?.find(
-  (operation) => operation.operationId === "createWltSettlement",
+  (operation) => operation.operationId === "createWltEvidenceBackedSettlement",
 );
 if (!settlementOperation) {
   violations.push({ file: operationStateFile, line: 0, message: "CREATE_SETTLEMENT_OPERATION_STATE_MISSING" });
@@ -130,7 +163,7 @@ for (const [pattern, message] of [
 const settlementPostingFile = "services/wlt/backend/internal/settlement/settlement.go";
 const settlementPosting = read(settlementPostingFile);
 for (const [pattern, message] of [
-  [/WHERE\s+tenant_id\s*=\s*\$1\s+AND\s+id\s*=\s*\$2\s+AND\s+status\s*=\s*'pending'/, "SETTLEMENT_POST_MUST_REQUIRE_TRUSTED_TENANT_AND_PENDING_STATE"],
+  [/WHERE\s+operator_context_id\s*=\s*\$1\s+AND\s+id\s*=\s*\$2\s+AND\s+status\s*=\s*'pending'/, "SETTLEMENT_POST_MUST_REQUIRE_TRUSTED_OperatorContext_AND_PENDING_STATE"],
   [/platform_payable[\s\S]*wallet[\s\S]*platform_revenue/, "SETTLEMENT_BALANCED_ACCOUNTING_LINES_MISSING"],
   [/BeginTx[\s\S]*PostLedgerTransaction[\s\S]*tx\.Commit/, "SETTLEMENT_STATE_AND_JOURNAL_NOT_ATOMIC"],
 ]) {
@@ -181,25 +214,35 @@ if (!/PUT \/wlt\/settlement-policies\/\{partnerId\}/.test(wltServer)) {
 }
 
 const dshServerFile = "services/dsh/backend/internal/http/server.go";
+const dshCompositionFile = "services/dsh/backend/internal/http/catalog_unified_routes.go";
+const dshFinanceRoutesFile = "services/dsh/backend/internal/http/representative_finance_routes.go";
 const dshServer = read(dshServerFile);
+const dshComposition = read(dshCompositionFile);
+const dshFinanceRoutes = read(dshFinanceRoutesFile);
+if (!dshServer.includes("registerUnifiedCatalogRoutes(mux, protected)")) {
+  violations.push({ file: dshServerFile, line: 0, message: "DSH_PROTECTED_ROUTE_COMPOSITION_MISSING" });
+}
+if (!dshComposition.includes("registerRepresentativeFinanceRoutes(mux, s)")) {
+  violations.push({ file: dshCompositionFile, line: 0, message: "DSH_FINANCE_REGISTRAR_NOT_COMPOSED" });
+}
 for (const marker of [
   "POST /dsh/control-panel/finance/settlements/from-delivered-orders",
   "PUT /dsh/control-panel/finance/settlement-policies/{partnerId}",
 ]) {
-  if (!dshServer.includes(marker)) {
-    violations.push({ file: dshServerFile, line: 0, message: `DSH_SETTLEMENT_ROUTE_MISSING ${marker}` });
+  if (!dshFinanceRoutes.includes(marker)) {
+    violations.push({ file: dshFinanceRoutesFile, line: 0, message: `DSH_SETTLEMENT_ROUTE_MISSING ${marker}` });
   }
 }
 
-const openApiFile = "services/wlt/contracts/wlt.openapi.yaml";
+const openApiFile = "services/wlt/contracts/wlt.settlements-commissions.openapi.yaml";
 const openApi = read(openApiFile);
 const settlementPathStart = openApi.indexOf("  /wlt/settlements:");
-const settlementPathEnd = openApi.indexOf("\n  /wlt/settlements/summary:", settlementPathStart);
+const settlementPathEnd = openApi.indexOf("\ncomponents:", settlementPathStart);
 const settlementContract = settlementPathStart >= 0
   ? openApi.slice(settlementPathStart, settlementPathEnd > settlementPathStart ? settlementPathEnd : undefined)
   : "";
 for (const marker of [
-  "operationId: createWltSettlement",
+  "operationId: createWltEvidenceBackedSettlement",
   "x-bthwani-mutation-approved: true",
   "x-bthwani-default-enabled: false",
 ]) {
@@ -207,10 +250,11 @@ for (const marker of [
     violations.push({ file: openApiFile, line: 0, message: `SETTLEMENT_OPENAPI_ACTIVE_MARKER_MISSING ${marker}` });
   }
 }
-const settlementSchemaStart = openApi.indexOf("    WltCreateSettlementRequest:");
-const settlementSchemaEnd = openApi.indexOf("\n    WltSettlementResponse:", settlementSchemaStart);
+const settlementSchemaStart = openApi.indexOf("    VerifiedDeliveredOrderSource:");
+const settlementSchemaEnd = openApi.indexOf("\n    CreateSettlementRequest:", settlementSchemaStart);
+const settlementSchemaTail = openApi.indexOf("\n    SettlementPolicyInput:", settlementSchemaEnd);
 const settlementSchema = settlementSchemaStart >= 0
-  ? openApi.slice(settlementSchemaStart, settlementSchemaEnd > settlementSchemaStart ? settlementSchemaEnd : undefined)
+  ? openApi.slice(settlementSchemaStart, settlementSchemaTail > settlementSchemaEnd ? settlementSchemaTail : undefined)
   : "";
 for (const marker of ["orderSources", "orderId", "grossAmountMinorUnits", "deliveredAt", "operatorId"]) {
   if (!settlementSchema.includes(marker)) {
@@ -233,13 +277,13 @@ function requireCommercialText(file, text, message) {
 }
 
 const genericHandler = requireCommercialText(
-  "services/wlt/backend/internal/reference/trusted_tenant_handler.go",
+  "services/wlt/backend/internal/reference/trusted_operator_context_handler.go",
   "subscription purchases must use /wlt/commercial/payment-sessions",
   "GENERIC_PAYMENT_ROUTE_ACCEPTS_SUBSCRIPTION",
 );
 if (!genericHandler.includes("input.SubscriptionPurchaseID") || !genericHandler.includes("input.CommercialProductReference")) {
   violations.push({
-    file: "services/wlt/backend/internal/reference/trusted_tenant_handler.go",
+    file: "services/wlt/backend/internal/reference/trusted_operator_context_handler.go",
     line: 0,
     message: "GENERIC_PAYMENT_ROUTE_SOURCE_GUARD_MISSING",
   });

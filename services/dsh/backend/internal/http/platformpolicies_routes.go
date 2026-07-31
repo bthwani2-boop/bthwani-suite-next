@@ -31,7 +31,7 @@ func RegisterPlatformPolicyRoutes(
 	mux.HandleFunc("GET /dsh/operator/privacy/client-addresses/events", protected.handleListClientAddressPrivacyEvents)
 	mux.HandleFunc("POST /dsh/operator/privacy/client-addresses/anonymize", protected.handleAnonymizeExpiredClientAddresses)
 
-	// Captain financial eligibility. Refresh performs a tenant-scoped WLT wallet
+	// Captain financial eligibility. Refresh performs a OperatorContext-scoped WLT wallet
 	// read and stores only a short-lived DSH dispatch decision snapshot.
 	mux.HandleFunc("GET /dsh/operator/platform/dispatch-balance-policy", protected.handleGetDispatchBalancePolicy)
 	mux.HandleFunc("PUT /dsh/operator/platform/dispatch-balance-policy", protected.handleUpsertDispatchBalancePolicy)
@@ -40,7 +40,7 @@ func RegisterPlatformPolicyRoutes(
 	mux.HandleFunc("GET /dsh/captain/dispatch/financial-eligibility", protected.handleGetOwnCaptainFinancialEligibility)
 	mux.HandleFunc("POST /dsh/captain/dispatch/financial-eligibility/refresh", protected.handleRefreshOwnCaptainFinancialEligibility)
 
-	// JRN-029 unified operational policy closure. Existing zone/SLA/capacity
+	// Unified operational policy routes. Existing zone/SLA/capacity
 	// compatibility routes remain registered by registerUnifiedCatalogRoutes.
 	mux.HandleFunc("GET /dsh/operator/platform/operational-profiles/{zoneId}", protected.handleGetOperationalProfile)
 	mux.HandleFunc("PUT /dsh/operator/platform/operational-profiles/{zoneId}", protected.handleUpsertOperationalProfile)

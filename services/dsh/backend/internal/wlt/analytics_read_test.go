@@ -8,7 +8,7 @@ import (
 )
 
 func TestReadAnalyticsFinancialSnapshotIsAuthenticatedReadOnly(t *testing.T) {
-	const tenantID = "tenant-a"
+	const operatorContextID = "OperatorContext-a"
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			t.Fatalf("method=%s", r.Method)
@@ -22,8 +22,8 @@ func TestReadAnalyticsFinancialSnapshotIsAuthenticatedReadOnly(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("service caller=%q", r.Header.Get("X-Service-Caller"))
 		}
-		if r.Header.Get("X-Tenant-ID") != tenantID {
-			t.Fatalf("tenant=%q", r.Header.Get("X-Tenant-ID"))
+		if r.Header.Get("X-Operator-Context-ID") != operatorContextID {
+			t.Fatalf("OperatorContext=%q", r.Header.Get("X-Operator-Context-ID"))
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"financialSummary":{"currencies":[{"currency":"YER","assetsMinorUnits":10,"liabilitiesMinorUnits":4,"revenueMinorUnits":2,"expensesMinorUnits":0,"netPositionMinorUnits":6,"accounts":[]}],"dataCompleteness":[]}}`))
@@ -31,7 +31,7 @@ func TestReadAnalyticsFinancialSnapshotIsAuthenticatedReadOnly(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	trustedContext := WithTenantContext(context.Background(), tenantID)
+	trustedContext := WithOperatorContext(context.Background(), operatorContextID)
 	snapshot, err := client.ReadAnalyticsFinancialSnapshot(trustedContext)
 	if err != nil {
 		t.Fatal(err)

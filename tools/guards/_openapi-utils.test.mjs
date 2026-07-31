@@ -80,7 +80,7 @@ function testParser() {
   const homeUpdate = modularOperations.find((item) => item.operationId === "updateOperatorHomeDiscoveryContent");
   assert.ok(homeUpdate?.parameters.some((parameter) => parameter.in === "path" && parameter.name === "kind"));
   assert.ok(homeUpdate?.parameters.some((parameter) => parameter.in === "path" && parameter.name === "itemId"));
-  const workforceRead = parseOpenApiContract("services/dsh/contracts/dsh.jrn-003-workforce-scopes.openapi.yaml")
+  const workforceRead = parseOpenApiContract("services/dsh/contracts/dsh.workforce-scopes.openapi.yaml")
     .find((item) => item.operationId === "getWorkforceActorScopes");
   assert.ok(workforceRead?.parameters.some((parameter) => parameter.in === "path" && parameter.name === "actorId"));
   console.log("All parser tests PASSED!");

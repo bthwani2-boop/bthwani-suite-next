@@ -19,7 +19,7 @@ paths:
     post:
       operationId: recordDshHomeMarketingEvent
       summary: Record one targeted, publishable home banner or promo impression/click.
-      tags: [DshHomeMarketing]
+      tags: [ DshHomeMarketing ]
       requestBody:
         required: true
         content:
@@ -33,6 +33,8 @@ paths:
           $ref: "#/components/responses/InvalidEvent"
         "404":
           $ref: "#/components/responses/ContentNotPublishable"
+      security:
+        - bearerAuth: []
 
   /dsh/operator/home-discovery/{kind}/{itemId}/targeting:
     parameters:
@@ -41,8 +43,8 @@ paths:
     get:
       operationId: getDshOperatorHomeTargeting
       summary: Read the governed targeting projection for one home item.
-      tags: [DshHomeMarketing]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshHomeMarketing ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200":
           description: Targeting projection returned.
@@ -56,8 +58,8 @@ paths:
     put:
       operationId: replaceDshOperatorHomeTargeting
       summary: Atomically replace all target dimensions for one home item.
-      tags: [DshHomeMarketing]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshHomeMarketing ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: "#/components/parameters/CorrelationId"
       requestBody:
@@ -92,7 +94,7 @@ components:
       required: true
       schema:
         type: string
-        enum: [banners, promos]
+        enum: [ banners, promos ]
     HomeContentItemId:
       name: itemId
       in: path
@@ -121,10 +123,10 @@ components:
       properties:
         eventType:
           type: string
-          enum: [impression, click]
+          enum: [ impression, click ]
         contentKind:
           type: string
-          enum: [banners, promos]
+          enum: [ banners, promos ]
         contentId:
           type: string
           minLength: 1
@@ -143,12 +145,12 @@ components:
           pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$"
         audienceSegment:
           type: string
-          enum: [guest, authenticated]
+          enum: [ guest, authenticated ]
 
     DshHomeTargeting:
       type: object
       additionalProperties: false
-      required: [cityCodes, serviceAreaCodes, audienceSegments]
+      required: [ cityCodes, serviceAreaCodes, audienceSegments ]
       properties:
         cityCodes:
           type: array
@@ -174,12 +176,12 @@ components:
           maxItems: 2
           items:
             type: string
-            enum: [guest, authenticated]
+            enum: [ guest, authenticated ]
 
     DshHomeTargetingResponse:
       type: object
       additionalProperties: false
-      required: [targeting]
+      required: [ targeting ]
       properties:
         targeting:
           $ref: "#/components/schemas/DshHomeTargeting"
@@ -187,7 +189,7 @@ components:
     DshHomeMarketingEventError:
       type: object
       additionalProperties: false
-      required: [code, message]
+      required: [ code, message ]
       properties:
         code: { type: string }
         message: { type: string }
@@ -200,7 +202,8 @@ components:
           schema:
             $ref: "#/components/schemas/DshHomeMarketingEventError"
     ContentNotPublishable:
-      description: Referenced content is absent, inactive, outside schedule, or outside the supplied target context.
+      description: Referenced content is absent, inactive, outside schedule, or
+        outside the supplied target context.
       content:
         application/json:
           schema:

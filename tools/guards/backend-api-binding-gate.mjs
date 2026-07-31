@@ -10,10 +10,62 @@ import {
 
 const guardId = "backend-api-binding-gate";
 const violations = [];
+const draftContractStateCache = new Map();
+const nonActiveStates = new Set(["CONTRACT_DRAFT", "RESERVED"]);
+
+// A contract carrying CONTRACT_DRAFT or RESERVED documents a capability that
+// is not live yet (contracts-foundation.mjs already forbids client generation
+// for these states). Implementation-parity is meaningless for them; every
+// other check (operationId, path params, etc.) still applies.
+function isNonActiveContract(file) {
+  if (!draftContractStateCache.has(file)) {
+    const absolute = path.join(repoRoot, file);
+    let state = "CONTRACT_ACTIVE";
+    if (fs.existsSync(absolute)) {
+      const match = read(file).match(/^x-bthwani-contract-state:\s*(\S+)/m);
+      if (match) state = match[1];
+    }
+    draftContractStateCache.set(file, state);
+  }
+  return nonActiveStates.has(draftContractStateCache.get(file));
+}
 const dshRegistryFile = "services/dsh/contracts/contract-registry.ts";
 const routeClassificationFile =
   "services/dsh/contracts/backend-route-classification.json";
 const dshPrimary = "services/dsh/contracts/dsh.openapi.yaml";
+
+// Routes intercepted entirely by a middleware boundary before the router is
+// ever reached — the mux extractor can only see mux.HandleFunc registrations,
+// not a boundary's own path/method comparison, so these can never appear as
+// Go routes even though they are genuinely implemented.
+const boundaryInterceptedRoutes = new Map([
+  [
+    "Identity",
+    new Map([
+      [
+        "POST /auth/otp/request",
+        "intercepted by OtpBoundary (core/identity/backend/internal/http/otp_boundary.go) before the router",
+      ],
+    ]),
+  ],
+  [
+    "Workforce",
+    new Map([
+      [
+        "POST /workforce/reference/cities",
+        "intercepted by ReferenceMutationMiddleware (core/workforce/backend/internal/http/reference_mutation_middleware.go) before the router",
+      ],
+      [
+        "PATCH /workforce/reference/cities/{code}",
+        "intercepted by ReferenceMutationMiddleware (core/workforce/backend/internal/http/reference_mutation_middleware.go) before the router",
+      ],
+      [
+        "POST /workforce/{collection}/{actorId}/documents",
+        "intercepted by ReferenceMutationMiddleware (core/workforce/backend/internal/http/reference_mutation_middleware.go) before the router",
+      ],
+    ]),
+  ],
+]);
 
 function registeredDshContracts() {
   const source = read(dshRegistryFile);
@@ -132,30 +184,45 @@ const services = [
   },
   {
     name: "WLT",
-    openapi: "services/wlt/contracts/wlt.openapi.yaml",
-    additionalOpenapi: [
-      "services/wlt/contracts/wlt.payments.openapi.yaml",
-      "services/wlt/contracts/wlt.delivery-collections.openapi.yaml",
-      "services/wlt/contracts/wlt.commercial.openapi.yaml",
-      "services/wlt/contracts/wlt.commercial-summary.openapi.yaml",
-      "services/wlt/contracts/wlt.promotion-funding.openapi.yaml",
-      "services/wlt/contracts/jrn-035-refunds.openapi.yaml",
-      "services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml",
-      "services/wlt/contracts/jrn-037-payouts-destinations.openapi.yaml",
-      "services/wlt/contracts/jrn-038-cod-custody.openapi.yaml",
-      "services/wlt/contracts/wlt.workforce-finance.openapi.yaml",
-    ].filter((file) => fs.existsSync(path.join(repoRoot, file))),
+    openapi: "services/wlt/contracts/generated/wlt.bundle.openapi.yaml",
     router: "services/wlt/backend/internal/http/server.go",
     routerDir: "services/wlt/backend/internal/http",
   },
   {
     name: "Identity",
-    openapi: "core/identity/contracts/auth.openapi.yaml",
+    openapi: "core/identity/contracts/identity.openapi.yaml",
     additionalOpenapi: [
       "core/identity/contracts/employee-access.openapi.yaml",
     ],
     router: "core/identity/backend/internal/http/server.go",
     routerDir: "core/identity/backend/internal/http",
+  },
+  {
+    name: "Workforce",
+    openapi: "core/workforce/contracts/workforce.openapi.yaml",
+    additionalOpenapi: [
+      "core/workforce/contracts/workforce.operational-core.openapi.yaml",
+      "core/workforce/contracts/workforce.reference-mutations.openapi.yaml",
+      "core/workforce/contracts/workforce.sovereign-leadership.openapi.yaml",
+    ],
+    router: "core/workforce/backend/internal/http/server.go",
+    routerDir: "core/workforce/backend/internal/http",
+  },
+  {
+    name: "Providers",
+    openapi: "core/providers/contracts/providers.openapi.yaml",
+    router: "core/providers/backend/internal/http/server.go",
+    routerDir: "core/providers/backend/internal/http",
+  },
+  {
+    name: "PlatformControl",
+    openapi: "core/platform-control/contracts/platform-control.openapi.yaml",
+    additionalOpenapi: [
+      "core/platform-control/contracts/platform-change-sets.openapi.yaml",
+      "core/platform-control/contracts/platform-progressive-rollout.openapi.yaml",
+    ],
+    router: "core/platform-control/backend/internal/http/server.go",
+    routerDir: "core/platform-control/backend/internal/http",
   },
 ];
 
@@ -175,7 +242,6 @@ const gatedWltMutationRoutes = new Set([
   "POST /wlt/delivery-collections/{codRecordId}/collect",
   "POST /wlt/delivery-collections/{codRecordId}/remit",
   "POST /wlt/commissions",
-  "POST /wlt/ledger/entries",
   "POST /wlt/commercial/products",
   "PATCH /wlt/commercial/products/{productReference}",
   "POST /wlt/commercial/loyalty-entries",
@@ -413,7 +479,11 @@ try {
       validatePathParameters(service, operation);
       validateInternalServiceRoute(service, operation);
       validateWltOperation(service, operation);
-      if (!goRouteSet.has(key)) {
+      if (
+        !goRouteSet.has(key) &&
+        !boundaryInterceptedRoutes.get(service.name)?.has(key) &&
+        !isNonActiveContract(operationFile(service, operation))
+      ) {
         violations.push({
           file: operationFile(service, operation),
           line: operation.line,

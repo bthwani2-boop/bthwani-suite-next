@@ -62,7 +62,7 @@ func TestRequireCatalogPermissionRejectsWrongPermission(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
 			Subject:   "field-1",
-			TenantID:  "dsh",
+			OperatorContextID:  "dsh",
 			Roles:     []string{"field"},
 			AuthState: "authenticated",
 			Permissions: []auth.Permission{
@@ -89,7 +89,7 @@ func TestRequireCatalogPermissionAcceptsOperatorRoleFallback(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
 			Subject:   "operator-1",
-			TenantID:  "dsh",
+			OperatorContextID:  "dsh",
 			Roles:     []string{"operator"},
 			AuthState: "authenticated",
 		})
@@ -113,7 +113,7 @@ func TestRequireCatalogPermissionAcceptsFineGrainedGrant(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
 			Subject:   "media-reviewer-1",
-			TenantID:  "dsh",
+			OperatorContextID:  "dsh",
 			Roles:     []string{"field"},
 			AuthState: "authenticated",
 			Permissions: []auth.Permission{
@@ -161,7 +161,7 @@ func TestRequirePermissionAcrossDomains(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 				_ = json.NewEncoder(w).Encode(auth.Identity{
 					Subject:   "actor-1",
-					TenantID:  "dsh",
+					OperatorContextID:  "dsh",
 					Roles:     []string{"field"},
 					AuthState: "authenticated",
 					Permissions: []auth.Permission{
@@ -187,7 +187,7 @@ func TestRequirePermissionAcrossDomains(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 				_ = json.NewEncoder(w).Encode(auth.Identity{
 					Subject:   "actor-1",
-					TenantID:  "dsh",
+					OperatorContextID:  "dsh",
 					Roles:     []string{"field"},
 					AuthState: "authenticated",
 					Permissions: []auth.Permission{
@@ -216,7 +216,7 @@ func TestFinanceApproveReject_RequireManageNotRead(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
 			Subject:   "finance-reader-1",
-			TenantID:  "dsh",
+			OperatorContextID:  "dsh",
 			Roles:     []string{"field"},
 			AuthState: "authenticated",
 			Permissions: []auth.Permission{
@@ -250,7 +250,7 @@ func TestSpecialRequestsPermission_SupportGrantInsufficient(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
 			Subject:   "support-agent-1",
-			TenantID:  "dsh",
+			OperatorContextID:  "dsh",
 			Roles:     []string{"field"},
 			AuthState: "authenticated",
 			Permissions: []auth.Permission{
@@ -280,7 +280,7 @@ func TestSpecialRequestsPermission_OperationsGrantSucceeds(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
 			Subject:   "ops-agent-1",
-			TenantID:  "dsh",
+			OperatorContextID:  "dsh",
 			Roles:     []string{"field"},
 			AuthState: "authenticated",
 			Permissions: []auth.Permission{
@@ -310,7 +310,7 @@ func TestRequireCatalogPermissionRejectsStaleCentralCatalogSurface(t *testing.T)
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
 			Subject:   "stale-grant-1",
-			TenantID:  "dsh",
+			OperatorContextID:  "dsh",
 			Roles:     []string{"field"},
 			AuthState: "authenticated",
 			Permissions: []auth.Permission{

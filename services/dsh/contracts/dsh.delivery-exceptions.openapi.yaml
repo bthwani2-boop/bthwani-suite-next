@@ -3,13 +3,13 @@ info:
   title: BThwani DSH Delivery Exceptions and Return-to-Store API
   version: 1.0.0
   description: >
-    Canonical JRN-020 operational contract for reporting delivery exceptions,
+    Canonical operational contract for reporting delivery exceptions,
     acknowledging operational ownership, resolving retry/reassignment/return/cancellation,
     returning custody to the store, and cross-surface readback. DSH owns operational
     state only. Any cancellation financial effect is delegated to the governed WLT handoff.
 
 x-bthwani-owner: services/dsh
-x-bthwani-journey: JRN-020
+x-bthwani-capability: delivery-exceptions
 x-bthwani-truth-owner: services/dsh/backend/internal/dispatch/delivery_exceptions.go
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED
@@ -22,7 +22,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/AssignmentId'
     post:
-      operationId: reportCaptainDeliveryException
+      operationId: reportDshCaptainDeliveryException
       summary: Report a delivery exception with mandatory operational evidence.
       tags: [DshDeliveryExceptions]
       security: [{ bearerAuth: [] }]
@@ -43,7 +43,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
     get:
-      operationId: getCaptainDeliveryException
+      operationId: getDshCaptainDeliveryException
       summary: Read the captain-visible current exception and operations decision.
       tags: [DshDeliveryExceptions]
       security: [{ bearerAuth: [] }]
@@ -59,7 +59,7 @@ paths:
 
   /dsh/operator/delivery-exceptions:
     get:
-      operationId: listOperatorDeliveryExceptions
+      operationId: listDshOperatorDeliveryExceptions
       summary: List delivery exceptions by governed lifecycle status and severity.
       tags: [DshDeliveryExceptions]
       security: [{ bearerAuth: [] }]
@@ -93,7 +93,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/ExceptionId'
     post:
-      operationId: acknowledgeOperatorDeliveryException
+      operationId: acknowledgeDshOperatorDeliveryException
       summary: Assign operational review responsibility to the authenticated operator.
       tags: [DshDeliveryExceptions]
       security: [{ bearerAuth: [] }]
@@ -118,7 +118,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/ExceptionId'
     post:
-      operationId: resolveOperatorDeliveryException
+      operationId: resolveDshOperatorDeliveryException
       summary: Resolve an acknowledged exception using one governed operational action.
       description: >
         The exception must first be acknowledged to record operational responsibility.
@@ -147,7 +147,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/AssignmentId'
     post:
-      operationId: arriveCaptainReturnToStore
+      operationId: arriveDshCaptainReturnToStore
       summary: Record captain arrival at the store with returned custody.
       tags: [DshDeliveryExceptions]
       security: [{ bearerAuth: [] }]
@@ -166,7 +166,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/OrderId'
     get:
-      operationId: getPartnerReturnToStore
+      operationId: getDshPartnerReturnToStore
       summary: Read the partner-visible return custody state for an owned order.
       tags: [DshDeliveryExceptions]
       security: [{ bearerAuth: [] }]
@@ -184,7 +184,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/OrderId'
     post:
-      operationId: acceptPartnerReturnToStore
+      operationId: acceptDshPartnerReturnToStore
       summary: Confirm store receipt of the returned order and close delivery custody.
       tags: [DshDeliveryExceptions]
       security: [{ bearerAuth: [] }]
@@ -289,7 +289,7 @@ components:
       additionalProperties: false
       required:
         - id
-        - tenantId
+        - operatorContextId
         - assignmentId
         - orderId
         - captainId
@@ -305,7 +305,7 @@ components:
         - updatedAt
       properties:
         id: { type: string, format: uuid }
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         assignmentId: { type: string, format: uuid }
         orderId: { type: string, format: uuid }
         captainId: { type: string }

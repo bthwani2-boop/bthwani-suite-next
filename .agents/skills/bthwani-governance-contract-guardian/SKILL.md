@@ -8,12 +8,12 @@ summary: Validate repository governance contracts, authority precedence, agents,
 
 ## Purpose
 
-Own governance-contract integrity only: authority precedence, canonical decision vocabulary, agent and skill contracts, guard registration semantics, Product Truth governance, SaaS governance contracts, and SDLC control-plane structure.
+Own governance-contract integrity only: authority precedence, canonical decision vocabulary, agent and skill contracts, guard registration semantics, Product Truth governance, platform commercialization governance contracts, and SDLC control-plane structure.
 
 ## Invoke when
 
 - `AGENTS.md`, `.agents/**`, `governance/**`, or `tools/guards/**` changes.
-- Authority, decision, role, skill, guard, gate, Product Truth, SaaS governance, or SDLC contracts change.
+- Authority, decision, role, skill, guard, gate, Product Truth, platform commercialization governance, or SDLC contracts change.
 - Governance-contract approval or governance evidence is requested.
 
 ## Do not invoke when
@@ -26,7 +26,7 @@ Own governance-contract integrity only: authority precedence, canonical decision
 - `GOVERNANCE_CONTRACT_AUTHORITY` owns governance-contract approval.
 - This skill is separate from `CI_WORKFLOW_AUTHORITY`, the engineering executor, and the final closure judge.
 - It may verify and approve governance contracts only when the approver is independent from the change author.
-- It cannot approve CI workflow policy, product acceptance, QA, application security, finance, release, production, residual risk, or SaaS commercial activation.
+- It cannot approve CI workflow policy, product acceptance, QA, application security, finance, release, production, residual risk, or commercial platform activation.
 
 ## Required method
 
@@ -41,7 +41,7 @@ Own governance-contract integrity only: authority precedence, canonical decision
 ## Forbidden behavior
 
 - Implementing the reviewed governance change and approving it as the same identity.
-- Treating a static governance pass as runtime, QA, security, release, production, SaaS, or final closure evidence.
+- Treating a static governance pass as runtime, QA, security, release, production, commercial, or final closure evidence.
 - Creating policy in an adapter, derived support file, workflow name, comment, or generated diagnostic.
 - Granting CI workflow approval from this skill.
 

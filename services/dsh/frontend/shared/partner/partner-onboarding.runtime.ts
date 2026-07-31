@@ -98,7 +98,7 @@ export function createPartnerMutationContext(
   const prefix = `${operation}-${resourceId}`.replace(/[^a-zA-Z0-9_.-]+/g, "-").slice(0, 64);
   return {
     idempotencyKey: `${prefix}-${suffix}`,
-    correlationId: `jrn001-${prefix}-${suffix}`,
+    correlationId: `partner-onboarding-${prefix}-${suffix}`,
     ...(expectedVersion !== undefined ? { expectedVersion } : {}),
   };
 }

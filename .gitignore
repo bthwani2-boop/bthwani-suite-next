@@ -90,7 +90,10 @@ node-gates*.log
 *_HANDOFF.zip
 .claude/settings.local.json
 
-# Generated Swagger / OpenAPI bundles
+# OpenAPI bundles and clients are deterministic build artifacts. Canonical
+# entry contracts, modules, overlays and manifests are the only tracked truth.
+**/contracts/generated/*.bundle.openapi.yaml
+**/clients/generated/*-api.ts
 *.bundled.json
 
 # Explicitly track bthwani-deep-diagnostic-input.md
@@ -116,6 +119,12 @@ node-gates*.log
 # still apply inside both directories; only the markdown blanket-ignore is negated.
 !docs/**/*.md
 !infra/**/*.md
+
+# Contract documentation is part of the contract surface, not incidental prose.
+# contracts/README.md and each service's contracts/README.md explain the master
+# index and per-context manifest rules that the guards enforce.
+!contracts/**/*.md
+!**/contracts/**/*.md
 
 # Explicitly track operational journey checklist
 !tools/checklist/operational-journey-factory-checklist.md

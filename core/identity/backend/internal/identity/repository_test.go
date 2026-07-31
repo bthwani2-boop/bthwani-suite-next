@@ -45,18 +45,25 @@ func TestActivationCodeHashDoesNotExposeCode(t *testing.T) {
 	}
 }
 
-func TestRandomActivationCodeIsSixDigits(t *testing.T) {
-	code, err := randomActivationCode()
-	if err != nil {
-		t.Fatalf("generate activation code: %v", err)
-	}
-	if len(code) != 6 || strings.Trim(code, "0123456789") != "" {
-		t.Fatalf("activation code must be six digits, got %q", code)
+func TestRandomActivationCodeIsSixDigitsAndNeverRetiredCode(t *testing.T) {
+	for attempt := 0; attempt < 1000; attempt++ {
+		code, err := randomActivationCode()
+		if err != nil {
+			t.Fatalf("generate activation code: %v", err)
+		}
+		if len(code) != 6 || strings.Trim(code, "0123456789") != "" {
+			t.Fatalf("activation code must be six digits, got %q", code)
+		}
+		if code == "000000" {
+			t.Fatal("retired universal activation code must never be generated")
+		}
 	}
 }
 
-func TestActivationSurfaceForProviderRoles(t *testing.T) {
+func TestActivationSurfaceRegistryCoversEveryActorType(t *testing.T) {
 	tests := map[string]string{
+		"client":  "app-client",
+		"partner": "app-partner",
 		"field":   "app-field",
 		"captain": "app-captain",
 	}
@@ -67,6 +74,22 @@ func TestActivationSurfaceForProviderRoles(t *testing.T) {
 				t.Fatalf("expected %s surface %q, got %q ok=%v", actorType, expectedSurface, surface, ok)
 			}
 		})
+	}
+	if _, ok := activationSurfaceFor("operator"); ok {
+		t.Fatal("operator must not be activatable through a mobile activation surface")
+	}
+}
+
+func TestActivationIssuancePoliciesSeparatePublicAndWorkforceRoles(t *testing.T) {
+	for _, role := range []string{"client", "partner"} {
+		if !publicOtpActorTypes[role] || workforceManagedActorTypes[role] {
+			t.Fatalf("role %q must be public OTP only", role)
+		}
+	}
+	for _, role := range []string{"field", "captain"} {
+		if publicOtpActorTypes[role] || !workforceManagedActorTypes[role] {
+			t.Fatalf("role %q must be Workforce-managed only", role)
+		}
 	}
 }
 
@@ -86,6 +109,9 @@ func TestValidateExpectedActivationTargetIgnoresRoleOrder(t *testing.T) {
 	if err := validateExpectedActivationTarget(actor, "captain", "app-field"); !errors.Is(err, ErrInvalidActivation) {
 		t.Fatalf("wrong surface should be rejected, got %v", err)
 	}
+	if err := validateExpectedActivationTarget(actor, "partner", "app-partner"); !errors.Is(err, ErrInvalidActivation) {
+		t.Fatalf("public actor type must not use Workforce issuance, got %v", err)
+	}
 }
 
 func TestScopedActivationIdempotencyKeyIncludesTypeAndSurface(t *testing.T) {
@@ -98,11 +124,53 @@ func TestScopedActivationIdempotencyKeyIncludesTypeAndSurface(t *testing.T) {
 	}
 }
 
+func TestRequestOtpForOperatorContextRejectsWorkforceManagedRolesBeforeDatabaseAccess(t *testing.T) {
+	repo := &Repository{}
+	for _, role := range []string{"field", "captain"} {
+		_, err := repo.RequestOtpForOperatorContext(context.Background(), "context-1", OtpInput{
+			ActorType: role,
+			Phone:     "+967777123456",
+		})
+		if !errors.Is(err, ErrInvalidActivation) {
+			t.Fatalf("public OTP must reject Workforce role %q, got %v", role, err)
+		}
+	}
+}
+
+func TestConsumeActivationRejectsRetiredCodeWithoutChallenge(t *testing.T) {
+	t.Setenv("IDENTITY_ACTIVATION_HMAC_SECRET", "01234567890123456789012345678901")
+	phone := "+967700000001"
+	repo := newTestRepository(t, nil)
+	fakeDriverInst.setActors(t.Name(), map[string]Actor{
+		phone: {
+			ID:        "field-actor-1",
+			Username:  "field-actor",
+			OperatorContextID:  "context-1",
+			PhoneE164: phone,
+			Roles:     []string{"field"},
+			Permissions: []Permission{
+				{Service: "dsh", Surface: "app-field", Action: "store:read", Scope: "assigned"},
+			},
+			Active: false,
+		},
+	})
+
+	pair, err := repo.ConsumeActivation(context.Background(), ConsumeActivationInput{
+		ActorType:         "field",
+		Phone:             phone,
+		Code:              "000000",
+		DeviceFingerprint: "device-1",
+	})
+	if !errors.Is(err, ErrInvalidActivation) {
+		t.Fatalf("retired code must not create a session without a challenge, pair=%#v err=%v", pair, err)
+	}
+}
+
 func TestActorIdentityDerivesSurfaceAndServiceAccess(t *testing.T) {
 	expiresAt := time.Now().Add(time.Minute)
 	resolved := toIdentity(Actor{
 		ID:       "partner-1",
-		TenantID: "tenant-1",
+		OperatorContextID: "context-1",
 		Roles:    []string{"partner"},
 		Permissions: []Permission{
 			{Service: "dsh", Surface: "app-partner", Action: "store:write", Scope: "own"},
@@ -151,7 +219,7 @@ func TestResolveAccessTokenAcceptsRealSessionToken(t *testing.T) {
 			actor: Actor{
 				ID:       "operator-local-001",
 				Username: "operator",
-				TenantID: "local-dsh",
+				OperatorContextID: "local-dsh",
 				Roles:    []string{"operator"},
 				Permissions: []Permission{
 					{Service: "dsh", Surface: "control-panel", Action: "store:read", Scope: "all"},
@@ -175,9 +243,8 @@ func TestResolveAccessTokenAcceptsRealSessionToken(t *testing.T) {
 	}
 }
 
-// --- dependency-free fake sql.DB driver used only to exercise ResolveAccessToken's
-// real query path without requiring a live Postgres instance or a new test dependency. ---
-
+// Dependency-free fake sql.DB driver used only to exercise repository query
+// paths without requiring a live Postgres instance or a new test dependency.
 type fakeSessionRow struct {
 	hash      string
 	actor     Actor
@@ -187,12 +254,16 @@ type fakeSessionRow struct {
 
 var (
 	fakeDriverOnce sync.Once
-	fakeDriverInst = &fakeIdentityDriver{data: map[string][]fakeSessionRow{}}
+	fakeDriverInst = &fakeIdentityDriver{
+		sessions: map[string][]fakeSessionRow{},
+		actors:   map[string]map[string]Actor{},
+	}
 )
 
 type fakeIdentityDriver struct {
-	mu   sync.Mutex
-	data map[string][]fakeSessionRow
+	mu       sync.Mutex
+	sessions map[string][]fakeSessionRow
+	actors   map[string]map[string]Actor
 }
 
 func (d *fakeIdentityDriver) Open(name string) (driver.Conn, error) {
@@ -202,13 +273,26 @@ func (d *fakeIdentityDriver) Open(name string) (driver.Conn, error) {
 func (d *fakeIdentityDriver) setRows(dsn string, rows []fakeSessionRow) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	d.data[dsn] = rows
+	d.sessions[dsn] = rows
+}
+
+func (d *fakeIdentityDriver) setActors(dsn string, actors map[string]Actor) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.actors[dsn] = actors
 }
 
 func (d *fakeIdentityDriver) rowsFor(dsn string) []fakeSessionRow {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	return d.data[dsn]
+	return d.sessions[dsn]
+}
+
+func (d *fakeIdentityDriver) actorForPhone(dsn, phone string) (Actor, bool) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	actor, ok := d.actors[dsn][phone]
+	return actor, ok
 }
 
 type fakeConn struct {
@@ -216,59 +300,120 @@ type fakeConn struct {
 	dsn    string
 }
 
-func (c *fakeConn) Prepare(query string) (driver.Stmt, error) { return &fakeStmt{conn: c}, nil }
-func (c *fakeConn) Close() error                              { return nil }
-func (c *fakeConn) Begin() (driver.Tx, error)                 { return nil, errors.New("transactions not supported") }
+func (c *fakeConn) Prepare(query string) (driver.Stmt, error) {
+	return &fakeStmt{conn: c, query: query}, nil
+}
+func (c *fakeConn) Close() error { return nil }
+func (c *fakeConn) Begin() (driver.Tx, error) {
+	return &fakeTx{}, nil
+}
 
-type fakeStmt struct{ conn *fakeConn }
+type fakeTx struct{}
+
+func (*fakeTx) Commit() error   { return nil }
+func (*fakeTx) Rollback() error { return nil }
+
+type fakeStmt struct {
+	conn  *fakeConn
+	query string
+}
 
 func (s *fakeStmt) Close() error  { return nil }
 func (s *fakeStmt) NumInput() int { return -1 }
-func (s *fakeStmt) Exec(args []driver.Value) (driver.Result, error) {
-	return nil, errors.New("exec not supported")
+func (s *fakeStmt) Exec([]driver.Value) (driver.Result, error) {
+	return fakeResult(1), nil
 }
 func (s *fakeStmt) Query(args []driver.Value) (driver.Rows, error) {
-	if len(args) == 0 {
-		return &fakeRows{}, nil
+	if strings.Contains(s.query, "FROM identity_activation_challenges") {
+		return &fakeRows{columns: []string{"id", "actor_id", "code_hash", "status", "attempts", "expires_at"}}, nil
 	}
-	hash, _ := args[0].(string)
-	for _, row := range s.conn.driver.rowsFor(s.conn.dsn) {
-		if row.hash == hash {
-			match := row
-			return &fakeRows{row: &match}, nil
+	if strings.Contains(s.query, "FROM identity_actors") && strings.Contains(s.query, "phone_e164 = $1") {
+		if len(args) == 0 {
+			return &fakeRows{columns: actorPhoneColumns()}, nil
 		}
+		phone, _ := args[0].(string)
+		actor, ok := s.conn.driver.actorForPhone(s.conn.dsn, phone)
+		if !ok {
+			return &fakeRows{columns: actorPhoneColumns()}, nil
+		}
+		permissions, err := json.Marshal(actor.Permissions)
+		if err != nil {
+			return nil, err
+		}
+		return &fakeRows{
+			columns: actorPhoneColumns(),
+			values: []driver.Value{
+				actor.ID,
+				actor.Username,
+				actor.OperatorContextID,
+				actor.PhoneE164,
+				"{" + strings.Join(actor.Roles, ",") + "}",
+				permissions,
+				actor.Active,
+			},
+		}, nil
 	}
-	return &fakeRows{}, nil
+	if strings.Contains(s.query, "FROM identity_sessions") {
+		if len(args) == 0 {
+			return &fakeRows{columns: sessionColumns()}, nil
+		}
+		hash, _ := args[0].(string)
+		for _, row := range s.conn.driver.rowsFor(s.conn.dsn) {
+			if row.hash != hash {
+				continue
+			}
+			permissions, err := json.Marshal(row.actor.Permissions)
+			if err != nil {
+				return nil, err
+			}
+			return &fakeRows{
+				columns: sessionColumns(),
+				values: []driver.Value{
+					row.actor.ID,
+					row.actor.Username,
+					row.actor.PasswordHash,
+					row.actor.OperatorContextID,
+					row.actor.PhoneE164,
+					"{" + strings.Join(row.actor.Roles, ",") + "}",
+					permissions,
+					row.actor.Active,
+					row.sessionID,
+					row.expiresAt,
+				},
+			}, nil
+		}
+		return &fakeRows{columns: sessionColumns()}, nil
+	}
+	return &fakeRows{columns: []string{"value"}}, nil
 }
+
+func actorPhoneColumns() []string {
+	return []string{"id", "username", "operator_context_id", "phone_e164", "roles", "permissions", "active"}
+}
+
+func sessionColumns() []string {
+	return []string{"id", "username", "password_hash", "operator_context_id", "phone_e164", "roles", "permissions", "active", "session_id", "expires_at"}
+}
+
+type fakeResult int64
+
+func (r fakeResult) LastInsertId() (int64, error) { return 0, nil }
+func (r fakeResult) RowsAffected() (int64, error) { return int64(r), nil }
 
 type fakeRows struct {
-	row  *fakeSessionRow
-	done bool
+	columns []string
+	values  []driver.Value
+	done    bool
 }
 
-func (r *fakeRows) Columns() []string {
-	return []string{"id", "username", "password_hash", "tenant_id", "phone_e164", "roles", "permissions", "active", "session_id", "expires_at"}
-}
-func (r *fakeRows) Close() error { return nil }
+func (r *fakeRows) Columns() []string { return r.columns }
+func (r *fakeRows) Close() error      { return nil }
 func (r *fakeRows) Next(dest []driver.Value) error {
-	if r.row == nil || r.done {
+	if len(r.values) == 0 || r.done {
 		return io.EOF
 	}
 	r.done = true
-	permissions, err := json.Marshal(r.row.actor.Permissions)
-	if err != nil {
-		return err
-	}
-	dest[0] = r.row.actor.ID
-	dest[1] = r.row.actor.Username
-	dest[2] = r.row.actor.PasswordHash
-	dest[3] = r.row.actor.TenantID
-	dest[4] = r.row.actor.PhoneE164
-	dest[5] = "{" + strings.Join(r.row.actor.Roles, ",") + "}"
-	dest[6] = permissions
-	dest[7] = r.row.actor.Active
-	dest[8] = r.row.sessionID
-	dest[9] = r.row.expiresAt
+	copy(dest, r.values)
 	return nil
 }
 
@@ -279,42 +424,13 @@ func newTestRepository(t *testing.T, rows []fakeSessionRow) *Repository {
 	})
 	dsn := t.Name()
 	fakeDriverInst.setRows(dsn, rows)
+	fakeDriverInst.setActors(dsn, map[string]Actor{})
 	db, err := sql.Open("identity-fake", dsn)
 	if err != nil {
 		t.Fatalf("open fake db: %v", err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
 	return NewRepository(db)
-}
-
-// Phase 4 unit tests -------------------------------------------------------
-
-func TestConsumeActivationActorTypeMapsSurface(t *testing.T) {
-	// Client remains a public consumer bootstrap and derives its surface in
-	// ConsumeActivation. Partner, field and captain are actor-bound platform
-	// access-code roles and therefore use the canonical surface registry.
-	cases := []struct {
-		role      string
-		surface   string
-		canonical bool
-	}{
-		{"client", "app-client", false},
-		{"partner", "app-partner", true},
-		{"field", "app-field", true},
-		{"captain", "app-captain", true},
-	}
-	for _, tc := range cases {
-		surface, ok := activationSurfaceFor(tc.role)
-		if tc.canonical {
-			if !ok || surface != tc.surface {
-				t.Errorf("role %q: expected canonical surface %q, got %q (ok=%v)", tc.role, tc.surface, surface, ok)
-			}
-			continue
-		}
-		if ok {
-			t.Errorf("role %q: expected public fallback rather than canonical mapping", tc.role)
-		}
-	}
 }
 
 func TestNormalizePhoneE164RejectsShortNumbers(t *testing.T) {

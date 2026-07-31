@@ -1,4 +1,4 @@
--- JRN-023 notification delivery audit invariants.
+--  notification delivery audit invariants.
 DO $$
 BEGIN
   IF to_regclass('public.dsh_notification_delivery_attempts') IS NULL THEN

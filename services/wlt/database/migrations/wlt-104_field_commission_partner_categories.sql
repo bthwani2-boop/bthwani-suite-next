@@ -26,7 +26,7 @@ ALTER TABLE wlt_commissions
   ADD COLUMN IF NOT EXISTS partner_category text NOT NULL DEFAULT 'default';
 
 CREATE INDEX IF NOT EXISTS wlt_commissions_partner_category_idx
-  ON wlt_commissions(tenant_id, partner_category, created_at DESC);
+  ON wlt_commissions(operator_context_id, partner_category, created_at DESC);
 
 INSERT INTO wlt_field_commission_category_policy_versions(
   policy_id,partner_category,version,fixed_amount_minor_units,currency,status,
@@ -35,9 +35,9 @@ INSERT INTO wlt_field_commission_category_policy_versions(
 SELECT
   'field-category-default', 'default', 1,
   fixed_amount_minor_units, currency, 'active',
-  'default category policy migrated from active JRN-036 field policy',
+  'default category policy migrated from active  field policy',
   updated_by_actor_id
-FROM wlt_jrn036_commission_policy_versions
+FROM wlt_commission_policy_versions
 WHERE commission_type='field_visit_fee'
   AND source_type='field_visit'
   AND beneficiary_actor_type='field'

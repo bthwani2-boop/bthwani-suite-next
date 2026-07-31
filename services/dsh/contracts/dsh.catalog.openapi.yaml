@@ -594,11 +594,22 @@ components:
         requiresCatalogReview: { type: boolean }
         requiresProductCatalog: { type: boolean }
     UpdateNodeRequest:
-      allOf:
-        - { $ref: "#/components/schemas/CreateNodeRequest" }
-        - type: object
-          required: [expectedVersion]
-          properties: { expectedVersion: { $ref: "#/components/schemas/PositiveVersion" } }
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { $ref: "#/components/schemas/PositiveVersion" }
+        nameAr: { type: string, minLength: 1 }
+        nameEn: { type: string }
+        icon: { type: string }
+        sortOrder: { type: integer }
+        isActive: { type: boolean }
+        isClientVisible: { type: boolean }
+        requiresBarcode: { type: boolean }
+        allowsProductProposal: { type: boolean }
+        allowsStoreProductCustomImage: { type: boolean }
+        requiresCatalogReview: { type: boolean }
+        requiresProductCatalog: { type: boolean }
     MasterProduct:
       allOf:
         - { $ref: "#/components/schemas/VersionedEntity" }

@@ -1,15 +1,15 @@
-openapi: 3.0.3
+openapi: 3.1.0
+x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
-  title: DSH JRN-011 Order Truth API
+  title: DSH Order Truth API
   version: 1.1.0
-  description: Canonical order creation and actor-scoped cross-surface reads. Financial execution and authoritative financial state remain in WLT.
-security:
-  - bearerAuth: []
+  description: Canonical order creation and actor-scoped cross-surface reads.
+    Financial execution and authoritative financial state remain in WLT.
 paths:
   /dsh/client/order-truth:
     post:
-      tags: ["dsh-client"]
+      tags: [ "dsh-client" ]
       operationId: createOrderTruthFromCheckout
       summary: Create one immutable order from an eligible actor-owned Checkout Intent.
       parameters:
@@ -33,7 +33,7 @@ paths:
           description: Idempotent replay of the previously created order.
           headers:
             Idempotent-Replay:
-              schema: { type: string, enum: ['true'] }
+              schema: { type: string, enum: [ 'true' ] }
             X-Correlation-ID:
               schema: { type: string }
           content:
@@ -43,10 +43,13 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
+      security:
+        - bearerAuth: []
     get:
-      tags: ["dsh-client"]
+      tags: [ "dsh-client" ]
       operationId: listClientOrderTruth
-      summary: List orders owned by the authenticated client in the current tenant.
+      summary: List orders owned by the authenticated client in the current
+        OperatorContext.
       parameters:
         - $ref: '#/components/parameters/Limit'
       responses:
@@ -57,9 +60,11 @@ paths:
               schema: { $ref: '#/components/schemas/OrderCollectionEnvelope' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+      security:
+        - bearerAuth: []
   /dsh/client/order-truth/{orderId}:
     get:
-      tags: ["dsh-client"]
+      tags: [ "dsh-client" ]
       operationId: getClientOrderTruth
       summary: Read one actor-owned order truth.
       parameters:
@@ -73,9 +78,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+      security:
+        - bearerAuth: []
   /dsh/client/order-truth/{orderId}/events:
     get:
-      tags: ["dsh-client"]
+      tags: [ "dsh-client" ]
       operationId: listClientOrderTruthEvents
       summary: Read the redacted timeline of an actor-owned order.
       parameters:
@@ -89,9 +96,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+      security:
+        - bearerAuth: []
   /dsh/partner/order-truth:
     get:
-      tags: ["dsh-partner"]
+      tags: [ "dsh-partner" ]
       operationId: listPartnerOrderTruth
       summary: List order truth for the authenticated partner store scope.
       parameters:
@@ -99,15 +108,18 @@ paths:
         - $ref: '#/components/parameters/Limit'
       responses:
         '200':
-          description: Store-scoped orders with client identity and private address redacted.
+          description: Store-scoped orders with client identity and private address
+            redacted.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OrderCollectionEnvelope' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+      security:
+        - bearerAuth: []
   /dsh/partner/order-truth/{orderId}:
     get:
-      tags: ["dsh-partner"]
+      tags: [ "dsh-partner" ]
       operationId: getPartnerOrderTruth
       summary: Read one order within the authenticated partner store scope.
       parameters:
@@ -121,27 +133,31 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+      security:
+        - bearerAuth: []
   /dsh/operator/order-truth:
     get:
-      tags: ["dsh-operator"]
+      tags: [ "dsh-operator" ]
       operationId: listOperatorOrderTruth
-      summary: List tenant order truth for an operator with operations.read.
+      summary: List OperatorContext order truth for an operator with operations.read.
       parameters:
         - $ref: '#/components/parameters/Status'
         - $ref: '#/components/parameters/Limit'
       responses:
         '200':
-          description: Tenant-scoped operational order truth.
+          description: OperatorContext-scoped operational order truth.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OrderCollectionEnvelope' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+      security:
+        - bearerAuth: []
   /dsh/operator/order-truth/diagnostics:
     get:
-      tags: ["dsh-operator"]
+      tags: [ "dsh-operator" ]
       operationId: getOperatorOrderTruthDiagnostics
-      summary: Read redacted tenant-scoped operational diagnostics.
+      summary: Read redacted OperatorContext-scoped operational diagnostics.
       responses:
         '200':
           description: Order truth service indicators and alert codes without PII.
@@ -150,22 +166,26 @@ paths:
               schema: { $ref: '#/components/schemas/OrderTruthDiagnosticsEnvelope' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+      security:
+        - bearerAuth: []
   /dsh/operator/order-truth/{orderId}:
     get:
-      tags: ["dsh-operator"]
+      tags: [ "dsh-operator" ]
       operationId: getOperatorOrderTruth
-      summary: Read one tenant order for an operator with operations.read.
+      summary: Read one OperatorContext order for an operator with operations.read.
       parameters:
         - $ref: '#/components/parameters/OrderId'
       responses:
         '200':
-          description: Tenant-scoped operational order truth.
+          description: OperatorContext-scoped operational order truth.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OrderEnvelope' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -177,7 +197,7 @@ components:
       name: Idempotency-Key
       in: header
       required: true
-      description: Durable mutation key scoped by tenant and authenticated client.
+      description: Durable mutation key scoped by OperatorContext and authenticated client.
       schema: { type: string, minLength: 16, maxLength: 200 }
     CorrelationId:
       name: X-Correlation-ID
@@ -203,19 +223,19 @@ components:
     CreateOrderRequest:
       type: object
       additionalProperties: false
-      required: [checkoutIntentId]
+      required: [ checkoutIntentId ]
       properties:
         checkoutIntentId: { type: string, format: uuid }
     OrderEnvelope:
       type: object
       additionalProperties: false
-      required: [order]
+      required: [ order ]
       properties:
         order: { $ref: '#/components/schemas/OrderTruth' }
     OrderCollectionEnvelope:
       type: object
       additionalProperties: false
-      required: [orders]
+      required: [ orders ]
       properties:
         orders:
           type: array
@@ -223,7 +243,7 @@ components:
     OrderEventCollectionEnvelope:
       type: object
       additionalProperties: false
-      required: [events]
+      required: [ events ]
       properties:
         events:
           type: array
@@ -261,17 +281,19 @@ components:
         storeId: { type: string, minLength: 1 }
         clientId:
           type: string
-          description: Present for the client view and omitted from protected partner/operator responses.
-        fulfillmentMode: { type: string, enum: [bthwani_delivery, partner_delivery, pickup] }
+          description: Present for the client view and omitted from protected
+            partner/operator responses.
+        fulfillmentMode: { type: string, enum: [ bthwani_delivery, partner_delivery, pickup ] }
         status: { type: string, minLength: 1 }
-        currentOwner: { type: string, enum: [client, partner, operations, captain, terminal] }
+        currentOwner: { type: string, enum: [ client, partner, operations, captain, terminal ] }
         allowedActions:
           type: array
           items: { type: string }
         deliveryAddressSnapshot:
           type: object
           additionalProperties: true
-          description: Immutable actor-redacted address snapshot. Partner/operator views may return only {redacted:true}.
+          description: Immutable actor-redacted address snapshot. Partner/operator views
+            may return only {redacted:true}.
         subtotalMinorUnits: { type: integer, format: int64, minimum: 0 }
         discountMinorUnits: { type: integer, format: int64, minimum: 0 }
         totalMinorUnits: { type: integer, format: int64, minimum: 0 }
@@ -280,7 +302,8 @@ components:
         couponCodeLast4: { type: string, maxLength: 4 }
         wltPaymentRefId:
           type: string
-          description: Opaque WLT reference; it does not transfer financial truth ownership to DSH.
+          description: Opaque WLT reference; it does not transfer financial truth
+            ownership to DSH.
         paymentStatusProjection: { type: string }
         paymentProjectionUpdatedAt: { type: string, format: date-time, nullable: true }
         correlationId: { type: string, minLength: 1 }
@@ -296,7 +319,16 @@ components:
     OrderItemSnapshot:
       type: object
       additionalProperties: false
-      required: [id, productId, productName, quantity, unitPrice, lineTotalMinorUnits, snapshot]
+      required:
+        [
+          id,
+          productId,
+          productName,
+          quantity,
+          unitPrice,
+          lineTotalMinorUnits,
+          snapshot
+        ]
       properties:
         id: { type: string, format: uuid }
         productId: { type: string }
@@ -310,7 +342,19 @@ components:
     OrderEvent:
       type: object
       additionalProperties: false
-      required: [id, type, fromStatus, toStatus, actorRole, correlationId, causationId, orderVersion, metadata, createdAt]
+      required:
+        [
+          id,
+          type,
+          fromStatus,
+          toStatus,
+          actorRole,
+          correlationId,
+          causationId,
+          orderVersion,
+          metadata,
+          createdAt
+        ]
       properties:
         id: { type: string, format: uuid }
         type: { type: string }
@@ -327,14 +371,14 @@ components:
     OrderTruthDiagnosticsEnvelope:
       type: object
       additionalProperties: false
-      required: [diagnostics]
+      required: [ diagnostics ]
       properties:
         diagnostics: { $ref: '#/components/schemas/OrderTruthDiagnostics' }
     OrderTruthDiagnostics:
       type: object
       additionalProperties: false
       required:
-        - tenantId
+        - operatorContextId
         - generatedAt
         - ordersCreatedLastFiveMinutes
         - ordersCreatedLastHour
@@ -349,7 +393,7 @@ components:
         - health
         - alerts
       properties:
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         generatedAt: { type: string, format: date-time }
         ordersCreatedLastFiveMinutes: { type: integer, format: int64, minimum: 0 }
         ordersCreatedLastHour: { type: integer, format: int64, minimum: 0 }
@@ -362,7 +406,7 @@ components:
         stalePaymentProjections: { type: integer, format: int64, minimum: 0 }
         idempotencyConflictsLastHour: { type: integer, format: int64, minimum: 0 }
         snapshotProtectionFailuresLastHour: { type: integer, format: int64, minimum: 0 }
-        health: { type: string, enum: [healthy, degraded, critical] }
+        health: { type: string, enum: [ healthy, degraded, critical ] }
         alerts:
           type: array
           items: { type: string }
@@ -374,6 +418,7 @@ components:
     Forbidden:
       description: Actor, permission or surface is not allowed.
     NotFound:
-      description: Resource is absent or inaccessible without disclosing cross-scope existence.
+      description: Resource is absent or inaccessible without disclosing cross-scope
+        existence.
     Conflict:
       description: Checkout state, idempotency fingerprint or concurrent state conflict.

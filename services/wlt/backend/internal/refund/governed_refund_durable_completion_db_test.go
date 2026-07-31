@@ -16,11 +16,11 @@ func TestGovernedRefundRuntimeDurableCompletionSurfacesOutcomePersistenceFailure
 	defer db.Close()
 
 	sessionID := insertTestSession(t, db, "captured", 1800, "YER")
-	orderID := fmt.Sprintf("jrn035-persistence-order-%d", time.Now().UnixNano())
+	orderID := fmt.Sprintf("persistence-order-%d", time.Now().UnixNano())
 	approved := createGovernedRuntimeRefund(t, db, sessionID, orderID, 500, "persistence-failure")
 
 	_, err := db.Exec(`
-		CREATE OR REPLACE FUNCTION jrn035_test_block_refund_outcome()
+		CREATE OR REPLACE FUNCTION test_block_refund_outcome()
 		RETURNS trigger
 		LANGUAGE plpgsql
 		AS $$
@@ -31,18 +31,18 @@ func TestGovernedRefundRuntimeDurableCompletionSurfacesOutcomePersistenceFailure
 			RETURN NEW;
 		END;
 		$$;
-		DROP TRIGGER IF EXISTS trg_jrn035_test_block_refund_outcome ON wlt_refunds;
-		CREATE TRIGGER trg_jrn035_test_block_refund_outcome
+		DROP TRIGGER IF EXISTS trg_test_block_refund_outcome ON wlt_refunds;
+		CREATE TRIGGER trg_test_block_refund_outcome
 		BEFORE UPDATE OF status ON wlt_refunds
 		FOR EACH ROW
-		EXECUTE FUNCTION jrn035_test_block_refund_outcome();`)
+		EXECUTE FUNCTION test_block_refund_outcome();`)
 	if err != nil {
 		t.Fatalf("install outcome persistence failure trigger: %v", err)
 	}
 	defer func() {
 		_, cleanupErr := db.Exec(`
-			DROP TRIGGER IF EXISTS trg_jrn035_test_block_refund_outcome ON wlt_refunds;
-			DROP FUNCTION IF EXISTS jrn035_test_block_refund_outcome();`)
+			DROP TRIGGER IF EXISTS trg_test_block_refund_outcome ON wlt_refunds;
+			DROP FUNCTION IF EXISTS test_block_refund_outcome();`)
 		if cleanupErr != nil {
 			t.Errorf("cleanup outcome persistence failure trigger: %v", cleanupErr)
 		}

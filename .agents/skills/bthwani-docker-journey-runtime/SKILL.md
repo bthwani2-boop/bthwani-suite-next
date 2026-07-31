@@ -22,8 +22,8 @@ Own runtime-evidence routing for Docker, data-plane, service startup, health, mi
 
 ## Read before
 
-- `governance/05_DOCKER_AND_DATA_PLANE.md`
-- `governance/06_EVIDENCE_AND_GATES.md`
+- `governance/policies/runtime.md`
+- `governance/policies/release.md`
 - `package.json`
 - applicable runtime scripts, compose files, service manifests, migrations, and health endpoints
 

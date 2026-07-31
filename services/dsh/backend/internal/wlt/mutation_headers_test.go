@@ -11,7 +11,7 @@ import (
 )
 
 func trustedMutationTestContext() context.Context {
-	return WithTenantContext(context.Background(), "tenant-a")
+	return WithOperatorContext(context.Background(), "OperatorContext-a")
 }
 
 func requireMutationHeaders(t *testing.T, r *http.Request) {
@@ -22,8 +22,8 @@ func requireMutationHeaders(t *testing.T, r *http.Request) {
 	if strings.TrimSpace(r.Header.Get("Idempotency-Key")) == "" {
 		t.Fatal("missing Idempotency-Key")
 	}
-	if r.Header.Get("X-Tenant-ID") != "tenant-a" {
-		t.Fatalf("unexpected X-Tenant-ID %q", r.Header.Get("X-Tenant-ID"))
+	if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-a" {
+		t.Fatalf("unexpected X-Operator-Context-ID %q", r.Header.Get("X-Operator-Context-ID"))
 	}
 }
 
@@ -155,7 +155,7 @@ func TestCommercialProductWriteAddsRequiredHeaders(t *testing.T) {
 	}
 }
 
-func TestPromotionFundingRejectsMissingTenantBeforeNetwork(t *testing.T) {
+func TestPromotionFundingRejectsMissingOperatorContextBeforeNetwork(t *testing.T) {
 	called := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
@@ -169,10 +169,10 @@ func TestPromotionFundingRejectsMissingTenantBeforeNetwork(t *testing.T) {
 		CouponRedemptionID: "redemption-1",
 	}, "", "")
 	if err == nil {
-		t.Fatal("expected missing tenant to fail")
+		t.Fatal("expected missing OperatorContext to fail")
 	}
 	if called {
-		t.Fatal("promotion funding request reached network without tenant")
+		t.Fatal("promotion funding request reached network without OperatorContext")
 	}
 }
 

@@ -73,7 +73,7 @@ func main() {
 	router := dshHttp.NewRouter(db, identityClient, wltClient, mediaProvider, respCache)
 	dshHttp.RegisterPartnerLifecycleRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPartnerSelfRoutes(router, db, identityClient, wltClient, mediaProvider)
-	dshHttp.RegisterJRN032AnalyticsRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterOperationalAnalyticsRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterActorNotificationRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterFieldReadinessRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPartnerFleetMembershipRoutes(router, db, identityClient, wltClient, mediaProvider)
@@ -110,8 +110,8 @@ func main() {
 		deliveryExceptionGovernedRouter,
 	)
 	availabilityGuardedRouter := dshHttp.OperationsAvailabilityMiddleware(db, governedIncidentRouter)
-	tenantGuardedRouter := dshHttp.TrustedTenantContextMiddleware(identityClient, availabilityGuardedRouter)
-	handler := dshHttp.CorsMiddleware(authMode, tenantGuardedRouter)
+	OperatorContextGuardedRouter := dshHttp.TrustedOperatorContextMiddleware(identityClient, availabilityGuardedRouter)
+	handler := dshHttp.CorsMiddleware(authMode, OperatorContextGuardedRouter)
 
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
 	go orders.RunOrderEventBridgeWorker(outboxCtx, db, 5*time.Second)

@@ -5,6 +5,7 @@ import test from "node:test";
 const read = (path) => fs.readFileSync(path, "utf8");
 
 const page = read("apps/control-panel/runtime/src/app/dsh/platform/page.tsx");
+const dashboard = read("services/dsh/frontend/control-panel/platform/PlatformDashboardScreen.tsx");
 const platformIndex = read("services/dsh/frontend/control-panel/platform/index.ts");
 const visual = read("services/dsh/frontend/control-panel/platform/PlatformGovernanceVisual.tsx");
 const session = read("services/dsh/frontend/shared/session/control-panel-session.tsx");
@@ -14,8 +15,10 @@ const identityContract = read("core/identity/clients/generated/identity-api.ts")
 const platformServer = read("core/platform-control/backend/internal/http/server.go");
 
 test("platform governance renders the live visualization on the sovereign platform page", () => {
-  assert.match(page, /PlatformGovernanceVisual/);
-  assert.match(page, /<PlatformGovernanceVisual\s*\/>/);
+  assert.match(page, /PlatformDashboardScreen/);
+  assert.match(page, /<PlatformDashboardScreen\s*\/>/);
+  assert.match(dashboard, /PlatformGovernanceVisual/);
+  assert.match(dashboard, /<PlatformGovernanceVisual\s*\/>/);
   assert.match(platformIndex, /export \{ PlatformGovernanceVisual \}/);
   assert.match(visual, /usePlatformChangeWorkflowController\(canRead\)/);
   assert.match(visual, /workflow\.state\.changeSets/);
@@ -23,15 +26,15 @@ test("platform governance renders the live visualization on the sovereign platfo
   assert.doesNotMatch(visual, /fetch\s*\(/);
 });
 
-test("platform governance binds the visualization to authenticated SaaS tenant context", () => {
-  assert.match(identityContract, /ActorIdentity:[\s\S]*tenantId: string/);
+test("platform governance binds the visualization to authenticated partner_platform operator context", () => {
+  assert.match(identityContract, /ActorIdentity:[\s\S]*operatorContextId: string/);
   assert.match(session, /identity: ActorIdentity/);
-  assert.match(visual, /identity\?\.tenantId\.trim\(\)/);
+  assert.match(visual, /identity\?\.operatorContextId\.trim\(\)/);
   assert.match(visual, /hasControlPanelPermission\(identity, "platform:read"\)/);
   assert.doesNotMatch(visual, /local-dsh/);
-  assert.doesNotMatch(visual, /X-Tenant-ID/);
-  assert.match(platformServer, /enforceSaasTenantContext/);
-  assert.match(platformServer, /authenticated identity has no trusted tenant context/);
+  assert.doesNotMatch(visual, /X-Operator-Context-ID/);
+  assert.match(platformServer, /enforceOperatorContext/);
+  assert.match(platformServer, /authenticated identity has no trusted operator context/);
 });
 
 test("platform governance exposes the complete governed lifecycle without bypass actions", () => {

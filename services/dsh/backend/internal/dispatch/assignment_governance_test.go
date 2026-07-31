@@ -16,8 +16,8 @@ func TestValidateGovernedCreateInputNormalizesDefaults(t *testing.T) {
 	if err := validateGovernedCreateInput(&input); err != nil {
 		t.Fatalf("expected valid input, got %v", err)
 	}
-	if input.TenantID != DefaultDispatchTenantID {
-		t.Fatalf("expected default tenant, got %q", input.TenantID)
+	if input.OperatorContextID != DefaultDispatchOperatorContextID {
+		t.Fatalf("expected default OperatorContext, got %q", input.OperatorContextID)
 	}
 	if input.ResponseTimeoutSecond != 90 {
 		t.Fatalf("expected default response timeout 90, got %d", input.ResponseTimeoutSecond)

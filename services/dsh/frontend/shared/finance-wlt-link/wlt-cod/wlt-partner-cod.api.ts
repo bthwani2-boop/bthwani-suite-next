@@ -1,7 +1,6 @@
-import type { WltDshCodReference } from "@bthwani/wlt";
 import { corrId, createDshHttpClient } from "../../_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../../_kernel/dsh-api-base-url";
-import type { WltCodCustodyMutationResult } from "./wlt-cod.api";
+import type { WltCodCustodyMutationResult, WltDshCodReference } from "./wlt-cod.api";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "partner-cod");
 

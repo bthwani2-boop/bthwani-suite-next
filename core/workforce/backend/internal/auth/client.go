@@ -26,7 +26,7 @@ type Permission struct {
 
 type Identity struct {
 	Subject     string       `json:"subject"`
-	TenantID    string       `json:"tenantId"`
+	OperatorContextID    string       `json:"operatorContextId"`
 	Roles       []string     `json:"roles"`
 	Permissions []Permission `json:"permissions"`
 	AuthState   string       `json:"authState"`
@@ -34,22 +34,20 @@ type Identity struct {
 
 type Client struct {
 	baseURL         string
-	defaultTenantID string
-	saasActive      bool
+	defaultOperatorContextID string
 	http            *http.Client
 }
 
 func NewClient(baseURL string) *Client {
 	return &Client{
 		baseURL:         strings.TrimRight(baseURL, "/"),
-		defaultTenantID: strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID")),
-		saasActive:      strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active"),
+		defaultOperatorContextID: strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID")),
 		http:            &http.Client{Timeout: 3 * time.Second},
 	}
 }
 
 func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, error) {
-	if c.baseURL == "" || (c.saasActive && c.defaultTenantID == "") {
+	if c.baseURL == "" || c.defaultOperatorContextID == "" {
 		return Identity{}, ErrIdentityUnavailable
 	}
 	if !strings.HasPrefix(strings.TrimSpace(authorization), "Bearer ") {
@@ -78,7 +76,7 @@ func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, e
 	if identity.AuthState != "authenticated" || identity.Subject == "" {
 		return Identity{}, ErrUnauthenticated
 	}
-	if c.saasActive && strings.TrimSpace(identity.TenantID) != c.defaultTenantID {
+	if strings.TrimSpace(identity.OperatorContextID) != c.defaultOperatorContextID {
 		return Identity{}, ErrUnauthenticated
 	}
 	return identity, nil

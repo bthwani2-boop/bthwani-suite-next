@@ -50,7 +50,8 @@ Use `CODE_BASED_LEAN` for ordinary work. Escalate only when claim, risk, impact,
 - Requiring broad builds, screenshots, or evidence packs for every small change.
 - Treating a generated report, declaration, runtime map, seed, fixture, or prior run as proof for a newer commit.
 - Mapping a scope-specific `PASS` directly to `CLOSED_WITH_EVIDENCE`.
-- Omitting `finance` for WLT impact or `isolation` for tenant/isolation impact.
+- Omitting `finance` for WLT impact or `isolation` for operator-context, organization, partner, store, actor, or other legally scoped data-boundary impact.
+- Treating a partner subscription or commercial model as independent platform instance evidence.
 - Producing or committing transient evidence by default.
 
 ## Required output

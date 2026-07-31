@@ -24,20 +24,20 @@ type wltCaptainWalletEnvelope struct {
 	} `json:"wallet"`
 }
 
-func dispatchTenantID(value string) string {
+func dispatchOperatorContextID(value string) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return dispatch.DefaultDispatchTenantID
+		return dispatch.DefaultDispatchOperatorContextID
 	}
 	return value
 }
 
 func (s *protectedStoreServer) refreshCaptainFinancialEligibility(
 	r *http.Request,
-	tenantID string,
+	operatorContextID string,
 	captainID string,
 ) (dispatch.CaptainFinancialEligibilitySnapshot, error) {
-	tenantID = dispatchTenantID(tenantID)
+	operatorContextID = dispatchOperatorContextID(operatorContextID)
 	captainID = strings.TrimSpace(captainID)
 	if captainID == "" {
 		return dispatch.CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("%w: captain id is required", dispatch.ErrInvalid)
@@ -50,12 +50,12 @@ func (s *protectedStoreServer) refreshCaptainFinancialEligibility(
 	if err != nil {
 		return dispatch.CaptainFinancialEligibilitySnapshot{}, err
 	}
-	status, body, err := s.wlt.FinanceReadWalletWithTenant(
+	status, body, err := s.wlt.FinanceReadWalletWithOperatorContext(
 		r.Context(),
 		"captain",
 		captainID,
 		r.Header.Get("X-Correlation-ID"),
-		tenantID,
+		operatorContextID,
 	)
 	if err != nil {
 		return dispatch.CaptainFinancialEligibilitySnapshot{}, err
@@ -79,7 +79,7 @@ func (s *protectedStoreServer) refreshCaptainFinancialEligibility(
 	return dispatch.UpsertCaptainFinancialEligibilitySnapshot(
 		r.Context(),
 		s.db,
-		tenantID,
+		operatorContextID,
 		captainID,
 		dispatch.DispatchBalanceRequirement{
 			Enabled:                          policy.Enabled,
@@ -165,12 +165,12 @@ func (s *protectedStoreServer) handleRefreshOperatorCaptainFinancialEligibility(
 		return
 	}
 	var body struct {
-		TenantID string `json:"tenantId"`
+		OperatorContextID string `json:"operatorContextId"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	snapshot, err := s.refreshCaptainFinancialEligibility(r, body.TenantID, r.PathValue("captainId"))
+	snapshot, err := s.refreshCaptainFinancialEligibility(r, body.OperatorContextID, r.PathValue("captainId"))
 	if err != nil {
 		writeCaptainFinancialEligibilityError(w, err)
 		return
@@ -184,7 +184,7 @@ func (s *protectedStoreServer) handleGetOperatorCaptainFinancialEligibility(w ht
 		return
 	}
 	snapshot, err := dispatch.GetCaptainFinancialEligibilitySnapshot(
-		r.Context(), s.db, r.URL.Query().Get("tenantId"), r.PathValue("captainId"),
+		r.Context(), s.db, r.URL.Query().Get("operatorContextId"), r.PathValue("captainId"),
 	)
 	if err != nil {
 		writeCaptainFinancialEligibilityError(w, err)
@@ -198,11 +198,11 @@ func (s *protectedStoreServer) handleRefreshOwnCaptainFinancialEligibility(w htt
 	if !ok {
 		return
 	}
-	if strings.TrimSpace(actor.TenantID) == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "captain tenant context is required")
+	if strings.TrimSpace(actor.OperatorContextID) == "" {
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "captain OperatorContext context is required")
 		return
 	}
-	snapshot, err := s.refreshCaptainFinancialEligibility(r, actor.TenantID, actor.ID)
+	snapshot, err := s.refreshCaptainFinancialEligibility(r, actor.OperatorContextID, actor.ID)
 	if err != nil {
 		writeCaptainFinancialEligibilityError(w, err)
 		return
@@ -215,11 +215,11 @@ func (s *protectedStoreServer) handleGetOwnCaptainFinancialEligibility(w http.Re
 	if !ok {
 		return
 	}
-	if strings.TrimSpace(actor.TenantID) == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "captain tenant context is required")
+	if strings.TrimSpace(actor.OperatorContextID) == "" {
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "captain OperatorContext context is required")
 		return
 	}
-	snapshot, err := dispatch.GetCaptainFinancialEligibilitySnapshot(r.Context(), s.db, actor.TenantID, actor.ID)
+	snapshot, err := dispatch.GetCaptainFinancialEligibilitySnapshot(r.Context(), s.db, actor.OperatorContextID, actor.ID)
 	if err != nil {
 		writeCaptainFinancialEligibilityError(w, err)
 		return

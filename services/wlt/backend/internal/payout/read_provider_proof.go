@@ -82,9 +82,9 @@ func scanPayoutRequestWithProof(rows *sql.Rows) (*PayoutRequest, error) {
 
 func HandleListPayoutRequestsWithProviderProof(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, err := shared.RequireTenantContext(r.Context())
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
 		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "TENANT_REQUIRED", err.Error())
+			shared.SendError(w, http.StatusBadRequest, "OperatorContext_REQUIRED", err.Error())
 			return
 		}
 		beneficiaryActorID := strings.TrimSpace(r.URL.Query().Get("beneficiaryActorId"))
@@ -102,8 +102,8 @@ func HandleListPayoutRequestsWithProviderProof(db *sql.DB) http.HandlerFunc {
 		}
 
 		query := "SELECT " + payoutReadCols + " FROM wlt_payout_requests"
-		where := []string{"tenant_id = $1"}
-		args := []any{tenantID}
+		where := []string{"operator_context_id = $1"}
+		args := []any{operatorContextID}
 		if beneficiaryActorID != "" {
 			args = append(args, beneficiaryActorID, strings.ToLower(beneficiaryActorType))
 			where = append(where, fmt.Sprintf("beneficiary_actor_id = $%d AND beneficiary_actor_type = $%d", len(args)-1, len(args)))
@@ -141,9 +141,9 @@ func HandleListPayoutRequestsWithProviderProof(db *sql.DB) http.HandlerFunc {
 
 func HandleGetPayoutRequestWithProviderProof(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, err := shared.RequireTenantContext(r.Context())
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
 		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "TENANT_REQUIRED", err.Error())
+			shared.SendError(w, http.StatusBadRequest, "OperatorContext_REQUIRED", err.Error())
 			return
 		}
 		payoutID := strings.TrimSpace(r.PathValue("payoutId"))
@@ -151,7 +151,7 @@ func HandleGetPayoutRequestWithProviderProof(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId is required")
 			return
 		}
-		rows, err := db.QueryContext(r.Context(), "SELECT "+payoutReadCols+" FROM wlt_payout_requests WHERE tenant_id=$1 AND id=$2 LIMIT 1", tenantID, payoutID)
+		rows, err := db.QueryContext(r.Context(), "SELECT "+payoutReadCols+" FROM wlt_payout_requests WHERE operator_context_id=$1 AND id=$2 LIMIT 1", operatorContextID, payoutID)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to query payout request")
 			return

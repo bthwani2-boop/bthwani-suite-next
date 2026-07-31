@@ -16,11 +16,11 @@
 
 ```yaml
 live_code_closure_gate:
-  docs_only_changes_allowed_for_closure: false
-  governance_only_changes_allowed_for_closure: false
-  diagnostics_only_changes_allowed_for_closure: false
-  checklist_only_changes_allowed_for_closure: false
-  generated_output_only_changes_allowed_for_closure: false
+ docs_only_changes_allowed_for_closure: false
+ governance_only_changes_allowed_for_closure: false
+ diagnostics_only_changes_allowed_for_closure: false
+ checklist_only_changes_allowed_for_closure: false
+ generated_output_only_changes_allowed_for_closure: false
 ```
 
 لا يوجد قبول نهائي إلا إذا تحقق الآتي داخل النطاق:
@@ -114,28 +114,28 @@ reason: unable_to_follow_protocol_without_unsafe_or_unverified_claims
 
 ```yaml
 frontend_backend_acceptance_gate:
-  unbound_ui_controls: 0
-  frontend_only_routes: 0
-  backend_only_routes: 0
-  request_mismatches: 0
-  response_mismatches: 0
-  status_mismatches: 0
-  permission_mismatches: 0
-  error_mapping_mismatches: 0
-  generated_client_drift: 0
-  untraced_contract_fields: 0
-  unverified_runtime_bindings: 0
+ unbound_ui_controls: 0
+ frontend_only_routes: 0
+ backend_only_routes: 0
+ request_mismatches: 0
+ response_mismatches: 0
+ status_mismatches: 0
+ permission_mismatches: 0
+ error_mapping_mismatches: 0
+ generated_client_drift: 0
+ untraced_contract_fields: 0
+ unverified_runtime_bindings: 0
 ```
 
 ```yaml
 numeric_closure:
-  unbound_controls: 0
-  contract_mismatches: 0
-  permission_mismatches: 0
-  failed_required_checks: 0
-  unresolved_internal_gaps: 0
-  duplicate_truth_owners: 0
-  runtime_journeys_unverified: 0
+ unbound_controls: 0
+ contract_mismatches: 0
+ permission_mismatches: 0
+ failed_required_checks: 0
+ unresolved_internal_gaps: 0
+ duplicate_truth_owners: 0
+ runtime_journeys_unverified: 0
 ```
 
 > قاعدة: لا يسمح بـIMPLEMENTATION_PASS إلا عند تحققها كلها.
@@ -144,35 +144,35 @@ numeric_closure:
 
 ```yaml
 required_ci_acceptance:
-  final_protocol_gate: PASS
-  standard_ci: PASS
-  runtime_gate: PASS | NOT_REQUIRED_WITH_PROOF
-  unresolved_internal_gaps: 0
+ final_protocol_gate: PASS
+ standard_ci: PASS
+ runtime_gate: PASS | NOT_REQUIRED_WITH_PROOF
+ unresolved_internal_gaps: 0
 ```
 
-## SaaS/Tenancy Acceptance Gate
+## platform/isolation Acceptance Gate
 
 ```yaml
-saas_tenancy_acceptance_gate:
-  tenant_owned_entities_classified: true
-  tenant_context_propagation_verified: true
-  cross_tenant_negative_tests_passed: true
-  cross_tenant_data_leakage: 0
-  privileged_cross_tenant_access_audited: true | NOT_APPLICABLE
-  tenant_export_delete_backup_restore_defined: true | NOT_APPLICABLE
-  per_tenant_observability_defined: true | NOT_APPLICABLE
-  quotas_or_noisy_neighbor_policy_defined: true | NOT_APPLICABLE
-  wlt_tenant_financial_isolation_verified: true | NOT_APPLICABLE
-  commercial_saas_activation: BLOCKED_BY_POLICY | APPROVED
+operator_context_acceptance_gate:
+ operator_context_owned_entities_classified: true
+ operator_context_propagation_verified: true
+ cross_operator_context_negative_tests_passed: true
+ cross_operator_context_data_leakage: 0
+ privileged_cross_operator_context_access_audited: true | NOT_APPLICABLE
+ operator_context_export_delete_backup_restore_defined: true | NOT_APPLICABLE
+ per_operator_context_observability_defined: true | NOT_APPLICABLE
+ quotas_or_noisy_neighbor_policy_defined: true | NOT_APPLICABLE
+ wlt_operator_context_financial_isolation_verified: true | NOT_APPLICABLE
+ commercial_platform_activation: BLOCKED_BY_POLICY | APPROVED
 ```
 
-Allowed SaaS decisions:
+Allowed platform decisions:
 
 ```text
-SAAS_ACTIVATION_APPROVED
-SAAS_READY_DEFERRED
+COMMERCIAL_ACTIVATION_APPROVED
+COMMERCIAL_READY_DEFERRED
 FIX_REQUIRED
 HARD_BLOCKED_EXTERNAL_ONLY
 ```
 
-Commercial SaaS activation is forbidden unless the decision is explicitly `SAAS_ACTIVATION_APPROVED`.
+platform activation is forbidden unless the decision is explicitly `COMMERCIAL_ACTIVATION_APPROVED`.

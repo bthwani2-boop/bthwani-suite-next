@@ -87,7 +87,6 @@ function Test-BthwaniMobileBackend {
     $checks = @(
         @{ Uri = "http://127.0.0.1:58082/identity/health"; Status = "healthy" },
         @{ Uri = "http://127.0.0.1:58086/workforce/health"; Status = "healthy" },
-        @{ Uri = "http://127.0.0.1:58083/wlt/health"; Status = "healthy" },
         @{ Uri = "http://127.0.0.1:58080/dsh/health"; Status = "healthy" }
     )
 
@@ -135,7 +134,7 @@ function Ensure-BthwaniMobileBackend {
     }
 
     if (-not (Test-BthwaniMobileBackend)) {
-        throw "Mobile backend startup completed but one or more required APIs are still unhealthy (Identity 58082, Workforce 58086, WLT 58083, DSH 58080)."
+        throw "Mobile backend startup completed but one or more application-facing APIs are still unhealthy (Identity 58082, Workforce 58086, DSH 58080)."
     }
     return "auto-started"
 }
@@ -161,8 +160,6 @@ $env:EXPO_PUBLIC_DSH_API_BASE_URL       = "http://127.0.0.1:58080"
 $env:NEXT_PUBLIC_DSH_API_BASE_URL       = "http://127.0.0.1:58080"
 $env:EXPO_PUBLIC_IDENTITY_API_BASE_URL  = "http://127.0.0.1:58082"
 $env:NEXT_PUBLIC_IDENTITY_API_BASE_URL  = "http://127.0.0.1:58082"
-$env:EXPO_PUBLIC_WLT_API_BASE_URL       = "http://127.0.0.1:58083"
-$env:NEXT_PUBLIC_WLT_API_BASE_URL       = "http://127.0.0.1:58083"
 $env:EXPO_PUBLIC_WORKFORCE_API_BASE_URL = "http://127.0.0.1:58086"
 $env:NEXT_PUBLIC_WORKFORCE_API_BASE_URL = "http://127.0.0.1:58086"
 
@@ -229,7 +226,7 @@ $env:ANDROID_SERIAL = $SelectedSerial
 $env:BTHWANI_ANDROID_SERIAL = $SelectedSerial
 $env:ADB = $AdbPath
 
-$Ports = @(58080, 58082, 58083, 58086, 59000, $MetroPort)
+$Ports = @(58080, 58082, 58086, 59000, $MetroPort)
 Invoke-BthwaniAdbReverse `
     -AdbPath $AdbPath `
     -Serial $SelectedSerial `

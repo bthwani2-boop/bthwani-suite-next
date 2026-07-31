@@ -9,7 +9,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS wlt_promotion_funding_reservations (
     id TEXT PRIMARY KEY DEFAULT ('pfr_' || replace(gen_random_uuid()::text, '-', '')),
-    tenant_id TEXT NOT NULL,
+    operator_context_id TEXT NOT NULL,
     external_reference TEXT NOT NULL,
     checkout_intent_id TEXT NOT NULL,
     coupon_redemption_id TEXT NOT NULL,
@@ -52,17 +52,17 @@ CREATE TABLE IF NOT EXISTS wlt_promotion_funding_reservations (
     CONSTRAINT wlt_promotion_reverse_chk CHECK (
         status <> 'reversed' OR (order_id IS NOT NULL AND reversed_at IS NOT NULL)
     ),
-    UNIQUE (tenant_id, external_reference),
-    UNIQUE (tenant_id, checkout_intent_id),
-    UNIQUE (tenant_id, coupon_redemption_id),
-    UNIQUE (tenant_id, idempotency_key)
+    UNIQUE (operator_context_id, external_reference),
+    UNIQUE (operator_context_id, checkout_intent_id),
+    UNIQUE (operator_context_id, coupon_redemption_id),
+    UNIQUE (operator_context_id, idempotency_key)
 );
 
 CREATE INDEX IF NOT EXISTS idx_wlt_promotion_funding_status
-    ON wlt_promotion_funding_reservations(tenant_id, status, updated_at DESC);
+    ON wlt_promotion_funding_reservations(operator_context_id, status, updated_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_wlt_promotion_funding_partner
-    ON wlt_promotion_funding_reservations(tenant_id, partner_id, status)
+    ON wlt_promotion_funding_reservations(operator_context_id, partner_id, status)
     WHERE partner_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS wlt_promotion_funding_events (
@@ -90,7 +90,7 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     IF ROW(
-        NEW.tenant_id,
+        NEW.operator_context_id,
         NEW.external_reference,
         NEW.checkout_intent_id,
         NEW.coupon_redemption_id,
@@ -103,7 +103,7 @@ BEGIN
         NEW.currency,
         NEW.idempotency_key
     ) IS DISTINCT FROM ROW(
-        OLD.tenant_id,
+        OLD.operator_context_id,
         OLD.external_reference,
         OLD.checkout_intent_id,
         OLD.coupon_redemption_id,

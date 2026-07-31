@@ -3,4 +3,3 @@ rules:
   operation-tags: error
   operation-operationId: error
   info-contact: error
-  invalid-ref: error

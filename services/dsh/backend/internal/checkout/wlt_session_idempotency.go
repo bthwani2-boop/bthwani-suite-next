@@ -13,12 +13,12 @@ import (
 func AttachWltPaymentSessionIdempotent(
 	db *sql.DB,
 	intentID string,
-	tenantID string,
+	operatorContextID string,
 	clientID string,
 	paymentSessionID string,
 ) (*Intent, error) {
-	tenantID = normalizeTenant(tenantID)
-	if intentID == "" || tenantID == "" || clientID == "" || paymentSessionID == "" {
+	operatorContextID = normalizeOperatorContext(operatorContextID)
+	if intentID == "" || operatorContextID == "" || clientID == "" || paymentSessionID == "" {
 		return nil, ErrInvalid
 	}
 
@@ -34,12 +34,12 @@ func AttachWltPaymentSessionIdempotent(
 		        WHEN state = $1 AND wlt_payment_session_id = $2 THEN updated_at
 		        ELSE NOW()
 		    END
-		WHERE id = $3::uuid AND tenant_id = $4 AND client_id = $5
+		WHERE id = $3::uuid AND operator_context_id = $4 AND client_id = $5
 		  AND (
 		      state IN ('pending', 'wlt_handoff_failed', 'wlt_outcome_unknown')
 		      OR (state = 'payment_pending' AND wlt_payment_session_id = $2)
 		  )
-		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		RETURNING id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`
 
@@ -48,12 +48,12 @@ func AttachWltPaymentSessionIdempotent(
 		string(StatePaymentPending),
 		paymentSessionID,
 		intentID,
-		tenantID,
+		operatorContextID,
 		clientID,
 	)
 	intent, err := scanIntent(row)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: intent not found, tenant mismatch, session mismatch, or not handoff-ready", ErrConflict)
+		return nil, fmt.Errorf("%w: intent not found, OperatorContext mismatch, session mismatch, or not handoff-ready", ErrConflict)
 	}
 	return intent, err
 }

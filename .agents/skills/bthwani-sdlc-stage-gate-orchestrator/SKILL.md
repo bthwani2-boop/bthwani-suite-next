@@ -19,7 +19,6 @@ Own formal SDLC stage routing, applicable-gate selection, no-skip validation, an
 
 - A low-risk code-only change requires only targeted verification.
 - The task is analysis-only and does not request a stage decision.
-- Commercial SaaS activation is requested while that separate implementation remains explicitly deferred.
 
 ## Authority boundary
 
@@ -28,14 +27,15 @@ This skill owns SDLC routing and stage-state validation only. It does not approv
 ## Resolution and workflow
 
 1. Pin repository mode, branch, and immutable commit with `bthwani-current-workspace-authority`.
-2. Classify task mode, risk, and real impact.
-3. Require Product Truth for applicable user-visible, role-sensitive, cross-surface, workflow, or commercial changes.
-4. Build or validate change-impact and artifact-manifest inputs.
-5. Select the immediate next stage only; stage skipping is forbidden without explicit not-applicable evidence.
-6. Run `pnpm run guard:sdlc` with artifact and impact inputs for affected formal transitions.
-7. Require governance-contract and CI-workflow approvals when their impact flags are true.
-8. Collect specialist evidence and approvals without manufacturing them.
-9. Map the result through the canonical decision vocabulary.
+2. Read and enforce `governance/product/platform-model.yaml` before classifying commercial or isolation impact.
+3. Classify task mode, risk, and real impact.
+4. Require Product Truth for applicable user-visible, role-sensitive, cross-surface, workflow, or commercial changes.
+5. Build or validate change-impact and artifact-manifest inputs.
+6. Select the immediate next stage only; stage skipping is forbidden without explicit not-applicable evidence.
+7. Run `pnpm run guard:sdlc` with artifact and impact inputs for affected formal transitions.
+8. Require governance-contract and CI-workflow approvals when their impact flags are true.
+9. Collect specialist evidence and approvals without manufacturing them.
+10. Map the result through the canonical decision vocabulary.
 
 ## Forbidden
 

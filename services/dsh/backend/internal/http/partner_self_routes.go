@@ -10,7 +10,7 @@ import (
 )
 
 // RegisterPartnerSelfRoutes closes the authenticated partner self-service
-// boundary explicitly. Tenant context is derived from Identity before the
+// boundary explicitly. OperatorContext context is derived from Identity before the
 // partner actor and governed store are resolved.
 // The order workboard remains registered by NewRouter because it is also part
 // of the shared order-fulfillment route group; registering it here as well
@@ -23,7 +23,7 @@ func RegisterPartnerSelfRoutes(
 	mediaProvider *media.Provider,
 ) {
 	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
-	mux.HandleFunc("GET /dsh/partner/activation/status", protected.withTrustedPartnerTenant(protected.handleGovernedPartnerActivationStatus))
-	mux.HandleFunc("GET /dsh/partner/activation/readiness", protected.withTrustedPartnerTenant(protected.handlePartnerAggregatedActivationReadiness))
-	mux.HandleFunc("GET /dsh/partner/analytics/performance", protected.withTrustedPartnerTenant(protected.handlePartnerPerformance))
+	mux.HandleFunc("GET /dsh/partner/activation/status", protected.withTrustedPartnerOperatorContext(protected.handleGovernedPartnerActivationStatus))
+	mux.HandleFunc("GET /dsh/partner/activation/readiness", protected.withTrustedPartnerOperatorContext(protected.handlePartnerAggregatedActivationReadiness))
+	mux.HandleFunc("GET /dsh/partner/analytics/performance", protected.withTrustedPartnerOperatorContext(protected.handlePartnerPerformance))
 }

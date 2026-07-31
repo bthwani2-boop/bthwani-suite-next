@@ -24,7 +24,7 @@ const (
 // misuse rejection_reason.
 type InformationExchange struct {
 	ID                       string
-	TenantID                 string
+	OperatorContextID                 string
 	SpecialRequestID         string
 	ClientID                 string
 	RequestedByOperatorID    string
@@ -42,7 +42,7 @@ func scanInformationExchange(scan func(...any) error) (*InformationExchange, err
 	var exchange InformationExchange
 	if err := scan(
 		&exchange.ID,
-		&exchange.TenantID,
+		&exchange.OperatorContextID,
 		&exchange.SpecialRequestID,
 		&exchange.ClientID,
 		&exchange.RequestedByOperatorID,
@@ -61,17 +61,17 @@ func scanInformationExchange(scan func(...any) error) (*InformationExchange, err
 }
 
 const informationExchangeColumns = `
-	id, tenant_id, special_request_id, client_id, requested_by_operator_id,
+	id, operator_context_id, special_request_id, client_id, requested_by_operator_id,
 	question, response, status, request_version_at_request,
 	request_version_at_response, requested_at, responded_at, updated_at
 `
 
-func (s *Service) LatestInformationExchangeInTenant(ctx context.Context, tenantID, requestID string) (*InformationExchange, error) {
+func (s *Service) LatestInformationExchangeInOperatorContext(ctx context.Context, operatorContextID, requestID string) (*InformationExchange, error) {
 	row := s.repo.DB().QueryRowContext(ctx, `SELECT `+informationExchangeColumns+`
 		FROM dsh_special_request_information_exchanges
-		WHERE tenant_id = $1 AND special_request_id = $2
+		WHERE operator_context_id = $1 AND special_request_id = $2
 		ORDER BY requested_at DESC
-		LIMIT 1`, tenantID, requestID)
+		LIMIT 1`, operatorContextID, requestID)
 	exchange, err := scanInformationExchange(row.Scan)
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
@@ -87,13 +87,13 @@ func validateInformationText(field, value string, minimum int) (string, error) {
 	return trimmed, nil
 }
 
-// RequestClientInformationInTenant creates one pending exchange and atomically
+// RequestClientInformationInOperatorContext creates one pending exchange and atomically
 // moves the request to customer_information. submitted and under_review are the
 // only eligible sources; terminal, quoted, paid, or dispatched work cannot be
 // rewound through this action.
-func (s *Service) RequestClientInformationInTenant(
+func (s *Service) RequestClientInformationInOperatorContext(
 	ctx context.Context,
-	tenantID, requestID, operatorID string,
+	operatorContextID, requestID, operatorID string,
 	expectedVersion int,
 	question string,
 ) (*SpecialRequest, *InformationExchange, error) {
@@ -106,7 +106,7 @@ func (s *Service) RequestClientInformationInTenant(
 		return nil, nil, fmt.Errorf("%w: operator is required", ErrInvalid)
 	}
 
-	current, err := s.repo.GetInTenant(ctx, tenantID, requestID)
+	current, err := s.repo.GetInOperatorContext(ctx, operatorContextID, requestID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -123,7 +123,7 @@ func (s *Service) RequestClientInformationInTenant(
 	var pendingCount int
 	if err := tx.QueryRowContext(ctx, `SELECT count(*)
 		FROM dsh_special_request_information_exchanges
-		WHERE tenant_id = $1 AND special_request_id = $2 AND status = 'pending'`, tenantID, requestID).Scan(&pendingCount); err != nil {
+		WHERE operator_context_id = $1 AND special_request_id = $2 AND status = 'pending'`, operatorContextID, requestID).Scan(&pendingCount); err != nil {
 		return nil, nil, err
 	}
 	if pendingCount > 0 {
@@ -132,7 +132,7 @@ func (s *Service) RequestClientInformationInTenant(
 
 	status := StatusNeedsCustomerInput
 	stage := "customer_information"
-	updated, err := s.repo.UpdateInTenantTx(ctx, tx, tenantID, requestID, expectedVersion, UpdateInput{
+	updated, err := s.repo.UpdateInOperatorContextTx(ctx, tx, operatorContextID, requestID, expectedVersion, UpdateInput{
 		Status:             &status,
 		WorkflowStage:      &stage,
 		AssignedOperatorID: &operatorID,
@@ -144,11 +144,11 @@ func (s *Service) RequestClientInformationInTenant(
 	exchangeID := uuid.NewString()
 	exchange, err := scanInformationExchange(tx.QueryRowContext(ctx, `
 		INSERT INTO dsh_special_request_information_exchanges (
-			id, tenant_id, special_request_id, client_id, requested_by_operator_id,
+			id, operator_context_id, special_request_id, client_id, requested_by_operator_id,
 			question, status, request_version_at_request
 		) VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)
 		RETURNING `+informationExchangeColumns,
-		exchangeID, tenantID, requestID, current.ClientID, operatorID, question, updated.Version).Scan)
+		exchangeID, operatorContextID, requestID, current.ClientID, operatorID, question, updated.Version).Scan)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -175,12 +175,12 @@ func (s *Service) RequestClientInformationInTenant(
 	return updated, exchange, nil
 }
 
-// RespondClientInformationInTenant records the client's answer and atomically
+// RespondClientInformationInOperatorContext records the client's answer and atomically
 // returns the request to governed review. The exchange id and request version
 // prevent answering a stale or already-completed question.
-func (s *Service) RespondClientInformationInTenant(
+func (s *Service) RespondClientInformationInOperatorContext(
 	ctx context.Context,
-	tenantID, requestID, clientID, exchangeID string,
+	operatorContextID, requestID, clientID, exchangeID string,
 	expectedVersion int,
 	response string,
 ) (*SpecialRequest, *InformationExchange, error) {
@@ -188,7 +188,7 @@ func (s *Service) RespondClientInformationInTenant(
 	if err != nil {
 		return nil, nil, err
 	}
-	current, err := s.repo.GetInTenant(ctx, tenantID, requestID)
+	current, err := s.repo.GetInOperatorContext(ctx, operatorContextID, requestID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -207,8 +207,8 @@ func (s *Service) RespondClientInformationInTenant(
 
 	pending, err := scanInformationExchange(tx.QueryRowContext(ctx, `SELECT `+informationExchangeColumns+`
 		FROM dsh_special_request_information_exchanges
-		WHERE id = $1 AND tenant_id = $2 AND special_request_id = $3 AND client_id = $4 AND status = 'pending'
-		FOR UPDATE`, exchangeID, tenantID, requestID, clientID).Scan)
+		WHERE id = $1 AND operator_context_id = $2 AND special_request_id = $3 AND client_id = $4 AND status = 'pending'
+		FOR UPDATE`, exchangeID, operatorContextID, requestID, clientID).Scan)
 	if err == sql.ErrNoRows {
 		return nil, nil, fmt.Errorf("%w: pending information exchange not found", ErrConflict)
 	}
@@ -221,7 +221,7 @@ func (s *Service) RespondClientInformationInTenant(
 	if current.RequestType == TypeAwnakErrand {
 		stage = "quote_review"
 	}
-	updated, err := s.repo.UpdateInTenantTx(ctx, tx, tenantID, requestID, expectedVersion, UpdateInput{
+	updated, err := s.repo.UpdateInOperatorContextTx(ctx, tx, operatorContextID, requestID, expectedVersion, UpdateInput{
 		Status:        &status,
 		WorkflowStage: &stage,
 	})

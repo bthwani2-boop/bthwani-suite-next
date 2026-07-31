@@ -154,8 +154,8 @@ git status --short
 git diff --check
 pnpm install --frozen-lockfile
 
-pnpm run foundation:gate
-pnpm run journey:gate
+pnpm run guard:foundation
+pnpm run guard:journey
 
 Push-Location "services\dsh\backend"
 go test ./...
@@ -170,8 +170,8 @@ Pop-Location
 
 قواعد استخدام هذه الأوامر:
 
-- `foundation:gate` إلزامي في كل رحلة بلا استثناء.
-- `journey:gate` إلزامي في كل رحلة تمس surface أو shared أو WLT.
+- `guard:foundation` إلزامي في كل رحلة بلا استثناء.
+- `guard:journey` إلزامي في كل رحلة تمس surface أو shared أو WLT.
 - Go backends تُشغَّل فقط إذا كانت داخل نطاق الرحلة الفعلي.
 
 إذا فشل أي أمر: `FIX_REQUIRED`. إذا كان الأمر غير موجود في `package.json` أو workspace: طبّق نفس قاعدة الأمر المفقود في `07` (القسم 19) — لا يجوز تحويله إلى PASS.

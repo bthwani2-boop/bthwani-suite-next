@@ -161,19 +161,19 @@ func (s *protectedStoreServer) handleCaptainFinanceCommissions(w http.ResponseWr
 		return
 	}
 	query := url.Values{"captainId": {actor.ID}}
-	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
+	status, body, err := s.wlt.FinanceReadWithOperatorContext(r.Context(), "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
-// Historical captain and field URLs delegate to the same actor-scoped JRN-037
+// Historical captain and field URLs delegate to the same actor-scoped payout
 // handlers used by the current /me routes. No compatibility route can create
 // a payout without an active destination owned by the authenticated actor.
 func (s *protectedStoreServer) handleCaptainFinancePayouts(w http.ResponseWriter, r *http.Request) {
-	s.handleCaptainPayoutRequestsJRN037(w, r)
+	s.handleCaptainPayoutRequests(w, r)
 }
 
 func (s *protectedStoreServer) handleCaptainCreatePayout(w http.ResponseWriter, r *http.Request) {
-	s.handleCaptainCreatePayoutRequestJRN037(w, r)
+	s.handleCaptainCreatePayoutRequest(w, r)
 }
 
 func (s *protectedStoreServer) handleFieldFinanceCommissions(w http.ResponseWriter, r *http.Request) {
@@ -185,25 +185,25 @@ func (s *protectedStoreServer) handleFieldFinanceWallet(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleFieldFinancePayouts(w http.ResponseWriter, r *http.Request) {
-	s.handleFieldPayoutRequestsJRN037(w, r)
+	s.handleFieldPayoutRequests(w, r)
 }
 
 func (s *protectedStoreServer) handleFieldCreatePayout(w http.ResponseWriter, r *http.Request) {
-	s.handleFieldCreatePayoutRequestJRN037(w, r)
+	s.handleFieldCreatePayoutRequest(w, r)
 }
 
 func (s *protectedStoreServer) handleFieldListPayoutDestinations(w http.ResponseWriter, r *http.Request) {
-	s.handleFieldPayoutDestinationReadJRN037(w, r)
+	s.handleFieldPayoutDestinationRead(w, r)
 }
 
 func (s *protectedStoreServer) handleFieldCreatePayoutDestination(w http.ResponseWriter, r *http.Request) {
-	s.handleFieldPayoutDestinationUpsertJRN037(w, r)
+	s.handleFieldPayoutDestinationUpsert(w, r)
 }
 
 func (s *protectedStoreServer) handleFieldUpdatePayoutDestination(w http.ResponseWriter, r *http.Request) {
-	s.handleFieldPayoutDestinationUpsertJRN037(w, r)
+	s.handleFieldPayoutDestinationUpsert(w, r)
 }
 
 func (s *protectedStoreServer) handleFieldDeletePayoutDestination(w http.ResponseWriter, r *http.Request) {
-	s.handleFieldPayoutDestinationDeactivateJRN037(w, r)
+	s.handleFieldPayoutDestinationDeactivate(w, r)
 }

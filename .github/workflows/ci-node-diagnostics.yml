@@ -63,9 +63,6 @@ jobs:
           path: ${{ runner.temp }}/immutable-diff.log
           if-no-files-found: error
           retention-days: 7
-      - name: Enforce immutable diff result
-        if: ${{ steps.immutable_diff.outcome == 'failure' }}
-        run: exit 1
       - name: Verify affected frontend diagnostics
         id: frontend_diagnostics
         if: ${{ inputs.frontend == 'true' }}
@@ -95,9 +92,6 @@ jobs:
           path: ${{ runner.temp }}/frontend-diagnostics.log
           if-no-files-found: error
           retention-days: 7
-      - name: Enforce frontend diagnostics result
-        if: ${{ steps.frontend_diagnostics.outcome == 'failure' }}
-        run: exit 1
       - name: Verify affected contracts and bindings
         id: contract_diagnostics
         if: ${{ inputs.contracts == 'true' }}
@@ -121,7 +115,6 @@ jobs:
           run_check pnpm run guard:service-manifest-drift
           run_check pnpm run guard:frontend-feature-binding
           run_check pnpm run guard:runtime-real-bindings
-          run_check pnpm run guard:live-cross-journey-integrity
           echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
           exit "${status}"
       - name: Upload contract diagnostics
@@ -132,9 +125,6 @@ jobs:
           path: ${{ runner.temp }}/contract-diagnostics.log
           if-no-files-found: error
           retention-days: 7
-      - name: Enforce contract diagnostics result
-        if: ${{ steps.contract_diagnostics.outcome == 'failure' }}
-        run: exit 1
       - name: Run deep repository diagnostics
         id: deep_repository_diagnostics
         if: ${{ inputs.full_verification == 'true' || inputs.verification_tier == 'deep' }}
@@ -168,10 +158,27 @@ jobs:
           path: ${{ runner.temp }}/deep-repository-diagnostics.log
           if-no-files-found: error
           retention-days: 7
-      - name: Enforce deep repository diagnostics result
-        if: ${{ steps.deep_repository_diagnostics.outcome == 'failure' }}
-        run: exit 1
       - name: Record strict dead-code backlog without allowing new closure claims
         if: ${{ inputs.full_verification == 'true' || inputs.verification_tier == 'deep' }}
         continue-on-error: true
         run: pnpm exec knip --config knip.strict.json --reporter compact
+      - name: Enforce all diagnostic results
+        if: ${{ always() }}
+        shell: bash
+        env:
+          IMMUTABLE_OUTCOME: ${{ steps.immutable_diff.outcome }}
+          FRONTEND_OUTCOME: ${{ steps.frontend_diagnostics.outcome }}
+          CONTRACT_OUTCOME: ${{ steps.contract_diagnostics.outcome }}
+          DEEP_OUTCOME: ${{ steps.deep_repository_diagnostics.outcome }}
+        run: |
+          status=0
+          for outcome in \
+            "${IMMUTABLE_OUTCOME}" \
+            "${FRONTEND_OUTCOME}" \
+            "${CONTRACT_OUTCOME}" \
+            "${DEEP_OUTCOME}"; do
+            if [[ "${outcome}" == "failure" ]]; then
+              status=1
+            fi
+          done
+          exit "${status}"

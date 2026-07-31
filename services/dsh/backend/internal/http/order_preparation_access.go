@@ -10,13 +10,13 @@ func captainCanReadOrderPreparation(
 	ctx context.Context,
 	db *sql.DB,
 	orderID,
-	tenantID,
+	operatorContextID,
 	captainID string,
 ) (bool, error) {
 	orderID = strings.TrimSpace(orderID)
-	tenantID = strings.TrimSpace(tenantID)
+	operatorContextID = strings.TrimSpace(operatorContextID)
 	captainID = strings.TrimSpace(captainID)
-	if db == nil || orderID == "" || tenantID == "" || captainID == "" {
+	if db == nil || orderID == "" || operatorContextID == "" || captainID == "" {
 		return false, nil
 	}
 	var allowed bool
@@ -25,9 +25,9 @@ func captainCanReadOrderPreparation(
 			SELECT 1
 			FROM dsh_assignments
 			WHERE order_id=$1::uuid
-			  AND tenant_id=$2
+			  AND operator_context_id=$2
 			  AND captain_id=$3
 			  AND status IN ('offered','accepted','completed')
-		)`, orderID, tenantID, captainID).Scan(&allowed)
+		)`, orderID, operatorContextID, captainID).Scan(&allowed)
 	return allowed, err
 }

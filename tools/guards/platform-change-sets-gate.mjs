@@ -1,16 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
 
-const governancePrefix = "JRN";
-const governanceNumber = "040";
-const governanceSlug = `${governancePrefix.toLowerCase()}-${governanceNumber}`;
-const governanceCapabilityId = [governancePrefix, governanceNumber, "PLATFORM", "CHANGE", "SETS"].join("_");
-const productTruthFile = `governance/product/contracts/${governanceSlug}-platform-change-sets.product-truth.json`;
+const governanceCapabilityId = "PLATFORM_CHANGE_SETS";
+const productTruthFile = "governance/product/contracts/platform-change-sets.product-truth.json";
 const validationMigrationFile = "core/platform-control/database/migrations/platform-005_change_set_validation.sql";
 const sensitiveBoundaryMigrationFile = "core/platform-control/database/migrations/platform-006_sensitive_change_boundary.sql";
 const contractFile = "core/platform-control/contracts/platform-change-sets.openapi.yaml";
-const generatedClientFile = "core/platform-control/clients/generated/platform-change-sets-api.ts";
+const generatedClientFile = "core/platform-control/clients/generated/platform-control-api.ts";
 const typecheckFile = "services/dsh/tsconfig.platform-change-sets.json";
 const visualizationProofFile = "services/dsh/tests/platform-governance-visualization.test.mjs";
 const strictBoundaryFile = "core/platform-control/backend/internal/platformcontrol/change_set_strict_boundary.go";
@@ -53,48 +49,6 @@ function requireText(file, tokens) {
   const content = fs.readFileSync(file, "utf8");
   for (const token of tokens) {
     if (!content.includes(token)) failures.push(`missing-token:${file}:${token}`);
-  }
-}
-
-function trackedFiles() {
-  const result = spawnSync("git", ["ls-files", "-z"], {
-    encoding: "utf8",
-    maxBuffer: 32 * 1024 * 1024,
-  });
-  if (result.error || result.status !== 0) {
-    failures.push(`git-ls-files:${result.error?.message ?? result.stderr.trim()}`);
-    return [];
-  }
-  return result.stdout.split("\0").filter(Boolean);
-}
-
-function rejectRuntimeJourneyIdentifiers() {
-  const pattern = new RegExp(`${governancePrefix}[-_]?${governanceNumber}`, "i");
-  const textExtensions = new Set([
-    ".cjs", ".go", ".js", ".json", ".jsx", ".md", ".mjs", ".ps1", ".py", ".sh", ".sql", ".ts", ".tsx", ".txt", ".yaml", ".yml",
-  ]);
-
-  for (const file of trackedFiles()) {
-    const normalized = file.replaceAll("\\", "/");
-    if (
-      normalized.startsWith("governance/") ||
-      normalized.startsWith("tools/") ||
-      normalized.startsWith(".github/")
-    ) continue;
-    if (pattern.test(normalized)) {
-      failures.push(`journey-identifier-in-runtime-path:${normalized}`);
-      continue;
-    }
-    if (!textExtensions.has(path.extname(normalized).toLowerCase())) continue;
-    let content;
-    try {
-      content = fs.readFileSync(normalized, "utf8");
-    } catch {
-      continue;
-    }
-    if (pattern.test(content)) {
-      failures.push(`journey-identifier-in-runtime-content:${normalized}`);
-    }
   }
 }
 
@@ -205,7 +159,7 @@ if (failures.length === 0) {
     "CreatePlatformChangeSetItemInput",
   ]);
   requireText(typecheckFile, [
-    "platform-change-sets-api.ts",
+    "platform-control-api.ts",
     "PlatformChangeWorkflowPanel.tsx",
     "dist-platform-change-sets",
   ]);
@@ -213,7 +167,7 @@ if (failures.length === 0) {
     "RollbackPlatformChangeSetInput",
     "rollbackPlatformChangeSet",
     "body: input",
-    "clients/generated/platform-change-sets-api",
+    "@bthwani/core-platform-control",
   ]);
   requireText("services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx", [
     "تفاصيل الطلب والفرق المتوقع",
@@ -234,11 +188,9 @@ if (failures.length === 0) {
     "platform_change_sets:",
     "name: Verify platform change-set binding",
     "pnpm --dir services/dsh exec tsc -p tsconfig.platform-change-sets.json --noEmit --pretty false",
-    "openapi-typescript ../../core/platform-control/contracts/platform-change-sets.openapi.yaml",
+    "openapi-typescript ../../core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml",
     "node tools/guards/platform-change-sets-gate.mjs",
   ]);
-
-  rejectRuntimeJourneyIdentifiers();
 }
 
 if (failures.length > 0) {

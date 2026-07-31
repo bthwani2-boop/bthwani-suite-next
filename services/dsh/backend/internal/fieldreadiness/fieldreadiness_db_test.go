@@ -15,18 +15,18 @@ import (
 	"dsh-api/internal/store"
 )
 
-func requiredTestTenantID(t *testing.T) string {
+func requiredTestOperatorContextID(t *testing.T) string {
 	t.Helper()
-	tenantID := os.Getenv("DSH_TEST_TENANT_ID")
-	if tenantID == "" {
-		t.Fatal("DSH_TEST_TENANT_ID is required when DSH_REQUIRE_DB_TESTS=true")
+	operatorContextID := os.Getenv("DSH_TEST_operator_context_id")
+	if operatorContextID == "" {
+		t.Fatal("DSH_TEST_operator_context_id is required when DSH_REQUIRE_DB_TESTS=true")
 	}
-	return tenantID
+	return operatorContextID
 }
 
 func testFieldActor(t *testing.T, actorID string) store.StoreActor {
 	t.Helper()
-	return store.StoreActor{ID: actorID, Role: "field", TenantID: requiredTestTenantID(t)}
+	return store.StoreActor{ID: actorID, Role: "field", OperatorContextID: requiredTestOperatorContextID(t)}
 }
 
 func openRequiredDB(t *testing.T) *sql.DB {

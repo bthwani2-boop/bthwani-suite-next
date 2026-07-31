@@ -8,11 +8,11 @@ import (
 // EmployeeProvisionInput requests one server-owned administrative permission
 // bundle. Arbitrary permissions are never accepted from Workforce or browsers.
 type EmployeeProvisionInput struct {
-	Username         string `json:"username"`
-	PhoneE164        string `json:"phoneE164"`
-	PermissionBundle string `json:"permissionBundle"`
-	DepartmentScope  string `json:"departmentScope"`
-	TenantID         string `json:"tenantId,omitempty"`
+	Username          string `json:"username"`
+	PhoneE164         string `json:"phoneE164"`
+	PermissionBundle  string `json:"permissionBundle"`
+	DepartmentScope   string `json:"departmentScope"`
+	OperatorContextID string `json:"operatorContextId,omitempty"`
 }
 
 // EmployeePermissionBundleDescriptor is supplied by Identity. Workforce may
@@ -42,11 +42,11 @@ func (c *Client) EmployeePermissionBundles(ctx context.Context) ([]EmployeePermi
 
 func (c *Client) ProvisionEmployee(ctx context.Context, input EmployeeProvisionInput) (ActorView, error) {
 	var view ActorView
-	tenantID, err := c.trustedTenant(input.TenantID)
+	operatorContextID, err := c.trustedOperatorContext(input.OperatorContextID)
 	if err != nil {
 		return view, err
 	}
-	input.TenantID = tenantID
+	input.OperatorContextID = operatorContextID
 	err = c.do(ctx, http.MethodPost, "/internal/employees/provision", input, &view, nil)
 	return view, err
 }

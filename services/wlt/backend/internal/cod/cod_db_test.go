@@ -46,7 +46,7 @@ func insertLegacyCodRecord(t *testing.T, db *sql.DB) string {
 	var id string
 	err := db.QueryRow(`
 		INSERT INTO wlt_cod_records
-			(tenant_id, order_id, captain_id, collector_type, collector_id,
+			(operator_context_id, order_id, captain_id, collector_type, collector_id,
 			 partner_id, amount_minor_units, currency)
 		VALUES ('legacy-unscoped', $1, 'captain-test', 'captain',
 			'captain-test', 'partner-test', 1000, 'YER')
@@ -102,19 +102,19 @@ func TestLegacyCodRemitTwiceConflicts(t *testing.T) {
 	}
 }
 
-func TestCreateCodRecordUsesTenantLocalWltSessionAndCollectorIdentity(t *testing.T) {
+func TestCreateCodRecordUsesOperatorContextLocalWltSessionAndCollectorIdentity(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
 	}
 	defer db.Close()
-	tenantID := fmt.Sprintf("tenant-cod-test-%d", time.Now().UnixNano())
-	ctx := shared.WithTenantContext(context.Background(), tenantID)
+	operatorContextID := fmt.Sprintf("OperatorContext-cod-test-%d", time.Now().UnixNano())
+	ctx := shared.WithOperatorContext(context.Background(), operatorContextID)
 	checkoutIntentID := fmt.Sprintf("checkout-cod-%d", time.Now().UnixNano())
 	orderID := fmt.Sprintf("order-cod-%d", time.Now().UnixNano())
 	if _, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
 		CheckoutIntentID: checkoutIntentID,
-		TenantID:         tenantID,
+		OperatorContextID:         operatorContextID,
 		ClientID:         "client-cod-test",
 		StoreID:          "store-cod-test",
 		PaymentMethod:    "cod",
@@ -131,11 +131,11 @@ func TestCreateCodRecordUsesTenantLocalWltSessionAndCollectorIdentity(t *testing
 		CollectorID: "courier-cod-test", PartnerID: "partner-cod-test",
 		CheckoutIntentID: checkoutIntentID,
 	}
-	first, err := CreateCodRecordForTenant(ctx, db, input)
+	first, err := CreateCodRecordForOperatorContext(ctx, db, input)
 	if err != nil {
 		t.Fatalf("create COD custody: %v", err)
 	}
-	second, err := CreateCodRecordForTenant(ctx, db, input)
+	second, err := CreateCodRecordForOperatorContext(ctx, db, input)
 	if err != nil {
 		t.Fatalf("replay COD custody: %v", err)
 	}
@@ -150,18 +150,18 @@ func TestCreateCodRecordUsesTenantLocalWltSessionAndCollectorIdentity(t *testing
 	}
 }
 
-func TestCreateCodRecordRejectsNonCodTenantSession(t *testing.T) {
+func TestCreateCodRecordRejectsNonCodOperatorContextSession(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
 	}
 	defer db.Close()
-	tenantID := fmt.Sprintf("tenant-wallet-test-%d", time.Now().UnixNano())
-	ctx := shared.WithTenantContext(context.Background(), tenantID)
+	operatorContextID := fmt.Sprintf("OperatorContext-wallet-test-%d", time.Now().UnixNano())
+	ctx := shared.WithOperatorContext(context.Background(), operatorContextID)
 	checkoutIntentID := fmt.Sprintf("checkout-wallet-%d", time.Now().UnixNano())
 	if _, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
 		CheckoutIntentID: checkoutIntentID,
-		TenantID:         tenantID,
+		OperatorContextID:         operatorContextID,
 		ClientID:         "client-wallet-test",
 		StoreID:          "store-wallet-test",
 		PaymentMethod:    "wallet",
@@ -173,7 +173,7 @@ func TestCreateCodRecordRejectsNonCodTenantSession(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("create governed wallet payment session: %v", err)
 	}
-	_, err := CreateCodRecordForTenant(ctx, db, CreateCodRecordInput{
+	_, err := CreateCodRecordForOperatorContext(ctx, db, CreateCodRecordInput{
 		OrderID: fmt.Sprintf("order-wallet-%d", time.Now().UnixNano()),
 		CollectorType: "captain", CollectorID: "captain-wallet-test",
 		PartnerID: "partner-wallet-test", CheckoutIntentID: checkoutIntentID,

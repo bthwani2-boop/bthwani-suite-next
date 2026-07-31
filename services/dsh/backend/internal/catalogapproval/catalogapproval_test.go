@@ -52,7 +52,7 @@ func TestPartnerQueueStagesExcludeInternalPublicationStages(t *testing.T) {
 	}
 }
 
-func TestTenantScopeFailsClosedBeforeDatabaseAccess(t *testing.T) {
+func TestOperatorContextScopeFailsClosedBeforeDatabaseAccess(t *testing.T) {
 	_, err := Create(nil, CreateInput{
 		EntityType:   "product",
 		OwnerActorID: "actor-1",
@@ -61,19 +61,19 @@ func TestTenantScopeFailsClosedBeforeDatabaseAccess(t *testing.T) {
 		Title:        "Product approval",
 	})
 	if !errors.Is(err, ErrInvalid) {
-		t.Fatalf("Create without tenant must fail with ErrInvalid, got %v", err)
+		t.Fatalf("Create without OperatorContext must fail with ErrInvalid, got %v", err)
 	}
 
 	if _, err := Get(nil, "", "record-1"); !errors.Is(err, ErrInvalid) {
-		t.Fatalf("Get without tenant must fail with ErrInvalid, got %v", err)
+		t.Fatalf("Get without OperatorContext must fail with ErrInvalid, got %v", err)
 	}
 	if _, err := List(nil, "", "", "", "", 10); !errors.Is(err, ErrInvalid) {
-		t.Fatalf("List without tenant must fail with ErrInvalid, got %v", err)
+		t.Fatalf("List without OperatorContext must fail with ErrInvalid, got %v", err)
 	}
 	if _, err := ListPartnerQueue(nil, "", "actor-1", 10); !errors.Is(err, ErrInvalid) {
-		t.Fatalf("ListPartnerQueue without tenant must fail with ErrInvalid, got %v", err)
+		t.Fatalf("ListPartnerQueue without OperatorContext must fail with ErrInvalid, got %v", err)
 	}
 	if _, err := Transition(nil, "", "record-1", "partner-review", "operator", "review"); !errors.Is(err, ErrInvalid) {
-		t.Fatalf("Transition without tenant must fail with ErrInvalid, got %v", err)
+		t.Fatalf("Transition without OperatorContext must fail with ErrInvalid, got %v", err)
 	}
 }

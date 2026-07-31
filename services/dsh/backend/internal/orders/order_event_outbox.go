@@ -10,7 +10,7 @@ import (
 
 type OrderOutboxRecord struct {
 	ID            string
-	TenantID      string
+	OperatorContextID      string
 	OrderID       string
 	EventID       string
 	EventType     string
@@ -52,7 +52,7 @@ func ClaimOrderEvents(db *sql.DB, limit int) ([]OrderOutboxRecord, error) {
 		SET status='processing', attempt_count=o.attempt_count+1, updated_at=NOW()
 		FROM candidates c
 		WHERE o.id=c.id
-		RETURNING o.id::text,o.tenant_id,o.order_id::text,o.event_id::text,o.event_type,
+		RETURNING o.id::text,o.operator_context_id,o.order_id::text,o.event_id::text,o.event_type,
 		          o.correlation_id,o.causation_id,o.payload,o.attempt_count`, limit)
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func ClaimOrderEvents(db *sql.DB, limit int) ([]OrderOutboxRecord, error) {
 		var payload []byte
 		if err = rows.Scan(
 			&record.ID,
-			&record.TenantID,
+			&record.OperatorContextID,
 			&record.OrderID,
 			&record.EventID,
 			&record.EventType,
@@ -87,14 +87,14 @@ func ClaimOrderEvents(db *sql.DB, limit int) ([]OrderOutboxRecord, error) {
 	return result, nil
 }
 
-func MarkOrderEventPublished(db *sql.DB, outboxID, tenantID string) error {
-	if strings.TrimSpace(outboxID) == "" || strings.TrimSpace(tenantID) == "" {
+func MarkOrderEventPublished(db *sql.DB, outboxID, operatorContextID string) error {
+	if strings.TrimSpace(outboxID) == "" || strings.TrimSpace(operatorContextID) == "" {
 		return ErrInvalid
 	}
 	result, err := db.Exec(`
 		UPDATE dsh_order_event_outbox
 		SET status='published', published_at=NOW(), last_error='', updated_at=NOW()
-		WHERE id=$1::uuid AND tenant_id=$2 AND status='processing'`, outboxID, tenantID)
+		WHERE id=$1::uuid AND operator_context_id=$2 AND status='processing'`, outboxID, operatorContextID)
 	if err != nil {
 		return err
 	}
@@ -108,11 +108,11 @@ func MarkOrderEventPublished(db *sql.DB, outboxID, tenantID string) error {
 	return nil
 }
 
-func MarkOrderEventRetry(db *sql.DB, outboxID, tenantID, failure string, retryAfter time.Duration) error {
+func MarkOrderEventRetry(db *sql.DB, outboxID, operatorContextID, failure string, retryAfter time.Duration) error {
 	outboxID = strings.TrimSpace(outboxID)
-	tenantID = strings.TrimSpace(tenantID)
+	operatorContextID = strings.TrimSpace(operatorContextID)
 	failure = strings.TrimSpace(failure)
-	if outboxID == "" || tenantID == "" || failure == "" {
+	if outboxID == "" || operatorContextID == "" || failure == "" {
 		return ErrInvalid
 	}
 	if retryAfter < time.Minute {
@@ -130,8 +130,8 @@ func MarkOrderEventRetry(db *sql.DB, outboxID, tenantID, failure string, retryAf
 		      ELSE NOW()+($3 * INTERVAL '1 second')
 		    END,
 		    last_error=LEFT($4,1000), updated_at=NOW()
-		WHERE id=$1::uuid AND tenant_id=$2 AND status='processing'`,
-		outboxID, tenantID, retrySeconds, failure)
+		WHERE id=$1::uuid AND operator_context_id=$2 AND status='processing'`,
+		outboxID, operatorContextID, retrySeconds, failure)
 	if err != nil {
 		return err
 	}
@@ -145,15 +145,15 @@ func MarkOrderEventRetry(db *sql.DB, outboxID, tenantID, failure string, retryAf
 	return nil
 }
 
-func GetOrderOutboxRecord(db *sql.DB, tenantID, eventID string) (*OrderOutboxRecord, error) {
+func GetOrderOutboxRecord(db *sql.DB, operatorContextID, eventID string) (*OrderOutboxRecord, error) {
 	var record OrderOutboxRecord
 	var payload []byte
 	err := db.QueryRow(`
-		SELECT id::text,tenant_id,order_id::text,event_id::text,event_type,correlation_id,causation_id,payload,attempt_count
-		FROM dsh_order_event_outbox WHERE tenant_id=$1 AND event_id=$2::uuid`, tenantID, eventID,
+		SELECT id::text,operator_context_id,order_id::text,event_id::text,event_type,correlation_id,causation_id,payload,attempt_count
+		FROM dsh_order_event_outbox WHERE operator_context_id=$1 AND event_id=$2::uuid`, operatorContextID, eventID,
 	).Scan(
 		&record.ID,
-		&record.TenantID,
+		&record.OperatorContextID,
 		&record.OrderID,
 		&record.EventID,
 		&record.EventType,

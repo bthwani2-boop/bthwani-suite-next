@@ -36,17 +36,37 @@ var (
 	ErrActorNotFound          = errors.New("actor not found")
 )
 
-// activationSurfaceByActorType is the single source for which surface each
-// activatable actor type belongs to. Public issuance by phone is intentionally
-// disabled for provider roles; Workforce must make a typed actor-bound request.
+// activationSurfaceByActorType is the single source for the authentication
+// surface of every activatable actor type. Issuance policy is deliberately
+// separate: client and partner may request public OTPs, while field and captain
+// must first be provisioned by Workforce and receive an actor-bound challenge.
 var activationSurfaceByActorType = map[string]string{
+	"client":  "app-client",
+	"partner": "app-partner",
 	"field":   "app-field",
 	"captain": "app-captain",
+}
+
+var publicOtpActorTypes = map[string]bool{
+	"client":  true,
+	"partner": true,
+}
+
+var workforceManagedActorTypes = map[string]bool{
+	"field":   true,
+	"captain": true,
 }
 
 func activationSurfaceFor(actorType string) (string, bool) {
 	surface, ok := activationSurfaceByActorType[actorType]
 	return surface, ok
+}
+
+func workforceActivationSurfaceFor(actorType string) (string, bool) {
+	if !workforceManagedActorTypes[actorType] {
+		return "", false
+	}
+	return activationSurfaceFor(actorType)
 }
 
 // Login lockout policy: after loginLockoutThreshold failed attempts for the
@@ -75,6 +95,10 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 	}
 	if len(input.Password) < 6 {
 		return errors.New("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD must contain at least 6 characters")
+	}
+	operatorContextID := strings.TrimSpace(input.OperatorContextID)
+	if operatorContextID == "" {
+		return errors.New("BTHWANI_OPERATOR_CONTEXT_ID is required when IDENTITY_LOCAL_BOOTSTRAP=true")
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -134,17 +158,19 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 		}
 		_, err = r.db.ExecContext(ctx, `
 			INSERT INTO identity_actors
-				(id, username, password_hash, tenant_id, phone_e164, roles, permissions, active, updated_at)
-			VALUES ($1, $2, $3, 'local-dsh', $4, $5, $6::jsonb, true, now())
+				(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, active, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, true, now())
 			ON CONFLICT (id) DO UPDATE SET
 				username = EXCLUDED.username,
 				password_hash = EXCLUDED.password_hash,
+				operator_context_id = EXCLUDED.operator_context_id,
 				phone_e164 = EXCLUDED.phone_e164,
 				roles = EXCLUDED.roles,
 				permissions = EXCLUDED.permissions,
 				active = true,
 				updated_at = now()`,
-			actor.id, actor.username, string(hash), actor.phone, pq.Array([]string{actor.role}), string(permissions))
+			actor.id, actor.username, string(hash), operatorContextID, actor.phone,
+			pq.Array([]string{actor.role}), string(permissions))
 		if err != nil {
 			return err
 		}
@@ -173,20 +199,16 @@ func NormalizePhoneE164(raw string) (string, error) {
 }
 
 // IssueActivationForActor issues an activation challenge for a specific actor
-// id. This is the internal (service-to-service) path used by Workforce: the
-// caller references the provider's actor id and Identity resolves the phone
-// sovereignly, so no phone ever travels from another service as input.
-// IssuedByActorID must reference the operator actor on whose behalf the
-// calling service acts (kept for the audit FK on the challenge row). The
-// expected type/surface are mandatory so multi-role actors cannot receive a
-// code for whichever role happens to appear first.
+// id. This is the internal service-to-service path used by Workforce. The
+// caller references the provider actor id and Identity resolves the sovereign
+// phone. Only Workforce-managed actor types are accepted here.
 func (r *Repository) IssueActivationForActor(ctx context.Context, actorID string, input IssueActivationForActorInput, idempotencyKey, correlationID string) (IssueActivationResult, error) {
 	if len(r.activationSecret) < 32 {
 		return IssueActivationResult{}, ErrActivationUnavailable
 	}
 	expectedActorType := strings.TrimSpace(input.ExpectedActorType)
 	expectedSurface := strings.TrimSpace(input.ExpectedSurface)
-	canonicalSurface, ok := activationSurfaceFor(expectedActorType)
+	canonicalSurface, ok := workforceActivationSurfaceFor(expectedActorType)
 	if !ok || expectedSurface != canonicalSurface || strings.TrimSpace(input.IssuedByActorID) == "" {
 		return IssueActivationResult{}, ErrInvalidActivation
 	}
@@ -218,7 +240,7 @@ func (r *Repository) IssueActivationForActor(ctx context.Context, actorID string
 }
 
 func validateExpectedActivationTarget(actor Actor, expectedActorType, expectedSurface string) error {
-	canonicalSurface, ok := activationSurfaceFor(strings.TrimSpace(expectedActorType))
+	canonicalSurface, ok := workforceActivationSurfaceFor(strings.TrimSpace(expectedActorType))
 	if !ok || strings.TrimSpace(expectedSurface) != canonicalSurface {
 		return ErrInvalidActivation
 	}
@@ -237,7 +259,7 @@ func scopedActivationIdempotencyKey(idempotencyKey, actorType, surface string) s
 }
 
 // issueChallengeTx enforces the per-phone issue rate limit, revokes any prior
-// pending challenge for the same actor type + phone, and inserts the new one.
+// pending challenge for the same actor type and phone, and inserts the new one.
 func (r *Repository) issueChallengeTx(ctx context.Context, tx *sql.Tx, actor Actor, actorType, surface, issuedByActorID, idempotencyKey, correlationID string) (IssueActivationResult, error) {
 	phone := actor.PhoneE164
 
@@ -299,52 +321,13 @@ func (r *Repository) ConsumeActivation(ctx context.Context, input ConsumeActivat
 	actorType := strings.TrimSpace(input.ActorType)
 	surface, ok := activationSurfaceFor(actorType)
 	if !ok {
-		if actorType == "client" {
-			surface = "app-client"
-		} else if actorType == "partner" {
-			surface = "app-partner"
-		} else {
-			return TokenPair{}, ErrInvalidActivation
-		}
+		return TokenPair{}, ErrInvalidActivation
 	}
 	phone, err := NormalizePhoneE164(input.Phone)
 	if err != nil {
 		return TokenPair{}, err
 	}
 	code := strings.TrimSpace(input.Code)
-	if code == "000000" {
-		tx, err := r.db.BeginTx(ctx, nil)
-		if err != nil {
-			return TokenPair{}, err
-		}
-		defer tx.Rollback()
-
-		actor, err := actorByPhoneAnyRoleTx(ctx, tx, phone)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return TokenPair{}, ErrInvalidActivation
-			}
-			return TokenPair{}, err
-		}
-		if !hasRole(actor.Roles, actorType) {
-			return TokenPair{}, ErrInvalidActivation
-		}
-
-		if _, err = tx.ExecContext(ctx, `UPDATE identity_actors SET active = true, updated_at = now() WHERE id = $1`, actor.ID); err != nil {
-			return TokenPair{}, err
-		}
-
-		pair, err := createSessionTx(ctx, tx, actor, input.DeviceFingerprint, r.now())
-		if err != nil {
-			return TokenPair{}, err
-		}
-
-		if err := tx.Commit(); err != nil {
-			return TokenPair{}, err
-		}
-		return pair, nil
-	}
-
 	codeOK, _ := regexp.MatchString(`^[0-9]{6}$`, code)
 	if !codeOK {
 		return TokenPair{}, ErrInvalidActivation
@@ -415,9 +398,7 @@ func (r *Repository) ConsumeActivation(ctx context.Context, input ConsumeActivat
 }
 
 // Login authenticates a username/password pair. Every attempt is recorded
-// in identity_login_attempts (never the password itself) for both audit
-// trail and lockout purposes; a username with loginLockoutThreshold recent
-// failures is rejected before any bcrypt work or actor lookup happens.
+// in identity_login_attempts for audit and lockout purposes.
 func (r *Repository) Login(ctx context.Context, username, password, fingerprint, ipAddress string) (TokenPair, error) {
 	normalizedUsername := strings.TrimSpace(username)
 
@@ -477,7 +458,7 @@ func (r *Repository) ResolveAccessToken(ctx context.Context, token string) (Acto
 	var sessionID string
 	var expiresAt time.Time
 	err := r.db.QueryRowContext(ctx, `
-		SELECT a.id, a.username, a.password_hash, a.tenant_id, a.phone_e164, a.roles, a.permissions, a.active,
+		SELECT a.id, a.username, a.password_hash, a.operator_context_id, a.phone_e164, a.roles, a.permissions, a.active,
 		       s.id, s.access_expires_at
 		FROM identity_sessions s
 		JOIN identity_actors a ON a.id = s.actor_id
@@ -485,7 +466,7 @@ func (r *Repository) ResolveAccessToken(ctx context.Context, token string) (Acto
 		  AND s.revoked_at IS NULL
 		  AND s.access_expires_at > now()
 		  AND a.active = true`, hash).Scan(
-		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.TenantID, &actor.PhoneE164,
+		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.OperatorContextID, &actor.PhoneE164,
 		&roles, &permissionsJSON, &actor.Active, &sessionID, &expiresAt,
 	)
 	if err != nil {
@@ -593,9 +574,9 @@ func (r *Repository) actorByUsername(ctx context.Context, username string) (Acto
 	var roles pq.StringArray
 	var permissionsJSON []byte
 	err := r.db.QueryRowContext(ctx, `
-		SELECT id, username, password_hash, tenant_id, COALESCE(phone_e164, ''), roles, permissions, active
+		SELECT id, username, password_hash, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, active
 		FROM identity_actors WHERE username = $1`, username).Scan(
-		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.TenantID, &actor.PhoneE164,
+		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.OperatorContextID, &actor.PhoneE164,
 		&roles, &permissionsJSON, &actor.Active,
 	)
 	if err != nil {
@@ -613,9 +594,9 @@ func actorByIDTx(ctx context.Context, tx *sql.Tx, actorID string) (Actor, error)
 	var roles pq.StringArray
 	var permissionsJSON []byte
 	err := tx.QueryRowContext(ctx, `
-		SELECT id, username, password_hash, tenant_id, COALESCE(phone_e164, ''), roles, permissions, active
+		SELECT id, username, password_hash, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, active
 		FROM identity_actors WHERE id = $1`, actorID).Scan(
-		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.TenantID, &actor.PhoneE164,
+		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.OperatorContextID, &actor.PhoneE164,
 		&roles, &permissionsJSON, &actor.Active,
 	)
 	if err != nil {
@@ -636,7 +617,7 @@ func toIdentity(actor Actor, sessionID string, expiresAt time.Time) ActorIdentit
 		services[permission.Service] = true
 	}
 	return ActorIdentity{
-		Subject: actor.ID, TenantID: actor.TenantID, PhoneE164: actor.PhoneE164, Roles: actor.Roles,
+		Subject: actor.ID, OperatorContextID: actor.OperatorContextID, PhoneE164: actor.PhoneE164, Roles: actor.Roles,
 		Permissions: actor.Permissions, AuthState: "authenticated",
 		SurfaceAccess: surfaces, ServiceAccess: services,
 		SessionID: sessionID, ExpiresAt: expiresAt,
@@ -652,11 +633,13 @@ func randomToken(byteCount int) (string, error) {
 }
 
 func randomActivationCode() (string, error) {
-	value, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	// 000000 is permanently retired and is never generated as a legitimate
+	// challenge. Generate the inclusive range 000001..999999 instead.
+	value, err := rand.Int(rand.Reader, big.NewInt(999999))
 	if err != nil {
 		return "", fmt.Errorf("random activation code: %w", err)
 	}
-	return fmt.Sprintf("%06d", value.Int64()), nil
+	return fmt.Sprintf("%06d", value.Int64()+1), nil
 }
 
 func tokenHash(token string) string {
@@ -690,17 +673,12 @@ func maskPhone(phone string) string {
 	return phone[:4] + strings.Repeat("*", len(phone)-6) + phone[len(phone)-2:]
 }
 
-// ProvisionActor creates an inactive actor for a workforce-managed provider.
-// The actor stays active=false until the provider consumes an activation code
-// (ConsumeActivation flips it to true), so a provisioned-but-never-activated
-// provider can never log in or refresh. The call is idempotent: if the phone
-// is already bound to an actor holding the requested role, that actor is
-// returned unchanged; if the phone belongs to an actor without the role, the
-// requested provider role and surface permissions are attached to the same
-// actor so one phone never creates duplicate identities.
+// ProvisionActor creates an inactive actor for a Workforce-managed provider.
+// It is intentionally limited to field and captain roles and requires the
+// trusted scope supplied by the authenticated Workforce service boundary.
 func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInput) (ActorAdminView, error) {
 	role := strings.TrimSpace(input.Role)
-	surface, ok := activationSurfaceByActorType[role]
+	surface, ok := workforceActivationSurfaceFor(role)
 	if !ok {
 		return ActorAdminView{}, ErrInvalidActivation
 	}
@@ -708,9 +686,9 @@ func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInp
 	if username == "" {
 		return ActorAdminView{}, ErrInvalidActivation
 	}
-	tenantID := strings.TrimSpace(input.TenantID)
-	if tenantID == "" {
-		tenantID = "local-dsh"
+	operatorContextID := strings.TrimSpace(input.OperatorContextID)
+	if operatorContextID == "" {
+		return ActorAdminView{}, ErrInvalidActivation
 	}
 	phone, err := NormalizePhoneE164(input.PhoneE164)
 	if err != nil {
@@ -726,6 +704,9 @@ func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInp
 	existing, err := actorByPhoneAnyRoleTx(ctx, tx, phone)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return ActorAdminView{}, err
+	}
+	if err == nil && strings.TrimSpace(existing.OperatorContextID) != operatorContextID {
+		return ActorAdminView{}, ErrForbidden
 	}
 	if err == nil {
 		if hasRole(existing.Roles, role) {
@@ -765,9 +746,9 @@ func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInp
 	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO identity_actors
-			(id, username, password_hash, tenant_id, phone_e164, roles, permissions, active, updated_at)
+			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, active, updated_at)
 		VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, false, now())`,
-		actorID, username, tenantID, phone, pq.Array([]string{role}), string(permissions))
+		actorID, username, operatorContextID, phone, pq.Array([]string{role}), string(permissions))
 	if err != nil {
 		return ActorAdminView{}, mapUniqueViolation(err)
 	}
@@ -791,9 +772,6 @@ func providerPermissions(surface string) ([]byte, error) {
 
 // ActorAdminByID returns the internal projection of an actor, including the
 // sovereign phone number, for service-to-service consumers.
-// SearchActors backs Workforce's supervisor picker (role + free-text query
-// on username/phone), replacing the old raw actor-id text box. Password
-// hashes are never selected.
 func (r *Repository) SearchActors(ctx context.Context, role, q string, limit int) ([]ActorAdminView, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 25
@@ -851,10 +829,7 @@ func (r *Repository) ActorAdminByID(ctx context.Context, actorID string) (ActorA
 	return toAdminView(actor), nil
 }
 
-// DeactivateActor suspends authentication for an actor in one transaction:
-// the actor is marked inactive (Login/Refresh/ResolveAccessToken all reject
-// inactive actors), every live session is revoked, and any pending activation
-// challenge is revoked so a previously issued code cannot resurrect access.
+// DeactivateActor suspends authentication for an actor in one transaction.
 func (r *Repository) DeactivateActor(ctx context.Context, actorID string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -883,9 +858,7 @@ func (r *Repository) DeactivateActor(ctx context.Context, actorID string) error 
 	return tx.Commit()
 }
 
-// ReactivateActor restores authentication for a previously activated actor
-// (e.g. a suspended provider being reinstated). It does not create sessions;
-// the actor logs in again through the normal flows.
+// ReactivateActor restores authentication for a previously activated actor.
 func (r *Repository) ReactivateActor(ctx context.Context, actorID string) error {
 	result, err := r.db.ExecContext(ctx, `
 		UPDATE identity_actors SET active = true, updated_at = now() WHERE id = $1`, actorID)
@@ -898,8 +871,6 @@ func (r *Repository) ReactivateActor(ctx context.Context, actorID string) error 
 	return nil
 }
 
-// RevokeActivationChallenges cancels all pending activation codes for an
-// actor without touching the actor's active flag or sessions.
 func (r *Repository) RevokeActivationChallenges(ctx context.Context, actorID string) error {
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE identity_activation_challenges SET status = 'revoked', updated_at = now()
@@ -930,10 +901,10 @@ func actorByIDForUpdateTx(ctx context.Context, tx *sql.Tx, actorID string) (Acto
 	var roles pq.StringArray
 	var permissionsJSON []byte
 	err := tx.QueryRowContext(ctx, `
-		SELECT id, username, password_hash, tenant_id, COALESCE(phone_e164, ''), roles, permissions, active
+		SELECT id, username, password_hash, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, active
 		FROM identity_actors WHERE id = $1
 		FOR UPDATE`, actorID).Scan(
-		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.TenantID, &actor.PhoneE164,
+		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.OperatorContextID, &actor.PhoneE164,
 		&roles, &permissionsJSON, &actor.Active,
 	)
 	if err != nil {
@@ -951,12 +922,12 @@ func actorByPhoneAnyRoleTx(ctx context.Context, tx *sql.Tx, phone string) (Actor
 	var roles pq.StringArray
 	var permissionsJSON []byte
 	err := tx.QueryRowContext(ctx, `
-		SELECT id, username, tenant_id, COALESCE(phone_e164, ''), roles, permissions, active
+		SELECT id, username, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, active
 		FROM identity_actors
 		WHERE phone_e164 = $1
 		LIMIT 1
 		FOR UPDATE`, phone).Scan(
-		&actor.ID, &actor.Username, &actor.TenantID, &actor.PhoneE164, &roles, &permissionsJSON, &actor.Active,
+		&actor.ID, &actor.Username, &actor.OperatorContextID, &actor.PhoneE164, &roles, &permissionsJSON, &actor.Active,
 	)
 	if err != nil {
 		return Actor{}, err
@@ -978,8 +949,6 @@ func toAdminView(actor Actor) ActorAdminView {
 	}
 }
 
-// mapUniqueViolation converts Postgres unique-constraint failures on the
-// actors table into the matching sentinel error.
 func mapUniqueViolation(err error) error {
 	var pqErr *pq.Error
 	if errors.As(err, &pqErr) && pqErr.Code == "23505" {
@@ -993,108 +962,20 @@ func mapUniqueViolation(err error) error {
 	return err
 }
 
-func (r *Repository) RequestOtp(ctx context.Context, input OtpInput) (IssueActivationResult, error) {
-	phone, err := NormalizePhoneE164(input.Phone)
-	if err != nil {
-		return IssueActivationResult{}, err
+func publicActorPermissions(role, surface string) ([]byte, error) {
+	switch role {
+	case "client":
+		return json.Marshal([]Permission{
+			{Service: "dsh", Surface: surface, Action: "store:read", Scope: "all"},
+		})
+	case "partner":
+		return json.Marshal([]Permission{
+			{Service: "dsh", Surface: surface, Action: "store:read", Scope: "own"},
+			{Service: "dsh", Surface: surface, Action: "store:write", Scope: "own"},
+		})
+	default:
+		return nil, ErrInvalidActivation
 	}
-	role := strings.TrimSpace(input.ActorType)
-	surface, ok := activationSurfaceFor(role)
-	if !ok {
-		if role == "client" {
-			surface = "app-client"
-		} else if role == "partner" {
-			surface = "app-partner"
-		} else {
-			return IssueActivationResult{}, ErrInvalidActivation
-		}
-	}
-
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return IssueActivationResult{}, err
-	}
-	defer tx.Rollback()
-
-	actor, err := actorByPhoneAnyRoleTx(ctx, tx, phone)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return IssueActivationResult{}, err
-	}
-
-	if errors.Is(err, sql.ErrNoRows) {
-		suffix, err := randomToken(9)
-		if err != nil {
-			return IssueActivationResult{}, err
-		}
-		actorID := role + "-" + suffix
-		username := role + "-" + phone
-		var permissions []byte
-		if role == "client" {
-			permissions, _ = json.Marshal([]Permission{
-				{Service: "dsh", Surface: "app-client", Action: "store:read", Scope: "all"},
-			})
-		} else if role == "partner" {
-			permissions, _ = json.Marshal([]Permission{
-				{Service: "dsh", Surface: "app-partner", Action: "store:read", Scope: "own"},
-				{Service: "dsh", Surface: "app-partner", Action: "store:write", Scope: "own"},
-			})
-		} else {
-			permissions, _ = providerPermissions(surface)
-		}
-
-		_, err = tx.ExecContext(ctx, `
-			INSERT INTO identity_actors
-				(id, username, password_hash, tenant_id, phone_e164, roles, permissions, active, updated_at)
-			VALUES ($1, $2, '', 'local-dsh', $3, $4, $5::jsonb, false, now())`,
-			actorID, username, phone, pq.Array([]string{role}), string(permissions))
-		if err != nil {
-			return IssueActivationResult{}, err
-		}
-		actor, err = actorByIDTx(ctx, tx, actorID)
-		if err != nil {
-			return IssueActivationResult{}, err
-		}
-	} else {
-		if !hasRole(actor.Roles, role) {
-			var permissions []byte
-			if role == "client" {
-				permissions, _ = json.Marshal([]Permission{
-					{Service: "dsh", Surface: "app-client", Action: "store:read", Scope: "all"},
-				})
-			} else if role == "partner" {
-				permissions, _ = json.Marshal([]Permission{
-					{Service: "dsh", Surface: "app-partner", Action: "store:read", Scope: "own"},
-					{Service: "dsh", Surface: "app-partner", Action: "store:write", Scope: "own"},
-				})
-			} else {
-				permissions, _ = providerPermissions(surface)
-			}
-			_, err = tx.ExecContext(ctx, `
-				UPDATE identity_actors
-				SET roles = array_append(roles, $2),
-				    permissions = permissions || $3::jsonb,
-				    updated_at = now()
-				WHERE id = $1`, actor.ID, role, string(permissions))
-			if err != nil {
-				return IssueActivationResult{}, err
-			}
-			actor, err = actorByIDTx(ctx, tx, actor.ID)
-			if err != nil {
-				return IssueActivationResult{}, err
-			}
-		}
-	}
-
-	result, err := r.issueChallengeTx(ctx, tx, actor, role, surface, "system", "", "")
-	if err != nil {
-		return IssueActivationResult{}, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return IssueActivationResult{}, err
-	}
-
-	return result, nil
 }
 
 func (r *Repository) ListSessions(ctx context.Context, actorID string) ([]SessionInfo, error) {
@@ -1164,7 +1045,6 @@ func (r *Repository) DeleteAccount(ctx context.Context, actorID string) error {
 	if err != nil {
 		return err
 	}
-
 	return tx.Commit()
 }
 

@@ -39,8 +39,8 @@ func (s *protectedStoreServer) handleOwnRepresentativeWallet(w http.ResponseWrit
 	if !ok {
 		return
 	}
-	trustedContext := wlt.WithTenantContext(r.Context(), actor.TenantID)
-	status, body, err := s.wlt.FinanceReadWalletWithTenant(trustedContext, actorType, actor.ID, r.Header.Get("X-Correlation-ID"), actor.TenantID)
+	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	status, body, err := s.wlt.FinanceReadWalletWithOperatorContext(trustedContext, actorType, actor.ID, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
@@ -55,8 +55,8 @@ func (s *protectedStoreServer) handleOwnRepresentativeLedger(w http.ResponseWrit
 			query.Set(key, value)
 		}
 	}
-	trustedContext := wlt.WithTenantContext(r.Context(), actor.TenantID)
-	status, body, err := s.wlt.FinanceReadWithTenant(trustedContext, "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
+	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	status, body, err := s.wlt.FinanceReadWithOperatorContext(trustedContext, "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
@@ -66,8 +66,8 @@ func (s *protectedStoreServer) handleOwnRepresentativeCommissions(w http.Respons
 		return
 	}
 	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {actorType}}
-	trustedContext := wlt.WithTenantContext(r.Context(), actor.TenantID)
-	status, body, err := s.wlt.FinanceReadWithTenant(trustedContext, "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
+	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	status, body, err := s.wlt.FinanceReadWithOperatorContext(trustedContext, "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
@@ -77,8 +77,8 @@ func (s *protectedStoreServer) handleOwnRepresentativePayoutRequests(w http.Resp
 		return
 	}
 	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {actorType}}
-	trustedContext := wlt.WithTenantContext(r.Context(), actor.TenantID)
-	status, body, err := s.wlt.FinanceReadWithTenant(trustedContext, "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
+	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	status, body, err := s.wlt.FinanceReadWithOperatorContext(trustedContext, "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
@@ -136,8 +136,8 @@ func (s *protectedStoreServer) handleControlPanelRepresentativeWallet(w http.Res
 	if !ok {
 		return
 	}
-	trustedContext := wlt.WithTenantContext(r.Context(), operator.TenantID)
-	status, body, err := s.wlt.FinanceReadWalletWithTenant(trustedContext, actorType, actorID, r.Header.Get("X-Correlation-ID"), operator.TenantID)
+	trustedContext := wlt.WithOperatorContext(r.Context(), operator.OperatorContextID)
+	status, body, err := s.wlt.FinanceReadWalletWithOperatorContext(trustedContext, actorType, actorID, r.Header.Get("X-Correlation-ID"), operator.OperatorContextID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
@@ -156,8 +156,8 @@ func (s *protectedStoreServer) handleControlPanelRepresentativeLedger(w http.Res
 			query.Set(key, value)
 		}
 	}
-	trustedContext := wlt.WithTenantContext(r.Context(), operator.TenantID)
-	status, body, err := s.wlt.FinanceReadWithTenant(trustedContext, "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"), operator.TenantID)
+	trustedContext := wlt.WithOperatorContext(r.Context(), operator.OperatorContextID)
+	status, body, err := s.wlt.FinanceReadWithOperatorContext(trustedContext, "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"), operator.OperatorContextID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
@@ -180,23 +180,31 @@ func registerRepresentativeFinanceRoutes(mux *http.ServeMux, s *protectedStoreSe
 	mux.HandleFunc("GET /dsh/captain/me/finance/wallet", s.handleCaptainOwnWallet)
 	mux.HandleFunc("GET /dsh/captain/me/finance/ledger-entries", s.handleCaptainOwnLedger)
 	mux.HandleFunc("GET /dsh/captain/me/finance/commissions", s.handleCaptainFinanceCommissions)
-	mux.HandleFunc("GET /dsh/captain/me/finance/payout-requests", s.handleCaptainPayoutRequestsJRN037)
-	mux.HandleFunc("POST /dsh/captain/me/finance/payout-requests", s.handleCaptainCreatePayoutRequestJRN037)
+	mux.HandleFunc("GET /dsh/captain/me/finance/payout-requests", s.handleCaptainPayoutRequests)
+	mux.HandleFunc("POST /dsh/captain/me/finance/payout-requests", s.handleCaptainCreatePayoutRequest)
 	mux.HandleFunc("GET /dsh/captain/me/finance/payout-destination", s.handleCaptainPayoutDestinationRead)
 	mux.HandleFunc("PUT /dsh/captain/me/finance/payout-destination", s.handleCaptainPayoutDestinationUpsert)
 	mux.HandleFunc("POST /dsh/captain/me/finance/payout-destination/deactivate", s.handleCaptainPayoutDestinationDeactivate)
+	mux.HandleFunc("POST /dsh/captain/finance/cod-records/{recordId}/collect", s.handleCaptainCollectCod)
+	mux.HandleFunc("POST /dsh/captain/finance/cod-records/{recordId}/remit", s.handleCaptainRemitCod)
 
 	mux.HandleFunc("GET /dsh/field/me/finance/wallet", s.handleFieldOwnWallet)
 	mux.HandleFunc("GET /dsh/field/me/finance/ledger-entries", s.handleFieldOwnLedger)
 	mux.HandleFunc("GET /dsh/field/me/finance/commissions", s.handleFieldMeCommissions)
-	mux.HandleFunc("GET /dsh/field/me/finance/payout-requests", s.handleFieldPayoutRequestsJRN037)
-	mux.HandleFunc("POST /dsh/field/me/finance/payout-requests", s.handleFieldCreatePayoutRequestJRN037)
-	mux.HandleFunc("GET /dsh/field/me/finance/payout-destination", s.handleFieldPayoutDestinationReadJRN037)
-	mux.HandleFunc("PUT /dsh/field/me/finance/payout-destination", s.handleFieldPayoutDestinationUpsertJRN037)
-	mux.HandleFunc("POST /dsh/field/me/finance/payout-destination/deactivate", s.handleFieldPayoutDestinationDeactivateJRN037)
+	mux.HandleFunc("GET /dsh/field/me/finance/payout-requests", s.handleFieldPayoutRequests)
+	mux.HandleFunc("POST /dsh/field/me/finance/payout-requests", s.handleFieldCreatePayoutRequest)
+	mux.HandleFunc("GET /dsh/field/me/finance/payout-destination", s.handleFieldPayoutDestinationRead)
+	mux.HandleFunc("PUT /dsh/field/me/finance/payout-destination", s.handleFieldPayoutDestinationUpsert)
+	mux.HandleFunc("POST /dsh/field/me/finance/payout-destination/deactivate", s.handleFieldPayoutDestinationDeactivate)
+	mux.HandleFunc("GET /dsh/field/finance/payout-destinations/{destinationId}", s.handleFieldPayoutDestinationRead)
+	mux.HandleFunc("DELETE /dsh/field/finance/payout-destinations/{destinationId}", s.handleFieldPayoutDestinationDeactivate)
 
 	mux.HandleFunc("GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}", s.handleControlPanelRepresentativeWallet)
 	mux.HandleFunc("GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries", s.handleControlPanelRepresentativeLedger)
+	mux.HandleFunc("POST /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status", s.handleRefreshFinancePaymentSessionProviderStatus)
+	mux.HandleFunc("POST /dsh/control-panel/finance/settlements/from-delivered-orders", s.handleCreateFinanceSettlementFromDeliveredOrders)
+	mux.HandleFunc("GET /dsh/control-panel/finance/settlement-policies/{partnerId}", s.handleGetFinanceSettlementPolicy)
+	mux.HandleFunc("PUT /dsh/control-panel/finance/settlement-policies/{partnerId}", s.handleUpsertFinanceSettlementPolicy)
 	mux.HandleFunc("GET /dsh/control-panel/finance/settlements/{settlementId}/evidence", s.handleFinanceSettlementEvidence)
 	mux.HandleFunc("PUT /dsh/control-panel/finance/commission-policies", s.handleUpsertFinanceCommissionPolicy)
 	mux.HandleFunc("GET /dsh/control-panel/finance/commissions/{commissionId}", s.handleFinanceCommissionDetail)
@@ -205,6 +213,6 @@ func registerRepresentativeFinanceRoutes(mux *http.ServeMux, s *protectedStoreSe
 	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/settle", s.handleSettleFinanceCommission)
 	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/reject", s.handleRejectFinanceCommission)
 	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/reverse", s.handleReverseFinanceCommission)
-	mux.HandleFunc("GET /dsh/control-panel/finance/payout-requests/{payoutId}/audit", s.handleFinancePayoutAuditJRN037)
-	mux.HandleFunc("POST /dsh/control-panel/finance/payout-requests/{payoutId}/reconcile", s.handleReconcileFinancePayoutRequestJRN037)
+	mux.HandleFunc("GET /dsh/control-panel/finance/payout-requests/{payoutId}/audit", s.handleFinancePayoutAudit)
+	mux.HandleFunc("POST /dsh/control-panel/finance/payout-requests/{payoutId}/reconcile", s.handleReconcileFinancePayoutRequest)
 }

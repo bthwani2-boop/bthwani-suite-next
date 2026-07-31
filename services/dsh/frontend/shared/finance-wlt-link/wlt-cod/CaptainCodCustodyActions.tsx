@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, TextInput, View } from "react-native";
 import { Badge, Box, Button, KeyValueList, StateView, Text, useTheme } from "@bthwani/ui-kit";
-import type { WltDshCodReference } from "@bthwani/wlt";
+import type { WltDshCodReference } from "./wlt-cod.api";
 import {
   collectDshCaptainCod,
   remitDshCaptainCod,

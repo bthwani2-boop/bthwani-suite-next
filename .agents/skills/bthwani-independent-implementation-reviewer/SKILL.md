@@ -44,7 +44,7 @@ Own independent G4 implementation review after engineering has completed bounded
 - Writing or fixing the reviewed change.
 - Coordinating the executor while acting as its independent reviewer.
 - Approving another authority domain.
-- Treating static checks as runtime, QA, security, finance, isolation, release, production, or SaaS evidence.
+- Treating static checks as runtime, QA, security, finance, isolation, release, production, or commercial platform evidence.
 
 ## Required output
 

@@ -1,5 +1,5 @@
-version: 1
-authority: governance/07_SECURITY_AND_SECRETS.md
+version: 2
+authority: governance/policies/security.md
 secure_sdlc_refs:
   - NIST_SSDF_1_1
   - OWASP_SAMM_V2
@@ -8,7 +8,7 @@ secure_sdlc_refs:
   - OWASP_MASVS_MASTG
 risk_triggers:
   - auth_sessions_rbac
-  - tenant_context
+  - operator_context_isolation
   - pii_secrets
   - public_or_admin_api
   - wlt_financial_truth
@@ -18,7 +18,7 @@ required_controls_when_applicable:
   - threat_model
   - trust_boundaries
   - object_authorization
-  - tenant_isolation_negative_tests
+  - operator_context_isolation_negative_tests
   - secret_scan
   - dependency_review
   - vulnerability_status

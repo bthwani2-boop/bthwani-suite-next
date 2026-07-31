@@ -6,7 +6,7 @@ type Actor struct {
 	ID           string
 	Username     string
 	PasswordHash string
-	TenantID     string
+	OperatorContextID     string
 	PhoneE164    string
 	Roles        []string
 	Permissions  []Permission
@@ -22,7 +22,7 @@ type Permission struct {
 
 type ActorIdentity struct {
 	Subject       string          `json:"subject"`
-	TenantID      string          `json:"tenantId"`
+	OperatorContextID      string          `json:"operatorContextId"`
 	PhoneE164     string          `json:"phoneE164"`
 	Roles         []string        `json:"roles"`
 	Permissions   []Permission    `json:"permissions"`
@@ -43,6 +43,7 @@ type TokenPair struct {
 type LocalBootstrap struct {
 	Enabled  bool
 	Password string
+	OperatorContextID string
 }
 
 type IssueActivationForActorInput struct {
@@ -69,7 +70,7 @@ type ProvisionActorInput struct {
 	Username  string
 	PhoneE164 string
 	Role      string
-	TenantID  string
+	OperatorContextID  string
 }
 
 // ActorAdminView is the internal (service-to-service) projection of an actor.

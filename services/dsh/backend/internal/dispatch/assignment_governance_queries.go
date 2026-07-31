@@ -12,7 +12,7 @@ import (
 
 type AssignmentGovernance struct {
 	AssignmentID           string     `json:"assignmentId"`
-	TenantID               string     `json:"tenantId"`
+	OperatorContextID               string     `json:"operatorContextId"`
 	ServiceAreaCode        string     `json:"serviceAreaCode"`
 	Priority               int        `json:"priority"`
 	DistanceMeters         *int       `json:"distanceMeters,omitempty"`
@@ -32,13 +32,13 @@ func GetAssignmentGovernance(db *sql.DB, assignmentID string) (*AssignmentGovern
 	}
 	var item AssignmentGovernance
 	err := db.QueryRow(`
-		SELECT id::text, tenant_id, COALESCE(service_area_code,''), priority,
+		SELECT id::text, operator_context_id, COALESCE(service_area_code,''), priority,
 		       distance_meters, COALESCE(offer_reason,''), COALESCE(response_reason,''),
 		       expired_at, cancelled_at, COALESCE(cancelled_by,''),
 		       COALESCE(supersedes_assignment_id::text,''), version
 		FROM dsh_assignments WHERE id=$1::uuid`, assignmentID,
 	).Scan(
-		&item.AssignmentID, &item.TenantID, &item.ServiceAreaCode, &item.Priority,
+		&item.AssignmentID, &item.OperatorContextID, &item.ServiceAreaCode, &item.Priority,
 		&item.DistanceMeters, &item.OfferReason, &item.ResponseReason,
 		&item.ExpiredAt, &item.CancelledAt, &item.CancelledBy,
 		&item.SupersedesAssignmentID, &item.Version,
@@ -54,7 +54,7 @@ func ListAssignmentGovernance(db *sql.DB, assignmentIDs []string) (map[string]As
 		return map[string]AssignmentGovernance{}, nil
 	}
 	rows, err := db.Query(`
-		SELECT id::text, tenant_id, COALESCE(service_area_code,''), priority,
+		SELECT id::text, operator_context_id, COALESCE(service_area_code,''), priority,
 		       distance_meters, COALESCE(offer_reason,''), COALESCE(response_reason,''),
 		       expired_at, cancelled_at, COALESCE(cancelled_by,''),
 		       COALESCE(supersedes_assignment_id::text,''), version
@@ -68,7 +68,7 @@ func ListAssignmentGovernance(db *sql.DB, assignmentIDs []string) (map[string]As
 	for rows.Next() {
 		var item AssignmentGovernance
 		if err = rows.Scan(
-			&item.AssignmentID, &item.TenantID, &item.ServiceAreaCode, &item.Priority,
+			&item.AssignmentID, &item.OperatorContextID, &item.ServiceAreaCode, &item.Priority,
 			&item.DistanceMeters, &item.OfferReason, &item.ResponseReason,
 			&item.ExpiredAt, &item.CancelledAt, &item.CancelledBy,
 			&item.SupersedesAssignmentID, &item.Version,

@@ -52,6 +52,18 @@ function Get-LocalActorToken([string] $Username) {
   return $login.accessToken
 }
 
+function Get-HttpFailureBody($Failure) {
+  if ($null -eq $Failure.Exception.Response) { return "" }
+  try {
+    $stream = $Failure.Exception.Response.GetResponseStream()
+    if ($null -eq $stream) { return "" }
+    $reader = [System.IO.StreamReader]::new($stream)
+    try { return $reader.ReadToEnd() } finally { $reader.Dispose() }
+  } catch {
+    return ""
+  }
+}
+
 $operatorToken = Get-LocalActorToken (Get-LocalUsername "operator")
 $operatorHeaders = @{ Authorization = "Bearer $operatorToken" }
 $operatorStores = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores" -Headers $operatorHeaders -TimeoutSec 10
@@ -155,7 +167,14 @@ if ([string]::IsNullOrWhiteSpace($proposal.proposal.adoptedMasterProductId)) { t
 
 # Attach an image to the Master Product so it can be approved and client-visible.
 $imageBody = @{ assetId = "asset-node-canned-food" } | ConvertTo-Json
-Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/master-products/$($proposal.proposal.adoptedMasterProductId)/images/canonical_product_image" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $imageBody -TimeoutSec 10
+$imageUrl = "http://localhost:58080/dsh/operator/catalog/master-products/$($proposal.proposal.adoptedMasterProductId)/images/canonical_product_image"
+try {
+  Invoke-RestMethod $imageUrl -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $imageBody -TimeoutSec 10 | Out-Null
+} catch {
+  $status = if ($null -ne $_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 0 }
+  $failureBody = Get-HttpFailureBody $_
+  throw "master product image attach failed: status=$status body=$failureBody"
+}
 
 # Transition to catalog-approved using the version returned by adoption.
 $transBody4 = @{

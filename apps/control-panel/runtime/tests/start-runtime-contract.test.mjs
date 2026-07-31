@@ -14,7 +14,6 @@ test("control-panel startup forces all browser transports through the same-origi
   const browserRoutes = new Map([
     ["NEXT_PUBLIC_DSH_API_BASE_URL", "/api/dsh"],
     ["NEXT_PUBLIC_IDENTITY_API_BASE_URL", "/api/identity"],
-    ["NEXT_PUBLIC_WLT_API_BASE_URL", "/api/wlt"],
     ["NEXT_PUBLIC_WORKFORCE_API_BASE_URL", "/api/workforce"],
     ["NEXT_PUBLIC_PROVIDERS_API_BASE_URL", "/api/providers"],
     ["NEXT_PUBLIC_PLATFORM_CONTROL_API_BASE_URL", "/api/platform-control"],
@@ -31,7 +30,6 @@ test("control-panel startup keeps service origins in server-only environment var
   const serverOrigins = new Map([
     ["DSH_API_BASE_URL", 58080],
     ["IDENTITY_API_BASE_URL", 58082],
-    ["WLT_API_BASE_URL", 58083],
     ["WORKFORCE_API_BASE_URL", 58086],
     ["PROVIDERS_API_BASE_URL", 58087],
     ["PLATFORM_CONTROL_API_BASE_URL", 58088],

@@ -33,13 +33,13 @@ func decodeRequiredOperator(w http.ResponseWriter, r *http.Request) (string, boo
 }
 
 func lockedPayout(ctx context.Context, tx *sql.Tx, payoutID string) (*PayoutRequest, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 	rows, err := tx.QueryContext(ctx,
-		"SELECT "+requestCols+" FROM wlt_payout_requests WHERE tenant_id = $1 AND id = $2 FOR UPDATE",
-		tenantID,
+		"SELECT "+requestCols+" FROM wlt_payout_requests WHERE operator_context_id = $1 AND id = $2 FOR UPDATE",
+		operatorContextID,
 		payoutID,
 	)
 	if err != nil {

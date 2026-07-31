@@ -2,7 +2,9 @@ openapi: 3.1.0
 info:
   title: BThwani Core External Provider API
   version: 0.5.0
-  description: External provider registry, governed health and database-backed readiness, secret-safe configuration, atomic audit, idempotent mutation, and provider invocation API.
+  description: External provider registry, governed health and database-backed
+    readiness, secret-safe configuration, atomic audit, idempotent mutation, and
+    provider invocation API.
 
 x-bthwani-owner: core/providers
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -13,8 +15,9 @@ paths:
     get:
       operationId: getExternalProviderHealth
       summary: Return the governed external-provider health snapshot.
-      description: A provider is healthy only after an allowlisted live health probe succeeds. Active configuration alone is never reported as healthy.
-      tags: [ExternalProviderHealth]
+      description: A provider is healthy only after an allowlisted live health probe
+        succeeds. Active configuration alone is never reported as healthy.
+      tags: [ ExternalProviderHealth ]
       responses:
         "200":
           description: External provider health snapshot without credentials or probe URLs.
@@ -24,13 +27,17 @@ paths:
                 $ref: "#/components/schemas/ExternalProviderHealthResponse"
         "500":
           description: Provider registry could not be read.
+      security:
+        - bearerAuth: []
 
   /providers/readiness:
     get:
       operationId: getExternalProviderReadiness
       summary: Return database-backed runtime readiness for the Providers service.
-      description: Readiness is reported only when the service can reach its sovereign PostgreSQL database. External provider configuration does not affect process readiness.
-      tags: [ExternalProviderHealth]
+      description: Readiness is reported only when the service can reach its sovereign
+        PostgreSQL database. External provider configuration does not affect
+        process readiness.
+      tags: [ ExternalProviderHealth ]
       responses:
         "200":
           description: Providers runtime is ready to serve database-backed requests.
@@ -39,17 +46,20 @@ paths:
               schema:
                 $ref: "#/components/schemas/RuntimeReadinessResponse"
         "503":
-          description: Providers runtime is not ready because its sovereign database is unavailable.
+          description: Providers runtime is not ready because its sovereign database is
+            unavailable.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeReadinessResponse"
+      security:
+        - bearerAuth: []
 
   /providers:
     get:
       operationId: listProviders
       summary: List external providers without returning secret material.
-      tags: [ExternalProviderManagement]
+      tags: [ ExternalProviderManagement ]
       security:
         - bearerAuth: []
       responses:
@@ -77,7 +87,7 @@ paths:
     get:
       operationId: getProvider
       summary: Get secret-safe details of one provider.
-      tags: [ExternalProviderManagement]
+      tags: [ ExternalProviderManagement ]
       security:
         - bearerAuth: []
       responses:
@@ -95,15 +105,17 @@ paths:
           description: Provider not found.
     patch:
       operationId: updateProvider
-      summary: Atomically update provider state, parameters, or write-only credentials with audit and idempotency.
-      tags: [ExternalProviderManagement]
+      summary: Atomically update provider state, parameters, or write-only credentials
+        with audit and idempotency.
+      tags: [ ExternalProviderManagement ]
       security:
         - bearerAuth: []
       parameters:
         - name: Idempotency-Key
           in: header
           required: true
-          description: Caller-generated identifier. Reuse with the same request returns the original response; reuse with a different request returns 409.
+          description: Caller-generated identifier. Reuse with the same request returns
+            the original response; reuse with a different request returns 409.
           schema:
             type: string
             minLength: 1
@@ -124,7 +136,8 @@ paths:
               $ref: "#/components/schemas/UpdateProviderRequest"
       responses:
         "200":
-          description: Updated secret-safe provider configuration or the original idempotent response.
+          description: Updated secret-safe provider configuration or the original
+            idempotent response.
           content:
             application/json:
               schema:
@@ -144,7 +157,7 @@ paths:
     post:
       operationId: searchMapLocations
       summary: Search locations through the governed active map-provider chain.
-      tags: [ExternalMapProvider]
+      tags: [ ExternalMapProvider ]
       security:
         - bearerAuth: []
       requestBody:
@@ -175,7 +188,7 @@ paths:
     post:
       operationId: reverseMapLocation
       summary: Resolve coordinates through the governed active map-provider chain.
-      tags: [ExternalMapProvider]
+      tags: [ ExternalMapProvider ]
       security:
         - bearerAuth: []
       requestBody:
@@ -206,7 +219,7 @@ paths:
     post:
       operationId: routeMapLocations
       summary: Calculate a governed route through the active map-provider chain.
-      tags: [ExternalMapProvider]
+      tags: [ ExternalMapProvider ]
       security:
         - bearerAuth: []
       requestBody:
@@ -244,27 +257,27 @@ components:
     RuntimeReadinessResponse:
       type: object
       additionalProperties: false
-      required: [status]
+      required: [ status ]
       properties:
         status:
           type: string
-          enum: [ready, not_ready]
+          enum: [ ready, not_ready ]
         reason:
           type: string
-          enum: [database_unavailable]
+          enum: [ database_unavailable ]
 
     ExternalProviderKind:
       type: string
-      enum: [sms, maps, payment, push, email, storage, search, fraud]
+      enum: [ sms, maps, payment, push, email, storage, search, fraud ]
 
     ExternalProviderStatus:
       type: string
-      enum: [healthy, degraded, down, not_configured]
+      enum: [ healthy, degraded, down, not_configured ]
 
     ExternalProviderHealthItem:
       type: object
       additionalProperties: false
-      required: [kind, status, checkedAt]
+      required: [ kind, status, checkedAt ]
       properties:
         kind:
           $ref: "#/components/schemas/ExternalProviderKind"
@@ -275,12 +288,13 @@ components:
           format: date-time
         message:
           type: string
-          description: Secret-safe operational summary. Probe URLs and credentials are never returned.
+          description: Secret-safe operational summary. Probe URLs and credentials are
+            never returned.
 
     ExternalProviderHealthResponse:
       type: object
       additionalProperties: false
-      required: [providers]
+      required: [ providers ]
       properties:
         providers:
           type: array
@@ -290,7 +304,7 @@ components:
     ExternalProvider:
       type: object
       additionalProperties: false
-      required: [providerId, kind, code, active, credentialConfigured, updatedAt]
+      required: [ providerId, kind, code, active, credentialConfigured, updatedAt ]
       properties:
         providerId:
           type: string
@@ -302,11 +316,13 @@ components:
           type: boolean
         credentialConfigured:
           type: boolean
-          description: Indicates whether secret credentials exist without exposing their names or values.
+          description: Indicates whether secret credentials exist without exposing their
+            names or values.
         parameters:
           type: object
           additionalProperties: true
-          description: Non-secret provider parameters. Sensitive material belongs only in credentials.
+          description: Non-secret provider parameters. Sensitive material belongs only in
+            credentials.
         updatedAt:
           type: string
           format: date-time
@@ -322,16 +338,18 @@ components:
           type: object
           writeOnly: true
           additionalProperties: true
-          description: Write-only secret material. It is never echoed in any response or audit payload.
+          description: Write-only secret material. It is never echoed in any response or
+            audit payload.
         parameters:
           type: object
           additionalProperties: true
-          description: May include healthUrl, which is probed only when its hostname is explicitly allowlisted at runtime.
+          description: May include healthUrl, which is probed only when its hostname is
+            explicitly allowlisted at runtime.
 
     MapSearchRequest:
       type: object
       additionalProperties: false
-      required: [query]
+      required: [ query ]
       properties:
         query:
           type: string
@@ -356,7 +374,7 @@ components:
     MapReverseRequest:
       type: object
       additionalProperties: false
-      required: [latitude, longitude]
+      required: [ latitude, longitude ]
       properties:
         latitude:
           type: number
@@ -375,7 +393,13 @@ components:
     MapRouteRequest:
       type: object
       additionalProperties: false
-      required: [originLatitude, originLongitude, destinationLatitude, destinationLongitude]
+      required:
+        [
+          originLatitude,
+          originLongitude,
+          destinationLatitude,
+          destinationLongitude
+        ]
       properties:
         originLatitude:
           type: number
@@ -400,7 +424,7 @@ components:
 
     MapLocation:
       type: object
-      required: [providerCode, providerPlaceId, displayName, latitude, longitude]
+      required: [ providerCode, providerPlaceId, displayName, latitude, longitude ]
       properties:
         providerCode:
           type: string
@@ -429,7 +453,7 @@ components:
     MapSearchResponse:
       type: object
       additionalProperties: false
-      required: [locations]
+      required: [ locations ]
       properties:
         locations:
           type: array
@@ -439,7 +463,7 @@ components:
     MapReverseResponse:
       type: object
       additionalProperties: false
-      required: [location]
+      required: [ location ]
       properties:
         location:
           $ref: "#/components/schemas/MapLocation"
@@ -447,7 +471,7 @@ components:
     MapRouteResponse:
       type: object
       additionalProperties: false
-      required: [providerCode, distanceMeters, durationSeconds]
+      required: [ providerCode, distanceMeters, durationSeconds ]
       properties:
         providerCode:
           type: string

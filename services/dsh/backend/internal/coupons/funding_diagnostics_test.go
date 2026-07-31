@@ -10,7 +10,7 @@ import (
 func baseFundingDiagnostic() FundingLifecycleDiagnostic {
 	return FundingLifecycleDiagnostic{
 		RedemptionID: "redemption-1", CouponID: "coupon-1",
-		CheckoutIntentID: "checkout-1", TenantID: "tenant-1",
+		CheckoutIntentID: "checkout-1", OperatorContextID: "OperatorContext-1",
 		PlatformFundedMinorUnits: 600, PartnerFundedMinorUnits: 400,
 		TotalDiscountMinorUnits: 1000, Currency: "YER",
 		DSHStatus: "committed", WLTReservationID: "pfr_123",
@@ -21,7 +21,7 @@ func TestReconcileFundingLifecycle(t *testing.T) {
 	t.Parallel()
 	matching := baseFundingDiagnostic()
 	ReconcileFundingLifecycle(&matching, &wlt.PromotionFundingReservation{
-		ID: "pfr_123", TenantID: "tenant-1", CouponRedemptionID: "redemption-1",
+		ID: "pfr_123", OperatorContextID: "OperatorContext-1", CouponRedemptionID: "redemption-1",
 		CouponID: "coupon-1", CheckoutIntentID: "checkout-1",
 		PlatformFundedMinorUnits: 600, PartnerFundedMinorUnits: 400,
 		TotalDiscountMinorUnits: 1000, Currency: "YER", Status: "committed",
@@ -32,7 +32,7 @@ func TestReconcileFundingLifecycle(t *testing.T) {
 
 	mismatch := baseFundingDiagnostic()
 	ReconcileFundingLifecycle(&mismatch, &wlt.PromotionFundingReservation{
-		ID: "pfr_123", TenantID: "tenant-1", CouponRedemptionID: "redemption-1",
+		ID: "pfr_123", OperatorContextID: "OperatorContext-1", CouponRedemptionID: "redemption-1",
 		CouponID: "coupon-1", CheckoutIntentID: "checkout-1",
 		PlatformFundedMinorUnits: 700, PartnerFundedMinorUnits: 300,
 		TotalDiscountMinorUnits: 1000, Currency: "YER", Status: "committed",

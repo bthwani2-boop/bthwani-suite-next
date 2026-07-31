@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestJRN008CatalogGovernanceRoutesAreRegistered(t *testing.T) {
+func TestCatalogGovernanceRoutesAreRegistered(t *testing.T) {
 	t.Parallel()
 	mux := NewRouter(nil, nil, nil, nil, nil)
 	cases := []struct {

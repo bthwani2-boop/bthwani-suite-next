@@ -375,7 +375,7 @@ if (!journeys) {
       owner: "api-contracts",
       reason: "OpenAPI files exist but generated clients were not discovered.",
       suggested_action: "run_openapi_generate_or_fix_generated_client_detection",
-      verification_command: "pnpm run openapi:generate && pnpm run diagnostics:operational:inventory",
+      verification_command: "pnpm run openapi:generate:all && pnpm run diagnostics:operational:inventory",
       blocks_journey_start: true
     }));
   }

@@ -4,10 +4,10 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "openapi:compose": "node ../../tools/scripts/compose-dsh-openapi.mjs",
+    "openapi:compose": "node ../../tools/scripts/compose-openapi-context.mjs dsh",
     "openapi:generate": "pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/dsh.bundle.openapi.yaml -o clients/generated/dsh-api.ts",
     "openapi:test": "node --test tests/dsh-openapi-modular.test.mjs",
-    "openapi:verify": "node ../../tools/guards/dsh-openapi-modular-gate.mjs && pnpm run openapi:generate",
+    "openapi:verify": "node ../../tools/guards/dsh-openapi-modular-gate.mjs",
     "database:migrate": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action migrate -Transport auto",
     "database:seed:local": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action seed -Transport auto -AllowLocalSeeds",
     "database:test": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite schema",
@@ -15,7 +15,7 @@
     "database:contract": "node ../../tools/scripts/check-dsh-database-contract.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json",
-    "test": "pnpm run build && node --test ../../services/dsh/tests/*.test.mjs",
+    "test": "pnpm run build && pnpm --dir ../.. exec node --test services/dsh/tests/*.test.mjs",
     "lint": "pnpm --dir ../.. run guard:fullstack-boundary"
   },
   "peerDependencies": {
@@ -36,7 +36,6 @@
     "@bthwani/core-identity": "workspace:*",
     "@bthwani/core-platform-control": "workspace:*",
     "@bthwani/ui-kit": "workspace:*",
-    "@bthwani/wlt": "workspace:*",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "15.15.4"
   },

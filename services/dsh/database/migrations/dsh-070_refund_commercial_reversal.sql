@@ -51,10 +51,10 @@ BEGIN
     END IF;
 
     INSERT INTO dsh_promotion_funding_outbox (
-        event_type,tenant_id,checkout_intent_id,coupon_redemption_id,
+        event_type,operator_context_id,checkout_intent_id,coupon_redemption_id,
         wlt_funding_reservation_id,order_id,reason,idempotency_key,correlation_id
     )
-    SELECT 'reverse',r.funding_tenant_id,r.checkout_intent_id,r.id,
+    SELECT 'reverse',r.funding_operator_context_id,r.checkout_intent_id,r.id,
            r.wlt_funding_reservation_id,p_order_id,
            COALESCE(NULLIF(p_reason,''),'confirmed_refund'),
            'dsh-promotion-funding-reverse:' || r.id::TEXT || ':' || p_order_id::TEXT,
@@ -62,7 +62,7 @@ BEGIN
     FROM dsh_coupon_redemptions r
     WHERE r.order_id=p_order_id
       AND r.funding_status='committed'
-      AND btrim(COALESCE(r.funding_tenant_id,''))<>''
+      AND btrim(COALESCE(r.funding_operator_context_id,''))<>''
       AND btrim(COALESCE(r.wlt_funding_reservation_id,''))<>''
     ON CONFLICT (idempotency_key) DO NOTHING;
     funding_queued := FOUND;

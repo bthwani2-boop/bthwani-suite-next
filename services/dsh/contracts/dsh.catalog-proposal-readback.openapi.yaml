@@ -1,11 +1,12 @@
 openapi: 3.1.0
 info:
-  title: BThwani DSH Catalog Proposal Readback API
-  version: 1.0.0
+  title: BThwani DSH Catalog Readback API
+  version: 1.1.0
   description: >-
-    Store-scoped readback contract for product proposals submitted by partner
-    and field surfaces. Store ownership is resolved from the authenticated
-    actor context and cannot be supplied as an arbitrary query parameter.
+    Governed readback contract for one sovereign master product and for product
+    proposals submitted by partner and field surfaces. Actor and store ownership
+    are resolved from authenticated context and cannot be supplied as arbitrary
+    trust inputs.
 
 x-bthwani-owner: services/dsh
 x-bthwani-parent-contract: contracts/dsh.catalog.openapi.yaml
@@ -13,10 +14,36 @@ x-bthwani-contract-role: executable-fragment
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED
 x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
-x-bthwani-adapter-owner: frontend/shared/catalog/product-proposal-readback.api.ts
+x-bthwani-adapter-owner: frontend/shared/catalog
 x-bthwani-runtime-dependency: true
 
 paths:
+  /dsh/operator/catalog/master-products/{productId}:
+    get:
+      operationId: getMasterProductOperator
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: Sovereign master-product detail
+          content:
+            application/json:
+              schema:
+                $ref: "./dsh.catalog.openapi.yaml#/components/schemas/MasterProductResponse"
+        "400":
+          $ref: "./dsh.catalog.openapi.yaml#/components/responses/InvalidRequest"
+        "401":
+          $ref: "./dsh.catalog.openapi.yaml#/components/responses/Unauthenticated"
+        "403":
+          $ref: "./dsh.catalog.openapi.yaml#/components/responses/Forbidden"
+        "404":
+          $ref: "./dsh.catalog.openapi.yaml#/components/responses/NotFound"
+
   /dsh/partner/catalog/product-proposals:
     get:
       operationId: listPartnerProductProposals

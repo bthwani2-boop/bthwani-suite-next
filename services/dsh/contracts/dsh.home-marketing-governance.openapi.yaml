@@ -17,7 +17,7 @@ x-bthwani-runtime-dependency: true
 paths:
   /dsh/operator/home-discovery/{kind}:
     get:
-      operationId: listGovernedHomeMarketingContent
+      operationId: listOperatorHomeDiscoveryContent
       summary: List marketing home content including publication governance metadata.
       tags: [DshHomeMarketing]
       security: [{ bearerAuth: [] }]
@@ -39,7 +39,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
-      operationId: createGovernedHomeMarketingContent
+      operationId: createOperatorHomeDiscoveryContent
       summary: Create banner or promo and record the authenticated marketing publication decision.
       tags: [DshHomeMarketing]
       security: [{ bearerAuth: [] }]
@@ -62,7 +62,7 @@ paths:
 
   /dsh/operator/home-discovery/{kind}/{itemId}:
     patch:
-      operationId: updateGovernedHomeMarketingContent
+      operationId: updateOperatorHomeDiscoveryContent
       summary: Update content and publication decision using optimistic concurrency.
       tags: [DshHomeMarketing]
       security: [{ bearerAuth: [] }]
@@ -89,7 +89,7 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
     delete:
-      operationId: deleteGovernedHomeMarketingContent
+      operationId: deleteOperatorHomeDiscoveryContent
       summary: Delete a banner or promo with an audit event.
       tags: [DshHomeMarketing]
       security: [{ bearerAuth: [] }]

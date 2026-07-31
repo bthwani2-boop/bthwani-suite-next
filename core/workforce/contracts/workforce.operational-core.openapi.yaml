@@ -2,11 +2,11 @@ openapi: 3.1.0
 info:
   title: BThwani Workforce Operational Core API
   version: 1.0.0
-  description: Progressive independent-provider onboarding, availability, incidents, appeals, and evidence-backed captain classification.
+  description: Progressive independent-provider onboarding, availability,
+    incidents, appeals, and evidence-backed captain classification.
+x-bthwani-owner: core/workforce
 servers:
-  - url: /api/workforce
-security:
-  - bearerAuth: []
+  - url: http://localhost:58086
 paths:
   /workforce/field-agents/{actorId}/operational-core:
     parameters:
@@ -18,6 +18,8 @@ paths:
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
     patch:
       operationId: patchFieldOperationalCore
       requestBody:
@@ -30,6 +32,8 @@ paths:
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /workforce/captains/{actorId}/operational-core:
     parameters:
       - $ref: '#/components/parameters/ActorId'
@@ -40,6 +44,8 @@ paths:
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
     patch:
       operationId: patchCaptainOperationalCore
       requestBody:
@@ -52,6 +58,8 @@ paths:
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /workforce/captains/{actorId}/classification/basic:
     parameters:
       - $ref: '#/components/parameters/ActorId'
@@ -69,13 +77,15 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [operationalCore]
+                required: [ operationalCore ]
                 properties:
                   operationalCore: { $ref: '#/components/schemas/ProviderOperationalCore' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /workforce/me/operational-core:
     get:
       operationId: getOwnProviderOperationalCore
@@ -83,6 +93,8 @@ paths:
         '200': { $ref: '#/components/responses/OperationalCoreResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /workforce/me/availability-notices:
     get:
       operationId: listOwnAvailabilityNotices
@@ -97,13 +109,15 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [availabilityNotices]
+                required: [ availabilityNotices ]
                 properties:
                   availabilityNotices:
                     type: array
                     items: { $ref: '#/components/schemas/AvailabilityNotice' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
     post:
       operationId: createOwnAvailabilityNotice
       requestBody:
@@ -118,12 +132,14 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [availabilityNotice]
+                required: [ availabilityNotice ]
                 properties:
                   availabilityNotice: { $ref: '#/components/schemas/AvailabilityNotice' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /workforce/me/incidents:
     get:
       operationId: listOwnProviderIncidents
@@ -135,6 +151,8 @@ paths:
         '200': { $ref: '#/components/responses/IncidentListResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /workforce/me/incidents/{incidentId}/appeal:
     parameters:
       - $ref: '#/components/parameters/IncidentId'
@@ -146,7 +164,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [note]
+              required: [ note ]
               properties:
                 note: { type: string, minLength: 3, maxLength: 1000 }
       responses:
@@ -155,6 +173,8 @@ paths:
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /workforce/provider-incidents:
     get:
       operationId: listProviderIncidentsForOperator
@@ -171,6 +191,8 @@ paths:
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
     post:
       operationId: createProviderIncident
       requestBody:
@@ -184,6 +206,8 @@ paths:
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /workforce/provider-incidents/{incidentId}/status:
     parameters:
       - $ref: '#/components/parameters/IncidentId'
@@ -201,6 +225,8 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /workforce/provider-incidents/{incidentId}/transitions:
     parameters:
       - $ref: '#/components/parameters/IncidentId'
@@ -213,13 +239,15 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [transitions]
+                required: [ transitions ]
                 properties:
                   transitions:
                     type: array
                     items: { $ref: '#/components/schemas/ProviderIncidentTransition' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -248,7 +276,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [operationalCore, activationReadiness]
+            required: [ operationalCore, activationReadiness ]
             properties:
               operationalCore: { $ref: '#/components/schemas/ProviderOperationalCore' }
               activationReadiness: { $ref: '#/components/schemas/ActivationReadiness' }
@@ -258,7 +286,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [incident]
+            required: [ incident ]
             properties:
               incident: { $ref: '#/components/schemas/ProviderIncident' }
     IncidentListResponse:
@@ -267,7 +295,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [incidents]
+            required: [ incidents ]
             properties:
               incidents:
                 type: array
@@ -275,13 +303,13 @@ components:
   schemas:
     Error:
       type: object
-      required: [code, message]
+      required: [ code, message ]
       properties:
         code: { type: string }
         message: { type: string }
     ActivationReadiness:
       type: object
-      required: [ready, missing]
+      required: [ ready, missing ]
       properties:
         ready: { type: boolean }
         missing:
@@ -300,17 +328,25 @@ components:
         - operationsAccreditationStatus
         - version
       properties:
-        classification: { type: string, enum: [joker, basic] }
+        classification: { type: string, enum: [ joker, basic ] }
         financialGuaranteeMinorUnits: { type: integer, format: int64, minimum: 0 }
         financialGuaranteeCurrency: { type: string, minLength: 3, maxLength: 3 }
-        financialGuaranteeStatus: { type: string, enum: [not_funded, pending_review, funded, released, forfeited] }
+        financialGuaranteeStatus:
+          {
+            type: string,
+            enum: [ not_funded, pending_review, funded, released, forfeited ]
+          }
         financialGuaranteeReference: { type: string }
-        deliveryBagCustodyStatus: { type: string, enum: [not_issued, issued, returned, lost, damaged] }
+        deliveryBagCustodyStatus: { type: string, enum: [ not_issued, issued, returned, lost, damaged ] }
         deliveryBagCustodyReference: { type: string }
-        mandatoryPurchasesStatus: { type: string, enum: [not_required, pending_payment, paid, paid_and_delivered, cancelled] }
+        mandatoryPurchasesStatus:
+          {
+            type: string,
+            enum: [ not_required, pending_payment, paid, paid_and_delivered, cancelled ]
+          }
         mandatoryPurchasesReference: { type: string }
-        trainingStatus: { type: string, enum: [pending, in_progress, passed, failed] }
-        operationsAccreditationStatus: { type: string, enum: [pending, approved, suspended, expired] }
+        trainingStatus: { type: string, enum: [ pending, in_progress, passed, failed ] }
+        operationsAccreditationStatus: { type: string, enum: [ pending, approved, suspended, expired ] }
         version: { type: integer, minimum: 1 }
     ProviderOperationalCore:
       type: object
@@ -324,8 +360,23 @@ components:
         - version
       properties:
         actorId: { type: string }
-        workforceKind: { type: string, enum: [field, captain] }
-        referralSourceType: { type: string, enum: [employee, captain, field, partner, advertisement, social_media, public_referral, direct, other] }
+        workforceKind: { type: string, enum: [ field, captain ] }
+        referralSourceType:
+          {
+            type: string,
+            enum:
+              [
+                employee,
+                captain,
+                field,
+                partner,
+                advertisement,
+                social_media,
+                public_referral,
+                direct,
+                other
+              ]
+          }
         referralSourceActorId: { type: string }
         referralPartnerId: { type: string }
         referralChannel: { type: string }
@@ -337,12 +388,34 @@ components:
         nationalIdNumber: { type: string }
         identityFrontMediaRef: { type: string }
         identityBackMediaRef: { type: string }
-        identityVerificationStatus: { type: string, enum: [pending, under_review, approved, rejected, expired, needs_resubmission] }
+        identityVerificationStatus:
+          {
+            type: string,
+            enum: [ pending, under_review, approved, rejected, expired, needs_resubmission ]
+          }
         identityRejectionReason: { type: string }
         contractMediaRef: { type: string }
-        contractReviewStatus: { type: string, enum: [pending, under_review, approved, rejected, needs_resubmission] }
+        contractReviewStatus:
+          {
+            type: string,
+            enum: [ pending, under_review, approved, rejected, needs_resubmission ]
+          }
         contractRejectionReason: { type: string }
-        onboardingStage: { type: string, enum: [basic_profile, documents_pending, documents_review, training_pending, partnerships_review, operations_review, activation_ready, active] }
+        onboardingStage:
+          {
+            type: string,
+            enum:
+              [
+                basic_profile,
+                documents_pending,
+                documents_review,
+                training_pending,
+                partnerships_review,
+                operations_review,
+                activation_ready,
+                active
+              ]
+          }
         partnershipsApprovedAt: { type: string, format: date-time }
         version: { type: integer, minimum: 1 }
         captain: { $ref: '#/components/schemas/CaptainActivationCore' }
@@ -350,7 +423,22 @@ components:
       type: object
       additionalProperties: false
       properties:
-        referralSourceType: { type: string, enum: [employee, captain, field, partner, advertisement, social_media, public_referral, direct, other] }
+        referralSourceType:
+          {
+            type: string,
+            enum:
+              [
+                employee,
+                captain,
+                field,
+                partner,
+                advertisement,
+                social_media,
+                public_referral,
+                direct,
+                other
+              ]
+          }
         referralSourceActorId: { type: string }
         referralPartnerId: { type: string }
         referralChannel: { type: string }
@@ -362,32 +450,75 @@ components:
         nationalIdNumber: { type: string }
         identityFrontMediaRef: { type: string }
         identityBackMediaRef: { type: string }
-        identityVerificationStatus: { type: string, enum: [pending, under_review, approved, rejected, expired, needs_resubmission] }
+        identityVerificationStatus:
+          {
+            type: string,
+            enum: [ pending, under_review, approved, rejected, expired, needs_resubmission ]
+          }
         identityRejectionReason: { type: string }
         contractMediaRef: { type: string }
-        contractReviewStatus: { type: string, enum: [pending, under_review, approved, rejected, needs_resubmission] }
+        contractReviewStatus:
+          {
+            type: string,
+            enum: [ pending, under_review, approved, rejected, needs_resubmission ]
+          }
         contractRejectionReason: { type: string }
-        onboardingStage: { type: string, enum: [basic_profile, documents_pending, documents_review, training_pending, partnerships_review, operations_review, activation_ready, active] }
+        onboardingStage:
+          {
+            type: string,
+            enum:
+              [
+                basic_profile,
+                documents_pending,
+                documents_review,
+                training_pending,
+                partnerships_review,
+                operations_review,
+                activation_ready,
+                active
+              ]
+          }
         partnershipsApproved: { type: boolean }
         captain:
           type: object
           additionalProperties: false
           properties:
-            classification: { type: string, enum: [joker, basic], description: Direct promotion is rejected; use the evidence-backed classification command. }
+            classification:
+              {
+                type: string,
+                enum: [ joker, basic ],
+                description: Direct promotion is rejected; use the evidence-backed
+                  classification command.
+              }
             financialGuaranteeMinorUnits: { type: integer, format: int64, minimum: 0 }
             financialGuaranteeCurrency: { type: string, minLength: 3, maxLength: 3 }
-            financialGuaranteeStatus: { type: string, enum: [not_funded, pending_review, funded, released, forfeited] }
+            financialGuaranteeStatus:
+              {
+                type: string,
+                enum: [ not_funded, pending_review, funded, released, forfeited ]
+              }
             financialGuaranteeReference: { type: string }
-            deliveryBagCustodyStatus: { type: string, enum: [not_issued, issued, returned, lost, damaged] }
+            deliveryBagCustodyStatus: { type: string, enum: [ not_issued, issued, returned, lost, damaged ] }
             deliveryBagCustodyReference: { type: string }
-            mandatoryPurchasesStatus: { type: string, enum: [not_required, pending_payment, paid, paid_and_delivered, cancelled] }
+            mandatoryPurchasesStatus:
+              {
+                type: string,
+                enum: [ not_required, pending_payment, paid, paid_and_delivered, cancelled ]
+              }
             mandatoryPurchasesReference: { type: string }
-            trainingStatus: { type: string, enum: [pending, in_progress, passed, failed] }
-            operationsAccreditationStatus: { type: string, enum: [pending, approved, suspended, expired] }
+            trainingStatus: { type: string, enum: [ pending, in_progress, passed, failed ] }
+            operationsAccreditationStatus: { type: string, enum: [ pending, approved, suspended, expired ] }
     PromoteCaptainInput:
       type: object
       additionalProperties: false
-      required: [completedDeliveries, completionRateBasisPoints, severeIncidentFree, evidenceMediaRefs, decisionNote]
+      required:
+        [
+          completedDeliveries,
+          completionRateBasisPoints,
+          severeIncidentFree,
+          evidenceMediaRefs,
+          decisionNote
+        ]
       properties:
         completedDeliveries: { type: integer, minimum: 1 }
         completionRateBasisPoints: { type: integer, minimum: 1, maximum: 10000 }
@@ -401,9 +532,20 @@ components:
     CreateAvailabilityNoticeInput:
       type: object
       additionalProperties: false
-      required: [noticeType, startsAt, endsAt, reasonCode]
+      required: [ noticeType, startsAt, endsAt, reasonCode ]
       properties:
-        noticeType: { type: string, enum: [planned_unavailability, immediate_unavailability, short_break, emergency, temporary_restriction] }
+        noticeType:
+          {
+            type: string,
+            enum:
+              [
+                planned_unavailability,
+                immediate_unavailability,
+                short_break,
+                emergency,
+                temporary_restriction
+              ]
+          }
         startsAt: { type: string, format: date-time }
         endsAt: { type: string, format: date-time }
         serviceZoneId: { type: string }
@@ -413,21 +555,32 @@ components:
       allOf:
         - $ref: '#/components/schemas/CreateAvailabilityNoticeInput'
         - type: object
-          required: [id, actorId, status, createdByActorId, createdAt, updatedAt]
+          required: [ id, actorId, status, createdByActorId, createdAt, updatedAt ]
           properties:
             id: { type: string, format: uuid }
             actorId: { type: string }
-            status: { type: string, enum: [scheduled, active, completed, cancelled] }
+            status: { type: string, enum: [ scheduled, active, completed, cancelled ] }
             createdByActorId: { type: string }
             createdAt: { type: string, format: date-time }
             updatedAt: { type: string, format: date-time }
     IncidentStatus:
       type: string
-      enum: [reported, under_review, provider_notified, appeal_window, approved, rejected, financial_action_posted, closed, reversed]
+      enum:
+        [
+          reported,
+          under_review,
+          provider_notified,
+          appeal_window,
+          approved,
+          rejected,
+          financial_action_posted,
+          closed,
+          reversed
+        ]
     CreateProviderIncidentInput:
       type: object
       additionalProperties: false
-      required: [actorId, incidentCode, description, severity]
+      required: [ actorId, incidentCode, description, severity ]
       properties:
         actorId: { type: string, minLength: 1 }
         incidentCode: { type: string, minLength: 1 }
@@ -438,7 +591,7 @@ components:
           type: array
           uniqueItems: true
           items: { type: string, minLength: 1 }
-        severity: { type: string, enum: [minor, major, critical] }
+        severity: { type: string, enum: [ minor, major, critical ] }
         policyId: { type: string }
         proposedPenaltyMinorUnits: { type: integer, format: int64, minimum: 0 }
         currency: { type: string, minLength: 3, maxLength: 3, default: YER }
@@ -446,7 +599,7 @@ components:
       allOf:
         - $ref: '#/components/schemas/CreateProviderIncidentInput'
         - type: object
-          required: [id, status, currency, reportedByActorId, version, createdAt, updatedAt]
+          required: [ id, status, currency, reportedByActorId, version, createdAt, updatedAt ]
           properties:
             id: { type: string, format: uuid }
             status: { $ref: '#/components/schemas/IncidentStatus' }
@@ -463,14 +616,14 @@ components:
     TransitionProviderIncidentInput:
       type: object
       additionalProperties: false
-      required: [toStatus]
+      required: [ toStatus ]
       properties:
         toStatus: { $ref: '#/components/schemas/IncidentStatus' }
         resolutionNote: { type: string, minLength: 3, maxLength: 1000 }
         wltLedgerReference: { type: string, minLength: 1 }
     ProviderIncidentTransition:
       type: object
-      required: [id, incidentId, fromStatus, toStatus, changedByActorId, createdAt]
+      required: [ id, incidentId, fromStatus, toStatus, changedByActorId, createdAt ]
       properties:
         id: { type: string, format: uuid }
         incidentId: { type: string, format: uuid }

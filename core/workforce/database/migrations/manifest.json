@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "service": "workforce",
+  "ordering": "explicit",
+  "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
+  "cutover": "workforce-013_captain_license_evidence_gate.sql",
+  "migrations": [
+    {
+      "ordinal": 1,
+      "file": "workforce-001_people.sql",
+      "sha256": "47f716ee91b2e842df0c3c5375aeb0ec53a0952f43d307da19cc5d5719fb1886",
+      "historicalPrefix": "001",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 2,
+      "file": "workforce-002_provider_kind.sql",
+      "sha256": "4736087fea9c8ada76ce3d69904db340bd12cccda99b01ace550c588bd97c3a9",
+      "historicalPrefix": "002",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 3,
+      "file": "workforce-003_human_workforce_model.sql",
+      "sha256": "e5aac2cc70950df5cf5334f043df38766006f0020f5c059302a15cf46bf6c60e",
+      "historicalPrefix": "003",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 4,
+      "file": "workforce-004_operational_core.sql",
+      "sha256": "d4f9c4f81768e8d00e71d0cc6264f72259a34bcf26a6d0f9d0188bedf02dbcff",
+      "historicalPrefix": "004",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 5,
+      "file": "workforce-005_operational_enforcement.sql",
+      "sha256": "c44e7463436415723711ee3d40789b7ab80cdddc580b687a969fd6cab096178f",
+      "historicalPrefix": "005",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 6,
+      "file": "workforce-006_provider_activation_evidence.sql",
+      "sha256": "0b03d8a86b5d279bf2fb93af986cbc2f4ecf939d7cc7672b3c9ef1bf5882223d",
+      "historicalPrefix": "006",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 7,
+      "file": "workforce-007_employee_governance.sql",
+      "sha256": "fb152a6a3c8dc71dd854211c5ce0f1abe04117f10ada6bc3724475a25cfaf8d9",
+      "historicalPrefix": "007",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 8,
+      "file": "workforce-008_dsh_availability_outbox.sql",
+      "sha256": "c86f8db9fad612c9d6b865975aa97d79ee5535afee49262b69d1fddac654bb47",
+      "historicalPrefix": "008",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 9,
+      "file": "workforce-009_sovereign_leadership.sql",
+      "sha256": "a78e80ce5c583b27a5ff290ccf9961a898a60706fbf210f87ad765a6303237ce",
+      "historicalPrefix": "009",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 10,
+      "file": "workforce-010_drop_legacy_provider_kind.sql",
+      "sha256": "6b917a38bacab3b6bc543290137cadff53f619a0befc648aed78834f7708eac2",
+      "historicalPrefix": "010",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 11,
+      "file": "workforce-011_provider_operational_governance.sql",
+      "sha256": "d83a4fc3ddeb0d630235b7596bbb2e80022452e525d12aa7fa860a54ed9053b5",
+      "historicalPrefix": "011",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 12,
+      "file": "workforce-012_identity_workforce_authority_boundary.sql",
+      "sha256": "004656d7e30a213f1af252ccd8b87bf32c5cd341136f9ccf14e106dda5ed0ad4",
+      "historicalPrefix": "012",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 13,
+      "file": "workforce-013_captain_license_evidence_gate.sql",
+      "sha256": "3d1308868d8949d6543e47afe47170a1f3b18b6071b2f32b3776be627392d82e",
+      "historicalPrefix": "013",
+      "state": "HISTORICAL_IMMUTABLE"
+    }
+  ]
+}

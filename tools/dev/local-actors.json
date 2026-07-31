@@ -2,7 +2,7 @@
   "$comment": "Canonical local development identity actors. Single source of truth for the local bootstrap password and the usernames every dev/smoke script logs in with. Local only: the Identity bootstrap that creates these actors runs solely when IDENTITY_LOCAL_BOOTSTRAP=true and is refused in production. Consumers: tools/dev/local-actors.mjs, tools/dev/local-actors.ps1. Drift against the Go bootstrap and the runtime env files is enforced by tools/guards/local-dev-actors-gate.mjs.",
   "passwordEnvVar": "IDENTITY_LOCAL_BOOTSTRAP_PASSWORD",
   "password": "123456",
-  "tenantId": "local-dsh",
+  "OperatorContextId": "local-dsh",
   "actors": {
     "operator": {
       "username": "operator",

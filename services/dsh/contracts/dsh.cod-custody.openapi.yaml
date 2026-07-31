@@ -1,0 +1,163 @@
+openapi: 3.1.0
+info:
+  title: DSH COD Custody Proxy API
+  version: 1.0.0
+  description: Surface-scoped DSH proxy routes for WLT-owned COD custody and
+    reconciliation truth.
+x-bthwani-owner: services/dsh
+x-bthwani-capability: cod-custody
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-runtime-dependency: true
+x-bthwani-client-generation: DISABLED
+x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
+servers:
+  - url: http://localhost:58080
+paths:
+  /dsh/control-panel/finance/cod-reconciliation-cases:
+    get:
+      tags: ["dsh-control-panel"]
+      operationId: listDshControlPanelCodReconciliationCases
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, investigating, resolved]
+      responses:
+        "200": { description: WLT COD reconciliation cases }
+        "403": { description: Missing finance read permission }
+        "502": { description: WLT unavailable }
+      security:
+        - bearerAuth: []
+
+  /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign:
+    parameters:
+      - $ref: "#/components/parameters/CaseId"
+    post:
+      tags: ["dsh-control-panel"]
+      operationId: assignDshControlPanelCodReconciliationCase
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CodReconciliationAssignmentRequest"
+      responses:
+        "200": { description: COD reconciliation case assigned }
+        "400": { description: Invalid assignment request }
+        "403": { description: Missing finance manage permission }
+        "404": { description: Reconciliation case not found }
+        "409": { description: Reconciliation case state conflict }
+        "502": { description: WLT unavailable }
+
+  /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/resolve:
+    parameters:
+      - $ref: "#/components/parameters/CaseId"
+    post:
+      tags: ["dsh-control-panel"]
+      operationId: resolveDshControlPanelCodReconciliationCase
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CodReconciliationResolutionRequest"
+      responses:
+        "200": { description: COD reconciliation case resolved }
+        "400": { description: Invalid resolution request }
+        "403": { description: Missing finance manage permission }
+        "404": { description: Reconciliation case not found }
+        "409": { description: Reconciliation case state conflict }
+        "502": { description: WLT unavailable }
+
+  /dsh/partner/me/finance/cod-records:
+    get:
+      tags: ["dsh-partner"]
+      operationId: listDshPartnerCodRecords
+      responses:
+        "200": { description: Partner-owned COD records }
+        "403": { description: Actor is not a partner }
+        "502": { description: WLT unavailable }
+      security:
+        - bearerAuth: []
+
+  /dsh/partner/me/finance/cod-records/{recordId}/remit:
+    parameters:
+      - $ref: "#/components/parameters/RecordId"
+    post:
+      tags: ["dsh-partner"]
+      operationId: remitDshPartnerCodRecord
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 200 }
+        - name: X-Correlation-ID
+          in: header
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 200 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartnerCodRemittanceRequest"
+      responses:
+        "200": { description: WLT-owned COD record remitted with governed evidence }
+        "400": { description: Invalid remittance evidence }
+        "401": { description: Unauthenticated partner }
+        "403": { description: Record does not belong to the partner }
+        "404": { description: COD record not found }
+        "409": { description: COD custody state conflict }
+        "502": { description: WLT unavailable }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    CaseId:
+      name: caseId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    RecordId:
+      name: recordId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+  schemas:
+    CodReconciliationAssignmentRequest:
+      type: object
+      additionalProperties: false
+      required: [investigationNote]
+      properties:
+        investigationNote:
+          type: string
+          minLength: 1
+    CodReconciliationResolutionRequest:
+      type: object
+      additionalProperties: false
+      required: [resolutionAction, resolutionNote]
+      properties:
+        resolutionAction:
+          type: string
+          enum: [confirmed_variance, cash_adjustment, collector_recovery, write_off]
+        resolutionNote:
+          type: string
+          minLength: 1
+    PartnerCodRemittanceRequest:
+      type: object
+      additionalProperties: false
+      required: [proofReference]
+      properties:
+        proofReference:
+          type: string
+          minLength: 3
+        note:
+          type: string

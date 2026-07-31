@@ -72,7 +72,7 @@ export const ORDER_TRUTH_VISIBLE_STATE_POLICY: Readonly<
   },
   not_found: {
     title: "الطلب غير متاح",
-    description: "الطلب غير موجود أو خارج tenant أو actor scope الحالي.",
+    description: "الطلب غير موجود أو خارج OperatorContext أو actor scope الحالي.",
     tone: "warning",
     retryable: true,
     announce: "assertive",

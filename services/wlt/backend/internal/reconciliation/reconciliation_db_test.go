@@ -13,7 +13,7 @@ import (
 	"wlt-api/internal/shared"
 )
 
-const reconciliationTestTenant = "tenant-reconciliation-tests"
+const reconciliationTestOperatorContext = "OperatorContext-reconciliation-tests"
 
 func getTestDB(t *testing.T) *sql.DB {
 	dbURL := os.Getenv("DATABASE_URL")
@@ -40,24 +40,24 @@ func getTestDB(t *testing.T) *sql.DB {
 }
 
 func reconciliationTestContext() context.Context {
-	return shared.WithTenantContext(context.Background(), reconciliationTestTenant)
+	return shared.WithOperatorContext(context.Background(), reconciliationTestOperatorContext)
 }
 
 func insertTestCase(t *testing.T, db *sql.DB) string {
 	checkoutIntentID := fmt.Sprintf("test-checkout-recon-%d", time.Now().UnixNano())
 	var sessionID string
 	err := db.QueryRow(`
-		INSERT INTO wlt_payment_sessions (tenant_id, checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency)
+		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency)
 		VALUES ($1, $2, 'client-test', 'store-test', 'official_wallet', 'provider_result_unknown', 1000, 'YER')
-		RETURNING id`, reconciliationTestTenant, checkoutIntentID).Scan(&sessionID)
+		RETURNING id`, reconciliationTestOperatorContext, checkoutIntentID).Scan(&sessionID)
 	if err != nil {
 		t.Fatalf("failed to insert test session: %v", err)
 	}
 	var caseID string
 	err = db.QueryRow(`
-		INSERT INTO wlt_reconciliation_cases (tenant_id, payment_session_id, operation, trigger_reason)
+		INSERT INTO wlt_reconciliation_cases (operator_context_id, payment_session_id, operation, trigger_reason)
 		VALUES ($1, $2, 'authorize', 'test timeout')
-		RETURNING id`, reconciliationTestTenant, sessionID).Scan(&caseID)
+		RETURNING id`, reconciliationTestOperatorContext, sessionID).Scan(&caseID)
 	if err != nil {
 		t.Fatalf("failed to insert test reconciliation case: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestAssignThenResolveCase_Succeeds(t *testing.T) {
 
 	caseID := insertTestCase(t, db)
 
-	assigned, err := AssignCaseForTenant(ctx, db, caseID, "operator-alice")
+	assigned, err := AssignCaseForOperatorContext(ctx, db, caseID, "operator-alice")
 	if err != nil {
 		t.Fatalf("assign failed: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestAssignThenResolveCase_Succeeds(t *testing.T) {
 		t.Fatalf("expected status to remain 'open' after assign, got %q", assigned.Status)
 	}
 
-	resolved, err := ResolveCaseForTenant(ctx, db, caseID, "operator-alice", "confirmed_success", "confirmed with provider dashboard")
+	resolved, err := ResolveCaseForOperatorContext(ctx, db, caseID, "operator-alice", "confirmed_success", "confirmed with provider dashboard")
 	if err != nil {
 		t.Fatalf("resolve failed: %v", err)
 	}
@@ -109,10 +109,10 @@ func TestResolveCase_AlreadyResolved_Rejected(t *testing.T) {
 	ctx := reconciliationTestContext()
 
 	caseID := insertTestCase(t, db)
-	if _, err := ResolveCaseForTenant(ctx, db, caseID, "operator-alice", "confirmed_failed", "provider confirmed decline"); err != nil {
+	if _, err := ResolveCaseForOperatorContext(ctx, db, caseID, "operator-alice", "confirmed_failed", "provider confirmed decline"); err != nil {
 		t.Fatalf("first resolve should succeed, got error: %v", err)
 	}
-	if _, err := ResolveCaseForTenant(ctx, db, caseID, "operator-bob", "confirmed_success", "trying to override"); err != ErrCaseNotOpen {
+	if _, err := ResolveCaseForOperatorContext(ctx, db, caseID, "operator-bob", "confirmed_success", "trying to override"); err != ErrCaseNotOpen {
 		t.Fatalf("expected ErrCaseNotOpen on double-resolve, got %v", err)
 	}
 }
@@ -126,7 +126,7 @@ func TestResolveCase_InvalidResolutionAction_Rejected(t *testing.T) {
 	ctx := reconciliationTestContext()
 
 	caseID := insertTestCase(t, db)
-	if _, err := ResolveCaseForTenant(ctx, db, caseID, "operator-alice", "not_a_real_action", ""); err == nil {
+	if _, err := ResolveCaseForOperatorContext(ctx, db, caseID, "operator-alice", "not_a_real_action", ""); err == nil {
 		t.Fatalf("expected an error for an invalid resolutionAction")
 	}
 }
@@ -140,7 +140,7 @@ func TestListCases_FilterByOpenStatus(t *testing.T) {
 	ctx := reconciliationTestContext()
 
 	caseID := insertTestCase(t, db)
-	cases, err := ListCasesForTenant(ctx, db, "open")
+	cases, err := ListCasesForOperatorContext(ctx, db, "open")
 	if err != nil {
 		t.Fatalf("list failed: %v", err)
 	}

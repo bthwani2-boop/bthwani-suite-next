@@ -1,7 +1,7 @@
 -- DSH-075: enforce coupon funding ownership and append-only policy audit.
 --
 -- Go validates the request before mutation; these database rules provide the
--- final tenant-independent integrity boundary for every writer.
+-- final OperatorContext-independent integrity boundary for every writer.
 
 CREATE TABLE IF NOT EXISTS dsh_coupon_funding_policy_audit (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

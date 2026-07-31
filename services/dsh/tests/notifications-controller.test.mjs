@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
-import { composeDshOpenApi } from "../../../tools/scripts/dsh-openapi-modular-lib.mjs";
+import { composeContext } from "../../../tools/scripts/openapi-context-composer.mjs";
 
 describe("notifications states", () => {
   it("notifIdle returns kind=idle", async () => {
@@ -22,25 +22,31 @@ describe("notifications states", () => {
     const { notifSuccess } = await import(
       "../dist/services/dsh/frontend/shared/notifications/notifications.states.js"
     );
-    const n = [{
-      id: "n1", actorId: "a1", actorType: "client", topic: "order",
-      title: "طلب جديد", body: "تم تأكيد طلبك", actionUrl: "",
-      isRead: false, createdAt: "2026-06-24T00:00:00Z",
+    const notifications = [{
+      id: "n1",
+      actorId: "a1",
+      actorType: "client",
+      topic: "order",
+      title: "طلب جديد",
+      body: "تم تأكيد طلبك",
+      actionUrl: "",
+      isRead: false,
+      createdAt: "2026-06-24T00:00:00Z",
     }];
-    const s = notifSuccess(n, 1);
-    assert.equal(s.kind, "success");
-    assert.equal(s.unreadCount, 1);
-    assert.equal(s.notifications.length, 1);
-    assert.equal(s.notifications[0].topic, "order");
+    const state = notifSuccess(notifications, 1);
+    assert.equal(state.kind, "success");
+    assert.equal(state.unreadCount, 1);
+    assert.equal(state.notifications.length, 1);
+    assert.equal(state.notifications[0].topic, "order");
   });
 
   it("notifError carries message", async () => {
     const { notifError } = await import(
       "../dist/services/dsh/frontend/shared/notifications/notifications.states.js"
     );
-    const s = notifError("network error");
-    assert.equal(s.kind, "error");
-    assert.equal(s.message, "network error");
+    const state = notifError("network error");
+    assert.equal(state.kind, "error");
+    assert.equal(state.message, "network error");
   });
 
   it("configSuccess wraps configs", async () => {
@@ -48,76 +54,17 @@ describe("notifications states", () => {
       "../dist/services/dsh/frontend/shared/notifications/notifications.states.js"
     );
     const configs = [{
-      id: "c1", topic: "order_update", actorTypes: ["client"],
-      isEnabled: true, description: "Order updates",
-      updatedBy: "admin", updatedAt: "2026-06-24T00:00:00Z",
+      id: "c1",
+      topic: "order_update",
+      actorTypes: ["client"],
+      isEnabled: true,
+      description: "Order updates",
+      updatedBy: "admin",
+      updatedAt: "2026-06-24T00:00:00Z",
     }];
-    const s = configSuccess(configs);
-    assert.equal(s.kind, "success");
-    assert.equal(s.configs[0].topic, "order_update");
-  });
-});
-
-describe("finance-visibility states", () => {
-  it("financeIdle returns kind=idle", async () => {
-    const { financeIdle } = await import(
-      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.states.js"
-    );
-    assert.equal(financeIdle().kind, "idle");
-  });
-
-  it("financeSuccess wraps data", async () => {
-    const { financeSuccess } = await import(
-      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.states.js"
-    );
-    const data = {
-      orderId: "ord-1", paymentStatus: "captured", settlementStatus: "settled",
-      refundStatus: null, walletStatus: null, updatedAt: "2026-06-24T00:00:00Z",
-    };
-    const s = financeSuccess(data);
-    assert.equal(s.kind, "success");
-    assert.equal(s.data.orderId, "ord-1");
-  });
-
-  it("financeWltUnavailable returns kind=wlt_unavailable", async () => {
-    const { financeWltUnavailable } = await import(
-      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.states.js"
-    );
-    assert.equal(financeWltUnavailable().kind, "wlt_unavailable");
-  });
-});
-
-describe("finance-visibility view-model", () => {
-  it("buildFinanceStatusLabel maps payment statuses", async () => {
-    const { buildFinanceStatusLabel } = await import(
-      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.view-model.js"
-    );
-    assert.equal(buildFinanceStatusLabel("captured", "payment").badge, "success");
-    assert.equal(buildFinanceStatusLabel("pending", "payment").badge, "warning");
-    assert.equal(buildFinanceStatusLabel("failed", "payment").badge, "error");
-    assert.equal(buildFinanceStatusLabel("unknown", "payment").badge, "neutral");
-  });
-
-  it("buildFinanceStatusLabel maps settlement statuses", async () => {
-    const { buildFinanceStatusLabel } = await import(
-      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.view-model.js"
-    );
-    assert.equal(buildFinanceStatusLabel("settled", "settlement").badge, "success");
-    assert.equal(buildFinanceStatusLabel("on_hold", "settlement").badge, "warning");
-    assert.equal(buildFinanceStatusLabel("failed", "settlement").badge, "error");
-  });
-
-  it("buildPartnerFinanceSummaryViewModel composes refs", async () => {
-    const { buildPartnerFinanceSummaryViewModel } = await import(
-      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.view-model.js"
-    );
-    const payment = { id: "p1", orderId: "ord-1", status: "captured", updatedAt: "2026-06-24T00:00:00Z" };
-    const settlement = { id: "s1", orderId: "ord-1", status: "settled", updatedAt: "2026-06-24T00:00:00Z" };
-    const vm = buildPartnerFinanceSummaryViewModel(payment, settlement, null);
-    assert.equal(vm.orderId, "ord-1");
-    assert.equal(vm.paymentStatus, "captured");
-    assert.equal(vm.settlementStatus, "settled");
-    assert.equal(vm.refundStatus, null);
+    const state = configSuccess(configs);
+    assert.equal(state.kind, "success");
+    assert.equal(state.configs[0].topic, "order_update");
   });
 });
 
@@ -166,8 +113,8 @@ describe("notifications journey maps", () => {
     "app-captain",
   ];
 
-  it("keeps contract operations in the composed OpenAPI and generated client", () => {
-    const openapi = composeDshOpenApi({ write: false });
+  it("keeps contract operations in canonical OpenAPI and generated client", async () => {
+    const openapi = (await composeContext("dsh", { write: false })).bundle;
     const generatedClient = readFileSync(new URL("../clients/generated/dsh-api.ts", import.meta.url), "utf8");
 
     for (const operation of operations) {

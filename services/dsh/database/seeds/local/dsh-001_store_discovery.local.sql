@@ -1,7 +1,7 @@
 -- LEGACY_FILENAME_ONLY — not a slice reference
 INSERT INTO dsh_stores (
   id,
-  tenant_id,
+  operator_context_id,
   slug,
   display_name,
   status,

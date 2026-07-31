@@ -11,11 +11,11 @@ import (
 	"wlt-api/internal/shared"
 )
 
-var ErrCommissionSourceFinancialTruthMissing = errors.New("tenant-local WLT payment truth is required for order commission")
+var ErrCommissionSourceFinancialTruthMissing = errors.New("OperatorContext-local WLT payment truth is required for order commission")
 
 func bindCanonicalCommissionFinancialTruth(
 	db *sql.DB,
-	tenantID string,
+	operatorContextID string,
 	input *CreateGovernedCommissionInput,
 ) error {
 	input.SourceType = strings.ToLower(strings.TrimSpace(input.SourceType))
@@ -35,7 +35,7 @@ func bindCanonicalCommissionFinancialTruth(
 		err := db.QueryRow(`
 			SELECT amount_minor_units, currency, status
 			FROM wlt_payment_sessions
-			WHERE tenant_id=$1 AND id=$2`, tenantID, paymentSessionID).Scan(
+			WHERE operator_context_id=$1 AND id=$2`, operatorContextID, paymentSessionID).Scan(
 			&amountMinorUnits,
 			&currency,
 			&status,
@@ -63,15 +63,15 @@ func bindCanonicalCommissionFinancialTruth(
 }
 
 // HandleCreateCanonicalCommission is the only runtime entry point for the
-// generic JRN-036 commission route. Caller-supplied amount and currency never
+// generic governed commission route. Caller-supplied amount and currency never
 // become financial authority: order commissions resolve both values from a
-// tenant-local WLT payment session; field visits use their dedicated evidence
+// OperatorContext-local WLT payment session; field visits use their dedicated evidence
 // route and WLT-owned category policy.
 func HandleCreateCanonicalCommission(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, err := shared.RequireTenantContext(r.Context())
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
 		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "TENANT_REQUIRED", err.Error())
+			shared.SendError(w, http.StatusBadRequest, "OperatorContext_REQUIRED", err.Error())
 			return
 		}
 
@@ -85,7 +85,7 @@ func HandleCreateCanonicalCommission(db *sql.DB) http.HandlerFunc {
 		if input.IdempotencyKey == "" {
 			input.IdempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 		}
-		if err := bindCanonicalCommissionFinancialTruth(db, tenantID, &input); err != nil {
+		if err := bindCanonicalCommissionFinancialTruth(db, operatorContextID, &input); err != nil {
 			switch {
 			case errors.Is(err, ErrCommissionSourceFinancialTruthMissing):
 				shared.SendError(w, http.StatusConflict, "COMMISSION_SOURCE_TRUTH_MISSING", err.Error())

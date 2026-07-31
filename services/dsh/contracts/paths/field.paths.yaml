@@ -234,25 +234,7 @@
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
-  post:
-    operationId: POSTDshFieldFinancePayouts
-    summary: Governed finance operation owned by DSH/WLT.
-    tags: [DshFieldFinance]
-    security: [{ bearerAuth: [] }]
-    requestBody:
-      required: false
-      content:
-        application/json:
-          schema: { type: object, additionalProperties: true }
-    responses:
-      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
-      "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
 
 /dsh/field/finance/payout-destinations:
   get:
@@ -266,30 +248,11 @@
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
-  post:
-    operationId: POSTDshFieldFinancePayoutDestinations
-    summary: Governed finance operation owned by DSH/WLT.
-    tags: [DshFieldFinance]
-    security: [{ bearerAuth: [] }]
-    requestBody:
-      required: false
-      content:
-        application/json:
-          schema: { type: object, additionalProperties: true }
-    responses:
-      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
-      "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
 /dsh/field/finance/payout-destinations/{destinationId}:
-  patch:
-    operationId: PATCHDshFieldFinancePayoutDestinationsDestinationId
-    summary: Governed finance operation owned by DSH/WLT.
+  get:
+    operationId: getDshFieldFinancePayoutDestination
+    summary: Read a single governed WLT payout destination owned by the authenticated field actor.
     tags: [DshFieldFinance]
     security: [{ bearerAuth: [] }]
     parameters:
@@ -297,21 +260,13 @@
         in: path
         required: true
         schema: { type: string }
-    requestBody:
-      required: false
-      content:
-        application/json:
-          schema: { type: object, additionalProperties: true }
     responses:
-      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "200": { description: Payout destination view (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
   delete:
-    operationId: DELETEDshFieldFinancePayoutDestinationsDestinationId
-    summary: Governed finance operation owned by DSH/WLT.
+    operationId: deleteDshFieldFinancePayoutDestination
+    summary: Remove a governed WLT payout destination owned by the authenticated field actor.
     tags: [DshFieldFinance]
     security: [{ bearerAuth: [] }]
     parameters:
@@ -320,13 +275,12 @@
         required: true
         schema: { type: string }
     responses:
-      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
-      "204": { description: Governed finance object deleted }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "204": { description: Destination removed. }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+
+
 
 /dsh/field/stores/{storeId}/visits:
   post:

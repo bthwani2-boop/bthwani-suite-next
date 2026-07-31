@@ -18,7 +18,7 @@ servers:
 paths:
   /dsh/captain/dispatch/assignments/{assignmentId}/pod:
     post:
-      operationId: uploadAndSubmitDshCaptainDeliveryProof
+      operationId: submitDshPoD
       summary: Upload captain-owned photo proof and complete an arrived delivery.
       tags: [DshDeliveryProofMedia]
       security: [{ bearerAuth: [] }]
@@ -59,7 +59,7 @@ paths:
         "503": { $ref: "#/components/responses/MediaUnavailable" }
   /dsh/partner/orders/{orderId}/partner-delivery/proof:
     post:
-      operationId: uploadAndSubmitDshPartnerDeliveryProof
+      operationId: submitDshPartnerDeliveryProof
       summary: Upload partner-owned photo proof and complete a store-courier delivery.
       tags: [DshDeliveryProofMedia]
       security: [{ bearerAuth: [] }]

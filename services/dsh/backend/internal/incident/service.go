@@ -16,7 +16,7 @@ import (
 // IncidentType/TargetEntityType are read by dispatch.
 type ReportInput struct {
 	OrderID          string
-	TenantID         string
+	OperatorContextID         string
 	TargetEntityType TargetEntityType
 	TargetEntityID   string
 	IncidentType     IncidentType
@@ -153,7 +153,7 @@ func (s *Service) dispatch(ctx context.Context, input ReportInput) ([]byte, erro
 	case TypeCancel:
 		order, err := orders.CancelOrder(s.db, orders.CancellationInput{
 			OrderID:       input.OrderID,
-			TenantID:      input.TenantID,
+			OperatorContextID:      input.OperatorContextID,
 			ActorID:       input.ActorID,
 			ActorRole:     input.ActorRole,
 			ReasonCode:    input.ReasonCode,

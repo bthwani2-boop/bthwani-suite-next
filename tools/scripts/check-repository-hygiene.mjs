@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-const policyRelative = "governance/cleanup/repository-retention-policy.json";
+const policyRelative = "governance/policies/repository-retention-policy.json";
 const policyPath = path.join(repoRoot, policyRelative);
 const reportPath = path.resolve(
   repoRoot,
@@ -94,7 +94,7 @@ const archiveRoot = policy.documents?.archiveRoot ?? "governance/archive/";
 const retiredMarkers = policy.documents?.retiredMarkers ?? [];
 const documentPolicyFiles = new Set([
   policyRelative,
-  "governance/cleanup/repository-retention-policy.schema.json",
+  "governance/policies/repository-retention-policy.schema.json",
 ]);
 
 const referenceText = (policy.evidence?.referenceIndexes ?? [])

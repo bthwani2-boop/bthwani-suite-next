@@ -52,13 +52,11 @@ func main() {
 	if wltServiceToken == "" {
 		log.Fatal("[workforce-api] WORKFORCE_WLT_SERVICE_TOKEN is required")
 	}
-	tenantID := strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID"))
-	if tenantID == "" {
-		log.Fatal("[workforce-api] BTHWANI_DEFAULT_TENANT_ID is required; silent tenant fallback is forbidden")
+	operatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
+	if operatorContextID == "" {
+		log.Fatal("[workforce-api] BTHWANI_OPERATOR_CONTEXT_ID is required; silent operator context fallback is forbidden")
 	}
-	if strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active") && tenantID == "local-dsh" {
-		log.Fatal("[workforce-api] active SaaS mode requires an explicit non-local BTHWANI_DEFAULT_TENANT_ID")
-	}
+
 
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
@@ -71,9 +69,9 @@ func main() {
 	}
 
 	repo := workforce.NewRepository(db)
-	identity := identityclient.NewClient(identityBaseURL, serviceToken, tenantID)
-	dsh := dshclient.NewClient(dshBaseURL, dshServiceToken, tenantID)
-	wlt := wltclient.NewClient(wltBaseURL, wltServiceToken, tenantID)
+	identity := identityclient.NewClient(identityBaseURL, serviceToken, operatorContextID)
+	dsh := dshclient.NewClient(dshBaseURL, dshServiceToken, operatorContextID)
+	wlt := wltclient.NewClient(wltBaseURL, wltServiceToken, operatorContextID)
 	service := workforce.NewService(repo, identity, dsh)
 	authClient := auth.NewClient(identityBaseURL)
 
@@ -84,14 +82,14 @@ func main() {
 	workforcehttp.RegisterSovereignLeadershipRoutes(baseRouter, service, repo, authClient)
 	workforcehttp.RegisterSovereignLeadershipReferenceRoutes(baseRouter, service, authClient)
 	operationalCoreRouter := workforcehttp.OperationalCoreGateMiddleware(baseRouter, repo, authClient)
-	journeyRouter := workforcehttp.Journey003MutationMiddleware(operationalCoreRouter, repo, authClient)
+	referenceMutationRouter := workforcehttp.ReferenceMutationMiddleware(operationalCoreRouter, repo, authClient)
 
 	workerCtx, cancelWorker := context.WithCancel(context.Background())
 	go availabilityoutbox.RunWorker(workerCtx, db, dsh, 15*time.Second)
 
 	server := &http.Server{
 		Addr:         ":" + port,
-		Handler:      workforcehttp.CorsMiddleware(workforcehttp.ActivationMutationSafetyMiddleware(journeyRouter)),
+		Handler:      workforcehttp.CorsMiddleware(workforcehttp.ActivationMutationSafetyMiddleware(referenceMutationRouter)),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,

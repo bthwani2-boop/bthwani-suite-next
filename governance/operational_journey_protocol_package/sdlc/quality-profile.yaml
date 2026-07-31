@@ -1,5 +1,5 @@
 version: 1
-authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+authority: governance/policies/release.md
 quality_model: ISO_IEC_25010_2023_ALIGNED
 characteristics:
   - functional_suitability

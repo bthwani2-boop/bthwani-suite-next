@@ -3,15 +3,16 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { normalizeOpenApiMetadata } from "../contracts/normalize-openapi-metadata.mjs";
-import { composeDshOpenApi } from "../scripts/dsh-openapi-modular-lib.mjs";
+import { composeContext } from "../scripts/openapi-context-composer.mjs";
 
 const contracts = [
   "contracts/master.openapi.yaml",
-  "core/identity/contracts/auth.openapi.yaml",
+  "core/identity/contracts/identity.openapi.yaml",
+  "core/platform-control/contracts/platform-control.openapi.yaml",
   "core/providers/contracts/providers.openapi.yaml",
   "core/workforce/contracts/workforce.openapi.yaml",
   "services/dsh/contracts/generated/dsh.bundle.openapi.yaml",
-  "services/wlt/contracts/wlt.openapi.yaml",
+  "services/wlt/contracts/generated/wlt.bundle.openapi.yaml",
 ];
 
 const repoRoot = new URL("../..", import.meta.url);
@@ -36,6 +37,11 @@ rules:
         schema:
           type: array
           uniqueItems: true
+  # Disable false-positive unused-component warnings. Modular bundles inline
+  # cross-file $refs so shared component declarations (parameters, responses)
+  # appear unreferenced in the flattened output even though they are genuinely
+  # used by every path item in the source.
+  oas3-unused-component: off
 `,
   "utf8",
 );
@@ -86,10 +92,8 @@ try {
   run("contracts-foundation", "node", ["tools/important-scripts/contracts-foundation.mjs"], {
     stdio: "inherit",
   });
-  composeDshOpenApi({ write: true });
-  run("dsh-openapi-modular", "node", ["tools/guards/dsh-openapi-modular-gate.mjs"], {
-    stdio: "inherit",
-  });
+  await composeContext("dsh", { write: true });
+  await composeContext("wlt", { write: true });
 
   const verificationContracts = contracts.map((contract) => ({
     source: contract,
@@ -110,10 +114,13 @@ try {
   }
 
   for (const contract of verificationContracts) {
+    const tsOut = join(tempDir, `${basename(contract.normalized)}.ts`);
     run(`openapi-typescript ${contract.source}`, "pnpm", [
       "exec",
       "openapi-typescript",
       contract.normalized,
+      "-o",
+      tsOut,
     ]);
   }
 

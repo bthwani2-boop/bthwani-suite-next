@@ -34,7 +34,7 @@ type Event struct {
 	PartnerID           string
 	CheckoutIntentID    string
 	ClientID            string
-	TenantID            string
+	OperatorContextID            string
 	Points              int64
 	ReversalOfReference string
 	ExternalReference   string
@@ -43,21 +43,21 @@ type Event struct {
 	AttemptCount        int
 }
 
-func resolveTenant(tx *sql.Tx, checkoutIntentID string) (string, error) {
+func resolveOperatorContext(tx *sql.Tx, checkoutIntentID string) (string, error) {
 	if strings.TrimSpace(checkoutIntentID) == "" {
-		return "", fmt.Errorf("checkout intent is required to resolve tenant context")
+		return "", fmt.Errorf("checkout intent is required to resolve OperatorContext context")
 	}
-	var tenantID string
+	var operatorContextID string
 	if err := tx.QueryRow(`
-		SELECT tenant_id
+		SELECT operator_context_id
 		FROM dsh_checkout_intents
-		WHERE id = $1::uuid`, checkoutIntentID).Scan(&tenantID); err != nil {
-		return "", fmt.Errorf("resolve tenant context: %w", err)
+		WHERE id = $1::uuid`, checkoutIntentID).Scan(&operatorContextID); err != nil {
+		return "", fmt.Errorf("resolve OperatorContext context: %w", err)
 	}
-	if strings.TrimSpace(tenantID) == "" {
-		return "", fmt.Errorf("tenant context is required")
+	if strings.TrimSpace(operatorContextID) == "" {
+		return "", fmt.Errorf("OperatorContext context is required")
 	}
-	return tenantID, nil
+	return operatorContextID, nil
 }
 
 func validateCollector(collectorType, collectorID string) error {
@@ -94,7 +94,7 @@ func EnqueueDeliveryCompleted(
 	if strings.TrimSpace(orderID) == "" || strings.TrimSpace(partnerID) == "" {
 		return fmt.Errorf("enqueue wlt delivery event: order and partner are required")
 	}
-	tenantID, err := resolveTenant(tx, checkoutIntentID)
+	operatorContextID, err := resolveOperatorContext(tx, checkoutIntentID)
 	if err != nil {
 		return fmt.Errorf("enqueue wlt delivery event: %w", err)
 	}
@@ -104,10 +104,10 @@ func EnqueueDeliveryCompleted(
 	}
 	_, err = tx.Exec(`
 		INSERT INTO dsh_wlt_outbox_events
-		  (event_type,tenant_id,order_id,captain_id,collector_type,collector_id,partner_id,checkout_intent_id)
+		  (event_type,operator_context_id,order_id,captain_id,collector_type,collector_id,partner_id,checkout_intent_id)
 		VALUES ($1,$2,NULLIF($3,'')::uuid,NULLIF($4,''),$5,$6,$7,NULLIF($8,'')::uuid)
 		ON CONFLICT DO NOTHING`,
-		EventTypeDeliveryCompleted, tenantID, orderID, captainID, collectorType, collectorID, partnerID, checkoutIntentID,
+		EventTypeDeliveryCompleted, operatorContextID, orderID, captainID, collectorType, collectorID, partnerID, checkoutIntentID,
 	)
 	if err != nil {
 		return fmt.Errorf("enqueue wlt delivery event: %w", err)
@@ -115,7 +115,7 @@ func EnqueueDeliveryCompleted(
 	return nil
 }
 
-// Enqueue accepts the canonical tenant-aware shape and the transitional
+// Enqueue accepts the canonical OperatorContext-aware shape and the transitional
 // delivery-completion shape used by older callers. Delivery calls are converted
 // to a captain collector; new non-captain callers must use
 // EnqueueDeliveryCompleted explicitly.
@@ -124,24 +124,24 @@ func Enqueue(tx *sql.Tx, eventType string, values ...string) error {
 		return fmt.Errorf("enqueue wlt outbox event: transaction is required")
 	}
 
-	var tenantID, orderID, captainID, partnerID, checkoutIntentID string
+	var operatorContextID, orderID, captainID, partnerID, checkoutIntentID string
 	switch len(values) {
 	case 5:
-		tenantID, orderID, captainID, partnerID, checkoutIntentID = values[0], values[1], values[2], values[3], values[4]
+		operatorContextID, orderID, captainID, partnerID, checkoutIntentID = values[0], values[1], values[2], values[3], values[4]
 	case 4:
 		orderID, captainID, partnerID, checkoutIntentID = values[0], values[1], values[2], values[3]
-		resolvedTenant, err := resolveTenant(tx, checkoutIntentID)
+		resolvedOperatorContext, err := resolveOperatorContext(tx, checkoutIntentID)
 		if err != nil {
 			return fmt.Errorf("enqueue wlt outbox event: %w", err)
 		}
-		tenantID = resolvedTenant
+		operatorContextID = resolvedOperatorContext
 	default:
 		return fmt.Errorf("enqueue wlt outbox event: invalid argument shape")
 	}
 
-	tenantID = strings.TrimSpace(tenantID)
-	if tenantID == "" {
-		return fmt.Errorf("enqueue wlt outbox event: tenant context is required")
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return fmt.Errorf("enqueue wlt outbox event: OperatorContext context is required")
 	}
 	if eventType == EventTypeDeliveryCompleted {
 		if err := validateCollector(CollectorCaptain, captainID); err != nil {
@@ -149,10 +149,10 @@ func Enqueue(tx *sql.Tx, eventType string, values ...string) error {
 		}
 		_, err := tx.Exec(`
 			INSERT INTO dsh_wlt_outbox_events
-			  (event_type,tenant_id,order_id,captain_id,collector_type,collector_id,partner_id,checkout_intent_id)
+			  (event_type,operator_context_id,order_id,captain_id,collector_type,collector_id,partner_id,checkout_intent_id)
 			VALUES ($1,$2,NULLIF($3,'')::uuid,$4,$5,$6,$7,NULLIF($8,'')::uuid)
 			ON CONFLICT DO NOTHING`,
-			eventType, tenantID, orderID, captainID, CollectorCaptain, captainID, partnerID, checkoutIntentID,
+			eventType, operatorContextID, orderID, captainID, CollectorCaptain, captainID, partnerID, checkoutIntentID,
 		)
 		if err != nil {
 			return fmt.Errorf("enqueue wlt outbox event: %w", err)
@@ -162,9 +162,9 @@ func Enqueue(tx *sql.Tx, eventType string, values ...string) error {
 
 	_, err := tx.Exec(`
 		INSERT INTO dsh_wlt_outbox_events
-		  (event_type,tenant_id,order_id,captain_id,partner_id,checkout_intent_id)
+		  (event_type,operator_context_id,order_id,captain_id,partner_id,checkout_intent_id)
 		VALUES ($1,$2,NULLIF($3,'')::uuid,NULLIF($4,''),$5,NULLIF($6,'')::uuid)
-		ON CONFLICT DO NOTHING`, eventType, tenantID, orderID, captainID, partnerID, checkoutIntentID)
+		ON CONFLICT DO NOTHING`, eventType, operatorContextID, orderID, captainID, partnerID, checkoutIntentID)
 	if err != nil {
 		return fmt.Errorf("enqueue wlt outbox event: %w", err)
 	}
@@ -190,7 +190,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 		SELECT id,event_type,COALESCE(order_id::text,''),COALESCE(captain_id,''),
 		       COALESCE(collector_type,''),COALESCE(collector_id,''),
 		       COALESCE(partner_id,''),COALESCE(checkout_intent_id::text,''),
-		       COALESCE(client_id,''),tenant_id,COALESCE(points,0),COALESCE(reversal_of_reference,''),
+		       COALESCE(client_id,''),operator_context_id,COALESCE(points,0),COALESCE(reversal_of_reference,''),
 		       COALESCE(external_reference,''),COALESCE(payload,'{}'::jsonb),COALESCE(reversal_requested,FALSE),attempt_count
 		FROM dsh_wlt_outbox_events
 		WHERE status IN ('pending','processing') AND next_retry_at<=NOW()
@@ -208,7 +208,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 		if err := rows.Scan(
 			&event.ID, &event.EventType, &event.OrderID, &event.CaptainID,
 			&event.CollectorType, &event.CollectorID, &event.PartnerID,
-			&event.CheckoutIntentID, &event.ClientID, &event.TenantID, &event.Points,
+			&event.CheckoutIntentID, &event.ClientID, &event.OperatorContextID, &event.Points,
 			&event.ReversalOfReference, &event.ExternalReference, &payload,
 			&event.ReversalRequested, &event.AttemptCount,
 		); err != nil {
@@ -253,18 +253,18 @@ func MarkSentWithReference(db *sql.DB, id, externalReference string) error {
 	}
 	defer tx.Rollback()
 
-	var eventType, tenantID, orderID, partnerID, checkoutIntentID, clientID string
+	var eventType, operatorContextID, orderID, partnerID, checkoutIntentID, clientID string
 	var points int64
 	var reversalRequested bool
 	var payload []byte
 	err = tx.QueryRow(`
-		SELECT event_type,tenant_id,COALESCE(order_id::text,''),COALESCE(partner_id,''),
+		SELECT event_type,operator_context_id,COALESCE(order_id::text,''),COALESCE(partner_id,''),
 		       COALESCE(checkout_intent_id::text,''),COALESCE(client_id,''),COALESCE(points,0),
 		       COALESCE(reversal_requested,FALSE),COALESCE(payload,'{}'::jsonb)
 		FROM dsh_wlt_outbox_events
 		WHERE id=$1::uuid AND status='processing'
 		FOR UPDATE`, id).Scan(
-		&eventType, &tenantID, &orderID, &partnerID, &checkoutIntentID, &clientID,
+		&eventType, &operatorContextID, &orderID, &partnerID, &checkoutIntentID, &clientID,
 		&points, &reversalRequested, &payload,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -294,10 +294,10 @@ func MarkSentWithReference(db *sql.DB, id, externalReference string) error {
 		}
 		if _, err := tx.Exec(`
 			INSERT INTO dsh_wlt_outbox_events
-			  (event_type,tenant_id,order_id,captain_id,partner_id,checkout_intent_id,
+			  (event_type,operator_context_id,order_id,captain_id,partner_id,checkout_intent_id,
 			   client_id,points,reversal_of_reference,payload)
 			VALUES ('loyalty_reversed',$1,$2::uuid,NULL,$3,NULLIF($4,'')::uuid,$5,$6,$7,$8)
-			ON CONFLICT DO NOTHING`, tenantID, orderID, partnerID, checkoutIntentID, clientID, points, externalReference, reversalPayload); err != nil {
+			ON CONFLICT DO NOTHING`, operatorContextID, orderID, partnerID, checkoutIntentID, clientID, points, externalReference, reversalPayload); err != nil {
 			return err
 		}
 	}

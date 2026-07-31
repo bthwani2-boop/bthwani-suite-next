@@ -1,0 +1,17 @@
+bundle: generated/wlt.bundle.openapi.yaml
+entry: wlt.openapi.yaml
+modules:
+  - wlt.cod-custody.openapi.yaml
+  - wlt.cod-records.openapi.yaml
+  - wlt.commercial-summary.openapi.yaml
+  - wlt.commercial.openapi.yaml
+  - wlt.common.openapi.yaml
+  - wlt.delivery-collections.openapi.yaml
+  - wlt.payments.openapi.yaml
+  - wlt.payout-failure-boundary.openapi.yaml
+  - wlt.payouts-destinations.openapi.yaml
+  - wlt.promotion-funding.openapi.yaml
+  - wlt.refunds.openapi.yaml
+  - wlt.settlement-operations.openapi.yaml
+  - wlt.settlements-commissions.openapi.yaml
+  - wlt.workforce-finance.openapi.yaml

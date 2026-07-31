@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestNotifyIncludesTenantForSpecialRequestEvents(t *testing.T) {
+func TestNotifyIncludesOperatorContextForSpecialRequestEvents(t *testing.T) {
 	var payload map[string]string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -20,12 +20,12 @@ func TestNotifyIncludesTenantForSpecialRequestEvents(t *testing.T) {
 
 	specialRequestID := "special-1"
 	client := NewClient(server.URL, "service-token")
-	err := client.Notify(context.Background(), "tenant-a", nil, &specialRequestID, "session-1", "captured")
+	err := client.Notify(context.Background(), "OperatorContext-a", nil, &specialRequestID, "session-1", "captured")
 	if err != nil {
 		t.Fatalf("Notify failed: %v", err)
 	}
-	if payload["tenantId"] != "tenant-a" {
-		t.Fatalf("expected tenantId tenant-a, got %q", payload["tenantId"])
+	if payload["operatorContextId"] != "OperatorContext-a" {
+		t.Fatalf("expected operatorContextId OperatorContext-a, got %q", payload["operatorContextId"])
 	}
 	if payload["specialRequestId"] != specialRequestID {
 		t.Fatalf("expected specialRequestId %s, got %q", specialRequestID, payload["specialRequestId"])

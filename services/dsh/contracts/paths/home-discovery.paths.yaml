@@ -29,6 +29,14 @@
           maximum: 50
           default: 10
         description: Maximum number of stores to return.
+      - name: audienceSegment
+        in: query
+        required: false
+        description: Resolved client audience used with city and service area targeting.
+        schema:
+          type: string
+          enum: [guest, authenticated]
+          default: guest
     responses:
       "200":
         description: Home discovery payload.

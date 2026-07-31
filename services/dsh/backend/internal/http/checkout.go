@@ -38,8 +38,8 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	cartID := strings.TrimSpace(body.CartID)
 	storeID := strings.TrimSpace(body.StoreID)
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
-	if cartID == "" || storeID == "" || actor.TenantID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId, storeId and authenticated tenant are required")
+	if cartID == "" || storeID == "" || actor.OperatorContextID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId, storeId and authenticated OperatorContext are required")
 		return
 	}
 	if len(idempotencyKey) < 16 || len(idempotencyKey) > 200 {
@@ -116,7 +116,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	}
 	defer tx.Rollback()
 
-	if err := checkout.LockCreateIdempotencyTx(r.Context(), tx, actor.TenantID, actor.ID, idempotencyKey); err != nil {
+	if err := checkout.LockCreateIdempotencyTx(r.Context(), tx, actor.OperatorContextID, actor.ID, idempotencyKey); err != nil {
 		if errors.Is(err, checkout.ErrInvalid) {
 			store.SendError(w, http.StatusBadRequest, "INVALID_IDEMPOTENCY_KEY", "checkout idempotency context is invalid")
 			return
@@ -126,7 +126,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	}
 
 	record, err := checkout.FindCreateIdempotencyTx(
-		r.Context(), tx, actor.TenantID, actor.ID, idempotencyKey, requestFingerprint,
+		r.Context(), tx, actor.OperatorContextID, actor.ID, idempotencyKey, requestFingerprint,
 	)
 	if errors.Is(err, checkout.ErrIdempotencyConflict) {
 		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_KEY_REUSED", "Idempotency-Key was already used for a different checkout request")
@@ -149,7 +149,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to release checkout retry lock")
 			return
 		}
-		intent, err = checkout.GetIntent(s.db, record.IntentID, actor.TenantID, actor.ID)
+		intent, err = checkout.GetIntent(s.db, record.IntentID, actor.OperatorContextID, actor.ID)
 		if err != nil {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to recover idempotent checkout intent")
 			return
@@ -252,7 +252,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		)
 
 		intent, err = checkout.CreatePricedIntentWithAddressTx(r.Context(), tx, checkout.CreateIntentInput{
-			ID: intentID, TenantID: actor.TenantID, ClientID: actor.ID, CartID: cartID, StoreID: storeID,
+			ID: intentID, OperatorContextID: actor.OperatorContextID, ClientID: actor.ID, CartID: cartID, StoreID: storeID,
 			FulfillmentMode: checkout.FulfillmentMode(fulfillmentMode),
 			PaymentMethod:   checkout.PaymentMethod(paymentMethod),
 			DeliveryAddress: deliveryAddressSnapshot, Note: note,
@@ -266,7 +266,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			return
 		}
 		if err := checkout.BindCreateIdempotencyTx(
-			r.Context(), tx, actor.TenantID, actor.ID, idempotencyKey, requestFingerprint, intent.ID,
+			r.Context(), tx, actor.OperatorContextID, actor.ID, idempotencyKey, requestFingerprint, intent.ID,
 		); err != nil {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to bind checkout idempotency state")
 			return
@@ -281,10 +281,10 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	correlationID := fundingCorrelation(r.Header.Get("X-Correlation-ID"), intent.ID)
 	var fundingProjection *coupons.FundingProjection
 	if hasCouponFunding {
-		fundingProjection, err = s.reserveCouponFunding(r.Context(), actor.TenantID, intent.ID, correlationID)
+		fundingProjection, err = s.reserveCouponFunding(r.Context(), actor.OperatorContextID, intent.ID, correlationID)
 		if err != nil {
 			_ = coupons.ReleaseByIntent(s.db, intent.ID, "wlt_funding_reserve_failed")
-			failedIntent, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.TenantID, actor.ID)
+			failedIntent, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.OperatorContextID, actor.ID)
 			if markErr == nil {
 				store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
 					"intent": marshalIntentWithPricing(failedIntent, pricing),
@@ -301,7 +301,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	}
 
 	paymentSession, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
-		CheckoutIntentID: intent.ID, TenantID: actor.TenantID, ClientID: actor.ID,
+		CheckoutIntentID: intent.ID, OperatorContextID: actor.OperatorContextID, ClientID: actor.ID,
 		StoreID: intent.StoreID, PaymentMethod: string(intent.PaymentMethod),
 		AmountMinorUnits: pricing.TotalMinorUnits, Currency: pricing.Currency,
 		CartSnapshotHash: pricing.SnapshotHash,
@@ -310,7 +310,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	})
 	if err != nil {
 		if wlt.IsPaymentSessionOutcomeUnknown(err) {
-			unknownIntent, markErr := checkout.MarkWltOutcomeUnknown(s.db, intent.ID, actor.TenantID, actor.ID)
+			unknownIntent, markErr := checkout.MarkWltOutcomeUnknown(s.db, intent.ID, actor.OperatorContextID, actor.ID)
 			if markErr != nil {
 				store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to mark unknown WLT outcome")
 				return
@@ -327,13 +327,13 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		}
 		fundingReleaseFailed := false
 		if fundingProjection != nil {
-			if releaseErr := s.releaseCouponFunding(r.Context(), actor.TenantID, intent.ID, "payment_session_handoff_failed", correlationID); releaseErr != nil {
+			if releaseErr := s.releaseCouponFunding(r.Context(), actor.OperatorContextID, intent.ID, "payment_session_handoff_failed", correlationID); releaseErr != nil {
 				fundingReleaseFailed = true
 				_ = coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_payment_handoff_failed")
 			}
 		}
 		_ = coupons.ReleaseByIntent(s.db, intent.ID, "wlt_handoff_failed")
-		if failedIntent, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.TenantID, actor.ID); markErr == nil {
+		if failedIntent, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.OperatorContextID, actor.ID); markErr == nil {
 			code := "WLT_HANDOFF_UNAVAILABLE"
 			message := "WLT payment-session handoff is unavailable"
 			if fundingReleaseFailed {
@@ -350,16 +350,16 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		return
 	}
 
-	intent, err = checkout.AttachWltPaymentSessionIdempotent(s.db, intent.ID, actor.TenantID, actor.ID, paymentSession.ID)
+	intent, err = checkout.AttachWltPaymentSessionIdempotent(s.db, intent.ID, actor.OperatorContextID, actor.ID, paymentSession.ID)
 	if err != nil {
 		_ = s.wlt.ExpireSession(r.Context(), paymentSession.ID, correlationID)
 		if fundingProjection != nil {
-			if releaseErr := s.releaseCouponFunding(r.Context(), actor.TenantID, intent.ID, "payment_session_attach_failed", correlationID); releaseErr != nil {
+			if releaseErr := s.releaseCouponFunding(r.Context(), actor.OperatorContextID, intent.ID, "payment_session_attach_failed", correlationID); releaseErr != nil {
 				_ = coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_attach_failed")
 			}
 		}
 		_ = coupons.ReleaseByIntent(s.db, intent.ID, "payment_session_attach_failed")
-		_, _ = checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.TenantID, actor.ID)
+		_, _ = checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.OperatorContextID, actor.ID)
 		if errors.Is(err, checkout.ErrInvalid) {
 			store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
@@ -384,7 +384,7 @@ func (s *protectedStoreServer) handleGetCheckoutIntent(w http.ResponseWriter, r 
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "intentId is required")
 		return
 	}
-	intent, err := checkout.GetIntent(s.db, intentID, actor.TenantID, actor.ID)
+	intent, err := checkout.GetIntent(s.db, intentID, actor.OperatorContextID, actor.ID)
 	if errors.Is(err, checkout.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found")
 		return
@@ -411,7 +411,7 @@ func (s *protectedStoreServer) handleCancelCheckoutIntent(w http.ResponseWriter,
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "intentId is required")
 		return
 	}
-	intent, err := checkout.CancelIntent(s.db, intentID, actor.TenantID, actor.ID)
+	intent, err := checkout.CancelIntent(s.db, intentID, actor.OperatorContextID, actor.ID)
 	if errors.Is(err, checkout.ErrConflict) {
 		store.SendError(w, http.StatusConflict, "CONFLICT", "intent not found or already closed")
 		return
@@ -421,7 +421,7 @@ func (s *protectedStoreServer) handleCancelCheckoutIntent(w http.ResponseWriter,
 		return
 	}
 	correlationID := fundingCorrelation(r.Header.Get("X-Correlation-ID"), intent.ID)
-	if err := s.releaseCouponFunding(r.Context(), actor.TenantID, intent.ID, "client_cancelled", correlationID); err != nil {
+	if err := s.releaseCouponFunding(r.Context(), actor.OperatorContextID, intent.ID, "client_cancelled", correlationID); err != nil {
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_PROMOTION_FUNDING_RELEASE_FAILED", "checkout was cancelled but promotion funding release requires reconciliation")
 		return
 	}
@@ -460,7 +460,7 @@ func (s *protectedStoreServer) handleOperatorCheckoutIntents(w http.ResponseWrit
 
 func marshalIntent(i *checkout.Intent) map[string]any {
 	return map[string]any{
-		"id": i.ID, "tenantId": i.TenantID, "clientId": i.ClientID, "cartId": i.CartID, "storeId": i.StoreID,
+		"id": i.ID, "operatorContextId": i.OperatorContextID, "clientId": i.ClientID, "cartId": i.CartID, "storeId": i.StoreID,
 		"fulfillmentMode": string(i.FulfillmentMode), "state": string(i.State),
 		"paymentMethod": string(i.PaymentMethod), "wltPaymentSessionId": i.WltPaymentSessionID,
 		"deliveryAddress": i.DeliveryAddress, "note": i.Note, "version": i.Version,
@@ -518,7 +518,7 @@ func (s *protectedStoreServer) handleReconcileCheckoutIntent(w http.ResponseWrit
 	correlationID := fundingCorrelation(r.Header.Get("X-Correlation-ID"), intent.ID)
 	session, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
 		CheckoutIntentID: intent.ID,
-		TenantID:         intent.TenantID,
+		OperatorContextID:         intent.OperatorContextID,
 		ClientID:         intent.ClientID,
 		StoreID:          intent.StoreID,
 		PaymentMethod:    string(intent.PaymentMethod),
@@ -536,9 +536,9 @@ func (s *protectedStoreServer) handleReconcileCheckoutIntent(w http.ResponseWrit
 			})
 			return
 		}
-		_ = s.releaseCouponFunding(r.Context(), intent.TenantID, intent.ID, "reconciliation_definitive_failure", correlationID)
+		_ = s.releaseCouponFunding(r.Context(), intent.OperatorContextID, intent.ID, "reconciliation_definitive_failure", correlationID)
 		_ = coupons.ReleaseByIntent(s.db, intent.ID, "reconciliation_definitive_failure")
-		failed, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, intent.TenantID, intent.ClientID)
+		failed, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, intent.OperatorContextID, intent.ClientID)
 		if markErr == nil {
 			store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
 				"intent":                 marshalIntentWithPricing(failed, pricing),
@@ -549,7 +549,7 @@ func (s *protectedStoreServer) handleReconcileCheckoutIntent(w http.ResponseWrit
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_HANDOFF_UNAVAILABLE", "WLT reconciliation failed definitively")
 		return
 	}
-	reconciled, err := checkout.AttachWltPaymentSessionIdempotent(s.db, intent.ID, intent.TenantID, intent.ClientID, session.ID)
+	reconciled, err := checkout.AttachWltPaymentSessionIdempotent(s.db, intent.ID, intent.OperatorContextID, intent.ClientID, session.ID)
 	if err != nil {
 		store.SendError(w, http.StatusConflict, "RECONCILIATION_CONFLICT", "checkout state changed while reconciling")
 		return

@@ -104,21 +104,21 @@ for (const migration of migrations) {
   }
 }
 
-const trustedTenantMigrationPath = "services/dsh/database/migrations/dsh-954_trusted_tenant_session_context.sql";
-const trustedTenantMigration = read(trustedTenantMigrationPath);
-requireText(trustedTenantMigration, "dsh_trusted_tenant_context", trustedTenantMigrationPath);
-requireText(trustedTenantMigration, "current_setting('bthwani.tenant_id', TRUE)", trustedTenantMigrationPath);
-requireText(trustedTenantMigration, "TENANT_OWNERSHIP_IMMUTABLE", trustedTenantMigrationPath);
-requireText(trustedTenantMigration, "trg_dsh_partners_tenant", trustedTenantMigrationPath);
-requireText(trustedTenantMigration, "trg_dsh_stores_tenant", trustedTenantMigrationPath);
+const trustedOperatorContextMigrationPath = "services/dsh/database/migrations/dsh-954_trusted_operator_context_session_context.sql";
+const trustedOperatorContextMigration = read(trustedOperatorContextMigrationPath);
+requireText(trustedOperatorContextMigration, "dsh_trusted_OperatorContext_context", trustedOperatorContextMigrationPath);
+requireText(trustedOperatorContextMigration, "current_setting('bthwani.operator_context_id', TRUE)", trustedOperatorContextMigrationPath);
+requireText(trustedOperatorContextMigration, "OperatorContext_OWNERSHIP_IMMUTABLE", trustedOperatorContextMigrationPath);
+requireText(trustedOperatorContextMigration, "trg_dsh_partners_OperatorContext", trustedOperatorContextMigrationPath);
+requireText(trustedOperatorContextMigration, "trg_dsh_stores_OperatorContext", trustedOperatorContextMigrationPath);
 
-const testTenantHelperPath = "services/dsh/backend/internal/testdb/tenant_context.go";
-const testTenantHelper = read(testTenantHelperPath);
-requireText(testTenantHelper, "DSH_REQUIRE_DB_TESTS", testTenantHelperPath);
-requireText(testTenantHelper, "DSH_TEST_TENANT_ID", testTenantHelperPath);
-requireText(testTenantHelper, "PGOPTIONS", testTenantHelperPath);
-requireText(testTenantHelper, "bthwani.tenant_id", testTenantHelperPath);
-requireText(testTenantHelper, 'os.Getenv("CI") == "true"', testTenantHelperPath);
+const testOperatorContextHelperPath = "services/dsh/backend/internal/testdb/operator_context_context.go";
+const testOperatorContextHelper = read(testOperatorContextHelperPath);
+requireText(testOperatorContextHelper, "DSH_REQUIRE_DB_TESTS", testOperatorContextHelperPath);
+requireText(testOperatorContextHelper, "DSH_TEST_operator_context_id", testOperatorContextHelperPath);
+requireText(testOperatorContextHelper, "PGOPTIONS", testOperatorContextHelperPath);
+requireText(testOperatorContextHelper, "bthwani.operator_context_id", testOperatorContextHelperPath);
+requireText(testOperatorContextHelper, 'os.Getenv("CI") == "true"', testOperatorContextHelperPath);
 
 const databaseTestPackages = [
   "cart",
@@ -138,10 +138,10 @@ const databaseTestPackages = [
   "wltoutbox",
 ];
 for (const packageName of databaseTestPackages) {
-  const activatorPath = `services/dsh/backend/internal/${packageName}/tenant_context_test.go`;
+  const activatorPath = `services/dsh/backend/internal/${packageName}/operator_context_context_test.go`;
   const activator = read(activatorPath);
   requireText(activator, `package ${packageName}`, activatorPath);
-  requireText(activator, "testdb.ConfigureTrustedTenantContext()", activatorPath);
+  requireText(activator, "testdb.ConfigureTrustedOperatorContext()", activatorPath);
 }
 
 for (const suite of ["schema", "seed"]) {
@@ -204,7 +204,7 @@ requireText(workflow, runnerPath, "DSH database workflow");
 requireText(workflow, runnerVerificationPath, "DSH database workflow runner verification");
 requireText(workflow, '"package.json"', "DSH database workflow path routing");
 requireText(workflow, "permissions:\n  contents: read", "DSH database workflow read-only permissions");
-requireText(workflow, "DSH_TEST_TENANT_ID: ci-dsh", "DSH database workflow test tenant");
+requireText(workflow, "DSH_TEST_operator_context_id: ci-dsh", "DSH database workflow test OperatorContext");
 requireText(workflow, "Apply canonical DSH migrations", "DSH database workflow");
 requireText(workflow, "Re-run canonical DSH migrations", "DSH database workflow");
 requireText(workflow, "Verify DSH migration runner failure contracts", "DSH database workflow");
@@ -214,7 +214,7 @@ requireText(workflow, "Run DSH seed database contracts", "DSH database workflow"
 forbidText(workflow, "statuses: write", "DSH database workflow");
 forbidText(workflow, "gh api --method POST", "DSH database workflow");
 forbidText(workflow, "bthwani/dsh-database", "DSH database workflow");
-forbidText(workflow, "ALTER DATABASE dsh_runtime SET bthwani.tenant_id", "DSH database workflow");
+forbidText(workflow, "ALTER DATABASE dsh_runtime SET bthwani.operator_context_id", "DSH database workflow");
 forbidText(workflow, "Capture canonical contextual workflow source", "DSH database workflow");
 
 if (failures.length > 0) {
@@ -225,4 +225,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`DSH database contract: PASS (${migrations.length} migrations, ${databaseTestPackages.length} tenant-aware DB test packages)`);
+console.log(`DSH database contract: PASS (${migrations.length} migrations, ${databaseTestPackages.length} OperatorContext-aware DB test packages)`);
