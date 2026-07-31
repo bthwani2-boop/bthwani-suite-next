@@ -1,6 +1,5 @@
 param(
-  [string]$BaseUrl = "http://localhost:58083",
-  [string]$OperatorContextId = "OperatorContext-yemen"
+  [string]$BaseUrl = "http://localhost:58083"
 )
 
 Set-StrictMode -Version Latest
@@ -20,7 +19,6 @@ $runIdentity = if (-not [string]::IsNullOrWhiteSpace([string]$env:GITHUB_RUN_ID)
 $serviceHeaders = @{
   Authorization = "Bearer $serviceToken"
   "X-Service-Caller" = "dsh"
-  "X-Operator-Context-ID" = $OperatorContextId
   "X-Correlation-ID" = "wlt-runtime-$runIdentity"
 }
 
@@ -61,12 +59,10 @@ Write-Host "  authenticated wallet reference: active"
 $mutationHeaders = @{
   Authorization = "Bearer $serviceToken"
   "X-Service-Caller" = "dsh"
-  "X-Operator-Context-ID" = $OperatorContextId
   "X-Correlation-ID" = "wlt-session-$runIdentity"
   "Idempotency-Key" = "wlt-session-$runIdentity"
 }
 $sessionBody = @{
-  operatorContextId = $OperatorContextId
   checkoutIntentId = "checkout-$runIdentity"
   clientId = "client-local-001"
   storeId = "store-test-grocery"

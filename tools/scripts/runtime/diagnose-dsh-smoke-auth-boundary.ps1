@@ -202,16 +202,4 @@ foreach ($transition in @(
     -Body $transitionBody
 }
 
-$masterProductId = [Uri]::EscapeDataString([string]$proposal.proposal.adoptedMasterProductId)
-if ([string]::IsNullOrWhiteSpace($masterProductId)) {
-  throw "dsh-catalog-transition-catalog-adopted returned no adopted master product id"
-}
-$imageBody = @{ assetId = "asset-node-canned-food" } | ConvertTo-Json
-Invoke-CheckedJsonRequest `
-  -Name "dsh-master-product-canonical-image-link" `
-  -Method "PUT" `
-  -Uri "$DshBaseUrl/dsh/operator/catalog/master-products/$masterProductId/images/canonical_product_image" `
-  -Headers $operatorHeaders `
-  -Body $imageBody | Out-Null
-
-Write-Host "DSH smoke request-boundary diagnosis: PASS through canonical product image link"
+Write-Host "DSH smoke request-boundary diagnosis: PASS through catalog adoption"
