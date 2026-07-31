@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fail, listFiles, read, repoRoot, toPosix } from "../guards/_guard-utils.mjs";
-import { parseIndexedContractModules, parseOpenApiContract } from "../guards/_openapi-utils.mjs";
+import { parseIndexedContractModules, parseOpenApiContractContent } from "../guards/_openapi-utils.mjs";
 
 const guardId = "contracts-foundation";
 const violations = [];
@@ -88,7 +88,9 @@ for (const entry of entries) {
   }
 
   const modules = parseIndexedContractModules(entry.file);
-  for (const candidate of [{ file: entry.file, exists: true }, ...modules]) {
+  const ownedCandidates = [{ file: entry.file, exists: true }, ...modules];
+
+  for (const candidate of ownedCandidates) {
     if (!candidate.exists) {
       violations.push({ file: entry.file, message: `indexed module does not exist: ${candidate.file}` });
       continue;
@@ -99,30 +101,47 @@ for (const entry of entries) {
     } else {
       ownedFiles.set(candidate.file, entry.file);
     }
+  }
 
-    for (const operation of parseOpenApiContract(candidate.file)) {
+  // An entry contract is a composition boundary. When it indexes modules, its
+  // paths are references to those modules and must not be counted as a second
+  // owner of the same operations. Operation ownership therefore belongs to the
+  // indexed leaf modules, or to the entry itself only for a non-modular context.
+  const operationSources = modules.length > 0 ? modules : [{ file: entry.file, exists: true }];
+  for (const source of operationSources) {
+    if (!source.exists) continue;
+
+    if (source.file !== entry.file && parseIndexedContractModules(source.file).length > 0) {
+      violations.push({ file: source.file, message: `nested contract indexes are forbidden; ${entry.file} must index leaf modules only` });
+      continue;
+    }
+
+    // Duplicate ownership must be based on declarations physically present in
+    // the leaf source. Expanding external path-item references here would turn
+    // composed read views into false parallel owners.
+    for (const operation of parseOpenApiContractContent(read(source.file), source.file)) {
       const operationKey = `${operation.method.toUpperCase()} ${operation.path}`;
       const priorOperation = operationOwners.get(operationKey);
-      if (priorOperation && priorOperation.owner === entry.file) {
+      if (priorOperation) {
         violations.push({
-          file: candidate.file,
+          file: source.file,
           line: operation.line,
           message: `duplicate operation '${operationKey}' also defined in ${priorOperation.file}`,
         });
-      } else if (!priorOperation) {
-        operationOwners.set(operationKey, { owner: entry.file, file: candidate.file });
+      } else {
+        operationOwners.set(operationKey, { owner: entry.file, file: source.file });
       }
 
       if (operation.operationId) {
         const priorId = operationIdOwners.get(operation.operationId);
         if (priorId) {
           violations.push({
-            file: candidate.file,
+            file: source.file,
             line: operation.line,
             message: `duplicate operationId '${operation.operationId}' also defined in ${priorId}`,
           });
         } else {
-          operationIdOwners.set(operation.operationId, candidate.file);
+          operationIdOwners.set(operation.operationId, source.file);
         }
       }
     }
@@ -153,6 +172,12 @@ if (entries.length > 0) {
   console.log(`openapi_source_digest: ${digest.digest("hex")}`);
   console.log(`indexed_contexts: ${entries.length}`);
   console.log(`owned_contract_files: ${ownedFiles.size}`);
+}
+
+if (violations.length === 0) {
+  console.log("parallel_central_openapi_sources: 0");
+  console.log("duplicate_operations: 0");
+  console.log("duplicate_schema_ownership: 0");
 }
 
 fail(guardId, violations);
