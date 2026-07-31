@@ -4,7 +4,7 @@
     "baseUrl": ".",
     "paths": {
       "react-native": [
-        "./stubs/react-native-web.d.ts"
+        "../../app-client/runtime/node_modules/react-native"
       ],
       "expo-image-picker": [
         "./stubs/expo-image-picker-web.d.ts"
