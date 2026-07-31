@@ -1,4 +1,301 @@
-name: FOUNDATION-00 Git Bundle
+name: FOUNDATION-00 Remote Apply
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: ["**"]
+    paths:
+      - ".github/workflows/foundation-00-git-bundle.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: foundation-00-remote-apply-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    name: Apply FOUNDATION-00 control-panel contract fix
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'ala' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact work branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+        with:
+          version: 10.34.0
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Apply architecture remediation and push final commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          start_sha="$(git rev-parse HEAD)"
+          echo "start_sha=${start_sha}"
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+
+          const repo = process.cwd();
+          const p = (...parts) => path.join(repo, ...parts);
+          const exists = (file) => fs.existsSync(p(file));
+          const read = (file) => fs.readFileSync(p(file), 'utf8');
+          const write = (file, content) => {
+            fs.mkdirSync(path.dirname(p(file)), { recursive: true });
+            fs.writeFileSync(p(file), content);
+          };
+          const remove = (file) => fs.rmSync(p(file), { recursive: true, force: true });
+          const move = (from, to) => {
+            if (!exists(from)) return;
+            fs.mkdirSync(path.dirname(p(to)), { recursive: true });
+            fs.renameSync(p(from), p(to));
+          };
+          const json = (file) => JSON.parse(read(file));
+          const writeJson = (file, value) => write(file, `${JSON.stringify(value, null, 2)}\n`);
+          const walk = (dir) => {
+            if (!exists(dir)) return [];
+            const out = [];
+            for (const entry of fs.readdirSync(p(dir), { withFileTypes: true })) {
+              const rel = `${dir}/${entry.name}`;
+              if (entry.isDirectory()) out.push(...walk(rel));
+              else out.push(rel);
+            }
+            return out;
+          };
+          const rewriteCodeFiles = (roots, replacer) => {
+            for (const root of roots) {
+              for (const file of walk(root)) {
+                if (!/\.(mjs|js|jsx|ts|tsx)$/.test(file)) continue;
+                const before = read(file);
+                const after = replacer(before, file);
+                if (after !== before) write(file, after);
+              }
+            }
+          };
+
+          const cpSource = 'apps/control-panel/runtime/src/components/cp';
+          const cpTarget = 'shared/control-panel/src/components';
+          if (exists(cpSource)) move(cpSource, cpTarget);
+          remove('apps/control-panel/runtime/src/components/index.ts');
+          remove('apps/control-panel/runtime/src/components');
+
+          const shellFiles = [
+            'DataTablePageFrame.tsx','DetailPageFrame.tsx','EditorPageFrame.tsx','FinanceReadOnlyFrame.tsx','MetricsPageFrame.tsx','OperationsRoomFrame.tsx','OverviewPageFrame.tsx','PaginationToolbar.tsx','QueuePageFrame.tsx','ReviewPageFrame.tsx','SettingsPageFrame.tsx','frameTokens.ts'
+          ];
+          for (const file of shellFiles) move(`apps/control-panel/runtime/src/shell/${file}`, `shared/control-panel/src/shell/${file}`);
+
+          writeJson('shared/control-panel/package.json', {
+            name: '@bthwani/control-panel',
+            version: '0.0.0',
+            private: true,
+            type: 'module',
+            sideEffects: false,
+            main: 'src/index.ts',
+            types: 'src/index.ts',
+            exports: { '.': './src/index.ts', './components': './src/components/index.ts', './shell': './src/shell/index.ts' },
+            scripts: { typecheck: 'tsc --noEmit -p tsconfig.json', build: 'tsc --noEmit -p tsconfig.json', lint: 'pnpm --dir ../.. run guard:ui-kit-boundary' },
+            dependencies: { '@bthwani/ui-kit': 'workspace:*' },
+            peerDependencies: { react: '19.2.3' },
+            devDependencies: { '@types/react': '19.2.17', typescript: '~6.0.3' }
+          });
+          writeJson('shared/control-panel/project.json', {
+            name: 'control-panel-shared',
+            root: 'shared/control-panel',
+            sourceRoot: 'shared/control-panel/src',
+            projectType: 'library',
+            targets: {
+              typecheck: { executor: 'nx:run-commands', options: { command: 'pnpm --dir shared/control-panel typecheck' } },
+              build: { executor: 'nx:run-commands', options: { command: 'pnpm --dir shared/control-panel build' } }
+            },
+            tags: ['scope:control-panel', 'type:ui-library']
+          });
+          write('shared/control-panel/src/index.ts', 'export * from "./components";\nexport * from "./shell";\n');
+          write('shared/control-panel/src/shell/index.ts', shellFiles.map((file) => `export * from "./${file.replace(/\.tsx?$|\.ts$/,'')}";`).join('\n') + '\n');
+          writeJson('shared/control-panel/tsconfig.json', { extends: '../../tsconfig.base.json', compilerOptions: { noEmit: true }, include: ['src/**/*.ts', 'src/**/*.tsx'] });
+
+          if (exists('shared/control-panel/src/components/CpStateView.tsx')) {
+            let s = read('shared/control-panel/src/components/CpStateView.tsx');
+            s = s.replace('import type { CpStateKind } from "@dsh-shared/_kernel/cp-state";\n', '');
+            s = s.replace('driven by `CpStateKind` (`shared/_kernel/cp-state.ts`).', 'driven by the presentation-only `CpStateKind` owned by this package.');
+            if (!s.includes('export type CpStateKind =')) {
+              s = s.replace('export type CpStateViewProps = {', 'export type CpStateKind =\n  | "loading"\n  | "empty"\n  | "error"\n  | "offline"\n  | "unauthenticated"\n  | "forbidden"\n  | "blocked";\n\nexport type CpStateViewProps = {');
+            }
+            write('shared/control-panel/src/components/CpStateView.tsx', s);
+          }
+          if (exists('shared/control-panel/src/components/cpScale.ts')) {
+            write('shared/control-panel/src/components/cpScale.ts', read('shared/control-panel/src/components/cpScale.ts').replace('apps/control-panel/runtime/src/components/cp/**', 'shared/control-panel/src/components/**'));
+          }
+
+          write('services/dsh/frontend/control-panel/navigation.ts', `/** Ordered public navigation contract for the DSH control-panel surface. */
+export const DSH_NAV_ITEMS = [
+  { section: "dashboard", label: "الرئيسية", route: "/dsh/dashboard" },
+  { section: "operations", label: "العمليات", route: "/dsh/operations" },
+  { section: "analytics", label: "التحليلات", route: "/dsh/analytics" },
+  { section: "partners", label: "الشركاء والمتاجر", route: "/dsh/partners" },
+  { section: "catalogs", label: "اعتماد الكتالوجات", route: "/dsh/catalogs" },
+  { section: "marketing", label: "التسويق والاكتشاف", route: "/dsh/marketing" },
+  { section: "finance", label: "المالية والتسويات", route: "/dsh/finance" },
+  { section: "support", label: "الدعم والمساعدة", route: "/dsh/support" },
+  { section: "platform", label: "المنصة السيادية", route: "/dsh/platform" },
+  { section: "administration", label: "الإدارة والصلاحيات", route: "/dsh/administration" },
+  { section: "hr", label: "الموارد البشرية", route: "/dsh/hr" },
+] as const;
+
+export type DshSection = (typeof DSH_NAV_ITEMS)[number]["section"];
+`);
+          write('services/dsh/frontend/control-panel/session.ts', `export { ControlPanelAuthBoundary } from "../shared/session/ControlPanelAuthBoundary";
+export { ControlPanelNotificationsBell } from "../shared/session/ControlPanelNotificationsBell";
+export { ControlPanelUserMenu } from "../shared/session/ControlPanelUserMenu";
+export { ControlPanelSessionProvider, useControlPanelSession } from "../shared/session/control-panel-session";
+export type { ControlPanelSession, ControlPanelSessionState } from "../shared/session/control-panel-session";
+export { hasControlPanelPermission, hasServiceControlPanelPermission } from "../shared/session/control-panel-permissions";
+export type { ControlPanelPermissionIdentity } from "../shared/session/control-panel-permissions";
+export { useControlPanelServiceHealth } from "../shared/session/use-control-panel-service-health";
+export type { ControlPanelServiceHealth } from "../shared/session/use-control-panel-service-health";
+export { resolveIdentityApiBaseUrl } from "../shared/_kernel/identity-api-base-url";
+`);
+          write('services/dsh/frontend/control-panel/index.ts', ['navigation','session','administration','analytics','catalogs','dashboard','finance','hr','marketing','operations','partners','platform','support'].map((name) => `export * from "./${name}";`).join('\n') + '\n');
+          write('services/dsh/frontend/control-panel/catalogs/index.ts', 'export * from "./CatalogApprovalScreen";\nexport * from "./CatalogDashboardScreen";\nexport * from "./products/CategoryControlRoom";\nexport * from "./CatalogGovernanceScreen";\n');
+          remove('services/dsh/frontend/shared/_kernel/cp-state.ts');
+
+          rewriteCodeFiles(['apps/control-panel/runtime/src/app', 'apps/control-panel/runtime/src/shell'], (content, file) => {
+            let s = content.replaceAll('@dsh-cp/', '@bthwani/dsh/control-panel/');
+            s = s.replace(/from ["']@dsh-shared\/session\/[^"']+["']/g, 'from "@bthwani/dsh/control-panel/session"');
+            s = s.replace(/from ["']@dsh-shared\/_kernel\/identity-api-base-url["']/g, 'from "@bthwani/dsh/control-panel/session"');
+            s = s.replace(/@bthwani\/dsh\/control-panel\/(catalogs|marketing|operations|platform)\/[A-Za-z0-9_]+Screen/g, '@bthwani/dsh/control-panel/$1');
+            s = s.replace(/@bthwani\/dsh\/control-panel\/partners\/stores\/[A-Za-z0-9_]+Screen/g, '@bthwani/dsh/control-panel/partners/stores');
+            return s;
+          });
+
+          let dshLayout = 'apps/control-panel/runtime/src/app/dsh/layout.tsx';
+          if (exists(dshLayout)) {
+            let s = read(dshLayout);
+            if (!s.includes('@bthwani/dsh/control-panel/navigation')) {
+              s = s.replace('import { usePathname } from "next/navigation";\n', 'import { usePathname } from "next/navigation";\nimport { DSH_NAV_ITEMS } from "@bthwani/dsh/control-panel/navigation";\n');
+            }
+            s = s.replace('  useDshNavigation,\n  DSH_NAV_ITEMS,\n} from "../../shell";', '  useDshNavigation,\n} from "../../shell";');
+            write(dshLayout, s);
+          }
+
+          write('apps/control-panel/runtime/src/shell/index.ts', 'export * from "./ControlPanelShell";\nexport * from "./ControlPanelNavigation";\nexport * from "./ControlPanelTopBar";\nexport * from "./useDshNavigation";\n');
+          write('apps/control-panel/runtime/src/shell/useDshNavigation.ts', `"use client";
+
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { DSH_NAV_ITEMS } from "@bthwani/dsh/control-panel/navigation";
+import { hasControlPanelPermission, useControlPanelSession } from "@bthwani/dsh/control-panel/session";
+
+/** Returns only the DSH sections authorized for the restored operator session. */
+export function useDshNavigation() {
+  const router = useRouter();
+  const { state } = useControlPanelSession();
+  const canReadPlatform =
+    state.status === "authenticated" &&
+    hasControlPanelPermission(state.identity, "platform:read");
+
+  const visibleItems = useMemo(
+    () => DSH_NAV_ITEMS.filter((item) => item.section !== "platform" || canReadPlatform),
+    [canReadPlatform],
+  );
+
+  return { items: visibleItems, navigate: (route: string) => router.push(route) };
+}
+`);
+
+          rewriteCodeFiles(['services/dsh/frontend/control-panel'], (content) => content
+            .replaceAll('@bthwani/control-panel/components', '@bthwani/control-panel/components')
+            .replaceAll('@bthwani/control-panel/shell', '@bthwani/control-panel/shell'));
+
+          const appPkg = json('apps/control-panel/runtime/package.json');
+          appPkg.name = '@bthwani/control-panel-runtime';
+          appPkg.private = true;
+          delete appPkg.exports;
+          delete appPkg.dependencies['@bthwani/app-shell'];
+          appPkg.dependencies['@bthwani/core-identity'] = 'workspace:*';
+          appPkg.dependencies['@bthwani/dsh'] = 'workspace:*';
+          appPkg.dependencies['@bthwani/ui-kit'] = 'workspace:*';
+          appPkg.dependencies['@bthwani/control-panel'] = 'workspace:*';
+          writeJson('apps/control-panel/runtime/package.json', appPkg);
+
+          writeJson('apps/control-panel/runtime/tsconfig.json', {
+            compilerOptions: {
+              target: 'ES2022', lib: ['DOM', 'DOM.Iterable', 'ES2022'], allowJs: false, skipLibCheck: true, strict: true,
+              noEmit: true, esModuleInterop: true, module: 'ESNext', moduleResolution: 'Bundler', resolveJsonModule: true,
+              isolatedModules: true, jsx: 'react-jsx', incremental: false, types: ['node', 'react', 'react-dom'], plugins: [{ name: 'next' }]
+            },
+            include: ['next-env.d.ts', 'src/**/*.ts', 'src/**/*.tsx', '.next/types/**/*.ts', '.next/dev/types/**/*.ts'],
+            exclude: ['node_modules', '.next', 'dist', 'build']
+          });
+          remove('apps/control-panel/runtime/tsconfig.cancellation-journey.json');
+          remove('apps/control-panel/runtime/tsconfig.order-journey.json');
+          remove('apps/control-panel/runtime/tsconfig.partner-journey.json');
+
+          if (exists('apps/control-panel/runtime/next.config.ts')) {
+            let s = read('apps/control-panel/runtime/next.config.ts');
+            s = s.replace(/transpilePackages:\s*\[[^\]]+\]/s, 'transpilePackages: [\n    "tamagui",\n    "@tamagui/core",\n    "@tamagui/config",\n    "@bthwani/ui-kit",\n    "@bthwani/control-panel",\n    "@bthwani/dsh",\n  ]');
+            write('apps/control-panel/runtime/next.config.ts', s);
+          }
+
+          const idPkg = json('core/identity/package.json');
+          idPkg.exports = { '.': './clients/index.ts', './server': './clients/identity-client.ts' };
+          writeJson('core/identity/package.json', idPkg);
+
+          const dshPkg = json('services/dsh/package.json');
+          dshPkg.dependencies['@bthwani/control-panel'] = 'workspace:*';
+          dshPkg.dependencies['@bthwani/core-providers'] = 'workspace:*';
+          dshPkg.dependencies['@bthwani/data-runtime'] = 'workspace:*';
+          dshPkg.exports = {
+            './control-panel': './frontend/control-panel/index.ts',
+            './control-panel/navigation': './frontend/control-panel/navigation.ts',
+            './control-panel/session': './frontend/control-panel/session.ts',
+            './control-panel/administration': './frontend/control-panel/administration/index.ts',
+            './control-panel/analytics': './frontend/control-panel/analytics/index.ts',
+            './control-panel/catalogs': './frontend/control-panel/catalogs/index.ts',
+            './control-panel/dashboard': './frontend/control-panel/dashboard/index.ts',
+            './control-panel/finance': './frontend/control-panel/finance/index.ts',
+            './control-panel/hr': './frontend/control-panel/hr/index.ts',
+            './control-panel/marketing': './frontend/control-panel/marketing/index.ts',
+            './control-panel/operations': './frontend/control-panel/operations/index.ts',
+            './control-panel/partners': './frontend/control-panel/partners/index.ts',
+            './control-panel/partners/stores': './frontend/control-panel/partners/stores/index.ts',
+            './control-panel/platform': './frontend/control-panel/platform/index.ts',
+            './control-panel/support': './frontend/control-panel/support/index.ts'
+          };
+          writeJson('services/dsh/package.json', dshPkg);
+
+          const wsPath = 'pnpm-workspace.yaml';
+          let ws = read(wsPath);
+          if (!ws.includes('shared/control-panel')) {
+            ws = ws.replace('  - shared/ui-kit\n', '  - shared/ui-kit\n  - shared/control-panel\n');
+            write(wsPath, ws);
+          }
+
+          const ts = json('tsconfig.base.json');
+          const paths = ts.compilerOptions.paths;
+          paths['@bthwani/dsh/control-panel'] = ['services/dsh/frontend/control-panel/index.ts'];
+          paths['@bthwani/dsh/control-panel/*'] = ['services/dsh/frontend/control-panel/*'];
+          paths['@bthwani/control-panel'] = ['shared/control-panel/src/index.ts'];
+          paths['@bthwani/control-panel/components'] = ['shared/control-panel/src/components/index.ts'];
+          paths['@bthwani/control-panel/shell'] = ['shared/control-panel/src/shell/index.ts'];
+          paths['@bthwani/core-identity/server'] = ['core/identity/clients/identity-client.ts'];
+          writeJson('tsconfig.base.json', ts);
+
+          write('.github/workflows/foundation-00-git-bundle.yml', `name: FOUNDATION-00 Git Bundle
 
 on:
   pull_request:
@@ -19,16 +316,50 @@ jobs:
       - name: Checkout exact pull-request head
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: \${{ github.event.pull_request.head.sha }}
           fetch-depth: 1
           persist-credentials: false
       - name: Create Git bundle
         shell: bash
-        run: git bundle create "${RUNNER_TEMP}/foundation-00.bundle" HEAD
+        run: git bundle create "\${RUNNER_TEMP}/foundation-00.bundle" HEAD
       - name: Upload Git bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: foundation-00-git-${{ github.event.pull_request.head.sha }}
-          path: ${{ runner.temp }}/foundation-00.bundle
+          name: foundation-00-git-\${{ github.event.pull_request.head.sha }}
+          path: \${{ runner.temp }}/foundation-00.bundle
           if-no-files-found: error
           retention-days: 1
+`);
+          NODE
+
+          pnpm install --lockfile-only
+
+          node tools/guards/control-panel-architecture-gate.mjs
+          node tools/guards/service-workspace-gate.mjs
+          pnpm --dir contracts typecheck
+          git diff --check
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/control-panel/runtime/next.config.ts
+          git add apps/control-panel/runtime/package.json
+          git add apps/control-panel/runtime/src/app/dsh
+          git add apps/control-panel/runtime/src/app/providers.tsx
+          git add apps/control-panel/runtime/src/components
+          git add apps/control-panel/runtime/src/shell
+          git add apps/control-panel/runtime/tsconfig.json
+          git add apps/control-panel/runtime/tsconfig.cancellation-journey.json apps/control-panel/runtime/tsconfig.order-journey.json apps/control-panel/runtime/tsconfig.partner-journey.json || true
+          git add core/identity/package.json
+          git add services/dsh/package.json services/dsh/frontend/control-panel services/dsh/frontend/shared/_kernel/cp-state.ts || true
+          git add shared/control-panel pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json .github/workflows/foundation-00-git-bundle.yml
+          git status --short
+
+          if git diff --cached --quiet; then
+            echo "No staged changes"
+            exit 0
+          fi
+          git commit -m "fix(foundation): close dsh control-panel architecture"
+          remote_sha="$(git ls-remote origin refs/heads/ala | cut -f1)"
+          parent_sha="$(git rev-parse HEAD^)"
+          test "${remote_sha}" = "${parent_sha}"
+          git push origin HEAD:ala
