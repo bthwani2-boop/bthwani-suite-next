@@ -502,6 +502,14 @@
       "source_file": "tools/guards/dsh-openapi-modular-gate.mjs"
     },
     {
+      "id": "dsh-route-declaration",
+      "name": "DSH Route Declaration Gate",
+      "script": "guard:dsh-route-declaration",
+      "exit_level": "fail",
+      "description": "Enforces that every DSH route registered in Go source is declared in the OpenAPI contract or is a reviewed, reasoned exception in tools/guards/dsh-route-declaration-allowlist.json. Closes the reverse direction of dsh-openapi-modular (declared ⊆ implemented); this gate is implemented ⊆ (declared ∪ allowlisted).",
+      "source_file": "tools/guards/dsh-route-declaration-gate.mjs"
+    },
+    {
       "id": "a11y-runtime",
       "name": "Accessibility Runtime Gate",
       "script": "guard:a11y-runtime",

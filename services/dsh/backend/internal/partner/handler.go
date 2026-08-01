@@ -190,27 +190,6 @@ func HandleGetPartner(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// PATCH /dsh/partners/{partnerId}  — update partner (operator)
-func HandleUpdatePartner(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var input UpdatePartnerInput
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
-			return
-		}
-		p, err := UpdatePartner(db, partnerIDFromPath(r), input, versionFromQuery(r))
-		if errors.Is(err, ErrNotFound) {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
-			return
-		}
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to update partner")
-			return
-		}
-		sendJSON(w, http.StatusOK, p)
-	}
-}
-
 func readinessHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		pid := partnerIDFromPath(r)
@@ -488,31 +467,6 @@ func HandleFieldGetPartner(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		HandleGetPartner(db)(w, r)
-	}
-}
-
-// PATCH /dsh/field/partners/{partnerId}  — field updates allowed fields
-func HandleFieldUpdatePartner(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		actorID, _ := actorFromContext(r)
-		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
-			return
-		}
-		var input UpdatePartnerInput
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
-			return
-		}
-		p, err := UpdatePartner(db, partnerIDFromPath(r), input, versionFromQuery(r))
-		if errors.Is(err, ErrNotFound) {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
-			return
-		}
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to update partner")
-			return
-		}
-		sendJSON(w, http.StatusOK, p)
 	}
 }
 

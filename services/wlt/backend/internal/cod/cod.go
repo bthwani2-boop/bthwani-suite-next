@@ -823,44 +823,6 @@ func HandleListCodRecords(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func HandleCollectCod(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c, err := MarkCodCollected(db, r.PathValue("codRecordId"))
-		if errors.Is(err, ErrCodStateConflict) {
-			shared.SendError(w, http.StatusConflict, "INVALID_STATE", "COD record is not pending collection")
-			return
-		}
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		if c == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "COD record not found")
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"codRecord": c})
-	}
-}
-
-func HandleRemitCod(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c, err := MarkCodRemitted(db, r.PathValue("codRecordId"))
-		if errors.Is(err, ErrCodStateConflict) {
-			shared.SendError(w, http.StatusConflict, "INVALID_STATE", "COD record is not collected")
-			return
-		}
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		if c == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "COD record not found")
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"codRecord": c})
-	}
-}
-
 func HandleCreateCommission(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !requireDshServiceCaller(w, r) {
@@ -916,68 +878,10 @@ func handleCommissionTransitionError(w http.ResponseWriter, err error) bool {
 	return false
 }
 
-func HandleConfirmCommission(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c, err := ConfirmCommission(db, r.PathValue("commissionId"))
-		if handleCommissionTransitionError(w, err) {
-			return
-		}
-		if c == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "commission not found")
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"commission": c})
-	}
-}
-
-func HandleSettleCommission(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c, err := SettleCommission(db, r.PathValue("commissionId"))
-		if handleCommissionTransitionError(w, err) {
-			return
-		}
-		if c == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "commission not found")
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"commission": c})
-	}
-}
-
 func decodeCommissionResolutionNote(w http.ResponseWriter, r *http.Request) string {
 	var body struct {
 		Note string `json:"resolutionNote"`
 	}
 	_ = json.NewDecoder(http.MaxBytesReader(w, r.Body, 4*1024)).Decode(&body)
 	return body.Note
-}
-
-func HandleRejectCommission(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		note := decodeCommissionResolutionNote(w, r)
-		c, err := RejectCommission(db, r.PathValue("commissionId"), note)
-		if handleCommissionTransitionError(w, err) {
-			return
-		}
-		if c == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "commission not found")
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"commission": c})
-	}
-}
-
-func HandleReverseCommission(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		note := decodeCommissionResolutionNote(w, r)
-		c, err := ReverseCommission(db, r.PathValue("commissionId"), note)
-		if handleCommissionTransitionError(w, err) {
-			return
-		}
-		if c == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "commission not found")
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"commission": c})
-	}
 }

@@ -26,14 +26,18 @@ const governedPartnerColumns = `id, legal_name_ar, legal_name_en, display_name,
 	notes,
 	COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
 	COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
-	beneficiary_name, bank_name, bank_branch, bank_account_number, bank_iban,
-	payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
+	beneficiary_name, bank_name, bank_branch,
+	settlement_preference, bank_account_holder_matches_owner, bank_notes,
 	version, created_at, updated_at`
 
 type partnerScanner interface {
 	Scan(dest ...any) error
 }
 
+// scanGovernedPartner populates the legacy raw-named JSON fields
+// (BankAccountNumber/BankIBAN/PayoutMobileNumber) from the masked columns --
+// DSH does not persist raw payout credentials (see D3 remediation); those
+// columns were dropped from dsh_partners.
 func scanGovernedPartner(row partnerScanner) (Partner, error) {
 	var p Partner
 	err := row.Scan(
@@ -43,11 +47,14 @@ func scanGovernedPartner(row partnerScanner) (Partner, error) {
 		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
 		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
-		&p.BeneficiaryName, &p.BankName, &p.BankBranch, &p.BankAccountNumber, &p.BankIBAN,
-		&p.PayoutMobileNumber, &p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
+		&p.BeneficiaryName, &p.BankName, &p.BankBranch,
+		&p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
 		&p.Version, &p.CreatedAt, &p.UpdatedAt,
 	)
-	return p, err
+	if err != nil {
+		return Partner{}, err
+	}
+	return SanitizePartnerForSurface(p), nil
 }
 
 // SanitizePartnerForSurface guarantees that no raw payout identifier can leave
@@ -93,9 +100,6 @@ func UpdatePartnerGoverned(db *sql.DB, partnerID string, input UpdatePartnerInpu
 				beneficiary_name = $9,
 				bank_name = $10,
 				bank_branch = $11,
-				bank_account_number = '',
-				bank_iban = '',
-				payout_mobile_number = '',
 				settlement_preference = $12,
 				bank_account_holder_matches_owner = COALESCE($13, bank_account_holder_matches_owner),
 				bank_notes = $14,

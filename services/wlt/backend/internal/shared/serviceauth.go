@@ -9,14 +9,20 @@ import (
 
 const legacyOperatorContextHeader = "X-Operator-Context-ID"
 
-// configuredFinancialCompatibilityScope returns the server-owned compatibility
-// value required by the current WLT schema while operator_context_id is removed
-// from the financial domain model. It is configuration, not caller-selected
-// ownership and not an active tenant boundary.
+// configuredFinancialCompatibilityScope returns the single, server-owned
+// operator context that identifies this WLT deployment for the DSH service
+// bridge. WLT is a single-tenant financial service by design: every request
+// that arrives through the DSH service-to-service path is bound to this one
+// fixed value, never to a caller-supplied header. The operator_context_id
+// column that appears throughout the schema is retained (it is load-bearing
+// for the per-row scoping guards and their tests -- see
+// internal/*/operator_context_isolation_test.go), but it identifies rows
+// within this single deployment, not separate tenants reachable over the
+// network. Do not read this as an active multi-tenant boundary.
 func configuredFinancialCompatibilityScope(w http.ResponseWriter) (string, bool) {
 	scopeID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
 	if scopeID == "" {
-		SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_CONFIGURED", "BTHWANI_OPERATOR_CONTEXT_ID is required while the legacy WLT scope columns are being retired")
+		SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_CONFIGURED", "BTHWANI_OPERATOR_CONTEXT_ID must be configured; WLT is single-tenant per deployment")
 		return "", false
 	}
 	return scopeID, true
@@ -24,8 +30,10 @@ func configuredFinancialCompatibilityScope(w http.ResponseWriter) (string, bool)
 
 // RequireServiceCaller validates the shared-secret bearer token and expected
 // service identity. After authentication, WLT replaces any caller-supplied
-// X-Operator-Context-ID with the server-owned compatibility value. Callers
-// cannot select financial ownership or isolation scope.
+// X-Operator-Context-ID with the single deployment-owned operator context
+// (see configuredFinancialCompatibilityScope). Callers cannot select
+// financial ownership or isolation scope; WLT does not implement multi-tenant
+// isolation across the DSH service bridge.
 func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, expectedCaller string) bool {
 	expectedToken := os.Getenv(tokenEnvVar)
 	if expectedToken == "" {

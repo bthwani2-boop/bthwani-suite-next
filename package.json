@@ -8,6 +8,7 @@
     "pnpm": "10.34.0"
   },
   "scripts": {
+    "postinstall": "node tools/scripts/postinstall-generate-clients.mjs",
     "contracts:spectral": "spectral lint \"{core,services,apps,contracts}/**/*.openapi.yaml\"",
     "contracts:registry": "node tools/scripts/generate-contract-registry.mjs",
     "contracts:lint": "node tools/important-scripts/contracts-foundation.mjs && pnpm run guard:contract-registry-drift && pnpm run contracts:spectral",
@@ -236,6 +237,7 @@
     "runtime:dev-financial:rebuild-reset": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action all -Profiles wlt,financial-simulators,mail",
     "guard:runtime-real-bindings": "node tools/guards/runtime-real-bindings-gate.mjs",
     "openapi:lint:dsh": "node tools/guards/dsh-openapi-modular-gate.mjs",
+    "guard:dsh-route-declaration": "node tools/guards/dsh-route-declaration-gate.mjs",
     "openapi:verify:dsh": "pnpm --dir services/dsh openapi:verify",
     "guard:a11y-runtime": "node tools/guards/a11y-runtime-gate.mjs",
     "mobile:eas": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/mobile-eas.ps1",

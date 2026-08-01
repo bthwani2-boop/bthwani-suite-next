@@ -786,22 +786,6 @@ func HandleRejectGovernedRefund(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func HandleCompleteGovernedRefund(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var input struct { OperatorID string `json:"operatorId"` }
-		if !decodeGovernedJSON(w, r, &input) { return }
-		client, err := provider.NewDefaultPaymentProvider()
-		if err != nil { shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error()); return }
-		item, err := CompleteGovernedRefundWithProvider(r.Context(), db, client, r.PathValue("refundId"), input.OperatorID, r.Header.Get("X-Correlation-ID"))
-		if err != nil {
-			if !sendGovernedRefundError(w, err) { shared.SendProviderError(w, err) }
-			return
-		}
-		if item == nil { shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "refund not found"); return }
-		shared.SendJSON(w, http.StatusOK, map[string]any{"refund": item})
-	}
-}
-
 func HandleReconcileGovernedRefund(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var input RefundReconciliationInput

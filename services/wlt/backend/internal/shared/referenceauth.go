@@ -72,8 +72,9 @@ const (
 )
 
 // RequireReferenceReader protects WLT reference projections in every runtime
-// mode. Authenticated DSH requests are bound to the server-owned compatibility
-// scope; caller-supplied X-Operator-Context-ID values are ignored. End-user
+// mode. Authenticated DSH service-bridge requests are bound to the single
+// deployment-owned operator context (WLT is single-tenant across that path;
+// caller-supplied X-Operator-Context-ID values are ignored). End-user
 // requests derive the OperatorContext from Identity, and conflicting client
 // context remains rejected. Development and deferred modes never bypass this
 // boundary.

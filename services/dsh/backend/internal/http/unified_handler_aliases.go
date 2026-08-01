@@ -9,12 +9,6 @@ import (
 	"dsh-api/internal/store"
 )
 
-// Operational escalation and analytics aliases keep the unified route names
-// mapped to governed implementations.
-func (s *protectedStoreServer) handleResolveEscalation(w http.ResponseWriter, r *http.Request) {
-	s.handleUpdateEscalation(w, r)
-}
-
 func (s *protectedStoreServer) handleGetOperationsAnalytics(w http.ResponseWriter, r *http.Request) {
 	// Preserve the historical platform-KPI response unless the caller explicitly
 	// requests the additive client-address diagnostic projection.
@@ -102,14 +96,6 @@ func (s *protectedStoreServer) handleCreateMarketingSubscriptionPlan(w http.Resp
 
 func (s *protectedStoreServer) handleUpdateMarketingSubscriptionPlan(w http.ResponseWriter, r *http.Request) {
 	s.handleUpdateSubscriptionPlan(w, r)
-}
-
-func (s *protectedStoreServer) handleCreateClientSubscriptionPurchase(w http.ResponseWriter, r *http.Request) {
-	s.handleCreateSubscriptionPurchase(w, r)
-}
-
-func (s *protectedStoreServer) handleActivateClientSubscription(w http.ResponseWriter, r *http.Request) {
-	s.handleActivateSubscriptionPurchase(w, r)
 }
 
 func (s *protectedStoreServer) handleClientBenefits(w http.ResponseWriter, r *http.Request) {

@@ -8,40 +8,6 @@ import (
 	"dsh-api/internal/store"
 )
 
-// POST /dsh/field/stores/{storeId}/visits
-func (s *protectedStoreServer) handleCreateFieldVisit(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "field")
-	if !ok {
-		return
-	}
-	storeID := r.PathValue("storeId")
-	var body struct {
-		VisitType      string                           `json:"visitType"`
-		StartLocation  *fieldreadiness.LocationEvidence `json:"startLocation"`
-		StoreLatitude  *float64                         `json:"storeLatitude"`
-		StoreLongitude *float64                         `json:"storeLongitude"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	vt := fieldreadiness.VisitTypeOnboarding
-	if body.VisitType != "" {
-		vt = fieldreadiness.VisitType(body.VisitType)
-	}
-	visit, err := fieldreadiness.CreateVisit(r.Context(), s.db, actor, fieldreadiness.CreateVisitInput{
-		StoreID:        storeID,
-		FieldAgentID:   actor.ID,
-		VisitType:      vt,
-		StartLocation:  body.StartLocation,
-		StoreLatitude:  body.StoreLatitude,
-		StoreLongitude: body.StoreLongitude,
-	})
-	if err != nil {
-		s.writeFieldReadinessError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"visit": marshalVisit(visit)})
-}
 
 // GET /dsh/field/stores/{storeId}/visits
 func (s *protectedStoreServer) handleListFieldVisits(w http.ResponseWriter, r *http.Request) {
@@ -89,57 +55,7 @@ func (s *protectedStoreServer) handleFieldWorkQueue(w http.ResponseWriter, r *ht
 	store.SendJSON(w, http.StatusOK, map[string]any{"visits": visitResult, "escalations": escalationResult})
 }
 
-// POST /dsh/field/visits/{visitId}/complete
-func (s *protectedStoreServer) handleCompleteFieldVisit(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "field")
-	if !ok {
-		return
-	}
-	visitID := r.PathValue("visitId")
-	var body struct {
-		CompletionLocation *fieldreadiness.LocationEvidence `json:"completionLocation"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	visit, err := fieldreadiness.CompleteVisit(r.Context(), s.db, actor, visitID, fieldreadiness.CompleteVisitInput{
-		CompletionLocation: body.CompletionLocation,
-	})
-	if err != nil {
-		s.writeFieldReadinessError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"visit": marshalVisit(visit)})
-}
 
-// PUT /dsh/field/visits/{visitId}/checks
-func (s *protectedStoreServer) handleUpsertReadinessCheck(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "field")
-	if !ok {
-		return
-	}
-	visitID := r.PathValue("visitId")
-	var body struct {
-		CheckType   string `json:"checkType"`
-		Status      string `json:"status"`
-		EvidenceURL string `json:"evidenceUrl"`
-		Notes       string `json:"notes"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	check, err := fieldreadiness.UpsertReadinessCheck(r.Context(), s.db, actor, visitID, fieldreadiness.UpdateCheckInput{
-		CheckType:   body.CheckType,
-		Status:      fieldreadiness.CheckStatus(body.Status),
-		EvidenceURL: body.EvidenceURL,
-		Notes:       body.Notes,
-	})
-	if err != nil {
-		s.writeFieldReadinessError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"check": marshalCheck(check)})
-}
 
 // GET /dsh/field/visits/{visitId}/checks
 func (s *protectedStoreServer) handleListVisitChecks(w http.ResponseWriter, r *http.Request) {
@@ -160,36 +76,6 @@ func (s *protectedStoreServer) handleListVisitChecks(w http.ResponseWriter, r *h
 	store.SendJSON(w, http.StatusOK, map[string]any{"checks": result})
 }
 
-// POST /dsh/field/stores/{storeId}/escalations
-func (s *protectedStoreServer) handleCreateReadinessEscalation(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "field")
-	if !ok {
-		return
-	}
-	storeID := r.PathValue("storeId")
-	var body struct {
-		VisitID     string `json:"visitId"`
-		Severity    string `json:"severity"`
-		Category    string `json:"category"`
-		Description string `json:"description"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	esc, err := fieldreadiness.CreateEscalation(r.Context(), s.db, actor, fieldreadiness.CreateEscalationInput{
-		VisitID:     body.VisitID,
-		StoreID:     storeID,
-		RaisedBy:    actor.ID,
-		Severity:    fieldreadiness.EscalationSeverity(body.Severity),
-		Category:    fieldreadiness.EscalationCategory(body.Category),
-		Description: body.Description,
-	})
-	if err != nil {
-		s.writeFieldReadinessError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"escalation": marshalEscalation(esc)})
-}
 
 // GET /dsh/operator/field-readiness/escalations
 func (s *protectedStoreServer) handleListOperatorEscalations(w http.ResponseWriter, r *http.Request) {
@@ -210,54 +96,7 @@ func (s *protectedStoreServer) handleListOperatorEscalations(w http.ResponseWrit
 	store.SendJSON(w, http.StatusOK, map[string]any{"escalations": result})
 }
 
-// PATCH /dsh/operator/field-readiness/escalations/{escalationId}
-func (s *protectedStoreServer) handleUpdateEscalation(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
-	if !ok {
-		return
-	}
-	escalationID := r.PathValue("escalationId")
-	var body struct {
-		Status         string `json:"status"`
-		ResolutionNote string `json:"resolutionNote"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	esc, err := fieldreadiness.UpdateEscalation(r.Context(), s.db, escalationID, fieldreadiness.UpdateEscalationInput{
-		Status:         fieldreadiness.EscalationStatus(body.Status),
-		ResolvedBy:     actor.ID,
-		ResolutionNote: body.ResolutionNote,
-	})
-	if errors.Is(err, fieldreadiness.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "escalation not found")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to update escalation")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"escalation": marshalEscalation(esc)})
-}
 
-// GET /dsh/partner/stores/{storeId}/onboarding-status
-func (s *protectedStoreServer) handlePartnerOnboardingStatus(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
-	if !ok {
-		return
-	}
-	storeID := r.PathValue("storeId")
-	if err := fieldreadiness.AuthorizeStore(r.Context(), s.db, actor, storeID); err != nil {
-		s.writeFieldReadinessError(w, err)
-		return
-	}
-	status, err := fieldreadiness.GetStoreOnboardingStatus(r.Context(), s.db, storeID)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get onboarding status")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, status)
-}
 
 func (s *protectedStoreServer) writeFieldReadinessError(w http.ResponseWriter, err error) {
 	switch {

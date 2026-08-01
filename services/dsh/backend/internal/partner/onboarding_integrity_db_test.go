@@ -55,8 +55,7 @@ func TestGovernedTransitionReplaysSameEventDBIntegration(t *testing.T) {
 	if _, err := db.Exec(`
 		UPDATE dsh_partners
 		SET payout_destination_id = 'wpd-test-replay',
-		    masked_account_number = '*****1234',
-		    bank_account_number = '', bank_iban = '', payout_mobile_number = ''
+		    masked_account_number = '*****1234'
 		WHERE id = $1`, partner.ID); err != nil {
 		t.Fatal(err)
 	}
@@ -112,15 +111,19 @@ func TestUpdatePartnerGovernedPersistsOnlyWltReferenceDBIntegration(t *testing.T
 	if updated.BankAccountNumber != "*****4321" {
 		t.Fatalf("surface response did not use masked account value: %q", updated.BankAccountNumber)
 	}
-	var account, iban, mobile, reference string
+	// Raw bank_account_number/bank_iban/payout_mobile_number columns were
+	// dropped from dsh_partners entirely (dsh-963, D3 remediation) -- the
+	// schema itself now guarantees no raw payout data can be persisted, so
+	// only the WLT reference needs to be verified here.
+	var reference string
 	if err := db.QueryRow(`
-		SELECT bank_account_number, bank_iban, payout_mobile_number, payout_destination_id
+		SELECT payout_destination_id
 		FROM dsh_partners WHERE id = $1`, partner.ID,
-	).Scan(&account, &iban, &mobile, &reference); err != nil {
+	).Scan(&reference); err != nil {
 		t.Fatal(err)
 	}
-	if account != "" || iban != "" || mobile != "" || reference != "wpd-governed-cache" {
-		t.Fatalf("DSH persisted raw payout data: account=%q iban=%q mobile=%q ref=%q", account, iban, mobile, reference)
+	if reference != "wpd-governed-cache" {
+		t.Fatalf("DSH did not persist the WLT payout reference: ref=%q", reference)
 	}
 }
 

@@ -13,8 +13,6 @@
     "**/contracts/generated/**"
   ],
   "ignoreDependencies": [
-    "@react-native-async-storage/async-storage",
-    "@react-native-community/netinfo",
     "@react-native/metro-config",
     "expo-file-system",
     "expo-haptics",

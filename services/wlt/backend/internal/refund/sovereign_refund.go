@@ -3,7 +3,6 @@ package refund
 import (
 	"context"
 	"database/sql"
-	"net/http"
 
 	"wlt-api/internal/provider"
 )
@@ -21,8 +20,4 @@ func CompleteRefundSovereign(ctx context.Context, db *sql.DB, refundID string) (
 func CompleteRefundWithProviderSovereign(ctx context.Context, db *sql.DB, client financialProvider, refundID string, meta provider.RequestMeta) (*Refund, error) {
 	item, err := CompleteGovernedRefundWithProvider(ctx, db, client, refundID, "wlt-refund-executor", meta.CorrelationID)
 	return legacyRefundView(item), err
-}
-
-func HandleCompleteRefundSovereign(db *sql.DB) http.HandlerFunc {
-	return HandleCompleteGovernedRefund(db)
 }

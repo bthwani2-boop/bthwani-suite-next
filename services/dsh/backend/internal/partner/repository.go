@@ -48,8 +48,8 @@ func CreatePartner(db *sql.DB, input CreatePartnerInput) (Partner, error) {
 		          notes,
 		          COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
 		          COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
-		          beneficiary_name, bank_name, bank_branch, bank_account_number, bank_iban,
-		          payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
+		          beneficiary_name, bank_name, bank_branch,
+		          settlement_preference, bank_account_holder_matches_owner, bank_notes,
 		          version, created_at, updated_at`,
 		input.LegalNameAr, input.LegalNameEn, input.DisplayName,
 		input.LegalIdentityType, input.LegalIdentityNumber,
@@ -62,8 +62,8 @@ func CreatePartner(db *sql.DB, input CreatePartnerInput) (Partner, error) {
 		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
 		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
-		&p.BeneficiaryName, &p.BankName, &p.BankBranch, &p.BankAccountNumber, &p.BankIBAN,
-		&p.PayoutMobileNumber, &p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
+		&p.BeneficiaryName, &p.BankName, &p.BankBranch,
+		&p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
 		&p.Version, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {
@@ -72,6 +72,7 @@ func CreatePartner(db *sql.DB, input CreatePartnerInput) (Partner, error) {
 		}
 		return Partner{}, err
 	}
+	p = SanitizePartnerForSurface(p)
 
 	// Every partner owns exactly one store from creation onward (app-field
 	// collects the first store's data as part of the onboarding file). The
@@ -114,8 +115,8 @@ func GetPartner(db *sql.DB, partnerID string) (Partner, error) {
 		       notes,
 		       COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
 		       COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
-		       beneficiary_name, bank_name, bank_branch, bank_account_number, bank_iban,
-		       payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
+		       beneficiary_name, bank_name, bank_branch,
+		       settlement_preference, bank_account_holder_matches_owner, bank_notes,
 		       version, created_at, updated_at
 		FROM dsh_partners WHERE id = $1`, partnerID,
 	).Scan(
@@ -125,14 +126,17 @@ func GetPartner(db *sql.DB, partnerID string) (Partner, error) {
 		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
 		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
-		&p.BeneficiaryName, &p.BankName, &p.BankBranch, &p.BankAccountNumber, &p.BankIBAN,
-		&p.PayoutMobileNumber, &p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
+		&p.BeneficiaryName, &p.BankName, &p.BankBranch,
+		&p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
 		&p.Version, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Partner{}, ErrNotFound
 	}
-	return p, err
+	if err != nil {
+		return Partner{}, err
+	}
+	return SanitizePartnerForSurface(p), nil
 }
 
 func ListPartners(db *sql.DB, q PartnerListQuery) ([]PartnerSummary, int, error) {
@@ -193,69 +197,6 @@ func ListPartners(db *sql.DB, q PartnerListQuery) ([]PartnerSummary, int, error)
 		list = []PartnerSummary{}
 	}
 	return list, total, rows.Err()
-}
-
-func UpdatePartner(db *sql.DB, partnerID string, input UpdatePartnerInput, expectedVersion int) (Partner, error) {
-	var p Partner
-	var holderMatchesOwner sql.NullBool
-	if input.BankAccountHolderMatchesOwner != nil {
-		holderMatchesOwner = sql.NullBool{Bool: *input.BankAccountHolderMatchesOwner, Valid: true}
-	}
-	err := db.QueryRow(`
-		UPDATE dsh_partners SET
-			display_name         = COALESCE(NULLIF($2,''), display_name),
-			owner_name           = COALESCE(NULLIF($3,''), owner_name),
-			primary_phone        = COALESCE(NULLIF($4,''), primary_phone),
-			secondary_phone      = COALESCE(NULLIF($5,''), secondary_phone),
-			email                = COALESCE(NULLIF($6,''), email),
-			notes                = COALESCE(NULLIF($7,''), notes),
-			beneficiary_name     = COALESCE(NULLIF($9,''), beneficiary_name),
-			bank_name            = COALESCE(NULLIF($10,''), bank_name),
-			bank_branch          = COALESCE(NULLIF($11,''), bank_branch),
-			bank_account_number  = COALESCE(NULLIF($12,''), bank_account_number),
-			bank_iban            = COALESCE(NULLIF($13,''), bank_iban),
-			payout_mobile_number = COALESCE(NULLIF($14,''), payout_mobile_number),
-			settlement_preference = COALESCE(NULLIF($15,''), settlement_preference),
-			bank_account_holder_matches_owner = COALESCE($16, bank_account_holder_matches_owner),
-			bank_notes           = COALESCE(NULLIF($17,''), bank_notes),
-			payout_destination_id  = COALESCE(NULLIF($18,''), payout_destination_id),
-			masked_account_number  = COALESCE(NULLIF($19,''), masked_account_number),
-			masked_iban            = COALESCE(NULLIF($20,''), masked_iban),
-			masked_mobile_number   = COALESCE(NULLIF($21,''), masked_mobile_number),
-			version          = version + 1,
-			updated_at       = NOW()
-		WHERE id = $1 AND version = $8
-		RETURNING id, legal_name_ar, legal_name_en, display_name,
-		          legal_identity_type, legal_identity_number,
-		          owner_name, primary_phone, secondary_phone, email,
-		          category, activation_status, created_by_actor_id, created_by_surface,
-		          notes,
-		          COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
-		          COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
-		          beneficiary_name, bank_name, bank_branch, bank_account_number, bank_iban,
-		          payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
-		          version, created_at, updated_at`,
-		partnerID, input.DisplayName, input.OwnerName,
-		input.PrimaryPhone, input.SecondaryPhone, input.Email,
-		input.Notes, expectedVersion,
-		input.BeneficiaryName, input.BankName, input.BankBranch, input.BankAccountNumber, input.BankIBAN,
-		input.PayoutMobileNumber, input.SettlementPreference, holderMatchesOwner, input.BankNotes,
-		input.PayoutDestinationID, input.MaskedAccountNumber, input.MaskedIBAN, input.MaskedMobileNumber,
-	).Scan(
-		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
-		&p.LegalIdentityType, &p.LegalIdentityNumber,
-		&p.OwnerName, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
-		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
-		&p.Notes,
-		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
-		&p.BeneficiaryName, &p.BankName, &p.BankBranch, &p.BankAccountNumber, &p.BankIBAN,
-		&p.PayoutMobileNumber, &p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
-		&p.Version, &p.CreatedAt, &p.UpdatedAt,
-	)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Partner{}, ErrNotFound
-	}
-	return p, err
 }
 
 // ─── Activation transition ─────────────────────────────────────────────────
@@ -333,8 +274,8 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		          owner_name, primary_phone, secondary_phone, email,
 		          category, activation_status, created_by_actor_id, created_by_surface,
 		          notes,
-		          beneficiary_name, bank_name, bank_branch, bank_account_number, bank_iban,
-		          payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
+		          beneficiary_name, bank_name, bank_branch,
+		          settlement_preference, bank_account_holder_matches_owner, bank_notes,
 		          version, created_at, updated_at`,
 		partnerID, input.ToStatus,
 	).Scan(
@@ -343,13 +284,14 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		&updated.OwnerName, &updated.PrimaryPhone, &updated.SecondaryPhone, &updated.Email,
 		&updated.Category, &updated.ActivationStatus, &updated.CreatedByActorID, &updated.CreatedBySurface,
 		&updated.Notes,
-		&updated.BeneficiaryName, &updated.BankName, &updated.BankBranch, &updated.BankAccountNumber, &updated.BankIBAN,
-		&updated.PayoutMobileNumber, &updated.SettlementPreference, &updated.BankAccountHolderMatchesOwner, &updated.BankNotes,
+		&updated.BeneficiaryName, &updated.BankName, &updated.BankBranch,
+		&updated.SettlementPreference, &updated.BankAccountHolderMatchesOwner, &updated.BankNotes,
 		&updated.Version, &updated.CreatedAt, &updated.UpdatedAt,
 	)
 	if err != nil {
 		return Partner{}, ActivationEvent{}, err
 	}
+	updated = SanitizePartnerForSurface(updated)
 
 	var evt ActivationEvent
 	err = tx.QueryRow(`

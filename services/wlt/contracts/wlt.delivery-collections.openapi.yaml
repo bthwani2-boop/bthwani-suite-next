@@ -102,62 +102,11 @@ paths:
         '404': { $ref: '#/components/responses/CollectionNotFound' }
       security:
         - serviceBearer: []
-  /wlt/delivery-collections/{codRecordId}/collect:
-    post:
-      operationId: collectWltDeliveryCollection
-      summary: Commit evidence-backed collection against WLT-owned custody truth.
-      tags: [ WltDeliveryCollections ]
-      x-bthwani-mutation-approved: false
-      x-bthwani-default-enabled: false
-      parameters:
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/CodRecordId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/CollectDeliveryCollectionRequest' }
-      responses:
-        '200': { description: Collection committed atomically or replayed exactly }
-        '400': { $ref: '#/components/responses/CollectionInvalidRequest' }
-        '401': { $ref: '#/components/responses/CollectionUnauthorized' }
-        '403': { $ref: '#/components/responses/CollectionFeatureNotEnabled' }
-        '404': { $ref: '#/components/responses/CollectionNotFound' }
-        '409': { $ref: '#/components/responses/CollectionConflict' }
-      security:
-        - serviceBearer: []
-  /wlt/delivery-collections/{codRecordId}/remit:
-    post:
-      operationId: remitWltDeliveryCollection
-      summary: Commit evidence-backed remittance against WLT-owned custody truth.
-      tags: [ WltDeliveryCollections ]
-      x-bthwani-mutation-approved: false
-      x-bthwani-default-enabled: false
-      parameters:
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/CodRecordId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/RemitDeliveryCollectionRequest' }
-      responses:
-        '200': { description: Remittance committed atomically or replayed exactly }
-        '400': { $ref: '#/components/responses/CollectionInvalidRequest' }
-        '401': { $ref: '#/components/responses/CollectionUnauthorized' }
-        '403': { $ref: '#/components/responses/CollectionFeatureNotEnabled' }
-        '404': { $ref: '#/components/responses/CollectionNotFound' }
-        '409': { $ref: '#/components/responses/CollectionConflict' }
-      security:
-        - serviceBearer: []
+  # collect/remit are intentionally not declared here (C3 remediation): they
+  # bound to the exact same handlers as /wlt/cod-records/{codRecordId}/collect
+  # and /remit (see wlt.cod-custody.openapi.yaml), with zero verified
+  # consumers of this delivery-collections URL variant. cod-records remains
+  # the single canonical path for that mutation.
 components:
   securitySchemes: {}
   schemas:
@@ -175,16 +124,6 @@ components:
         captainId: { type: string }
         partnerId: { type: string, minLength: 1 }
         checkoutIntentId: { type: string, minLength: 1 }
-    CollectDeliveryCollectionRequest:
-      type: object
-      additionalProperties: false
-      required: [ actualAmountMinorUnits, proofReference, actorId, actorType ]
-      properties:
-        actualAmountMinorUnits: { type: integer, format: int64, minimum: 1 }
-        proofReference: { type: string, minLength: 3, maxLength: 512 }
-        actorId: { type: string, minLength: 1 }
-        actorType: { $ref: '#/components/schemas/CollectionActorType' }
-        note: { type: string, maxLength: 4000 }
     DeliveryCollectionRecord:
       type: object
       required:
@@ -223,15 +162,6 @@ components:
           nullable: true
         applicable: { type: boolean }
         replayed: { type: boolean }
-    RemitDeliveryCollectionRequest:
-      type: object
-      additionalProperties: false
-      required: [ proofReference, actorId, actorType ]
-      properties:
-        proofReference: { type: string, minLength: 3, maxLength: 512 }
-        actorId: { type: string, minLength: 1 }
-        actorType: { $ref: '#/components/schemas/CollectionActorType' }
-        note: { type: string, maxLength: 4000 }
   responses:
     CollectionInvalidRequest:
       description: Invalid request

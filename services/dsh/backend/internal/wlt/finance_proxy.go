@@ -39,6 +39,10 @@ func financeReadPathAllowed(path string) bool {
 	for _, prefix := range []string{"/wlt/reconciliation-cases/", "/wlt/commissions/"} {
 		if rest, ok := strings.CutPrefix(path, prefix); ok { return rest != "" && !strings.Contains(rest, "/") }
 	}
+	if rest, ok := strings.CutPrefix(path, "/wlt/commercial/clients/"); ok {
+		parts := strings.Split(rest, "/")
+		return len(parts) == 2 && strings.TrimSpace(parts[0]) != "" && parts[1] == "benefits"
+	}
 	if rest, ok := strings.CutPrefix(path, "/wlt/settlements/"); ok {
 		parts := strings.Split(rest, "/")
 		return len(parts) == 2 && strings.TrimSpace(parts[0]) != "" && parts[1] == "evidence"

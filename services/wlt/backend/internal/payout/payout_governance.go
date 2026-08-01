@@ -112,24 +112,6 @@ func appendPayoutAudit(ctx context.Context, tx *sql.Tx, aggregateType, aggregate
 	return err
 }
 
-func enqueuePayoutEvent(ctx context.Context, tx *sql.Tx, payoutRequestID, eventType, actorID, actorType, correlationID string, payload any) error {
-	operatorContextID, err := shared.RequireOperatorContext(ctx)
-	if err != nil {
-		return err
-	}
-	encoded, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-	_, err = tx.ExecContext(ctx, `
-		INSERT INTO wlt_payout_outbox
-			(operator_context_id, payout_request_id, event_type, recipient_actor_id, recipient_actor_type, payload, correlation_id)
-		VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7)
-		ON CONFLICT (operator_context_id, payout_request_id, event_type) DO NOTHING`,
-		operatorContextID, payoutRequestID, eventType, actorID, actorType, string(encoded), correlationID)
-	return err
-}
-
 func scanGovernedDestination(row *sql.Row) (*governedDestinationRef, error) {
 	var destination governedDestinationRef
 	var updatedAt string
@@ -478,12 +460,6 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout request")
 			return
 		}
-		if err := enqueuePayoutEvent(r.Context(), tx, created.ID, "payout.requested", input.BeneficiaryActorID, input.BeneficiaryActorType, correlationID, map[string]any{
-			"status": "pending", "amountMinorUnits": input.AmountMinorUnits, "currency": input.Currency,
-		}); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to enqueue payout notification")
-			return
-		}
 		if err := tx.Commit(); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to commit payout request")
 			return
@@ -603,12 +579,10 @@ func HandleReconcileGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 
 		finalStatus := current.Status
 		reconciliationStatus := "open"
-		eventType := "payout.reconciliation_opened"
 		action := "payout.reconciliation_opened"
 		if resultStatus == "succeeded" || resultStatus == "completed" {
 			finalStatus = "completed"
 			reconciliationStatus = "resolved"
-			eventType = "payout.completed"
 			action = "payout.reconciled_completed"
 			if _, err := finalTx.ExecContext(r.Context(), `UPDATE wlt_wallets
 				SET held_balance_minor_units=held_balance_minor_units-$1,
@@ -621,7 +595,6 @@ func HandleReconcileGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 		} else if resultStatus == "failed" || resultStatus == "declined" {
 			finalStatus = "failed"
 			reconciliationStatus = "resolved"
-			eventType = "payout.failed"
 			action = "payout.reconciled_failed"
 			if _, err := finalTx.ExecContext(r.Context(), `UPDATE wlt_wallets
 				SET held_balance_minor_units=held_balance_minor_units-$1,
@@ -652,12 +625,6 @@ func HandleReconcileGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			"providerStatus": resultStatus, "providerResponseCode": inquiry.ResponseCode, "reconciliationId": reconciliationID,
 		}); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout reconciliation")
-			return
-		}
-		if err := enqueuePayoutEvent(r.Context(), finalTx, payoutID, eventType, current.BeneficiaryActorID, current.BeneficiaryActorType, correlationID, map[string]any{
-			"status": finalStatus, "reconciliationStatus": reconciliationStatus,
-		}); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to enqueue reconciled payout notification")
 			return
 		}
 		if err := finalTx.Commit(); err != nil {

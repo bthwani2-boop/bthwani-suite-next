@@ -8,7 +8,7 @@ work_branch: ala
 pinned_head_at_planning: null
 base_branch: master
 base_sha_at_planning: null
-pull_request: 199
+
 pull_request_mode: draft
 merge_authorized: false
 force_push: forbidden

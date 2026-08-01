@@ -13,8 +13,6 @@ import (
 	"github.com/lib/pq"
 )
 
-const DefaultDispatchOperatorContextID = "default"
-
 var (
 	ErrCaptainNotEligible = errors.New("captain is not eligible for dispatch")
 	ErrCaptainAtCapacity  = errors.New("captain dispatch capacity reached")
@@ -90,17 +88,21 @@ type ReassignAssignmentInput struct {
 	ResponseTimeoutSecond int
 }
 
-func normalizeOperatorContextID(value string) string {
+func normalizeOperatorContextID(value string) (string, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return DefaultDispatchOperatorContextID
+		return "", fmt.Errorf("%w: operatorContextId is required", ErrInvalid)
 	}
-	return value
+	return value, nil
 }
 
 func validateGovernedCreateInput(input *GovernedCreateAssignmentInput) error {
 	input.OrderID = strings.TrimSpace(input.OrderID)
-	input.OperatorContextID = normalizeOperatorContextID(input.OperatorContextID)
+	var err error
+	input.OperatorContextID, err = normalizeOperatorContextID(input.OperatorContextID)
+	if err != nil {
+		return err
+	}
 	input.CaptainID = strings.TrimSpace(input.CaptainID)
 	input.ActorID = strings.TrimSpace(input.ActorID)
 	input.ServiceAreaCode = strings.TrimSpace(input.ServiceAreaCode)
@@ -129,7 +131,11 @@ func validateGovernedCreateInput(input *GovernedCreateAssignmentInput) error {
 }
 
 func UpsertCaptainDispatchProfile(db *sql.DB, input CaptainDispatchProfileInput) (*CaptainDispatchCandidate, error) {
-	input.OperatorContextID = normalizeOperatorContextID(input.OperatorContextID)
+	var err error
+	input.OperatorContextID, err = normalizeOperatorContextID(input.OperatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	input.CaptainID = strings.TrimSpace(input.CaptainID)
 	input.ActorID = strings.TrimSpace(input.ActorID)
 	input.AccreditationStatus = strings.TrimSpace(input.AccreditationStatus)
@@ -150,7 +156,7 @@ func UpsertCaptainDispatchProfile(db *sql.DB, input CaptainDispatchProfileInput)
 		return nil, fmt.Errorf("%w: invalid capacity or priority score", ErrInvalid)
 	}
 	var version int
-	err := db.QueryRow(`
+	err = db.QueryRow(`
 		INSERT INTO dsh_captain_dispatch_profiles (
 			operator_context_id, captain_id, accreditation_status, availability_status,
 			max_active_assignments, priority_score, updated_by
@@ -197,7 +203,10 @@ func UpsertCaptainDispatchProfile(db *sql.DB, input CaptainDispatchProfileInput)
 }
 
 func ListCaptainDispatchCandidates(db *sql.DB, operatorContextID, serviceAreaCode string, limit int) ([]CaptainDispatchCandidate, error) {
-	operatorContextID = normalizeOperatorContextID(operatorContextID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	serviceAreaCode = strings.TrimSpace(serviceAreaCode)
 	if serviceAreaCode == "" {
 		return nil, fmt.Errorf("%w: serviceAreaCode is required", ErrInvalid)
@@ -601,7 +610,10 @@ func DeclineGovernedAssignment(db *sql.DB, assignmentID, captainID, reasonCode, 
 }
 
 func ExpireOverdueAssignments(db *sql.DB, operatorContextID, actorID string, limit int) (int, error) {
-	operatorContextID = normalizeOperatorContextID(operatorContextID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return 0, err
+	}
 	actorID = strings.TrimSpace(actorID)
 	if actorID == "" {
 		actorID = "dispatch-expiry-worker"
@@ -715,7 +727,11 @@ func CancelGovernedAssignment(db *sql.DB, assignmentID, actorID, reasonCode, rea
 
 func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Assignment, error) {
 	input.AssignmentID = strings.TrimSpace(input.AssignmentID)
-	input.OperatorContextID = normalizeOperatorContextID(input.OperatorContextID)
+	var err error
+	input.OperatorContextID, err = normalizeOperatorContextID(input.OperatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	input.CaptainID = strings.TrimSpace(input.CaptainID)
 	input.ActorID = strings.TrimSpace(input.ActorID)
 	input.ServiceAreaCode = strings.TrimSpace(input.ServiceAreaCode)
@@ -856,7 +872,10 @@ func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Ass
 }
 
 func ListDispatchDecisions(db *sql.DB, operatorContextID, assignmentID, orderID string, limit int) ([]DispatchDecision, error) {
-	operatorContextID = normalizeOperatorContextID(operatorContextID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	assignmentID = strings.TrimSpace(assignmentID)
 	orderID = strings.TrimSpace(orderID)
 	if assignmentID == "" && orderID == "" {
@@ -892,7 +911,10 @@ func ListDispatchDecisions(db *sql.DB, operatorContextID, assignmentID, orderID 
 }
 
 func ListOperatorAssignmentsInOperatorContext(db *sql.DB, operatorContextID string, limit int) ([]Assignment, error) {
-	operatorContextID = normalizeOperatorContextID(operatorContextID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	if limit <= 0 || limit > 500 {
 		limit = 200
 	}
@@ -908,7 +930,10 @@ func ListOperatorAssignmentsInOperatorContext(db *sql.DB, operatorContextID stri
 }
 
 func ListCaptainAssignmentsInOperatorContext(db *sql.DB, operatorContextID, captainID string, limit int) ([]Assignment, error) {
-	operatorContextID = normalizeOperatorContextID(operatorContextID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	captainID = strings.TrimSpace(captainID)
 	if captainID == "" {
 		return nil, fmt.Errorf("%w: captain actor is required", ErrInvalid)
@@ -938,11 +963,15 @@ func insertDispatchDecisionTx(tx *sql.Tx, operatorContextID, assignmentID, order
 	if err != nil {
 		return err
 	}
+	normCtx, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return err
+	}
 	_, err = tx.Exec(`
 		INSERT INTO dsh_dispatch_decisions (
 			operator_context_id,assignment_id,order_id,captain_id,action,reason_code,reason,actor_id,actor_role,metadata
 		) VALUES ($1,NULLIF($2,'')::uuid,NULLIF($3,'')::uuid,NULLIF($4,''),$5,NULLIF($6,''),NULLIF($7,''),$8,$9,$10::jsonb)`,
-		normalizeOperatorContextID(operatorContextID), assignmentID, orderID, captainID, action, reasonCode, reason, actorID, actorRole, string(encoded))
+		normCtx, assignmentID, orderID, captainID, action, reasonCode, reason, actorID, actorRole, string(encoded))
 	return err
 }
 

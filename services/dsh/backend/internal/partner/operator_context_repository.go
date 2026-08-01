@@ -58,8 +58,8 @@ func CreatePartnerForOperatorContext(db *sql.DB, operatorContextID string, input
 		          notes,
 		          COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
 		          COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
-		          beneficiary_name, bank_name, bank_branch, bank_account_number, bank_iban,
-		          payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
+		          beneficiary_name, bank_name, bank_branch,
+		          settlement_preference, bank_account_holder_matches_owner, bank_notes,
 		          version, created_at, updated_at`,
 		operatorContextID,
 		input.LegalNameAr, input.LegalNameEn, input.DisplayName,
@@ -73,8 +73,8 @@ func CreatePartnerForOperatorContext(db *sql.DB, operatorContextID string, input
 		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
 		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
-		&p.BeneficiaryName, &p.BankName, &p.BankBranch, &p.BankAccountNumber, &p.BankIBAN,
-		&p.PayoutMobileNumber, &p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
+		&p.BeneficiaryName, &p.BankName, &p.BankBranch,
+		&p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
 		&p.Version, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {
@@ -83,6 +83,7 @@ func CreatePartnerForOperatorContext(db *sql.DB, operatorContextID string, input
 		}
 		return Partner{}, err
 	}
+	p = SanitizePartnerForSurface(p)
 
 	// The first store remains unpublished. The migration trigger derives its
 	// OperatorContext from the owning partner, and the explicit update provides a second
@@ -133,8 +134,8 @@ func GetPartnerForOperatorContext(db *sql.DB, operatorContextID, partnerID strin
 		       notes,
 		       COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
 		       COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
-		       beneficiary_name, bank_name, bank_branch, bank_account_number, bank_iban,
-		       payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
+		       beneficiary_name, bank_name, bank_branch,
+		       settlement_preference, bank_account_holder_matches_owner, bank_notes,
 		       version, created_at, updated_at
 		FROM dsh_partners
 		WHERE id = $1 AND operator_context_id = $2`, partnerID, operatorContextID,
@@ -145,14 +146,17 @@ func GetPartnerForOperatorContext(db *sql.DB, operatorContextID, partnerID strin
 		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
 		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
-		&p.BeneficiaryName, &p.BankName, &p.BankBranch, &p.BankAccountNumber, &p.BankIBAN,
-		&p.PayoutMobileNumber, &p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
+		&p.BeneficiaryName, &p.BankName, &p.BankBranch,
+		&p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
 		&p.Version, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Partner{}, ErrNotFound
 	}
-	return p, err
+	if err != nil {
+		return Partner{}, err
+	}
+	return SanitizePartnerForSurface(p), nil
 }
 
 func ListPartnersForOperatorContext(db *sql.DB, operatorContextID string, q PartnerListQuery) ([]PartnerSummary, int, error) {

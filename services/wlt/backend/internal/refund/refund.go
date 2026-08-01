@@ -3,10 +3,8 @@ package refund
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"wlt-api/internal/provider"
@@ -128,32 +126,4 @@ func RejectRefund(db *sql.DB, refundID string) (*Refund, error) {
 		CorrelationID: "legacy-reject:" + refundID,
 	})
 	return legacyRefundView(item), err
-}
-
-func HandleCreateRefund(db *sql.DB) http.HandlerFunc { return HandleCreateGovernedRefund(db) }
-func HandleGetRefund(db *sql.DB) http.HandlerFunc { return HandleGetGovernedRefund(db) }
-func HandleListRefunds(db *sql.DB) http.HandlerFunc { return HandleListGovernedRefunds(db) }
-
-func HandleApproveRefund(db *sql.DB) http.HandlerFunc { return HandleApproveGovernedRefund(db) }
-func HandleRejectRefund(db *sql.DB) http.HandlerFunc { return HandleRejectGovernedRefund(db) }
-
-// HandleCompleteRefund keeps the old symbol but requires operator identity,
-// matching the governed route instead of silently completing a refund.
-func HandleCompleteRefund(db *sql.DB) http.HandlerFunc { return HandleCompleteGovernedRefund(db) }
-
-// decodeLegacyDecision exists only for downstream code that imported the old
-// handler file directly; all router bindings use the governed handlers above.
-func decodeLegacyDecision(w http.ResponseWriter, r *http.Request) (RefundDecisionInput, bool) {
-	var input RefundDecisionInput
-	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&input); err != nil {
-		shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-		return input, false
-	}
-	if input.OperatorID == "" || input.Reason == "" {
-		shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", fmt.Sprintf("operatorId and reason are required"))
-		return input, false
-	}
-	return input, true
 }

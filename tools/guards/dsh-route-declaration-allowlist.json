@@ -1,0 +1,1625 @@
+{
+  "description": "Reviewed exceptions for dsh-route-declaration-gate. Every entry must carry a route and a precise reason. This is a closure list, not a permanent allowance -- routes should be removed as they are properly declared in the DSH OpenAPI contract. Snapshotted 2026-08-01 during root-cause remediation (C1/C2); this is the full pre-existing gap, not newly introduced debt.",
+  "entries": [
+    {
+      "route": "DELETE /dsh/client/addresses/{addressId}",
+      "method": "DELETE",
+      "path": "/dsh/client/addresses/{addressId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "DELETE /dsh/notifications/push-endpoints/{deviceId}",
+      "method": "DELETE",
+      "path": "/dsh/notifications/push-endpoints/{deviceId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "DELETE /dsh/operator/catalog/master-products/{productId}/relationships/{relationshipId}",
+      "method": "DELETE",
+      "path": "/dsh/operator/catalog/master-products/{productId}/relationships/{relationshipId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/captain/dispatch/assignments/{assignmentId}/delivery-proof",
+      "method": "GET",
+      "path": "/dsh/captain/dispatch/assignments/{assignmentId}/delivery-proof",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/captain/dispatch/financial-eligibility",
+      "method": "GET",
+      "path": "/dsh/captain/dispatch/financial-eligibility",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/captain/me/finance/commissions",
+      "method": "GET",
+      "path": "/dsh/captain/me/finance/commissions",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/captain/me/finance/ledger-entries",
+      "method": "GET",
+      "path": "/dsh/captain/me/finance/ledger-entries",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/captain/me/finance/payout-destination",
+      "method": "GET",
+      "path": "/dsh/captain/me/finance/payout-destination",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/captain/me/finance/payout-requests",
+      "method": "GET",
+      "path": "/dsh/captain/me/finance/payout-requests",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/captain/me/finance/wallet",
+      "method": "GET",
+      "path": "/dsh/captain/me/finance/wallet",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/captain/me/ratings/summary",
+      "method": "GET",
+      "path": "/dsh/captain/me/ratings/summary",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/captain/partner-fleet/memberships",
+      "method": "GET",
+      "path": "/dsh/captain/partner-fleet/memberships",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/catalog/domains",
+      "method": "GET",
+      "path": "/dsh/catalog/domains",
+      "reason": "Public/client-facing catalog read surface, parallel to the already-declared operator catalog routes. Declared operator equivalents exist; this client-facing group needs its own operation entries."
+    },
+    {
+      "route": "GET /dsh/catalog/master-products",
+      "method": "GET",
+      "path": "/dsh/catalog/master-products",
+      "reason": "Public/client-facing catalog read surface, parallel to the already-declared operator catalog routes. Declared operator equivalents exist; this client-facing group needs its own operation entries."
+    },
+    {
+      "route": "GET /dsh/catalog/nodes",
+      "method": "GET",
+      "path": "/dsh/catalog/nodes",
+      "reason": "Public/client-facing catalog read surface, parallel to the already-declared operator catalog routes. Declared operator equivalents exist; this client-facing group needs its own operation entries."
+    },
+    {
+      "route": "GET /dsh/catalog/policies",
+      "method": "GET",
+      "path": "/dsh/catalog/policies",
+      "reason": "Public/client-facing catalog read surface, parallel to the already-declared operator catalog routes. Declared operator equivalents exist; this client-facing group needs its own operation entries."
+    },
+    {
+      "route": "GET /dsh/catalog/proposals",
+      "method": "GET",
+      "path": "/dsh/catalog/proposals",
+      "reason": "Public/client-facing catalog read surface, parallel to the already-declared operator catalog routes. Declared operator equivalents exist; this client-facing group needs its own operation entries."
+    },
+    {
+      "route": "GET /dsh/catalog/stores/{storeId}/assortment",
+      "method": "GET",
+      "path": "/dsh/catalog/stores/{storeId}/assortment",
+      "reason": "Public/client-facing catalog read surface, parallel to the already-declared operator catalog routes. Declared operator equivalents exist; this client-facing group needs its own operation entries."
+    },
+    {
+      "route": "GET /dsh/client/addresses",
+      "method": "GET",
+      "path": "/dsh/client/addresses",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/client/benefits",
+      "method": "GET",
+      "path": "/dsh/client/benefits",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/client/marketing/subscriptions/purchases/{purchaseId}",
+      "method": "GET",
+      "path": "/dsh/client/marketing/subscriptions/purchases/{purchaseId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/client/me/finance/ledger-entries",
+      "method": "GET",
+      "path": "/dsh/client/me/finance/ledger-entries",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/client/me/finance/wallet",
+      "method": "GET",
+      "path": "/dsh/client/me/finance/wallet",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/client/me/ratings/pending-order",
+      "method": "GET",
+      "path": "/dsh/client/me/ratings/pending-order",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/client/order-truth",
+      "method": "GET",
+      "path": "/dsh/client/order-truth",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/client/order-truth/{orderId}",
+      "method": "GET",
+      "path": "/dsh/client/order-truth/{orderId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/client/order-truth/{orderId}/events",
+      "method": "GET",
+      "path": "/dsh/client/order-truth/{orderId}/events",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/client/orders/{orderId}/delivery-proof",
+      "method": "GET",
+      "path": "/dsh/client/orders/{orderId}/delivery-proof",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/client/orders/{orderId}/rating-prompt",
+      "method": "GET",
+      "path": "/dsh/client/orders/{orderId}/rating-prompt",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/client/orders/{orderId}/refunds",
+      "method": "GET",
+      "path": "/dsh/client/orders/{orderId}/refunds",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/client/support/tickets",
+      "method": "GET",
+      "path": "/dsh/client/support/tickets",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/client/support/tickets/{ticketId}",
+      "method": "GET",
+      "path": "/dsh/client/support/tickets/{ticketId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/client/support/tickets/{ticketId}/messages",
+      "method": "GET",
+      "path": "/dsh/client/support/tickets/{ticketId}/messages",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/control-panel/finance/cod-reconciliation-cases",
+      "method": "GET",
+      "path": "/dsh/control-panel/finance/cod-reconciliation-cases",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/control-panel/finance/commissions/{commissionId}",
+      "method": "GET",
+      "path": "/dsh/control-panel/finance/commissions/{commissionId}",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/timeline",
+      "method": "GET",
+      "path": "/dsh/control-panel/finance/payment-sessions/{paymentSessionId}/timeline",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/control-panel/finance/payout-requests/{payoutId}/audit",
+      "method": "GET",
+      "path": "/dsh/control-panel/finance/payout-requests/{payoutId}/audit",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/control-panel/finance/refunds/{refundId}/audit",
+      "method": "GET",
+      "path": "/dsh/control-panel/finance/refunds/{refundId}/audit",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/control-panel/finance/settlements/{settlementId}/evidence",
+      "method": "GET",
+      "path": "/dsh/control-panel/finance/settlements/{settlementId}/evidence",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}",
+      "method": "GET",
+      "path": "/dsh/control-panel/finance/wallets/{actorType}/{actorId}",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries",
+      "method": "GET",
+      "path": "/dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/field/catalog/attributes",
+      "method": "GET",
+      "path": "/dsh/field/catalog/attributes",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/field/catalog/attributes/{attributeId}/options",
+      "method": "GET",
+      "path": "/dsh/field/catalog/attributes/{attributeId}/options",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/field/catalog/domains",
+      "method": "GET",
+      "path": "/dsh/field/catalog/domains",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/field/catalog/master-products/{productId}/attribute-values",
+      "method": "GET",
+      "path": "/dsh/field/catalog/master-products/{productId}/attribute-values",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/field/catalog/master-products/{productId}/relationships",
+      "method": "GET",
+      "path": "/dsh/field/catalog/master-products/{productId}/relationships",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/field/catalog/nodes",
+      "method": "GET",
+      "path": "/dsh/field/catalog/nodes",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/field/catalog/stores/{storeId}/assortment",
+      "method": "GET",
+      "path": "/dsh/field/catalog/stores/{storeId}/assortment",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/field/me/finance/payout-destination",
+      "method": "GET",
+      "path": "/dsh/field/me/finance/payout-destination",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/field/me/ratings/summary",
+      "method": "GET",
+      "path": "/dsh/field/me/ratings/summary",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/field/partners/{partnerId}/assortment-pauses",
+      "method": "GET",
+      "path": "/dsh/field/partners/{partnerId}/assortment-pauses",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/field/partners/{partnerId}/catalog/product-proposals",
+      "method": "GET",
+      "path": "/dsh/field/partners/{partnerId}/catalog/product-proposals",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/admin/approvals",
+      "method": "GET",
+      "path": "/dsh/operator/admin/approvals",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/admin/diagnostics",
+      "method": "GET",
+      "path": "/dsh/operator/admin/diagnostics",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/admin/role-requests",
+      "method": "GET",
+      "path": "/dsh/operator/admin/role-requests",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/admin/rollback-requests",
+      "method": "GET",
+      "path": "/dsh/operator/admin/rollback-requests",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/admin/support-sessions",
+      "method": "GET",
+      "path": "/dsh/operator/admin/support-sessions",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/admin/support/snapshot",
+      "method": "GET",
+      "path": "/dsh/operator/admin/support/snapshot",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/analytics/captains",
+      "method": "GET",
+      "path": "/dsh/operator/analytics/captains",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/analytics/drill-down/orders",
+      "method": "GET",
+      "path": "/dsh/operator/analytics/drill-down/orders",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/analytics/export.csv",
+      "method": "GET",
+      "path": "/dsh/operator/analytics/export.csv",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/analytics/field",
+      "method": "GET",
+      "path": "/dsh/operator/analytics/field",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/analytics/financial-snapshot",
+      "method": "GET",
+      "path": "/dsh/operator/analytics/financial-snapshot",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/analytics/operations",
+      "method": "GET",
+      "path": "/dsh/operator/analytics/operations",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/analytics/preparation-sla",
+      "method": "GET",
+      "path": "/dsh/operator/analytics/preparation-sla",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/catalog/attributes",
+      "method": "GET",
+      "path": "/dsh/operator/catalog/attributes",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/catalog/attributes/{attributeId}/options",
+      "method": "GET",
+      "path": "/dsh/operator/catalog/attributes/{attributeId}/options",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/catalog/audit",
+      "method": "GET",
+      "path": "/dsh/operator/catalog/audit",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/catalog/master-products/{productId}",
+      "method": "GET",
+      "path": "/dsh/operator/catalog/master-products/{productId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/catalog/master-products/{productId}/attribute-values",
+      "method": "GET",
+      "path": "/dsh/operator/catalog/master-products/{productId}/attribute-values",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/catalog/master-products/{productId}/relationships",
+      "method": "GET",
+      "path": "/dsh/operator/catalog/master-products/{productId}/relationships",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/delivery-proofs",
+      "method": "GET",
+      "path": "/dsh/operator/delivery-proofs",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/delivery-proofs/{proofId}",
+      "method": "GET",
+      "path": "/dsh/operator/delivery-proofs/{proofId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/dispatch/candidates",
+      "method": "GET",
+      "path": "/dsh/operator/dispatch/candidates",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/dispatch/capacity-forecast",
+      "method": "GET",
+      "path": "/dsh/operator/dispatch/capacity-forecast",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/dispatch/captains/{captainId}/financial-eligibility",
+      "method": "GET",
+      "path": "/dsh/operator/dispatch/captains/{captainId}/financial-eligibility",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/operator/dispatch/decisions",
+      "method": "GET",
+      "path": "/dsh/operator/dispatch/decisions",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/dispatch/heatmap",
+      "method": "GET",
+      "path": "/dsh/operator/dispatch/heatmap",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/dispatch/tracking-alerts",
+      "method": "GET",
+      "path": "/dsh/operator/dispatch/tracking-alerts",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/home-discovery/{kind}/{itemId}/targeting",
+      "method": "GET",
+      "path": "/dsh/operator/home-discovery/{kind}/{itemId}/targeting",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/marketing/coupons",
+      "method": "GET",
+      "path": "/dsh/operator/marketing/coupons",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/marketing/loyalty-earning-policies",
+      "method": "GET",
+      "path": "/dsh/operator/marketing/loyalty-earning-policies",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/marketing/loyalty-tiers",
+      "method": "GET",
+      "path": "/dsh/operator/marketing/loyalty-tiers",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/marketing/subscription-plans",
+      "method": "GET",
+      "path": "/dsh/operator/marketing/subscription-plans",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/notifications/delivery-attempts",
+      "method": "GET",
+      "path": "/dsh/operator/notifications/delivery-attempts",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/operational-incidents",
+      "method": "GET",
+      "path": "/dsh/operator/operational-incidents",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/operational-incidents/{incidentId}",
+      "method": "GET",
+      "path": "/dsh/operator/operational-incidents/{incidentId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/order-truth",
+      "method": "GET",
+      "path": "/dsh/operator/order-truth",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/order-truth/diagnostics",
+      "method": "GET",
+      "path": "/dsh/operator/order-truth/diagnostics",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/order-truth/{orderId}",
+      "method": "GET",
+      "path": "/dsh/operator/order-truth/{orderId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/order-workboard",
+      "method": "GET",
+      "path": "/dsh/operator/order-workboard",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/partner-delivery/sla-alerts",
+      "method": "GET",
+      "path": "/dsh/operator/partner-delivery/sla-alerts",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/pickups/sla-alerts",
+      "method": "GET",
+      "path": "/dsh/operator/pickups/sla-alerts",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/platform/dispatch-balance-policy",
+      "method": "GET",
+      "path": "/dsh/operator/platform/dispatch-balance-policy",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/platform/map-provider-health",
+      "method": "GET",
+      "path": "/dsh/operator/platform/map-provider-health",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/platform/service-areas",
+      "method": "GET",
+      "path": "/dsh/operator/platform/service-areas",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/platform/service-areas/{serviceAreaCode}",
+      "method": "GET",
+      "path": "/dsh/operator/platform/service-areas/{serviceAreaCode}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/privacy/client-addresses/events",
+      "method": "GET",
+      "path": "/dsh/operator/privacy/client-addresses/events",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/privacy/client-addresses/policy",
+      "method": "GET",
+      "path": "/dsh/operator/privacy/client-addresses/policy",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/privacy/client-addresses/status",
+      "method": "GET",
+      "path": "/dsh/operator/privacy/client-addresses/status",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/reels/{reelId}/media/{kind}",
+      "method": "GET",
+      "path": "/dsh/operator/reels/{reelId}/media/{kind}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/stores/{storeId}/assortment-pauses",
+      "method": "GET",
+      "path": "/dsh/operator/stores/{storeId}/assortment-pauses",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/stores/{storeId}/delivery-pricing",
+      "method": "GET",
+      "path": "/dsh/operator/stores/{storeId}/delivery-pricing",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/support/incidents",
+      "method": "GET",
+      "path": "/dsh/operator/support/incidents",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/support/incidents/{incidentId}",
+      "method": "GET",
+      "path": "/dsh/operator/support/incidents/{incidentId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/support/incidents/{incidentId}/events",
+      "method": "GET",
+      "path": "/dsh/operator/support/incidents/{incidentId}/events",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/support/order-rescue-cases",
+      "method": "GET",
+      "path": "/dsh/operator/support/order-rescue-cases",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/support/order-rescue-cases/{caseId}",
+      "method": "GET",
+      "path": "/dsh/operator/support/order-rescue-cases/{caseId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/support/order-rescue-cases/{caseId}/events",
+      "method": "GET",
+      "path": "/dsh/operator/support/order-rescue-cases/{caseId}/events",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/support/tickets/{ticketId}",
+      "method": "GET",
+      "path": "/dsh/operator/support/tickets/{ticketId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/support/tickets/{ticketId}/events",
+      "method": "GET",
+      "path": "/dsh/operator/support/tickets/{ticketId}/events",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/support/tickets/{ticketId}/messages",
+      "method": "GET",
+      "path": "/dsh/operator/support/tickets/{ticketId}/messages",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/support/tickets/{ticketId}/messages/{messageId}/attachments",
+      "method": "GET",
+      "path": "/dsh/operator/support/tickets/{ticketId}/messages/{messageId}/attachments",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/workforce/scopes/{actorId}",
+      "method": "GET",
+      "path": "/dsh/operator/workforce/scopes/{actorId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/catalog/assortment",
+      "method": "GET",
+      "path": "/dsh/partner/catalog/assortment",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/catalog/attributes",
+      "method": "GET",
+      "path": "/dsh/partner/catalog/attributes",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/catalog/attributes/{attributeId}/options",
+      "method": "GET",
+      "path": "/dsh/partner/catalog/attributes/{attributeId}/options",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/catalog/domains",
+      "method": "GET",
+      "path": "/dsh/partner/catalog/domains",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/catalog/master-products/{productId}/attribute-values",
+      "method": "GET",
+      "path": "/dsh/partner/catalog/master-products/{productId}/attribute-values",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/catalog/master-products/{productId}/relationships",
+      "method": "GET",
+      "path": "/dsh/partner/catalog/master-products/{productId}/relationships",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/catalog/nodes",
+      "method": "GET",
+      "path": "/dsh/partner/catalog/nodes",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/catalog/product-proposals",
+      "method": "GET",
+      "path": "/dsh/partner/catalog/product-proposals",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/catalog/proposals",
+      "method": "GET",
+      "path": "/dsh/partner/catalog/proposals",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/me/finance/cod-records",
+      "method": "GET",
+      "path": "/dsh/partner/me/finance/cod-records",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/partner/me/finance/commissions",
+      "method": "GET",
+      "path": "/dsh/partner/me/finance/commissions",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/partner/me/finance/ledger-entries",
+      "method": "GET",
+      "path": "/dsh/partner/me/finance/ledger-entries",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/partner/me/finance/payout-destination",
+      "method": "GET",
+      "path": "/dsh/partner/me/finance/payout-destination",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/partner/me/finance/payout-requests",
+      "method": "GET",
+      "path": "/dsh/partner/me/finance/payout-requests",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/partner/me/finance/wallet",
+      "method": "GET",
+      "path": "/dsh/partner/me/finance/wallet",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "GET /dsh/partner/me/ratings/field/prompt",
+      "method": "GET",
+      "path": "/dsh/partner/me/ratings/field/prompt",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/order-truth",
+      "method": "GET",
+      "path": "/dsh/partner/order-truth",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/order-truth/{orderId}",
+      "method": "GET",
+      "path": "/dsh/partner/order-truth/{orderId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/orders/{orderId}/refunds",
+      "method": "GET",
+      "path": "/dsh/partner/orders/{orderId}/refunds",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/reels",
+      "method": "GET",
+      "path": "/dsh/partner/reels",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/stores/{storeId}/assortment-pauses",
+      "method": "GET",
+      "path": "/dsh/partner/stores/{storeId}/assortment-pauses",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/stores/{storeId}/courier-connections",
+      "method": "GET",
+      "path": "/dsh/partner/stores/{storeId}/courier-connections",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/stores/{storeId}/delivery-pricing",
+      "method": "GET",
+      "path": "/dsh/partner/stores/{storeId}/delivery-pricing",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/support/tickets",
+      "method": "GET",
+      "path": "/dsh/partner/support/tickets",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/support/tickets/{ticketId}",
+      "method": "GET",
+      "path": "/dsh/partner/support/tickets/{ticketId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/support/tickets/{ticketId}/messages",
+      "method": "GET",
+      "path": "/dsh/partner/support/tickets/{ticketId}/messages",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/support/tickets/{ticketId}/messages/{messageId}/attachments",
+      "method": "GET",
+      "path": "/dsh/support/tickets/{ticketId}/messages/{messageId}/attachments",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PATCH /dsh/catalog/domains/{domainId}",
+      "method": "PATCH",
+      "path": "/dsh/catalog/domains/{domainId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PATCH /dsh/catalog/master-products/{productId}",
+      "method": "PATCH",
+      "path": "/dsh/catalog/master-products/{productId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PATCH /dsh/catalog/nodes/{nodeId}",
+      "method": "PATCH",
+      "path": "/dsh/catalog/nodes/{nodeId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PATCH /dsh/catalog/policies/{policyId}",
+      "method": "PATCH",
+      "path": "/dsh/catalog/policies/{policyId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PATCH /dsh/client/addresses/{addressId}",
+      "method": "PATCH",
+      "path": "/dsh/client/addresses/{addressId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PATCH /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}",
+      "method": "PATCH",
+      "path": "/dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PATCH /dsh/operator/marketing/coupons/{couponId}",
+      "method": "PATCH",
+      "path": "/dsh/operator/marketing/coupons/{couponId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PATCH /dsh/operator/marketing/loyalty-earning-policies/{policyId}",
+      "method": "PATCH",
+      "path": "/dsh/operator/marketing/loyalty-earning-policies/{policyId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PATCH /dsh/operator/marketing/loyalty-tiers/{tierId}",
+      "method": "PATCH",
+      "path": "/dsh/operator/marketing/loyalty-tiers/{tierId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PATCH /dsh/operator/marketing/subscription-plans/{planId}",
+      "method": "PATCH",
+      "path": "/dsh/operator/marketing/subscription-plans/{planId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PATCH /dsh/operator/support/incidents/{incidentId}",
+      "method": "PATCH",
+      "path": "/dsh/operator/support/incidents/{incidentId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PATCH /dsh/operator/support/order-rescue-cases/{caseId}",
+      "method": "PATCH",
+      "path": "/dsh/operator/support/order-rescue-cases/{caseId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PATCH /dsh/partner/catalog/product-proposals/{proposalId}",
+      "method": "PATCH",
+      "path": "/dsh/partner/catalog/product-proposals/{proposalId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/captain/dispatch/assignments/{assignmentId}/delivery-proof",
+      "method": "POST",
+      "path": "/dsh/captain/dispatch/assignments/{assignmentId}/delivery-proof",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/captain/dispatch/assignments/{assignmentId}/handoff-exceptions",
+      "method": "POST",
+      "path": "/dsh/captain/dispatch/assignments/{assignmentId}/handoff-exceptions",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/captain/dispatch/financial-eligibility/refresh",
+      "method": "POST",
+      "path": "/dsh/captain/dispatch/financial-eligibility/refresh",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/captain/me/finance/payout-destination/deactivate",
+      "method": "POST",
+      "path": "/dsh/captain/me/finance/payout-destination/deactivate",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/captain/me/finance/payout-requests",
+      "method": "POST",
+      "path": "/dsh/captain/me/finance/payout-requests",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/captain/partner-fleet/connect",
+      "method": "POST",
+      "path": "/dsh/captain/partner-fleet/connect",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/catalog/domains",
+      "method": "POST",
+      "path": "/dsh/catalog/domains",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/catalog/master-products",
+      "method": "POST",
+      "path": "/dsh/catalog/master-products",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/catalog/nodes",
+      "method": "POST",
+      "path": "/dsh/catalog/nodes",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/catalog/proposals/{proposalId}/decision",
+      "method": "POST",
+      "path": "/dsh/catalog/proposals/{proposalId}/decision",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/catalog/proposals/{proposalId}/transitions",
+      "method": "POST",
+      "path": "/dsh/catalog/proposals/{proposalId}/transitions",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/client/addresses",
+      "method": "POST",
+      "path": "/dsh/client/addresses",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/client/addresses/{addressId}/default",
+      "method": "POST",
+      "path": "/dsh/client/addresses/{addressId}/default",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/client/maps/reverse",
+      "method": "POST",
+      "path": "/dsh/client/maps/reverse",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/client/maps/search",
+      "method": "POST",
+      "path": "/dsh/client/maps/search",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/client/marketing/subscriptions/purchase",
+      "method": "POST",
+      "path": "/dsh/client/marketing/subscriptions/purchase",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/client/marketing/subscriptions/{purchaseId}/activate",
+      "method": "POST",
+      "path": "/dsh/client/marketing/subscriptions/{purchaseId}/activate",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/client/marketing/subscriptions/{subscriptionId}/cancel",
+      "method": "POST",
+      "path": "/dsh/client/marketing/subscriptions/{subscriptionId}/cancel",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/client/marketing/subscriptions/{subscriptionId}/renew",
+      "method": "POST",
+      "path": "/dsh/client/marketing/subscriptions/{subscriptionId}/renew",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/client/order-truth",
+      "method": "POST",
+      "path": "/dsh/client/order-truth",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/client/orders/{orderId}/delivery-pin",
+      "method": "POST",
+      "path": "/dsh/client/orders/{orderId}/delivery-pin",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/client/orders/{orderId}/ratings",
+      "method": "POST",
+      "path": "/dsh/client/orders/{orderId}/ratings",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/client/support/tickets",
+      "method": "POST",
+      "path": "/dsh/client/support/tickets",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/client/support/tickets/{ticketId}/messages",
+      "method": "POST",
+      "path": "/dsh/client/support/tickets/{ticketId}/messages",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign",
+      "method": "POST",
+      "path": "/dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/resolve",
+      "method": "POST",
+      "path": "/dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/resolve",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/control-panel/finance/commissions/{commissionId}/adjust",
+      "method": "POST",
+      "path": "/dsh/control-panel/finance/commissions/{commissionId}/adjust",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/control-panel/finance/commissions/{commissionId}/confirm",
+      "method": "POST",
+      "path": "/dsh/control-panel/finance/commissions/{commissionId}/confirm",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/control-panel/finance/commissions/{commissionId}/reject",
+      "method": "POST",
+      "path": "/dsh/control-panel/finance/commissions/{commissionId}/reject",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/control-panel/finance/commissions/{commissionId}/reverse",
+      "method": "POST",
+      "path": "/dsh/control-panel/finance/commissions/{commissionId}/reverse",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/control-panel/finance/commissions/{commissionId}/settle",
+      "method": "POST",
+      "path": "/dsh/control-panel/finance/commissions/{commissionId}/settle",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status",
+      "method": "POST",
+      "path": "/dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/control-panel/finance/payout-requests/{payoutId}/reconcile",
+      "method": "POST",
+      "path": "/dsh/control-panel/finance/payout-requests/{payoutId}/reconcile",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/control-panel/finance/refunds",
+      "method": "POST",
+      "path": "/dsh/control-panel/finance/refunds",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/control-panel/finance/refunds/{refundId}/approve",
+      "method": "POST",
+      "path": "/dsh/control-panel/finance/refunds/{refundId}/approve",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/control-panel/finance/refunds/{refundId}/complete",
+      "method": "POST",
+      "path": "/dsh/control-panel/finance/refunds/{refundId}/complete",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/control-panel/finance/refunds/{refundId}/reconcile",
+      "method": "POST",
+      "path": "/dsh/control-panel/finance/refunds/{refundId}/reconcile",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/control-panel/finance/refunds/{refundId}/reject",
+      "method": "POST",
+      "path": "/dsh/control-panel/finance/refunds/{refundId}/reject",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/field/me/finance/payout-destination/deactivate",
+      "method": "POST",
+      "path": "/dsh/field/me/finance/payout-destination/deactivate",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/field/partners/{partnerId}/assortment/{masterProductId}/pause",
+      "method": "POST",
+      "path": "/dsh/field/partners/{partnerId}/assortment/{masterProductId}/pause",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/field/partners/{partnerId}/assortment/{masterProductId}/resume",
+      "method": "POST",
+      "path": "/dsh/field/partners/{partnerId}/assortment/{masterProductId}/resume",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/home-discovery/events",
+      "method": "POST",
+      "path": "/dsh/home-discovery/events",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/internal/workforce/availability-projections",
+      "method": "POST",
+      "path": "/dsh/internal/workforce/availability-projections",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/admin/approvals/{approvalId}/review",
+      "method": "POST",
+      "path": "/dsh/operator/admin/approvals/{approvalId}/review",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/admin/approvals/{approvalId}/rollback-requests",
+      "method": "POST",
+      "path": "/dsh/operator/admin/approvals/{approvalId}/rollback-requests",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/admin/role-requests/{requestId}/review",
+      "method": "POST",
+      "path": "/dsh/operator/admin/role-requests/{requestId}/review",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/admin/roles/requests",
+      "method": "POST",
+      "path": "/dsh/operator/admin/roles/requests",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/admin/rollback-requests/{requestId}/review",
+      "method": "POST",
+      "path": "/dsh/operator/admin/rollback-requests/{requestId}/review",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/admin/support-sessions",
+      "method": "POST",
+      "path": "/dsh/operator/admin/support-sessions",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/admin/support-sessions/{requestId}/review",
+      "method": "POST",
+      "path": "/dsh/operator/admin/support-sessions/{requestId}/review",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/admin/support-sessions/{requestId}/revoke",
+      "method": "POST",
+      "path": "/dsh/operator/admin/support-sessions/{requestId}/revoke",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/catalog/attributes",
+      "method": "POST",
+      "path": "/dsh/operator/catalog/attributes",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/catalog/attributes/{attributeId}/options",
+      "method": "POST",
+      "path": "/dsh/operator/catalog/attributes/{attributeId}/options",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/catalog/audit/{auditId}/rollback",
+      "method": "POST",
+      "path": "/dsh/operator/catalog/audit/{auditId}/rollback",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/delivery-proofs/{proofId}/accept",
+      "method": "POST",
+      "path": "/dsh/operator/delivery-proofs/{proofId}/accept",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/delivery-proofs/{proofId}/reject",
+      "method": "POST",
+      "path": "/dsh/operator/delivery-proofs/{proofId}/reject",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/dispatch/assignments/expire",
+      "method": "POST",
+      "path": "/dsh/operator/dispatch/assignments/expire",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/dispatch/assignments/{assignmentId}/cancel",
+      "method": "POST",
+      "path": "/dsh/operator/dispatch/assignments/{assignmentId}/cancel",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/dispatch/assignments/{assignmentId}/reassign",
+      "method": "POST",
+      "path": "/dsh/operator/dispatch/assignments/{assignmentId}/reassign",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/dispatch/captains/{captainId}/financial-eligibility/refresh",
+      "method": "POST",
+      "path": "/dsh/operator/dispatch/captains/{captainId}/financial-eligibility/refresh",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/operator/marketing/coupons",
+      "method": "POST",
+      "path": "/dsh/operator/marketing/coupons",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/marketing/loyalty-earning-policies",
+      "method": "POST",
+      "path": "/dsh/operator/marketing/loyalty-earning-policies",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/marketing/loyalty-tiers",
+      "method": "POST",
+      "path": "/dsh/operator/marketing/loyalty-tiers",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/marketing/subscription-plans",
+      "method": "POST",
+      "path": "/dsh/operator/marketing/subscription-plans",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/operational-incidents",
+      "method": "POST",
+      "path": "/dsh/operator/operational-incidents",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/partner-delivery/sla-alerts/refresh",
+      "method": "POST",
+      "path": "/dsh/operator/partner-delivery/sla-alerts/refresh",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/partner-delivery/sla-alerts/{alertId}/acknowledge",
+      "method": "POST",
+      "path": "/dsh/operator/partner-delivery/sla-alerts/{alertId}/acknowledge",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/pickups/sla-alerts/refresh",
+      "method": "POST",
+      "path": "/dsh/operator/pickups/sla-alerts/refresh",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/pickups/sla-alerts/{alertId}/acknowledge",
+      "method": "POST",
+      "path": "/dsh/operator/pickups/sla-alerts/{alertId}/acknowledge",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/privacy/client-addresses/anonymize",
+      "method": "POST",
+      "path": "/dsh/operator/privacy/client-addresses/anonymize",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/stores/{storeId}/assortment/{masterProductId}/pause",
+      "method": "POST",
+      "path": "/dsh/operator/stores/{storeId}/assortment/{masterProductId}/pause",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/stores/{storeId}/assortment/{masterProductId}/resume",
+      "method": "POST",
+      "path": "/dsh/operator/stores/{storeId}/assortment/{masterProductId}/resume",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/support/incidents",
+      "method": "POST",
+      "path": "/dsh/operator/support/incidents",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/support/order-rescue-cases",
+      "method": "POST",
+      "path": "/dsh/operator/support/order-rescue-cases",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/support/tickets/{ticketId}/messages",
+      "method": "POST",
+      "path": "/dsh/operator/support/tickets/{ticketId}/messages",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/support/tickets/{ticketId}/messages/read",
+      "method": "POST",
+      "path": "/dsh/operator/support/tickets/{ticketId}/messages/read",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/support/tickets/{ticketId}/messages/{messageId}/attachments",
+      "method": "POST",
+      "path": "/dsh/operator/support/tickets/{ticketId}/messages/{messageId}/attachments",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/workforce/employees/{actorId}/media/uploads",
+      "method": "POST",
+      "path": "/dsh/operator/workforce/employees/{actorId}/media/uploads",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/catalog/proposals",
+      "method": "POST",
+      "path": "/dsh/partner/catalog/proposals",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/me/finance/cod-records/{recordId}/remit",
+      "method": "POST",
+      "path": "/dsh/partner/me/finance/cod-records/{recordId}/remit",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/partner/me/finance/payout-destination/deactivate",
+      "method": "POST",
+      "path": "/dsh/partner/me/finance/payout-destination/deactivate",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/partner/me/finance/payout-requests",
+      "method": "POST",
+      "path": "/dsh/partner/me/finance/payout-requests",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "POST /dsh/partner/me/ratings/field",
+      "method": "POST",
+      "path": "/dsh/partner/me/ratings/field",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/orders/{orderId}/captain-handoff/confirm",
+      "method": "POST",
+      "path": "/dsh/partner/orders/{orderId}/captain-handoff/confirm",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/orders/{orderId}/captain-handoff/exceptions",
+      "method": "POST",
+      "path": "/dsh/partner/orders/{orderId}/captain-handoff/exceptions",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/orders/{orderId}/pickup/extend-window",
+      "method": "POST",
+      "path": "/dsh/partner/orders/{orderId}/pickup/extend-window",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/orders/{orderId}/pickup/reschedule",
+      "method": "POST",
+      "path": "/dsh/partner/orders/{orderId}/pickup/reschedule",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/stores/{storeId}/assortment/{masterProductId}/pause",
+      "method": "POST",
+      "path": "/dsh/partner/stores/{storeId}/assortment/{masterProductId}/pause",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/stores/{storeId}/assortment/{masterProductId}/resume",
+      "method": "POST",
+      "path": "/dsh/partner/stores/{storeId}/assortment/{masterProductId}/resume",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/stores/{storeId}/courier-connections/{connectionId}/revoke",
+      "method": "POST",
+      "path": "/dsh/partner/stores/{storeId}/courier-connections/{connectionId}/revoke",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code",
+      "method": "POST",
+      "path": "/dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/support/tickets",
+      "method": "POST",
+      "path": "/dsh/partner/support/tickets",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/support/tickets/{ticketId}/messages",
+      "method": "POST",
+      "path": "/dsh/partner/support/tickets/{ticketId}/messages",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/support/tickets/{ticketId}/messages/read",
+      "method": "POST",
+      "path": "/dsh/support/tickets/{ticketId}/messages/read",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/support/tickets/{ticketId}/messages/{messageId}/attachments",
+      "method": "POST",
+      "path": "/dsh/support/tickets/{ticketId}/messages/{messageId}/attachments",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/captain/me/finance/payout-destination",
+      "method": "PUT",
+      "path": "/dsh/captain/me/finance/payout-destination",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "PUT /dsh/catalog/stores/{storeId}/assortment/{masterProductId}",
+      "method": "PUT",
+      "path": "/dsh/catalog/stores/{storeId}/assortment/{masterProductId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/control-panel/finance/commission-policies",
+      "method": "PUT",
+      "path": "/dsh/control-panel/finance/commission-policies",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "PUT /dsh/field/catalog/stores/{storeId}/assortment/{masterProductId}",
+      "method": "PUT",
+      "path": "/dsh/field/catalog/stores/{storeId}/assortment/{masterProductId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/field/me/finance/payout-destination",
+      "method": "PUT",
+      "path": "/dsh/field/me/finance/payout-destination",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "PUT /dsh/notifications/push-endpoints",
+      "method": "PUT",
+      "path": "/dsh/notifications/push-endpoints",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/operator/catalog/master-products/{productId}/attribute-values/{attributeId}",
+      "method": "PUT",
+      "path": "/dsh/operator/catalog/master-products/{productId}/attribute-values/{attributeId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/operator/catalog/master-products/{productId}/relationships",
+      "method": "PUT",
+      "path": "/dsh/operator/catalog/master-products/{productId}/relationships",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/operator/catalog/nodes/{nodeId}/attributes/{attributeId}",
+      "method": "PUT",
+      "path": "/dsh/operator/catalog/nodes/{nodeId}/attributes/{attributeId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/operator/catalog/stores/{storeId}/images/{role}",
+      "method": "PUT",
+      "path": "/dsh/operator/catalog/stores/{storeId}/images/{role}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/operator/dispatch/capacity-policies/{serviceAreaCode}",
+      "method": "PUT",
+      "path": "/dsh/operator/dispatch/capacity-policies/{serviceAreaCode}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/operator/dispatch/captains/{captainId}/profile",
+      "method": "PUT",
+      "path": "/dsh/operator/dispatch/captains/{captainId}/profile",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/operator/home-discovery/{kind}/{itemId}/targeting",
+      "method": "PUT",
+      "path": "/dsh/operator/home-discovery/{kind}/{itemId}/targeting",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/operator/platform/dispatch-balance-policy",
+      "method": "PUT",
+      "path": "/dsh/operator/platform/dispatch-balance-policy",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/operator/platform/service-areas/{serviceAreaCode}",
+      "method": "PUT",
+      "path": "/dsh/operator/platform/service-areas/{serviceAreaCode}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/operator/privacy/client-addresses/policy",
+      "method": "PUT",
+      "path": "/dsh/operator/privacy/client-addresses/policy",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/operator/stores/{storeId}/delivery-pricing/{fulfillmentMode}",
+      "method": "PUT",
+      "path": "/dsh/operator/stores/{storeId}/delivery-pricing/{fulfillmentMode}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/operator/workforce/scopes/{actorId}",
+      "method": "PUT",
+      "path": "/dsh/operator/workforce/scopes/{actorId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/partner/catalog/assortment/{masterProductId}",
+      "method": "PUT",
+      "path": "/dsh/partner/catalog/assortment/{masterProductId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/partner/me/finance/payout-destination",
+      "method": "PUT",
+      "path": "/dsh/partner/me/finance/payout-destination",
+      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
+    },
+    {
+      "route": "PUT /dsh/partner/stores/{storeId}/delivery-pricing/{fulfillmentMode}",
+      "method": "PUT",
+      "path": "/dsh/partner/stores/{storeId}/delivery-pricing/{fulfillmentMode}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    }
+  ]
+}

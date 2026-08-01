@@ -135,13 +135,17 @@ func GetCaptainFinancialEligibilitySnapshot(
 	captainID string,
 ) (CaptainFinancialEligibilitySnapshot, error) {
 	var snapshot CaptainFinancialEligibilitySnapshot
-	err := db.QueryRowContext(ctx, `
+	normCtx, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return snapshot, err
+	}
+	err = db.QueryRowContext(ctx, `
 		SELECT operator_context_id,captain_id,wallet_id,wallet_status,available_balance_minor_units,
 			minimum_dispatch_balance_minor_units,currency,eligible,ineligibility_reason,
 			snapshot_reference,checked_at,expires_at
 		FROM dsh_captain_financial_eligibility
 		WHERE operator_context_id=$1 AND captain_id=$2`,
-		normalizeOperatorContextID(operatorContextID), strings.TrimSpace(captainID),
+		normCtx, strings.TrimSpace(captainID),
 	).Scan(
 		&snapshot.OperatorContextID,
 		&snapshot.CaptainID,

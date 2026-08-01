@@ -39,7 +39,18 @@
     "react-native-svg": "15.15.4",
     "@bthwani/core-providers": "workspace:*",
     "@bthwani/data-runtime": "workspace:*",
-    "@bthwani/control-panel": "workspace:*"
+    "@bthwani/control-panel": "workspace:*",
+    "@react-native-async-storage/async-storage": "1.24.0",
+    "@react-native-community/netinfo": "11.4.1",
+    "react-native": "0.85.3",
+    "react-native-maps": "1.27.2",
+    "@tanstack/react-query": "5.90.2",
+    "expo-image-picker": "~56.0.22",
+    "expo-location": "~56.0.22",
+    "expo-notifications": "~56.0.22",
+    "expo-secure-store": "~56.0.4",
+    "expo-constants": "~56.0.22",
+    "expo-crypto": "~56.0.4"
   },
   "devDependencies": {
     "@types/node": "24.10.1",

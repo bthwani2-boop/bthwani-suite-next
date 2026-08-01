@@ -33,6 +33,10 @@ try {
       stdio: "inherit",
       env: { ...process.env, CI: "1", EXPO_NO_TELEMETRY: "1", COREPACK_ENABLE_DOWNLOAD_PROMPT: "0" },
       windowsHide: true,
+      // Node's CVE-2024-27980 mitigation blocks spawning .cmd/.bat directly without
+      // a shell (EINVAL) on Windows. All arguments here are locally constructed
+      // (repo-relative paths, fixed CLI flags) -- no untrusted input crosses this call.
+      shell: process.platform === "win32",
     },
   );
   if (result.error) fail(`${appKey}: Expo export could not start: ${result.error.message}`);

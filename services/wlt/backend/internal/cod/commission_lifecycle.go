@@ -416,50 +416,6 @@ func writeCommissionLifecycleResult(w http.ResponseWriter, commission *Commissio
 	shared.SendJSON(w, http.StatusOK, map[string]any{"commission": commission})
 }
 
-func HandleConfirmGovernedCommission(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		input, ok := decodeLifecycleInput(w, r)
-		if !ok {
-			return
-		}
-		commission, err := ConfirmGovernedCommission(r.Context(), db, r.PathValue("commissionId"), input.OperatorID, r.Header.Get("X-Correlation-ID"))
-		writeCommissionLifecycleResult(w, commission, err)
-	}
-}
-
-func HandleSettleGovernedCommission(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		input, ok := decodeLifecycleInput(w, r)
-		if !ok {
-			return
-		}
-		commission, err := SettleGovernedCommission(r.Context(), db, r.PathValue("commissionId"), input.OperatorID, r.Header.Get("X-Correlation-ID"))
-		writeCommissionLifecycleResult(w, commission, err)
-	}
-}
-
-func HandleRejectGovernedCommission(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		input, ok := decodeLifecycleInput(w, r)
-		if !ok {
-			return
-		}
-		commission, err := RejectGovernedCommission(r.Context(), db, r.PathValue("commissionId"), input.OperatorID, input.Reason, r.Header.Get("X-Correlation-ID"))
-		writeCommissionLifecycleResult(w, commission, err)
-	}
-}
-
-func HandleReverseGovernedCommission(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		input, ok := decodeLifecycleInput(w, r)
-		if !ok {
-			return
-		}
-		commission, err := ReverseGovernedCommission(r.Context(), db, r.PathValue("commissionId"), input.OperatorID, input.Reason, r.Header.Get("X-Correlation-ID"))
-		writeCommissionLifecycleResult(w, commission, err)
-	}
-}
-
 func HandleGetGovernedCommission(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		detail, err := GetGovernedCommissionDetail(r.Context(), db, r.PathValue("commissionId"))

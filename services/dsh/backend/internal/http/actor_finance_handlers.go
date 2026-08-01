@@ -172,10 +172,6 @@ func (s *protectedStoreServer) handleCaptainFinancePayouts(w http.ResponseWriter
 	s.handleCaptainPayoutRequests(w, r)
 }
 
-func (s *protectedStoreServer) handleCaptainCreatePayout(w http.ResponseWriter, r *http.Request) {
-	s.handleCaptainCreatePayoutRequest(w, r)
-}
-
 func (s *protectedStoreServer) handleFieldFinanceCommissions(w http.ResponseWriter, r *http.Request) {
 	s.handleFieldMeCommissions(w, r)
 }
@@ -188,22 +184,6 @@ func (s *protectedStoreServer) handleFieldFinancePayouts(w http.ResponseWriter, 
 	s.handleFieldPayoutRequests(w, r)
 }
 
-func (s *protectedStoreServer) handleFieldCreatePayout(w http.ResponseWriter, r *http.Request) {
-	s.handleFieldCreatePayoutRequest(w, r)
-}
-
 func (s *protectedStoreServer) handleFieldListPayoutDestinations(w http.ResponseWriter, r *http.Request) {
 	s.handleFieldPayoutDestinationRead(w, r)
-}
-
-func (s *protectedStoreServer) handleFieldCreatePayoutDestination(w http.ResponseWriter, r *http.Request) {
-	s.handleFieldPayoutDestinationUpsert(w, r)
-}
-
-func (s *protectedStoreServer) handleFieldUpdatePayoutDestination(w http.ResponseWriter, r *http.Request) {
-	s.handleFieldPayoutDestinationUpsert(w, r)
-}
-
-func (s *protectedStoreServer) handleFieldDeletePayoutDestination(w http.ResponseWriter, r *http.Request) {
-	s.handleFieldPayoutDestinationDeactivate(w, r)
 }
