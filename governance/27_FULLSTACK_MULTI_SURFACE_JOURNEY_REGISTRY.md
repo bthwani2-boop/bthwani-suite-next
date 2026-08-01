@@ -66,9 +66,39 @@ Recreated baseline commit: `5edaac5f7fe5cc492f64735850de8f5945436688`
 - `FS-17` — التحقق المستهدف: static، product، runtime، visual، QA، security، finance، isolation، governance، CI، release وproduction حسب الأثر.
 - `FS-18` — دليل نفس الـcommit، الموافقات المستقلة، rollback والفجوات والمخاطر المتبقية.
 
+## FOUNDATION-01 — اكتشاف التغطية الآلي (SHA `d856e7972`)
+
+شُغِّلت أدوات الاكتشاف الآلي الموجودة فعلياً في `tools/scripts/` (لا أداة جديدة):
+`generate-operational-journey-inventory.mjs`, `generate-operational-surface-inventory.mjs`,
+`generate-operational-toolchain-inventory.mjs`, `generate-operational-gap-ledger.mjs`.
+
+هذا اكتشاف خام (`DISCOVERY_ONLY`) — **ليس** ربطاً نهائياً لكل رحلة من J01-J107 بمسارها وكودها ودليلها؛ ذلك يتطلب فتح كل رحلة على حدة حسب §12.3 من هذا الملف، وهو عمل المرحلة القادمة (تنفيذ الرحلات)، لا هذه المرحلة.
+
+```yaml
+head_sha: d856e7972bdb48bfcd6096ba1e44a37b7ef63395
+status: DISCOVERY_ONLY
+proposed_journey_operations: 599   # عملية واحدة لكل operationId عبر كل العقود، غير مصنّفة بعد إلى J01-J107
+proposed_journey_groups: 13
+backend_routes_indexed: 212
+open_gaps: 15
+```
+
+### الفجوات المفتوحة المكتشفة (`gap-ledger.json`, غير مُصلَحة بعد)
+
+| الخطورة | العدد | النوع | الأمثلة |
+| --- | --- | --- | --- |
+| CRITICAL / P0 | 2 | `CI_NOT_PROVEN` | codeql، sonarqube غير مربوطين بأي workflow فعلي (يتفق مع اكتشاف `toolchain-activation-gate` السابق في هذه الجلسة) |
+| HIGH / P1 | 4 | `CI_WEAKLY_BOUND` | gitleaks، nx، osv-scanner، trivy |
+| HIGH / P1 | 6 | `BUSINESS_LOGIC_IN_SURFACE` | `StoreDetailShell.tsx`، `DshFieldFinanceScreen.tsx`، `PartnerDeliveryPricingCard.tsx`، `CommissionGovernancePanel.tsx`، `RefundsCommandPanel.tsx`، `RepresentativeWalletLookup.tsx` — منطق مجال داخل طبقة عرض بدل العقل المشترك، ثلاثة منها مالية |
+| MEDIUM / P2 | 3 | `DIRECT_API_IN_SHARED_UNCLASSIFIED` | `home-discovery-events.ts`، `presigned-upload.ts`، `google-maps-web-config.ts` |
+
+**ملاحظة أداة معطوبة إضافية:** `reconcile-operational-diagnostics.mjs` يفشل عند خطوة التلخيص النهائي لأنه يستدعي `.diagnostics/operational-journey-factory/build-canonical-reference.mjs` — ملف غير موجود في المستودع إطلاقاً (بحث كامل بلا نتيجة). أداة تلخيص لم تُستكمل قط، لا عطل ناتج عن هذه الجلسة؛ مسجَّلة هنا كفجوة أدوات مفتوحة.
+
+جميع الفجوات الأربع عشرة أعلاه (عدا ملاحظة الأداة المعطوبة) **لم تُعالَج في هذه المرحلة** — الاكتشاف والتوثيق فقط، بقرار صريح بعدم توسيع نطاق «بناء السجل» إلى «إصلاح كل ما يكشفه السجل» دون مراجعة.
+
 ## فهرس الرحلات
 
-_فارغ حالياً — يُملأ عند فتح كل رحلة فعلياً على commit محدد، وليس بأثر رجعي._
+_فارغ حالياً على مستوى J01-J107 المسمّاة — يُملأ عند فتح كل رحلة فعلياً على commit محدد، وليس بأثر رجعي. الاكتشاف الخام أعلاه (599 عملية) هو المُدخل الذي ستُصنَّف منه هذه الرحلات عند فتحها، لا بديل عن فتحها._
 
 | ID | الرحلة | المالك الرئيسي | الأسطح | القرار | آخر SHA للأدلة |
 | --- | --- | --- | --- | --- | --- |
@@ -78,3 +108,4 @@ _فارغ حالياً — يُملأ عند فتح كل رحلة فعلياً �
 | التاريخ | الحدث |
 | --- | --- |
 | 2026-07-31 | أُعيد إنشاء السجل فارغاً بقرار مالك المستودع، بعد حذفه عمداً في `475fba912`. لا رحلات مضافة بعد. |
+| 2026-08-01 | FOUNDATION-01: تشغيل أدوات الاكتشاف الآلي الموجودة (599 عملية مقترحة، 212 مسار خلفي، 15 فجوة مفتوحة موثّقة أعلاه). لا رحلات J01-J107 مصنَّفة بعد؛ التصنيف يحدث عند فتح كل رحلة. |

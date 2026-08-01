@@ -1,0 +1,627 @@
+{
+  "head_sha": "d856e7972bdb48bfcd6096ba1e44a37b7ef63395",
+  "status": "DISCOVERY_ONLY",
+  "required_gap_fields": [
+    "gap_id",
+    "type",
+    "path",
+    "owner",
+    "affected_surface",
+    "affected_journeys",
+    "root_cause",
+    "pattern_group",
+    "risk_level",
+    "required_action",
+    "target_files",
+    "allowed_decision",
+    "forbidden_actions",
+    "verification_commands",
+    "proof_required",
+    "status",
+    "blocks_journey_start"
+  ],
+  "gap_count": 15,
+  "gaps": [
+    {
+      "gap_id": "CI_NOT_PROVEN:codeql",
+      "type": "CI_NOT_PROVEN",
+      "source_tool": "toolchain-inventory",
+      "path": "codeql",
+      "reason": "Tool classified as BLOCKED_NEEDS_TOOL, NEEDS_OWNER.",
+      "severity": "CRITICAL",
+      "risk_level": "P0",
+      "journey": "factory",
+      "affected_journeys": [
+        "operational_foundation"
+      ],
+      "affected_surface": "multi-surface",
+      "owner": "toolchain",
+      "root_cause": "toolchain_execution_not_proven",
+      "pattern_group": "toolchain_binding",
+      "required_action": "classify_or_bind_tool",
+      "target_files": [
+        "package.json",
+        "tools/toolchain/**",
+        "tools/scripts/**",
+        ".github/workflows/**"
+      ],
+      "allowed_decision": "BLOCKED_NEEDS_TOOL",
+      "forbidden_actions": [
+        "mark_pass_without_command",
+        "ignore_active_fail_policy_tool"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:toolchain"
+      ],
+      "proof_required": [
+        "command_record_has_classification",
+        "tool_activation_policy_respected"
+      ],
+      "decision": "BLOCKED_NEEDS_EVIDENCE",
+      "verification": "pnpm run diagnostics:operational:toolchain",
+      "status": "OPEN",
+      "blocks_journey_start": true
+    },
+    {
+      "gap_id": "CI_WEAKLY_BOUND:gitleaks",
+      "type": "CI_WEAKLY_BOUND",
+      "source_tool": "toolchain-inventory",
+      "path": "gitleaks",
+      "reason": "Active fail-policy tool is weakly bound: FIX_REQUIRED, NEEDS_OWNER.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "operational_foundation"
+      ],
+      "affected_surface": "multi-surface",
+      "owner": "toolchain",
+      "root_cause": "toolchain_execution_not_proven",
+      "pattern_group": "toolchain_binding",
+      "required_action": "strengthen_tool_binding_or_document_workflow_evidence",
+      "target_files": [
+        "package.json",
+        "tools/toolchain/**",
+        "tools/scripts/**",
+        ".github/workflows/**"
+      ],
+      "allowed_decision": "FIX_REQUIRED",
+      "forbidden_actions": [
+        "mark_pass_without_command",
+        "ignore_active_fail_policy_tool"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:toolchain"
+      ],
+      "proof_required": [
+        "command_record_has_classification",
+        "tool_activation_policy_respected"
+      ],
+      "decision": "FIX_REQUIRED",
+      "verification": "pnpm run diagnostics:operational:toolchain",
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "CI_WEAKLY_BOUND:nx",
+      "type": "CI_WEAKLY_BOUND",
+      "source_tool": "toolchain-inventory",
+      "path": "nx",
+      "reason": "Active fail-policy tool is weakly bound: FIX_REQUIRED, NEEDS_OWNER.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "operational_foundation"
+      ],
+      "affected_surface": "multi-surface",
+      "owner": "toolchain",
+      "root_cause": "toolchain_execution_not_proven",
+      "pattern_group": "toolchain_binding",
+      "required_action": "strengthen_tool_binding_or_document_workflow_evidence",
+      "target_files": [
+        "package.json",
+        "tools/toolchain/**",
+        "tools/scripts/**",
+        ".github/workflows/**"
+      ],
+      "allowed_decision": "FIX_REQUIRED",
+      "forbidden_actions": [
+        "mark_pass_without_command",
+        "ignore_active_fail_policy_tool"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:toolchain"
+      ],
+      "proof_required": [
+        "command_record_has_classification",
+        "tool_activation_policy_respected"
+      ],
+      "decision": "FIX_REQUIRED",
+      "verification": "pnpm run diagnostics:operational:toolchain",
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "CI_WEAKLY_BOUND:osv-scanner",
+      "type": "CI_WEAKLY_BOUND",
+      "source_tool": "toolchain-inventory",
+      "path": "osv-scanner",
+      "reason": "Active fail-policy tool is weakly bound: FIX_REQUIRED, NEEDS_OWNER.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "operational_foundation"
+      ],
+      "affected_surface": "multi-surface",
+      "owner": "toolchain",
+      "root_cause": "toolchain_execution_not_proven",
+      "pattern_group": "toolchain_binding",
+      "required_action": "strengthen_tool_binding_or_document_workflow_evidence",
+      "target_files": [
+        "package.json",
+        "tools/toolchain/**",
+        "tools/scripts/**",
+        ".github/workflows/**"
+      ],
+      "allowed_decision": "FIX_REQUIRED",
+      "forbidden_actions": [
+        "mark_pass_without_command",
+        "ignore_active_fail_policy_tool"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:toolchain"
+      ],
+      "proof_required": [
+        "command_record_has_classification",
+        "tool_activation_policy_respected"
+      ],
+      "decision": "FIX_REQUIRED",
+      "verification": "pnpm run diagnostics:operational:toolchain",
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "CI_NOT_PROVEN:sonarqube",
+      "type": "CI_NOT_PROVEN",
+      "source_tool": "toolchain-inventory",
+      "path": "sonarqube",
+      "reason": "Tool classified as BLOCKED_NEEDS_TOOL, NEEDS_OWNER.",
+      "severity": "CRITICAL",
+      "risk_level": "P0",
+      "journey": "factory",
+      "affected_journeys": [
+        "operational_foundation"
+      ],
+      "affected_surface": "multi-surface",
+      "owner": "toolchain",
+      "root_cause": "toolchain_execution_not_proven",
+      "pattern_group": "toolchain_binding",
+      "required_action": "classify_or_bind_tool",
+      "target_files": [
+        "package.json",
+        "tools/toolchain/**",
+        "tools/scripts/**",
+        ".github/workflows/**"
+      ],
+      "allowed_decision": "BLOCKED_NEEDS_TOOL",
+      "forbidden_actions": [
+        "mark_pass_without_command",
+        "ignore_active_fail_policy_tool"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:toolchain"
+      ],
+      "proof_required": [
+        "command_record_has_classification",
+        "tool_activation_policy_respected"
+      ],
+      "decision": "BLOCKED_NEEDS_EVIDENCE",
+      "verification": "pnpm run diagnostics:operational:toolchain",
+      "status": "OPEN",
+      "blocks_journey_start": true
+    },
+    {
+      "gap_id": "CI_WEAKLY_BOUND:trivy",
+      "type": "CI_WEAKLY_BOUND",
+      "source_tool": "toolchain-inventory",
+      "path": "trivy",
+      "reason": "Active fail-policy tool is weakly bound: FIX_REQUIRED, NEEDS_OWNER.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "operational_foundation"
+      ],
+      "affected_surface": "multi-surface",
+      "owner": "toolchain",
+      "root_cause": "toolchain_execution_not_proven",
+      "pattern_group": "toolchain_binding",
+      "required_action": "strengthen_tool_binding_or_document_workflow_evidence",
+      "target_files": [
+        "package.json",
+        "tools/toolchain/**",
+        "tools/scripts/**",
+        ".github/workflows/**"
+      ],
+      "allowed_decision": "FIX_REQUIRED",
+      "forbidden_actions": [
+        "mark_pass_without_command",
+        "ignore_active_fail_policy_tool"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:toolchain"
+      ],
+      "proof_required": [
+        "command_record_has_classification",
+        "tool_activation_policy_respected"
+      ],
+      "decision": "FIX_REQUIRED",
+      "verification": "pnpm run diagnostics:operational:toolchain",
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-client/store/StoreDetailShell.tsx",
+      "type": "BUSINESS_LOGIC_IN_SURFACE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/app-client/store/StoreDetailShell.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "partner_onboarding",
+        "store_publication"
+      ],
+      "affected_surface": "services/dsh/frontend/app-client",
+      "owner": "dsh_frontend_client_surface",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/app-client/store/StoreDetailShell.tsx",
+        "services/dsh/frontend/app-client/store/StoreDetailShell.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "BLOCKED_NEEDS_EVIDENCE",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "OPEN",
+      "blocks_journey_start": true
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx",
+      "type": "BUSINESS_LOGIC_IN_SURFACE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "checkout",
+        "payment_handoff",
+        "settlement_read_projection"
+      ],
+      "affected_surface": "services/dsh/frontend/app-field",
+      "owner": "dsh_frontend_field_surface",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx",
+        "services/dsh/frontend/app-field/finance/DshFieldFinance.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "BLOCKED_NEEDS_EVIDENCE",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "OPEN",
+      "blocks_journey_start": true
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx",
+      "type": "BUSINESS_LOGIC_IN_SURFACE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "partner_onboarding",
+        "store_publication"
+      ],
+      "affected_surface": "services/dsh/frontend/app-partner",
+      "owner": "dsh_frontend_partner_surface",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx",
+        "services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "BLOCKED_NEEDS_EVIDENCE",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "OPEN",
+      "blocks_journey_start": true
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/finance/CommissionGovernancePanel.tsx",
+      "type": "BUSINESS_LOGIC_IN_SURFACE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/finance/CommissionGovernancePanel.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "checkout",
+        "payment_handoff",
+        "settlement_read_projection"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_finance_read_proxy_consumer",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/finance/CommissionGovernancePanel.tsx",
+        "services/dsh/frontend/control-panel/finance/CommissionGovernance.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "BLOCKED_NEEDS_EVIDENCE",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "OPEN",
+      "blocks_journey_start": true
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/finance/RefundsCommandPanel.tsx",
+      "type": "BUSINESS_LOGIC_IN_SURFACE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/finance/RefundsCommandPanel.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "checkout",
+        "payment_handoff",
+        "settlement_read_projection"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_finance_read_proxy_consumer",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/finance/RefundsCommandPanel.tsx",
+        "services/dsh/frontend/control-panel/finance/RefundsCommand.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "BLOCKED_NEEDS_EVIDENCE",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "OPEN",
+      "blocks_journey_start": true
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/finance/RepresentativeWalletLookup.tsx",
+      "type": "BUSINESS_LOGIC_IN_SURFACE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/finance/RepresentativeWalletLookup.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "checkout",
+        "payment_handoff",
+        "settlement_read_projection"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_finance_read_proxy_consumer",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/finance/RepresentativeWalletLookup.tsx",
+        "services/dsh/frontend/control-panel/finance/RepresentativeWalletLookup.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "BLOCKED_NEEDS_EVIDENCE",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "OPEN",
+      "blocks_journey_start": true
+    },
+    {
+      "gap_id": "DIRECT_API_IN_SHARED_UNCLASSIFIED:services/dsh/frontend/shared/home-discovery/home-discovery-events.ts",
+      "type": "DIRECT_API_IN_SHARED_UNCLASSIFIED",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/shared/home-discovery/home-discovery-events.ts",
+      "reason": "Shared file contains direct API signs but is not named as adapter/client/transport/kernel.",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/shared",
+      "owner": "shared_brain",
+      "root_cause": "shared_direct_api_file_has_unclear_role",
+      "pattern_group": "shared_runtime_adapter_classification",
+      "required_action": "rename_or_move_to_shared_adapter_or_kernel",
+      "target_files": [
+        "services/dsh/frontend/shared/home-discovery/home-discovery-events.ts"
+      ],
+      "allowed_decision": "KEEP_WITH_PROOF_OR_RENAME",
+      "forbidden_actions": [
+        "leave_unclassified_direct_api",
+        "delete_without_reference_proof"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "classified_as_adapter_client_transport_or_runtime",
+        "runtime_config_guard_passes"
+      ],
+      "decision": "FIX_REQUIRED",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "DIRECT_API_IN_SHARED_UNCLASSIFIED:services/dsh/frontend/shared/media/presigned-upload.ts",
+      "type": "DIRECT_API_IN_SHARED_UNCLASSIFIED",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/shared/media/presigned-upload.ts",
+      "reason": "Shared file contains direct API signs but is not named as adapter/client/transport/kernel.",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/shared",
+      "owner": "shared_brain",
+      "root_cause": "shared_direct_api_file_has_unclear_role",
+      "pattern_group": "shared_runtime_adapter_classification",
+      "required_action": "rename_or_move_to_shared_adapter_or_kernel",
+      "target_files": [
+        "services/dsh/frontend/shared/media/presigned-upload.ts"
+      ],
+      "allowed_decision": "KEEP_WITH_PROOF_OR_RENAME",
+      "forbidden_actions": [
+        "leave_unclassified_direct_api",
+        "delete_without_reference_proof"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "classified_as_adapter_client_transport_or_runtime",
+        "runtime_config_guard_passes"
+      ],
+      "decision": "FIX_REQUIRED",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "DIRECT_API_IN_SHARED_UNCLASSIFIED:services/dsh/frontend/shared/_kernel/google-maps-web-config.ts",
+      "type": "DIRECT_API_IN_SHARED_UNCLASSIFIED",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/shared/_kernel/google-maps-web-config.ts",
+      "reason": "Shared file contains direct API signs but is not named as adapter/client/transport/kernel.",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/shared",
+      "owner": "shared_brain",
+      "root_cause": "shared_direct_api_file_has_unclear_role",
+      "pattern_group": "shared_runtime_adapter_classification",
+      "required_action": "rename_or_move_to_shared_adapter_or_kernel",
+      "target_files": [
+        "services/dsh/frontend/shared/_kernel/google-maps-web-config.ts"
+      ],
+      "allowed_decision": "KEEP_WITH_PROOF_OR_RENAME",
+      "forbidden_actions": [
+        "leave_unclassified_direct_api",
+        "delete_without_reference_proof"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "classified_as_adapter_client_transport_or_runtime",
+        "runtime_config_guard_passes"
+      ],
+      "decision": "FIX_REQUIRED",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "OPEN",
+      "blocks_journey_start": false
+    }
+  ]
+}
