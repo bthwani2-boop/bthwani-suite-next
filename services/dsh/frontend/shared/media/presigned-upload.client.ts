@@ -8,6 +8,9 @@ export async function uploadBinaryToPresignedUrl(
   body: Blob,
   contentType: string,
 ): Promise<PresignedUploadResult> {
+  // We use raw fetch instead of createDshHttpClient because we are uploading directly 
+  // to an S3 presigned URL, which will reject the request if BThwani custom headers 
+  // (added by the approved client) are present.
   const response = await fetch(uploadUrl, {
     method: "PUT",
     body,
