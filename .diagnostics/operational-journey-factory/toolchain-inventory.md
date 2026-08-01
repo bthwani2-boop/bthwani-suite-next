@@ -1,6 +1,6 @@
 # Operational Toolchain Inventory
 
-head_sha: `d856e7972bdb48bfcd6096ba1e44a37b7ef63395`
+head_sha: `f90ba856d34cb095cbedb52e628ab5ef6e752b6b`
 status: `DISCOVERY_ONLY`
 
 | Tool | Activation | Command | Classification |
@@ -10,7 +10,7 @@ status: `DISCOVERY_ONLY`
 | `autocannon` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
 | `axe` | partial | `guard:a11y-runtime` | PARTIAL, NEEDS_OWNER |
 | `checkov` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
-| `codeql` | active | `NO_COMMAND_DECLARED` | BLOCKED_NEEDS_TOOL, NEEDS_OWNER |
+| `codeql` | active | `NO_COMMAND_DECLARED` | WORKFLOW_ONLY, NEEDS_OWNER |
 | `conftest` | active | `guard:opa-policies` | NEEDS_OWNER |
 | `cucumber` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
 | `cue` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
@@ -54,7 +54,7 @@ status: `DISCOVERY_ONLY`
 | `shellcheck` | partial | `guard:shellcheck` | PARTIAL, NEEDS_OWNER |
 | `sherif` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
 | `size-limit` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
-| `sonarqube` | active | `NO_COMMAND_DECLARED` | BLOCKED_NEEDS_TOOL, NEEDS_OWNER |
+| `sonarqube` | active | `NO_COMMAND_DECLARED` | WORKFLOW_ONLY, NEEDS_OWNER |
 | `spectral` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
 | `storybook` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
 | `style-dictionary` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |

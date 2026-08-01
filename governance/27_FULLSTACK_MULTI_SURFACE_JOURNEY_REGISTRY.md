@@ -81,16 +81,17 @@ proposed_journey_operations: 599   # عملية واحدة لكل operationId ع
 proposed_journey_groups: 13
 backend_routes_indexed: 212
 open_gaps: 15
+open_gaps_after_critical_closure: 13
 ```
 
-### الفجوات المفتوحة المكتشفة (`gap-ledger.json`, غير مُصلَحة بعد)
+### الفجوات المفتوحة المكتشفة (`gap-ledger.json`)
 
-| الخطورة | العدد | النوع | الأمثلة |
-| --- | --- | --- | --- |
-| CRITICAL / P0 | 2 | `CI_NOT_PROVEN` | codeql، sonarqube غير مربوطين بأي workflow فعلي (يتفق مع اكتشاف `toolchain-activation-gate` السابق في هذه الجلسة) |
-| HIGH / P1 | 4 | `CI_WEAKLY_BOUND` | gitleaks، nx، osv-scanner، trivy |
-| HIGH / P1 | 6 | `BUSINESS_LOGIC_IN_SURFACE` | `StoreDetailShell.tsx`، `DshFieldFinanceScreen.tsx`، `PartnerDeliveryPricingCard.tsx`، `CommissionGovernancePanel.tsx`، `RefundsCommandPanel.tsx`، `RepresentativeWalletLookup.tsx` — منطق مجال داخل طبقة عرض بدل العقل المشترك، ثلاثة منها مالية |
-| MEDIUM / P2 | 3 | `DIRECT_API_IN_SHARED_UNCLASSIFIED` | `home-discovery-events.ts`، `presigned-upload.ts`، `google-maps-web-config.ts` |
+| الخطورة | العدد | النوع | الحالة | الأمثلة |
+| --- | --- | --- | --- | --- |
+| CRITICAL / P0 | 2 | `CI_NOT_PROVEN` | **أُغلقت** — أُضيف `.github/workflows/codeql.yml` (javascript-typescript + مصفوفة go لكل خدمة) و`.github/workflows/sonarqube.yml`؛ actionlint وpinact وzizmor كلها PASS. تشغيل حقيقي على PR/push لم يُثبت بعد (لا يمكن تشغيله من هنا)، وSonarQube يحتاج `SONAR_TOKEN`/`SONAR_HOST_URL` من مالك المستودع في إعدادات GitHub | codeql، sonarqube |
+| HIGH / P1 | 4 | `CI_WEAKLY_BOUND` | مفتوحة — خارج نطاق هذه الجولة بقرار صريح | gitleaks، nx، osv-scanner، trivy |
+| HIGH / P1 | 6 | `BUSINESS_LOGIC_IN_SURFACE` | مفتوحة — خارج نطاق هذه الجولة بقرار صريح | `StoreDetailShell.tsx`، `DshFieldFinanceScreen.tsx`، `PartnerDeliveryPricingCard.tsx`، `CommissionGovernancePanel.tsx`، `RefundsCommandPanel.tsx`، `RepresentativeWalletLookup.tsx` — منطق مجال داخل طبقة عرض بدل العقل المشترك، ثلاثة منها مالية |
+| MEDIUM / P2 | 3 | `DIRECT_API_IN_SHARED_UNCLASSIFIED` | مفتوحة — خارج نطاق هذه الجولة بقرار صريح | `home-discovery-events.ts`، `presigned-upload.ts`، `google-maps-web-config.ts` |
 
 **ملاحظة أداة معطوبة إضافية:** `reconcile-operational-diagnostics.mjs` يفشل عند خطوة التلخيص النهائي لأنه يستدعي `.diagnostics/operational-journey-factory/build-canonical-reference.mjs` — ملف غير موجود في المستودع إطلاقاً (بحث كامل بلا نتيجة). أداة تلخيص لم تُستكمل قط، لا عطل ناتج عن هذه الجلسة؛ مسجَّلة هنا كفجوة أدوات مفتوحة.
 

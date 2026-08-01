@@ -1,5 +1,5 @@
 {
-  "head_sha": "d856e7972bdb48bfcd6096ba1e44a37b7ef63395",
+  "head_sha": "f90ba856d34cb095cbedb52e628ab5ef6e752b6b",
   "status": "DISCOVERY_ONLY",
   "output_policy": ".diagnostics/operational-journey-factory",
   "sources": {
@@ -189,11 +189,13 @@
       ".github/workflows/ci-policy.yml",
       ".github/workflows/ci-runtime.yml",
       ".github/workflows/ci.yml",
+      ".github/workflows/codeql.yml",
       ".github/workflows/dsh-database.yml",
       ".github/workflows/foundation-00-git-bundle.yml",
       ".github/workflows/foundation-00-snapshot.yml",
       ".github/workflows/lockfile-snapshot.yml",
-      ".github/workflows/manual-deep-verification.yml"
+      ".github/workflows/manual-deep-verification.yml",
+      ".github/workflows/sonarqube.yml"
     ]
   },
   "tools": [
@@ -363,14 +365,18 @@
       "failure_policy": "fail",
       "command": "NO_COMMAND_DECLARED",
       "script_found": false,
-      "workflow_found": false,
-      "workflow_evidence": [],
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_filename",
+        "workflow_name",
+        "workflow_action_or_step"
+      ],
       "detected_from": [
         "tools/toolchain/tool-catalog.v5.json",
         "tools/toolchain/tool-activation-baseline.json"
       ],
       "classification": [
-        "BLOCKED_NEEDS_TOOL",
+        "WORKFLOW_ONLY",
         "NEEDS_OWNER"
       ],
       "commands": [
@@ -380,10 +386,10 @@
           "tool": "codeql",
           "expected_exit_code": 0,
           "actual_exit_code": null,
-          "blocking": true,
-          "classification": "BLOCKED_NEEDS_TOOL",
+          "blocking": false,
+          "classification": "EXTERNAL_CI_WORKFLOW_ONLY",
           "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
-          "remediation_hint": "bind_or_install_required_tool"
+          "remediation_hint": "collect_external_ci_run_evidence_for_closure"
         }
       ]
     },
@@ -1731,14 +1737,18 @@
       "failure_policy": "fail",
       "command": "NO_COMMAND_DECLARED",
       "script_found": false,
-      "workflow_found": false,
-      "workflow_evidence": [],
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_filename",
+        "workflow_name",
+        "workflow_action_or_step"
+      ],
       "detected_from": [
         "tools/toolchain/tool-catalog.v5.json",
         "tools/toolchain/tool-activation-baseline.json"
       ],
       "classification": [
-        "BLOCKED_NEEDS_TOOL",
+        "WORKFLOW_ONLY",
         "NEEDS_OWNER"
       ],
       "commands": [
@@ -1748,10 +1758,10 @@
           "tool": "sonarqube",
           "expected_exit_code": 0,
           "actual_exit_code": null,
-          "blocking": true,
-          "classification": "BLOCKED_NEEDS_TOOL",
+          "blocking": false,
+          "classification": "EXTERNAL_CI_WORKFLOW_ONLY",
           "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
-          "remediation_hint": "bind_or_install_required_tool"
+          "remediation_hint": "collect_external_ci_run_evidence_for_closure"
         }
       ]
     },

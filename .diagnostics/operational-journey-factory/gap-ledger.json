@@ -1,5 +1,5 @@
 {
-  "head_sha": "d856e7972bdb48bfcd6096ba1e44a37b7ef63395",
+  "head_sha": "f90ba856d34cb095cbedb52e628ab5ef6e752b6b",
   "status": "DISCOVERY_ONLY",
   "required_gap_fields": [
     "gap_id",
@@ -20,48 +20,8 @@
     "status",
     "blocks_journey_start"
   ],
-  "gap_count": 15,
+  "gap_count": 13,
   "gaps": [
-    {
-      "gap_id": "CI_NOT_PROVEN:codeql",
-      "type": "CI_NOT_PROVEN",
-      "source_tool": "toolchain-inventory",
-      "path": "codeql",
-      "reason": "Tool classified as BLOCKED_NEEDS_TOOL, NEEDS_OWNER.",
-      "severity": "CRITICAL",
-      "risk_level": "P0",
-      "journey": "factory",
-      "affected_journeys": [
-        "operational_foundation"
-      ],
-      "affected_surface": "multi-surface",
-      "owner": "toolchain",
-      "root_cause": "toolchain_execution_not_proven",
-      "pattern_group": "toolchain_binding",
-      "required_action": "classify_or_bind_tool",
-      "target_files": [
-        "package.json",
-        "tools/toolchain/**",
-        "tools/scripts/**",
-        ".github/workflows/**"
-      ],
-      "allowed_decision": "BLOCKED_NEEDS_TOOL",
-      "forbidden_actions": [
-        "mark_pass_without_command",
-        "ignore_active_fail_policy_tool"
-      ],
-      "verification_commands": [
-        "pnpm run diagnostics:operational:toolchain"
-      ],
-      "proof_required": [
-        "command_record_has_classification",
-        "tool_activation_policy_respected"
-      ],
-      "decision": "BLOCKED_NEEDS_EVIDENCE",
-      "verification": "pnpm run diagnostics:operational:toolchain",
-      "status": "OPEN",
-      "blocks_journey_start": true
-    },
     {
       "gap_id": "CI_WEAKLY_BOUND:gitleaks",
       "type": "CI_WEAKLY_BOUND",
@@ -181,46 +141,6 @@
       "verification": "pnpm run diagnostics:operational:toolchain",
       "status": "OPEN",
       "blocks_journey_start": false
-    },
-    {
-      "gap_id": "CI_NOT_PROVEN:sonarqube",
-      "type": "CI_NOT_PROVEN",
-      "source_tool": "toolchain-inventory",
-      "path": "sonarqube",
-      "reason": "Tool classified as BLOCKED_NEEDS_TOOL, NEEDS_OWNER.",
-      "severity": "CRITICAL",
-      "risk_level": "P0",
-      "journey": "factory",
-      "affected_journeys": [
-        "operational_foundation"
-      ],
-      "affected_surface": "multi-surface",
-      "owner": "toolchain",
-      "root_cause": "toolchain_execution_not_proven",
-      "pattern_group": "toolchain_binding",
-      "required_action": "classify_or_bind_tool",
-      "target_files": [
-        "package.json",
-        "tools/toolchain/**",
-        "tools/scripts/**",
-        ".github/workflows/**"
-      ],
-      "allowed_decision": "BLOCKED_NEEDS_TOOL",
-      "forbidden_actions": [
-        "mark_pass_without_command",
-        "ignore_active_fail_policy_tool"
-      ],
-      "verification_commands": [
-        "pnpm run diagnostics:operational:toolchain"
-      ],
-      "proof_required": [
-        "command_record_has_classification",
-        "tool_activation_policy_respected"
-      ],
-      "decision": "BLOCKED_NEEDS_EVIDENCE",
-      "verification": "pnpm run diagnostics:operational:toolchain",
-      "status": "OPEN",
-      "blocks_journey_start": true
     },
     {
       "gap_id": "CI_WEAKLY_BOUND:trivy",
