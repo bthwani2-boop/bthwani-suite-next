@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
-import { useIdentitySession } from "./control-panel-session";
+import { useIdentitySession } from "@bthwani/core-identity";
 
 const DSH_ROUTE_PREFIX = "/" + "dsh";
 const DSH_LOGIN_ROUTE = `${DSH_ROUTE_PREFIX}/login`;

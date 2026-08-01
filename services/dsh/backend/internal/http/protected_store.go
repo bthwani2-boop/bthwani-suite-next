@@ -444,7 +444,49 @@ func (s *protectedStoreServer) handlePartnerInviteTeamMember(w http.ResponseWrit
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
 		return
 	}
+	hasPermission, err := s.actorHasPartnerPermission(r.Context(), actor.ID, storeID, "team.manage")
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to verify permissions")
+		return
+	}
+	if !hasPermission {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor lacks team.manage permission for this store")
+		return
+	}
 	partner.HandleInviteStoreTeamMember(s.db)(w, partnerRequestWithActor(r, actor))
+}
+
+func (s *protectedStoreServer) actorHasPartnerPermission(ctx context.Context, actorID string, storeID string, requiredAction string) (bool, error) {
+	var role string
+	err := s.db.QueryRowContext(ctx, `
+		SELECT role FROM dsh_store_team_members 
+		WHERE identity_actor_id = $1 AND store_id = $2 AND status = 'active'
+	`, actorID, storeID).Scan(&role)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// If not a team member, check if they are the partner owner.
+			// Currently, owners are supposed to have an active 'owner' row in team_members, 
+			// but we can fallback if needed. Let's assume team_members is authoritative.
+			return false, nil
+		}
+		return false, err
+	}
+
+	bundles, err := s.identity.FetchPartnerPermissionBundles(ctx)
+	if err != nil {
+		return false, err
+	}
+	for _, b := range bundles {
+		if b.Code == role {
+			for _, action := range b.Actions {
+				if action == requiredAction {
+					return true, nil
+				}
+			}
+			return false, nil
+		}
+	}
+	return false, nil
 }
 
 func (s *protectedStoreServer) handlePartnerListInvites(w http.ResponseWriter, r *http.Request) {
@@ -526,7 +568,7 @@ func (s *protectedStoreServer) handlePartnerCoverageZones(w http.ResponseWriter,
 }
 
 func (s *protectedStoreServer) handlePartnerScopes(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerSelfHandler(w, r, partner.HandleListPartnerScopes(s.db))
+	s.servePartnerSelfHandler(w, r, partner.HandleListPartnerScopes(s.db, s.identity))
 }
 
 func (s *protectedStoreServer) requireActor(

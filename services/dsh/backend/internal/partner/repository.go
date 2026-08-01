@@ -808,8 +808,8 @@ func InviteStoreTeamMember(db *sql.DB, storeID string, input InviteTeamMemberInp
 	_, err := db.Exec(`
 		INSERT INTO dsh_store_team_members (
 			store_id, name, role, status, invite_lifecycle, invited_identity, invited_by_actor_id
-		) VALUES ($1, $2, 'staff', 'invited', 'دعوة أُرسلت وبانتظار القبول', $2, $3)`,
-		storeID, input.Identity, input.InvitedByActorID)
+		) VALUES ($1, $2, $3, 'invited', 'دعوة أُرسلت وبانتظار القبول', $2, $4)`,
+		storeID, input.Identity, input.Role, input.InvitedByActorID)
 	return err
 }
 
@@ -1123,7 +1123,7 @@ func ListStoreCoverageZones(db *sql.DB, storeID string) ([]StoreCoverageZone, er
 // scopes. Role comes from the actor's own team-member row per store when one
 // exists (matched by invited_identity); absent a team-member row, the caller
 // is the store's owning partner and defaults to "owner".
-func ListPartnerScopesForActor(db *sql.DB, partnerID, actorIdentity string) ([]OperationalScope, error) {
+func ListPartnerScopesForActor(db *sql.DB, partnerID, actorIdentity string, resolver map[string][]string) ([]OperationalScope, error) {
 	rows, err := db.Query(`
 		SELECT s.id, s.partner_id, s.display_name, tm.role AS role
 		FROM dsh_stores s
@@ -1143,7 +1143,7 @@ func ListPartnerScopesForActor(db *sql.DB, partnerID, actorIdentity string) ([]O
 			return nil, err
 		}
 		sc.ScopeID = sc.StoreID
-		sc.Permissions = permissionsForRole(sc.Role)
+		sc.Permissions = resolver[sc.Role]
 		scopes = append(scopes, sc)
 	}
 	return scopes, rows.Err()

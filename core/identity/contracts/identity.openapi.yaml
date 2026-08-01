@@ -481,6 +481,29 @@ paths:
           description: Pending activation codes revoked.
         "401":
           $ref: "#/components/responses/Unauthenticated"
+  /internal/partner/permission-bundles:
+    get:
+      tags:
+        - InternalPartner
+      summary: List partner permission bundles
+      operationId: listPartnerPermissionBundles
+      description: |
+        Service-to-service only. Returns the canonical list of partner permission bundles
+        (owner, manager, etc.) so that dependent services like DSH can resolve scope permissions
+        without maintaining shadow authorization logic.
+      responses:
+        '200':
+          description: Canonical Identity-owned partner permission bundles.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [permissionBundles]
+                properties:
+                  permissionBundles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PartnerPermissionBundleDescriptor'
 components:
   securitySchemes:
     bearerAuth:
@@ -551,6 +574,21 @@ components:
           schema:
             $ref: "#/components/schemas/ApiError"
   schemas:
+    PartnerPermissionBundleDescriptor:
+      type: object
+      description: Canonical Identity-owned partner permission bundle.
+      required: [ code, nameAr, nameEn, actions ]
+      properties:
+        code:
+          type: string
+        nameAr:
+          type: string
+        nameEn:
+          type: string
+        actions:
+          type: array
+          items:
+            type: string
     RuntimeStatus:
       type: object
       required: [ status, service ]

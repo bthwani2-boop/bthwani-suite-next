@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"dsh-api/internal/auth"
 	"dsh-api/internal/store"
 )
 
@@ -466,7 +467,7 @@ func HandleListStoreCoverageZones(db *sql.DB) http.HandlerFunc {
 
 // GET /dsh/partner/scopes — resolves the caller's own default store to find
 // their partner, then lists all of that partner's stores as scopes.
-func HandleListPartnerScopes(db *sql.DB) http.HandlerFunc {
+func HandleListPartnerScopes(db *sql.DB, authClient *auth.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
 		if !ok {
@@ -488,7 +489,18 @@ func HandleListPartnerScopes(db *sql.DB) http.HandlerFunc {
 			sendJSON(w, http.StatusOK, map[string]any{"scopes": []OperationalScope{}})
 			return
 		}
-		scopes, err := ListPartnerScopesForActorForOperatorContext(db, operatorContextID, partnerID.String, actorID)
+
+		bundles, err := authClient.FetchPartnerPermissionBundles(r.Context())
+		if err != nil {
+			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve authoritative partner permission bundles")
+			return
+		}
+		resolver := make(map[string][]string)
+		for _, b := range bundles {
+			resolver[b.Code] = b.Actions
+		}
+
+		scopes, err := ListPartnerScopesForActorForOperatorContext(db, operatorContextID, partnerID.String, actorID, resolver)
 		if err != nil {
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list partner scopes")
 			return

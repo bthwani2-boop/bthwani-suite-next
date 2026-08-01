@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { colorRoles } from "@bthwani/ui-kit";
-import { useIdentitySession } from "./control-panel-session";
+import { useIdentitySession } from "@bthwani/core-identity";
 
 const DSH_LOGIN_ROUTE = "/" + "dsh" + "/login";
 

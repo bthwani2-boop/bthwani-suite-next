@@ -4,7 +4,7 @@ import "database/sql"
 
 // ListPartnerScopesForActorForOperatorContext returns only active team scopes belonging
 // to both the partner and authenticated OperatorContext.
-func ListPartnerScopesForActorForOperatorContext(db *sql.DB, operatorContextID, partnerID, actorIdentity string) ([]OperationalScope, error) {
+func ListPartnerScopesForActorForOperatorContext(db *sql.DB, operatorContextID, partnerID, actorIdentity string, resolver map[string][]string) ([]OperationalScope, error) {
 	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func ListPartnerScopesForActorForOperatorContext(db *sql.DB, operatorContextID, 
 			return nil, err
 		}
 		scope.ScopeID = scope.StoreID
-		scope.Permissions = permissionsForRole(scope.Role)
+		scope.Permissions = resolver[scope.Role]
 		scopes = append(scopes, scope)
 	}
 	return scopes, rows.Err()
