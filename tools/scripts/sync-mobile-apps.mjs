@@ -56,6 +56,28 @@ function assertSame(file, expected) {
   }
 }
 
+// Reviewed exceptions to the generated app.config.ts template. Every entry
+// needs a real UI/platform reason recorded here; the check still requires
+// the file to call the sovereign factory with the correct app key, so the
+// factory itself may not be bypassed -- only additional wrapping on top of
+// its result is permitted.
+const appConfigCustomizations = {
+  "app-client": "keeps native appearance forced to light and enables expo-video picture-in-picture (see commit 1a2a8fbed)",
+};
+
+function assertAppConfigSynced(key, file, expected) {
+  const actual = readText(file);
+  if (sameText(actual, expected)) return;
+  if (!appConfigCustomizations[key]) {
+    throw new Error(`${file}: not synchronized`);
+  }
+  const callsFactory = new RegExp(`defineBthwaniExpoApp\\(\\s*["']${key}["']\\s*\\)`).test(actual);
+  const usesFactoryImport = actual.includes('from "../../../tools/mobile/defineBthwaniExpoApp"');
+  if (!callsFactory || !usesFactoryImport) {
+    throw new Error(`${file}: documented customization must still call defineBthwaniExpoApp("${key}") from the sovereign factory`);
+  }
+}
+
 function isUuid(value) {
   return typeof value === "string" &&
     /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
@@ -165,7 +187,7 @@ if (apply) {
 
 assertSame("tools/mobile/defineBthwaniExpoApp.d.ts", factoryDtsContent());
 for (const key of targetAppKeys) {
-  assertSame(`${appDir(key)}/app.config.ts`, appConfig(key));
+  assertAppConfigSynced(key, `${appDir(key)}/app.config.ts`, appConfig(key));
   assertSame(`${appDir(key)}/eas.json`, JSON.stringify(easTemplate, null, 2) + "\n");
 }
 

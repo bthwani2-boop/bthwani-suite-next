@@ -17,7 +17,6 @@ on:
       - "services/dsh/frontend/**"
       - "services/dsh/clients/**"
       - "shared/ui-kit/**"
-      - "shared/app-shell/**"
       - "core/identity/package.json"
       - "core/platform-control/package.json"
 
@@ -55,7 +54,6 @@ jobs:
             services/dsh/frontend
             services/dsh/clients
             shared/ui-kit
-            shared/app-shell
             core/identity/package.json
             core/platform-control/package.json
           if-no-files-found: error
