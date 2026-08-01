@@ -14,13 +14,17 @@ BEGIN
     WHERE table_schema = 'public' AND table_name = 'wlt_payout_destinations' AND column_name = 'owner_actor_type' AND is_nullable = 'NO'
   ) THEN missing := array_append(missing, 'wlt_payout_destinations.owner_actor_type NOT NULL'); END IF;
 
+  -- wlt-113 replaced wlt_payout_destinations_one_active_owner_uidx with an
+  -- operator-context-scoped index: uniqueness of the single active destination is
+  -- per (operator_context_id, owner_actor_type, owner_actor_id), not per owner
+  -- alone. Asserting the retired name made this test fail on every current schema.
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
-    WHERE schemaname = 'public' AND indexname = 'wlt_payout_destinations_one_active_owner_uidx'
+    WHERE schemaname = 'public' AND indexname = 'wlt_payout_destinations_one_active_operatorcontext_owner_idx'
       AND indexdef ILIKE '%UNIQUE%'
-      AND indexdef ILIKE '%owner_actor_type%owner_actor_id%'
+      AND indexdef ILIKE '%operator_context_id%owner_actor_type%owner_actor_id%'
       AND indexdef ILIKE '%WHERE (active = true)%'
-  ) THEN missing := array_append(missing, 'one active destination per typed owner index'); END IF;
+  ) THEN missing := array_append(missing, 'one active destination per operator-context typed owner index'); END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
@@ -55,10 +59,12 @@ BEGIN
     missing := array_append(missing, 'wlt_payout_reconciliations');
   END IF;
 
+  -- wlt-902 renamed this trigger to wlt_payout_transition_audit_trigger when the
+  -- payout transition capture became audit-only. The old name no longer exists.
   IF NOT EXISTS (
     SELECT 1 FROM pg_trigger
-    WHERE tgname = 'wlt_payout_transition_trigger' AND NOT tgisinternal
-  ) THEN missing := array_append(missing, 'wlt_payout_transition_trigger'); END IF;
+    WHERE tgname = 'wlt_payout_transition_audit_trigger' AND NOT tgisinternal
+  ) THEN missing := array_append(missing, 'wlt_payout_transition_audit_trigger'); END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_trigger
@@ -79,10 +85,13 @@ $$;
 DO $$
 BEGIN
   BEGIN
+    -- operator_context_id became NOT NULL in wlt-112. Without it this insert failed
+    -- with not_null_violation before ever reaching the owner_actor_type check, so
+    -- the test passed while proving nothing about the constraint it names.
     INSERT INTO wlt_payout_destinations
-      (partner_id, owner_actor_id, owner_actor_type, beneficiary_name, settlement_preference, active)
+      (operator_context_id, partner_id, owner_actor_id, owner_actor_type, beneficiary_name, settlement_preference, active)
     VALUES
-      ('actor-', 'actor-', 'client', 'invalid owner', 'manual', false);
+      ('ctx-invariant-probe', 'actor-', 'actor-', 'client', 'invalid owner', 'manual', false);
     RAISE EXCEPTION ' invariant failure: unsupported owner actor type was accepted';
   EXCEPTION
     WHEN check_violation THEN NULL;

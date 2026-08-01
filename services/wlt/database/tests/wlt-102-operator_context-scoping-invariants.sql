@@ -46,22 +46,22 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
-    WHERE schemaname = 'public' AND indexname = 'wlt_settlements_OperatorContext_partner_idx'
+    WHERE schemaname = 'public' AND indexname = 'wlt_settlements_operatorcontext_partner_idx'
   ) THEN RAISE EXCEPTION 'wlt_settlements_OperatorContext_partner_idx is missing'; END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
-    WHERE schemaname = 'public' AND indexname = 'wlt_cod_records_OperatorContext_partner_idx'
+    WHERE schemaname = 'public' AND indexname = 'wlt_cod_records_operatorcontext_partner_idx'
   ) THEN RAISE EXCEPTION 'wlt_cod_records_OperatorContext_partner_idx is missing'; END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
-    WHERE schemaname = 'public' AND indexname = 'wlt_commissions_OperatorContext_beneficiary_idx'
+    WHERE schemaname = 'public' AND indexname = 'wlt_commissions_operatorcontext_beneficiary_idx'
   ) THEN RAISE EXCEPTION 'wlt_commissions_OperatorContext_beneficiary_idx is missing'; END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
-    WHERE schemaname = 'public' AND indexname = 'wlt_payout_requests_OperatorContext_beneficiary_idx'
+    WHERE schemaname = 'public' AND indexname = 'wlt_payout_requests_operatorcontext_beneficiary_idx'
   ) THEN RAISE EXCEPTION 'wlt_payout_requests_OperatorContext_beneficiary_idx is missing'; END IF;
 
   IF EXISTS (SELECT 1 FROM wlt_settlements WHERE operator_context_id IS NULL OR btrim(operator_context_id) = '') THEN
