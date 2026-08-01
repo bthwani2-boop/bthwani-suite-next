@@ -8,7 +8,7 @@
 **Remote head SHA (re-pinned after follow-up fixes; `origin/ala` fast-forwarded during this pass via automated bot commits with a net-zero tree diff — see "Branch movement" note below):** `5edaac5f7fe5cc492f64735850de8f5945436688`
 **Scope:** FOUNDATION-00 baseline closure for `services/dsh` and the dsh-facing surface of `services/wlt`, plus a follow-up pass (explicitly authorized by the user, "نفّذ ما تبقى قبل البدء بأول رحلة") that closed the remaining `guard:foundation`/`guard:journey` blockers by adding missing (but already-tooled) client-generation scripts to `core/identity`, `core/platform-control`, `core/providers`, `core/workforce`, and fixing two stale pre-refactor path references in guard/CI-routing scripts. This is **not** a full architectural review of `apps/control-panel` or the four `core/*` modules — only the specific mechanical gaps blocking the mandatory baseline gates were closed.
 
-### Branch movement note
+## Branch movement note
 
 Mid-pass, `origin/ala` advanced by 5 commits (`b5e5b1f92` → `c2bc35115` → `e13c11118` → `018da0aa5` → `5edaac5f7`) via an automated process outside this session (commit messages: "apply remote architecture remediation", "run remote control-panel contract remediation", "restore read-only bundle workflow after blocked apply" — an external apply-then-rollback cycle). `git diff` between the original pin and the new HEAD is empty (net-zero tree change), and this session's uncommitted local changes were unaffected — confirmed via `git status` before and after. Re-pinned to the new HEAD per protocol before continuing.
 
@@ -36,6 +36,7 @@ justified_exclusion:
   verification_command: N/A (excluded)
   impact_if_skipped: control-panel architecture contract (00.2) and the four core/* modules' own workspace/contract health remain open for a future FOUNDATION-00 pass
   decision: OUT_OF_SCOPE_FOR_THIS_JOURNEY
+
 ```
 
 ---
@@ -49,10 +50,11 @@ justified_exclusion:
 ## 00.3 Service Workspaces (dsh + wlt)
 
 Findings:
+
 - `services/dsh` (`@bthwani/dsh`) and `services/wlt` (`@bthwani/wlt`) both resolve correctly under the `services/*` pnpm-workspace glob. No orphan or duplicate entries between the two.
 - `services/dsh/package.json` declares `workspace:*` dependencies on `@bthwani/control-panel`, `@bthwani/core-identity`, `@bthwani/core-platform-control`, `@bthwani/ui-kit`. The first three cross an app/core boundary from a service package — confirmed as a **real, in-use** dependency (dsh's `frontend/control-panel/**` and `frontend/shared/platform/*.api.ts` genuinely import `@bthwani/control-panel/components` and core-platform-control/core-providers path aliases), not dead weight. Whether a service depending directly on an app's component library (`@bthwani/control-panel`) via a path alias into `apps/control-panel/runtime/src/...` (see `services/dsh/tsconfig.platform-change-sets.json`) is the correct direction is a **00.2-adjacent architectural question that requires reviewing control-panel's own export boundary — out of scope this pass.** Flagged as `NEEDS_EVIDENCE` for a future control-panel-inclusive pass, not fixed here.
 - Go module boundaries are clean: `services/dsh/backend` (`module dsh-api`) and `services/wlt/backend` (`module wlt-api`) have no direct Go-level dependency on each other; the dsh↔wlt relationship is mediated entirely through `internal/wlt` / `internal/wltoutbox` (dsh side) and `internal/dshnotify` / `internal/dshoutbox` (wlt side) — an outbox/reference pattern, not direct DB or type access.
-- `services/dsh/tsconfig..json` (literal double-dot filename) is a pre-existing, git-tracked, intentionally-named file (added in commit `7fc45e97`) that is explicitly referenced by name in `governance/product/HOME_DISCOVERY_PRODUCT_TRUTH.md:77` as the targeted typecheck config for the home-discovery journey. Left unchanged: renaming would require updating that product-truth reference and is a cosmetic naming defect, not a functional workspace break — noted, not fixed, per smallest-safe-change discipline.
+- `services/dsh/tsconfig..json` (the literal double-dot filename this section previously flagged as a cosmetic naming defect) **no longer exists in the repository** — confirmed absent as of commit `862e97015`, i.e. removed before this session's work began, not renamed. It was not recreated speculatively, since its original include-list could not be verified. `governance/product/HOME_DISCOVERY_PRODUCT_TRUTH.md:77` has been updated to point at the service-wide `services/dsh/tsconfig.json` (`pnpm run typecheck` in `services/dsh`, confirmed clean) instead of the missing file.
 
 ```yaml
 service_workspace_validation: PASS
@@ -61,6 +63,7 @@ orphan_workspace_entries: 0
 duplicate_package_names: 0
 invalid_workspace_dependencies: 0
 circular_package_boundaries: 0
+
 ```
 
 ---
@@ -80,6 +83,7 @@ duplicate_operations: 0
 duplicate_schema_ownership: 0
 openapi_bundle: PASS
 openapi_lint: PASS
+
 ```
 
 ---
@@ -95,6 +99,7 @@ generated_clients_reproducible: true
 generated_client_drift: 0
 manual_generated_edits: 0
 frontend_local_contract_duplicates: 0
+
 ```
 
 ---
@@ -119,14 +124,17 @@ frontend_local_contract_duplicates: 0
 **Fix 1 — `guard:guard-registry` `WORKFLOW_INVENTORY_DRIFT`:** two workflow files (`.github/workflows/foundation-00-snapshot.yml`, `.github/workflows/foundation-00-git-bundle.yml`, added in commits `2ea015942` and `1d02d55b3`) existed on disk but had no entry in `governance/github/workflow-registry.json`. Root cause: the registry wasn't updated in the same commits that added the workflows. Fix: registered both as `class: READ_ONLY_DIAGNOSTIC` (the schema-defined class for exactly this case — read-only, `contents: read`, no secrets, no source mutation) in `governance/github/workflow-registry.json`.
 
 **Fix 2 — `guard:no-broken-imports` (5 violations, all in core/identity + core/platform-control + core/providers-facing dsh files):**
-```
+
+```text
 core/identity/clients/identity-client.ts:1 broken relative import: ./generated/identity-api.ts
 core/identity/clients/index.ts:6 broken relative import: ./generated/identity-api.ts
 services/dsh/frontend/shared/platform/platform-control.api.ts:3 tsconfig alias target does not exist: @bthwani/core-platform-control
 services/dsh/frontend/shared/platform/platform-control.types.ts:1 tsconfig alias target does not exist: @bthwani/core-platform-control
 services/dsh/frontend/shared/platform/providers.api.ts:3 tsconfig alias target does not exist: @bthwani/core-providers
 ```
+
 Root cause: `core/identity`, `core/platform-control`, `core/providers`, and `core/workforce` all declare `generated/` client paths but had **no script to produce them** (`package.json` only defined `test`/`build`/`typecheck`), unlike `services/dsh`/`services/wlt` which already had a proven `openapi:compose`/`openapi:generate` pair. The underlying compose tool (`tools/scripts/compose-openapi-context.mjs` + `openapi-context-composer.mjs`) already had manifests registered for all four core modules (`identity`, `workforce`, `platform-control`, `providers`) — the gap was purely missing npm-script wiring, not missing tooling. Fix: added matching `openapi:compose`/`openapi:generate` scripts to all four `core/*/package.json` files (mirroring the exact dsh/wlt pattern) and ran generation for each:
+
 - `identity`: 23 paths / 23 operations — PASS
 - `platform-control`: 26 paths / 28 operations — PASS
 - `providers`: 7 paths / 8 operations — PASS
@@ -157,8 +165,10 @@ guard_journey: PASS (full run)
 dsh_database_workflow: PASS
 contextual_ci: NOT_RUN (requires GitHub Actions execution; local-equivalent guard commands above substitute for this pass)
 remaining_risks:
+
   - dsh's dependency direction onto @bthwani/control-panel's internal src (via tsconfig path alias, not a package export) needs review once control-panel is in scope — investigated, confirmed non-blocking (alias target matches control-panel's own declared package export), left as a minor future cleanup item only
   - governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md, named as ACTIVE_CANONICAL by 12_SLICE_BY_SLICE_JOURNEY_SEQUENCING.md, does not exist in the repository — see "Open governance item" below; this is a decision for the repository owner, not something closed in this pass
+
 ```
 
 ---
@@ -169,11 +179,13 @@ remaining_risks:
 
 ```text
 475fba912 refactor(governance): purge remaining SaaS and Tenancy references
+
 ```
 
 That commit's diff (813 lines removed from this file alone, plus renames like `saas_otp.go` → `operator_otp.go`, `tenant_context.go` → `operator_context.go`) shows a deliberate SaaS/Tenancy-terminology purge across the repo, not a scoped removal of just this file. The pre-deletion content (recoverable via `git show 475fba912~1:governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md`) still lists journeys `JRN-001`–`JRN-012`+ with statuses (`READY_FOR_REVIEW`, `NEEDS_EVIDENCE`) and references now-purged concepts (tenant-style service codes `knz`, `arb`, `amn`, `esf`, `mrf`, `snd`, `kwd`).
 
 This was **not** recreated in this pass because doing so unilaterally carries real risk in either direction:
+
 - Restoring the stale pre-purge snapshot verbatim could reintroduce exactly the SaaS/Tenancy references `475fba912` intentionally purged, and would report journey statuses that are almost a month stale and unverified against current code.
 - Fabricating a fresh registry from scratch would mean inventing journey IDs, ownership, and status without the product/governance authority that owns this decision (`SDLC_PROGRAM_AUTHORITY` / `GOVERNANCE_CONTRACT_AUTHORITY` per `AGENTS.md`), and `12_SLICE_BY_SLICE_JOURNEY_SEQUENCING.md` §38 requires opening the *live* registry, never one recalled from memory or a stale snapshot.
 

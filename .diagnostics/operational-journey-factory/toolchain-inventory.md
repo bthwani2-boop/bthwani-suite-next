@@ -1,6 +1,6 @@
 # Operational Toolchain Inventory
 
-head_sha: `f90ba856d34cb095cbedb52e628ab5ef6e752b6b`
+head_sha: `62deda65446d4582bea5cecea4f68c7168410eb7`
 status: `DISCOVERY_ONLY`
 
 | Tool | Activation | Command | Classification |
@@ -20,7 +20,7 @@ status: `DISCOVERY_ONLY`
 | `eslint` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
 | `expo-atlas` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
 | `git-sizer` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
-| `gitleaks` | active | `guard:secrets` | FIX_REQUIRED, NEEDS_OWNER |
+| `gitleaks` | active | `guard:secrets` | NEEDS_OWNER |
 | `go-pprof` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
 | `grafana` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
 | `graphify` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
@@ -39,11 +39,11 @@ status: `DISCOVERY_ONLY`
 | `maestro` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
 | `markdownlint-cli2` | partial | `guard:markdown-governance` | PARTIAL, NEEDS_OWNER |
 | `next-bundle` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
-| `nx` | active | `nx:projects` | FIX_REQUIRED, NEEDS_OWNER |
+| `nx` | active | `nx:projects` | NEEDS_OWNER |
 | `opa` | partial | `guard:opa-policies` | PARTIAL, NEEDS_OWNER |
 | `openapi-typescript` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
 | `opentelemetry` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
-| `osv-scanner` | active | `security:osv` | FIX_REQUIRED, NEEDS_OWNER |
+| `osv-scanner` | active | `security:osv` | NEEDS_OWNER |
 | `pinact` | active | `guard:actions-pin` | NEEDS_OWNER |
 | `playwright` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
 | `prometheus` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
@@ -60,7 +60,7 @@ status: `DISCOVERY_ONLY`
 | `style-dictionary` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
 | `syft` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
 | `tamagui` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
-| `trivy` | active | `security:trivy` | FIX_REQUIRED, NEEDS_OWNER |
+| `trivy` | active | `security:trivy` | NEEDS_OWNER |
 | `typescript` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
 | `xstate` | optional | `NO_COMMAND_DECLARED` | OPTIONAL, NEEDS_OWNER |
 | `yamllint` | partial | `guard:yaml-lint` | PARTIAL, NEEDS_OWNER |

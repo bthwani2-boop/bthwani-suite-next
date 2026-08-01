@@ -102,4 +102,3 @@ func HandleGetWalletStatus(db *sql.DB) http.HandlerFunc {
 		shared.SendJSON(w, http.StatusOK, map[string]interface{}{"reference": ref})
 	}
 }
-

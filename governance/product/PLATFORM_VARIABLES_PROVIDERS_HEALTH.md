@@ -1,4 +1,4 @@
-#  — متغيرات المنصة والمزودون والصحة
+# متغيرات المنصة والمزودون والصحة
 
 Status: IMPLEMENTED_PENDING_INDEPENDENT_ACCEPTANCE
 

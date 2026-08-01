@@ -1,5 +1,5 @@
 import * as api from "./central-catalog.api";
-import { uploadBinaryToPresignedUrl } from "../media/presigned-upload";
+import { uploadBinaryToPresignedUrl } from "../media/presigned-upload.client";
 import type { CatalogAsset, CatalogAssetLink, AssetUploadIntentInput, AssetUploadProgress } from "./central-catalog.types";
 
 export type { AssetUploadProgress };

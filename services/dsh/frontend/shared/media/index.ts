@@ -6,5 +6,5 @@ export * from './resolve-runtime-image-source';
 export * from './dsh-media-api.client';
 export * from './useDshEntityMedia';
 export * from './field-document-media';
-export * from './presigned-upload';
+export * from './presigned-upload.client';
 export * from './pod/pod-upload-flow';

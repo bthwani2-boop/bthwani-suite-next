@@ -27,7 +27,7 @@
         "properties": {
           "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
           "path": { "type": "string", "pattern": "^\\.github/workflows/[a-z0-9._-]+\\.ya?ml$" },
-          "class": { "enum": ["CORE", "READ_ONLY_DIAGNOSTIC", "TEMPORARY"] },
+          "class": { "enum": ["CORE", "READ_ONLY_DIAGNOSTIC", "SECURITY_SCANNER", "TEMPORARY"] },
           "name": { "type": "string", "minLength": 1 },
           "triggers": {
             "type": "array",
@@ -38,12 +38,16 @@
             "type": "object",
             "additionalProperties": false,
             "required": ["contents"],
-            "properties": { "contents": { "const": "read" } }
+            "properties": {
+              "contents": { "const": "read" },
+              "security-events": { "const": "write" }
+            }
           },
           "mayMutateSource": { "const": false },
-          "mayUseSecrets": { "const": false },
+          "mayUseSecrets": { "type": "boolean" },
           "requiredPinnedActions": { "const": true },
           "purpose": { "type": "string", "minLength": 10 },
+          "secretsJustification": { "type": "string", "minLength": 20 },
           "taskId": { "type": "string", "pattern": "^GAP-[0-9]{4}$" },
           "contractHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
           "parentBranch": { "type": "string", "minLength": 1 },
@@ -53,6 +57,23 @@
           {
             "if": { "properties": { "class": { "const": "TEMPORARY" } }, "required": ["class"] },
             "then": { "required": ["taskId", "contractHash", "parentBranch", "expiresAt"] }
+          },
+          {
+            "comment": "Only the SECURITY_SCANNER class may read a secret or hold security-events:write. Every other class stays strictly read-only and secretless, exactly as before this class existed.",
+            "if": {
+              "not": { "properties": { "class": { "const": "SECURITY_SCANNER" } }, "required": ["class"] }
+            },
+            "then": {
+              "properties": {
+                "mayUseSecrets": { "const": false },
+                "permissions": { "not": { "required": ["security-events"] } }
+              }
+            }
+          },
+          {
+            "comment": "A workflow that reads a secret must state why in writing; silent secret access is never registrable.",
+            "if": { "properties": { "mayUseSecrets": { "const": true } }, "required": ["mayUseSecrets"] },
+            "then": { "required": ["secretsJustification"] }
           }
         ]
       }

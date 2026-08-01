@@ -1,16 +1,30 @@
--- WLT-115: Drop wlt_payout_outbox (D4 remediation).
+-- WLT-903: Drop wlt_payout_outbox (D4 remediation), ordered after wlt-902.
 --
--- wlt_payout_outbox has been write-only since its introduction (wlt-098):
--- both the wlt_capture_payout_transition() trigger and the Go-side
--- enqueuePayoutEvent() append rows, but no worker, consumer, or query ever
--- claims/reads/deletes them (verified: only DELETE is in a test fixture
--- cleanup). Every payout lifecycle transition this table would have notified
--- on is already durably captured, losslessly, in wlt_payout_audit_events by
--- the same trigger transaction -- so no historical evidence is lost by
--- removing the outbox. A real actor-facing payout notification pipeline
--- (mirroring internal/dshoutbox) is a legitimate future feature, but it
--- needs its own DSH-side endpoint, contract and end-to-end verification; it
--- is out of scope for closing this dead-producer gap.
+-- Supersedes the withdrawn wlt-115_drop_unconsumed_payout_outbox.sql. That
+-- migration performed exactly this work but sorted BEFORE wlt-902, which
+-- recreates wlt_capture_payout_transition() with an INSERT INTO
+-- wlt_payout_outbox and then runs COMMENT ON TABLE wlt_payout_outbox. Dropping
+-- the table first made every fresh install and every upgrade fail with
+--   ERROR: relation "wlt_payout_outbox" does not exist
+-- so the drop is re-issued here, after wlt-902 has finished referencing the
+-- table. wlt-115 was never merged to master and never applied to a shared
+-- environment (verified: absent from master, introduced on branch `ala` only),
+-- so withdrawing it rewrites no applied history.
+--
+-- Rationale for the drop itself is unchanged from wlt-115: wlt_payout_outbox
+-- has been write-only since its introduction (wlt-098). Both the
+-- wlt_capture_payout_transition() trigger and the (since-removed) Go-side
+-- enqueuePayoutEvent() appended rows, but no worker, consumer, or query ever
+-- claimed/read/deleted them. Every payout lifecycle transition this table would
+-- have notified on is already durably captured, losslessly, in
+-- wlt_payout_audit_events by the same trigger transaction -- so no historical
+-- evidence is lost by removing the outbox. A real actor-facing payout
+-- notification pipeline (mirroring internal/dshoutbox) is a legitimate future
+-- feature, but it needs its own DSH-side endpoint, contract and end-to-end
+-- verification; it is out of scope for closing this dead-producer gap.
+--
+-- Order is load-bearing: the trigger function must stop referencing the table
+-- BEFORE the table is dropped, otherwise the next payout status update fails.
 
 CREATE OR REPLACE FUNCTION wlt_capture_payout_transition()
 RETURNS trigger

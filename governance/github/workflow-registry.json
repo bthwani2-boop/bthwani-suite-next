@@ -145,6 +145,31 @@
       "mayUseSecrets": false,
       "requiredPinnedActions": true,
       "purpose": "Read-only export of an exact-HEAD git bundle as a pull-request artifact for FOUNDATION-00 same-SHA evidence."
+    },
+    {
+      "id": "codeql",
+      "path": ".github/workflows/codeql.yml",
+      "class": "SECURITY_SCANNER",
+      "name": "CodeQL",
+      "triggers": ["pull_request", "push", "schedule"],
+      "permissions": { "contents": "read", "security-events": "write" },
+      "mayMutateSource": false,
+      "mayUseSecrets": false,
+      "requiredPinnedActions": true,
+      "purpose": "Static application security testing for javascript-typescript and for each Go backend module, uploading findings to the repository security-events API. Required active/fail/P0 by tools/toolchain/tool-catalog.v5.json."
+    },
+    {
+      "id": "sonarqube",
+      "path": ".github/workflows/sonarqube.yml",
+      "class": "SECURITY_SCANNER",
+      "name": "SonarQube",
+      "triggers": ["pull_request", "push"],
+      "permissions": { "contents": "read" },
+      "mayMutateSource": false,
+      "mayUseSecrets": true,
+      "requiredPinnedActions": true,
+      "purpose": "Code quality and security analysis published to an external SonarQube server. Required active/fail/P0 by tools/toolchain/tool-catalog.v5.json.",
+      "secretsJustification": "SonarQube authenticates uploads with SONAR_TOKEN; the scanner cannot publish without it. The job is gated on `vars.SONAR_HOST_URL != ''` so it stays skipped until the repository owner provisions both values, and the token is scoped to the SonarQube server only — it grants no repository write access."
     }
   ]
 }

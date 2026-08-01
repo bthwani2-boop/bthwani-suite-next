@@ -1,5 +1,5 @@
 {
-  "head_sha": "f90ba856d34cb095cbedb52e628ab5ef6e752b6b",
+  "head_sha": "62deda65446d4582bea5cecea4f68c7168410eb7",
   "status": "DISCOVERY_ONLY",
   "output_policy": ".diagnostics/operational-journey-factory",
   "sources": {
@@ -680,14 +680,17 @@
       "failure_policy": "fail",
       "command": "guard:secrets",
       "script_found": true,
-      "workflow_found": false,
-      "workflow_evidence": [],
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command",
+        "workflow_name",
+        "workflow_action_or_step"
+      ],
       "detected_from": [
         "tools/toolchain/tool-catalog.v5.json",
         "tools/toolchain/tool-activation-baseline.json"
       ],
       "classification": [
-        "FIX_REQUIRED",
         "NEEDS_OWNER"
       ],
       "commands": [
@@ -697,10 +700,10 @@
           "tool": "gitleaks",
           "expected_exit_code": 0,
           "actual_exit_code": null,
-          "blocking": true,
-          "classification": "FIX_REQUIRED",
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
           "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
-          "remediation_hint": "add_workflow_evidence_or_adjust_activation_policy"
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
         }
       ]
     },
@@ -1269,14 +1272,15 @@
       "failure_policy": "fail",
       "command": "nx:projects",
       "script_found": true,
-      "workflow_found": false,
-      "workflow_evidence": [],
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_tool_specific_invocation"
+      ],
       "detected_from": [
         "tools/toolchain/tool-catalog.v5.json",
         "tools/toolchain/tool-activation-baseline.json"
       ],
       "classification": [
-        "FIX_REQUIRED",
         "NEEDS_OWNER"
       ],
       "commands": [
@@ -1286,10 +1290,10 @@
           "tool": "nx",
           "expected_exit_code": 0,
           "actual_exit_code": null,
-          "blocking": true,
-          "classification": "FIX_REQUIRED",
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
           "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
-          "remediation_hint": "add_workflow_evidence_or_adjust_activation_policy"
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
         }
       ]
     },
@@ -1395,14 +1399,17 @@
       "failure_policy": "fail",
       "command": "security:osv",
       "script_found": true,
-      "workflow_found": false,
-      "workflow_evidence": [],
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command",
+        "workflow_name",
+        "workflow_action_or_step"
+      ],
       "detected_from": [
         "tools/toolchain/tool-catalog.v5.json",
         "tools/toolchain/tool-activation-baseline.json"
       ],
       "classification": [
-        "FIX_REQUIRED",
         "NEEDS_OWNER"
       ],
       "commands": [
@@ -1412,10 +1419,10 @@
           "tool": "osv-scanner",
           "expected_exit_code": 0,
           "actual_exit_code": null,
-          "blocking": true,
-          "classification": "FIX_REQUIRED",
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
           "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
-          "remediation_hint": "add_workflow_evidence_or_adjust_activation_policy"
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
         }
       ]
     },
@@ -1927,14 +1934,17 @@
       "failure_policy": "fail",
       "command": "security:trivy",
       "script_found": true,
-      "workflow_found": false,
-      "workflow_evidence": [],
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command",
+        "workflow_name",
+        "workflow_action_or_step"
+      ],
       "detected_from": [
         "tools/toolchain/tool-catalog.v5.json",
         "tools/toolchain/tool-activation-baseline.json"
       ],
       "classification": [
-        "FIX_REQUIRED",
         "NEEDS_OWNER"
       ],
       "commands": [
@@ -1944,10 +1954,10 @@
           "tool": "trivy",
           "expected_exit_code": 0,
           "actual_exit_code": null,
-          "blocking": true,
-          "classification": "FIX_REQUIRED",
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
           "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
-          "remediation_hint": "add_workflow_evidence_or_adjust_activation_policy"
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
         }
       ]
     },

@@ -257,6 +257,85 @@ jobs:
         if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' }}
         run: pnpm run guard:opa-policies
 
+      - name: Install locked security scanner binaries
+        if: ${{ inputs.security_policy == 'true' }}
+        run: bash tools/scripts/install-oss-toolchain-binaries.sh security
+
+      - name: Scan for committed secrets
+        id: gitleaks
+        if: ${{ inputs.security_policy == 'true' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          log="${RUNNER_TEMP}/gitleaks.log"
+          pnpm run guard:secrets 2>&1 | tee "${log}"
+          status=${PIPESTATUS[0]}
+          exit "${status}"
+
+      - name: Upload secret scan diagnostics
+        if: ${{ steps.gitleaks.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gitleaks-${{ github.run_id }}
+          path: ${{ runner.temp }}/gitleaks.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce secret scan result
+        if: ${{ steps.gitleaks.outcome == 'failure' }}
+        run: exit 1
+
+      - name: Scan filesystem for known vulnerabilities
+        id: trivy
+        if: ${{ inputs.security_policy == 'true' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          log="${RUNNER_TEMP}/trivy.log"
+          pnpm run security:trivy 2>&1 | tee "${log}"
+          status=${PIPESTATUS[0]}
+          exit "${status}"
+
+      - name: Upload filesystem vulnerability scan diagnostics
+        if: ${{ steps.trivy.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: trivy-${{ github.run_id }}
+          path: ${{ runner.temp }}/trivy.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce filesystem vulnerability scan result
+        if: ${{ steps.trivy.outcome == 'failure' }}
+        run: exit 1
+
+      - name: Scan dependencies for known vulnerabilities
+        id: osv_scanner
+        if: ${{ inputs.security_policy == 'true' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          log="${RUNNER_TEMP}/osv-scanner.log"
+          pnpm run security:osv 2>&1 | tee "${log}"
+          status=${PIPESTATUS[0]}
+          exit "${status}"
+
+      - name: Upload dependency vulnerability scan diagnostics
+        if: ${{ steps.osv_scanner.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: osv-scanner-${{ github.run_id }}
+          path: ${{ runner.temp }}/osv-scanner.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce dependency vulnerability scan result
+        if: ${{ steps.osv_scanner.outcome == 'failure' }}
+        run: exit 1
+
       - name: Verify runtime configuration policy
         if: ${{ inputs.infrastructure_policy == 'true' }}
         run: pnpm run guard:runtime-config

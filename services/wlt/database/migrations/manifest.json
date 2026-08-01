@@ -3,7 +3,7 @@
   "service": "wlt",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "wlt-902_contextual_finance_object_names.sql",
+  "cutover": "wlt-903_drop_unconsumed_payout_outbox.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -441,23 +441,23 @@
     },
     {
       "ordinal": 63,
-      "file": "wlt-115_drop_unconsumed_payout_outbox.sql",
-      "sha256": "80a2883320146554597f2c46385ef87372b313c797660406875e88a9d4c00a6f",
-      "historicalPrefix": "115",
-      "state": "HISTORICAL_IMMUTABLE"
-    },
-    {
-      "ordinal": 64,
       "file": "wlt-901_reconciliation_operator_context_guard.sql",
       "sha256": "eefbe734f917806ed9f72c2cf43f8a345d7d026a94830692446899fed3b3ef7d",
       "historicalPrefix": "901",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
-      "ordinal": 65,
+      "ordinal": 64,
       "file": "wlt-902_contextual_finance_object_names.sql",
       "sha256": "27d318c2ea95d8b1ccd46c94c1833f3ba8f30a4123de54de15091e28813c6168",
       "historicalPrefix": "902",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 65,
+      "file": "wlt-903_drop_unconsumed_payout_outbox.sql",
+      "sha256": "f76982b4cabf9c250765def7e8ed5415974ed3dbc22b133af848e04615248720",
+      "historicalPrefix": "903",
       "state": "HISTORICAL_IMMUTABLE"
     }
   ]

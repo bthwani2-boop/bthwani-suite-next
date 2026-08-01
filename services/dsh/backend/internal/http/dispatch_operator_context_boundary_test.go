@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	
+
 	"dsh-api/internal/wlt"
 )
 
@@ -40,10 +40,10 @@ func TestDispatchGovernanceHandlersRejectSpoofedOperatorContext(t *testing.T) {
 		reqBody := []byte(`{"operatorContextId":"spoofed","orderId":"123","captainId":"456"}`)
 		req := httptest.NewRequest(http.MethodPost, "/dsh/dispatch/governance/assignments", bytes.NewReader(reqBody))
 		req.Header.Set("Content-Type", "application/json")
-		
+
 		rec := httptest.NewRecorder()
 		trustedHandler.ServeHTTP(rec, req)
-		
+
 		if rec.Code != http.StatusCreated {
 			t.Errorf("expected 201 Created, got %d", rec.Code)
 		}
@@ -55,10 +55,10 @@ func TestDispatchGovernanceHandlersRejectSpoofedOperatorContext(t *testing.T) {
 		reqBody := []byte(`{"operatorContextId":"spoofed","orderId":"123","captainId":"456"}`)
 		req := httptest.NewRequest(http.MethodPost, "/dsh/dispatch/governance/assignments", bytes.NewReader(reqBody))
 		req.Header.Set("Content-Type", "application/json")
-		
+
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
-		
+
 		if rec.Code != http.StatusBadRequest {
 			t.Errorf("expected 400 Bad Request, got %d", rec.Code)
 		}

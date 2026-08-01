@@ -1,4 +1,4 @@
-#  — DSH/WLT dispatch boundary
+# DSH/WLT dispatch boundary
 
 ## Ownership
 

@@ -10,8 +10,13 @@
     "AGENTS.md",
     ".github/**/*.md"
   ],
+  // Multi-part numbered execution plans deliberately use one top-level heading
+  // per numbered part (MD025) and dense compact tables (MD060). The structure is
+  // the document contract, not style drift, so these three are exempt rather than
+  // reformatted. Any other governance document stays fully linted.
   "ignores": [
     "governance/policies/RADICAL_REMEDIATION_EXECUTION_POLICY.md",
-    "governance/operational_journey_protocol_package/14_FULL_SURFACE_CLOSURE_PLAN.md"
+    "governance/operational_journey_protocol_package/14_FULL_SURFACE_CLOSURE_PLAN.md",
+    "governance/operational_journey_protocol_package/15_AUTHORITATIVE_DSH_WLT_FULLSTACK_CLOSURE_PLAN.md"
   ]
 }

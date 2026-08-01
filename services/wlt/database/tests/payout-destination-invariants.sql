@@ -44,8 +44,12 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'wlt_payout_audit_events') THEN
     missing := array_append(missing, 'wlt_payout_audit_events');
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'wlt_payout_outbox') THEN
-    missing := array_append(missing, 'wlt_payout_outbox');
+  -- wlt_payout_outbox is intentionally absent after wlt-903: it was a write-only
+  -- table with no consumer, and every transition it would have carried is already
+  -- captured in wlt_payout_audit_events. Asserted gone, not present, so the dead
+  -- producer cannot silently return.
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'wlt_payout_outbox') THEN
+    missing := array_append(missing, 'wlt_payout_outbox_must_stay_dropped');
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'wlt_payout_reconciliations') THEN
     missing := array_append(missing, 'wlt_payout_reconciliations');

@@ -143,3 +143,29 @@ func TestCreateFieldVisitGovernedBindsFirstStoreDBIntegration(t *testing.T) {
 		t.Fatalf("field visit store = %q, want %q", visit.StoreID, wantStoreID)
 	}
 }
+
+// TestPartnerRawPayoutColumnsStayDroppedDBIntegration locks the D3/dsh-963
+// ownership boundary at the schema level: WLT is the sole owner of raw payout
+// data, and DSH keeps only the reference plus masked display strings. A test
+// that merely checks "we did not write raw values" passes again the moment
+// someone re-adds the columns, so this asserts the columns themselves are
+// absent -- the only form of the check that cannot be silently regressed.
+func TestPartnerRawPayoutColumnsStayDroppedDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	for _, column := range []string{"bank_account_number", "bank_iban", "payout_mobile_number"} {
+		var present bool
+		if err := db.QueryRow(`
+			SELECT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_schema = 'public'
+				  AND table_name = 'dsh_partners'
+				  AND column_name = $1
+			)`, column,
+		).Scan(&present); err != nil {
+			t.Fatal(err)
+		}
+		if present {
+			t.Fatalf("dsh_partners.%s is back; raw payout data belongs to WLT only (see dsh-963)", column)
+		}
+	}
+}

@@ -202,5 +202,3 @@ func CreateSettlementFromDeliveredOrders(ctx context.Context, db *sql.DB, input 
 	}
 	return settlement, nil
 }
-
-

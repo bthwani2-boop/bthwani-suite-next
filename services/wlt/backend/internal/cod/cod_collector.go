@@ -233,8 +233,3 @@ func transitionDeliveryCollection(db *sql.DB, recordID, fromStatus, toStatus, ti
 	}
 	return record, err
 }
-
-
-
-
-

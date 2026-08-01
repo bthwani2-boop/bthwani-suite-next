@@ -251,4 +251,3 @@ func ActivateSubscriptionGoverned(ctx context.Context, db *sql.DB, input Activat
 	}
 	return subscription, nil
 }
-

@@ -520,4 +520,3 @@ func ListPublishedPartnerOffers(db *sql.DB) ([]PartnerOffer, error) {
 	}
 	return out, rows.Err()
 }
-

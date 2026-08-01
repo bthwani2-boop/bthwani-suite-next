@@ -84,4 +84,3 @@ func CreateCodRecordAtomic(db *sql.DB, input CreateCodRecordInput) (*CodRecord, 
 	}
 	return existing, false, nil
 }
-
