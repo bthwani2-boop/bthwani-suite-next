@@ -1,4 +1,8 @@
-import { fail, lineNumber, listCodeFiles, listFiles, read } from "./_guard-utils.mjs";
+import fs from "node:fs";
+import path from "node:path";
+import { fail, lineNumber, listCodeFiles, listFiles, read, repoRoot } from "./_guard-utils.mjs";
+import { composeContext } from "../scripts/openapi-context-composer.mjs";
+import { parse } from "yaml";
 
 const guardId = "wlt-financial-boundary-gate";
 const violations = [];
@@ -329,6 +333,64 @@ if (listFiles().includes(unsafeCommercialHelper)) {
     line: 0,
     message: "UNSAFE_GENERIC_SUBSCRIPTION_PAYMENT_HELPER_REINTRODUCED",
   });
+}
+
+// Every DSH route that touches WLT-owned money (finance, wallet, refunds,
+// commissions, settlements, payouts, COD) must be declared in the DSH
+// OpenAPI contract -- an allowlist exception is not acceptable for this
+// class of route, unlike the general dsh-route-declaration-gate. This
+// closes the root cause behind 73 previously-undeclared financial proxy
+// routes: they existed, worked, and were reviewed, but had no contract, no
+// generated client, and no client-side type safety.
+const financialRoutePattern =
+  /\/(?:finance|wallet|refunds|commissions|settlements|payouts|cod)\b/i;
+const financialRouteRegistrationPattern = /(?:mux|router)\.HandleFunc\("([A-Z]+) ([^"]+)"/g;
+
+function listGoFiles(directory) {
+  const results = [];
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const fullPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...listGoFiles(fullPath));
+    } else if (entry.name.endsWith(".go") && !entry.name.endsWith("_test.go")) {
+      results.push(fullPath);
+    }
+  }
+  return results;
+}
+
+const dshBackendRoot = path.join(repoRoot, "services/dsh/backend/internal");
+const registeredFinancialRoutes = new Set();
+for (const filePath of listGoFiles(dshBackendRoot)) {
+  const content = fs.readFileSync(filePath, "utf8");
+  let match;
+  while ((match = financialRouteRegistrationPattern.exec(content)) !== null) {
+    const [, method, route] = match;
+    if (financialRoutePattern.test(route)) {
+      registeredFinancialRoutes.add(`${method} ${route}`);
+    }
+  }
+}
+
+const { bundle: dshBundleText } = await composeContext("dsh", { write: false });
+const dshBundle = parse(dshBundleText);
+const declaredDshOperations = new Set();
+for (const [routePath, methods] of Object.entries(dshBundle.paths ?? {})) {
+  for (const method of Object.keys(methods)) {
+    if (["get", "post", "put", "patch", "delete"].includes(method)) {
+      declaredDshOperations.add(`${method.toUpperCase()} ${routePath}`);
+    }
+  }
+}
+
+for (const route of [...registeredFinancialRoutes].sort()) {
+  if (!declaredDshOperations.has(route)) {
+    violations.push({
+      file: "services/dsh/contracts/dsh.openapi.yaml",
+      line: 0,
+      message: `UNDECLARED_FINANCIAL_ROUTE ${route} -- financial routes require a contract operation, not an allowlist exception`,
+    });
+  }
 }
 
 fail(guardId, violations);

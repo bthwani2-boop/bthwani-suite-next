@@ -329,16 +329,28 @@ function resolveModularFragments(document, rootSourceFile) {
 
     const resolvedObject = {};
     for (const [key, item] of Object.entries(value)) {
+      // A fragment fetched from a non-root module file carries its own
+      // same-document ("#/...") refs. Those must resolve against the module
+      // file it came from, not the final merged document, so they are
+      // rewritten to an explicit cross-file ref back into that module before
+      // the ordinary cross-file resolution below runs.
+      const isBareSameDocumentRef =
+        key === "$ref" && typeof item === "string" && item.startsWith("#");
+      const rewrittenItem =
+        isBareSameDocumentRef && currentSourceFile !== rootSourceFile
+          ? `${path.basename(currentSourceFile)}${item}`
+          : item;
+
       if (
         key === "$ref" &&
-        typeof item === "string" &&
-        !item.startsWith("#") &&
-        !isAbsoluteReference(item)
+        typeof rewrittenItem === "string" &&
+        !rewrittenItem.startsWith("#") &&
+        !isAbsoluteReference(rewrittenItem)
       ) {
-        const hashIndex = item.indexOf("#");
+        const hashIndex = rewrittenItem.indexOf("#");
         if (hashIndex !== -1) {
-          const filePart = item.slice(0, hashIndex);
-          const fragment = item.slice(hashIndex + 2);
+          const filePart = rewrittenItem.slice(0, hashIndex);
+          const fragment = rewrittenItem.slice(hashIndex + 2);
           const targetFile = path.resolve(path.dirname(currentSourceFile), filePart);
 
           if (fs.existsSync(targetFile)) {

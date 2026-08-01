@@ -127,6 +127,17 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
 
   /dsh/operator/catalog/master-products/{productId}:
+    get:
+      operationId: getMasterProductOperator
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/ProductId" }]
+      responses:
+        "200": { description: Sovereign master-product detail, content: { application/json: { schema: { $ref: "#/components/schemas/MasterProductResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     patch:
       operationId: updateMasterProduct
       tags: [CentralCatalog]
@@ -283,6 +294,18 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
 
   /dsh/partner/catalog/product-proposals:
+    get:
+      operationId: listPartnerProductProposals
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: status, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200": { description: Proposals belonging to the authenticated partner store, content: { application/json: { schema: { $ref: "#/components/schemas/ProposalListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       operationId: createPartnerProductProposal
       tags: [CentralCatalog]
@@ -299,6 +322,23 @@ paths:
   /dsh/partner/catalog/product-proposals/{proposalId}:
     patch:
       operationId: patchPartnerProductProposal
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/ProposalId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateProposalRequest" } } }
+      responses:
+        "200": { description: Proposal resubmitted, content: { application/json: { schema: { $ref: "#/components/schemas/ProposalResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    put:
+      operationId: patchPartnerProductProposalCompat
+      deprecated: true
+      description: Legacy alias of PATCH, kept live for backward compatibility.
       tags: [CentralCatalog]
       security: [{ bearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/ProposalId" }]
@@ -362,6 +402,19 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
 
   /dsh/field/partners/{partnerId}/catalog/product-proposals:
+    get:
+      operationId: listFieldProductProposals
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/PartnerId" }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200": { description: Proposals belonging to the field-authorized partner store, content: { application/json: { schema: { $ref: "#/components/schemas/ProposalListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       operationId: createFieldProductProposal
       tags: [CentralCatalog]
@@ -379,6 +432,25 @@ paths:
   /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}:
     patch:
       operationId: patchFieldProductProposal
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/PartnerId" }
+        - { $ref: "#/components/parameters/ProposalId" }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateProposalRequest" } } }
+      responses:
+        "200": { description: Field proposal resubmitted, content: { application/json: { schema: { $ref: "#/components/schemas/ProposalResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    put:
+      operationId: patchFieldProductProposalCompat
+      deprecated: true
+      description: Legacy alias of PATCH, kept live for backward compatibility.
       tags: [CentralCatalog]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -451,6 +523,17 @@ paths:
       responses:
         "200": { description: Asset updated, content: { application/json: { schema: { $ref: "#/components/schemas/AssetResponse" } } } }
         "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      operationId: deleteCatalogAsset
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AssetId" }]
+      responses:
+        "204": { description: "Asset deleted (only draft/uploaded/rejected with no active links)." }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }

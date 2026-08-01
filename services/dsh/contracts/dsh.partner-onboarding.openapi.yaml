@@ -55,6 +55,22 @@ paths:
       security:
         - bearerAuth: []
   /dsh/operator/partners/{partnerId}/stores:
+    get:
+      operationId: listDshPartnerStores
+      summary: List stores linked to a partner.
+      tags: [ "dsh-operator" ]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PartnerId'
+      responses:
+        "200":
+          description: Partner stores.
+          content:
+            application/json:
+              schema: { $ref: "./dsh.openapi.yaml#/components/schemas/DshPartnerStoresListResponse" }
+        "401": { $ref: "./dsh.openapi.yaml#/components/responses/Unauthenticated" }
+        "404": { $ref: "./dsh.openapi.yaml#/components/responses/NotFound" }
     post:
       tags: [ "dsh-operator" ]
       operationId: linkDshPartnerStore

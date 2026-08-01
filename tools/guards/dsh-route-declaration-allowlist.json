@@ -26,42 +26,6 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "GET /dsh/captain/dispatch/financial-eligibility",
-      "method": "GET",
-      "path": "/dsh/captain/dispatch/financial-eligibility",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/captain/me/finance/commissions",
-      "method": "GET",
-      "path": "/dsh/captain/me/finance/commissions",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/captain/me/finance/ledger-entries",
-      "method": "GET",
-      "path": "/dsh/captain/me/finance/ledger-entries",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/captain/me/finance/payout-destination",
-      "method": "GET",
-      "path": "/dsh/captain/me/finance/payout-destination",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/captain/me/finance/payout-requests",
-      "method": "GET",
-      "path": "/dsh/captain/me/finance/payout-requests",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/captain/me/finance/wallet",
-      "method": "GET",
-      "path": "/dsh/captain/me/finance/wallet",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
       "route": "GET /dsh/captain/me/ratings/summary",
       "method": "GET",
       "path": "/dsh/captain/me/ratings/summary",
@@ -128,18 +92,6 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "GET /dsh/client/me/finance/ledger-entries",
-      "method": "GET",
-      "path": "/dsh/client/me/finance/ledger-entries",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/client/me/finance/wallet",
-      "method": "GET",
-      "path": "/dsh/client/me/finance/wallet",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
       "route": "GET /dsh/client/me/ratings/pending-order",
       "method": "GET",
       "path": "/dsh/client/me/ratings/pending-order",
@@ -176,12 +128,6 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "GET /dsh/client/orders/{orderId}/refunds",
-      "method": "GET",
-      "path": "/dsh/client/orders/{orderId}/refunds",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
       "route": "GET /dsh/client/support/tickets",
       "method": "GET",
       "path": "/dsh/client/support/tickets",
@@ -198,54 +144,6 @@
       "method": "GET",
       "path": "/dsh/client/support/tickets/{ticketId}/messages",
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "GET /dsh/control-panel/finance/cod-reconciliation-cases",
-      "method": "GET",
-      "path": "/dsh/control-panel/finance/cod-reconciliation-cases",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/control-panel/finance/commissions/{commissionId}",
-      "method": "GET",
-      "path": "/dsh/control-panel/finance/commissions/{commissionId}",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/timeline",
-      "method": "GET",
-      "path": "/dsh/control-panel/finance/payment-sessions/{paymentSessionId}/timeline",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/control-panel/finance/payout-requests/{payoutId}/audit",
-      "method": "GET",
-      "path": "/dsh/control-panel/finance/payout-requests/{payoutId}/audit",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/control-panel/finance/refunds/{refundId}/audit",
-      "method": "GET",
-      "path": "/dsh/control-panel/finance/refunds/{refundId}/audit",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/control-panel/finance/settlements/{settlementId}/evidence",
-      "method": "GET",
-      "path": "/dsh/control-panel/finance/settlements/{settlementId}/evidence",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}",
-      "method": "GET",
-      "path": "/dsh/control-panel/finance/wallets/{actorType}/{actorId}",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries",
-      "method": "GET",
-      "path": "/dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
     },
     {
       "route": "GET /dsh/field/catalog/attributes",
@@ -290,12 +188,6 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "GET /dsh/field/me/finance/payout-destination",
-      "method": "GET",
-      "path": "/dsh/field/me/finance/payout-destination",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
       "route": "GET /dsh/field/me/ratings/summary",
       "method": "GET",
       "path": "/dsh/field/me/ratings/summary",
@@ -305,12 +197,6 @@
       "route": "GET /dsh/field/partners/{partnerId}/assortment-pauses",
       "method": "GET",
       "path": "/dsh/field/partners/{partnerId}/assortment-pauses",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "GET /dsh/field/partners/{partnerId}/catalog/product-proposals",
-      "method": "GET",
-      "path": "/dsh/field/partners/{partnerId}/catalog/product-proposals",
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
@@ -410,12 +296,6 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "GET /dsh/operator/catalog/master-products/{productId}",
-      "method": "GET",
-      "path": "/dsh/operator/catalog/master-products/{productId}",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
       "route": "GET /dsh/operator/catalog/master-products/{productId}/attribute-values",
       "method": "GET",
       "path": "/dsh/operator/catalog/master-products/{productId}/attribute-values",
@@ -450,12 +330,6 @@
       "method": "GET",
       "path": "/dsh/operator/dispatch/capacity-forecast",
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "GET /dsh/operator/dispatch/captains/{captainId}/financial-eligibility",
-      "method": "GET",
-      "path": "/dsh/operator/dispatch/captains/{captainId}/financial-eligibility",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
     },
     {
       "route": "GET /dsh/operator/dispatch/decisions",
@@ -656,12 +530,6 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "GET /dsh/operator/support/tickets/{ticketId}",
-      "method": "GET",
-      "path": "/dsh/operator/support/tickets/{ticketId}",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
       "route": "GET /dsh/operator/support/tickets/{ticketId}/events",
       "method": "GET",
       "path": "/dsh/operator/support/tickets/{ticketId}/events",
@@ -728,52 +596,10 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "GET /dsh/partner/catalog/product-proposals",
-      "method": "GET",
-      "path": "/dsh/partner/catalog/product-proposals",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
       "route": "GET /dsh/partner/catalog/proposals",
       "method": "GET",
       "path": "/dsh/partner/catalog/proposals",
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "GET /dsh/partner/me/finance/cod-records",
-      "method": "GET",
-      "path": "/dsh/partner/me/finance/cod-records",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/partner/me/finance/commissions",
-      "method": "GET",
-      "path": "/dsh/partner/me/finance/commissions",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/partner/me/finance/ledger-entries",
-      "method": "GET",
-      "path": "/dsh/partner/me/finance/ledger-entries",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/partner/me/finance/payout-destination",
-      "method": "GET",
-      "path": "/dsh/partner/me/finance/payout-destination",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/partner/me/finance/payout-requests",
-      "method": "GET",
-      "path": "/dsh/partner/me/finance/payout-requests",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "GET /dsh/partner/me/finance/wallet",
-      "method": "GET",
-      "path": "/dsh/partner/me/finance/wallet",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
     },
     {
       "route": "GET /dsh/partner/me/ratings/field/prompt",
@@ -791,18 +617,6 @@
       "route": "GET /dsh/partner/order-truth/{orderId}",
       "method": "GET",
       "path": "/dsh/partner/order-truth/{orderId}",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "GET /dsh/partner/orders/{orderId}/refunds",
-      "method": "GET",
-      "path": "/dsh/partner/orders/{orderId}/refunds",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "GET /dsh/partner/reels",
-      "method": "GET",
-      "path": "/dsh/partner/reels",
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
@@ -878,12 +692,6 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "PATCH /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}",
-      "method": "PATCH",
-      "path": "/dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
       "route": "PATCH /dsh/operator/marketing/coupons/{couponId}",
       "method": "PATCH",
       "path": "/dsh/operator/marketing/coupons/{couponId}",
@@ -920,12 +728,6 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "PATCH /dsh/partner/catalog/product-proposals/{proposalId}",
-      "method": "PATCH",
-      "path": "/dsh/partner/catalog/product-proposals/{proposalId}",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
       "route": "POST /dsh/captain/dispatch/assignments/{assignmentId}/delivery-proof",
       "method": "POST",
       "path": "/dsh/captain/dispatch/assignments/{assignmentId}/delivery-proof",
@@ -936,24 +738,6 @@
       "method": "POST",
       "path": "/dsh/captain/dispatch/assignments/{assignmentId}/handoff-exceptions",
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "POST /dsh/captain/dispatch/financial-eligibility/refresh",
-      "method": "POST",
-      "path": "/dsh/captain/dispatch/financial-eligibility/refresh",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/captain/me/finance/payout-destination/deactivate",
-      "method": "POST",
-      "path": "/dsh/captain/me/finance/payout-destination/deactivate",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/captain/me/finance/payout-requests",
-      "method": "POST",
-      "path": "/dsh/captain/me/finance/payout-requests",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
     },
     {
       "route": "POST /dsh/captain/partner-fleet/connect",
@@ -1068,96 +852,6 @@
       "method": "POST",
       "path": "/dsh/client/support/tickets/{ticketId}/messages",
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "POST /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign",
-      "method": "POST",
-      "path": "/dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/resolve",
-      "method": "POST",
-      "path": "/dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/resolve",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/control-panel/finance/commissions/{commissionId}/adjust",
-      "method": "POST",
-      "path": "/dsh/control-panel/finance/commissions/{commissionId}/adjust",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/control-panel/finance/commissions/{commissionId}/confirm",
-      "method": "POST",
-      "path": "/dsh/control-panel/finance/commissions/{commissionId}/confirm",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/control-panel/finance/commissions/{commissionId}/reject",
-      "method": "POST",
-      "path": "/dsh/control-panel/finance/commissions/{commissionId}/reject",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/control-panel/finance/commissions/{commissionId}/reverse",
-      "method": "POST",
-      "path": "/dsh/control-panel/finance/commissions/{commissionId}/reverse",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/control-panel/finance/commissions/{commissionId}/settle",
-      "method": "POST",
-      "path": "/dsh/control-panel/finance/commissions/{commissionId}/settle",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status",
-      "method": "POST",
-      "path": "/dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/control-panel/finance/payout-requests/{payoutId}/reconcile",
-      "method": "POST",
-      "path": "/dsh/control-panel/finance/payout-requests/{payoutId}/reconcile",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/control-panel/finance/refunds",
-      "method": "POST",
-      "path": "/dsh/control-panel/finance/refunds",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/control-panel/finance/refunds/{refundId}/approve",
-      "method": "POST",
-      "path": "/dsh/control-panel/finance/refunds/{refundId}/approve",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/control-panel/finance/refunds/{refundId}/complete",
-      "method": "POST",
-      "path": "/dsh/control-panel/finance/refunds/{refundId}/complete",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/control-panel/finance/refunds/{refundId}/reconcile",
-      "method": "POST",
-      "path": "/dsh/control-panel/finance/refunds/{refundId}/reconcile",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/control-panel/finance/refunds/{refundId}/reject",
-      "method": "POST",
-      "path": "/dsh/control-panel/finance/refunds/{refundId}/reject",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/field/me/finance/payout-destination/deactivate",
-      "method": "POST",
-      "path": "/dsh/field/me/finance/payout-destination/deactivate",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
     },
     {
       "route": "POST /dsh/field/partners/{partnerId}/assortment/{masterProductId}/pause",
@@ -1280,12 +974,6 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "POST /dsh/operator/dispatch/captains/{captainId}/financial-eligibility/refresh",
-      "method": "POST",
-      "path": "/dsh/operator/dispatch/captains/{captainId}/financial-eligibility/refresh",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
       "route": "POST /dsh/operator/marketing/coupons",
       "method": "POST",
       "path": "/dsh/operator/marketing/coupons",
@@ -1400,24 +1088,6 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "POST /dsh/partner/me/finance/cod-records/{recordId}/remit",
-      "method": "POST",
-      "path": "/dsh/partner/me/finance/cod-records/{recordId}/remit",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/partner/me/finance/payout-destination/deactivate",
-      "method": "POST",
-      "path": "/dsh/partner/me/finance/payout-destination/deactivate",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
-      "route": "POST /dsh/partner/me/finance/payout-requests",
-      "method": "POST",
-      "path": "/dsh/partner/me/finance/payout-requests",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
       "route": "POST /dsh/partner/me/ratings/field",
       "method": "POST",
       "path": "/dsh/partner/me/ratings/field",
@@ -1496,34 +1166,16 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "PUT /dsh/captain/me/finance/payout-destination",
-      "method": "PUT",
-      "path": "/dsh/captain/me/finance/payout-destination",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
       "route": "PUT /dsh/catalog/stores/{storeId}/assortment/{masterProductId}",
       "method": "PUT",
       "path": "/dsh/catalog/stores/{storeId}/assortment/{masterProductId}",
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "PUT /dsh/control-panel/finance/commission-policies",
-      "method": "PUT",
-      "path": "/dsh/control-panel/finance/commission-policies",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
-    },
-    {
       "route": "PUT /dsh/field/catalog/stores/{storeId}/assortment/{masterProductId}",
       "method": "PUT",
       "path": "/dsh/field/catalog/stores/{storeId}/assortment/{masterProductId}",
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "PUT /dsh/field/me/finance/payout-destination",
-      "method": "PUT",
-      "path": "/dsh/field/me/finance/payout-destination",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
     },
     {
       "route": "PUT /dsh/notifications/push-endpoints",
@@ -1608,12 +1260,6 @@
       "method": "PUT",
       "path": "/dsh/partner/catalog/assortment/{masterProductId}",
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "PUT /dsh/partner/me/finance/payout-destination",
-      "method": "PUT",
-      "path": "/dsh/partner/me/finance/payout-destination",
-      "reason": "Actor-facing WLT finance read/write proxy surface (wallet, commissions, payout-destination, ledger-entries, refunds, settlements, COD). Live and authenticated, but never declared in the DSH OpenAPI contract -- no generated client exists for it. Tracked for C1 remediation; highest-priority group to declare next given it forwards financial data."
     },
     {
       "route": "PUT /dsh/partner/stores/{storeId}/delivery-pricing/{fulfillmentMode}",

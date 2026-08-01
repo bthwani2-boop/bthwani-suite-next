@@ -86,6 +86,21 @@ paths:
         '502': { $ref: '#/components/responses/WltUnavailable' }
       security:
         - bearerAuth: []
+    post:
+      operationId: createDshPartnerOwnPayoutRequest
+      tags: [ representative-finance ]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        $ref: '#/components/requestBodies/PayoutRequestBody'
+      responses:
+        '201': { $ref: '#/components/responses/ReferenceItemResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/captain/me/finance/wallet:
     get:
       operationId: getDshCaptainOwnWallet
