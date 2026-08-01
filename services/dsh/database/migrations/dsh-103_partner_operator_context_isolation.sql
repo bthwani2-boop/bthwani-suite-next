@@ -85,7 +85,7 @@ BEGIN
   END IF;
 END $$;
 
--- Legal identities are unique inside a OperatorContext, not across the entire partner_platform.
+-- Legal identities are unique inside a OperatorContext, not across the entire platform.
 ALTER TABLE dsh_partners DROP CONSTRAINT IF EXISTS dsh_partners_legal_identity_unique;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_partners_OperatorContext_legal_identity
   ON dsh_partners(operator_context_id, legal_identity_type, legal_identity_number);

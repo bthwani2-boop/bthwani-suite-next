@@ -118,7 +118,7 @@ if (!fs.existsSync(path.join(repoRoot, envExample))) {
       violations.push({ file: envExample, message: "AUTHORIZED_RUNTIME_MUST_NOT_IMPLY_PRODUCTION_DEPLOYMENT" });
     }
     if (!/^[a-z0-9][a-z0-9-]{2,62}$/.test(defaultOperatorContextId)) {
-      violations.push({ file: envExample, message: "AUTHORIZED_partner_platform_RUNTIME_REQUIRES_GOVERNED_DEFAULT_OperatorContext_ID" });
+      violations.push({ file: envExample, message: "AUTHORIZED_PLATFORM_RUNTIME_REQUIRES_GOVERNED_DEFAULT_OperatorContext_ID" });
     }
   }
   if (activationState === "active") {

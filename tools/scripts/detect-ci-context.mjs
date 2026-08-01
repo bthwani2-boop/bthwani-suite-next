@@ -97,7 +97,7 @@ export function classifyFiles(inputFiles, options = {}) {
   const secretsChanged = full || starts("governance/security/", "tools/security/") || has((file) =>
     /(^|\/)(secret|secrets|credential|credentials|signing|keystore|certificate)(\/|[-_.])/i.test(file)
   );
-  const operatorContextChanged = full || starts("governance/partner_platform/") || has((file) =>
+  const operatorContextChanged = full || starts("governance/platform/") || has((file) =>
     /(^|\/)(OperatorContext|tenancy|OperatorContext-context|OperatorContext-isolation|cross-OperatorContext)(\/|[-_.])/i.test(file)
   );
   const protectedSecurityChanged = authChanged || sessionChanged || rbacChanged || privacyChanged || piiChanged || secretsChanged || operatorContextChanged;

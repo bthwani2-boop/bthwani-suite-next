@@ -1,5 +1,5 @@
 -- dsh-056_special_requests_tenancy.sql
--- Adds partner_platform-ready deferred OperatorContext ownership to special-request truth.
+-- Adds platform-ready deferred OperatorContext ownership to special-request truth.
 
 BEGIN;
 

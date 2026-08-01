@@ -1,4 +1,4 @@
--- DSH multi-OperatorContext partner_platform schema contract.
+-- DSH multi-OperatorContext schema contract.
 -- Verifies OperatorContext ownership columns, constraints, indexes, and write guards.
 
 DO $$

@@ -258,7 +258,7 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   }
   const sentryRuntime = fs.readFileSync(path.join(dir, "src", "observability", "sentry.ts"), "utf8");
   for (const marker of ["sendDefaultPii: false", "beforeSend", "SENTRY_TRACES_SAMPLE_RATE", "FORBIDDEN_KEY"]) {
-    if (!sentryRuntime.includes(marker)) fail(`${key}: Sentry partner_platform privacy marker missing: ${marker}`);
+    if (!sentryRuntime.includes(marker)) fail(`${key}: Sentry platform privacy marker missing: ${marker}`);
   }
 
   if (requireBuildSecrets && buildSecretsTargetApps.includes(key)) {

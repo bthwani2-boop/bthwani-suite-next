@@ -73,7 +73,7 @@ export function PlatformGovernanceVisual() {
     <View style={styles.root} aria-label="المسار التنفيذي لتغييرات المنصة السيادية">
       <View style={styles.headingRow}>
         <View style={styles.headingCopy}>
-          <Text role="titleSm">المسار التنفيذي للفول ستاك partner_platform</Text>
+          <Text role="titleSm">المسار التنفيذي للفول ستاك operator_context</Text>
           <Text role="caption">
             قراءة حية لدورة تغييرات المنصة من الجلسة الموثوقة إلى platform-control ثم PostgreSQL؛ لا توجد قيم تجريبية أو مستأجر محلي مفروض من الواجهة.
           </Text>
@@ -159,7 +159,7 @@ export function PlatformGovernanceVisual() {
 
           <View style={styles.footerRow}>
             <Text role="caption">
-              المصدر: GET /platform/v1/change-sets عبر جلسة لوحة التحكم وحد partner_platform الموثوق.
+              المصدر: GET /platform/v1/change-sets عبر جلسة لوحة التحكم وحد operator_context الموثوق.
             </Text>
             <CpButton onClick={() => void workflow.reload()}>تحديث القراءة</CpButton>
           </View>

@@ -39,8 +39,7 @@ components:
       deprecated: true
       description: >-
         Ignored caller compatibility header. WLT overwrites this value after
-        service authentication with the server-owned compatibility scope. It
-        is not a tenant, organization, partner, store or ownership selector.
+        service authentication with the server-owned compatibility scope.
       schema: { type: string, minLength: 1, maxLength: 120 }
     CorrelationId:
       name: X-Correlation-ID

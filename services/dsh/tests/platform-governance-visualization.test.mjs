@@ -26,7 +26,7 @@ test("platform governance renders the live visualization on the sovereign platfo
   assert.doesNotMatch(visual, /fetch\s*\(/);
 });
 
-test("platform governance binds the visualization to authenticated partner_platform operator context", () => {
+test("platform governance binds the visualization to authenticated operator context", () => {
   assert.match(identityContract, /ActorIdentity:[\s\S]*operatorContextId: string/);
   assert.match(session, /identity: ActorIdentity/);
   assert.match(visual, /identity\?\.operatorContextId\.trim\(\)/);
