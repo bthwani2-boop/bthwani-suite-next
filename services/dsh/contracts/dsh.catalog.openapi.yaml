@@ -556,6 +556,254 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  # --- Legacy bare-prefix compatibility surface -----------------------------
+  # These paths are registered in Go alongside their /dsh/operator/... twins
+  # (see services/dsh/backend/internal/http/server.go, "Central Catalog
+  # compatibility surface") and dispatch to the exact same handler functions.
+  # They are locked in place by
+  # services/dsh/backend/internal/http/catalog_legacy_occ_routes_test.go
+  # ("TestLegacyCatalogWriteRoutesRemainRegistered"), so they may not be
+  # removed without also removing that test and confirming no external
+  # caller still depends on the bare prefix. No owner, reason, or removal
+  # trigger for this compatibility window is on record; that is a separate,
+  # pre-existing gap, not one this pass invents.
+  /dsh/catalog/domains:
+    get:
+      operationId: listCatalogDomainsLegacyPrefix
+      deprecated: true
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Domains, content: { application/json: { schema: { $ref: "#/components/schemas/DomainListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createCatalogDomainLegacyPrefix
+      deprecated: true
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateDomainRequest" } } }
+      responses:
+        "201": { description: Domain created, content: { application/json: { schema: { $ref: "#/components/schemas/DomainResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /dsh/catalog/domains/{domainId}:
+    patch:
+      operationId: updateCatalogDomainLegacyPrefix
+      deprecated: true
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/DomainId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateDomainRequest" } } }
+      responses:
+        "200": { description: Domain updated, content: { application/json: { schema: { $ref: "#/components/schemas/DomainResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /dsh/catalog/nodes:
+    get:
+      operationId: listCatalogNodesLegacyPrefix
+      deprecated: true
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: domainId, in: query, schema: { type: string } }
+        - { name: parentId, in: query, schema: { type: string } }
+      responses:
+        "200": { description: Nodes, content: { application/json: { schema: { $ref: "#/components/schemas/NodeListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    post:
+      operationId: createCatalogNodeLegacyPrefix
+      deprecated: true
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateNodeRequest" } } }
+      responses:
+        "201": { description: Node created, content: { application/json: { schema: { $ref: "#/components/schemas/NodeResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /dsh/catalog/nodes/{nodeId}:
+    patch:
+      operationId: updateCatalogNodeLegacyPrefix
+      deprecated: true
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/NodeId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateNodeRequest" } } }
+      responses:
+        "200": { description: Node updated, content: { application/json: { schema: { $ref: "#/components/schemas/NodeResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /dsh/catalog/master-products:
+    get:
+      operationId: listMasterProductsOperatorLegacyPrefix
+      deprecated: true
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: domainId, in: query, schema: { type: string } }
+        - { name: categoryNodeId, in: query, schema: { type: string } }
+        - { name: approvalStatus, in: query, schema: { type: string } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200": { description: Master products, content: { application/json: { schema: { $ref: "#/components/schemas/MasterProductListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    post:
+      operationId: createMasterProductLegacyPrefix
+      deprecated: true
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateMasterProductRequest" } } }
+      responses:
+        "201": { description: Master product created, content: { application/json: { schema: { $ref: "#/components/schemas/MasterProductResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /dsh/catalog/master-products/{productId}:
+    patch:
+      operationId: updateMasterProductLegacyPrefix
+      deprecated: true
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/ProductId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateMasterProductRequest" } } }
+      responses:
+        "200": { description: Master product updated, content: { application/json: { schema: { $ref: "#/components/schemas/MasterProductResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /dsh/catalog/proposals:
+    get:
+      operationId: listProductProposalsLegacyPrefix
+      deprecated: true
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: status, in: query, schema: { type: string } }
+        - { name: storeId, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200": { description: Proposals, content: { application/json: { schema: { $ref: "#/components/schemas/ProposalListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+  /dsh/catalog/proposals/{proposalId}/decision:
+    post:
+      operationId: decideProductProposalLegacyPrefix
+      deprecated: true
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/ProposalId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ProposalDecisionRequest" } } }
+      responses:
+        "200": { description: Proposal decided, content: { application/json: { schema: { $ref: "#/components/schemas/ProposalResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /dsh/catalog/proposals/{proposalId}/transitions:
+    post:
+      operationId: transitionProductProposalLegacyPrefix
+      deprecated: true
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/ProposalId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ProposalTransitionRequest" } } }
+      responses:
+        "200": { description: Proposal transitioned, content: { application/json: { schema: { $ref: "#/components/schemas/ProposalResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/InvalidTransition" }
+  /dsh/catalog/policies:
+    get:
+      operationId: listCatalogPlatformPoliciesLegacyPrefix
+      deprecated: true
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Policies, content: { application/json: { schema: { $ref: "#/components/schemas/PolicyListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+  /dsh/catalog/policies/{policyId}:
+    patch:
+      operationId: patchCatalogPlatformPolicyLegacyPrefix
+      deprecated: true
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/PolicyId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdatePolicyRequest" } } }
+      responses:
+        "200": { description: Policy updated, content: { application/json: { schema: { $ref: "#/components/schemas/PolicyResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /dsh/catalog/stores/{storeId}/assortment:
+    get:
+      operationId: getOperatorStoreAssortmentLegacyPrefix
+      deprecated: true
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/StoreId" }]
+      responses:
+        "200": { description: Assortment, content: { application/json: { schema: { $ref: "#/components/schemas/AssortmentListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /dsh/catalog/stores/{storeId}/assortment/{masterProductId}:
+    put:
+      operationId: upsertOperatorStoreAssortmentLegacyPrefix
+      deprecated: true
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/StoreId" }
+        - { $ref: "#/components/parameters/MasterProductId" }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpsertAssortmentRequest" } } }
+      responses:
+        "200": { description: Assortment saved, content: { application/json: { schema: { $ref: "#/components/schemas/AssortmentResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer }

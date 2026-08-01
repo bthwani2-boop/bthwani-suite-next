@@ -260,6 +260,32 @@ paths:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1settlements~1summary"
   /dsh/control-panel/finance/refunds:
     $ref: "./dsh.refunds.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1refunds"
+  /dsh/catalog/domains:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1domains"
+  /dsh/catalog/domains/{domainId}:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1domains~1{domainId}"
+  /dsh/catalog/nodes:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1nodes"
+  /dsh/catalog/nodes/{nodeId}:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1nodes~1{nodeId}"
+  /dsh/catalog/master-products:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1master-products"
+  /dsh/catalog/master-products/{productId}:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1master-products~1{productId}"
+  /dsh/catalog/proposals:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1proposals"
+  /dsh/catalog/proposals/{proposalId}/decision:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1proposals~1{proposalId}~1decision"
+  /dsh/catalog/proposals/{proposalId}/transitions:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1proposals~1{proposalId}~1transitions"
+  /dsh/catalog/policies:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1policies"
+  /dsh/catalog/policies/{policyId}:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1policies~1{policyId}"
+  /dsh/catalog/stores/{storeId}/assortment:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1stores~1{storeId}~1assortment"
+  /dsh/catalog/stores/{storeId}/assortment/{masterProductId}:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1stores~1{storeId}~1assortment~1{masterProductId}"
   /dsh/client/orders/{orderId}/refunds:
     $ref: "./dsh.refunds.openapi.yaml#/paths/~1dsh~1client~1orders~1{orderId}~1refunds"
   /dsh/partner/orders/{orderId}/refunds:

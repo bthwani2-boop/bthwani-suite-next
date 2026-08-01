@@ -38,42 +38,6 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "GET /dsh/catalog/domains",
-      "method": "GET",
-      "path": "/dsh/catalog/domains",
-      "reason": "Public/client-facing catalog read surface, parallel to the already-declared operator catalog routes. Declared operator equivalents exist; this client-facing group needs its own operation entries."
-    },
-    {
-      "route": "GET /dsh/catalog/master-products",
-      "method": "GET",
-      "path": "/dsh/catalog/master-products",
-      "reason": "Public/client-facing catalog read surface, parallel to the already-declared operator catalog routes. Declared operator equivalents exist; this client-facing group needs its own operation entries."
-    },
-    {
-      "route": "GET /dsh/catalog/nodes",
-      "method": "GET",
-      "path": "/dsh/catalog/nodes",
-      "reason": "Public/client-facing catalog read surface, parallel to the already-declared operator catalog routes. Declared operator equivalents exist; this client-facing group needs its own operation entries."
-    },
-    {
-      "route": "GET /dsh/catalog/policies",
-      "method": "GET",
-      "path": "/dsh/catalog/policies",
-      "reason": "Public/client-facing catalog read surface, parallel to the already-declared operator catalog routes. Declared operator equivalents exist; this client-facing group needs its own operation entries."
-    },
-    {
-      "route": "GET /dsh/catalog/proposals",
-      "method": "GET",
-      "path": "/dsh/catalog/proposals",
-      "reason": "Public/client-facing catalog read surface, parallel to the already-declared operator catalog routes. Declared operator equivalents exist; this client-facing group needs its own operation entries."
-    },
-    {
-      "route": "GET /dsh/catalog/stores/{storeId}/assortment",
-      "method": "GET",
-      "path": "/dsh/catalog/stores/{storeId}/assortment",
-      "reason": "Public/client-facing catalog read surface, parallel to the already-declared operator catalog routes. Declared operator equivalents exist; this client-facing group needs its own operation entries."
-    },
-    {
       "route": "GET /dsh/client/addresses",
       "method": "GET",
       "path": "/dsh/client/addresses",
@@ -662,30 +626,6 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "PATCH /dsh/catalog/domains/{domainId}",
-      "method": "PATCH",
-      "path": "/dsh/catalog/domains/{domainId}",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "PATCH /dsh/catalog/master-products/{productId}",
-      "method": "PATCH",
-      "path": "/dsh/catalog/master-products/{productId}",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "PATCH /dsh/catalog/nodes/{nodeId}",
-      "method": "PATCH",
-      "path": "/dsh/catalog/nodes/{nodeId}",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "PATCH /dsh/catalog/policies/{policyId}",
-      "method": "PATCH",
-      "path": "/dsh/catalog/policies/{policyId}",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
       "route": "PATCH /dsh/client/addresses/{addressId}",
       "method": "PATCH",
       "path": "/dsh/client/addresses/{addressId}",
@@ -743,36 +683,6 @@
       "route": "POST /dsh/captain/partner-fleet/connect",
       "method": "POST",
       "path": "/dsh/captain/partner-fleet/connect",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "POST /dsh/catalog/domains",
-      "method": "POST",
-      "path": "/dsh/catalog/domains",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "POST /dsh/catalog/master-products",
-      "method": "POST",
-      "path": "/dsh/catalog/master-products",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "POST /dsh/catalog/nodes",
-      "method": "POST",
-      "path": "/dsh/catalog/nodes",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "POST /dsh/catalog/proposals/{proposalId}/decision",
-      "method": "POST",
-      "path": "/dsh/catalog/proposals/{proposalId}/decision",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "POST /dsh/catalog/proposals/{proposalId}/transitions",
-      "method": "POST",
-      "path": "/dsh/catalog/proposals/{proposalId}/transitions",
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
@@ -1163,12 +1073,6 @@
       "route": "POST /dsh/support/tickets/{ticketId}/messages/{messageId}/attachments",
       "method": "POST",
       "path": "/dsh/support/tickets/{ticketId}/messages/{messageId}/attachments",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "PUT /dsh/catalog/stores/{storeId}/assortment/{masterProductId}",
-      "method": "PUT",
-      "path": "/dsh/catalog/stores/{storeId}/assortment/{masterProductId}",
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
