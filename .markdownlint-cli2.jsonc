@@ -9,5 +9,9 @@
     "governance/**/*.md",
     "AGENTS.md",
     ".github/**/*.md"
+  ],
+  "ignores": [
+    "governance/policies/RADICAL_REMEDIATION_EXECUTION_POLICY.md",
+    "governance/operational_journey_protocol_package/14_FULL_SURFACE_CLOSURE_PLAN.md"
   ]
 }

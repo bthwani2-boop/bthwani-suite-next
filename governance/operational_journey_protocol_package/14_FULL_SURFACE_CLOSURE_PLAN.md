@@ -1740,29 +1740,15 @@ DSH partner/store onboarding state
 
 ---
 
-## JOURNEY-90 — المنتجات التجارية والاشتراكات والولاء
-
-هذه رحلة **معلنة في عقد WLT لكنها مشروطة**:
-
-```text
-Commercial product
-→ Subscription payment session
-→ Activation
-→ Renewal
-→ Lifecycle
-→ Client benefits
-→ Loyalty ledger entries
-```
-
-قبل تنفيذها يجب حسم Product Truth:
+## JOURNEY-90 — المنتجات التجارية والاشتراكات والولاء (خارج النطاق)
 
 ```yaml
-platform_is_full_saas: false
-partner_saas_commercialization: deferred
-client_commercial_benefits: requires_explicit_product_approval
+status: OUT_OF_SCOPE
+reason: البنية التحتية Commercial product/Subscription/Loyalty ledger معلنة في عقد WLT دون أن يوجد قرار منتج معتمد لتفعيلها؛ المنصة ليست SaaS ولا تعرّف مستأجرين.
+decided_by: repository_owner
 ```
 
-لا تُحذف من سجل الرحلات، ولا تُفعّل تلقائيًا.
+لا تُحذف من سجل الرحلات؛ تبقى `OUT_OF_SCOPE` حتى قرار منتج صريح مستقل يعيد فتحها.
 
 ---
 
