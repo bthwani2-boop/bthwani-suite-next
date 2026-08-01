@@ -1345,7 +1345,7 @@
     {
       "ordinal": 192,
       "file": "dsh-967_drop_dead_governance_tables.sql",
-      "sha256": "06860f468c296e803c36b8726588841d2aec2f4d7572c86bbfdbf2e80821d1e5",
+      "sha256": "6a12c2f78d7d900215394d821b2199bf90fbafc516369417f6fa2a61bf28c4a1",
       "historicalPrefix": "967",
       "state": "HISTORICAL_IMMUTABLE"
     }

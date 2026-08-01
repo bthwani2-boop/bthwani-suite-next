@@ -7,51 +7,11 @@
     },
     {
       "path": "tools/scripts/run-command-check.mjs",
-      "reason": "Invoked as an nx target from 12 project.json files (apps/app-client, apps/app-captain, apps/app-field, apps/app-partner, apps/control-panel, contracts, services/dsh, services/wlt, shared/app-shell, shared/data-runtime, shared/media-runtime, shared/ui-kit). project.json is not a scanned code-file extension for this guard."
+      "reason": "Invoked as an nx target from 10 project.json files (apps/app-client/runtime, apps/app-captain/runtime, apps/app-field/runtime, apps/app-partner/runtime, apps/control-panel/runtime, contracts, services/dsh, services/wlt, shared/data-runtime, shared/ui-kit). project.json is not a scanned code-file extension for this guard."
     },
     {
       "path": "tools/scripts/run-tsc-check.mjs",
       "reason": "Invoked as an nx target from project.json files (apps/control-panel/runtime, shared/data-runtime, services/dsh, apps/app-client/runtime). project.json is not a scanned code-file extension for this guard."
-    },
-    {
-      "path": "tools/scripts/encoding-scan.mjs",
-      "reason": "Manual mojibake diagnostic scanner, paired with the remediator tools/scripts/fix-mojibake-line.mjs. Real ad hoc invocation history against services/dsh/frontend/control-panel, apps/control-panel/runtime, and services/dsh/frontend/shared is recorded in .claude/settings.local.json permission grants. Not CI-wired by design (manual diagnostic)."
-    },
-    {
-      "path": "tools/scripts/build-operational-journey-package.mjs",
-      "reason": "Scaffolds 01_EXECUTION_LEDGER.yaml and 02_VERIFICATION_CLOSURE.yaml, whose schemas are named and governed in governance/operational_journey_factory/00_FACTORY_INDEX.md (01_EXECUTION_LEDGER_SCHEMA.md, 02_VERIFICATION_CLOSURE_SCHEMA.md). Manual scaffolding tool run by humans starting a new governed journey package; not CI-wired by design."
-    },
-    {
-      "path": "tools/scripts/guard-google-platform-prebuild.mjs",
-      "reason": "Manual pre-flight validator for Google Play services config ahead of EAS mobile builds (validates via ../mobile/google-services-config.mjs). Sibling manual ops scripts in tools/scripts/google-cloud/ (bootstrap-firebase-android-apps.ps1, enable-firebase-platform.ps1, prepare-fcm-v1-service-account.ps1) are likewise real, functioning tools omitted from that folder's README and never wired to CI; this follows the same established pattern."
-    },
-    {
-      "path": "tools/scripts/verify-dsh-order-lifecycle-backend-binding.mjs",
-      "reason": "KNOWN DEAD, NOT DELETED HERE: hardcodes status: \"PROVEN\" for every listed operation unconditionally (tools/scripts/verify-dsh-order-lifecycle-backend-binding.mjs lines ~36-48) -- a fabricated-evidence generator with zero references anywhere in the tracked tree. Should be deleted, but tools/scripts/** is outside the permitted touch scope for this change (see governance/guards/guard-registry.json remediation notes / task handoff). Left allowlisted rather than silently edited out of scope."
-    },
-    {
-      "path": "tools/scripts/verify-dsh-wlt-finance-boundary.mjs",
-      "reason": "KNOWN DEAD, NOT DELETED HERE: unregistered duplicate of the already-registered, CI-wired guard \"wlt-financial-boundary\" (tools/guards/wlt-financial-boundary-gate.mjs). Zero references anywhere in the tracked tree. Should be deleted as superseded, but tools/scripts/** is outside the permitted touch scope for this change."
-    },
-    {
-      "path": "tools/scripts/generate-dsh-order-lifecycle-ui-binding-inventory.mjs",
-      "reason": "KNOWN DEAD, NOT DELETED HERE: zero references anywhere in the tracked tree; writes an unconsumed diagnostic inventory with no reader. Should be deleted, but tools/scripts/** is outside the permitted touch scope for this change."
-    },
-    {
-      "path": "tools/scripts/scan-legacy-catalog-references.mjs",
-      "reason": "KNOWN DEAD, NOT DELETED HERE: one-off migration-verification script for the retired local catalog (dsh_catalog_categories etc). Verified zero remaining references to those identifiers in services/dsh live code (.ts/.tsx/.go), confirming the migration it exists to verify is complete and the script has expired. Should be deleted, but tools/scripts/** is outside the permitted touch scope for this change."
-    },
-    {
-      "path": "tools/scripts/replace-opstheme.mjs",
-      "reason": "KNOWN DEAD, NOT DELETED HERE: one-off opsTheme-to-colorRoles migration script (header explicitly documents it as a one-time remediation). Verified zero remaining opsTheme references in services/dsh/frontend/control-panel, confirming the migration is complete and the script has expired. Should be deleted, but tools/scripts/** is outside the permitted touch scope for this change."
-    },
-    {
-      "path": "tools/scripts/generate-fixtures.mjs",
-      "reason": "KNOWN DEAD, NOT DELETED HERE: zero references anywhere in the tracked tree, no documentation, no runbook mention. Should be deleted as an abandoned one-off dev-seed generator, but tools/scripts/** is outside the permitted touch scope for this change."
-    },
-    {
-      "path": "tools/scripts/generate-seed-images.mjs",
-      "reason": "KNOWN DEAD, NOT DELETED HERE: zero references anywhere in the tracked tree, no documentation, no runbook mention. Should be deleted as an abandoned one-off dev-seed generator, but tools/scripts/** is outside the permitted touch scope for this change."
     }
   ]
 }

@@ -1,4 +1,4 @@
-// Validates governance/quality/flaky-tests.json against its schema and enforces
+// Validates governance/guards/flaky-tests.json against its schema and enforces
 // the spec S17 rules: FLAKY_CONFIRMED entries required for proof block closure,
 // and any QUARANTINED entry past its quarantineExpiry becomes EXPIRED_QUARANTINE
 // (which itself blocks closure) rather than silently staying quarantined forever.
@@ -9,7 +9,7 @@ import addFormats from "ajv-formats";
 import { fail, repoRoot } from "./_guard-utils.mjs";
 
 const guardId = "flaky-tests-gate";
-const qualityRoot = "governance/quality";
+const qualityRoot = "governance/guards";
 const violations = [];
 
 function readJson(relative) {

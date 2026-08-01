@@ -137,18 +137,12 @@ importers:
 
   apps/app-captain/runtime:
     dependencies:
-      '@bthwani/app-shell':
-        specifier: workspace:*
-        version: link:../../../shared/app-shell
       '@bthwani/core-identity':
         specifier: workspace:*
         version: link:../../../core/identity
       '@bthwani/data-runtime':
         specifier: workspace:*
         version: link:../../../shared/data-runtime
-      '@bthwani/media-runtime':
-        specifier: workspace:*
-        version: link:../../../shared/media-runtime
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../../shared/ui-kit
@@ -297,18 +291,12 @@ importers:
 
   apps/app-client/runtime:
     dependencies:
-      '@bthwani/app-shell':
-        specifier: workspace:*
-        version: link:../../../shared/app-shell
       '@bthwani/core-identity':
         specifier: workspace:*
         version: link:../../../core/identity
       '@bthwani/data-runtime':
         specifier: workspace:*
         version: link:../../../shared/data-runtime
-      '@bthwani/media-runtime':
-        specifier: workspace:*
-        version: link:../../../shared/media-runtime
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../../shared/ui-kit
@@ -451,18 +439,12 @@ importers:
 
   apps/app-field/runtime:
     dependencies:
-      '@bthwani/app-shell':
-        specifier: workspace:*
-        version: link:../../../shared/app-shell
       '@bthwani/core-identity':
         specifier: workspace:*
         version: link:../../../core/identity
       '@bthwani/data-runtime':
         specifier: workspace:*
         version: link:../../../shared/data-runtime
-      '@bthwani/media-runtime':
-        specifier: workspace:*
-        version: link:../../../shared/media-runtime
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../../shared/ui-kit
@@ -611,18 +593,12 @@ importers:
 
   apps/app-partner/runtime:
     dependencies:
-      '@bthwani/app-shell':
-        specifier: workspace:*
-        version: link:../../../shared/app-shell
       '@bthwani/core-identity':
         specifier: workspace:*
         version: link:../../../core/identity
       '@bthwani/data-runtime':
         specifier: workspace:*
         version: link:../../../shared/data-runtime
-      '@bthwani/media-runtime':
-        specifier: workspace:*
-        version: link:../../../shared/media-runtime
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../../shared/ui-kit
@@ -948,15 +924,6 @@ importers:
         specifier: ~6.0.3
         version: 6.0.3
 
-  shared/app-shell:
-    devDependencies:
-      '@types/react':
-        specifier: 19.2.17
-        version: 19.2.17
-      typescript:
-        specifier: ~6.0.3
-        version: 6.0.3
-
   shared/control-panel:
     dependencies:
       '@bthwani/ui-kit':
@@ -978,22 +945,6 @@ importers:
       '@tanstack/react-query':
         specifier: 5.90.2
         version: 5.90.2(react@19.2.3)
-    devDependencies:
-      '@types/react':
-        specifier: 19.2.17
-        version: 19.2.17
-      typescript:
-        specifier: ~6.0.3
-        version: 6.0.3
-
-  shared/media-runtime:
-    dependencies:
-      '@react-native-async-storage/async-storage':
-        specifier: 2.2.0
-        version: 2.2.0(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))
-      expo-image:
-        specifier: ~56.0.11
-        version: 56.0.11(expo@56.0.17)(react-native-web@0.19.13(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
     devDependencies:
       '@types/react':
         specifier: 19.2.17

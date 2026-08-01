@@ -155,6 +155,18 @@ jobs:
       - name: Verify every registered DSH route is declared or a reviewed exception
         run: pnpm run guard:dsh-route-declaration
 
+      - name: Verify every exported Go handler is referenced somewhere
+        run: pnpm run guard:go-handler-generation
+
+      - name: Verify flaky-test quarantine registry
+        run: pnpm run guard:flaky-tests
+
+      - name: Verify DSH dispatch contract/registry consistency
+        run: pnpm run guard:dispatch-contract-registry
+
+      - name: Verify local dev actors registry consistency
+        run: pnpm run guard:local-dev-actors
+
       - name: Verify WLT OpenAPI bundle provenance
         run: pnpm run guard:wlt-openapi-bundle
 

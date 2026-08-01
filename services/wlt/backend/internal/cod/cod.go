@@ -866,18 +866,6 @@ func HandleListCommissions(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func handleCommissionTransitionError(w http.ResponseWriter, err error) bool {
-	if errors.Is(err, ErrCommissionNotInExpectedState) {
-		shared.SendError(w, http.StatusConflict, "INVALID_STATE", "commission is not in a state that allows this transition")
-		return true
-	}
-	if err != nil {
-		shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-		return true
-	}
-	return false
-}
-
 func decodeCommissionResolutionNote(w http.ResponseWriter, r *http.Request) string {
 	var body struct {
 		Note string `json:"resolutionNote"`

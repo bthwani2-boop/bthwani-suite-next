@@ -27,7 +27,6 @@
     "react-native-svg",
     "react-native-worklets",
     "react-native-web",
-    "@bthwani/app-shell",
     "@expo/vector-icons",
     "@types/react",
     "@ast-grep/cli",
@@ -83,7 +82,6 @@
         "fingerprint.config.js"
       ],
       "ignoreDependencies": [
-        "@bthwani/media-runtime",
         "@expo/fingerprint",
         "@tanstack/react-query",
         "expo-application",
@@ -99,7 +97,6 @@
         "fingerprint.config.js"
       ],
       "ignoreDependencies": [
-        "@bthwani/media-runtime",
         "@expo/fingerprint",
         "@tanstack/react-query",
         "expo-application",
@@ -116,7 +113,6 @@
         "fingerprint.config.js"
       ],
       "ignoreDependencies": [
-        "@bthwani/media-runtime",
         "@expo/fingerprint",
         "expo-application",
         "expo-battery",
@@ -133,7 +129,6 @@
         "fingerprint.config.js"
       ],
       "ignoreDependencies": [
-        "@bthwani/media-runtime",
         "@expo/fingerprint",
         "expo-application",
         "expo-battery",

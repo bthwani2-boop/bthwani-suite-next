@@ -11,13 +11,20 @@ BEGIN
     'wlt_commission_policy_versions',
     'wlt_commission_evidence',
     'wlt_commission_adjustments',
-    'wlt_audit_events',
     'wlt_mutation_receipts'
   ] LOOP
     IF to_regclass('public.' || required_table) IS NULL THEN
       RAISE EXCEPTION 'missing  table %', required_table;
     END IF;
   END LOOP;
+
+  -- wlt-902 renames wlt_audit_events to wlt_finance_audit_events on any
+  -- database new enough to have it; accept either name so this contract
+  -- does not go stale after that rename.
+  IF to_regclass('public.wlt_audit_events') IS NULL
+     AND to_regclass('public.wlt_finance_audit_events') IS NULL THEN
+    RAISE EXCEPTION 'missing  table wlt_audit_events (or its wlt-902 rename wlt_finance_audit_events)';
+  END IF;
 END $$;
 
 DO $$

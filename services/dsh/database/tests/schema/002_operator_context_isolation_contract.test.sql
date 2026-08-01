@@ -13,7 +13,6 @@ DECLARE
     'dsh_partner_document_reviews',
     'dsh_partner_field_visits',
     'dsh_partner_activation_events',
-    'dsh_partner_store_visibility_events',
     'dsh_store_actor_scopes'
   ];
 BEGIN

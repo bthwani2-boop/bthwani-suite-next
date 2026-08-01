@@ -13,9 +13,7 @@ config.watchFolders = [
   projectRoot,
   path.join(workspaceRoot, "services/dsh"),
   path.join(workspaceRoot, "shared/ui-kit"),
-  path.join(workspaceRoot, "shared/app-shell"),
   path.join(workspaceRoot, "shared/data-runtime"),
-  path.join(workspaceRoot, "shared/media-runtime"),
   path.join(workspaceRoot, "core/identity"),
 ];
 
@@ -26,9 +24,7 @@ config.resolver.nodeModulesPaths = [
 
 config.resolver.extraNodeModules = {
   "@bthwani/ui-kit": path.join(workspaceRoot, "shared/ui-kit"),
-  "@bthwani/app-shell": path.join(workspaceRoot, "shared/app-shell"),
   "@bthwani/data-runtime": path.join(workspaceRoot, "shared/data-runtime"),
-  "@bthwani/media-runtime": path.join(workspaceRoot, "shared/media-runtime"),
   "@bthwani/core-identity": path.join(workspaceRoot, "core/identity"),
   react: path.join(projectRoot, "node_modules/react"),
   "react-native": path.join(projectRoot, "node_modules/react-native"),

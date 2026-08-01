@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"dsh-api/internal/store"
 )
@@ -84,112 +83,6 @@ func requireFieldOwnsPartner(w http.ResponseWriter, db *sql.DB, partnerID, actor
 
 // ─── Handlers ──────────────────────────────────────────────────────────────
 
-// POST /dsh/partners  — create partner (control-panel or field)
-func HandleCreatePartner(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		actorID, surface := actorFromContext(r)
-		var input CreatePartnerInput
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
-			return
-		}
-		input.CreatedByActorID = actorID
-		input.CreatedBySurface = surface
-		p, err := CreatePartner(db, input)
-		if errors.Is(err, ErrInvalid) {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
-			return
-		}
-		if errors.Is(err, ErrConflict) {
-			sendError(w, http.StatusConflict, "CONFLICT", "partner with this legal identity already exists")
-			return
-		}
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create partner")
-			return
-		}
-		sendJSON(w, http.StatusCreated, p)
-	}
-}
-
-// GET /dsh/partners  — list partners (operator)
-func HandleListPartners(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		q := PartnerListQuery{
-			ActivationStatus: r.URL.Query().Get("status"),
-			Limit:            20,
-			Offset:           0,
-		}
-		if l, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && l > 0 {
-			q.Limit = l
-		}
-		if o, err := strconv.Atoi(r.URL.Query().Get("offset")); err == nil && o >= 0 {
-			q.Offset = o
-		}
-		list, total, err := ListPartners(db, q)
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list partners")
-			return
-		}
-		sendJSON(w, http.StatusOK, map[string]any{
-			"partners": list,
-			"pagination": map[string]int{
-				"total":  total,
-				"limit":  q.Limit,
-				"offset": q.Offset,
-			},
-		})
-	}
-}
-
-// GET /dsh/field/partners  — list partner drafts created by the calling field actor
-func HandleListFieldPartnerDrafts(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		actorID, _ := actorFromContext(r)
-		q := PartnerListQuery{
-			ActivationStatus: r.URL.Query().Get("status"),
-			CreatedByActorID: actorID,
-			Limit:            20,
-			Offset:           0,
-		}
-		if l, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && l > 0 {
-			q.Limit = l
-		}
-		if o, err := strconv.Atoi(r.URL.Query().Get("offset")); err == nil && o >= 0 {
-			q.Offset = o
-		}
-		list, total, err := ListPartners(db, q)
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list field partner drafts")
-			return
-		}
-		sendJSON(w, http.StatusOK, map[string]any{
-			"partners": list,
-			"pagination": map[string]int{
-				"total":  total,
-				"limit":  q.Limit,
-				"offset": q.Offset,
-			},
-		})
-	}
-}
-
-// GET /dsh/partners/{partnerId}  — get partner detail (operator)
-func HandleGetPartner(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		p, err := GetPartner(db, partnerIDFromPath(r))
-		if errors.Is(err, ErrNotFound) {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
-			return
-		}
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get partner")
-			return
-		}
-		sendJSON(w, http.StatusOK, p)
-	}
-}
-
 func readinessHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		pid := partnerIDFromPath(r)
@@ -233,70 +126,6 @@ func readinessHandler(db *sql.DB) http.HandlerFunc {
 			storePartnerReadinessReady, storeCatalogApproved,
 			storeMarketingVisible, storeIsVisible,
 		))
-	}
-}
-
-// GET /dsh/partners/{partnerId}/readiness — operator, any partner
-func HandleGetReadiness(db *sql.DB) http.HandlerFunc {
-	return readinessHandler(db)
-}
-
-// GET /dsh/field/partners/{partnerId}/readiness — field, only its own draft
-func HandleFieldGetReadiness(db *sql.DB) http.HandlerFunc {
-	inner := readinessHandler(db)
-	return func(w http.ResponseWriter, r *http.Request) {
-		actorID, _ := actorFromContext(r)
-		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
-			return
-		}
-		inner(w, r)
-	}
-}
-
-// POST /dsh/partners/{partnerId}/activation-transitions
-func HandleActivationTransition(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		actorID, surface := actorFromContext(r)
-		var input TransitionInput
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
-			return
-		}
-		input.ActorID = actorID
-		input.ActorSurface = surface
-		input.CorrelationID = correlationID(r)
-		input.IdempotencyKey = idempotencyKey(r)
-
-		updated, evt, err := TransitionStatus(db, partnerIDFromPath(r), input, versionFromQuery(r))
-		if errors.Is(err, ErrNotFound) {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
-			return
-		}
-		if errors.Is(err, ErrInvalidTransition) {
-			sendError(w, http.StatusUnprocessableEntity, "INVALID_TRANSITION",
-				"transition not allowed from current status")
-			return
-		}
-		if errors.Is(err, ErrConflict) {
-			sendError(w, http.StatusConflict, "VERSION_CONFLICT", "partner was modified concurrently")
-			return
-		}
-		if errors.Is(err, ErrInvalid) {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "reason is required to reject or deactivate a partner")
-			return
-		}
-		if err != nil {
-			if strings.Contains(err.Error(), "store publication gates failed") {
-				sendError(w, http.StatusUnprocessableEntity, "STORE_PUBLICATION_GATES_FAILED", err.Error())
-				return
-			}
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "transition failed")
-			return
-		}
-		sendJSON(w, http.StatusOK, map[string]any{
-			"partner": updated,
-			"event":   evt,
-		})
 	}
 }
 
@@ -389,34 +218,6 @@ func HandleListPartnerStores(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// POST /dsh/partners/{partnerId}/stores
-func HandleLinkPartnerStore(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		actorID, _ := actorFromContext(r)
-		var input struct {
-			StoreID string `json:"storeId"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
-			return
-		}
-		stores, err := LinkPartnerStore(db, partnerIDFromPath(r), input.StoreID, actorID)
-		if errors.Is(err, ErrInvalid) {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "storeId is required")
-			return
-		}
-		if errors.Is(err, ErrNotFound) {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "store not found")
-			return
-		}
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to link partner store")
-			return
-		}
-		sendJSON(w, http.StatusOK, map[string]any{"stores": stores, "total": len(stores)})
-	}
-}
-
 // GET /dsh/partners/{partnerId}/audit
 func HandleListAudit(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -430,45 +231,6 @@ func HandleListAudit(db *sql.DB) http.HandlerFunc {
 }
 
 // ─── Field surface handlers ─────────────────────────────────────────────────
-
-// POST /dsh/field/partners/drafts  — field creates partner draft
-func HandleFieldCreateDraft(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		actorID, _ := actorFromContext(r)
-		var input CreatePartnerInput
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
-			return
-		}
-		input.CreatedByActorID = actorID
-		input.CreatedBySurface = "app-field"
-		p, err := CreatePartner(db, input)
-		if errors.Is(err, ErrInvalid) {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
-			return
-		}
-		if errors.Is(err, ErrConflict) {
-			sendError(w, http.StatusConflict, "CONFLICT", "partner with this legal identity already exists")
-			return
-		}
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create draft")
-			return
-		}
-		sendJSON(w, http.StatusCreated, p)
-	}
-}
-
-// GET /dsh/field/partners/{partnerId}  — field reads partner draft
-func HandleFieldGetPartner(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		actorID, _ := actorFromContext(r)
-		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
-			return
-		}
-		HandleGetPartner(db)(w, r)
-	}
-}
 
 func uploadDocumentHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -514,77 +276,6 @@ func HandleAddDocument(db *sql.DB) http.HandlerFunc {
 	return uploadDocumentHandler(db)
 }
 
-// POST /dsh/field/partners/{partnerId}/visits  — field creates partner-level visit
-func HandleFieldCreateVisit(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		actorID, _ := actorFromContext(r)
-		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
-			return
-		}
-		var input CreateFieldVisitInput
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
-			return
-		}
-		input.PartnerID = partnerIDFromPath(r)
-		input.FieldActorID = actorID
-
-		visit, err := CreateFieldVisit(db, input)
-		if errors.Is(err, ErrInvalid) {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
-			return
-		}
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create visit")
-			return
-		}
-		sendJSON(w, http.StatusCreated, visit)
-	}
-}
-
-// POST /dsh/field/partners/{partnerId}/submit  — field submits for CP review
-// This triggers a draft → submitted transition.
-func HandleFieldSubmitPartner(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		actorID, _ := actorFromContext(r)
-		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
-			return
-		}
-		var body struct {
-			Reason string `json:"reason"`
-		}
-		_ = json.NewDecoder(r.Body).Decode(&body)
-
-		input := TransitionInput{
-			ToStatus:       StatusSubmitted,
-			Reason:         body.Reason,
-			ActorID:        actorID,
-			ActorSurface:   "app-field",
-			CorrelationID:  correlationID(r),
-			IdempotencyKey: idempotencyKey(r),
-		}
-
-		updated, evt, err := TransitionStatus(db, partnerIDFromPath(r), input, 0)
-		if errors.Is(err, ErrNotFound) {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
-			return
-		}
-		if errors.Is(err, ErrInvalidTransition) {
-			sendError(w, http.StatusUnprocessableEntity, "INVALID_TRANSITION",
-				"partner cannot be submitted from current status — must be draft or field_visit_scheduled")
-			return
-		}
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "submission failed")
-			return
-		}
-		sendJSON(w, http.StatusOK, map[string]any{
-			"partner": updated,
-			"event":   evt,
-		})
-	}
-}
-
 // ─── Partner-self surface handler ──────────────────────────────────────────
 
 // GET /dsh/partner/me  — partner reads their own profile
@@ -625,63 +316,6 @@ func HandlePartnerMe(db *sql.DB) http.HandlerFunc {
 			"createdAt":        p.CreatedAt,
 			"updatedAt":        p.UpdatedAt,
 		})
-	}
-}
-
-// GET /dsh/partner/me/readiness
-func HandlePartnerMeReadiness(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		storeID := storeIDFromContext(r)
-		if storeID == "" {
-			sendError(w, http.StatusForbidden, "FORBIDDEN", "no store context")
-			return
-		}
-		var partnerID sql.NullString
-		if err := db.QueryRow(`SELECT partner_id FROM dsh_stores WHERE id = $1`, storeID).Scan(&partnerID); err != nil {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "store not found")
-			return
-		}
-		if !partnerID.Valid || partnerID.String == "" {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "no partner linked to this store")
-			return
-		}
-		pid := partnerID.String
-		p, err := GetPartner(db, pid)
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get partner")
-			return
-		}
-		total, approved, err := CountApprovedDocuments(db, pid)
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to count documents")
-			return
-		}
-
-		var hasStore bool
-		var storeActive bool
-		var storeServiceable bool
-		var storePartnerReadinessReady bool
-		var storeCatalogApproved bool
-		var storeMarketingVisible bool
-		var storeIsVisible bool
-
-		linkedStore, err := store.GetStoreByPartnerID(db, pid)
-		if err == nil && linkedStore != nil {
-			hasStore = true
-			storeActive = (linkedStore.Status == store.StatusActive)
-			storeServiceable = (linkedStore.ServiceabilityStatus == store.ServiceabilityServiceable || linkedStore.ServiceabilityStatus == store.ServiceabilityLimited)
-			storePartnerReadinessReady = (linkedStore.PartnerReadiness == "ready")
-			storeCatalogApproved = (linkedStore.CatalogApprovalStatus == "approved")
-			storeMarketingVisible = (linkedStore.MarketingVisibility == "visible")
-			storeIsVisible = linkedStore.IsVisible
-		}
-
-		sendJSON(w, http.StatusOK, ComputeReadiness(
-			p, total, approved,
-			hasStore, storeActive, storeServiceable,
-			storePartnerReadinessReady, storeCatalogApproved,
-			storeMarketingVisible, storeIsVisible,
-		))
 	}
 }
 
@@ -779,37 +413,6 @@ func HandleRejectInvite(db *sql.DB) http.HandlerFunc {
 		}
 		if err != nil {
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to reject invite")
-			return
-		}
-		sendJSON(w, http.StatusOK, map[string]bool{"success": true})
-	}
-}
-
-// POST /dsh/partner/stores/{storeId}/team/members/{memberId}/action
-func HandleExecuteStoreTeamMemberAction(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		actorID, _ := actorFromContext(r)
-		var input TeamMemberActionInput
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
-			return
-		}
-		input.ActorID = actorID
-		err := ExecuteStoreTeamMemberAction(db, r.PathValue("storeId"), r.PathValue("memberId"), input)
-		if errors.Is(err, ErrInvalid) {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
-			return
-		}
-		if errors.Is(err, ErrNotFound) {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "team member not found")
-			return
-		}
-		if errors.Is(err, ErrForbidden) {
-			sendError(w, http.StatusForbidden, "FORBIDDEN", "team member does not belong to this store")
-			return
-		}
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to execute team member action")
 			return
 		}
 		sendJSON(w, http.StatusOK, map[string]bool{"success": true})

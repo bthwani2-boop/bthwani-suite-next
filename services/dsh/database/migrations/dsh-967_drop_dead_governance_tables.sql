@@ -10,6 +10,10 @@
 --     coupon funding ownership path, never written to.
 --   * dsh_partner_store_visibility_events (dsh-015) -- superseded by the
 --     live dsh_partner_store_transfer_audit (dsh-958), never written to.
+--     Its BEFORE INSERT/UPDATE OperatorContext-match trigger (dsh-103) is
+--     dropped automatically with the table; it was never populated.
+--     database/tests/schema/002_operator_context_isolation_contract.test.sql
+--     is updated in the same change to drop it from the required-table list.
 --
 -- Note: the dsh-002b "storefront catalog" tables (dsh_catalog_products,
 -- dsh_catalog_categories, dsh_catalog_media, dsh_catalog_audit,

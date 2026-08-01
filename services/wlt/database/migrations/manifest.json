@@ -448,20 +448,13 @@
     },
     {
       "ordinal": 64,
-      "file": "wlt-116_drop_dead_audit_event_tables.sql",
-      "sha256": "82408c6fe7aac2c0bb9939b6b4b4ab13ae3acc5c31a29be2b8865c6e5da2dd0c",
-      "historicalPrefix": "116",
-      "state": "HISTORICAL_IMMUTABLE"
-    },
-    {
-      "ordinal": 65,
       "file": "wlt-901_reconciliation_operator_context_guard.sql",
       "sha256": "eefbe734f917806ed9f72c2cf43f8a345d7d026a94830692446899fed3b3ef7d",
       "historicalPrefix": "901",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
-      "ordinal": 66,
+      "ordinal": 65,
       "file": "wlt-902_contextual_finance_object_names.sql",
       "sha256": "27d318c2ea95d8b1ccd46c94c1833f3ba8f30a4123de54de15091e28813c6168",
       "historicalPrefix": "902",

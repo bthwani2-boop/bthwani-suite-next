@@ -333,7 +333,7 @@
       "name": "Flaky Tests Gate",
       "script": "guard:flaky-tests",
       "exit_level": "fail",
-      "description": "Validates governance/quality/flaky-tests.json and fails an unexpired-fix quarantine that has passed its expiry date.",
+      "description": "Validates governance/guards/flaky-tests.json and fails an unexpired-fix quarantine that has passed its expiry date.",
       "source_file": "tools/guards/flaky-tests-gate.mjs"
     },
     {
@@ -508,6 +508,30 @@
       "exit_level": "fail",
       "description": "Enforces that every DSH route registered in Go source is declared in the OpenAPI contract or is a reviewed, reasoned exception in tools/guards/dsh-route-declaration-allowlist.json. Closes the reverse direction of dsh-openapi-modular (declared ⊆ implemented); this gate is implemented ⊆ (declared ∪ allowlisted).",
       "source_file": "tools/guards/dsh-route-declaration-gate.mjs"
+    },
+    {
+      "id": "go-handler-generation",
+      "name": "Go Handler Generation Gate",
+      "script": "guard:go-handler-generation",
+      "exit_level": "fail",
+      "description": "Fails when an exported DSH or WLT Go HTTP handler (func Handle*/handle*) has no reference anywhere else in its service's backend tree. Prevents the layered-generation dead-handler accumulation pattern (superseded handlers left behind when a new governed/sovereign/durable version replaces them) from recurring silently.",
+      "source_file": "tools/guards/go-handler-generation-gate.mjs"
+    },
+    {
+      "id": "dispatch-contract-registry",
+      "name": "Dispatch Contract Registry Gate",
+      "script": "guard:dispatch-contract-registry",
+      "exit_level": "fail",
+      "description": "Verifies dsh.dispatch-governance.openapi.yaml and contract-registry.ts stay mutually consistent (owner markers, adapter ownership, declared paths). Was a real, functioning, unwired-and-unregistered guard found during remediation; the registry's adapterOwner had drifted from the guard's stale expectation (fixed to match the current single-owner reality).",
+      "source_file": "tools/guards/dispatch-contract-registry-gate.mjs"
+    },
+    {
+      "id": "local-dev-actors",
+      "name": "Local Dev Actors Registry Gate",
+      "script": "guard:local-dev-actors",
+      "exit_level": "fail",
+      "description": "Keeps tools/dev/local-actors.json the single source of truth for local development identity actors, verifying the three consumers that cannot import it directly (Go bootstrap, Docker Compose default, runtime env example) still agree with it. Was a real, functioning, unwired-and-unregistered guard found during remediation.",
+      "source_file": "tools/guards/local-dev-actors-gate.mjs"
     },
     {
       "id": "a11y-runtime",

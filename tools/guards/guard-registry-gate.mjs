@@ -162,6 +162,35 @@ for (const scriptName of Object.keys(scripts).filter((name) => name.startsWith("
   if (!aggregateScripts.has(scriptName) && !registeredScripts.has(scriptName)) violations.push({ file: packageRelative, line: 0, message: `UNREGISTERED_GUARD_SCRIPT ${scriptName}` });
 }
 
+// Reverse direction of the check above: every executable guard *source file*
+// on disk must be reachable from somewhere -- a root package.json script, a
+// contracts/package.json script (some guards are wired there instead), a
+// CI workflow invoking it directly, or the direct-work-branch-execution
+// registration file. A guard with none of these is orphaned: it can never
+// run, so it silently stops protecting anything the moment it bit-rots.
+// This is the structural fix for repeated "N unregistered guards" findings.
+{
+  const guardsDir = path.join(repoRoot, "tools/guards");
+  const guardFiles = fs.existsSync(guardsDir)
+    ? fs.readdirSync(guardsDir).filter((name) => name.endsWith(".mjs") && !name.startsWith("_") && !name.endsWith(".test.mjs"))
+    : [];
+  const haystacks = [JSON.stringify(scripts)];
+  const contractsPackageRelative = "contracts/package.json";
+  const contractsPackage = readJson(contractsPackageRelative);
+  if (contractsPackage) haystacks.push(JSON.stringify(contractsPackage.scripts ?? {}));
+  if (fs.existsSync(workflowsDir)) {
+    for (const fileName of fs.readdirSync(workflowsDir).filter((name) => /\.ya?ml$/i.test(name))) {
+      haystacks.push(readText(`${workflowsRoot}/${fileName}`));
+    }
+  }
+  haystacks.push(readText(directRegistrationRelative));
+  const combined = haystacks.join("\n");
+  for (const fileName of guardFiles) {
+    const relativePath = `tools/guards/${fileName}`;
+    if (!combined.includes(relativePath)) violations.push({ file: relativePath, line: 0, message: "ORPHANED_GUARD_SOURCE_FILE_NOT_INVOKED_ANYWHERE" });
+  }
+}
+
 const manifestGuardIds = new Set([...(manifest?.guardSets?.foundation ?? []), ...(manifest?.guardSets?.journey ?? []), ...(manifest?.guardSets?.governance ?? [])]);
 for (const id of manifestGuardIds) {
   if (!entryById.has(id)) violations.push({ file: manifestRelative, line: 0, message: `MANIFEST_REFERENCES_UNKNOWN_GUARD ${id}` });
