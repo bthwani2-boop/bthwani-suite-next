@@ -44,7 +44,6 @@
     "@react-native-community/netinfo": "11.4.1",
     "react-native": "0.85.3",
     "react-native-maps": "1.27.2",
-    "@tanstack/react-query": "5.90.2",
     "expo-image-picker": "~56.0.22",
     "expo-location": "~56.0.22",
     "expo-notifications": "~56.0.22",

@@ -861,9 +861,6 @@ importers:
       '@react-native-community/netinfo':
         specifier: 11.4.1
         version: 11.4.1(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))
-      '@tanstack/react-query':
-        specifier: 5.90.2
-        version: 5.90.2(react@19.2.3)
       expo-constants:
         specifier: ~56.0.22
         version: 56.0.22(expo@56.0.17)(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))
