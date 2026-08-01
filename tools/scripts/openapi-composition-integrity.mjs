@@ -5,7 +5,9 @@ import { parse } from "yaml";
 
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
 const defaultRepositoryRoot = path.resolve(scriptsDirectory, "../..");
+const MEMORY_DOCUMENT_KEY = "<memory>";
 const URI_SCHEME_PATTERN = /^[A-Za-z][A-Za-z0-9+.-]*:/;
+const FILE_URI_PATTERN = /^file:/i;
 const WINDOWS_ABSOLUTE_PATH_PATTERN = /^[A-Za-z]:[\\/]/;
 
 function escapeJsonPointerToken(value) {
@@ -16,8 +18,10 @@ function decodeJsonPointerToken(value) {
   return decodeURIComponent(value).replaceAll("~1", "/").replaceAll("~0", "~");
 }
 
-function isLocalExternalReference(value) {
-  if (typeof value !== "string" || value.startsWith("#")) return false;
+function isLocalReference(value) {
+  if (typeof value !== "string") return false;
+  if (value.startsWith("#")) return true;
+  if (FILE_URI_PATTERN.test(value)) return true;
   if (WINDOWS_ABSOLUTE_PATH_PATTERN.test(value)) return true;
   if (value.startsWith("//")) return false;
   if (value.startsWith("/") || value.startsWith("\\")) return true;
@@ -30,6 +34,10 @@ function isWithinRepository(repositoryRoot, targetFile) {
     relativePath === "" ||
     (!relativePath.startsWith(`..${path.sep}`) && relativePath !== ".." && !path.isAbsolute(relativePath))
   );
+}
+
+function displayDocumentPath(filePath, repositoryRoot) {
+  return filePath ? path.relative(repositoryRoot, filePath) : MEMORY_DOCUMENT_KEY;
 }
 
 function readOpenApiDocument(filePath, documentCache) {
@@ -46,6 +54,9 @@ function resolveLocalReference(reference, sourceFile, repositoryRoot, documentCa
   const filePart = hashIndex === -1 ? reference : reference.slice(0, hashIndex);
   const fragment = hashIndex === -1 ? "" : reference.slice(hashIndex + 1);
 
+  if (FILE_URI_PATTERN.test(filePart)) {
+    throw new Error("file URI references are not portable");
+  }
   if (
     WINDOWS_ABSOLUTE_PATH_PATTERN.test(filePart) ||
     filePart.startsWith("/") ||
@@ -54,24 +65,35 @@ function resolveLocalReference(reference, sourceFile, repositoryRoot, documentCa
     throw new Error("absolute filesystem references are not portable");
   }
 
-  const targetFile = path.resolve(path.dirname(sourceFile), filePart);
-  if (!isWithinRepository(repositoryRoot, targetFile)) {
-    throw new Error("reference escapes the repository boundary");
-  }
-  if (!fs.existsSync(targetFile)) {
-    throw new Error(`target file does not exist: ${path.relative(repositoryRoot, targetFile)}`);
-  }
-  if (!fs.statSync(targetFile).isFile()) {
-    throw new Error(`target is not a file: ${path.relative(repositoryRoot, targetFile)}`);
-  }
-
+  let targetFile = sourceFile;
   let targetDocument;
-  try {
-    targetDocument = readOpenApiDocument(targetFile, documentCache);
-  } catch (error) {
-    throw new Error(
-      `target file is not valid YAML: ${path.relative(repositoryRoot, targetFile)} (${error instanceof Error ? error.message : String(error)})`,
-    );
+  if (filePart === "") {
+    targetDocument = documentCache.get(sourceFile ?? MEMORY_DOCUMENT_KEY);
+    if (targetDocument === undefined) {
+      throw new Error("source OpenAPI document is unavailable for internal reference resolution");
+    }
+  } else {
+    if (!sourceFile) {
+      throw new Error("bundlePath is required to validate external local references");
+    }
+    targetFile = path.resolve(path.dirname(sourceFile), filePart);
+    if (!isWithinRepository(repositoryRoot, targetFile)) {
+      throw new Error("reference escapes the repository boundary");
+    }
+    if (!fs.existsSync(targetFile)) {
+      throw new Error(`target file does not exist: ${path.relative(repositoryRoot, targetFile)}`);
+    }
+    if (!fs.statSync(targetFile).isFile()) {
+      throw new Error(`target is not a file: ${path.relative(repositoryRoot, targetFile)}`);
+    }
+
+    try {
+      targetDocument = readOpenApiDocument(targetFile, documentCache);
+    } catch (error) {
+      throw new Error(
+        `target file is not valid YAML: ${path.relative(repositoryRoot, targetFile)} (${error instanceof Error ? error.message : String(error)})`,
+      );
+    }
   }
 
   if (fragment === "") {
@@ -93,7 +115,7 @@ function resolveLocalReference(reference, sourceFile, repositoryRoot, documentCa
     }
     if (!targetValue || typeof targetValue !== "object" || !Object.hasOwn(targetValue, token)) {
       throw new Error(
-        `JSON Pointer #${fragment} does not exist in ${path.relative(repositoryRoot, targetFile)}`,
+        `JSON Pointer #${fragment} does not exist in ${displayDocumentPath(targetFile, repositoryRoot)}`,
       );
     }
     targetValue = targetValue[token];
@@ -119,38 +141,30 @@ function collectUnresolvedLocalReferences(
 
   for (const [key, item] of Object.entries(value)) {
     const itemLocation = `${location}/${escapeJsonPointerToken(key)}`;
-    if (key === "$ref" && isLocalExternalReference(item)) {
-      if (!sourceFile) {
+    if (key === "$ref" && isLocalReference(item)) {
+      const referenceKey = `${sourceFile ?? MEMORY_DOCUMENT_KEY}::${item}`;
+      try {
+        const { targetFile, targetValue } = resolveLocalReference(
+          item,
+          sourceFile,
+          state.repositoryRoot,
+          state.documentCache,
+        );
+        if (!state.validatedReferences.has(referenceKey)) {
+          state.validatedReferences.add(referenceKey);
+          collectUnresolvedLocalReferences(
+            targetValue,
+            targetFile,
+            `${itemLocation}(${item})`,
+            state,
+          );
+        }
+      } catch (error) {
         state.findings.push({
           location: itemLocation,
           reference: item,
-          reason: "bundlePath is required to validate local references",
+          reason: error instanceof Error ? error.message : String(error),
         });
-      } else {
-        const referenceKey = `${sourceFile}::${item}`;
-        try {
-          const { targetFile, targetValue } = resolveLocalReference(
-            item,
-            sourceFile,
-            state.repositoryRoot,
-            state.documentCache,
-          );
-          if (!state.validatedReferences.has(referenceKey)) {
-            state.validatedReferences.add(referenceKey);
-            collectUnresolvedLocalReferences(
-              targetValue,
-              targetFile,
-              `${itemLocation}(${item})`,
-              state,
-            );
-          }
-        } catch (error) {
-          state.findings.push({
-            location: itemLocation,
-            reference: item,
-            reason: error instanceof Error ? error.message : String(error),
-          });
-        }
       }
     }
     collectUnresolvedLocalReferences(item, sourceFile, itemLocation, state);
@@ -159,7 +173,7 @@ function collectUnresolvedLocalReferences(
 
 export function findUnresolvedLocalOpenApiReferences(
   bundle,
-  { bundlePath = "<memory>", repositoryRoot = defaultRepositoryRoot } = {},
+  { bundlePath = MEMORY_DOCUMENT_KEY, repositoryRoot = defaultRepositoryRoot } = {},
 ) {
   const document = typeof bundle === "string" ? parse(bundle) : bundle;
   if (!document || typeof document !== "object" || Array.isArray(document)) {
@@ -167,12 +181,12 @@ export function findUnresolvedLocalOpenApiReferences(
   }
 
   const absoluteRepositoryRoot = path.resolve(repositoryRoot);
-  const sourceFile = bundlePath === "<memory>"
+  const sourceFile = bundlePath === MEMORY_DOCUMENT_KEY
     ? null
     : path.resolve(absoluteRepositoryRoot, bundlePath);
   const findings = [];
   const documentCache = new Map();
-  if (sourceFile) documentCache.set(sourceFile, document);
+  documentCache.set(sourceFile ?? MEMORY_DOCUMENT_KEY, document);
 
   collectUnresolvedLocalReferences(document, sourceFile, "#", {
     documentCache,
@@ -186,7 +200,7 @@ export function findUnresolvedLocalOpenApiReferences(
 
 export function assertNoUnresolvedLocalOpenApiReferences(
   bundle,
-  { context = "unknown", bundlePath = "<memory>", repositoryRoot = defaultRepositoryRoot } = {},
+  { context = "unknown", bundlePath = MEMORY_DOCUMENT_KEY, repositoryRoot = defaultRepositoryRoot } = {},
 ) {
   const findings = findUnresolvedLocalOpenApiReferences(bundle, { bundlePath, repositoryRoot });
   if (findings.length === 0) return;

@@ -45,7 +45,7 @@ test("generated bundle composition is deterministic and self-contained", async (
   assert.match(first.bundle, /operationId:\s*getDshPartnerOrderWorkboard/);
 });
 
-test("composition integrity fails closed on unresolved local references", () => {
+test("composition integrity fails closed on unresolved external local references", () => {
   const invalidBundle = `
 openapi: 3.1.0
 info:
@@ -73,7 +73,62 @@ paths:
   );
 });
 
-test("composition integrity permits internal and remote references", () => {
+test("composition integrity fails closed on unresolved internal references", () => {
+  const invalidBundle = `
+openapi: 3.1.0
+info:
+  title: Invalid internal reference fixture
+  version: 1.0.0
+paths:
+  /broken:
+    get:
+      operationId: getBrokenInternalReference
+      responses:
+        "200":
+          description: broken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Missing"
+components:
+  schemas:
+    Existing:
+      type: object
+`;
+
+  assert.throws(
+    () => assertNoUnresolvedLocalOpenApiReferences(invalidBundle, {
+      context: "fixture",
+    }),
+    /JSON Pointer .* does not exist in <memory>/,
+  );
+});
+
+test("composition integrity rejects non-portable file URI references", () => {
+  const invalidBundle = `
+openapi: 3.1.0
+info:
+  title: Invalid file URI reference fixture
+  version: 1.0.0
+paths:
+  /broken:
+    get:
+      operationId: getBrokenFileReference
+      responses:
+        "200":
+          $ref: "file:///tmp/common.openapi.yaml#/components/responses/Ok"
+`;
+
+  assert.throws(
+    () => assertNoUnresolvedLocalOpenApiReferences(invalidBundle, {
+      context: "fixture",
+      bundlePath: "generated/fixture.openapi.yaml",
+    }),
+    /file URI references are not portable/,
+  );
+});
+
+test("composition integrity permits resolved internal and remote references", () => {
   const validBundle = `
 openapi: 3.1.0
 info:
