@@ -17,6 +17,31 @@ const vocabulary = JSON.parse(fs.readFileSync(path.join(repositoryRoot, vocabula
 
 const failures = [];
 
+// Scopes enforced only through dynamic dispatch (a helper function returns
+// one of several *Permission* constants at runtime based on input, and the
+// call site passes that return value straight into a require*Permission
+// wrapper). The static scan below cannot trace a value through a helper
+// function call, so these are recorded here after manual verification of
+// every branch of the deciding helper and its call site.
+const dynamicallyEnforcedScopes = new Map([
+  [
+    "catalog.proposal.adopt",
+    "services/dsh/backend/internal/http/centralcatalog_catalog.go: decideProposalPermissionAction/proposalTransitionPermissionAction, called from catalog_proposal_occ_handlers.go via requireCatalogPermission",
+  ],
+  [
+    "catalog.proposal.review",
+    "services/dsh/backend/internal/http/centralcatalog_catalog.go: decideProposalPermissionAction/proposalTransitionPermissionAction, called from catalog_proposal_occ_handlers.go via requireCatalogPermission",
+  ],
+  [
+    "catalog.proposal.marketing_review",
+    "services/dsh/backend/internal/http/centralcatalog_catalog.go: proposalTransitionPermissionAction, called from catalog_proposal_occ_handlers.go via requireCatalogPermission",
+  ],
+  [
+    "catalog.proposal.publish",
+    "services/dsh/backend/internal/http/centralcatalog_catalog.go: proposalTransitionPermissionAction, called from catalog_proposal_occ_handlers.go via requireCatalogPermission",
+  ],
+]);
+
 const declared = new Set();
 for (const family of vocabulary.families ?? []) {
   for (const entry of family.scopes ?? []) {
@@ -37,15 +62,36 @@ const scanTargets = [
       /providerSelf\(\s*"([^"]+)"/g,
       /anyAuthenticated\(\s*"([^"]+)"/g,
       /resolveReferenceOperator\([^)]*?,\s*"([^"]+)"\s*\)/g,
+      /identity\.HasPermission\(\s*"[^"]*",\s*"([^"]+)"/g,
+      /hasWorkforceScope\(\s*identity,\s*"([^"]+)"/g,
+      /changeDepartmentEmployeeStatus\([^)]*?,\s*"([^"]+)"/g,
+      /requireEmployeeTarget\(\s*w,\s*identity,\s*"([^"]+)"/g,
     ],
   },
-  { root: "core/providers/backend", patterns: [/operatorOnly\(\s*"([^"]+)"/g] },
-  { root: "core/platform-control/backend", patterns: [/operatorOnly\(\s*"([^"]+)"/g] },
+  {
+    root: "core/providers/backend",
+    patterns: [
+      /operatorOnly\(\s*"([^"]+)"/g,
+      /identity\.HasPermission\(\s*"[^"]*",\s*"([^"]+)"/g,
+    ],
+  },
+  {
+    root: "core/platform-control/backend",
+    patterns: [
+      /operatorOnly\(\s*"([^"]+)"/g,
+      /identity\.HasPermission\(\s*"[^"]*",\s*"([^"]+)"/g,
+    ],
+  },
   {
     root: "services/dsh/backend",
     patterns: [
       /requirePermission\(\s*w,\s*r,\s*"[^"]*",\s*"([a-zA-Z][a-zA-Z0-9_.:-]*)"/g,
-      /requirePermission\(\s*w,\s*r,\s*"[^"]*",\s*[A-Za-z][A-Za-z0-9]*Permission[A-Za-z0-9]*,/g,
+      // Covers requirePermission, requireCatalogPermission,
+      // requireAdministrationPermission, and any future require*Permission
+      // wrapper: they all take a *Permission* constant identifying the scope,
+      // just with different surrounding argument shapes.
+      /require[A-Za-z]*Permission\(\s*w,\s*r,\s*(?:"[^"]*",\s*)?([A-Za-z][A-Za-z0-9]*Permission[A-Za-z0-9]*)\s*[,)]/g,
+      /serve[A-Za-z]*PermissionHandler\(\s*w,\s*r,[\s\S]*?,\s*([A-Za-z][A-Za-z0-9]*Permission[A-Za-z0-9]*)\s*[,)]/g,
     ],
   },
 ];
@@ -78,7 +124,7 @@ function* walk(dir) {
   }
 }
 
-const enforced = new Set();
+const enforced = new Set(dynamicallyEnforcedScopes.keys());
 const dshConstants = collectDshPermissionConstants("services/dsh/backend");
 
 for (const target of scanTargets) {
@@ -87,6 +133,14 @@ for (const target of scanTargets) {
     const text = fs.readFileSync(path.join(repositoryRoot, file), "utf8");
     for (const pattern of target.patterns) {
       for (const match of text.matchAll(pattern)) {
+        if (match[1] && /^[A-Za-z][A-Za-z0-9]*Permission[A-Za-z0-9]*$/.test(match[1]) && !match[1].includes(".")) {
+          // Captured a *Permission* constant identifier, not a literal scope
+          // string -- resolve it through the constant declarations.
+          const resolved = dshConstants.get(match[1]);
+          if (resolved) enforced.add(resolved);
+          else failures.push(`services/dsh/backend: unresolved permission constant '${match[1]}' referenced in ${file}`);
+          continue;
+        }
         if (match[1]) {
           enforced.add(match[1]);
           continue;
@@ -109,13 +163,19 @@ for (const scope of enforced) {
   }
 }
 
-const staleThreshold = declared.size;
-let stale = 0;
+// Every declared scope must be enforced somewhere -- a scope granted by
+// Identity/RBAC seed data but checked by no handler is either a capability
+// that was never finished or a stale leftover, and both are indistinguishable
+// from a silent authorization hole from the outside. This was a WARNING
+// until the vocabulary carried 49 such scopes; each was manually traced to
+// either genuine Go enforcement the scan patterns above now recognize, or a
+// capability that does not exist yet and was removed from the vocabulary.
+// No unenforced scope may be reintroduced without either wiring it to a real
+// authorization check or leaving it out of this file.
 for (const scope of declared) {
-  if (!enforced.has(scope)) stale += 1;
-}
-if (stale > 0) {
-  console.warn(`contract-scope-binding-gate: WARNING ${stale}/${staleThreshold} declared scopes are not currently enforced anywhere in Go (informational only, not a failure)`);
+  if (!enforced.has(scope)) {
+    failures.push(`${vocabularyRelative}: scope '${scope}' is declared but enforced nowhere in Go`);
+  }
 }
 
 if (failures.length > 0) {
@@ -124,4 +184,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`contract-scope-binding-gate: OK (${enforced.size} Go-enforced scopes all present in ${vocabularyRelative})`);
+console.log(`contract-scope-binding-gate: OK (${declared.size} declared scopes, all enforced; ${enforced.size} enforced literals all present in ${vocabularyRelative})`);

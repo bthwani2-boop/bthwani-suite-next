@@ -9,7 +9,6 @@
       "pattern": "colon-delimited (resource:action or resource:sub:action)",
       "enforcedBy": "operatorOnly(scope, handler) / providerSelf(scope, handler) at route-registration site",
       "scopes": [
-        { "scope": "audit:read", "domain": "workforce" },
         { "scope": "employee.activation:issue", "domain": "workforce" },
         { "scope": "employee:create", "domain": "workforce" },
         { "scope": "employee:read", "domain": "workforce" },
@@ -18,16 +17,11 @@
         { "scope": "employee:update", "domain": "workforce" },
         { "scope": "leadership:create", "domain": "workforce" },
         { "scope": "leadership:read", "domain": "workforce" },
-        { "scope": "leadership:update", "domain": "workforce" },
         { "scope": "maps:invoke", "domain": "providers" },
-        { "scope": "platform:audit:export", "domain": "platform-control" },
         { "scope": "platform:audit:read", "domain": "platform-control" },
-        { "scope": "platform:flags:manage", "domain": "platform-control" },
-        { "scope": "platform:health:acknowledge", "domain": "platform-control" },
         { "scope": "platform:health:read", "domain": "platform-control" },
         { "scope": "platform:read", "domain": "platform-control" },
         { "scope": "platform:rollouts:manage", "domain": "platform-control" },
-        { "scope": "platform:services:manage", "domain": "platform-control" },
         { "scope": "platform:variables:apply", "domain": "platform-control" },
         { "scope": "platform:variables:approve", "domain": "platform-control" },
         { "scope": "platform:variables:propose", "domain": "platform-control" },
@@ -38,9 +32,7 @@
         { "scope": "provider:read", "domain": "workforce" },
         { "scope": "provider:suspend", "domain": "workforce" },
         { "scope": "provider:update", "domain": "providers" },
-        { "scope": "reference:manage", "domain": "workforce" },
-        { "scope": "store:read", "domain": "workforce" },
-        { "scope": "store:write", "domain": "workforce" }
+        { "scope": "reference:manage", "domain": "workforce" }
       ]
     },
     {
@@ -66,7 +58,6 @@
         { "scope": "catalog.assortment.manage", "domain": "dsh" },
         { "scope": "catalog.assortment.read", "domain": "dsh" },
         { "scope": "catalog.attribute.manage", "domain": "dsh" },
-        { "scope": "catalog.attribute.read", "domain": "dsh" },
         { "scope": "catalog.audit.read", "domain": "dsh" },
         { "scope": "catalog.media.manage", "domain": "dsh" },
         { "scope": "catalog.media.read", "domain": "dsh" },
@@ -97,7 +88,6 @@
         { "scope": "partners.activate", "domain": "dsh" },
         { "scope": "partners.manage", "domain": "dsh" },
         { "scope": "partners.read", "domain": "dsh" },
-        { "scope": "pickup.act", "domain": "dsh" },
         { "scope": "pickup.manage", "domain": "dsh" },
         { "scope": "pickup.read", "domain": "dsh" },
         { "scope": "platform.manage", "domain": "dsh" },

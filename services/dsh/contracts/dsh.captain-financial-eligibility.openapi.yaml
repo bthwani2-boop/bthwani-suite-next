@@ -11,6 +11,7 @@ paths:
   /dsh/operator/platform/dispatch-balance-policy:
     get:
       operationId: getDispatchBalancePolicy
+      tags: [DispatchFinancialEligibility]
       responses:
         '200': { $ref: '#/components/responses/PolicyResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
@@ -19,6 +20,7 @@ paths:
         - bearerAuth: []
     put:
       operationId: upsertDispatchBalancePolicy
+      tags: [DispatchFinancialEligibility]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
@@ -41,6 +43,7 @@ paths:
       - $ref: '#/components/parameters/OperatorContextIdQuery'
     get:
       operationId: getOperatorCaptainFinancialEligibility
+      tags: [DispatchFinancialEligibility]
       responses:
         '200': { $ref: '#/components/responses/EligibilityResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
@@ -54,6 +57,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationId'
     post:
       operationId: refreshOperatorCaptainFinancialEligibility
+      tags: [DispatchFinancialEligibility]
       requestBody:
         required: true
         content:
@@ -76,6 +80,7 @@ paths:
   /dsh/captain/dispatch/financial-eligibility:
     get:
       operationId: getOwnCaptainFinancialEligibility
+      tags: [DispatchFinancialEligibility]
       responses:
         '200': { $ref: '#/components/responses/EligibilityResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
@@ -86,6 +91,7 @@ paths:
   /dsh/captain/dispatch/financial-eligibility/refresh:
     post:
       operationId: refreshOwnCaptainFinancialEligibility
+      tags: [DispatchFinancialEligibility]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
       requestBody:
