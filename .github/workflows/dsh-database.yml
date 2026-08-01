@@ -1,4 +1,4 @@
-name: DSH Database Contract
+﻿name: DSH Database Contract
 
 on:
   push:

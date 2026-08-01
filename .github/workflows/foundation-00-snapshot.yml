@@ -1,4 +1,4 @@
-name: FOUNDATION-00 Architecture Snapshot
+﻿name: FOUNDATION-00 Architecture Snapshot
 
 on:
   pull_request:

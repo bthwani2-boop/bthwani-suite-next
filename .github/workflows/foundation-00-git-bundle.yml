@@ -1,4 +1,4 @@
-name: FOUNDATION-00 Git Bundle
+﻿name: FOUNDATION-00 Git Bundle
 
 on:
   pull_request:

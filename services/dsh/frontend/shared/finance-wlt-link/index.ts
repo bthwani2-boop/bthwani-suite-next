@@ -13,7 +13,7 @@ export * from './finance-boundary/dsh-wlt-settlement-bridge.contract';
 
 export * from './wlt-ledger/wlt-ledger.types';
 
-export * from './wlt-refund/wlt-refund.types';
+export * from './wlt-refund/wlt-refund.queries';
 
 export * from './wlt-settlement/wlt-settlement.types';
 

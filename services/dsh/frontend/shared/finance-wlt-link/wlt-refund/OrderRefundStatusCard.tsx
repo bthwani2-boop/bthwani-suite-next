@@ -1,21 +1,42 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Badge, Button, Surface, Text, colorRoles, spacing } from "@bthwani/ui-kit";
-import { useWltRefundsByOrderController } from "./use-wlt-refund-controller";
+import { useRefundsByOrderQuery, useClientOrderRefundsQuery } from "./wlt-refund.queries";
+import type { WltRefundResponse } from "./wlt-refund.queries";
 
 export type OrderRefundStatusCardProps = {
   readonly orderId: string;
   readonly surface: "client" | "partner";
 };
 
+function refundBadgeTone(status: string): "success" | "warning" | "danger" | "neutral" {
+  if (status === "completed") return "success";
+  if (status === "rejected" || status === "reversed") return "danger";
+  if (status === "approved" || status === "processing" || status === "provider_unknown") return "warning";
+  return "neutral";
+}
+
+function refundLabel(status: string): string {
+  switch (status) {
+    case "requested": return "بانتظار المراجعة";
+    case "approved": return "معتمد";
+    case "processing": return "قيد التنفيذ لدى المزود";
+    case "provider_unknown": return "نتيجة غير محسومة";
+    case "completed": return "مسترد";
+    case "rejected": return "مرفوض";
+    case "reversed": return "معكوس";
+    default: return status;
+  }
+}
+
 export function OrderRefundStatusCard({ orderId, surface }: OrderRefundStatusCardProps) {
-  const { state, loadByOrder } = useWltRefundsByOrderController(surface);
+  const cpQuery = useRefundsByOrderQuery(orderId, surface === "partner");
+  const clientQuery = useClientOrderRefundsQuery(orderId, surface === "client");
 
-  useEffect(() => {
-    void loadByOrder(orderId);
-  }, [loadByOrder, orderId]);
+  const query = surface === "client" ? clientQuery : cpQuery;
+  const refunds: readonly WltRefundResponse[] = query.data ?? [];
 
-  if (state.kind === "idle" || state.kind === "loading") {
+  if (query.isPending) {
     return (
       <View
         accessibilityRole="progressbar"
@@ -29,47 +50,46 @@ export function OrderRefundStatusCard({ orderId, surface }: OrderRefundStatusCar
     );
   }
 
-  if (state.kind === "error") {
+  if (query.isError) {
     return (
       <View
         accessibilityRole="alert"
         accessibilityLiveRegion="assertive"
-        accessibilityLabel={`تعذر تحديث حالة الاسترداد: ${state.message}`}
+        accessibilityLabel="تعذر تحديث حالة الاسترداد"
       >
         <Surface style={[styles.card, styles.errorCard]}>
           <Text role="bodyStrong">تعذر تحديث حالة الاسترداد</Text>
-          <Text role="bodySm" tone="muted">{state.message}</Text>
-          <Button label="إعادة المحاولة" tone="secondary" size="sm" onPress={() => void loadByOrder(orderId)} />
+          <Text role="bodySm" tone="muted">تعذر الاتصال بخدمة WLT المالية.</Text>
+          <Button label="إعادة المحاولة" tone="secondary" size="sm" onPress={() => void query.refetch()} />
         </Surface>
       </View>
     );
   }
 
-  if (state.refunds.length === 0) return null;
+  if (refunds.length === 0) return null;
 
-  const hasProviderUnknown = state.refunds.some((refund) => refund.status === "provider_unknown");
+  const hasProviderUnknown = refunds.some((r) => r.status === "provider_unknown");
 
   return (
-    <Surface style={styles.card} accessibilityLabel={`حالة استردادات الطلب، العدد ${state.refunds.length}`}>
+    <Surface style={styles.card} accessibilityLabel={`حالة استردادات الطلب، العدد ${refunds.length}`}>
       <View style={styles.header}>
         <Text role="bodyStrong">الاسترداد المالي</Text>
         <Text role="caption" tone="muted">الحالة من WLT</Text>
       </View>
-      {state.refunds.map((refund) => (
+      {refunds.map((refund) => (
         <View
           key={refund.id}
           style={styles.row}
           accessible
-          accessibilityLabel={`${refund.amountLabel} ${refund.currency}، ${refund.statusLabel}`}
+          accessibilityLabel={`${refund.amountMinorUnits} ${refund.currency}، ${refundLabel(refund.status)}`}
         >
           <View style={styles.amountBlock}>
-            <Text role="bodyStrong">{refund.amountLabel} {refund.currency}</Text>
-            <Text role="caption" tone="muted">{refund.resolvedAt ? `حُسم: ${refund.resolvedAt}` : "لم يُحسم بعد"}</Text>
+            <Text role="bodyStrong">{refund.amountMinorUnits} {refund.currency}</Text>
+            <Text role="caption" tone="muted">
+              {refund.resolvedAt ? `حُسم: ${refund.resolvedAt}` : "لم يُحسم بعد"}
+            </Text>
           </View>
-          <Badge
-            label={refund.statusLabel}
-            tone={refund.statusBadge === "error" ? "danger" : refund.statusBadge}
-          />
+          <Badge label={refundLabel(refund.status)} tone={refundBadgeTone(refund.status)} />
         </View>
       ))}
       {hasProviderUnknown ? (

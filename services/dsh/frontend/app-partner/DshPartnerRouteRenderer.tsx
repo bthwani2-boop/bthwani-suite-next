@@ -15,11 +15,9 @@ import { InventoryActionScreen } from "./catalog/InventoryActionScreen";
 import { NotificationsScreen } from "./account/NotificationsScreen";
 import { OrderActionScreen } from "./orders/OrderActionScreen";
 import { OrderIssueScreen } from "./orders/OrderIssueScreen";
-import { OrdersInboxScreen } from "./orders/OrdersInboxScreen";
+
 import {
-  DshPartnerOrderRejectionScreen,
-  type DshPartnerOrderRejectionScreenProps,
-} from "./orders/DshPartnerOrderRejectionScreen";
+
 import { DshPartnerStoreCourierScreen } from "./store/DshPartnerStoreCourierScreen";
 import { PartnerTeamManagementScreen } from "./team/PartnerTeamManagementScreen";
 import { PartnerEntryScreen } from "./account/PartnerEntryScreen";
@@ -30,8 +28,11 @@ import { CategoryManagementScreen } from "./catalog/CategoryManagementScreen";
 import { ProductMediaScreen } from "./catalog/ProductMediaScreen";
 import { ProductOverridesScreen } from "./catalog/ProductOverridesScreen";
 import { DSH_PARTNER_BINDING_CONTRACTS } from "./dsh-partner-binding.contracts";
-import type { PartnerOrderItem } from "../shared/orders/orders.contract";
-
+import type {
+  PartnerOrderItem,
+  DshPartnerOrderAlertItem,
+  DshPartnerOrderAlertId,
+} from "../shared/orders/orders.contract";
 function hasRouteBindingContract(route: DshPartnerRoute): boolean {
   return DSH_PARTNER_BINDING_CONTRACTS.some(
     (contract) => contract.surfaceId === route,
@@ -118,13 +119,6 @@ type Props = {
   scopes: readonly import("../shared/partner/partner.types").DshPartnerOperationalScope[];
 };
 
-const PARTNER_ORDER_REJECTION_REASONS = [
-  { id: "out-of-stock", label: "بعض الأصناف غير متوفرة" },
-  { id: "busy", label: "المتجر مزدحم جداً حالياً" },
-  { id: "closing-soon", label: "المتجر سيغلق قريباً" },
-  { id: "technical-issue", label: "مشكلة تقنية في استقبال الطلبات" },
-  { id: "other", label: "سبب آخر" },
-] satisfies DshPartnerOrderRejectionScreenProps["rejectionReasons"];
 
 const STORE_SCOPED_ROUTES = new Set<DshPartnerRoute>([
   "inventory-management",
@@ -142,29 +136,56 @@ const PRODUCT_SCOPED_ROUTES = new Set<DshPartnerRoute>([
   "product-overrides",
 ]);
 
-function getPartnerOrderRejectionState(
-  state: Props["partnerOrdersState"],
-): NonNullable<DshPartnerOrderRejectionScreenProps["state"]> {
-  if (state === "loading") return "loading";
-  if (state === "error" || state === "offline") return "error";
-  return "ready";
-}
 
-function getPartnerOrderRejectionItems(
-  order: PartnerOrderItem | undefined,
-  activeOrderId: string,
-  initialOrderId: string,
-): DshPartnerOrderRejectionScreenProps["items"] {
-  return [
-    {
-      id: order?.id ?? (activeOrderId || initialOrderId),
-      name:
-        order?.itemsSummaryLabel ??
-        order?.itemsCountLabel ??
-        "تفاصيل الطلب",
-      quantity: 1,
-    },
-  ];
+function derivePartnerOrderAlerts(orders: readonly PartnerOrderItem[]): DshPartnerOrderAlertItem[] {
+  const alerts: DshPartnerOrderAlertItem[] = [];
+  
+  orders.forEach((order) => {
+    let alertId: DshPartnerOrderAlertId | undefined;
+    let title = '';
+    let description = '';
+    let urgent = false;
+    
+    if (order.status === 'needs_accept') {
+      alertId = 'order_needs_accept';
+      title = 'طلب يحتاج قبولًا فوريًا';
+      description = 'الطلب يحتاج قرار قبول سريع قبل بدء التجهيز.';
+      urgent = order.urgent;
+    } else if (order.issueRequired) {
+      alertId = 'order_issue_required';
+      title = 'طلب يحتاج معالجة مشكلة';
+      description = 'الطلب يحتاج قرارًا واضحًا بشأن مشكلة تشغيلية.';
+      urgent = true;
+    } else if (order.slaRisk) {
+      alertId = 'order_sla_risk';
+      title = 'خطر تأخير التجهيز';
+      description = 'الطلب متأخر أو قارب على تجاوز الوقت المحدد للتحضير.';
+      urgent = true;
+    } else if (order.status === 'ready' || order.status === 'items_ready') {
+      alertId = 'order_ready';
+      title = 'طلب جاهز للتسليم';
+      description = 'الطلب أصبح جاهزًا ويحتاج نقلًا فوريًا إلى مسار التسليم.';
+    } else if (order.status === 'handoff') {
+      alertId = 'order_handoff_pending';
+      title = 'تسليم للكابتن بانتظار الإغلاق';
+      description = 'الطلب بانتظار تثبيت التسليم للكابتن.';
+    }
+
+    if (alertId) {
+      alerts.push({
+        id: `alert-${order.id}-${alertId}`,
+        orderId: order.id,
+        alertId,
+        title,
+        description,
+        timeLabel: order.elapsedLabel,
+        status: order.unread ? 'new' : 'seen',
+        urgent,
+      });
+    }
+  });
+
+  return alerts;
 }
 
 export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
@@ -323,6 +344,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
         {...(activeOrderId && activeOrderId !== initialOrderId
           ? { activeOrderId }
           : {})}
+        alerts={derivePartnerOrderAlerts(partnerOrders)}
         onOpenInbox={openOrdersBoard}
         onOpenOrderSupport={(orderId) => {
           setActiveOrderId(orderId);
@@ -337,18 +359,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
     );
   }
 
-  if (route === "inbox") {
-    return renderMainShell(
-      <OrdersInboxScreen
-        state={partnerOrdersState}
-        items={partnerOrders}
-        searchMode={ordersSearchMode}
-        onCloseSearch={() => setOrdersSearchMode(false)}
-        onMarkReady={handleMarkReady}
-        onRetry={refreshOrders}
-      />,
-    );
-  }
+
 
   if (route === "inventory-management") {
     return renderSurfaceShell(
@@ -441,30 +452,6 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
     );
   }
 
-  if (route === "order-rejection") {
-    return renderSurfaceShell(
-      <DshPartnerOrderRejectionScreen
-        state={getPartnerOrderRejectionState(partnerOrdersState)}
-        orderCode={
-          activePartnerOrder?.orderCode ?? `#${activeOrderId || initialOrderId}`
-        }
-        amount={activePartnerOrder?.amountLabel ?? "—"}
-        items={getPartnerOrderRejectionItems(
-          activePartnerOrder,
-          activeOrderId,
-          initialOrderId,
-        )}
-        rejectionReasons={PARTNER_ORDER_REJECTION_REASONS}
-        onAccept={() =>
-          openSupportCommandFromOperationalFlow("order-accept", "orders")
-        }
-        onReject={() =>
-          openSupportCommandFromOperationalFlow("order-reject", "orders")
-        }
-        onBack={openOrdersBoard}
-      />,
-    );
-  }
 
   if (route === "support-screen") {
     const categoryId =

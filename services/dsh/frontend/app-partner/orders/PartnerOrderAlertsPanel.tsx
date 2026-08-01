@@ -14,47 +14,6 @@ export type DshPartnerOrderAlertsPanelProps = {
   onRetry?: () => void;
 };
 
-const defaultItems: DshPartnerOrderAlertItem[] = [
-  {
-    id: 'order-alert-1',
-    orderId: 'ord-4401',
-    alertId: 'order_needs_accept',
-    title: 'طلب يحتاج قبولًا فوريًا',
-    description: 'الطلب 4401 دخل الآن إلى الفرع ويحتاج قرار قبول سريع قبل بدء التجهيز.',
-    timeLabel: 'منذ دقيقتين',
-    status: 'new',
-    urgent: true,
-  },
-  {
-    id: 'order-alert-2',
-    orderId: 'ord-4391',
-    alertId: 'order_ready',
-    title: 'طلب جاهز للتسليم',
-    description: 'الطلب 4391 أصبح جاهزًا ويحتاج نقلًا فوريًا إلى مسار التسليم للكابتن.',
-    timeLabel: 'منذ 5 دقائق',
-    status: 'new',
-  },
-  {
-    id: 'order-alert-3',
-    orderId: 'ord-4385',
-    alertId: 'order_handoff_pending',
-    title: 'تسليم للكابتن بانتظار الإغلاق',
-    description: 'الطلب 4385 بانتظار تثبيت التسليم للكابتن من نفس دورة الطلب.',
-    timeLabel: 'منذ 9 دقائق',
-    status: 'seen',
-  },
-  {
-    id: 'order-alert-4',
-    orderId: 'ord-4359',
-    alertId: 'order_issue_required',
-    title: 'طلب يحتاج معالجة مشكلة',
-    description: 'الطلب 4359 يحتاج قرارًا واضحًا بسبب نقص عنصر بعد القبول.',
-    timeLabel: 'منذ 14 دقيقة',
-    status: 'new',
-    urgent: true,
-  },
-];
-
 function renderState(state: Exclude<DshPartnerOrderAlertsPanelState, 'ready'>, onRetry?: () => void) {
   if (state === 'loading') {
     return <StateView title="جارٍ تجهيز تنبيهات الطلب" description="نرتب التنبيهات المرتبطة بدورة الطلب الحالية فقط." />;
@@ -88,7 +47,7 @@ function resolveAlertChipLabel(alertId: DshPartnerOrderAlertItem['alertId']) {
 export function DshPartnerOrderAlertsPanel({
   state = 'ready',
   activeOrderId,
-  items = defaultItems,
+  items = [],
   onOpenOrder,
   onOpenFlow,
   onRetry,

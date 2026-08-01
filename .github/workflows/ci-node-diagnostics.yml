@@ -1,4 +1,4 @@
-name: BThwani Node Diagnostics
+﻿name: BThwani Node Diagnostics
 
 on:
   workflow_call:

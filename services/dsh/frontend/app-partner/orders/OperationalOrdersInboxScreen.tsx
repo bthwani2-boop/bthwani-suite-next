@@ -10,8 +10,8 @@ import type { PartnerTeamMember } from '../team/partner-team.types';
 import {
   GovernedPartnerOrdersScreen,
   type GovernedPartnerOrderActionId,
+  type PartnerOrdersHomeScreenState,
 } from './GovernedPartnerOrdersScreen';
-import type { PartnerOrdersHomeScreenState } from './OrdersInboxScreen';
 import { PartnerFulfillmentActionsPanel } from './PartnerFulfillmentActionsPanel';
 import { PreparationEstimateRevisionPanel } from './PreparationEstimateRevisionPanel';
 import { PreparationIssuesPanel } from './PreparationIssuesPanel';
