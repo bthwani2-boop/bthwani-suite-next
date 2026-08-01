@@ -19,7 +19,7 @@ import {
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
-import { useControlPanelSession } from "../../shared/session/control-panel-session";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   useGovernedPartnerStoresController,
   usePartnerAuditController,
@@ -85,7 +85,7 @@ export type PartnerDetailUnifiedScreenProps = {
 };
 
 export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailUnifiedScreenProps) {
-  const { state: sessionState } = useControlPanelSession();
+  const { state: sessionState } = useIdentitySession();
   const authKind = sessionState.kind;
   const detail = usePartnerDetailController(partnerId, authKind);
   const documents = usePartnerDocumentsController(partnerId, authKind);

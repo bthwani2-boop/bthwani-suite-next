@@ -12,7 +12,7 @@ import {
   CpTabs,
 } from "@bthwani/control-panel/components";
 import { QueuePageFrame } from "@bthwani/control-panel/shell";
-import { useControlPanelSession } from "../../shared/session/control-panel-session";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { usePartnersController } from "../../shared/partner";
 import { PartnerListScreen } from "./PartnerListScreen";
 import { StoreManagementScreen } from "./stores/StoreManagementScreen";
@@ -28,7 +28,7 @@ type Props = {
 export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { state: sessionState } = useControlPanelSession();
+  const { state: sessionState } = useIdentitySession();
   const [createOpen, setCreateOpen] = useState(false);
   const {
     activeTab,

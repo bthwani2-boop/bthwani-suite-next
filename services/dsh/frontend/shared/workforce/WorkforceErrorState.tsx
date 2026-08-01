@@ -6,10 +6,10 @@
 // (network, 5xx, IDENTITY_UNAVAILABLE) keep a normal retry affordance.
 import React from "react";
 import { Box, Button, Surface, Text, spacing } from "@bthwani/ui-kit";
-import { useControlPanelSession } from "../session/control-panel-session";
+import { useIdentitySession } from "@bthwani/core-identity";
 
 export function WorkforceErrorState(props: { readonly message: string; readonly isSessionExpired: boolean; readonly onRetry: () => void }) {
-  const session = useControlPanelSession();
+  const session = useIdentitySession();
 
   if (props.isSessionExpired) {
     return (

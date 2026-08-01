@@ -17,7 +17,7 @@ import {
   useProviderRegistryController,
 } from "../../shared/platform";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
-import { useControlPanelSession } from "../../shared/session/control-panel-session";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { MapsProviderInspector } from "./MapsProviderInspector";
 
 const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
@@ -47,7 +47,7 @@ const header = (
 );
 
 export function ProviderRegistryPanel() {
-  const { state: sessionState } = useControlPanelSession();
+  const { state: sessionState } = useIdentitySession();
   const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
   const canRead = hasServiceControlPanelPermission(identity, "providers", "provider:read");
   const canUpdate = hasServiceControlPanelPermission(identity, "providers", "provider:update");

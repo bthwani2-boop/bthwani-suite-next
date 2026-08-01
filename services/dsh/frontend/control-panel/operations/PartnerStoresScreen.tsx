@@ -9,7 +9,7 @@ import {
   WebControlPanelKpiStrip,
   WebControlPanelRecommendation,
 } from '@bthwani/ui-kit/web';
-import { useControlPanelSession } from '../../shared/session/control-panel-session';
+import { useIdentitySession } from "@bthwani/core-identity";
 import { buildOperationsHref } from './operations.registry';
 import { useStoreAdminController, type DshStoreAdminTableRow } from '../../shared/store';
 import styles from '../shared/control-panel-surface.module.css';
@@ -53,7 +53,7 @@ export function PartnerStoresScreen({ focusParams }: PartnerStoresScreenProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlStoreId = focusParams?.orderId ?? searchParams.get('orderId') ?? null;
-  const { state: identity } = useControlPanelSession();
+  const { state: identity } = useIdentitySession();
   const controller = useStoreAdminController(identity.kind);
 
   const rows = React.useMemo(

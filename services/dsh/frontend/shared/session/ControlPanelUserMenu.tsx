@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { colorRoles } from "@bthwani/ui-kit";
-import { useControlPanelSession } from "./control-panel-session";
+import { useIdentitySession } from "./control-panel-session";
 
 const DSH_LOGIN_ROUTE = "/" + "dsh" + "/login";
 
 export function ControlPanelUserMenu() {
-  const { state, logout } = useControlPanelSession();
+  const { state, logout } = useIdentitySession();
   const router = useRouter();
   const [open, setOpen] = useState(false);
 

@@ -24,7 +24,7 @@ import {
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import { OperationsRoomFrame } from "@bthwani/control-panel/shell";
-import { useControlPanelSession } from "../../shared/session/control-panel-session";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   useCentralCatalogController,
   type ProductProposalPipelineStatus,
@@ -160,7 +160,7 @@ export const MAIN_TAB_GROUPS: MainTabGroup[] = [
 const DAM_ENTITY_TYPES: readonly DamEntityType[] = ["domains", "nodes", "master-products", "product-proposals"];
 
 export function CatalogDashboardScreen() {
-  const { state } = useControlPanelSession();
+  const { state } = useIdentitySession();
   const controller = useCentralCatalogController(state.kind);
 
   const searchParams = useSearchParams();

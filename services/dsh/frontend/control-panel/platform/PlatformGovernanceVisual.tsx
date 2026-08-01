@@ -16,7 +16,7 @@ import {
   type PlatformChangeSet,
 } from "../../shared/platform";
 import { hasControlPanelPermission } from "../../shared/session/control-panel-permissions";
-import { useControlPanelSession } from "../../shared/session/control-panel-session";
+import { useIdentitySession } from "@bthwani/core-identity";
 
 type LifecycleStage = {
   readonly status: PlatformChangeSet["status"];
@@ -50,7 +50,7 @@ function stageCount(
 }
 
 export function PlatformGovernanceVisual() {
-  const { state: sessionState } = useControlPanelSession();
+  const { state: sessionState } = useIdentitySession();
   const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
   const canRead = hasControlPanelPermission(identity, "platform:read");
   const workflow = usePlatformChangeWorkflowController(canRead);
