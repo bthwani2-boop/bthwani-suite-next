@@ -37,8 +37,8 @@ func main() {
 
 	repository := identity.NewRepository(db)
 	localBootstrap := identity.LocalBootstrap{
-		Enabled:  strings.EqualFold(strings.TrimSpace(os.Getenv("IDENTITY_LOCAL_BOOTSTRAP")), "true"),
-		Password: os.Getenv("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD"),
+		Enabled:           strings.EqualFold(strings.TrimSpace(os.Getenv("IDENTITY_LOCAL_BOOTSTRAP")), "true"),
+		Password:          os.Getenv("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD"),
 		OperatorContextID: bootstrapOperatorContextID,
 	}
 
@@ -59,7 +59,8 @@ func main() {
 
 	identityhttp.RegisterEmployeeAccessRoutes(router, repository)
 	identityhttp.RegisterPartnerAccessRoutes(router, repository)
-	authRouter := identityhttp.AuthOperatorContextBoundary(repository, router)
+	runtimeReadinessRouter := identityhttp.RuntimeReadinessBoundary(router)
+	authRouter := identityhttp.AuthOperatorContextBoundary(repository, runtimeReadinessRouter)
 	issuerScopedRouter := identityhttp.ActivationIssuerBoundary(db, authRouter)
 	internalRouter := identityhttp.OperatorBoundary(db, issuerScopedRouter)
 	otpScopedRouter := identityhttp.OtpBoundary(repository, internalRouter)
