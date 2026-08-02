@@ -62,8 +62,9 @@ func main() {
 	runtimeReadinessRouter := identityhttp.RuntimeReadinessBoundary(router)
 	authRouter := identityhttp.AuthOperatorContextBoundary(repository, runtimeReadinessRouter)
 	issuerScopedRouter := identityhttp.ActivationIssuerBoundary(db, authRouter)
-	internalRouter := identityhttp.OperatorBoundary(db, issuerScopedRouter)
-	otpScopedRouter := identityhttp.OtpBoundary(repository, internalRouter)
+	operatorScopedRouter := identityhttp.OperatorBoundary(db, issuerScopedRouter)
+	internalTrustRouter := identityhttp.RuntimeOperatorContextBoundary(operatorScopedRouter)
+	otpScopedRouter := identityhttp.OtpBoundary(repository, internalTrustRouter)
 	server := &http.Server{
 		Addr: ":" + port,
 		Handler: identityhttp.BrowserOriginGuard(
