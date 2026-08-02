@@ -6,7 +6,10 @@ import (
 	"strings"
 )
 
-var ErrOpenStoreOperations = errors.New("store has open operational records")
+var (
+	ErrOpenStoreOperations  = errors.New("store has open operational records")
+	ErrPartnerCannotOwnStore = errors.New("partner state does not allow store ownership assignment")
+)
 
 // GovernedStoreLinkInput is the only accepted shape for a transfer. Initial
 // assignment of an unowned store remains idempotent; reassignment requires a
@@ -37,15 +40,32 @@ func LinkPartnerStoreForOperatorContextGoverned(
 	if partnerID == "" || input.StoreID == "" || actorID == "" {
 		return nil, ErrInvalid
 	}
-	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
-		return nil, err
-	}
 
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback() //nolint:errcheck
+
+	// Lock the target Partner before the Store. This matches lifecycle transitions,
+	// prevents a concurrent deactivation/rejection from racing the ownership change,
+	// and keeps lock ordering consistent when a transition also updates stores.
+	var targetStatus ActivationStatus
+	err = tx.QueryRow(`
+		SELECT activation_status
+		FROM dsh_partners
+		WHERE id = $1 AND operator_context_id = $2
+		FOR SHARE`, partnerID, operatorContextID,
+	).Scan(&targetStatus)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if targetStatus == StatusOpsRejected || targetStatus == StatusPartnerDeactivated {
+		return nil, ErrPartnerCannotOwnStore
+	}
 
 	var currentPartnerID string
 	var currentVersion int
