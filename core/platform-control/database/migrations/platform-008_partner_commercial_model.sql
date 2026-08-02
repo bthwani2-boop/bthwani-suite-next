@@ -48,6 +48,14 @@ BEGIN
       USING ERRCODE = '23514';
   END IF;
 
+  IF TG_OP = 'UPDATE'
+     AND NEW.effective_from IS DISTINCT FROM OLD.effective_from
+     AND NEW.effective_from IS NOT NULL
+     AND NEW.effective_from < NOW() THEN
+    RAISE EXCEPTION 'retroactive partner commercial model edits are forbidden'
+      USING ERRCODE = '23514';
+  END IF;
+
   RETURN NEW;
 END;
 $$;
