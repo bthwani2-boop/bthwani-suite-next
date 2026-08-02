@@ -165,14 +165,31 @@ export function fetchPartnerTeam(storeId: string): Promise<{ members: DshPartner
   return request(`/dsh/partner/stores/${storeId}/team`);
 }
 
+export type PartnerTeamInviteRole = "manager" | "supervisor" | "staff" | "courier";
+
+export type PartnerTeamInvitationResponse = {
+  readonly memberId: string;
+  readonly actorId: string;
+  readonly role: PartnerTeamInviteRole;
+  readonly replayed: boolean;
+  readonly activationState: "issued" | "unknown";
+  readonly activation?: {
+    readonly activationId: string;
+    readonly code: string;
+    readonly maskedPhone: string;
+    readonly expiresAt: string;
+  };
+};
+
 export function invitePartnerTeamMember(
   storeId: string,
   identity: string,
+  role: PartnerTeamInviteRole,
   mutation?: PartnerMutationContext,
-): Promise<{ success: boolean }> {
+): Promise<PartnerTeamInvitationResponse> {
   return request(`/dsh/partner/stores/${storeId}/team/invites`, {
     method: "POST",
-    body: { identity },
+    body: { identity, role },
     mutation,
   });
 }
