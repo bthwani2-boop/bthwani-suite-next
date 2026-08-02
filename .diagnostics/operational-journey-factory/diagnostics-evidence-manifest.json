@@ -1,0 +1,18 @@
+[
+  {
+    "path": ".diagnostics/operational-journey-factory/tool-evidence/jscpd/jscpd-report.json",
+    "sha256": "6ae90513dd0091e45e9584def30beaa6720ce895c72e84f25059f812b4241e30",
+    "size": 3460126,
+    "generated_at": "2026-08-02T15:09:29.581Z",
+    "head_sha": "1fbc80dffc54f3096498c943c422de20bc5d7628",
+    "classification": "RAW_DUPLICATION_REPORT"
+  },
+  {
+    "path": ".diagnostics/operational-journey-factory/tool-evidence/knip-report.json",
+    "sha256": "922fe05529b17fdfa334c5cdda3ecf53f3a3891161834c60612f9caa36411b80",
+    "size": 727,
+    "generated_at": "2026-08-02T15:09:37.404Z",
+    "head_sha": "1fbc80dffc54f3096498c943c422de20bc5d7628",
+    "classification": "RAW_DEAD_CODE_REPORT"
+  }
+]

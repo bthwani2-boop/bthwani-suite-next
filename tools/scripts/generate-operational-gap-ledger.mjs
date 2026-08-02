@@ -195,7 +195,7 @@ function gap({ source_tool, path: sourcePath, type, severity = "HIGH", journey =
 const VERIFIED_PURE_RENDER_LOCAL_LOGIC_FILES = new Map([
   ["services/dsh/frontend/app-client/store/StoreDetailShell.tsx",
     "toProductCardPrice parses/validates a price-reference string for display; no arithmetic derivation of price."],
-  ["services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx",
+  ["services/dsh/frontend/app-field/finance/WltFieldFinanceScreen.tsx",
     "commissionStatusLabel/commissionStatusTone/commissionTypeLabel are enum-to-display mappers, not computed values."],
   ["services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx",
     "formatFee converts already-known minor units to a localized display string; the fee value itself comes from the controller."],

@@ -104,13 +104,16 @@ async function runReconciliation() {
 
       // Reload the regenerated inventories
       const freshGapLedger = JSON.parse(fs.readFileSync(gapLedgerPath, "utf8"));
-      const freshSummary = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
+      let freshSummary = null;
+      if (fs.existsSync(summaryPath)) {
+        freshSummary = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
+      }
       const freshSurfaceInventory = JSON.parse(fs.readFileSync(surfaceInventoryPath, "utf8"));
       const freshJourneyInventory = JSON.parse(fs.readFileSync(journeyInventoryPath, "utf8"));
       const freshToolchainInventory = JSON.parse(fs.readFileSync(toolchainInventoryPath, "utf8"));
 
       Object.assign(gapLedger, freshGapLedger);
-      if (summary) Object.assign(summary, freshSummary);
+      if (summary && freshSummary) Object.assign(summary, freshSummary);
       Object.assign(surfaceInventory, freshSurfaceInventory);
       Object.assign(journeyInventory, freshJourneyInventory);
       Object.assign(toolchainInventory, freshToolchainInventory);
@@ -353,7 +356,10 @@ async function runReconciliation() {
   }
 
   // Reload the updated summary
-  const updatedSummary = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
+  let updatedSummary = null;
+  if (fs.existsSync(summaryPath)) {
+    updatedSummary = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
+  }
 
   // 9b. Generate diagnostics-evidence-manifest.json
   console.log("[RECONCILE] Generating diagnostics-evidence-manifest.json...");
@@ -469,15 +475,15 @@ async function runReconciliation() {
   }
 
   // Rule A: Gap count comparison
-  if (updatedSummary.numeric_truth.gap_count !== updatedLedger.gap_count) {
+  if (updatedSummary && updatedSummary.numeric_truth && updatedSummary.numeric_truth.gap_count !== updatedLedger.gap_count) {
     blockers.push(`Gap count mismatch: summary says ${updatedSummary.numeric_truth.gap_count}, ledger says ${updatedLedger.gap_count}`);
   }
 
   // Rule B: final_closure / exact_100_percent_claim consistency
-  if (updatedSummary.final_closure && !updatedSummary.exact_100_percent_claim) {
+  if (updatedSummary && updatedSummary.final_closure && !updatedSummary.exact_100_percent_claim) {
     blockers.push("Conflict: final_closure is true but exact_100_percent_claim is false.");
   }
-  if (!updatedSummary.final_closure && updatedSummary.exact_100_percent_claim) {
+  if (updatedSummary && !updatedSummary.final_closure && updatedSummary.exact_100_percent_claim) {
     blockers.push("Conflict: final_closure is false but exact_100_percent_claim is true.");
   }
 

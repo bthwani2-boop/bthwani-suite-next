@@ -1,5 +1,5 @@
 {
-  "head_sha": "e56637e750fd3915c19e2b0efc02d9a12c8b42f1",
+  "head_sha": "1fbc80dffc54f3096498c943c422de20bc5d7628",
   "status": "DISCOVERY_ONLY",
   "roots": [
     "apps",
@@ -557,11 +557,9 @@
       ],
       "direct_api_signs": [],
       "process_env_usage": [],
-      "local_business_logic_candidates": [
-        "services/dsh/frontend/app-field/finance/WltFieldFinanceScreen.tsx"
-      ],
+      "local_business_logic_candidates": [],
       "icons_components_actions_candidates": 143,
-      "states_candidates": 215
+      "states_candidates": 213
     },
     {
       "surface": "services/dsh/frontend/app-partner",
@@ -1104,7 +1102,7 @@
     {
       "surface": "services/wlt/frontend/shared",
       "kind": "shared_brain",
-      "files": 66,
+      "files": 67,
       "screens": [],
       "pages": [],
       "route_bindings": [],
@@ -1147,6 +1145,7 @@
         "services/wlt/frontend/shared/dsh/commissions/wlt-field-commission-reference.api.ts",
         "services/wlt/frontend/shared/dsh/commissions/wlt-field-commission.view-model.ts",
         "services/wlt/frontend/shared/dsh/field-finance/field-finance.api.ts",
+        "services/wlt/frontend/shared/dsh/field-finance/field-finance.presentation.ts",
         "services/wlt/frontend/shared/dsh/field-finance/field-payout-attempt.ts",
         "services/wlt/frontend/shared/dsh/field-finance/use-field-finance-controller.ts",
         "services/wlt/frontend/shared/dsh/finance/finance-hub-runtime.api.ts",
@@ -1161,7 +1160,7 @@
         "services/wlt/frontend/shared/dsh/wlt-settlement/wlt-settlement.api.ts"
       ],
       "icons_components_actions_candidates": 13,
-      "states_candidates": 420
+      "states_candidates": 422
     },
     {
       "surface": "shared/ui-kit",
@@ -2022,7 +2021,6 @@
   ],
   "local_business_logic_candidates": [
     "services/dsh/frontend/app-client/store/StoreDetailShell.tsx",
-    "services/dsh/frontend/app-field/finance/WltFieldFinanceScreen.tsx",
     "services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx",
     "services/dsh/frontend/control-panel/finance/CommissionGovernancePanel.tsx",
     "services/dsh/frontend/control-panel/finance/RefundsCommandPanel.tsx",
@@ -2043,6 +2041,7 @@
     "services/wlt/frontend/shared/dsh/commissions/wlt-field-commission-reference.api.ts",
     "services/wlt/frontend/shared/dsh/commissions/wlt-field-commission.view-model.ts",
     "services/wlt/frontend/shared/dsh/field-finance/field-finance.api.ts",
+    "services/wlt/frontend/shared/dsh/field-finance/field-finance.presentation.ts",
     "services/wlt/frontend/shared/dsh/field-finance/field-payout-attempt.ts",
     "services/wlt/frontend/shared/dsh/field-finance/use-field-finance-controller.ts",
     "services/wlt/frontend/shared/dsh/finance/finance-hub-runtime.api.ts",
