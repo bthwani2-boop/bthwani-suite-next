@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { FinanceDashboardScreen, RepresentativeWalletLookup } from "@bthwani/wlt/control-panel/finance";
+import { FinanceDashboardScreen, RepresentativeWalletLookup } from "@bthwani/dsh/control-panel/finance";
 
 export default function FinancePage() {
   return (

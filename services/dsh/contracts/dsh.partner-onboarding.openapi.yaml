@@ -346,17 +346,7 @@ components:
         event: { $ref: '#/components/schemas/ActivationEvent' }
     ActivationEvent:
       type: object
-      required:
-        [
-          id,
-          partnerId,
-          fromStatus,
-          toStatus,
-          actorId,
-          actorSurface,
-          correlationId,
-          createdAt
-        ]
+      required: [ id, partnerId, fromStatus, toStatus, actorId, actorSurface, createdAt ]
       properties:
         id: { type: string }
         partnerId: { type: string }
@@ -365,7 +355,6 @@ components:
         actorId: { type: string }
         actorSurface: { type: string }
         reason: { type: string }
-        correlationId: { type: string }
         createdAt: { type: string, format: date-time }
     LinkedStore:
       type: object

@@ -38,6 +38,9 @@ paths:
       operationId: assignDshControlPanelCodReconciliationCase
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
       requestBody:
         required: true
         content:
@@ -60,6 +63,9 @@ paths:
       operationId: resolveDshControlPanelCodReconciliationCase
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
       requestBody:
         required: true
         content:
@@ -113,6 +119,70 @@ paths:
         "400": { description: Invalid remittance evidence }
         "401": { description: Unauthenticated partner }
         "403": { description: Record does not belong to the partner }
+        "404": { description: COD record not found }
+        "409": { description: COD custody state conflict }
+        "502": { description: WLT unavailable }
+
+  /dsh/captain/me/finance/cod-records:
+    get:
+      tags: ["dsh-captain"]
+      operationId: listDshCaptainCodRecords
+      responses:
+        "200": { description: Captain-owned COD records }
+        "401": { description: Unauthenticated captain }
+        "403": { description: Actor is not a captain }
+        "502": { description: WLT unavailable }
+      security:
+        - bearerAuth: []
+
+  /dsh/captain/me/finance/cod-records/{recordId}/collect:
+    parameters:
+      - $ref: "#/components/parameters/RecordId"
+    post:
+      tags: ["dsh-captain"]
+      operationId: collectDshCaptainCodRecord
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+      responses:
+        "200": { description: COD record collected }
+        "401": { description: Unauthenticated captain }
+        "403": { description: Record does not belong to the captain }
+        "404": { description: COD record not found }
+        "409": { description: COD custody state conflict }
+        "502": { description: WLT unavailable }
+
+  /dsh/captain/me/finance/cod-records/{recordId}/remit:
+    parameters:
+      - $ref: "#/components/parameters/RecordId"
+    post:
+      tags: ["dsh-captain"]
+      operationId: remitDshCaptainCodRecord
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartnerCodRemittanceRequest"
+      responses:
+        "200": { description: COD record remitted }
+        "400": { description: Invalid remittance evidence }
+        "401": { description: Unauthenticated captain }
+        "403": { description: Record does not belong to the captain }
         "404": { description: COD record not found }
         "409": { description: COD custody state conflict }
         "502": { description: WLT unavailable }

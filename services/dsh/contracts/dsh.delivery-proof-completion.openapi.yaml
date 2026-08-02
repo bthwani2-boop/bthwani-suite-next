@@ -3,9 +3,9 @@ info:
   title: BThwani DSH Delivery Proof Completion API
   version: 1.0.0
   description: >
-    Actor-owned proof-of-delivery contract. DSH owns proof and order
-    completion state. WLT receives only the durable delivery_completed handoff
-    and remains the sole owner of financial truth.
+    Actor-owned proof-of-delivery contract. DSH owns proof and order completion
+    state. WLT receives only the durable delivery_completed handoff and remains
+    the sole owner of financial truth.
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED
@@ -16,14 +16,16 @@ paths:
   /dsh/client/orders/{orderId}/delivery-pin:
     post:
       operationId: issueClientDeliveryPin
-      tags: [DshDeliveryProof]
-      summary: Issue or rotate the authenticated order client's short-lived delivery PIN.
-      security: [{ bearerAuth: [] }]
+      tags: [ DshDeliveryProof ]
+      summary: Issue or rotate the authenticated order client's short-lived delivery
+        PIN.
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/OrderId'
       responses:
         '201':
-          description: Challenge issued. The clear PIN is returned only in this client-owned response.
+          description: Challenge issued. The clear PIN is returned only in this
+            client-owned response.
           content:
             application/json:
               schema:
@@ -35,9 +37,10 @@ paths:
   /dsh/client/orders/{orderId}/delivery-proof:
     get:
       operationId: getClientAcceptedDeliveryProof
-      tags: [DshDeliveryProof]
-      summary: Read the redacted accepted proof summary for the authenticated order client.
-      security: [{ bearerAuth: [] }]
+      tags: [ DshDeliveryProof ]
+      summary: Read the redacted accepted proof summary for the authenticated order
+        client.
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/OrderId'
       responses:
@@ -47,7 +50,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [proof]
+                required: [ proof ]
                 properties:
                   proof: { $ref: '#/components/schemas/ClientDeliveryProof' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
@@ -56,9 +59,9 @@ paths:
   /dsh/captain/dispatch/assignments/{assignmentId}/delivery-proof:
     get:
       operationId: getCaptainDeliveryProof
-      tags: [DshDeliveryProof]
+      tags: [ DshDeliveryProof ]
       summary: Read the latest proof submitted by the authenticated assignment captain.
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/AssignmentId'
       responses:
@@ -68,16 +71,16 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [proof]
+                required: [ proof ]
                 properties:
                   proof: { $ref: '#/components/schemas/DeliveryProof' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '404': { $ref: '#/components/responses/NotFound' }
     post:
       operationId: submitCaptainDeliveryProof
-      tags: [DshDeliveryProof]
+      tags: [ DshDeliveryProof ]
       summary: Submit an idempotent PIN, photo, signature, or composite proof.
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/AssignmentId'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -90,12 +93,13 @@ paths:
           multipart/form-data:
             schema:
               type: object
-              required: [file, evidenceKind, idempotencyKey]
+              required: [ file, evidenceKind, idempotencyKey ]
               properties:
                 file:
                   type: string
                   format: binary
-                  description: Governed image containing either the delivery scene or the recipient signature.
+                  description: Governed image containing either the delivery scene or the
+                    recipient signature.
                 evidenceKind: { $ref: '#/components/schemas/DeliveryEvidenceKind' }
                 method: { $ref: '#/components/schemas/DeliveryProofMethod' }
                 pin: { type: string, pattern: '^[0-9]{6}$' }
@@ -110,7 +114,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [proof]
+                required: [ proof ]
                 properties:
                   proof: { $ref: '#/components/schemas/DeliveryProof' }
         '400': { $ref: '#/components/responses/InvalidRequest' }
@@ -121,9 +125,9 @@ paths:
   /dsh/operator/delivery-proofs:
     get:
       operationId: listOperatorDeliveryProofs
-      tags: [DshDeliveryProof]
+      tags: [ DshDeliveryProof ]
       summary: List proof records for operations review.
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: status
           in: query
@@ -136,7 +140,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [proofs]
+                required: [ proofs ]
                 properties:
                   proofs:
                     type: array
@@ -147,9 +151,9 @@ paths:
   /dsh/operator/delivery-proofs/{proofId}:
     get:
       operationId: getOperatorDeliveryProof
-      tags: [DshDeliveryProof]
+      tags: [ DshDeliveryProof ]
       summary: Read full operational evidence for one proof.
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/ProofId'
       responses:
@@ -159,7 +163,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [proof]
+                required: [ proof ]
                 properties:
                   proof: { $ref: '#/components/schemas/DeliveryProof' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
@@ -169,9 +173,9 @@ paths:
   /dsh/operator/delivery-proofs/{proofId}/accept:
     post:
       operationId: acceptOperatorDeliveryProof
-      tags: [DshDeliveryProof]
+      tags: [ DshDeliveryProof ]
       summary: Accept a pending exceptional proof and complete the order exactly once.
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/ProofId'
       requestBody:
@@ -186,7 +190,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [proof]
+                required: [ proof ]
                 properties:
                   proof: { $ref: '#/components/schemas/DeliveryProof' }
         '400': { $ref: '#/components/responses/InvalidRequest' }
@@ -198,9 +202,10 @@ paths:
   /dsh/operator/delivery-proofs/{proofId}/reject:
     post:
       operationId: rejectOperatorDeliveryProof
-      tags: [DshDeliveryProof]
-      summary: Reject a pending proof while leaving the assignment at arrived_customer for retry.
-      security: [{ bearerAuth: [] }]
+      tags: [ DshDeliveryProof ]
+      summary: Reject a pending proof while leaving the assignment at arrived_customer
+        for retry.
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/ProofId'
       requestBody:
@@ -215,7 +220,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [proof]
+                required: [ proof ]
                 properties:
                   proof: { $ref: '#/components/schemas/DeliveryProof' }
         '400': { $ref: '#/components/responses/InvalidRequest' }
@@ -261,17 +266,18 @@ components:
   schemas:
     DeliveryEvidenceKind:
       type: string
-      enum: [photo, signature]
-      description: Classifies the multipart image so DSH binds it to the correct governed media purpose.
+      enum: [ photo, signature ]
+      description: Classifies the multipart image so DSH binds it to the correct
+        governed media purpose.
     DeliveryProofMethod:
       type: string
-      enum: [otp_pin, photo, signature, composite]
+      enum: [ otp_pin, photo, signature, composite ]
     DeliveryProofStatus:
       type: string
-      enum: [submitted, pending_review, accepted, rejected, superseded]
+      enum: [ submitted, pending_review, accepted, rejected, superseded ]
     DeliveryPinChallenge:
       type: object
-      required: [id, orderId, assignmentId, expiresAt, maxAttempts, version]
+      required: [ id, orderId, assignmentId, expiresAt, maxAttempts, version ]
       properties:
         id: { type: string, format: uuid }
         orderId: { type: string, format: uuid }
@@ -281,13 +287,13 @@ components:
         version: { type: integer, minimum: 1 }
     DeliveryPinResponse:
       type: object
-      required: [challenge, pin]
+      required: [ challenge, pin ]
       properties:
         challenge: { $ref: '#/components/schemas/DeliveryPinChallenge' }
         pin: { type: string, pattern: '^[0-9]{6}$' }
     SubmitDeliveryProofRequest:
       type: object
-      required: [method, idempotencyKey]
+      required: [ method ]
       properties:
         method: { $ref: '#/components/schemas/DeliveryProofMethod' }
         pin: { type: string, pattern: '^[0-9]{6}$' }
@@ -296,16 +302,28 @@ components:
         capturedLatitude: { type: number, minimum: -90, maximum: 90, nullable: true }
         capturedLongitude: { type: number, minimum: -180, maximum: 180, nullable: true }
         capturedAt: { type: string, format: date-time, nullable: true }
-        idempotencyKey: { type: string, minLength: 8, maxLength: 160 }
     ReviewDeliveryProofRequest:
       type: object
-      required: [expectedVersion, reason]
+      required: [ expectedVersion, reason ]
       properties:
         expectedVersion: { type: integer, minimum: 1 }
         reason: { type: string, minLength: 5, maxLength: 500 }
     DeliveryProof:
       type: object
-      required: [id, assignmentId, orderId, captainId, method, status, hasPhoto, hasSignature, capturedAt, submittedAt, version]
+      required:
+        [
+          id,
+          assignmentId,
+          orderId,
+          captainId,
+          method,
+          status,
+          hasPhoto,
+          hasSignature,
+          capturedAt,
+          submittedAt,
+          version
+        ]
       properties:
         id: { type: string, format: uuid }
         assignmentId: { type: string, format: uuid }
@@ -329,7 +347,7 @@ components:
         version: { type: integer, minimum: 1 }
     ClientDeliveryProof:
       type: object
-      required: [id, orderId, method, status, hasPhoto, hasSignature, capturedAt]
+      required: [ id, orderId, method, status, hasPhoto, hasSignature, capturedAt ]
       properties:
         id: { type: string, format: uuid }
         orderId: { type: string, format: uuid }
@@ -343,7 +361,7 @@ components:
         acceptedAt: { type: string, format: date-time, nullable: true }
     ErrorResponse:
       type: object
-      required: [code, message]
+      required: [ code, message ]
       properties:
         code: { type: string }
         message: { type: string }

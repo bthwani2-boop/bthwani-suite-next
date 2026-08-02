@@ -334,7 +334,7 @@ components:
         updatedAt: { type: string, format: date-time }
     IncidentEvent:
       type: object
-      required: [ id, incidentId, actorId, eventType, toStatus, correlationId, createdAt ]
+      required: [ id, incidentId, actorId, eventType, toStatus, createdAt ]
       properties:
         id: { type: string }
         incidentId: { type: string }
@@ -347,7 +347,6 @@ components:
             - { $ref: '#/components/schemas/IncidentStatus' }
             - { type: string, maxLength: 0 }
         toStatus: { $ref: '#/components/schemas/IncidentStatus' }
-        correlationId: { type: string }
         createdAt: { type: string, format: date-time }
     OperationalIncidentType:
       type: string
@@ -375,7 +374,6 @@ components:
         incidentType: { $ref: '#/components/schemas/OperationalIncidentType' }
         reason: { type: string, minLength: 1, maxLength: 2000 }
         ticketReference: { type: string, minLength: 1, maxLength: 256 }
-        correlationId: { type: string, maxLength: 200 }
         expectedVersion: { type: integer, minimum: 0 }
         evidenceReferences:
           type: array
@@ -398,7 +396,6 @@ components:
           ticketReference,
           actorId,
           actorRole,
-          correlationId,
           createdAt,
           updatedAt
         ]
@@ -418,7 +415,6 @@ components:
         failureReason: { type: [ string, 'null' ] }
         partnerNotified: { type: boolean }
         partnerNotifiedAt: { type: [ string, 'null' ], format: date-time }
-        correlationId: { type: string }
         appliedAt: { type: [ string, 'null' ], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }

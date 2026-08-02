@@ -281,17 +281,7 @@ components:
         createdAt: { type: string, format: date-time }
     TicketEvent:
       type: object
-      required:
-        [
-          id,
-          ticketId,
-          reporterId,
-          actorId,
-          actorRole,
-          eventType,
-          correlationId,
-          createdAt
-        ]
+      required: [ id, ticketId, reporterId, actorId, actorRole, eventType, createdAt ]
       properties:
         id: { type: string }
         ticketId: { type: string }
@@ -303,7 +293,6 @@ components:
             type: string,
             enum: [ created, message_added, status_changed, escalated, closed ]
           }
-        correlationId: { type: string }
         createdAt: { type: string, format: date-time }
   responses:
     Ticket:

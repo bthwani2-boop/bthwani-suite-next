@@ -7,7 +7,7 @@
     summary: Return the authenticated field agent's wallet balance.
     tags:
       - DshFieldFinance
-    security: [{ bearerAuth: [] }]
+    security: [ { bearerAuth: [] } ]
     responses:
       "200":
         description: Wallet returned successfully.
@@ -39,7 +39,7 @@
     summary: Return the authenticated field agent's commissions.
     tags:
       - DshFieldFinance
-    security: [{ bearerAuth: [] }]
+    security: [ { bearerAuth: [] } ]
     responses:
       "200":
         description: Commissions list returned successfully.
@@ -74,7 +74,7 @@
     summary: Return the authenticated field agent's ledger entries.
     tags:
       - DshFieldFinance
-    security: [{ bearerAuth: [] }]
+    security: [ { bearerAuth: [] } ]
     responses:
       "200":
         description: Ledger entries returned successfully.
@@ -92,7 +92,7 @@
     summary: Return the authenticated field agent's payout requests.
     tags:
       - DshFieldFinance
-    security: [{ bearerAuth: [] }]
+    security: [ { bearerAuth: [] } ]
     responses:
       "200":
         description: Payout requests returned successfully.
@@ -121,7 +121,7 @@
     summary: Submit a new payout request for the authenticated field agent.
     tags:
       - DshFieldFinance
-    security: [{ bearerAuth: [] }]
+    security: [ { bearerAuth: [] } ]
     requestBody:
       required: true
       content:
@@ -131,11 +131,9 @@
             required:
               - amountMinorUnits
               - currency
-              - idempotencyKey
             properties:
               amountMinorUnits: { type: integer, format: int64 }
               currency: { type: string }
-              idempotencyKey: { type: string }
     responses:
       "201":
         description: Payout request created successfully.
@@ -158,12 +156,15 @@
                     failureReason: { type: string, nullable: true }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+    parameters:
+      - $ref: "#/components/parameters/IdempotencyKey"
 
 /dsh/field/stores/{storeId}/verifications:
   post:
     operationId: submitFieldStoreVerification
-    summary: Submit a verification outcome for the authenticated field actor's assigned store.
-    tags: [DshStoreGovernance]
+    summary: Submit a verification outcome for the authenticated field actor's
+      assigned store.
+    tags: [ DshStoreGovernance ]
     security:
       - bearerAuth: []
     parameters:
@@ -198,10 +199,14 @@
   get:
     operationId: GETDshFieldFinanceCommissions
     summary: Governed finance operation owned by DSH/WLT.
-    tags: [DshFieldFinance]
-    security: [{ bearerAuth: [] }]
+    tags: [ DshFieldFinance ]
+    security: [ { bearerAuth: [] } ]
     responses:
-      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: Governed finance response,
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
@@ -212,10 +217,14 @@
   get:
     operationId: GETDshFieldFinanceWallet
     summary: Governed finance operation owned by DSH/WLT.
-    tags: [DshFieldFinance]
-    security: [{ bearerAuth: [] }]
+    tags: [ DshFieldFinance ]
+    security: [ { bearerAuth: [] } ]
     responses:
-      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: Governed finance response,
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
@@ -226,24 +235,31 @@
   get:
     operationId: GETDshFieldFinancePayouts
     summary: Governed finance operation owned by DSH/WLT.
-    tags: [DshFieldFinance]
-    security: [{ bearerAuth: [] }]
+    tags: [ DshFieldFinance ]
+    security: [ { bearerAuth: [] } ]
     responses:
-      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: Governed finance response,
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
-
 /dsh/field/finance/payout-destinations:
   get:
     operationId: GETDshFieldFinancePayoutDestinations
     summary: Governed finance operation owned by DSH/WLT.
-    tags: [DshFieldFinance]
-    security: [{ bearerAuth: [] }]
+    tags: [ DshFieldFinance ]
+    security: [ { bearerAuth: [] } ]
     responses:
-      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: Governed finance response,
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
@@ -252,23 +268,29 @@
 /dsh/field/finance/payout-destinations/{destinationId}:
   get:
     operationId: getDshFieldFinancePayoutDestination
-    summary: Read a single governed WLT payout destination owned by the authenticated field actor.
-    tags: [DshFieldFinance]
-    security: [{ bearerAuth: [] }]
+    summary: Read a single governed WLT payout destination owned by the
+      authenticated field actor.
+    tags: [ DshFieldFinance ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: destinationId
         in: path
         required: true
         schema: { type: string }
     responses:
-      "200": { description: Payout destination view (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: Payout destination view (verbatim passthrough),
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
   delete:
     operationId: deleteDshFieldFinancePayoutDestination
-    summary: Remove a governed WLT payout destination owned by the authenticated field actor.
-    tags: [DshFieldFinance]
-    security: [{ bearerAuth: [] }]
+    summary: Remove a governed WLT payout destination owned by the authenticated
+      field actor.
+    tags: [ DshFieldFinance ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: destinationId
         in: path
@@ -279,14 +301,11 @@
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
-
-
-
 /dsh/field/stores/{storeId}/visits:
   post:
     operationId: createDshFieldVisit
     summary: Field agent starts a new store visit.
-    tags: [DshFieldReadiness]
+    tags: [ DshFieldReadiness ]
     security:
       - bearerAuth: []
     parameters:
@@ -309,7 +328,7 @@
   get:
     operationId: listDshFieldVisits
     summary: List field visits for a store.
-    tags: [DshFieldReadiness]
+    tags: [ DshFieldReadiness ]
     security:
       - bearerAuth: []
     parameters:
@@ -326,7 +345,7 @@
   get:
     operationId: getDshFieldWorkQueue
     summary: Field agent's own open visits and escalations across every store.
-    tags: [DshFieldReadiness]
+    tags: [ DshFieldReadiness ]
     security:
       - bearerAuth: []
     responses:
@@ -341,7 +360,7 @@
   post:
     operationId: completeDshFieldVisit
     summary: Field agent marks a visit complete.
-    tags: [DshFieldReadiness]
+    tags: [ DshFieldReadiness ]
     security:
       - bearerAuth: []
     parameters:
@@ -358,12 +377,12 @@
           schema:
             type: object
             additionalProperties: false
-            required: [completionLocation]
+            required: [ completionLocation ]
             properties:
               completionLocation:
                 type: object
                 additionalProperties: false
-                required: [latitude, longitude, accuracyMeters, capturedAt, provider]
+                required: [ latitude, longitude, accuracyMeters, capturedAt, provider ]
                 properties:
                   latitude: { type: number, minimum: -90, maximum: 90 }
                   longitude: { type: number, minimum: -180, maximum: 180 }
@@ -385,7 +404,7 @@
   put:
     operationId: upsertDshReadinessCheck
     summary: Field agent records or updates a readiness checklist item.
-    tags: [DshFieldReadiness]
+    tags: [ DshFieldReadiness ]
     security:
       - bearerAuth: []
     parameters:
@@ -399,7 +418,10 @@
       required: true
       content:
         application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpsertReadinessCheckRequest" }
+          schema:
+            {
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshUpsertReadinessCheckRequest"
+            }
     responses:
       "200":
         description: Check recorded.
@@ -411,7 +433,7 @@
   get:
     operationId: listDshVisitChecks
     summary: List all readiness checks for a visit.
-    tags: [DshFieldReadiness]
+    tags: [ DshFieldReadiness ]
     security:
       - bearerAuth: []
     parameters:
@@ -431,7 +453,7 @@
   post:
     operationId: createDshReadinessEscalation
     summary: Field agent raises a quality escalation for a store.
-    tags: [DshFieldReadiness]
+    tags: [ DshFieldReadiness ]
     security:
       - bearerAuth: []
     parameters:
@@ -456,7 +478,7 @@
   get:
     operationId: listDshOperatorEscalations
     summary: Operator views all field readiness escalations with optional status filter.
-    tags: [DshFieldReadiness]
+    tags: [ DshFieldReadiness ]
     security:
       - bearerAuth: []
     parameters:
@@ -465,7 +487,7 @@
         required: false
         schema:
           type: string
-          enum: [open, acknowledged, resolved, escalated_further]
+          enum: [ open, acknowledged, resolved, escalated_further ]
     responses:
       "200":
         description: List of escalations.
@@ -478,7 +500,7 @@
   patch:
     operationId: updateDshOperatorEscalation
     summary: Operator acknowledges or resolves an escalation.
-    tags: [DshFieldReadiness]
+    tags: [ DshFieldReadiness ]
     security:
       - bearerAuth: []
     parameters:
@@ -504,7 +526,7 @@
   get:
     operationId: getDshPartnerOnboardingStatus
     summary: Partner views their store's field onboarding status.
-    tags: [DshFieldReadiness]
+    tags: [ DshFieldReadiness ]
     security:
       - bearerAuth: []
     parameters:
@@ -523,7 +545,7 @@
   get:
     operationId: listDshPartnerFieldVisits
     summary: List field visits recorded for a partner.
-    tags: [DshPartnerActivation]
+    tags: [ DshPartnerActivation ]
     security:
       - bearerAuth: []
     parameters:
@@ -538,7 +560,7 @@
           application/json:
             schema:
               type: object
-              required: [visits]
+              required: [ visits ]
               properties:
                 visits:
                   type: array
@@ -550,7 +572,7 @@
   get:
     operationId: listFieldPartnerDrafts
     summary: List partner drafts created by the calling field actor.
-    tags: [DshPartnerActivation]
+    tags: [ DshPartnerActivation ]
     security:
       - bearerAuth: []
     parameters:
@@ -576,7 +598,7 @@
   post:
     operationId: createFieldPartnerDraft
     summary: Field agent creates a new partner intake draft.
-    tags: [DshPartnerActivation]
+    tags: [ DshPartnerActivation ]
     security:
       - bearerAuth: []
     requestBody:
@@ -598,7 +620,7 @@
   get:
     operationId: getFieldPartnerDraft
     summary: Field agent gets partner draft details.
-    tags: [DshPartnerActivation]
+    tags: [ DshPartnerActivation ]
     security:
       - bearerAuth: []
     parameters:
@@ -617,7 +639,7 @@
   patch:
     operationId: updateFieldPartnerDraft
     summary: Field agent updates partner draft details.
-    tags: [DshPartnerActivation]
+    tags: [ DshPartnerActivation ]
     security:
       - bearerAuth: []
     parameters:
@@ -644,7 +666,7 @@
   get:
     operationId: getFieldPartnerStore
     summary: Field agent reads the first store draft linked to a partner it owns.
-    tags: [DshPartnerActivation]
+    tags: [ DshPartnerActivation ]
     security:
       - bearerAuth: []
     parameters:
@@ -659,7 +681,7 @@
           application/json:
             schema:
               type: object
-              required: [storeId, store]
+              required: [ storeId, store ]
               properties:
                 storeId: { type: string }
                 store: { $ref: "../dsh.openapi.yaml#/components/schemas/DshFieldPartnerStoreDraft" }
@@ -668,8 +690,9 @@
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
   patch:
     operationId: updateFieldPartnerStore
-    summary: Field agent updates first-store draft data without publishing it to clients.
-    tags: [DshPartnerActivation]
+    summary: Field agent updates first-store draft data without publishing it to
+      clients.
+    tags: [ DshPartnerActivation ]
     security:
       - bearerAuth: []
     parameters:
@@ -681,7 +704,11 @@
       required: true
       content:
         application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdateFieldPartnerStoreDraftRequest" }
+          schema:
+            {
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdateFieldPartnerStoreDraftR\
+                equest"
+            }
     responses:
       "200":
         description: Store draft updated.
@@ -689,7 +716,7 @@
           application/json:
             schema:
               type: object
-              required: [storeId, store, audit]
+              required: [ storeId, store, audit ]
               properties:
                 storeId: { type: string }
                 store: { $ref: "../dsh.openapi.yaml#/components/schemas/DshFieldPartnerStoreDraft" }
@@ -702,7 +729,7 @@
   get:
     operationId: listFieldPartnerDocuments
     summary: Field agent lists documents uploaded for a partner draft it owns.
-    tags: [DshPartnerActivation]
+    tags: [ DshPartnerActivation ]
     security:
       - bearerAuth: []
     parameters:
@@ -717,7 +744,7 @@
           application/json:
             schema:
               type: object
-              required: [documents]
+              required: [ documents ]
               properties:
                 documents:
                   type: array
@@ -727,7 +754,7 @@
   post:
     operationId: uploadFieldPartnerDocument
     summary: Field agent uploads a document for partner onboarding.
-    tags: [DshPartnerActivation]
+    tags: [ DshPartnerActivation ]
     security:
       - bearerAuth: []
     parameters:
@@ -753,8 +780,9 @@
 /dsh/field/media/uploads:
   post:
     operationId: uploadFieldMedia
-    summary: Field agent uploads a binary document/photo, receiving a mediaRef to attach via uploadFieldPartnerDocument.
-    tags: [DshPartnerActivation]
+    summary: Field agent uploads a binary document/photo, receiving a mediaRef to
+      attach via uploadFieldPartnerDocument.
+    tags: [ DshPartnerActivation ]
     security:
       - bearerAuth: []
     requestBody:
@@ -763,7 +791,7 @@
         multipart/form-data:
           schema:
             type: object
-            required: [partnerId, file]
+            required: [ partnerId, file ]
             properties:
               partnerId: { type: string }
               file: { type: string, format: binary }
@@ -774,7 +802,7 @@
           application/json:
             schema:
               type: object
-              required: [mediaRef]
+              required: [ mediaRef ]
               properties:
                 mediaRef: { type: string }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
@@ -785,7 +813,7 @@
   post:
     operationId: createFieldPartnerVisit
     summary: Field agent records a partner-level onboarding visit.
-    tags: [DshPartnerActivation]
+    tags: [ DshPartnerActivation ]
     security:
       - bearerAuth: []
     parameters:
@@ -797,7 +825,11 @@
       required: true
       content:
         application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreatePartnerFieldVisitRequest" }
+          schema:
+            {
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshCreatePartnerFieldVisitReques\
+                t"
+            }
     responses:
       "201":
         description: Partner field visit recorded.
@@ -811,7 +843,7 @@
   get:
     operationId: listFieldPartnerFieldVisits
     summary: Field agent lists field visits recorded for a partner draft it owns.
-    tags: [DshPartnerActivation]
+    tags: [ DshPartnerActivation ]
     security:
       - bearerAuth: []
     parameters:
@@ -826,7 +858,7 @@
           application/json:
             schema:
               type: object
-              required: [visits]
+              required: [ visits ]
               properties:
                 visits:
                   type: array
@@ -838,7 +870,7 @@
   post:
     operationId: submitFieldPartnerDraft
     summary: Field agent submits partner draft for review.
-    tags: [DshPartnerActivation]
+    tags: [ DshPartnerActivation ]
     security:
       - bearerAuth: []
     parameters:

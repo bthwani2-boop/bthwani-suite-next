@@ -775,17 +775,7 @@ components:
     AuditEntry:
       type: object
       additionalProperties: false
-      required:
-        [
-          id,
-          actorId,
-          action,
-          targetId,
-          detail,
-          sensitivity,
-          correlationId,
-          createdAt
-        ]
+      required: [ id, actorId, action, targetId, detail, sensitivity, createdAt ]
       properties:
         id: { type: string, format: uuid }
         actorId: { type: string }
@@ -796,5 +786,4 @@ components:
           description: Redacted allowlisted metadata only; never raw reason, review note,
             phone, credential, document, token, or secret.
         sensitivity: { type: string, enum: [ internal, restricted ] }
-        correlationId: { type: string }
         createdAt: { type: string, format: date-time }

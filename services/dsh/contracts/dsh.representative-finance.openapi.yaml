@@ -429,7 +429,6 @@ components:
       properties:
         amountMinorUnits: { type: integer, format: int64, minimum: 1 }
         currency: { type: string, minLength: 3, maxLength: 3 }
-        idempotencyKey: { type: string, minLength: 8, maxLength: 200 }
       additionalProperties: false
     ErrorResponse:
       type: object

@@ -15,15 +15,17 @@ x-bthwani-adapter-owner: frontend/shared/orders,frontend/shared/dispatch
 x-bthwani-parent-operation:
   path: /dsh/captain/dispatch/assignments/{assignmentId}/status
   operationId: updateDshDeliveryStatus
-  governance: picked_up is accepted only after completed dual custody and with no active delivery exception
+  governance: picked_up is accepted only after completed dual custody and with no
+    active delivery exception
 
 paths:
   /dsh/partner/orders/{orderId}/captain-handoff/confirm:
     post:
       operationId: confirmPartnerStoreCaptainHandoff
-      summary: Confirm that the owning store released the package to the assigned captain.
-      tags: [DshStoreCaptainHandoff]
-      security: [{ bearerAuth: [] }]
+      summary: Confirm that the owning store released the package to the assigned
+        captain.
+      tags: [ DshStoreCaptainHandoff ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/OrderId'
       responses:
@@ -43,8 +45,8 @@ paths:
     post:
       operationId: reportPartnerStoreCaptainHandoffException
       summary: Report package shortage or mismatch before store confirmation.
-      tags: [DshStoreCaptainHandoff]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshStoreCaptainHandoff ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/OrderId'
         - $ref: '#/components/parameters/CorrelationId'
@@ -71,8 +73,8 @@ paths:
     post:
       operationId: reportCaptainStoreCaptainHandoffException
       summary: Report package shortage or mismatch before captain pickup.
-      tags: [DshStoreCaptainHandoff]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshStoreCaptainHandoff ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/AssignmentId'
         - $ref: '#/components/parameters/CorrelationId'
@@ -122,11 +124,22 @@ components:
   schemas:
     StoreCaptainHandoffStatus:
       type: string
-      enum: [awaiting_partner, partner_confirmed, completed, superseded]
+      enum: [ awaiting_partner, partner_confirmed, completed, superseded ]
     StoreCaptainHandoff:
       type: object
       additionalProperties: false
-      required: [id, orderId, assignmentId, storeId, captainId, status, version, createdAt, updatedAt]
+      required:
+        [
+          id,
+          orderId,
+          assignmentId,
+          storeId,
+          captainId,
+          status,
+          version,
+          createdAt,
+          updatedAt
+        ]
       properties:
         id: { type: string, format: uuid }
         orderId: { type: string, format: uuid }
@@ -134,41 +147,40 @@ components:
         storeId: { type: string }
         captainId: { type: string }
         status: { $ref: '#/components/schemas/StoreCaptainHandoffStatus' }
-        partnerConfirmedAt: { type: [string, 'null'], format: date-time }
-        partnerConfirmedByActorId: { type: [string, 'null'] }
-        captainConfirmedAt: { type: [string, 'null'], format: date-time }
-        captainConfirmedByActorId: { type: [string, 'null'] }
+        partnerConfirmedAt: { type: [ string, 'null' ], format: date-time }
+        partnerConfirmedByActorId: { type: [ string, 'null' ] }
+        captainConfirmedAt: { type: [ string, 'null' ], format: date-time }
+        captainConfirmedByActorId: { type: [ string, 'null' ] }
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     StoreCaptainHandoffResponse:
       type: object
       additionalProperties: false
-      required: [handoff]
+      required: [ handoff ]
       properties:
         handoff: { $ref: '#/components/schemas/StoreCaptainHandoff' }
     StoreCaptainHandoffExceptionReason:
       type: string
-      enum: [handoff_shortage, handoff_mismatch]
+      enum: [ handoff_shortage, handoff_mismatch ]
     StoreCaptainHandoffExceptionRequest:
       type: object
       additionalProperties: false
-      required: [reasonCode, note, correlationId]
+      required: [ reasonCode, note ]
       properties:
         reasonCode: { $ref: '#/components/schemas/StoreCaptainHandoffExceptionReason' }
         note: { type: string, minLength: 5, maxLength: 1000 }
-        correlationId: { type: string, minLength: 1, maxLength: 200 }
         latitude: { type: number, minimum: -90, maximum: 90 }
         longitude: { type: number, minimum: -180, maximum: 180 }
     DeliveryExceptionResponse:
       type: object
       additionalProperties: false
-      required: [exception]
+      required: [ exception ]
       properties:
         exception: { type: object, additionalProperties: true }
     ErrorResponse:
       type: object
-      required: [code, message]
+      required: [ code, message ]
       properties:
         code: { type: string }
         message: { type: string }

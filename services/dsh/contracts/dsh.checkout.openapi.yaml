@@ -14,9 +14,9 @@ x-bthwani-truth-boundary:
 paths:
   /dsh/client/checkout-intents:
     post:
-      tags: ["dsh-client"]
+      tags: [ "dsh-client" ]
       operationId: createDshCheckoutIntent
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
@@ -24,41 +24,41 @@ paths:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/CreateCheckoutIntentInput'}
+            schema: { $ref: '#/components/schemas/CreateCheckoutIntentInput' }
       responses:
-        '200': {$ref: '#/components/responses/CheckoutIntentResponse'}
-        '201': {$ref: '#/components/responses/CheckoutIntentResponse'}
-        '202': {$ref: '#/components/responses/CheckoutIntentResponse'}
-        '409': {$ref: '#/components/responses/ErrorResponse'}
-        '422': {$ref: '#/components/responses/ErrorResponse'}
-        '503': {$ref: '#/components/responses/ErrorResponse'}
+        '200': { $ref: '#/components/responses/CheckoutIntentResponse' }
+        '201': { $ref: '#/components/responses/CheckoutIntentResponse' }
+        '202': { $ref: '#/components/responses/CheckoutIntentResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+        '503': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/client/checkout-intents/{intentId}:
     get:
-      tags: ["dsh-client"]
+      tags: [ "dsh-client" ]
       operationId: getDshCheckoutIntent
-      security: [{ bearerAuth: [] }]
-      parameters: [{$ref: '#/components/parameters/IntentId'}]
+      security: [ { bearerAuth: [] } ]
+      parameters: [ { $ref: '#/components/parameters/IntentId' } ]
       responses:
-        '200': {$ref: '#/components/responses/CheckoutIntentResponse'}
-        '404': {$ref: '#/components/responses/ErrorResponse'}
+        '200': { $ref: '#/components/responses/CheckoutIntentResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/client/checkout-intents/{intentId}/cancel:
     post:
-      tags: ["dsh-client"]
+      tags: [ "dsh-client" ]
       operationId: cancelDshCheckoutIntent
-      security: [{ bearerAuth: [] }]
-      parameters: [{$ref: '#/components/parameters/IntentId'}]
+      security: [ { bearerAuth: [] } ]
+      parameters: [ { $ref: '#/components/parameters/IntentId' } ]
       responses:
-        '200': {$ref: '#/components/responses/CheckoutIntentResponse'}
-        '409': {$ref: '#/components/responses/ErrorResponse'}
+        '200': { $ref: '#/components/responses/CheckoutIntentResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/operator/checkout-intents:
     get:
-      tags: ["dsh-operator"]
+      tags: [ "dsh-operator" ]
       operationId: listOperatorCheckoutIntents
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: state
           in: query
-          schema: {$ref: '#/components/schemas/CheckoutIntentState'}
+          schema: { $ref: '#/components/schemas/CheckoutIntentState' }
       responses:
         '200':
           description: OperatorContext-visible operational checkout projections.
@@ -66,29 +66,29 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [intents]
+                required: [ intents ]
                 properties:
                   intents:
                     type: array
-                    items: {$ref: '#/components/schemas/CheckoutIntent'}
+                    items: { $ref: '#/components/schemas/CheckoutIntent' }
   /dsh/operator/checkout-intents/{intentId}/reconcile:
     post:
-      tags: ["dsh-operator"]
+      tags: [ "dsh-operator" ]
       operationId: reconcileDshCheckoutIntent
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/IntentId'
         - $ref: '#/components/parameters/CorrelationId'
       responses:
-        '200': {$ref: '#/components/responses/CheckoutIntentResponse'}
-        '202': {$ref: '#/components/responses/CheckoutIntentResponse'}
-        '409': {$ref: '#/components/responses/ErrorResponse'}
-        '503': {$ref: '#/components/responses/ErrorResponse'}
+        '200': { $ref: '#/components/responses/CheckoutIntentResponse' }
+        '202': { $ref: '#/components/responses/CheckoutIntentResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '503': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/internal/wlt/payment-session-events:
     post:
-      tags: ["dsh-internal"]
+      tags: [ "dsh-internal" ]
       operationId: reportWltPaymentSessionEvent
-      security: [{ serviceToken: [] }]
+      security: [ { serviceToken: [] } ]
       parameters:
         - name: Authorization
           in: header
@@ -97,12 +97,12 @@ paths:
         - name: X-Service-Caller
           in: header
           required: true
-          schema: { type: string, enum: [wlt] }
+          schema: { type: string, enum: [ wlt ] }
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/WltPaymentSessionEvent'}
+            schema: { $ref: '#/components/schemas/WltPaymentSessionEvent' }
       responses:
         '200':
           description: Event receipt and atomically updated DSH projection.
@@ -110,12 +110,12 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [intent, eventReference, replayed]
+                required: [ intent, eventReference, replayed ]
                 properties:
-                  intent: {$ref: '#/components/schemas/CheckoutIntent'}
-                  eventReference: {type: string}
-                  replayed: {type: boolean}
-        '409': {$ref: '#/components/responses/ErrorResponse'}
+                  intent: { $ref: '#/components/schemas/CheckoutIntent' }
+                  eventReference: { type: string }
+                  replayed: { type: boolean }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
 components:
   securitySchemes:
     bearerAuth:
@@ -130,80 +130,119 @@ components:
       name: intentId
       in: path
       required: true
-      schema: {type: string, format: uuid}
+      schema: { type: string, format: uuid }
     IdempotencyKey:
       name: Idempotency-Key
       in: header
       required: true
-      schema: {type: string, minLength: 16, maxLength: 200}
+      schema: { type: string, minLength: 16, maxLength: 200 }
     CorrelationId:
       name: X-Correlation-ID
       in: header
       required: false
-      schema: {type: string, maxLength: 200}
+      schema: { type: string, maxLength: 200 }
   schemas:
     CheckoutIntentState:
       type: string
-      enum: [pending, wlt_handoff_failed, wlt_outcome_unknown, payment_pending, confirmed, cancelled, payment_confirmed, payment_failed, expired]
+      enum:
+        [
+          pending,
+          wlt_handoff_failed,
+          wlt_outcome_unknown,
+          payment_pending,
+          confirmed,
+          cancelled,
+          payment_confirmed,
+          payment_failed,
+          expired
+        ]
     PaymentMethod:
       type: string
-      enum: [cod, wallet, mixed, official_wallet]
+      enum: [ cod, wallet, mixed, official_wallet ]
     FulfillmentMode:
       type: string
-      enum: [bthwani_delivery, partner_delivery, pickup]
+      enum: [ bthwani_delivery, partner_delivery, pickup ]
     CreateCheckoutIntentInput:
       type: object
-      required: [cartId, storeId]
+      required: [ cartId, storeId ]
       properties:
-        cartId: {type: string, format: uuid}
-        storeId: {type: string}
-        fulfillmentMode: {$ref: '#/components/schemas/FulfillmentMode'}
-        paymentMethod: {$ref: '#/components/schemas/PaymentMethod'}
-        deliveryAddressId: {type: string, format: uuid}
-        note: {type: string, maxLength: 1000}
-        couponCode: {type: string, maxLength: 32}
+        cartId: { type: string, format: uuid }
+        storeId: { type: string }
+        fulfillmentMode: { $ref: '#/components/schemas/FulfillmentMode' }
+        paymentMethod: { $ref: '#/components/schemas/PaymentMethod' }
+        deliveryAddressId: { type: string, format: uuid }
+        note: { type: string, maxLength: 1000 }
+        couponCode: { type: string, maxLength: 32 }
     WltPaymentSessionEvent:
       type: object
       additionalProperties: false
-      required: [operatorContextId, checkoutIntentId, paymentSessionId, status]
+      required: [ operatorContextId, checkoutIntentId, paymentSessionId, status ]
       properties:
-        eventId: {type: string, minLength: 8, maxLength: 200}
-        correlationId: {type: string, maxLength: 200}
-        operatorContextId: {type: string, minLength: 1}
-        checkoutIntentId: {type: string, format: uuid}
-        paymentSessionId: {type: string, minLength: 1}
+        eventId: { type: string, minLength: 8, maxLength: 200 }
+        operatorContextId: { type: string, minLength: 1 }
+        checkoutIntentId: { type: string, format: uuid }
+        paymentSessionId: { type: string, minLength: 1 }
         status:
           type: string
-          enum: [authorized, reference_created, cod_pending, captured, cod_collected, failed, expired]
+          enum:
+            [
+              authorized,
+              reference_created,
+              cod_pending,
+              captured,
+              cod_collected,
+              failed,
+              expired
+            ]
     CheckoutIntent:
       type: object
-      required: [id, operatorContextId, clientId, cartId, storeId, fulfillmentMode, state, paymentMethod, wltPaymentSessionId, subtotalMinorUnits, deliveryFeeMinorUnits, discountMinorUnits, totalMinorUnits, currency, pricingSnapshotHash, version, createdAt, updatedAt]
+      required:
+        [
+          id,
+          operatorContextId,
+          clientId,
+          cartId,
+          storeId,
+          fulfillmentMode,
+          state,
+          paymentMethod,
+          wltPaymentSessionId,
+          subtotalMinorUnits,
+          deliveryFeeMinorUnits,
+          discountMinorUnits,
+          totalMinorUnits,
+          currency,
+          pricingSnapshotHash,
+          version,
+          createdAt,
+          updatedAt
+        ]
       properties:
-        id: {type: string, format: uuid}
-        operatorContextId: {type: string}
-        clientId: {type: string}
-        cartId: {type: string, format: uuid}
-        storeId: {type: string}
-        fulfillmentMode: {$ref: '#/components/schemas/FulfillmentMode'}
-        state: {$ref: '#/components/schemas/CheckoutIntentState'}
-        paymentMethod: {$ref: '#/components/schemas/PaymentMethod'}
-        wltPaymentSessionId: {type: string}
-        deliveryAddress: {type: string}
-        note: {type: string}
-        subtotalMinorUnits: {type: integer, format: int64, minimum: 0}
-        deliveryFeeMinorUnits: {type: integer, format: int64, minimum: 0}
-        discountMinorUnits: {type: integer, format: int64, minimum: 0}
-        totalMinorUnits: {type: integer, format: int64, minimum: 0}
-        currency: {type: string, minLength: 3, maxLength: 3}
-        pricingSnapshotHash: {type: string}
-        couponId: {type: string}
-        couponRedemptionId: {type: string}
-        couponCodeLast4: {type: string}
-        version: {type: integer, minimum: 1}
-        reconciliationRequired: {type: boolean}
-        reconciliationAgeSeconds: {type: integer, format: int64, minimum: 0}
-        createdAt: {type: string, format: date-time}
-        updatedAt: {type: string, format: date-time}
+        id: { type: string, format: uuid }
+        operatorContextId: { type: string }
+        clientId: { type: string }
+        cartId: { type: string, format: uuid }
+        storeId: { type: string }
+        fulfillmentMode: { $ref: '#/components/schemas/FulfillmentMode' }
+        state: { $ref: '#/components/schemas/CheckoutIntentState' }
+        paymentMethod: { $ref: '#/components/schemas/PaymentMethod' }
+        wltPaymentSessionId: { type: string }
+        deliveryAddress: { type: string }
+        note: { type: string }
+        subtotalMinorUnits: { type: integer, format: int64, minimum: 0 }
+        deliveryFeeMinorUnits: { type: integer, format: int64, minimum: 0 }
+        discountMinorUnits: { type: integer, format: int64, minimum: 0 }
+        totalMinorUnits: { type: integer, format: int64, minimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        pricingSnapshotHash: { type: string }
+        couponId: { type: string }
+        couponRedemptionId: { type: string }
+        couponCodeLast4: { type: string }
+        version: { type: integer, minimum: 1 }
+        reconciliationRequired: { type: boolean }
+        reconciliationAgeSeconds: { type: integer, format: int64, minimum: 0 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
   responses:
     CheckoutIntentResponse:
       description: Canonical DSH checkout projection.
@@ -211,9 +250,9 @@ components:
         application/json:
           schema:
             type: object
-            required: [intent]
+            required: [ intent ]
             properties:
-              intent: {$ref: '#/components/schemas/CheckoutIntent'}
+              intent: { $ref: '#/components/schemas/CheckoutIntent' }
     ErrorResponse:
       description: Governed error envelope.
       content:
@@ -223,7 +262,7 @@ components:
             properties:
               error:
                 type: object
-                required: [code, message]
+                required: [ code, message ]
                 properties:
-                  code: {type: string}
-                  message: {type: string}
+                  code: { type: string }
+                  message: { type: string }

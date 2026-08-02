@@ -1,4 +1,4 @@
-import { PaymentSessionOperationsScreen } from "@bthwani/wlt/control-panel/finance";
+import { PaymentSessionOperationsScreen } from "@bthwani/dsh/control-panel/finance";
 
 export default function PaymentSessionsPage() {
   return <PaymentSessionOperationsScreen />;

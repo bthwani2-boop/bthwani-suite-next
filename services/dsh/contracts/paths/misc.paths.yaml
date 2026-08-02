@@ -5,7 +5,7 @@
   get:
     operationId: getDshStoreContext
     summary: Resolve the authenticated actor's own or assigned store context.
-    tags: [DshStoreGovernance]
+    tags: [ DshStoreGovernance ]
     security:
       - bearerAuth: []
     responses:
@@ -27,9 +27,10 @@
 /dsh/control-panel/finance/settlements:
   get:
     operationId: listDshControlPanelFinanceSettlements
-    summary: Operator reads the governed WLT settlements view through the DSH finance proxy. WLT service auth stays server-side.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Operator reads the governed WLT settlements view through the DSH
+      finance proxy. WLT service auth stays server-side.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: partnerId
         in: query
@@ -54,9 +55,10 @@
 /dsh/control-panel/finance/settlements/summary:
   get:
     operationId: getDshControlPanelFinanceSettlementSummary
-    summary: Operator reads the governed WLT settlement summary through the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Operator reads the governed WLT settlement summary through the DSH
+      finance proxy.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: partnerId
         in: query
@@ -74,8 +76,8 @@
   get:
     operationId: listDshControlPanelFinanceRefunds
     summary: Operator reads the governed WLT refunds view through the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: orderId
         in: query
@@ -101,8 +103,8 @@
   get:
     operationId: getDshControlPanelFinanceRefund
     summary: Operator reads one governed WLT refund through the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: refundId
         in: path
@@ -120,9 +122,10 @@
 /dsh/control-panel/finance/ledger/entries:
   get:
     operationId: listDshControlPanelFinanceLedgerEntries
-    summary: Operator reads the governed WLT ledger entries view through the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Operator reads the governed WLT ledger entries view through the DSH
+      finance proxy.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: actorId
         in: query
@@ -159,9 +162,11 @@
 /dsh/control-panel/finance/financial-summary:
   get:
     operationId: getDshControlPanelFinanceFinancialSummary
-    summary: Operator reads the WLT ledger-kernel financial summary (Assets/Liabilities/Revenue/Net Position per currency) through the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Operator reads the WLT ledger-kernel financial summary
+      (Assets/Liabilities/Revenue/Net Position per currency) through the DSH
+      finance proxy.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     responses:
       "200":
         description: WLT financial summary view (verbatim passthrough).
@@ -173,9 +178,10 @@
 /dsh/control-panel/finance/cod-records:
   get:
     operationId: listDshControlPanelFinanceCodRecords
-    summary: Operator reads the governed WLT COD records view through the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Operator reads the governed WLT COD records view through the DSH
+      finance proxy.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: captainId
         in: query
@@ -204,9 +210,10 @@
 /dsh/control-panel/finance/commissions:
   get:
     operationId: listDshControlPanelFinanceCommissions
-    summary: Operator reads the governed WLT commissions view through the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Operator reads the governed WLT commissions view through the DSH
+      finance proxy.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: orderId
         in: query
@@ -235,9 +242,10 @@
 /dsh/control-panel/finance/payout-requests:
   get:
     operationId: listDshControlPanelFinancePayoutRequests
-    summary: Operator reads the governed WLT payout requests view through the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Operator reads the governed WLT payout requests view through the DSH
+      finance proxy.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: status
         in: query
@@ -267,13 +275,14 @@
   post:
     operationId: approveDshControlPanelPayoutRequest
     summary: Operator approves a governed WLT payout request via the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: payoutId
         in: path
         required: true
         schema: { type: string }
+      - $ref: "#/components/parameters/IdempotencyKey"
     requestBody:
       required: true
       content:
@@ -281,11 +290,14 @@
           schema:
             type: object
             additionalProperties: false
-            required: [idempotencyKey]
-            properties:
-              idempotencyKey: { type: string, minLength: 1 }
+            required: []
+            properties: {}
     responses:
-      "200": { description: Payout request approved (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: Payout request approved (verbatim passthrough),
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
@@ -295,13 +307,14 @@
   post:
     operationId: rejectDshControlPanelPayoutRequest
     summary: Operator rejects a governed WLT payout request via the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: payoutId
         in: path
         required: true
         schema: { type: string }
+      - $ref: "#/components/parameters/IdempotencyKey"
     requestBody:
       required: true
       content:
@@ -309,12 +322,15 @@
           schema:
             type: object
             additionalProperties: false
-            required: [idempotencyKey, reason]
+            required: [ reason ]
             properties:
-              idempotencyKey: { type: string, minLength: 1 }
               reason: { type: string, minLength: 1 }
     responses:
-      "200": { description: Payout request rejected (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: Payout request rejected (verbatim passthrough),
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
@@ -323,14 +339,16 @@
 /dsh/control-panel/finance/payout-requests/{payoutId}/process:
   post:
     operationId: processDshControlPanelPayoutRequest
-    summary: Operator moves a payout request to processing state via the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Operator moves a payout request to processing state via the DSH finance
+      proxy.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: payoutId
         in: path
         required: true
         schema: { type: string }
+      - $ref: "#/components/parameters/IdempotencyKey"
     requestBody:
       required: true
       content:
@@ -338,11 +356,14 @@
           schema:
             type: object
             additionalProperties: false
-            required: [idempotencyKey]
-            properties:
-              idempotencyKey: { type: string, minLength: 1 }
+            required: []
+            properties: {}
     responses:
-      "200": { description: Payout request processing started (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: Payout request processing started (verbatim passthrough),
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
@@ -352,13 +373,14 @@
   post:
     operationId: completeDshControlPanelPayoutRequest
     summary: Operator marks a payout request complete via the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: payoutId
         in: path
         required: true
         schema: { type: string }
+      - $ref: "#/components/parameters/IdempotencyKey"
     requestBody:
       required: true
       content:
@@ -366,11 +388,14 @@
           schema:
             type: object
             additionalProperties: false
-            required: [idempotencyKey]
-            properties:
-              idempotencyKey: { type: string, minLength: 1 }
+            required: []
+            properties: {}
     responses:
-      "200": { description: Payout request completed (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: Payout request completed (verbatim passthrough),
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
@@ -380,13 +405,14 @@
   post:
     operationId: failDshControlPanelPayoutRequest
     summary: Operator records a payout failure via the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: payoutId
         in: path
         required: true
         schema: { type: string }
+      - $ref: "#/components/parameters/IdempotencyKey"
     requestBody:
       required: true
       content:
@@ -394,12 +420,15 @@
           schema:
             type: object
             additionalProperties: false
-            required: [idempotencyKey, failureReason]
+            required: [ failureReason ]
             properties:
-              idempotencyKey: { type: string, minLength: 1 }
               failureReason: { type: string, minLength: 1 }
     responses:
-      "200": { description: Payout request failed state recorded (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: Payout request failed state recorded (verbatim passthrough),
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
@@ -408,9 +437,10 @@
 /dsh/control-panel/finance/settlements/from-delivered-orders:
   post:
     operationId: triggerDshControlPanelFinanceSettlementsFromDeliveredOrders
-    summary: Operator triggers governed WLT settlement calculation from delivered orders via the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Operator triggers governed WLT settlement calculation from delivered
+      orders via the DSH finance proxy.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     requestBody:
       required: true
       content:
@@ -418,41 +448,53 @@
           schema:
             type: object
             additionalProperties: false
-            required: [idempotencyKey]
+            required: []
             properties:
-              idempotencyKey: { type: string, minLength: 1 }
               partnerId: { type: string }
     responses:
-      "200": { description: Settlement triggered (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: Settlement triggered (verbatim passthrough),
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+    parameters:
+      - $ref: "#/components/parameters/IdempotencyKey"
 
 /dsh/control-panel/finance/settlement-policies/{partnerId}:
   get:
     operationId: getDshControlPanelFinanceSettlementPolicy
-    summary: Operator reads the governed WLT settlement policy for a partner via the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Operator reads the governed WLT settlement policy for a partner via the
+      DSH finance proxy.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: partnerId
         in: path
         required: true
         schema: { type: string }
     responses:
-      "200": { description: Settlement policy view (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: Settlement policy view (verbatim passthrough),
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
   put:
     operationId: upsertDshControlPanelFinanceSettlementPolicy
-    summary: Operator creates or updates the governed WLT settlement policy for a partner via the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Operator creates or updates the governed WLT settlement policy for a
+      partner via the DSH finance proxy.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: partnerId
         in: path
         required: true
         schema: { type: string }
+      - $ref: "#/components/parameters/IdempotencyKey"
     requestBody:
       required: true
       content:
@@ -460,14 +502,17 @@
           schema:
             type: object
             additionalProperties: false
-            required: [idempotencyKey]
+            required: []
             properties:
-              idempotencyKey: { type: string, minLength: 1 }
               settlementCycleDays: { type: integer, minimum: 1 }
               minimumSettlementAmountMinorUnits: { type: integer, minimum: 0 }
               currency: { type: string }
     responses:
-      "200": { description: Settlement policy upserted (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: Settlement policy upserted (verbatim passthrough),
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
@@ -475,16 +520,17 @@
 /dsh/control-panel/finance/reconciliation-cases:
   get:
     operationId: listDshControlPanelFinanceReconciliationCases
-    summary: Operator reads governed WLT reconciliation cases view through the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Operator reads governed WLT reconciliation cases view through the DSH
+      finance proxy.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: status
         in: query
         required: false
         schema:
           type: string
-          enum: [open, resolved]
+          enum: [ open, resolved ]
     responses:
       "200":
         description: WLT reconciliation cases view (verbatim passthrough).
@@ -496,9 +542,10 @@
 /dsh/control-panel/finance/reconciliation-cases/{caseId}:
   get:
     operationId: getDshControlPanelFinanceReconciliationCase
-    summary: Operator reads one governed WLT reconciliation case through the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Operator reads one governed WLT reconciliation case through the DSH
+      finance proxy.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: caseId
         in: path
@@ -516,14 +563,16 @@
 /dsh/control-panel/finance/reconciliation-cases/{caseId}/assign:
   post:
     operationId: assignDshControlPanelFinanceReconciliationCase
-    summary: Operator assigns a governed WLT reconciliation case to themselves or a designee via the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Operator assigns a governed WLT reconciliation case to themselves or a
+      designee via the DSH finance proxy.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: caseId
         in: path
         required: true
         schema: { type: string }
+      - $ref: "#/components/parameters/IdempotencyKey"
     requestBody:
       required: true
       content:
@@ -531,12 +580,15 @@
           schema:
             type: object
             additionalProperties: false
-            required: [idempotencyKey]
+            required: []
             properties:
-              idempotencyKey: { type: string, minLength: 1 }
               assigneeId: { type: string }
     responses:
-      "200": { description: Reconciliation case assigned (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: Reconciliation case assigned (verbatim passthrough),
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
@@ -545,14 +597,16 @@
 /dsh/control-panel/finance/reconciliation-cases/{caseId}/resolve:
   post:
     operationId: resolveDshControlPanelFinanceReconciliationCase
-    summary: Operator resolves a governed WLT reconciliation case via the DSH finance proxy.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Operator resolves a governed WLT reconciliation case via the DSH
+      finance proxy.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: caseId
         in: path
         required: true
         schema: { type: string }
+      - $ref: "#/components/parameters/IdempotencyKey"
     requestBody:
       required: true
       content:
@@ -560,13 +614,16 @@
           schema:
             type: object
             additionalProperties: false
-            required: [idempotencyKey, resolution]
+            required: [ resolution ]
             properties:
-              idempotencyKey: { type: string, minLength: 1 }
               resolution: { type: string, minLength: 1 }
               notes: { type: string }
     responses:
-      "200": { description: Reconciliation case resolved (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: Reconciliation case resolved (verbatim passthrough),
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
@@ -576,7 +633,7 @@
   get:
     operationId: listDshNotifications
     summary: List notifications for the authenticated actor.
-    tags: [notifications]
+    tags: [ notifications ]
     security:
       - bearerAuth: []
     responses:
@@ -591,7 +648,7 @@
   post:
     operationId: markDshNotificationRead
     summary: Mark a single notification as read.
-    tags: [notifications]
+    tags: [ notifications ]
     security:
       - bearerAuth: []
     parameters:
@@ -612,7 +669,7 @@
   post:
     operationId: markAllDshNotificationsRead
     summary: Mark all notifications read for the authenticated actor.
-    tags: [notifications]
+    tags: [ notifications ]
     security:
       - bearerAuth: []
     responses:
@@ -622,7 +679,7 @@
           application/json:
             schema:
               type: object
-              required: [markedCount]
+              required: [ markedCount ]
               properties:
                 markedCount: { type: integer }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
@@ -631,7 +688,7 @@
   get:
     operationId: getDshNotificationPreferences
     summary: List notification preferences for the authenticated actor.
-    tags: [notifications]
+    tags: [ notifications ]
     security:
       - bearerAuth: []
     responses:
@@ -641,7 +698,7 @@
           application/json:
             schema:
               type: object
-              required: [preferences]
+              required: [ preferences ]
               properties:
                 preferences:
                   type: array
@@ -651,20 +708,28 @@
   put:
     operationId: updateDshNotificationPreferences
     summary: Update notification preferences for the authenticated actor.
-    tags: [notifications]
+    tags: [ notifications ]
     security:
       - bearerAuth: []
     requestBody:
       required: true
       content:
         application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdateNotificationPreferenceRequest" }
+          schema:
+            {
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdateNotificationPreferenceR\
+                equest"
+            }
     responses:
       "200":
         description: Preference updated.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshNotificationPreferenceResponse" }
+            schema:
+              {
+                $ref: "../dsh.openapi.yaml#/components/schemas/DshNotificationPreferenceRespons\
+                  e"
+              }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
@@ -674,7 +739,7 @@
     summary: Create a special request
     tags:
       - DshClientSpecialRequests
-    security: [{ bearerAuth: [] }]
+    security: [ { bearerAuth: [] } ]
     requestBody:
       required: true
       content:
@@ -693,7 +758,7 @@
     summary: List special requests for the client
     tags:
       - DshClientSpecialRequests
-    security: [{ bearerAuth: [] }]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: limit
         in: query
@@ -706,7 +771,10 @@
         description: List
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestListResponse" }
+            schema:
+              {
+                $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestListResponse"
+              }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
 /dsh/client/special-requests/{requestId}:
@@ -715,7 +783,7 @@
     summary: Get special request
     tags:
       - DshClientSpecialRequests
-    security: [{ bearerAuth: [] }]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: requestId
         in: path
@@ -736,7 +804,7 @@
     summary: Cancel special request
     tags:
       - DshClientSpecialRequests
-    security: [{ bearerAuth: [] }]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: requestId
         in: path
@@ -758,7 +826,7 @@
     summary: Approve an operator-set quote and hand off to WLT for a payment session
     tags:
       - DshClientSpecialRequests
-    security: [{ bearerAuth: [] }]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: requestId
         in: path
@@ -770,7 +838,7 @@
         application/json:
           schema:
             type: object
-            required: [expectedVersion]
+            required: [ expectedVersion ]
             properties:
               expectedVersion: { type: integer }
     responses:
@@ -787,9 +855,10 @@
 /dsh/client/special-requests/{requestId}/information-exchange:
   get:
     operationId: getDshClientSpecialRequestInformationExchange
-    summary: Read the latest governed operator question and client response for an owned special request.
-    tags: [DshClientSpecialRequests]
-    security: [{ bearerAuth: [] }]
+    summary: Read the latest governed operator question and client response for an
+      owned special request.
+    tags: [ DshClientSpecialRequests ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: requestId
         in: path
@@ -800,16 +869,21 @@
         description: Latest information exchange or null when no question exists.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestInformationExchangeResponse" }
+            schema:
+              {
+                $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestInformationExch\
+                  angeResponse"
+              }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
 /dsh/client/special-requests/{requestId}/information-response:
   post:
     operationId: respondDshClientSpecialRequestInformation
-    summary: Answer the pending operator question and return the request to governed review.
-    tags: [DshClientSpecialRequests]
-    security: [{ bearerAuth: [] }]
+    summary: Answer the pending operator question and return the request to governed
+      review.
+    tags: [ DshClientSpecialRequests ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: requestId
         in: path
@@ -819,13 +893,21 @@
       required: true
       content:
         application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshRespondSpecialRequestInformation" }
+          schema:
+            {
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshRespondSpecialRequestInformat\
+                ion"
+            }
     responses:
       "200":
         description: Canonical request and completed information exchange.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestInformationMutationResponse" }
+            schema:
+              {
+                $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestInformationMuta\
+                  tionResponse"
+              }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
@@ -834,9 +916,10 @@
 /dsh/client/special-requests/{requestId}/execution:
   get:
     operationId: getDshClientSpecialRequestExecution
-    summary: Read governed assignment, delivery, proof, and latest exception evidence for an owned special request.
-    tags: [DshClientSpecialRequests]
-    security: [{ bearerAuth: [] }]
+    summary: Read governed assignment, delivery, proof, and latest exception
+      evidence for an owned special request.
+    tags: [ DshClientSpecialRequests ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: requestId
         in: path
@@ -847,7 +930,11 @@
         description: Dispatch-owned execution evidence.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestExecutionResponse" }
+            schema:
+              {
+                $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestExecutionRespon\
+                  se"
+              }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
@@ -855,8 +942,8 @@
   get:
     operationId: getDshOperatorSpecialRequestInformationExchange
     summary: Read the latest governed information exchange for a special request.
-    tags: [DshOperatorSpecialRequests]
-    security: [{ bearerAuth: [] }]
+    tags: [ DshOperatorSpecialRequests ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: requestId
         in: path
@@ -867,7 +954,11 @@
         description: Latest information exchange or null.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestInformationExchangeResponse" }
+            schema:
+              {
+                $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestInformationExch\
+                  angeResponse"
+              }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
@@ -875,9 +966,10 @@
 /dsh/operator/special-requests/{requestId}/information-request:
   post:
     operationId: requestDshOperatorSpecialRequestInformation
-    summary: Ask the client for missing information and move the request to customer_information.
-    tags: [DshOperatorSpecialRequests]
-    security: [{ bearerAuth: [] }]
+    summary: Ask the client for missing information and move the request to
+      customer_information.
+    tags: [ DshOperatorSpecialRequests ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: requestId
         in: path
@@ -887,13 +979,21 @@
       required: true
       content:
         application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshRequestSpecialRequestInformation" }
+          schema:
+            {
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshRequestSpecialRequestInformat\
+                ion"
+            }
     responses:
       "200":
         description: Canonical request and pending information exchange.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestInformationMutationResponse" }
+            schema:
+              {
+                $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestInformationMuta\
+                  tionResponse"
+              }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
@@ -903,9 +1003,10 @@
 /dsh/operator/special-requests/{requestId}/execution:
   get:
     operationId: getDshOperatorSpecialRequestExecution
-    summary: Read dispatch-owned execution, proof, and exception evidence for a special request.
-    tags: [DshOperatorSpecialRequests]
-    security: [{ bearerAuth: [] }]
+    summary: Read dispatch-owned execution, proof, and exception evidence for a
+      special request.
+    tags: [ DshOperatorSpecialRequests ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: requestId
         in: path
@@ -916,7 +1017,11 @@
         description: Dispatch-owned execution evidence.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestExecutionResponse" }
+            schema:
+              {
+                $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestExecutionRespon\
+                  se"
+              }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
