@@ -36,6 +36,12 @@ type PartnerActivationInput struct {
 	StoreID         string `json:"storeId"`
 }
 
+type PartnerStoreAccessInput struct {
+	StoreID          string `json:"storeId"`
+	PermissionBundle string `json:"permissionBundle,omitempty"`
+	Enabled          bool   `json:"enabled"`
+}
+
 type PartnerActivationResult struct {
 	ActivationID string    `json:"activationId"`
 	Code         string    `json:"code"`
@@ -104,6 +110,35 @@ func (c *Client) ProvisionPartnerActor(ctx context.Context, input PartnerActorPr
 		return PartnerActorView{}, ErrIdentityUnavailable
 	}
 	return view, nil
+}
+
+// SetPartnerStoreAccess replaces or revokes one actor's Identity-owned
+// executable permissions for a single DSH store.
+func (c *Client) SetPartnerStoreAccess(
+	ctx context.Context,
+	actorID string,
+	input PartnerStoreAccessInput,
+) error {
+	actorID = strings.TrimSpace(actorID)
+	input.StoreID = strings.TrimSpace(input.StoreID)
+	input.PermissionBundle = strings.TrimSpace(input.PermissionBundle)
+	if actorID == "" || input.StoreID == "" || (input.Enabled && input.PermissionBundle == "") {
+		return ErrIdentityRejected
+	}
+	path := "/internal/partner/actors/" + url.PathEscape(actorID) + "/store-access"
+	req, err := c.newDSHInternalRequest(ctx, http.MethodPut, path, input)
+	if err != nil {
+		return err
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return ErrIdentityUnavailable
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return identityMutationError(resp.StatusCode)
+	}
+	return nil
 }
 
 func (c *Client) IssuePartnerActivation(

@@ -27,6 +27,16 @@ type PartnerActivationInput struct {
 	OperatorContextID string
 }
 
+// PartnerStoreAccessInput changes one actor's executable authority for a
+// single DSH store. Operator context is injected by the trusted service
+// boundary and cannot be selected by a client payload.
+type PartnerStoreAccessInput struct {
+	StoreID           string
+	PermissionBundle  string
+	Enabled           bool
+	OperatorContextID string
+}
+
 func registeredPartnerBundle(code string) bool {
 	code = strings.TrimSpace(code)
 	for _, descriptor := range PartnerPermissionBundles() {
@@ -159,6 +169,67 @@ func (r *Repository) ProvisionPartnerActor(ctx context.Context, input PartnerAct
 		Roles:     []string{"partner"},
 		Active:    false,
 	}, nil
+}
+
+// SetPartnerStoreAccess replaces or removes all executable app-partner
+// permissions for exactly one store while preserving the actor's other store
+// assignments and unrelated authorities. It intentionally does not deactivate
+// the actor or revoke every session because one actor may belong to multiple
+// stores.
+func (r *Repository) SetPartnerStoreAccess(ctx context.Context, actorID string, input PartnerStoreAccessInput) (ActorAdminView, error) {
+	actorID = strings.TrimSpace(actorID)
+	operatorContextID := strings.TrimSpace(input.OperatorContextID)
+	storeID := strings.TrimSpace(input.StoreID)
+	bundle := strings.TrimSpace(input.PermissionBundle)
+	if actorID == "" || operatorContextID == "" || storeID == "" {
+		return ActorAdminView{}, ErrInvalidActivation
+	}
+
+	replacements := []Permission(nil)
+	if input.Enabled {
+		if !registeredPartnerBundle(bundle) {
+			return ActorAdminView{}, ErrInvalidActivation
+		}
+		replacements = PartnerBundlePermissions(bundle, storeID)
+		if len(replacements) == 0 {
+			return ActorAdminView{}, ErrInvalidActivation
+		}
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return ActorAdminView{}, err
+	}
+	defer tx.Rollback()
+
+	actor, err := actorByIDForUpdateTx(ctx, tx, actorID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ActorAdminView{}, ErrActorNotFound
+		}
+		return ActorAdminView{}, err
+	}
+	if strings.TrimSpace(actor.OperatorContextID) != operatorContextID || !hasRole(actor.Roles, "partner") {
+		return ActorAdminView{}, ErrForbidden
+	}
+
+	effectivePermissions := replacePartnerStorePermissions(actor.Permissions, replacements, storeID)
+	permissionsJSON, err := json.Marshal(effectivePermissions)
+	if err != nil {
+		return ActorAdminView{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE identity_actors
+		SET permissions = $2::jsonb, updated_at = now()
+		WHERE id = $1`, actorID, string(permissionsJSON)); err != nil {
+		return ActorAdminView{}, err
+	}
+	actor.Permissions = effectivePermissions
+	view := toAdminView(actor)
+	if err := tx.Commit(); err != nil {
+		return ActorAdminView{}, err
+	}
+	return view, nil
 }
 
 // IssuePartnerActivationForActor issues a single-use app-partner challenge only

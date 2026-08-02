@@ -62,3 +62,40 @@ func TestIssuePartnerActivationRejectsIncompleteInputBeforeDatabase(t *testing.T
 		t.Fatalf("expected missing store rejection, got %v", err)
 	}
 }
+
+func TestReplacePartnerStorePermissionsCanRevokeOneStoreOnly(t *testing.T) {
+	current := []Permission{
+		{Service: "dsh", Surface: "app-partner", Action: "team.manage", Scope: "store:store-1"},
+		{Service: "dsh", Surface: "app-partner", Action: "orders.manage", Scope: "store:store-2"},
+		{Service: "wlt", Surface: "app-partner", Action: "balance.read", Scope: "own"},
+	}
+	effective := replacePartnerStorePermissions(current, nil, "store-1")
+	if len(effective) != 2 {
+		t.Fatalf("expected only target store permissions revoked, got %#v", effective)
+	}
+	for _, permission := range effective {
+		if permission.Scope == "store:store-1" {
+			t.Fatalf("revoked store authority survived: %#v", permission)
+		}
+	}
+}
+
+func TestSetPartnerStoreAccessRejectsEnabledUnknownBundleBeforeDatabase(t *testing.T) {
+	repository := &Repository{}
+	_, err := repository.SetPartnerStoreAccess(t.Context(), "partner-1", PartnerStoreAccessInput{
+		StoreID: "store-1", PermissionBundle: "administrator", Enabled: true, OperatorContextID: "operator-main",
+	})
+	if err != ErrInvalidActivation {
+		t.Fatalf("expected invalid bundle rejection, got %v", err)
+	}
+}
+
+func TestSetPartnerStoreAccessAllowsRevocationWithoutBundleValidation(t *testing.T) {
+	repository := &Repository{}
+	_, err := repository.SetPartnerStoreAccess(t.Context(), "", PartnerStoreAccessInput{
+		StoreID: "store-1", Enabled: false, OperatorContextID: "operator-main",
+	})
+	if err != ErrInvalidActivation {
+		t.Fatalf("expected actor validation before database, got %v", err)
+	}
+}

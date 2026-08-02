@@ -25,5 +25,5 @@ func (s *protectedStoreServer) handlePartnerTeamMemberActionAudited(w http.Respo
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
 		return
 	}
-	partner.HandleExecuteStoreTeamMemberActionAudited(s.db)(w, partnerRequestWithActor(r, actor))
+	partner.HandleExecuteStoreTeamMemberActionAudited(s.db, s.identity)(w, partnerRequestWithActor(r, actor))
 }

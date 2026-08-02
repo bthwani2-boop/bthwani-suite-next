@@ -22,6 +22,7 @@ func RegisterPartnerAccessRoutes(handler http.Handler, repository *identity.Repo
 	s := &partnerAccessServer{repository: repository}
 	mux.HandleFunc("GET /internal/partner/permission-bundles", s.dshOnly(s.permissionBundles))
 	mux.HandleFunc("POST /internal/partner/actors/provision", s.dshOnly(s.provisionActor))
+	mux.HandleFunc("PUT /internal/partner/actors/{actorId}/store-access", s.dshOnly(s.setStoreAccess))
 	mux.HandleFunc("POST /internal/partner/actors/{actorId}/activations", s.dshOnly(s.issueActivation))
 }
 
@@ -87,6 +88,28 @@ func (s *partnerAccessServer) provisionActor(w http.ResponseWriter, r *http.Requ
 	sendJSON(w, http.StatusCreated, view)
 }
 
+func (s *partnerAccessServer) setStoreAccess(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		StoreID          string `json:"storeId"`
+		PermissionBundle string `json:"permissionBundle"`
+		Enabled          bool   `json:"enabled"`
+	}
+	if !decodeJSON(w, r, &request) {
+		return
+	}
+	view, err := s.repository.SetPartnerStoreAccess(r.Context(), r.PathValue("actorId"), identity.PartnerStoreAccessInput{
+		StoreID:           request.StoreID,
+		PermissionBundle:  request.PermissionBundle,
+		Enabled:           request.Enabled,
+		OperatorContextID: strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID")),
+	})
+	if err != nil {
+		writePartnerAccessError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, view)
+}
+
 func (s *partnerAccessServer) issueActivation(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		IssuedByActorID string `json:"issuedByActorId"`
@@ -126,8 +149,7 @@ func writePartnerAccessError(w http.ResponseWriter, err error) {
 	case errors.Is(err, identity.ErrActivationRateLimited):
 		sendError(w, http.StatusTooManyRequests, "RATE_LIMITED", "activation issuance is rate limited")
 	case errors.Is(err, identity.ErrActivationUnavailable):
-		sendError(w, http.StatusServiceUnavailable, "ACTIVATION_UNAVAILABLE", "activation issuance is unavailable")
-	default:
+		sendError(w, http.StatusServiceUnavailable, "ACTIVATION_UNAVAILABLE", "activation issuance is unavailable")	default:
 		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
 	}
 }

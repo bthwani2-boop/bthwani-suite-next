@@ -78,3 +78,50 @@ func TestPartnerMutationClientFailsClosedWithoutTrustConfiguration(t *testing.T)
 		t.Fatalf("expected unavailable without service trust, got %v", err)
 	}
 }
+
+func TestSetPartnerStoreAccessUsesTrustedPutBoundary(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut || r.URL.Path != "/internal/partner/actors/partner-actor-1/store-access" {
+			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Bearer dsh-secret" || r.Header.Get("X-Service-Caller") != "dsh" || r.Header.Get("X-Operator-Context-ID") != "operator-main" {
+			t.Fatalf("missing trusted headers: %#v", r.Header)
+		}
+		var input PartnerStoreAccessInput
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		if input.StoreID != "store-1" || input.PermissionBundle != "staff" || !input.Enabled {
+			t.Fatalf("unexpected input: %#v", input)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	client := NewClientWithInternalAccess(server.URL, "dsh-secret", "operator-main")
+	err := client.SetPartnerStoreAccess(context.Background(), "partner-actor-1", PartnerStoreAccessInput{
+		StoreID: "store-1", PermissionBundle: "staff", Enabled: true,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestSetPartnerStoreAccessAllowsBundlelessRevocation(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var input PartnerStoreAccessInput
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		if input.Enabled || input.PermissionBundle != "" || input.StoreID != "store-1" {
+			t.Fatalf("unexpected revocation payload: %#v", input)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	client := NewClientWithInternalAccess(server.URL, "dsh-secret", "operator-main")
+	if err := client.SetPartnerStoreAccess(context.Background(), "partner-actor-1", PartnerStoreAccessInput{StoreID: "store-1"}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
