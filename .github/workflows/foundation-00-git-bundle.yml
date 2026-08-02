@@ -37,7 +37,7 @@ jobs:
           git checkout --detach "${EXPECTED_HEAD_SHA}"
           test "$(git rev-parse HEAD)" = "${EXPECTED_HEAD_SHA}"
           test "$(git rev-list --count HEAD)" -gt 1
-          git rev-list --parents HEAD | grep -q ' '
+          test "$(git rev-list --parents --max-count=1 HEAD | awk '{ print NF }')" -gt 1
           git bundle create "${RUNNER_TEMP}/foundation-00.bundle" HEAD
           git bundle verify "${RUNNER_TEMP}/foundation-00.bundle"
       - name: Upload Git bundle
