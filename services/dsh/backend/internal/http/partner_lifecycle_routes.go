@@ -30,7 +30,7 @@ func RegisterPartnerLifecycleRoutes(
 	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/readiness", protected.withOperatorContextPartnerResource(protected.handleAggregatedPartnerReadiness))
 	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/documents", protected.withOperatorContextPartnerResource(protected.handleListPartnerDocuments))
 	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/documents", protected.withOperatorContextPartnerResource(protected.handleAddPartnerDocument))
-	mux.HandleFunc("PATCH /dsh/operator/partners/{partnerId}/documents/{docId}/review", protected.withOperatorContextPartnerResource(protected.handleReviewPartnerDocument))
+	mux.HandleFunc("PATCH /dsh/operator/partners/{partnerId}/documents/{docId}/review", protected.withOperatorContextPartnerResource(protected.handleReviewPartnerDocumentSeparated))
 	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/stores", protected.withOperatorContextPartnerResource(protected.handleListPartnerStores))
 	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/stores", protected.withOperatorContextPartnerResource(protected.handleOperatorContextLinkPartnerStore))
 	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/field-visits", protected.withOperatorContextPartnerResource(protected.handleListPartnerFieldVisits))
