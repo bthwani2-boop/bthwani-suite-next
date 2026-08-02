@@ -17,5 +17,3 @@ export function ControlPanelSessionProvider({ children }: { readonly children: R
 export function useControlPanelSession() {
   return useIdentitySession();
 }
-
-
