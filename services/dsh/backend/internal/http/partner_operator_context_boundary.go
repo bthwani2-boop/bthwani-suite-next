@@ -69,7 +69,7 @@ func (s *protectedStoreServer) handleOperatorContextListPartners(w http.Response
 }
 
 func (s *protectedStoreServer) handleOperatorContextCreatePartner(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleOperatorContextCreatePartner(s.db), PartnersPermissionManage, "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleOperatorContextCreatePartnerIdempotent(s.db), PartnersPermissionManage, "operator")
 }
 
 func (s *protectedStoreServer) handleOperatorContextFieldListPartnerDrafts(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +77,7 @@ func (s *protectedStoreServer) handleOperatorContextFieldListPartnerDrafts(w htt
 }
 
 func (s *protectedStoreServer) handleOperatorContextFieldCreatePartnerDraft(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleOperatorContextFieldCreateDraft(s.db), "field")
+	s.servePartnerHandler(w, r, partner.HandleOperatorContextFieldCreateDraftIdempotent(s.db), "field")
 }
 
 func (s *protectedStoreServer) handleOperatorContextLinkPartnerStore(w http.ResponseWriter, r *http.Request) {
