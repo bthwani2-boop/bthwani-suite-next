@@ -80,11 +80,12 @@ func TestActivationSurfaceRegistryCoversEveryActorType(t *testing.T) {
 	}
 }
 
-func TestActivationIssuancePoliciesSeparatePublicAndWorkforceRoles(t *testing.T) {
-	for _, role := range []string{"client", "partner"} {
-		if !publicOtpActorTypes[role] || workforceManagedActorTypes[role] {
-			t.Fatalf("role %q must be public OTP only", role)
-		}
+func TestActivationIssuancePoliciesSeparatePublicAndGovernedRoles(t *testing.T) {
+	if !publicOtpActorTypes["client"] || workforceManagedActorTypes["client"] {
+		t.Fatal("client must remain the only public OTP actor type")
+	}
+	if publicOtpActorTypes["partner"] || workforceManagedActorTypes["partner"] {
+		t.Fatal("partner must use the dedicated DSH-governed actor activation path")
 	}
 	for _, role := range []string{"field", "captain"} {
 		if publicOtpActorTypes[role] || !workforceManagedActorTypes[role] {
@@ -110,7 +111,7 @@ func TestValidateExpectedActivationTargetIgnoresRoleOrder(t *testing.T) {
 		t.Fatalf("wrong surface should be rejected, got %v", err)
 	}
 	if err := validateExpectedActivationTarget(actor, "partner", "app-partner"); !errors.Is(err, ErrInvalidActivation) {
-		t.Fatalf("public actor type must not use Workforce issuance, got %v", err)
+		t.Fatalf("partner must use the dedicated DSH-governed issuance path, got %v", err)
 	}
 }
 
@@ -143,11 +144,11 @@ func TestConsumeActivationRejectsRetiredCodeWithoutChallenge(t *testing.T) {
 	repo := newTestRepository(t, nil)
 	fakeDriverInst.setActors(t.Name(), map[string]Actor{
 		phone: {
-			ID:        "field-actor-1",
-			Username:  "field-actor",
-			OperatorContextID:  "context-1",
-			PhoneE164: phone,
-			Roles:     []string{"field"},
+			ID:                "field-actor-1",
+			Username:          "field-actor",
+			OperatorContextID: "context-1",
+			PhoneE164:         phone,
+			Roles:             []string{"field"},
 			Permissions: []Permission{
 				{Service: "dsh", Surface: "app-field", Action: "store:read", Scope: "assigned"},
 			},
@@ -169,9 +170,9 @@ func TestConsumeActivationRejectsRetiredCodeWithoutChallenge(t *testing.T) {
 func TestActorIdentityDerivesSurfaceAndServiceAccess(t *testing.T) {
 	expiresAt := time.Now().Add(time.Minute)
 	resolved := toIdentity(Actor{
-		ID:       "partner-1",
+		ID:                "partner-1",
 		OperatorContextID: "context-1",
-		Roles:    []string{"partner"},
+		Roles:             []string{"partner"},
 		Permissions: []Permission{
 			{Service: "dsh", Surface: "app-partner", Action: "store:write", Scope: "own"},
 		},
@@ -217,10 +218,10 @@ func TestResolveAccessTokenAcceptsRealSessionToken(t *testing.T) {
 		{
 			hash: tokenHash(token),
 			actor: Actor{
-				ID:       "operator-local-001",
-				Username: "operator",
+				ID:                "operator-local-001",
+				Username:          "operator",
 				OperatorContextID: "local-dsh",
-				Roles:    []string{"operator"},
+				Roles:             []string{"operator"},
 				Permissions: []Permission{
 					{Service: "dsh", Surface: "control-panel", Action: "store:read", Scope: "all"},
 				},
