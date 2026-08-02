@@ -278,7 +278,7 @@ func TestHandleMediaDownloadEndpoint(t *testing.T) {
 			media:    media.NewStaticProvider(&media.Client{}), // dummy media client so it passes the nil check
 		}
 		req := httptest.NewRequest(http.MethodGet, "/dsh/media", nil)
-		req.Header.Set("Authorization", "Bearer operator-token")
+		req.Header.Set("Authorization", "Bearer field-owner-token")
 		rec := httptest.NewRecorder()
 
 		s.handleMediaDownload(rec, req)
@@ -296,7 +296,7 @@ func TestHandleMediaDownloadEndpoint(t *testing.T) {
 			media:    nil, // unconfigured
 		}
 		req := httptest.NewRequest(http.MethodGet, "/dsh/media?mediaRef=some-ref", nil)
-		req.Header.Set("Authorization", "Bearer operator-token")
+		req.Header.Set("Authorization", "Bearer field-owner-token")
 		rec := httptest.NewRecorder()
 
 		s.handleMediaDownload(rec, req)
@@ -339,7 +339,7 @@ func TestHandleMediaDownloadEndpointDBIntegration(t *testing.T) {
 	// Unknown mediaRef (not present in DB) -> returns 404 Not Found
 	{
 		req := httptest.NewRequest(http.MethodGet, "/dsh/media?mediaRef=totally-unknown-ref-123456", nil)
-		req.Header.Set("Authorization", "Bearer operator-token")
+		req.Header.Set("Authorization", "Bearer field-owner-token")
 		rec := httptest.NewRecorder()
 
 		s.handleMediaDownload(rec, req)

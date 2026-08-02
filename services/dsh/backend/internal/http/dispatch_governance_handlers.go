@@ -75,7 +75,14 @@ func (s *protectedStoreServer) handleListGovernedOperatorDispatchAssignments(w h
 	if !ok {
 		return
 	}
-	operatorContextID := r.URL.Query().Get("operatorContextId")
+	// operatorContextId must come from the authenticated Identity session, not from
+	// client-supplied query parameters. A browser-controlled ID is a resource locator
+	// claim and confers no authorization (J009).
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+		return
+	}
 	if _, err := dispatch.ExpireOverdueAssignments(s.db, operatorContextID, actor.ID, 100); err != nil {
 		writeGovernedDispatchError(w, err)
 		return
@@ -98,7 +105,12 @@ func (s *protectedStoreServer) handleListGovernedCaptainDispatchAssignments(w ht
 	if !ok {
 		return
 	}
-	operatorContextID := r.URL.Query().Get("operatorContextId")
+	// OperatorContext must come from the trusted Identity session, not the browser (J009).
+	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
+	if operatorContextID == "" {
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+		return
+	}
 	if _, err := dispatch.ExpireOverdueAssignments(s.db, operatorContextID, "dispatch-captain-inbox", 100); err != nil {
 		writeGovernedDispatchError(w, err)
 		return
@@ -220,7 +232,12 @@ func (s *protectedStoreServer) handleListCaptainDispatchCandidates(w http.Respon
 	if !ok {
 		return
 	}
-	operatorContextID := r.URL.Query().Get("operatorContextId")
+	// OperatorContext must come from the trusted Identity session (J009).
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+		return
+	}
 	limit := parseDispatchLimit(r.URL.Query().Get("limit"), 100)
 	items, err := dispatch.ListCaptainDispatchCandidates(
 		s.db, operatorContextID, r.URL.Query().Get("serviceAreaCode"), limit,
@@ -346,8 +363,14 @@ func (s *protectedStoreServer) handleListDispatchDecisions(w http.ResponseWriter
 	if !ok {
 		return
 	}
+	// OperatorContext must come from the trusted Identity session (J009).
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+		return
+	}
 	items, err := dispatch.ListDispatchDecisions(
-		s.db, r.URL.Query().Get("operatorContextId"), r.URL.Query().Get("assignmentId"),
+		s.db, operatorContextID, r.URL.Query().Get("assignmentId"),
 		r.URL.Query().Get("orderId"), parseDispatchLimit(r.URL.Query().Get("limit"), 100),
 	)
 	if err != nil {
