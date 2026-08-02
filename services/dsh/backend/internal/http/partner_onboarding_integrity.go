@@ -11,7 +11,11 @@ func (s *protectedStoreServer) handleGovernedGetPartner(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleGovernedActivationTransition(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleGovernedActivationTransition(s.db, s.wlt), PartnersPermissionActivate, "operator")
+	handler := partner.EnforcePartnerDecisionSeparation(
+		s.db,
+		partner.HandleGovernedActivationTransition(s.db, s.wlt),
+	)
+	s.servePartnerPermissionHandler(w, r, handler, PartnersPermissionActivate, "operator")
 }
 
 func (s *protectedStoreServer) handleGovernedFieldGetPartnerDraft(w http.ResponseWriter, r *http.Request) {
