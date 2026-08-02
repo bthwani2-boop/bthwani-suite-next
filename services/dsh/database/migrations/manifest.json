@@ -3,7 +3,7 @@
   "service": "dsh",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "dsh-967_drop_dead_governance_tables.sql",
+  "cutover": "dsh-968_cod_operator_context_isolation.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -1348,6 +1348,13 @@
       "sha256": "6a12c2f78d7d900215394d821b2199bf90fbafc516369417f6fa2a61bf28c4a1",
       "historicalPrefix": "967",
       "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 193,
+      "file": "dsh-968_cod_operator_context_isolation.sql",
+      "sha256": "bba1f4b6325d124238d6011d8cd0dbac33708804b8b405f45c5ba6879f686093",
+      "historicalPrefix": "968",
+      "state": "ACTIVE"
     }
   ]
 }
