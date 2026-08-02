@@ -39,6 +39,8 @@ func main() {
 
 	authMode := os.Getenv("DSH_AUTH_MODE")
 	identityBaseURL := os.Getenv("DSH_IDENTITY_BASE_URL")
+	identityServiceToken := os.Getenv("DSH_IDENTITY_SERVICE_TOKEN")
+	operatorContextID := os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID")
 	wltBaseURL := os.Getenv("DSH_WLT_BASE_URL")
 	wltServiceToken := os.Getenv("WLT_DSH_SERVICE_TOKEN")
 	pushProviderURL := os.Getenv("DSH_PUSH_PROVIDER_URL")
@@ -60,7 +62,7 @@ func main() {
 
 	appCtx, cancelApp := context.WithCancel(context.Background())
 	mediaProvider := newMediaProvider(appCtx)
-	identityClient := auth.NewClient(identityBaseURL)
+	identityClient := auth.NewClientWithInternalAccess(identityBaseURL, identityServiceToken, operatorContextID)
 	wltClient := wlt.NewClient(wltBaseURL, wltServiceToken)
 
 	respCache := cache.NewClient(os.Getenv("DSH_VALKEY_ADDR"))
@@ -110,8 +112,8 @@ func main() {
 		deliveryExceptionGovernedRouter,
 	)
 	availabilityGuardedRouter := dshHttp.OperationsAvailabilityMiddleware(db, governedIncidentRouter)
-	OperatorContextGuardedRouter := dshHttp.TrustedOperatorContextMiddleware(identityClient, availabilityGuardedRouter)
-	handler := dshHttp.CorsMiddleware(authMode, OperatorContextGuardedRouter)
+	operatorContextGuardedRouter := dshHttp.TrustedOperatorContextMiddleware(identityClient, availabilityGuardedRouter)
+	handler := dshHttp.CorsMiddleware(authMode, operatorContextGuardedRouter)
 
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
 	go orders.RunOrderEventBridgeWorker(outboxCtx, db, 5*time.Second)
