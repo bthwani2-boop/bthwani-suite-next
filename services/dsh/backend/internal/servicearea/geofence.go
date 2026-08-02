@@ -22,12 +22,21 @@ var (
 
 var serviceAreaCodePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{1,79}$`)
 
+const (
+	serviceAreaSRID          = 4326
+	serviceAreaOverlapPolicy = "priority_then_code"
+)
+
 type Geofence struct {
 	ServiceAreaCode string      `json:"serviceAreaCode"`
 	DisplayName     string      `json:"displayName"`
 	Polygon         [][]float64 `json:"polygon"`
 	Active          bool        `json:"active"`
 	Priority        int         `json:"priority"`
+	SRID            int         `json:"srid"`
+	OverlapPolicy   string      `json:"overlapPolicy"`
+	EffectiveFrom   time.Time   `json:"effectiveFrom"`
+	ExpiresAt       *time.Time  `json:"expiresAt,omitempty"`
 	Version         int         `json:"version"`
 	CreatedAt       time.Time   `json:"createdAt"`
 	UpdatedAt       time.Time   `json:"updatedAt"`
@@ -38,6 +47,10 @@ type UpsertInput struct {
 	Polygon         [][]float64 `json:"polygon"`
 	Active          bool        `json:"active"`
 	Priority        int         `json:"priority"`
+	SRID            int         `json:"srid"`
+	OverlapPolicy   string      `json:"overlapPolicy"`
+	EffectiveFrom   time.Time   `json:"effectiveFrom"`
+	ExpiresAt       *time.Time  `json:"expiresAt"`
 	ExpectedVersion int         `json:"expectedVersion"`
 	Reason          string      `json:"reason"`
 	ActorID         string      `json:"-"`
@@ -55,7 +68,9 @@ type Resolution struct {
 
 func List(ctx context.Context, db *sql.DB) ([]Geofence, error) {
 	rows, err := db.QueryContext(ctx, `
-		SELECT service_area_code, display_name, polygon, active, priority, version, created_at, updated_at
+		SELECT service_area_code, display_name, polygon, active, priority,
+		       srid, overlap_policy, effective_from, expires_at,
+		       version, created_at, updated_at
 		FROM dsh_service_area_geofences
 		ORDER BY priority DESC, service_area_code ASC`)
 	if err != nil {
@@ -78,8 +93,20 @@ func Resolve(ctx context.Context, db *sql.DB, latitude, longitude float64) (Reso
 		return Resolution{}, ErrInvalid
 	}
 	rows, err := db.QueryContext(ctx, `
-		SELECT service_area_code, display_name, polygon, active, priority, version, created_at, updated_at
-		FROM dsh_service_area_geofences
+		WITH effective_versions AS (
+			SELECT DISTINCT ON (service_area_code)
+			       service_area_code, display_name, polygon, active, priority,
+			       srid, overlap_policy, effective_from, expires_at, version,
+			       created_at, created_at AS updated_at
+			FROM dsh_service_area_versions
+			WHERE effective_from <= NOW()
+			  AND (expires_at IS NULL OR expires_at > NOW())
+			ORDER BY service_area_code, effective_from DESC, version DESC
+		)
+		SELECT service_area_code, display_name, polygon, active, priority,
+		       srid, overlap_policy, effective_from, expires_at,
+		       version, created_at, updated_at
+		FROM effective_versions
 		WHERE active = TRUE
 		ORDER BY priority DESC, service_area_code ASC`)
 	if err != nil {
@@ -114,7 +141,21 @@ func Upsert(ctx context.Context, db *sql.DB, serviceAreaCode string, input Upser
 	input.ActorSurface = strings.TrimSpace(input.ActorSurface)
 	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
-	if !serviceAreaCodePattern.MatchString(serviceAreaCode) || input.DisplayName == "" || len(input.DisplayName) > 160 || len(input.Reason) < 3 || len(input.Reason) > 500 || input.ActorID == "" || input.ActorSurface == "" || len(input.IdempotencyKey) < 8 || input.Priority < 0 || input.Priority > 100000 || input.ExpectedVersion < 0 || !validPolygon(input.Polygon) {
+	input.OverlapPolicy = strings.TrimSpace(input.OverlapPolicy)
+	if input.SRID == 0 {
+		input.SRID = serviceAreaSRID
+	}
+	if input.OverlapPolicy == "" {
+		input.OverlapPolicy = serviceAreaOverlapPolicy
+	}
+	if !input.EffectiveFrom.IsZero() {
+		input.EffectiveFrom = input.EffectiveFrom.UTC()
+	}
+	if input.ExpiresAt != nil {
+		expiresAt := input.ExpiresAt.UTC()
+		input.ExpiresAt = &expiresAt
+	}
+	if !serviceAreaCodePattern.MatchString(serviceAreaCode) || input.DisplayName == "" || len(input.DisplayName) > 160 || len(input.Reason) < 3 || len(input.Reason) > 500 || input.ActorID == "" || input.ActorSurface == "" || len(input.IdempotencyKey) < 8 || input.Priority < 0 || input.Priority > 100000 || input.SRID != serviceAreaSRID || input.OverlapPolicy != serviceAreaOverlapPolicy || (!input.EffectiveFrom.IsZero() && input.EffectiveFrom.Before(time.Now().UTC().Add(-time.Second))) || (input.ExpiresAt != nil && !input.EffectiveFrom.IsZero() && !input.ExpiresAt.After(input.EffectiveFrom)) || input.ExpectedVersion < 0 || !validPolygon(input.Polygon) {
 		return Geofence{}, ErrInvalid
 	}
 
@@ -124,9 +165,13 @@ func Upsert(ctx context.Context, db *sql.DB, serviceAreaCode string, input Upser
 		Polygon         [][]float64 `json:"polygon"`
 		Active          bool        `json:"active"`
 		Priority        int         `json:"priority"`
+		SRID            int         `json:"srid"`
+		OverlapPolicy   string      `json:"overlapPolicy"`
+		EffectiveFrom   time.Time   `json:"effectiveFrom"`
+		ExpiresAt       *time.Time  `json:"expiresAt"`
 		ExpectedVersion int         `json:"expectedVersion"`
 		Reason          string      `json:"reason"`
-	}{serviceAreaCode, input.DisplayName, input.Polygon, input.Active, input.Priority, input.ExpectedVersion, input.Reason})
+	}{serviceAreaCode, input.DisplayName, input.Polygon, input.Active, input.Priority, input.SRID, input.OverlapPolicy, input.EffectiveFrom, input.ExpiresAt, input.ExpectedVersion, input.Reason})
 	sum := sha256.Sum256(hashPayload)
 	requestHash := hex.EncodeToString(sum[:])
 	operation := "upsert-service-area:" + serviceAreaCode
@@ -168,6 +213,13 @@ func Upsert(ctx context.Context, db *sql.DB, serviceAreaCode string, input Upser
 	if err != nil {
 		return Geofence{}, err
 	}
+	effectiveFrom := input.EffectiveFrom
+	if effectiveFrom.IsZero() {
+		effectiveFrom = time.Now().UTC()
+	}
+	if input.ExpiresAt != nil && !input.ExpiresAt.After(effectiveFrom) {
+		return Geofence{}, ErrInvalid
+	}
 	var result Geofence
 	var action string
 	var fromVersion any
@@ -178,11 +230,17 @@ func Upsert(ctx context.Context, db *sql.DB, serviceAreaCode string, input Upser
 		polygonJSON, _ := json.Marshal(input.Polygon)
 		err = tx.QueryRowContext(ctx, `
 			INSERT INTO dsh_service_area_geofences
-				(service_area_code, display_name, polygon, active, priority)
-			VALUES ($1, $2, $3::jsonb, $4, $5)
-			RETURNING service_area_code, display_name, polygon, active, priority, version, created_at, updated_at`,
+				(service_area_code, display_name, polygon, active, priority,
+				 srid, overlap_policy, effective_from, expires_at)
+			VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9)
+			RETURNING service_area_code, display_name, polygon, active, priority,
+			          srid, overlap_policy, effective_from, expires_at,
+			          version, created_at, updated_at`,
 			serviceAreaCode, input.DisplayName, string(polygonJSON), input.Active, input.Priority,
-		).Scan(&result.ServiceAreaCode, &result.DisplayName, &polygonJSON, &result.Active, &result.Priority, &result.Version, &result.CreatedAt, &result.UpdatedAt)
+			input.SRID, input.OverlapPolicy, effectiveFrom, input.ExpiresAt,
+		).Scan(&result.ServiceAreaCode, &result.DisplayName, &polygonJSON, &result.Active, &result.Priority,
+			&result.SRID, &result.OverlapPolicy, &result.EffectiveFrom, &result.ExpiresAt,
+			&result.Version, &result.CreatedAt, &result.UpdatedAt)
 		if err != nil {
 			return Geofence{}, err
 		}
@@ -199,11 +257,17 @@ func Upsert(ctx context.Context, db *sql.DB, serviceAreaCode string, input Upser
 		err = tx.QueryRowContext(ctx, `
 			UPDATE dsh_service_area_geofences
 			SET display_name = $2, polygon = $3::jsonb, active = $4, priority = $5,
+				srid = $6, overlap_policy = $7, effective_from = $8, expires_at = $9,
 				version = version + 1, updated_at = NOW()
 			WHERE service_area_code = $1
-			RETURNING service_area_code, display_name, polygon, active, priority, version, created_at, updated_at`,
+			RETURNING service_area_code, display_name, polygon, active, priority,
+			          srid, overlap_policy, effective_from, expires_at,
+			          version, created_at, updated_at`,
 			serviceAreaCode, input.DisplayName, string(polygonJSON), input.Active, input.Priority,
-		).Scan(&result.ServiceAreaCode, &result.DisplayName, &polygonJSON, &result.Active, &result.Priority, &result.Version, &result.CreatedAt, &result.UpdatedAt)
+			input.SRID, input.OverlapPolicy, effectiveFrom, input.ExpiresAt,
+		).Scan(&result.ServiceAreaCode, &result.DisplayName, &polygonJSON, &result.Active, &result.Priority,
+			&result.SRID, &result.OverlapPolicy, &result.EffectiveFrom, &result.ExpiresAt,
+			&result.Version, &result.CreatedAt, &result.UpdatedAt)
 		if err != nil {
 			return Geofence{}, err
 		}
@@ -228,6 +292,22 @@ func Upsert(ctx context.Context, db *sql.DB, serviceAreaCode string, input Upser
 		serviceAreaCode, input.ActorID, input.ActorSurface, action, fromVersion, result.Version, input.Reason, input.CorrelationID); err != nil {
 		return Geofence{}, err
 	}
+	versionPolygon, err := json.Marshal(result.Polygon)
+	if err != nil {
+		return Geofence{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO dsh_service_area_versions (
+			service_area_code, version, display_name, polygon, active, priority,
+			srid, overlap_policy, effective_from, expires_at,
+			actor_id, actor_surface, reason, correlation_id
+		) VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9, $10, $11, $12, $13, NULLIF($14, ''))`,
+		result.ServiceAreaCode, result.Version, result.DisplayName, string(versionPolygon),
+		result.Active, result.Priority, result.SRID, result.OverlapPolicy,
+		result.EffectiveFrom, result.ExpiresAt, input.ActorID, input.ActorSurface,
+		input.Reason, input.CorrelationID); err != nil {
+		return Geofence{}, err
+	}
 	responseJSON, _ := json.Marshal(result)
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_service_area_mutation_results
@@ -249,7 +329,11 @@ type rowScanner interface {
 func scanGeofence(row rowScanner) (Geofence, error) {
 	var item Geofence
 	var polygon []byte
-	if err := row.Scan(&item.ServiceAreaCode, &item.DisplayName, &polygon, &item.Active, &item.Priority, &item.Version, &item.CreatedAt, &item.UpdatedAt); err != nil {
+	if err := row.Scan(
+		&item.ServiceAreaCode, &item.DisplayName, &polygon, &item.Active, &item.Priority,
+		&item.SRID, &item.OverlapPolicy, &item.EffectiveFrom, &item.ExpiresAt,
+		&item.Version, &item.CreatedAt, &item.UpdatedAt,
+	); err != nil {
 		return Geofence{}, err
 	}
 	if err := json.Unmarshal(polygon, &item.Polygon); err != nil {
@@ -260,7 +344,9 @@ func scanGeofence(row rowScanner) (Geofence, error) {
 
 func getForUpdate(ctx context.Context, tx *sql.Tx, serviceAreaCode string) (Geofence, bool, error) {
 	row := tx.QueryRowContext(ctx, `
-		SELECT service_area_code, display_name, polygon, active, priority, version, created_at, updated_at
+		SELECT service_area_code, display_name, polygon, active, priority,
+		       srid, overlap_policy, effective_from, expires_at,
+		       version, created_at, updated_at
 		FROM dsh_service_area_geofences
 		WHERE service_area_code = $1
 		FOR UPDATE`, serviceAreaCode)
