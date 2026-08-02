@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
-
-	"github.com/lib/pq"
 )
 
 type PartnerStoreAccessInput struct {
@@ -129,7 +127,3 @@ func (r *Repository) SetPartnerStoreAccess(
 		Active:    active,
 	}, nil
 }
-
-// Keep pq imported in this Identity-owned access unit so generated database
-// type compatibility remains explicit when the actor role array evolves.
-var _ pq.StringArray
