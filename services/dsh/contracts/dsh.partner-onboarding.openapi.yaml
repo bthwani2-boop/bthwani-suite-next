@@ -3,9 +3,10 @@ x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: BThwani DSH Partner Onboarding API
-  version: 1.1.0
-  description: Governed contract for retry-safe partner creation, onboarding,
-    first-store ownership, evidence review, state transitions, and partner readback.
+  version: 1.2.0
+  description: Governed contract for retry-safe partner creation, independent
+    evidence review, audited lifecycle decisions, first-store ownership, and
+    synchronized partner readback.
 servers:
   - url: http://localhost:58080
 paths:
@@ -64,7 +65,11 @@ paths:
     post:
       tags: [ "dsh-operator" ]
       operationId: transitionDshPartner
-      summary: Apply one governed partner activation transition
+      summary: Apply one independently reviewed partner lifecycle decision
+      description: >-
+        The creator cannot approve or activate the same Partner. Approval,
+        rejection, and deactivation require an auditable reason. Expected
+        version and idempotency protect concurrent and unknown-result retries.
       parameters:
         - $ref: '#/components/parameters/PartnerId'
         - $ref: '#/components/parameters/ExpectedVersion'
@@ -81,10 +86,41 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PartnerTransitionResponse' }
+        '400': { $ref: '#/components/responses/DecisionReasonRequired' }
+        '403': { $ref: '#/components/responses/IndependentReviewRequired' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ReadinessFailed' }
         '428': { $ref: '#/components/responses/VersionRequired' }
         '503': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
+  /dsh/operator/partners/{partnerId}/documents/{docId}/review:
+    patch:
+      tags: [ "dsh-operator" ]
+      operationId: reviewDshPartnerDocument
+      summary: Record an independent evidence review decision
+      description: >-
+        The authenticated reviewer cannot review evidence uploaded by the same
+        actor. Every approval, rejection, or resubmission decision requires a
+        non-empty reason and produces immutable decision audit.
+      parameters:
+        - $ref: '#/components/parameters/PartnerId'
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DocumentReviewRequest' }
+      responses:
+        '200':
+          description: Document and immutable review decision.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DocumentReviewResponse' }
+        '400': { $ref: '#/components/responses/DecisionReasonRequired' }
+        '403': { $ref: '#/components/responses/IndependentReviewRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
       security:
         - bearerAuth: []
   /dsh/operator/partners/{partnerId}/stores:
@@ -300,6 +336,11 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 1 }
+    DocumentId:
+      name: docId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
     ExpectedVersion:
       name: version
       in: query
@@ -453,6 +494,16 @@ components:
       properties:
         toStatus: { $ref: '#/components/schemas/ActivationStatus' }
         reason: { type: string, maxLength: 500 }
+      allOf:
+        - if:
+            properties:
+              toStatus:
+                enum: [ ops_approved, ops_rejected, partner_deactivated ]
+            required: [ toStatus ]
+          then:
+            required: [ reason ]
+            properties:
+              reason: { type: string, minLength: 1, maxLength: 500 }
     PartnerTransitionResponse:
       type: object
       required: [ partner, event ]
@@ -461,7 +512,7 @@ components:
         event: { $ref: '#/components/schemas/ActivationEvent' }
     ActivationEvent:
       type: object
-      required: [ id, partnerId, fromStatus, toStatus, actorId, actorSurface, createdAt ]
+      required: [ id, partnerId, fromStatus, toStatus, actorId, actorSurface, reason, createdAt ]
       properties:
         id: { type: string }
         partnerId: { type: string }
@@ -476,6 +527,34 @@ components:
         actorSurface: { type: string }
         reason: { type: string }
         createdAt: { type: string, format: date-time }
+    DocumentReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [ decision, reason ]
+      properties:
+        decision:
+          type: string
+          enum: [ approved, rejected, needs_resubmit ]
+        reason: { type: string, minLength: 1, maxLength: 500 }
+    DocumentReviewResponse:
+      type: object
+      required: [ document, review ]
+      properties:
+        document:
+          type: object
+          additionalProperties: true
+        review:
+          type: object
+          required: [ id, documentId, partnerId, reviewedByActorId, decision, reason, createdAt ]
+          properties:
+            id: { type: string }
+            documentId: { type: string }
+            partnerId: { type: string }
+            reviewedByActorId: { type: string }
+            decision: { type: string }
+            reason: { type: string }
+            correlationId: { type: string }
+            createdAt: { type: string, format: date-time }
     LinkedStore:
       type: object
       required: [ storeId, displayName ]
@@ -536,18 +615,28 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
+    DecisionReasonRequired:
+      description: Approval, rejection, deactivation, and evidence review require an auditable reason.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    IndependentReviewRequired:
+      description: The creator or evidence uploader cannot approve the same owned record.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
     Forbidden:
       description: Actor is not authorized for this partner or surface.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     NotFound:
-      description: Partner or store was not found.
+      description: Partner, document, or store was not found.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     Conflict:
-      description: Version conflict, duplicate legal identity, or idempotency key reuse with another payload.
+      description: Version conflict, duplicate legal identity or primary phone, or idempotency key reuse with another payload.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
