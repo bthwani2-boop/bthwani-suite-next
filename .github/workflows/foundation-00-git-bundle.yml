@@ -16,16 +16,19 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Checkout exact pull-request head with reachable history
+      - name: Checkout pull-request branch with reachable history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Create self-contained Git bundle
+      - name: Verify and create self-contained Git bundle
         shell: bash
+        env:
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${EXPECTED_HEAD_SHA}"
           git rev-list --parents HEAD | grep -q ' '
           git bundle create "${RUNNER_TEMP}/foundation-00.bundle" HEAD
           git bundle verify "${RUNNER_TEMP}/foundation-00.bundle"
