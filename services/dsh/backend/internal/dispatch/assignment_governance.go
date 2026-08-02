@@ -14,6 +14,10 @@ import (
 )
 
 var (
+	ErrStale                      = errors.New("dispatch mutation rejected due to stale version")
+	ErrPreconditionFailed         = errors.New("dispatch mutation rejected due to precondition failure")
+	ErrAssignmentNotFound         = errors.New("assignment not found")
+	ErrCaptainProfileNotFound     = errors.New("captain dispatch profile not found")
 	ErrCaptainNotEligible = errors.New("captain is not eligible for dispatch")
 	ErrCaptainAtCapacity  = errors.New("captain dispatch capacity reached")
 	ErrOfferExpired       = errors.New("dispatch offer expired")
@@ -128,6 +132,36 @@ func validateGovernedCreateInput(input *GovernedCreateAssignmentInput) error {
 		return fmt.Errorf("%w: responseTimeoutSeconds must be between 30 and 600", ErrInvalid)
 	}
 	return nil
+}
+
+func GetCaptainDispatchProfile(db *sql.DB, operatorContextID, captainID string) (*CaptainDispatchCandidate, error) {
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
+	captainID = strings.TrimSpace(captainID)
+	if captainID == "" {
+		return nil, fmt.Errorf("%w: captainId is required", ErrInvalid)
+	}
+
+	var candidate CaptainDispatchCandidate
+	err = db.QueryRow(`
+		SELECT accreditation_status, availability_status, max_active_assignments, priority_score, version
+		FROM dsh_captain_dispatch_profiles
+		WHERE operator_context_id = $1 AND captain_id = $2
+	`, operatorContextID, captainID).Scan(
+		&candidate.AccreditationStatus, &candidate.AvailabilityStatus,
+		&candidate.MaxActiveAssignments, &candidate.PriorityScore, &candidate.Version,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrCaptainProfileNotFound
+		}
+		return nil, err
+	}
+	candidate.CaptainID = captainID
+	candidate.Eligible = true
+	return &candidate, nil
 }
 
 func UpsertCaptainDispatchProfile(db *sql.DB, input CaptainDispatchProfileInput) (*CaptainDispatchCandidate, error) {

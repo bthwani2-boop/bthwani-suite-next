@@ -62,7 +62,7 @@ func (s *protectedStoreServer) handleFieldMediaUpload(w http.ResponseWriter, r *
 			return
 		}
 	} else {
-		if err := fieldreadiness.AuthorizeStore(r.Context(), s.db, actor, storeID); err != nil {
+		if err := fieldreadiness.AuthorizeStore(r.Context(), s.db, s.workforce, actor, storeID); err != nil {
 			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
 			return
 		}

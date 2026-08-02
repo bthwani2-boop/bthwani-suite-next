@@ -188,6 +188,8 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 				return existing, true, nil
 			}
 		}
+		// Compensation cleanup
+		_ = s.identity.Deprovision(ctx, actor.ActorID)
 		return Person{}, false, err
 	}
 
@@ -263,6 +265,8 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 				return existing, true, nil
 			}
 		}
+		// Compensation cleanup
+		_ = s.identity.Deprovision(ctx, actor.ActorID)
 		return Person{}, false, err
 	}
 	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actor.ActorID,
@@ -327,6 +331,8 @@ func (s *Service) CreateEmployee(ctx context.Context, operator Operator, input C
 				return existing, true, nil
 			}
 		}
+		// Compensation cleanup
+		_ = s.identity.Deprovision(ctx, actor.ActorID)
 		return Person{}, false, err
 	}
 	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actor.ActorID,

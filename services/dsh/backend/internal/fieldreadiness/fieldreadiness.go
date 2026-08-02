@@ -241,14 +241,14 @@ type UpdateEscalationInput struct {
 	ResolutionNote string
 }
 
-func CreateVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, input CreateVisitInput) (Visit, error) {
+func CreateVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, input CreateVisitInput) (Visit, error) {
 	if input.StoreID == "" || input.FieldAgentID == "" {
 		return Visit{}, ErrInvalid
 	}
 	if err := validateStartLocation(input.StartLocation); err != nil {
 		return Visit{}, err
 	}
-	if err := AuthorizeStore(ctx, db, actor, input.StoreID); err != nil {
+	if err := AuthorizeStore(ctx, db, wf, actor, input.StoreID); err != nil {
 		return Visit{}, err
 	}
 	vt := input.VisitType
@@ -312,8 +312,8 @@ func GetVisit(ctx context.Context, db *sql.DB, visitID string) (Visit, error) {
 	return v, err
 }
 
-func ListStoreVisits(ctx context.Context, db *sql.DB, actor store.StoreActor, storeID string, limit int) ([]Visit, error) {
-	if err := AuthorizeStore(ctx, db, actor, storeID); err != nil {
+func ListStoreVisits(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, storeID string, limit int) ([]Visit, error) {
+	if err := AuthorizeStore(ctx, db, wf, actor, storeID); err != nil {
 		return nil, err
 	}
 	query := `SELECT ` + visitSelectCols + ` FROM dsh_field_visits WHERE store_id = $1`
@@ -365,7 +365,7 @@ type CompleteVisitInput struct {
 // CompleteVisit marks a visit complete inside a transaction after verifying
 // ownership, that every required readiness check has passed, no blocking
 // escalation is open, and that the completion GPS location is valid.
-func CompleteVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, visitID string, input CompleteVisitInput) (Visit, error) {
+func CompleteVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, visitID string, input CompleteVisitInput) (Visit, error) {
 	if err := validateStartLocation(input.CompletionLocation); err != nil {
 		return Visit{}, err
 	}
@@ -388,7 +388,7 @@ func CompleteVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, visi
 	if v.FieldAgentID != actor.ID && actor.Role != "operator" {
 		return Visit{}, ErrForbidden
 	}
-	allowed, err := store.ActorCanAccessStore(ctx, db, actor, v.StoreID)
+	allowed, err := store.ActorCanAccessStore(ctx, db, wf, actor, v.StoreID)
 	if err != nil {
 		return Visit{}, err
 	}
@@ -503,8 +503,8 @@ func CompleteVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, visi
 	return updated, nil
 }
 
-func UpsertReadinessCheck(ctx context.Context, db *sql.DB, actor store.StoreActor, visitID string, input UpdateCheckInput) (ReadinessCheck, error) {
-	v, err := GetOwnedVisit(ctx, db, actor, visitID)
+func UpsertReadinessCheck(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, visitID string, input UpdateCheckInput) (ReadinessCheck, error) {
+	v, err := GetOwnedVisit(ctx, db, wf, actor, visitID)
 	if err != nil {
 		return ReadinessCheck{}, err
 	}
@@ -512,7 +512,7 @@ func UpsertReadinessCheck(ctx context.Context, db *sql.DB, actor store.StoreActo
 		return ReadinessCheck{}, ErrVisitAlreadyComplete
 	}
 	if input.Status == CheckPassed {
-		if err := validateCheckEvidence(ctx, db, actor, input.EvidenceURL); err != nil {
+		if err := validateCheckEvidence(ctx, db, wf, actor, input.EvidenceURL); err != nil {
 			return ReadinessCheck{}, err
 		}
 	}
@@ -534,8 +534,8 @@ func UpsertReadinessCheck(ctx context.Context, db *sql.DB, actor store.StoreActo
 	return c, err
 }
 
-func ListVisitChecks(ctx context.Context, db *sql.DB, actor store.StoreActor, visitID string) ([]ReadinessCheck, error) {
-	if _, err := GetOwnedVisit(ctx, db, actor, visitID); err != nil {
+func ListVisitChecks(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, visitID string) ([]ReadinessCheck, error) {
+	if _, err := GetOwnedVisit(ctx, db, wf, actor, visitID); err != nil {
 		return nil, err
 	}
 	rows, err := db.QueryContext(ctx, `
@@ -556,11 +556,11 @@ func ListVisitChecks(ctx context.Context, db *sql.DB, actor store.StoreActor, vi
 	return list, rows.Err()
 }
 
-func CreateEscalation(ctx context.Context, db *sql.DB, actor store.StoreActor, input CreateEscalationInput) (Escalation, error) {
+func CreateEscalation(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, input CreateEscalationInput) (Escalation, error) {
 	if input.StoreID == "" || input.RaisedBy == "" || input.Description == "" {
 		return Escalation{}, ErrInvalid
 	}
-	if err := AuthorizeStore(ctx, db, actor, input.StoreID); err != nil {
+	if err := AuthorizeStore(ctx, db, wf, actor, input.StoreID); err != nil {
 		return Escalation{}, err
 	}
 	var visitIDSQL sql.NullString
@@ -677,7 +677,7 @@ func GetStoreOnboardingStatus(ctx context.Context, db *sql.DB, storeID string) (
 	}, nil
 }
 
-func validateCheckEvidence(ctx context.Context, db *sql.DB, actor store.StoreActor, mediaRef string) error {
+func validateCheckEvidence(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, mediaRef string) error {
 	ref := strings.TrimSpace(mediaRef)
 	if ref == "" {
 		return ErrEvidenceRequired

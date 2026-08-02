@@ -188,3 +188,32 @@ type ApiError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 }
+
+type OperationalAssignment struct {
+	ID                string     `json:"id"`
+	ActorID           string     `json:"actorId"`
+	OperatorContextID string     `json:"operatorContextId"`
+	Role              string     `json:"role"`
+	ScopeType         string     `json:"scopeType"`
+	ScopeTargetID     string     `json:"scopeTargetId"`
+	StartsOn          time.Time  `json:"startsOn"`
+	EndsOn            *time.Time `json:"endsOn,omitempty"`
+	Active            bool       `json:"active"`
+	AssignedBy        string     `json:"assignedBy,omitempty"`
+	CreatedAt         time.Time  `json:"createdAt"`
+}
+
+type OperationalAssignmentInput struct {
+	ScopeType     string     `json:"scopeType"`
+	ScopeTargetID string     `json:"scopeTargetId"`
+	StartsOn      time.Time  `json:"startsOn"`
+	EndsOn        *time.Time `json:"endsOn,omitempty"`
+}
+
+type ActorScopes struct {
+	ActorID           string   `json:"actorId"`
+	Role              string   `json:"role"`
+	OperatorContextID string   `json:"operatorContextId"`
+	StoreIDs          []string `json:"storeIds"`
+	ServiceAreaCodes  []string `json:"serviceAreaCodes"`
+}

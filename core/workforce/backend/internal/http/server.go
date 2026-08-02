@@ -60,8 +60,25 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux.HandleFunc("POST /workforce/reference/shifts", s.operatorOnly("reference:manage", s.createShift))
 	mux.HandleFunc("PATCH /workforce/reference/shifts/{code}", s.operatorOnly("reference:manage", s.updateShift))
 	mux.HandleFunc("GET /workforce/reference/supervisors", s.operatorOnly("provider:read", s.searchSupervisors))
+
+	// Internal routes
+	mux.HandleFunc("GET /internal/assignments/{actorId}/scopes", s.internalOnly(s.handleGetActorScopes))
+	mux.HandleFunc("PUT /internal/assignments/{actorId}/scopes", s.internalOnly(s.handleSetActorScopes))
+	
 	return mux
 }
+
+func (s *server) internalOnly(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if token != "WORKFORCE_DSH_SERVICE_TOKEN" && token != "WORKFORCE_INTERNAL_TOKEN" {
+			sendError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Invalid internal service token")
+			return
+		}
+		next(w, r)
+	}
+}
+
 
 // allowedCorsOrigins mirrors the identity service convention.
 func allowedCorsOrigins() map[string]bool {

@@ -62,6 +62,19 @@ func normalizeDepartmentScope(value string) string {
 	return strings.ReplaceAll(value, " ", "-")
 }
 
+func redactPersonPII(identity auth.Identity, person *workforce.Person) {
+	if identity.HasPermission("workforce", "pii:read", "all") {
+		return
+	}
+	if identity.Subject == person.ActorID {
+		return
+	}
+	if person.FieldProfile != nil {
+		person.FieldProfile.EmergencyContactName = ""
+		person.FieldProfile.EmergencyContactPhone = ""
+	}
+}
+
 func departmentsForAction(identity auth.Identity, action string) []string {
 	departments := []string{}
 	seen := map[string]struct{}{}
@@ -158,6 +171,9 @@ func (s *sovereignLeadershipServer) listDepartmentEmployees(w http.ResponseWrite
 		writeWorkforceError(w, err)
 		return
 	}
+	for i := range people {
+		redactPersonPII(identity, &people[i])
+	}
 	sendJSON(w, http.StatusOK, map[string]any{"employees": people})
 }
 
@@ -197,6 +213,7 @@ func (s *sovereignLeadershipServer) getDepartmentEmployee(w http.ResponseWriter,
 	if !requireEmployeeTarget(w, identity, "employee:read", person.Person) {
 		return
 	}
+	redactPersonPII(identity, &person.Person)
 	sendJSON(w, http.StatusOK, person)
 }
 

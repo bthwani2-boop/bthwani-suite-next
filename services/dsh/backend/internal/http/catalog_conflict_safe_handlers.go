@@ -155,7 +155,7 @@ func (s *protectedStoreServer) handlePutStoreImageSafe(w http.ResponseWriter, r 
 	}
 	storeID := r.PathValue("storeId")
 	if actor.Role != "operator" {
-		if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, storeID); err != nil {
+		if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, s.workforce, actor, storeID); err != nil {
 			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store does not belong to you")
 			return
 		}

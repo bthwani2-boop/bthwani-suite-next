@@ -140,6 +140,12 @@ func (c *Client) SearchActorPage(ctx context.Context, role, q, status string, li
 	return page, err
 }
 
+// Deprovision initiates a hard delete of an unactivated actor. This is used exclusively
+// for saga compensation when a downstream creation step fails.
+func (c *Client) Deprovision(ctx context.Context, actorID string) error {
+	return c.do(ctx, http.MethodDelete, "/internal/actors/"+url.PathEscape(actorID), nil, nil, nil)
+}
+
 func (c *Client) Deactivate(ctx context.Context, actorID, reason, correlationID string) error {
 	body := map[string]string{
 		"reason":        reason,

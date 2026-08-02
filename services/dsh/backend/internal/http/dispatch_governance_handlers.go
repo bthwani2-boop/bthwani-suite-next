@@ -111,6 +111,21 @@ func (s *protectedStoreServer) handleListGovernedCaptainDispatchAssignments(w ht
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return
 	}
+
+	readiness, err := s.getCaptainAggregatedReadiness(r, operatorContextID, actor.ID)
+	if err != nil {
+		writeGovernedDispatchError(w, err)
+		return
+	}
+	if !readiness.Ready {
+		store.SendJSON(w, http.StatusForbidden, map[string]any{
+			"error":   "CAPTAIN_NOT_READY",
+			"message": "you must complete your readiness requirements before listing assignments",
+			"missing": readiness.Missing,
+		})
+		return
+	}
+
 	if _, err := dispatch.ExpireOverdueAssignments(s.db, operatorContextID, "dispatch-captain-inbox", 100); err != nil {
 		writeGovernedDispatchError(w, err)
 		return
@@ -137,15 +152,21 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "captain OperatorContext context is required")
 		return
 	}
-	financialEligibility, err := s.refreshCaptainFinancialEligibility(r, actor.OperatorContextID, actor.ID)
+
+	readiness, err := s.getCaptainAggregatedReadiness(r, actor.OperatorContextID, actor.ID)
 	if err != nil {
-		writeCaptainFinancialEligibilityError(w, err)
+		writeGovernedDispatchError(w, err)
 		return
 	}
-	if !financialEligibility.Eligible {
-		store.SendError(w, http.StatusConflict, financialEligibility.IneligibilityReason, "captain does not meet the WLT-backed dispatch balance requirement")
+	if !readiness.Ready {
+		store.SendJSON(w, http.StatusForbidden, map[string]any{
+			"error":   "CAPTAIN_NOT_READY",
+			"message": "you must complete your readiness requirements before accepting assignments",
+			"missing": readiness.Missing,
+		})
 		return
 	}
+
 	assignment, err := dispatch.AcceptGovernedAssignment(s.db, r.PathValue("assignmentId"), actor.ID)
 	if err != nil {
 		writeGovernedDispatchError(w, err)

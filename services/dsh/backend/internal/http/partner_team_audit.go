@@ -16,7 +16,7 @@ func (s *protectedStoreServer) handlePartnerTeamMemberActionAudited(w http.Respo
 		return
 	}
 	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return

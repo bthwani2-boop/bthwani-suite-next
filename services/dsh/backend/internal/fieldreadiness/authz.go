@@ -9,8 +9,8 @@ import (
 
 // AuthorizeStore ensures the actor is allowed to operate against storeID
 // (assigned scope, or operator override), returning ErrForbidden otherwise.
-func AuthorizeStore(ctx context.Context, db *sql.DB, actor store.StoreActor, storeID string) error {
-	allowed, err := store.ActorCanAccessStore(ctx, db, actor, storeID)
+func AuthorizeStore(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, storeID string) error {
+	allowed, err := store.ActorCanAccessStore(ctx, db, wf, actor, storeID)
 	if err != nil {
 		return err
 	}
@@ -24,7 +24,7 @@ func AuthorizeStore(ctx context.Context, db *sql.DB, actor store.StoreActor, sto
 // belongs to and, for non-operator field actors, owns the visit itself.
 // Returns ErrNotFound if the visit doesn't exist, ErrForbidden if the actor
 // cannot access its store or visit.
-func GetOwnedVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, visitID string) (Visit, error) {
+func GetOwnedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, visitID string) (Visit, error) {
 	v, err := GetVisit(ctx, db, visitID)
 	if err != nil {
 		return Visit{}, err
@@ -32,7 +32,7 @@ func GetOwnedVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, visi
 	if actor.Role != "operator" && v.FieldAgentID != actor.ID {
 		return Visit{}, ErrForbidden
 	}
-	if err := AuthorizeStore(ctx, db, actor, v.StoreID); err != nil {
+	if err := AuthorizeStore(ctx, db, wf, actor, v.StoreID); err != nil {
 		return Visit{}, err
 	}
 	return v, nil

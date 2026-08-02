@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 
 	"dsh-api/internal/auth"
@@ -14,13 +15,15 @@ import (
 	"dsh-api/internal/partner"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
+	"dsh-api/internal/workforceclient"
 )
 
 type protectedStoreServer struct {
-	db       *sql.DB
-	identity *auth.Client
-	wlt      *wlt.Client
-	media    *media.Provider
+	db        *sql.DB
+	identity  *auth.Client
+	wlt       *wlt.Client
+	media     *media.Provider
+	workforce *workforceclient.Client
 }
 
 // Partners permission actions on the control-panel surface, covering store
@@ -101,7 +104,13 @@ func (s *protectedStoreServer) writeHomeDiscoveryAdminResult(w http.ResponseWrit
 }
 
 func newProtectedStoreServer(db *sql.DB, identity *auth.Client, wltClient *wlt.Client, mediaProvider *media.Provider) *protectedStoreServer {
-	return &protectedStoreServer{db: db, identity: identity, wlt: wltClient, media: mediaProvider}
+	return &protectedStoreServer{
+		db:        db,
+		identity:  identity,
+		wlt:       wltClient,
+		media:     mediaProvider,
+		workforce: workforceclient.NewClient(os.Getenv("DSH_WORKFORCE_BASE_URL"), os.Getenv("WORKFORCE_DSH_SERVICE_TOKEN")),
+	}
 }
 
 func (s *protectedStoreServer) mediaClient() *media.Client {
@@ -183,7 +192,7 @@ func (s *protectedStoreServer) servePartnerSelfHandler(
 	if !ok {
 		return
 	}
-	row, _, err := store.ResolveActorStore(r.Context(), s.db, actor)
+	row, _, err := store.ResolveActorStore(r.Context(), s.db, s.workforce, actor)
 	if err != nil {
 		s.writeStoreError(w, err)
 		return
@@ -232,7 +241,7 @@ func (s *protectedStoreServer) handleStoreContext(w http.ResponseWriter, r *http
 	if !ok {
 		return
 	}
-	row, scope, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, r.URL.Query().Get("storeId"))
+	row, scope, err := store.ResolveActorStoreForID(r.Context(), s.db, s.workforce, actor, r.URL.Query().Get("storeId"))
 	if err != nil {
 		s.writeStoreError(w, err)
 		return
@@ -299,7 +308,7 @@ func (s *protectedStoreServer) handlePartnerSettings(w http.ResponseWriter, r *h
 		return
 	}
 	response, err := store.UpdatePartnerSettings(
-		r.Context(), s.db, actor, r.PathValue("storeId"),
+		r.Context(), s.db, s.workforce, actor, r.PathValue("storeId"),
 		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input,
 	)
 	s.writeActionResponse(w, response, err)
@@ -311,7 +320,7 @@ func (s *protectedStoreServer) handleGetPartnerSettings(w http.ResponseWriter, r
 		return
 	}
 	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -345,7 +354,7 @@ func (s *protectedStoreServer) handleFieldVerification(w http.ResponseWriter, r 
 		return
 	}
 	response, err := store.SubmitFieldVerification(
-		r.Context(), s.db, actor, r.PathValue("storeId"),
+		r.Context(), s.db, s.workforce, actor, r.PathValue("storeId"),
 		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input,
 	)
 	s.writeActionResponse(w, response, err)
@@ -361,7 +370,7 @@ func (s *protectedStoreServer) handleCaptainReadiness(w http.ResponseWriter, r *
 		return
 	}
 	response, err := store.ReportCaptainReadiness(
-		r.Context(), s.db, actor, r.PathValue("storeId"),
+		r.Context(), s.db, s.workforce, actor, r.PathValue("storeId"),
 		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input,
 	)
 	s.writeActionResponse(w, response, err)
@@ -377,7 +386,7 @@ func (s *protectedStoreServer) handleOperatorGovernance(w http.ResponseWriter, r
 		return
 	}
 	response, err := store.GovernStore(
-		r.Context(), s.db, actor, r.PathValue("storeId"),
+		r.Context(), s.db, s.workforce, actor, r.PathValue("storeId"),
 		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input,
 	)
 	s.writeActionResponse(w, response, err)
@@ -415,7 +424,7 @@ func (s *protectedStoreServer) handlePartnerStoreTeam(w http.ResponseWriter, r *
 		return
 	}
 	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -433,7 +442,7 @@ func (s *protectedStoreServer) handlePartnerInviteTeamMember(w http.ResponseWrit
 		return
 	}
 	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -517,7 +526,7 @@ func (s *protectedStoreServer) handlePartnerGetCourierSettings(w http.ResponseWr
 		return
 	}
 	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -535,7 +544,7 @@ func (s *protectedStoreServer) handlePartnerUpdateCourierSettings(w http.Respons
 		return
 	}
 	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -553,7 +562,7 @@ func (s *protectedStoreServer) handlePartnerCoverageZones(w http.ResponseWriter,
 		return
 	}
 	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return

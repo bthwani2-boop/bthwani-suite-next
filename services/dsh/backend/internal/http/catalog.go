@@ -85,7 +85,7 @@ func (s *protectedStoreServer) partnerStore(w http.ResponseWriter, r *http.Reque
 	if !ok {
 		return store.StoreActor{}, "", false
 	}
-	row, _, err := store.ResolveActorStore(r.Context(), s.db, actor)
+	row, _, err := store.ResolveActorStore(r.Context(), s.db, s.workforce, actor)
 	if err != nil {
 		s.writeStoreError(w, err)
 		return store.StoreActor{}, "", false

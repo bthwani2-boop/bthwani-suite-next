@@ -214,7 +214,50 @@ func (r *Repository) SearchActorsGoverned(ctx context.Context, input ActorSearch
 	if err := rows.Err(); err != nil {
 		return ActorSearchPage{}, err
 	}
+
 	return page, nil
+}
+
+// DeleteProvisionedActor safely performs a hard delete of an actor if and only if
+// it is in the 'PROVISIONED' state and has never logged in. This supports saga
+// compensation during failed HR/Platform provisioning processes.
+func (r *Repository) DeleteProvisionedActor(ctx context.Context, actorID string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Ensure the actor is purely provisioned and has no password (never activated/claimed).
+	// We check status by inferring from 'active' and 'password_hash'. 
+	// Our model maps PROVISIONED when password_hash = '' and active = false.
+	var active bool
+	var passHash string
+	err = tx.QueryRowContext(ctx, `SELECT active, password_hash FROM actors WHERE id = $1 FOR UPDATE`, actorID).Scan(&active, &passHash)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil // Already deleted or doesn't exist, idempotent success
+		}
+		return err
+	}
+
+	if active || passHash != "" {
+		return errors.New("cannot delete an actor that has been activated or claimed")
+	}
+
+	// Delete roles first, then the actor. 
+	// (Depending on FK constraints ON DELETE CASCADE, deleting actor might be enough, but we do both to be safe).
+	_, err = tx.ExecContext(ctx, `DELETE FROM actor_roles WHERE actor_id = $1`, actorID)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx, `DELETE FROM actors WHERE id = $1`, actorID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *Repository) ActorAdminByIDGoverned(ctx context.Context, operatorContextID, actorID string) (ActorAdminView, error) {

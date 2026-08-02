@@ -89,7 +89,7 @@ func main() {
 	dshHttp.RegisterPickupRecoveryRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPlatformPolicyRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterAdministrationRoutes(router, db, identityClient, wltClient, mediaProvider)
-	dshHttp.RegisterWorkforceScopeRoutes(router, db, identityClient, wltClient, mediaProvider)
+
 	dshHttp.RegisterWorkforceEmployeeMediaRoute(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterLegacyContractCompatibilityRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterGovernedIncidentRoutes(router, db, identityClient, wltClient, mediaProvider)
