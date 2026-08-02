@@ -17,9 +17,9 @@ import {
   configureIdentitySession,
   configureIdentitySessionStorage,
   type SessionStorageAdapter,
+  resolveIdentityApiBaseUrl,
   useIdentitySession,
 } from "@bthwani/core-identity";
-import { resolveIdentityApiBaseUrl } from "../../../../services/dsh/frontend/shared/_kernel/identity-api-base-url";
 import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
 
 const FIELD_APP_SCHEME = "bthwani-field-next";

@@ -510,6 +510,102 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/PartnerPermissionBundleDescriptor'
+  /internal/partner/actors/provision:
+    post:
+      tags:
+        - InternalPartner
+      summary: Provision a partner actor
+      operationId: provisionPartnerActor
+      description: |
+        Service-to-service only. Creates a partner actor.
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/ServiceCaller"
+        - name: X-Operator-Context-ID
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '201':
+          description: Partner actor provisioned successfully.
+        '400':
+          $ref: "#/components/responses/InvalidRequest"
+        '401':
+          $ref: "#/components/responses/Unauthenticated"
+        '403':
+          $ref: "#/components/responses/Forbidden"
+  /internal/partner/actors/{actorId}/store-access:
+    put:
+      tags:
+        - InternalPartner
+      summary: Set partner store access
+      operationId: setPartnerStoreAccess
+      description: |
+        Service-to-service only.
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/ServiceCaller"
+        - name: X-Operator-Context-ID
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Partner store access updated successfully.
+        '400':
+          $ref: "#/components/responses/InvalidRequest"
+        '401':
+          $ref: "#/components/responses/Unauthenticated"
+        '403':
+          $ref: "#/components/responses/Forbidden"
+  /internal/partner/actors/{actorId}/activations:
+    post:
+      tags:
+        - InternalPartner
+      summary: Issue partner activation
+      operationId: issuePartnerActivation
+      description: |
+        Service-to-service only.
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/ServiceCaller"
+        - name: X-Operator-Context-ID
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema:
+            type: string
+        - in: header
+          name: X-Correlation-ID
+          required: false
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Partner activation issued successfully.
+        '400':
+          $ref: "#/components/responses/InvalidRequest"
+        '401':
+          $ref: "#/components/responses/Unauthenticated"
+        '403':
+          $ref: "#/components/responses/Forbidden"
 components:
   securitySchemes:
     bearerAuth:
