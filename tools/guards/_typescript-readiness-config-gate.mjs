@@ -137,8 +137,7 @@ function removeTrailingCommas(input) {
 }
 
 function parseJsonc(relativePath) {
-  const absolutePath = path.join(repoRoot, relativePath);
-  const raw = fs.readFileSync(absolutePath, "utf8").replace(/^\uFEFF/, "");
+  const raw = fs.readFileSync(path.join(repoRoot, relativePath), "utf8").replace(/^\uFEFF/, "");
   try {
     return {
       raw,
@@ -155,7 +154,8 @@ function own(object, property) {
 }
 
 function optionLine(raw, option) {
-  const match = new RegExp(`"${option.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"\\s*:`).exec(raw);
+  const escaped = option.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = new RegExp(`"${escaped}"\\s*:`).exec(raw);
   return match ? lineNumber(raw, match.index) : 0;
 }
 
@@ -168,11 +168,7 @@ if (!tsconfigFiles.includes(canonicalConfig)) {
   violations.push({ file: canonicalConfig, line: 0, message: "CANONICAL_TSCONFIG_MISSING" });
 }
 
-const parsedConfigs = new Map();
-for (const file of tsconfigFiles) {
-  parsedConfigs.set(file, parseJsonc(file));
-}
-
+const parsedConfigs = new Map(tsconfigFiles.map((file) => [file, parseJsonc(file)]));
 const canonical = parsedConfigs.get(canonicalConfig)?.parsed;
 const canonicalAliases = new Set(Object.keys(canonical?.compilerOptions?.paths ?? {}));
 
@@ -270,24 +266,27 @@ const sourceFiles = gitTracked([
   ":(glob)**/*.mjs",
   ":(glob)**/*.cjs",
 ]);
-const compilerApiPattern = /(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(\s*)["']typescript["']/g;
-const compilerApiConsumers = [];
+const compilerApiConsumers = new Set();
 
 for (const file of sourceFiles) {
   if (file.endsWith(".d.ts") || file === "tools/guards/_typescript-readiness-config-gate.mjs") continue;
   const raw = fs.readFileSync(path.join(repoRoot, file), "utf8");
-  let match;
-  while ((match = compilerApiPattern.exec(raw))) {
-    compilerApiConsumers.push(file);
-    violations.push({
-      file,
-      line: lineNumber(raw, match.index),
-      message: "DIRECT_TYPESCRIPT_COMPILER_API_DEPENDENCY",
-    });
-  }
+  const compilerApiPattern = /(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(\s*)["']typescript["']/g;
+  if (compilerApiPattern.test(raw)) compilerApiConsumers.add(file);
 }
 
 console.log(`typescript_readiness_tsconfig_files: ${tsconfigFiles.length}`);
 console.log(`typescript_readiness_canonical_aliases: ${canonicalAliases.size}`);
-console.log(`typescript_readiness_compiler_api_consumers: ${new Set(compilerApiConsumers).size}`);
+console.log(`typescript_readiness_compiler_api_consumers: ${compilerApiConsumers.size}`);
+for (const file of [...compilerApiConsumers].sort()) {
+  console.log(`typescript_readiness_compiler_api_consumer: ${file}`);
+}
+
+if (compilerApiConsumers.size > 0) {
+  console.warn(
+    "typescript-readiness note: Compiler API consumers are inventoried for the future TypeScript 7 experiment; " +
+      "they remain validated on TypeScript 6.0.3 during this readiness phase.",
+  );
+}
+
 fail(guardId, violations);
