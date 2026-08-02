@@ -704,7 +704,6 @@ components:
           minItems: 1
           items:
             type: string
-            enum: [ client, partner, captain, field, operator, system ]
         permissions:
           type: array
           items:
@@ -784,7 +783,6 @@ components:
           type: array
           items:
             type: string
-            enum: [ client, partner, captain, field, operator, system ]
         active:
           type: boolean
     IssueActivationForActorRequest:

@@ -61,6 +61,7 @@
   },
   "exports": {
     "./control-panel": "./frontend/control-panel/index.ts",
+    "./control-panel/finance": "./frontend/control-panel/finance/index.ts",
     "./control-panel/navigation": "./frontend/control-panel/navigation.ts",
     "./control-panel/session": "./frontend/control-panel/session.ts",
     "./control-panel/administration": "./frontend/control-panel/administration/index.ts",
