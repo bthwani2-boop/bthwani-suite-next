@@ -2,13 +2,13 @@
 
 > **المستودع:** `bthwani2-boop/bthwani-suite-next`
 >
-> **فرع التنفيذ:** `smsm`
+> **فرع التنفيذ:** `CURRENT_BRANCH`
 >
 > **الصفة:** `DERIVED_SUPPORT_ARTIFACT / EXECUTION_PLAN_PACKAGE`
 >
 > **الحالة التنفيذية:** `FIX_REQUIRED`
 >
-> **قاعدة الادعاء:** اكتمال هذه الوثائق لا يعني إغلاق المنصة. الإغلاق لا يصدر إلا بعد تنفيذها على الكود الحي ونجاح جميع الأدلة المنطبقة على SHA نهائي واحد.
+> **قاعدة الادعاء:** اكتمال هذه الوثائق لا يعني إغلاق المنصة. الإغلاق لا يصدر إلا بعد تنفيذها على الكود الحي ونجاح جميع الأدلة المنطبقة على أحدث SHA (`CURRENT_SHA`).
 
 ## 1. سبب إعادة البناء
 
@@ -27,9 +27,9 @@
 
 ```yaml
 repository: bthwani2-boop/bthwani-suite-next
-work_branch: smsm
-base_branch: master
-pinned_head_before_master_plan_rewrite: 315f9ae15674cccf660e6f5eb5a958e165a8af09
+work_branch: CURRENT_BRANCH
+base_branch: CURRENT_BASE_BRANCH
+pinned_head_before_master_plan_rewrite: CURRENT_SHA
 force_push: forbidden
 history_rewrite: forbidden
 automatic_branch: forbidden
@@ -40,7 +40,7 @@ production: forbidden_without_explicit_authorization
 current_decision: FIX_REQUIRED
 ```
 
-يُعاد تثبيت رأس `smsm`:
+يُعاد تثبيت رأس الفرع الحالي (`CURRENT_BRANCH`):
 
 1. قبل التشخيص.
 2. قبل كل دفعة كتابة.
@@ -64,7 +64,7 @@ current_decision: FIX_REQUIRED
 9. `16H_SMSM_SURFACE_CONTROL_AND_STATE_CLOSURE_MATRIX.md` — كل Surface وصفحة وشاشة وتبويب وزر وأيقونة وحالة مرئية.
 10. `16I_SMSM_LAYER_TEST_RUNTIME_AND_FINAL_CLOSURE_GATES.md` — معايير إغلاق العقود والباك إند وقواعد البيانات والـRuntime والاختبارات والتنظيف والقرار النهائي.
 
-بالنسبة لتخطيط إغلاق DSH/WLT على `smsm`، تمثل الحزمة `16 + 16A..16I` المرجع التنفيذي الحالي. الخطتان `14_FULL_SURFACE_CLOSURE_PLAN.md` و`15_AUTHORITATIVE_DSH_WLT_FULLSTACK_CLOSURE_PLAN.md` مراجع تخطيط تاريخية ولا تثبتان الحالة الحالية ولا تستخدمان بالتوازي مع هذه الحزمة.
+بالنسبة لتخطيط إغلاق DSH/WLT على الفرع الحالي، تمثل الحزمة `16 + 16A..16I` المرجع التنفيذي الحالي. الخطتان `14_FULL_SURFACE_CLOSURE_PLAN.md` و`15_AUTHORITATIVE_DSH_WLT_FULLSTACK_CLOSURE_PLAN.md` مراجع تخطيط تاريخية ولا تثبتان الحالة الحالية ولا تستخدمان بالتوازي مع هذه الحزمة.
 
 ## 4. الحقيقة الحاكمة للمنصة
 
@@ -156,7 +156,7 @@ controls_without_real_effect: 0
 required_surfaces_without_readback: 0
 ```
 
-لا تسجل قيمة صفر لعنصر لم يُقَس على SHA النهائي.
+لا تسجل قيمة صفر لعنصر لم يُقَس على أحدث SHA.
 
 ## 7. الشرائح الرأسية الإلزامية داخل كل رحلة
 
@@ -217,7 +217,7 @@ FS-18 Cleanup/zero residue/same-SHA evidence
 
 ### المرحلة 7 — إغلاق الأسطح والطبقات والسيناريو المتكامل
 
-`16H` ثم `16I`، مع إعادة توليد الجرد على SHA النهائي وتشغيل السيناريوهات الإيجابية والسلبية والتعافي.
+`16H` ثم `16I`، مع إعادة توليد الجرد على أحدث SHA وتشغيل السيناريوهات الإيجابية والسلبية والتعافي.
 
 ## 9. معيار إغلاق كل رحلة
 
@@ -242,7 +242,7 @@ runtime_readback: PASS
 observability_and_audit: PASS
 legacy_residue: 0
 failed_required_checks: 0
-evidence_sha: FINAL_SHA
+evidence_sha: CURRENT_SHA
 ```
 
 القرارات المسموحة:

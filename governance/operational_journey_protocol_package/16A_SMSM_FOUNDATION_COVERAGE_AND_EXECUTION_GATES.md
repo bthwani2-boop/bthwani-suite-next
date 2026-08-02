@@ -12,7 +12,7 @@
 
 ### 2.1 عناصر الجرد
 
-يُعاد توليد الجرد من أحدث SHA للفرع `smsm` ويشمل:
+يُعاد توليد الجرد من أحدث SHA للفرع الحالي (`CURRENT_BRANCH`) ويشمل:
 
 - ملفات Git المتتبعة، الحزم، Workspaces، tsconfig، project.json، package scripts والاعتماديات.
 - OpenAPI files وpaths وoperations وschemas وerrors وsecurity requirements.
@@ -232,7 +232,7 @@ required_surfaces_without_readback: 0
 15. `FS-15`: readback من كل سطح مطلوب يعكس الحقيقة المحفوظة نفسها.
 16. `FS-16`: IDOR/replay/race/partial-failure/offline/recovery PASS.
 17. `FS-17`: security/privacy/audit/observability/a11y/RTL/performance gates PASS.
-18. `FS-18`: legacy/mocks/fallbacks/duplicates صفر، والأدلة من final SHA.
+18. `FS-18`: legacy/mocks/fallbacks/duplicates صفر، والأدلة من أحدث SHA (`CURRENT_SHA`).
 
 ## 5. معيار إغلاق أي رحلة
 
@@ -256,7 +256,7 @@ journey_closure:
   observability_and_audit: PASS
   legacy_residue: 0
   failed_required_checks: 0
-  evidence_sha: FINAL_SHA
+  evidence_sha: CURRENT_SHA
   decision: CLOSED_WITH_EVIDENCE | READY_FOR_REVIEW | NEEDS_EVIDENCE | FIX_REQUIRED | BLOCKED_EXTERNAL
 ```
 

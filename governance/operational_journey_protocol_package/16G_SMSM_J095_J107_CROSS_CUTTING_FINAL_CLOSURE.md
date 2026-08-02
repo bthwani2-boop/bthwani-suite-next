@@ -96,7 +96,7 @@
 
 ## J107 — الحوكمة وCI والأدلة والتنظيف والإغلاق النهائي
 
-- **الهدف:** إثبات أن كل رحلة وسطح وعنصر مغطى ومغلق على SHA واحد دون بقايا أو ادعاء زائد.
+- **الهدف:** إثبات أن كل رحلة وسطح وعنصر مغطى ومغلق على أحدث SHA دون بقايا أو ادعاء زائد.
 - **النطاق:** authority/registries/workflows/guards، coverage counters، journey evidence، diff review، legacy deletion، approvals.
 - **التنظيف:** إزالة duplicate contracts/types/routes/handlers/tables/files/mocks/fixtures/fallbacks/plans المتنافسة بعد ترحيل المستهلكين.
 - **التحقق:** targeted suites ثم integrated runtime، head-SHA evidence، merge compatibility منفصل، read-only final verification.
@@ -121,5 +121,5 @@ governance_ci_evidence_cleanup: PASS
 open_journeys_in_group: 0
 failed_required_checks: 0
 unproven_required_items: 0
-evidence_sha: FINAL_SHA
+evidence_sha: CURRENT_SHA
 ```

@@ -155,5 +155,5 @@ operator_direct_db_actions: 0
 all_visible_controls_and_states_mapped: PASS
 open_journeys_in_group: 0
 failed_required_checks: 0
-evidence_sha: FINAL_SHA
+evidence_sha: CURRENT_SHA
 ```

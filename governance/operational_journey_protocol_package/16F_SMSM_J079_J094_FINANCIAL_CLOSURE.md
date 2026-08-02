@@ -161,5 +161,5 @@ financial_scope_and_atomic_authorization: PASS
 financial_reports_reconcile_to_ledger: PASS
 open_journeys_in_group: 0
 failed_required_checks: 0
-evidence_sha: FINAL_SHA
+evidence_sha: CURRENT_SHA
 ```

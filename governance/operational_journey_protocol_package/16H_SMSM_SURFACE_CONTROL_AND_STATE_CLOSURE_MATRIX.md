@@ -303,7 +303,7 @@ ABSENT
 ## 12. بوابة إغلاق جميع الأسطح
 
 ```yaml
-surface_inventory_regenerated_on_final_sha: PASS
+surface_inventory_regenerated_on_current_sha: PASS
 all_routes_screens_pages_mapped: PASS
 all_tabs_buttons_icons_forms_mapped: PASS
 all_visible_states_mapped: PASS

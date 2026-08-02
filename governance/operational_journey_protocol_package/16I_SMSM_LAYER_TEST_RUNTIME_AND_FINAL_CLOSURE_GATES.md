@@ -1,6 +1,6 @@
 # 16I — معايير إغلاق الطبقات والاختبارات والتشغيل والإغلاق النهائي
 
-> جزء إلزامي من الخطة الرئيسية. لا يغلق قسم أو رحلة أو المنصة إلا وفق البوابات أدناه وعلى SHA نهائي واحد.
+> جزء إلزامي من الخطة الرئيسية. لا يغلق قسم أو رحلة أو المنصة إلا وفق البوابات أدناه وعلى أحدث SHA.
 
 ## 1. العقود وOpenAPI
 
@@ -345,7 +345,7 @@ PIN → DIAGNOSE → FIX OWNER → VERIFY UNIT → REVIEW DIFF
 section_evidence:
   section_id:
   initial_sha:
-  final_sha:
+  current_sha:
   inventory_counts_before:
   inventory_counts_after:
   findings_and_root_causes:
