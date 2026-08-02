@@ -57,7 +57,7 @@
     {
       "ordinal": 8,
       "file": "platform-008_partner_commercial_model.sql",
-      "sha256": "da1df110aab5c6dd86cb8d46fe2c242afe0c584f4809d18dd4af07c559e0eafa",
+      "sha256": "52eda1faf121f113a327dfa4d3b31f5d055f6852f0476bde52d4826d73addb19",
       "historicalPrefix": "008",
       "state": "ACTIVE_CUTOVER"
     }
