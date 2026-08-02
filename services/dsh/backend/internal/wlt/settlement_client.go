@@ -37,11 +37,11 @@ func (c *Client) FinanceWriteSettlement(ctx context.Context, method, path string
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
 	correlationID = strings.TrimSpace(correlationID)
-    
-    idempotencyKey = strings.TrimSpace(idempotencyKey)
-    if idempotencyKey == "" {
-        idempotencyKey = deterministicMutationKey("settlement", method, path, correlationID)
-    }
+
+	idempotencyKey = strings.TrimSpace(idempotencyKey)
+	if idempotencyKey == "" {
+		idempotencyKey = deterministicMutationKey("settlement", method, path, correlationID)
+	}
 
 	if err := setRequiredMutationHeaders(
 		req,
