@@ -37,15 +37,20 @@ func registeredPartnerBundle(code string) bool {
 	return false
 }
 
-func mergePermissions(current, additions []Permission) []Permission {
+// replacePartnerStorePermissions removes every previous executable authority
+// for one partner-store scope before applying the selected canonical bundle.
+// This prevents a downgrade (for example manager -> staff) from retaining the
+// former elevated actions.
+func replacePartnerStorePermissions(current, replacements []Permission, storeID string) []Permission {
 	type permissionKey struct {
 		service string
 		surface string
 		action  string
 		scope   string
 	}
-	seen := make(map[permissionKey]struct{}, len(current)+len(additions))
-	merged := make([]Permission, 0, len(current)+len(additions))
+	targetScope := "store:" + strings.TrimSpace(storeID)
+	seen := make(map[permissionKey]struct{}, len(current)+len(replacements))
+	result := make([]Permission, 0, len(current)+len(replacements))
 	appendUnique := func(permission Permission) {
 		key := permissionKey{
 			service: permission.Service,
@@ -57,15 +62,18 @@ func mergePermissions(current, additions []Permission) []Permission {
 			return
 		}
 		seen[key] = struct{}{}
-		merged = append(merged, permission)
+		result = append(result, permission)
 	}
 	for _, permission := range current {
+		if permission.Service == "dsh" && permission.Surface == "app-partner" && permission.Scope == targetScope {
+			continue
+		}
 		appendUnique(permission)
 	}
-	for _, permission := range additions {
+	for _, permission := range replacements {
 		appendUnique(permission)
 	}
-	return merged
+	return result
 }
 
 // ProvisionPartnerActor creates or extends one Identity actor for a governed
@@ -106,8 +114,8 @@ func (r *Repository) ProvisionPartnerActor(ctx context.Context, input PartnerAct
 		if !hasRole(roles, "partner") {
 			roles = append(roles, "partner")
 		}
-		mergedPermissions := mergePermissions(existing.Permissions, permissions)
-		permissionsJSON, marshalErr := json.Marshal(mergedPermissions)
+		effectivePermissions := replacePartnerStorePermissions(existing.Permissions, permissions, storeID)
+		permissionsJSON, marshalErr := json.Marshal(effectivePermissions)
 		if marshalErr != nil {
 			return ActorAdminView{}, marshalErr
 		}
