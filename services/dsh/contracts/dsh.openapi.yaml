@@ -260,6 +260,14 @@ paths:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1settlements~1summary"
   /dsh/control-panel/finance/refunds:
     $ref: "./dsh.refunds.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1refunds"
+  /dsh/control-panel/finance/references/field-commission:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1references~1field-commission"
+  /dsh/control-panel/finance/references/payment-status:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1references~1payment-status"
+  /dsh/control-panel/finance/references/refund-status:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1references~1refund-status"
+  /dsh/control-panel/finance/references/settlement-status:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1references~1settlement-status"
   /dsh/catalog/domains:
     $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1domains"
   /dsh/catalog/domains/{domainId}:
