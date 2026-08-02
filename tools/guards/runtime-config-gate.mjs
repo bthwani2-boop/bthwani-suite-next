@@ -133,6 +133,7 @@ if (!fs.existsSync(path.join(repoRoot, envExample))) {
     [LOCAL_PASSWORD_ENV_VAR, localPasswordDefault()],
     ["IDENTITY_ACTIVATION_HMAC_SECRET", "LOCAL_ONLY_replace_with_32_plus_byte_activation_hmac_secret"],
     ["IDENTITY_WORKFORCE_SERVICE_TOKEN", "LOCAL_ONLY_replace_with_workforce_internal_service_token"],
+    ["IDENTITY_DSH_SERVICE_TOKEN", "LOCAL_ONLY_replace_with_dsh_identity_internal_service_token"],
     ["WLT_DSH_SERVICE_TOKEN", "dev-only-dsh-wlt-shared-secret"],
     ["DSH_WLT_SERVICE_TOKEN", "dev-only-dsh-wlt-shared-secret"],
     ["WLT_PAYOUT_ENCRYPTION_KEY", "dev-only-payout-destination-encryption-key"],
