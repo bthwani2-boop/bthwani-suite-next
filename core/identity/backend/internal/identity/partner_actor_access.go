@@ -34,6 +34,7 @@ type PartnerStoreAccessInput struct {
 	StoreID           string
 	PermissionBundle  string
 	Enabled           bool
+	Reactivate        bool
 	OperatorContextID string
 }
 
@@ -84,6 +85,27 @@ func replacePartnerStorePermissions(current, replacements []Permission, storeID 
 		appendUnique(permission)
 	}
 	return result
+}
+
+func hasAnyPartnerStorePermission(permissions []Permission) bool {
+	for _, permission := range permissions {
+		if permission.Service == "dsh" && permission.Surface == "app-partner" && strings.HasPrefix(permission.Scope, "store:") {
+			return true
+		}
+	}
+	return false
+}
+
+func hasOnlyPartnerRole(roles []string) bool {
+	return len(roles) == 1 && roles[0] == "partner"
+}
+
+func revokeActorSessionsTx(ctx context.Context, tx *sql.Tx, actorID string) error {
+	_, err := tx.ExecContext(ctx, `
+		UPDATE identity_sessions
+		SET revoked_at = now()
+		WHERE actor_id = $1 AND revoked_at IS NULL`, actorID)
+	return err
 }
 
 // ProvisionPartnerActor creates or extends one Identity actor for a governed
@@ -137,6 +159,9 @@ func (r *Repository) ProvisionPartnerActor(ctx context.Context, input PartnerAct
 			WHERE id = $1`, existing.ID, pq.Array(roles), string(permissionsJSON)); err != nil {
 			return ActorAdminView{}, err
 		}
+		if err := revokeActorSessionsTx(ctx, tx, existing.ID); err != nil {
+			return ActorAdminView{}, err
+		}
 		if err := tx.Commit(); err != nil {
 			return ActorAdminView{}, err
 		}
@@ -172,16 +197,16 @@ func (r *Repository) ProvisionPartnerActor(ctx context.Context, input PartnerAct
 }
 
 // SetPartnerStoreAccess replaces or removes all executable app-partner
-// permissions for exactly one store while preserving the actor's other store
-// assignments and unrelated authorities. It intentionally does not deactivate
-// the actor or revoke every session because one actor may belong to multiple
-// stores.
+// permissions for exactly one store while preserving unrelated authorities.
+// Every change revokes live sessions, so cached tokens cannot retain a removed
+// bundle. Losing the final store scope suspends a partner-only actor; restoring
+// access reactivates it only for an explicit activate action, never for resend.
 func (r *Repository) SetPartnerStoreAccess(ctx context.Context, actorID string, input PartnerStoreAccessInput) (ActorAdminView, error) {
 	actorID = strings.TrimSpace(actorID)
 	operatorContextID := strings.TrimSpace(input.OperatorContextID)
 	storeID := strings.TrimSpace(input.StoreID)
 	bundle := strings.TrimSpace(input.PermissionBundle)
-	if actorID == "" || operatorContextID == "" || storeID == "" {
+	if actorID == "" || operatorContextID == "" || storeID == "" || (input.Reactivate && !input.Enabled) {
 		return ActorAdminView{}, ErrInvalidActivation
 	}
 
@@ -214,17 +239,37 @@ func (r *Repository) SetPartnerStoreAccess(ctx context.Context, actorID string, 
 	}
 
 	effectivePermissions := replacePartnerStorePermissions(actor.Permissions, replacements, storeID)
+	active := actor.Active
+	if input.Reactivate {
+		active = true
+	} else if !input.Enabled && !hasAnyPartnerStorePermission(effectivePermissions) && hasOnlyPartnerRole(actor.Roles) {
+		active = false
+	}
 	permissionsJSON, err := json.Marshal(effectivePermissions)
 	if err != nil {
 		return ActorAdminView{}, err
 	}
 	if _, err = tx.ExecContext(ctx, `
 		UPDATE identity_actors
-		SET permissions = $2::jsonb, updated_at = now()
-		WHERE id = $1`, actorID, string(permissionsJSON)); err != nil {
+		SET permissions = $2::jsonb,
+		    active = $3,
+		    updated_at = now()
+		WHERE id = $1`, actorID, string(permissionsJSON), active); err != nil {
 		return ActorAdminView{}, err
 	}
+	if err := revokeActorSessionsTx(ctx, tx, actorID); err != nil {
+		return ActorAdminView{}, err
+	}
+	if !input.Enabled {
+		if _, err = tx.ExecContext(ctx, `
+			UPDATE identity_activation_challenges
+			SET status = 'revoked', updated_at = now()
+			WHERE actor_id = $1 AND actor_type = 'partner' AND status = 'pending'`, actorID); err != nil {
+			return ActorAdminView{}, err
+		}
+	}
 	actor.Permissions = effectivePermissions
+	actor.Active = active
 	view := toAdminView(actor)
 	if err := tx.Commit(); err != nil {
 		return ActorAdminView{}, err
