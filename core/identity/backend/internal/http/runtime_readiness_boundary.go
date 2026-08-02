@@ -6,12 +6,19 @@ import (
 	"strings"
 )
 
-const minimumActivationHMACSecretLength = 32
+const (
+	minimumActivationHMACSecretLength = 32
+	minimumInternalServiceTokenLength = 32
+)
+
+func configuredRuntimeSecret(name string, minimumLength int) bool {
+	return len(strings.TrimSpace(os.Getenv(name))) >= minimumLength
+}
 
 // RuntimeReadinessBoundary keeps the liveness probe independent while making
 // readiness fail closed when Identity cannot safely issue or consume activation
-// challenges for the active platform context. Database readiness remains owned
-// by the downstream readiness handler.
+// challenges or authenticate its internal Workforce and DSH callers. Database
+// readiness remains owned by the downstream readiness handler.
 func RuntimeReadinessBoundary(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet || r.URL.Path != "/identity/readiness" {
@@ -19,7 +26,7 @@ func RuntimeReadinessBoundary(next http.Handler) http.Handler {
 			return
 		}
 
-		if len(strings.TrimSpace(os.Getenv("IDENTITY_ACTIVATION_HMAC_SECRET"))) < minimumActivationHMACSecretLength {
+		if !configuredRuntimeSecret("IDENTITY_ACTIVATION_HMAC_SECRET", minimumActivationHMACSecretLength) {
 			sendError(
 				w,
 				http.StatusServiceUnavailable,
@@ -36,6 +43,17 @@ func RuntimeReadinessBoundary(next http.Handler) http.Handler {
 				"identity platform context is not configured",
 			)
 			return
+		}
+		for _, name := range []string{"IDENTITY_WORKFORCE_SERVICE_TOKEN", "IDENTITY_DSH_SERVICE_TOKEN"} {
+			if !configuredRuntimeSecret(name, minimumInternalServiceTokenLength) {
+				sendError(
+					w,
+					http.StatusServiceUnavailable,
+					"IDENTITY_NOT_READY",
+					"identity internal service authentication is not configured",
+				)
+				return
+			}
 		}
 
 		next.ServeHTTP(w, r)
