@@ -40,11 +40,11 @@ func (c *Client) FinanceWriteCommission(
 		return 0, nil, fmt.Errorf("prepare WLT governed commission OperatorContext: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-    
-    idempotencyKey = strings.TrimSpace(idempotencyKey)
-    if idempotencyKey == "" {
-        idempotencyKey = deterministicMutationKey("commission", method, path, string(body))
-    }
+
+	idempotencyKey = strings.TrimSpace(idempotencyKey)
+	if idempotencyKey == "" {
+		idempotencyKey = deterministicMutationKey("commission", method, path, string(body))
+	}
 
 	if err := setRequiredMutationHeaders(
 		req,
