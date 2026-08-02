@@ -69,7 +69,7 @@ try {
     Write-Host "Repository: $repoRoot"
     Write-Host "Branch:     $currentBranch"
 
-    Write-Section "Remove deprecated TypeScript 6 options"
+    Write-Section "Migrate deprecated TypeScript 6 options"
 
     $tsconfigContent = [System.IO.File]::ReadAllText($tsconfigPath)
     $updatedTsconfig = $tsconfigContent
@@ -108,16 +108,46 @@ try {
         Write-Host 'The deprecated setting "baseUrl" is already absent.'
     }
 
-    if ($changed) {
-        $utf8WithoutBom = [System.Text.UTF8Encoding]::new($false)
-        [System.IO.File]::WriteAllText($tsconfigPath, $updatedTsconfig, $utf8WithoutBom)
+    $nonRelativePathTargetPattern = '(?m)^(\s*"[^"]+"\s*:\s*\[\s*")(?!(?:\./|\.\./|/))([^"]+)("\s*\]\s*,?\s*)$'
+    $nonRelativePathTargetCount = [System.Text.RegularExpressions.Regex]::Matches(
+        $updatedTsconfig,
+        $nonRelativePathTargetPattern
+    ).Count
+
+    if ($nonRelativePathTargetCount -gt 0) {
+        $updatedTsconfig = [System.Text.RegularExpressions.Regex]::Replace(
+            $updatedTsconfig,
+            $nonRelativePathTargetPattern,
+            '${1}./${2}${3}'
+        )
+        $changed = $true
+        Write-Host "Migrated $nonRelativePathTargetCount TypeScript path target(s) to explicit relative paths."
+    }
+    else {
+        Write-Host "All TypeScript path targets are already explicitly relative."
     }
 
     try {
-        $null = Get-Content -LiteralPath $tsconfigPath -Raw | ConvertFrom-Json
+        $parsedTsconfig = $updatedTsconfig | ConvertFrom-Json
     }
     catch {
-        throw "tsconfig.base.json is invalid JSON after the edit: $($_.Exception.Message)"
+        throw "tsconfig.base.json is invalid JSON after the migration: $($_.Exception.Message)"
+    }
+
+    if ($null -ne $parsedTsconfig.compilerOptions.paths) {
+        foreach ($pathProperty in $parsedTsconfig.compilerOptions.paths.PSObject.Properties) {
+            foreach ($target in @($pathProperty.Value)) {
+                $targetValue = [string]$target
+                if ($targetValue -notmatch '^(?:\./|\.\./|/)') {
+                    throw "TypeScript path '$($pathProperty.Name)' still has a non-relative target: '$targetValue'."
+                }
+            }
+        }
+    }
+
+    if ($changed) {
+        $utf8WithoutBom = [System.Text.UTF8Encoding]::new($false)
+        [System.IO.File]::WriteAllText($tsconfigPath, $updatedTsconfig, $utf8WithoutBom)
     }
 
     $packageJson = Get-Content -LiteralPath $packageJsonPath -Raw | ConvertFrom-Json
