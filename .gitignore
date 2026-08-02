@@ -30,6 +30,7 @@ build/
 .expo/
 coverage/
 *.tsbuildinfo
+*.exe
 .DS_Store
 Thumbs.db
 
