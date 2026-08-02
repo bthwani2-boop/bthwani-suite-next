@@ -59,7 +59,7 @@ func main() {
 
 	identityhttp.RegisterEmployeeAccessRoutes(router, repository)
 	identityhttp.RegisterPartnerAccessRoutes(router, repository)
-	runtimeReadinessRouter := identityhttp.RuntimeReadinessBoundary(router)
+	runtimeReadinessRouter := identityhttp.RuntimeReadinessBoundary(router, db)
 	authRouter := identityhttp.AuthOperatorContextBoundary(repository, runtimeReadinessRouter)
 	issuerScopedRouter := identityhttp.ActivationIssuerBoundary(db, authRouter)
 	operatorScopedRouter := identityhttp.OperatorBoundary(db, issuerScopedRouter)
