@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"identity-api/internal/identity"
@@ -204,17 +205,22 @@ func (s *server) introspect(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) provisionActor(w http.ResponseWriter, r *http.Request) {
 	var request struct {
-		Username  string `json:"username"`
-		PhoneE164 string `json:"phoneE164"`
-		Role      string `json:"role"`
-		OperatorContextID  string `json:"operatorContextId"`
+		Username          string `json:"username"`
+		PhoneE164         string `json:"phoneE164"`
+		Role              string `json:"role"`
+		OperatorContextID string `json:"operatorContextId"`
 	}
 	if !decodeJSON(w, r, &request) {
 		return
 	}
-	view, err := s.repository.ProvisionActor(r.Context(), identity.ProvisionActorInput{
+	operatorContextID, ok := trustedOperatorContext(r)
+	if !ok {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "trusted operator context is unavailable")
+		return
+	}
+	view, err := s.repository.ProvisionActorGoverned(r.Context(), identity.ProvisionActorInput{
 		Username: request.Username, PhoneE164: request.PhoneE164,
-		Role: request.Role, OperatorContextID: request.OperatorContextID,
+		Role: request.Role, OperatorContextID: operatorContextID,
 	})
 	if err != nil {
 		writeInternalActorError(w, err)
@@ -224,7 +230,12 @@ func (s *server) provisionActor(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) internalActorGet(w http.ResponseWriter, r *http.Request) {
-	view, err := s.repository.ActorAdminByID(r.Context(), r.PathValue("actorId"))
+	operatorContextID, ok := trustedOperatorContext(r)
+	if !ok {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "trusted operator context is unavailable")
+		return
+	}
+	view, err := s.repository.ActorAdminByIDGoverned(r.Context(), operatorContextID, r.PathValue("actorId"))
 	if err != nil {
 		writeInternalActorError(w, err)
 		return
@@ -233,18 +244,42 @@ func (s *server) internalActorGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) internalActorSearch(w http.ResponseWriter, r *http.Request) {
+	operatorContextID, ok := trustedOperatorContext(r)
+	if !ok {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "trusted operator context is unavailable")
+		return
+	}
 	query := r.URL.Query()
-	views, err := s.repository.SearchActors(
-		r.Context(), strings.TrimSpace(query.Get("role")), strings.TrimSpace(query.Get("q")), 25,
-	)
+	limit, offset := 25, 0
+	if raw := strings.TrimSpace(query.Get("limit")); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil {
+			writeInternalActorError(w, identity.ErrInvalidActorQuery)
+			return
+		}
+		limit = parsed
+	}
+	if raw := strings.TrimSpace(query.Get("offset")); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil {
+			writeInternalActorError(w, identity.ErrInvalidActorQuery)
+			return
+		}
+		offset = parsed
+	}
+	page, err := s.repository.SearchActorsGoverned(r.Context(), identity.ActorSearchInput{
+		OperatorContextID: operatorContextID,
+		Role:              strings.TrimSpace(query.Get("role")),
+		Query:             strings.TrimSpace(query.Get("q")),
+		Status:            identity.ActorLifecycleStatus(strings.TrimSpace(query.Get("status"))),
+		Limit:             limit,
+		Offset:            offset,
+	})
 	if err != nil {
 		writeInternalActorError(w, err)
 		return
 	}
-	if views == nil {
-		views = []identity.ActorAdminView{}
-	}
-	sendJSON(w, http.StatusOK, views)
+	sendJSON(w, http.StatusOK, page)
 }
 
 func (s *server) internalActorDeactivate(w http.ResponseWriter, r *http.Request) {
@@ -278,9 +313,9 @@ func (s *server) internalActorIssueActivation(w http.ResponseWriter, r *http.Req
 	}
 	result, err := s.repository.IssueActivationForActor(
 		r.Context(), r.PathValue("actorId"), identity.IssueActivationForActorInput{
-			IssuedByActorID: request.IssuedByActorID,
+			IssuedByActorID:   request.IssuedByActorID,
 			ExpectedActorType: request.ExpectedActorType,
-			ExpectedSurface: request.ExpectedSurface,
+			ExpectedSurface:   request.ExpectedSurface,
 		}, r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"),
 	)
 	if err != nil {
@@ -399,6 +434,10 @@ func writeInternalActorError(w http.ResponseWriter, err error) {
 		sendError(w, http.StatusConflict, "PHONE_ALREADY_BOUND", "phone is already bound to another actor")
 	case identity.ErrUsernameTaken:
 		sendError(w, http.StatusConflict, "USERNAME_TAKEN", "username is already taken")
+	case identity.ErrProvisionConflict:
+		sendError(w, http.StatusConflict, "ACTOR_PROVISION_CONFLICT", "provisioning input conflicts with the existing actor")
+	case identity.ErrInvalidActorQuery:
+		sendError(w, http.StatusBadRequest, "INVALID_ACTOR_QUERY", "actor query is invalid")
 	case identity.ErrActivationRateLimited:
 		sendError(w, http.StatusTooManyRequests, "ACTIVATION_RATE_LIMITED", "activation can be requested again later")
 	case identity.ErrActivationUnavailable:
@@ -412,11 +451,11 @@ func writeInternalActorError(w http.ResponseWriter, err error) {
 
 func tokenResponse(pair identity.TokenPair) map[string]any {
 	return map[string]any{
-		"accessToken": pair.AccessToken,
+		"accessToken":  pair.AccessToken,
 		"refreshToken": pair.RefreshToken,
-		"tokenType": "Bearer",
-		"expiresIn": 900,
-		"identity": pair.Identity,
+		"tokenType":    "Bearer",
+		"expiresIn":    900,
+		"identity":     pair.Identity,
 	}
 }
 

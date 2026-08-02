@@ -165,7 +165,7 @@ func (r *Repository) ProvisionPartnerActor(ctx context.Context, input PartnerAct
 		if err := tx.Commit(); err != nil {
 			return ActorAdminView{}, err
 		}
-		return r.ActorAdminByID(ctx, existing.ID)
+		return r.ActorAdminByIDGoverned(ctx, operatorContextID, existing.ID)
 	}
 
 	suffix, err := randomToken(9)
@@ -193,6 +193,7 @@ func (r *Repository) ProvisionPartnerActor(ctx context.Context, input PartnerAct
 		PhoneE164: phone,
 		Roles:     []string{"partner"},
 		Active:    false,
+		Status:    ActorStatusProvisioned,
 	}, nil
 }
 

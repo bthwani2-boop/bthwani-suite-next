@@ -166,7 +166,7 @@ components:
     ActorAdminView:
       type: object
       additionalProperties: false
-      required: [actorId, username, phoneE164, roles, active]
+      required: [actorId, username, phoneE164, roles, active, status]
       properties:
         actorId:
           type: string
@@ -180,3 +180,6 @@ components:
             type: string
         active:
           type: boolean
+        status:
+          type: string
+          enum: [PROVISIONED, PENDING_ACTIVATION, ACTIVE, INACTIVE]

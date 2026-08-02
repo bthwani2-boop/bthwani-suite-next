@@ -28,11 +28,11 @@ var departmentCodePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{1,63}$`)
 // when it creates an administrative employee. Identity remains the only owner
 // of roles, permissions, sessions and the sovereign phone number.
 type EmployeeProvisionInput struct {
-	Username         string `json:"username"`
-	PhoneE164        string `json:"phoneE164"`
-	PermissionBundle string `json:"permissionBundle"`
-	DepartmentScope  string `json:"departmentScope"`
-	OperatorContextID         string `json:"operatorContextId,omitempty"`
+	Username          string `json:"username"`
+	PhoneE164         string `json:"phoneE164"`
+	PermissionBundle  string `json:"permissionBundle"`
+	DepartmentScope   string `json:"departmentScope"`
+	OperatorContextID string `json:"operatorContextId,omitempty"`
 }
 
 func init() {
@@ -279,7 +279,7 @@ func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvis
 	if err := tx.Commit(); err != nil {
 		return ActorAdminView{}, err
 	}
-	return ActorAdminView{ActorID: actorID, Username: username, PhoneE164: phone, Roles: roles, Active: false}, nil
+	return ActorAdminView{ActorID: actorID, Username: username, PhoneE164: phone, Roles: roles, Active: false, Status: ActorStatusProvisioned}, nil
 }
 
 // BootstrapSovereignLeadershipAccess upgrades only the explicit local operator

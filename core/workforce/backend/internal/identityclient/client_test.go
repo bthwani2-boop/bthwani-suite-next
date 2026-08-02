@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestSearchActorsDecodesOpenAPIArrayAndSendsServiceIdentity(t *testing.T) {
+func TestSearchActorsDecodesGovernedPageAndSendsServiceIdentity(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet || r.URL.Path != "/internal/actors/search" {
 			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
@@ -29,11 +29,14 @@ func TestSearchActorsDecodesOpenAPIArrayAndSendsServiceIdentity(t *testing.T) {
 		if got := r.Header.Get("X-Operator-Context-ID"); got != "context-main" {
 			t.Fatalf("unexpected operator context %q", got)
 		}
+		if r.URL.Query().Get("limit") != "100" || r.URL.Query().Get("offset") != "0" {
+			t.Fatalf("missing pagination query: %s", r.URL.RawQuery)
+		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode([]ActorView{{
+		_ = json.NewEncoder(w).Encode(ActorSearchPage{Items: []ActorView{{
 			ActorID: "field-1", Username: "ali", PhoneE164: "+967770000001",
-			Roles: []string{"field"}, Active: true,
-		}})
+			Roles: []string{"field"}, Active: true, Status: "ACTIVE",
+		}}, Limit: 100, Offset: 0, Total: 1})
 	}))
 	defer server.Close()
 
@@ -53,7 +56,7 @@ func TestClientSendsTrustedContextToEveryIdentityCall(t *testing.T) {
 			t.Fatalf("expected context-main, got %q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode([]ActorView{})
+		_ = json.NewEncoder(w).Encode(ActorSearchPage{Items: []ActorView{}, Limit: 100})
 	}))
 	defer server.Close()
 

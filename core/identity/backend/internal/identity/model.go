@@ -3,14 +3,14 @@ package identity
 import "time"
 
 type Actor struct {
-	ID           string
-	Username     string
-	PasswordHash string
-	OperatorContextID     string
-	PhoneE164    string
-	Roles        []string
-	Permissions  []Permission
-	Active       bool
+	ID                string
+	Username          string
+	PasswordHash      string
+	OperatorContextID string
+	PhoneE164         string
+	Roles             []string
+	Permissions       []Permission
+	Active            bool
 }
 
 type Permission struct {
@@ -21,16 +21,16 @@ type Permission struct {
 }
 
 type ActorIdentity struct {
-	Subject       string          `json:"subject"`
-	OperatorContextID      string          `json:"operatorContextId"`
-	PhoneE164     string          `json:"phoneE164"`
-	Roles         []string        `json:"roles"`
-	Permissions   []Permission    `json:"permissions"`
-	AuthState     string          `json:"authState"`
-	SurfaceAccess map[string]bool `json:"surfaceAccess"`
-	ServiceAccess map[string]bool `json:"serviceAccess"`
-	SessionID     string          `json:"sessionId"`
-	ExpiresAt     time.Time       `json:"expiresAt"`
+	Subject           string          `json:"subject"`
+	OperatorContextID string          `json:"operatorContextId"`
+	PhoneE164         string          `json:"phoneE164"`
+	Roles             []string        `json:"roles"`
+	Permissions       []Permission    `json:"permissions"`
+	AuthState         string          `json:"authState"`
+	SurfaceAccess     map[string]bool `json:"surfaceAccess"`
+	ServiceAccess     map[string]bool `json:"serviceAccess"`
+	SessionID         string          `json:"sessionId"`
+	ExpiresAt         time.Time       `json:"expiresAt"`
 }
 
 type TokenPair struct {
@@ -41,8 +41,8 @@ type TokenPair struct {
 }
 
 type LocalBootstrap struct {
-	Enabled  bool
-	Password string
+	Enabled           bool
+	Password          string
 	OperatorContextID string
 }
 
@@ -67,10 +67,35 @@ type ConsumeActivationInput struct {
 }
 
 type ProvisionActorInput struct {
-	Username  string
-	PhoneE164 string
-	Role      string
-	OperatorContextID  string
+	Username          string
+	PhoneE164         string
+	Role              string
+	OperatorContextID string
+}
+
+type ActorLifecycleStatus string
+
+const (
+	ActorStatusProvisioned       ActorLifecycleStatus = "PROVISIONED"
+	ActorStatusPendingActivation ActorLifecycleStatus = "PENDING_ACTIVATION"
+	ActorStatusActive            ActorLifecycleStatus = "ACTIVE"
+	ActorStatusInactive          ActorLifecycleStatus = "INACTIVE"
+)
+
+type ActorSearchInput struct {
+	OperatorContextID string
+	Role              string
+	Query             string
+	Status            ActorLifecycleStatus
+	Limit             int
+	Offset            int
+}
+
+type ActorSearchPage struct {
+	Items  []ActorAdminView `json:"items"`
+	Limit  int              `json:"limit"`
+	Offset int              `json:"offset"`
+	Total  int              `json:"total"`
 }
 
 // ActorAdminView is the internal (service-to-service) projection of an actor.
@@ -78,11 +103,12 @@ type ProvisionActorInput struct {
 // owner of phone data and sibling services fetch it here instead of storing
 // their own copy.
 type ActorAdminView struct {
-	ActorID   string   `json:"actorId"`
-	Username  string   `json:"username"`
-	PhoneE164 string   `json:"phoneE164"`
-	Roles     []string `json:"roles"`
-	Active    bool     `json:"active"`
+	ActorID   string               `json:"actorId"`
+	Username  string               `json:"username"`
+	PhoneE164 string               `json:"phoneE164"`
+	Roles     []string             `json:"roles"`
+	Active    bool                 `json:"active"`
+	Status    ActorLifecycleStatus `json:"status"`
 }
 
 type ApiError struct {

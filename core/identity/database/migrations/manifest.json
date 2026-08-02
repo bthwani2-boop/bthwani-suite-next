@@ -3,7 +3,7 @@
   "service": "identity",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "identity-012_activation_session_causality.sql",
+  "cutover": "identity-013_actor_provisioning_integrity.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -87,6 +87,13 @@
       "file": "identity-012_activation_session_causality.sql",
       "sha256": "62db708e2fcb5b6c5be51194e2472d45504093ffde2f36fb781b00995cfb07e8",
       "historicalPrefix": "012",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 13,
+      "file": "identity-013_actor_provisioning_integrity.sql",
+      "sha256": "80f50cbb08692c26abe57ba9186378dfbd713a28c888a86204238467925fb631",
+      "historicalPrefix": "013",
       "state": "HISTORICAL_IMMUTABLE"
     }
   ]

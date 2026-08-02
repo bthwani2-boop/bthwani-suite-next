@@ -16,7 +16,7 @@ const (
 	minimumActivationHMACSecretLength = 32
 	minimumInternalServiceTokenLength = 32
 	identityMigrationServiceName      = "identity"
-	identityLatestMigration           = "identity-012_activation_session_causality.sql"
+	identityLatestMigration           = "identity-013_actor_provisioning_integrity.sql"
 	defaultReadinessProbeTimeout      = 2 * time.Second
 	defaultClockSkewLimit             = 5 * time.Second
 )
