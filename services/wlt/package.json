@@ -14,11 +14,20 @@
     "lint": "pnpm --dir ../.. run guard:fullstack-boundary && pnpm --dir ../.. run guard:wlt-financial-boundary && pnpm --dir ../.. run guard:wlt-openapi-bundle"
   },
   "dependencies": {
+    "@bthwani/control-panel": "workspace:*",
+    "@bthwani/ui-kit": "workspace:*",
+    "@tanstack/react-query": "^5.64.0",
     "react": "19.2.3"
   },
   "devDependencies": {
     "@types/node": "24.10.1",
     "@types/react": "19.2.17",
+    "next": "15.1.6",
     "typescript": "~6.0.3"
+  },
+  "exports": {
+    "./control-panel/finance": "./frontend/control-panel/finance/index.ts",
+    "./app-captain/finance": "./frontend/app-captain/finance/index.ts",
+    "./app-field/finance": "./frontend/app-field/finance/index.ts"
   }
 }

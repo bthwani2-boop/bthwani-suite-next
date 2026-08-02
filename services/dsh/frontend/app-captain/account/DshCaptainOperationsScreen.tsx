@@ -8,7 +8,7 @@ import type { DshCaptainOrderStage } from '../../shared/orders';
 import type { DshCaptainProfileSnapshot } from '../dsh-captain.types';
 import { getOperationsSupportFlowsForSurface, type DshOperationsSupportFlowId } from '../../shared';
 import { type DshCaptainRegistryFlowId } from '../dsh-captain-binding.contracts';
-import { WltDshCaptainBridge } from '../../shared/finance-wlt-link/wlt/generated/wlt_frontend_dsh_app_captain.facade';
+import { WltCaptainCodCustodyScreen } from '@bthwani/wlt/app-captain/finance';
 
 export type CaptainSupportScreenId =
 	| 'chat-read-ack'
@@ -385,7 +385,7 @@ export function DshCaptainOperationsScreen({
 
 	if (screenId === 'cod-liability') {
 		return (
-			<WltDshCaptainBridge section="cod-liability" {...(onBack ? { onBack } : {})} />
+			<WltCaptainCodCustodyScreen embedded={true} />
 		);
 	}
 

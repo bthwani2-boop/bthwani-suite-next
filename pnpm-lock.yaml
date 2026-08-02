@@ -756,6 +756,9 @@ importers:
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../../shared/ui-kit
+      '@bthwani/wlt':
+        specifier: workspace:*
+        version: link:../../../services/wlt
       next:
         specifier: 16.2.11
         version: 16.2.11(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.10.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -861,6 +864,9 @@ importers:
       '@react-native-community/netinfo':
         specifier: 11.4.1
         version: 11.4.1(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))
+      '@tanstack/react-query':
+        specifier: ^5.64.0
+        version: 5.90.2(react@19.2.3)
       expo-constants:
         specifier: ~56.0.22
         version: 56.0.22(expo@56.0.17)(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))
@@ -907,6 +913,15 @@ importers:
 
   services/wlt:
     dependencies:
+      '@bthwani/control-panel':
+        specifier: workspace:*
+        version: link:../../shared/control-panel
+      '@bthwani/ui-kit':
+        specifier: workspace:*
+        version: link:../../shared/ui-kit
+      '@tanstack/react-query':
+        specifier: ^5.64.0
+        version: 5.90.2(react@19.2.3)
       react:
         specifier: 19.2.3
         version: 19.2.3
@@ -917,6 +932,9 @@ importers:
       '@types/react':
         specifier: 19.2.17
         version: 19.2.17
+      next:
+        specifier: 16.2.11
+        version: 16.2.11(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.10.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       typescript:
         specifier: ~6.0.3
         version: 6.0.3

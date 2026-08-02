@@ -16,8 +16,6 @@ import { NotificationsScreen } from "./account/NotificationsScreen";
 import { OrderActionScreen } from "./orders/OrderActionScreen";
 import { OrderIssueScreen } from "./orders/OrderIssueScreen";
 
-import {
-
 import { DshPartnerStoreCourierScreen } from "./store/DshPartnerStoreCourierScreen";
 import { PartnerTeamManagementScreen } from "./team/PartnerTeamManagementScreen";
 import { PartnerEntryScreen } from "./account/PartnerEntryScreen";
@@ -150,7 +148,7 @@ function derivePartnerOrderAlerts(orders: readonly PartnerOrderItem[]): DshPartn
       alertId = 'order_needs_accept';
       title = 'طلب يحتاج قبولًا فوريًا';
       description = 'الطلب يحتاج قرار قبول سريع قبل بدء التجهيز.';
-      urgent = order.urgent;
+      urgent = !!order.urgent;
     } else if (order.issueRequired) {
       alertId = 'order_issue_required';
       title = 'طلب يحتاج معالجة مشكلة';

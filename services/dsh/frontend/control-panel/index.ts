@@ -4,7 +4,6 @@ export * from "./administration";
 export * from "./analytics";
 export * from "./catalogs";
 export * from "./dashboard";
-export * from "./finance";
 export * from "./hr";
 export * from "./marketing";
 export * from "./operations";

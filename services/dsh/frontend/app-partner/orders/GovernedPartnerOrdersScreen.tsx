@@ -14,7 +14,7 @@ import {
   PREPARATION_ISSUE_KIND_LABELS,
   STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS,
 } from '../../shared/orders';
-import { OrderRefundStatusCard } from '../../shared/finance-wlt-link/wlt-refund/OrderRefundStatusCard';
+import { OrderRefundStatusCard } from '@bthwani/wlt/shared';
 import type { GovernedPartnerOrderItem } from '../../shared/partner/partner.adapters';
 export type PartnerOrdersHomeScreenState = 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 'disabled' | 'partial';
 export type GovernedPartnerOrderActionId =

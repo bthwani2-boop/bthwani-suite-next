@@ -9,7 +9,7 @@ import {
   colorRoles,
   spacing,
 } from "@bthwani/ui-kit";
-import { ActorWalletPanel } from "../../shared/finance-wlt-link/actor-wallet";
+import { ActorWalletPanel } from "@bthwani/wlt/shared";
 
 export type MySpaceScreenProps = {
   onOpenOrders?: () => void;

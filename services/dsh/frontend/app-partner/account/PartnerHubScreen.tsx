@@ -18,7 +18,7 @@ import { useIdentitySession } from "@bthwani/core-identity";
 import {
   getWltDshPartnerOperationalModeCommission,
   WltDshPartnerBridge,
-} from "../../shared/finance/partner-finance";
+} from "@bthwani/wlt/shared";
 import { resolveDshStoreClientVisibility } from "../../shared/partner/dsh-client-visibility.model";
 import {
   isDshPartnerActivationComplete,
