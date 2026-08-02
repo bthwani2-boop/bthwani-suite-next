@@ -858,6 +858,9 @@ importers:
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../shared/ui-kit
+      '@bthwani/wlt':
+        specifier: workspace:*
+        version: link:../wlt
       '@react-native-async-storage/async-storage':
         specifier: 1.24.0
         version: 1.24.0(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))
