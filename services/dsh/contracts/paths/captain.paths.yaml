@@ -108,8 +108,11 @@
           schema:
             type: object
             additionalProperties: false
-            required: []
-            properties: {}
+            required: [ actualAmountMinorUnits, proofReference ]
+            properties:
+              actualAmountMinorUnits: { type: integer, format: int64, minimum: 1 }
+              proofReference: { type: string, minLength: 1, maxLength: 512 }
+              note: { type: string, maxLength: 4000 }
     responses:
       "200":
         {
@@ -141,8 +144,10 @@
           schema:
             type: object
             additionalProperties: false
-            required: []
-            properties: {}
+            required: [ proofReference ]
+            properties:
+              proofReference: { type: string, minLength: 1, maxLength: 512 }
+              note: { type: string, maxLength: 4000 }
     responses:
       "200":
         {
