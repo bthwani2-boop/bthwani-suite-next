@@ -13,17 +13,25 @@ func TestRegisteredPartnerBundleRejectsUnknownCode(t *testing.T) {
 	}
 }
 
-func TestMergePermissionsDeduplicatesExactAuthority(t *testing.T) {
+func TestReplacePartnerStorePermissionsRevokesPreviousBundle(t *testing.T) {
 	current := []Permission{
-		{Service: "dsh", Surface: "app-partner", Action: "orders.manage", Scope: "store:store-1"},
-	}
-	additions := []Permission{
-		{Service: "dsh", Surface: "app-partner", Action: "orders.manage", Scope: "store:store-1"},
+		{Service: "dsh", Surface: "app-partner", Action: "team.manage", Scope: "store:store-1"},
 		{Service: "dsh", Surface: "app-partner", Action: "catalog.manage", Scope: "store:store-1"},
+		{Service: "dsh", Surface: "app-partner", Action: "orders.manage", Scope: "store:store-2"},
+		{Service: "wlt", Surface: "app-partner", Action: "balance.read", Scope: "own"},
 	}
-	merged := mergePermissions(current, additions)
-	if len(merged) != 2 {
-		t.Fatalf("expected two unique permissions, got %#v", merged)
+	staff := []Permission{
+		{Service: "dsh", Surface: "app-partner", Action: "orders.manage", Scope: "store:store-1"},
+		{Service: "dsh", Surface: "app-partner", Action: "orders.manage", Scope: "store:store-1"},
+	}
+	effective := replacePartnerStorePermissions(current, staff, "store-1")
+	if len(effective) != 3 {
+		t.Fatalf("expected unrelated authorities plus one staff permission, got %#v", effective)
+	}
+	for _, permission := range effective {
+		if permission.Scope == "store:store-1" && permission.Action != "orders.manage" {
+			t.Fatalf("downgraded store retained elevated action: %#v", permission)
+		}
 	}
 }
 
