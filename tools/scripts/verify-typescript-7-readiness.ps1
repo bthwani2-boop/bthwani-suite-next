@@ -69,25 +69,48 @@ try {
     Write-Host "Repository: $repoRoot"
     Write-Host "Branch:     $currentBranch"
 
-    Write-Section "Remove TypeScript 6 deprecation suppression"
+    Write-Section "Remove deprecated TypeScript 6 options"
 
     $tsconfigContent = [System.IO.File]::ReadAllText($tsconfigPath)
-    $ignoreDeprecationsPattern = '(?m)^\s*"ignoreDeprecations"\s*:\s*"6\.0"\s*,?\r?\n'
+    $updatedTsconfig = $tsconfigContent
+    $changed = $false
 
-    if ([System.Text.RegularExpressions.Regex]::IsMatch($tsconfigContent, $ignoreDeprecationsPattern)) {
+    $ignoreDeprecationsPattern = '(?m)^\s*"ignoreDeprecations"\s*:\s*"6\.0"\s*,?\r?\n'
+    if ([System.Text.RegularExpressions.Regex]::IsMatch($updatedTsconfig, $ignoreDeprecationsPattern)) {
         $updatedTsconfig = [System.Text.RegularExpressions.Regex]::Replace(
-            $tsconfigContent,
+            $updatedTsconfig,
             $ignoreDeprecationsPattern,
             "",
             1
         )
-
-        $utf8WithoutBom = [System.Text.UTF8Encoding]::new($false)
-        [System.IO.File]::WriteAllText($tsconfigPath, $updatedTsconfig, $utf8WithoutBom)
+        $changed = $true
         Write-Host 'Removed "ignoreDeprecations": "6.0" from tsconfig.base.json.'
     }
     else {
         Write-Host 'The setting "ignoreDeprecations": "6.0" is already absent.'
+    }
+
+    $baseUrlPattern = '(?m)^\s*"baseUrl"\s*:\s*"\."\s*,?\r?\n'
+    if ([System.Text.RegularExpressions.Regex]::IsMatch($updatedTsconfig, $baseUrlPattern)) {
+        $updatedTsconfig = [System.Text.RegularExpressions.Regex]::Replace(
+            $updatedTsconfig,
+            $baseUrlPattern,
+            "",
+            1
+        )
+        $changed = $true
+        Write-Host 'Removed deprecated "baseUrl": "." from tsconfig.base.json.'
+    }
+    elseif ($updatedTsconfig -match '"baseUrl"\s*:') {
+        throw 'tsconfig.base.json contains a non-standard baseUrl value. Migrate its paths explicitly instead of deleting it automatically.'
+    }
+    else {
+        Write-Host 'The deprecated setting "baseUrl" is already absent.'
+    }
+
+    if ($changed) {
+        $utf8WithoutBom = [System.Text.UTF8Encoding]::new($false)
+        [System.IO.File]::WriteAllText($tsconfigPath, $updatedTsconfig, $utf8WithoutBom)
     }
 
     try {
