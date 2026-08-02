@@ -40,6 +40,7 @@ type PartnerStoreAccessInput struct {
 	StoreID          string `json:"storeId"`
 	PermissionBundle string `json:"permissionBundle,omitempty"`
 	Enabled          bool   `json:"enabled"`
+	Reactivate       bool   `json:"reactivate"`
 }
 
 type PartnerActivationResult struct {
@@ -122,7 +123,7 @@ func (c *Client) SetPartnerStoreAccess(
 	actorID = strings.TrimSpace(actorID)
 	input.StoreID = strings.TrimSpace(input.StoreID)
 	input.PermissionBundle = strings.TrimSpace(input.PermissionBundle)
-	if actorID == "" || input.StoreID == "" || (input.Enabled && input.PermissionBundle == "") {
+	if actorID == "" || input.StoreID == "" || (input.Enabled && input.PermissionBundle == "") || (input.Reactivate && !input.Enabled) {
 		return ErrIdentityRejected
 	}
 	path := "/internal/partner/actors/" + url.PathEscape(actorID) + "/store-access"
