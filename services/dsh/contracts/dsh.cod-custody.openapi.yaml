@@ -123,7 +123,7 @@ paths:
         "409": { description: COD custody state conflict }
         "502": { description: WLT unavailable }
 
-  /dsh/captain/me/finance/cod-records:
+  /dsh/captain/finance/cod-records:
     get:
       tags: ["dsh-captain"]
       operationId: listDshCaptainCodRecords
@@ -135,7 +135,7 @@ paths:
       security:
         - bearerAuth: []
 
-  /dsh/captain/me/finance/cod-records/{recordId}/collect:
+  /dsh/captain/finance/cod-records/{recordId}/collect:
     parameters:
       - $ref: "#/components/parameters/RecordId"
     post:
@@ -161,7 +161,7 @@ paths:
         "409": { description: COD custody state conflict }
         "502": { description: WLT unavailable }
 
-  /dsh/captain/me/finance/cod-records/{recordId}/remit:
+  /dsh/captain/finance/cod-records/{recordId}/remit:
     parameters:
       - $ref: "#/components/parameters/RecordId"
     post:

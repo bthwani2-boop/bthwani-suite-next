@@ -491,6 +491,11 @@ paths:
         Service-to-service only. Returns the canonical list of partner permission bundles
         (owner, manager, etc.) so that dependent services like DSH can resolve scope permissions
         without maintaining shadow authorization logic.
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/ServiceCaller"
       responses:
         '200':
           description: Canonical Identity-owned partner permission bundles.

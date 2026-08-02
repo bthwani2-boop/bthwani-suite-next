@@ -361,7 +361,7 @@ export const DSH_CAPABILITY_MAP = [
       "listDshControlPanelFinanceLedgerEntries",
       "listDshControlPanelFinanceCodRecords",
       "listDshControlPanelFinanceCommissions",
-      "listDshCaptainFinanceCodRecords",
+      "listDshCaptainCodRecords",
     ],
     surfaces: ["control-panel", "app-partner"],
     runtimeBound: true,
