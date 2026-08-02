@@ -50,8 +50,13 @@ func (s *employeeAccessServer) permissionBundles(w http.ResponseWriter, _ *http.
 }
 
 func (s *employeeAccessServer) provision(w http.ResponseWriter, r *http.Request) {
-	var input identity.EmployeeProvisionInput
-	if !decodeJSON(w, r, &input) {
+	var request struct {
+		Username         string `json:"username"`
+		PhoneE164        string `json:"phoneE164"`
+		PermissionBundle string `json:"permissionBundle"`
+		DepartmentScope  string `json:"departmentScope"`
+	}
+	if !decodeJSON(w, r, &request) {
 		return
 	}
 	operatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
@@ -62,7 +67,13 @@ func (s *employeeAccessServer) provision(w http.ResponseWriter, r *http.Request)
 	if !validateInternalOperatorRequest(w, r, operatorContextID) {
 		return
 	}
-	input.OperatorContextID = operatorContextID
+	input := identity.EmployeeProvisionInput{
+		Username:          request.Username,
+		PhoneE164:         request.PhoneE164,
+		PermissionBundle:  request.PermissionBundle,
+		DepartmentScope:   request.DepartmentScope,
+		OperatorContextID: operatorContextID,
+	}
 	if err := s.repository.ValidateEmployeePhoneOperatorContext(r.Context(), input.PhoneE164, operatorContextID); err != nil {
 		writeInternalActorError(w, err)
 		return
