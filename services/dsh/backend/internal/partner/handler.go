@@ -305,7 +305,6 @@ func HandlePartnerMe(db *sql.DB) http.HandlerFunc {
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get partner")
 			return
 		}
-		// Only expose fields the partner should see (no internal notes from CP)
 		sendJSON(w, http.StatusOK, map[string]any{
 			"id":               p.ID,
 			"displayName":      p.DisplayName,
@@ -321,9 +320,6 @@ func HandlePartnerMe(db *sql.DB) http.HandlerFunc {
 }
 
 // ─── Store team, courier settings, coverage zones ──────────────────────────
-// These are pure business handlers — no auth logic inside. Callers in
-// protected_store.go verify the actor can access storeId (via
-// store.ActorCanAccessStore) before invoking these.
 
 // GET /dsh/partner/stores/{storeId}/team
 func HandleGetStoreTeam(db *sql.DB) http.HandlerFunc {
@@ -342,20 +338,39 @@ func HandleInviteStoreTeamMember(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		actorID, _ := actorFromContext(r)
 		var input InviteTeamMemberInput
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 32*1024))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&input); err != nil {
 			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
 			return
 		}
 		input.InvitedByActorID = actorID
-		if err := InviteStoreTeamMember(db, r.PathValue("storeId"), input); err != nil {
-			if errors.Is(err, ErrInvalid) {
-				sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
-				return
-			}
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to invite team member")
-			return
+		result, err := CreateGovernedTeamInvitation(
+			r.Context(),
+			db,
+			r.PathValue("storeId"),
+			input,
+			idempotencyKey(r),
+			correlationID(r),
+		)
+		switch {
+		case err == nil:
+			sendJSON(w, http.StatusCreated, result)
+		case errors.Is(err, ErrInvalid):
+			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team invitation")
+		case errors.Is(err, ErrConflict), errors.Is(err, auth.ErrIdentityConflict):
+			sendError(w, http.StatusConflict, "INVITATION_CONFLICT", "team invitation conflicts with an existing assignment or activation")
+		case errors.Is(err, auth.ErrIdentityRejected):
+			sendError(w, http.StatusUnprocessableEntity, "IDENTITY_REJECTED", "Identity rejected the partner assignment")
+		case errors.Is(err, auth.ErrIdentityUnavailable):
+			sendJSON(w, http.StatusServiceUnavailable, map[string]any{
+				"code": "IDENTITY_UNAVAILABLE",
+				"message": "partner identity provisioning or activation is unavailable",
+				"invitation": result,
+			})
+		default:
+			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create governed team invitation")
 		}
-		sendJSON(w, http.StatusOK, map[string]bool{"success": true})
 	}
 }
 
@@ -496,8 +511,8 @@ func HandleListPartnerScopes(db *sql.DB, authClient *auth.Client) http.HandlerFu
 			return
 		}
 		resolver := make(map[string][]string)
-		for _, b := range bundles {
-			resolver[b.Code] = b.Actions
+		for _, bundle := range bundles {
+			resolver[bundle.Code] = bundle.Actions
 		}
 
 		scopes, err := ListPartnerScopesForActorForOperatorContext(db, operatorContextID, partnerID.String, actorID, resolver)
