@@ -108,15 +108,13 @@ try {
   }));
 
   for (const contract of verificationContracts) {
-    run(`spectral ${contract.source}`, "pnpm", [
+    run(`redocly ${contract.source}`, "pnpm", [
       "exec",
-      "spectral",
+      "redocly",
       "lint",
-      "--ruleset",
-      ruleset,
-      "--fail-severity",
-      "warn",
-      contract.normalized,
+      "--config",
+      ".redocly.yaml",
+      contract.source,
     ], { stdio: "pipe" });
   }
 
@@ -125,7 +123,7 @@ try {
     run(`openapi-typescript ${contract.source}`, "pnpm", [
       "exec",
       "openapi-typescript",
-      contract.normalized,
+      contract.source,
       "-o",
       tsOut,
     ]);

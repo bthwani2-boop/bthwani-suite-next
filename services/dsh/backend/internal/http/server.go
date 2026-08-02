@@ -104,6 +104,8 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/operator/orders/{orderId}/cancel", protected.handleOperatorCancelOrder)
 
 	// Dispatch & Captain Delivery Lifecycle
+	mux.HandleFunc("GET /dsh/captain/me/readiness", protected.handleGetCaptainSelfReadiness)
+	mux.HandleFunc("GET /dsh/operator/dispatch/captains/{captainId}/readiness", protected.handleGetCaptainOperatorReadiness)
 	mux.HandleFunc("POST /dsh/operator/dispatch/assignments", protected.handleCreateGovernedDispatchAssignment)
 	mux.HandleFunc("GET /dsh/operator/dispatch/assignments", protected.handleListGovernedOperatorDispatchAssignments)
 	mux.HandleFunc("GET /dsh/operator/dispatch/tracking-alerts", protected.handleListDispatchTrackingAlerts)

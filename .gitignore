@@ -67,20 +67,10 @@ services/dsh/database/seeds/local/media/
 .aider*
 !.aiderignore
 
-# Allow only bounded summaries/inventories/manifests inside .diagnostics
-!.diagnostics/
-.diagnostics/*
-!.diagnostics/operational-journey-factory/
-.diagnostics/operational-journey-factory/*
-.diagnostics/operational-journey-factory/tool-evidence/
-!.diagnostics/operational-journey-factory/inventories/
-!.diagnostics/operational-journey-factory/inventories/*
-!.diagnostics/operational-journey-factory/*.json
-!.diagnostics/operational-journey-factory/*.md
-!.diagnostics/operational-journey-factory/*.mjs
-# Raw diagnostic outputs must never be tracked (reconciliation gate policy)
-.diagnostics/operational-journey-factory/command-results.json
-.diagnostics/operational-journey-factory/knip-current.json
+# Diagnostics are transient evidence. Canonical policy, contracts, and source
+# live outside this directory; generated inventories and command output must
+# never become repository truth or same-commit closure evidence.
+.diagnostics/
 tools/diagnostics/graph.json
 tools/diagnostics/*.raw.json
 tools/diagnostics/*.full.json

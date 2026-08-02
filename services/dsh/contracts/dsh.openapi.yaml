@@ -306,6 +306,10 @@ paths:
     $ref: "./dsh.captain-financial-eligibility.openapi.yaml#/paths/~1dsh~1operator~1dispatch~1captains~1{captainId}~1financial-eligibility"
   /dsh/operator/dispatch/captains/{captainId}/financial-eligibility/refresh:
     $ref: "./dsh.captain-financial-eligibility.openapi.yaml#/paths/~1dsh~1operator~1dispatch~1captains~1{captainId}~1financial-eligibility~1refresh"
+  /dsh/captain/me/readiness:
+    $ref: "./dsh.dispatch-governance.openapi.yaml#/paths/~1dsh~1captain~1me~1readiness"
+  /dsh/operator/dispatch/captains/{captainId}/readiness:
+    $ref: "./dsh.dispatch-governance.openapi.yaml#/paths/~1dsh~1operator~1dispatch~1captains~1{captainId}~1readiness"
   /dsh/captain/me/finance/commissions:
     $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1commissions"
   /dsh/captain/me/finance/ledger-entries:

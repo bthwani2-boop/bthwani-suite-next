@@ -1,0 +1,4 @@
+rules:
+  operation-summary: off
+  struct: off
+  security-defined: off

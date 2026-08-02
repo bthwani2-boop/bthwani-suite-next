@@ -9,7 +9,7 @@
   },
   "scripts": {
     "postinstall": "node tools/scripts/postinstall-generate-clients.mjs",
-    "contracts:spectral": "spectral lint \"{core,services,apps,contracts}/**/*.openapi.yaml\"",
+    "contracts:spectral": "redocly lint \"{core,services,apps,contracts}/**/*.openapi.yaml\"",
     "contracts:registry": "node tools/scripts/generate-contract-registry.mjs",
     "contracts:lint": "node tools/important-scripts/contracts-foundation.mjs && pnpm run guard:contract-registry-drift && pnpm run contracts:spectral",
     "typecheck": "pnpm -r --if-present typecheck",
@@ -262,7 +262,7 @@
     "@opentelemetry/sdk-node": "^0.217.0",
     "@opentelemetry/semantic-conventions": "^1.28.0",
     "@playwright/test": "^1.61.1",
-    "@stoplight/spectral-cli": "6.16.0",
+    "@redocly/cli": "2.43.2",
     "@types/react": "19.2.17",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",

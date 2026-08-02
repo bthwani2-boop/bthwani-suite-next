@@ -87,6 +87,11 @@ export type DshCaptainDispatchCandidate = {
   readonly updatedAt: string;
 };
 
+export type DshCaptainReadiness = {
+  readonly ready: boolean;
+  readonly missing: readonly string[];
+};
+
 export type DshReassignAssignmentInput = Omit<DshGovernedCreateAssignmentInput, "orderId"> & {
   readonly reason: string;
 };

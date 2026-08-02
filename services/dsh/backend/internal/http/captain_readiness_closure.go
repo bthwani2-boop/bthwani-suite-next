@@ -1,7 +1,9 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"dsh-api/internal/dispatch"
@@ -20,7 +22,7 @@ func (s *protectedStoreServer) getCaptainAggregatedReadiness(r *http.Request, op
 	// 1. Workforce Activation Readiness
 	workforceReadiness, err := s.workforce.ActivationReadiness(r.Context(), captainID)
 	if err != nil {
-		return AggregatedCaptainReadiness{}, err
+		return AggregatedCaptainReadiness{}, fmt.Errorf("workforce readiness unavailable: %w", err)
 	}
 	if !workforceReadiness.IsActive {
 		missing = append(missing, workforceReadiness.Missing...)
@@ -45,9 +47,10 @@ func (s *protectedStoreServer) getCaptainAggregatedReadiness(r *http.Request, op
 	financial, err := dispatch.GetCaptainFinancialEligibilitySnapshot(r.Context(), s.db, operatorContextID, captainID)
 	if err != nil || !financial.Eligible || !financial.ExpiresAt.After(time.Now()) {
 		updated, refreshErr := s.refreshCaptainFinancialEligibility(r, operatorContextID, captainID)
-		if refreshErr == nil {
-			financial = updated
+		if refreshErr != nil {
+			return AggregatedCaptainReadiness{}, fmt.Errorf("financial readiness unavailable: %w", refreshErr)
 		}
+		financial = updated
 	}
 	if !financial.Eligible {
 		reason := "CAPTAIN_FINANCIAL_ELIGIBILITY_REQUIRED"
@@ -63,6 +66,18 @@ func (s *protectedStoreServer) getCaptainAggregatedReadiness(r *http.Request, op
 	}, nil
 }
 
+func writeCaptainReadinessError(w http.ResponseWriter, err error) {
+	message := err.Error()
+	if strings.Contains(message, "workforce readiness unavailable") ||
+		strings.Contains(message, "financial readiness unavailable") ||
+		strings.Contains(message, "not configured") ||
+		strings.Contains(message, "WLT wallet read failed") {
+		store.SendError(w, http.StatusServiceUnavailable, "CAPTAIN_READINESS_UNAVAILABLE", "a sovereign readiness dependency could not be verified")
+		return
+	}
+	writeGovernedDispatchError(w, err)
+}
+
 func (s *protectedStoreServer) handleGetCaptainSelfReadiness(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "captain")
 	if !ok {
@@ -76,7 +91,7 @@ func (s *protectedStoreServer) handleGetCaptainSelfReadiness(w http.ResponseWrit
 
 	readiness, err := s.getCaptainAggregatedReadiness(r, operatorContextID, actor.ID)
 	if err != nil {
-		writeGovernedDispatchError(w, err)
+		writeCaptainReadinessError(w, err)
 		return
 	}
 	store.SendJSON(w, http.StatusOK, readiness)
@@ -96,7 +111,7 @@ func (s *protectedStoreServer) handleGetCaptainOperatorReadiness(w http.Response
 	captainID := r.PathValue("captainId")
 	readiness, err := s.getCaptainAggregatedReadiness(r, operatorContextID, captainID)
 	if err != nil {
-		writeGovernedDispatchError(w, err)
+		writeCaptainReadinessError(w, err)
 		return
 	}
 	store.SendJSON(w, http.StatusOK, readiness)

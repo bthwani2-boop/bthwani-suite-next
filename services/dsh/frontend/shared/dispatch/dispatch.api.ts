@@ -3,6 +3,7 @@ import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshCaptainDispatchCandidate,
   DshCaptainDispatchProfileInput,
+  DshCaptainReadiness,
   DshDeliveryException,
   DshDeliveryExceptionResolutionAction,
   DshDeliveryStatus,
@@ -16,6 +17,16 @@ import type {
 } from "./dispatch.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "dispatch");
+
+export function fetchOwnCaptainReadiness(): Promise<DshCaptainReadiness> {
+  return request<DshCaptainReadiness>("/dsh/captain/me/readiness");
+}
+
+export function fetchOperatorCaptainReadiness(captainId: string): Promise<DshCaptainReadiness> {
+  return request<DshCaptainReadiness>(
+    `/dsh/operator/dispatch/captains/${encodeURIComponent(captainId)}/readiness`,
+  );
+}
 
 export async function createGovernedDispatchAssignment(
   input: DshGovernedCreateAssignmentInput,

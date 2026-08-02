@@ -6,4 +6,5 @@ export * from "./captain-financial-eligibility.api";
 export * from "./CaptainFinancialEligibilityPanel";
 export * from "./StoreCaptainHandoffExceptionForm";
 export * from "./use-dispatch-controller";
+export * from "./use-captain-readiness-controller";
 export * from "./use-store-captain-handoff-exception";
