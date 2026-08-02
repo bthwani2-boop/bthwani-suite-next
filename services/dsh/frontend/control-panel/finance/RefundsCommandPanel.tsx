@@ -63,12 +63,12 @@ export function RefundsCommandPanel() {
   const reconcileMutation = useReconcileRefundMutation();
 
   const refunds = refundsQuery.data ?? [];
-  const selected = refunds.find((r: WltRefundResponse) => r.id === selectedRefundId) 
-    ?? createMutation.data 
-    ?? approveMutation.data 
-    ?? rejectMutation.data 
-    ?? completeMutation.data 
-    ?? reconcileMutation.data 
+  const selected = refunds.find((r: WltRefundResponse) => r.id === selectedRefundId)
+    ?? createMutation.data
+    ?? approveMutation.data
+    ?? rejectMutation.data
+    ?? completeMutation.data
+    ?? reconcileMutation.data
     ?? null;
 
   async function search() {
