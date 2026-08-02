@@ -115,7 +115,8 @@ func TestRuntimeReadinessBoundaryDelegatesConfiguredReadiness(t *testing.T) {
 	}
 }
 
-func TestRuntimeReadinessBoundaryDoesNotGateOtherRoutes(t *testing.T) {
+func TestRuntimeReadinessBoundaryHandlesHealthAndDelegatesBusinessRoutes(t *testing.T) {
+	lastReadinessFailed.Store(false)
 	t.Setenv("IDENTITY_ACTIVATION_HMAC_SECRET", "")
 	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
 	t.Setenv("IDENTITY_WORKFORCE_SERVICE_TOKEN", "")
@@ -123,14 +124,16 @@ func TestRuntimeReadinessBoundaryDoesNotGateOtherRoutes(t *testing.T) {
 	handler := RuntimeReadinessBoundary(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
-	for _, path := range []string{"/identity/health", "/auth/login"} {
-		response := httptest.NewRecorder()
-		request := httptest.NewRequest(http.MethodGet, path, nil)
 
-		handler.ServeHTTP(response, request)
+	health := httptest.NewRecorder()
+	handler.ServeHTTP(health, httptest.NewRequest(http.MethodGet, "/identity/health", nil))
+	if health.Code != http.StatusOK || !strings.Contains(health.Body.String(), `"status":"HEALTHY"`) {
+		t.Fatalf("health was not handled as liveness: status=%d body=%s", health.Code, health.Body.String())
+	}
 
-		if response.Code != http.StatusNoContent {
-			t.Fatalf("%s was unexpectedly readiness-gated: %d", path, response.Code)
-		}
+	business := httptest.NewRecorder()
+	handler.ServeHTTP(business, httptest.NewRequest(http.MethodGet, "/auth/login", nil))
+	if business.Code != http.StatusNoContent {
+		t.Fatalf("business route was unexpectedly readiness-gated: %d", business.Code)
 	}
 }
