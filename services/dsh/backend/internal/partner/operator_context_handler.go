@@ -113,6 +113,8 @@ func HandleOperatorContextLinkPartnerStore(db *sql.DB) http.HandlerFunc {
 			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner or store not found")
 		case errors.Is(err, ErrOperatorContextRequired):
 			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", err.Error())
+		case errors.Is(err, ErrPartnerCannotOwnStore):
+			sendError(w, http.StatusUnprocessableEntity, "PARTNER_OWNERSHIP_INELIGIBLE", "rejected or deactivated partner cannot receive store ownership")
 		case errors.Is(err, ErrStoreOwnershipConflict):
 			sendError(w, http.StatusConflict, "STORE_OWNERSHIP_CONFLICT", "owned store transfer requires a reason and expectedStoreVersion")
 		case errors.Is(err, ErrVersionConflict):
