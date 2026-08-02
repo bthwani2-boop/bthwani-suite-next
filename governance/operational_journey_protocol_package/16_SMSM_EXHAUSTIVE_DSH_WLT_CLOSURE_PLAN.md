@@ -1,26 +1,35 @@
-# الخطة التنفيذية المرجعية ذات التغطية الرقمية لإغلاق DSH وما يرتبط به في WLT
+# الخطة التنفيذية الشاملة والمفصلة لإغلاق DSH وما يرتبط به في WLT
 
-> **الفرع الحاكم:** `smsm`
+> **المستودع:** `bthwani2-boop/bthwani-suite-next`
 >
-> **حالة الوثيقة:** `DERIVED_SUPPORT_ARTIFACT / EXECUTION_PLAN`
+> **فرع التنفيذ:** `smsm`
 >
-> **الحالة التنفيذية عند الإنشاء:** `FIX_REQUIRED`
+> **الصفة:** `DERIVED_SUPPORT_ARTIFACT / EXECUTION_PLAN_PACKAGE`
 >
-> هذه الوثيقة لا تثبت إغلاق المنصة. الإغلاق لا يصدر إلا من كود حي وعقود وقواعد بيانات وRuntime وأدلة مرتبطة بالـSHA النهائي نفسه.
+> **الحالة التنفيذية:** `FIX_REQUIRED`
+>
+> **قاعدة الادعاء:** اكتمال هذه الوثائق لا يعني إغلاق المنصة. الإغلاق لا يصدر إلا بعد تنفيذها على الكود الحي ونجاح جميع الأدلة المنطبقة على SHA نهائي واحد.
 
-## 0. مرجع التنفيذ
+## 1. سبب إعادة البناء
+
+النسخة الأولى من هذه الخطة كانت تحتوي فهرسًا من `J001..J107`، لكنها لم تقدم لكل رحلة تفاصيل الهدف والمالك والحالات والأسطح والبيانات والعقود والاختبارات ومعيار الإغلاق. أُعيد بناء الخطة كحزمة واحدة مترابطة، بحيث لا تبقى رحلة أو طبقة أو Surface عنوانًا مجردًا.
+
+الخطة الحالية:
+
+- تفصل FOUNDATION عن الرحلات.
+- تعرّف تغطية رقمية لكل ملف وعملية وتحكم مرئي.
+- تفصل كل رحلة إلى هدف وملكية وحالات وأسـطح وبيانات واختبارات وبوابة خروج.
+- تضيف معيار إغلاق لكل Surface ولكل طبقة هندسية.
+- تضيف السيناريو الإيجابي والسيناريوهات السلبية والتعافي.
+- تمنع اعتبار Build أو Typecheck أو قائمة عناوين دليل إغلاق.
+
+## 2. حالة المرجع
 
 ```yaml
 repository: bthwani2-boop/bthwani-suite-next
 work_branch: smsm
-pinned_head_at_plan_creation: 583377098a8f98943c82ac7613b34b8f30a1d63f
 base_branch: master
-base_sha_at_plan_creation: d27791729eb8ab21b05ce0e88bb39769c92cc33e
-branch_ahead_by_at_plan_creation: 64
-branch_behind_by_at_plan_creation: 0
-pull_request_at_plan_creation: NONE_FOUND
-head_workflow_runs_at_plan_creation: 0
-head_combined_statuses_at_plan_creation: 0
+pinned_head_before_master_plan_rewrite: 315f9ae15674cccf660e6f5eb5a958e165a8af09
 force_push: forbidden
 history_rewrite: forbidden
 automatic_branch: forbidden
@@ -28,407 +37,315 @@ automatic_pr: forbidden
 merge: forbidden_without_explicit_authorization
 release: forbidden_without_explicit_authorization
 production: forbidden_without_explicit_authorization
+current_decision: FIX_REQUIRED
 ```
 
-يُعاد تثبيت `smsm` قبل التشخيص، وقبل كل دفعة كتابة، وقبل كل Commit، وبعد كل Push، وقبل فتح أو إغلاق أي شريحة أو رحلة، وقبل التحقق النهائي.
+يُعاد تثبيت رأس `smsm`:
 
-## 1. تشخيص المرفقات المدمجة
+1. قبل التشخيص.
+2. قبل كل دفعة كتابة.
+3. قبل كل Commit.
+4. بعد كل Push.
+5. قبل فتح أو إغلاق أي شريحة أو رحلة أو قسم.
+6. قبل التحقق النهائي والقرار.
 
-1. `Pasted text(199).txt` خطة واسعة تحتوي 43 رحلة وشرائح كثيرة، لكنها مثبتة على `ala` ولا ترتبط رقميًا بكل عمليات وعناصر فرع `smsm`.
-2. `Pasted text (2)(19).txt` نسخة مطابقة تمامًا للملف السابق؛ الاحتفاظ بهما كمرجعين حاكمين يخلق تكرار سلطة.
-3. `Pasted text (3)(3).txt` ملحق للفجوات يعيد استخدام أرقام رحلات `35..41` بمعانٍ مختلفة عن الخطة الأساسية، فينشئ تعارض هوية الرحلات، كما أن حقائقه مثبتة على SHA قديم.
-4. `# الخطة النهائية لإغلاق منصة BThwan(2).txt` خطة أقدم على `validclean` وتجمع المنصة في سبع رحلات عريضة لا تكفي لتغطية كل عملية وسطح وتحكم.
-5. `BThwani-final-closure-execution-plan(2).md` نسخة مبتورة بنيويًا: تتوقف عند `35.10 Short-lived read URL` وبها سياج Markdown غير مغلق؛ لا تصلح مرجعًا نهائيًا.
-6. `BThwani-unified-execution-command-final-authoritative(4).md` أمر تنفيذي عام وقوي، لكنه ليس خطة مستودع مخصصة، ويحتوي مراجع تاريخية مثل `contracts/master.openapi.yaml` الذي لم يعد موجودًا في `smsm`.
+## 3. وحدة الخطة وسلطتها
 
-القرار: تحفظ المعاني الصحيحة، يدمج التكرار، تزال التعارضات، ولا تعامل أي نسخة مرفقة أو خطة قديمة بوصفها مصدر حالة تنفيذية حيًا.
+هذه الملفات تمثل **خطة واحدة** ولا يجوز تنفيذ ملف وترك بقية الملفات:
 
-## 2. الحقيقة الحاكمة
+1. `16_SMSM_EXHAUSTIVE_DSH_WLT_CLOSURE_PLAN.md` — الفهرس الحاكم وترتيب التنفيذ.
+2. `16A_SMSM_FOUNDATION_COVERAGE_AND_EXECUTION_GATES.md` — التغطية الرقمية وFOUNDATION ومعيار إغلاق كل شريحة ورحلة.
+3. `16B_SMSM_J001_J019_IDENTITY_WORKFORCE_PLATFORM_PROVIDERS.md` — الهوية والجلسات والموارد البشرية والسياسات والمزودون.
+4. `16C_SMSM_J020_J040_PARTNER_STORE_CATALOG_MARKETING.md` — الشريك والمتجر والكتالوج والتسويق.
+5. `16D_SMSM_J041_J055_CUSTOMER_CART_CHECKOUT_ORDER.md` — العميل والعناوين والاكتشاف والسلة وCheckout والطلب.
+6. `16E_SMSM_J056_J078_FULFILLMENT_DELIVERY_SUPPORT.md` — التجهيز والإسناد والتوصيل والدعم والإشعارات والتحليلات.
+7. `16F_SMSM_J079_J094_FINANCIAL_CLOSURE.md` — DSH Finance Facade وWLT والدفع والدفتر وCOD والعمولات والتسويات والصرف والمصالحة.
+8. `16G_SMSM_J095_J107_CROSS_CUTTING_FINAL_CLOSURE.md` — idempotency والأحداث والوظائف وoffline والأمن والتشغيل والاستعادة والحوكمة.
+9. `16H_SMSM_SURFACE_CONTROL_AND_STATE_CLOSURE_MATRIX.md` — كل Surface وصفحة وشاشة وتبويب وزر وأيقونة وحالة مرئية.
+10. `16I_SMSM_LAYER_TEST_RUNTIME_AND_FINAL_CLOSURE_GATES.md` — معايير إغلاق العقود والباك إند وقواعد البيانات والـRuntime والاختبارات والتنظيف والقرار النهائي.
+
+بالنسبة لتخطيط إغلاق DSH/WLT على `smsm`، تمثل الحزمة `16 + 16A..16I` المرجع التنفيذي الحالي. الخطتان `14_FULL_SURFACE_CLOSURE_PLAN.md` و`15_AUTHORITATIVE_DSH_WLT_FULLSTACK_CLOSURE_PLAN.md` مراجع تخطيط تاريخية ولا تثبتان الحالة الحالية ولا تستخدمان بالتوازي مع هذه الحزمة.
+
+## 4. الحقيقة الحاكمة للمنصة
 
 ```text
 BThwani = Unified Multi-Surface B2B2C Commerce, Fulfillment and Financial Platform.
 DSH = المالك الوحيد للحقيقة التشغيلية.
 WLT = المالك الوحيد للحقيقة المالية.
-Surfaces = عرض وإدخال وتركيب فقط.
-Financial access from DSH surfaces = DSH_FACADE_ONLY.
-Partner/Store = نطاقات أعمال وصلاحية، وليسا Tenant أو منصة مستقلة.
+Identity = المالك الوحيد للمصادقة والجلسات والأدوار والصلاحيات وهوية الخدمات.
+Workforce = المالك الوحيد للملف المهني والتكليف والجاهزية.
+Platform Control = المالك الوحيد للتغييرات السيادية والسياسات والـRollout.
+Providers = المالك الوحيد لسجل المزودين وسياسات الاتصال ومراجع الأسرار.
+Media = المالك الوحيد للملفات وmetadata والمسح والاحتفاظ.
+Surfaces = عرض وإدخال وتركيب؛ لا تملك حقيقة تشغيلية أو مالية أو صلاحيات.
 ```
 
-`subscription` و`commission` و`hybrid` نماذج تجارية فقط ولا تنشئ SaaS أو Tenant architecture.
+القواعد غير القابلة للتجاوز:
 
-المصدر المركزي للعقود في `smsm` هو:
+- Partner وStore نطاقات أعمال وصلاحية، وليسا Tenant أو منصة مستقلة.
+- `COMMISSION | SUBSCRIPTION | HYBRID | OPERATOR_MANAGED` نماذج تجارية ولا تنشئ SaaS.
+- كل Store يتبع Partner واحدًا.
+- IDs القادمة من العميل محددات موارد وليست مصدر سلطة.
+- كل Surface مالي يستخدم DSH facade فقط؛ لا استدعاء WLT مباشر.
+- DSH لا يحتفظ برصيد أو Ledger أو عمولة أو تسوية أو تفاصيل بنكية خام.
+- المصدر المركزي للعقود هو `contracts/openapi/index.yaml`؛ يمنع إحياء index موازٍ.
+
+## 5. نطاق المستودع الملزم
+
+يشمل النطاق كل ما يثبت ارتباطه بـDSH أو بحدوده مع WLT، وبالأخص:
 
 ```text
-contracts/openapi/index.yaml
-```
-
-ويمنع إحياء `contracts/master.openapi.yaml` كمصدر موازٍ.
-
-## 3. قاعدة التغطية الرقمية COVERAGE-00
-
-لا يمكن ضمان عدم تجاهل زر أو تبويب أو عملية بقائمة يدوية فقط. لذلك تنشأ تغطية آلية على أحدث SHA، ويُسند كل عنصر إلى رحلة وشريحة ومالك وحالة ودليل.
-
-### 3.1 وحدات الجرد الإلزامية
-
-```yaml
-coverage_units:
-  tracked_files:
-  workspace_packages:
-  openapi_files:
-  openapi_operations:
-  generated_clients:
-  backend_routes:
-  backend_handlers:
-  domain_commands:
-  domain_queries:
-  state_machines:
-  database_tables:
-  database_columns:
-  constraints:
-  indexes:
-  migrations:
-  events:
-  outbox_producers:
-  consumers:
-  jobs:
-  queues:
-  caches:
-  search_indexes:
-  providers:
-  runtime_profiles:
-  environment_variables:
-  app_entrypoints:
-  pages:
-  screens:
-  routes:
-  navigation_entries:
-  tabs:
-  buttons:
-  icons_with_actions:
-  forms:
-  modals:
-  sheets:
-  filters:
-  sort_controls:
-  pagination_controls:
-  visible_states:
-  feature_flags:
-  tests:
-  workflows:
-  guards:
-```
-
-### 3.2 سجل كل عنصر
-
-```yaml
-coverage_item:
-  id:
-  kind:
-  path:
-  symbol_or_operation_id:
-  semantic_capability:
-  canonical_owner:
-  journey_id:
-  slice_id:
-  required_surfaces:
-  excluded_surfaces_with_reason:
-  write_path:
-  readback_path:
-  permissions:
-  trusted_scope:
-  persistence_or_provider_effect:
-  positive_test:
-  negative_test:
-  runtime_test:
-  status: UNCLASSIFIED | IN_SCOPE | READ_ONLY | NOT_APPLICABLE_WITH_EVIDENCE | CLOSED
-  evidence_sha:
-```
-
-### 3.3 بوابة التغطية
-
-```yaml
-unclassified_files: 0
-unassigned_operations: 0
-unassigned_routes: 0
-unassigned_handlers: 0
-unassigned_database_objects: 0
-unassigned_events_jobs: 0
-unassigned_screens: 0
-unassigned_tabs: 0
-unassigned_buttons: 0
-unassigned_icons_with_actions: 0
-unassigned_forms_modals_sheets: 0
-unassigned_visible_states: 0
-unassigned_tests: 0
-unverified_required_surfaces: 0
-```
-
-أي عنصر لم يُقَس لا يسجل صفرًا، وأي اكتشاف قديم يعاد توليده على رأس `smsm` الحالي.
-
-## 4. نموذج التنفيذ
-
-```text
-PIN
-→ READ AUTHORITY
-→ REGENERATE COVERAGE
-→ DEFINE JOURNEY
-→ OPEN ONE VERTICAL SLICE
-→ DIAGNOSE
-→ PROVE ROOT CAUSE
-→ FIX CANONICAL OWNER
-→ MIGRATE DATA AND CONSUMERS
-→ COMPLETE CONTRACT/BACKEND/DB/SHARED-BRAIN/SURFACES
-→ REMOVE PARALLEL WRITES AND FALLBACKS
-→ TARGETED VERIFY
-→ NEGATIVE/CONCURRENCY/RECOVERY TESTS
-→ RUNTIME READBACK
-→ REVIEW DIFF
-→ COMMIT
-→ PUSH
-→ RE-PIN
-→ CLOSE SLICE
-→ NEXT SLICE
-→ SAME-SHA FINAL VERIFICATION
-```
-
-لا شريحة تالية قبل إغلاق الحالية، ولا رحلة تالية قبل إغلاق كل شرائح الحالية.
-
-## 5. الشرائح الرأسية الثابتة FS-01..FS-18
-
-| الشريحة | النطاق الإلزامي |
-|---|---|
-| FS-01 | Product Truth، Actors، النتيجة، الحالات، الأفعال المسموحة والممنوعة |
-| FS-02 | Identity، Session، Device، Service Identity |
-| FS-03 | Roles، Permissions، Assignments، Platform/Operator/Partner/Store/Object Authorization |
-| FS-04 | Routes، Pages، Screens، Tabs، Buttons، Icons، Navigation |
-| FS-05 | Controllers، Hooks، View Models، Validation، Error/Offline/Unknown Result |
-| FS-06 | OpenAPI، Request/Response/Error، Auth، Scope، Idempotency، Compatibility |
-| FS-07 | Generated clients/types، Drift، منع التعديل اليدوي |
-| FS-08 | Backend route، Handler، Validation، Correlation، Error translation |
-| FS-09 | Domain state machine، transitions، concurrency، audit |
-| FS-10 | Repository، tables، constraints، indexes، transaction، migrations، backfill |
-| FS-11 | Events، Outbox/Inbox، Consumers، Jobs، Retry، Replay، DLQ |
-| FS-12 | DSH/WLT أو Provider handoff، Service auth، Unknown Result، Reconciliation |
-| FS-13 | Cache، Search، Media، Providers، Invalidation، Retention |
-| FS-14 | Runtime، Docker، Env، Entrypoints، Health/Readiness، Expo/EAS/BFF |
-| FS-15 | Readback في جميع الأسطح المطلوبة |
-| FS-16 | Negative، IDOR، Replay، Race، Partial failure، Offline، Recovery |
-| FS-17 | Security، Privacy، Audit، Observability، Accessibility، RTL، Performance |
-| FS-18 | إزالة Legacy/Mocks/Fallbacks/Duplicates، Zero gates، Same-SHA evidence |
-
-## 6. FOUNDATION-00
-
-1. **السلطة والمرجع:** قراءة `AGENTS.md`، سجل ترتيب السلطة، Product Truth، platform model، سجل الرحلات والقاموس.
-2. **تقارب الفرع:** مقارنة `smsm` بـ`master`، مراجعة 64 Commit الحالية، منع out-of-scope diff.
-3. **Workspaces:** package names، workspace paths، dependencies، cycles، tsconfig، lockfile، unused/orphan packages.
-4. **OpenAPI:** فهرس واحد، operation IDs فريدة، schema ownership، bundle/lint/provenance، semantic binding.
-5. **Generated clients:** توليد حتمي، Drift صفر، لا تعديل يدوي، كل مستهلك مربوط.
-6. **Migration history:** لا تعديل Migration مطبقة، Manifest/Checksum، Fresh/Upgrade/Rerun/Interrupted/Restore.
-7. **App entrypoints:** app-client/partner/captain/field وControl Panel؛ Metro/Expo/Next startup وdeep links.
-8. **Architecture boundaries:** لا imports ممنوعة، لا business truth في Surface، لا direct WLT calls.
-9. **DSH-WLT transport:** نقل حاكم واحد، Service identity، DSH facade only، لا public WLT URLs.
-10. **Idempotency/Correlation:** stable key، payload fingerprint، same-key conflict، result lookup.
-11. **Atomic authorization:** فحص الملكية والحالة والإصدار والدفتر داخل معاملة WLT لمنع TOCTOU.
-12. **Errors:** لا raw DB/provider/internal errors، public error envelope + correlation ID.
-13. **Runtime baseline:** Identity/Workforce/DSH/WLT/Providers/Media/Notifications/DB وجميع الأسطح.
-14. **CI:** guard/workflow registry، immutable diff، fail-closed aggregate، لا skipped بسبب فشل سابق.
-15. **Evidence provenance:** Head-SHA proof وmerge-compatibility proof منفصلان.
-16. **Journey registry:** ربط J001..J107 بجميع عناصر COVERAGE-00 الحية.
-
-بوابة الخروج:
-
-```yaml
-coverage_baseline: PASS
-authority_pin: PASS
-workspace_architecture: PASS
-canonical_openapi: PASS
-generated_clients: PASS
-migration_history: PASS
-application_entrypoints: PASS
-dsh_wlt_boundary: PASS
-idempotency_correlation: PASS
-atomic_financial_authorization: PASS
-error_boundary: PASS
-runtime_baseline: PASS
-required_ci: PASS
-journey_registry_mapping: PASS
-same_sha_evidence: PASS
-```
-
-## 7. فهرس الرحلات J001..J107
-
-كل رحلة تبدأ `NOT_ASSESSED`، وتُفتح على SHA مثبت، وتنفذ فيها الشرائح `FS-01..FS-18` المنطبقة، ويمنع الإغلاق قبل ربط جميع عناصر COVERAGE-00 التابعة لها.
-
-- **J001 — صحة الهوية وجاهزيتها**
-- **J002 — تزويد Actor والبحث والقراءة**
-- **J003 — دورة حياة Actor**
-- **J004 — إصدار التفعيل وإلغاؤه وقراءته**
-- **J005 — استهلاك التفعيل وتسجيل الدخول**
-- **J006 — الجلسات والتحديث والخروج**
-- **J007 — الأجهزة وPush tokens**
-- **J008 — الأدوار والصلاحيات وحزم الوصول**
-- **J009 — السياق الموثوق وObject Authorization**
-- **J010 — الأشخاص والملف المهني**
-- **J011 — التزويد الإداري والموارد البشرية**
-- **J012 — جاهزية الكابتن**
-- **J013 — جاهزية الميداني**
-- **J014 — التكليفات والورديات والنطاقات**
-- **J015 — Platform Change Sets**
-- **J016 — Progressive Rollout وKill Switch**
-- **J017 — السياسات التشغيلية وسياسات المنصة**
-- **J018 — سجل المزودين والقدرات والصحة**
-- **J019 — اعتمادات المزود والمهل وCircuit Breaker**
-- **J020 — إنشاء الشريك وبدء Onboarding**
-- **J021 — مراجعة الشريك والتحقق ودورة الحياة**
-- **J022 — ملف الشريك وإدارته الذاتية والفريق**
-- **J023 — النموذج التجاري للشريك**
-- **J024 — إنشاء المتجر وملكيته**
-- **J025 — جاهزية المتجر والنشر والتعليق**
-- **J026 — مناطق الخدمة والحدود الجغرافية**
-- **J027 — أسطول الشريك وعضوية الكباتن**
-- **J028 — إعدادات التوصيل وتسعيره التشغيلي**
-- **J029 — Taxonomy والتصنيفات والوحدات والعلامات**
-- **J030 — المنتجات المركزية والمتغيرات والباركود**
-- **J031 — وسائط المنتج وأصول الكتالوج**
-- **J032 — اقتراحات المنتجات والتصحيحات**
-- **J033 — مراجعة الكتالوج والتعارض والدمج**
-- **J034 — Store Assortment**
-- **J035 — المخزون والتوفر وحدود الطلب**
-- **J036 — السعر ووقت التحضير وسياسة التغيير**
-- **J037 — Reels ومحتوى المنتجات المرئي**
-- **J038 — Home Discovery ومحتوى الواجهة الرئيسية**
-- **J039 — الحملات والعروض والكوبونات والمزادات**
-- **J040 — الولاء والمزايا**
-- **J041 — ملف العميل وتفضيلاته**
-- **J042 — عناوين العميل وخصوصيتها**
-- **J043 — الخرائط والترميز الجغرافي**
-- **J044 — اكتشاف المتاجر والبحث والترشيح**
-- **J045 — تفاصيل المتجر وقراءة الكتالوج**
-- **J046 — Serviceability وETA**
-- **J047 — إنشاء السلة وقراءتها وتعديلها**
-- **J048 — تزامن السلة واستعادتها**
-- **J049 — التسعير والرسوم والضرائب والتقريب**
-- **J050 — Checkout والتحقق والمعاينة**
-- **J051 — اختيار Fulfillment Mode**
-- **J052 — اختيار الدفع وPayment Session الأولية**
-- **J053 — إنشاء الطلب وIdempotency**
-- **J054 — حقيقة الطلب والجدول الزمني والقراءة**
-- **J055 — Workboards والتدخل التشغيلي والطلبات المساعدة**
-- **J056 — صندوق طلبات الشريك والتنبيهات**
-- **J057 — قبول الطلب ورفضه**
-- **J058 — التجهيز والتقديرات والمشكلات والاستبدال**
-- **J059 — الطلبات الخاصة**
-- **J060 — Customer Pickup**
-- **J061 — توفر وسعة Dispatch**
-- **J062 — إسناد Dispatch وعروض الكابتن**
-- **J063 — الإسناد اليدوي وإعادة الإسناد**
-- **J064 — التتبع الحي وسلامة الموقع**
-- **J065 — تسليم المتجر للكابتن وPickup**
-- **J066 — تنفيذ الكابتن وأثناء التوصيل**
-- **J067 — إكمال إثبات التسليم**
-- **J068 — وسائط إثبات التسليم**
-- **J069 — استثناءات وفشل التوصيل**
-- **J070 — Rescue والإنقاذ وإعادة الإسناد**
-- **J071 — إلغاء الطلب**
-- **J072 — المرتجعات وطلب الاسترداد التشغيلي**
-- **J073 — الدعم والتذاكر والمحادثات**
-- **J074 — دعم الشريك**
-- **J075 — الحوادث والتصعيدات**
-- **J076 — الإشعارات والقوالب والتفضيلات والتسليم**
-- **J077 — التقييمات وتقييم المزود والطلب**
-- **J078 — التحليلات التشغيلية وSLA والتنبيهات**
-- **J079 — DSH Finance Facade والنقل المالي**
-- **J080 — المدفوعات الإلكترونية وحقيقة المزود**
-- **J081 — المحافظ والحسابات والأرصدة المقروءة**
-- **J082 — Ledger والقيود والانعكاس**
-- **J083 — سجلات COD**
-- **J084 — حيازة COD والتحصيل والتسليم**
-- **J085 — الأهلية المالية للكابتن والميداني والممثل**
-- **J086 — العمولات وسياساتها واحتسابها**
-- **J087 — الاشتراك المالي والالتزامات وديون الشريك**
-- **J088 — تمويل العروض والكوبونات**
-- **J089 — الاستردادات**
-- **J090 — التسويات**
-- **J091 — وجهات الصرف**
-- **J092 — طلبات الصرف والفشل وإعادة المحاولة**
-- **J093 — المصالحة المالية وحالات الفروقات**
-- **J094 — التقارير المالية والملخص التجاري**
-- **J095 — Idempotency وCorrelation وUnknown Result**
-- **J096 — التفويض الذري وTOCTOU وهوية الخدمات**
-- **J097 — Events وOutbox وInbox وReplay**
-- **J098 — Jobs وQueues وRetry وDead Letters**
-- **J099 — Cache وSearch وInvalidation**
-- **J100 — دورة حياة الوسائط والملفات**
-- **J101 — Offline وإعادة الاتصال والتعارض**
-- **J102 — Observability والتدقيق والتشخيص**
-- **J103 — الأمن والخصوصية والحماية السلبية**
-- **J104 — Runtime وDocker والمداخل وBFF والبناء المحمول**
-- **J105 — الوصولية وRTL والترجمة والأداء والاعتمادية**
-- **J106 — النسخ والاستعادة والاحتفاظ والتصدير والتوافق والإصدار**
-- **J107 — الحوكمة وCI والأدلة والتنظيف والإغلاق النهائي**
-
-## 8. الأسطح والنطاقات غير القابلة للتجاهل
-
-```text
-apps/app-client/runtime
-apps/app-partner/runtime
-apps/app-captain/runtime
-apps/app-field/runtime
-apps/control-panel/runtime
+AGENTS.md
+governance/authority
+governance/product
+governance/policies
+governance/contracts
+governance/guards
+governance/github
+governance/operational_journey_protocol_package
+contracts/openapi
+core/identity
+core/workforce
+core/platform-control
+core/providers
+services/dsh/backend
+services/dsh/contracts
+services/dsh/database
+services/dsh/frontend/shared
 services/dsh/frontend/app-client
 services/dsh/frontend/app-partner
 services/dsh/frontend/app-captain
 services/dsh/frontend/app-field
 services/dsh/frontend/control-panel
-services/dsh/frontend/shared
+services/wlt/backend
+services/wlt/contracts
+services/wlt/database
 services/wlt/frontend/shared/dsh
+apps/app-client/runtime
+apps/app-partner/runtime
+apps/app-captain/runtime
+apps/app-field/runtime
+apps/control-panel/runtime
+apps/mobile
 shared/ui-kit
+infra/docker
+tools/scripts
+tools/guards
+.github/workflows
 ```
 
-كل Surface يسجل كل Route/Screen/Tab/Button/Icon/Form/Modal/Sheet/Filter/Sort/Pagination/Visible State. كل عنصر مرئي يثبت:
-`visibility → permission → trusted scope → controller → client → contract → handler → domain → DB/provider effect → readback → negative/runtime proof`.
+لا يعني ذلك فحصًا عشوائيًا لكل المستودع؛ يبدأ العمل بالرحلة المفتوحة ويتوسع إلى كل مالك ومستهلك واعتماد يحتاجه إغلاقها، بينما يستخدم `COVERAGE-00` لمنع بقاء عنصر غير مصنف.
 
-`webapp` و`website` يصنفان فقط إلى `ACTIVE_SURFACE | FUTURE_DECLARED_SURFACE | DUPLICATE_SURFACE | DEAD_SCAFFOLD | ABSENT` وفق الكود الحالي، ولا يعاد إنشاؤهما اعتمادًا على وثيقة قديمة.
+## 6. التغطية الرقمية بدل الذاكرة
 
-## 9. حدود DSH وWLT
+تفاصيل `COVERAGE-00` موجودة في `16A`. الحد الأدنى للحكم:
 
 ```yaml
-dsh_owns:
-  - partner_store_catalog_assortment
-  - serviceability_cart_checkout_order
-  - fulfillment_dispatch_delivery_support
-  - immutable_operational_evidence
-
-wlt_owns:
-  - payments_wallets_accounts_ledger
-  - cod_financial_custody
-  - commissions_obligations_debts
-  - refunds_settlements_payouts_reconciliation
-
-surfaces_must_not:
-  - call_wlt_directly
-  - calculate_financial_truth
-  - own_permissions_or_state_machines
-  - trust_client_scope_identifiers
+unclassified_files: 0
+unassigned_openapi_operations: 0
+unassigned_routes_handlers: 0
+unassigned_database_objects: 0
+unassigned_events_jobs_queues: 0
+unassigned_runtime_profiles_env: 0
+unassigned_pages_screens_routes: 0
+unassigned_tabs_buttons_icons: 0
+unassigned_forms_modals_sheets: 0
+unassigned_visible_states: 0
+unassigned_tests_workflows_guards: 0
+controls_without_real_effect: 0
+required_surfaces_without_readback: 0
 ```
 
-DSH يحتفظ بمراجع WLT وحقول masked فقط، ولا يحتفظ بتفاصيل مصرفية خام أو رصيد أو Ledger أو عمولة أو تسوية موازية.
+لا تسجل قيمة صفر لعنصر لم يُقَس على SHA النهائي.
 
-## 10. الاختبارات المطلوبة
+## 7. الشرائح الرأسية الإلزامية داخل كل رحلة
 
-- Unit، integration، database، contract، generated-client، authorization، isolation.
-- Fresh/upgrade/rerun/interrupted migration وbackup/restore.
-- Idempotency، replay، concurrency، TOCTOU، partial failure، unknown result.
-- Webhook signatures، provider timeout/failure/reconciliation.
-- Event duplication/order/replay/DLQ.
-- Network proof: صفر طلبات من المتصفح أو الهاتف إلى WLT.
-- Mobile entry/export/native requirements وControl Panel routes/BFF/session.
-- Positive/negative end-to-end journeys.
-- Accessibility، RTL، العربية، responsive، weak network، performance، SLA.
-- Security: auth bypass، IDOR، cross-partner/store/actor، injection، SSRF، path traversal، file abuse، secrets/PII.
-- Runtime readback عبر كل Surface مطلوبة.
+كل رحلة تنفذ حسب `FS-01..FS-18` المفصلة في `16A`:
 
-## 11. بوابة البقايا الصفرية
+```text
+FS-01 Product Truth and invariants
+FS-02 Identity/session/device/service identity
+FS-03 Permissions/trusted scope/object authorization
+FS-04 Routes/screens/tabs/buttons/icons/navigation
+FS-05 Controllers/view-models/visible states/offline
+FS-06 OpenAPI contract
+FS-07 Generated clients
+FS-08 Backend handler/middleware/errors
+FS-09 Domain state machine
+FS-10 Database/transaction/migration
+FS-11 Events/outbox/jobs
+FS-12 DSH-WLT/provider handoff
+FS-13 Cache/search/media/providers
+FS-14 Runtime/Docker/entrypoints
+FS-15 Cross-surface readback
+FS-16 Negative/concurrency/recovery
+FS-17 Security/privacy/a11y/RTL/performance/observability
+FS-18 Cleanup/zero residue/same-SHA evidence
+```
+
+لا تنتقل شريحة قبل إغلاق سابقتها، ولا تنتقل رحلة قبل إغلاق كل شرائحها المنطبقة.
+
+## 8. ترتيب التنفيذ الإلزامي
+
+### المرحلة 0 — COVERAGE-00 وFOUNDATION-00
+
+تنفذ الأقسام `F00-01..F00-16` في `16A`. يمنع بدء رحلة مجال قبل نجاح بوابة FOUNDATION، باستثناء الإصلاحات اللازمة لجعل FOUNDATION خضراء.
+
+### المرحلة 1 — الهوية والموارد والسياسات والمزودون
+
+`J001..J019` وفق `16B`.
+
+### المرحلة 2 — الشريك والمتجر والكتالوج والتسويق
+
+`J020..J040` وفق `16C`.
+
+### المرحلة 3 — العميل والسلة وCheckout والطلب
+
+`J041..J055` وفق `16D`.
+
+### المرحلة 4 — التجهيز والإسناد والتوصيل والدعم
+
+`J056..J078` وفق `16E`.
+
+### المرحلة 5 — الماليات
+
+`J079..J094` وفق `16F`، مع تطبيق استقلال الأدلة المالية وعدم السماح لـDSH أو الأسطح بامتلاك الحقيقة.
+
+### المرحلة 6 — الموثوقية والأمن والتشغيل والإغلاق
+
+`J095..J107` وفق `16G`، بالتوازي كتطبيق عرضي على الرحلات السابقة ثم كإغلاق نهائي.
+
+### المرحلة 7 — إغلاق الأسطح والطبقات والسيناريو المتكامل
+
+`16H` ثم `16I`، مع إعادة توليد الجرد على SHA النهائي وتشغيل السيناريوهات الإيجابية والسلبية والتعافي.
+
+## 9. معيار إغلاق كل رحلة
+
+كل رحلة في `16B..16G` تحتوي معيارها الخاص، ويضاف إليه المعيار العام:
+
+```yaml
+product_truth: PASS
+mapped_coverage_items: ALL
+required_slices: PASS
+unclassified_items: 0
+canonical_write_paths: 1
+parallel_truth_sources: 0
+required_surfaces: PASS
+excluded_surfaces_with_evidence: COMPLETE
+positive_paths: PASS
+negative_authorization_and_isolation: PASS
+concurrency_and_idempotency: PASS
+offline_unknown_result_recovery: PASS
+database_and_migration_when_applicable: PASS
+cross_service_finance_when_applicable: PASS
+runtime_readback: PASS
+observability_and_audit: PASS
+legacy_residue: 0
+failed_required_checks: 0
+evidence_sha: FINAL_SHA
+```
+
+القرارات المسموحة:
+
+```text
+CLOSED_WITH_EVIDENCE
+READY_FOR_REVIEW
+NEEDS_EVIDENCE
+BLOCKED_EXTERNAL
+FIX_REQUIRED
+PROTOCOL_VIOLATION
+```
+
+## 10. معيار إغلاق كل Surface
+
+يطبق `16H` على:
+
+- app-client.
+- app-partner.
+- app-captain.
+- app-field.
+- Control Panel.
+- DSH Shared Brain.
+- WLT frontend/shared/dsh.
+- Runtime shells.
+- shared/ui-kit.
+- أي webapp/website/mobile path يصنف Active.
+
+لا يغلق السطح قبل ربط كل Route/Screen/Tab/Button/Icon/Form/Modal/Sheet/Filter/Sort/Pagination وحالاته المرئية بالرحلة والعقد والأثر والـreadback.
+
+## 11. معيار إغلاق كل طبقة
+
+يطبق `16I` على:
+
+- العقود والعملاء المولدين.
+- DSH Backend وDatabase.
+- WLT Backend وDatabase.
+- Events/Jobs/Cache/Search.
+- Media/Providers/Notifications.
+- Runtime/Docker/Expo/Next/BFF.
+- Security/Privacy/Isolation.
+- Accessibility/RTL/Performance.
+- Tests/Cleanup/Evidence.
+
+نجاح فحص ساكن واحد لا يغلق الطبقة.
+
+## 12. قاعدة المعالجة الجذرية
+
+لكل Finding:
+
+1. إثبات الحقيقة الخاطئة أو المفقودة.
+2. تحديد مالك الحقيقة القانوني.
+3. تتبع كل writers/readers/consumers.
+4. تحديد السبب الجذري لا العرض.
+5. إصلاح المالك الحاكم.
+6. ترحيل البيانات والمستهلكين.
+7. إيقاف الكتابات المتوازية.
+8. إزالة fallback/legacy/residue بعد إثبات الانتقال.
+9. إضافة اختبار يمنع رجوع السبب.
+10. إثبات Runtime/readback.
+
+يسمح بإعادة البناء أو النقل أو الدمج أو الحذف عندما يكون التصميم الأساسي فاسدًا، لكن لا يحذف عنصر قبل تحليل استخدامه واعتمادياته وترحيله.
+
+## 13. الحلقة التنفيذية
+
+```text
+PIN
+→ READ AUTHORITY
+→ REGENERATE COVERAGE
+→ OPEN ONE JOURNEY AND ONE SLICE
+→ DIAGNOSE ROOT CAUSE
+→ FIX CANONICAL OWNER
+→ COMPLETE CONTRACT/BACKEND/DB/SHARED-BRAIN/SURFACES
+→ MIGRATE DATA AND CONSUMERS
+→ REMOVE PARALLEL WRITES AND FALLBACKS
+→ RUN TARGETED AND NEGATIVE TESTS
+→ RUN RUNTIME READBACK
+→ REVIEW DIFF
+→ COMMIT ATOMICALLY
+→ PUSH
+→ RE-PIN
+→ CLOSE SLICE
+→ CONTINUE
+→ READ-ONLY FINAL VERIFICATION
+```
+
+## 14. استراتيجية Git
+
+```yaml
+commit: ATOMIC_LOGICAL_UNITS
+push: AFTER_EACH_VERIFIED_COMMIT
+force_push: false
+reset_over_newer_work: false
+automatic_branch: false
+automatic_pr: false
+merge_to_master: false
+release: false
+production: false
+```
+
+إذا تحرك الفرع، توقف الكتابة وأعد التثبيت والمقارنة والمزامنة بأمان.
+
+## 15. بوابة البقايا الصفرية
 
 ```yaml
 parallel_truth_sources: 0
@@ -447,7 +364,7 @@ silent_scope_or_context_fallbacks: 0
 runtime_reachable_mocks: 0
 runtime_fixtures_as_truth: 0
 legacy_runtime_paths: 0
-legacy_read_fallbacks: 0
+legacy_read_write_fallbacks: 0
 modified_applied_migrations: 0
 unmanifested_migration_collisions: 0
 unclassified_coverage_items: 0
@@ -460,99 +377,48 @@ unproven_required_behavior: 0
 out_of_scope_diff: 0
 ```
 
-## 12. سيناريو التكامل النهائي
-
-```text
-Actor/session/device
-→ partner onboarding/activation
-→ store/service area/readiness/publication
-→ partner user assignment
-→ taxonomy/product/proposal/approval
-→ assortment/price/availability
-→ customer/address/serviceability/discovery
-→ cart/pricing/checkout/payment-or-COD
-→ order/readback
-→ partner accept/prepare
-→ dispatch/assignment/pickup/tracking/proof
-→ payment/COD/ledger/commission/debt/settlement/payout
-→ reconciliation/support/notification/audit
-→ readback on every required surface
-```
-
-ثم تشغل السيناريوهات السلبية والتزامن والـUnknown Result والتعافي المقابلة.
-
-## 13. دليل كل شريحة
+## 16. بوابة الإغلاق النهائية
 
 ```yaml
-slice_evidence:
-  journey_id:
-  slice_id:
-  initial_sha:
-  final_sha:
-  root_cause:
-  canonical_owner:
-  coverage_item_ids:
-  changed_paths:
-  migrations:
-  contracts:
-  generated_clients:
-  backend_and_database_effect:
-  wlt_effect:
-  required_surfaces:
-  negative_tests:
-  runtime_readback:
-  commands_and_exit_codes:
-  workflow_runs_and_artifact_digests:
-  zero_gate:
-  commit_sha:
-  decision:
+coverage_00: PASS
+foundation_00_sections_closed: 16
+journeys_registered: 107
+journeys_closed_with_evidence: 107
+open_journeys: 0
+open_slices: 0
+unmapped_coverage_items: 0
+unmapped_surface_controls_states: 0
+all_layer_gates: PASS
+all_required_surfaces_runtime_readback: PASS
+dsh_operational_truth_single_owner: PASS
+wlt_financial_truth_single_owner: PASS
+dsh_facade_only: PASS
+fresh_upgrade_rerun_restore: PASS
+positive_integrated_scenario: PASS
+negative_recovery_scenarios: PASS
+security_privacy_isolation: PASS
+accessibility_rtl_performance: PASS
+zero_residue_cleanup: PASS
+required_ci_workflows: PASS
+head_sha_evidence: PASS
+merge_compatibility_evidence: PASS
+required_independent_approvals: PASS
+remaining_internal_findings: 0
+remaining_unproven_required_items: 0
+out_of_scope_diff: 0
+final_verification_mutated_source: false
 ```
 
-## 14. استراتيجية Git
+## 17. الحالة الحالية
 
 ```yaml
-commit: ATOMIC_LOGICAL_UNITS
-push: AFTER_EACH_VERIFIED_COMMIT
-force_push: false
-merge_to_master: false
-auto_merge: false
-release: false
-production: false
+plan_package_rebuilt: true
+foundation_executed: false
+journeys_executed: false
+surfaces_runtime_verified: false
+layer_gates_executed: false
+ci_evidence_on_final_plan_sha: pending
+current_decision: FIX_REQUIRED
 ```
 
-## 15. القرار النهائي
-
-```yaml
-required_for_closed_with_evidence:
-  coverage_00: PASS
-  foundation_00: PASS
-  journeys_registered: 107
-  journeys_closed: 107
-  open_journeys: 0
-  open_slices: 0
-  all_required_surfaces: PASS
-  dsh_operational_truth: PASS
-  wlt_financial_truth: PASS
-  dsh_facade_only: PASS
-  database_fresh_upgrade_rerun_restore: PASS
-  contracts_and_generated_clients: PASS
-  security_privacy_isolation: PASS
-  runtime_mobile_control_panel: PASS
-  positive_negative_recovery_scenarios: PASS
-  zero_residue_matrix: PASS
-  head_sha_evidence: PASS
-  merge_compatibility_evidence: PASS
-  remaining_internal_findings: 0
-  remaining_unproven_required_items: 0
-```
-
-الحالة الحالية:
-
-```yaml
-decision: FIX_REQUIRED
-reason:
-  - this plan is created but not executed
-  - current discovery artifacts are stale and DISCOVERY_ONLY
-  - live registry has no named J001..J107 mappings yet
-  - current pinned head has no CI or runtime evidence
-```
+هذه الحزمة أمر إغلاق تفصيلي، وليست إعلانًا بأن الإغلاق نُفذ.
