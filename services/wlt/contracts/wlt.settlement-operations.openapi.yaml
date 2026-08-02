@@ -135,7 +135,7 @@ components:
         currency: { type: string }
         orderCount: { type: integer }
         status: { type: string }
-        settledAt: { type: string, nullable: true }
+        settledAt: { type: [string, 'null'] }
         createdAt: { type: string }
         updatedAt: { type: string }
     SettlementListResponse:

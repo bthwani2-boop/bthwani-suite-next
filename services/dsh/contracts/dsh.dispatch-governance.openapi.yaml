@@ -58,8 +58,6 @@ paths:
       operationId: listDshDispatchAssignments
       tags: [ DshDispatch ]
       security: [ { bearerAuth: [] } ]
-      parameters:
-        - $ref: '#/components/parameters/OperatorContextId'
       responses:
         '200':
           description: Active and recent assignments visible to the operator.
@@ -105,8 +103,6 @@ paths:
       operationId: listDshCaptainAssignments
       tags: [ DshDispatch ]
       security: [ { bearerAuth: [] } ]
-      parameters:
-        - $ref: '#/components/parameters/OperatorContextId'
       responses:
         '200':
           description: Actionable offers and accepted tasks for the authenticated captain.
@@ -170,7 +166,6 @@ paths:
       tags: [ DshDispatch ]
       security: [ { bearerAuth: [] } ]
       parameters:
-        - $ref: '#/components/parameters/OperatorContextId'
         - name: serviceAreaCode
           in: query
           required: true
@@ -280,8 +275,8 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
-                operatorContextId: { type: string, default: default }
                 limit: { type: integer, minimum: 1, maximum: 500, default: 100 }
       responses:
         '200':
@@ -302,7 +297,6 @@ paths:
       tags: [ DshDispatch ]
       security: [ { bearerAuth: [] } ]
       parameters:
-        - $ref: '#/components/parameters/OperatorContextId'
         - name: assignmentId
           in: query
           required: false
@@ -339,11 +333,6 @@ components:
       bearerFormat: JWT
 
   parameters:
-    OperatorContextId:
-      name: operatorContextId
-      in: query
-      required: false
-      schema: { type: string, default: default }
     AssignmentId:
       name: assignmentId
       in: path
@@ -384,7 +373,6 @@ components:
       additionalProperties: false
       required: [ captainId, serviceAreaCode ]
       properties:
-        operatorContextId: { type: string, default: default }
         captainId: { type: string, minLength: 1 }
         serviceAreaCode: { type: string, minLength: 1 }
         priority: { type: integer, minimum: 0, maximum: 100, default: 0 }
@@ -493,7 +481,6 @@ components:
           priorityScore
         ]
       properties:
-        operatorContextId: { type: string, default: default }
         accreditationStatus: { type: string, enum: [ pending, approved, suspended, expired ] }
         availabilityStatus: { type: string, enum: [ available, busy, offline, suspended ] }
         maxActiveAssignments: { type: integer, minimum: 1, maximum: 20 }

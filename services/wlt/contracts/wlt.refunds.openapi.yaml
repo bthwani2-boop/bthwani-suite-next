@@ -384,6 +384,8 @@ components:
             properties:
               resolutionAction: { const: confirmed_success }
           then:
+            properties:
+              providerReference: {}
             required: [ providerReference ]
     RefundAuditEvent:
       type: object

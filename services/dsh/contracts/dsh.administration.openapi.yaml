@@ -98,7 +98,7 @@ paths:
                   role:
                     oneOf:
                       - $ref: "#/components/schemas/Role"
-                      - nullable: true
+                      - type: 'null'
         "403": { description: Self-approval is forbidden. }
         "409": { description: Version, lifecycle, or duplicate-role conflict. }
       security:
@@ -198,7 +198,7 @@ paths:
                   assignment:
                     oneOf:
                       - $ref: "#/components/schemas/StaffAssignment"
-                      - nullable: true
+                      - type: 'null'
         "403": { description: Self-approval is forbidden. }
         "409": { description: Version, lifecycle, or role-state conflict. }
       security:
@@ -285,7 +285,7 @@ paths:
                   assignment:
                     oneOf:
                       - $ref: "#/components/schemas/StaffAssignment"
-                      - nullable: true
+                      - type: 'null'
         "403": { description: Independent checker rule violated. }
         "409": { description: Version or role-state conflict. }
       security:
@@ -636,7 +636,7 @@ components:
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        reviewedAt: { type: string, nullable: true, format: date-time }
+        reviewedAt: { type: [string, 'null'], format: date-time }
     StaffAssignment:
       type: object
       additionalProperties: false
@@ -697,7 +697,7 @@ components:
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        reviewedAt: { type: string, nullable: true, format: date-time }
+        reviewedAt: { type: [string, 'null'], format: date-time }
     RollbackRequest:
       type: object
       additionalProperties: false
@@ -736,7 +736,7 @@ components:
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        reviewedAt: { type: string, nullable: true, format: date-time }
+        reviewedAt: { type: [string, 'null'], format: date-time }
         sourceApprovedBy: { type: string }
     AdministrationDiagnostics:
       type: object

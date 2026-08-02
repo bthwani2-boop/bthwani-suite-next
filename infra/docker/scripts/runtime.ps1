@@ -238,15 +238,15 @@ function Start-DshApi {
 function Wait-ForIdentityApi {
   $max = 20
   for ($i = 1; $i -le $max; $i++) {
-    Write-Host "Waiting for Identity API ($i/$max)..."
+    Write-Host "Waiting for Identity API readiness ($i/$max)..."
     try {
-      $h = Invoke-RestMethod "http://localhost:58082/identity/health" -TimeoutSec 5 -ErrorAction Stop
-      if ($h.status -eq "healthy") { Write-Host "Identity API: healthy"; return }
+      $readiness = Invoke-RestMethod "http://localhost:58082/identity/readiness" -TimeoutSec 5 -ErrorAction Stop
+      if ($readiness.status -eq "HEALTHY") { Write-Host "Identity API: ready"; return }
     } catch { }
     Start-Sleep -Seconds 4
   }
-  Write-RuntimeDoctor -Reason "Identity API health check failed after $max attempts" -Service "identity-api"
-  throw "Identity API did not become healthy after $max attempts"
+  Write-RuntimeDoctor -Reason "Identity API readiness check failed after $max attempts" -Service "identity-api"
+  throw "Identity API did not become ready after $max attempts"
 }
 
 function Wait-ForWorkforceApi {
@@ -273,18 +273,17 @@ function Invoke-WorkforceSmoke {
 }
 
 function Invoke-IdentityMigrate {
-  $MigrationDir = "core/identity/database/migrations"
-  $MigrationFiles = Get-ChildItem -LiteralPath $MigrationDir -Filter "*.sql" | Sort-Object Name
-  if ($MigrationFiles.Count -eq 0) { throw "No identity migration files found in $MigrationDir" }
-  Write-Host "`n--- Applying identity migrations ---"
-  foreach ($f in $MigrationFiles) {
-    Write-Host "  Applying: $($f.Name)"
-    Get-Content -LiteralPath $f.FullName -Raw |
-      docker compose @(Get-ComposeBase) exec -T postgres `
-        psql -U identity_runtime -d identity_runtime -v ON_ERROR_STOP=1
-    if ($LASTEXITCODE -ne 0) { throw "Identity migration failed for $($f.Name) (exit $LASTEXITCODE)" }
+  $migrationScript = Join-Path $script:RepoRoot "infra/docker/scripts/invoke-runtime-database-migrations.ps1"
+  if (-not (Test-Path -LiteralPath $migrationScript)) {
+    throw "Governed migration runner not found: $migrationScript"
   }
-  Write-Host "Identity migration: PASS"
+  $sourceCommitSha = (& git rev-parse HEAD).Trim()
+  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($sourceCommitSha)) {
+    throw "Unable to resolve source commit SHA for identity migrations"
+  }
+  Write-Host "`n--- Applying governed identity migrations ---"
+  & $migrationScript -Service identity -SourceCommitSha $sourceCommitSha
+  Write-Host "Identity governed migration: PASS sha=$sourceCommitSha"
 }
 
 function Invoke-WorkforceMigrate {
@@ -305,9 +304,9 @@ function Invoke-WorkforceMigrate {
 function Invoke-IdentitySmoke {
   Write-Host "`n--- Identity API smoke ---"
   $health = Invoke-RestMethod "http://localhost:58082/identity/health" -TimeoutSec 10 -ErrorAction Stop
-  if ($health.status -ne "healthy") { throw "/identity/health not healthy" }
+  if ($health.status -ne "HEALTHY") { throw "/identity/health not healthy: $($health.status)" }
   $readiness = Invoke-RestMethod "http://localhost:58082/identity/readiness" -TimeoutSec 10 -ErrorAction Stop
-  if ($readiness.status -ne "ready") { throw "/identity/readiness not ready" }
+  if ($readiness.status -ne "HEALTHY") { throw "/identity/readiness not ready: $($readiness.status)" }
   $body = @{
     username = (Get-LocalUsername "operator")
     password = Get-LocalPassword

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -16,7 +17,7 @@ const (
 	minimumActivationHMACSecretLength = 32
 	minimumInternalServiceTokenLength = 32
 	identityMigrationServiceName      = "identity"
-	identityLatestMigration           = "identity-013_actor_provisioning_integrity.sql"
+	identityLatestMigration           = "identity-015_actor_lifecycle_integrity.sql"
 	defaultReadinessProbeTimeout      = 2 * time.Second
 	defaultClockSkewLimit             = 5 * time.Second
 )
@@ -37,6 +38,53 @@ type runtimeReadinessStore interface {
 
 type sqlRuntimeReadinessStore struct {
 	db *sql.DB
+}
+
+type runtimeReadinessResult struct {
+	failedCheck string
+	err         error
+}
+
+type runtimeReadinessFlight struct {
+	done   chan struct{}
+	result runtimeReadinessResult
+}
+
+// runtimeReadinessCoordinator shares one dependency probe among concurrent
+// callers. If a database driver does not promptly honor context cancellation,
+// HTTP responses still fail closed on their own timer without creating an
+// unbounded goroutine or connection storm.
+type runtimeReadinessCoordinator struct {
+	mu       sync.Mutex
+	inFlight *runtimeReadinessFlight
+}
+
+func (c *runtimeReadinessCoordinator) probe(
+	store runtimeReadinessStore,
+	timeout time.Duration,
+	clockSkewLimit time.Duration,
+) *runtimeReadinessFlight {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.inFlight != nil {
+		return c.inFlight
+	}
+
+	flight := &runtimeReadinessFlight{done: make(chan struct{})}
+	c.inFlight = flight
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		flight.result = evaluateRuntimeReadiness(ctx, store, clockSkewLimit)
+		close(flight.done)
+
+		c.mu.Lock()
+		if c.inFlight == flight {
+			c.inFlight = nil
+		}
+		c.mu.Unlock()
+	}()
+	return flight
 }
 
 func (s sqlRuntimeReadinessStore) Ping(ctx context.Context) error {
@@ -104,18 +152,19 @@ func runtimeConfigurationReady() bool {
 
 // RuntimeReadinessBoundary keeps liveness independent while making readiness
 // fail closed unless Identity configuration, PostgreSQL, governed migrations,
-// critical persistence relations, and database clock are all usable. The
-// variadic database parameter preserves source compatibility for focused unit
-// tests; production must pass the live database handle.
-func RuntimeReadinessBoundary(next http.Handler, databases ...*sql.DB) http.Handler {
+// critical persistence relations, and database clock are all usable. A missing
+// database handle is a configuration failure, never a reason to delegate to a
+// weaker readiness implementation.
+func RuntimeReadinessBoundary(next http.Handler, database *sql.DB) http.Handler {
 	var store runtimeReadinessStore
-	if len(databases) > 0 && databases[0] != nil {
-		store = sqlRuntimeReadinessStore{db: databases[0]}
+	if database != nil {
+		store = sqlRuntimeReadinessStore{db: database}
 	}
 	return runtimeReadinessBoundary(store, next)
 }
 
 func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) http.Handler {
+	coordinator := &runtimeReadinessCoordinator{}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet && r.URL.Path == "/identity/health" {
 			w.Header().Set("Cache-Control", "no-store")
@@ -149,52 +198,25 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 			return
 		}
 
-		// Backward-compatible delegation is retained only for unit-level wrappers.
-		// The production entrypoint passes the live database and therefore always
-		// executes the complete governed probe below.
 		if store == nil {
-			next.ServeHTTP(w, r)
+			writeReadinessFailure(w, "database_configuration", startedAt, nil)
 			return
 		}
 
-		ctx, cancel := context.WithTimeout(r.Context(), probeTimeout)
-		defer cancel()
-
-		if err := store.Ping(ctx); err != nil {
-			writeReadinessFailure(w, "database_ping", startedAt, err)
-			return
-		}
-
-		migrationID, success, dirty, err := store.LatestMigration(ctx)
-		if err != nil || migrationID != identityLatestMigration || !success || dirty {
-			writeReadinessFailure(w, "migration_ledger", startedAt, err)
-			return
-		}
-
-		for _, relation := range []string{
-			"identity_actors",
-			"identity_sessions",
-			"identity_activation_challenges",
-			"identity_login_attempts",
-		} {
-			exists, relationErr := store.RelationExists(ctx, relation)
-			if relationErr != nil || !exists {
-				writeReadinessFailure(w, "required_relations", startedAt, relationErr)
+		probeTimer := time.NewTimer(probeTimeout)
+		defer probeTimer.Stop()
+		flight := coordinator.probe(store, probeTimeout, clockSkewLimit)
+		select {
+		case <-flight.done:
+			result := flight.result
+			if result.failedCheck != "" {
+				writeReadinessFailure(w, result.failedCheck, startedAt, result.err)
 				return
 			}
-		}
-
-		databaseTime, err := store.DatabaseTime(ctx)
-		if err != nil {
-			writeReadinessFailure(w, "database_clock", startedAt, err)
+		case <-probeTimer.C:
+			writeReadinessFailure(w, "dependency_timeout", startedAt, context.DeadlineExceeded)
 			return
-		}
-		clockSkew := time.Since(databaseTime)
-		if clockSkew < 0 {
-			clockSkew = -clockSkew
-		}
-		if clockSkew > clockSkewLimit {
-			writeReadinessFailure(w, "clock_skew", startedAt, nil)
+		case <-r.Context().Done():
 			return
 		}
 
@@ -210,6 +232,46 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 		)
 		sendJSON(w, http.StatusOK, map[string]string{"status": "HEALTHY", "service": "core-identity"})
 	})
+}
+
+func evaluateRuntimeReadiness(
+	ctx context.Context,
+	store runtimeReadinessStore,
+	clockSkewLimit time.Duration,
+) runtimeReadinessResult {
+	if err := store.Ping(ctx); err != nil {
+		return runtimeReadinessResult{failedCheck: "database_ping", err: err}
+	}
+
+	migrationID, success, dirty, err := store.LatestMigration(ctx)
+	if err != nil || migrationID != identityLatestMigration || !success || dirty {
+		return runtimeReadinessResult{failedCheck: "migration_ledger", err: err}
+	}
+
+	for _, relation := range []string{
+		"identity_actors",
+		"identity_sessions",
+		"identity_activation_challenges",
+		"identity_login_attempts",
+	} {
+		exists, relationErr := store.RelationExists(ctx, relation)
+		if relationErr != nil || !exists {
+			return runtimeReadinessResult{failedCheck: "required_relations", err: relationErr}
+		}
+	}
+
+	databaseTime, err := store.DatabaseTime(ctx)
+	if err != nil {
+		return runtimeReadinessResult{failedCheck: "database_clock", err: err}
+	}
+	clockSkew := time.Since(databaseTime)
+	if clockSkew < 0 {
+		clockSkew = -clockSkew
+	}
+	if clockSkew > clockSkewLimit {
+		return runtimeReadinessResult{failedCheck: "clock_skew"}
+	}
+	return runtimeReadinessResult{}
 }
 
 func writeReadinessFailure(w http.ResponseWriter, check string, startedAt time.Time, err error) {

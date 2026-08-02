@@ -39,13 +39,8 @@ func (s *protectedStoreServer) handleGetFieldSelfReadiness(w http.ResponseWriter
 	}
 	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
 	if operatorContextID == "" {
-		// Attempt WLT context check if actor doesn't have it explicitly bound
-		ctxOp, hasOp := wlt.OperatorContextIDFromContext(r.Context())
-		if hasOp {
-			operatorContextID = ctxOp
-		} else {
-			operatorContextID = "default"
-		}
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted operator context is required")
+		return
 	}
 
 	readiness, err := s.getFieldAggregatedReadiness(r, operatorContextID, actor.ID)
@@ -89,12 +84,8 @@ func (s *protectedStoreServer) enforceFieldReadinessGate(next http.HandlerFunc) 
 		}
 		operatorContextID := strings.TrimSpace(actor.OperatorContextID)
 		if operatorContextID == "" {
-			ctxOp, hasOp := wlt.OperatorContextIDFromContext(r.Context())
-			if hasOp {
-				operatorContextID = ctxOp
-			} else {
-				operatorContextID = "default"
-			}
+			store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted operator context is required")
+			return
 		}
 
 		readiness, err := s.getFieldAggregatedReadiness(r, operatorContextID, actor.ID)

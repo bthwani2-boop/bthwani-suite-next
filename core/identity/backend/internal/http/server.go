@@ -15,15 +15,12 @@ import (
 )
 
 type server struct {
-	db         *sql.DB
 	repository *identity.Repository
 }
 
-func NewRouter(db *sql.DB, repository *identity.Repository) http.Handler {
-	s := &server{db: db, repository: repository}
+func NewRouter(repository *identity.Repository) http.Handler {
+	s := &server{repository: repository}
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /identity/health", s.health)
-	mux.HandleFunc("GET /identity/readiness", s.readiness)
 	mux.HandleFunc("POST /auth/login", s.login)
 	mux.HandleFunc("POST /auth/activate", s.activate)
 	mux.HandleFunc("POST /auth/refresh", s.refresh)
@@ -97,18 +94,6 @@ func CorsMiddleware(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
-}
-
-func (s *server) health(w http.ResponseWriter, _ *http.Request) {
-	sendJSON(w, http.StatusOK, map[string]string{"status": "healthy", "service": "core-identity"})
-}
-
-func (s *server) readiness(w http.ResponseWriter, r *http.Request) {
-	if err := s.db.PingContext(r.Context()); err != nil {
-		sendError(w, http.StatusServiceUnavailable, "IDENTITY_NOT_READY", "identity database is unavailable")
-		return
-	}
-	sendJSON(w, http.StatusOK, map[string]string{"status": "ready", "service": "core-identity"})
 }
 
 func (s *server) login(w http.ResponseWriter, r *http.Request) {
@@ -289,13 +274,18 @@ func (s *server) internalActorSearch(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) internalActorDeactivate(w http.ResponseWriter, r *http.Request) {
 	var request struct {
-		Reason        string `json:"reason"`
-		CorrelationID string `json:"correlationId"`
+		RequestedByActorID string `json:"requestedByActorId"`
+		Reason             string `json:"reason"`
+		CorrelationID      string `json:"correlationId"`
 	}
 	if !decodeJSON(w, r, &request) {
 		return
 	}
-	if err := s.repository.DeactivateActor(r.Context(), r.PathValue("actorId"), request.Reason, request.CorrelationID); err != nil {
+	if !validLifecycleRequest(request.RequestedByActorID, request.Reason, request.CorrelationID) {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "requestedByActorId, reason, and correlationId are required")
+		return
+	}
+	if err := s.repository.DeactivateActor(r.Context(), r.PathValue("actorId"), request.RequestedByActorID, request.Reason, request.CorrelationID); err != nil {
 		writeInternalActorError(w, err)
 		return
 	}
@@ -304,17 +294,29 @@ func (s *server) internalActorDeactivate(w http.ResponseWriter, r *http.Request)
 
 func (s *server) internalActorReactivate(w http.ResponseWriter, r *http.Request) {
 	var request struct {
-		Reason        string `json:"reason"`
-		CorrelationID string `json:"correlationId"`
+		RequestedByActorID string `json:"requestedByActorId"`
+		Reason             string `json:"reason"`
+		CorrelationID      string `json:"correlationId"`
 	}
 	if !decodeJSON(w, r, &request) {
 		return
 	}
-	if err := s.repository.ReactivateActor(r.Context(), r.PathValue("actorId"), request.Reason, request.CorrelationID); err != nil {
+	if !validLifecycleRequest(request.RequestedByActorID, request.Reason, request.CorrelationID) {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "requestedByActorId, reason, and correlationId are required")
+		return
+	}
+	if err := s.repository.ReactivateActor(r.Context(), r.PathValue("actorId"), request.RequestedByActorID, request.Reason, request.CorrelationID); err != nil {
 		writeInternalActorError(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func validLifecycleRequest(requestedByActorID, reason, correlationID string) bool {
+	requestedByActorID = strings.TrimSpace(requestedByActorID)
+	reason = strings.TrimSpace(reason)
+	correlationID = strings.TrimSpace(correlationID)
+	return requestedByActorID != "" && reason != "" && len(reason) <= 500 && correlationID != "" && len(correlationID) <= 128
 }
 
 func (s *server) internalActorIssueActivation(w http.ResponseWriter, r *http.Request) {
@@ -356,7 +358,6 @@ func (s *server) internalActorLatestActivation(w http.ResponseWriter, r *http.Re
 	}
 	sendJSON(w, http.StatusOK, meta)
 }
-
 
 func (s *server) internalActorRevokeActivations(w http.ResponseWriter, r *http.Request) {
 	if err := s.repository.RevokeActivationChallenges(r.Context(), r.PathValue("actorId")); err != nil {
@@ -456,6 +457,10 @@ func writeInternalActorError(w http.ResponseWriter, err error) {
 		sendError(w, http.StatusConflict, "USERNAME_TAKEN", "username is already taken")
 	case identity.ErrProvisionConflict:
 		sendError(w, http.StatusConflict, "ACTOR_PROVISION_CONFLICT", "provisioning input conflicts with the existing actor")
+	case identity.ErrForbidden:
+		sendError(w, http.StatusForbidden, "FORBIDDEN", "actor operation is forbidden")
+	case identity.ErrActorAlreadyDeactivated, identity.ErrActorAlreadyActive, identity.ErrInvalidActorTransition:
+		sendError(w, http.StatusConflict, "ACTOR_STATE_CONFLICT", "actor lifecycle transition conflicts with current state")
 	case identity.ErrInvalidActorQuery:
 		sendError(w, http.StatusBadRequest, "INVALID_ACTOR_QUERY", "actor query is invalid")
 	case identity.ErrActivationRateLimited:

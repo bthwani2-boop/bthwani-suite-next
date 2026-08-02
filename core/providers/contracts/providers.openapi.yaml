@@ -27,6 +27,10 @@ paths:
                 $ref: "#/components/schemas/ExternalProviderHealthResponse"
         "500":
           description: Provider registry could not be read.
+        "401":
+          description: Authentication is required.
+        "403":
+          description: Provider health read permission is required.
       security:
         - bearerAuth: []
 
@@ -52,6 +56,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeReadinessResponse"
+        "401":
+          description: Authentication is required.
+        "403":
+          description: Provider readiness read permission is required.
       security:
         - bearerAuth: []
 

@@ -26,6 +26,8 @@ paths:
                   rollouts:
                     type: array
                     items: { $ref: "#/components/schemas/PlatformRollout" }
+        "401": { $ref: "#/components/responses/PlatformRolloutError" }
+        "403": { $ref: "#/components/responses/PlatformRolloutError" }
       security:
         - bearerAuth: []
     post:

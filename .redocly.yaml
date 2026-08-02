@@ -1,4 +1,12 @@
+extends:
+  - recommended
 rules:
+  no-unresolved-refs: error
+  no-ambiguous-paths: error
+  security-defined: error
+  operation-4xx-response: error
   operation-summary: off
-  struct: off
-  security-defined: off
+  info-license: off
+  no-empty-servers: off
+  no-server-example.com: off
+  no-unused-components: off

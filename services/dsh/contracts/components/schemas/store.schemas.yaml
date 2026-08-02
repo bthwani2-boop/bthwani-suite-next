@@ -160,8 +160,9 @@ DshStoreContextResponse:
     store:
       $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreDetail"
     latestAction:
-      $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreAuditEvent"
-      nullable: true
+      anyOf:
+        - $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreAuditEvent"
+        - type: 'null'
 
 OperatorStoreGovernanceRequest:
   type: object

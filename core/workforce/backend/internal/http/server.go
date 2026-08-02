@@ -1,6 +1,7 @@
 package http
 
 import (
+	"crypto/subtle"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -15,14 +16,19 @@ import (
 )
 
 type server struct {
-	db      *sql.DB
-	service *workforce.Service
-	repo    *workforce.Repository
-	auth    *auth.Client
+	db               *sql.DB
+	service          *workforce.Service
+	repo             *workforce.Repository
+	auth             *auth.Client
+	internalDSHToken string
+	readinessStore   workforceRuntimeReadinessStore
 }
 
-func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repository, authClient *auth.Client) http.Handler {
-	s := &server{db: db, service: service, repo: repo, auth: authClient}
+func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repository, authClient *auth.Client, internalDSHToken string) http.Handler {
+	s := &server{db: db, service: service, repo: repo, auth: authClient, internalDSHToken: strings.TrimSpace(internalDSHToken)}
+	if db != nil {
+		s.readinessStore = sqlWorkforceRuntimeReadinessStore{db: db}
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /workforce/health", s.health)
 	mux.HandleFunc("GET /workforce/readiness", s.readiness)
@@ -69,15 +75,14 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 
 func (s *server) internalOnly(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if token != "WORKFORCE_DSH_SERVICE_TOKEN" && token != "WORKFORCE_INTERNAL_TOKEN" {
-			sendError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Invalid internal service token")
+		token := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
+		if s.internalDSHToken == "" || subtle.ConstantTimeCompare([]byte(token), []byte(s.internalDSHToken)) != 1 || r.Header.Get("X-Service-Caller") != "dsh" {
+			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "valid DSH service identity is required")
 			return
 		}
 		next(w, r)
 	}
 }
-
 
 // allowedCorsOrigins mirrors the identity service convention.
 func allowedCorsOrigins() map[string]bool {
@@ -116,14 +121,6 @@ func CorsMiddleware(next http.Handler) http.Handler {
 
 func (s *server) health(w http.ResponseWriter, _ *http.Request) {
 	sendJSON(w, http.StatusOK, map[string]string{"status": "healthy", "service": "core-workforce"})
-}
-
-func (s *server) readiness(w http.ResponseWriter, r *http.Request) {
-	if err := s.db.PingContext(r.Context()); err != nil {
-		sendError(w, http.StatusServiceUnavailable, "WORKFORCE_NOT_READY", "workforce database is unavailable")
-		return
-	}
-	sendJSON(w, http.StatusOK, map[string]string{"status": "ready", "service": "core-workforce"})
 }
 
 // ---- auth guards ----
@@ -503,6 +500,8 @@ func writeWorkforceError(w http.ResponseWriter, err error) {
 		sendError(w, http.StatusNotFound, "PROFILE_NOT_PROVISIONED", "no provider profile exists for this actor")
 	case errors.Is(err, workforce.ErrVersionConflict):
 		sendError(w, http.StatusConflict, "VERSION_CONFLICT", "profile was modified by someone else; reload and retry")
+	case errors.Is(err, workforce.ErrOverlappingAssignment):
+		sendError(w, http.StatusConflict, "ASSIGNMENT_OVERLAP", "operational scopes contain a duplicate active assignment")
 	case errors.Is(err, workforce.ErrDuplicateWorkforceCode):
 		sendError(w, http.StatusConflict, "DUPLICATE_WORKFORCE_CODE", "workforce code is already used")
 	case errors.Is(err, workforce.ErrInvalidReference):
@@ -535,6 +534,8 @@ func writeWorkforceError(w http.ResponseWriter, err error) {
 		sendError(w, http.StatusTooManyRequests, "ACTIVATION_RATE_LIMITED", "activation can be requested again later")
 	case errors.Is(err, identityclient.ErrInvalidActor):
 		sendError(w, http.StatusUnprocessableEntity, "INVALID_ACTOR_INPUT", "identity rejected the actor input")
+	case errors.Is(err, identityclient.ErrActorStateConflict):
+		sendError(w, http.StatusConflict, "STATUS_NOT_ALLOWED", "identity actor state does not allow this transition")
 	case errors.Is(err, identityclient.ErrUnavailable):
 		sendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
 	default:

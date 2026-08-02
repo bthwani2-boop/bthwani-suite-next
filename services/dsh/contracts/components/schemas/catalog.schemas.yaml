@@ -33,6 +33,7 @@ DshCatalogAsset:
     intendedRole: { type: [string, "null"] }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
+    version: { type: integer, minimum: 1 }
 
 DshCatalogAssetListResponse:
   type: object
@@ -139,6 +140,7 @@ DshProductProposal:
     blockedReason: { type: [string, "null"] }
     resubmissionCount: { type: integer }
     linkedStoreId: { type: [string, "null"] }
+    version: { type: integer, minimum: 1 }
 
 DshProductProposalListResponse:
   type: object
@@ -168,6 +170,7 @@ DshCentralCatalogDomain:
     isManualRequest: { type: boolean }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
+    version: { type: integer, minimum: 1 }
 
 DshCentralCatalogNode:
   type: object
@@ -184,6 +187,7 @@ DshCentralCatalogNode:
     sortOrder: { type: integer }
     isActive: { type: boolean }
     isClientVisible: { type: boolean }
+    version: { type: integer, minimum: 1 }
 
 DshClientCatalogProduct:
   type: object
@@ -208,8 +212,7 @@ DshClientCatalogProduct:
     stockStatus: { type: string, enum: [in_stock, low_stock, out_of_stock] }
     imageObjectKey: { type: string, deprecated: true, description: "Deprecated: use effectiveImage instead." }
     effectiveImage:
-      type: object
-      nullable: true
+      type: [object, 'null']
       description: >
         DAM-computed effective product image. Priority: approved store-assortment
         partner_custom_product_image (when policy allows) > approved master-product
@@ -246,6 +249,7 @@ DshCatalogPolicySnapshot:
     requiresBarcode: { type: boolean }
     requiresCatalogReview: { type: boolean }
     requiresProductImage: { type: boolean }
+    version: { type: integer, minimum: 1 }
 
 DshCatalogResponse:
   type: object

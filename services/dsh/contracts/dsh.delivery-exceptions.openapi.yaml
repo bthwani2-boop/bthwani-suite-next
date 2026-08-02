@@ -263,14 +263,13 @@ components:
       properties:
         reasonCode: { $ref: '#/components/schemas/DeliveryExceptionReasonCode' }
         note: { type: string, minLength: 5, maxLength: 1000 }
-        latitude: { type: number, format: double, minimum: -90, maximum: 90, nullable: true }
+        latitude: { type: [number, 'null'], format: double, minimum: -90, maximum: 90 }
         longitude:
           {
-            type: number,
+            type: [number, 'null'],
             format: double,
             minimum: -180,
-            maximum: 180,
-            nullable: true
+            maximum: 180
           }
 
     AcknowledgeDeliveryExceptionRequest:
@@ -324,23 +323,24 @@ components:
           enum: [ driver_assigned, driver_arrived_store, picked_up, arrived_customer ]
         severity: { $ref: '#/components/schemas/DeliveryExceptionSeverity' }
         status: { $ref: '#/components/schemas/DeliveryExceptionStatus' }
-        reportedLatitude: { type: number, format: double, nullable: true }
-        reportedLongitude: { type: number, format: double, nullable: true }
+        reportedLatitude: { type: [number, 'null'], format: double }
+        reportedLongitude: { type: [number, 'null'], format: double }
         reportedAt: { type: string, format: date-time }
-        acknowledgedAt: { type: string, format: date-time, nullable: true }
-        acknowledgedByActorId: { type: string, nullable: true }
-        resolvedAt: { type: string, format: date-time, nullable: true }
-        resolvedByActorId: { type: string, nullable: true }
+        acknowledgedAt: { type: [string, 'null'], format: date-time }
+        acknowledgedByActorId: { type: [string, 'null'] }
+        resolvedAt: { type: [string, 'null'], format: date-time }
+        resolvedByActorId: { type: [string, 'null'] }
         resolutionAction:
-          allOf: [ { $ref: '#/components/schemas/DeliveryExceptionResolutionAction' } ]
-          nullable: true
-        resolutionNote: { type: string, nullable: true }
-        replacementAssignmentId: { type: string, format: uuid, nullable: true }
-        replacementCaptainId: { type: string, nullable: true }
-        returnStartedAt: { type: string, format: date-time, nullable: true }
-        returnArrivedAt: { type: string, format: date-time, nullable: true }
-        returnedAt: { type: string, format: date-time, nullable: true }
-        returnAcceptedByActorId: { type: string, nullable: true }
+          anyOf:
+            - $ref: '#/components/schemas/DeliveryExceptionResolutionAction'
+            - type: 'null'
+        resolutionNote: { type: [string, 'null'] }
+        replacementAssignmentId: { type: [string, 'null'], format: uuid }
+        replacementCaptainId: { type: [string, 'null'] }
+        returnStartedAt: { type: [string, 'null'], format: date-time }
+        returnArrivedAt: { type: [string, 'null'], format: date-time }
+        returnedAt: { type: [string, 'null'], format: date-time }
+        returnAcceptedByActorId: { type: [string, 'null'] }
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }

@@ -5,6 +5,99 @@ function ConvertTo-BthwaniSqlLiteral {
   return "'" + $Value.Replace("'", "''") + "'"
 }
 
+function Get-BthwaniSha256Hex {
+  param([Parameter(Mandatory = $true)][byte[]]$Bytes)
+
+  $algorithm = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    return ([System.BitConverter]::ToString($algorithm.ComputeHash($Bytes))).Replace("-", "").ToLowerInvariant()
+  } finally {
+    $algorithm.Dispose()
+  }
+}
+
+function Get-BthwaniPortableSqlChecksums {
+  param([Parameter(Mandatory = $true)][System.IO.FileInfo]$File)
+
+  $rawBytes = [System.IO.File]::ReadAllBytes($File.FullName)
+  $text = [System.Text.Encoding]::UTF8.GetString($rawBytes)
+  $lfText = $text -replace "`r`n?", "`n"
+  $crlfText = $lfText -replace "`n", "`r`n"
+  $lfBytes = [System.Text.Encoding]::UTF8.GetBytes($lfText)
+  $digests = @(
+    Get-BthwaniSha256Hex -Bytes $rawBytes
+    Get-BthwaniSha256Hex -Bytes $lfBytes
+    Get-BthwaniSha256Hex -Bytes ([System.Text.Encoding]::UTF8.GetBytes($crlfText))
+  ) | Select-Object -Unique
+
+  return @{
+    Canonical = Get-BthwaniSha256Hex -Bytes $lfBytes
+    Accepted = @($digests)
+  }
+}
+
+function Get-BthwaniAuthorizedHistoricalChecksums {
+  param(
+    [Parameter(Mandatory = $true)][ValidatePattern('^[a-z0-9-]+$')][string]$ServiceName,
+    [Parameter(Mandatory = $true)][System.IO.FileInfo]$File,
+    [Parameter(Mandatory = $true)][string[]]$CurrentPortableChecksums
+  )
+
+  $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
+  $amendmentsPath = Join-Path $repositoryRoot 'governance/contracts/migration-amendments.json'
+  if (-not (Test-Path -LiteralPath $amendmentsPath -PathType Leaf)) {
+    return @()
+  }
+
+  $document = Get-Content -LiteralPath $amendmentsPath -Raw | ConvertFrom-Json
+  $matches = @($document.amendments | Where-Object {
+    $_.service -eq $ServiceName -and $_.migrationId -eq $File.Name
+  })
+  if ($matches.Count -gt 1) {
+    throw "Duplicate migration amendment for $ServiceName/$($File.Name)."
+  }
+  if ($matches.Count -eq 0) {
+    return @()
+  }
+
+  $amendment = $matches[0]
+  if ($amendment.classification -ne 'PRE_RELEASE_UNAPPLIED_CORRECTION' -or
+      $amendment.evidence.productionApprovalEvidence -ne $false) {
+    throw "Unauthorized migration amendment for $ServiceName/$($File.Name)."
+  }
+  $replacementProperty = $amendment.PSObject.Properties['replacementSha256']
+  if ($null -eq $replacementProperty -or [string]::IsNullOrWhiteSpace($replacementProperty.Value)) {
+    return @()
+  }
+  $replacementSha256 = [string]$replacementProperty.Value
+  if ($CurrentPortableChecksums -notcontains $replacementSha256) {
+    throw "Migration amendment replacement digest does not match $ServiceName/$($File.Name)."
+  }
+
+  $manifestPath = Join-Path $File.DirectoryName 'manifest.json'
+  if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+    throw "Migration amendment requires manifest.json for $ServiceName/$($File.Name)."
+  }
+  $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+  $entries = @($manifest.migrations | Where-Object { $_.file -eq $File.Name })
+  if ($entries.Count -ne 1 -or $entries[0].sha256 -notmatch '^[a-f0-9]{64}$') {
+    throw "Migration amendment has no unique historical manifest digest for $ServiceName/$($File.Name)."
+  }
+
+  $authorizedChecksums = @([string]$entries[0].sha256)
+  $historicalProperty = $amendment.PSObject.Properties['acceptedHistoricalSha256']
+  if ($null -ne $historicalProperty) {
+    foreach ($historicalChecksum in @($historicalProperty.Value)) {
+      if ([string]$historicalChecksum -notmatch '^[a-f0-9]{64}$') {
+        throw "Migration amendment has an invalid historical digest for $ServiceName/$($File.Name)."
+      }
+      $authorizedChecksums += [string]$historicalChecksum
+    }
+  }
+
+  return @($authorizedChecksums | Select-Object -Unique)
+}
+
 function Remove-BthwaniLeadingSqlTrivia {
   param([Parameter(Mandatory = $true)][AllowEmptyString()][string]$Sql)
 
@@ -138,9 +231,21 @@ END
     }
     $runnerManagedTransaction = -not $transactionOff -and -not $fileManagedTransaction
 
-    $checksum = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    # SQL text is portable across LF and CRLF worktrees. Persist a canonical LF
+    # digest for new applications while accepting only newline-equivalent legacy
+    # digests already recorded by older Windows/POSIX runners.
+    $portableChecksums = Get-BthwaniPortableSqlChecksums -File $file
+    $checksum = $portableChecksums.Canonical
+    $historicalChecksums = @(Get-BthwaniAuthorizedHistoricalChecksums `
+      -ServiceName $ServiceName `
+      -File $file `
+      -CurrentPortableChecksums $portableChecksums.Accepted)
+    $acceptedChecksums = @($portableChecksums.Accepted + $historicalChecksums | Select-Object -Unique)
     $migrationLiteral = ConvertTo-BthwaniSqlLiteral $file.Name
     $checksumLiteral = ConvertTo-BthwaniSqlLiteral $checksum
+    $acceptedChecksumArray = "ARRAY[" + (($acceptedChecksums | ForEach-Object {
+      ConvertTo-BthwaniSqlLiteral $_
+    }) -join ", ") + "]::TEXT[]"
 
     [void]$builder.AppendLine(@"
 DO `$bthwani`$
@@ -154,7 +259,7 @@ BEGIN
   FROM schema_migrations
   WHERE service_name = $serviceLiteral AND migration_id = $migrationLiteral;
 
-  IF FOUND AND existing_checksum <> $checksumLiteral THEN
+  IF FOUND AND NOT (existing_checksum = ANY ($acceptedChecksumArray)) THEN
     RAISE EXCEPTION 'MIGRATION_CHECKSUM_MISMATCH: %', $migrationLiteral;
   END IF;
   IF FOUND AND (existing_dirty OR NOT existing_success) THEN
@@ -167,7 +272,7 @@ SELECT CASE WHEN EXISTS (
   SELECT 1 FROM schema_migrations
   WHERE service_name = $serviceLiteral
     AND migration_id = $migrationLiteral
-    AND checksum_sha256 = $checksumLiteral
+    AND checksum_sha256 = ANY ($acceptedChecksumArray)
     AND success
     AND NOT dirty
 ) THEN 'false' ELSE 'true' END AS bthwani_apply \gset

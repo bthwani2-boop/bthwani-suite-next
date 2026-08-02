@@ -4,6 +4,7 @@
 /dsh/stores:
   get:
     operationId: listDshStores
+    security: []
     summary: List discoverable stores.
     tags:
       - DshStoreDiscovery
@@ -70,6 +71,7 @@
 /dsh/stores/{storeId}:
   get:
     operationId: getDshStore
+    security: []
     summary: Get a single store by ID.
     tags:
       - DshStoreDiscovery

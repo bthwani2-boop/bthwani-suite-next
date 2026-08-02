@@ -1,70 +1,223 @@
 openapi: 3.1.0
 info:
   title: Workforce Internal Scopes API
-  version: 1.0.0
+  version: 1.1.0
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/workforce
 paths:
   /internal/assignments/{actorId}/scopes:
     get:
       operationId: getInternalActorScopes
+      summary: Read active operational scopes in a trusted platform context.
       parameters:
-        - in: path
-          name: actorId
-          required: true
-          schema: { type: string }
-        - in: query
-          name: role
-          required: true
-          schema: { type: string }
-        - in: query
-          name: operatorContextId
-          required: true
-          schema: { type: string }
-        - in: header
-          name: Authorization
-          required: true
-          schema: { type: string }
-        - in: header
-          name: X-Service-Caller
-          required: true
-          schema: { type: string }
+        - $ref: '#/components/parameters/ActorId'
+        - $ref: '#/components/parameters/Role'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/OperatorContext'
       responses:
-        '200': { description: Success }
+        '200':
+          description: Active actor scopes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActorScopes'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '500':
+          $ref: '#/components/responses/InternalError'
       security:
         - bearerAuth: []
-        - serviceCaller: []
+          serviceCaller: []
     put:
       operationId: updateInternalActorScopes
+      summary: Replace operational scopes with an audited trusted-context mutation.
       parameters:
-        - in: path
-          name: actorId
-          required: true
-          schema: { type: string }
-        - in: header
-          name: Authorization
-          required: true
-          schema: { type: string }
-        - in: header
-          name: X-Service-Caller
-          required: true
-          schema: { type: string }
+        - $ref: '#/components/parameters/ActorId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/OperatorContext'
+        - $ref: '#/components/parameters/RequestingActor'
+        - $ref: '#/components/parameters/CorrelationId'
       requestBody:
         required: true
         content:
           application/json:
-            schema: { type: object }
+            schema:
+              $ref: '#/components/schemas/SetActorScopesRequest'
       responses:
-        '200': { description: Success }
+        '200':
+          description: Replaced actor scopes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActorScopes'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
       security:
         - bearerAuth: []
-        - serviceCaller: []
+          serviceCaller: []
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
+      description: DSH-to-Workforce service credential.
     serviceCaller:
       type: apiKey
       in: header
       name: X-Service-Caller
+  parameters:
+    ActorId:
+      in: path
+      name: actorId
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    Role:
+      in: query
+      name: role
+      required: true
+      schema:
+        type: string
+        enum: [field, captain, employee]
+    Authorization:
+      in: header
+      name: Authorization
+      required: true
+      schema:
+        type: string
+        minLength: 8
+    ServiceCaller:
+      in: header
+      name: X-Service-Caller
+      required: true
+      schema:
+        type: string
+        const: dsh
+    OperatorContext:
+      in: header
+      name: X-Operator-Context-ID
+      required: true
+      description: Trusted platform context resolved by DSH from Identity.
+      schema:
+        type: string
+        minLength: 1
+    RequestingActor:
+      in: header
+      name: X-Actor-ID
+      required: true
+      description: Identity-resolved actor that requested the mutation.
+      schema:
+        type: string
+        minLength: 1
+    CorrelationId:
+      in: header
+      name: X-Correlation-ID
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+  responses:
+    InvalidRequest:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthenticated:
+      description: Valid DSH service identity is required.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: The requested scopes overlap or conflict with durable state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    InternalError:
+      description: Workforce could not complete the operation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    OperationalAssignmentInput:
+      type: object
+      additionalProperties: false
+      required: [scopeType, scopeTargetId, startsOn]
+      properties:
+        scopeType:
+          type: string
+          enum: [store, area, partner, shift]
+        scopeTargetId:
+          type: string
+          minLength: 1
+        startsOn:
+          type: string
+          format: date-time
+        endsOn:
+          type: string
+          format: date-time
+    SetActorScopesRequest:
+      type: object
+      additionalProperties: false
+      required: [role, inputs]
+      properties:
+        role:
+          type: string
+          enum: [field, captain, employee]
+        inputs:
+          type: array
+          maxItems: 500
+          items:
+            $ref: '#/components/schemas/OperationalAssignmentInput'
+    ActorScopes:
+      type: object
+      additionalProperties: false
+      required: [actorId, role, operatorContextId, storeIds, serviceAreaCodes, partnerIds, shiftCodes]
+      properties:
+        actorId:
+          type: string
+        role:
+          type: string
+          enum: [field, captain, employee]
+        operatorContextId:
+          type: string
+        storeIds:
+          type: array
+          items:
+            type: string
+        serviceAreaCodes:
+          type: array
+          items:
+            type: string
+        partnerIds:
+          type: array
+          items:
+            type: string
+        shiftCodes:
+          type: array
+          items:
+            type: string

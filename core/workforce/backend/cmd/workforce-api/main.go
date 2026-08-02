@@ -57,7 +57,6 @@ func main() {
 		log.Fatal("[workforce-api] BTHWANI_OPERATOR_CONTEXT_ID is required; silent operator context fallback is forbidden")
 	}
 
-
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
 		log.Fatalf("[workforce-api] open database: %v", err)
@@ -75,7 +74,7 @@ func main() {
 	service := workforce.NewService(repo, identity, dsh)
 	authClient := auth.NewClient(identityBaseURL)
 
-	baseRouter := workforcehttp.NewRouter(db, service, repo, authClient)
+	baseRouter := workforcehttp.NewRouter(db, service, repo, authClient, dshServiceToken)
 	workforcehttp.RegisterOperationalCoreRoutes(baseRouter, repo, authClient)
 	workforcehttp.RegisterOperationalEnforcementRoutes(baseRouter, repo, authClient, wlt)
 	workforcehttp.RegisterEmployeeGovernanceRoutes(baseRouter, repo, authClient)

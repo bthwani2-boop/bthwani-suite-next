@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -26,6 +27,8 @@ type ActorScopes struct {
 	OperatorContextID string   `json:"operatorContextId"`
 	StoreIDs          []string `json:"storeIds"`
 	ServiceAreaCodes  []string `json:"serviceAreaCodes"`
+	PartnerIDs        []string `json:"partnerIds"`
+	ShiftCodes        []string `json:"shiftCodes"`
 }
 
 type GovernedActivationReadiness struct {
@@ -88,13 +91,21 @@ func (c *Client) getReadiness(ctx context.Context, endpoint string) (GovernedAct
 }
 
 func (c *Client) GetActorScopes(ctx context.Context, actorID, operatorContextID, role string) (*ActorScopes, error) {
-	urlStr := fmt.Sprintf("%s/internal/assignments/%s/scopes?role=%s&operatorContextId=%s", c.baseURL, actorID, role, operatorContextID)
+	actorID = strings.TrimSpace(actorID)
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	role = strings.TrimSpace(role)
+	if !c.Configured() || actorID == "" || operatorContextID == "" || role == "" {
+		return nil, fmt.Errorf("workforce scopes request requires configured client, actor, role, and trusted operator context")
+	}
+	urlStr := fmt.Sprintf("%s/internal/assignments/%s/scopes?role=%s", c.baseURL, url.PathEscape(actorID), url.QueryEscape(role))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create workforce request: %w", err)
 	}
 
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
+	req.Header.Set("X-Service-Caller", "dsh")
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
 
 	resp, err := c.http.Do(req)
 	if err != nil {

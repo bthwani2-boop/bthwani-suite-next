@@ -17,10 +17,10 @@ DshOrderPreparation:
     - preparationRemainingSeconds
   properties:
     orderId: { type: string, format: uuid }
-    acceptedAt: { type: string, format: date-time, nullable: true }
-    preparationStartedAt: { type: string, format: date-time, nullable: true }
-    estimatedReadyAt: { type: string, format: date-time, nullable: true }
-    readyAt: { type: string, format: date-time, nullable: true }
+    acceptedAt: { type: [string, 'null'], format: date-time }
+    preparationStartedAt: { type: [string, 'null'], format: date-time }
+    estimatedReadyAt: { type: [string, 'null'], format: date-time }
+    readyAt: { type: [string, 'null'], format: date-time }
     estimatedPreparationMinutes: { type: integer, minimum: 0, maximum: 180 }
     preparationWarningMinutes: { type: integer, minimum: 0, maximum: 60 }
     preparationDelayReason: { type: string }
@@ -83,12 +83,12 @@ DshPreparationIssue:
       $ref: "../../dsh.openapi.yaml#/components/schemas/DshPreparationIssueCustomerDecision"
     customerDecidedByActorId: { type: string }
     customerDecisionNote: { type: string, maxLength: 500 }
-    customerDecidedAt: { type: string, format: date-time, nullable: true }
+    customerDecidedAt: { type: [string, 'null'], format: date-time }
     openedByActorId: { type: string }
     openedAt: { type: string, format: date-time }
     resolvedByActorId: { type: string }
     resolutionNote: { type: string }
-    resolvedAt: { type: string, format: date-time, nullable: true }
+    resolvedAt: { type: [string, 'null'], format: date-time }
     version: { type: integer, minimum: 1 }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
@@ -213,8 +213,8 @@ DshPreparationAlert:
     estimateRevision: { type: integer, minimum: 0 }
     detectedAt: { type: string, format: date-time }
     acknowledgedByActorId: { type: string }
-    acknowledgedAt: { type: string, format: date-time, nullable: true }
-    resolvedAt: { type: string, format: date-time, nullable: true }
+    acknowledgedAt: { type: [string, 'null'], format: date-time }
+    resolvedAt: { type: [string, 'null'], format: date-time }
     resolutionReason: { type: string }
     version: { type: integer, minimum: 1 }
     createdAt: { type: string, format: date-time }
@@ -279,8 +279,8 @@ DshPartnerOrderWorkboardOrder:
         storeCaptainHandoffStatus: { type: string }
         storeCaptainHandoffAssignmentId: { type: string }
         storeCaptainHandoffCaptainId: { type: string }
-        partnerHandoffConfirmedAt: { type: string, format: date-time, nullable: true }
-        captainPickupConfirmedAt: { type: string, format: date-time, nullable: true }
+        partnerHandoffConfirmedAt: { type: [string, 'null'], format: date-time }
+        captainPickupConfirmedAt: { type: [string, 'null'], format: date-time }
         openStoreCaptainHandoffExceptionId: { type: string }
         openStoreCaptainHandoffExceptionReason: { type: string }
         openStoreCaptainHandoffExceptionStatus: { type: string }

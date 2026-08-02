@@ -21,6 +21,7 @@ var (
 	ErrRateLimited              = errors.New("activation rate limited")
 	ErrInvalidActor             = errors.New("actor input invalid")
 	ErrOperatorContextForbidden = errors.New("operator context forbidden")
+	ErrActorStateConflict       = errors.New("actor state conflict")
 	ErrUnavailable              = errors.New("identity unavailable")
 )
 
@@ -146,18 +147,20 @@ func (c *Client) Deprovision(ctx context.Context, actorID string) error {
 	return c.do(ctx, http.MethodDelete, "/internal/actors/"+url.PathEscape(actorID), nil, nil, nil)
 }
 
-func (c *Client) Deactivate(ctx context.Context, actorID, reason, correlationID string) error {
+func (c *Client) Deactivate(ctx context.Context, actorID, requestedByActorID, reason, correlationID string) error {
 	body := map[string]string{
-		"reason":        reason,
-		"correlationId": correlationID,
+		"requestedByActorId": requestedByActorID,
+		"reason":             reason,
+		"correlationId":      correlationID,
 	}
 	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/deactivate", nil, body, nil)
 }
 
-func (c *Client) Reactivate(ctx context.Context, actorID, reason, correlationID string) error {
+func (c *Client) Reactivate(ctx context.Context, actorID, requestedByActorID, reason, correlationID string) error {
 	body := map[string]string{
-		"reason":        reason,
-		"correlationId": correlationID,
+		"requestedByActorId": requestedByActorID,
+		"reason":             reason,
+		"correlationId":      correlationID,
 	}
 	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/reactivate", nil, body, nil)
 }
@@ -259,6 +262,8 @@ func (c *Client) do(ctx context.Context, method, path string, body, target any, 
 		return ErrInvalidActor
 	case "OPERATOR_CONTEXT_REQUIRED", "OPERATOR_CONTEXT_FORBIDDEN":
 		return ErrOperatorContextForbidden
+	case "ACTOR_STATE_CONFLICT":
+		return ErrActorStateConflict
 	}
 	if response.StatusCode == http.StatusNotFound {
 		return ErrActorNotFound

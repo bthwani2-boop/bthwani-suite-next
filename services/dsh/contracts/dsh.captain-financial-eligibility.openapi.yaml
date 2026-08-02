@@ -40,7 +40,6 @@ paths:
   /dsh/operator/dispatch/captains/{captainId}/financial-eligibility:
     parameters:
       - $ref: '#/components/parameters/CaptainId'
-      - $ref: '#/components/parameters/OperatorContextIdQuery'
     get:
       operationId: getOperatorCaptainFinancialEligibility
       tags: [DispatchFinancialEligibility]
@@ -58,16 +57,6 @@ paths:
     post:
       operationId: refreshOperatorCaptainFinancialEligibility
       tags: [DispatchFinancialEligibility]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required: [ operatorContextId ]
-              properties:
-                operatorContextId: { type: string, minLength: 1 }
       responses:
         '200': { $ref: '#/components/responses/EligibilityResponse' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
@@ -116,11 +105,6 @@ components:
     CaptainId:
       name: captainId
       in: path
-      required: true
-      schema: { type: string, minLength: 1 }
-    OperatorContextIdQuery:
-      name: operatorContextId
-      in: query
       required: true
       schema: { type: string, minLength: 1 }
     IdempotencyKey:

@@ -24,6 +24,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeStatus"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /identity/readiness:
     get:
       tags: [ "identity-readiness" ]
@@ -31,13 +33,15 @@ paths:
       security: []
       responses:
         "200":
-          description: Identity database is ready.
+          description: Identity configuration, database, migration ledger, critical relations, and clock are ready.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeStatus"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /auth/login:
     post:
       tags: [ "auth-login" ]
@@ -373,19 +377,32 @@ paths:
           application/json:
             schema:
               type: object
-              required: [ reason, correlationId ]
+              required: [ requestedByActorId, reason, correlationId ]
               properties:
+                requestedByActorId:
+                  type: string
+                  minLength: 1
                 reason:
                   type: string
+                  minLength: 1
+                  maxLength: 500
                 correlationId:
                   type: string
+                  minLength: 1
+                  maxLength: 128
       responses:
         "204":
           description: Actor deactivated and sessions revoked.
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /internal/actors/{actorId}/reactivate:
     post:
       operationId: reactivateActor
@@ -403,19 +420,32 @@ paths:
           application/json:
             schema:
               type: object
-              required: [ reason, correlationId ]
+              required: [ requestedByActorId, reason, correlationId ]
               properties:
+                requestedByActorId:
+                  type: string
+                  minLength: 1
                 reason:
                   type: string
+                  minLength: 1
+                  maxLength: 500
                 correlationId:
                   type: string
+                  minLength: 1
+                  maxLength: 128
       responses:
         "204":
           description: Actor reactivated.
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /internal/actors/{actorId}/activations:
     post:
       operationId: issueActivationForActor
@@ -536,6 +566,10 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/PartnerPermissionBundleDescriptor'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /internal/partner/actors/provision:
     post:
       tags:
@@ -689,6 +723,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ApiError"
+    Conflict:
+      description: Requested identity transition conflicts with current durable state.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
     RateLimited:
       description: Request was rate limited.
       content:
@@ -723,6 +763,7 @@ components:
       properties:
         status:
           type: string
+          enum: [ HEALTHY, DEGRADED, NOT_READY ]
         service:
           type: string
     LoginRequest:

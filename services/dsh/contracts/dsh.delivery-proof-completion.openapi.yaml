@@ -297,11 +297,11 @@ components:
       properties:
         method: { $ref: '#/components/schemas/DeliveryProofMethod' }
         pin: { type: string, pattern: '^[0-9]{6}$' }
-        photoMediaRef: { type: string, nullable: true }
-        signatureMediaRef: { type: string, nullable: true }
-        capturedLatitude: { type: number, minimum: -90, maximum: 90, nullable: true }
-        capturedLongitude: { type: number, minimum: -180, maximum: 180, nullable: true }
-        capturedAt: { type: string, format: date-time, nullable: true }
+        photoMediaRef: { type: [string, 'null'] }
+        signatureMediaRef: { type: [string, 'null'] }
+        capturedLatitude: { type: [number, 'null'], minimum: -90, maximum: 90 }
+        capturedLongitude: { type: [number, 'null'], minimum: -180, maximum: 180 }
+        capturedAt: { type: [string, 'null'], format: date-time }
     ReviewDeliveryProofRequest:
       type: object
       required: [ expectedVersion, reason ]
@@ -333,17 +333,17 @@ components:
         status: { $ref: '#/components/schemas/DeliveryProofStatus' }
         hasPhoto: { type: boolean }
         hasSignature: { type: boolean }
-        photoMediaRef: { type: string, nullable: true }
-        signatureMediaRef: { type: string, nullable: true }
-        capturedLatitude: { type: number, nullable: true }
-        capturedLongitude: { type: number, nullable: true }
+        photoMediaRef: { type: [string, 'null'] }
+        signatureMediaRef: { type: [string, 'null'] }
+        capturedLatitude: { type: [number, 'null'] }
+        capturedLongitude: { type: [number, 'null'] }
         capturedAt: { type: string, format: date-time }
         submittedAt: { type: string, format: date-time }
-        reviewedAt: { type: string, format: date-time, nullable: true }
-        reviewedByActorId: { type: string, nullable: true }
-        reviewReason: { type: string, nullable: true }
-        acceptedAt: { type: string, format: date-time, nullable: true }
-        rejectedAt: { type: string, format: date-time, nullable: true }
+        reviewedAt: { type: [string, 'null'], format: date-time }
+        reviewedByActorId: { type: [string, 'null'] }
+        reviewReason: { type: [string, 'null'] }
+        acceptedAt: { type: [string, 'null'], format: date-time }
+        rejectedAt: { type: [string, 'null'], format: date-time }
         version: { type: integer, minimum: 1 }
     ClientDeliveryProof:
       type: object
@@ -358,7 +358,7 @@ components:
         hasPhoto: { type: boolean }
         hasSignature: { type: boolean }
         capturedAt: { type: string, format: date-time }
-        acceptedAt: { type: string, format: date-time, nullable: true }
+        acceptedAt: { type: [string, 'null'], format: date-time }
     ErrorResponse:
       type: object
       required: [ code, message ]

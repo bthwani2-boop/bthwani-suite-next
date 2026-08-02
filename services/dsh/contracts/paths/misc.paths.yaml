@@ -1033,6 +1033,8 @@
     tags: [ DshFinanceProxy ]
     security: [ { bearerAuth: [] } ]
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: Verbatim passthrough.
         content:
@@ -1046,6 +1048,8 @@
     tags: [ DshFinanceProxy ]
     security: [ { bearerAuth: [] } ]
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: Verbatim passthrough.
         content:
@@ -1059,6 +1063,8 @@
     tags: [ DshFinanceProxy ]
     security: [ { bearerAuth: [] } ]
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: Verbatim passthrough.
         content:
@@ -1072,6 +1078,8 @@
     tags: [ DshFinanceProxy ]
     security: [ { bearerAuth: [] } ]
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: Verbatim passthrough.
         content:

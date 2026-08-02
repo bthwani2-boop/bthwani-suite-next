@@ -26,6 +26,8 @@ paths:
                   changeSets:
                     type: array
                     items: { $ref: '#/components/schemas/PlatformChangeSet' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
       security:
         - bearerAuth: []
     post:

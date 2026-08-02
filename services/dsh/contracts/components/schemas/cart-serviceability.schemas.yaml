@@ -62,8 +62,9 @@ DshCartResponse:
   required: [cart]
   properties:
     cart:
-      $ref: "../../dsh.openapi.yaml#/components/schemas/DshCart"
-      nullable: true
+      anyOf:
+        - $ref: "../../dsh.openapi.yaml#/components/schemas/DshCart"
+        - type: 'null'
 
 DshUpsertCartItemRequest:
   type: object

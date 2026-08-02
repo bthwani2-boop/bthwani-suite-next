@@ -149,8 +149,8 @@ components:
         amountMinorUnits: { type: integer, format: int64 }
         currency: { type: string }
         status: { type: string }
-        collectedAt: { type: string, nullable: true }
-        remittedAt: { type: string, nullable: true }
+        collectedAt: { type: [string, 'null'] }
+        remittedAt: { type: [string, 'null'] }
         createdAt: { type: string }
         updatedAt: { type: string }
     DeliveryCollectionHandoffResponse:
@@ -158,8 +158,9 @@ components:
       required: [ codRecord, applicable, replayed ]
       properties:
         codRecord:
-          allOf: [ { $ref: '#/components/schemas/DeliveryCollectionRecord' } ]
-          nullable: true
+          anyOf:
+            - $ref: '#/components/schemas/DeliveryCollectionRecord'
+            - type: 'null'
         applicable: { type: boolean }
         replayed: { type: boolean }
   responses:

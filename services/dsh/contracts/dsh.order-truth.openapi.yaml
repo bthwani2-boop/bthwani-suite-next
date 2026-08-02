@@ -304,7 +304,7 @@ components:
           description: Opaque WLT reference; it does not transfer financial truth
             ownership to DSH.
         paymentStatusProjection: { type: string }
-        paymentProjectionUpdatedAt: { type: string, format: date-time, nullable: true }
+        paymentProjectionUpdatedAt: { type: [string, 'null'], format: date-time }
         version: { type: integer, minimum: 1 }
         items:
           type: array
@@ -397,7 +397,7 @@ components:
         pendingOutboxEvents: { type: integer, format: int64, minimum: 0 }
         retryingOutboxEvents: { type: integer, format: int64, minimum: 0 }
         deadLetterOutboxEvents: { type: integer, format: int64, minimum: 0 }
-        oldestUnpublishedEventAt: { type: string, format: date-time, nullable: true }
+        oldestUnpublishedEventAt: { type: [string, 'null'], format: date-time }
         unknownPaymentProjections: { type: integer, format: int64, minimum: 0 }
         stalePaymentProjections: { type: integer, format: int64, minimum: 0 }
         idempotencyConflictsLastHour: { type: integer, format: int64, minimum: 0 }

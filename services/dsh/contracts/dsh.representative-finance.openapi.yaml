@@ -392,8 +392,8 @@ components:
         earnedTotalMinorUnits: { type: integer, format: int64 }
         settledTotalMinorUnits: { type: integer, format: int64 }
         paidTotalMinorUnits: { type: integer, format: int64 }
-        lastLedgerEntryAt: { type: string, format: date-time, nullable: true }
-        updatedAt: { type: string, format: date-time, nullable: true }
+        lastLedgerEntryAt: { type: [string, 'null'], format: date-time }
+        updatedAt: { type: [string, 'null'], format: date-time }
     RepresentativeLedgerEntry:
       type: object
       required:

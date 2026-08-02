@@ -458,7 +458,7 @@ func (s *Service) Suspend(ctx context.Context, operator Operator, actorID string
 	if err != nil {
 		return Person{}, err
 	}
-	if err := s.identity.Deactivate(ctx, actorID, reason, correlationID); err != nil {
+	if err := s.identity.Deactivate(ctx, actorID, operator.ActorID, reason, correlationID); err != nil {
 		// Identity is the auth gate: if it cannot be deactivated the
 		// suspension is not effective, so roll the status back and fail.
 		_, _ = s.repo.SetEngagementStatus(ctx, actorID, before.EngagementStatus, person.Version)
@@ -487,7 +487,7 @@ func (s *Service) Reactivate(ctx context.Context, operator Operator, actorID str
 	if err != nil {
 		return Person{}, err
 	}
-	if err := s.identity.Reactivate(ctx, actorID, reason, correlationID); err != nil {
+	if err := s.identity.Reactivate(ctx, actorID, operator.ActorID, reason, correlationID); err != nil {
 		_, _ = s.repo.SetEngagementStatus(ctx, actorID, "suspended", person.Version)
 		return Person{}, err
 	}

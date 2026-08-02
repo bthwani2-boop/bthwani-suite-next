@@ -3,7 +3,7 @@
   "service": "dsh",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "dsh-969_partner_team_manager_role.sql",
+  "cutover": "dsh-971_partner_brand_schema_recovery.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -1361,6 +1361,20 @@
       "file": "dsh-969_partner_team_manager_role.sql",
       "sha256": "60892daab11086968129689bb794849fe491d4eb1602009b35943edcf1643c17",
       "historicalPrefix": "969",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 195,
+      "file": "dsh-970_service_area_effectivity_history.sql",
+      "sha256": "76b14767a2ad17eb9974592dfaf50ec70cca10074116a062687b075dbe8d4ae6",
+      "historicalPrefix": "970",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 196,
+      "file": "dsh-971_partner_brand_schema_recovery.sql",
+      "sha256": "8a2932e788d47cce4e7f11c146ec46330cb80ae26e13b2c6e67f6b3dfe4551b1",
+      "historicalPrefix": "971",
       "state": "ACTIVE"
     }
   ]

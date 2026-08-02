@@ -25,6 +25,7 @@ paths:
       security: []
       responses:
         "200": { $ref: "#/components/responses/PublicHealth" }
+        "400": { $ref: "#/components/responses/PlatformError" }
         "503": { $ref: "#/components/responses/PublicHealth" }
   /platform/readiness:
     get:
@@ -34,6 +35,7 @@ paths:
       security: []
       responses:
         "200": { $ref: "#/components/responses/PublicHealth" }
+        "400": { $ref: "#/components/responses/PlatformError" }
         "503": { $ref: "#/components/responses/PublicHealth" }
   /platform/v1/runtime-config:
     get:
@@ -47,6 +49,8 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/PlatformRuntimeSnapshot" }
+        "401": { $ref: "#/components/responses/PlatformError" }
+        "403": { $ref: "#/components/responses/PlatformError" }
       security:
         - bearerAuth: []
   /platform/v1/runtime-config/effective:
@@ -61,6 +65,8 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/PlatformEffectiveRuntimeConfig" }
+        "401": { $ref: "#/components/responses/PlatformError" }
+        "403": { $ref: "#/components/responses/PlatformError" }
         "500": { $ref: "#/components/responses/PlatformError" }
       security:
         - bearerAuth: []
@@ -82,6 +88,8 @@ paths:
                   variables:
                     type: array
                     items: { $ref: "#/components/schemas/PlatformVariable" }
+        "401": { $ref: "#/components/responses/PlatformError" }
+        "403": { $ref: "#/components/responses/PlatformError" }
         "500": { $ref: "#/components/responses/PlatformError" }
       security:
         - bearerAuth: []
@@ -133,6 +141,8 @@ paths:
                   flags:
                     type: array
                     items: { $ref: "#/components/schemas/PlatformFeatureFlag" }
+        "401": { $ref: "#/components/responses/PlatformError" }
+        "403": { $ref: "#/components/responses/PlatformError" }
         "500": { $ref: "#/components/responses/PlatformError" }
       security:
         - bearerAuth: []
@@ -154,6 +164,8 @@ paths:
                   services:
                     type: array
                     items: { $ref: "#/components/schemas/PlatformServicePosture" }
+        "401": { $ref: "#/components/responses/PlatformError" }
+        "403": { $ref: "#/components/responses/PlatformError" }
       security:
         - bearerAuth: []
   /platform/v1/health:
@@ -168,6 +180,8 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/PlatformHealthSnapshot" }
+        "401": { $ref: "#/components/responses/PlatformError" }
+        "403": { $ref: "#/components/responses/PlatformError" }
       security:
         - bearerAuth: []
   /platform/v1/audit-events:
@@ -188,6 +202,8 @@ paths:
                   events:
                     type: array
                     items: { $ref: "#/components/schemas/PlatformAuditEvent" }
+        "401": { $ref: "#/components/responses/PlatformError" }
+        "403": { $ref: "#/components/responses/PlatformError" }
         "500": { $ref: "#/components/responses/PlatformError" }
       security:
         - bearerAuth: []

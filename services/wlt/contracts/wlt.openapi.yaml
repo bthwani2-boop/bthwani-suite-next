@@ -43,6 +43,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/HealthResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
       security:
         - bearerAuth: []
   /wlt/readiness:
@@ -56,6 +58,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/HealthResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '503': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
       security:
         - bearerAuth: []
@@ -293,6 +297,8 @@ paths:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
       responses:
         '200': { description: OperatorContext-local financial summary }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
 components:
   securitySchemes: {}
   parameters:
@@ -356,11 +362,11 @@ components:
         actorType: { type: string }
         sourceType: { type: string }
         sourceId: { type: string }
-        orderId: { type: string, nullable: true }
-        visitId: { type: string, nullable: true }
-        storeId: { type: string, nullable: true }
-        partnerId: { type: string, nullable: true }
-        commissionEventId: { type: string, nullable: true }
+        orderId: { type: [string, 'null'] }
+        visitId: { type: [string, 'null'] }
+        storeId: { type: [string, 'null'] }
+        partnerId: { type: [string, 'null'] }
+        commissionEventId: { type: [string, 'null'] }
         referenceId: { type: string }
         referenceType: { type: string }
         amountMinorUnits: { type: integer, format: int64 }
@@ -368,7 +374,7 @@ components:
         debitCredit: { type: string }
         balanceAfter: { type: integer, format: int64 }
         description: { type: string }
-        idempotencyKey: { type: string, nullable: true }
+        idempotencyKey: { type: [string, 'null'] }
         createdAt: { type: string }
     LedgerEntryListResponse:
       type: object

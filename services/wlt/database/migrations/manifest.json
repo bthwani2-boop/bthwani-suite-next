@@ -3,7 +3,7 @@
   "service": "wlt",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "wlt-903_drop_unconsumed_payout_outbox.sql",
+  "cutover": "wlt-904_reconciliation_claim_guard_repair.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -459,6 +459,13 @@
       "sha256": "f76982b4cabf9c250765def7e8ed5415974ed3dbc22b133af848e04615248720",
       "historicalPrefix": "903",
       "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 66,
+      "file": "wlt-904_reconciliation_claim_guard_repair.sql",
+      "sha256": "2f881eb64d0270e5ead84190764e3845d81c77b7e9e73281f3b485e9dd4c1ccd",
+      "historicalPrefix": "904",
+      "state": "ACTIVE"
     }
   ]
 }

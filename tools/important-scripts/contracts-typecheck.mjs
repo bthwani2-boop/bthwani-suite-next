@@ -1,46 +1,14 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { normalizeOpenApiMetadata } from "../contracts/normalize-openapi-metadata.mjs";
 import { composeContext } from "../scripts/openapi-context-composer.mjs";
 
-const contracts = [
-  "contracts/openapi/index.yaml",
-  "core/identity/contracts/identity.openapi.yaml",
-  "core/platform-control/contracts/platform-control.openapi.yaml",
-  "core/providers/contracts/providers.openapi.yaml",
-  "core/workforce/contracts/workforce.openapi.yaml",
-  "services/dsh/contracts/generated/dsh.bundle.openapi.yaml",
-  "services/wlt/contracts/generated/wlt.bundle.openapi.yaml",
-];
+const contexts = ["identity", "workforce", "platform-control", "providers", "dsh", "wlt"];
 
 const repoRoot = new URL("../..", import.meta.url);
 const tempDir = mkdtempSync(join(tmpdir(), "bthwani-contracts-"));
-const ruleset = join(tempDir, "spectral.yaml");
-const normalizedContracts = [];
-writeFileSync(
-  ruleset,
-  `extends: [spectral:oas]
-rules:
-  duplicated-entry-in-enum:
-    description: Enum values must not have duplicate entry.
-    severity: warn
-    recommended: true
-    message: "{{error}}"
-    given:
-      - "$..[?(@property !== 'properties' && @ != null && @.enum && @.enum.constructor.name === 'Array')]"
-    then:
-      field: enum
-      function: schema
-      functionOptions:
-        schema:
-          type: array
-          uniqueItems: true
-  oas3-unused-component: off
-`,
-  "utf8",
-);
 
 function firstActionableDiagnostic(output) {
   const lines = String(output ?? "")
@@ -57,30 +25,52 @@ function firstActionableDiagnostic(output) {
 }
 
 function run(label, command, args, options = {}) {
-  const result = spawnSync(command, args, {
+  const { rejectWarnings = false, ...spawnOptions } = options;
+  let executable = command;
+  let effectiveArgs = args;
+  if (process.platform === "win32" && command === "pnpm") {
+    const pnpmCli = join(dirname(process.execPath), "node_modules", "corepack", "dist", "pnpm.js");
+    if (!existsSync(pnpmCli)) throw new Error(`${label}: pnpm corepack entrypoint not found`);
+    executable = process.execPath;
+    effectiveArgs = [pnpmCli, ...args];
+  }
+  const result = spawnSync(executable, effectiveArgs, {
     cwd: repoRoot,
     encoding: "utf8",
-    shell: process.platform === "win32",
-    ...options,
+    shell: false,
+    ...spawnOptions,
   });
 
+  const combined = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`.trim();
+
   if (result.status !== 0) {
-    const combined = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.trim();
     if (result.stdout) process.stdout.write(result.stdout);
     if (result.stderr) process.stderr.write(result.stderr);
     throw new Error(`${label}: ${firstActionableDiagnostic(combined)}`);
   }
 
-  if (options.stdio !== "pipe") return;
+  if (rejectWarnings && /\bYou have\s+[1-9]\d*\s+warnings?\b/i.test(combined)) {
+    if (result.stdout) process.stdout.write(result.stdout);
+    if (result.stderr) process.stderr.write(result.stderr);
+    throw new Error(`${label}: warnings are forbidden`);
+  }
+
+  if (spawnOptions.stdio !== "pipe") return;
   if (result.stderr) process.stderr.write(result.stderr);
 }
 
-function materializeNormalizedContract(contract) {
-  const output = join(dirname(contract), `.${basename(contract)}.normalized-${process.pid}.yaml`);
-  const source = readFileSync(new URL(contract, repoRoot), "utf8");
-  writeFileSync(new URL(output, repoRoot), normalizeOpenApiMetadata(source, contract), "utf8");
-  normalizedContracts.push(output);
+function materializeNormalizedContract(source, sourceLabel) {
+  const output = join(tempDir, ...sourceLabel.split("/"));
+  mkdirSync(dirname(output), { recursive: true });
+  writeFileSync(output, normalizeOpenApiMetadata(source, sourceLabel), "utf8");
   return output;
+}
+
+function materializeSharedContracts() {
+  const sharedContract = "contracts/shared/common.openapi.yaml";
+  const output = join(tempDir, ...sharedContract.split("/"));
+  mkdirSync(dirname(output), { recursive: true });
+  copyFileSync(new URL(sharedContract, repoRoot), output);
 }
 
 async function verifyGeneratedBundle(context) {
@@ -93,19 +83,24 @@ async function verifyGeneratedBundle(context) {
     );
   }
   console.log(`${context} generated bundle: PASS (${result.sourceDigest})`);
+  return result;
 }
 
 try {
   run("contracts-foundation", "node", ["tools/important-scripts/contracts-foundation.mjs"], {
     stdio: "inherit",
   });
-  await verifyGeneratedBundle("dsh");
-  await verifyGeneratedBundle("wlt");
-
-  const verificationContracts = contracts.map((contract) => ({
-    source: contract,
-    normalized: materializeNormalizedContract(contract),
-  }));
+  materializeSharedContracts();
+  const verificationContracts = [];
+  for (const context of contexts) {
+    const result = context === "dsh" || context === "wlt"
+      ? await verifyGeneratedBundle(context)
+      : await composeContext(context, { write: false });
+    verificationContracts.push({
+      source: result.bundlePath,
+      normalized: materializeNormalizedContract(result.bundle, result.bundlePath),
+    });
+  }
 
   for (const contract of verificationContracts) {
     run(`redocly ${contract.source}`, "pnpm", [
@@ -114,8 +109,10 @@ try {
       "lint",
       "--config",
       ".redocly.yaml",
-      contract.source,
-    ], { stdio: "pipe" });
+      "--max-problems",
+      "1000",
+      contract.normalized,
+    ], { stdio: "pipe", rejectWarnings: true });
   }
 
   for (const contract of verificationContracts) {
@@ -123,7 +120,7 @@ try {
     run(`openapi-typescript ${contract.source}`, "pnpm", [
       "exec",
       "openapi-typescript",
-      contract.source,
+      contract.normalized,
       "-o",
       tsOut,
     ]);
@@ -131,6 +128,5 @@ try {
 
   console.log("contracts-typecheck: PASS (read-only, zero warnings)");
 } finally {
-  for (const contract of normalizedContracts) rmSync(new URL(contract, repoRoot), { force: true });
   rmSync(tempDir, { recursive: true, force: true });
 }

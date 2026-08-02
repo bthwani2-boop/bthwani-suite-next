@@ -2,14 +2,44 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 )
+
+func TestRuntimeReadinessExpectedMigrationMatchesManifestActiveEntry(t *testing.T) {
+	raw, err := os.ReadFile("../../../database/migrations/manifest.json")
+	if err != nil {
+		t.Fatalf("read identity migration manifest: %v", err)
+	}
+	var manifest struct {
+		Migrations []struct {
+			File  string `json:"file"`
+			State string `json:"state"`
+		} `json:"migrations"`
+	}
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		t.Fatalf("decode identity migration manifest: %v", err)
+	}
+	active := make([]string, 0, 1)
+	for _, migration := range manifest.Migrations {
+		if migration.State == "ACTIVE" {
+			active = append(active, migration.File)
+		}
+	}
+	if len(active) != 1 {
+		t.Fatalf("identity migration manifest must have exactly one ACTIVE entry, got %v", active)
+	}
+	if active[0] != identityLatestMigration {
+		t.Fatalf("readiness migration drift: manifest=%s runtime=%s", active[0], identityLatestMigration)
+	}
+}
 
 type fakeRuntimeReadinessStore struct {
 	ping            func(context.Context) error
@@ -150,6 +180,25 @@ func TestRuntimeReadinessProbeTimesOutDependency(t *testing.T) {
 	assertNotReady(t, response)
 	if elapsed := time.Since(startedAt); elapsed > time.Second {
 		t.Fatalf("readiness timeout was not bounded: %s", elapsed)
+	}
+}
+
+func TestRuntimeReadinessProbeTimesOutDependencyThatIgnoresContext(t *testing.T) {
+	resetRuntimeProbeState()
+	configureIdentityRuntime(t)
+	t.Setenv("IDENTITY_READINESS_PROBE_TIMEOUT", "10ms")
+	store := readyRuntimeStore()
+	store.ping = func(context.Context) error {
+		time.Sleep(250 * time.Millisecond)
+		return nil
+	}
+
+	startedAt := time.Now()
+	response := serveRuntimeProbe(store, "/identity/readiness")
+
+	assertNotReady(t, response)
+	if elapsed := time.Since(startedAt); elapsed > 100*time.Millisecond {
+		t.Fatalf("readiness HTTP boundary did not enforce timeout: %s", elapsed)
 	}
 }
 

@@ -50,9 +50,8 @@ export async function fetchCaptainDispatchAssignments(): Promise<readonly DshDis
 
 export async function fetchCaptainDispatchCandidates(
   serviceAreaCode: string,
-  operatorContextId = "default",
 ): Promise<readonly DshCaptainDispatchCandidate[]> {
-  const params = new URLSearchParams({ serviceAreaCode, operatorContextId });
+  const params = new URLSearchParams({ serviceAreaCode });
   const data = await request<{ candidates: DshCaptainDispatchCandidate[] }>(
     `/dsh/operator/dispatch/candidates?${params.toString()}`,
   );
@@ -113,24 +112,21 @@ export async function cancelDispatchAssignment(
 }
 
 export async function expireDispatchAssignments(
-  operatorContextId = "default",
   limit = 100,
 ): Promise<number> {
   const data = await request<{ expiredCount: number }>(
     "/dsh/operator/dispatch/assignments/expire",
-    { method: "POST", body: { operatorContextId, limit } },
+    { method: "POST", body: { limit } },
   );
   return Math.max(0, Number(data.expiredCount ?? 0));
 }
 
 export async function fetchDispatchDecisions(input: {
-  readonly operatorContextId?: string;
   readonly assignmentId?: string;
   readonly orderId?: string;
   readonly limit?: number;
 }): Promise<readonly DshDispatchDecision[]> {
   const params = new URLSearchParams();
-  if (input.operatorContextId) params.set("operatorContextId", input.operatorContextId);
   if (input.assignmentId) params.set("assignmentId", input.assignmentId);
   if (input.orderId) params.set("orderId", input.orderId);
   if (input.limit) params.set("limit", String(input.limit));

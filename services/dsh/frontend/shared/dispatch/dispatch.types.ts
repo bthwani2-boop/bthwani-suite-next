@@ -52,7 +52,6 @@ export type DshPartnerDispatchReference = components["schemas"]["DshPartnerDispa
 
 export type DshGovernedCreateAssignmentInput = {
   readonly orderId: string;
-  readonly operatorContextId?: string;
   readonly captainId: string;
   readonly serviceAreaCode: string;
   readonly idempotencyKey: string;
@@ -63,7 +62,6 @@ export type DshGovernedCreateAssignmentInput = {
 };
 
 export type DshCaptainDispatchProfileInput = {
-  readonly operatorContextId?: string;
   readonly accreditationStatus: "pending" | "approved" | "suspended" | "expired";
   readonly availabilityStatus: "available" | "busy" | "offline" | "suspended";
   readonly maxActiveAssignments: number;

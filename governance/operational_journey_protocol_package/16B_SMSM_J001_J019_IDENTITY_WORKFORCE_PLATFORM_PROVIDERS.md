@@ -2,6 +2,25 @@
 
 > جزء إلزامي من الخطة الرئيسية. تطبق قواعد `16A` ومعيار إغلاق الرحلة العام على كل رحلة أدناه.
 
+## دفتر القياس المتسلسل
+
+```yaml
+repository: C:\\bthwani-suite-next
+target_branch: smsm
+baseline_head: 76172f83ada5434d5f10e201d406b47a3d153948
+worktree_state: DIRTY_UNCOMMITTED_IMPLEMENTATION
+evaluation_order: J001_THEN_J002_THROUGH_J019_WITHOUT_SKIP
+closed_with_evidence: 0
+ready_for_review: 1
+needs_evidence: 18
+group_decision: NEEDS_EVIDENCE
+```
+
+| الرحلة | حالة التنفيذ | قرار الإغلاق | سبب عدم الإغلاق النهائي |
+|---|---|---|---|
+| J001 | `READY_FOR_REVIEW` | `NEEDS_EVIDENCE` | التغييرات غير ملتزمة على SHA نهائي؛ `go -race` يحتاج `gcc` غير المتاح؛ مراجعات QA/Security/CI المستقلة غير موجودة |
+| J002–J019 | `NEEDS_EVIDENCE` | `NEEDS_EVIDENCE` | لم تُشخّص بعد في هذه الدورة المتسلسلة؛ يمنع توريث أي نجاح سابق دون إعادة إثبات |
+
 ## J001 — صحة الهوية وجاهزيتها
 
 - **الهدف والمالك:** إثبات أن خدمة Identity قادرة على المصادقة وإدارة الجلسات؛ المالك `identity`.
@@ -11,6 +30,16 @@
 - **العقود والبيانات:** عمليات health/readiness في عقد Identity، runtime probes، metrics، structured logs.
 - **الاختبارات:** dependency down، DB timeout، key missing، stale migration، restart، concurrent probes.
 - **معيار الإغلاق:** probes PASS في runtime؛ false-ready صفر؛ secrets/PII leakage صفر؛ كل مستهلك يتعامل مع degraded/unavailable بوضوح.
+
+### سجل تنفيذ J001 الحالي
+
+- **الأسباب الجذرية المعالجة:** إزالة health/readiness الضعيفين من router؛ منع readiness بلا DB؛ ربط أحدث هجرة بالـmanifest؛ استبدال تطبيق SQL الخام بالمشغّل المحكوم؛ قبول checksum التاريخي المتكافئ فقط عبر LF/CRLF مع كتابة LF حاكم؛ انتظار readiness بدل liveness؛ فرض مهلة HTTP مستقلة ومشاركة probe واحدة لمنع تراكم الاتصالات عند driver معلق.
+- **العقد والعميل:** عقد Identity يعلن `HEALTHY | DEGRADED | NOT_READY`؛ bundle والعميل أعيد توليدهما دون drift.
+- **التشغيل المثبت محليًا:** أحدث ledger هو `identity-014` بحالة `success=true, dirty=false`؛ عند `docker pause bthwani-postgres-runtime` أعادت readiness `503` خلال `2.217235s` وأعادت health `DEGRADED`؛ بعد `unpause` ثم restart عادت readiness والحاوية إلى `HEALTHY`.
+- **الفحوصات ذات exit code 0:** `go test ./...`، `go vet ./...`، `go build -o <system-temp>/identity-api.exe ./cmd/identity-api`، `pnpm --dir core/identity typecheck`، `pnpm run guard:migration-manifest-drift -- --service identity`، `pnpm run contracts:redocly`، `pnpm run openapi:generate:identity` مع ثبات hash، `pnpm run runtime:identity:smoke`، وبناء Docker وإعادة الإنشاء.
+- **الفحص غير المثبت:** `CGO_ENABLED=1 go test -race ./internal/http ...` خرج `1` لأن `gcc` غير موجود في البيئة، ولم يصل إلى تنفيذ الاختبار.
+- **حالة الدليل:** هذه نتائج تشخيصية على worktree غير ملتزم فوق الرأس المبين؛ ليست evidence pack لنفس commit ولا تمنح اعتماد QA/Security/CI/Release/Production.
+- **قرار J001:** `NEEDS_EVIDENCE`؛ التنفيذ `READY_FOR_REVIEW` ولا يتحول إلى `CLOSED_WITH_EVIDENCE` قبل الالتزام النهائي وإعادة الفحوصات والمراجعات المستقلة.
 
 ## J002 — تزويد Actor والبحث والقراءة
 
@@ -183,17 +212,20 @@
 ## بوابة إغلاق المجموعة J001..J019
 
 ```yaml
-identity_truth_single_owner: PASS
-workforce_truth_single_owner: PASS
-platform_policy_single_owner: PASS
-provider_registry_single_owner: PASS
-cross_actor_and_scope_isolation: PASS
-session_activation_device_security: PASS
-workforce_readiness_gates: PASS
-policy_rollout_runtime_readback: PASS
-provider_failure_recovery: PASS
-unmapped_controls_operations_data: 0
-open_journeys_in_group: 0
-failed_required_checks: 0
-evidence_sha: CURRENT_SHA
+identity_truth_single_owner: NEEDS_EVIDENCE
+workforce_truth_single_owner: NEEDS_EVIDENCE
+platform_policy_single_owner: NEEDS_EVIDENCE
+provider_registry_single_owner: NEEDS_EVIDENCE
+cross_actor_and_scope_isolation: NEEDS_EVIDENCE
+session_activation_device_security: NEEDS_EVIDENCE
+workforce_readiness_gates: NEEDS_EVIDENCE
+policy_rollout_runtime_readback: NEEDS_EVIDENCE
+provider_failure_recovery: NEEDS_EVIDENCE
+unmapped_controls_operations_data: NEEDS_EVIDENCE
+closed_with_evidence: 0
+open_journeys_in_group: 19
+failed_required_checks: 1
+failed_check: GO_RACE_TOOLCHAIN_GCC_MISSING
+evidence_sha: NEEDS_EVIDENCE
+group_decision: NEEDS_EVIDENCE
 ```

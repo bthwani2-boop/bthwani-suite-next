@@ -26,7 +26,7 @@ func TestRuntimeReadinessBoundaryRejectsMissingActivationSecret(t *testing.T) {
 	handler := RuntimeReadinessBoundary(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		nextCalled = true
 		w.WriteHeader(http.StatusOK)
-	}))
+	}), nil)
 	response := httptest.NewRecorder()
 
 	handler.ServeHTTP(response, readinessRequest())
@@ -44,7 +44,7 @@ func TestRuntimeReadinessBoundaryRejectsShortActivationSecret(t *testing.T) {
 	t.Setenv("IDENTITY_ACTIVATION_HMAC_SECRET", "too-short")
 	response := httptest.NewRecorder()
 
-	RuntimeReadinessBoundary(http.NotFoundHandler()).ServeHTTP(response, readinessRequest())
+	RuntimeReadinessBoundary(http.NotFoundHandler(), nil).ServeHTTP(response, readinessRequest())
 
 	if response.Code != http.StatusServiceUnavailable || !strings.Contains(response.Body.String(), "IDENTITY_NOT_READY") {
 		t.Fatalf("unexpected readiness response status=%d body=%s", response.Code, response.Body.String())
@@ -56,7 +56,7 @@ func TestRuntimeReadinessBoundaryRejectsMissingOperatorContext(t *testing.T) {
 	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
 	response := httptest.NewRecorder()
 
-	RuntimeReadinessBoundary(http.NotFoundHandler()).ServeHTTP(response, readinessRequest())
+	RuntimeReadinessBoundary(http.NotFoundHandler(), nil).ServeHTTP(response, readinessRequest())
 
 	if response.Code != http.StatusServiceUnavailable || !strings.Contains(response.Body.String(), "IDENTITY_NOT_READY") {
 		t.Fatalf("unexpected readiness response status=%d body=%s", response.Code, response.Body.String())
@@ -68,7 +68,7 @@ func TestRuntimeReadinessBoundaryRejectsMissingWorkforceServiceToken(t *testing.
 	t.Setenv("IDENTITY_WORKFORCE_SERVICE_TOKEN", "")
 	response := httptest.NewRecorder()
 
-	RuntimeReadinessBoundary(http.NotFoundHandler()).ServeHTTP(response, readinessRequest())
+	RuntimeReadinessBoundary(http.NotFoundHandler(), nil).ServeHTTP(response, readinessRequest())
 
 	if response.Code != http.StatusServiceUnavailable || !strings.Contains(response.Body.String(), "IDENTITY_NOT_READY") {
 		t.Fatalf("unexpected readiness response status=%d body=%s", response.Code, response.Body.String())
@@ -80,7 +80,7 @@ func TestRuntimeReadinessBoundaryRejectsMissingDshServiceToken(t *testing.T) {
 	t.Setenv("IDENTITY_DSH_SERVICE_TOKEN", "")
 	response := httptest.NewRecorder()
 
-	RuntimeReadinessBoundary(http.NotFoundHandler()).ServeHTTP(response, readinessRequest())
+	RuntimeReadinessBoundary(http.NotFoundHandler(), nil).ServeHTTP(response, readinessRequest())
 
 	if response.Code != http.StatusServiceUnavailable || !strings.Contains(response.Body.String(), "IDENTITY_NOT_READY") {
 		t.Fatalf("unexpected readiness response status=%d body=%s", response.Code, response.Body.String())
@@ -92,26 +92,26 @@ func TestRuntimeReadinessBoundaryRejectsShortInternalServiceToken(t *testing.T) 
 	t.Setenv("IDENTITY_DSH_SERVICE_TOKEN", "too-short")
 	response := httptest.NewRecorder()
 
-	RuntimeReadinessBoundary(http.NotFoundHandler()).ServeHTTP(response, readinessRequest())
+	RuntimeReadinessBoundary(http.NotFoundHandler(), nil).ServeHTTP(response, readinessRequest())
 
 	if response.Code != http.StatusServiceUnavailable || !strings.Contains(response.Body.String(), "IDENTITY_NOT_READY") {
 		t.Fatalf("unexpected readiness response status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
-func TestRuntimeReadinessBoundaryDelegatesConfiguredReadiness(t *testing.T) {
+func TestRuntimeReadinessBoundaryRejectsMissingDatabaseConfiguration(t *testing.T) {
 	configureIdentityRuntime(t)
 	nextCalled := false
 	handler := RuntimeReadinessBoundary(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		nextCalled = true
 		w.WriteHeader(http.StatusNoContent)
-	}))
+	}), nil)
 	response := httptest.NewRecorder()
 
 	handler.ServeHTTP(response, readinessRequest())
 
-	if !nextCalled || response.Code != http.StatusNoContent {
-		t.Fatalf("configured readiness was not delegated status=%d nextCalled=%v", response.Code, nextCalled)
+	if nextCalled || response.Code != http.StatusServiceUnavailable || !strings.Contains(response.Body.String(), "IDENTITY_NOT_READY") {
+		t.Fatalf("missing database did not fail closed status=%d nextCalled=%v body=%s", response.Code, nextCalled, response.Body.String())
 	}
 }
 
@@ -123,7 +123,7 @@ func TestRuntimeReadinessBoundaryHandlesHealthAndDelegatesBusinessRoutes(t *test
 	t.Setenv("IDENTITY_DSH_SERVICE_TOKEN", "")
 	handler := RuntimeReadinessBoundary(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
-	}))
+	}), nil)
 
 	health := httptest.NewRecorder()
 	handler.ServeHTTP(health, httptest.NewRequest(http.MethodGet, "/identity/health", nil))

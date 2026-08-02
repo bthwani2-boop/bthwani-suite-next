@@ -55,7 +55,7 @@ func main() {
 		log.Fatalf("[identity-api] local sovereign leadership bootstrap: %v", err)
 	}
 
-	router := identityhttp.NewRouter(db, repository)
+	router := identityhttp.NewRouter(repository)
 
 	identityhttp.RegisterEmployeeAccessRoutes(router, repository)
 	identityhttp.RegisterPartnerAccessRoutes(router, repository)

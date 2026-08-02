@@ -113,17 +113,16 @@ export const upsertDispatchBalancePolicy = (body: DshDispatchBalancePolicyInput)
     },
   );
 
-export const fetchOperatorCaptainFinancialEligibility = (operatorContextId: string, captainId: string) =>
+export const fetchOperatorCaptainFinancialEligibility = (captainId: string) =>
   req<{ financialEligibility: DshCaptainFinancialEligibility }>(
-    `/dsh/operator/dispatch/captains/${encodeURIComponent(captainId)}/financial-eligibility?operatorContextId=${encodeURIComponent(operatorContextId)}`,
+    `/dsh/operator/dispatch/captains/${encodeURIComponent(captainId)}/financial-eligibility`,
   );
 
-export const refreshOperatorCaptainFinancialEligibility = (operatorContextId: string, captainId: string) =>
+export const refreshOperatorCaptainFinancialEligibility = (captainId: string) =>
   req<{ financialEligibility: DshCaptainFinancialEligibility }>(
     `/dsh/operator/dispatch/captains/${encodeURIComponent(captainId)}/financial-eligibility/refresh`,
     {
       method: "POST",
-      body: { operatorContextId },
-      idempotencyKey: stableMutationKey(`captain:${captainId}:financial-eligibility`, { operatorContextId }),
+      idempotencyKey: stableMutationKey(`captain:${captainId}:financial-eligibility`, { captainId }),
     },
   );

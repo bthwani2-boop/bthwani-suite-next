@@ -23,18 +23,21 @@ import (
 )
 
 var (
-	ErrUnauthenticated        = errors.New("unauthenticated")
-	ErrInvalidRefresh         = errors.New("invalid refresh token")
-	ErrForbidden              = errors.New("forbidden")
-	ErrInvalidActivation      = errors.New("invalid activation")
-	ErrActivationRateLimited  = errors.New("activation rate limited")
-	ErrActivationUnavailable  = errors.New("activation unavailable")
-	ErrActivationTargetAbsent = errors.New("activation target absent")
-	ErrLoginRateLimited       = errors.New("login rate limited")
-	ErrPhoneAlreadyBound      = errors.New("phone already bound to another actor")
-	ErrUsernameTaken          = errors.New("username already taken")
-	ErrActorNotFound          = errors.New("actor not found")
-	ErrActorDeactivated       = errors.New("actor is deactivated")
+	ErrUnauthenticated         = errors.New("unauthenticated")
+	ErrInvalidRefresh          = errors.New("invalid refresh token")
+	ErrForbidden               = errors.New("forbidden")
+	ErrInvalidActivation       = errors.New("invalid activation")
+	ErrActivationRateLimited   = errors.New("activation rate limited")
+	ErrActivationUnavailable   = errors.New("activation unavailable")
+	ErrActivationTargetAbsent  = errors.New("activation target absent")
+	ErrLoginRateLimited        = errors.New("login rate limited")
+	ErrPhoneAlreadyBound       = errors.New("phone already bound to another actor")
+	ErrUsernameTaken           = errors.New("username already taken")
+	ErrActorNotFound           = errors.New("actor not found")
+	ErrActorDeactivated        = errors.New("actor is deactivated")
+	ErrActorAlreadyDeactivated = errors.New("actor is already deactivated")
+	ErrActorAlreadyActive      = errors.New("actor is already active")
+	ErrInvalidActorTransition  = errors.New("invalid actor lifecycle transition")
 )
 
 // activationSurfaceByActorType is the single source for the authentication
@@ -835,7 +838,14 @@ func (r *Repository) ActorAdminByID(ctx context.Context, actorID string) (ActorA
 }
 
 // DeactivateActor suspends authentication for an actor in one transaction.
-func (r *Repository) DeactivateActor(ctx context.Context, actorID, reason, correlationID string) error {
+func (r *Repository) DeactivateActor(ctx context.Context, actorID, requestedByActorID, reason, correlationID string) error {
+	actorID = strings.TrimSpace(actorID)
+	requestedByActorID = strings.TrimSpace(requestedByActorID)
+	reason = strings.TrimSpace(reason)
+	correlationID = strings.TrimSpace(correlationID)
+	if actorID == "" || requestedByActorID == "" || reason == "" || correlationID == "" || len(reason) > 500 || len(correlationID) > 128 {
+		return ErrInvalidActorTransition
+	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -843,15 +853,39 @@ func (r *Repository) DeactivateActor(ctx context.Context, actorID, reason, corre
 	defer tx.Rollback()
 
 	var active bool
-	err = tx.QueryRowContext(ctx, `SELECT active FROM identity_actors WHERE id = $1 FOR UPDATE`, actorID).Scan(&active)
+	var operatorContextID string
+	var roles pq.StringArray
+	err = tx.QueryRowContext(ctx, `
+		SELECT active, operator_context_id, roles
+		FROM identity_actors
+		WHERE id = $1
+		FOR UPDATE`, actorID).Scan(&active, &operatorContextID, &roles)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrActorNotFound
 		}
 		return err
 	}
+	if !hasAnyRole([]string(roles), "field", "captain", "employee") {
+		return ErrForbidden
+	}
+	if err := requireLifecycleRequester(ctx, tx, requestedByActorID, operatorContextID); err != nil {
+		return err
+	}
 	if !active {
-		return errors.New("actor is already deactivated")
+		var replay bool
+		if err := tx.QueryRowContext(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM identity_actor_lifecycle_events
+				WHERE actor_id = $1 AND status = 'deactivated'
+				  AND requested_by_actor_id = $2 AND reason = $3 AND correlation_id = $4
+			)`, actorID, requestedByActorID, reason, correlationID).Scan(&replay); err != nil {
+			return err
+		}
+		if replay {
+			return tx.Commit()
+		}
+		return ErrActorAlreadyDeactivated
 	}
 
 	_, err = tx.ExecContext(ctx, `UPDATE identity_actors SET active = false, updated_at = now() WHERE id = $1`, actorID)
@@ -870,10 +904,15 @@ func (r *Repository) DeactivateActor(ctx context.Context, actorID, reason, corre
 		return err
 	}
 
-	eventID, _ := randomToken(16)
+	eventID, err := randomToken(16)
+	if err != nil {
+		return err
+	}
 	if _, err = tx.ExecContext(ctx, `
-		INSERT INTO identity_actor_lifecycle_events (id, actor_id, status, reason, correlation_id)
-		VALUES ($1, $2, 'deactivated', $3, $4)`, eventID, actorID, reason, correlationID); err != nil {
+		INSERT INTO identity_actor_lifecycle_events
+			(id, actor_id, status, requested_by_actor_id, reason, correlation_id)
+		VALUES ($1, $2, 'deactivated', $3, $4, $5)`,
+		eventID, actorID, requestedByActorID, reason, correlationID); err != nil {
 		return err
 	}
 
@@ -881,7 +920,14 @@ func (r *Repository) DeactivateActor(ctx context.Context, actorID, reason, corre
 }
 
 // ReactivateActor restores authentication for a previously activated actor.
-func (r *Repository) ReactivateActor(ctx context.Context, actorID, reason, correlationID string) error {
+func (r *Repository) ReactivateActor(ctx context.Context, actorID, requestedByActorID, reason, correlationID string) error {
+	actorID = strings.TrimSpace(actorID)
+	requestedByActorID = strings.TrimSpace(requestedByActorID)
+	reason = strings.TrimSpace(reason)
+	correlationID = strings.TrimSpace(correlationID)
+	if actorID == "" || requestedByActorID == "" || reason == "" || correlationID == "" || len(reason) > 500 || len(correlationID) > 128 {
+		return ErrInvalidActorTransition
+	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -889,15 +935,43 @@ func (r *Repository) ReactivateActor(ctx context.Context, actorID, reason, corre
 	defer tx.Rollback()
 
 	var active bool
-	err = tx.QueryRowContext(ctx, `SELECT active FROM identity_actors WHERE id = $1 FOR UPDATE`, actorID).Scan(&active)
+	var passwordHash string
+	var operatorContextID string
+	var roles pq.StringArray
+	err = tx.QueryRowContext(ctx, `
+		SELECT active, password_hash, operator_context_id, roles
+		FROM identity_actors
+		WHERE id = $1
+		FOR UPDATE`, actorID).Scan(&active, &passwordHash, &operatorContextID, &roles)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrActorNotFound
 		}
 		return err
 	}
+	if !hasAnyRole([]string(roles), "field", "captain", "employee") {
+		return ErrForbidden
+	}
+	if err := requireLifecycleRequester(ctx, tx, requestedByActorID, operatorContextID); err != nil {
+		return err
+	}
 	if active {
-		return errors.New("actor is already active")
+		var replay bool
+		if err := tx.QueryRowContext(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM identity_actor_lifecycle_events
+				WHERE actor_id = $1 AND status = 'reactivated'
+				  AND requested_by_actor_id = $2 AND reason = $3 AND correlation_id = $4
+			)`, actorID, requestedByActorID, reason, correlationID).Scan(&replay); err != nil {
+			return err
+		}
+		if replay {
+			return tx.Commit()
+		}
+		return ErrActorAlreadyActive
+	}
+	if strings.TrimSpace(passwordHash) == "" {
+		return ErrInvalidActorTransition
 	}
 
 	_, err = tx.ExecContext(ctx, `UPDATE identity_actors SET active = true, updated_at = now() WHERE id = $1`, actorID)
@@ -905,14 +979,46 @@ func (r *Repository) ReactivateActor(ctx context.Context, actorID, reason, corre
 		return err
 	}
 
-	eventID, _ := randomToken(16)
+	eventID, err := randomToken(16)
+	if err != nil {
+		return err
+	}
 	if _, err = tx.ExecContext(ctx, `
-		INSERT INTO identity_actor_lifecycle_events (id, actor_id, status, reason, correlation_id)
-		VALUES ($1, $2, 'reactivated', $3, $4)`, eventID, actorID, reason, correlationID); err != nil {
+		INSERT INTO identity_actor_lifecycle_events
+			(id, actor_id, status, requested_by_actor_id, reason, correlation_id)
+		VALUES ($1, $2, 'reactivated', $3, $4, $5)`,
+		eventID, actorID, requestedByActorID, reason, correlationID); err != nil {
 		return err
 	}
 
 	return tx.Commit()
+}
+
+func hasAnyRole(roles []string, allowed ...string) bool {
+	for _, role := range roles {
+		for _, candidate := range allowed {
+			if strings.TrimSpace(role) == candidate {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// requireLifecycleRequester prevents a trusted service caller from recording a
+// forged or cross-context human principal in the lifecycle audit trail. The
+// outer service authorization still owns action-level permission checks; this
+// repository boundary owns durable actor existence, activity, and isolation.
+func requireLifecycleRequester(ctx context.Context, tx *sql.Tx, requestedByActorID, operatorContextID string) error {
+	var active bool
+	err := tx.QueryRowContext(ctx, `
+		SELECT active
+		FROM identity_actors
+		WHERE id = $1 AND operator_context_id = $2`, requestedByActorID, operatorContextID).Scan(&active)
+	if errors.Is(err, sql.ErrNoRows) || (err == nil && !active) {
+		return ErrForbidden
+	}
+	return err
 }
 
 func (r *Repository) RevokeActivationChallenges(ctx context.Context, actorID string) error {

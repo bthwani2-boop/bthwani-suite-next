@@ -107,7 +107,7 @@ type UpdateCaptainInput struct {
 	EngagementStartDate *string `json:"engagementStartDate"`
 	PhotoMediaRef       *string `json:"photoMediaRef"`
 	VehicleType         *string `json:"vehicleType"`
-	VehicleIdentifier  *string `json:"vehicleIdentifier"`
+	VehicleIdentifier   *string `json:"vehicleIdentifier"`
 	LicenseStatus       *string `json:"licenseStatus"`
 	LicenseExpiresAt    *string `json:"licenseExpiresAt"`
 	ServiceZoneID       *string `json:"serviceZoneId"`
@@ -216,4 +216,6 @@ type ActorScopes struct {
 	OperatorContextID string   `json:"operatorContextId"`
 	StoreIDs          []string `json:"storeIds"`
 	ServiceAreaCodes  []string `json:"serviceAreaCodes"`
+	PartnerIDs        []string `json:"partnerIds"`
+	ShiftCodes        []string `json:"shiftCodes"`
 }

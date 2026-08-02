@@ -104,7 +104,7 @@
       "team": "BThwani Platform Team",
       "scope": "local/ci"
     },
-    "spectral": {
+    "redocly": {
       "team": "BThwani Backend Team",
       "scope": "local/ci"
     },

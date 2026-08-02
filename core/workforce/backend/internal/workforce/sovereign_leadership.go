@@ -350,7 +350,7 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 		return SovereignLeadershipCreationResult{}, false, identityclient.ErrPhoneAlreadyBound
 	}
 	if personErr != nil {
-		_ = s.identity.Deactivate(ctx, actor.ActorID, "creation_failed_rollback", correlationID)
+		_ = s.identity.Deactivate(ctx, actor.ActorID, operator.ActorID, "creation_failed_rollback", correlationID)
 		return SovereignLeadershipCreationResult{}, false, personErr
 	}
 
@@ -358,18 +358,18 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 	if existing, err := s.repo.EmployeeGovernanceByActorID(ctx, actor.ActorID); err == nil {
 		governanceVersion = existing.Version
 	} else if !errors.Is(err, ErrNotFound) {
-		_ = s.identity.Deactivate(ctx, actor.ActorID, "creation_failed_rollback", correlationID)
+		_ = s.identity.Deactivate(ctx, actor.ActorID, operator.ActorID, "creation_failed_rollback", correlationID)
 		return SovereignLeadershipCreationResult{}, false, err
 	}
 	governance, err := s.repo.UpsertEmployeeGovernance(ctx, actor.ActorID, operator.ActorID, UpsertEmployeeGovernanceInput{
 		ExpectedVersion: governanceVersion, PositionTitle: input.PositionTitle, JobGrade: input.JobGrade,
 		EmploymentClass: input.EmploymentClass, GuaranteeType: input.GuaranteeType,
 		GuaranteeStatus: input.GuaranteeStatus, GuaranteeReference: input.GuaranteeReference,
-		ResponsibilityScopes: cleanScopeValues(input.ResponsibilityScopes),
+		ResponsibilityScopes:   cleanScopeValues(input.ResponsibilityScopes),
 		ManagedDepartmentCodes: []string{department}, Notes: input.Notes,
 	})
 	if err != nil {
-		_ = s.identity.Deactivate(ctx, actor.ActorID, "creation_failed_rollback", correlationID)
+		_ = s.identity.Deactivate(ctx, actor.ActorID, operator.ActorID, "creation_failed_rollback", correlationID)
 		return SovereignLeadershipCreationResult{}, false, err
 	}
 	assignmentVersion := 0
@@ -379,7 +379,7 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 	assignment, err := s.repo.UpsertSovereignAssignment(ctx, actor.ActorID, operator.ActorID, assignmentVersion,
 		input.PermissionBundle, department, input.AssignmentStartsOn, input.AssignmentEndsOn)
 	if err != nil {
-		_ = s.identity.Deactivate(ctx, actor.ActorID, "creation_failed_rollback", correlationID)
+		_ = s.identity.Deactivate(ctx, actor.ActorID, operator.ActorID, "creation_failed_rollback", correlationID)
 		return SovereignLeadershipCreationResult{}, false, err
 	}
 	activation, err := s.identity.IssueActivation(ctx, actor.ActorID, operator.ActorID, "employee", "webapp", idempotencyKey+":activation", correlationID)
@@ -437,7 +437,7 @@ func (s *Service) CreateDepartmentEmployee(ctx context.Context, operator Operato
 		person, personErr = s.repo.CreateEmployee(ctx, actor.ActorID, workforceCode, input)
 	}
 	if personErr != nil {
-		_ = s.identity.Deactivate(ctx, actor.ActorID, "creation_failed_rollback", correlationID)
+		_ = s.identity.Deactivate(ctx, actor.ActorID, operator.ActorID, "creation_failed_rollback", correlationID)
 		return DepartmentEmployeeCreationResult{}, false, personErr
 	}
 	activation, err := s.identity.IssueActivation(ctx, actor.ActorID, operator.ActorID, "employee", "webapp", idempotencyKey+":activation", correlationID)

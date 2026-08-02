@@ -4,10 +4,12 @@
 /dsh/health:
   get:
     operationId: getDshHealth
+    security: []
     summary: Return DSH liveness state.
     tags:
       - DshSystem
     responses:
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "200":
         description: DSH process is alive.
         content:
@@ -18,10 +20,12 @@
 /dsh/readiness:
   get:
     operationId: getDshReadiness
+    security: []
     summary: Return DSH readiness state.
     tags:
       - DshSystem
     responses:
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "200":
         description: DSH dependencies are ready.
         content:

@@ -29,8 +29,8 @@
                     earnedTotalMinorUnits: { type: integer, format: int64 }
                     settledTotalMinorUnits: { type: integer, format: int64 }
                     paidTotalMinorUnits: { type: integer, format: int64 }
-                    lastLedgerEntryAt: { type: string, format: date-time, nullable: true }
-                    updatedAt: { type: string, format: date-time, nullable: true }
+                    lastLedgerEntryAt: { type: [string, 'null'], format: date-time }
+                    updatedAt: { type: [string, 'null'], format: date-time }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
 /dsh/field/me/finance/commissions:
@@ -58,14 +58,14 @@
                       beneficiaryActorType: { type: string }
                       sourceType: { type: string }
                       sourceId: { type: string }
-                      visitId: { type: string, nullable: true }
-                      storeId: { type: string, nullable: true }
-                      partnerId: { type: string, nullable: true }
-                      commissionPolicyId: { type: string, nullable: true }
+                      visitId: { type: [string, 'null'] }
+                      storeId: { type: [string, 'null'] }
+                      partnerId: { type: [string, 'null'] }
+                      commissionPolicyId: { type: [string, 'null'] }
                       amountMinorUnits: { type: integer, format: int64 }
                       currency: { type: string }
                       status: { type: string }
-                      idempotencyKey: { type: string, nullable: true }
+                      idempotencyKey: { type: [string, 'null'] }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
 /dsh/field/me/finance/ledger-entries:
@@ -113,8 +113,8 @@
                       currency: { type: string }
                       status: { type: string }
                       requestedAt: { type: string, format: date-time }
-                      completedAt: { type: string, format: date-time, nullable: true }
-                      failureReason: { type: string, nullable: true }
+                      completedAt: { type: [string, 'null'], format: date-time }
+                      failureReason: { type: [string, 'null'] }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
   post:
     operationId: submitDshFieldMePayoutRequest
@@ -152,8 +152,8 @@
                     currency: { type: string }
                     status: { type: string }
                     requestedAt: { type: string, format: date-time }
-                    completedAt: { type: string, format: date-time, nullable: true }
-                    failureReason: { type: string, nullable: true }
+                    completedAt: { type: [string, 'null'], format: date-time }
+                    failureReason: { type: [string, 'null'] }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
     parameters:

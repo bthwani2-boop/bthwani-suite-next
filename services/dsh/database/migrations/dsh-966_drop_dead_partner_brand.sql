@@ -1,69 +1,37 @@
--- DSH-966: Retire the never-populated partner-brand feature (X3).
+-- DSH-966 corrected pre-release migration: preserve governed partner-brand truth.
 --
--- dsh_partner_brands (dsh-958) has zero Go writers/readers anywhere in the
--- repository -- no handler ever creates a brand. The only live touch of
--- dsh_stores.brand_id is store_ownership_closure.go, which always set it to
--- NULL during a partner transfer (removed in this same change); it was
--- never set to a real value. Since the brand feature was never wired up,
--- the column and its backing table are dead, not merely unused-but-populated.
---
--- Note: dsh_categories / dsh_stores.category_id (dsh-002) were already
--- retired by dsh-036_central_catalog_runtime_closure.sql and are not
--- touched here.
---
--- dsh_stores.brand_id is validated by the
--- trg_dsh_enforce_partner_store_OperatorContext_match trigger (dsh-958); the
--- function is replaced here to drop the brand_id check clause since the
--- column no longer exists.
+-- The original destructive migration assumed dsh_stores.brand_id was never
+-- populated. Runtime verification disproved that assumption: valid stores are
+-- linked to valid, operator-context-scoped partner brands. Deleting those rows
+-- or their ownership relation would destroy commercial data. This corrected
+-- migration therefore verifies the existing invariant and performs no drop.
 
 DO $$
-DECLARE
-  brand_id_count integer;
 BEGIN
-  SELECT count(*) INTO brand_id_count FROM dsh_stores WHERE brand_id IS NOT NULL;
-  IF brand_id_count > 0 THEN
-    RAISE EXCEPTION 'dsh-966: refusing to drop dsh_stores.brand_id; % row(s) still have a non-null value, contradicting the "always NULL" analysis', brand_id_count;
+  IF EXISTS (
+    SELECT 1
+      FROM dsh_partner_brands b
+      LEFT JOIN dsh_partners p ON p.id = b.partner_id
+     WHERE p.id IS NULL
+        OR p.operator_context_id <> b.operator_context_id
+  ) THEN
+    RAISE EXCEPTION 'dsh-966: partner-brand ownership invariant failed';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+      FROM dsh_stores s
+      JOIN dsh_partner_brands b ON b.id = s.brand_id
+     WHERE s.brand_id IS NOT NULL
+       AND (
+         s.partner_id IS NULL
+         OR b.partner_id <> s.partner_id
+         OR b.operator_context_id <> s.operator_context_id
+       )
+  ) THEN
+    RAISE EXCEPTION 'dsh-966: store-brand ownership invariant failed';
   END IF;
 END $$;
 
-CREATE OR REPLACE FUNCTION dsh_enforce_partner_store_OperatorContext_match()
-RETURNS trigger
-LANGUAGE plpgsql
-AS $$
-DECLARE
-    owner_OperatorContext TEXT;
-BEGIN
-    IF NEW.partner_id IS NULL OR btrim(NEW.partner_id) = '' THEN
-        RETURN NEW;
-    END IF;
-
-    SELECT operator_context_id
-      INTO owner_OperatorContext
-      FROM dsh_partners
-     WHERE id = NEW.partner_id;
-
-    IF owner_OperatorContext IS NULL THEN
-        RAISE EXCEPTION 'partner % does not exist', NEW.partner_id
-            USING ERRCODE = '23503';
-    END IF;
-
-    IF owner_OperatorContext <> NEW.operator_context_id THEN
-        RAISE EXCEPTION 'partner/store OperatorContext mismatch for store %', NEW.id
-            USING ERRCODE = '23514';
-    END IF;
-
-    RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS trg_dsh_enforce_partner_store_OperatorContext_match ON dsh_stores;
-CREATE TRIGGER trg_dsh_enforce_partner_store_OperatorContext_match
-BEFORE INSERT OR UPDATE OF operator_context_id, partner_id ON dsh_stores
-FOR EACH ROW
-EXECUTE FUNCTION dsh_enforce_partner_store_OperatorContext_match();
-
-DROP INDEX IF EXISTS idx_dsh_stores_OperatorContext_partner_brand;
-
-ALTER TABLE dsh_stores DROP COLUMN IF EXISTS brand_id;
-
-DROP TABLE IF EXISTS dsh_partner_brands;
+COMMENT ON TABLE dsh_partner_brands IS
+  'Governed optional commercial identity owned by a partner within one trusted operator context.';

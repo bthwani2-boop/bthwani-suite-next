@@ -104,9 +104,9 @@
       "action": "keep",
       "reason": "Workspace package.json consistency checker."
     },
-    "spectral": {
+    "redocly": {
       "action": "keep",
-      "reason": "OpenAPI YAML API contract linter."
+      "reason": "OpenAPI bundle linter and reference validator."
     },
     "openapi-typescript": {
       "action": "keep",

@@ -92,6 +92,10 @@ paths:
       responses:
         '200':
           description: Employees filtered by the caller department scopes.
+        '401':
+          description: Authentication required.
+        '403':
+          description: employee:read with a matching department scope is required.
     post:
       operationId: createDepartmentEmployee
       tags: [department-employees]

@@ -30,8 +30,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeStatus"
-      security:
-        - bearerAuth: []
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+      security: []
   /workforce/readiness:
     get:
       tags: [ "workforce-readiness" ]
@@ -45,8 +46,9 @@ paths:
                 $ref: "#/components/schemas/RuntimeStatus"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
-      security:
-        - bearerAuth: []
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+      security: []
   /workforce/field-agents:
     post:
       tags: [ "workforce-field-agents" ]
