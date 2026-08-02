@@ -3,29 +3,48 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { hasBinary, repoRoot } from "./_external-tool-runner.mjs";
 
-const version = "1.27.0";
+// v1.27.0 must never be used: it could emit configured GitHub credentials in
+// cleartext logs. Keep this pin aligned with the first patched release.
+const version = "1.28.0";
 const reportPath = path.resolve(
   repoRoot,
   process.env.BTHWANI_ZIZMOR_REPORT ?? ".diagnostics/workflow-security/zizmor.json",
 );
 const args = [
   "--no-config",
+  "--offline",
+  "--collect=workflows",
+  "--strict-collection",
   "--min-severity",
   "high",
   "--min-confidence",
   "high",
   "--format",
-  "json",
-  ".github/workflows",
+  "json-v1",
+  ".",
 ];
 
 function execute(binary, binaryArgs) {
+  const env = { ...process.env };
+  // The audit is intentionally offline. Do not expose repository credentials
+  // to the scanner process even if the GitHub runner populated them.
+  delete env.GH_TOKEN;
+  delete env.GITHUB_TOKEN;
+  delete env.ZIZMOR_GITHUB_TOKEN;
   return spawnSync(binary, binaryArgs, {
     cwd: repoRoot,
     encoding: "utf8",
-    env: process.env,
+    env,
     maxBuffer: 32 * 1024 * 1024,
   });
+}
+
+function isPinnedBinaryAvailable() {
+  if (!hasBinary("zizmor")) return false;
+  const probe = execute("zizmor", ["--version"]);
+  if (probe.error || probe.status !== 0) return false;
+  const output = `${probe.stdout ?? ""}\n${probe.stderr ?? ""}`;
+  return new RegExp(`(?:^|\\s)${version.replaceAll(".", "\\.")}(?:\\s|$)`).test(output);
 }
 
 function findPython() {
@@ -44,7 +63,7 @@ function findPython() {
 }
 
 function runPinned() {
-  if (hasBinary("zizmor")) return execute("zizmor", args);
+  if (isPinnedBinaryAvailable()) return execute("zizmor", args);
   if (hasBinary("uvx")) {
     return execute("uvx", ["--from", `zizmor==${version}`, "zizmor", ...args]);
   }
