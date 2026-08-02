@@ -1,5 +1,5 @@
 {
-  "head_sha": "1fbc80dffc54f3096498c943c422de20bc5d7628",
+  "head_sha": "fd953239d3ab91c5b123c472a84e211b48a27e37",
   "status": "DISCOVERY_ONLY",
   "source_files": {
     "service_manifest": {
@@ -43,6 +43,7 @@
     "core/platform-control/contracts/platform-control.openapi.yaml",
     "core/platform-control/contracts/platform-progressive-rollout.openapi.yaml",
     "core/providers/contracts/providers.openapi.yaml",
+    "core/workforce/contracts/workforce.internal-scopes.openapi.yaml",
     "core/workforce/contracts/workforce.openapi.yaml",
     "core/workforce/contracts/workforce.operational-core.openapi.yaml",
     "core/workforce/contracts/workforce.reference-mutations.openapi.yaml",
@@ -124,6 +125,8 @@
     "services/dsh/backend/internal/http/administration_support_sessions.go",
     "services/dsh/backend/internal/http/analytics.go",
     "services/dsh/backend/internal/http/captain_financial_eligibility.go",
+    "services/dsh/backend/internal/http/captain_readiness_closure.go",
+    "services/dsh/backend/internal/http/captain_readiness_closure_test.go",
     "services/dsh/backend/internal/http/cart.go",
     "services/dsh/backend/internal/http/catalog.go",
     "services/dsh/backend/internal/http/catalog_approval.go",
@@ -181,6 +184,8 @@
     "services/dsh/backend/internal/http/fieldreadiness.go",
     "services/dsh/backend/internal/http/field_finance.go",
     "services/dsh/backend/internal/http/field_finance_test.go",
+    "services/dsh/backend/internal/http/field_readiness_closure.go",
+    "services/dsh/backend/internal/http/field_readiness_closure_test.go",
     "services/dsh/backend/internal/http/field_readiness_governed_handlers.go",
     "services/dsh/backend/internal/http/field_readiness_routes.go",
     "services/dsh/backend/internal/http/financeproxy.go",
@@ -197,7 +202,6 @@
     "services/dsh/backend/internal/http/governed_support.go",
     "services/dsh/backend/internal/http/home_discovery_targeting_handlers.go",
     "services/dsh/backend/internal/http/incident.go",
-    "services/dsh/backend/internal/http/journey003_workforce_scopes_test.go",
     "services/dsh/backend/internal/http/journeys_015_020_test.go",
     "services/dsh/backend/internal/http/journeys_020_025_routes_test.go",
     "services/dsh/backend/internal/http/journeys_026_030_routes_test.go",
@@ -1006,6 +1010,30 @@
           "method": "POST",
           "path": "/providers/maps/route",
           "source_path": "core/providers/contracts/providers.openapi.yaml"
+        }
+      ],
+      "required_surface_policy": "no_single_surface_journey_without_verified_exclusion"
+    },
+    {
+      "journey_group_id": "journey:workforce:internal",
+      "source": "OpenAPI operation grouping",
+      "status": "PROPOSED_UNFILLED",
+      "segmentation_rule": "business_outcome_fullstack_multi_surface",
+      "required_action": "expand_group_to_all_affected_surfaces_tabs_backend_api_database_runtime_ci_and_cleanup_decisions",
+      "service": "workforce",
+      "tag_or_root": "internal",
+      "operations": [
+        {
+          "operation_id": "getInternalActorScopes",
+          "method": "GET",
+          "path": "/internal/assignments/{actorId}/scopes",
+          "source_path": "core/workforce/contracts/workforce.internal-scopes.openapi.yaml"
+        },
+        {
+          "operation_id": "updateInternalActorScopes",
+          "method": "PUT",
+          "path": "/internal/assignments/{actorId}/scopes",
+          "source_path": "core/workforce/contracts/workforce.internal-scopes.openapi.yaml"
         }
       ],
       "required_surface_policy": "no_single_surface_journey_without_verified_exclusion"
@@ -5013,6 +5041,26 @@
       "method": "POST",
       "path": "/providers/maps/route",
       "journey_group_key": "providers:providers"
+    },
+    {
+      "journey_id": "api:getInternalActorScopes",
+      "source_path": "core/workforce/contracts/workforce.internal-scopes.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getInternalActorScopes",
+      "method": "GET",
+      "path": "/internal/assignments/{actorId}/scopes",
+      "journey_group_key": "workforce:internal"
+    },
+    {
+      "journey_id": "api:updateInternalActorScopes",
+      "source_path": "core/workforce/contracts/workforce.internal-scopes.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "updateInternalActorScopes",
+      "method": "PUT",
+      "path": "/internal/assignments/{actorId}/scopes",
+      "journey_group_key": "workforce:internal"
     },
     {
       "journey_id": "api:getWorkforceHealth",

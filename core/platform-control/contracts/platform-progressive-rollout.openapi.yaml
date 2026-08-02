@@ -6,7 +6,7 @@ info:
     health-gated advancement, abort, rollback and recovery guidance.
 x-bthwani-owner: core/platform-control
 x-bthwani-capability: platform-progressive-rollout
-x-bthwani-contract-state: CONTRACT_DRAFT
+x-bthwani-contract-state: CONTRACT_ACTIVE
 servers:
   - url: http://localhost:58084
 paths:

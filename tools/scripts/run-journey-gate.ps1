@@ -46,7 +46,7 @@ function Invoke-Step {
     Write-Host "[ OK  ] $Name"
   }
   catch {
-    Write-Host "[ FAIL] $Name — $_"
+    Write-Host "[ FAIL] $Name - $_"
     throw
   }
 }

@@ -1,7 +1,8 @@
 openapi: 3.1.0
 info:
-  title: BThwani Workforce Internal Scopes API
+  title: Workforce Internal Scopes API
   version: 1.0.0
+x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/workforce
 paths:
   /internal/assignments/{actorId}/scopes:
