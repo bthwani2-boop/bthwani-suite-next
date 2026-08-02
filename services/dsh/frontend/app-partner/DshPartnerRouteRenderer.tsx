@@ -31,6 +31,7 @@ import type {
   DshPartnerOrderAlertItem,
   DshPartnerOrderAlertId,
 } from "../shared/orders/orders.contract";
+
 function hasRouteBindingContract(route: DshPartnerRoute): boolean {
   return DSH_PARTNER_BINDING_CONTRACTS.some(
     (contract) => contract.surfaceId === route,
@@ -117,7 +118,6 @@ type Props = {
   scopes: readonly import("../shared/partner/partner.types").DshPartnerOperationalScope[];
 };
 
-
 const STORE_SCOPED_ROUTES = new Set<DshPartnerRoute>([
   "inventory-management",
   "product-edit",
@@ -134,16 +134,15 @@ const PRODUCT_SCOPED_ROUTES = new Set<DshPartnerRoute>([
   "product-overrides",
 ]);
 
-
 function derivePartnerOrderAlerts(orders: readonly PartnerOrderItem[]): DshPartnerOrderAlertItem[] {
   const alerts: DshPartnerOrderAlertItem[] = [];
-  
+
   orders.forEach((order) => {
     let alertId: DshPartnerOrderAlertId | undefined;
     let title = '';
     let description = '';
     let urgent = false;
-    
+
     if (order.status === 'needs_accept') {
       alertId = 'order_needs_accept';
       title = 'طلب يحتاج قبولًا فوريًا';
@@ -357,8 +356,6 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
     );
   }
 
-
-
   if (route === "inventory-management") {
     return renderSurfaceShell(
       <PartnerCatalogManagementScreen storeId={scopedStoreId} />,
@@ -449,7 +446,6 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
       />,
     );
   }
-
 
   if (route === "support-screen") {
     const categoryId =
