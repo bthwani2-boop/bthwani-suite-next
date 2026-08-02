@@ -417,6 +417,13 @@ paths:
   /dsh/control-panel/finance/settlement-policies/{partnerId}:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1settlement-policies~1{partnerId}"
 
+  /dsh/captain/finance/cod-records:
+    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1captain~1finance~1cod-records"
+  /dsh/captain/finance/cod-records/{recordId}/collect:
+    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1captain~1finance~1cod-records~1{recordId}~1collect"
+  /dsh/captain/finance/cod-records/{recordId}/remit:
+    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1captain~1finance~1cod-records~1{recordId}~1remit"
+
   /dsh/captain/finance/commissions:
     $ref: "./paths/captain.paths.yaml#/~1dsh~1captain~1finance~1commissions"
   /dsh/captain/finance/payouts:
