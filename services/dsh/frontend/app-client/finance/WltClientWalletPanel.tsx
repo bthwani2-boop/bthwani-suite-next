@@ -1,4 +1,4 @@
-// services/wlt/frontend/app-client/finance — WltClientWalletPanel
+// services/dsh/frontend/app-client/finance — WltClientWalletPanel
 // Displays the authenticated client's own WLT wallet balance and ledger.
 // DSH app-client surfaces import this via the WLT shared barrel.
 import React from "react";

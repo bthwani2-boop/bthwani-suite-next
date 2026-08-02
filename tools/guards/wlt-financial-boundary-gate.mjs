@@ -10,16 +10,18 @@ const violations = [];
 // 0. Applications and the control panel may consume finance only through DSH.
 // WLT remains an internal service-to-service dependency of DSH.
 const directAppWltPatterns = [
-  [/@bthwani\/wlt\b/, "APPLICATION_IMPORTS_WLT_DIRECTLY"],
-  [/\bWLT_API_BASE_URL\b/, "APPLICATION_CONFIGURES_WLT_DIRECTLY"],
+  [/from\s+['"]@bthwani\/wlt(?!\/dsh\b)[^'"]*['"]/, "APPLICATION_IMPORTS_WLT_DEEP_PATHS"],
+  [/\b(?:EXPO_PUBLIC_)?WLT_API_BASE_URL\b/, "APPLICATION_CONFIGURES_WLT_DIRECTLY"],
   [/\/api\/wlt(?:\/|["'`])/, "APPLICATION_EXPOSES_WLT_ROUTE"],
+  [/\bwltFetchJson\b/, "WLT_FETCH_JSON_IS_FORBIDDEN"],
+  [/\bwlt-http\b/, "WLT_HTTP_IS_FORBIDDEN"],
   [/\b58083\b/, "APPLICATION_EXPOSES_WLT_PORT"],
   [/services\/wlt\b/, "APPLICATION_REFERENCES_WLT_SOURCE"],
 ];
 const appBoundaryFiles = [
   ...listFiles().filter(
     (file) =>
-      file.startsWith("apps/") &&
+      (file.startsWith("apps/") || file.startsWith("services/dsh/frontend/")) &&
       !file.includes("/tests/") &&
       !file.includes("/test/") &&
       !file.includes(".test.") &&

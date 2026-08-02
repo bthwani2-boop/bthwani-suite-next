@@ -194,8 +194,6 @@ function extractApiOperationCalls(file, content) {
   const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindFor(file));
   const operations = new Map();
   const approvedCallNames = new Set([
-    "request",
-    "wltfetchjson",
     "fetch",
     "get",
     "post",
@@ -226,7 +224,6 @@ function extractApiOperationCalls(file, content) {
 }
 
 const DSH_HTTP_CLIENT_PATTERN = /\bcreate(?:Dsh|DshPublic|DshFlexible|DshRaw)HttpClient\b/;
-const WLT_HTTP_CLIENT_PATTERN = /\bwltFetchJson\b/;
 const RAW_FETCH_PATTERN = /\bfetch\s*\(/g;
 const MOCK_RESOLVE_PATTERN = /\breturn\s+Promise\.resolve\s*\(\s*[\[{]/;
 const HARDCODED_URL_PATTERN = /https?:\/\/(?!localhost|127\.0\.0\.1|\.\.\.|example\.com)/;
@@ -278,15 +275,14 @@ for (const file of apiFiles) {
     }
   }
 
-  const usesApprovedClient =
-    DSH_HTTP_CLIENT_PATTERN.test(content) || WLT_HTTP_CLIENT_PATTERN.test(content);
+  const usesApprovedClient = DSH_HTTP_CLIENT_PATTERN.test(content);
   const isMultipartUploadAdapter = content.includes("new FormData(");
   if (!usesApprovedClient && !isMultipartUploadAdapter) {
     const fetchMatches = [...content.matchAll(RAW_FETCH_PATTERN)];
     if (fetchMatches.length > 0) {
       violations.push({
         file,
-        message: "FORBIDDEN: raw fetch() in adapter without approved HTTP client (createDsh*HttpClient or wltFetchJson)",
+        message: "FORBIDDEN: raw fetch() in adapter without approved HTTP client (createDsh*HttpClient)",
       });
     }
   }

@@ -1,4 +1,4 @@
-// services/wlt/frontend/app-partner/finance — WltPartnerFinanceScreen
+// services/dsh/frontend/app-partner/finance — WltPartnerFinanceScreen
 // Displays the authenticated partner's own financial data from WLT:
 // partner COD custody + commissions + payout destination.
 // DSH surfaces import this via the WLT partner facade.
