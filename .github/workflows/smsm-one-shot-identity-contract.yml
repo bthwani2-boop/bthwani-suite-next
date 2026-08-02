@@ -1,0 +1,266 @@
+name: SMSM one-shot Identity contract alignment
+
+on:
+  push:
+    branches: [smsm]
+    paths:
+      - .github/workflows/smsm-one-shot-identity-contract.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: smsm-one-shot-identity-contract
+  cancel-in-progress: false
+
+jobs:
+  align:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: smsm
+          fetch-depth: 0
+
+      - name: Align Identity OpenAPI with live governed routes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("core/identity/contracts/identity.openapi.yaml")
+          text = path.read_text(encoding="utf-8")
+
+          internal_headers = '''        - $ref: "#/components/parameters/Authorization"
+          - $ref: "#/components/parameters/ServiceCaller"'''
+          if internal_headers not in text:
+              raise SystemExit("expected internal header sequence not found")
+          text = text.replace(
+              internal_headers,
+              internal_headers + '\n        - $ref: "#/components/parameters/OperatorContext"',
+          )
+
+          marker = '''components:
+            securitySchemes:'''
+          if marker not in text:
+              raise SystemExit("components marker not found")
+          partner_routes = '''  /internal/partner/actors/provision:
+            post:
+              tags: [ InternalPartner ]
+              operationId: provisionPartnerActor
+              summary: Provision or update a store-scoped partner actor
+              description: >-
+                DSH service only. Identity owns the partner role and executable
+                permission bundle; the request body cannot select operator context.
+              security:
+                - serviceToken: []
+              parameters:
+                - $ref: "#/components/parameters/Authorization"
+                - $ref: "#/components/parameters/ServiceCaller"
+                - $ref: "#/components/parameters/OperatorContext"
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      $ref: "#/components/schemas/PartnerActorProvisionRequest"
+              responses:
+                "201":
+                  description: Partner actor provisioned or its store authority replaced.
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/ActorAdminView"
+                "400":
+                  $ref: "#/components/responses/InvalidRequest"
+                "401":
+                  $ref: "#/components/responses/Unauthenticated"
+                "403":
+                  $ref: "#/components/responses/Forbidden"
+                "409":
+                  description: Phone or username conflicts with another actor.
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/ApiError"
+                "503":
+                  $ref: "#/components/responses/ServiceUnavailable"
+            /internal/partner/actors/{actorId}/activations:
+              post:
+                tags: [ InternalPartner ]
+                operationId: issuePartnerActorActivation
+                summary: Issue an actor-bound app-partner access code
+                description: >-
+                  DSH service only. The actor must already own an Identity permission
+                  scoped to the requested store. Raw codes are returned once and are
+                  never persisted by DSH.
+                security:
+                  - serviceToken: []
+                parameters:
+                  - $ref: "#/components/parameters/ActorId"
+                  - $ref: "#/components/parameters/Authorization"
+                  - $ref: "#/components/parameters/ServiceCaller"
+                  - $ref: "#/components/parameters/OperatorContext"
+                  - in: header
+                    name: Idempotency-Key
+                    required: false
+                    schema:
+                      type: string
+                  - in: header
+                    name: X-Correlation-ID
+                    required: false
+                    schema:
+                      type: string
+                requestBody:
+                  required: true
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/PartnerActivationRequest"
+                responses:
+                  "201":
+                    description: Single-use app-partner activation code issued.
+                    content:
+                      application/json:
+                        schema:
+                          $ref: "#/components/schemas/IssueActivationResponse"
+                  "400":
+                    $ref: "#/components/responses/InvalidRequest"
+                  "401":
+                    $ref: "#/components/responses/Unauthenticated"
+                  "403":
+                    $ref: "#/components/responses/Forbidden"
+                  "404":
+                    $ref: "#/components/responses/NotFound"
+                  "429":
+                    $ref: "#/components/responses/RateLimited"
+                  "503":
+                    $ref: "#/components/responses/ServiceUnavailable"
+          '''
+          text = text.replace(marker, partner_routes + marker, 1)
+
+          text = text.replace(
+              '''    serviceToken:
+                type: http
+                scheme: bearer
+                scheme: bearer
+                description: Workforce service token (IDENTITY_WORKFORCE_SERVICE_TOKEN) for
+                  internal actor APIs.''',
+              '''    serviceToken:
+                type: http
+                scheme: bearer
+                description: >-
+                  Service-specific bearer token. Workforce actor APIs use
+                  IDENTITY_WORKFORCE_SERVICE_TOKEN; DSH partner APIs use
+                  IDENTITY_DSH_SERVICE_TOKEN.''',
+          )
+
+          service_caller = '''    ServiceCaller:
+                in: header
+                name: X-Service-Caller
+                required: true
+                schema:
+                  type: string
+                  minLength: 1'''
+          if service_caller not in text:
+              raise SystemExit("service caller parameter not found")
+          text = text.replace(
+              service_caller,
+              service_caller + '''
+              OperatorContext:
+                in: header
+                name: X-Operator-Context-ID
+                required: true
+                description: Server-owned platform scope; request bodies cannot select it.
+                schema:
+                  type: string
+                  minLength: 1''',
+              1,
+          )
+
+          text = text.replace(
+              '''        scope:
+                  type: string
+                  enum: [ own, assigned, store, zone, all, none ]''',
+              '''        scope:
+                  oneOf:
+                    - type: string
+                      enum: [ own, assigned, store, zone, all, none ]
+                    - type: string
+                      pattern: '^store:[^\\s]+$' ''',
+              1,
+          )
+
+          text = text.replace(
+              '''        role:
+                  type: string
+                  enum: [ field, captain ]
+                operatorContextId:
+                  type: string''',
+              '''        role:
+                  type: string
+                  enum: [ field, captain ]''',
+              1,
+          )
+
+          text = text.replace(
+              '''        actorType:
+                  type: string
+                  enum: [ field, captain, client, partner ]
+              SessionInfo:''',
+              '''        actorType:
+                  type: string
+                  enum: [ client ]
+              PartnerActorProvisionRequest:
+                type: object
+                additionalProperties: false
+                required: [ username, phoneE164, permissionBundle, storeId ]
+                properties:
+                  username:
+                    type: string
+                    minLength: 1
+                  phoneE164:
+                    type: string
+                    minLength: 8
+                    maxLength: 20
+                  permissionBundle:
+                    type: string
+                    enum: [ owner, manager, supervisor, staff, courier ]
+                  storeId:
+                    type: string
+                    minLength: 1
+              PartnerActivationRequest:
+                type: object
+                additionalProperties: false
+                required: [ issuedByActorId, storeId ]
+                properties:
+                  issuedByActorId:
+                    type: string
+                    minLength: 1
+                  storeId:
+                    type: string
+                    minLength: 1
+              SessionInfo:''',
+              1,
+          )
+
+          if "/internal/partner/actors/provision:" not in text:
+              raise SystemExit("partner provision route was not inserted")
+          if "enum: [ field, captain, client, partner ]" in text[text.index("    OtpRequest:"):]:
+              raise SystemExit("public OTP still exposes governed actor types")
+          if "operatorContextId:" in text[text.index("    ProvisionActorRequest:"):text.index("    ActorAdminView:")]:
+              raise SystemExit("provision request body still selects operator context")
+
+          path.write_text(text, encoding="utf-8")
+          Path(".github/workflows/smsm-one-shot-identity-contract.yml").unlink()
+
+      - name: Commit one-shot result
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "bthwani-governance-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add core/identity/contracts/identity.openapi.yaml \
+                  .github/workflows/smsm-one-shot-identity-contract.yml
+          git diff --cached --check
+          git commit -m "fix(identity): align contract with governed partner access"
+          git push origin HEAD:smsm
