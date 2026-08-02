@@ -71,7 +71,7 @@ export async function collectDshCaptainCod(
   if (!recordId.trim() || !Number.isSafeInteger(input.actualAmountMinorUnits) || input.actualAmountMinorUnits <= 0 || proofReference.length < 3) {
     throw new Error("Invalid request");
   }
-  
+
   const result = await dshPostJson<WltCodCustodyMutationResult>(
     `${resolveDshApiBaseUrl()}/dsh/captain/finance/cod-records/${encodeURIComponent(recordId)}/collect`,
     {
@@ -93,7 +93,7 @@ export async function remitDshCaptainCod(
   if (!recordId.trim() || proofReference.length < 3) {
     throw new Error("Invalid request");
   }
-  
+
   const result = await dshPostJson<WltCodCustodyMutationResult>(
     `${resolveDshApiBaseUrl()}/dsh/captain/finance/cod-records/${encodeURIComponent(recordId)}/remit`,
     {
