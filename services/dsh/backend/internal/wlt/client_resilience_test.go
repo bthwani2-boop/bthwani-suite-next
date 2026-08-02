@@ -336,10 +336,10 @@ func TestFinanceWriteHasDeterministicRequiredHeaders(t *testing.T) {
 	c := NewClient(server.URL, "test-service-token")
 	body := []byte(`{"actorId":"payout-1"}`)
 
-	if _, _, err := c.FinanceWrite(trustedMutationTestContext(), http.MethodPost, "/wlt/payout-requests", body, "corr-payout-1"); err != nil {
+	if _, _, err := c.FinanceWrite(trustedMutationTestContext(), http.MethodPost, "/wlt/payout-requests", body, "corr-payout-1", ""); err != nil {
 		t.Fatalf("unexpected error on first call: %v", err)
 	}
-	if _, _, err := c.FinanceWrite(trustedMutationTestContext(), http.MethodPost, "/wlt/payout-requests", body, "corr-payout-1"); err != nil {
+	if _, _, err := c.FinanceWrite(trustedMutationTestContext(), http.MethodPost, "/wlt/payout-requests", body, "corr-payout-1", ""); err != nil {
 		t.Fatalf("unexpected error on second call: %v", err)
 	}
 

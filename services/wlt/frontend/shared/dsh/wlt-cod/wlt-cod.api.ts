@@ -54,7 +54,7 @@ export type WltCodCustodyMutationResult = {
 
 export async function fetchDshCaptainOwnCodRecords(): Promise<WltReferenceApiResult<WltDshCodReference[]>> {
   const result = await wltFetchJson<{ codRecords?: WltDshCodReference[] }>(
-    `${getWltApiBaseUrl()}/wlt/captain/cod-records`,
+    `${getWltApiBaseUrl()}/dsh/captain/finance/cod-records`,
     (body) => body as { codRecords?: WltDshCodReference[] }
   );
   if (!result.ok) {
@@ -73,7 +73,7 @@ export async function collectDshCaptainCod(
   }
   
   const result = await wltPostJson<WltCodCustodyMutationResult>(
-    `${getWltApiBaseUrl()}/wlt/captain/cod-records/${encodeURIComponent(recordId)}/collect`,
+    `${getWltApiBaseUrl()}/dsh/captain/finance/cod-records/${encodeURIComponent(recordId)}/collect`,
     {
       actualAmountMinorUnits: input.actualAmountMinorUnits,
       proofReference,
@@ -95,7 +95,7 @@ export async function remitDshCaptainCod(
   }
   
   const result = await wltPostJson<WltCodCustodyMutationResult>(
-    `${getWltApiBaseUrl()}/wlt/captain/cod-records/${encodeURIComponent(recordId)}/remit`,
+    `${getWltApiBaseUrl()}/dsh/captain/finance/cod-records/${encodeURIComponent(recordId)}/remit`,
     {
       proofReference,
       note: input.note?.trim() ?? "",

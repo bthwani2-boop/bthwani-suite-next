@@ -13,7 +13,7 @@ export async function fetchWltPaymentStatusRef(
   orderId: string
 ) {
   return wltFetchJson<WltPaymentStatusReference>(
-    `${baseUrl}/wlt/references/payment-status?orderId=${encodeURIComponent(orderId)}`,
+    `${baseUrl}/dsh/control-panel/finance/references/payment-status?orderId=${encodeURIComponent(orderId)}`,
     (body: unknown) => (body as any).reference as WltPaymentStatusReference,
   );
 }
@@ -23,7 +23,7 @@ export async function fetchWltSettlementStatusRef(
   orderId: string
 ) {
   return wltFetchJson<WltSettlementStatusReference>(
-    `${baseUrl}/wlt/references/settlement-status?orderId=${encodeURIComponent(orderId)}`,
+    `${baseUrl}/dsh/control-panel/finance/references/settlement-status?orderId=${encodeURIComponent(orderId)}`,
     (body: unknown) => (body as any).reference as WltSettlementStatusReference,
   );
 }
@@ -33,7 +33,7 @@ export async function fetchWltRefundStatusRef(
   orderId: string
 ) {
   return wltFetchJson<WltRefundStatusReference>(
-    `${baseUrl}/wlt/references/refund-status?orderId=${encodeURIComponent(orderId)}`,
+    `${baseUrl}/dsh/control-panel/finance/references/refund-status?orderId=${encodeURIComponent(orderId)}`,
     (body: unknown) => (body as any).reference as WltRefundStatusReference,
   );
 }

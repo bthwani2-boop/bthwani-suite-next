@@ -90,7 +90,7 @@ func (s *protectedStoreServer) handleUpsertFinanceCommissionPolicy(w http.Respon
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode governed commission policy")
 		return
 	}
-	status, body, err := s.wlt.FinanceWriteCommission(r.Context(), http.MethodPut, "/wlt/commission-policies", payload, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceWriteCommission(r.Context(), http.MethodPut, "/wlt/commission-policies", payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
 	writeGovernedCommissionProxyResponse(w, status, body, err)
 }
 
@@ -155,7 +155,7 @@ func (s *protectedStoreServer) proxyGovernedCommissionLifecycle(w http.ResponseW
 		return
 	}
 	path := "/wlt/commissions/" + url.PathEscape(commissionID) + "/" + action
-	status, body, err := s.wlt.FinanceWriteCommission(r.Context(), http.MethodPost, path, payload, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceWriteCommission(r.Context(), http.MethodPost, path, payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
 	writeGovernedCommissionProxyResponse(w, status, body, err)
 }
 

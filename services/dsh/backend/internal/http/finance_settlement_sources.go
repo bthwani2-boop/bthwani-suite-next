@@ -106,7 +106,7 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 	if len(orderSources) == 0 { store.SendError(w, http.StatusConflict, "NO_ELIGIBLE_DELIVERED_ORDERS", "no delivered non-cancelled orders with an authoritative pricing snapshot are eligible for this partner and period"); return }
 	payload, err := json.Marshal(map[string]any{"partnerId": input.PartnerID, "periodStart": input.PeriodStart, "periodEnd": input.PeriodEnd, "orderSources": orderSources, "operatorId": actor.ID})
 	if err != nil { store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode governed settlement"); return }
-	status, responseBody, err := s.wlt.FinanceWriteSettlement(r.Context(), http.MethodPost, "/wlt/settlements", payload, r.Header.Get("X-Correlation-ID"))
+	status, responseBody, err := s.wlt.FinanceWriteSettlement(r.Context(), http.MethodPost, "/wlt/settlements", payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
 	if err != nil { store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT governed settlement call failed"); return }
 	w.Header().Set("Content-Type", "application/json"); w.Header().Set("Cache-Control", "no-store"); w.WriteHeader(status); _, _ = w.Write(responseBody)
 }
@@ -129,7 +129,7 @@ func (s *protectedStoreServer) handleUpsertFinanceSettlementPolicy(w http.Respon
 	payload, err := json.Marshal(map[string]any{"feeBasisPoints": input.FeeBasisPoints, "currency": input.Currency, "status": input.Status, "cycleDays": input.CycleDays, "minimumNetMinorUnits": input.MinimumNetMinorUnits, "changeReason": input.ChangeReason, "operatorId": actor.ID})
 	if err != nil { store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode settlement policy"); return }
 	path := "/wlt/settlement-policies/" + url.PathEscape(partnerID)
-	status, responseBody, err := s.wlt.FinanceWriteSettlement(r.Context(), http.MethodPut, path, bytes.Clone(payload), r.Header.Get("X-Correlation-ID"))
+	status, responseBody, err := s.wlt.FinanceWriteSettlement(r.Context(), http.MethodPut, path, bytes.Clone(payload), r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
 	if err != nil { store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", fmt.Sprintf("WLT settlement policy call failed: %v", err)); return }
 	w.Header().Set("Content-Type", "application/json"); w.Header().Set("Cache-Control", "no-store"); w.WriteHeader(status); _, _ = w.Write(responseBody)
 }

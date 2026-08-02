@@ -85,6 +85,7 @@ func (s *protectedStoreServer) handlePartnerRemitCodRecord(w http.ResponseWriter
 		"remit",
 		payload,
 		r.Header.Get("X-Correlation-ID"),
+		r.Header.Get("Idempotency-Key"),
 	)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
@@ -132,6 +133,7 @@ func (s *protectedStoreServer) handleAssignFinanceCodReconciliationCase(w http.R
 		"/wlt/cod-reconciliation-cases/"+url.PathEscape(caseID)+"/assign",
 		payload,
 		r.Header.Get("X-Correlation-ID"),
+		r.Header.Get("Idempotency-Key"),
 		actor.OperatorContextID,
 	)
 	writeWltActorFinanceResponse(w, status, body, err)
@@ -175,6 +177,7 @@ func (s *protectedStoreServer) handleResolveFinanceCodReconciliationCase(w http.
 		"/wlt/cod-reconciliation-cases/"+url.PathEscape(caseID)+"/resolve",
 		payload,
 		r.Header.Get("X-Correlation-ID"),
+		r.Header.Get("Idempotency-Key"),
 		actor.OperatorContextID,
 	)
 	writeWltActorFinanceResponse(w, status, body, err)

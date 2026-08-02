@@ -114,7 +114,7 @@ func TestActorFinanceCodMutationAddsFallbackCorrelation(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	status, _, err := client.FinanceWriteCodRecord(trustedMutationTestContext(), "cod-1", "collect", proof, "")
+	status, _, err := client.FinanceWriteCodRecord(trustedMutationTestContext(), "cod-1", "collect", proof, "", "")
 	if err != nil {
 		t.Fatalf("expected governed fallback correlation: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestSettlementMutationAddsRequiredHeaders(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	if _, _, err := client.FinanceWriteSettlement(trustedMutationTestContext(), http.MethodPost, "/wlt/settlements", []byte(`{}`), "order-1"); err != nil {
+	if _, _, err := client.FinanceWriteSettlement(trustedMutationTestContext(), http.MethodPost, "/wlt/settlements", []byte(`{}`), "order-1", ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

@@ -11,7 +11,7 @@ export async function fetchPartnerCodRecords(): Promise<
   const result = await wltFetchJson<{
     readonly codRecords?: readonly WltDshCodReference[];
   }>(
-    `${getWltApiBaseUrl()}/wlt/partner/cod-records`,
+    `${getWltApiBaseUrl()}/dsh/partner/me/finance/cod-records`,
     (body) => body as { readonly codRecords?: readonly WltDshCodReference[] },
   );
   if (!result.ok) throw new Error(result.message);
@@ -29,7 +29,7 @@ export async function remitPartnerCodRecord(
     throw new Error("Invalid record or proof");
   }
   const result = await wltPostJson<WltCodCustodyMutationResult>(
-    `${getWltApiBaseUrl()}/wlt/partner/cod-records/${encodeURIComponent(normalizedRecordId)}/remit`,
+    `${getWltApiBaseUrl()}/dsh/partner/me/finance/cod-records/${encodeURIComponent(normalizedRecordId)}/remit`,
     { proofReference: normalizedProof, note: note.trim() },
     (body: unknown) => body as WltCodCustodyMutationResult
   );

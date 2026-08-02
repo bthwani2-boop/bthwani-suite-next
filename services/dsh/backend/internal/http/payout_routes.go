@@ -117,7 +117,7 @@ func (s *protectedStoreServer) handleActorPayoutCreate(w http.ResponseWriter, r 
 		return
 	}
 	correlationID := correlationForActorMutation(r, input.IdempotencyKey)
-	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests", payload, correlationID)
+	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests", payload, correlationID, r.Header.Get("Idempotency-Key"))
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
@@ -189,6 +189,7 @@ func (s *protectedStoreServer) handleReconcileFinancePayoutRequest(w http.Respon
 		"/wlt/payout-requests/"+url.PathEscape(payoutID)+"/reconcile",
 		operatorWriteBody(actor.ID),
 		correlationForActorMutation(r, "payout-reconcile-"+payoutID),
+		r.Header.Get("Idempotency-Key"),
 		operatorContextID,
 	)
 	writeWltActorFinanceResponse(w, status, responseBody, err)

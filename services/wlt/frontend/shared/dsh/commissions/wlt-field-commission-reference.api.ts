@@ -6,7 +6,7 @@ export async function fetchWltFieldCommissionRef(
   partnerId: string,
 ): Promise<WltReferenceApiResult<WltDshFieldCommissionReference>> {
   return wltFetchJson<WltDshFieldCommissionReference>(
-    `${baseUrl}/wlt/references/field-commission?partnerId=${encodeURIComponent(partnerId)}`,
+    `${baseUrl}/dsh/control-panel/finance/references/field-commission?partnerId=${encodeURIComponent(partnerId)}`,
     (body: unknown) => (body as any).reference as WltDshFieldCommissionReference,
   );
 }
