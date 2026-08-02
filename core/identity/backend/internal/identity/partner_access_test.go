@@ -9,18 +9,22 @@ func TestPartnerAccessCodeSurfaceRegistered(t *testing.T) {
 	}
 }
 
-// partner is public-OTP-only (publicOtpActorTypes), never Workforce
-// access-code-issued (workforceManagedActorTypes), so it must always be
-// rejected by the Workforce-scoped validateExpectedActivationTarget path —
-// see TestActivationIssuancePoliciesSeparatePublicAndWorkforceRoles.
-func TestPartnerAccessCodeTargetIsActorBound(t *testing.T) {
+func TestPartnerCannotRequestPublicOTP(t *testing.T) {
+	if _, err := otpRoleSurface("partner"); err == nil {
+		t.Fatal("partner must use an actor-bound platform-issued access code")
+	}
+}
+
+// Workforce activation remains restricted to field/captain. Partner codes are
+// issued through the dedicated authenticated DSH service path.
+func TestPartnerDoesNotUseWorkforceActivationPath(t *testing.T) {
 	actor := Actor{
 		ID:        "partner-actor-1",
 		PhoneE164: "+967771000001",
 		Roles:     []string{"partner"},
 	}
 	if err := validateExpectedActivationTarget(actor, "partner", "app-partner"); err == nil {
-		t.Fatal("partner is public-OTP-only and must not validate through Workforce access-code issuance")
+		t.Fatal("partner must not validate through Workforce activation issuance")
 	}
 	if err := validateExpectedActivationTarget(actor, "partner", "app-captain"); err == nil {
 		t.Fatal("partner access code must not target another application surface")
