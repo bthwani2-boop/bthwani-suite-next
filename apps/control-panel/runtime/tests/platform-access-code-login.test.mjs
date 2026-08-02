@@ -24,17 +24,15 @@ test("employee platform access code has a same-origin HttpOnly BFF route", () =>
   assert.doesNotMatch(`${route}\n${identityActivation}\n${identityTransport}`, /localStorage|sessionStorage/);
 });
 
-test("control-panel makes the platform-issued code the primary employee entry", () => {
-  const page = read("apps/control-panel/runtime/src/app/dsh/login/page.tsx");
-  const session = read("services/dsh/frontend/shared/session/control-panel-session.tsx");
-  const api = read("services/dsh/frontend/shared/session/control-panel-session.api.ts");
+test("control-panel identity configuration owns the same-origin BFF transport", () => {
+  const providers = read("apps/control-panel/runtime/src/app/providers.tsx");
+  const identityConfig = read("core/identity/clients/identity-api-config.ts");
+  const nextConfig = read("apps/control-panel/runtime/next.config.ts");
 
-  assert.match(page, /useState<LoginMode>\("access-code"\)/);
-  assert.match(page, /كود الدخول الصادر من منصة بثواني/);
-  assert.match(page, /ليس رمز تحقق/);
-  assert.match(page, /تسجيل المتصفح والدخول/);
-  assert.match(session, /activate\(phone: string, code: string\)/);
-  assert.match(api, /"\/api\/auth\/activate"/);
+  assert.match(providers, /configureIdentitySession\(resolveIdentityApiBaseUrl\(\)\)/);
+  assert.match(identityConfig, /NEXT_PUBLIC_CONTROL_PANEL_BFF_ENABLED/);
+  assert.match(identityConfig, /return "\/api\/identity"/);
+  assert.match(nextConfig, /NEXT_PUBLIC_CONTROL_PANEL_BFF_ENABLED:\s*"true"/);
 });
 
 test("employee invitation contract targets control-panel rather than webapp", () => {
