@@ -204,6 +204,7 @@ const services = [
       "core/workforce/contracts/workforce.operational-core.openapi.yaml",
       "core/workforce/contracts/workforce.reference-mutations.openapi.yaml",
       "core/workforce/contracts/workforce.sovereign-leadership.openapi.yaml",
+      "core/workforce/contracts/workforce.internal-scopes.openapi.yaml",
     ],
     router: "core/workforce/backend/internal/http/server.go",
     routerDir: "core/workforce/backend/internal/http",

@@ -107,10 +107,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/operator/dispatch/assignments", protected.handleCreateGovernedDispatchAssignment)
 	mux.HandleFunc("GET /dsh/operator/dispatch/assignments", protected.handleListGovernedOperatorDispatchAssignments)
 	mux.HandleFunc("GET /dsh/operator/dispatch/tracking-alerts", protected.handleListDispatchTrackingAlerts)
-	mux.HandleFunc("GET /dsh/operator/dispatch/captains/{captainId}/readiness", protected.handleGetCaptainOperatorReadiness)
 
-	mux.HandleFunc("GET /dsh/field/me/readiness", protected.handleGetFieldSelfReadiness)
-	mux.HandleFunc("GET /dsh/operator/dispatch/fields/{fieldId}/readiness", protected.handleGetFieldOperatorReadiness)
 	mux.HandleFunc("GET /dsh/captain/dispatch/assignments", protected.handleListGovernedCaptainDispatchAssignments)
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/accept", protected.handleAcceptGovernedDispatchAssignment)
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/decline", protected.handleDeclineGovernedDispatchAssignment)
@@ -212,7 +209,6 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/control-panel/finance/references/refund-status", protected.handleFinanceReferencesRefundStatus)
 	mux.HandleFunc("GET /dsh/control-panel/finance/references/field-commission", protected.handleFinanceReferencesFieldCommission)
 	mux.HandleFunc("GET /dsh/captain/finance/cod-records", protected.handleCaptainFinanceCodRecords)
-	mux.HandleFunc("GET /dsh/captain/me/readiness", protected.handleGetCaptainSelfReadiness)
 	mux.HandleFunc("GET /dsh/captain/finance/commissions", protected.handleCaptainFinanceCommissions)
 	mux.HandleFunc("GET /dsh/captain/finance/payouts", protected.handleCaptainFinancePayouts)
 	mux.HandleFunc("GET /dsh/field/finance/commissions", protected.enforceFieldReadinessGate(protected.handleFieldFinanceCommissions))

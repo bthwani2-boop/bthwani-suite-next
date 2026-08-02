@@ -42,7 +42,7 @@ func NewRouter(db *sql.DB, repository *identity.Repository) http.Handler {
 	mux.HandleFunc("POST /internal/actors/{actorId}/activations", s.serviceOnly(s.internalActorIssueActivation))
 	mux.HandleFunc("GET /internal/actors/{actorId}/activations/latest", s.serviceOnly(s.internalActorLatestActivation))
 	mux.HandleFunc("POST /internal/actors/{actorId}/activations/revoke", s.serviceOnly(s.internalActorRevokeActivations))
-	mux.HandleFunc("DELETE /internal/actors/{actorId}", s.serviceOnly(s.internalActorDelete))
+
 	return mux
 }
 
@@ -357,19 +357,6 @@ func (s *server) internalActorLatestActivation(w http.ResponseWriter, r *http.Re
 	sendJSON(w, http.StatusOK, meta)
 }
 
-func (s *server) internalActorDelete(w http.ResponseWriter, r *http.Request) {
-	actorID := strings.TrimSpace(r.PathValue("actorId"))
-	if actorID == "" {
-		sendError(w, http.StatusBadRequest, "INVALID_INPUT", "actorId is required")
-		return
-	}
-	err := s.repository.DeleteProvisionedActor(r.Context(), actorID)
-	if err != nil {
-		sendError(w, http.StatusConflict, "CONFLICT", err.Error())
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
 
 func (s *server) internalActorRevokeActivations(w http.ResponseWriter, r *http.Request) {
 	if err := s.repository.RevokeActivationChallenges(r.Context(), r.PathValue("actorId")); err != nil {

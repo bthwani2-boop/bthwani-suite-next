@@ -64,7 +64,6 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	// Internal routes
 	mux.HandleFunc("GET /internal/assignments/{actorId}/scopes", s.internalOnly(s.handleGetActorScopes))
 	mux.HandleFunc("PUT /internal/assignments/{actorId}/scopes", s.internalOnly(s.handleSetActorScopes))
-	
 	return mux
 }
 

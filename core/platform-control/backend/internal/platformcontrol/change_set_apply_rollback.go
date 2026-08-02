@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func (r *Repository) ApplyChangeSetGoverned(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
+func (r *Repository) ApplyChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return ChangeSet{}, err
@@ -53,7 +53,7 @@ WHERE id = $1::uuid`, id, actorID); err != nil {
 	if err := tx.Commit(); err != nil {
 		return ChangeSet{}, err
 	}
-	return r.GetChangeSetGoverned(ctx, id)
+	return r.GetChangeSet(ctx, id)
 }
 
 func applyGovernedItem(ctx context.Context, tx *sql.Tx, item ChangeSetItem) error {
@@ -130,10 +130,13 @@ WHERE id = $1::uuid`, item.ID, beforeRaw, nextRevision)
 	return err
 }
 
-func (r *Repository) RollbackChangeSetGoverned(ctx context.Context, id, actorID string, roles []string, correlationID, reason string) (ChangeSet, error) {
+func (r *Repository) RollbackChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID, reason string) (ChangeSet, error) {
 	reason = strings.TrimSpace(reason)
 	if reason == "" {
 		return ChangeSet{}, ErrRollbackReason
+	}
+	if len(reason) > maxGovernedTextLength {
+		return ChangeSet{}, ErrValidation
 	}
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
@@ -177,7 +180,7 @@ WHERE id = $1::uuid`, id); err != nil {
 	if err := tx.Commit(); err != nil {
 		return ChangeSet{}, err
 	}
-	return r.GetChangeSetGoverned(ctx, id)
+	return r.GetChangeSet(ctx, id)
 }
 
 func rollbackGovernedItem(ctx context.Context, tx *sql.Tx, item ChangeSetItem) error {
@@ -312,4 +315,18 @@ UPDATE platform_feature_flags
 SET enabled = $2, revision = revision + 1, updated_at = NOW()
 WHERE flag_key = $1 AND revision = $3`, item.TargetKey, beforeEnabled, currentRevision)
 	return requireOneRow(result, err)
+}
+
+func requireOneRow(result sql.Result, err error) error {
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows != 1 {
+		return ErrVersionConflict
+	}
+	return nil
 }

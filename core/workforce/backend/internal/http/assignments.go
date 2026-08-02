@@ -5,9 +5,8 @@ import (
 	"log"
 	"net/http"
 
-	"bthwani.com/core/workforce/backend/internal/workforce"
+	"workforce-api/internal/workforce"
 )
-
 
 type SetScopesRequest struct {
 	Role              string                               `json:"role"`
@@ -15,7 +14,7 @@ type SetScopesRequest struct {
 	Inputs            []workforce.OperationalAssignmentInput `json:"inputs"`
 }
 
-func (s *Server) handleGetActorScopes(w http.ResponseWriter, r *http.Request) {
+func (s *server) handleGetActorScopes(w http.ResponseWriter, r *http.Request) {
 	actorID := r.PathValue("actorId")
 	role := r.URL.Query().Get("role")
 	operatorContextID := r.URL.Query().Get("operatorContextId")
@@ -36,7 +35,7 @@ func (s *Server) handleGetActorScopes(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(scopes)
 }
 
-func (s *Server) handleSetActorScopes(w http.ResponseWriter, r *http.Request) {
+func (s *server) handleSetActorScopes(w http.ResponseWriter, r *http.Request) {
 	actorID := r.PathValue("actorId")
 	if actorID == "" {
 		http.Error(w, `{"error":"actorId is required"}`, http.StatusBadRequest)

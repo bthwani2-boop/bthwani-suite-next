@@ -1,0 +1,69 @@
+openapi: 3.1.0
+info:
+  title: BThwani Workforce Internal Scopes API
+  version: 1.0.0
+x-bthwani-owner: core/workforce
+paths:
+  /internal/assignments/{actorId}/scopes:
+    get:
+      operationId: getInternalActorScopes
+      parameters:
+        - in: path
+          name: actorId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: role
+          required: true
+          schema: { type: string }
+        - in: query
+          name: operatorContextId
+          required: true
+          schema: { type: string }
+        - in: header
+          name: Authorization
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-Service-Caller
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Success }
+      security:
+        - bearerAuth: []
+        - serviceCaller: []
+    put:
+      operationId: updateInternalActorScopes
+      parameters:
+        - in: path
+          name: actorId
+          required: true
+          schema: { type: string }
+        - in: header
+          name: Authorization
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-Service-Caller
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Success }
+      security:
+        - bearerAuth: []
+        - serviceCaller: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    serviceCaller:
+      type: apiKey
+      in: header
+      name: X-Service-Caller
