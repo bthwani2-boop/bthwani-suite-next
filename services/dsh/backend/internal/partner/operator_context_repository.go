@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"sort"
 	"strings"
 
 	"dsh-api/internal/store"
@@ -73,12 +74,70 @@ func hashPartnerCreation(operatorContextID string, input CreatePartnerInput) (st
 	return hex.EncodeToString(digest[:]), nil
 }
 
+// lockPartnerCreationUniqueness serializes both legal-identity and primary-phone
+// contenders. Database uniqueness still guards legal identity; the phone lock
+// and scoped existence check close the second J020 duplicate authority path
+// without trusting a preflight read that can race.
+func lockPartnerCreationUniqueness(
+	ctx context.Context,
+	tx *sql.Tx,
+	operatorContextID string,
+	input CreatePartnerInput,
+) error {
+	lockKeys := []string{
+		strings.Join([]string{
+			"partner-legal-identity",
+			operatorContextID,
+			strings.TrimSpace(input.LegalIdentityType),
+			strings.TrimSpace(input.LegalIdentityNumber),
+		}, "\x1f"),
+		strings.Join([]string{
+			"partner-primary-phone",
+			operatorContextID,
+			strings.TrimSpace(input.PrimaryPhone),
+		}, "\x1f"),
+	}
+	sort.Strings(lockKeys)
+	for _, key := range lockKeys {
+		if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, key); err != nil {
+			return err
+		}
+	}
+
+	var duplicate bool
+	if err := tx.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM dsh_partners
+			WHERE operator_context_id = $1
+			  AND (
+				(legal_identity_type = $2 AND btrim(legal_identity_number) = btrim($3))
+				OR btrim(primary_phone) = btrim($4)
+			  )
+		)`,
+		operatorContextID,
+		input.LegalIdentityType,
+		input.LegalIdentityNumber,
+		input.PrimaryPhone,
+	).Scan(&duplicate); err != nil {
+		return err
+	}
+	if duplicate {
+		return ErrConflict
+	}
+	return nil
+}
+
 func createPartnerForOperatorContextTx(
 	ctx context.Context,
 	tx *sql.Tx,
 	operatorContextID string,
 	input CreatePartnerInput,
 ) (Partner, error) {
+	if err := lockPartnerCreationUniqueness(ctx, tx, operatorContextID, input); err != nil {
+		return Partner{}, err
+	}
+
 	var p Partner
 	err := tx.QueryRowContext(ctx, `
 		INSERT INTO dsh_partners (
