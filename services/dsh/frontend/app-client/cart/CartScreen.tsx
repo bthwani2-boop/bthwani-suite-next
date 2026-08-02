@@ -26,7 +26,7 @@ import type {
 } from "../../shared/cart";
 import type { DshPaymentMethod } from "../../shared/checkout";
 import type { DshClientAddress } from "../../shared/client-address";
-import { useWltPaymentController } from "@bthwani/wlt/shared";
+import { useWltPaymentController } from "@bthwani/wlt/dsh";
 import { PaymentDecisionSection } from "./PaymentDecisionSection";
 
 type Props = {

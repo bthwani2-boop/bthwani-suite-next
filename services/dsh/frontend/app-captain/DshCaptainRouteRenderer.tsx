@@ -30,7 +30,7 @@ import {
 } from "./orders/DshCaptainOrdersScreen";
 import { DshCaptainMapScreen } from "./orders/DshCaptainMapScreen";
 import { DshCaptainPoDSubmissionScreen } from "./orders/DshCaptainPoDSubmissionScreen";
-import { WltCaptainFinanceScreen } from "@bthwani/wlt/app-captain/finance";
+import { WltCaptainFinanceScreen } from "./finance/WltCaptainFinanceScreen";
 import { DshCaptainSupportDirectoryScreen } from "./account/DshCaptainOperationsScreen";
 import { DshCaptainAccountSettingsContent } from "./account/DshCaptainAccountSettingsContent";
 import { CaptainAccountNavRow } from "./account/CaptainAccountNavRow";

@@ -14,7 +14,7 @@ import {
 import { useCartController, useServiceabilityController } from "../../shared/cart";
 import type { DshCart, DshFulfillmentMode } from "../../shared/cart";
 import type { DshPaymentMethod } from "../../shared/checkout";
-import { useWltPaymentController } from "@bthwani/wlt/shared";
+import { useWltPaymentController } from "@bthwani/wlt/dsh";
 import { PaymentDecisionSection } from "./PaymentDecisionSection";
 
 type Props = {

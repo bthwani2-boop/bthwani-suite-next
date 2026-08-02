@@ -1,0 +1,47 @@
+declare const process:
+  | { readonly env?: Readonly<Record<string, string | undefined>> }
+  | undefined;
+
+const FORBIDDEN_PORTS = new Set(["8080", "8081", "8082", "8083", "8084", "3000"]);
+const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+
+/** WLT transport owner for control-panel BFF and native direct runtimes. */
+export function resolveWltApiBaseUrl(): string {
+  if (
+    typeof process !== "undefined" &&
+    process.env?.["NEXT_PUBLIC_CONTROL_PANEL_BFF_ENABLED"] === "true"
+  ) {
+    return "/api/wlt";
+  }
+
+  if (typeof process !== "undefined" && process.env) {
+    const configured =
+      process.env["EXPO_PUBLIC_WLT_API_BASE_URL"] ??
+      process.env["NEXT_PUBLIC_WLT_API_BASE_URL"] ??
+      process.env["WLT_API_URL"];
+    if (configured && configured.trim().length > 0) {
+      return configured.trim().replace(/\/$/, "");
+    }
+  }
+  return "http://localhost:58083";
+}
+
+export function validateWltApiBaseUrl(url: string): boolean {
+  if (url.startsWith("/")) return url.length > 1;
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.length === 0) return false;
+    if (LOCAL_HOSTNAMES.has(parsed.hostname)) {
+      const port = parsed.port || (parsed.protocol === "https:" ? "443" : "80");
+      if (FORBIDDEN_PORTS.has(port)) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** @deprecated Use resolveWltApiBaseUrl instead. */
+export function getWltApiBaseUrl(): string {
+  return resolveWltApiBaseUrl();
+}

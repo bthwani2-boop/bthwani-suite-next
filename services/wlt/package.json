@@ -26,8 +26,6 @@
     "typescript": "~6.0.3"
   },
   "exports": {
-    "./control-panel/finance": "./frontend/control-panel/finance/index.ts",
-    "./app-captain/finance": "./frontend/app-captain/finance/index.ts",
-    "./app-field/finance": "./frontend/app-field/finance/index.ts"
+    "./dsh": "./frontend/shared/dsh/index.ts"
   }
 }

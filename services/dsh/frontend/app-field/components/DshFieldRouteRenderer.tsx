@@ -13,7 +13,7 @@ import { DshFieldProfileHomeScreen } from '../account/DshFieldProfileHomeScreen'
 import { DshFieldProfileScreen } from '../account/DshFieldProfileScreen';
 import { DshFieldProfileCompletionScreen } from '../account/DshFieldProfileCompletionScreen';
 import { DshFieldStoresHistoryScreen } from '../stores/DshFieldStoresHistoryScreen';
-import { WltFieldFinanceScreen } from '@bthwani/wlt/app-field/finance';
+import { WltFieldFinanceScreen } from '../finance/WltFieldFinanceScreen';
 import { DshFieldCatalogOperationsScreen } from './DshFieldCatalogOperationsScreen';
 import type { useDshFieldSurfaceModel } from '../field.surface-model';
 import type { FieldOnboardingController } from '../../shared/field-onboarding';

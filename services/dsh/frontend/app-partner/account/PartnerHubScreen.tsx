@@ -18,7 +18,7 @@ import { useIdentitySession } from "@bthwani/core-identity";
 import {
   getWltDshPartnerOperationalModeCommission,
   WltDshPartnerBridge,
-} from "@bthwani/wlt/shared";
+} from "@bthwani/wlt/dsh";
 import { resolveDshStoreClientVisibility } from "../../shared/partner/dsh-client-visibility.model";
 import {
   isDshPartnerActivationComplete,

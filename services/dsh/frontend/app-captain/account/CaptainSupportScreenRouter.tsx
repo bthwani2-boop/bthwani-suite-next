@@ -11,7 +11,7 @@ import {
   DshCaptainProofUploadScreen,
 } from '../orders/DshCaptainOrdersScreen';
 import { CaptainOrderSupportConversationScreen } from '../orders/CaptainOrderSupportConversationScreen';
-import { WltCaptainCodBalanceScreen } from '@bthwani/wlt/app-captain/finance';
+import { WltCaptainCodBalanceScreen } from '../finance/WltCaptainFinanceScreen';
 import {
   DshCaptainProfileGetScreen,
   DshCaptainTierEvaluateScreen,

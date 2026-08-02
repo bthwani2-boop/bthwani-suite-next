@@ -8,7 +8,7 @@ import type { DshCaptainOrderStage } from '../../shared/orders';
 import type { DshCaptainProfileSnapshot } from '../dsh-captain.types';
 import { getOperationsSupportFlowsForSurface, type DshOperationsSupportFlowId } from '../../shared';
 import { type DshCaptainRegistryFlowId } from '../dsh-captain-binding.contracts';
-import { WltCaptainCodCustodyScreen } from '@bthwani/wlt/app-captain/finance';
+import { WltCaptainCodCustodyScreen } from '../finance/WltCaptainCodCustodyScreen';
 
 export type CaptainSupportScreenId =
 	| 'chat-read-ack'

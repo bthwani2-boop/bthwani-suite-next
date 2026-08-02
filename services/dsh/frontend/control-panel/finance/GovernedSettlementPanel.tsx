@@ -1,0 +1,240 @@
+"use client";
+
+import { useCallback, useMemo, useState } from "react";
+import { Card, Text } from "@bthwani/ui-kit";
+import { CpButton, CpTextInput } from "@bthwani/control-panel/components";
+import {
+  createSettlementFromDeliveredOrders,
+  upsertSettlementPolicy,
+  type SettlementActionResult,
+} from '@bthwani/wlt/dsh';
+
+type GovernedSettlementPanelProps = {
+  readonly reload: () => Promise<void>;
+};
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function monthStartIso(): string {
+  const date = new Date();
+  date.setUTCDate(1);
+  return date.toISOString().slice(0, 10);
+}
+
+function resultMessage(result: SettlementActionResult): string {
+  if (result.ok) return "تم تنفيذ العملية وقراءة النتيجة من WLT.";
+  return `${result.code}: ${result.message}`;
+}
+
+export function GovernedSettlementPanel({ reload }: GovernedSettlementPanelProps) {
+  const [partnerId, setPartnerId] = useState("");
+  const [feeBasisPoints, setFeeBasisPoints] = useState("0");
+  const [currency, setCurrency] = useState("YER");
+  const [cycleDays, setCycleDays] = useState("7");
+  const [minimumNetMinorUnits, setMinimumNetMinorUnits] = useState("0");
+  const [changeReason, setChangeReason] = useState("");
+  const [periodStart, setPeriodStart] = useState(monthStartIso());
+  const [periodEnd, setPeriodEnd] = useState(todayIso());
+  const [policyReadyForPartner, setPolicyReadyForPartner] = useState<string | null>(null);
+  const [busy, setBusy] = useState<"policy" | "settlement" | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  const parsedFee = Number(feeBasisPoints);
+  const parsedCycleDays = Number(cycleDays);
+  const parsedMinimumNet = Number(minimumNetMinorUnits);
+  const policyValid = useMemo(
+    () =>
+      partnerId.trim().length > 0 &&
+      Number.isInteger(parsedFee) &&
+      parsedFee >= 0 &&
+      parsedFee <= 10000 &&
+      currency.trim().length > 0 &&
+      Number.isInteger(parsedCycleDays) &&
+      parsedCycleDays >= 1 &&
+      parsedCycleDays <= 366 &&
+      Number.isSafeInteger(parsedMinimumNet) &&
+      parsedMinimumNet >= 0 &&
+      changeReason.trim().length > 0,
+    [
+      changeReason,
+      currency,
+      parsedCycleDays,
+      parsedFee,
+      parsedMinimumNet,
+      partnerId,
+    ],
+  );
+  const settlementValid = useMemo(
+    () =>
+      policyReadyForPartner === partnerId.trim() &&
+      periodStart.length === 10 &&
+      periodEnd.length === 10 &&
+      periodEnd >= periodStart,
+    [policyReadyForPartner, partnerId, periodStart, periodEnd],
+  );
+
+  const invalidateSavedPolicy = useCallback(() => {
+    setPolicyReadyForPartner(null);
+  }, []);
+
+  const savePolicy = useCallback(async () => {
+    if (!policyValid) return;
+    setBusy("policy");
+    setMessage(null);
+    setError(false);
+    try {
+      const result = await upsertSettlementPolicy({
+        partnerId: partnerId.trim(),
+        feeBasisPoints: parsedFee,
+        currency: currency.trim(),
+        status: "active",
+        cycleDays: parsedCycleDays,
+        minimumNetMinorUnits: parsedMinimumNet,
+        changeReason: changeReason.trim(),
+      });
+      setMessage(resultMessage(result));
+      setError(!result.ok);
+      if (result.ok) setPolicyReadyForPartner(partnerId.trim());
+    } finally {
+      setBusy(null);
+    }
+  }, [
+    changeReason,
+    currency,
+    parsedCycleDays,
+    parsedFee,
+    parsedMinimumNet,
+    partnerId,
+    policyValid,
+  ]);
+
+  const createSettlement = useCallback(async () => {
+    if (!settlementValid) return;
+    setBusy("settlement");
+    setMessage(null);
+    setError(false);
+    try {
+      const result = await createSettlementFromDeliveredOrders({
+        partnerId: partnerId.trim(),
+        periodStart,
+        periodEnd,
+      });
+      setMessage(resultMessage(result));
+      setError(!result.ok);
+      if (result.ok) await reload();
+    } finally {
+      setBusy(null);
+    }
+  }, [partnerId, periodEnd, periodStart, reload, settlementValid]);
+
+  return (
+    <Card style={{ padding: "1.5rem", marginBottom: "1rem" }}>
+      <Text role="titleMd" style={{ marginBottom: "0.5rem" }}>
+        إنشاء تسوية محكومة من الأوامر المسلمة
+      </Text>
+      <Text role="body" tone="muted" style={{ marginBottom: "1rem" }}>
+        لا تُقبل مبالغ gross أو fee أو net من الواجهة. DSH يجمع أوامر الشريك بحالة delivered، وWLT يطبق إصدار السياسة الفعّال والاستردادات المكتملة ويحجز orderId ضد التسوية المكررة.
+      </Text>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "0.75rem",
+        }}
+      >
+        <CpTextInput
+          aria-label="معرف الشريك للتسوية"
+          placeholder="Partner ID"
+          value={partnerId}
+          onChange={(value) => {
+            setPartnerId(value);
+            invalidateSavedPolicy();
+          }}
+        />
+        <CpTextInput
+          aria-label="عمولة المنصة بالنقاط الأساسية"
+          placeholder="Fee basis points (مثال 1000 = 10%)"
+          value={feeBasisPoints}
+          onChange={(value) => {
+            setFeeBasisPoints(value);
+            invalidateSavedPolicy();
+          }}
+        />
+        <CpTextInput
+          aria-label="عملة سياسة التسوية"
+          placeholder="Currency"
+          value={currency}
+          onChange={(value) => {
+            setCurrency(value);
+            invalidateSavedPolicy();
+          }}
+        />
+        <CpTextInput
+          aria-label="دورة التسوية بالأيام"
+          placeholder="Cycle days"
+          value={cycleDays}
+          onChange={(value) => {
+            setCycleDays(value);
+            invalidateSavedPolicy();
+          }}
+        />
+        <CpTextInput
+          aria-label="الحد الأدنى لصافي التسوية بالوحدات الصغرى"
+          placeholder="Minimum net minor units"
+          value={minimumNetMinorUnits}
+          onChange={(value) => {
+            setMinimumNetMinorUnits(value);
+            invalidateSavedPolicy();
+          }}
+        />
+        <CpTextInput
+          aria-label="سبب تغيير سياسة التسوية"
+          placeholder="سبب تغيير السياسة"
+          value={changeReason}
+          onChange={(value) => {
+            setChangeReason(value);
+            invalidateSavedPolicy();
+          }}
+        />
+        <CpTextInput
+          aria-label="بداية فترة التسوية"
+          placeholder="YYYY-MM-DD"
+          value={periodStart}
+          onChange={setPeriodStart}
+        />
+        <CpTextInput
+          aria-label="نهاية فترة التسوية"
+          placeholder="YYYY-MM-DD"
+          value={periodEnd}
+          onChange={setPeriodEnd}
+        />
+      </div>
+
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginTop: "1rem" }}>
+        <CpButton variant="secondary" disabled={!policyValid || busy !== null} onClick={savePolicy}>
+          {busy === "policy" ? "جارٍ حفظ السياسة…" : "حفظ إصدار سياسة التسوية في WLT"}
+        </CpButton>
+        <CpButton variant="primary" disabled={!settlementValid || busy !== null} onClick={createSettlement}>
+          {busy === "settlement" ? "جارٍ احتساب التسوية…" : "إنشاء التسوية من delivered orders"}
+        </CpButton>
+      </div>
+
+      {policyReadyForPartner === partnerId.trim() ? (
+        <Text role="caption" tone="success" style={{ marginTop: "0.75rem" }}>
+          حُفظ إصدار السياسة مع سبب التغيير. يمكن الآن إنشاء التسوية من الأدلة التشغيلية فقط.
+        </Text>
+      ) : null}
+      {message ? (
+        <Card style={{ padding: "0.75rem", marginTop: "0.75rem" }}>
+          <Text role="body" tone={error ? "danger" : "success"}>
+            {message}
+          </Text>
+        </Card>
+      ) : null}
+    </Card>
+  );
+}
