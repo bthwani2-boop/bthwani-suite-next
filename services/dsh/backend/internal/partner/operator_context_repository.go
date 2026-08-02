@@ -1,12 +1,18 @@
 package partner
 
 import (
+	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"strings"
 
 	"dsh-api/internal/store"
 )
+
+var ErrPartnerCreationIdempotencyRequired = errors.New("partner creation idempotency key is required")
 
 func normalizeOperatorContextID(operatorContextID string) (string, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
@@ -16,34 +22,65 @@ func normalizeOperatorContextID(operatorContextID string) (string, error) {
 	return operatorContextID, nil
 }
 
-// CreatePartnerForOperatorContext is the only production partner creation path. The
-// OperatorContext is supplied by the authenticated server-side context, never by JSON.
-func CreatePartnerForOperatorContext(db *sql.DB, operatorContextID string, input CreatePartnerInput) (Partner, error) {
-	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+func normalizePartnerCreationInput(input CreatePartnerInput) CreatePartnerInput {
+	if strings.TrimSpace(input.Category) == "" {
+		input.Category = "default"
+	}
+	if strings.TrimSpace(input.CreatedBySurface) == "" {
+		input.CreatedBySurface = "app-field"
+	}
+	return input
+}
+
+type partnerCreationFingerprint struct {
+	OperatorContextID   string `json:"operatorContextId"`
+	LegalNameAr         string `json:"legalNameAr"`
+	LegalNameEn         string `json:"legalNameEn"`
+	DisplayName         string `json:"displayName"`
+	LegalIdentityType   string `json:"legalIdentityType"`
+	LegalIdentityNumber string `json:"legalIdentityNumber"`
+	OwnerName           string `json:"ownerName"`
+	PrimaryPhone        string `json:"primaryPhone"`
+	SecondaryPhone      string `json:"secondaryPhone"`
+	Email               string `json:"email"`
+	Category            string `json:"category"`
+	Notes               string `json:"notes"`
+	CreatedByActorID    string `json:"createdByActorId"`
+	CreatedBySurface    string `json:"createdBySurface"`
+}
+
+func hashPartnerCreation(operatorContextID string, input CreatePartnerInput) (string, error) {
+	payload, err := json.Marshal(partnerCreationFingerprint{
+		OperatorContextID:   operatorContextID,
+		LegalNameAr:         input.LegalNameAr,
+		LegalNameEn:         input.LegalNameEn,
+		DisplayName:         input.DisplayName,
+		LegalIdentityType:   input.LegalIdentityType,
+		LegalIdentityNumber: input.LegalIdentityNumber,
+		OwnerName:           input.OwnerName,
+		PrimaryPhone:        input.PrimaryPhone,
+		SecondaryPhone:      input.SecondaryPhone,
+		Email:               input.Email,
+		Category:            input.Category,
+		Notes:               input.Notes,
+		CreatedByActorID:    input.CreatedByActorID,
+		CreatedBySurface:    input.CreatedBySurface,
+	})
 	if err != nil {
-		return Partner{}, err
+		return "", err
 	}
-	if err := input.Validate(); err != nil {
-		return Partner{}, err
-	}
+	digest := sha256.Sum256(payload)
+	return hex.EncodeToString(digest[:]), nil
+}
 
-	category := input.Category
-	if category == "" {
-		category = "default"
-	}
-	surface := input.CreatedBySurface
-	if surface == "" {
-		surface = "app-field"
-	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return Partner{}, err
-	}
-	defer tx.Rollback() //nolint:errcheck
-
+func createPartnerForOperatorContextTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	operatorContextID string,
+	input CreatePartnerInput,
+) (Partner, error) {
 	var p Partner
-	err = tx.QueryRow(`
+	err := tx.QueryRowContext(ctx, `
 		INSERT INTO dsh_partners (
 			operator_context_id,
 			legal_name_ar, legal_name_en, display_name,
@@ -65,7 +102,7 @@ func CreatePartnerForOperatorContext(db *sql.DB, operatorContextID string, input
 		input.LegalNameAr, input.LegalNameEn, input.DisplayName,
 		input.LegalIdentityType, input.LegalIdentityNumber,
 		input.OwnerName, input.PrimaryPhone, input.SecondaryPhone, input.Email,
-		category, input.Notes, input.CreatedByActorID, surface,
+		input.Category, input.Notes, input.CreatedByActorID, input.CreatedBySurface,
 	).Scan(
 		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
 		&p.LegalIdentityType, &p.LegalIdentityNumber,
@@ -96,12 +133,12 @@ func CreatePartnerForOperatorContext(db *sql.DB, operatorContextID string, input
 	if err != nil {
 		return Partner{}, err
 	}
-	if _, err = tx.Exec(`UPDATE dsh_stores SET operator_context_id = $1 WHERE id = $2`, operatorContextID, sRow.ID); err != nil {
+	if _, err = tx.ExecContext(ctx, `UPDATE dsh_stores SET operator_context_id = $1 WHERE id = $2`, operatorContextID, sRow.ID); err != nil {
 		return Partner{}, err
 	}
 
 	if input.CreatedByActorID != "" {
-		_, err = tx.Exec(`
+		_, err = tx.ExecContext(ctx, `
 			INSERT INTO dsh_store_actor_scopes
 				(operator_context_id, actor_id, actor_role, store_id, scope_type, active)
 			VALUES ($1, $2, 'field', $3, 'assigned', true)
@@ -114,10 +151,150 @@ func CreatePartnerForOperatorContext(db *sql.DB, operatorContextID string, input
 		}
 	}
 
+	return p, nil
+}
+
+// CreatePartnerForOperatorContext is the transactionally consistent creation
+// primitive. HTTP production paths use the idempotent variant below; this
+// primitive remains for trusted fixtures and internal callers that already own
+// retry coordination.
+func CreatePartnerForOperatorContext(db *sql.DB, operatorContextID string, input CreatePartnerInput) (Partner, error) {
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return Partner{}, err
+	}
+	if err := input.Validate(); err != nil {
+		return Partner{}, err
+	}
+	input = normalizePartnerCreationInput(input)
+
+	tx, err := db.BeginTx(context.Background(), nil)
+	if err != nil {
+		return Partner{}, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	p, err := createPartnerForOperatorContextTx(context.Background(), tx, operatorContextID, input)
+	if err != nil {
+		return Partner{}, err
+	}
 	if err := tx.Commit(); err != nil {
 		return Partner{}, err
 	}
 	return p, nil
+}
+
+// CreatePartnerForOperatorContextIdempotent atomically creates the Partner,
+// its unpublished first Store, the field scope, and the immutable creation
+// event. The lifecycle audit event doubles as the retry journal, avoiding a
+// parallel source of truth while making unknown-result retries deterministic.
+func CreatePartnerForOperatorContextIdempotent(
+	ctx context.Context,
+	db *sql.DB,
+	operatorContextID string,
+	idempotencyKey string,
+	correlationID string,
+	input CreatePartnerInput,
+) (Partner, bool, error) {
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return Partner{}, false, err
+	}
+	idempotencyKey = strings.TrimSpace(idempotencyKey)
+	if idempotencyKey == "" {
+		return Partner{}, false, ErrPartnerCreationIdempotencyRequired
+	}
+	if err := input.Validate(); err != nil {
+		return Partner{}, false, err
+	}
+	input = normalizePartnerCreationInput(input)
+	if strings.TrimSpace(input.CreatedByActorID) == "" {
+		return Partner{}, false, ErrInvalid
+	}
+	requestHash, err := hashPartnerCreation(operatorContextID, input)
+	if err != nil {
+		return Partner{}, false, err
+	}
+	if strings.TrimSpace(correlationID) == "" {
+		correlationID = governedMutationKey(
+			"partner-create-correlation",
+			operatorContextID,
+			input.CreatedByActorID,
+			idempotencyKey,
+		)
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return Partner{}, false, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	lockKey := strings.Join([]string{
+		"partner-create",
+		operatorContextID,
+		input.CreatedByActorID,
+		idempotencyKey,
+	}, "\x1f")
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, lockKey); err != nil {
+		return Partner{}, false, err
+	}
+
+	var replayPartnerID string
+	var replayRequestHash string
+	err = tx.QueryRowContext(ctx, `
+		SELECT event.partner_id, COALESCE(event.request_hash, '')
+		FROM dsh_partner_activation_events AS event
+		JOIN dsh_partners AS partner ON partner.id = event.partner_id
+		WHERE partner.operator_context_id = $1
+		  AND event.actor_id = $2
+		  AND event.idempotency_key = $3
+		  AND event.from_status = 'none'
+		  AND event.to_status = 'draft'
+		ORDER BY event.created_at DESC
+		LIMIT 1`,
+		operatorContextID, input.CreatedByActorID, idempotencyKey,
+	).Scan(&replayPartnerID, &replayRequestHash)
+	if err == nil {
+		if replayRequestHash != requestHash {
+			return Partner{}, false, ErrIdempotencyConflict
+		}
+		p, loadErr := loadPartnerTx(ctx, tx, replayPartnerID, false)
+		if loadErr != nil {
+			return Partner{}, false, loadErr
+		}
+		if err := tx.Commit(); err != nil {
+			return Partner{}, false, err
+		}
+		return SanitizePartnerForSurface(p), true, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return Partner{}, false, err
+	}
+
+	p, err := createPartnerForOperatorContextTx(ctx, tx, operatorContextID, input)
+	if err != nil {
+		return Partner{}, false, err
+	}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO dsh_partner_activation_events (
+			partner_id, from_status, to_status, actor_id, actor_surface,
+			reason, correlation_id, idempotency_key, request_hash
+		) VALUES ($1, 'none', 'draft', $2, $3, 'partner_created', $4, $5, $6)`,
+		p.ID,
+		input.CreatedByActorID,
+		input.CreatedBySurface,
+		correlationID,
+		idempotencyKey,
+		requestHash,
+	); err != nil {
+		return Partner{}, false, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return Partner{}, false, err
+	}
+	return p, false, nil
 }
 
 func GetPartnerForOperatorContext(db *sql.DB, operatorContextID, partnerID string) (Partner, error) {
