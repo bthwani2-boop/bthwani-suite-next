@@ -12,19 +12,23 @@ permissions:
 
 jobs:
   bundle:
-    name: Export exact head bundle
+    name: Export auditable full-history head bundle
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Checkout exact pull-request head
+      - name: Checkout exact pull-request head with reachable history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 1
+          fetch-depth: 0
           persist-credentials: false
-      - name: Create Git bundle
+      - name: Create self-contained Git bundle
         shell: bash
-        run: git bundle create "${RUNNER_TEMP}/foundation-00.bundle" HEAD
+        run: |
+          set -euo pipefail
+          git rev-list --parents HEAD | grep -q ' '
+          git bundle create "${RUNNER_TEMP}/foundation-00.bundle" HEAD
+          git bundle verify "${RUNNER_TEMP}/foundation-00.bundle"
       - name: Upload Git bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
