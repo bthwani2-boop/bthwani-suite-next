@@ -77,7 +77,18 @@ func TestPartnerCommercialModelVariableIsGovernedDBIntegration(t *testing.T) {
 		SET expires_at = effective_from - interval '1 second'
 		WHERE variable_key='VAR_PARTNER_COMMERCIAL_MODEL'
 		  AND scope_type='partner' AND scope_id=$1`, partnerScope)
+	pqErr = nil
 	if !errors.As(err, &pqErr) || string(pqErr.Code) != "23514" {
 		t.Fatalf("retroactive expiry error = %v, want check violation", err)
+	}
+
+	_, err = db.Exec(`
+		UPDATE platform_variables
+		SET effective_from = now() - interval '1 day'
+		WHERE variable_key='VAR_PARTNER_COMMERCIAL_MODEL'
+		  AND scope_type='partner' AND scope_id=$1`, partnerScope)
+	pqErr = nil
+	if !errors.As(err, &pqErr) || string(pqErr.Code) != "23514" {
+		t.Fatalf("retroactive model edit error = %v, want check violation", err)
 	}
 }
