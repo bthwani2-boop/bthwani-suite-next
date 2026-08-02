@@ -155,7 +155,7 @@ try {
     }
 
     Invoke-Step -Name "TypeScript configuration governance" -FilePath "node" -Arguments @(
-        "tools/guards/typescript-readiness-config-gate.mjs"
+        "tools/guards/_typescript-readiness-config-gate.mjs"
     )
 
     $packageJson = Get-Content -LiteralPath $packageJsonPath -Raw | ConvertFrom-Json
@@ -212,7 +212,7 @@ try {
     Invoke-Step -Name "Governance gates" -FilePath "pnpm" -Arguments @("run", "guard:governance-all")
 
     Invoke-Step -Name "Final TypeScript configuration governance" -FilePath "node" -Arguments @(
-        "tools/guards/typescript-readiness-config-gate.mjs"
+        "tools/guards/_typescript-readiness-config-gate.mjs"
     )
 
     $finalSha = Invoke-Captured -FilePath "git" -Arguments @("rev-parse", "HEAD") -Name "Resolve final HEAD"
