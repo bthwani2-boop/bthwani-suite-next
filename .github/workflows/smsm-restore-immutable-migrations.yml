@@ -1,0 +1,101 @@
+name: SMSM restore immutable migration bytes
+
+on:
+  push:
+    branches: [smsm]
+    paths:
+      - .github/workflows/smsm-restore-immutable-migrations.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: smsm-restore-immutable-migrations
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: smsm
+          fetch-depth: 0
+
+      - name: Restore exact historical bytes by recorded digest
+        shell: python
+        run: |
+          import hashlib
+          import subprocess
+          from pathlib import Path
+
+          targets = [
+              {
+                  "destination": "services/dsh/database/migrations/dsh-056_special_requests_operator_context.sql",
+                  "sha256": "f10b874485d537bd14b83561af1273fff295a2b98367fdb7a18d889b10a572e0",
+                  "candidates": [
+                      "services/dsh/database/migrations/dsh-056_special_requests_operator_context.sql",
+                      "services/dsh/database/migrations/dsh-056_special_requests_tenancy.sql",
+                  ],
+              },
+              {
+                  "destination": "services/dsh/database/migrations/dsh-103_partner_operator_context_isolation.sql",
+                  "sha256": "abcef8a52eb3e6eabf049df7ce38225c15a34cb35d7edbb5a3098107a5390d4",
+                  "candidates": [
+                      "services/dsh/database/migrations/dsh-103_partner_operator_context_isolation.sql",
+                      "services/dsh/database/migrations/dsh-103_partner_tenant_isolation.sql",
+                      "services/dsh/database/migrations/dsh-103_jrn001_partner_tenant_isolation.sql",
+                  ],
+              },
+          ]
+
+          commits = subprocess.check_output(["git", "rev-list", "--all"], text=True).splitlines()
+
+          def digests(data: bytes):
+              text = data.decode("utf-8")
+              lf = text.replace("\r\n", "\n").replace("\r", "\n").encode()
+              crlf = lf.decode().replace("\n", "\r\n").encode()
+              return {
+                  hashlib.sha256(data).hexdigest(),
+                  hashlib.sha256(lf).hexdigest(),
+                  hashlib.sha256(crlf).hexdigest(),
+              }
+
+          for target in targets:
+              found = None
+              source = None
+              for commit in commits:
+                  for candidate in target["candidates"]:
+                      probe = subprocess.run(
+                          ["git", "show", f"{commit}:{candidate}"],
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.DEVNULL,
+                      )
+                      if probe.returncode != 0:
+                          continue
+                      if target["sha256"] in digests(probe.stdout):
+                          found = probe.stdout
+                          source = f"{commit}:{candidate}"
+                          break
+                  if found is not None:
+                      break
+              if found is None:
+                  raise SystemExit(f"no historical blob matches {target['destination']} {target['sha256']}")
+              Path(target["destination"]).write_bytes(found)
+              print(f"restored {target['destination']} from {source}")
+
+          Path(".github/workflows/smsm-restore-immutable-migrations.yml").unlink()
+
+      - name: Verify and commit exact restoration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/guards/migration-manifest-drift-gate.mjs --service dsh
+          git config user.name "bthwani-governance-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add services/dsh/database/migrations/dsh-056_special_requests_operator_context.sql \
+                  services/dsh/database/migrations/dsh-103_partner_operator_context_isolation.sql \
+                  .github/workflows/smsm-restore-immutable-migrations.yml
+          git diff --cached --check
+          git commit -m "fix(dsh): restore immutable migration bytes exactly"
+          git push origin HEAD:smsm
