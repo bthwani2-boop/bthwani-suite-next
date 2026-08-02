@@ -16,6 +16,7 @@ paths:
     get:
       tags: [ "identity-health" ]
       operationId: getIdentityHealth
+      security: []
       responses:
         "200":
           description: Identity runtime is healthy.
@@ -23,12 +24,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeStatus"
-      security:
-        - bearerAuth: []
   /identity/readiness:
     get:
       tags: [ "identity-readiness" ]
       operationId: getIdentityReadiness
+      security: []
       responses:
         "200":
           description: Identity database is ready.
@@ -38,12 +38,11 @@ paths:
                 $ref: "#/components/schemas/RuntimeStatus"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
-      security:
-        - bearerAuth: []
   /auth/login:
     post:
       tags: [ "auth-login" ]
       operationId: login
+      security: []
       requestBody:
         required: true
         content:
@@ -61,12 +60,13 @@ paths:
           $ref: "#/components/responses/InvalidRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
-      security:
-        - bearerAuth: []
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /auth/otp/request:
     post:
       tags: [ "auth-otp" ]
       operationId: requestOtp
+      security: []
       requestBody:
         required: true
         content:
@@ -82,14 +82,17 @@ paths:
                 $ref: "#/components/schemas/IssueActivationResponse"
         "400":
           $ref: "#/components/responses/InvalidRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "429":
           $ref: "#/components/responses/RateLimited"
-      security:
-        - bearerAuth: []
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /auth/activate:
     post:
       tags: [ "auth-activate" ]
       operationId: activateActor
+      security: []
       requestBody:
         required: true
         content:
@@ -107,10 +110,10 @@ paths:
           $ref: "#/components/responses/InvalidRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
-      security:
-        - bearerAuth: []
   /auth/logout:
     post:
       tags: [ "auth-logout" ]
@@ -126,6 +129,7 @@ paths:
     post:
       tags: [ "auth-refresh" ]
       operationId: refreshSession
+      security: []
       requestBody:
         required: true
         content:
@@ -143,8 +147,6 @@ paths:
           $ref: "#/components/responses/InvalidRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
-      security:
-        - bearerAuth: []
   /auth/session:
     get:
       tags: [ "auth-session" ]
@@ -164,6 +166,7 @@ paths:
     post:
       tags: [ "auth-introspect" ]
       operationId: introspectToken
+      security: []
       requestBody:
         required: true
         content:
@@ -181,8 +184,6 @@ paths:
           $ref: "#/components/responses/InvalidRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
-      security:
-        - bearerAuth: []
   /auth/sessions:
     get:
       tags: [ "auth-sessions" ]
