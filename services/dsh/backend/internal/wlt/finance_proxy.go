@@ -13,14 +13,14 @@ import (
 const maxFinanceProxyResponseBytes = 4 << 20
 
 var financeReadAllowlist = map[string]struct{}{
-	"/wlt/settlements":              {},
-	"/wlt/settlements/summary":      {},
-	"/wlt/refunds":                  {},
-	"/wlt/ledger/entries":           {},
-	"/wlt/ledger/financial-summary": {},
-	"/wlt/cod-records":              {},
-	"/wlt/cod-reconciliation-cases": {},
-	"/wlt/commissions":              {},
+	"/wlt/settlements":                  {},
+	"/wlt/settlements/summary":          {},
+	"/wlt/refunds":                      {},
+	"/wlt/ledger/entries":               {},
+	"/wlt/ledger/financial-summary":     {},
+	"/wlt/cod-records":                  {},
+	"/wlt/cod-reconciliation-cases":     {},
+	"/wlt/commissions":                  {},
 	"/wlt/references/wallet-status":     {},
 	"/wlt/references/payment-status":    {},
 	"/wlt/references/settlement-status": {},
@@ -31,7 +31,9 @@ var financeReadAllowlist = map[string]struct{}{
 }
 
 func financeReadPathAllowed(path string) bool {
-	if _, ok := financeReadAllowlist[path]; ok { return true }
+	if _, ok := financeReadAllowlist[path]; ok {
+		return true
+	}
 	if rest, ok := strings.CutPrefix(path, "/wlt/refunds/"); ok {
 		parts := strings.Split(rest, "/")
 		return (len(parts) == 1 || (len(parts) == 2 && parts[1] == "audit")) && strings.TrimSpace(parts[0]) != ""
@@ -41,7 +43,9 @@ func financeReadPathAllowed(path string) bool {
 		return (len(parts) == 1 || (len(parts) == 2 && parts[1] == "audit")) && strings.TrimSpace(parts[0]) != ""
 	}
 	for _, prefix := range []string{"/wlt/reconciliation-cases/", "/wlt/commissions/"} {
-		if rest, ok := strings.CutPrefix(path, prefix); ok { return rest != "" && !strings.Contains(rest, "/") }
+		if rest, ok := strings.CutPrefix(path, prefix); ok {
+			return rest != "" && !strings.Contains(rest, "/")
+		}
 	}
 	if rest, ok := strings.CutPrefix(path, "/wlt/commercial/clients/"); ok {
 		parts := strings.Split(rest, "/")
@@ -65,11 +69,21 @@ func (c *Client) FinanceReadWallet(ctx context.Context, actorType, actorID, corr
 }
 
 func (c *Client) FinanceReadWalletWithOperatorContext(ctx context.Context, actorType, actorID, correlationID, operatorContextID string) (int, []byte, error) {
-	if !c.Configured() { return 0, nil, fmt.Errorf("WLT integration is not configured") }
-	actorType = strings.ToLower(strings.TrimSpace(actorType)); actorID = strings.TrimSpace(actorID); operatorContextID = strings.TrimSpace(operatorContextID)
-	if _, ok := financeReadWalletAllowlist[actorType]; !ok { return 0, nil, fmt.Errorf("WLT wallet actor type %q is not allowlisted", actorType) }
-	if actorID == "" || len(actorID) > 200 { return 0, nil, fmt.Errorf("WLT wallet actor id must be non-empty and no longer than 200 characters") }
-	if operatorContextID == "" { return 0, nil, fmt.Errorf("WLT wallet OperatorContext id is required") }
+	if !c.Configured() {
+		return 0, nil, fmt.Errorf("WLT integration is not configured")
+	}
+	actorType = strings.ToLower(strings.TrimSpace(actorType))
+	actorID = strings.TrimSpace(actorID)
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if _, ok := financeReadWalletAllowlist[actorType]; !ok {
+		return 0, nil, fmt.Errorf("WLT wallet actor type %q is not allowlisted", actorType)
+	}
+	if actorID == "" || len(actorID) > 200 {
+		return 0, nil, fmt.Errorf("WLT wallet actor id must be non-empty and no longer than 200 characters")
+	}
+	if operatorContextID == "" {
+		return 0, nil, fmt.Errorf("WLT wallet OperatorContext id is required")
+	}
 	return c.financeReadRequest(ctx, "/wlt/wallets/"+url.PathEscape(actorType)+"/"+url.PathEscape(actorID), nil, correlationID, operatorContextID)
 }
 
@@ -78,20 +92,40 @@ func (c *Client) FinanceRead(ctx context.Context, path string, query url.Values,
 }
 
 func (c *Client) FinanceReadWithOperatorContext(ctx context.Context, path string, query url.Values, correlationID, operatorContextID string) (int, []byte, error) {
-	if !c.Configured() { return 0, nil, fmt.Errorf("WLT integration is not configured") }
-	if !financeReadPathAllowed(path) { return 0, nil, fmt.Errorf("WLT finance read path %q is not allowlisted", path) }
+	if !c.Configured() {
+		return 0, nil, fmt.Errorf("WLT integration is not configured")
+	}
+	if !financeReadPathAllowed(path) {
+		return 0, nil, fmt.Errorf("WLT finance read path %q is not allowlisted", path)
+	}
 	return c.financeReadRequest(ctx, path, query, correlationID, operatorContextID)
 }
 
 func (c *Client) financeReadRequest(ctx context.Context, path string, query url.Values, correlationID, operatorContextID string) (int, []byte, error) {
-	target := c.baseURL + path; if len(query) > 0 { target += "?" + query.Encode() }
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil); if err != nil { return 0, nil, fmt.Errorf("build WLT finance read request: %w", err) }
+	target := c.baseURL + path
+	if len(query) > 0 {
+		target += "?" + query.Encode()
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
+	if err != nil {
+		return 0, nil, fmt.Errorf("build WLT finance read request: %w", err)
+	}
 	setServiceHeaders(req, c.serviceToken)
-	if correlationID = strings.TrimSpace(correlationID); correlationID != "" { req.Header.Set("X-Correlation-ID", correlationID) }
-	if operatorContextID = strings.TrimSpace(operatorContextID); operatorContextID != "" { req.Header.Set("X-Operator-Context-ID", operatorContextID) }
-	response, err := c.http.Do(req); if err != nil { return 0, nil, fmt.Errorf("call WLT finance read: %w", err) }
+	if correlationID = strings.TrimSpace(correlationID); correlationID != "" {
+		req.Header.Set("X-Correlation-ID", correlationID)
+	}
+	if operatorContextID = strings.TrimSpace(operatorContextID); operatorContextID != "" {
+		req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	}
+	response, err := c.http.Do(req)
+	if err != nil {
+		return 0, nil, fmt.Errorf("call WLT finance read: %w", err)
+	}
 	defer response.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes)); if err != nil { return 0, nil, fmt.Errorf("read WLT finance read response: %w", err) }
+	body, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes))
+	if err != nil {
+		return 0, nil, fmt.Errorf("read WLT finance read response: %w", err)
+	}
 	return response.StatusCode, body, nil
 }
 
@@ -100,41 +134,75 @@ func (c *Client) FinanceWrite(ctx context.Context, method, path string, body []b
 }
 
 func (c *Client) FinanceWriteWithOperatorContext(ctx context.Context, method, path string, body []byte, correlationID, idempotencyKey, operatorContextID string) (int, []byte, error) {
-	if !c.Configured() { return 0, nil, fmt.Errorf("WLT integration is not configured") }
-	if method != http.MethodPost && method != http.MethodPut && method != http.MethodPatch { return 0, nil, fmt.Errorf("WLT finance write method %q is not allowlisted", method) }
-	if !financeWritePathAllowed(path) { return 0, nil, fmt.Errorf("WLT finance write path %q is not allowlisted", path) }
-	correlationID = strings.TrimSpace(correlationID); if correlationID == "" { return 0, nil, fmt.Errorf("WLT finance write correlation id is required") }
-	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bytes.NewReader(body)); if err != nil { return 0, nil, fmt.Errorf("build WLT finance write request: %w", err) }
-	setServiceHeaders(req, c.serviceToken); req.Header.Set("Content-Type", "application/json")
-	if operatorContextID = strings.TrimSpace(operatorContextID); operatorContextID != "" { req.Header.Set("X-Operator-Context-ID", operatorContextID) }
-    
-    idempotencyKey = strings.TrimSpace(idempotencyKey)
-    if idempotencyKey == "" {
-        idempotencyKey = deterministicMutationKey("finance-proxy", method, path, string(body), operatorContextID)
-    }
+	if !c.Configured() {
+		return 0, nil, fmt.Errorf("WLT integration is not configured")
+	}
+	if method != http.MethodPost && method != http.MethodPut && method != http.MethodPatch {
+		return 0, nil, fmt.Errorf("WLT finance write method %q is not allowlisted", method)
+	}
+	if !financeWritePathAllowed(path) {
+		return 0, nil, fmt.Errorf("WLT finance write path %q is not allowlisted", path)
+	}
+	correlationID = strings.TrimSpace(correlationID)
+	if correlationID == "" {
+		return 0, nil, fmt.Errorf("WLT finance write correlation id is required")
+	}
+	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bytes.NewReader(body))
+	if err != nil {
+		return 0, nil, fmt.Errorf("build WLT finance write request: %w", err)
+	}
+	setServiceHeaders(req, c.serviceToken)
+	req.Header.Set("Content-Type", "application/json")
+	if operatorContextID = strings.TrimSpace(operatorContextID); operatorContextID != "" {
+		req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	}
 
-	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil { return 0, nil, fmt.Errorf("prepare WLT finance write request: %w", err) }
-	response, err := c.http.Do(req); if err != nil { return 0, nil, fmt.Errorf("call WLT finance write: %w", err) }
+	idempotencyKey = strings.TrimSpace(idempotencyKey)
+	if idempotencyKey == "" {
+		idempotencyKey = deterministicMutationKey("finance-proxy", method, path, string(body), operatorContextID)
+	}
+
+	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
+		return 0, nil, fmt.Errorf("prepare WLT finance write request: %w", err)
+	}
+	response, err := c.http.Do(req)
+	if err != nil {
+		return 0, nil, fmt.Errorf("call WLT finance write: %w", err)
+	}
 	defer response.Body.Close()
-	responseBody, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes)); if err != nil { return 0, nil, fmt.Errorf("read WLT finance write response: %w", err) }
+	responseBody, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes))
+	if err != nil {
+		return 0, nil, fmt.Errorf("read WLT finance write response: %w", err)
+	}
 	return response.StatusCode, responseBody, nil
 }
 
 func financeWritePathAllowed(path string) bool {
-	if path == "/wlt/payout-requests" || path == "/wlt/refunds" { return true }
+	if path == "/wlt/payout-requests" || path == "/wlt/refunds" {
+		return true
+	}
 	for prefix, actions := range map[string]map[string]struct{}{
 		"/wlt/payout-requests/":          {"approve": {}, "reject": {}, "process": {}, "complete": {}, "fail": {}, "reconcile": {}},
 		"/wlt/reconciliation-cases/":     {"assign": {}, "resolve": {}},
 		"/wlt/cod-reconciliation-cases/": {"assign": {}, "resolve": {}},
 		"/wlt/refunds/":                  {"approve": {}, "reject": {}, "complete": {}, "reconcile": {}},
 	} {
-		rest, ok := strings.CutPrefix(path, prefix); if !ok { continue }
-		parts := strings.Split(rest, "/"); if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" { return false }
-		_, allowed := actions[parts[1]]; return allowed
+		rest, ok := strings.CutPrefix(path, prefix)
+		if !ok {
+			continue
+		}
+		parts := strings.Split(rest, "/")
+		if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" {
+			return false
+		}
+		_, allowed := actions[parts[1]]
+		return allowed
 	}
 	return false
 }
 
 func setServiceHeaders(req *http.Request, serviceToken string) {
-	req.Header.Set("Accept", "application/json"); req.Header.Set("Authorization", "Bearer "+serviceToken); req.Header.Set("X-Service-Caller", "dsh")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+serviceToken)
+	req.Header.Set("X-Service-Caller", "dsh")
 }
