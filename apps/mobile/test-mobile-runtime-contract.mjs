@@ -40,6 +40,7 @@ const result = spawnSync(executable, ["--dir", appDir, "exec", "expo", "config",
   encoding: "utf8",
   env: { ...process.env, CI: "1", EXPO_NO_TELEMETRY: "1", COREPACK_ENABLE_DOWNLOAD_PROMPT: "0" },
   windowsHide: true,
+  shell: process.platform === "win32",
 });
 if (result.error) fail(`${appKey}: Expo config could not start: ${result.error.message}`);
 if (result.status !== 0) {

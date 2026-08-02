@@ -122,7 +122,6 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   if (pkg.scripts?.typecheck !== "tsc --noEmit -p tsconfig.json") fail(`${key}: strict typecheck script is required`);
   if (!pkg.dependencies?.["@sentry/react-native"]) fail(`${key}: @sentry/react-native is required`);
   if (!pkg.dependencies?.["@bthwani/data-runtime"]) fail(`${key}: @bthwani/data-runtime is required`);
-  if (!pkg.dependencies?.["@bthwani/media-runtime"]) fail(`${key}: @bthwani/media-runtime is required`);
   for (const asset of requiredAssets) requireFile(path.join("apps", key, "runtime", "assets", asset), `${key}: ${asset}`);
 
   if (eas.cli?.appVersionSource !== "remote") fail(`${key}: EAS appVersionSource must be remote`);
@@ -247,7 +246,7 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   }
 
   const metro = fs.readFileSync(path.join(dir, "metro.config.cjs"), "utf8");
-  for (const marker of ["getSentryExpoConfig", "shared/media-runtime", "@bthwani/media-runtime"]) {
+  for (const marker of ["getSentryExpoConfig"]) {
     if (!metro.includes(marker)) fail(`${key}: Metro marker missing: ${marker}`);
   }
   const appRoot = fs.readFileSync(path.join(dir, "src", "index.ts"), "utf8");
@@ -259,7 +258,7 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   }
   const sentryRuntime = fs.readFileSync(path.join(dir, "src", "observability", "sentry.ts"), "utf8");
   for (const marker of ["sendDefaultPii: false", "beforeSend", "SENTRY_TRACES_SAMPLE_RATE", "FORBIDDEN_KEY"]) {
-    if (!sentryRuntime.includes(marker)) fail(`${key}: Sentry partner_platform privacy marker missing: ${marker}`);
+    if (!sentryRuntime.includes(marker)) fail(`${key}: Sentry platform privacy marker missing: ${marker}`);
   }
 
   if (requireBuildSecrets && buildSecretsTargetApps.includes(key)) {
@@ -281,7 +280,6 @@ for (const [key, app] of Object.entries(manifest.apps)) {
 
 const workspace = fs.readFileSync(path.join(root, "pnpm-workspace.yaml"), "utf8");
 if (!workspace.includes("apps/*/runtime")) fail("pnpm-workspace.yaml must include apps/*/runtime");
-if (!workspace.includes("shared/media-runtime")) fail("pnpm-workspace.yaml must include shared/media-runtime");
 if (!workspace.includes("allowBuilds:")) fail("pnpm-workspace.yaml must define allowBuilds");
 if (!workspace.includes('"@sentry/cli": true')) fail("pnpm-workspace.yaml must allow the Sentry CLI source-map uploader");
 if (workspace.includes("onlyBuiltDependencies")) fail("pnpm-workspace.yaml must not use onlyBuiltDependencies");
@@ -290,8 +288,6 @@ if (workspace.includes("ignoredBuiltDependencies")) fail("pnpm-workspace.yaml mu
 for (const file of [
   "shared/data-runtime/src/persistence.ts",
   "shared/data-runtime/src/offline-mutation-queue.ts",
-  "shared/media-runtime/src/resumable-upload.ts",
-  "shared/media-runtime/src/CachedMediaImage.tsx",
 ]) requireFile(file);
 
 console.log(`PASS: mobile Expo/EAS configuration is centrally guarded for ${profile}/${platform}`);

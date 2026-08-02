@@ -10,6 +10,7 @@ import (
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/platformpolicies"
 	"dsh-api/internal/store"
+	"dsh-api/internal/wlt"
 )
 
 type wltCaptainWalletEnvelope struct {
@@ -24,20 +25,15 @@ type wltCaptainWalletEnvelope struct {
 	} `json:"wallet"`
 }
 
-func dispatchOperatorContextID(value string) string {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return dispatch.DefaultDispatchOperatorContextID
-	}
-	return value
-}
-
 func (s *protectedStoreServer) refreshCaptainFinancialEligibility(
 	r *http.Request,
 	operatorContextID string,
 	captainID string,
 ) (dispatch.CaptainFinancialEligibilitySnapshot, error) {
-	operatorContextID = dispatchOperatorContextID(operatorContextID)
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return dispatch.CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("%w: operatorContextId is required", dispatch.ErrInvalid)
+	}
 	captainID = strings.TrimSpace(captainID)
 	if captainID == "" {
 		return dispatch.CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("%w: captain id is required", dispatch.ErrInvalid)
@@ -164,13 +160,12 @@ func (s *protectedStoreServer) handleRefreshOperatorCaptainFinancialEligibility(
 	if !ok {
 		return
 	}
-	var body struct {
-		OperatorContextID string `json:"operatorContextId"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
 		return
 	}
-	snapshot, err := s.refreshCaptainFinancialEligibility(r, body.OperatorContextID, r.PathValue("captainId"))
+	snapshot, err := s.refreshCaptainFinancialEligibility(r, operatorContextID, r.PathValue("captainId"))
 	if err != nil {
 		writeCaptainFinancialEligibilityError(w, err)
 		return
@@ -183,8 +178,13 @@ func (s *protectedStoreServer) handleGetOperatorCaptainFinancialEligibility(w ht
 	if !ok {
 		return
 	}
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
+		return
+	}
 	snapshot, err := dispatch.GetCaptainFinancialEligibilitySnapshot(
-		r.Context(), s.db, r.URL.Query().Get("operatorContextId"), r.PathValue("captainId"),
+		r.Context(), s.db, operatorContextID, r.PathValue("captainId"),
 	)
 	if err != nil {
 		writeCaptainFinancialEligibilityError(w, err)

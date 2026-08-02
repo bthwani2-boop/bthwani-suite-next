@@ -56,23 +56,6 @@ paths:
         '502': { $ref: '#/components/responses/ErrorResponse' }
       security:
         - bearerAuth: []
-  /dsh/partner/me/finance/payout-requests:
-    post:
-      tags: [ "dsh-partner" ]
-      operationId: createDshPartnerOwnPayoutRequest
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        $ref: '#/components/requestBodies/ObjectBody'
-      responses:
-        '201': { $ref: '#/components/responses/ObjectResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
-        '502': { $ref: '#/components/responses/ErrorResponse' }
-      security:
-        - bearerAuth: []
   /dsh/captain/me/finance/payout-destination:
     get:
       tags: [ "dsh-captain" ]

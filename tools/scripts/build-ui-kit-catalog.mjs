@@ -1,7 +1,16 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { repoRoot } from "../guards/_guard-utils.mjs";
+
+function headSha() {
+  try {
+    return execFileSync("git", ["rev-parse", "HEAD"], { cwd: repoRoot, encoding: "utf8" }).trim();
+  } catch {
+    return undefined;
+  }
+}
 
 const uiRoot = path.join(repoRoot, "shared/ui-kit/src");
 const outputRoot = path.join(repoRoot, ".diagnostics/ui-kit-catalog");
@@ -114,6 +123,7 @@ const manifest = {
   schemaVersion: 1,
   sourceRoot: "shared/ui-kit/src",
   generatedBy: "tools/scripts/build-ui-kit-catalog.mjs",
+  sourceSha: headSha(),
   moduleCount: modules.length,
   publicSymbolCount: publicSymbols.length,
   publicSymbols,

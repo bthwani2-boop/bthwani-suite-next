@@ -30,7 +30,7 @@ import {
 } from "./orders/DshCaptainOrdersScreen";
 import { DshCaptainMapScreen } from "./orders/DshCaptainMapScreen";
 import { DshCaptainPoDSubmissionScreen } from "./orders/DshCaptainPoDSubmissionScreen";
-import { DshCaptainFinanceScreen } from "./account/DshCaptainFinanceScreen";
+import { WltCaptainFinanceScreen } from "./finance/WltCaptainFinanceScreen";
 import { DshCaptainSupportDirectoryScreen } from "./account/DshCaptainOperationsScreen";
 import { DshCaptainAccountSettingsContent } from "./account/DshCaptainAccountSettingsContent";
 import { CaptainAccountNavRow } from "./account/CaptainAccountNavRow";
@@ -272,7 +272,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
 
     if (route === "account-finance") {
       if (!dshClientId) return <StateView title="الهوية المالية غير مربوطة" description="لا يمكن فتح مالية الكابتن دون معرف DSH/WLT موثق." tone="warning" actionLabel="العودة للحساب" onActionPress={onGoToAccount} />;
-      return <DshCaptainFinanceScreen onBack={onGoToAccount} dshClientId={dshClientId} />;
+      return <WltCaptainFinanceScreen onBack={onGoToAccount} dshClientId={dshClientId} />;
     }
 
     if (route === "account-profile") {

@@ -19,6 +19,7 @@ func (c *Client) FinanceWriteCommission(
 	path string,
 	body []byte,
 	correlationID string,
+	idempotencyKey string,
 ) (int, []byte, error) {
 	if !c.Configured() {
 		return 0, nil, fmt.Errorf("WLT integration is not configured")
@@ -39,10 +40,16 @@ func (c *Client) FinanceWriteCommission(
 		return 0, nil, fmt.Errorf("prepare WLT governed commission OperatorContext: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+    
+    idempotencyKey = strings.TrimSpace(idempotencyKey)
+    if idempotencyKey == "" {
+        idempotencyKey = deterministicMutationKey("commission", method, path, string(body))
+    }
+
 	if err := setRequiredMutationHeaders(
 		req,
 		correlationID,
-		deterministicMutationKey("commission", method, path, string(body)),
+		idempotencyKey,
 	); err != nil {
 		return 0, nil, fmt.Errorf("prepare WLT governed commission mutation: %w", err)
 	}

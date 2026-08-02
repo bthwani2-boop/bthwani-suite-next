@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
-import { useControlPanelSession } from "./control-panel-session";
+import { useIdentitySession } from "@bthwani/core-identity";
 
 const DSH_ROUTE_PREFIX = "/" + "dsh";
 const DSH_LOGIN_ROUTE = `${DSH_ROUTE_PREFIX}/login`;
@@ -33,7 +33,7 @@ function loadingPanel(): ReactNode {
  * below this boundary may render its own login UI.
  */
 export function ControlPanelAuthBoundary({ children }: { readonly children: ReactNode }) {
-  const { state } = useControlPanelSession();
+  const { state } = useIdentitySession();
   const router = useRouter();
   const pathname = usePathname();
 

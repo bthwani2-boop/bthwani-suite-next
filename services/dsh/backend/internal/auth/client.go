@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -22,17 +23,20 @@ type Permission struct {
 }
 
 type Identity struct {
-	Subject     string       `json:"subject"`
-	OperatorContextID    string       `json:"operatorContextId"`
-	PhoneE164   string       `json:"phoneE164"`
-	Roles       []string     `json:"roles"`
-	Permissions []Permission `json:"permissions"`
-	AuthState   string       `json:"authState"`
+	Subject           string       `json:"subject"`
+	OperatorContextID string       `json:"operatorContextId"`
+	PhoneE164         string       `json:"phoneE164"`
+	Roles             []string     `json:"roles"`
+	Permissions       []Permission `json:"permissions"`
+	AuthState         string       `json:"authState"`
 }
 
 type Client struct {
 	baseURL string
 	http    *http.Client
+
+	mu             sync.RWMutex
+	partnerBundles []PartnerPermissionBundleDescriptor
 }
 
 func NewClient(baseURL string) *Client {
@@ -87,4 +91,57 @@ func (i Identity) HasRole(role string) bool {
 		}
 	}
 	return false
+}
+
+type PartnerPermissionBundleDescriptor struct {
+	Code    string   `json:"code"`
+	NameAr  string   `json:"nameAr"`
+	NameEn  string   `json:"nameEn"`
+	Actions []string `json:"actions"`
+}
+
+type partnerPermissionBundlesResponse struct {
+	PermissionBundles []PartnerPermissionBundleDescriptor `json:"permissionBundles"`
+}
+
+// FetchPartnerPermissionBundles retrieves the canonical Identity-owned partner permission bundles.
+func (c *Client) FetchPartnerPermissionBundles(ctx context.Context) ([]PartnerPermissionBundleDescriptor, error) {
+	c.mu.RLock()
+	if c.partnerBundles != nil {
+		defer c.mu.RUnlock()
+		return c.partnerBundles, nil
+	}
+	c.mu.RUnlock()
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Double-check after acquiring write lock
+	if c.partnerBundles != nil {
+		return c.partnerBundles, nil
+	}
+
+	if c.baseURL == "" {
+		return nil, ErrIdentityUnavailable
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/internal/partner/permission-bundles", nil)
+	if err != nil {
+		return nil, ErrIdentityUnavailable
+	}
+	// ServiceCaller must be DSH for internal APIs
+	req.Header.Set("X-Service-Caller", "dsh")
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, ErrIdentityUnavailable
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, ErrIdentityUnavailable
+	}
+	var res partnerPermissionBundlesResponse
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return nil, ErrIdentityUnavailable
+	}
+	c.partnerBundles = res.PermissionBundles
+	return res.PermissionBundles, nil
 }

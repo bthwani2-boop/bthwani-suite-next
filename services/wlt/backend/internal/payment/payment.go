@@ -576,54 +576,6 @@ func CancelSessionForOrder(db *sql.DB, sessionID, orderID, clientID, reason stri
 
 // HTTP handlers
 
-func HandleAuthorizeSession(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		sessionID := r.PathValue("paymentSessionId")
-		// The amount/currency to authorize are the payment session's own
-		// values (set at reference-creation time), never caller input --
-		// see AuthorizeSessionWithProvider. Any request body is ignored.
-		client, err := provider.NewDefaultPaymentProvider()
-		if err != nil {
-			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
-			return
-		}
-		session, err := AuthorizeSessionWithProvider(r.Context(), db, client, sessionID, provider.RequestMetaFromHTTP(r, "wlt-authorize"))
-		if errors.Is(err, ErrNotAuthorizable) {
-			shared.SendError(w, http.StatusConflict, "INVALID_STATE", "payment session is not in an authorizable state")
-			return
-		}
-		if err != nil {
-			shared.SendProviderError(w, err)
-			return
-		}
-		if session == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payment session not found")
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"paymentSession": session})
-	}
-}
-
-func HandleCaptureSession(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		client, err := provider.NewDefaultPaymentProvider()
-		if err != nil {
-			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
-			return
-		}
-		session, err := CaptureSessionWithProvider(r.Context(), db, client, r.PathValue("paymentSessionId"), provider.RequestMetaFromHTTP(r, "wlt-capture"))
-		if err != nil {
-			shared.SendProviderError(w, err)
-			return
-		}
-		if session == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payment session not found")
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"paymentSession": session})
-	}
-}
-
 func HandleExpireSession(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, err := ExpireSession(db, r.PathValue("paymentSessionId"))
@@ -652,19 +604,4 @@ func HandleExpireSession(db *sql.DB) http.HandlerFunc {
 //   - {"action": "none", "sessionStatus": "<status>"}
 func HandleCancelSessionForOrder(db *sql.DB) http.HandlerFunc {
 	return HandleGovernedSessionCancellation(db)
-}
-
-func HandleMarkCodCollected(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		session, err := MarkCodCollected(db, r.PathValue("paymentSessionId"))
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		if session == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payment session not found")
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"paymentSession": session})
-	}
 }

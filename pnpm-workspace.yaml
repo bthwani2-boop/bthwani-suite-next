@@ -1,8 +1,7 @@
 packages:
   - "apps/*/runtime"
-  - "shared/app-shell"
+  - "shared/control-panel"
   - "shared/data-runtime"
-  - "shared/media-runtime"
   - "shared/ui-kit"
   - "services/*"
   - "core/identity"

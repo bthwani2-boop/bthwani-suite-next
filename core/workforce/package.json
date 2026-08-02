@@ -6,6 +6,8 @@
   "main": "clients/generated/workforce-api.ts",
   "types": "clients/generated/workforce-api.ts",
   "scripts": {
+    "openapi:compose": "node ../../tools/scripts/compose-openapi-context.mjs workforce",
+    "openapi:generate": "pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/workforce.bundle.openapi.yaml -o clients/generated/workforce-api.ts",
     "test": "cd backend && go test ./...",
     "build": "cd backend && go build ./...",
     "typecheck": "tsc --noEmit -p tsconfig.json"

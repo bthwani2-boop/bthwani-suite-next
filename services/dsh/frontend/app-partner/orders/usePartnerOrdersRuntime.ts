@@ -34,7 +34,7 @@ export function usePartnerOrdersRuntime(route: string) {
   }, []);
 
   React.useEffect(() => {
-    if (route !== 'inbox') {
+    if (route !== 'inbox' && route !== 'bell') {
       setState('disabled');
       return;
     }

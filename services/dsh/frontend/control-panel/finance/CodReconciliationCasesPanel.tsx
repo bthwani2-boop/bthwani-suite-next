@@ -10,7 +10,7 @@ import {
   resolveCodReconciliationCase,
   type CodReconciliationCase,
   type CodResolutionAction,
-} from "../../shared/finance-wlt-link/finance/cod-reconciliation.api";
+} from '@bthwani/wlt/dsh';
 
 const RESOLUTION_OPTIONS = [
   { value: "confirmed_variance", label: "تأكيد الفرق" },

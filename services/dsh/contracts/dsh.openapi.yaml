@@ -81,9 +81,9 @@ paths:
   /dsh/operator/workforce/media/uploads:
     $ref: "./paths/workforce.paths.yaml#/~1dsh~1operator~1workforce~1media~1uploads"
   /dsh/operator/home-discovery/{kind}:
-    $ref: "./paths/home-discovery.paths.yaml#/~1dsh~1operator~1home-discovery~1{kind}"
+    $ref: "./dsh.home-marketing-governance.openapi.yaml#/paths/~1dsh~1operator~1home-discovery~1{kind}"
   /dsh/operator/home-discovery/{kind}/{itemId}:
-    $ref: "./paths/home-discovery.paths.yaml#/~1dsh~1operator~1home-discovery~1{kind}~1{itemId}"
+    $ref: "./dsh.home-marketing-governance.openapi.yaml#/paths/~1dsh~1operator~1home-discovery~1{kind}~1{itemId}"
   /dsh/stores/{storeId}:
     $ref: "./paths/discovery.paths.yaml#/~1dsh~1stores~1{storeId}"
   /dsh/store-context:
@@ -123,7 +123,7 @@ paths:
   /dsh/operator/catalog/master-products:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1master-products"
   /dsh/operator/catalog/master-products/{productId}:
-    $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1master-products~1{productId}"
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1operator~1catalog~1master-products~1{productId}"
   /dsh/operator/catalog/product-proposals:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1product-proposals"
   /dsh/operator/catalog/product-proposals/{proposalId}/decision:
@@ -143,7 +143,7 @@ paths:
   /dsh/operator/catalog/assets/{assetId}/complete:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1assets~1{assetId}~1complete"
   /dsh/operator/catalog/assets/{assetId}:
-    $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1assets~1{assetId}"
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1operator~1catalog~1assets~1{assetId}"
   /dsh/operator/catalog/assets/{assetId}/review:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1assets~1{assetId}~1review"
   /dsh/operator/catalog/assets/{assetId}/link:
@@ -155,7 +155,7 @@ paths:
   /dsh/operator/reels/{reelId}/review:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1reels~1{reelId}~1review"
   /dsh/partner/reels:
-    $ref: "./paths/catalog.paths.yaml#/~1dsh~1partner~1reels"
+    $ref: "./dsh.reels.openapi.yaml#/paths/~1dsh~1partner~1reels"
   /dsh/public/reels:
     $ref: "./paths/home-discovery.paths.yaml#/~1dsh~1public~1reels"
   /dsh/operator/catalog/asset-links:
@@ -183,9 +183,9 @@ paths:
   /dsh/partner/stores/{storeId}/assortment/{masterProductId}:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1assortment~1{masterProductId}"
   /dsh/partner/catalog/product-proposals:
-    $ref: "./paths/catalog.paths.yaml#/~1dsh~1partner~1catalog~1product-proposals"
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1product-proposals"
   /dsh/partner/catalog/product-proposals/{proposalId}:
-    $ref: "./paths/catalog.paths.yaml#/~1dsh~1partner~1catalog~1product-proposals~1{proposalId}"
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1product-proposals~1{proposalId}"
   /dsh/field/catalog/taxonomy:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1field~1catalog~1taxonomy"
   /dsh/field/catalog/master-products:
@@ -197,9 +197,9 @@ paths:
   /dsh/field/partners/{partnerId}/assortment:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1assortment"
   /dsh/field/partners/{partnerId}/catalog/product-proposals:
-    $ref: "./paths/catalog.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1catalog~1product-proposals"
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1field~1partners~1{partnerId}~1catalog~1product-proposals"
   /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}:
-    $ref: "./paths/catalog.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1catalog~1product-proposals~1{proposalId}"
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1field~1partners~1{partnerId}~1catalog~1product-proposals~1{proposalId}"
   /dsh/client/cart:
     $ref: "./paths/cart-serviceability.paths.yaml#/~1dsh~1client~1cart"
   /dsh/client/cart/items:
@@ -259,7 +259,133 @@ paths:
   /dsh/control-panel/finance/settlements/summary:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1settlements~1summary"
   /dsh/control-panel/finance/refunds:
-    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1refunds"
+    $ref: "./dsh.refunds.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1refunds"
+  /dsh/control-panel/finance/references/field-commission:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1references~1field-commission"
+  /dsh/control-panel/finance/references/payment-status:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1references~1payment-status"
+  /dsh/control-panel/finance/references/refund-status:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1references~1refund-status"
+  /dsh/control-panel/finance/references/settlement-status:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1references~1settlement-status"
+  /dsh/catalog/domains:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1domains"
+  /dsh/catalog/domains/{domainId}:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1domains~1{domainId}"
+  /dsh/catalog/nodes:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1nodes"
+  /dsh/catalog/nodes/{nodeId}:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1nodes~1{nodeId}"
+  /dsh/catalog/master-products:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1master-products"
+  /dsh/catalog/master-products/{productId}:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1master-products~1{productId}"
+  /dsh/catalog/proposals:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1proposals"
+  /dsh/catalog/proposals/{proposalId}/decision:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1proposals~1{proposalId}~1decision"
+  /dsh/catalog/proposals/{proposalId}/transitions:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1proposals~1{proposalId}~1transitions"
+  /dsh/catalog/policies:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1policies"
+  /dsh/catalog/policies/{policyId}:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1policies~1{policyId}"
+  /dsh/catalog/stores/{storeId}/assortment:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1stores~1{storeId}~1assortment"
+  /dsh/catalog/stores/{storeId}/assortment/{masterProductId}:
+    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1stores~1{storeId}~1assortment~1{masterProductId}"
+  /dsh/client/orders/{orderId}/refunds:
+    $ref: "./dsh.refunds.openapi.yaml#/paths/~1dsh~1client~1orders~1{orderId}~1refunds"
+  /dsh/partner/orders/{orderId}/refunds:
+    $ref: "./dsh.refunds.openapi.yaml#/paths/~1dsh~1partner~1orders~1{orderId}~1refunds"
+  /dsh/captain/dispatch/financial-eligibility:
+    $ref: "./dsh.captain-financial-eligibility.openapi.yaml#/paths/~1dsh~1captain~1dispatch~1financial-eligibility"
+  /dsh/captain/dispatch/financial-eligibility/refresh:
+    $ref: "./dsh.captain-financial-eligibility.openapi.yaml#/paths/~1dsh~1captain~1dispatch~1financial-eligibility~1refresh"
+  /dsh/operator/dispatch/captains/{captainId}/financial-eligibility:
+    $ref: "./dsh.captain-financial-eligibility.openapi.yaml#/paths/~1dsh~1operator~1dispatch~1captains~1{captainId}~1financial-eligibility"
+  /dsh/operator/dispatch/captains/{captainId}/financial-eligibility/refresh:
+    $ref: "./dsh.captain-financial-eligibility.openapi.yaml#/paths/~1dsh~1operator~1dispatch~1captains~1{captainId}~1financial-eligibility~1refresh"
+  /dsh/captain/me/finance/commissions:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1commissions"
+  /dsh/captain/me/finance/ledger-entries:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1ledger-entries"
+  /dsh/captain/me/finance/payout-requests:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1payout-requests"
+  /dsh/captain/me/finance/wallet:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1wallet"
+  /dsh/client/me/finance/ledger-entries:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1client~1me~1finance~1ledger-entries"
+  /dsh/client/me/finance/wallet:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1client~1me~1finance~1wallet"
+  /dsh/partner/me/finance/commissions:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1commissions"
+  /dsh/partner/me/finance/ledger-entries:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1ledger-entries"
+  /dsh/partner/me/finance/payout-requests:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1payout-requests"
+  /dsh/partner/me/finance/wallet:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1wallet"
+  /dsh/control-panel/finance/wallets/{actorType}/{actorId}:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1wallets~1{actorType}~1{actorId}"
+  /dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1wallets~1{actorType}~1{actorId}~1ledger-entries"
+  /dsh/captain/me/finance/payout-destination:
+    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1payout-destination"
+  /dsh/captain/me/finance/payout-destination/deactivate:
+    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1payout-destination~1deactivate"
+  /dsh/field/me/finance/payout-destination:
+    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1field~1me~1finance~1payout-destination"
+  /dsh/field/me/finance/payout-destination/deactivate:
+    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1field~1me~1finance~1payout-destination~1deactivate"
+  /dsh/partner/me/finance/payout-destination:
+    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1payout-destination"
+  /dsh/partner/me/finance/payout-destination/deactivate:
+    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1payout-destination~1deactivate"
+  /dsh/control-panel/finance/payout-requests/{payoutId}/audit:
+    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1audit"
+  /dsh/control-panel/finance/payout-requests/{payoutId}/reconcile:
+    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1reconcile"
+  /dsh/control-panel/finance/cod-reconciliation-cases:
+    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases"
+  /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign:
+    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases~1{caseId}~1assign"
+  /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/resolve:
+    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases~1{caseId}~1resolve"
+  /dsh/partner/me/finance/cod-records:
+    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1cod-records"
+  /dsh/partner/me/finance/cod-records/{recordId}/remit:
+    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1cod-records~1{recordId}~1remit"
+  /dsh/control-panel/finance/commissions/{commissionId}:
+    $ref: "./dsh.settlements-commissions.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}"
+  /dsh/control-panel/finance/commissions/{commissionId}/adjust:
+    $ref: "./dsh.settlements-commissions.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}~1adjust"
+  /dsh/control-panel/finance/commissions/{commissionId}/confirm:
+    $ref: "./dsh.settlements-commissions.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}~1confirm"
+  /dsh/control-panel/finance/commissions/{commissionId}/reject:
+    $ref: "./dsh.settlements-commissions.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}~1reject"
+  /dsh/control-panel/finance/commissions/{commissionId}/reverse:
+    $ref: "./dsh.settlements-commissions.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}~1reverse"
+  /dsh/control-panel/finance/commissions/{commissionId}/settle:
+    $ref: "./dsh.settlements-commissions.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}~1settle"
+  /dsh/control-panel/finance/commission-policies:
+    $ref: "./dsh.settlements-commissions.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1commission-policies"
+  /dsh/control-panel/finance/settlements/{settlementId}/evidence:
+    $ref: "./dsh.settlements-commissions.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1settlements~1{settlementId}~1evidence"
+  /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/timeline:
+    $ref: "./dsh.payment-sessions.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1payment-sessions~1{paymentSessionId}~1timeline"
+  /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status:
+    $ref: "./dsh.payment-sessions.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1payment-sessions~1{paymentSessionId}~1refresh-provider-status"
+  /dsh/control-panel/finance/refunds/{refundId}/approve:
+    $ref: "./dsh.refunds.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1refunds~1{refundId}~1approve"
+  /dsh/control-panel/finance/refunds/{refundId}/complete:
+    $ref: "./dsh.refunds.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1refunds~1{refundId}~1complete"
+  /dsh/control-panel/finance/refunds/{refundId}/reconcile:
+    $ref: "./dsh.refunds.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1refunds~1{refundId}~1reconcile"
+  /dsh/control-panel/finance/refunds/{refundId}/reject:
+    $ref: "./dsh.refunds.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1refunds~1{refundId}~1reject"
+  /dsh/control-panel/finance/refunds/{refundId}/audit:
+    $ref: "./dsh.refunds.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1refunds~1{refundId}~1audit"
   /dsh/partner/me/finance/settlements:
     $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1me~1finance~1settlements"
   /dsh/partner/me/finance/settlements/summary:
@@ -351,7 +477,7 @@ paths:
   /dsh/operator/support/tickets:
     $ref: "./paths/support.paths.yaml#/~1dsh~1operator~1support~1tickets"
   /dsh/operator/support/tickets/{ticketId}:
-    $ref: "./paths/support.paths.yaml#/~1dsh~1operator~1support~1tickets~1{ticketId}"
+    $ref: "./dsh.support-governance.openapi.yaml#/paths/~1dsh~1operator~1support~1tickets~1{ticketId}"
   /dsh/operator/incidents:
     $ref: "./paths/support.paths.yaml#/~1dsh~1operator~1incidents"
   /dsh/operator/incidents/{incidentId}:
@@ -441,7 +567,7 @@ paths:
   /dsh/operator/partners/{partnerId}/documents/{docId}/review:
     $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1partners~1{partnerId}~1documents~1{docId}~1review"
   /dsh/operator/partners/{partnerId}/stores:
-    $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1partners~1{partnerId}~1stores"
+    $ref: "./dsh.partner-onboarding.openapi.yaml#/paths/~1dsh~1operator~1partners~1{partnerId}~1stores"
   /dsh/operator/partners/{partnerId}/audit:
     $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1partners~1{partnerId}~1audit"
   /dsh/operator/partners/{partnerId}/field-visits:

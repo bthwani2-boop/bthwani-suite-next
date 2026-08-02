@@ -21,9 +21,13 @@ var financeReadAllowlist = map[string]struct{}{
 	"/wlt/cod-records":              {},
 	"/wlt/cod-reconciliation-cases": {},
 	"/wlt/commissions":              {},
-	"/wlt/references/wallet-status": {},
-	"/wlt/payout-requests":          {},
-	"/wlt/reconciliation-cases":     {},
+	"/wlt/references/wallet-status":     {},
+	"/wlt/references/payment-status":    {},
+	"/wlt/references/settlement-status": {},
+	"/wlt/references/refund-status":     {},
+	"/wlt/references/field-commission":  {},
+	"/wlt/payout-requests":              {},
+	"/wlt/reconciliation-cases":         {},
 }
 
 func financeReadPathAllowed(path string) bool {
@@ -38,6 +42,10 @@ func financeReadPathAllowed(path string) bool {
 	}
 	for _, prefix := range []string{"/wlt/reconciliation-cases/", "/wlt/commissions/"} {
 		if rest, ok := strings.CutPrefix(path, prefix); ok { return rest != "" && !strings.Contains(rest, "/") }
+	}
+	if rest, ok := strings.CutPrefix(path, "/wlt/commercial/clients/"); ok {
+		parts := strings.Split(rest, "/")
+		return len(parts) == 2 && strings.TrimSpace(parts[0]) != "" && parts[1] == "benefits"
 	}
 	if rest, ok := strings.CutPrefix(path, "/wlt/settlements/"); ok {
 		parts := strings.Split(rest, "/")
@@ -87,11 +95,11 @@ func (c *Client) financeReadRequest(ctx context.Context, path string, query url.
 	return response.StatusCode, body, nil
 }
 
-func (c *Client) FinanceWrite(ctx context.Context, method, path string, body []byte, correlationID string) (int, []byte, error) {
-	return c.FinanceWriteWithOperatorContext(ctx, method, path, body, correlationID, "")
+func (c *Client) FinanceWrite(ctx context.Context, method, path string, body []byte, correlationID, idempotencyKey string) (int, []byte, error) {
+	return c.FinanceWriteWithOperatorContext(ctx, method, path, body, correlationID, idempotencyKey, "")
 }
 
-func (c *Client) FinanceWriteWithOperatorContext(ctx context.Context, method, path string, body []byte, correlationID, operatorContextID string) (int, []byte, error) {
+func (c *Client) FinanceWriteWithOperatorContext(ctx context.Context, method, path string, body []byte, correlationID, idempotencyKey, operatorContextID string) (int, []byte, error) {
 	if !c.Configured() { return 0, nil, fmt.Errorf("WLT integration is not configured") }
 	if method != http.MethodPost && method != http.MethodPut && method != http.MethodPatch { return 0, nil, fmt.Errorf("WLT finance write method %q is not allowlisted", method) }
 	if !financeWritePathAllowed(path) { return 0, nil, fmt.Errorf("WLT finance write path %q is not allowlisted", path) }
@@ -99,7 +107,13 @@ func (c *Client) FinanceWriteWithOperatorContext(ctx context.Context, method, pa
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bytes.NewReader(body)); if err != nil { return 0, nil, fmt.Errorf("build WLT finance write request: %w", err) }
 	setServiceHeaders(req, c.serviceToken); req.Header.Set("Content-Type", "application/json")
 	if operatorContextID = strings.TrimSpace(operatorContextID); operatorContextID != "" { req.Header.Set("X-Operator-Context-ID", operatorContextID) }
-	if err := setRequiredMutationHeaders(req, correlationID, deterministicMutationKey("finance-proxy", method, path, string(body), operatorContextID)); err != nil { return 0, nil, fmt.Errorf("prepare WLT finance write request: %w", err) }
+    
+    idempotencyKey = strings.TrimSpace(idempotencyKey)
+    if idempotencyKey == "" {
+        idempotencyKey = deterministicMutationKey("finance-proxy", method, path, string(body), operatorContextID)
+    }
+
+	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil { return 0, nil, fmt.Errorf("prepare WLT finance write request: %w", err) }
 	response, err := c.http.Do(req); if err != nil { return 0, nil, fmt.Errorf("call WLT finance write: %w", err) }
 	defer response.Body.Close()
 	responseBody, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes)); if err != nil { return 0, nil, fmt.Errorf("read WLT finance write response: %w", err) }

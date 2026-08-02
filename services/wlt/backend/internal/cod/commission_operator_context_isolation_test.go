@@ -1,5 +1,12 @@
 package cod
 
+// Note: these tests exercise the per-row operator_context_id scoping guards
+// inside a single WLT deployment (WHERE operator_context_id=$1 filters and
+// RequireOperatorContextScope checks). They do not exercise or assert
+// network-level multi-tenant isolation -- the DSH service bridge binds every
+// request to one fixed deployment-owned context (see
+// internal/shared/serviceauth.go). See governance decision Q1/T4.
+
 import (
 	"context"
 	"database/sql"

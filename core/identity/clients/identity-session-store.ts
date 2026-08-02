@@ -31,14 +31,6 @@ type StoredSession = {
 
 const STORAGE_KEY = "bthwani-identity-session";
 const RUNTIME_DEVICE_FINGERPRINT = `bthwani-runtime-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-const ACTOR_ROLES = new Set([
-  "client",
-  "partner",
-  "captain",
-  "field",
-  "operator",
-  "system",
-]);
 
 let client: IdentityClient | null = null;
 let state: IdentitySessionState = { kind: "unconfigured" };
@@ -120,7 +112,7 @@ function isValidActorIdentity(value: unknown): value is ActorIdentity {
   if (
     !Array.isArray(value.roles)
     || value.roles.length === 0
-    || !value.roles.every((role) => typeof role === "string" && ACTOR_ROLES.has(role))
+    || !value.roles.every((role) => typeof role === "string")
   ) {
     return false;
   }

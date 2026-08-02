@@ -16,7 +16,7 @@ import {
   spacing,
   useDirection,
 } from '@bthwani/ui-kit';
-import { getWltDshPartnerCommissionLabel } from '../../shared/finance/partner-finance';
+import { getWltDshPartnerCommissionLabel } from "@bthwani/wlt/dsh";
 import { resolveDshStoreClientVisibility } from '../../shared/partner/dsh-client-visibility.model';
 import { getDshPartnerActivationStatusLabel } from '../../shared/partner/partner-activation.model';
 import type { PartnerCoverageZone, PartnerCoverageZoneStatus, PartnerOperationalMode } from '../../shared/partner/partner-hub.types';

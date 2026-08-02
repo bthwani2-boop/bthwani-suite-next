@@ -3,16 +3,12 @@ package settlement
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
 	"github.com/lib/pq"
-
-	"wlt-api/internal/shared"
 )
 
 var ErrSettlementPolicyMissing = errors.New("active WLT settlement policy is required for this partner")
@@ -205,50 +201,4 @@ func CreateSettlementFromDeliveredOrders(ctx context.Context, db *sql.DB, input 
 		return nil, err
 	}
 	return settlement, nil
-}
-
-func HandleUpsertSettlementPolicy(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var input UpsertSettlementPolicyInput
-		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
-		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&input); err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-			return
-		}
-		policy, err := UpsertSettlementPolicy(r.Context(), db, r.PathValue("partnerId"), input)
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"settlementPolicy": policy})
-	}
-}
-
-func HandleCreateSettlementFromDeliveredOrders(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var input CreateFromDeliveredOrdersInput
-		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 2*1024*1024))
-		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&input); err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-			return
-		}
-		settlement, err := CreateSettlementFromDeliveredOrders(r.Context(), db, input)
-		switch {
-		case errors.Is(err, ErrSettlementPolicyMissing):
-			shared.SendError(w, http.StatusConflict, "SETTLEMENT_POLICY_MISSING", err.Error())
-			return
-		case errors.Is(err, ErrSettlementOrderAlreadyUsed):
-			shared.SendError(w, http.StatusConflict, "ORDER_ALREADY_SETTLED", err.Error())
-			return
-		case errors.Is(err, ErrSettlementAmountOverflow):
-			shared.SendError(w, http.StatusUnprocessableEntity, "SETTLEMENT_AMOUNT_OVERFLOW", err.Error())
-			return
-		case err != nil:
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		shared.SendJSON(w, http.StatusCreated, map[string]any{"settlement": settlement})
-	}
 }

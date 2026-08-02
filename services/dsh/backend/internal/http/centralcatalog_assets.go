@@ -68,27 +68,6 @@ func (s *protectedStoreServer) handleCompleteAssetUpload(w http.ResponseWriter, 
 	store.SendJSON(w, http.StatusOK, map[string]any{"asset": a})
 }
 
-func (s *protectedStoreServer) handleUpdateCatalogAsset(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
-	if !ok {
-		return
-	}
-	var input centralcatalog.AssetUpdateInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	assetID := r.PathValue("assetId")
-	if !s.authorizeAssetAccess(w, r, actor, assetID) {
-		return
-	}
-	a, err := centralcatalog.UpdateAsset(r.Context(), s.db, assetID, input)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"asset": a})
-}
-
 func sourceSurfaceForActor(role string) string {
 	switch role {
 	case "operator":
@@ -119,23 +98,6 @@ func (s *protectedStoreServer) authorizeAssetAccess(w http.ResponseWriter, r *ht
 		return false
 	}
 	return true
-}
-
-func (s *protectedStoreServer) handleReviewCatalogAsset(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaReview, "operator")
-	if !ok {
-		return
-	}
-	var input centralcatalog.AssetReviewInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	a, err := centralcatalog.ReviewAsset(r.Context(), s.db, actor.ID, r.PathValue("assetId"), input)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"asset": a})
 }
 
 func (s *protectedStoreServer) handleDeleteCatalogAsset(w http.ResponseWriter, r *http.Request) {

@@ -1,4 +1,4 @@
-#  — Partner onboarding support runbook
+# Partner onboarding support runbook
 
 Status: ACTIVE
 Owner: DSH partner onboarding

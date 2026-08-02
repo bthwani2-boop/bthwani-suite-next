@@ -268,7 +268,6 @@ components:
         - pricingSnapshotHash
         - wltPaymentRefId
         - paymentStatusProjection
-        - correlationId
         - version
         - items
         - statusTimeline
@@ -306,7 +305,6 @@ components:
             ownership to DSH.
         paymentStatusProjection: { type: string }
         paymentProjectionUpdatedAt: { type: string, format: date-time, nullable: true }
-        correlationId: { type: string, minLength: 1 }
         version: { type: integer, minimum: 1 }
         items:
           type: array
@@ -349,7 +347,6 @@ components:
           fromStatus,
           toStatus,
           actorRole,
-          correlationId,
           causationId,
           orderVersion,
           metadata,
@@ -361,7 +358,6 @@ components:
         fromStatus: { type: string }
         toStatus: { type: string }
         actorRole: { type: string }
-        correlationId: { type: string }
         causationId: { type: string }
         orderVersion: { type: integer, minimum: 1 }
         metadata:

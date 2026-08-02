@@ -11,7 +11,7 @@ import {
   DshCaptainProofUploadScreen,
 } from '../orders/DshCaptainOrdersScreen';
 import { CaptainOrderSupportConversationScreen } from '../orders/CaptainOrderSupportConversationScreen';
-import { DshCaptainCodBalanceScreen } from './DshCaptainFinanceScreen';
+import { WltCaptainCodBalanceScreen } from '../finance/WltCaptainFinanceScreen';
 import {
   DshCaptainProfileGetScreen,
   DshCaptainTierEvaluateScreen,
@@ -59,13 +59,7 @@ export function CaptainSupportScreenRouter({
         />
       );
     case 'cod-liability':
-      return captainCollectsCod ? (
-        <DshCaptainCodBalanceScreen
-          onBack={onBack}
-          onRetry={onBack}
-          {...(dshClientId !== undefined ? { dshClientId } : {})}
-        />
-      ) : null;
+      return <WltCaptainCodBalanceScreen onBack={onBack} embedded={false} />;
     case 'order-accept':
       return (
         <DshCaptainOrderAcceptScreen

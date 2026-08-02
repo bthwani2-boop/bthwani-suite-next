@@ -193,26 +193,6 @@ func (s *protectedStoreServer) servePartnerSelfHandler(
 	handler(w, partnerRequestWithStore(r, actor, row.ID))
 }
 
-func (s *protectedStoreServer) handleListPartners(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleListPartners(s.db), PartnersPermissionRead, "operator")
-}
-
-func (s *protectedStoreServer) handleCreatePartner(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleCreatePartner(s.db), PartnersPermissionManage, "operator")
-}
-
-func (s *protectedStoreServer) handleGetPartner(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleGetPartner(s.db), PartnersPermissionRead, "operator")
-}
-
-func (s *protectedStoreServer) handleActivationTransition(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleActivationTransition(s.db), PartnersPermissionActivate, "operator")
-}
-
-func (s *protectedStoreServer) handleGetPartnerReadiness(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleGetReadiness(s.db), PartnersPermissionRead, "operator")
-}
-
 func (s *protectedStoreServer) handleListPartnerDocuments(w http.ResponseWriter, r *http.Request) {
 	s.servePartnerPermissionHandler(w, r, partner.HandleListDocuments(s.db), PartnersPermissionRead, "operator")
 }
@@ -229,10 +209,6 @@ func (s *protectedStoreServer) handleListPartnerStores(w http.ResponseWriter, r 
 	s.servePartnerPermissionHandler(w, r, partner.HandleListPartnerStores(s.db), PartnersPermissionRead, "operator")
 }
 
-func (s *protectedStoreServer) handleLinkPartnerStore(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleLinkPartnerStore(s.db), PartnersPermissionManage, "operator")
-}
-
 func (s *protectedStoreServer) handleListPartnerFieldVisits(w http.ResponseWriter, r *http.Request) {
 	s.servePartnerPermissionHandler(w, r, partner.HandleListFieldVisits(s.db), PartnersPermissionRead, "operator")
 }
@@ -241,36 +217,8 @@ func (s *protectedStoreServer) handleListPartnerAudit(w http.ResponseWriter, r *
 	s.servePartnerPermissionHandler(w, r, partner.HandleListAudit(s.db), PartnersPermissionRead, "operator")
 }
 
-func (s *protectedStoreServer) handleFieldListPartnerDrafts(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleListFieldPartnerDrafts(s.db), "field")
-}
-
-func (s *protectedStoreServer) handleFieldCreatePartnerDraft(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleFieldCreateDraft(s.db), "field")
-}
-
-func (s *protectedStoreServer) handleFieldGetPartnerDraft(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleFieldGetPartner(s.db), "field")
-}
-
-func (s *protectedStoreServer) handleFieldUpdatePartnerDraft(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleFieldUpdatePartner(s.db), "field")
-}
-
 func (s *protectedStoreServer) handleFieldUploadPartnerDocument(w http.ResponseWriter, r *http.Request) {
 	s.servePartnerHandler(w, r, partner.HandleFieldUploadDocument(s.db), "field")
-}
-
-func (s *protectedStoreServer) handleFieldCreatePartnerVisit(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleFieldCreateVisit(s.db), "field")
-}
-
-func (s *protectedStoreServer) handleFieldSubmitPartnerDraft(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleFieldSubmitPartner(s.db), "field")
-}
-
-func (s *protectedStoreServer) handleFieldGetPartnerReadiness(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleFieldGetReadiness(s.db), "field")
 }
 
 func (s *protectedStoreServer) handleFieldListPartnerDocuments(w http.ResponseWriter, r *http.Request) {
@@ -279,10 +227,6 @@ func (s *protectedStoreServer) handleFieldListPartnerDocuments(w http.ResponseWr
 
 func (s *protectedStoreServer) handleFieldListPartnerFieldVisits(w http.ResponseWriter, r *http.Request) {
 	s.servePartnerHandler(w, r, partner.HandleFieldListFieldVisits(s.db), "field")
-}
-
-func (s *protectedStoreServer) handlePartnerActivationReadiness(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerSelfHandler(w, r, partner.HandlePartnerMeReadiness(s.db))
 }
 
 func (s *protectedStoreServer) handleStoreContext(w http.ResponseWriter, r *http.Request) {
@@ -500,7 +444,49 @@ func (s *protectedStoreServer) handlePartnerInviteTeamMember(w http.ResponseWrit
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
 		return
 	}
+	hasPermission, err := s.actorHasPartnerPermission(r.Context(), actor.ID, storeID, "team.manage")
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to verify permissions")
+		return
+	}
+	if !hasPermission {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor lacks team.manage permission for this store")
+		return
+	}
 	partner.HandleInviteStoreTeamMember(s.db)(w, partnerRequestWithActor(r, actor))
+}
+
+func (s *protectedStoreServer) actorHasPartnerPermission(ctx context.Context, actorID string, storeID string, requiredAction string) (bool, error) {
+	var role string
+	err := s.db.QueryRowContext(ctx, `
+		SELECT role FROM dsh_store_team_members 
+		WHERE identity_actor_id = $1 AND store_id = $2 AND status = 'active'
+	`, actorID, storeID).Scan(&role)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// If not a team member, check if they are the partner owner.
+			// Currently, owners are supposed to have an active 'owner' row in team_members, 
+			// but we can fallback if needed. Let's assume team_members is authoritative.
+			return false, nil
+		}
+		return false, err
+	}
+
+	bundles, err := s.identity.FetchPartnerPermissionBundles(ctx)
+	if err != nil {
+		return false, err
+	}
+	for _, b := range bundles {
+		if b.Code == role {
+			for _, action := range b.Actions {
+				if action == requiredAction {
+					return true, nil
+				}
+			}
+			return false, nil
+		}
+	}
+	return false, nil
 }
 
 func (s *protectedStoreServer) handlePartnerListInvites(w http.ResponseWriter, r *http.Request) {
@@ -525,24 +511,6 @@ func (s *protectedStoreServer) handlePartnerRejectInvite(w http.ResponseWriter, 
 		return
 	}
 	partner.HandleRejectInvite(s.db)(w, partnerRequestWithActor(r, actor))
-}
-
-func (s *protectedStoreServer) handlePartnerTeamMemberAction(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
-	if !ok {
-		return
-	}
-	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
-		return
-	}
-	if !canAccess {
-		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
-		return
-	}
-	partner.HandleExecuteStoreTeamMemberAction(s.db)(w, partnerRequestWithActor(r, actor))
 }
 
 func (s *protectedStoreServer) handlePartnerGetCourierSettings(w http.ResponseWriter, r *http.Request) {
@@ -600,7 +568,7 @@ func (s *protectedStoreServer) handlePartnerCoverageZones(w http.ResponseWriter,
 }
 
 func (s *protectedStoreServer) handlePartnerScopes(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerSelfHandler(w, r, partner.HandleListPartnerScopes(s.db))
+	s.servePartnerSelfHandler(w, r, partner.HandleListPartnerScopes(s.db, s.identity))
 }
 
 func (s *protectedStoreServer) requireActor(

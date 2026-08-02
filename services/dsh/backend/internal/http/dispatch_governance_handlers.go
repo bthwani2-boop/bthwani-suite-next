@@ -9,6 +9,7 @@ import (
 
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/store"
+	"dsh-api/internal/wlt"
 )
 
 func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.ResponseWriter, r *http.Request) {
@@ -18,7 +19,6 @@ func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.Res
 	}
 	var body struct {
 		OrderID                string `json:"orderId"`
-		OperatorContextID               string `json:"operatorContextId"`
 		CaptainID              string `json:"captainId"`
 		ServiceAreaCode        string `json:"serviceAreaCode"`
 		IdempotencyKey         string `json:"idempotencyKey"`
@@ -30,7 +30,12 @@ func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.Res
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	financialEligibility, err := s.refreshCaptainFinancialEligibility(r, body.OperatorContextID, body.CaptainID)
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
+		return
+	}
+	financialEligibility, err := s.refreshCaptainFinancialEligibility(r, operatorContextID, body.CaptainID)
 	if err != nil {
 		writeCaptainFinancialEligibilityError(w, err)
 		return
@@ -44,7 +49,7 @@ func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.Res
 		idempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	}
 	assignment, replayed, err := dispatch.CreateGovernedAssignment(s.db, dispatch.GovernedCreateAssignmentInput{
-		OrderID: body.OrderID, OperatorContextID: body.OperatorContextID, CaptainID: body.CaptainID,
+		OrderID: body.OrderID, OperatorContextID: operatorContextID, CaptainID: body.CaptainID,
 		ActorID: actor.ID, ServiceAreaCode: body.ServiceAreaCode, IdempotencyKey: idempotencyKey,
 		Priority: body.Priority, DistanceMeters: body.DistanceMeters, OfferReason: body.OfferReason,
 		ResponseTimeoutSecond: body.ResponseTimeoutSeconds,
@@ -175,7 +180,6 @@ func (s *protectedStoreServer) handleUpsertCaptainDispatchProfile(w http.Respons
 		return
 	}
 	var body struct {
-		OperatorContextID             string `json:"operatorContextId"`
 		AccreditationStatus  string `json:"accreditationStatus"`
 		AvailabilityStatus   string `json:"availabilityStatus"`
 		MaxActiveAssignments int    `json:"maxActiveAssignments"`
@@ -185,8 +189,13 @@ func (s *protectedStoreServer) handleUpsertCaptainDispatchProfile(w http.Respons
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
+		return
+	}
 	candidate, err := dispatch.UpsertCaptainDispatchProfile(s.db, dispatch.CaptainDispatchProfileInput{
-		OperatorContextID: body.OperatorContextID, CaptainID: r.PathValue("captainId"),
+		OperatorContextID: operatorContextID, CaptainID: r.PathValue("captainId"),
 		AccreditationStatus: body.AccreditationStatus, AvailabilityStatus: body.AvailabilityStatus,
 		MaxActiveAssignments: body.MaxActiveAssignments, PriorityScore: body.PriorityScore,
 		ExpectedVersion: body.ExpectedVersion, ActorID: actor.ID,
@@ -195,7 +204,7 @@ func (s *protectedStoreServer) handleUpsertCaptainDispatchProfile(w http.Respons
 		writeGovernedDispatchError(w, err)
 		return
 	}
-	financial, financialErr := dispatch.GetCaptainFinancialEligibilitySnapshot(r.Context(), s.db, body.OperatorContextID, r.PathValue("captainId"))
+	financial, financialErr := dispatch.GetCaptainFinancialEligibilitySnapshot(r.Context(), s.db, operatorContextID, r.PathValue("captainId"))
 	if financialErr != nil || !financial.Eligible || !financial.ExpiresAt.After(time.Now()) {
 		candidate.Eligible = false
 		candidate.IneligibilityReason = "CAPTAIN_FINANCIAL_ELIGIBILITY_REQUIRED"
@@ -240,7 +249,6 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 		return
 	}
 	var body struct {
-		OperatorContextID               string `json:"operatorContextId"`
 		CaptainID              string `json:"captainId"`
 		ServiceAreaCode        string `json:"serviceAreaCode"`
 		IdempotencyKey         string `json:"idempotencyKey"`
@@ -252,7 +260,12 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	financialEligibility, err := s.refreshCaptainFinancialEligibility(r, body.OperatorContextID, body.CaptainID)
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
+		return
+	}
+	financialEligibility, err := s.refreshCaptainFinancialEligibility(r, operatorContextID, body.CaptainID)
 	if err != nil {
 		writeCaptainFinancialEligibilityError(w, err)
 		return
@@ -266,7 +279,7 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 		idempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	}
 	assignment, err := dispatch.ReassignGovernedAssignment(s.db, dispatch.ReassignAssignmentInput{
-		AssignmentID: r.PathValue("assignmentId"), OperatorContextID: body.OperatorContextID,
+		AssignmentID: r.PathValue("assignmentId"), OperatorContextID: operatorContextID,
 		CaptainID: body.CaptainID, ActorID: actor.ID, ServiceAreaCode: body.ServiceAreaCode,
 		IdempotencyKey: idempotencyKey, Priority: body.Priority, DistanceMeters: body.DistanceMeters,
 		Reason: body.Reason, ResponseTimeoutSecond: body.ResponseTimeoutSeconds,
@@ -310,13 +323,17 @@ func (s *protectedStoreServer) handleExpireGovernedDispatchAssignments(w http.Re
 		return
 	}
 	var body struct {
-		OperatorContextID string `json:"operatorContextId"`
 		Limit    int    `json:"limit"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	count, err := dispatch.ExpireOverdueAssignments(s.db, body.OperatorContextID, actor.ID, body.Limit)
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
+		return
+	}
+	count, err := dispatch.ExpireOverdueAssignments(s.db, operatorContextID, actor.ID, body.Limit)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return

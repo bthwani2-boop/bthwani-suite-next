@@ -137,18 +137,12 @@ importers:
 
   apps/app-captain/runtime:
     dependencies:
-      '@bthwani/app-shell':
-        specifier: workspace:*
-        version: link:../../../shared/app-shell
       '@bthwani/core-identity':
         specifier: workspace:*
         version: link:../../../core/identity
       '@bthwani/data-runtime':
         specifier: workspace:*
         version: link:../../../shared/data-runtime
-      '@bthwani/media-runtime':
-        specifier: workspace:*
-        version: link:../../../shared/media-runtime
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../../shared/ui-kit
@@ -297,18 +291,12 @@ importers:
 
   apps/app-client/runtime:
     dependencies:
-      '@bthwani/app-shell':
-        specifier: workspace:*
-        version: link:../../../shared/app-shell
       '@bthwani/core-identity':
         specifier: workspace:*
         version: link:../../../core/identity
       '@bthwani/data-runtime':
         specifier: workspace:*
         version: link:../../../shared/data-runtime
-      '@bthwani/media-runtime':
-        specifier: workspace:*
-        version: link:../../../shared/media-runtime
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../../shared/ui-kit
@@ -451,18 +439,12 @@ importers:
 
   apps/app-field/runtime:
     dependencies:
-      '@bthwani/app-shell':
-        specifier: workspace:*
-        version: link:../../../shared/app-shell
       '@bthwani/core-identity':
         specifier: workspace:*
         version: link:../../../core/identity
       '@bthwani/data-runtime':
         specifier: workspace:*
         version: link:../../../shared/data-runtime
-      '@bthwani/media-runtime':
-        specifier: workspace:*
-        version: link:../../../shared/media-runtime
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../../shared/ui-kit
@@ -611,18 +593,12 @@ importers:
 
   apps/app-partner/runtime:
     dependencies:
-      '@bthwani/app-shell':
-        specifier: workspace:*
-        version: link:../../../shared/app-shell
       '@bthwani/core-identity':
         specifier: workspace:*
         version: link:../../../core/identity
       '@bthwani/data-runtime':
         specifier: workspace:*
         version: link:../../../shared/data-runtime
-      '@bthwani/media-runtime':
-        specifier: workspace:*
-        version: link:../../../shared/media-runtime
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../../shared/ui-kit
@@ -768,12 +744,18 @@ importers:
 
   apps/control-panel/runtime:
     dependencies:
-      '@bthwani/app-shell':
+      '@bthwani/control-panel':
         specifier: workspace:*
-        version: link:../../../shared/app-shell
+        version: link:../../../shared/control-panel
       '@bthwani/core-identity':
         specifier: workspace:*
         version: link:../../../core/identity
+      '@bthwani/dsh':
+        specifier: workspace:*
+        version: link:../../../services/dsh
+      '@bthwani/ui-kit':
+        specifier: workspace:*
+        version: link:../../../shared/ui-kit
       next:
         specifier: 16.2.11
         version: 16.2.11(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.10.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -796,6 +778,9 @@ importers:
       '@types/react-dom':
         specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.17)
+      '@types/react-native':
+        specifier: ^0.73.0
+        version: 0.73.0(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3)
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
@@ -854,16 +839,58 @@ importers:
     dependencies:
       '@bthwani/control-panel':
         specifier: workspace:*
-        version: link:../../apps/control-panel/runtime
+        version: link:../../shared/control-panel
       '@bthwani/core-identity':
         specifier: workspace:*
         version: link:../../core/identity
       '@bthwani/core-platform-control':
         specifier: workspace:*
         version: link:../../core/platform-control
+      '@bthwani/core-providers':
+        specifier: workspace:*
+        version: link:../../core/providers
+      '@bthwani/data-runtime':
+        specifier: workspace:*
+        version: link:../../shared/data-runtime
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../shared/ui-kit
+      '@bthwani/wlt':
+        specifier: workspace:*
+        version: link:../wlt
+      '@react-native-async-storage/async-storage':
+        specifier: 1.24.0
+        version: 1.24.0(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))
+      '@react-native-community/netinfo':
+        specifier: 11.4.1
+        version: 11.4.1(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))
+      '@tanstack/react-query':
+        specifier: ^5.64.0
+        version: 5.90.2(react@19.2.3)
+      expo-constants:
+        specifier: ~56.0.22
+        version: 56.0.22(expo@56.0.17)(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))
+      expo-crypto:
+        specifier: ~56.0.4
+        version: 56.0.4(expo@56.0.17)
+      expo-image-picker:
+        specifier: ~56.0.22
+        version: 56.0.22(expo@56.0.17)
+      expo-location:
+        specifier: ~56.0.22
+        version: 56.0.22(expo@56.0.17)(typescript@6.0.3)
+      expo-notifications:
+        specifier: ~56.0.22
+        version: 56.0.22(expo@56.0.17)(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
+      expo-secure-store:
+        specifier: ~56.0.4
+        version: 56.0.4(expo@56.0.17)
+      react-native:
+        specifier: 0.85.3
+        version: 0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3)
+      react-native-maps:
+        specifier: 1.27.2
+        version: 1.27.2(react-native-web@0.19.13(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
       react-native-safe-area-context:
         specifier: ~5.7.0
         version: 5.7.0(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
@@ -886,6 +913,15 @@ importers:
 
   services/wlt:
     dependencies:
+      '@bthwani/control-panel':
+        specifier: workspace:*
+        version: link:../../shared/control-panel
+      '@bthwani/ui-kit':
+        specifier: workspace:*
+        version: link:../../shared/ui-kit
+      '@tanstack/react-query':
+        specifier: ^5.64.0
+        version: 5.90.2(react@19.2.3)
       react:
         specifier: 19.2.3
         version: 19.2.3
@@ -896,11 +932,18 @@ importers:
       '@types/react':
         specifier: 19.2.17
         version: 19.2.17
+      next:
+        specifier: 16.2.11
+        version: 16.2.11(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.10.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
 
-  shared/app-shell:
+  shared/control-panel:
+    dependencies:
+      '@bthwani/ui-kit':
+        specifier: workspace:*
+        version: link:../ui-kit
     devDependencies:
       '@types/react':
         specifier: 19.2.17
@@ -917,22 +960,6 @@ importers:
       '@tanstack/react-query':
         specifier: 5.90.2
         version: 5.90.2(react@19.2.3)
-    devDependencies:
-      '@types/react':
-        specifier: 19.2.17
-        version: 19.2.17
-      typescript:
-        specifier: ~6.0.3
-        version: 6.0.3
-
-  shared/media-runtime:
-    dependencies:
-      '@react-native-async-storage/async-storage':
-        specifier: 2.2.0
-        version: 2.2.0(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))
-      expo-image:
-        specifier: ~56.0.11
-        version: 56.0.11(expo@56.0.17)(react-native-web@0.19.13(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
     devDependencies:
       '@types/react':
         specifier: 19.2.17
@@ -2742,8 +2769,18 @@ packages:
       '@types/react':
         optional: true
 
+  '@react-native-async-storage/async-storage@1.24.0':
+    resolution: {integrity: sha512-W4/vbwUOYOjco0x3toB8QCr7EjIP6nE9G7o8PMguvvjYT5Awg09lyV4enACRx4s++PPulBiBSjL0KTFx2u0Z/g==}
+    peerDependencies:
+      react-native: 0.85.3
+
   '@react-native-async-storage/async-storage@2.2.0':
     resolution: {integrity: sha512-gvRvjR5JAaUZF8tv2Kcq/Gbt3JHwbKFYfmb445rhOj6NUMx3qPLixmDx5pZAyb9at1bYvJ4/eTUipU5aki45xw==}
+    peerDependencies:
+      react-native: 0.85.3
+
+  '@react-native-community/netinfo@11.4.1':
+    resolution: {integrity: sha512-B0BYAkghz3Q2V09BF88RA601XursIEA111tnc2JOaN7axJWmNefmfjZqw/KdSxKZp7CZUuPpjBmz/WCR9uaHYg==}
     peerDependencies:
       react-native: 0.85.3
 
@@ -3766,6 +3803,10 @@ packages:
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
     peerDependencies:
       '@types/react': ^19.2.0
+
+  '@types/react-native@0.73.0':
+    resolution: {integrity: sha512-6ZRPQrYM72qYKGWidEttRe6M5DZBEV5F+MHMHqd4TTYx0tfkcdrUFGdef6CCxY0jXU7wldvd/zA/b0A/kTeJmA==}
+    deprecated: This is a stub types definition. react-native provides its own type definitions, so you do not need this installed.
 
   '@types/react-test-renderer@19.1.0':
     resolution: {integrity: sha512-XD0WZrHqjNrxA/MaR9O22w/RNidWR9YZmBdRGI7wcnWGrv/3dA8wKCJ8m63Sn+tLJhcjmuhOi629N66W6kgWzQ==}
@@ -9631,9 +9672,18 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.2.17
 
+  '@react-native-async-storage/async-storage@1.24.0(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))':
+    dependencies:
+      merge-options: 3.0.4
+      react-native: 0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3)
+
   '@react-native-async-storage/async-storage@2.2.0(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))':
     dependencies:
       merge-options: 3.0.4
+      react-native: 0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3)
+
+  '@react-native-community/netinfo@11.4.1(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))':
+    dependencies:
       react-native: 0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3)
 
   '@react-native-community/netinfo@12.0.1(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)':
@@ -9713,7 +9763,7 @@ snapshots:
       metro: 0.84.4
       metro-config: 0.84.4
       metro-core: 0.84.4
-      semver: 7.8.4
+      semver: 7.8.5
     optionalDependencies:
       '@react-native/metro-config': 0.85.3
     transitivePeerDependencies:
@@ -9770,7 +9820,9 @@ snapshots:
       metro-config: 0.84.4
       metro-runtime: 0.84.4
     transitivePeerDependencies:
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-color@2.1.0': {}
 
@@ -12287,6 +12339,19 @@ snapshots:
   '@types/react-dom@19.2.3(@types/react@19.2.17)':
     dependencies:
       '@types/react': 19.2.17
+
+  '@types/react-native@0.73.0(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3)':
+    dependencies:
+      react-native: 0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3)
+    transitivePeerDependencies:
+      - '@react-native-community/cli'
+      - '@react-native/jest-preset'
+      - '@react-native/metro-config'
+      - '@types/react'
+      - bufferutil
+      - react
+      - supports-color
+      - utf-8-validate
 
   '@types/react-test-renderer@19.1.0':
     dependencies:
@@ -15824,7 +15889,7 @@ snapshots:
       react-refresh: 0.14.2
       regenerator-runtime: 0.13.11
       scheduler: 0.27.0
-      semver: 7.8.4
+      semver: 7.8.5
       stacktrace-parser: 0.1.11
       tinyglobby: 0.2.17
       whatwg-fetch: 3.6.20

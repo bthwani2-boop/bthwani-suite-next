@@ -1,0 +1,25 @@
+{
+  "head_sha": "bb6c661e49cdde3fd44e5598889790ea6f4ba7c0",
+  "status": "DISCOVERY_ONLY",
+  "required_gap_fields": [
+    "gap_id",
+    "type",
+    "path",
+    "owner",
+    "affected_surface",
+    "affected_journeys",
+    "root_cause",
+    "pattern_group",
+    "risk_level",
+    "required_action",
+    "target_files",
+    "allowed_decision",
+    "forbidden_actions",
+    "verification_commands",
+    "proof_required",
+    "status",
+    "blocks_journey_start"
+  ],
+  "gap_count": 0,
+  "gaps": []
+}

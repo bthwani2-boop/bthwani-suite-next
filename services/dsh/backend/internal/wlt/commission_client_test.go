@@ -11,12 +11,7 @@ import (
 func TestFinanceWriteCommissionRequiresTrustedOperatorContext(t *testing.T) {
 	client := NewClient("http://127.0.0.1:1", "service-token")
 	_, _, err := client.FinanceWriteCommission(
-		context.Background(),
-		http.MethodPut,
-		"/wlt/commission-policies",
-		[]byte(`{"policyId":"policy-1"}`),
-		"correlation-1",
-	)
+		context.Background(), http.MethodPut, "/wlt/commission-policies", []byte(`{"policyId":"policy-1"}`), "correlation-1", "")
 	if err == nil {
 		t.Fatal("expected missing trusted OperatorContext to fail closed")
 	}
@@ -52,12 +47,7 @@ func TestFinanceWriteCommissionSendsTrustedOperatorContextAndMutationHeaders(t *
 	client := NewClient(server.URL, "service-token")
 	ctx := WithOperatorContext(context.Background(), "OperatorContext-commission-test")
 	status, body, err := client.FinanceWriteCommission(
-		ctx,
-		http.MethodPut,
-		"/wlt/commission-policies",
-		[]byte(`{"policyId":"policy-1"}`),
-		"correlation-1",
-	)
+		ctx, http.MethodPut, "/wlt/commission-policies", []byte(`{"policyId":"policy-1"}`), "correlation-1", "")
 	if err != nil {
 		t.Fatalf("finance commission write failed: %v", err)
 	}

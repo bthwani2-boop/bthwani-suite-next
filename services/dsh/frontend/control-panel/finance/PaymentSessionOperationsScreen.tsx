@@ -9,12 +9,12 @@ import {
   presentWltPaymentSessionStatus,
   requiresWltPaymentReconciliation,
   type WltPaymentSessionTimeline,
-} from "../../shared/finance-wlt-link/payment";
+} from '@bthwani/wlt/dsh';
 import {
   loadPaymentSessionTimeline,
   refreshPaymentSessionProviderStatus,
   type PaymentSessionRuntimeError,
-} from "../../shared/finance-wlt-link/payment/payment-session-runtime.api";
+} from '@bthwani/wlt/dsh';
 
 type ScreenState = "idle" | "loading" | "ready" | "refreshing" | "offline" | "forbidden" | "not_found" | "conflict" | "error";
 

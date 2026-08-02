@@ -13,7 +13,7 @@ import {
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import { useCatalogApprovalController } from "../../shared/catalog";
-import { useControlPanelSession } from "../../shared/session/control-panel-session";
+import { useIdentitySession } from "@bthwani/core-identity";
 
 const listSectionStyle: CSSProperties = { display: "grid", gap: "1rem" };
 const submissionCardStyle: CSSProperties = {
@@ -32,7 +32,7 @@ const SUBMISSION_STATUS_TONE: Record<"submitted" | "approved" | "rejected", CpBa
 };
 
 export function CatalogApprovalScreen() {
-  const session = useControlPanelSession();
+  const session = useIdentitySession();
   const controller = useCatalogApprovalController(session.state.kind);
   const [reasonByStore, setReasonByStore] = useState<Record<string, string>>({});
 

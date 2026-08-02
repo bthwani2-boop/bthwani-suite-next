@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, Text } from "@bthwani/ui-kit";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import { CpBadge, CpButton, CpSelect, CpTextInput } from "@bthwani/control-panel/components";
-import { resolveDshApiBaseUrl } from "../../shared/finance-wlt-link/_kernel/dsh-api-base-url";
-import { createDshHttpClient } from "../../shared/finance-wlt-link/_kernel/dsh-http-request";
+import { resolveDshApiBaseUrl } from '@bthwani/wlt/dsh';
+import { createDshHttpClient } from '@bthwani/wlt/dsh';
 import {
   adjustCommission,
   confirmCommission,
@@ -16,7 +16,7 @@ import {
   type Commission,
   type CommissionPolicyInput,
   type RepresentativeActorType,
-} from "../../shared/finance-wlt-link/commissions";
+} from '@bthwani/wlt/dsh';
 
 const { request } = createDshHttpClient(
   resolveDshApiBaseUrl(),

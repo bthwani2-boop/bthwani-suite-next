@@ -6,8 +6,11 @@ import type { DshPartnerOperationalFlowId } from '../dsh-partner.types';
 import { DshPartnerOrderAlertsPanel } from '../orders/PartnerOrderAlertsPanel';
 import { OperationHeader } from './OperationHeader';
 
+import type { DshPartnerOrderAlertItem } from '../../shared/orders';
+
 export type NotificationsScreenProps = {
   activeOrderId?: string;
+  alerts?: readonly DshPartnerOrderAlertItem[];
   onOpenInbox?: () => void;
   onOpenOrderSupport?: (orderId: string) => void;
   onOpenAlertsSupport?: (flowId: DshPartnerOperationalFlowId) => void;
@@ -17,6 +20,7 @@ export type NotificationsScreenProps = {
 
 export function NotificationsScreen({
   activeOrderId,
+  alerts,
   onOpenInbox,
   onOpenOrderSupport,
   onOpenAlertsSupport,
@@ -47,6 +51,7 @@ export function NotificationsScreen({
 
       <DshPartnerOrderAlertsPanel
         {...(activeOrderId !== undefined ? { activeOrderId } : {})}
+        {...(alerts !== undefined ? { items: alerts } : {})}
         onOpenOrder={(orderId) => onOpenOrderSupport?.(orderId)}
         onOpenFlow={(flowId) => onOpenAlertsSupport?.(flowId)}
         {...(onRetry !== undefined ? { onRetry } : {})}

@@ -122,7 +122,7 @@ func (s *protectedStoreServer) handleSubmitFieldMePayoutRequest(w http.ResponseW
 		correlationID = request.IdempotencyKey
 	}
 	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
-	status, body, err := s.wlt.FinanceWriteWithOperatorContext(trustedContext, http.MethodPost, "/wlt/payout-requests", payloadBytes, correlationID, actor.OperatorContextID)
+	status, body, err := s.wlt.FinanceWriteWithOperatorContext(trustedContext, http.MethodPost, "/wlt/payout-requests", payloadBytes, correlationID, r.Header.Get("Idempotency-Key"), actor.OperatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", err.Error())
 		return

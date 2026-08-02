@@ -95,7 +95,11 @@ func TestPartnerScopeAuthorizationDB(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			scopes, err := ListPartnerScopesForActorForOperatorContext(db, partnerTestOperatorContextID, tc.partnerID, tc.actorID)
+			mockResolver := map[string][]string{
+				"owner": {"team.manage", "orders.manage"},
+				"staff": {"orders.manage"},
+			}
+			scopes, err := ListPartnerScopesForActorForOperatorContext(db, partnerTestOperatorContextID, tc.partnerID, tc.actorID, mockResolver)
 			if err != nil {
 				t.Fatalf("ListPartnerScopesForActorForOperatorContext failed: %v", err)
 			}

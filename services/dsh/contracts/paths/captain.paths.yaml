@@ -5,7 +5,7 @@
   post:
     operationId: reportCaptainPickupReadiness
     summary: Report readiness for the authenticated captain's assigned pickup point.
-    tags: [DshStoreGovernance]
+    tags: [ DshStoreGovernance ]
     security:
       - bearerAuth: []
     parameters:
@@ -36,16 +36,18 @@
       "409":
         $ref: "../dsh.openapi.yaml#/components/responses/Conflict"
 
-
-
 /dsh/captain/finance/commissions:
   get:
     operationId: GETDshCaptainFinanceCommissions
     summary: Governed finance operation owned by DSH/WLT.
-    tags: [DshCaptainFinance]
-    security: [{ bearerAuth: [] }]
+    tags: [ DshCaptainFinance ]
+    security: [ { bearerAuth: [] } ]
     responses:
-      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: Governed finance response,
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
@@ -56,26 +58,31 @@
   get:
     operationId: GETDshCaptainFinancePayouts
     summary: Governed finance operation owned by DSH/WLT.
-    tags: [DshCaptainFinance]
-    security: [{ bearerAuth: [] }]
+    tags: [ DshCaptainFinance ]
+    security: [ { bearerAuth: [] } ]
     responses:
-      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: Governed finance response,
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
-
 /dsh/captain/finance/cod-records:
   get:
     operationId: listDshCaptainFinanceCodRecords
-    summary: Captain reads their own governed WLT COD liability records. The captain id always comes from the authenticated actor, never from the query.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Captain reads their own governed WLT COD liability records. The captain
+      id always comes from the authenticated actor, never from the query.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     responses:
       "200":
-        description: WLT COD records view for the authenticated captain (verbatim passthrough).
+        description: WLT COD records view for the authenticated captain (verbatim
+          passthrough).
         content:
           application/json:
             schema: { type: object, additionalProperties: true }
@@ -84,14 +91,16 @@
 /dsh/captain/finance/cod-records/{recordId}/collect:
   post:
     operationId: collectDshCaptainCodRecord
-    summary: Captain records cash-on-delivery collection against a governed WLT COD liability record.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Captain records cash-on-delivery collection against a governed WLT COD
+      liability record.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: recordId
         in: path
         required: true
         schema: { type: string }
+      - $ref: "#/components/parameters/IdempotencyKey"
     requestBody:
       required: true
       content:
@@ -99,11 +108,17 @@
           schema:
             type: object
             additionalProperties: false
-            required: [idempotencyKey]
+            required: [ actualAmountMinorUnits, proofReference ]
             properties:
-              idempotencyKey: { type: string, minLength: 1 }
+              actualAmountMinorUnits: { type: integer, format: int64, minimum: 1 }
+              proofReference: { type: string, minLength: 1, maxLength: 512 }
+              note: { type: string, maxLength: 4000 }
     responses:
-      "200": { description: COD collection recorded (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: COD collection recorded (verbatim passthrough),
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
@@ -112,14 +127,16 @@
 /dsh/captain/finance/cod-records/{recordId}/remit:
   post:
     operationId: remitDshCaptainCodRecord
-    summary: Captain records remittance of collected COD cash against a governed WLT COD liability record.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
+    summary: Captain records remittance of collected COD cash against a governed WLT
+      COD liability record.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
     parameters:
       - name: recordId
         in: path
         required: true
         schema: { type: string }
+      - $ref: "#/components/parameters/IdempotencyKey"
     requestBody:
       required: true
       content:
@@ -127,11 +144,16 @@
           schema:
             type: object
             additionalProperties: false
-            required: [idempotencyKey]
+            required: [ proofReference ]
             properties:
-              idempotencyKey: { type: string, minLength: 1 }
+              proofReference: { type: string, minLength: 1, maxLength: 512 }
+              note: { type: string, maxLength: 4000 }
     responses:
-      "200": { description: COD remittance recorded (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "200":
+        {
+          description: COD remittance recorded (verbatim passthrough),
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
@@ -141,7 +163,7 @@
   get:
     operationId: listDshCaptainCredentials
     summary: List captain credentials.
-    tags: [DshAdministration]
+    tags: [ DshAdministration ]
     security:
       - bearerAuth: []
     responses:
@@ -149,14 +171,18 @@
         description: Captain credentials list.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCaptainCredentialsListResponse" }
+            schema:
+              {
+                $ref: "../dsh.openapi.yaml#/components/schemas/DshCaptainCredentialsListRespons\
+                  e"
+              }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
 /dsh/operator/admin/captains/{captainId}/credential:
   post:
     operationId: upsertDshCaptainCredential
     summary: Upsert credential for a captain.
-    tags: [DshAdministration]
+    tags: [ DshAdministration ]
     security:
       - bearerAuth: []
     parameters:
@@ -168,7 +194,11 @@
       required: true
       content:
         application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpsertCaptainCredentialRequest" }
+          schema:
+            {
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshUpsertCaptainCredentialReques\
+                t"
+            }
     responses:
       "200":
         description: Captain credential upserted.

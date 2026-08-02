@@ -88,15 +88,7 @@
       ],
       "project": ["frontend/**/*.{ts,tsx}", "*.ts"]
     },
-    "shared/app-shell": {
-      "entry": ["src/index.{ts,tsx}", "index.{ts,tsx}"],
-      "project": ["src/**/*.{ts,tsx}", "*.{ts,tsx}"]
-    },
     "shared/data-runtime": {
-      "entry": ["src/index.{ts,tsx}", "index.{ts,tsx}"],
-      "project": ["src/**/*.{ts,tsx}", "*.{ts,tsx}"]
-    },
-    "shared/media-runtime": {
       "entry": ["src/index.{ts,tsx}", "index.{ts,tsx}"],
       "project": ["src/**/*.{ts,tsx}", "*.{ts,tsx}"]
     },

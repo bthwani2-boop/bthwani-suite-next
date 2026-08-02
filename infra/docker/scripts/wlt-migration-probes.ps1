@@ -89,6 +89,7 @@ $script:WltMigrationProbes = [ordered]@{
   "wlt-114_payout_destination_request_operator_context_key.sql" = "EXISTS (SELECT 1 FROM pg_constraint WHERE conname='wlt_payout_destination_requests_pkey' AND pg_get_constraintdef(oid) LIKE '%operator_context_id%idempotency_key%') AND to_regclass('public.wlt_payout_destination_requests_context_owner_idx') IS NOT NULL"
   "wlt-901_reconciliation_operator_context_guard.sql" = "EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='wlt_reconciliation_case_context_guard' AND NOT tgisinternal)"
   "wlt-902_contextual_finance_object_names.sql" = "to_regclass('public.wlt_settlement_requests') IS NOT NULL AND to_regclass('public.wlt_commission_policy_versions') IS NOT NULL AND to_regclass('public.wlt_finance_audit_events') IS NOT NULL AND to_regclass('public.wlt_mutation_receipts') IS NOT NULL AND to_regclass('public.wlt_payout_audit_events') IS NOT NULL AND to_regclass('public.wlt_payout_outbox') IS NOT NULL AND to_regclass('public.wlt_payout_reconciliations') IS NOT NULL AND EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='wlt_payout_transition_audit_trigger' AND NOT tgisinternal)"
+  "wlt-903_drop_unconsumed_payout_outbox.sql" = "to_regclass('public.wlt_payout_outbox') IS NULL AND EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='wlt_payout_transition_audit_trigger' AND NOT tgisinternal) AND pg_get_functiondef('wlt_capture_payout_transition()'::regprocedure) NOT LIKE '%wlt_payout_outbox%'"
 }
 
 function Test-WltMigrationProbeCoverage {

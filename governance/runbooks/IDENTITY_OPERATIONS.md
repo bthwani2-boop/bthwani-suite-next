@@ -1,4 +1,4 @@
-#  Identity Operations Runbook
+# Identity Operations Runbook
 
 Status: `ACTIVE_CANONICAL`
 

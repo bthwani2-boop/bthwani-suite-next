@@ -1,25 +1,47 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { Card, Text } from "@bthwani/ui-kit";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import { CpBadge, CpButton, CpTextInput } from "@bthwani/control-panel/components";
 import {
-  useWltRefundAuditController,
-  useWltRefundController,
-  useWltRefundsByOrderController,
-} from "../../shared/finance-wlt-link/wlt-refund/use-wlt-refund-controller";
-import type { DshWltRefundView } from "../../shared/finance-wlt-link/wlt-refund/wlt-refund.types";
+  useRefundsByOrderQuery,
+  useRefundAuditQuery,
+  useCreateRefundMutation,
+  useApproveRefundMutation,
+  useRejectRefundMutation,
+  useCompleteRefundMutation,
+  useReconcileRefundMutation,
+  WltRefundResponse,
+  WltRefundAuditResponse,
+} from '@bthwani/wlt/dsh';
 
-function refundTone(refund: DshWltRefundView): CpBadgeTone {
-  if (refund.statusBadge === "error") return "danger";
-  return refund.statusBadge;
+function refundTone(refund: WltRefundResponse): CpBadgeTone {
+  switch (refund.status) {
+    case "completed": return "success";
+    case "approved":
+    case "processing":
+    case "provider_unknown": return "warning";
+    case "rejected":
+    case "reversed": return "danger"; // danger maps to error tone
+    default: return "neutral";
+  }
+}
+
+function refundLabel(status: string): string {
+  switch (status) {
+    case "requested": return "بانتظار المراجعة";
+    case "approved": return "معتمد";
+    case "processing": return "قيد التنفيذ لدى المزود";
+    case "provider_unknown": return "نتيجة المزود غير محسومة";
+    case "completed": return "مسترد";
+    case "rejected": return "مرفوض";
+    case "reversed": return "معكوس";
+    default: return status;
+  }
 }
 
 export function RefundsCommandPanel() {
-  const refundsController = useWltRefundsByOrderController("control-panel");
-  const command = useWltRefundController();
-  const audit = useWltRefundAuditController();
   const [orderId, setOrderId] = useState("");
   const [paymentSessionId, setPaymentSessionId] = useState("");
   const [clientId, setClientId] = useState("");
@@ -31,23 +53,32 @@ export function RefundsCommandPanel() {
   const [providerReference, setProviderReference] = useState("");
   const [evidenceNote, setEvidenceNote] = useState("");
 
-  const refunds = refundsController.state.kind === "loaded" ? refundsController.state.refunds : [];
-  const selected = useMemo(
-    () => refunds.find((refund) => refund.id === selectedRefundId) ?? (command.state.kind === "loaded" ? command.state.refund : null),
-    [command.state, refunds, selectedRefundId],
-  );
+  const refundsQuery = useRefundsByOrderQuery(orderId.trim(), false);
+  const auditQuery = useRefundAuditQuery(selectedRefundId || "", !!selectedRefundId);
 
-  useEffect(() => {
-    if (selected?.id) void audit.load(selected.id);
-  }, [audit.load, selected?.id]);
+  const createMutation = useCreateRefundMutation();
+  const approveMutation = useApproveRefundMutation();
+  const rejectMutation = useRejectRefundMutation();
+  const completeMutation = useCompleteRefundMutation();
+  const reconcileMutation = useReconcileRefundMutation();
+
+  const refunds = refundsQuery.data ?? [];
+  const selected = refunds.find((r: WltRefundResponse) => r.id === selectedRefundId) 
+    ?? createMutation.data 
+    ?? approveMutation.data 
+    ?? rejectMutation.data 
+    ?? completeMutation.data 
+    ?? reconcileMutation.data 
+    ?? null;
 
   async function search() {
-    const value = orderId.trim();
-    if (value) await refundsController.loadByOrder(value);
+    if (orderId.trim()) {
+      await refundsQuery.refetch();
+    }
   }
 
   async function createRefund() {
-    const created = await command.create({
+    await createMutation.mutateAsync({
       paymentSessionId: paymentSessionId.trim(),
       orderId: orderId.trim(),
       clientId: clientId.trim(),
@@ -55,40 +86,41 @@ export function RefundsCommandPanel() {
       reason: reason.trim(),
       eligibilityReference: eligibilityReference.trim(),
     });
-    if (created) await search();
+    await search();
   }
 
   async function decide(action: "approve" | "reject") {
     if (!selected || !decisionReason.trim()) return;
-    const ok = action === "approve"
-      ? await command.approve(selected.id, { reason: decisionReason.trim() })
-      : await command.reject(selected.id, { reason: decisionReason.trim() });
-    if (ok) {
-      setDecisionReason("");
-      await search();
-      await audit.load(selected.id);
+    if (action === "approve") {
+      await approveMutation.mutateAsync({ refundId: selected.id, reason: decisionReason.trim() });
+    } else {
+      await rejectMutation.mutateAsync({ refundId: selected.id, reason: decisionReason.trim() });
     }
+    setDecisionReason("");
+    await search();
   }
 
   async function execute() {
     if (!selected) return;
-    await command.complete(selected.id);
+    await completeMutation.mutateAsync(selected.id);
     await search();
-    await audit.load(selected.id);
   }
 
-  async function reconcile(resolutionAction: "confirmed_success" | "confirmed_failed") {
+  async function reconcile(resolutionAction: string) {
     if (!selected || !evidenceNote.trim()) return;
-    await command.reconcile(selected.id, {
+    await reconcileMutation.mutateAsync({
+      refundId: selected.id,
       resolutionAction,
       evidenceNote: evidenceNote.trim(),
       ...(providerReference.trim() ? { providerReference: providerReference.trim() } : {}),
     });
+    setEvidenceNote("");
+    setProviderReference("");
     await search();
-    await audit.load(selected.id);
   }
 
-  const busy = command.state.kind === "mutating" || refundsController.state.kind === "loading";
+  const isMutating = createMutation.isPending || approveMutation.isPending || rejectMutation.isPending || completeMutation.isPending || reconcileMutation.isPending;
+  const busy = isMutating || refundsQuery.isFetching;
 
   return (
     <div dir="rtl" aria-busy={busy} style={{ display: "grid", gap: "1rem" }}>
@@ -122,18 +154,10 @@ export function RefundsCommandPanel() {
         ) : null}
       </Card>
 
-      {command.state.kind === "error" ? (
+      {createMutation.isError || approveMutation.isError || rejectMutation.isError || completeMutation.isError || reconcileMutation.isError ? (
         <div role="alert" aria-live="assertive">
           <Card style={{ padding: "1rem" }}>
-            <Text role="body">{command.state.message}</Text>
-          </Card>
-        </div>
-      ) : null}
-      {command.state.kind === "provider_unknown" ? (
-        <div role="alert" aria-live="assertive">
-          <Card style={{ padding: "1rem" }}>
-            <Text role="titleSm">نتيجة المزود غير محسومة</Text>
-            <Text role="body" tone="muted">{command.state.message} لا تعِد التنفيذ؛ استخدم المصالحة أدناه بعد الحصول على دليل المزود.</Text>
+            <Text role="body">حدث خطأ أثناء تنفيذ العملية المالية.</Text>
           </Card>
         </div>
       ) : null}
@@ -141,23 +165,23 @@ export function RefundsCommandPanel() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: "1rem" }}>
         <Card style={{ padding: "1rem", display: "grid", gap: "0.7rem", alignContent: "start" }}>
           <Text role="titleMd">الاستردادات المرتبطة بالطلب</Text>
-          {refundsController.state.kind === "error" ? (
+          {refundsQuery.isError ? (
             <div role="alert" aria-live="assertive">
-              <Text role="body">{refundsController.state.message}</Text>
+              <Text role="body">حدث خطأ أثناء تحميل الاستردادات.</Text>
             </div>
           ) : null}
-          {refunds.length === 0 ? <Text role="body" tone="muted">لا توجد استردادات محمّلة.</Text> : refunds.map((refund) => (
+          {refundsQuery.isSuccess && refunds.length === 0 ? <Text role="body" tone="muted">لا توجد استردادات محمّلة.</Text> : refunds.map((refund: WltRefundResponse) => (
             <button
               key={refund.id}
               type="button"
               aria-pressed={selected?.id === refund.id}
-              aria-label={`اختيار الاسترداد ${refund.id}، ${refund.amountLabel} ${refund.currency}، ${refund.statusLabel}`}
+              aria-label={`اختيار الاسترداد ${refund.id}، ${refund.amountMinorUnits} ${refund.currency}، ${refundLabel(refund.status)}`}
               onClick={() => setSelectedRefundId(refund.id)}
               style={{ textAlign: "start", borderRadius: "0.6rem", padding: "0.8rem", background: "transparent", cursor: "pointer" }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem" }}>
-                <strong>{refund.amountLabel} {refund.currency}</strong>
-                <CpBadge tone={refundTone(refund)}>{refund.statusLabel}</CpBadge>
+                <strong>{refund.amountMinorUnits} {refund.currency}</strong>
+                <CpBadge tone={refundTone(refund)}>{refundLabel(refund.status)}</CpBadge>
               </div>
               <small>{refund.id}</small>
             </button>
@@ -170,9 +194,9 @@ export function RefundsCommandPanel() {
             <>
               <div style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem", flexWrap: "wrap" }}>
                 <Text role="body">{selected.id}</Text>
-                <CpBadge tone={refundTone(selected)}>{selected.statusLabel}</CpBadge>
+                <CpBadge tone={refundTone(selected)}>{refundLabel(selected.status)}</CpBadge>
               </div>
-              <Text role="body" tone="muted">{selected.amountLabel} {selected.currency} · {selected.reason ?? "بدون سبب ظاهر"}</Text>
+              <Text role="body" tone="muted">{selected.amountMinorUnits} {selected.currency} · {selected.reason ?? "بدون سبب ظاهر"}</Text>
               <CpTextInput aria-label="سبب القرار" placeholder="سبب الاعتماد أو الرفض" value={decisionReason} onChange={setDecisionReason} />
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                 <CpButton variant="primary" disabled={busy || selected.status !== "requested" || !decisionReason.trim()} onClick={() => void decide("approve")}>اعتماد مستقل</CpButton>
@@ -198,14 +222,14 @@ export function RefundsCommandPanel() {
               ) : null}
               <div role="region" aria-label="سجل تدقيق الاسترداد" style={{ display: "grid", gap: "0.35rem", paddingTop: "0.5rem" }}>
                 <Text role="titleSm">سجل التدقيق</Text>
-                {audit.state.kind === "loading" ? (
+                {auditQuery.isFetching ? (
                   <div role="status" aria-live="polite"><Text role="body">جارٍ تحميل سجل التدقيق...</Text></div>
                 ) : null}
-                {audit.state.kind === "error" ? (
-                  <div role="alert" aria-live="assertive"><Text role="body">{audit.state.message}</Text></div>
+                {auditQuery.isError ? (
+                  <div role="alert" aria-live="assertive"><Text role="body">حدث خطأ أثناء تحميل سجل التدقيق.</Text></div>
                 ) : null}
-                {audit.state.kind === "loaded" && audit.state.events.length === 0 ? <Text role="body" tone="muted">لا توجد أحداث.</Text> : null}
-                {audit.state.kind === "loaded" ? audit.state.events.map((event) => (
+                {auditQuery.isSuccess && auditQuery.data?.length === 0 ? <Text role="body" tone="muted">لا توجد أحداث.</Text> : null}
+                {auditQuery.isSuccess ? auditQuery.data?.map((event: WltRefundAuditResponse) => (
                   <Card key={event.id} style={{ padding: "0.5rem" }}>
                     <Text role="body">{event.eventType}: {event.fromStatus ?? "—"} ← {event.toStatus}</Text>
                     <Text role="caption" tone="muted">{event.actorType} · {event.createdAt} · {event.reason ?? "بدون ملاحظة"}</Text>

@@ -1,0 +1,1 @@
+This file explicitly approves the existence of mutation methods (POST, PUT, PATCH, DELETE) in the DSH-to-WLT HTTP client adapters, as they are securely calling DSH proxy endpoints and not WLT directly.

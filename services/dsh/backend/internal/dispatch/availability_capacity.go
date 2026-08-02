@@ -29,7 +29,11 @@ type ProviderAvailabilityProjection struct {
 }
 
 func normalizeAvailabilityProjection(input *ProviderAvailabilityProjectionInput) error {
-	input.OperatorContextID = normalizeOperatorContextID(input.OperatorContextID)
+	var err error
+	input.OperatorContextID, err = normalizeOperatorContextID(input.OperatorContextID)
+	if err != nil {
+		return err
+	}
 	input.NoticeID = strings.TrimSpace(input.NoticeID)
 	input.ActorType = strings.ToLower(strings.TrimSpace(input.ActorType))
 	input.ActorID = strings.TrimSpace(input.ActorID)
@@ -82,7 +86,10 @@ func UpsertProviderAvailabilityProjection(ctx context.Context, db *sql.DB, input
 }
 
 func CaptainUnavailableAt(ctx context.Context, db *sql.DB, operatorContextID, captainID string, at time.Time) (bool, error) {
-	operatorContextID = normalizeOperatorContextID(operatorContextID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return false, err
+	}
 	captainID = strings.TrimSpace(captainID)
 	if captainID == "" {
 		return false, ErrInvalid
@@ -91,7 +98,7 @@ func CaptainUnavailableAt(ctx context.Context, db *sql.DB, operatorContextID, ca
 		at = time.Now().UTC()
 	}
 	var unavailable bool
-	err := db.QueryRowContext(ctx, `SELECT EXISTS(
+	err = db.QueryRowContext(ctx, `SELECT EXISTS(
 		SELECT 1 FROM dsh_provider_availability_projections
 		WHERE operator_context_id=$1 AND actor_type='captain' AND actor_id=$2 AND status='active'
 		  AND $3 >= starts_at AND $3 < ends_at
@@ -106,10 +113,14 @@ func ApplyWorkforceAvailability(ctx context.Context, db *sql.DB, operatorContext
 	if at.IsZero() {
 		at = time.Now().UTC()
 	}
+	normCtx, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return err
+	}
 	rows, err := db.QueryContext(ctx, `SELECT DISTINCT actor_id
 		FROM dsh_provider_availability_projections
 		WHERE operator_context_id=$1 AND actor_type='captain' AND status='active'
-		  AND $2 >= starts_at AND $2 < ends_at`, normalizeOperatorContextID(operatorContextID), at)
+		  AND $2 >= starts_at AND $2 < ends_at`, normCtx, at)
 	if err != nil {
 		return err
 	}
@@ -160,7 +171,11 @@ type UpsertServiceAreaCapacityPolicyInput struct {
 }
 
 func UpsertServiceAreaCapacityPolicy(ctx context.Context, db *sql.DB, input UpsertServiceAreaCapacityPolicyInput) (ServiceAreaCapacityPolicy, error) {
-	input.OperatorContextID = normalizeOperatorContextID(input.OperatorContextID)
+	var err error
+	input.OperatorContextID, err = normalizeOperatorContextID(input.OperatorContextID)
+	if err != nil {
+		return ServiceAreaCapacityPolicy{}, err
+	}
 	input.ServiceAreaCode = strings.TrimSpace(input.ServiceAreaCode)
 	input.UpdatedBy = strings.TrimSpace(input.UpdatedBy)
 	if input.MinimumAvailableCaptains < 0 || input.TargetAvailableCaptains < input.MinimumAvailableCaptains ||
@@ -171,7 +186,7 @@ func UpsertServiceAreaCapacityPolicy(ctx context.Context, db *sql.DB, input Upse
 		return ServiceAreaCapacityPolicy{}, ErrInvalid
 	}
 	var policy ServiceAreaCapacityPolicy
-	err := db.QueryRowContext(ctx, `INSERT INTO dsh_service_area_capacity_policies(
+	err = db.QueryRowContext(ctx, `INSERT INTO dsh_service_area_capacity_policies(
 		operator_context_id,service_area_code,minimum_available_captains,target_available_captains,
 		demand_buffer_basis_points,mass_absence_threshold_basis_points,
 		forecast_horizon_minutes,updated_by)
@@ -207,11 +222,15 @@ func UpsertServiceAreaCapacityPolicy(ctx context.Context, db *sql.DB, input Upse
 
 func loadCapacityPolicy(ctx context.Context, db *sql.DB, operatorContextID, serviceAreaCode string) (ServiceAreaCapacityPolicy, error) {
 	var policy ServiceAreaCapacityPolicy
-	err := db.QueryRowContext(ctx, `SELECT operator_context_id,service_area_code,
+	normCtx, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return ServiceAreaCapacityPolicy{}, err
+	}
+	err = db.QueryRowContext(ctx, `SELECT operator_context_id,service_area_code,
 		minimum_available_captains,target_available_captains,demand_buffer_basis_points,
 		mass_absence_threshold_basis_points,forecast_horizon_minutes,updated_by,version,updated_at
 		FROM dsh_service_area_capacity_policies WHERE operator_context_id=$1 AND service_area_code=$2`,
-		normalizeOperatorContextID(operatorContextID), strings.TrimSpace(serviceAreaCode),
+		normCtx, strings.TrimSpace(serviceAreaCode),
 	).Scan(
 		&policy.OperatorContextID, &policy.ServiceAreaCode, &policy.MinimumAvailableCaptains,
 		&policy.TargetAvailableCaptains, &policy.DemandBufferBasisPoints,
@@ -220,7 +239,7 @@ func loadCapacityPolicy(ctx context.Context, db *sql.DB, operatorContextID, serv
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ServiceAreaCapacityPolicy{
-			OperatorContextID: normalizeOperatorContextID(operatorContextID), ServiceAreaCode: strings.TrimSpace(serviceAreaCode),
+			OperatorContextID: normCtx, ServiceAreaCode: strings.TrimSpace(serviceAreaCode),
 			MinimumAvailableCaptains: 1, TargetAvailableCaptains: 2,
 			DemandBufferBasisPoints: 2000, MassAbsenceThresholdBasisPoints: 4000,
 			ForecastHorizonMinutes: 180, UpdatedBy: "default", Version: 0,
@@ -250,7 +269,10 @@ type ServiceAreaCapacityForecast struct {
 }
 
 func GetServiceAreaCapacityForecast(ctx context.Context, db *sql.DB, operatorContextID, serviceAreaCode string, at time.Time) (ServiceAreaCapacityForecast, error) {
-	operatorContextID = normalizeOperatorContextID(operatorContextID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return ServiceAreaCapacityForecast{}, err
+	}
 	serviceAreaCode = strings.TrimSpace(serviceAreaCode)
 	if serviceAreaCode == "" {
 		return ServiceAreaCapacityForecast{}, ErrInvalid
@@ -362,7 +384,10 @@ type heatmapAccumulator struct {
 }
 
 func GetOperationsHeatmap(ctx context.Context, db *sql.DB, operatorContextID, serviceAreaCode string, now time.Time) ([]OperationsHeatmapCell, error) {
-	operatorContextID = normalizeOperatorContextID(operatorContextID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	serviceAreaCode = strings.TrimSpace(serviceAreaCode)
 	if now.IsZero() {
 		now = time.Now().UTC()

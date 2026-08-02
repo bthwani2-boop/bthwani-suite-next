@@ -26,7 +26,7 @@ import type {
 } from "../../shared/cart";
 import type { DshPaymentMethod } from "../../shared/checkout";
 import type { DshClientAddress } from "../../shared/client-address";
-import { useDshPaymentController } from "../../shared/finance-wlt-link";
+import { useWltPaymentController } from "@bthwani/wlt/dsh";
 import { PaymentDecisionSection } from "./PaymentDecisionSection";
 
 type Props = {
@@ -154,7 +154,7 @@ export function CartScreen({
 }: Props) {
   const controller = useCartController(storeId, authKind);
   const serviceabilityController = useServiceabilityController();
-  const wltPayment = useDshPaymentController();
+  const wltPayment = useWltPaymentController();
   const [note, setNote] = useState("");
   const [couponCode, setCouponCode] = useState("");
   const [validationMessageText, setValidationMessageText] = useState<string | null>(null);

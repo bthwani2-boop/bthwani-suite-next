@@ -86,20 +86,22 @@ DECLARE
   audit_count integer;
 BEGIN
   INSERT INTO wlt_cod_records
-    (order_id, payment_session_id, partner_id, captain_id, collector_type, collector_id,
+    -- wlt_cod_records has no payment_session_id column; the COD record is keyed by
+     -- order_id, and operator_context_id became NOT NULL in wlt-109.
+    (order_id, operator_context_id, partner_id, captain_id, collector_type, collector_id,
      amount_minor_units, currency, status)
   VALUES
-    ('order-invariant', 'payment-session-invariant', 'partner-',
+    ('order-invariant', 'ctx-invariant-probe', 'partner-',
      'captain-', 'captain', 'captain-', 10000, 'YER', 'pending_collection')
   RETURNING id INTO record_id;
 
   BEGIN
     INSERT INTO wlt_cod_custody_evidence
-      (cod_record_id, event_type, expected_amount_minor_units, actual_amount_minor_units,
+      (cod_record_id, operator_context_id, event_type, expected_amount_minor_units, actual_amount_minor_units,
        difference_minor_units, currency, proof_reference, actor_id, actor_type,
        correlation_id, idempotency_key, ledger_transaction_id)
     VALUES
-      (record_id, 'collection', 10000, 9500, 0, 'YER', 'proof-invalid-difference',
+      (record_id, 'ctx-invariant-probe', 'collection', 10000, 9500, 0, 'YER', 'proof-invalid-difference',
        'captain-', 'captain', 'corr-invalid', 'idem-invalid', 'ledger-invalid');
     RAISE EXCEPTION ' invariant failure: invalid difference was accepted';
   EXCEPTION
@@ -108,11 +110,11 @@ BEGIN
 
   BEGIN
     INSERT INTO wlt_cod_custody_evidence
-      (cod_record_id, event_type, expected_amount_minor_units, actual_amount_minor_units,
+      (cod_record_id, operator_context_id, event_type, expected_amount_minor_units, actual_amount_minor_units,
        difference_minor_units, currency, proof_reference, actor_id, actor_type,
        correlation_id, idempotency_key, ledger_transaction_id)
     VALUES
-      (record_id, 'collection', 10000, 9500, -500, 'YER', 'x',
+      (record_id, 'ctx-invariant-probe', 'collection', 10000, 9500, -500, 'YER', 'x',
        'captain-', 'captain', 'corr-proof', 'idem-proof', 'ledger-proof');
     RAISE EXCEPTION ' invariant failure: weak proof reference was accepted';
   EXCEPTION
@@ -120,11 +122,11 @@ BEGIN
   END;
 
   INSERT INTO wlt_cod_custody_evidence
-    (cod_record_id, event_type, expected_amount_minor_units, actual_amount_minor_units,
+    (cod_record_id, operator_context_id, event_type, expected_amount_minor_units, actual_amount_minor_units,
      difference_minor_units, currency, proof_reference, actor_id, actor_type,
      correlation_id, idempotency_key, ledger_transaction_id)
   VALUES
-    (record_id, 'collection', 10000, 9500, -500, 'YER', 'proof-valid',
+    (record_id, 'ctx-invariant-probe', 'collection', 10000, 9500, -500, 'YER', 'proof-valid',
      'captain-', 'captain', 'corr-valid', 'idem-valid', 'ledger-valid')
   RETURNING id INTO evidence_id;
 
@@ -141,10 +143,10 @@ BEGIN
   END;
 
   INSERT INTO wlt_cod_reconciliation_cases
-    (cod_record_id, custody_evidence_id, expected_amount_minor_units,
+    (cod_record_id, operator_context_id, custody_evidence_id, expected_amount_minor_units,
      actual_amount_minor_units, difference_minor_units, currency)
   VALUES
-    (record_id, evidence_id, 10000, 9500, -500, 'YER')
+    (record_id, 'ctx-invariant-probe', evidence_id, 10000, 9500, -500, 'YER')
   RETURNING id INTO case_id;
 
   SELECT count(*) INTO audit_count

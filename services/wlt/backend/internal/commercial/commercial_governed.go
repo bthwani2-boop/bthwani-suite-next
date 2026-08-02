@@ -251,18 +251,3 @@ func ActivateSubscriptionGoverned(ctx context.Context, db *sql.DB, input Activat
 	}
 	return subscription, nil
 }
-
-func HandleActivateSubscriptionGoverned(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var input ActivateSubscriptionGovernedInput
-		if !decodeJSON(w, r, &input) {
-			return
-		}
-		subscription, err := ActivateSubscriptionGoverned(r.Context(), db, input)
-		if err != nil {
-			writeError(w, err)
-			return
-		}
-		shared.SendJSON(w, http.StatusCreated, map[string]any{"subscription": subscription})
-	}
-}

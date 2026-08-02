@@ -2,14 +2,11 @@ package cod
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"wlt-api/internal/reference"
-	"wlt-api/internal/shared"
 )
 
 type DeliveryCollectionRecord struct {
@@ -235,103 +232,4 @@ func transitionDeliveryCollection(db *sql.DB, recordID, fromStatus, toStatus, ti
 		return nil, ErrCodStateConflict
 	}
 	return record, err
-}
-
-func HandleCreateDeliveryCollection(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !requireDshServiceCaller(w, r) {
-			return
-		}
-		var input CreateDeliveryCollectionInput
-		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
-		if err := decoder.Decode(&input); err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-			return
-		}
-		record, created, err := CreateDeliveryCollection(db, input)
-		if errors.Is(err, ErrCodReferenceConflict) {
-			shared.SendError(w, http.StatusConflict, "COD_REFERENCE_CONFLICT", err.Error())
-			return
-		}
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		status := http.StatusOK
-		if created {
-			status = http.StatusCreated
-		}
-		shared.SendJSON(w, status, map[string]any{"codRecord": record, "replayed": !created})
-	}
-}
-
-func HandleGetDeliveryCollection(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		record, err := GetDeliveryCollection(db, r.PathValue("codRecordId"))
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		if record == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "COD record not found")
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"codRecord": record})
-	}
-}
-
-func HandleListDeliveryCollections(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		query := r.URL.Query()
-		records, err := ListDeliveryCollections(
-			db,
-			query.Get("collectorType"),
-			query.Get("collectorId"),
-			query.Get("captainId"),
-			query.Get("partnerId"),
-		)
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"codRecords": records})
-	}
-}
-
-func HandleCollectDeliveryCollection(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		record, err := transitionDeliveryCollection(db, r.PathValue("codRecordId"), "pending_collection", "collected", "collected_at")
-		if errors.Is(err, ErrCodStateConflict) {
-			shared.SendError(w, http.StatusConflict, "INVALID_STATE", "COD record is not pending collection")
-			return
-		}
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		if record == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "COD record not found")
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"codRecord": record})
-	}
-}
-
-func HandleRemitDeliveryCollection(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		record, err := transitionDeliveryCollection(db, r.PathValue("codRecordId"), "collected", "remitted", "remitted_at")
-		if errors.Is(err, ErrCodStateConflict) {
-			shared.SendError(w, http.StatusConflict, "INVALID_STATE", "COD record is not collected")
-			return
-		}
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		if record == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "COD record not found")
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"codRecord": record})
-	}
 }

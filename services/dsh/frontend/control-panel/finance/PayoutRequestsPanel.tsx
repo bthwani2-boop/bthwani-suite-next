@@ -11,8 +11,8 @@ import {
   rejectPayoutRequest,
   type FinanceActionResult,
   type FinancePayoutRequest,
-} from "../../shared/finance-wlt-link/finance/finance.controller";
-import { reconcilePayoutRequest } from "../../shared/finance-wlt-link/payouts";
+} from '@bthwani/wlt/dsh';
+import { reconcilePayoutRequest } from '@bthwani/wlt/dsh';
 import { GovernedSettlementPanel } from "./GovernedSettlementPanel";
 import { CommissionGovernancePanel } from "./CommissionGovernancePanel";
 

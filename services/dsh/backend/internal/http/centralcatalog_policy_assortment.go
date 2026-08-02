@@ -21,22 +21,6 @@ func (s *protectedStoreServer) handleListCatalogPolicies(w http.ResponseWriter, 
 	store.SendJSON(w, http.StatusOK, map[string]any{"policies": items})
 }
 
-func (s *protectedStoreServer) handleUpdateCatalogPolicy(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionPolicyManage, "operator"); !ok {
-		return
-	}
-	var input centralcatalog.CatalogPolicyInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	p, err := centralcatalog.UpdateCatalogPolicy(r.Context(), s.db, r.PathValue("policyId"), input)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"policy": p})
-}
-
 // ── Store assortment ─────────────────────────────────────────────────────────
 
 func (s *protectedStoreServer) handleOperatorGetStoreAssortment(w http.ResponseWriter, r *http.Request) {
@@ -86,14 +70,6 @@ func (s *protectedStoreServer) upsertStoreAssortment(w http.ResponseWriter, r *h
 	store.SendJSON(w, http.StatusOK, map[string]any{"assortment": a})
 }
 
-func (s *protectedStoreServer) handleOperatorUpsertStoreAssortment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentManage, "operator")
-	if !ok {
-		return
-	}
-	s.upsertStoreAssortment(w, r, actor.ID, "operator", r.PathValue("storeId"))
-}
-
 func (s *protectedStoreServer) handlePartnerGetStoreAssortment(w http.ResponseWriter, r *http.Request) {
 	actor, storeID, ok := s.partnerStore(w, r)
 	if !ok {
@@ -110,30 +86,6 @@ func (s *protectedStoreServer) handlePartnerGetStoreAssortment(w http.ResponseWr
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"assortment": items})
-}
-
-func (s *protectedStoreServer) handlePartnerUpsertStoreAssortment(w http.ResponseWriter, r *http.Request) {
-	actor, storeID, ok := s.partnerStore(w, r)
-	if !ok {
-		return
-	}
-	if storeID != r.PathValue("storeId") {
-		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store does not belong to you")
-		return
-	}
-	s.upsertStoreAssortment(w, r, actor.ID, actor.Role, storeID)
-}
-
-func (s *protectedStoreServer) handleFieldUpsertStoreAssortment(w http.ResponseWriter, r *http.Request) {
-	actorID, storeID, ok := s.fieldPartnerStore(w, r)
-	if !ok {
-		return
-	}
-	if storeID != r.PathValue("storeId") {
-		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store does not belong to this partner draft")
-		return
-	}
-	s.upsertStoreAssortment(w, r, actorID, "field", storeID)
 }
 
 func (s *protectedStoreServer) handleFieldGetStoreAssortment(w http.ResponseWriter, r *http.Request) {

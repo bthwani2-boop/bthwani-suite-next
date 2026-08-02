@@ -71,17 +71,6 @@ func (s *protectedStoreServer) handleOwnRepresentativeCommissions(w http.Respons
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
-func (s *protectedStoreServer) handleOwnRepresentativePayoutRequests(w http.ResponseWriter, r *http.Request, actorType string) {
-	actor, ok := s.requireActor(w, r, actorType)
-	if !ok {
-		return
-	}
-	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {actorType}}
-	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
-	status, body, err := s.wlt.FinanceReadWithOperatorContext(trustedContext, "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
-	writeRepresentativeFinanceResponse(w, status, body, err)
-}
-
 func (s *protectedStoreServer) handleClientOwnWallet(w http.ResponseWriter, r *http.Request) {
 	s.handleOwnRepresentativeWallet(w, r, "client")
 }
@@ -96,9 +85,6 @@ func (s *protectedStoreServer) handlePartnerOwnLedger(w http.ResponseWriter, r *
 }
 func (s *protectedStoreServer) handlePartnerOwnCommissions(w http.ResponseWriter, r *http.Request) {
 	s.handleOwnRepresentativeCommissions(w, r, "partner")
-}
-func (s *protectedStoreServer) handlePartnerOwnPayoutRequests(w http.ResponseWriter, r *http.Request) {
-	s.handleOwnRepresentativePayoutRequests(w, r, "partner")
 }
 func (s *protectedStoreServer) handleCaptainOwnWallet(w http.ResponseWriter, r *http.Request) {
 	s.handleOwnRepresentativeWallet(w, r, "captain")

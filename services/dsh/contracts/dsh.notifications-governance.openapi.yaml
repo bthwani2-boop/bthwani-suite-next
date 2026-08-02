@@ -260,8 +260,7 @@ components:
           outcome,
           errorMessage,
           createdAt,
-          outboxStatus,
-          correlationId
+          outboxStatus
         ]
       properties:
         id: { type: string, format: uuid }
@@ -275,7 +274,6 @@ components:
         nextRetryAt: { type: [ string, 'null' ], format: date-time }
         createdAt: { type: string, format: date-time }
         outboxStatus: { type: string, enum: [ pending, sent, failed ] }
-        correlationId: { type: string }
     DshNotificationPushDeliveryAudit:
       type: object
       additionalProperties: false
@@ -335,7 +333,7 @@ components:
     DshNotificationDeliveryAuditResponse:
       type: object
       additionalProperties: false
-      required: [attempts, pushDeliveries, summary]
+      required: [ attempts, pushDeliveries, summary ]
       properties:
         attempts:
           type: array

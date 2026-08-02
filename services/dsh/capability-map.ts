@@ -173,8 +173,6 @@ export const DSH_CAPABILITY_MAP = [
       "listCatalogAssetLinks",
       "getPublicCatalogMedia",
       "patchCatalogPlatformPolicy",
-      "updateFieldProductProposal",
-      "updatePartnerProductProposal",
       "listReels",
       "reviewReel",
       "submitReel",

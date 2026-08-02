@@ -13,7 +13,6 @@
  *
  * Environment overrides:
  *   NEXT_PUBLIC_DSH_API_BASE_URL  or  EXPO_PUBLIC_DSH_API_BASE_URL
- *   NEXT_PUBLIC_WLT_API_BASE_URL  or  EXPO_PUBLIC_WLT_API_BASE_URL
  *   NEXT_PUBLIC_IDENTITY_API_BASE_URL  or  EXPO_PUBLIC_IDENTITY_API_BASE_URL
  *   BTHWANI_ALLOW_FRONTEND_WITHOUT_BACKEND=true  — skip exit 1 (warn only)
  */
@@ -39,16 +38,6 @@ const services = [
       "http://localhost:58080",
     ),
     healthPath: "/dsh/readiness",
-  },
-  {
-    name: "WLT",
-    baseUrl: resolveUrl(
-      "NEXT_PUBLIC_WLT_API_BASE_URL",
-      "EXPO_PUBLIC_WLT_API_BASE_URL",
-      "WLT_API_URL",
-      "http://localhost:58083",
-    ),
-    healthPath: "/wlt/readiness",
   },
   {
     name: "Identity",

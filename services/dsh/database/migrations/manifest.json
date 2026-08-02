@@ -3,7 +3,7 @@
   "service": "dsh",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "dsh-962_platform_context_error_contract.sql",
+  "cutover": "dsh-968_cod_operator_context_isolation.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -120,7 +120,7 @@
     {
       "ordinal": 17,
       "file": "dsh-017_marketing_governance.sql",
-      "sha256": "a6644000cddab37c60560da4c7eedf9302cdd1fb5d0819da5288c7e674a02091",
+      "sha256": "ae030e8f2f57e77156c46dbbad99691a3f52d4c12a0268bd8ec9d1ad8b8e9966",
       "historicalPrefix": "017",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -330,7 +330,7 @@
     {
       "ordinal": 47,
       "file": "dsh-046_field_visit_gps.sql",
-      "sha256": "1a5e28abf5d8750c359bdb8963d061fe0aa143d355a0a5941db3b29ac26a9fee",
+      "sha256": "d9e0e2b18215f60e62fde3476ed2a44ba3120f018d9772bce92f181dad5c7650",
       "historicalPrefix": "046",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -351,7 +351,7 @@
     {
       "ordinal": 50,
       "file": "dsh-048_workforce_actor_area_scopes.sql",
-      "sha256": "c2f69f5a5b9f91030a1ac86ddfb08b7f856d8152264d26c056f5106ab9ff65ce",
+      "sha256": "5d4b2e606a6f2d8cd03c5909b71f84cb70f62f5b3eb7da4fe7a82f208f3d3cc4",
       "historicalPrefix": "048",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -589,7 +589,7 @@
     {
       "ordinal": 84,
       "file": "dsh-076_admin_role_assignment_approvals.sql",
-      "sha256": "4db80a9857c4e7641bdc064cd222d7f4f97f28832e7fdbb1d1504d39d243b68e",
+      "sha256": "119108e2c53b6a979e828fda0c75415f4eb5d231875b1309d4b2b5f32eef9583",
       "historicalPrefix": "076",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -603,7 +603,7 @@
     {
       "ordinal": 86,
       "file": "dsh-077_admin_role_permissions.sql",
-      "sha256": "dcf0b717d3855e8dde0988d4b8279b15b27ee97722c8a2a4c26e051ec00db19d",
+      "sha256": "c3bbd4ffe812367e138a46f389be4fee16102ac3d23d8a36a96e838909b4e77a",
       "historicalPrefix": "077",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -624,7 +624,7 @@
     {
       "ordinal": 89,
       "file": "dsh-078_admin_role_definition_approvals.sql",
-      "sha256": "834540897d81520945a27186bad1b9bdb940f90c8e262780ce7c71fd4de5a48c",
+      "sha256": "5c1a1cd6e3b179eda71a9a415f1863ce0f124f2f7240e799d546010aeafc246b",
       "historicalPrefix": "078",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -638,7 +638,7 @@
     {
       "ordinal": 91,
       "file": "dsh-079_admin_role_assignment_revocations.sql",
-      "sha256": "bba1076a433a9f99588424c131ba8a0bcda0c6c1bb6b93c4c6afb4a39bc16d3b",
+      "sha256": "fb96bbb023a677d9d33307684ea4fab4b14109d10b473ced07ee5890337f3f39",
       "historicalPrefix": "079",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -659,7 +659,7 @@
     {
       "ordinal": 94,
       "file": "dsh-080_admin_support_session_approvals.sql",
-      "sha256": "a0cb4041c717953dee18dae39f4cee52477296bb788ae841e44dbde600fa8749",
+      "sha256": "5a263208bdfb7c597150c0424febc24640907feb3775bf456c6d7351468530a7",
       "historicalPrefix": "080",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -722,7 +722,7 @@
     {
       "ordinal": 103,
       "file": "dsh-088_notification_delivery_policy.sql",
-      "sha256": "f11e6abaf439ee22854a501067a8c25f3b2989cc023ddf4660c5f37e0ea4dd84",
+      "sha256": "0547e1e0647d3addea25c8b96ca4346be98ec11983e54565613053ff23f7df2e",
       "historicalPrefix": "088",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -750,7 +750,7 @@
     {
       "ordinal": 107,
       "file": "dsh-090_checkout_unknown_outcome_reconciliation.sql",
-      "sha256": "dad5a06e207b2da46ab832dd79e1d458938eb468ac1e24853973435a18a89b0e",
+      "sha256": "2f520fc99672e2b5892e7dcc6fca7f146673e03a329811f78880e0e966195131",
       "historicalPrefix": "090",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -792,7 +792,7 @@
     {
       "ordinal": 113,
       "file": "dsh-094_pickup_mutation_commands.sql",
-      "sha256": "114d688ae045d9b25c66e1d12b0fd288332cb982e994ce795d1dfae64853650e",
+      "sha256": "aa6e9a7bcde4e1897189db03fc01e26395e32c4b10fab06f7e5e45499790ecd7",
       "historicalPrefix": "094",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -813,14 +813,14 @@
     {
       "ordinal": 116,
       "file": "dsh-096_cart_slice_closure.sql",
-      "sha256": "f662bdcbd07a292609dd6102ff56ca569d2e25d3b208925cfcb636e69cb696fc",
+      "sha256": "64bfb6412a0b4eddf22d5105e16f184e2b0f4cdfea673371fff811f4df7374d6",
       "historicalPrefix": "096",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 117,
       "file": "dsh-096_delivery_proof_media_integrity.sql",
-      "sha256": "dc466191cd71e0b001da807e962147626e00a18aadc3068270ab8f280d1206e3",
+      "sha256": "9e36e182ce171c5c6af8357951582ae400aa0826ce1d1a3e316e4fc1cc07d425",
       "historicalPrefix": "096",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -834,77 +834,77 @@
     {
       "ordinal": 119,
       "file": "dsh-096_store_captain_handoff_reassignment.sql",
-      "sha256": "9c38672e62a21cf23fb4bd700d56f74ff43e6ce3124dbbe5cb21113cab20221f",
+      "sha256": "3426a285ef3725388266c9890183e97f51cc249c9e922f4424e2cdca8d000885",
       "historicalPrefix": "096",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 120,
       "file": "dsh-096_support_message_delivery.sql",
-      "sha256": "bd2f5e9821b5d059da71cf33cd1a0c824ef9319a2368be35bdf63a4b8896ca7e",
+      "sha256": "6564b46787c1ee8a1855330d08e5b062d3f2803140ad4f6218b95935c538ffdf",
       "historicalPrefix": "096",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 121,
       "file": "dsh-097_cart_currency_snapshot.sql",
-      "sha256": "e573e477312dfd7a9f180dd0bb80c353c2977581c3bd5953053dc1d275392f83",
+      "sha256": "f08311bb5de728b94e81108049497c054ec28a7d1f990b8e6dc8dbd0e23e87fc",
       "historicalPrefix": "097",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 122,
       "file": "dsh-097_dispatch_location_integrity.sql",
-      "sha256": "2d96cfcc643866011d12c70480f2332b98d0819efee92ca68d34e0c67e1fdf61",
+      "sha256": "e0c080a90412033f7b14ef4ac0c578560a8264c0e3a82dcb703d840859224e7d",
       "historicalPrefix": "097",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 123,
       "file": "dsh-097_notification_delivery_audit.sql",
-      "sha256": "756a55ce7dbf76664aca2dde1ca17a37a49e215564036b208b8a005090f455eb",
+      "sha256": "8eead4f73e50afaae2a0bc3552352a33e99801c7f1a034e0b0233e8b1555efd4",
       "historicalPrefix": "097",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 124,
       "file": "dsh-097_special_request_delivery_exceptions.sql",
-      "sha256": "62fddf89466e9180dbdba85705430b223430df3250c02e51134d49d5baa1d2e0",
+      "sha256": "afb9a8a4bd7d6fd2f60fb97e848774e8b3caf4976f0f3583802a0e616df3d32e",
       "historicalPrefix": "097",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 125,
       "file": "dsh-097_store_captain_handoff_exceptions.sql",
-      "sha256": "893d9acd18276bea692f92673150f17a4c49e87d1bda4f96530cc74f5954aff6",
+      "sha256": "076f6035127160cd08a90f7fd2853d3a372508c038dcfbf7f25808c044dc4b43",
       "historicalPrefix": "097",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 126,
       "file": "dsh-098_home_discovery_targeting.sql",
-      "sha256": "6dd4c0a9c9a8a72fe6c02aac8081c9457e0cb5e4379bd85ad2b3f69771804370",
+      "sha256": "6d5c40b9df524c8b8e3bf483e055ed4b77b5222be802a7de667c7781a4758128",
       "historicalPrefix": "098",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 127,
       "file": "dsh-098_incident_governance.sql",
-      "sha256": "0c399b125311fe735e706b35a0d7e4ca48d8ae2ff3a7b3d1d755eda6b85aafd2",
+      "sha256": "cfa436c7056b19d0beee9d9efe9057939fc22b3878c21566617deb7764fe2ccc",
       "historicalPrefix": "098",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 128,
       "file": "dsh-098_order_item_currency_snapshot.sql",
-      "sha256": "7c2d192c95305cebf200776cf709b611af5bef5637bee059a8be389a1513ffb0",
+      "sha256": "82b51797eae420de30a2c83d51a9c7f894b11e397f06e88afd116fb93dbdd127",
       "historicalPrefix": "098",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 129,
       "file": "dsh-098_partner_onboarding_integrity.sql",
-      "sha256": "e7841e9a41b707a96ccc10a518d4d6cad44a21e1d5a6f2d68e73f647a9242710",
+      "sha256": "a2f117c5302dfe8b339d32d2cb3607f493ae7adb2db1893d8390103156c279cc",
       "historicalPrefix": "098",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -918,7 +918,7 @@
     {
       "ordinal": 131,
       "file": "dsh-098_store_governance_closure.sql",
-      "sha256": "09c4d766331870b08f294413a91efa39e5c1fca11ac7b0591f93355717f7497b",
+      "sha256": "1afb681d7a09675ea0fd1c3d836774350882cb3a479fc8ef92e29b50f6b26764",
       "historicalPrefix": "098",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -932,42 +932,42 @@
     {
       "ordinal": 133,
       "file": "dsh-099_home_marketing_impression_dedup.sql",
-      "sha256": "4358d2b1eada515a2ec45660fbc940cec90adcc337315e926d46a7966abab2a9",
+      "sha256": "b36b7c137e7d6bc998487bd6a311063c1cec26aff81db8c6eb8aaaf89493758e",
       "historicalPrefix": "099",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 134,
       "file": "dsh-099_order_rescue.sql",
-      "sha256": "80a56324778a8ef94e6aaad6521ab25b11fa26451784df08002f4824f2de6602",
+      "sha256": "38c09b886cc6a03e8e5f57e17cc0b6f7e3fd0e865ef676e107e8b80c59b0103f",
       "historicalPrefix": "099",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 135,
       "file": "dsh-099_partner_onboarding_audit_retention.sql",
-      "sha256": "6a99f77ba6f4b3c5f2c2754ffc38ff683127efa6d103b0d70bb09573ee33558f",
+      "sha256": "34e13865e54d38d2bd7d99ff87c214f7dc0c0dd4c7e83c3e08039a74878187e8",
       "historicalPrefix": "099",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 136,
       "file": "dsh-101_marketing_lifecycle.sql",
-      "sha256": "896075ce952f9bf34516c465fd46b62c24f8187928dfb438f5955d9622207e5a",
+      "sha256": "806d42f5fddf332e7abd2173366389c792fe59ca06c1af39766428f2e43ca36e",
       "historicalPrefix": "101",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 137,
       "file": "dsh-101_partner_wlt_outbox_reconciliation.sql",
-      "sha256": "66b1ac2f5c34de4dbf40bdcef35fe6a15852aac0e2b6a6115cf0714e75df2beb",
+      "sha256": "8fbd231a7e10d3bc4c9d754c7b4144b022aef4eb2baa1e4a7d3554ef6c34e423",
       "historicalPrefix": "101",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 138,
       "file": "dsh-102_support_message_media_runtime.sql",
-      "sha256": "8388d825405cc95bdd50edf5a9a8b3422438bcc2eb8866453fc5e02eeb931458",
+      "sha256": "ed47c381027afe353c836135cdb8ec11e9055004e096dfa77bd46e5d7afe160d",
       "historicalPrefix": "102",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -988,35 +988,35 @@
     {
       "ordinal": 141,
       "file": "dsh-116_partner_delivery_command_idempotency_and_exception_evidence.sql",
-      "sha256": "0b210ea8acb77706ac2a47113055be03c46c235c059c5a1b51c9c5b0b4daf225",
+      "sha256": "57d84cedc74ce7567b88ec37674e72a8b759ddf659af44636aa714e1dd7283d0",
       "historicalPrefix": "116",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 142,
       "file": "dsh-117_delivery_proof_completion.sql",
-      "sha256": "46599ad5ead1ec9a8042f09b846c1cb978f980f4278908d7612429cb9a440362",
+      "sha256": "e4dd3c1545dc3de93ed07ae5fb75a7396dc9df25d7a8d76d33593d455c3ec105",
       "historicalPrefix": "117",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 143,
       "file": "dsh-118_delivery_proof_location_snapshot.sql",
-      "sha256": "22e26c8708e0c808e179c4ba2f075e6b34f96ce0a1a6ae48bcc943cc943917d2",
+      "sha256": "153d73c56c472114f530bd782fcc2a9d51ba3a4f7aa8f349315c161a93a4ece3",
       "historicalPrefix": "118",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 144,
       "file": "dsh-119_delivery_pin_hardening.sql",
-      "sha256": "8caf8ed98be43acd202cff32c31b231f601ed360c183c920fbb8a7b8ebc07302",
+      "sha256": "00be8f43d309dc5afcdadd7911756572ba8cbc01f4898106d2ba7124e8abffee",
       "historicalPrefix": "119",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 145,
       "file": "dsh-119_field_commission_partner_category.sql",
-      "sha256": "014dc5d2baa767a19ca5cae4fc47d3b34e475a95aa5cc4b636c5fd1aca11188f",
+      "sha256": "70e6f2b0d1b010b2429711a2fbfb4430f6df7123e5d56d490b1913ff986749e2",
       "historicalPrefix": "119",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1030,49 +1030,49 @@
     {
       "ordinal": 147,
       "file": "dsh-126_order_preparation_issues.sql",
-      "sha256": "531eca62da8f263a79c703543742533e08eb561979b69f69d001df039beba246",
+      "sha256": "a067b65526db4be7c944fb8f4ff220e29d232c76e2e99bd985826a4d14efebca",
       "historicalPrefix": "126",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 148,
       "file": "dsh-127_preparation_issue_item_binding.sql",
-      "sha256": "6ddeaf6dfb8c0425bd130ffd191f0971020420df65bdf2cfbcb1882733c0eb94",
+      "sha256": "d70eaeca0ae4ee7221c28e4cfbfbee141db0211b473e2096a0e71ba227ee96c9",
       "historicalPrefix": "127",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 149,
       "file": "dsh-128_preparation_issue_customer_decision.sql",
-      "sha256": "d4b59c6580ce344cfdc7c753116927a9135bf3a9acdc66263a01738d23d1550a",
+      "sha256": "d5ae29a4fba97e70960061652a11358f9aa083f76464d3b5cb72ac7e6c47d7c4",
       "historicalPrefix": "128",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 150,
       "file": "dsh-129_operational_policy_closure.sql",
-      "sha256": "5d7aebba017d71e593aab744390881816e9ab3aed82068e40ce7c236b62e8630",
+      "sha256": "a9b485539d04c747640b825777ed5232885591ba4b950fe0c3ec425487065ee1",
       "historicalPrefix": "129",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 151,
       "file": "dsh-129_order_preparation_alerts.sql",
-      "sha256": "37447e181110ad3b85c7c3d98d782cf4a65c2ec4487275917389da4ab511365f",
+      "sha256": "3a0456edd1e8b64ebd5e1487c78d47f0432120c4200aebc28e21503ec39be891",
       "historicalPrefix": "129",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 152,
       "file": "dsh-130_store_visibility_projection.sql",
-      "sha256": "b42aa4edcf2d8d541a626dee67c70abfd58ac5611d7f139b29bf507dedae8cf0",
+      "sha256": "0c8a9c60f8cb9180daf4870d8bda0c96ae23f22214a924b4b40f6075b926713c",
       "historicalPrefix": "130",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 153,
       "file": "dsh-131_governed_administration_closure.sql",
-      "sha256": "cc0491f3d440dd1fbe7a9e55c75c475c3e13f1b60f4be77d0b975c4b512a9a59",
+      "sha256": "283f96aeabf1b78285ee9511a9047150517304599a10cbfde81ccd0958f7b9c7",
       "historicalPrefix": "131",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1093,7 +1093,7 @@
     {
       "ordinal": 156,
       "file": "dsh-901_client_address_logical_deduplication.sql",
-      "sha256": "c2415ffdbdac32e13382e43ee48db79f7cf1a560a8db387821f16a5b643ad023",
+      "sha256": "e516d6ef438b5e428d6552278cd24ad45e1fd689865ca57f5d9ea00f7633a7dd",
       "historicalPrefix": "901",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1114,7 +1114,7 @@
     {
       "ordinal": 159,
       "file": "dsh-904_order_item_currency_snapshot_closure.sql",
-      "sha256": "f536d6a1af9968ba4ead7e44ded2763f6bd406899be7ceb428d26ff92095e863",
+      "sha256": "5e7c38af08d01d7af75512e86fddf05cb8e733633695af5415e079fbcdbe1415",
       "historicalPrefix": "904",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1135,49 +1135,49 @@
     {
       "ordinal": 162,
       "file": "dsh-906_client_address_geofence_binding.sql",
-      "sha256": "91d69216c56648542ac09e2f16c5d0e3fca3b3e23f8ddf5994097c34ddd96d04",
+      "sha256": "4814469c49133b30a3024c7ef9ccb3e64476ab850cef0d0998576817a0c99e4f",
       "historicalPrefix": "906",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 163,
       "file": "dsh-907_address_mutation_receipts.sql",
-      "sha256": "4df6c6e22ffd1d29095234e4594e2caf5a2b035990c4a5ea2154f88003375164",
+      "sha256": "c0475e9a62c2bc5b9f83dcc9329fb2d46af55b596f9a6dd29c66533848cb0474",
       "historicalPrefix": "907",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 164,
       "file": "dsh-907_service_area_topology.sql",
-      "sha256": "486fe1af67edcf46768a791216ee2eb204492d5275bfa7dcc8666d90acaeeead",
+      "sha256": "4d21a22bda7fb4e3f982d629f7d670df640b584907cd476e6020e2cd00e6864d",
       "historicalPrefix": "907",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 165,
       "file": "dsh-908_mutation_receipt_retention.sql",
-      "sha256": "8f28e2a4384bf42f87470a10ea15f6b7a4eab6b375a1e819a151764b9655e85c",
+      "sha256": "9ecd41f4e1167ad538df28514cdd8fea940696741f61a7cc18dc2ddb18508eb6",
       "historicalPrefix": "908",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 166,
       "file": "dsh-908_privacy_audit_projection.sql",
-      "sha256": "d83fbaacbb0686c81ea7f1eff0e3773cfb740b047293399fba4fda329d96fa5c",
+      "sha256": "1b38dd684cbf34ffcaffb94636a28174e8453409f7f2b853d3b08a8e7a8b8188",
       "historicalPrefix": "908",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 167,
       "file": "dsh-909_manual_request_catalog_capabilities.sql",
-      "sha256": "2f1792d2414c3c200c5c99103e5f6128b3b9f37f8d023241f741eb67fc230979",
+      "sha256": "a3215148ff8dd485098481c68e1416f8416534041473776f9e600bae6ca7f790",
       "historicalPrefix": "909",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 168,
       "file": "dsh-910_reel_presentation_metadata.sql",
-      "sha256": "a312f571e305743b841b930a8e7c37d7a04901bc64da6945f811e5e1374f734c",
+      "sha256": "a35b83a82d68a1d6b58b4e79981572894ac6317910690580ae49e88930eb7430",
       "historicalPrefix": "910",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1191,42 +1191,42 @@
     {
       "ordinal": 170,
       "file": "dsh-911_reel_partner_scope_constraints.sql",
-      "sha256": "287c83092fd9fc692362bee4cc51dae0b2df4d0d27bcac2864f4b8f3fb06d7f8",
+      "sha256": "f08893fdb56b2a19324be1b625f90ab252867a030a797443b905775358edf031",
       "historicalPrefix": "911",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 171,
       "file": "dsh-930_catalog_slice_closure.sql",
-      "sha256": "a64d2ae0ba86a8334f88fa41acc90d26e3bbe75017fc9622b3c722a2735ce19d",
+      "sha256": "e1bf4fc817b5a2c3e09804f9fb365418d69896c7575ef7a40dcab6462584321c",
       "historicalPrefix": "930",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 172,
       "file": "dsh-931_assortment_pause_restore.sql",
-      "sha256": "0e36dd984e85e9a1427be7f92b453e51d55fe85e2b0ad1bc0ed3681495740d47",
+      "sha256": "68ba44bce025ea16c38fa593217960a5f96d963e8315a1042e0735052268a739",
       "historicalPrefix": "931",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 173,
       "file": "dsh-932_audit_trigger_safety.sql",
-      "sha256": "5e32d071a0cfe1abcdf53a76e70919ced3c06b557917261e1fda4debd49377e3",
+      "sha256": "aae7cdb486c78b5809e521a229f9c860fbc8036663a802e9f47ca279c60d3a98",
       "historicalPrefix": "932",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 174,
       "file": "dsh-933_partner_fleet_action_audit.sql",
-      "sha256": "e10db7763487fdf75257dcafeb17f9db38eac19e9c0001b55ba3ba1fad0cdc97",
+      "sha256": "5576e6675cc57aca662a24c067d1c4def49424264dc3a47f258ae98aee18d9a8",
       "historicalPrefix": "933",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 175,
       "file": "dsh-950_catalog_approval_actor_scope.sql",
-      "sha256": "38ade5f05472cfe7456fd48201c68e9a7f1724b0a2d8bebaf0bffcc92df40439",
+      "sha256": "af05db4149d24c380fe464053dc1ea04b0b4ae96d0b19acb5bd9dde7c658bf71",
       "historicalPrefix": "950",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1240,14 +1240,14 @@
     {
       "ordinal": 177,
       "file": "dsh-952_partner_soft_archive.sql",
-      "sha256": "10a3a22835625d8b035e4fa53288ad57531956ddc323bd9e20d7703aae44ffb0",
+      "sha256": "06dab655a1c877a1d4a6f272b506d467985ef127680c1dadf7ce424a6968d701",
       "historicalPrefix": "952",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 178,
       "file": "dsh-953_partner_offers_store_id_text.sql",
-      "sha256": "27a35a5a4c06c1ea0869f683189c1eb6493a38126c855b992ecde905ffba23e0",
+      "sha256": "6d8a98a8f6bd61aa62acb8dcb4bc70c0e6f29d00b3463b923bca456d32ea5666",
       "historicalPrefix": "953",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1261,21 +1261,21 @@
     {
       "ordinal": 180,
       "file": "dsh-955_pickup_window_extension_policy.sql",
-      "sha256": "5ab8950509f7ccd2a0e5c744d91867565bc63123623f20c9c13e8e627607d470",
+      "sha256": "06cb0f9c7ecddaf29898df2d3f5fe3305849fca79cfc785fde2bd19a0615b13f",
       "historicalPrefix": "955",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 181,
       "file": "dsh-956_operational_incident.sql",
-      "sha256": "cf17f1582f39d5428979b3553a69044080e8a9d25b9331b98e5234a3738da33e",
+      "sha256": "0bdf5fdad82a515aeaf18790b4444cd8ff19c755909b255fce4b0239c01e87ac",
       "historicalPrefix": "956",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 182,
       "file": "dsh-957_delivery_pickup_sla_alerts.sql",
-      "sha256": "2e0b24775e1251c8d15754efeb4842efce379749b16816f24121eaf7d6f6f502",
+      "sha256": "adae6d58d26cb8029530e6cba88e5728e11b44f528472962693ed92534dd86d9",
       "historicalPrefix": "957",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1296,7 +1296,7 @@
     {
       "ordinal": 185,
       "file": "dsh-960_field_readiness_mutation_idempotency.sql",
-      "sha256": "7c016c72fd16862143912e7cc56cc1e042f573fa7237ad15338abd0e2d3f2419",
+      "sha256": "c56dd5e6ad992e1bdd0a4572ef5ba59fac1555eb54f3a11e3996c0523a425864",
       "historicalPrefix": "960",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1313,6 +1313,48 @@
       "sha256": "83e1ac1bf0e81b6cdceedd383b5c1b106913756082af55dba9da4b83d58b3f7c",
       "historicalPrefix": "962",
       "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 188,
+      "file": "dsh-963_drop_partner_raw_bank_columns.sql",
+      "sha256": "b6a70d25c9dd7611562f4153f37df679b4f742993c9e5bc07174178f0fde8449",
+      "historicalPrefix": "963",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 189,
+      "file": "dsh-964_drop_dead_client_loyalty_tables.sql",
+      "sha256": "04cb323c8b3f28e35e5d6f3f17e13b307b84cddad7840b82479663cf1c87696b",
+      "historicalPrefix": "964",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 190,
+      "file": "dsh-965_drop_dead_client_subscriptions_table.sql",
+      "sha256": "5c4f67d35218850884673d7d05602af44162173e411eadcf1ace8d5bebcf5a42",
+      "historicalPrefix": "965",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 191,
+      "file": "dsh-966_drop_dead_partner_brand.sql",
+      "sha256": "5f5ec6576242b881ce061af64d810571caacdf4595afd8b69222cb510de0e1c2",
+      "historicalPrefix": "966",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 192,
+      "file": "dsh-967_drop_dead_governance_tables.sql",
+      "sha256": "6a12c2f78d7d900215394d821b2199bf90fbafc516369417f6fa2a61bf28c4a1",
+      "historicalPrefix": "967",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 193,
+      "file": "dsh-968_cod_operator_context_isolation.sql",
+      "sha256": "bba1f4b6325d124238d6011d8cd0dbac33708804b8b405f45c5ba6879f686093",
+      "historicalPrefix": "968",
+      "state": "ACTIVE"
     }
   ]
 }

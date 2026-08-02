@@ -1,4 +1,4 @@
-name: BThwani Node Diagnostics
+﻿name: BThwani Node Diagnostics
 
 on:
   workflow_call:
@@ -81,6 +81,8 @@ jobs:
           }
           run_check pnpm run diagnostics:ui-kit
           run_check pnpm run guard:a11y
+          run_check node tools/guards/control-panel-architecture-gate.mjs
+          run_check node tools/guards/service-workspace-gate.mjs
           run_check pnpm run guard:dependency-graph
           run_check pnpm run guard:ast-grep-rules
           exit "${status}"

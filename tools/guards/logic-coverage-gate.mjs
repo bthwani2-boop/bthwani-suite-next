@@ -81,6 +81,33 @@ function isScriptOrUtil(f) {
   );
 }
 
+// A route shim that renders a governed screen is covered by that screen, not by
+// its own imports. Next.js `app/**/page.tsx` files are the main case: they exist
+// to bind a URL to a screen exported from `@bthwani/dsh|wlt/...`, and the screen
+// they delegate to is itself scanned by this same gate. Matching the delegation
+// therefore moves the check one hop rather than skipping it -- without this, every
+// correctly-thin route file is reported as if it held static content.
+const DELEGATES_TO_GOVERNED_SCREEN =
+  /import\s*(?:\{[^}]*\b[A-Z][A-Za-z0-9]*(?:Screen|Panel|Workspace|Shell|View|Dashboard)\b[^}]*\}|[A-Z][A-Za-z0-9]*(?:Screen|Panel|Workspace|Shell|View|Dashboard)\b)\s*from\s*["'](@bthwani\/(?:dsh|wlt)\/[^"']+|\.[^"']*)["']/;
+
+// This codebase names its controllers `use-<domain>-controller.ts(x)` exporting
+// `use<Domain>Controller`; it has no `/controllers/` directory anywhere. Matching
+// only the directory form meant every screen wired to a real controller through the
+// repository's actual convention was reported as unwired.
+const IMPORTS_CONTROLLER_MODULE = /from\s*["'][^"']*-controller(?:-core)?["']/;
+const USES_CONTROLLER_HOOK = /\buse[A-Z][A-Za-z0-9]*Controller\b/;
+
+// A barrel that only re-exports carries no logic of its own; the module it forwards
+// to is scanned by this same gate.
+const RE_EXPORT_ONLY = (content) => {
+  const meaningful = content
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/[^\n]*/g, "")
+    .replace(/^\s*['"]use (?:client|server)['"];?\s*$/gm, "")
+    .trim();
+  return meaningful.length > 0 && /^(?:export\s*(?:\{[\s\S]*?\}|\*)\s*from\s*["'][^"']+["'];?\s*)+$/.test(meaningful);
+};
+
 function importsController(content) {
   return (
     content.includes("/controllers/") ||
@@ -90,7 +117,11 @@ function importsController(content) {
     content.includes("useMutation") ||
     content.includes("useCapability") ||
     content.includes("useNavigate") ||
-    content.includes("useRouter")
+    content.includes("useRouter") ||
+    IMPORTS_CONTROLLER_MODULE.test(content) ||
+    USES_CONTROLLER_HOOK.test(content) ||
+    DELEGATES_TO_GOVERNED_SCREEN.test(content) ||
+    RE_EXPORT_ONLY(content)
   );
 }
 

@@ -14,7 +14,7 @@ import (
 // shapes: delivered-order creation and partner policy upsert. It deliberately
 // remains separate from generic finance writes so no caller can reach an
 // arbitrary WLT mutation through DSH.
-func (c *Client) FinanceWriteSettlement(ctx context.Context, method, path string, body []byte, correlationID string) (int, []byte, error) {
+func (c *Client) FinanceWriteSettlement(ctx context.Context, method, path string, body []byte, correlationID, idempotencyKey string) (int, []byte, error) {
 	if !c.Configured() {
 		return 0, nil, fmt.Errorf("WLT integration is not configured")
 	}
@@ -37,10 +37,16 @@ func (c *Client) FinanceWriteSettlement(ctx context.Context, method, path string
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
 	correlationID = strings.TrimSpace(correlationID)
+    
+    idempotencyKey = strings.TrimSpace(idempotencyKey)
+    if idempotencyKey == "" {
+        idempotencyKey = deterministicMutationKey("settlement", method, path, correlationID)
+    }
+
 	if err := setRequiredMutationHeaders(
 		req,
 		correlationID,
-		deterministicMutationKey("settlement", method, path, correlationID),
+		idempotencyKey,
 	); err != nil {
 		return 0, nil, fmt.Errorf("prepare WLT settlement mutation: %w", err)
 	}

@@ -13,7 +13,7 @@ import { DshFieldProfileHomeScreen } from '../account/DshFieldProfileHomeScreen'
 import { DshFieldProfileScreen } from '../account/DshFieldProfileScreen';
 import { DshFieldProfileCompletionScreen } from '../account/DshFieldProfileCompletionScreen';
 import { DshFieldStoresHistoryScreen } from '../stores/DshFieldStoresHistoryScreen';
-import { DshFieldFinanceScreen } from '../finance/DshFieldFinanceScreen';
+import { WltFieldFinanceScreen } from '../finance/WltFieldFinanceScreen';
 import { DshFieldCatalogOperationsScreen } from './DshFieldCatalogOperationsScreen';
 import type { useDshFieldSurfaceModel } from '../field.surface-model';
 import type { FieldOnboardingController } from '../../shared/field-onboarding';
@@ -138,7 +138,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
   }
 
   if (route.kind === 'finance') {
-    return <DshFieldFinanceScreen onBack={actions.popRoute} />;
+    return <WltFieldFinanceScreen onBack={actions.popRoute} />;
   }
 
   if (route.kind === 'escalation') {

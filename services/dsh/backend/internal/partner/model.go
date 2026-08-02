@@ -503,11 +503,15 @@ type StoreTeamMember struct {
 
 type InviteTeamMemberInput struct {
 	Identity         string `json:"identity"`
+	Role             string `json:"role"`
 	InvitedByActorID string `json:"-"`
 }
 
 func (i InviteTeamMemberInput) Validate() error {
 	if strings.TrimSpace(i.Identity) == "" {
+		return ErrInvalid
+	}
+	if i.Role != "manager" && i.Role != "supervisor" && i.Role != "staff" && i.Role != "courier" {
 		return ErrInvalid
 	}
 	return nil
@@ -586,20 +590,4 @@ type OperationalScope struct {
 	Permissions []string `json:"permissions"`
 }
 
-// scopePermissionsByRole is the auditable source of truth for what each
-// team role can do within a store scope. Referenced by
-// ListPartnerScopesForActor — not duplicated inline in query-mapping code.
-var scopePermissionsByRole = map[string][]string{
-	"owner":      {"team.manage", "courier.manage", "coverage.read", "catalog.manage", "orders.manage"},
-	"manager":    {"team.manage", "courier.manage", "coverage.read", "orders.manage"},
-	"supervisor": {"coverage.read", "orders.manage"},
-	"staff":      {"orders.manage"},
-	"courier":    {"orders.manage"},
-}
 
-func permissionsForRole(role string) []string {
-	if perms, ok := scopePermissionsByRole[role]; ok {
-		return perms
-	}
-	return scopePermissionsByRole["staff"]
-}

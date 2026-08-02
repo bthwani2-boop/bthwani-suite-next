@@ -5,12 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Card, StateView, Text } from "@bthwani/ui-kit";
 import { CpBadge, CpButton, CpKpiCard, CpKpiStrip, CpTabs } from "@bthwani/control-panel/components";
 import { OverviewPageFrame } from "@bthwani/control-panel/shell";
-import { useFinanceController } from "../../shared/finance-wlt-link/finance/finance.controller";
+import { useFinanceController } from '@bthwani/wlt/dsh';
 import { PayoutRequestsPanel } from "./PayoutRequestsPanel";
 import { ReconciliationCasesPanel } from "./ReconciliationCasesPanel";
 import { CodReconciliationCasesPanel } from "./CodReconciliationCasesPanel";
 import { RefundsCommandPanel } from "./RefundsCommandPanel";
-import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from "../../shared/finance-wlt-link/finance/finance-hub.types";
+import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from '@bthwani/wlt/dsh';
 
 type FinanceTabItem = { readonly id: string; readonly label: string; readonly active: boolean };
 

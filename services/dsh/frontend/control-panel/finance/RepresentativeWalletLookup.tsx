@@ -13,13 +13,13 @@ import {
   CpTableHeaderCell,
   CpTextInput,
 } from "@bthwani/control-panel/components";
-import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
-import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
+import { resolveDshApiBaseUrl } from '@bthwani/wlt/dsh';
+import { createDshHttpClient } from '@bthwani/wlt/dsh';
 import type {
   RepresentativeActorType,
   RepresentativeLedgerEntry,
   RepresentativeWallet,
-} from "../../shared/finance-wlt-link/actor-wallet";
+} from '@bthwani/wlt/dsh';
 
 const { request } = createDshHttpClient(
   resolveDshApiBaseUrl(),

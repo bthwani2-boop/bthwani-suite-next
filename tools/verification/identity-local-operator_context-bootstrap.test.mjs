@@ -40,12 +40,12 @@ test("platform bootstrap writes and refreshes OperatorContext_id directly", () =
   assert.doesNotMatch(platformBootstrap, /VALUES \(\$1, \$2, \$3, 'local-dsh'/);
 });
 
-test("database and compose preserve deferred partner_platform readiness and OperatorContext safety", () => {
+test("database and compose preserve deferred platform readiness and OperatorContext safety", () => {
   // Published migration history remains immutable and still protects upgraded
   // databases that may contain historical local bootstrap rows.
   assert.match(migration, /identity_actors_OperatorContext_nonblank_chk/);
   assert.match(migration, /CHECK \(btrim\(OperatorContext_id\) <> ''\) NOT VALID/);
   assert.match(compose, /BTHWANI_DEFAULT_OperatorContext_ID: "\$\{BTHWANI_DEFAULT_OperatorContext_ID:-local-dsh\}"/);
-  assert.match(compose, /identity-api:[\s\S]*<<: \*bthwani-partner_platform-environment/);
-  assert.match(compose, /dsh-api:[\s\S]*<<: \*bthwani-partner_platform-environment/);
+  assert.match(compose, /identity-api:[\s\S]*<<: \*bthwani-platform-environment/);
+  assert.match(compose, /dsh-api:[\s\S]*<<: \*bthwani-platform-environment/);
 });

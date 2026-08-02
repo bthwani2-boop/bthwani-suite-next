@@ -112,7 +112,6 @@ func LinkPartnerStoreForOperatorContextGoverned(
 	result, err := tx.Exec(`
 		UPDATE dsh_stores
 		SET partner_id = $1,
-		    brand_id = NULL,
 		    partner_readiness = 'pending',
 		    catalog_approval_status = 'draft',
 		    marketing_visibility = 'hidden',

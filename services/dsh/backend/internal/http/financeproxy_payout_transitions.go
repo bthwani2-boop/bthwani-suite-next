@@ -32,6 +32,7 @@ func (s *protectedStoreServer) proxyFinancePayoutTransition(w http.ResponseWrite
 		"/wlt/payout-requests/"+url.PathEscape(payoutID)+"/"+action,
 		operatorWriteBody(actor.ID),
 		correlationForActorMutation(r, "payout-"+action+"-"+payoutID),
+		r.Header.Get("Idempotency-Key"),
 		operatorContextID,
 	)
 	if err != nil {
