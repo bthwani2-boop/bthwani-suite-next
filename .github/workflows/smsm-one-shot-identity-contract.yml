@@ -142,7 +142,6 @@ jobs:
               '''    serviceToken:
                 type: http
                 scheme: bearer
-                scheme: bearer
                 description: Workforce service token (IDENTITY_WORKFORCE_SERVICE_TOKEN) for
                   internal actor APIs.''',
               '''    serviceToken:
@@ -152,6 +151,7 @@ jobs:
                   Service-specific bearer token. Workforce actor APIs use
                   IDENTITY_WORKFORCE_SERVICE_TOKEN; DSH partner APIs use
                   IDENTITY_DSH_SERVICE_TOKEN.''',
+              1,
           )
 
           service_caller = '''    ServiceCaller:
