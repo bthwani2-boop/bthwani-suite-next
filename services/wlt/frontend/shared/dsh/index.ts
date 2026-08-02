@@ -6,7 +6,6 @@
 export * from './finance-boundary/wlt-dsh-boundary.types';
 export * from './wlt-reference/wlt-reference.states';
 export * from './wlt-reference/wlt-reference.view-model';
-export * from './dsh-http/dsh-api-base-url';
 export * from './wlt-reference/use-wlt-reference-controller';
 export * from './payment/wlt-checkout-handoff.contract';
 export * from './finance/wlt-money';
@@ -40,6 +39,8 @@ export * from './wlt-cod/PartnerCodCustodyPanel';
 export * from './finance/finance.controller';
 export * from './finance/finance-hub.types';
 export * from './finance/cod-reconciliation.api';
+// Canonical DSH HTTP utilities — dsh-link is the single source of truth.
+// dsh-http re-exports from dsh-link; only one of them should appear here.
 export * from './dsh-link/dsh-api-base-url';
 export * from './dsh-link/dsh-http-request';
 export * from './wlt/generated/wlt_frontend_dsh_app_captain.facade';
