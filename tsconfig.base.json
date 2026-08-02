@@ -12,7 +12,6 @@
     "isolatedModules": true,
     "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
-    "baseUrl": ".",
     "paths": {
       "@bthwani/ui-kit": ["shared/ui-kit/src/index.ts"],
       "@bthwani/ui-kit/web": ["shared/ui-kit/src/web.ts"],
