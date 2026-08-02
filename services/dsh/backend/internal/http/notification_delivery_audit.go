@@ -10,7 +10,7 @@ import (
 
 // GET /dsh/operator/notifications/delivery-attempts
 func (s *protectedStoreServer) handleListNotificationDeliveryAttempts(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead)
 	if !ok {
 		return
 	}

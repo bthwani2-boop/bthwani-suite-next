@@ -7,7 +7,7 @@ import (
 )
 
 func (s *protectedStoreServer) handleGovernedGetPartner(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleGovernedGetPartnerState(s.db, "control-panel"), PartnersPermissionRead, "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleGovernedGetPartnerState(s.db, "control-panel"), PartnersPermissionRead)
 }
 
 func (s *protectedStoreServer) handleGovernedActivationTransition(w http.ResponseWriter, r *http.Request) {
@@ -15,7 +15,7 @@ func (s *protectedStoreServer) handleGovernedActivationTransition(w http.Respons
 		s.db,
 		partner.HandleGovernedActivationTransition(s.db, s.wlt),
 	)
-	s.servePartnerPermissionHandler(w, r, handler, PartnersPermissionActivate, "operator")
+	s.servePartnerPermissionHandler(w, r, handler, PartnersPermissionActivate)
 }
 
 func (s *protectedStoreServer) handleGovernedFieldGetPartnerDraft(w http.ResponseWriter, r *http.Request) {

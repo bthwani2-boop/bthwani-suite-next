@@ -28,7 +28,7 @@ func TestRequireCatalogPermissionRejectsNoAuth(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/dsh/operator/catalog/policies", nil)
 	rec := httptest.NewRecorder()
 
-	_, ok := s.requireCatalogPermission(rec, req, CatalogPermissionPolicyRead, "operator")
+	_, ok := s.requireCatalogPermission(rec, req, CatalogPermissionPolicyRead)
 	if ok {
 		t.Fatal("expected requireCatalogPermission to reject a request with no Authorization header")
 	}
@@ -48,7 +48,7 @@ func TestRequireCatalogPermissionRejectsForgedToken(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer dev-bypass-operator-anything")
 	rec := httptest.NewRecorder()
 
-	_, ok := s.requireCatalogPermission(rec, req, CatalogPermissionPolicyRead, "operator")
+	_, ok := s.requireCatalogPermission(rec, req, CatalogPermissionPolicyRead)
 	if ok {
 		t.Fatal("expected requireCatalogPermission to reject a forged dev-bypass token")
 	}
@@ -75,7 +75,7 @@ func TestRequireCatalogPermissionRejectsWrongPermission(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer valid-field-token")
 	rec := httptest.NewRecorder()
 
-	_, ok := s.requireCatalogPermission(rec, req, CatalogPermissionPolicyRead, "operator")
+	_, ok := s.requireCatalogPermission(rec, req, CatalogPermissionPolicyRead)
 	if ok {
 		t.Fatal("expected requireCatalogPermission to reject an authenticated actor without the required permission")
 	}
@@ -84,7 +84,7 @@ func TestRequireCatalogPermissionRejectsWrongPermission(t *testing.T) {
 	}
 }
 
-func TestRequireCatalogPermissionAcceptsOperatorRoleFallback(t *testing.T) {
+func TestRequireCatalogPermissionRejectsOperatorRoleWithoutPermissionClaim(t *testing.T) {
 	s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
@@ -92,6 +92,7 @@ func TestRequireCatalogPermissionAcceptsOperatorRoleFallback(t *testing.T) {
 			OperatorContextID:  "dsh",
 			Roles:     []string{"operator"},
 			AuthState: "authenticated",
+			// No Permission claims: the operator role alone must no longer grant access.
 		})
 	})
 
@@ -99,12 +100,12 @@ func TestRequireCatalogPermissionAcceptsOperatorRoleFallback(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer valid-operator-token")
 	rec := httptest.NewRecorder()
 
-	actor, ok := s.requireCatalogPermission(rec, req, CatalogPermissionPolicyRead, "operator")
-	if !ok {
-		t.Fatalf("expected operator role to satisfy the permission fallback, got status %d", rec.Code)
+	_, ok := s.requireCatalogPermission(rec, req, CatalogPermissionPolicyRead)
+	if ok {
+		t.Fatal("operator role without explicit permission claims must not grant access")
 	}
-	if actor.ID != "operator-1" {
-		t.Fatalf("unexpected actor id: %q", actor.ID)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
 	}
 }
 
@@ -126,7 +127,7 @@ func TestRequireCatalogPermissionAcceptsFineGrainedGrant(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer valid-media-reviewer-token")
 	rec := httptest.NewRecorder()
 
-	actor, ok := s.requireCatalogPermission(rec, req, CatalogPermissionMediaReview, "operator")
+	actor, ok := s.requireCatalogPermission(rec, req, CatalogPermissionMediaReview)
 	if !ok {
 		t.Fatalf("expected fine-grained permission grant to succeed, got status %d", rec.Code)
 	}
@@ -141,18 +142,17 @@ func TestRequirePermissionAcrossDomains(t *testing.T) {
 	cases := []struct {
 		name       string
 		action     string
-		fallback   string
 		grantedFor string
 	}{
-		{"marketing", MarketingPermissionManage, "operator", MarketingPermissionManage},
-		{"administration", AdministrationPermissionRead, "operator", AdministrationPermissionRead},
-		{"analytics", AnalyticsPermissionRead, "operator", AnalyticsPermissionRead},
-		{"finance", FinancePermissionRead, "operator", FinancePermissionRead},
-		{"finance-manage", FinancePermissionManage, "operator", FinancePermissionManage},
-		{"support", SupportPermissionManage, "operator", SupportPermissionManage},
-		{"platform", PlatformPermissionManage, "operator", PlatformPermissionManage},
-		{"operations", OperationsPermissionManage, "operator", OperationsPermissionManage},
-		{"partners", PartnersPermissionActivate, "operator", PartnersPermissionActivate},
+		{"marketing", MarketingPermissionManage, MarketingPermissionManage},
+		{"administration", AdministrationPermissionRead, AdministrationPermissionRead},
+		{"analytics", AnalyticsPermissionRead, AnalyticsPermissionRead},
+		{"finance", FinancePermissionRead, FinancePermissionRead},
+		{"finance-manage", FinancePermissionManage, FinancePermissionManage},
+		{"support", SupportPermissionManage, SupportPermissionManage},
+		{"platform", PlatformPermissionManage, PlatformPermissionManage},
+		{"operations", OperationsPermissionManage, OperationsPermissionManage},
+		{"partners", PartnersPermissionActivate, PartnersPermissionActivate},
 	}
 
 	for _, tc := range cases {
@@ -173,7 +173,7 @@ func TestRequirePermissionAcrossDomains(t *testing.T) {
 			req.Header.Set("Authorization", "Bearer valid-token")
 			rec := httptest.NewRecorder()
 
-			_, ok := s.requirePermission(rec, req, "control-panel", tc.action, tc.fallback)
+			_, ok := s.requirePermission(rec, req, "control-panel", tc.action)
 			if ok {
 				t.Fatalf("%s: expected rejection for actor lacking %q", tc.name, tc.action)
 			}
@@ -199,7 +199,7 @@ func TestRequirePermissionAcrossDomains(t *testing.T) {
 			req.Header.Set("Authorization", "Bearer valid-token")
 			rec := httptest.NewRecorder()
 
-			_, ok := s.requirePermission(rec, req, "control-panel", tc.action, tc.fallback)
+			_, ok := s.requirePermission(rec, req, "control-panel", tc.action)
 			if !ok {
 				t.Fatalf("%s: expected fine-grained grant to succeed, got status %d", tc.name, rec.Code)
 			}
@@ -229,7 +229,7 @@ func TestFinanceApproveReject_RequireManageNotRead(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer valid-finance-read-token")
 	rec := httptest.NewRecorder()
 
-	_, ok := s.requirePermission(rec, req, "control-panel", FinancePermissionManage, "operator")
+	_, ok := s.requirePermission(rec, req, "control-panel", FinancePermissionManage)
 	if ok {
 		t.Fatal("expected an actor with only finance.read to be rejected from a finance.manage action")
 	}
@@ -263,7 +263,7 @@ func TestSpecialRequestsPermission_SupportGrantInsufficient(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer valid-support-token")
 	rec := httptest.NewRecorder()
 
-	_, ok := s.requirePermission(rec, req, "control-panel", OperationsSpecialRequestsPermissionDispatch, "operator")
+	_, ok := s.requirePermission(rec, req, "control-panel", OperationsSpecialRequestsPermissionDispatch)
 	if ok {
 		t.Fatal("expected an actor with only support.manage to be rejected from operations.special_requests.dispatch")
 	}
@@ -293,7 +293,7 @@ func TestSpecialRequestsPermission_OperationsGrantSucceeds(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer valid-ops-token")
 	rec := httptest.NewRecorder()
 
-	actor, ok := s.requirePermission(rec, req, "control-panel", OperationsSpecialRequestsPermissionDispatch, "operator")
+	actor, ok := s.requirePermission(rec, req, "control-panel", OperationsSpecialRequestsPermissionDispatch)
 	if !ok {
 		t.Fatalf("expected operations.special_requests.dispatch grant to succeed, got status %d", rec.Code)
 	}
@@ -323,7 +323,7 @@ func TestRequireCatalogPermissionRejectsStaleCentralCatalogSurface(t *testing.T)
 	req.Header.Set("Authorization", "Bearer valid-stale-token")
 	rec := httptest.NewRecorder()
 
-	_, ok := s.requireCatalogPermission(rec, req, CatalogPermissionMediaReview, "operator")
+	_, ok := s.requireCatalogPermission(rec, req, CatalogPermissionMediaReview)
 	if ok {
 		t.Fatal("expected a permission grant on the stale central-catalog surface to be rejected")
 	}

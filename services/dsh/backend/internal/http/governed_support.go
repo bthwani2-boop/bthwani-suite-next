@@ -157,7 +157,7 @@ func (s *protectedStoreServer) handleAddGovernedClientSupportMessage(w http.Resp
 
 // GET /dsh/operator/support/tickets
 func (s *protectedStoreServer) handleListGovernedOperatorSupportTickets(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead)
 	if !ok {
 		return
 	}
@@ -175,7 +175,7 @@ func (s *protectedStoreServer) handleListGovernedOperatorSupportTickets(w http.R
 
 // GET /dsh/operator/support/tickets/{ticketId}
 func (s *protectedStoreServer) handleGetGovernedOperatorSupportTicket(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead)
 	if !ok {
 		return
 	}
@@ -189,7 +189,7 @@ func (s *protectedStoreServer) handleGetGovernedOperatorSupportTicket(w http.Res
 
 // GET /dsh/operator/support/tickets/{ticketId}/messages
 func (s *protectedStoreServer) handleListGovernedOperatorSupportMessages(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead)
 	if !ok {
 		return
 	}
@@ -207,7 +207,7 @@ func (s *protectedStoreServer) handleListGovernedOperatorSupportMessages(w http.
 
 // POST /dsh/operator/support/tickets/{ticketId}/messages
 func (s *protectedStoreServer) handleAddGovernedOperatorSupportMessage(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
 	if !ok {
 		return
 	}
@@ -232,7 +232,7 @@ func (s *protectedStoreServer) handleAddGovernedOperatorSupportMessage(w http.Re
 
 // PATCH /dsh/operator/support/tickets/{ticketId}
 func (s *protectedStoreServer) handleUpdateGovernedOperatorSupportTicket(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
 	if !ok {
 		return
 	}
@@ -266,7 +266,7 @@ func (s *protectedStoreServer) handleUpdateGovernedOperatorSupportTicket(w http.
 
 // GET /dsh/operator/support/tickets/{ticketId}/events
 func (s *protectedStoreServer) handleListGovernedOperatorSupportEvents(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead)
 	if !ok {
 		return
 	}

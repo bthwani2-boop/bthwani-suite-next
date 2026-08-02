@@ -17,7 +17,6 @@ func (s *protectedStoreServer) handleRefreshPreparationAlerts(w http.ResponseWri
 		r,
 		"control-panel",
 		OperationsPermissionManage,
-		"operator",
 	)
 	if !ok {
 		return
@@ -50,7 +49,6 @@ func (s *protectedStoreServer) handleListPreparationAlerts(w http.ResponseWriter
 		r,
 		"control-panel",
 		OperationsPermissionRead,
-		"operator",
 	)
 	if !ok {
 		return
@@ -86,7 +84,6 @@ func (s *protectedStoreServer) handleAcknowledgePreparationAlert(w http.Response
 		r,
 		"control-panel",
 		OperationsPermissionManage,
-		"operator",
 	)
 	if !ok {
 		return

@@ -12,7 +12,7 @@ import (
 )
 
 func (s *protectedStoreServer) handleCreateOrderRescueCase(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
 	if !ok {
 		return
 	}
@@ -50,7 +50,7 @@ func (s *protectedStoreServer) handleCreateOrderRescueCase(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleListOrderRescueCases(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead); !ok {
 		return
 	}
 	items, err := support.ListOrderRescueCases(s.db, r.URL.Query().Get("status"), 100)
@@ -62,7 +62,7 @@ func (s *protectedStoreServer) handleListOrderRescueCases(w http.ResponseWriter,
 }
 
 func (s *protectedStoreServer) handleGetOrderRescueCase(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead); !ok {
 		return
 	}
 	item, err := support.GetOrderRescueCase(s.db, r.PathValue("caseId"))
@@ -74,7 +74,7 @@ func (s *protectedStoreServer) handleGetOrderRescueCase(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleUpdateOrderRescueCase(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
 	if !ok {
 		return
 	}
@@ -119,7 +119,7 @@ func (s *protectedStoreServer) handleUpdateOrderRescueCase(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleListOrderRescueEvents(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead); !ok {
 		return
 	}
 	caseID := r.PathValue("caseId")

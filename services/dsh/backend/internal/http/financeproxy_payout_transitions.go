@@ -9,7 +9,7 @@ import (
 )
 
 func (s *protectedStoreServer) proxyFinancePayoutTransition(w http.ResponseWriter, r *http.Request, action string) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
 	if !ok {
 		return
 	}

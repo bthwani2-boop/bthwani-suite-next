@@ -135,7 +135,7 @@ func (s *protectedStoreServer) handleRevisePreparationEstimate(w http.ResponseWr
 }
 
 func (s *protectedStoreServer) handleGetOrderPreparation(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain")
 	if !ok {
 		return
 	}
@@ -174,8 +174,7 @@ func (s *protectedStoreServer) handleGetOrderPreparation(w http.ResponseWriter, 
 			r,
 			"control-panel",
 			OperationsPermissionRead,
-			"operator",
-		); !permitted {
+	); !permitted {
 			return
 		}
 	}

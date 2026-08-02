@@ -27,7 +27,7 @@ func RegisterWorkforceEmployeeMediaRoute(
 }
 
 func (s *protectedStoreServer) handleEmployeeMediaUpload(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", "provider.documents:upload", "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", "provider.documents:upload")
 	if !ok {
 		return
 	}

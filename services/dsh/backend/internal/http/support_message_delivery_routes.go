@@ -32,7 +32,7 @@ func decodeSupportAttachmentInput(w http.ResponseWriter, r *http.Request) (suppo
 }
 
 func (s *protectedStoreServer) handleAttachActorSupportMessageAsset(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain")
 	if !ok {
 		return
 	}
@@ -56,7 +56,7 @@ func (s *protectedStoreServer) handleAttachActorSupportMessageAsset(w http.Respo
 }
 
 func (s *protectedStoreServer) handleListActorSupportMessageAttachments(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain")
 	if !ok {
 		return
 	}
@@ -76,7 +76,7 @@ func (s *protectedStoreServer) handleListActorSupportMessageAttachments(w http.R
 }
 
 func (s *protectedStoreServer) handleMarkActorSupportMessagesRead(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain")
 	if !ok {
 		return
 	}
@@ -94,7 +94,7 @@ func (s *protectedStoreServer) handleMarkActorSupportMessagesRead(w http.Respons
 }
 
 func (s *protectedStoreServer) handleAttachOperatorSupportMessageAsset(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
 	if !ok {
 		return
 	}
@@ -113,7 +113,7 @@ func (s *protectedStoreServer) handleAttachOperatorSupportMessageAsset(w http.Re
 }
 
 func (s *protectedStoreServer) handleListOperatorSupportMessageAttachments(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead)
 	if !ok {
 		return
 	}
@@ -128,7 +128,7 @@ func (s *protectedStoreServer) handleListOperatorSupportMessageAttachments(w htt
 }
 
 func (s *protectedStoreServer) handleMarkOperatorSupportMessagesRead(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead)
 	if !ok {
 		return
 	}

@@ -13,7 +13,7 @@ func (s *protectedStoreServer) authorizePreparationIssueRead(
 	w http.ResponseWriter,
 	r *http.Request,
 ) (string, bool) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain")
 	if !ok {
 		return "", false
 	}
@@ -51,8 +51,7 @@ func (s *protectedStoreServer) authorizePreparationIssueRead(
 			r,
 			"control-panel",
 			OperationsPermissionRead,
-			"operator",
-		); !permitted {
+	); !permitted {
 			return "", false
 		}
 	}

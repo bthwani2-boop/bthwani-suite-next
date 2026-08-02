@@ -10,7 +10,7 @@ import (
 
 // PUT /dsh/notifications/push-endpoints
 func (s *protectedStoreServer) handleUpsertNotificationPushEndpoint(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field")
 	if !ok {
 		return
 	}
@@ -42,7 +42,7 @@ func (s *protectedStoreServer) handleUpsertNotificationPushEndpoint(w http.Respo
 
 // DELETE /dsh/notifications/push-endpoints/{deviceId}
 func (s *protectedStoreServer) handleDeactivateNotificationPushEndpoint(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field")
 	if !ok {
 		return
 	}

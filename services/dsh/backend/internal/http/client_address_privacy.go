@@ -42,7 +42,7 @@ func privacyMutationContext(w http.ResponseWriter, r *http.Request, actorID stri
 }
 
 func (s *protectedStoreServer) handleGetClientAddressPrivacyPolicy(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read", "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read"); !ok {
 		return
 	}
 	policy, err := clientaddress.GetPrivacyPolicy(r.Context(), s.db)
@@ -54,7 +54,7 @@ func (s *protectedStoreServer) handleGetClientAddressPrivacyPolicy(w http.Respon
 }
 
 func (s *protectedStoreServer) handleGetClientAddressPrivacyStatus(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read", "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read"); !ok {
 		return
 	}
 	status, err := clientaddress.GetPrivacyQueueStatus(r.Context(), s.db)
@@ -66,7 +66,7 @@ func (s *protectedStoreServer) handleGetClientAddressPrivacyStatus(w http.Respon
 }
 
 func (s *protectedStoreServer) handleListClientAddressPrivacyEvents(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read", "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read"); !ok {
 		return
 	}
 	limit, err := privacyEventLimit(r)
@@ -83,7 +83,7 @@ func (s *protectedStoreServer) handleListClientAddressPrivacyEvents(w http.Respo
 }
 
 func (s *protectedStoreServer) handleUpdateClientAddressPrivacyPolicy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", "platform.manage", "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", "platform.manage")
 	if !ok {
 		return
 	}
@@ -104,7 +104,7 @@ func (s *protectedStoreServer) handleUpdateClientAddressPrivacyPolicy(w http.Res
 }
 
 func (s *protectedStoreServer) handleAnonymizeExpiredClientAddresses(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", "platform.manage", "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", "platform.manage")
 	if !ok {
 		return
 	}

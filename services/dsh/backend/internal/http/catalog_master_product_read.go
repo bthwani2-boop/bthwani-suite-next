@@ -12,7 +12,7 @@ import (
 // operator detail workspace. The catalog package remains the only product
 // truth owner; this handler only enforces actor scope and transports the result.
 func (s *protectedStoreServer) handleGetCatalogMasterProduct(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requireActor(w, r); !ok {
 		return
 	}
 

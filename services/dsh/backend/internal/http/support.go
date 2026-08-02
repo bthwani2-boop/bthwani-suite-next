@@ -26,7 +26,7 @@ const errTicketNotFound = "ticket not found"
 
 // POST /dsh/operator/incidents
 func (s *protectedStoreServer) handleCreateIncident(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
 	if !ok {
 		return
 	}
@@ -59,7 +59,7 @@ func (s *protectedStoreServer) handleCreateIncident(w http.ResponseWriter, r *ht
 
 // GET /dsh/operator/incidents
 func (s *protectedStoreServer) handleListIncidents(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead)
 	if !ok {
 		return
 	}
@@ -78,7 +78,7 @@ func (s *protectedStoreServer) handleListIncidents(w http.ResponseWriter, r *htt
 
 // PATCH /dsh/operator/incidents/{incidentId}
 func (s *protectedStoreServer) handleUpdateIncident(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
 	if !ok {
 		return
 	}

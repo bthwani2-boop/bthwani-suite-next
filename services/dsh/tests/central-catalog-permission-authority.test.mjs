@@ -7,10 +7,11 @@ const source = fs.readFileSync(
   "utf8",
 );
 
-test("catalog UI authorization consumes Identity permission claims", () => {
+test("catalog UI authorization consumes Identity permission claims exclusively", () => {
   assert.match(source, /hasServiceControlPanelPermission/);
-  assert.match(source, /identityOrFallbackRole\.roles\?\.includes\("operator"\)/);
-  assert.match(source, /hasServiceControlPanelPermission\(identityOrFallbackRole, "dsh", permission\)/);
+  assert.match(source, /hasServiceControlPanelPermission\(identity, "dsh", permission\)/);
+  // Operator role must not be expanded locally anymore — all claims must arrive from Identity.
+  assert.doesNotMatch(source, /identityOrFallbackRole/);
 });
 
 test("catalog UI permission vocabulary includes backend assortment and seed actions", () => {
@@ -19,10 +20,10 @@ test("catalog UI permission vocabulary includes backend assortment and seed acti
   assert.match(source, /"catalog\.seed\.read"/);
 });
 
-test("catalog UI does not expand admin or staff roles locally", () => {
+test("catalog UI does not expand any local role to access — deny by default", () => {
   assert.doesNotMatch(source, /actorRole === "admin"/);
   assert.doesNotMatch(source, /actorRole === "staff"/);
   assert.doesNotMatch(source, /partnerAllowed/);
   assert.doesNotMatch(source, /fieldAllowed/);
-  assert.match(source, /return identityOrFallbackRole === "operator"/);
+  assert.doesNotMatch(source, /return identityOrFallbackRole === "operator"/);
 });

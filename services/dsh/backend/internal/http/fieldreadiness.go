@@ -79,7 +79,7 @@ func (s *protectedStoreServer) handleListVisitChecks(w http.ResponseWriter, r *h
 
 // GET /dsh/operator/field-readiness/escalations
 func (s *protectedStoreServer) handleListOperatorEscalations(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead)
 	if !ok {
 		return
 	}

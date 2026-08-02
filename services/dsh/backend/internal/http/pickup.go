@@ -301,7 +301,7 @@ func (s *protectedStoreServer) handlePickupNoShow(w http.ResponseWriter, r *http
 }
 
 func (s *protectedStoreServer) handleListOperatorPickups(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PickupPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", PickupPermissionRead)
 	if !ok {
 		return
 	}
@@ -324,7 +324,7 @@ func (s *protectedStoreServer) handleListOperatorPickups(w http.ResponseWriter, 
 }
 
 func (s *protectedStoreServer) handleGetOperatorPickup(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PickupPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", PickupPermissionRead)
 	if !ok {
 		return
 	}
@@ -410,7 +410,7 @@ func (s *protectedStoreServer) handlePartnerReschedulePickupWindow(w http.Respon
 // IncidentPermissionOverride, not the ordinary PickupPermissionManage that
 // gates read/monitor-adjacent operator actions elsewhere in this file.
 func (s *protectedStoreServer) handleExtendPickupWindow(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", IncidentPermissionOverride, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", IncidentPermissionOverride)
 	if !ok {
 		return
 	}

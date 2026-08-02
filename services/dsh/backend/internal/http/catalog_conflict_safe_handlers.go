@@ -25,7 +25,7 @@ func (s *protectedStoreServer) handleCompleteAssetUploadSafe(w http.ResponseWrit
 }
 
 func (s *protectedStoreServer) handleDeleteCatalogAssetSafe(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
 		return
 	}
 	if err := centralcatalog.DeleteUnlinkedAsset(r.Context(), s.db, s.mediaClient(), r.PathValue("assetId")); err != nil {
@@ -121,28 +121,28 @@ func (s *protectedStoreServer) putEntityImageSafe(
 }
 
 func (s *protectedStoreServer) handlePutDomainImageSafe(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
 		return
 	}
 	s.putEntityImageSafe(w, r, "domain", r.PathValue("domainId"), r.PathValue("role"))
 }
 
 func (s *protectedStoreServer) handlePutNodeImageSafe(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
 		return
 	}
 	s.putEntityImageSafe(w, r, "node", r.PathValue("nodeId"), r.PathValue("role"))
 }
 
 func (s *protectedStoreServer) handlePutMasterProductImageSafe(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
 		return
 	}
 	s.putEntityImageSafe(w, r, "master_product", r.PathValue("productId"), r.PathValue("role"))
 }
 
 func (s *protectedStoreServer) handlePutProductProposalImageSafe(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
 		return
 	}
 	s.putEntityImageSafe(w, r, "product_proposal", r.PathValue("proposalId"), r.PathValue("role"))
@@ -168,7 +168,7 @@ func (s *protectedStoreServer) handlePutStoreImageSafe(w http.ResponseWriter, r 
 }
 
 func (s *protectedStoreServer) handleSubmitReelSafe(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner", "operator")
+	actor, ok := s.requireActor(w, r, "partner")
 	if !ok {
 		return
 	}
@@ -185,7 +185,7 @@ func (s *protectedStoreServer) handleSubmitReelSafe(w http.ResponseWriter, r *ht
 }
 
 func (s *protectedStoreServer) handleReviewReelSafe(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaReview, "operator")
+	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaReview)
 	if !ok {
 		return
 	}

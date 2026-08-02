@@ -438,7 +438,7 @@ func (s *protectedStoreServer) handleCancelCheckoutIntent(w http.ResponseWriter,
 }
 
 func (s *protectedStoreServer) handleOperatorCheckoutIntents(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead); !ok {
 		return
 	}
 	intents, err := checkout.ListOperatorIntents(s.db, r.URL.Query().Get("state"), 50)
@@ -494,7 +494,7 @@ func checkoutCreateFingerprint(parts ...string) string {
 }
 
 func (s *protectedStoreServer) handleReconcileCheckoutIntent(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage); !ok {
 		return
 	}
 	intent, err := checkout.GetIntentForOperator(s.db, r.PathValue("intentId"))

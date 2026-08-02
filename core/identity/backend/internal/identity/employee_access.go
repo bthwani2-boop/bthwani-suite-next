@@ -51,8 +51,9 @@ func normalizeDepartmentCode(raw string) (string, error) {
 }
 
 // employeeDshPermissions maps administrative bundles to the exact DSH actions
-// consumed by control-panel routes. These grants replace broad operator-role
-// fallbacks for every non-owner employee.
+// consumed by control-panel routes. These grants are the authoritative source
+// of DSH capabilities for each employee role. The broad operator-role fallback
+// in requirePermission must not be relied on; all access must flow through here.
 func employeeDshPermissions(bundle string) []Permission {
 	grant := func(actions ...string) []Permission {
 		permissions := make([]Permission, 0, len(actions))
@@ -66,21 +67,54 @@ func employeeDshPermissions(bundle string) []Permission {
 
 	switch strings.TrimSpace(bundle) {
 	case EmployeeBundlePlatformOwner:
-		return grant("platform.read", "platform.manage")
+		// Sovereign platform owner: all DSH control-panel capabilities.
+		return grant(
+			"platform.read", "platform.manage",
+			"partners.read", "partners.manage", "partners.activate",
+			"catalog.taxonomy.manage",
+			"catalog.product.read", "catalog.product.manage", "catalog.product.approve", "catalog.product.publish",
+			"catalog.proposal.read", "catalog.proposal.review", "catalog.proposal.marketing_review",
+			"catalog.proposal.adopt", "catalog.proposal.publish",
+			"catalog.media.read", "catalog.media.upload", "catalog.media.review", "catalog.media.manage",
+			"catalog.policy.read", "catalog.policy.manage",
+			"catalog.assortment.read", "catalog.assortment.manage",
+			"catalog.seed.read",
+			"catalog.bulk.import", "catalog.bulk.export", "catalog.bulk.edit",
+			"catalog.audit.read", "catalog.cleanup.manage",
+			"marketing.read", "marketing.manage",
+			"finance.read", "finance.manage",
+			"analytics.read",
+			"operations.read", "operations.manage",
+			"operations.special_requests.read", "operations.special_requests.transition", "operations.special_requests.dispatch",
+			"support.read", "support.manage",
+			"administration.read", "administration.manage",
+			"administration.approve",
+			"administration.role.request", "administration.role.approve",
+			"administration.staff.request", "administration.staff.approve",
+			"administration.audit.read", "administration.diagnostics.read",
+			"administration.rollback.request", "administration.rollback.approve",
+		)
 	case EmployeeBundlePlatformCoordinator:
-		return grant("platform.read")
+		return grant("platform.read", "analytics.read")
 	case EmployeeBundleOperationsManager:
-		return grant("operations.read", "operations.manage")
+		return grant(
+			"operations.read", "operations.manage",
+			"operations.special_requests.read", "operations.special_requests.transition", "operations.special_requests.dispatch",
+			"analytics.read",
+		)
 	case EmployeeBundlePartnersManager:
 		return grant("partners.read", "partners.manage", "partners.activate")
 	case EmployeeBundleFinanceManager:
 		return grant("finance.read", "finance.manage")
 	case EmployeeBundleSupportManager:
 		return grant("support.read", "support.manage")
+	case EmployeeBundleHRManager:
+		return grant("administration.read", "administration.manage")
 	default:
 		return nil
 	}
 }
+
 
 func employeeBundlePermissions(bundle, department string) ([]Permission, error) {
 	bundle = strings.TrimSpace(bundle)

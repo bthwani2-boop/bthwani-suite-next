@@ -30,7 +30,7 @@ func RegisterPartnerFleetOperatorRoutes(
 
 // GET /dsh/operator/stores/{storeId}/partner-fleet
 func (s *protectedStoreServer) handleOperatorPartnerFleetSnapshot(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead)
 	if !ok {
 		return
 	}

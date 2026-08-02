@@ -195,7 +195,7 @@ func (s *protectedStoreServer) handleGetClientDeliveryProof(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleListOperatorDeliveryProofs(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead)
 	if !ok {
 		return
 	}
@@ -213,7 +213,7 @@ func (s *protectedStoreServer) handleListOperatorDeliveryProofs(w http.ResponseW
 }
 
 func (s *protectedStoreServer) handleGetOperatorDeliveryProof(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead)
 	if !ok {
 		return
 	}
@@ -234,7 +234,7 @@ func (s *protectedStoreServer) handleRejectOperatorDeliveryProof(w http.Response
 }
 
 func (s *protectedStoreServer) handleReviewOperatorDeliveryProof(w http.ResponseWriter, r *http.Request, accept bool) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage)
 	if !ok {
 		return
 	}

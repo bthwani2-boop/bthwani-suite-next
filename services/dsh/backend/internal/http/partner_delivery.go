@@ -218,7 +218,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryProof(w http.ResponseWriter,
 // own execution, so it requires IncidentPermissionOverride and is recorded
 // as an operational_incident before the task is actually mutated.
 func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", IncidentPermissionOverride, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", IncidentPermissionOverride)
 	if !ok {
 		return
 	}
@@ -273,7 +273,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleListOperatorPartnerDeliveries(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionRead)
 	if !ok {
 		return
 	}
@@ -296,7 +296,7 @@ func (s *protectedStoreServer) handleListOperatorPartnerDeliveries(w http.Respon
 }
 
 func (s *protectedStoreServer) handleGetOperatorPartnerDelivery(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionRead)
 	if !ok {
 		return
 	}
@@ -309,7 +309,7 @@ func (s *protectedStoreServer) handleGetOperatorPartnerDelivery(w http.ResponseW
 }
 
 func (s *protectedStoreServer) handleGetOperatorPartnerDeliveryByOrder(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionRead)
 	if !ok {
 		return
 	}

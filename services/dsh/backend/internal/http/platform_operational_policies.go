@@ -104,7 +104,6 @@ func (s *protectedStoreServer) handleListPlatformZones(
 		r,
 		"control-panel",
 		"platform.read",
-		"operator",
 	); !ok {
 		return
 	}
@@ -139,7 +138,6 @@ func (s *protectedStoreServer) handleCreatePlatformZone(
 		r,
 		"control-panel",
 		"platform.manage",
-		"operator",
 	)
 	if !ok {
 		return
@@ -185,7 +183,6 @@ func (s *protectedStoreServer) handleUpdatePlatformZone(
 		r,
 		"control-panel",
 		"platform.manage",
-		"operator",
 	)
 	if !ok {
 		return
@@ -232,7 +229,6 @@ func (s *protectedStoreServer) handleListPlatformSlaRules(
 		r,
 		"control-panel",
 		"platform.read",
-		"operator",
 	); !ok {
 		return
 	}
@@ -257,7 +253,6 @@ func (s *protectedStoreServer) handleUpsertPlatformSlaRule(
 		r,
 		"control-panel",
 		"platform.manage",
-		"operator",
 	)
 	if !ok {
 		return
@@ -305,7 +300,6 @@ func (s *protectedStoreServer) handleGetPlatformCapacity(
 		r,
 		"control-panel",
 		"platform.read",
-		"operator",
 	); !ok {
 		return
 	}
@@ -330,7 +324,6 @@ func (s *protectedStoreServer) handleUpsertPlatformCapacity(
 		r,
 		"control-panel",
 		"platform.manage",
-		"operator",
 	)
 	if !ok {
 		return
@@ -378,7 +371,6 @@ func (s *protectedStoreServer) handleGetPlatformZoneServiceability(
 		r,
 		"control-panel",
 		"platform.read",
-		"operator",
 	); !ok {
 		return
 	}

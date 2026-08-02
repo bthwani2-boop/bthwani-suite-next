@@ -59,7 +59,7 @@ func marshalIncidentEvent(event support.IncidentEvent) map[string]any {
 }
 
 func (s *protectedStoreServer) handleCreateGovernedIncident(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
 	if !ok {
 		return
 	}
@@ -93,7 +93,7 @@ func (s *protectedStoreServer) handleCreateGovernedIncident(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleListGovernedIncidents(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead); !ok {
 		return
 	}
 	incidents, err := support.ListGovernedIncidents(s.db, r.URL.Query().Get("status"), 50)
@@ -109,7 +109,7 @@ func (s *protectedStoreServer) handleListGovernedIncidents(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleGetGovernedIncident(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead); !ok {
 		return
 	}
 	incident, err := support.GetGovernedIncident(s.db, r.PathValue("incidentId"))
@@ -121,7 +121,7 @@ func (s *protectedStoreServer) handleGetGovernedIncident(w http.ResponseWriter, 
 }
 
 func (s *protectedStoreServer) handleUpdateGovernedIncident(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
 	if !ok {
 		return
 	}
@@ -154,7 +154,7 @@ func (s *protectedStoreServer) handleUpdateGovernedIncident(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleListGovernedIncidentEvents(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead); !ok {
 		return
 	}
 	incidentID := r.PathValue("incidentId")

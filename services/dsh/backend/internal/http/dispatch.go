@@ -85,7 +85,7 @@ func (s *protectedStoreServer) handleGetCaptainDeliveryException(w http.Response
 
 // GET /dsh/operator/delivery-exceptions
 func (s *protectedStoreServer) handleListOperatorDeliveryExceptions(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead)
 	if !ok {
 		return
 	}
@@ -140,7 +140,7 @@ func marshalDeliveryException(item *dispatch.DeliveryException) map[string]any {
 
 // POST /dsh/operator/delivery-exceptions/{exceptionId}/acknowledge
 func (s *protectedStoreServer) handleAcknowledgeDeliveryException(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage)
 	if !ok {
 		return
 	}
@@ -160,7 +160,7 @@ func (s *protectedStoreServer) handleAcknowledgeDeliveryException(w http.Respons
 
 // POST /dsh/operator/delivery-exceptions/{exceptionId}/resolve
 func (s *protectedStoreServer) handleResolveDeliveryException(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage)
 	if !ok {
 		return
 	}

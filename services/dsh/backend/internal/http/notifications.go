@@ -10,7 +10,7 @@ import (
 
 // GET /dsh/notifications
 func (s *protectedStoreServer) handleListNotifications(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field")
 	if !ok {
 		return
 	}
@@ -31,7 +31,7 @@ func (s *protectedStoreServer) handleListNotifications(w http.ResponseWriter, r 
 
 // POST /dsh/notifications/{notificationId}/read
 func (s *protectedStoreServer) handleMarkNotificationRead(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field")
 	if !ok {
 		return
 	}
@@ -50,7 +50,7 @@ func (s *protectedStoreServer) handleMarkNotificationRead(w http.ResponseWriter,
 
 // POST /dsh/notifications/read-all
 func (s *protectedStoreServer) handleMarkAllNotificationsRead(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field")
 	if !ok {
 		return
 	}
@@ -64,7 +64,7 @@ func (s *protectedStoreServer) handleMarkAllNotificationsRead(w http.ResponseWri
 
 // PUT /dsh/notifications/preferences
 func (s *protectedStoreServer) handleUpdateNotificationPreferences(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field")
 	if !ok {
 		return
 	}
@@ -107,7 +107,7 @@ func (s *protectedStoreServer) handleUpdateNotificationPreferences(w http.Respon
 
 // GET /dsh/operator/notifications/config
 func (s *protectedStoreServer) handleListPlatformNotificationConfig(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead)
 	if !ok {
 		return
 	}
@@ -125,7 +125,7 @@ func (s *protectedStoreServer) handleListPlatformNotificationConfig(w http.Respo
 
 // PUT /dsh/operator/notifications/config
 func (s *protectedStoreServer) handleUpsertPlatformNotificationConfig(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
 	if !ok {
 		return
 	}

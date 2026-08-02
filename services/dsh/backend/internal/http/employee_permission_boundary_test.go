@@ -32,7 +32,6 @@ func TestEmployeeExactPermissionDoesNotCrossDshDomains(t *testing.T) {
 		allowedRequest,
 		"control-panel",
 		OperationsPermissionManage,
-		"operator",
 	)
 	if !ok {
 		t.Fatalf("operations manager exact grant was rejected with status %d", allowedResponse.Code)
@@ -53,7 +52,7 @@ func TestEmployeeExactPermissionDoesNotCrossDshDomains(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, "/dsh/operator/cross-domain", nil)
 			request.Header.Set("Authorization", "Bearer operations-manager-token")
 			response := httptest.NewRecorder()
-			if _, allowed := s.requirePermission(response, request, "control-panel", denied, "operator"); allowed {
+			if _, allowed := s.requirePermission(response, request, "control-panel", denied); allowed {
 				t.Fatalf("operations manager crossed into %s", denied)
 			}
 			if response.Code != http.StatusForbidden {
@@ -82,7 +81,6 @@ func TestRegularEmployeeHasNoImplicitOperatorAuthority(t *testing.T) {
 		request,
 		"control-panel",
 		OperationsPermissionRead,
-		"operator",
 	); allowed {
 		t.Fatal("regular employee received implicit operator authority")
 	}

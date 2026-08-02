@@ -47,7 +47,7 @@ func writeGovernedCommissionProxyResponse(w http.ResponseWriter, status int, bod
 
 // PUT /dsh/control-panel/finance/commission-policies
 func (s *protectedStoreServer) handleUpsertFinanceCommissionPolicy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
 	if !ok {
 		return
 	}
@@ -96,7 +96,7 @@ func (s *protectedStoreServer) handleUpsertFinanceCommissionPolicy(w http.Respon
 
 // GET /dsh/control-panel/finance/commissions/{commissionId}
 func (s *protectedStoreServer) handleFinanceCommissionDetail(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
 	if !ok {
 		return
 	}
@@ -110,7 +110,7 @@ func (s *protectedStoreServer) handleFinanceCommissionDetail(w http.ResponseWrit
 
 // POST /dsh/control-panel/finance/commissions/{commissionId}/adjust
 func (s *protectedStoreServer) handleAdjustFinanceCommission(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
 	if !ok {
 		return
 	}
@@ -160,7 +160,7 @@ func (s *protectedStoreServer) proxyGovernedCommissionLifecycle(w http.ResponseW
 }
 
 func (s *protectedStoreServer) handleConfirmFinanceCommission(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
 	if !ok {
 		return
 	}
@@ -168,7 +168,7 @@ func (s *protectedStoreServer) handleConfirmFinanceCommission(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleSettleFinanceCommission(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
 	if !ok {
 		return
 	}
@@ -189,7 +189,7 @@ func (s *protectedStoreServer) decodeReasonedCommissionLifecycle(w http.Response
 }
 
 func (s *protectedStoreServer) handleRejectFinanceCommission(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
 	if !ok {
 		return
 	}
@@ -201,7 +201,7 @@ func (s *protectedStoreServer) handleRejectFinanceCommission(w http.ResponseWrit
 }
 
 func (s *protectedStoreServer) handleReverseFinanceCommission(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
 	if !ok {
 		return
 	}
@@ -214,7 +214,7 @@ func (s *protectedStoreServer) handleReverseFinanceCommission(w http.ResponseWri
 
 // GET /dsh/control-panel/finance/settlements/{settlementId}/evidence
 func (s *protectedStoreServer) handleFinanceSettlementEvidence(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
 	if !ok {
 		return
 	}

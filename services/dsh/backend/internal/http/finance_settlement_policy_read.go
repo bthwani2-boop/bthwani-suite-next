@@ -13,7 +13,7 @@ import (
 // WLT remains the sole owner of settlement-policy truth. DSH forwards only an
 // operator-authorized, trusted-context read and does not cache or reinterpret it.
 func (s *protectedStoreServer) handleGetFinanceSettlementPolicy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
 	if !ok {
 		return
 	}

@@ -10,7 +10,7 @@ import (
 // ── Platform catalog policies ────────────────────────────────────────────────
 
 func (s *protectedStoreServer) handleListCatalogPolicies(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionPolicyRead, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionPolicyRead); !ok {
 		return
 	}
 	items, err := centralcatalog.ListCatalogPolicies(r.Context(), s.db)
@@ -24,7 +24,7 @@ func (s *protectedStoreServer) handleListCatalogPolicies(w http.ResponseWriter, 
 // ── Store assortment ─────────────────────────────────────────────────────────
 
 func (s *protectedStoreServer) handleOperatorGetStoreAssortment(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentRead, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentRead); !ok {
 		return
 	}
 	items, err := centralcatalog.ListStoreAssortment(r.Context(), s.db, r.PathValue("storeId"))

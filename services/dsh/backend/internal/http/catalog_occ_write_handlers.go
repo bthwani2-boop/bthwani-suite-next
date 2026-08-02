@@ -45,7 +45,7 @@ func (s *protectedStoreServer) upsertStoreAssortmentAtomic(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleOperatorUpsertStoreAssortmentAtomic(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentManage, "operator")
+	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentManage)
 	if !ok {
 		return
 	}
@@ -153,7 +153,7 @@ func (s *protectedStoreServer) handleUpdateCatalogAssetAtomic(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleReviewCatalogAssetExpected(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaReview, "operator")
+	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaReview)
 	if !ok {
 		return
 	}

@@ -76,7 +76,7 @@ func couponFundingPolicy(coupon coupons.GovernedCoupon) coupons.FundingPolicy {
 }
 
 func (s *protectedStoreServer) handleListCoupons(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionRead, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionRead); !ok {
 		return
 	}
 	items, err := coupons.ListGoverned(s.db)
@@ -117,7 +117,7 @@ func (s *protectedStoreServer) handleListCoupons(w http.ResponseWriter, r *http.
 }
 
 func (s *protectedStoreServer) handleCreateCoupon(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage)
 	if !ok {
 		return
 	}
@@ -176,7 +176,7 @@ func (s *protectedStoreServer) handleCreateCoupon(w http.ResponseWriter, r *http
 }
 
 func (s *protectedStoreServer) handleUpdateCoupon(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage)
 	if !ok {
 		return
 	}

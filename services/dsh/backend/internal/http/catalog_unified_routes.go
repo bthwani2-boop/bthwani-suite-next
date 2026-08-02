@@ -33,7 +33,7 @@ func (s *protectedStoreServer) writeCatalogMutationError(w http.ResponseWriter, 
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogDomainAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok { return }
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok { return }
 	var input centralcatalog.DomainPatchInput
 	if !decodeProtectedJSON(w, r, &input) { return }
 	domain, err := centralcatalog.UpdateDomainAtomic(r.Context(), s.db, r.PathValue("domainId"), input)
@@ -42,7 +42,7 @@ func (s *protectedStoreServer) handleUpdateCatalogDomainAtomic(w http.ResponseWr
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogNodeAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok { return }
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok { return }
 	var input centralcatalog.NodePatchInput
 	if !decodeProtectedJSON(w, r, &input) { return }
 	node, err := centralcatalog.UpdateNodeAtomic(r.Context(), s.db, r.PathValue("nodeId"), input)
@@ -51,7 +51,7 @@ func (s *protectedStoreServer) handleUpdateCatalogNodeAtomic(w http.ResponseWrit
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogMasterProductAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductManage, "operator"); !ok { return }
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductManage); !ok { return }
 	var input centralcatalog.MasterProductPatchInput
 	if !decodeProtectedJSON(w, r, &input) { return }
 	product, err := centralcatalog.UpdateMasterProductAtomic(r.Context(), s.db, r.PathValue("productId"), input)
@@ -60,7 +60,7 @@ func (s *protectedStoreServer) handleUpdateCatalogMasterProductAtomic(w http.Res
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogPlatformPolicyAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionPolicyManage, "operator"); !ok { return }
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionPolicyManage); !ok { return }
 	var input centralcatalog.CatalogPolicyPatchInput
 	if !decodeProtectedJSON(w, r, &input) { return }
 	policy, err := centralcatalog.UpdateCatalogPolicyAtomic(r.Context(), s.db, r.PathValue("policyId"), input)

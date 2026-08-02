@@ -114,7 +114,7 @@ func resolveControlPanelRepresentativeActor(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *protectedStoreServer) handleControlPanelRepresentativeWallet(w http.ResponseWriter, r *http.Request) {
-	operator, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	operator, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
 	if !ok {
 		return
 	}
@@ -128,7 +128,7 @@ func (s *protectedStoreServer) handleControlPanelRepresentativeWallet(w http.Res
 }
 
 func (s *protectedStoreServer) handleControlPanelRepresentativeLedger(w http.ResponseWriter, r *http.Request) {
-	operator, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	operator, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
 	if !ok {
 		return
 	}

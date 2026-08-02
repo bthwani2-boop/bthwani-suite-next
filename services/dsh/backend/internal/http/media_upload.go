@@ -108,7 +108,7 @@ func (s *protectedStoreServer) handleFieldMediaUpload(w http.ResponseWriter, r *
 // GET /dsh/media?mediaRef=... streams back an authorized uploaded object
 // so control-panel/app-partner can preview evidence during document review.
 func (s *protectedStoreServer) handleMediaDownload(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "field", "partner", "operator")
+	actor, ok := s.requireActor(w, r, "field", "partner")
 	if !ok {
 		return
 	}

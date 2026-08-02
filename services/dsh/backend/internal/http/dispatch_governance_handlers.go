@@ -13,7 +13,7 @@ import (
 )
 
 func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage)
 	if !ok {
 		return
 	}
@@ -71,7 +71,7 @@ func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.Res
 }
 
 func (s *protectedStoreServer) handleListGovernedOperatorDispatchAssignments(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead)
 	if !ok {
 		return
 	}
@@ -175,7 +175,7 @@ func (s *protectedStoreServer) handleDeclineGovernedDispatchAssignment(w http.Re
 }
 
 func (s *protectedStoreServer) handleUpsertCaptainDispatchProfile(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage)
 	if !ok {
 		return
 	}
@@ -216,7 +216,7 @@ func (s *protectedStoreServer) handleUpsertCaptainDispatchProfile(w http.Respons
 }
 
 func (s *protectedStoreServer) handleListCaptainDispatchCandidates(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead)
 	if !ok {
 		return
 	}
@@ -244,7 +244,7 @@ func (s *protectedStoreServer) handleListCaptainDispatchCandidates(w http.Respon
 }
 
 func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage)
 	if !ok {
 		return
 	}
@@ -297,7 +297,7 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 }
 
 func (s *protectedStoreServer) handleCancelGovernedDispatchAssignment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage)
 	if !ok {
 		return
 	}
@@ -318,7 +318,7 @@ func (s *protectedStoreServer) handleCancelGovernedDispatchAssignment(w http.Res
 }
 
 func (s *protectedStoreServer) handleExpireGovernedDispatchAssignments(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage)
 	if !ok {
 		return
 	}
@@ -342,7 +342,7 @@ func (s *protectedStoreServer) handleExpireGovernedDispatchAssignments(w http.Re
 }
 
 func (s *protectedStoreServer) handleListDispatchDecisions(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead)
 	if !ok {
 		return
 	}

@@ -23,7 +23,7 @@ func (s *protectedStoreServer) handleListCatalogDomains(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleCreateCatalogDomain(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok {
 		return
 	}
 	var input centralcatalog.DomainInput
@@ -53,7 +53,7 @@ func (s *protectedStoreServer) handleListCatalogNodes(w http.ResponseWriter, r *
 }
 
 func (s *protectedStoreServer) handleCreateCatalogNode(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok {
 		return
 	}
 	var input centralcatalog.NodeInput
@@ -71,7 +71,7 @@ func (s *protectedStoreServer) handleCreateCatalogNode(w http.ResponseWriter, r 
 // ── Taxonomy (read-only domains+nodes) for partner/field surfaces ──────────
 
 func (s *protectedStoreServer) handleCatalogTaxonomy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner", "field", "operator")
+	actor, ok := s.requireActor(w, r, "partner", "field")
 	if !ok {
 		return
 	}
@@ -142,7 +142,7 @@ func (s *protectedStoreServer) handleListMasterProducts(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleCreateMasterProduct(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductManage); !ok {
 		return
 	}
 	var input centralcatalog.MasterProductInput
@@ -160,7 +160,7 @@ func (s *protectedStoreServer) handleCreateMasterProduct(w http.ResponseWriter, 
 // ── Product proposals ────────────────────────────────────────────────────────
 
 func (s *protectedStoreServer) handleListProductProposals(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProposalRead, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProposalRead); !ok {
 		return
 	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))

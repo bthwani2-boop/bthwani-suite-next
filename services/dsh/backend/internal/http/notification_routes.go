@@ -37,7 +37,7 @@ func RegisterActorNotificationRoutes(
 }
 
 func (s *protectedStoreServer) handleListNotificationPreferences(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field")
 	if !ok {
 		return
 	}

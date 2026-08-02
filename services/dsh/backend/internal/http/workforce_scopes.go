@@ -44,7 +44,7 @@ func RegisterWorkforceScopeRoutes(
 }
 
 func (s *protectedStoreServer) handleGetWorkforceScopes(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", WorkforceScopePermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", WorkforceScopePermissionRead)
 	if !ok {
 		return
 	}
@@ -63,7 +63,7 @@ func (s *protectedStoreServer) handleGetWorkforceScopes(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleReplaceWorkforceScopes(w http.ResponseWriter, r *http.Request) {
-	operator, ok := s.requirePermission(w, r, "control-panel", WorkforceScopePermissionManage, "operator")
+	operator, ok := s.requirePermission(w, r, "control-panel", WorkforceScopePermissionManage)
 	if !ok {
 		return
 	}

@@ -19,7 +19,7 @@ func actorSupportRole(role string) (support.ReporterRole, bool) {
 
 // POST /dsh/support/tickets — compatibility path retained for the primary generated contract.
 func (s *protectedStoreServer) handleCreateActorSupportTicket(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain")
 	if !ok {
 		return
 	}
@@ -62,7 +62,7 @@ func (s *protectedStoreServer) handleCreateActorSupportTicket(w http.ResponseWri
 
 // GET /dsh/support/tickets
 func (s *protectedStoreServer) handleListActorSupportTickets(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain")
 	if !ok {
 		return
 	}
@@ -85,7 +85,7 @@ func (s *protectedStoreServer) handleListActorSupportTickets(w http.ResponseWrit
 
 // GET /dsh/support/tickets/{ticketId}
 func (s *protectedStoreServer) handleGetActorSupportTicket(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain")
 	if !ok {
 		return
 	}
@@ -104,7 +104,7 @@ func (s *protectedStoreServer) handleGetActorSupportTicket(w http.ResponseWriter
 
 // GET /dsh/support/tickets/{ticketId}/messages
 func (s *protectedStoreServer) handleListActorSupportMessages(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain")
 	if !ok {
 		return
 	}
@@ -127,7 +127,7 @@ func (s *protectedStoreServer) handleListActorSupportMessages(w http.ResponseWri
 
 // POST /dsh/support/tickets/{ticketId}/messages
 func (s *protectedStoreServer) handleAddActorSupportMessage(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain")
 	if !ok {
 		return
 	}

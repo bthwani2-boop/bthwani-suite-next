@@ -188,7 +188,7 @@ func authorizePickupMutation(
 	// dsh_pickup_sessions.max_extensions) is exhausted -- not routine
 	// tooling -- so it requires the same override permission as any other
 	// sovereign intervention, not the ordinary PickupPermissionManage.
-	_, ok := protected.requirePermission(w, r, "control-panel", IncidentPermissionOverride, "operator")
+	_, ok := protected.requirePermission(w, r, "control-panel", IncidentPermissionOverride)
 	return ok
 }
 
@@ -360,7 +360,7 @@ func PickupMutationGuard(
 // reschedule after no-show belongs to the partner (see
 // handlePartnerReschedulePickupWindow in pickup.go).
 func (s *protectedStoreServer) handleReschedulePickupWindow(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", IncidentPermissionOverride, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", IncidentPermissionOverride)
 	if !ok {
 		return
 	}

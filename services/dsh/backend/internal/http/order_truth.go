@@ -193,7 +193,7 @@ func (s *protectedStoreServer) handleGetPartnerOrderTruth(w http.ResponseWriter,
 }
 
 func (s *protectedStoreServer) handleListOperatorOrderTruth(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead)
 	if !ok {
 		return
 	}
@@ -206,7 +206,7 @@ func (s *protectedStoreServer) handleListOperatorOrderTruth(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleGetOperatorOrderTruth(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead)
 	if !ok {
 		return
 	}
@@ -214,7 +214,7 @@ func (s *protectedStoreServer) handleGetOperatorOrderTruth(w http.ResponseWriter
 	if writeOrderTruthReadFailure(w, err, "failed to read OperatorContext order truth") {
 		return
 	}
-	orders.RedactOrderTruthForViewer(truth, "operator")
+	orders.RedactOrderTruthForViewer(truth, actor.Role)
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": truth})
 }
 

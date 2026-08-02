@@ -8,7 +8,7 @@ import (
 )
 
 func (s *protectedStoreServer) handleGetOrderTruthDiagnostics(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead)
 	if !ok {
 		return
 	}
