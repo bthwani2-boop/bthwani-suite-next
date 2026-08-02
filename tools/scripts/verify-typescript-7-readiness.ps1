@@ -5,10 +5,19 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $expectedBranch = "task/typescript-7-readiness"
+$baseBranch = "smsm"
 $expectedTypeScriptVersion = "6.0.3"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
-$tsconfigPath = Join-Path $repoRoot "tsconfig.base.json"
 $packageJsonPath = Join-Path $repoRoot "package.json"
+$steps = [System.Collections.Generic.List[object]]::new()
+$failureMessage = ""
+$exitCode = 0
+$pinnedSha = ""
+$currentBranch = ""
+$declaredTypeScript = ""
+$resolvedTypeScript = ""
+$tsconfigFiles = @()
+$changedConfigFiles = @()
 
 function Write-Section {
     param([Parameter(Mandatory)][string]$Title)
@@ -17,181 +26,233 @@ function Write-Section {
     Write-Host "=== $Title ==="
 }
 
-function Invoke-PnpmStep {
+function Invoke-Captured {
+    param(
+        [Parameter(Mandatory)][string]$FilePath,
+        [Parameter(Mandatory)][string[]]$Arguments,
+        [Parameter(Mandatory)][string]$Name
+    )
+
+    $output = & $FilePath @Arguments 2>&1
+    $nativeExitCode = $LASTEXITCODE
+    if ($nativeExitCode -ne 0) {
+        throw "$Name failed with exit code $nativeExitCode.`n$($output | Out-String)"
+    }
+
+    return ($output | Out-String).Trim()
+}
+
+function Invoke-Step {
     param(
         [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$FilePath,
         [Parameter(Mandatory)][string[]]$Arguments
     )
 
     Write-Section $Name
     $startedAt = Get-Date
+    & $FilePath @Arguments
+    $nativeExitCode = $LASTEXITCODE
+    $elapsed = (Get-Date) - $startedAt
 
-    & pnpm @Arguments
-    $exitCode = $LASTEXITCODE
+    $steps.Add([pscustomobject]@{
+        Name = $Name
+        ExitCode = $nativeExitCode
+        Duration = $elapsed
+    })
 
-    if ($exitCode -ne 0) {
-        throw "$Name failed with exit code $exitCode."
+    if ($nativeExitCode -ne 0) {
+        throw "$Name failed with exit code $nativeExitCode."
     }
 
-    $elapsed = (Get-Date) - $startedAt
     Write-Host ("Completed in {0:hh\:mm\:ss}." -f $elapsed)
+}
+
+function Assert-CleanWorktree {
+    param([Parameter(Mandatory)][string]$Stage)
+
+    $status = Invoke-Captured -FilePath "git" -Arguments @("status", "--porcelain") -Name "git status ($Stage)"
+    if ($status) {
+        throw "Unexpected repository drift during '$Stage':`n$status"
+    }
+
+    Invoke-Step -Name "Diff whitespace check ($Stage)" -FilePath "git" -Arguments @("diff", "--check")
+    Invoke-Step -Name "Tracked diff check ($Stage)" -FilePath "git" -Arguments @("diff", "--exit-code")
 }
 
 Push-Location $repoRoot
 try {
     Write-Section "Preflight"
 
-    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-        throw "git is not available in PATH."
-    }
-
-    if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
-        throw "pnpm is not available in PATH."
-    }
-
-    $currentBranch = (& git branch --show-current).Trim()
-    if ($LASTEXITCODE -ne 0) {
-        throw "Unable to determine the current Git branch."
-    }
-
-    if ($currentBranch -ne $expectedBranch) {
-        throw "Wrong branch: '$currentBranch'. Switch to '$expectedBranch' before running this script."
-    }
-
-    if (-not (Test-Path -LiteralPath $tsconfigPath)) {
-        throw "Missing file: $tsconfigPath"
+    foreach ($command in @("git", "node", "pnpm")) {
+        if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {
+            throw "$command is not available in PATH."
+        }
     }
 
     if (-not (Test-Path -LiteralPath $packageJsonPath)) {
         throw "Missing file: $packageJsonPath"
     }
 
+    $currentBranch = Invoke-Captured -FilePath "git" -Arguments @("branch", "--show-current") -Name "Resolve current branch"
+    if ($currentBranch -ne $expectedBranch) {
+        throw "Wrong branch: '$currentBranch'. Switch to '$expectedBranch' before running this script."
+    }
+
+    $initialStatus = Invoke-Captured -FilePath "git" -Arguments @("status", "--porcelain") -Name "Initial git status"
+    if ($initialStatus) {
+        throw "The worktree must be clean before verification:`n$initialStatus"
+    }
+
+    Invoke-Step -Name "Fetch immutable remote refs" -FilePath "git" -Arguments @(
+        "fetch",
+        "origin",
+        $expectedBranch,
+        $baseBranch,
+        "--prune"
+    )
+
+    $pinnedSha = Invoke-Captured -FilePath "git" -Arguments @("rev-parse", "HEAD") -Name "Resolve local HEAD"
+    $remoteSha = Invoke-Captured -FilePath "git" -Arguments @("rev-parse", "refs/remotes/origin/$expectedBranch") -Name "Resolve remote HEAD"
+
+    if ($pinnedSha -ne $remoteSha) {
+        throw "Local HEAD '$pinnedSha' does not match origin/$expectedBranch '$remoteSha'. Pull with --ff-only before running verification."
+    }
+
     Write-Host "Repository: $repoRoot"
     Write-Host "Branch:     $currentBranch"
+    Write-Host "Pinned SHA: $pinnedSha"
 
-    Write-Section "Migrate deprecated TypeScript 6 options"
-
-    $tsconfigContent = [System.IO.File]::ReadAllText($tsconfigPath)
-    $updatedTsconfig = $tsconfigContent
-    $changed = $false
-
-    $ignoreDeprecationsPattern = '(?m)^\s*"ignoreDeprecations"\s*:\s*"6\.0"\s*,?\r?\n'
-    if ([System.Text.RegularExpressions.Regex]::IsMatch($updatedTsconfig, $ignoreDeprecationsPattern)) {
-        $updatedTsconfig = [System.Text.RegularExpressions.Regex]::Replace(
-            $updatedTsconfig,
-            $ignoreDeprecationsPattern,
-            "",
-            1
-        )
-        $changed = $true
-        Write-Host 'Removed "ignoreDeprecations": "6.0" from tsconfig.base.json.'
+    Write-Section "Inventory TypeScript configuration"
+    $tsconfigFiles = @(
+        & git ls-files -- "tsconfig*.json" ":(glob)**/tsconfig*.json"
+    ) | Where-Object { $_ }
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to inventory tracked TypeScript configuration files."
     }
-    else {
-        Write-Host 'The setting "ignoreDeprecations": "6.0" is already absent.'
+    $tsconfigFiles = @($tsconfigFiles | Sort-Object -Unique)
+
+    if ($tsconfigFiles.Count -eq 0) {
+        throw "No tracked tsconfig files were found."
     }
 
-    $baseUrlPattern = '(?m)^\s*"baseUrl"\s*:\s*"\."\s*,?\r?\n'
-    if ([System.Text.RegularExpressions.Regex]::IsMatch($updatedTsconfig, $baseUrlPattern)) {
-        $updatedTsconfig = [System.Text.RegularExpressions.Regex]::Replace(
-            $updatedTsconfig,
-            $baseUrlPattern,
-            "",
-            1
-        )
-        $changed = $true
-        Write-Host 'Removed deprecated "baseUrl": "." from tsconfig.base.json.'
+    $changedConfigFiles = @(
+        & git diff --name-only "origin/$baseBranch...HEAD" -- "tsconfig*.json" ":(glob)**/tsconfig*.json"
+    ) | Where-Object { $_ }
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to calculate changed TypeScript configuration files."
     }
-    elseif ($updatedTsconfig -match '"baseUrl"\s*:') {
-        throw 'tsconfig.base.json contains a non-standard baseUrl value. Migrate its paths explicitly instead of deleting it automatically.'
-    }
-    else {
-        Write-Host 'The deprecated setting "baseUrl" is already absent.'
+    $changedConfigFiles = @($changedConfigFiles | Sort-Object -Unique)
+
+    Write-Host "Tracked tsconfig files: $($tsconfigFiles.Count)"
+    foreach ($file in $tsconfigFiles) {
+        Write-Host "- $file"
     }
 
-    $nonRelativePathTargetPattern = '(?m)^(\s*"[^"]+"\s*:\s*\[\s*")(?!(?:\./|\.\./|/))([^"]+)("\s*\]\s*,?\s*)$'
-    $nonRelativePathTargetCount = [System.Text.RegularExpressions.Regex]::Matches(
-        $updatedTsconfig,
-        $nonRelativePathTargetPattern
-    ).Count
-
-    if ($nonRelativePathTargetCount -gt 0) {
-        $updatedTsconfig = [System.Text.RegularExpressions.Regex]::Replace(
-            $updatedTsconfig,
-            $nonRelativePathTargetPattern,
-            '${1}./${2}${3}'
-        )
-        $changed = $true
-        Write-Host "Migrated $nonRelativePathTargetCount TypeScript path target(s) to explicit relative paths."
-    }
-    else {
-        Write-Host "All TypeScript path targets are already explicitly relative."
+    Write-Host "Changed tsconfig files in this readiness branch: $($changedConfigFiles.Count)"
+    foreach ($file in $changedConfigFiles) {
+        Write-Host "- $file"
     }
 
-    try {
-        $parsedTsconfig = $updatedTsconfig | ConvertFrom-Json
-    }
-    catch {
-        throw "tsconfig.base.json is invalid JSON after the migration: $($_.Exception.Message)"
-    }
-
-    if ($null -ne $parsedTsconfig.compilerOptions.paths) {
-        foreach ($pathProperty in $parsedTsconfig.compilerOptions.paths.PSObject.Properties) {
-            foreach ($target in @($pathProperty.Value)) {
-                $targetValue = [string]$target
-                if ($targetValue -notmatch '^(?:\./|\.\./|/)') {
-                    throw "TypeScript path '$($pathProperty.Name)' still has a non-relative target: '$targetValue'."
-                }
-            }
-        }
-    }
-
-    if ($changed) {
-        $utf8WithoutBom = [System.Text.UTF8Encoding]::new($false)
-        [System.IO.File]::WriteAllText($tsconfigPath, $updatedTsconfig, $utf8WithoutBom)
-    }
+    Invoke-Step -Name "TypeScript configuration governance" -FilePath "node" -Arguments @(
+        "tools/guards/typescript-readiness-config-gate.mjs"
+    )
 
     $packageJson = Get-Content -LiteralPath $packageJsonPath -Raw | ConvertFrom-Json
     $declaredTypeScript = [string]$packageJson.devDependencies.typescript
-
     if ($declaredTypeScript -ne "~$expectedTypeScriptVersion") {
-        throw "Expected package.json to keep typescript at '~$expectedTypeScriptVersion', but found '$declaredTypeScript'."
+        throw "Expected package.json to keep TypeScript at '~$expectedTypeScriptVersion', but found '$declaredTypeScript'."
     }
 
-    Write-Host "TypeScript declaration remains: $declaredTypeScript"
+    Write-Host "TypeScript declaration: $declaredTypeScript"
 
-    Invoke-PnpmStep -Name "Install locked dependencies" -Arguments @(
+    Invoke-Step -Name "Install locked dependencies" -FilePath "pnpm" -Arguments @(
         "install",
         "--frozen-lockfile"
     )
 
-    Write-Section "Verify TypeScript version"
-    $versionOutput = (& pnpm exec tsc --version | Out-String).Trim()
-    $versionExitCode = $LASTEXITCODE
+    Assert-CleanWorktree -Stage "postinstall generation"
+
+    Write-Section "Resolve TypeScript toolchain"
+    $versionOutput = Invoke-Captured -FilePath "pnpm" -Arguments @("exec", "tsc", "--version") -Name "Resolve TypeScript version"
     Write-Host $versionOutput
-
-    if ($versionExitCode -ne 0) {
-        throw "pnpm exec tsc --version failed with exit code $versionExitCode."
-    }
-
     if ($versionOutput -ne "Version $expectedTypeScriptVersion") {
         throw "Expected TypeScript $expectedTypeScriptVersion, but received '$versionOutput'."
     }
+    $resolvedTypeScript = $expectedTypeScriptVersion
 
-    Invoke-PnpmStep -Name "Typecheck" -Arguments @("run", "typecheck")
-    Invoke-PnpmStep -Name "Lint" -Arguments @("run", "lint")
-    Invoke-PnpmStep -Name "Tests" -Arguments @("run", "test")
-    Invoke-PnpmStep -Name "Build" -Arguments @("run", "build")
-    Invoke-PnpmStep -Name "Governance gates" -Arguments @("run", "guard:governance-all")
+    Invoke-Step -Name "Explain workspace TypeScript resolution" -FilePath "pnpm" -Arguments @(
+        "why",
+        "-r",
+        "typescript"
+    )
 
-    Write-Section "Result"
-    Write-Host "TypeScript 7 readiness verification completed successfully."
-    Write-Host "TypeScript remains pinned to $expectedTypeScriptVersion."
+    Write-Section "Targeted verification"
+    Invoke-Step -Name "Control panel typecheck" -FilePath "pnpm" -Arguments @(
+        "--dir", "apps/control-panel/runtime", "typecheck"
+    )
+    Invoke-Step -Name "Control panel build" -FilePath "pnpm" -Arguments @(
+        "--dir", "apps/control-panel/runtime", "build"
+    )
+    Invoke-Step -Name "Shared control panel typecheck" -FilePath "pnpm" -Arguments @(
+        "--dir", "shared/control-panel", "typecheck"
+    )
+    Invoke-Step -Name "DSH typecheck" -FilePath "pnpm" -Arguments @(
+        "--dir", "services/dsh", "typecheck"
+    )
+    Invoke-Step -Name "WLT typecheck" -FilePath "pnpm" -Arguments @(
+        "--dir", "services/wlt", "typecheck"
+    )
 
-    & git status --short
-    if ($LASTEXITCODE -ne 0) {
-        throw "git status failed with exit code $LASTEXITCODE."
+    Write-Section "Full workspace verification"
+    Invoke-Step -Name "Workspace typecheck" -FilePath "pnpm" -Arguments @("run", "typecheck")
+    Invoke-Step -Name "Workspace lint" -FilePath "pnpm" -Arguments @("run", "lint")
+    Invoke-Step -Name "Workspace tests" -FilePath "pnpm" -Arguments @("run", "test")
+    Invoke-Step -Name "Workspace build" -FilePath "pnpm" -Arguments @("run", "build")
+    Invoke-Step -Name "Governance gates" -FilePath "pnpm" -Arguments @("run", "guard:governance-all")
+
+    Invoke-Step -Name "Final TypeScript configuration governance" -FilePath "node" -Arguments @(
+        "tools/guards/typescript-readiness-config-gate.mjs"
+    )
+
+    $finalSha = Invoke-Captured -FilePath "git" -Arguments @("rev-parse", "HEAD") -Name "Resolve final HEAD"
+    if ($finalSha -ne $pinnedSha) {
+        throw "HEAD moved during verification: pinned '$pinnedSha', final '$finalSha'."
     }
+
+    Assert-CleanWorktree -Stage "final verification"
+}
+catch {
+    $exitCode = 1
+    $failureMessage = $_.Exception.Message
 }
 finally {
     Pop-Location
 }
+
+Write-Section "Verification summary"
+Write-Host "Branch:                      $currentBranch"
+Write-Host "Pinned SHA:                  $pinnedSha"
+Write-Host "TypeScript declared:         $declaredTypeScript"
+Write-Host "TypeScript resolved:         $resolvedTypeScript"
+Write-Host "Tracked tsconfig files:      $($tsconfigFiles.Count)"
+Write-Host "Changed tsconfig files:      $($changedConfigFiles.Count)"
+
+if ($steps.Count -gt 0) {
+    Write-Host ""
+    Write-Host "Stages:"
+    foreach ($step in $steps) {
+        Write-Host ("- {0}: exit={1}, duration={2:hh\:mm\:ss}" -f $step.Name, $step.ExitCode, $step.Duration)
+    }
+}
+
+if ($exitCode -eq 0) {
+    Write-Host ""
+    Write-Host "Decision: READY_FOR_TYPESCRIPT_7_EXPERIMENT"
+    exit 0
+}
+
+Write-Host ""
+Write-Host "Decision: NOT_READY"
+Write-Host "First blocker: $failureMessage"
+exit $exitCode
