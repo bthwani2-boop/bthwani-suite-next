@@ -45,6 +45,8 @@ paths:
           description: Invalid Workforce service token.
         '403':
           description: Caller or operator context is forbidden.
+        '503':
+          description: Internal Identity trust configuration is unavailable.
   /internal/employees/provision:
     post:
       operationId: provisionAdministrativeEmployee
@@ -69,13 +71,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/ActorAdminView'
         '400':
-          description: Missing operator context or invalid bundle, department, phone, or username.
+          description: Invalid bundle, department, phone, or username.
         '401':
           description: Invalid Workforce service token.
         '403':
           description: Caller or operator context is forbidden.
         '409':
           description: Phone or username is already bound to an existing actor.
+        '503':
+          description: Internal Identity trust configuration is unavailable.
 components:
   securitySchemes:
     serviceToken:
@@ -99,6 +103,7 @@ components:
       name: X-Operator-Context-ID
       in: header
       required: true
+      description: Trusted runtime scope. The request body cannot select or override it.
       schema:
         type: string
         minLength: 1
@@ -145,7 +150,7 @@ components:
     EmployeeProvisionRequest:
       type: object
       additionalProperties: false
-      required: [username, phoneE164, departmentScope, operatorContextId]
+      required: [username, phoneE164, departmentScope]
       properties:
         username:
           type: string
@@ -158,9 +163,6 @@ components:
         departmentScope:
           type: string
           pattern: '^[a-z0-9][a-z0-9_-]{1,63}$'
-        operatorContextId:
-          type: string
-          minLength: 1
     ActorAdminView:
       type: object
       additionalProperties: false
