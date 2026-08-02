@@ -459,13 +459,13 @@ func (s *protectedStoreServer) handlePartnerInviteTeamMember(w http.ResponseWrit
 func (s *protectedStoreServer) actorHasPartnerPermission(ctx context.Context, actorID string, storeID string, requiredAction string) (bool, error) {
 	var role string
 	err := s.db.QueryRowContext(ctx, `
-		SELECT role FROM dsh_store_team_members 
+		SELECT role FROM dsh_store_team_members
 		WHERE identity_actor_id = $1 AND store_id = $2 AND status = 'active'
 	`, actorID, storeID).Scan(&role)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			// If not a team member, check if they are the partner owner.
-			// Currently, owners are supposed to have an active 'owner' row in team_members, 
+			// Currently, owners are supposed to have an active 'owner' row in team_members,
 			// but we can fallback if needed. Let's assume team_members is authoritative.
 			return false, nil
 		}
