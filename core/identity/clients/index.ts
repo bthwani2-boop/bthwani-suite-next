@@ -1,4 +1,4 @@
-export * from "./identity-api-base-url.ts";
+export * from "./identity-api-config.ts";
 export * from "./identity-client.ts";
 export * from "./identity-session-policy.ts";
 export * from "./identity-session-storage.ts";

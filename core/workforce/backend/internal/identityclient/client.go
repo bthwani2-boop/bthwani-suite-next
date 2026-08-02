@@ -140,12 +140,20 @@ func (c *Client) SearchActorPage(ctx context.Context, role, q, status string, li
 	return page, err
 }
 
-func (c *Client) Deactivate(ctx context.Context, actorID string) error {
-	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/deactivate", nil, nil, nil)
+func (c *Client) Deactivate(ctx context.Context, actorID, reason, correlationID string) error {
+	body := map[string]string{
+		"reason":        reason,
+		"correlationId": correlationID,
+	}
+	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/deactivate", nil, body, nil)
 }
 
-func (c *Client) Reactivate(ctx context.Context, actorID string) error {
-	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/reactivate", nil, nil, nil)
+func (c *Client) Reactivate(ctx context.Context, actorID, reason, correlationID string) error {
+	body := map[string]string{
+		"reason":        reason,
+		"correlationId": correlationID,
+	}
+	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/reactivate", nil, body, nil)
 }
 
 func canonicalActivationSurface(expectedActorType, expectedSurface string) string {

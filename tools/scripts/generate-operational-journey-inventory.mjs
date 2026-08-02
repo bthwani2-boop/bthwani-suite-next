@@ -101,7 +101,6 @@ function operationRecords(file) {
 }
 
 const sourceFiles = {
-  service_blueprint: "services/dsh/SERVICE_BLUEPRINT.md",
   service_manifest: "services/dsh/service.manifest.ts",
   runtime_map: "services/dsh/runtime-map.ts",
   capability_map: "services/dsh/capability-map.ts",

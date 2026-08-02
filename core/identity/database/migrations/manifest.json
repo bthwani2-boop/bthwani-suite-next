@@ -95,6 +95,13 @@
       "sha256": "80f50cbb08692c26abe57ba9186378dfbd713a28c888a86204238467925fb631",
       "historicalPrefix": "013",
       "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 14,
+      "file": "identity-014_actor_lifecycle_audit.sql",
+      "sha256": "2b926ca48f3d669f2505bb170857e97ed66f6414cd22e7e0540db35ae1826450",
+      "historicalPrefix": "014",
+      "state": "ACTIVE"
     }
   ]
 }

@@ -201,7 +201,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'detail-on-open',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'dsh/frontend/app-partner/screens/OrdersInboxScreen.tsx',
+    currentEvidencePath: 'dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx',
     notes: 'Preparation records explain whether delay belongs to store, item issue, substitution, or handoff.',
   },
   {
@@ -508,7 +508,7 @@ const PARTNER_ORDER_LIFECYCLE: readonly DshFlowRegistryEntry[] = [
     visibleSurfaces: ['app-partner'],
     visibility: 'primary',
     routeId: 'order-get',
-    screenHint: 'OrdersInboxScreen',
+    screenHint: 'OperationalOrdersInboxScreen',
     onDemandPolicy: 'detail-on-open',
     allowedActions: ['عرض تفاصيل الطلب'],
     forbiddenActions: ['تعديل بيانات الطلب الأصلية'],

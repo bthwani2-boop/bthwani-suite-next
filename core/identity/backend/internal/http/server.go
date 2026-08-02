@@ -125,6 +125,10 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 			sendError(w, http.StatusTooManyRequests, "LOGIN_RATE_LIMITED", "too many failed attempts; try again later")
 			return
 		}
+		if err == identity.ErrActorDeactivated {
+			sendError(w, http.StatusForbidden, "ACTOR_DEACTIVATED", "actor is deactivated")
+			return
+		}
 		sendError(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "invalid username or password")
 		return
 	}
@@ -283,7 +287,14 @@ func (s *server) internalActorSearch(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) internalActorDeactivate(w http.ResponseWriter, r *http.Request) {
-	if err := s.repository.DeactivateActor(r.Context(), r.PathValue("actorId")); err != nil {
+	var request struct {
+		Reason        string `json:"reason"`
+		CorrelationID string `json:"correlationId"`
+	}
+	if !decodeJSON(w, r, &request) {
+		return
+	}
+	if err := s.repository.DeactivateActor(r.Context(), r.PathValue("actorId"), request.Reason, request.CorrelationID); err != nil {
 		writeInternalActorError(w, err)
 		return
 	}
@@ -291,7 +302,14 @@ func (s *server) internalActorDeactivate(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *server) internalActorReactivate(w http.ResponseWriter, r *http.Request) {
-	if err := s.repository.ReactivateActor(r.Context(), r.PathValue("actorId")); err != nil {
+	var request struct {
+		Reason        string `json:"reason"`
+		CorrelationID string `json:"correlationId"`
+	}
+	if !decodeJSON(w, r, &request) {
+		return
+	}
+	if err := s.repository.ReactivateActor(r.Context(), r.PathValue("actorId"), request.Reason, request.CorrelationID); err != nil {
 		writeInternalActorError(w, err)
 		return
 	}

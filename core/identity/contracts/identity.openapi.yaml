@@ -60,6 +60,8 @@ paths:
           $ref: "#/components/responses/InvalidRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "429":
           $ref: "#/components/responses/RateLimited"
   /auth/otp/request:
@@ -365,6 +367,18 @@ paths:
         - $ref: "#/components/parameters/ActorId"
         - $ref: "#/components/parameters/Authorization"
         - $ref: "#/components/parameters/ServiceCaller"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ reason, correlationId ]
+              properties:
+                reason:
+                  type: string
+                correlationId:
+                  type: string
       responses:
         "204":
           description: Actor deactivated and sessions revoked.
@@ -383,6 +397,18 @@ paths:
         - $ref: "#/components/parameters/ActorId"
         - $ref: "#/components/parameters/Authorization"
         - $ref: "#/components/parameters/ServiceCaller"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ reason, correlationId ]
+              properties:
+                reason:
+                  type: string
+                correlationId:
+                  type: string
       responses:
         "204":
           description: Actor reactivated.

@@ -34,6 +34,7 @@ var (
 	ErrPhoneAlreadyBound      = errors.New("phone already bound to another actor")
 	ErrUsernameTaken          = errors.New("username already taken")
 	ErrActorNotFound          = errors.New("actor not found")
+	ErrActorDeactivated       = errors.New("actor is deactivated")
 )
 
 // activationSurfaceByActorType is the single source for the authentication
@@ -411,13 +412,17 @@ func (r *Repository) Login(ctx context.Context, username, password, fingerprint,
 	}
 
 	actor, err := r.actorByUsername(ctx, normalizedUsername)
-	if err != nil || !actor.Active {
+	if err != nil {
 		r.recordLoginAttempt(ctx, normalizedUsername, false, ipAddress)
 		return TokenPair{}, ErrUnauthenticated
 	}
 	if bcrypt.CompareHashAndPassword([]byte(actor.PasswordHash), []byte(password)) != nil {
 		r.recordLoginAttempt(ctx, normalizedUsername, false, ipAddress)
 		return TokenPair{}, ErrUnauthenticated
+	}
+	if !actor.Active {
+		r.recordLoginAttempt(ctx, normalizedUsername, false, ipAddress)
+		return TokenPair{}, ErrActorDeactivated
 	}
 
 	pair, err := r.createSession(ctx, actor, fingerprint)
@@ -830,21 +835,30 @@ func (r *Repository) ActorAdminByID(ctx context.Context, actorID string) (ActorA
 }
 
 // DeactivateActor suspends authentication for an actor in one transaction.
-func (r *Repository) DeactivateActor(ctx context.Context, actorID string) error {
+func (r *Repository) DeactivateActor(ctx context.Context, actorID, reason, correlationID string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	result, err := tx.ExecContext(ctx, `
-		UPDATE identity_actors SET active = false, updated_at = now() WHERE id = $1`, actorID)
+	var active bool
+	err = tx.QueryRowContext(ctx, `SELECT active FROM identity_actors WHERE id = $1 FOR UPDATE`, actorID).Scan(&active)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrActorNotFound
+		}
+		return err
+	}
+	if !active {
+		return errors.New("actor is already deactivated")
+	}
+
+	_, err = tx.ExecContext(ctx, `UPDATE identity_actors SET active = false, updated_at = now() WHERE id = $1`, actorID)
 	if err != nil {
 		return err
 	}
-	if affected, _ := result.RowsAffected(); affected == 0 {
-		return ErrActorNotFound
-	}
+
 	if _, err = tx.ExecContext(ctx, `
 		UPDATE identity_sessions SET revoked_at = now()
 		WHERE actor_id = $1 AND revoked_at IS NULL`, actorID); err != nil {
@@ -855,20 +869,50 @@ func (r *Repository) DeactivateActor(ctx context.Context, actorID string) error 
 		WHERE actor_id = $1 AND status = 'pending'`, actorID); err != nil {
 		return err
 	}
+
+	eventID, _ := randomToken(16)
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO identity_actor_lifecycle_events (id, actor_id, status, reason, correlation_id)
+		VALUES ($1, $2, 'deactivated', $3, $4)`, eventID, actorID, reason, correlationID); err != nil {
+		return err
+	}
+
 	return tx.Commit()
 }
 
 // ReactivateActor restores authentication for a previously activated actor.
-func (r *Repository) ReactivateActor(ctx context.Context, actorID string) error {
-	result, err := r.db.ExecContext(ctx, `
-		UPDATE identity_actors SET active = true, updated_at = now() WHERE id = $1`, actorID)
+func (r *Repository) ReactivateActor(ctx context.Context, actorID, reason, correlationID string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	if affected, _ := result.RowsAffected(); affected == 0 {
-		return ErrActorNotFound
+	defer tx.Rollback()
+
+	var active bool
+	err = tx.QueryRowContext(ctx, `SELECT active FROM identity_actors WHERE id = $1 FOR UPDATE`, actorID).Scan(&active)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrActorNotFound
+		}
+		return err
 	}
-	return nil
+	if active {
+		return errors.New("actor is already active")
+	}
+
+	_, err = tx.ExecContext(ctx, `UPDATE identity_actors SET active = true, updated_at = now() WHERE id = $1`, actorID)
+	if err != nil {
+		return err
+	}
+
+	eventID, _ := randomToken(16)
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO identity_actor_lifecycle_events (id, actor_id, status, reason, correlation_id)
+		VALUES ($1, $2, 'reactivated', $3, $4)`, eventID, actorID, reason, correlationID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *Repository) RevokeActivationChallenges(ctx context.Context, actorID string) error {

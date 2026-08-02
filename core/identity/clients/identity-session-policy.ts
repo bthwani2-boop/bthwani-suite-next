@@ -53,6 +53,12 @@ export function identityErrorPresentation(code: string): IdentityErrorPresentati
         description: "لا يملك هذا الحساب أو السطح صلاحية تنفيذ العملية.",
         retryable: false,
       };
+    case "ACTOR_DEACTIVATED":
+      return {
+        title: "الحساب معطل",
+        description: "تم حظر هذا الحساب. يرجى التواصل مع الدعم.",
+        retryable: false,
+      };
     case "PHONE_ALREADY_BOUND":
     case "USERNAME_TAKEN":
     case "SESSION_NOT_FOUND":
