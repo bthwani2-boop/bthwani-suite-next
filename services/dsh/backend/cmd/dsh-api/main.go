@@ -20,6 +20,7 @@ import (
 	"dsh-api/internal/media"
 	"dsh-api/internal/operationaloutbox"
 	"dsh-api/internal/orders"
+	"dsh-api/internal/partner"
 	"dsh-api/internal/partnerwltoutbox"
 	"dsh-api/internal/promotionfundingoutbox"
 	"dsh-api/internal/wlt"
@@ -63,6 +64,7 @@ func main() {
 	appCtx, cancelApp := context.WithCancel(context.Background())
 	mediaProvider := newMediaProvider(appCtx)
 	identityClient := auth.NewClientWithInternalAccess(identityBaseURL, identityServiceToken, operatorContextID)
+	partner.ConfigureIdentityClient(identityClient)
 	wltClient := wlt.NewClient(wltBaseURL, wltServiceToken)
 
 	respCache := cache.NewClient(os.Getenv("DSH_VALKEY_ADDR"))
