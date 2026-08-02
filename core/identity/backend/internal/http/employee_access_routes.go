@@ -54,24 +54,16 @@ func (s *employeeAccessServer) provision(w http.ResponseWriter, r *http.Request)
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	trustedOperatorContextID := strings.TrimSpace(input.OperatorContextID)
 	operatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
-	if operatorContextID != "" {
-		if !validateInternalOperatorRequest(w, r, operatorContextID) {
-			return
-		}
-		if trustedOperatorContextID != "" && trustedOperatorContextID != operatorContextID {
-			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "provisioned employee operator context cannot override the active runtime operator context")
-			return
-		}
-		trustedOperatorContextID = operatorContextID
-	}
-	if trustedOperatorContextID == "" {
-		sendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "trusted operator context is required for employee provisioning")
+	if operatorContextID == "" {
+		sendError(w, http.StatusServiceUnavailable, "INTERNAL_API_UNAVAILABLE", "trusted operator context is not configured")
 		return
 	}
-	input.OperatorContextID = trustedOperatorContextID
-	if err := s.repository.ValidateEmployeePhoneOperatorContext(r.Context(), input.PhoneE164, trustedOperatorContextID); err != nil {
+	if !validateInternalOperatorRequest(w, r, operatorContextID) {
+		return
+	}
+	input.OperatorContextID = operatorContextID
+	if err := s.repository.ValidateEmployeePhoneOperatorContext(r.Context(), input.PhoneE164, operatorContextID); err != nil {
 		writeInternalActorError(w, err)
 		return
 	}
