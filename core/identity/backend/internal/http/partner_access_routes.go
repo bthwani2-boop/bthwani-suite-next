@@ -93,6 +93,7 @@ func (s *partnerAccessServer) setStoreAccess(w http.ResponseWriter, r *http.Requ
 		StoreID          string `json:"storeId"`
 		PermissionBundle string `json:"permissionBundle"`
 		Enabled          bool   `json:"enabled"`
+		Reactivate       bool   `json:"reactivate"`
 	}
 	if !decodeJSON(w, r, &request) {
 		return
@@ -101,6 +102,7 @@ func (s *partnerAccessServer) setStoreAccess(w http.ResponseWriter, r *http.Requ
 		StoreID:           request.StoreID,
 		PermissionBundle:  request.PermissionBundle,
 		Enabled:           request.Enabled,
+		Reactivate:        request.Reactivate,
 		OperatorContextID: strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID")),
 	})
 	if err != nil {
