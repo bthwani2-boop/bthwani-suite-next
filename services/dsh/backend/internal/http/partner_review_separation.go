@@ -9,7 +9,7 @@ import (
 func (s *protectedStoreServer) handleReviewPartnerDocumentSeparated(w http.ResponseWriter, r *http.Request) {
 	handler := partner.EnforcePartnerDocumentReviewSeparation(
 		s.db,
-		partner.HandleReviewDocument(s.db),
+		s.handleReviewPartnerDocument,
 	)
-	s.servePartnerPermissionHandler(w, r, handler, PartnersPermissionManage, "operator")
+	handler(w, r)
 }
