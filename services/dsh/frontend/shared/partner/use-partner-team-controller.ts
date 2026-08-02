@@ -57,7 +57,7 @@ export function usePartnerTeamController({
 
   const onInviteMember = React.useCallback(async (
     identity: string,
-    role: PartnerTeamInviteRole,
+    role: PartnerTeamInviteRole = 'staff',
   ): Promise<PartnerTeamMutationResult> => {
     if (!activeStoreId) {
       return { ok: false, error: 'لا يوجد فرع محدد لإرسال الدعوة.' };
