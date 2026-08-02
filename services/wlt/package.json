@@ -2,8 +2,6 @@
   "name": "@bthwani/wlt",
   "version": "0.0.0",
   "private": true,
-  "main": "frontend/shared/dsh/index.ts",
-  "types": "frontend/shared/dsh/index.ts",
   "scripts": {
     "openapi:compose": "node ../../tools/scripts/compose-openapi-context.mjs wlt",
     "openapi:generate": "pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/wlt.bundle.openapi.yaml -o clients/generated/wlt-api.ts",

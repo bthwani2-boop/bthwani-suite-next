@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer } from "react";
-import type { WltDshCodReference, WltReferenceApiResult } from "./wlt-cod.api";
+import type { WltDshCodReference, DshReferenceApiResult } from "./wlt-cod.api";
 
 export type DshCaptainCodState =
   | { readonly kind: "loading" }
@@ -26,7 +26,7 @@ function reducer(_state: DshCaptainCodState, action: Action): DshCaptainCodState
   }
 }
 
-export type DshCaptainCodRecordsFetcher = () => Promise<WltReferenceApiResult<WltDshCodReference[]>>;
+export type DshCaptainCodRecordsFetcher = () => Promise<DshReferenceApiResult<WltDshCodReference[]>>;
 
 export function useWltCaptainCodCustodyController(
   actorAvailable: boolean,

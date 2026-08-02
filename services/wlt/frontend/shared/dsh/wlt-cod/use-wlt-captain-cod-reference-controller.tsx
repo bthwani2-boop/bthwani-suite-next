@@ -1,7 +1,7 @@
 import { useEffect, useReducer } from "react";
 import type { WltCaptainCodState } from "./wlt-captain-cod.states";
 import type { WltDshCodReference } from "../finance-boundary/wlt-dsh-boundary.types";
-import type { WltReferenceApiResult } from "../wlt-http/wlt-http-request";
+import type { DshReferenceApiResult } from "../dsh-http/dsh-http-request";
 
 /**
  * Transport for the captain COD read model. WLT's internal /wlt/cod-records
@@ -11,7 +11,7 @@ import type { WltReferenceApiResult } from "../wlt-http/wlt-http-request";
  */
 export type WltCaptainCodRecordsFetcher = (
   captainId: string,
-) => Promise<WltReferenceApiResult<WltDshCodReference[]>>;
+) => Promise<DshReferenceApiResult<WltDshCodReference[]>>;
 
 type Action =
   | { type: "LOADING" }

@@ -1,7 +1,7 @@
 import { useEffect, useReducer } from "react";
 import type { WltDshReferenceState } from "./wlt-reference.states";
 import type { WltDshReferenceContext } from "../finance-boundary/wlt-dsh-boundary.types";
-import { getWltApiBaseUrl } from "../wlt-http/wlt-api-base-url";
+import { resolveDshApiBaseUrl } from "../dsh-http/dsh-api-base-url";
 import {
   fetchWltPaymentStatusRef,
   fetchWltSettlementStatusRef,
@@ -36,7 +36,7 @@ export function useWltDshReferenceController(orderId: string): WltDshReferenceCo
   const [state, dispatch] = useReducer(reducer, { kind: "not_available" });
 
   const load = () => {
-    const baseUrl = getWltApiBaseUrl();
+    const baseUrl = resolveDshApiBaseUrl();
     if (!baseUrl) {
       dispatch({ type: "NOT_AVAILABLE" });
       return;

@@ -1,7 +1,7 @@
 import { createDshFlexibleHttpClient } from "../dsh-link/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
 
-export type WltReferenceApiResult<T> =
+export type DshReferenceApiResult<T> =
   | { readonly ok: true; readonly data: T }
   | { readonly ok: false; readonly kind: "http" | "network"; readonly status?: number; readonly message: string };
 
@@ -17,11 +17,11 @@ function getClient() {
   return createDshFlexibleHttpClient(resolveDshApiBaseUrl());
 }
 
-export async function wltFetchJson<T>(
+export async function dshFetchJson<T>(
   url: string,
   extract: (body: unknown) => T,
   timeoutMs = 10_000,
-): Promise<WltReferenceApiResult<T>> {
+): Promise<DshReferenceApiResult<T>> {
   try {
     const data = await getClient().request<any>(url, { method: "GET" });
     return { ok: true, data: extract(data) };
@@ -33,12 +33,12 @@ export async function wltFetchJson<T>(
   }
 }
 
-export async function wltPostJson<T>(
+export async function dshPostJson<T>(
   url: string,
   body: unknown,
   extract: (body: unknown) => T,
   timeoutMs = 10_000,
-): Promise<WltReferenceApiResult<T>> {
+): Promise<DshReferenceApiResult<T>> {
   try {
     const data = await getClient().request<any>(url, { method: "POST", body });
     return { ok: true, data: extract(data) };

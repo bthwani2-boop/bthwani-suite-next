@@ -43,7 +43,7 @@
       "@bthwani/control-panel": ["shared/control-panel/src/index.ts"],
       "@bthwani/control-panel/components": ["shared/control-panel/src/components/index.ts"],
       "@bthwani/control-panel/shell": ["shared/control-panel/src/shell/index.ts"],
-      "@bthwani/wlt/*": ["services/wlt/frontend/*"]
+      "@bthwani/wlt/dsh": ["services/wlt/frontend/shared/dsh/index.ts"]
     }
   }
 }

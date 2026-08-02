@@ -1,5 +1,5 @@
-import { wltFetchJson, wltPostJson } from "../wlt-http/wlt-http-request";
-import { getWltApiBaseUrl } from "../wlt-http/wlt-api-base-url";
+import { dshFetchJson, dshPostJson } from "../dsh-http/dsh-http-request";
+import { resolveDshApiBaseUrl } from "../dsh-http/dsh-api-base-url";
 import type {
   WltCodCustodyMutationResult,
   WltDshCodReference,
@@ -8,10 +8,10 @@ import type {
 export async function fetchPartnerCodRecords(): Promise<
   readonly WltDshCodReference[]
 > {
-  const result = await wltFetchJson<{
+  const result = await dshFetchJson<{
     readonly codRecords?: readonly WltDshCodReference[];
   }>(
-    `${getWltApiBaseUrl()}/dsh/partner/me/finance/cod-records`,
+    `${resolveDshApiBaseUrl()}/dsh/partner/me/finance/cod-records`,
     (body) => body as { readonly codRecords?: readonly WltDshCodReference[] },
   );
   if (!result.ok) throw new Error(result.message);
@@ -28,8 +28,8 @@ export async function remitPartnerCodRecord(
   if (!normalizedRecordId || normalizedProof.length < 3) {
     throw new Error("Invalid record or proof");
   }
-  const result = await wltPostJson<WltCodCustodyMutationResult>(
-    `${getWltApiBaseUrl()}/dsh/partner/me/finance/cod-records/${encodeURIComponent(normalizedRecordId)}/remit`,
+  const result = await dshPostJson<WltCodCustodyMutationResult>(
+    `${resolveDshApiBaseUrl()}/dsh/partner/me/finance/cod-records/${encodeURIComponent(normalizedRecordId)}/remit`,
     { proofReference: normalizedProof, note: note.trim() },
     (body: unknown) => body as WltCodCustodyMutationResult
   );

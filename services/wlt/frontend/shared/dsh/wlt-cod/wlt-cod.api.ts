@@ -1,10 +1,10 @@
-import { wltFetchJson, wltPostJson } from "../wlt-http/wlt-http-request";
-import { getWltApiBaseUrl } from "../wlt-http/wlt-api-base-url";
+import { dshFetchJson, dshPostJson } from "../dsh-http/dsh-http-request";
+import { resolveDshApiBaseUrl } from "../dsh-http/dsh-api-base-url";
 
 import type { WltDshCodReference } from '../finance-boundary/wlt-dsh-boundary.types';
 export type { WltDshCodReference };
 
-export type WltReferenceApiResult<T> =
+export type DshReferenceApiResult<T> =
   | { readonly ok: true; readonly data: T }
   | { readonly ok: false; readonly kind: "http" | "network"; readonly status?: number; readonly message: string };
 
@@ -52,9 +52,9 @@ export type WltCodCustodyMutationResult = {
   readonly replayed: boolean;
 };
 
-export async function fetchDshCaptainOwnCodRecords(): Promise<WltReferenceApiResult<WltDshCodReference[]>> {
-  const result = await wltFetchJson<{ codRecords?: WltDshCodReference[] }>(
-    `${getWltApiBaseUrl()}/dsh/captain/finance/cod-records`,
+export async function fetchDshCaptainOwnCodRecords(): Promise<DshReferenceApiResult<WltDshCodReference[]>> {
+  const result = await dshFetchJson<{ codRecords?: WltDshCodReference[] }>(
+    `${resolveDshApiBaseUrl()}/dsh/captain/finance/cod-records`,
     (body) => body as { codRecords?: WltDshCodReference[] }
   );
   if (!result.ok) {
@@ -72,8 +72,8 @@ export async function collectDshCaptainCod(
     throw new Error("Invalid request");
   }
   
-  const result = await wltPostJson<WltCodCustodyMutationResult>(
-    `${getWltApiBaseUrl()}/dsh/captain/finance/cod-records/${encodeURIComponent(recordId)}/collect`,
+  const result = await dshPostJson<WltCodCustodyMutationResult>(
+    `${resolveDshApiBaseUrl()}/dsh/captain/finance/cod-records/${encodeURIComponent(recordId)}/collect`,
     {
       actualAmountMinorUnits: input.actualAmountMinorUnits,
       proofReference,
@@ -94,8 +94,8 @@ export async function remitDshCaptainCod(
     throw new Error("Invalid request");
   }
   
-  const result = await wltPostJson<WltCodCustodyMutationResult>(
-    `${getWltApiBaseUrl()}/dsh/captain/finance/cod-records/${encodeURIComponent(recordId)}/remit`,
+  const result = await dshPostJson<WltCodCustodyMutationResult>(
+    `${resolveDshApiBaseUrl()}/dsh/captain/finance/cod-records/${encodeURIComponent(recordId)}/remit`,
     {
       proofReference,
       note: input.note?.trim() ?? "",

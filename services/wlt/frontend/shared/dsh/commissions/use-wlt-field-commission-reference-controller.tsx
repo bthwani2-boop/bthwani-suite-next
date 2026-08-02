@@ -1,7 +1,7 @@
 import { useEffect, useReducer } from "react";
 import type { WltFieldCommissionState } from "./wlt-field-commission.states";
 import type { WltDshFieldCommissionReference } from "./wlt-field-commission.types";
-import { getWltApiBaseUrl } from "../wlt-http/wlt-api-base-url";
+import { resolveDshApiBaseUrl } from "../dsh-http/dsh-api-base-url";
 import { fetchWltFieldCommissionRef } from "./wlt-field-commission-reference.api";
 
 type Action =
@@ -32,7 +32,7 @@ export function useWltDshFieldCommissionReferenceController(partnerId: string): 
   const [state, dispatch] = useReducer(reducer, { kind: "not_available" });
 
   const load = () => {
-    const baseUrl = getWltApiBaseUrl();
+    const baseUrl = resolveDshApiBaseUrl();
     if (!baseUrl || !partnerId) {
       dispatch({ type: "NOT_AVAILABLE" });
       return;
