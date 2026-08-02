@@ -14,6 +14,7 @@ import {
 } from "@bthwani/ui-kit";
 import { usePartnerFleetController } from "../../shared/partner/use-partner-fleet-controller";
 import type { DshCourierConnectionStatus } from "../../shared/partner/partner-fleet.api";
+import type { PartnerTeamInviteRole } from "../../shared/partner/partner.api";
 import type { PartnerTeamMember } from "./partner-team.types";
 import type { PartnerTeamMutationResult } from "./usePartnerTeamModel";
 
@@ -46,7 +47,10 @@ type PartnerTeamManagementScreenProps = {
   readonly isLoading?: boolean;
   readonly error?: string | null;
   readonly onRetry?: () => void;
-  readonly onInviteMember: (identity: string) => Promise<PartnerTeamMutationResult>;
+  readonly onInviteMember: (
+    identity: string,
+    role: PartnerTeamInviteRole,
+  ) => Promise<PartnerTeamMutationResult>;
   readonly onMemberAction: (
     memberId: string,
     action: PartnerTeamInlineAction,
@@ -60,6 +64,13 @@ type MutationState =
   | { readonly kind: "submitting"; readonly target: string }
   | { readonly kind: "success"; readonly message: string }
   | { readonly kind: "error"; readonly message: string };
+
+const inviteRoles: readonly { id: PartnerTeamInviteRole; label: string }[] = [
+  { id: "manager", label: "مدير" },
+  { id: "supervisor", label: "مشرف" },
+  { id: "staff", label: "موظف" },
+  { id: "courier", label: "موصل" },
+];
 
 const sections: readonly { id: PartnerTeamSection; label: string }[] = [
   { id: "members", label: "الأعضاء" },
@@ -124,6 +135,7 @@ export function PartnerTeamManagementScreen({
   const fleet = usePartnerFleetController(storeId);
   const [section, setSection] = React.useState<PartnerTeamSection>("members");
   const [inviteIdentity, setInviteIdentity] = React.useState("");
+  const [inviteRole, setInviteRole] = React.useState<PartnerTeamInviteRole>("staff");
   const [mutation, setMutation] = React.useState<MutationState>({ kind: "idle" });
   const busy = mutation.kind === "submitting";
 
@@ -137,13 +149,13 @@ export function PartnerTeamManagementScreen({
     const identity = inviteIdentity.trim();
     if (identity.length < 5 || busy) return;
     setMutation({ kind: "submitting", target: "invite" });
-    const result = await onInviteMember(identity);
+    const result = await onInviteMember(identity, inviteRole);
     if (!result.ok) {
       setMutation({ kind: "error", message: result.error });
       return;
     }
     setInviteIdentity("");
-    setMutation({ kind: "success", message: "تم إرسال الدعوة من DSH." });
+    setMutation({ kind: "success", message: "تم إرسال الدعوة وربط صلاحيات المتجر عبر Identity." });
   };
 
   const submitAction = async (member: PartnerTeamMember, action: PartnerTeamInlineAction) => {
@@ -232,6 +244,19 @@ export function PartnerTeamManagementScreen({
           placeholder="+967…"
           keyboardType="phone-pad"
         />
+        <Text role="caption" tone="muted" style={styles.rtl}>حزمة الدور داخل هذا المتجر</Text>
+        <View style={styles.inviteRoleOptions}>
+          {inviteRoles.map((role) => (
+            <Button
+              key={role.id}
+              label={role.label}
+              tone={inviteRole === role.id ? "primary" : "ghost"}
+              size="sm"
+              disabled={busy}
+              onPress={() => setInviteRole(role.id)}
+            />
+          ))}
+        </View>
         <Button
           label={mutation.kind === "submitting" && mutation.target === "invite" ? "جارٍ الإرسال…" : "إرسال الدعوة"}
           tone="primary"
@@ -346,6 +371,7 @@ const styles = StyleSheet.create({
   headerCard: { padding: spacing[4], gap: spacing[1], backgroundColor: colorRoles.surfaceBase },
   tabs: { flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[2] },
   inviteCard: { padding: spacing[4], gap: spacing[3], backgroundColor: colorRoles.surfaceBase },
+  inviteRoleOptions: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2], justifyContent: "flex-end" },
   connectionCard: { padding: spacing[4], gap: spacing[3], backgroundColor: colorRoles.surfaceBase },
   connectionRow: {
     paddingVertical: spacing[2],
