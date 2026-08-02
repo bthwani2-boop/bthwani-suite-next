@@ -149,7 +149,8 @@ func writePartnerAccessError(w http.ResponseWriter, err error) {
 	case errors.Is(err, identity.ErrActivationRateLimited):
 		sendError(w, http.StatusTooManyRequests, "RATE_LIMITED", "activation issuance is rate limited")
 	case errors.Is(err, identity.ErrActivationUnavailable):
-		sendError(w, http.StatusServiceUnavailable, "ACTIVATION_UNAVAILABLE", "activation issuance is unavailable")	default:
+		sendError(w, http.StatusServiceUnavailable, "ACTIVATION_UNAVAILABLE", "activation issuance is unavailable")
+	default:
 		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
 	}
 }
