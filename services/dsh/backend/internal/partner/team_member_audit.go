@@ -38,6 +38,7 @@ func (i TeamMemberAuditedActionInput) validate() error {
 type teamMemberAccessDirective struct {
 	syncIdentity    bool
 	identityEnable  bool
+	identityRestore bool
 	scopeActive     bool
 	issueActivation bool
 }
@@ -45,7 +46,7 @@ type teamMemberAccessDirective struct {
 func accessDirectiveForTeamAction(action string) teamMemberAccessDirective {
 	switch action {
 	case "activate":
-		return teamMemberAccessDirective{syncIdentity: true, identityEnable: true, scopeActive: true}
+		return teamMemberAccessDirective{syncIdentity: true, identityEnable: true, identityRestore: true, scopeActive: true}
 	case "resend-invite":
 		return teamMemberAccessDirective{syncIdentity: true, identityEnable: true, scopeActive: false, issueActivation: true}
 	case "pause", "block", "cancel-invite":
@@ -65,7 +66,9 @@ func HandleExecuteStoreTeamMemberActionAudited(db *sql.DB, identityClient *auth.
 			Action string `json:"action"`
 			Reason string `json:"reason"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 32*1024))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&body); err != nil {
 			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
 			return
 		}
@@ -202,6 +205,7 @@ func ExecuteStoreTeamMemberActionAudited(
 				StoreID:          storeID,
 				PermissionBundle: role,
 				Enabled:          directive.identityEnable,
+				Reactivate:       directive.identityRestore,
 			}); err != nil {
 				return nil, err
 			}
