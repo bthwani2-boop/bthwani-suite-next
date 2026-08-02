@@ -3,12 +3,45 @@ x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: BThwani DSH Partner Onboarding API
-  version: 1.0.0
-  description: Governed contract for partner onboarding, first-store ownership,
-    evidence review, state transitions, and partner readback.
+  version: 1.1.0
+  description: Governed contract for retry-safe partner creation, onboarding,
+    first-store ownership, evidence review, state transitions, and partner readback.
 servers:
   - url: http://localhost:58080
 paths:
+  /dsh/operator/partners:
+    post:
+      tags: [ "dsh-operator" ]
+      operationId: createDshPartner
+      summary: Create one governed partner and its unpublished first store
+      description: >-
+        Creates the Partner, first Store, creator scope, and immutable creation
+        event as one transaction. Retrying the same Idempotency-Key with the
+        same payload replays the original Partner; reusing it with another
+        payload fails with IDEMPOTENCY_CONFLICT.
+      parameters:
+        - $ref: '#/components/parameters/PartnerCreationIdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PartnerCreateRequest' }
+      responses:
+        '201':
+          description: Partner created or the original creation result replayed.
+          headers:
+            Idempotent-Replayed:
+              description: Present with value true when the original result was replayed.
+              schema: { type: string, const: 'true' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PartnerCreationResult' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+      security:
+        - bearerAuth: []
   /dsh/operator/partners/{partnerId}:
     get:
       tags: [ "dsh-operator" ]
@@ -101,6 +134,38 @@ paths:
                     items: { $ref: '#/components/schemas/LinkedStore' }
                   total: { type: integer, minimum: 0 }
         '409': { $ref: '#/components/responses/StoreOwnershipConflict' }
+      security:
+        - bearerAuth: []
+  /dsh/field/partners/drafts:
+    post:
+      tags: [ "dsh-field" ]
+      operationId: createFieldPartnerDraft
+      summary: Create one field-owned partner intake draft
+      description: >-
+        The authenticated field actor and trusted OperatorContext own the
+        creation. The first Store remains unpublished. Unknown-result retries
+        replay the original Partner rather than creating parallel authority.
+      parameters:
+        - $ref: '#/components/parameters/PartnerCreationIdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PartnerCreateRequest' }
+      responses:
+        '201':
+          description: Partner draft created or the original result replayed.
+          headers:
+            Idempotent-Replayed:
+              description: Present with value true when the original result was replayed.
+              schema: { type: string, const: 'true' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PartnerCreationResult' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
       security:
         - bearerAuth: []
   /dsh/field/partners/{partnerId}:
@@ -240,6 +305,12 @@ components:
       in: query
       required: true
       schema: { type: integer, minimum: 1 }
+    PartnerCreationIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 200 }
+      description: Retry identity scoped to the authenticated actor and trusted OperatorContext.
     IdempotencyKey:
       name: Idempotency-Key
       in: header
@@ -276,6 +347,50 @@ components:
           client_visible,
           client_hidden
         ]
+    PartnerCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [ legalNameAr, displayName, legalIdentityType, legalIdentityNumber, primaryPhone ]
+      properties:
+        legalNameAr: { type: string, minLength: 1 }
+        legalNameEn: { type: string }
+        displayName: { type: string, minLength: 1 }
+        legalIdentityType:
+          type: string
+          enum: [ commercial_register, national_id, freelancer_certificate ]
+        legalIdentityNumber: { type: string, minLength: 1 }
+        ownerName: { type: string }
+        primaryPhone: { type: string, minLength: 8, maxLength: 20 }
+        secondaryPhone: { type: string, maxLength: 20 }
+        email: { type: string }
+        category:
+          type: string
+          enum: [ restaurant, grocery, pharmacy, bakery, default ]
+        notes: { type: string }
+    PartnerCreationResult:
+      type: object
+      required: [ id, legalNameAr, displayName, legalIdentityType, legalIdentityNumber,
+        primaryPhone, category, activationStatus, createdByActorId, createdBySurface,
+        version, createdAt, updatedAt ]
+      properties:
+        id: { type: string }
+        legalNameAr: { type: string }
+        legalNameEn: { type: string }
+        displayName: { type: string }
+        legalIdentityType: { type: string }
+        legalIdentityNumber: { type: string }
+        ownerName: { type: string }
+        primaryPhone: { type: string }
+        secondaryPhone: { type: string }
+        email: { type: string }
+        category: { type: string }
+        activationStatus: { $ref: '#/components/schemas/ActivationStatus' }
+        createdByActorId: { type: string }
+        createdBySurface: { type: string }
+        notes: { type: string }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
     PartnerState:
       type: object
       required:
@@ -350,7 +465,12 @@ components:
       properties:
         id: { type: string }
         partnerId: { type: string }
-        fromStatus: { $ref: '#/components/schemas/ActivationStatus' }
+        fromStatus:
+          oneOf:
+            - $ref: '#/components/schemas/ActivationStatus'
+            - type: string
+              const: none
+          description: none is used only by the immutable Partner creation event.
         toStatus: { $ref: '#/components/schemas/ActivationStatus' }
         actorId: { type: string }
         actorSurface: { type: string }
@@ -411,6 +531,11 @@ components:
         code: { type: string }
         message: { type: string }
   responses:
+    InvalidRequest:
+      description: Request validation failed or Idempotency-Key is missing.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
     Forbidden:
       description: Actor is not authorized for this partner or surface.
       content:
@@ -422,7 +547,7 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     Conflict:
-      description: Version conflict or idempotency key reuse with another payload.
+      description: Version conflict, duplicate legal identity, or idempotency key reuse with another payload.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
