@@ -51,7 +51,7 @@ test("identity and service clients switch to cookie transport for relative bases
   assert.match(kernel, /!cookieMode && token/);
 
   const resolvers = [
-    ["services/dsh/frontend/shared/_kernel/identity-api-base-url.ts", "/api/identity"],
+    ["core/identity/clients/identity-api-config.ts", "/api/identity"],
     ["services/dsh/frontend/shared/_kernel/dsh-api-base-url.ts", "/api/dsh"],
     ["services/dsh/frontend/shared/_kernel/workforce-api-base-url.ts", "/api/workforce"],
     ["services/dsh/frontend/shared/_kernel/providers-api-base-url.ts", "/api/providers"],
