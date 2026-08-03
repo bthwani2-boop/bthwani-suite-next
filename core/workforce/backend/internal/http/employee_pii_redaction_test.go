@@ -6,13 +6,11 @@ import (
 	"workforce-api/internal/workforce"
 )
 
-
-
 func TestEmployeePIIRedaction(t *testing.T) {
 	tests := []struct {
-		name          string
-		identity      auth.Identity
-		person        workforce.Person
+		name           string
+		identity       auth.Identity
+		person         workforce.Person
 		expectRedacted bool
 	}{
 		{
@@ -55,7 +53,7 @@ func TestEmployeePIIRedaction(t *testing.T) {
 			person: workforce.Person{
 				ActorID: "actor-1",
 				FieldProfile: &workforce.FieldProfile{
-					EmergencyContactName: "John Doe",
+					EmergencyContactName:  "John Doe",
 					EmergencyContactPhone: "123456789",
 				},
 			},
@@ -66,7 +64,7 @@ func TestEmployeePIIRedaction(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			redactPersonPII(tt.identity, &tt.person)
-			
+
 			if tt.expectRedacted {
 				if tt.person.FieldProfile != nil && tt.person.FieldProfile.EmergencyContactName != "" {
 					t.Errorf("expected PII to be redacted, got %s", tt.person.FieldProfile.EmergencyContactName)
