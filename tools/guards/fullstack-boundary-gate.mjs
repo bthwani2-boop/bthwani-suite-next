@@ -41,6 +41,56 @@ const FINANCIAL_MUTATION_PATTERNS = [
   /\bfinalizeRefund\b/,
 ];
 
+function sortedUnique(values) {
+  return [...new Set(values)].sort();
+}
+
+function extractBracketEnumValues(block) {
+  return sortedUnique([...block.matchAll(/^\s*([a-z][a-z0-9_]*)\s*,?\s*$/gm)].map((match) => match[1]));
+}
+
+function extractQuotedUnionValues(block) {
+  return sortedUnique([...block.matchAll(/"([^"]+)"/g)].map((match) => match[1]));
+}
+
+function checkWltPaymentSessionContractBinding() {
+  const contractFile = "services/wlt/contracts/wlt.payments.openapi.yaml";
+  const typesFile = "services/wlt/frontend/shared/dsh/payment/payment-session.types.ts";
+  const contract = read(contractFile);
+  const types = read(typesFile);
+
+  const paymentStatusBlock = contract.match(/PaymentStatus:\s*\n\s*type:\s*string\s*\n\s*enum:\s*\n\s*\[\s*\n([\s\S]*?)\n\s*\]/)?.[1] ?? "";
+  const contractStatuses = extractBracketEnumValues(paymentStatusBlock);
+  const manualStatusBlock = types.match(/export\s+type\s+WltPaymentSessionStatus\s*=\s*([\s\S]*?);/)?.[1] ?? "";
+  const manualStatuses = extractQuotedUnionValues(manualStatusBlock);
+
+  if (contractStatuses.length === 0 || manualStatuses.length === 0 || contractStatuses.join("|") !== manualStatuses.join("|")) {
+    violations.push({
+      file: typesFile,
+      message: `WLT_PAYMENT_STATUS_DTO_DRIFT contract=${contractStatuses.join(",")} manual=${manualStatuses.join(",")}`,
+    });
+  }
+
+  const paymentSessionBlock = contract.match(/PaymentSession:\s*\n([\s\S]*?)\n    CreatePaymentSessionRequest:/)?.[1] ?? "";
+  const contractPropertiesBlock = paymentSessionBlock.match(/\n      properties:\s*\n([\s\S]*)/)?.[1] ?? "";
+  const contractProperties = sortedUnique(
+    [...contractPropertiesBlock.matchAll(/^\s{8}([A-Za-z][A-Za-z0-9]*):\s*\{/gm)].map((match) => match[1]),
+  );
+  const manualSessionBlock = types.match(/export\s+type\s+WltPaymentSession\s*=\s*\{([\s\S]*?)\n\};/)?.[1] ?? "";
+  const manualProperties = sortedUnique(
+    [...manualSessionBlock.matchAll(/readonly\s+([A-Za-z][A-Za-z0-9]*)\??:/g)].map((match) => match[1]),
+  );
+
+  if (contractProperties.length === 0 || manualProperties.length === 0 || contractProperties.join("|") !== manualProperties.join("|")) {
+    violations.push({
+      file: typesFile,
+      message: `WLT_PAYMENT_SESSION_DTO_DRIFT contract=${contractProperties.join(",")} manual=${manualProperties.join(",")}`,
+    });
+  }
+}
+
+checkWltPaymentSessionContractBinding();
+
 for (const file of listCodeFiles()) {
   const content = read(file);
   const surfaceMatch = file.match(/^services\/([^/]+)\/frontend\/([^/]+)\//);
