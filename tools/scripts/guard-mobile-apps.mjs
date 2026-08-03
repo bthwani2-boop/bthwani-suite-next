@@ -118,7 +118,7 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   const eas = readJson(path.join("apps", key, "runtime", "eas.json"));
   const features = app.features ?? [];
 
-  if (pkg.devDependencies?.typescript !== "~6.0.3") fail(`${key}: TypeScript must be ~6.0.3`);
+  if (pkg.devDependencies?.typescript !== "7.0.2") fail(`${key}: TypeScript must be 7.0.2`);
   if (pkg.scripts?.typecheck !== "tsc --noEmit -p tsconfig.json") fail(`${key}: strict typecheck script is required`);
   if (!pkg.dependencies?.["@sentry/react-native"]) fail(`${key}: @sentry/react-native is required`);
   if (!pkg.dependencies?.["@bthwani/data-runtime"]) fail(`${key}: @bthwani/data-runtime is required`);

@@ -78,7 +78,7 @@
     {
       "ordinal": 11,
       "file": "identity-011_employee_dsh_permission_backfill.sql",
-      "sha256": "6d9d22945272307a9f0035cdac4be7cd7d8b3042e0fb00176e109adcaea9fc1d",
+      "sha256": "58efbed6a60e4624c5b6c7e5e81663c577f490a7d184cf1b6a3bd0ee76cfd397",
       "historicalPrefix": "011",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -113,7 +113,7 @@
     {
       "ordinal": 16,
       "file": "identity-016_dsh_operational_policy_permissions.sql",
-      "sha256": "b23aa6aaf2147208f34ba8075924bd17eab7486c41faf44f208829422e72c020",
+      "sha256": "c7a7ba1e6a5d62aafa5279c13f90b4e22b835606d16e89b5db1cfb97b83ac8a8",
       "historicalPrefix": "016",
       "state": "HISTORICAL_IMMUTABLE"
     },

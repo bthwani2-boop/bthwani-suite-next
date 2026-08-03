@@ -10,11 +10,11 @@ import {
   spacing,
   useTheme,
 } from "@bthwani/ui-kit";
-import type { RepresentativeActorType, RepresentativeLedgerEntry } from "./actor-wallet.api";
+import type { RepresentativeWalletActorType, RepresentativeLedgerEntry } from "./actor-wallet.api";
 import { useActorWalletController } from "./use-actor-wallet-controller";
 
 export type ActorWalletPanelProps = {
-  readonly actorType: RepresentativeActorType;
+  readonly actorType: RepresentativeWalletActorType;
   readonly title?: string;
   readonly showLedger?: boolean;
   readonly embedded?: boolean;

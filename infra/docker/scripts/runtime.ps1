@@ -198,7 +198,7 @@ function Write-RuntimeDoctor {
 }
 
 function Wait-ForPostgres {
-  $requiredDatabases = Get-RequiredDatabaseNames
+  $requiredDatabases = @(Get-RequiredDatabaseNames)
   if ($requiredDatabases.Count -eq 0) {
     Write-Host "Postgres readiness skipped: no selected database-backed service."
     return
@@ -513,7 +513,7 @@ switch ($Action) {
 
   "smoke" {
     Write-Host "=== runtime:smoke (profiles: $($ProfileList -join ','))"
-    if ((Get-RequiredDatabaseNames).Count -gt 0) {
+    if (@(Get-RequiredDatabaseNames).Count -gt 0) {
       Invoke-Compose up -d postgres
       Wait-ForPostgres
       Invoke-GovernedMigrations

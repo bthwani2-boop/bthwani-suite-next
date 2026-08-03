@@ -14,6 +14,8 @@ WITH employee_grants AS (
           {"service":"dsh","surface":"control-panel","action":"dsh.fulfillment_sla.manage","scope":"all"},
           {"service":"dsh","surface":"control-panel","action":"dsh.dispatch_capacity.read","scope":"all"},
           {"service":"dsh","surface":"control-panel","action":"dsh.dispatch_capacity.manage","scope":"all"},
+          {"service":"dsh","surface":"control-panel","action":"dsh.dispatch_financial_eligibility.read","scope":"all"},
+          {"service":"dsh","surface":"control-panel","action":"dsh.dispatch_financial_eligibility.manage","scope":"all"},
           {"service":"dsh","surface":"control-panel","action":"dsh.operational_policy.audit.read","scope":"all"},
           {"service":"dsh","surface":"control-panel","action":"dsh.operational_policy.rollback","scope":"all"}
         ]'::jsonb
@@ -23,6 +25,7 @@ WITH employee_grants AS (
           {"service":"dsh","surface":"control-panel","action":"dsh.service_zones.read","scope":"all"},
           {"service":"dsh","surface":"control-panel","action":"dsh.fulfillment_sla.read","scope":"all"},
           {"service":"dsh","surface":"control-panel","action":"dsh.dispatch_capacity.read","scope":"all"},
+          {"service":"dsh","surface":"control-panel","action":"dsh.dispatch_financial_eligibility.read","scope":"all"},
           {"service":"dsh","surface":"control-panel","action":"dsh.operational_policy.audit.read","scope":"all"}
         ]'::jsonb
       WHEN permissions @> '[{"service":"workforce","surface":"control-panel","action":"employee:create","scope":"department:operations"}]'::jsonb
@@ -33,6 +36,8 @@ WITH employee_grants AS (
           {"service":"dsh","surface":"control-panel","action":"dsh.fulfillment_sla.manage","scope":"all"},
           {"service":"dsh","surface":"control-panel","action":"dsh.dispatch_capacity.read","scope":"all"},
           {"service":"dsh","surface":"control-panel","action":"dsh.dispatch_capacity.manage","scope":"all"},
+          {"service":"dsh","surface":"control-panel","action":"dsh.dispatch_financial_eligibility.read","scope":"all"},
+          {"service":"dsh","surface":"control-panel","action":"dsh.dispatch_financial_eligibility.manage","scope":"all"},
           {"service":"dsh","surface":"control-panel","action":"dsh.operational_policy.audit.read","scope":"all"}
         ]'::jsonb
       ELSE '[]'::jsonb
@@ -74,6 +79,8 @@ BEGIN
         {"service":"dsh","surface":"control-panel","action":"dsh.fulfillment_sla.manage","scope":"all"},
         {"service":"dsh","surface":"control-panel","action":"dsh.dispatch_capacity.read","scope":"all"},
         {"service":"dsh","surface":"control-panel","action":"dsh.dispatch_capacity.manage","scope":"all"},
+        {"service":"dsh","surface":"control-panel","action":"dsh.dispatch_financial_eligibility.read","scope":"all"},
+        {"service":"dsh","surface":"control-panel","action":"dsh.dispatch_financial_eligibility.manage","scope":"all"},
         {"service":"dsh","surface":"control-panel","action":"dsh.operational_policy.audit.read","scope":"all"}
       ]'::jsonb
   ) THEN

@@ -893,37 +893,16 @@ export function CatalogDashboardScreen() {
         )}
 
         {activeTab === "policies" && (
-          <div>
-            <h3>سياسات الفئة والمنصة</h3>
-            <CpTable aria-label="جدول السياسات">
-              <thead>
-                <tr dir="rtl">
-                  <CpTableHeaderCell>المعرف</CpTableHeaderCell>
-                  <CpTableHeaderCell>النطاق</CpTableHeaderCell>
-                  <CpTableHeaderCell>عمولة المنصة</CpTableHeaderCell>
-                  <CpTableHeaderCell>يسمح بصورة مخصصة</CpTableHeaderCell>
-                  <CpTableHeaderCell>يتطلب باركود</CpTableHeaderCell>
-                  <CpTableHeaderCell>يتطلب صورة منتج</CpTableHeaderCell>
-                  <CpTableHeaderCell>الحالة</CpTableHeaderCell>
-                </tr>
-              </thead>
-              <tbody dir="rtl">
-                {controller.state.policies.items.map((p) => (
-                  <tr key={p.id}>
-                    <CpTableCell>{p.id}</CpTableCell>
-                    <CpTableCell><code>{p.policyScope}</code></CpTableCell>
-                    <CpTableCell>{p.platformCommissionRate * 100}%</CpTableCell>
-                    <CpTableCell>{p.allowsStoreProductCustomImage ? "نعم" : "لا"}</CpTableCell>
-                    <CpTableCell>{p.requiresBarcode ? "نعم" : "لا"}</CpTableCell>
-                    <CpTableCell>{p.requiresProductImage ? "نعم" : "لا"}</CpTableCell>
-                    <CpTableCell>
-                      <StatusBadge label={p.isActive ? "نشط" : "معطل"} tone={p.isActive ? "success" : "neutral"} />
-                    </CpTableCell>
-                  </tr>
-                ))}
-              </tbody>
-            </CpTable>
-          </div>
+          <CpStatePanel
+            role="status"
+            title="إدارة السياسات"
+            description="تم نقل إدارة السياسات والصلاحيات إلى مسار منصة الحوكمة السيادي."
+            code="CATALOG_POLICIES_MOVED"
+          >
+            <CpButton onClick={() => router.push("/dsh/catalogs/governance")}>
+              فتح منصة الحوكمة
+            </CpButton>
+          </CpStatePanel>
         )}
 
         {activeTab === "assortment" && (

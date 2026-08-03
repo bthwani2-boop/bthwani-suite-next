@@ -9,10 +9,7 @@ export type RepresentativeActorType = Extract<
 >;
 
 /** Actor classes that expose a DSH-facing WLT wallet projection. */
-export type RepresentativeWalletActorType = Extract<
-  components["schemas"]["ActorType"],
-  "client" | "partner" | "captain" | "field"
->;
+export type RepresentativeWalletActorType = components["schemas"]["ActorType"];
 
 /** WalletEnvelope remains open in WLT OpenAPI; this is a read-only projection. */
 export type RepresentativeWallet = {
@@ -43,14 +40,14 @@ const { request } = createDshHttpClient(
   "dsh-representative-wallet",
 );
 
-const walletPathByActor: Record<RepresentativeWalletActorType, string> = {
+const walletPathByActor: Partial<Record<RepresentativeWalletActorType, string>> = {
   client: "/dsh/client/me/finance/wallet",
   partner: "/dsh/partner/me/finance/wallet",
   captain: "/dsh/captain/me/finance/wallet",
   field: "/dsh/field/me/finance/wallet",
 };
 
-const ledgerPathByActor: Record<RepresentativeWalletActorType, string> = {
+const ledgerPathByActor: Partial<Record<RepresentativeWalletActorType, string>> = {
   client: "/dsh/client/me/finance/ledger-entries",
   partner: "/dsh/partner/me/finance/ledger-entries",
   captain: "/dsh/captain/me/finance/ledger-entries",
@@ -79,8 +76,10 @@ function controlPanelWalletPath(
 export async function fetchOwnRepresentativeWallet(
   actorType: RepresentativeWalletActorType,
 ): Promise<RepresentativeWallet> {
+  const path = walletPathByActor[actorType];
+  if (!path) throw new Error("UNSUPPORTED_REPRESENTATIVE_ACTOR_TYPE");
   const response = await request<{ readonly wallet: RepresentativeWallet }>(
-    walletPathByActor[actorType],
+    path,
   );
   return response.wallet;
 }
@@ -89,8 +88,10 @@ export async function fetchOwnRepresentativeLedger(
   actorType: RepresentativeWalletActorType,
   limit = 30,
 ): Promise<readonly RepresentativeLedgerEntry[]> {
+  const path = ledgerPathByActor[actorType];
+  if (!path) throw new Error("UNSUPPORTED_REPRESENTATIVE_ACTOR_TYPE");
   const response = await request<{ readonly ledgerEntries: RepresentativeLedgerEntry[] }>(
-    `${ledgerPathByActor[actorType]}?limit=${safeLedgerLimit(limit)}`,
+    `${path}?limit=${safeLedgerLimit(limit)}`,
   );
   return response.ledgerEntries ?? [];
 }

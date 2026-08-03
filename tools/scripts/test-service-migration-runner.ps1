@@ -231,6 +231,22 @@ ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload;
   Invoke-RunnerProcess -Directory $driftDirectory -ExpectSuccess $false
   Invoke-RunnerProcess -Directory $MigrationPath -ExpectSuccess $true
 
+  Write-Host "--- ${ServiceKey}: legacy ledger conflict rejection ---"
+  Invoke-DatabaseSql -Sql @"
+CREATE TABLE IF NOT EXISTS bthwani_migration_ledger (
+  service_name TEXT NOT NULL,
+  migration_id TEXT NOT NULL,
+  run_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  checksum_sha256 TEXT NOT NULL,
+  PRIMARY KEY (service_name, migration_id)
+);
+INSERT INTO bthwani_migration_ledger (service_name, migration_id, checksum_sha256)
+VALUES ('$ServiceKeySql', 'legacy-unknown.sql', 'bad-checksum')
+ON CONFLICT DO NOTHING;
+"@ | Out-Null
+  Invoke-RunnerProcess -Directory $MigrationPath -ExpectSuccess $false
+  Invoke-DatabaseSql -Sql "DELETE FROM bthwani_migration_ledger WHERE service_name = '$ServiceKeySql' AND migration_id = 'legacy-unknown.sql';" | Out-Null
+
   Write-Host "--- ${ServiceKey}: partial failure rollback and roll-forward ---"
   Set-Content -LiteralPath (Join-Path $partialDirectory $ProbeOneFile) -Value @"
 CREATE TABLE $ProbeOneTable (

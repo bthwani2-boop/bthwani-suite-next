@@ -2,7 +2,7 @@ import { useCallback, useEffect, useReducer } from "react";
 import {
   fetchOwnRepresentativeLedger,
   fetchOwnRepresentativeWallet,
-  type RepresentativeActorType,
+  type RepresentativeWalletActorType,
   type RepresentativeLedgerEntry,
   type RepresentativeWallet,
 } from "./actor-wallet.api";
@@ -51,7 +51,7 @@ function errorMessage(error: unknown): string {
   return String(error);
 }
 
-export function useActorWalletController(actorType: RepresentativeActorType) {
+export function useActorWalletController(actorType: RepresentativeWalletActorType) {
   const [state, dispatch] = useReducer(reducer, { kind: "loading" });
 
   const refresh = useCallback(() => {

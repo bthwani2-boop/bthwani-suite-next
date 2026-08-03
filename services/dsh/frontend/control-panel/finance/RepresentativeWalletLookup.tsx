@@ -16,7 +16,7 @@ import {
 import { resolveDshApiBaseUrl } from '@bthwani/wlt/dsh';
 import { createDshHttpClient } from '@bthwani/wlt/dsh';
 import type {
-  RepresentativeActorType,
+  RepresentativeWalletActorType,
   RepresentativeLedgerEntry,
   RepresentativeWallet,
 } from '@bthwani/wlt/dsh';
@@ -71,7 +71,7 @@ function ledgerDirectionLabel(entry: RepresentativeLedgerEntry): string {
 }
 
 export function RepresentativeWalletLookup() {
-  const [actorType, setActorType] = useState<RepresentativeActorType>("client");
+  const [actorType, setActorType] = useState<RepresentativeWalletActorType>("client");
   const [actorId, setActorId] = useState("");
   const [state, setState] = useState<LookupState>({ kind: "idle" });
 
@@ -129,7 +129,7 @@ export function RepresentativeWalletLookup() {
           <CpSelect
             aria-label="نوع الممثل"
             value={actorType}
-            onChange={(value) => setActorType(value as RepresentativeActorType)}
+            onChange={(value) => setActorType(value as RepresentativeWalletActorType)}
             options={ACTOR_TYPE_OPTIONS}
           />
         </label>

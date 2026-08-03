@@ -74,7 +74,7 @@ func (s *protectedStoreServer) handleUpsertDispatchBalancePolicy(w http.Response
 }
 
 func (s *protectedStoreServer) handleRefreshOperatorCaptainFinancialEligibility(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage)
+	_, ok := s.requirePermission(w, r, "control-panel", DshDispatchFinancialEligibilityPermissionManage)
 	if !ok {
 		return
 	}
@@ -92,7 +92,7 @@ func (s *protectedStoreServer) handleRefreshOperatorCaptainFinancialEligibility(
 }
 
 func (s *protectedStoreServer) handleGetOperatorCaptainFinancialEligibility(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead)
+	_, ok := s.requirePermission(w, r, "control-panel", DshDispatchFinancialEligibilityPermissionRead)
 	if !ok {
 		return
 	}
