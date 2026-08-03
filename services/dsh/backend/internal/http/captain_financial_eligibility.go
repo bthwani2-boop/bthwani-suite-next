@@ -8,20 +8,19 @@ import (
 	"time"
 
 	"dsh-api/internal/dispatch"
-	"dsh-api/internal/platformpolicies"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
 )
 
+const captainFinancialDecisionTTLSeconds = 300
+
 type wltCaptainWalletEnvelope struct {
 	Wallet *struct {
-		ID                         string    `json:"id"`
-		ActorID                    string    `json:"actorId"`
-		ActorType                  string    `json:"actorType"`
-		Status                     string    `json:"status"`
-		Currency                   string    `json:"currency"`
-		AvailableBalanceMinorUnits int64     `json:"availableBalanceMinorUnits"`
-		UpdatedAt                  time.Time `json:"updatedAt"`
+		ID        string    `json:"id"`
+		ActorID   string    `json:"actorId"`
+		ActorType string    `json:"actorType"`
+		Status    string    `json:"status"`
+		UpdatedAt time.Time `json:"updatedAt"`
 	} `json:"wallet"`
 }
 
@@ -42,10 +41,6 @@ func (s *protectedStoreServer) refreshCaptainFinancialEligibility(
 		return dispatch.CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("WLT integration is not configured")
 	}
 
-	policy, err := platformpolicies.GetDispatchBalancePolicy(r.Context(), s.db)
-	if err != nil {
-		return dispatch.CaptainFinancialEligibilitySnapshot{}, err
-	}
 	status, body, err := s.wlt.FinanceReadWalletWithOperatorContext(
 		r.Context(),
 		"captain",
@@ -62,7 +57,7 @@ func (s *protectedStoreServer) refreshCaptainFinancialEligibility(
 
 	var envelope wltCaptainWalletEnvelope
 	if err := json.Unmarshal(body, &envelope); err != nil {
-		return dispatch.CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("decode WLT captain wallet: %w", err)
+		return dispatch.CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("decode WLT captain wallet reference: %w", err)
 	}
 	if envelope.Wallet == nil || envelope.Wallet.ActorID != captainID || envelope.Wallet.ActorType != "captain" {
 		return dispatch.CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("WLT captain wallet identity mismatch")
@@ -72,28 +67,29 @@ func (s *protectedStoreServer) refreshCaptainFinancialEligibility(
 		return dispatch.CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("WLT captain wallet is missing updatedAt")
 	}
 
-	return dispatch.UpsertCaptainFinancialEligibilitySnapshot(
+	reasonCode := "WLT_WALLET_ACTIVE"
+	eligible := strings.EqualFold(strings.TrimSpace(envelope.Wallet.Status), "active")
+	ineligibilityReason := ""
+	if !eligible {
+		reasonCode = "WLT_WALLET_NOT_ACTIVE"
+		ineligibilityReason = reasonCode
+	}
+	decisionID := fmt.Sprintf("wlt-wallet-status:%s:%s", envelope.Wallet.ID, updatedAt.Format(time.RFC3339Nano))
+
+	return dispatch.UpsertCaptainFinancialEligibilityDecision(
 		r.Context(),
 		s.db,
 		operatorContextID,
 		captainID,
-		dispatch.DispatchBalanceRequirement{
-			Enabled:                          policy.Enabled,
-			RequirePositiveBalance:           policy.RequirePositiveBalance,
-			MinimumDispatchBalanceMinorUnits: policy.MinimumDispatchBalanceMinorUnits,
-			Currency:                         policy.Currency,
-			SnapshotTTLSeconds:               policy.SnapshotTTLSeconds,
-		},
-		dispatch.CaptainWalletReadback{
-			WalletID:                   envelope.Wallet.ID,
-			WalletStatus:               envelope.Wallet.Status,
-			AvailableBalanceMinorUnits: envelope.Wallet.AvailableBalanceMinorUnits,
-			Currency:                   envelope.Wallet.Currency,
-			SnapshotReference: fmt.Sprintf(
-				"wlt-wallet:%s:%s",
-				envelope.Wallet.ID,
-				updatedAt.Format(time.RFC3339Nano),
-			),
+		dispatch.CaptainWltFinancialEligibilityDecision{
+			WltDecisionID:       decisionID,
+			WltReasonCode:       reasonCode,
+			WltPolicyVersion:    "wallet-status@1",
+			Eligible:            eligible,
+			IneligibilityReason: ineligibilityReason,
+			SnapshotReference:   decisionID,
+			EvaluatedAt:         updatedAt,
+			TTLSeconds:          captainFinancialDecisionTTLSeconds,
 		},
 	)
 }
@@ -102,57 +98,14 @@ func (s *protectedStoreServer) handleGetDispatchBalancePolicy(w http.ResponseWri
 	if _, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionRead); !ok {
 		return
 	}
-	policy, err := platformpolicies.GetDispatchBalancePolicy(r.Context(), s.db)
-	if err != nil {
-		writePlatformPolicyError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"policy": policy})
+	store.SendError(w, http.StatusGone, "DISPATCH_BALANCE_POLICY_OWNED_BY_WLT", "captain dispatch financial thresholds and wallet policy are owned by WLT; DSH stores only WLT eligibility decision metadata")
 }
 
 func (s *protectedStoreServer) handleUpsertDispatchBalancePolicy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionManage)
-	if !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionManage); !ok {
 		return
 	}
-	var body struct {
-		Enabled                          bool   `json:"enabled"`
-		RequirePositiveBalance           bool   `json:"requirePositiveBalance"`
-		MinimumDispatchBalanceMinorUnits int64  `json:"minimumDispatchBalanceMinorUnits"`
-		MinimumCODBalanceMinorUnits      int64  `json:"minimumCodBalanceMinorUnits"`
-		Currency                         string `json:"currency"`
-		SnapshotTTLSeconds               int    `json:"snapshotTtlSeconds"`
-		Notes                            string `json:"notes"`
-		ExpectedVersion                  int    `json:"expectedVersion"`
-		Reason                           string `json:"reason"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	mutation, ok := platformPolicyMutation(w, r, actor.ID, body.Reason)
-	if !ok {
-		return
-	}
-	policy, err := platformpolicies.UpsertDispatchBalancePolicy(
-		r.Context(),
-		s.db,
-		platformpolicies.DispatchBalancePolicyInput{
-			Enabled:                          body.Enabled,
-			RequirePositiveBalance:           body.RequirePositiveBalance,
-			MinimumDispatchBalanceMinorUnits: body.MinimumDispatchBalanceMinorUnits,
-			MinimumCODBalanceMinorUnits:      body.MinimumCODBalanceMinorUnits,
-			Currency:                         body.Currency,
-			SnapshotTTLSeconds:               body.SnapshotTTLSeconds,
-			Notes:                            body.Notes,
-			ExpectedVersion:                  body.ExpectedVersion,
-		},
-		mutation,
-	)
-	if err != nil {
-		writePlatformPolicyError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"policy": policy})
+	store.SendError(w, http.StatusGone, "DISPATCH_BALANCE_POLICY_OWNED_BY_WLT", "captain dispatch financial thresholds and wallet policy are owned by WLT; DSH stores only WLT eligibility decision metadata")
 }
 
 func (s *protectedStoreServer) handleRefreshOperatorCaptainFinancialEligibility(w http.ResponseWriter, r *http.Request) {
@@ -236,7 +189,7 @@ func writeCaptainFinancialEligibilityError(w http.ResponseWriter, err error) {
 	case strings.Contains(err.Error(), "identity mismatch") || strings.Contains(err.Error(), "missing updatedAt"):
 		store.SendError(w, http.StatusConflict, "WLT_WALLET_READBACK_INVALID", "WLT wallet readback did not match the captain")
 	case strings.Contains(err.Error(), dispatch.ErrCaptainNotEligible.Error()):
-		store.SendError(w, http.StatusConflict, "CAPTAIN_FINANCIAL_ELIGIBILITY_REQUIRED", "captain financial eligibility has not been verified")
+		store.SendError(w, http.StatusConflict, "CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED", "captain WLT financial eligibility decision has not been verified")
 	case strings.Contains(err.Error(), dispatch.ErrInvalid.Error()):
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 	default:
