@@ -17,4 +17,9 @@ if (-not (Test-Path -LiteralPath $upgradeScript)) {
     -RunWorkspaceLint:$RunWorkspaceLint `
     -RunWorkspaceTests:$RunWorkspaceTests
 
-exit $LASTEXITCODE
+if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+}
+
+Write-Host "Decision: TYPESCRIPT_7_UPGRADE_STATE_VERIFIED"
+exit 0
