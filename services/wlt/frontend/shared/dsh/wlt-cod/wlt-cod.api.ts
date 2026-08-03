@@ -1,6 +1,6 @@
 import { dshFetchJson, dshPostJson } from "../dsh-link/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
-import type { components } from "../../../../clients/generated/wlt-api";
+import type { components } from "@bthwani/wlt-openapi";
 
 import type { WltDshCodReference } from "../finance-boundary/wlt-dsh-boundary.types";
 export type { WltDshCodReference };
