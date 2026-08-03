@@ -110,18 +110,16 @@ export type DshStoreOnboardingFeePolicyInput = {
   readonly reason: string;
 };
 
-// DSH stores only opaque WLT decision metadata. Wallet state, balance,
-// currency, thresholds, and financial policy remain WLT-owned truth.
+// Exact operational projection of the WLT decision contract. No financial
+// inputs or arithmetic-capable values are exposed to DSH frontend code.
 export type DshCaptainFinancialEligibility = {
   readonly operatorContextId: string;
   readonly captainId: string;
   readonly wltDecisionId: string;
-  readonly wltReasonCode: string;
-  readonly wltPolicyVersion: string;
   readonly eligible: boolean;
-  readonly ineligibilityReason?: string;
-  readonly snapshotReference: string;
-  readonly checkedAt: string;
+  readonly reasonCode: string;
+  readonly policyVersion: string;
   readonly evaluatedAt: string;
   readonly expiresAt: string;
+  readonly lastFinancialSyncAt: string;
 };
