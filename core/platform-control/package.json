@@ -9,7 +9,7 @@
     "openapi:compose": "node ../../tools/scripts/compose-openapi-context.mjs platform-control",
     "openapi:generate": "pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/platform-control.bundle.openapi.yaml -o clients/generated/platform-control-api.ts",
     "test": "cd backend && go test ./...",
-    "build": "cd backend && go build ./...",
+    "build": "node ../../tools/scripts/verify-go-build.mjs backend",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "peerDependencies": {
