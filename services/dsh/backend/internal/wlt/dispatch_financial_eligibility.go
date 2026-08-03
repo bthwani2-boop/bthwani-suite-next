@@ -44,8 +44,12 @@ func (c *Client) EvaluateDispatchFinancialEligibility(
 	if captainID == "" || len(captainID) > 200 {
 		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("captain id is required and must not exceed 200 characters")
 	}
-	if operatorContextID == "" {
+	trustedOperatorContextID, ok := OperatorContextIDFromContext(ctx)
+	if !ok || strings.TrimSpace(trustedOperatorContextID) == "" {
 		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("trusted operator context is required")
+	}
+	if trustedOperatorContextID != operatorContextID {
+		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("trusted operator context does not match request scope")
 	}
 
 	payload, err := json.Marshal(map[string]any{"captainId": captainID})
@@ -63,7 +67,6 @@ func (c *Client) EvaluateDispatchFinancialEligibility(
 	}
 	setServiceHeaders(req, c.serviceToken)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Operator-Context-ID", operatorContextID)
 	if correlationID = strings.TrimSpace(correlationID); correlationID != "" {
 		req.Header.Set("X-Correlation-ID", correlationID)
 	}
