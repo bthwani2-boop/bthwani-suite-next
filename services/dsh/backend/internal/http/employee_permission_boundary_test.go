@@ -49,7 +49,7 @@ func TestEmployeeExactPermissionDoesNotCrossDshDomains(t *testing.T) {
 		PartnersPermissionRead,
 		PartnersPermissionManage,
 		SupportPermissionManage,
-		PlatformPermissionManage,
+		DshDispatchCapacityPermissionManage,
 	} {
 		t.Run("deny-"+denied, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, "/dsh/operator/cross-domain", nil)

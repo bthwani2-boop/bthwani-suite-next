@@ -9,6 +9,9 @@ import (
 	"time"
 )
 
+// CaptainWltFinancialEligibilityDecision contains only the opaque decision
+// metadata returned by WLT. DSH must not receive wallet, balance, currency,
+// threshold, COD amount, or financial calculation inputs.
 type CaptainWltFinancialEligibilityDecision struct {
 	WltDecisionID       string
 	WltReasonCode       string
@@ -17,7 +20,7 @@ type CaptainWltFinancialEligibilityDecision struct {
 	IneligibilityReason string
 	SnapshotReference   string
 	EvaluatedAt         time.Time
-	TTLSeconds          int
+	ExpiresAt           time.Time
 }
 
 type CaptainFinancialEligibilitySnapshot struct {
@@ -43,19 +46,19 @@ func normalizeCaptainWltFinancialDecision(input CaptainWltFinancialEligibilityDe
 	if input.SnapshotReference == "" {
 		input.SnapshotReference = input.WltDecisionID
 	}
-	if input.EvaluatedAt.IsZero() {
-		input.EvaluatedAt = time.Now().UTC()
-	} else {
-		input.EvaluatedAt = input.EvaluatedAt.UTC()
-	}
+	input.EvaluatedAt = input.EvaluatedAt.UTC()
+	input.ExpiresAt = input.ExpiresAt.UTC()
 	if !input.Eligible && input.IneligibilityReason == "" {
 		input.IneligibilityReason = input.WltReasonCode
 	}
-	if input.TTLSeconds < 30 || input.TTLSeconds > 600 {
-		return CaptainWltFinancialEligibilityDecision{}, fmt.Errorf("%w: WLT decision ttl must be between 30 and 600 seconds", ErrInvalid)
-	}
 	if input.WltDecisionID == "" || input.WltReasonCode == "" || input.WltPolicyVersion == "" || input.SnapshotReference == "" {
 		return CaptainWltFinancialEligibilityDecision{}, fmt.Errorf("%w: WLT financial eligibility decision metadata is required", ErrInvalid)
+	}
+	if input.EvaluatedAt.IsZero() || input.ExpiresAt.IsZero() || !input.ExpiresAt.After(input.EvaluatedAt) {
+		return CaptainWltFinancialEligibilityDecision{}, fmt.Errorf("%w: WLT financial eligibility decision time window is invalid", ErrInvalid)
+	}
+	if !input.ExpiresAt.After(time.Now().UTC()) {
+		return CaptainWltFinancialEligibilityDecision{}, fmt.Errorf("%w: WLT financial eligibility decision is expired", ErrInvalid)
 	}
 	return input, nil
 }
@@ -69,8 +72,8 @@ func UpsertCaptainFinancialEligibilityDecision(
 ) (CaptainFinancialEligibilitySnapshot, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	captainID = strings.TrimSpace(captainID)
-	if operatorContextID == "" || captainID == "" {
-		return CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("%w: operator context and captain id are required", ErrInvalid)
+	if db == nil || operatorContextID == "" || captainID == "" {
+		return CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("%w: database, operator context, and captain id are required", ErrInvalid)
 	}
 	decision, err := normalizeCaptainWltFinancialDecision(decision)
 	if err != nil {
@@ -82,7 +85,7 @@ func UpsertCaptainFinancialEligibilityDecision(
 		INSERT INTO dsh_captain_financial_eligibility(
 			operator_context_id,captain_id,wlt_decision_id,wlt_reason_code,wlt_policy_version,
 			eligible,ineligibility_reason,snapshot_reference,checked_at,evaluated_at,expires_at
-		) VALUES($1,$2,$3,$4,$5,$6,$7,$8,now(),$9,now()+($10*interval '1 second'))
+		) VALUES($1,$2,$3,$4,$5,$6,$7,$8,now(),$9,$10)
 		ON CONFLICT(operator_context_id,captain_id) DO UPDATE SET
 			wlt_decision_id=excluded.wlt_decision_id,
 			wlt_reason_code=excluded.wlt_reason_code,
@@ -104,7 +107,7 @@ func UpsertCaptainFinancialEligibilityDecision(
 		decision.IneligibilityReason,
 		decision.SnapshotReference,
 		decision.EvaluatedAt,
-		decision.TTLSeconds,
+		decision.ExpiresAt,
 	).Scan(
 		&snapshot.OperatorContextID,
 		&snapshot.CaptainID,
@@ -128,16 +131,23 @@ func GetCaptainFinancialEligibilitySnapshot(
 	captainID string,
 ) (CaptainFinancialEligibilitySnapshot, error) {
 	var snapshot CaptainFinancialEligibilitySnapshot
+	if db == nil {
+		return snapshot, fmt.Errorf("%w: database is required", ErrInvalid)
+	}
 	normCtx, err := normalizeOperatorContextID(operatorContextID)
 	if err != nil {
 		return snapshot, err
+	}
+	captainID = strings.TrimSpace(captainID)
+	if captainID == "" {
+		return snapshot, fmt.Errorf("%w: captain id is required", ErrInvalid)
 	}
 	err = db.QueryRowContext(ctx, `
 		SELECT operator_context_id,captain_id,wlt_decision_id,wlt_reason_code,wlt_policy_version,
 			eligible,ineligibility_reason,snapshot_reference,checked_at,evaluated_at,expires_at
 		FROM dsh_captain_financial_eligibility
 		WHERE operator_context_id=$1 AND captain_id=$2`,
-		normCtx, strings.TrimSpace(captainID),
+		normCtx, captainID,
 	).Scan(
 		&snapshot.OperatorContextID,
 		&snapshot.CaptainID,

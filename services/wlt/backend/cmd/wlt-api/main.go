@@ -53,6 +53,7 @@ func main() {
 	wltHttp.RegisterDeliveryCollectionRoutes(router, db, mutationsEnabled)
 	wltHttp.RegisterOrderCancellationRoutes(router, db, mutationsEnabled)
 	wltHttp.RegisterFieldCategoryCommissionRoutes(router, db, mutationsEnabled)
+	wltHttp.RegisterDispatchFinancialEligibilityRoutes(router, db)
 	referenceScopedRouter := wltHttp.ReferenceReadBoundary(router)
 	handler := wltHttp.CorsMiddleware(authMode, referenceScopedRouter)
 
