@@ -151,6 +151,7 @@ function New-BthwaniGovernedMigrationBatch {
   $serviceLiteral = ConvertTo-BthwaniSqlLiteral $ServiceName
   $sourceLiteral = ConvertTo-BthwaniSqlLiteral $SourceCommitSha
   $lockNameLiteral = ConvertTo-BthwaniSqlLiteral "bthwani:schema-migrations:$ServiceName"
+  $serviceTablePrefixLiteral = ConvertTo-BthwaniSqlLiteral (($ServiceName -replace '-', '_') + '_')
   $builder = [System.Text.StringBuilder]::new()
 
   [void]$builder.AppendLine('\set ON_ERROR_STOP on')
@@ -194,6 +195,7 @@ BEGIN
     FROM information_schema.tables
     WHERE table_schema = 'public'
       AND table_type = 'BASE TABLE'
+      AND table_name LIKE ($serviceTablePrefixLiteral || '%')
       AND table_name NOT IN ('schema_migrations', 'runtime_schema_migrations')
   ) THEN
     RAISE EXCEPTION 'UNTRACKED_LEGACY_SCHEMA: service % has tables but no governed migration ledger', $serviceLiteral;
@@ -278,6 +280,13 @@ SELECT CASE WHEN EXISTS (
 ) THEN 'false' ELSE 'true' END AS bthwani_apply \gset
 
 \if :bthwani_apply
+"@)
+
+    if ($runnerManagedTransaction) {
+      [void]$builder.AppendLine('BEGIN;')
+    }
+
+    [void]$builder.AppendLine(@"
 INSERT INTO schema_migrations (
   service_name, migration_id, checksum_sha256, source_commit_sha,
   applied_at, execution_ms, success, error_code, dirty
@@ -286,10 +295,6 @@ INSERT INTO schema_migrations (
   clock_timestamp(), 0, FALSE, NULL, TRUE
 );
 "@)
-
-    if ($runnerManagedTransaction) {
-      [void]$builder.AppendLine('BEGIN;')
-    }
 
     [void]$builder.AppendLine("-- BEGIN GOVERNED MIGRATION: $($file.Name)")
     [void]$builder.AppendLine($content.TrimEnd())
