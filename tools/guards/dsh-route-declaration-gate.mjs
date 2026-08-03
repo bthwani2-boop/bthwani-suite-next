@@ -20,6 +20,13 @@ const guardId = "dsh-route-declaration-gate";
 const backendRoot = path.join(repositoryRoot, "services/dsh/backend/internal");
 const allowlistPath = path.join(repositoryRoot, "tools/guards/dsh-route-declaration-allowlist.json");
 
+// Routes in this set are intentionally retired. They are allowed to remain in
+// the historical allowlist until the large pre-existing allowlist is reduced,
+// but this gate still fails if any retired route becomes registered again.
+const retiredClosureRoutes = new Set([
+  "PUT /dsh/operator/workforce/scopes/{actorId}",
+]);
+
 function fail(id, violations) {
   for (const violation of violations) console.error(`${id} FAIL: ${violation}`);
   if (violations.length > 0) {
@@ -90,7 +97,8 @@ const allowlist = loadAllowlist();
 const undeclared = [...registered].filter((route) => !declared.has(route)).sort();
 const newlyUndeclared = undeclared.filter((route) => !allowlist.has(route));
 const staleAllowlistEntries = [...allowlist.keys()].filter(
-  (route) => !registered.has(route) || declared.has(route),
+  (route) =>
+    (!registered.has(route) || declared.has(route)) && !retiredClosureRoutes.has(route),
 );
 
 console.log(`registered_routes: ${registered.size}`);
@@ -108,6 +116,11 @@ for (const route of staleAllowlistEntries) {
   violations.push(
     `dsh-route-declaration-allowlist.json entry is stale (route no longer undeclared or no longer registered): ${route}`,
   );
+}
+for (const route of retiredClosureRoutes) {
+  if (registered.has(route)) {
+    violations.push(`retired DSH route was re-registered: ${route}`);
+  }
 }
 
 fail(guardId, violations);
