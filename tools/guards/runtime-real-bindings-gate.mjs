@@ -1,7 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import ts from "typescript";
+import * as typescriptNamespace from "typescript";
 import { fail, lineNumber, repoRoot, toPosix } from "./_guard-utils.mjs";
+
+// Normalize TypeScript 7's CommonJS-compatible compiler export for Node ESM.
+const ts = typescriptNamespace.default ?? typescriptNamespace;
 
 const guardId = "runtime-real-bindings-gate";
 const violations = [];
