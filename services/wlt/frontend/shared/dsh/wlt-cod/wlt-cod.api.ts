@@ -1,22 +1,19 @@
 import type { components } from "@bthwani/wlt-openapi";
 import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
-import { createDshHttpClient } from "../dsh-link/dsh-http-request";
-import {
-  requestDshReference,
-  type DshReferenceApiResult,
-} from "../dsh-link/dsh-reference-client";
+import { corrId, createDshHttpClient } from "../dsh-link/dsh-http-request";
+
 import type { WltDshCodReference } from "../finance-boundary/wlt-dsh-boundary.types";
-
 export type { WltDshCodReference };
-export type { DshReferenceApiResult } from "../dsh-link/dsh-reference-client";
 
-/** DSH façade input. Actor identity is resolved server-side and is never caller-selected. */
+export type DshReferenceApiResult<T> =
+  | { readonly ok: true; readonly data: T }
+  | { readonly ok: false; readonly kind: "http" | "network"; readonly status?: number; readonly message: string };
+
 export type DshCaptainCodCollectionInput = Pick<
   components["schemas"]["CollectCodInput"],
   "actualAmountMinorUnits" | "proofReference" | "note"
 >;
 
-/** DSH façade input. Actor identity is resolved server-side and is never caller-selected. */
 export type DshCaptainCodRemittanceInput = Pick<
   components["schemas"]["RemitCodInput"],
   "proofReference" | "note"
@@ -31,21 +28,37 @@ export type WltCodCustodyMutationResult = Omit<
   readonly codRecord: WltDshCodReference;
 };
 
-export function fetchDshCaptainOwnCodRecords(): Promise<
-  DshReferenceApiResult<WltDshCodReference[]>
-> {
-  return requestDshReference<
-    { readonly codRecords?: readonly WltDshCodReference[] },
-    WltDshCodReference[]
-  >(
-    resolveDshApiBaseUrl(),
-    "/dsh/captain/finance/cod-records",
-    (response) => [...(response.codRecords ?? [])],
-  );
+const { request } = createDshHttpClient(
+  resolveDshApiBaseUrl(),
+  "captain-cod",
+);
+
+function classifyDshReferenceError(error: unknown): Exclude<DshReferenceApiResult<never>, { readonly ok: true }> {
+  if (typeof error === "object" && error !== null && "kind" in error) {
+    const value = error as { kind?: unknown; status?: unknown; message?: unknown };
+    return {
+      ok: false,
+      kind: value.kind === "network" ? "network" : "http",
+      ...(typeof value.status === "number" ? { status: value.status } : {}),
+      message: typeof value.message === "string" ? value.message : "DSH request failed",
+    };
+  }
+  return {
+    ok: false,
+    kind: "network",
+    message: error instanceof Error ? error.message : "DSH request failed",
+  };
 }
 
-function codClient() {
-  return createDshHttpClient(resolveDshApiBaseUrl(), "wlt-dsh-cod");
+export async function fetchDshCaptainOwnCodRecords(): Promise<DshReferenceApiResult<WltDshCodReference[]>> {
+  try {
+    const response = await request<{ codRecords?: WltDshCodReference[] }>(
+      "/dsh/captain/finance/cod-records",
+    );
+    return { ok: true, data: response.codRecords ?? [] };
+  } catch (error) {
+    return classifyDshReferenceError(error);
+  }
 }
 
 export async function collectDshCaptainCod(
@@ -54,19 +67,17 @@ export async function collectDshCaptainCod(
 ): Promise<WltCodCustodyMutationResult> {
   const normalizedRecordId = recordId.trim();
   const proofReference = input.proofReference.trim();
-  if (
-    !normalizedRecordId ||
-    !Number.isSafeInteger(input.actualAmountMinorUnits) ||
-    input.actualAmountMinorUnits <= 0 ||
-    proofReference.length < 3
-  ) {
+  if (!normalizedRecordId || !Number.isSafeInteger(input.actualAmountMinorUnits) || input.actualAmountMinorUnits <= 0 || proofReference.length < 3) {
     throw new Error("Invalid request");
   }
 
-  return codClient().request<WltCodCustodyMutationResult>(
+  const correlationId = corrId("captain-cod-collect");
+  return request<WltCodCustodyMutationResult>(
     `/dsh/captain/finance/cod-records/${encodeURIComponent(normalizedRecordId)}/collect`,
     {
       method: "POST",
+      correlationId,
+      idempotencyKey: `${correlationId}:${normalizedRecordId}:collect`,
       body: {
         actualAmountMinorUnits: input.actualAmountMinorUnits,
         proofReference,
@@ -86,10 +97,13 @@ export async function remitDshCaptainCod(
     throw new Error("Invalid request");
   }
 
-  return codClient().request<WltCodCustodyMutationResult>(
+  const correlationId = corrId("captain-cod-remit");
+  return request<WltCodCustodyMutationResult>(
     `/dsh/captain/finance/cod-records/${encodeURIComponent(normalizedRecordId)}/remit`,
     {
       method: "POST",
+      correlationId,
+      idempotencyKey: `${correlationId}:${normalizedRecordId}:remit`,
       body: {
         proofReference,
         note: input.note?.trim() ?? "",
