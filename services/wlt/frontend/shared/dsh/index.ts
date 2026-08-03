@@ -29,7 +29,7 @@ export * from './payment';
 export * from './field-finance';
 export * from './actor-wallet';
 export * from './wlt/generated/wlt_frontend_dsh_app_partner.facade';
-export * from './wlt/generated/wlt_frontend_dsh_app_partner_wlt_dsh_partner_ui_copy.facade';
+export * from './presentation/partner-finance.copy';
 
 export * from './commissions';
 export * from './payouts';
