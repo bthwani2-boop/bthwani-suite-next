@@ -16,3 +16,4 @@ modules:
   - ./employee-access.openapi.yaml
 overlays:
   - ./identity.actor-admin.overlay.yaml
+  - ./identity.runtime-readiness.overlay.yaml
