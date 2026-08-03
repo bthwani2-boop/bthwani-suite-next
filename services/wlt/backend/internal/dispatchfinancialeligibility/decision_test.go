@@ -7,7 +7,7 @@ import (
 
 func TestEvaluateFinancialEligibilityFailsClosedWithoutPolicy(t *testing.T) {
 	now := time.Date(2026, 8, 3, 4, 0, 0, 0, time.UTC)
-	result := evaluateFinancialEligibility(now, nil, nil, false)
+	result := evaluateFinancialEligibility(now, nil, nil)
 	if result.Eligible || result.ReasonCode != "WLT_DISPATCH_POLICY_NOT_CONFIGURED" {
 		t.Fatalf("unexpected decision: %+v", result)
 	}
@@ -16,7 +16,7 @@ func TestEvaluateFinancialEligibilityFailsClosedWithoutPolicy(t *testing.T) {
 	}
 }
 
-func TestEvaluateFinancialEligibilityUsesCodThreshold(t *testing.T) {
+func TestEvaluateFinancialEligibilityUsesStrictestWltThreshold(t *testing.T) {
 	now := time.Date(2026, 8, 3, 4, 0, 0, 0, time.UTC)
 	policy := &policyRecord{
 		Enabled:                          true,
@@ -28,12 +28,12 @@ func TestEvaluateFinancialEligibilityUsesCodThreshold(t *testing.T) {
 		PolicyVersion:                    "dispatch-balance@7",
 	}
 	wallet := &walletRecord{ID: "wallet-1", Status: "active", Currency: "YER", AvailableBalanceMinorUnits: 400}
-	result := evaluateFinancialEligibility(now, policy, wallet, true)
+	result := evaluateFinancialEligibility(now, policy, wallet)
 	if result.Eligible || result.ReasonCode != "WLT_AVAILABLE_BALANCE_BELOW_REQUIRED" {
-		t.Fatalf("unexpected COD decision: %+v", result)
+		t.Fatalf("unexpected decision: %+v", result)
 	}
 	if result.RequiredBalance == nil || *result.RequiredBalance != 500 {
-		t.Fatalf("expected WLT COD threshold, got %+v", result.RequiredBalance)
+		t.Fatalf("expected strictest WLT threshold, got %+v", result.RequiredBalance)
 	}
 }
 
@@ -49,7 +49,7 @@ func TestEvaluateFinancialEligibilityReturnsAbstractEligibleDecision(t *testing.
 		PolicyVersion:                    "dispatch-balance@8",
 	}
 	wallet := &walletRecord{ID: "wallet-1", Status: "active", Currency: "YER", AvailableBalanceMinorUnits: 700}
-	result := evaluateFinancialEligibility(now, policy, wallet, true)
+	result := evaluateFinancialEligibility(now, policy, wallet)
 	if !result.Eligible || result.ReasonCode != "WLT_DISPATCH_FINANCIALLY_ELIGIBLE" {
 		t.Fatalf("unexpected eligible decision: %+v", result)
 	}
@@ -61,14 +61,14 @@ func TestEvaluateFinancialEligibilityReturnsAbstractEligibleDecision(t *testing.
 func TestEvaluateFinancialEligibilityRejectsWalletCurrencyMismatch(t *testing.T) {
 	now := time.Date(2026, 8, 3, 4, 0, 0, 0, time.UTC)
 	policy := &policyRecord{
-		Enabled:              true,
-		RequireActiveWallet:  true,
-		Currency:             "YER",
-		DecisionTTLSeconds:   120,
-		PolicyVersion:        "dispatch-balance@9",
+		Enabled:             true,
+		RequireActiveWallet: true,
+		Currency:            "YER",
+		DecisionTTLSeconds:  120,
+		PolicyVersion:       "dispatch-balance@9",
 	}
 	wallet := &walletRecord{ID: "wallet-1", Status: "active", Currency: "USD", AvailableBalanceMinorUnits: 1000}
-	result := evaluateFinancialEligibility(now, policy, wallet, false)
+	result := evaluateFinancialEligibility(now, policy, wallet)
 	if result.Eligible || result.ReasonCode != "WLT_WALLET_CURRENCY_MISMATCH" {
 		t.Fatalf("unexpected currency decision: %+v", result)
 	}
