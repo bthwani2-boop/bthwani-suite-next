@@ -6,6 +6,7 @@ import {
   loginIdentity,
   requestOtpIdentity,
   activateIdentity,
+  retryIdentityBootstrap,
   listIdentitySessions,
   revokeIdentitySession,
   logoutIdentity,
@@ -51,6 +52,7 @@ export function useIdentitySession() {
     },
     [],
   );
+  const retryBootstrap = useCallback(() => retryIdentityBootstrap(), []);
   const listSessions = useCallback(() => listIdentitySessions(), []);
   const revokeSession = useCallback(
     (sessionId: string) => revokeIdentitySession(sessionId),
@@ -68,6 +70,7 @@ export function useIdentitySession() {
     login,
     requestOtp,
     activate,
+    retryBootstrap,
     listSessions,
     revokeSession,
     logout,
