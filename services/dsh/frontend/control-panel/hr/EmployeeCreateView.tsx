@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useIdentityRuntimeStatus } from "@bthwani/core-identity";
 import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
 import { EditorPageFrame } from "@bthwani/control-panel/shell";
 import { Text } from "@bthwani/ui-kit";
@@ -18,6 +19,16 @@ export function EmployeeCreateView(props: {
   readonly inline?: boolean;
 }) {
   const controller = useEmployeeCreateController();
+  const identityRuntime = useIdentityRuntimeStatus();
+  const runtimeValue = identityRuntime.state.kind === "resolved"
+    ? identityRuntime.state.value
+    : identityRuntime.state.kind === "checking"
+      ? identityRuntime.state.previous
+      : undefined;
+  const identityReady = runtimeValue?.status === "HEALTHY";
+  const identityReason = identityRuntime.state.kind === "unavailable"
+    ? identityRuntime.state.code
+    : (runtimeValue?.reasonCodes ?? ["IDENTITY_READINESS_UNPROVEN"]).join("، ");
   const [fullNameAr, setFullNameAr] = useState("");
   const [fullNameEn, setFullNameEn] = useState("");
   const [phone, setPhone] = useState("");
@@ -29,6 +40,7 @@ export function EmployeeCreateView(props: {
 
   const created = controller.state.kind === "created" ? controller.state.employee : null;
   const canSubmit =
+    identityReady &&
     fullNameAr.trim().length > 0 &&
     phone.trim().length >= 9 &&
     department.trim().length > 0 &&
@@ -54,7 +66,16 @@ export function EmployeeCreateView(props: {
         ينشئ Workforce الرقم الوظيفي تلقائيًا، بينما تحتفظ Identity برقم الهاتف والدور والجلسات.
       </CpMutedInline>
 
-      {/* Basic Info Card */}
+      {!identityReady ? (
+        <CpStatePanel
+          role="alert"
+          title="Identity غير جاهزة؛ إنشاء الموظف الإداري متوقف"
+          description={`السبب: ${identityReason}. تبقى بيانات النموذج محليًا، ولا تُرسل عملية Workforce جزئية بلا Actor صالح.`}
+        >
+          <CpButton variant="secondary" onClick={() => void identityRuntime.refresh(true)}>إعادة فحص Identity</CpButton>
+        </CpStatePanel>
+      ) : null}
+
       <div style={{ padding: "24px", backgroundColor: "var(--bthwani-control-panel-surface)", border: "1px solid var(--bthwani-control-panel-border)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px", boxShadow: "0 2px 8px var(--bthwani-overlay-soft)" }}>
         <Text role="titleMd" style={{ fontWeight: "800", color: "var(--bthwani-control-panel-text)", borderBottom: "1px solid var(--bthwani-control-panel-border)", paddingBottom: "12px", marginBottom: "4px" }}>البيانات الأساسية</Text>
 
@@ -75,7 +96,6 @@ export function EmployeeCreateView(props: {
         </div>
       </div>
 
-      {/* Work Info Card */}
       <div style={{ padding: "24px", backgroundColor: "var(--bthwani-control-panel-surface)", border: "1px solid var(--bthwani-control-panel-border)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px", boxShadow: "0 2px 8px var(--bthwani-overlay-soft)" }}>
         <Text role="titleMd" style={{ fontWeight: "800", color: "var(--bthwani-control-panel-text)", borderBottom: "1px solid var(--bthwani-control-panel-border)", paddingBottom: "12px", marginBottom: "4px" }}>بيانات العمل والتوظيف</Text>
 
@@ -102,7 +122,6 @@ export function EmployeeCreateView(props: {
         </div>
       </div>
 
-      {/* Supervision Card */}
       <div style={{ padding: "24px", backgroundColor: "var(--bthwani-control-panel-surface)", border: "1px solid var(--bthwani-control-panel-border)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px", boxShadow: "0 2px 8px var(--bthwani-overlay-soft)" }}>
         <Text role="titleMd" style={{ fontWeight: "800", color: "var(--bthwani-control-panel-text)", borderBottom: "1px solid var(--bthwani-control-panel-border)", paddingBottom: "12px", marginBottom: "4px" }}>التسلسل الإداري والإشراف</Text>
         <SupervisorPicker kind="employee" selected={supervisor} onSelect={setSupervisor} disabled={Boolean(created)} />
@@ -112,7 +131,6 @@ export function EmployeeCreateView(props: {
         <CpStatePanel role="alert" title="تعذر إنشاء الموظف الإداري" description={controller.state.message} />
       ) : null}
 
-      {/* Action Bar */}
       {created ? (
         <CpStatePanel role="status" title={`تم إنشاء الموظف الإداري برقم ${created.workforceCode}.`}>
           <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "1rem" }}>
@@ -126,7 +144,8 @@ export function EmployeeCreateView(props: {
             <CpButton
               variant="primary"
               disabled={!canSubmit}
-              onClick={() =>
+              onClick={() => {
+                if (!identityReady) return;
                 void controller.submit({
                   fullNameAr: fullNameAr.trim(),
                   fullNameEn: fullNameEn.trim() || undefined,
@@ -137,8 +156,8 @@ export function EmployeeCreateView(props: {
                   role: role.trim(),
                   officeLocation: officeLocation.trim() || undefined,
                   supervisorActorId: supervisor?.actorId,
-                })
-              }
+                });
+              }}
             >
               {controller.state.kind === "submitting" ? "جارٍ الإنشاء…" : "إنشاء الموظف الإداري"}
             </CpButton>
