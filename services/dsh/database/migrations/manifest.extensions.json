@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "service": "dsh",
+  "extends": "manifest.json",
+  "migrations": [
+    {
+      "ordinal": 197,
+      "file": "dsh-972_financial_eligibility_wlt_decision_boundary.sql",
+      "sha256": "0845c392787adc1135cf99f65513984b973c3313296267726e29bf8c7d5c737c",
+      "historicalPrefix": "972",
+      "state": "ACTIVE"
+    }
+  ]
+}
