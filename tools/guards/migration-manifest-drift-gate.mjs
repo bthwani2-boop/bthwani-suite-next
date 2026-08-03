@@ -67,6 +67,29 @@ function loadAmendments() {
 
 const amendments = loadAmendments();
 
+function loadManifestWithExtensions(service, dir, manifestPath, failures) {
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  const extensionPath = path.join(dir, "manifest.extensions.json");
+  if (!fs.existsSync(extensionPath)) return manifest;
+
+  const extension = JSON.parse(fs.readFileSync(extensionPath, "utf8"));
+  if (extension.schemaVersion !== manifest.schemaVersion) {
+    failures.push("manifest.extensions.json schemaVersion must match manifest.json");
+  }
+  if (extension.service !== service || extension.extends !== "manifest.json") {
+    failures.push("manifest.extensions.json must declare the same service and extends=manifest.json");
+  }
+  if (!Array.isArray(extension.migrations)) {
+    failures.push("manifest.extensions.json must contain migrations[]");
+    return manifest;
+  }
+
+  return {
+    ...manifest,
+    migrations: [...manifest.migrations, ...extension.migrations],
+  };
+}
+
 function checkService(service) {
   const relativeDir = servicePaths[service];
   const dir = path.join(repositoryRoot, relativeDir);
@@ -82,7 +105,7 @@ function checkService(service) {
     };
   }
 
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  const manifest = loadManifestWithExtensions(service, dir, manifestPath, failures);
   const onDisk = new Set(fs.readdirSync(dir).filter((name) => name.toLowerCase().endsWith(".sql")));
 
   const seenOrdinals = new Set();
@@ -170,7 +193,7 @@ function checkDshFinancialSovereigntyMigrations() {
       "DSH_MUST_NOT_CREATE_WALLET_BALANCE_ELIGIBILITY_TRUTH",
     ],
     [
-      /ALTER\s+TABLE[\s\S]{0,800}dsh_captain_financial_eligibility[\s\S]{0,800}ADD\s+COLUMN[\s\S]{0,800}(available_balance_minor_units|minimum_dispatch_balance_minor_units|minimum_cod_balance_minor_units|wallet_status)/i,
+      /ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?dsh_captain_financial_eligibility[\s\S]{0,300}ADD\s+COLUMN\s+(?:IF\s+NOT\s+EXISTS\s+)?(available_balance_minor_units|minimum_dispatch_balance_minor_units|minimum_cod_balance_minor_units|wallet_status)\b/i,
       "DSH_MUST_NOT_ADD_WALLET_BALANCE_ELIGIBILITY_TRUTH",
     ],
   ];
