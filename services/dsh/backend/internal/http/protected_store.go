@@ -26,9 +26,6 @@ type protectedStoreServer struct {
 	workforce *workforceclient.Client
 }
 
-// Partners permission actions on the control-panel surface, covering store
-// listing/governance (partners & stores nav). "operator" remains a valid
-// fallback role during RBAC data migration.
 const (
 	PartnersPermissionRead     = "partners.read"
 	PartnersPermissionManage   = "partners.manage"
@@ -167,9 +164,6 @@ func (s *protectedStoreServer) servePartnerHandler(
 	handler(w, partnerRequestWithActor(r, actor))
 }
 
-// servePartnerPermissionHandler grants access exclusively via a
-// Permission{Service:"dsh", Surface:"control-panel", Action:action} entry.
-// No role-based fallback is allowed.
 func (s *protectedStoreServer) servePartnerPermissionHandler(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -322,7 +316,7 @@ func (s *protectedStoreServer) handleGetPartnerSettings(w http.ResponseWriter, r
 	storeID := r.PathValue("storeId")
 	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		s.writeStoreError(w, err)
 		return
 	}
 	if !canAccess {
@@ -413,11 +407,6 @@ func (s *protectedStoreServer) handleStoreAudit(w http.ResponseWriter, r *http.R
 	store.SendJSON(w, http.StatusOK, map[string]any{"events": events})
 }
 
-// ─── Store team, courier settings, coverage zones, partner scopes ───────────
-// Thin auth wrappers: verify the actor can access storeId via the existing
-// store.ActorCanAccessStore primitive, then delegate to the pure business
-// handler in partner/handler.go. Mirrors handleGetPartnerSettings above.
-
 func (s *protectedStoreServer) handlePartnerStoreTeam(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "partner")
 	if !ok {
@@ -426,7 +415,7 @@ func (s *protectedStoreServer) handlePartnerStoreTeam(w http.ResponseWriter, r *
 	storeID := r.PathValue("storeId")
 	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		s.writeStoreError(w, err)
 		return
 	}
 	if !canAccess {
@@ -444,7 +433,7 @@ func (s *protectedStoreServer) handlePartnerInviteTeamMember(w http.ResponseWrit
 	storeID := r.PathValue("storeId")
 	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		s.writeStoreError(w, err)
 		return
 	}
 	if !canAccess {
@@ -471,9 +460,6 @@ func (s *protectedStoreServer) actorHasPartnerPermission(ctx context.Context, ac
 	`, actorID, storeID).Scan(&role)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			// If not a team member, check if they are the partner owner.
-			// Currently, owners are supposed to have an active 'owner' row in team_members,
-			// but we can fallback if needed. Let's assume team_members is authoritative.
 			return false, nil
 		}
 		return false, err
@@ -528,7 +514,7 @@ func (s *protectedStoreServer) handlePartnerGetCourierSettings(w http.ResponseWr
 	storeID := r.PathValue("storeId")
 	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		s.writeStoreError(w, err)
 		return
 	}
 	if !canAccess {
@@ -546,7 +532,7 @@ func (s *protectedStoreServer) handlePartnerUpdateCourierSettings(w http.Respons
 	storeID := r.PathValue("storeId")
 	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		s.writeStoreError(w, err)
 		return
 	}
 	if !canAccess {
@@ -564,7 +550,7 @@ func (s *protectedStoreServer) handlePartnerCoverageZones(w http.ResponseWriter,
 	storeID := r.PathValue("storeId")
 	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		s.writeStoreError(w, err)
 		return
 	}
 	if !canAccess {
@@ -576,6 +562,34 @@ func (s *protectedStoreServer) handlePartnerCoverageZones(w http.ResponseWriter,
 
 func (s *protectedStoreServer) handlePartnerScopes(w http.ResponseWriter, r *http.Request) {
 	s.servePartnerSelfHandler(w, r, partner.HandleListPartnerScopes(s.db, s.identity))
+}
+
+func bindTrustedStoreSubject(r *http.Request, identity auth.Identity) {
+	permissions := make([]store.TrustedPermission, 0, len(identity.Permissions))
+	for _, permission := range identity.Permissions {
+		permissions = append(permissions, store.TrustedPermission{
+			Service: permission.Service,
+			Surface: permission.Surface,
+			Action:  permission.Action,
+			Scope:   permission.Scope,
+		})
+	}
+	subject := store.TrustedSubject{
+		ID:                identity.Subject,
+		OperatorContextID: identity.OperatorContextID,
+		Roles:             append([]string(nil), identity.Roles...),
+		Permissions:       permissions,
+	}
+	*r = *r.WithContext(store.WithTrustedSubject(r.Context(), subject))
+}
+
+func actorRoleForAudit(identity auth.Identity) string {
+	for _, candidate := range []string{"operator", "partner", "field", "captain", "system"} {
+		if identity.HasRole(candidate) {
+			return candidate
+		}
+	}
+	return "system"
 }
 
 func (s *protectedStoreServer) requireActor(
@@ -592,6 +606,7 @@ func (s *protectedStoreServer) requireActor(
 		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
 		return store.StoreActor{}, false
 	}
+	bindTrustedStoreSubject(r, identity)
 	for _, role := range allowedRoles {
 		if identity.HasRole(role) {
 			return store.StoreActor{ID: identity.Subject, Role: role, OperatorContextID: identity.OperatorContextID, PhoneE164: identity.PhoneE164}, true
@@ -601,13 +616,9 @@ func (s *protectedStoreServer) requireActor(
 	return store.StoreActor{}, false
 }
 
-// requirePermission is the sovereign fine-grained access check. It grants
-// access only to actors whose Identity carries a
-// Permission{Service:"dsh", Surface:surface, Action:action} entry.
-// No role-based bypass is allowed; all capabilities must be explicitly issued
-// by Identity via the employee permission bundle system. surface must be one of
-// Identity's contract-defined surfaces (core/identity/contracts/identity.openapi.yaml);
-// "control-panel" is used for every control-panel-governed domain.
+// requirePermission trusts only the structured Identity permission assertion.
+// It binds the complete trusted subject into the request context and never
+// converts a permission string into a local role or authorization rule.
 func (s *protectedStoreServer) requirePermission(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -623,19 +634,21 @@ func (s *protectedStoreServer) requirePermission(
 		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
 		return store.StoreActor{}, false
 	}
-	for _, p := range identity.Permissions {
-		if p.Service == "dsh" && p.Surface == surface && p.Action == action {
-			return store.StoreActor{ID: identity.Subject, Role: "permission:" + action, OperatorContextID: identity.OperatorContextID, PhoneE164: identity.PhoneE164}, true
+	for _, permission := range identity.Permissions {
+		if permission.Service == "dsh" && permission.Surface == surface && permission.Action == action {
+			bindTrustedStoreSubject(r, identity)
+			return store.StoreActor{
+				ID:                identity.Subject,
+				Role:              actorRoleForAudit(identity),
+				OperatorContextID: identity.OperatorContextID,
+				PhoneE164:         identity.PhoneE164,
+			}, true
 		}
 	}
-	store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor role cannot perform this action")
+	store.SendError(w, http.StatusForbidden, "FORBIDDEN", "explicit Identity permission is required")
 	return store.StoreActor{}, false
 }
 
-
-// requireCatalogPermission is requirePermission scoped to the control-panel
-// surface, kept as a named wrapper because every centralcatalog.go call site
-// reads more clearly with the surface implied.
 func (s *protectedStoreServer) requireCatalogPermission(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -654,6 +667,10 @@ func (s *protectedStoreServer) writeActionResponse(w http.ResponseWriter, respon
 
 func (s *protectedStoreServer) writeStoreError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, store.ErrAuthorizationUnavailable):
+		store.SendError(w, http.StatusServiceUnavailable, "STORE_AUTHORIZATION_UNAVAILABLE", "store assignment authorization is unavailable")
+	case errors.Is(err, store.ErrStoreAccessDenied):
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor is not authorized for this store object")
 	case errors.Is(err, store.ErrScopedStoreNotFound):
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "store context not found")
 	case errors.Is(err, store.ErrVersionConflict):

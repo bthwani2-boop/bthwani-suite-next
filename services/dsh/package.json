@@ -13,12 +13,13 @@
     "database:test": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite schema",
     "database:test:seed": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite seed",
     "database:contract": "node ../../tools/scripts/check-dsh-database-contract.mjs",
+    "guard:p0-sovereignty": "node ../../tools/guards/dsh-p0-sovereignty-gate.mjs",
     "pretypecheck": "pnpm run openapi:generate",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prebuild": "pnpm run openapi:generate",
     "build": "tsc -p tsconfig.json",
-    "test": "pnpm run build && pnpm --dir ../.. exec node --test services/dsh/tests/*.test.mjs",
-    "lint": "pnpm --dir ../.. run guard:fullstack-boundary"
+    "test": "pnpm run guard:p0-sovereignty && pnpm run build && pnpm --dir ../.. exec node --test services/dsh/tests/*.test.mjs",
+    "lint": "pnpm run guard:p0-sovereignty && pnpm --dir ../.. run guard:fullstack-boundary"
   },
   "peerDependencies": {
     "expo-document-picker": "~56.0.4",

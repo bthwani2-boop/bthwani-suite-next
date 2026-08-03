@@ -115,9 +115,6 @@ BEGIN
     RAISE EXCEPTION 'expected 6 complete local client storefronts, found %', published_storefront_count;
   END IF;
 
-  -- A public assortment is not complete unless the API can derive
-  -- effectiveImage from an approved DAM link and approved asset. This protects
-  -- runtime readback from seed rows that are client_visible but unrenderable.
   IF EXISTS (
     SELECT 1
     FROM dsh_store_assortments assortment

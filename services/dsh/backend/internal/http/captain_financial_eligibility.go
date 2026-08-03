@@ -1,28 +1,14 @@
 package http
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
 )
-
-const captainFinancialDecisionTTLSeconds = 300
-
-type wltCaptainWalletEnvelope struct {
-	Wallet *struct {
-		ID        string    `json:"id"`
-		ActorID   string    `json:"actorId"`
-		ActorType string    `json:"actorType"`
-		Status    string    `json:"status"`
-		UpdatedAt time.Time `json:"updatedAt"`
-	} `json:"wallet"`
-}
 
 func (s *protectedStoreServer) refreshCaptainFinancialEligibility(
 	r *http.Request,
@@ -41,9 +27,8 @@ func (s *protectedStoreServer) refreshCaptainFinancialEligibility(
 		return dispatch.CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("WLT integration is not configured")
 	}
 
-	status, body, err := s.wlt.FinanceReadWalletWithOperatorContext(
+	decision, err := s.wlt.EvaluateDispatchFinancialEligibility(
 		r.Context(),
-		"captain",
 		captainID,
 		r.Header.Get("X-Correlation-ID"),
 		operatorContextID,
@@ -51,30 +36,6 @@ func (s *protectedStoreServer) refreshCaptainFinancialEligibility(
 	if err != nil {
 		return dispatch.CaptainFinancialEligibilitySnapshot{}, err
 	}
-	if status != http.StatusOK {
-		return dispatch.CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("WLT wallet read failed with status %d", status)
-	}
-
-	var envelope wltCaptainWalletEnvelope
-	if err := json.Unmarshal(body, &envelope); err != nil {
-		return dispatch.CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("decode WLT captain wallet reference: %w", err)
-	}
-	if envelope.Wallet == nil || envelope.Wallet.ActorID != captainID || envelope.Wallet.ActorType != "captain" {
-		return dispatch.CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("WLT captain wallet identity mismatch")
-	}
-	updatedAt := envelope.Wallet.UpdatedAt.UTC()
-	if updatedAt.IsZero() {
-		return dispatch.CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("WLT captain wallet is missing updatedAt")
-	}
-
-	reasonCode := "WLT_WALLET_ACTIVE"
-	eligible := strings.EqualFold(strings.TrimSpace(envelope.Wallet.Status), "active")
-	ineligibilityReason := ""
-	if !eligible {
-		reasonCode = "WLT_WALLET_NOT_ACTIVE"
-		ineligibilityReason = reasonCode
-	}
-	decisionID := fmt.Sprintf("wlt-wallet-status:%s:%s", envelope.Wallet.ID, updatedAt.Format(time.RFC3339Nano))
 
 	return dispatch.UpsertCaptainFinancialEligibilityDecision(
 		r.Context(),
@@ -82,14 +43,12 @@ func (s *protectedStoreServer) refreshCaptainFinancialEligibility(
 		operatorContextID,
 		captainID,
 		dispatch.CaptainWltFinancialEligibilityDecision{
-			WltDecisionID:       decisionID,
-			WltReasonCode:       reasonCode,
-			WltPolicyVersion:    "wallet-status@1",
-			Eligible:            eligible,
-			IneligibilityReason: ineligibilityReason,
-			SnapshotReference:   decisionID,
-			EvaluatedAt:         updatedAt,
-			TTLSeconds:          captainFinancialDecisionTTLSeconds,
+			WltDecisionID: decision.DecisionID,
+			Eligible:      decision.Eligible,
+			ReasonCode:    decision.ReasonCode,
+			PolicyVersion: decision.PolicyVersion,
+			EvaluatedAt:   decision.EvaluatedAt,
+			ExpiresAt:     decision.ExpiresAt,
 		},
 	)
 }
@@ -184,10 +143,10 @@ func writeCaptainFinancialEligibilityError(w http.ResponseWriter, err error) {
 	switch {
 	case err == nil:
 		return
-	case strings.Contains(err.Error(), "not configured") || strings.Contains(err.Error(), "WLT wallet read failed"):
-		store.SendError(w, http.StatusServiceUnavailable, "WLT_FINANCIAL_ELIGIBILITY_UNAVAILABLE", "WLT wallet eligibility could not be verified")
-	case strings.Contains(err.Error(), "identity mismatch") || strings.Contains(err.Error(), "missing updatedAt"):
-		store.SendError(w, http.StatusConflict, "WLT_WALLET_READBACK_INVALID", "WLT wallet readback did not match the captain")
+	case strings.Contains(err.Error(), "not configured") || strings.Contains(err.Error(), "returned HTTP") || strings.Contains(err.Error(), "call WLT"):
+		store.SendError(w, http.StatusServiceUnavailable, "WLT_FINANCIAL_ELIGIBILITY_UNAVAILABLE", "WLT financial eligibility decision could not be verified")
+	case strings.Contains(err.Error(), "metadata is incomplete") || strings.Contains(err.Error(), "time window is invalid") || strings.Contains(err.Error(), "already expired"):
+		store.SendError(w, http.StatusConflict, "WLT_FINANCIAL_DECISION_INVALID", "WLT returned an invalid dispatch financial decision")
 	case strings.Contains(err.Error(), dispatch.ErrCaptainNotEligible.Error()):
 		store.SendError(w, http.StatusConflict, "CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED", "captain WLT financial eligibility decision has not been verified")
 	case strings.Contains(err.Error(), dispatch.ErrInvalid.Error()):
