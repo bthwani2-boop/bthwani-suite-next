@@ -191,6 +191,7 @@ func TestRuntimeReadinessProbeTimesOutDependencyThatIgnoresContext(t *testing.T)
 	resetRuntimeProbeState()
 	configureIdentityRuntime(t)
 	t.Setenv("IDENTITY_READINESS_PROBE_TIMEOUT", "10ms")
+	t.Setenv("IDENTITY_READINESS_CHECK_TIMEOUT", "5ms")
 	store := readyRuntimeStore()
 	store.ping = func(context.Context) error {
 		time.Sleep(250 * time.Millisecond)
