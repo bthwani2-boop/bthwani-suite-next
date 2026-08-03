@@ -1,84 +1,67 @@
 package dispatch
 
-import "testing"
+import (
+	"strings"
+	"testing"
+	"time"
+)
 
-func TestEvaluateCaptainFinancialEligibility(t *testing.T) {
-	requirement := DispatchBalanceRequirement{
-		Enabled:                          true,
-		RequirePositiveBalance:           true,
-		MinimumDispatchBalanceMinorUnits: 50000,
-		Currency:                         "YER",
-		SnapshotTTLSeconds:               120,
+func TestNormalizeCaptainWltFinancialDecision(t *testing.T) {
+	evaluatedAt := time.Date(2026, 8, 3, 3, 0, 0, 0, time.UTC)
+	decision, err := normalizeCaptainWltFinancialDecision(CaptainWltFinancialEligibilityDecision{
+		WltDecisionID:    " wlt-decision-1 ",
+		WltReasonCode:    " WLT_WALLET_ACTIVE ",
+		WltPolicyVersion: " wallet-status@1 ",
+		Eligible:         true,
+		EvaluatedAt:      evaluatedAt,
+		TTLSeconds:       120,
+	})
+	if err != nil {
+		t.Fatalf("unexpected validation error: %v", err)
 	}
-
-	cases := []struct {
-		name       string
-		wallet     CaptainWalletReadback
-		eligible   bool
-		reason     string
-		minimum    int64
-	}{
-		{
-			name: "eligible funded wallet",
-			wallet: CaptainWalletReadback{WalletStatus: "active", AvailableBalanceMinorUnits: 75000, Currency: "YER"},
-			eligible: true,
-			minimum: 50000,
-		},
-		{
-			name: "below minimum",
-			wallet: CaptainWalletReadback{WalletStatus: "active", AvailableBalanceMinorUnits: 49999, Currency: "YER"},
-			eligible: false,
-			reason: "CAPTAIN_FINANCIAL_GUARANTEE_BELOW_MINIMUM",
-			minimum: 50000,
-		},
-		{
-			name: "inactive wallet",
-			wallet: CaptainWalletReadback{WalletStatus: "suspended", AvailableBalanceMinorUnits: 90000, Currency: "YER"},
-			eligible: false,
-			reason: "CAPTAIN_WALLET_NOT_ACTIVE",
-			minimum: 50000,
-		},
-		{
-			name: "currency mismatch",
-			wallet: CaptainWalletReadback{WalletStatus: "active", AvailableBalanceMinorUnits: 90000, Currency: "USD"},
-			eligible: false,
-			reason: "CAPTAIN_WALLET_CURRENCY_MISMATCH",
-			minimum: 50000,
-		},
+	if decision.WltDecisionID != "wlt-decision-1" || decision.SnapshotReference != "wlt-decision-1" {
+		t.Fatalf("decision identifiers were not normalized: %+v", decision)
 	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			eligible, reason, minimum := EvaluateCaptainFinancialEligibility(requirement, tc.wallet)
-			if eligible != tc.eligible || reason != tc.reason || minimum != tc.minimum {
-				t.Fatalf("got eligible=%v reason=%q minimum=%d", eligible, reason, minimum)
-			}
-		})
+	if decision.WltReasonCode != "WLT_WALLET_ACTIVE" || decision.WltPolicyVersion != "wallet-status@1" {
+		t.Fatalf("decision metadata was not normalized: %+v", decision)
+	}
+	if !decision.EvaluatedAt.Equal(evaluatedAt) {
+		t.Fatalf("evaluatedAt changed: %s", decision.EvaluatedAt)
 	}
 }
 
-func TestEvaluateCaptainFinancialEligibilityPositiveFloor(t *testing.T) {
-	eligible, reason, minimum := EvaluateCaptainFinancialEligibility(
-		DispatchBalanceRequirement{
-			Enabled:                          true,
-			RequirePositiveBalance:           true,
-			MinimumDispatchBalanceMinorUnits: 0,
-			Currency:                         "YER",
-		},
-		CaptainWalletReadback{WalletStatus: "active", AvailableBalanceMinorUnits: 0, Currency: "YER"},
-	)
-	if eligible || reason != "CAPTAIN_FINANCIAL_GUARANTEE_BELOW_MINIMUM" || minimum != 1 {
-		t.Fatalf("expected positive-balance floor, got eligible=%v reason=%q minimum=%d", eligible, reason, minimum)
+func TestNormalizeCaptainWltFinancialDecisionRejectsMissingMetadata(t *testing.T) {
+	_, err := normalizeCaptainWltFinancialDecision(CaptainWltFinancialEligibilityDecision{Eligible: true, TTLSeconds: 120})
+	if err == nil || !strings.Contains(err.Error(), "WLT financial eligibility decision metadata") {
+		t.Fatalf("expected missing metadata error, got %v", err)
 	}
 }
 
-func TestDisabledBalancePolicyStillRequiresActiveWallet(t *testing.T) {
-	requirement := DispatchBalanceRequirement{Enabled: false, Currency: "YER"}
-	eligible, reason, _ := EvaluateCaptainFinancialEligibility(
-		requirement,
-		CaptainWalletReadback{WalletStatus: "suspended", Currency: "YER"},
-	)
-	if eligible || reason != "CAPTAIN_WALLET_NOT_ACTIVE" {
-		t.Fatalf("disabled threshold must not accept an inactive WLT wallet: eligible=%v reason=%q", eligible, reason)
+func TestNormalizeCaptainWltFinancialDecisionRejectsInvalidTtl(t *testing.T) {
+	_, err := normalizeCaptainWltFinancialDecision(CaptainWltFinancialEligibilityDecision{
+		WltDecisionID:    "decision",
+		WltReasonCode:    "WLT_WALLET_ACTIVE",
+		WltPolicyVersion: "wallet-status@1",
+		Eligible:         true,
+		TTLSeconds:       10,
+	})
+	if err == nil || !strings.Contains(err.Error(), "ttl") {
+		t.Fatalf("expected ttl error, got %v", err)
+	}
+}
+
+func TestNormalizeCaptainWltFinancialDecisionCopiesReasonForIneligibleDecision(t *testing.T) {
+	decision, err := normalizeCaptainWltFinancialDecision(CaptainWltFinancialEligibilityDecision{
+		WltDecisionID:    "decision",
+		WltReasonCode:    "WLT_WALLET_NOT_ACTIVE",
+		WltPolicyVersion: "wallet-status@1",
+		Eligible:         false,
+		TTLSeconds:       120,
+	})
+	if err != nil {
+		t.Fatalf("unexpected validation error: %v", err)
+	}
+	if decision.IneligibilityReason != "WLT_WALLET_NOT_ACTIVE" {
+		t.Fatalf("expected WLT reason copy, got %q", decision.IneligibilityReason)
 	}
 }
