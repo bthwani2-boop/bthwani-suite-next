@@ -1,13 +1,12 @@
 <#
 .SYNOPSIS
-  Applies one service's PostgreSQL migrations through an immutable checksum ledger.
+  Applies one service's PostgreSQL migrations through the governed schema_migrations runner.
 
 .DESCRIPTION
-  Uses the complete case-insensitive filename as the canonical migration identity,
-  orders files deterministically, rejects unsafe SQL, serializes concurrent runners
-  through the ledger table, applies each migration atomically, and verifies the
-  recorded SHA-256 checksum. Numeric filename prefixes remain legacy ordering hints;
-  they are not a second migration authority.
+  This script preserves the generic service-migration CLI for local and CI callers,
+  but it no longer owns a separate ledger or SQL application engine. All ordering,
+  checksum, dirty-state, amendment, and legacy-ledger import behavior is delegated
+  to infra/docker/scripts/schema-migration-runner.ps1.
 #>
 
 [CmdletBinding()]
@@ -25,7 +24,9 @@ param(
   [int]$LockTimeoutSeconds = 30,
 
   [ValidateRange(1, 120)]
-  [int]$StatementTimeoutMinutes = 15
+  [int]$StatementTimeoutMinutes = 15,
+
+  [string]$SourceCommitSha = ""
 )
 
 Set-StrictMode -Version Latest
@@ -48,167 +49,63 @@ if (-not (Test-Path -LiteralPath $MigrationPath -PathType Container)) {
   throw "Migration directory not found: $MigrationPath"
 }
 
-function ConvertTo-SqlLiteral {
-  param([Parameter(Mandatory = $true)][string]$Value)
-  return $Value.Replace("'", "''")
+$MigrationFiles = @(Get-ChildItem -LiteralPath $MigrationPath -File -Filter "*.sql" | Sort-Object Name)
+if ($MigrationFiles.Count -eq 0) {
+  throw "No SQL migrations found for service '$ServiceKey' in $MigrationPath"
 }
+
+if ([string]::IsNullOrWhiteSpace($SourceCommitSha)) {
+  if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_SHA)) {
+    $SourceCommitSha = $env:GITHUB_SHA
+  } else {
+    $SourceCommitSha = (& git rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($SourceCommitSha)) {
+      throw "Unable to resolve source commit SHA."
+    }
+  }
+}
+
+. (Join-Path $RepoRoot "infra/docker/scripts/schema-migration-runner.ps1")
 
 function Invoke-DatabaseSql {
   param(
     [Parameter(Mandatory = $true)][string]$Sql,
-    [switch]$TuplesOnly,
-    [switch]$SingleTransaction
+    [switch]$Quiet
   )
 
-  $arguments = @($DatabaseUrl, "-X", "-q", "-v", "ON_ERROR_STOP=1")
-  if ($TuplesOnly) { $arguments += "-tA" }
-  if ($SingleTransaction) { $arguments += "--single-transaction" }
+  $arguments = @(
+    $DatabaseUrl,
+    "-X",
+    "-v", "ON_ERROR_STOP=1",
+    "-v", "bthwani_lock_timeout_seconds=$LockTimeoutSeconds",
+    "-v", "bthwani_statement_timeout_minutes=$StatementTimeoutMinutes"
+  )
+  if ($Quiet) { $arguments += "-q" }
 
   $output = $Sql | & psql @arguments 2>&1
   $exitCode = $LASTEXITCODE
   if ($exitCode -ne 0) {
     $message = (($output | ForEach-Object { "$_" }) -join "`n").Trim()
-    throw "PostgreSQL migration command failed for service '$ServiceKey' (exit $exitCode).`n$message"
+    throw "PostgreSQL governed migration command failed for service '$ServiceKey' (exit $exitCode).`n$message"
   }
 
   return (($output | ForEach-Object { "$_" }) -join "`n").Trim()
 }
 
-function ConvertFrom-LegacyTransactionBoundaries {
-  param(
-    [Parameter(Mandatory = $true)][string]$Content,
-    [Parameter(Mandatory = $true)][string]$MigrationName
-  )
-
-  $beginPattern = "(?im)^\s*BEGIN(?:\s+(?:WORK|TRANSACTION))?\s*;\s*(?:--.*)?$"
-  $commitPattern = "(?im)^\s*COMMIT(?:\s+(?:WORK|TRANSACTION))?\s*;\s*(?:--.*)?$"
-  $beginCount = [regex]::Matches($Content, $beginPattern).Count
-  $commitCount = [regex]::Matches($Content, $commitPattern).Count
-
-  if ($beginCount -ne $commitCount) {
-    throw "Migration $MigrationName contains unbalanced legacy transaction boundaries: BEGIN=$beginCount COMMIT=$commitCount."
-  }
-
-  if ($beginCount -gt 0) {
-    Write-Host "  Normalizing $beginCount legacy transaction boundary pair(s): $MigrationName"
-    $Content = [regex]::Replace($Content, $beginPattern, "-- transaction boundary owned by canonical runner")
-    $Content = [regex]::Replace($Content, $commitPattern, "-- transaction boundary owned by canonical runner")
-  }
-
-  return $Content
+$executeBatch = {
+  param([string]$Sql)
+  Invoke-DatabaseSql -Sql $Sql
+}
+$executeStatement = {
+  param([string]$Sql)
+  Invoke-DatabaseSql -Sql $Sql -Quiet
 }
 
-function Get-OrderedMigrationFiles {
-  $files = @(Get-ChildItem -LiteralPath $MigrationPath -File -Filter "*.sql" |
-    Sort-Object { $_.Name.ToLowerInvariant() }, Name)
-  if ($files.Count -eq 0) {
-    throw "No SQL migrations found for service '$ServiceKey' in $MigrationPath"
-  }
+Invoke-BthwaniGovernedMigrations `
+  -ServiceName $ServiceKey `
+  -MigrationFiles $MigrationFiles `
+  -SourceCommitSha $SourceCommitSha `
+  -ExecuteBatch $executeBatch `
+  -ExecuteStatement $executeStatement
 
-  $duplicateNames = $files |
-    Group-Object { $_.Name.ToLowerInvariant() } |
-    Where-Object Count -gt 1
-  if ($duplicateNames) {
-    throw "Duplicate canonical migration filenames detected for '$ServiceKey': $($duplicateNames.Name -join ', ')"
-  }
-
-  foreach ($file in $files) {
-    if ($file.Length -eq 0) {
-      throw "Migration is empty: $($file.Name)"
-    }
-
-    $content = Get-Content -Raw -LiteralPath $file.FullName
-    $forbiddenPatterns = @(
-      @{ Pattern = "(?im)^\s*CREATE\s+(?:UNIQUE\s+)?INDEX\s+CONCURRENTLY\b"; Reason = "CREATE INDEX CONCURRENTLY requires a separately governed online migration" },
-      @{ Pattern = "(?im)^\s*REINDEX\s+.*\s+CONCURRENTLY\b"; Reason = "REINDEX CONCURRENTLY cannot run inside the required atomic transaction" },
-      @{ Pattern = "(?im)^\s*VACUUM\b"; Reason = "VACUUM cannot run inside the required atomic transaction" },
-      @{ Pattern = "(?im)^\s*ROLLBACK(?:\s+(?:WORK|TRANSACTION))?\s*;"; Reason = "ROLLBACK is forbidden because the canonical runner owns failure recovery" },
-      @{ Pattern = "(?im)^\s*(?:CREATE|DROP)\s+DATABASE\b"; Reason = "database lifecycle changes are outside service migration authority" },
-      @{ Pattern = "(?im)^\s*ALTER\s+SYSTEM\b"; Reason = "cluster configuration is outside service migration authority" }
-    )
-    foreach ($rule in $forbiddenPatterns) {
-      if ($content -match $rule.Pattern) {
-        throw "Migration $($file.Name) is not atomic: $($rule.Reason)."
-      }
-    }
-
-    ConvertFrom-LegacyTransactionBoundaries -Content $content -MigrationName $file.Name | Out-Null
-  }
-
-  return $files
-}
-
-function Initialize-MigrationLedger {
-  Invoke-DatabaseSql -Sql @"
-CREATE TABLE IF NOT EXISTS runtime_schema_migrations (
-  migration_name TEXT        PRIMARY KEY,
-  checksum       TEXT        NOT NULL,
-  applied_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-"@ | Out-Null
-}
-
-$files = Get-OrderedMigrationFiles
-Initialize-MigrationLedger
-
-Write-Host "Applying canonical $ServiceKey migrations from $MigrationDirectory"
-foreach ($file in $files) {
-  $checksum = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-  $nameSql = ConvertTo-SqlLiteral $file.Name
-  $recorded = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT checksum FROM runtime_schema_migrations WHERE migration_name = '$nameSql';"
-
-  if ($recorded -eq $checksum) {
-    Write-Host "  Skipping (already applied): $($file.Name)"
-    continue
-  }
-  if (-not [string]::IsNullOrWhiteSpace($recorded)) {
-    throw "Migration checksum mismatch for $($file.Name): recorded=$recorded current=$checksum. Applied migrations are immutable; add a new migration."
-  }
-
-  $migrationSql = ConvertFrom-LegacyTransactionBoundaries `
-    -Content (Get-Content -Raw -LiteralPath $file.FullName) `
-    -MigrationName $file.Name
-  $payload = @"
-SET LOCAL lock_timeout = '${LockTimeoutSeconds}s';
-SET LOCAL statement_timeout = '${StatementTimeoutMinutes}min';
-LOCK TABLE runtime_schema_migrations IN EXCLUSIVE MODE;
-
-SELECT CASE
-  WHEN EXISTS (
-    SELECT 1
-    FROM runtime_schema_migrations
-    WHERE migration_name = '$nameSql' AND checksum <> '$checksum'
-  ) THEN 'true'
-  ELSE 'false'
-END AS checksum_mismatch \gset
-
-\if :checksum_mismatch
-\echo 'ERROR: immutable migration checksum mismatch for $nameSql'
-\quit 3
-\endif
-
-SELECT CASE
-  WHEN EXISTS (SELECT 1 FROM runtime_schema_migrations WHERE migration_name = '$nameSql')
-    THEN 'false'
-  ELSE 'true'
-END AS apply_migration \gset
-
-\if :apply_migration
-$migrationSql
-
-INSERT INTO runtime_schema_migrations (migration_name, checksum)
-VALUES ('$nameSql', '$checksum');
-\endif
-"@
-
-  Write-Host "  Applying atomically: $($file.Name)"
-  Invoke-DatabaseSql -Sql $payload -SingleTransaction | Out-Null
-
-  $verified = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT checksum FROM runtime_schema_migrations WHERE migration_name = '$nameSql';"
-  if ($verified -ne $checksum) {
-    throw "Migration ledger verification failed for $($file.Name)."
-  }
-  Write-Host "  $($file.Name): PASS"
-}
-
-Write-Host "$ServiceKey migrations: PASS ($($files.Count) files)"
+Write-Host "Governed service migrations: PASS service=$ServiceKey files=$($MigrationFiles.Count) sha=$SourceCommitSha"
