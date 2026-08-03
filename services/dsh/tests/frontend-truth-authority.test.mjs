@@ -69,6 +69,55 @@ describe("DSH/WLT frontend truth authority", () => {
     }
   });
 
+  it("keeps checkout schemas canonical and DSH-prefixed", () => {
+    const checkoutShard = read("services/dsh/contracts/dsh.checkout.openapi.yaml");
+    const checkoutSchemas = read("services/dsh/contracts/components/schemas/checkout.schemas.yaml");
+
+    for (const parallelSchema of [
+      /^\s{4}CheckoutIntentState:/m,
+      /^\s{4}PaymentMethod:/m,
+      /^\s{4}FulfillmentMode:/m,
+      /^\s{4}CreateCheckoutIntentInput:/m,
+      /^\s{4}CheckoutIntent:/m,
+    ]) {
+      assert.doesNotMatch(
+        checkoutShard,
+        parallelSchema,
+        "checkout path shard must consume canonical Dsh-prefixed schemas",
+      );
+    }
+
+    for (const canonicalSchema of [
+      "DshCheckoutIntentState:",
+      "DshCheckoutPaymentMethod:",
+      "DshCheckoutFulfillmentMode:",
+      "DshCreateCheckoutIntentRequest:",
+      "DshCheckoutIntent:",
+    ]) {
+      assert.equal(
+        checkoutSchemas.includes(canonicalSchema),
+        true,
+        `canonical checkout schema is missing: ${canonicalSchema}`,
+      );
+    }
+  });
+
+  it("does not restore the retired WLT dsh-http transport tree", () => {
+    const violations = [];
+    for (const absolutePath of listSourceFiles("services/wlt/frontend/shared/dsh")) {
+      const source = fs.readFileSync(absolutePath, "utf8");
+      if (/from\s+["'][^"']*\/dsh-http\//.test(source)) {
+        violations.push(relativeToRepository(absolutePath));
+      }
+    }
+
+    assert.deepEqual(
+      violations,
+      [],
+      `WLT DSH consumers must use the canonical dsh-link transport:\n${violations.join("\n")}`,
+    );
+  });
+
   it("keeps the shared delivery contract presentation-only", () => {
     const source = read("services/dsh/frontend/shared/delivery/delivery.contract.ts");
     const forbiddenAuthorityMarkers = [
