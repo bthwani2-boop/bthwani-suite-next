@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { CpTabs } from "@bthwani/control-panel/components";
+import { IdentityRuntimeHealthPanel } from "@bthwani/dsh/control-panel/dashboard";
 import {
   PlatformDashboardScreen,
   SovereignLeadershipPanel,
 } from "@bthwani/dsh/control-panel/platform";
 
-type PlatformSection = "control" | "leadership";
+type PlatformSection = "control" | "identity-health" | "leadership";
 
 export default function PlatformPage() {
   const [section, setSection] = useState<PlatformSection>("control");
@@ -21,6 +22,7 @@ export default function PlatformPage() {
           onChange={(value) => setSection(value as PlatformSection)}
           items={[
             { value: "control", label: "التحكم السيادي" },
+            { value: "identity-health", label: "الخدمات والجاهزية — Identity" },
             { value: "leadership", label: "القيادة والكادر السيادي" },
           ]}
         />
@@ -28,6 +30,10 @@ export default function PlatformPage() {
       {section === "leadership" ? (
         <div style={{ padding: "16px" }}>
           <SovereignLeadershipPanel />
+        </div>
+      ) : section === "identity-health" ? (
+        <div style={{ padding: "16px" }}>
+          <IdentityRuntimeHealthPanel />
         </div>
       ) : (
         <PlatformDashboardScreen />
