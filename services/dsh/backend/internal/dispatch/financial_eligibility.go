@@ -9,43 +9,49 @@ import (
 	"time"
 )
 
-// CaptainWltFinancialEligibilityDecision is the complete financial payload
-// accepted by DSH. It deliberately contains no wallet, balance, currency,
-// threshold, COD amount, or calculation input.
+// CaptainWltFinancialEligibilityDecision contains only the opaque decision
+// metadata returned by WLT. DSH must not receive wallet, balance, currency,
+// threshold, COD amount, or financial calculation inputs.
 type CaptainWltFinancialEligibilityDecision struct {
-	WltDecisionID string
-	Eligible      bool
-	ReasonCode    string
-	PolicyVersion string
-	EvaluatedAt   time.Time
-	ExpiresAt     time.Time
+	WltDecisionID       string
+	WltReasonCode       string
+	WltPolicyVersion    string
+	Eligible            bool
+	IneligibilityReason string
+	SnapshotReference   string
+	EvaluatedAt         time.Time
+	ExpiresAt           time.Time
 }
 
-// CaptainFinancialEligibilitySnapshot is an operational projection of one
-// opaque WLT decision. DSH may display and enforce this projection but may not
-// reconstruct or re-evaluate the financial policy behind it.
 type CaptainFinancialEligibilitySnapshot struct {
 	OperatorContextID   string    `json:"operatorContextId"`
 	CaptainID           string    `json:"captainId"`
 	WltDecisionID       string    `json:"wltDecisionId"`
+	WltReasonCode       string    `json:"wltReasonCode"`
+	WltPolicyVersion    string    `json:"wltPolicyVersion"`
 	Eligible            bool      `json:"eligible"`
-	ReasonCode          string    `json:"reasonCode"`
-	PolicyVersion       string    `json:"policyVersion"`
+	IneligibilityReason string    `json:"ineligibilityReason,omitempty"`
+	SnapshotReference   string    `json:"snapshotReference"`
+	CheckedAt           time.Time `json:"checkedAt"`
 	EvaluatedAt         time.Time `json:"evaluatedAt"`
 	ExpiresAt           time.Time `json:"expiresAt"`
-	LastFinancialSyncAt time.Time `json:"lastFinancialSyncAt"`
-	// IneligibilityReason is a compile-only alias for legacy internal call sites.
-	// It is never serialized or persisted and must be removed with those callers.
-	IneligibilityReason string `json:"-"`
 }
 
 func normalizeCaptainWltFinancialDecision(input CaptainWltFinancialEligibilityDecision) (CaptainWltFinancialEligibilityDecision, error) {
 	input.WltDecisionID = strings.TrimSpace(input.WltDecisionID)
-	input.ReasonCode = strings.TrimSpace(input.ReasonCode)
-	input.PolicyVersion = strings.TrimSpace(input.PolicyVersion)
+	input.WltReasonCode = strings.TrimSpace(input.WltReasonCode)
+	input.WltPolicyVersion = strings.TrimSpace(input.WltPolicyVersion)
+	input.IneligibilityReason = strings.TrimSpace(input.IneligibilityReason)
+	input.SnapshotReference = strings.TrimSpace(input.SnapshotReference)
+	if input.SnapshotReference == "" {
+		input.SnapshotReference = input.WltDecisionID
+	}
 	input.EvaluatedAt = input.EvaluatedAt.UTC()
 	input.ExpiresAt = input.ExpiresAt.UTC()
-	if input.WltDecisionID == "" || input.ReasonCode == "" || input.PolicyVersion == "" {
+	if !input.Eligible && input.IneligibilityReason == "" {
+		input.IneligibilityReason = input.WltReasonCode
+	}
+	if input.WltDecisionID == "" || input.WltReasonCode == "" || input.WltPolicyVersion == "" || input.SnapshotReference == "" {
 		return CaptainWltFinancialEligibilityDecision{}, fmt.Errorf("%w: WLT financial eligibility decision metadata is required", ErrInvalid)
 	}
 	if input.EvaluatedAt.IsZero() || input.ExpiresAt.IsZero() || !input.ExpiresAt.After(input.EvaluatedAt) {
@@ -77,41 +83,44 @@ func UpsertCaptainFinancialEligibilityDecision(
 	var snapshot CaptainFinancialEligibilitySnapshot
 	err = db.QueryRowContext(ctx, `
 		INSERT INTO dsh_captain_financial_eligibility(
-			operator_context_id,captain_id,wlt_decision_id,eligible,reason_code,
-			policy_version,evaluated_at,expires_at,last_financial_sync_at
-		) VALUES($1,$2,$3,$4,$5,$6,$7,$8,now())
+			operator_context_id,captain_id,wlt_decision_id,wlt_reason_code,wlt_policy_version,
+			eligible,ineligibility_reason,snapshot_reference,checked_at,evaluated_at,expires_at
+		) VALUES($1,$2,$3,$4,$5,$6,$7,$8,now(),$9,$10)
 		ON CONFLICT(operator_context_id,captain_id) DO UPDATE SET
 			wlt_decision_id=excluded.wlt_decision_id,
+			wlt_reason_code=excluded.wlt_reason_code,
+			wlt_policy_version=excluded.wlt_policy_version,
 			eligible=excluded.eligible,
-			reason_code=excluded.reason_code,
-			policy_version=excluded.policy_version,
+			ineligibility_reason=excluded.ineligibility_reason,
+			snapshot_reference=excluded.snapshot_reference,
+			checked_at=excluded.checked_at,
 			evaluated_at=excluded.evaluated_at,
-			expires_at=excluded.expires_at,
-			last_financial_sync_at=excluded.last_financial_sync_at
-		RETURNING operator_context_id,captain_id,wlt_decision_id,eligible,reason_code,
-			policy_version,evaluated_at,expires_at,last_financial_sync_at`,
+			expires_at=excluded.expires_at
+		RETURNING operator_context_id,captain_id,wlt_decision_id,wlt_reason_code,wlt_policy_version,
+			eligible,ineligibility_reason,snapshot_reference,checked_at,evaluated_at,expires_at`,
 		operatorContextID,
 		captainID,
 		decision.WltDecisionID,
+		decision.WltReasonCode,
+		decision.WltPolicyVersion,
 		decision.Eligible,
-		decision.ReasonCode,
-		decision.PolicyVersion,
+		decision.IneligibilityReason,
+		decision.SnapshotReference,
 		decision.EvaluatedAt,
 		decision.ExpiresAt,
 	).Scan(
 		&snapshot.OperatorContextID,
 		&snapshot.CaptainID,
 		&snapshot.WltDecisionID,
+		&snapshot.WltReasonCode,
+		&snapshot.WltPolicyVersion,
 		&snapshot.Eligible,
-		&snapshot.ReasonCode,
-		&snapshot.PolicyVersion,
+		&snapshot.IneligibilityReason,
+		&snapshot.SnapshotReference,
+		&snapshot.CheckedAt,
 		&snapshot.EvaluatedAt,
 		&snapshot.ExpiresAt,
-		&snapshot.LastFinancialSyncAt,
 	)
-	if err == nil && !snapshot.Eligible {
-		snapshot.IneligibilityReason = snapshot.ReasonCode
-	}
 	return snapshot, err
 }
 
@@ -134,8 +143,8 @@ func GetCaptainFinancialEligibilitySnapshot(
 		return snapshot, fmt.Errorf("%w: captain id is required", ErrInvalid)
 	}
 	err = db.QueryRowContext(ctx, `
-		SELECT operator_context_id,captain_id,wlt_decision_id,eligible,reason_code,
-			policy_version,evaluated_at,expires_at,last_financial_sync_at
+		SELECT operator_context_id,captain_id,wlt_decision_id,wlt_reason_code,wlt_policy_version,
+			eligible,ineligibility_reason,snapshot_reference,checked_at,evaluated_at,expires_at
 		FROM dsh_captain_financial_eligibility
 		WHERE operator_context_id=$1 AND captain_id=$2`,
 		normCtx, captainID,
@@ -143,18 +152,17 @@ func GetCaptainFinancialEligibilitySnapshot(
 		&snapshot.OperatorContextID,
 		&snapshot.CaptainID,
 		&snapshot.WltDecisionID,
+		&snapshot.WltReasonCode,
+		&snapshot.WltPolicyVersion,
 		&snapshot.Eligible,
-		&snapshot.ReasonCode,
-		&snapshot.PolicyVersion,
+		&snapshot.IneligibilityReason,
+		&snapshot.SnapshotReference,
+		&snapshot.CheckedAt,
 		&snapshot.EvaluatedAt,
 		&snapshot.ExpiresAt,
-		&snapshot.LastFinancialSyncAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return snapshot, ErrCaptainNotEligible
-	}
-	if err == nil && !snapshot.Eligible {
-		snapshot.IneligibilityReason = snapshot.ReasonCode
 	}
 	return snapshot, err
 }
