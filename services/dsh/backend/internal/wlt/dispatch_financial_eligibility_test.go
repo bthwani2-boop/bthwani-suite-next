@@ -2,6 +2,7 @@ package wlt
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -21,13 +22,20 @@ func TestEvaluateDispatchFinancialEligibilityUsesAbstractWltDecision(t *testing.
 		if r.Header.Get("X-Operator-Context-ID") != "operator-1" {
 			t.Fatalf("missing trusted operator context")
 		}
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		if len(body) != 1 || body["captainId"] != "captain-1" {
+			t.Fatalf("DSH sent non-identity or financial inputs: %#v", body)
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"decision":{"eligible":true,"reasonCode":"WLT_DISPATCH_FINANCIALLY_ELIGIBLE","decisionId":"wlt_dfe_1","policyVersion":"dispatch-balance@8","evaluatedAt":"` + evaluatedAt.Format(time.RFC3339Nano) + `","expiresAt":"` + expiresAt.Format(time.RFC3339Nano) + `"}}`))
 	}))
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	decision, err := client.EvaluateDispatchFinancialEligibility(context.Background(), "captain-1", true, "correlation-1", "operator-1")
+	decision, err := client.EvaluateDispatchFinancialEligibility(context.Background(), "captain-1", "correlation-1", "operator-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -44,7 +52,7 @@ func TestEvaluateDispatchFinancialEligibilityRejectsIncompleteDecision(t *testin
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	_, err := client.EvaluateDispatchFinancialEligibility(context.Background(), "captain-1", false, "", "operator-1")
+	_, err := client.EvaluateDispatchFinancialEligibility(context.Background(), "captain-1", "", "operator-1")
 	if err == nil {
 		t.Fatal("expected invalid WLT decision to fail closed")
 	}
@@ -57,7 +65,7 @@ func TestEvaluateDispatchFinancialEligibilityDoesNotInferOnWltFailure(t *testing
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	_, err := client.EvaluateDispatchFinancialEligibility(context.Background(), "captain-1", false, "", "operator-1")
+	_, err := client.EvaluateDispatchFinancialEligibility(context.Background(), "captain-1", "", "operator-1")
 	if err == nil {
 		t.Fatal("expected WLT failure to be returned")
 	}
