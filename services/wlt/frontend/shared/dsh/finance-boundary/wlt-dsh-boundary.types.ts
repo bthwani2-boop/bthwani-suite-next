@@ -1,28 +1,22 @@
-// WLT-for-DSH boundary types.
-// Read-only financial reference types that DSH surfaces may display.
-// DSH must not mutate any of these fields.
+import type { components } from "../../../../clients/generated/wlt-api";
 
-export type WltPaymentStatusReference =
-  | "pending"
-  | "authorized"
-  | "captured"
-  | "failed"
-  | "refunded"
-  | "partially_refunded";
-
+/**
+ * Canonical WLT-for-DSH financial references.
+ *
+ * Financial statuses and records are aliases of the generated WLT OpenAPI
+ * client. This file may compose read-only DSH projections, but it must never
+ * redefine WLT DTOs, lifecycle states, monetary records, or envelopes.
+ */
+export type WltPaymentStatusReference = components["schemas"]["PaymentStatus"];
 export type WltSettlementStatusReference =
-  | "pending"
-  | "processing"
-  | "settled"
-  | "failed";
+  components["schemas"]["SettlementListItem"]["status"];
 
+/** `none` is a DSH presentation sentinel for an absent refund reference. */
 export type WltRefundStatusReference =
-  | "none"
-  | "requested"
-  | "approved"
-  | "completed"
-  | "rejected";
+  | components["schemas"]["RefundStatus"]
+  | "none";
 
+/** Names of read-only references projected by the DSH facade. */
 export type WltReferenceField =
   | "wlt_reference"
   | "payment_session_reference"
@@ -31,62 +25,20 @@ export type WltReferenceField =
   | "refund_status_reference";
 
 export type WltPaymentSessionStatusReference =
-  | "reference_created"
-  | "pending_provider"
-  | "authorized"
-  | "captured"
-  | "cod_pending"
-  | "cod_collected"
-  | "failed"
-  | "expired";
+  components["schemas"]["PaymentStatus"];
+export type WltRefundStatus = components["schemas"]["RefundStatus"];
+export type WltDshRefundReference = components["schemas"]["GovernedRefund"];
 
-// WLT Refund Status
-export type WltRefundStatus =
-  | "requested"
-  | "approved"
-  | "processing"
-  | "completed"
-  | "rejected"
-  | "reversed";
-
-export type WltDshRefundReference = {
-  readonly id: string;
-  readonly paymentSessionId: string;
-  readonly orderId: string;
-  readonly clientId: string;
-  readonly amountMinorUnits: number;
-  readonly currency: string;
-  readonly reason: string;
-  readonly status: WltRefundStatus;
-  readonly resolvedAt: string | null;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-// WLT Settlement Status
 export type WltSettlementStatus =
-  | "pending"
-  | "processing"
-  | "settled"
-  | "failed"
-  | "reversed";
+  components["schemas"]["SettlementListItem"]["status"];
+export type WltDshSettlementReference =
+  components["schemas"]["SettlementListItem"];
 
-export type WltDshSettlementReference = {
-  readonly id: string;
-  readonly partnerId: string;
-  readonly periodStart: string;
-  readonly periodEnd: string;
-  readonly grossAmount: number;
-  readonly platformFee: number;
-  readonly netAmount: number;
-  readonly currency: string;
-  readonly orderCount: number;
-  readonly status: WltSettlementStatus;
-  readonly settledAt: string | null;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
+/**
+ * DSH facade projection. The WLT settlement-summary route does not yet expose
+ * a named schema, so this type is deliberately limited to the read model used
+ * by DSH surfaces and does not define settlement lifecycle authority.
+ */
 export type WltDshSettlementSummary = {
   readonly partnerId: string;
   readonly totalSettled: number;
@@ -95,95 +47,24 @@ export type WltDshSettlementSummary = {
   readonly settlementCount: number;
 };
 
-// WLT Commission
-export type WltCodStatus =
-  | "pending_collection"
-  | "collected"
-  | "remitted"
-  | "disputed"
-  | "resolved";
-
+export type WltCodStatus = components["schemas"]["CodRecord"]["status"];
 export type WltCommissionType =
-  | "delivery_fee"
-  | "platform_fee"
-  | "cod_fee"
-  | "partner_discount";
+  components["schemas"]["Commission"]["commissionType"];
+export type WltCommissionStatus = components["schemas"]["CommissionStatus"];
+export type WltCodCollectorType =
+  components["schemas"]["CreateCodRecordRequest"]["collectorType"];
+export type WltDshCodReference = components["schemas"]["CodRecord"];
+export type WltDshCommissionReference = components["schemas"]["Commission"];
 
-export type WltCommissionStatus =
-  | "pending"
-  | "confirmed"
-  | "settled"
-  | "reversed";
+export type WltLedgerDebitCredit =
+  components["schemas"]["LedgerEntry"]["debitCredit"];
+export type WltLedgerActorType = components["schemas"]["ActorType"];
+export type WltDshLedgerEntry = components["schemas"]["LedgerEntry"];
 
-export type WltCodCollectorType = "captain" | "store_courier" | "partner_store";
+export type WltDshPaymentSessionReference =
+  components["schemas"]["PaymentSession"];
 
-export type WltDshCodReference = {
-  readonly id: string;
-  readonly orderId: string;
-  readonly captainId?: string;
-  readonly collectorType: WltCodCollectorType;
-  readonly collectorId: string;
-  readonly partnerId: string;
-  readonly amountMinorUnits: number;
-  readonly currency: string;
-  readonly status: WltCodStatus;
-  readonly collectedAt: string | null;
-  readonly remittedAt: string | null;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type WltDshCommissionReference = {
-  readonly id: string;
-  readonly orderId: string;
-  readonly captainId: string;
-  readonly partnerId: string;
-  readonly commissionType: WltCommissionType;
-  readonly amountMinorUnits: number;
-  readonly currency: string;
-  readonly status: WltCommissionStatus;
-  readonly settledAt: string | null;
-  readonly createdAt: string;
-};
-
-// WLT Ledger
-export type WltLedgerDebitCredit = "debit" | "credit";
-
-export type WltLedgerActorType =
-  | "client"
-  | "partner"
-  | "captain"
-  | "system"
-  | "platform";
-
-export type WltDshLedgerEntry = {
-  readonly id: string;
-  readonly entryType: string;
-  readonly actorId: string;
-  readonly actorType: WltLedgerActorType;
-  readonly orderId: string | null;
-  readonly referenceId: string;
-  readonly referenceType: string;
-  readonly amountMinorUnits: number;
-  readonly currency: string;
-  readonly debitCredit: WltLedgerDebitCredit;
-  readonly balanceAfter: number;
-  readonly description: string;
-  readonly createdAt: string;
-};
-
-export type WltDshPaymentSessionReference = {
-  readonly id: string;
-  readonly checkoutIntentId: string;
-  readonly clientId: string;
-  readonly storeId: string;
-  readonly paymentMethod: "cod" | "wallet" | "mixed" | "official_wallet";
-  readonly status: WltPaymentSessionStatusReference;
-  readonly providerReference: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
+/** Read-only cross-domain composition; each status remains WLT-owned above. */
 export type WltDshReferenceContext = {
   readonly orderId: string;
   readonly paymentStatus: WltPaymentStatusReference | null;
