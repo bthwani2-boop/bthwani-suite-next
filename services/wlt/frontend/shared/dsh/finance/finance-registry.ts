@@ -170,5 +170,5 @@ export function buildFinanceHref(group: CanonicalFinanceGroupId = 'financial-com
   if (options?.subGroup) searchParams.set('subGroup', options.subGroup);
   if (options?.panel) searchParams.set('panel', options.panel);
   const query = searchParams.toString();
-  return query ? `/dsh/finance?${query}` : '/dsh/finance';
+  return query ? `/wlt/finance?${query}` : '/wlt/finance';
 }

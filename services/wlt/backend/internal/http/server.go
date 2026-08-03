@@ -166,7 +166,9 @@ func requireInternalFinancialRead(next http.HandlerFunc) http.HandlerFunc {
 		if !shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh") {
 			return
 		}
-		next(w, r)
+		// Explicitly reassign the request context, in case pointer mutation fails to propagate
+		ctx := shared.WithOperatorContext(r.Context(), r.Header.Get("X-Operator-Context-ID"))
+		next(w, r.WithContext(ctx))
 	}
 }
 
@@ -175,7 +177,8 @@ func requireMutationServiceAuth(next http.HandlerFunc) http.HandlerFunc {
 		if !shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh") {
 			return
 		}
-		next(w, r)
+		ctx := shared.WithOperatorContext(r.Context(), r.Header.Get("X-Operator-Context-ID"))
+		next(w, r.WithContext(ctx))
 	}
 }
 
@@ -184,7 +187,8 @@ func requireWorkforceMutationServiceAuth(next http.HandlerFunc) http.HandlerFunc
 		if !shared.RequireServiceCaller(w, r, "WLT_WORKFORCE_SERVICE_TOKEN", "workforce") {
 			return
 		}
-		next(w, r)
+		ctx := shared.WithOperatorContext(r.Context(), r.Header.Get("X-Operator-Context-ID"))
+		next(w, r.WithContext(ctx))
 	}
 }
 
