@@ -153,7 +153,7 @@ func (c *Client) Deactivate(ctx context.Context, actorID, requestedByActorID, re
 		"reason":             reason,
 		"correlationId":      correlationID,
 	}
-	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/deactivate", nil, body, nil)
+	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/deactivate", body, nil, nil)
 }
 
 func (c *Client) Reactivate(ctx context.Context, actorID, requestedByActorID, reason, correlationID string) error {
@@ -162,7 +162,7 @@ func (c *Client) Reactivate(ctx context.Context, actorID, requestedByActorID, re
 		"reason":             reason,
 		"correlationId":      correlationID,
 	}
-	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/reactivate", nil, body, nil)
+	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/reactivate", body, nil, nil)
 }
 
 func canonicalActivationSurface(expectedActorType, expectedSurface string) string {
