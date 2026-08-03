@@ -5,21 +5,30 @@ DO $$
 DECLARE
   published_storefront_count INTEGER;
 BEGIN
-  IF to_regclass('public.runtime_seed_runs') IS NULL THEN
-    RAISE EXCEPTION 'runtime_seed_runs ledger is missing';
+  IF to_regclass('public.runtime_seed_history') IS NULL THEN
+    RAISE EXCEPTION 'runtime_seed_history ledger is missing';
   END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM runtime_seed_runs) THEN
-    RAISE EXCEPTION 'runtime_seed_runs contains no executed local seeds';
+  IF NOT EXISTS (
+    SELECT 1
+    FROM runtime_seed_history
+    WHERE service_name = 'dsh'
+  ) THEN
+    RAISE EXCEPTION 'runtime_seed_history contains no executed DSH local seeds';
   END IF;
 
   IF EXISTS (
     SELECT 1
-    FROM runtime_seed_runs
-    WHERE checksum !~ '^[0-9a-f]{64}$'
-       OR run_count < 1
+    FROM runtime_seed_history
+    WHERE service_name = 'dsh'
+      AND (
+        checksum !~ '^[0-9a-f]{64}$'
+        OR run_count < 1
+        OR btrim(seed_name) = ''
+        OR btrim(source_commit_sha) = ''
+      )
   ) THEN
-    RAISE EXCEPTION 'runtime_seed_runs contains an invalid checksum or run count';
+    RAISE EXCEPTION 'runtime_seed_history contains invalid DSH seed provenance';
   END IF;
 
   IF NOT EXISTS (
@@ -106,9 +115,6 @@ BEGIN
     RAISE EXCEPTION 'expected 6 complete local client storefronts, found %', published_storefront_count;
   END IF;
 
-  -- A public assortment is not complete unless the API can derive
-  -- effectiveImage from an approved DAM link and approved asset. This protects
-  -- runtime readback from seed rows that are client_visible but unrenderable.
   IF EXISTS (
     SELECT 1
     FROM dsh_store_assortments assortment
