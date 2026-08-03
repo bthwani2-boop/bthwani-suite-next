@@ -1,0 +1,62 @@
+overlay: 1.0.0
+info:
+  title: BThwani WLT Payment Session Capabilities Overlay
+  version: 1.0.0
+actions:
+  - target: $.components.schemas
+    description: Add the WLT-owned behavioral projection consumed by all payment-session surfaces.
+    update:
+      PaymentSessionCapabilities:
+        type: object
+        additionalProperties: false
+        required:
+          - terminal
+          - retryAllowed
+          - reconciliationRequired
+          - operationInProgress
+          - nextAllowedActions
+        properties:
+          terminal:
+            type: boolean
+            description: True only when WLT considers the current session lifecycle terminal.
+          retryAllowed:
+            type: boolean
+            description: Whether the caller may begin a governed replacement or retry flow.
+          reconciliationRequired:
+            type: boolean
+            description: Whether WLT requires reconciliation before any irreversible follow-up.
+          operationInProgress:
+            type: boolean
+            description: Whether an authorize/capture/provider refresh operation is currently in flight.
+          nextAllowedActions:
+            type: array
+            description: Exhaustive server-owned action identifiers legal from the current status.
+            items:
+              type: string
+              enum:
+                - authorize
+                - capture
+                - expire
+                - refresh_provider_status
+                - record_delivery_collection
+                - create_new_payment_session
+                - open_reconciliation
+  - target: $.components.schemas.PaymentSession
+    description: Require every payment-session projection to carry WLT-owned behavioral capabilities.
+    update:
+      required:
+        - id
+        - operatorContextId
+        - clientId
+        - storeId
+        - paymentMethod
+        - status
+        - providerReference
+        - amountMinorUnits
+        - currency
+        - capabilities
+        - createdAt
+        - updatedAt
+      properties:
+        capabilities:
+          $ref: '#/components/schemas/PaymentSessionCapabilities'
