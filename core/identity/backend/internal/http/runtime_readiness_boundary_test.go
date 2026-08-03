@@ -120,6 +120,14 @@ func TestRuntimeReadinessBoundaryRejectsMissingDatabaseConfiguration(t *testing.
 
 func TestRuntimeReadinessBoundaryHandlesHealthDelegatesReadsAndGatesMutations(t *testing.T) {
 	resetRuntimeProbeState()
+	lastReadinessFailed.Store(true)
+	readinessSnapshot.Lock()
+	readinessSnapshot.value = runtimeStatusResponse{
+		Service: "core-identity",
+		Checks: []runtimeCheckStatus{},
+		ReasonCodes: []string{reasonReadinessUnproven},
+	}
+	readinessSnapshot.Unlock()
 	configureIdentityRuntime(t)
 	nextCalls := 0
 	handler := runtimeReadinessBoundary(readyRuntimeStore(), http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -127,10 +135,22 @@ func TestRuntimeReadinessBoundaryHandlesHealthDelegatesReadsAndGatesMutations(t 
 		w.WriteHeader(http.StatusNoContent)
 	}))
 
+	healthBeforeReadiness := httptest.NewRecorder()
+	handler.ServeHTTP(healthBeforeReadiness, httptest.NewRequest(http.MethodGet, "/identity/health", nil))
+	if healthBeforeReadiness.Code != http.StatusOK || !strings.Contains(healthBeforeReadiness.Body.String(), `"status":"DEGRADED"`) || !strings.Contains(healthBeforeReadiness.Body.String(), reasonReadinessUnproven) {
+		t.Fatalf("health claimed success before readiness status=%d body=%s", healthBeforeReadiness.Code, healthBeforeReadiness.Body.String())
+	}
+
+	readiness := httptest.NewRecorder()
+	handler.ServeHTTP(readiness, readinessRequest())
+	if readiness.Code != http.StatusOK || !strings.Contains(readiness.Body.String(), `"status":"HEALTHY"`) {
+		t.Fatalf("readiness did not establish healthy state status=%d body=%s", readiness.Code, readiness.Body.String())
+	}
+
 	health := httptest.NewRecorder()
 	handler.ServeHTTP(health, httptest.NewRequest(http.MethodGet, "/identity/health", nil))
 	if health.Code != http.StatusOK || !strings.Contains(health.Body.String(), `"status":"HEALTHY"`) {
-		t.Fatalf("health was not handled as liveness: status=%d body=%s", health.Code, health.Body.String())
+		t.Fatalf("health did not reflect successful readiness status=%d body=%s", health.Code, health.Body.String())
 	}
 
 	read := httptest.NewRecorder()
