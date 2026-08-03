@@ -206,7 +206,7 @@ function Wait-ForHttpStatus {
     try {
       $body = Invoke-RestMethod $Url -TimeoutSec 5 -ErrorAction Stop
       if ($HealthyValues -contains [string]$body.status) {
-        Write-Host "$Name: $($body.status)"
+        Write-Host "${Name}: $($body.status)"
         return $body
       }
     } catch { }
