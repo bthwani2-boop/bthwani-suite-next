@@ -131,6 +131,31 @@ function checkService(service) {
   return { service, failures };
 }
 
+function checkGenericServiceMigrationWrapper() {
+  const failures = [];
+  const wrapperPath = path.join(repositoryRoot, "tools/scripts/invoke-service-migrations.ps1");
+  const testPath = path.join(repositoryRoot, "tools/scripts/test-service-migration-runner.ps1");
+
+  for (const filePath of [wrapperPath, testPath]) {
+    const relative = path.relative(repositoryRoot, filePath).replaceAll(path.sep, "/");
+    if (!fs.existsSync(filePath)) {
+      failures.push(`${relative}: missing generic service migration wrapper/test`);
+      continue;
+    }
+    const content = fs.readFileSync(filePath, "utf8");
+    if (content.includes("runtime_schema_migrations")) {
+      failures.push(`${relative}: must not own or assert runtime_schema_migrations; use schema_migrations via schema-migration-runner.ps1`);
+    }
+  }
+
+  const wrapper = fs.existsSync(wrapperPath) ? fs.readFileSync(wrapperPath, "utf8") : "";
+  if (!wrapper.includes("schema-migration-runner.ps1") || !wrapper.includes("Invoke-BthwaniGovernedMigrations")) {
+    failures.push("tools/scripts/invoke-service-migrations.ps1: must delegate to schema-migration-runner.ps1/Invoke-BthwaniGovernedMigrations");
+  }
+
+  return failures;
+}
+
 const targetServices = requestedServices ?? Object.keys(servicePaths);
 let anyFailure = false;
 for (const service of targetServices) {
@@ -147,6 +172,15 @@ for (const service of targetServices) {
   } else {
     console.log(`migration-manifest-drift-gate: PASS ${service} (${result.service})`);
   }
+}
+
+const genericWrapperFailures = checkGenericServiceMigrationWrapper();
+if (genericWrapperFailures.length > 0) {
+  anyFailure = true;
+  console.error("migration-manifest-drift-gate: FAIL generic-service-migration-wrapper");
+  for (const failure of genericWrapperFailures) console.error(`  - ${failure}`);
+} else {
+  console.log("migration-manifest-drift-gate: PASS generic-service-migration-wrapper");
 }
 
 if (anyFailure) process.exit(1);
