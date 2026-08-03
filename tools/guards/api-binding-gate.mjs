@@ -15,9 +15,14 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import ts from "typescript";
+import * as typescriptNamespace from "typescript";
 import { fail, listCodeFiles, read, repoRoot } from "./_guard-utils.mjs";
 import { parseIndexedContractModules, parseOpenApiContract } from "./_openapi-utils.mjs";
+
+// TypeScript 7's CommonJS-compatible compiler export can be exposed by Node ESM
+// under `default` instead of synthetic named exports. Normalize the module once
+// so every AST operation uses the actual compiler API on Node 24 and Windows.
+const ts = typescriptNamespace.default ?? typescriptNamespace;
 
 const guardId = "api-binding-gate";
 const violations = [];
