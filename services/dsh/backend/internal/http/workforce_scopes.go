@@ -17,8 +17,9 @@ func RegisterWorkforceScopesRoutes(mux *http.ServeMux) {
 		workforce: workforceclient.NewClient(os.Getenv("DSH_WORKFORCE_BASE_URL"), os.Getenv("WORKFORCE_DSH_SERVICE_TOKEN")),
 	}
 
+	// DSH exposes Workforce scopes as a read-through operational reference only.
+	// Workforce remains the sole owner of assignment/scope mutations.
 	mux.HandleFunc("GET /dsh/operator/workforce/scopes/{actorId}", s.handleGetOperatorWorkforceScopes)
-	mux.HandleFunc("PUT /dsh/operator/workforce/scopes/{actorId}", s.handleUpdateOperatorWorkforceScopes)
 }
 
 func (s *workforceScopesServer) handleGetOperatorWorkforceScopes(w http.ResponseWriter, r *http.Request) {
@@ -34,9 +35,4 @@ func (s *workforceScopesServer) handleGetOperatorWorkforceScopes(w http.Response
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(scopes)
-}
-
-func (s *workforceScopesServer) handleUpdateOperatorWorkforceScopes(w http.ResponseWriter, r *http.Request) {
-	// DSH acts as a pass-through or simply throws not implemented if we don't have the client method yet
-	http.Error(w, `{"error":"not implemented"}`, http.StatusNotImplemented)
 }
