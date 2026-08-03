@@ -52,18 +52,21 @@ func main() {
 
 	identityhttp.RegisterEmployeeAccessRoutes(router, repository)
 	identityhttp.RegisterPartnerAccessRoutes(router, repository)
-	runtimeReadinessRouter := identityhttp.RuntimeReadinessBoundary(router, db)
-	authRouter := identityhttp.AuthOperatorContextBoundary(repository, runtimeReadinessRouter)
+	authRouter := identityhttp.AuthOperatorContextBoundary(repository, router)
 	issuerScopedRouter := identityhttp.ActivationIssuerBoundary(db, authRouter)
 	operatorScopedRouter := identityhttp.OperatorBoundary(db, issuerScopedRouter)
 	internalTrustRouter := identityhttp.RuntimeOperatorContextBoundary(operatorScopedRouter)
 	otpScopedRouter := identityhttp.OtpBoundary(repository, internalTrustRouter)
+	// Readiness is the outer domain boundary so no authentication, activation,
+	// operator-context, or service middleware can touch persistence before the
+	// authoritative fail-closed gate has passed.
+	runtimeReadinessRouter := identityhttp.RuntimeReadinessBoundary(otpScopedRouter, db)
 	server := &http.Server{
 		Addr: ":" + port,
 		Handler: identityhttp.BrowserOriginGuard(
 			identityhttp.CorsMiddleware(
 				identityhttp.RequestContractMiddleware(
-					identityhttp.ActivationSafetyMiddleware(otpScopedRouter),
+					identityhttp.ActivationSafetyMiddleware(runtimeReadinessRouter),
 				),
 			),
 		),
