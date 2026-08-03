@@ -46,7 +46,7 @@ paths:
         '403':
           description: Caller or operator context is forbidden.
         '503':
-          description: Internal Identity trust configuration is unavailable.
+          $ref: '#/components/responses/ServiceUnavailable'
   /internal/employees/provision:
     post:
       operationId: provisionAdministrativeEmployee
@@ -79,7 +79,7 @@ paths:
         '409':
           description: Phone or username is already bound to an existing actor.
         '503':
-          description: Internal Identity trust configuration is unavailable.
+          $ref: '#/components/responses/ServiceUnavailable'
 components:
   securitySchemes:
     serviceToken:
