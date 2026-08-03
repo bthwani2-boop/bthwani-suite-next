@@ -26,7 +26,7 @@ func TestEmployeeProfileGate_UnauthorizedSelfEdit(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	allowed := requireEmployeeTarget(w, identity, "employee:update", person)
-	
+
 	if allowed {
 		t.Fatalf("expected self-edit to be rejected due to missing explicit employee:update scope")
 	}
@@ -55,7 +55,7 @@ func TestEmployeeProfileGate_TerminatedAccess(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	allowed := requireEmployeeTarget(w, identity, "employee:update", person)
-	
+
 	if allowed {
 		t.Fatalf("expected edit to be rejected due to cross-department scope")
 	}
