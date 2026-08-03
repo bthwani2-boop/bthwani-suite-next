@@ -17,7 +17,7 @@ export function CaptainFinancialEligibilityPanel() {
       setData(result.financialEligibility);
     } catch (cause) {
       setData(null);
-      setError(cause instanceof Error ? cause.message : "تعذر التحقق من قرار الأهلية عبر WLT.");
+      setError(cause instanceof Error ? cause.message : "تعذر التحقق من قرار الأهلية المالية عبر WLT.");
     } finally {
       setLoading(false);
     }
@@ -33,7 +33,7 @@ export function CaptainFinancialEligibilityPanel() {
       <StateView
         tone="danger"
         title="أهلية الإسناد غير متاحة"
-        description={error ?? "لم تصل إجابة أهلية موثوقة من WLT."}
+        description={error ?? "لم تصل نتيجة أهلية صالحة من WLT."}
         actionLabel="إعادة التحقق"
         onActionPress={() => void refresh()}
       />
@@ -43,53 +43,35 @@ export function CaptainFinancialEligibilityPanel() {
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <Badge
-          label={data.eligible ? "مؤهل لاستلام الطلبات" : "غير مؤهل حاليًا"}
-          tone={data.eligible ? "success" : "danger"}
-        />
-        <Text role="titleSm" style={styles.rtl}>قرار الأهلية المالية</Text>
+        <Badge label={data.eligible ? "مؤهل لاستلام الطلبات" : "غير مؤهل حاليًا"} tone={data.eligible ? "success" : "danger"} />
+        <Text role="titleSm" style={styles.rtl}>قرار الأهلية المالية للإسناد</Text>
       </View>
-
       <Text role="bodySm" tone="muted" style={styles.rtl}>
-        يعرض DSH قرار WLT المرجعي فقط. الرصيد والحدود والسياسة المالية لا تُنسخ إلى التطبيق ولا تُحسب محليًا.
+        يعرض DSH قرار WLT قصير العمر ومرجعه فقط. الرصيد والحد المالي والسياسة التفصيلية لا تُنسخ إلى التطبيق.
       </Text>
-
       <View style={styles.metrics}>
         <View style={styles.metric}>
-          <Text role="caption" tone="muted">رمز سبب WLT</Text>
+          <Text role="caption" tone="muted">رمز القرار</Text>
           <Text role="bodyStrong">{data.wltReasonCode}</Text>
         </View>
         <View style={styles.metric}>
-          <Text role="caption" tone="muted">نسخة السياسة</Text>
+          <Text role="caption" tone="muted">إصدار السياسة</Text>
           <Text role="bodyStrong">{data.wltPolicyVersion}</Text>
         </View>
         <View style={styles.metric}>
-          <Text role="caption" tone="muted">مرجع القرار</Text>
-          <Text role="bodyStrong">{data.wltDecisionId}</Text>
+          <Text role="caption" tone="muted">مرجع اللقطة</Text>
+          <Text role="bodyStrong">{data.snapshotReference}</Text>
         </View>
       </View>
-
       {!data.eligible && data.ineligibilityReason ? (
         <StateView tone="warning" title="سبب عدم الأهلية" description={data.ineligibilityReason} />
       ) : null}
       {error ? <StateView tone="warning" title="تعذر تحديث القراءة الأخيرة" description={error} /> : null}
-
       <Text role="caption" tone="muted" style={styles.rtl}>
-        آخر تحقق: {new Date(data.checkedAt).toLocaleString("ar-YE")} · تقييم WLT: {new Date(data.evaluatedAt).toLocaleString("ar-YE")} · انتهاء القرار: {new Date(data.expiresAt).toLocaleString("ar-YE")}
+        تم التقييم: {new Date(data.evaluatedAt).toLocaleString("ar-YE")} · آخر تحقق: {new Date(data.checkedAt).toLocaleString("ar-YE")} · تنتهي النتيجة: {new Date(data.expiresAt).toLocaleString("ar-YE")}
       </Text>
-      <Text role="caption" tone="muted" style={styles.rtl}>
-        مرجع اللقطة: {data.snapshotReference}
-      </Text>
-
-      <Pressable
-        accessibilityRole="button"
-        disabled={loading}
-        onPress={() => void refresh()}
-        style={[styles.button, loading && styles.disabled]}
-      >
-        <Text role="bodyStrong" style={styles.buttonLabel}>
-          {loading ? "جارٍ التحقق…" : "تحديث القرار من WLT"}
-        </Text>
+      <Pressable accessibilityRole="button" disabled={loading} onPress={() => void refresh()} style={[styles.button, loading && styles.disabled]}>
+        <Text role="bodyStrong" style={styles.buttonLabel}>{loading ? "جارٍ التحقق…" : "تحديث القرار من WLT"}</Text>
       </Pressable>
     </View>
   );

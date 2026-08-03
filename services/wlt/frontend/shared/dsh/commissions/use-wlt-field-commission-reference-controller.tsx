@@ -10,7 +10,10 @@ type Action =
   | { type: "ERROR"; message: string }
   | { type: "NOT_AVAILABLE" };
 
-function reducer(_state: WltFieldCommissionState, action: Action): WltFieldCommissionState {
+function reducer(
+  _state: WltFieldCommissionState,
+  action: Action,
+): WltFieldCommissionState {
   switch (action.type) {
     case "LOADING":
       return { kind: "loading" };
@@ -28,7 +31,9 @@ export type WltFieldCommissionController = {
   readonly retry: () => void;
 };
 
-export function useWltDshFieldCommissionReferenceController(partnerId: string): WltFieldCommissionController {
+export function useWltDshFieldCommissionReferenceController(
+  partnerId: string,
+): WltFieldCommissionController {
   const [state, dispatch] = useReducer(reducer, { kind: "not_available" });
 
   const load = () => {
@@ -50,10 +55,10 @@ export function useWltDshFieldCommissionReferenceController(partnerId: string): 
           dispatch({ type: "ERROR", message: res.message });
         }
       })
-      .catch((e: unknown) => {
+      .catch((error: unknown) => {
         dispatch({
           type: "ERROR",
-          message: e instanceof Error ? e.message : "unknown error",
+          message: error instanceof Error ? error.message : "unknown error",
         });
       });
   };

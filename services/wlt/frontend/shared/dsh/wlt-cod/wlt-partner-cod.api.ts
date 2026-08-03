@@ -1,21 +1,22 @@
 import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
-import { createDshHttpClient } from "../dsh-link/dsh-http-request";
+import { corrId, createDshHttpClient } from "../dsh-link/dsh-http-request";
 import type {
   WltCodCustodyMutationResult,
   WltDshCodReference,
 } from "./wlt-cod.api";
 
-function partnerCodClient() {
-  return createDshHttpClient(resolveDshApiBaseUrl(), "wlt-dsh-partner-cod");
-}
+const { request } = createDshHttpClient(
+  resolveDshApiBaseUrl(),
+  "partner-cod",
+);
 
 export async function fetchPartnerCodRecords(): Promise<
   readonly WltDshCodReference[]
 > {
-  const response = await partnerCodClient().request<{
+  const body = await request<{
     readonly codRecords?: readonly WltDshCodReference[];
   }>("/dsh/partner/me/finance/cod-records");
-  return response.codRecords ?? [];
+  return body.codRecords ?? [];
 }
 
 export async function remitPartnerCodRecord(
@@ -29,10 +30,13 @@ export async function remitPartnerCodRecord(
     throw new Error("Invalid record or proof");
   }
 
-  return partnerCodClient().request<WltCodCustodyMutationResult>(
+  const correlationId = corrId("partner-cod-remit");
+  return request<WltCodCustodyMutationResult>(
     `/dsh/partner/me/finance/cod-records/${encodeURIComponent(normalizedRecordId)}/remit`,
     {
       method: "POST",
+      correlationId,
+      idempotencyKey: `${correlationId}:${normalizedRecordId}:remit`,
       body: { proofReference: normalizedProof, note: note.trim() },
     },
   );
