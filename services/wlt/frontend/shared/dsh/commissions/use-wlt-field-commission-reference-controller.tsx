@@ -10,10 +10,7 @@ type Action =
   | { type: "ERROR"; message: string }
   | { type: "NOT_AVAILABLE" };
 
-function reducer(
-  _state: WltFieldCommissionState,
-  action: Action,
-): WltFieldCommissionState {
+function reducer(_state: WltFieldCommissionState, action: Action): WltFieldCommissionState {
   switch (action.type) {
     case "LOADING":
       return { kind: "loading" };
@@ -31,9 +28,7 @@ export type WltFieldCommissionController = {
   readonly retry: () => void;
 };
 
-export function useWltDshFieldCommissionReferenceController(
-  partnerId: string,
-): WltFieldCommissionController {
+export function useWltDshFieldCommissionReferenceController(partnerId: string): WltFieldCommissionController {
   const [state, dispatch] = useReducer(reducer, { kind: "not_available" });
 
   const load = () => {
@@ -50,15 +45,17 @@ export function useWltDshFieldCommissionReferenceController(
         if (res.ok) {
           dispatch({ type: "LOADED", reference: res.data });
         } else if (res.kind === "http" && res.status === 404) {
+          // No commission reference recorded yet for this partner — an
+          // expected pre-approval state, not a failure.
           dispatch({ type: "NOT_AVAILABLE" });
         } else {
           dispatch({ type: "ERROR", message: res.message });
         }
       })
-      .catch((error: unknown) => {
+      .catch((e: unknown) => {
         dispatch({
           type: "ERROR",
-          message: error instanceof Error ? error.message : "unknown error",
+          message: e instanceof Error ? e.message : "unknown error",
         });
       });
   };
