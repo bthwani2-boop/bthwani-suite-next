@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useControlPanelSession } from "@bthwani/dsh/control-panel/session";
+import { identityErrorPresentation } from "@bthwani/core-identity";
 import { colorRoles, alpha } from "@bthwani/ui-kit";
 
 function resolveSafeReturnTo(raw: string | null): string {
@@ -22,12 +23,11 @@ export default function DshLoginPage() {
 }
 
 function DshLoginForm() {
-  const { state, login } = useControlPanelSession();
+  const { state, login, retryBootstrap } = useControlPanelSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const returnTo = resolveSafeReturnTo(searchParams.get("returnTo"));
 
@@ -39,18 +39,15 @@ function DshLoginForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    setSubmitError(null);
-
-    try {
-      await login(username.trim(), password);
-    } catch (err) {
-      setSubmitError("اسم المستخدم أو كلمة المرور غير صحيحة.");
-    }
+    await login(username.trim(), password);
   }
 
   const isSubmitting = state.kind === "authenticating";
   const passwordReady = username.trim().length > 0 && password.length >= 6;
   const submitDisabled = isSubmitting || !passwordReady;
+  const errorPresentation = state.kind === "error"
+    ? identityErrorPresentation(state.message)
+    : null;
 
   const inputStyle = {
     padding: "0.625rem 0.75rem",
@@ -59,6 +56,56 @@ function DshLoginForm() {
     background: "var(--card-bg)",
     color: "var(--text-primary)",
   } as const;
+
+  if (state.kind === "service_unavailable") {
+    return (
+      <div
+        dir="rtl"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100vh",
+          background: "var(--main-bg)",
+          padding: "1rem",
+        }}
+      >
+        <div
+          role="alert"
+          style={{
+            width: "30rem",
+            maxWidth: "100%",
+            display: "grid",
+            gap: "1rem",
+            padding: "2rem",
+            borderRadius: "1rem",
+            border: "1px solid var(--card-border)",
+            background: "var(--card-bg)",
+          }}
+        >
+          <h1 style={{ margin: 0, fontSize: "1.25rem" }}>خدمة الهوية غير متاحة</h1>
+          <p style={{ margin: 0, lineHeight: 1.8 }}>
+            لم تُعامل الحالة كفشل بيانات دخول، ولم تُحذف الجلسة المحفوظة. أعد الفحص بعد عودة الخدمة.
+          </p>
+          <button
+            type="button"
+            onClick={() => void retryBootstrap()}
+            style={{
+              padding: "0.75rem",
+              borderRadius: "0.5rem",
+              border: "none",
+              background: "var(--grad-blue)",
+              color: "white",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            إعادة الفحص
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -121,9 +168,9 @@ function DshLoginForm() {
           هذا المسار للحسابات السيادية أو التشغيلية البديلة المصرح بها فقط.
         </p>
 
-        {submitError ? (
+        {errorPresentation ? (
           <p role="alert" style={{ margin: 0, color: colorRoles.danger, fontSize: "0.875rem" }}>
-            {submitError}
+            {errorPresentation.title}: {errorPresentation.description}
           </p>
         ) : null}
 
