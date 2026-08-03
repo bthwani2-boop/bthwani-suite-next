@@ -27,6 +27,7 @@ dist/
 dist-swagger/
 build/
 .next/
+apps/control-panel/runtime/next-env.d.ts
 .expo/
 coverage/
 *.tsbuildinfo
