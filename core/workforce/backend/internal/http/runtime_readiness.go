@@ -9,7 +9,7 @@ import (
 
 const (
 	workforceMigrationServiceName = "workforce"
-	workforceLatestMigration      = "workforce-014_operational_assignments_integrity.sql"
+	workforceLatestMigration      = "workforce-015_workforce_code_sequence_reconciliation.sql"
 	workforceReadinessTimeout     = 2 * time.Second
 )
 
