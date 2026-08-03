@@ -48,6 +48,7 @@ function relativeToRepository(absolutePath) {
 const retiredParallelAuthorities = [
   "services/dsh/frontend/shared/checkout/checkout-contract.ts",
   "services/dsh/frontend/shared/checkout/dsh-client-binding.contracts.ts",
+  "services/dsh/frontend/shared/identity-access/dsh-role-permission.model.ts",
   "services/wlt/frontend/shared/dsh/payment/wlt-payment-session.types.ts",
   "services/wlt/frontend/control-panel/_skeleton-proof/WltFinanceReadOnlySkeletonProof.tsx",
 ];
@@ -58,7 +59,7 @@ const numericFinancialTruthPatterns = [
 ];
 
 describe("DSH/WLT frontend truth authority", () => {
-  it("keeps retired parallel contract authorities deleted", () => {
+  it("keeps retired parallel contract and authorization authorities deleted", () => {
     for (const relativePath of retiredParallelAuthorities) {
       assert.equal(
         fs.existsSync(repositoryPath(relativePath)),
@@ -92,6 +93,43 @@ describe("DSH/WLT frontend truth authority", () => {
         source.includes(marker),
         false,
         `delivery presentation contract must not regain operational or financial authority: ${marker}`,
+      );
+    }
+  });
+
+  it("does not synthesize audit or RBAC truth in operations surfaces", () => {
+    const detailWorkspace = read(
+      "services/dsh/frontend/control-panel/operations/AuditTrailDetailWorkspace.tsx",
+    );
+    const auditScreen = read(
+      "services/dsh/frontend/control-panel/operations/AuditSupportSlaScreen.tsx",
+    );
+
+    for (const marker of [
+      "DshAuditEntry",
+      "DSH_AUDIT_ENTRIES",
+      "getDshRolePermission",
+      "getDshRoleArabicName",
+      "UI preview",
+      "no runtime auth",
+    ]) {
+      assert.equal(
+        detailWorkspace.includes(marker),
+        false,
+        `audit detail must not restore local audit or RBAC authority: ${marker}`,
+      );
+    }
+
+    for (const marker of [
+      "getDynamicUiAudits",
+      "resolveAuditEntry",
+      "التدقيقات اليدوية",
+      "سجل التدقيق والمتابعة (Preview)",
+    ]) {
+      assert.equal(
+        auditScreen.includes(marker),
+        false,
+        `audit screen must not restore preview audit truth: ${marker}`,
       );
     }
   });
