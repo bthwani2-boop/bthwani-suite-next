@@ -47,6 +47,13 @@ func trustedSubjectForStoreActor(ctx context.Context, actor StoreActor) TrustedS
 	}
 }
 
+// TrustedSubjectForActor exposes the trusted Identity assertion already bound
+// to the request context. The StoreActor fallback carries identity and known
+// role metadata only; it never synthesizes permissions.
+func TrustedSubjectForActor(ctx context.Context, actor StoreActor) TrustedSubject {
+	return trustedSubjectForStoreActor(ctx, actor)
+}
+
 // ResolveActorStore resolves the first active Workforce assignment and then
 // asks DSH's object authorizer to verify that the store belongs to the trusted
 // operator context. DSH-local scope rows are not an assignment authority.
