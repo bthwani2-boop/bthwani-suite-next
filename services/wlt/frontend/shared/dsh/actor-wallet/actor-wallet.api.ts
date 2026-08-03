@@ -2,7 +2,14 @@ import type { components } from "../../../../clients/generated/wlt-api";
 import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
 import { createDshHttpClient } from "../dsh-link/dsh-http-request";
 
+/** Actor classes eligible to receive a governed commission policy. */
 export type RepresentativeActorType = Extract<
+  components["schemas"]["ActorType"],
+  "partner" | "captain" | "field"
+>;
+
+/** Actor classes that expose a DSH-facing WLT wallet projection. */
+export type RepresentativeWalletActorType = Extract<
   components["schemas"]["ActorType"],
   "client" | "partner" | "captain" | "field"
 >;
@@ -15,7 +22,7 @@ export type RepresentativeActorType = Extract<
 export type RepresentativeWallet = {
   readonly id: string;
   readonly actorId: string;
-  readonly actorType: RepresentativeActorType;
+  readonly actorType: RepresentativeWalletActorType;
   readonly status: "active" | "suspended" | "frozen" | "closed" | string;
   readonly currency: string;
   readonly availableBalanceMinorUnits: number;
@@ -42,14 +49,14 @@ const { request } = createDshHttpClient(
 
 // Canonical boundary: `/dsh/${actorType}/me/finance`; explicit maps keep each
 // wallet and ledger endpoint typed and prevent arbitrary path construction.
-const walletPathByActor: Record<RepresentativeActorType, string> = {
+const walletPathByActor: Record<RepresentativeWalletActorType, string> = {
   client: "/dsh/client/me/finance/wallet",
   partner: "/dsh/partner/me/finance/wallet",
   captain: "/dsh/captain/me/finance/wallet",
   field: "/dsh/field/me/finance/wallet",
 };
 
-const ledgerPathByActor: Record<RepresentativeActorType, string> = {
+const ledgerPathByActor: Record<RepresentativeWalletActorType, string> = {
   client: "/dsh/client/me/finance/ledger-entries",
   partner: "/dsh/partner/me/finance/ledger-entries",
   captain: "/dsh/captain/me/finance/ledger-entries",
@@ -69,14 +76,14 @@ function safeLedgerLimit(limit: number): number {
 }
 
 function controlPanelWalletPath(
-  actorType: RepresentativeActorType,
+  actorType: RepresentativeWalletActorType,
   actorId: string,
 ): string {
   return `/dsh/control-panel/finance/wallets/${actorType}/${encodeURIComponent(normalizeRepresentativeActorId(actorId))}`;
 }
 
 export async function fetchOwnRepresentativeWallet(
-  actorType: RepresentativeActorType,
+  actorType: RepresentativeWalletActorType,
 ): Promise<RepresentativeWallet> {
   const response = await request<{ readonly wallet: RepresentativeWallet }>(
     walletPathByActor[actorType],
@@ -85,7 +92,7 @@ export async function fetchOwnRepresentativeWallet(
 }
 
 export async function fetchOwnRepresentativeLedger(
-  actorType: RepresentativeActorType,
+  actorType: RepresentativeWalletActorType,
   limit = 30,
 ): Promise<readonly RepresentativeLedgerEntry[]> {
   const response = await request<{
@@ -99,7 +106,7 @@ export async function fetchOwnRepresentativeLedger(
  * the authenticated session and rejects unsupported actor types and IDs.
  */
 export async function fetchRepresentativeWallet(
-  actorType: RepresentativeActorType,
+  actorType: RepresentativeWalletActorType,
   actorId: string,
 ): Promise<RepresentativeWallet> {
   const response = await request<{ readonly wallet: RepresentativeWallet }>(
@@ -109,7 +116,7 @@ export async function fetchRepresentativeWallet(
 }
 
 export async function fetchRepresentativeLedger(
-  actorType: RepresentativeActorType,
+  actorType: RepresentativeWalletActorType,
   actorId: string,
   limit = 50,
 ): Promise<readonly RepresentativeLedgerEntry[]> {
