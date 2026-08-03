@@ -1,7 +1,7 @@
 import { useEffect, useReducer } from "react";
 import type { WltFieldCommissionState } from "./wlt-field-commission.states";
 import type { WltDshFieldCommissionReference } from "./wlt-field-commission.types";
-import { resolveDshApiBaseUrl } from "../dsh-http/dsh-api-base-url";
+import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
 import { fetchWltFieldCommissionRef } from "./wlt-field-commission-reference.api";
 
 type Action =
