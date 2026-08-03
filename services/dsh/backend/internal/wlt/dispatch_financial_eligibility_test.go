@@ -3,6 +3,7 @@ package wlt
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -56,6 +57,9 @@ func TestEvaluateDispatchFinancialEligibilityRejectsIncompleteDecision(t *testin
 	if err == nil {
 		t.Fatal("expected invalid WLT decision to fail closed")
 	}
+	if !errors.Is(err, ErrDispatchFinancialEligibilityInvalidDecision) {
+		t.Fatalf("expected typed invalid-decision error, got %T %v", err, err)
+	}
 }
 
 func TestEvaluateDispatchFinancialEligibilityDoesNotInferOnWltFailure(t *testing.T) {
@@ -71,6 +75,9 @@ func TestEvaluateDispatchFinancialEligibilityDoesNotInferOnWltFailure(t *testing
 	}
 	if statusErr, ok := err.(DispatchFinancialEligibilityHTTPError); !ok || statusErr.StatusCode != http.StatusServiceUnavailable {
 		t.Fatalf("expected HTTP error, got %T %v", err, err)
+	}
+	if !errors.Is(err, ErrDispatchFinancialEligibilityUnavailable) {
+		t.Fatalf("expected typed unavailable error, got %T %v", err, err)
 	}
 }
 

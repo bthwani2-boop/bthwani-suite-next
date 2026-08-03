@@ -9,7 +9,6 @@ import (
 
 func TestGenericPaymentSessionRouteRejectsSubscriptionSource(t *testing.T) {
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-service-token")
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "test-financial-scope")
 
 	request := httptest.NewRequest(http.MethodPost, "/wlt/payment-sessions", strings.NewReader(`{
 		"subscriptionPurchaseId":"subp-1",
@@ -23,6 +22,7 @@ func TestGenericPaymentSessionRouteRejectsSubscriptionSource(t *testing.T) {
 	}`))
 	request.Header.Set("Authorization", "Bearer test-service-token")
 	request.Header.Set("X-Service-Caller", "dsh")
+	request.Header.Set("X-Operator-Context-ID", "OperatorContext-test")
 	request.Header.Set("Idempotency-Key", "generic-subscription-source")
 	request.Header.Set("X-Correlation-ID", "subp-1")
 	response := httptest.NewRecorder()

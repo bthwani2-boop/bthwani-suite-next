@@ -13,6 +13,7 @@ import {
   CpTabs,
 } from "@bthwani/control-panel/components";
 import { MetricsPageFrame } from "@bthwani/control-panel/shell";
+import { formatWltMoney } from "@bthwani/wlt/dsh";
 import {
   fetchCaptainPerformanceAnalytics,
   fetchFieldPerformanceAnalytics,
@@ -320,7 +321,9 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
                 {state.finance.summary.currencies.map((currency) => (
                   <Box key={currency.currency} style={styles.row}>
                     <Text role="bodyStrong">{currency.currency}</Text>
-                    <Text role="bodySm">الأصول {currency.assetsMinorUnits} • الالتزامات {currency.liabilitiesMinorUnits} • صافي المركز {currency.netPositionMinorUnits}</Text>
+                    <Text role="bodySm">
+                      الأصول {formatWltMoney(currency.assetsMinorUnits, currency.currency)} • الالتزامات {formatWltMoney(currency.liabilitiesMinorUnits, currency.currency)} • صافي المركز {formatWltMoney(currency.netPositionMinorUnits, currency.currency)}
+                    </Text>
                   </Box>
                 ))}
               </Box>

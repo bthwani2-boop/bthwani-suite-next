@@ -1,6 +1,7 @@
 import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
 import { createDshHttpClient } from "../dsh-link/dsh-http-request";
 import type { DshWltLedgerEntryView, DshWltLedgerParams } from "./wlt-ledger.types";
+import { formatWltMoney } from "../finance/wlt-money";
 
 // WLT internal financial reads are service-authenticated; DSH surfaces read
 // them through the governed DSH finance proxy, never from the browser.
@@ -22,14 +23,6 @@ type WltLedgerEntryRaw = {
   readonly createdAt: string;
 };
 
-// Minor units -> major units display, matching the conversion already used
-// by the field app (DshFieldFinanceScreen's formatAmount) -- this table
-// previously displayed the raw integer minor-units value with no
-// conversion, so e.g. "150000" instead of "1500.00".
-function formatMinorUnits(minorUnits: number): string {
-  return (minorUnits / 100).toFixed(2);
-}
-
 function mapActorTypeLabel(actorType: string): string {
   switch (actorType) {
     case "client": return "Client";
@@ -50,11 +43,11 @@ function toView(e: WltLedgerEntryRaw): DshWltLedgerEntryView {
     orderId: e.orderId,
     referenceId: e.referenceId,
     referenceType: e.referenceType,
-    amountLabel: formatMinorUnits(e.amountMinorUnits),
+    amountLabel: formatWltMoney(e.amountMinorUnits, e.currency),
     currency: e.currency,
     debitCreditLabel: e.debitCredit === "debit" ? "Debit" : "Credit",
     debitCreditBadge: e.debitCredit === "debit" ? "error" : "success",
-    balanceAfterLabel: formatMinorUnits(e.balanceAfter),
+    balanceAfterLabel: formatWltMoney(e.balanceAfter, e.currency),
     description: e.description,
     createdAt: e.createdAt,
   };

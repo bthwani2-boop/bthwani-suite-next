@@ -6,6 +6,7 @@ import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import { CpBadge, CpButton, CpMutedInline, CpPageHeader, CpTextInput } from "@bthwani/control-panel/components";
 import { FinanceReadOnlyFrame } from "@bthwani/control-panel/shell";
 import {
+  formatWltMoney,
   presentWltPaymentSessionStatus,
   requiresWltPaymentReconciliation,
   type WltPaymentSessionTimeline,
@@ -17,10 +18,6 @@ import {
 } from '@bthwani/wlt/dsh';
 
 type ScreenState = "idle" | "loading" | "ready" | "refreshing" | "offline" | "forbidden" | "not_found" | "conflict" | "error";
-
-function formatAmount(minorUnits: number, currency: string): string {
-  return `${new Intl.NumberFormat("ar-YE").format(minorUnits)} ${currency === "YER" ? "ر.ي" : currency}`;
-}
 
 function errorState(error: PaymentSessionRuntimeError): ScreenState {
   return error.state;
@@ -108,7 +105,7 @@ export function PaymentSessionOperationsScreen() {
             <CpBadge tone={toBadgeTone(presentation.tone)}>{timeline.paymentSession.status}</CpBadge>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem", marginTop: "1rem" }}>
-            <div><Text role="caption" tone="muted">المبلغ</Text><Text role="body">{formatAmount(timeline.paymentSession.amountMinorUnits, timeline.paymentSession.currency)}</Text></div>
+            <div><Text role="caption" tone="muted">المبلغ</Text><Text role="body">{formatWltMoney(timeline.paymentSession.amountMinorUnits, timeline.paymentSession.currency)}</Text></div>
             <div><Text role="caption" tone="muted">وسيلة الدفع</Text><Text role="body">{timeline.paymentSession.paymentMethod}</Text></div>
             <div><Text role="caption" tone="muted">مرجع المزود</Text><Text role="body">{timeline.paymentSession.providerReference || "—"}</Text></div>
             <div><Text role="caption" tone="muted">قيد التحصيل</Text><Text role="body">{timeline.captureLedgerTransactionId || "غير موجود"}</Text></div>

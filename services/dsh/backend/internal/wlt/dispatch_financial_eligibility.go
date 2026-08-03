@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +13,12 @@ import (
 )
 
 const maxDispatchFinancialEligibilityResponseBytes = 64 << 10
+
+var (
+	ErrDispatchFinancialEligibilityUnavailable     = errors.New("WLT dispatch financial eligibility unavailable")
+	ErrDispatchFinancialEligibilityInvalidDecision = errors.New("WLT dispatch financial eligibility decision invalid")
+	ErrDispatchFinancialEligibilityInvalidRequest  = errors.New("WLT dispatch financial eligibility request invalid")
+)
 
 type DispatchFinancialEligibilityDecision struct {
 	Eligible      bool      `json:"eligible"`
@@ -30,6 +37,10 @@ func (e DispatchFinancialEligibilityHTTPError) Error() string {
 	return fmt.Sprintf("WLT dispatch financial eligibility returned HTTP %d", e.StatusCode)
 }
 
+func (e DispatchFinancialEligibilityHTTPError) Unwrap() error {
+	return ErrDispatchFinancialEligibilityUnavailable
+}
+
 func (c *Client) EvaluateDispatchFinancialEligibility(
 	ctx context.Context,
 	captainID string,
@@ -37,24 +48,24 @@ func (c *Client) EvaluateDispatchFinancialEligibility(
 	operatorContextID string,
 ) (DispatchFinancialEligibilityDecision, error) {
 	if !c.Configured() {
-		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("WLT integration is not configured")
+		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("%w: integration is not configured", ErrDispatchFinancialEligibilityUnavailable)
 	}
 	captainID = strings.TrimSpace(captainID)
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if captainID == "" || len(captainID) > 200 {
-		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("captain id is required and must not exceed 200 characters")
+		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("%w: captain id is required and must not exceed 200 characters", ErrDispatchFinancialEligibilityInvalidRequest)
 	}
 	trustedOperatorContextID, ok := OperatorContextIDFromContext(ctx)
 	if !ok || strings.TrimSpace(trustedOperatorContextID) == "" {
-		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("trusted operator context is required")
+		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("%w: trusted operator context is required", ErrDispatchFinancialEligibilityInvalidRequest)
 	}
 	if trustedOperatorContextID != operatorContextID {
-		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("trusted operator context does not match request scope")
+		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("%w: trusted operator context does not match request scope", ErrDispatchFinancialEligibilityInvalidRequest)
 	}
 
 	payload, err := json.Marshal(map[string]any{"captainId": captainID})
 	if err != nil {
-		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("encode WLT dispatch financial eligibility request: %w", err)
+		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("%w: encode request: %v", ErrDispatchFinancialEligibilityInvalidRequest, err)
 	}
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -63,7 +74,7 @@ func (c *Client) EvaluateDispatchFinancialEligibility(
 		bytes.NewReader(payload),
 	)
 	if err != nil {
-		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("build WLT dispatch financial eligibility request: %w", err)
+		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("%w: build request: %v", ErrDispatchFinancialEligibilityInvalidRequest, err)
 	}
 	setServiceHeaders(req, c.serviceToken)
 	req.Header.Set("Content-Type", "application/json")
@@ -73,12 +84,12 @@ func (c *Client) EvaluateDispatchFinancialEligibility(
 
 	response, err := c.http.Do(req)
 	if err != nil {
-		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("call WLT dispatch financial eligibility: %w", err)
+		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("%w: call WLT: %v", ErrDispatchFinancialEligibilityUnavailable, err)
 	}
 	defer response.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(response.Body, maxDispatchFinancialEligibilityResponseBytes))
 	if err != nil {
-		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("read WLT dispatch financial eligibility response: %w", err)
+		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("%w: read response: %v", ErrDispatchFinancialEligibilityUnavailable, err)
 	}
 	if response.StatusCode != http.StatusOK {
 		return DispatchFinancialEligibilityDecision{}, DispatchFinancialEligibilityHTTPError{StatusCode: response.StatusCode}
@@ -88,7 +99,7 @@ func (c *Client) EvaluateDispatchFinancialEligibility(
 		Decision DispatchFinancialEligibilityDecision `json:"decision"`
 	}
 	if err := json.Unmarshal(body, &envelope); err != nil {
-		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("decode WLT dispatch financial eligibility response: %w", err)
+		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("%w: decode response: %v", ErrDispatchFinancialEligibilityInvalidDecision, err)
 	}
 	decision := envelope.Decision
 	decision.DecisionID = strings.TrimSpace(decision.DecisionID)
@@ -97,13 +108,13 @@ func (c *Client) EvaluateDispatchFinancialEligibility(
 	decision.EvaluatedAt = decision.EvaluatedAt.UTC()
 	decision.ExpiresAt = decision.ExpiresAt.UTC()
 	if decision.DecisionID == "" || decision.ReasonCode == "" || decision.PolicyVersion == "" {
-		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("WLT dispatch financial eligibility decision metadata is incomplete")
+		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("%w: metadata is incomplete", ErrDispatchFinancialEligibilityInvalidDecision)
 	}
 	if decision.EvaluatedAt.IsZero() || decision.ExpiresAt.IsZero() || !decision.ExpiresAt.After(decision.EvaluatedAt) {
-		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("WLT dispatch financial eligibility decision time window is invalid")
+		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("%w: time window is invalid", ErrDispatchFinancialEligibilityInvalidDecision)
 	}
 	if !decision.ExpiresAt.After(time.Now().UTC()) {
-		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("WLT dispatch financial eligibility decision is already expired")
+		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("%w: decision is already expired", ErrDispatchFinancialEligibilityInvalidDecision)
 	}
 	return decision, nil
 }

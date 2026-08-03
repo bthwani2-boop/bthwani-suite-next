@@ -13,8 +13,7 @@ import {
   CpTableHeaderCell,
   CpTextInput,
 } from "@bthwani/control-panel/components";
-import { resolveDshApiBaseUrl } from '@bthwani/wlt/dsh';
-import { createDshHttpClient } from '@bthwani/wlt/dsh';
+import { createDshHttpClient, formatWltMoney, resolveDshApiBaseUrl } from '@bthwani/wlt/dsh';
 import type {
   RepresentativeWalletActorType,
   RepresentativeLedgerEntry,
@@ -38,10 +37,7 @@ type LookupState =
     };
 
 function amountLabel(value: number, currency: string): string {
-  return `${(value / 100).toLocaleString("ar-YE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} ${currency}`;
+  return formatWltMoney(value, currency);
 }
 
 function statusTone(status: string): CpBadgeTone {

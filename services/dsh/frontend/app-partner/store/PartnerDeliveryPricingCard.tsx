@@ -2,6 +2,11 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Button, Card, Text, TextField, spacing } from "@bthwani/ui-kit";
 import {
+  formatWltMoney,
+  minorUnitsToWltMajorInput,
+  parseWltMajorInputToMinorUnits,
+} from "@bthwani/wlt/dsh";
+import {
   findDeliveryPricing,
   usePartnerDeliveryPricingController,
 } from "../../shared/partner/partner-delivery-pricing.public";
@@ -10,10 +15,6 @@ export type PartnerDeliveryPricingCardProps = {
   readonly storeId: string;
 };
 
-function formatFee(value: number): string {
-  return (value / 100).toLocaleString("ar");
-}
-
 export function PartnerDeliveryPricingCard({ storeId }: PartnerDeliveryPricingCardProps) {
   const controller = usePartnerDeliveryPricingController(storeId);
   const partnerPolicy = findDeliveryPricing(controller.records, "partner_delivery");
@@ -21,14 +22,14 @@ export function PartnerDeliveryPricingCard({ storeId }: PartnerDeliveryPricingCa
   const [reason, setReason] = React.useState("");
 
   React.useEffect(() => {
-    setFeeYer(partnerPolicy ? String(partnerPolicy.feeMinorUnits / 100) : "");
+    setFeeYer(partnerPolicy ? minorUnitsToWltMajorInput(partnerPolicy.feeMinorUnits, "YER") : "");
   }, [partnerPolicy]);
 
   const save = React.useCallback(async () => {
-    const fee = Number(feeYer);
-    if (!Number.isFinite(fee) || fee < 0 || !reason.trim()) return;
+    const fee = parseWltMajorInputToMinorUnits(feeYer, "YER");
+    if (!fee.ok || fee.minorUnits < 0 || !reason.trim()) return;
     const succeeded = await controller.save(partnerPolicy, {
-      feeMinorUnits: Math.round(fee * 100),
+      feeMinorUnits: fee.minorUnits,
       currency: "YER",
       status: partnerPolicy?.status === "archived" ? "paused" : partnerPolicy?.status ?? "active",
       reason: reason.trim(),
@@ -60,7 +61,7 @@ export function PartnerDeliveryPricingCard({ storeId }: PartnerDeliveryPricingCa
         <View style={styles.editor}>
           {partnerPolicy ? (
             <Text role="caption" tone="muted" align="start">
-              السعر الحالي: {formatFee(partnerPolicy.feeMinorUnits)} ر.ي · الحالة: {partnerPolicy.status} · الإصدار: {partnerPolicy.version}
+              السعر الحالي: {formatWltMoney(partnerPolicy.feeMinorUnits, partnerPolicy.currency)} · الحالة: {partnerPolicy.status} · الإصدار: {partnerPolicy.version}
             </Text>
           ) : (
             <Text role="caption" tone="muted" align="start">

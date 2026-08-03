@@ -15,64 +15,59 @@ func authorizedServiceRequest(path string) *http.Request {
 	return request
 }
 
-func TestRequireServiceCallerFailsClosedWithoutConfiguredFinancialScope(t *testing.T) {
+func TestRequireServiceCallerFailsClosedWithoutDelegatedOperatorContext(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
 
 	request := authorizedServiceRequest("/wlt/settlements")
-	request.Header.Set("X-Operator-Context-ID", "caller-selected-scope")
 	recorder := httptest.NewRecorder()
 
 	if RequireServiceCaller(recorder, request, "TEST_WLT_SERVICE_TOKEN", "dsh") {
-		t.Fatal("caller-selected financial scope was accepted without server configuration")
+		t.Fatal("service request without delegated OperatorContext was accepted")
 	}
-	if recorder.Code != http.StatusServiceUnavailable || !strings.Contains(recorder.Body.String(), "FINANCIAL_SCOPE_NOT_CONFIGURED") {
-		t.Fatalf("expected FINANCIAL_SCOPE_NOT_CONFIGURED, got status=%d body=%s", recorder.Code, recorder.Body.String())
+	if recorder.Code != http.StatusBadRequest || !strings.Contains(recorder.Body.String(), "OPERATOR_CONTEXT_REQUIRED") {
+		t.Fatalf("expected OPERATOR_CONTEXT_REQUIRED, got status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
 }
 
-func TestRequireServiceCallerOverridesCallerSelectedFinancialScope(t *testing.T) {
+func TestRequireServiceCallerBindsAuthenticatedDelegatedOperatorContext(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "local-dsh")
 
 	request := authorizedServiceRequest("/wlt/settlements")
-	request.Header.Set("X-Operator-Context-ID", "untrusted-caller-scope")
+	request.Header.Set("X-Operator-Context-ID", "OperatorContext-a")
 	recorder := httptest.NewRecorder()
 
 	if !RequireServiceCaller(recorder, request, "TEST_WLT_SERVICE_TOKEN", "dsh") {
 		t.Fatalf("authenticated service request was rejected status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
-	if got := request.Header.Get("X-Operator-Context-ID"); got != "local-dsh" {
-		t.Fatalf("caller header was not replaced by server scope: got %q", got)
+	if got := request.Header.Get("X-Operator-Context-ID"); got != "OperatorContext-a" {
+		t.Fatalf("delegated context changed after authentication: got %q", got)
 	}
-	if scopeID, ok := OperatorContextIDFromContext(request.Context()); !ok || scopeID != "local-dsh" {
-		t.Fatalf("server scope was not propagated, scope=%q ok=%v", scopeID, ok)
+	if scopeID, ok := OperatorContextIDFromContext(request.Context()); !ok || scopeID != "OperatorContext-a" {
+		t.Fatalf("delegated context was not propagated, scope=%q ok=%v", scopeID, ok)
 	}
 }
 
-func TestRequireServiceCallerCollapsesDistinctCallerScopesToServerScope(t *testing.T) {
+func TestRequireServiceCallerPreservesDistinctAuthenticatedContexts(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "local-dsh")
 
-	for _, callerScope := range []string{"tenant-a", "tenant-b", "partner-42", ""} {
+	for _, callerScope := range []string{"OperatorContext-a", "OperatorContext-b"} {
 		request := authorizedServiceRequest("/wlt/settlements")
 		request.Header.Set("X-Operator-Context-ID", callerScope)
 		recorder := httptest.NewRecorder()
 		if !RequireServiceCaller(recorder, request, "TEST_WLT_SERVICE_TOKEN", "dsh") {
 			t.Fatalf("authenticated request with caller scope %q was rejected status=%d body=%s", callerScope, recorder.Code, recorder.Body.String())
 		}
-		if got := request.Header.Get("X-Operator-Context-ID"); got != "local-dsh" {
-			t.Fatalf("caller scope %q survived authentication as %q", callerScope, got)
+		if got := request.Header.Get("X-Operator-Context-ID"); got != callerScope {
+			t.Fatalf("delegated context %q changed to %q", callerScope, got)
 		}
 	}
 }
 
 func TestRequireServiceCallerAuthenticatesBeforeBindingScope(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "local-dsh")
 	request := authorizedServiceRequest("/wlt/settlements")
 	request.Header.Set("Authorization", "Bearer wrong-token")
-	request.Header.Set("X-Operator-Context-ID", "caller-selected-scope")
+	request.Header.Set("X-Operator-Context-ID", "OperatorContext-a")
 	recorder := httptest.NewRecorder()
 
 	if RequireServiceCaller(recorder, request, "TEST_WLT_SERVICE_TOKEN", "dsh") {
@@ -81,7 +76,7 @@ func TestRequireServiceCallerAuthenticatesBeforeBindingScope(t *testing.T) {
 	if recorder.Code != http.StatusForbidden || !strings.Contains(recorder.Body.String(), "SERVICE_TOKEN_INVALID") {
 		t.Fatalf("expected SERVICE_TOKEN_INVALID, got status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
-	if got := request.Header.Get("X-Operator-Context-ID"); got != "caller-selected-scope" {
+	if got := request.Header.Get("X-Operator-Context-ID"); got != "OperatorContext-a" {
 		t.Fatalf("unauthenticated request was mutated before authentication: got %q", got)
 	}
 }

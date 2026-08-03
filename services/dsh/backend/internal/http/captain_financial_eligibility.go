@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -24,7 +25,7 @@ func (s *protectedStoreServer) refreshCaptainFinancialEligibility(
 		return dispatch.CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("%w: captain id is required", dispatch.ErrInvalid)
 	}
 	if s.wlt == nil || !s.wlt.Configured() {
-		return dispatch.CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("WLT integration is not configured")
+		return dispatch.CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("%w: integration is not configured", wlt.ErrDispatchFinancialEligibilityUnavailable)
 	}
 
 	decision, err := s.wlt.EvaluateDispatchFinancialEligibility(
@@ -117,7 +118,7 @@ func (s *protectedStoreServer) handleRefreshOwnCaptainFinancialEligibility(w htt
 		return
 	}
 	if strings.TrimSpace(actor.OperatorContextID) == "" {
-		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "captain OperatorContext context is required")
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "captain OperatorContext context is required")
 		return
 	}
 	snapshot, err := s.refreshCaptainFinancialEligibility(r, actor.OperatorContextID, actor.ID)
@@ -134,7 +135,7 @@ func (s *protectedStoreServer) handleGetOwnCaptainFinancialEligibility(w http.Re
 		return
 	}
 	if strings.TrimSpace(actor.OperatorContextID) == "" {
-		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "captain OperatorContext context is required")
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "captain OperatorContext context is required")
 		return
 	}
 	snapshot, err := dispatch.GetCaptainFinancialEligibilitySnapshot(r.Context(), s.db, actor.OperatorContextID, actor.ID)
@@ -149,13 +150,13 @@ func writeCaptainFinancialEligibilityError(w http.ResponseWriter, err error) {
 	switch {
 	case err == nil:
 		return
-	case strings.Contains(err.Error(), "not configured") || strings.Contains(err.Error(), "returned HTTP") || strings.Contains(err.Error(), "call WLT"):
+	case errors.Is(err, wlt.ErrDispatchFinancialEligibilityUnavailable):
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_FINANCIAL_ELIGIBILITY_UNAVAILABLE", "WLT financial eligibility decision could not be verified")
-	case strings.Contains(err.Error(), "metadata is incomplete") || strings.Contains(err.Error(), "time window is invalid") || strings.Contains(err.Error(), "already expired"):
+	case errors.Is(err, wlt.ErrDispatchFinancialEligibilityInvalidDecision):
 		store.SendError(w, http.StatusConflict, "WLT_FINANCIAL_DECISION_INVALID", "WLT returned an invalid dispatch financial decision")
-	case strings.Contains(err.Error(), dispatch.ErrCaptainNotEligible.Error()):
+	case errors.Is(err, dispatch.ErrCaptainNotEligible):
 		store.SendError(w, http.StatusConflict, "CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED", "captain WLT financial eligibility decision has not been verified")
-	case strings.Contains(err.Error(), dispatch.ErrInvalid.Error()):
+	case errors.Is(err, wlt.ErrDispatchFinancialEligibilityInvalidRequest), errors.Is(err, dispatch.ErrInvalid):
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 	default:
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "captain financial eligibility operation failed")

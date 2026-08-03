@@ -2,7 +2,6 @@ package shared
 
 import (
 	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -14,17 +13,6 @@ type referenceIdentity struct {
 	Subject           string `json:"subject"`
 	OperatorContextID string `json:"operatorContextId"`
 	AuthState         string `json:"authState"`
-}
-
-func trustedDshReferenceRequest(r *http.Request) bool {
-	expectedToken := strings.TrimSpace(os.Getenv("WLT_DSH_SERVICE_TOKEN"))
-	if expectedToken == "" || r.Header.Get("X-Service-Caller") != "dsh" {
-		return false
-	}
-	return subtle.ConstantTimeCompare(
-		[]byte(strings.TrimSpace(r.Header.Get("Authorization"))),
-		[]byte("Bearer "+expectedToken),
-	) == 1
 }
 
 func resolveReferenceIdentity(ctx context.Context, authorization string) (referenceIdentity, error) {
@@ -72,21 +60,13 @@ const (
 )
 
 // RequireReferenceReader protects WLT reference projections in every runtime
-// mode. Authenticated DSH service-bridge requests are bound to the single
-// deployment-owned operator context (WLT is single-tenant across that path;
-// caller-supplied X-Operator-Context-ID values are ignored). End-user
-// requests derive the OperatorContext from Identity, and conflicting client
-// context remains rejected. Development and deferred modes never bypass this
+// mode. Authenticated DSH requests delegate a trusted OperatorContext through
+// the service-auth boundary. End-user requests derive it from Identity, and a
+// conflicting client context is rejected. Development modes never bypass this
 // boundary.
 func RequireReferenceReader(w http.ResponseWriter, r *http.Request) bool {
-	if trustedDshReferenceRequest(r) {
-		operatorContextID, ok := configuredFinancialCompatibilityScope(w)
-		if !ok {
-			return false
-		}
-		r.Header.Set("X-Operator-Context-ID", operatorContextID)
-		*r = *r.WithContext(WithOperatorContext(r.Context(), operatorContextID))
-		return true
+	if strings.TrimSpace(r.Header.Get("X-Service-Caller")) != "" {
+		return RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh")
 	}
 	identity, err := resolveReferenceIdentity(r.Context(), r.Header.Get("Authorization"))
 	if err == ErrReferenceIdentityUnavailable {

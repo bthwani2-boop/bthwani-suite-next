@@ -1,14 +1,15 @@
 openapi: 3.1.0
 info:
   title: BThwani WLT Shared Transport Components
-  version: 1.0.0
+  version: 1.1.0
   description: >-
     Canonical cross-contract transport components for the WLT service. Domain
     schemas remain owned by their journey contracts; authentication headers,
     correlation, idempotency and the runtime error envelope are defined exactly
-    once here. The legacy operator-context header remains only as an optional
-    compatibility field while its database columns are retired; callers do not
-    control financial ownership through it.
+    once here. X-Operator-Context-ID is required on authenticated service calls
+    and is accepted only after the service credential and caller identity have
+    been verified. End-user reference reads derive the context from Identity
+    and do not accept a client-selected financial scope.
 x-bthwani-owner: services/wlt
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED
@@ -35,11 +36,10 @@ components:
     OperatorContextId:
       name: X-Operator-Context-ID
       in: header
-      required: false
-      deprecated: true
+      required: true
       description: >-
-        Ignored caller compatibility header. WLT overwrites this value after
-        service authentication with the server-owned compatibility scope.
+        Trusted platform-isolation context delegated by an authenticated server
+        caller. This parameter is not valid as an end-user authorization claim.
       schema: { type: string, minLength: 1, maxLength: 120 }
     CorrelationId:
       name: X-Correlation-ID

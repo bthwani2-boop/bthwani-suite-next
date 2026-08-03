@@ -4,8 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, Text } from "@bthwani/ui-kit";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import { CpBadge, CpButton, CpSelect, CpTextInput } from "@bthwani/control-panel/components";
-import { resolveDshApiBaseUrl } from '@bthwani/wlt/dsh';
-import { createDshHttpClient } from '@bthwani/wlt/dsh';
+import { createDshHttpClient, formatWltMoney, resolveDshApiBaseUrl } from '@bthwani/wlt/dsh';
 import {
   adjustCommission,
   confirmCommission,
@@ -50,10 +49,7 @@ const STATUS_OPTIONS = [
 ] as const;
 
 function formatMoney(amountMinorUnits: number, currency: string): string {
-  return `${(amountMinorUnits / 100).toLocaleString("ar-YE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} ${currency}`;
+  return formatWltMoney(amountMinorUnits, currency);
 }
 
 function validatePolicy(policy: CommissionPolicyInput): string | null {

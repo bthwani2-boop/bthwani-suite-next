@@ -14,7 +14,7 @@ import {
 import { useCartController, useServiceabilityController } from "../../shared/cart";
 import type { DshCart, DshFulfillmentMode } from "../../shared/cart";
 import type { DshPaymentMethod } from "../../shared/checkout";
-import { useWltPaymentController } from "@bthwani/wlt/dsh";
+import { formatWltMoney, useWltPaymentController } from "@bthwani/wlt/dsh";
 import { PaymentDecisionSection } from "./PaymentDecisionSection";
 
 type Props = {
@@ -178,7 +178,7 @@ export function GovernedCartScreen({
                 <View style={{ flex: 1 }}>
                   <Text role="bodyStrong" align="start">{item.productName}</Text>
                   <Text role="caption" tone="muted" align="start">
-                    {item.unitPrice.toLocaleString("ar")} {item.currency} × {item.quantity}
+                    {formatWltMoney(item.unitPrice, item.currency)} × {item.quantity}
                   </Text>
                 </View>
                 <View style={{ flexDirection: "row-reverse", gap: spacing[1] }}>
@@ -190,7 +190,7 @@ export function GovernedCartScreen({
             </View>
           ))}
           <Text role="bodySm" align="start">
-            إجمالي المنتجات التقديري: {presentationSubtotal.toLocaleString("ar")} {presentationCurrency}
+            إجمالي المنتجات التقديري: {formatWltMoney(presentationSubtotal, presentationCurrency)}
           </Text>
           <Text role="caption" tone="muted" align="start">الإجمالي النهائي يظهر بعد إنشاء intent من DSH.</Text>
           <Button label="حذف جميع العناصر" tone="secondary" onPress={() => void cartController.clear(cart)} />

@@ -14,6 +14,10 @@ ls:
       screens:
         .tsx: PascalCase
         .ts: camelCase
+  # Next.js filesystem routing has a framework-owned segment vocabulary.
+  # Apply it to every app tree rather than carving out individual routes.
+  apps/*/runtime/src/app/**:
+    .dir: regex:^(?:[a-z0-9]+(?:-[a-z0-9]+)*|\([a-z0-9]+(?:-[a-z0-9]+)*\)|\[[A-Za-z][A-Za-z0-9]*\]|\[\.\.\.[A-Za-z][A-Za-z0-9]*\]|\[\[\.\.\.[A-Za-z][A-Za-z0-9]*\]\])$
   services:
     .dir: kebabcase
     backend:
@@ -61,7 +65,6 @@ ignore:
   - "**/.expo"
   - "**/_kernel"
   - "tools/registry/runs"
-  - "apps/control-panel/runtime/src/app/dsh/partners/[partnerId]"
   - "services/dsh/backend/graphify-out"
   - "services/dsh/frontend/app-partner/Catalog"
   - "services/wlt/frontend/control-panel/_skeleton-proof"

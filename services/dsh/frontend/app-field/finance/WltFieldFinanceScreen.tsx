@@ -11,10 +11,9 @@ import {
   spacing,
   colorRoles,
   Header,
-  formatCurrency,
   formatDateTime,
 } from "@bthwani/ui-kit";
-import { useFieldFinanceController } from '@bthwani/wlt/dsh';
+import { formatWltMoney, useFieldFinanceController } from '@bthwani/wlt/dsh';
 import {
   PayoutDestinationPanel,
   commissionStatusLabel,
@@ -82,28 +81,28 @@ export function WltFieldFinanceScreen({ onBack }: WltFieldFinanceScreenProps) {
           </View>
           <View style={styles.balanceRow}>
             <Text role="caption" tone="muted">متاح</Text>
-            <Text role="titleLg" style={styles.positiveAmount}>{formatCurrency(wallet.availableBalanceMinorUnits, wallet.currency)}</Text>
+            <Text role="titleLg" style={styles.positiveAmount}>{formatWltMoney(wallet.availableBalanceMinorUnits, wallet.currency)}</Text>
           </View>
           <View style={styles.balanceRow}>
             <Text role="caption" tone="muted">معلّق</Text>
-            <Text role="bodyMd">{formatCurrency(wallet.pendingBalanceMinorUnits, wallet.currency)}</Text>
+            <Text role="bodyMd">{formatWltMoney(wallet.pendingBalanceMinorUnits, wallet.currency)}</Text>
           </View>
           <View style={styles.balanceRow}>
             <Text role="caption" tone="muted">محجوز</Text>
-            <Text role="bodyMd">{formatCurrency(wallet.heldBalanceMinorUnits, wallet.currency)}</Text>
+            <Text role="bodyMd">{formatWltMoney(wallet.heldBalanceMinorUnits, wallet.currency)}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.balanceRow}>
             <Text role="caption" tone="muted">إجمالي المكتسب</Text>
-            <Text role="bodyMd">{formatCurrency(wallet.earnedTotalMinorUnits, wallet.currency)}</Text>
+            <Text role="bodyMd">{formatWltMoney(wallet.earnedTotalMinorUnits, wallet.currency)}</Text>
           </View>
           <View style={styles.balanceRow}>
             <Text role="caption" tone="muted">إجمالي المسوّى</Text>
-            <Text role="bodyMd">{formatCurrency(wallet.settledTotalMinorUnits, wallet.currency)}</Text>
+            <Text role="bodyMd">{formatWltMoney(wallet.settledTotalMinorUnits, wallet.currency)}</Text>
           </View>
           <View style={styles.balanceRow}>
             <Text role="caption" tone="muted">إجمالي المدفوع</Text>
-            <Text role="bodyMd">{formatCurrency(wallet.paidTotalMinorUnits, wallet.currency)}</Text>
+            <Text role="bodyMd">{formatWltMoney(wallet.paidTotalMinorUnits, wallet.currency)}</Text>
           </View>
           <Text role="caption" tone="muted" style={styles.rtl}>
             {wallet.updatedAt ? `آخر تحديث: ${formatDateTime(wallet.updatedAt)}` : ""}
@@ -136,7 +135,7 @@ export function WltFieldFinanceScreen({ onBack }: WltFieldFinanceScreenProps) {
             <Card key={entry.id}>
               <View style={styles.rowBetween}>
                 <Text role="bodyStrong" tone={entry.debitCredit === "credit" ? "success" : "danger"}>
-                  {entry.debitCredit === "credit" ? "+" : "-"}{formatCurrency(Math.abs(entry.amountMinorUnits), entry.currency)}
+                  {entry.debitCredit === "credit" ? "+" : "-"}{formatWltMoney(Math.abs(entry.amountMinorUnits), entry.currency)}
                 </Text>
                 <Text role="bodyStrong" style={styles.rtl}>{entry.entryType || "قيد مالي"}</Text>
               </View>
@@ -145,7 +144,7 @@ export function WltFieldFinanceScreen({ onBack }: WltFieldFinanceScreenProps) {
               ) : null}
               <View style={styles.rowBetween}>
                 <Text role="caption" tone="muted">{formatDateTime(entry.createdAt)}</Text>
-                <Text role="caption" tone="muted">الرصيد بعد القيد: {formatCurrency(entry.balanceAfter, entry.currency)}</Text>
+                <Text role="caption" tone="muted">الرصيد بعد القيد: {formatWltMoney(entry.balanceAfter, entry.currency)}</Text>
               </View>
             </Card>
           ))
@@ -170,10 +169,10 @@ export function WltFieldFinanceScreen({ onBack }: WltFieldFinanceScreenProps) {
           commissions.map((commission) => (
             <Card
               key={commission.id}
-              accessibilityLabel={`${commissionTypeLabel(commission.commissionType)} بحالة ${commissionStatusLabel(commission.status)} وقيمة ${formatCurrency(commission.amountMinorUnits, commission.currency)}`}
+              accessibilityLabel={`${commissionTypeLabel(commission.commissionType)} بحالة ${commissionStatusLabel(commission.status)} وقيمة ${formatWltMoney(commission.amountMinorUnits, commission.currency)}`}
             >
               <View style={styles.rowBetween}>
-                <Text role="bodyStrong">{formatCurrency(commission.amountMinorUnits, commission.currency)}</Text>
+                <Text role="bodyStrong">{formatWltMoney(commission.amountMinorUnits, commission.currency)}</Text>
                 <Badge label={commissionStatusLabel(commission.status)} tone={commissionStatusTone(commission.status)} />
               </View>
               <Text role="bodyStrong" style={styles.rtl}>{commissionTypeLabel(commission.commissionType)}</Text>

@@ -108,8 +108,8 @@ const checks = [
     forbidden: [],
   },
   {
-    file: "contracts/master.openapi.yaml",
-    required: ["dshPartnerSupport: ../services/dsh/contracts/dsh.partner-support.openapi.yaml"],
+    file: "contracts/openapi/index.yaml",
+    required: ["dsh: ../../services/dsh/contracts/dsh.openapi.yaml"],
     forbidden: [],
   },
 ];

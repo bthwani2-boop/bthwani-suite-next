@@ -1,6 +1,7 @@
 import React from "react";
 import { Alert, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { ScrollScreen, StateView, Text, TopBar, spacing, colorRoles } from "@bthwani/ui-kit";
+import { formatWltMoney } from "@bthwani/wlt/dsh";
 import { useSubscriptionLifecycleController } from "../../shared/marketing/use-subscription-lifecycle-controller";
 import type {
   ClientBenefitsPayload,
@@ -52,7 +53,7 @@ function rowsFor(
         badge: "معتمد",
         helper:
           tier.freeDeliveryThreshold > 0
-            ? `توصيل مجاني بعد ${tier.freeDeliveryThreshold.toLocaleString("ar")} ر.ي`
+            ? `توصيل مجاني بعد ${formatWltMoney(tier.freeDeliveryThreshold, "YER")}`
             : undefined,
       })),
     ];
@@ -82,7 +83,7 @@ function PlanCard({
         <Text style={styles.badge}>متاح</Text>
       </View>
       <Text style={styles.subtitle}>
-        {plan.priceYer.toLocaleString("ar")} ر.ي · {plan.billingCycle}
+        {formatWltMoney(plan.priceYer, "YER")} · {plan.billingCycle}
       </Text>
       <Text style={styles.helper}>
         {plan.includeFreeDelivery ? "يتضمن التوصيل المجاني" : "المنافع تطبق وفق شروط الخطة"}
@@ -220,7 +221,7 @@ export function BenefitsHubScreen({ initialSection = "loyalty", onBack }: Benefi
                   <Text style={styles.title}>تعويض الاشتراك: {benefits.compensation.status}</Text>
                   <Text style={styles.subtitle}>{benefits.compensation.reason}</Text>
                   <Text style={styles.helper}>
-                    {benefits.compensation.amountMinorUnits.toLocaleString("ar")} {benefits.compensation.currency}
+                    {formatWltMoney(benefits.compensation.amountMinorUnits, benefits.compensation.currency)}
                     {benefits.compensation.refundReference
                       ? ` · المرجع ${benefits.compensation.refundReference}`
                       : " · بانتظار مرجع الإكمال من WLT"}

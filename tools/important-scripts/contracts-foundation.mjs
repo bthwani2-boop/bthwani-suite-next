@@ -49,6 +49,17 @@ for (const file of forbiddenIndexes) {
   }
 }
 
+for (const file of listFiles()) {
+  if (file === "tools/important-scripts/contracts-foundation.mjs") continue;
+  if (file.startsWith("governance/operational_journey_protocol_package/")) continue;
+  if (file.startsWith("tools/trash/")) continue;
+  if (!/^(contracts|governance\/policies|governance\/product\/contracts|tools\/guards|tools\/scripts)\//.test(file)) continue;
+  if (!/\.(?:md|json|mjs|js|ts|ya?ml)$/.test(file)) continue;
+  if (read(file).includes("contracts/master.openapi.yaml")) {
+    violations.push({ file, message: `stale canonical index reference; use ${canonicalIndex}` });
+  }
+}
+
 if (!exists(canonicalIndex)) {
   violations.push({ file: canonicalIndex, message: "canonical OpenAPI index is missing" });
 } else {

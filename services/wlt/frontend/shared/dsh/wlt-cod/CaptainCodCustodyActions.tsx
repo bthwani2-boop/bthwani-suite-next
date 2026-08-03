@@ -7,6 +7,7 @@ import {
   remitDshCaptainCod,
   type WltCodCustodyMutationResult,
 } from "./wlt-cod.api";
+import { formatWltMoney, parseWltMajorInputToMinorUnits } from "../finance/wlt-money";
 
 export type CaptainCodCustodyActionsProps = {
   readonly records: readonly WltDshCodReference[];
@@ -30,7 +31,7 @@ function messageFromError(error: unknown): string {
 }
 
 function amountLabel(amountMinorUnits: number, currency: string): string {
-  return `${(amountMinorUnits / 100).toLocaleString()} ${currency}`;
+  return formatWltMoney(amountMinorUnits, currency);
 }
 
 export function CaptainCodCustodyActions({ records, onMutated }: CaptainCodCustodyActionsProps) {
@@ -69,17 +70,16 @@ export function CaptainCodCustodyActions({ records, onMutated }: CaptainCodCusto
 
   const runCollection = React.useCallback(async (record: WltDshCodReference) => {
     const actualText = actualByRecord[record.id]?.trim() ?? "";
-    const actualMajorUnits = Number(actualText.replace(/,/g, "."));
-    const actualAmountMinorUnits = Math.round(actualMajorUnits * 100);
+    const parsedAmount = parseWltMajorInputToMinorUnits(actualText.replace(/,/g, "."), record.currency);
     const proofReference = proofByRecord[record.id]?.trim() ?? "";
-    if (!Number.isFinite(actualMajorUnits) || actualAmountMinorUnits <= 0 || proofReference.length < 3) {
+    if (!parsedAmount.ok || parsedAmount.minorUnits <= 0 || proofReference.length < 3) {
       setState({ kind: "error", message: "أدخل المبلغ المستلم فعليًا ومرجع إثبات صالحًا." });
       return;
     }
     setState({ kind: "submitting", recordId: record.id });
     try {
       const result = await collectDshCaptainCod(record.id, {
-        actualAmountMinorUnits,
+        actualAmountMinorUnits: parsedAmount.minorUnits,
         proofReference,
         note: `captain-app collection for order ${record.orderId}`,
       });

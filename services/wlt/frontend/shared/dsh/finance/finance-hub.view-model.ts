@@ -10,14 +10,10 @@ import type {
   WltLedgerEntryKind,
   WltLedgerEntryStatus,
 } from "./finance-hub.types";
+import { formatWltMoney } from "./wlt-money";
 
 export function formatWltYer(minorUnits: number): string {
-  const major = Math.abs(minorUnits) / 100;
-  try {
-    return `${major.toLocaleString('ar-YE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ر.ي`;
-  } catch {
-    return `${major.toLocaleString('ar', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ر.ي`;
-  }
+  return formatWltMoney(Math.abs(minorUnits), "YER");
 }
 
 export function resolveWltFinanceBusinessDate(now: Date = new Date()): string {

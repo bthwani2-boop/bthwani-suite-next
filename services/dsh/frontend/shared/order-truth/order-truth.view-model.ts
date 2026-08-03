@@ -1,4 +1,5 @@
 import type { OrderTruth, OrderTruthEvent } from "./order-truth.types";
+import { formatWltMoney } from "@bthwani/wlt/dsh";
 
 const STATUS_LABELS: Readonly<Record<string, string>> = {
   pending: "بانتظار قبول المتجر",
@@ -41,13 +42,7 @@ export type OrderTruthSummaryViewModel = {
 };
 
 export function formatMinorUnits(amount: number, currency: string): string {
-  const normalized = Number.isFinite(amount) ? Math.max(0, Math.trunc(amount)) : 0;
-  const major = normalized / 100;
-  return new Intl.NumberFormat("ar-YE", {
-    style: "currency",
-    currency: currency || "YER",
-    maximumFractionDigits: currency === "YER" ? 0 : 2,
-  }).format(major);
+  return formatWltMoney(amount, currency || "YER");
 }
 
 export function toOrderTruthSummary(order: OrderTruth): OrderTruthSummaryViewModel {

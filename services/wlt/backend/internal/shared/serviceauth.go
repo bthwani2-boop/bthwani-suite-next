@@ -9,31 +9,10 @@ import (
 
 const legacyOperatorContextHeader = "X-Operator-Context-ID"
 
-// configuredFinancialCompatibilityScope returns the single, server-owned
-// operator context that identifies this WLT deployment for the DSH service
-// bridge. WLT is a single-tenant financial service by design: every request
-// that arrives through the DSH service-to-service path is bound to this one
-// fixed value, never to a caller-supplied header. The operator_context_id
-// column that appears throughout the schema is retained (it is load-bearing
-// for the per-row scoping guards and their tests -- see
-// internal/*/operator_context_isolation_test.go), but it identifies rows
-// within this single deployment, not separate tenants reachable over the
-// network. Do not read this as an active multi-tenant boundary.
-func configuredFinancialCompatibilityScope(w http.ResponseWriter) (string, bool) {
-	scopeID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
-	if scopeID == "" {
-		SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_CONFIGURED", "BTHWANI_OPERATOR_CONTEXT_ID must be configured; WLT is single-tenant per deployment")
-		return "", false
-	}
-	return scopeID, true
-}
-
 // RequireServiceCaller validates the shared-secret bearer token and expected
-// service identity. After authentication, WLT replaces any caller-supplied
-// X-Operator-Context-ID with the single deployment-owned operator context
-// (see configuredFinancialCompatibilityScope). Callers cannot select
-// financial ownership or isolation scope; WLT does not implement multi-tenant
-// isolation across the DSH service bridge.
+// service identity before accepting the delegated OperatorContext. The context
+// header is trusted only on this authenticated server-to-server path; browser
+// and end-user requests must derive it from Identity instead.
 func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, expectedCaller string) bool {
 	expectedToken := os.Getenv(tokenEnvVar)
 	if expectedToken == "" {
@@ -54,11 +33,12 @@ func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, e
 		return false
 	}
 
-	scopeID, ok := configuredFinancialCompatibilityScope(w)
-	if !ok {
+	operatorContextID := strings.TrimSpace(r.Header.Get(legacyOperatorContextHeader))
+	if operatorContextID == "" {
+		SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "authenticated service delegation requires X-Operator-Context-ID")
 		return false
 	}
-	r.Header.Set(legacyOperatorContextHeader, scopeID)
-	*r = *r.WithContext(WithOperatorContext(r.Context(), scopeID))
+	r.Header.Set(legacyOperatorContextHeader, operatorContextID)
+	*r = *r.WithContext(WithOperatorContext(r.Context(), operatorContextID))
 	return true
 }

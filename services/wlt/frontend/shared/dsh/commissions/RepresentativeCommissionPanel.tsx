@@ -15,6 +15,7 @@ import {
   type Commission,
   type RepresentativeActorType,
 } from "./commission.api";
+import { formatWltMoney } from "../finance/wlt-money";
 
 type CommissionPanelState =
   | { readonly kind: "loading" }
@@ -28,11 +29,7 @@ export type RepresentativeCommissionPanelProps = {
 };
 
 function amountLabel(minorUnits: number, currency: string): string {
-  const value = Number.isSafeInteger(minorUnits) ? minorUnits : 0;
-  return `${(value / 100).toLocaleString("ar-YE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} ${currency}`;
+  return formatWltMoney(minorUnits, currency);
 }
 
 function statusLabel(status: string): string {

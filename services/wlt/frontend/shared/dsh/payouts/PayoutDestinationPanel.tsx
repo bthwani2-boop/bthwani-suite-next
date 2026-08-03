@@ -21,6 +21,7 @@ import {
   type PayoutDestination,
   type PayoutDestinationInput,
 } from "./payout.api";
+import { formatWltMoney, parseWltMajorInputToMinorUnits } from "../finance/wlt-money";
 
 export type PayoutDestinationPanelProps = {
   readonly actorType: PayoutActorType;
@@ -78,7 +79,7 @@ function statusMeta(status: string): { readonly label: string; readonly tone: "n
 }
 
 function amountLabel(minorUnits: number, currency: string): string {
-  return `${(minorUnits / 100).toLocaleString("ar-YE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+  return formatWltMoney(minorUnits, currency);
 }
 
 function DestinationSummary({ destination }: { readonly destination: PayoutDestination }) {
@@ -253,9 +254,8 @@ export function PayoutDestinationPanel({
 
   const submit = useCallback(async () => {
     if (state.kind !== "ready" || !state.destination) return;
-    const normalized = Number(amount.trim());
-    const amountMinorUnits = Math.round(normalized * 100);
-    if (!Number.isFinite(normalized) || normalized <= 0 || !Number.isSafeInteger(amountMinorUnits)) {
+    const parsedAmount = parseWltMajorInputToMinorUnits(amount, currency);
+    if (!parsedAmount.ok || parsedAmount.minorUnits <= 0) {
       setActionError("مبلغ طلب الصرف غير صالح.");
       return;
     }
@@ -263,7 +263,7 @@ export function PayoutDestinationPanel({
     setBusy("submit");
     if (!attemptKeyRef.current) attemptKeyRef.current = newAttemptKey(actorType);
     try {
-      await createOwnPayoutRequest(actorType, state.destination.id, amountMinorUnits, currency, attemptKeyRef.current);
+      await createOwnPayoutRequest(actorType, state.destination.id, parsedAmount.minorUnits, currency, attemptKeyRef.current);
       attemptKeyRef.current = null;
       setAmount("");
       await load();

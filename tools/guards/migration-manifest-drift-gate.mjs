@@ -224,6 +224,10 @@ function checkDatabaseExecutionAuthority() {
     "Resolve-BthwaniGovernedMigrationPlan",
     "schema_migrations",
     "runtime_schema_migrations_legacy_retired",
+    "bthwani_migration_ledger_legacy_retired",
+    "LEGACY_IMPORTED_BTHWANI_LEDGER",
+    "BTHWANI_MIGRATION_LEDGER_SCHEMA_CONFLICT",
+    "BTHWANI_MIGRATION_LEDGER_FOREIGN_SERVICE_CONFLICT",
     "LEGACY_MIGRATION_LEDGER_CONFLICT",
   ]) {
     if (!canonicalMigration.includes(requiredToken)) failures.push(`${canonicalMigrationPath}: missing ${requiredToken}`);

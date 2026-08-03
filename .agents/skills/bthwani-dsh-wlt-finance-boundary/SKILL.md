@@ -1,6 +1,6 @@
 ---
 name: bthwani-dsh-wlt-finance-boundary
-version: 2026.07.17-v1
+version: 2026.08.03-v2
 summary: Protect WLT financial truth and require explicit evidence for every DSH/WLT financial handoff.
 ---
 
@@ -24,8 +24,11 @@ Own verification of the DSH/WLT financial boundary for checkout, payments, COD, 
 
 - `governance/policies/contracts.md`
 - `governance/policies/release.md`
-- `services/dsh/SERVICE_BLUEPRINT.md`
-- `services/wlt/SERVICE_BLUEPRINT.md`
+- `services/dsh/service.manifest.ts`, including its capability, surface, runtime, and contract registries
+- `services/wlt/service.manifest.ts`
+- `services/dsh/contracts/contract.manifest.yaml` and `services/wlt/contracts/contract.manifest.yaml`
+- `services/wlt/contracts/operation-state.json`
+- `services/wlt/docker/RUNTIME_CONTRACT.md`
 - applicable DSH and WLT contracts, manifests, backend, database, clients, and shared frontend paths
 
 ## Authority boundary

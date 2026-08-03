@@ -26,7 +26,7 @@ import type {
 } from "../../shared/cart";
 import type { DshPaymentMethod } from "../../shared/checkout";
 import type { DshClientAddress } from "../../shared/client-address";
-import { useWltPaymentController } from "@bthwani/wlt/dsh";
+import { formatWltMoney, useWltPaymentController } from "@bthwani/wlt/dsh";
 import { PaymentDecisionSection } from "./PaymentDecisionSection";
 
 type Props = {
@@ -59,7 +59,7 @@ function fulfillmentLabel(mode: DshFulfillmentMode): string {
 function ServerPrice({ value, currency }: { readonly value: number; readonly currency: string }) {
   return (
     <Text role="caption" style={styles.priceText}>
-      سعر الوحدة المثبت: {new Intl.NumberFormat("ar").format(value)} {currency}
+      سعر الوحدة المثبت: {formatWltMoney(value, currency)}
     </Text>
   );
 }
@@ -128,7 +128,7 @@ function CartItemValidationNotice({
       {validation.status === "price_changed" && validation.currentUnitPrice !== undefined ? (
         <>
           <Text role="caption" style={styles.mutedText}>
-            الحقيقة الحالية: {new Intl.NumberFormat("ar").format(validation.currentUnitPrice)} {validation.currentCurrency ?? validation.snapshotCurrency}
+            الحقيقة الحالية: {formatWltMoney(validation.currentUnitPrice, validation.currentCurrency ?? validation.snapshotCurrency)}
           </Text>
           <Button
             label="اعتماد السعر والعملة الحاليين"

@@ -11,6 +11,7 @@ import {
   rejectPayoutRequest,
   type FinanceActionResult,
   type FinancePayoutRequest,
+  formatWltMoney,
 } from '@bthwani/wlt/dsh';
 import { reconcilePayoutRequest } from '@bthwani/wlt/dsh';
 import { GovernedSettlementPanel } from "./GovernedSettlementPanel";
@@ -62,13 +63,7 @@ function actionsForStatus(status: string): readonly PayoutAction[] {
 }
 
 function formatMoney(amountMinorUnits: number, currency: string): string {
-  try {
-    const formatter = new Intl.NumberFormat("ar-YE", { style: "currency", currency });
-    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 0;
-    return formatter.format(amountMinorUnits / (10 ** fractionDigits));
-  } catch {
-    return `${amountMinorUnits.toLocaleString("ar-YE")} ${currency}`;
-  }
+  return formatWltMoney(amountMinorUnits, currency);
 }
 
 function terminalOrHoldMessage(request: FinancePayoutRequest): string | null {

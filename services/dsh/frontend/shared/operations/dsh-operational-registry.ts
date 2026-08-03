@@ -264,7 +264,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'detail-on-open',
     dataClassification: 'WLT_READ_ONLY_REFERENCE',
     currentClosureStatus: 'blocked-by-wlt',
-    currentEvidencePath: 'wlt/SERVICE_BLUEPRINT.md',
+    currentEvidencePath: 'wlt/contracts/wlt.cod-custody.openapi.yaml',
     notes: 'DSH records COD event only; WLT owns liability, ledger, reconciliation, and settlement.',
   },
   {
@@ -327,7 +327,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'summary-only',
     dataClassification: 'WLT_READ_ONLY_REFERENCE',
     currentClosureStatus: 'blocked-by-wlt',
-    currentEvidencePath: 'wlt/SERVICE_BLUEPRINT.md',
+    currentEvidencePath: 'wlt/contracts/wlt.settlements-commissions.openapi.yaml',
     notes: 'DSH emits operational candidates only. WLT accepts, rejects, reconciles, and accounts.',
   },
   {

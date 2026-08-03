@@ -1,6 +1,7 @@
 import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Screen, StateView, Text, TextField, colorRoles, spacing } from "@bthwani/ui-kit";
+import { formatWltMoney } from "@bthwani/wlt/dsh";
 import {
   canClientApproveSpecialRequestQuote,
   canClientCancelSpecialRequest,
@@ -27,14 +28,7 @@ function quoteLabel(request: DshSpecialRequestResponse): string | null {
   if (request.estimatedAmountMinorUnits === null || request.estimatedAmountMinorUnits === undefined || !request.currency) {
     return null;
   }
-  try {
-    return new Intl.NumberFormat("ar-YE", {
-      style: "currency",
-      currency: request.currency,
-    }).format(request.estimatedAmountMinorUnits / 100);
-  } catch {
-    return `${request.estimatedAmountMinorUnits} ${request.currency}`;
-  }
+  return formatWltMoney(request.estimatedAmountMinorUnits, request.currency);
 }
 
 function formatTimestamp(value: string | null | undefined): string | null {

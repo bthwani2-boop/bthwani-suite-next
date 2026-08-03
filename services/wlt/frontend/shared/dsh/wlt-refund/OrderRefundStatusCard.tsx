@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { Badge, Button, Surface, Text, colorRoles, spacing } from "@bthwani/ui-kit";
 import { usePartnerOrderRefundsQuery, useClientOrderRefundsQuery } from "./wlt-refund.queries";
 import type { WltRefundResponse } from "./wlt-refund.queries";
+import { formatWltMoney } from "../finance/wlt-money";
 
 export type OrderRefundStatusCardProps = {
   readonly orderId: string;
@@ -81,10 +82,10 @@ export function OrderRefundStatusCard({ orderId, surface }: OrderRefundStatusCar
           key={refund.id}
           style={styles.row}
           accessible
-          accessibilityLabel={`${refund.amountMinorUnits} ${refund.currency}، ${refundLabel(refund.status)}`}
+          accessibilityLabel={`${formatWltMoney(refund.amountMinorUnits, refund.currency)}، ${refundLabel(refund.status)}`}
         >
           <View style={styles.amountBlock}>
-            <Text role="bodyStrong">{refund.amountMinorUnits} {refund.currency}</Text>
+            <Text role="bodyStrong">{formatWltMoney(refund.amountMinorUnits, refund.currency)}</Text>
             <Text role="caption" tone="muted">
               {refund.resolvedAt ? `حُسم: ${refund.resolvedAt}` : "لم يُحسم بعد"}
             </Text>

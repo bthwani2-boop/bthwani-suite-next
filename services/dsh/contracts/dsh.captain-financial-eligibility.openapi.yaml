@@ -14,6 +14,8 @@ paths:
   /dsh/operator/platform/dispatch-balance-policy:
     get:
       operationId: getDispatchBalancePolicy
+      x-bthwani-required-permissions: [dsh.dispatch_capacity.read]
+      x-bthwani-error-codes: [UNAUTHENTICATED, IDENTITY_UNAVAILABLE, FORBIDDEN, DISPATCH_BALANCE_POLICY_OWNED_BY_WLT]
       summary: Retired DSH dispatch-balance policy endpoint; WLT owns this policy.
       tags: [DispatchFinancialEligibility]
       responses:
@@ -24,6 +26,8 @@ paths:
         - bearerAuth: []
     put:
       operationId: upsertDispatchBalancePolicy
+      x-bthwani-required-permissions: [dsh.dispatch_capacity.manage]
+      x-bthwani-error-codes: [UNAUTHENTICATED, IDENTITY_UNAVAILABLE, FORBIDDEN, DISPATCH_BALANCE_POLICY_OWNED_BY_WLT]
       summary: Retired DSH dispatch-balance policy mutation; WLT owns this policy.
       tags: [DispatchFinancialEligibility]
       parameters:
@@ -40,12 +44,16 @@ paths:
       - $ref: '#/components/parameters/CaptainId'
     get:
       operationId: getOperatorCaptainFinancialEligibility
+      x-bthwani-required-permissions: [dsh.dispatch_financial_eligibility.read]
+      x-bthwani-error-codes: [UNAUTHENTICATED, IDENTITY_UNAVAILABLE, FORBIDDEN, INVALID_REQUEST, CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED, INTERNAL_ERROR]
       tags: [DispatchFinancialEligibility]
       responses:
         '200': { $ref: '#/components/responses/EligibilityResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
+        '500': { $ref: '#/components/responses/ErrorResponse' }
+        '503': { $ref: '#/components/responses/ErrorResponse' }
       security:
         - bearerAuth: []
   /dsh/operator/dispatch/captains/{captainId}/financial-eligibility/refresh:
@@ -54,6 +62,8 @@ paths:
       - $ref: '#/components/parameters/CorrelationId'
     post:
       operationId: refreshOperatorCaptainFinancialEligibility
+      x-bthwani-required-permissions: [dsh.dispatch_financial_eligibility.manage]
+      x-bthwani-error-codes: [UNAUTHENTICATED, IDENTITY_UNAVAILABLE, FORBIDDEN, INVALID_REQUEST, WLT_FINANCIAL_ELIGIBILITY_UNAVAILABLE, WLT_FINANCIAL_DECISION_INVALID, CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED, INTERNAL_ERROR]
       tags: [DispatchFinancialEligibility]
       responses:
         '200': { $ref: '#/components/responses/EligibilityResponse' }
@@ -62,22 +72,29 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '503': { $ref: '#/components/responses/ErrorResponse' }
+        '500': { $ref: '#/components/responses/ErrorResponse' }
       security:
         - bearerAuth: []
   /dsh/captain/dispatch/financial-eligibility:
     get:
       operationId: getOwnCaptainFinancialEligibility
+      x-bthwani-actor-types: [captain]
+      x-bthwani-error-codes: [UNAUTHENTICATED, IDENTITY_UNAVAILABLE, FORBIDDEN, OPERATOR_CONTEXT_REQUIRED, CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED, INTERNAL_ERROR]
       tags: [DispatchFinancialEligibility]
       responses:
         '200': { $ref: '#/components/responses/EligibilityResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
+        '500': { $ref: '#/components/responses/ErrorResponse' }
+        '503': { $ref: '#/components/responses/ErrorResponse' }
       security:
         - bearerAuth: []
   /dsh/captain/dispatch/financial-eligibility/refresh:
     post:
       operationId: refreshOwnCaptainFinancialEligibility
+      x-bthwani-actor-types: [captain]
+      x-bthwani-error-codes: [UNAUTHENTICATED, IDENTITY_UNAVAILABLE, FORBIDDEN, OPERATOR_CONTEXT_REQUIRED, INVALID_REQUEST, WLT_FINANCIAL_ELIGIBILITY_UNAVAILABLE, WLT_FINANCIAL_DECISION_INVALID, CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED, INTERNAL_ERROR]
       tags: [DispatchFinancialEligibility]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -92,6 +109,7 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '503': { $ref: '#/components/responses/ErrorResponse' }
+        '500': { $ref: '#/components/responses/ErrorResponse' }
       security:
         - bearerAuth: []
 components:
@@ -132,11 +150,7 @@ components:
               financialEligibility: { $ref: '#/components/schemas/CaptainFinancialEligibility' }
   schemas:
     Error:
-      type: object
-      required: [ code, message ]
-      properties:
-        code: { type: string }
-        message: { type: string }
+      $ref: '../../../contracts/shared/common.openapi.yaml#/components/schemas/Error'
     CaptainFinancialEligibility:
       type: object
       required:

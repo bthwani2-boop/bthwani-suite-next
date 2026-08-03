@@ -19,6 +19,7 @@ import {
   type WltDshCodReference,
 } from "../wlt-cod/wlt-cod.api";
 import { useWltCaptainCodCustodyController } from "../wlt-cod/use-wlt-captain-cod-custody-controller";
+import { formatWltMoney } from "../finance/wlt-money";
 
 function ChevronDownIcon() {
   return <Icon name="chevron-down" tone="muted" size={18} />;
@@ -130,8 +131,7 @@ function formatMinorUnitsToLabel(
   currency: string,
   sign: "+" | "-" | "" = "",
 ): string {
-  const major = Math.abs(amountMinorUnits) / 100;
-  return `${sign}${major.toLocaleString()} ${currency}`;
+  return `${sign}${formatWltMoney(Math.abs(amountMinorUnits), currency)}`;
 }
 
 function codReferenceToRecord(ref: WltDshCodReference): WltDshFinanceSummaryRecord {
@@ -253,7 +253,7 @@ export function WltDshCaptainBridge({
   const codCurrency =
     codController.state.kind === "loaded" && codController.state.records[0]
       ? codController.state.records[0].currency
-      : "ر.ي";
+      : "YER";
 
   const codPendingCollectionCount =
     codController.state.kind === "loaded"

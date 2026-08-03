@@ -1,4 +1,5 @@
 import type { WltDshFieldCommissionReference } from "./wlt-field-commission.types";
+import { formatWltMoney } from "../finance/wlt-money";
 
 export interface WltFieldCommissionViewModel {
   readonly id: string;
@@ -13,7 +14,7 @@ export interface WltFieldCommissionViewModel {
 export function toFieldCommissionViewModel(
   ref: WltDshFieldCommissionReference
 ): WltFieldCommissionViewModel {
-  const formattedAmount = `${(ref.amountMinorUnits / 100).toFixed(2)} ${ref.currency}`;
+  const formattedAmount = formatWltMoney(ref.amountMinorUnits, ref.currency);
   let statusLabel = "";
   let statusColor = "";
   let canUploadEvidence = false;

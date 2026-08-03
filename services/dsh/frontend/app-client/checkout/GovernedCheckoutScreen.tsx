@@ -11,6 +11,7 @@ import {
   TopBar,
   spacing,
 } from "@bthwani/ui-kit";
+import { formatWltMoney } from "@bthwani/wlt/dsh";
 import { useCheckoutToOrderFlow } from "../../shared/checkout";
 import type { DshCart } from "../../shared/cart";
 import type { DshCreateIntentInput, DshPaymentMethod } from "../../shared/checkout";
@@ -26,8 +27,7 @@ type Props = {
 };
 
 function formatMinorUnits(value: number, currency: string): string {
-  const major = value / 100;
-  return `${major.toLocaleString("ar")} ${currency === "YER" ? "ر.ي" : currency}`;
+  return formatWltMoney(value, currency);
 }
 
 export function GovernedCheckoutScreen({

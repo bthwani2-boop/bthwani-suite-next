@@ -3,6 +3,7 @@
 import { useState, type CSSProperties } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
 import { CpButton } from "@bthwani/control-panel/components";
+import { formatWltMoney, parseWltMajorInputToMinorUnits } from "@bthwani/wlt/dsh";
 import { useSubscriptionPlansController, type SubscriptionPlanRecord } from "../../../shared/marketing";
 
 export function SubscriptionsCommandDeck() {
@@ -13,13 +14,13 @@ export function SubscriptionsCommandDeck() {
   const [submitting, setSubmitting] = useState(false);
 
   const createDraft = async () => {
-    const price = Number(priceYer);
-    if (!nameAr.trim() || !Number.isFinite(price) || price < 1) return;
+    const price = parseWltMajorInputToMinorUnits(priceYer, "YER");
+    if (!nameAr.trim() || !price.ok || price.minorUnits < 1) return;
     setSubmitting(true);
     try {
       await controller.create({
         nameAr: nameAr.trim(),
-        priceYer: price,
+        priceYer: price.minorUnits,
         billingCycle: "monthly",
         ...(wltProductReference.trim() ? { wltProductReference: wltProductReference.trim() } : {}),
       });
@@ -55,7 +56,7 @@ export function SubscriptionsCommandDeck() {
       <div style={styles.summary}>
         <span>خطط نشطة: {controller.summary.activePlans.toLocaleString("ar")}</span>
         <span>اشتراكات نشطة: {controller.summary.totalActiveSubscribers.toLocaleString("ar")}</span>
-        <span>MRR من WLT: {controller.summary.mrr.toLocaleString("ar")} YER</span>
+        <span>MRR من WLT: {formatWltMoney(controller.summary.mrr, "YER")}</span>
       </div>
 
       <div style={styles.form}>
@@ -75,7 +76,7 @@ export function SubscriptionsCommandDeck() {
           <article key={plan.id} style={styles.card}>
             <div>
               <strong>{plan.nameAr}</strong>
-              <p style={styles.muted}>{plan.priceYer.toLocaleString("ar")} YER · {plan.billingCycle} · الإصدار {plan.version}</p>
+              <p style={styles.muted}>{formatWltMoney(plan.priceYer, "YER")} · {plan.billingCycle} · الإصدار {plan.version}</p>
               <p style={styles.muted}>مرجع WLT: {plan.wltProductReference || "غير مربوط"}</p>
               <p style={styles.muted}>الحالة: {plan.status}</p>
             </div>

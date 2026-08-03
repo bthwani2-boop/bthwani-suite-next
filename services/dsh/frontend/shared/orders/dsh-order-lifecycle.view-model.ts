@@ -1,10 +1,10 @@
 import type { DshOrderRecord } from './dsh-order-lifecycle.types';
 import { isOrderCancellationStatus } from './orders.types';
+import { formatWltMoney } from '@bthwani/wlt/dsh';
 
 export function formatOrderTotalPrice(order: DshOrderRecord): string {
   const currency = order.currency?.trim();
-  const total = order.total_price.toLocaleString('ar-YE');
-  return currency ? `${total} ${currency}` : total;
+  return currency ? formatWltMoney(order.total_price, currency) : String(order.total_price);
 }
 
 export function isOrderActive(order: DshOrderRecord): boolean {

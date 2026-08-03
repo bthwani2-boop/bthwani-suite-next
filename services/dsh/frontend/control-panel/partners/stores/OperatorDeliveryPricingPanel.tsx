@@ -3,6 +3,10 @@
 import React from "react";
 import { colorRoles } from "@bthwani/ui-kit";
 import {
+  minorUnitsToWltMajorInput,
+  parseWltMajorInputToMinorUnits,
+} from "@bthwani/wlt/dsh";
+import {
   CpButton,
   CpRetryButton,
   CpSelect,
@@ -52,7 +56,9 @@ export function OperatorDeliveryPricingPanel({ storeId }: OperatorDeliveryPricin
     for (const mode of MODES) {
       const record = findDeliveryPricing(controller.records, mode);
       next[mode] = {
-        feeYer: mode === "pickup" ? "0" : String((record?.feeMinorUnits ?? 0) / 100),
+        feeYer: mode === "pickup"
+          ? "0"
+          : minorUnitsToWltMajorInput(record?.feeMinorUnits ?? 0, record?.currency ?? "YER"),
         status: record?.status ?? (mode === "pickup" ? "active" : "paused"),
         reason: "",
       };
@@ -71,10 +77,12 @@ export function OperatorDeliveryPricingPanel({ storeId }: OperatorDeliveryPricin
     const record = findDeliveryPricing(controller.records, mode);
     const draft = drafts[mode];
     if (!draft.reason.trim()) return;
-    const fee = mode === "pickup" ? 0 : Number(draft.feeYer);
-    if (!Number.isFinite(fee) || fee < 0) return;
+    const fee = mode === "pickup"
+      ? { ok: true as const, minorUnits: 0 }
+      : parseWltMajorInputToMinorUnits(draft.feeYer, record?.currency ?? "YER");
+    if (!fee.ok || fee.minorUnits < 0) return;
     const succeeded = await controller.save(record, {
-      feeMinorUnits: Math.round(fee * 100),
+      feeMinorUnits: fee.minorUnits,
       currency: "YER",
       status: !record && draft.status === "archived" ? "paused" : draft.status,
       reason: draft.reason.trim(),

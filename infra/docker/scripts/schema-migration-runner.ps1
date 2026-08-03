@@ -359,6 +359,65 @@ BEGIN
     ALTER TABLE runtime_schema_migrations RENAME TO runtime_schema_migrations_legacy_retired;
   END IF;
 
+  IF to_regclass('public.bthwani_migration_ledger') IS NOT NULL THEN
+    IF to_regclass('public.bthwani_migration_ledger_legacy_retired') IS NOT NULL THEN
+      RAISE EXCEPTION 'BTHWANI_MIGRATION_LEDGER_QUARANTINE_CONFLICT: both active and retired bthwani ledgers exist';
+    END IF;
+
+    IF (
+      SELECT array_agg(column_name ORDER BY ordinal_position)
+      FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'bthwani_migration_ledger'
+    ) IS DISTINCT FROM ARRAY['service_name', 'migration_id', 'run_at', 'checksum_sha256']::TEXT[] THEN
+      RAISE EXCEPTION 'BTHWANI_MIGRATION_LEDGER_SCHEMA_CONFLICT: unexpected legacy ledger columns';
+    END IF;
+
+    IF (
+      SELECT array_agg(data_type ORDER BY ordinal_position)
+      FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'bthwani_migration_ledger'
+    ) IS DISTINCT FROM ARRAY['text', 'text', 'timestamp with time zone', 'text']::TEXT[] THEN
+      RAISE EXCEPTION 'BTHWANI_MIGRATION_LEDGER_SCHEMA_CONFLICT: unexpected legacy ledger column types';
+    END IF;
+
+    IF EXISTS (
+      SELECT 1 FROM bthwani_migration_ledger
+      WHERE service_name <> $serviceLiteral
+    ) THEN
+      RAISE EXCEPTION 'BTHWANI_MIGRATION_LEDGER_FOREIGN_SERVICE_CONFLICT: legacy ledger contains rows for another service';
+    END IF;
+
+    IF EXISTS (
+      WITH expected(migration_id, accepted_checksums) AS (
+        VALUES
+        $expectedLedgerValues
+      )
+      SELECT 1
+      FROM bthwani_migration_ledger legacy
+      LEFT JOIN expected ON expected.migration_id = legacy.migration_id
+      WHERE legacy.service_name = $serviceLiteral
+        AND (
+          expected.migration_id IS NULL OR
+          NOT (legacy.checksum_sha256 = ANY(expected.accepted_checksums))
+        )
+    ) THEN
+      RAISE EXCEPTION 'BTHWANI_MIGRATION_LEDGER_CONFLICT: service % contains an unknown or checksum-invalid legacy row', $serviceLiteral;
+    END IF;
+
+    INSERT INTO schema_migrations (
+      service_name, migration_id, checksum_sha256, source_commit_sha,
+      applied_at, execution_ms, success, error_code, dirty
+    )
+    SELECT
+      service_name, migration_id, checksum_sha256,
+      'LEGACY_IMPORTED_BTHWANI_LEDGER', run_at, 0, TRUE, NULL, FALSE
+    FROM bthwani_migration_ledger
+    WHERE service_name = $serviceLiteral
+    ON CONFLICT (service_name, migration_id) DO NOTHING;
+
+    ALTER TABLE bthwani_migration_ledger RENAME TO bthwani_migration_ledger_legacy_retired;
+  END IF;
+
   IF NOT EXISTS (
     SELECT 1 FROM schema_migrations WHERE service_name = $serviceLiteral
   ) AND EXISTS (
@@ -370,7 +429,9 @@ BEGIN
       AND table_name NOT IN (
         'schema_migrations',
         'runtime_schema_migrations',
-        'runtime_schema_migrations_legacy_retired'
+        'runtime_schema_migrations_legacy_retired',
+        'bthwani_migration_ledger',
+        'bthwani_migration_ledger_legacy_retired'
       )
   ) THEN
     RAISE EXCEPTION 'UNTRACKED_LEGACY_SCHEMA: service % has tables but no governed migration ledger', $serviceLiteral;

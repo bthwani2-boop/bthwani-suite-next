@@ -3,6 +3,7 @@ import { StyleSheet, TextInput, View } from "react-native";
 import type { WltDshCodReference } from "./wlt-cod.api";
 import { Badge, Box, Button, KeyValueList, StateView, Text, useTheme } from "@bthwani/ui-kit";
 import { fetchPartnerCodRecords, remitPartnerCodRecord } from "./wlt-partner-cod.api";
+import { formatWltMoney } from "../finance/wlt-money";
 
 type PanelState =
   | { readonly kind: "loading" }
@@ -10,7 +11,7 @@ type PanelState =
   | { readonly kind: "error"; readonly message: string };
 
 function amountLabel(value: number, currency: string): string {
-  return `${(value / 100).toLocaleString("ar-YE")} ${currency}`;
+  return formatWltMoney(value, currency);
 }
 
 function errorMessage(error: unknown): string {

@@ -10,6 +10,7 @@ import {
   resolveCodReconciliationCase,
   type CodReconciliationCase,
   type CodResolutionAction,
+  formatWltMoney,
 } from '@bthwani/wlt/dsh';
 
 const RESOLUTION_OPTIONS = [
@@ -20,7 +21,7 @@ const RESOLUTION_OPTIONS = [
 ] as const;
 
 function amount(value: number, currency: string): string {
-  return `${(value / 100).toLocaleString("ar-YE")} ${currency}`;
+  return formatWltMoney(value, currency);
 }
 
 function message(error: unknown): string {

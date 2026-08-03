@@ -43,6 +43,20 @@ func uniqueSuffix() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
+func requireTestTable(t *testing.T, db *sql.DB, table string) {
+	t.Helper()
+	var exists bool
+	if err := db.QueryRow(`SELECT to_regclass($1) IS NOT NULL`, "public."+table).Scan(&exists); err != nil {
+		t.Fatalf("failed to inspect test table %s: %v", table, err)
+	}
+	if !exists {
+		if os.Getenv("WLT_REQUIRE_DB_TESTS") == "true" {
+			t.Fatalf("required WLT test table %s is missing", table)
+		}
+		t.Skipf("Skipping DB integration test: WLT test table %s is missing", table)
+	}
+}
+
 func authenticatedFinancialRequest(method, path, callerScope string) *http.Request {
 	req := httptest.NewRequest(method, path, nil)
 	req.Header.Set("Authorization", "Bearer test-dsh-service-token")
@@ -53,7 +67,7 @@ func authenticatedFinancialRequest(method, path, callerScope string) *http.Reque
 	return req
 }
 
-func assertServerOwnedScopeRoute(
+func assertDelegatedScopeRoute(
 	t *testing.T,
 	router http.Handler,
 	ownPath string,
@@ -61,54 +75,54 @@ func assertServerOwnedScopeRoute(
 	listPath string,
 	ownID string,
 	foreignID string,
+	delegatedScope string,
 ) {
 	t.Helper()
 
-	ownReq := authenticatedFinancialRequest(http.MethodGet, ownPath, "caller-selected-foreign-scope")
+	ownReq := authenticatedFinancialRequest(http.MethodGet, ownPath, delegatedScope)
 	ownRec := httptest.NewRecorder()
 	router.ServeHTTP(ownRec, ownReq)
 	if ownRec.Code != http.StatusOK {
-		t.Fatalf("server-owned financial record was not readable after caller scope override: status=%d body=%s", ownRec.Code, ownRec.Body.String())
+		t.Fatalf("delegated financial record was not readable: status=%d body=%s", ownRec.Code, ownRec.Body.String())
 	}
-	if got := ownReq.Header.Get("X-Operator-Context-ID"); got != os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID") {
-		t.Fatalf("caller-selected scope survived authentication: got=%q", got)
+	if got := ownReq.Header.Get("X-Operator-Context-ID"); got != delegatedScope {
+		t.Fatalf("delegated scope changed after authentication: got=%q want=%q", got, delegatedScope)
 	}
 
-	foreignReq := authenticatedFinancialRequest(http.MethodGet, foreignPath, "legacy-foreign-scope")
+	foreignReq := authenticatedFinancialRequest(http.MethodGet, foreignPath, delegatedScope)
 	foreignRec := httptest.NewRecorder()
 	router.ServeHTTP(foreignRec, foreignReq)
 	if foreignRec.Code != http.StatusNotFound {
-		t.Fatalf("caller selected a foreign compatibility scope: expected 404, got=%d body=%s", foreignRec.Code, foreignRec.Body.String())
+		t.Fatalf("delegated scope read a foreign record: expected 404, got=%d body=%s", foreignRec.Code, foreignRec.Body.String())
 	}
 
-	listReq := authenticatedFinancialRequest(http.MethodGet, listPath, "legacy-foreign-scope")
+	listReq := authenticatedFinancialRequest(http.MethodGet, listPath, delegatedScope)
 	listRec := httptest.NewRecorder()
 	router.ServeHTTP(listRec, listReq)
 	if listRec.Code != http.StatusOK {
-		t.Fatalf("server-owned financial list failed: status=%d body=%s", listRec.Code, listRec.Body.String())
+		t.Fatalf("delegated financial list failed: status=%d body=%s", listRec.Code, listRec.Body.String())
 	}
 	body := listRec.Body.String()
 	if !strings.Contains(body, ownID) {
-		t.Fatalf("server-owned financial list omitted its record %s: body=%s", ownID, body)
+		t.Fatalf("delegated financial list omitted its record %s: body=%s", ownID, body)
 	}
 	if strings.Contains(body, foreignID) {
-		t.Fatalf("server-owned financial list leaked foreign compatibility record %s: body=%s", foreignID, body)
+		t.Fatalf("delegated financial list leaked foreign record %s: body=%s", foreignID, body)
 	}
 }
 
-func TestSettlementRoutesUseServerOwnedFinancialScope(t *testing.T) {
+func TestSettlementRoutesIsolateDelegatedFinancialScopes(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
 	}
 	defer db.Close()
+	requireTestTable(t, db, "wlt_settlements")
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
 
 	suffix := uniqueSuffix()
 	serverScope := "server-settlement-" + suffix
 	foreignScope := "foreign-settlement-" + suffix
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", serverScope)
-
 	var ownID, foreignID string
 	if err := db.QueryRow(`
 		INSERT INTO wlt_settlements (partner_id, period_start, period_end, operator_context_id)
@@ -125,28 +139,28 @@ func TestSettlementRoutesUseServerOwnedFinancialScope(t *testing.T) {
 	defer db.Exec(`DELETE FROM wlt_settlements WHERE id IN ($1,$2)`, ownID, foreignID)
 
 	router := NewRouter(db, true)
-	assertServerOwnedScopeRoute(t, router,
+	assertDelegatedScopeRoute(t, router,
 		"/wlt/settlements/"+ownID,
 		"/wlt/settlements/"+foreignID,
 		"/wlt/settlements",
-		ownID, foreignID,
+		ownID, foreignID, serverScope,
 	)
+	assertDelegatedScopeRoute(t, router, "/wlt/settlements/"+foreignID, "/wlt/settlements/"+ownID, "/wlt/settlements", foreignID, ownID, foreignScope)
 }
 
-func TestCodRecordRoutesUseServerOwnedFinancialScope(t *testing.T) {
+func TestCodRecordRoutesIsolateDelegatedFinancialScopes(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
 	}
 	defer db.Close()
+	requireTestTable(t, db, "wlt_cod_records")
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
 
 	suffix := uniqueSuffix()
 	serverScope := "server-cod-" + suffix
 	foreignScope := "foreign-cod-" + suffix
 	sharedPartnerID := "partner-shared-" + suffix
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", serverScope)
-
 	var ownID, foreignID string
 	if err := db.QueryRow(`
 		INSERT INTO wlt_cod_records (order_id, collector_type, collector_id, partner_id, amount_minor_units, currency, operator_context_id)
@@ -163,27 +177,27 @@ func TestCodRecordRoutesUseServerOwnedFinancialScope(t *testing.T) {
 	defer db.Exec(`DELETE FROM wlt_cod_records WHERE id IN ($1,$2)`, ownID, foreignID)
 
 	router := NewRouter(db, true)
-	assertServerOwnedScopeRoute(t, router,
+	assertDelegatedScopeRoute(t, router,
 		"/wlt/cod-records/"+ownID,
 		"/wlt/cod-records/"+foreignID,
 		"/wlt/cod-records?partnerId="+sharedPartnerID,
-		ownID, foreignID,
+		ownID, foreignID, serverScope,
 	)
+	assertDelegatedScopeRoute(t, router, "/wlt/cod-records/"+foreignID, "/wlt/cod-records/"+ownID, "/wlt/cod-records?partnerId="+sharedPartnerID, foreignID, ownID, foreignScope)
 }
 
-func TestCommissionRoutesUseServerOwnedFinancialScope(t *testing.T) {
+func TestCommissionRoutesIsolateDelegatedFinancialScopes(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
 	}
 	defer db.Close()
+	requireTestTable(t, db, "wlt_commissions")
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
 
 	suffix := uniqueSuffix()
 	serverScope := "server-commission-" + suffix
 	foreignScope := "foreign-commission-" + suffix
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", serverScope)
-
 	var ownID, foreignID string
 	if err := db.QueryRow(`
 		INSERT INTO wlt_commissions (beneficiary_actor_id, beneficiary_actor_type, source_type, source_id, commission_type, amount_minor_units, currency, operator_context_id)
@@ -200,27 +214,27 @@ func TestCommissionRoutesUseServerOwnedFinancialScope(t *testing.T) {
 	defer db.Exec(`DELETE FROM wlt_commissions WHERE id IN ($1,$2)`, ownID, foreignID)
 
 	router := NewRouter(db, true)
-	assertServerOwnedScopeRoute(t, router,
+	assertDelegatedScopeRoute(t, router,
 		"/wlt/commissions/"+ownID,
 		"/wlt/commissions/"+foreignID,
 		"/wlt/commissions",
-		ownID, foreignID,
+		ownID, foreignID, serverScope,
 	)
+	assertDelegatedScopeRoute(t, router, "/wlt/commissions/"+foreignID, "/wlt/commissions/"+ownID, "/wlt/commissions", foreignID, ownID, foreignScope)
 }
 
-func TestPayoutRequestRoutesUseServerOwnedFinancialScope(t *testing.T) {
+func TestPayoutRequestRoutesIsolateDelegatedFinancialScopes(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
 	}
 	defer db.Close()
+	requireTestTable(t, db, "wlt_payout_requests")
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
 
 	suffix := uniqueSuffix()
 	serverScope := "server-payout-" + suffix
 	foreignScope := "foreign-payout-" + suffix
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", serverScope)
-
 	var ownID, foreignID string
 	if err := db.QueryRow(`
 		INSERT INTO wlt_payout_requests (beneficiary_actor_id, beneficiary_actor_type, amount_minor_units, currency, operator_context_id)
@@ -237,10 +251,11 @@ func TestPayoutRequestRoutesUseServerOwnedFinancialScope(t *testing.T) {
 	defer db.Exec(`DELETE FROM wlt_payout_requests WHERE id IN ($1,$2)`, ownID, foreignID)
 
 	router := NewRouter(db, true)
-	assertServerOwnedScopeRoute(t, router,
+	assertDelegatedScopeRoute(t, router,
 		"/wlt/payout-requests/"+ownID,
 		"/wlt/payout-requests/"+foreignID,
 		"/wlt/payout-requests",
-		ownID, foreignID,
+		ownID, foreignID, serverScope,
 	)
+	assertDelegatedScopeRoute(t, router, "/wlt/payout-requests/"+foreignID, "/wlt/payout-requests/"+ownID, "/wlt/payout-requests", foreignID, ownID, foreignScope)
 }

@@ -12,8 +12,9 @@
  *   5. No import from apps/ directly into services/ source
  *      (apps consume services only through generated clients or packages)
  *
- * We run madge programmatically on TypeScript source directories.
- * If a directory doesn't exist, the check is skipped with a note.
+ * We run madge programmatically with the owning TypeScript configuration.
+ * Existing targets must process at least one file; a zero-file "success" is a
+ * diagnostic failure, not evidence of an acyclic graph.
  *
  * Output: DEPENDENCY_GRAPH_GATE: PASS / FAIL
  */
@@ -22,6 +23,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import ts from "@typescript/typescript6";
 
 const require = createRequire(import.meta.url);
 const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -47,13 +49,28 @@ function exists(dir) {
   return fs.existsSync(path.join(repoRoot, dir));
 }
 
-async function getCirculars(dir, label) {
+function loadTsConfig(relativePath) {
+  const absolutePath = path.join(repoRoot, relativePath);
+  const config = ts.readConfigFile(absolutePath, ts.sys.readFile);
+  if (config.error) {
+    throw new Error(ts.flattenDiagnosticMessageText(config.error.messageText, "\n"));
+  }
+  const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, path.dirname(absolutePath));
+  if (parsed.errors.length > 0) {
+    throw new Error(parsed.errors.map((error) => ts.flattenDiagnosticMessageText(error.messageText, "\n")).join("\n"));
+  }
+  return { ...config.config, compilerOptions: parsed.options };
+}
+
+async function analyzeTarget({ dir, label, tsConfig }) {
   if (!exists(dir)) {
-    notes.push(`  SKIP: ${label} — directory not found: ${dir}`);
-    return [];
+    violations.push(`MADGE_TARGET_MISSING ${label}: ${dir}`);
+    failed = true;
+    return { circulars: [], dependencies: {} };
   }
   const result = await madge(path.join(repoRoot, dir), {
     fileExtensions: ["ts", "tsx"],
+    tsConfig: loadTsConfig(tsConfig),
     excludeRegExp: [
       /node_modules/,
       /generated/,
@@ -62,22 +79,31 @@ async function getCirculars(dir, label) {
       /__tests__/,
     ],
   });
-  return result.circular();
+  const dependencies = result.obj();
+  const processedFiles = Object.keys(dependencies).length;
+  if (processedFiles === 0) {
+    violations.push(`MADGE_ZERO_FILES ${label}: dir=${dir} tsconfig=${tsConfig}`);
+    failed = true;
+  } else {
+    notes.push(`  MADGE: ${label} processed=${processedFiles} tsconfig=${tsConfig}`);
+  }
+  return { circulars: result.circular(), dependencies };
 }
 
 // ---------------------------------------------------------------------------
 // Rule 1-3: Circular dependency checks
 // ---------------------------------------------------------------------------
 const circularChecks = [
-  { dir: "services/dsh/frontend",     label: "DSH frontend" },
-  { dir: "services/wlt/frontend",     label: "WLT frontend" },
-  { dir: "apps/control-panel/runtime/src", label: "Control panel" },
+  { dir: "services/dsh/frontend", label: "DSH frontend", tsConfig: "services/dsh/tsconfig.json" },
+  { dir: "services/wlt/frontend", label: "WLT frontend", tsConfig: "services/wlt/tsconfig.json" },
+  { dir: "apps/control-panel/runtime/src", label: "Control panel", tsConfig: "apps/control-panel/runtime/tsconfig.json" },
 ];
 
 const circularWarnings = [];
 
-for (const { dir, label } of circularChecks) {
-  const circulars = await getCirculars(dir, label);
+for (const target of circularChecks) {
+  const { dir, label } = target;
+  const { circulars } = await analyzeTarget(target);
   if (circulars.length > 0) {
     for (const cycle of circulars) {
       circularWarnings.push(`CIRCULAR in ${label}: ${cycle.join(" → ")}`);
@@ -108,11 +134,18 @@ async function getCrossServiceViolations() {
   for (const [srcDir, srcService] of Object.entries(serviceMap)) {
     if (!exists(srcDir)) continue;
 
+    const tsConfig = srcService === "dsh" ? "services/dsh/tsconfig.json" : "services/wlt/tsconfig.json";
     const result = await madge(path.join(repoRoot, srcDir), {
       fileExtensions: ["ts", "tsx"],
+      tsConfig: loadTsConfig(tsConfig),
       excludeRegExp: [/node_modules/, /generated/],
     });
     const deps = result.obj();
+    if (Object.keys(deps).length === 0) {
+      violations.push(`MADGE_ZERO_FILES ${srcService} cross-service scan: dir=${srcDir} tsconfig=${tsConfig}`);
+      failed = true;
+      continue;
+    }
 
     for (const [file, imports] of Object.entries(deps)) {
       for (const imp of imports) {

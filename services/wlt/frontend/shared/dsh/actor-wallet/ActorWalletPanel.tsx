@@ -12,6 +12,7 @@ import {
 } from "@bthwani/ui-kit";
 import type { RepresentativeWalletActorType, RepresentativeLedgerEntry } from "./actor-wallet.api";
 import { useActorWalletController } from "./use-actor-wallet-controller";
+import { formatWltMoney } from "../finance/wlt-money";
 
 export type ActorWalletPanelProps = {
   readonly actorType: RepresentativeWalletActorType;
@@ -21,11 +22,7 @@ export type ActorWalletPanelProps = {
 };
 
 function amountLabel(minorUnits: number, currency: string): string {
-  const normalized = Number.isSafeInteger(minorUnits) ? minorUnits : 0;
-  return `${(normalized / 100).toLocaleString("ar-YE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} ${currency}`;
+  return formatWltMoney(minorUnits, currency);
 }
 
 function walletStatusLabel(status: string): string {

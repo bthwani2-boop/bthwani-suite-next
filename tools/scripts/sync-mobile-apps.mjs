@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { resolvePackageManagerInvocation } from "./lib/package-manager-invocation.mjs";
+import { assertSafeMobileAppKey, escapeRegexLiteral } from "./lib/mobile-app-key.mjs";
 
 const root = process.cwd();
 const apply = process.argv.includes("--apply");
@@ -71,7 +72,8 @@ function assertAppConfigSynced(key, file, expected) {
   if (!appConfigCustomizations[key]) {
     throw new Error(`${file}: not synchronized`);
   }
-  const callsFactory = new RegExp(`defineBthwaniExpoApp\\(\\s*["']${key}["']\\s*\\)`).test(actual);
+  const escapedKey = escapeRegexLiteral(assertSafeMobileAppKey(key, "customized app key"));
+  const callsFactory = new RegExp(`defineBthwaniExpoApp\\(\\s*["']${escapedKey}["']\\s*\\)`).test(actual);
   const usesFactoryImport = actual.includes('from "../../../tools/mobile/defineBthwaniExpoApp"');
   if (!callsFactory || !usesFactoryImport) {
     throw new Error(`${file}: documented customization must still call defineBthwaniExpoApp("${key}") from the sovereign factory`);
@@ -116,7 +118,13 @@ function runNode(args) {
 
 const manifest = readJson("tools/mobile/mobile-apps.manifest.json");
 const easTemplate = readJson("tools/mobile/eas.template.json");
+if (!manifest.apps || typeof manifest.apps !== "object" || Array.isArray(manifest.apps)) {
+  throw new Error("mobile manifest apps must be an object");
+}
 const appKeys = Object.keys(manifest.apps);
+for (const key of appKeys) assertSafeMobileAppKey(key, "mobile manifest app key");
+
+if (requestedApp) assertSafeMobileAppKey(requestedApp, "--app");
 
 if (requestedApp && !manifest.apps[requestedApp]) {
   console.error(`FAIL: unknown --app '${requestedApp}'. Allowed: ${appKeys.join(", ")}`);

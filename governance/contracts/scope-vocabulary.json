@@ -76,6 +76,8 @@
         { "scope": "catalog.taxonomy.manage", "domain": "dsh" },
         { "scope": "dsh.dispatch_capacity.manage", "domain": "dsh" },
         { "scope": "dsh.dispatch_capacity.read", "domain": "dsh" },
+        { "scope": "dsh.dispatch_financial_eligibility.manage", "domain": "dsh" },
+        { "scope": "dsh.dispatch_financial_eligibility.read", "domain": "dsh" },
         { "scope": "dsh.fulfillment_sla.manage", "domain": "dsh" },
         { "scope": "dsh.fulfillment_sla.read", "domain": "dsh" },
         { "scope": "dsh.operational_policy.audit.read", "domain": "dsh" },

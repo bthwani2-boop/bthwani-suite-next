@@ -11,7 +11,6 @@ import (
 func configureReferenceAuth(t *testing.T) {
 	t.Helper()
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "service-token")
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "server-owned-context")
 }
 
 func referenceRequest() *http.Request {
@@ -25,9 +24,9 @@ func trustedDshReferenceRequestForTest() *http.Request {
 	return request
 }
 
-func TestReferenceReaderCollapsesDistinctTrustedDshContextsToServerScope(t *testing.T) {
+func TestReferenceReaderPreservesDistinctTrustedDshContexts(t *testing.T) {
 	configureReferenceAuth(t)
-	for _, callerContextID := range []string{"OperatorContext-a", "OperatorContext-b", ""} {
+	for _, callerContextID := range []string{"OperatorContext-a", "OperatorContext-b"} {
 		request := trustedDshReferenceRequestForTest()
 		request.Header.Set("X-Operator-Context-ID", callerContextID)
 		response := httptest.NewRecorder()
@@ -35,27 +34,25 @@ func TestReferenceReaderCollapsesDistinctTrustedDshContextsToServerScope(t *test
 		if !RequireReferenceReader(response, request) {
 			t.Fatalf("trusted DSH request with caller context %q was rejected status=%d body=%s", callerContextID, response.Code, response.Body.String())
 		}
-		if got := request.Header.Get("X-Operator-Context-ID"); got != "server-owned-context" {
-			t.Fatalf("caller context %q was not replaced by server scope: got %q", callerContextID, got)
+		if got := request.Header.Get("X-Operator-Context-ID"); got != callerContextID {
+			t.Fatalf("delegated context %q changed to %q", callerContextID, got)
 		}
-		if contextualOperatorContext, ok := OperatorContextIDFromContext(request.Context()); !ok || contextualOperatorContext != "server-owned-context" {
-			t.Fatalf("server OperatorContext context not installed: OperatorContext=%q ok=%v", contextualOperatorContext, ok)
+		if contextualOperatorContext, ok := OperatorContextIDFromContext(request.Context()); !ok || contextualOperatorContext != callerContextID {
+			t.Fatalf("delegated OperatorContext was not installed: OperatorContext=%q ok=%v", contextualOperatorContext, ok)
 		}
 	}
 }
 
-func TestReferenceReaderFailsClosedWithoutConfiguredServerScope(t *testing.T) {
+func TestReferenceReaderFailsClosedWithoutDelegatedContext(t *testing.T) {
 	configureReferenceAuth(t)
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
 	request := trustedDshReferenceRequestForTest()
-	request.Header.Set("X-Operator-Context-ID", "caller-selected-context")
 	response := httptest.NewRecorder()
 
 	if RequireReferenceReader(response, request) {
-		t.Fatal("trusted DSH request was accepted without the server-owned financial scope")
+		t.Fatal("trusted DSH request was accepted without a delegated OperatorContext")
 	}
-	if response.Code != http.StatusServiceUnavailable || !strings.Contains(response.Body.String(), "FINANCIAL_SCOPE_NOT_CONFIGURED") {
-		t.Fatalf("expected FINANCIAL_SCOPE_NOT_CONFIGURED, status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_REQUIRED") {
+		t.Fatalf("expected OPERATOR_CONTEXT_REQUIRED, status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
@@ -152,12 +149,12 @@ func TestReferenceReaderDoesNotBypassAuthInDeferredMode(t *testing.T) {
 func TestReferenceReaderAcceptsTrustedDshInDeferredMode(t *testing.T) {
 	configureReferenceAuth(t)
 	request := trustedDshReferenceRequestForTest()
-	request.Header.Set("X-Operator-Context-ID", "caller-selected-deferred-context")
+	request.Header.Set("X-Operator-Context-ID", "OperatorContext-deferred")
 	response := httptest.NewRecorder()
 	if !RequireReferenceReader(response, request) {
 		t.Fatalf("deferred trusted service read rejected status=%d body=%s", response.Code, response.Body.String())
 	}
-	if got := request.Header.Get("X-Operator-Context-ID"); got != "server-owned-context" {
-		t.Fatalf("deferred caller context was not replaced by server scope: got %q", got)
+	if got := request.Header.Get("X-Operator-Context-ID"); got != "OperatorContext-deferred" {
+		t.Fatalf("deferred delegated context changed: got %q", got)
 	}
 }
