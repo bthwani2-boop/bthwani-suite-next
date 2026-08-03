@@ -27,8 +27,7 @@ type protectedStoreServer struct {
 }
 
 // Partners permission actions on the control-panel surface, covering store
-// listing/governance (partners & stores nav). "operator" remains a valid
-// fallback role during RBAC data migration.
+// listing and governance. Identity permissions are the only capability source.
 const (
 	PartnersPermissionRead     = "partners.read"
 	PartnersPermissionManage   = "partners.manage"
@@ -167,9 +166,6 @@ func (s *protectedStoreServer) servePartnerHandler(
 	handler(w, partnerRequestWithActor(r, actor))
 }
 
-// servePartnerPermissionHandler grants access exclusively via a
-// Permission{Service:"dsh", Surface:"control-panel", Action:action} entry.
-// No role-based fallback is allowed.
 func (s *protectedStoreServer) servePartnerPermissionHandler(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -413,11 +409,6 @@ func (s *protectedStoreServer) handleStoreAudit(w http.ResponseWriter, r *http.R
 	store.SendJSON(w, http.StatusOK, map[string]any{"events": events})
 }
 
-// ─── Store team, courier settings, coverage zones, partner scopes ───────────
-// Thin auth wrappers: verify the actor can access storeId via the existing
-// store.ActorCanAccessStore primitive, then delegate to the pure business
-// handler in partner/handler.go. Mirrors handleGetPartnerSettings above.
-
 func (s *protectedStoreServer) handlePartnerStoreTeam(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "partner")
 	if !ok {
@@ -471,9 +462,6 @@ func (s *protectedStoreServer) actorHasPartnerPermission(ctx context.Context, ac
 	`, actorID, storeID).Scan(&role)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			// If not a team member, check if they are the partner owner.
-			// Currently, owners are supposed to have an active 'owner' row in team_members,
-			// but we can fallback if needed. Let's assume team_members is authoritative.
 			return false, nil
 		}
 		return false, err
@@ -601,13 +589,6 @@ func (s *protectedStoreServer) requireActor(
 	return store.StoreActor{}, false
 }
 
-// requirePermission is the sovereign fine-grained access check. It grants
-// access only to actors whose Identity carries a
-// Permission{Service:"dsh", Surface:surface, Action:action} entry.
-// No role-based bypass is allowed; all capabilities must be explicitly issued
-// by Identity via the employee permission bundle system. surface must be one of
-// Identity's contract-defined surfaces (core/identity/contracts/identity.openapi.yaml);
-// "control-panel" is used for every control-panel-governed domain.
 func (s *protectedStoreServer) requirePermission(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -625,28 +606,41 @@ func (s *protectedStoreServer) requirePermission(
 	}
 	for _, p := range identity.Permissions {
 		if p.Service == "dsh" && p.Surface == surface && p.Action == action {
-			return store.StoreActor{ID: identity.Subject, Role: "permission:" + action, OperatorContextID: identity.OperatorContextID, PhoneE164: identity.PhoneE164}, true
+			scope := strings.TrimSpace(p.Scope)
+			if scope == "" {
+				continue
+			}
+			return store.StoreActor{
+				ID:                 identity.Subject,
+				Role:               "operator",
+				OperatorContextID:  identity.OperatorContextID,
+				PhoneE164:          identity.PhoneE164,
+				AuthorizedAction:   action,
+				AuthorizationScope: scope,
+			}, true
 		}
 	}
-	store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor role cannot perform this action")
+	store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor lacks required permission")
 	return store.StoreActor{}, false
 }
 
-
-// requireCatalogPermission is requirePermission scoped to the control-panel
-// surface, kept as a named wrapper because every centralcatalog.go call site
-// reads more clearly with the surface implied.
-func (s *protectedStoreServer) requireCatalogPermission(
-	w http.ResponseWriter,
-	r *http.Request,
-	action string,
-) (store.StoreActor, bool) {
-	return s.requirePermission(w, r, "control-panel", action)
+func decodeProtectedJSON(w http.ResponseWriter, r *http.Request, target any) bool {
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(target); err != nil {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
+		return false
+	}
+	return true
 }
 
 func (s *protectedStoreServer) writeActionResponse(w http.ResponseWriter, response store.StoreActionResponse, err error) {
 	if err == nil {
-		store.SendJSON(w, http.StatusOK, response)
+		status := http.StatusOK
+		if response.Replayed {
+			w.Header().Set("Idempotent-Replayed", "true")
+		}
+		store.SendJSON(w, status, response)
 		return
 	}
 	s.writeStoreError(w, err)
@@ -655,26 +649,12 @@ func (s *protectedStoreServer) writeActionResponse(w http.ResponseWriter, respon
 func (s *protectedStoreServer) writeStoreError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, store.ErrScopedStoreNotFound):
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "store context not found")
+		store.SendError(w, http.StatusNotFound, "STORE_NOT_FOUND", "store was not found in actor scope")
 	case errors.Is(err, store.ErrVersionConflict):
-		store.SendError(w, http.StatusConflict, "VERSION_CONFLICT", "store version changed; reload before retrying")
+		store.SendError(w, http.StatusConflict, "VERSION_CONFLICT", "store version changed; refresh and retry")
 	case errors.Is(err, store.ErrIdempotencyConflict):
-		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "idempotency key was already used for a different request")
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "idempotency key was already used with a different request")
 	default:
-		if strings.Contains(err.Error(), "invalid") || strings.Contains(err.Error(), "required") {
-			store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "store action failed")
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 	}
-}
-
-func decodeProtectedJSON(w http.ResponseWriter, r *http.Request, target any) bool {
-	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(target); err != nil {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-		return false
-	}
-	return true
 }
