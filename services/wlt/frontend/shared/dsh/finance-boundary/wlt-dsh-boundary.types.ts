@@ -4,10 +4,10 @@ import type { components } from "../../../../clients/generated/wlt-api";
  * Canonical WLT-for-DSH financial boundary.
  *
  * Named financial records and lifecycle states are aliases of the generated
- * WLT OpenAPI client. The three `*StatusReference` unions below are isolated
- * read projections only: the core `/wlt/references/*` response is still open
- * in OpenAPI and must be promoted to named schemas before these unions can be
- * replaced by generated aliases without changing their runtime meaning.
+ * WLT OpenAPI client. The isolated read projections below exist only where the
+ * current WLT contract still exposes an open response or omits returned fields;
+ * each gap is documented at the declaration and must be removed when OpenAPI
+ * gains the matching named schema.
  */
 export type WltPaymentStatusReference =
   | "pending"
@@ -67,7 +67,19 @@ export type WltCommissionType =
 export type WltCommissionStatus = components["schemas"]["CommissionStatus"];
 export type WltCodCollectorType =
   components["schemas"]["CreateCodRecordRequest"]["collectorType"];
-export type WltDshCodReference = components["schemas"]["CodRecord"];
+
+/**
+ * The generated CodRecord owns all required financial fields. Its source
+ * schema currently leaves lifecycle timestamps as open properties, so this
+ * read-only intersection types only those runtime-returned timestamps.
+ */
+export type WltDshCodReference = components["schemas"]["CodRecord"] & {
+  readonly collectedAt?: string | null;
+  readonly remittedAt?: string | null;
+  readonly createdAt?: string;
+  readonly updatedAt?: string;
+};
+
 export type WltDshCommissionReference = components["schemas"]["Commission"];
 
 export type WltLedgerDebitCredit =
