@@ -1,7 +1,5 @@
 export type { DshPartnerOperationalScope } from '../shared/partner/partner.types';
 
-export { defaultServiceModes } from '../shared/delivery';
-
 export {
   defaultSupportCommandContext,
   buildSupportCommandContextFromOperationalFlow,

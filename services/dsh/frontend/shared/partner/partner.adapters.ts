@@ -1,7 +1,6 @@
 // Partner adapters — governed order mapping and operations summary.
 // No JSX. No ui-kit. No Tamagui. No compatibility projection for legacy rows.
 
-import { getSurfaceModeCapability } from "../identity-access";
 import type {
   DshOrderPreparation,
   DshPartnerOrder,
@@ -103,7 +102,6 @@ type CanonicalOrderShape = {
     readonly productId?: string;
     readonly productName?: string;
     readonly quantity?: number;
-    readonly unitPrice?: number;
   }[];
 };
 
@@ -247,10 +245,6 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
     return { id, productName, quantity };
   });
   const itemCount = orderItems.reduce((sum, item) => sum + item.quantity, 0);
-  const total = raw.items.reduce(
-    (sum, item) => sum + Math.max(0, Number(item.quantity ?? 0)) * Math.max(0, Number(item.unitPrice ?? 0)),
-    0,
-  );
   const itemNames = orderItems.map((item) => item.productName).slice(0, 3);
   const elapsed = formatElapsed(createdAt);
   const acceptanceRisk = status === "needs_accept" && elapsed.minutes >= 10;
@@ -283,7 +277,7 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
     orderTypeLabel: resolveOrderTypeLabel(orderMode),
     orderMode,
     itemsCountLabel: itemCount > 0 ? `${itemCount} عنصر` : "العناصر عند فتح التفاصيل",
-    amountLabel: total > 0 ? `${total.toLocaleString("ar-YE")} ر.ي` : "—",
+    amountLabel: "غير متاح من عقد الطلب",
     createdAtLabel: createdAt.toLocaleTimeString("ar-YE", { hour: "2-digit", minute: "2-digit" }),
     elapsedLabel: elapsed.label,
     nextActionLabel: custodyExceptionRisk
@@ -322,10 +316,6 @@ export function buildPartnerDeliveryOpsSummary(
   partnerOrders: readonly PartnerOrderForOps[],
   partnerActionableHandoffs: readonly DshOrderLifecycleHandoff[],
 ): PartnerDeliveryOpsSummary {
-  const partnerReceivesOrders =
-    getSurfaceModeCapability("bthwani_delivery").partner.receivesOrder
-    || getSurfaceModeCapability("partner_delivery").partner.receivesOrder;
-
   return {
     outForDelivery: partnerOrders.filter(
       (order) =>
@@ -333,14 +323,12 @@ export function buildPartnerDeliveryOpsSummary(
         || order.status === "captain_arriving"
         || order.status === "delivering",
     ).length,
-    handoffReady: partnerReceivesOrders
-      ? partnerOrders.filter(
-          (order) =>
-            order.status === "ready"
-            || order.status === "items_ready"
-            || order.status === "handoff",
-        ).length
-      : 0,
+    handoffReady: partnerOrders.filter(
+      (order) =>
+        order.status === "ready"
+        || order.status === "items_ready"
+        || order.status === "handoff",
+    ).length,
     deliveredToday: partnerOrders.filter((order) => order.status === "completed").length,
     delayedRisk:
       partnerOrders.filter((order) => order.priority === "high" || order.slaRisk || order.issueRequired).length

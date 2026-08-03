@@ -5,6 +5,7 @@ import test from "node:test";
 
 const repoRoot = path.resolve(import.meta.dirname, "../../../..");
 const read = (relative) => fs.readFileSync(path.join(repoRoot, relative), "utf8");
+const nextConfigPath = "apps/control-panel/runtime/next.config.mjs";
 
 test("employee platform access code has a same-origin HttpOnly BFF route", () => {
   const route = read("apps/control-panel/runtime/src/app/api/auth/activate/route.ts");
@@ -27,7 +28,7 @@ test("employee platform access code has a same-origin HttpOnly BFF route", () =>
 test("control-panel identity configuration owns the same-origin BFF transport", () => {
   const providers = read("apps/control-panel/runtime/src/app/providers.tsx");
   const identityConfig = read("core/identity/clients/identity-api-config.ts");
-  const nextConfig = read("apps/control-panel/runtime/next.config.ts");
+  const nextConfig = read(nextConfigPath);
 
   assert.match(providers, /configureIdentitySession\(resolveIdentityApiBaseUrl\(\)\)/);
   assert.match(identityConfig, /NEXT_PUBLIC_CONTROL_PANEL_BFF_ENABLED/);
