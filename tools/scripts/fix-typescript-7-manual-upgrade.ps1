@@ -11,9 +11,11 @@ $ErrorActionPreference = "Stop"
 $expectedBranch = "task/typescript-7-readiness"
 $baseBranch = "smsm"
 $typeScript7Version = "7.0.2"
-$typeScript6CompatVersion = "6.0.3"
+# @typescript/typescript6 publishes package 6.0.2, while its compiler/API reports 6.0.3.
+$typeScript6PackageVersion = "6.0.2"
+$typeScript6RuntimeVersion = "6.0.3"
 $typeScript7RootAlias = "npm:typescript@$typeScript7Version"
-$typeScript6RootAlias = "npm:@typescript/typescript6@$typeScript6CompatVersion"
+$typeScript6RootAlias = "npm:@typescript/typescript6@$typeScript6PackageVersion"
 $typeScript7WorkspaceSpecifier = $typeScript7Version
 
 function Write-Section {
@@ -100,14 +102,15 @@ try {
         throw "Branch is behind origin/$baseBranch by $behindBase commit(s). Sync first."
     }
 
-    Write-Host "Repository:              $((Resolve-Path ".").Path)"
-    Write-Host "Branch:                  $currentBranch"
-    Write-Host "HEAD:                    $localSha"
-    Write-Host "TypeScript 7 compiler:   $typeScript7Version"
-    Write-Host "TypeScript 6 API bridge: $typeScript6CompatVersion"
+    Write-Host "Repository:                 $((Resolve-Path ".").Path)"
+    Write-Host "Branch:                     $currentBranch"
+    Write-Host "HEAD:                       $localSha"
+    Write-Host "TypeScript 7 compiler:      $typeScript7Version"
+    Write-Host "TS6 bridge package:         $typeScript6PackageVersion"
+    Write-Host "TS6 bridge compiler/API:    $typeScript6RuntimeVersion"
 
     Write-Section "Restore pnpm install policy"
-    @'
+    $pnpmfile = @'
 "use strict";
 
 const EXPO_SDK_56_FORCED = Object.freeze({
@@ -153,7 +156,7 @@ function applyTypeScriptCompilerApiBridge(pkg) {
 
   pkg.dependencies = {
     ...pkg.dependencies,
-    typescript: "npm:@typescript/typescript6@6.0.3",
+    typescript: "__TS6_ALIAS__",
   };
 
   return pkg;
@@ -166,7 +169,9 @@ module.exports = {
     },
   },
 };
-'@ | Set-Content -LiteralPath ".pnpmfile.cjs" -Encoding UTF8
+'@
+    $pnpmfile = $pnpmfile.Replace("__TS6_ALIAS__", $typeScript6RootAlias)
+    Set-Content -LiteralPath ".pnpmfile.cjs" -Value $pnpmfile -Encoding UTF8
 
     Write-Section "Remove unsafe Next.js TypeScript bypass"
     foreach ($file in @("apps/control-panel/runtime/next.config.mjs", "apps/control-panel/runtime/next.config.ts")) {
@@ -272,8 +277,8 @@ for (const file of touchedFiles) console.log(`- ${file}`);
     $api = Invoke-Captured -Name "Resolve TypeScript API bridge" -FilePath "node" -Arguments @("--input-type=module", "--eval", "import ts from 'typescript'; process.stdout.write(ts.version);")
 
     Assert-Exact -Label "TypeScript 7 compiler" -Actual $tsc7 -Expected "Version $typeScript7Version"
-    Assert-Exact -Label "TypeScript 6 compatibility compiler" -Actual $tsc6 -Expected "Version $typeScript6CompatVersion"
-    Assert-Exact -Label "TypeScript API bridge" -Actual $api -Expected $typeScript6CompatVersion
+    Assert-Exact -Label "TypeScript 6 compatibility compiler" -Actual $tsc6 -Expected "Version $typeScript6RuntimeVersion"
+    Assert-Exact -Label "TypeScript API bridge" -Actual $api -Expected $typeScript6RuntimeVersion
 
     Write-Host "tsc:  $tsc7"
     Write-Host "tsc6: $tsc6"
