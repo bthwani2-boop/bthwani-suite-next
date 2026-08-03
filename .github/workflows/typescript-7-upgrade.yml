@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - task/typescript-7-readiness
+  pull_request:
+    branches:
+      - smsm
 
 permissions:
   contents: write
@@ -21,6 +24,7 @@ jobs:
       - name: Checkout upgrade branch
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: task/typescript-7-readiness
           fetch-depth: 0
           persist-credentials: true
 
@@ -88,7 +92,7 @@ jobs:
 
           for (const file of codeFiles) {
             const original = fs.readFileSync(file, 'utf8');
-            let updated = original
+            const updated = original
               .replace(/(\bfrom\s+)(["'])typescript\2/gu, '$1$2@typescript/typescript6$2')
               .replace(/(\bimport\s*)(["'])typescript\2/gu, '$1$2@typescript/typescript6$2')
               .replace(/(\bimport\s*\(\s*)(["'])typescript\2(\s*\))/gu, '$1$2@typescript/typescript6$2$3')
