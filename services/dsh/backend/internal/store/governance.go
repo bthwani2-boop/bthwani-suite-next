@@ -21,10 +21,12 @@ var (
 )
 
 type StoreActor struct {
-	ID                string
-	Role              string
-	OperatorContextID string
-	PhoneE164         string
+	ID                 string
+	Role               string
+	OperatorContextID  string
+	PhoneE164          string
+	AuthorizedAction   string
+	AuthorizationScope string
 }
 
 type StoreScope struct {
@@ -170,17 +172,33 @@ func GetStoreByIDInternal(ctx context.Context, db *sql.DB, storeID string) (*Dsh
 	return getStoreByIDContext(ctx, db, storeID)
 }
 
+func permissionScopeAllowsStore(scope, storeID string) bool {
+	scope = strings.TrimSpace(scope)
+	storeID = strings.TrimSpace(storeID)
+	if scope == "all" {
+		return true
+	}
+	return storeID != "" && scope == "store:"+storeID
+}
+
+// ActorCanAccessStore applies object authorization without interpreting role
+// names. Identity-issued permissions carry an explicit action and scope;
+// ordinary partner/field/captain actors must have an active DSH store scope.
 func ActorCanAccessStore(ctx context.Context, db queryer, _ WorkforceScopeResolver, actor StoreActor, storeID string) (bool, error) {
 	actorID := strings.TrimSpace(actor.ID)
 	role := strings.TrimSpace(actor.Role)
 	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
+	authorizedAction := strings.TrimSpace(actor.AuthorizedAction)
 	storeID = strings.TrimSpace(storeID)
-	if db == nil || actorID == "" || role == "" || operatorContextID == "" || storeID == "" {
+	if db == nil || actorID == "" || operatorContextID == "" || storeID == "" {
 		return false, nil
 	}
 
 	var exists bool
-	if role == "operator" || strings.HasPrefix(role, "permission:") {
+	if authorizedAction != "" {
+		if !permissionScopeAllowsStore(actor.AuthorizationScope, storeID) {
+			return false, nil
+		}
 		err := db.QueryRowContext(ctx, `
 			SELECT EXISTS (
 				SELECT 1
@@ -188,6 +206,9 @@ func ActorCanAccessStore(ctx context.Context, db queryer, _ WorkforceScopeResolv
 				WHERE id = $1 AND operator_context_id = $2
 			)`, storeID, operatorContextID).Scan(&exists)
 		return exists, err
+	}
+	if role == "" {
+		return false, nil
 	}
 
 	err := db.QueryRowContext(ctx, `
@@ -254,7 +275,7 @@ func SubmitFieldVerification(
 			if visitStoreID != storeID {
 				return fmt.Errorf("visit does not belong to this store")
 			}
-			if actor.Role != "operator" && fieldAgentID != actor.ID {
+			if fieldAgentID != actor.ID {
 				return fmt.Errorf("visit not owned by actor")
 			}
 
@@ -391,6 +412,9 @@ func GovernStore(
 ) (StoreActionResponse, error) {
 	if input.ExpectedVersion < 1 || len(strings.TrimSpace(input.Reason)) < 3 {
 		return StoreActionResponse{}, fmt.Errorf("invalid governance action")
+	}
+	if strings.TrimSpace(actor.AuthorizedAction) != "partners.manage" {
+		return StoreActionResponse{}, ErrScopedStoreNotFound
 	}
 	return runMutation(ctx, db, wf, actor, storeID, "operator.store.govern", key, correlationID, input, input.Reason,
 		func(tx *sql.Tx, current DshStoreRow) error {
@@ -540,8 +564,12 @@ func runMutation(
 		return StoreActionResponse{}, err
 	}
 	after := storeState(updated)
+	auditRole := strings.TrimSpace(actor.Role)
+	if auditRole == "" {
+		auditRole = "identity-permission"
+	}
 	audit := StoreAuditEvent{
-		ID: eventID("audit"), ActorID: actor.ID, ActorRole: actor.Role,
+		ID: eventID("audit"), ActorID: actor.ID, ActorRole: auditRole,
 		StoreID: storeID, Action: operation, FromState: before, ToState: after,
 		Reason: strings.TrimSpace(reason), CorrelationID: correlationID, CreatedAt: time.Now().UTC(),
 	}
