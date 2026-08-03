@@ -94,15 +94,18 @@ func (s *protectedStoreServer) refreshCaptainFinancialEligibility(
 	)
 }
 
+// These compatibility tombstones expose no DSH policy data or mutation.
+// They remain protected by the existing operations permission while returning
+// 410 Gone; active operational-policy routes use the precise DSH permissions.
 func (s *protectedStoreServer) handleGetDispatchBalancePolicy(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionRead); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead); !ok {
 		return
 	}
 	store.SendError(w, http.StatusGone, "DISPATCH_BALANCE_POLICY_OWNED_BY_WLT", "captain dispatch financial thresholds and wallet policy are owned by WLT; DSH stores only WLT eligibility decision metadata")
 }
 
 func (s *protectedStoreServer) handleUpsertDispatchBalancePolicy(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionManage); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage); !ok {
 		return
 	}
 	store.SendError(w, http.StatusGone, "DISPATCH_BALANCE_POLICY_OWNED_BY_WLT", "captain dispatch financial thresholds and wallet policy are owned by WLT; DSH stores only WLT eligibility decision metadata")
