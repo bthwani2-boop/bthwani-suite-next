@@ -3,8 +3,6 @@ import type {
   DshCapacityConfig,
   DshCaptainFinancialEligibility,
   DshCreateZoneInput,
-  DshDispatchBalancePolicy,
-  DshDispatchBalancePolicyInput,
   DshSlaRule,
   DshStoreOnboardingFeePolicy,
   DshStoreOnboardingFeePolicyInput,
@@ -96,21 +94,6 @@ export const upsertStoreOnboardingFeePolicy = (
 export const fetchStoreOnboardingFeeReference = () =>
   req<{ policy: DshStoreOnboardingFeePolicy }>(
     "/dsh/platform/store-onboarding-fee",
-  );
-
-export const fetchDispatchBalancePolicy = () =>
-  req<{ policy: DshDispatchBalancePolicy }>(
-    "/dsh/operator/platform/dispatch-balance-policy",
-  );
-
-export const upsertDispatchBalancePolicy = (body: DshDispatchBalancePolicyInput) =>
-  req<{ policy: DshDispatchBalancePolicy }>(
-    "/dsh/operator/platform/dispatch-balance-policy",
-    {
-      method: "PUT",
-      body,
-      idempotencyKey: stableMutationKey("dispatch-balance-policy", body),
-    },
   );
 
 export const fetchOperatorCaptainFinancialEligibility = (captainId: string) =>
