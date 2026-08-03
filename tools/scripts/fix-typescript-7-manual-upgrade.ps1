@@ -81,9 +81,10 @@ try {
         throw "Wrong branch '$currentBranch'. Expected '$expectedBranch'."
     }
 
-    $status = Invoke-Captured -Name "Read git status" -FilePath "git" -Arguments @("status", "--porcelain")
-    if ($status) {
-        throw "Worktree must be clean before correction:`n$status"
+    $initialStatus = Invoke-Captured -Name "Read initial git status" -FilePath "git" -Arguments @("status", "--porcelain")
+    if ($initialStatus) {
+        Write-Host "Existing local changes detected; continuing because this script is idempotent:"
+        Write-Host $initialStatus
     }
 
     Invoke-Step -Name "Fetch remote refs" -FilePath "git" -Arguments @("fetch", "origin", $expectedBranch, $baseBranch, "--prune")
@@ -191,17 +192,18 @@ module.exports = {
     Write-Section "Normalize TypeScript package policy"
     $transformScript = Join-Path ([System.IO.Path]::GetTempPath()) "bthwani-fix-ts7-$([guid]::NewGuid().ToString('N')).mjs"
     try {
-        @"
+        @'
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
 
-const rootNativeAlias = "$typeScript7RootAlias";
-const rootCompatAlias = "$typeScript6RootAlias";
-const workspaceTypeScript = "$typeScript7WorkspaceSpecifier";
-const sections = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
+const [rootNativeAlias, rootCompatAlias, workspaceTypeScript] = process.argv.slice(2);
+if (!rootNativeAlias || !rootCompatAlias || !workspaceTypeScript) {
+  throw new Error("Missing TypeScript policy arguments.");
+}
 
+const sections = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
 const trackedFiles = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
-  .split("\\0")
+  .split("\0")
   .filter(Boolean);
 const packageFiles = trackedFiles.filter((file) => file === "package.json" || file.endsWith("/package.json"));
 
@@ -249,7 +251,7 @@ for (const file of packageFiles) {
   }
 
   if (changed) {
-    fs.writeFileSync(file, `${JSON.stringify(json, null, 2)}\n`, "utf8");
+    fs.writeFileSync(file, JSON.stringify(json, null, 2) + "\n", "utf8");
     touched += 1;
     touchedFiles.push(file);
   }
@@ -262,9 +264,9 @@ if (declarations === 0) {
 console.log(`TypeScript declarations: ${declarations}`);
 console.log(`Updated package manifests: ${touched}`);
 for (const file of touchedFiles) console.log(`- ${file}`);
-"@ | Set-Content -LiteralPath $transformScript -Encoding UTF8
+'@ | Set-Content -LiteralPath $transformScript -Encoding UTF8
 
-        Invoke-Step -Name "Apply TypeScript package policy" -FilePath "node" -Arguments @($transformScript)
+        Invoke-Step -Name "Apply TypeScript package policy" -FilePath "node" -Arguments @($transformScript, $typeScript7RootAlias, $typeScript6RootAlias, $typeScript7WorkspaceSpecifier)
     }
     finally {
         Remove-Item -LiteralPath $transformScript -Force -ErrorAction SilentlyContinue
@@ -289,19 +291,20 @@ for (const file of touchedFiles) console.log(`- ${file}`);
     Write-Section "Validate package policy"
     $validationScript = Join-Path ([System.IO.Path]::GetTempPath()) "bthwani-validate-ts7-$([guid]::NewGuid().ToString('N')).mjs"
     try {
-        @"
+        @'
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
 
-const rootNativeAlias = "$typeScript7RootAlias";
-const rootCompatAlias = "$typeScript6RootAlias";
-const workspaceTypeScript = "$typeScript7WorkspaceSpecifier";
+const [rootNativeAlias, rootCompatAlias, workspaceTypeScript] = process.argv.slice(2);
+if (!rootNativeAlias || !rootCompatAlias || !workspaceTypeScript) {
+  throw new Error("Missing TypeScript policy arguments.");
+}
+
 const sections = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
 const violations = [];
 let declarations = 0;
-
 const trackedFiles = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
-  .split("\\0")
+  .split("\0")
   .filter(Boolean);
 const packageFiles = trackedFiles.filter((file) => file === "package.json" || file.endsWith("/package.json"));
 
@@ -338,9 +341,9 @@ if (violations.length > 0) {
 }
 
 console.log(`Validated TypeScript declarations: ${declarations}`);
-"@ | Set-Content -LiteralPath $validationScript -Encoding UTF8
+'@ | Set-Content -LiteralPath $validationScript -Encoding UTF8
 
-        Invoke-Step -Name "Enforce TypeScript package policy" -FilePath "node" -Arguments @($validationScript)
+        Invoke-Step -Name "Enforce TypeScript package policy" -FilePath "node" -Arguments @($validationScript, $typeScript7RootAlias, $typeScript6RootAlias, $typeScript7WorkspaceSpecifier)
     }
     finally {
         Remove-Item -LiteralPath $validationScript -Force -ErrorAction SilentlyContinue
