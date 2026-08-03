@@ -13,8 +13,9 @@ $expectedBranch = "task/typescript-7-readiness"
 $baseBranch = "smsm"
 $typeScript7Version = "7.0.2"
 $typeScript6CompatVersion = "6.0.2"
-$typeScript7Specifier = "npm:typescript@$typeScript7Version"
-$typeScript6Specifier = "npm:@typescript/typescript6@$typeScript6CompatVersion"
+$typeScript7RootAlias = "npm:typescript@$typeScript7Version"
+$typeScript6RootAlias = "npm:@typescript/typescript6@$typeScript6CompatVersion"
+$typeScript7WorkspaceSpecifier = $typeScript7Version
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $packageJsonPath = Join-Path $repoRoot "package.json"
 
@@ -121,14 +122,14 @@ try {
         "HEAD..origin/$baseBranch"
     ))
     if ($behindBase -ne 0) {
-        throw "The branch is behind origin/$baseBranch by $behindBase commit(s). Rebase or merge the base before upgrading."
+        throw "The branch is behind origin/$baseBranch by $behindBase commit(s). Synchronize the branch before upgrading."
     }
 
-    Write-Host "Repository:          $repoRoot"
-    Write-Host "Branch:              $currentBranch"
-    Write-Host "Pinned SHA:          $localSha"
-    Write-Host "TypeScript compiler: $typeScript7Version"
-    Write-Host "Compiler API bridge: $typeScript6CompatVersion"
+    Write-Host "Repository:             $repoRoot"
+    Write-Host "Branch:                 $currentBranch"
+    Write-Host "Pinned SHA:             $localSha"
+    Write-Host "TypeScript 7 compiler:  $typeScript7Version"
+    Write-Host "TypeScript 6 API bridge:$typeScript6CompatVersion"
 
     if (-not $VerifyOnly) {
         Write-Section "Rewrite workspace TypeScript declarations"
@@ -139,9 +140,9 @@ try {
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
 
-const [typeScript7Specifier, typeScript6Specifier] = process.argv.slice(2);
-if (!typeScript7Specifier || !typeScript6Specifier) {
-  throw new Error("Missing TypeScript package specifiers.");
+const [rootNativeAlias, rootCompatAlias, workspaceTypeScript] = process.argv.slice(2);
+if (!rootNativeAlias || !rootCompatAlias || !workspaceTypeScript) {
+  throw new Error("Missing TypeScript package policy arguments.");
 }
 
 const trackedFiles = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
@@ -153,40 +154,53 @@ const packageFiles = trackedFiles.filter(
 
 let updatedManifestCount = 0;
 let declarationCount = 0;
+const sections = [
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+  "optionalDependencies",
+];
 
 for (const file of packageFiles) {
   const source = fs.readFileSync(file, "utf8");
   const packageJson = JSON.parse(source);
   let changed = false;
 
-  for (const sectionName of [
-    "dependencies",
-    "devDependencies",
-    "peerDependencies",
-    "optionalDependencies",
-  ]) {
+  for (const sectionName of sections) {
     const section = packageJson[sectionName];
     if (!section || !Object.prototype.hasOwnProperty.call(section, "typescript")) {
       continue;
     }
 
     declarationCount += 1;
-    if (section.typescript !== typeScript6Specifier) {
-      section.typescript = typeScript6Specifier;
+    const expected = file === "package.json" ? rootCompatAlias : workspaceTypeScript;
+    if (section.typescript !== expected) {
+      section.typescript = expected;
       changed = true;
     }
   }
 
   if (file === "package.json") {
     packageJson.devDependencies ??= {};
-    if (packageJson.devDependencies["@typescript/native"] !== typeScript7Specifier) {
-      packageJson.devDependencies["@typescript/native"] = typeScript7Specifier;
+    if (packageJson.devDependencies["@typescript/native"] !== rootNativeAlias) {
+      packageJson.devDependencies["@typescript/native"] = rootNativeAlias;
       changed = true;
     }
 
     if (Object.prototype.hasOwnProperty.call(packageJson.devDependencies, "@typescript/typescript6")) {
       delete packageJson.devDependencies["@typescript/typescript6"];
       changed = true;
+    }
+  } else {
+    for (const sectionName of sections) {
+      const section = packageJson[sectionName];
+      if (!section) continue;
+      for (const legacyName of ["@typescript/native", "@typescript/typescript6"]) {
+        if (Object.prototype.hasOwnProperty.call(section, legacyName)) {
+          delete section[legacyName];
+          changed = true;
+        }
+      }
     }
   }
 
@@ -208,8 +222,9 @@ console.log(`Package manifests updated: ${updatedManifestCount}`);
 
             Invoke-Native -Name "Apply TypeScript 7 package policy" -FilePath "node" -Arguments @(
                 $transformScript,
-                $typeScript7Specifier,
-                $typeScript6Specifier
+                $typeScript7RootAlias,
+                $typeScript6RootAlias,
+                $typeScript7WorkspaceSpecifier
             )
         }
         finally {
@@ -263,7 +278,7 @@ console.log(`Package manifests updated: ${updatedManifestCount}`);
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
 
-const [typeScript7Specifier, typeScript6Specifier] = process.argv.slice(2);
+const [rootNativeAlias, rootCompatAlias, workspaceTypeScript] = process.argv.slice(2);
 const trackedFiles = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
   .split("\0")
   .filter(Boolean);
@@ -272,32 +287,34 @@ const packageFiles = trackedFiles.filter(
 );
 const violations = [];
 let declarationCount = 0;
+const sections = [
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+  "optionalDependencies",
+];
 
 for (const file of packageFiles) {
   const packageJson = JSON.parse(fs.readFileSync(file, "utf8"));
 
-  for (const sectionName of [
-    "dependencies",
-    "devDependencies",
-    "peerDependencies",
-    "optionalDependencies",
-  ]) {
+  for (const sectionName of sections) {
     const section = packageJson[sectionName];
     if (!section || !Object.prototype.hasOwnProperty.call(section, "typescript")) {
       continue;
     }
 
     declarationCount += 1;
-    if (section.typescript !== typeScript6Specifier) {
+    const expected = file === "package.json" ? rootCompatAlias : workspaceTypeScript;
+    if (section.typescript !== expected) {
       violations.push(
-        `${file}:${sectionName}.typescript=${JSON.stringify(section.typescript)}`,
+        `${file}:${sectionName}.typescript=${JSON.stringify(section.typescript)} expected=${JSON.stringify(expected)}`,
       );
     }
   }
 
   if (file === "package.json") {
     const nativeSpecifier = packageJson.devDependencies?.["@typescript/native"];
-    if (nativeSpecifier !== typeScript7Specifier) {
+    if (nativeSpecifier !== rootNativeAlias) {
       violations.push(
         `${file}:devDependencies.@typescript/native=${JSON.stringify(nativeSpecifier)}`,
       );
@@ -322,8 +339,9 @@ console.log(`Validated ${declarationCount} TypeScript declarations.`);
 
         Invoke-Native -Name "Enforce TypeScript 7 package policy" -FilePath "node" -Arguments @(
             $validationScript,
-            $typeScript7Specifier,
-            $typeScript6Specifier
+            $typeScript7RootAlias,
+            $typeScript6RootAlias,
+            $typeScript7WorkspaceSpecifier
         )
     }
     finally {
