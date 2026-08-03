@@ -289,8 +289,8 @@ func TestHandleMediaDownloadEndpointDBIntegration(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		var identity auth.Identity
 		switch authHeader {
-		case "Bearer operator-token":
-			identity = auth.Identity{Subject: "op-1", OperatorContextID: "local-dsh", Roles: []string{"operator"}, AuthState: "authenticated"}
+		case "Bearer partner-token":
+			identity = auth.Identity{Subject: "partner-1", OperatorContextID: "local-dsh", Roles: []string{"partner"}, AuthState: "authenticated"}
 		default:
 			w.WriteHeader(http.StatusUnauthorized)
 			return
@@ -308,7 +308,7 @@ func TestHandleMediaDownloadEndpointDBIntegration(t *testing.T) {
 
 	{
 		req := httptest.NewRequest(http.MethodGet, "/dsh/media?mediaRef=totally-unknown-ref-123456", nil)
-		req.Header.Set("Authorization", "Bearer operator-token")
+		req.Header.Set("Authorization", "Bearer partner-token")
 		rec := httptest.NewRecorder()
 		s.handleMediaDownload(rec, req)
 		if rec.Code != http.StatusNotFound {
