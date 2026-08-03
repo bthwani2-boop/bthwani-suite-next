@@ -39,22 +39,35 @@ test('mobile development data has one canonical implementation and checks all go
   assert.doesNotMatch(canonical, /field-local-001|captain-local-001/);
 });
 
-test('mobile preflight has one canonical runtime and data convergence owner', () => {
+test('mobile preflight delegates lifecycle and data convergence to the canonical runtime authority', () => {
   const compatibility = read('tools/scripts/ensure-mobile-dev-runtime.ps1');
   const canonical = read('apps/mobile/ensure-mobile-dev-runtime.ps1');
+  const phaseAdapter = read('apps/mobile/invoke-runtime-phase.ps1');
+  const runtimeAuthority = read('infra/docker/scripts/runtime.ps1');
 
   assert.match(compatibility, /apps\\mobile\\ensure-mobile-dev-runtime\.ps1/);
   for (const marker of [
-    '-Action", "seed"',
+    '-Action", "up"',
     '-Action", "bootstrap-dev"',
     'mobile-dev-data.mjs',
-    '--repair',
     '--check',
     'BthwaniMobileDevRuntimeBootstrap',
     'Ensure-BthwaniMobileBackend',
   ]) {
     assert.ok(canonical.includes(marker), `missing canonical mobile preflight marker: ${marker}`);
   }
+
+  assert.doesNotMatch(canonical, /converge-local-runtime-database\.ps1/);
+  assert.doesNotMatch(canonical, /repair-wlt-migration-ledger\.ps1/);
+  assert.doesNotMatch(canonical, /-Action", "seed"/);
+  assert.doesNotMatch(canonical, /--repair/);
+
+  assert.match(phaseAdapter, /tools\/scripts\/invoke-runtime-phase\.ps1|tools\\scripts\\invoke-runtime-phase\.ps1/);
+  assert.match(phaseAdapter, /No automatic database or ledger repair was attempted/);
+  assert.match(runtimeAuthority, /"bootstrap-dev"/);
+  assert.match(runtimeAuthority, /Invoke-GovernedMigrations/);
+  assert.match(runtimeAuthority, /Invoke-GovernedSeeds/);
+  assert.match(runtimeAuthority, /tools\/scripts\/mobile-dev-data\.mjs --repair/);
 });
 
 test('every mobile launcher reaches the shared preflight before Metro', () => {
