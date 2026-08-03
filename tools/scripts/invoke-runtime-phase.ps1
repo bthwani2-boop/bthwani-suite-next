@@ -204,10 +204,10 @@ try {
     }
   }
 
-  # Development catalog convergence has governed prerequisites: canonical SQL
-  # seeds establish relational truth and the media seed mirrors the exact
-  # governed fixture objects into the private MinIO bucket before readback.
-  if ($Action -eq "up" -and $ProfileList -contains "dsh") {
+  # Development catalog convergence is resettable local bootstrap state. Keep
+  # it bound to bootstrap-dev only; runtime:up must start services without
+  # replaying SQL scenario seeds or media fixture convergence.
+  if ($Action -eq "bootstrap-dev" -and $ProfileList -contains "dsh") {
     Write-Host "`n=== runtime:seed-prerequisites ==="
     $global:LASTEXITCODE = 0
     & $RuntimeScript -Action seed -Profiles $Profiles 2>&1 | Tee-Object -FilePath $LogPath -Append
