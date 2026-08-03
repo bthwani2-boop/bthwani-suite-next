@@ -34,6 +34,9 @@ type CaptainFinancialEligibilitySnapshot struct {
 	EvaluatedAt         time.Time `json:"evaluatedAt"`
 	ExpiresAt           time.Time `json:"expiresAt"`
 	LastFinancialSyncAt time.Time `json:"lastFinancialSyncAt"`
+	// IneligibilityReason is a compile-only alias for legacy internal call sites.
+	// It is never serialized or persisted and must be removed with those callers.
+	IneligibilityReason string `json:"-"`
 }
 
 func normalizeCaptainWltFinancialDecision(input CaptainWltFinancialEligibilityDecision) (CaptainWltFinancialEligibilityDecision, error) {
@@ -106,6 +109,9 @@ func UpsertCaptainFinancialEligibilityDecision(
 		&snapshot.ExpiresAt,
 		&snapshot.LastFinancialSyncAt,
 	)
+	if err == nil && !snapshot.Eligible {
+		snapshot.IneligibilityReason = snapshot.ReasonCode
+	}
 	return snapshot, err
 }
 
@@ -146,6 +152,9 @@ func GetCaptainFinancialEligibilitySnapshot(
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return snapshot, ErrCaptainNotEligible
+	}
+	if err == nil && !snapshot.Eligible {
+		snapshot.IneligibilityReason = snapshot.ReasonCode
 	}
 	return snapshot, err
 }
