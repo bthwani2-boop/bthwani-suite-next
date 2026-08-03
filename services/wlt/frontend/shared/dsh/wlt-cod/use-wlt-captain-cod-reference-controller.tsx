@@ -1,21 +1,15 @@
 import { useEffect, useReducer } from "react";
 import type { WltCaptainCodState } from "./wlt-captain-cod.states";
 import type { WltDshCodReference } from "../finance-boundary/wlt-dsh-boundary.types";
-import type { DshReferenceApiResult } from "../dsh-http/dsh-http-request";
+import type { DshReferenceApiResult } from "./wlt-cod.api";
 
-/**
- * Transport for the captain COD read model. WLT's internal /wlt/cod-records
- * read is service-authenticated, so the DSH surface injects a fetcher that
- * goes through the governed DSH finance proxy (actor-authenticated); WLT
- * keeps owning the read-model semantics and state machine.
- */
 export type WltCaptainCodRecordsFetcher = (
   captainId: string,
 ) => Promise<DshReferenceApiResult<WltDshCodReference[]>>;
 
 type Action =
   | { type: "LOADING" }
-  | { type: "LOADED"; records: import("../finance-boundary/wlt-dsh-boundary.types").WltDshCodReference[] }
+  | { type: "LOADED"; records: WltDshCodReference[] }
   | { type: "ERROR"; message: string }
   | { type: "NOT_AVAILABLE" };
 
@@ -37,11 +31,6 @@ export type WltCaptainCodController = {
   readonly retry: () => void;
 };
 
-/**
- * WLT-owned reference controller for a captain's COD (cash-on-delivery) liability.
- * DSH surfaces (app-captain) must consume COD/settlement figures through this
- * controller instead of computing or simulating their own financial state.
- */
 export function useWltDshCaptainCodReferenceController(
   captainId: string | null | undefined,
   fetchCodRecords: WltCaptainCodRecordsFetcher,
