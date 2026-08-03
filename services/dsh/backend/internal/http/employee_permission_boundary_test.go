@@ -13,10 +13,10 @@ func TestEmployeeExactPermissionDoesNotCrossDshDomains(t *testing.T) {
 	s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
-			Subject:   "operations-manager-1",
-			OperatorContextID:  "OperatorContext-main",
-			Roles:     []string{"employee", "workforce.supervise.employee"},
-			AuthState: "authenticated",
+			Subject:           "operations-manager-1",
+			OperatorContextID: "OperatorContext-main",
+			Roles:             []string{"employee", "workforce.supervise.employee"},
+			AuthState:         "authenticated",
 			Permissions: []auth.Permission{
 				{Service: "dsh", Surface: "control-panel", Action: OperationsPermissionRead, Scope: "all"},
 				{Service: "dsh", Surface: "control-panel", Action: OperationsPermissionManage, Scope: "all"},
@@ -46,7 +46,7 @@ func TestEmployeeExactPermissionDoesNotCrossDshDomains(t *testing.T) {
 		PartnersPermissionRead,
 		PartnersPermissionManage,
 		SupportPermissionManage,
-		PlatformPermissionManage,
+		DshDispatchCapacityPermissionManage,
 	} {
 		t.Run("deny-"+denied, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, "/dsh/operator/cross-domain", nil)
@@ -66,10 +66,10 @@ func TestRegularEmployeeHasNoImplicitOperatorAuthority(t *testing.T) {
 	s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
-			Subject:   "staff-1",
-			OperatorContextID:  "OperatorContext-main",
-			Roles:     []string{"employee"},
-			AuthState: "authenticated",
+			Subject:           "staff-1",
+			OperatorContextID: "OperatorContext-main",
+			Roles:             []string{"employee"},
+			AuthState:         "authenticated",
 		})
 	})
 
