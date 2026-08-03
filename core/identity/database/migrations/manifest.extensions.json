@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "service": "identity",
+  "extends": "manifest.json",
+  "migrations": [
+    {
+      "ordinal": 16,
+      "file": "identity-016_dsh_operational_policy_permissions.sql",
+      "sha256": "b23aa6aaf2147208f34ba8075924bd17eab7486c41faf44f208829422e72c020",
+      "historicalPrefix": "016",
+      "state": "ACTIVE"
+    }
+  ]
+}
