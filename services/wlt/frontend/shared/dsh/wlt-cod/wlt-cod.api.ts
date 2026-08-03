@@ -1,4 +1,4 @@
-import { dshFetchJson, dshPostJson } from "../dsh-link/dsh-http-request";
+import { dshFetchJson, dshPostJson } from "../dsh-link/dsh-reference-request";
 import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
 import type { components } from "../../../../clients/generated/wlt-api";
 
@@ -33,7 +33,7 @@ export type WltCodCustodyMutationResult = Omit<
 export async function fetchDshCaptainOwnCodRecords(): Promise<DshReferenceApiResult<WltDshCodReference[]>> {
   const result = await dshFetchJson<{ codRecords?: WltDshCodReference[] }>(
     `${resolveDshApiBaseUrl()}/dsh/captain/finance/cod-records`,
-    (body) => body as { codRecords?: WltDshCodReference[] },
+    (body: unknown) => body as { codRecords?: WltDshCodReference[] },
   );
   if (!result.ok) {
     return {
