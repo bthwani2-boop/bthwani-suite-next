@@ -1,10 +1,10 @@
 import type { DshCheckoutIntent } from "./checkout.types";
 import {
   checkoutBlockedPaymentUnavailableState,
-  checkoutIdleState,
   checkoutPaymentPendingState,
   checkoutReconciliationPendingState,
   checkoutSuccessState,
+  checkoutTerminalState,
 } from "./checkout.states";
 
 export function checkoutIntentHasWltSession(intent: DshCheckoutIntent): boolean {
@@ -15,7 +15,7 @@ export function resolveCheckoutIntentDisplayState(intent: DshCheckoutIntent) {
   switch (intent.state) {
     case "cancelled":
     case "expired":
-      return checkoutIdleState();
+      return checkoutTerminalState(intent, intent.state);
     case "payment_failed":
     case "wlt_handoff_failed":
       return checkoutBlockedPaymentUnavailableState();
