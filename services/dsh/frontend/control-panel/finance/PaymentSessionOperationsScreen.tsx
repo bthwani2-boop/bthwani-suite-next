@@ -95,7 +95,8 @@ export function PaymentSessionOperationsScreen() {
     }
     if (!timeline || !presentation) return null;
 
-    const unknown = requiresWltPaymentReconciliation(timeline.paymentSession.status);
+    const capabilities = timeline.paymentSession.capabilities;
+    const unknown = requiresWltPaymentReconciliation(capabilities);
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         <Card style={{ padding: "1.25rem" }}>
@@ -121,7 +122,7 @@ export function PaymentSessionOperationsScreen() {
             <CpButton
               variant="secondary"
               onClick={refreshProvider}
-              disabled={state === "refreshing" || presentation.terminal}
+              disabled={state === "refreshing" || capabilities.terminal}
             >
               {state === "refreshing" ? "جارٍ الاستعلام من المزود..." : "تحديث حالة المزود"}
             </CpButton>
