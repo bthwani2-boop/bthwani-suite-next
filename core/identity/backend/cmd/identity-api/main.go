@@ -17,6 +17,8 @@ import (
 	"identity-api/internal/identity"
 )
 
+const localBootstrapRetryInterval = 10 * time.Second
+
 func main() {
 	port := envOr("PORT", "8082")
 	databaseURL := os.Getenv("DATABASE_URL")
@@ -27,13 +29,16 @@ func main() {
 
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
-		log.Fatalf("[identity-api] open database: %v", err)
+		log.Fatalf("[identity-api] open database configuration: %v", err)
 	}
 	db.SetMaxOpenConns(10)
 	db.SetConnMaxIdleTime(30 * time.Second)
-	if err := db.Ping(); err != nil {
-		log.Fatalf("[identity-api] ping database: %v", err)
+
+	startupProbeContext, startupProbeCancel := context.WithTimeout(context.Background(), 2*time.Second)
+	if err := db.PingContext(startupProbeContext); err != nil {
+		log.Printf("[identity-api] database unavailable at startup; liveness remains available and readiness is fail-closed")
 	}
+	startupProbeCancel()
 
 	repository := identity.NewRepository(db)
 	localBootstrap := identity.LocalBootstrap{
@@ -41,19 +46,7 @@ func main() {
 		Password:          os.Getenv("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD"),
 		OperatorContextID: bootstrapOperatorContextID,
 	}
-
-	if localBootstrap.Enabled && localBootstrap.OperatorContextID == "" {
-		log.Fatal("[identity-api] BTHWANI_OPERATOR_CONTEXT_ID is required when local bootstrap is enabled")
-	}
-	if err := repository.BootstrapLocalActors(context.Background(), localBootstrap); err != nil {
-		log.Fatalf("[identity-api] local bootstrap: %v", err)
-	}
-	if err := repository.BootstrapLocalPlatformActors(context.Background(), localBootstrap); err != nil {
-		log.Fatalf("[identity-api] local platform separation bootstrap: %v", err)
-	}
-	if err := repository.BootstrapSovereignLeadershipAccess(context.Background(), localBootstrap); err != nil {
-		log.Fatalf("[identity-api] local sovereign leadership bootstrap: %v", err)
-	}
+	go retryLocalBootstrap(repository, localBootstrap)
 
 	router := identityhttp.NewRouter(repository)
 
@@ -96,6 +89,36 @@ func main() {
 	defer cancel()
 	_ = server.Shutdown(ctx)
 	_ = db.Close()
+}
+
+func retryLocalBootstrap(repository *identity.Repository, bootstrap identity.LocalBootstrap) {
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+		err := bootstrapLocalIdentityState(ctx, repository, bootstrap)
+		cancel()
+		if err == nil {
+			if bootstrap.Enabled {
+				log.Printf("[identity-api] local development identity bootstrap is ready")
+			}
+			return
+		}
+		log.Printf("[identity-api] local bootstrap deferred; readiness remains authoritative")
+		time.Sleep(localBootstrapRetryInterval)
+	}
+}
+
+func bootstrapLocalIdentityState(
+	ctx context.Context,
+	repository *identity.Repository,
+	bootstrap identity.LocalBootstrap,
+) error {
+	if err := repository.BootstrapLocalActors(ctx, bootstrap); err != nil {
+		return err
+	}
+	if err := repository.BootstrapLocalPlatformActors(ctx, bootstrap); err != nil {
+		return err
+	}
+	return repository.BootstrapSovereignLeadershipAccess(ctx, bootstrap)
 }
 
 func envOr(name, fallback string) string {
