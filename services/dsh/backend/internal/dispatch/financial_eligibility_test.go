@@ -7,14 +7,15 @@ import (
 )
 
 func TestNormalizeCaptainWltFinancialDecision(t *testing.T) {
-	evaluatedAt := time.Date(2026, 8, 3, 3, 0, 0, 0, time.UTC)
+	evaluatedAt := time.Now().UTC().Add(-time.Second)
+	expiresAt := evaluatedAt.Add(2 * time.Minute)
 	decision, err := normalizeCaptainWltFinancialDecision(CaptainWltFinancialEligibilityDecision{
 		WltDecisionID:    " wlt-decision-1 ",
-		WltReasonCode:    " WLT_WALLET_ACTIVE ",
-		WltPolicyVersion: " wallet-status@1 ",
+		WltReasonCode:    " WLT_DISPATCH_FINANCIALLY_ELIGIBLE ",
+		WltPolicyVersion: " dispatch-balance@8 ",
 		Eligible:         true,
 		EvaluatedAt:      evaluatedAt,
-		TTLSeconds:       120,
+		ExpiresAt:        expiresAt,
 	})
 	if err != nil {
 		t.Fatalf("unexpected validation error: %v", err)
@@ -22,41 +23,63 @@ func TestNormalizeCaptainWltFinancialDecision(t *testing.T) {
 	if decision.WltDecisionID != "wlt-decision-1" || decision.SnapshotReference != "wlt-decision-1" {
 		t.Fatalf("decision identifiers were not normalized: %+v", decision)
 	}
-	if decision.WltReasonCode != "WLT_WALLET_ACTIVE" || decision.WltPolicyVersion != "wallet-status@1" {
+	if decision.WltReasonCode != "WLT_DISPATCH_FINANCIALLY_ELIGIBLE" || decision.WltPolicyVersion != "dispatch-balance@8" {
 		t.Fatalf("decision metadata was not normalized: %+v", decision)
 	}
-	if !decision.EvaluatedAt.Equal(evaluatedAt) {
-		t.Fatalf("evaluatedAt changed: %s", decision.EvaluatedAt)
+	if !decision.EvaluatedAt.Equal(evaluatedAt) || !decision.ExpiresAt.Equal(expiresAt) {
+		t.Fatalf("decision time window changed: %+v", decision)
 	}
 }
 
 func TestNormalizeCaptainWltFinancialDecisionRejectsMissingMetadata(t *testing.T) {
-	_, err := normalizeCaptainWltFinancialDecision(CaptainWltFinancialEligibilityDecision{Eligible: true, TTLSeconds: 120})
+	now := time.Now().UTC()
+	_, err := normalizeCaptainWltFinancialDecision(CaptainWltFinancialEligibilityDecision{
+		Eligible: true, EvaluatedAt: now, ExpiresAt: now.Add(time.Minute),
+	})
 	if err == nil || !strings.Contains(err.Error(), "WLT financial eligibility decision metadata") {
 		t.Fatalf("expected missing metadata error, got %v", err)
 	}
 }
 
-func TestNormalizeCaptainWltFinancialDecisionRejectsInvalidTtl(t *testing.T) {
+func TestNormalizeCaptainWltFinancialDecisionRejectsInvalidTimeWindow(t *testing.T) {
+	now := time.Now().UTC()
 	_, err := normalizeCaptainWltFinancialDecision(CaptainWltFinancialEligibilityDecision{
 		WltDecisionID:    "decision",
-		WltReasonCode:    "WLT_WALLET_ACTIVE",
-		WltPolicyVersion: "wallet-status@1",
+		WltReasonCode:    "WLT_DISPATCH_FINANCIALLY_ELIGIBLE",
+		WltPolicyVersion: "dispatch-balance@8",
 		Eligible:         true,
-		TTLSeconds:       10,
+		EvaluatedAt:      now,
+		ExpiresAt:        now,
 	})
-	if err == nil || !strings.Contains(err.Error(), "ttl") {
-		t.Fatalf("expected ttl error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "time window") {
+		t.Fatalf("expected time-window error, got %v", err)
+	}
+}
+
+func TestNormalizeCaptainWltFinancialDecisionRejectsExpiredDecision(t *testing.T) {
+	now := time.Now().UTC()
+	_, err := normalizeCaptainWltFinancialDecision(CaptainWltFinancialEligibilityDecision{
+		WltDecisionID:    "decision",
+		WltReasonCode:    "WLT_DISPATCH_FINANCIALLY_ELIGIBLE",
+		WltPolicyVersion: "dispatch-balance@8",
+		Eligible:         true,
+		EvaluatedAt:      now.Add(-2 * time.Minute),
+		ExpiresAt:        now.Add(-time.Minute),
+	})
+	if err == nil || !strings.Contains(err.Error(), "expired") {
+		t.Fatalf("expected expired-decision error, got %v", err)
 	}
 }
 
 func TestNormalizeCaptainWltFinancialDecisionCopiesReasonForIneligibleDecision(t *testing.T) {
+	now := time.Now().UTC()
 	decision, err := normalizeCaptainWltFinancialDecision(CaptainWltFinancialEligibilityDecision{
 		WltDecisionID:    "decision",
 		WltReasonCode:    "WLT_WALLET_NOT_ACTIVE",
-		WltPolicyVersion: "wallet-status@1",
+		WltPolicyVersion: "dispatch-balance@8",
 		Eligible:         false,
-		TTLSeconds:       120,
+		EvaluatedAt:      now,
+		ExpiresAt:        now.Add(time.Minute),
 	})
 	if err != nil {
 		t.Fatalf("unexpected validation error: %v", err)
