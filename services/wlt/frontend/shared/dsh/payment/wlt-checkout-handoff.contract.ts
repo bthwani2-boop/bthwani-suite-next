@@ -1,16 +1,8 @@
-import type { WltPaymentStatusReference } from "../finance-boundary/wlt-dsh-boundary.types";
+import type { components } from "@bthwani/wlt-openapi";
 
-export type WltPaymentCallbackEnvelope = {
-  readonly paymentSessionId: string;
-  readonly checkoutIntentId: string;
-  readonly paymentStatus: WltPaymentStatusReference;
-  readonly occurredAt: string;
-};
-
-export type DshCheckoutPaymentReference = {
-  readonly paymentSessionId: string;
-  readonly paymentStatus: WltPaymentStatusReference;
-};
+/** Cross-service envelopes are owned by WLT OpenAPI; this file exposes aliases only. */
+export type WltPaymentCallbackEnvelope = components["schemas"]["WltPaymentCallbackEnvelope"];
+export type DshCheckoutPaymentReference = components["schemas"]["DshCheckoutPaymentReference"];
 
 export const WLT_DSH_CHECKOUT_BOUNDARY = {
   owner: "wlt",

@@ -7,6 +7,7 @@ modules:
   - wlt.commercial.openapi.yaml
   - wlt.common.openapi.yaml
   - wlt.delivery-collections.openapi.yaml
+  - wlt.dispatch-financial-eligibility.openapi.yaml
   - wlt.payments.openapi.yaml
   - wlt.payout-failure-boundary.openapi.yaml
   - wlt.payouts-destinations.openapi.yaml
@@ -18,3 +19,4 @@ modules:
 
 overlays:
   - wlt.payment-session-capabilities.overlay.yaml
+  - wlt.dsh-checkout-handoff.overlay.yaml

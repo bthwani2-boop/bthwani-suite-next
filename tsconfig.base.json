@@ -36,6 +36,8 @@
       "expo-constants": ["./services/dsh/node_modules/expo-constants"],
       "expo-crypto": ["./services/dsh/node_modules/expo-crypto"],
       "@dsh-shared/*": ["./services/dsh/frontend/shared/*"],
+      "@bthwani/dsh-openapi": ["./services/dsh/clients/generated/dsh-api.ts"],
+      "@bthwani/wlt-openapi": ["./services/wlt/clients/generated/wlt-api.ts"],
       "@bthwani/dsh/control-panel": ["./services/dsh/frontend/control-panel/index.ts"],
       "@bthwani/dsh/control-panel/*": ["./services/dsh/frontend/control-panel/*"],
       "@bthwani/control-panel": ["./shared/control-panel/src/index.ts"],

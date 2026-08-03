@@ -14,7 +14,7 @@ import (
 
 const (
 	dshMigrationServiceName = "dsh"
-	dshLatestMigration      = "dsh-971_partner_brand_schema_recovery.sql"
+	dshLatestMigration      = "dsh-972_financial_eligibility_wlt_decision_boundary.sql"
 	dshReadinessTimeout     = 2 * time.Second
 )
 
@@ -42,7 +42,8 @@ func (s sqlRuntimeReadinessStore) Ready(ctx context.Context) (bool, error) {
 			AND to_regclass('public.dsh_orders') IS NOT NULL
 			AND to_regclass('public.dsh_wlt_outbox_events') IS NOT NULL
 			AND to_regclass('public.dsh_service_area_versions') IS NOT NULL
-			AND to_regclass('public.dsh_partner_brands') IS NOT NULL`,
+			AND to_regclass('public.dsh_partner_brands') IS NOT NULL
+			AND to_regclass('public.dsh_captain_financial_eligibility') IS NOT NULL`,
 		dshMigrationServiceName,
 		dshLatestMigration,
 	).Scan(&ready)

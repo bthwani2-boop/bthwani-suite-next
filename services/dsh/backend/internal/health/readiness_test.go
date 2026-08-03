@@ -70,32 +70,47 @@ func TestReadinessRequiresAllDependencies(t *testing.T) {
 	}
 }
 
-func TestReadinessMigrationMatchesActiveManifest(t *testing.T) {
+type migrationManifestDocument struct {
+	Migrations []struct {
+		Ordinal int    `json:"ordinal"`
+		File    string `json:"file"`
+		State   string `json:"state"`
+	} `json:"migrations"`
+}
+
+func TestReadinessMigrationMatchesGovernedManifestSet(t *testing.T) {
 	_, testFile, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("cannot resolve test source path")
 	}
-	manifestPath := filepath.Clean(filepath.Join(filepath.Dir(testFile), "../../../database/migrations/manifest.json"))
-	content, err := os.ReadFile(manifestPath)
-	if err != nil {
-		t.Fatal(err)
+	migrationDirectory := filepath.Clean(filepath.Join(filepath.Dir(testFile), "../../../database/migrations"))
+	manifestPaths := []string{
+		filepath.Join(migrationDirectory, "manifest.json"),
+		filepath.Join(migrationDirectory, "manifest.extensions.json"),
 	}
-	var manifest struct {
-		Migrations []struct {
-			File  string `json:"file"`
-			State string `json:"state"`
-		} `json:"migrations"`
-	}
-	if err := json.Unmarshal(content, &manifest); err != nil {
-		t.Fatal(err)
-	}
-	active := make([]string, 0, 1)
-	for _, migration := range manifest.Migrations {
-		if migration.State == "ACTIVE" {
-			active = append(active, migration.File)
+
+	latestOrdinal := -1
+	latestActive := ""
+	for _, manifestPath := range manifestPaths {
+		content, err := os.ReadFile(manifestPath)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) && filepath.Base(manifestPath) == "manifest.extensions.json" {
+				continue
+			}
+			t.Fatal(err)
+		}
+		var manifest migrationManifestDocument
+		if err := json.Unmarshal(content, &manifest); err != nil {
+			t.Fatal(err)
+		}
+		for _, migration := range manifest.Migrations {
+			if migration.State == "ACTIVE" && migration.Ordinal > latestOrdinal {
+				latestOrdinal = migration.Ordinal
+				latestActive = migration.File
+			}
 		}
 	}
-	if len(active) != 1 || active[0] != dshLatestMigration {
-		t.Fatalf("DSH readiness migration drift: active=%v runtime=%s", active, dshLatestMigration)
+	if latestActive != dshLatestMigration {
+		t.Fatalf("DSH readiness migration drift: latest_active=%s runtime=%s", latestActive, dshLatestMigration)
 	}
 }

@@ -1,90 +1,22 @@
+import type { components } from "@bthwani/wlt-openapi";
 import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
 import { createDshHttpClient } from "../dsh-link/dsh-http-request";
 
-import type { RepresentativeActorType } from '../actor-wallet/actor-wallet.api';
+import type { RepresentativeActorType } from "../actor-wallet/actor-wallet.api";
 export type { RepresentativeActorType };
-export type CommissionStatus =
-  | "pending"
-  | "confirmed"
-  | "settled"
-  | "rejected"
-  | "reversed"
-  | string;
 
-export type Commission = {
-  readonly id: string;
-  readonly beneficiaryActorId: string;
-  readonly beneficiaryActorType: RepresentativeActorType | string;
-  readonly sourceType: string;
-  readonly sourceId: string;
-  readonly visitId: string | null;
-  readonly storeId: string | null;
-  readonly commissionPolicyId: string | null;
-  readonly commissionType: string;
-  readonly amountMinorUnits: number;
-  readonly currency: string;
-  readonly status: CommissionStatus;
-  readonly settledAt: string | null;
-  readonly confirmedAt: string | null;
-  readonly rejectedAt: string | null;
-  readonly reversedAt: string | null;
-  readonly resolutionNote: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
+export type CommissionStatus = components["schemas"]["CommissionStatus"];
+export type Commission = components["schemas"]["Commission"];
+export type CommissionDetail = components["schemas"]["CommissionDetail"];
+export type CommissionEvidence = NonNullable<CommissionDetail["evidence"]>;
+export type CommissionAdjustment = CommissionDetail["adjustments"][number];
+export type SettlementEvidence = components["schemas"]["SettlementEvidence"];
 
-export type CommissionEvidence = {
-  readonly policyId: string;
-  readonly policyVersion: number;
-  readonly sourceEvidenceId: string;
-  readonly sourceEvidenceHash: string;
-  readonly sourceEvidenceStatus: "completed" | "delivered" | "approved" | string;
-  readonly grossBasisMinorUnits: number;
-  readonly calculatedAmountMinorUnits: number;
-  readonly verifiedAt: string;
-};
-
-export type CommissionAdjustment = {
-  readonly id: string;
-  readonly deltaMinorUnits: number;
-  readonly reason: string;
-  readonly operatorId: string;
-  readonly createdAt: string;
-};
-
-export type CommissionDetail = {
-  readonly commission: Commission;
-  readonly evidence?: CommissionEvidence;
-  readonly adjustments: readonly CommissionAdjustment[];
-};
-
-export type SettlementEvidence = {
-  readonly orderId: string;
-  readonly pricingSnapshotHash: string;
-  readonly completionEventId: string;
-  readonly completionEvidenceHash: string;
-  readonly cancellationStatus: "not_cancelled" | "cancelled" | string;
-  readonly originalGrossMinorUnits: number;
-  readonly completedRefundMinorUnits: number;
-  readonly settlementBasisMinorUnits: number;
-  readonly refundEvidenceCount: number;
-  readonly verifiedAt: string;
-};
-
-export type CommissionPolicyInput = {
-  readonly policyId: string;
-  readonly commissionType: string;
-  readonly sourceType: string;
-  readonly beneficiaryActorType: RepresentativeActorType;
-  readonly calculationType: "fixed" | "basis_points";
-  readonly fixedAmountMinorUnits: number;
-  readonly basisPoints: number;
-  readonly minimumAmountMinorUnits: number;
-  readonly maximumAmountMinorUnits?: number | null;
-  readonly currency: string;
-  readonly status: "active" | "inactive";
-  readonly changeReason: string;
-};
+/** Operator identity is resolved by the authenticated backend. */
+export type CommissionPolicyInput = Omit<
+  components["schemas"]["CommissionPolicyInput"],
+  "operatorId"
+>;
 
 const { request } = createDshHttpClient(
   resolveDshApiBaseUrl(),
@@ -187,12 +119,9 @@ export const adjustCommission = (
 
 export const confirmCommission = (commissionId: string) =>
   commissionAction(commissionId, "confirm", {});
-
 export const settleCommission = (commissionId: string) =>
   commissionAction(commissionId, "settle", {});
-
 export const rejectCommission = (commissionId: string, reason: string) =>
   commissionAction(commissionId, "reject", { reason });
-
 export const reverseCommission = (commissionId: string, reason: string) =>
   commissionAction(commissionId, "reverse", { reason });

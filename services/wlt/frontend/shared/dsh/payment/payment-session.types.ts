@@ -1,4 +1,4 @@
-import type { components, paths } from "../../../../clients/generated/wlt-api";
+import type { components, paths } from "@bthwani/wlt-openapi";
 
 /** Canonical WLT contract aliases. No status, DTO, envelope, or behavior is owned here. */
 export type WltPaymentSessionStatus = components["schemas"]["PaymentStatus"];

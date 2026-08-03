@@ -5,6 +5,7 @@ Set-Location -LiteralPath $script:RepoRoot
 $script:ComposeFile = Join-Path $script:RepoRoot "infra/docker/compose.runtime.yml"
 $script:FinancialComposeFile = Join-Path $script:RepoRoot "infra/docker/compose.financial-simulators.yml"
 $script:EnvFile = Join-Path $script:RepoRoot "infra/docker/env/runtime.env.example"
+$script:MigrationRunner = Join-Path $script:RepoRoot "tools/scripts/invoke-service-migrations.ps1"
 $script:ComposeArgs = @(
   "--env-file", $script:EnvFile,
   "-f", $script:ComposeFile,
@@ -18,6 +19,7 @@ $script:ComposeArgs = @(
 )
 $script:PostgresAdminUser = if ($env:BTHWANI_POSTGRES_USER) { $env:BTHWANI_POSTGRES_USER } else { "bthwani_runtime" }
 $script:PostgresAdminDatabase = if ($env:BTHWANI_POSTGRES_DB) { $env:BTHWANI_POSTGRES_DB } else { "bthwani_runtime" }
+$script:PostgresPort = if ($env:BTHWANI_POSTGRES_PORT) { $env:BTHWANI_POSTGRES_PORT } else { "55432" }
 
 function Invoke-PlatformCompose {
   param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)
@@ -41,47 +43,29 @@ function Ensure-PlatformDatabases {
   if ($LASTEXITCODE -ne 0) { throw "failed to ensure platform runtime databases" }
 }
 
-function Invoke-PlatformDatabasePsql {
+function Invoke-PlatformServiceMigrations {
   param(
+    [Parameter(Mandatory = $true)][string]$ServiceKey,
     [Parameter(Mandatory = $true)][string]$User,
-    [Parameter(Mandatory = $true)][string]$Database,
-    [Parameter(Mandatory = $true)][string]$Sql
-  )
-  $result = $Sql | docker compose @script:ComposeArgs exec -T postgres psql -U $User -d $Database -v ON_ERROR_STOP=1 -tA
-  if ($LASTEXITCODE -ne 0) { throw "psql failed for database $Database" }
-  return ($result -join "`n").Trim()
-}
-
-function Invoke-PlatformDatabaseMigrate {
-  param(
-    [Parameter(Mandatory = $true)][string]$User,
+    [Parameter(Mandatory = $true)][string]$Password,
     [Parameter(Mandatory = $true)][string]$Database,
     [Parameter(Mandatory = $true)][string]$MigrationDirectory
   )
-  $migrationDir = Join-Path $script:RepoRoot $MigrationDirectory
-  $migrationFiles = @(Get-ChildItem -LiteralPath $migrationDir -Filter "*.sql" | Sort-Object Name)
-  if ($migrationFiles.Count -eq 0) { throw "no migrations found in $MigrationDirectory" }
 
-  Invoke-PlatformDatabasePsql -User $User -Database $Database -Sql @'
-CREATE TABLE IF NOT EXISTS runtime_schema_migrations (
-  migration_name TEXT PRIMARY KEY,
-  checksum TEXT NOT NULL,
-  applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-'@ | Out-Null
+  if (-not (Test-Path -LiteralPath $script:MigrationRunner -PathType Leaf)) {
+    throw "governed migration runner not found: $script:MigrationRunner"
+  }
+  if (-not (Get-Command psql -ErrorAction SilentlyContinue)) {
+    throw "psql is required to apply governed platform runtime migrations"
+  }
 
-  foreach ($file in $migrationFiles) {
-    $checksum = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-    $recorded = Invoke-PlatformDatabasePsql -User $User -Database $Database -Sql "SELECT checksum FROM runtime_schema_migrations WHERE migration_name = '$($file.Name)';"
-    if ($recorded -eq $checksum) {
-      Write-Host "Skipping applied migration in ${Database}: $($file.Name)"
-      continue
-    }
-    if ($recorded -ne "") { throw "migration checksum mismatch in ${Database}: $($file.Name)" }
-    Get-Content -LiteralPath $file.FullName -Raw | docker compose @script:ComposeArgs exec -T postgres psql -U $User -d $Database -v ON_ERROR_STOP=1
-    if ($LASTEXITCODE -ne 0) { throw "migration failed in ${Database}: $($file.Name)" }
-    Invoke-PlatformDatabasePsql -User $User -Database $Database -Sql "INSERT INTO runtime_schema_migrations (migration_name, checksum) VALUES ('$($file.Name)', '$checksum');" | Out-Null
-    Write-Host "Applied migration in ${Database}: $($file.Name)"
+  $databaseUrl = "postgresql://${User}:${Password}@127.0.0.1:$($script:PostgresPort)/${Database}?sslmode=disable"
+  & pwsh -NoProfile -ExecutionPolicy Bypass -File $script:MigrationRunner `
+    -ServiceKey $ServiceKey `
+    -MigrationDirectory $MigrationDirectory `
+    -DatabaseUrl $databaseUrl
+  if ($LASTEXITCODE -ne 0) {
+    throw "governed migrations failed for service '$ServiceKey' (exit $LASTEXITCODE)"
   }
 }
 
@@ -89,11 +73,11 @@ function Invoke-PlatformMigrations {
   Invoke-PlatformCompose up -d postgres
   Wait-PlatformPostgres
   Ensure-PlatformDatabases
-  Invoke-PlatformDatabaseMigrate -User "identity_runtime" -Database "identity_runtime" -MigrationDirectory "core/identity/database/migrations"
-  Invoke-PlatformDatabaseMigrate -User "providers_runtime" -Database "providers_runtime" -MigrationDirectory "core/providers/database/migrations"
-  Invoke-PlatformDatabaseMigrate -User "wlt_runtime" -Database "wlt_runtime" -MigrationDirectory "services/wlt/database/migrations"
-  Invoke-PlatformDatabaseMigrate -User "dsh_runtime" -Database "dsh_runtime" -MigrationDirectory "services/dsh/database/migrations"
-  Invoke-PlatformDatabaseMigrate -User "platform_control_runtime" -Database "platform_control_runtime" -MigrationDirectory "core/platform-control/database/migrations"
+  Invoke-PlatformServiceMigrations -ServiceKey "identity" -User "identity_runtime" -Password "identity_runtime_password" -Database "identity_runtime" -MigrationDirectory "core/identity/database/migrations"
+  Invoke-PlatformServiceMigrations -ServiceKey "providers" -User "providers_runtime" -Password "providers_runtime_password" -Database "providers_runtime" -MigrationDirectory "core/providers/database/migrations"
+  Invoke-PlatformServiceMigrations -ServiceKey "wlt" -User "wlt_runtime" -Password "wlt_runtime_password" -Database "wlt_runtime" -MigrationDirectory "services/wlt/database/migrations"
+  Invoke-PlatformServiceMigrations -ServiceKey "dsh" -User "dsh_runtime" -Password "dsh_runtime_password" -Database "dsh_runtime" -MigrationDirectory "services/dsh/database/migrations"
+  Invoke-PlatformServiceMigrations -ServiceKey "platform-control" -User "platform_control_runtime" -Password "platform_control_runtime_password" -Database "platform_control_runtime" -MigrationDirectory "core/platform-control/database/migrations"
 }
 
 function Wait-PlatformHttpReady {

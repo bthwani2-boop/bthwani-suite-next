@@ -13,7 +13,7 @@ import (
 
 const (
 	wltMigrationServiceName = "wlt"
-	wltLatestMigration      = "wlt-904_reconciliation_claim_guard_repair.sql"
+	wltLatestMigration      = "wlt-905_dispatch_financial_eligibility_decisions.sql"
 	wltReadinessTimeout     = 2 * time.Second
 )
 
@@ -43,7 +43,9 @@ func (s sqlRuntimeReadinessStore) Ready(ctx context.Context) (bool, error) {
 			AND to_regclass('public.wlt_cod_records') IS NOT NULL
 			AND to_regclass('public.wlt_settlements') IS NOT NULL
 			AND to_regclass('public.wlt_refunds') IS NOT NULL
-			AND to_regclass('public.wlt_payout_requests') IS NOT NULL`,
+			AND to_regclass('public.wlt_payout_requests') IS NOT NULL
+			AND to_regclass('public.wlt_dispatch_financial_eligibility_policies') IS NOT NULL
+			AND to_regclass('public.wlt_dispatch_financial_eligibility_decisions') IS NOT NULL`,
 		wltMigrationServiceName,
 		wltLatestMigration,
 	).Scan(&ready)
