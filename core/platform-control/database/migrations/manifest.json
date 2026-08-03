@@ -66,7 +66,7 @@
       "file": "platform-009_partner_commercial_truth_boundary.sql",
       "sha256": "e72e25fee9269e352a6ff208f48f164e5ef7e91f71fb4782d85530cb72bab0e8",
       "historicalPrefix": "009",
-      "state": "ACTIVE_CUTOVER"
+      "state": "ACTIVE"
     }
   ]
 }
