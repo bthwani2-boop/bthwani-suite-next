@@ -50,6 +50,8 @@ const retiredParallelAuthorities = [
   "services/dsh/frontend/shared/checkout/dsh-client-binding.contracts.ts",
   "services/dsh/frontend/shared/identity-access/dsh-role-permission.model.ts",
   "services/dsh/frontend/shared/identity-access/surface-visibility.policy.ts",
+  "services/dsh/frontend/shared/catalog/central-catalog.controller-core.ts",
+  "services/dsh/frontend/shared/catalog/central-catalog.policy.ts",
   "services/wlt/frontend/shared/dsh/payment/wlt-payment-session.types.ts",
   "services/wlt/frontend/control-panel/_skeleton-proof/WltFinanceReadOnlySkeletonProof.tsx",
 ];
@@ -117,6 +119,41 @@ describe("DSH/WLT frontend truth authority", () => {
       [],
       `WLT DSH consumers must use the canonical dsh-link transport:\n${violations.join("\n")}`,
     );
+  });
+
+  it("keeps catalog controllers free of DSH-owned financial policy authority", () => {
+    const controller = read("services/dsh/frontend/shared/catalog/use-central-catalog-controller.tsx");
+    const occClient = read("services/dsh/frontend/shared/catalog/central-catalog-occ.api.ts");
+
+    for (const marker of [
+      "CatalogPlatformPolicy",
+      "fetchCatalogPlatformPolicies",
+      "updateCatalogPlatformPolicy",
+      "reloadPolicies",
+      "updatePolicy",
+      "policies:",
+    ]) {
+      assert.equal(
+        controller.includes(marker),
+        false,
+        `catalog controller must not expose financial policy authority: ${marker}`,
+      );
+    }
+
+    for (const marker of [
+      "CatalogPlatformPolicy",
+      "PolicyMutationInput",
+      "updateCatalogPlatformPolicyOCC",
+      "platformCommissionRate",
+      "fieldPartnerOnboardingCommissionAmount",
+      "storeOnboardingFeeAmount",
+    ]) {
+      assert.equal(
+        occClient.includes(marker),
+        false,
+        `catalog OCC client must not mutate financial policy authority: ${marker}`,
+      );
+    }
   });
 
   it("keeps partner order mapping free of local capability and financial-total authority", () => {
