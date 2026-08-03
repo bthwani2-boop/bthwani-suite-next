@@ -18,6 +18,7 @@
         { "scope": "leadership:create", "domain": "workforce" },
         { "scope": "leadership:read", "domain": "workforce" },
         { "scope": "maps:invoke", "domain": "providers" },
+        { "scope": "pii:read", "domain": "workforce" },
         { "scope": "platform:audit:read", "domain": "platform-control" },
         { "scope": "platform:health:read", "domain": "platform-control" },
         { "scope": "platform:read", "domain": "platform-control" },
@@ -94,9 +95,7 @@
         { "scope": "platform.read", "domain": "dsh" },
         { "scope": "provider.documents:upload", "domain": "dsh" },
         { "scope": "support.manage", "domain": "dsh" },
-        { "scope": "support.read", "domain": "dsh" },
-        { "scope": "workforce.scopes.manage", "domain": "dsh" },
-        { "scope": "workforce.scopes.read", "domain": "dsh" }
+        { "scope": "support.read", "domain": "dsh" }
       ]
     },
     {
