@@ -57,7 +57,9 @@
     "@types/node": "24.10.1",
     "@types/react": "19.2.17",
     "next": "^16.2.11",
-    "react": "19.2.3"
+    "react": "19.2.3",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "@typescript/native": "npm:typescript@7.0.2"
   },
   "exports": {
     "./control-panel": "./frontend/control-panel/index.ts",

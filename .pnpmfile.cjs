@@ -1,9 +1,5 @@
 "use strict";
 
-// Central pnpm install policy for the current mobile line.
-// Keep mobile apps on Expo SDK 56 until an explicit SDK migration is approved.
-// This hook prevents accidental Expo 57 pulls from root/transitive packages during pnpm install and EAS builds.
-
 const EXPO_SDK_56_FORCED = Object.freeze({
   "expo-background-task": "~56.0.23",
   "expo-constants": "~56.0.22",
@@ -29,14 +25,25 @@ function applyForcedExpoSdk56Versions(pkg) {
       }
     }
   }
+  return pkg;
+}
 
+function applyCompilerApiBridge(pkg) {
+  if (pkg.name !== "openapi-typescript") return pkg;
+
+  if (pkg.peerDependencies) delete pkg.peerDependencies.typescript;
+  if (pkg.peerDependenciesMeta) delete pkg.peerDependenciesMeta.typescript;
+  pkg.dependencies = {
+    ...pkg.dependencies,
+    typescript: "npm:@typescript/typescript6@6.0.2",
+  };
   return pkg;
 }
 
 module.exports = {
   hooks: {
     readPackage(pkg) {
-      return applyForcedExpoSdk56Versions(pkg);
+      return applyCompilerApiBridge(applyForcedExpoSdk56Versions(pkg));
     },
   },
 };
