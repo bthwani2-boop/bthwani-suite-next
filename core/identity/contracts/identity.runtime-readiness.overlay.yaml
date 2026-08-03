@@ -93,12 +93,18 @@ actions:
           const: IDENTITY_NOT_READY
         message:
           type: string
+  - target: $.components.responses.ServiceUnavailable.content['application/json'].schema['$ref']
+    description: Remove the generic-only response authority before installing the governed union.
+    remove: true
   - target: $.components.responses.ServiceUnavailable.content['application/json'].schema
     description: A 503 may be the structured fail-closed runtime status or an operation-specific API error.
     update:
       oneOf:
         - $ref: '#/components/schemas/RuntimeStatus'
         - $ref: '#/components/schemas/ApiError'
+  - target: $.paths['/identity/readiness'].get.responses['503']['$ref']
+    description: Remove the generic response reference before defining the readiness-specific response.
+    remove: true
   - target: $.paths['/identity/readiness'].get.responses['503']
     update:
       description: Identity is alive but must not receive authentication or activation traffic.
