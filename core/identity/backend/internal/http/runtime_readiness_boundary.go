@@ -249,7 +249,11 @@ func runRuntimeCheck(
 	}
 	if err != nil {
 		status.Status = "FAIL"
-		status.ReasonCode = reasonCode
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			status.ReasonCode = reasonDependencyTimeout
+		} else {
+			status.ReasonCode = reasonCode
+		}
 	}
 	return status
 }
