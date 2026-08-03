@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "service": "wlt",
+  "extends": "manifest.json",
+  "migrations": [
+    {
+      "ordinal": 67,
+      "file": "wlt-905_dispatch_financial_eligibility_decisions.sql",
+      "sha256": "f89f25678618cd5eaa886dd327d5985079bd01a788f68068d9b809c4066ce3aa",
+      "historicalPrefix": "905",
+      "state": "ACTIVE"
+    }
+  ]
+}
