@@ -44,7 +44,7 @@ func TestActivationConcurrentIssue(t *testing.T) {
 				ExpectedActorType: "field",
 				ExpectedSurface:   "app-field",
 			}, idempotencyKey, "corr-1")
-			
+
 			if err == nil {
 				atomic.AddInt32(&successCount, 1)
 			} else if !errors.Is(err, ErrActivationRateLimited) && !strings.Contains(err.Error(), "duplicate key value violates unique constraint") && !strings.Contains(err.Error(), "deadlock detected") {
@@ -117,7 +117,7 @@ func TestActivationConcurrentConsumeAndRevoke(t *testing.T) {
 	}()
 
 	wg.Wait()
-	
+
 	if consumeErr != nil && !errors.Is(consumeErr, ErrInvalidActivation) && !strings.Contains(consumeErr.Error(), "deadlock detected") {
 		t.Errorf("unexpected consume error: %v", consumeErr)
 	}
