@@ -27,7 +27,47 @@ function Import-EnvironmentFile {
     }
 }
 
+function Test-ControlPanelPackageResolution {
+    param([Parameter(Mandatory)][string] $PackageName)
+
+    Push-Location -LiteralPath $PSScriptRoot
+    try {
+        & node -e "require.resolve('$PackageName/package.json')" 2>$null | Out-Null
+        return $LASTEXITCODE -eq 0
+    } finally {
+        Pop-Location
+    }
+}
+
+function Ensure-ControlPanelDependencies {
+    if ((Test-ControlPanelPackageResolution -PackageName "next") -and
+        (Test-ControlPanelPackageResolution -PackageName "typescript")) {
+        return
+    }
+
+    if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
+        throw "Control Panel dependencies are missing and pnpm is unavailable. Enable Corepack and retry."
+    }
+
+    Write-Host "Control Panel dependencies are incomplete; restoring the governed workspace lockfile..."
+    Push-Location -LiteralPath $RepoRoot
+    try {
+        & pnpm install --frozen-lockfile
+        if ($LASTEXITCODE -ne 0) {
+            throw "Governed workspace dependency installation failed with exit code $LASTEXITCODE."
+        }
+    } finally {
+        Pop-Location
+    }
+
+    if (-not (Test-ControlPanelPackageResolution -PackageName "next") -or
+        -not (Test-ControlPanelPackageResolution -PackageName "typescript")) {
+        throw "Control Panel dependencies remain unresolved after the frozen-lockfile installation."
+    }
+}
+
 Import-EnvironmentFile -Path $GoogleEnvironmentPath
+Ensure-ControlPanelDependencies
 Set-Location -LiteralPath $PSScriptRoot
 
 # The browser must use the authenticated same-origin BFF. Direct service URLs
