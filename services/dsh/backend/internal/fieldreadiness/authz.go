@@ -7,10 +7,22 @@ import (
 	"dsh-api/internal/store"
 )
 
+// workforceScopeResolverOverride is intentionally unset in production. Tests
+// in this package may bind a deterministic Workforce boundary adapter without
+// weakening the runtime fail-closed behavior for a missing resolver.
+var workforceScopeResolverOverride store.WorkforceScopeResolver
+
+func effectiveWorkforceScopeResolver(wf store.WorkforceScopeResolver) store.WorkforceScopeResolver {
+	if wf != nil {
+		return wf
+	}
+	return workforceScopeResolverOverride
+}
+
 // AuthorizeStore ensures the actor has an active canonical DSH store scope.
 // Identity roles or permission labels never bypass object authorization.
 func AuthorizeStore(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, storeID string) error {
-	allowed, err := store.ActorCanAccessStore(ctx, db, wf, actor, storeID)
+	allowed, err := store.ActorCanAccessStore(ctx, db, effectiveWorkforceScopeResolver(wf), actor, storeID)
 	if err != nil {
 		return err
 	}
