@@ -92,8 +92,8 @@ type runtimeReadinessFlight struct {
 }
 
 type runtimeProbeSettings struct {
-	probeTimeout  time.Duration
-	checkTimeout  time.Duration
+	probeTimeout   time.Duration
+	checkTimeout   time.Duration
 	clockSkewLimit time.Duration
 }
 
@@ -195,8 +195,8 @@ func runtimeProbeConfiguration() (runtimeProbeSettings, runtimeReadinessResult) 
 		return runtimeProbeSettings{}, failedRuntimeCheck("clock_skew_configuration", reasonProbeConfigInvalid, nil, 0)
 	}
 	return runtimeProbeSettings{
-		probeTimeout: probeTimeout,
-		checkTimeout: checkTimeout,
+		probeTimeout:   probeTimeout,
+		checkTimeout:   checkTimeout,
 		clockSkewLimit: clockSkewLimit,
 	}, runtimeReadinessResult{}
 }
@@ -220,9 +220,9 @@ func configurationChecks() runtimeReadinessResult {
 			status.ReasonCode = item.reasonCode
 			checks = append(checks, status)
 			return runtimeReadinessResult{
-				checks: checks,
+				checks:      checks,
 				failedCheck: item.name,
-				reasonCode: item.reasonCode,
+				reasonCode:  item.reasonCode,
 			}
 		}
 		checks = append(checks, status)
@@ -242,9 +242,9 @@ func runRuntimeCheck(
 	defer cancel()
 	err := operation(ctx)
 	status := runtimeCheckStatus{
-		Name: name,
-		Status: "PASS",
-		Critical: true,
+		Name:       name,
+		Status:     "PASS",
+		Critical:   true,
 		DurationMS: time.Since(startedAt).Milliseconds(),
 	}
 	if err != nil {
@@ -257,15 +257,15 @@ func runRuntimeCheck(
 func failedRuntimeCheck(name, reasonCode string, err error, durationMS int64) runtimeReadinessResult {
 	return runtimeReadinessResult{
 		checks: []runtimeCheckStatus{{
-			Name: name,
-			Status: "FAIL",
-			Critical: true,
+			Name:       name,
+			Status:     "FAIL",
+			Critical:   true,
 			ReasonCode: reasonCode,
 			DurationMS: durationMS,
 		}},
 		failedCheck: name,
-		reasonCode: reasonCode,
-		err: err,
+		reasonCode:  reasonCode,
+		err:         err,
 	}
 }
 
@@ -281,9 +281,9 @@ func evaluateRuntimeReadiness(
 	}
 	if store == nil {
 		result.checks = append(result.checks, runtimeCheckStatus{
-			Name: "database",
-			Status: "FAIL",
-			Critical: true,
+			Name:       "database",
+			Status:     "FAIL",
+			Critical:   true,
 			ReasonCode: reasonDatabaseUnavailable,
 		})
 		result.failedCheck = "database_configuration"
@@ -390,13 +390,13 @@ func currentHealthSnapshot(correlationID string) runtimeStatusResponse {
 		status = "DEGRADED"
 	}
 	return runtimeStatusResponse{
-		Status: status,
-		Service: "core-identity",
-		CheckedAt: time.Now().UTC().Format(time.RFC3339Nano),
+		Status:        status,
+		Service:       "core-identity",
+		CheckedAt:     time.Now().UTC().Format(time.RFC3339Nano),
 		LastSuccessAt: last.LastSuccessAt,
 		CorrelationID: correlationID,
-		Checks: append([]runtimeCheckStatus(nil), last.Checks...),
-		ReasonCodes: append([]string(nil), last.ReasonCodes...),
+		Checks:        append([]runtimeCheckStatus(nil), last.Checks...),
+		ReasonCodes:   append([]string(nil), last.ReasonCodes...),
 	}
 }
 
@@ -412,14 +412,14 @@ func readinessStatus(
 	readinessSnapshot.RUnlock()
 	checkedAt := time.Now().UTC()
 	response := runtimeStatusResponse{
-		Status: status,
-		Service: "core-identity",
-		CheckedAt: checkedAt.Format(time.RFC3339Nano),
+		Status:        status,
+		Service:       "core-identity",
+		CheckedAt:     checkedAt.Format(time.RFC3339Nano),
 		LastSuccessAt: lastSuccessAt,
 		CorrelationID: correlationID,
-		DurationMS: time.Since(startedAt).Milliseconds(),
-		Checks: result.checks,
-		ReasonCodes: []string{},
+		DurationMS:    time.Since(startedAt).Milliseconds(),
+		Checks:        result.checks,
+		ReasonCodes:   []string{},
 	}
 	if status == "HEALTHY" {
 		response.LastSuccessAt = response.CheckedAt
@@ -452,19 +452,19 @@ func waitForRuntimeProbe(
 	}
 }
 
-func isIdentityMutationRequest(r *http.Request) bool {
-	switch r.Method {
-	case http.MethodGet, http.MethodHead, http.MethodOptions:
+func isIdentityOperationalRequest(r *http.Request) bool {
+	if r.Method == http.MethodOptions {
 		return false
 	}
 	return strings.HasPrefix(r.URL.Path, "/auth/") || strings.HasPrefix(r.URL.Path, "/internal/")
 }
 
 // RuntimeReadinessBoundary keeps liveness independent while making readiness
-// and every Identity mutation fail closed unless configuration, PostgreSQL,
-// governed migrations, critical persistence relations, and database clock are
-// all usable. Readiness responses are never cached and never contain raw
-// dependency errors, secrets, tokens, or stack traces.
+// and every Identity authentication, session, actor, activation, and internal
+// service request fail closed unless configuration, PostgreSQL, governed
+// migrations, critical persistence relations, and database clock are all usable.
+// Readiness responses are never cached and never contain raw dependency errors,
+// secrets, tokens, or stack traces.
 func RuntimeReadinessBoundary(next http.Handler, database *sql.DB) http.Handler {
 	var store runtimeReadinessStore
 	if database != nil {
@@ -486,7 +486,7 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 		}
 
 		isReadinessRequest := r.Method == http.MethodGet && r.URL.Path == "/identity/readiness"
-		if !isReadinessRequest && !isIdentityMutationRequest(r) {
+		if !isReadinessRequest && !isIdentityOperationalRequest(r) {
 			next.ServeHTTP(w, r)
 			return
 		}
