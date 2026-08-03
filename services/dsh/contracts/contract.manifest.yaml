@@ -46,3 +46,4 @@ modules:
 
 overlays:
   - dsh.store-operational-context.overlay.yaml
+  - dsh.operational-policy-permissions.overlay.yaml

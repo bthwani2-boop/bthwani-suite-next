@@ -1,0 +1,40 @@
+overlay: 1.0.0
+info:
+  title: BThwani WLT to DSH Checkout Handoff Overlay
+  version: 1.0.0
+actions:
+  - target: $.components.schemas
+    description: Add the WLT-owned payment reference contracts handed back to DSH.
+    update:
+      WltPaymentCallbackEnvelope:
+        type: object
+        additionalProperties: false
+        required:
+          - paymentSessionId
+          - checkoutIntentId
+          - paymentStatus
+          - occurredAt
+        properties:
+          paymentSessionId:
+            type: string
+            minLength: 1
+          checkoutIntentId:
+            type: string
+            minLength: 1
+          paymentStatus:
+            $ref: '#/components/schemas/PaymentStatus'
+          occurredAt:
+            type: string
+            format: date-time
+      DshCheckoutPaymentReference:
+        type: object
+        additionalProperties: false
+        required:
+          - paymentSessionId
+          - paymentStatus
+        properties:
+          paymentSessionId:
+            type: string
+            minLength: 1
+          paymentStatus:
+            $ref: '#/components/schemas/PaymentStatus'
