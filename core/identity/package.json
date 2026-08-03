@@ -9,10 +9,19 @@
     "openapi:compose": "node ../../tools/scripts/compose-openapi-context.mjs identity",
     "openapi:generate": "pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/identity.bundle.openapi.yaml -o clients/generated/identity-api.ts",
     "test": "cd backend && go test ./...",
-    "build": "cd backend && go build ./...",
+    "build": "node ../../tools/scripts/verify-go-build.mjs backend",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
-  "peerDependencies": { "react": "19.2.3" },
-  "devDependencies": { "@types/react": "19.2.17", "react": "19.2.3", "typescript": "~6.0.3" },
-  "exports": { ".": "./clients/index.ts", "./server": "./clients/identity-client.ts" }
+  "peerDependencies": {
+    "react": "19.2.3"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "react": "19.2.3",
+    "typescript": "~6.0.3"
+  },
+  "exports": {
+    ".": "./clients/index.ts",
+    "./server": "./clients/identity-client.ts"
+  }
 }
