@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { CpRetryButton, CpStatePanel } from "@bthwani/control-panel/components";
 import { colorRoles } from "@bthwani/ui-kit";
 import { useIdentitySession } from "@bthwani/core-identity";
 
@@ -29,11 +30,12 @@ function loadingPanel(): ReactNode {
 
 /**
  * Owns the single sign-on boundary for every /dsh/* route (except
- * /dsh/login itself, which renders outside this component). No screen
- * below this boundary may render its own login UI.
+ * /dsh/login itself, which renders outside this component). Identity outages
+ * never redirect to login or clear a retained session; only proven signed-out,
+ * invalid-session, or wrong-role states do so.
  */
 export function ControlPanelAuthBoundary({ children }: { readonly children: ReactNode }) {
-  const { state } = useIdentitySession();
+  const { state, retryBootstrap } = useIdentitySession();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -50,6 +52,22 @@ export function ControlPanelAuthBoundary({ children }: { readonly children: Reac
 
   if (state.kind === "restoring" || state.kind === "authenticating") {
     return loadingPanel();
+  }
+
+  if (state.kind === "service_unavailable") {
+    return (
+      <div dir="rtl" style={{ padding: "2rem" }}>
+        <CpStatePanel
+          role="alert"
+          title="خدمة الهوية غير جاهزة"
+          description={state.retainedSession
+            ? "تعذر التحقق من الجلسة مؤقتًا، لكن الجلسة المحفوظة لم تُحذف. أعد الفحص بعد تعافي الخدمة."
+            : "تعذر الوصول إلى خدمة الهوية. لن تُعرض هذه الحالة كفشل بيانات دخول."}
+        >
+          <CpRetryButton onClick={() => void retryBootstrap()}>إعادة الفحص</CpRetryButton>
+        </CpStatePanel>
+      </div>
+    );
   }
 
   if (
