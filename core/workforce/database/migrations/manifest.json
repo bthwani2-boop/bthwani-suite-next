@@ -43,7 +43,7 @@
     {
       "ordinal": 6,
       "file": "workforce-006_provider_activation_evidence.sql",
-      "sha256": "0b03d8a86b5d279bf2fb93af986cbc2f4ecf939d7cc7672b3c9ef1bf5882223d",
+      "sha256": "0b03d8a86b5d279bf2fb93af986cbc2f4ecf939d7cc7672b69d1fddac654bb47",
       "historicalPrefix": "006",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -101,6 +101,13 @@
       "file": "workforce-014_operational_assignments_integrity.sql",
       "sha256": "5517ef53d10a4430e2ae914caa26ddb35082fc83b35db43b745a99a412a6f716",
       "historicalPrefix": "014",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 15,
+      "file": "workforce-015_workforce_code_sequence_reconciliation.sql",
+      "sha256": "3ee3e9c4af204ea59cc1ae60ba43ec01ce36ed7413379f0410748f9f4b1314cd",
+      "historicalPrefix": "015",
       "state": "ACTIVE"
     }
   ]
