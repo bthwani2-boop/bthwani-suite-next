@@ -10,6 +10,10 @@ function repositoryPath(relativePath) {
   return path.join(repositoryRoot, relativePath);
 }
 
+function read(relativePath) {
+  return fs.readFileSync(repositoryPath(relativePath), "utf8");
+}
+
 function listSourceFiles(relativeRoot) {
   const absoluteRoot = repositoryPath(relativeRoot);
   if (!fs.existsSync(absoluteRoot)) return [];
@@ -60,6 +64,34 @@ describe("DSH/WLT frontend truth authority", () => {
         fs.existsSync(repositoryPath(relativePath)),
         false,
         `retired parallel authority must stay deleted: ${relativePath}`,
+      );
+    }
+  });
+
+  it("keeps the shared delivery contract presentation-only", () => {
+    const source = read("services/dsh/frontend/shared/delivery/delivery.contract.ts");
+    const forbiddenAuthorityMarkers = [
+      "defaultServiceModes",
+      "operationalOwner",
+      "financialOwner",
+      "requiresCaptain",
+      "requiresPartnerCourier",
+      "requiresCustomerPickup",
+      "cartSummaryBehavior",
+      "clientCheckoutBehavior",
+      "partnerPreparationBehavior",
+      "controlPanelDispatchBehavior",
+      "trackingTimelineBehavior",
+      "notificationEvents",
+      "wltDisplayImpactOnly",
+      "forbiddenUiClaims",
+    ];
+
+    for (const marker of forbiddenAuthorityMarkers) {
+      assert.equal(
+        source.includes(marker),
+        false,
+        `delivery presentation contract must not regain operational or financial authority: ${marker}`,
       );
     }
   });
