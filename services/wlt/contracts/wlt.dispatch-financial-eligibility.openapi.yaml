@@ -5,8 +5,8 @@ info:
   description: >-
     Internal WLT-owned decision boundary for captain dispatch financial
     eligibility. Wallet status, balances, currency, thresholds, and financial
-    policy never cross this contract. DSH receives only a short-lived abstract
-    decision and must fail closed when this operation is unavailable.
+    policy never cross this contract. WLT applies its strictest dispatch policy
+    so the short-lived decision is valid for every DSH assignment context.
 x-bthwani-owner: services/wlt
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: ENABLED
@@ -48,14 +48,12 @@ components:
     DispatchFinancialEligibilityEvaluationInput:
       type: object
       additionalProperties: false
-      required: [captainId, requiresCod]
+      required: [captainId]
       properties:
         captainId:
           type: string
           minLength: 1
           maxLength: 200
-        requiresCod:
-          type: boolean
     DispatchFinancialEligibilityDecisionEnvelope:
       type: object
       additionalProperties: false
