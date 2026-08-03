@@ -11,7 +11,7 @@ $ErrorActionPreference = "Stop"
 $expectedBranch = "task/typescript-7-readiness"
 $baseBranch = "smsm"
 $typeScript7Version = "7.0.2"
-$typeScript6CompatVersion = "6.0.2"
+$typeScript6CompatVersion = "6.0.3"
 $typeScript7RootAlias = "npm:typescript@$typeScript7Version"
 $typeScript6RootAlias = "npm:@typescript/typescript6@$typeScript6CompatVersion"
 $typeScript7WorkspaceSpecifier = $typeScript7Version
@@ -92,7 +92,7 @@ try {
     $localSha = Invoke-Captured -Name "Resolve local HEAD" -FilePath "git" -Arguments @("rev-parse", "HEAD")
     $remoteSha = Invoke-Captured -Name "Resolve remote HEAD" -FilePath "git" -Arguments @("rev-parse", "origin/$expectedBranch")
     if ($localSha -ne $remoteSha) {
-        throw "Local HEAD '$localSha' differs from origin/$expectedBranch '$remoteSha'. Run git pull --ff-only first."
+        throw "Local HEAD '$localSha' differs from origin/$expectedBranch '$remoteSha'. Reset to origin/$expectedBranch before rerunning."
     }
 
     $behindBase = [int](Invoke-Captured -Name "Check base divergence" -FilePath "git" -Arguments @("rev-list", "--count", "HEAD..origin/$baseBranch"))
@@ -153,7 +153,7 @@ function applyTypeScriptCompilerApiBridge(pkg) {
 
   pkg.dependencies = {
     ...pkg.dependencies,
-    typescript: "npm:@typescript/typescript6@6.0.2",
+    typescript: "npm:@typescript/typescript6@6.0.3",
   };
 
   return pkg;
@@ -169,20 +169,11 @@ module.exports = {
 '@ | Set-Content -LiteralPath ".pnpmfile.cjs" -Encoding UTF8
 
     Write-Section "Remove unsafe Next.js TypeScript bypass"
-    $nextConfigCandidates = @(
-        "apps/control-panel/runtime/next.config.mjs",
-        "apps/control-panel/runtime/next.config.ts"
-    )
-
-    foreach ($file in $nextConfigCandidates) {
-        if (-not (Test-Path -LiteralPath $file)) {
-            continue
-        }
-
+    foreach ($file in @("apps/control-panel/runtime/next.config.mjs", "apps/control-panel/runtime/next.config.ts")) {
+        if (-not (Test-Path -LiteralPath $file)) { continue }
         $content = Get-Content -LiteralPath $file -Raw
         $content = $content -replace "(?s)\r?\n\s*typescript:\s*\{\s*ignoreBuildErrors:\s*true,?\s*\},", ""
         Set-Content -LiteralPath $file -Value $content -Encoding UTF8
-
         $after = Get-Content -LiteralPath $file -Raw
         if ($after -match "ignoreBuildErrors\s*:\s*true") {
             throw "Unsafe Next.js ignoreBuildErrors remains in $file."
