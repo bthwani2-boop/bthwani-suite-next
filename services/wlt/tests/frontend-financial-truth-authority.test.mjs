@@ -61,7 +61,7 @@ test("WLT DSH-facing transport has one canonical implementation", () => {
   }
 });
 
-test("WLT financial records and statuses are generated from OpenAPI", () => {
+test("named WLT financial records and lifecycle states come from OpenAPI", () => {
   const boundary = read(
     "services/wlt/frontend/shared/dsh/finance-boundary/wlt-dsh-boundary.types.ts",
   );
@@ -80,7 +80,6 @@ test("WLT financial records and statuses are generated from OpenAPI", () => {
   }
 
   for (const forbidden of [
-    /export type WltPaymentStatusReference\s*=\s*(?:\r?\n\s*)?\|/,
     /export type WltRefundStatus\s*=\s*(?:\r?\n\s*)?\|/,
     /export type WltCommissionStatus\s*=\s*(?:\r?\n\s*)?\|/,
     /export type WltDshRefundReference\s*=\s*\{/,
@@ -90,6 +89,12 @@ test("WLT financial records and statuses are generated from OpenAPI", () => {
   ]) {
     assert.doesNotMatch(boundary, forbidden);
   }
+
+  assert.match(
+    boundary,
+    /core `\/wlt\/references\/\*` response is still open/,
+    "temporary reference-status projections must document the missing named OpenAPI authority",
+  );
 
   const commissionApi = read(
     "services/wlt/frontend/shared/dsh/commissions/commission.api.ts",
