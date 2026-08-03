@@ -4,10 +4,10 @@
 
 .DESCRIPTION
   The wrapper must delegate to infra/docker/scripts/schema-migration-runner.ps1 and
-  therefore record governed state in schema_migrations rather than any legacy
-  runtime-local ledger table. This test covers manifest authority, previous-version
-  upgrade, deterministic rerun, checksum immutability, legacy-ledger reconciliation,
-  failed migration rollback, and roll-forward recovery.
+  therefore record governed state only in schema_migrations. This test covers
+  manifest authority, previous-version upgrade, deterministic rerun, checksum
+  immutability, failed migration rollback, and roll-forward recovery. Historical
+  ledger import belongs exclusively to the governed runner's own focused tests.
 #>
 
 [CmdletBinding()]
@@ -65,15 +65,11 @@ $SafeServiceKey = ($ServiceKey -replace "[^a-zA-Z0-9_]", "_").ToLowerInvariant()
 $SentinelTable = "ci_migration_sentinel_$SafeServiceKey"
 $ProbeOneTable = "ci_migration_probe_${SafeServiceKey}_one"
 $ProbeTwoTable = "ci_migration_probe_${SafeServiceKey}_two"
-$LegacyProbeTable = "ci_migration_probe_${SafeServiceKey}_legacy"
 $ProbePrefix = "ci-$ServiceKey-probe"
 $ProbeOneFile = "$ProbePrefix-991_base.sql"
 $ProbeTwoFile = "$ProbePrefix-992_followup.sql"
-$LegacyProbeFile = "$ProbePrefix-990_legacy.sql"
 $PartialProbeServiceKey = "$ServiceKey-partial-probe"
 $PartialProbeServiceKeySql = ConvertTo-SqlLiteral $PartialProbeServiceKey
-$LegacyProbeServiceKey = "$ServiceKey-legacy-probe"
-$LegacyProbeServiceKeySql = ConvertTo-SqlLiteral $LegacyProbeServiceKey
 $SentinelCreated = $false
 
 function Invoke-DatabaseSql {
@@ -167,12 +163,10 @@ $temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) "bthwani-migration-
 $previousDirectory = Join-Path $temporaryRoot "previous-version"
 $driftDirectory = Join-Path $temporaryRoot "checksum-drift"
 $partialDirectory = Join-Path $temporaryRoot "partial-failure"
-$legacyDirectory = Join-Path $temporaryRoot "legacy-ledger"
 $missingManifestDirectory = Join-Path $temporaryRoot "missing-manifest"
 New-Item -ItemType Directory -Path $previousDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $driftDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $partialDirectory -Force | Out-Null
-New-Item -ItemType Directory -Path $legacyDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $missingManifestDirectory -Force | Out-Null
 
 try {
@@ -236,56 +230,6 @@ ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload;
   Add-Content -LiteralPath $driftFile.FullName -Value "`n-- intentional checksum drift probe"
   Invoke-RunnerProcess -Directory $driftDirectory -ExpectSuccess $false
   Invoke-RunnerProcess -Directory $MigrationPath -ExpectSuccess $true
-
-  Write-Host "--- ${ServiceKey}: legacy ledger conflict rejection and governed reconciliation ---"
-  Set-Content -LiteralPath (Join-Path $legacyDirectory $LegacyProbeFile) -Value @"
-CREATE TABLE IF NOT EXISTS $LegacyProbeTable (
-  id INTEGER PRIMARY KEY,
-  payload TEXT NOT NULL
-);
-"@
-  Write-TestMigrationManifest -Directory $legacyDirectory -ManifestServiceKey $LegacyProbeServiceKey
-  $legacyFileInfo = Get-Item -LiteralPath (Join-Path $legacyDirectory $LegacyProbeFile)
-  $legacyChecksum = (Get-BthwaniPortableSqlChecksums -File $legacyFileInfo).Canonical
-  $legacyFileSql = ConvertTo-SqlLiteral $LegacyProbeFile
-
-  Invoke-DatabaseSql -Sql @"
-DROP TABLE IF EXISTS runtime_schema_migrations;
-DROP TABLE IF EXISTS runtime_schema_migrations_legacy_retired;
-DELETE FROM schema_migrations WHERE service_name = '$LegacyProbeServiceKeySql';
-CREATE TABLE runtime_schema_migrations (
-  migration_name TEXT PRIMARY KEY,
-  checksum TEXT NOT NULL,
-  applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-INSERT INTO runtime_schema_migrations(migration_name, checksum)
-VALUES ('$legacyFileSql', 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
-"@ | Out-Null
-  Invoke-RunnerProcess -Directory $legacyDirectory -ExpectSuccess $false -RunnerServiceKey $LegacyProbeServiceKey
-
-  Invoke-DatabaseSql -Sql @"
-TRUNCATE runtime_schema_migrations;
-CREATE TABLE IF NOT EXISTS $LegacyProbeTable (
-  id INTEGER PRIMARY KEY,
-  payload TEXT NOT NULL
-);
-INSERT INTO runtime_schema_migrations(migration_name, checksum)
-VALUES ('$legacyFileSql', '$legacyChecksum');
-"@ | Out-Null
-  Invoke-RunnerProcess -Directory $legacyDirectory -ExpectSuccess $true -RunnerServiceKey $LegacyProbeServiceKey
-
-  $legacyImported = Get-GovernedLedgerCount -LedgerServiceKeySql $LegacyProbeServiceKeySql
-  if ($legacyImported -ne "1") {
-    throw "Legacy ledger was not imported into schema_migrations."
-  }
-  $legacyActiveGone = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT CASE WHEN to_regclass('public.runtime_schema_migrations') IS NULL THEN '1' ELSE '0' END;"
-  if ($legacyActiveGone -ne "1") {
-    throw "Active legacy migration ledger was not retired."
-  }
-  $legacyRetiredPresent = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT CASE WHEN to_regclass('public.runtime_schema_migrations_legacy_retired') IS NOT NULL THEN '1' ELSE '0' END;"
-  if ($legacyRetiredPresent -ne "1") {
-    throw "Retired legacy migration ledger was not preserved for audit."
-  }
 
   Write-Host "--- ${ServiceKey}: partial failure rollback and roll-forward ---"
   Set-Content -LiteralPath (Join-Path $partialDirectory $ProbeOneFile) -Value @"
