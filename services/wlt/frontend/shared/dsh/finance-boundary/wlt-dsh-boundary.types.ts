@@ -76,7 +76,7 @@ export type WltCodCollectorType =
 export type WltDshCodReference = components["schemas"]["CodRecord"] & {
   readonly collectedAt?: string | null;
   readonly remittedAt?: string | null;
-  readonly createdAt?: string;
+  readonly createdAt: string;
   readonly updatedAt?: string;
 };
 
