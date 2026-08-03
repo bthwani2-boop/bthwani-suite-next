@@ -7,13 +7,11 @@ $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $RuntimePhase = Join-Path $PSScriptRoot "invoke-runtime-phase.ps1"
-$RuntimeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
-$DatabaseConvergenceScript = Join-Path $PSScriptRoot "converge-local-runtime-database.ps1"
 $DataScript = Join-Path $PSScriptRoot "mobile-dev-data.mjs"
 $MobileEnvFile = Join-Path $RepoRoot "infra/local/mobile.env"
 $Profiles = "identity,workforce,dsh,wlt,media"
 
-foreach ($requiredPath in @($RuntimePhase, $RuntimeScript, $DatabaseConvergenceScript, $DataScript)) {
+foreach ($requiredPath in @($RuntimePhase, $DataScript)) {
   if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
     throw "Required mobile runtime file not found: $requiredPath"
   }
@@ -103,13 +101,6 @@ function Ensure-BthwaniMobileBackend {
   }
 
   Invoke-BthwaniProcess `
-    -Description "mobile-runtime-database-convergence" `
-    -FilePath "pwsh" `
-    -Arguments @(
-      "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $DatabaseConvergenceScript
-    )
-
-  Invoke-BthwaniProcess `
     -Description "mobile-runtime-up" `
     -FilePath "pwsh" `
     -Arguments @(
@@ -142,25 +133,12 @@ function Test-BthwaniMobileDevData {
 
 function Repair-BthwaniMobileDevData {
   Invoke-BthwaniProcess `
-    -Description "mobile-runtime-seed" `
-    -FilePath "pwsh" `
-    -Arguments @(
-      "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $RuntimeScript,
-      "-Action", "seed", "-Profiles", $Profiles
-    )
-
-  Invoke-BthwaniProcess `
     -Description "mobile-runtime-bootstrap-dev" `
     -FilePath "pwsh" `
     -Arguments @(
       "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $RuntimePhase,
       "-Action", "bootstrap-dev", "-Profiles", $Profiles, "-Force"
     )
-
-  Invoke-BthwaniProcess `
-    -Description "mobile-workforce-convergence" `
-    -FilePath "node" `
-    -Arguments @($DataScript, "--repair")
 }
 
 Import-BthwaniMobileEnvironment
@@ -187,7 +165,7 @@ try {
       return
     }
 
-    Write-Host "Mobile APIs are healthy but governed development data is incomplete; converging DSH, WLT and Workforce..."
+    Write-Host "Mobile APIs are healthy but governed development data is incomplete; invoking the canonical runtime bootstrap..."
     Repair-BthwaniMobileDevData
 
     if (-not (Test-BthwaniMobileDevData)) {
