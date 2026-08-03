@@ -5,7 +5,8 @@
 .DESCRIPTION
   This adapter owns only service paths and Docker credentials. Seed discovery,
   checksums, transactions, and runtime_seed_history are owned exclusively by
-  tools/scripts/invoke-service-seeds.ps1.
+  tools/scripts/invoke-service-seeds.ps1. A service without local fixtures must
+  declare that empty set explicitly instead of being silently skipped.
 #>
 
 [CmdletBinding()]
@@ -33,11 +34,13 @@ $serviceMap = @{
     Directory = "services/dsh/database/seeds/local"
     User = "dsh_runtime"
     Database = "dsh_runtime"
+    AllowEmptySeedSet = $false
   }
   wlt = @{
     Directory = "services/wlt/database/seeds/local"
     User = "wlt_runtime"
     Database = "wlt_runtime"
+    AllowEmptySeedSet = $true
   }
 }
 $config = $serviceMap[$Service]
@@ -52,6 +55,7 @@ $parameters = @{
   EnvFile = "infra/docker/env/runtime.env.example"
   SourceCommitSha = $SourceCommitSha
   AllowLocalSeeds = [bool]$AllowLocalSeeds
+  AllowEmptySeedSet = [bool]$config.AllowEmptySeedSet
 }
 
 & $CanonicalSeedRunner @parameters
