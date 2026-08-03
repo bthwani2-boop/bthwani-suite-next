@@ -106,3 +106,53 @@ func TestClientFailsClosedWithoutRuntimeContext(t *testing.T) {
 		t.Fatal("expected identity client without operator context to be unconfigured")
 	}
 }
+
+func TestLifecycleMutationsSendGovernedRequestBody(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		call func(*Client) error
+	}{
+		{
+			name: "deactivate",
+			path: "/internal/actors/field-1/deactivate",
+			call: func(client *Client) error {
+				return client.Deactivate(context.Background(), "field-1", "operator-1", "policy breach", "correlation-1")
+			},
+		},
+		{
+			name: "reactivate",
+			path: "/internal/actors/field-1/reactivate",
+			call: func(client *Client) error {
+				return client.Reactivate(context.Background(), "field-1", "operator-1", "review complete", "correlation-2")
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPost || r.URL.Path != test.path {
+					t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
+				}
+				if got := r.Header.Get("Content-Type"); got != "application/json" {
+					t.Fatalf("expected application/json, got %q", got)
+				}
+				var body map[string]string
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					t.Fatalf("decode lifecycle body: %v", err)
+				}
+				if body["requestedByActorId"] != "operator-1" || body["reason"] == "" || body["correlationId"] == "" {
+					t.Fatalf("unexpected lifecycle body %#v", body)
+				}
+				w.WriteHeader(http.StatusNoContent)
+			}))
+			defer server.Close()
+
+			client := NewClient(server.URL, "service-token", "context-main")
+			if err := test.call(client); err != nil {
+				t.Fatalf("lifecycle mutation returned error: %v", err)
+			}
+		})
+	}
+}
