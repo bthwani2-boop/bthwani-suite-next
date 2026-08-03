@@ -3,7 +3,6 @@ import {
   getCaptainAvailabilityMeta,
 } from './captain.contract';
 import { EMPTY_CAPTAIN_ORDER_SUMMARY } from './captain.cod';
-import { isCaptainPodRequiredForMode, isCaptainCodCollectorForMode } from '../identity-access/surface-visibility.policy';
 import type { DshCaptainSurfaceState, DshCaptainSurfaceDerived } from './captain.surface.types';
 import { ASSIGNMENT_STATUS_LABELS, DELIVERY_STATUS_LABELS, type DshDispatchAssignment } from '../dispatch/dispatch.types';
 import type { DshCaptainOrderDetailSummary } from '../orders';
@@ -93,8 +92,10 @@ export function buildCaptainDerived(
   const isStoreCourierMode = state.captainAppMode === 'store_courier_mode';
   const isCaptainAvailable = state.captainAvailabilityStatus === 'available';
   const isGpsEnabled = state.gpsStatus !== 'disabled';
-  const captainPodRequired = !isStoreCourierMode && isCaptainPodRequiredForMode('bthwani_delivery');
-  const captainCollectsCod = !isStoreCourierMode && isCaptainCodCollectorForMode('bthwani_delivery');
+  // Presentation gating only. A live actor-scoped DSH assignment is required
+  // before the PoD route is shown; the PoD endpoint remains authoritative for
+  // whether the submitted mutation is valid.
+  const captainPodRequired = Boolean(activeAssignment) && !isStoreCourierMode;
   const currentAvailabilityMeta = getCaptainAvailabilityMeta(state.captainAvailabilityStatus);
   const activeOrderDisplayId = state.activeOrderId ? resolveDshRuntimeOrderId(state.activeOrderId) : '';
   const showBottomNav = isStoreCourierMode
@@ -109,7 +110,6 @@ export function buildCaptainDerived(
     isCaptainAvailable,
     isGpsEnabled,
     captainPodRequired,
-    captainCollectsCod,
     showBottomNav,
     captainBottomActiveId,
     currentAvailabilityMeta,
