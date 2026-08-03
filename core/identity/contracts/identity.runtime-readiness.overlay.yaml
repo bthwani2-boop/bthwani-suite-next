@@ -108,7 +108,7 @@ actions:
     remove: true
   - target: $.paths['/identity/readiness'].get.responses['503']
     update:
-      description: Identity is alive but must not receive authentication or activation traffic.
+      description: Identity is alive but must not receive authentication, session, actor, activation, or internal service traffic.
       content:
         application/json:
           schema:
@@ -125,7 +125,15 @@ actions:
     update:
       '503':
         $ref: '#/components/responses/ServiceUnavailable'
+  - target: $.paths['/auth/session'].get.responses
+    update:
+      '503':
+        $ref: '#/components/responses/ServiceUnavailable'
   - target: $.paths['/auth/introspect'].post.responses
+    update:
+      '503':
+        $ref: '#/components/responses/ServiceUnavailable'
+  - target: $.paths['/auth/sessions'].get.responses
     update:
       '503':
         $ref: '#/components/responses/ServiceUnavailable'
@@ -138,6 +146,46 @@ actions:
       '503':
         $ref: '#/components/responses/ServiceUnavailable'
   - target: $.paths['/auth/password/change'].post.responses
+    update:
+      '503':
+        $ref: '#/components/responses/ServiceUnavailable'
+  - target: $.paths['/internal/actors/search'].get.responses
+    update:
+      '503':
+        $ref: '#/components/responses/ServiceUnavailable'
+  - target: $.paths['/internal/actors/{actorId}'].get.responses
+    update:
+      '503':
+        $ref: '#/components/responses/ServiceUnavailable'
+  - target: $.paths['/internal/actors/{actorId}/deactivate'].post.responses
+    update:
+      '503':
+        $ref: '#/components/responses/ServiceUnavailable'
+  - target: $.paths['/internal/actors/{actorId}/reactivate'].post.responses
+    update:
+      '503':
+        $ref: '#/components/responses/ServiceUnavailable'
+  - target: $.paths['/internal/actors/{actorId}/activations/latest'].get.responses
+    update:
+      '503':
+        $ref: '#/components/responses/ServiceUnavailable'
+  - target: $.paths['/internal/actors/{actorId}/activations/revoke'].post.responses
+    update:
+      '503':
+        $ref: '#/components/responses/ServiceUnavailable'
+  - target: $.paths['/internal/partner/permission-bundles'].get.responses
+    update:
+      '503':
+        $ref: '#/components/responses/ServiceUnavailable'
+  - target: $.paths['/internal/partner/actors/provision'].post.responses
+    update:
+      '503':
+        $ref: '#/components/responses/ServiceUnavailable'
+  - target: $.paths['/internal/partner/actors/{actorId}/store-access'].put.responses
+    update:
+      '503':
+        $ref: '#/components/responses/ServiceUnavailable'
+  - target: $.paths['/internal/partner/actors/{actorId}/activations'].post.responses
     update:
       '503':
         $ref: '#/components/responses/ServiceUnavailable'
