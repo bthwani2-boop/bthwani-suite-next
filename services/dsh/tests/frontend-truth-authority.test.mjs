@@ -1,0 +1,107 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, it } from "node:test";
+
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+
+function repositoryPath(relativePath) {
+  return path.join(repositoryRoot, relativePath);
+}
+
+function listSourceFiles(relativeRoot) {
+  const absoluteRoot = repositoryPath(relativeRoot);
+  if (!fs.existsSync(absoluteRoot)) return [];
+
+  const files = [];
+  const stack = [absoluteRoot];
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const absolutePath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        if (["node_modules", "dist", "build", ".next", "coverage", "generated"].includes(entry.name)) {
+          continue;
+        }
+        stack.push(absolutePath);
+        continue;
+      }
+      if (!/\.(?:[cm]?[jt]sx?)$/.test(entry.name)) continue;
+      if (/\.(?:test|spec)\./.test(entry.name)) continue;
+      files.push(absolutePath);
+    }
+  }
+
+  return files;
+}
+
+function relativeToRepository(absolutePath) {
+  return path.relative(repositoryRoot, absolutePath).split(path.sep).join("/");
+}
+
+const retiredParallelAuthorities = [
+  "services/dsh/frontend/shared/checkout/checkout-contract.ts",
+  "services/dsh/frontend/shared/checkout/dsh-client-binding.contracts.ts",
+  "services/wlt/frontend/shared/dsh/payment/wlt-payment-session.types.ts",
+  "services/wlt/frontend/control-panel/_skeleton-proof/WltFinanceReadOnlySkeletonProof.tsx",
+];
+
+const numericFinancialTruthPatterns = [
+  /\b(?:commissionRate|platformCommissionRate|platformFeeRate|serviceFeeRate|feeRate|settlementRate|refundRate|payoutRate|commissionPercent|commissionPercentage|commissionBasisPoints|commissionBps)\s*:\s*-?\d+(?:\.\d+)?\b/g,
+  /\b(?:commissionRate|platformCommissionRate|platformFeeRate|serviceFeeRate|feeRate|settlementRate|refundRate|payoutRate|commissionPercent|commissionPercentage|commissionBasisPoints|commissionBps)\s*=\s*-?\d+(?:\.\d+)?\b/g,
+];
+
+describe("DSH/WLT frontend truth authority", () => {
+  it("keeps retired parallel contract authorities deleted", () => {
+    for (const relativePath of retiredParallelAuthorities) {
+      assert.equal(
+        fs.existsSync(repositoryPath(relativePath)),
+        false,
+        `retired parallel authority must stay deleted: ${relativePath}`,
+      );
+    }
+  });
+
+  it("does not hard-code financial rates in DSH frontend source", () => {
+    const violations = [];
+
+    for (const absolutePath of listSourceFiles("services/dsh/frontend")) {
+      const source = fs.readFileSync(absolutePath, "utf8");
+      for (const pattern of numericFinancialTruthPatterns) {
+        pattern.lastIndex = 0;
+        let match;
+        while ((match = pattern.exec(source)) !== null) {
+          const line = source.slice(0, match.index).split("\n").length;
+          violations.push(`${relativeToRepository(absolutePath)}:${line}:${match[0]}`);
+        }
+      }
+    }
+
+    assert.deepEqual(
+      violations,
+      [],
+      `financial rates must be returned by governed DSH/WLT contracts, not defined in frontend source:\n${violations.join("\n")}`,
+    );
+  });
+
+  it("does not retain contract-only runtime placeholders in live frontend roots", () => {
+    const violations = [];
+
+    for (const relativeRoot of ["services/dsh/frontend", "services/wlt/frontend"]) {
+      for (const absolutePath of listSourceFiles(relativeRoot)) {
+        const source = fs.readFileSync(absolutePath, "utf8");
+        if (/\bCONTRACT_ONLY\b/.test(source)) {
+          violations.push(relativeToRepository(absolutePath));
+        }
+      }
+    }
+
+    assert.deepEqual(
+      violations,
+      [],
+      `contract-only placeholders are not live runtime implementations:\n${violations.join("\n")}`,
+    );
+  });
+});
