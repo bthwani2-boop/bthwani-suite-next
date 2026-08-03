@@ -1,12 +1,12 @@
 <#
 .SYNOPSIS
-  Thin DSH database adapter for governed migration, seed, and database-test tools.
+  Thin DSH database adapter for governed migration, seed, and assertion tools.
 
 .DESCRIPTION
-  This script owns no migration ordering, checksum policy, migration ledger, or
-  seed ledger. Schema changes delegate to the repository-wide governed migration
-  runner. Local Docker seeds delegate to the single governed runtime seed runner.
-  Direct psql execution is retained only for read-only/assertion database tests.
+  This script owns no migration ordering, checksum policy, migration ledger,
+  seed discovery, seed transaction, or seed ledger. Both Docker and URL/CI
+  transports delegate writes to repository-wide canonical runners. Direct psql
+  execution is retained only for isolated database assertion files.
 #>
 
 [CmdletBinding()]
@@ -38,14 +38,15 @@ $RepoRoot = (Resolve-Path (Join-Path $ScriptDir "../../../..")).Path
 Set-Location -LiteralPath $RepoRoot
 
 $MigrationDir = Join-Path $RepoRoot "services/dsh/database/migrations"
+$SeedDir = Join-Path $RepoRoot "services/dsh/database/seeds/local"
 $TestRoot = Join-Path $RepoRoot "services/dsh/database/tests"
 $ComposeFilePath = if ([System.IO.Path]::IsPathRooted($ComposeFile)) { $ComposeFile } else { Join-Path $RepoRoot $ComposeFile }
 $EnvFilePath = if ([System.IO.Path]::IsPathRooted($EnvFile)) { $EnvFile } else { Join-Path $RepoRoot $EnvFile }
 $RuntimeMigrationRunner = Join-Path $RepoRoot "infra/docker/scripts/invoke-runtime-database-migrations.ps1"
-$RuntimeSeedRunner = Join-Path $RepoRoot "infra/docker/scripts/invoke-runtime-database-seeds.ps1"
 $ServiceMigrationRunner = Join-Path $RepoRoot "tools/scripts/invoke-service-migrations.ps1"
+$ServiceSeedRunner = Join-Path $RepoRoot "tools/scripts/invoke-service-seeds.ps1"
 
-foreach ($requiredFile in @($RuntimeMigrationRunner, $RuntimeSeedRunner, $ServiceMigrationRunner)) {
+foreach ($requiredFile in @($RuntimeMigrationRunner, $ServiceMigrationRunner, $ServiceSeedRunner)) {
   if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
     throw "Required governed database authority not found: $requiredFile"
   }
@@ -72,8 +73,7 @@ if ($Transport -eq "url") {
   if (-not (Get-Command psql -ErrorAction SilentlyContinue)) {
     throw "psql is required when Transport=url."
   }
-}
-if ($Transport -eq "docker") {
+} else {
   if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     throw "docker is required when Transport=docker."
   }
@@ -124,7 +124,7 @@ function Invoke-DshTestSql {
     $Sql | & docker @arguments
   }
   if ($LASTEXITCODE -ne 0) {
-    throw "DSH database test failed using transport '$Transport' (exit $LASTEXITCODE)."
+    throw "DSH database assertion failed using transport '$Transport' (exit $LASTEXITCODE)."
   }
 }
 
@@ -162,20 +162,33 @@ function Invoke-GovernedDshSeeds {
   if (-not $AllowLocalSeeds) {
     throw "Local DSH seeds require -AllowLocalSeeds."
   }
-  if ($Transport -ne "docker") {
-    throw "Governed local DSH seeds are Docker-runtime fixtures. Transport=url is intentionally unsupported."
+
+  if ($Transport -eq "docker") {
+    Ensure-DockerDshPostgres
+  }
+  Invoke-GovernedDshMigrations
+
+  $seedParameters = @{
+    ServiceKey = "dsh"
+    SeedDirectory = $SeedDir
+    Transport = $Transport
+    SourceCommitSha = $SourceCommitSha
+    AllowLocalSeeds = $true
+  }
+  if ($Transport -eq "url") {
+    $seedParameters.DatabaseUrl = $DatabaseUrl
+  } else {
+    $seedParameters.DockerUser = "dsh_runtime"
+    $seedParameters.DockerDatabase = "dsh_runtime"
+    $seedParameters.ComposeFile = $ComposeFilePath
+    $seedParameters.EnvFile = $EnvFilePath
   }
 
-  Ensure-DockerDshPostgres
-  Invoke-GovernedDshMigrations
-  & $RuntimeSeedRunner `
-    -Service dsh `
-    -SourceCommitSha $SourceCommitSha `
-    -AllowLocalSeeds
+  & $ServiceSeedRunner @seedParameters
   if ($LASTEXITCODE -ne 0) {
     throw "Governed DSH local seeds failed (exit $LASTEXITCODE)."
   }
-  Write-Host "DSH local seeds: PASS ledger=runtime_seed_history"
+  Write-Host "DSH local seeds: PASS ledger=runtime_seed_history authority=invoke-service-seeds.ps1"
 }
 
 function Invoke-DshDatabaseTests {
