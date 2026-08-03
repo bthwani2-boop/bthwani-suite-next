@@ -19,7 +19,6 @@ CREATE TABLE IF NOT EXISTS wlt_dispatch_financial_eligibility_decisions (
   id                                      text PRIMARY KEY DEFAULT ('wlt_dfe_' || gen_random_uuid()::text),
   operator_context_id                     text NOT NULL CHECK (btrim(operator_context_id) <> ''),
   captain_id                              text NOT NULL CHECK (btrim(captain_id) <> ''),
-  requires_cod                            boolean NOT NULL DEFAULT false,
   wallet_id                               text,
   wallet_status                           text,
   available_balance_minor_units           bigint,
@@ -47,4 +46,4 @@ COMMENT ON TABLE wlt_dispatch_financial_eligibility_policies IS
   'WLT-owned dispatch eligibility thresholds and currency policy. DSH must never copy or evaluate these values.';
 
 COMMENT ON TABLE wlt_dispatch_financial_eligibility_decisions IS
-  'Auditable WLT-owned dispatch financial decisions. Only abstract decision metadata crosses into DSH.';
+  'Auditable WLT-owned universal dispatch financial decisions. Only abstract decision metadata crosses into DSH.';
