@@ -93,7 +93,7 @@ actions:
           const: IDENTITY_NOT_READY
         message:
           type: string
-  - target: $.components.responses.ServiceUnavailable.content.application/json.schema
+  - target: $.components.responses.ServiceUnavailable.content['application/json'].schema
     description: A 503 may be the structured fail-closed runtime status or an operation-specific API error.
     update:
       oneOf:
