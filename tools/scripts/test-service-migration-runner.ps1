@@ -4,9 +4,10 @@
 
 .DESCRIPTION
   The wrapper must delegate to infra/docker/scripts/schema-migration-runner.ps1 and
-  therefore record governed state in schema_migrations, not runtime_schema_migrations.
-  This test covers previous-version upgrade, deterministic rerun, checksum
-  immutability, failed migration rollback, and roll-forward recovery.
+  therefore record governed state in schema_migrations rather than any legacy
+  runtime-local ledger table. This test covers previous-version upgrade,
+  deterministic rerun, checksum immutability, failed migration rollback, and
+  roll-forward recovery.
 #>
 
 [CmdletBinding()]
