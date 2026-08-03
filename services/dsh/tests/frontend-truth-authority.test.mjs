@@ -49,6 +49,7 @@ const retiredParallelAuthorities = [
   "services/dsh/frontend/shared/checkout/checkout-contract.ts",
   "services/dsh/frontend/shared/checkout/dsh-client-binding.contracts.ts",
   "services/dsh/frontend/shared/identity-access/dsh-role-permission.model.ts",
+  "services/dsh/frontend/shared/identity-access/surface-visibility.policy.ts",
   "services/wlt/frontend/shared/dsh/payment/wlt-payment-session.types.ts",
   "services/wlt/frontend/control-panel/_skeleton-proof/WltFinanceReadOnlySkeletonProof.tsx",
 ];
@@ -116,6 +117,21 @@ describe("DSH/WLT frontend truth authority", () => {
       [],
       `WLT DSH consumers must use the canonical dsh-link transport:\n${violations.join("\n")}`,
     );
+  });
+
+  it("keeps partner order mapping free of local capability and financial-total authority", () => {
+    const source = read("services/dsh/frontend/shared/partner/partner.adapters.ts");
+    assert.doesNotMatch(source, /getSurfaceModeCapability/);
+    assert.doesNotMatch(source, /quantity[^\n]*\*[^\n]*unitPrice|unitPrice[^\n]*\*[^\n]*quantity/);
+    assert.doesNotMatch(source, /const\s+total\s*=/);
+    assert.match(source, /amountLabel:\s*"غير متاح من عقد الطلب"/);
+  });
+
+  it("keeps captain UI free of local COD capability authority", () => {
+    const source = read("services/dsh/frontend/shared/delivery/captain.derived.ts");
+    assert.doesNotMatch(source, /isCaptainCodCollectorForMode/);
+    assert.doesNotMatch(source, /captainCollectsCod/);
+    assert.match(source, /Boolean\(activeAssignment\)/);
   });
 
   it("keeps the shared delivery contract presentation-only", () => {
