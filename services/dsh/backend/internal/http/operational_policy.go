@@ -9,7 +9,7 @@ import (
 )
 
 func (s *protectedStoreServer) handleGetOperationalProfile(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionRead); !ok {
 		return
 	}
 	profile, err := platformpolicies.GetOperationalProfile(
@@ -26,7 +26,7 @@ func (s *protectedStoreServer) handleGetOperationalProfile(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleUpsertOperationalProfile(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage)
+	actor, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionManage)
 	if !ok {
 		return
 	}
@@ -78,7 +78,7 @@ func (s *protectedStoreServer) handleUpsertOperationalProfile(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleListOperationalDeliveryModes(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionRead); !ok {
 		return
 	}
 	items, err := platformpolicies.ListDeliveryModePolicies(r.Context(), s.db, r.PathValue("zoneId"))
@@ -90,7 +90,7 @@ func (s *protectedStoreServer) handleListOperationalDeliveryModes(w http.Respons
 }
 
 func (s *protectedStoreServer) handleUpsertOperationalDeliveryMode(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage)
+	actor, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionManage)
 	if !ok {
 		return
 	}
@@ -143,7 +143,7 @@ func (s *protectedStoreServer) handleEvaluateOperationalPolicy(w http.ResponseWr
 }
 
 func (s *protectedStoreServer) handleListOperationalPolicyAudit(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionRead); !ok {
 		return
 	}
 	limit := 50
@@ -170,7 +170,7 @@ func (s *protectedStoreServer) handleListOperationalPolicyAudit(w http.ResponseW
 }
 
 func (s *protectedStoreServer) handleRollbackOperationalPolicy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage)
+	actor, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionManage)
 	if !ok {
 		return
 	}
