@@ -101,7 +101,7 @@
       "file": "workforce-014_operational_assignments_integrity.sql",
       "sha256": "5517ef53d10a4430e2ae914caa26ddb35082fc83b35db43b745a99a412a6f716",
       "historicalPrefix": "014",
-      "state": "ACTIVE"
+      "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 15,
