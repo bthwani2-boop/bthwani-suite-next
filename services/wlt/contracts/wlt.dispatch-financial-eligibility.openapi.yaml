@@ -1,0 +1,81 @@
+openapi: 3.1.0
+info:
+  title: BThwani WLT Dispatch Financial Eligibility API
+  version: 1.0.0
+  description: >-
+    Internal WLT-owned decision boundary for captain dispatch financial
+    eligibility. Wallet status, balances, currency, thresholds, and financial
+    policy never cross this contract. DSH receives only a short-lived abstract
+    decision and must fail closed when this operation is unavailable.
+x-bthwani-owner: services/wlt
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: ENABLED
+x-bthwani-runtime-dependency: true
+x-bthwani-financial-owner: true
+paths:
+  /internal/dispatch-financial-eligibility/evaluate:
+    post:
+      operationId: evaluateDispatchFinancialEligibility
+      summary: Evaluate a captain using WLT-owned financial truth and policy.
+      tags: [WltDispatchFinancialEligibility]
+      security: [ { serviceBearer: [] } ]
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationIdOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DispatchFinancialEligibilityEvaluationInput' }
+      responses:
+        '200':
+          description: WLT-owned abstract dispatch financial decision.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DispatchFinancialEligibilityDecisionEnvelope' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '503': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+components:
+  securitySchemes: {}
+  schemas:
+    DispatchFinancialEligibilityEvaluationInput:
+      type: object
+      additionalProperties: false
+      required: [captainId, requiresCod]
+      properties:
+        captainId:
+          type: string
+          minLength: 1
+          maxLength: 200
+        requiresCod:
+          type: boolean
+    DispatchFinancialEligibilityDecisionEnvelope:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision: { $ref: '#/components/schemas/DispatchFinancialEligibilityDecision' }
+    DispatchFinancialEligibilityDecision:
+      type: object
+      additionalProperties: false
+      required:
+        - eligible
+        - reasonCode
+        - decisionId
+        - policyVersion
+        - evaluatedAt
+        - expiresAt
+      properties:
+        eligible: { type: boolean }
+        reasonCode: { type: string, minLength: 1, maxLength: 160 }
+        decisionId: { type: string, minLength: 1, maxLength: 200 }
+        policyVersion: { type: string, minLength: 1, maxLength: 200 }
+        evaluatedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
