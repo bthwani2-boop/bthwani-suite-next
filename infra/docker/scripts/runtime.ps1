@@ -409,7 +409,7 @@ switch ($Action) {
       Invoke-GovernedMinioInit
     }
     Invoke-GovernedMigrations
-    Invoke-Compose up -d
+    Invoke-Compose up -d --build
     Wait-ForSelectedApis
     Write-Host "runtime:up: PASS"
   }
@@ -436,7 +436,7 @@ switch ($Action) {
     }
     Invoke-GovernedMigrations
     Invoke-GovernedSeeds
-    Invoke-Compose up -d
+    Invoke-Compose up -d --build
     Invoke-SelectedSmoke
     Write-Host "reset: PASS"
   }
@@ -456,12 +456,12 @@ switch ($Action) {
     }
     Invoke-GovernedMigrations
     Invoke-GovernedSeeds
-    Invoke-Compose up -d
+    Invoke-Compose up -d --build
     Wait-ForSelectedApis
     if ($ProfileList -contains "dsh") {
       node tools/scripts/mobile-dev-data.mjs --repair
       if ($LASTEXITCODE -ne 0) {
-        throw "DSH API dev bootstrap failed (exit $LASTEXITCODE)"
+        throw "Mobile full-stack development data bootstrap failed (exit $LASTEXITCODE)"
       }
     }
     Write-Host "runtime:bootstrap-dev: PASS"
