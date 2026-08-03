@@ -111,6 +111,17 @@ function Get-GovernedLedgerCount {
   return Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM schema_migrations WHERE service_name = '$LedgerServiceKeySql' AND success AND NOT dirty;"
 }
 
+function Copy-MigrationManifestFiles {
+  param([Parameter(Mandatory = $true)][string]$Destination)
+
+  foreach ($manifestName in @("manifest.json", "manifest.extensions.json")) {
+    $source = Join-Path $MigrationPath $manifestName
+    if (Test-Path -LiteralPath $source -PathType Leaf) {
+      Copy-Item -LiteralPath $source -Destination (Join-Path $Destination $manifestName) -Force
+    }
+  }
+}
+
 $canonicalFiles = @(Get-ChildItem -LiteralPath $MigrationPath -File -Filter "*.sql" |
   Sort-Object { $_.Name.ToLowerInvariant() }, Name)
 if ($canonicalFiles.Count -eq 0) {
@@ -142,6 +153,7 @@ ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload;
     foreach ($file in $canonicalFiles[0..($previousCount - 1)]) {
       Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $previousDirectory $file.Name)
     }
+    Copy-MigrationManifestFiles -Destination $previousDirectory
     Invoke-RunnerProcess -Directory $previousDirectory -ExpectSuccess $true
 
     $previousLedgerCount = Get-GovernedLedgerCount -LedgerServiceKeySql $ServiceKeySql
