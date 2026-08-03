@@ -41,8 +41,8 @@ export * from './wlt-cod/PartnerCodCustodyPanel';
 export * from './finance/finance.controller';
 export * from './finance/finance-hub.types';
 export * from './finance/cod-reconciliation.api';
-// Canonical DSH HTTP utilities — dsh-link is the single source of truth.
-// dsh-http re-exports from dsh-link; only one of them should appear here.
+// Canonical DSH HTTP utilities. The retired dsh-http compatibility wrapper
+// must not return; this barrel exposes the single transport path.
 export * from './dsh-link/dsh-api-base-url';
 export * from './dsh-link/dsh-http-request';
 export * from './payment/payment-session-runtime.api';
