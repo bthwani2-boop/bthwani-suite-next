@@ -7,9 +7,10 @@ const repoRoot = path.resolve(import.meta.dirname, "../../../..");
 const read = (relative) => fs.readFileSync(path.join(repoRoot, relative), "utf8");
 const stripComments = (source) => source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 const bffProxyPath = "apps/control-panel/runtime/src/server/bff-proxy.adapter.ts";
+const nextConfigPath = "apps/control-panel/runtime/next.config.mjs";
 
 test("control-panel emits governed browser security headers", () => {
-  const config = read("apps/control-panel/runtime/next.config.ts");
+  const config = read(nextConfigPath);
   for (const header of [
     "Content-Security-Policy",
     "Referrer-Policy",
