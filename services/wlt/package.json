@@ -22,8 +22,8 @@
     "@types/node": "24.10.1",
     "@types/react": "19.2.17",
     "next": "15.1.6",
-    "typescript": "npm:@typescript/typescript6@6.0.2",
-    "@typescript/native": "npm:typescript@7.0.2"
+    "typescript": "7.0.2",
+    "@typescript/typescript6": "6.0.2"
   },
   "exports": {
     "./dsh": "./frontend/shared/dsh/index.ts"

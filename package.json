@@ -13,6 +13,9 @@
     "contracts:registry": "node tools/scripts/generate-contract-registry.mjs",
     "contracts:lint": "pnpm run contracts:redocly && pnpm run guard:contract-registry-drift",
     "typecheck": "pnpm -r --if-present typecheck",
+    "typecheck:ts7": "pnpm -r --if-present typecheck:ts7",
+    "typecheck:ts6:compat": "pnpm -r --if-present typecheck:ts6:compat",
+    "typecheck:all": "pnpm run typecheck:ts7 && pnpm run typecheck:ts6:compat",
     "build": "pnpm -r --if-present build",
     "guard:foundation": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-foundation-gate.ps1",
     "guard:journey": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-journey-gate.ps1",
@@ -279,9 +282,9 @@
     "openapi-typescript": "7.13.0",
     "sherif": "1.11.1",
     "size-limit": "^11.1.6",
-    "typescript": "npm:@typescript/typescript6@6.0.2",
-    "yaml": "2.8.1",
-    "@typescript/native": "npm:typescript@7.0.2"
+    "typescript": "7.0.2",
+    "@typescript/typescript6": "6.0.2",
+    "yaml": "2.8.1"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

@@ -8,6 +8,9 @@
   "types": "src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck:ts7": "tsc --noEmit -p tsconfig.json",
+    "typecheck:ts6:compat": "tsc6 --noEmit -p tsconfig.json",
+    "typecheck:all": "pnpm run typecheck:ts7 && pnpm run typecheck:ts6:compat",
     "build": "tsc --noEmit -p tsconfig.json",
     "test": "node --test tests/*.test.mjs"
   },
@@ -26,6 +29,7 @@
   },
   "devDependencies": {
     "@types/react": "19.2.17",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "@typescript/typescript6": "6.0.2"
   }
 }

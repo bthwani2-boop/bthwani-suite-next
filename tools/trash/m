@@ -1,0 +1,685 @@
+# النتيجة الحاكمة: `FIX_REQUIRED`
+
+نُفّذ التشخيص عبر GitHub Remote على الفرع المحدد فقط، وبوضع قراءة وتحليل دون كتابة، وفق نمط `DIAGNOSE` في الأمر الحاكم المرفق. لم تُنشأ ملفات أو Commits أو Pushات، ولم تُعدَّل الاختبارات لإخفاء الفشل. 
+
+```yaml
+repository_mode: GITHUB_REMOTE_READ_ONLY
+repository: bthwani2-boop/bthwani-suite-next
+target_branch: smsm
+resolved_commit_sha: e44b4abec5ceb14671b8c43cb08309cbd364f1c0
+base_ref: master
+pull_request: 201
+pull_request_state: OPEN_DRAFT
+changed_paths_by_this_diagnosis: []
+decision: FIX_REQUIRED
+merge_recommendation: DO_NOT_MERGE
+```
+
+رأس الفرع بقي ثابتًا عند `e44b4abec5ceb14671b8c43cb08309cbd364f1c0`. الـPR ما زال Draft، ويشمل 620 Commit و953 ملفًا متغيرًا ويفرض في وصفه عدم الدمج قبل نجاح العقود وGo وقواعد البيانات وRuntime والأدلة متعددة الأسطح.
+
+## الحكم المعماري العام
+
+حدث تقارب حقيقي داخل `smsm`، خصوصًا في OpenAPI وCheckout وWLT والـRBAC، لكن الفرع **ليس مغلقًا**. بقيت أربعة أسباب جذرية عالية الخطورة:
+
+1. سلطة الصلاحيات منقسمة بين تنفيذ Go والقاموس التعاقدي.
+2. Runtime CI يطلب قراءة بيانات لم ينفذ Bootstrap أو Seeds لإنشائها.
+3. عقد حماية Migration ledger يتعارض مع سلوك الـrunner الحاكم.
+4. بعض أسطح DSH ما زالت تعيد تفسير الحقيقة المالية محليًا.
+
+إضافة إلى ذلك توجد عيوب في أدوات التشخيص نفسها، وملاحظات أمنية مفتوحة، وديون اعتماديات وتنظيف لا يجوز حذفها جماعيًا دون إثبات الاستهلاك.
+
+---
+
+# الفجوات الجذرية المثبتة
+
+## P0-01 — سلطة صلاحيات مالية تشغيلية غير مكتملة مركزيًا
+
+### المسارات
+
+```text
+services/dsh/backend/internal/http/captain_financial_eligibility.go
+services/dsh/contracts/dsh.captain-financial-eligibility.openapi.yaml
+governance/contracts/scope-vocabulary.json
+Identity permission bundles and migrations
+```
+
+### المشكلة
+
+تنفيذ Go يفرض فعليًا:
+
+```text
+dsh.dispatch_financial_eligibility.read
+dsh.dispatch_financial_eligibility.manage
+```
+
+لكن القيمتين غير موجودتين في `scope-vocabulary.json`، رغم أن القاموس يعلن صراحة أن كل Scope يفرضه Go يجب أن يوجد فيه. القاموس الحالي يحتوي صلاحيات Dispatch capacity وغيرها، لكنه لا يحتوي صلاحيات Financial eligibility.
+
+الـhandlers تستخدم الصلاحيتين فعلًا، وتستدعي WLT للحصول على القرار، ثم تحفظ داخل DSH Projection وMetadata فقط، وهو حد ملكية صحيح من حيث المبدأ.
+
+العقد يعلن أن WLT يملك الرصيد والسياسة المالية وأن DSH يحتفظ بقرار قصير العمر فقط، لكنه يكتفي بـ`bearerAuth` ولا يربط العمليات بالصلاحيات الفعلية التي يفرضها Go. كما أن `Error.code` ما زال `string` مفتوحًا.
+
+### فجوة إضافية
+
+التنفيذ يعيد:
+
+```text
+OperatorContext_REQUIRED
+```
+
+بدل صيغة متسقة مثل:
+
+```text
+OPERATOR_CONTEXT_REQUIRED
+```
+
+في موضعين. لأن العقد لا يحكم Error codes بـEnum أو Schema مركزية، يمكن أن يستمر هذا الانحراف دون أن تكتشفه عملية التوليد.
+
+### السبب الجذري
+
+Capability الأهلية المالية أضيفت في Go وWLT، لكن دورة المركزية لم تكتمل عبر:
+
+```text
+Identity
+→ canonical permission vocabulary
+→ OpenAPI security metadata
+→ generated clients
+→ Go enforcement
+→ error vocabulary
+→ negative authorization tests
+```
+
+### الأثر
+
+* فشل بوابة Contract-scope binding.
+* احتمال منح صلاحية غير موجودة في Bundles الحاكمة أو عدم إمكانية منحها أصلًا.
+* اختلاف بين وثيقة العقد والسلوك التشغيلي.
+* صعوبة اكتشاف أخطاء Error mapping عبر الأسطح.
+* النطاق مالي وأمني، ولذلك يمنع الإغلاق.
+
+### المعالجة المطلوبة
+
+1. إضافة الصلاحيتين إلى القاموس الحاكم.
+2. إثبات وجودهما في Identity permission bundles؛ وإضافة Migration أمامية إن كانتا مفقودتين.
+3. ربط عمليات OpenAPI بالـscopes الفعلية وفق آلية المستودع الحالية.
+4. توحيد `OPERATOR_CONTEXT_REQUIRED`.
+5. تقييد Error codes بعقد مركزي أو Schema مشتركة.
+6. إضافة اختبارات:
+
+   * بلا صلاحية.
+   * صلاحية قراءة فقط أمام Mutation.
+   * Operator context مفقود.
+   * Captain يحاول قراءة Captain آخر.
+   * قرار WLT منتهي أو غير مطابق للسياق.
+
+---
+
+## P0-02 — Runtime orchestration يثبت الجاهزية ثم يفشل حتميًا في القراءة
+
+### السلسلة الحالية
+
+Workflow التشغيل ينفذ:
+
+```text
+runtime:up
+→ runtime:catalog-readback
+→ runtime:smoke
+```
+
+وهو مثبت في Workflow الحالي.
+
+لكن Action `up` في `runtime.ps1` ينفذ:
+
+```text
+Postgres
+→ MinIO init
+→ migrations
+→ services startup
+→ readiness
+```
+
+ولا ينفذ DSH SQL Seeds أو Media fixtures أو Bootstrap data.
+
+بعد ذلك يطلب `verify-catalog.ps1` وجود:
+
+* متجر واحد على الأقل.
+* فئة واحدة على الأقل.
+* منتجات منشورة.
+* صور منتجات قابلة للوصول.
+
+ويرفض الصفر بصورة صحيحة.
+
+نتيجة Runtime artifact على SHA المثبت:
+
+```text
+Postgres: healthy
+Identity: healthy
+Workforce: ready
+WLT: ready
+DSH: ready
+MinIO: healthy
+runtime:up: PASS
+Home discovery returned 0 stores
+runtime:catalog-readback: FAIL
+```
+
+إذن الفشل ليس Docker أو Build أو Readiness؛ بل إن Workflow يطلب قراءة Fixture لم ينفذ المسار الذي ينشئها.
+
+المسار الحاكم للـSeeds موجود بالفعل، ويصرح بأن DSH يجب أن يملك Seed set غير فارغ.
+
+كما أن `bootstrap-dev` و`reset/all` ينفذان المهاجرات والـSeeds وMedia initialization بالترتيب الصحيح.
+
+### تراجع حماية مهم
+
+آخر Commit حذف:
+
+```text
+services/dsh/tests/central-catalog-runtime-portability.test.mjs
+services/dsh/tests/mobile-runtime-database-convergence.test.mjs
+```
+
+وحذف Assertion من اختبار إغلاق الكتالوج. أحد الاختبارات المحذوفة كان يثبت أن الـSeeds تسبق Catalog convergence؛ وهو بالضبط السلوك الذي فشل الآن في Runtime.
+
+### السبب الجذري
+
+تم فصل `up` عن `seed` بصورة صحيحة معماريًا، لكن Workflow لم يُحدّث ليستخدم Bootstrap مناسبًا قبل اختبار محتوى قاعدة جديدة. ثم أزيل الاختبار الذي كان يمنع هذا الانفصال التشغيلي غير المكتمل.
+
+### المعالجة الصحيحة
+
+* لا يجوز تخفيف `verify-catalog` أو السماح بصفر متاجر.
+* يجب أن ينفذ Runtime proof واحدًا من:
+
+  * `bootstrap-dev -Force` في بيئة CI المعزولة، أو
+  * مسارًا صريحًا: migrations → governed DSH seeds → media fixtures → APIs → readback.
+* يجب ألا ينفذ مسارين مستقلين للـSeed أو Catalog convergence.
+* يجب إعادة بناء Regression test وفق الـorchestrator الحالي، لا استعادة الاختبارات القديمة حرفيًا.
+* يجب توضيح أن الـSeeds دليل ربط Runtime فقط، وليست دليل بيانات إنتاجية أو تفعيل تجاري.
+
+الملفات التشخيصية:
+
+[Runtime proof artifact](sandbox:/mnt/data/runtime-proof.zip)
+
+---
+
+## P0-03 — تعارض في سلطة Migration ledger عبر جميع الخدمات
+
+السياسة الحاكمة تنص على:
+
+```text
+one runner
+one schema_migrations ledger
+```
+
+وتمنع إعادة كتابة التاريخ.
+
+الاختبار العام للخدمات ينشئ جدولًا تاريخيًا:
+
+```text
+bthwani_migration_ledger
+```
+
+ويضع داخله Migration مجهولة وChecksum خاطئًا، ثم يتوقع أن يفشل الـrunner.
+
+لكن `schema-migration-runner.ps1` يفحص فقط:
+
+```text
+schema_migrations
+runtime_schema_migrations
+runtime_schema_migrations_legacy_retired
+```
+
+ولا يفحص `bthwani_migration_ledger`.
+
+لذلك ينجح الـrunner بينما يتوقع الاختبار الرفض.
+
+### ما ثبت أيضًا
+
+المهاجرات الفعلية نفسها نجحت في:
+
+* قاعدة جديدة.
+* الترقية من الإصدار السابق.
+* إعادة التنفيذ الحتمية.
+* فحص Manifest.
+* رفض Checksum drift.
+* الحفاظ على البيانات السابقة.
+
+الفشل المشترك في Jobs الخدمات ليس ستة عيوب منفصلة؛ بل سبب واحد في Contract الاختبار/الـrunner.
+
+### السبب الجذري
+
+لم يُحسم وضع `bthwani_migration_ledger` بعد الانتقال إلى `schema_migrations`:
+
+* هل هو Legacy ledger معترف به يجب فحصه أو عزله؟
+* أم اسم قديم لم يعد له أي وجود قانوني ويجب إزالة اختباره بعد إثبات ذلك؟
+
+الوضع الحالي يجمع بين ادعاءين متناقضين:
+
+```text
+TEST: this ledger is security/data relevant and must be rejected
+RUNNER: this ledger does not exist conceptually
+```
+
+### المعالجة المطلوبة
+
+الأكثر أمانًا هو Fail-closed:
+
+1. اكتشاف `bthwani_migration_ledger`.
+2. فحص بنيته وصفوفه.
+3. رفض أي صفوف مجهولة أو Checksums غير قابلة للمصالحة.
+4. منع بقائه كـLedger نشط موازٍ.
+5. ترحيله أو عزله باسم retired إذا كان تاريخًا حقيقيًا مثبتًا.
+6. عدم استيراده إلى `schema_migrations` دون Mapping قابل للتدقيق.
+7. إضافة اختبارات منفصلة:
+
+   * Legacy ledger غير موجود.
+   * موجود وفارغ.
+   * موجود بصفوف صحيحة قابلة للمصالحة.
+   * صف مجهول.
+   * Checksum مختلف.
+   * وجود Ledger نشط وآخر retired معًا.
+
+حذف الاختبار فقط سيخفي قرار ملكية غير محسوم.
+
+---
+
+## P1-01 — حقيقة مالية محلية داخل شاشة Checkout في DSH
+
+الملف:
+
+```text
+services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx
+```
+
+يعرّف محليًا:
+
+```ts
+const major = value / 100;
+currency === "YER" ? "ر.ي" : currency
+```
+
+أي أنه يفترض أن جميع العملات تملك منزلتين عشريتين، ويملك محليًا تفسير YER وعرض Minor units.
+
+لكن WLT يملك بالفعل Formatter يحسب عدد المنازل من ISO/`Intl.NumberFormat` ولا يفترض منزلتين.
+
+### التصنيف
+
+```text
+FORBIDDEN_LOCAL_FINANCIAL_INTERPRETATION
+```
+
+هذا ليس Ledger موازٍ، لكنه **محرك تفسير مالي موازٍ** وقد يعرض مبلغًا خاطئًا لعملات ذات 0 أو 3 منازل عشرية.
+
+### المعالجة
+
+* جعل Formatter المالي Projection/Presentation واحدة مملوكة لحد WLT-DSH المشترك.
+* استهلاكه من شاشة Checkout دون Deep import غير حاكم.
+* منع أي `/ 100` أو Currency exponent محلي داخل DSH والأسطح.
+* إضافة Guard دلالي للـminor-units، بدل البحث فقط عن Commission rates ثابتة.
+
+---
+
+## P1-02 — أدوات Coverage تنتج False positives ولا تكشف بعض العيوب الحقيقية
+
+التشخيص أبلغ عن 26 شاشة بلا Controller أو API binding واضح.
+
+لكن العينة:
+
+```text
+GovernedCheckoutScreen.tsx
+```
+
+تستورد فعليًا:
+
+```text
+useCheckoutToOrderFlow
+```
+
+من Shared checkout، ولذلك تحذير «لا يوجد Controller» غير صحيح.
+
+الـgate يعتمد Regex وأسماء ملفات ومؤشرات نصية مثل `Controller` و`.api` بدل تتبع Export/Import symbol عبر الـbarrels.
+
+في المقابل لم يكتشف الـgate الحساب المحلي `/ 100` داخل الشاشة.
+
+### السبب الجذري
+
+```text
+TEXT_PATTERN_COVERAGE
+≠
+SEMANTIC_BINDING_PROOF
+```
+
+### المعالجة
+
+* تحويل الفحص إلى AST/import graph.
+* حل Barrel exports قبل تصنيف الشاشة.
+* فصل:
+
+  * Screen static/unbound.
+  * Screen bound through shared hook.
+  * Screen يحمل Business/Financial logic محليًا.
+* عدم حذف أو إعادة كتابة الشاشات الـ26 اعتمادًا على هذا التقرير وحده.
+
+---
+
+## P1-03 — خيطا مراجعة أمنية غير محلولين
+
+يوجد Threadان مفتوحان في PR #201:
+
+1. `tools/guards/logic-coverage-gate.mjs`
+   احتمال Regex backtracking أُسّي.
+
+2. `tools/scripts/sync-mobile-apps.mjs`
+   Regex مبني من قيمة `--app` قادمة من command line دون escaping.
+
+الملف الثاني يأخذ `--app` من `process.argv` ثم يدرج `key` مباشرة داخل `new RegExp(...)`.
+
+حتى لو كانت التطبيقات الحالية مجموعة محدودة، يجب إما:
+
+* التحقق من `key` مقابل Allowlist صارمة قبل بناء Regex، و
+* Escape جميع Regex metacharacters،
+
+أو إزالة بناء Regex الديناميكي بالكامل.
+
+نجاح CodeQL الحالي لا يغلق تلقائيًا Threads غير المحلولة؛ يلزم إثبات إصلاحها أو إثبات أنها أصبحت Outdated ثم Resolve رسميًا.
+
+---
+
+## P1-04 — بوابات بنيوية واعتمادية غير مستقرة
+
+Deep diagnostics أظهر:
+
+* اختلاف Toolchain بين TypeScript 7 في تطبيقات الهاتف وAlias لـTypeScript 6 في Control Panel.
+* `.ls-lint` يعامل Route groups مثل `(shell)` والمسارات الديناميكية `[partnerId]` كمخالفة تسمية، رغم أنها صيغة Next.js قانونية.
+* Test file داخل `tools/guards` يطابق نمط Guard production بالخطأ.
+* اعتماديات غير مستخدمة أو غير معلنة.
+* أنماط Knip متقادمة أو زائدة.
+
+المعالجة ليست إعادة تسمية Next routes أو حذف Dependencies جماعيًا؛ بل:
+
+1. تثبيت قرار Toolchain واحد لكل Runtime.
+2. تعريف استثناءات Framework قانونية داخل Naming gate.
+3. فصل ملفات اختبارات الحراس عن الحراس التنفيذية.
+4. تصحيح Manifests بناءً على Imports الحقيقية.
+5. إزالة Knip ignores المتقادمة تدريجيًا.
+
+[Deep repository diagnostics](sandbox:/mnt/data/deep-repository-diagnostics.zip)
+
+---
+
+## P2 — مرشحو تنظيف غير مثبتين بعد
+
+التشخيص أبلغ عن:
+
+* 77 ملفًا مرشحًا لعدم الاستهلاك.
+* 48 Export غير مستخدم.
+* 4 Types مصدرة غير مستخدمة.
+* 26 شاشة ذات Binding غير واضح وفق الفحص النصي.
+* Dependencies غير مستخدمة، منها عناصر في DSH وWLT والجذر.
+* تكرار أصول Mobile icons بين التطبيقات.
+* مئات القيم البصرية الخام خارج Design tokens.
+
+هذه ليست قائمة حذف جاهزة.
+
+كل ملف يجب أن يمر عبر:
+
+```text
+imports
+→ exports
+→ route registration
+→ navigation registration
+→ registries
+→ package entry points
+→ dynamic import
+→ tests
+→ runtime reachability
+```
+
+ثم يصنف:
+
+```text
+KEEP_ACTIVE
+MERGE_DUPLICATE
+MOVE_TO_OWNER
+REFACTOR_SPLIT
+RETIRE_DEAD
+```
+
+لا يوجد حاليًا دليل يسمح باعتبار الملفات الـ77 كلها Dead code.
+
+---
+
+# حالة مصادر الحقيقة الموازية
+
+## ما عولج فعليًا على رأس `smsm`
+
+### Checkout
+
+الملف اليدوي السابق:
+
+```text
+services/dsh/frontend/shared/checkout/checkout-contract.ts
+```
+
+لم يعد موجودًا.
+
+الملف الحالي `checkout.types.ts` يستخرج Request وResponse والحالات من:
+
+```text
+@bthwani/dsh-openapi
+```
+
+ويبقي فقط Controller presentation state.
+
+### WLT Payment sessions
+
+الأنواع الحالية تأتي من:
+
+```text
+@bthwani/wlt-openapi
+```
+
+ولا تعيد تعريف Status أو Session أو Provider events محليًا.
+
+### سلطات RBAC والكتالوج القديمة
+
+يوجد اختبار يمنع عودة:
+
+* Checkout contract القديم.
+* DSH role-permission model المحلي.
+* Surface visibility policy المحلية.
+* Catalog controller/policy القديمة.
+* WLT payment types القديمة.
+* `CONTRACT_ONLY` داخل Runtime frontend.
+* Rates مالية ثابتة داخل DSH frontend.
+
+كما يوجد اختبار WLT يمنع إعادة تعريف Refund/Commission/Ledger/Payment types يدويًا ويشترط OpenAPI aliases.
+
+هذه معالجة صحيحة، لكنها لا تثبت وحدها كل الـRoutes والأسطح لأن الحراس الحالية Pattern-based وليست Semantic proof كاملة.
+
+## ما بقي موازياً أو متناقضاً
+
+| الحقيقة                                    | الحالة             |
+| ------------------------------------------ | ------------------ |
+| OpenAPI operation/schema ownership         | `PROVEN_STATIC`    |
+| Checkout Request/Response authority        | `PROVEN_STATIC`    |
+| WLT payment DTO/status authority           | `PROVEN_STATIC`    |
+| WLT financial ownership                    | `PARTIALLY_PROVEN` |
+| DSH local money interpretation             | `FIX_REQUIRED`     |
+| Permission vocabulary مقابل Go enforcement | `FIX_REQUIRED`     |
+| Error-code vocabulary                      | `FIX_REQUIRED`     |
+| Migration ledger authority                 | `FIX_REQUIRED`     |
+| Runtime data/bootstrap authority           | `FIX_REQUIRED`     |
+| Full cross-surface readback                | `NEEDS_EVIDENCE`   |
+| جميع الشاشات والرحلات                      | `NEEDS_EVIDENCE`   |
+| Production/commercial truth                | `NOT_PROVEN`       |
+
+النموذج الحاكم نفسه يثبت أن DSH يملك الحقيقة التشغيلية، وWLT الحقيقة المالية، وأن التطبيقات تصل للماليات عبر DSH فقط. لكنه يسجل Product acceptance كـ`PENDING_EXACT_COMMIT_EVIDENCE`.
+
+---
+
+# وضع الفروع الجانبية
+
+الفروع التالية أصبحت أسلافًا لـ`smsm`؛ الفرع `smsm` متقدم عليها ولا توجد فيها Commits منفصلة تحتاج دمجًا جديدًا:
+
+```text
+task/smsm-cross-surface-truth-closure-20260803-0755
+task/smsm-cross-surface-truth-convergence-v2-20260803
+task/smsm-cross-surface-truth-convergence-v3-20260803
+task/smsm-p0-financial-sovereignty-v2-20260803
+task/smsm-p0-authz-sovereignty-20260803
+verify/smsm-cross-surface-truth-base-20260803
+```
+
+إذن المشكلة الحالية ليست إنجازات مفقودة في الفروع الجانبية؛ بل تناقضات ظهرت أو بقيت بعد تقاربها داخل `smsm`.
+
+---
+
+# تسلسل المعالجة الجذرية الصحيح
+
+## الوحدة 1 — صلاحيات الأهلية المالية
+
+```text
+scope vocabulary
+→ Identity bundles/migration
+→ OpenAPI security binding
+→ Go constants
+→ normalized errors
+→ generated clients
+→ authorization negative tests
+```
+
+## الوحدة 2 — Runtime bootstrap والكتالوج
+
+```text
+clean database
+→ migrations
+→ governed local seeds
+→ governed media fixtures
+→ APIs
+→ readiness
+→ home discovery
+→ store detail
+→ product catalog
+→ image readback
+```
+
+ثم إعادة بناء اختبار يمنع تقديم Catalog readback قبل Bootstrap.
+
+## الوحدة 3 — Migration authority
+
+```text
+inventory historical ledgers
+→ classify bthwani_migration_ledger
+→ fail-closed reconciliation/quarantine
+→ one schema_migrations authority
+→ fresh/upgrade/replay/failure/recovery tests
+```
+
+## الوحدة 4 — الحقيقة المالية في العرض
+
+```text
+remove /100 and YER special case from DSH screen
+→ expose governed money formatter
+→ migrate every financial surface
+→ add minor-unit authority guard
+```
+
+## الوحدة 5 — هندسة الحراس
+
+```text
+replace regex-only binding detection
+→ AST/import graph
+→ escape or remove dynamic regex
+→ resolve security review threads
+→ prove guard mutation tests
+```
+
+## الوحدة 6 — التنظيف
+
+بعد نجاح الوحدات السابقة فقط:
+
+```text
+unused dependency verification
+→ file reachability verification
+→ route/navigation verification
+→ retire proven dead files
+→ deduplicate generated mobile assets where safe
+→ reduce stale Knip exceptions
+```
+
+## الوحدة 7 — Exact-SHA final verification
+
+يجب تشغيل البوابات على SHA نهائي واحد:
+
+```text
+contracts and generated clients
+authorization and isolation
+all backend Go checks
+fresh and upgrade database paths
+runtime full profile
+catalog multi-surface readback
+representative DSH→WLT financial readback
+negative and unknown-result flows
+security review closure
+immutable diff
+contextual CI aggregate
+```
+
+---
+
+# ما لم يمكن إثبات إغلاقه
+
+* لم يصل Runtime إلى Full smoke بعد فشل Catalog readback.
+* لم يصل إلى Representative DSH→WLT financial readback.
+* لم يثبت التطبيق الكامل لكل الأسطح الخمسة.
+* لم تثبت جميع الرحلات الموجودة في 953 ملفًا متغيرًا.
+* لم تثبت Production أو Release أو Commercial activation.
+* لا توجد موافقة مستقلة نهائية على Security أو Finance أو Migrations.
+* خيطا المراجعة الأمنية ما زالا مفتوحين.
+* ملفات Knip الـ77 ليست مثبتة كملفات ميتة.
+* PR ما زال Draft.
+* Contextual CI غير أخضر على SHA النهائي.
+* لا يجوز تسجيل أي عداد غير مقاس بصفر.
+
+```yaml
+canonical_result: FIX_REQUIRED
+
+static:
+  status: FAILED
+  reasons:
+    - scope vocabulary drift
+    - migration runner contract contradiction
+    - immutable diff and dependency diagnostics
+
+runtime:
+  status: FAILED
+  reason: governed runtime started successfully but catalog readback had zero stores
+
+security:
+  status: NEEDS_EVIDENCE
+  reasons:
+    - authorization vocabulary incomplete
+    - two unresolved review threads
+
+finance:
+  status: FIX_REQUIRED
+  reasons:
+    - DSH local minor-unit interpretation
+    - full DSH-to-WLT runtime readback not reached
+
+isolation:
+  status: NEEDS_EVIDENCE
+
+database:
+  status: FIX_REQUIRED
+  reason: legacy-ledger authority unresolved
+
+multi_surface:
+  status: NEEDS_EVIDENCE
+
+ci:
+  status: FAILED
+
+merge_status: FORBIDDEN_BY_CURRENT_EVIDENCE
+```
+
+**القرار النهائي على SHA `e44b4abec5ceb14671b8c43cb08309cbd364f1c0`: `FIX_REQUIRED — DO_NOT_MERGE`.**
