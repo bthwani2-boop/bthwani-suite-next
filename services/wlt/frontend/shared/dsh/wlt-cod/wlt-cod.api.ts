@@ -1,6 +1,6 @@
-import { dshFetchJson, dshPostJson } from "../dsh-link/dsh-reference-request";
+import { createDshFlexibleHttpClient } from "../dsh-link/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
-import type { components } from "../../../../clients/generated/wlt-api";
+import type { components } from "@bthwani/wlt-openapi";
 
 import type { WltDshCodReference } from "../finance-boundary/wlt-dsh-boundary.types";
 export type { WltDshCodReference };
@@ -30,20 +30,35 @@ export type WltCodCustodyMutationResult = Omit<
   readonly codRecord: WltDshCodReference;
 };
 
-export async function fetchDshCaptainOwnCodRecords(): Promise<DshReferenceApiResult<WltDshCodReference[]>> {
-  const result = await dshFetchJson<{ codRecords?: WltDshCodReference[] }>(
-    `${resolveDshApiBaseUrl()}/dsh/captain/finance/cod-records`,
-    (body: unknown) => body as { codRecords?: WltDshCodReference[] },
-  );
-  if (!result.ok) {
+const { request } = createDshFlexibleHttpClient(resolveDshApiBaseUrl());
+
+function classifyDshReferenceError(error: unknown): Exclude<DshReferenceApiResult<never>, { readonly ok: true }> {
+  if (typeof error === "object" && error !== null && "kind" in error) {
+    const value = error as { kind?: unknown; status?: unknown; message?: unknown };
+    const kind = value.kind === "network" ? "network" : "http";
     return {
       ok: false,
-      kind: result.kind,
-      ...(result.status !== undefined ? { status: result.status } : {}),
-      message: result.message,
+      kind,
+      ...(typeof value.status === "number" ? { status: value.status } : {}),
+      message: typeof value.message === "string" ? value.message : "DSH request failed",
     };
   }
-  return { ok: true, data: result.data.codRecords ?? [] };
+  return {
+    ok: false,
+    kind: "network",
+    message: error instanceof Error ? error.message : "DSH request failed",
+  };
+}
+
+export async function fetchDshCaptainOwnCodRecords(): Promise<DshReferenceApiResult<WltDshCodReference[]>> {
+  try {
+    const response = await request<{ codRecords?: WltDshCodReference[] }>(
+      "/dsh/captain/finance/cod-records",
+    );
+    return { ok: true, data: response.codRecords ?? [] };
+  } catch (error) {
+    return classifyDshReferenceError(error);
+  }
 }
 
 export async function collectDshCaptainCod(
@@ -55,17 +70,17 @@ export async function collectDshCaptainCod(
     throw new Error("Invalid request");
   }
 
-  const result = await dshPostJson<WltCodCustodyMutationResult>(
-    `${resolveDshApiBaseUrl()}/dsh/captain/finance/cod-records/${encodeURIComponent(recordId)}/collect`,
+  return request<WltCodCustodyMutationResult>(
+    `/dsh/captain/finance/cod-records/${encodeURIComponent(recordId)}/collect`,
     {
-      actualAmountMinorUnits: input.actualAmountMinorUnits,
-      proofReference,
-      note: input.note?.trim() ?? "",
+      method: "POST",
+      body: {
+        actualAmountMinorUnits: input.actualAmountMinorUnits,
+        proofReference,
+        note: input.note?.trim() ?? "",
+      },
     },
-    (body: unknown) => body as WltCodCustodyMutationResult,
   );
-  if (!result.ok) throw new Error(result.message);
-  return result.data;
 }
 
 export async function remitDshCaptainCod(
@@ -77,14 +92,14 @@ export async function remitDshCaptainCod(
     throw new Error("Invalid request");
   }
 
-  const result = await dshPostJson<WltCodCustodyMutationResult>(
-    `${resolveDshApiBaseUrl()}/dsh/captain/finance/cod-records/${encodeURIComponent(recordId)}/remit`,
+  return request<WltCodCustodyMutationResult>(
+    `/dsh/captain/finance/cod-records/${encodeURIComponent(recordId)}/remit`,
     {
-      proofReference,
-      note: input.note?.trim() ?? "",
+      method: "POST",
+      body: {
+        proofReference,
+        note: input.note?.trim() ?? "",
+      },
     },
-    (body: unknown) => body as WltCodCustodyMutationResult,
   );
-  if (!result.ok) throw new Error(result.message);
-  return result.data;
 }
