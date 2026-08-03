@@ -80,6 +80,7 @@ actions:
           items:
             type: string
             enum:
+              - IDENTITY_READINESS_UNPROVEN
               - IDENTITY_CONFIGURATION_INVALID
               - IDENTITY_SIGNING_KEY_INVALID
               - IDENTITY_DATABASE_UNAVAILABLE
