@@ -79,4 +79,11 @@ describe("WLT migration ledger probes", () => {
     assert.match(value, /wlt_commissions_operator_context_idempotency_idx/);
     assert.match(value, /wlt_commission_adjustments_operator_context_idempotency_uq/);
   });
+
+  it("requires both reconciliation guard function and trigger for repair migration", () => {
+    const value = probe("wlt-904_reconciliation_claim_guard_repair.sql");
+    assert.match(value, /wlt_reject_duplicate_reconciliation_claim/);
+    assert.match(value, /wlt_single_reconciliation_claim_trigger/);
+    assert.match(value, /NOT tgisinternal/);
+  });
 });
