@@ -11,12 +11,12 @@ import (
 )
 
 const (
-	PlatformPermissionRead   = "platform.read"
-	PlatformPermissionManage = "platform.manage"
+	DshOperationalPolicyPermissionRead   = "operations.read"
+	DshOperationalPolicyPermissionManage = "operations.manage"
 )
 
 func (s *protectedStoreServer) handleListZones(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionRead); !ok {
 		return
 	}
 	includeInactive := true
@@ -37,7 +37,7 @@ func (s *protectedStoreServer) handleListZones(w http.ResponseWriter, r *http.Re
 }
 
 func (s *protectedStoreServer) handleCreateZone(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage)
+	actor, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionManage)
 	if !ok {
 		return
 	}
@@ -66,7 +66,7 @@ func (s *protectedStoreServer) handleCreateZone(w http.ResponseWriter, r *http.R
 }
 
 func (s *protectedStoreServer) handleUpdateZone(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage)
+	actor, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionManage)
 	if !ok {
 		return
 	}
@@ -95,7 +95,7 @@ func (s *protectedStoreServer) handleUpdateZone(w http.ResponseWriter, r *http.R
 }
 
 func (s *protectedStoreServer) handleListSlaRules(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionRead); !ok {
 		return
 	}
 	rules, err := platformpolicies.ListSlaRules(r.Context(), s.db, r.URL.Query().Get("zoneId"))
@@ -107,7 +107,7 @@ func (s *protectedStoreServer) handleListSlaRules(w http.ResponseWriter, r *http
 }
 
 func (s *protectedStoreServer) handleUpsertSlaRules(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage)
+	actor, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionManage)
 	if !ok {
 		return
 	}
@@ -138,7 +138,7 @@ func (s *protectedStoreServer) handleUpsertSlaRules(w http.ResponseWriter, r *ht
 }
 
 func (s *protectedStoreServer) handleGetCapacityConfig(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionRead); !ok {
 		return
 	}
 	config, err := platformpolicies.GetCapacity(r.Context(), s.db, r.URL.Query().Get("zoneId"))
@@ -150,7 +150,7 @@ func (s *protectedStoreServer) handleGetCapacityConfig(w http.ResponseWriter, r 
 }
 
 func (s *protectedStoreServer) handleUpsertCapacityConfig(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage)
+	actor, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionManage)
 	if !ok {
 		return
 	}
@@ -182,7 +182,7 @@ func (s *protectedStoreServer) handleUpsertCapacityConfig(w http.ResponseWriter,
 }
 
 func (s *protectedStoreServer) handleGetZoneServiceability(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionRead); !ok {
 		return
 	}
 	result, err := platformpolicies.GetZoneServiceability(r.Context(), s.db, r.PathValue("zoneId"))
@@ -194,7 +194,7 @@ func (s *protectedStoreServer) handleGetZoneServiceability(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleGetStoreOnboardingFeePolicy(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionRead); !ok {
 		return
 	}
 	policy, err := platformpolicies.GetStoreOnboardingFeePolicy(r.Context(), s.db)
@@ -210,7 +210,7 @@ func (s *protectedStoreServer) handleGetStoreOnboardingFeePolicy(w http.Response
 }
 
 func (s *protectedStoreServer) handleUpsertStoreOnboardingFeePolicy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage)
+	actor, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionManage)
 	if !ok {
 		return
 	}
