@@ -7,6 +7,7 @@ import { CpBadge, CpButton, CpMutedInline, CpPageHeader, CpTextInput } from "@bt
 import { FinanceReadOnlyFrame } from "@bthwani/control-panel/shell";
 import {
   presentWltPaymentSessionStatus,
+  requiresWltPaymentReconciliation,
   type WltPaymentSessionTimeline,
 } from '@bthwani/wlt/dsh';
 import {
@@ -27,14 +28,6 @@ function errorState(error: PaymentSessionRuntimeError): ScreenState {
 
 function toBadgeTone(tone: "action" | "success" | "warning" | "danger" | "info"): CpBadgeTone {
   return tone === "action" ? "brand" : tone;
-}
-
-function timelineRequiresReconciliation(timeline: WltPaymentSessionTimeline): boolean {
-  return (
-    timeline.paymentSession.status === "provider_result_unknown" ||
-    timeline.operationReceipts.some((receipt) => receipt.state === "provider_result_unknown") ||
-    timeline.reconciliationCases.some((item) => item.status === "open")
-  );
 }
 
 export function PaymentSessionOperationsScreen() {
@@ -102,7 +95,8 @@ export function PaymentSessionOperationsScreen() {
     }
     if (!timeline || !presentation) return null;
 
-    const requiresReconciliation = timelineRequiresReconciliation(timeline);
+    const capabilities = timeline.paymentSession.capabilities;
+    const reconciliationRequired = requiresWltPaymentReconciliation(capabilities);
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         <Card style={{ padding: "1.25rem" }}>
@@ -119,7 +113,7 @@ export function PaymentSessionOperationsScreen() {
             <div><Text role="caption" tone="muted">مرجع المزود</Text><Text role="body">{timeline.paymentSession.providerReference || "—"}</Text></div>
             <div><Text role="caption" tone="muted">قيد التحصيل</Text><Text role="body">{timeline.captureLedgerTransactionId || "غير موجود"}</Text></div>
           </div>
-          {requiresReconciliation ? (
+          {reconciliationRequired ? (
             <Card style={{ padding: "1rem", marginTop: "1rem" }}>
               <Text role="body">ممنوع إعادة التفويض أو التحصيل. استخدم تحديث حالة المزود، ثم عالج حالة المطابقة المفتوحة بناءً على دليل مزود موثوق.</Text>
             </Card>
@@ -128,7 +122,7 @@ export function PaymentSessionOperationsScreen() {
             <CpButton
               variant="secondary"
               onClick={refreshProvider}
-              disabled={state === "refreshing"}
+              disabled={state === "refreshing" || capabilities.terminal || capabilities.operationInProgress}
             >
               {state === "refreshing" ? "جارٍ الاستعلام من المزود..." : "تحديث حالة المزود"}
             </CpButton>
