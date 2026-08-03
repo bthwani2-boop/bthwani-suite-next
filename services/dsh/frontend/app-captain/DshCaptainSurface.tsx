@@ -149,7 +149,7 @@ function AuthenticatedCaptainSurface({
         <CaptainAssignmentOfferPanel
           assignment={activeAssignment}
           busy={offerBusy}
-          {...(offerError ? { errorMessage: offerError }) : {}}
+          {...(offerError ? { errorMessage: offerError } : {})}
           onAccept={(assignmentId) => void actions.handleAcceptTask(assignmentId)}
           onDecline={(assignmentId, reason) => void actions.handleDeclineConfirm(assignmentId, reason)}
         />
