@@ -14,7 +14,8 @@
     "@types/react": "19.2.17",
     "@types/react-native": "^0.73.0",
     "@types/react-dom": "19.2.3",
-    "typescript": "7.0.2"
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "@typescript/native": "npm:typescript@7.0.2"
   },
   "scripts": {
     "typecheck": "next typegen && tsc --noEmit -p tsconfig.json",
