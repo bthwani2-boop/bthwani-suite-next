@@ -61,7 +61,7 @@ $ProfileList = @()
 if (-not [string]::IsNullOrWhiteSpace($Profiles)) {
   $ProfileList = @($Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 }
-if ($ProfileList.Count -eq 0 -and @("up", "reset", "smoke", "all").Contains($Action)) {
+if ($ProfileList.Count -eq 0 -and @("up", "reset", "smoke", "all", "bootstrap-dev").Contains($Action)) {
   $ProfileList = @("identity", "dsh", "media")
 }
 
@@ -80,6 +80,15 @@ if (($ProfileList -contains "dsh" -or $ProfileList -contains "workforce" -or
   $ProfileList = @("identity") + $ProfileList
 }
 $ProfileList = @($ProfileList | Select-Object -Unique)
+
+function Test-ExplicitResetInvocation {
+  if ($Force) { return $true }
+  return $env:npm_lifecycle_event -in @(
+    "docker:runtime:reset",
+    "runtime:reset",
+    "runtime:full:reset"
+  )
+}
 
 function Get-ComposeProfileArgs {
   $arguments = @()
@@ -411,7 +420,9 @@ switch ($Action) {
   }
 
   "reset" {
-    if (-not $Force) { throw "runtime reset is destructive. Provide -Force to proceed." }
+    if (-not (Test-ExplicitResetInvocation)) {
+      throw "runtime reset is destructive. Provide -Force or invoke a named pnpm reset command."
+    }
     Write-Host "=== runtime:reset (profiles: $($ProfileList -join ','))"
     docker info | Out-Null
     Invoke-Compose down -v --remove-orphans
@@ -434,18 +445,26 @@ switch ($Action) {
     if ($env:NODE_ENV -eq "production") { throw "bootstrap-dev is not allowed in production." }
     if (-not $Force) { throw "bootstrap-dev requires -Force." }
     Write-Host "=== runtime:bootstrap-dev (profiles: $($ProfileList -join ','))"
-    if ($ProfileList -contains "dsh") {
+    docker info | Out-Null
+    Invoke-Compose up -d postgres
+    Wait-ForPostgres
+    if ($ProfileList -contains "media" -or $ProfileList -contains "dsh") {
+      Invoke-Compose up -d minio
       Wait-ForMinIO
       Invoke-GovernedMinioInit
       Invoke-DshMediaSeed
-      Wait-ForHttpStatus -Name "DSH API" -Url "http://localhost:58080/dsh/readiness" -HealthyValues @("ready") | Out-Null
+    }
+    Invoke-GovernedMigrations
+    Invoke-GovernedSeeds
+    Invoke-Compose up -d
+    Wait-ForSelectedApis
+    if ($ProfileList -contains "dsh") {
       node tools/scripts/mobile-dev-data.mjs --repair
       if ($LASTEXITCODE -ne 0) {
         throw "DSH API dev bootstrap failed (exit $LASTEXITCODE)"
       }
-    } else {
-      Write-Host "DSH profile is not active. Bootstrap skipped."
     }
+    Write-Host "runtime:bootstrap-dev: PASS"
   }
 
   "verify-catalog" {

@@ -99,7 +99,7 @@ func (r *Repository) SetOperationalScopes(ctx context.Context, actorID, operator
 	for _, input := range inputs {
 		// Overlap validation (though we deactivated all, we enforce it structurally)
 		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO workforce_operational_assignments 
+			INSERT INTO workforce_operational_assignments
 			(actor_id, operator_context_id, role, scope_type, scope_target_id, starts_on, ends_on, active, assigned_by)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8)`,
 			actorID, operatorContextID, role, input.ScopeType, input.ScopeTargetID, input.StartsOn, input.EndsOn, changedBy); err != nil {
@@ -142,7 +142,7 @@ func (r *Repository) SetOperationalScopes(ctx context.Context, actorID, operator
 	}
 
 	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO workforce_operational_assignment_audit 
+		INSERT INTO workforce_operational_assignment_audit
 		(actor_id, operator_context_id, role, changed_by, store_ids, service_areas, partner_ids, shift_codes, correlation_id, request_hash)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		actorID, operatorContextID, role, changedBy, storeJSON, areaJSON, partnerJSON, shiftJSON, correlationID, requestHash); err != nil {
