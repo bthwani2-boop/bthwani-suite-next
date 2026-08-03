@@ -95,14 +95,14 @@ func (s *protectedStoreServer) refreshCaptainFinancialEligibility(
 }
 
 func (s *protectedStoreServer) handleGetDispatchBalancePolicy(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionRead); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead); !ok {
 		return
 	}
 	store.SendError(w, http.StatusGone, "DISPATCH_BALANCE_POLICY_OWNED_BY_WLT", "captain dispatch financial thresholds and wallet policy are owned by WLT; DSH stores only WLT eligibility decision metadata")
 }
 
 func (s *protectedStoreServer) handleUpsertDispatchBalancePolicy(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionManage); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage); !ok {
 		return
 	}
 	store.SendError(w, http.StatusGone, "DISPATCH_BALANCE_POLICY_OWNED_BY_WLT", "captain dispatch financial thresholds and wallet policy are owned by WLT; DSH stores only WLT eligibility decision metadata")
@@ -123,7 +123,7 @@ func (s *protectedStoreServer) handleRefreshOperatorCaptainFinancialEligibility(
 		writeCaptainFinancialEligibilityError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"financialEligibility": snapshot})
+	store.SendJSON(w, http.StatusOK, map[string]any{"financialEligibility": snapshot)
 }
 
 func (s *protectedStoreServer) handleGetOperatorCaptainFinancialEligibility(w http.ResponseWriter, r *http.Request) {
@@ -143,7 +143,7 @@ func (s *protectedStoreServer) handleGetOperatorCaptainFinancialEligibility(w ht
 		writeCaptainFinancialEligibilityError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"financialEligibility": snapshot})
+	store.SendJSON(w, http.StatusOK, map[string]any{"financialEligibility": snapshot)
 }
 
 func (s *protectedStoreServer) handleRefreshOwnCaptainFinancialEligibility(w http.ResponseWriter, r *http.Request) {
@@ -160,7 +160,7 @@ func (s *protectedStoreServer) handleRefreshOwnCaptainFinancialEligibility(w htt
 		writeCaptainFinancialEligibilityError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"financialEligibility": snapshot})
+	store.SendJSON(w, http.StatusOK, map[string]any{"financialEligibility": snapshot)
 }
 
 func (s *protectedStoreServer) handleGetOwnCaptainFinancialEligibility(w http.ResponseWriter, r *http.Request) {
@@ -177,22 +177,20 @@ func (s *protectedStoreServer) handleGetOwnCaptainFinancialEligibility(w http.Re
 		writeCaptainFinancialEligibilityError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"financialEligibility": snapshot})
+	store.SendJSON(w, http.StatusOK, map[string]any{"financialEligibility": snapshot)
 }
 
 func writeCaptainFinancialEligibilityError(w http.ResponseWriter, err error) {
 	switch {
 	case err == nil:
 		return
-	case strings.Contains(err.Error(), "not configured") || strings.Contains(err.Error(), "WLT wallet read failed"):
-		store.SendError(w, http.StatusServiceUnavailable, "WLT_FINANCIAL_ELIGIBILITY_UNAVAILABLE", "WLT wallet eligibility could not be verified")
-	case strings.Contains(err.Error(), "identity mismatch") || strings.Contains(err.Error(), "missing updatedAt"):
-		store.SendError(w, http.StatusConflict, "WLT_WALLET_READBACK_INVALID", "WLT wallet readback did not match the captain")
-	case strings.Contains(err.Error(), dispatch.ErrCaptainNotEligible.Error()):
-		store.SendError(w, http.StatusConflict, "CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED", "captain WLT financial eligibility decision has not been verified")
 	case strings.Contains(err.Error(), dispatch.ErrInvalid.Error()):
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+	case strings.Contains(err.Error(), dispatch.ErrNotFound.Error()):
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "captain financial eligibility was not found")
+	case strings.Contains(err.Error(), dispatch.ErrConflict.Error()):
+		store.SendError(w, http.StatusConflict, "CONFLICT", err.Error())
 	default:
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "captain financial eligibility operation failed")
+		store.SendError(w, http.StatusBadGateway, "WLT_ELIGIBILITY_UNAVAILABLE", "captain financial eligibility could not be refreshed")
 	}
 }
