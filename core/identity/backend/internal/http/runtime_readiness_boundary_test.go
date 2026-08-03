@@ -37,6 +37,9 @@ func TestRuntimeReadinessBoundaryRejectsMissingActivationSecret(t *testing.T) {
 	if response.Code != http.StatusServiceUnavailable || !strings.Contains(response.Body.String(), "IDENTITY_NOT_READY") {
 		t.Fatalf("unexpected readiness response status=%d body=%s", response.Code, response.Body.String())
 	}
+	if !strings.Contains(response.Body.String(), reasonSigningKeyInvalid) {
+		t.Fatalf("missing governed signing-key reason: %s", response.Body.String())
+	}
 }
 
 func TestRuntimeReadinessBoundaryRejectsShortActivationSecret(t *testing.T) {
@@ -115,15 +118,14 @@ func TestRuntimeReadinessBoundaryRejectsMissingDatabaseConfiguration(t *testing.
 	}
 }
 
-func TestRuntimeReadinessBoundaryHandlesHealthAndDelegatesBusinessRoutes(t *testing.T) {
-	lastReadinessFailed.Store(false)
-	t.Setenv("IDENTITY_ACTIVATION_HMAC_SECRET", "")
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
-	t.Setenv("IDENTITY_WORKFORCE_SERVICE_TOKEN", "")
-	t.Setenv("IDENTITY_DSH_SERVICE_TOKEN", "")
-	handler := RuntimeReadinessBoundary(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+func TestRuntimeReadinessBoundaryHandlesHealthDelegatesReadsAndGatesMutations(t *testing.T) {
+	resetRuntimeProbeState()
+	configureIdentityRuntime(t)
+	nextCalls := 0
+	handler := runtimeReadinessBoundary(readyRuntimeStore(), http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		nextCalls++
 		w.WriteHeader(http.StatusNoContent)
-	}), nil)
+	}))
 
 	health := httptest.NewRecorder()
 	handler.ServeHTTP(health, httptest.NewRequest(http.MethodGet, "/identity/health", nil))
@@ -131,9 +133,23 @@ func TestRuntimeReadinessBoundaryHandlesHealthAndDelegatesBusinessRoutes(t *test
 		t.Fatalf("health was not handled as liveness: status=%d body=%s", health.Code, health.Body.String())
 	}
 
-	business := httptest.NewRecorder()
-	handler.ServeHTTP(business, httptest.NewRequest(http.MethodGet, "/auth/login", nil))
-	if business.Code != http.StatusNoContent {
-		t.Fatalf("business route was unexpectedly readiness-gated: %d", business.Code)
+	read := httptest.NewRecorder()
+	handler.ServeHTTP(read, httptest.NewRequest(http.MethodGet, "/auth/session", nil))
+	if read.Code != http.StatusNoContent || nextCalls != 1 {
+		t.Fatalf("safe identity read was not delegated status=%d calls=%d", read.Code, nextCalls)
+	}
+
+	mutation := httptest.NewRecorder()
+	handler.ServeHTTP(mutation, httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(`{}`)))
+	if mutation.Code != http.StatusNoContent || nextCalls != 2 {
+		t.Fatalf("ready identity mutation was not delegated status=%d calls=%d body=%s", mutation.Code, nextCalls, mutation.Body.String())
+	}
+
+	configureIdentityRuntime(t)
+	t.Setenv("IDENTITY_ACTIVATION_HMAC_SECRET", "")
+	blocked := httptest.NewRecorder()
+	handler.ServeHTTP(blocked, httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(`{}`)))
+	if blocked.Code != http.StatusServiceUnavailable || nextCalls != 2 {
+		t.Fatalf("not-ready identity mutation was not blocked status=%d calls=%d body=%s", blocked.Code, nextCalls, blocked.Body.String())
 	}
 }
