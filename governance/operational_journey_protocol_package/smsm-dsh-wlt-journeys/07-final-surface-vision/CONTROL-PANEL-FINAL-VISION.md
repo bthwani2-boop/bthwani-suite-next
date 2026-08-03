@@ -1,130 +1,188 @@
-# Control Panel — الرؤية النهائية
+# Control Panel — الرؤية النهائية الحاكمة
 
 ## الدور النهائي
 
-سطح الإدارة والتشغيل والمراجعة والتدخل المصرح، وليس قاعدة بيانات بديلة أو أداة لتجاوز state machines. كل إجراء يمر بعقد وpermission وtrusted scope وreason وaudit وreadback.
+لوحة التحكم هي سطح الإدارة والتشغيل والمراجعة والتدخل المصرح، وليست قاعدة بيانات بديلة أو أداة لتجاوز state machines. كل إجراء يمر بعقد generated client وpermission وobject scope وoperator context وreason وaudit وreadback. كل قيمة مالية تأتي عبر DSH Finance Facade من WLT، وكل حقيقة تشغيلية تأتي من مالكها.
 
-## الهيكل المعلوماتي النهائي
+## السجل الآلي الملزم
 
-### لوحة البداية
+السجل الحاكم للتغطية موجود في:
+
+`../08-control-panel-coverage/CONTROL-PANEL-SECTION-REGISTRY.json`
+
+ويُقارن آليًا مع:
+
+- `services/dsh/frontend/control-panel/navigation.ts`.
+- `apps/control-panel/runtime/src/app/**/page.tsx`.
+- ملفات الرحلات `J001..J107`.
+
+لا يجوز إضافة قسم أو Route أو صفحة دون تسجيلها وربطها بالرحلات والحالات والتحكمات والتجريب اليدوي.
+
+## الأقسام النهائية وعدم التجاهل
+
+### 1. الرئيسية — `/dsh/dashboard`
 
 - صحة Identity/Workforce/DSH/WLT/Providers/Media/Notifications.
-- التنبيهات والحوادث وSLA والمصالحات والفشل الجزئي.
-- اختصارات قائمة على الصلاحية، لا روابط ثابتة للجميع.
-- freshness وlast successful readback، دون false-green.
+- critical alerts والحوادث وSLA وprojection freshness.
+- اختصارات قائمة على الصلاحية.
+- لا KPI بلا تعريف ومصدر و`as_of`.
 
-### الهوية والوصول
+### 2. العمليات — `/dsh/operations`
 
-- Actors: إنشاء، بحث، قراءة، تعليق، إعادة تفعيل.
-- التفعيل: إصدار/إلغاء/إعادة إصدار، masking وexpiry.
-- الجلسات والأجهزة: revoke current/all، device status.
-- الأدوار والصلاحيات والحزم والتكليفات.
-- trusted scope/object authorization diagnostics.
+- Order workboards وlive orders وallowedActions.
+- preparation/issues/substitution.
+- Dispatch/Offers/Assignment/Reassignment.
+- tracking/pickup/custody/delivery proof/exceptions/rescue.
+- cancellations/returns/work items.
+- كل filter/sort/search/page من الخادم.
 
-### Workforce
+### 3. التحليلات — `/dsh/analytics` و`/dsh/analytics/operational`
 
-- الأشخاص والملفات المهنية.
-- تزويد الكابتن والميداني.
-- readiness checklists وأسباب الحظر.
-- assignments/shifts/supervisors/areas/stores/effective ranges.
-- documents/media status دون تكرار بيانات Identity.
+- metric registry وSLA definitions والفترات والمناطق الزمنية.
+- freshness/data quality/projection lag.
+- drill-down إلى الحقيقة بصلاحية.
+- exports مدققة.
 
-### Platform Control وProviders
+### 4. الشركاء والمتاجر
 
-- change sets وreview/approval/schedule/rollback.
-- rollout/kill switch والسياسات الفعالة.
-- provider registry/capabilities/health/maintenance.
-- credentials references فقط؛ لا secrets في UI أو API response.
+Routes:
 
-### الشركاء والمتاجر
+- `/dsh/partners`.
+- `/dsh/partners/[partnerId]`.
+- `/dsh/partners/stores`.
 
-- onboarding queue، evidence review، decisions، lifecycle.
-- profile/team/commercial model.
+التغطية:
+
+- onboarding queue/evidence/decisions/lifecycle.
+- partner profile/team/commercial model/support.
 - stores/readiness/publication/pause/suspend.
 - service areas/maps/delivery modes/fleet.
+- summaries المالية masked عبر facade.
 
-### الكتالوج والتسويق
+### 5. اعتماد الكتالوجات
+
+Routes:
+
+- `/dsh/catalogs`.
+- `/dsh/catalogs/governance`.
+
+التغطية:
 
 - taxonomy/master products/variants/barcodes/media.
 - proposals/review/conflict/merge/lineage.
-- assortment/stock/availability/price/preparation.
-- reels/home discovery/campaigns/coupons/auctions/loyalty.
+- assortment/availability/price/preparation/publication.
+- preview وruntime projection diagnostics.
 
-### الطلبات والتنفيذ
+### 6. التسويق والاكتشاف — `/dsh/marketing`
 
-- order workboards مع filter/sort/pagination ثابتة.
-- detail/timeline/allowedActions.
-- partner decision/preparation/issues/substitution.
-- dispatch availability/offers/manual assignment/reassignment.
-- tracking/pickup/custody/delivery proof/exceptions/rescue.
-- cancellation/returns/support/incidents.
+- Home Discovery targeting.
+- campaigns/coupons/loyalty/content.
+- funding references من WLT.
+- eligibility/performance/reconciliation دون حساب مالي محلي.
 
-### المالية عبر DSH Facade
+### 7. المالية والتسويات
 
-- payment/refund/settlement/payout/COD/eligibility/reconciliation/report summaries.
-- masked references وحالات وreason codes فقط.
-- أي أمر مالي حساس يحتاج confirmation وreason وsegregation of duties.
-- لا raw wallet/ledger/bank/provider details من DSH.
+Routes:
 
-### الحوكمة والتشخيص
+- `/wlt/finance`.
+- `/wlt/finance/payment-sessions`.
 
-- audit trail وcorrelation lookup.
-- event/outbox/inbox/job/DLQ diagnostics المحكومة.
-- cache/search freshness/rebuild.
-- runtime/CI/evidence views للقراءة، بلا ادعاء Closure تلقائي.
+التغطية:
 
-## نموذج الصفحة
+- payment sessions، wallet/account summaries، COD، eligibility، commissions، obligations، refunds، settlements، payout destinations/requests، reconciliation، reports.
+- masked references وحالات وreason codes.
+- segregation of duties.
+- لا direct WLT calls أو raw ledger/bank/provider details.
 
-كل صفحة يجب أن تتكون من:
+### 8. الدعم والمساعدة — `/dsh/support`
+
+- tickets/messages/internal notes/attachments.
+- partner support.
+- incidents/escalations/SLA.
+- object scope وvisibility العامة/الداخلية.
+
+### 9. المنصة السيادية
+
+Routes:
+
+- `/dsh/platform`.
+- `/dsh/platform/policies`.
+
+التغطية:
+
+- change sets/review/approval/schedule/rollback.
+- rollout/kill switch والسياسات الفعالة.
+- provider registry/capabilities/health/maintenance.
+- runtime/registries/cache/events/jobs diagnostics.
+- credentials references فقط.
+
+### 10. الإدارة والصلاحيات — `/dsh/administration`
+
+- Actors والتفعيل والجلسات والأجهزة.
+- الأدوار والصلاحيات والحزم وOperator Context.
+- trusted scope/object authorization diagnostics.
+- audit/correlation/evidence.
+
+### 11. الموارد البشرية — `/dsh/hr`
+
+- الأشخاص والملفات المهنية.
+- Captain/Field provisioning/readiness.
+- assignments/shifts/supervisors/areas/stores/effectivity.
+- documents/media status.
+- لا تكرار Identity أو WLT truth.
+
+### Route غير ملاحي: تسجيل الدخول — `/dsh/login`
+
+- loading/ready/invalid credentials/service unavailable/rate limited/session established/error.
+- return URL آمن، session rotation، ولا خلط بين outage وفشل بيانات الدخول.
+
+## نموذج الصفحة الإلزامي
+
+كل صفحة يجب أن تحتوي أو تثبت N/A لكل عنصر:
 
 1. عنوان وغرض وscope فعال ظاهر.
-2. breadcrumbs وroute ثابت.
+2. breadcrumbs وRoute ثابت.
 3. summary metrics مع freshness.
-4. filters/sort/search/pagination server-side.
-5. table/list accessible مع empty/error/partial states.
-6. detail drawer/page لا يعتمد على row snapshot فقط.
-7. actions من `allowedActions` الخادمية.
-8. confirmation يوضح الأثر والسبب عندما يلزم.
-9. toast/banner لا يكون الدليل الوحيد؛ يجب readback.
-10. audit/correlation link للعملية الحساسة.
+4. search/filter/sort/pagination server-side.
+5. table/list/cards accessible.
+6. loading/ready/empty/error/forbidden/stale/conflict/unknown-result.
+7. detail drawer/page يعيد القراءة ولا يثق بـrow snapshot.
+8. actions من `allowedActions` الخادمية.
+9. confirmation وreason للعملية الحساسة.
+10. idempotency وversion conflict وresult lookup.
+11. success readback لا toast فقط.
+12. audit/correlation/source links.
 
-## ضوابط الأزرار والتحكمات
+## ضوابط كل زر وأيقونة وتبويب وحقل
 
-لكل زر أو أيقونة:
-
-- accessibility name وtooltip عند الأيقونة المجردة.
-- permission visibility وbusiness enablement منفصلان.
-- loading محلي يمنع التكرار دون تجميد الصفحة.
-- idempotency key عند mutation الحساسة.
-- stale version handling وconflict dialog.
-- unknown-result state مع زر «التحقق من النتيجة»، لا إعادة عمياء.
-- success ينتج refresh/readback من الخادم.
+- معرف تغطية أو ارتباط واضح بالرحلة والعملية.
+- accessibility name وrole وtooltip للأيقونة المجردة.
+- permission visibility منفصلة عن business enablement.
+- loading محلي يمنع التكرار.
+- stale version/conflict handling.
+- unknown result مع `التحقق من النتيجة`.
+- لا control شكلي بلا API binding أو أثر.
+- كل mutation لها اختبار إيجابي وسلبي وdouble-submit وresponse-loss.
 
 ## التقنية والبرمجة
 
 - Next.js shell داخل `apps/control-panel/runtime`.
 - DSH UI السيادي في `services/dsh/frontend/control-panel` والعقل المشترك في `services/dsh/frontend/shared`.
-- WLT-related DSH views عبر `services/wlt/frontend/shared/dsh` وDSH facade فقط.
-- generated clients، query keys مركزية، controller hooks، view models، error mapping موحد.
-- لا deep imports بين الخدمات أو server secrets في client bundle.
-- route groups وdynamic segments مقبولة حوكميًا دون تعطيل naming guard.
-
-## الأمن والخصوصية
-
-- deny-by-default، object authorization، scope banner.
-- PII masking، exports مسجلة، support sessions محدودة الغرض والمدة.
-- لا direct DB actions أو impersonation غير محكوم.
-- CSRF/cookies/session rotation حسب المعمارية.
+- WLT views عبر `services/wlt/frontend/shared/dsh` وDSH facade فقط.
+- generated clients وquery keys وcontrollers وview models وerror mapping مركزية.
+- لا deep imports أو server secrets في client bundle.
+- لا Route قديمة موازية أو page placeholder غير مصنفة.
 
 ## التجريب اليدوي النهائي
 
-- اختبر كل دور Operator بصفحة navigation مختلفة.
-- افتح كل route مباشرة واختبر back/refresh/session expiry.
-- اختبر كل filter/sort/page/empty/error/partial state.
-- اختبر كل action بصلاحية صحيحة وناقصة وobject خارج scope ونسخة stale ونقر مكرر وفقد الرد.
-- تحقق من الأثر في التطبيق المعني ومن DB/event/audit.
-- اختبر keyboard-only، screen reader، RTL، zoom وlarge text.
+1. اختبر كل دور Operator وملاحة مختلفة.
+2. افتح كل Route مباشرًا واختبر refresh/back/session expiry/deep link.
+3. اختبر كل تبويب وfilter وsort وsearch وpagination وtable/card/form/dialog.
+4. اختبر كل action بصلاحية صحيحة وناقصة وobject خارج scope وversion stale ونقر مكرر وفقد الاستجابة.
+5. تحقق من الأثر في التطبيقات وDB/event/audit/WLT حسب الرحلة.
+6. اختبر dependency unavailable/recovery.
+7. اختبر keyboard-only وقارئ الشاشة وRTL وzoom والنص الكبير.
 
 ## بوابة إغلاق السطح
 
-`unmapped_routes=0; unmapped_controls=0; direct_db_actions=0; direct_wlt_calls=0; permission_backend_mismatches=0; missing_visible_states=0; required_manual_cases=PASS; same_sha_evidence=PASS`.
+`registered_navigation_sections=11; unmapped_routes=0; unmapped_pages=0; unmapped_tabs_controls_states=0; direct_db_actions=0; direct_wlt_calls=0; permission_backend_mismatches=0; control_panel_journey_coverage=J001..J107; required_manual_cases=PASS; same_sha_evidence=PASS`.

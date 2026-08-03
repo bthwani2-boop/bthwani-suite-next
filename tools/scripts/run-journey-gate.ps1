@@ -57,6 +57,7 @@ function Test-JourneyGuardSelected {
 }
 
 Invoke-Step "git-diff-check" { git --no-pager diff --check }
+Invoke-Step "smsm-journey-documentation-completeness" { node tools/scripts/check-smsm-journey-coverage.mjs }
 
 if ($Full) {
   foreach ($step in @(

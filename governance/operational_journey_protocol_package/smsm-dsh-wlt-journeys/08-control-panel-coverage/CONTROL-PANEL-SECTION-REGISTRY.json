@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "surface": "control-panel",
+  "navigationSource": "services/dsh/frontend/control-panel/navigation.ts",
+  "nextAppRoot": "apps/control-panel/runtime/src/app",
+  "canonicalVision": "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys/07-final-surface-vision/CONTROL-PANEL-FINAL-VISION.md",
+  "requiredStates": [
+    "loading",
+    "ready",
+    "empty",
+    "error",
+    "forbidden",
+    "stale",
+    "conflict",
+    "unknown-result"
+  ],
+  "requiredControlClasses": [
+    "navigation",
+    "tabs",
+    "search",
+    "filters",
+    "sorting",
+    "pagination",
+    "tables-or-lists",
+    "cards",
+    "forms",
+    "buttons",
+    "icons",
+    "dialogs",
+    "state-panels",
+    "audit-links"
+  ],
+  "requiredManualScenarios": [
+    "authorized-happy-path",
+    "missing-permission",
+    "object-outside-scope",
+    "stale-version-conflict",
+    "duplicate-submit",
+    "response-lost-after-commit",
+    "dependency-unavailable-and-recovery",
+    "keyboard-screen-reader-rtl-large-text"
+  ],
+  "sections": [
+    {
+      "id": "dashboard",
+      "label": "الرئيسية",
+      "canonicalRoute": "/dsh/dashboard",
+      "routes": ["/dsh/dashboard"],
+      "purpose": "الصحة العامة والتنبيهات والاختصارات المصرح بها مع freshness دون إنشاء حقيقة بديلة.",
+      "capabilities": ["service-health", "readiness", "critical-alerts", "sla-summary", "journey-entrypoints"],
+      "journeyCoverage": ["J001..J019", "J044", "J054", "J075", "J078", "J094", "J102", "J104", "J107"]
+    },
+    {
+      "id": "operations",
+      "label": "العمليات",
+      "canonicalRoute": "/dsh/operations",
+      "routes": ["/dsh/operations"],
+      "purpose": "لوحات الطلبات والتنفيذ وDispatch والتتبع والحيازة والاستثناءات والإنقاذ والتدخلات المحكومة.",
+      "capabilities": ["order-workboards", "dispatch", "tracking", "pickup", "delivery", "exceptions", "rescue", "work-items"],
+      "journeyCoverage": ["J053..J078", "J095..J107"]
+    },
+    {
+      "id": "analytics",
+      "label": "التحليلات",
+      "canonicalRoute": "/dsh/analytics",
+      "routes": ["/dsh/analytics", "/dsh/analytics/operational"],
+      "purpose": "مؤشرات تشغيلية مشتقة وتعريفات SLA وfreshness وdrill-down دون إعادة حساب الحقيقة المالية أو التشغيلية.",
+      "capabilities": ["operational-kpis", "sla", "alerts", "projection-freshness", "exports"],
+      "journeyCoverage": ["J035..J040", "J044", "J054", "J056..J078", "J083..J094", "J099", "J102", "J105", "J107"]
+    },
+    {
+      "id": "partners",
+      "label": "الشركاء والمتاجر",
+      "canonicalRoute": "/dsh/partners",
+      "routes": ["/dsh/partners", "/dsh/partners/[partnerId]", "/dsh/partners/stores"],
+      "purpose": "Onboarding وحياة الشريك والفريق والمتاجر والجاهزية والنشر والنطاقات والملخص التجاري scoped.",
+      "capabilities": ["partner-list", "partner-detail", "onboarding", "team", "stores", "readiness", "commercial-summary", "support-links"],
+      "journeyCoverage": ["J020..J040", "J045..J060", "J074", "J077", "J083..J094", "J096", "J099..J107"]
+    },
+    {
+      "id": "catalogs",
+      "label": "اعتماد الكتالوجات",
+      "canonicalRoute": "/dsh/catalogs",
+      "routes": ["/dsh/catalogs", "/dsh/catalogs/governance"],
+      "purpose": "Taxonomy والمنتجات والمقترحات والتعارض والمراجعة والنشر والوسائط والتوفر مع مصدر كتالوج مركزي واحد.",
+      "capabilities": ["catalog-dashboard", "governance-queue", "taxonomy", "products", "proposals", "conflicts", "publication", "media"],
+      "journeyCoverage": ["J027..J040", "J045", "J047", "J049", "J058", "J088", "J099", "J100", "J103", "J105", "J107"]
+    },
+    {
+      "id": "marketing",
+      "label": "التسويق والاكتشاف",
+      "canonicalRoute": "/dsh/marketing",
+      "routes": ["/dsh/marketing"],
+      "purpose": "Discovery targeting والحملات والكوبونات والولاء والتمويل وقياس الأثر دون مصادر حقيقة مالية أو كتالوجية موازية.",
+      "capabilities": ["home-discovery", "campaigns", "coupons", "loyalty", "funding", "content", "performance"],
+      "journeyCoverage": ["J035..J040", "J044", "J077", "J078", "J088", "J094", "J099", "J100", "J103", "J105", "J107"]
+    },
+    {
+      "id": "finance",
+      "label": "المالية والتسويات",
+      "canonicalRoute": "/wlt/finance",
+      "routes": ["/wlt/finance", "/wlt/finance/payment-sessions"],
+      "purpose": "عرض وأوامر مالية عبر DSH facade فقط للمدفوعات وCOD والعمولات والاستردادات والتسويات والصرف والمصالحة والتقارير.",
+      "capabilities": ["payment-sessions", "wallet-references", "cod", "commissions", "refunds", "settlements", "payouts", "reconciliation", "reports"],
+      "journeyCoverage": ["J049", "J052", "J058", "J067", "J070..J072", "J079..J107"]
+    },
+    {
+      "id": "support",
+      "label": "الدعم والمساعدة",
+      "canonicalRoute": "/dsh/support",
+      "routes": ["/dsh/support"],
+      "purpose": "التذاكر والمحادثات وطلبات المساعدة ودعم الشريك والحوادث والتصعيدات مع رسائل ومرفقات وSLA مدققة.",
+      "capabilities": ["tickets", "messages", "attachments", "partner-support", "incidents", "escalations", "sla"],
+      "journeyCoverage": ["J055", "J059", "J069..J076", "J093", "J095..J107"]
+    },
+    {
+      "id": "platform",
+      "label": "المنصة السيادية",
+      "canonicalRoute": "/dsh/platform",
+      "routes": ["/dsh/platform", "/dsh/platform/policies"],
+      "purpose": "Change sets والسياسات وProviders والRollouts والصحة والتشخيص وRuntime دون تجاوز ملاك الحقائق.",
+      "capabilities": ["change-sets", "policies", "providers", "rollouts", "kill-switches", "runtime-health", "registries"],
+      "journeyCoverage": ["J001", "J008..J010", "J016..J019", "J043", "J061", "J075", "J076", "J095..J107"]
+    },
+    {
+      "id": "administration",
+      "label": "الإدارة والصلاحيات",
+      "canonicalRoute": "/dsh/administration",
+      "routes": ["/dsh/administration"],
+      "purpose": "Actors والتفعيل والجلسات والأدوار والصلاحيات وOperator Context والخصوصية والتدقيق والأدلة الإدارية.",
+      "capabilities": ["actors", "activations", "sessions", "devices", "roles", "permissions", "operator-context", "customer-profile-privacy", "audit"],
+      "journeyCoverage": ["J001..J024", "J041..J042", "J075", "J095..J107"]
+    },
+    {
+      "id": "hr",
+      "label": "الموارد البشرية",
+      "canonicalRoute": "/dsh/hr",
+      "routes": ["/dsh/hr"],
+      "purpose": "ملفات Workforce والتزويد والجاهزية والتكليفات والمناوبات والإشراف والنطاقات والوثائق دون تكرار Identity أو WLT.",
+      "capabilities": ["people", "profiles", "captain-provisioning", "field-provisioning", "readiness", "assignments", "shifts", "scopes", "documents"],
+      "journeyCoverage": ["J011..J015", "J020", "J061..J063", "J074", "J076", "J085", "J091", "J092", "J096", "J101..J107"]
+    }
+  ],
+  "nonNavigationRoutes": [
+    {
+      "route": "/dsh/login",
+      "classification": "authentication",
+      "requiredStates": ["loading", "ready", "invalid-credentials", "service-unavailable", "rate-limited", "session-established", "error"]
+    }
+  ]
+}
