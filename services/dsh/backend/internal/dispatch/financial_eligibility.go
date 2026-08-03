@@ -9,120 +9,113 @@ import (
 	"time"
 )
 
-type CaptainWalletReadback struct {
-	WalletID                   string
-	WalletStatus               string
-	AvailableBalanceMinorUnits int64
-	Currency                   string
-	SnapshotReference          string
-}
-
-type DispatchBalanceRequirement struct {
-	Enabled                          bool
-	RequirePositiveBalance           bool
-	MinimumDispatchBalanceMinorUnits int64
-	Currency                         string
-	SnapshotTTLSeconds               int
+type CaptainWltFinancialEligibilityDecision struct {
+	WltDecisionID       string
+	WltReasonCode       string
+	WltPolicyVersion    string
+	Eligible            bool
+	IneligibilityReason string
+	SnapshotReference   string
+	EvaluatedAt         time.Time
+	TTLSeconds          int
 }
 
 type CaptainFinancialEligibilitySnapshot struct {
-	OperatorContextID                         string    `json:"operatorContextId"`
-	CaptainID                        string    `json:"captainId"`
-	WalletID                         string    `json:"walletId"`
-	WalletStatus                     string    `json:"walletStatus"`
-	AvailableBalanceMinorUnits       int64     `json:"availableBalanceMinorUnits"`
-	MinimumDispatchBalanceMinorUnits int64     `json:"minimumDispatchBalanceMinorUnits"`
-	Currency                         string    `json:"currency"`
-	Eligible                         bool      `json:"eligible"`
-	IneligibilityReason              string    `json:"ineligibilityReason,omitempty"`
-	SnapshotReference                string    `json:"snapshotReference"`
-	CheckedAt                        time.Time `json:"checkedAt"`
-	ExpiresAt                        time.Time `json:"expiresAt"`
+	OperatorContextID   string    `json:"operatorContextId"`
+	CaptainID           string    `json:"captainId"`
+	WltDecisionID       string    `json:"wltDecisionId"`
+	WltReasonCode       string    `json:"wltReasonCode"`
+	WltPolicyVersion    string    `json:"wltPolicyVersion"`
+	Eligible            bool      `json:"eligible"`
+	IneligibilityReason string    `json:"ineligibilityReason,omitempty"`
+	SnapshotReference   string    `json:"snapshotReference"`
+	CheckedAt           time.Time `json:"checkedAt"`
+	EvaluatedAt         time.Time `json:"evaluatedAt"`
+	ExpiresAt           time.Time `json:"expiresAt"`
 }
 
-func effectiveDispatchMinimum(requirement DispatchBalanceRequirement) int64 {
-	minimum := requirement.MinimumDispatchBalanceMinorUnits
-	if requirement.RequirePositiveBalance && minimum < 1 {
-		return 1
+func normalizeCaptainWltFinancialDecision(input CaptainWltFinancialEligibilityDecision) (CaptainWltFinancialEligibilityDecision, error) {
+	input.WltDecisionID = strings.TrimSpace(input.WltDecisionID)
+	input.WltReasonCode = strings.TrimSpace(input.WltReasonCode)
+	input.WltPolicyVersion = strings.TrimSpace(input.WltPolicyVersion)
+	input.IneligibilityReason = strings.TrimSpace(input.IneligibilityReason)
+	input.SnapshotReference = strings.TrimSpace(input.SnapshotReference)
+	if input.SnapshotReference == "" {
+		input.SnapshotReference = input.WltDecisionID
 	}
-	return minimum
+	if input.EvaluatedAt.IsZero() {
+		input.EvaluatedAt = time.Now().UTC()
+	} else {
+		input.EvaluatedAt = input.EvaluatedAt.UTC()
+	}
+	if !input.Eligible && input.IneligibilityReason == "" {
+		input.IneligibilityReason = input.WltReasonCode
+	}
+	if input.TTLSeconds < 30 || input.TTLSeconds > 600 {
+		return CaptainWltFinancialEligibilityDecision{}, fmt.Errorf("%w: WLT decision ttl must be between 30 and 600 seconds", ErrInvalid)
+	}
+	if input.WltDecisionID == "" || input.WltReasonCode == "" || input.WltPolicyVersion == "" || input.SnapshotReference == "" {
+		return CaptainWltFinancialEligibilityDecision{}, fmt.Errorf("%w: WLT financial eligibility decision metadata is required", ErrInvalid)
+	}
+	return input, nil
 }
 
-func EvaluateCaptainFinancialEligibility(
-	requirement DispatchBalanceRequirement,
-	wallet CaptainWalletReadback,
-) (bool, string, int64) {
-	minimum := effectiveDispatchMinimum(requirement)
-	if strings.TrimSpace(wallet.WalletStatus) != "active" {
-		return false, "CAPTAIN_WALLET_NOT_ACTIVE", minimum
-	}
-	if !requirement.Enabled {
-		return true, "", minimum
-	}
-	if strings.ToUpper(strings.TrimSpace(wallet.Currency)) != strings.ToUpper(strings.TrimSpace(requirement.Currency)) {
-		return false, "CAPTAIN_WALLET_CURRENCY_MISMATCH", minimum
-	}
-	if wallet.AvailableBalanceMinorUnits < minimum {
-		return false, "CAPTAIN_FINANCIAL_GUARANTEE_BELOW_MINIMUM", minimum
-	}
-	return true, "", minimum
-}
-
-func UpsertCaptainFinancialEligibilitySnapshot(
+func UpsertCaptainFinancialEligibilityDecision(
 	ctx context.Context,
 	db *sql.DB,
 	operatorContextID string,
 	captainID string,
-	requirement DispatchBalanceRequirement,
-	wallet CaptainWalletReadback,
+	decision CaptainWltFinancialEligibilityDecision,
 ) (CaptainFinancialEligibilitySnapshot, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	captainID = strings.TrimSpace(captainID)
-	wallet.WalletID = strings.TrimSpace(wallet.WalletID)
-	wallet.WalletStatus = strings.TrimSpace(wallet.WalletStatus)
-	wallet.Currency = strings.ToUpper(strings.TrimSpace(wallet.Currency))
-	wallet.SnapshotReference = strings.TrimSpace(wallet.SnapshotReference)
-	requirement.Currency = strings.ToUpper(strings.TrimSpace(requirement.Currency))
-	if operatorContextID == "" || captainID == "" || wallet.WalletID == "" || wallet.SnapshotReference == "" ||
-		len(wallet.Currency) != 3 || len(requirement.Currency) != 3 ||
-		requirement.MinimumDispatchBalanceMinorUnits < 0 ||
-		requirement.SnapshotTTLSeconds < 30 || requirement.SnapshotTTLSeconds > 600 {
-		return CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("%w: invalid captain financial eligibility snapshot", ErrInvalid)
+	if operatorContextID == "" || captainID == "" {
+		return CaptainFinancialEligibilitySnapshot{}, fmt.Errorf("%w: operator context and captain id are required", ErrInvalid)
 	}
-	eligible, reason, minimum := EvaluateCaptainFinancialEligibility(requirement, wallet)
+	decision, err := normalizeCaptainWltFinancialDecision(decision)
+	if err != nil {
+		return CaptainFinancialEligibilitySnapshot{}, err
+	}
+
 	var snapshot CaptainFinancialEligibilitySnapshot
-	err := db.QueryRowContext(ctx, `
+	err = db.QueryRowContext(ctx, `
 		INSERT INTO dsh_captain_financial_eligibility(
-			operator_context_id,captain_id,wallet_id,wallet_status,available_balance_minor_units,
-			minimum_dispatch_balance_minor_units,currency,eligible,ineligibility_reason,
-			snapshot_reference,checked_at,expires_at
-		) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now(),now()+($11*interval '1 second'))
+			operator_context_id,captain_id,wlt_decision_id,wlt_reason_code,wlt_policy_version,
+			eligible,ineligibility_reason,snapshot_reference,checked_at,evaluated_at,expires_at
+		) VALUES($1,$2,$3,$4,$5,$6,$7,$8,now(),$9,now()+($10*interval '1 second'))
 		ON CONFLICT(operator_context_id,captain_id) DO UPDATE SET
-			wallet_id=excluded.wallet_id,wallet_status=excluded.wallet_status,
-			available_balance_minor_units=excluded.available_balance_minor_units,
-			minimum_dispatch_balance_minor_units=excluded.minimum_dispatch_balance_minor_units,
-			currency=excluded.currency,eligible=excluded.eligible,
+			wlt_decision_id=excluded.wlt_decision_id,
+			wlt_reason_code=excluded.wlt_reason_code,
+			wlt_policy_version=excluded.wlt_policy_version,
+			eligible=excluded.eligible,
 			ineligibility_reason=excluded.ineligibility_reason,
-			snapshot_reference=excluded.snapshot_reference,checked_at=excluded.checked_at,
+			snapshot_reference=excluded.snapshot_reference,
+			checked_at=excluded.checked_at,
+			evaluated_at=excluded.evaluated_at,
 			expires_at=excluded.expires_at
-		RETURNING operator_context_id,captain_id,wallet_id,wallet_status,available_balance_minor_units,
-			minimum_dispatch_balance_minor_units,currency,eligible,ineligibility_reason,
-			snapshot_reference,checked_at,expires_at`,
-		operatorContextID, captainID, wallet.WalletID, wallet.WalletStatus,
-		wallet.AvailableBalanceMinorUnits, minimum, wallet.Currency, eligible, reason,
-		wallet.SnapshotReference, requirement.SnapshotTTLSeconds,
+		RETURNING operator_context_id,captain_id,wlt_decision_id,wlt_reason_code,wlt_policy_version,
+			eligible,ineligibility_reason,snapshot_reference,checked_at,evaluated_at,expires_at`,
+		operatorContextID,
+		captainID,
+		decision.WltDecisionID,
+		decision.WltReasonCode,
+		decision.WltPolicyVersion,
+		decision.Eligible,
+		decision.IneligibilityReason,
+		decision.SnapshotReference,
+		decision.EvaluatedAt,
+		decision.TTLSeconds,
 	).Scan(
 		&snapshot.OperatorContextID,
 		&snapshot.CaptainID,
-		&snapshot.WalletID,
-		&snapshot.WalletStatus,
-		&snapshot.AvailableBalanceMinorUnits,
-		&snapshot.MinimumDispatchBalanceMinorUnits,
-		&snapshot.Currency,
+		&snapshot.WltDecisionID,
+		&snapshot.WltReasonCode,
+		&snapshot.WltPolicyVersion,
 		&snapshot.Eligible,
 		&snapshot.IneligibilityReason,
 		&snapshot.SnapshotReference,
 		&snapshot.CheckedAt,
+		&snapshot.EvaluatedAt,
 		&snapshot.ExpiresAt,
 	)
 	return snapshot, err
@@ -140,24 +133,22 @@ func GetCaptainFinancialEligibilitySnapshot(
 		return snapshot, err
 	}
 	err = db.QueryRowContext(ctx, `
-		SELECT operator_context_id,captain_id,wallet_id,wallet_status,available_balance_minor_units,
-			minimum_dispatch_balance_minor_units,currency,eligible,ineligibility_reason,
-			snapshot_reference,checked_at,expires_at
+		SELECT operator_context_id,captain_id,wlt_decision_id,wlt_reason_code,wlt_policy_version,
+			eligible,ineligibility_reason,snapshot_reference,checked_at,evaluated_at,expires_at
 		FROM dsh_captain_financial_eligibility
 		WHERE operator_context_id=$1 AND captain_id=$2`,
 		normCtx, strings.TrimSpace(captainID),
 	).Scan(
 		&snapshot.OperatorContextID,
 		&snapshot.CaptainID,
-		&snapshot.WalletID,
-		&snapshot.WalletStatus,
-		&snapshot.AvailableBalanceMinorUnits,
-		&snapshot.MinimumDispatchBalanceMinorUnits,
-		&snapshot.Currency,
+		&snapshot.WltDecisionID,
+		&snapshot.WltReasonCode,
+		&snapshot.WltPolicyVersion,
 		&snapshot.Eligible,
 		&snapshot.IneligibilityReason,
 		&snapshot.SnapshotReference,
 		&snapshot.CheckedAt,
+		&snapshot.EvaluatedAt,
 		&snapshot.ExpiresAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
