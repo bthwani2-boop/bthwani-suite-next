@@ -1,8 +1,17 @@
+import type { components } from "../../../../clients/generated/wlt-api";
 import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
 import { createDshHttpClient } from "../dsh-link/dsh-http-request";
 
-export type RepresentativeActorType = "client" | "partner" | "captain" | "field";
+export type RepresentativeActorType = Extract<
+  components["schemas"]["ActorType"],
+  "client" | "partner" | "captain" | "field"
+>;
 
+/**
+ * DSH facade projection. The current WLT WalletEnvelope is intentionally open
+ * and must be promoted to a named schema before this projection can become a
+ * generated alias.
+ */
 export type RepresentativeWallet = {
   readonly id: string;
   readonly actorId: string;
@@ -19,22 +28,7 @@ export type RepresentativeWallet = {
   readonly updatedAt: string | null;
 };
 
-export type RepresentativeLedgerEntry = {
-  readonly id: string;
-  readonly entryType: string;
-  readonly actorId: string;
-  readonly actorType: RepresentativeActorType;
-  readonly sourceType: string;
-  readonly sourceId: string;
-  readonly referenceId: string;
-  readonly referenceType: string;
-  readonly amountMinorUnits: number;
-  readonly currency: string;
-  readonly debitCredit: "debit" | "credit" | string;
-  readonly balanceAfter: number;
-  readonly description: string;
-  readonly createdAt: string;
-};
+export type RepresentativeLedgerEntry = components["schemas"]["LedgerEntry"];
 
 export type RepresentativeFinanceApiError = {
   readonly status?: number;
@@ -74,7 +68,10 @@ function safeLedgerLimit(limit: number): number {
   return Number.isInteger(limit) && limit > 0 && limit <= 100 ? limit : 30;
 }
 
-function controlPanelWalletPath(actorType: RepresentativeActorType, actorId: string): string {
+function controlPanelWalletPath(
+  actorType: RepresentativeActorType,
+  actorId: string,
+): string {
   return `/dsh/control-panel/finance/wallets/${actorType}/${encodeURIComponent(normalizeRepresentativeActorId(actorId))}`;
 }
 
@@ -91,14 +88,14 @@ export async function fetchOwnRepresentativeLedger(
   actorType: RepresentativeActorType,
   limit = 30,
 ): Promise<readonly RepresentativeLedgerEntry[]> {
-  const response = await request<{ readonly ledgerEntries: RepresentativeLedgerEntry[] }>(
-    `${ledgerPathByActor[actorType]}?limit=${safeLedgerLimit(limit)}`,
-  );
+  const response = await request<{
+    readonly ledgerEntries: RepresentativeLedgerEntry[];
+  }>(`${ledgerPathByActor[actorType]}?limit=${safeLedgerLimit(limit)}`);
   return response.ledgerEntries ?? [];
 }
 
 /**
- * Operator-only read boundary. The backend resolves the operator OperatorContext from
+ * Operator-only read boundary. The backend resolves the operator context from
  * the authenticated session and rejects unsupported actor types and IDs.
  */
 export async function fetchRepresentativeWallet(
@@ -116,7 +113,9 @@ export async function fetchRepresentativeLedger(
   actorId: string,
   limit = 50,
 ): Promise<readonly RepresentativeLedgerEntry[]> {
-  const response = await request<{ readonly ledgerEntries: RepresentativeLedgerEntry[] }>(
+  const response = await request<{
+    readonly ledgerEntries: RepresentativeLedgerEntry[];
+  }>(
     `${controlPanelWalletPath(actorType, actorId)}/ledger-entries?limit=${safeLedgerLimit(limit)}`,
   );
   return response.ledgerEntries ?? [];
