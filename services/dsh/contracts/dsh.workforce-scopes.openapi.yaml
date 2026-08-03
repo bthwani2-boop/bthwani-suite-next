@@ -24,25 +24,7 @@ paths:
         '200': { description: Scope snapshot }
       security:
         - bearerAuth: []
-    put:
-      tags: [ "dsh-operator" ]
-      operationId: replaceWorkforceActorScopes
-      x-bthwani-required-scope: workforce.scopes.manage
-      parameters:
-        - in: path
-          name: actorId
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WorkforceScopeInput'
-      responses:
-        '200': { description: Scope snapshot }
-      security:
-        - bearerAuth: []
+
   /dsh/operator/workforce/employees/{actorId}/media/uploads:
     post:
       tags: [ "dsh-operator" ]
@@ -72,16 +54,4 @@ components:
       type: http
       scheme: bearer
   schemas:
-    WorkforceScopeInput:
-      type: object
-      required: [ actorRole, storeIds, serviceAreaCodes ]
-      properties:
-        actorRole: { type: string, enum: [ field, captain ] }
-        storeIds:
-          type: array
-          uniqueItems: true
-          items: { type: string }
-        serviceAreaCodes:
-          type: array
-          uniqueItems: true
-          items: { type: string }
+
