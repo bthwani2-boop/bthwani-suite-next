@@ -1,7 +1,7 @@
 import { useEffect, useReducer } from "react";
 import type { WltDshReferenceState } from "./wlt-reference.states";
 import type { WltDshReferenceContext } from "../finance-boundary/wlt-dsh-boundary.types";
-import { resolveDshApiBaseUrl } from "../dsh-http/dsh-api-base-url";
+import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
 import {
   fetchWltPaymentStatusRef,
   fetchWltSettlementStatusRef,
