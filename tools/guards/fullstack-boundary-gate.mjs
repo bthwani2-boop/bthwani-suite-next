@@ -48,6 +48,13 @@ for (const file of listCodeFiles()) {
   const currentSurface = isSurface ? surfaceMatch[2] : null;
   const isShared = file.startsWith("shared/") || file.includes("/frontend/shared/");
 
+  if (/PUT\s+\/dsh\/operator\/workforce\/scopes\//.test(content) || /handleUpdateOperatorWorkforceScopes/.test(content)) {
+    violations.push({
+      file,
+      message: "FORBIDDEN: DSH may read Workforce scopes only; assignment/scope mutations belong to Workforce",
+    });
+  }
+
   if (isSurface) {
     if (/\bfetch\(/.test(content)) {
       violations.push({ file, message: "direct fetch() call in surface — move to shared API adapter" });
