@@ -54,4 +54,3 @@ components:
       type: http
       scheme: bearer
   schemas:
-

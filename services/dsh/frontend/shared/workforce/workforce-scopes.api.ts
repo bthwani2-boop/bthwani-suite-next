@@ -53,5 +53,3 @@ export async function getWorkforceScopes(
     `/dsh/operator/workforce/scopes/${encodeURIComponent(actorId)}?actorRole=${actorRole}`,
   );
 }
-
-
