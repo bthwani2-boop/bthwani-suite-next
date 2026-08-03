@@ -99,11 +99,18 @@ func handleReadiness(readinessStore runtimeReadinessStore, storageStatus func(co
 		}
 		wltBaseURLStatus := configuredStatus(os.Getenv("DSH_WLT_BASE_URL"))
 		wltTokenStatus := configuredStatus(os.Getenv("WLT_DSH_SERVICE_TOKEN"))
+		workforceBaseURLStatus := configuredStatus(os.Getenv("DSH_WORKFORCE_BASE_URL"))
+		workforceTokenStatus := configuredStatus(os.Getenv("WORKFORCE_DSH_SERVICE_TOKEN"))
 		storageDependencyStatus := storageStatus(r.Context())
 
 		overallStatus := "ready"
 		httpStatus := http.StatusOK
-		if dbStatus != "ready" || wltBaseURLStatus != "configured" || wltTokenStatus != "configured" || storageDependencyStatus == "unavailable" {
+		if dbStatus != "ready" ||
+			wltBaseURLStatus != "configured" ||
+			wltTokenStatus != "configured" ||
+			workforceBaseURLStatus != "configured" ||
+			workforceTokenStatus != "configured" ||
+			storageDependencyStatus == "unavailable" {
 			overallStatus = "not_ready"
 			httpStatus = http.StatusServiceUnavailable
 		}
@@ -112,10 +119,12 @@ func handleReadiness(readinessStore runtimeReadinessStore, storageStatus func(co
 			Service: "dsh",
 			Status:  overallStatus,
 			Dependencies: map[string]string{
-				"postgres":          dbStatus,
-				"wlt_base_url":      wltBaseURLStatus,
-				"wlt_service_token": wltTokenStatus,
-				"storage":           storageDependencyStatus,
+				"postgres":                dbStatus,
+				"wlt_base_url":            wltBaseURLStatus,
+				"wlt_service_token":       wltTokenStatus,
+				"workforce_base_url":      workforceBaseURLStatus,
+				"workforce_service_token": workforceTokenStatus,
+				"storage":                 storageDependencyStatus,
 			},
 			CheckedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		}

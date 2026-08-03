@@ -19,3 +19,4 @@ modules:
 
 overlays:
   - wlt.payment-session-capabilities.overlay.yaml
+  - wlt.dsh-checkout-handoff.overlay.yaml
