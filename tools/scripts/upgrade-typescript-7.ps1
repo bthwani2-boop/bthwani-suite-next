@@ -125,11 +125,11 @@ try {
         throw "The branch is behind origin/$baseBranch by $behindBase commit(s). Synchronize the branch before upgrading."
     }
 
-    Write-Host "Repository:             $repoRoot"
-    Write-Host "Branch:                 $currentBranch"
-    Write-Host "Pinned SHA:             $localSha"
-    Write-Host "TypeScript 7 compiler:  $typeScript7Version"
-    Write-Host "TypeScript 6 API bridge:$typeScript6CompatVersion"
+    Write-Host "Repository:              $repoRoot"
+    Write-Host "Branch:                  $currentBranch"
+    Write-Host "Pinned SHA:              $localSha"
+    Write-Host "TypeScript 7 compiler:   $typeScript7Version"
+    Write-Host "TypeScript 6 API bridge: $typeScript6CompatVersion"
 
     if (-not $VerifyOnly) {
         Write-Section "Rewrite workspace TypeScript declarations"
@@ -430,6 +430,7 @@ console.log(`Validated ${declarationCount} TypeScript declarations.`);
 
     Write-Host ""
     Write-Host "Decision: TYPESCRIPT_7_UPGRADE_VERIFIED"
+    Write-Host "Next verification command: pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\scripts\verify-typescript-7-readiness.ps1"
 }
 finally {
     Pop-Location
