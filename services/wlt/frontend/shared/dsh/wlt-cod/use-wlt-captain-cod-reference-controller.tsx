@@ -1,7 +1,7 @@
 import { useEffect, useReducer } from "react";
 import type { WltCaptainCodState } from "./wlt-captain-cod.states";
 import type { WltDshCodReference } from "../finance-boundary/wlt-dsh-boundary.types";
-import type { DshReferenceApiResult } from "../dsh-http/dsh-http-request";
+import type { DshReferenceApiResult } from "../dsh-link/dsh-reference-client";
 
 /**
  * Transport for the captain COD read model. WLT's internal /wlt/cod-records
@@ -15,7 +15,7 @@ export type WltCaptainCodRecordsFetcher = (
 
 type Action =
   | { type: "LOADING" }
-  | { type: "LOADED"; records: import("../finance-boundary/wlt-dsh-boundary.types").WltDshCodReference[] }
+  | { type: "LOADED"; records: WltDshCodReference[] }
   | { type: "ERROR"; message: string }
   | { type: "NOT_AVAILABLE" };
 
@@ -38,9 +38,7 @@ export type WltCaptainCodController = {
 };
 
 /**
- * WLT-owned reference controller for a captain's COD (cash-on-delivery) liability.
- * DSH surfaces (app-captain) must consume COD/settlement figures through this
- * controller instead of computing or simulating their own financial state.
+ * WLT-owned reference controller for a captain's COD liability.
  */
 export function useWltDshCaptainCodReferenceController(
   captainId: string | null | undefined,
