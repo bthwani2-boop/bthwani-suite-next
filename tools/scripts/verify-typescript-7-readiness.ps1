@@ -99,6 +99,11 @@ try {
         throw "Wrong branch: '$currentBranch'. Switch to '$expectedBranch' before running this script."
     }
 
+    Invoke-Step -Name "Clean stale Windows Go build artifacts" -FilePath "node" -Arguments @(
+        "tools/scripts/verify-go-build.mjs",
+        "--cleanup-stale"
+    )
+
     $initialStatus = Invoke-Captured -FilePath "git" -Arguments @("status", "--porcelain") -Name "Initial git status"
     if ($initialStatus) {
         throw "The worktree must be clean before verification:`n$initialStatus"
@@ -209,10 +214,18 @@ try {
     Invoke-Step -Name "Workspace lint" -FilePath "pnpm" -Arguments @("run", "lint")
     Invoke-Step -Name "Workspace tests" -FilePath "pnpm" -Arguments @("run", "test")
     Invoke-Step -Name "Workspace build" -FilePath "pnpm" -Arguments @("run", "build")
+    Invoke-Step -Name "Assert no Windows Go build artifacts" -FilePath "node" -Arguments @(
+        "tools/scripts/verify-go-build.mjs",
+        "--assert-clean"
+    )
     Invoke-Step -Name "Governance gates" -FilePath "pnpm" -Arguments @("run", "guard:governance-all")
 
     Invoke-Step -Name "Final TypeScript configuration governance" -FilePath "node" -Arguments @(
         "tools/guards/_typescript-readiness-config-gate.mjs"
+    )
+    Invoke-Step -Name "Final Go artifact hygiene" -FilePath "node" -Arguments @(
+        "tools/scripts/verify-go-build.mjs",
+        "--assert-clean"
     )
 
     $finalSha = Invoke-Captured -FilePath "git" -Arguments @("rev-parse", "HEAD") -Name "Resolve final HEAD"
