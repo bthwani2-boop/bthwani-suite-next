@@ -409,7 +409,8 @@ async function main() {
   if (failures.length > 0) {
     console.error('Mobile development data is not ready:');
     for (const failure of failures) console.error(`- ${failure}`);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   console.log(`Mobile development data ${MODE === 'repair' ? 'repaired and verified' : 'verified'}.`);
@@ -417,5 +418,5 @@ async function main() {
 
 main().catch((error) => {
   console.error(`Mobile development data ${MODE} failed:`, error);
-  process.exit(1);
+  process.exitCode = 1;
 });
