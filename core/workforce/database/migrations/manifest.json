@@ -43,7 +43,7 @@
     {
       "ordinal": 6,
       "file": "workforce-006_provider_activation_evidence.sql",
-      "sha256": "0b03d8a86b5d279bf2fb93af986cbc2f4ecf939d7cc7672b69d1fddac654bb47",
+      "sha256": "0b03d8a86b5d279bf2fb93af986cbc2f4ecf939d7cc7672b3c9ef1bf5882223d",
       "historicalPrefix": "006",
       "state": "HISTORICAL_IMMUTABLE"
     },
