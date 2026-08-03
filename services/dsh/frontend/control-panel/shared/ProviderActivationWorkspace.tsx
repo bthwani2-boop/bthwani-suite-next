@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useIdentityRuntimeStatus } from "@bthwani/core-identity";
 import { Box, Card, Text, TextField } from "@bthwani/ui-kit";
 import {
   CpBadge,
@@ -154,6 +155,16 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
     suspend,
     reactivate,
   } = useProviderActivationController(providerKind, actorId);
+  const identityRuntime = useIdentityRuntimeStatus();
+  const runtimeValue = identityRuntime.state.kind === "resolved"
+    ? identityRuntime.state.value
+    : identityRuntime.state.kind === "checking"
+      ? identityRuntime.state.previous
+      : undefined;
+  const identityReady = runtimeValue?.status === "HEALTHY";
+  const identityRuntimeReason = identityRuntime.state.kind === "unavailable"
+    ? identityRuntime.state.code
+    : (runtimeValue?.reasonCodes ?? ["IDENTITY_READINESS_UNPROVEN"]).join("، ");
   const [reason, setReason] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -175,7 +186,7 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
       missingReasons.push("رخصة القيادة منتهية الصلاحية");
     }
   }
-  const isReadyToIssue = managerAllowed && detail.readyToIssue && missingReasons.length === 0;
+  const isReadyToIssue = managerAllowed && identityReady && detail.readyToIssue && missingReasons.length === 0;
   const latest = detail.latestActivation;
 
   const copyCode = async (code: string) => {
@@ -200,6 +211,16 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
           <CpDescriptionRow label="الجهة المخولة">{activationOwner(providerKind)}</CpDescriptionRow>
           <CpDescriptionRow label="حالة الهوية">{detail.authActive ? "نشطة" : "غير نشطة"}</CpDescriptionRow>
         </CpDescriptionList>
+
+        {!identityReady ? (
+          <CpStatePanel
+            role="alert"
+            title="Identity غير جاهزة؛ عمليات التفعيل متوقفة مغلقًا"
+            description={`السبب: ${identityRuntimeReason}. تبقى بيانات مقدم الخدمة متاحة للقراءة ولا تُحذف الجلسات المحفوظة.`}
+          >
+            <CpButton variant="secondary" onClick={() => void identityRuntime.refresh(true)}>إعادة فحص Identity</CpButton>
+          </CpStatePanel>
+        ) : null}
 
         {!managerAllowed ? (
           <CpStatePanel
@@ -230,7 +251,7 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
                   <Text role="bodyStrong">آخر كود: {latest.status}</Text>
                   <Text role="caption" tone="muted">ينتهي: {new Date(latest.expiresAt).toLocaleString("ar-YE")}</Text>
                 </Box>
-                <CpButton variant="danger" disabled={actionBusy} onClick={() => void revokeCode().then(onReloadList)}>إبطال الأكواد</CpButton>
+                <CpButton variant="danger" disabled={actionBusy || !identityReady} onClick={() => void revokeCode().then(onReloadList)}>إبطال الأكواد</CpButton>
               </Box>
             ) : (
               <CpMutedInline tight>لم يصدر كود دخول بعد.</CpMutedInline>
@@ -251,7 +272,7 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
             {detail.engagementStatus === "suspended" ? (
               <CpButton
                 variant="primary"
-                disabled={actionBusy || reason.trim().length < 3}
+                disabled={actionBusy || !identityReady || reason.trim().length < 3}
                 onClick={() => void reactivate(reason.trim()).then((success) => { if (success) { setReason(""); void onReloadList(); } })}
               >
                 إعادة التفعيل
@@ -259,7 +280,7 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
             ) : (
               <CpButton
                 variant="danger"
-                disabled={actionBusy || reason.trim().length < 3}
+                disabled={actionBusy || !identityReady || reason.trim().length < 3}
                 onClick={() => void suspend(reason.trim()).then((success) => { if (success) { setReason(""); void onReloadList(); } })}
               >
                 إيقاف مقدم الخدمة
