@@ -71,7 +71,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/OrderIdQuery'
       responses:
-        '200': { $ref: '#/components/responses/ReferenceResponse' }
+        '200': { $ref: '#/components/responses/PaymentStatusReferenceResponse' }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
       security:
@@ -85,7 +85,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/OrderIdQuery'
       responses:
-        '200': { $ref: '#/components/responses/ReferenceResponse' }
+        '200': { $ref: '#/components/responses/SettlementStatusReferenceResponse' }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
       security:
@@ -98,7 +98,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/OrderIdQuery'
       responses:
-        '200': { $ref: '#/components/responses/ReferenceResponse' }
+        '200': { $ref: '#/components/responses/RefundStatusReferenceResponse' }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
       security:
@@ -118,7 +118,7 @@ paths:
           required: true
           schema: { type: string, minLength: 1 }
       responses:
-        '200': { $ref: '#/components/responses/ReferenceResponse' }
+        '200': { $ref: '#/components/responses/WalletStatusReferenceResponse' }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
       security:
@@ -318,15 +318,104 @@ components:
       required: true
       schema: { type: string, minLength: 1 }
   responses:
-    ReferenceResponse:
-      description: Canonical WLT reference.
+    PaymentStatusReferenceResponse:
+      description: Canonical WLT payment status reference.
       content:
         application/json:
-          schema: { type: object, additionalProperties: true }
+          schema: { $ref: '#/components/schemas/PaymentStatusReferenceEnvelope' }
+    SettlementStatusReferenceResponse:
+      description: Canonical WLT settlement status reference.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/SettlementStatusReferenceEnvelope' }
+    RefundStatusReferenceResponse:
+      description: Canonical WLT refund status reference.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/RefundStatusReferenceEnvelope' }
+    WalletStatusReferenceResponse:
+      description: Canonical WLT wallet status reference.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/WalletStatusReferenceEnvelope' }
   schemas:
     ActorType:
       type: string
       enum: [ client, partner, captain, field, system, platform ]
+    PaymentReferenceStatus:
+      type: string
+      enum: [ pending, authorized, captured, failed, refunded, partially_refunded ]
+    SettlementReferenceStatus:
+      type: string
+      enum: [ pending, processing, settled, failed ]
+    RefundReferenceStatus:
+      type: string
+      enum: [ none, requested, approved, completed, rejected ]
+    WalletReferenceStatus:
+      type: string
+      enum: [ active, suspended, frozen, closed ]
+    PaymentStatusReference:
+      type: object
+      additionalProperties: false
+      required: [ id, orderId, status, updatedAt ]
+      properties:
+        id: { type: string, minLength: 1 }
+        orderId: { type: string, minLength: 1 }
+        status: { $ref: '#/components/schemas/PaymentReferenceStatus' }
+        updatedAt: { type: string, format: date-time }
+    SettlementStatusReference:
+      type: object
+      additionalProperties: false
+      required: [ id, orderId, status, updatedAt ]
+      properties:
+        id: { type: string, minLength: 1 }
+        orderId: { type: string, minLength: 1 }
+        status: { $ref: '#/components/schemas/SettlementReferenceStatus' }
+        updatedAt: { type: string, format: date-time }
+    RefundStatusReference:
+      type: object
+      additionalProperties: false
+      required: [ id, orderId, status, updatedAt ]
+      properties:
+        id: { type: string, minLength: 1 }
+        orderId: { type: string, minLength: 1 }
+        status: { $ref: '#/components/schemas/RefundReferenceStatus' }
+        updatedAt: { type: string, format: date-time }
+    WalletStatusReference:
+      type: object
+      additionalProperties: false
+      required: [ id, actorId, actorType, status, currency, updatedAt ]
+      properties:
+        id: { type: string, minLength: 1 }
+        actorId: { type: string, minLength: 1 }
+        actorType: { $ref: '#/components/schemas/ActorType' }
+        status: { $ref: '#/components/schemas/WalletReferenceStatus' }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        updatedAt: { type: string, format: date-time }
+    PaymentStatusReferenceEnvelope:
+      type: object
+      additionalProperties: false
+      required: [ reference ]
+      properties:
+        reference: { $ref: '#/components/schemas/PaymentStatusReference' }
+    SettlementStatusReferenceEnvelope:
+      type: object
+      additionalProperties: false
+      required: [ reference ]
+      properties:
+        reference: { $ref: '#/components/schemas/SettlementStatusReference' }
+    RefundStatusReferenceEnvelope:
+      type: object
+      additionalProperties: false
+      required: [ reference ]
+      properties:
+        reference: { $ref: '#/components/schemas/RefundStatusReference' }
+    WalletStatusReferenceEnvelope:
+      type: object
+      additionalProperties: false
+      required: [ reference ]
+      properties:
+        reference: { $ref: '#/components/schemas/WalletStatusReference' }
     HealthResponse:
       type: object
       required: [ service, status ]
