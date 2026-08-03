@@ -1,16 +1,20 @@
-import type { components } from "../../../clients/generated/dsh-checkout-api";
+import type { paths } from "@bthwani/dsh-openapi";
 
-/** Canonical DSH checkout contract aliases generated directly from the governed checkout shard. */
-export type DshPaymentMethod = components["schemas"]["PaymentMethod"];
-export type DshIntentState = components["schemas"]["CheckoutIntentState"];
-export type DshFulfillmentMode = components["schemas"]["FulfillmentMode"];
-export type DshCheckoutIntent = components["schemas"]["CheckoutIntent"];
-export type DshCreateIntentInput = components["schemas"]["CreateCheckoutIntentInput"];
+type CreateCheckoutIntentOperation = paths["/dsh/client/checkout-intents"]["post"];
+type CreateCheckoutIntentEnvelope =
+  CreateCheckoutIntentOperation["responses"][201]["content"]["application/json"];
 
-/** Presentation-only terminal classification derived from the generated runtime state union. */
+/** Canonical DSH aliases extracted from the public OpenAPI operations. */
+export type DshCreateIntentInput = NonNullable<
+  CreateCheckoutIntentOperation["requestBody"]
+>["content"]["application/json"];
+export type DshCheckoutIntent = CreateCheckoutIntentEnvelope["intent"];
+export type DshPaymentMethod = NonNullable<DshCreateIntentInput["paymentMethod"]>;
+export type DshFulfillmentMode = NonNullable<DshCreateIntentInput["fulfillmentMode"]>;
+export type DshIntentState = DshCheckoutIntent["state"];
 export type DshCheckoutTerminalReason = Extract<DshIntentState, "cancelled" | "expired">;
 
-/** Presentation-only controller state. It does not redefine any runtime DTO or status union. */
+/** Presentation-only controller state. Runtime DTO and status authority remains OpenAPI-only. */
 export type DshCheckoutState =
   | { readonly kind: "idle" }
   | { readonly kind: "loading" }
