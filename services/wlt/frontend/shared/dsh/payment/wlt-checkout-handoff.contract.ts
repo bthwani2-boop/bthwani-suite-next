@@ -1,4 +1,4 @@
-import type { components } from "../../../../clients/generated/wlt-api";
+import type { components } from "@bthwani/wlt-openapi";
 
 /** Cross-service envelopes are owned by WLT OpenAPI; this file exposes aliases only. */
 export type WltPaymentCallbackEnvelope = components["schemas"]["WltPaymentCallbackEnvelope"];
