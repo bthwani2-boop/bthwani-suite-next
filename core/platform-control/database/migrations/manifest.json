@@ -3,7 +3,7 @@
   "service": "platform-control",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "platform-008_partner_commercial_model.sql",
+  "cutover": "platform-009_partner_commercial_truth_boundary.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -59,6 +59,13 @@
       "file": "platform-008_partner_commercial_model.sql",
       "sha256": "52eda1faf121f113a327dfa4d3b31f5d055f6852f0476bde52d4826d73addb19",
       "historicalPrefix": "008",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 9,
+      "file": "platform-009_partner_commercial_truth_boundary.sql",
+      "sha256": "e72e25fee9269e352a6ff208f48f164e5ef7e91f71fb4782d85530cb72bab0e8",
+      "historicalPrefix": "009",
       "state": "ACTIVE_CUTOVER"
     }
   ]
