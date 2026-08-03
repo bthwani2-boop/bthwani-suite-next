@@ -99,7 +99,7 @@ func (s *protectedStoreServer) refreshCaptainFinancialEligibility(
 }
 
 func (s *protectedStoreServer) handleGetDispatchBalancePolicy(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionRead); !ok {
 		return
 	}
 	policy, err := platformpolicies.GetDispatchBalancePolicy(r.Context(), s.db)
@@ -111,7 +111,7 @@ func (s *protectedStoreServer) handleGetDispatchBalancePolicy(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleUpsertDispatchBalancePolicy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage)
+	actor, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyPermissionManage)
 	if !ok {
 		return
 	}
