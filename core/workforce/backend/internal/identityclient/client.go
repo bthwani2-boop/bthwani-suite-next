@@ -15,14 +15,14 @@ import (
 )
 
 var (
+	ErrUnavailable              = errors.New("identity unavailable")
 	ErrPhoneAlreadyBound        = errors.New("phone already bound to another actor")
 	ErrUsernameTaken            = errors.New("username already taken")
 	ErrActorNotFound            = errors.New("actor not found")
 	ErrRateLimited              = errors.New("activation rate limited")
 	ErrInvalidActor             = errors.New("actor input invalid")
-	ErrOperatorContextForbidden = errors.New("operator context forbidden")
+	ErrOperatorContextForbidden = fmt.Errorf("%w: operator context forbidden", ErrUnavailable)
 	ErrActorStateConflict       = errors.New("actor state conflict")
-	ErrUnavailable              = errors.New("identity unavailable")
 )
 
 type Client struct {
@@ -258,15 +258,23 @@ func (c *Client) do(ctx context.Context, method, path string, body, target any, 
 		return ErrActorNotFound
 	case "ACTIVATION_RATE_LIMITED":
 		return ErrRateLimited
-	case "INVALID_ACTOR_INPUT":
+	case "INVALID_REQUEST", "INVALID_ACTOR_INPUT":
 		return ErrInvalidActor
 	case "OPERATOR_CONTEXT_REQUIRED", "OPERATOR_CONTEXT_FORBIDDEN":
 		return ErrOperatorContextForbidden
 	case "ACTOR_STATE_CONFLICT":
 		return ErrActorStateConflict
+	case "INTERNAL_API_UNAVAILABLE", "IDENTITY_DEPENDENCY_TIMEOUT", "SERVICE_UNAVAILABLE":
+		return ErrUnavailable
 	}
 	if response.StatusCode == http.StatusNotFound {
 		return ErrActorNotFound
+	}
+	if response.StatusCode == http.StatusTooManyRequests {
+		return ErrRateLimited
+	}
+	if response.StatusCode == http.StatusServiceUnavailable || response.StatusCode == http.StatusGatewayTimeout {
+		return ErrUnavailable
 	}
 	return fmt.Errorf("identity returned HTTP %d (%s)", response.StatusCode, apiErr.Code)
 }
