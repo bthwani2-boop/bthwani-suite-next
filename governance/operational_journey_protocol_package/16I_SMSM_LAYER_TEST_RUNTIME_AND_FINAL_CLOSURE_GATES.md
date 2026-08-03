@@ -216,7 +216,7 @@ required_visual_and_device_checks: PASS
 ## 11. مصفوفة الاختبارات حسب نوع التغيير
 
 | نوع التغيير | الاختبارات الدنيا |
-|---|---|
+| --- | --- |
 | Product/state | Product Truth + transition table + positive/negative allowedActions |
 | Contract | compose + lint + registry + generate + handler/consumer binding |
 | Backend | unit + integration + authz/isolation + error/correlation |
