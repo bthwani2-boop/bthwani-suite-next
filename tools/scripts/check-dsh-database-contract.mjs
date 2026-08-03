@@ -63,15 +63,71 @@ requireText(databaseReadme, "WLT", "DSH database README");
 const runnerPath = "services/dsh/database/scripts/invoke-dsh-database.ps1";
 const runnerVerificationPath = "services/dsh/database/scripts/test-dsh-migration-runner.ps1";
 const serviceRunnerPath = "database/scripts/invoke-dsh-database.ps1";
+const runtimePath = "infra/docker/scripts/runtime.ps1";
+const runtimeMigrationPath = "infra/docker/scripts/invoke-runtime-database-migrations.ps1";
+const runtimeSeedPath = "infra/docker/scripts/invoke-runtime-database-seeds.ps1";
+const canonicalMigrationRunnerPath = "infra/docker/scripts/schema-migration-runner.ps1";
+
 const runner = read(runnerPath);
-requireText(runner, "runtime_schema_migrations", runnerPath);
-requireText(runner, "runtime_seed_runs", runnerPath);
-requireText(runner, "SingleTransaction", runnerPath);
-requireText(runner, "--single-transaction", runnerPath);
-requireText(runner, "AllowLocalSeeds", runnerPath);
-requireText(runner, "CREATE INDEX CONCURRENTLY", runnerPath);
-requireText(runner, "Set-StrictMode", runnerPath);
-requireText(runner, "Ensure-DockerDshPostgres", runnerPath);
+for (const token of [
+  "invoke-runtime-database-migrations.ps1",
+  "invoke-runtime-database-seeds.ps1",
+  "invoke-service-migrations.ps1",
+  "schema_migrations",
+  "runtime_seed_history",
+  "AllowLocalSeeds",
+  "--single-transaction",
+  "Set-StrictMode",
+  "Ensure-DockerDshPostgres",
+]) {
+  requireText(runner, token, runnerPath);
+}
+for (const retiredToken of [
+  "runtime_schema_migrations",
+  "runtime_seed_runs",
+  "SingleTransaction",
+  "CREATE INDEX CONCURRENTLY",
+]) {
+  forbidText(runner, retiredToken, runnerPath);
+}
+
+const canonicalMigrationRunner = read(canonicalMigrationRunnerPath);
+for (const token of [
+  "Get-BthwaniMigrationManifestEntries",
+  "Resolve-BthwaniGovernedMigrationPlan",
+  "schema_migrations",
+  "runtime_schema_migrations_legacy_retired",
+  "LEGACY_MIGRATION_LEDGER_CONFLICT",
+  "MIGRATION_CHECKSUM_MISMATCH",
+  "DIRTY_MIGRATION_STATE",
+]) {
+  requireText(canonicalMigrationRunner, token, canonicalMigrationRunnerPath);
+}
+
+const runtimeMigrationRunner = read(runtimeMigrationPath);
+requireText(runtimeMigrationRunner, "schema-migration-runner.ps1", runtimeMigrationPath);
+requireText(runtimeMigrationRunner, "Invoke-BthwaniGovernedMigrations", runtimeMigrationPath);
+
+const runtimeSeedRunner = read(runtimeSeedPath);
+for (const token of ["*.local.sql", "runtime_seed_history", "BEGIN;", "COMMIT;", "AllowLocalSeeds"]) {
+  requireText(runtimeSeedRunner, token, runtimeSeedPath);
+}
+forbidText(runtimeSeedRunner, '-Filter "*.sql"', runtimeSeedPath);
+forbidText(runtimeSeedRunner, "runtime_seed_runs", runtimeSeedPath);
+
+const runtime = read(runtimePath);
+for (const token of [
+  "$GovernedMigrationScript",
+  "$GovernedSeedScript",
+  "Invoke-GovernedMigrations",
+  "Invoke-GovernedSeeds",
+  "-AllowLocalSeeds",
+]) {
+  requireText(runtime, token, runtimePath);
+}
+for (const retiredToken of ["function Invoke-SqlSeedDirectory", "runtime_schema_migrations", "runtime_seed_runs"]) {
+  forbidText(runtime, retiredToken, runtimePath);
+}
 
 const runnerVerification = read(runnerVerificationPath);
 requireText(runnerVerification, "checksum drift", runnerVerificationPath);
@@ -193,9 +249,10 @@ if (rootPackage) {
       fail(`package.json is missing script: ${scriptName}`);
     }
   }
-  requireText(scripts["runtime:migrate"] ?? "", runnerPath, "runtime:migrate");
-  requireText(scripts["runtime:seed"] ?? "", runnerPath, "runtime:seed");
-  requireText(scripts["runtime:seed"] ?? "", "AllowLocalSeeds", "runtime:seed");
+  requireText(scripts["runtime:migrate"] ?? "", runtimePath, "runtime:migrate");
+  requireText(scripts["runtime:migrate"] ?? "", "-Action migrate", "runtime:migrate");
+  requireText(scripts["runtime:seed"] ?? "", runtimePath, "runtime:seed");
+  requireText(scripts["runtime:seed"] ?? "", "-Action seed", "runtime:seed");
   requireText(scripts["database:dsh:contract"] ?? "", "check-dsh-database-contract.mjs", "database:dsh:contract");
 }
 
@@ -225,4 +282,6 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`DSH database contract: PASS (${migrations.length} migrations, ${databaseTestPackages.length} OperatorContext-aware DB test packages)`);
+console.log(
+  `DSH database contract: PASS (${migrations.length} migrations, ${databaseTestPackages.length} OperatorContext-aware DB test packages, canonical migration/seed authority)`,
+);
