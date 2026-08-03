@@ -4,10 +4,6 @@ import { Badge, StateView, Text, colorRoles, spacing } from "@bthwani/ui-kit";
 import type { DshCaptainFinancialEligibility } from "../platform";
 import { refreshOwnCaptainFinancialEligibility } from "./captain-financial-eligibility.api";
 
-function amountLabel(minorUnits: number, currency: string): string {
-  return `${(minorUnits / 100).toLocaleString("ar-YE", { maximumFractionDigits: 2 })} ${currency}`;
-}
-
 export function CaptainFinancialEligibilityPanel() {
   const [data, setData] = React.useState<DshCaptainFinancialEligibility | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -21,7 +17,7 @@ export function CaptainFinancialEligibilityPanel() {
       setData(result.financialEligibility);
     } catch (cause) {
       setData(null);
-      setError(cause instanceof Error ? cause.message : "تعذر التحقق من الضمانة المالية عبر WLT.");
+      setError(cause instanceof Error ? cause.message : "تعذر التحقق من قرار الأهلية المالية عبر WLT.");
     } finally {
       setLoading(false);
     }
@@ -37,46 +33,45 @@ export function CaptainFinancialEligibilityPanel() {
       <StateView
         tone="danger"
         title="أهلية الإسناد غير متاحة"
-        description={error ?? "لم تصل قراءة محفظة صالحة من WLT."}
+        description={error ?? "لم تصل نتيجة أهلية صالحة من WLT."}
         actionLabel="إعادة التحقق"
         onActionPress={() => void refresh()}
       />
     );
   }
 
-  const deficit = Math.max(0, data.minimumDispatchBalanceMinorUnits - data.availableBalanceMinorUnits);
   return (
     <View style={styles.root}>
       <View style={styles.header}>
         <Badge label={data.eligible ? "مؤهل لاستلام الطلبات" : "غير مؤهل حاليًا"} tone={data.eligible ? "success" : "danger"} />
-        <Text role="titleSm" style={styles.rtl}>الضمانة المالية وأهلية الإسناد</Text>
+        <Text role="titleSm" style={styles.rtl}>قرار الأهلية المالية للإسناد</Text>
       </View>
       <Text role="bodySm" tone="muted" style={styles.rtl}>
-        الرصيد من WLT، والحد التشغيلي من سياسة المنصة. لا يمكن للتطبيق تعديل أي منهما.
+        يعرض DSH قرار WLT قصير العمر ومرجعه فقط. الرصيد والحد المالي والسياسة التفصيلية لا تُنسخ إلى التطبيق.
       </Text>
       <View style={styles.metrics}>
         <View style={styles.metric}>
-          <Text role="caption" tone="muted">الرصيد المتاح</Text>
-          <Text role="bodyStrong">{amountLabel(data.availableBalanceMinorUnits, data.currency)}</Text>
+          <Text role="caption" tone="muted">رمز القرار</Text>
+          <Text role="bodyStrong">{data.wltReasonCode}</Text>
         </View>
         <View style={styles.metric}>
-          <Text role="caption" tone="muted">الحد المطلوب</Text>
-          <Text role="bodyStrong">{amountLabel(data.minimumDispatchBalanceMinorUnits, data.currency)}</Text>
+          <Text role="caption" tone="muted">إصدار السياسة</Text>
+          <Text role="bodyStrong">{data.wltPolicyVersion}</Text>
         </View>
         <View style={styles.metric}>
-          <Text role="caption" tone="muted">المبلغ الناقص</Text>
-          <Text role="bodyStrong" tone={deficit > 0 ? "danger" : "success"}>{amountLabel(deficit, data.currency)}</Text>
+          <Text role="caption" tone="muted">مرجع اللقطة</Text>
+          <Text role="bodyStrong">{data.snapshotReference}</Text>
         </View>
       </View>
       {!data.eligible && data.ineligibilityReason ? (
-        <StateView tone="warning" title="سبب الحظر" description={data.ineligibilityReason} />
+        <StateView tone="warning" title="سبب عدم الأهلية" description={data.ineligibilityReason} />
       ) : null}
       {error ? <StateView tone="warning" title="تعذر تحديث القراءة الأخيرة" description={error} /> : null}
       <Text role="caption" tone="muted" style={styles.rtl}>
-        آخر تحقق: {new Date(data.checkedAt).toLocaleString("ar-YE")} · تنتهي اللقطة: {new Date(data.expiresAt).toLocaleString("ar-YE")}
+        تم التقييم: {new Date(data.evaluatedAt).toLocaleString("ar-YE")} · آخر تحقق: {new Date(data.checkedAt).toLocaleString("ar-YE")} · تنتهي النتيجة: {new Date(data.expiresAt).toLocaleString("ar-YE")}
       </Text>
       <Pressable accessibilityRole="button" disabled={loading} onPress={() => void refresh()} style={[styles.button, loading && styles.disabled]}>
-        <Text role="bodyStrong" style={styles.buttonLabel}>{loading ? "جارٍ التحقق…" : "تحديث الأهلية من WLT"}</Text>
+        <Text role="bodyStrong" style={styles.buttonLabel}>{loading ? "جارٍ التحقق…" : "تحديث القرار من WLT"}</Text>
       </Pressable>
     </View>
   );
