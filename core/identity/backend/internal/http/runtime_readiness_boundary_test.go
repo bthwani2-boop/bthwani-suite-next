@@ -118,13 +118,13 @@ func TestRuntimeReadinessBoundaryRejectsMissingDatabaseConfiguration(t *testing.
 	}
 }
 
-func TestRuntimeReadinessBoundaryHandlesHealthDelegatesReadsAndGatesMutations(t *testing.T) {
+func TestRuntimeReadinessBoundaryHandlesHealthAndGatesOperationalRequests(t *testing.T) {
 	resetRuntimeProbeState()
 	lastReadinessFailed.Store(true)
 	readinessSnapshot.Lock()
 	readinessSnapshot.value = runtimeStatusResponse{
-		Service: "core-identity",
-		Checks: []runtimeCheckStatus{},
+		Service:     "core-identity",
+		Checks:      []runtimeCheckStatus{},
 		ReasonCodes: []string{reasonReadinessUnproven},
 	}
 	readinessSnapshot.Unlock()
@@ -156,7 +156,7 @@ func TestRuntimeReadinessBoundaryHandlesHealthDelegatesReadsAndGatesMutations(t 
 	read := httptest.NewRecorder()
 	handler.ServeHTTP(read, httptest.NewRequest(http.MethodGet, "/auth/session", nil))
 	if read.Code != http.StatusNoContent || nextCalls != 1 {
-		t.Fatalf("safe identity read was not delegated status=%d calls=%d", read.Code, nextCalls)
+		t.Fatalf("ready identity session bootstrap was not delegated status=%d calls=%d", read.Code, nextCalls)
 	}
 
 	mutation := httptest.NewRecorder()
@@ -167,9 +167,21 @@ func TestRuntimeReadinessBoundaryHandlesHealthDelegatesReadsAndGatesMutations(t 
 
 	configureIdentityRuntime(t)
 	t.Setenv("IDENTITY_ACTIVATION_HMAC_SECRET", "")
-	blocked := httptest.NewRecorder()
-	handler.ServeHTTP(blocked, httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(`{}`)))
-	if blocked.Code != http.StatusServiceUnavailable || nextCalls != 2 {
-		t.Fatalf("not-ready identity mutation was not blocked status=%d calls=%d body=%s", blocked.Code, nextCalls, blocked.Body.String())
+	blockedRead := httptest.NewRecorder()
+	handler.ServeHTTP(blockedRead, httptest.NewRequest(http.MethodGet, "/auth/session", nil))
+	if blockedRead.Code != http.StatusServiceUnavailable || nextCalls != 2 || !strings.Contains(blockedRead.Body.String(), reasonSigningKeyInvalid) {
+		t.Fatalf("not-ready session bootstrap was not blocked status=%d calls=%d body=%s", blockedRead.Code, nextCalls, blockedRead.Body.String())
+	}
+
+	blockedMutation := httptest.NewRecorder()
+	handler.ServeHTTP(blockedMutation, httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(`{}`)))
+	if blockedMutation.Code != http.StatusServiceUnavailable || nextCalls != 2 {
+		t.Fatalf("not-ready identity mutation was not blocked status=%d calls=%d body=%s", blockedMutation.Code, nextCalls, blockedMutation.Body.String())
+	}
+
+	unrelated := httptest.NewRecorder()
+	handler.ServeHTTP(unrelated, httptest.NewRequest(http.MethodGet, "/unrelated", nil))
+	if unrelated.Code != http.StatusNoContent || nextCalls != 3 {
+		t.Fatalf("unrelated request was incorrectly readiness-gated status=%d calls=%d", unrelated.Code, nextCalls)
 	}
 }
