@@ -205,13 +205,15 @@ function checkGenericServiceMigrationWrapper() {
 
 function checkDatabaseExecutionAuthority() {
   const failures = [];
-  const canonicalRunnerPath = "infra/docker/scripts/schema-migration-runner.ps1";
+  const canonicalMigrationPath = "infra/docker/scripts/schema-migration-runner.ps1";
+  const canonicalSeedPath = "tools/scripts/invoke-service-seeds.ps1";
   const runtimeMigrationPath = "infra/docker/scripts/invoke-runtime-database-migrations.ps1";
   const runtimeSeedPath = "infra/docker/scripts/invoke-runtime-database-seeds.ps1";
   const runtimePath = "infra/docker/scripts/runtime.ps1";
   const dshAdapterPath = "services/dsh/database/scripts/invoke-dsh-database.ps1";
 
-  const canonicalRunner = requireFile(canonicalRunnerPath, failures);
+  const canonicalMigration = requireFile(canonicalMigrationPath, failures);
+  const canonicalSeed = requireFile(canonicalSeedPath, failures);
   const runtimeMigration = requireFile(runtimeMigrationPath, failures);
   const runtimeSeed = requireFile(runtimeSeedPath, failures);
   const runtime = requireFile(runtimePath, failures);
@@ -224,17 +226,30 @@ function checkDatabaseExecutionAuthority() {
     "runtime_schema_migrations_legacy_retired",
     "LEGACY_MIGRATION_LEDGER_CONFLICT",
   ]) {
-    if (!canonicalRunner.includes(requiredToken)) failures.push(`${canonicalRunnerPath}: missing ${requiredToken}`);
+    if (!canonicalMigration.includes(requiredToken)) failures.push(`${canonicalMigrationPath}: missing ${requiredToken}`);
   }
   if (!runtimeMigration.includes("schema-migration-runner.ps1") || !runtimeMigration.includes("Invoke-BthwaniGovernedMigrations")) {
     failures.push(`${runtimeMigrationPath}: must be a thin adapter to the canonical migration runner`);
   }
 
-  for (const requiredToken of ["*.local.sql", "runtime_seed_history", "BEGIN;", "COMMIT;"]) {
-    if (!runtimeSeed.includes(requiredToken)) failures.push(`${runtimeSeedPath}: missing governed seed invariant ${requiredToken}`);
+  for (const requiredToken of [
+    "*.local.sql",
+    "runtime_seed_history",
+    "BEGIN;",
+    "COMMIT;",
+    'ValidateSet("auto", "url", "docker")',
+    "Get-PortableSeedChecksum",
+  ]) {
+    if (!canonicalSeed.includes(requiredToken)) failures.push(`${canonicalSeedPath}: missing governed seed invariant ${requiredToken}`);
   }
-  if (runtimeSeed.includes('-Filter "*.sql"')) {
-    failures.push(`${runtimeSeedPath}: must not execute verification/utility SQL as seed data`);
+  for (const forbiddenToken of ['-Filter "*.sql"', "runtime_seed_runs"]) {
+    if (canonicalSeed.includes(forbiddenToken)) failures.push(`${canonicalSeedPath}: contains retired seed behavior ${forbiddenToken}`);
+  }
+  if (!runtimeSeed.includes("invoke-service-seeds.ps1") || !runtimeSeed.includes('Transport = "docker"')) {
+    failures.push(`${runtimeSeedPath}: must be a thin Docker adapter to invoke-service-seeds.ps1`);
+  }
+  for (const forbiddenToken of ["function Invoke-ComposePsql", "CREATE TABLE IF NOT EXISTS runtime_seed_history", "BEGIN;"]) {
+    if (runtimeSeed.includes(forbiddenToken)) failures.push(`${runtimeSeedPath}: reimplements canonical seed behavior ${forbiddenToken}`);
   }
 
   for (const forbiddenToken of ["function Invoke-SqlSeedDirectory", "runtime_schema_migrations", "runtime_seed_runs"]) {
@@ -247,7 +262,7 @@ function checkDatabaseExecutionAuthority() {
   for (const forbiddenToken of ["runtime_schema_migrations", "runtime_seed_runs", "Initialize-DshDatabaseLedgers", "Invoke-DshMigrations"]) {
     if (dshAdapter.includes(forbiddenToken)) failures.push(`${dshAdapterPath}: contains retired local engine ${forbiddenToken}`);
   }
-  for (const requiredToken of ["invoke-runtime-database-migrations.ps1", "invoke-runtime-database-seeds.ps1", "invoke-service-migrations.ps1"]) {
+  for (const requiredToken of ["invoke-runtime-database-migrations.ps1", "invoke-service-migrations.ps1", "invoke-service-seeds.ps1"]) {
     if (!dshAdapter.includes(requiredToken)) failures.push(`${dshAdapterPath}: missing canonical delegation ${requiredToken}`);
   }
 
@@ -262,8 +277,23 @@ function checkDatabaseExecutionAuthority() {
     }
   }
 
-  const activeRoots = ["infra/docker/scripts", "services/dsh/database/scripts", "services/wlt/database/scripts", "tools/scripts"];
-  const legacyLedgerAllowlist = new Set([canonicalRunnerPath]);
+  for (const retiredPath of [
+    "apps/mobile/converge-local-runtime-database.ps1",
+    "apps/mobile/repair-wlt-migration-ledger.ps1",
+  ]) {
+    if (fs.existsSync(path.join(repositoryRoot, retiredPath))) {
+      failures.push(`${retiredPath}: retired database repair authority must not exist`);
+    }
+  }
+
+  const activeRoots = [
+    "apps/mobile",
+    "infra/docker/scripts",
+    "services/dsh/database/scripts",
+    "services/wlt/database/scripts",
+    "tools/scripts",
+  ];
+  const legacyLedgerAllowlist = new Set([canonicalMigrationPath]);
   for (const root of activeRoots) {
     for (const relativePath of walkPowerShell(root)) {
       if (relativePath.includes("/test-") || path.basename(relativePath).startsWith("test-")) continue;
