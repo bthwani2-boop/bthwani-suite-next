@@ -1,20 +1,34 @@
 import type { components } from "../../../../clients/generated/wlt-api";
 
 /**
- * Canonical WLT-for-DSH financial references.
+ * Canonical WLT-for-DSH financial boundary.
  *
- * Financial statuses and records are aliases of the generated WLT OpenAPI
- * client. This file may compose read-only DSH projections, but it must never
- * redefine WLT DTOs, lifecycle states, monetary records, or envelopes.
+ * Named financial records and lifecycle states are aliases of the generated
+ * WLT OpenAPI client. The three `*StatusReference` unions below are isolated
+ * read projections only: the core `/wlt/references/*` response is still open
+ * in OpenAPI and must be promoted to named schemas before these unions can be
+ * replaced by generated aliases without changing their runtime meaning.
  */
-export type WltPaymentStatusReference = components["schemas"]["PaymentStatus"];
-export type WltSettlementStatusReference =
-  components["schemas"]["SettlementListItem"]["status"];
+export type WltPaymentStatusReference =
+  | "pending"
+  | "authorized"
+  | "captured"
+  | "failed"
+  | "refunded"
+  | "partially_refunded";
 
-/** `none` is a DSH presentation sentinel for an absent refund reference. */
+export type WltSettlementStatusReference =
+  | "pending"
+  | "processing"
+  | "settled"
+  | "failed";
+
 export type WltRefundStatusReference =
-  | components["schemas"]["RefundStatus"]
-  | "none";
+  | "none"
+  | "requested"
+  | "approved"
+  | "completed"
+  | "rejected";
 
 /** Names of read-only references projected by the DSH facade. */
 export type WltReferenceField =
