@@ -1,39 +1,45 @@
 import type {
   WltPaymentStatusReference,
-  WltDshPaymentSessionReference,
   WltSettlementStatusReference,
   WltRefundStatusReference,
 } from "../finance-boundary/wlt-dsh-boundary.types";
-import type { WltDshReferenceContext } from "../finance-boundary/wlt-dsh-boundary.types";
-import { dshFetchJson } from "../dsh-http/dsh-http-request";
-export type { DshReferenceApiResult } from "../dsh-http/dsh-http-request";
+import {
+  requestDshReference,
+  type DshReferenceApiResult,
+} from "../dsh-link/dsh-reference-client";
 
-export async function fetchWltPaymentStatusRef(
-  baseUrl: string,
-  orderId: string
-) {
-  return dshFetchJson<WltPaymentStatusReference>(
-    `${baseUrl}/dsh/control-panel/finance/references/payment-status?orderId=${encodeURIComponent(orderId)}`,
-    (body: unknown) => (body as any).reference as WltPaymentStatusReference,
-  );
+export type { DshReferenceApiResult } from "../dsh-link/dsh-reference-client";
+
+function referencePath(kind: "payment-status" | "settlement-status" | "refund-status", orderId: string) {
+  return `/dsh/control-panel/finance/references/${kind}?orderId=${encodeURIComponent(orderId)}`;
 }
 
-export async function fetchWltSettlementStatusRef(
+export function fetchWltPaymentStatusRef(
   baseUrl: string,
-  orderId: string
-) {
-  return dshFetchJson<WltSettlementStatusReference>(
-    `${baseUrl}/dsh/control-panel/finance/references/settlement-status?orderId=${encodeURIComponent(orderId)}`,
-    (body: unknown) => (body as any).reference as WltSettlementStatusReference,
-  );
+  orderId: string,
+): Promise<DshReferenceApiResult<WltPaymentStatusReference>> {
+  return requestDshReference<
+    { readonly reference: WltPaymentStatusReference },
+    WltPaymentStatusReference
+  >(baseUrl, referencePath("payment-status", orderId), (response) => response.reference);
 }
 
-export async function fetchWltRefundStatusRef(
+export function fetchWltSettlementStatusRef(
   baseUrl: string,
-  orderId: string
-) {
-  return dshFetchJson<WltRefundStatusReference>(
-    `${baseUrl}/dsh/control-panel/finance/references/refund-status?orderId=${encodeURIComponent(orderId)}`,
-    (body: unknown) => (body as any).reference as WltRefundStatusReference,
-  );
+  orderId: string,
+): Promise<DshReferenceApiResult<WltSettlementStatusReference>> {
+  return requestDshReference<
+    { readonly reference: WltSettlementStatusReference },
+    WltSettlementStatusReference
+  >(baseUrl, referencePath("settlement-status", orderId), (response) => response.reference);
+}
+
+export function fetchWltRefundStatusRef(
+  baseUrl: string,
+  orderId: string,
+): Promise<DshReferenceApiResult<WltRefundStatusReference>> {
+  return requestDshReference<
+    { readonly reference: WltRefundStatusReference },
+    WltRefundStatusReference
+  >(baseUrl, referencePath("refund-status", orderId), (response) => response.reference);
 }
