@@ -94,23 +94,39 @@ type WorkforceScopeResolver interface {
 	GetActorScopes(ctx context.Context, actorID, operatorContextID, role string) (*workforceclient.ActorScopes, error)
 }
 
-// DSH delegates store assignment authority entirely to Workforce. Workforce owns actor
-// lifecycle/profile truth and store-access boundary. DSH strictly consumes
-// assignments from WorkforceScopeResolver as a read-only projection.
-func ResolveActorStore(ctx context.Context, db *sql.DB, wf WorkforceScopeResolver, actor StoreActor) (*DshStoreRow, StoreScope, error) {
+// DSH is the operational owner of store assignments. Workforce owns actor
+// lifecycle/profile truth, while dsh_store_actor_scopes is the canonical
+// store-access boundary enforced by DSH. The resolver parameter is retained
+// temporarily for call-site compatibility and must not become a parallel
+// authorization source.
+func ResolveActorStore(ctx context.Context, db *sql.DB, _ WorkforceScopeResolver, actor StoreActor) (*DshStoreRow, StoreScope, error) {
 	actorID := strings.TrimSpace(actor.ID)
 	role := strings.TrimSpace(actor.Role)
 	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
-	if db == nil || wf == nil || actorID == "" || role == "" || operatorContextID == "" {
+	if db == nil || actorID == "" || role == "" || operatorContextID == "" {
 		return nil, StoreScope{}, ErrScopedStoreNotFound
 	}
 
-	scopes, err := wf.GetActorScopes(ctx, actorID, operatorContextID, role)
-	if err != nil || scopes == nil || len(scopes.StoreIDs) == 0 {
+	var scope StoreScope
+	err := db.QueryRowContext(ctx, `
+		SELECT scopes.store_id, scopes.scope_type
+		FROM dsh_store_actor_scopes scopes
+		JOIN dsh_stores stores
+		  ON stores.id = scopes.store_id
+		 AND stores.operator_context_id = scopes.operator_context_id
+		WHERE scopes.actor_id = $1
+		  AND scopes.actor_role = $2
+		  AND scopes.operator_context_id = $3
+		  AND scopes.active = true
+		ORDER BY scopes.store_id ASC
+		LIMIT 1`, actorID, role, operatorContextID).Scan(&scope.StoreID, &scope.Type)
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, StoreScope{}, ErrScopedStoreNotFound
 	}
+	if err != nil {
+		return nil, StoreScope{}, err
+	}
 
-	scope := StoreScope{StoreID: scopes.StoreIDs[0], Type: "primary"}
 	row, err := GetStoreByIDInternalForOperatorContext(ctx, db, operatorContextID, scope.StoreID)
 	return row, scope, err
 }
@@ -122,30 +138,32 @@ func ResolveActorStoreForID(ctx context.Context, db *sql.DB, wf WorkforceScopeRe
 	role := strings.TrimSpace(actor.Role)
 	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
 	storeID = strings.TrimSpace(storeID)
-	if db == nil || wf == nil || actorID == "" || role == "" || operatorContextID == "" {
+	if db == nil || actorID == "" || role == "" || operatorContextID == "" {
 		return nil, StoreScope{}, ErrScopedStoreNotFound
 	}
 	if storeID == "" {
 		return ResolveActorStore(ctx, db, wf, actor)
 	}
 
-	scopes, err := wf.GetActorScopes(ctx, actorID, operatorContextID, role)
-	if err != nil || scopes == nil {
+	var scope StoreScope
+	err := db.QueryRowContext(ctx, `
+		SELECT scopes.store_id, scopes.scope_type
+		FROM dsh_store_actor_scopes scopes
+		JOIN dsh_stores stores
+		  ON stores.id = scopes.store_id
+		 AND stores.operator_context_id = scopes.operator_context_id
+		WHERE scopes.actor_id = $1
+		  AND scopes.actor_role = $2
+		  AND scopes.operator_context_id = $3
+		  AND scopes.store_id = $4
+		  AND scopes.active = true`, actorID, role, operatorContextID, storeID).Scan(&scope.StoreID, &scope.Type)
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, StoreScope{}, ErrScopedStoreNotFound
 	}
-
-	found := false
-	for _, id := range scopes.StoreIDs {
-		if id == storeID {
-			found = true
-			break
-		}
-	}
-	if !found {
-		return nil, StoreScope{}, ErrScopedStoreNotFound
+	if err != nil {
+		return nil, StoreScope{}, err
 	}
 
-	scope := StoreScope{StoreID: storeID, Type: "primary"}
 	row, err := GetStoreByIDInternalForOperatorContext(ctx, db, operatorContextID, scope.StoreID)
 	return row, scope, err
 }
@@ -166,7 +184,7 @@ func permissionScopeAllowsStore(scope, storeID string) bool {
 // ActorCanAccessStore applies object authorization without interpreting role
 // names. Identity-issued permissions carry an explicit action and scope;
 // ordinary partner/field/captain actors must have an active DSH store scope.
-func ActorCanAccessStore(ctx context.Context, db queryer, wf WorkforceScopeResolver, actor StoreActor, storeID string) (bool, error) {
+func ActorCanAccessStore(ctx context.Context, db queryer, _ WorkforceScopeResolver, actor StoreActor, storeID string) (bool, error) {
 	actorID := strings.TrimSpace(actor.ID)
 	role := strings.TrimSpace(actor.Role)
 	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
@@ -189,21 +207,24 @@ func ActorCanAccessStore(ctx context.Context, db queryer, wf WorkforceScopeResol
 			)`, storeID, operatorContextID).Scan(&exists)
 		return exists, err
 	}
-	if role == "" || wf == nil {
+	if role == "" {
 		return false, nil
 	}
 
-	scopes, err := wf.GetActorScopes(ctx, actorID, operatorContextID, role)
-	if err != nil || scopes == nil {
-		return false, nil
-	}
-	
-	for _, id := range scopes.StoreIDs {
-		if id == storeID {
-			return true, nil
-		}
-	}
-	return false, nil
+	err := db.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM dsh_store_actor_scopes scopes
+			JOIN dsh_stores stores
+			  ON stores.id = scopes.store_id
+			 AND stores.operator_context_id = scopes.operator_context_id
+			WHERE scopes.actor_id = $1
+			  AND scopes.actor_role = $2
+			  AND scopes.store_id = $3
+			  AND scopes.operator_context_id = $4
+			  AND scopes.active = true
+		)`, actorID, role, storeID, operatorContextID).Scan(&exists)
+	return exists, err
 }
 
 func UpdatePartnerSettings(
