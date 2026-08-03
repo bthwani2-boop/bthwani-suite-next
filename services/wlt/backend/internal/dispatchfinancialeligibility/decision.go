@@ -1,6 +1,7 @@
 package dispatchfinancialeligibility
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -15,8 +16,7 @@ import (
 const fallbackDecisionTTL = 60 * time.Second
 
 type EvaluateRequest struct {
-	CaptainID   string `json:"captainId"`
-	RequiresCOD bool   `json:"requiresCod"`
+	CaptainID string `json:"captainId"`
 }
 
 type Decision struct {
@@ -29,13 +29,13 @@ type Decision struct {
 }
 
 type policyRecord struct {
-	Enabled                              bool
-	RequireActiveWallet                  bool
-	MinimumDispatchBalanceMinorUnits     int64
-	MinimumCODBalanceMinorUnits          int64
-	Currency                             string
-	DecisionTTLSeconds                   int
-	PolicyVersion                        string
+	Enabled                          bool
+	RequireActiveWallet              bool
+	MinimumDispatchBalanceMinorUnits int64
+	MinimumCODBalanceMinorUnits      int64
+	Currency                         string
+	DecisionTTLSeconds               int
+	PolicyVersion                    string
 }
 
 type walletRecord struct {
@@ -46,15 +46,19 @@ type walletRecord struct {
 }
 
 type evaluation struct {
-	Eligible             bool
-	ReasonCode           string
-	RequiredBalance      *int64
-	Wallet               *walletRecord
-	PolicyVersion        string
-	ExpiresAt            time.Time
+	Eligible        bool
+	ReasonCode      string
+	RequiredBalance *int64
+	Wallet          *walletRecord
+	PolicyVersion   string
+	ExpiresAt       time.Time
 }
 
-func evaluateFinancialEligibility(now time.Time, policy *policyRecord, wallet *walletRecord, requiresCOD bool) evaluation {
+// evaluateFinancialEligibility is the sole financial decision function for
+// dispatch. It applies the strictest active dispatch/COD threshold so the
+// returned decision is universally valid for any DSH assignment during its
+// short lifetime. DSH never selects a threshold or sends financial inputs.
+func evaluateFinancialEligibility(now time.Time, policy *policyRecord, wallet *walletRecord) evaluation {
 	now = now.UTC()
 	if policy == nil {
 		return evaluation{
@@ -90,7 +94,7 @@ func evaluateFinancialEligibility(now time.Time, policy *policyRecord, wallet *w
 	}
 
 	required := policy.MinimumDispatchBalanceMinorUnits
-	if requiresCOD {
+	if policy.MinimumCODBalanceMinorUnits > required {
 		required = policy.MinimumCODBalanceMinorUnits
 	}
 	result.RequiredBalance = &required
@@ -128,7 +132,7 @@ func HandleEvaluate(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		decision, err := evaluateAndPersist(r, db, operatorContextID, input)
+		decision, err := evaluateAndPersist(r.Context(), db, operatorContextID, input)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "WLT_FINANCIAL_ELIGIBILITY_FAILED", "financial eligibility evaluation failed")
 			return
@@ -139,29 +143,29 @@ func HandleEvaluate(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func evaluateAndPersist(r *http.Request, db *sql.DB, operatorContextID string, input EvaluateRequest) (Decision, error) {
-	tx, err := db.BeginTx(r.Context(), &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+func evaluateAndPersist(ctx context.Context, db *sql.DB, operatorContextID string, input EvaluateRequest) (Decision, error) {
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return Decision{}, err
 	}
 	defer tx.Rollback()
 
-	policy, err := loadPolicy(r, tx, operatorContextID)
+	policy, err := loadPolicy(ctx, tx, operatorContextID)
 	if err != nil {
 		return Decision{}, err
 	}
-	wallet, err := loadCaptainWallet(r, tx, operatorContextID, input.CaptainID)
+	wallet, err := loadCaptainWallet(ctx, tx, operatorContextID, input.CaptainID)
 	if err != nil {
 		return Decision{}, err
 	}
 
 	evaluatedAt := time.Now().UTC()
-	result := evaluateFinancialEligibility(evaluatedAt, policy, wallet, input.RequiresCOD)
+	result := evaluateFinancialEligibility(evaluatedAt, policy, wallet)
 	if strings.TrimSpace(result.PolicyVersion) == "" {
 		return Decision{}, fmt.Errorf("empty WLT policy version")
 	}
 
-	if _, err := tx.ExecContext(r.Context(), `
+	if _, err := tx.ExecContext(ctx, `
 		UPDATE wlt_dispatch_financial_eligibility_decisions
 		SET revoked_at=$3
 		WHERE operator_context_id=$1 AND captain_id=$2
@@ -185,14 +189,14 @@ func evaluateAndPersist(r *http.Request, db *sql.DB, operatorContextID string, i
 	if result.RequiredBalance != nil {
 		requiredBalance = *result.RequiredBalance
 	}
-	err = tx.QueryRowContext(r.Context(), `
+	err = tx.QueryRowContext(ctx, `
 		INSERT INTO wlt_dispatch_financial_eligibility_decisions(
-			operator_context_id,captain_id,requires_cod,wallet_id,wallet_status,
+			operator_context_id,captain_id,wallet_id,wallet_status,
 			available_balance_minor_units,required_balance_minor_units,currency,
 			eligible,reason_code,policy_version,evaluated_at,expires_at
-		) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+		) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
 		RETURNING id`,
-		operatorContextID, input.CaptainID, input.RequiresCOD, walletID, walletStatus,
+		operatorContextID, input.CaptainID, walletID, walletStatus,
 		availableBalance, requiredBalance, currency, result.Eligible, result.ReasonCode,
 		result.PolicyVersion, evaluatedAt, result.ExpiresAt,
 	).Scan(&decisionID)
@@ -212,9 +216,9 @@ func evaluateAndPersist(r *http.Request, db *sql.DB, operatorContextID string, i
 	}, nil
 }
 
-func loadPolicy(r *http.Request, tx *sql.Tx, operatorContextID string) (*policyRecord, error) {
+func loadPolicy(ctx context.Context, tx *sql.Tx, operatorContextID string) (*policyRecord, error) {
 	var policy policyRecord
-	err := tx.QueryRowContext(r.Context(), `
+	err := tx.QueryRowContext(ctx, `
 		SELECT enabled,require_active_wallet,minimum_dispatch_balance_minor_units,
 			minimum_cod_balance_minor_units,currency,decision_ttl_seconds,policy_version
 		FROM wlt_dispatch_financial_eligibility_policies
@@ -238,9 +242,9 @@ func loadPolicy(r *http.Request, tx *sql.Tx, operatorContextID string) (*policyR
 	return &policy, nil
 }
 
-func loadCaptainWallet(r *http.Request, tx *sql.Tx, operatorContextID, captainID string) (*walletRecord, error) {
+func loadCaptainWallet(ctx context.Context, tx *sql.Tx, operatorContextID, captainID string) (*walletRecord, error) {
 	var wallet walletRecord
-	err := tx.QueryRowContext(r.Context(), `
+	err := tx.QueryRowContext(ctx, `
 		SELECT id,status,currency,available_balance_minor_units
 		FROM wlt_wallets
 		WHERE operator_context_id=$1 AND actor_type='captain' AND actor_id=$2
