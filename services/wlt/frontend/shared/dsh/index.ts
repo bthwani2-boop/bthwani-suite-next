@@ -30,6 +30,7 @@ export * from './field-finance';
 export * from './actor-wallet';
 export * from './presentation/WltDshCaptainBridge';
 export * from './presentation/WltDshPartnerBridge';
+export * from './presentation/captain-finance.copy';
 export * from './presentation/partner-finance.copy';
 
 export * from './commissions';
