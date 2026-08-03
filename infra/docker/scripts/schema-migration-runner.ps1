@@ -365,7 +365,7 @@ BEGIN
     END IF;
 
     IF (
-      SELECT array_agg(column_name ORDER BY ordinal_position)
+      SELECT array_agg(column_name::TEXT ORDER BY ordinal_position)
       FROM information_schema.columns
       WHERE table_schema = 'public' AND table_name = 'bthwani_migration_ledger'
     ) IS DISTINCT FROM ARRAY['service_name', 'migration_id', 'run_at', 'checksum_sha256']::TEXT[] THEN
@@ -373,7 +373,7 @@ BEGIN
     END IF;
 
     IF (
-      SELECT array_agg(data_type ORDER BY ordinal_position)
+      SELECT array_agg(data_type::TEXT ORDER BY ordinal_position)
       FROM information_schema.columns
       WHERE table_schema = 'public' AND table_name = 'bthwani_migration_ledger'
     ) IS DISTINCT FROM ARRAY['text', 'text', 'timestamp with time zone', 'text']::TEXT[] THEN
