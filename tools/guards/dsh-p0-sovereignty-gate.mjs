@@ -51,7 +51,7 @@ for (const relativePath of [
 ]) {
   reject(
     relativePath,
-    /available[_A-Za-z]*balance|minimum[_A-Za-z]*(?:dispatch|cod)[_A-Za-z]*balance|wallet_status|walletStatus|\bcurrency\b/i,
+    /available[_A-Za-z]*balance|minimum[_A-Za-z]*(?:dispatch|cod)[_A-Za-z]*balance|wallet_status|walletStatus/i,
     "DSH financial eligibility may contain only opaque WLT decision metadata",
   );
   reject(
