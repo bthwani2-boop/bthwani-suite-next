@@ -1,4 +1,4 @@
-import type { paths } from "../../../../clients/generated/wlt-api";
+import type { paths } from "@bthwani/wlt-openapi";
 
 export type DshWltLedgerEntryView = {
   readonly id: string;
