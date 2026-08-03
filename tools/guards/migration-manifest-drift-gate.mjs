@@ -156,6 +156,39 @@ function checkGenericServiceMigrationWrapper() {
   return failures;
 }
 
+function checkDshFinancialSovereigntyMigrations() {
+  const failures = [];
+  const dshMigrationDir = path.join(repositoryRoot, servicePaths.dsh);
+  const historicalException = "dsh-099_captain_dispatch_financial_eligibility.sql";
+  const forbiddenCreations = [
+    [
+      /CREATE\s+TABLE[\s\S]{0,3000}dsh_platform_dispatch_balance_policy/i,
+      "DSH_MUST_NOT_CREATE_DISPATCH_BALANCE_POLICY",
+    ],
+    [
+      /CREATE\s+TABLE[\s\S]{0,3000}dsh_captain_financial_eligibility[\s\S]{0,3000}(available_balance_minor_units|minimum_dispatch_balance_minor_units|minimum_cod_balance_minor_units|wallet_status)/i,
+      "DSH_MUST_NOT_CREATE_WALLET_BALANCE_ELIGIBILITY_TRUTH",
+    ],
+    [
+      /ALTER\s+TABLE[\s\S]{0,800}dsh_captain_financial_eligibility[\s\S]{0,800}ADD\s+COLUMN[\s\S]{0,800}(available_balance_minor_units|minimum_dispatch_balance_minor_units|minimum_cod_balance_minor_units|wallet_status)/i,
+      "DSH_MUST_NOT_ADD_WALLET_BALANCE_ELIGIBILITY_TRUTH",
+    ],
+  ];
+
+  for (const name of fs.readdirSync(dshMigrationDir).filter((entry) => entry.endsWith(".sql"))) {
+    if (name === historicalException) continue;
+    const relative = `${servicePaths.dsh}/${name}`;
+    const content = fs.readFileSync(path.join(dshMigrationDir, name), "utf8");
+    for (const [pattern, code] of forbiddenCreations) {
+      if (pattern.test(content)) {
+        failures.push(`${relative}: ${code}; DSH may store only opaque WLT eligibility decision metadata, not wallet balances/minimums/status truth`);
+      }
+    }
+  }
+
+  return failures;
+}
+
 const targetServices = requestedServices ?? Object.keys(servicePaths);
 let anyFailure = false;
 for (const service of targetServices) {
@@ -181,6 +214,15 @@ if (genericWrapperFailures.length > 0) {
   for (const failure of genericWrapperFailures) console.error(`  - ${failure}`);
 } else {
   console.log("migration-manifest-drift-gate: PASS generic-service-migration-wrapper");
+}
+
+const dshFinancialSovereigntyFailures = checkDshFinancialSovereigntyMigrations();
+if (dshFinancialSovereigntyFailures.length > 0) {
+  anyFailure = true;
+  console.error("migration-manifest-drift-gate: FAIL dsh-financial-sovereignty");
+  for (const failure of dshFinancialSovereigntyFailures) console.error(`  - ${failure}`);
+} else {
+  console.log("migration-manifest-drift-gate: PASS dsh-financial-sovereignty");
 }
 
 if (anyFailure) process.exit(1);
