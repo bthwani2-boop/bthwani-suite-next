@@ -1,8 +1,11 @@
 # BThwani DSH OpenAPI schemas module: checkout.
 # Canonical checkout request/response/status authority. Referenced by
-# ../dsh.openapi.yaml and all checkout contract shards.
+# dsh.openapi.yaml and checkout path shards.
+#
+# YAML anchors intentionally keep intra-module schemas single-sourced without
+# creating file-relative $ref values that become invalid after bundle inlining.
 
-DshCheckoutIntentState:
+DshCheckoutIntentState: &DshCheckoutIntentState
   type: string
   enum:
     - pending
@@ -15,15 +18,15 @@ DshCheckoutIntentState:
     - payment_failed
     - expired
 
-DshCheckoutPaymentMethod:
+DshCheckoutPaymentMethod: &DshCheckoutPaymentMethod
   type: string
   enum: [cod, wallet, mixed, official_wallet]
 
-DshCheckoutFulfillmentMode:
+DshCheckoutFulfillmentMode: &DshCheckoutFulfillmentMode
   type: string
   enum: [bthwani_delivery, partner_delivery, pickup]
 
-DshCheckoutIntent:
+DshCheckoutIntent: &DshCheckoutIntent
   type: object
   additionalProperties: false
   required:
@@ -51,12 +54,9 @@ DshCheckoutIntent:
     clientId: { type: string, minLength: 1 }
     cartId: { type: string, format: uuid }
     storeId: { type: string, minLength: 1 }
-    fulfillmentMode:
-      $ref: "../../dsh.openapi.yaml#/components/schemas/DshCheckoutFulfillmentMode"
-    state:
-      $ref: "../../dsh.openapi.yaml#/components/schemas/DshCheckoutIntentState"
-    paymentMethod:
-      $ref: "../../dsh.openapi.yaml#/components/schemas/DshCheckoutPaymentMethod"
+    fulfillmentMode: *DshCheckoutFulfillmentMode
+    state: *DshCheckoutIntentState
+    paymentMethod: *DshCheckoutPaymentMethod
     wltPaymentSessionId:
       type: string
       description: "Opaque WLT-owned payment-session reference. DSH never mutates financial truth."
@@ -84,10 +84,8 @@ DshCreateCheckoutIntentRequest:
   properties:
     cartId: { type: string, format: uuid }
     storeId: { type: string, minLength: 1 }
-    fulfillmentMode:
-      $ref: "../../dsh.openapi.yaml#/components/schemas/DshCheckoutFulfillmentMode"
-    paymentMethod:
-      $ref: "../../dsh.openapi.yaml#/components/schemas/DshCheckoutPaymentMethod"
+    fulfillmentMode: *DshCheckoutFulfillmentMode
+    paymentMethod: *DshCheckoutPaymentMethod
     deliveryAddressId: { type: string, format: uuid }
     note: { type: string, maxLength: 1000 }
     couponCode: { type: string, maxLength: 32 }
@@ -97,8 +95,7 @@ DshCheckoutIntentResponse:
   additionalProperties: false
   required: [intent]
   properties:
-    intent:
-      $ref: "../../dsh.openapi.yaml#/components/schemas/DshCheckoutIntent"
+    intent: *DshCheckoutIntent
 
 DshOperatorCheckoutIntentsResponse:
   type: object
@@ -107,8 +104,7 @@ DshOperatorCheckoutIntentsResponse:
   properties:
     intents:
       type: array
-      items:
-        $ref: "../../dsh.openapi.yaml#/components/schemas/DshCheckoutIntent"
+      items: *DshCheckoutIntent
 
 DshWltPaymentSessionEvent:
   type: object
@@ -129,5 +125,3 @@ DshWltPaymentSessionEvent:
         - cod_collected
         - failed
         - expired
-
-# ─── Order schemas ──────────────────────────────────────────────
