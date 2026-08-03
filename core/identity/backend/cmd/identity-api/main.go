@@ -22,23 +22,22 @@ const localBootstrapRetryInterval = 10 * time.Second
 func main() {
 	port := envOr("PORT", "8082")
 	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		log.Fatal("[identity-api] DATABASE_URL is required")
-	}
 	bootstrapOperatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
 
-	db, err := sql.Open("postgres", databaseURL)
+	db, err := openIdentityDatabase(databaseURL)
 	if err != nil {
-		log.Fatalf("[identity-api] open database configuration: %v", err)
+		log.Printf("[identity-api] database configuration unavailable; liveness remains available and readiness is fail-closed")
+		db = nil
 	}
-	db.SetMaxOpenConns(10)
-	db.SetConnMaxIdleTime(30 * time.Second)
-
-	startupProbeContext, startupProbeCancel := context.WithTimeout(context.Background(), 2*time.Second)
-	if err := db.PingContext(startupProbeContext); err != nil {
-		log.Printf("[identity-api] database unavailable at startup; liveness remains available and readiness is fail-closed")
+	if db == nil {
+		log.Printf("[identity-api] DATABASE_URL is unavailable; liveness remains available and readiness is fail-closed")
+	} else {
+		startupProbeContext, startupProbeCancel := context.WithTimeout(context.Background(), 2*time.Second)
+		if err := db.PingContext(startupProbeContext); err != nil {
+			log.Printf("[identity-api] database unavailable at startup; liveness remains available and readiness is fail-closed")
+		}
+		startupProbeCancel()
 	}
-	startupProbeCancel()
 
 	repository := identity.NewRepository(db)
 	localBootstrap := identity.LocalBootstrap{
@@ -46,7 +45,11 @@ func main() {
 		Password:          os.Getenv("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD"),
 		OperatorContextID: bootstrapOperatorContextID,
 	}
-	go retryLocalBootstrap(repository, localBootstrap)
+	if db != nil {
+		go retryLocalBootstrap(repository, localBootstrap)
+	} else {
+		log.Printf("[identity-api] local bootstrap deferred until a database is configured")
+	}
 
 	router := identityhttp.NewRouter(repository)
 
@@ -57,9 +60,9 @@ func main() {
 	operatorScopedRouter := identityhttp.OperatorBoundary(db, issuerScopedRouter)
 	internalTrustRouter := identityhttp.RuntimeOperatorContextBoundary(operatorScopedRouter)
 	otpScopedRouter := identityhttp.OtpBoundary(repository, internalTrustRouter)
-	// Readiness is the outer domain boundary so no authentication, activation,
-	// operator-context, or service middleware can touch persistence before the
-	// authoritative fail-closed gate has passed.
+	// Readiness is the outer persistence boundary so no authentication,
+	// activation, operator-context, or service middleware can touch persistence
+	// before the authoritative fail-closed gate has passed.
 	runtimeReadinessRouter := identityhttp.RuntimeReadinessBoundary(otpScopedRouter, db)
 	server := &http.Server{
 		Addr: ":" + port,
@@ -91,7 +94,22 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_ = server.Shutdown(ctx)
-	_ = db.Close()
+	if db != nil {
+		_ = db.Close()
+	}
+}
+
+func openIdentityDatabase(databaseURL string) (*sql.DB, error) {
+	if strings.TrimSpace(databaseURL) == "" {
+		return nil, nil
+	}
+	db, err := sql.Open("postgres", databaseURL)
+	if err != nil {
+		return nil, err
+	}
+	db.SetMaxOpenConns(10)
+	db.SetConnMaxIdleTime(30 * time.Second)
+	return db, nil
 }
 
 func retryLocalBootstrap(repository *identity.Repository, bootstrap identity.LocalBootstrap) {
