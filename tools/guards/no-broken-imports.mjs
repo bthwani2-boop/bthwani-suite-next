@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import * as ts from "@typescript/typescript6";
+import * as typescriptNamespace from "@typescript/typescript6";
 import {
   existsResolved,
   fail,
@@ -10,6 +10,12 @@ import {
   read,
   repoRoot
 } from "./_guard-utils.mjs";
+
+// @typescript/typescript6 is published through a CommonJS-compatible export.
+// Node ESM may expose that compiler API under `default` rather than as synthetic
+// named exports, so normalize the module shape before reading ScriptTarget,
+// ScriptKind, SyntaxKind, or factory helpers.
+const ts = typescriptNamespace.default ?? typescriptNamespace;
 
 const guardId = "no-broken-imports";
 const violations = [];
