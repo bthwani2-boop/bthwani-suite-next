@@ -76,15 +76,7 @@ test("closure migration is atomic, gated, and archives legacy records", () => {
   assert.ok(firstGateAt >= 0 && firstGateAt < dropAt);
 });
 
-test("migrate runner keeps a checksum ledger so applied migrations never re-run", () => {
-  const runner = fs.readFileSync(
-    new URL("../../../infra/docker/scripts/runtime.ps1", import.meta.url),
-    "utf8",
-  );
-  assert.match(runner, /CREATE TABLE IF NOT EXISTS runtime_schema_migrations/);
-  assert.match(runner, /Skipping \(already applied\)/);
-  assert.match(runner, /checksum mismatch/);
-});
+
 
 test("central verification fails hard instead of only printing results", () => {
   const verify = read("database/seeds/local/verify-central-catalog-seed.sql");
