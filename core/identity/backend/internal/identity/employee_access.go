@@ -85,6 +85,10 @@ func employeeDshPermissions(bundle string) []Permission {
 			"finance.read", "finance.manage",
 			"analytics.read",
 			"operations.read", "operations.manage",
+			"dsh.service_zones.read", "dsh.service_zones.manage",
+			"dsh.fulfillment_sla.read", "dsh.fulfillment_sla.manage",
+			"dsh.dispatch_capacity.read", "dsh.dispatch_capacity.manage",
+			"dsh.operational_policy.audit.read", "dsh.operational_policy.rollback",
 			"operations.special_requests.read", "operations.special_requests.transition", "operations.special_requests.dispatch",
 			"support.read", "support.manage",
 			"administration.read", "administration.manage",
@@ -95,10 +99,20 @@ func employeeDshPermissions(bundle string) []Permission {
 			"administration.rollback.request", "administration.rollback.approve",
 		)
 	case EmployeeBundlePlatformCoordinator:
-		return grant("platform.read", "analytics.read")
+		return grant(
+			"platform.read", "analytics.read",
+			"dsh.service_zones.read",
+			"dsh.fulfillment_sla.read",
+			"dsh.dispatch_capacity.read",
+			"dsh.operational_policy.audit.read",
+		)
 	case EmployeeBundleOperationsManager:
 		return grant(
 			"operations.read", "operations.manage",
+			"dsh.service_zones.read", "dsh.service_zones.manage",
+			"dsh.fulfillment_sla.read", "dsh.fulfillment_sla.manage",
+			"dsh.dispatch_capacity.read", "dsh.dispatch_capacity.manage",
+			"dsh.operational_policy.audit.read",
 			"operations.special_requests.read", "operations.special_requests.transition", "operations.special_requests.dispatch",
 			"analytics.read",
 		)
@@ -114,7 +128,6 @@ func employeeDshPermissions(bundle string) []Permission {
 		return nil
 	}
 }
-
 
 func employeeBundlePermissions(bundle, department string) ([]Permission, error) {
 	bundle = strings.TrimSpace(bundle)

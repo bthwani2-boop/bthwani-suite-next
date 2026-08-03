@@ -1,11 +1,7 @@
 #!/usr/bin/env node
-// Fails when a service's committed migrations/manifest.json diverges from
-// the files actually on disk: unregistered files, missing files, checksum
-// drift, duplicate ordinals/filenames, or a new legacy numeric-prefix
-// collision introduced after the manifest's cutover file.
-// Historical migrations are immutable by default. A pre-release correction is
-// accepted only when governance/contracts/migration-amendments.json records the
-// exact replacement digest and the absence of production approval evidence.
+// Enforces migration-file/manifest integrity and the single governed database
+// execution authority. Historical migrations are immutable by default. A
+// pre-release correction is accepted only through migration-amendments.json.
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -29,14 +25,41 @@ function sha256(content) {
   return crypto.createHash("sha256").update(content).digest("hex");
 }
 
-// Historical manifests were generated from both Windows and POSIX worktrees.
-// Accept only newline-equivalent digests so the same SQL text is portable while
-// any semantic, whitespace, ordering, or final-newline change still fails.
 function portableSqlDigests(buffer) {
   const text = buffer.toString("utf8");
   const lf = text.replace(/\r\n?/g, "\n");
   const crlf = lf.replace(/\n/g, "\r\n");
   return new Set([sha256(buffer), sha256(Buffer.from(lf, "utf8")), sha256(Buffer.from(crlf, "utf8"))]);
+}
+
+function read(relativePath) {
+  return fs.readFileSync(path.join(repositoryRoot, relativePath), "utf8");
+}
+
+function requireFile(relativePath, failures) {
+  const filePath = path.join(repositoryRoot, relativePath);
+  if (!fs.existsSync(filePath)) {
+    failures.push(`${relativePath}: missing required authority file`);
+    return "";
+  }
+  return fs.readFileSync(filePath, "utf8");
+}
+
+function walkPowerShell(relativeRoot) {
+  const absoluteRoot = path.join(repositoryRoot, relativeRoot);
+  if (!fs.existsSync(absoluteRoot)) return [];
+  const results = [];
+  const visit = (directory) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(absolute);
+      else if (entry.isFile() && entry.name.toLowerCase().endsWith(".ps1")) {
+        results.push(path.relative(repositoryRoot, absolute).replaceAll(path.sep, "/"));
+      }
+    }
+  };
+  visit(absoluteRoot);
+  return results;
 }
 
 function loadAmendments() {
@@ -48,9 +71,7 @@ function loadAmendments() {
   for (const amendment of document.amendments ?? []) {
     if (!amendment?.service || !amendment?.migrationId || !amendment?.replacementSha256) continue;
     const key = `${amendment.service}:${amendment.migrationId}`;
-    if (amendments.has(key)) {
-      throw new Error(`duplicate migration amendment: ${key}`);
-    }
+    if (amendments.has(key)) throw new Error(`duplicate migration amendment: ${key}`);
     if (amendment.classification !== "PRE_RELEASE_UNAPPLIED_CORRECTION") {
       throw new Error(`unsupported migration amendment classification for ${key}`);
     }
@@ -83,11 +104,7 @@ function loadManifestWithExtensions(service, dir, manifestPath, failures) {
     failures.push("manifest.extensions.json must contain migrations[]");
     return manifest;
   }
-
-  return {
-    ...manifest,
-    migrations: [...manifest.migrations, ...extension.migrations],
-  };
+  return { ...manifest, migrations: [...manifest.migrations, ...extension.migrations] };
 }
 
 function checkService(service) {
@@ -96,8 +113,6 @@ function checkService(service) {
   const manifestPath = path.join(dir, "manifest.json");
   const failures = [];
 
-  // Every service listed in servicePaths carries a committed manifest as of
-  // VC-130b; a missing one is a regression, never a skip.
   if (!fs.existsSync(manifestPath)) {
     return {
       service,
@@ -106,32 +121,45 @@ function checkService(service) {
   }
 
   const manifest = loadManifestWithExtensions(service, dir, manifestPath, failures);
-  const onDisk = new Set(fs.readdirSync(dir).filter((name) => name.toLowerCase().endsWith(".sql")));
+  if (manifest.service !== service) failures.push(`manifest service mismatch: expected=${service} actual=${manifest.service}`);
+  if (manifest.ordering !== "explicit") failures.push("manifest ordering must be explicit");
+  if (!Array.isArray(manifest.migrations) || manifest.migrations.length === 0) {
+    failures.push("manifest migrations[] must be non-empty");
+    return { service, failures };
+  }
 
+  const onDisk = new Set(fs.readdirSync(dir).filter((name) => name.toLowerCase().endsWith(".sql")));
   const seenOrdinals = new Set();
   const seenFiles = new Set();
-  for (const entry of manifest.migrations) {
+  const orderedEntries = [...manifest.migrations].sort((a, b) => a.ordinal - b.ordinal);
+
+  orderedEntries.forEach((entry, index) => {
+    const expectedOrdinal = index + 1;
+    if (entry.ordinal !== expectedOrdinal) {
+      failures.push(`non-contiguous ordinal: expected=${expectedOrdinal} actual=${entry.ordinal} file=${entry.file}`);
+    }
     if (seenOrdinals.has(entry.ordinal)) failures.push(`duplicate ordinal: ${entry.ordinal}`);
     seenOrdinals.add(entry.ordinal);
     if (seenFiles.has(entry.file)) failures.push(`duplicate filename in manifest: ${entry.file}`);
     seenFiles.add(entry.file);
+    if (!/^[a-f0-9]{64}$/.test(entry.sha256 ?? "")) failures.push(`invalid sha256: ${entry.file}`);
+    if (!["HISTORICAL_IMMUTABLE", "ACTIVE"].includes(entry.state)) failures.push(`invalid state: ${entry.file}=${entry.state}`);
 
     if (!onDisk.has(entry.file)) {
       failures.push(`manifest file missing on disk: ${entry.file}`);
-      continue;
+      return;
     }
     const migration = fs.readFileSync(path.join(dir, entry.file));
     const acceptableDigests = portableSqlDigests(migration);
     if (!acceptableDigests.has(entry.sha256)) {
       const amendment = amendments.get(`${service}:${entry.file}`);
       if (!amendment || !acceptableDigests.has(amendment.replacementSha256)) {
-        const amendmentDigest = amendment?.replacementSha256 ?? "<none>";
         failures.push(
-          `checksum drift: ${entry.file} recorded=${entry.sha256} amendment=${amendmentDigest} actual=${sha256(migration)}`,
+          `checksum drift: ${entry.file} recorded=${entry.sha256} amendment=${amendment?.replacementSha256 ?? "<none>"} actual=${sha256(migration)}`,
         );
       }
     }
-  }
+  });
 
   for (const file of onDisk) {
     if (!seenFiles.has(file)) failures.push(`file not in manifest: ${file}`);
@@ -156,24 +184,127 @@ function checkService(service) {
 
 function checkGenericServiceMigrationWrapper() {
   const failures = [];
-  const wrapperPath = path.join(repositoryRoot, "tools/scripts/invoke-service-migrations.ps1");
-  const testPath = path.join(repositoryRoot, "tools/scripts/test-service-migration-runner.ps1");
+  const wrapperPath = "tools/scripts/invoke-service-migrations.ps1";
+  const testPath = "tools/scripts/test-service-migration-runner.ps1";
+  const wrapper = requireFile(wrapperPath, failures);
+  const test = requireFile(testPath, failures);
 
-  for (const filePath of [wrapperPath, testPath]) {
-    const relative = path.relative(repositoryRoot, filePath).replaceAll(path.sep, "/");
-    if (!fs.existsSync(filePath)) {
-      failures.push(`${relative}: missing generic service migration wrapper/test`);
-      continue;
-    }
-    const content = fs.readFileSync(filePath, "utf8");
+  for (const [relative, content] of [[wrapperPath, wrapper], [testPath, test]]) {
     if (content.includes("runtime_schema_migrations")) {
-      failures.push(`${relative}: must not own or assert runtime_schema_migrations; use schema_migrations via schema-migration-runner.ps1`);
+      failures.push(`${relative}: must not own or assert runtime_schema_migrations`);
+    }
+  }
+  if (!wrapper.includes("schema-migration-runner.ps1") || !wrapper.includes("Invoke-BthwaniGovernedMigrations")) {
+    failures.push(`${wrapperPath}: must delegate to schema-migration-runner.ps1`);
+  }
+  if (!test.includes("manifest is mandatory") || !test.includes("legacy ledger conflict rejection")) {
+    failures.push(`${testPath}: must prove manifest authority and legacy-ledger reconciliation`);
+  }
+  return failures;
+}
+
+function checkDatabaseExecutionAuthority() {
+  const failures = [];
+  const canonicalMigrationPath = "infra/docker/scripts/schema-migration-runner.ps1";
+  const canonicalSeedPath = "tools/scripts/invoke-service-seeds.ps1";
+  const runtimeMigrationPath = "infra/docker/scripts/invoke-runtime-database-migrations.ps1";
+  const runtimeSeedPath = "infra/docker/scripts/invoke-runtime-database-seeds.ps1";
+  const runtimePath = "infra/docker/scripts/runtime.ps1";
+  const dshAdapterPath = "services/dsh/database/scripts/invoke-dsh-database.ps1";
+
+  const canonicalMigration = requireFile(canonicalMigrationPath, failures);
+  const canonicalSeed = requireFile(canonicalSeedPath, failures);
+  const runtimeMigration = requireFile(runtimeMigrationPath, failures);
+  const runtimeSeed = requireFile(runtimeSeedPath, failures);
+  const runtime = requireFile(runtimePath, failures);
+  const dshAdapter = requireFile(dshAdapterPath, failures);
+
+  for (const requiredToken of [
+    "Get-BthwaniMigrationManifestEntries",
+    "Resolve-BthwaniGovernedMigrationPlan",
+    "schema_migrations",
+    "runtime_schema_migrations_legacy_retired",
+    "LEGACY_MIGRATION_LEDGER_CONFLICT",
+  ]) {
+    if (!canonicalMigration.includes(requiredToken)) failures.push(`${canonicalMigrationPath}: missing ${requiredToken}`);
+  }
+  if (!runtimeMigration.includes("schema-migration-runner.ps1") || !runtimeMigration.includes("Invoke-BthwaniGovernedMigrations")) {
+    failures.push(`${runtimeMigrationPath}: must be a thin adapter to the canonical migration runner`);
+  }
+
+  for (const requiredToken of [
+    "*.local.sql",
+    "runtime_seed_history",
+    "BEGIN;",
+    "COMMIT;",
+    'ValidateSet("auto", "url", "docker")',
+    "Get-PortableSeedChecksum",
+  ]) {
+    if (!canonicalSeed.includes(requiredToken)) failures.push(`${canonicalSeedPath}: missing governed seed invariant ${requiredToken}`);
+  }
+  for (const forbiddenToken of ['-Filter "*.sql"', "runtime_seed_runs"]) {
+    if (canonicalSeed.includes(forbiddenToken)) failures.push(`${canonicalSeedPath}: contains retired seed behavior ${forbiddenToken}`);
+  }
+  if (!runtimeSeed.includes("invoke-service-seeds.ps1") || !runtimeSeed.includes('Transport = "docker"')) {
+    failures.push(`${runtimeSeedPath}: must be a thin Docker adapter to invoke-service-seeds.ps1`);
+  }
+  for (const forbiddenToken of ["function Invoke-ComposePsql", "CREATE TABLE IF NOT EXISTS runtime_seed_history", "BEGIN;"]) {
+    if (runtimeSeed.includes(forbiddenToken)) failures.push(`${runtimeSeedPath}: reimplements canonical seed behavior ${forbiddenToken}`);
+  }
+
+  for (const forbiddenToken of ["function Invoke-SqlSeedDirectory", "runtime_schema_migrations", "runtime_seed_runs"]) {
+    if (runtime.includes(forbiddenToken)) failures.push(`${runtimePath}: contains retired database authority ${forbiddenToken}`);
+  }
+  for (const requiredToken of ["$GovernedMigrationScript", "$GovernedSeedScript", "Invoke-GovernedMinioInit"]) {
+    if (!runtime.includes(requiredToken)) failures.push(`${runtimePath}: missing delegated authority ${requiredToken}`);
+  }
+
+  for (const forbiddenToken of ["runtime_schema_migrations", "runtime_seed_runs", "Initialize-DshDatabaseLedgers", "Invoke-DshMigrations"]) {
+    if (dshAdapter.includes(forbiddenToken)) failures.push(`${dshAdapterPath}: contains retired local engine ${forbiddenToken}`);
+  }
+  for (const requiredToken of ["invoke-runtime-database-migrations.ps1", "invoke-service-migrations.ps1", "invoke-service-seeds.ps1"]) {
+    if (!dshAdapter.includes(requiredToken)) failures.push(`${dshAdapterPath}: missing canonical delegation ${requiredToken}`);
+  }
+
+  const thinAdapters = [
+    "infra/docker/scripts/apply-dsh-store-discovery-db.ps1",
+    "infra/docker/scripts/apply-dsh-central-catalog-seed.ps1",
+  ];
+  for (const adapterPath of thinAdapters) {
+    const content = requireFile(adapterPath, failures);
+    if (/\bpsql\b/i.test(content) || /database[\\/]migrations[\\/].+\.sql/i.test(content)) {
+      failures.push(`${adapterPath}: compatibility adapter must not apply SQL directly`);
     }
   }
 
-  const wrapper = fs.existsSync(wrapperPath) ? fs.readFileSync(wrapperPath, "utf8") : "";
-  if (!wrapper.includes("schema-migration-runner.ps1") || !wrapper.includes("Invoke-BthwaniGovernedMigrations")) {
-    failures.push("tools/scripts/invoke-service-migrations.ps1: must delegate to schema-migration-runner.ps1/Invoke-BthwaniGovernedMigrations");
+  for (const retiredPath of [
+    "apps/mobile/converge-local-runtime-database.ps1",
+    "apps/mobile/repair-wlt-migration-ledger.ps1",
+  ]) {
+    if (fs.existsSync(path.join(repositoryRoot, retiredPath))) {
+      failures.push(`${retiredPath}: retired database repair authority must not exist`);
+    }
+  }
+
+  const activeRoots = [
+    "apps/mobile",
+    "infra/docker/scripts",
+    "services/dsh/database/scripts",
+    "services/wlt/database/scripts",
+    "tools/scripts",
+  ];
+  const legacyLedgerAllowlist = new Set([canonicalMigrationPath]);
+  for (const root of activeRoots) {
+    for (const relativePath of walkPowerShell(root)) {
+      if (relativePath.includes("/test-") || path.basename(relativePath).startsWith("test-")) continue;
+      const content = read(relativePath);
+      if (content.includes("runtime_schema_migrations") && !legacyLedgerAllowlist.has(relativePath)) {
+        failures.push(`${relativePath}: active script references retired runtime_schema_migrations`);
+      }
+      if (content.includes("runtime_seed_runs")) {
+        failures.push(`${relativePath}: active script references retired runtime_seed_runs`);
+      }
+    }
   }
 
   return failures;
@@ -184,18 +315,9 @@ function checkDshFinancialSovereigntyMigrations() {
   const dshMigrationDir = path.join(repositoryRoot, servicePaths.dsh);
   const historicalException = "dsh-099_captain_dispatch_financial_eligibility.sql";
   const forbiddenCreations = [
-    [
-      /CREATE\s+TABLE[\s\S]{0,3000}dsh_platform_dispatch_balance_policy/i,
-      "DSH_MUST_NOT_CREATE_DISPATCH_BALANCE_POLICY",
-    ],
-    [
-      /CREATE\s+TABLE[\s\S]{0,3000}dsh_captain_financial_eligibility[\s\S]{0,3000}(available_balance_minor_units|minimum_dispatch_balance_minor_units|minimum_cod_balance_minor_units|wallet_status)/i,
-      "DSH_MUST_NOT_CREATE_WALLET_BALANCE_ELIGIBILITY_TRUTH",
-    ],
-    [
-      /ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?dsh_captain_financial_eligibility[\s\S]{0,300}ADD\s+COLUMN\s+(?:IF\s+NOT\s+EXISTS\s+)?(available_balance_minor_units|minimum_dispatch_balance_minor_units|minimum_cod_balance_minor_units|wallet_status)\b/i,
-      "DSH_MUST_NOT_ADD_WALLET_BALANCE_ELIGIBILITY_TRUTH",
-    ],
+    [/CREATE\s+TABLE[\s\S]{0,3000}dsh_platform_dispatch_balance_policy/i, "DSH_MUST_NOT_CREATE_DISPATCH_BALANCE_POLICY"],
+    [/CREATE\s+TABLE[\s\S]{0,3000}dsh_captain_financial_eligibility[\s\S]{0,3000}(available_balance_minor_units|minimum_dispatch_balance_minor_units|minimum_cod_balance_minor_units|wallet_status)/i, "DSH_MUST_NOT_CREATE_WALLET_BALANCE_ELIGIBILITY_TRUTH"],
+    [/ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?dsh_captain_financial_eligibility[\s\S]{0,300}ADD\s+COLUMN\s+(?:IF\s+NOT\s+EXISTS\s+)?(available_balance_minor_units|minimum_dispatch_balance_minor_units|minimum_cod_balance_minor_units|wallet_status)\b/i, "DSH_MUST_NOT_ADD_WALLET_BALANCE_ELIGIBILITY_TRUTH"],
   ];
 
   for (const name of fs.readdirSync(dshMigrationDir).filter((entry) => entry.endsWith(".sql"))) {
@@ -204,11 +326,10 @@ function checkDshFinancialSovereigntyMigrations() {
     const content = fs.readFileSync(path.join(dshMigrationDir, name), "utf8");
     for (const [pattern, code] of forbiddenCreations) {
       if (pattern.test(content)) {
-        failures.push(`${relative}: ${code}; DSH may store only opaque WLT eligibility decision metadata, not wallet balances/minimums/status truth`);
+        failures.push(`${relative}: ${code}; DSH may store only opaque WLT eligibility decision metadata`);
       }
     }
   }
-
   return failures;
 }
 
@@ -226,26 +347,22 @@ for (const service of targetServices) {
     console.error(`migration-manifest-drift-gate: FAIL ${service}`);
     for (const failure of result.failures) console.error(`  - ${failure}`);
   } else {
-    console.log(`migration-manifest-drift-gate: PASS ${service} (${result.service})`);
+    console.log(`migration-manifest-drift-gate: PASS ${service}`);
   }
 }
 
-const genericWrapperFailures = checkGenericServiceMigrationWrapper();
-if (genericWrapperFailures.length > 0) {
-  anyFailure = true;
-  console.error("migration-manifest-drift-gate: FAIL generic-service-migration-wrapper");
-  for (const failure of genericWrapperFailures) console.error(`  - ${failure}`);
-} else {
-  console.log("migration-manifest-drift-gate: PASS generic-service-migration-wrapper");
-}
-
-const dshFinancialSovereigntyFailures = checkDshFinancialSovereigntyMigrations();
-if (dshFinancialSovereigntyFailures.length > 0) {
-  anyFailure = true;
-  console.error("migration-manifest-drift-gate: FAIL dsh-financial-sovereignty");
-  for (const failure of dshFinancialSovereigntyFailures) console.error(`  - ${failure}`);
-} else {
-  console.log("migration-manifest-drift-gate: PASS dsh-financial-sovereignty");
+for (const [scope, failures] of [
+  ["generic-service-migration-wrapper", checkGenericServiceMigrationWrapper()],
+  ["database-execution-authority", checkDatabaseExecutionAuthority()],
+  ["dsh-financial-sovereignty", checkDshFinancialSovereigntyMigrations()],
+]) {
+  if (failures.length > 0) {
+    anyFailure = true;
+    console.error(`migration-manifest-drift-gate: FAIL ${scope}`);
+    for (const failure of failures) console.error(`  - ${failure}`);
+  } else {
+    console.log(`migration-manifest-drift-gate: PASS ${scope}`);
+  }
 }
 
 if (anyFailure) process.exit(1);

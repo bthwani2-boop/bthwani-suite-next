@@ -1,64 +1,47 @@
-import { dshFetchJson, dshPostJson } from "../dsh-http/dsh-http-request";
-import { resolveDshApiBaseUrl } from "../dsh-http/dsh-api-base-url";
+import { dshFetchJson, dshPostJson } from "../dsh-link/dsh-http-request";
+import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
+import type { components } from "../../../../clients/generated/wlt-api";
 
-import type { WltDshCodReference } from '../finance-boundary/wlt-dsh-boundary.types';
+import type { WltDshCodReference } from "../finance-boundary/wlt-dsh-boundary.types";
 export type { WltDshCodReference };
 
 export type DshReferenceApiResult<T> =
   | { readonly ok: true; readonly data: T }
   | { readonly ok: false; readonly kind: "http" | "network"; readonly status?: number; readonly message: string };
 
-export type DshCaptainCodCollectionInput = {
-  readonly actualAmountMinorUnits: number;
-  readonly proofReference: string;
-  readonly note?: string;
-};
+/** DSH façade input. Actor identity is resolved server-side and is never caller-selected. */
+export type DshCaptainCodCollectionInput = Pick<
+  components["schemas"]["CollectCodInput"],
+  "actualAmountMinorUnits" | "proofReference" | "note"
+>;
 
-export type DshCaptainCodRemittanceInput = {
-  readonly proofReference: string;
-  readonly note?: string;
-};
+/** DSH façade input. Actor identity is resolved server-side and is never caller-selected. */
+export type DshCaptainCodRemittanceInput = Pick<
+  components["schemas"]["RemitCodInput"],
+  "proofReference" | "note"
+>;
 
-export type WltCodCustodyEvidence = {
-  readonly id: string;
-  readonly codRecordId: string;
-  readonly eventType: "collection" | "remittance";
-  readonly expectedAmountMinorUnits: number;
-  readonly actualAmountMinorUnits: number;
-  readonly differenceMinorUnits: number;
-  readonly currency: string;
-  readonly proofReference: string;
-  readonly actorId: string;
-  readonly actorType: string;
-  readonly note: string;
-  readonly ledgerTransactionId: string;
-  readonly createdAt: string;
-};
-
-export type WltCodReconciliationCase = {
-  readonly id: string;
-  readonly codRecordId: string;
-  readonly expectedAmountMinorUnits: number;
-  readonly actualAmountMinorUnits: number;
-  readonly differenceMinorUnits: number;
-  readonly currency: string;
-  readonly status: "open" | "investigating" | "resolved";
-};
-
-export type WltCodCustodyMutationResult = {
+export type WltCodCustodyEvidence = components["schemas"]["CodCustodyEvidence"];
+export type WltCodReconciliationCase = components["schemas"]["CodReconciliationCase"];
+export type WltCodCustodyMutationResult = Omit<
+  components["schemas"]["CodCustodyMutationResult"],
+  "codRecord"
+> & {
   readonly codRecord: WltDshCodReference;
-  readonly custodyEvidence: WltCodCustodyEvidence;
-  readonly reconciliationCase?: WltCodReconciliationCase;
-  readonly replayed: boolean;
 };
 
 export async function fetchDshCaptainOwnCodRecords(): Promise<DshReferenceApiResult<WltDshCodReference[]>> {
   const result = await dshFetchJson<{ codRecords?: WltDshCodReference[] }>(
     `${resolveDshApiBaseUrl()}/dsh/captain/finance/cod-records`,
-    (body) => body as { codRecords?: WltDshCodReference[] }
+    (body) => body as { codRecords?: WltDshCodReference[] },
   );
   if (!result.ok) {
-    return { ok: false, kind: result.kind, ...(result.status !== undefined ? { status: result.status } : {}), message: result.message };
+    return {
+      ok: false,
+      kind: result.kind,
+      ...(result.status !== undefined ? { status: result.status } : {}),
+      message: result.message,
+    };
   }
   return { ok: true, data: result.data.codRecords ?? [] };
 }
@@ -79,7 +62,7 @@ export async function collectDshCaptainCod(
       proofReference,
       note: input.note?.trim() ?? "",
     },
-    (body: unknown) => body as WltCodCustodyMutationResult
+    (body: unknown) => body as WltCodCustodyMutationResult,
   );
   if (!result.ok) throw new Error(result.message);
   return result.data;
@@ -100,7 +83,7 @@ export async function remitDshCaptainCod(
       proofReference,
       note: input.note?.trim() ?? "",
     },
-    (body: unknown) => body as WltCodCustodyMutationResult
+    (body: unknown) => body as WltCodCustodyMutationResult,
   );
   if (!result.ok) throw new Error(result.message);
   return result.data;

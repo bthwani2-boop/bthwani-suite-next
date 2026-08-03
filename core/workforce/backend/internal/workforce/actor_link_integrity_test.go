@@ -7,7 +7,8 @@ import (
 // TestActorLinkIntegrity verifies that:
 // 1. A workforce person cannot be created without a valid ActorID.
 // 2. The workforce (employee/captain/field) code generation logic is immune to duplicates
-//    due to its reliance on Postgres sequences (verified architecturally, simulated here).
+//
+// due to its reliance on Postgres sequences (verified architecturally, simulated here).
 func TestActorLinkIntegrity_MissingActorID(t *testing.T) {
 	// A valid input but missing ActorID
 	input := CreateEmployeeInput{
@@ -38,7 +39,7 @@ func TestActorLinkIntegrity_DuplicateEmployeeCode(t *testing.T) {
 	// `SELECT 'EMP-' || nextval('workforce_employee_code_seq')`
 	// This makes duplicates impossible at the database level.
 	// We simulate the guarantee here.
-	
+
 	seq1 := "EMP-10001"
 	seq2 := "EMP-10002"
 

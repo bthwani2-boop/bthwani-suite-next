@@ -17,7 +17,7 @@ func actorSupportRole(role string) (support.ReporterRole, bool) {
 	}
 }
 
-// POST /dsh/support/tickets — compatibility path retained for the primary generated contract.
+// POST /dsh/support/tickets — canonical actor support write path.
 func (s *protectedStoreServer) handleCreateActorSupportTicket(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client", "partner", "captain")
 	if !ok {

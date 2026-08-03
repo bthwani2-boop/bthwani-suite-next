@@ -8,7 +8,7 @@ func TestService_ProvisioningCompensation(t *testing.T) {
 	// A mock test representing the compensation sequence logic when DB fails.
 	// Since identityclient is a concrete struct depending on HTTP in tests,
 	// we prove the logical flow here.
-	
+
 	// When service.repo.CreateEmployee fails, service.identity.Deprovision(ctx, actor.ActorID)
 	// MUST be called. The implementation added inside service.go executes exactly this logic:
 	// _ = s.identity.Deprovision(ctx, actor.ActorID)

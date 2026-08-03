@@ -68,7 +68,7 @@ jobs:
           add_backend "${WLT}" wlt services/wlt/backend/go.mod services/wlt/database/migrations services/wlt/backend
           add_backend "${IDENTITY}" identity core/identity/backend/go.mod core/identity/database/migrations core/identity/backend
           add_backend "${WORKFORCE}" workforce core/workforce/backend/go.mod core/workforce/database/migrations core/workforce/backend
-          add_backend "${PLATFORM}" platform core/platform-control/backend/go.mod core/platform-control/database/migrations core/platform-control/backend
+          add_backend "${PLATFORM}" platform-control core/platform-control/backend/go.mod core/platform-control/database/migrations core/platform-control/backend
           add_backend "${PROVIDERS}" providers core/providers/backend/go.mod core/providers/database/migrations core/providers/backend
 
           count="$(jq 'length' <<< "${entries}")"

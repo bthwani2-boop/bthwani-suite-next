@@ -1,47 +1,28 @@
+<#
+.SYNOPSIS
+  Compatibility adapter for the historical Store Discovery database command.
+
+.DESCRIPTION
+  Store Discovery no longer owns a partial migration/seed path. The command now
+  delegates to the canonical DSH database adapter, which applies the complete
+  governed DSH migration and local-fixture set with canonical ledgers.
+#>
+
+[CmdletBinding()]
+param()
+
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)))
 
-$ComposeFile = ".\infra\docker\compose.runtime.yml"
-$EnvFile     = ".\infra\docker\env\runtime.env.example"
-$Migration   = ".\services\dsh\database\migrations\dsh-001_store_discovery.sql"
-$Seed        = ".\services\dsh\database\seeds\local\dsh-001_store_discovery.local.sql"
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../..")).Path
+$DshDatabaseRunner = Join-Path $RepoRoot "services/dsh/database/scripts/invoke-dsh-database.ps1"
+if (-not (Test-Path -LiteralPath $DshDatabaseRunner -PathType Leaf)) {
+  throw "Canonical DSH database adapter not found: $DshDatabaseRunner"
+}
 
-Write-Host "=== apply-dsh-store-discovery-db ==="
-Write-Host "Repo root: $(Get-Location)"
-
-if (-not (Test-Path $Migration)) { throw "Migration file missing: $Migration" }
-if (-not (Test-Path $Seed))      { throw "Seed file missing: $Seed" }
-
-Write-Host "`n--- Checking postgres health ---"
-$maxRetries = 20
-$attempt = 0
-do {
-  $attempt++
-  $status = docker compose --env-file $EnvFile -f $ComposeFile ps --format json 2>$null |
-    ConvertFrom-Json -ErrorAction SilentlyContinue |
-    Where-Object { $_.Service -eq "postgres" } |
-    Select-Object -ExpandProperty Health -ErrorAction SilentlyContinue
-  if ($status -eq "healthy") { break }
-  if ($attempt -ge $maxRetries) { throw "Postgres not healthy after $maxRetries attempts" }
-  Write-Host "  Waiting for postgres (attempt $attempt/$maxRetries)..."
-  Start-Sleep -Seconds 3
-} while ($true)
-Write-Host "Postgres: healthy"
-
-Write-Host "`n--- Applying Store Discovery migration ---"
-Get-Content -LiteralPath $Migration -Raw |
-  docker compose --env-file $EnvFile -f $ComposeFile exec -T postgres `
-    psql -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1
-
-if ($LASTEXITCODE -ne 0) { throw "Store Discovery migration failed (exit $LASTEXITCODE)" }
-Write-Host "Migration: OK"
-
-Write-Host "`n--- Applying Store Discovery local seed ---"
-Get-Content -LiteralPath $Seed -Raw |
-  docker compose --env-file $EnvFile -f $ComposeFile exec -T postgres `
-    psql -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1
-
-if ($LASTEXITCODE -ne 0) { throw "Store Discovery seed failed (exit $LASTEXITCODE)" }
-Write-Host "Seed: OK"
-
-Write-Host "`napply-dsh-store-discovery-db: PASS"
+Write-Warning "apply-dsh-store-discovery-db.ps1 is a compatibility adapter; partial Store Discovery schema application is retired."
+& $DshDatabaseRunner -Action seed -Transport docker -AllowLocalSeeds
+if ($LASTEXITCODE -ne 0) {
+  throw "Governed DSH database convergence failed (exit $LASTEXITCODE)."
+}
+Write-Host "apply-dsh-store-discovery-db: PASS authority=invoke-dsh-database.ps1"
