@@ -33,7 +33,6 @@ func (e DispatchFinancialEligibilityHTTPError) Error() string {
 func (c *Client) EvaluateDispatchFinancialEligibility(
 	ctx context.Context,
 	captainID string,
-	requiresCOD bool,
 	correlationID string,
 	operatorContextID string,
 ) (DispatchFinancialEligibilityDecision, error) {
@@ -49,10 +48,7 @@ func (c *Client) EvaluateDispatchFinancialEligibility(
 		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("trusted operator context is required")
 	}
 
-	payload, err := json.Marshal(map[string]any{
-		"captainId":  captainID,
-		"requiresCod": requiresCOD,
-	})
+	payload, err := json.Marshal(map[string]any{"captainId": captainID})
 	if err != nil {
 		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("encode WLT dispatch financial eligibility request: %w", err)
 	}
