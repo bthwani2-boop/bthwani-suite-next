@@ -10,36 +10,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
-
-	"dsh-api/internal/workforceclient"
 )
-
-type staticWorkforceScopeResolver struct {
-	storeIDs map[string][]string
-}
-
-func newStaticWorkforceScopeResolver() *staticWorkforceScopeResolver {
-	return &staticWorkforceScopeResolver{storeIDs: map[string][]string{}}
-}
-
-func (r *staticWorkforceScopeResolver) grant(actorID, storeID string) {
-	for _, existing := range r.storeIDs[actorID] {
-		if existing == storeID {
-			return
-		}
-	}
-	r.storeIDs[actorID] = append(r.storeIDs[actorID], storeID)
-}
-
-func (r *staticWorkforceScopeResolver) GetActorScopes(_ context.Context, actorID, operatorContextID, role string) (*workforceclient.ActorScopes, error) {
-	ids := append([]string(nil), r.storeIDs[actorID]...)
-	return &workforceclient.ActorScopes{
-		ActorID:           actorID,
-		Role:              role,
-		OperatorContextID: operatorContextID,
-		StoreIDs:          ids,
-	}, nil
-}
 
 func requiredTestOperatorContextID(t *testing.T) string {
 	t.Helper()
@@ -79,7 +50,7 @@ func uniqueID(prefix string) string {
 	return prefix + "-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 }
 
-func seedGovernanceStore(t *testing.T, db *sql.DB, scopes *staticWorkforceScopeResolver, storeID, agentID string) {
+func seedGovernanceStore(t *testing.T, db *sql.DB, storeID, agentID string) {
 	t.Helper()
 	ctx := context.Background()
 	if _, err := db.ExecContext(ctx, `
@@ -89,7 +60,16 @@ func seedGovernanceStore(t *testing.T, db *sql.DB, scopes *staticWorkforceScopeR
 		t.Fatalf("seed store: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID) })
-	scopes.grant(agentID, storeID)
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_store_actor_scopes (actor_id, actor_role, store_id, scope_type, active)
+		VALUES ($1, 'field', $2, 'assigned', true)
+		ON CONFLICT (actor_id, actor_role, store_id) DO NOTHING`, agentID, storeID); err != nil {
+		t.Fatalf("seed scope: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_actor_scopes WHERE actor_id = $1 AND store_id = $2`, agentID, storeID)
+	})
 }
 
 func seedFieldVisit(t *testing.T, db *sql.DB, storeID, agentID, status string) string {
@@ -151,13 +131,12 @@ func seedVerificationEvidence(t *testing.T, db *sql.DB, visitID, storeID, agentI
 func TestSubmitFieldVerificationRequiresVisitID(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
-	scopes := newStaticWorkforceScopeResolver()
 	storeID := uniqueID("store-fv")
 	agentID := uniqueID("agent-fv")
-	seedGovernanceStore(t, db, scopes, storeID, agentID)
+	seedGovernanceStore(t, db, storeID, agentID)
 	actor := testStoreActor(t, agentID)
 
-	_, err := SubmitFieldVerification(ctx, db, scopes, actor, storeID, "idempotency-key-1", "correlation-id-1", FieldVerificationInput{
+	_, err := SubmitFieldVerification(ctx, db, nil, actor, storeID, "idempotency-key-1", "correlation-id-1", FieldVerificationInput{
 		ExpectedVersion: 1,
 		Outcome:         "verified",
 		EvidenceStatus:  "complete",
@@ -171,17 +150,16 @@ func TestSubmitFieldVerificationRequiresVisitID(t *testing.T) {
 func TestSubmitFieldVerificationRejectsVisitStoreMismatch(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
-	scopes := newStaticWorkforceScopeResolver()
 	storeA := uniqueID("store-fv-a")
 	storeB := uniqueID("store-fv-b")
 	agentID := uniqueID("agent-fv-mm")
-	seedGovernanceStore(t, db, scopes, storeA, agentID)
-	seedGovernanceStore(t, db, scopes, storeB, agentID)
+	seedGovernanceStore(t, db, storeA, agentID)
+	seedGovernanceStore(t, db, storeB, agentID)
 	actor := testStoreActor(t, agentID)
 
 	visitID := seedFieldVisit(t, db, storeB, agentID, "complete")
 
-	_, err := SubmitFieldVerification(ctx, db, scopes, actor, storeA, "idempotency-key-2", "correlation-id-2", FieldVerificationInput{
+	_, err := SubmitFieldVerification(ctx, db, nil, actor, storeA, "idempotency-key-2", "correlation-id-2", FieldVerificationInput{
 		ExpectedVersion: 1,
 		VisitID:         visitID,
 		Outcome:         "verified",
@@ -196,15 +174,14 @@ func TestSubmitFieldVerificationRejectsVisitStoreMismatch(t *testing.T) {
 func TestSubmitFieldVerificationRejectsVerifiedWithIncompleteVisit(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
-	scopes := newStaticWorkforceScopeResolver()
 	storeID := uniqueID("store-fv-ic")
 	agentID := uniqueID("agent-fv-ic")
-	seedGovernanceStore(t, db, scopes, storeID, agentID)
+	seedGovernanceStore(t, db, storeID, agentID)
 	actor := testStoreActor(t, agentID)
 
 	visitID := seedFieldVisit(t, db, storeID, agentID, "in_progress")
 
-	_, err := SubmitFieldVerification(ctx, db, scopes, actor, storeID, "idempotency-key-3", "correlation-id-3", FieldVerificationInput{
+	_, err := SubmitFieldVerification(ctx, db, nil, actor, storeID, "idempotency-key-3", "correlation-id-3", FieldVerificationInput{
 		ExpectedVersion: 1,
 		VisitID:         visitID,
 		Outcome:         "verified",
@@ -215,7 +192,7 @@ func TestSubmitFieldVerificationRejectsVerifiedWithIncompleteVisit(t *testing.T)
 		t.Fatal("expected error when outcome=verified but visit is not complete")
 	}
 
-	resp, err := SubmitFieldVerification(ctx, db, scopes, actor, storeID, "idempotency-key-4", "correlation-id-4", FieldVerificationInput{
+	resp, err := SubmitFieldVerification(ctx, db, nil, actor, storeID, "idempotency-key-4", "correlation-id-4", FieldVerificationInput{
 		ExpectedVersion: 1,
 		VisitID:         visitID,
 		Outcome:         "needs_follow_up",
@@ -233,10 +210,9 @@ func TestSubmitFieldVerificationRejectsVerifiedWithIncompleteVisit(t *testing.T)
 func TestSubmitFieldVerificationRejectsVerifiedWithOpenEscalation(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
-	scopes := newStaticWorkforceScopeResolver()
 	storeID := uniqueID("store-fv-esc")
 	agentID := uniqueID("agent-fv-esc")
-	seedGovernanceStore(t, db, scopes, storeID, agentID)
+	seedGovernanceStore(t, db, storeID, agentID)
 	actor := testStoreActor(t, agentID)
 
 	visitID := seedFieldVisit(t, db, storeID, agentID, "complete")
@@ -251,7 +227,7 @@ func TestSubmitFieldVerificationRejectsVerifiedWithOpenEscalation(t *testing.T) 
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_readiness_escalations WHERE id = $1`, escID) })
 
-	_, err := SubmitFieldVerification(ctx, db, scopes, actor, storeID, "idempotency-key-5", "correlation-id-5", FieldVerificationInput{
+	_, err := SubmitFieldVerification(ctx, db, nil, actor, storeID, "idempotency-key-5", "correlation-id-5", FieldVerificationInput{
 		ExpectedVersion: 1,
 		VisitID:         visitID,
 		Outcome:         "verified",
@@ -266,7 +242,7 @@ func TestSubmitFieldVerificationRejectsVerifiedWithOpenEscalation(t *testing.T) 
 		t.Fatalf("resolve escalation: %v", err)
 	}
 
-	if _, err := SubmitFieldVerification(ctx, db, scopes, actor, storeID, "idempotency-key-6", "correlation-id-6", FieldVerificationInput{
+	if _, err := SubmitFieldVerification(ctx, db, nil, actor, storeID, "idempotency-key-6", "correlation-id-6", FieldVerificationInput{
 		ExpectedVersion: 1,
 		VisitID:         visitID,
 		Outcome:         "verified",
@@ -280,27 +256,26 @@ func TestSubmitFieldVerificationRejectsVerifiedWithOpenEscalation(t *testing.T) 
 func TestResolveActorStoreForIDFallbackAndExplicit(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
-	scopes := newStaticWorkforceScopeResolver()
 	storeA := uniqueID("store-ras-a")
 	storeB := uniqueID("store-ras-b")
 	agentID := uniqueID("agent-ras")
-	seedGovernanceStore(t, db, scopes, storeA, agentID)
-	seedGovernanceStore(t, db, scopes, storeB, agentID)
+	seedGovernanceStore(t, db, storeA, agentID)
+	seedGovernanceStore(t, db, storeB, agentID)
 	actor := testStoreActor(t, agentID)
 
-	rowNoParam, _, err := ResolveActorStoreForID(ctx, db, scopes, actor, "")
+	rowNoParam, _, err := ResolveActorStoreForID(ctx, db, nil, actor, "")
 	if err != nil {
 		t.Fatalf("expected fallback resolution to succeed, got %v", err)
 	}
-	rowLegacy, _, err := ResolveActorStore(ctx, db, scopes, actor)
+	rowLegacy, _, err := ResolveActorStore(ctx, db, nil, actor)
 	if err != nil {
 		t.Fatalf("legacy resolution failed: %v", err)
 	}
 	if rowNoParam.ID != rowLegacy.ID {
-		t.Fatalf("expected empty-storeId fallback to match first canonical Workforce scope: got %s want %s", rowNoParam.ID, rowLegacy.ID)
+		t.Fatalf("expected empty-storeId fallback to match legacy first-scope behavior: got %s want %s", rowNoParam.ID, rowLegacy.ID)
 	}
 
-	rowExplicit, _, err := ResolveActorStoreForID(ctx, db, scopes, actor, storeB)
+	rowExplicit, _, err := ResolveActorStoreForID(ctx, db, nil, actor, storeB)
 	if err != nil {
 		t.Fatalf("expected explicit store resolution to succeed, got %v", err)
 	}
@@ -308,7 +283,7 @@ func TestResolveActorStoreForIDFallbackAndExplicit(t *testing.T) {
 		t.Fatalf("expected explicit storeId to resolve to %s, got %s", storeB, rowExplicit.ID)
 	}
 
-	if _, _, err := ResolveActorStoreForID(ctx, db, scopes, actor, uniqueID("store-not-scoped")); !errors.Is(err, ErrScopedStoreNotFound) {
+	if _, _, err := ResolveActorStoreForID(ctx, db, nil, actor, uniqueID("store-not-scoped")); !errors.Is(err, ErrScopedStoreNotFound) {
 		t.Fatalf("expected ErrScopedStoreNotFound for an unscoped store, got %v", err)
 	}
 }
