@@ -26,6 +26,20 @@ const registry = JSON.parse(fs.readFileSync(path.join(repositoryRoot, registryRe
 
 const failures = [];
 const requiredContexts = new Set(["identity", "workforce", "platform-control", "providers", "dsh", "wlt"]);
+const retiredHandAuthoredGeneratedRoots = [
+  "services/wlt/frontend/shared/dsh/wlt/generated",
+];
+
+for (const retiredRoot of retiredHandAuthoredGeneratedRoots) {
+  const absoluteRoot = path.join(repositoryRoot, retiredRoot);
+  if (!fs.existsSync(absoluteRoot)) continue;
+  const files = fs.readdirSync(absoluteRoot, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => path.join(entry.parentPath ?? retiredRoot, entry.name));
+  for (const file of files) {
+    failures.push(`${retiredRoot}: hand-authored generated residue is forbidden: ${file}`);
+  }
+}
 
 if (registry.schemaVersion !== 2) failures.push(`${registryRelative}: schemaVersion must be 2`);
 if (registry.entries.length !== requiredContexts.size) {
