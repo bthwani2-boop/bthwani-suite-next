@@ -1,4 +1,4 @@
-import type { components } from "../../../../clients/generated/wlt-api";
+import type { components } from "@bthwani/wlt-openapi";
 import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
 import { createDshHttpClient } from "../dsh-link/dsh-http-request";
 import {
