@@ -96,7 +96,7 @@ export function PaymentSessionOperationsScreen() {
     if (!timeline || !presentation) return null;
 
     const capabilities = timeline.paymentSession.capabilities;
-    const unknown = requiresWltPaymentReconciliation(capabilities);
+    const reconciliationRequired = requiresWltPaymentReconciliation(capabilities);
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         <Card style={{ padding: "1.25rem" }}>
@@ -113,7 +113,7 @@ export function PaymentSessionOperationsScreen() {
             <div><Text role="caption" tone="muted">مرجع المزود</Text><Text role="body">{timeline.paymentSession.providerReference || "—"}</Text></div>
             <div><Text role="caption" tone="muted">قيد التحصيل</Text><Text role="body">{timeline.captureLedgerTransactionId || "غير موجود"}</Text></div>
           </div>
-          {unknown ? (
+          {reconciliationRequired ? (
             <Card style={{ padding: "1rem", marginTop: "1rem" }}>
               <Text role="body">ممنوع إعادة التفويض أو التحصيل. استخدم تحديث حالة المزود، ثم عالج حالة المطابقة المفتوحة بناءً على دليل مزود موثوق.</Text>
             </Card>
@@ -122,7 +122,7 @@ export function PaymentSessionOperationsScreen() {
             <CpButton
               variant="secondary"
               onClick={refreshProvider}
-              disabled={state === "refreshing" || capabilities.terminal}
+              disabled={state === "refreshing" || capabilities.terminal || capabilities.operationInProgress}
             >
               {state === "refreshing" ? "جارٍ الاستعلام من المزود..." : "تحديث حالة المزود"}
             </CpButton>
