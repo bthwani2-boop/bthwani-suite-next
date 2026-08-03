@@ -2,6 +2,7 @@ import type { IdentitySessionState } from "./identity-session-store.ts";
 
 export type IdentitySessionAction =
   | "configure"
+  | "retry_bootstrap"
   | "login"
   | "request_activation"
   | "consume_activation"
@@ -25,6 +26,8 @@ export function identitySessionAllowedActions(state: IdentitySessionState): read
     case "restoring":
     case "authenticating":
       return [];
+    case "service_unavailable":
+      return ["retry_bootstrap"];
     case "signed_out":
     case "error":
       return ["login", "request_activation", "consume_activation"];
@@ -84,10 +87,12 @@ export function identityErrorPresentation(code: string): IdentityErrorPresentati
       };
     case "IDENTITY_UNAVAILABLE":
     case "IDENTITY_NOT_READY":
+    case "BFF_UPSTREAM_UNAVAILABLE":
+    case "BFF_UPSTREAM_NOT_CONFIGURED":
     case "INTERNAL_API_UNAVAILABLE":
       return {
-        title: "الخدمة غير متاحة",
-        description: "تحقق من الاتصال ثم أعد المحاولة دون فقد البيانات المدخلة.",
+        title: "خدمة الهوية غير متاحة",
+        description: "الجلسة المحفوظة لم تُحذف. أعد الفحص بعد عودة الخدمة.",
         retryable: true,
       };
     default:
