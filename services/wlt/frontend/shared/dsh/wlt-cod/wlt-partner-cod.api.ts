@@ -1,5 +1,5 @@
-import { dshFetchJson, dshPostJson } from "../dsh-http/dsh-http-request";
-import { resolveDshApiBaseUrl } from "../dsh-http/dsh-api-base-url";
+import { dshFetchJson, dshPostJson } from "../dsh-link/dsh-reference-request";
+import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
 import type {
   WltCodCustodyMutationResult,
   WltDshCodReference,
@@ -12,7 +12,7 @@ export async function fetchPartnerCodRecords(): Promise<
     readonly codRecords?: readonly WltDshCodReference[];
   }>(
     `${resolveDshApiBaseUrl()}/dsh/partner/me/finance/cod-records`,
-    (body) => body as { readonly codRecords?: readonly WltDshCodReference[] },
+    (body: unknown) => body as { readonly codRecords?: readonly WltDshCodReference[] },
   );
   if (!result.ok) throw new Error(result.message);
   return result.data.codRecords ?? [];
@@ -31,7 +31,7 @@ export async function remitPartnerCodRecord(
   const result = await dshPostJson<WltCodCustodyMutationResult>(
     `${resolveDshApiBaseUrl()}/dsh/partner/me/finance/cod-records/${encodeURIComponent(normalizedRecordId)}/remit`,
     { proofReference: normalizedProof, note: note.trim() },
-    (body: unknown) => body as WltCodCustodyMutationResult
+    (body: unknown) => body as WltCodCustodyMutationResult,
   );
   if (!result.ok) throw new Error(result.message);
   return result.data;
