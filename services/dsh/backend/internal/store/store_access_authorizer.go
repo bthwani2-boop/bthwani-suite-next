@@ -5,8 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
+
+	"dsh-api/internal/workforceclient"
 )
 
 var (
@@ -114,7 +115,7 @@ func (a *sqlStoreAccessAuthorizer) AuthorizeStoreAccess(
 		return decision, ErrStoreAccessDenied
 	}
 
-	if permission, ok := matchingObjectPermission(subject.Permissions, decision.StoreID, decision.PartnerID, subject.OperatorContextID, decision.Action); ok {
+	if permission, ok := matchingObjectPermission(subject.Permissions, decision.StoreID, decision.PartnerID, decision.Action); ok {
 		decision.Allowed = true
 		decision.ReasonCode = "IDENTITY_OBJECT_PERMISSION_GRANTED"
 		decision.GrantedBy = "identity"
@@ -132,15 +133,11 @@ func (a *sqlStoreAccessAuthorizer) AuthorizeStoreAccess(
 			decision.ReasonCode = "WORKFORCE_ASSIGNMENTS_UNAVAILABLE"
 			return decision, fmt.Errorf("%w: %v", ErrAuthorizationUnavailable, err)
 		}
-		if scopes == nil ||
-			strings.TrimSpace(scopes.ActorID) != subject.ID ||
-			strings.TrimSpace(scopes.OperatorContextID) != subject.OperatorContextID ||
-			!strings.EqualFold(strings.TrimSpace(scopes.Role), role) {
+		if !trustedWorkforceScopeIdentity(scopes, subject, role) {
 			decision.ReasonCode = "WORKFORCE_ASSIGNMENT_IDENTITY_MISMATCH"
 			return decision, ErrStoreAccessDenied
 		}
-		if slices.Contains(scopes.StoreIDs, decision.StoreID) ||
-			(decision.PartnerID != "" && slices.Contains(scopes.PartnerIDs, decision.PartnerID)) {
+		if activeAssignmentAllowsStore(scopes, decision.StoreID, decision.PartnerID) {
 			decision.Allowed = true
 			decision.ReasonCode = "WORKFORCE_ACTIVE_ASSIGNMENT_GRANTED"
 			decision.GrantedBy = "workforce"
@@ -172,19 +169,45 @@ func normalizeTrustedSubject(subject TrustedSubject) TrustedSubject {
 	return subject
 }
 
+func trustedWorkforceScopeIdentity(scopes *workforceclient.ActorScopes, subject TrustedSubject, role string) bool {
+	return scopes != nil &&
+		strings.TrimSpace(scopes.ActorID) == subject.ID &&
+		strings.TrimSpace(scopes.OperatorContextID) == subject.OperatorContextID &&
+		strings.EqualFold(strings.TrimSpace(scopes.Role), role)
+}
+
+// Workforce returns active assignments only. An expired, suspended, missing,
+// or cross-object assignment therefore reaches this function without the
+// requested store/partner and is denied.
+func activeAssignmentAllowsStore(scopes *workforceclient.ActorScopes, storeID string, partnerID string) bool {
+	if scopes == nil {
+		return false
+	}
+	for _, assignedStoreID := range scopes.StoreIDs {
+		if strings.TrimSpace(assignedStoreID) == storeID {
+			return true
+		}
+	}
+	if partnerID == "" {
+		return false
+	}
+	for _, assignedPartnerID := range scopes.PartnerIDs {
+		if strings.TrimSpace(assignedPartnerID) == partnerID {
+			return true
+		}
+	}
+	return false
+}
+
 func matchingObjectPermission(
 	permissions []TrustedPermission,
 	storeID string,
 	partnerID string,
-	operatorContextID string,
 	action string,
 ) (TrustedPermission, bool) {
 	allowedScopes := map[string]struct{}{
-		"store:" + storeID:                          {},
-		"store/" + storeID:                          {},
-		"operator-context:" + operatorContextID:     {},
-		"operator_context:" + operatorContextID:     {},
-		"operator-context/" + operatorContextID:     {},
+		"store:" + storeID: {},
+		"store/" + storeID: {},
 	}
 	if partnerID != "" {
 		allowedScopes["partner:"+partnerID] = struct{}{}
