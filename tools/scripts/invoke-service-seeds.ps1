@@ -72,6 +72,10 @@ if ($Transport -eq "auto") {
   $Transport = if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) { "docker" } else { "url" }
 }
 if (-not (Test-Path -LiteralPath $SeedPath -PathType Container)) {
+  if ($AllowEmptySeedSet) {
+    Write-Host "Governed service seeds: PASS service=$ServiceKey transport=$Transport files=0 policy=explicit-absent-empty-directory"
+    return
+  }
   throw "Seed directory not found for '$ServiceKey': $SeedPath"
 }
 if ($Transport -eq "url") {
