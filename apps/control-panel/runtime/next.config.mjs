@@ -40,9 +40,6 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   reactCompiler: true,
   env: {
     // Compile-time transport switch consumed only by shared frontend resolvers.
@@ -87,3 +84,4 @@ const nextConfig = {
 };
 
 export default nextConfig;
+
