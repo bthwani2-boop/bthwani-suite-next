@@ -64,6 +64,7 @@ $ProbeOneFile = "$ProbePrefix-991_base.sql"
 $ProbeTwoFile = "$ProbePrefix-992_followup.sql"
 $PartialProbeServiceKey = "$ServiceKey-partial-probe"
 $PartialProbeServiceKeySql = ConvertTo-SqlLiteral $PartialProbeServiceKey
+$SentinelCreated = $false
 
 function Invoke-DatabaseSql {
   param(
@@ -138,15 +139,6 @@ New-Item -ItemType Directory -Path $partialDirectory -Force | Out-Null
 
 try {
   Write-Host "--- ${ServiceKey}: previous-version database with existing data ---"
-  Invoke-DatabaseSql -Sql @"
-CREATE TABLE IF NOT EXISTS $SentinelTable (
-  id INTEGER PRIMARY KEY,
-  payload TEXT NOT NULL
-);
-INSERT INTO $SentinelTable (id, payload)
-VALUES (1, 'preexisting-data')
-ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload;
-"@ | Out-Null
 
   $previousCount = [Math]::Max(0, $canonicalFiles.Count - 1)
   if ($previousCount -gt 0) {
@@ -160,14 +152,27 @@ ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload;
     if ([int]$previousLedgerCount -ne $previousCount) {
       throw "Previous-version governed ledger count mismatch for '$ServiceKey': expected=$previousCount actual=$previousLedgerCount"
     }
+
+    Invoke-DatabaseSql -Sql @"
+CREATE TABLE IF NOT EXISTS $SentinelTable (
+  id INTEGER PRIMARY KEY,
+  payload TEXT NOT NULL
+);
+INSERT INTO $SentinelTable (id, payload)
+VALUES (1, 'preexisting-data')
+ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload;
+"@ | Out-Null
+    $SentinelCreated = $true
   }
 
   Write-Host "--- ${ServiceKey}: upgrade to current migration set ---"
   Invoke-RunnerProcess -Directory $MigrationPath -ExpectSuccess $true
 
-  $sentinelCount = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM $SentinelTable WHERE id = 1 AND payload = 'preexisting-data';"
-  if ($sentinelCount -ne "1") {
-    throw "Pre-existing data was not preserved while upgrading '$ServiceKey' migrations."
+  if ($SentinelCreated) {
+    $sentinelCount = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM $SentinelTable WHERE id = 1 AND payload = 'preexisting-data';"
+    if ($sentinelCount -ne "1") {
+      throw "Pre-existing data was not preserved while upgrading '$ServiceKey' migrations."
+    }
   }
 
   $ledgerCount = Get-GovernedLedgerCount -LedgerServiceKeySql $ServiceKeySql
