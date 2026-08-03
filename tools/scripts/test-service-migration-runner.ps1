@@ -5,9 +5,9 @@
 .DESCRIPTION
   The wrapper must delegate to infra/docker/scripts/schema-migration-runner.ps1 and
   therefore record governed state in schema_migrations rather than any legacy
-  runtime-local ledger table. This test covers previous-version upgrade,
-  deterministic rerun, checksum immutability, failed migration rollback, and
-  roll-forward recovery.
+  runtime-local ledger table. This test covers manifest authority, previous-version
+  upgrade, deterministic rerun, checksum immutability, legacy-ledger reconciliation,
+  failed migration rollback, and roll-forward recovery.
 #>
 
 [CmdletBinding()]
@@ -27,6 +27,7 @@ $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $RunnerPath = Join-Path $PSScriptRoot "invoke-service-migrations.ps1"
+$GovernedRunnerPath = Join-Path $RepoRoot "infra/docker/scripts/schema-migration-runner.ps1"
 $MigrationPath = if ([System.IO.Path]::IsPathRooted($MigrationDirectory)) {
   $MigrationDirectory
 } else {
@@ -39,6 +40,9 @@ if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) {
 if (-not (Test-Path -LiteralPath $RunnerPath -PathType Leaf)) {
   throw "Migration wrapper not found: $RunnerPath"
 }
+if (-not (Test-Path -LiteralPath $GovernedRunnerPath -PathType Leaf)) {
+  throw "Governed migration runner not found: $GovernedRunnerPath"
+}
 if (-not (Test-Path -LiteralPath $MigrationPath -PathType Container)) {
   throw "Migration directory not found: $MigrationPath"
 }
@@ -48,6 +52,8 @@ if (-not (Get-Command psql -ErrorAction SilentlyContinue)) {
 if (-not (Get-Command pwsh -ErrorAction SilentlyContinue)) {
   throw "pwsh is required to test service migrations."
 }
+
+. $GovernedRunnerPath
 
 function ConvertTo-SqlLiteral {
   param([Parameter(Mandatory = $true)][string]$Value)
@@ -59,11 +65,15 @@ $SafeServiceKey = ($ServiceKey -replace "[^a-zA-Z0-9_]", "_").ToLowerInvariant()
 $SentinelTable = "ci_migration_sentinel_$SafeServiceKey"
 $ProbeOneTable = "ci_migration_probe_${SafeServiceKey}_one"
 $ProbeTwoTable = "ci_migration_probe_${SafeServiceKey}_two"
+$LegacyProbeTable = "ci_migration_probe_${SafeServiceKey}_legacy"
 $ProbePrefix = "ci-$ServiceKey-probe"
 $ProbeOneFile = "$ProbePrefix-991_base.sql"
 $ProbeTwoFile = "$ProbePrefix-992_followup.sql"
+$LegacyProbeFile = "$ProbePrefix-990_legacy.sql"
 $PartialProbeServiceKey = "$ServiceKey-partial-probe"
 $PartialProbeServiceKeySql = ConvertTo-SqlLiteral $PartialProbeServiceKey
+$LegacyProbeServiceKey = "$ServiceKey-legacy-probe"
+$LegacyProbeServiceKeySql = ConvertTo-SqlLiteral $LegacyProbeServiceKey
 $SentinelCreated = $false
 
 function Invoke-DatabaseSql {
@@ -112,15 +122,39 @@ function Get-GovernedLedgerCount {
   return Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM schema_migrations WHERE service_name = '$LedgerServiceKeySql' AND success AND NOT dirty;"
 }
 
-function Copy-MigrationManifestFiles {
-  param([Parameter(Mandatory = $true)][string]$Destination)
+function Write-TestMigrationManifest {
+  param(
+    [Parameter(Mandatory = $true)][string]$Directory,
+    [Parameter(Mandatory = $true)][string]$ManifestServiceKey
+  )
 
-  foreach ($manifestName in @("manifest.json", "manifest.extensions.json")) {
-    $source = Join-Path $MigrationPath $manifestName
-    if (Test-Path -LiteralPath $source -PathType Leaf) {
-      Copy-Item -LiteralPath $source -Destination (Join-Path $Destination $manifestName) -Force
+  $files = @(Get-ChildItem -LiteralPath $Directory -File -Filter "*.sql" |
+    Sort-Object { $_.Name.ToLowerInvariant() }, Name)
+  if ($files.Count -eq 0) {
+    throw "Cannot write an empty test migration manifest: $Directory"
+  }
+
+  $entries = @()
+  for ($index = 0; $index -lt $files.Count; $index++) {
+    $checksums = Get-BthwaniPortableSqlChecksums -File $files[$index]
+    $entries += [ordered]@{
+      ordinal = $index + 1
+      file = $files[$index].Name
+      sha256 = $checksums.Canonical
+      historicalPrefix = "test-$($index + 1)"
+      state = "ACTIVE"
     }
   }
+
+  $manifest = [ordered]@{
+    schemaVersion = 1
+    service = $ManifestServiceKey
+    ordering = "explicit"
+    orderingSource = "test-generated"
+    cutover = $files[-1].Name
+    migrations = $entries
+  }
+  $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $Directory "manifest.json")
 }
 
 $canonicalFiles = @(Get-ChildItem -LiteralPath $MigrationPath -File -Filter "*.sql" |
@@ -133,19 +167,26 @@ $temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) "bthwani-migration-
 $previousDirectory = Join-Path $temporaryRoot "previous-version"
 $driftDirectory = Join-Path $temporaryRoot "checksum-drift"
 $partialDirectory = Join-Path $temporaryRoot "partial-failure"
+$legacyDirectory = Join-Path $temporaryRoot "legacy-ledger"
+$missingManifestDirectory = Join-Path $temporaryRoot "missing-manifest"
 New-Item -ItemType Directory -Path $previousDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $driftDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $partialDirectory -Force | Out-Null
+New-Item -ItemType Directory -Path $legacyDirectory -Force | Out-Null
+New-Item -ItemType Directory -Path $missingManifestDirectory -Force | Out-Null
 
 try {
-  Write-Host "--- ${ServiceKey}: previous-version database with existing data ---"
+  Write-Host "--- ${ServiceKey}: manifest is mandatory and authoritative ---"
+  Copy-Item -LiteralPath $canonicalFiles[0].FullName -Destination (Join-Path $missingManifestDirectory $canonicalFiles[0].Name)
+  Invoke-RunnerProcess -Directory $missingManifestDirectory -ExpectSuccess $false
 
+  Write-Host "--- ${ServiceKey}: previous-version database with existing data ---"
   $previousCount = [Math]::Max(0, $canonicalFiles.Count - 1)
   if ($previousCount -gt 0) {
     foreach ($file in $canonicalFiles[0..($previousCount - 1)]) {
       Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $previousDirectory $file.Name)
     }
-    Copy-MigrationManifestFiles -Destination $previousDirectory
+    Write-TestMigrationManifest -Directory $previousDirectory -ManifestServiceKey $ServiceKey
     Invoke-RunnerProcess -Directory $previousDirectory -ExpectSuccess $true
 
     $previousLedgerCount = Get-GovernedLedgerCount -LedgerServiceKeySql $ServiceKeySql
@@ -187,7 +228,7 @@ ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload;
     throw "Re-execution changed the governed ledger for '$ServiceKey'."
   }
 
-  Write-Host "--- ${ServiceKey}: checksum immutability ---"
+  Write-Host "--- ${ServiceKey}: checksum and manifest immutability ---"
   Copy-Item -Path (Join-Path $MigrationPath "*") -Destination $driftDirectory -Recurse -Force
   $driftFile = Get-ChildItem -LiteralPath $driftDirectory -File -Filter "*.sql" |
     Sort-Object { $_.Name.ToLowerInvariant() }, Name |
@@ -195,6 +236,56 @@ ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload;
   Add-Content -LiteralPath $driftFile.FullName -Value "`n-- intentional checksum drift probe"
   Invoke-RunnerProcess -Directory $driftDirectory -ExpectSuccess $false
   Invoke-RunnerProcess -Directory $MigrationPath -ExpectSuccess $true
+
+  Write-Host "--- ${ServiceKey}: legacy ledger conflict rejection and governed reconciliation ---"
+  Set-Content -LiteralPath (Join-Path $legacyDirectory $LegacyProbeFile) -Value @"
+CREATE TABLE IF NOT EXISTS $LegacyProbeTable (
+  id INTEGER PRIMARY KEY,
+  payload TEXT NOT NULL
+);
+"@
+  Write-TestMigrationManifest -Directory $legacyDirectory -ManifestServiceKey $LegacyProbeServiceKey
+  $legacyFileInfo = Get-Item -LiteralPath (Join-Path $legacyDirectory $LegacyProbeFile)
+  $legacyChecksum = (Get-BthwaniPortableSqlChecksums -File $legacyFileInfo).Canonical
+  $legacyFileSql = ConvertTo-SqlLiteral $LegacyProbeFile
+
+  Invoke-DatabaseSql -Sql @"
+DROP TABLE IF EXISTS runtime_schema_migrations;
+DROP TABLE IF EXISTS runtime_schema_migrations_legacy_retired;
+DELETE FROM schema_migrations WHERE service_name = '$LegacyProbeServiceKeySql';
+CREATE TABLE runtime_schema_migrations (
+  migration_name TEXT PRIMARY KEY,
+  checksum TEXT NOT NULL,
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+INSERT INTO runtime_schema_migrations(migration_name, checksum)
+VALUES ('$legacyFileSql', 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
+"@ | Out-Null
+  Invoke-RunnerProcess -Directory $legacyDirectory -ExpectSuccess $false -RunnerServiceKey $LegacyProbeServiceKey
+
+  Invoke-DatabaseSql -Sql @"
+TRUNCATE runtime_schema_migrations;
+CREATE TABLE IF NOT EXISTS $LegacyProbeTable (
+  id INTEGER PRIMARY KEY,
+  payload TEXT NOT NULL
+);
+INSERT INTO runtime_schema_migrations(migration_name, checksum)
+VALUES ('$legacyFileSql', '$legacyChecksum');
+"@ | Out-Null
+  Invoke-RunnerProcess -Directory $legacyDirectory -ExpectSuccess $true -RunnerServiceKey $LegacyProbeServiceKey
+
+  $legacyImported = Get-GovernedLedgerCount -LedgerServiceKeySql $LegacyProbeServiceKeySql
+  if ($legacyImported -ne "1") {
+    throw "Legacy ledger was not imported into schema_migrations."
+  }
+  $legacyActiveGone = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT CASE WHEN to_regclass('public.runtime_schema_migrations') IS NULL THEN '1' ELSE '0' END;"
+  if ($legacyActiveGone -ne "1") {
+    throw "Active legacy migration ledger was not retired."
+  }
+  $legacyRetiredPresent = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT CASE WHEN to_regclass('public.runtime_schema_migrations_legacy_retired') IS NOT NULL THEN '1' ELSE '0' END;"
+  if ($legacyRetiredPresent -ne "1") {
+    throw "Retired legacy migration ledger was not preserved for audit."
+  }
 
   Write-Host "--- ${ServiceKey}: partial failure rollback and roll-forward ---"
   Set-Content -LiteralPath (Join-Path $partialDirectory $ProbeOneFile) -Value @"
@@ -212,6 +303,7 @@ CREATE TABLE $ProbeTwoTable (
 INSERT INTO $ProbeTwoTable (id, payload) VALUES (1, 'must-rollback');
 SELECT 1 / 0;
 "@
+  Write-TestMigrationManifest -Directory $partialDirectory -ManifestServiceKey $PartialProbeServiceKey
 
   Invoke-RunnerProcess -Directory $partialDirectory -ExpectSuccess $false -RunnerServiceKey $PartialProbeServiceKey
 
@@ -236,6 +328,7 @@ CREATE TABLE $ProbeTwoTable (
 );
 INSERT INTO $ProbeTwoTable (id, payload) VALUES (1, 'recovered');
 "@
+  Write-TestMigrationManifest -Directory $partialDirectory -ManifestServiceKey $PartialProbeServiceKey
   Invoke-RunnerProcess -Directory $partialDirectory -ExpectSuccess $true -RunnerServiceKey $PartialProbeServiceKey
 
   $recovered = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM $ProbeTwoTable WHERE id = 1 AND payload = 'recovered';"
@@ -248,7 +341,7 @@ INSERT INTO $ProbeTwoTable (id, payload) VALUES (1, 'recovered');
     throw "Partial probe governed ledger count mismatch: expected=2 actual=$partialLedgerCount"
   }
 
-  Write-Host "service-migration-wrapper-test: PASS service=$ServiceKey files=$($canonicalFiles.Count) ledger=schema_migrations"
+  Write-Host "service-migration-wrapper-test: PASS service=$ServiceKey files=$($canonicalFiles.Count) ledger=schema_migrations manifest=authoritative"
 } finally {
   if (Test-Path -LiteralPath $temporaryRoot) {
     Remove-Item -LiteralPath $temporaryRoot -Recurse -Force
