@@ -2,12 +2,12 @@ openapi: 3.1.0
 x-bthwani-owner: services/dsh
 info:
   title: BThwani DSH Captain Financial Eligibility API
-  version: 1.1.0
+  version: 2.0.0
   description: >-
-    OperatorContext-scoped WLT financial eligibility decision projection for
-    dispatch gating. WLT owns wallet state, balances, currency, thresholds,
-    and financial policy. DSH stores only opaque WLT decision metadata and a
-    short-lived eligibility boolean for assignment gating.
+    OperatorContext-scoped projection of a WLT-owned dispatch financial
+    decision. DSH never receives or stores wallet status, balances, currency,
+    thresholds, COD rules, or policy inputs. Refresh operations fail closed
+    when WLT cannot return a complete non-expired decision.
 servers:
   - url: /api/dsh
 paths:
@@ -122,46 +122,44 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     EligibilityResponse:
-      description: Short-lived WLT-owned captain financial eligibility decision projection.
+      description: Short-lived WLT-owned captain financial decision projection.
       content:
         application/json:
           schema:
             type: object
-            required: [ financialEligibility ]
+            required: [financialEligibility]
             properties:
               financialEligibility: { $ref: '#/components/schemas/CaptainFinancialEligibility' }
   schemas:
     Error:
       type: object
-      required: [ code, message ]
+      required: [code, message]
       properties:
         code: { type: string }
         message: { type: string }
     CaptainFinancialEligibility:
       type: object
+      additionalProperties: false
       required:
         - operatorContextId
         - captainId
         - wltDecisionId
-        - wltReasonCode
-        - wltPolicyVersion
         - eligible
-        - snapshotReference
-        - checkedAt
+        - reasonCode
+        - policyVersion
         - evaluatedAt
         - expiresAt
+        - lastFinancialSyncAt
       properties:
         operatorContextId: { type: string, minLength: 1 }
         captainId: { type: string, minLength: 1 }
         wltDecisionId: { type: string, minLength: 1 }
-        wltReasonCode: { type: string, minLength: 1 }
-        wltPolicyVersion: { type: string, minLength: 1 }
         eligible: { type: boolean }
-        ineligibilityReason: { type: string }
-        snapshotReference: { type: string, minLength: 1 }
-        checkedAt: { type: string, format: date-time }
+        reasonCode: { type: string, minLength: 1 }
+        policyVersion: { type: string, minLength: 1 }
         evaluatedAt: { type: string, format: date-time }
         expiresAt: { type: string, format: date-time }
+        lastFinancialSyncAt: { type: string, format: date-time }
 x-bthwani-service: dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-financial-boundary: WLT_DECISION_REFERENCE_ONLY
