@@ -1,11 +1,12 @@
 <#
 .SYNOPSIS
-  Verifies the canonical service migration runner against a real PostgreSQL database.
+  Verifies the generic service migration wrapper against a real PostgreSQL database.
 
 .DESCRIPTION
-  Covers upgrade from a previous migration set with existing data, deterministic
-  re-execution, immutable checksums, per-migration atomic rollback, and roll-forward
-  recovery after a partially failed batch.
+  The wrapper must delegate to infra/docker/scripts/schema-migration-runner.ps1 and
+  therefore record governed state in schema_migrations, not runtime_schema_migrations.
+  This test covers previous-version upgrade, deterministic rerun, checksum
+  immutability, failed migration rollback, and roll-forward recovery.
 #>
 
 [CmdletBinding()]
@@ -35,7 +36,7 @@ if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) {
   throw "DatabaseUrl is required."
 }
 if (-not (Test-Path -LiteralPath $RunnerPath -PathType Leaf)) {
-  throw "Canonical migration runner not found: $RunnerPath"
+  throw "Migration wrapper not found: $RunnerPath"
 }
 if (-not (Test-Path -LiteralPath $MigrationPath -PathType Container)) {
   throw "Migration directory not found: $MigrationPath"
@@ -47,6 +48,12 @@ if (-not (Get-Command pwsh -ErrorAction SilentlyContinue)) {
   throw "pwsh is required to test service migrations."
 }
 
+function ConvertTo-SqlLiteral {
+  param([Parameter(Mandatory = $true)][string]$Value)
+  return $Value.Replace("'", "''")
+}
+
+$ServiceKeySql = ConvertTo-SqlLiteral $ServiceKey
 $SafeServiceKey = ($ServiceKey -replace "[^a-zA-Z0-9_]", "_").ToLowerInvariant()
 $SentinelTable = "ci_migration_sentinel_$SafeServiceKey"
 $ProbeOneTable = "ci_migration_probe_${SafeServiceKey}_one"
@@ -54,11 +61,8 @@ $ProbeTwoTable = "ci_migration_probe_${SafeServiceKey}_two"
 $ProbePrefix = "ci-$ServiceKey-probe"
 $ProbeOneFile = "$ProbePrefix-991_base.sql"
 $ProbeTwoFile = "$ProbePrefix-992_followup.sql"
-
-function ConvertTo-SqlLiteral {
-  param([Parameter(Mandatory = $true)][string]$Value)
-  return $Value.Replace("'", "''")
-}
+$PartialProbeServiceKey = "$ServiceKey-partial-probe"
+$PartialProbeServiceKeySql = ConvertTo-SqlLiteral $PartialProbeServiceKey
 
 function Invoke-DatabaseSql {
   param(
@@ -92,15 +96,18 @@ function Invoke-RunnerProcess {
 
   if ($ExpectSuccess -and $exitCode -ne 0) {
     $message = (($output | ForEach-Object { "$_" }) -join "`n").Trim()
-    throw "Migration runner unexpectedly failed for '$RunnerServiceKey' (exit $exitCode).`n$message"
+    throw "Migration wrapper unexpectedly failed for '$RunnerServiceKey' (exit $exitCode).`n$message"
   }
   if (-not $ExpectSuccess -and $exitCode -eq 0) {
-    throw "Migration runner unexpectedly succeeded for the required failure probe '$RunnerServiceKey'."
+    throw "Migration wrapper unexpectedly succeeded for the required failure probe '$RunnerServiceKey'."
   }
 
-  if ($ExpectSuccess) {
-    foreach ($line in $output) { Write-Host "$line" }
-  }
+  foreach ($line in $output) { Write-Host "$line" }
+}
+
+function Get-GovernedLedgerCount {
+  param([Parameter(Mandatory = $true)][string]$LedgerServiceKeySql)
+  return Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM schema_migrations WHERE service_name = '$LedgerServiceKeySql' AND success AND NOT dirty;"
 }
 
 $canonicalFiles = @(Get-ChildItem -LiteralPath $MigrationPath -File -Filter "*.sql" |
@@ -136,9 +143,9 @@ ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload;
     }
     Invoke-RunnerProcess -Directory $previousDirectory -ExpectSuccess $true
 
-    $previousLedgerCount = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM runtime_schema_migrations;"
+    $previousLedgerCount = Get-GovernedLedgerCount -LedgerServiceKeySql $ServiceKeySql
     if ([int]$previousLedgerCount -ne $previousCount) {
-      throw "Previous-version ledger count mismatch for '$ServiceKey': expected=$previousCount actual=$previousLedgerCount"
+      throw "Previous-version governed ledger count mismatch for '$ServiceKey': expected=$previousCount actual=$previousLedgerCount"
     }
   }
 
@@ -150,16 +157,16 @@ ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload;
     throw "Pre-existing data was not preserved while upgrading '$ServiceKey' migrations."
   }
 
-  $ledgerCount = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM runtime_schema_migrations;"
+  $ledgerCount = Get-GovernedLedgerCount -LedgerServiceKeySql $ServiceKeySql
   if ([int]$ledgerCount -ne $canonicalFiles.Count) {
-    throw "Migration ledger count mismatch for '$ServiceKey': expected=$($canonicalFiles.Count) actual=$ledgerCount"
+    throw "Governed migration ledger count mismatch for '$ServiceKey': expected=$($canonicalFiles.Count) actual=$ledgerCount"
   }
 
   Write-Host "--- ${ServiceKey}: deterministic re-execution ---"
   Invoke-RunnerProcess -Directory $MigrationPath -ExpectSuccess $true
-  $rerunLedgerCount = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM runtime_schema_migrations;"
+  $rerunLedgerCount = Get-GovernedLedgerCount -LedgerServiceKeySql $ServiceKeySql
   if ([int]$rerunLedgerCount -ne $canonicalFiles.Count) {
-    throw "Re-execution changed the canonical ledger for '$ServiceKey'."
+    throw "Re-execution changed the governed ledger for '$ServiceKey'."
   }
 
   Write-Host "--- ${ServiceKey}: checksum immutability ---"
@@ -188,7 +195,7 @@ INSERT INTO $ProbeTwoTable (id, payload) VALUES (1, 'must-rollback');
 SELECT 1 / 0;
 "@
 
-  Invoke-RunnerProcess -Directory $partialDirectory -ExpectSuccess $false -RunnerServiceKey "$ServiceKey-partial-probe"
+  Invoke-RunnerProcess -Directory $partialDirectory -ExpectSuccess $false -RunnerServiceKey $PartialProbeServiceKey
 
   $firstApplied = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM $ProbeOneTable WHERE id = 1 AND payload = 'first-committed';"
   if ($firstApplied -ne "1") {
@@ -199,9 +206,9 @@ SELECT 1 / 0;
     throw "The failed migration left a partial table behind."
   }
   $probeTwoNameSql = ConvertTo-SqlLiteral $ProbeTwoFile
-  $failedLedgerCount = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM runtime_schema_migrations WHERE migration_name = '$probeTwoNameSql';"
+  $failedLedgerCount = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM schema_migrations WHERE service_name = '$PartialProbeServiceKeySql' AND migration_id = '$probeTwoNameSql';"
   if ($failedLedgerCount -ne "0") {
-    throw "The failed migration was recorded in the immutable ledger."
+    throw "The failed migration was recorded in the governed ledger."
   }
 
   Set-Content -LiteralPath (Join-Path $partialDirectory $ProbeTwoFile) -Value @"
@@ -211,28 +218,19 @@ CREATE TABLE $ProbeTwoTable (
 );
 INSERT INTO $ProbeTwoTable (id, payload) VALUES (1, 'recovered');
 "@
-  Invoke-RunnerProcess -Directory $partialDirectory -ExpectSuccess $true -RunnerServiceKey "$ServiceKey-partial-probe"
+  Invoke-RunnerProcess -Directory $partialDirectory -ExpectSuccess $true -RunnerServiceKey $PartialProbeServiceKey
 
   $recovered = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM $ProbeTwoTable WHERE id = 1 AND payload = 'recovered';"
   if ($recovered -ne "1") {
     throw "Roll-forward after the partial failure did not recover the second migration."
   }
 
-  $probeOneNameSql = ConvertTo-SqlLiteral $ProbeOneFile
-  Invoke-DatabaseSql -Sql @"
-DROP TABLE IF EXISTS $ProbeTwoTable;
-DROP TABLE IF EXISTS $ProbeOneTable;
-DROP TABLE IF EXISTS $SentinelTable;
-DELETE FROM runtime_schema_migrations
-WHERE migration_name IN ('$probeOneNameSql', '$probeTwoNameSql');
-"@ | Out-Null
-
-  $finalLedgerCount = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM runtime_schema_migrations;"
-  if ([int]$finalLedgerCount -ne $canonicalFiles.Count) {
-    throw "Canonical migration ledger changed after probe cleanup for '$ServiceKey'."
+  $partialLedgerCount = Get-GovernedLedgerCount -LedgerServiceKeySql $PartialProbeServiceKeySql
+  if ([int]$partialLedgerCount -ne 2) {
+    throw "Partial probe governed ledger count mismatch: expected=2 actual=$partialLedgerCount"
   }
 
-  Write-Host "$ServiceKey migration safety contracts: PASS"
+  Write-Host "service-migration-wrapper-test: PASS service=$ServiceKey files=$($canonicalFiles.Count) ledger=schema_migrations"
 } finally {
   if (Test-Path -LiteralPath $temporaryRoot) {
     Remove-Item -LiteralPath $temporaryRoot -Recurse -Force
