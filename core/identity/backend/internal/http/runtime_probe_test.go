@@ -167,7 +167,8 @@ func TestRuntimeReadinessProbeRejectsClockSkew(t *testing.T) {
 func TestRuntimeReadinessProbeTimesOutDependency(t *testing.T) {
 	resetRuntimeProbeState()
 	configureIdentityRuntime(t)
-	t.Setenv("IDENTITY_READINESS_PROBE_TIMEOUT", "10ms")
+	t.Setenv("IDENTITY_READINESS_PROBE_TIMEOUT", "20ms")
+	t.Setenv("IDENTITY_READINESS_CHECK_TIMEOUT", "10ms")
 	store := readyRuntimeStore()
 	store.ping = func(ctx context.Context) error {
 		<-ctx.Done()
@@ -178,6 +179,9 @@ func TestRuntimeReadinessProbeTimesOutDependency(t *testing.T) {
 	response := serveRuntimeProbe(store, "/identity/readiness")
 
 	assertNotReady(t, response)
+	if !strings.Contains(response.Body.String(), reasonDependencyTimeout) {
+		t.Fatalf("dependency timeout was not classified explicitly: %s", response.Body.String())
+	}
 	if elapsed := time.Since(startedAt); elapsed > time.Second {
 		t.Fatalf("readiness timeout was not bounded: %s", elapsed)
 	}
@@ -197,6 +201,9 @@ func TestRuntimeReadinessProbeTimesOutDependencyThatIgnoresContext(t *testing.T)
 	response := serveRuntimeProbe(store, "/identity/readiness")
 
 	assertNotReady(t, response)
+	if !strings.Contains(response.Body.String(), reasonDependencyTimeout) {
+		t.Fatalf("uncooperative dependency timeout was not classified explicitly: %s", response.Body.String())
+	}
 	if elapsed := time.Since(startedAt); elapsed > 100*time.Millisecond {
 		t.Fatalf("readiness HTTP boundary did not enforce timeout: %s", elapsed)
 	}
@@ -210,6 +217,31 @@ func TestRuntimeReadinessProbeRejectsInvalidTimingConfiguration(t *testing.T) {
 	response := serveRuntimeProbe(readyRuntimeStore(), "/identity/readiness")
 
 	assertNotReady(t, response)
+}
+
+func TestRuntimeReadinessRecoversWithoutRestartOrStaleCache(t *testing.T) {
+	resetRuntimeProbeState()
+	configureIdentityRuntime(t)
+	store := readyRuntimeStore()
+	store.migrationErr = errors.New("temporary migration ledger outage")
+	handler := runtimeReadinessBoundary(store, http.NotFoundHandler())
+
+	failed := httptest.NewRecorder()
+	handler.ServeHTTP(failed, readinessRequest())
+	assertNotReady(t, failed)
+
+	store.migrationErr = nil
+	recovered := httptest.NewRecorder()
+	handler.ServeHTTP(recovered, readinessRequest())
+	if recovered.Code != http.StatusOK || !strings.Contains(recovered.Body.String(), `"status":"HEALTHY"`) {
+		t.Fatalf("readiness did not recover without restart status=%d body=%s", recovered.Code, recovered.Body.String())
+	}
+
+	health := httptest.NewRecorder()
+	handler.ServeHTTP(health, httptest.NewRequest(http.MethodGet, "/identity/health", nil))
+	if health.Code != http.StatusOK || !strings.Contains(health.Body.String(), `"status":"HEALTHY"`) || !strings.Contains(health.Body.String(), `"lastSuccessAt"`) {
+		t.Fatalf("health retained stale failure after recovery status=%d body=%s", health.Code, health.Body.String())
+	}
 }
 
 func TestRuntimeHealthReportsDegradedAfterReadinessFailureWithoutLeakingSecrets(t *testing.T) {
