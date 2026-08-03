@@ -1,0 +1,58 @@
+overlay: 1.0.0
+info:
+  title: BThwani DSH Operational Policy Permission Overlay
+  version: 1.0.0
+actions:
+  - target: $.paths['/dsh/operator/platform/zones'].get
+    update:
+      x-bthwani-required-scope: dsh.service_zones.read
+  - target: $.paths['/dsh/operator/platform/zones'].post
+    update:
+      x-bthwani-required-scope: dsh.service_zones.manage
+  - target: $.paths['/dsh/operator/platform/zones/{zoneId}'].patch
+    update:
+      x-bthwani-required-scope: dsh.service_zones.manage
+  - target: $.paths['/dsh/operator/platform/serviceability/{zoneId}'].get
+    update:
+      x-bthwani-required-scope: dsh.service_zones.read
+  - target: $.paths['/dsh/operator/platform/sla-rules'].get
+    update:
+      x-bthwani-required-scope: dsh.fulfillment_sla.read
+  - target: $.paths['/dsh/operator/platform/sla-rules'].put
+    update:
+      x-bthwani-required-scope: dsh.fulfillment_sla.manage
+  - target: $.paths['/dsh/operator/platform/capacity'].get
+    update:
+      x-bthwani-required-scope: dsh.dispatch_capacity.read
+  - target: $.paths['/dsh/operator/platform/capacity'].put
+    update:
+      x-bthwani-required-scope: dsh.dispatch_capacity.manage
+  - target: $.paths['/dsh/operator/platform/store-onboarding-fee'].get
+    update:
+      x-bthwani-required-scope: partners.read
+  - target: $.paths['/dsh/operator/platform/store-onboarding-fee'].put
+    update:
+      x-bthwani-required-scope: partners.manage
+  - target: $.paths['/dsh/operator/platform/operational-profiles/{zoneId}'].get
+    update:
+      x-bthwani-required-scopes:
+        - dsh.service_zones.read
+        - dsh.fulfillment_sla.read
+        - dsh.dispatch_capacity.read
+  - target: $.paths['/dsh/operator/platform/operational-profiles/{zoneId}'].put
+    update:
+      x-bthwani-required-scopes:
+        - dsh.fulfillment_sla.manage
+        - dsh.dispatch_capacity.manage
+  - target: $.paths['/dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes'].get
+    update:
+      x-bthwani-required-scope: dsh.fulfillment_sla.read
+  - target: $.paths['/dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes/{fulfillmentMode}'].put
+    update:
+      x-bthwani-required-scope: dsh.fulfillment_sla.manage
+  - target: $.paths['/dsh/operator/platform/operational-policy/audit'].get
+    update:
+      x-bthwani-required-scope: dsh.operational_policy.audit.read
+  - target: $.paths['/dsh/operator/platform/operational-policy/audit/{eventId}/rollback'].post
+    update:
+      x-bthwani-required-scope: dsh.operational_policy.rollback

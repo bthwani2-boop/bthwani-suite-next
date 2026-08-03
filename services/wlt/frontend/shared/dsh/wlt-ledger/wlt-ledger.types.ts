@@ -1,3 +1,5 @@
+import type { paths } from "../../../../clients/generated/wlt-api";
+
 export type DshWltLedgerEntryView = {
   readonly id: string;
   readonly entryType: string;
@@ -15,14 +17,10 @@ export type DshWltLedgerEntryView = {
   readonly createdAt: string;
 };
 
-export type DshWltLedgerParams = {
-  readonly actorId?: string;
-  readonly actorType?: string;
-  readonly orderId?: string;
-  readonly entryType?: string;
-  readonly limit?: number;
-  readonly cursor?: string;
-};
+/** Canonical query DTO extracted from the WLT OpenAPI operation. */
+export type DshWltLedgerParams = NonNullable<
+  paths["/wlt/ledger/entries"]["get"]["parameters"]["query"]
+>;
 
 export type DshWltLedgerState =
   | { readonly kind: "idle" }

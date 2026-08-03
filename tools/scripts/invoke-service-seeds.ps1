@@ -30,7 +30,8 @@ param(
 
   [string]$SourceCommitSha = "",
 
-  [switch]$AllowLocalSeeds
+  [switch]$AllowLocalSeeds,
+  [switch]$AllowEmptySeedSet
 )
 
 Set-StrictMode -Version Latest
@@ -71,6 +72,10 @@ if ($Transport -eq "auto") {
   $Transport = if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) { "docker" } else { "url" }
 }
 if (-not (Test-Path -LiteralPath $SeedPath -PathType Container)) {
+  if ($AllowEmptySeedSet) {
+    Write-Host "Governed service seeds: PASS service=$ServiceKey transport=$Transport files=0 policy=explicit-absent-empty-directory"
+    return
+  }
   throw "Seed directory not found for '$ServiceKey': $SeedPath"
 }
 if ($Transport -eq "url") {
@@ -97,6 +102,10 @@ if ($Transport -eq "url") {
 $seedFiles = @(Get-ChildItem -LiteralPath $SeedPath -Filter "*.local.sql" -File |
   Sort-Object { $_.Name.ToLowerInvariant() }, Name)
 if ($seedFiles.Count -eq 0) {
+  if ($AllowEmptySeedSet) {
+    Write-Host "Governed service seeds: PASS service=$ServiceKey transport=$Transport files=0 policy=explicit-empty-set"
+    return
+  }
   throw "No governed local seed files found for '$ServiceKey'. Expected *.local.sql."
 }
 $duplicateNames = @($seedFiles |
