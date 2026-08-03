@@ -172,7 +172,7 @@ export function IdentitySessionGate({
   requiredSurface,
   children,
 }: IdentitySessionGateProps) {
-  const { state } = useIdentitySession();
+  const { state, retryBootstrap } = useIdentitySession();
 
   switch (state.kind) {
     case "restoring":
@@ -186,6 +186,20 @@ export function IdentitySessionGate({
           description="لم يتم تهيئة خدمة الهوية لهذا التطبيق بعد. تواصل مع فريق التشغيل."
         />
       );
+
+    case "service_unavailable": {
+      const presentation = identityErrorPresentation(state.message);
+      return (
+        <ErrorState
+          title={presentation.title}
+          description={state.retainedSession
+            ? "تعذر التحقق من الخدمة مؤقتًا. بقيت الجلسة محفوظة ولن يُطلب منك تسجيل الدخول بسبب الانقطاع."
+            : presentation.description}
+          actionLabel="إعادة الفحص"
+          onActionPress={() => void retryBootstrap()}
+        />
+      );
+    }
 
     case "error":
       return <IdentityAccessPanel requiredRole={requiredRole} errorMessage={state.message} />;
