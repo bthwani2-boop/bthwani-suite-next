@@ -19,7 +19,7 @@ func TestEvaluateDispatchFinancialEligibilityUsesAbstractWltDecision(t *testing.
 		if r.Header.Get("Authorization") != "Bearer service-token" || r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("missing service authentication headers")
 		}
-		if r.Header.Get("X-Operator-Context-ID") != "operator-1" {
+		if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-a" {
 			t.Fatalf("missing trusted operator context")
 		}
 		var body map[string]any
@@ -35,7 +35,7 @@ func TestEvaluateDispatchFinancialEligibilityUsesAbstractWltDecision(t *testing.
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	decision, err := client.EvaluateDispatchFinancialEligibility(context.Background(), "captain-1", "correlation-1", "operator-1")
+	decision, err := client.EvaluateDispatchFinancialEligibility(trustedMutationTestContext(), "captain-1", "correlation-1", "OperatorContext-a")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestEvaluateDispatchFinancialEligibilityRejectsIncompleteDecision(t *testin
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	_, err := client.EvaluateDispatchFinancialEligibility(context.Background(), "captain-1", "", "operator-1")
+	_, err := client.EvaluateDispatchFinancialEligibility(trustedMutationTestContext(), "captain-1", "", "OperatorContext-a")
 	if err == nil {
 		t.Fatal("expected invalid WLT decision to fail closed")
 	}
@@ -65,11 +65,30 @@ func TestEvaluateDispatchFinancialEligibilityDoesNotInferOnWltFailure(t *testing
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	_, err := client.EvaluateDispatchFinancialEligibility(context.Background(), "captain-1", "", "operator-1")
+	_, err := client.EvaluateDispatchFinancialEligibility(trustedMutationTestContext(), "captain-1", "", "OperatorContext-a")
 	if err == nil {
 		t.Fatal("expected WLT failure to be returned")
 	}
 	if statusErr, ok := err.(DispatchFinancialEligibilityHTTPError); !ok || statusErr.StatusCode != http.StatusServiceUnavailable {
 		t.Fatalf("expected HTTP error, got %T %v", err, err)
+	}
+}
+
+func TestEvaluateDispatchFinancialEligibilityRejectsMissingOrMismatchedTrustedContext(t *testing.T) {
+	called := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+	}))
+	defer server.Close()
+	client := NewClient(server.URL, "service-token")
+
+	if _, err := client.EvaluateDispatchFinancialEligibility(context.Background(), "captain-1", "", "OperatorContext-a"); err == nil {
+		t.Fatal("expected missing trusted context to fail closed")
+	}
+	if _, err := client.EvaluateDispatchFinancialEligibility(trustedMutationTestContext(), "captain-1", "", "OperatorContext-b"); err == nil {
+		t.Fatal("expected mismatched trusted context to fail closed")
+	}
+	if called {
+		t.Fatal("financial eligibility reached WLT without a matching trusted context")
 	}
 }
