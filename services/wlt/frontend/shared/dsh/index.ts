@@ -28,6 +28,7 @@ export * from './wlt-settlement/wlt-settlement.types';
 export * from './payment';
 export * from './field-finance';
 export * from './actor-wallet';
+export * from './presentation/WltDshCaptainBridge';
 export * from './presentation/WltDshPartnerBridge';
 export * from './presentation/partner-finance.copy';
 
@@ -43,5 +44,4 @@ export * from './finance/cod-reconciliation.api';
 // dsh-http re-exports from dsh-link; only one of them should appear here.
 export * from './dsh-link/dsh-api-base-url';
 export * from './dsh-link/dsh-http-request';
-export * from './wlt/generated/wlt_frontend_dsh_app_captain.facade';
 export * from './payment/payment-session-runtime.api';
