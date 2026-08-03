@@ -2,23 +2,8 @@ import type { components, paths } from "./generated/identity-api.ts";
 
 export type ActorIdentity = components["schemas"]["ActorIdentity"];
 export type RuntimeStatus = components["schemas"]["RuntimeStatus"];
-export type IdentityRuntimeCheckStatus = {
-  readonly name: string;
-  readonly status: "PASS" | "FAIL" | "UNKNOWN";
-  readonly critical: boolean;
-  readonly reasonCode?: string;
-  readonly durationMs: number;
-};
-export type IdentityRuntimeStatus = RuntimeStatus & {
-  readonly checkedAt?: string;
-  readonly lastSuccessAt?: string;
-  readonly correlationId?: string;
-  readonly durationMs?: number;
-  readonly checks?: readonly IdentityRuntimeCheckStatus[];
-  readonly reasonCodes?: readonly string[];
-  readonly code?: string;
-  readonly message?: string;
-};
+export type IdentityRuntimeCheckStatus = components["schemas"]["RuntimeCheckStatus"];
+export type IdentityRuntimeStatus = RuntimeStatus;
 export type LoginRequest = components["schemas"]["LoginRequest"];
 export type OtpRequest = components["schemas"]["OtpRequest"];
 export type IssueActivationResponse = components["schemas"]["IssueActivationResponse"];
