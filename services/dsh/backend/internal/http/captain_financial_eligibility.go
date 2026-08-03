@@ -37,18 +37,24 @@ func (s *protectedStoreServer) refreshCaptainFinancialEligibility(
 		return dispatch.CaptainFinancialEligibilitySnapshot{}, err
 	}
 
+	ineligibilityReason := ""
+	if !decision.Eligible {
+		ineligibilityReason = decision.ReasonCode
+	}
 	return dispatch.UpsertCaptainFinancialEligibilityDecision(
 		r.Context(),
 		s.db,
 		operatorContextID,
 		captainID,
 		dispatch.CaptainWltFinancialEligibilityDecision{
-			WltDecisionID: decision.DecisionID,
-			Eligible:      decision.Eligible,
-			ReasonCode:    decision.ReasonCode,
-			PolicyVersion: decision.PolicyVersion,
-			EvaluatedAt:   decision.EvaluatedAt,
-			ExpiresAt:     decision.ExpiresAt,
+			WltDecisionID:       decision.DecisionID,
+			WltReasonCode:       decision.ReasonCode,
+			WltPolicyVersion:    decision.PolicyVersion,
+			Eligible:            decision.Eligible,
+			IneligibilityReason: ineligibilityReason,
+			SnapshotReference:   decision.DecisionID,
+			EvaluatedAt:         decision.EvaluatedAt,
+			ExpiresAt:           decision.ExpiresAt,
 		},
 	)
 }
