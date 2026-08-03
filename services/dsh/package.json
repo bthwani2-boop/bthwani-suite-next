@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "openapi:compose": "node ../../tools/scripts/compose-openapi-context.mjs dsh",
-    "openapi:generate": "node -e \"require('node:fs').mkdirSync('clients/generated',{recursive:true})\" && pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/dsh.bundle.openapi.yaml -o clients/generated/dsh-api.ts",
+    "openapi:generate": "node -e \"require('node:fs').mkdirSync('clients/generated',{recursive:true})\" && pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/dsh.bundle.openapi.yaml -o clients/generated/dsh-api.ts && pnpm exec openapi-typescript contracts/dsh.checkout.openapi.yaml -o clients/generated/dsh-checkout-api.ts",
     "openapi:test": "node --test tests/dsh-openapi-modular.test.mjs",
     "openapi:verify": "node ../../tools/guards/dsh-openapi-modular-gate.mjs",
     "database:migrate": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action migrate -Transport auto",
@@ -44,7 +44,7 @@
     "@bthwani/control-panel": "workspace:*",
     "@bthwani/wlt": "workspace:*",
     "@react-native-async-storage/async-storage": "1.24.0",
-    "@react-native-community/netinfo": "11.4.1",
+    "@react-native-community/netinfo": "11.4.0",
     "@tanstack/react-query": "^5.64.0",
     "react-native": "0.85.3",
     "react-native-maps": "1.27.2",
