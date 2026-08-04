@@ -45,6 +45,17 @@ $serviceMap = @{
 }
 $config = $serviceMap[$Service]
 
+# Local fixtures reference the Workforce-provisioned field agent and captain
+# through @@FIELD_ACTOR_ID@@ / @@CAPTAIN_ACTOR_ID@@. Those actors are created at
+# runtime by tools/dev/local-workforce-provisioning.mjs, which writes this
+# registry. When it is absent the seed runner reports the unresolved tokens.
+$GeneratedActorRegistry = Join-Path $RepoRoot ".artifacts/local-dev/workforce-actors.json"
+$placeholderFile = if (Test-Path -LiteralPath $GeneratedActorRegistry -PathType Leaf) {
+  $GeneratedActorRegistry
+} else {
+  ""
+}
+
 $parameters = @{
   ServiceKey = $Service
   SeedDirectory = $config.Directory
@@ -54,6 +65,7 @@ $parameters = @{
   ComposeFile = "infra/docker/compose.runtime.yml"
   EnvFile = "infra/docker/env/runtime.env.example"
   SourceCommitSha = $SourceCommitSha
+  PlaceholderFile = $placeholderFile
   AllowLocalSeeds = [bool]$AllowLocalSeeds
   AllowEmptySeedSet = [bool]$config.AllowEmptySeedSet
 }

@@ -1,5 +1,6 @@
 {
   "$comment": "Canonical local development identity actors. Single source of truth for the local bootstrap password and the usernames every dev/smoke script logs in with. Local only: the Identity bootstrap that creates these actors runs solely when IDENTITY_LOCAL_BOOTSTRAP=true and is refused in production. Consumers: tools/dev/local-actors.mjs, tools/dev/local-actors.ps1. Drift against the Go bootstrap and the runtime env files is enforced by tools/guards/local-dev-actors-gate.mjs.",
+  "$workforceProvidersComment": "Field agents and captains are NOT bootstrap actors. Workforce owns provider actor creation and always provisions Identity with a server-generated workforce code as the username, so a pre-seeded actor holding the same phone can never be adopted. They are provisioned at runtime by tools/dev/local-workforce-provisioning.mjs, which writes the generated actor ids to .artifacts/local-dev/workforce-actors.json. They authenticate by redeeming an activation code, not by password.",
   "passwordEnvVar": "IDENTITY_LOCAL_BOOTSTRAP_PASSWORD",
   "password": "123456",
   "OperatorContextId": "local-dsh",
@@ -20,22 +21,6 @@
       "scope": "own",
       "phoneE164": "+967771000001"
     },
-    "field": {
-      "username": "field",
-      "actorId": "field-local-001",
-      "role": "field",
-      "surface": "app-field",
-      "scope": "assigned",
-      "phoneE164": "+967774182730"
-    },
-    "captain": {
-      "username": "captain",
-      "actorId": "captain-local-001",
-      "role": "captain",
-      "surface": "app-captain",
-      "scope": "assigned",
-      "phoneE164": "+967773000003"
-    },
     "client": {
       "username": "client",
       "actorId": "client-local-001",
@@ -43,6 +28,24 @@
       "surface": "app-client",
       "scope": "own",
       "phoneE164": "+967774000004"
+    }
+  },
+  "workforceProviders": {
+    "field": {
+      "role": "field",
+      "surface": "app-field",
+      "scope": "assigned",
+      "phoneE164": "+967774182730",
+      "fullNameAr": "مندوب بثواني المحلي",
+      "fullNameEn": "BThwani Local Field Agent"
+    },
+    "captain": {
+      "role": "captain",
+      "surface": "app-captain",
+      "scope": "assigned",
+      "phoneE164": "+967773000003",
+      "fullNameAr": "كابتن بثواني المحلي",
+      "fullNameEn": "BThwani Local Captain"
     }
   },
   "platformActors": {

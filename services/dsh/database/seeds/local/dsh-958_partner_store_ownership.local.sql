@@ -16,35 +16,35 @@ INSERT INTO dsh_partners (
         'prt_partner_local_002', 'local-dsh', 'مؤسسة مخبز السبعين', 'Al Sabeen Bakery Est', 'مخبز السبعين',
         'commercial_register', 'YE-CR-LOCAL-BAKERY-002', 'محمد السبعيني',
         '+967771000102', '', 'bakery.partner@local.test', 'bakery',
-        'client_visible', 'field-local-001', 'app-field',
+        'client_visible', '@@FIELD_ACTOR_ID@@', 'app-field',
         'شريك محلي مستقل لمخبز السبعين', 8, NOW() - INTERVAL '2 days', NOW()
     ),
     (
         'prt_partner_local_003', 'local-dsh', 'مؤسسة سوق شارع تعز', 'Taiz Street Market Est', 'سوق شارع تعز',
         'commercial_register', 'YE-CR-LOCAL-MARKET-003', 'علي التعزي',
         '+967771000103', '', 'taiz.market@local.test', 'grocery',
-        'client_visible', 'field-local-001', 'app-field',
+        'client_visible', '@@FIELD_ACTOR_ID@@', 'app-field',
         'شريك محلي مستقل لسوق شارع تعز', 8, NOW() - INTERVAL '2 days', NOW()
     ),
     (
         'prt_partner_local_005', 'local-dsh', 'مؤسسة مطعم المدينة القديمة', 'Old City Restaurant Est', 'مطعم المدينة القديمة',
         'commercial_register', 'YE-CR-LOCAL-RESTAURANT-005', 'أحمد الصنعاني',
         '+967771000105', '', 'oldcity.restaurant@local.test', 'restaurant',
-        'client_visible', 'field-local-001', 'app-field',
+        'client_visible', '@@FIELD_ACTOR_ID@@', 'app-field',
         'شريك محلي مستقل لمطعم المدينة القديمة', 8, NOW() - INTERVAL '2 days', NOW()
     ),
     (
         'prt_partner_local_006', 'local-dsh', 'مؤسسة صيدلية معين', 'Maeen Pharmacy Est', 'صيدلية معين',
         'commercial_register', 'YE-CR-LOCAL-PHARMACY-006', 'سامي معين',
         '+967771000106', '', 'maeen.pharmacy@local.test', 'pharmacy',
-        'client_visible', 'field-local-001', 'app-field',
+        'client_visible', '@@FIELD_ACTOR_ID@@', 'app-field',
         'شريك محلي مستقل لصيدلية معين', 8, NOW() - INTERVAL '2 days', NOW()
     ),
     (
         'prt_partner_local_007', 'local-dsh', 'مؤسسة إلكترونيات المستقبل', 'Future Electronics Est', 'إلكترونيات المستقبل',
         'commercial_register', 'YE-CR-LOCAL-ELECTRONICS-007', 'خالد المستقبل',
         '+967771000107', '', 'future.electronics@local.test', 'default',
-        'client_visible', 'field-local-001', 'app-field',
+        'client_visible', '@@FIELD_ACTOR_ID@@', 'app-field',
         'شريك محلي مستقل لإلكترونيات المستقبل', 8, NOW() - INTERVAL '2 days', NOW()
     )
 ON CONFLICT (id) DO UPDATE SET
@@ -160,11 +160,11 @@ INSERT INTO dsh_partner_documents (
     id, partner_id, document_type, document_status,
     uploaded_by_actor_id, media_ref, notes, version, created_at, updated_at
 ) VALUES
-    ('doc_local_002_cr', 'prt_partner_local_002', 'commercial_register', 'approved', 'field-local-001', 'media_local_002_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
-    ('doc_local_003_cr', 'prt_partner_local_003', 'commercial_register', 'approved', 'field-local-001', 'media_local_003_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
-    ('doc_local_005_cr', 'prt_partner_local_005', 'commercial_register', 'approved', 'field-local-001', 'media_local_005_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
-    ('doc_local_006_cr', 'prt_partner_local_006', 'commercial_register', 'approved', 'field-local-001', 'media_local_006_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
-    ('doc_local_007_cr', 'prt_partner_local_007', 'commercial_register', 'approved', 'field-local-001', 'media_local_007_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW())
+    ('doc_local_002_cr', 'prt_partner_local_002', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_002_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
+    ('doc_local_003_cr', 'prt_partner_local_003', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_003_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
+    ('doc_local_005_cr', 'prt_partner_local_005', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_005_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
+    ('doc_local_006_cr', 'prt_partner_local_006', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_006_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
+    ('doc_local_007_cr', 'prt_partner_local_007', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_007_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW())
 ON CONFLICT (id) DO UPDATE SET
     document_status = 'approved',
     notes = EXCLUDED.notes,

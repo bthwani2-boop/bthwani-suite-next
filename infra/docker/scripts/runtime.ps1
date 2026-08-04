@@ -296,6 +296,23 @@ function Invoke-GovernedMigrations {
   }
 }
 
+# Provisions the local field agent and captain through the real Workforce path.
+# Their actor ids are generated at runtime, so this must run before the governed
+# seeds, which substitute those ids into @@FIELD_ACTOR_ID@@ / @@CAPTAIN_ACTOR_ID@@.
+function Invoke-LocalWorkforceProvisioning {
+  if ($env:NODE_ENV -eq "production") {
+    throw "Local workforce provisioning is forbidden when NODE_ENV=production."
+  }
+  if (-not ($ProfileList -contains "workforce" -and $ProfileList -contains "identity")) { return }
+  if (@(Get-SelectedSeedServices).Count -eq 0) { return }
+
+  Write-Host "`n--- Provisioning governed local Workforce providers ---"
+  & node (Join-Path $RepoRoot "tools/dev/local-workforce-provisioning.mjs")
+  if ($LASTEXITCODE -ne 0) {
+    throw "Local Workforce provider provisioning failed (exit $LASTEXITCODE)"
+  }
+}
+
 function Invoke-GovernedSeeds {
   if ($env:NODE_ENV -eq "production") {
     throw "Local runtime seeds are forbidden when NODE_ENV=production."
@@ -435,8 +452,10 @@ switch ($Action) {
       Invoke-DshMediaSeed
     }
     Invoke-GovernedMigrations
-    Invoke-GovernedSeeds
     Invoke-Compose up -d --build
+    Wait-ForSelectedApis
+    Invoke-LocalWorkforceProvisioning
+    Invoke-GovernedSeeds
     Invoke-SelectedSmoke
     Write-Host "reset: PASS"
   }
@@ -455,9 +474,12 @@ switch ($Action) {
       Invoke-DshMediaSeed
     }
     Invoke-GovernedMigrations
-    Invoke-GovernedSeeds
+    # Services come up before seeding: provider actor ids are minted through the
+    # live Workforce API and substituted into the SQL fixtures.
     Invoke-Compose up -d --build
     Wait-ForSelectedApis
+    Invoke-LocalWorkforceProvisioning
+    Invoke-GovernedSeeds
     if ($ProfileList -contains "dsh") {
       node tools/scripts/mobile-dev-data.mjs --repair
       if ($LASTEXITCODE -ne 0) {
@@ -504,6 +526,9 @@ switch ($Action) {
 
   "seed" {
     Write-Host "=== runtime:seed"
+    # Postgres-only by design. Fixtures that reference Workforce-provisioned
+    # actors reuse the registry from a previous bootstrap-dev/reset; if it is
+    # missing the seed runner reports the unresolved placeholders.
     Invoke-Compose up -d postgres
     Wait-ForPostgres
     Invoke-GovernedMigrations

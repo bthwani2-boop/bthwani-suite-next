@@ -113,10 +113,13 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 	}{
 		{"operator-local-001", "operator", "operator", "control-panel", "all", "+967770000000"},
 		{"partner-local-001", "bthwani", "partner", "app-partner", "own", "+967771000001"},
-		{"field-local-001", "field", "field", "app-field", "assigned", "+967774182730"},
-		{"captain-local-001", "captain", "captain", "app-captain", "assigned", "+967773000003"},
 		{"client-local-001", "client", "client", "app-client", "own", "+967774000004"},
 	}
+	// Field agents and captains are deliberately absent. Workforce owns provider
+	// actor creation and always provisions with a server-generated workforce code
+	// as the username, so an actor pre-seeded here under a friendly username would
+	// permanently conflict on the phone and could never be adopted. They are
+	// created at runtime by tools/dev/local-workforce-provisioning.mjs.
 	for _, actor := range actors {
 		actorPermissions := []Permission{
 			{Service: "dsh", Surface: actor.surface, Action: "store:read", Scope: actor.scope},
@@ -148,12 +151,6 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 				Permission{Service: "providers", Surface: "control-panel", Action: "provider:read", Scope: "all"},
 				Permission{Service: "providers", Surface: "control-panel", Action: "provider:update", Scope: "all"},
 				Permission{Service: "providers", Surface: "control-panel", Action: "provider:test", Scope: "all"},
-			)
-		}
-		if actor.role == "field" || actor.role == "captain" {
-			actorPermissions = append(actorPermissions,
-				Permission{Service: "workforce", Surface: actor.surface, Action: "provider:read", Scope: "own"},
-				Permission{Service: "workforce", Surface: actor.surface, Action: "provider:update", Scope: "own"},
 			)
 		}
 		permissions, marshalErr := json.Marshal(actorPermissions)

@@ -30,6 +30,12 @@ param(
 
   [string]$SourceCommitSha = "",
 
+  # JSON map of @@TOKEN@@ -> value, resolved into seed SQL after the checksum is
+  # computed. Lets fixtures reference runtime-provisioned identifiers (such as
+  # Workforce-provisioned actor ids) without hardcoding them, while keeping
+  # runtime_seed_history keyed to the stable template.
+  [string]$PlaceholderFile = "",
+
   [switch]$AllowLocalSeeds,
   [switch]$AllowEmptySeedSet
 )
@@ -136,12 +142,56 @@ function ConvertTo-SqlLiteral {
   return "'" + $Value.Replace("'", "''") + "'"
 }
 
-function Get-PortableSeedChecksum {
-  param([Parameter(Mandatory = $true)][System.IO.FileInfo]$File)
+$placeholders = @{}
+if (-not [string]::IsNullOrWhiteSpace($PlaceholderFile)) {
+  $placeholderPath = if ([System.IO.Path]::IsPathRooted($PlaceholderFile)) {
+    $PlaceholderFile
+  } else {
+    Join-Path $RepoRoot $PlaceholderFile
+  }
+  if (-not (Test-Path -LiteralPath $placeholderPath -PathType Leaf)) {
+    throw "Seed placeholder file not found: $placeholderPath"
+  }
+  foreach ($entry in (Get-Content -LiteralPath $placeholderPath -Raw | ConvertFrom-Json).PSObject.Properties) {
+    # Only UPPER_SNAKE_CASE keys are tokens; the registry also carries metadata
+    # such as $comment, generatedAt and the structured actor detail.
+    if ($entry.Name -cnotmatch '^[A-Z][A-Z0-9_]*$') { continue }
+    $value = [string]$entry.Value
+    if ([string]::IsNullOrWhiteSpace($value)) {
+      throw "Seed placeholder '$($entry.Name)' resolved to an empty value."
+    }
+    if ($value -match "['\\]") {
+      throw "Seed placeholder '$($entry.Name)' contains quote or backslash characters and cannot be substituted safely."
+    }
+    $placeholders[$entry.Name] = $value
+  }
+}
 
-  $rawBytes = [System.IO.File]::ReadAllBytes($File.FullName)
-  $text = [System.Text.Encoding]::UTF8.GetString($rawBytes)
-  $normalized = $text -replace "`r`n?", "`n"
+# Substitution runs on the SQL sent to psql, never on the checksummed template,
+# so a fixture's identity in runtime_seed_history stays stable across runs.
+function Resolve-SeedPlaceholders {
+  param(
+    [Parameter(Mandatory = $true)][string]$Sql,
+    [Parameter(Mandatory = $true)][string]$SeedName
+  )
+
+  $resolved = $Sql
+  foreach ($token in $placeholders.Keys) {
+    $resolved = $resolved.Replace("@@$token@@", $placeholders[$token])
+  }
+  $unresolved = @([regex]::Matches($resolved, '@@[A-Z][A-Z0-9_]*@@') |
+    ForEach-Object { $_.Value } |
+    Sort-Object -Unique)
+  if ($unresolved.Count -gt 0) {
+    throw "Seed '$SeedName' has unresolved placeholders: $($unresolved -join ', '). Provide them via -PlaceholderFile."
+  }
+  return $resolved
+}
+
+function Get-PortableSeedChecksum {
+  param([Parameter(Mandatory = $true)][AllowEmptyString()][string]$Text)
+
+  $normalized = $Text -replace "`r`n?", "`n"
   $bytes = [System.Text.Encoding]::UTF8.GetBytes($normalized)
   $algorithm = [System.Security.Cryptography.SHA256]::Create()
   try {
@@ -196,7 +246,18 @@ $serviceLiteral = ConvertTo-SqlLiteral $ServiceKey
 $sourceCommitLiteral = ConvertTo-SqlLiteral $SourceCommitSha
 
 foreach ($seedFile in $seedFiles) {
-  $checksum = Get-PortableSeedChecksum -File $seedFile
+  $template = Get-Content -LiteralPath $seedFile.FullName -Raw
+  if ($template -match '(?m)^\s*\\') {
+    throw "Seed '$($seedFile.Name)' contains psql meta-commands."
+  }
+  if ($template -match '(?mi)^\s*(BEGIN|START\s+TRANSACTION|COMMIT|ROLLBACK)\s*;') {
+    throw "Seed '$($seedFile.Name)' contains transaction control. The governed seed runner owns the atomic transaction."
+  }
+
+  $sql = Resolve-SeedPlaceholders -Sql $template -SeedName $seedFile.Name
+  # Checksumming the resolved SQL means a fixture re-applies when a substituted
+  # runtime identifier changes, not only when the template is edited.
+  $checksum = Get-PortableSeedChecksum -Text $sql
   $seedNameLiteral = ConvertTo-SqlLiteral $seedFile.Name
   $checksumLiteral = ConvertTo-SqlLiteral $checksum
   $recorded = (Invoke-ServicePsql -TuplesOnly -Sql @"
@@ -209,14 +270,6 @@ WHERE service_name = $serviceLiteral AND seed_name = $seedNameLiteral;
   if ($recorded -eq $checksum) {
     Write-Host "Skipping unchanged local seed: service=$ServiceKey file=$($seedFile.Name)"
     continue
-  }
-
-  $sql = Get-Content -LiteralPath $seedFile.FullName -Raw
-  if ($sql -match '(?m)^\s*\\') {
-    throw "Seed '$($seedFile.Name)' contains psql meta-commands."
-  }
-  if ($sql -match '(?mi)^\s*(BEGIN|START\s+TRANSACTION|COMMIT|ROLLBACK)\s*;') {
-    throw "Seed '$($seedFile.Name)' contains transaction control. The governed seed runner owns the atomic transaction."
   }
 
   Write-Host "Applying governed local seed atomically: service=$ServiceKey file=$($seedFile.Name)"

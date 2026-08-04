@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -534,11 +535,16 @@ func writeWorkforceError(w http.ResponseWriter, err error) {
 		sendError(w, http.StatusTooManyRequests, "ACTIVATION_RATE_LIMITED", "activation can be requested again later")
 	case errors.Is(err, identityclient.ErrInvalidActor):
 		sendError(w, http.StatusUnprocessableEntity, "INVALID_ACTOR_INPUT", "identity rejected the actor input")
+	case errors.Is(err, identityclient.ErrProvisionConflict):
+		sendError(w, http.StatusConflict, "ACTOR_PROVISION_CONFLICT", "phone is already provisioned to an actor with a different username or role")
 	case errors.Is(err, identityclient.ErrActorStateConflict):
 		sendError(w, http.StatusConflict, "STATUS_NOT_ALLOWED", "identity actor state does not allow this transition")
 	case errors.Is(err, identityclient.ErrUnavailable):
 		sendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
 	default:
+		// Unmapped errors become an opaque 500 for the caller. Log the underlying
+		// cause so the failure is diagnosable from the container logs.
+		log.Printf("[workforce] unmapped error: %v", err)
 		sendError(w, http.StatusInternalServerError, "WORKFORCE_INTERNAL_ERROR", "workforce request failed")
 	}
 }

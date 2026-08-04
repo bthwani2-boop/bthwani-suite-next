@@ -23,6 +23,10 @@ var (
 	ErrInvalidActor             = errors.New("actor input invalid")
 	ErrOperatorContextForbidden = fmt.Errorf("%w: operator context forbidden", ErrUnavailable)
 	ErrActorStateConflict       = errors.New("actor state conflict")
+	// ErrProvisionConflict is identity's ACTOR_PROVISION_CONFLICT: an actor
+	// already holds this phone under a different username or role, so the
+	// provisioning input cannot be replayed idempotently.
+	ErrProvisionConflict = errors.New("actor provisioning conflict")
 )
 
 type Client struct {
@@ -264,6 +268,8 @@ func (c *Client) do(ctx context.Context, method, path string, body, target any, 
 		return ErrOperatorContextForbidden
 	case "ACTOR_STATE_CONFLICT":
 		return ErrActorStateConflict
+	case "ACTOR_PROVISION_CONFLICT":
+		return ErrProvisionConflict
 	case "INTERNAL_API_UNAVAILABLE", "IDENTITY_DEPENDENCY_TIMEOUT", "SERVICE_UNAVAILABLE":
 		return ErrUnavailable
 	}

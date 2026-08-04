@@ -32,8 +32,8 @@ INSERT INTO wlt_wallets (
 VALUES
   ('wlt-wallet-client-local-001',  'local-dsh', 'client-local-001',  'client',  'active', 'YER', 125000, 10000,  5000, 140000, 10000,  5000, '2026-07-22T08:00:00Z', '2026-07-22T08:00:00Z'),
   ('wlt-wallet-partner-local-001', 'local-dsh', 'partner-local-001', 'partner', 'active', 'YER', 875000, 75000, 25000, 975000, 75000, 25000, '2026-07-22T08:01:00Z', '2026-07-22T08:01:00Z'),
-  ('wlt-wallet-captain-local-001', 'local-dsh', 'captain-local-001', 'captain', 'active', 'YER', 215000, 30000, 10000, 255000, 30000, 10000, '2026-07-22T08:02:00Z', '2026-07-22T08:02:00Z'),
-  ('wlt-wallet-field-local-001',   'local-dsh', 'field-local-001',   'field',   'active', 'YER', 165000, 20000,  5000, 190000, 20000,  5000, '2026-07-22T08:03:00Z', '2026-07-22T08:03:00Z'),
+  ('wlt-wallet-captain-local-001', 'local-dsh', '@@CAPTAIN_ACTOR_ID@@', 'captain', 'active', 'YER', 215000, 30000, 10000, 255000, 30000, 10000, '2026-07-22T08:02:00Z', '2026-07-22T08:02:00Z'),
+  ('wlt-wallet-field-local-001',   'local-dsh', '@@FIELD_ACTOR_ID@@',   'field',   'active', 'YER', 165000, 20000,  5000, 190000, 20000,  5000, '2026-07-22T08:03:00Z', '2026-07-22T08:03:00Z'),
   ('wlt-wallet-client-isolated-context-001', 'isolated-platform-context', 'client-isolated-context-001', 'client', 'active', 'YER', 999999, 0, 0, 999999, 0, 0, '2026-07-22T08:04:00Z', '2026-07-22T08:04:00Z')
 ON CONFLICT (id) DO UPDATE SET
   operator_context_id = EXCLUDED.operator_context_id,
@@ -56,8 +56,8 @@ WHERE source_type = 'runtime_seed'
   AND actor_id IN (
     'client-local-001',
     'partner-local-001',
-    'captain-local-001',
-    'field-local-001',
+    '@@CAPTAIN_ACTOR_ID@@',
+    '@@FIELD_ACTOR_ID@@',
     'client-other-OperatorContext-001',
     'client-isolated-context-001'
   );
@@ -83,8 +83,8 @@ INSERT INTO wlt_ledger_entries (
 VALUES
   ('wled-wallet-client-local-001',  'local-dsh', 'wallet_credit', 'client-local-001',  'client',  'runtime_seed', 'representative-wallet-client',  'representative-wallet-client-credit',  'runtime_evidence', 125000, 'YER', 'credit', 125000, 'رصيد محفظة العميل المحلي',  'representative-wallet-seed-client-local-001',  '2026-07-22T08:00:00Z'),
   ('wled-wallet-partner-local-001', 'local-dsh', 'wallet_credit', 'partner-local-001', 'partner', 'runtime_seed', 'representative-wallet-partner', 'representative-wallet-partner-credit', 'runtime_evidence', 875000, 'YER', 'credit', 875000, 'رصيد محفظة الشريك المحلي', 'representative-wallet-seed-partner-local-001', '2026-07-22T08:01:00Z'),
-  ('wled-wallet-captain-local-001', 'local-dsh', 'earning',       'captain-local-001', 'captain', 'runtime_seed', 'representative-wallet-captain', 'representative-wallet-captain-credit', 'runtime_evidence', 215000, 'YER', 'credit', 215000, 'أرباح الكابتن المحلية', 'representative-wallet-seed-captain-local-001', '2026-07-22T08:02:00Z'),
-  ('wled-wallet-field-local-001',   'local-dsh', 'commission',    'field-local-001',   'field',   'runtime_seed', 'representative-wallet-field',   'representative-wallet-field-credit',   'runtime_evidence', 165000, 'YER', 'credit', 165000, 'عمولة الميداني المحلية', 'representative-wallet-seed-field-local-001',   '2026-07-22T08:03:00Z'),
+  ('wled-wallet-captain-local-001', 'local-dsh', 'earning',       '@@CAPTAIN_ACTOR_ID@@', 'captain', 'runtime_seed', 'representative-wallet-captain', 'representative-wallet-captain-credit', 'runtime_evidence', 215000, 'YER', 'credit', 215000, 'أرباح الكابتن المحلية', 'representative-wallet-seed-captain-local-001', '2026-07-22T08:02:00Z'),
+  ('wled-wallet-field-local-001',   'local-dsh', 'commission',    '@@FIELD_ACTOR_ID@@',   'field',   'runtime_seed', 'representative-wallet-field',   'representative-wallet-field-credit',   'runtime_evidence', 165000, 'YER', 'credit', 165000, 'عمولة الميداني المحلية', 'representative-wallet-seed-field-local-001',   '2026-07-22T08:03:00Z'),
   ('wled-wallet-client-isolated-context-001', 'isolated-platform-context', 'wallet_credit', 'client-isolated-context-001', 'client', 'runtime_seed', 'representative-wallet-isolated-context', 'representative-wallet-isolated-context-credit', 'runtime_evidence', 999999, 'YER', 'credit', 999999, 'قيد سلبي لإثبات منع القراءة عبر سياقات المنصة', 'representative-wallet-seed-client-isolated-context-001', '2026-07-22T08:04:00Z')
 ON CONFLICT (id) DO UPDATE SET
   operator_context_id = EXCLUDED.operator_context_id,
