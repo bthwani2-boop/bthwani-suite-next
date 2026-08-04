@@ -3,13 +3,18 @@
 ```yaml
 repository: bthwani2-boop/bthwani-suite-next
 branch: smsm
-last_assessed_sha: 54fdc9162dea44476005ae1ca6adc2ab7f4b9623
-current_package_sha: 2f34e305af03abc26354c8145f1193b0dafdfcf4
+last_assessed_sha: 9ee33187eac5d44832f9cb7a43d48117e5922b1c
+current_package_sha: 9ee33187eac5d44832f9cb7a43d48117e5922b1c
 status: FIX_REQUIRED
 journey_execution_allowed: false
 journey_assessment_allowed: true
 merge_allowed: false
 ```
+
+> `status` stays `FIX_REQUIRED` deliberately. PHASE-01..05 closed with evidence
+> on this head, but PHASE-06 did not: the authenticated DSH↔WLT financial
+> readback is unproven, and a newly found systemic authorization defect
+> (`FND-D06`) is open. Technical progress is not product acceptance.
 
 ## الهدف
 
@@ -39,32 +44,50 @@ merge_allowed: false
 
 ## الخاطئ أو المتعارض المثبت
 
-### FND-D01 — `no-broken-imports` يفشل قبل فحص الواردات
+### FND-D01 — Compiler API للحراس — **مغلق بدليل**
 
-- الملف: `tools/guards/no-broken-imports.mjs`.
-- العارض: `TypeError: Cannot read properties of undefined (reading 'Latest')` عند `ts.ScriptTarget.Latest`.
-- السبب المرجح المثبت من الكود: default import لـ`typescript` لا يعيد namespace المتوقع في بيئة Node/TypeScript الحالية.
-- المعالجة: استخدام namespace import أو تحميل متوافق ثم إضافة self-test يمنع crash ويثبت parsing لكل TS/TSX/JS/MJS/CJS.
-- يمنع: Journey Gate وPROJECT-WIDE verification.
+- السبب الجذري الحقيقي أوسع من التشخيص الأصلي: حزمة `typescript@7` لا تُصدِّر Compiler API من JavaScript إطلاقًا (`createProgram`/`createSourceFile`/`SyntaxKind`/`ScriptTarget` كلها `undefined`)، ولم يكن هناك مالك واحد للـAPI فنسخ كل حارس تطبيعه الخاص.
+- المعالجة: `tools/guards/lib/typescript-compiler.mjs` هو المستورد الوحيد لحزمة مترجم، يؤكد وجود الواجهة عند التحميل، ويملك `scriptKindFor` الذي كان مكررًا ثلاث مرات.
+- الدليل: ستة حراس PASS، و12/12 اختبار، واختبار انحدار يفشل إذا استورد أي حارس حزمة مترجم مباشرة (مسجَّل في `ci-policy.yml`).
 
-### FND-D02 — Immutable diff residue
+### FND-D02 — Immutable diff residue — **مغلق بدليل**
 
-أظهر CI whitespace/EOF residue في:
+- `tools/trash/` لم يعد موجودًا.
+- `git diff --check` نظيف مقابل merge-base على الرأس الحالي.
 
-- `services/dsh/backend/internal/store/governance.go`.
-- `services/dsh/contracts/dsh.workforce-scopes.openapi.yaml`.
-- `services/dsh/frontend/shared/workforce/workforce-scopes.api.ts`.
-- `tools/trash/m`.
+### FND-D03 — Migration verification مشترك — **مغلق بدليل**
 
-`tools/trash/m` يبدو artifact تشخيصيًا داخل المسار الحي؛ يجب إثبات عدم الاستهلاك ثم حذفه، لا إصلاح whitespace فقط.
+السبب الجذري لم يكن runner ولا legacy-ledger، بل commit تنظيف واحد غير ذرّي (`f085bf81e`) حذف
+`dsh-972` و`wlt-905` وترك مداخل المانيفست ACTIVE. أُعيدت المهاجرتان بالبايت المطابق لـsha256 المثبت.
 
-### FND-D03 — Migration verification مشترك
+الدليل على قاعدة بيانات جديدة بعد `runtime:full:reset`:
 
-مهاجرات Identity/Workforce/DSH/WLT/Providers/Platform-control فشلت في خط CI السابق قبل اختبارات Go. النمط المشترك يدل على خلل runner/test contract أو legacy-ledger handling، لا ستة أخطاء مستقلة حتى يثبت العكس.
+- `dsh_runtime`: 166 جدولًا؛ `dsh_captain_financial_eligibility` موجود بأعمدة `wlt_decision_id` و`wlt_reason_code` و`wlt_policy_version` و`evaluated_at`؛ والـtrigger والدالتان من dsh-972 موجودة.
+- **سيادة مالية مثبتة**: أعمدة `wallet_id` و`wallet_status` و`available_balance_minor_units` و`currency` **غائبة** من DSH كما يقصد dsh-972.
+- `wlt_runtime`: 53 جدولًا؛ جدولا `wlt_dispatch_financial_eligibility_{policies,decisions}` موجودان.
+- `dsh_platform_dispatch_balance_policy` **محذوف** — ما يثبت أن إزالة القارئ الميت كانت صحيحة.
 
-### FND-D04 — Runtime proof
+### FND-D04 — Runtime proof — **مغلق جزئيًا**
 
-Runtime كان يفشل سابقًا عند catalog readback رغم صحة الحاويات. تم تعديل bootstrap، لكن نجاح readback الكامل على الرأس النهائي لم يثبت بعد.
+- **مثبت**: الحاويات كلها ترتفع سليمة (identity/workforce/dsh/wlt/minio/mailpit/wiremock)، والمهاجرات تُطبَّق، وتزويد الكوادر المحلي ينجح، وsmoke ينفّذ تدفقات DSH حقيقية بقراءة راجعة فعلية (حَجْب متجر ← عام 404 ← إظهار ← عام 200).
+- **غير مثبت**: القراءة الراجعة المصادَق عليها لأهلية DSH↔WLT المالية. المشغّل المحلي لا يملك `dsh.dispatch_financial_eligibility.read/manage` (يرد 403 وهو سلوك fail-closed صحيح)، وكوادر Workforce تسجّل الدخول بـOTP لا بكلمة مرور. مانع بيئة/بذور لا عيب كود.
+- **فشل قائم غير متعلق بهذه الجولة**: `dsh-catalog-transition-*` في smoke يتوقع خاصية `proposal` لا يجدها. الملفان (`catalog_proposal_occ_handlers.go` و`diagnose-dsh-smoke-auth-boundary.ps1`) لم تمسّهما هذه الجولة.
+
+### FND-D06 — مسارات سيادية بلا إنفاذ صلاحيات تُرجِع 200 فارغة — **مفتوح (P0)**
+
+اكتُشف أثناء تشغيل Runtime لا بقراءة الكود.
+
+`withPermission` هو ما يوثّق المتصل **ويضع الـactor في سياق الطلب**. المعالجات التي تبدأ بـ
+`ActorFromContext` (بحث سياق صامت لا يكتب استجابة) تعود مبكرًا دون كتابة أي شيء عند غياب الـactor،
+فينتج **HTTP 200 بجسم فارغ** لأي متصل، موثَّق أو لا — نجاح كاذب وقدرة معطّلة.
+
+- **مُصلَح في هذه الجولة**: ثمانية مسارات سياسة تشغيلية سيادية (zones وsla-rules وcapacity وserviceability) أُعيد لها `withPermission` بثوابت الصلاحيات الموثّقة في `platformpolicies_routes.go`. الدليل: zones بتوكيد → `200 {"zones":[]}`؛ بلا توكيد → `401 UNAUTHENTICATED` (كان 200 فارغًا في الحالتين).
+- **باقٍ مفتوحًا**: مسح ثابت وجد نحو 36 مسارًا بنفس النمط، وتأكّد ثلاثة من أربعة عيّنات تجريبيًا:
+  `GET /dsh/operator/support/incidents`، `GET /dsh/operator/platform/operational-policy/audit`،
+  `GET /dsh/operator/dispatch/heatmap` — كلها 200 بجسم فارغ للموثَّق وغير الموثَّق.
+  المجموعة تشمل مسارات مالية: `refunds/{id}/approve|reject` و`me/finance/payout-requests` و`payout-destination`.
+  `GET /dsh/operator/catalog/domains` سليم (401/200) أي أن المسح الثابت يعطي إيجابيات كاذبة ويجب التحقق من كل مسار تجريبيًا.
+- **المطلوب**: لكل مسار، تحديد الصلاحية الصحيحة من Product Truth لا بالتخمين، ثم حارس انحدار يمنع تسجيل معالج يعتمد `ActorFromContext` بلا غلاف صلاحيات.
 
 ### FND-D05 — وثائق الرحلات المختصرة
 
