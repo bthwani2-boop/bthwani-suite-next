@@ -805,37 +805,6 @@
       "200":
         description: Proposal image updated.
 
-/dsh/stores/{storeId}/images/{role}:
-  put:
-    operationId: putStoreImage
-    summary: Set a store's logo/cover/storefront/interior/signage photo. Callable by the store's own partner/field actor, not just operator.
-    tags: [CentralCatalog]
-    security: [{ bearerAuth: [] }]
-    parameters:
-      - name: storeId
-        in: path
-        required: true
-        schema: { type: string }
-      - name: role
-        in: path
-        required: true
-        schema:
-          type: string
-          enum: [store_logo, store_cover, storefront_photo, interior_photo, signage_photo]
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            required: [assetId]
-            properties:
-              assetId: { type: string }
-    responses:
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
-      "200":
-        description: Store image updated.
 
 /dsh/operator/stores/{storeId}/assortment:
   get:

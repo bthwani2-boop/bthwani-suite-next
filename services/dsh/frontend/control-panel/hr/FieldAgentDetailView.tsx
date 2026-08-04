@@ -81,7 +81,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
       setUploadError(null);
       const objectUrl = URL.createObjectURL(file);
       try {
-        const mediaRef = await uploadProviderMedia(agent.actorId, "field", {
+        const mediaRef = await uploadProviderMedia(agent.actorId, {
           uri: objectUrl,
           name: file.name,
           mimeType: file.type || "application/octet-stream",

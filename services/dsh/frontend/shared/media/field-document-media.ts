@@ -23,9 +23,15 @@ export async function uploadFieldStoreMedia(storeId: string, file: FieldMediaPic
 // Provider-owned upload (captain license/vehicle photo, field agent
 // document) from the Workforce HR create/edit screens — not tied to any
 // partner or store, unlike the uploads above.
+//
+// This targets the actor-scoped governed route. The flat
+// /dsh/operator/workforce/media/uploads path this used to call was a legacy
+// compatibility entry that already answered 410 ROUTE_RETIRED, and its shim
+// was deleted with legacy_contract_compat_routes.go, so the call had no
+// handler at all. The actor is now identified by the path, and the server
+// classifies the object as an employee document, so no actor field is sent.
 export async function uploadProviderMedia(
   actorId: string,
-  actorRole: "field" | "captain",
   file: FieldMediaPickResult,
 ): Promise<string> {
   const baseUrl = resolveDshApiBaseUrl();
@@ -34,17 +40,14 @@ export async function uploadProviderMedia(
   if (!cookieMode && !token) throw { kind: "http", status: 401 };
 
   const form = new FormData();
-  form.append("actorId", actorId);
-  form.append("actorRole", actorRole);
   form.append("file", {
     uri: file.uri,
     name: file.name,
     type: file.mimeType,
   } as unknown as Blob);
 
-  const url = cookieMode
-    ? `${baseUrl.replace(/\/$/, "")}/dsh/operator/workforce/media/uploads`
-    : new URL("/dsh/operator/workforce/media/uploads", baseUrl);
+  const path = `/dsh/operator/workforce/employees/${encodeURIComponent(actorId)}/media/uploads`;
+  const url = cookieMode ? `${baseUrl.replace(/\/$/, "")}${path}` : new URL(path, baseUrl);
   const response = await fetch(url, {
     method: "POST",
     headers: {

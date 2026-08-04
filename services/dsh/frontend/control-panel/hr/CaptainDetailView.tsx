@@ -108,7 +108,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
       setUploadError(null);
       const objectUrl = URL.createObjectURL(file);
       try {
-        const mediaRef = await uploadProviderMedia(captain.actorId, "captain", {
+        const mediaRef = await uploadProviderMedia(captain.actorId, {
           uri: objectUrl,
           name: file.name,
           mimeType: file.type || "application/octet-stream",

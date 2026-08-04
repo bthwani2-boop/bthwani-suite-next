@@ -92,33 +92,3 @@
               }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
-/dsh/operator/admin/captains/{captainId}/credential:
-  post:
-    operationId: upsertDshCaptainCredential
-    summary: Upsert credential for a captain.
-    tags: [ DshAdministration ]
-    security:
-      - bearerAuth: []
-    parameters:
-      - name: captainId
-        in: path
-        required: true
-        schema: { type: string }
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            {
-              $ref: "../dsh.openapi.yaml#/components/schemas/DshUpsertCaptainCredentialReques\
-                t"
-            }
-    responses:
-      "200":
-        description: Captain credential upserted.
-        content:
-          application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCaptainCredential" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }

@@ -183,7 +183,7 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
       setUploadBusy(true);
       const objectUrl = URL.createObjectURL(file);
       try {
-        await uploadProviderMedia(props.actorId, "captain", {
+        await uploadProviderMedia(props.actorId, {
           uri: objectUrl,
           name: file.name,
           mimeType: file.type || "application/octet-stream" });

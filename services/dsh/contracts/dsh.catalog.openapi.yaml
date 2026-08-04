@@ -335,24 +335,6 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
-    put:
-      operationId: patchPartnerProductProposalCompat
-      deprecated: true
-      description: Legacy alias of PATCH, kept live for backward compatibility.
-      tags: [CentralCatalog]
-      security: [{ bearerAuth: [] }]
-      parameters: [{ $ref: "#/components/parameters/ProposalId" }]
-      requestBody:
-        required: true
-        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateProposalRequest" } } }
-      responses:
-        "200": { description: Proposal resubmitted, content: { application/json: { schema: { $ref: "#/components/schemas/ProposalResponse" } } } }
-        "400": { $ref: "#/components/responses/InvalidRequest" }
-        "401": { $ref: "#/components/responses/Unauthenticated" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409": { $ref: "#/components/responses/Conflict" }
-
   /dsh/partner/stores/{storeId}/assortment:
     get:
       operationId: getPartnerStoreAssortment
@@ -447,26 +429,6 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
-    put:
-      operationId: patchFieldProductProposalCompat
-      deprecated: true
-      description: Legacy alias of PATCH, kept live for backward compatibility.
-      tags: [CentralCatalog]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - { $ref: "#/components/parameters/PartnerId" }
-        - { $ref: "#/components/parameters/ProposalId" }
-      requestBody:
-        required: true
-        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateProposalRequest" } } }
-      responses:
-        "200": { description: Field proposal resubmitted, content: { application/json: { schema: { $ref: "#/components/schemas/ProposalResponse" } } } }
-        "400": { $ref: "#/components/responses/InvalidRequest" }
-        "401": { $ref: "#/components/responses/Unauthenticated" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409": { $ref: "#/components/responses/Conflict" }
-
   /dsh/field/partners/{partnerId}/assortment:
     get:
       operationId: fieldGetStoreAssortment

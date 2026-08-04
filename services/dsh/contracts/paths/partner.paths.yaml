@@ -869,59 +869,7 @@
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerActivationsListResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
-/dsh/operator/admin/partners/{partnerId}/activate:
-  post:
-    operationId: activateDshPartner
-    summary: Activate a partner.
-    tags: [DshAdministration]
-    security:
-      - bearerAuth: []
-    parameters:
-      - name: partnerId
-        in: path
-        required: true
-        schema: { type: string }
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshActivatePartnerRequest" }
-    responses:
-      "200":
-        description: Partner activated.
-        content:
-          application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerActivation" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
-/dsh/operator/admin/partners/{partnerId}/block:
-  post:
-    operationId: blockDshPartner
-    summary: Block a partner.
-    tags: [DshAdministration]
-    security:
-      - bearerAuth: []
-    parameters:
-      - name: partnerId
-        in: path
-        required: true
-        schema: { type: string }
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshBlockPartnerRequest" }
-    responses:
-      "200":
-        description: Partner blocked.
-        content:
-          application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerActivation" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
 /dsh/partner/orders/{orderId}/partner-delivery:
   get:

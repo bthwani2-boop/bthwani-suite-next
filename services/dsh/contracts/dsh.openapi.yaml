@@ -77,8 +77,6 @@ paths:
     $ref: "./paths/discovery.paths.yaml#/~1dsh~1stores"
   /dsh/home-discovery:
     $ref: "./paths/home-discovery.paths.yaml#/~1dsh~1home-discovery"
-  /dsh/operator/workforce/media/uploads:
-    $ref: "./paths/workforce.paths.yaml#/~1dsh~1operator~1workforce~1media~1uploads"
   /dsh/operator/home-discovery/{kind}:
     $ref: "./dsh.home-marketing-governance.openapi.yaml#/paths/~1dsh~1operator~1home-discovery~1{kind}"
   /dsh/operator/home-discovery/{kind}/{itemId}:
@@ -167,8 +165,6 @@ paths:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1master-products~1{productId}~1images~1{role}"
   /dsh/operator/catalog/product-proposals/{proposalId}/images/{role}:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1product-proposals~1{proposalId}~1images~1{role}"
-  /dsh/stores/{storeId}/images/{role}:
-    $ref: "./paths/catalog.paths.yaml#/~1dsh~1stores~1{storeId}~1images~1{role}"
   /dsh/operator/stores/{storeId}/assortment:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1stores~1{storeId}~1assortment"
   /dsh/operator/stores/{storeId}/assortment/{masterProductId}:
@@ -620,14 +616,8 @@ paths:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1submit"
   /dsh/operator/admin/partners:
     $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1admin~1partners"
-  /dsh/operator/admin/partners/{partnerId}/activate:
-    $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1admin~1partners~1{partnerId}~1activate"
-  /dsh/operator/admin/partners/{partnerId}/block:
-    $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1admin~1partners~1{partnerId}~1block"
   /dsh/operator/admin/captains:
     $ref: "./paths/captain.paths.yaml#/~1dsh~1operator~1admin~1captains"
-  /dsh/operator/admin/captains/{captainId}/credential:
-    $ref: "./paths/captain.paths.yaml#/~1dsh~1operator~1admin~1captains~1{captainId}~1credential"
   /dsh/operator/admin/audit:
     $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1admin~1audit"
   /dsh/client/special-requests:

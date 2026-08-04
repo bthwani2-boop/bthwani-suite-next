@@ -81,7 +81,7 @@ function MediaUploadField({
       setBusy(true);
       const objectUrl = URL.createObjectURL(file);
       try {
-        const mediaRef = await uploadProviderMedia(actorId, kind, {
+        const mediaRef = await uploadProviderMedia(actorId, {
           uri: objectUrl,
           name: file.name,
           mimeType: file.type || "application/octet-stream",
