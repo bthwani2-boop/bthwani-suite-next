@@ -32,6 +32,7 @@
     "@expo/vector-icons",
     "@types/react",
     "@ast-grep/cli",
+    "@redocly/cli",
     "@stoplight/spectral-cli",
     "autocannon",
     "babel-plugin-react-compiler",
@@ -62,7 +63,8 @@
         "tools/guards/**/*.mjs",
         "tools/scripts/*.mjs",
         "tools/scripts/**/*.mjs",
-        "tools/verification/**/*.mjs"
+        "tools/verification/**/*.mjs",
+        "tools/diagnose-implementing/*.mjs"
       ],
       "ignoreFiles": [
         "tools/contracts/**/*.mjs",
