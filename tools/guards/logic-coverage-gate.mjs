@@ -7,7 +7,7 @@
  */
 
 import path from "node:path";
-import ts from "@typescript/typescript6";
+import { ts } from "./lib/typescript-compiler.mjs";
 import { fail, listCodeFiles, lineNumber, read } from "./_guard-utils.mjs";
 
 const guardId = "logic-coverage-gate";

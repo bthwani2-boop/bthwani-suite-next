@@ -1,10 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import * as typescriptNamespace from "typescript";
 import { fail, lineNumber, repoRoot, toPosix } from "./_guard-utils.mjs";
-
-// Normalize TypeScript 7's CommonJS-compatible compiler export for Node ESM.
-const ts = typescriptNamespace.default ?? typescriptNamespace;
+import { scriptKindForFile, ts } from "./lib/typescript-compiler.mjs";
 
 const guardId = "runtime-real-bindings-gate";
 const violations = [];
@@ -60,15 +57,8 @@ function verifyMigrationFileNames(relativeRoot, prefix) {
   }
 }
 
-function scriptKindFor(file) {
-  if (file.endsWith(".tsx")) return ts.ScriptKind.TSX;
-  if (file.endsWith(".jsx")) return ts.ScriptKind.JSX;
-  if (file.endsWith(".js") || file.endsWith(".mjs") || file.endsWith(".cjs")) return ts.ScriptKind.JS;
-  return ts.ScriptKind.TS;
-}
-
 function findUnconditionalNullStubs(file, content) {
-  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindFor(file));
+  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindForFile(file));
   const matches = [];
 
   function isNull(node) {

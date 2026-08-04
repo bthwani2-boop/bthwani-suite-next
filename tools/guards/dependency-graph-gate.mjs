@@ -23,7 +23,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import ts from "@typescript/typescript6";
+import { ts } from "./lib/typescript-compiler.mjs";
 
 const require = createRequire(import.meta.url);
 const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");

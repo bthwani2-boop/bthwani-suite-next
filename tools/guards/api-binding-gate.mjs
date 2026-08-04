@@ -15,14 +15,9 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import * as typescriptNamespace from "typescript";
 import { fail, listCodeFiles, read, repoRoot } from "./_guard-utils.mjs";
 import { parseIndexedContractModules, parseOpenApiContract } from "./_openapi-utils.mjs";
-
-// TypeScript 7's CommonJS-compatible compiler export can be exposed by Node ESM
-// under `default` instead of synthetic named exports. Normalize the module once
-// so every AST operation uses the actual compiler API on Node 24 and Windows.
-const ts = typescriptNamespace.default ?? typescriptNamespace;
+import { scriptKindForFile, ts } from "./lib/typescript-compiler.mjs";
 
 const guardId = "api-binding-gate";
 const violations = [];
@@ -109,13 +104,6 @@ function isKnownOperation(method, rawPath) {
   );
 }
 
-function scriptKindFor(file) {
-  if (file.endsWith(".tsx")) return ts.ScriptKind.TSX;
-  if (file.endsWith(".jsx")) return ts.ScriptKind.JSX;
-  if (file.endsWith(".js") || file.endsWith(".mjs") || file.endsWith(".cjs")) return ts.ScriptKind.JS;
-  return ts.ScriptKind.TS;
-}
-
 function materializeTemplatePath(node) {
   let value = node.head.text;
   for (const span of node.templateSpans) {
@@ -174,7 +162,7 @@ function staticMethodFromCall(node) {
 }
 
 function extractApiPathLiterals(file, content) {
-  const sourceFile = ts.createSourceFile(file, content, 99 /* ts.ScriptTarget.Latest */, true, scriptKindFor(file));
+  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindForFile(file));
   const paths = new Set();
 
   function record(value) {
@@ -196,7 +184,7 @@ function extractApiPathLiterals(file, content) {
 }
 
 function extractApiOperationCalls(file, content) {
-  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindFor(file));
+  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindForFile(file));
   const operations = new Map();
   const approvedCallNames = new Set([
     "fetch",

@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import * as typescriptNamespace from "@typescript/typescript6";
 import {
   existsResolved,
   fail,
@@ -10,12 +9,7 @@ import {
   read,
   repoRoot
 } from "./_guard-utils.mjs";
-
-// @typescript/typescript6 is published through a CommonJS-compatible export.
-// Node ESM may expose that compiler API under `default` rather than as synthetic
-// named exports, so normalize the module shape before reading ScriptTarget,
-// ScriptKind, SyntaxKind, or factory helpers.
-const ts = typescriptNamespace.default ?? typescriptNamespace;
+import { scriptKindForFile, ts } from "./lib/typescript-compiler.mjs";
 
 const guardId = "no-broken-imports";
 const violations = [];
@@ -27,15 +21,8 @@ function aliasExists(alias) {
   return fs.existsSync(path.join(repoRoot, target));
 }
 
-function scriptKindFor(file) {
-  if (file.endsWith(".tsx")) return ts.ScriptKind.TSX;
-  if (file.endsWith(".jsx")) return ts.ScriptKind.JSX;
-  if (file.endsWith(".js") || file.endsWith(".mjs") || file.endsWith(".cjs")) return ts.ScriptKind.JS;
-  return ts.ScriptKind.TS;
-}
-
 function findParsedImportSpecifiers(file, content) {
-  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindFor(file));
+  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindForFile(file));
   const specs = [];
 
   function addSpecifier(node) {
