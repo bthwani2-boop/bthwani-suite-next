@@ -16,19 +16,23 @@ test("rejects identical revisions", () => {
   );
 });
 
-test("builds deterministic fail-closed Nx commands", () => {
+test("builds one deterministic fail-closed Nx command", () => {
   const plan = resolveAffectedPlan(
     ["typecheck", "lint", "typecheck", "test", "build"],
     { NX_BASE: "base-sha", NX_HEAD: "head-sha" },
   );
-  assert.deepEqual(plan.map(({ target }) => target), ["typecheck", "lint", "test", "build"]);
-  for (const { args } of plan) {
-    assert.deepEqual(args.slice(0, 3), ["exec", "nx", "affected"]);
-    assert.ok(args.includes("--base"));
-    assert.ok(args.includes("base-sha"));
-    assert.ok(args.includes("--head"));
-    assert.ok(args.includes("head-sha"));
-  }
+  assert.deepEqual(plan.targets, ["typecheck", "lint", "test", "build"]);
+  assert.deepEqual(plan.args.slice(0, 5), [
+    "exec",
+    "nx",
+    "affected",
+    "-t",
+    "typecheck,lint,test,build",
+  ]);
+  assert.ok(plan.args.includes("--base"));
+  assert.ok(plan.args.includes("base-sha"));
+  assert.ok(plan.args.includes("--head"));
+  assert.ok(plan.args.includes("head-sha"));
 });
 
 test("rejects unsupported targets", () => {
