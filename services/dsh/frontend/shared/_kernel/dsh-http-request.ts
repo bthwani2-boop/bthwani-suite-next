@@ -1,4 +1,4 @@
-import { getIdentityAccessToken } from "@bthwani/core-identity";
+import { getIdentityAccessToken, refreshIdentitySession } from "@bthwani/core-identity";
 
 export type DshRequestMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -69,16 +69,19 @@ async function fetchWithControlPanelSessionRetry(
   cookieMode: boolean,
 ): Promise<Response> {
   let response = await execute();
-  if (!cookieMode || response.status !== 401) return response;
+  if (response.status !== 401) return response;
 
-  const refreshed = await refreshControlPanelCookieSession();
+  const refreshed = cookieMode
+    ? await refreshControlPanelCookieSession()
+    : await refreshIdentitySession();
+
   if (!refreshed) {
-    notifyControlPanelSessionExpired();
+    if (cookieMode) notifyControlPanelSessionExpired();
     return response;
   }
 
   response = await execute();
-  if (response.status === 401) notifyControlPanelSessionExpired();
+  if (cookieMode && response.status === 401) notifyControlPanelSessionExpired();
   return response;
 }
 
@@ -125,8 +128,6 @@ export function createDshHttpClient(
     path: string,
     options: DshRequestOptions = {},
   ): Promise<T> {
-    const token = options.token ?? (cookieMode ? undefined : getIdentityAccessToken());
-    if (!cookieMode && !token) throw { kind: "http", status: 401 };
     if (
       options.expectedVersion !== undefined &&
       (!Number.isInteger(options.expectedVersion) || options.expectedVersion < 1)
@@ -141,8 +142,11 @@ export function createDshHttpClient(
     const correlationId = options.correlationId ?? corrId(corrPrefix);
     const requestBody =
       options.body !== undefined ? JSON.stringify(options.body) : undefined;
-    const execute = () =>
-      fetch(requestUrl, {
+    const execute = () => {
+      const token = options.token ?? (cookieMode ? undefined : getIdentityAccessToken());
+      if (!cookieMode && !token) return Promise.resolve(new Response(null, { status: 401 }));
+      
+      return fetch(requestUrl, {
         method: options.method ?? "GET",
         headers: {
           Accept: "application/json",
@@ -162,6 +166,7 @@ export function createDshHttpClient(
         ...requestCredentials(cookieMode),
         signal: AbortSignal.timeout(timeoutMs),
       });
+    };
 
     let response: Response;
     try {

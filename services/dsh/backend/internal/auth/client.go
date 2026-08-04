@@ -29,6 +29,8 @@ type Identity struct {
 	Roles             []string     `json:"roles"`
 	Permissions       []Permission `json:"permissions"`
 	AuthState         string       `json:"authState"`
+	SessionID         string       `json:"sessionId"`
+	SessionSurface    string       `json:"sessionSurface"`
 }
 
 type Client struct {
@@ -211,3 +213,93 @@ func (c *Client) CheckHealth(ctx context.Context) string {
 
 	return "NOT_READY"
 }
+
+// IsSessionValid securely queries the Identity backend using the internal service token
+// to determine if the given session is active and not compromised.
+func (c *Client) IsSessionValid(ctx context.Context, actorID, sessionID string) (bool, error) {
+	if c.baseURL == "" || c.internalServiceToken == "" {
+		return false, ErrIdentityUnavailable
+	}
+	if strings.TrimSpace(actorID) == "" || strings.TrimSpace(sessionID) == "" {
+		return false, nil
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/internal/actors/"+actorID+"/sessions", nil)
+	if err != nil {
+		return false, ErrIdentityUnavailable
+	}
+	req.Header.Set("X-Service-Caller", c.internalServiceToken)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return false, ErrIdentityUnavailable
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return false, nil
+	}
+	if resp.StatusCode != http.StatusOK {
+		return false, ErrIdentityUnavailable
+	}
+
+	var sessions []struct {
+		SessionID     string `json:"sessionId"`
+		CompromisedAt string `json:"compromisedAt"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&sessions); err != nil {
+		return false, ErrIdentityUnavailable
+	}
+
+	for _, s := range sessions {
+		if s.SessionID == sessionID {
+			if s.CompromisedAt != "" {
+				return false, nil // Compromised
+			}
+			return true, nil // Valid
+		}
+	}
+	return false, nil
+}
+
+// ResolvePermissions queries the RBAC registry in Identity for the canonical
+// permission set of the given operator actor. This is the deny-by-default
+// authority: only permissions explicitly granted through the relational RBAC
+// schema are returned. A missing or unconfigured internal token returns
+// ErrIdentityUnavailable so callers must treat unavailability as a denial.
+func (c *Client) ResolvePermissions(ctx context.Context, actorID string) ([]Permission, error) {
+	if c.baseURL == "" || c.internalServiceToken == "" {
+		return nil, ErrIdentityUnavailable
+	}
+	if strings.TrimSpace(actorID) == "" {
+		return nil, ErrIdentityUnavailable
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/internal/permissions/resolve", nil)
+	if err != nil {
+		return nil, ErrIdentityUnavailable
+	}
+	q := req.URL.Query()
+	q.Set("actorId", actorID)
+	req.URL.RawQuery = q.Encode()
+	req.Header.Set("Authorization", "Bearer "+c.internalServiceToken)
+	req.Header.Set("X-Service-Caller", "dsh")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, ErrIdentityUnavailable
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, ErrIdentityUnavailable
+	}
+
+	var result struct {
+		Permissions []Permission `json:"permissions"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, ErrIdentityUnavailable
+	}
+	return result.Permissions, nil
+}
+

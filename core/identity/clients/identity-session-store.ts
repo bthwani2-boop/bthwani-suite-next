@@ -317,6 +317,42 @@ export function configureIdentitySession(baseUrl: string): void {
   void retryIdentityBootstrap(true);
 }
 
+let refreshInFlight: Promise<boolean> | null = null;
+
+export async function refreshIdentitySession(): Promise<boolean> {
+  if (refreshInFlight) return refreshInFlight;
+  if (client === null || stored === null) return false;
+
+  const configuredClient = client;
+  const session = stored;
+
+  const promise = (async () => {
+    try {
+      const refreshed = await configuredClient.refresh(session.refreshToken);
+      commitAuthenticatedSession({
+        accessToken: refreshed.accessToken,
+        refreshToken: refreshed.refreshToken,
+        identity: refreshed.identity,
+      }, true);
+      return true;
+    } catch (error) {
+      if (isIdentityInvalidSessionError(error)) {
+        clearSession("IDENTITY_SESSION_INVALID");
+      }
+      return false;
+    }
+  })();
+
+  refreshInFlight = promise;
+  try {
+    return await promise;
+  } finally {
+    if (refreshInFlight === promise) {
+      refreshInFlight = null;
+    }
+  }
+}
+
 export async function retryIdentityBootstrap(force = false): Promise<void> {
   if (client === null) {
     setState({ kind: "error", message: "IDENTITY_NOT_CONFIGURED" });

@@ -525,22 +525,39 @@ paths:
           $ref: "#/components/responses/NotFound"
   /internal/actors/{actorId}/sessions:
     get:
-      operationId: internalListSessions
-      tags: [ internal ]
-      summary: List all active sessions for the actor.
+      summary: List all active sessions for an actor
+      tags: [ Internal ]
       security:
-        - serviceToken: []
+        - InternalServiceAuth: [ ]
       parameters:
-        - $ref: "#/components/parameters/ActorId"
+        - name: actorId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
-        "200":
-          description: List of active sessions.
+        '200':
+          description: A list of active sessions
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/SessionInfo"
+                  $ref: '#/components/schemas/SessionInfo'
+    delete:
+      summary: Revoke all active sessions for an actor
+      tags: [ Internal ]
+      security:
+        - InternalServiceAuth: [ ]
+      parameters:
+        - name: actorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: All sessions revoked successfully
         "401":
           $ref: "#/components/responses/Unauthenticated"
   /internal/actors/{actorId}/sessions/{sessionId}:
@@ -1084,17 +1101,27 @@ components:
           type: string
           enum: [ field, captain, client, partner ]
     SessionInfo:
-      type: object
-      additionalProperties: false
-      required: [ sessionId, deviceFingerprint, createdAt, expiresAt ]
-      properties:
-        sessionId:
-          type: string
-        deviceFingerprint:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-        expiresAt:
-          type: string
-          format: date-time
+        type: object
+        additionalProperties: false
+        required: [ sessionId, deviceFingerprint, surface, version, createdAt, expiresAt ]
+        properties:
+          sessionId:
+            type: string
+          deviceFingerprint:
+            type: string
+          surface:
+            type: string
+          version:
+            type: integer
+          createdAt:
+            type: string
+            format: date-time
+          expiresAt:
+            type: string
+            format: date-time
+          lastUsedAt:
+            type: string
+            format: date-time
+          compromisedAt:
+            type: string
+            format: date-time

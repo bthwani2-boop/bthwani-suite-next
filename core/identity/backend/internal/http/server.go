@@ -41,7 +41,9 @@ func NewRouter(repository *identity.Repository) http.Handler {
 	mux.HandleFunc("GET /internal/actors/{actorId}/activations/latest", s.serviceOnly(s.internalActorLatestActivation))
 	mux.HandleFunc("GET /internal/actors/{actorId}/sessions", s.serviceOnly(s.internalActorListSessions))
 	mux.HandleFunc("DELETE /internal/actors/{actorId}/sessions/{sessionId}", s.serviceOnly(s.internalActorRevokeSession))
+	mux.HandleFunc("DELETE /internal/actors/{actorId}/sessions", s.serviceOnly(s.internalActorRevokeAllSessions))
 	mux.HandleFunc("POST /internal/actors/{actorId}/activations/revoke", s.serviceOnly(s.internalActorRevokeActivations))
+	mux.HandleFunc("GET /internal/permissions/resolve", s.dshServiceOnly(s.internalPermissionsResolve))
 
 	return mux
 }
@@ -65,6 +67,31 @@ func (s *server) serviceOnly(next http.HandlerFunc) http.HandlerFunc {
 		next(w, r)
 	}
 }
+
+// dshServiceOnly guards internal endpoints that are exclusively called by the
+// DSH backend. It validates X-Service-Caller: dsh and the IDENTITY_DSH_SERVICE_TOKEN
+// bearer credential. No operator-context binding is enforced here; callers must
+// supply their own actorId query parameter as the resolution scope.
+func (s *server) dshServiceOnly(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if strings.TrimSpace(r.Header.Get("X-Service-Caller")) != "dsh" {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "X-Service-Caller is not allowed")
+			return
+		}
+		expected := strings.TrimSpace(os.Getenv("IDENTITY_DSH_SERVICE_TOKEN"))
+		if expected == "" {
+			sendError(w, http.StatusServiceUnavailable, "INTERNAL_API_UNAVAILABLE", "DSH internal API is not configured")
+			return
+		}
+		token, ok := bearerToken(r)
+		if !ok || subtle.ConstantTimeCompare([]byte(token), []byte(expected)) != 1 {
+			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "DSH service token is required")
+			return
+		}
+		next(w, r)
+	}
+}
+
 
 func allowedCorsOrigins() map[string]bool {
 	raw := strings.TrimSpace(os.Getenv("IDENTITY_CORS_ALLOWED_ORIGINS"))
@@ -406,6 +433,20 @@ func (s *server) internalActorRevokeSession(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (s *server) internalActorRevokeAllSessions(w http.ResponseWriter, r *http.Request) {
+	actorID := r.PathValue("actorId")
+	if actorID == "" {
+		sendError(w, http.StatusBadRequest, "INVALID_INPUT", "actorId is required")
+		return
+	}
+	err := s.repository.RevokeAllSessions(r.Context(), actorID)
+	if err != nil {
+		writeInternalActorError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (s *server) listSessions(w http.ResponseWriter, r *http.Request) {
 	resolved, ok := s.resolveSession(w, r)
 	if !ok {
@@ -581,4 +622,23 @@ func writeActivationError(w http.ResponseWriter, err error) {
 	default:
 		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
 	}
+}
+
+func (s *server) internalPermissionsResolve(w http.ResponseWriter, r *http.Request) {
+	actorID := r.URL.Query().Get("actorId")
+	if actorID == "" {
+		sendError(w, http.StatusBadRequest, "BAD_REQUEST", "actorId query parameter is required")
+		return
+	}
+
+	permissions, err := s.repository.Enforcer.GetActorPermissions(r.Context(), actorID)
+	if err != nil {
+		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "could not resolve permissions")
+		return
+	}
+
+	sendJSON(w, http.StatusOK, map[string]interface{}{
+		"actorId":     actorID,
+		"permissions": permissions,
+	})
 }

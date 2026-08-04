@@ -17,7 +17,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /dsh/health", health.HandleHealth)
-	mux.HandleFunc("GET /dsh/readiness", health.HandleReadiness(db, mediaProvider))
+	mux.HandleFunc("GET /dsh/readiness", health.HandleReadiness(db, mediaProvider, identityClient))
 	mux.HandleFunc("GET /dsh/stores", store.HandleListStores(db))
 	mux.HandleFunc("GET /dsh/stores/{storeId}", store.HandleGetStore(db))
 	mux.HandleFunc("GET /dsh/stores/{storeId}/catalog", handlePublicCatalog(db))

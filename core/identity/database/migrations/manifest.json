@@ -3,7 +3,7 @@
   "service": "identity",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "identity-017_employee_dsh_permission_integrity.sql",
+  "cutover": "identity-020_rbac_foundation.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -122,6 +122,27 @@
       "file": "identity-017_employee_dsh_permission_integrity.sql",
       "sha256": "28d5384c6a38f960efb55b8bc64337b40b95404857c9fada92f466543fdb6c06",
       "historicalPrefix": "017",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 18,
+      "file": "identity-018_session_surface.sql",
+      "sha256": "8518a3dd2f87e8f8ea1bf10ab006794dc0364543deb430aa0f0cb713a3d59adf",
+      "historicalPrefix": "018",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 19,
+      "file": "identity-019_session_family.sql",
+      "sha256": "a3c6fd01630356aefdff8d5923fb956a7c5fa36a477ecdcdb80b93d29de8a56c",
+      "historicalPrefix": "019",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 20,
+      "file": "identity-020_rbac_foundation.sql",
+      "sha256": "3e8ff87524965959477e7f1dd48ca616e22e32a0513275d73df7bfc2ba5fe229",
+      "historicalPrefix": "020",
       "state": "ACTIVE"
     }
   ]

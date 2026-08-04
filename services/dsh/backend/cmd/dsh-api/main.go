@@ -129,7 +129,7 @@ func main() {
 		if pushErr != nil {
 			log.Printf("[dsh-api] push worker disabled: %v", pushErr)
 		} else {
-			go operationaloutbox.RunPushWorker(outboxCtx, db, pushProvider, 5*time.Second)
+			go operationaloutbox.RunPushWorker(outboxCtx, db, pushProvider, identityClient, 5*time.Second)
 			log.Println("[dsh-api] governed notification push worker enabled")
 		}
 	}

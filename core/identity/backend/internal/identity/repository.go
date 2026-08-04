@@ -84,13 +84,19 @@ const (
 
 type Repository struct {
 	db               *sql.DB
+	Enforcer         *PermissionEnforcer
 	now              func() time.Time
 	activationSecret []byte
 }
 
 func NewRepository(db *sql.DB) *Repository {
 	secret := strings.TrimSpace(os.Getenv("IDENTITY_ACTIVATION_HMAC_SECRET"))
-	return &Repository{db: db, now: time.Now, activationSecret: []byte(secret)}
+	return &Repository{
+		db:               db,
+		Enforcer:         NewPermissionEnforcer(db),
+		now:              time.Now,
+		activationSecret: []byte(secret),
+	}
 }
 
 func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootstrap) error {
@@ -503,38 +509,81 @@ func (r *Repository) ResolveAccessToken(ctx context.Context, token string) (Acto
 }
 
 func (r *Repository) Refresh(ctx context.Context, refreshToken string) (TokenPair, error) {
+	parts := strings.SplitN(refreshToken, ".", 2)
+	if len(parts) != 2 {
+		return TokenPair{}, ErrInvalidRefresh
+	}
+	sessionID := parts[0]
+	presentedRandomToken := parts[1]
+
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return TokenPair{}, err
 	}
 	defer tx.Rollback()
 
-	var actorID, sessionID, surface string
+	var actorID, surface, currentHash string
 	err = tx.QueryRowContext(ctx, `
-		SELECT actor_id, id, surface
+		SELECT actor_id, surface, refresh_token_hash
 		FROM identity_sessions
-		WHERE refresh_token_hash = $1
+		WHERE id = $1
 		  AND revoked_at IS NULL
 		  AND refresh_expires_at > now()
-		FOR UPDATE`, tokenHash(refreshToken)).Scan(&actorID, &sessionID, &surface)
+		FOR UPDATE`, sessionID).Scan(&actorID, &surface, &currentHash)
 	if err != nil {
 		return TokenPair{}, ErrInvalidRefresh
 	}
-	if _, err = tx.ExecContext(ctx, `UPDATE identity_sessions SET revoked_at = now() WHERE id = $1`, sessionID); err != nil {
-		return TokenPair{}, err
+
+	if currentHash != tokenHash(presentedRandomToken) {
+		// REUSE DETECTED!
+		_, _ = tx.ExecContext(ctx, `
+			UPDATE identity_sessions
+			SET revoked_at = now(), compromised_at = now()
+			WHERE id = $1`, sessionID)
+		tx.Commit()
+		return TokenPair{}, ErrInvalidRefresh
 	}
+
 	actor, err := actorByIDTx(ctx, tx, actorID)
 	if err != nil || actor.Status != ActorStatusActive {
 		return TokenPair{}, ErrInvalidRefresh
 	}
-	pair, err := createSessionTx(ctx, tx, actor, "refresh-rotation", surface, r.now())
+
+	accessToken, err := randomToken(32)
 	if err != nil {
 		return TokenPair{}, err
 	}
+	newRandomToken, err := randomToken(48)
+	if err != nil {
+		return TokenPair{}, err
+	}
+	newRefreshToken := sessionID + "." + newRandomToken
+
+	now := r.now()
+	accessExpiry := now.Add(15 * time.Minute)
+	refreshExpiry := now.Add(7 * 24 * time.Hour)
+
+	_, err = tx.ExecContext(ctx, `
+		UPDATE identity_sessions
+		SET access_token_hash = $1,
+		    refresh_token_hash = $2,
+		    version = version + 1,
+		    last_used_at = $3,
+		    access_expires_at = $4,
+		    refresh_expires_at = $5
+		WHERE id = $6`,
+		tokenHash(accessToken), tokenHash(newRandomToken), now, accessExpiry, refreshExpiry, sessionID)
+	if err != nil {
+		return TokenPair{}, err
+	}
+
 	if err := tx.Commit(); err != nil {
 		return TokenPair{}, err
 	}
-	return pair, nil
+	return TokenPair{
+		AccessToken: accessToken, RefreshToken: newRefreshToken, AccessExpiry: accessExpiry,
+		Identity: toIdentity(actor, sessionID, surface, accessExpiry),
+	}, nil
 }
 
 func (r *Repository) Logout(ctx context.Context, accessToken string) error {
@@ -570,10 +619,11 @@ func createSessionTx(ctx context.Context, tx *sql.Tx, actor Actor, fingerprint s
 	if err != nil {
 		return TokenPair{}, err
 	}
-	refreshToken, err := randomToken(48)
+	randomRefreshToken, err := randomToken(48)
 	if err != nil {
 		return TokenPair{}, err
 	}
+	refreshToken := sessionID + "." + randomRefreshToken
 	accessExpiry := now.Add(15 * time.Minute)
 	refreshExpiry := now.Add(7 * 24 * time.Hour)
 	_, err = tx.ExecContext(ctx, `
@@ -581,7 +631,7 @@ func createSessionTx(ctx context.Context, tx *sql.Tx, actor Actor, fingerprint s
 			(id, actor_id, access_token_hash, refresh_token_hash, device_fingerprint,
 			 surface, access_expires_at, refresh_expires_at)
 		VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6, $7, $8)`,
-		sessionID, actor.ID, tokenHash(accessToken), tokenHash(refreshToken),
+		sessionID, actor.ID, tokenHash(accessToken), tokenHash(randomRefreshToken),
 		strings.TrimSpace(fingerprint), surface, accessExpiry, refreshExpiry)
 	if err != nil {
 		return TokenPair{}, err
@@ -1148,7 +1198,7 @@ func publicActorPermissions(role, surface string) ([]byte, error) {
 
 func (r *Repository) ListSessions(ctx context.Context, actorID string) ([]SessionInfo, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, COALESCE(device_fingerprint, ''), surface, created_at, access_expires_at
+		SELECT id, COALESCE(device_fingerprint, ''), surface, version, created_at, access_expires_at, last_used_at, compromised_at
 		FROM identity_sessions
 		WHERE actor_id = $1 AND revoked_at IS NULL
 		ORDER BY created_at DESC`, actorID)
@@ -1159,7 +1209,7 @@ func (r *Repository) ListSessions(ctx context.Context, actorID string) ([]Sessio
 	var list []SessionInfo
 	for rows.Next() {
 		var s SessionInfo
-		if err := rows.Scan(&s.SessionID, &s.DeviceFingerprint, &s.Surface, &s.CreatedAt, &s.ExpiresAt); err != nil {
+		if err := rows.Scan(&s.SessionID, &s.DeviceFingerprint, &s.Surface, &s.Version, &s.CreatedAt, &s.ExpiresAt, &s.LastUsedAt, &s.CompromisedAt); err != nil {
 			return nil, err
 		}
 		list = append(list, s)
@@ -1180,6 +1230,14 @@ func (r *Repository) RevokeSession(ctx context.Context, actorID string, sessionI
 		return errors.New("session not found")
 	}
 	return nil
+}
+
+func (r *Repository) RevokeAllSessions(ctx context.Context, actorID string) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE identity_sessions
+		SET revoked_at = now()
+		WHERE actor_id = $1 AND revoked_at IS NULL`, actorID)
+	return err
 }
 
 func (r *Repository) DeleteAccount(ctx context.Context, actorID string) error {

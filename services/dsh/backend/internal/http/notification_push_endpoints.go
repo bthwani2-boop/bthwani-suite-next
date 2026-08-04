@@ -24,10 +24,12 @@ func (s *protectedStoreServer) handleUpsertNotificationPushEndpoint(w http.Respo
 		return
 	}
 	endpoint, err := notifications.UpsertPushEndpoint(s.db, actor.ID, actor.Role, notifications.PushEndpointInput{
-		Provider:      body.Provider,
-		EndpointToken: body.EndpointToken,
-		DeviceID:      body.DeviceID,
-		Platform:      body.Platform,
+		Provider:          body.Provider,
+		EndpointToken:     body.EndpointToken,
+		DeviceID:          body.DeviceID,
+		Platform:          body.Platform,
+		IdentitySessionID: actor.SessionID,
+		Surface:           actor.SessionSurface,
 	})
 	if errors.Is(err, notifications.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "push endpoint is invalid")

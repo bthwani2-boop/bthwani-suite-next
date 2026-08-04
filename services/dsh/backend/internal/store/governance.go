@@ -24,6 +24,8 @@ type StoreActor struct {
 	ID                 string
 	Role               string
 	OperatorContextID  string
+	SessionID          string
+	SessionSurface     string
 	PhoneE164          string
 	AuthorizedAction   string
 	AuthorizationScope string
