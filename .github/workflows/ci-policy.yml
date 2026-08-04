@@ -54,6 +54,10 @@ jobs:
         if: ${{ inputs.governance_policy == 'true' || inputs.workflow_policy == 'true' }}
         run: node --test tools/guards/lib/typescript-compiler.test.mjs
 
+      - name: Test shared API operation resolution
+        if: ${{ inputs.governance_policy == 'true' || inputs.workflow_policy == 'true' }}
+        run: node --test tools/guards/lib/api-operations.test.mjs
+
       - name: Test direct work-branch execution guard
         if: ${{ inputs.governance_policy == 'true' || inputs.workflow_policy == 'true' }}
         run: node --test tools/guards/direct-work-branch-execution-gate.test.mjs

@@ -17,6 +17,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { fail, listCodeFiles, read, repoRoot } from "./_guard-utils.mjs";
 import { parseIndexedContractModules, parseOpenApiContract } from "./_openapi-utils.mjs";
+import {
+  callName,
+  materializeTemplatePath,
+  pathsAreCompatible,
+  staticMethodFromCall,
+  staticPathValue,
+} from "./lib/api-operations.mjs";
 import { scriptKindForFile, ts } from "./lib/typescript-compiler.mjs";
 
 const guardId = "api-binding-gate";
@@ -65,29 +72,6 @@ const masterReferences = expandEntryModules(loadMasterContractReferences());
 const contractOperations = masterReferences.flatMap((relative) => parseOpenApiContract(relative));
 const knownPaths = new Set(contractOperations.map((operation) => operation.path));
 
-function normalizePath(rawPath) {
-  return rawPath
-    .replace(/[?#].*$/, "")
-    .replace(/\{[^}]+\}/g, "{param}")
-    .replace(/`/g, "")
-    .replace(/\/+$/, "");
-}
-
-function pathSegments(rawPath) {
-  return normalizePath(rawPath).split("/").filter(Boolean);
-}
-
-function pathsAreCompatible(candidatePath, contractPath) {
-  const candidate = pathSegments(candidatePath);
-  const contract = pathSegments(contractPath);
-  if (candidate.length !== contract.length) return false;
-
-  return candidate.every((segment, index) => {
-    const contractSegment = contract[index];
-    return segment === contractSegment || segment === "{param}" || contractSegment === "{param}";
-  });
-}
-
 function isKnownPath(rawPath) {
   for (const known of knownPaths) {
     if (pathsAreCompatible(rawPath, known)) return true;
@@ -102,63 +86,6 @@ function isKnownOperation(method, rawPath) {
       operation.method === normalizedMethod &&
       pathsAreCompatible(rawPath, operation.path),
   );
-}
-
-function materializeTemplatePath(node) {
-  let value = node.head.text;
-  for (const span of node.templateSpans) {
-    if (/[?#]/.test(value)) break;
-    if (!value.endsWith("/")) {
-      // Expressions appended to a complete route are query fragments or other
-      // runtime suffixes, not path parameters. The contract path ends here.
-      break;
-    }
-    value += `{param}${span.literal.text}`;
-  }
-  return value;
-}
-
-function staticPathValue(node) {
-  if (ts.isStringLiteralLike(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
-    return node.text;
-  }
-  if (ts.isTemplateExpression(node)) {
-    return materializeTemplatePath(node);
-  }
-  return null;
-}
-
-function propertyNameText(name) {
-  if (!name) return "";
-  if (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) return name.text;
-  return "";
-}
-
-function callName(node) {
-  if (ts.isIdentifier(node.expression)) return node.expression.text;
-  if (ts.isPropertyAccessExpression(node.expression)) return node.expression.name.text;
-  return "";
-}
-
-function staticMethodFromCall(node) {
-  const name = callName(node).toLowerCase();
-  if (["get", "post", "put", "patch", "delete", "options", "head"].includes(name)) {
-    return name.toUpperCase();
-  }
-
-  const options = node.arguments[1];
-  if (!options) return "GET";
-  if (!ts.isObjectLiteralExpression(options)) return null;
-
-  for (const property of options.properties) {
-    if (!ts.isPropertyAssignment(property) || propertyNameText(property.name) !== "method") continue;
-    const initializer = property.initializer;
-    if (ts.isStringLiteralLike(initializer) || ts.isNoSubstitutionTemplateLiteral(initializer)) {
-      return initializer.text.toUpperCase();
-    }
-    return null;
-  }
-  return "GET";
 }
 
 function extractApiPathLiterals(file, content) {
