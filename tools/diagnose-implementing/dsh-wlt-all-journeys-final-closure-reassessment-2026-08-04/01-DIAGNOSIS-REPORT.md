@@ -1,32 +1,62 @@
-# إعادة تشخيص DSH/WLT وجميع الرحلات
+# تقرير التشخيص الكامل — DSH/WLT وجميع الرحلات
+
+> هذه الحزمة أداة دعم مشتقة وقابلة للحذف. لا تنشئ حقيقة تشغيلية أو مالية أو تعاقدية جديدة.
+
+## الحكم
 
 ```yaml
 repository: bthwani2-boop/bthwani-suite-next
 branch: smsm
-pinned_sha: 2ce6a0052ccca6303ada3a017665e80d5a78afb3
+pinned_sha: 6970f0f8be107118611c839df824dbae0e843b18
 mode: DIAGNOSIS_AND_PLAN_ONLY
 verdict: NO_GO
 journey_execution_allowed: false
+product_changes_in_this_stage: forbidden
+strict_package_validation: PASS
 ```
 
-## النتائج المعرّفة
+## ما جرى فعليًا
 
-- `FND-0001`: لا يوجد baseline أخضر؛ DSH Database Contract فشل وContextual CI لم يكن مكتملًا.
-- `FND-0002`: manifests الخاصة بـDSH وWLT تشير إلى `dsh-972` و`wlt-905` بينما الملفان محذوفان.
-- `FND-0003`: `FOUNDATION-00` قديم، والحزمة السابقة حُذفت دون دليل `--strict --disposal`.
-- `FND-0004`: `.wlt-mutation-approved` bypass شامل، وإصلاحات حراس AST غير مثبتة بنتيجة same-SHA نهائية.
-- `FND-0005`: الجرد وتغطية routes/screens/controls/states والرحلات `J001..J107` غير مثبتة على الرأس الحالي.
+- استُخدم Git Bundle رسمي للرأس المثبت.
+- استُخدم المولّد الدائم `new-package.mjs` بعد إزالة النسخة المحلية غير المكتملة من مسار العمل فقط.
+- صُنفت 3568 ملفات متتبعة: صفر غير مصنف.
+- جُردت 4332 حافة TypeScript/JavaScript و4549 حافة Go و349 أمر package.
+- جُردت 762 route في خدمات Go و612 عملية OpenAPI مرصودة.
+- جُردت 208 ملفات شاشة/Route و2076 عنصر تحكم ثابت عبر الأسطح.
+- جُردت 107 رحلات و2568 شريحة، وجميعها ما تزال محجوبة بـFOUNDATION.
+- جُردت 24 مجموعة تطابق بايتي و110 ملفًا نصيًا كبيرًا وصفر ملف فارغ وصفر `.gitkeep`.
+- رُبطت 20 نتيجة بـ18 مهمة و18 تحققًا و11 مرحلة.
 
-## ما ثبت صحيحًا
+## الحالة الصحيحة الموجودة
 
-نجحت Architecture Snapshot وGit Bundle وLockfile Snapshot وCodeQL على الرأس المرصود. الفرع الافتراضي ومرجع PR هو `master`. PR #201 ما زال Draft ويمنع الدمج قبل الإغلاق الكامل.
+- OpenAPI المركزي يملك 6 contexts و68 ملف عقد، ولا توجد duplicate operations أو parallel central sources في فحص CI الحالي.
+- generated clients الستة متطابقة مع bundles الحاكمة.
+- no-broken-imports وservice workspace وcontrol-panel architecture وfrontend static binding نجحت.
+- Identity وWorkforce وPlatform Control وProviders backend/database نجحت على الرأس المثبت.
+- dependency graph وa11y وAST rules وperformance budgets نجحت.
+
+## الموانع الفعلية
+
+1. DSH وWLT migration manifests يشيران إلى ملفين محذوفين.
+2. trailing whitespace يمنع deep Node graph.
+3. api-binding وruntime-real-bindings ينهاران بسبب Compiler API غير المعتمد.
+4. 18 عملية عقد بلا route server مطابق.
+5. full runtime يفشل عند bootstrap قبل readback.
+6. FOUNDATION قديم و107 رحلات غير مقيمة ومفتوحة.
+7. `_template` يتعارض مع naming gate، وKnip لا يفهم أدوات المشغل الدائمة.
+8. 9 شاشات بلا binding مثبت.
+9. `.wlt-mutation-approved` يمثل bypass شاملًا.
+10. Journey Gate selector يشغل الجميع وartifact الفشل غير تشخيصي، مع استدعاء `-Soft` غير مدعوم.
+11. لا يوجد إغلاق same-SHA لكل الأسطح والرحلات.
+
+## السبب الذي جعل النسخة السابقة ناقصة
+
+النسخة السابقة اختزلت المطلوب إلى خمسة موانع واحتوت `inventoryItems=0` مع `unclassifiedInventoryItems=1`. المدقق الصارم لم يفرض بوابة plan-ready؛ لذلك مرّت بنيويًا رغم أنها لا تحقق عقد الحزمة. هذه النسخة تصحح ذلك بالجرد الكامل والربط المتقاطع والتحقق الفعلي.
+
+## قرار البدء
+
+`TASK-0001` وحدها جاهزة بعد تفويض تعديل المنتج وتثبيت الرأس. لا تبدأ J001 قبل إغلاق PHASE-01..PHASE-06 على SHA بعد آخر كتابة.
 
 ## حدود الإثبات
 
-لم ينتج موصل GitHub جردًا كاملًا حديثًا لكل الشجرة والاعتماديات الديناميكية. لذلك لا تدعي هذه الحزمة فحص كل سطر، وتسجل إنتاج inventory حديث كـ`TASK-0004`. الأرقام القديمة لا تُستخدم كدليل للرأس الحالي.
-
-## الترتيب الإلزامي
-
-`TASK-0001 → TASK-0002 → TASK-0003 → TASK-0004 → TASK-0005`
-
-لا تُفتح إلا مهمة واحدة. بعد كل وحدة: تحقق مستهدف، Commit، Push مباشر، إعادة تثبيت SHA، ثم بوابة المهمة.
+الحزمة تثبت حالة المستودع وCI والأدلة المتاحة على SHA المثبت. لا تثبت الإنتاج أو مزودًا خارجيًا أو قبولًا يدويًا لم ينفذ. كل ذلك يبقى صريحًا في verification matrix.
