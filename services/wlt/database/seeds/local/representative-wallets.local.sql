@@ -88,6 +88,10 @@ VALUES
   ('wled-wallet-client-isolated-context-001', 'isolated-platform-context', 'wallet_credit', 'client-isolated-context-001', 'client', 'runtime_seed', 'representative-wallet-isolated-context', 'representative-wallet-isolated-context-credit', 'runtime_evidence', 999999, 'YER', 'credit', 999999, 'قيد سلبي لإثبات منع القراءة عبر سياقات المنصة', 'representative-wallet-seed-client-isolated-context-001', '2026-07-22T08:04:00Z')
 ON CONFLICT (id) DO UPDATE SET
   operator_context_id = EXCLUDED.operator_context_id,
+  -- Provider actor ids are provisioned at runtime, so a re-seed must re-point
+  -- these fixtures rather than keep the previously substituted actor.
+  actor_id = EXCLUDED.actor_id,
+  actor_type = EXCLUDED.actor_type,
   amount_minor_units = EXCLUDED.amount_minor_units,
   balance_after = EXCLUDED.balance_after,
   description = EXCLUDED.description,

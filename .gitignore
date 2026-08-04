@@ -133,6 +133,10 @@ node-gates*.log
 # Explicitly track the WLT Minimum Viable Financial Scope v1 governance doc
 !services/wlt/FINANCIAL_SCOPE_V1.md
 
+# Machine-local runtime output. The provisioned Workforce provider actor ids are
+# generated per developer environment and must never be shared between machines.
+.artifacts/local-dev/
+
 *.pem
 *.key
 *.p8
