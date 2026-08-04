@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.0.0",
+  "taskName": "dsh-wlt-pre-journey-readiness-2026-08-04",
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "branch": "smsm",
+  "packageParentSha": "98dafdf17e0af7fcc2012a0aa0e250838723f2ce",
+  "initialObservationSha": "11afa6cd20480afbe0a56364e13a3f5430089439",
+  "mode": "DIAGNOSIS_AND_PLAN_ONLY",
+  "verdict": "NO_GO",
+  "journeyExecutionAllowed": false,
+  "existingProjectFilesModified": 0,
+  "existingProjectFilesDeletedOrMoved": 0,
+  "evidenceClasses": [
+    "CURRENT_DIRECT",
+    "CURRENT_CI",
+    "HISTORICAL_REVALIDATE",
+    "CANDIDATE",
+    "UNPROVEN"
+  ],
+  "mandatoryPhaseOrder": [
+    "PHASE-00-AUTHORITY-SHA-PROVENANCE",
+    "PHASE-01-EXHAUSTIVE-INVENTORY",
+    "PHASE-02-TRUST-IDENTITY-AUTHZ",
+    "PHASE-03-CONTRACTS-DATA-DATABASES",
+    "PHASE-04-DSH-WLT-SOVEREIGNTY",
+    "PHASE-05-BACKENDS-RUNTIME-INTEGRATIONS",
+    "PHASE-06-MULTI-SURFACE-JOURNEYS",
+    "PHASE-07-RETIREMENT-CLEANUP",
+    "PHASE-08-FINAL-SAME-SHA-CLOSURE"
+  ],
+  "blockingIds": [
+    "B-001",
+    "B-002",
+    "B-003",
+    "B-004",
+    "B-005",
+    "B-006",
+    "B-007",
+    "B-008",
+    "B-009",
+    "B-010"
+  ],
+  "prohibitions": [
+    "NO_PRODUCT_CHANGE_IN_THIS_PACKAGE",
+    "NO_DELETION_WITHOUT_USAGE_DEPENDENCY_MIGRATION_ROLLBACK_PROOF",
+    "NO_JOURNEY_EXECUTION_BEFORE_FOUNDATION_CLOSES_ON_ONE_SHA",
+    "NO_STALE_LINE_NUMBER_EXECUTION",
+    "NO_PARALLEL_SOURCE_OF_TRUTH",
+    "NO_FORCE_PUSH",
+    "NO_CLAIM_OF_COMPLETENESS_WITH_UNPROVEN_ITEMS"
+  ]
+}
