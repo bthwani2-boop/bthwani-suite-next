@@ -21,6 +21,7 @@ const (
 	DshDispatchFinancialEligibilityPermissionManage = "dsh.dispatch_financial_eligibility.manage"
 	DshOperationalPolicyAuditPermissionRead     = "dsh.operational_policy.audit.read"
 	DshOperationalPolicyRollbackPermission      = "dsh.operational_policy.rollback"
+	DshPlatformManagePermission                 = "dsh.platform.manage"
 )
 
 func (s *protectedStoreServer) handleListZones(w http.ResponseWriter, r *http.Request) {
@@ -114,80 +115,75 @@ func (s *protectedStoreServer) handleListSlaRules(w http.ResponseWriter, r *http
 	store.SendJSON(w, http.StatusOK, map[string]any{"slaRules": rules})
 }
 
-func (s *protectedStoreServer) handleUpsertSlaRules(w http.ResponseWriter, r *http.Request) {
+func (s *protectedStoreServer) handleCreateDraftChangeSet(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
-	var body struct {
-		ZoneID          string `json:"zoneId"`
-		Category        string `json:"category"`
-		MaxPrepMins     int    `json:"maxPrepMins"`
-		MaxDeliveryMins int    `json:"maxDeliveryMins"`
-		ExpectedVersion int    `json:"expectedVersion"`
-		Reason          string `json:"reason"`
-	}
+	var body platformpolicies.DraftChangeSetInput
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	mutation, ok := platformPolicyMutation(w, r, actor.ID, body.Reason)
-	if !ok {
-		return
-	}
-	rule, err := platformpolicies.UpsertSlaRule(r.Context(), s.db, platformpolicies.UpsertSlaInput{
-		ZoneID: body.ZoneID, Category: body.Category, MaxPrepMins: body.MaxPrepMins,
-		MaxDeliveryMins: body.MaxDeliveryMins, ExpectedVersion: body.ExpectedVersion,
-	}, mutation)
+	cs, err := platformpolicies.CreateDraftChangeSet(r.Context(), s.db, body, actor.ID)
 	if err != nil {
 		writePlatformPolicyError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"slaRule": rule})
+	store.SendJSON(w, http.StatusOK, map[string]any{"changeSet": cs})
 }
 
-func (s *protectedStoreServer) handleGetCapacityConfig(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.ActorFromContext(r.Context()); !ok {
-		return
-	}
-	config, err := platformpolicies.GetCapacity(r.Context(), s.db, r.URL.Query().Get("zoneId"))
-	if err != nil {
-		writePlatformPolicyError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"capacityConfig": config})
-}
-
-func (s *protectedStoreServer) handleUpsertCapacityConfig(w http.ResponseWriter, r *http.Request) {
+func (s *protectedStoreServer) handleSubmitChangeSet(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
-	var body struct {
-		ZoneID              string  `json:"zoneId"`
-		MaxConcurrentOrders int     `json:"maxConcurrentOrders"`
-		MaxCaptainsOnline   int     `json:"maxCaptainsOnline"`
-		ThrottleThreshold   float64 `json:"throttleThreshold"`
-		ExpectedVersion     int     `json:"expectedVersion"`
-		Reason              string  `json:"reason"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	mutation, ok := platformPolicyMutation(w, r, actor.ID, body.Reason)
-	if !ok {
-		return
-	}
-	config, err := platformpolicies.UpsertCapacity(r.Context(), s.db, platformpolicies.UpsertCapacityInput{
-		ZoneID: body.ZoneID, MaxConcurrentOrders: body.MaxConcurrentOrders,
-		MaxCaptainsOnline: body.MaxCaptainsOnline, ThrottleThreshold: body.ThrottleThreshold,
-		ExpectedVersion: body.ExpectedVersion,
-	}, mutation)
+	changeSetID := r.PathValue("changeSetId")
+	cs, err := platformpolicies.SubmitForReview(r.Context(), s.db, changeSetID, actor.ID)
 	if err != nil {
 		writePlatformPolicyError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"capacityConfig": config})
+	store.SendJSON(w, http.StatusOK, map[string]any{"changeSet": cs})
 }
+
+func (s *protectedStoreServer) handleApproveChangeSet(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.ActorFromContext(r.Context())
+	if !ok {
+		return
+	}
+	changeSetID := r.PathValue("changeSetId")
+	cs, err := platformpolicies.ApproveChangeSet(r.Context(), s.db, changeSetID, actor.ID)
+	if err != nil {
+		writePlatformPolicyError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"changeSet": cs})
+}
+
+func (s *protectedStoreServer) handleApplyChangeSet(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.ActorFromContext(r.Context())
+	if !ok {
+		return
+	}
+	changeSetID := r.PathValue("changeSetId")
+	tx, err := s.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL", err.Error())
+		return
+	}
+	defer tx.Rollback()
+	err = platformpolicies.MarkApplied(r.Context(), tx, changeSetID, actor.ID)
+	if err != nil {
+		writePlatformPolicyError(w, err)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL", err.Error())
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"status": "applied"})
+}
+
 
 func (s *protectedStoreServer) handleGetZoneServiceability(w http.ResponseWriter, r *http.Request) {
 	if _, ok := s.ActorFromContext(r.Context()); !ok {
@@ -201,78 +197,3 @@ func (s *protectedStoreServer) handleGetZoneServiceability(w http.ResponseWriter
 	store.SendJSON(w, http.StatusOK, result)
 }
 
-func (s *protectedStoreServer) handleGetStoreOnboardingFeePolicy(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.ActorFromContext(r.Context()); !ok {
-		return
-	}
-	policy, err := platformpolicies.GetStoreOnboardingFeePolicy(r.Context(), s.db)
-	if errors.Is(err, platformpolicies.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "store onboarding fee policy not found")
-		return
-	}
-	if err != nil {
-		writePlatformPolicyError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"policy": policy})
-}
-
-func (s *protectedStoreServer) handleUpsertStoreOnboardingFeePolicy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.ActorFromContext(r.Context())
-	if !ok {
-		return
-	}
-	var body struct {
-		Enabled         bool    `json:"enabled"`
-		Amount          float64 `json:"amount"`
-		Currency        string  `json:"currency"`
-		AppliesTo       string  `json:"appliesTo"`
-		ChargeTiming    string  `json:"chargeTiming"`
-		EffectiveFrom   *string `json:"effectiveFrom"`
-		Notes           string  `json:"notes"`
-		ExpectedVersion int     `json:"expectedVersion"`
-		Reason          string  `json:"reason"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	input := platformpolicies.StoreOnboardingFeePolicyInput{
-		Enabled: body.Enabled, Amount: body.Amount, Currency: body.Currency,
-		AppliesTo: body.AppliesTo, ChargeTiming: body.ChargeTiming,
-		Notes: body.Notes, ExpectedVersion: body.ExpectedVersion,
-	}
-	if body.EffectiveFrom != nil && *body.EffectiveFrom != "" {
-		parsed, err := time.Parse(time.RFC3339, *body.EffectiveFrom)
-		if err != nil {
-			store.SendError(w, http.StatusBadRequest, "INVALID_EFFECTIVE_FROM", "effectiveFrom must be RFC3339")
-			return
-		}
-		input.EffectiveFrom = &parsed
-	}
-	mutation, ok := platformPolicyMutation(w, r, actor.ID, body.Reason)
-	if !ok {
-		return
-	}
-	policy, err := platformpolicies.UpsertStoreOnboardingFeePolicy(r.Context(), s.db, input, mutation)
-	if err != nil {
-		writePlatformPolicyError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"policy": policy})
-}
-
-func (s *protectedStoreServer) handleGetStoreOnboardingFeeReference(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "field", "partner"); !ok {
-		return
-	}
-	policy, err := platformpolicies.GetStoreOnboardingFeePolicy(r.Context(), s.db)
-	if errors.Is(err, platformpolicies.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "store onboarding fee policy not found")
-		return
-	}
-	if err != nil {
-		writePlatformPolicyError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"policy": policy})
-}

@@ -3,8 +3,16 @@ import { PROVIDER_SECRET_POLICIES, PROVIDER_CREDENTIAL_VISIBILITY } from "./plat
 import { PROVIDER_AFFECTED_SURFACES, WLT_BOUNDARY_PROVIDER_KINDS } from "./platform-provider.policy";
 
 /**
- * Seed registry of platform providers.
+ * UI DISPLAY SKELETON — NOT AUTHORITATIVE.
+ *
+ * This is a static shape definition for the provider registry UI panels.
  * No real secrets or API keys — maskedCredential values are display-only placeholders.
+ *
+ * Runtime truth: providers.api.ts → GET /providers (from @bthwani/core-providers).
+ * This registry MUST NOT be used as a fallback when the backend is unavailable.
+ * If the providers API fails, show a loading/error state — never fall back to this data.
+ *
+ * Reason: J018 requires a single canonical provider registry owned by the backend.
  */
 export const PLATFORM_PROVIDER_REGISTRY: readonly PlatformProviderRecord[] = [
   {
@@ -13,7 +21,7 @@ export const PLATFORM_PROVIDER_REGISTRY: readonly PlatformProviderRecord[] = [
     label: "Google Maps",
     selectedProvider: "google",
     fallbackProvider: null,
-    environment: "unknown",
+    environment: "sandbox",
     status: "inactive",
     owner: "platform-team",
     priority: 1,

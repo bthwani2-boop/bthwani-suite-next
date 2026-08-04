@@ -4,27 +4,47 @@ x-bthwani-capability: workforce-scopes
 x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: DSH Workforce Scope Contract
-  version: 1.0.0
+  version: 1.1.0
 paths:
   /dsh/operator/workforce/scopes/{actorId}:
     get:
       tags: [ "dsh-operator" ]
       operationId: getWorkforceActorScopes
+      summary: Get workforce scope snapshot for a field or captain actor
+      description: >
+        Read-through proxy to Workforce. DSH exposes this as an operational
+        reference only. Workforce remains the sole owner of assignment and
+        scope mutations. Returns the current store and service-area assignments
+        for the given actor.
       x-bthwani-required-scope: workforce.scopes.read
       parameters:
         - in: path
           name: actorId
           required: true
           schema: { type: string }
+          description: The actor identifier (field agent or captain)
         - in: query
           name: actorRole
           required: true
           schema: { type: string, enum: [ field, captain ] }
+          description: The workforce role of the actor
       responses:
-        '200': { description: Scope snapshot }
+        '200':
+          description: Current scope snapshot for the actor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkforceScopeSnapshot'
+        '400':
+          description: Missing or invalid actorRole
+        '403':
+          description: Insufficient scope or operator context mismatch
+        '404':
+          description: Actor not found in Workforce
+        '502':
+          description: Workforce upstream unavailable
       security:
         - bearerAuth: []
-
 
 components:
   securitySchemes:
@@ -32,3 +52,22 @@ components:
       type: http
       scheme: bearer
   schemas:
+    WorkforceScopeSnapshot:
+      type: object
+      required: [ actorId, actorRole, storeIds, serviceAreaCodes ]
+      properties:
+        actorId:
+          type: string
+          description: The actor identifier
+        actorRole:
+          type: string
+          enum: [ field, captain ]
+          description: The workforce role of the actor
+        storeIds:
+          type: array
+          items: { type: string }
+          description: Store IDs the actor is currently assigned to
+        serviceAreaCodes:
+          type: array
+          items: { type: string }
+          description: Service area codes active for the actor

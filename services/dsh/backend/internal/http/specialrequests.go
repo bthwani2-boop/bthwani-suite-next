@@ -477,6 +477,10 @@ func (s *protectedStoreServer) handleAssignSpecialRequestDispatch(w http.Respons
 	if !ok {
 		return
 	}
+	if err := store.EnforceKillSwitch(r.Context(), s.decisionService, "dispatch_assignment", actor.ID); err != nil {
+		store.SendError(w, http.StatusForbidden, "KILL_SWITCH_ACTIVE", err.Error())
+		return
+	}
 	reqID := r.PathValue("requestId")
 	var body assignSpecialRequestDispatchBody
 	if !decodeProtectedJSON(w, r, &body) {

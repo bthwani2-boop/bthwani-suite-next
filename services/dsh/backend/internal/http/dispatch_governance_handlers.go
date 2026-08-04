@@ -17,6 +17,10 @@ func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.Res
 	if !ok {
 		return
 	}
+	if err := store.EnforceKillSwitch(r.Context(), s.decisionService, "dispatch_assignment", actor.ID); err != nil {
+		store.SendError(w, http.StatusForbidden, "KILL_SWITCH_ACTIVE", err.Error())
+		return
+	}
 	var body struct {
 		OrderID                string `json:"orderId"`
 		CaptainID              string `json:"captainId"`

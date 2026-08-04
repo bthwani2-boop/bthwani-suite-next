@@ -291,18 +291,12 @@ func GetServiceAreaCapacityForecast(ctx context.Context, db *sql.DB, operatorCon
 	}
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(DISTINCT p.captain_id)::int
 		FROM dsh_captain_dispatch_profiles p
-		JOIN dsh_actor_service_area_scopes scope
-		  ON scope.actor_id=p.captain_id AND scope.actor_role='captain'
-		 AND scope.active=true AND scope.service_area_code=$2
-		WHERE p.operator_context_id=$1`, operatorContextID, serviceAreaCode).Scan(&forecast.TotalScopedCaptains); err != nil {
+		WHERE p.operator_context_id=$1`, operatorContextID).Scan(&forecast.TotalScopedCaptains); err != nil {
 		return forecast, err
 	}
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*)::int FROM (
 		SELECT p.captain_id
 		FROM dsh_captain_dispatch_profiles p
-		JOIN dsh_actor_service_area_scopes scope
-		  ON scope.actor_id=p.captain_id AND scope.actor_role='captain'
-		 AND scope.active=true AND scope.service_area_code=$2
 		LEFT JOIN dsh_captain_financial_eligibility financial
 		  ON financial.operator_context_id=p.operator_context_id AND financial.captain_id=p.captain_id
 		LEFT JOIN dsh_assignments assignment
@@ -319,18 +313,15 @@ func GetServiceAreaCapacityForecast(ctx context.Context, db *sql.DB, operatorCon
 		  )
 		GROUP BY p.captain_id,p.max_active_assignments
 		HAVING COUNT(assignment.id)<p.max_active_assignments
-	) available`, operatorContextID, serviceAreaCode, at).Scan(&forecast.CurrentlyAvailableCaptains); err != nil {
+	) available`, operatorContextID, at).Scan(&forecast.CurrentlyAvailableCaptains); err != nil {
 		return forecast, err
 	}
 	if err := db.QueryRowContext(ctx, `SELECT
-		COUNT(DISTINCT actor_id) FILTER (WHERE $3>=starts_at AND $3<ends_at)::int,
-		COUNT(DISTINCT actor_id) FILTER (WHERE starts_at>$3 AND starts_at<$4)::int
+		COUNT(DISTINCT actor_id) FILTER (WHERE $2>=starts_at AND $2<ends_at)::int,
+		COUNT(DISTINCT actor_id) FILTER (WHERE starts_at>$2 AND starts_at<$3)::int
 		FROM dsh_provider_availability_projections absence
-		WHERE operator_context_id=$1 AND actor_type='captain' AND status='active'
-		  AND EXISTS (SELECT 1 FROM dsh_actor_service_area_scopes scope
-		    WHERE scope.actor_id=absence.actor_id AND scope.actor_role='captain'
-		      AND scope.active=true AND scope.service_area_code=$2)`,
-		operatorContextID, serviceAreaCode, at, horizon,
+		WHERE operator_context_id=$1 AND actor_type='captain' AND status='active'`,
+		operatorContextID, at, horizon,
 	).Scan(&forecast.ActiveAbsences, &forecast.PlannedAbsences); err != nil {
 		return forecast, err
 	}

@@ -36,9 +36,6 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("PUT /dsh/operator/stores/{storeId}/delivery-pricing/{fulfillmentMode}", protected.withPermission("control-panel", "operations.manage", protected.handleOperatorUpsertDeliveryPricing))
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/settings", protected.handleGetPartnerSettings)
 	mux.HandleFunc("PATCH /dsh/partner/stores/{storeId}/settings", protected.handlePartnerSettings)
-	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/team", protected.handlePartnerStoreTeam)
-	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/team/invites", protected.handlePartnerInviteTeamMember)
-	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/team/members/{memberId}/action", protected.handlePartnerTeamMemberActionAudited)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/courier-settings", protected.handlePartnerGetCourierSettings)
 	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/courier-settings", protected.handlePartnerUpdateCourierSettings)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/coverage-zones", protected.handlePartnerCoverageZones)
@@ -47,9 +44,6 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code", protected.handleIssuePartnerCourierConnectionCode)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/courier-connections", protected.handleListPartnerCourierConnections)
 	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/courier-connections/{connectionId}/revoke", protected.handleRevokePartnerCourierConnection)
-	mux.HandleFunc("GET /dsh/partner/invites", protected.handlePartnerListInvites)
-	mux.HandleFunc("POST /dsh/partner/invites/{inviteId}/accept", protected.handlePartnerAcceptInvite)
-	mux.HandleFunc("POST /dsh/partner/invites/{inviteId}/reject", protected.handlePartnerRejectInvite)
 	mux.HandleFunc("GET /dsh/partner/scopes", protected.handlePartnerScopes)
 	mux.HandleFunc("POST /dsh/field/stores/{storeId}/verifications", protected.enforceFieldReadinessGate(protected.handleFieldVerification))
 	mux.HandleFunc("POST /dsh/captain/stores/{storeId}/pickup-readiness", protected.handleCaptainReadiness)
@@ -65,6 +59,20 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("PUT /dsh/operator/home-discovery/{kind}/{itemId}/targeting", protected.withPermission("control-panel", MarketingPermissionManage, protected.handleHomeDiscoveryAdminTargetingPut))
 	mux.HandleFunc("GET /dsh/operator/platform/service-areas", protected.withPermission("control-panel", "platform.read", protected.handleOperatorListServiceAreas))
 	mux.HandleFunc("PUT /dsh/operator/platform/service-areas/{serviceAreaCode}", protected.withPermission("control-panel", "platform.manage", protected.handleOperatorUpsertServiceArea))
+
+	// Platform Change Sets
+	mux.HandleFunc("POST /dsh/operator/platform/change-sets", protected.handleCreateChangeSet)
+	mux.HandleFunc("GET /dsh/operator/platform/change-sets/{changesetId}", protected.handleGetChangeSet)
+	mux.HandleFunc("POST /dsh/operator/platform/change-sets/{changesetId}/submit", protected.handleSubmitChangeSet)
+	mux.HandleFunc("POST /dsh/operator/platform/change-sets/{changesetId}/approve", protected.handleApproveChangeSet)
+	mux.HandleFunc("POST /dsh/operator/platform/change-sets/{changesetId}/apply", protected.handleApplyChangeSet)
+	mux.HandleFunc("POST /dsh/operator/platform/change-sets/{changesetId}/reject", protected.handleRejectChangeSet)
+
+	// Platform Providers
+	mux.HandleFunc("GET /dsh/operator/platform/providers", protected.handleListProviders)
+	mux.HandleFunc("POST /dsh/operator/platform/providers/{providerId}/status", protected.handleUpdateProviderStatus)
+
+
 
 	// Cart, client address book, governed maps, and serviceability.
 	mux.HandleFunc("GET /dsh/client/cart", protected.handleGetCart)

@@ -150,7 +150,7 @@ func TestAssignCourierBeforeReadyRejectedDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	f := seedFixture(t, db, "preparing")
 
-	svc := NewService(db)
+	svc := NewService(db, nil)
 	_, err := svc.AssignCourier(context.Background(), f.orderID, f.courierID, "operator-1", "operator", "")
 	if !errors.Is(err, ErrNotReadyForAssignment) {
 		t.Fatalf("expected ErrNotReadyForAssignment, got %v", err)
@@ -170,7 +170,7 @@ func TestAssignCourierIneligibleCourierRejectedDBIntegration(t *testing.T) {
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_team_members WHERE id = $1`, staffID) })
 
-	svc := NewService(db)
+	svc := NewService(db, nil)
 	if _, err := svc.AssignCourier(ctx, f.orderID, staffID, "operator-1", "operator", ""); !errors.Is(err, ErrCourierIneligible) {
 		t.Fatalf("expected ErrCourierIneligible for wrong role, got %v", err)
 	}
@@ -196,7 +196,7 @@ func TestAssignCourierIneligibleCourierRejectedDBIntegration(t *testing.T) {
 func TestAssignCourierDoubleAssignRejectedDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	f := seedFixture(t, db, "ready_for_pickup")
-	svc := NewService(db)
+	svc := NewService(db, nil)
 
 	task, err := svc.AssignCourier(context.Background(), f.orderID, f.courierID, "operator-1", "operator", "")
 	if err != nil {
@@ -214,7 +214,7 @@ func TestAssignCourierDoubleAssignRejectedDBIntegration(t *testing.T) {
 func TestAssignCourierVersionConflictOnConcurrentUpdateDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	f := seedFixture(t, db, "ready_for_pickup")
-	svc := NewService(db)
+	svc := NewService(db, nil)
 	ctx := context.Background()
 
 	task, err := svc.AssignCourier(ctx, f.orderID, f.courierID, "operator-1", "operator", "")
@@ -234,7 +234,7 @@ func TestAssignCourierVersionConflictOnConcurrentUpdateDBIntegration(t *testing.
 func TestPartnerDeliveryDepartureRequiresPickupDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	f := seedFixture(t, db, "ready_for_pickup")
-	svc := NewService(db)
+	svc := NewService(db, nil)
 	ctx := context.Background()
 
 	task, err := svc.AssignCourier(ctx, f.orderID, f.courierID, "operator-1", "operator", "corr-departure")
@@ -252,7 +252,7 @@ func TestPartnerDeliveryDepartureRequiresPickupDBIntegration(t *testing.T) {
 func TestPartnerDeliveryCompletesTaskAndOrderAtomicallyDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	f := seedFixture(t, db, "ready_for_pickup")
-	svc := NewService(db)
+	svc := NewService(db, nil)
 	ctx := context.Background()
 
 	task, err := svc.AssignCourier(ctx, f.orderID, f.courierID, "operator-1", "operator", "corr-complete")

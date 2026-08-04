@@ -93,16 +93,16 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	// absent, so registering them bare answered 200 with an empty body instead
 	// of 401/403 and made the capability unusable.
 	mux.HandleFunc("GET /dsh/operator/platform/zones", s.withPermission("control-panel", DshServiceZonesPermissionRead, s.handleListPlatformZones))
-	mux.HandleFunc("POST /dsh/operator/platform/zones", s.withPermission("control-panel", DshServiceZonesPermissionManage, s.handleCreatePlatformZone))
-	mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", s.withPermission("control-panel", DshServiceZonesPermissionManage, s.handleUpdatePlatformZone))
 	mux.HandleFunc("GET /dsh/operator/platform/sla-rules", s.withPermission("control-panel", DshFulfillmentSlaPermissionRead, s.handleListPlatformSlaRules))
-	mux.HandleFunc("PUT /dsh/operator/platform/sla-rules", s.withPermission("control-panel", DshFulfillmentSlaPermissionManage, s.handleUpsertPlatformSlaRule))
 	mux.HandleFunc("GET /dsh/operator/platform/capacity", s.withPermission("control-panel", DshDispatchCapacityPermissionRead, s.handleGetPlatformCapacity))
-	mux.HandleFunc("PUT /dsh/operator/platform/capacity", s.withPermission("control-panel", DshDispatchCapacityPermissionManage, s.handleUpsertPlatformCapacity))
 	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", s.withPermission("control-panel", DshServiceZonesPermissionRead, s.handleGetPlatformZoneServiceability))
-	mux.HandleFunc("GET /dsh/operator/platform/store-onboarding-fee", s.withPermission("control-panel", "partners.read", s.handleGetStoreOnboardingFeePolicy))
-	mux.HandleFunc("PUT /dsh/operator/platform/store-onboarding-fee", s.withPermission("control-panel", "partners.manage", s.handleUpsertStoreOnboardingFeePolicy))
-	mux.HandleFunc("GET /dsh/platform/store-onboarding-fee", s.handleGetStoreOnboardingFeeReference)
+	
+	mux.HandleFunc("POST /dsh/operator/platform/change-sets", s.withPermission("control-panel", DshPlatformManagePermission, s.handleCreateDraftChangeSet))
+	mux.HandleFunc("POST /dsh/operator/platform/change-sets/{changeSetId}/submit", s.withPermission("control-panel", DshPlatformManagePermission, s.handleSubmitChangeSet))
+	mux.HandleFunc("POST /dsh/operator/platform/change-sets/{changeSetId}/approve", s.withPermission("control-panel", DshPlatformManagePermission, s.handleApproveChangeSet))
+	mux.HandleFunc("POST /dsh/operator/platform/change-sets/{changeSetId}/apply", s.withPermission("control-panel", DshPlatformManagePermission, s.handleApplyChangeSet))
+
+
 
 	// Operator taxonomy, products, attributes, relationships, proposals,
 	// policies, assortments, audit and rollback.

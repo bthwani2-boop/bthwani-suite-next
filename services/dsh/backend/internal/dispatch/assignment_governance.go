@@ -249,20 +249,17 @@ func ListCaptainDispatchCandidates(db *sql.DB, operatorContextID, serviceAreaCod
 		limit = 100
 	}
 	rows, err := db.Query(`
-		SELECT p.operator_context_id, p.captain_id, s.service_area_code,
+		SELECT p.operator_context_id, p.captain_id, $2,
 		       p.accreditation_status, p.availability_status,
 		       p.max_active_assignments,
 		       COUNT(a.id) FILTER (WHERE a.status='accepted' OR (a.status='offered' AND a.response_deadline_at>NOW()))::int,
 		       p.priority_score, p.version, p.updated_at
 		FROM dsh_captain_dispatch_profiles p
-		JOIN dsh_actor_service_area_scopes s
-		  ON s.actor_id=p.captain_id AND s.actor_role='captain' AND s.active=true
-		 AND s.service_area_code=$2
 		LEFT JOIN dsh_assignments a
 		  ON a.operator_context_id=p.operator_context_id AND a.captain_id=p.captain_id
 		 AND (a.status='accepted' OR (a.status='offered' AND a.response_deadline_at>NOW()))
 		WHERE p.operator_context_id=$1
-		GROUP BY p.operator_context_id,p.captain_id,s.service_area_code,p.accreditation_status,
+		GROUP BY p.operator_context_id,p.captain_id,p.accreditation_status,
 		         p.availability_status,p.max_active_assignments,p.priority_score,p.version,p.updated_at
 		ORDER BY
 		  CASE WHEN p.accreditation_status='approved' AND p.availability_status='available' THEN 0 ELSE 1 END,
@@ -291,16 +288,7 @@ func ListCaptainDispatchCandidates(db *sql.DB, operatorContextID, serviceAreaCod
 
 func getCaptainCandidate(db *sql.DB, operatorContextID, captainID, serviceAreaCode string) (*CaptainDispatchCandidate, error) {
 	if serviceAreaCode == "" {
-		err := db.QueryRow(`
-			SELECT service_area_code FROM dsh_actor_service_area_scopes
-			WHERE actor_id=$1 AND actor_role='captain' AND active=true
-			ORDER BY service_area_code LIMIT 1`, captainID).Scan(&serviceAreaCode)
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrCaptainNotEligible
-		}
-		if err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("%w: serviceAreaCode is required, cannot determine from local DB anymore", ErrInvalid)
 	}
 	items, err := ListCaptainDispatchCandidates(db, operatorContextID, serviceAreaCode, 200)
 	if err != nil {
@@ -344,18 +332,6 @@ func validateCaptainForAssignmentTx(tx *sql.Tx, operatorContextID, captainID, se
 	}
 	if accreditation != "approved" || availability != "available" {
 		return ErrCaptainNotEligible
-	}
-	var scoped int
-	err = tx.QueryRow(`
-		SELECT 1 FROM dsh_actor_service_area_scopes
-		WHERE actor_id=$1 AND actor_role='captain' AND active=true AND service_area_code=$2`,
-		captainID, serviceAreaCode,
-	).Scan(&scoped)
-	if errors.Is(err, sql.ErrNoRows) {
-		return ErrCaptainNotEligible
-	}
-	if err != nil {
-		return err
 	}
 	var active int
 	if err = tx.QueryRow(`

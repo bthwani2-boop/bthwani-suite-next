@@ -11,14 +11,16 @@ import (
 	"dsh-api/internal/operationaloutbox"
 	"dsh-api/internal/orders"
 	"dsh-api/internal/wltoutbox"
+	"dsh-api/internal/workforceclient"
 )
 
 type Service struct {
 	db *sql.DB
+	wf *workforceclient.Client
 }
 
-func NewService(db *sql.DB) *Service {
-	return &Service{db: db}
+func NewService(db *sql.DB, wf *workforceclient.Client) *Service {
+	return &Service{db: db, wf: wf}
 }
 
 func taskJSON(t *PartnerDeliveryTask) []byte {
@@ -85,17 +87,15 @@ func (s *Service) AssignCourier(ctx context.Context, orderID, storeCourierID, ac
 		return nil, fmt.Errorf("%w: order already has an active bthwani-captain assignment", ErrAlreadyAssigned)
 	}
 
-	var courierStoreID, courierRole, courierStatus string
-	err = tx.QueryRow(`SELECT store_id, role, status FROM dsh_store_team_members WHERE id = $1 FOR UPDATE`, storeCourierID).
-		Scan(&courierStoreID, &courierRole, &courierStatus)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: store courier not found", ErrCourierIneligible)
+	if s.wf == nil {
+		return nil, fmt.Errorf("J014: workforce client is required to verify courier")
 	}
+	readiness, err := s.wf.ActivationReadiness(ctx, storeCourierID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("verify courier readiness: %w", err)
 	}
-	if courierRole != "courier" || courierStatus != "active" || courierStoreID != storeID {
-		return nil, fmt.Errorf("%w: courier must be an active courier of the order's store", ErrCourierIneligible)
+	if !readiness.IsActive {
+		return nil, fmt.Errorf("%w: courier is not active in workforce", ErrCourierIneligible)
 	}
 
 	current, err := GetForUpdateByOrderID(tx, orderID)

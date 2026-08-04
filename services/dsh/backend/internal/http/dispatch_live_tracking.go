@@ -102,7 +102,7 @@ func routeEta(
 	destinationLatitude float64,
 	destinationLongitude float64,
 ) (*dispatchEtaProjection, error) {
-	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"))
+	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"), nil)
 	route, err := client.Route(ctx, authorization, mapproviders.RouteInput{
 		OriginLatitude:       originLatitude,
 		OriginLongitude:      originLongitude,

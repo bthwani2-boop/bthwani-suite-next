@@ -122,7 +122,7 @@ func (s *protectedStoreServer) handleAssignPartnerDelivery(w http.ResponseWriter
 		return
 	}
 	correlationID := partnerDeliveryCorrelationID(r, body.CorrelationID)
-	task, err := partnerdelivery.NewService(s.db).AssignCourierCommand(
+	task, err := partnerdelivery.NewService(s.db, s.workforce).AssignCourierCommand(
 		r.Context(), ownedOrder.ID, body.StoreCourierID, actor.ID, actor.Role, correlationID, body.CommandID,
 	)
 	if err != nil {
@@ -173,7 +173,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryTaskTransition(
 		return
 	}
 	updated, err := call(
-		partnerdelivery.NewService(s.db), task.ID, body.ExpectedVersion, actor.ID, actor.Role,
+		partnerdelivery.NewService(s.db, s.workforce), task.ID, body.ExpectedVersion, actor.ID, actor.Role,
 		partnerDeliveryCorrelationID(r, body.CorrelationID), body.CommandID,
 	)
 	if err != nil {
@@ -202,7 +202,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryProof(w http.ResponseWriter,
 		return
 	}
 	correlationID := partnerDeliveryCorrelationID(r, body.CorrelationID)
-	updated, err := partnerdelivery.NewService(s.db).SubmitProofCommand(
+	updated, err := partnerdelivery.NewService(s.db, s.workforce).SubmitProofCommand(
 		r.Context(), task.ID, body.ExpectedVersion, body.ProofMethod, body.ProofReference,
 		actor.ID, actor.Role, correlationID, body.CommandID,
 	)

@@ -10,7 +10,7 @@ func TestPartnerDeliveryCommandReplayDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	fixture := seedFixture(t, db, "ready_for_pickup")
 	ctx := context.Background()
-	svc := NewService(db)
+	svc := NewService(db, nil)
 	actorID := "partner-command-test"
 	commandID := "assign-command-1"
 	t.Cleanup(func() {
@@ -54,7 +54,7 @@ func TestPartnerDeliveryExceptionEvidenceDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	fixture := seedFixture(t, db, "ready_for_pickup")
 	ctx := context.Background()
-	svc := NewService(db)
+	svc := NewService(db, nil)
 	actorID := "operator-exception-test"
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM dsh_partner_delivery_command_receipts WHERE actor_id = $1`, actorID)

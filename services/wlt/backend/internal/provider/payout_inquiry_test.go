@@ -10,7 +10,7 @@ import (
 )
 
 func TestPayoutInquiryRequiresCanonicalIdentifiers(t *testing.T) {
-	client := NewClient(Config{Mode: ModeSandbox, BaseURL: "http://127.0.0.1"})
+	client := NewClient(Config{Mode: ModeSandbox, BaseURL: "http://127.0.0.1"}, nil)
 	_, err := client.InquirePayout(context.Background(), url.Values{"providerReference": {"provider-1"}})
 	if err == nil || !strings.Contains(err.Error(), "payoutRequestId") {
 		t.Fatalf("expected required identifiers error, got %v", err)
@@ -33,7 +33,7 @@ func TestPayoutInquiryUsesProviderReadAndPreservesReference(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(Config{Mode: ModeSandbox, BaseURL: server.URL})
+	client := NewClient(Config{Mode: ModeSandbox, BaseURL: server.URL}, nil)
 	inquiry, err := client.InquirePayout(context.Background(), url.Values{
 		"providerReference": {"provider-1"},
 		"payoutRequestId":  {"payout-1"},

@@ -25,7 +25,7 @@ func TestReverseNormalizesAndReturnsTrustedLocation(t *testing.T) {
 	}))
 	defer server.Close()
 
-	response, err := NewClient(server.URL).Reverse(context.Background(), "Bearer client", ReverseInput{
+	response, err := NewClient(server.URL, nil).Reverse(context.Background(), "Bearer client", ReverseInput{
 		Latitude: 15.35, Longitude: 44.20, Language: " ar ",
 	})
 	if err != nil {
@@ -37,7 +37,7 @@ func TestReverseNormalizesAndReturnsTrustedLocation(t *testing.T) {
 }
 
 func TestReverseRejectsInvalidCoordinatesBeforeProviderCall(t *testing.T) {
-	_, err := NewClient("http://unused.invalid").Reverse(context.Background(), "", ReverseInput{Latitude: 91, Longitude: 44})
+	_, err := NewClient("http://unused.invalid", nil).Reverse(context.Background(), "", ReverseInput{Latitude: 91, Longitude: 44})
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("Reverse() error = %v, want ErrInvalid", err)
 	}
@@ -51,7 +51,7 @@ func TestReverseRejectsUncertainProviderResult(t *testing.T) {
 	}))
 	defer server.Close()
 
-	_, err := NewClient(server.URL).Reverse(context.Background(), "Bearer client", ReverseInput{Latitude: 15.35, Longitude: 44.20})
+	_, err := NewClient(server.URL, nil).Reverse(context.Background(), "Bearer client", ReverseInput{Latitude: 15.35, Longitude: 44.20})
 	if !errors.Is(err, ErrUncertain) {
 		t.Fatalf("Reverse() error = %v, want ErrUncertain", err)
 	}

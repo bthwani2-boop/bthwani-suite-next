@@ -142,7 +142,7 @@ func (s *Service) dispatch(ctx context.Context, input ReportInput) ([]byte, erro
 		if input.TargetEntityType != TargetPartnerDeliveryTask {
 			return nil, fmt.Errorf("%w: raise_exception targets a partner_delivery_task", ErrInvalid)
 		}
-		task, err := partnerdelivery.NewService(s.db).RaiseExceptionCommand(
+		task, err := partnerdelivery.NewService(s.db, nil).RaiseExceptionCommand(
 			ctx, input.TargetEntityID, input.ExpectedVersion, input.Reason, input.EvidenceReferences,
 			input.ActorID, input.ActorRole, input.CorrelationID, input.CommandID,
 		)

@@ -24,7 +24,7 @@ func RegisterWorkforceScopesRoutes(mux *http.ServeMux) {
 
 func (s *workforceScopesServer) handleGetOperatorWorkforceScopes(w http.ResponseWriter, r *http.Request) {
 	actorID := r.PathValue("actorId")
-	role := r.URL.Query().Get("role")
+	role := r.URL.Query().Get("actorRole")
 	operatorContextID := r.URL.Query().Get("operatorContextId")
 
 	scopes, err := s.workforce.GetActorScopes(r.Context(), actorID, operatorContextID, role)

@@ -49,7 +49,7 @@ func main() {
 	log.Println("[wlt-api] database connected successfully")
 
 	mutationsEnabled := os.Getenv("WLT_MUTATIONS_ENABLED") == "true"
-	router := wltHttp.NewRouter(db, mutationsEnabled)
+	router := wltHttp.NewRouter(db, mutationsEnabled, nil)
 	wltHttp.RegisterDeliveryCollectionRoutes(router, db, mutationsEnabled)
 	wltHttp.RegisterOrderCancellationRoutes(router, db, mutationsEnabled)
 	wltHttp.RegisterFieldCategoryCommissionRoutes(router, db, mutationsEnabled)

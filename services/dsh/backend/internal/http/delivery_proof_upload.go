@@ -123,7 +123,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryProofWithMedia(w http.Respon
 		return
 	}
 
-	updated, err := partnerdelivery.NewService(s.db).SubmitProofCommand(
+	updated, err := partnerdelivery.NewService(s.db, s.workforce).SubmitProofCommand(
 		r.Context(), task.ID, task.Version, "photo", mediaRef,
 		actor.ID, actor.Role, correlationID, commandID,
 	)
