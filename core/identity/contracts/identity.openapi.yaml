@@ -24,6 +24,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeStatus"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
         "429":
           $ref: "#/components/responses/RateLimited"
   /identity/readiness:
@@ -521,6 +523,48 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "404":
           $ref: "#/components/responses/NotFound"
+  /internal/actors/{actorId}/sessions:
+    get:
+      operationId: internalListSessions
+      tags: [ internal ]
+      summary: List all active sessions for the actor.
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+      responses:
+        "200":
+          description: List of active sessions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SessionInfo"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /internal/actors/{actorId}/sessions/{sessionId}:
+    delete:
+      operationId: internalRevokeSession
+      tags: [ internal ]
+      summary: Revoke a specific session for the actor.
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "204":
+          description: Session revoked successfully.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          description: Session not found.
   /internal/actors/{actorId}/activations/revoke:
     post:
       operationId: revokeActorActivations
@@ -538,6 +582,37 @@ paths:
           description: Pending activation codes revoked.
         "401":
           $ref: "#/components/responses/Unauthenticated"
+  /internal/actors/{actorId}/activations/reissue:
+    post:
+      operationId: reissueActorActivation
+      tags: [ internal ]
+      description: |
+        Service-to-service only. Revokes any existing pending activation codes and issues a new one.
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/ServiceCaller"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueActivationForActorRequest"
+      responses:
+        "201":
+          description: Activation code reissued successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueActivationResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /internal/partner/permission-bundles:
     get:
       tags:

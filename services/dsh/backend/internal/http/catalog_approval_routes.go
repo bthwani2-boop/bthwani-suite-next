@@ -15,7 +15,6 @@ func registerCatalogApprovalRoutes(mux *http.ServeMux, s *protectedStoreServer) 
 	mux.HandleFunc("POST /dsh/operator/reels/{reelId}/review", s.handleReviewReelSafe)
 	mux.HandleFunc("GET /dsh/operator/reels/{reelId}/media/{kind}", s.handlePreviewOperatorReelMedia)
 	mux.HandleFunc("PUT /dsh/operator/catalog/product-proposals/{proposalId}/images/{role}", s.handlePutProductProposalImageSafe)
-	mux.HandleFunc("PUT /dsh/operator/catalog/stores/{storeId}/images/{role}", s.handlePutStoreImageSafe)
 	mux.HandleFunc("GET /dsh/catalog-approvals/{recordId}", s.withPermission("control-panel", CatalogApprovalPermissionRead, s.handleGetCatalogApproval))
 	mux.HandleFunc("POST /dsh/catalog-approvals/{recordId}/transition", s.withPermission("control-panel", CatalogApprovalPermissionManage, s.handleTransitionCatalogApproval))
 }

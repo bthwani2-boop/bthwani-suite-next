@@ -31,7 +31,7 @@ export function EmployeeCreateView(props: {
     : (runtimeValue?.reasonCodes ?? ["IDENTITY_READINESS_UNPROVEN"]).join("، ");
   const [fullNameAr, setFullNameAr] = useState("");
   const [fullNameEn, setFullNameEn] = useState("");
-  const [phone, setPhone] = useState("");
+  const [actorId, setActorId] = useState("");
   const [department, setDepartment] = useState("");
   const [role, setRole] = useState("");
   const [officeLocation, setOfficeLocation] = useState("");
@@ -42,7 +42,7 @@ export function EmployeeCreateView(props: {
   const canSubmit =
     identityReady &&
     fullNameAr.trim().length > 0 &&
-    phone.trim().length >= 9 &&
+    actorId.trim().length > 0 &&
     department.trim().length > 0 &&
     role.trim().length > 0 &&
     controller.state.kind !== "submitting" &&
@@ -52,7 +52,7 @@ export function EmployeeCreateView(props: {
     controller.reset();
     setFullNameAr("");
     setFullNameEn("");
-    setPhone("");
+    setActorId("");
     setDepartment("");
     setRole("");
     setOfficeLocation("");
@@ -63,7 +63,7 @@ export function EmployeeCreateView(props: {
   const body = (
     <div style={{ maxWidth: "800px", margin: "0 auto", width: "100%", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       <CpMutedInline>
-        ينشئ Workforce الرقم الوظيفي تلقائيًا، بينما تحتفظ Identity برقم الهاتف والدور والجلسات.
+        ينشئ Workforce الرقم الوظيفي تلقائيًا، بينما تحتفظ Identity بالهوية والدور والجلسات. يجب إنشاء الهوية مسبقاً في قسم الإدارة.
       </CpMutedInline>
 
       {!identityReady ? (
@@ -91,8 +91,8 @@ export function EmployeeCreateView(props: {
         </div>
 
         <div>
-          <Text role="bodySm" style={{ marginBottom: "6px", display: "block", fontWeight: "600", color: "var(--bthwani-control-panel-text-muted)" }}>رقم الهاتف *</Text>
-          <CpTextInput value={phone} onChange={setPhone} placeholder="مثال: 777123456" disabled={Boolean(created)} aria-label="رقم الهاتف" />
+          <Text role="bodySm" style={{ marginBottom: "6px", display: "block", fontWeight: "600", color: "var(--bthwani-control-panel-text-muted)" }}>Identity Actor ID *</Text>
+          <CpTextInput value={actorId} onChange={setActorId} placeholder="مثال: actor-123" disabled={Boolean(created)} aria-label="Actor ID" />
         </div>
       </div>
 
@@ -149,7 +149,7 @@ export function EmployeeCreateView(props: {
                 void controller.submit({
                   fullNameAr: fullNameAr.trim(),
                   fullNameEn: fullNameEn.trim() || undefined,
-                  phoneE164: phone.trim(),
+                  actorId: actorId.trim(),
                   engagementType: "employee",
                   engagementStartDate: engagementStartDate.trim() || undefined,
                   department: department.trim(),

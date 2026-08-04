@@ -245,7 +245,7 @@ func TestRuntimeReadinessRecoversWithoutRestartOrStaleCache(t *testing.T) {
 	}
 }
 
-func TestRuntimeHealthReportsDegradedAfterReadinessFailureWithoutLeakingSecrets(t *testing.T) {
+func TestRuntimeHealthReportsNotReadyAfterReadinessFailureWithoutLeakingSecrets(t *testing.T) {
 	resetRuntimeProbeState()
 	configureIdentityRuntime(t)
 	secret := strings.Repeat("sensitive-value-", 3)
@@ -257,8 +257,8 @@ func TestRuntimeHealthReportsDegradedAfterReadinessFailureWithoutLeakingSecrets(
 	assertNotReady(t, readiness)
 	health := serveRuntimeProbe(store, "/identity/health")
 
-	if health.Code != http.StatusOK || !strings.Contains(health.Body.String(), `"status":"DEGRADED"`) {
-		t.Fatalf("unexpected degraded health response status=%d body=%s", health.Code, health.Body.String())
+	if health.Code != http.StatusServiceUnavailable || !strings.Contains(health.Body.String(), `"status":"NOT_READY"`) {
+		t.Fatalf("unexpected health response after failure status=%d body=%s", health.Code, health.Body.String())
 	}
 	if strings.Contains(health.Body.String(), secret) || strings.Contains(readiness.Body.String(), "database details") {
 		t.Fatalf("probe response leaked sensitive/internal details: health=%s readiness=%s", health.Body.String(), readiness.Body.String())

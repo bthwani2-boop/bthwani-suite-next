@@ -87,7 +87,7 @@ export type WorkforceMe = FieldAgent & {
 export type CreateFieldAgentInput = {
   readonly fullNameAr: string;
   readonly fullNameEn?: string | undefined;
-  readonly phoneE164: string;
+  readonly actorId: string;
   readonly engagementType?: EngagementType | undefined;
   readonly engagementStartDate?: string | undefined;
   readonly serviceZoneId: string;
@@ -110,7 +110,7 @@ export type UpdateFieldAgentInput = {
 export type CreateCaptainInput = {
   readonly fullNameAr: string;
   readonly fullNameEn?: string | undefined;
-  readonly phoneE164: string;
+  readonly actorId: string;
   readonly engagementType?: EngagementType | undefined;
   readonly engagementStartDate?: string | undefined;
   readonly photoMediaRef?: string | undefined;
@@ -143,7 +143,7 @@ export type UpdateCaptainInput = {
 export type CreateEmployeeInput = {
   readonly fullNameAr: string;
   readonly fullNameEn?: string | undefined;
-  readonly phoneE164: string;
+  readonly actorId: string;
   readonly engagementType?: "employee" | undefined;
   readonly engagementStartDate?: string | undefined;
   readonly photoMediaRef?: string | undefined;

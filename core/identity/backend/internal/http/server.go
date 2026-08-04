@@ -37,7 +37,10 @@ func NewRouter(repository *identity.Repository) http.Handler {
 	mux.HandleFunc("POST /internal/actors/{actorId}/deactivate", s.serviceOnly(s.internalActorDeactivate))
 	mux.HandleFunc("POST /internal/actors/{actorId}/reactivate", s.serviceOnly(s.internalActorReactivate))
 	mux.HandleFunc("POST /internal/actors/{actorId}/activations", s.serviceOnly(s.internalActorIssueActivation))
+	mux.HandleFunc("POST /internal/actors/{actorId}/activations/reissue", s.serviceOnly(s.internalActorIssueActivation))
 	mux.HandleFunc("GET /internal/actors/{actorId}/activations/latest", s.serviceOnly(s.internalActorLatestActivation))
+	mux.HandleFunc("GET /internal/actors/{actorId}/sessions", s.serviceOnly(s.internalActorListSessions))
+	mux.HandleFunc("DELETE /internal/actors/{actorId}/sessions/{sessionId}", s.serviceOnly(s.internalActorRevokeSession))
 	mux.HandleFunc("POST /internal/actors/{actorId}/activations/revoke", s.serviceOnly(s.internalActorRevokeActivations))
 
 	return mux
@@ -285,7 +288,7 @@ func (s *server) internalActorDeactivate(w http.ResponseWriter, r *http.Request)
 		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "requestedByActorId, reason, and correlationId are required")
 		return
 	}
-	if err := s.repository.DeactivateActor(r.Context(), r.PathValue("actorId"), request.RequestedByActorID, request.Reason, request.CorrelationID); err != nil {
+	if err := s.repository.SuspendActor(r.Context(), r.PathValue("actorId"), request.RequestedByActorID, request.Reason, request.CorrelationID); err != nil {
 		writeInternalActorError(w, err)
 		return
 	}
@@ -361,6 +364,42 @@ func (s *server) internalActorLatestActivation(w http.ResponseWriter, r *http.Re
 
 func (s *server) internalActorRevokeActivations(w http.ResponseWriter, r *http.Request) {
 	if err := s.repository.RevokeActivationChallenges(r.Context(), r.PathValue("actorId")); err != nil {
+		writeInternalActorError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *server) internalActorListSessions(w http.ResponseWriter, r *http.Request) {
+	actorID := r.PathValue("actorId")
+	if actorID == "" {
+		sendError(w, http.StatusBadRequest, "INVALID_INPUT", "actorId is required")
+		return
+	}
+	sessions, err := s.repository.ListSessions(r.Context(), actorID)
+	if err != nil {
+		writeInternalActorError(w, err)
+		return
+	}
+	if sessions == nil {
+		sessions = []identity.SessionInfo{}
+	}
+	sendJSON(w, http.StatusOK, sessions)
+}
+
+func (s *server) internalActorRevokeSession(w http.ResponseWriter, r *http.Request) {
+	actorID := r.PathValue("actorId")
+	sessionID := r.PathValue("sessionId")
+	if actorID == "" || sessionID == "" {
+		sendError(w, http.StatusBadRequest, "INVALID_INPUT", "actorId and sessionId are required")
+		return
+	}
+	err := s.repository.RevokeSession(r.Context(), actorID, sessionID)
+	if err != nil {
+		if err.Error() == "session not found" {
+			sendError(w, http.StatusNotFound, "NOT_FOUND", "session not found")
+			return
+		}
 		writeInternalActorError(w, err)
 		return
 	}

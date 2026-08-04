@@ -123,6 +123,7 @@ func TestRuntimeReadinessBoundaryHandlesHealthAndGatesOperationalRequests(t *tes
 	lastReadinessFailed.Store(true)
 	readinessSnapshot.Lock()
 	readinessSnapshot.value = runtimeStatusResponse{
+		Status:      "NOT_READY",
 		Service:     "core-identity",
 		Checks:      []runtimeCheckStatus{},
 		ReasonCodes: []string{reasonReadinessUnproven},
@@ -137,8 +138,8 @@ func TestRuntimeReadinessBoundaryHandlesHealthAndGatesOperationalRequests(t *tes
 
 	healthBeforeReadiness := httptest.NewRecorder()
 	handler.ServeHTTP(healthBeforeReadiness, httptest.NewRequest(http.MethodGet, "/identity/health", nil))
-	if healthBeforeReadiness.Code != http.StatusOK || !strings.Contains(healthBeforeReadiness.Body.String(), `"status":"DEGRADED"`) || !strings.Contains(healthBeforeReadiness.Body.String(), reasonReadinessUnproven) {
-		t.Fatalf("health claimed success before readiness status=%d body=%s", healthBeforeReadiness.Code, healthBeforeReadiness.Body.String())
+	if healthBeforeReadiness.Code != http.StatusServiceUnavailable || !strings.Contains(healthBeforeReadiness.Body.String(), `"status":"NOT_READY"`) || !strings.Contains(healthBeforeReadiness.Body.String(), reasonReadinessUnproven) {
+		t.Fatalf("health did not correctly reflect NOT_READY before readiness status=%d body=%s", healthBeforeReadiness.Code, healthBeforeReadiness.Body.String())
 	}
 
 	readiness := httptest.NewRecorder()

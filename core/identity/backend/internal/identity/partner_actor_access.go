@@ -179,8 +179,8 @@ func (r *Repository) ProvisionPartnerActor(ctx context.Context, input PartnerAct
 	}
 	if _, err = tx.ExecContext(ctx, `
 		INSERT INTO identity_actors
-			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, active, updated_at)
-		VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, false, now())`,
+			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
+		VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, 'PROVISIONED', 1, now())`,
 		actorID, username, operatorContextID, phone, pq.Array([]string{"partner"}), string(permissionsJSON)); err != nil {
 		return ActorAdminView{}, mapUniqueViolation(err)
 	}
@@ -192,8 +192,8 @@ func (r *Repository) ProvisionPartnerActor(ctx context.Context, input PartnerAct
 		Username:  username,
 		PhoneE164: phone,
 		Roles:     []string{"partner"},
-		Active:    false,
 		Status:    ActorStatusProvisioned,
+		Version:   1,
 	}, nil
 }
 
@@ -240,11 +240,11 @@ func (r *Repository) SetPartnerStoreAccess(ctx context.Context, actorID string, 
 	}
 
 	effectivePermissions := replacePartnerStorePermissions(actor.Permissions, replacements, storeID)
-	active := actor.Active
+	status := actor.Status
 	if input.Reactivate {
-		active = true
+		status = ActorStatusActive
 	} else if !input.Enabled && !hasAnyPartnerStorePermission(effectivePermissions) && hasOnlyPartnerRole(actor.Roles) {
-		active = false
+		status = ActorStatusSuspended
 	}
 	permissionsJSON, err := json.Marshal(effectivePermissions)
 	if err != nil {
@@ -253,9 +253,10 @@ func (r *Repository) SetPartnerStoreAccess(ctx context.Context, actorID string, 
 	if _, err = tx.ExecContext(ctx, `
 		UPDATE identity_actors
 		SET permissions = $2::jsonb,
-		    active = $3,
+		    status = $3,
+		    version = version + 1,
 		    updated_at = now()
-		WHERE id = $1`, actorID, string(permissionsJSON), active); err != nil {
+		WHERE id = $1`, actorID, string(permissionsJSON), status); err != nil {
 		return ActorAdminView{}, err
 	}
 	if err := revokeActorSessionsTx(ctx, tx, actorID); err != nil {
@@ -270,7 +271,7 @@ func (r *Repository) SetPartnerStoreAccess(ctx context.Context, actorID string, 
 		}
 	}
 	actor.Permissions = effectivePermissions
-	actor.Active = active
+	actor.Status = status
 	view := toAdminView(actor)
 	if err := tx.Commit(); err != nil {
 		return ActorAdminView{}, err

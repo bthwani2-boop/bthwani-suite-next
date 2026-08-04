@@ -84,6 +84,7 @@ func TestIdentityInternalActorOperationsRemainServiceProtected(t *testing.T) {
 		"/internal/actors/{actorId}/activations",
 		"/internal/actors/{actorId}/activations/latest",
 		"/internal/actors/{actorId}/activations/revoke",
+		"/internal/actors/{actorId}/activations/reissue",
 		"/internal/partner/permission-bundles",
 	} {
 		block := identityOperationBlock(t, contract, path)

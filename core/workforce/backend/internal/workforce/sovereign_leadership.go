@@ -41,7 +41,7 @@ type SovereignLeadershipRecord struct {
 type CreateSovereignLeaderInput struct {
 	FullNameAr           string   `json:"fullNameAr"`
 	FullNameEn           string   `json:"fullNameEn"`
-	PhoneE164            string   `json:"phoneE164"`
+	ActorID              string   `json:"actorId"`
 	Department           string   `json:"department"`
 	PositionTitle        string   `json:"positionTitle"`
 	JobGrade             string   `json:"jobGrade"`
@@ -330,18 +330,20 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 	if err != nil {
 		return SovereignLeadershipCreationResult{}, false, err
 	}
-	actor, err := s.identity.ProvisionEmployee(ctx, identityclient.EmployeeProvisionInput{
-		Username: workforceCode, PhoneE164: input.PhoneE164,
-		PermissionBundle: input.PermissionBundle, DepartmentScope: department,
-	})
+	// Identity roles must be handled by Administration. Assuming actor is pre-provisioned.
+	if input.ActorID == "" {
+		return SovereignLeadershipCreationResult{}, false, ErrInvalidInput
+	}
+	actorID := input.ActorID
+
 	if err != nil {
 		return SovereignLeadershipCreationResult{}, false, err
 	}
 
-	person, personErr := s.repo.PersonByActorID(ctx, actor.ActorID)
+	person, personErr := s.repo.PersonByActorID(ctx, actorID)
 	if errors.Is(personErr, ErrNotFound) {
-		person, personErr = s.repo.CreateEmployee(ctx, actor.ActorID, workforceCode, CreateEmployeeInput{
-			FullNameAr: input.FullNameAr, FullNameEn: input.FullNameEn, PhoneE164: input.PhoneE164,
+		person, personErr = s.repo.CreateEmployee(ctx, input.ActorID, workforceCode, CreateEmployeeInput{
+			FullNameAr: input.FullNameAr, FullNameEn: input.FullNameEn, ActorID: input.ActorID,
 			EngagementType: "employee", EngagementStartDate: input.EngagementStartDate,
 			Department: department, Role: input.PositionTitle, OfficeLocation: input.OfficeLocation,
 			SupervisorActorID: input.SupervisorActorID,
@@ -350,18 +352,18 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 		return SovereignLeadershipCreationResult{}, false, identityclient.ErrPhoneAlreadyBound
 	}
 	if personErr != nil {
-		_ = s.identity.Deactivate(ctx, actor.ActorID, operator.ActorID, "creation_failed_rollback", correlationID)
+		// _ = s.identity.Deactivate(ctx, actorID, operator.ActorID, "creation_failed_rollback", correlationID)
 		return SovereignLeadershipCreationResult{}, false, personErr
 	}
 
 	governanceVersion := 0
-	if existing, err := s.repo.EmployeeGovernanceByActorID(ctx, actor.ActorID); err == nil {
+	if existing, err := s.repo.EmployeeGovernanceByActorID(ctx, actorID); err == nil {
 		governanceVersion = existing.Version
 	} else if !errors.Is(err, ErrNotFound) {
-		_ = s.identity.Deactivate(ctx, actor.ActorID, operator.ActorID, "creation_failed_rollback", correlationID)
+		// _ = s.identity.Deactivate(ctx, actorID, operator.ActorID, "creation_failed_rollback", correlationID)
 		return SovereignLeadershipCreationResult{}, false, err
 	}
-	governance, err := s.repo.UpsertEmployeeGovernance(ctx, actor.ActorID, operator.ActorID, UpsertEmployeeGovernanceInput{
+	governance, err := s.repo.UpsertEmployeeGovernance(ctx, actorID, operator.ActorID, UpsertEmployeeGovernanceInput{
 		ExpectedVersion: governanceVersion, PositionTitle: input.PositionTitle, JobGrade: input.JobGrade,
 		EmploymentClass: input.EmploymentClass, GuaranteeType: input.GuaranteeType,
 		GuaranteeStatus: input.GuaranteeStatus, GuaranteeReference: input.GuaranteeReference,
@@ -369,20 +371,19 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 		ManagedDepartmentCodes: []string{department}, Notes: input.Notes,
 	})
 	if err != nil {
-		_ = s.identity.Deactivate(ctx, actor.ActorID, operator.ActorID, "creation_failed_rollback", correlationID)
+		// _ = s.identity.Deactivate(ctx, actorID, operator.ActorID, "creation_failed_rollback", correlationID)
 		return SovereignLeadershipCreationResult{}, false, err
 	}
 	assignmentVersion := 0
-	if existing, err := s.repo.SovereignAssignmentByActorID(ctx, actor.ActorID); err == nil {
+	if existing, err := s.repo.SovereignAssignmentByActorID(ctx, actorID); err == nil {
 		assignmentVersion = existing.Version
 	}
-	assignment, err := s.repo.UpsertSovereignAssignment(ctx, actor.ActorID, operator.ActorID, assignmentVersion,
+	assignment, err := s.repo.UpsertSovereignAssignment(ctx, actorID, operator.ActorID, assignmentVersion,
 		input.PermissionBundle, department, input.AssignmentStartsOn, input.AssignmentEndsOn)
 	if err != nil {
-		_ = s.identity.Deactivate(ctx, actor.ActorID, operator.ActorID, "creation_failed_rollback", correlationID)
 		return SovereignLeadershipCreationResult{}, false, err
 	}
-	activation, err := s.identity.IssueActivation(ctx, actor.ActorID, operator.ActorID, "employee", "webapp", idempotencyKey+":activation", correlationID)
+	activation, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, "employee", "webapp", idempotencyKey+":activation", correlationID)
 	if err != nil {
 		return SovereignLeadershipCreationResult{}, false, err
 	}
@@ -390,7 +391,7 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 		Leadership: SovereignLeadershipRecord{Employee: person, Governance: governance, Assignment: assignment},
 		Activation: activation,
 	}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actor.ActorID,
+	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
 		"sovereign_leadership.created", nil, result.Leadership, input.Notes, correlationID); err != nil {
 		log.Printf("[workforce] RecordAudit error in CreateSovereignLeader: %v", err)
 	}
@@ -426,26 +427,24 @@ func (s *Service) CreateDepartmentEmployee(ctx context.Context, operator Operato
 	if err != nil {
 		return DepartmentEmployeeCreationResult{}, false, err
 	}
-	actor, err := s.identity.ProvisionEmployee(ctx, identityclient.EmployeeProvisionInput{
-		Username: workforceCode, PhoneE164: input.PhoneE164, DepartmentScope: department,
-	})
-	if err != nil {
-		return DepartmentEmployeeCreationResult{}, false, err
+	if input.ActorID == "" {
+		return DepartmentEmployeeCreationResult{}, false, ErrInvalidInput
 	}
-	person, personErr := s.repo.PersonByActorID(ctx, actor.ActorID)
+	actorID := input.ActorID
+	person, personErr := s.repo.PersonByActorID(ctx, actorID)
 	if errors.Is(personErr, ErrNotFound) {
-		person, personErr = s.repo.CreateEmployee(ctx, actor.ActorID, workforceCode, input)
+		person, personErr = s.repo.CreateEmployee(ctx, actorID, workforceCode, input)
 	}
 	if personErr != nil {
-		_ = s.identity.Deactivate(ctx, actor.ActorID, operator.ActorID, "creation_failed_rollback", correlationID)
+		// _ = s.identity.Deactivate(ctx, actorID, operator.ActorID, "creation_failed_rollback", correlationID)
 		return DepartmentEmployeeCreationResult{}, false, personErr
 	}
-	activation, err := s.identity.IssueActivation(ctx, actor.ActorID, operator.ActorID, "employee", "webapp", idempotencyKey+":activation", correlationID)
+	activation, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, "employee", "webapp", idempotencyKey+":activation", correlationID)
 	if err != nil {
 		return DepartmentEmployeeCreationResult{}, false, err
 	}
 	result := DepartmentEmployeeCreationResult{Employee: person, Activation: activation}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actor.ActorID,
+	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
 		"department_employee.created", nil, person, "", correlationID); err != nil {
 		log.Printf("[workforce] RecordAudit error in CreateDepartmentEmployee: %v", err)
 	}

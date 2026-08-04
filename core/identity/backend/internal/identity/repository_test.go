@@ -152,7 +152,7 @@ func TestConsumeActivationRejectsRetiredCodeWithoutChallenge(t *testing.T) {
 			Permissions: []Permission{
 				{Service: "dsh", Surface: "app-field", Action: "store:read", Scope: "assigned"},
 			},
-			Active: false,
+			Status: ActorStatusProvisioned, Version: 1,
 		},
 	})
 
@@ -176,7 +176,7 @@ func TestActorIdentityDerivesSurfaceAndServiceAccess(t *testing.T) {
 		Permissions: []Permission{
 			{Service: "dsh", Surface: "app-partner", Action: "store:write", Scope: "own"},
 		},
-	}, "session-1", expiresAt)
+	}, "session-1", "app-partner", expiresAt)
 
 	if !resolved.SurfaceAccess["app-partner"] || !resolved.ServiceAccess["dsh"] {
 		t.Fatalf("derived access is incomplete: %#v", resolved)
@@ -225,9 +225,10 @@ func TestResolveAccessTokenAcceptsRealSessionToken(t *testing.T) {
 				Permissions: []Permission{
 					{Service: "dsh", Surface: "control-panel", Action: "store:read", Scope: "all"},
 				},
-				Active: true,
+				Status: ActorStatusActive, Version: 1,
 			},
 			sessionID: "session-real-1",
+			surface:   "control-panel",
 			expiresAt: expiresAt,
 		},
 	})
@@ -250,6 +251,7 @@ type fakeSessionRow struct {
 	hash      string
 	actor     Actor
 	sessionID string
+	surface   string
 	expiresAt time.Time
 }
 
@@ -350,7 +352,8 @@ func (s *fakeStmt) Query(args []driver.Value) (driver.Rows, error) {
 				actor.PhoneE164,
 				"{" + strings.Join(actor.Roles, ",") + "}",
 				permissions,
-				actor.Active,
+				actor.Status,
+				actor.Version,
 			},
 		}, nil
 	}
@@ -377,8 +380,10 @@ func (s *fakeStmt) Query(args []driver.Value) (driver.Rows, error) {
 					row.actor.PhoneE164,
 					"{" + strings.Join(row.actor.Roles, ",") + "}",
 					permissions,
-					row.actor.Active,
+					row.actor.Status,
+					row.actor.Version,
 					row.sessionID,
+					row.surface,
 					row.expiresAt,
 				},
 			}, nil
@@ -389,11 +394,11 @@ func (s *fakeStmt) Query(args []driver.Value) (driver.Rows, error) {
 }
 
 func actorPhoneColumns() []string {
-	return []string{"id", "username", "operator_context_id", "phone_e164", "roles", "permissions", "active"}
+	return []string{"id", "username", "operator_context_id", "phone_e164", "roles", "permissions", "status", "version"}
 }
 
 func sessionColumns() []string {
-	return []string{"id", "username", "password_hash", "operator_context_id", "phone_e164", "roles", "permissions", "active", "session_id", "expires_at"}
+	return []string{"id", "username", "password_hash", "operator_context_id", "phone_e164", "roles", "permissions", "status", "version", "session_id", "surface", "expires_at"}
 }
 
 type fakeResult int64

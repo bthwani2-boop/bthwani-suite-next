@@ -317,8 +317,8 @@ func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvis
 	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO identity_actors
-			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, active, updated_at)
-		VALUES ($1,$2,'',$3,$4,$5,$6::jsonb,false,now())`,
+			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
+		VALUES ($1,$2,'',$3,$4,$5,$6::jsonb,'PROVISIONED',1,now())`,
 		actorID, username, operatorContextID, phone, pq.Array(roles), string(permissionsJSON))
 	if err != nil {
 		return ActorAdminView{}, mapUniqueViolation(err)
@@ -326,7 +326,7 @@ func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvis
 	if err := tx.Commit(); err != nil {
 		return ActorAdminView{}, err
 	}
-	return ActorAdminView{ActorID: actorID, Username: username, PhoneE164: phone, Roles: roles, Active: false, Status: ActorStatusProvisioned}, nil
+	return ActorAdminView{ActorID: actorID, Username: username, PhoneE164: phone, Roles: roles, Status: ActorStatusProvisioned, Version: 1}, nil
 }
 
 // BootstrapSovereignLeadershipAccess upgrades only the explicit local operator

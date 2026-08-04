@@ -32,7 +32,7 @@ func TestProvisionActorRejectsExistingPhoneFromDifferentOperatorContext(t *testi
 			Permissions: []Permission{
 				{Service: "dsh", Surface: "app-field", Action: "store:read", Scope: "assigned"},
 			},
-			Active: false,
+			Status: ActorStatusProvisioned, Version: 1,
 		},
 	})
 
@@ -63,7 +63,7 @@ func TestProvisionActorRejectsMismatchedIdempotentFingerprint(t *testing.T) {
 	fakeDriverInst.setActors(t.Name(), map[string]Actor{
 		phone: {
 			ID: "field-one", Username: "field-one", OperatorContextID: "OperatorContext-main",
-			PhoneE164: phone, Roles: []string{"field"}, Active: false,
+			PhoneE164: phone, Roles: []string{"field"}, Status: ActorStatusProvisioned, Version: 1,
 		},
 	})
 

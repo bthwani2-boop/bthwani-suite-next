@@ -49,7 +49,6 @@ func TestUnifiedCatalogRoutesAreRegistered(t *testing.T) {
 		{http.MethodPut, "/dsh/operator/catalog/nodes/node-1/images/icon", "PUT /dsh/operator/catalog/nodes/{nodeId}/images/{role}"},
 		{http.MethodPut, "/dsh/operator/catalog/master-products/product-1/images/canonical", "PUT /dsh/operator/catalog/master-products/{productId}/images/{role}"},
 		{http.MethodPut, "/dsh/operator/catalog/product-proposals/proposal-1/images/proposal", "PUT /dsh/operator/catalog/product-proposals/{proposalId}/images/{role}"},
-		{http.MethodPut, "/dsh/operator/catalog/stores/store-1/images/logo", "PUT /dsh/operator/catalog/stores/{storeId}/images/{role}"},
 		{http.MethodGet, "/dsh/partner/catalog/taxonomy", "GET /dsh/partner/catalog/taxonomy"},
 		{http.MethodGet, "/dsh/partner/catalog/master-products", "GET /dsh/partner/catalog/master-products"},
 		{http.MethodPost, "/dsh/partner/catalog/product-proposals", "POST /dsh/partner/catalog/product-proposals"},

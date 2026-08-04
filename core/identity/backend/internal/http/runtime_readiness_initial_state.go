@@ -8,9 +8,12 @@ func init() {
 	lastReadinessFailed.Store(true)
 	readinessSnapshot.Lock()
 	readinessSnapshot.value = runtimeStatusResponse{
+		Status:  "NOT_READY",
 		Service: "core-identity",
 		Checks: []runtimeCheckStatus{},
 		ReasonCodes: []string{reasonReadinessUnproven},
+		Code: "IDENTITY_NOT_READY",
+		Message: "identity runtime is not ready",
 	}
 	readinessSnapshot.Unlock()
 }

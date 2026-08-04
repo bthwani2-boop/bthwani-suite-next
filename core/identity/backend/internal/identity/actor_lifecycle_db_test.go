@@ -17,16 +17,17 @@ type lifecycleTestActor struct {
 	operatorContextID string
 	role              string
 	passwordHash      string
-	active            bool
+	status            ActorLifecycleStatus
+	version           int
 }
 
 func insertLifecycleTestActor(t *testing.T, db *sql.DB, actor lifecycleTestActor) {
 	t.Helper()
 	_, err := db.Exec(`
 		INSERT INTO identity_actors
-			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, active)
-		VALUES ($1, $2, $3, $4, $5, ARRAY[$6]::text[], '[]'::jsonb, $7)`,
-		actor.id, actor.username, actor.passwordHash, actor.operatorContextID, actor.phone, actor.role, actor.active)
+			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version)
+		VALUES ($1, $2, $3, $4, $5, ARRAY[$6]::text[], '[]'::jsonb, $7, $8)`,
+		actor.id, actor.username, actor.passwordHash, actor.operatorContextID, actor.phone, actor.role, actor.status, actor.version)
 	if err != nil {
 		t.Fatalf("insert lifecycle test actor %s: %v", actor.id, err)
 	}
@@ -61,27 +62,27 @@ func TestActorLifecycleRevokesAuthenticationAndPreservesAuditDBIntegration(t *te
 
 	insertLifecycleTestActor(t, db, lifecycleTestActor{
 		id: targetID, username: "j003.field", phone: "+967700009301",
-		operatorContextID: operatorContextID, role: "field", passwordHash: "activated-password-hash", active: true,
+		operatorContextID: operatorContextID, role: "field", passwordHash: "activated-password-hash", status: ActorStatusActive, version: 1,
 	})
 	insertLifecycleTestActor(t, db, lifecycleTestActor{
 		id: requesterID, username: "j003.operator", phone: "+967700009302",
-		operatorContextID: operatorContextID, role: "operator", passwordHash: "operator-password-hash", active: true,
+		operatorContextID: operatorContextID, role: "operator", passwordHash: "operator-password-hash", status: ActorStatusActive, version: 1,
 	})
 	insertLifecycleTestActor(t, db, lifecycleTestActor{
 		id: foreignRequesterID, username: "j003.foreign", phone: "+967700009303",
-		operatorContextID: "j003-foreign-context", role: "operator", passwordHash: "operator-password-hash", active: true,
+		operatorContextID: "j003-foreign-context", role: "operator", passwordHash: "operator-password-hash", status: ActorStatusActive, version: 1,
 	})
 	insertLifecycleTestActor(t, db, lifecycleTestActor{
 		id: inactiveRequesterID, username: "j003.inactive", phone: "+967700009304",
-		operatorContextID: operatorContextID, role: "operator", passwordHash: "operator-password-hash", active: false,
+		operatorContextID: operatorContextID, role: "operator", passwordHash: "operator-password-hash", status: ActorStatusSuspended, version: 1,
 	})
 	insertLifecycleTestActor(t, db, lifecycleTestActor{
 		id: clientID, username: "j003.client", phone: "+967700009305",
-		operatorContextID: operatorContextID, role: "client", passwordHash: "client-password-hash", active: true,
+		operatorContextID: operatorContextID, role: "client", passwordHash: "client-password-hash", status: ActorStatusActive, version: 1,
 	})
 	insertLifecycleTestActor(t, db, lifecycleTestActor{
 		id: provisionedID, username: "j003.provisioned", phone: "+967700009306",
-		operatorContextID: operatorContextID, role: "captain", passwordHash: "", active: false,
+		operatorContextID: operatorContextID, role: "captain", passwordHash: "", status: ActorStatusProvisioned, version: 1,
 	})
 
 	if _, err := db.Exec(`
@@ -99,34 +100,34 @@ func TestActorLifecycleRevokesAuthenticationAndPreservesAuditDBIntegration(t *te
 
 	repository := NewRepository(db)
 	ctx := context.Background()
-	if err := repository.DeactivateActor(ctx, targetID, foreignRequesterID, "security review", "j003-foreign"); !errors.Is(err, ErrForbidden) {
+	if err := repository.SuspendActor(ctx, targetID, foreignRequesterID, "security review", "j003-foreign"); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("cross-context requester must be forbidden, got %v", err)
 	}
-	if err := repository.DeactivateActor(ctx, targetID, inactiveRequesterID, "security review", "j003-inactive"); !errors.Is(err, ErrForbidden) {
+	if err := repository.SuspendActor(ctx, targetID, inactiveRequesterID, "security review", "j003-inactive"); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("inactive requester must be forbidden, got %v", err)
 	}
-	if err := repository.DeactivateActor(ctx, clientID, requesterID, "not workforce", "j003-client"); !errors.Is(err, ErrForbidden) {
+	if err := repository.SuspendActor(ctx, clientID, requesterID, "not workforce", "j003-client"); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("non-workforce target must be forbidden, got %v", err)
 	}
 	if err := repository.ReactivateActor(ctx, provisionedID, requesterID, "not activated", "j003-provisioned"); !errors.Is(err, ErrInvalidActorTransition) {
 		t.Fatalf("never-activated target must not reactivate, got %v", err)
 	}
 
-	if err := repository.DeactivateActor(ctx, targetID, requesterID, "security review", "j003-deactivate"); err != nil {
+	if err := repository.SuspendActor(ctx, targetID, requesterID, "security review", "j003-deactivate"); err != nil {
 		t.Fatalf("deactivate actor: %v", err)
 	}
-	assertLifecycleState(t, db, targetID, false, true, "revoked", "deactivated", requesterID, "security review", "j003-deactivate", 1)
-	if err := repository.DeactivateActor(ctx, targetID, requesterID, "security review", "j003-deactivate"); err != nil {
+	assertLifecycleState(t, db, targetID, ActorStatusSuspended, true, "revoked", "suspended", requesterID, "security review", "j003-deactivate", 1)
+	if err := repository.SuspendActor(ctx, targetID, requesterID, "security review", "j003-deactivate"); err != nil {
 		t.Fatalf("exact deactivation replay must succeed: %v", err)
 	}
-	if err := repository.DeactivateActor(ctx, targetID, requesterID, "security review", "j003-deactivate-other"); !errors.Is(err, ErrActorAlreadyDeactivated) {
+	if err := repository.SuspendActor(ctx, targetID, requesterID, "security review", "j003-deactivate-other"); !errors.Is(err, ErrActorAlreadyDeactivated) {
 		t.Fatalf("different deactivation retry must conflict, got %v", err)
 	}
 
 	if err := repository.ReactivateActor(ctx, targetID, requesterID, "review cleared", "j003-reactivate"); err != nil {
 		t.Fatalf("reactivate actor: %v", err)
 	}
-	assertLifecycleState(t, db, targetID, true, true, "revoked", "reactivated", requesterID, "review cleared", "j003-reactivate", 1)
+	assertLifecycleState(t, db, targetID, ActorStatusActive, true, "revoked", "reactivated", requesterID, "review cleared", "j003-reactivate", 1)
 	if err := repository.ReactivateActor(ctx, targetID, requesterID, "review cleared", "j003-reactivate"); err != nil {
 		t.Fatalf("exact reactivation replay must succeed: %v", err)
 	}
@@ -139,7 +140,7 @@ func assertLifecycleState(
 	t *testing.T,
 	db *sql.DB,
 	actorID string,
-	wantActive bool,
+	wantStatus ActorLifecycleStatus,
 	wantSessionRevoked bool,
 	wantChallengeStatus string,
 	eventStatus string,
@@ -149,9 +150,10 @@ func assertLifecycleState(
 	wantEventCount int,
 ) {
 	t.Helper()
-	var active, sessionRevoked bool
+	var status ActorLifecycleStatus
+	var sessionRevoked bool
 	var challengeStatus string
-	if err := db.QueryRow(`SELECT active FROM identity_actors WHERE id = $1`, actorID).Scan(&active); err != nil {
+	if err := db.QueryRow(`SELECT status FROM identity_actors WHERE id = $1`, actorID).Scan(&status); err != nil {
 		t.Fatalf("read actor state: %v", err)
 	}
 	if err := db.QueryRow(`SELECT revoked_at IS NOT NULL FROM identity_sessions WHERE actor_id = $1`, actorID).Scan(&sessionRevoked); err != nil {
@@ -160,8 +162,8 @@ func assertLifecycleState(
 	if err := db.QueryRow(`SELECT status FROM identity_activation_challenges WHERE actor_id = $1`, actorID).Scan(&challengeStatus); err != nil {
 		t.Fatalf("read activation challenge state: %v", err)
 	}
-	if active != wantActive || sessionRevoked != wantSessionRevoked || challengeStatus != wantChallengeStatus {
-		t.Fatalf("lifecycle persistence mismatch: active=%v revoked=%v challenge=%s", active, sessionRevoked, challengeStatus)
+	if status != wantStatus || sessionRevoked != wantSessionRevoked || challengeStatus != wantChallengeStatus {
+		t.Fatalf("lifecycle persistence mismatch: status=%v revoked=%v challenge=%s", status, sessionRevoked, challengeStatus)
 	}
 	var count int
 	if err := db.QueryRow(`
@@ -187,11 +189,11 @@ func TestActorLifecycleConcurrentExactReplayDBIntegration(t *testing.T) {
 	cleanupLifecycleTestActors(t, db, targetID, requesterID)
 	insertLifecycleTestActor(t, db, lifecycleTestActor{
 		id: targetID, username: "j003.concurrent.captain", phone: "+967700009307",
-		operatorContextID: operatorContextID, role: "captain", passwordHash: "activated-password-hash", active: true,
+		operatorContextID: operatorContextID, role: "captain", passwordHash: "activated-password-hash", status: ActorStatusActive, version: 1,
 	})
 	insertLifecycleTestActor(t, db, lifecycleTestActor{
 		id: requesterID, username: "j003.concurrent.operator", phone: "+967700009308",
-		operatorContextID: operatorContextID, role: "operator", passwordHash: "operator-password-hash", active: true,
+		operatorContextID: operatorContextID, role: "operator", passwordHash: "operator-password-hash", status: ActorStatusActive, version: 1,
 	})
 
 	db.SetMaxOpenConns(12)
@@ -205,7 +207,7 @@ func TestActorLifecycleConcurrentExactReplayDBIntegration(t *testing.T) {
 			defer waitGroup.Done()
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			if err := repository.DeactivateActor(ctx, targetID, requesterID, "concurrent suspension", "j003-concurrent"); err != nil {
+			if err := repository.SuspendActor(ctx, targetID, requesterID, "concurrent suspension", "j003-concurrent"); err != nil {
 				errorsCh <- fmt.Errorf("caller %d: %w", index, err)
 			}
 		}(index)

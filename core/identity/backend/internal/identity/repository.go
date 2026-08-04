@@ -305,6 +305,23 @@ func (r *Repository) issueChallengeTx(ctx context.Context, tx *sql.Tx, actor Act
 		r.activationCodeHash(actorType, phone, code), expiresAt,
 		issuedByActorID, strings.TrimSpace(idempotencyKey), strings.TrimSpace(correlationID))
 	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" && pqErr.Constraint == "identity_activation_idempotency_idx" {
+			var existingID, existingPhone string
+			var existingExpiresAt time.Time
+			if selErr := tx.QueryRowContext(ctx, `
+				SELECT id, phone_e164, expires_at
+				FROM identity_activation_challenges
+				WHERE idempotency_key = $1
+			`, strings.TrimSpace(idempotencyKey)).Scan(&existingID, &existingPhone, &existingExpiresAt); selErr == nil {
+				return IssueActivationResult{
+					ActivationID: existingID,
+					Code:         "", // Do not expose code on idempotent retry
+					MaskedPhone:  maskPhone(existingPhone),
+					ExpiresAt:    existingExpiresAt,
+				}, nil
+			}
+		}
 		return IssueActivationResult{}, err
 	}
 	return IssueActivationResult{
@@ -381,14 +398,14 @@ func (r *Repository) ConsumeActivation(ctx context.Context, input ConsumeActivat
 		WHERE id = $1`, challengeID); err != nil {
 		return TokenPair{}, err
 	}
-	if _, err = tx.ExecContext(ctx, `UPDATE identity_actors SET active = true, updated_at = now() WHERE id = $1`, actorID); err != nil {
+	if _, err = tx.ExecContext(ctx, `UPDATE identity_actors SET status = 'ACTIVE', version = version + 1, updated_at = now() WHERE id = $1`, actorID); err != nil {
 		return TokenPair{}, err
 	}
 	actor, err := actorByIDTx(ctx, tx, actorID)
 	if err != nil {
 		return TokenPair{}, err
 	}
-	pair, err := createSessionTx(ctx, tx, actor, input.DeviceFingerprint, r.now())
+	pair, err := createSessionTx(ctx, tx, actor, input.DeviceFingerprint, surface, r.now())
 	if err != nil {
 		return TokenPair{}, err
 	}
@@ -420,12 +437,12 @@ func (r *Repository) Login(ctx context.Context, username, password, fingerprint,
 		r.recordLoginAttempt(ctx, normalizedUsername, false, ipAddress)
 		return TokenPair{}, ErrUnauthenticated
 	}
-	if !actor.Active {
+	if actor.Status != ActorStatusActive {
 		r.recordLoginAttempt(ctx, normalizedUsername, false, ipAddress)
 		return TokenPair{}, ErrActorDeactivated
 	}
 
-	pair, err := r.createSession(ctx, actor, fingerprint)
+	pair, err := r.createSession(ctx, actor, fingerprint, "control-panel")
 	if err != nil {
 		r.recordLoginAttempt(ctx, normalizedUsername, false, ipAddress)
 		return TokenPair{}, err
@@ -461,18 +478,19 @@ func (r *Repository) ResolveAccessToken(ctx context.Context, token string) (Acto
 	var roles pq.StringArray
 	var permissionsJSON []byte
 	var sessionID string
+	var sessionSurface string
 	var expiresAt time.Time
 	err := r.db.QueryRowContext(ctx, `
-		SELECT a.id, a.username, a.password_hash, a.operator_context_id, a.phone_e164, a.roles, a.permissions, a.active,
-		       s.id, s.access_expires_at
+		SELECT a.id, a.username, a.password_hash, a.operator_context_id, a.phone_e164, a.roles, a.permissions, a.status, a.version,
+		       s.id, s.surface, s.access_expires_at
 		FROM identity_sessions s
 		JOIN identity_actors a ON a.id = s.actor_id
 		WHERE s.access_token_hash = $1
 		  AND s.revoked_at IS NULL
 		  AND s.access_expires_at > now()
-		  AND a.active = true`, hash).Scan(
+		  AND a.status = 'ACTIVE'`, hash).Scan(
 		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.OperatorContextID, &actor.PhoneE164,
-		&roles, &permissionsJSON, &actor.Active, &sessionID, &expiresAt,
+		&roles, &permissionsJSON, &actor.Status, &actor.Version, &sessionID, &sessionSurface, &expiresAt,
 	)
 	if err != nil {
 		return ActorIdentity{}, ErrUnauthenticated
@@ -481,7 +499,7 @@ func (r *Repository) ResolveAccessToken(ctx context.Context, token string) (Acto
 	if err := json.Unmarshal(permissionsJSON, &actor.Permissions); err != nil {
 		return ActorIdentity{}, err
 	}
-	return toIdentity(actor, sessionID, expiresAt), nil
+	return toIdentity(actor, sessionID, sessionSurface, expiresAt), nil
 }
 
 func (r *Repository) Refresh(ctx context.Context, refreshToken string) (TokenPair, error) {
@@ -491,14 +509,14 @@ func (r *Repository) Refresh(ctx context.Context, refreshToken string) (TokenPai
 	}
 	defer tx.Rollback()
 
-	var actorID, sessionID string
+	var actorID, sessionID, surface string
 	err = tx.QueryRowContext(ctx, `
-		SELECT actor_id, id
+		SELECT actor_id, id, surface
 		FROM identity_sessions
 		WHERE refresh_token_hash = $1
 		  AND revoked_at IS NULL
 		  AND refresh_expires_at > now()
-		FOR UPDATE`, tokenHash(refreshToken)).Scan(&actorID, &sessionID)
+		FOR UPDATE`, tokenHash(refreshToken)).Scan(&actorID, &sessionID, &surface)
 	if err != nil {
 		return TokenPair{}, ErrInvalidRefresh
 	}
@@ -506,10 +524,10 @@ func (r *Repository) Refresh(ctx context.Context, refreshToken string) (TokenPai
 		return TokenPair{}, err
 	}
 	actor, err := actorByIDTx(ctx, tx, actorID)
-	if err != nil || !actor.Active {
+	if err != nil || actor.Status != ActorStatusActive {
 		return TokenPair{}, ErrInvalidRefresh
 	}
-	pair, err := createSessionTx(ctx, tx, actor, "refresh-rotation", r.now())
+	pair, err := createSessionTx(ctx, tx, actor, "refresh-rotation", surface, r.now())
 	if err != nil {
 		return TokenPair{}, err
 	}
@@ -527,13 +545,13 @@ func (r *Repository) Logout(ctx context.Context, accessToken string) error {
 	return err
 }
 
-func (r *Repository) createSession(ctx context.Context, actor Actor, fingerprint string) (TokenPair, error) {
+func (r *Repository) createSession(ctx context.Context, actor Actor, fingerprint string, surface string) (TokenPair, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return TokenPair{}, err
 	}
 	defer tx.Rollback()
-	pair, err := createSessionTx(ctx, tx, actor, fingerprint, r.now())
+	pair, err := createSessionTx(ctx, tx, actor, fingerprint, surface, r.now())
 	if err != nil {
 		return TokenPair{}, err
 	}
@@ -543,7 +561,7 @@ func (r *Repository) createSession(ctx context.Context, actor Actor, fingerprint
 	return pair, nil
 }
 
-func createSessionTx(ctx context.Context, tx *sql.Tx, actor Actor, fingerprint string, now time.Time) (TokenPair, error) {
+func createSessionTx(ctx context.Context, tx *sql.Tx, actor Actor, fingerprint string, surface string, now time.Time) (TokenPair, error) {
 	sessionID, err := randomToken(18)
 	if err != nil {
 		return TokenPair{}, err
@@ -561,16 +579,16 @@ func createSessionTx(ctx context.Context, tx *sql.Tx, actor Actor, fingerprint s
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO identity_sessions
 			(id, actor_id, access_token_hash, refresh_token_hash, device_fingerprint,
-			 access_expires_at, refresh_expires_at)
-		VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6, $7)`,
+			 surface, access_expires_at, refresh_expires_at)
+		VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6, $7, $8)`,
 		sessionID, actor.ID, tokenHash(accessToken), tokenHash(refreshToken),
-		strings.TrimSpace(fingerprint), accessExpiry, refreshExpiry)
+		strings.TrimSpace(fingerprint), surface, accessExpiry, refreshExpiry)
 	if err != nil {
 		return TokenPair{}, err
 	}
 	return TokenPair{
 		AccessToken: accessToken, RefreshToken: refreshToken, AccessExpiry: accessExpiry,
-		Identity: toIdentity(actor, sessionID, accessExpiry),
+		Identity: toIdentity(actor, sessionID, surface, accessExpiry),
 	}, nil
 }
 
@@ -579,10 +597,10 @@ func (r *Repository) actorByUsername(ctx context.Context, username string) (Acto
 	var roles pq.StringArray
 	var permissionsJSON []byte
 	err := r.db.QueryRowContext(ctx, `
-		SELECT id, username, password_hash, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, active
+		SELECT id, username, password_hash, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, status, version
 		FROM identity_actors WHERE username = $1`, username).Scan(
 		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.OperatorContextID, &actor.PhoneE164,
-		&roles, &permissionsJSON, &actor.Active,
+		&roles, &permissionsJSON, &actor.Status, &actor.Version,
 	)
 	if err != nil {
 		return Actor{}, err
@@ -599,10 +617,10 @@ func actorByIDTx(ctx context.Context, tx *sql.Tx, actorID string) (Actor, error)
 	var roles pq.StringArray
 	var permissionsJSON []byte
 	err := tx.QueryRowContext(ctx, `
-		SELECT id, username, password_hash, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, active
+		SELECT id, username, password_hash, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, status, version
 		FROM identity_actors WHERE id = $1`, actorID).Scan(
 		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.OperatorContextID, &actor.PhoneE164,
-		&roles, &permissionsJSON, &actor.Active,
+		&roles, &permissionsJSON, &actor.Status, &actor.Version,
 	)
 	if err != nil {
 		return Actor{}, err
@@ -614,7 +632,7 @@ func actorByIDTx(ctx context.Context, tx *sql.Tx, actorID string) (Actor, error)
 	return actor, nil
 }
 
-func toIdentity(actor Actor, sessionID string, expiresAt time.Time) ActorIdentity {
+func toIdentity(actor Actor, sessionID string, sessionSurface string, expiresAt time.Time) ActorIdentity {
 	surfaces := map[string]bool{}
 	services := map[string]bool{}
 	for _, permission := range actor.Permissions {
@@ -624,7 +642,7 @@ func toIdentity(actor Actor, sessionID string, expiresAt time.Time) ActorIdentit
 	return ActorIdentity{
 		Subject: actor.ID, OperatorContextID: actor.OperatorContextID, PhoneE164: actor.PhoneE164, Roles: actor.Roles,
 		Permissions: actor.Permissions, AuthState: "authenticated",
-		SurfaceAccess: surfaces, ServiceAccess: services,
+		SurfaceAccess: surfaces, ServiceAccess: services, SessionSurface: sessionSurface,
 		SessionID: sessionID, ExpiresAt: expiresAt,
 	}
 }
@@ -751,8 +769,8 @@ func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInp
 	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO identity_actors
-			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, active, updated_at)
-		VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, false, now())`,
+			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
+		VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, 'PROVISIONED', 1, now())`,
 		actorID, username, operatorContextID, phone, pq.Array([]string{role}), string(permissions))
 	if err != nil {
 		return ActorAdminView{}, mapUniqueViolation(err)
@@ -762,7 +780,7 @@ func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInp
 	}
 	return ActorAdminView{
 		ActorID: actorID, Username: username, PhoneE164: phone,
-		Roles: []string{role}, Active: false,
+		Roles: []string{role}, Status: ActorStatusProvisioned, Version: 1,
 	}, nil
 }
 
@@ -781,7 +799,7 @@ func (r *Repository) SearchActors(ctx context.Context, role, q string, limit int
 	if limit <= 0 || limit > 100 {
 		limit = 25
 	}
-	clauses := []string{"active"}
+	clauses := []string{"status = 'ACTIVE'"}
 	args := []any{}
 	if role != "" {
 		args = append(args, role)
@@ -793,7 +811,7 @@ func (r *Repository) SearchActors(ctx context.Context, role, q string, limit int
 	}
 	args = append(args, limit)
 	query := `
-		SELECT id, username, COALESCE(phone_e164, ''), roles, active
+		SELECT id, username, COALESCE(phone_e164, ''), roles, status, version
 		FROM identity_actors
 		WHERE ` + strings.Join(clauses, " AND ") + `
 		ORDER BY username
@@ -807,7 +825,7 @@ func (r *Repository) SearchActors(ctx context.Context, role, q string, limit int
 	for rows.Next() {
 		var actor Actor
 		var roles pq.StringArray
-		if err := rows.Scan(&actor.ID, &actor.Username, &actor.PhoneE164, &roles, &actor.Active); err != nil {
+		if err := rows.Scan(&actor.ID, &actor.Username, &actor.PhoneE164, &roles, &actor.Status, &actor.Version); err != nil {
 			return nil, err
 		}
 		actor.Roles = []string(roles)
@@ -820,9 +838,9 @@ func (r *Repository) ActorAdminByID(ctx context.Context, actorID string) (ActorA
 	var actor Actor
 	var roles pq.StringArray
 	err := r.db.QueryRowContext(ctx, `
-		SELECT id, username, COALESCE(phone_e164, ''), roles, active
+		SELECT id, username, COALESCE(phone_e164, ''), roles, status, version
 		FROM identity_actors WHERE id = $1`, actorID).Scan(
-		&actor.ID, &actor.Username, &actor.PhoneE164, &roles, &actor.Active,
+		&actor.ID, &actor.Username, &actor.PhoneE164, &roles, &actor.Status, &actor.Version,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -834,8 +852,8 @@ func (r *Repository) ActorAdminByID(ctx context.Context, actorID string) (ActorA
 	return toAdminView(actor), nil
 }
 
-// DeactivateActor suspends authentication for an actor in one transaction.
-func (r *Repository) DeactivateActor(ctx context.Context, actorID, requestedByActorID, reason, correlationID string) error {
+// SuspendActor suspends authentication for an actor in one transaction.
+func (r *Repository) SuspendActor(ctx context.Context, actorID, requestedByActorID, reason, correlationID string) error {
 	actorID = strings.TrimSpace(actorID)
 	requestedByActorID = strings.TrimSpace(requestedByActorID)
 	reason = strings.TrimSpace(reason)
@@ -849,14 +867,15 @@ func (r *Repository) DeactivateActor(ctx context.Context, actorID, requestedByAc
 	}
 	defer tx.Rollback()
 
-	var active bool
+	var status ActorLifecycleStatus
+	var version int
 	var operatorContextID string
 	var roles pq.StringArray
 	err = tx.QueryRowContext(ctx, `
-		SELECT active, operator_context_id, roles
+		SELECT status, version, operator_context_id, roles
 		FROM identity_actors
 		WHERE id = $1
-		FOR UPDATE`, actorID).Scan(&active, &operatorContextID, &roles)
+		FOR UPDATE`, actorID).Scan(&status, &version, &operatorContextID, &roles)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrActorNotFound
@@ -869,12 +888,12 @@ func (r *Repository) DeactivateActor(ctx context.Context, actorID, requestedByAc
 	if err := requireLifecycleRequester(ctx, tx, requestedByActorID, operatorContextID); err != nil {
 		return err
 	}
-	if !active {
+	if status != ActorStatusActive {
 		var replay bool
 		if err := tx.QueryRowContext(ctx, `
 			SELECT EXISTS (
 				SELECT 1 FROM identity_actor_lifecycle_events
-				WHERE actor_id = $1 AND status = 'deactivated'
+				WHERE actor_id = $1 AND status = 'suspended'
 				  AND requested_by_actor_id = $2 AND reason = $3 AND correlation_id = $4
 			)`, actorID, requestedByActorID, reason, correlationID).Scan(&replay); err != nil {
 			return err
@@ -885,7 +904,7 @@ func (r *Repository) DeactivateActor(ctx context.Context, actorID, requestedByAc
 		return ErrActorAlreadyDeactivated
 	}
 
-	_, err = tx.ExecContext(ctx, `UPDATE identity_actors SET active = false, updated_at = now() WHERE id = $1`, actorID)
+	_, err = tx.ExecContext(ctx, `UPDATE identity_actors SET status = 'SUSPENDED', version = version + 1, updated_at = now() WHERE id = $1`, actorID)
 	if err != nil {
 		return err
 	}
@@ -908,7 +927,7 @@ func (r *Repository) DeactivateActor(ctx context.Context, actorID, requestedByAc
 	if _, err = tx.ExecContext(ctx, `
 		INSERT INTO identity_actor_lifecycle_events
 			(id, actor_id, status, requested_by_actor_id, reason, correlation_id)
-		VALUES ($1, $2, 'deactivated', $3, $4, $5)`,
+		VALUES ($1, $2, 'suspended', $3, $4, $5)`,
 		eventID, actorID, requestedByActorID, reason, correlationID); err != nil {
 		return err
 	}
@@ -931,15 +950,16 @@ func (r *Repository) ReactivateActor(ctx context.Context, actorID, requestedByAc
 	}
 	defer tx.Rollback()
 
-	var active bool
+	var status ActorLifecycleStatus
+	var version int
 	var passwordHash string
 	var operatorContextID string
 	var roles pq.StringArray
 	err = tx.QueryRowContext(ctx, `
-		SELECT active, password_hash, operator_context_id, roles
+		SELECT status, version, password_hash, operator_context_id, roles
 		FROM identity_actors
 		WHERE id = $1
-		FOR UPDATE`, actorID).Scan(&active, &passwordHash, &operatorContextID, &roles)
+		FOR UPDATE`, actorID).Scan(&status, &version, &passwordHash, &operatorContextID, &roles)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrActorNotFound
@@ -952,7 +972,7 @@ func (r *Repository) ReactivateActor(ctx context.Context, actorID, requestedByAc
 	if err := requireLifecycleRequester(ctx, tx, requestedByActorID, operatorContextID); err != nil {
 		return err
 	}
-	if active {
+	if status == ActorStatusActive {
 		var replay bool
 		if err := tx.QueryRowContext(ctx, `
 			SELECT EXISTS (
@@ -971,7 +991,7 @@ func (r *Repository) ReactivateActor(ctx context.Context, actorID, requestedByAc
 		return ErrInvalidActorTransition
 	}
 
-	_, err = tx.ExecContext(ctx, `UPDATE identity_actors SET active = true, updated_at = now() WHERE id = $1`, actorID)
+	_, err = tx.ExecContext(ctx, `UPDATE identity_actors SET status = 'ACTIVE', version = version + 1, updated_at = now() WHERE id = $1`, actorID)
 	if err != nil {
 		return err
 	}
@@ -1048,11 +1068,11 @@ func actorByIDForUpdateTx(ctx context.Context, tx *sql.Tx, actorID string) (Acto
 	var roles pq.StringArray
 	var permissionsJSON []byte
 	err := tx.QueryRowContext(ctx, `
-		SELECT id, username, password_hash, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, active
+		SELECT id, username, password_hash, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, status, version
 		FROM identity_actors WHERE id = $1
 		FOR UPDATE`, actorID).Scan(
 		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.OperatorContextID, &actor.PhoneE164,
-		&roles, &permissionsJSON, &actor.Active,
+		&roles, &permissionsJSON, &actor.Status, &actor.Version,
 	)
 	if err != nil {
 		return Actor{}, err
@@ -1069,12 +1089,12 @@ func actorByPhoneAnyRoleTx(ctx context.Context, tx *sql.Tx, phone string) (Actor
 	var roles pq.StringArray
 	var permissionsJSON []byte
 	err := tx.QueryRowContext(ctx, `
-		SELECT id, username, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, active
+		SELECT id, username, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, status, version
 		FROM identity_actors
 		WHERE phone_e164 = $1
 		LIMIT 1
 		FOR UPDATE`, phone).Scan(
-		&actor.ID, &actor.Username, &actor.OperatorContextID, &actor.PhoneE164, &roles, &permissionsJSON, &actor.Active,
+		&actor.ID, &actor.Username, &actor.OperatorContextID, &actor.PhoneE164, &roles, &permissionsJSON, &actor.Status, &actor.Version,
 	)
 	if err != nil {
 		return Actor{}, err
@@ -1092,7 +1112,8 @@ func toAdminView(actor Actor) ActorAdminView {
 		Username:  actor.Username,
 		PhoneE164: actor.PhoneE164,
 		Roles:     actor.Roles,
-		Active:    actor.Active,
+		Status:    actor.Status,
+		Version:   actor.Version,
 	}
 }
 
@@ -1127,7 +1148,7 @@ func publicActorPermissions(role, surface string) ([]byte, error) {
 
 func (r *Repository) ListSessions(ctx context.Context, actorID string) ([]SessionInfo, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, COALESCE(device_fingerprint, ''), created_at, access_expires_at
+		SELECT id, COALESCE(device_fingerprint, ''), surface, created_at, access_expires_at
 		FROM identity_sessions
 		WHERE actor_id = $1 AND revoked_at IS NULL
 		ORDER BY created_at DESC`, actorID)
@@ -1138,7 +1159,7 @@ func (r *Repository) ListSessions(ctx context.Context, actorID string) ([]Sessio
 	var list []SessionInfo
 	for rows.Next() {
 		var s SessionInfo
-		if err := rows.Scan(&s.SessionID, &s.DeviceFingerprint, &s.CreatedAt, &s.ExpiresAt); err != nil {
+		if err := rows.Scan(&s.SessionID, &s.DeviceFingerprint, &s.Surface, &s.CreatedAt, &s.ExpiresAt); err != nil {
 			return nil, err
 		}
 		list = append(list, s)

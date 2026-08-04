@@ -169,3 +169,45 @@ func (c *Client) FetchPartnerPermissionBundles(ctx context.Context) ([]PartnerPe
 	c.partnerBundlesLoaded = true
 	return clonePartnerPermissionBundles(c.partnerBundles), nil
 }
+
+// CheckHealth queries the Identity service health endpoint to determine if it is
+// HEALTHY, DEGRADED, or NOT_READY, returning the status as a string.
+func (c *Client) CheckHealth(ctx context.Context) string {
+	if c.baseURL == "" {
+		return "NOT_READY"
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/identity/readiness", nil)
+	if err != nil {
+		return "NOT_READY"
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return "NOT_READY"
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		var healthResp struct {
+			Status string `json:"status"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&healthResp); err == nil {
+			if strings.ToUpper(healthResp.Status) == "DEGRADED" {
+				return "DEGRADED"
+			}
+		}
+		return "HEALTHY"
+	}
+	
+	if resp.StatusCode == http.StatusServiceUnavailable {
+		var healthResp struct {
+			Status string `json:"status"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&healthResp); err == nil {
+			if strings.ToUpper(healthResp.Status) == "DEGRADED" {
+				return "DEGRADED"
+			}
+		}
+	}
+
+	return "NOT_READY"
+}

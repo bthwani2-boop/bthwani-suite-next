@@ -60,7 +60,7 @@ type EmployeeProfile struct {
 type CreateFieldAgentInput struct {
 	FullNameAr          string   `json:"fullNameAr"`
 	FullNameEn          string   `json:"fullNameEn"`
-	PhoneE164           string   `json:"phoneE164"`
+	ActorID             string   `json:"actorId"`
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
 	ServiceZoneID       string   `json:"serviceZoneId"`
@@ -73,7 +73,7 @@ type CreateFieldAgentInput struct {
 type CreateCaptainInput struct {
 	FullNameAr          string   `json:"fullNameAr"`
 	FullNameEn          string   `json:"fullNameEn"`
-	PhoneE164           string   `json:"phoneE164"`
+	ActorID             string   `json:"actorId"`
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
 	PhotoMediaRef       string   `json:"photoMediaRef"`
@@ -118,7 +118,7 @@ type UpdateCaptainInput struct {
 type CreateEmployeeInput struct {
 	FullNameAr          string   `json:"fullNameAr"`
 	FullNameEn          string   `json:"fullNameEn"`
-	PhoneE164           string   `json:"phoneE164"`
+	ActorID             string   `json:"actorId"`
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
 	PhotoMediaRef       string   `json:"photoMediaRef"`

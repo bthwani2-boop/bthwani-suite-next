@@ -32,7 +32,7 @@ export function CaptainCreateView(props: {
     ? identityRuntime.state.code
     : (runtimeValue?.reasonCodes ?? ["IDENTITY_READINESS_UNPROVEN"]).join("، ");
   const [fullNameAr, setFullNameAr] = useState("");
-  const [phone, setPhone] = useState("");
+  const [actorId, setActorId] = useState("");
   const [zoneId, setZoneId] = useState("");
   const [vehicleType, setVehicleType] = useState("");
 
@@ -46,7 +46,7 @@ export function CaptainCreateView(props: {
   const canSubmit =
     identityReady &&
     fullNameAr.trim().length > 0 &&
-    phone.trim().length >= 9 &&
+    actorId.trim().length > 0 &&
     zoneId !== "" &&
     vehicleType !== "" &&
     state.kind !== "submitting" &&
@@ -56,7 +56,7 @@ export function CaptainCreateView(props: {
     if (!identityReady) return;
     await submit({
       fullNameAr: fullNameAr.trim(),
-      phoneE164: phone.trim(),
+      actorId: actorId.trim(),
       engagementType: "independent_contractor",
       vehicleType,
       licenseStatus: "missing",
@@ -67,7 +67,7 @@ export function CaptainCreateView(props: {
   const resetForm = () => {
     reset();
     setFullNameAr("");
-    setPhone("");
+    setActorId("");
     setZoneId("");
     setVehicleType("");
   };
@@ -75,7 +75,7 @@ export function CaptainCreateView(props: {
   const body = (
     <div style={{ maxWidth: "800px", margin: "0 auto", width: "100%", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       <CpMutedInline>
-        إنشاء أولي مختصر للكابتن. يبدأ تلقائيًا بتصنيف Joker، ولا يصدر كود الدخول قبل اكتمال الهوية والرخصة والعقد والعهدة والتدريب والضمانة المالية واعتماد العمليات.
+        إنشاء أولي مختصر للكابتن. يجب إنشاء الهوية مسبقاً في قسم الإدارة (Administration)، ولا يصدر كود الدخول قبل اكتمال الهوية والرخصة والعقد والعهدة والتدريب والضمانة المالية واعتماد العمليات.
       </CpMutedInline>
 
       {!identityReady ? (
@@ -96,8 +96,8 @@ export function CaptainCreateView(props: {
             <CpTextInput value={fullNameAr} onChange={setFullNameAr} placeholder="أحمد محمد" disabled={Boolean(createdCaptain)} aria-label="الاسم الكامل" />
           </div>
           <div>
-            <Text role="bodySm" style={{ marginBottom: "6px", display: "block", fontWeight: "600", color: "var(--bthwani-control-panel-text-muted)" }}>رقم الهاتف *</Text>
-            <CpTextInput value={phone} onChange={setPhone} placeholder="مثال: 777123456" disabled={Boolean(createdCaptain)} aria-label="رقم الهاتف" />
+            <Text role="bodySm" style={{ marginBottom: "6px", display: "block", fontWeight: "600", color: "var(--bthwani-control-panel-text-muted)" }}>Identity Actor ID *</Text>
+            <CpTextInput value={actorId} onChange={setActorId} placeholder="مثال: actor-123" disabled={Boolean(createdCaptain)} aria-label="Actor ID" />
           </div>
         </div>
 

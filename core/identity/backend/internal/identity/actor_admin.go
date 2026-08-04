@@ -99,8 +99,8 @@ func (r *Repository) ProvisionActorGoverned(ctx context.Context, input Provision
 	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO identity_actors
-			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, active, updated_at)
-		VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, false, now())`,
+			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
+		VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, 'PROVISIONED', 1, now())`,
 		actorID, username, operatorContextID, phone, pq.Array([]string{role}), string(permissions))
 	if err != nil {
 		return ActorAdminView{}, mapUniqueViolation(err)
@@ -110,7 +110,7 @@ func (r *Repository) ProvisionActorGoverned(ctx context.Context, input Provision
 	}
 	return ActorAdminView{
 		ActorID: actorID, Username: username, PhoneE164: phone,
-		Roles: []string{role}, Active: false, Status: ActorStatusProvisioned,
+		Roles: []string{role}, Status: ActorStatusProvisioned, Version: 1,
 	}, nil
 }
 
@@ -133,7 +133,7 @@ func (r *Repository) SearchActorsGoverned(ctx context.Context, input ActorSearch
 		return ActorSearchPage{}, ErrInvalidActorQuery
 	}
 	status := ActorLifecycleStatus(strings.ToUpper(strings.TrimSpace(string(input.Status))))
-	if status != "" && status != ActorStatusProvisioned && status != ActorStatusPendingActivation && status != ActorStatusActive && status != ActorStatusInactive {
+	if status != "" && status != ActorStatusProvisioned && status != ActorStatusPendingActivation && status != ActorStatusActive && status != ActorStatusSuspended && status != ActorStatusDeactivated {
 		return ActorSearchPage{}, ErrInvalidActorQuery
 	}
 
@@ -152,7 +152,7 @@ func (r *Repository) SearchActorsGoverned(ctx context.Context, input ActorSearch
 	}
 
 	statusExpression := `CASE
-		WHEN active THEN 'ACTIVE'
+		WHEN status = 'ACTIVE' THEN 'ACTIVE'
 		WHEN EXISTS (
 			SELECT 1 FROM identity_activation_challenges c
 			WHERE c.actor_id = identity_actors.id
@@ -170,11 +170,11 @@ func (r *Repository) SearchActorsGoverned(ctx context.Context, input ActorSearch
 	query := `
 		WITH actor_projection AS (
 			SELECT id, username, COALESCE(phone_e164, '') AS phone_e164,
-			       roles, active, ` + statusExpression + ` AS lifecycle_status
+			       roles, status, version, ` + statusExpression + ` AS lifecycle_status
 			FROM identity_actors
 			WHERE ` + strings.Join(clauses, " AND ") + `
 		)
-		SELECT id, username, phone_e164, roles, active, lifecycle_status, COUNT(*) OVER()
+		SELECT id, username, phone_e164, roles, status, version, COUNT(*) OVER()
 		FROM actor_projection
 		WHERE $` + strconv.Itoa(statusIndex) + ` = '' OR lifecycle_status = $` + strconv.Itoa(statusIndex) + `
 		ORDER BY lower(username), id
@@ -188,7 +188,7 @@ func (r *Repository) SearchActorsGoverned(ctx context.Context, input ActorSearch
 	for rows.Next() {
 		var view ActorAdminView
 		var roles pq.StringArray
-		if err := rows.Scan(&view.ActorID, &view.Username, &view.PhoneE164, &roles, &view.Active, &view.Status, &page.Total); err != nil {
+		if err := rows.Scan(&view.ActorID, &view.Username, &view.PhoneE164, &roles, &view.Status, &view.Version, &page.Total); err != nil {
 			return ActorSearchPage{}, err
 		}
 		view.Roles = []string(roles)
@@ -209,9 +209,9 @@ func (r *Repository) ActorAdminByIDGoverned(ctx context.Context, operatorContext
 	var view ActorAdminView
 	var roles pq.StringArray
 	err := r.db.QueryRowContext(ctx, `
-		SELECT id, username, COALESCE(phone_e164, ''), roles, active,
+		SELECT id, username, COALESCE(phone_e164, ''), roles, status, version,
 		       CASE
-		         WHEN active THEN 'ACTIVE'
+		         WHEN status = 'ACTIVE' THEN 'ACTIVE'
 		         WHEN EXISTS (
 		           SELECT 1 FROM identity_activation_challenges c
 		           WHERE c.actor_id = identity_actors.id
@@ -219,11 +219,11 @@ func (r *Repository) ActorAdminByIDGoverned(ctx context.Context, operatorContext
 		             AND c.expires_at > clock_timestamp()
 		         ) THEN 'PENDING_ACTIVATION'
 		         WHEN password_hash = '' THEN 'PROVISIONED'
-		         ELSE 'INACTIVE'
+		         ELSE status
 		       END
 		FROM identity_actors
 		WHERE id = $1 AND operator_context_id = $2`, actorID, operatorContextID).Scan(
-		&view.ActorID, &view.Username, &view.PhoneE164, &roles, &view.Active, &view.Status,
+		&view.ActorID, &view.Username, &view.PhoneE164, &roles, &view.Status, &view.Version, &view.Status,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -240,12 +240,12 @@ func actorByUsernameForUpdateTx(ctx context.Context, tx *sql.Tx, username string
 	var roles pq.StringArray
 	var permissionsJSON []byte
 	err := tx.QueryRowContext(ctx, `
-		SELECT id, username, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, active
+		SELECT id, username, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, status, version
 		FROM identity_actors
 		WHERE lower(btrim(username)) = $1
 		LIMIT 1
 		FOR UPDATE`, username).Scan(
-		&actor.ID, &actor.Username, &actor.OperatorContextID, &actor.PhoneE164, &roles, &permissionsJSON, &actor.Active,
+		&actor.ID, &actor.Username, &actor.OperatorContextID, &actor.PhoneE164, &roles, &permissionsJSON, &actor.Status, &actor.Version,
 	)
 	if err != nil {
 		return Actor{}, err

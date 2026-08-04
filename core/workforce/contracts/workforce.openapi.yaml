@@ -1135,17 +1135,16 @@ components:
     CreateFieldAgentRequest:
       type: object
       additionalProperties: false
-      required: [ fullNameAr, phoneE164, serviceZoneId, shiftCode ]
+      required: [ actorId, fullNameAr, serviceZoneId ]
       properties:
+        actorId:
+          type: string
+          minLength: 1
         fullNameAr:
           type: string
           minLength: 1
         fullNameEn:
           type: string
-        phoneE164:
-          type: string
-          minLength: 8
-          maxLength: 20
         engagementType:
           $ref: "#/components/schemas/EngagementType"
         engagementStartDate:
@@ -1191,17 +1190,16 @@ components:
     CreateCaptainRequest:
       type: object
       additionalProperties: false
-      required: [ fullNameAr, phoneE164, serviceZoneId, vehicleType, vehicleIdentifier ]
+      required: [ actorId, fullNameAr, serviceZoneId, vehicleType, vehicleIdentifier ]
       properties:
+        actorId:
+          type: string
+          minLength: 1
         fullNameAr:
           type: string
           minLength: 1
         fullNameEn:
           type: string
-        phoneE164:
-          type: string
-          minLength: 8
-          maxLength: 20
         engagementType:
           $ref: "#/components/schemas/EngagementType"
         engagementStartDate:
@@ -1267,17 +1265,16 @@ components:
     CreateEmployeeRequest:
       type: object
       additionalProperties: false
-      required: [ fullNameAr, phoneE164, department, role, officeLocation ]
+      required: [ actorId, fullNameAr, department, role ]
       properties:
+        actorId:
+          type: string
+          minLength: 1
         fullNameAr:
           type: string
           minLength: 1
         fullNameEn:
           type: string
-        phoneE164:
-          type: string
-          minLength: 8
-          maxLength: 20
         engagementType:
           $ref: "#/components/schemas/EngagementType"
         engagementStartDate:

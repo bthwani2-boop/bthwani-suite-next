@@ -40,7 +40,7 @@ func TestActorProvisionSearchReadbackDBIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("provision actor: %v", err)
 	}
-	if created.ActorID == "" || created.Status != ActorStatusProvisioned || created.Active {
+	if created.ActorID == "" || created.Status != ActorStatusProvisioned {
 		t.Fatalf("unexpected provisioned actor: %#v", created)
 	}
 	replayed, err := repository.ProvisionActorGoverned(context.Background(), input)

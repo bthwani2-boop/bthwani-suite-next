@@ -72,7 +72,7 @@ func HandleHealth(w http.ResponseWriter, r *http.Request) {
 	store.SendJSON(w, http.StatusOK, resp)
 }
 
-func HandleReadiness(db *sql.DB, mediaProvider *media.Provider) http.HandlerFunc {
+func HandleReadiness(db *sql.DB, mediaProvider *media.Provider, identityClient interface{ CheckHealth(context.Context) string }) http.HandlerFunc {
 	var readinessStore runtimeReadinessStore
 	if db != nil {
 		readinessStore = sqlRuntimeReadinessStore{db: db}
@@ -81,30 +81,52 @@ func HandleReadiness(db *sql.DB, mediaProvider *media.Provider) http.HandlerFunc
 	if mediaProvider != nil {
 		storageStatus = mediaProvider.Status
 	}
-	return handleReadiness(readinessStore, storageStatus)
+	identityCheck := func(context.Context) string { return "NOT_READY" }
+	if identityClient != nil {
+		identityCheck = identityClient.CheckHealth
+	}
+	return handleReadiness(readinessStore, storageStatus, identityCheck)
 }
 
-func handleReadiness(readinessStore runtimeReadinessStore, storageStatus func(context.Context) string) http.HandlerFunc {
+func handleReadiness(readinessStore runtimeReadinessStore, storageStatus func(context.Context) string, identityCheck func(context.Context) string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
-		dbStatus := "not_ready"
+		
+		ctx, cancel := context.WithTimeout(r.Context(), dshReadinessTimeout)
+		defer cancel()
+
+		dbStatus := "NOT_READY"
 		if readinessStore != nil {
-			ctx, cancel := context.WithTimeout(r.Context(), dshReadinessTimeout)
 			ready, err := readinessStore.Ready(ctx)
-			cancel()
 			if err == nil && ready {
-				dbStatus = "ready"
+				dbStatus = "HEALTHY"
 			}
 		}
 		wltBaseURLStatus := configuredStatus(os.Getenv("DSH_WLT_BASE_URL"))
 		wltTokenStatus := configuredStatus(os.Getenv("WLT_DSH_SERVICE_TOKEN"))
-		storageDependencyStatus := storageStatus(r.Context())
+		storageDependencyStatus := storageStatus(ctx)
+		if storageDependencyStatus == "ready" || storageDependencyStatus == "HEALTHY" {
+			storageDependencyStatus = "HEALTHY"
+		} else {
+			storageDependencyStatus = "NOT_READY"
+		}
 
-		overallStatus := "ready"
+		wltStatus := "NOT_READY"
+		if wltBaseURLStatus == "configured" && wltTokenStatus == "configured" {
+			wltStatus = "HEALTHY"
+		}
+
+		identityStatus := identityCheck(ctx)
+
+		overallStatus := "HEALTHY"
 		httpStatus := http.StatusOK
-		if dbStatus != "ready" || wltBaseURLStatus != "configured" || wltTokenStatus != "configured" || storageDependencyStatus == "unavailable" {
-			overallStatus = "not_ready"
+		if dbStatus != "HEALTHY" || wltStatus != "HEALTHY" || identityStatus == "NOT_READY" || storageDependencyStatus != "HEALTHY" {
+			overallStatus = "NOT_READY"
 			httpStatus = http.StatusServiceUnavailable
+		} else if identityStatus == "DEGRADED" {
+			overallStatus = "DEGRADED"
+			// DEGRADED returns 200 OK because the service is fundamentally alive, just degraded
+			httpStatus = http.StatusOK
 		}
 
 		resp := ReadinessResponse{
@@ -114,7 +136,9 @@ func handleReadiness(readinessStore runtimeReadinessStore, storageStatus func(co
 				"postgres":          dbStatus,
 				"wlt_base_url":      wltBaseURLStatus,
 				"wlt_service_token": wltTokenStatus,
+				"wlt_service":       wltStatus,
 				"storage":           storageDependencyStatus,
+				"identity":          identityStatus,
 			},
 			CheckedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		}
@@ -129,3 +153,4 @@ func configuredStatus(value string) string {
 	}
 	return "configured"
 }
+

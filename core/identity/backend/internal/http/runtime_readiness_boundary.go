@@ -384,15 +384,17 @@ func recordRuntimeSnapshot(snapshot runtimeStatusResponse) {
 	readinessSnapshot.Unlock()
 }
 
-func currentHealthSnapshot(correlationID string) runtimeStatusResponse {
+func currentHealthSnapshot(correlationID string) (runtimeStatusResponse, int) {
 	readinessSnapshot.RLock()
 	last := readinessSnapshot.value
 	readinessSnapshot.RUnlock()
 
-	status := "HEALTHY"
-	if lastReadinessFailed.Load() {
-		status = "DEGRADED"
+	status := last.Status
+	statusCode := http.StatusOK
+	if status == "NOT_READY" {
+		statusCode = http.StatusServiceUnavailable
 	}
+
 	return runtimeStatusResponse{
 		Status:        status,
 		Service:       "core-identity",
@@ -401,7 +403,7 @@ func currentHealthSnapshot(correlationID string) runtimeStatusResponse {
 		CorrelationID: correlationID,
 		Checks:        append([]runtimeCheckStatus(nil), last.Checks...),
 		ReasonCodes:   append([]string(nil), last.ReasonCodes...),
-	}
+	}, statusCode
 }
 
 func readinessStatus(
@@ -485,7 +487,8 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 		w.Header().Set("X-Correlation-ID", correlationID)
 
 		if r.Method == http.MethodGet && r.URL.Path == "/identity/health" {
-			sendJSON(w, http.StatusOK, currentHealthSnapshot(correlationID))
+			snapshot, statusCode := currentHealthSnapshot(correlationID)
+			sendJSON(w, statusCode, snapshot)
 			return
 		}
 

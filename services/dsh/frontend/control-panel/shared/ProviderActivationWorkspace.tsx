@@ -21,6 +21,7 @@ import {
   type FieldAgent,
 } from "../../shared/workforce";
 import { ProviderOperationalEnforcementPanel } from "./ProviderOperationalEnforcementPanel";
+import { ActorActivationCard } from "./ActorActivationCard";
 
 export type ProviderActivationWorkspaceProps = {
   readonly providerKind: "field" | "captain";
@@ -237,33 +238,16 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
 
         {managerAllowed ? (
           <Box gap={2}>
-            {issuedCode ? (
-              <Box layoutDirection="row" justify="space-between" align="center">
-                <Box gap={0}>
-                  <Text role="caption" tone="muted">كود الدخول أحادي الاستخدام</Text>
-                  <Text role="titleMd">{issuedCode.code}</Text>
-                </Box>
-                <CpButton variant="secondary" onClick={() => void copyCode(issuedCode.code)}>{copied ? "تم النسخ" : "نسخ"}</CpButton>
-              </Box>
-            ) : latest ? (
-              <Box layoutDirection="row" justify="space-between" align="center">
-                <Box gap={0}>
-                  <Text role="bodyStrong">آخر كود: {latest.status}</Text>
-                  <Text role="caption" tone="muted">ينتهي: {new Date(latest.expiresAt).toLocaleString("ar-YE")}</Text>
-                </Box>
-                <CpButton variant="danger" disabled={actionBusy || !identityReady} onClick={() => void revokeCode().then(onReloadList)}>إبطال الأكواد</CpButton>
-              </Box>
-            ) : (
-              <CpMutedInline tight>لم يصدر كود دخول بعد.</CpMutedInline>
-            )}
+            <ActorActivationCard
+              actorId={actorId}
+              expectedActorType={providerKind}
+              expectedSurface={`app-${providerKind}`}
+              issuedByActorId="dsh-operator" // Would normally come from auth context
+              disabled={!isReadyToIssue}
+              disabledReason={!isReadyToIssue ? "لا يمكن الإصدار إلا إذا كانت الهوية جاهزة وجميع المتطلبات مكتملة" : undefined}
+            />
 
-            <CpButton
-              variant="primary"
-              disabled={!isReadyToIssue || actionBusy}
-              onClick={() => void issueCode().then(onReloadList)}
-            >
-              {actionBusy ? "جارٍ التنفيذ…" : "إصدار كود الدخول"}
-            </CpButton>
+
             <CpMutedInline>
               الخادم يعيد فحص الهوية والعقد والضمين والتجهيز والضمانة المالية والتدريب والاعتماد؛ لا يمكن تجاوز البوابة من الواجهة.
             </CpMutedInline>

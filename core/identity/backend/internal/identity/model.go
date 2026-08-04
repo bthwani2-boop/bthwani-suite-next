@@ -10,7 +10,8 @@ type Actor struct {
 	PhoneE164         string
 	Roles             []string
 	Permissions       []Permission
-	Active            bool
+	Version           int
+	Status            ActorLifecycleStatus
 }
 
 type Permission struct {
@@ -29,6 +30,7 @@ type ActorIdentity struct {
 	AuthState         string          `json:"authState"`
 	SurfaceAccess     map[string]bool `json:"surfaceAccess"`
 	ServiceAccess     map[string]bool `json:"serviceAccess"`
+	SessionSurface    string          `json:"sessionSurface"`
 	SessionID         string          `json:"sessionId"`
 	ExpiresAt         time.Time       `json:"expiresAt"`
 }
@@ -79,7 +81,8 @@ const (
 	ActorStatusProvisioned       ActorLifecycleStatus = "PROVISIONED"
 	ActorStatusPendingActivation ActorLifecycleStatus = "PENDING_ACTIVATION"
 	ActorStatusActive            ActorLifecycleStatus = "ACTIVE"
-	ActorStatusInactive          ActorLifecycleStatus = "INACTIVE"
+	ActorStatusSuspended         ActorLifecycleStatus = "SUSPENDED"
+	ActorStatusDeactivated       ActorLifecycleStatus = "DEACTIVATED"
 )
 
 type ActorSearchInput struct {
@@ -107,7 +110,7 @@ type ActorAdminView struct {
 	Username  string               `json:"username"`
 	PhoneE164 string               `json:"phoneE164"`
 	Roles     []string             `json:"roles"`
-	Active    bool                 `json:"active"`
+	Version   int                  `json:"version"`
 	Status    ActorLifecycleStatus `json:"status"`
 }
 
@@ -132,6 +135,7 @@ type OtpInput struct {
 type SessionInfo struct {
 	SessionID         string    `json:"sessionId"`
 	DeviceFingerprint string    `json:"deviceFingerprint"`
+	Surface           string    `json:"surface"`
 	CreatedAt         time.Time `json:"createdAt"`
 	ExpiresAt         time.Time `json:"expiresAt"`
 }
