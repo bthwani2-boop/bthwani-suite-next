@@ -87,15 +87,19 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/operator/order-truth/diagnostics", s.withPermission("control-panel", OperationsPermissionRead, s.handleGetOrderTruthDiagnostics))
 	mux.HandleFunc("GET /dsh/operator/order-truth/{orderId}", s.withPermission("control-panel", OperationsPermissionRead, s.handleGetOperatorOrderTruth))
 
-	// Sovereign operational policy truth.
-	mux.HandleFunc("GET /dsh/operator/platform/zones", s.handleListPlatformZones)
-	mux.HandleFunc("POST /dsh/operator/platform/zones", s.handleCreatePlatformZone)
-	mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", s.handleUpdatePlatformZone)
-	mux.HandleFunc("GET /dsh/operator/platform/sla-rules", s.handleListPlatformSlaRules)
-	mux.HandleFunc("PUT /dsh/operator/platform/sla-rules", s.handleUpsertPlatformSlaRule)
-	mux.HandleFunc("GET /dsh/operator/platform/capacity", s.handleGetPlatformCapacity)
-	mux.HandleFunc("PUT /dsh/operator/platform/capacity", s.handleUpsertPlatformCapacity)
-	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", s.handleGetPlatformZoneServiceability)
+	// Sovereign operational policy truth. withPermission is what authenticates
+	// the caller and places the actor in the request context; these handlers
+	// resolve the actor with ActorFromContext and return silently when it is
+	// absent, so registering them bare answered 200 with an empty body instead
+	// of 401/403 and made the capability unusable.
+	mux.HandleFunc("GET /dsh/operator/platform/zones", s.withPermission("control-panel", DshServiceZonesPermissionRead, s.handleListPlatformZones))
+	mux.HandleFunc("POST /dsh/operator/platform/zones", s.withPermission("control-panel", DshServiceZonesPermissionManage, s.handleCreatePlatformZone))
+	mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", s.withPermission("control-panel", DshServiceZonesPermissionManage, s.handleUpdatePlatformZone))
+	mux.HandleFunc("GET /dsh/operator/platform/sla-rules", s.withPermission("control-panel", DshFulfillmentSlaPermissionRead, s.handleListPlatformSlaRules))
+	mux.HandleFunc("PUT /dsh/operator/platform/sla-rules", s.withPermission("control-panel", DshFulfillmentSlaPermissionManage, s.handleUpsertPlatformSlaRule))
+	mux.HandleFunc("GET /dsh/operator/platform/capacity", s.withPermission("control-panel", DshDispatchCapacityPermissionRead, s.handleGetPlatformCapacity))
+	mux.HandleFunc("PUT /dsh/operator/platform/capacity", s.withPermission("control-panel", DshDispatchCapacityPermissionManage, s.handleUpsertPlatformCapacity))
+	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", s.withPermission("control-panel", DshServiceZonesPermissionRead, s.handleGetPlatformZoneServiceability))
 	mux.HandleFunc("GET /dsh/operator/platform/store-onboarding-fee", s.withPermission("control-panel", "partners.read", s.handleGetStoreOnboardingFeePolicy))
 	mux.HandleFunc("PUT /dsh/operator/platform/store-onboarding-fee", s.withPermission("control-panel", "partners.manage", s.handleUpsertStoreOnboardingFeePolicy))
 	mux.HandleFunc("GET /dsh/platform/store-onboarding-fee", s.handleGetStoreOnboardingFeeReference)
