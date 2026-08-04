@@ -21,13 +21,16 @@ func (f fakeRuntimeReadinessStore) Ready(context.Context) (bool, error) {
 	return f.ready, f.err
 }
 
+// noopIdentityCheck returns HEALTHY for use in tests that don't test identity health.
+func noopIdentityCheck(_ context.Context) string { return "HEALTHY" }
+
 func serveReadiness(t *testing.T, store runtimeReadinessStore) *httptest.ResponseRecorder {
 	t.Helper()
 	t.Setenv("DSH_WLT_BASE_URL", "http://wlt-api:8083")
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "configured-test-service-token")
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/dsh/readiness", nil)
-	handleReadiness(store, func(context.Context) string { return "ready" }).ServeHTTP(response, request)
+	handleReadiness(store, func(context.Context) string { return "ready" }, noopIdentityCheck).ServeHTTP(response, request)
 	return response
 }
 
@@ -52,7 +55,7 @@ func TestReadinessRequiresAllDependencies(t *testing.T) {
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "configured-test-service-token")
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/dsh/readiness", nil)
-	handleReadiness(fakeRuntimeReadinessStore{ready: true}, func(context.Context) string { return "unavailable" }).ServeHTTP(response, request)
+	handleReadiness(fakeRuntimeReadinessStore{ready: true}, func(context.Context) string { return "unavailable" }, noopIdentityCheck).ServeHTTP(response, request)
 	if response.Code != http.StatusServiceUnavailable {
 		t.Fatalf("unavailable storage must block readiness, got %d", response.Code)
 	}
@@ -65,8 +68,45 @@ func TestReadinessRequiresAllDependencies(t *testing.T) {
 	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
 		t.Fatal(err)
 	}
-	if payload.Dependencies["postgres"] != "ready" {
+	if payload.Dependencies["postgres"] != "HEALTHY" {
 		t.Fatalf("unexpected dependency state: %v", payload.Dependencies)
+	}
+}
+
+func TestReadinessIdentityDegradedReturns200(t *testing.T) {
+	t.Setenv("DSH_WLT_BASE_URL", "http://wlt-api:8083")
+	t.Setenv("WLT_DSH_SERVICE_TOKEN", "configured-test-service-token")
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/dsh/readiness", nil)
+	handleReadiness(
+		fakeRuntimeReadinessStore{ready: true},
+		func(context.Context) string { return "ready" },
+		func(context.Context) string { return "DEGRADED" },
+	).ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("DEGRADED identity should return 200, got %d", response.Code)
+	}
+	var payload ReadinessResponse
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.Status != "DEGRADED" {
+		t.Fatalf("expected DEGRADED status, got %s", payload.Status)
+	}
+}
+
+func TestReadinessIdentityNotReadyReturns503(t *testing.T) {
+	t.Setenv("DSH_WLT_BASE_URL", "http://wlt-api:8083")
+	t.Setenv("WLT_DSH_SERVICE_TOKEN", "configured-test-service-token")
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/dsh/readiness", nil)
+	handleReadiness(
+		fakeRuntimeReadinessStore{ready: true},
+		func(context.Context) string { return "ready" },
+		func(context.Context) string { return "NOT_READY" },
+	).ServeHTTP(response, request)
+	if response.Code != http.StatusServiceUnavailable {
+		t.Fatalf("NOT_READY identity should return 503, got %d", response.Code)
 	}
 }
 

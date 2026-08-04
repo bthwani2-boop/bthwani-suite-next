@@ -3,7 +3,7 @@
   "service": "dsh",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "dsh-971_partner_brand_schema_recovery.sql",
+  "cutover": "dsh-972_financial_eligibility_wlt_decision_boundary.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -1375,6 +1375,20 @@
       "file": "dsh-971_partner_brand_schema_recovery.sql",
       "sha256": "8a2932e788d47cce4e7f11c146ec46330cb80ae26e13b2c6e67f6b3dfe4551b1",
       "historicalPrefix": "971",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 197,
+      "file": "dsh-132_push_endpoints_session_binding.sql",
+      "sha256": "42fd091c9314d02c343bf4129861156ebc66fc8a295cf8ddb1dc365d12cfbe5e",
+      "historicalPrefix": "132",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 198,
+      "file": "dsh-972_financial_eligibility_wlt_decision_boundary.sql",
+      "sha256": "0845c392787adc1135cf99f65513984b973c3313296267726e29bf8c7d5c737c",
+      "historicalPrefix": "972",
       "state": "ACTIVE"
     }
   ]
