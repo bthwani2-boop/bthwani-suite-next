@@ -34,8 +34,6 @@ const (
 	StatePaymentPending    IntentState = "payment_pending"
 	StateConfirmed         IntentState = "confirmed"
 	StateCancelled         IntentState = "cancelled"
-	StatePaymentConfirmed  IntentState = "payment_confirmed"
-	StatePaymentFailed     IntentState = "payment_failed"
 	StateExpired           IntentState = "expired"
 )
 
@@ -350,9 +348,9 @@ var ErrPaymentSessionMismatch = errors.New("wlt payment session id does not matc
 func paymentEventTargetState(wltStatus string) (IntentState, bool, error) {
 	switch strings.TrimSpace(wltStatus) {
 	case "captured", "cod_collected":
-		return StatePaymentConfirmed, false, nil
+		return StateConfirmed, false, nil
 	case "failed":
-		return StatePaymentFailed, false, nil
+		return StateCancelled, false, nil
 	case "expired":
 		return StateExpired, false, nil
 	case "authorized", "reference_created", "cod_pending":

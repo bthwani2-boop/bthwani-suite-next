@@ -3,7 +3,7 @@ package http
 import (
 	"errors"
 	"net/http"
-	"strings"
+
 
 	"dsh-api/internal/store"
 	"dsh-api/internal/support"
@@ -37,123 +37,7 @@ func marshalTicketEvent(event support.TicketEvent) map[string]any {
 	}
 }
 
-// POST /dsh/client/support/tickets
-func (s *protectedStoreServer) handleCreateGovernedClientSupportTicket(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client")
-	if !ok {
-		return
-	}
-	idempotencyKey, correlationID, ok := partnerSupportMutationHeaders(w, r)
-	if !ok {
-		return
-	}
-	var body struct {
-		StoreID     string `json:"storeId"`
-		OrderID     string `json:"orderId"`
-		Subject     string `json:"subject"`
-		Description string `json:"description"`
-		Category    string `json:"category"`
-		Priority    string `json:"priority"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	priority := support.TicketPriority(strings.TrimSpace(body.Priority))
-	if priority == "" {
-		priority = support.PriorityNormal
-	}
-	ticket, err := support.CreateClientTicket(s.db, support.ClientCreateTicketInput{
-		ActorID:        actor.ID,
-		StoreID:        body.StoreID,
-		OrderID:        body.OrderID,
-		Subject:        body.Subject,
-		Description:    body.Description,
-		Category:       support.TicketCategory(body.Category),
-		Priority:       priority,
-		IdempotencyKey: idempotencyKey,
-		CorrelationID:  correlationID,
-	})
-	if err != nil {
-		sendGovernedSupportError(w, err, "failed to create client support ticket")
-		return
-	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"ticket": marshalTicket(ticket)})
-}
 
-// GET /dsh/client/support/tickets
-func (s *protectedStoreServer) handleListGovernedClientSupportTickets(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client")
-	if !ok {
-		return
-	}
-	tickets, err := support.ListClientTickets(s.db, actor.ID, 50)
-	if err != nil {
-		sendGovernedSupportError(w, err, "failed to list client support tickets")
-		return
-	}
-	result := make([]map[string]any, 0, len(tickets))
-	for _, ticket := range tickets {
-		result = append(result, marshalTicket(ticket))
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"tickets": result})
-}
-
-// GET /dsh/client/support/tickets/{ticketId}
-func (s *protectedStoreServer) handleGetGovernedClientSupportTicket(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client")
-	if !ok {
-		return
-	}
-	ticket, err := support.GetClientTicket(s.db, actor.ID, r.PathValue("ticketId"))
-	if err != nil {
-		sendGovernedSupportError(w, err, "failed to load client support ticket")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"ticket": marshalTicket(ticket)})
-}
-
-// GET /dsh/client/support/tickets/{ticketId}/messages
-func (s *protectedStoreServer) handleListGovernedClientSupportMessages(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client")
-	if !ok {
-		return
-	}
-	messages, err := support.ListActorRichMessages(s.db, actor.ID, support.RoleClient, r.PathValue("ticketId"))
-	if err != nil {
-		sendGovernedSupportError(w, err, "failed to list client support messages")
-		return
-	}
-	result := make([]map[string]any, 0, len(messages))
-	for _, message := range messages {
-		result = append(result, marshalRichMessage(message))
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"messages": result})
-}
-
-// POST /dsh/client/support/tickets/{ticketId}/messages
-func (s *protectedStoreServer) handleAddGovernedClientSupportMessage(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client")
-	if !ok {
-		return
-	}
-	idempotencyKey, correlationID, ok := partnerSupportMutationHeaders(w, r)
-	if !ok {
-		return
-	}
-	input, ok := decodeRichSupportMessageRequest(w, r, false)
-	if !ok {
-		return
-	}
-	input.TicketID = r.PathValue("ticketId")
-	input.IdempotencyKey = idempotencyKey
-	input.CorrelationID = correlationID
-	message, err := support.AddActorRichMessage(s.db, actor.ID, support.RoleClient, input)
-	if err != nil {
-		sendGovernedSupportError(w, err, "failed to add client support message")
-		return
-	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"message": marshalRichMessage(message)})
-}
 
 // GET /dsh/operator/support/tickets
 func (s *protectedStoreServer) handleListGovernedOperatorSupportTickets(w http.ResponseWriter, r *http.Request) {

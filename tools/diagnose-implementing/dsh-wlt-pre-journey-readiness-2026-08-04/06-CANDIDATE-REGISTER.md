@@ -14,16 +14,16 @@
 | C-008 | manual checkout/payment request/status types | MIGRATE_TO_GENERATED | consumer list + generated equivalents |
 | C-009 | stub/placeholder routes | IMPLEMENT_OR_DELETE | route registry + consumers + product decision |
 | C-010 | generic WLT trips mapping | REPLACE_DOMAIN_APIS | capability/contract/data mapping |
-| C-011 | removed orchestrator references | DELETE_REFERENCES | zero implementation/consumer + replacement |
+| C-011 | removed orchestrator references | CLOSED_WITH_EVIDENCE | zero implementation/consumer + replacement |
 | C-012 | passive collector-only gates | REWRITE_OR_REMOVE | assertion harvest + CI replacement |
-| C-013 | compatibility wrappers/aliases | RETIRE | telemetry zero window + consumer migration |
-| C-014 | generated artifacts داخل live source | RELOCATE/GENERATE | build graph + clean-clone proof |
-| C-015 | DSH `noop.js` وplaceholder lint | REDEFINE_PACKAGE | package role + real entrypoints |
-| C-016 | WLT Unix-only cleanup command | CROSS_PLATFORM_REPLACE | Windows/Linux test |
-| C-017 | duplicate Next/config files | CONVERGE | prove loaded file + merge all settings |
+| C-013 | compatibility wrappers/aliases | CLOSED_WITH_EVIDENCE | telemetry zero window + consumer migration |
+| C-014 | generated artifacts داخل live source | CLOSED_WITH_EVIDENCE | build graph + clean-clone proof |
+| C-015 | DSH `noop.js` وplaceholder lint | CLOSED_WITH_EVIDENCE | package role + real entrypoints |
+| C-016 | WLT Unix-only cleanup command | CLOSED_WITH_EVIDENCE | Windows/Linux test |
+| C-017 | duplicate Next/config files | CLOSED_WITH_EVIDENCE | prove loaded file + merge all settings |
 | C-018 | duplicate shared HTTP helpers | CENTRALIZE/GENERATE | ownership + no reverse dependency |
-| C-019 | populated `.gitkeep`/empty noise | DELETE_BATCHED | tracked siblings + zero refs |
-| C-020 | one-off migration/refactor scripts | DELETE_AFTER_HARVEST | assertions moved + zero script refs |
+| C-019 | populated `.gitkeep`/empty noise | CLOSED_WITH_EVIDENCE | tracked siblings + zero refs |
+| C-020 | one-off migration/refactor scripts | CLOSED_WITH_EVIDENCE | assertions moved + zero script refs |
 | C-021 | journey subsystem removal proposal | REJECT_OR_DEFER | user intent is journey execution; requires authority decision and complete semantic harvest |
 | C-022 | old diagnostic package built on `09f7a33` | KEEP_AS_HISTORY_OR_SUPERSEDE | no live executor treats it as current |
 

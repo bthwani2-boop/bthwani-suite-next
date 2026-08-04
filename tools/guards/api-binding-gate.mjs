@@ -174,7 +174,7 @@ function staticMethodFromCall(node) {
 }
 
 function extractApiPathLiterals(file, content) {
-  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindFor(file));
+  const sourceFile = ts.createSourceFile(file, content, 99 /* ts.ScriptTarget.Latest */, true, scriptKindFor(file));
   const paths = new Set();
 
   function record(value) {

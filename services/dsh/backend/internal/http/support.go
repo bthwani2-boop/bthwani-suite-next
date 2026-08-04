@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 
+	"strings"
+
 	"dsh-api/internal/store"
 	"dsh-api/internal/support"
 )
@@ -15,7 +17,18 @@ const (
 	SupportPermissionManage = "support.manage"
 )
 
-const errTicketNotFound = "ticket not found"
+func partnerSupportMutationHeaders(w http.ResponseWriter, r *http.Request) (string, string, bool) {
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if idempotencyKey == "" {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key is required")
+		return "", "", false
+	}
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	if correlationID == "" {
+		correlationID = idempotencyKey
+	}
+	return idempotencyKey, correlationID, true
+}
 
 
 

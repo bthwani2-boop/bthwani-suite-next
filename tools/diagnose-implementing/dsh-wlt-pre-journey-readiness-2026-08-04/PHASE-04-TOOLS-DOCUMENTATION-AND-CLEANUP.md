@@ -15,10 +15,10 @@ CI Workflows, Governance Tools, Test Suites, Runbooks, Residual Garbage Collecti
 - `PHASE-03-MULTI-SURFACE-EXPERIENCE`
 
 ## Tasks
-1. **Garbage Collection:** Final pass to delete any file renamed as `_legacy`, `_old`, or unused utility scripts.
-2. **CI Pipeline Repair:** Ensure GitHub Actions and static checks strictly enforce new boundaries.
-3. **Documentation Sync:** Update architecture diagrams, registries, and dossiers.
-4. **Final Same-SHA Verification:** Execute all validation steps on the final commit.
+1. **Garbage Collection:** [CLOSED_WITH_EVIDENCE] Final pass to delete any file renamed as `_legacy`, `_old`, or unused utility scripts. (No residual files found).
+2. **CI Pipeline Repair:** [CLOSED_WITH_EVIDENCE] Ensure GitHub Actions and static checks strictly enforce new boundaries.
+3. **Documentation Sync:** [CLOSED_WITH_EVIDENCE] Update architecture diagrams, registries, and dossiers.
+4. **Final Same-SHA Verification:** [BLOCKED] Execute all validation steps on the final commit. (Blocked by B-011: Missing Closure Commands. Executing `verify:full` as fallback).
 
 ## Acceptance Criteria
 - Repository has no dead code or unreferenced modules.

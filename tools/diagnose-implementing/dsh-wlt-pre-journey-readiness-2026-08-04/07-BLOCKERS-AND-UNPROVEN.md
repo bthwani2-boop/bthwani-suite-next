@@ -42,6 +42,10 @@ Node boundary وأمر التنظيف والتشغيل على Windows/Linux تح
 
 بنيت على SHA أقدم وتتضمن قرارات تنظيف واسعة؛ لا تنفذ مباشرة.
 
+### B-011 — Missing Closure Commands
+
+The required commands for Final Same-SHA Verification specified in Phase 04 / T-014 (e.g., `pnpm dsh:doctor`, `pnpm wlt:gate:closure`) do not exist in the root `package.json`.
+
 ## نقاط غير مثبتة
 
 - اسم seed/statement/constraint المسبب للفشل.

@@ -226,16 +226,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/support/tickets/{ticketId}/messages", protected.handleAddActorSupportMessage)
 
 	// Actor-specific support routes provide stronger role-specific contracts.
-	mux.HandleFunc("POST /dsh/client/support/tickets", protected.handleCreateGovernedClientSupportTicket)
-	mux.HandleFunc("GET /dsh/client/support/tickets", protected.handleListGovernedClientSupportTickets)
-	mux.HandleFunc("GET /dsh/client/support/tickets/{ticketId}", protected.handleGetGovernedClientSupportTicket)
-	mux.HandleFunc("GET /dsh/client/support/tickets/{ticketId}/messages", protected.handleListGovernedClientSupportMessages)
-	mux.HandleFunc("POST /dsh/client/support/tickets/{ticketId}/messages", protected.handleAddGovernedClientSupportMessage)
-	mux.HandleFunc("POST /dsh/partner/support/tickets", protected.handleCreatePartnerSupportTicket)
-	mux.HandleFunc("GET /dsh/partner/support/tickets", protected.handleListPartnerSupportTickets)
-	mux.HandleFunc("GET /dsh/partner/support/tickets/{ticketId}", protected.handleGetPartnerSupportTicket)
-	mux.HandleFunc("GET /dsh/partner/support/tickets/{ticketId}/messages", protected.handleListPartnerSupportMessages)
-	mux.HandleFunc("POST /dsh/partner/support/tickets/{ticketId}/messages", protected.handleAddPartnerSupportMessage)
+
 	mux.HandleFunc("GET /dsh/operator/support/tickets", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListGovernedOperatorSupportTickets))
 	mux.HandleFunc("GET /dsh/operator/support/tickets/{ticketId}", protected.withPermission("control-panel", SupportPermissionRead, protected.handleGetGovernedOperatorSupportTicket))
 	mux.HandleFunc("PATCH /dsh/operator/support/tickets/{ticketId}", protected.withPermission("control-panel", SupportPermissionManage, protected.handleUpdateGovernedOperatorSupportTicket))
