@@ -7,7 +7,7 @@
 ```yaml
 repository: bthwani2-boop/bthwani-suite-next
 work_branch: smsm
-base_branch: master
+base_branch: smsm
 write_mode: DIRECT_WORK_BRANCH
 force_push: forbidden
 automatic_branch: forbidden
