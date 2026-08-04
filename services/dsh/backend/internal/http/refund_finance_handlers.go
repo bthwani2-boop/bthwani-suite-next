@@ -98,7 +98,7 @@ func (s *protectedStoreServer) writeRefundCommand(w http.ResponseWriter, r *http
 
 // POST /dsh/control-panel/finance/refunds
 func (s *protectedStoreServer) handleCreateFinanceRefund(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -133,7 +133,7 @@ func (s *protectedStoreServer) handleCreateFinanceRefund(w http.ResponseWriter, 
 }
 
 func (s *protectedStoreServer) refundDecisionCommand(w http.ResponseWriter, r *http.Request, action string) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -173,7 +173,7 @@ func (s *protectedStoreServer) handleRejectFinanceRefund(w http.ResponseWriter, 
 }
 
 func (s *protectedStoreServer) handleCompleteFinanceRefund(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -193,7 +193,7 @@ func (s *protectedStoreServer) handleCompleteFinanceRefund(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleReconcileFinanceRefund(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -230,7 +230,7 @@ func (s *protectedStoreServer) handleReconcileFinanceRefund(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleFinanceRefundAudit(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

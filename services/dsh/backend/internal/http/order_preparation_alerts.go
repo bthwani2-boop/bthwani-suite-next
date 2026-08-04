@@ -12,12 +12,7 @@ import (
 )
 
 func (s *protectedStoreServer) handleRefreshPreparationAlerts(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(
-		w,
-		r,
-		"control-panel",
-		OperationsPermissionManage,
-	)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -44,12 +39,7 @@ func (s *protectedStoreServer) handleRefreshPreparationAlerts(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleListPreparationAlerts(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(
-		w,
-		r,
-		"control-panel",
-		OperationsPermissionRead,
-	)
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -79,12 +69,7 @@ func (s *protectedStoreServer) handleListPreparationAlerts(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleAcknowledgePreparationAlert(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(
-		w,
-		r,
-		"control-panel",
-		OperationsPermissionManage,
-	)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

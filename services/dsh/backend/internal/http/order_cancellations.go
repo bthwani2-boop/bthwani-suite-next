@@ -152,7 +152,7 @@ func (s *protectedStoreServer) handlePartnerCancelOrder(w http.ResponseWriter, r
 // override always carries a reason and ticket reference in a durable,
 // queryable record.
 func (s *protectedStoreServer) handleOperatorCancelOrderGoverned(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", IncidentPermissionOverride)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -237,7 +237,7 @@ func (s *protectedStoreServer) handlePartnerOrderCancellation(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleOperatorOrderCancellation(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead)
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

@@ -184,7 +184,7 @@ func (s *protectedStoreServer) handleCreateGovernedReadinessEscalation(w http.Re
 
 // PATCH /dsh/operator/field-readiness/escalations/{escalationId}
 func (s *protectedStoreServer) handleUpdateGovernedEscalation(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

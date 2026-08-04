@@ -254,7 +254,7 @@ func (s *protectedStoreServer) handleGetPartnerDispatchTrackingReference(w http.
 }
 
 func (s *protectedStoreServer) handleListDispatchTrackingAlerts(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	assignments, err := dispatch.ListOperatorAssignments(s.db, 200)

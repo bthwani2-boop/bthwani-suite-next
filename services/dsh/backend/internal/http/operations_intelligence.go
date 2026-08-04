@@ -50,7 +50,7 @@ func handleWorkforceAvailabilityProjection(db *sql.DB) http.HandlerFunc {
 }
 
 func (s *protectedStoreServer) handleGetServiceAreaCapacityForecast(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
@@ -70,7 +70,7 @@ func (s *protectedStoreServer) handleGetServiceAreaCapacityForecast(w http.Respo
 }
 
 func (s *protectedStoreServer) handleUpsertServiceAreaCapacityPolicy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -89,7 +89,7 @@ func (s *protectedStoreServer) handleUpsertServiceAreaCapacityPolicy(w http.Resp
 }
 
 func (s *protectedStoreServer) handleGetOperationsHeatmap(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())

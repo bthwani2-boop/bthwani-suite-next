@@ -360,7 +360,7 @@ func PickupMutationGuard(
 // reschedule after no-show belongs to the partner (see
 // handlePartnerReschedulePickupWindow in pickup.go).
 func (s *protectedStoreServer) handleReschedulePickupWindow(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", IncidentPermissionOverride)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

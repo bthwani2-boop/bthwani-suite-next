@@ -209,7 +209,7 @@ func (s *protectedStoreServer) handleMarkReadyForPickup(w http.ResponseWriter, r
 
 // GET /dsh/operator/orders?status=...
 func (s *protectedStoreServer) handleListOperatorOrders(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead)
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

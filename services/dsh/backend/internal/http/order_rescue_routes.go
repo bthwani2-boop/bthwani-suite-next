@@ -12,7 +12,7 @@ import (
 )
 
 func (s *protectedStoreServer) handleCreateOrderRescueCase(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -50,7 +50,7 @@ func (s *protectedStoreServer) handleCreateOrderRescueCase(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleListOrderRescueCases(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	items, err := support.ListOrderRescueCases(s.db, r.URL.Query().Get("status"), 100)
@@ -62,7 +62,7 @@ func (s *protectedStoreServer) handleListOrderRescueCases(w http.ResponseWriter,
 }
 
 func (s *protectedStoreServer) handleGetOrderRescueCase(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	item, err := support.GetOrderRescueCase(s.db, r.PathValue("caseId"))
@@ -74,7 +74,7 @@ func (s *protectedStoreServer) handleGetOrderRescueCase(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleUpdateOrderRescueCase(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -119,7 +119,7 @@ func (s *protectedStoreServer) handleUpdateOrderRescueCase(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleListOrderRescueEvents(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	caseID := r.PathValue("caseId")
@@ -143,9 +143,9 @@ func RegisterOrderRescueRoutes(
 	mediaProvider *media.Provider,
 ) {
 	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
-	mux.HandleFunc("POST /dsh/operator/support/order-rescue-cases", protected.handleCreateOrderRescueCase)
-	mux.HandleFunc("GET /dsh/operator/support/order-rescue-cases", protected.handleListOrderRescueCases)
-	mux.HandleFunc("GET /dsh/operator/support/order-rescue-cases/{caseId}", protected.handleGetOrderRescueCase)
-	mux.HandleFunc("PATCH /dsh/operator/support/order-rescue-cases/{caseId}", protected.handleUpdateOrderRescueCase)
-	mux.HandleFunc("GET /dsh/operator/support/order-rescue-cases/{caseId}/events", protected.handleListOrderRescueEvents)
+	mux.HandleFunc("POST /dsh/operator/support/order-rescue-cases", protected.withPermission("control-panel", SupportPermissionManage, protected.handleCreateOrderRescueCase))
+	mux.HandleFunc("GET /dsh/operator/support/order-rescue-cases", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListOrderRescueCases))
+	mux.HandleFunc("GET /dsh/operator/support/order-rescue-cases/{caseId}", protected.withPermission("control-panel", SupportPermissionRead, protected.handleGetOrderRescueCase))
+	mux.HandleFunc("PATCH /dsh/operator/support/order-rescue-cases/{caseId}", protected.withPermission("control-panel", SupportPermissionManage, protected.handleUpdateOrderRescueCase))
+	mux.HandleFunc("GET /dsh/operator/support/order-rescue-cases/{caseId}/events", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListOrderRescueEvents))
 }

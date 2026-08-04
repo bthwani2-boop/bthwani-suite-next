@@ -46,12 +46,7 @@ func (s *protectedStoreServer) authorizePreparationIssueRead(
 			return "", false
 		}
 	case "operator":
-		if _, permitted := s.requirePermission(
-			w,
-			r,
-			"control-panel",
-			OperationsPermissionRead,
-	); !permitted {
+		if _, permitted := s.ActorFromContext(r.Context()); !permitted {
 			return "", false
 		}
 	}

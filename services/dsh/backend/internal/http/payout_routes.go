@@ -170,7 +170,7 @@ func (s *protectedStoreServer) handleFieldCreatePayoutRequest(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleReconcileFinancePayoutRequest(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -196,7 +196,7 @@ func (s *protectedStoreServer) handleReconcileFinancePayoutRequest(w http.Respon
 }
 
 func (s *protectedStoreServer) handleFinancePayoutAudit(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

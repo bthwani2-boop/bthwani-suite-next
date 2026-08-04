@@ -12,7 +12,7 @@ import (
 )
 
 func (s *protectedStoreServer) handleRefreshPickupSLAAlerts(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PickupPermissionManage)
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -30,7 +30,7 @@ func (s *protectedStoreServer) handleRefreshPickupSLAAlerts(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleListPickupSLAAlerts(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PickupPermissionRead)
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -53,7 +53,7 @@ func (s *protectedStoreServer) handleListPickupSLAAlerts(w http.ResponseWriter, 
 }
 
 func (s *protectedStoreServer) handleAcknowledgePickupSLAAlert(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PickupPermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

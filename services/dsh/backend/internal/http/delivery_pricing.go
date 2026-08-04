@@ -49,7 +49,7 @@ func decodeDeliveryPricingMutation(w http.ResponseWriter, r *http.Request) (stru
 
 // GET /dsh/operator/stores/{storeId}/delivery-pricing
 func (s *protectedStoreServer) handleOperatorListDeliveryPricing(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", "operations.read"); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	items, err := checkout.ListDeliveryPricing(s.db, r.PathValue("storeId"))
@@ -62,7 +62,7 @@ func (s *protectedStoreServer) handleOperatorListDeliveryPricing(w http.Response
 
 // PUT /dsh/operator/stores/{storeId}/delivery-pricing/{fulfillmentMode}
 func (s *protectedStoreServer) handleOperatorUpsertDeliveryPricing(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", "operations.manage")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

@@ -193,7 +193,7 @@ func (s *protectedStoreServer) handleGetPartnerOrderTruth(w http.ResponseWriter,
 }
 
 func (s *protectedStoreServer) handleListOperatorOrderTruth(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -206,7 +206,7 @@ func (s *protectedStoreServer) handleListOperatorOrderTruth(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleGetOperatorOrderTruth(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

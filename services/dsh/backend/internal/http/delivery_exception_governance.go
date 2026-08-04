@@ -126,7 +126,7 @@ func (s *protectedStoreServer) handleReportDeliveryExceptionGoverned(w http.Resp
 // gate before any retry, reassignment, return, or cancellation decision. A
 // resolved item remains eligible only for the domain layer's idempotent replay.
 func (s *protectedStoreServer) handleResolveDeliveryExceptionGoverned(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

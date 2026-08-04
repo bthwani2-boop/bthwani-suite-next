@@ -69,7 +69,7 @@ func writeOperationalIncidentError(w http.ResponseWriter, err error) {
 // not the ordinary read/manage control-panel permissions used elsewhere in
 // this file, so read/monitor access does not imply override access.
 func (s *protectedStoreServer) handleReportOperationalIncident(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", IncidentPermissionOverride)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -101,7 +101,7 @@ func (s *protectedStoreServer) handleReportOperationalIncident(w http.ResponseWr
 }
 
 func (s *protectedStoreServer) handleListOperatorIncidents(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionRead)
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -123,7 +123,7 @@ func (s *protectedStoreServer) handleListOperatorIncidents(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleGetOperatorIncident(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionRead)
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

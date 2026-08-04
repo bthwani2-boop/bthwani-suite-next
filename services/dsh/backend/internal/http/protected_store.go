@@ -119,6 +119,8 @@ func (s *protectedStoreServer) mediaClient() *media.Client {
 	return s.media.Client()
 }
 
+type storeActorContextKeyType struct{}
+
 func partnerRequestWithActor(r *http.Request, actor store.StoreActor) *http.Request {
 	ctx := r.Context()
 	if strings.TrimSpace(actor.OperatorContextID) != "" {
@@ -127,7 +129,13 @@ func partnerRequestWithActor(r *http.Request, actor store.StoreActor) *http.Requ
 	ctx = context.WithValue(ctx, "actor_id", actor.ID)
 	ctx = context.WithValue(ctx, "actor_phone", actor.PhoneE164)
 	ctx = context.WithValue(ctx, "actor_surface", dshActorSurface(actor.Role))
+	ctx = context.WithValue(ctx, storeActorContextKeyType{}, actor)
 	return r.WithContext(ctx)
+}
+
+func (s *protectedStoreServer) ActorFromContext(ctx context.Context) (store.StoreActor, bool) {
+	actor, ok := ctx.Value(storeActorContextKeyType{}).(store.StoreActor)
+	return actor, ok
 }
 
 func dshActorSurface(role string) string {
@@ -587,6 +595,19 @@ func (s *protectedStoreServer) requireActor(
 	}
 	store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor role cannot perform this action")
 	return store.StoreActor{}, false
+}
+
+func (s *protectedStoreServer) withPermission(surface, action string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		actor, ok := s.requirePermission(w, r, surface, action)
+		if !ok {
+			return
+		}
+		ctx := partnerRequestWithActor(r, actor).Context()
+		ctx = context.WithValue(ctx, "authorized_action", actor.AuthorizedAction)
+		ctx = context.WithValue(ctx, "authorization_scope", actor.AuthorizationScope)
+		next(w, r.WithContext(ctx))
+	}
 }
 
 func (s *protectedStoreServer) requirePermission(

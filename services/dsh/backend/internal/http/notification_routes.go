@@ -31,9 +31,9 @@ func RegisterActorNotificationRoutes(
 	mux.HandleFunc("DELETE /dsh/notifications/push-endpoints/{deviceId}", protected.handleDeactivateNotificationPushEndpoint)
 	mux.HandleFunc("POST /dsh/notifications/read-all", protected.handleMarkAllNotificationsRead)
 	mux.HandleFunc("POST /dsh/notifications/{notificationId}/read", protected.handleMarkNotificationRead)
-	mux.HandleFunc("GET /dsh/operator/notifications/config", protected.handleListPlatformNotificationConfig)
-	mux.HandleFunc("PUT /dsh/operator/notifications/config", protected.handleUpsertPlatformNotificationConfig)
-	mux.HandleFunc("GET /dsh/operator/notifications/delivery-attempts", protected.handleListNotificationDeliveryAttempts)
+	mux.HandleFunc("GET /dsh/operator/notifications/config", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListPlatformNotificationConfig))
+	mux.HandleFunc("PUT /dsh/operator/notifications/config", protected.withPermission("control-panel", SupportPermissionManage, protected.handleUpsertPlatformNotificationConfig))
+	mux.HandleFunc("GET /dsh/operator/notifications/delivery-attempts", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListNotificationDeliveryAttempts))
 }
 
 func (s *protectedStoreServer) handleListNotificationPreferences(w http.ResponseWriter, r *http.Request) {

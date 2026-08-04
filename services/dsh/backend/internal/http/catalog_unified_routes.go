@@ -83,9 +83,9 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/client/order-truth/{orderId}/events", s.handleListClientOrderTruthEvents)
 	mux.HandleFunc("GET /dsh/partner/order-truth", s.handleListPartnerOrderTruth)
 	mux.HandleFunc("GET /dsh/partner/order-truth/{orderId}", s.handleGetPartnerOrderTruth)
-	mux.HandleFunc("GET /dsh/operator/order-truth", s.handleListOperatorOrderTruth)
-	mux.HandleFunc("GET /dsh/operator/order-truth/diagnostics", s.handleGetOrderTruthDiagnostics)
-	mux.HandleFunc("GET /dsh/operator/order-truth/{orderId}", s.handleGetOperatorOrderTruth)
+	mux.HandleFunc("GET /dsh/operator/order-truth", s.withPermission("control-panel", OperationsPermissionRead, s.handleListOperatorOrderTruth))
+	mux.HandleFunc("GET /dsh/operator/order-truth/diagnostics", s.withPermission("control-panel", OperationsPermissionRead, s.handleGetOrderTruthDiagnostics))
+	mux.HandleFunc("GET /dsh/operator/order-truth/{orderId}", s.withPermission("control-panel", OperationsPermissionRead, s.handleGetOperatorOrderTruth))
 
 	// Sovereign operational policy truth.
 	mux.HandleFunc("GET /dsh/operator/platform/zones", s.handleListPlatformZones)
@@ -96,8 +96,8 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/operator/platform/capacity", s.handleGetPlatformCapacity)
 	mux.HandleFunc("PUT /dsh/operator/platform/capacity", s.handleUpsertPlatformCapacity)
 	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", s.handleGetPlatformZoneServiceability)
-	mux.HandleFunc("GET /dsh/operator/platform/store-onboarding-fee", s.handleGetStoreOnboardingFeePolicy)
-	mux.HandleFunc("PUT /dsh/operator/platform/store-onboarding-fee", s.handleUpsertStoreOnboardingFeePolicy)
+	mux.HandleFunc("GET /dsh/operator/platform/store-onboarding-fee", s.withPermission("control-panel", "partners.read", s.handleGetStoreOnboardingFeePolicy))
+	mux.HandleFunc("PUT /dsh/operator/platform/store-onboarding-fee", s.withPermission("control-panel", "partners.manage", s.handleUpsertStoreOnboardingFeePolicy))
 	mux.HandleFunc("GET /dsh/platform/store-onboarding-fee", s.handleGetStoreOnboardingFeeReference)
 
 	// Operator taxonomy, products, attributes, relationships, proposals,

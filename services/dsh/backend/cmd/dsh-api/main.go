@@ -136,7 +136,6 @@ func main() {
 	}
 
 	if wltClient.Configured() {
-		go orders.RunPaymentProjectionWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go wltoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go fieldcommissionoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go checkoutfinanceoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)

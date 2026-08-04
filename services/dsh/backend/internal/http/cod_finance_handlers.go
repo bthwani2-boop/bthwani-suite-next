@@ -91,7 +91,7 @@ func (s *protectedStoreServer) handlePartnerRemitCodRecord(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleFinanceCodReconciliationCases(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -99,7 +99,7 @@ func (s *protectedStoreServer) handleFinanceCodReconciliationCases(w http.Respon
 }
 
 func (s *protectedStoreServer) handleAssignFinanceCodReconciliationCase(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -140,7 +140,7 @@ func (s *protectedStoreServer) handleAssignFinanceCodReconciliationCase(w http.R
 }
 
 func (s *protectedStoreServer) handleResolveFinanceCodReconciliationCase(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

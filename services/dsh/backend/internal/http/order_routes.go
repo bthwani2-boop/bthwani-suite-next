@@ -19,10 +19,10 @@ func RegisterOrderJourneyRoutes(
 	mediaProvider *media.Provider,
 ) {
 	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
-	mux.HandleFunc("GET /dsh/operator/order-workboard", protected.handleOperatorOrderWorkboard)
+	mux.HandleFunc("GET /dsh/operator/order-workboard", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleOperatorOrderWorkboard))
 	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/partner-delivery", protected.handleGetPartnerDeliveryTask)
 
-	mux.HandleFunc("GET /dsh/orders/{orderId}/preparation", protected.handleGetOrderPreparation)
+	mux.HandleFunc("GET /dsh/orders/{orderId}/preparation", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleGetOrderPreparation))
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparation-estimate", protected.handleRevisePreparationEstimate)
 	mux.HandleFunc("GET /dsh/orders/{orderId}/preparation-issues", protected.handleListPreparationIssues)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparation-issues", protected.handleCreatePreparationIssue)
@@ -31,9 +31,9 @@ func RegisterOrderJourneyRoutes(
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/order-preparation-policy", protected.handleGetStorePreparationPolicy)
 	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/order-preparation-policy", protected.handleUpdateStorePreparationPolicy)
 
-	mux.HandleFunc("POST /dsh/operator/order-preparation/alerts/refresh", protected.handleRefreshPreparationAlerts)
-	mux.HandleFunc("GET /dsh/operator/order-preparation/alerts", protected.handleListPreparationAlerts)
-	mux.HandleFunc("POST /dsh/operator/order-preparation/alerts/{alertId}/acknowledge", protected.handleAcknowledgePreparationAlert)
+	mux.HandleFunc("POST /dsh/operator/order-preparation/alerts/refresh", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleRefreshPreparationAlerts))
+	mux.HandleFunc("GET /dsh/operator/order-preparation/alerts", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleListPreparationAlerts))
+	mux.HandleFunc("POST /dsh/operator/order-preparation/alerts/{alertId}/acknowledge", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleAcknowledgePreparationAlert))
 
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/handoff-exceptions", protected.handleReportCaptainStoreCaptainHandoffException)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/captain-handoff/exceptions", protected.handleReportPartnerStoreCaptainHandoffException)

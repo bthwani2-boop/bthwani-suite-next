@@ -39,11 +39,11 @@ func (s *protectedStoreServer) handleGetOperationalProfile(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleUpsertOperationalProfile(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", DshFulfillmentSlaPermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
-	if _, ok := s.requirePermission(w, r, "control-panel", DshDispatchCapacityPermissionManage); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	var body struct {
@@ -94,7 +94,7 @@ func (s *protectedStoreServer) handleUpsertOperationalProfile(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleListOperationalDeliveryModes(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", DshFulfillmentSlaPermissionRead); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	items, err := platformpolicies.ListDeliveryModePolicies(r.Context(), s.db, r.PathValue("zoneId"))
@@ -106,7 +106,7 @@ func (s *protectedStoreServer) handleListOperationalDeliveryModes(w http.Respons
 }
 
 func (s *protectedStoreServer) handleUpsertOperationalDeliveryMode(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", DshFulfillmentSlaPermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -159,7 +159,7 @@ func (s *protectedStoreServer) handleEvaluateOperationalPolicy(w http.ResponseWr
 }
 
 func (s *protectedStoreServer) handleListOperationalPolicyAudit(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyAuditPermissionRead); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	limit := 50
@@ -186,7 +186,7 @@ func (s *protectedStoreServer) handleListOperationalPolicyAudit(w http.ResponseW
 }
 
 func (s *protectedStoreServer) handleRollbackOperationalPolicy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyRollbackPermission)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

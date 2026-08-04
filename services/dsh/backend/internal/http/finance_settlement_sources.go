@@ -63,7 +63,7 @@ func settlementEvidenceHash(parts ...string) string {
 // DSH sends only immutable operational evidence. WLT owns refund truth,
 // settlement policy, arithmetic, ledger effects, and duplicate prevention.
 func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok { return }
 	if !s.wlt.Configured() { store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured"); return }
 	var input createGovernedSettlementRequest
@@ -113,7 +113,7 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 
 // PUT /dsh/control-panel/finance/settlement-policies/{partnerId}
 func (s *protectedStoreServer) handleUpsertFinanceSettlementPolicy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok { return }
 	if !s.wlt.Configured() { store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured"); return }
 	partnerID := strings.TrimSpace(r.PathValue("partnerId"))

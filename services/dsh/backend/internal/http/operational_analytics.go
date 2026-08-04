@@ -42,7 +42,7 @@ func analyticsLimit(r *http.Request, fallback int) int {
 }
 
 func (s *protectedStoreServer) requireAnalyticsOperator(w http.ResponseWriter, r *http.Request) bool {
-	_, ok := s.requirePermission(w, r, "control-panel", AnalyticsPermissionRead)
+	_, ok := s.ActorFromContext(r.Context())
 	return ok
 }
 

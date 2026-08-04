@@ -26,6 +26,7 @@ type Event struct {
 	RefundReference  string
 	Reason           string
 	CorrelationID    string
+	PaymentMethod    string
 	AttemptCount     int
 }
 
@@ -89,19 +90,21 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	defer tx.Rollback()
 
 	rows, err := tx.Query(`
-		SELECT id, event_type, payment_session_id,
-		       COALESCE(to_jsonb(wlt_dsh_outbox_events)->>'operator_context_id', 'OperatorContext-dev-001'),
-		       checkout_intent_id, special_request_id,
-		       COALESCE(to_jsonb(wlt_dsh_outbox_events)->>'order_id',''),
-		       COALESCE(to_jsonb(wlt_dsh_outbox_events)->>'refund_reference',''),
-		       COALESCE(to_jsonb(wlt_dsh_outbox_events)->>'reason',''),
-		       COALESCE(to_jsonb(wlt_dsh_outbox_events)->>'correlation_id',''),
-		       attempt_count
-		FROM wlt_dsh_outbox_events
-		WHERE status = 'pending' AND next_retry_at <= NOW()
-		ORDER BY created_at
+		SELECT o.id, o.event_type, o.payment_session_id,
+		       COALESCE(to_jsonb(o)->>'operator_context_id', 'OperatorContext-dev-001'),
+		       o.checkout_intent_id, o.special_request_id,
+		       COALESCE(to_jsonb(o)->>'order_id',''),
+		       COALESCE(to_jsonb(o)->>'refund_reference',''),
+		       COALESCE(to_jsonb(o)->>'reason',''),
+		       COALESCE(to_jsonb(o)->>'correlation_id',''),
+		       p.payment_method,
+		       o.attempt_count
+		FROM wlt_dsh_outbox_events o
+		JOIN wlt_payment_sessions p ON p.id = o.payment_session_id
+		WHERE o.status = 'pending' AND o.next_retry_at <= NOW()
+		ORDER BY o.created_at
 		LIMIT $1
-		FOR UPDATE SKIP LOCKED`, limit)
+		FOR UPDATE OF o SKIP LOCKED`, limit)
 	if err != nil {
 		return nil, fmt.Errorf("claim dsh outbox batch: %w", err)
 	}
@@ -111,7 +114,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 		if err := rows.Scan(
 			&e.ID, &e.EventType, &e.PaymentSessionID, &e.OperatorContextID,
 			&e.CheckoutIntentID, &e.SpecialRequestID, &e.OrderID, &e.RefundReference,
-			&e.Reason, &e.CorrelationID, &e.AttemptCount,
+			&e.Reason, &e.CorrelationID, &e.PaymentMethod, &e.AttemptCount,
 		); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan dsh outbox event: %w", err)

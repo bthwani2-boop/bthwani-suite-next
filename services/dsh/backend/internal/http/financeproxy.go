@@ -45,7 +45,7 @@ func financeQuery(r *http.Request, keys ...string) url.Values {
 }
 
 func (s *protectedStoreServer) handleFinanceSettlements(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -53,7 +53,7 @@ func (s *protectedStoreServer) handleFinanceSettlements(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleFinanceSettlementSummary(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -82,7 +82,7 @@ func (s *protectedStoreServer) handlePartnerFinanceSettlementSummary(w http.Resp
 
 // Control-panel refund reads are OperatorContext-bound before WLT is called.
 func (s *protectedStoreServer) handleFinanceRefunds(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -94,7 +94,7 @@ func (s *protectedStoreServer) handleFinanceRefunds(w http.ResponseWriter, r *ht
 }
 
 func (s *protectedStoreServer) handleFinanceRefundDetail(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -106,7 +106,7 @@ func (s *protectedStoreServer) handleFinanceRefundDetail(w http.ResponseWriter, 
 }
 
 func (s *protectedStoreServer) handleFinanceLedgerEntries(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -114,7 +114,7 @@ func (s *protectedStoreServer) handleFinanceLedgerEntries(w http.ResponseWriter,
 }
 
 func (s *protectedStoreServer) handleFinanceFinancialSummary(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -122,7 +122,7 @@ func (s *protectedStoreServer) handleFinanceFinancialSummary(w http.ResponseWrit
 }
 
 func (s *protectedStoreServer) handleFinanceCodRecords(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -130,7 +130,7 @@ func (s *protectedStoreServer) handleFinanceCodRecords(w http.ResponseWriter, r 
 }
 
 func (s *protectedStoreServer) handleFinanceCommissions(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -138,7 +138,7 @@ func (s *protectedStoreServer) handleFinanceCommissions(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleFinanceReferencesPaymentStatus(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -146,7 +146,7 @@ func (s *protectedStoreServer) handleFinanceReferencesPaymentStatus(w http.Respo
 }
 
 func (s *protectedStoreServer) handleFinanceReferencesSettlementStatus(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -154,7 +154,7 @@ func (s *protectedStoreServer) handleFinanceReferencesSettlementStatus(w http.Re
 }
 
 func (s *protectedStoreServer) handleFinanceReferencesRefundStatus(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -162,7 +162,7 @@ func (s *protectedStoreServer) handleFinanceReferencesRefundStatus(w http.Respon
 }
 
 func (s *protectedStoreServer) handleFinanceReferencesFieldCommission(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -180,7 +180,7 @@ func (s *protectedStoreServer) handleCaptainFinanceCodRecords(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleFinancePayoutRequests(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -193,7 +193,7 @@ func operatorWriteBody(operatorID string) []byte {
 }
 
 func (s *protectedStoreServer) handleApproveFinancePayoutRequest(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -217,7 +217,7 @@ func (s *protectedStoreServer) handleApproveFinancePayoutRequest(w http.Response
 }
 
 func (s *protectedStoreServer) handleRejectFinancePayoutRequest(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -241,7 +241,7 @@ func (s *protectedStoreServer) handleRejectFinancePayoutRequest(w http.ResponseW
 }
 
 func (s *protectedStoreServer) handleFinanceReconciliationCases(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -249,7 +249,7 @@ func (s *protectedStoreServer) handleFinanceReconciliationCases(w http.ResponseW
 }
 
 func (s *protectedStoreServer) handleFinanceReconciliationCaseDetail(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -257,7 +257,7 @@ func (s *protectedStoreServer) handleFinanceReconciliationCaseDetail(w http.Resp
 }
 
 func (s *protectedStoreServer) handleAssignFinanceReconciliationCase(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -281,7 +281,7 @@ func (s *protectedStoreServer) handleAssignFinanceReconciliationCase(w http.Resp
 }
 
 func (s *protectedStoreServer) handleResolveFinanceReconciliationCase(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

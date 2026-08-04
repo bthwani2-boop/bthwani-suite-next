@@ -14,5 +14,5 @@ func (s *protectedStoreServer) requireCatalogPermission(
 	r *http.Request,
 	action string,
 ) (store.StoreActor, bool) {
-	return s.requirePermission(w, r, "control-panel", action)
+	return s.ActorFromContext(r.Context())
 }

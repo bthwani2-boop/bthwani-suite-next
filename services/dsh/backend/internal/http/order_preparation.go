@@ -169,12 +169,7 @@ func (s *protectedStoreServer) handleGetOrderPreparation(w http.ResponseWriter, 
 			return
 		}
 	case "operator":
-		if _, permitted := s.requirePermission(
-			w,
-			r,
-			"control-panel",
-			OperationsPermissionRead,
-	); !permitted {
+		if _, permitted := s.ActorFromContext(r.Context()); !permitted {
 			return
 		}
 	}

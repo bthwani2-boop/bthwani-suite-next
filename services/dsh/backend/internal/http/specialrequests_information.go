@@ -56,7 +56,7 @@ func (s *protectedStoreServer) handleGetClientSpecialRequestInformation(w http.R
 
 // GET /dsh/operator/special-requests/{requestId}/information-exchange
 func (s *protectedStoreServer) handleGetOperatorSpecialRequestInformation(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsSpecialRequestsPermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -77,7 +77,7 @@ type requestSpecialRequestInformationBody struct {
 
 // POST /dsh/operator/special-requests/{requestId}/information-request
 func (s *protectedStoreServer) handleRequestSpecialRequestInformation(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsSpecialRequestsPermissionTransition)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

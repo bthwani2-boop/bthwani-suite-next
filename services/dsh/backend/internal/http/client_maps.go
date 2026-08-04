@@ -91,7 +91,7 @@ func (s *protectedStoreServer) handleClientMapReverse(w http.ResponseWriter, r *
 }
 
 func (s *protectedStoreServer) handleOperatorMapProviderHealth(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read"); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"))
@@ -118,7 +118,7 @@ func (s *protectedStoreServer) verifyMapLocation(r *http.Request, location mappr
 }
 
 func (s *protectedStoreServer) handleOperatorListServiceAreas(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read"); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	items, err := servicearea.ListProjections(r.Context(), s.db)
@@ -130,7 +130,7 @@ func (s *protectedStoreServer) handleOperatorListServiceAreas(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleOperatorGetServiceArea(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read"); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	item, err := servicearea.GetProjection(r.Context(), s.db, r.PathValue("serviceAreaCode"))
@@ -142,7 +142,7 @@ func (s *protectedStoreServer) handleOperatorGetServiceArea(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleOperatorUpsertServiceArea(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", "platform.manage")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

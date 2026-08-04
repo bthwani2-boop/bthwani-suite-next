@@ -104,7 +104,7 @@ func (s *protectedStoreServer) handleGetClientSpecialRequestExecution(w http.Res
 
 // GET /dsh/operator/special-requests/{requestId}/execution
 func (s *protectedStoreServer) handleGetOperatorSpecialRequestExecution(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsSpecialRequestsPermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

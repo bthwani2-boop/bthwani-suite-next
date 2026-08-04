@@ -337,7 +337,7 @@ func (s *protectedStoreServer) handleApproveSpecialRequestQuote(w http.ResponseW
 
 // GET /dsh/operator/special-requests
 func (s *protectedStoreServer) handleListOperatorSpecialRequests(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsSpecialRequestsPermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -375,7 +375,7 @@ func (s *protectedStoreServer) handleListOperatorSpecialRequests(w http.Response
 
 // GET /dsh/operator/special-requests/{requestId}
 func (s *protectedStoreServer) handleGetOperatorSpecialRequest(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsSpecialRequestsPermissionRead)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -415,7 +415,7 @@ type updateSpecialRequestBody struct {
 
 // PATCH /dsh/operator/special-requests/{requestId}
 func (s *protectedStoreServer) handleUpdateOperatorSpecialRequest(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsSpecialRequestsPermissionTransition)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -473,7 +473,7 @@ type assignSpecialRequestDispatchBody struct {
 // as handleUpdateOperatorSpecialRequest since this is also an operator-only
 // mutation of a special request's dispatch state.
 func (s *protectedStoreServer) handleAssignSpecialRequestDispatch(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsSpecialRequestsPermissionDispatch)
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

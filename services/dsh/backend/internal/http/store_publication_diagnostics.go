@@ -7,7 +7,7 @@ import (
 )
 
 func (s *protectedStoreServer) handleGovernedOperatorStoreDiagnostics(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead)
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

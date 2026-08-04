@@ -16,7 +16,7 @@ func (s *protectedStoreServer) handleGetOperationsAnalytics(w http.ResponseWrite
 		s.handlePlatformKpis(w, r)
 		return
 	}
-	_, ok := s.requirePermission(w, r, "control-panel", AnalyticsPermissionRead)
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
