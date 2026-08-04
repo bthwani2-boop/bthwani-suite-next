@@ -1,0 +1,125 @@
+{
+  "workItemId": "TASK-0001",
+  "phaseId": "PHASE-00",
+  "sliceId": "SLICE-0001",
+  "title": "REPLACE_WITH_ONE_ATOMIC_OUTCOME",
+  "status": "PLANNED",
+  "priority": "P0|P1|P2|P3",
+  "findingIds": ["FND-0001"],
+  "objective": "REPLACE_WITH_ONE_MEASURABLE_RESULT",
+  "rationale": "REPLACE_WITH_ROOT_CAUSE_LINK",
+  "preconditions": [
+    {
+      "condition": "REPLACE",
+      "proof": "EVD-0001",
+      "requiredState": "REPLACE"
+    }
+  ],
+  "dependencies": {
+    "workItems": [],
+    "phases": [],
+    "external": [],
+    "mustNotStartUntil": []
+  },
+  "scope": {
+    "filesToRead": [],
+    "filesToModify": [],
+    "filesToCreate": [],
+    "filesToDelete": [],
+    "symbolsOrRanges": [],
+    "contracts": [],
+    "dataObjects": [],
+    "surfaces": [],
+    "services": [],
+    "forbiddenPaths": [],
+    "outOfScope": []
+  },
+  "changeSpecification": {
+    "currentState": "REPLACE",
+    "targetState": "REPLACE",
+    "exactChanges": [
+      {
+        "path": "REPOSITORY_PATH",
+        "symbolOrRange": "EXACT_SYMBOL_OR_RANGE",
+        "action": "MODIFY|CREATE|DELETE|MOVE|RENAME|GENERATE|MIGRATE",
+        "before": "REPLACE_WITH_RELEVANT_CURRENT_BEHAVIOR",
+        "after": "REPLACE_WITH_REQUIRED_BEHAVIOR",
+        "implementationNotes": "REPLACE_WITH_CONCRETE_INSTRUCTIONS",
+        "findingIds": ["FND-0001"]
+      }
+    ],
+    "forbiddenChanges": [],
+    "generatedArtifacts": [],
+    "consumerMigrations": [],
+    "dataMigrationSteps": [],
+    "compatibilitySteps": [],
+    "cleanupSteps": [],
+    "documentationUpdates": []
+  },
+  "execution": {
+    "commands": [
+      {
+        "order": 1,
+        "workingDirectory": "REPOSITORY_ROOT_OR_EXACT_PATH",
+        "command": "REPLACE_WITH_EXACT_COMMAND",
+        "purpose": "REPLACE",
+        "expectedExitCode": 0,
+        "expectedObservableResult": "REPLACE",
+        "destructive": false,
+        "requiresCredential": false,
+        "credentialHandling": "NOT_APPLICABLE"
+      }
+    ],
+    "oneWorkItemOpenAtATime": true,
+    "commitBoundary": {
+      "required": true,
+      "messagePattern": "type(scope): concrete outcome",
+      "includeOnlyLogicalUnit": true,
+      "pushAfterCommit": true,
+      "rePinAfterPush": true
+    }
+  },
+  "acceptance": {
+    "positiveCriteria": [
+      {
+        "criterionId": "AC-TASK-0001-01",
+        "statement": "REPLACE_WITH_BINARY_MEASURABLE_RESULT",
+        "evidenceRequired": "REPLACE",
+        "verificationIds": ["VER-0001"]
+      }
+    ],
+    "negativeCriteria": [],
+    "edgeCriteria": [],
+    "crossSurfaceCriteria": [],
+    "migrationCriteria": [],
+    "deletionCriteria": [],
+    "mustRemainTrue": []
+  },
+  "verification": {
+    "verificationIds": ["VER-0001"],
+    "smallestSufficientChecks": [],
+    "checksAfterLastWrite": true,
+    "sameCommitRequired": true,
+    "failurePolicy": "KEEP_WORK_ITEM_OPEN_FIX_AND_RERUN",
+    "claimsNotProvenByTheseChecks": []
+  },
+  "rollback": {
+    "triggerConditions": [],
+    "codeRollback": "REPLACE",
+    "dataRollback": "REPLACE_OR_NOT_APPLICABLE_WITH_REASON",
+    "contractRollback": "REPLACE_OR_NOT_APPLICABLE_WITH_REASON",
+    "operationalRollback": "REPLACE_OR_NOT_APPLICABLE_WITH_REASON",
+    "irreversibleSteps": [],
+    "recoveryEvidence": []
+  },
+  "closure": {
+    "openedAtSha": null,
+    "completedAtSha": null,
+    "verifiedAtSha": null,
+    "commitSha": null,
+    "pushConfirmed": false,
+    "evidenceIds": [],
+    "remainingRisks": [],
+    "decision": "NEEDS_EVIDENCE"
+  }
+}
