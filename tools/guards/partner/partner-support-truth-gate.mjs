@@ -3,6 +3,11 @@ import { fail, lineNumber, read } from "../_guard-utils.mjs";
 const guardId = "partner-support-truth-gate";
 const violations = [];
 
+// Partner support is served by the actor-generic /dsh/support/tickets family.
+// The actor and its scope are derived from the trusted session, not from a
+// /dsh/partner/... path segment, so there is deliberately no partner-specific
+// route, handler or contract to assert. This gate keeps the partner surface
+// bound to that one implementation and blocks a partner-local fork.
 const checks = [
   {
     file: "services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx",
@@ -24,11 +29,14 @@ const checks = [
     file: "services/dsh/frontend/shared/support/partner-support.api.ts",
     required: [
       "createDshHttpClient",
-      "/dsh/partner/support/tickets",
+      "/dsh/support/tickets",
       "idempotencyKey: context.idempotencyKey",
       "correlationId: context.correlationId",
     ],
-    forbidden: [[/\bfetch\s*\(/g, "RAW_PARTNER_SUPPORT_FETCH_FORBIDDEN"]],
+    forbidden: [
+      [/\bfetch\s*\(/g, "RAW_PARTNER_SUPPORT_FETCH_FORBIDDEN"],
+      [/\/dsh\/partner\/support\/tickets/g, "RETIRED_PARTNER_SUPPORT_PATH_FORBIDDEN"],
+    ],
   },
   {
     file: "services/dsh/frontend/shared/support/partner-support-attempt.ts",
@@ -42,39 +50,48 @@ const checks = [
     forbidden: [[/Math\.random\s*\(/g, "RANDOM_SUPPORT_RETRY_ID_FORBIDDEN"]],
   },
   {
-    file: "services/dsh/backend/internal/http/partner_support.go",
+    file: "services/dsh/backend/internal/http/support_actor_routes.go",
     required: [
-      'requireActor(w, r, "partner")',
-      'r.Header.Get("Idempotency-Key")',
-      "support.CreatePartnerTicket",
-      "support.GetPartnerTicket",
-      "support.AddPartnerMessage",
-      "support.ListPartnerMessages",
+      'requireActor(w, r, "client", "partner", "captain")',
+      "actorSupportRole(actor.Role)",
+      "support.CreateActorTicket",
+      "support.GetActorTicket",
+      "support.ListActorTickets",
+      "support.ListActorRichMessages",
     ],
+    forbidden: [
+      // The partner must never be identified by a client-supplied path or body
+      // value; authority comes from the resolved session actor.
+      [/PathValue\("partnerId"\)/g, "PARTNER_SCOPE_FROM_REQUEST_FORBIDDEN"],
+    ],
+  },
+  {
+    file: "services/dsh/backend/internal/support/actor.go",
+    required: ["create_idempotency_key", "pg_advisory_xact_lock", "reporter_role"],
     forbidden: [],
   },
   {
-    file: "services/dsh/backend/internal/support/partner.go",
+    // Reporter-facing reads must never expose operator-internal notes. That
+    // invariant is owned here, by the includeInternal flag, not by the caller.
+    file: "services/dsh/backend/internal/support/rich_message_media.go",
     required: [
-      "dsh_store_actor_scopes",
-      "reporter_role = 'partner'",
-      "create_idempotency_key",
-      "pg_advisory_xact_lock",
-      "writePartnerTicketEventTx",
-      "m.is_internal = FALSE",
+      "func ListActorRichMessages",
+      "return listRichMessages(db, actorID, role, ticketID, false)",
     ],
     forbidden: [],
   },
   {
     file: "services/dsh/backend/internal/http/server.go",
     required: [
-      'POST /dsh/partner/support/tickets',
-      'GET /dsh/partner/support/tickets',
-      'GET /dsh/partner/support/tickets/{ticketId}',
-      'GET /dsh/partner/support/tickets/{ticketId}/messages',
-      'POST /dsh/partner/support/tickets/{ticketId}/messages',
+      'POST /dsh/support/tickets',
+      'GET /dsh/support/tickets',
+      'GET /dsh/support/tickets/{ticketId}',
+      'GET /dsh/support/tickets/{ticketId}/messages',
+      'POST /dsh/support/tickets/{ticketId}/messages',
     ],
-    forbidden: [],
+    forbidden: [
+      [/\/dsh\/partner\/support\/tickets/g, "RETIRED_PARTNER_SUPPORT_ROUTE_FORBIDDEN"],
+    ],
   },
   {
     file: "services/dsh/database/migrations/dsh-059_partner_support_integrity.sql",
@@ -87,25 +104,22 @@ const checks = [
     forbidden: [],
   },
   {
-    file: "services/dsh/contracts/dsh.partner-support.openapi.yaml",
+    file: "services/dsh/contracts/dsh.openapi.yaml",
     required: [
-      "listDshPartnerSupportTickets",
-      "createDshPartnerSupportTicket",
-      "getDshPartnerSupportTicket",
-      "listDshPartnerSupportMessages",
-      "addDshPartnerSupportMessage",
-      "x-bthwani-client-binding: MANUAL_TYPED_ADAPTER",
+      "/dsh/support/tickets:",
+      "/dsh/support/tickets/{ticketId}:",
+      "/dsh/support/tickets/{ticketId}/messages:",
     ],
-    forbidden: [],
+    forbidden: [
+      [/dsh\.partner-support\.openapi\.yaml/g, "RETIRED_PARTNER_SUPPORT_CONTRACT_REFERENCE_FORBIDDEN"],
+    ],
   },
   {
     file: "services/dsh/contracts/contract-registry.ts",
-    required: [
-      'id: "dsh-partner-support"',
-      'path: "contracts/dsh.partner-support.openapi.yaml"',
-      'adapterOwner: "frontend/shared/support"',
+    required: ['id: "dsh-support-governance"', 'adapterOwner: "frontend/shared/support"'],
+    forbidden: [
+      [/dsh-partner-support/g, "RETIRED_PARTNER_SUPPORT_REGISTRY_ENTRY_FORBIDDEN"],
     ],
-    forbidden: [],
   },
   {
     file: "contracts/openapi/index.yaml",

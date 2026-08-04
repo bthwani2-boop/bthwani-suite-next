@@ -92,24 +92,6 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "GET /dsh/client/support/tickets",
-      "method": "GET",
-      "path": "/dsh/client/support/tickets",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "GET /dsh/client/support/tickets/{ticketId}",
-      "method": "GET",
-      "path": "/dsh/client/support/tickets/{ticketId}",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "GET /dsh/client/support/tickets/{ticketId}/messages",
-      "method": "GET",
-      "path": "/dsh/client/support/tickets/{ticketId}/messages",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
       "route": "GET /dsh/field/catalog/attributes",
       "method": "GET",
       "path": "/dsh/field/catalog/attributes",
@@ -602,24 +584,6 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "GET /dsh/partner/support/tickets",
-      "method": "GET",
-      "path": "/dsh/partner/support/tickets",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "GET /dsh/partner/support/tickets/{ticketId}",
-      "method": "GET",
-      "path": "/dsh/partner/support/tickets/{ticketId}",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "GET /dsh/partner/support/tickets/{ticketId}/messages",
-      "method": "GET",
-      "path": "/dsh/partner/support/tickets/{ticketId}/messages",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
       "route": "GET /dsh/support/tickets/{ticketId}/messages/{messageId}/attachments",
       "method": "GET",
       "path": "/dsh/support/tickets/{ticketId}/messages/{messageId}/attachments",
@@ -749,18 +713,6 @@
       "route": "POST /dsh/client/orders/{orderId}/ratings",
       "method": "POST",
       "path": "/dsh/client/orders/{orderId}/ratings",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "POST /dsh/client/support/tickets",
-      "method": "POST",
-      "path": "/dsh/client/support/tickets",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "POST /dsh/client/support/tickets/{ticketId}/messages",
-      "method": "POST",
-      "path": "/dsh/client/support/tickets/{ticketId}/messages",
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
@@ -1049,18 +1001,6 @@
       "route": "POST /dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code",
       "method": "POST",
       "path": "/dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "POST /dsh/partner/support/tickets",
-      "method": "POST",
-      "path": "/dsh/partner/support/tickets",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "POST /dsh/partner/support/tickets/{ticketId}/messages",
-      "method": "POST",
-      "path": "/dsh/partner/support/tickets/{ticketId}/messages",
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {

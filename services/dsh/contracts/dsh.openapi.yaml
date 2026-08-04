@@ -45,7 +45,6 @@ x-bthwani-contracts:
   partnerDelivery: ./dsh.partner-delivery.openapi.yaml
   partnerFleet: ./dsh.partner-fleet.openapi.yaml
   partnerOnboarding: ./dsh.partner-onboarding.openapi.yaml
-  partnerSupport: ./dsh.partner-support.openapi.yaml
   paymentSessions: ./dsh.payment-sessions.openapi.yaml
   payoutsDestinations: ./dsh.payouts-destinations.openapi.yaml
   platformPolicies: ./dsh.platform-policies.openapi.yaml

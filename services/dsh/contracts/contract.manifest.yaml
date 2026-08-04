@@ -30,7 +30,6 @@ modules:
   - dsh.partner-delivery.openapi.yaml
   - dsh.partner-fleet.openapi.yaml
   - dsh.partner-onboarding.openapi.yaml
-  - dsh.partner-support.openapi.yaml
   - dsh.payment-sessions.openapi.yaml
   - dsh.payouts-destinations.openapi.yaml
   - dsh.platform-policies.openapi.yaml
