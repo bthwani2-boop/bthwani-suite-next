@@ -124,6 +124,46 @@ function reachesController(startFile) {
   return ownsControllerBinding(startFile, sources.get(startFile));
 }
 
+// Reverse import graph, built once, so a screen can be judged by who composes
+// it as well as by what it imports.
+const importers = (() => {
+  const map = new Map();
+  for (const [file, sourceFile] of sources) {
+    for (const specifier of importSpecifiers(sourceFile)) {
+      const resolved = resolveImport(file, specifier);
+      if (!resolved) continue;
+      if (!map.has(resolved)) map.set(resolved, []);
+      map.get(resolved).push(file);
+    }
+  }
+  return map;
+})();
+
+/**
+ * A presentational screen that takes its data through props is correct
+ * architecture: surfaces compose and render, controllers own behavior. Such a
+ * screen reaches no controller through its own imports, so it must instead be
+ * proven bound through the parent that renders it.
+ *
+ * A screen that neither reaches a controller nor is composed by any bound
+ * parent is genuinely unreachable, and that is what stays reported.
+ */
+function isComposedByBoundParent(startFile) {
+  const queue = [{ file: startFile, depth: 0 }];
+  const visited = new Set([startFile]);
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (current.depth > MAX_IMPORT_DEPTH) continue;
+    for (const parent of importers.get(current.file) ?? []) {
+      if (visited.has(parent)) continue;
+      visited.add(parent);
+      if (ownsControllerBinding(parent, sources.get(parent)) || reachesController(parent)) return true;
+      queue.push({ file: parent, depth: current.depth + 1 });
+    }
+  }
+  return false;
+}
+
 function isScreenFile(file) {
   return /\/(screens?|pages?|views?)\//.test(file)
     || file.endsWith("Screen.tsx")
@@ -237,8 +277,11 @@ for (const file of scopedFiles) {
   };
   visit(sourceFile);
 
-  if (isScreenFile(file) && !reachesController(file)) {
-    warnings.push({ file, message: `SCREEN_BINDING_NOT_PROVEN within ${MAX_IMPORT_DEPTH} import edges` });
+  if (isScreenFile(file) && !reachesController(file) && !isComposedByBoundParent(file)) {
+    warnings.push({
+      file,
+      message: `SCREEN_BINDING_NOT_PROVEN: reaches no controller within ${MAX_IMPORT_DEPTH} import edges and no bound parent composes it`,
+    });
   }
 }
 
