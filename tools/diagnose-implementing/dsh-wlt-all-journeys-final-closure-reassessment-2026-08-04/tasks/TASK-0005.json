@@ -1,15 +1,15 @@
 {
-  "workItemId": "TASK-0001",
-  "phaseId": "PHASE-02",
-  "sliceId": "SLICE-0001",
-  "title": "إصلاح سلطة مهاجرات DSH",
-  "status": "READY",
+  "workItemId": "TASK-0005",
+  "phaseId": "PHASE-03",
+  "sliceId": "SLICE-0005",
+  "title": "تقارب عقود DSH وتسجيلات الخادم",
+  "status": "BLOCKED",
   "priority": "P0",
   "findingIds": [
-    "FND-0002"
+    "FND-0007"
   ],
-  "objective": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-  "rationale": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+  "objective": "Zero active contract operations without server registration and zero undeclared registered routes.",
+  "rationale": "For every row in contract-route-mismatches.csv, perform consumer census and choose exactly one of restore implementation or retire contract, then regenerate clients and tests.",
   "preconditions": [
     {
       "condition": "Pin latest remote head and compare with expected parent before writing.",
@@ -18,21 +18,27 @@
     }
   ],
   "dependencies": {
-    "workItems": [],
+    "workItems": [
+      "TASK-0004"
+    ],
     "phases": [],
     "external": [],
     "mustNotStartUntil": [
-      "Current product-write authorization is explicit and the branch head is pinned."
+      "Every predecessor is CLOSED_WITH_EVIDENCE on the post-write SHA."
     ]
   },
   "scope": {
     "filesToRead": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "services/dsh/contracts/dsh.openapi.yaml",
+      "services/dsh/contracts/dsh.partner-support.openapi.yaml",
+      "services/dsh/contracts/dsh.support-governance.openapi.yaml",
+      "services/dsh/backend/internal/http/server.go"
     ],
     "filesToModify": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "services/dsh/contracts/dsh.openapi.yaml",
+      "services/dsh/contracts/dsh.partner-support.openapi.yaml",
+      "services/dsh/contracts/dsh.support-governance.openapi.yaml",
+      "services/dsh/backend/internal/http/server.go"
     ],
     "filesToCreate": [],
     "filesToDelete": [],
@@ -59,28 +65,50 @@
   },
   "changeSpecification": {
     "currentState": "See linked findings and evidence.",
-    "targetState": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+    "targetState": "Zero active contract operations without server registration and zero undeclared registered routes.",
     "exactChanges": [
       {
-        "path": "services/dsh/database/migrations/manifest.extensions.json",
+        "path": "services/dsh/contracts/dsh.openapi.yaml",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "Zero active contract operations without server registration and zero undeclared registered routes.",
+        "implementationNotes": "For every row in contract-route-mismatches.csv, perform consumer census and choose exactly one of restore implementation or retire contract, then regenerate clients and tests.",
         "findingIds": [
-          "FND-0002"
+          "FND-0007"
         ]
       },
       {
-        "path": "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql",
+        "path": "services/dsh/contracts/dsh.partner-support.openapi.yaml",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "Zero active contract operations without server registration and zero undeclared registered routes.",
+        "implementationNotes": "For every row in contract-route-mismatches.csv, perform consumer census and choose exactly one of restore implementation or retire contract, then regenerate clients and tests.",
         "findingIds": [
-          "FND-0002"
+          "FND-0007"
+        ]
+      },
+      {
+        "path": "services/dsh/contracts/dsh.support-governance.openapi.yaml",
+        "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
+        "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
+        "before": "Current state is recorded by linked findings and immutable evidence.",
+        "after": "Zero active contract operations without server registration and zero undeclared registered routes.",
+        "implementationNotes": "For every row in contract-route-mismatches.csv, perform consumer census and choose exactly one of restore implementation or retire contract, then regenerate clients and tests.",
+        "findingIds": [
+          "FND-0007"
+        ]
+      },
+      {
+        "path": "services/dsh/backend/internal/http/server.go",
+        "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
+        "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
+        "before": "Current state is recorded by linked findings and immutable evidence.",
+        "after": "Zero active contract operations without server registration and zero undeclared registered routes.",
+        "implementationNotes": "For every row in contract-route-mismatches.csv, perform consumer census and choose exactly one of restore implementation or retire contract, then regenerate clients and tests.",
+        "findingIds": [
+          "FND-0007"
         ]
       }
     ],
@@ -111,10 +139,10 @@
       {
         "order": 1,
         "workingDirectory": ".",
-        "command": "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed",
+        "command": "pnpm run guard:backend-api-binding && pnpm --dir contracts typecheck && pnpm run guard:generated-client-provenance",
         "purpose": "Smallest sufficient falsification after the last write.",
         "expectedExitCode": 0,
-        "expectedObservableResult": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "expectedObservableResult": "Zero active contract operations without server registration and zero undeclared registered routes.",
         "destructive": false,
         "requiresCredential": false,
         "credentialHandling": "NOT_APPLICABLE"
@@ -132,11 +160,11 @@
   "acceptance": {
     "positiveCriteria": [
       {
-        "criterionId": "AC-TASK-0001-01",
-        "statement": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "criterionId": "AC-TASK-0005-01",
+        "statement": "Zero active contract operations without server registration and zero undeclared registered routes.",
         "evidenceRequired": "Command output, diff review and post-write commit SHA.",
         "verificationIds": [
-          "VER-0001"
+          "VER-0005"
         ]
       }
     ],
@@ -147,9 +175,7 @@
       "Negative, timeout, concurrent, retry, offline and unknown-result behavior is checked when applicable."
     ],
     "crossSurfaceCriteria": [],
-    "migrationCriteria": [
-      "Fresh, upgrade, replay, checksum, preservation and rollback are proven."
-    ],
+    "migrationCriteria": [],
     "deletionCriteria": [
       "Consumer census, replacement, reference scan and rollback proof precede deletion."
     ],
@@ -159,10 +185,10 @@
   },
   "verification": {
     "verificationIds": [
-      "VER-0001"
+      "VER-0005"
     ],
     "smallestSufficientChecks": [
-      "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed"
+      "pnpm run guard:backend-api-binding && pnpm --dir contracts typecheck && pnpm run guard:generated-client-provenance"
     ],
     "checksAfterLastWrite": true,
     "sameCommitRequired": true,

@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "branch": "smsm",
+  "pinnedRemoteSha": "f97dcbc3ecfbc19a130c4dbafef6cb7def9c3eb8",
+  "observedAt": "2026-08-04T14:16:24.152228Z",
+  "gitBundle": {
+    "workflowRunId": 30915542720,
+    "artifactId": 8894880011,
+    "artifactName": "foundation-00-git-f97dcbc3ecfbc19a130c4dbafef6cb7def9c3eb8",
+    "digest": "sha256:d7ae99af69ec9f7176b4bd268bfea5ad44a8b168dafe09131dda4edcfddb6f51",
+    "conclusion": "success"
+  },
+  "workflowRuns": [
+    {
+      "name": "FOUNDATION-00 Architecture Snapshot",
+      "runId": 30915539321,
+      "conclusion": "success"
+    },
+    {
+      "name": "FOUNDATION-00 Git Bundle",
+      "runId": 30915542720,
+      "conclusion": "success"
+    },
+    {
+      "name": "BThwani Lockfile Snapshot",
+      "runId": 30915538507,
+      "conclusion": "success"
+    },
+    {
+      "name": "CodeQL",
+      "runId": 30915538400,
+      "conclusion": "success"
+    },
+    {
+      "name": "DSH Database Contract",
+      "runId": 30915538485,
+      "conclusion": "failure"
+    },
+    {
+      "name": "BThwani Contextual CI",
+      "runId": 30915539526,
+      "conclusion": "failure"
+    },
+    {
+      "name": "SonarQube",
+      "runId": 30915539290,
+      "conclusion": "skipped"
+    }
+  ],
+  "confirmedFailures": [
+    {
+      "gate": "DSH Database Contract",
+      "jobId": 92012595670,
+      "failedStep": "Apply canonical DSH migrations",
+      "message": "Migration manifest/file drift for 'dsh': missing=[dsh-972_financial_eligibility_wlt_decision_boundary.sql] unregistered=[]"
+    },
+    {
+      "gate": "BThwani Contextual CI",
+      "runId": 30915539526,
+      "failedAreas": [
+        "migration manifest drift",
+        "static diagnostics enforcement",
+        "runtime proof",
+        "journey gate enforcement",
+        "deep Node immutable-diff enforcement",
+        "DSH backend/database",
+        "WLT backend/database"
+      ]
+    }
+  ],
+  "limitations": [
+    "The package is a diagnosis and execution plan, not product truth.",
+    "Production/provider/manual acceptance evidence remains unproven until explicitly executed.",
+    "No product file was changed while constructing this downloadable package."
+  ]
+}

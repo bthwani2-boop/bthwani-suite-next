@@ -1,15 +1,16 @@
 {
-  "workItemId": "TASK-0001",
-  "phaseId": "PHASE-02",
-  "sliceId": "SLICE-0001",
-  "title": "إصلاح سلطة مهاجرات DSH",
-  "status": "READY",
+  "workItemId": "TASK-0004",
+  "phaseId": "PHASE-01",
+  "sliceId": "SLICE-0004",
+  "title": "توحيد Compiler API للحراس",
+  "status": "BLOCKED",
   "priority": "P0",
   "findingIds": [
-    "FND-0002"
+    "FND-0005",
+    "FND-0006"
   ],
-  "objective": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-  "rationale": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+  "objective": "All AST guards parse TS, TSX, JS, JSX, MJS and CJS under Node 24 and report violations rather than crashing.",
+  "rationale": "Create one tested loader for @typescript/typescript6 and migrate all affected AST guards to it without weakening checks.",
   "preconditions": [
     {
       "condition": "Pin latest remote head and compare with expected parent before writing.",
@@ -18,21 +19,25 @@
     }
   ],
   "dependencies": {
-    "workItems": [],
+    "workItems": [
+      "TASK-0003"
+    ],
     "phases": [],
     "external": [],
     "mustNotStartUntil": [
-      "Current product-write authorization is explicit and the branch head is pinned."
+      "Every predecessor is CLOSED_WITH_EVIDENCE on the post-write SHA."
     ]
   },
   "scope": {
     "filesToRead": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "tools/guards/api-binding-gate.mjs",
+      "tools/guards/runtime-real-bindings-gate.mjs",
+      "tools/guards/_typescript-compiler.mjs"
     ],
     "filesToModify": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "tools/guards/api-binding-gate.mjs",
+      "tools/guards/runtime-real-bindings-gate.mjs",
+      "tools/guards/_typescript-compiler.mjs"
     ],
     "filesToCreate": [],
     "filesToDelete": [],
@@ -46,10 +51,7 @@
       "Service-owned schema and ledger objects when affected."
     ],
     "surfaces": [],
-    "services": [
-      "dsh",
-      "wlt"
-    ],
+    "services": [],
     "forbiddenPaths": [
       "No change to this support package as a substitute for durable owner changes."
     ],
@@ -59,28 +61,42 @@
   },
   "changeSpecification": {
     "currentState": "See linked findings and evidence.",
-    "targetState": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+    "targetState": "All AST guards parse TS, TSX, JS, JSX, MJS and CJS under Node 24 and report violations rather than crashing.",
     "exactChanges": [
       {
-        "path": "services/dsh/database/migrations/manifest.extensions.json",
+        "path": "tools/guards/api-binding-gate.mjs",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "All AST guards parse TS, TSX, JS, JSX, MJS and CJS under Node 24 and report violations rather than crashing.",
+        "implementationNotes": "Create one tested loader for @typescript/typescript6 and migrate all affected AST guards to it without weakening checks.",
         "findingIds": [
-          "FND-0002"
+          "FND-0005",
+          "FND-0006"
         ]
       },
       {
-        "path": "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql",
+        "path": "tools/guards/runtime-real-bindings-gate.mjs",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "All AST guards parse TS, TSX, JS, JSX, MJS and CJS under Node 24 and report violations rather than crashing.",
+        "implementationNotes": "Create one tested loader for @typescript/typescript6 and migrate all affected AST guards to it without weakening checks.",
         "findingIds": [
-          "FND-0002"
+          "FND-0005",
+          "FND-0006"
+        ]
+      },
+      {
+        "path": "tools/guards/_typescript-compiler.mjs",
+        "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
+        "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
+        "before": "Current state is recorded by linked findings and immutable evidence.",
+        "after": "All AST guards parse TS, TSX, JS, JSX, MJS and CJS under Node 24 and report violations rather than crashing.",
+        "implementationNotes": "Create one tested loader for @typescript/typescript6 and migrate all affected AST guards to it without weakening checks.",
+        "findingIds": [
+          "FND-0005",
+          "FND-0006"
         ]
       }
     ],
@@ -111,10 +127,10 @@
       {
         "order": 1,
         "workingDirectory": ".",
-        "command": "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed",
+        "command": "pnpm run guard:api-binding && pnpm run guard:runtime-real-bindings && pnpm run guard:no-broken-imports",
         "purpose": "Smallest sufficient falsification after the last write.",
         "expectedExitCode": 0,
-        "expectedObservableResult": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "expectedObservableResult": "All AST guards parse TS, TSX, JS, JSX, MJS and CJS under Node 24 and report violations rather than crashing.",
         "destructive": false,
         "requiresCredential": false,
         "credentialHandling": "NOT_APPLICABLE"
@@ -132,11 +148,11 @@
   "acceptance": {
     "positiveCriteria": [
       {
-        "criterionId": "AC-TASK-0001-01",
-        "statement": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "criterionId": "AC-TASK-0004-01",
+        "statement": "All AST guards parse TS, TSX, JS, JSX, MJS and CJS under Node 24 and report violations rather than crashing.",
         "evidenceRequired": "Command output, diff review and post-write commit SHA.",
         "verificationIds": [
-          "VER-0001"
+          "VER-0004"
         ]
       }
     ],
@@ -147,9 +163,7 @@
       "Negative, timeout, concurrent, retry, offline and unknown-result behavior is checked when applicable."
     ],
     "crossSurfaceCriteria": [],
-    "migrationCriteria": [
-      "Fresh, upgrade, replay, checksum, preservation and rollback are proven."
-    ],
+    "migrationCriteria": [],
     "deletionCriteria": [
       "Consumer census, replacement, reference scan and rollback proof precede deletion."
     ],
@@ -159,10 +173,10 @@
   },
   "verification": {
     "verificationIds": [
-      "VER-0001"
+      "VER-0004"
     ],
     "smallestSufficientChecks": [
-      "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed"
+      "pnpm run guard:api-binding && pnpm run guard:runtime-real-bindings && pnpm run guard:no-broken-imports"
     ],
     "checksAfterLastWrite": true,
     "sameCommitRequired": true,

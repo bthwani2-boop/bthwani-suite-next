@@ -1,15 +1,16 @@
 {
-  "workItemId": "TASK-0001",
-  "phaseId": "PHASE-02",
-  "sliceId": "SLICE-0001",
-  "title": "إصلاح سلطة مهاجرات DSH",
-  "status": "READY",
+  "workItemId": "TASK-0017",
+  "phaseId": "PHASE-09",
+  "sliceId": "SLICE-0017",
+  "title": "تنفيذ الرحلات J079 إلى J107",
+  "status": "BLOCKED",
   "priority": "P0",
   "findingIds": [
-    "FND-0002"
+    "FND-0009",
+    "FND-0020"
   ],
-  "objective": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-  "rationale": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+  "objective": "J079..J107 are CLOSED_WITH_EVIDENCE with zero financial truth bypass and zero unverified cross-cutting behavior.",
+  "rationale": "Execute financial and cross-cutting journeys with WLT sovereignty, reconciliation, security, accessibility and operational recovery evidence.",
   "preconditions": [
     {
       "condition": "Pin latest remote head and compare with expected parent before writing.",
@@ -18,21 +19,23 @@
     }
   ],
   "dependencies": {
-    "workItems": [],
+    "workItems": [
+      "TASK-0016"
+    ],
     "phases": [],
     "external": [],
     "mustNotStartUntil": [
-      "Current product-write authorization is explicit and the branch head is pinned."
+      "Every predecessor is CLOSED_WITH_EVIDENCE on the post-write SHA."
     ]
   },
   "scope": {
     "filesToRead": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys/05-financial-closure",
+      "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys/06-cross-cutting-final"
     ],
     "filesToModify": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys/05-financial-closure",
+      "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys/06-cross-cutting-final"
     ],
     "filesToCreate": [],
     "filesToDelete": [],
@@ -45,7 +48,13 @@
     "dataObjects": [
       "Service-owned schema and ledger objects when affected."
     ],
-    "surfaces": [],
+    "surfaces": [
+      "control-panel",
+      "app-client",
+      "app-partner",
+      "app-captain",
+      "app-field"
+    ],
     "services": [
       "dsh",
       "wlt"
@@ -59,28 +68,30 @@
   },
   "changeSpecification": {
     "currentState": "See linked findings and evidence.",
-    "targetState": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+    "targetState": "J079..J107 are CLOSED_WITH_EVIDENCE with zero financial truth bypass and zero unverified cross-cutting behavior.",
     "exactChanges": [
       {
-        "path": "services/dsh/database/migrations/manifest.extensions.json",
+        "path": "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys/05-financial-closure",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "J079..J107 are CLOSED_WITH_EVIDENCE with zero financial truth bypass and zero unverified cross-cutting behavior.",
+        "implementationNotes": "Execute financial and cross-cutting journeys with WLT sovereignty, reconciliation, security, accessibility and operational recovery evidence.",
         "findingIds": [
-          "FND-0002"
+          "FND-0009",
+          "FND-0020"
         ]
       },
       {
-        "path": "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql",
+        "path": "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys/06-cross-cutting-final",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "J079..J107 are CLOSED_WITH_EVIDENCE with zero financial truth bypass and zero unverified cross-cutting behavior.",
+        "implementationNotes": "Execute financial and cross-cutting journeys with WLT sovereignty, reconciliation, security, accessibility and operational recovery evidence.",
         "findingIds": [
-          "FND-0002"
+          "FND-0009",
+          "FND-0020"
         ]
       }
     ],
@@ -111,10 +122,10 @@
       {
         "order": 1,
         "workingDirectory": ".",
-        "command": "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed",
+        "command": "pwsh -NoProfile -File tools/scripts/run-journey-gate.ps1 -Journey J079 through J107 one at a time",
         "purpose": "Smallest sufficient falsification after the last write.",
         "expectedExitCode": 0,
-        "expectedObservableResult": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "expectedObservableResult": "J079..J107 are CLOSED_WITH_EVIDENCE with zero financial truth bypass and zero unverified cross-cutting behavior.",
         "destructive": false,
         "requiresCredential": false,
         "credentialHandling": "NOT_APPLICABLE"
@@ -132,11 +143,11 @@
   "acceptance": {
     "positiveCriteria": [
       {
-        "criterionId": "AC-TASK-0001-01",
-        "statement": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "criterionId": "AC-TASK-0017-01",
+        "statement": "J079..J107 are CLOSED_WITH_EVIDENCE with zero financial truth bypass and zero unverified cross-cutting behavior.",
         "evidenceRequired": "Command output, diff review and post-write commit SHA.",
         "verificationIds": [
-          "VER-0001"
+          "VER-0017"
         ]
       }
     ],
@@ -146,10 +157,10 @@
     "edgeCriteria": [
       "Negative, timeout, concurrent, retry, offline and unknown-result behavior is checked when applicable."
     ],
-    "crossSurfaceCriteria": [],
-    "migrationCriteria": [
-      "Fresh, upgrade, replay, checksum, preservation and rollback are proven."
+    "crossSurfaceCriteria": [
+      "Every affected surface shows the same governed truth and state."
     ],
+    "migrationCriteria": [],
     "deletionCriteria": [
       "Consumer census, replacement, reference scan and rollback proof precede deletion."
     ],
@@ -159,10 +170,10 @@
   },
   "verification": {
     "verificationIds": [
-      "VER-0001"
+      "VER-0017"
     ],
     "smallestSufficientChecks": [
-      "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed"
+      "pwsh -NoProfile -File tools/scripts/run-journey-gate.ps1 -Journey J079 through J107 one at a time"
     ],
     "checksAfterLastWrite": true,
     "sameCommitRequired": true,

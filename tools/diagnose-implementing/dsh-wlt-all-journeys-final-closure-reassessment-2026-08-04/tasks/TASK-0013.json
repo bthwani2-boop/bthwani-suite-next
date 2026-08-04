@@ -1,15 +1,15 @@
 {
-  "workItemId": "TASK-0001",
-  "phaseId": "PHASE-02",
-  "sliceId": "SLICE-0001",
-  "title": "إصلاح سلطة مهاجرات DSH",
-  "status": "READY",
+  "workItemId": "TASK-0013",
+  "phaseId": "PHASE-06",
+  "sliceId": "SLICE-0013",
+  "title": "إغلاق full runtime readback",
+  "status": "BLOCKED",
   "priority": "P0",
   "findingIds": [
-    "FND-0002"
+    "FND-0008"
   ],
-  "objective": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-  "rationale": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+  "objective": "Full runtime profile passes and runtime-proof.json records PASS on the same commit.",
+  "rationale": "Run full reset/bootstrap/smoke after database and contract blockers close; verify health, readiness, DSH facade finance, catalog, order and recovery readbacks.",
   "preconditions": [
     {
       "condition": "Pin latest remote head and compare with expected parent before writing.",
@@ -18,21 +18,27 @@
     }
   ],
   "dependencies": {
-    "workItems": [],
+    "workItems": [
+      "TASK-0012"
+    ],
     "phases": [],
     "external": [],
     "mustNotStartUntil": [
-      "Current product-write authorization is explicit and the branch head is pinned."
+      "Every predecessor is CLOSED_WITH_EVIDENCE on the post-write SHA."
     ]
   },
   "scope": {
     "filesToRead": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "infra/docker",
+      "tools/scripts/invoke-runtime-phase.ps1",
+      "services/dsh",
+      "services/wlt"
     ],
     "filesToModify": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "infra/docker",
+      "tools/scripts/invoke-runtime-phase.ps1",
+      "services/dsh",
+      "services/wlt"
     ],
     "filesToCreate": [],
     "filesToDelete": [],
@@ -45,7 +51,13 @@
     "dataObjects": [
       "Service-owned schema and ledger objects when affected."
     ],
-    "surfaces": [],
+    "surfaces": [
+      "control-panel",
+      "app-client",
+      "app-partner",
+      "app-captain",
+      "app-field"
+    ],
     "services": [
       "dsh",
       "wlt"
@@ -59,28 +71,50 @@
   },
   "changeSpecification": {
     "currentState": "See linked findings and evidence.",
-    "targetState": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+    "targetState": "Full runtime profile passes and runtime-proof.json records PASS on the same commit.",
     "exactChanges": [
       {
-        "path": "services/dsh/database/migrations/manifest.extensions.json",
+        "path": "infra/docker",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "Full runtime profile passes and runtime-proof.json records PASS on the same commit.",
+        "implementationNotes": "Run full reset/bootstrap/smoke after database and contract blockers close; verify health, readiness, DSH facade finance, catalog, order and recovery readbacks.",
         "findingIds": [
-          "FND-0002"
+          "FND-0008"
         ]
       },
       {
-        "path": "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql",
+        "path": "tools/scripts/invoke-runtime-phase.ps1",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "Full runtime profile passes and runtime-proof.json records PASS on the same commit.",
+        "implementationNotes": "Run full reset/bootstrap/smoke after database and contract blockers close; verify health, readiness, DSH facade finance, catalog, order and recovery readbacks.",
         "findingIds": [
-          "FND-0002"
+          "FND-0008"
+        ]
+      },
+      {
+        "path": "services/dsh",
+        "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
+        "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
+        "before": "Current state is recorded by linked findings and immutable evidence.",
+        "after": "Full runtime profile passes and runtime-proof.json records PASS on the same commit.",
+        "implementationNotes": "Run full reset/bootstrap/smoke after database and contract blockers close; verify health, readiness, DSH facade finance, catalog, order and recovery readbacks.",
+        "findingIds": [
+          "FND-0008"
+        ]
+      },
+      {
+        "path": "services/wlt",
+        "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
+        "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
+        "before": "Current state is recorded by linked findings and immutable evidence.",
+        "after": "Full runtime profile passes and runtime-proof.json records PASS on the same commit.",
+        "implementationNotes": "Run full reset/bootstrap/smoke after database and contract blockers close; verify health, readiness, DSH facade finance, catalog, order and recovery readbacks.",
+        "findingIds": [
+          "FND-0008"
         ]
       }
     ],
@@ -111,10 +145,10 @@
       {
         "order": 1,
         "workingDirectory": ".",
-        "command": "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed",
+        "command": "pnpm run runtime:full:reset && pnpm run runtime:full:bootstrap-dev && pnpm run runtime:full:smoke",
         "purpose": "Smallest sufficient falsification after the last write.",
         "expectedExitCode": 0,
-        "expectedObservableResult": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "expectedObservableResult": "Full runtime profile passes and runtime-proof.json records PASS on the same commit.",
         "destructive": false,
         "requiresCredential": false,
         "credentialHandling": "NOT_APPLICABLE"
@@ -132,11 +166,11 @@
   "acceptance": {
     "positiveCriteria": [
       {
-        "criterionId": "AC-TASK-0001-01",
-        "statement": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "criterionId": "AC-TASK-0013-01",
+        "statement": "Full runtime profile passes and runtime-proof.json records PASS on the same commit.",
         "evidenceRequired": "Command output, diff review and post-write commit SHA.",
         "verificationIds": [
-          "VER-0001"
+          "VER-0013"
         ]
       }
     ],
@@ -146,7 +180,9 @@
     "edgeCriteria": [
       "Negative, timeout, concurrent, retry, offline and unknown-result behavior is checked when applicable."
     ],
-    "crossSurfaceCriteria": [],
+    "crossSurfaceCriteria": [
+      "Every affected surface shows the same governed truth and state."
+    ],
     "migrationCriteria": [
       "Fresh, upgrade, replay, checksum, preservation and rollback are proven."
     ],
@@ -159,10 +195,10 @@
   },
   "verification": {
     "verificationIds": [
-      "VER-0001"
+      "VER-0013"
     ],
     "smallestSufficientChecks": [
-      "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed"
+      "pnpm run runtime:full:reset && pnpm run runtime:full:bootstrap-dev && pnpm run runtime:full:smoke"
     ],
     "checksAfterLastWrite": true,
     "sameCommitRequired": true,

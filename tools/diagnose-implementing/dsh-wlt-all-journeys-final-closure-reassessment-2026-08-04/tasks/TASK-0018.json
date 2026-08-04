@@ -1,15 +1,17 @@
 {
-  "workItemId": "TASK-0001",
-  "phaseId": "PHASE-02",
-  "sliceId": "SLICE-0001",
-  "title": "إصلاح سلطة مهاجرات DSH",
-  "status": "READY",
+  "workItemId": "TASK-0018",
+  "phaseId": "PHASE-10",
+  "sliceId": "SLICE-0018",
+  "title": "الإغلاق النهائي same-SHA والتخلص الآمن",
+  "status": "BLOCKED",
   "priority": "P0",
   "findingIds": [
-    "FND-0002"
+    "FND-0001",
+    "FND-0017",
+    "FND-0020"
   ],
-  "objective": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-  "rationale": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+  "objective": "All required gates pass on one SHA; zero open findings, unproven behaviors, unverified deletions and outside references.",
+  "rationale": "Run all required read-only checks on the final SHA, publish the audited closure report, migrate durable outputs, scan outside references, then run strict disposal before deleting only the task directory.",
   "preconditions": [
     {
       "condition": "Pin latest remote head and compare with expected parent before writing.",
@@ -18,21 +20,25 @@
     }
   ],
   "dependencies": {
-    "workItems": [],
+    "workItems": [
+      "TASK-0017"
+    ],
     "phases": [],
     "external": [],
     "mustNotStartUntil": [
-      "Current product-write authorization is explicit and the branch head is pinned."
+      "Every predecessor is CLOSED_WITH_EVIDENCE on the post-write SHA."
     ]
   },
   "scope": {
     "filesToRead": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      ".github/workflows",
+      "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys",
+      "tools/diagnose-implementing/dsh-wlt-all-journeys-final-closure-reassessment-2026-08-04"
     ],
     "filesToModify": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      ".github/workflows",
+      "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys",
+      "tools/diagnose-implementing/dsh-wlt-all-journeys-final-closure-reassessment-2026-08-04"
     ],
     "filesToCreate": [],
     "filesToDelete": [],
@@ -45,7 +51,13 @@
     "dataObjects": [
       "Service-owned schema and ledger objects when affected."
     ],
-    "surfaces": [],
+    "surfaces": [
+      "control-panel",
+      "app-client",
+      "app-partner",
+      "app-captain",
+      "app-field"
+    ],
     "services": [
       "dsh",
       "wlt"
@@ -59,28 +71,45 @@
   },
   "changeSpecification": {
     "currentState": "See linked findings and evidence.",
-    "targetState": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+    "targetState": "All required gates pass on one SHA; zero open findings, unproven behaviors, unverified deletions and outside references.",
     "exactChanges": [
       {
-        "path": "services/dsh/database/migrations/manifest.extensions.json",
+        "path": ".github/workflows",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "All required gates pass on one SHA; zero open findings, unproven behaviors, unverified deletions and outside references.",
+        "implementationNotes": "Run all required read-only checks on the final SHA, publish the audited closure report, migrate durable outputs, scan outside references, then run strict disposal before deleting only the task directory.",
         "findingIds": [
-          "FND-0002"
+          "FND-0001",
+          "FND-0017",
+          "FND-0020"
         ]
       },
       {
-        "path": "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql",
+        "path": "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "All required gates pass on one SHA; zero open findings, unproven behaviors, unverified deletions and outside references.",
+        "implementationNotes": "Run all required read-only checks on the final SHA, publish the audited closure report, migrate durable outputs, scan outside references, then run strict disposal before deleting only the task directory.",
         "findingIds": [
-          "FND-0002"
+          "FND-0001",
+          "FND-0017",
+          "FND-0020"
+        ]
+      },
+      {
+        "path": "tools/diagnose-implementing/dsh-wlt-all-journeys-final-closure-reassessment-2026-08-04",
+        "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
+        "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
+        "before": "Current state is recorded by linked findings and immutable evidence.",
+        "after": "All required gates pass on one SHA; zero open findings, unproven behaviors, unverified deletions and outside references.",
+        "implementationNotes": "Run all required read-only checks on the final SHA, publish the audited closure report, migrate durable outputs, scan outside references, then run strict disposal before deleting only the task directory.",
+        "findingIds": [
+          "FND-0001",
+          "FND-0017",
+          "FND-0020"
         ]
       }
     ],
@@ -111,10 +140,10 @@
       {
         "order": 1,
         "workingDirectory": ".",
-        "command": "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed",
+        "command": "pnpm run verify:full && pnpm run runtime:verify && node tools/diagnose-implementing/validate-package.mjs tools/diagnose-implementing/dsh-wlt-all-journeys-final-closure-reassessment-2026-08-04 --strict --disposal",
         "purpose": "Smallest sufficient falsification after the last write.",
         "expectedExitCode": 0,
-        "expectedObservableResult": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "expectedObservableResult": "All required gates pass on one SHA; zero open findings, unproven behaviors, unverified deletions and outside references.",
         "destructive": false,
         "requiresCredential": false,
         "credentialHandling": "NOT_APPLICABLE"
@@ -132,11 +161,11 @@
   "acceptance": {
     "positiveCriteria": [
       {
-        "criterionId": "AC-TASK-0001-01",
-        "statement": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "criterionId": "AC-TASK-0018-01",
+        "statement": "All required gates pass on one SHA; zero open findings, unproven behaviors, unverified deletions and outside references.",
         "evidenceRequired": "Command output, diff review and post-write commit SHA.",
         "verificationIds": [
-          "VER-0001"
+          "VER-0018"
         ]
       }
     ],
@@ -146,10 +175,10 @@
     "edgeCriteria": [
       "Negative, timeout, concurrent, retry, offline and unknown-result behavior is checked when applicable."
     ],
-    "crossSurfaceCriteria": [],
-    "migrationCriteria": [
-      "Fresh, upgrade, replay, checksum, preservation and rollback are proven."
+    "crossSurfaceCriteria": [
+      "Every affected surface shows the same governed truth and state."
     ],
+    "migrationCriteria": [],
     "deletionCriteria": [
       "Consumer census, replacement, reference scan and rollback proof precede deletion."
     ],
@@ -159,10 +188,10 @@
   },
   "verification": {
     "verificationIds": [
-      "VER-0001"
+      "VER-0018"
     ],
     "smallestSufficientChecks": [
-      "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed"
+      "pnpm run verify:full && pnpm run runtime:verify && node tools/diagnose-implementing/validate-package.mjs tools/diagnose-implementing/dsh-wlt-all-journeys-final-closure-reassessment-2026-08-04 --strict --disposal"
     ],
     "checksAfterLastWrite": true,
     "sameCommitRequired": true,

@@ -1,0 +1,330 @@
+surface,path,line,control_kind,snippet,binding_state
+app-partner,services/dsh/frontend/app-partner/DshPartnerSurface.tsx,145,Pressable,<Pressable onPress={() => openAccountHub('profile')} style={styles.profileButton}>,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/DshPartnerSurface.tsx,145,onPress,<Pressable onPress={() => openAccountHub('profile')} style={styles.profileButton}>,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/DshPartnerSurface.tsx,149,Pressable,"<Pressable onPress={openStoreScope} style={[styles.storeScopeButton, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/DshPartnerSurface.tsx,149,onPress,"<Pressable onPress={openStoreScope} style={[styles.storeScopeButton, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/DshPartnerSurface.tsx,158,Pressable,"<Pressable accessibilityLabel=""البحث عن الطلبات"" onPress={openOrdersSearch}>",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/DshPartnerSurface.tsx,158,onPress,"<Pressable accessibilityLabel=""البحث عن الطلبات"" onPress={openOrdersSearch}>",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/DshPartnerSurface.tsx,161,Pressable,"<Pressable accessibilityLabel=""الإشعارات"" onPress={() => { setActiveOrderId(initialOrderId); setRoute('bell'); }}>",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/DshPartnerSurface.tsx,161,onPress,"<Pressable accessibilityLabel=""الإشعارات"" onPress={() => { setActiveOrderId(initialOrderId); setRoute('bell'); }}>",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/DshPartnerSurface.tsx,202,Pressable,<Pressable,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/DshPartnerSurface.tsx,204,onPress,onPress={() => handleNavSelect(item.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/AuctionStatusUpdateScreen.tsx,81,onPress,onPress={() => setSelectedStatus(item.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/AuctionStatusUpdateScreen.tsx,100,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/AuctionStatusUpdateScreen.tsx,102,onPress,onPress={() => setSavedMessage(`تم حفظ الحالة: ${auctionStatusItems.find((item) => item.id === selectedStatus)?.title ?? 'غير معروفة'}`)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/AuctionStatusUpdateScreen.tsx,105,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/AuctionStatusUpdateScreen.tsx,109,onPress,onPress={() => {,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/AuctionStatusUpdateScreen.tsx,117,Button,"{onBack ? <Button label=""العودة"" tone=""ghost"" fullWidth={false} onPress={onBack} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/AuctionStatusUpdateScreen.tsx,117,onPress,"{onBack ? <Button label=""العودة"" tone=""ghost"" fullWidth={false} onPress={onBack} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/AuctionStatusUpdateScreen.tsx,118,Button,"{onSecondaryAction ? <Button label=""العودة لدليل العمليات"" tone=""ghost"" fullWidth={false} onPress={onSecondaryAction} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/AuctionStatusUpdateScreen.tsx,118,onPress,"{onSecondaryAction ? <Button label=""العودة لدليل العمليات"" tone=""ghost"" fullWidth={false} onPress={onSecondaryAction} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/NotificationsScreen.tsx,39,Button,"{onOpenInbox ? <Button label=""العودة لصندوق الطلبات"" tone=""secondary"" fullWidth={false} onPress={onOpenInbox} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/NotificationsScreen.tsx,39,onPress,"{onOpenInbox ? <Button label=""العودة لصندوق الطلبات"" tone=""secondary"" fullWidth={false} onPress={onOpenInbox} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/NotificationsScreen.tsx,40,Button,"{onBack ? <Button label=""رجوع"" fullWidth={false} onPress={onBack} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/NotificationsScreen.tsx,40,onPress,"{onBack ? <Button label=""رجوع"" fullWidth={false} onPress={onBack} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerAnalyticsInsightsPanel.tsx,102,onChange,<PeriodSelector period={period} onChange={setPeriod} />,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerAnalyticsInsightsPanel.tsx,120,onChange,<PeriodSelector period={period} onChange={setPeriod} />,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerAnalyticsInsightsPanel.tsx,141,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerAnalyticsInsightsPanel.tsx,145,onPress,onPress={() => onChange(item.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx,120,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx,122,onPress,onPress={onOpenOrdersBoardPress},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx,143,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx,146,onPress,onPress={onOpenOrdersBoardPress},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx,158,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx,161,onPress,onPress={onOpenOrderDetailPress},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx,183,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx,186,onPress,onPress={onOpenMaintenancePress},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx,198,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx,201,onPress,onPress={onOpenIssueQueuePress},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx,248,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx,255,onPress,onPress={() =>,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubNav.tsx,181,onValueChange,const isSwitchRow = typeof value === 'boolean' && typeof onValueChange === 'function';,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubNav.tsx,184,Pressable,<Pressable,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubNav.tsx,189,onPress,onPress={isSwitchRow ? undefined : onPress},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubNav.tsx,240,onValueChange,onValueChange={onValueChange},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubNav.tsx,340,Pressable,<Pressable,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubNav.tsx,343,onPress,onPress={onPress},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubNav.tsx,446,Pressable,<Pressable,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubNav.tsx,449,onPress,onPress={onPress},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx,707,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx,711,onPress,"onPress={() => updateSection(""wallet"")}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx,725,onPress,onPress={() => updateSection(item.section)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubSettingsPanel.tsx,160,Pressable,<Pressable,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubSettingsPanel.tsx,161,onPress,onPress={() => setAppearanceMode('lightPremium')},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubSettingsPanel.tsx,179,Pressable,<Pressable,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubSettingsPanel.tsx,180,onPress,onPress={() => setAppearanceMode('darkGlass')},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubSettingsPanel.tsx,211,onValueChange,"onValueChange={(nextValue) => updateNotificationPreference(item.id, nextValue)}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubSettingsPanel.tsx,214,Pressable,<Pressable onPress={() => setShowAdvancedNotifications(!showAdvancedNotifications)}>,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubSettingsPanel.tsx,214,onPress,<Pressable onPress={() => setShowAdvancedNotifications(!showAdvancedNotifications)}>,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubSettingsPanel.tsx,227,onValueChange,"onValueChange={(nextValue) => updateNotificationPreference(item.id, nextValue)}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubSettingsPanel.tsx,245,onPress,onPress={openOrderAlerts},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubSettingsPanel.tsx,252,onPress,onPress={onOpenStoreScope},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubSettingsPanel.tsx,259,onPress,onPress={openOperationsDirectory},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubStoreHero.tsx,82,Pressable,<Pressable,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubStoreHero.tsx,83,onPress,onPress={onOpenStoreScope},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubStoreHero.tsx,94,Pressable,<Pressable,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerHubStoreHero.tsx,96,onPress,onPress={() => setSelectedModeId(mode.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOnboardingStatusView.tsx,182,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOnboardingStatusView.tsx,185,onPress,onPress={reloadSelfStatus},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOperationsPanel.tsx,124,Button,"<Button label=""إعداد موصل المتجر"" tone=""primary"" size=""sm"" fullWidth={false} onPress={onOpenStoreCourierSetup} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOperationsPanel.tsx,124,onPress,"<Button label=""إعداد موصل المتجر"" tone=""primary"" size=""sm"" fullWidth={false} onPress={onOpenStoreCourierSetup} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOperationsPanel.tsx,175,Pressable,<Pressable,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOperationsPanel.tsx,176,onPress,onPress={() => setSelectedModeId(isSelected ? '' : mode.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOperationsPanel.tsx,217,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOperationsPanel.tsx,222,onPress,onPress={onOpenStoreCourierSetup},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOperationsPanel.tsx,243,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOperationsPanel.tsx,248,onPress,onPress={onOpenTeamManagement},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOperationsPanel.tsx,268,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOperationsPanel.tsx,273,onPress,onPress={() => setCoveragePanelOpen((current) => !current)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOperationsPanel.tsx,307,Pressable,<Pressable,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOperationsPanel.tsx,308,onPress,onPress={() => setSelectedZoneId(isZoneSelected ? '' : zone.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOperationsPanel.tsx,356,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOperationsPanel.tsx,361,onPress,onPress={() => setLastSaveLabel(`طلب مراجعة المنطقة: ${zone.name}`)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOperationsPanel.tsx,363,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOperationsPanel.tsx,368,onPress,onPress={() => setLastSaveLabel(zone.operationalImpact)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerOperationsPanel.tsx,384,onPress,"onPress={() => setLastSaveLabel(new Date().toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit' }))}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx,164,Button,"<Button label=""إغلاق"" tone=""ghost"" size=""sm"" onPress={controller.clearMutationError} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx,164,onPress,"<Button label=""إغلاق"" tone=""ghost"" size=""sm"" onPress={controller.clearMutationError} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx,169,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx,174,onPress,onPress={() => setShowCreate((current) => !current)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx,207,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx,212,onPress,onPress={() => setCategory(item)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx,219,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx,224,onPress,onPress={() => setPriority(item)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx,229,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx,233,onPress,onPress={() => void submitTicket()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx,263,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx,267,onPress,onPress={() => controller.selectTicket(ticket.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx,324,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx,328,onPress,onPress={() => void sendMessage()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PromotionsScreen.tsx,126,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PromotionsScreen.tsx,131,onPress,onPress={() => onActionPress(offer)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PromotionsScreen.tsx,322,Button,"<Button label=""إرسال للمراجعة"" tone=""brand"" fullWidth={false} onPress={handleSubmitOffer} disabled={controller.submitting} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PromotionsScreen.tsx,322,onPress,"<Button label=""إرسال للمراجعة"" tone=""brand"" fullWidth={false} onPress={handleSubmitOffer} disabled={controller.submitting} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PromotionsScreen.tsx,323,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PromotionsScreen.tsx,327,onPress,onPress={() => {,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PromotionsScreen.tsx,372,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PromotionsScreen.tsx,377,onPress,onPress={() => openOfferForm()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/account/PromotionsScreen.tsx,401,onValueChange,onValueChange={setActiveTab},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/CategoryManagementScreen.tsx,77,Button,"<Button label=""رجوع"" tone=""ghost"" size=""sm"" fullWidth={false} onPress={onBack} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/CategoryManagementScreen.tsx,77,onPress,"<Button label=""رجوع"" tone=""ghost"" size=""sm"" fullWidth={false} onPress={onBack} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/InventoryActionScreen.tsx,38,Button,"{onBack ? <Button label=""العودة"" tone=""secondary"" fullWidth={false} onPress={onBack} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/InventoryActionScreen.tsx,38,onPress,"{onBack ? <Button label=""العودة"" tone=""secondary"" fullWidth={false} onPress={onBack} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/InventoryActionScreen.tsx,39,Button,"{onSecondaryAction ? <Button label=""العودة لدليل العمليات"" fullWidth={false} onPress={onSecondaryAction} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/InventoryActionScreen.tsx,39,onPress,"{onSecondaryAction ? <Button label=""العودة لدليل العمليات"" fullWidth={false} onPress={onSecondaryAction} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx,218,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx,222,onPress,onPress={() => startEditing(product)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx,243,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx,246,onPress,onPress={() => void saveAssortment()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx,249,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx,252,onPress,onPress={() => {,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerCatalogReadinessPanel.tsx,167,Button,"<Button label=""✕"" tone=""secondary"" size=""sm"" onPress={onClose} style={{ minWidth: 0 }} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerCatalogReadinessPanel.tsx,167,onPress,"<Button label=""✕"" tone=""secondary"" size=""sm"" onPress={onClose} style={{ minWidth: 0 }} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerCatalogReadinessPanel.tsx,284,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerCatalogReadinessPanel.tsx,288,onPress,onPress={onEditStock},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerCatalogReadinessPanel.tsx,292,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerCatalogReadinessPanel.tsx,296,onPress,onPress={onEditAvailability},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerInventoryActionPanel.tsx,33,onPress,onPress={() => onSelectFlow?.(item.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerInventoryActionPanel.tsx,38,Button,"<Button label=""متابعة من داخل لوحة المخزون"" tone=""secondary"" onPress={activeFlowId ? () => onSelectFlow?.(activeFlowId) : undefined} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerInventoryActionPanel.tsx,38,onPress,"<Button label=""متابعة من داخل لوحة المخزون"" tone=""secondary"" onPress={activeFlowId ? () => onSelectFlow?.(activeFlowId) : undefined} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerReelsManagementSection.tsx,151,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerReelsManagementSection.tsx,154,onPress,onPress={() => void pickVideo()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerReelsManagementSection.tsx,157,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerReelsManagementSection.tsx,160,onPress,onPress={() => void pickPoster()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerReelsManagementSection.tsx,201,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerReelsManagementSection.tsx,206,onPress,onPress={() => void submit()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerReelsManagementSection.tsx,208,Button,"<Button label=""تحديث الحالات"" tone=""ghost"" disabled={submitting} onPress={() => void load()} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/PartnerReelsManagementSection.tsx,208,onPress,"<Button label=""تحديث الحالات"" tone=""ghost"" disabled={submitting} onPress={() => void load()} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductEditScreen.tsx,154,Button,"<Button label=""رجوع"" tone=""ghost"" size=""sm"" fullWidth={false} onPress={onBack} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductEditScreen.tsx,154,onPress,"<Button label=""رجوع"" tone=""ghost"" size=""sm"" fullWidth={false} onPress={onBack} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductEditScreen.tsx,178,Button,"<Button label=""العودة للكتالوج"" tone=""primary"" size=""sm"" onPress={onBack} style={{ marginTop: spacing[2] }} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductEditScreen.tsx,178,onPress,"<Button label=""العودة للكتالوج"" tone=""primary"" size=""sm"" onPress={onBack} style={{ marginTop: spacing[2] }} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductEditScreen.tsx,193,Button,"<Button label=""العودة وإدارة التوافر"" tone=""secondary"" onPress={onBack} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductEditScreen.tsx,193,onPress,"<Button label=""العودة وإدارة التوافر"" tone=""secondary"" onPress={onBack} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductEditScreen.tsx,246,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductEditScreen.tsx,252,onPress,onPress={() => {,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductEditScreen.tsx,268,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductEditScreen.tsx,273,onPress,onPress={() => setSelectedNodeId('')},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductEditScreen.tsx,278,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductEditScreen.tsx,284,onPress,onPress={() => setSelectedNodeId(node.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductEditScreen.tsx,304,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductEditScreen.tsx,308,onPress,onPress={handleCreateProposal},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductMediaScreen.tsx,279,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductMediaScreen.tsx,282,onPress,onPress={() => void handleUpload()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductMediaScreen.tsx,311,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductMediaScreen.tsx,316,onPress,onPress={() => void handleUnlink(asset.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,185,Button,"<Button label=""رجوع"" tone=""ghost"" size=""sm"" fullWidth={false} onPress={onBack} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,185,onPress,"<Button label=""رجوع"" tone=""ghost"" size=""sm"" fullWidth={false} onPress={onBack} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,210,Button,"<Button label=""إعادة المحاولة"" tone=""secondary"" size=""sm"" fullWidth={false} onPress={loadData} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,210,onPress,"<Button label=""إعادة المحاولة"" tone=""secondary"" size=""sm"" fullWidth={false} onPress={loadData} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,220,Button,"{onBack && <Button label=""العودة للكتالوج"" tone=""primary"" size=""sm"" fullWidth={false} onPress={onBack} style={{ marginTop: spacing[2] }} />}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,220,onPress,"{onBack && <Button label=""العودة للكتالوج"" tone=""primary"" size=""sm"" fullWidth={false} onPress={onBack} style={{ marginTop: spacing[2] }} />}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,247,Button,"<Button label=""متوفر"" tone={stockStatus === 'in_stock' ? 'primary' : 'secondary'} size=""sm"" onPress={() => setStockStatus('in_stock')} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,247,onPress,"<Button label=""متوفر"" tone={stockStatus === 'in_stock' ? 'primary' : 'secondary'} size=""sm"" onPress={() => setStockStatus('in_stock')} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,248,Button,"<Button label=""منخفض"" tone={stockStatus === 'low_stock' ? 'primary' : 'secondary'} size=""sm"" onPress={() => setStockStatus('low_stock')} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,248,onPress,"<Button label=""منخفض"" tone={stockStatus === 'low_stock' ? 'primary' : 'secondary'} size=""sm"" onPress={() => setStockStatus('low_stock')} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,249,Button,"<Button label=""نفد"" tone={stockStatus === 'out_of_stock' ? 'primary' : 'secondary'} size=""sm"" onPress={() => setStockStatus('out_of_stock')} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,249,onPress,"<Button label=""نفد"" tone={stockStatus === 'out_of_stock' ? 'primary' : 'secondary'} size=""sm"" onPress={() => setStockStatus('out_of_stock')} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,258,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,264,onPress,onPress={() => setAvailable(!available)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,268,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,272,onPress,onPress={handleSave},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,303,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,307,onPress,onPress={handlePause},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,311,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/catalog/ProductOverridesScreen.tsx,315,onPress,onPress={handleResume},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/AcceptanceTimerSheet.tsx,77,Button,"<Button label=""قبول الطلب"" tone=""primary"" onPress={() => onAccept?.(orderId)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/AcceptanceTimerSheet.tsx,77,onPress,"<Button label=""قبول الطلب"" tone=""primary"" onPress={() => onAccept?.(orderId)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/AcceptanceTimerSheet.tsx,78,Button,"<Button label=""رفض الطلب"" tone=""danger"" onPress={() => onDecline?.(orderId)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/AcceptanceTimerSheet.tsx,78,onPress,"<Button label=""رفض الطلب"" tone=""danger"" onPress={() => onDecline?.(orderId)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx,123,Button,"{canAccept ? <Button label=""قبول الطلب"" tone=""primary"" onPress={onAccept} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx,123,onPress,"{canAccept ? <Button label=""قبول الطلب"" tone=""primary"" onPress={onAccept} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx,125,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx,128,onPress,onPress={() => setShowRejectionPanel(true)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx,149,Pressable,<Pressable,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx,151,onPress,onPress={() => {,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx,182,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx,186,onPress,"onPress={() => canReject && selectedReasonId && onReject(selectedReasonId, reasonNote.trim())}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx,188,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx,191,onPress,onPress={() => {,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx,178,onValueChange,<Tabs items={tabItems} value={stage} onValueChange={(value) => setStage(value as StageId)} />,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx,183,Button,"<Button label=""إغلاق البحث"" tone=""ghost"" size=""sm"" fullWidth={false} onPress={onCloseSearch} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx,183,onPress,"<Button label=""إغلاق البحث"" tone=""ghost"" size=""sm"" fullWidth={false} onPress={onCloseSearch} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx,240,Button,"<Button label={primaryLabel(item)} size=""sm"" fullWidth={false} onPress={() => onAction(action, item.id)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx,240,onPress,"<Button label={primaryLabel(item)} size=""sm"" fullWidth={false} onPress={() => onAction(action, item.id)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx,242,Button,"<Button label=""نقص أو عدم تطابق"" tone=""danger"" size=""sm"" fullWidth={false} onPress={() => onAction('handoff_exception', item.id)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx,242,onPress,"<Button label=""نقص أو عدم تطابق"" tone=""danger"" size=""sm"" fullWidth={false} onPress={() => onAction('handoff_exception', item.id)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx,245,Button,"<Button label=""تسجيل مشكلة"" tone=""danger"" size=""sm"" fullWidth={false} onPress={() => onAction('report_issue', item.id)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx,245,onPress,"<Button label=""تسجيل مشكلة"" tone=""danger"" size=""sm"" fullWidth={false} onPress={() => onAction('report_issue', item.id)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx,248,Button,"<Button label=""تعديل الوقت"" tone=""secondary"" size=""sm"" fullWidth={false} onPress={() => onAction('revise_estimate', item.id)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx,248,onPress,"<Button label=""تعديل الوقت"" tone=""secondary"" size=""sm"" fullWidth={false} onPress={() => onAction('revise_estimate', item.id)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx,251,Button,"<Button label=""رفض مع سبب"" tone=""danger"" size=""sm"" fullWidth={false} onPress={() => onAction('reject', item.id)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx,251,onPress,"<Button label=""رفض مع سبب"" tone=""danger"" size=""sm"" fullWidth={false} onPress={() => onAction('reject', item.id)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx,253,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx,258,onPress,onPress={() => setExpandedId(expanded ? null : item.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx,217,onSubmit,onSubmit={async () => {,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx,248,Button,"<Button label=""إغلاق"" tone=""ghost"" size=""sm"" fullWidth={false} onPress={() => setExpandedFulfillmentOrderId(null)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx,248,onPress,"<Button label=""إغلاق"" tone=""ghost"" size=""sm"" fullWidth={false} onPress={() => setExpandedFulfillmentOrderId(null)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/OrderActionScreen.tsx,84,Button,"{onBack ? <Button label=""العودة"" tone=""secondary"" fullWidth={false} onPress={onBack} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/OrderActionScreen.tsx,84,onPress,"{onBack ? <Button label=""العودة"" tone=""secondary"" fullWidth={false} onPress={onBack} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/OrderActionScreen.tsx,85,Button,{onSecondaryAction ? <Button label={activeCopy.secondaryLabel} fullWidth={false} onPress={onSecondaryAction} /> : null},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/OrderActionScreen.tsx,85,onPress,{onSecondaryAction ? <Button label={activeCopy.secondaryLabel} fullWidth={false} onPress={onSecondaryAction} /> : null},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/OrderIssueScreen.tsx,49,Button,"{onBack ? <Button label=""العودة"" tone=""secondary"" fullWidth={false} onPress={onBack} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/OrderIssueScreen.tsx,49,onPress,"{onBack ? <Button label=""العودة"" tone=""secondary"" fullWidth={false} onPress={onBack} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/OrderIssueScreen.tsx,50,Button,{onSecondaryAction ? <Button label={activeCopy.secondaryLabel} fullWidth={false} onPress={onSecondaryAction} /> : null},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/OrderIssueScreen.tsx,50,onPress,{onSecondaryAction ? <Button label={activeCopy.secondaryLabel} fullWidth={false} onPress={onSecondaryAction} /> : null},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerConversationScreen.tsx,55,Button,"{onBack ? <Button label=""العودة"" tone=""secondary"" fullWidth={false} onPress={onBack} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerConversationScreen.tsx,55,onPress,"{onBack ? <Button label=""العودة"" tone=""secondary"" fullWidth={false} onPress={onBack} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerConversationScreen.tsx,56,Button,"{onSecondaryAction ? <Button label=""المسار التالي"" fullWidth={false} onPress={onSecondaryAction} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerConversationScreen.tsx,56,onPress,"{onSecondaryAction ? <Button label=""المسار التالي"" fullWidth={false} onPress={onSecondaryAction} /> : null}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerConversationScreen.tsx,81,onPress,onPress={() => onOpenScreen?.(item.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerDispatchTrackingScreen.tsx,22,Button,"actions={<Button label=""العودة"" tone=""secondary"" fullWidth={false} onPress={onBack} />}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerDispatchTrackingScreen.tsx,22,onPress,"actions={<Button label=""العودة"" tone=""secondary"" fullWidth={false} onPress={onBack} />}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerDispatchTrackingScreen.tsx,96,Button,"<Button label=""تحديث المرجع"" tone=""secondary"" onPress={() => void reload()} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerDispatchTrackingScreen.tsx,96,onPress,"<Button label=""تحديث المرجع"" tone=""secondary"" onPress={() => void reload()} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,75,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,78,onPress,onPress={() => void accept()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,82,Button,"<Button label=""تحديث حالة المرتجع"" tone=""ghost"" size=""sm"" fullWidth={false} disabled={accepting} onPress={() => void load()} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,82,onPress,"<Button label=""تحديث حالة المرتجع"" tone=""ghost"" size=""sm"" fullWidth={false} disabled={accepting} onPress={() => void load()} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,132,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,138,onPress,onPress={() => setSelectedCourierId(courier.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,143,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,146,onPress,onPress={() => void assign(selectedCourierId)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,156,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,159,onPress,onPress={() => void pickup()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,161,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,164,onPress,onPress={() => void depart()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,166,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,169,onPress,onPress={() => void arrive()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,177,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,180,onPress,onPress={() => void captureAndSubmitProof()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,185,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,191,onPress,onPress={() => void refresh()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,232,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,235,onPress,onPress={() => void markReady()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,237,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,240,onPress,onPress={() => void notify()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,242,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,245,onPress,onPress={() => void customerArrived()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,256,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,259,onPress,onPress={() => void verify(code).then((ok) => {,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,269,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,273,onPress,onPress={() => void noShow(noShowReason).then((ok) => {,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,292,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,295,onPress,onPress={() => void rescheduleWindow(,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,305,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,313,onPress,onPress={() => void extendWindow(,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,336,Button,"<Button label=""إعادة قراءة المرحلة"" tone=""ghost"" size=""sm"" fullWidth={false} disabled={busy} onPress={() => void refresh()} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx,336,onPress,"<Button label=""إعادة قراءة المرحلة"" tone=""ghost"" size=""sm"" fullWidth={false} disabled={busy} onPress={() => void refresh()} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerOrderActionPanel.tsx,95,onPress,onPress={() => onSelectFlow?.(item.id as PartnerOrderActionFlowId)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerOrderActionPanel.tsx,102,Button,"<Button label=""متابعة من داخل الطلب"" tone=""secondary"" onPress={activeFlowId ? () => onSelectFlow?.(activeFlowId) : undefined} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerOrderActionPanel.tsx,102,onPress,"<Button label=""متابعة من داخل الطلب"" tone=""secondary"" onPress={activeFlowId ? () => onSelectFlow?.(activeFlowId) : undefined} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerOrderAlertsPanel.tsx,86,onPress,onPress={() => onOpenOrder?.(item.orderId)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerOrderAlertsPanel.tsx,92,Button,"<Button label=""فتح تنبيهات الطلب"" tone=""secondary"" fullWidth={false} onPress={() => onOpenFlow?.('order-alerts')} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerOrderAlertsPanel.tsx,92,onPress,"<Button label=""فتح تنبيهات الطلب"" tone=""secondary"" fullWidth={false} onPress={() => onOpenFlow?.('order-alerts')} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerOrderAlertsPanel.tsx,93,Button,"<Button label=""فتح الطلب المحدد"" fullWidth={false} onPress={() => onOpenOrder?.(visibleItems[0]!.orderId)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerOrderAlertsPanel.tsx,93,onPress,"<Button label=""فتح الطلب المحدد"" fullWidth={false} onPress={() => onOpenOrder?.(visibleItems[0]!.orderId)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerOrderIssuePanel.tsx,172,Pressable,<Pressable,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerOrderIssuePanel.tsx,176,onPress,onPress={() => handleSelectCategory(category.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerOrderIssuePanel.tsx,209,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PartnerOrderIssuePanel.tsx,212,onPress,onPress={() => onSelectFlow?.(resolveCategoryFlowId(internalCategoryId))},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PreparationEstimateRevisionPanel.tsx,83,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PreparationEstimateRevisionPanel.tsx,86,onPress,onPress={() => void submit()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PreparationEstimateRevisionPanel.tsx,88,Button,"<Button label=""إلغاء"" tone=""ghost"" onPress={onClose} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PreparationEstimateRevisionPanel.tsx,88,onPress,"<Button label=""إلغاء"" tone=""ghost"" onPress={onClose} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PreparationIssuesPanel.tsx,137,Button,"<Button label=""إغلاق"" tone=""ghost"" size=""sm"" fullWidth={false} onPress={onClose} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PreparationIssuesPanel.tsx,137,onPress,"<Button label=""إغلاق"" tone=""ghost"" size=""sm"" fullWidth={false} onPress={onClose} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PreparationIssuesPanel.tsx,185,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PreparationIssuesPanel.tsx,191,onPress,onPress={() => setSelectedIssueId(selectedIssueId === issue.id ? null : issue.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PreparationIssuesPanel.tsx,209,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PreparationIssuesPanel.tsx,212,onPress,onPress={() => void resolveIssue()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PreparationIssuesPanel.tsx,223,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PreparationIssuesPanel.tsx,229,onPress,onPress={() => {,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PreparationIssuesPanel.tsx,240,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PreparationIssuesPanel.tsx,246,onPress,onPress={() => {,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PreparationIssuesPanel.tsx,284,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/orders/PreparationIssuesPanel.tsx,287,onPress,onPress={() => void reportIssue()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/ratings/PartnerFieldRatingGate.tsx,45,Modal,"<Modal visible={visible} transparent animationType=""fade"" onRequestClose={() => setDismissed(true)}>",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/ratings/PartnerFieldRatingGate.tsx,58,Pressable,<Pressable,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/ratings/PartnerFieldRatingGate.tsx,63,onPress,onPress={() => setScore(value)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/ratings/PartnerFieldRatingGate.tsx,84,Pressable,<Pressable,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/ratings/PartnerFieldRatingGate.tsx,88,onPress,onPress={() => void submit()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/ratings/PartnerFieldRatingGate.tsx,93,Pressable,"<Pressable accessibilityRole=""button"" onPress={() => setDismissed(true)} style={styles.laterButton}>",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/ratings/PartnerFieldRatingGate.tsx,93,onPress,"<Pressable accessibilityRole=""button"" onPress={() => setDismissed(true)} style={styles.laterButton}>",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx,57,Pressable,<Pressable,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx,59,onPress,onPress={() => onSelect(option.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx,182,Switch,<Switch value={isActive} onValueChange={setIsActive} />,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx,182,onValueChange,<Switch value={isActive} onValueChange={setIsActive} />,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx,198,onPress,onPress={() => toggleBranch(branch.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx,279,onPress,onPress={() => {,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx,53,Button,"<Button label=""إعادة المحاولة"" tone=""secondary"" onPress={() => void controller.reload()} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx,53,onPress,"<Button label=""إعادة المحاولة"" tone=""secondary"" onPress={() => void controller.reload()} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx,83,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx,91,onPress,onPress={() => void save()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/PartnerStoreScopeSheet.tsx,61,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/PartnerStoreScopeSheet.tsx,65,onPress,onPress={() => onSelect(option.scopeId)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/PartnerStoreScopeSheet.tsx,73,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/PartnerStoreScopeSheet.tsx,78,onPress,onPress={() => void locateDevice()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/PartnerStoreScopeSheet.tsx,93,Button,"<Button label=""إغلاق"" onPress={onClose} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/PartnerStoreScopeSheet.tsx,93,onPress,"<Button label=""إغلاق"" onPress={onClose} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/StoreProfileScreen.tsx,121,Button,"<Button label={actionLabel} tone=""secondary"" size=""sm"" fullWidth={false} onPress={onToggle} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/StoreProfileScreen.tsx,121,onPress,"<Button label={actionLabel} tone=""secondary"" size=""sm"" fullWidth={false} onPress={onToggle} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/StoreProfileScreen.tsx,306,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/StoreProfileScreen.tsx,311,onPress,onPress={() => {,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/StoreProfileScreen.tsx,317,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/StoreProfileScreen.tsx,323,onPress,onPress={() => toggleMode(mode.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/store/StoreProfileScreen.tsx,392,onPress,onPress={() => void onSave()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx,222,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx,227,onPress,onPress={() => setSection(selectPartnerTeamSection(item.id))},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx,250,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx,256,onPress,onPress={() => setInviteRole(role.id)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx,260,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx,264,onPress,onPress={() => void submitInvite()},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx,271,Button,"<Button label=""تحديث الاتصالات"" tone=""ghost"" size=""sm"" disabled={fleet.loading || busy} onPress={() => void fleet.reload()} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx,271,onPress,"<Button label=""تحديث الاتصالات"" tone=""ghost"" size=""sm"" disabled={fleet.loading || busy} onPress={() => void fleet.reload()} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx,339,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx,344,onPress,"onPress={() => void submitAction(member, member.inlineAction)}",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx,348,Button,<Button,REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx,353,onPress,onPress={() => void issueCourierCode(member)},REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx,357,Button,"<Button label=""إلغاء رمز الربط"" tone=""danger"" size=""sm"" disabled={busy} onPress={() => void revokeCourier(member)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF
+app-partner,services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx,357,onPress,"<Button label=""إلغاء رمز الربط"" tone=""danger"" size=""sm"" disabled={busy} onPress={() => void revokeCourier(member)} />",REQUIRES_ACTION_PERMISSION_API_AND_STATE_PROOF

@@ -7,12 +7,12 @@
     "slug": "dsh-wlt-all-journeys-final-closure-reassessment-2026-08-04",
     "objective": "إنتاج حزمة تشخيص وتخطيط كاملة قابلة للتدقيق لإغلاق FOUNDATION وجميع DSH/WLT journeys دون تعديل المنتج في هذه المرحلة.",
     "requestedMode": "DIAGNOSIS_AND_PLAN_ONLY",
-    "createdAt": "2026-08-04T13:36:46.444517Z",
-    "createdBy": "OpenAI GPT-5.6 Thinking via GitHub Remote and official Git Bundle",
+    "createdAt": "2026-08-04T14:16:24.152228Z",
+    "createdBy": "OpenAI GPT-5.6 Thinking via GitHub Remote, official Git Bundle, permanent generator and strict validator",
     "repository": "bthwani2-boop/bthwani-suite-next",
     "targetBranch": "smsm",
-    "pinnedStartSha": "6970f0f8be107118611c839df824dbae0e843b18",
-    "latestObservedRemoteSha": "6970f0f8be107118611c839df824dbae0e843b18",
+    "pinnedStartSha": "f97dcbc3ecfbc19a130c4dbafef6cb7def9c3eb8",
+    "latestObservedRemoteSha": "f97dcbc3ecfbc19a130c4dbafef6cb7def9c3eb8",
     "latestVerifiedImplementationSha": null,
     "latestPushedSha": null
   },
@@ -41,10 +41,10 @@
     ]
   },
   "status": {
-    "diagnosis": "COMPLETE_ON_PINNED_SHA",
+    "diagnosis": "COMPLETE_ON_PINNED_REMOTE_SHA",
     "plan": "READY_FOR_EXECUTION_REVIEW",
     "implementation": "NOT_STARTED",
-    "verification": "STRICT_VALIDATION_PASSED",
+    "verification": "STRICT_VALIDATION_PASSED_ON_EXACT_GIT_BUNDLE",
     "disposal": "NOT_READY",
     "decision": "NO_GO"
   },
@@ -145,6 +145,7 @@
     "06-CLOSURE-AND-DISPOSAL.md",
     "07-TRACEABILITY-MATRIX.csv",
     "evidence/README.md",
+    "evidence/remote-head-and-ci.json",
     "evidence/authority-ledger.csv",
     "evidence/candidate-register.csv",
     "evidence/ci-job-step-matrix.csv",
@@ -164,6 +165,7 @@
     "evidence/large-text-files.csv",
     "evidence/migration-manifest-ledger.csv",
     "evidence/package-file-manifest.csv",
+    "evidence/package-validation.json",
     "evidence/package-scripts.csv",
     "evidence/root-cause-matrix.csv",
     "evidence/runtime-proof-summary.json",
@@ -204,7 +206,9 @@
     "tasks/TASK-0015.json",
     "tasks/TASK-0016.json",
     "tasks/TASK-0017.json",
-    "tasks/TASK-0018.json"
+    "tasks/TASK-0018.json",
+    "08-IMPORT-INSTRUCTIONS.md",
+    "09-PUSH-PACKAGE-PER-FILE.ps1"
   ],
   "qualityGates": {
     "planReady": {
@@ -255,7 +259,7 @@
     "lastCompletedWorkItem": null,
     "currentWorkItem": null,
     "nextWorkItem": "TASK-0001",
-    "lastVerifiedSha": "6970f0f8be107118611c839df824dbae0e843b18",
+    "lastVerifiedSha": "f97dcbc3ecfbc19a130c4dbafef6cb7def9c3eb8",
     "failedChecks": [
       "DSH Database Contract",
       "BThwani Contextual CI",
@@ -295,5 +299,15 @@
       "07-TRACEABILITY-MATRIX.csv",
       "evidence/README.md"
     ]
+  },
+  "provenance": {
+    "remoteHeadSha": "f97dcbc3ecfbc19a130c4dbafef6cb7def9c3eb8",
+    "officialGitBundleArtifactId": 8894880011,
+    "officialGitBundleDigest": "sha256:d7ae99af69ec9f7176b4bd268bfea5ad44a8b168dafe09131dda4edcfddb6f51",
+    "generator": "tools/diagnose-implementing/new-package.mjs",
+    "validator": "tools/diagnose-implementing/validate-package.mjs --strict",
+    "productFilesModifiedDuringPackageBuild": 0,
+    "remoteWritesPerformedForThisDownloadableDelivery": 0,
+    "generatedAt": "2026-08-04T14:16:24.152228Z"
   }
 }

@@ -7,13 +7,23 @@
 ```yaml
 repository: bthwani2-boop/bthwani-suite-next
 branch: smsm
-pinned_sha: 6970f0f8be107118611c839df824dbae0e843b18
+pinned_sha: f97dcbc3ecfbc19a130c4dbafef6cb7def9c3eb8
 mode: DIAGNOSIS_AND_PLAN_ONLY
 verdict: NO_GO
 journey_execution_allowed: false
 product_changes_in_this_stage: forbidden
 strict_package_validation: PASS
+official_git_bundle_sha: f97dcbc3ecfbc19a130c4dbafef6cb7def9c3eb8
 ```
+
+## تثبيت الرأس الحالي
+
+- الرأس الريموت المثبت: `f97dcbc3ecfbc19a130c4dbafef6cb7def9c3eb8`.
+- مصدر الفحص: Git Bundle الرسمي، artifact `8894880011`.
+- نجحت Architecture Snapshot وGit Bundle وLockfile Snapshot وCodeQL على الرأس الحالي.
+- فشل `DSH Database Contract` في `Apply canonical DSH migrations` بسبب الملف المفقود `dsh-972_financial_eligibility_wlt_decision_boundary.sql`.
+- فشل `BThwani Contextual CI` في migration drift وstatic enforcement وruntime proof وjourney enforcement وDSH/WLT database verification.
+- لم تُعدّل أي ملفات منتج عند تجهيز هذه النسخة القابلة للتنزيل.
 
 ## ما جرى فعليًا
 

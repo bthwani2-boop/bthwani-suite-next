@@ -1,15 +1,16 @@
 {
-  "workItemId": "TASK-0001",
-  "phaseId": "PHASE-02",
-  "sliceId": "SLICE-0001",
-  "title": "إصلاح سلطة مهاجرات DSH",
-  "status": "READY",
+  "workItemId": "TASK-0007",
+  "phaseId": "PHASE-01",
+  "sliceId": "SLICE-0007",
+  "title": "تقوية إطار حزم التشخيص",
+  "status": "BLOCKED",
   "priority": "P0",
   "findingIds": [
-    "FND-0002"
+    "FND-0010",
+    "FND-0018"
   ],
-  "objective": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-  "rationale": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+  "objective": "Strict validation rejects zero inventory and unresolved plan gates; naming passes without broad exception.",
+  "rationale": "Enforce documented zero gates in strict validation, add focused tests, and add one exact naming exception for the mandated _template path.",
   "preconditions": [
     {
       "condition": "Pin latest remote head and compare with expected parent before writing.",
@@ -18,21 +19,27 @@
     }
   ],
   "dependencies": {
-    "workItems": [],
+    "workItems": [
+      "TASK-0006"
+    ],
     "phases": [],
     "external": [],
     "mustNotStartUntil": [
-      "Current product-write authorization is explicit and the branch head is pinned."
+      "Every predecessor is CLOSED_WITH_EVIDENCE on the post-write SHA."
     ]
   },
   "scope": {
     "filesToRead": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "tools/diagnose-implementing/validate-package.mjs",
+      "tools/diagnose-implementing/new-package.mjs",
+      ".ls-lint.yml",
+      "tools/diagnose-implementing/_template"
     ],
     "filesToModify": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "tools/diagnose-implementing/validate-package.mjs",
+      "tools/diagnose-implementing/new-package.mjs",
+      ".ls-lint.yml",
+      "tools/diagnose-implementing/_template"
     ],
     "filesToCreate": [],
     "filesToDelete": [],
@@ -46,10 +53,7 @@
       "Service-owned schema and ledger objects when affected."
     ],
     "surfaces": [],
-    "services": [
-      "dsh",
-      "wlt"
-    ],
+    "services": [],
     "forbiddenPaths": [
       "No change to this support package as a substitute for durable owner changes."
     ],
@@ -59,28 +63,54 @@
   },
   "changeSpecification": {
     "currentState": "See linked findings and evidence.",
-    "targetState": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+    "targetState": "Strict validation rejects zero inventory and unresolved plan gates; naming passes without broad exception.",
     "exactChanges": [
       {
-        "path": "services/dsh/database/migrations/manifest.extensions.json",
+        "path": "tools/diagnose-implementing/validate-package.mjs",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "Strict validation rejects zero inventory and unresolved plan gates; naming passes without broad exception.",
+        "implementationNotes": "Enforce documented zero gates in strict validation, add focused tests, and add one exact naming exception for the mandated _template path.",
         "findingIds": [
-          "FND-0002"
+          "FND-0010",
+          "FND-0018"
         ]
       },
       {
-        "path": "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql",
+        "path": "tools/diagnose-implementing/new-package.mjs",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "Strict validation rejects zero inventory and unresolved plan gates; naming passes without broad exception.",
+        "implementationNotes": "Enforce documented zero gates in strict validation, add focused tests, and add one exact naming exception for the mandated _template path.",
         "findingIds": [
-          "FND-0002"
+          "FND-0010",
+          "FND-0018"
+        ]
+      },
+      {
+        "path": ".ls-lint.yml",
+        "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
+        "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
+        "before": "Current state is recorded by linked findings and immutable evidence.",
+        "after": "Strict validation rejects zero inventory and unresolved plan gates; naming passes without broad exception.",
+        "implementationNotes": "Enforce documented zero gates in strict validation, add focused tests, and add one exact naming exception for the mandated _template path.",
+        "findingIds": [
+          "FND-0010",
+          "FND-0018"
+        ]
+      },
+      {
+        "path": "tools/diagnose-implementing/_template",
+        "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
+        "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
+        "before": "Current state is recorded by linked findings and immutable evidence.",
+        "after": "Strict validation rejects zero inventory and unresolved plan gates; naming passes without broad exception.",
+        "implementationNotes": "Enforce documented zero gates in strict validation, add focused tests, and add one exact naming exception for the mandated _template path.",
+        "findingIds": [
+          "FND-0010",
+          "FND-0018"
         ]
       }
     ],
@@ -111,10 +141,10 @@
       {
         "order": 1,
         "workingDirectory": ".",
-        "command": "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed",
+        "command": "node tools/diagnose-implementing/validate-package.mjs tools/diagnose-implementing/dsh-wlt-all-journeys-final-closure-reassessment-2026-08-04 --strict && pnpm run guard:repo-naming",
         "purpose": "Smallest sufficient falsification after the last write.",
         "expectedExitCode": 0,
-        "expectedObservableResult": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "expectedObservableResult": "Strict validation rejects zero inventory and unresolved plan gates; naming passes without broad exception.",
         "destructive": false,
         "requiresCredential": false,
         "credentialHandling": "NOT_APPLICABLE"
@@ -132,11 +162,11 @@
   "acceptance": {
     "positiveCriteria": [
       {
-        "criterionId": "AC-TASK-0001-01",
-        "statement": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "criterionId": "AC-TASK-0007-01",
+        "statement": "Strict validation rejects zero inventory and unresolved plan gates; naming passes without broad exception.",
         "evidenceRequired": "Command output, diff review and post-write commit SHA.",
         "verificationIds": [
-          "VER-0001"
+          "VER-0007"
         ]
       }
     ],
@@ -147,9 +177,7 @@
       "Negative, timeout, concurrent, retry, offline and unknown-result behavior is checked when applicable."
     ],
     "crossSurfaceCriteria": [],
-    "migrationCriteria": [
-      "Fresh, upgrade, replay, checksum, preservation and rollback are proven."
-    ],
+    "migrationCriteria": [],
     "deletionCriteria": [
       "Consumer census, replacement, reference scan and rollback proof precede deletion."
     ],
@@ -159,10 +187,10 @@
   },
   "verification": {
     "verificationIds": [
-      "VER-0001"
+      "VER-0007"
     ],
     "smallestSufficientChecks": [
-      "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed"
+      "node tools/diagnose-implementing/validate-package.mjs tools/diagnose-implementing/dsh-wlt-all-journeys-final-closure-reassessment-2026-08-04 --strict && pnpm run guard:repo-naming"
     ],
     "checksAfterLastWrite": true,
     "sameCommitRequired": true,

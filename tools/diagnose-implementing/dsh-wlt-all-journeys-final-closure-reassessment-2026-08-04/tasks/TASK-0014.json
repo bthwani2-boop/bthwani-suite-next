@@ -1,15 +1,15 @@
 {
-  "workItemId": "TASK-0001",
-  "phaseId": "PHASE-02",
-  "sliceId": "SLICE-0001",
-  "title": "إصلاح سلطة مهاجرات DSH",
-  "status": "READY",
+  "workItemId": "TASK-0014",
+  "phaseId": "PHASE-06",
+  "sliceId": "SLICE-0014",
+  "title": "إعادة تثبيت FOUNDATION وسجل التغطية",
+  "status": "BLOCKED",
   "priority": "P0",
   "findingIds": [
-    "FND-0002"
+    "FND-0009"
   ],
-  "objective": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-  "rationale": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+  "objective": "FOUNDATION closes with zero applicable blockers and journey registry points to the same SHA.",
+  "rationale": "Regenerate current evidence and bind FOUNDATION status to the post-fix SHA; do not mark journeys closed.",
   "preconditions": [
     {
       "condition": "Pin latest remote head and compare with expected parent before writing.",
@@ -18,21 +18,23 @@
     }
   ],
   "dependencies": {
-    "workItems": [],
+    "workItems": [
+      "TASK-0013"
+    ],
     "phases": [],
     "external": [],
     "mustNotStartUntil": [
-      "Current product-write authorization is explicit and the branch head is pinned."
+      "Every predecessor is CLOSED_WITH_EVIDENCE on the post-write SHA."
     ]
   },
   "scope": {
     "filesToRead": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys/FOUNDATION-00.md",
+      "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys/04-JOURNEY-REGISTRY.yaml"
     ],
     "filesToModify": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys/FOUNDATION-00.md",
+      "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys/04-JOURNEY-REGISTRY.yaml"
     ],
     "filesToCreate": [],
     "filesToDelete": [],
@@ -45,7 +47,13 @@
     "dataObjects": [
       "Service-owned schema and ledger objects when affected."
     ],
-    "surfaces": [],
+    "surfaces": [
+      "control-panel",
+      "app-client",
+      "app-partner",
+      "app-captain",
+      "app-field"
+    ],
     "services": [
       "dsh",
       "wlt"
@@ -59,28 +67,28 @@
   },
   "changeSpecification": {
     "currentState": "See linked findings and evidence.",
-    "targetState": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+    "targetState": "FOUNDATION closes with zero applicable blockers and journey registry points to the same SHA.",
     "exactChanges": [
       {
-        "path": "services/dsh/database/migrations/manifest.extensions.json",
+        "path": "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys/FOUNDATION-00.md",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "FOUNDATION closes with zero applicable blockers and journey registry points to the same SHA.",
+        "implementationNotes": "Regenerate current evidence and bind FOUNDATION status to the post-fix SHA; do not mark journeys closed.",
         "findingIds": [
-          "FND-0002"
+          "FND-0009"
         ]
       },
       {
-        "path": "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql",
+        "path": "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys/04-JOURNEY-REGISTRY.yaml",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "FOUNDATION closes with zero applicable blockers and journey registry points to the same SHA.",
+        "implementationNotes": "Regenerate current evidence and bind FOUNDATION status to the post-fix SHA; do not mark journeys closed.",
         "findingIds": [
-          "FND-0002"
+          "FND-0009"
         ]
       }
     ],
@@ -111,10 +119,10 @@
       {
         "order": 1,
         "workingDirectory": ".",
-        "command": "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed",
+        "command": "pnpm run guard:foundation && node tools/scripts/check-smsm-journey-coverage.mjs",
         "purpose": "Smallest sufficient falsification after the last write.",
         "expectedExitCode": 0,
-        "expectedObservableResult": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "expectedObservableResult": "FOUNDATION closes with zero applicable blockers and journey registry points to the same SHA.",
         "destructive": false,
         "requiresCredential": false,
         "credentialHandling": "NOT_APPLICABLE"
@@ -132,11 +140,11 @@
   "acceptance": {
     "positiveCriteria": [
       {
-        "criterionId": "AC-TASK-0001-01",
-        "statement": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "criterionId": "AC-TASK-0014-01",
+        "statement": "FOUNDATION closes with zero applicable blockers and journey registry points to the same SHA.",
         "evidenceRequired": "Command output, diff review and post-write commit SHA.",
         "verificationIds": [
-          "VER-0001"
+          "VER-0014"
         ]
       }
     ],
@@ -146,10 +154,10 @@
     "edgeCriteria": [
       "Negative, timeout, concurrent, retry, offline and unknown-result behavior is checked when applicable."
     ],
-    "crossSurfaceCriteria": [],
-    "migrationCriteria": [
-      "Fresh, upgrade, replay, checksum, preservation and rollback are proven."
+    "crossSurfaceCriteria": [
+      "Every affected surface shows the same governed truth and state."
     ],
+    "migrationCriteria": [],
     "deletionCriteria": [
       "Consumer census, replacement, reference scan and rollback proof precede deletion."
     ],
@@ -159,10 +167,10 @@
   },
   "verification": {
     "verificationIds": [
-      "VER-0001"
+      "VER-0014"
     ],
     "smallestSufficientChecks": [
-      "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed"
+      "pnpm run guard:foundation && node tools/scripts/check-smsm-journey-coverage.mjs"
     ],
     "checksAfterLastWrite": true,
     "sameCommitRequired": true,

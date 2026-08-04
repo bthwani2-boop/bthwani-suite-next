@@ -1,15 +1,15 @@
 {
-  "workItemId": "TASK-0001",
-  "phaseId": "PHASE-02",
-  "sliceId": "SLICE-0001",
-  "title": "إصلاح سلطة مهاجرات DSH",
-  "status": "READY",
-  "priority": "P0",
+  "workItemId": "TASK-0008",
+  "phaseId": "PHASE-01",
+  "sliceId": "SLICE-0008",
+  "title": "إصلاح تشخيص وانتقاء Journey Gate",
+  "status": "BLOCKED",
+  "priority": "P1",
   "findingIds": [
-    "FND-0002"
+    "FND-0019"
   ],
-  "objective": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-  "rationale": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+  "objective": "Journey artifact names selected guards, commands, exit codes and first root failure; no unsupported -Soft invocation remains.",
+  "rationale": "Implement registry-driven selection, reject unsupported parameters, emit structured step results and preserve all relevant failure output in the artifact.",
   "preconditions": [
     {
       "condition": "Pin latest remote head and compare with expected parent before writing.",
@@ -18,21 +18,25 @@
     }
   ],
   "dependencies": {
-    "workItems": [],
+    "workItems": [
+      "TASK-0007"
+    ],
     "phases": [],
     "external": [],
     "mustNotStartUntil": [
-      "Current product-write authorization is explicit and the branch head is pinned."
+      "Every predecessor is CLOSED_WITH_EVIDENCE on the post-write SHA."
     ]
   },
   "scope": {
     "filesToRead": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "tools/scripts/run-journey-gate.ps1",
+      "infra/docker/scripts/gate-build-test.ps1",
+      ".github/workflows/ci-node-verification.yml"
     ],
     "filesToModify": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "tools/scripts/run-journey-gate.ps1",
+      "infra/docker/scripts/gate-build-test.ps1",
+      ".github/workflows/ci-node-verification.yml"
     ],
     "filesToCreate": [],
     "filesToDelete": [],
@@ -46,10 +50,7 @@
       "Service-owned schema and ledger objects when affected."
     ],
     "surfaces": [],
-    "services": [
-      "dsh",
-      "wlt"
-    ],
+    "services": [],
     "forbiddenPaths": [
       "No change to this support package as a substitute for durable owner changes."
     ],
@@ -59,28 +60,39 @@
   },
   "changeSpecification": {
     "currentState": "See linked findings and evidence.",
-    "targetState": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+    "targetState": "Journey artifact names selected guards, commands, exit codes and first root failure; no unsupported -Soft invocation remains.",
     "exactChanges": [
       {
-        "path": "services/dsh/database/migrations/manifest.extensions.json",
+        "path": "tools/scripts/run-journey-gate.ps1",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "Journey artifact names selected guards, commands, exit codes and first root failure; no unsupported -Soft invocation remains.",
+        "implementationNotes": "Implement registry-driven selection, reject unsupported parameters, emit structured step results and preserve all relevant failure output in the artifact.",
         "findingIds": [
-          "FND-0002"
+          "FND-0019"
         ]
       },
       {
-        "path": "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql",
+        "path": "infra/docker/scripts/gate-build-test.ps1",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "Journey artifact names selected guards, commands, exit codes and first root failure; no unsupported -Soft invocation remains.",
+        "implementationNotes": "Implement registry-driven selection, reject unsupported parameters, emit structured step results and preserve all relevant failure output in the artifact.",
         "findingIds": [
-          "FND-0002"
+          "FND-0019"
+        ]
+      },
+      {
+        "path": ".github/workflows/ci-node-verification.yml",
+        "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
+        "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
+        "before": "Current state is recorded by linked findings and immutable evidence.",
+        "after": "Journey artifact names selected guards, commands, exit codes and first root failure; no unsupported -Soft invocation remains.",
+        "implementationNotes": "Implement registry-driven selection, reject unsupported parameters, emit structured step results and preserve all relevant failure output in the artifact.",
+        "findingIds": [
+          "FND-0019"
         ]
       }
     ],
@@ -111,10 +123,10 @@
       {
         "order": 1,
         "workingDirectory": ".",
-        "command": "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed",
+        "command": "pwsh -NoProfile -File tools/scripts/run-journey-gate.ps1 -Journey PROJECT-WIDE && pwsh -NoProfile -File infra/docker/scripts/gate-build-test.ps1",
         "purpose": "Smallest sufficient falsification after the last write.",
         "expectedExitCode": 0,
-        "expectedObservableResult": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "expectedObservableResult": "Journey artifact names selected guards, commands, exit codes and first root failure; no unsupported -Soft invocation remains.",
         "destructive": false,
         "requiresCredential": false,
         "credentialHandling": "NOT_APPLICABLE"
@@ -132,11 +144,11 @@
   "acceptance": {
     "positiveCriteria": [
       {
-        "criterionId": "AC-TASK-0001-01",
-        "statement": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "criterionId": "AC-TASK-0008-01",
+        "statement": "Journey artifact names selected guards, commands, exit codes and first root failure; no unsupported -Soft invocation remains.",
         "evidenceRequired": "Command output, diff review and post-write commit SHA.",
         "verificationIds": [
-          "VER-0001"
+          "VER-0008"
         ]
       }
     ],
@@ -147,9 +159,7 @@
       "Negative, timeout, concurrent, retry, offline and unknown-result behavior is checked when applicable."
     ],
     "crossSurfaceCriteria": [],
-    "migrationCriteria": [
-      "Fresh, upgrade, replay, checksum, preservation and rollback are proven."
-    ],
+    "migrationCriteria": [],
     "deletionCriteria": [
       "Consumer census, replacement, reference scan and rollback proof precede deletion."
     ],
@@ -159,10 +169,10 @@
   },
   "verification": {
     "verificationIds": [
-      "VER-0001"
+      "VER-0008"
     ],
     "smallestSufficientChecks": [
-      "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed"
+      "pwsh -NoProfile -File tools/scripts/run-journey-gate.ps1 -Journey PROJECT-WIDE && pwsh -NoProfile -File infra/docker/scripts/gate-build-test.ps1"
     ],
     "checksAfterLastWrite": true,
     "sameCommitRequired": true,

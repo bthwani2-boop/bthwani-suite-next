@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "sourceSha": "f97dcbc3ecfbc19a130c4dbafef6cb7def9c3eb8",
+  "runId": "30915539526",
+  "profile": "full",
+  "result": "FAIL",
+  "error": "runtime:bootstrap-dev failed with exit code 1",
+  "rootBlocker": "WLT migration manifest references missing wlt-905_dispatch_financial_eligibility_decisions.sql",
+  "artifact": "runtime-proof-30915539526"
+}

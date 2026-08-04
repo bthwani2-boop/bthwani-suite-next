@@ -1,15 +1,15 @@
 {
-  "workItemId": "TASK-0001",
-  "phaseId": "PHASE-02",
-  "sliceId": "SLICE-0001",
-  "title": "إصلاح سلطة مهاجرات DSH",
-  "status": "READY",
-  "priority": "P0",
+  "workItemId": "TASK-0010",
+  "phaseId": "PHASE-01",
+  "sliceId": "SLICE-0010",
+  "title": "تصحيح Knip واعتماديات الأدوات",
+  "status": "BLOCKED",
+  "priority": "P1",
   "findingIds": [
-    "FND-0002"
+    "FND-0011"
   ],
-  "objective": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-  "rationale": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+  "objective": "Zero unexplained unused entries; no required tool or dependency removed.",
+  "rationale": "Declare permanent operator entrypoints precisely and remove dependencies only after direct, transitive, generated and runtime checks.",
   "preconditions": [
     {
       "condition": "Pin latest remote head and compare with expected parent before writing.",
@@ -18,21 +18,29 @@
     }
   ],
   "dependencies": {
-    "workItems": [],
+    "workItems": [
+      "TASK-0009"
+    ],
     "phases": [],
     "external": [],
     "mustNotStartUntil": [
-      "Current product-write authorization is explicit and the branch head is pinned."
+      "Every predecessor is CLOSED_WITH_EVIDENCE on the post-write SHA."
     ]
   },
   "scope": {
     "filesToRead": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "knip.json",
+      "package.json",
+      "services/wlt/package.json",
+      "tools/diagnose-implementing/new-package.mjs",
+      "tools/diagnose-implementing/validate-package.mjs"
     ],
     "filesToModify": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "knip.json",
+      "package.json",
+      "services/wlt/package.json",
+      "tools/diagnose-implementing/new-package.mjs",
+      "tools/diagnose-implementing/validate-package.mjs"
     ],
     "filesToCreate": [],
     "filesToDelete": [],
@@ -45,7 +53,13 @@
     "dataObjects": [
       "Service-owned schema and ledger objects when affected."
     ],
-    "surfaces": [],
+    "surfaces": [
+      "control-panel",
+      "app-client",
+      "app-partner",
+      "app-captain",
+      "app-field"
+    ],
     "services": [
       "dsh",
       "wlt"
@@ -59,28 +73,61 @@
   },
   "changeSpecification": {
     "currentState": "See linked findings and evidence.",
-    "targetState": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+    "targetState": "Zero unexplained unused entries; no required tool or dependency removed.",
     "exactChanges": [
       {
-        "path": "services/dsh/database/migrations/manifest.extensions.json",
+        "path": "knip.json",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "Zero unexplained unused entries; no required tool or dependency removed.",
+        "implementationNotes": "Declare permanent operator entrypoints precisely and remove dependencies only after direct, transitive, generated and runtime checks.",
         "findingIds": [
-          "FND-0002"
+          "FND-0011"
         ]
       },
       {
-        "path": "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql",
+        "path": "package.json",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "Zero unexplained unused entries; no required tool or dependency removed.",
+        "implementationNotes": "Declare permanent operator entrypoints precisely and remove dependencies only after direct, transitive, generated and runtime checks.",
         "findingIds": [
-          "FND-0002"
+          "FND-0011"
+        ]
+      },
+      {
+        "path": "services/wlt/package.json",
+        "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
+        "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
+        "before": "Current state is recorded by linked findings and immutable evidence.",
+        "after": "Zero unexplained unused entries; no required tool or dependency removed.",
+        "implementationNotes": "Declare permanent operator entrypoints precisely and remove dependencies only after direct, transitive, generated and runtime checks.",
+        "findingIds": [
+          "FND-0011"
+        ]
+      },
+      {
+        "path": "tools/diagnose-implementing/new-package.mjs",
+        "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
+        "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
+        "before": "Current state is recorded by linked findings and immutable evidence.",
+        "after": "Zero unexplained unused entries; no required tool or dependency removed.",
+        "implementationNotes": "Declare permanent operator entrypoints precisely and remove dependencies only after direct, transitive, generated and runtime checks.",
+        "findingIds": [
+          "FND-0011"
+        ]
+      },
+      {
+        "path": "tools/diagnose-implementing/validate-package.mjs",
+        "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
+        "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
+        "before": "Current state is recorded by linked findings and immutable evidence.",
+        "after": "Zero unexplained unused entries; no required tool or dependency removed.",
+        "implementationNotes": "Declare permanent operator entrypoints precisely and remove dependencies only after direct, transitive, generated and runtime checks.",
+        "findingIds": [
+          "FND-0011"
         ]
       }
     ],
@@ -111,10 +158,10 @@
       {
         "order": 1,
         "workingDirectory": ".",
-        "command": "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed",
+        "command": "pnpm exec knip --config knip.json --reporter compact && pnpm run verify:full",
         "purpose": "Smallest sufficient falsification after the last write.",
         "expectedExitCode": 0,
-        "expectedObservableResult": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "expectedObservableResult": "Zero unexplained unused entries; no required tool or dependency removed.",
         "destructive": false,
         "requiresCredential": false,
         "credentialHandling": "NOT_APPLICABLE"
@@ -132,11 +179,11 @@
   "acceptance": {
     "positiveCriteria": [
       {
-        "criterionId": "AC-TASK-0001-01",
-        "statement": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "criterionId": "AC-TASK-0010-01",
+        "statement": "Zero unexplained unused entries; no required tool or dependency removed.",
         "evidenceRequired": "Command output, diff review and post-write commit SHA.",
         "verificationIds": [
-          "VER-0001"
+          "VER-0010"
         ]
       }
     ],
@@ -146,10 +193,10 @@
     "edgeCriteria": [
       "Negative, timeout, concurrent, retry, offline and unknown-result behavior is checked when applicable."
     ],
-    "crossSurfaceCriteria": [],
-    "migrationCriteria": [
-      "Fresh, upgrade, replay, checksum, preservation and rollback are proven."
+    "crossSurfaceCriteria": [
+      "Every affected surface shows the same governed truth and state."
     ],
+    "migrationCriteria": [],
     "deletionCriteria": [
       "Consumer census, replacement, reference scan and rollback proof precede deletion."
     ],
@@ -159,10 +206,10 @@
   },
   "verification": {
     "verificationIds": [
-      "VER-0001"
+      "VER-0010"
     ],
     "smallestSufficientChecks": [
-      "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed"
+      "pnpm exec knip --config knip.json --reporter compact && pnpm run verify:full"
     ],
     "checksAfterLastWrite": true,
     "sameCommitRequired": true,

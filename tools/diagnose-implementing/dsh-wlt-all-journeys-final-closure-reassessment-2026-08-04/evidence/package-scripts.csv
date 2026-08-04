@@ -1,0 +1,350 @@
+package_path,package_name,script,command,owner
+apps/app-captain/runtime/package.json,@bthwani/app-captain-runtime,typecheck,tsc --noEmit -p tsconfig.json,app-captain
+apps/app-captain/runtime/package.json,@bthwani/app-captain-runtime,lint,node ../../mobile/verify-mobile-source.mjs --app app-captain,app-captain
+apps/app-captain/runtime/package.json,@bthwani/app-captain-runtime,test,node ../../mobile/test-mobile-runtime-contract.mjs --app app-captain,app-captain
+apps/app-captain/runtime/package.json,@bthwani/app-captain-runtime,build,node ../../mobile/verify-mobile-export.mjs --app app-captain,app-captain
+apps/app-captain/runtime/package.json,@bthwani/app-captain-runtime,eas-build-pre-install,node ../../mobile/verify-eas-provider-inputs.mjs --app app-captain,app-captain
+apps/app-client/runtime/package.json,@bthwani/app-client-runtime,typecheck,tsc --noEmit -p tsconfig.json,app-client
+apps/app-client/runtime/package.json,@bthwani/app-client-runtime,lint,node ../../mobile/verify-mobile-source.mjs --app app-client,app-client
+apps/app-client/runtime/package.json,@bthwani/app-client-runtime,test,node --test tests/*.test.mjs && node ../../mobile/test-mobile-runtime-contract.mjs --app app-client,app-client
+apps/app-client/runtime/package.json,@bthwani/app-client-runtime,build,node ../../mobile/verify-mobile-export.mjs --app app-client,app-client
+apps/app-client/runtime/package.json,@bthwani/app-client-runtime,eas-build-pre-install,node ../../mobile/verify-eas-provider-inputs.mjs --app app-client,app-client
+apps/app-field/runtime/package.json,@bthwani/app-field-runtime,typecheck,tsc --noEmit -p tsconfig.json,app-field
+apps/app-field/runtime/package.json,@bthwani/app-field-runtime,lint,node ../../mobile/verify-mobile-source.mjs --app app-field,app-field
+apps/app-field/runtime/package.json,@bthwani/app-field-runtime,test,node ../../mobile/test-mobile-runtime-contract.mjs --app app-field,app-field
+apps/app-field/runtime/package.json,@bthwani/app-field-runtime,build,node ../../mobile/verify-mobile-export.mjs --app app-field,app-field
+apps/app-field/runtime/package.json,@bthwani/app-field-runtime,eas-build-pre-install,node ../../mobile/verify-eas-provider-inputs.mjs --app app-field,app-field
+apps/app-partner/runtime/package.json,@bthwani/app-partner-runtime,typecheck,tsc --noEmit -p tsconfig.json,app-partner
+apps/app-partner/runtime/package.json,@bthwani/app-partner-runtime,lint,node ../../mobile/verify-mobile-source.mjs --app app-partner,app-partner
+apps/app-partner/runtime/package.json,@bthwani/app-partner-runtime,test,node ../../mobile/test-mobile-runtime-contract.mjs --app app-partner,app-partner
+apps/app-partner/runtime/package.json,@bthwani/app-partner-runtime,build,node ../../mobile/verify-mobile-export.mjs --app app-partner,app-partner
+apps/app-partner/runtime/package.json,@bthwani/app-partner-runtime,eas-build-pre-install,node ../../mobile/verify-eas-provider-inputs.mjs --app app-partner,app-partner
+apps/control-panel/runtime/package.json,@bthwani/control-panel-runtime,typecheck,next typegen && tsc --noEmit -p tsconfig.json,control-panel
+apps/control-panel/runtime/package.json,@bthwani/control-panel-runtime,dev,next dev --port 13000,control-panel
+apps/control-panel/runtime/package.json,@bthwani/control-panel-runtime,build,next build,control-panel
+apps/control-panel/runtime/package.json,@bthwani/control-panel-runtime,lint,pnpm --dir ../../.. run guard:ui-kit-boundary,control-panel
+apps/control-panel/runtime/package.json,@bthwani/control-panel-runtime,test,node --test tests/*.test.mjs,control-panel
+contracts/package.json,@bthwani/contracts,foundation,pnpm run typecheck,contracts
+contracts/package.json,@bthwani/contracts,typecheck,node ../tools/important-scripts/contracts-typecheck.mjs && node ../tools/important-scripts/contracts-foundation.mjs && node ../tools/guards/generated-client-provenance-gate.mjs && node ../tools/guards/control-panel-architecture-gate.mjs && node ../tools/guards/service-workspace-gate.mjs,contracts
+contracts/package.json,@bthwani/contracts,build,pnpm run typecheck,contracts
+contracts/package.json,@bthwani/contracts,test,node ../tools/important-scripts/contracts-foundation.mjs && node ../tools/guards/generated-client-provenance-gate.mjs,contracts
+contracts/package.json,@bthwani/contracts,lint,pnpm run typecheck && node ../tools/guards/api-binding-gate.mjs && node ../tools/guards/backend-api-binding-gate.mjs && node ../tools/guards/service-manifest-drift-gate.mjs,contracts
+core/identity/package.json,@bthwani/core-identity,openapi:compose,node ../../tools/scripts/compose-openapi-context.mjs identity,identity
+core/identity/package.json,@bthwani/core-identity,openapi:generate,pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/identity.bundle.openapi.yaml -o clients/generated/identity-api.ts,identity
+core/identity/package.json,@bthwani/core-identity,test,cd backend && go test ./... && cd .. && node --test tests/*.test.mjs,identity
+core/identity/package.json,@bthwani/core-identity,build,node ../../tools/scripts/verify-go-build.mjs backend,identity
+core/identity/package.json,@bthwani/core-identity,typecheck,tsc --noEmit -p tsconfig.json,identity
+core/identity/package.json,@bthwani/core-identity,typecheck:ts7,tsc --noEmit -p tsconfig.json,identity
+core/identity/package.json,@bthwani/core-identity,typecheck:ts6:compat,tsc6 --noEmit -p tsconfig.json,identity
+core/identity/package.json,@bthwani/core-identity,typecheck:all,pnpm run typecheck:ts7 && pnpm run typecheck:ts6:compat,identity
+core/platform-control/package.json,@bthwani/core-platform-control,openapi:compose,node ../../tools/scripts/compose-openapi-context.mjs platform-control,platform-control
+core/platform-control/package.json,@bthwani/core-platform-control,openapi:generate,pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/platform-control.bundle.openapi.yaml -o clients/generated/platform-control-api.ts,platform-control
+core/platform-control/package.json,@bthwani/core-platform-control,test,cd backend && go test ./...,platform-control
+core/platform-control/package.json,@bthwani/core-platform-control,build,node ../../tools/scripts/verify-go-build.mjs backend,platform-control
+core/platform-control/package.json,@bthwani/core-platform-control,typecheck,tsc --noEmit -p tsconfig.json,platform-control
+core/platform-control/package.json,@bthwani/core-platform-control,typecheck:ts7,tsc --noEmit -p tsconfig.json,platform-control
+core/platform-control/package.json,@bthwani/core-platform-control,typecheck:ts6:compat,tsc6 --noEmit -p tsconfig.json,platform-control
+core/platform-control/package.json,@bthwani/core-platform-control,typecheck:all,pnpm run typecheck:ts7 && pnpm run typecheck:ts6:compat,platform-control
+core/providers/package.json,@bthwani/core-providers,openapi:compose,node ../../tools/scripts/compose-openapi-context.mjs providers,providers
+core/providers/package.json,@bthwani/core-providers,openapi:generate,pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/providers.bundle.openapi.yaml -o clients/generated/providers-api.ts,providers
+core/providers/package.json,@bthwani/core-providers,test,cd backend && go test ./...,providers
+core/providers/package.json,@bthwani/core-providers,build,node ../../tools/scripts/verify-go-build.mjs backend,providers
+core/providers/package.json,@bthwani/core-providers,typecheck,tsc --noEmit -p tsconfig.json,providers
+core/providers/package.json,@bthwani/core-providers,typecheck:ts7,tsc --noEmit -p tsconfig.json,providers
+core/providers/package.json,@bthwani/core-providers,typecheck:ts6:compat,tsc6 --noEmit -p tsconfig.json,providers
+core/providers/package.json,@bthwani/core-providers,typecheck:all,pnpm run typecheck:ts7 && pnpm run typecheck:ts6:compat,providers
+core/workforce/package.json,@bthwani/core-workforce,openapi:compose,node ../../tools/scripts/compose-openapi-context.mjs workforce,workforce
+core/workforce/package.json,@bthwani/core-workforce,openapi:generate,pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/workforce.bundle.openapi.yaml -o clients/generated/workforce-api.ts,workforce
+core/workforce/package.json,@bthwani/core-workforce,test,cd backend && go test ./...,workforce
+core/workforce/package.json,@bthwani/core-workforce,build,node ../../tools/scripts/verify-go-build.mjs backend,workforce
+core/workforce/package.json,@bthwani/core-workforce,typecheck,tsc --noEmit -p tsconfig.json,workforce
+core/workforce/package.json,@bthwani/core-workforce,typecheck:ts7,tsc --noEmit -p tsconfig.json,workforce
+core/workforce/package.json,@bthwani/core-workforce,typecheck:ts6:compat,tsc6 --noEmit -p tsconfig.json,workforce
+core/workforce/package.json,@bthwani/core-workforce,typecheck:all,pnpm run typecheck:ts7 && pnpm run typecheck:ts6:compat,workforce
+package.json,bthwani-suite-next,postinstall,node tools/scripts/postinstall-generate-clients.mjs,repository
+package.json,bthwani-suite-next,contracts:redocly,node tools/important-scripts/contracts-typecheck.mjs,repository
+package.json,bthwani-suite-next,contracts:registry,node tools/scripts/generate-contract-registry.mjs,repository
+package.json,bthwani-suite-next,contracts:lint,pnpm run contracts:redocly && pnpm run guard:contract-registry-drift,repository
+package.json,bthwani-suite-next,typecheck,pnpm -r --if-present typecheck,repository
+package.json,bthwani-suite-next,typecheck:ts7,pnpm -r --if-present typecheck:ts7,repository
+package.json,bthwani-suite-next,typecheck:ts6:compat,pnpm -r --if-present typecheck:ts6:compat,repository
+package.json,bthwani-suite-next,typecheck:all,pnpm run typecheck:ts7 && pnpm run typecheck:ts6:compat,repository
+package.json,bthwani-suite-next,build,pnpm -r --if-present build,repository
+package.json,bthwani-suite-next,guard:foundation,pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-foundation-gate.ps1,repository
+package.json,bthwani-suite-next,guard:journey,pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-journey-gate.ps1,repository
+package.json,bthwani-suite-next,guard:journey-runtime,pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-journey-gate.ps1 -Runtime,repository
+package.json,bthwani-suite-next,guard:journey:full,pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-journey-gate.ps1 -Full,repository
+package.json,bthwani-suite-next,docker:runtime:up,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles dsh,media",repository
+package.json,bthwani-suite-next,docker:runtime:down,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles dsh,media",repository
+package.json,bthwani-suite-next,docker:runtime:reset,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles dsh,media",repository
+package.json,bthwani-suite-next,docker:runtime:smoke,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action smoke -Profiles dsh,media",repository
+package.json,bthwani-suite-next,runtime:full:up,"pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action up -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media",repository
+package.json,bthwani-suite-next,runtime:full:bootstrap-dev,"pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action bootstrap-dev -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media -Force",repository
+package.json,bthwani-suite-next,runtime:full:down,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media",repository
+package.json,bthwani-suite-next,runtime:full:reset,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media",repository
+package.json,bthwani-suite-next,runtime:full:smoke,"pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action smoke -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media",repository
+package.json,bthwani-suite-next,runtime:up,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles dsh,media",repository
+package.json,bthwani-suite-next,runtime:bootstrap-dev,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action bootstrap-dev -Profiles dsh,media -Force",repository
+package.json,bthwani-suite-next,runtime:down,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles dsh,media",repository
+package.json,bthwani-suite-next,runtime:reset,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles dsh,media",repository
+package.json,bthwani-suite-next,runtime:verify-catalog,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action verify-catalog -Profiles dsh,media",repository
+package.json,bthwani-suite-next,runtime:migrate,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action migrate -Profiles dsh,media",repository
+package.json,bthwani-suite-next,runtime:seed,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action seed -Profiles dsh,media",repository
+package.json,bthwani-suite-next,database:dsh:test,pwsh -NoProfile -ExecutionPolicy Bypass -File services/dsh/database/scripts/invoke-dsh-database.ps1 -Action test -Transport docker -TestSuite schema,repository
+package.json,bthwani-suite-next,database:dsh:test:seed,pwsh -NoProfile -ExecutionPolicy Bypass -File services/dsh/database/scripts/invoke-dsh-database.ps1 -Action test -Transport docker -TestSuite seed,repository
+package.json,bthwani-suite-next,database:dsh:contract,node tools/scripts/check-dsh-database-contract.mjs,repository
+package.json,bthwani-suite-next,runtime:smoke,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action smoke -Profiles dsh,media",repository
+package.json,bthwani-suite-next,runtime:status,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action status -Profiles dsh,media",repository
+package.json,bthwani-suite-next,runtime:logs,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action logs -Profiles dsh,media",repository
+package.json,bthwani-suite-next,runtime:identity:status,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action status -Profiles identity,repository
+package.json,bthwani-suite-next,runtime:identity:smoke,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action smoke -Profiles identity,repository
+package.json,bthwani-suite-next,runtime:workforce:up,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles identity,workforce",repository
+package.json,bthwani-suite-next,runtime:workforce:down,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles identity,workforce",repository
+package.json,bthwani-suite-next,runtime:workforce:status,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action status -Profiles identity,workforce",repository
+package.json,bthwani-suite-next,runtime:workforce:migrate,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action migrate -Profiles identity,workforce",repository
+package.json,bthwani-suite-next,runtime:workforce:smoke,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action smoke -Profiles identity,workforce",repository
+package.json,bthwani-suite-next,runtime:codespaces:check,pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/check-codespaces-runtime.ps1,repository
+package.json,bthwani-suite-next,runtime:codespaces:core,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles dsh,repository
+package.json,bthwani-suite-next,runtime:codespaces:wlt,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles wlt,repository
+package.json,bthwani-suite-next,runtime:codespaces:smoke,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action smoke -Profiles dsh,wlt",repository
+package.json,bthwani-suite-next,guard:ui-kit-boundary,node tools/guards/ui-kit-boundary-gate.mjs,repository
+package.json,bthwani-suite-next,guard:fullstack-boundary,node tools/guards/fullstack-boundary-gate.mjs,repository
+package.json,bthwani-suite-next,guard:wlt-financial-boundary,node tools/guards/wlt-financial-boundary-gate.mjs,repository
+package.json,bthwani-suite-next,guard:runtime-config,node tools/guards/runtime-config-gate.mjs,repository
+package.json,bthwani-suite-next,guard:no-broken-imports,node tools/guards/no-broken-imports.mjs,repository
+package.json,bthwani-suite-next,guard:cleanup-policy,node tools/guards/cleanup-policy-gate.mjs,repository
+package.json,bthwani-suite-next,guard:contract-registry-drift,node tools/guards/contract-registry-drift-gate.mjs,repository
+package.json,bthwani-suite-next,guard:migration-manifest-drift,node tools/guards/migration-manifest-drift-gate.mjs,repository
+package.json,bthwani-suite-next,guard:generated-client-provenance,node tools/guards/generated-client-provenance-gate.mjs,repository
+package.json,bthwani-suite-next,guard:contract-scope-binding,node tools/guards/contract-scope-binding-gate.mjs,repository
+package.json,bthwani-suite-next,guard:openapi-bundle-provenance,node tools/guards/openapi-bundle-provenance-gate.mjs,repository
+package.json,bthwani-suite-next,runtime:wlt:up,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles wlt,repository
+package.json,bthwani-suite-next,runtime:wlt:down,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles wlt,repository
+package.json,bthwani-suite-next,runtime:wlt:status,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action status -Profiles wlt,repository
+package.json,bthwani-suite-next,runtime:wlt:migrate,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action migrate -Profiles wlt,repository
+package.json,bthwani-suite-next,runtime:wlt:seed,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action seed -Profiles wlt,repository
+package.json,bthwani-suite-next,runtime:wlt:smoke,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action smoke -Profiles wlt,repository
+package.json,bthwani-suite-next,runtime:financial-simulators,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles financial-simulators,repository
+package.json,bthwani-suite-next,runtime:mail,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles mail,repository
+package.json,bthwani-suite-next,runtime:cache,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles cache,repository
+package.json,bthwani-suite-next,runtime:wiremock:financial:smoke,pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/smoke-wiremock-financial-provider.ps1,repository
+package.json,bthwani-suite-next,runtime:wlt:provider:smoke,pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/smoke-wlt-provider-through-wlt.ps1,repository
+package.json,bthwani-suite-next,runtime:context:status,pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/docker-context-status.ps1,repository
+package.json,bthwani-suite-next,runtime:context:local,pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/docker-context-local.ps1,repository
+package.json,bthwani-suite-next,graphify,graphify update . --force,repository
+package.json,bthwani-suite-next,graphify:callflow,graphify export callflow-html,repository
+package.json,bthwani-suite-next,graphify:version,graphify --version,repository
+package.json,bthwani-suite-next,graphify:code,graphify update . --force,repository
+package.json,bthwani-suite-next,graphify:full,graphify .,repository
+package.json,bthwani-suite-next,nx:projects,nx show projects,repository
+package.json,bthwani-suite-next,nx:graph,nx graph,repository
+package.json,bthwani-suite-next,nx:typecheck,nx run-many -t typecheck --all,repository
+package.json,bthwani-suite-next,nx:build,nx run-many -t build --all,repository
+package.json,bthwani-suite-next,nx:lint,nx run-many -t lint --all,repository
+package.json,bthwani-suite-next,nx:test,nx run-many -t test --all,repository
+package.json,bthwani-suite-next,affected:typecheck,nx affected -t typecheck,repository
+package.json,bthwani-suite-next,affected:build,nx affected -t build,repository
+package.json,bthwani-suite-next,affected:lint,nx affected -t lint,repository
+package.json,bthwani-suite-next,affected:test,nx affected -t test,repository
+package.json,bthwani-suite-next,repair,pnpm -r --if-present run lint --fix,repository
+package.json,bthwani-suite-next,lint,pnpm -r --if-present lint,repository
+package.json,bthwani-suite-next,test,pnpm -r --if-present test,repository
+package.json,bthwani-suite-next,reverse,pwsh -NoProfile -ExecutionPolicy Bypass -File apps/reverse-all.ps1,repository
+package.json,bthwani-suite-next,client,pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-client/runtime/start.ps1,repository
+package.json,bthwani-suite-next,captain,pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-captain/runtime/start.ps1,repository
+package.json,bthwani-suite-next,field,pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-field/runtime/start.ps1,repository
+package.json,bthwani-suite-next,partner,pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-partner/runtime/start.ps1,repository
+package.json,bthwani-suite-next,control,pwsh -NoProfile -ExecutionPolicy Bypass -File apps/control-panel/runtime/start.ps1,repository
+package.json,bthwani-suite-next,yagni:diagnostics,pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-yagni-diagnostics.ps1,repository
+package.json,bthwani-suite-next,openapi:compose:identity,node tools/scripts/compose-openapi-context.mjs identity,repository
+package.json,bthwani-suite-next,openapi:compose:workforce,node tools/scripts/compose-openapi-context.mjs workforce,repository
+package.json,bthwani-suite-next,openapi:compose:platform-control,node tools/scripts/compose-openapi-context.mjs platform-control,repository
+package.json,bthwani-suite-next,openapi:compose:providers,node tools/scripts/compose-openapi-context.mjs providers,repository
+package.json,bthwani-suite-next,openapi:compose:dsh,pnpm --dir services/dsh openapi:compose,repository
+package.json,bthwani-suite-next,openapi:compose:wlt,pnpm --dir services/wlt openapi:compose,repository
+package.json,bthwani-suite-next,openapi:compose:all,pnpm run openapi:compose:identity && pnpm run openapi:compose:workforce && pnpm run openapi:compose:platform-control && pnpm run openapi:compose:providers && pnpm run openapi:compose:dsh && pnpm run openapi:compose:wlt,repository
+package.json,bthwani-suite-next,openapi:generate:identity,pnpm run openapi:compose:identity && pnpm exec openapi-typescript core/identity/contracts/generated/identity.bundle.openapi.yaml -o core/identity/clients/generated/identity-api.ts,repository
+package.json,bthwani-suite-next,openapi:generate:workforce,pnpm run openapi:compose:workforce && pnpm exec openapi-typescript core/workforce/contracts/generated/workforce.bundle.openapi.yaml -o core/workforce/clients/generated/workforce-api.ts,repository
+package.json,bthwani-suite-next,openapi:generate:platform-control,pnpm run openapi:compose:platform-control && pnpm exec openapi-typescript core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml -o core/platform-control/clients/generated/platform-control-api.ts,repository
+package.json,bthwani-suite-next,openapi:generate:providers,pnpm run openapi:compose:providers && pnpm exec openapi-typescript core/providers/contracts/generated/providers.bundle.openapi.yaml -o core/providers/clients/generated/providers-api.ts,repository
+package.json,bthwani-suite-next,openapi:generate:dsh,pnpm --dir services/dsh openapi:generate,repository
+package.json,bthwani-suite-next,openapi:generate:wlt,pnpm --dir services/wlt openapi:generate,repository
+package.json,bthwani-suite-next,openapi:generate:all,pnpm run openapi:generate:identity && pnpm run openapi:generate:workforce && pnpm run openapi:generate:platform-control && pnpm run openapi:generate:providers && pnpm run openapi:generate:dsh && pnpm run openapi:generate:wlt,repository
+package.json,bthwani-suite-next,guard:api-binding,node tools/guards/api-binding-gate.mjs,repository
+package.json,bthwani-suite-next,guard:backend-api-binding,node tools/guards/backend-api-binding-gate.mjs,repository
+package.json,bthwani-suite-next,guard:service-manifest-drift,node tools/guards/service-manifest-drift-gate.mjs,repository
+package.json,bthwani-suite-next,guard:frontend-feature-binding,node tools/guards/frontend-feature-binding-gate.mjs,repository
+package.json,bthwani-suite-next,guard:required-command-integrity,node tools/guards/required-command-integrity-gate.mjs,repository
+package.json,bthwani-suite-next,runtime:frontend-binding:check,node tools/scripts/check-frontend-binding-readiness.mjs,repository
+package.json,bthwani-suite-next,swagger,node tools/scripts/serve-swagger.mjs,repository
+package.json,bthwani-suite-next,swagger:build,node tools/scripts/build-swagger-static.mjs,repository
+package.json,bthwani-suite-next,diagnostics:codeql:local,pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/check-codeql-local.ps1,repository
+package.json,bthwani-suite-next,diagnostics:sonarqube:config,pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/check-sonarqube-config.ps1,repository
+package.json,bthwani-suite-next,diagnostics:go-routes,pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/check-go-ast-extractor.ps1,repository
+package.json,bthwani-suite-next,diagnostics:otel:smoke,node tools/observability/otel-node-smoke.mjs,repository
+package.json,bthwani-suite-next,diagnostics:tools,pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/check-diagnostic-tools.ps1,repository
+package.json,bthwani-suite-next,runtime:observability:up,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles observability,repository
+package.json,bthwani-suite-next,runtime:observability:down,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles observability,repository
+package.json,bthwani-suite-next,runtime:observability:status,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action status -Profiles observability,repository
+package.json,bthwani-suite-next,runtime:observability:logs,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action logs -Profiles observability,repository
+package.json,bthwani-suite-next,guard:go-routes-ci,node tools/guards/go-routes-ci.mjs,repository
+package.json,bthwani-suite-next,guard:logic-coverage,node tools/guards/logic-coverage-gate.mjs,repository
+package.json,bthwani-suite-next,guard:a11y,node tools/guards/a11y-gate.mjs,repository
+package.json,bthwani-suite-next,guard:dependency-graph,node tools/guards/dependency-graph-gate.mjs,repository
+package.json,bthwani-suite-next,guard:ast-grep-rules,node tools/guards/ast-grep-rules-gate.mjs,repository
+package.json,bthwani-suite-next,guard:logic-all,node tools/guards/go-routes-ci.mjs && node tools/guards/logic-coverage-gate.mjs && node tools/guards/a11y-gate.mjs && node tools/guards/dependency-graph-gate.mjs && node tools/guards/ast-grep-rules-gate.mjs,repository
+package.json,bthwani-suite-next,guard:ui-provider,node tools/guards/ui-provider-required-gate.mjs,repository
+package.json,bthwani-suite-next,guard:icon-contract,node tools/guards/icon-contract-gate.mjs,repository
+package.json,bthwani-suite-next,guard:design-tokens,node tools/guards/design-tokens-gate.mjs,repository
+package.json,bthwani-suite-next,guard:brand-identity,node tools/guards/brand-identity-report.mjs,repository
+package.json,bthwani-suite-next,diagnostics:ui-kit,node tools/guards/ui-provider-required-gate.mjs && node tools/guards/icon-contract-gate.mjs && node tools/guards/design-tokens-gate.mjs && node tools/guards/ui-kit-boundary-gate.mjs && node tools/guards/brand-identity-report.mjs,repository
+package.json,bthwani-suite-next,guard:repo-size,node tools/guards/repository-size-gate.mjs,repository
+package.json,bthwani-suite-next,guard:repo-naming,node tools/guards/repository-naming-gate.mjs,repository
+package.json,bthwani-suite-next,guard:repo-structure,node tools/guards/repository-structure-gate.mjs,repository
+package.json,bthwani-suite-next,guard:repo-all,node tools/guards/repository-size-gate.mjs && node tools/guards/repository-naming-gate.mjs && node tools/guards/repository-structure-gate.mjs,repository
+package.json,bthwani-suite-next,diagnostics:repo-structure,node tools/scripts/generate-repository-structure-report.mjs,repository
+package.json,bthwani-suite-next,guard:heavy-imports,node tools/guards/heavy-import-gate.mjs,repository
+package.json,bthwani-suite-next,guard:bundle-budget,node tools/guards/bundle-budget-gate.mjs,repository
+package.json,bthwani-suite-next,guard:performance-budget,node tools/guards/performance-budget-gate.mjs,repository
+package.json,bthwani-suite-next,guard:performance-all,node tools/guards/heavy-import-gate.mjs && node tools/guards/performance-budget-gate.mjs && node tools/guards/bundle-budget-gate.mjs,repository
+package.json,bthwani-suite-next,performance:api:k6:dsh,k6 run tools/performance/k6/dsh-smoke.js,repository
+package.json,bthwani-suite-next,performance:api:k6:wlt,k6 run tools/performance/k6/wlt-smoke.js,repository
+package.json,bthwani-suite-next,performance:api:k6:identity,k6 run tools/performance/k6/identity-smoke.js,repository
+package.json,bthwani-suite-next,performance:go:bench:dsh,pwsh -NoProfile -ExecutionPolicy Bypass -File tools/performance/go/run-go-benchmarks.ps1 -Service dsh,repository
+package.json,bthwani-suite-next,performance:go:bench:wlt,pwsh -NoProfile -ExecutionPolicy Bypass -File tools/performance/go/run-go-benchmarks.ps1 -Service wlt,repository
+package.json,bthwani-suite-next,diagnostics:performance,node tools/scripts/generate-performance-report.mjs,repository
+package.json,bthwani-suite-next,guard:governance-schema,node tools/guards/governance-schema-gate.mjs,repository
+package.json,bthwani-suite-next,guard:same-commit-evidence,node tools/guards/same-commit-evidence-gate.mjs,repository
+package.json,bthwani-suite-next,guard:workflow-temp-files,node tools/guards/workflow-temp-files-gate.mjs,repository
+package.json,bthwani-suite-next,guard:canonical-paths,node tools/guards/canonical-paths-gate.mjs,repository
+package.json,bthwani-suite-next,guard:orphan-files,node tools/guards/orphan-files-gate.mjs,repository
+package.json,bthwani-suite-next,guard:document-authority-conflicts,node tools/guards/document-authority-conflicts-gate.mjs,repository
+package.json,bthwani-suite-next,guard:flaky-tests,node tools/guards/flaky-tests-gate.mjs,repository
+package.json,bthwani-suite-next,guard:agent-governance,node tools/guards/agent-governance-gate.mjs,repository
+package.json,bthwani-suite-next,guard:authority-separation,node tools/guards/authority-separation-gate.mjs,repository
+package.json,bthwani-suite-next,guard:guard-registry,node tools/guards/guard-registry-gate.mjs,repository
+package.json,bthwani-suite-next,guard:nomenclature,node tools/guards/nomenclature-guard.mjs,repository
+package.json,bthwani-suite-next,guard:sdlc,node tools/guards/sdlc/invoke-sdlc-gate.mjs,repository
+package.json,bthwani-suite-next,guard:markdown-governance,"pnpm exec markdownlint-cli2 ""governance/**/*.md"" ""AGENTS.md"" "".github/**/*.md""",repository
+package.json,bthwani-suite-next,guard:secrets,"gitleaks detect --log-opts=""HEAD"" --source . --no-banner --redact --verbose",repository
+package.json,bthwani-suite-next,guard:governance-all,pnpm run guard:governance-schema && pnpm run guard:agent-governance && pnpm run guard:authority-separation && pnpm run guard:guard-registry && pnpm run guard:sdlc && pnpm run guard:cleanup-policy && pnpm run guard:required-command-integrity && pnpm run guard:markdown-governance,repository
+package.json,bthwani-suite-next,diagnostics:tools:v5,node tools/scripts/generate-deep-tools-diagnostics-v5.mjs && node tools/scripts/generate-toolchain-execution-plan.mjs,repository
+package.json,bthwani-suite-next,diagnostics:operational:toolchain,node tools/scripts/generate-operational-toolchain-inventory.mjs,repository
+package.json,bthwani-suite-next,diagnostics:operational:surfaces,node tools/scripts/generate-operational-surface-inventory.mjs,repository
+package.json,bthwani-suite-next,diagnostics:operational:inventory,node tools/scripts/generate-operational-journey-inventory.mjs,repository
+package.json,bthwani-suite-next,diagnostics:operational:gaps,node tools/scripts/generate-operational-gap-ledger.mjs,repository
+package.json,bthwani-suite-next,diagnostics:operational:reconcile,node tools/scripts/reconcile-operational-diagnostics.mjs,repository
+package.json,bthwani-suite-next,guard:tool-catalog-coverage,node tools/guards/tool-catalog-coverage-gate.mjs,repository
+package.json,bthwani-suite-next,guard:toolchain-activation,node tools/guards/toolchain-activation-gate.mjs,repository
+package.json,bthwani-suite-next,guard:oss-toolchain-policy,node tools/guards/oss-toolchain-policy-gate.mjs,repository
+package.json,bthwani-suite-next,security:trivy,node tools/scripts/run-trivy.mjs,repository
+package.json,bthwani-suite-next,diagnostics:trivy,node tools/scripts/run-trivy.mjs --diagnostic-only,repository
+package.json,bthwani-suite-next,security:osv,node tools/scripts/run-osv-scanner.mjs,repository
+package.json,bthwani-suite-next,diagnostics:osv,node tools/scripts/run-osv-scanner.mjs --diagnostic-only,repository
+package.json,bthwani-suite-next,guard:workflow-lint,node tools/scripts/run-actionlint.mjs,repository
+package.json,bthwani-suite-next,guard:workflow-security,node tools/scripts/run-zizmor.mjs,repository
+package.json,bthwani-suite-next,guard:actions-pin,node tools/scripts/run-pinact.mjs --verify,repository
+package.json,bthwani-suite-next,diagnostics:actions-pin,node tools/scripts/run-pinact.mjs --list,repository
+package.json,bthwani-suite-next,guard:rego-lint,node tools/scripts/run-regal.mjs,repository
+package.json,bthwani-suite-next,guard:opa-policies,node tools/scripts/run-conftest.mjs,repository
+package.json,bthwani-suite-next,guard:shellcheck,node tools/scripts/run-shellcheck.mjs,repository
+package.json,bthwani-suite-next,guard:dockerfile-lint,node tools/scripts/run-hadolint.mjs,repository
+package.json,bthwani-suite-next,guard:yaml-lint,node tools/scripts/run-yamllint.mjs,repository
+package.json,bthwani-suite-next,diagnostics:iac-security,"node -e ""try { require('child_process').execSync('checkov -d . --quiet --framework dockerfile,secrets,github_actions', { stdio: 'inherit' }); } catch (e) { console.log('Checkov not installed or failed.'); }""",repository
+package.json,bthwani-suite-next,diagnostics:git-sizer,"node -e ""try { require('child_process').execSync('git-sizer --verbose', { stdio: 'inherit' }); } catch (e) { console.log('git-sizer not installed.'); }""",repository
+package.json,bthwani-suite-next,diagnostics:sbom,"node -e ""try { require('child_process').execSync('syft . -o cyclonedx-json=.diagnostics/sbom/sbom.cdx.json', { stdio: 'inherit' }); } catch (e) { console.log('syft not installed.'); }""",repository
+package.json,bthwani-suite-next,diagnostics:sbom:cyclonedx,"node -e ""try { require('child_process').execSync('npx @cyclonedx/cyclonedx-npm --output-file .diagnostics/sbom/npm.cdx.json', { stdio: 'inherit' }); } catch (e) { console.log('cyclonedx-npm failed or not installed.'); }""",repository
+package.json,bthwani-suite-next,web:runtime-contract:test,node --test apps/control-panel/runtime/tests/*.test.mjs,repository
+package.json,bthwani-suite-next,guard:ls-lint,pnpm exec ls-lint,repository
+package.json,bthwani-suite-next,ui-kit:catalog:build,node tools/scripts/build-ui-kit-catalog.mjs,repository
+package.json,bthwani-suite-next,visual:ui-kit:contract,node tools/guards/ui-kit-visual-contract-gate.mjs,repository
+package.json,bthwani-suite-next,performance:api:quick,pnpm exec autocannon -c 10 -d 10 http://localhost:58080/dsh/health,repository
+package.json,bthwani-suite-next,performance:bundle:size,pnpm exec size-limit,repository
+package.json,bthwani-suite-next,diagnostics:next-bundle,ANALYZE=true pnpm --dir apps/control-panel/runtime build,repository
+package.json,bthwani-suite-next,guard:tools-v5-all,pnpm run guard:tools-v5-registry,repository
+package.json,bthwani-suite-next,diagnostics:ui-kit-catalog,node tools/scripts/build-ui-kit-catalog.mjs,repository
+package.json,bthwani-suite-next,diagnostics:state-machines,node tools/scripts/check-state-machines.mjs,repository
+package.json,bthwani-suite-next,diagnostics:journey-scenarios,node tools/scripts/check-journey-scenarios.mjs,repository
+package.json,bthwani-suite-next,diagnostics:expo-atlas:client,node tools/scripts/check-expo-atlas-readiness.mjs,repository
+package.json,bthwani-suite-next,diagnostics:style-dictionary,node tools/scripts/check-style-dictionary-readiness.mjs,repository
+package.json,bthwani-suite-next,guard:tools-v5-registry,pnpm run guard:tool-catalog-coverage && pnpm run guard:toolchain-activation && pnpm run guard:oss-toolchain-policy,repository
+package.json,bthwani-suite-next,guard:tools-v5-ci,pnpm run guard:tools-v5-registry && pnpm run guard:workflow-lint && pnpm run guard:workflow-security && pnpm run guard:opa-policies,repository
+package.json,bthwani-suite-next,diagnostics:knip,knip --reporter json,repository
+package.json,bthwani-suite-next,diagnostics:jscpd,jscpd --reporters json --output .diagnostics/operational-journey-factory/tool-evidence/jscpd .,repository
+package.json,bthwani-suite-next,diagnostics:madge,"madge services/dsh/frontend services/wlt/frontend apps/control-panel/runtime/src --extensions ts,tsx --circular",repository
+package.json,bthwani-suite-next,mobile:apps:sync,node tools/scripts/sync-mobile-apps.mjs --apply,repository
+package.json,bthwani-suite-next,mobile:apps:check,node tools/scripts/sync-mobile-apps.mjs --check,repository
+package.json,bthwani-suite-next,mobile:expo:verify,node tools/scripts/guard-mobile-apps.mjs,repository
+package.json,bthwani-suite-next,client:mirror,pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-client/runtime/start.ps1 -MirrorDevice,repository
+package.json,bthwani-suite-next,partner:mirror,pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-partner/runtime/start.ps1 -MirrorDevice,repository
+package.json,bthwani-suite-next,captain:mirror,pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-captain/runtime/start.ps1 -MirrorDevice,repository
+package.json,bthwani-suite-next,field:mirror,pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-field/runtime/start.ps1 -MirrorDevice,repository
+package.json,bthwani-suite-next,runtime:full,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media",repository
+package.json,bthwani-suite-next,runtime:all,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles dsh,media",repository
+package.json,bthwani-suite-next,runtime:identity,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles identity,repository
+package.json,bthwani-suite-next,runtime:wlt,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles wlt,repository
+package.json,bthwani-suite-next,runtime:dev-core,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles dsh,repository
+package.json,bthwani-suite-next,runtime:dev-financial,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles wlt,financial-simulators,mail",repository
+package.json,bthwani-suite-next,runtime:full:rebuild-reset,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action all -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media",repository
+package.json,bthwani-suite-next,runtime:all:rebuild-reset,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action all -Profiles dsh,media",repository
+package.json,bthwani-suite-next,runtime:identity:rebuild-reset,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action all -Profiles identity,repository
+package.json,bthwani-suite-next,runtime:wlt:rebuild-reset,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action all -Profiles wlt,repository
+package.json,bthwani-suite-next,runtime:dev-core:rebuild-reset,pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action all -Profiles dsh,repository
+package.json,bthwani-suite-next,runtime:dev-financial:rebuild-reset,"pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action all -Profiles wlt,financial-simulators,mail",repository
+package.json,bthwani-suite-next,guard:runtime-real-bindings,node tools/guards/runtime-real-bindings-gate.mjs,repository
+package.json,bthwani-suite-next,openapi:lint:dsh,node tools/guards/dsh-openapi-modular-gate.mjs,repository
+package.json,bthwani-suite-next,guard:dsh-route-declaration,node tools/guards/dsh-route-declaration-gate.mjs,repository
+package.json,bthwani-suite-next,guard:go-handler-generation,node tools/guards/go-handler-generation-gate.mjs,repository
+package.json,bthwani-suite-next,guard:dispatch-contract-registry,node tools/guards/dispatch-contract-registry-gate.mjs,repository
+package.json,bthwani-suite-next,guard:local-dev-actors,node tools/guards/local-dev-actors-gate.mjs,repository
+package.json,bthwani-suite-next,openapi:verify:dsh,pnpm --dir services/dsh openapi:verify,repository
+package.json,bthwani-suite-next,guard:a11y-runtime,node tools/guards/a11y-runtime-gate.mjs,repository
+package.json,bthwani-suite-next,mobile:eas,pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/mobile-eas.ps1,repository
+package.json,bthwani-suite-next,diagnose,pnpm run guard:governance-all,repository
+package.json,bthwani-suite-next,verify,pnpm run affected:typecheck && pnpm run affected:lint && pnpm run affected:test,repository
+package.json,bthwani-suite-next,verify:full,pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run guard:governance-all,repository
+package.json,bthwani-suite-next,runtime:verify,pnpm run runtime:full:smoke,repository
+package.json,bthwani-suite-next,cleanup:check,pnpm run guard:cleanup-policy && pnpm run guard:orphan-files,repository
+package.json,bthwani-suite-next,openapi:verify:wlt,pnpm --dir services/wlt openapi:verify,repository
+package.json,bthwani-suite-next,guard:wlt-openapi-bundle,node tools/guards/wlt-openapi-bundle-gate.mjs,repository
+services/dsh/package.json,@bthwani/dsh,openapi:compose,node ../../tools/scripts/compose-openapi-context.mjs dsh,dsh
+services/dsh/package.json,@bthwani/dsh,openapi:generate,"node -e ""require('node:fs').mkdirSync('clients/generated',{recursive:true})"" && pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/dsh.bundle.openapi.yaml -o clients/generated/dsh-api.ts",dsh
+services/dsh/package.json,@bthwani/dsh,openapi:test,node --test tests/dsh-openapi-modular.test.mjs,dsh
+services/dsh/package.json,@bthwani/dsh,openapi:verify,node ../../tools/guards/dsh-openapi-modular-gate.mjs,dsh
+services/dsh/package.json,@bthwani/dsh,database:migrate,pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action migrate -Transport auto,dsh
+services/dsh/package.json,@bthwani/dsh,database:seed:local,pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action seed -Transport auto -AllowLocalSeeds,dsh
+services/dsh/package.json,@bthwani/dsh,database:test,pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite schema,dsh
+services/dsh/package.json,@bthwani/dsh,database:test:seed,pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite seed,dsh
+services/dsh/package.json,@bthwani/dsh,database:contract,node ../../tools/scripts/check-dsh-database-contract.mjs,dsh
+services/dsh/package.json,@bthwani/dsh,pretypecheck,pnpm run openapi:generate,dsh
+services/dsh/package.json,@bthwani/dsh,typecheck,tsc -p tsconfig.json --noEmit,dsh
+services/dsh/package.json,@bthwani/dsh,prebuild,pnpm run openapi:generate,dsh
+services/dsh/package.json,@bthwani/dsh,build,tsc -p tsconfig.json,dsh
+services/dsh/package.json,@bthwani/dsh,test,pnpm run build && pnpm --dir ../.. exec node --test services/dsh/tests/*.test.mjs,dsh
+services/dsh/package.json,@bthwani/dsh,lint,pnpm --dir ../.. run guard:fullstack-boundary,dsh
+services/wlt/package.json,@bthwani/wlt,openapi:compose,node ../../tools/scripts/compose-openapi-context.mjs wlt,wlt
+services/wlt/package.json,@bthwani/wlt,openapi:generate,"node -e ""require('node:fs').mkdirSync('clients/generated',{recursive:true})"" && pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/wlt.bundle.openapi.yaml -o clients/generated/wlt-api.ts",wlt
+services/wlt/package.json,@bthwani/wlt,openapi:verify,node ../../tools/guards/wlt-openapi-bundle-gate.mjs,wlt
+services/wlt/package.json,@bthwani/wlt,pretypecheck,pnpm run openapi:generate,wlt
+services/wlt/package.json,@bthwani/wlt,typecheck,tsc --noEmit -p tsconfig.json,wlt
+services/wlt/package.json,@bthwani/wlt,build,pnpm run typecheck && node ../../tools/scripts/verify-go-build.mjs backend,wlt
+services/wlt/package.json,@bthwani/wlt,test,node --test tests/*.test.mjs ../../tools/scripts/wlt-openapi-bundle-lib.test.mjs && cd backend && go test ./...,wlt
+services/wlt/package.json,@bthwani/wlt,lint,pnpm --dir ../.. run guard:fullstack-boundary && pnpm --dir ../.. run guard:wlt-financial-boundary && pnpm --dir ../.. run guard:wlt-openapi-bundle,wlt
+shared/control-panel/package.json,@bthwani/control-panel,typecheck,tsc --noEmit -p tsconfig.json,repository
+shared/control-panel/package.json,@bthwani/control-panel,typecheck:ts7,tsc --noEmit -p tsconfig.json,repository
+shared/control-panel/package.json,@bthwani/control-panel,typecheck:ts6:compat,tsc6 --noEmit -p tsconfig.json,repository
+shared/control-panel/package.json,@bthwani/control-panel,typecheck:all,pnpm run typecheck:ts7 && pnpm run typecheck:ts6:compat,repository
+shared/control-panel/package.json,@bthwani/control-panel,build,tsc --noEmit -p tsconfig.json,repository
+shared/control-panel/package.json,@bthwani/control-panel,lint,pnpm --dir ../.. run guard:ui-kit-boundary,repository
+shared/data-runtime/package.json,@bthwani/data-runtime,typecheck,tsc --noEmit -p tsconfig.json,repository
+shared/data-runtime/package.json,@bthwani/data-runtime,typecheck:ts7,tsc --noEmit -p tsconfig.json,repository
+shared/data-runtime/package.json,@bthwani/data-runtime,typecheck:ts6:compat,tsc6 --noEmit -p tsconfig.json,repository
+shared/data-runtime/package.json,@bthwani/data-runtime,typecheck:all,pnpm run typecheck:ts7 && pnpm run typecheck:ts6:compat,repository
+shared/data-runtime/package.json,@bthwani/data-runtime,build,tsc --noEmit -p tsconfig.json,repository
+shared/data-runtime/package.json,@bthwani/data-runtime,test,node --test tests/*.test.mjs,repository
+shared/ui-kit/package.json,@bthwani/ui-kit,typecheck,tsc --noEmit -p tsconfig.json,repository
+shared/ui-kit/package.json,@bthwani/ui-kit,typecheck:ts7,tsc --noEmit -p tsconfig.json,repository
+shared/ui-kit/package.json,@bthwani/ui-kit,typecheck:ts6:compat,tsc6 --noEmit -p tsconfig.json,repository
+shared/ui-kit/package.json,@bthwani/ui-kit,typecheck:all,pnpm run typecheck:ts7 && pnpm run typecheck:ts6:compat,repository
+shared/ui-kit/package.json,@bthwani/ui-kit,typecheck:contracts,tsc --noEmit -p tsconfig.contracts.json,repository
+shared/ui-kit/package.json,@bthwani/ui-kit,lint,pnpm --dir ../.. run guard:ui-kit-boundary,repository

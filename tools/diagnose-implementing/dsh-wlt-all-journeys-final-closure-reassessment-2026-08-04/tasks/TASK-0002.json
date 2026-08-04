@@ -1,15 +1,15 @@
 {
-  "workItemId": "TASK-0001",
+  "workItemId": "TASK-0002",
   "phaseId": "PHASE-02",
-  "sliceId": "SLICE-0001",
-  "title": "إصلاح سلطة مهاجرات DSH",
-  "status": "READY",
+  "sliceId": "SLICE-0002",
+  "title": "إصلاح سلطة مهاجرات WLT",
+  "status": "BLOCKED",
   "priority": "P0",
   "findingIds": [
-    "FND-0002"
+    "FND-0003"
   ],
-  "objective": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-  "rationale": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+  "objective": "WLT fresh, upgrade, replay, checksum, ledger integrity and data-preservation paths pass.",
+  "rationale": "Reconcile wlt-905 from Git history, ledger schema, provider/reconciliation consumers and DSH facade contracts; restore or retire only with upgrade proof.",
   "preconditions": [
     {
       "condition": "Pin latest remote head and compare with expected parent before writing.",
@@ -18,21 +18,23 @@
     }
   ],
   "dependencies": {
-    "workItems": [],
+    "workItems": [
+      "TASK-0001"
+    ],
     "phases": [],
     "external": [],
     "mustNotStartUntil": [
-      "Current product-write authorization is explicit and the branch head is pinned."
+      "Every predecessor is CLOSED_WITH_EVIDENCE on the post-write SHA."
     ]
   },
   "scope": {
     "filesToRead": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "services/wlt/database/migrations/manifest.extensions.json",
+      "services/wlt/database/migrations/wlt-905_dispatch_financial_eligibility_decisions.sql"
     ],
     "filesToModify": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "services/wlt/database/migrations/manifest.extensions.json",
+      "services/wlt/database/migrations/wlt-905_dispatch_financial_eligibility_decisions.sql"
     ],
     "filesToCreate": [],
     "filesToDelete": [],
@@ -59,28 +61,28 @@
   },
   "changeSpecification": {
     "currentState": "See linked findings and evidence.",
-    "targetState": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+    "targetState": "WLT fresh, upgrade, replay, checksum, ledger integrity and data-preservation paths pass.",
     "exactChanges": [
       {
-        "path": "services/dsh/database/migrations/manifest.extensions.json",
+        "path": "services/wlt/database/migrations/manifest.extensions.json",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "WLT fresh, upgrade, replay, checksum, ledger integrity and data-preservation paths pass.",
+        "implementationNotes": "Reconcile wlt-905 from Git history, ledger schema, provider/reconciliation consumers and DSH facade contracts; restore or retire only with upgrade proof.",
         "findingIds": [
-          "FND-0002"
+          "FND-0003"
         ]
       },
       {
-        "path": "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql",
+        "path": "services/wlt/database/migrations/wlt-905_dispatch_financial_eligibility_decisions.sql",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "WLT fresh, upgrade, replay, checksum, ledger integrity and data-preservation paths pass.",
+        "implementationNotes": "Reconcile wlt-905 from Git history, ledger schema, provider/reconciliation consumers and DSH facade contracts; restore or retire only with upgrade proof.",
         "findingIds": [
-          "FND-0002"
+          "FND-0003"
         ]
       }
     ],
@@ -111,10 +113,10 @@
       {
         "order": 1,
         "workingDirectory": ".",
-        "command": "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed",
+        "command": "pnpm run guard:migration-manifest-drift && pnpm run runtime:wlt:migrate && pnpm --dir services/wlt test",
         "purpose": "Smallest sufficient falsification after the last write.",
         "expectedExitCode": 0,
-        "expectedObservableResult": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "expectedObservableResult": "WLT fresh, upgrade, replay, checksum, ledger integrity and data-preservation paths pass.",
         "destructive": false,
         "requiresCredential": false,
         "credentialHandling": "NOT_APPLICABLE"
@@ -132,11 +134,11 @@
   "acceptance": {
     "positiveCriteria": [
       {
-        "criterionId": "AC-TASK-0001-01",
-        "statement": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "criterionId": "AC-TASK-0002-01",
+        "statement": "WLT fresh, upgrade, replay, checksum, ledger integrity and data-preservation paths pass.",
         "evidenceRequired": "Command output, diff review and post-write commit SHA.",
         "verificationIds": [
-          "VER-0001"
+          "VER-0002"
         ]
       }
     ],
@@ -159,10 +161,10 @@
   },
   "verification": {
     "verificationIds": [
-      "VER-0001"
+      "VER-0002"
     ],
     "smallestSufficientChecks": [
-      "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed"
+      "pnpm run guard:migration-manifest-drift && pnpm run runtime:wlt:migrate && pnpm --dir services/wlt test"
     ],
     "checksAfterLastWrite": true,
     "sameCommitRequired": true,

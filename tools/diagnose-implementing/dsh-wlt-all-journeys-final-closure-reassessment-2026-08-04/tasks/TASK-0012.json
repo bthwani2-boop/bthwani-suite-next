@@ -1,15 +1,15 @@
 {
-  "workItemId": "TASK-0001",
-  "phaseId": "PHASE-02",
-  "sliceId": "SLICE-0001",
-  "title": "إصلاح سلطة مهاجرات DSH",
-  "status": "READY",
-  "priority": "P0",
+  "workItemId": "TASK-0012",
+  "phaseId": "PHASE-05",
+  "sliceId": "SLICE-0012",
+  "title": "تفكيك hotspots المثبتة فقط",
+  "status": "BLOCKED",
+  "priority": "P2",
   "findingIds": [
-    "FND-0002"
+    "FND-0015"
   ],
-  "objective": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-  "rationale": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+  "objective": "Selected hotspots have smaller owned modules and unchanged observable behavior; untouched large files have documented justification.",
+  "rationale": "Rank by responsibility count, churn, coupling and test coverage; refactor only modules with proven mixed ownership, preserving behavior and public contracts.",
   "preconditions": [
     {
       "condition": "Pin latest remote head and compare with expected parent before writing.",
@@ -18,21 +18,21 @@
     }
   ],
   "dependencies": {
-    "workItems": [],
+    "workItems": [
+      "TASK-0011"
+    ],
     "phases": [],
     "external": [],
     "mustNotStartUntil": [
-      "Current product-write authorization is explicit and the branch head is pinned."
+      "Every predecessor is CLOSED_WITH_EVIDENCE on the post-write SHA."
     ]
   },
   "scope": {
     "filesToRead": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "evidence/large-text-files.csv"
     ],
     "filesToModify": [
-      "services/dsh/database/migrations/manifest.extensions.json",
-      "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+      "evidence/large-text-files.csv"
     ],
     "filesToCreate": [],
     "filesToDelete": [],
@@ -45,11 +45,14 @@
     "dataObjects": [
       "Service-owned schema and ledger objects when affected."
     ],
-    "surfaces": [],
-    "services": [
-      "dsh",
-      "wlt"
+    "surfaces": [
+      "control-panel",
+      "app-client",
+      "app-partner",
+      "app-captain",
+      "app-field"
     ],
+    "services": [],
     "forbiddenPaths": [
       "No change to this support package as a substitute for durable owner changes."
     ],
@@ -59,28 +62,17 @@
   },
   "changeSpecification": {
     "currentState": "See linked findings and evidence.",
-    "targetState": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+    "targetState": "Selected hotspots have smaller owned modules and unchanged observable behavior; untouched large files have documented justification.",
     "exactChanges": [
       {
-        "path": "services/dsh/database/migrations/manifest.extensions.json",
+        "path": "evidence/large-text-files.csv",
         "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
         "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
         "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
+        "after": "Selected hotspots have smaller owned modules and unchanged observable behavior; untouched large files have documented justification.",
+        "implementationNotes": "Rank by responsibility count, churn, coupling and test coverage; refactor only modules with proven mixed ownership, preserving behavior and public contracts.",
         "findingIds": [
-          "FND-0002"
-        ]
-      },
-      {
-        "path": "services/dsh/database/migrations/dsh-972_financial_eligibility_wlt_decision_boundary.sql",
-        "symbolOrRange": "Task-specific owner, entry, route, component or ledger rows documented in linked evidence.",
-        "action": "MODIFY_OR_DECIDE_WITH_EVIDENCE",
-        "before": "Current state is recorded by linked findings and immutable evidence.",
-        "after": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
-        "implementationNotes": "Reconcile the dsh-972 semantic intent from Git history, schema consumers and contracts; restore the immutable migration or retire the manifest entry with an explicit replacement and upgrade proof.",
-        "findingIds": [
-          "FND-0002"
+          "FND-0015"
         ]
       }
     ],
@@ -111,10 +103,10 @@
       {
         "order": 1,
         "workingDirectory": ".",
-        "command": "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed",
+        "command": "pnpm run typecheck && pnpm run test && pnpm run guard:dependency-graph",
         "purpose": "Smallest sufficient falsification after the last write.",
         "expectedExitCode": 0,
-        "expectedObservableResult": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "expectedObservableResult": "Selected hotspots have smaller owned modules and unchanged observable behavior; untouched large files have documented justification.",
         "destructive": false,
         "requiresCredential": false,
         "credentialHandling": "NOT_APPLICABLE"
@@ -132,11 +124,11 @@
   "acceptance": {
     "positiveCriteria": [
       {
-        "criterionId": "AC-TASK-0001-01",
-        "statement": "DSH fresh, upgrade, replay, checksum and data-preservation paths pass.",
+        "criterionId": "AC-TASK-0012-01",
+        "statement": "Selected hotspots have smaller owned modules and unchanged observable behavior; untouched large files have documented justification.",
         "evidenceRequired": "Command output, diff review and post-write commit SHA.",
         "verificationIds": [
-          "VER-0001"
+          "VER-0012"
         ]
       }
     ],
@@ -146,10 +138,10 @@
     "edgeCriteria": [
       "Negative, timeout, concurrent, retry, offline and unknown-result behavior is checked when applicable."
     ],
-    "crossSurfaceCriteria": [],
-    "migrationCriteria": [
-      "Fresh, upgrade, replay, checksum, preservation and rollback are proven."
+    "crossSurfaceCriteria": [
+      "Every affected surface shows the same governed truth and state."
     ],
+    "migrationCriteria": [],
     "deletionCriteria": [
       "Consumer census, replacement, reference scan and rollback proof precede deletion."
     ],
@@ -159,10 +151,10 @@
   },
   "verification": {
     "verificationIds": [
-      "VER-0001"
+      "VER-0012"
     ],
     "smallestSufficientChecks": [
-      "pnpm run guard:migration-manifest-drift && pnpm --dir services/dsh run database:contract && pnpm --dir services/dsh run database:test && pnpm --dir services/dsh run database:test:seed"
+      "pnpm run typecheck && pnpm run test && pnpm run guard:dependency-graph"
     ],
     "checksAfterLastWrite": true,
     "sameCommitRequired": true,
