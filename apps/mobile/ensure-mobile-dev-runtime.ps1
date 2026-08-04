@@ -132,6 +132,16 @@ function Test-BthwaniMobileDevData {
 }
 
 function Repair-BthwaniMobileDevData {
+  try {
+    Invoke-BthwaniProcess `
+      -Description "mobile-dev-data-repair" `
+      -FilePath "node" `
+      -Arguments @($DataScript, "--repair")
+    return
+  } catch {
+    Write-Warning "Targeted mobile data repair failed; rebuilding the canonical runtime once before the final repair attempt. $($_.Exception.Message)"
+  }
+
   Invoke-BthwaniProcess `
     -Description "mobile-runtime-bootstrap-dev" `
     -FilePath "pwsh" `
@@ -140,6 +150,7 @@ function Repair-BthwaniMobileDevData {
       "-Action", "bootstrap-dev", "-Profiles", $Profiles, "-Force"
     )
 }
+
 
 Import-BthwaniMobileEnvironment
 
@@ -165,7 +176,7 @@ try {
       return
     }
 
-    Write-Host "Mobile APIs are healthy but governed development data is incomplete; invoking the canonical runtime bootstrap..."
+    Write-Host "Mobile APIs are healthy but governed development data is incomplete; invoking targeted canonical data repair..."
     Repair-BthwaniMobileDevData
 
     if (-not (Test-BthwaniMobileDevData)) {

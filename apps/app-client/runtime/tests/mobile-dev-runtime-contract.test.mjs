@@ -39,7 +39,7 @@ test('mobile development data has one canonical implementation and checks all go
   assert.doesNotMatch(canonical, /field-local-001|captain-local-001/);
 });
 
-test('mobile preflight delegates lifecycle and data convergence to the canonical runtime authority', () => {
+test('mobile preflight delegates lifecycle to runtime and repair logic to the canonical data implementation', () => {
   const compatibility = read('tools/scripts/ensure-mobile-dev-runtime.ps1');
   const canonical = read('apps/mobile/ensure-mobile-dev-runtime.ps1');
   const phaseAdapter = read('apps/mobile/invoke-runtime-phase.ps1');
@@ -60,7 +60,7 @@ test('mobile preflight delegates lifecycle and data convergence to the canonical
   assert.doesNotMatch(canonical, /converge-local-runtime-database\.ps1/);
   assert.doesNotMatch(canonical, /repair-wlt-migration-ledger\.ps1/);
   assert.doesNotMatch(canonical, /-Action", "seed"/);
-  assert.doesNotMatch(canonical, /--repair/);
+  assert.match(canonical, /--repair/);
 
   assert.match(phaseAdapter, /tools\/scripts\/invoke-runtime-phase\.ps1|tools\\scripts\\invoke-runtime-phase\.ps1/);
   assert.match(phaseAdapter, /No automatic database or ledger repair was attempted/);

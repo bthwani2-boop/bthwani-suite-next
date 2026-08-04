@@ -27,24 +27,27 @@ function Import-EnvironmentFile {
     }
 }
 
-function Test-ControlPanelPackageResolution {
-    param([Parameter(Mandatory)][string] $PackageName)
+function Resolve-ControlPanelModulePath {
+    param([Parameter(Mandatory)][string] $ModulePath)
 
     Push-Location -LiteralPath $PSScriptRoot
     try {
-        & node -e "require.resolve('$PackageName/package.json')" 2>$null | Out-Null
-        return $LASTEXITCODE -eq 0
+        $resolved = & node -e "process.stdout.write(require.resolve('$ModulePath'))" 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            return $null
+        }
+        return ([string]$resolved).Trim()
     } finally {
         Pop-Location
     }
 }
 
-function Ensure-ControlPanelDependencies {
-    if ((Test-ControlPanelPackageResolution -PackageName "next") -and
-        (Test-ControlPanelPackageResolution -PackageName "typescript")) {
-        return
-    }
+function Test-ControlPanelModuleResolution {
+    param([Parameter(Mandatory)][string] $ModulePath)
+    return -not [string]::IsNullOrWhiteSpace((Resolve-ControlPanelModulePath -ModulePath $ModulePath))
+}
 
+function Restore-ControlPanelWorkspaceInstall {
     if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
         throw "Control Panel dependencies are missing and pnpm is unavailable. Enable Corepack and retry."
     }
@@ -59,11 +62,51 @@ function Ensure-ControlPanelDependencies {
     } finally {
         Pop-Location
     }
+}
 
-    if (-not (Test-ControlPanelPackageResolution -PackageName "next") -or
-        -not (Test-ControlPanelPackageResolution -PackageName "typescript")) {
-        throw "Control Panel dependencies remain unresolved after the frozen-lockfile installation."
+function Ensure-ControlPanelTypeScriptCompiler {
+    if (Test-ControlPanelModuleResolution -ModulePath "typescript/lib/typescript.js") {
+        return
     }
+
+    $compatPackageJson = Resolve-ControlPanelModulePath -ModulePath "@typescript/typescript6/package.json"
+    $compatCompiler = Resolve-ControlPanelModulePath -ModulePath "@typescript/typescript6/lib/typescript.js"
+    if ([string]::IsNullOrWhiteSpace($compatPackageJson) -or [string]::IsNullOrWhiteSpace($compatCompiler)) {
+        throw "Next.js requires the JavaScript TypeScript compiler API, but @typescript/typescript6 is not installed from the locked workspace."
+    }
+
+    $runtimeNodeModules = Join-Path $PSScriptRoot "node_modules"
+    $typescriptLink = Join-Path $runtimeNodeModules "typescript"
+    $compatRoot = Split-Path -Parent $compatPackageJson
+    New-Item -ItemType Directory -Path $runtimeNodeModules -Force | Out-Null
+
+    if (Test-Path -LiteralPath $typescriptLink) {
+        $existing = Get-Item -LiteralPath $typescriptLink -Force
+        if (($existing.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -eq 0) {
+            throw "Refusing to replace a non-link TypeScript directory at $typescriptLink. Run pnpm install --frozen-lockfile to restore the governed workspace layout."
+        }
+        Remove-Item -LiteralPath $typescriptLink -Force
+    }
+
+    New-Item -ItemType Junction -Path $typescriptLink -Target $compatRoot -Force | Out-Null
+    if (-not (Test-ControlPanelModuleResolution -ModulePath "typescript/lib/typescript.js")) {
+        throw "Failed to expose the locked TypeScript 6 compiler API required by Next.js."
+    }
+
+    Write-Host "Control Panel compiler: TypeScript 6 compatibility package (Next.js compiler API)." -ForegroundColor DarkGray
+}
+
+function Ensure-ControlPanelDependencies {
+    if (-not (Test-ControlPanelModuleResolution -ModulePath "next/package.json") -or
+        -not (Test-ControlPanelModuleResolution -ModulePath "@typescript/typescript6/lib/typescript.js")) {
+        Restore-ControlPanelWorkspaceInstall
+    }
+
+    if (-not (Test-ControlPanelModuleResolution -ModulePath "next/package.json")) {
+        throw "Next.js remains unresolved after the frozen-lockfile installation."
+    }
+
+    Ensure-ControlPanelTypeScriptCompiler
 }
 
 Import-EnvironmentFile -Path $GoogleEnvironmentPath
