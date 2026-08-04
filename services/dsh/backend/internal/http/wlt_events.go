@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -23,17 +24,17 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		return
 	}
 	var body struct {
-		EventID          string `json:"eventId"`
-		CorrelationID    string `json:"correlationId"`
-		CheckoutIntentID string `json:"checkoutIntentId"`
-		SpecialRequestID string `json:"specialRequestId"`
-		OrderID          string `json:"orderId"`
-		RefundReference  string `json:"refundReference"`
-		Reason           string `json:"reason"`
-		OperatorContextID         string `json:"operatorContextId"`
-		PaymentSessionID string `json:"paymentSessionId"`
-		PaymentMethod    string `json:"paymentMethod"`
-		Status           string `json:"status"`
+		EventID           string `json:"eventId"`
+		CorrelationID     string `json:"correlationId"`
+		CheckoutIntentID  string `json:"checkoutIntentId"`
+		SpecialRequestID  string `json:"specialRequestId"`
+		OrderID           string `json:"orderId"`
+		RefundReference   string `json:"refundReference"`
+		Reason            string `json:"reason"`
+		OperatorContextID string `json:"operatorContextId"`
+		PaymentSessionID  string `json:"paymentSessionId"`
+		PaymentMethod     string `json:"paymentMethod"`
+		Status            string `json:"status"`
 	}
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
 	decoder.DisallowUnknownFields()
@@ -137,12 +138,12 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 	}
 
 	eventEnvelope := checkout.WltPaymentEventEnvelope{
-		EventID:          body.EventID,
-		OperatorContextID:         body.OperatorContextID,
-		CheckoutIntentID: body.CheckoutIntentID,
-		PaymentSessionID: body.PaymentSessionID,
-		Status:           body.Status,
-		CorrelationID:    body.CorrelationID,
+		EventID:           body.EventID,
+		OperatorContextID: body.OperatorContextID,
+		CheckoutIntentID:  body.CheckoutIntentID,
+		PaymentSessionID:  body.PaymentSessionID,
+		Status:            body.Status,
+		CorrelationID:     body.CorrelationID,
 	}
 	eventKey, replayed, err := checkout.BeginWltPaymentEventTx(r.Context(), tx, eventEnvelope)
 	if errors.Is(err, checkout.ErrWltEventReplayConflict) {
@@ -172,8 +173,12 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 
 	if body.OrderID != "" {
 		if err := applyOrderPaymentProjection(r.Context(), s.db, body.OrderID, body.OperatorContextID, body.PaymentSessionID, body.PaymentMethod, body.Status, body.CorrelationID); err != nil {
-			// Do not fail the request; projection is eventually consistent, 
-			// or we can just log it since the main transaction succeeded.
+			// The WLT event itself is already accepted, so the request must not fail:
+			// this projection is eventually consistent and is repaired by replay.
+			// It is still recorded, because a silently dropped projection error would
+			// leave DSH's read model diverged from WLT with no operator signal.
+			log.Printf("[wlt-events] order payment projection failed for order %s (session %s, correlation %s): %v",
+				body.OrderID, body.PaymentSessionID, body.CorrelationID, err)
 		}
 	}
 
@@ -232,7 +237,6 @@ func handleConfirmedRefundEffect(w http.ResponseWriter, s *protectedStoreServer,
 func requireWltServiceCaller(w http.ResponseWriter, r *http.Request) bool {
 	return store.RequireServiceCaller(w, r, "DSH_WLT_SERVICE_TOKEN", "wlt")
 }
-
 
 func applyOrderPaymentProjection(ctx context.Context, db *sql.DB, orderID, operatorContextID, sessionID, method, status, correlationID string) error {
 	projection, err := mapWltPaymentProjection(method, status)
