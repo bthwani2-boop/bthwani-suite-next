@@ -18,25 +18,34 @@ export function resolveAffectedPlan(targets, environment = process.env) {
   }
   if (base === head) throw new Error("NX_BASE and NX_HEAD must identify different revisions");
 
-  return normalizedTargets.map((target) => ({
-    target,
-    args: ["exec", "nx", "affected", "-t", target, "--base", base, "--head", head, "--outputStyle=stream"],
-  }));
+  return {
+    targets: normalizedTargets,
+    args: [
+      "exec",
+      "nx",
+      "affected",
+      "-t",
+      normalizedTargets.join(","),
+      "--base",
+      base,
+      "--head",
+      head,
+      "--outputStyle=stream",
+    ],
+  };
 }
 
 export function executeAffectedPlan(plan, environment = process.env) {
-  for (const step of plan) {
-    const executable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-    const result = spawnSync(executable, step.args, {
-      cwd: process.cwd(),
-      env: environment,
-      stdio: "inherit",
-      shell: false,
-      windowsHide: true,
-    });
-    if (result.error) throw new Error(`${step.target} could not start: ${result.error.message}`);
-    if (result.status !== 0) process.exit(result.status ?? 1);
-  }
+  const executable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+  const result = spawnSync(executable, plan.args, {
+    cwd: process.cwd(),
+    env: environment,
+    stdio: "inherit",
+    shell: false,
+    windowsHide: true,
+  });
+  if (result.error) throw new Error(`Affected verification could not start: ${result.error.message}`);
+  if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
 function main() {
