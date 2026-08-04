@@ -1,3 +1,9 @@
+# -Journey is an evidence label recorded with the run, not a guard selector.
+# The guard registry carries no per-journey capability metadata, so there is
+# nothing to select on; a previous Test-JourneyGuardSelected helper returned
+# $true unconditionally, which made the parameter look like a filter while
+# every registered journey guard ran regardless. Real selection is -Guard,
+# which is validated against the registered journey set below.
 param(
   [switch]$Full,
   [switch]$Runtime,
@@ -32,10 +38,39 @@ if ($Guard) {
   $journeyGuards = @($Guard)
 }
 
+$script:StepLog = [System.Collections.Generic.List[object]]::new()
+$script:SummaryPath = Join-Path ([string](Get-Location)) ".diagnostics/journey-gate/journey-gate-summary.json"
+
+# A bare "[ FAIL] <step>" told an operator which step threw, but not what the
+# gate had already proven nor the failing output. Every run now writes a
+# machine-readable summary so the uploaded CI artifact is diagnostic on its own.
+function Write-JourneyGateSummary {
+  param([Parameter(Mandatory)][string]$Result, [string]$FailedStep = "", [string]$Detail = "")
+  $summary = [ordered]@{
+    result            = $Result
+    scope             = if ($Runtime) { "runtime" } else { "static" }
+    mode              = if ($Full) { "full-explicit" } else { "targeted-default" }
+    capability        = $Journey
+    guardFilter       = if ($Guard) { $Guard } else { "all-registered-journey-guards" }
+    journeyGuardCount = @($journeyGuards).Count
+    failedStep        = $FailedStep
+    detail            = $Detail
+    steps             = @($script:StepLog)
+    generatedAt       = (Get-Date).ToUniversalTime().ToString("o")
+  }
+  $directory = Split-Path -Parent $script:SummaryPath
+  if (-not (Test-Path -LiteralPath $directory)) {
+    New-Item -ItemType Directory -Force -Path $directory | Out-Null
+  }
+  $summary | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $script:SummaryPath -Encoding utf8
+  Write-Host "journey-gate summary: $script:SummaryPath"
+}
+
 function Invoke-Step {
   param([Parameter(Mandatory)][string]$Name, [Parameter(Mandatory)][scriptblock]$Block)
   Write-Host "[ RUN ] $Name"
   $global:LASTEXITCODE = 0
+  $startedAt = Get-Date
   try {
     $stepOutput = & $Block 2>&1
     $nativeExitCode = $global:LASTEXITCODE
@@ -44,16 +79,24 @@ function Invoke-Step {
     }
     if ($nativeExitCode -ne 0) { throw "exit $nativeExitCode" }
     Write-Host "[ OK  ] $Name"
+    $script:StepLog.Add([ordered]@{
+        step = $Name; result = "PASS"; durationSeconds = [math]::Round(((Get-Date) - $startedAt).TotalSeconds, 2)
+      })
   }
   catch {
-    Write-Host "[ FAIL] $Name - $_"
+    $detail = [string]$_
+    $tail = @($stepOutput) | Select-Object -Last 40 | ForEach-Object { [string]$_ }
+    Write-Host "[ FAIL] $Name - $detail"
+    $script:StepLog.Add([ordered]@{
+        step = $Name; result = "FAIL"; detail = $detail
+        durationSeconds = [math]::Round(((Get-Date) - $startedAt).TotalSeconds, 2)
+        outputTail = @($tail)
+      })
+    Write-JourneyGateSummary -Result "FAIL" -FailedStep $Name -Detail $detail
+    Write-Output ""
+    Write-Output "RESULT: FAIL step=$Name capability=$Journey"
     throw
   }
-}
-
-function Test-JourneyGuardSelected {
-  param([Parameter(Mandatory)][string]$GuardId)
-  return $true
 }
 
 Invoke-Step "git-diff-check" { git --no-pager diff --check }
@@ -73,8 +116,6 @@ if ($Full) {
 }
 
 foreach ($guardName in $journeyGuards) {
-  if (-not (Test-JourneyGuardSelected -GuardId $guardName)) { continue }
-
   $entry = $guardEntries[$guardName]
   if (-not $entry) { throw "Journey guard is not present in the guard registry: $guardName" }
 
@@ -104,6 +145,7 @@ if ($Runtime) {
 
 $scope = if ($Runtime) { "runtime" } else { "static" }
 $mode = if ($Full) { "full-explicit" } else { "targeted-default" }
+Write-JourneyGateSummary -Result "PASS"
 Write-Output ""
 Write-Output "RESULT: PASS scope=$scope mode=$mode capability=$Journey"
 Write-Output "PASS is scoped evidence only and does not imply CLOSED_WITH_EVIDENCE."

@@ -121,11 +121,14 @@ function collectStrings(value, path = '$', output = []) {
   return output;
 }
 
+let unresolvedMarkerCount = 0;
+
 function findUnresolvedMarkers(text, label) {
   for (const pattern of unresolvedPatterns) {
     pattern.lastIndex = 0;
     const matches = text.match(pattern);
     if (matches?.length) {
+      unresolvedMarkerCount += matches.length;
       const message = `${label} contains unresolved marker ${matches[0]} (${matches.length} occurrence(s)).`;
       strict ? addError(message) : addWarning(message);
     }
@@ -399,6 +402,129 @@ if (manifest) {
         addError(`CLOSED_WITH_EVIDENCE is invalid while coverage.${key}=${counts[key]}.`);
       }
     }
+  }
+}
+
+// Plan-ready gate.
+//
+// The manifest documents qualityGates.planReady thresholds, but nothing used
+// to compare anything against them, so a package could satisfy the JSON schema
+// while failing the planning contract it declared. A previous package passed
+// --strict while reporting inventoryItems=0 with unclassifiedInventoryItems=1.
+//
+// Every metric below is measured from the registers rather than read from the
+// manifest's own coverage block, and the self-reported coverage is then checked
+// against those measurements, so an inaccurate self-report is itself an error.
+const PLAN_READY_METRICS = [
+  'unclassifiedInventoryItems',
+  'findingsWithoutEvidence',
+  'findingsWithoutRootCause',
+  'internalFindingsWithoutWorkItems',
+  'workItemsWithoutAcceptanceCriteria',
+  'workItemsWithoutVerification',
+  'unresolvedTemplateMarkers',
+  'dependencyCycles',
+];
+
+function countWorkItemDependencyCycles() {
+  const graph = new Map(
+    workItems
+      .filter((item) => item?.workItemId)
+      .map((item) => [
+        item.workItemId,
+        (Array.isArray(item.dependencies?.workItems) ? item.dependencies.workItems : []).filter((id) =>
+          workItemMap.has(id),
+        ),
+      ]),
+  );
+  const state = new Map();
+  let cycles = 0;
+  const visit = (node) => {
+    state.set(node, 'visiting');
+    for (const next of graph.get(node) ?? []) {
+      const nextState = state.get(next);
+      if (nextState === 'visiting') cycles += 1;
+      else if (nextState !== 'done') visit(next);
+    }
+    state.set(node, 'done');
+  };
+  for (const node of graph.keys()) {
+    if (!state.has(node)) visit(node);
+  }
+  return cycles;
+}
+
+const planReady = manifest?.qualityGates?.planReady;
+if (!planReady || typeof planReady !== 'object') {
+  addError('Manifest must declare qualityGates.planReady thresholds.');
+} else {
+  const isInternal = (finding) => finding?.disposition?.decision !== 'BLOCKED_EXTERNAL';
+  const coverage = manifest?.coverage ?? {};
+  const declaredInventory = Number(coverage.inventoryItems);
+  const declaredClassified = Number(coverage.classifiedInventoryItems);
+  const declaredUnclassified = Number(coverage.unclassifiedInventoryItems);
+
+  if (!Number.isInteger(declaredInventory) || declaredInventory <= 0) {
+    addError(`Manifest coverage.inventoryItems must be a positive integer; found ${coverage.inventoryItems}.`);
+  }
+  if (declaredClassified + declaredUnclassified !== declaredInventory) {
+    addError(
+      `Manifest coverage is inconsistent: classified (${declaredClassified}) + unclassified (${declaredUnclassified}) !== inventoryItems (${declaredInventory}).`,
+    );
+  }
+
+  const measured = {
+    unclassifiedInventoryItems: Number.isInteger(declaredUnclassified) ? declaredUnclassified : Number.NaN,
+    findingsWithoutEvidence: findings.filter((f) => !Array.isArray(f?.evidence) || f.evidence.length === 0).length,
+    findingsWithoutRootCause: findings.filter(
+      (f) =>
+        !isNonEmptyString(f?.rootCause?.immediateCause) ||
+        !isNonEmptyString(f?.rootCause?.structuralCause) ||
+        !isNonEmptyString(f?.rootCause?.incorrectOrMissingTruthOwner),
+    ).length,
+    internalFindingsWithoutWorkItems: findings.filter(
+      (f) => isInternal(f) && (!Array.isArray(f?.resolution?.workItemIds) || f.resolution.workItemIds.length === 0),
+    ).length,
+    workItemsWithoutAcceptanceCriteria: workItems.filter(
+      (w) =>
+        !Array.isArray(w?.acceptance?.positiveCriteria) || w.acceptance.positiveCriteria.length === 0,
+    ).length,
+    workItemsWithoutVerification: workItems.filter(
+      (w) => !Array.isArray(w?.verification?.verificationIds) || w.verification.verificationIds.length === 0,
+    ).length,
+    unresolvedTemplateMarkers: unresolvedMarkerCount,
+    dependencyCycles: countWorkItemDependencyCycles(),
+  };
+
+  for (const metric of PLAN_READY_METRICS) {
+    const threshold = planReady[metric];
+    if (!Number.isInteger(threshold)) {
+      addError(`qualityGates.planReady.${metric} must be declared as an integer threshold.`);
+      continue;
+    }
+    const actual = measured[metric];
+    if (!Number.isInteger(actual)) {
+      addError(`Plan-ready metric ${metric} could not be measured.`);
+      continue;
+    }
+    if (actual > threshold) {
+      addError(`Plan-ready gate failed: ${metric} measured ${actual}, threshold ${threshold}.`);
+    }
+  }
+
+  const reportedFindings = Number(coverage.findings);
+  if (Number.isInteger(reportedFindings) && reportedFindings !== findings.length) {
+    addError(`Manifest coverage.findings reports ${reportedFindings} but the register contains ${findings.length}.`);
+  }
+  const reportedWorkItems = Number(coverage.workItems);
+  if (Number.isInteger(reportedWorkItems) && reportedWorkItems !== workItems.length) {
+    addError(`Manifest coverage.workItems reports ${reportedWorkItems} but the register contains ${workItems.length}.`);
+  }
+  const reportedVerifications = Number(coverage.verificationItems);
+  if (Number.isInteger(reportedVerifications) && reportedVerifications !== verifications.length) {
+    addError(
+      `Manifest coverage.verificationItems reports ${reportedVerifications} but the register contains ${verifications.length}.`,
+    );
   }
 }
 
