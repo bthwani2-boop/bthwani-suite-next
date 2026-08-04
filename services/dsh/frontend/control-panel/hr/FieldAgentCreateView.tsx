@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useIdentityRuntimeStatus } from "@bthwani/core-identity";
@@ -97,7 +97,7 @@ export function FieldAgentCreateView(props: {
         <CpStatePanel
           role="alert"
           title="Identity غير جاهزة؛ إنشاء الوكيل الميداني متوقف"
-          description={السبب: .}
+          description={identityReason}
         >
           <CpButton variant="secondary" onClick={() => void identityRuntime.refresh(true)}>إعادة فحص Identity</CpButton>
         </CpStatePanel>

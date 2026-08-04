@@ -155,7 +155,11 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} />
             </div>
-        <ProviderActivationWorkspace providerKind="field" initialActorId={agent.actorId} entrySource="hr" />
+          </section>
+        )}
+        {activeTab === "ops" && (
+          <ProviderActivationWorkspace providerKind="field" initialActorId={agent.actorId} entrySource="hr" />
+        )}
       </div>
     </DetailPageFrame>
   );
