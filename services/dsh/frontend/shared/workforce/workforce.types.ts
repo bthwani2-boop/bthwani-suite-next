@@ -330,3 +330,41 @@ export const ENGAGEMENT_TYPE_LABEL_AR: Record<EngagementType, string> = {
   independent_contractor: "مقدم خدمة مستقل",
   employee: "موظف رسمي",
 };
+export type ProvisioningCase = {
+  id: string;
+  idempotencyKey: string;
+  status: string;
+  workforceKind: string;
+  actorId?: string;
+  workforceCode?: string;
+  payload: any;
+  failureReason?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type StartProvisioningInput = {
+  workforceKind: string;
+  username: string;
+  phoneE164: string;
+  role: string;
+  operatorContextId?: string;
+  payload: any;
+};
+export type BlockerReason = 
+  | "IDENTITY_SUSPENDED"
+  | "PROFILE_INCOMPLETE"
+  | "DOCUMENTS_EXPIRED"
+  | "EMPLOYMENT_TERMINATED"
+  | "NO_ACTIVE_ASSIGNMENT"
+  | "SHIFT_INACTIVE"
+  | "OUTSIDE_ACTIVE_AREA"
+  | "FINANCIAL_ELIGIBILITY_BLOCKED"
+  | "ELIGIBILITY_UNAVAILABLE";
+
+export interface ReadinessGate {
+  actorId: string;
+  status: "ALLOWED" | "BLOCKED";
+  blockerReasons: BlockerReason[];
+  checkedAt: string;
+}

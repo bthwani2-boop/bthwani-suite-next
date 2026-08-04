@@ -8,6 +8,7 @@ import { RoleAssignmentApprovalQueue } from "./RoleAssignmentApprovalQueue";
 import { DecisionRollbackQueue } from "./DecisionRollbackQueue";
 import { AdministrationDiagnosticsPanel } from "./AdministrationDiagnosticsPanel";
 import { IdentityRuntimeHealthPanel } from "../dashboard/IdentityRuntimeHealthPanel";
+import { CpStatePanel } from "@bthwani/control-panel/components";
 
 export function GovernedAdministrationScreen() {
   const { state } = useIdentityRuntimeStatus();
@@ -18,20 +19,12 @@ export function GovernedAdministrationScreen() {
   return (
     <>
       {identityNotReady && (
-        <div style={{
-          backgroundColor: "#FEE2E2",
-          color: "#991B1B",
-          padding: "16px",
-          margin: "16px",
-          borderRadius: "8px",
-          border: "1px solid #F87171"
-        }}>
-          <h3 style={{ marginTop: 0, marginBottom: "8px" }}>عمليات الهوية متوقفة (Identity NOT_READY)</h3>
-          <p style={{ margin: 0 }}>
-            <strong>السبب:</strong> {reasonCodes || "غير معروف"}<br/>
-            <strong>الإجراء:</strong> يرجى التحقق من قواعد البيانات والمهاجرات (Migrations) لحين استعادة الخدمة.
-            تم تعطيل إجراءات إنشاء وتفعيل الحسابات (Actors) حفاظاً على سلامة البيانات.
-          </p>
+        <div style={{ padding: "16px", paddingBottom: 0 }}>
+          <CpStatePanel
+            role="alert"
+            title="عمليات الهوية متوقفة (Identity NOT_READY)"
+            description={`السبب: ${reasonCodes || "غير معروف"} — يرجى التحقق من قواعد البيانات والمهاجرات لحين استعادة الخدمة. تم تعطيل إجراءات إنشاء وتفعيل الحسابات حفاظاً على سلامة البيانات.`}
+          />
         </div>
       )}
       <div style={{ padding: "16px" }}>

@@ -32,7 +32,9 @@ export async function uploadFieldStoreMedia(storeId: string, file: FieldMediaPic
 // classifies the object as an employee document, so no actor field is sent.
 export async function uploadProviderMedia(
   actorId: string,
+  role: "employees" | "captains" | "field-agents",
   file: FieldMediaPickResult,
+  operatorContextId: string,
 ): Promise<string> {
   const baseUrl = resolveDshApiBaseUrl();
   const cookieMode = baseUrl.startsWith("/");
@@ -46,13 +48,14 @@ export async function uploadProviderMedia(
     type: file.mimeType,
   } as unknown as Blob);
 
-  const path = `/dsh/operator/workforce/employees/${encodeURIComponent(actorId)}/media/uploads`;
+  const path = `/workforce/${role}/${encodeURIComponent(actorId)}/media/uploads`;
   const url = cookieMode ? `${baseUrl.replace(/\/$/, "")}${path}` : new URL(path, baseUrl);
   const response = await fetch(url, {
     method: "POST",
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       "X-Correlation-ID": `provider-media-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`,
+      "X-Operator-Context-ID": operatorContextId,
     },
     body: form,
     ...(cookieMode ? { credentials: "include" as const } : {}),

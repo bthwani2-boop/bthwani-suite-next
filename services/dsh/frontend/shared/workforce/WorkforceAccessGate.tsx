@@ -39,20 +39,6 @@ export function WorkforceAccessGate({
     );
   }
 
-  if (state.kind === "suspended") {
-    return (
-      <GateFrame onLogout={onLogout}>
-        <StateView
-          tone="danger"
-          title="الملف التشغيلي موقوف"
-          description="أوقف Workforce هذا الارتباط. تم حجب العمليات إلى أن تعيد الجهة المخولة تفعيله."
-          actionLabel="تحديث الحالة"
-          onActionPress={() => void workforce.reload()}
-        />
-      </GateFrame>
-    );
-  }
-
   if (state.kind === "error") {
     return (
       <GateFrame onLogout={onLogout}>
@@ -74,34 +60,6 @@ export function WorkforceAccessGate({
           tone="danger"
           title="نوع الملف لا يطابق التطبيق"
           description="هذه الجلسة مرتبطة بسطح Workforce مختلف. افتح التطبيق المخصص لنوع مقدم الخدمة المسجل."
-        />
-      </GateFrame>
-    );
-  }
-
-  if (state.me.engagementStatus !== "active") {
-    return (
-      <GateFrame onLogout={onLogout}>
-        <StateView
-          tone="warning"
-          title="الارتباط غير نشط"
-          description="لا يمكن تنفيذ العمليات قبل انتقال حالة الارتباط إلى نشط في Workforce."
-          actionLabel="تحديث الحالة"
-          onActionPress={() => void workforce.reload()}
-        />
-      </GateFrame>
-    );
-  }
-
-  if (!state.me.profileComplete) {
-    return incompleteContent ?? (
-      <GateFrame onLogout={onLogout}>
-        <StateView
-          tone="warning"
-          title="الملف التشغيلي غير مكتمل"
-          description="أكمل البيانات الذاتية المطلوبة قبل فتح العمليات."
-          actionLabel="إعادة التحقق"
-          onActionPress={() => void workforce.reload()}
         />
       </GateFrame>
     );

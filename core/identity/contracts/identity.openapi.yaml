@@ -526,9 +526,10 @@ paths:
   /internal/actors/{actorId}/sessions:
     get:
       summary: List all active sessions for an actor
+      operationId: internalListSessions
       tags: [ Internal ]
       security:
-        - InternalServiceAuth: [ ]
+        - serviceToken: [ ]
       parameters:
         - name: actorId
           in: path
@@ -544,11 +545,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/SessionInfo'
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
     delete:
       summary: Revoke all active sessions for an actor
+      operationId: internalRevokeSessions
       tags: [ Internal ]
       security:
-        - InternalServiceAuth: [ ]
+        - serviceToken: [ ]
       parameters:
         - name: actorId
           in: path

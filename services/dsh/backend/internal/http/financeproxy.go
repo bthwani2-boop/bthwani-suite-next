@@ -65,8 +65,13 @@ func (s *protectedStoreServer) handlePartnerFinanceSettlements(w http.ResponseWr
 	if !ok {
 		return
 	}
+	scopes, err := s.workforce.GetActorScopes(r.Context(), actor.ID, actor.OperatorContextID, "partner")
+	if err != nil || len(scopes.PartnerIDs) == 0 {
+		store.SendError(w, http.StatusForbidden, "NO_PARTNER_ASSIGNMENT", "actor has no partner assignments")
+		return
+	}
 	query := financeQuery(r, "limit", "cursor")
-	query.Set("partnerId", actor.ID)
+	query.Set("partnerId", scopes.PartnerIDs[0])
 	s.proxyFinanceRead(w, r, "/wlt/settlements", query, actor.OperatorContextID)
 }
 
@@ -75,8 +80,13 @@ func (s *protectedStoreServer) handlePartnerFinanceSettlementSummary(w http.Resp
 	if !ok {
 		return
 	}
+	scopes, err := s.workforce.GetActorScopes(r.Context(), actor.ID, actor.OperatorContextID, "partner")
+	if err != nil || len(scopes.PartnerIDs) == 0 {
+		store.SendError(w, http.StatusForbidden, "NO_PARTNER_ASSIGNMENT", "actor has no partner assignments")
+		return
+	}
 	query := url.Values{}
-	query.Set("partnerId", actor.ID)
+	query.Set("partnerId", scopes.PartnerIDs[0])
 	s.proxyFinanceRead(w, r, "/wlt/settlements/summary", query, actor.OperatorContextID)
 }
 

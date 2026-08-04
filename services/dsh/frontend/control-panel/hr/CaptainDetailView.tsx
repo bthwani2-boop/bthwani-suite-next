@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CpButton, CpMutedInline, CpPageHeader, CpStateView, CpTextInput } from "@bthwani/control-panel/components";
+import { CpButton, CpMutedInline, CpPageHeader, CpStateView, CpTabs, CpTextInput } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
 import { Text } from "@bthwani/ui-kit";
 
@@ -17,6 +17,7 @@ import { ProviderActivationWorkspace } from "../shared";
 import { ProviderOperationalCorePanel } from "./ProviderOperationalCorePanel";
 import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState";
 import { SupervisorPicker } from "./SupervisorPicker";
+import { useIdentitySession } from "@bthwani/core-identity";
 
 import { ZonePicker } from "./ZonePicker";
 
@@ -32,6 +33,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
   const controller = useCaptainDetailController(props.actorId);
   const captain = controller.state.kind === "ready" ? controller.state.captain : null;
 
+  const [activeTab, setActiveTab] = useState("profile");
   const [fullNameAr, setFullNameAr] = useState("");
   const [fullNameEn, setFullNameEn] = useState("");
   const [zoneId, setZoneId] = useState("");
@@ -43,6 +45,9 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
   const [supervisor, setSupervisor] = useState<SupervisorCandidate | null>(null);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  
+  const { state: identityState } = useIdentitySession();
+  const operatorContextId = identityState.kind === "active" ? identityState.identity.actorId : "";
 
   useEffect(() => {
     if (!captain) return;
@@ -108,11 +113,11 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
       setUploadError(null);
       const objectUrl = URL.createObjectURL(file);
       try {
-        const mediaRef = await uploadProviderMedia(captain.actorId, {
+        const mediaRef = await uploadProviderMedia(captain.actorId, "captains", {
           uri: objectUrl,
           name: file.name,
           mimeType: file.type || "application/octet-stream",
-        });
+        }, operatorContextId);
         if (purpose === "photo") {
           await controller.update({ expectedVersion: captain.version, photoMediaRef: mediaRef });
         } else {
@@ -153,89 +158,106 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          <div>
-            <Text role="bodySm">الاسم بالعربية *</Text>
-            <CpTextInput value={fullNameAr} onChange={setFullNameAr} aria-label="الاسم بالعربية" />
-          </div>
-          <div>
-            <Text role="bodySm">الاسم بالإنجليزية</Text>
-            <CpTextInput value={fullNameEn} onChange={setFullNameEn} aria-label="الاسم بالإنجليزية" />
-          </div>
-          <div>
-            <Text role="bodySm">تاريخ بداية الارتباط</Text>
-            <CpTextInput type="date" value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية الارتباط" />
-          </div>
-          <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} />
-          <div>
-            <Text role="bodySm">نوع المركبة *</Text>
-            <CpTextInput value={vehicleType} onChange={setVehicleType} aria-label="نوع المركبة" />
-          </div>
-          <div>
-            <Text role="bodySm">رقم أو لوحة المركبة *</Text>
-            <CpTextInput value={vehicleIdentifier} onChange={setVehicleIdentifier} aria-label="رقم أو لوحة المركبة" />
-          </div>
-          <div>
-            <Text role="bodySm">نطاق التشغيل</Text>
-            <CpTextInput value={operatingScopeCode} onChange={setOperatingScopeCode} aria-label="نطاق التشغيل" />
-          </div>
-          <div>
-            <Text role="bodySm">تاريخ انتهاء الرخصة</Text>
-            <CpTextInput type="date" value={licenseExpiresAt} onChange={setLicenseExpiresAt} placeholder="YYYY-MM-DD" aria-label="تاريخ انتهاء الرخصة" />
-          </div>
+        <CpTabs
+          value={activeTab}
+          onChange={setActiveTab}
+          items={[
+            { label: "الملف الأساسي", value: "profile" },
+            { label: "الوثائق والرخصة", value: "media" },
+            { label: "التشغيل والربط", value: "ops" },
+          ]}
+        />
+        {activeTab === "profile" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div>
+              <Text role="bodySm">الاسم بالعربية *</Text>
+              <CpTextInput value={fullNameAr} onChange={setFullNameAr} aria-label="الاسم بالعربية" />
+            </div>
+            <div>
+              <Text role="bodySm">الاسم بالإنجليزية</Text>
+              <CpTextInput value={fullNameEn} onChange={setFullNameEn} aria-label="الاسم بالإنجليزية" />
+            </div>
+            <div>
+              <Text role="bodySm">تاريخ بداية الارتباط</Text>
+              <CpTextInput type="date" value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية الارتباط" />
+            </div>
+            <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} />
+            <div>
+              <Text role="bodySm">نوع المركبة *</Text>
+              <CpTextInput value={vehicleType} onChange={setVehicleType} aria-label="نوع المركبة" />
+            </div>
+            <div>
+              <Text role="bodySm">رقم أو لوحة المركبة *</Text>
+              <CpTextInput value={vehicleIdentifier} onChange={setVehicleIdentifier} aria-label="رقم أو لوحة المركبة" />
+            </div>
+            <div>
+              <Text role="bodySm">نطاق التشغيل</Text>
+              <CpTextInput value={operatingScopeCode} onChange={setOperatingScopeCode} aria-label="نطاق التشغيل" />
+            </div>
+            <div>
+              <Text role="bodySm">تاريخ انتهاء الرخصة</Text>
+              <CpTextInput type="date" value={licenseExpiresAt} onChange={setLicenseExpiresAt} placeholder="YYYY-MM-DD" aria-label="تاريخ انتهاء الرخصة" />
+            </div>
 
-          <Text role="bodySm" style={{ fontWeight: "bold" }}>المشرف</Text>
-          <SupervisorPicker kind="captain" selected={supervisor} onSelect={setSupervisor} />
-          {controller.actionError ? <CpStateView kind="error" title={controller.actionError} /> : null}
+            <Text role="bodySm" style={{ fontWeight: "bold" }}>المشرف</Text>
+            <SupervisorPicker kind="captain" selected={supervisor} onSelect={setSupervisor} />
+            {controller.actionError ? <CpStateView kind="error" title={controller.actionError} /> : null}
 
-          <CpButton
-            variant="primary"
-            disabled={!canSave}
-            onClick={() =>
-              void controller.update({
-                expectedVersion: captain.version,
-                fullNameAr: fullNameAr.trim(),
-                fullNameEn: fullNameEn.trim() || undefined,
-                engagementStartDate: engagementStartDate.trim() || undefined,
-                serviceZoneId: zoneId,
-                vehicleType: vehicleType.trim(),
-                vehicleIdentifier: vehicleIdentifier.trim(),
-                licenseExpiresAt: licenseExpiresAt.trim() || undefined,
-                operatingScopeCode: operatingScopeCode.trim() || undefined,
-                supervisorActorId: supervisor?.actorId,
-              })
-            }
-          >
-            {controller.actionBusy ? "جارٍ الحفظ…" : "حفظ الملف التشغيلي"}
-          </CpButton>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          <Text role="titleSm">الصورة ووثائق الرخصة</Text>
-          <Text role="bodySm">الصورة: {captain.photoMediaRef ? "مرتبطة" : "مفقودة"}</Text>
-          <Text role="bodySm">الوثائق: {documentCount}</Text>
-          <Text role="bodySm">حالة الرخصة: {LICENSE_LABEL[profile?.licenseStatus ?? "missing"]}</Text>
-          {uploadError ? <CpStateView kind="error" title={uploadError} /> : null}
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("photo")}>
-              {uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}
-            </CpButton>
-            <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("document")}>
-              {uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة رخصة"}
+            <CpButton
+              variant="primary"
+              disabled={!canSave}
+              onClick={() =>
+                void controller.update({
+                  expectedVersion: captain.version,
+                  fullNameAr: fullNameAr.trim(),
+                  fullNameEn: fullNameEn.trim() || undefined,
+                  engagementStartDate: engagementStartDate.trim() || undefined,
+                  serviceZoneId: zoneId,
+                  vehicleType: vehicleType.trim(),
+                  vehicleIdentifier: vehicleIdentifier.trim(),
+                  licenseExpiresAt: licenseExpiresAt.trim() || undefined,
+                  operatingScopeCode: operatingScopeCode.trim() || undefined,
+                  supervisorActorId: supervisor?.actorId,
+                })
+              }
+            >
+              {controller.actionBusy ? "جارٍ الحفظ…" : "حفظ الملف التشغيلي"}
             </CpButton>
           </div>
-          {!canApproveLicense ? (
-            <CpMutedInline>اعتماد الرخصة يتطلب وثيقة مرتبطة وتاريخ انتهاء صالحًا.</CpMutedInline>
-          ) : null}
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            <CpButton variant="primary" disabled={!canApproveLicense || controller.actionBusy} onClick={() => void updateLicenseStatus("valid")}>اعتماد الرخصة</CpButton>
-            <CpButton variant="danger" disabled={controller.actionBusy} onClick={() => void updateLicenseStatus("rejected")}>رفض الرخصة</CpButton>
-            <CpButton variant="secondary" disabled={controller.actionBusy} onClick={() => void updateLicenseStatus("missing")}>طلب استكمال</CpButton>
-          </div>
-        </div>
+        )}
 
-        <ProviderOperationalCorePanel actorId={captain.actorId} kind="captain" />
-        <ProviderActivationWorkspace providerKind="captain" initialActorId={captain.actorId} entrySource="hr" />
+        {activeTab === "media" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <Text role="titleSm">الصورة ووثائق الرخصة</Text>
+            <Text role="bodySm">الصورة: {captain.photoMediaRef ? "مرتبطة" : "مفقودة"}</Text>
+            <Text role="bodySm">الوثائق: {documentCount}</Text>
+            <Text role="bodySm">حالة الرخصة: {LICENSE_LABEL[profile?.licenseStatus ?? "missing"]}</Text>
+            {uploadError ? <CpStateView kind="error" title={uploadError} /> : null}
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("photo")}>
+                {uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}
+              </CpButton>
+              <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("document")}>
+                {uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة رخصة"}
+              </CpButton>
+            </div>
+            {!canApproveLicense ? (
+              <CpMutedInline>اعتماد الرخصة يتطلب وثيقة مرتبطة وتاريخ انتهاء صالحًا.</CpMutedInline>
+            ) : null}
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <CpButton variant="primary" disabled={!canApproveLicense || controller.actionBusy} onClick={() => void updateLicenseStatus("valid")}>اعتماد الرخصة</CpButton>
+              <CpButton variant="danger" disabled={controller.actionBusy} onClick={() => void updateLicenseStatus("rejected")}>رفض الرخصة</CpButton>
+              <CpButton variant="secondary" disabled={controller.actionBusy} onClick={() => void updateLicenseStatus("missing")}>طلب استكمال</CpButton>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "ops" && (
+          <>
+            <ProviderOperationalCorePanel actorId={captain.actorId} kind="captain" />
+            <ProviderActivationWorkspace providerKind="captain" initialActorId={captain.actorId} entrySource="hr" />
+          </>
+        )}
       </div>
     </DetailPageFrame>
   );

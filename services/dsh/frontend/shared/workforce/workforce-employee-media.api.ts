@@ -16,7 +16,7 @@ export async function uploadEmployeeMedia(actorId: string, file: FieldMediaPickR
     type: file.mimeType,
   } as unknown as Blob);
 
-  const path = `/dsh/operator/workforce/employees/${encodeURIComponent(actorId)}/media/uploads`;
+  const path = `/workforce/employees/${encodeURIComponent(actorId)}/media/uploads`;
   const url = cookieMode ? `${baseUrl.replace(/\/$/, "")}${path}` : new URL(path, baseUrl);
   const response = await fetch(url, {
     method: "POST",

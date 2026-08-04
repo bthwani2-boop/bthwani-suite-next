@@ -9,6 +9,7 @@ import {
   CpMutedInline,
   CpStateView,
   CpTextInput,
+  CpTabs,
 } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
 import { Text } from "@bthwani/ui-kit";
@@ -47,6 +48,7 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
   const employee = controller.state.kind === "ready" ? controller.state.employee : null;
   const profile = employee?.employeeProfile;
 
+  const [activeTab, setActiveTab] = useState("profile");
   const [fullNameAr, setFullNameAr] = useState("");
   const [fullNameEn, setFullNameEn] = useState("");
   const [department, setDepartment] = useState("");
@@ -221,91 +223,111 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          <div><Text role="bodySm">الاسم بالعربية *</Text><CpTextInput value={fullNameAr} onChange={setFullNameAr} aria-label="الاسم بالعربية" /></div>
-          <div><Text role="bodySm">الاسم بالإنجليزية</Text><CpTextInput value={fullNameEn} onChange={setFullNameEn} aria-label="الاسم بالإنجليزية" /></div>
-          <div><Text role="bodySm">الإدارة أو القسم *</Text><CpTextInput value={department} onChange={setDepartment} aria-label="الإدارة أو القسم" /></div>
-          <div><Text role="bodySm">المسمى الوظيفي المختصر *</Text><CpTextInput value={role} onChange={setRole} aria-label="المسمى الوظيفي" /></div>
-          <div><Text role="bodySm">موقع العمل</Text><CpTextInput value={officeLocation} onChange={setOfficeLocation} aria-label="موقع العمل" /></div>
-          <div><Text role="bodySm">تاريخ بداية العمل</Text><CpTextInput value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية العمل" /></div>
+        <CpTabs
+          value={activeTab}
+          onChange={setActiveTab}
+          items={[
+            { label: "الملف الأساسي", value: "profile" },
+            { label: "الوثائق والصور", value: "media" },
+            { label: "التنظيم والحالة", value: "governance" },
+          ]}
+        />
 
-          <Text role="bodySm" style={{ fontWeight: "bold" }}>المشرف والتسلسل الإداري</Text>
-          <SupervisorPicker kind="employee" selected={supervisor} onSelect={setSupervisor} />
-          {controller.actionError ? <CpStateView kind="error" title={controller.actionError} /> : null}
-          <CpButton
-            variant="primary"
-            disabled={!canSave}
-            onClick={() => void controller.update({
-              expectedVersion: employee.version,
-              fullNameAr: fullNameAr.trim(),
-              fullNameEn: fullNameEn.trim() || undefined,
-              department: department.trim(),
-              role: role.trim(),
-              officeLocation: officeLocation.trim() || undefined,
-              engagementStartDate: engagementStartDate.trim() || undefined,
-              supervisorActorId: supervisor?.actorId,
-            })}
-          >
-            {controller.actionBusy ? "جارٍ الحفظ…" : "حفظ البيانات الأساسية"}
-          </CpButton>
-        </div>
+        {activeTab === "profile" && (
+          <>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              <div><Text role="bodySm">الاسم بالعربية *</Text><CpTextInput value={fullNameAr} onChange={setFullNameAr} aria-label="الاسم بالعربية" /></div>
+              <div><Text role="bodySm">الاسم بالإنجليزية</Text><CpTextInput value={fullNameEn} onChange={setFullNameEn} aria-label="الاسم بالإنجليزية" /></div>
+              <div><Text role="bodySm">الإدارة أو القسم *</Text><CpTextInput value={department} onChange={setDepartment} aria-label="الإدارة أو القسم" /></div>
+              <div><Text role="bodySm">المسمى الوظيفي المختصر *</Text><CpTextInput value={role} onChange={setRole} aria-label="المسمى الوظيفي" /></div>
+              <div><Text role="bodySm">موقع العمل</Text><CpTextInput value={officeLocation} onChange={setOfficeLocation} aria-label="موقع العمل" /></div>
+              <div><Text role="bodySm">تاريخ بداية العمل</Text><CpTextInput value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية العمل" /></div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", padding: 16, border: "1px solid var(--bthwani-control-panel-border)", borderRadius: 12 }}>
-          <Text role="titleSm">المنصب والضمانة ونطاق المسؤولية</Text>
-          <CpMutedInline>هذه بيانات تنظيمية فقط. الأدوار والصلاحيات التنفيذية تُدار حصريًا بواسطة Identity ولا يمكن تحريرها من ملف Workforce.</CpMutedInline>
-          <div><Text role="bodySm">المسمى الرسمي *</Text><CpTextInput value={positionTitle} onChange={setPositionTitle} aria-label="المسمى الرسمي" /></div>
-          <div><Text role="bodySm">الدرجة الوظيفية</Text><CpTextInput value={jobGrade} onChange={setJobGrade} aria-label="الدرجة الوظيفية" /></div>
-          <select value={employmentClass} onChange={(event) => setEmploymentClass(event.target.value as EmployeeEmploymentClass)} style={selectStyle} aria-label="الفئة الإدارية">
-            <option value="staff">موظف</option><option value="coordinator">منسق</option><option value="department_manager">مدير قسم</option><option value="executive">إدارة تنفيذية</option><option value="project_manager">مدير المشروع</option>
-          </select>
-          <select value={guaranteeType} onChange={(event) => setGuaranteeType(event.target.value as EmployeeGuaranteeType)} style={selectStyle} aria-label="نوع الضمانة">
-            <option value="none">لا توجد ضمانة</option><option value="personal">ضمانة شخصية</option><option value="financial">ضمانة مالية</option><option value="institutional">ضمانة جهة</option>
-          </select>
-          <select value={guaranteeStatus} onChange={(event) => setGuaranteeStatus(event.target.value as EmployeeGuaranteeStatus)} style={selectStyle} aria-label="حالة الضمانة">
-            <option value="not_required">غير مطلوبة</option><option value="pending">قيد الاستكمال</option><option value="active">سارية</option><option value="released">مفرج عنها</option><option value="forfeited">مصادرة بقرار</option>
-          </select>
-          <div><Text role="bodySm">مرجع الضمانة</Text><CpTextInput value={guaranteeReference} onChange={setGuaranteeReference} aria-label="مرجع الضمانة" /></div>
-          <div><Text role="bodySm">نطاقات المسؤولية</Text><CpTextInput value={responsibilityScopes} onChange={setResponsibilityScopes} placeholder="العمليات، الكباتن، جودة الخدمة" aria-label="نطاقات المسؤولية" /></div>
-          <div><Text role="bodySm">رموز الأقسام المُدارة</Text><CpTextInput value={managedDepartmentCodes} onChange={setManagedDepartmentCodes} placeholder="operations, partners" aria-label="الأقسام المدارة" /></div>
-          <div><Text role="bodySm">ملاحظات القرار</Text><CpTextInput value={governanceNotes} onChange={setGovernanceNotes} aria-label="ملاحظات القرار" /></div>
-          {governanceError ? <CpStateView kind="error" title={governanceError} /> : null}
-          <CpButton variant="primary" disabled={governanceBusy || positionTitle.trim().length === 0} onClick={() => void saveGovernance()}>
-            {governanceBusy ? "جارٍ الحفظ…" : "حفظ نطاق المسؤولية"}
-          </CpButton>
-        </div>
+              <Text role="bodySm" style={{ fontWeight: "bold" }}>المشرف والتسلسل الإداري</Text>
+              <SupervisorPicker kind="employee" selected={supervisor} onSelect={setSupervisor} />
+              {controller.actionError ? <CpStateView kind="error" title={controller.actionError} /> : null}
+              <CpButton
+                variant="primary"
+                disabled={!canSave}
+                onClick={() => void controller.update({
+                  expectedVersion: employee.version,
+                  fullNameAr: fullNameAr.trim(),
+                  fullNameEn: fullNameEn.trim() || undefined,
+                  department: department.trim(),
+                  role: role.trim(),
+                  officeLocation: officeLocation.trim() || undefined,
+                  engagementStartDate: engagementStartDate.trim() || undefined,
+                  supervisorActorId: supervisor?.actorId,
+                })}
+              >
+                {controller.actionBusy ? "جارٍ الحفظ…" : "حفظ البيانات الأساسية"}
+              </CpButton>
+            </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          <Text role="titleSm">الصورة والوثائق الوظيفية</Text>
-          <Text role="bodySm">الصورة: {employee.photoMediaRef ? "مرتبطة" : "مفقودة"}</Text>
-          <Text role="bodySm">الوثائق: {profile?.documentMediaRefs.length ?? 0}</Text>
-          {uploadError ? <CpStateView kind="error" title={uploadError} /> : null}
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("photo")}>{uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}</CpButton>
-            <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("document")}>{uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة وظيفية"}</CpButton>
+            <div style={{ marginTop: "1rem" }}>
+              <Text role="titleSm">ملخص الملف</Text>
+              <CpDescriptionList>
+                <CpDescriptionRow label="الهاتف">{employee.phoneMasked ?? "—"}</CpDescriptionRow>
+                <CpDescriptionRow label="القسم">{profile?.department ?? "—"}</CpDescriptionRow>
+                <CpDescriptionRow label="الدور">{profile?.role ?? "—"}</CpDescriptionRow>
+                <CpDescriptionRow label="الموقع">{profile?.officeLocation ?? "—"}</CpDescriptionRow>
+                <CpDescriptionRow label="الفئة الإدارية">{governance?.employmentClass ?? "—"}</CpDescriptionRow>
+                <CpDescriptionRow label="حالة الضمانة">{governance?.guaranteeStatus ?? "—"}</CpDescriptionRow>
+              </CpDescriptionList>
+            </div>
+          </>
+        )}
+
+        {activeTab === "governance" && (
+          <>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", padding: 16, border: "1px solid var(--bthwani-control-panel-border)", borderRadius: 12 }}>
+              <Text role="titleSm">المنصب والضمانة ونطاق المسؤولية</Text>
+              <CpMutedInline>هذه بيانات تنظيمية فقط. الأدوار والصلاحيات التنفيذية تُدار حصريًا بواسطة Identity ولا يمكن تحريرها من ملف Workforce.</CpMutedInline>
+              <div><Text role="bodySm">المسمى الرسمي *</Text><CpTextInput value={positionTitle} onChange={setPositionTitle} aria-label="المسمى الرسمي" /></div>
+              <div><Text role="bodySm">الدرجة الوظيفية</Text><CpTextInput value={jobGrade} onChange={setJobGrade} aria-label="الدرجة الوظيفية" /></div>
+              <select value={employmentClass} onChange={(event) => setEmploymentClass(event.target.value as EmployeeEmploymentClass)} style={selectStyle} aria-label="الفئة الإدارية">
+                <option value="staff">موظف</option><option value="coordinator">منسق</option><option value="department_manager">مدير قسم</option><option value="executive">إدارة تنفيذية</option><option value="project_manager">مدير المشروع</option>
+              </select>
+              <select value={guaranteeType} onChange={(event) => setGuaranteeType(event.target.value as EmployeeGuaranteeType)} style={selectStyle} aria-label="نوع الضمانة">
+                <option value="none">لا توجد ضمانة</option><option value="personal">ضمانة شخصية</option><option value="financial">ضمانة مالية</option><option value="institutional">ضمانة جهة</option>
+              </select>
+              <select value={guaranteeStatus} onChange={(event) => setGuaranteeStatus(event.target.value as EmployeeGuaranteeStatus)} style={selectStyle} aria-label="حالة الضمانة">
+                <option value="not_required">غير مطلوبة</option><option value="pending">قيد الاستكمال</option><option value="active">سارية</option><option value="released">مفرج عنها</option><option value="forfeited">مصادرة بقرار</option>
+              </select>
+              <div><Text role="bodySm">مرجع الضمانة</Text><CpTextInput value={guaranteeReference} onChange={setGuaranteeReference} aria-label="مرجع الضمانة" /></div>
+              <div><Text role="bodySm">نطاقات المسؤولية</Text><CpTextInput value={responsibilityScopes} onChange={setResponsibilityScopes} placeholder="العمليات، الكباتن، جودة الخدمة" aria-label="نطاقات المسؤولية" /></div>
+              <div><Text role="bodySm">رموز الأقسام المُدارة</Text><CpTextInput value={managedDepartmentCodes} onChange={setManagedDepartmentCodes} placeholder="operations, partners" aria-label="الأقسام المدارة" /></div>
+              <div><Text role="bodySm">ملاحظات القرار</Text><CpTextInput value={governanceNotes} onChange={setGovernanceNotes} aria-label="ملاحظات القرار" /></div>
+              {governanceError ? <CpStateView kind="error" title={governanceError} /> : null}
+              <CpButton variant="primary" disabled={governanceBusy || positionTitle.trim().length === 0} onClick={() => void saveGovernance()}>
+                {governanceBusy ? "جارٍ الحفظ…" : "حفظ نطاق المسؤولية"}
+              </CpButton>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              <Text role="titleSm">إدارة الحالة الوظيفية</Text>
+              <div><Text role="bodySm">سبب الإيقاف أو إعادة التفعيل *</Text><CpTextInput value={reason} onChange={setReason} placeholder="اكتب سببًا تشغيليًا واضحًا" aria-label="سبب الإيقاف أو إعادة التفعيل" /></div>
+              {employee.engagementStatus === "suspended" ? (
+                <CpButton variant="primary" disabled={!canChangeStatus} onClick={() => void controller.reactivate(employee.version, reason.trim()).then((ok) => { if (ok) setReason(""); })}>{controller.actionBusy ? "جارٍ التنفيذ…" : "إعادة تفعيل الموظف"}</CpButton>
+              ) : (
+                <CpButton variant="danger" disabled={!canChangeStatus} onClick={() => void controller.suspend(employee.version, reason.trim()).then((ok) => { if (ok) setReason(""); })}>{controller.actionBusy ? "جارٍ التنفيذ…" : "تعليق الموظف"}</CpButton>
+              )}
+            </div>
+          </>
+        )}
+
+        {activeTab === "media" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <Text role="titleSm">الصورة والوثائق الوظيفية</Text>
+            <Text role="bodySm">الصورة: {employee.photoMediaRef ? "مرتبطة" : "مفقودة"}</Text>
+            <Text role="bodySm">الوثائق: {profile?.documentMediaRefs.length ?? 0}</Text>
+            {uploadError ? <CpStateView kind="error" title={uploadError} /> : null}
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("photo")}>{uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}</CpButton>
+              <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("document")}>{uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة وظيفية"}</CpButton>
+            </div>
           </div>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          <Text role="titleSm">إدارة الحالة الوظيفية</Text>
-          <div><Text role="bodySm">سبب الإيقاف أو إعادة التفعيل *</Text><CpTextInput value={reason} onChange={setReason} placeholder="اكتب سببًا تشغيليًا واضحًا" aria-label="سبب الإيقاف أو إعادة التفعيل" /></div>
-          {employee.engagementStatus === "suspended" ? (
-            <CpButton variant="primary" disabled={!canChangeStatus} onClick={() => void controller.reactivate(employee.version, reason.trim()).then((ok) => { if (ok) setReason(""); })}>{controller.actionBusy ? "جارٍ التنفيذ…" : "إعادة تفعيل الموظف"}</CpButton>
-          ) : (
-            <CpButton variant="danger" disabled={!canChangeStatus} onClick={() => void controller.suspend(employee.version, reason.trim()).then((ok) => { if (ok) setReason(""); })}>{controller.actionBusy ? "جارٍ التنفيذ…" : "تعليق الموظف"}</CpButton>
-          )}
-        </div>
-
-        <div>
-          <Text role="titleSm">ملخص الملف</Text>
-          <CpDescriptionList>
-            <CpDescriptionRow label="الهاتف">{employee.phoneMasked ?? "—"}</CpDescriptionRow>
-            <CpDescriptionRow label="القسم">{profile?.department ?? "—"}</CpDescriptionRow>
-            <CpDescriptionRow label="الدور">{profile?.role ?? "—"}</CpDescriptionRow>
-            <CpDescriptionRow label="الموقع">{profile?.officeLocation ?? "—"}</CpDescriptionRow>
-            <CpDescriptionRow label="الفئة الإدارية">{governance?.employmentClass ?? "—"}</CpDescriptionRow>
-            <CpDescriptionRow label="حالة الضمانة">{governance?.guaranteeStatus ?? "—"}</CpDescriptionRow>
-          </CpDescriptionList>
-        </div>
+        )}
       </div>
     </DetailPageFrame>
   );

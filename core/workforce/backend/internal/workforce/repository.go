@@ -820,3 +820,41 @@ func nonNil(values []string) []string {
 	}
 	return values
 }
+func (r *Repository) CreateProvisioningCase(ctx context.Context, c ProvisioningCase) error {
+	_, err := r.db.ExecContext(ctx, `
+		INSERT INTO workforce_provisioning_cases
+		(id, idempotency_key, status, workforce_kind, actor_id, workforce_code, payload, failure_reason)
+		VALUES ($1, $2, $3, $4, NULLIF($5, ''), NULLIF($6, ''), $7, NULLIF($8, ''))`,
+		c.ID, c.IdempotencyKey, c.Status, c.WorkforceKind, c.ActorID, c.WorkforceCode, c.Payload, c.FailureReason)
+	return err
+}
+
+func (r *Repository) UpdateProvisioningCase(ctx context.Context, c ProvisioningCase) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE workforce_provisioning_cases
+		SET status = $2, actor_id = NULLIF($3, ''), workforce_code = NULLIF($4, ''), 
+		    failure_reason = NULLIF($5, ''), updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1`,
+		c.ID, c.Status, c.ActorID, c.WorkforceCode, c.FailureReason)
+	return err
+}
+
+func (r *Repository) GetProvisioningCase(ctx context.Context, id string) (ProvisioningCase, error) {
+	var c ProvisioningCase
+	var actorID, code, failureReason sql.NullString
+	err := r.db.QueryRowContext(ctx, `
+		SELECT id, idempotency_key, status, workforce_kind, actor_id, workforce_code, payload, failure_reason, created_at, updated_at
+		FROM workforce_provisioning_cases
+		WHERE id = $1`, id).Scan(
+		&c.ID, &c.IdempotencyKey, &c.Status, &c.WorkforceKind, &actorID, &code, &c.Payload, &failureReason, &c.CreatedAt, &c.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ProvisioningCase{}, ErrNotFound
+		}
+		return ProvisioningCase{}, err
+	}
+	c.ActorID = actorID.String
+	c.WorkforceCode = code.String
+	c.FailureReason = failureReason.String
+	return c, nil
+}
