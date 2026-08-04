@@ -330,28 +330,29 @@ export const ENGAGEMENT_TYPE_LABEL_AR: Record<EngagementType, string> = {
   independent_contractor: "مقدم خدمة مستقل",
   employee: "موظف رسمي",
 };
+
 export type ProvisioningCase = {
-  id: string;
-  idempotencyKey: string;
-  status: string;
-  workforceKind: string;
-  actorId?: string;
-  workforceCode?: string;
-  payload: any;
-  failureReason?: string;
-  createdAt: string;
-  updatedAt: string;
+  readonly id: string;
+  readonly idempotencyKey: string;
+  readonly status: string;
+  readonly workforceKind: string;
+  readonly actorId?: string;
+  readonly workforceCode?: string;
+  readonly failureReason?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 };
 
 export type StartProvisioningInput = {
-  workforceKind: string;
-  username: string;
-  phoneE164: string;
-  role: string;
-  operatorContextId?: string;
-  payload: any;
+  readonly workforceKind: string;
+  readonly username: string;
+  readonly phoneE164: string;
+  readonly role: string;
+  readonly operatorContextId: string;
+  readonly payload: Record<string, unknown>;
 };
-export type BlockerReason = 
+
+export type BlockerReason =
   | "IDENTITY_SUSPENDED"
   | "PROFILE_INCOMPLETE"
   | "DOCUMENTS_EXPIRED"
@@ -362,9 +363,10 @@ export type BlockerReason =
   | "FINANCIAL_ELIGIBILITY_BLOCKED"
   | "ELIGIBILITY_UNAVAILABLE";
 
-export interface ReadinessGate {
-  actorId: string;
-  status: "ALLOWED" | "BLOCKED";
-  blockerReasons: BlockerReason[];
-  checkedAt: string;
-}
+export type ReadinessGate = {
+  readonly actorId: string;
+  readonly workforceKind: string;
+  readonly status: "ALLOWED" | "BLOCKED";
+  readonly blockerReasons: readonly BlockerReason[];
+  readonly checkedAt: string;
+};
