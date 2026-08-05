@@ -1,0 +1,118 @@
+openapi: 3.1.0
+info:
+  title: BThwani WLT Pricing Quotes API
+  version: 1.0.0
+  description: >-
+    Authoritative financial pricing engine for carts and checkouts. DSH provides
+    operational inputs (items, raw delivery fee distances), and WLT returns the
+    sovereign Quote containing taxes, fees, discounts, and rounding policies.
+x-bthwani-owner: services/wlt
+x-bthwani-capability: governed-pricing
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-financial-owner: true
+x-bthwani-client-generation: ENABLED
+servers:
+  - url: http://localhost:58083
+paths:
+  /wlt/internal/quotes/calculate:
+    post:
+      operationId: calculateWltPricingQuote
+      summary: Calculate the sovereign financial quote from operational inputs.
+      tags: [ WltPricing ]
+      security: [ { serviceBearer: [] } ]
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CalculateQuoteRequest' }
+      responses:
+        '200':
+          description: Authoritative Pricing Quote.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PricingQuoteResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+
+components:
+  schemas:
+    CalculateQuoteRequest:
+      type: object
+      additionalProperties: false
+      required: [ clientId, storeId, currency, lines ]
+      properties:
+        clientId: { type: string, minLength: 1 }
+        storeId: { type: string, minLength: 1 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        deliveryFeeInputMinorUnits: { type: integer, format: int64, default: 0 }
+        serviceFeeInputMinorUnits: { type: integer, format: int64, default: 0 }
+        cartVersion: { type: integer, default: 0 }
+        lines:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/QuoteInputLine' }
+    
+    QuoteInputLine:
+      type: object
+      additionalProperties: false
+      required: [ masterProductId, quantity, unitPriceMinorUnits ]
+      properties:
+        masterProductId: { type: string, minLength: 1 }
+        productName: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        unitPriceMinorUnits: { type: integer, format: int64, minimum: 0 }
+
+    PricingQuoteResponse:
+      type: object
+      required: [ quote ]
+      properties:
+        quote: { $ref: '#/components/schemas/WltPricingQuote' }
+
+    WltPricingQuote:
+      type: object
+      required:
+        [
+          lines,
+          subtotalMinorUnits,
+          deliveryFeeMinorUnits,
+          serviceFeeMinorUnits,
+          taxMinorUnits,
+          discountMinorUnits,
+          roundingMinorUnits,
+          totalMinorUnits,
+          currency,
+          fundingRefs,
+          hash,
+          version
+        ]
+      properties:
+        lines:
+          type: array
+          items: { $ref: '#/components/schemas/QuoteOutputLine' }
+        subtotalMinorUnits: { type: integer, format: int64 }
+        deliveryFeeMinorUnits: { type: integer, format: int64 }
+        serviceFeeMinorUnits: { type: integer, format: int64 }
+        taxMinorUnits: { type: integer, format: int64 }
+        discountMinorUnits: { type: integer, format: int64 }
+        roundingMinorUnits: { type: integer, format: int64 }
+        totalMinorUnits: { type: integer, format: int64 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        fundingRefs:
+          type: array
+          items: { type: string }
+        hash: { type: string }
+        version: { type: integer }
+        expiresAt: { type: string, format: date-time, nullable: true }
+
+    QuoteOutputLine:
+      type: object
+      required: [ masterProductId, quantity, unitPriceMinorUnits, totalMinorUnits ]
+      properties:
+        masterProductId: { type: string }
+        productName: { type: string }
+        quantity: { type: integer }
+        unitPriceMinorUnits: { type: integer, format: int64 }
+        totalMinorUnits: { type: integer, format: int64 }

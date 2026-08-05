@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/lib/pq"
+	"dsh-api/internal/wlt"
 )
 
 var (
@@ -52,81 +53,70 @@ type CartItem struct {
 }
 
 type Cart struct {
-	ID              string          `json:"id"`
-	ClientID        string          `json:"clientId"`
-	StoreID         string          `json:"storeId"`
-	FulfillmentMode FulfillmentMode `json:"fulfillmentMode"`
-	State           string          `json:"state"`
-	Note            string          `json:"note"`
-	Items           []CartItem      `json:"items"`
-	Quote           PricingQuote    `json:"quote"`
-	Version         int             `json:"version"`
-	CreatedAt       time.Time       `json:"createdAt"`
-	UpdatedAt       time.Time       `json:"updatedAt"`
+	ID              string           `json:"id"`
+	ClientID        string           `json:"clientId"`
+	StoreID         string           `json:"storeId"`
+	FulfillmentMode FulfillmentMode  `json:"fulfillmentMode"`
+	State           string           `json:"state"`
+	Note            string           `json:"note"`
+	Items           []CartItem       `json:"items"`
+	// Quote is the authoritative financial quote from WLT. DSH never mutates it.
+	Quote           *wlt.WltPricingQuote `json:"quote"`
+	Version         int              `json:"version"`
+	CreatedAt       time.Time        `json:"createdAt"`
+	UpdatedAt       time.Time        `json:"updatedAt"`
 }
 
-type PricingQuoteLine struct {
-	MasterProductID     string `json:"masterProductId"`
-	ProductName         string `json:"productName"`
-	Quantity            int    `json:"quantity"`
-	UnitPriceMinorUnits int64  `json:"unitPriceMinorUnits"`
-	TotalMinorUnits     int64  `json:"totalMinorUnits"`
+// FetchDeliveryFeeMinorUnits reads the store's persisted delivery fee from the
+// DSH operational database. This is a DSH concern (logistics configuration),
+// not a financial computation — WLT receives it as a raw input.
+func FetchDeliveryFeeMinorUnits(ctx context.Context, db *sql.DB, storeID string) int64 {
+	var fee int64
+	_ = db.QueryRowContext(ctx,
+		"SELECT COALESCE(delivery_fee_minor, 0) FROM dsh_store_delivery_settings WHERE store_id = $1",
+		storeID,
+	).Scan(&fee)
+	return fee
 }
 
-type PricingQuote struct {
-	Lines                 []PricingQuoteLine `json:"lines"`
-	SubtotalMinorUnits    int64              `json:"subtotalMinorUnits"`
-	DeliveryFeeMinorUnits int64              `json:"deliveryFeeMinorUnits"`
-	ServiceFeeMinorUnits  int64              `json:"serviceFeeMinorUnits"`
-	TaxMinorUnits         int64              `json:"taxMinorUnits"`
-	DiscountMinorUnits    int64              `json:"discountMinorUnits"`
-	RoundingMinorUnits    int64              `json:"roundingMinorUnits"`
-	TotalMinorUnits       int64              `json:"totalMinorUnits"`
-	Currency              string             `json:"currency"`
-	FundingRefs           []string           `json:"fundingRefs"`
-	Hash                  string             `json:"hash"`
-	Version               int                `json:"version"`
-	ExpiresAt             *time.Time         `json:"expiresAt"`
-}
-
-func GenerateQuote(c *Cart, db *sql.DB, ctx context.Context) PricingQuote {
-	quote := PricingQuote{
-		Lines:       []PricingQuoteLine{},
-		FundingRefs: []string{},
-		Version:     c.Version,
+// FetchWltQuote calls WLT's sovereign pricing engine. DSH passes operational
+// inputs; WLT owns all arithmetic, rounding, tax, and discount logic.
+// If wltClient is nil (unconfigured) it returns nil so callers can handle gracefully.
+func FetchWltQuote(ctx context.Context, db *sql.DB, wltClient interface{ CalculateQuote(context.Context, wlt.CalculatePricingQuoteRequest) (*wlt.WltPricingQuote, error) }, c *Cart) (*wlt.WltPricingQuote, error) {
+	if wltClient == nil {
+		return nil, nil
 	}
+
 	var currency string
+	lines := make([]wlt.QuotePricingInputLine, 0, len(c.Items))
 	for _, item := range c.Items {
-		currency = item.Currency
-		lineTotal := item.UnitPriceMinorUnits * int64(item.Quantity)
-		quote.Lines = append(quote.Lines, PricingQuoteLine{
+		if item.Currency != "" {
+			currency = item.Currency
+		}
+		lines = append(lines, wlt.QuotePricingInputLine{
 			MasterProductID:     item.MasterProductID,
 			ProductName:         item.ProductName,
 			Quantity:            item.Quantity,
 			UnitPriceMinorUnits: item.UnitPriceMinorUnits,
-			TotalMinorUnits:     lineTotal,
 		})
-		quote.SubtotalMinorUnits += lineTotal
-	}
-	quote.Currency = currency
-
-	// Fetch delivery fee if available
-	var deliveryFee int64
-	err := db.QueryRowContext(ctx, "SELECT COALESCE(delivery_fee_minor, 0) FROM dsh_store_delivery_settings WHERE store_id = $1", c.StoreID).Scan(&deliveryFee)
-	if err == nil {
-		quote.DeliveryFeeMinorUnits = deliveryFee
 	}
 
-	quote.TotalMinorUnits = quote.SubtotalMinorUnits + quote.DeliveryFeeMinorUnits + quote.ServiceFeeMinorUnits + quote.TaxMinorUnits - quote.DiscountMinorUnits + quote.RoundingMinorUnits
+	if len(lines) == 0 {
+		// Empty cart — no quote needed yet
+		return nil, nil
+	}
 
-	b, _ := json.Marshal(quote)
-	h := sha256.Sum256(b)
-	quote.Hash = hex.EncodeToString(h[:])
-	
-	expiresAt := time.Now().Add(15 * time.Minute)
-	quote.ExpiresAt = &expiresAt
+	deliveryFee := FetchDeliveryFeeMinorUnits(ctx, db, c.StoreID)
 
-	return quote
+	return wltClient.CalculateQuote(ctx, wlt.CalculatePricingQuoteRequest{
+		ClientID:                   c.ClientID,
+		StoreID:                    c.StoreID,
+		Currency:                   currency,
+		DeliveryFeeInputMinorUnits: deliveryFee,
+		ServiceFeeInputMinorUnits:  0,
+		CartVersion:                c.Version,
+		Lines:                      lines,
+	})
 }
 
 type ServiceabilityResult struct {
@@ -184,7 +174,13 @@ func hashOptions(options []string) string {
 	return hex.EncodeToString(h[:])
 }
 
-func GetOrCreateActiveCart(ctx context.Context, db *sql.DB, clientID, storeID string, mode FulfillmentMode) (*Cart, error) {
+// wltQuoter is the minimal WLT interface required by cart functions to fetch
+// a sovereign pricing quote. This avoids a direct import cycle.
+type wltQuoter interface {
+	CalculateQuote(context.Context, wlt.CalculatePricingQuoteRequest) (*wlt.WltPricingQuote, error)
+}
+
+func GetOrCreateActiveCart(ctx context.Context, db *sql.DB, wc wltQuoter, clientID, storeID string, mode FulfillmentMode) (*Cart, error) {
 	var c Cart
 	err := db.QueryRowContext(ctx,
 		`SELECT id, client_id, store_id, fulfillment_mode, state, note, version, created_at, updated_at
@@ -204,11 +200,12 @@ func GetOrCreateActiveCart(ctx context.Context, db *sql.DB, clientID, storeID st
 		return nil, err
 	}
 	c.Items = items
-	c.Quote = GenerateQuote(&c, db, ctx)
+	// WLT is the sovereign owner of the quote. Ignore quote fetch errors gracefully.
+	c.Quote, _ = FetchWltQuote(ctx, db, wc, &c)
 	return &c, nil
 }
 
-func GetCart(ctx context.Context, db *sql.DB, clientID, storeID string) (*Cart, error) {
+func GetCart(ctx context.Context, db *sql.DB, wc wltQuoter, clientID, storeID string) (*Cart, error) {
 	var c Cart
 	err := db.QueryRowContext(ctx,
 		`SELECT id, client_id, store_id, fulfillment_mode, state, note, version, created_at, updated_at
@@ -228,7 +225,8 @@ func GetCart(ctx context.Context, db *sql.DB, clientID, storeID string) (*Cart, 
 		return nil, err
 	}
 	c.Items = items
-	c.Quote = GenerateQuote(&c, db, ctx)
+	// WLT is the sovereign owner of the quote. Ignore quote fetch errors gracefully.
+	c.Quote, _ = FetchWltQuote(ctx, db, wc, &c)
 	return &c, nil
 }
 

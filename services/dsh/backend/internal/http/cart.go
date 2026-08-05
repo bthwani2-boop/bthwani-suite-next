@@ -137,7 +137,7 @@ func (s *protectedStoreServer) handleGetCart(w http.ResponseWriter, r *http.Requ
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId query parameter is required")
 		return
 	}
-	current, err := cart.GetCart(r.Context(), s.db, actor.ID, storeID)
+	current, err := cart.GetCart(r.Context(), s.db, s.wlt, actor.ID, storeID)
 	if errors.Is(err, cart.ErrNotFound) {
 		store.SendJSON(w, http.StatusOK, map[string]any{"cart": nil})
 		return
@@ -263,7 +263,7 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 	}
 
 	// Read cart again to get updated version
-	updatedCart, err := cart.GetCart(r.Context(), s.db, actor.ID, body.StoreID)
+	updatedCart, err := cart.GetCart(r.Context(), s.db, s.wlt, actor.ID, body.StoreID)
 	if err == nil {
 		w.Header().Set("ETag", fmt.Sprintf(`"%d"`, updatedCart.Version))
 	}
@@ -335,7 +335,7 @@ func (s *protectedStoreServer) handleClearCart(w http.ResponseWriter, r *http.Re
 		return
 	}
 	if storeID != "" {
-		current, err := cart.GetCart(r.Context(), s.db, actor.ID, storeID)
+		current, err := cart.GetCart(r.Context(), s.db, s.wlt, actor.ID, storeID)
 		if errors.Is(err, cart.ErrNotFound) {
 			w.WriteHeader(http.StatusNoContent)
 			return
