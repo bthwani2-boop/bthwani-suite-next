@@ -3,18 +3,28 @@
 ```yaml
 repository: bthwani2-boop/bthwani-suite-next
 branch: smsm
-last_assessed_sha: 9ee33187eac5d44832f9cb7a43d48117e5922b1c
-current_package_sha: 9ee33187eac5d44832f9cb7a43d48117e5922b1c
+last_assessed_sha: 324afd261e6239ea75a4598c706194ab57f00121
+current_package_sha: 324afd261e6239ea75a4598c706194ab57f00121
 status: FIX_REQUIRED
 journey_execution_allowed: false
 journey_assessment_allowed: true
 merge_allowed: false
 ```
 
-> `status` stays `FIX_REQUIRED` deliberately. PHASE-01..05 closed with evidence
-> on this head, but PHASE-06 did not: the authenticated DSH↔WLT financial
-> readback is unproven, and a newly found systemic authorization defect
-> (`FND-D06`) is open. Technical progress is not product acceptance.
+> `status` stays `FIX_REQUIRED` deliberately. Since the prior pin
+> (`9ee33187e`), a concurrent commit (`71d32fd2e`, "Architectural
+> Reconstruction Of DSH Infrastructure") broke the DSH/WLT/Workforce Go build,
+> drifted four services' migration manifests, and reintroduced `FND-D06` at
+> larger scope by discarding a permission-check wrapper across the whole
+> catalog surface. Five commits on this pin (`2933f82dd`..`324afd261`) restore
+> a green build, close manifest sovereignty, correct `dsh-990`'s drop list,
+> and close `FND-D06` with runtime-proven evidence (see below). What remains
+> before `journey_execution_allowed` can flip: `guard:dsh-route-declaration`
+> has 19 pre-existing violations unrelated to authorization (undeclared
+> change-set/provider routes, stale allowlist entries), and the authenticated
+> DSH↔WLT financial-eligibility readback is still unproven for the same
+> environment/seed reason as the prior pin. Technical progress is not product
+> acceptance.
 
 ## الهدف
 
@@ -67,27 +77,102 @@ merge_allowed: false
 - `wlt_runtime`: 53 جدولًا؛ جدولا `wlt_dispatch_financial_eligibility_{policies,decisions}` موجودان.
 - `dsh_platform_dispatch_balance_policy` **محذوف** — ما يثبت أن إزالة القارئ الميت كانت صحيحة.
 
+**تصحيح إضافي على SHA `324afd261`** (نفس الفئة، سبب مختلف): `71d32fd2e` أعاد نفس الخطأ بشكل
+مختلف — عدّل `dsh-014` (HISTORICAL_IMMUTABLE) في مكانه لحذف `dsh_admin_staff_assignments`، وأضاف
+`dsh-990` (DROP لعشرة جداول) بلا تسجيل في المانيفست، مع تكرار `dsh-972` عند ordinal 197 وordinals
+198-200 غير متسلسلة. الأخطر: `dsh-990` كان يحذف `dsh_store_actor_scopes` و`dsh_admin_roles` رغم
+كونهما حيّين ومحمَّلين — الأول موثَّق صراحة في `store/governance.go` كحدّ التفويض الوحيد المملوك
+لـDSH ("must not become a parallel authorization source")، وهو تناقض مباشر مع افتراض `dsh-990`.
+أُعيد ضبط checksum بعد استعادة `dsh-014`، وأُزيلت الجدولان الحيّان من قائمة DROP في `dsh-990` مع
+توثيق السبب داخل الملف نفسه، وأُسقط `dsh_admin_staff_assignments` من الكود (كانت `LoadSnapshot`
+تستعلمه فتفشل بـ500 على أي قاعدة بيانات جديدة، بمعزل عن `dsh-990`). `guard:migration-manifest-drift`
+PASS لكل التسعة فحوص (dsh, wlt, identity, workforce, providers, platform-control + 3 حوكمة) على
+SHA `324afd261`.
+
 ### FND-D04 — Runtime proof — **مغلق جزئيًا**
 
-- **مثبت**: الحاويات كلها ترتفع سليمة (identity/workforce/dsh/wlt/minio/mailpit/wiremock)، والمهاجرات تُطبَّق، وتزويد الكوادر المحلي ينجح، وsmoke ينفّذ تدفقات DSH حقيقية بقراءة راجعة فعلية (حَجْب متجر ← عام 404 ← إظهار ← عام 200).
-- **غير مثبت**: القراءة الراجعة المصادَق عليها لأهلية DSH↔WLT المالية. المشغّل المحلي لا يملك `dsh.dispatch_financial_eligibility.read/manage` (يرد 403 وهو سلوك fail-closed صحيح)، وكوادر Workforce تسجّل الدخول بـOTP لا بكلمة مرور. مانع بيئة/بذور لا عيب كود.
+- **مثبت (SHA سابق)**: الحاويات كلها ترتفع سليمة (identity/workforce/dsh/wlt/minio/mailpit/wiremock)، والمهاجرات تُطبَّق، وتزويد الكوادر المحلي ينجح، وsmoke ينفّذ تدفقات DSH حقيقية بقراءة راجعة فعلية (حَجْب متجر ← عام 404 ← إظهار ← عام 200).
+- **مثبت من جديد على SHA `324afd261`** بعد `runtime:full:reset` كامل (identity 21 ملفًا، workforce
+  16، wlt وdsh بلا أخطاء): الحاويات الثمانية جميعها HEALTHY، بما فيها `dsh-api` التي كانت لا تُبنى
+  أصلًا قبل هذه الجولة (`71d32fd2e` كسر البناء). `GET /dsh/stores` أرجع `200` وبيانات صالحة.
+  `GET /dsh/readiness` أرجع `HEALTHY` لكل الاعتماديات (`identity`, `postgres`, `storage`,
+  `wlt_service`). فحص قاعدة بيانات مباشر أكّد حالة المخطط المطابقة تمامًا لتصحيحات هذه الجولة
+  (انظر FND-D03 وFND-D06). ملاحظة أداة: نص `runtime:full:smoke` نفسه فشل مرتين — أولًا بسبب نافذة
+  انتظار جاهزية DSH الثابتة عند 20 محاولة (الخدمة أصبحت HEALTHY خلال ثوانٍ من انتهاء النافذة، مؤكَّد
+  بـ`curl` مباشر)، وثانيًا بسبب `LOGIN_RATE_LIMITED` من محاولات دخول متكررة أثناء هذه الجلسة —
+  مانع بيئة/سكربت لا عيب كود، ولم يُصلَح هذه الجولة.
+- **غير مثبت**: القراءة الراجعة المصادَق عليها لأهلية DSH↔WLT المالية. المشغّل المحلي لا يملك `dsh.dispatch_financial_eligibility.read/manage` (يرد 403 وهو سلوك fail-closed صحيح)، وكوادر Workforce تسجّل الدخول بـOTP لا بكلمة مرور. مانع بيئة/بذور لا عيب كود. لم يُحاول إثباته هذه الجولة بسبب rate-limit الدخول المذكور أعلاه.
 - **فشل قائم غير متعلق بهذه الجولة**: `dsh-catalog-transition-*` في smoke يتوقع خاصية `proposal` لا يجدها. الملفان (`catalog_proposal_occ_handlers.go` و`diagnose-dsh-smoke-auth-boundary.ps1`) لم تمسّهما هذه الجولة.
 
-### FND-D06 — مسارات سيادية بلا إنفاذ صلاحيات تُرجِع 200 فارغة — **مفتوح (P0)**
+### FND-D06 — مسارات سيادية بلا إنفاذ صلاحيات تُرجِع 200 فارغة — **مغلق بدليل** (كان P0)
 
-اكتُشف أثناء تشغيل Runtime لا بقراءة الكود.
+اكتُشف أثناء تشغيل Runtime لا بقراءة الكود، وأُعيد فتحه بنطاق أوسع بعد أن أسقط `71d32fd2e`
+(commit تنافسي على هذا الفرع) `withPermission` عن ~30 مسار catalog إضافيًا عبر تحويل
+`requireCatalogPermission` إلى دالة عابرة تتجاهل الصلاحية الممرَّرة وتسقط إلى `ActorFromContext`.
 
 `withPermission` هو ما يوثّق المتصل **ويضع الـactor في سياق الطلب**. المعالجات التي تبدأ بـ
 `ActorFromContext` (بحث سياق صامت لا يكتب استجابة) تعود مبكرًا دون كتابة أي شيء عند غياب الـactor،
 فينتج **HTTP 200 بجسم فارغ** لأي متصل، موثَّق أو لا — نجاح كاذب وقدرة معطّلة.
 
-- **مُصلَح في هذه الجولة**: ثمانية مسارات سياسة تشغيلية سيادية (zones وsla-rules وcapacity وserviceability) أُعيد لها `withPermission` بثوابت الصلاحيات الموثّقة في `platformpolicies_routes.go`. الدليل: zones بتوكيد → `200 {"zones":[]}`؛ بلا توكيد → `401 UNAUTHENTICATED` (كان 200 فارغًا في الحالتين).
-- **باقٍ مفتوحًا**: مسح ثابت وجد نحو 36 مسارًا بنفس النمط، وتأكّد ثلاثة من أربعة عيّنات تجريبيًا:
-  `GET /dsh/operator/support/incidents`، `GET /dsh/operator/platform/operational-policy/audit`،
-  `GET /dsh/operator/dispatch/heatmap` — كلها 200 بجسم فارغ للموثَّق وغير الموثَّق.
-  المجموعة تشمل مسارات مالية: `refunds/{id}/approve|reject` و`me/finance/payout-requests` و`payout-destination`.
-  `GET /dsh/operator/catalog/domains` سليم (401/200) أي أن المسح الثابت يعطي إيجابيات كاذبة ويجب التحقق من كل مسار تجريبيًا.
-- **المطلوب**: لكل مسار، تحديد الصلاحية الصحيحة من Product Truth لا بالتخمين، ثم حارس انحدار يمنع تسجيل معالج يعتمد `ActorFromContext` بلا غلاف صلاحيات.
+**مُصلَح ومثبت بالكامل على SHA `324afd261`:**
+
+- `requireCatalogPermission` أصبح استدعاءً حقيقيًا لـ`requirePermission` بدل التجاهل الصامت —
+  ~30 مسار catalog كانت تُقرأ كأنها محمية (كل موقع استدعاء يمرّر ثابت صلاحية حقيقي) دون أن تتحقق
+  من شيء فعليًا.
+- 37 مسارًا مؤكَّدًا عبر 12 ملفًا أُعيد ربطها بـ`withPermission`، كل واحد بالصلاحية المطابقة لعقد
+  OpenAPI (`dsh.operational-policy-permissions.overlay.yaml`, `x-bthwani-required-scope`) حيث
+  وُجد، أو بمطابقة مسار شقيق مربوط بشكل صحيح مسبقًا في نفس الملف — لا بالتخمين. مساران متعددا
+  النطاق (`PUT .../operational-profiles/{zoneId}`) احتاجا combinator جديدًا
+  (`requireOperationalProfileManage`) يفرض كِلا الصلاحيتين المعلنتين في العقد.
+- اكتُشفت ثغرة أخطر من النمط الأساسي: `GET /dsh/operator/workforce/scopes/{actorId}` كانت بلا
+  أي مصادقة إطلاقًا، وتأخذ `operatorContextId` مباشرة من query string العميل — IDOR عابر
+  للـOperatorContext يُرجع بيانات نطاق فعلية، لا مجرد فحص مفقود. الخادم المستقل عديم الهوية
+  أُلغي؛ المعالج الآن على `protectedStoreServer` محميًا بـ`withPermission`، ويشتق OperatorContext
+  من الجلسة الموثوقة فقط.
+- `GovernedIncidentMiddleware` تستدعي خمسة معالجات incidents مباشرة (alias `/dsh/operator/incidents`)
+  متجاوزةً توجيه mux بالكامل — أي غلاف عند التسجيل فقط كان سيبقى ميتًا لهذا المسار. أُضيف التحقق
+  داخل جسم كل معالج، لا عند التسجيل فقط. تحقق شامل من عدم وجود مسار تحايل مشابه لبقية الـ36 مسارًا.
+- **حارس انحدار جديد**: `guard:dsh-route-permission-binding`
+  (`tools/guards/dsh-route-permission-binding-gate.mjs`)، مسجَّل في `ci-policy.yml`، يفشل عند أي
+  تسجيل مسار جديد يعتمد `ActorFromContext` بلا فحص صلاحية يمكن الوصول إليه. أُثبتت فعاليته بإعادة
+  إدخال العيب في مسار مُصلَح والتأكد من فشل الحارس، ثم التراجع.
+- **دليل اختبار**: `fnd_d06_permission_binding_test.go` يثبت السلوك الحي على عيّنة عالية الخطورة
+  (incidents، موافقة/رفض استرداد مالي، rollback/audit سياسة تشغيلية، ثغرة workforce-scopes):
+  غير الموثَّق → `401` بجسم غير فارغ؛ الموثَّق بلا صلاحية → `403`؛ لا يصل أي منهما إلى المعالج.
+- **دليل Runtime حي على SHA `324afd261`** (بعد `runtime:full:reset` كامل، الحاويات الثمانية
+  HEALTHY): `curl` غير موثَّق لـ`GET /dsh/operator/support/incidents`،
+  `GET /dsh/operator/workforce/scopes/actor-1`، و`POST /dsh/control-panel/finance/refunds/refund-1/approve`
+  كل واحد أرجع `401 {"code":"UNAUTHENTICATED",...}` — كانت جميعها `200` فارغًا قبل هذه الجولة.
+  فحص قاعدة البيانات المباشر يؤكد أن `dsh_admin_roles` و`dsh_store_actor_scopes` (الجدولان اللذان
+  صحّح هذا الفرع منع `dsh-990` من حذفهما) موجودان وقابلان للاستعلام، بينما الجداول المؤكَّد موتها
+  (`dsh_admin_staff_assignments`, `dsh_store_team_members`, ...) غير موجودة كما هو مقصود.
+
+### FND-D07 — DSH build script لا يبني Go — **مغلق بدليل**
+
+`services/dsh/package.json`'s `build` كان `tsc -p tsconfig.json` فقط، على خلاف `identity`/`workforce`/`wlt`
+التي تستدعي `verify-go-build.mjs`. هذا هو السبب الذي سمح لباك إند DSH غير القابل للبناء
+(`71d32fd2e`) بالوصول إلى الفرع أصلًا. أُضيف `&& node ../../tools/scripts/verify-go-build.mjs backend`
+بعد `tsc`؛ التحقق: `verify-go-build: PASS backend=services\dsh\backend`.
+
+### FND-D08 — بقايا كود ميت يستعلم جداول محذوفة — **مغلق بدليل**
+
+`ActorHasPermission` و`ListStaff` (صفر مستدعٍ) كانا يستعلمان `dsh_admin_staff_assignments` غير
+الموجود؛ حُذفا. ثلاثة اختبارات SQL (`administration-governance.sql`, `dsh-058_partner_team_idempotency.sql`,
+`dsh-088_partner_team_action_runtime_audit.sql`) كانت تختبر قدرة موافقة/rollback الأدوار وواجهة
+HTTP لفريق المتجر، وكلتاهما مُتقاعدتان بالفعل في الكود (حذفهما `71d32fd2e`)؛ حُذفت الاختبارات.
+
+## بنود مفتوحة صراحة (لا تُخفى ولا تُدّعى منتهية)
+
+1. **`guard:dsh-route-declaration`**: 19 مخالفة موجودة قبل هذه الجولة ولم تتغيّر بها (مؤكَّد
+   بمقارنة قبل/بعد) — مسارات change-sets/providers غير معلنة في العقد، ومداخل allowlist قديمة
+   لمسارات retire الأدوار. سيادة تصريح العقد، لا سيادة الصلاحيات؛ منفصلة عن FND-D06.
+2. **أربعة اختبارات Go DB-integration وملف seed محلي واحد** (`partnerfleet_db_test.go`,
+   `repository_authz_test.go`, `commands_db_test.go`, `partnerdelivery_db_test.go`,
+   `dsh-015b_partner_owner_team_scopes.local.sql`) تستخدم `dsh_store_team_members` كبيانات fixture
+   لاختبار قدرات توصيل/أسطول حيّة أخرى، رغم أن لا كود إنتاجي يقرأ الجدول. حل تبعية الـfixture هذه
+   يحتاج قاعدة بيانات حيّة للتحقق ولم يُعالَج هذه الجولة.
+3. **القراءة الراجعة المصادَق عليها لأهلية DSH↔WLT المالية** (انظر FND-D04) — نفس المانع البيئي من
+   الجولة السابقة، لم يُحاول إثباته هذه الجولة بسبب rate-limit الدخول.
 
 ### FND-D05 — وثائق الرحلات المختصرة
 
@@ -132,3 +217,11 @@ FND-01 Fix no-broken-imports loader + self-test
 ## قرار Foundation
 
 `FIX_REQUIRED`. يسمح بالتشخيص والتوثيق والإصلاحات الحاكمة فقط. لا يسمح بإعلان أي رحلة `CLOSED_WITH_EVIDENCE` قبل إغلاق هذا الملف.
+
+**الحالة على SHA `324afd261`**: أُغلقت بدليل هذه الجولة — بناء Go الأخضر عبر الخدمات الأربع
+(FND-D07)، سيادة مانفست الهجرات التسعة الفحوص (FND-D03 إضافة)، تصحيح `dsh-990` وإزالة الكود
+الميت (FND-D08)، وFND-D06 كاملًا (37 مسارًا + ثغرة IDOR + حارس انحدار + اختبارات + دليل Runtime حي).
+تبقى ثلاثة بنود مفتوحة صراحة أعلاه، أهمها `guard:dsh-route-declaration` الذي يبقي "Contextual CI
+aggregate PASS على SHA واحد" غير مكتمل. `journey_execution_allowed` يبقى `false` حتى إغلاق هذا
+الحارس وإثبات القراءة الراجعة المالية المصادَق عليها؛ هذه الجولة توسّع نطاقها بلا إذن صريح إضافي
+لتشمل سيادة تصريح العقد، وهي مهمة منفصلة عن ترميم Foundation الذي طُلب.
