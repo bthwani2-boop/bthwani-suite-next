@@ -347,5 +347,33 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("PUT /dsh/partner/catalog/assortment/{masterProductId}", protected.handleLegacyPartnerUpsertStoreAssortmentAtomic)
 
 	registerUnifiedCatalogRoutes(mux, protected)
+	
+	mux.HandleFunc("POST /dsh/operator/platform/zones", protected.handleNotImplemented)
+	mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", protected.handleNotImplemented)
+	mux.HandleFunc("PUT /dsh/operator/platform/sla-rules", protected.handleNotImplemented)
+	mux.HandleFunc("PUT /dsh/operator/platform/capacity", protected.handleNotImplemented)
+	mux.HandleFunc("GET /dsh/operator/platform/store-onboarding-fee", protected.handleNotImplemented)
+	mux.HandleFunc("PUT /dsh/operator/platform/store-onboarding-fee", protected.handleNotImplemented)
+	mux.HandleFunc("GET /dsh/platform/store-onboarding-fee", protected.handleNotImplemented)
+	mux.HandleFunc("GET /dsh/operator/admin/roles", protected.handleNotImplemented)
+	mux.HandleFunc("GET /dsh/operator/admin/staff", protected.handleNotImplemented)
+	mux.HandleFunc("POST /dsh/operator/admin/staff/{staffId}/roles", protected.handleNotImplemented)
+	mux.HandleFunc("GET /dsh/partner/invites", protected.handleNotImplemented)
+	mux.HandleFunc("POST /dsh/partner/invites/{inviteId}/accept", protected.handleNotImplemented)
+	mux.HandleFunc("POST /dsh/partner/invites/{inviteId}/reject", protected.handleNotImplemented)
+	mux.HandleFunc("POST /dsh/operator/admin/roles/requests", protected.handleNotImplemented)
+	mux.HandleFunc("GET /dsh/operator/admin/role-requests", protected.handleNotImplemented)
+	mux.HandleFunc("POST /dsh/operator/admin/role-requests/{requestId}/review", protected.handleNotImplemented)
+	mux.HandleFunc("GET /dsh/operator/admin/approvals", protected.handleNotImplemented)
+	mux.HandleFunc("POST /dsh/operator/admin/approvals/{approvalId}/review", protected.handleNotImplemented)
+	mux.HandleFunc("POST /dsh/operator/admin/approvals/{approvalId}/rollback-requests", protected.handleNotImplemented)
+	mux.HandleFunc("GET /dsh/operator/admin/rollback-requests", protected.handleNotImplemented)
+	mux.HandleFunc("POST /dsh/operator/admin/rollback-requests/{requestId}/review", protected.handleNotImplemented)
+	mux.HandleFunc("GET /dsh/operator/admin/diagnostics", protected.handleNotImplemented)
 	return mux
 }
+
+func (s *protectedStoreServer) handleNotImplemented(w http.ResponseWriter, r *http.Request) {
+	store.SendError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "not implemented")
+}
+

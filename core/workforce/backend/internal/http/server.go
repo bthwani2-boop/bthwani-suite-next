@@ -35,11 +35,11 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /workforce/health", s.health)
 	mux.HandleFunc("GET /workforce/readiness", s.readiness)
-	mux.HandleFunc("GET /workforce/readiness/{actorId}", s.anyAuthenticated(s.handleGetReadiness))
-
+//	mux.HandleFunc("GET /workforce/readiness/{actorId}", s.anyAuthenticated(s.handleGetReadiness))
+//
 	mux.HandleFunc("POST /workforce/employees/{actorId}/media/uploads", s.operatorOnly("provider:update", s.handleMediaUpload))
-	mux.HandleFunc("POST /workforce/captains/{actorId}/media/uploads", s.operatorOnly("provider:update", s.handleMediaUpload))
-	mux.HandleFunc("POST /workforce/field-agents/{actorId}/media/uploads", s.operatorOnly("provider:update", s.handleMediaUpload))
+//	mux.HandleFunc("POST /workforce/captains/{actorId}/media/uploads", s.operatorOnly("provider:update", s.handleMediaUpload))
+//	mux.HandleFunc("POST /workforce/field-agents/{actorId}/media/uploads", s.operatorOnly("provider:update", s.handleMediaUpload))
 
 	mux.HandleFunc("POST /workforce/field-agents", s.operatorOnly("provider:create", s.createFieldAgent))
 	mux.HandleFunc("GET /workforce/field-agents", s.operatorOnly("provider:read", s.listFieldAgents))
@@ -619,3 +619,4 @@ func (s *server) updateEmployee(w http.ResponseWriter, r *http.Request, identity
 	}
 	sendJSON(w, http.StatusOK, person)
 }
+

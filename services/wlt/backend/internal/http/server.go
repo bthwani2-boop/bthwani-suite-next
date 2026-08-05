@@ -116,7 +116,7 @@ func NewRouter(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionService) *ht
 	mux.HandleFunc("POST /wlt/payout-requests/{payoutId}/reconcile", killGate(gate(serviceAuth(payout.HandleReconcileGovernedPayoutRequest(db)))))
 
 	mux.HandleFunc("GET /wlt/commercial/summary", readGate(commercial.HandleGetSummary(db)))
-	mux.HandleFunc("POST /wlt/internal/quotes/calculate", gate(serviceAuth(HandleCalculateQuote())))
+//	mux.HandleFunc("POST /wlt/internal/quotes/calculate", gate(serviceAuth(HandleCalculateQuote())))
 	mux.HandleFunc("GET /wlt/commercial/products/{productReference}", readGate(commercial.HandleGetProduct(db)))
 	mux.HandleFunc("POST /wlt/commercial/products", gate(serviceAuth(commercial.HandleCreateProduct(db))))
 	mux.HandleFunc("PATCH /wlt/commercial/products/{productReference}", gate(serviceAuth(commercial.HandleUpdateProductGoverned(db))))
@@ -216,3 +216,4 @@ func newKillSwitchGate(ds wallet.DecisionService) func(http.HandlerFunc) http.Ha
 		}
 	}
 }
+

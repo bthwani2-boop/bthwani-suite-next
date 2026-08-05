@@ -536,6 +536,16 @@ paths:
           required: true
           schema:
             type: string
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           description: A list of active sessions
@@ -559,6 +569,16 @@ paths:
           required: true
           schema:
             type: string
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
       responses:
         '204':
           description: All sessions revoked successfully
@@ -575,6 +595,16 @@ paths:
         - $ref: "#/components/parameters/ActorId"
         - in: path
           name: sessionId
+          required: true
+          schema:
+            type: string
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: X-Service-Caller
+          in: header
           required: true
           schema:
             type: string
