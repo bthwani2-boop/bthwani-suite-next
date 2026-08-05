@@ -19,6 +19,7 @@ import {
   fetchPartnerStoreAssortment,
   fetchPartnerTaxonomy,
   upsertPartnerStoreAssortmentOCC,
+  withdrawPartnerProductProposal,
 } from "../../shared/catalog";
 import type {
   CentralCatalogDomain,
@@ -120,6 +121,18 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "تعذر حفظ تشكيلة المتجر.");
       await loadData();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const withdrawProposal = async (proposalId: string, expectedVersion: number) => {
+    try {
+      setSaving(true);
+      const withdrawn = await withdrawPartnerProductProposal(proposalId, expectedVersion);
+      setProposals((items) => items.map((p) => p.id === withdrawn.id ? withdrawn : p));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "تعذر سحب الاقتراح.");
     } finally {
       setSaving(false);
     }
@@ -271,16 +284,28 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
         ) : (
           proposals.map((proposal) => {
             const presentation = new ProductProposalAdapter(proposal);
+            const canWithdraw = ["catalog-draft", "partner-proposed", "needs-fix", "conflict"].includes(proposal.status);
             return (
               <ListItem
                 key={proposal.id}
                 title={proposal.proposedNameAr}
                 subtitle={proposal.reviewNote || "بانتظار تحديث المراجعة"}
                 trailing={
-                  <Badge
-                    label={presentation.getArabicLabel()}
-                    tone={presentation.getTone()}
-                  />
+                  <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: spacing[2] }}>
+                    <Badge
+                      label={presentation.getArabicLabel()}
+                      tone={presentation.getTone()}
+                    />
+                    {canWithdraw && (
+                      <Button
+                        label="سحب"
+                        tone="danger"
+                        size="sm"
+                        disabled={saving}
+                        onPress={() => void withdrawProposal(proposal.id, proposal.version)}
+                      />
+                    )}
+                  </View>
                 }
               />
             );
@@ -295,19 +320,31 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
             <Text tone="secondary" align="center">لا توجد منتجات مضافة بعد.</Text>
           </View>
         ) : (
-          assortment.map((item) => (
-            <ListItem
-              key={item.id}
-              title={namesByProduct.get(item.masterProductId) ?? item.masterProductId}
-              subtitle={`${item.unitPrice} ${item.currency} — ${item.publicationStatus}`}
-              trailing={
-                <Badge
-                  label={item.available ? "متاح" : "موقوف"}
-                  tone={item.available ? "success" : "warning"}
-                />
-              }
-            />
-          ))
+          assortment.map((item) => {
+            const canonicalName = namesByProduct.get(item.masterProductId);
+            const isOrphan = !canonicalName;
+            const isRetired = item.publicationStatus === "retired";
+            return (
+              <ListItem
+                key={item.id}
+                title={canonicalName ?? item.masterProductId}
+                subtitle={`${item.unitPrice} ${item.currency} — ${item.publicationStatus}`}
+                trailing={
+                  <View style={{ flexDirection: "row", gap: 4, alignItems: "center" }}>
+                    {isOrphan && <Badge label="يتيم" tone="critical" />}
+                    {isRetired ? (
+                      <Badge label="متقاعد" tone="neutral" />
+                    ) : (
+                      <Badge
+                        label={item.available ? "متاح" : "موقوف"}
+                        tone={item.available ? "success" : "warning"}
+                      />
+                    )}
+                  </View>
+                }
+              />
+            );
+          })
         )}
       </Card>
     </ScrollScreen>

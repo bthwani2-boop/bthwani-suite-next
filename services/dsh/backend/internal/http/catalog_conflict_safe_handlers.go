@@ -182,3 +182,35 @@ func (s *protectedStoreServer) handleReviewReelSafe(w http.ResponseWriter, r *ht
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"reel": reel})
 }
+
+func (s *protectedStoreServer) handleCleanupOrphanCatalogAssets(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
+		return
+	}
+	deletedCount, err := centralcatalog.CleanupOrphanCatalogAssets(r.Context(), s.db, s.mediaClient())
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"deletedCount": deletedCount})
+}
+
+func (s *protectedStoreServer) handleSimulateAssetScan(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
+		return
+	}
+	
+	var input struct {
+		TargetStatus string `json:"targetStatus"`
+	}
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+
+	asset, err := centralcatalog.SimulateAssetScan(r.Context(), s.db, r.PathValue("assetId"), input.TargetStatus)
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"asset": asset})
+}

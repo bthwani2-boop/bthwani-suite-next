@@ -32,6 +32,8 @@ export interface CentralCatalogNode {
   readonly allowsStoreProductCustomImage: boolean;
   readonly requiresCatalogReview: boolean;
   readonly requiresProductCatalog: boolean;
+  readonly lifecycleStatus: "active" | "deprecated" | "merged";
+  readonly mergedIntoId: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -55,6 +57,8 @@ export interface MasterProduct {
   readonly isActive: boolean;
   readonly duplicateGroupId: string | null;
   readonly createdSource: string;
+  readonly parentId: string | null;
+  readonly isStandalone: boolean;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -72,6 +76,8 @@ export interface MasterProductPatchInput {
   readonly measurementType?: string;
   readonly approvalStatus?: "draft" | "pending_review" | "approved" | "rejected" | "archived";
   readonly isActive?: boolean;
+  readonly parentId?: string | null;
+  readonly isStandalone?: boolean;
   readonly expectedVersion?: number;
 }
 
@@ -137,6 +143,9 @@ export interface ProductProposal {
   readonly status: ProductProposalPipelineStatus;
   readonly reviewNote: string;
   readonly adoptedMasterProductId: string | null;
+  readonly targetMasterProductId: string | null;
+  readonly baseVersion: number | null;
+  readonly duplicateCandidates: readonly string[] | null;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly reviewStage?: string;
@@ -259,7 +268,7 @@ export interface CatalogAsset {
   readonly altAr: string;
   readonly altEn: string;
   readonly dominantColor: string | null;
-  readonly status: "draft" | "uploaded" | "pending_review" | "approved" | "rejected" | "archived";
+  readonly status: "draft" | "uploaded" | "scanning" | "quarantined" | "pending_review" | "approved" | "rejected" | "archived";
   readonly sourceSurface: "control-panel-catalog" | "control-panel-platform" | "app-partner" | "app-field" | "system";
   readonly uploadedBy: string;
   readonly reviewedBy: string | null;

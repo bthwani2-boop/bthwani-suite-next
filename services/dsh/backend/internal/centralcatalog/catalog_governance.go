@@ -516,6 +516,66 @@ func ResumeStoreAssortment(ctx context.Context, db *sql.DB, storeID, productID, 
 	return item, err
 }
 
+// RetireStoreAssortment permanently marks a store-product assortment as retired
+// (publication_status='retired', available=false). A retired assortment cannot be
+// resumed — the partner must create a new assortment link. This closes the lifecycle
+// gap between pause (temporary) and full removal from the store.
+func RetireStoreAssortment(ctx context.Context, db *sql.DB, storeID, productID, actorID string, expectedVersion *int, reason string) (StoreAssortment, error) {
+	if expectedVersion == nil {
+		return StoreAssortment{}, ErrInvalid
+	}
+	if strings.TrimSpace(reason) == "" {
+		return StoreAssortment{}, fmt.Errorf("%w: reason is required when retiring an assortment", ErrInvalid)
+	}
+	row := db.QueryRowContext(ctx, `UPDATE dsh_store_assortments SET
+		available=FALSE, publication_status='retired', pause_reason=$1,
+		paused_at=NOW(), paused_by=$2, submitted_by=$2, version=version+1, updated_at=NOW()
+		WHERE store_id=$3 AND master_product_id=$4 AND version=$5 AND publication_status != 'retired'
+		RETURNING `+assortmentColumns,
+		strings.TrimSpace(reason), actorID, storeID, productID, *expectedVersion)
+	item, err := scanAssortment(row)
+	if errors.Is(err, ErrNotFound) {
+		current, currentErr := GetStoreAssortmentByKey(ctx, db, storeID, productID)
+		if currentErr != nil {
+			return StoreAssortment{}, currentErr
+		}
+		if current.PublicationStatus == "retired" {
+			return StoreAssortment{}, fmt.Errorf("%w: assortment is already retired", ErrInvalid)
+		}
+		return StoreAssortment{}, &ConflictError{EntityID: current.ID, ExpectedVersion: expectedVersion, CurrentVersion: current.Version, Message: "version mismatch"}
+	}
+	return item, err
+}
+
+// MigrateAssortmentsOnMerge re-points all store assortments from a deprecated
+// MasterProduct to the canonical MasterProduct that absorbed it. This preserves
+// store-product links and their operational state across a catalog merge.
+// It is safe to call inside a transaction: pass a *sql.Tx cast to ExecContext.
+func MigrateAssortmentsOnMerge(ctx context.Context, db *sql.DB, deprecatedMasterProductID, canonicalMasterProductID string) (int64, error) {
+	if strings.TrimSpace(deprecatedMasterProductID) == "" || strings.TrimSpace(canonicalMasterProductID) == "" {
+		return 0, ErrInvalid
+	}
+	if deprecatedMasterProductID == canonicalMasterProductID {
+		return 0, fmt.Errorf("%w: deprecated and canonical IDs must differ", ErrInvalid)
+	}
+	// UPDATE only if there is no existing assortment for (store_id, canonical_product_id).
+	// Stores that already linked the canonical product keep their existing assortment.
+	result, err := db.ExecContext(ctx, `UPDATE dsh_store_assortments SET
+		master_product_id=$1, updated_at=NOW(), version=version+1
+		WHERE master_product_id=$2
+		AND NOT EXISTS (
+			SELECT 1 FROM dsh_store_assortments sa2
+			WHERE sa2.store_id=dsh_store_assortments.store_id
+			  AND sa2.master_product_id=$1
+		)`,
+		canonicalMasterProductID, deprecatedMasterProductID)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := result.RowsAffected()
+	return n, nil
+}
+
 // CatalogAuditEntry exposes append-only change history without SQL access.
 type CatalogAuditEntry struct {
 	ID            string          `json:"id"`

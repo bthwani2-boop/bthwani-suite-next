@@ -105,6 +105,15 @@ func (c *Client) StatObject(ctx context.Context, key string) (size int64, conten
 	return info.Size, info.ContentType, nil
 }
 
+// PresignGet returns a time-limited URL for downloading the object.
+func (c *Client) PresignGet(ctx context.Context, key string, ttl time.Duration) (string, time.Time, error) {
+	u, err := c.presignMC.PresignedGetObject(ctx, c.bucket, key, ttl, nil)
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("media: presign get failed: %w", err)
+	}
+	return u.String(), time.Now().Add(ttl), nil
+}
+
 // Remove deletes an object from the bucket.
 func (c *Client) Remove(ctx context.Context, key string) error {
 	if err := c.mc.RemoveObject(ctx, c.bucket, key, minio.RemoveObjectOptions{}); err != nil {

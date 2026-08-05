@@ -18,6 +18,7 @@ import { ProviderOperationalCorePanel } from "./ProviderOperationalCorePanel";
 import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState";
 import { SupervisorPicker } from "./SupervisorPicker";
 import { useIdentitySession } from "@bthwani/core-identity";
+import { CaptainFleetMembershipsPanel } from "./CaptainFleetMembershipsPanel";
 
 import { ZonePicker } from "./ZonePicker";
 
@@ -253,10 +254,11 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
         )}
 
         {activeTab === "ops" && (
-          <>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <ProviderOperationalCorePanel actorId={captain.actorId} kind="captain" />
+            <CaptainFleetMembershipsPanel actorId={captain.actorId} />
             <ProviderActivationWorkspace providerKind="captain" initialActorId={captain.actorId} entrySource="hr" />
-          </>
+          </div>
         )}
       </div>
     </DetailPageFrame>

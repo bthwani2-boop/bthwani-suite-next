@@ -315,6 +315,45 @@ func (s *protectedStoreServer) handleResumeFieldAssortment(w http.ResponseWriter
 	s.resumeAssortment(w, r, actorID, storeID)
 }
 
+// ── Retire assortment (permanent, requires reason) ──────────────────────────
+
+func (s *protectedStoreServer) retireAssortment(w http.ResponseWriter, r *http.Request, actorID, storeID string) {
+	var input struct {
+		ExpectedVersion *int   `json:"expectedVersion"`
+		Reason          string `json:"reason"`
+	}
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	productID := r.PathValue("masterProductId")
+	item, err := centralcatalog.RetireStoreAssortment(r.Context(), s.db, storeID, productID, actorID, input.ExpectedVersion, input.Reason)
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"assortment": item})
+}
+
+func (s *protectedStoreServer) handleRetireOperatorAssortment(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentManage)
+	if !ok {
+		return
+	}
+	s.retireAssortment(w, r, actor.ID, r.PathValue("storeId"))
+}
+
+func (s *protectedStoreServer) handleRetirePartnerAssortment(w http.ResponseWriter, r *http.Request) {
+	actor, storeID, ok := s.partnerStore(w, r)
+	if !ok {
+		return
+	}
+	if storeID != r.PathValue("storeId") {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store does not belong to you")
+		return
+	}
+	s.retireAssortment(w, r, actor.ID, storeID)
+}
+
 func (s *protectedStoreServer) handleListCatalogAudit(w http.ResponseWriter, r *http.Request) {
 	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAuditRead); !ok {
 		return

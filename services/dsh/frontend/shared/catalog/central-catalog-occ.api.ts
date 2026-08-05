@@ -68,6 +68,7 @@ export type ProductProposalTransitionOCCInput = Omit<
 > & {
   readonly adoptedMasterProductId?: string | null | undefined;
   readonly createMasterProduct?: boolean | undefined;
+  readonly mergeData?: boolean | undefined;
 };
 
 export async function transitionProductProposalOCC(

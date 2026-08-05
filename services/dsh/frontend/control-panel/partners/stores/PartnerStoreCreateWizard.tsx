@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { v4 as uuidv4 } from "uuid";
 import {
   CpButton,
   CpStatePanel,
@@ -35,7 +34,7 @@ export function PartnerStoreCreateWizard({ partnerId, onStoreCreated, onCancel }
 
     setStatus("loading");
     setErrorMessage("");
-    const storeId = uuidv4();
+    const storeId = crypto.randomUUID();
     const idempotencyKey = storeId;
 
     try {

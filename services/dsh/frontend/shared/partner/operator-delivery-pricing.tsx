@@ -9,19 +9,29 @@ export type DeliveryPricingFulfillmentMode =
 
 export type DeliveryPricingStatus = "active" | "paused" | "archived";
 
+export type DeliveryPricingMode =
+  | "free_delivery"
+  | "bthwani_pricing"
+  | "partner_fixed_pricing"
+  | "zone_pricing";
+
 export type DeliveryPricingRecord = {
   readonly storeId: string;
   readonly fulfillmentMode: DeliveryPricingFulfillmentMode;
+  readonly pricingMode: DeliveryPricingMode;
   readonly feeMinorUnits: number;
   readonly currency: string;
+  readonly pricingConfig: string;
   readonly status: DeliveryPricingStatus;
   readonly pricingSource: "control_panel" | "partner_store" | string;
   readonly version: number;
 };
 
 export type DeliveryPricingMutationInput = {
+  readonly pricingMode: DeliveryPricingMode;
   readonly feeMinorUnits: number;
   readonly currency: string;
+  readonly pricingConfig: string;
   readonly status: DeliveryPricingStatus;
   readonly reason: string;
 };
@@ -42,6 +52,15 @@ function isFulfillmentMode(value: unknown): value is DeliveryPricingFulfillmentM
   return value === "bthwani_delivery" || value === "partner_delivery" || value === "pickup";
 }
 
+function isPricingMode(value: unknown): value is DeliveryPricingMode {
+  return (
+    value === "free_delivery" ||
+    value === "bthwani_pricing" ||
+    value === "partner_fixed_pricing" ||
+    value === "zone_pricing"
+  );
+}
+
 function isPricingStatus(value: unknown): value is DeliveryPricingStatus {
   return value === "active" || value === "paused" || value === "archived";
 }
@@ -54,11 +73,13 @@ function parseDeliveryPricingRecord(value: unknown): DeliveryPricingRecord {
   if (
     typeof record.storeId !== "string" ||
     !isFulfillmentMode(record.fulfillmentMode) ||
+    !isPricingMode(record.pricingMode) ||
     typeof record.feeMinorUnits !== "number" ||
     !Number.isSafeInteger(record.feeMinorUnits) ||
     record.feeMinorUnits < 0 ||
     typeof record.currency !== "string" ||
     record.currency.trim() === "" ||
+    (record.pricingConfig !== undefined && typeof record.pricingConfig !== "string") ||
     !isPricingStatus(record.status) ||
     typeof record.pricingSource !== "string" ||
     !Number.isSafeInteger(record.version) ||
@@ -69,8 +90,10 @@ function parseDeliveryPricingRecord(value: unknown): DeliveryPricingRecord {
   return {
     storeId: record.storeId,
     fulfillmentMode: record.fulfillmentMode,
+    pricingMode: record.pricingMode,
     feeMinorUnits: record.feeMinorUnits,
     currency: record.currency,
+    pricingConfig: typeof record.pricingConfig === "string" ? record.pricingConfig : "{}",
     status: record.status,
     pricingSource: record.pricingSource,
     version: Number(record.version),
@@ -103,15 +126,21 @@ export async function fetchOperatorDeliveryPricing(
 export async function updateOperatorDeliveryPricing(
   storeId: string,
   fulfillmentMode: DeliveryPricingFulfillmentMode,
-  input: DeliveryPricingMutationInput & { readonly expectedVersion: number },
+  input: DeliveryPricingMutationInput,
+  expectedVersion: number,
 ): Promise<DeliveryPricingRecord> {
   const reason = input.reason.trim();
   if (
+    !isPricingMode(input.pricingMode) ||
+    typeof input.feeMinorUnits !== "number" ||
     !Number.isSafeInteger(input.feeMinorUnits) ||
     input.feeMinorUnits < 0 ||
+    typeof input.currency !== "string" ||
     input.currency.trim() === "" ||
-    !Number.isSafeInteger(input.expectedVersion) ||
-    input.expectedVersion < 1 ||
+    typeof input.pricingConfig !== "string" ||
+    !isPricingStatus(input.status) ||
+    !Number.isSafeInteger(expectedVersion) ||
+    expectedVersion < 1 ||
     reason === ""
   ) {
     throw new Error("قيمة الرسم والإصدار والسبب مطلوبة لتحديث تسعير التوصيل.");
@@ -121,10 +150,12 @@ export async function updateOperatorDeliveryPricing(
     {
       method: "PUT",
       body: {
+        pricingMode: input.pricingMode,
         feeMinorUnits: input.feeMinorUnits,
         currency: input.currency.trim().toUpperCase(),
+        pricingConfig: input.pricingConfig,
         status: input.status,
-        expectedVersion: input.expectedVersion,
+        expectedVersion: expectedVersion,
         reason,
       },
     },

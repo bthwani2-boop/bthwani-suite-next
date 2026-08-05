@@ -166,7 +166,7 @@ export function fetchPartnerTeam(storeId: string): Promise<{ members: DshPartner
   return request(`/dsh/partner/stores/${storeId}/team`);
 }
 
-export type PartnerTeamInviteRole = "manager" | "supervisor" | "staff" | "courier";
+export type PartnerTeamInviteRole = "manager" | "supervisor" | "staff";
 
 export type PartnerTeamInvitationResponse = {
   readonly memberId: string;

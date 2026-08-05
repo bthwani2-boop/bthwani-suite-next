@@ -68,6 +68,64 @@ func (s *protectedStoreServer) handleCreateCatalogNode(w http.ResponseWriter, r 
 	store.SendJSON(w, http.StatusCreated, map[string]any{"node": n})
 }
 
+func (s *protectedStoreServer) handleMoveCatalogNode(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok {
+		return
+	}
+	var input struct {
+		TargetParentID *string `json:"targetParentId"`
+	}
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	n, err := centralcatalog.MoveNode(r.Context(), s.db, r.PathValue("nodeId"), input.TargetParentID)
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"node": n})
+}
+
+func (s *protectedStoreServer) handleMergeCatalogNode(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok {
+		return
+	}
+	var input struct {
+		TargetNodeID string `json:"targetNodeId"`
+	}
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	tx, err := s.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	defer tx.Rollback()
+
+	if err := centralcatalog.MergeNode(r.Context(), tx, r.PathValue("nodeId"), input.TargetNodeID); err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"success": true})
+}
+
+func (s *protectedStoreServer) handleDeprecateCatalogNode(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok {
+		return
+	}
+	n, err := centralcatalog.DeprecateNode(r.Context(), s.db, r.PathValue("nodeId"))
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"node": n})
+}
+
 // ── Taxonomy (read-only domains+nodes) for partner/field surfaces ──────────
 
 func (s *protectedStoreServer) handleCatalogTaxonomy(w http.ResponseWriter, r *http.Request) {
@@ -121,12 +179,25 @@ func (s *protectedStoreServer) handleListMasterProducts(w http.ResponseWriter, r
 		approvalStatus = "approved"
 		activeOnly = true
 	}
+	var parentIDFilter *string
+	if r.URL.Query().Has("parentId") {
+		val := r.URL.Query().Get("parentId")
+		parentIDFilter = &val
+	}
+	var isStandaloneFilter *bool
+	if r.URL.Query().Has("isStandalone") {
+		val := r.URL.Query().Get("isStandalone") == "true"
+		isStandaloneFilter = &val
+	}
+
 	filter := centralcatalog.MasterProductFilter{
 		DomainID:       r.URL.Query().Get("domainId"),
 		CategoryNodeID: r.URL.Query().Get("categoryNodeId"),
 		ApprovalStatus: approvalStatus,
 		ActiveOnly:     activeOnly,
 		Search:         r.URL.Query().Get("search"),
+		ParentID:       parentIDFilter,
+		IsStandalone:   isStandaloneFilter,
 		Limit:          limit,
 		Offset:         offset,
 	}

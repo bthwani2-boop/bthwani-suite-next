@@ -61,6 +61,10 @@ export type DshOperatorPartnerFleetSnapshot = {
   readonly members: readonly DshOperatorStoreFleetMember[];
 };
 
+export function fetchOperatorCaptainFleetMemberships(captainId: string): Promise<{ readonly memberships: readonly DshCaptainFleetMembership[] }> {
+  return request(`operator/captains/${captainId}/partner-fleet`, { method: "GET" });
+}
+
 export function issuePartnerCourierConnectionCode(
   storeId: string,
   memberId: string,

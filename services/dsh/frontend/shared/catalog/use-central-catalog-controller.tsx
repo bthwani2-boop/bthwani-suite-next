@@ -234,6 +234,15 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
       );
     },
 
+    moveNode: async (nodeId: string, targetParentId: string | null) =>
+      runMutationWithReadback(() => api.moveCatalogNode(nodeId, targetParentId), loadNodes),
+
+    mergeNode: async (nodeId: string, targetNodeId: string) =>
+      runMutationWithReadback(() => api.mergeCatalogNode(nodeId, targetNodeId), loadNodes),
+
+    deprecateNode: async (nodeId: string) =>
+      runMutationWithReadback(() => api.deprecateCatalogNode(nodeId), loadNodes),
+
     createMasterProduct: async (input: Parameters<typeof api.createMasterProduct>[0]) =>
       runMutationWithReadback(() => api.createMasterProduct(input), loadMasterProducts),
 

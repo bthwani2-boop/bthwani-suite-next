@@ -3,7 +3,6 @@ package http
 import (
 	"database/sql"
 	"errors"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -68,15 +67,12 @@ func handlePublicMedia(db *sql.DB, mediaProvider *media.Provider) http.HandlerFu
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load media asset")
 			return
 		}
-		reader, contentType, err := mediaClient.Get(r.Context(), asset.ObjectKey)
+		signedURL, _, err := mediaClient.PresignGet(r.Context(), asset.ObjectKey, 2*time.Hour)
 		if err != nil {
-			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "media not found")
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to generate preview url")
 			return
 		}
-		defer reader.Close()
-		w.Header().Set("Content-Type", contentType)
-		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-		_, _ = io.Copy(w, reader)
+		http.Redirect(w, r, signedURL, http.StatusFound)
 	}
 }
 

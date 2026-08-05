@@ -29,8 +29,10 @@ export function PartnerDeliveryPricingCard({ storeId }: PartnerDeliveryPricingCa
     const fee = parseWltMajorInputToMinorUnits(feeYer, "YER");
     if (!fee.ok || fee.minorUnits < 0 || !reason.trim()) return;
     const succeeded = await controller.save(partnerPolicy, {
+      pricingMode: partnerPolicy?.pricingMode ?? "partner_fixed_pricing",
       feeMinorUnits: fee.minorUnits,
       currency: "YER",
+      pricingConfig: partnerPolicy?.pricingConfig ?? "{}",
       status: partnerPolicy?.status === "archived" ? "paused" : partnerPolicy?.status ?? "active",
       reason: reason.trim(),
     });
@@ -61,7 +63,7 @@ export function PartnerDeliveryPricingCard({ storeId }: PartnerDeliveryPricingCa
         <View style={styles.editor}>
           {partnerPolicy ? (
             <Text role="caption" tone="muted" align="start">
-              السعر الحالي: {formatWltMoney(partnerPolicy.feeMinorUnits, partnerPolicy.currency)} · الحالة: {partnerPolicy.status} · الإصدار: {partnerPolicy.version}
+              النمط: {partnerPolicy.pricingMode === "free_delivery" ? "مجاني" : (partnerPolicy.pricingMode === "partner_fixed_pricing" ? "ثابت" : partnerPolicy.pricingMode)} · السعر الحالي: {formatWltMoney(partnerPolicy.feeMinorUnits, partnerPolicy.currency)} · الحالة: {partnerPolicy.status} · الإصدار: {partnerPolicy.version}
             </Text>
           ) : (
             <Text role="caption" tone="muted" align="start">
@@ -70,9 +72,10 @@ export function PartnerDeliveryPricingCard({ storeId }: PartnerDeliveryPricingCa
           )}
           <TextField
             label="رسوم توصيل المتجر بالريال اليمني"
-            value={feeYer}
+            value={partnerPolicy?.pricingMode === "free_delivery" ? "0" : feeYer}
             onChangeText={setFeeYer}
             keyboardType="numeric"
+            editable={partnerPolicy?.pricingMode !== "free_delivery"}
           />
           <TextField
             label="سبب التغيير"

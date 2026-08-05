@@ -382,7 +382,7 @@ export type DshPartnerOperationalScope = {
 export type DshPartnerTeamMember = {
   readonly id: string;
   readonly name: string;
-  readonly role: 'owner' | 'supervisor' | 'staff' | 'courier';
+  readonly role: 'owner' | 'supervisor' | 'staff';
   readonly roleLabel: string;
   readonly status: 'active' | 'paused' | 'invited' | 'blocked' | 'review-needed';
   readonly statusLabel: string;
