@@ -1,21 +1,65 @@
 # Graphify Skill
 
-Graphify is a CLI tool, not an agent.
+Status: `PROJECT_SHARED_WRAPPER`
 
-Use it as the shared project knowledge-graph tool for Claude Code, Codex, Gemini CLI, and any other coding assistant working in this repository.
+Graphify is a local code-relationship and knowledge-graph tool. It is a CLI plus an assistant skill; it is not an autonomous agent and it is never final acceptance evidence.
 
-## Official CLI
+## Authority and locations
 
-Package: graphifyy
-Command: graphify
+The repository-owned shared wrapper is:
 
-## Required usage
+    .agents/skills/graphify/SKILL.md
+
+The official installer writes platform integrations to the detected assistant's standard user-level or platform-level location, for example:
+
+    %USERPROFILE%\.claude\skills\graphify\
+
+That global installation is machine integration, not a repository duplicate. `graphify install` does not write to `.agents` because `.agents` is a BThwani-specific project convention rather than a Graphify platform target.
+
+Do not replace this repository wrapper with an installer-generated vendor copy without reviewing the semantic diff.
+
+## Official package and executables
+
+- Package: `graphifyy`
+- CLI: `graphify`
+- MCP executable: `graphify-mcp`
+
+Machine installation on Windows:
+
+    uv tool install graphifyy
+    uv tool update-shell
+    graphify --version
+
+Register the assistant skill with detected assistants:
+
+    graphify install
+
+Register one supported assistant only:
+
+    graphify install --platform <name>
+
+Examples of platform names include `claude`, `cursor`, `codex`, `gemini`, `aider`, and `devin` when those assistants are installed and detectable.
+
+## Build or refresh the graph
+
+Graph construction runs inside a supported AI coding assistant, not as a PowerShell slash command:
+
+    /graphify .
+    /graphify . --update
+    /graphify . --mode deep
+
+Do not type `/graphify .` directly into PowerShell. In PowerShell, use the terminal CLI only for installation, verification, and reading an existing graph.
+
+## Terminal commands after graph creation
 
 From the repository root:
 
-    graphify .
+    graphify --version
+    graphify query "<question>"
+    graphify path "<source>" "<target>"
+    graphify explain "<symbol-or-node>"
 
-PowerShell rule: use graphify . not /graphify .
+These commands read `graphify-out/graph.json`; they do not replace the assistant-side graph build.
 
 ## Outputs
 
@@ -28,42 +72,37 @@ Graphify writes:
 
 ## When to use
 
-Use Graphify before deep codebase work involving architecture, imports, exports, service boundaries, multi-surface flows, DSH/WLT links, duplicated logic, dead code, risky refactors, ownership decisions, and broad file discovery.
+Use Graphify before broad work where relationship evidence is materially useful, including:
 
-## Required for Deep Work
-
-Graphify is optional for focused implementation, but mandatory before closure decisions involving:
-
-- DSH/WLT links
+- architecture and ownership analysis
+- import/export impact
 - service boundaries
-- shared brain ownership
+- DSH/WLT links
 - multi-surface flows
-- control-panel + mobile app impact
-- duplicated logic
-- dead code
-- risky move/delete/merge/refactor
-- unclear import/export ownership
-- broad route/navigation impact
+- duplicated logic and dead-code investigation
+- risky move, delete, merge, or refactor decisions
+- broad route or navigation impact
 
-Graphify output is impact guidance only. Final truth remains repo files + targeted verification.
+Graphify remains optional for narrow implementation where direct repository evidence is sufficient.
 
-## Token rule
+## Evidence and safety
 
-Prefer focused graph outputs before reading many raw files. Use Graphify to reduce token waste, not to replace verification.
+Graphify output is impact guidance only. Final truth remains repository files plus task-specific verification such as Git diff, type checking, tests, runtime evidence, API checks, and UI-flow verification.
 
-## Safety rule
+Before changing code:
 
-Graphify output is analysis support only. It is not final truth.
-
-Before changing code, verify with repo files, git status, git diff, diff check, and typecheck/test when relevant.
+1. Pin the correct repository, branch, and commit.
+2. Use the graph only to narrow the investigation.
+3. Verify each relevant claim against repository files.
+4. Review generated or installer-written files before committing.
 
 ## Single-skill rule
 
-This repository uses one shared Graphify skill only:
+Use only this repository-owned shared wrapper under `.agents`.
 
-    .agents/skills/graphify/SKILL.md
-
-Do not create duplicate Graphify skills under:
+Do not create repository-local duplicates under:
 
     .claude/skills/graphify
     .gemini/skills/graphify
+
+User-level integrations outside the repository, such as `%USERPROFILE%\.claude\skills\graphify`, are allowed because they are machine configuration and are not committed as parallel project authority.
