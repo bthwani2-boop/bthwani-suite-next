@@ -3,7 +3,7 @@
   "service": "dsh",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "dsh-990_workforce_assignment_cleanup.sql",
+  "cutover": "dsh-992_platform_providers_registry.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -99,7 +99,7 @@
     {
       "ordinal": 14,
       "file": "dsh-014_administration.sql",
-      "sha256": "d817f7e589274676a86349e84166752a193fd0baa0e5b1bfc791e0a23681817e",
+      "sha256": "3ae647dad86939dcd79468715fe2f9db3de63eb489369878c55d8f3277314463",
       "historicalPrefix": "014",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1394,9 +1394,23 @@
     {
       "ordinal": 199,
       "file": "dsh-990_workforce_assignment_cleanup.sql",
-      "sha256": "e383b668dfdc640e8217d1914071d1267cd771acbdc73e196958e35be5507bc2",
+      "sha256": "7271a2a7307b2922807e01f110a5a1d7b10bb968bc378889942d3a9cd00420fc",
       "historicalPrefix": "990",
       "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 200,
+      "file": "dsh-991_platform_change_sets.sql",
+      "sha256": "fe85848a2fc6819a7352876015063e8f959634dbc86c09db5e14239aad991779",
+      "historicalPrefix": "991",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 201,
+      "file": "dsh-992_platform_providers_registry.sql",
+      "sha256": "27c4d1b9ec691388e0d484e3980cc70ff6d316ea1733f03fa499d24195ede965",
+      "historicalPrefix": "992",
+      "state": "ACTIVE"
     }
   ]
 }

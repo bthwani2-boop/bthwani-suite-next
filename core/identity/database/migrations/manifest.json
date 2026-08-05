@@ -3,7 +3,7 @@
   "service": "identity",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "identity-020_rbac_foundation.sql",
+  "cutover": "identity-021_actor_lifecycle_status.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -143,6 +143,13 @@
       "file": "identity-020_rbac_foundation.sql",
       "sha256": "3e8ff87524965959477e7f1dd48ca616e22e32a0513275d73df7bfc2ba5fe229",
       "historicalPrefix": "020",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 21,
+      "file": "identity-021_actor_lifecycle_status.sql",
+      "sha256": "c9b2c315845623d1874e5d07c319361ee13403b826769a94f2f03d4db70cea10",
+      "historicalPrefix": "021",
       "state": "ACTIVE"
     }
   ]
