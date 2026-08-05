@@ -12,7 +12,9 @@ import {
   CpTableHeaderCell,
 } from "@bthwani/control-panel/components";
 import { FinanceReadOnlyFrame } from "@bthwani/control-panel/shell";
-import { createDshHttpClient, formatWltMoney, resolveDshApiBaseUrl } from '@bthwani/wlt/dsh';
+import { createDshHttpClient } from "../../../shared/_kernel/dsh-http-request";
+import { resolveDshApiBaseUrl } from "../../../shared/_kernel/dsh-api-base-url";
+import { formatWltMoney } from '@bthwani/wlt/dsh';
 
 const { request } = createDshHttpClient(
   resolveDshApiBaseUrl(),

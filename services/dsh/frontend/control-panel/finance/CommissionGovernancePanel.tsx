@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, Text } from "@bthwani/ui-kit";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import { CpBadge, CpButton, CpSelect, CpTextInput } from "@bthwani/control-panel/components";
-import { createDshHttpClient, formatWltMoney, resolveDshApiBaseUrl } from '@bthwani/wlt/dsh';
+import { createDshHttpClient } from "../../../shared/_kernel/dsh-http-request";
+import { resolveDshApiBaseUrl } from "../../../shared/_kernel/dsh-api-base-url";
+import { formatWltMoney } from '@bthwani/wlt/dsh';
 import {
   adjustCommission,
   confirmCommission,
