@@ -1,6 +1,6 @@
 # BThwani Skill Catalog
 
-Version: 2026.07.26-v2
+Version: 2026.08.05-v3
 
 This catalog is a human-readable projection of `governance/skills/skills-registry.json`. The registry is the canonical source. If this file conflicts with the registry, the registry wins.
 
@@ -28,6 +28,7 @@ This catalog is a human-readable projection of `governance/skills/skills-registr
 - `bthwani-sdlc-stage-gate-orchestrator` — Route governed changes through G0-G10 and final closure without owning specialist approval.
 - `bthwani-security-secrets-privacy` — Route auth, authorization, secrets, PII, sensitive logs, and privacy findings to independent security evidence.
 - `bthwani-service-fullstack-journey` — Verify a declared capability across product, contract, backend, data, shared state, and required surfaces.
+- `open-code-review-delegate` — Use OpenCodeReview for deterministic file and rule selection while an existing Codex, Claude Code, Gemini CLI, or other approved host subscription performs an advisory review without a separate OCR API key.
 
 ## Retired entries (must never be routed)
 
