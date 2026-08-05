@@ -132,6 +132,9 @@ func marshalTicket(t support.Ticket) map[string]any {
 		"status":       t.Status,
 		"assignedTo":   t.AssignedTo,
 		"orderId":      t.OrderID,
+		"version":      t.Version,
+		"claimedBy":    t.ClaimedBy,
+		"escalationReason": t.EscalationReason,
 		"createdAt":    t.CreatedAt,
 		"updatedAt":    t.UpdatedAt,
 	}
@@ -141,18 +144,29 @@ func marshalTicket(t support.Ticket) map[string]any {
 	if t.ClosedAt != nil {
 		m["closedAt"] = t.ClosedAt
 	}
+	if t.ClaimedAt != nil {
+		m["claimedAt"] = t.ClaimedAt
+	}
+	if t.SlaBreachAt != nil {
+		m["slaBreachAt"] = t.SlaBreachAt
+	}
+	if t.EscalatedAt != nil {
+		m["escalatedAt"] = t.EscalatedAt
+	}
 	return m
 }
 
 func marshalMessage(m support.Message) map[string]any {
 	return map[string]any{
-		"id":         m.ID,
-		"ticketId":   m.TicketID,
-		"senderId":   m.SenderID,
-		"senderRole": m.SenderRole,
-		"body":       m.Body,
-		"isInternal": m.IsInternal,
-		"createdAt":  m.CreatedAt,
+		"id":              m.ID,
+		"ticketId":        m.TicketID,
+		"senderId":        m.SenderID,
+		"senderRole":      m.SenderRole,
+		"body":            m.Body,
+		"isInternal":      m.IsInternal,
+		"clientMessageId": m.ClientMessageID,
+		"sequenceNum":     m.SequenceNum,
+		"createdAt":       m.CreatedAt,
 	}
 }
 

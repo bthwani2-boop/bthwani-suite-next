@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,6 +22,7 @@ type partnerOrderWorkboardItem struct {
 
 type partnerOrderWorkboardOrder struct {
 	ID                                     string                      `json:"id"`
+	Version                                int                         `json:"version"`
 	CheckoutIntentID                       string                      `json:"checkoutIntentId"`
 	StoreID                                string                      `json:"storeId"`
 	FulfillmentMode                        string                      `json:"fulfillmentMode"`
@@ -31,6 +33,8 @@ type partnerOrderWorkboardOrder struct {
 	TotalPrice                             float64                     `json:"totalPrice"`
 	Items                                  []partnerOrderWorkboardItem `json:"items"`
 	CreatedAt                              time.Time                   `json:"createdAt"`
+	DeadlineAt                             *time.Time                  `json:"deadlineAt"`
+	InboxCursor                            int64                       `json:"inboxCursor"`
 	AllowedActions                         []string                    `json:"allowedActions"`
 	Preparation                            orders.PreparationTiming    `json:"preparation"`
 	PreparationIssues                      []orders.PreparationIssue   `json:"preparationIssues"`
@@ -55,9 +59,14 @@ func partnerOrderAllowedActions(
 	openPreparationIssueCount,
 	resolvablePreparationIssueCount int,
 	hasOpenStoreCaptainHandoffException bool,
+	deadlineAt *time.Time,
+	now time.Time,
 ) []string {
 	switch strings.TrimSpace(status) {
 	case "pending":
+		if deadlineAt != nil && now.After(*deadlineAt) {
+			return []string{} // Expired, blocked pending timeout worker sweep
+		}
 		return []string{"accept", "reject"}
 	case "store_accepted":
 		actions := []string{"prepare", "revise_estimate", "report_issue"}
@@ -103,9 +112,19 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 	}
 
 	statusFilter := strings.TrimSpace(r.URL.Query().Get("status"))
+	
+	cursorStr := r.URL.Query().Get("cursor")
+	var cursor int64
+	if cursorStr != "" {
+		if c, err := strconv.ParseInt(cursorStr, 10, 64); err == nil {
+			cursor = c
+		}
+	}
+
 	rows, err := s.db.QueryContext(r.Context(), `
 		SELECT
 			o.id::text,
+			o.version,
 			o.checkout_intent_id::text,
 			o.store_id,
 			o.fulfillment_mode,
@@ -116,6 +135,8 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			COALESCE(item_projection.total_price, 0)::float8,
 			COALESCE(item_projection.items, '[]'::jsonb),
 			o.created_at,
+			o.partner_deadline_at,
+			o.latest_partner_inbox_cursor,
 			o.accepted_at,
 			o.preparation_started_at,
 			o.estimated_ready_at,
@@ -227,6 +248,7 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 		) he ON TRUE
 		WHERE o.store_id = $1
 		  AND ($2 = '' OR o.status = $2)
+		  AND ($3 = 0 OR o.latest_partner_inbox_cursor < $3)
 		ORDER BY
 			CASE o.status
 				WHEN 'pending' THEN 1
@@ -243,8 +265,8 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 				WHEN 'delivered' THEN 12
 				ELSE 99
 			END,
-			o.created_at ASC
-		LIMIT 100`, storeID, statusFilter)
+			o.latest_partner_inbox_cursor DESC
+		LIMIT 100`, storeID, statusFilter, cursor)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load partner order workboard")
 		return
@@ -259,6 +281,7 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 		var issuesJSON []byte
 		if err := rows.Scan(
 			&order.ID,
+			&order.Version,
 			&order.CheckoutIntentID,
 			&order.StoreID,
 			&order.FulfillmentMode,
@@ -269,6 +292,8 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			&order.TotalPrice,
 			&itemsJSON,
 			&order.CreatedAt,
+			&order.DeadlineAt,
+			&order.InboxCursor,
 			&order.Preparation.AcceptedAt,
 			&order.Preparation.PreparationStartedAt,
 			&order.Preparation.EstimatedReadyAt,
@@ -315,6 +340,8 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			order.OpenPreparationIssueCount,
 			order.ResolvablePreparationIssueCount,
 			order.OpenStoreCaptainHandoffExceptionID != "",
+			order.DeadlineAt,
+			now,
 		)
 		order.Preparation.OrderID = order.ID
 		order.Preparation = orders.EvaluatePreparationTiming(order.Preparation, now)

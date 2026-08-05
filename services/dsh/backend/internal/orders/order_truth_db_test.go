@@ -333,3 +333,4 @@ func ExampleCreateOrderTruthInput() {
 	fmt.Println(input.OperatorContextID, input.ClientID)
 	// Output: OperatorContext-yemen client-1001
 }
+

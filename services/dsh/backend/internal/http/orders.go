@@ -3,6 +3,8 @@ package http
 import (
 	"errors"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"dsh-api/internal/orders"
 	"dsh-api/internal/store"
@@ -16,57 +18,72 @@ const (
 	OperationsPermissionManage = "operations.manage"
 )
 
+func parseIfMatchVersion(w http.ResponseWriter, r *http.Request) (int, bool) {
+	val := strings.TrimSpace(r.Header.Get("If-Match-Version"))
+	if val == "" {
+		store.SendError(w, http.StatusBadRequest, "EXPECTED_VERSION_REQUIRED", "If-Match-Version header is required")
+		return 0, false
+	}
+	version, err := strconv.Atoi(val)
+	if err != nil || version <= 0 {
+		store.SendError(w, http.StatusBadRequest, "EXPECTED_VERSION_REQUIRED", "If-Match-Version must be a positive integer")
+		return 0, false
+	}
+	return version, true
+}
 
-
-// POST /dsh/partner/orders/{orderId}/accept
-func (s *protectedStoreServer) handleAcceptOrder(w http.ResponseWriter, r *http.Request) {
+// POST /dsh/partner/orders/{orderId}/decision
+func (s *protectedStoreServer) handlePartnerOrderDecision(w http.ResponseWriter, r *http.Request) {
 	actor, ownedOrder, ok := s.partnerOrder(w, r)
 	if !ok {
 		return
 	}
-	order, err := orders.AcceptOrder(s.db, ownedOrder.ID, actor.ID)
+
+	var body struct {
+		Decision   string `json:"decision"` // "accept" or "reject"
+		ReasonCode string `json:"reasonCode"`
+		ReasonNote string `json:"reasonNote"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+
+	idempotencyKey := r.Header.Get("Idempotency-Key")
+	if idempotencyKey == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "Idempotency-Key header is required")
+		return
+	}
+
+	version, ok := parseIfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+
+	order, err := orders.DecidePartnerOrder(s.db, orders.DecidePartnerOrderInput{
+		OrderID:         ownedOrder.ID,
+		StoreID:         ownedOrder.StoreID,
+		ActorID:         actor.ID,
+		Decision:        body.Decision,
+		ReasonCode:      body.ReasonCode,
+		ReasonNote:      body.ReasonNote,
+		ExpectedVersion: version,
+		IdempotencyKey:  idempotencyKey,
+	})
+
+	if errors.Is(err, orders.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
 	if errors.Is(err, orders.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return
 	}
 	if errors.Is(err, orders.ErrConflict) {
-		store.SendError(w, http.StatusConflict, "CONFLICT", "order cannot be accepted in current state")
+		store.SendError(w, http.StatusConflict, "CONFLICT", err.Error())
 		return
 	}
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to accept order")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order)})
-}
-
-// POST /dsh/partner/orders/{orderId}/reject
-func (s *protectedStoreServer) handleRejectOrder(w http.ResponseWriter, r *http.Request) {
-	actor, ownedOrder, ok := s.partnerOrder(w, r)
-	if !ok {
-		return
-	}
-	var body struct {
-		Reason string `json:"reason"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	if body.Reason == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "rejection reason is required")
-		return
-	}
-	order, err := orders.RejectOrder(s.db, ownedOrder.ID, actor.ID, body.Reason)
-	if errors.Is(err, orders.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-		return
-	}
-	if errors.Is(err, orders.ErrConflict) {
-		store.SendError(w, http.StatusConflict, "CONFLICT", "order cannot be rejected in current state")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to reject order")
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to process order decision")
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order)})

@@ -169,3 +169,99 @@ func (s *protectedStoreServer) handleListGovernedOperatorSupportEvents(w http.Re
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"events": result})
 }
+
+// POST /dsh/operator/support/tickets/{ticketId}/claim
+func (s *protectedStoreServer) handleClaimOperatorSupportTicket(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.ActorFromContext(r.Context())
+	if !ok {
+		return
+	}
+	var body struct {
+		ExpectedVersion int json:"expectedVersion"
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	ticket, err := support.ClaimTicket(s.db, r.PathValue("ticketId"), actor.ID, body.ExpectedVersion)
+	if err != nil {
+		sendGovernedSupportError(w, err, "failed to claim operator support ticket")
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"ticket": marshalTicket(ticket)})
+}
+
+// POST /dsh/operator/support/tickets/{ticketId}/escalate
+func (s *protectedStoreServer) handleEscalateOperatorSupportTicket(w http.ResponseWriter, r *http.Request) {
+	_, ok := s.ActorFromContext(r.Context())
+	if !ok {
+		return
+	}
+	var body struct {
+		Reason          string json:"reason"
+		ExpectedVersion int    json:"expectedVersion"
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	ticket, err := support.EscalateTicket(s.db, r.PathValue("ticketId"), body.Reason, body.ExpectedVersion)
+	if err != nil {
+		sendGovernedSupportError(w, err, "failed to escalate operator support ticket")
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"ticket": marshalTicket(ticket)})
+}
+
+// GET /dsh/operator/support/canned-responses
+func (s *protectedStoreServer) handleListCannedResponses(w http.ResponseWriter, r *http.Request) {
+	_, ok := s.ActorFromContext(r.Context())
+	if !ok {
+		return
+	}
+	categoryFilter := r.URL.Query().Get("category")
+	responses, err := support.ListCannedResponses(s.db, categoryFilter)
+	if err != nil {
+		sendGovernedSupportError(w, err, "failed to list canned responses")
+		return
+	}
+	result := make([]map[string]any, 0, len(responses))
+	for _, resp := range responses {
+		result = append(result, map[string]any{
+			"id":        resp.ID,
+			"title":     resp.Title,
+			"body":      resp.Body,
+			"category":  resp.Category,
+			"isActive":  resp.IsActive,
+			"createdAt": resp.CreatedAt,
+			"updatedAt": resp.UpdatedAt,
+		})
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"cannedResponses": result})
+}
+
+// GET /dsh/operator/support/tickets/{ticketId}/export
+func (s *protectedStoreServer) handleExportOperatorSupportTicket(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.ActorFromContext(r.Context())
+	if !ok {
+		return
+	}
+	ticketID := r.PathValue("ticketId")
+	ticket, err := support.GetOperatorTicket(s.db, ticketID)
+	if err != nil {
+		sendGovernedSupportError(w, err, "failed to load operator support ticket")
+		return
+	}
+	messages, err := support.ListOperatorRichMessages(s.db, actor.ID, ticketID)
+	if err != nil {
+		sendGovernedSupportError(w, err, "failed to list operator support messages")
+		return
+	}
+	msgResult := make([]map[string]any, 0, len(messages))
+	for _, message := range messages {
+		msgResult = append(msgResult, marshalRichMessage(message))
+	}
+	export := map[string]any{
+		"ticket":   marshalTicket(ticket),
+		"messages": msgResult,
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"export": export})
+}

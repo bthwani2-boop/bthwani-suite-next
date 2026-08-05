@@ -100,6 +100,7 @@ func (s *protectedStoreServer) handleReportDeliveryExceptionGoverned(w http.Resp
 		CorrelationID string                               `json:"correlationId"`
 		Latitude      *float64                             `json:"latitude"`
 		Longitude     *float64                             `json:"longitude"`
+		ProofMediaRef string                               `json:"proofMediaRef"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -114,6 +115,7 @@ func (s *protectedStoreServer) handleReportDeliveryExceptionGoverned(w http.Resp
 		CorrelationID: operationalCorrelationID(r, body.CorrelationID),
 		Latitude:      body.Latitude,
 		Longitude:     body.Longitude,
+		ProofMediaRef: strings.TrimSpace(body.ProofMediaRef),
 	})
 	if err != nil {
 		writeDeliveryExceptionError(w, err)

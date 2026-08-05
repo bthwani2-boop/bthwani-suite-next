@@ -21,6 +21,7 @@ const (
 	minLocationSampleInterval    = 5 * time.Second
 	maxLocationAccuracyMeters    = 100.0
 	locationCoordinateEpsilon    = 0.0000001
+	maxLocationSpeedMetersPerSec = 50.0 // 180 km/h
 )
 
 type dispatchLocationTimestampDecision string
@@ -31,9 +32,24 @@ const (
 	locationTimestampFuture      dispatchLocationTimestampDecision = "future"
 	locationTimestampOutOfOrder  dispatchLocationTimestampDecision = "out_of_order"
 	locationTimestampTooFrequent dispatchLocationTimestampDecision = "too_frequent"
+	locationTimestampSpoofed     dispatchLocationTimestampDecision = "spoofed"
 )
 
-func validateDispatchLocationTimestamp(recordedAt, now time.Time, previous *time.Time) dispatchLocationTimestampDecision {
+func distanceMeters(lat1, lon1, lat2, lon2 float64) float64 {
+	const earthRadius = 6371000.0
+	rad := math.Pi / 180.0
+	dLat := (lat2 - lat1) * rad
+	dLon := (lon2 - lon1) * rad
+	lat1Rad := lat1 * rad
+	lat2Rad := lat2 * rad
+
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+		math.Sin(dLon/2)*math.Sin(dLon/2)*math.Cos(lat1Rad)*math.Cos(lat2Rad)
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+	return earthRadius * c
+}
+
+func validateDispatchLocationIntegrity(recordedAt, now time.Time, latitude, longitude float64, previous *time.Time, previousLat, previousLon *float64) dispatchLocationTimestampDecision {
 	recordedAt = recordedAt.UTC()
 	now = now.UTC()
 	if recordedAt.Before(now.Add(-maxLocationSampleAge)) {
@@ -49,6 +65,15 @@ func validateDispatchLocationTimestamp(recordedAt, now time.Time, previous *time
 		}
 		if recordedAt.Sub(previousUTC) < minLocationSampleInterval {
 			return locationTimestampTooFrequent
+		}
+		if previousLat != nil && previousLon != nil {
+			durationSecs := recordedAt.Sub(previousUTC).Seconds()
+			if durationSecs > 0 {
+				dist := distanceMeters(latitude, longitude, *previousLat, *previousLon)
+				if (dist / durationSecs) > maxLocationSpeedMetersPerSec {
+					return locationTimestampSpoofed
+				}
+			}
 		}
 	}
 	return locationTimestampAccepted
@@ -143,11 +168,18 @@ func (s *protectedStoreServer) handlePushDispatchLocationGoverned(w http.Respons
 	}
 
 	var previousTime *time.Time
+	var prevLat, prevLon *float64
 	if previousRecordedAt.Valid {
 		value := previousRecordedAt.Time
 		previousTime = &value
 	}
-	switch validateDispatchLocationTimestamp(recordedAt, time.Now(), previousTime) {
+	if previousLatitude.Valid && previousLongitude.Valid {
+		lat := previousLatitude.Float64
+		lon := previousLongitude.Float64
+		prevLat = &lat
+		prevLon = &lon
+	}
+	switch validateDispatchLocationIntegrity(recordedAt, time.Now(), body.Latitude, body.Longitude, previousTime, prevLat, prevLon) {
 	case locationTimestampStale:
 		store.SendError(w, http.StatusUnprocessableEntity, "LOCATION_SAMPLE_STALE", "location sample is older than the allowed window")
 		return
@@ -159,6 +191,9 @@ func (s *protectedStoreServer) handlePushDispatchLocationGoverned(w http.Respons
 		return
 	case locationTimestampTooFrequent:
 		store.SendError(w, http.StatusTooManyRequests, "LOCATION_SAMPLE_TOO_FREQUENT", "location samples must be at least 5 seconds apart")
+		return
+	case locationTimestampSpoofed:
+		store.SendError(w, http.StatusUnprocessableEntity, "LOCATION_SAMPLE_SPOOFED", "location sample indicates impossible speed")
 		return
 	}
 

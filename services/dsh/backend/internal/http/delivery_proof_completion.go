@@ -75,11 +75,18 @@ func (s *protectedStoreServer) handleSubmitGovernedDeliveryProof(w http.Response
 		if evidenceKind == "signature" {
 			purpose = "delivery_signature"
 		}
+		var orderID string
+		if err := s.db.QueryRowContext(r.Context(), `SELECT order_id FROM dsh_assignments WHERE id = $1::uuid`, assignmentID).Scan(&orderID); err != nil {
+			s.removeDeliveryProofObject(r, "", uploaded.storageKey)
+			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "assignment not found")
+			return
+		}
+
 		if err := s.db.QueryRowContext(r.Context(), `
 			INSERT INTO dsh_media_refs
-				(storage_key, owner_actor_id, owner_actor_role, purpose, content_type, original_filename)
-			VALUES ($1,$2,'captain',$3,$4,$5)
-			RETURNING media_ref`, uploaded.storageKey, actor.ID, purpose, uploaded.contentType, uploaded.fileName).Scan(&uploadedMediaRef); err != nil {
+				(storage_key, owner_actor_id, owner_actor_role, purpose, content_type, original_filename, order_id)
+			VALUES ($1,$2,'captain',$3,$4,$5,$6::uuid)
+			RETURNING media_ref`, uploaded.storageKey, actor.ID, purpose, uploaded.contentType, uploaded.fileName, orderID).Scan(&uploadedMediaRef); err != nil {
 			s.removeDeliveryProofObject(r, "", uploaded.storageKey)
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to register delivery proof")
 			return
@@ -98,9 +105,11 @@ func (s *protectedStoreServer) handleSubmitGovernedDeliveryProof(w http.Response
 			}
 		}
 		input = dispatch.SubmitDeliveryProofInput{
-			Method:         method,
-			PIN:            pin,
-			IdempotencyKey: deliveryProofIdempotencyKey(r, r.FormValue("idempotencyKey")),
+			Method:                method,
+			PIN:                   pin,
+			RecipientRelationship: strings.TrimSpace(r.FormValue("recipientRelationship")),
+			RecipientName:         strings.TrimSpace(r.FormValue("recipientName")),
+			IdempotencyKey:        deliveryProofIdempotencyKey(r, r.FormValue("idempotencyKey")),
 		}
 		if evidenceKind == "signature" {
 			input.SignatureMediaRef = uploadedMediaRef
@@ -126,26 +135,30 @@ func (s *protectedStoreServer) handleSubmitGovernedDeliveryProof(w http.Response
 		}
 	} else {
 		var body struct {
-			Method            dispatch.DeliveryProofMethod `json:"method"`
-			PIN               string                       `json:"pin"`
-			PhotoMediaRef     string                       `json:"photoMediaRef"`
-			SignatureMediaRef string                       `json:"signatureMediaRef"`
-			CapturedLatitude  *float64                     `json:"capturedLatitude"`
-			CapturedLongitude *float64                     `json:"capturedLongitude"`
-			CapturedAt        string                       `json:"capturedAt"`
-			IdempotencyKey    string                       `json:"idempotencyKey"`
+			Method                dispatch.DeliveryProofMethod `json:"method"`
+			PIN                   string                       `json:"pin"`
+			PhotoMediaRef         string                       `json:"photoMediaRef"`
+			SignatureMediaRef     string                       `json:"signatureMediaRef"`
+			RecipientRelationship string                       `json:"recipientRelationship"`
+			RecipientName         string                       `json:"recipientName"`
+			CapturedLatitude      *float64                     `json:"capturedLatitude"`
+			CapturedLongitude     *float64                     `json:"capturedLongitude"`
+			CapturedAt            string                       `json:"capturedAt"`
+			IdempotencyKey        string                       `json:"idempotencyKey"`
 		}
 		if !decodeProtectedJSON(w, r, &body) {
 			return
 		}
 		input = dispatch.SubmitDeliveryProofInput{
-			Method:            body.Method,
-			PIN:               strings.TrimSpace(body.PIN),
-			PhotoMediaRef:     strings.TrimSpace(body.PhotoMediaRef),
-			SignatureMediaRef: strings.TrimSpace(body.SignatureMediaRef),
-			CapturedLatitude:  body.CapturedLatitude,
-			CapturedLongitude: body.CapturedLongitude,
-			IdempotencyKey:    deliveryProofIdempotencyKey(r, body.IdempotencyKey),
+			Method:                body.Method,
+			PIN:                   strings.TrimSpace(body.PIN),
+			PhotoMediaRef:         strings.TrimSpace(body.PhotoMediaRef),
+			SignatureMediaRef:     strings.TrimSpace(body.SignatureMediaRef),
+			RecipientRelationship: strings.TrimSpace(body.RecipientRelationship),
+			RecipientName:         strings.TrimSpace(body.RecipientName),
+			CapturedLatitude:      body.CapturedLatitude,
+			CapturedLongitude:     body.CapturedLongitude,
+			IdempotencyKey:        deliveryProofIdempotencyKey(r, body.IdempotencyKey),
 		}
 		if strings.TrimSpace(body.CapturedAt) != "" {
 			parsed, err := time.Parse(time.RFC3339, body.CapturedAt)
@@ -278,6 +291,8 @@ func marshalDeliveryProof(proof *dispatch.DeliveryProof, includeSensitive bool) 
 	if includeSensitive {
 		out["photoMediaRef"] = proof.PhotoMediaRef
 		out["signatureMediaRef"] = proof.SignatureMediaRef
+		out["recipientRelationship"] = proof.RecipientRelationship
+		out["recipientName"] = proof.RecipientName
 		out["capturedLatitude"] = proof.CapturedLatitude
 		out["capturedLongitude"] = proof.CapturedLongitude
 		out["reviewedByActorId"] = proof.ReviewedByActorID

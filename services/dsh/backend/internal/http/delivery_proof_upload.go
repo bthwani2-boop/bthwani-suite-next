@@ -115,9 +115,9 @@ func (s *protectedStoreServer) handlePartnerDeliveryProofWithMedia(w http.Respon
 	var mediaRef string
 	if err := s.db.QueryRowContext(r.Context(), `
 		INSERT INTO dsh_media_refs
-			(storage_key, owner_actor_id, owner_actor_role, partner_id, store_id, purpose, content_type, original_filename)
-		VALUES ($1,$2,'partner',$3,$4,'partner_delivery_proof',$5,$6)
-		RETURNING media_ref`, upload.storageKey, actor.ID, partnerID, task.StoreID, upload.contentType, upload.fileName).Scan(&mediaRef); err != nil {
+			(storage_key, owner_actor_id, owner_actor_role, partner_id, store_id, purpose, content_type, original_filename, order_id)
+		VALUES ($1,$2,'partner',$3,$4,'partner_delivery_proof',$5,$6,$7::uuid)
+		RETURNING media_ref`, upload.storageKey, actor.ID, partnerID, task.StoreID, upload.contentType, upload.fileName, task.OrderID).Scan(&mediaRef); err != nil {
 		s.removeDeliveryProofObject(r, "", upload.storageKey)
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to register partner delivery proof")
 		return

@@ -148,4 +148,58 @@ func RegisterOrderRescueRoutes(
 	mux.HandleFunc("GET /dsh/operator/support/order-rescue-cases/{caseId}", protected.withPermission("control-panel", SupportPermissionRead, protected.handleGetOrderRescueCase))
 	mux.HandleFunc("PATCH /dsh/operator/support/order-rescue-cases/{caseId}", protected.withPermission("control-panel", SupportPermissionManage, protected.handleUpdateOrderRescueCase))
 	mux.HandleFunc("GET /dsh/operator/support/order-rescue-cases/{caseId}/events", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListOrderRescueEvents))
+	mux.HandleFunc("POST /dsh/operator/support/order-rescue-cases/{caseId}/actions", protected.withPermission("control-panel", SupportPermissionManage, protected.handleCreateOrderRescueAction))
+	mux.HandleFunc("POST /dsh/operator/support/order-rescue-cases/{caseId}/actions/{actionId}/execute", protected.withPermission("control-panel", SupportPermissionManage, protected.handleExecuteOrderRescueAction))
 }
+func (s *protectedStoreServer) handleCreateOrderRescueAction(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.ActorFromContext(r.Context())
+	if !ok {
+		return
+	}
+	idempotencyKey, correlationID, ok := partnerSupportMutationHeaders(w, r)
+	if !ok {
+		return
+	}
+	var body struct {
+		ActionType string `json:"actionType"`
+		Payload    string `json:"payload"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	item, err := support.CreateOrderRescueAction(s.db, support.CreateOrderRescueActionInput{
+		ActorID:        actor.ID,
+		CaseID:         r.PathValue("caseId"),
+		ActionType:     support.OrderRescueNextAction(body.ActionType),
+		Payload:        body.Payload,
+		IdempotencyKey: idempotencyKey,
+		CorrelationID:  correlationID,
+	})
+	if err != nil {
+		sendGovernedSupportError(w, err, "failed to create order rescue action")
+		return
+	}
+	store.SendJSON(w, http.StatusCreated, map[string]any{"action": item})
+}
+
+func (s *protectedStoreServer) handleExecuteOrderRescueAction(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.ActorFromContext(r.Context())
+	if !ok {
+		return
+	}
+	_, correlationID, ok := partnerSupportMutationHeaders(w, r)
+	if !ok {
+		return
+	}
+	item, err := support.ExecuteOrderRescueAction(s.db, support.ExecuteOrderRescueActionInput{
+		ActorID:       actor.ID,
+		ActionID:      r.PathValue("actionId"),
+		CorrelationID: correlationID,
+	})
+	if err != nil {
+		sendGovernedSupportError(w, err, "failed to execute order rescue action")
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"action": item})
+}
+

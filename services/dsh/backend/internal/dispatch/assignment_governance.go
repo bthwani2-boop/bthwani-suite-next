@@ -255,14 +255,26 @@ func ListCaptainDispatchCandidates(db *sql.DB, operatorContextID, serviceAreaCod
 		       COUNT(a.id) FILTER (WHERE a.status='accepted' OR (a.status='offered' AND a.response_deadline_at>NOW()))::int,
 		       p.priority_score, p.version, p.updated_at
 		FROM dsh_captain_dispatch_profiles p
+		LEFT JOIN dsh_captain_financial_eligibility financial
+		  ON financial.operator_context_id=p.operator_context_id AND financial.captain_id=p.captain_id
 		LEFT JOIN dsh_assignments a
 		  ON a.operator_context_id=p.operator_context_id AND a.captain_id=p.captain_id
 		 AND (a.status='accepted' OR (a.status='offered' AND a.response_deadline_at>NOW()))
 		WHERE p.operator_context_id=$1
+		  AND p.accreditation_status='approved'
+		  AND p.availability_status='available'
+		  AND COALESCE(financial.eligible,false)=true AND financial.expires_at>NOW()
+		  AND p.updated_at > NOW() - INTERVAL '24 hours'
+		  AND NOT EXISTS (
+		    SELECT 1 FROM dsh_provider_availability_projections absence
+		    WHERE absence.operator_context_id=p.operator_context_id AND absence.actor_type='captain'
+		      AND absence.actor_id=p.captain_id AND absence.status='active'
+		      AND NOW()>=absence.starts_at AND NOW()<absence.ends_at
+		  )
 		GROUP BY p.operator_context_id,p.captain_id,p.accreditation_status,
 		         p.availability_status,p.max_active_assignments,p.priority_score,p.version,p.updated_at
+		HAVING COUNT(a.id) < p.max_active_assignments
 		ORDER BY
-		  CASE WHEN p.accreditation_status='approved' AND p.availability_status='available' THEN 0 ELSE 1 END,
 		  p.priority_score DESC,
 		  COUNT(a.id) ASC,
 		  p.updated_at DESC
@@ -316,31 +328,37 @@ func finalizeCandidate(item *CaptainDispatchCandidate) {
 }
 
 func validateCaptainForAssignmentTx(tx *sql.Tx, operatorContextID, captainID, serviceAreaCode string) error {
-	var accreditation, availability string
-	var maxActive int
+	var maxActive, active int
+	var financialEligible, hasAbsence, isFresh bool
 	err := tx.QueryRow(`
-		SELECT accreditation_status, availability_status, max_active_assignments
-		FROM dsh_captain_dispatch_profiles
-		WHERE operator_context_id=$1 AND captain_id=$2
-		FOR UPDATE`, operatorContextID, captainID,
-	).Scan(&accreditation, &availability, &maxActive)
+		SELECT p.max_active_assignments,
+		       COUNT(a.id) FILTER (WHERE a.status='accepted' OR (a.status='offered' AND a.response_deadline_at>NOW()))::int,
+		       COALESCE(f.eligible,false) AND f.expires_at>NOW(),
+		       EXISTS (
+		         SELECT 1 FROM dsh_provider_availability_projections absence
+		         WHERE absence.operator_context_id=p.operator_context_id AND absence.actor_type='captain'
+		           AND absence.actor_id=p.captain_id AND absence.status='active'
+		           AND NOW()>=absence.starts_at AND NOW()<absence.ends_at
+		       ),
+		       p.updated_at > NOW() - INTERVAL '24 hours'
+		FROM dsh_captain_dispatch_profiles p
+		LEFT JOIN dsh_captain_financial_eligibility f
+		  ON f.operator_context_id=p.operator_context_id AND f.captain_id=p.captain_id
+		LEFT JOIN dsh_assignments a
+		  ON a.operator_context_id=p.operator_context_id AND a.captain_id=p.captain_id
+		WHERE p.operator_context_id=$1 AND p.captain_id=$2
+		  AND p.accreditation_status='approved' AND p.availability_status='available'
+		GROUP BY p.operator_context_id, p.captain_id, p.max_active_assignments, f.eligible, f.expires_at, p.updated_at
+		FOR UPDATE OF p`, operatorContextID, captainID,
+	).Scan(&maxActive, &active, &financialEligible, &hasAbsence, &isFresh)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrCaptainNotEligible
 	}
 	if err != nil {
 		return err
 	}
-	if accreditation != "approved" || availability != "available" {
+	if !financialEligible || hasAbsence || !isFresh {
 		return ErrCaptainNotEligible
-	}
-	var active int
-	if err = tx.QueryRow(`
-		SELECT COUNT(*)::int FROM dsh_assignments
-		WHERE operator_context_id=$1 AND captain_id=$2
-		  AND (status='accepted' OR (status='offered' AND response_deadline_at>NOW()))`,
-		operatorContextID, captainID,
-	).Scan(&active); err != nil {
-		return err
 	}
 	if active >= maxActive {
 		return ErrCaptainAtCapacity
@@ -349,20 +367,30 @@ func validateCaptainForAssignmentTx(tx *sql.Tx, operatorContextID, captainID, se
 }
 
 func validateCaptainAcceptanceTx(tx *sql.Tx, operatorContextID, captainID string) error {
-	var accreditation, availability string
+	var financialEligible, hasAbsence, isFresh bool
 	err := tx.QueryRow(`
-		SELECT accreditation_status, availability_status
-		FROM dsh_captain_dispatch_profiles
-		WHERE operator_context_id=$1 AND captain_id=$2
-		FOR UPDATE`, operatorContextID, captainID,
-	).Scan(&accreditation, &availability)
+		SELECT COALESCE(f.eligible,false) AND f.expires_at>NOW(),
+		       EXISTS (
+		         SELECT 1 FROM dsh_provider_availability_projections absence
+		         WHERE absence.operator_context_id=p.operator_context_id AND absence.actor_type='captain'
+		           AND absence.actor_id=p.captain_id AND absence.status='active'
+		           AND NOW()>=absence.starts_at AND NOW()<absence.ends_at
+		       ),
+		       p.updated_at > NOW() - INTERVAL '24 hours'
+		FROM dsh_captain_dispatch_profiles p
+		LEFT JOIN dsh_captain_financial_eligibility f
+		  ON f.operator_context_id=p.operator_context_id AND f.captain_id=p.captain_id
+		WHERE p.operator_context_id=$1 AND p.captain_id=$2
+		  AND p.accreditation_status='approved' AND p.availability_status='available'
+		FOR UPDATE OF p`, operatorContextID, captainID,
+	).Scan(&financialEligible, &hasAbsence, &isFresh)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrCaptainNotEligible
 	}
 	if err != nil {
 		return err
 	}
-	if accreditation != "approved" || availability != "available" {
+	if !financialEligible || hasAbsence || !isFresh {
 		return ErrCaptainNotEligible
 	}
 	return nil

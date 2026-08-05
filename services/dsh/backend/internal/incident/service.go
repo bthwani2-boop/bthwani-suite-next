@@ -151,7 +151,7 @@ func (s *Service) dispatch(ctx context.Context, input ReportInput) ([]byte, erro
 		}
 		return json.Marshal(task)
 	case TypeCancel:
-		order, err := orders.CancelOrder(s.db, orders.CancellationInput{
+		order, err := orders.CancelOrderSync(s.db, orders.CreateCancellationCaseInput{
 			OrderID:       input.OrderID,
 			OperatorContextID:      input.OperatorContextID,
 			ActorID:       input.ActorID,
@@ -182,3 +182,4 @@ func nullableString(value string) any {
 	}
 	return value
 }
+

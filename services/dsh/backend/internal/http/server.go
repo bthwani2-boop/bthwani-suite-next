@@ -125,14 +125,17 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}", protected.handleGetClientOrderTruth)
 	mux.HandleFunc("GET /dsh/partner/orders", protected.handleListPartnerOrderTruth)
 	mux.HandleFunc("GET /dsh/partner/order-workboard", protected.handlePartnerOrderWorkboard)
-	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/accept", protected.handleAcceptOrder)
-	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/reject", protected.handleRejectOrder)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/decision", protected.handlePartnerOrderDecision)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparing", protected.handleMarkPreparing)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/ready", protected.handleMarkReadyForPickup)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/captain-handoff/confirm", protected.handleConfirmPartnerStoreCaptainHandoff)
 	mux.HandleFunc("GET /dsh/operator/orders", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleListOperatorOrderTruth))
 	mux.HandleFunc("GET /dsh/operator/orders/{orderId}", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleGetOperatorOrderTruth))
 	mux.HandleFunc("POST /dsh/operator/orders/{orderId}/cancel", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleOperatorCancelOrder))
+	
+	mux.HandleFunc("POST /dsh/client/orders/{orderId}/return", protected.handleClientReturnOrder)
+	mux.HandleFunc("GET /dsh/client/orders/{orderId}/return", protected.handleClientGetReturnOrder)
+	mux.HandleFunc("POST /dsh/operator/orders/{orderId}/return", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleOperatorReturnOrderGoverned))
 
 	// Dispatch & Captain Delivery Lifecycle
 	mux.HandleFunc("GET /dsh/captain/me/readiness", protected.handleGetCaptainSelfReadiness)
@@ -155,6 +158,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/location", protected.handlePushDispatchLocationGoverned)
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/exceptions", protected.handleReportDeliveryException)
 	mux.HandleFunc("GET /dsh/captain/dispatch/assignments/{assignmentId}/exceptions", protected.handleGetCaptainDeliveryException)
+	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/contact-proxy", protected.handleCaptainContactProxy)
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive", protected.handleArriveReturnToStore)
 	mux.HandleFunc("GET /dsh/operator/delivery-exceptions", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleListOperatorDeliveryExceptions))
 	mux.HandleFunc("POST /dsh/operator/delivery-exceptions/{exceptionId}/acknowledge", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleAcknowledgeDeliveryException))
@@ -264,6 +268,12 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("GET /dsh/operator/support/tickets/{ticketId}/messages", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListGovernedOperatorSupportMessages))
 	mux.HandleFunc("POST /dsh/operator/support/tickets/{ticketId}/messages", protected.withPermission("control-panel", SupportPermissionManage, protected.handleAddGovernedOperatorSupportMessage))
 	mux.HandleFunc("GET /dsh/operator/support/tickets/{ticketId}/events", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListGovernedOperatorSupportEvents))
+	
+	mux.HandleFunc("POST /dsh/operator/support/tickets/{ticketId}/claim", protected.withPermission("control-panel", SupportPermissionManage, protected.handleClaimOperatorSupportTicket))
+	mux.HandleFunc("POST /dsh/operator/support/tickets/{ticketId}/escalate", protected.withPermission("control-panel", SupportPermissionManage, protected.handleEscalateOperatorSupportTicket))
+	mux.HandleFunc("GET /dsh/operator/support/tickets/{ticketId}/export", protected.withPermission("control-panel", SupportPermissionRead, protected.handleExportOperatorSupportTicket))
+	mux.HandleFunc("GET /dsh/operator/support/canned-responses", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListCannedResponses))
+
 	mux.HandleFunc("POST /dsh/operator/incidents", protected.withPermission("control-panel", SupportPermissionManage, protected.handleCreateIncident))
 	mux.HandleFunc("GET /dsh/operator/incidents", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListIncidents))
 	mux.HandleFunc("PATCH /dsh/operator/incidents/{incidentId}", protected.withPermission("control-panel", SupportPermissionManage, protected.handleUpdateIncident))

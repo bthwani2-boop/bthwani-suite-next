@@ -14,14 +14,14 @@ func TestCancellationOutboxPersistsCommandCorrelationDBIntegration(t *testing.T)
 		_, _ = db.Exec(`DELETE FROM dsh_checkout_financial_closure_outbox WHERE payment_session_id=$1`, paymentSessionID)
 	})
 
-	if _, err := CancelOrder(db, CancellationInput{
+	if _, err := CancelOrderSync(db, CreateCancellationCaseInput{
 		OrderID:       order.ID,
 		ActorID:       order.ClientID,
 		ActorRole:     "client",
 		ReasonCode:    "changed_mind",
 		CorrelationID: correlationID,
 	}); err != nil {
-		t.Fatalf("CancelOrder failed: %v", err)
+		t.Fatalf("CancelOrderSync failed: %v", err)
 	}
 
 	var storedCorrelation string
@@ -35,3 +35,5 @@ func TestCancellationOutboxPersistsCommandCorrelationDBIntegration(t *testing.T)
 		t.Fatalf("stored correlation=%q want %q", storedCorrelation, correlationID)
 	}
 }
+
+

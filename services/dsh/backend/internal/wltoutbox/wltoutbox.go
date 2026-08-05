@@ -13,6 +13,7 @@ const (
 	EventTypeDeliveryCompleted       = "delivery_completed"
 	EventTypeLoyaltyEarned           = "loyalty_earned"
 	EventTypeLoyaltyReversed         = "loyalty_reversed"
+	EventTypeOrderReturnApproved     = "order_return_approved"
 	EventTypePromotionFundingCommit  = "promotion_funding_commit"
 	EventTypePromotionFundingRelease = "promotion_funding_release"
 	EventTypePromotionFundingReverse = "promotion_funding_reverse"

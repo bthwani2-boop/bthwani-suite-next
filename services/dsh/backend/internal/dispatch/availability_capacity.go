@@ -304,6 +304,7 @@ func GetServiceAreaCapacityForecast(ctx context.Context, db *sql.DB, operatorCon
 		 AND (assignment.status='accepted' OR (assignment.status='offered' AND assignment.response_deadline_at>$3))
 		WHERE p.operator_context_id=$1 AND p.accreditation_status='approved'
 		  AND p.availability_status='available'
+		  AND p.updated_at > NOW() - INTERVAL '24 hours'
 		  AND COALESCE(financial.eligible,false)=true AND financial.expires_at>$3
 		  AND NOT EXISTS (
 		    SELECT 1 FROM dsh_provider_availability_projections absence

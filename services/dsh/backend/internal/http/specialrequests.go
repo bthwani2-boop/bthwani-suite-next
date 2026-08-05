@@ -142,6 +142,11 @@ func marshalSpecialRequest(req *specialrequests.SpecialRequest) map[string]any {
 		"captainAssignedAt":         req.CaptainAssignedAt,
 		"pickedUpAt":                req.PickedUpAt,
 		"deliveredAt":               req.DeliveredAt,
+		"quoteExpiresAt":            req.QuoteExpiresAt,
+		"mediaId":                   req.MediaID,
+		"safetyStatus":              req.SafetyStatus,
+		"moderationNote":            req.ModerationNote,
+		"isUnsafeContent":           req.IsUnsafeContent,
 	}
 }
 
@@ -163,6 +168,7 @@ type createSpecialRequestBody struct {
 	ScheduleMode             *string                     `json:"scheduleMode"`
 	ScheduledAt              *time.Time                  `json:"scheduledAt"`
 	HandlingRequirements     *string                     `json:"handlingRequirements"`
+	MediaID                  *string                     `json:"mediaId"`
 }
 
 // POST /dsh/client/special-requests
@@ -196,6 +202,7 @@ func (s *protectedStoreServer) handleCreateSpecialRequest(w http.ResponseWriter,
 		ScheduleMode:             body.ScheduleMode,
 		ScheduledAt:              body.ScheduledAt,
 		HandlingRequirements:     body.HandlingRequirements,
+		MediaID:                  body.MediaID,
 	}
 	req, err := svc.CreateInOperatorContext(r.Context(), actor.OperatorContextID, actor.ID, input)
 	if err != nil {
@@ -410,6 +417,10 @@ type updateSpecialRequestBody struct {
 	CaptainAssignedAt         *time.Time                     `json:"captainAssignedAt"`
 	PickedUpAt                *time.Time                     `json:"pickedUpAt"`
 	DeliveredAt               *time.Time                     `json:"deliveredAt"`
+	QuoteExpiresAt            *time.Time                     `json:"quoteExpiresAt"`
+	SafetyStatus              *string                        `json:"safetyStatus"`
+	ModerationNote            *string                        `json:"moderationNote"`
+	IsUnsafeContent           *bool                          `json:"isUnsafeContent"`
 	ExpectedVersion           *int                           `json:"expectedVersion"`
 }
 
@@ -451,6 +462,10 @@ func (s *protectedStoreServer) handleUpdateOperatorSpecialRequest(w http.Respons
 		CaptainAssignedAt:         body.CaptainAssignedAt,
 		PickedUpAt:                body.PickedUpAt,
 		DeliveredAt:               body.DeliveredAt,
+		QuoteExpiresAt:            body.QuoteExpiresAt,
+		SafetyStatus:              body.SafetyStatus,
+		ModerationNote:            body.ModerationNote,
+		IsUnsafeContent:           body.IsUnsafeContent,
 	}
 	updated, err := svc.ApplyOperatorTransitionInOperatorContext(r.Context(), actor.OperatorContextID, reqID, *body.ExpectedVersion, input)
 	if err != nil {

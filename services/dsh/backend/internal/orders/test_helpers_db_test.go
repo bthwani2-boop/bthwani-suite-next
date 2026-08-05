@@ -102,3 +102,4 @@ func fetchFinancialClosureOutboxRow(t *testing.T, db *sql.DB, paymentSessionID s
 	}
 	return eventType, orderID, reason, true
 }
+

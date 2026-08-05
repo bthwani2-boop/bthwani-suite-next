@@ -3,6 +3,7 @@ package http
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"dsh-api/internal/dispatch"
@@ -53,6 +54,7 @@ func (s *protectedStoreServer) handleReportDeliveryException(w http.ResponseWrit
 		CorrelationID string                               `json:"correlationId"`
 		Latitude      *float64                             `json:"latitude"`
 		Longitude     *float64                             `json:"longitude"`
+		ProofMediaRef string                               `json:"proofMediaRef"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -61,6 +63,7 @@ func (s *protectedStoreServer) handleReportDeliveryException(w http.ResponseWrit
 		ReasonCode: body.ReasonCode, Note: body.Note,
 		CorrelationID: operationalCorrelationID(r, body.CorrelationID),
 		Latitude:      body.Latitude, Longitude: body.Longitude,
+		ProofMediaRef: strings.TrimSpace(body.ProofMediaRef),
 	})
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
@@ -135,6 +138,8 @@ func marshalDeliveryException(item *dispatch.DeliveryException) map[string]any {
 		"returnedAt":              item.ReturnedAt,
 		"returnAcceptedByActorId": item.ReturnAcceptedByActorID,
 		"version":                 item.Version, "createdAt": item.CreatedAt, "updatedAt": item.UpdatedAt,
+		"proofMediaRef": item.ProofMediaRef,
+		"policyNextAction": item.PolicyNextAction,
 	}
 }
 
