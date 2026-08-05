@@ -7,7 +7,7 @@ import (
 )
 
 func TestWLTSubscriptionLifecycleRoutes(t *testing.T) {
-	router := NewRouter(nil, true)
+	router := NewRouter(nil, true, nil)
 	cases := []struct {
 		method string
 		path   string

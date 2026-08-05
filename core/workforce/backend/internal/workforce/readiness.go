@@ -1,22 +1,26 @@
-﻿package workforce
+package workforce
 
 import (
 	"context"
 	"errors"
 	"time"
-
-	"workforce-api/internal/identityclient"
 )
 
-// EvaluateReadiness orchestrates checking all internal dependencies
-// (Identity, Workforce profile, DSH assignment, WLT eligibility)
-// and produces a unified ReadinessGate.
+// EvaluateReadiness orchestrates checking the dependencies Workforce can
+// answer today: Identity activation status and the professional profile
+// (employment status, documents, supervisor assignment).
+//
+// J012/J013 also require DSH active-assignment and WLT financial-eligibility
+// signals in the same gate. Neither dshclient nor wltclient currently exposes
+// a read for those, so this evaluation does not claim them: it reports a
+// gate scoped to what it can verify rather than fabricating an assignment or
+// eligibility check against a call that does not exist. Adding those signals
+// is J012/J013 journey work, not part of restoring a green build.
 func (s *Service) EvaluateReadiness(ctx context.Context, actorID string) (*ReadinessGate, error) {
-	// 1. Fetch Person (Workforce Truth)
-	person, err := s.Person(ctx, actorID)
+	person, err := s.repo.PersonByActorID(ctx, actorID)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			// Fast path for non-workforce actors
+			// Fast path for non-workforce actors.
 			return &ReadinessGate{
 				ActorID:        actorID,
 				Status:         ReadinessBlocked,
@@ -30,32 +34,24 @@ func (s *Service) EvaluateReadiness(ctx context.Context, actorID string) (*Readi
 	gate := &ReadinessGate{
 		ActorID:        actorID,
 		WorkforceKind:  person.WorkforceKind,
-		Status:         ReadinessAllowed, // Default to allowed until blockers are found
+		Status:         ReadinessAllowed, // Default to allowed until a blocker is found.
 		BlockerReasons: make([]BlockerReason, 0),
 		CheckedAt:      time.Now(),
 	}
 
-	// 2. Check Identity Status (Suspension)
+	// Identity status. An Identity lookup failure is treated the same as an
+	// inactive actor: J001/J012 require failing closed, not assuming healthy.
 	actor, err := s.identity.Actor(ctx, actorID)
-	if err != nil {
-		// If identity is unavailable or errors, we block safely.
-		if errors.Is(err, identityclient.ErrActorNotFound) {
-			gate.BlockerReasons = append(gate.BlockerReasons, BlockerIdentitySuspended)
-		} else {
-			// Fail open on Identity? NO, J012 says we fail closed.
-			// Actually, "unavailable" means we can't confirm identity.
-			gate.BlockerReasons = append(gate.BlockerReasons, BlockerIdentitySuspended)
-		}
-	} else if !actor.Active {
+	if err != nil || !actor.Active {
 		gate.BlockerReasons = append(gate.BlockerReasons, BlockerIdentitySuspended)
 	}
 
-	// 3. Check Employment Status
+	// Employment status.
 	if person.EngagementStatus == "terminated" || person.EngagementStatus == "suspended" {
 		gate.BlockerReasons = append(gate.BlockerReasons, BlockerEmploymentTerminated)
 	}
 
-	// 4. Check Profile Documents and Specific Requirements
+	// Profile documents and role-specific requirements.
 	if person.WorkforceKind == "captain" && person.CaptainProfile != nil {
 		if person.CaptainProfile.LicenseStatus == "expired" {
 			gate.BlockerReasons = append(gate.BlockerReasons, BlockerDocumentsExpired)
@@ -74,30 +70,6 @@ func (s *Service) EvaluateReadiness(ctx context.Context, actorID string) (*Readi
 		}
 	}
 
-	// 5. Check DSH Assignment
-	// To avoid calling DSH independently if we don't need to, we check if they are already blocked.
-	// But J012 says all gate states should be visible (so checklist can show all reasons).
-	// We call DSH to check active assignments.
-	assignments, err := s.dsh.ActiveAssignments(ctx, actorID)
-	if err == nil && len(assignments) == 0 {
-		gate.BlockerReasons = append(gate.BlockerReasons, BlockerNoActiveAssignment)
-	} else if err != nil {
-		// If DSH is down, we cannot confirm assignments
-		gate.BlockerReasons = append(gate.BlockerReasons, BlockerNoActiveAssignment)
-	}
-
-	// 6. Check Finance Eligibility (WLT) for non-employees
-	if person.EngagementType != "employee" {
-		// Typically we'd call WLT eligibility API. For this prototype, we simulate a call
-		// or check if there is an eligibility issue.
-		// Since we don't have a wltclient injected yet, we assume it's OK for this exercise,
-		// or we can simulate based on an interface. We will assume WLT responds OK unless
-		// wltclient returns an error. (Here we just add a mock or stub).
-		// We'll leave the financial check logic hooked up to a theoretical WLT call.
-		// If WLT is unavailable -> BlockerEligibilityUnavailable
-	}
-
-	// Aggregate Status
 	if len(gate.BlockerReasons) > 0 {
 		gate.Status = ReadinessBlocked
 	}

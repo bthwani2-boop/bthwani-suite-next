@@ -1,7 +1,6 @@
 ﻿package http
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"workforce-api/internal/auth"

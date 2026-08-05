@@ -91,7 +91,8 @@ type upstreamError struct {
 func NewClient(baseURL string, reg *providers.Registry) *Client {
 	return &Client{
 		baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
-		// The http.Client timeout will be overridden per request via Context
+		// The http.Client timeout is overridden per request via Context when a
+		// registry-provided timeout budget is available; see get()/post().
 		http:    &http.Client{},
 		breaker: providers.NewCircuitBreaker(providers.CircuitBreakerConfig{
 			FailureThreshold: 5,
@@ -100,6 +101,19 @@ func NewClient(baseURL string, reg *providers.Registry) *Client {
 		}),
 		reg: reg,
 	}
+}
+
+// NewClientWithTimeout builds a client bounded by a fixed http.Client timeout
+// instead of a provider registry budget, for callers that have no registry
+// (or, as in tests, need a deterministic short timeout regardless of any
+// registry-configured budget).
+func NewClientWithTimeout(baseURL string, timeout time.Duration) *Client {
+	if timeout <= 0 {
+		timeout = 8 * time.Second
+	}
+	client := NewClient(baseURL, nil)
+	client.http = &http.Client{Timeout: timeout}
+	return client
 }
 
 func (c *Client) Configured() bool {

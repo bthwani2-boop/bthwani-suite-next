@@ -7,7 +7,7 @@ import (
 )
 
 func TestMutationRoutesDisabledByDefault(t *testing.T) {
-	router := NewRouter(nil, false)
+	router := NewRouter(nil, false, nil)
 
 	gatedRoutes := []struct {
 		method string
@@ -40,7 +40,7 @@ func TestMutationRoutesDisabledByDefault(t *testing.T) {
 
 func TestRetiredLedgerMutationRouteIsNotRegistered(t *testing.T) {
 	for _, mutationsEnabled := range []bool{false, true} {
-		router := NewRouter(nil, mutationsEnabled)
+		router := NewRouter(nil, mutationsEnabled, nil)
 		req := httptest.NewRequest(http.MethodPost, "/wlt/ledger/entries", nil)
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -57,7 +57,7 @@ func TestRetiredLedgerMutationRouteIsNotRegistered(t *testing.T) {
 // "not gated" for them would require a real database connection -- that is
 // covered by the wlt-go-db CI job instead, not here.
 func TestReadRoutesStillWorkWhenMutationsDisabled(t *testing.T) {
-	router := NewRouter(nil, false)
+	router := NewRouter(nil, false, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/wlt/health", nil)
 	rec := httptest.NewRecorder()
@@ -76,7 +76,7 @@ func TestReadRoutesStillWorkWhenMutationsDisabled(t *testing.T) {
 // (WLT_MUTATIONS_ENABLED) is not itself authentication.
 func TestMutationRoutesRequireServiceAuth(t *testing.T) {
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
-	router := NewRouter(nil, true)
+	router := NewRouter(nil, true, nil)
 
 	mutationRoutes := []struct {
 		method string
@@ -115,7 +115,7 @@ func TestMutationRoutesRequireServiceAuth(t *testing.T) {
 
 func TestFinancialReadRoutesRequireInternalServiceAuth(t *testing.T) {
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
-	router := NewRouter(nil, true)
+	router := NewRouter(nil, true, nil)
 
 	readRoutes := []string{
 		"/wlt/refunds",

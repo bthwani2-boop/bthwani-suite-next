@@ -264,9 +264,9 @@ const (
 
 // ReadinessGate aggregates readiness from Identity, Workforce, DSH, and Finance.
 type ReadinessGate struct {
-	ActorID        string          json:"actorId"
-	WorkforceKind  string          json:"workforceKind"
-	Status         ReadinessStatus json:"status"
-	BlockerReasons []BlockerReason json:"blockerReasons"
-	CheckedAt      time.Time       json:"checkedAt"
+	ActorID        string          `json:"actorId"`
+	WorkforceKind  string          `json:"workforceKind"`
+	Status         ReadinessStatus `json:"status"`
+	BlockerReasons []BlockerReason `json:"blockerReasons"`
+	CheckedAt      time.Time       `json:"checkedAt"`
 }
