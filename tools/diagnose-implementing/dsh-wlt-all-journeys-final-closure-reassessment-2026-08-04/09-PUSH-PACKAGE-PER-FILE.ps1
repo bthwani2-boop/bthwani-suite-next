@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $false)]
-    [string]$RepoRoot = "C:\bthwani-suite-next",
+    [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../..")).Path,
 
     [Parameter(Mandatory = $false)]
     [string]$Branch = "smsm",
