@@ -29,6 +29,7 @@
     "redocly": "active",
     "openapi-typescript": "optional",
     "graphify": "optional",
+    "open-code-review": "optional",
     "playwright": "optional",
     "axe": "partial",
     "xstate": "optional",

@@ -116,6 +116,10 @@
       "action": "keep",
       "reason": "Architecture graph generator."
     },
+    "open-code-review": {
+      "action": "add",
+      "reason": "Apache-2.0 deterministic code-review scoping and rule resolution with delegation to existing subscription-based host agents and no separate OCR API key."
+    },
     "playwright": {
       "action": "add",
       "reason": "Web E2E smoke tests."

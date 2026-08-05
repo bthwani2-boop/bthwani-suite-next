@@ -1,0 +1,77 @@
+{
+  "include": [
+    "**/*_test.go",
+    "**/*.test.{js,jsx,ts,tsx}",
+    "**/*.spec.{js,jsx,ts,tsx}",
+    "**/__tests__/**",
+    "**/tests/**"
+  ],
+  "exclude": [
+    "**/node_modules/**",
+    "**/vendor/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.next/**",
+    "**/.expo/**",
+    "**/coverage/**",
+    "**/clients/generated/**",
+    "**/generated/**",
+    "**/*.min.js",
+    "**/*.map",
+    "pnpm-lock.yaml"
+  ],
+  "rules": [
+    {
+      "path": "governance/**/*",
+      "rule": "Review governance changes for canonical authority precedence, registry and catalog consistency, dependency resolution, decision vocabulary, authority separation, non-self-approval, same-commit evidence boundaries, and removal of parallel truth. Do not treat derived support or historical material as current authority."
+    },
+    {
+      "path": ".agents/**/*",
+      "rule": "Review agent and skill changes for one registered skill directory with one SKILL.md, aligned name and version, complete governed sections, valid dependencies, bounded advisory authority, routing-index and catalog consistency, and no tool or adapter claiming approval authority."
+    },
+    {
+      "path": ".github/workflows/**/*.{yaml,yml}",
+      "rule": "Review GitHub Actions for least privilege, immutable action pins, safe event handling, untrusted-input isolation, fail-closed verification, no secret leakage, and the repository rule that CI must never mutate, commit, push, merge, or rewrite source."
+    },
+    {
+      "path": "contracts/**/*",
+      "rule": "Review contracts as canonical API authority. Check schema compatibility, required fields, status and error vocabulary, operation IDs, authorization scopes, generated-client provenance, runtime route binding, consumer compatibility, and removal of manually duplicated request, response, or status truth."
+    },
+    {
+      "path": "services/**/contracts/**/*",
+      "rule": "Review service contracts as canonical API authority. Check modular source-to-bundle consistency, schema compatibility, operation IDs, authorization scopes, generated-client provenance, runtime route binding, consumer compatibility, and absence of parallel handwritten transport contracts."
+    },
+    {
+      "path": "**/database/migrations/**/*.sql",
+      "rule": "Review migrations for forward-only ordering, unique identifiers, manifest registration, transactional safety, locking and downtime risk, backward compatibility, deterministic defaults, data preservation, constraints and indexes, rollback or remediation strategy, and consistency with the runtime code deployed in the same change."
+    },
+    {
+      "path": "**/*_test.go",
+      "rule": "Review Go tests as executable evidence. Check that assertions prove the changed behavior and failure paths, fixtures reflect production contracts, database tests isolate state, concurrency and idempotency cases are covered where applicable, and deleted or weakened tests do not hide regressions."
+    },
+    {
+      "path": "**/*.{test,spec}.{js,jsx,ts,tsx}",
+      "rule": "Review tests as executable evidence. Check that assertions prove observable behavior, negative and permission paths are covered, mocks preserve real contract semantics, async failures are awaited, and snapshots or fixtures do not replace meaningful assertions."
+    },
+    {
+      "path": "apps/**/*.{ts,tsx,js,jsx}",
+      "rule": "Review application surfaces for correct route, state, action, controller, generated-client, authentication, authorization, loading, empty, degraded, failure, retry, offline, and accessibility behavior. Reject local business or financial truth that belongs to shared DSH or WLT owners."
+    },
+    {
+      "path": "services/**/frontend/**/*.{ts,tsx,js,jsx}",
+      "rule": "Review shared and surface frontend code for owner boundaries, generated API usage, stable state transitions, permission gates, error and retry handling, accessibility, and complete cross-surface binding. View models may shape presentation but must not redefine transport, operational, or financial authority."
+    },
+    {
+      "path": "services/wlt/**/*",
+      "rule": "Treat WLT as the exclusive owner of financial truth. Check ledger integrity, idempotency, reconciliation, transaction boundaries, immutable receipts, authorization, auditability, and that DSH or clients cannot create a parallel payment, wallet, refund, settlement, payout, commission, or reconciliation authority."
+    },
+    {
+      "path": "services/dsh/**/*",
+      "rule": "Treat DSH as operational commerce and fulfillment truth, not financial truth. Check lifecycle invariants, authorization, idempotency, concurrency, outbox and handoff reliability, failure recovery, DSH-to-WLT contract boundaries, route and consumer binding, and cross-surface behavior. Flag local financial mutation or duplicated contract authority."
+    },
+    {
+      "path": "**/*.{go,ts,tsx,js,jsx,json,yaml,yml,sql,md}",
+      "rule": "Review only changed behavior and its necessary context. Prioritize correctness, security, authorization, privacy, error handling, concurrency, idempotency, data loss, contract and owner boundaries, maintainability, and missing focused tests. Report grounded Critical, High, and Medium findings; discard style-only noise and likely false positives."
+    }
+  ]
+}
