@@ -146,30 +146,6 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "GET /dsh/operator/admin/approvals",
-      "method": "GET",
-      "path": "/dsh/operator/admin/approvals",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "GET /dsh/operator/admin/diagnostics",
-      "method": "GET",
-      "path": "/dsh/operator/admin/diagnostics",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "GET /dsh/operator/admin/role-requests",
-      "method": "GET",
-      "path": "/dsh/operator/admin/role-requests",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "GET /dsh/operator/admin/rollback-requests",
-      "method": "GET",
-      "path": "/dsh/operator/admin/rollback-requests",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
       "route": "GET /dsh/operator/admin/support-sessions",
       "method": "GET",
       "path": "/dsh/operator/admin/support-sessions",
@@ -740,36 +716,6 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "POST /dsh/operator/admin/approvals/{approvalId}/review",
-      "method": "POST",
-      "path": "/dsh/operator/admin/approvals/{approvalId}/review",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "POST /dsh/operator/admin/approvals/{approvalId}/rollback-requests",
-      "method": "POST",
-      "path": "/dsh/operator/admin/approvals/{approvalId}/rollback-requests",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "POST /dsh/operator/admin/role-requests/{requestId}/review",
-      "method": "POST",
-      "path": "/dsh/operator/admin/role-requests/{requestId}/review",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "POST /dsh/operator/admin/roles/requests",
-      "method": "POST",
-      "path": "/dsh/operator/admin/roles/requests",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "POST /dsh/operator/admin/rollback-requests/{requestId}/review",
-      "method": "POST",
-      "path": "/dsh/operator/admin/rollback-requests/{requestId}/review",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
       "route": "POST /dsh/operator/admin/support-sessions",
       "method": "POST",
       "path": "/dsh/operator/admin/support-sessions",
@@ -938,12 +884,6 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {
-      "route": "POST /dsh/operator/workforce/employees/{actorId}/media/uploads",
-      "method": "POST",
-      "path": "/dsh/operator/workforce/employees/{actorId}/media/uploads",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
       "route": "POST /dsh/partner/catalog/proposals",
       "method": "POST",
       "path": "/dsh/partner/catalog/proposals",
@@ -1043,12 +983,6 @@
       "route": "PUT /dsh/operator/catalog/nodes/{nodeId}/attributes/{attributeId}",
       "method": "PUT",
       "path": "/dsh/operator/catalog/nodes/{nodeId}/attributes/{attributeId}",
-      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
-    },
-    {
-      "route": "PUT /dsh/operator/catalog/stores/{storeId}/images/{role}",
-      "method": "PUT",
-      "path": "/dsh/operator/catalog/stores/{storeId}/images/{role}",
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
     },
     {

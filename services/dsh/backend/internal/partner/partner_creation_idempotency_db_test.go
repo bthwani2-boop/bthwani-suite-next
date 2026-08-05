@@ -15,7 +15,7 @@ func TestPartnerCreationUnknownResultRetryReplaysOriginalAuthorityDBIntegration(
 	actorID := "field-j020-" + suffix
 	idempotencyKey := "partner-create-j020-" + suffix
 	input := CreatePartnerInput{
-		LegalNameAr:         "شريك اختبار إعادة المحاولة " + suffix,
+		LegalNameAr:         "Ø´Ø±ÙŠÙƒ Ø§Ø®ØªØ¨Ø§Ø± Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© " + suffix,
 		LegalNameEn:         "J020 retry partner " + suffix,
 		DisplayName:         "J020 Partner " + suffix,
 		LegalIdentityType:   "commercial_register",
@@ -143,7 +143,7 @@ func TestPartnerCreationRequiresRetryIdentityDBIntegration(t *testing.T) {
 		"",
 		"",
 		CreatePartnerInput{
-			LegalNameAr:         "شريك دون مفتاح",
+			LegalNameAr:         "Ø´Ø±ÙŠÙƒ Ø¯ÙˆÙ† Ù…ÙØªØ§Ø­",
 			DisplayName:         "Missing Key " + suffix,
 			LegalIdentityType:   "commercial_register",
 			LegalIdentityNumber: "J020-MISSING-KEY-" + suffix,

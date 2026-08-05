@@ -7,7 +7,8 @@ export type DshPartner = {
   readonly displayName: string;
   readonly legalIdentityType: string;
   readonly legalIdentityNumber: string;
-  readonly ownerName: string;
+  readonly ownerActorId: string;
+  readonly workforcePersonId: string;
   readonly primaryPhone: string;
   readonly secondaryPhone: string;
   readonly email: string;
@@ -153,7 +154,8 @@ export type DshCreatePartnerInput = {
   readonly displayName: string;
   readonly legalIdentityType: string;
   readonly legalIdentityNumber: string;
-  readonly ownerName?: string;
+  readonly ownerActorId?: string;
+  readonly workforcePersonId?: string;
   readonly primaryPhone: string;
   readonly secondaryPhone?: string;
   readonly email?: string;
@@ -163,7 +165,8 @@ export type DshCreatePartnerInput = {
 
 export type DshUpdatePartnerRequest = {
   readonly displayName?: string;
-  readonly ownerName?: string;
+  readonly ownerActorId?: string;
+  readonly workforcePersonId?: string;
   readonly primaryPhone?: string;
   readonly secondaryPhone?: string;
   readonly email?: string;

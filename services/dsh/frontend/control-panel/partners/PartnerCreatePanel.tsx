@@ -26,7 +26,8 @@ export function PartnerCreatePanel({ controller, onClose, onCreated }: Props) {
   const [legalNameAr, setLegalNameAr] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [legalIdentityNumber, setLegalIdentityNumber] = useState("");
-  const [ownerName, setOwnerName] = useState("");
+  const [ownerActorId, setOwnerActorId] = useState("");
+  const [workforcePersonId, setWorkforcePersonId] = useState("");
   const [primaryPhone, setPrimaryPhone] = useState("");
   const [category, setCategory] = useState("default");
   const [notes, setNotes] = useState("");
@@ -34,7 +35,7 @@ export function PartnerCreatePanel({ controller, onClose, onCreated }: Props) {
   const valid = legalNameAr.trim().length > 1
     && displayName.trim().length > 1
     && legalIdentityNumber.trim().length > 2
-    && ownerName.trim().length > 1
+    && (ownerActorId.trim().length > 0 || workforcePersonId.trim().length > 0)
     && primaryPhone.trim().length >= 8;
 
   async function submit() {
@@ -44,7 +45,8 @@ export function PartnerCreatePanel({ controller, onClose, onCreated }: Props) {
       displayName: displayName.trim(),
       legalIdentityType: "commercial_register",
       legalIdentityNumber: legalIdentityNumber.trim(),
-      ownerName: ownerName.trim(),
+      ownerActorId: ownerActorId.trim(),
+      workforcePersonId: workforcePersonId.trim(),
       primaryPhone: primaryPhone.trim(),
       category: category.trim() || "default",
       ...(notes.trim() ? { notes: notes.trim() } : {}),
@@ -71,8 +73,11 @@ export function PartnerCreatePanel({ controller, onClose, onCreated }: Props) {
       <LabeledField label="رقم السجل التجاري">
         <CpTextInput value={legalIdentityNumber} onChange={setLegalIdentityNumber} aria-label="رقم السجل التجاري" />
       </LabeledField>
-      <LabeledField label="اسم المالك">
-        <CpTextInput value={ownerName} onChange={setOwnerName} aria-label="اسم المالك" />
+      <LabeledField label="Actor ID (المالك)">
+        <CpTextInput value={ownerActorId} onChange={setOwnerActorId} aria-label="Actor ID" />
+      </LabeledField>
+      <LabeledField label="Workforce ID (المالك)">
+        <CpTextInput value={workforcePersonId} onChange={setWorkforcePersonId} aria-label="Workforce ID" />
       </LabeledField>
       <LabeledField label="رقم الجوال">
         <CpTextInput value={primaryPhone} onChange={setPrimaryPhone} aria-label="رقم الجوال" />

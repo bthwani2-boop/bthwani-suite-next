@@ -123,7 +123,7 @@ func retryLocalBootstrap(repository *identity.Repository, bootstrap identity.Loc
 			}
 			return
 		}
-		log.Printf("[identity-api] local bootstrap deferred; readiness remains authoritative")
+		log.Printf("[identity-api] local bootstrap deferred; readiness remains authoritative: %v", err)
 		time.Sleep(localBootstrapRetryInterval)
 	}
 }

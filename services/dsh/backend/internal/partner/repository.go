@@ -1,117 +1,26 @@
 package partner
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"strings"
 	"time"
 
 	"github.com/lib/pq"
-
-	"dsh-api/internal/store"
 )
 
-// ─── Partner CRUD ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Partner CRUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-func CreatePartner(db *sql.DB, input CreatePartnerInput) (Partner, error) {
-	if err := input.Validate(); err != nil {
-		return Partner{}, err
-	}
-
-	category := input.Category
-	if category == "" {
-		category = "default"
-	}
-	surface := input.CreatedBySurface
-	if surface == "" {
-		surface = "app-field"
-	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return Partner{}, err
-	}
-	defer tx.Rollback()
-
-	var p Partner
-	err = tx.QueryRow(`
-		INSERT INTO dsh_partners (
-			legal_name_ar, legal_name_en, display_name,
-			legal_identity_type, legal_identity_number,
-			owner_name, primary_phone, secondary_phone, email,
-			category, notes, created_by_actor_id, created_by_surface
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-		RETURNING id, legal_name_ar, legal_name_en, display_name,
-		          legal_identity_type, legal_identity_number,
-		          owner_name, primary_phone, secondary_phone, email,
-		          category, activation_status, created_by_actor_id, created_by_surface,
-		          notes,
-		          COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
-		          COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
-		          beneficiary_name, bank_name, bank_branch,
-		          settlement_preference, bank_account_holder_matches_owner, bank_notes,
-		          version, created_at, updated_at`,
-		input.LegalNameAr, input.LegalNameEn, input.DisplayName,
-		input.LegalIdentityType, input.LegalIdentityNumber,
-		input.OwnerName, input.PrimaryPhone, input.SecondaryPhone, input.Email,
-		category, input.Notes, input.CreatedByActorID, surface,
-	).Scan(
-		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
-		&p.LegalIdentityType, &p.LegalIdentityNumber,
-		&p.OwnerName, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
-		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
-		&p.Notes,
-		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
-		&p.BeneficiaryName, &p.BankName, &p.BankBranch,
-		&p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
-		&p.Version, &p.CreatedAt, &p.UpdatedAt,
-	)
-	if err != nil {
-		if isPgUniqueViolation(err) {
-			return Partner{}, ErrConflict
-		}
-		return Partner{}, err
-	}
-	p = SanitizePartnerForSurface(p)
-
-	// Every partner owns exactly one store from creation onward (app-field
-	// collects the first store's data as part of the onboarding file). The
-	// store starts fully unpublished — is_visible=false, status=inactive —
-	// and stays invisible to app-client until control-panel approves it.
-	sRow, err := store.CreateDraftStore(tx, store.CreateDraftStoreInput{
-		PartnerID:   p.ID,
-		DisplayName: p.DisplayName,
-		Category:    p.Category,
-	})
-	if err != nil {
-		return Partner{}, err
-	}
-
-	if input.CreatedByActorID != "" {
-		_, err = tx.Exec(`
-			INSERT INTO dsh_store_actor_scopes (actor_id, actor_role, store_id, scope_type, active)
-			VALUES ($1, 'field', $2, 'assigned', true)
-			ON CONFLICT (actor_id, actor_role, store_id) DO NOTHING`,
-			input.CreatedByActorID, sRow.ID)
-		if err != nil {
-			return Partner{}, err
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return Partner{}, err
-	}
-
-	return p, nil
-}
+// CreatePartner was removed. Use CreatePartnerForOperatorContextIdempotent instead.
 
 func GetPartner(db *sql.DB, partnerID string) (Partner, error) {
 	var p Partner
 	err := db.QueryRow(`
 		SELECT id, legal_name_ar, legal_name_en, display_name,
 		       legal_identity_type, legal_identity_number,
-		       owner_name, primary_phone, secondary_phone, email,
-		       category, activation_status, created_by_actor_id, created_by_surface,
+		       owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
+		       category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 		       notes,
 		       COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
 		       COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
@@ -122,8 +31,8 @@ func GetPartner(db *sql.DB, partnerID string) (Partner, error) {
 	).Scan(
 		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
 		&p.LegalIdentityType, &p.LegalIdentityNumber,
-		&p.OwnerName, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
-		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
+		&p.OwnerActorID, &p.WorkforcePersonID, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
+		&p.Category, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
 		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
 		&p.BeneficiaryName, &p.BankName, &p.BankBranch,
@@ -199,7 +108,7 @@ func ListPartners(db *sql.DB, q PartnerListQuery) ([]PartnerSummary, int, error)
 	return list, total, rows.Err()
 }
 
-// ─── Activation transition ─────────────────────────────────────────────────
+// â”€â”€â”€ Activation transition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expectedVersion int) (Partner, ActivationEvent, error) {
 	tx, err := db.Begin()
@@ -271,8 +180,8 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		WHERE id = $1
 		RETURNING id, legal_name_ar, legal_name_en, display_name,
 		          legal_identity_type, legal_identity_number,
-		          owner_name, primary_phone, secondary_phone, email,
-		          category, activation_status, created_by_actor_id, created_by_surface,
+		          owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
+		          category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 		          notes,
 		          beneficiary_name, bank_name, bank_branch,
 		          settlement_preference, bank_account_holder_matches_owner, bank_notes,
@@ -281,8 +190,8 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 	).Scan(
 		&updated.ID, &updated.LegalNameAr, &updated.LegalNameEn, &updated.DisplayName,
 		&updated.LegalIdentityType, &updated.LegalIdentityNumber,
-		&updated.OwnerName, &updated.PrimaryPhone, &updated.SecondaryPhone, &updated.Email,
-		&updated.Category, &updated.ActivationStatus, &updated.CreatedByActorID, &updated.CreatedBySurface,
+		&updated.OwnerActorID, &updated.WorkforcePersonID, &updated.PrimaryPhone, &updated.SecondaryPhone, &updated.Email,
+		&updated.Category, &updated.ActivationStatus, &updated.OnboardingCaseStatus, &updated.CreatedByActorID, &updated.CreatedBySurface,
 		&updated.Notes,
 		&updated.BeneficiaryName, &updated.BankName, &updated.BankBranch,
 		&updated.SettlementPreference, &updated.BankAccountHolderMatchesOwner, &updated.BankNotes,
@@ -308,7 +217,7 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 	}
 
 	// Propagate partner_readiness to linked stores inside the same transaction.
-	// client_visible → stores become discoverable; client_hidden/deactivated → stores hidden.
+	// client_visible â†’ stores become discoverable; client_hidden/deactivated â†’ stores hidden.
 	if readiness, ok := partnerReadinessForActivationStatus(input.ToStatus); ok {
 		if _, err = tx.Exec(
 			`UPDATE dsh_stores SET partner_readiness = $2, version = version + 1, updated_at = NOW() WHERE partner_id = $1`,
@@ -354,7 +263,7 @@ func partnerReadinessForActivationStatus(status ActivationStatus) (string, bool)
 	}
 }
 
-// ─── Documents ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Documents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 func UploadDocument(db *sql.DB, partnerID string, input UploadDocumentInput) (Document, error) {
 	if err := input.Validate(); err != nil {
@@ -389,6 +298,10 @@ func UploadDocument(db *sql.DB, partnerID string, input UploadDocumentInput) (Do
 		return Document{}, err
 	}
 	if err := recordActivationEvent(tx, partnerID, "document_uploaded:"+d.DocumentType, input.UploadedByActorID, "app-field", input.Notes); err != nil {
+		return Document{}, err
+	}
+	
+	if err := EvaluateOnboardingCaseStatus(context.Background(), tx, partnerID); err != nil {
 		return Document{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -485,7 +398,7 @@ func ReviewDocument(db *sql.DB, partnerID, documentID string, input ReviewDocume
 	return d, rev, nil
 }
 
-// ─── Field visits ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Field visits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, error) {
 	if input.PartnerID == "" || input.FieldActorID == "" {
@@ -704,7 +617,7 @@ func SubmitFieldVisit(db *sql.DB, partnerID, visitID, actorID string) (FieldVisi
 	return v, nil
 }
 
-// ─── Activation audit ──────────────────────────────────────────────────────
+// â”€â”€â”€ Activation audit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // execer is satisfied by both *sql.DB and *sql.Tx, letting audit events be
 // recorded either standalone or as part of an existing transaction.
@@ -748,7 +661,7 @@ func ListActivationEvents(db *sql.DB, partnerID string) ([]ActivationEvent, erro
 	return list, rows.Err()
 }
 
-// ─── Store count for readiness ──────────────────────────────────────────────
+// â”€â”€â”€ Store count for readiness â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 func CountStores(db *sql.DB, partnerID string) (int, error) {
 	var n int
@@ -766,7 +679,7 @@ func CountApprovedDocuments(db *sql.DB, partnerID string) (int, int, error) {
 	return total, approved, nil
 }
 
-// ─── Store team members ─────────────────────────────────────────────────────
+// â”€â”€â”€ Store team members â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 func ListStoreTeamMembers(db *sql.DB, storeID string) ([]StoreTeamMember, error) {
 	return nil, errors.New("J014: team members migrated to Workforce")
@@ -774,7 +687,7 @@ func ListStoreTeamMembers(db *sql.DB, storeID string) ([]StoreTeamMember, error)
 
 // InviteStoreTeamMember creates a pending invite row for identity against
 // storeID. There is no identity-resolution service wired up yet (FIX_REQUIRED
-// for a future round) — the raw identity string is stored as both the
+// for a future round) â€” the raw identity string is stored as both the
 // member's placeholder display name and the invited_identity audit field.
 func InviteStoreTeamMember(db *sql.DB, storeID string, input InviteTeamMemberInput) error {
 	return errors.New("J014: team members migrated to Workforce")
@@ -820,28 +733,28 @@ func ExecuteStoreTeamMemberAction(db *sql.DB, storeID, memberID string, input Te
 func roleLabel(role string) string {
 	switch role {
 	case "owner":
-		return "مالك"
+		return "Ù…Ø§Ù„Ùƒ"
 	case "supervisor":
-		return "مشرف"
+		return "Ù…Ø´Ø±Ù"
 	case "courier":
-		return "موصل"
+		return "Ù…ÙˆØµÙ„"
 	default:
-		return "موظف"
+		return "Ù…ÙˆØ¸Ù"
 	}
 }
 
 func statusLabel(status string) string {
 	switch status {
 	case "active":
-		return "نشط"
+		return "Ù†Ø´Ø·"
 	case "paused":
-		return "موقوف"
+		return "Ù…ÙˆÙ‚ÙˆÙ"
 	case "invited":
-		return "بانتظار القبول"
+		return "Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„Ù‚Ø¨ÙˆÙ„"
 	case "blocked":
-		return "محظور"
+		return "Ù…Ø­Ø¸ÙˆØ±"
 	case "review-needed":
-		return "بحاجة مراجعة"
+		return "Ø¨Ø­Ø§Ø¬Ø© Ù…Ø±Ø§Ø¬Ø¹Ø©"
 	default:
 		return status
 	}
@@ -850,15 +763,15 @@ func statusLabel(status string) string {
 func inlineActionLabelForStatus(status string) string {
 	switch status {
 	case "active":
-		return "إيقاف"
+		return "Ø¥ÙŠÙ‚Ø§Ù"
 	case "paused":
-		return "تفعيل"
+		return "ØªÙØ¹ÙŠÙ„"
 	case "invited":
-		return "إعادة إرسال الدعوة"
+		return "Ø¥Ø¹Ø§Ø¯Ø© Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø¯Ø¹ÙˆØ©"
 	case "blocked":
-		return "تفعيل"
+		return "ØªÙØ¹ÙŠÙ„"
 	default:
-		return "مراجعة"
+		return "Ù…Ø±Ø§Ø¬Ø¹Ø©"
 	}
 }
 
@@ -877,7 +790,7 @@ func inlineActionForStatus(status string) string {
 	}
 }
 
-// ─── Store courier settings ─────────────────────────────────────────────────
+// â”€â”€â”€ Store courier settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 func GetStoreCourierSettings(db *sql.DB, storeID string) (StoreCourierSettings, error) {
 	var s StoreCourierSettings
@@ -886,7 +799,7 @@ func GetStoreCourierSettings(db *sql.DB, storeID string) (StoreCourierSettings, 
 		FROM dsh_store_courier_settings WHERE store_id = $1`, storeID).
 		Scan(&s.CourierName, &s.CourierPhone, &s.IsActive, &s.Policy, &s.PricingSource, &s.Compensation, pq.Array(&s.SelectedBranchIDs), &s.Version)
 	if errors.Is(err, sql.ErrNoRows) {
-		// The OpenAPI contract has no 404 response for this operation — return
+		// The OpenAPI contract has no 404 response for this operation â€” return
 		// the zero-value settings shape instead of an error.
 		return StoreCourierSettings{
 			Policy:            "free_delivery",
@@ -958,7 +871,7 @@ func UpsertStoreCourierSettings(db *sql.DB, storeID string, input StoreCourierSe
 	return s, nil
 }
 
-// ─── Store coverage zones ───────────────────────────────────────────────────
+// â”€â”€â”€ Store coverage zones â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 func ListStoreCoverageZones(db *sql.DB, storeID string) ([]StoreCoverageZone, error) {
 	rows, err := db.Query(`
@@ -987,7 +900,7 @@ func ListStoreCoverageZones(db *sql.DB, storeID string) ([]StoreCoverageZone, er
 	return zones, rows.Err()
 }
 
-// ─── Partner operational scopes ─────────────────────────────────────────────
+// â”€â”€â”€ Partner operational scopes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Scopes derive from dsh_stores.partner_id: a partner's stores are their
 // scopes. Role comes from the actor's own team-member row per store when one
 // exists (matched by invited_identity); absent a team-member row, the caller
@@ -996,7 +909,7 @@ func ListPartnerScopesForActor(db *sql.DB, partnerID, actorIdentity string, reso
 	return nil, errors.New("J014: scopes migrated to Workforce")
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 func isPgUniqueViolation(err error) bool {
 	if err == nil {

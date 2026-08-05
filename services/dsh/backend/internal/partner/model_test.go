@@ -42,7 +42,7 @@ func TestIsTransitionAllowed_legalPaths(t *testing.T) {
 	}
 	for _, c := range cases {
 		if !IsTransitionAllowed(c.from, c.to) {
-			t.Errorf("expected %s → %s to be allowed", c.from, c.to)
+			t.Errorf("expected %s â†’ %s to be allowed", c.from, c.to)
 		}
 	}
 }
@@ -66,7 +66,7 @@ func TestIsTransitionAllowed_illegalPaths(t *testing.T) {
 	}
 	for _, c := range cases {
 		if IsTransitionAllowed(c.from, c.to) {
-			t.Errorf("expected %s → %s to be forbidden (%s)", c.from, c.to, c.desc)
+			t.Errorf("expected %s â†’ %s to be forbidden (%s)", c.from, c.to, c.desc)
 		}
 	}
 }
@@ -177,7 +177,7 @@ func TestComputeReadiness_partnerIDPropagated(t *testing.T) {
 
 func TestCreatePartnerInput_valid(t *testing.T) {
 	input := CreatePartnerInput{
-		LegalNameAr:         "شركة الاختبار",
+		LegalNameAr:         "Ø´Ø±ÙƒØ© Ø§Ù„Ø§Ø®ØªØ¨Ø§Ø±",
 		DisplayName:         "Test Partner",
 		PrimaryPhone:        "+9671234567",
 		LegalIdentityNumber: "CR-001",
@@ -198,7 +198,7 @@ func TestCreatePartnerInput_missingLegalNameAr(t *testing.T) {
 
 func TestCreatePartnerInput_missingDisplayName(t *testing.T) {
 	input := CreatePartnerInput{
-		LegalNameAr: "شركة", PrimaryPhone: "+967", LegalIdentityNumber: "CR-001",
+		LegalNameAr: "Ø´Ø±ÙƒØ©", PrimaryPhone: "+967", LegalIdentityNumber: "CR-001",
 	}
 	if err := input.Validate(); err == nil {
 		t.Fatal("expected error for missing DisplayName")
@@ -207,7 +207,7 @@ func TestCreatePartnerInput_missingDisplayName(t *testing.T) {
 
 func TestCreatePartnerInput_missingPhone(t *testing.T) {
 	input := CreatePartnerInput{
-		LegalNameAr: "شركة", DisplayName: "Test", LegalIdentityNumber: "CR-001",
+		LegalNameAr: "Ø´Ø±ÙƒØ©", DisplayName: "Test", LegalIdentityNumber: "CR-001",
 	}
 	if err := input.Validate(); err == nil {
 		t.Fatal("expected error for missing PrimaryPhone")
@@ -216,7 +216,7 @@ func TestCreatePartnerInput_missingPhone(t *testing.T) {
 
 func TestCreatePartnerInput_missingIdentityNumber(t *testing.T) {
 	input := CreatePartnerInput{
-		LegalNameAr: "شركة", DisplayName: "Test", PrimaryPhone: "+967",
+		LegalNameAr: "Ø´Ø±ÙƒØ©", DisplayName: "Test", PrimaryPhone: "+967",
 	}
 	if err := input.Validate(); err == nil {
 		t.Fatal("expected error for missing LegalIdentityNumber")
@@ -305,7 +305,7 @@ func TestFieldSurfaceCannotActivate(t *testing.T) {
 
 func TestDeactivationRemovesClientVisibility(t *testing.T) {
 	if !IsTransitionAllowed(StatusClientVisible, StatusPartnerDeactivated) {
-		t.Fatal("client_visible → partner_deactivated must be allowed for immediate hide")
+		t.Fatal("client_visible â†’ partner_deactivated must be allowed for immediate hide")
 	}
 	if IsClientVisible(StatusPartnerDeactivated) {
 		t.Fatal("deactivated partner must not be client_visible")
@@ -358,7 +358,7 @@ func TestCreateFieldVisitRejectsPartialCoordinates(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Store publication gates (client_visible) — one case per gate
+// Store publication gates (client_visible) â€” one case per gate
 // ---------------------------------------------------------------------------
 
 func TestComputeReadiness_storePublicationGates(t *testing.T) {

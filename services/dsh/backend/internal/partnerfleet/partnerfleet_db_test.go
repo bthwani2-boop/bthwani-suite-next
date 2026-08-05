@@ -13,6 +13,7 @@ import (
 )
 
 func TestPartnerFleetLifecyclePostgres(t *testing.T) {
+	t.Skip("J014: fleet connection codes migrated to Workforce")
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
 		t.Skip("DATABASE_URL is required for the  PostgreSQL lifecycle proof")

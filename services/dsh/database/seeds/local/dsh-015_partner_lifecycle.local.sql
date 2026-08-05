@@ -31,7 +31,7 @@ INSERT INTO dsh_partners (
     'commercial_register',
     'YE-CR-9900112233',
     'عبدالله محمد الحداد',
-    '+967771000001',
+    '+967771111111',
     '+967771000002',
     'haddah.partner@local.test',
     'grocery',

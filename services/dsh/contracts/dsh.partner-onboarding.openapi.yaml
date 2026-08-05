@@ -400,7 +400,8 @@ components:
           type: string
           enum: [ commercial_register, national_id, freelancer_certificate ]
         legalIdentityNumber: { type: string, minLength: 1 }
-        ownerName: { type: string }
+        ownerActorId: { type: string }
+        workforcePersonId: { type: string }
         primaryPhone: { type: string, minLength: 8, maxLength: 20 }
         secondaryPhone: { type: string, maxLength: 20 }
         email: { type: string }
@@ -420,7 +421,9 @@ components:
         displayName: { type: string }
         legalIdentityType: { type: string }
         legalIdentityNumber: { type: string }
-        ownerName: { type: string }
+        ownerActorId: { type: string }
+        workforcePersonId: { type: string }
+        onboardingCaseStatus: { type: string }
         primaryPhone: { type: string }
         secondaryPhone: { type: string }
         email: { type: string }
@@ -448,7 +451,9 @@ components:
         legalNameAr: { type: string }
         legalNameEn: { type: string }
         displayName: { type: string }
-        ownerName: { type: string }
+        ownerActorId: { type: string }
+        workforcePersonId: { type: string }
+        onboardingCaseStatus: { type: string }
         primaryPhone: { type: string }
         category: { type: string }
         activationStatus: { $ref: '#/components/schemas/ActivationStatus' }
@@ -471,7 +476,8 @@ components:
       additionalProperties: false
       properties:
         displayName: { type: string }
-        ownerName: { type: string }
+        ownerActorId: { type: string }
+        workforcePersonId: { type: string }
         primaryPhone: { type: string }
         secondaryPhone: { type: string }
         email: { type: string }

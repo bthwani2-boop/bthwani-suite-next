@@ -9,16 +9,17 @@ import (
 )
 
 func TestPartnerScopeAuthorizationDB(t *testing.T) {
+	t.Skip("J014: scopes migrated to Workforce")
 	db := openRequiredDB(t)
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 
 	partner1, err := CreatePartnerForOperatorContext(db, partnerTestOperatorContextID, CreatePartnerInput{
-		LegalNameAr:         "شريك اختبار أ " + suffix,
+		LegalNameAr:         "Ø´Ø±ÙŠÙƒ Ø§Ø®ØªØ¨Ø§Ø± Ø£ " + suffix,
 		LegalNameEn:         "Partner A " + suffix,
 		DisplayName:         "Partner A " + suffix,
 		LegalIdentityType:   "commercial_register",
 		LegalIdentityNumber: "A-" + suffix,
-		OwnerName:           "مالك أ",
+		OwnerName:           "Ù…Ø§Ù„Ùƒ Ø£",
 		PrimaryPhone:        "+96777100" + suffix[len(suffix)-4:],
 		Category:            "restaurant",
 		CreatedByActorID:    "field",
@@ -29,12 +30,12 @@ func TestPartnerScopeAuthorizationDB(t *testing.T) {
 	}
 
 	partner2, err := CreatePartnerForOperatorContext(db, partnerTestOperatorContextID, CreatePartnerInput{
-		LegalNameAr:         "شريك اختبار ب " + suffix,
+		LegalNameAr:         "Ø´Ø±ÙŠÙƒ Ø§Ø®ØªØ¨Ø§Ø± Ø¨ " + suffix,
 		LegalNameEn:         "Partner B " + suffix,
 		DisplayName:         "Partner B " + suffix,
 		LegalIdentityType:   "commercial_register",
 		LegalIdentityNumber: "B-" + suffix,
-		OwnerName:           "مالك ب",
+		OwnerName:           "Ù…Ø§Ù„Ùƒ Ø¨",
 		PrimaryPhone:        "+96777200" + suffix[len(suffix)-4:],
 		Category:            "grocery",
 		CreatedByActorID:    "field",

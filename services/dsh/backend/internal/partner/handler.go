@@ -11,7 +11,7 @@ import (
 	"dsh-api/internal/store"
 )
 
-// ─── JSON helpers (reuse store.SendJSON pattern) ───────────────────────────
+// â”€â”€â”€ JSON helpers (reuse store.SendJSON pattern) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 func sendJSON(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
@@ -82,7 +82,7 @@ func requireFieldOwnsPartner(w http.ResponseWriter, db *sql.DB, partnerID, actor
 	return true
 }
 
-// ─── Handlers ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 func readinessHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -130,7 +130,7 @@ func readinessHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// GET /dsh/partners/{partnerId}/documents — operator, any partner
+// GET /dsh/partners/{partnerId}/documents â€” operator, any partner
 func HandleListDocuments(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		docs, err := ListDocuments(db, partnerIDFromPath(r))
@@ -142,7 +142,7 @@ func HandleListDocuments(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// GET /dsh/field/partners/{partnerId}/documents — field, only its own draft
+// GET /dsh/field/partners/{partnerId}/documents â€” field, only its own draft
 func HandleFieldListDocuments(db *sql.DB) http.HandlerFunc {
 	inner := HandleListDocuments(db)
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -183,7 +183,7 @@ func HandleReviewDocument(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// GET /dsh/partners/{partnerId}/field-visits — operator, any partner
+// GET /dsh/partners/{partnerId}/field-visits â€” operator, any partner
 func HandleListFieldVisits(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		visits, err := ListFieldVisits(db, partnerIDFromPath(r))
@@ -195,7 +195,7 @@ func HandleListFieldVisits(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// GET /dsh/field/partners/{partnerId}/field-visits — field, only its own draft
+// GET /dsh/field/partners/{partnerId}/field-visits â€” field, only its own draft
 func HandleFieldListFieldVisits(db *sql.DB) http.HandlerFunc {
 	inner := HandleListFieldVisits(db)
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -231,7 +231,7 @@ func HandleListAudit(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// ─── Field surface handlers ─────────────────────────────────────────────────
+// â”€â”€â”€ Field surface handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 func uploadDocumentHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -260,7 +260,7 @@ func uploadDocumentHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// POST /dsh/field/partners/{partnerId}/documents  — field uploads document to its own draft
+// POST /dsh/field/partners/{partnerId}/documents  â€” field uploads document to its own draft
 func HandleFieldUploadDocument(db *sql.DB) http.HandlerFunc {
 	inner := uploadDocumentHandler(db)
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -272,14 +272,14 @@ func HandleFieldUploadDocument(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// POST /dsh/operator/partners/{partnerId}/documents — operator adds a document to any partner
+// POST /dsh/operator/partners/{partnerId}/documents â€” operator adds a document to any partner
 func HandleAddDocument(db *sql.DB) http.HandlerFunc {
 	return uploadDocumentHandler(db)
 }
 
-// ─── Partner-self surface handler ──────────────────────────────────────────
+// â”€â”€â”€ Partner-self surface handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// GET /dsh/partner/me  — partner reads their own profile
+// GET /dsh/partner/me  â€” partner reads their own profile
 func HandlePartnerMe(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		storeID := storeIDFromContext(r)
@@ -319,7 +319,7 @@ func HandlePartnerMe(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// ─── Store team, courier settings, coverage zones ──────────────────────────
+// â”€â”€â”€ Store team, courier settings, coverage zones â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 
@@ -368,7 +368,7 @@ func HandleListStoreCoverageZones(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// GET /dsh/partner/scopes — resolves the caller's own default store to find
+// GET /dsh/partner/scopes â€” resolves the caller's own default store to find
 // their partner, then lists all of that partner's stores as scopes.
 func HandleListPartnerScopes(db *sql.DB, authClient *auth.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

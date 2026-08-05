@@ -37,12 +37,12 @@ func createPartnerFixture(t *testing.T, db *sql.DB, prefix string) Partner {
 	t.Helper()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 	p, err := CreatePartnerForOperatorContext(db, partnerTestOperatorContextID, CreatePartnerInput{
-		LegalNameAr:         "مؤسسة اختبار " + prefix + " " + suffix,
+		LegalNameAr:         "Ù…Ø¤Ø³Ø³Ø© Ø§Ø®ØªØ¨Ø§Ø± " + prefix + " " + suffix,
 		LegalNameEn:         prefix + " Smoke " + suffix,
-		DisplayName:         "شريك اختبار " + prefix + " " + suffix,
+		DisplayName:         "Ø´Ø±ÙŠÙƒ Ø§Ø®ØªØ¨Ø§Ø± " + prefix + " " + suffix,
 		LegalIdentityType:   "commercial_register",
 		LegalIdentityNumber: "YE-" + prefix + "-" + suffix,
-		OwnerName:           "مالك اختبار",
+		OwnerName:           "Ù…Ø§Ù„Ùƒ Ø§Ø®ØªØ¨Ø§Ø±",
 		PrimaryPhone:        "+96777" + suffix[len(suffix)-7:],
 		Category:            "grocery",
 		CreatedByActorID:    "field-local-001",

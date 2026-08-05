@@ -39,7 +39,7 @@ func TestProvisionPartnerActorRejectsInvalidInputBeforeDatabase(t *testing.T) {
 	repository := &Repository{}
 	_, err := repository.ProvisionPartnerActor(t.Context(), PartnerActorProvisionInput{
 		Username:          "partner-user",
-		PhoneE164:         "+967771000001",
+		PhoneE164:         "+967771111111",
 		PermissionBundle:  "unknown",
 		StoreID:           "store-1",
 		OperatorContextID: "operator-main",

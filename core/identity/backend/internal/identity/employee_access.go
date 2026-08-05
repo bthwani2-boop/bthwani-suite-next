@@ -88,6 +88,7 @@ func employeeDshPermissions(bundle string) []Permission {
 			"dsh.service_zones.read", "dsh.service_zones.manage",
 			"dsh.fulfillment_sla.read", "dsh.fulfillment_sla.manage",
 			"dsh.dispatch_capacity.read", "dsh.dispatch_capacity.manage",
+			"dsh.dispatch_financial_eligibility.read", "dsh.dispatch_financial_eligibility.manage",
 			"dsh.operational_policy.audit.read", "dsh.operational_policy.rollback",
 			"operations.special_requests.read", "operations.special_requests.transition", "operations.special_requests.dispatch",
 			"support.read", "support.manage",
@@ -104,6 +105,7 @@ func employeeDshPermissions(bundle string) []Permission {
 			"dsh.service_zones.read",
 			"dsh.fulfillment_sla.read",
 			"dsh.dispatch_capacity.read",
+			"dsh.dispatch_financial_eligibility.read",
 			"dsh.operational_policy.audit.read",
 		)
 	case EmployeeBundleOperationsManager:
@@ -112,6 +114,7 @@ func employeeDshPermissions(bundle string) []Permission {
 			"dsh.service_zones.read", "dsh.service_zones.manage",
 			"dsh.fulfillment_sla.read", "dsh.fulfillment_sla.manage",
 			"dsh.dispatch_capacity.read", "dsh.dispatch_capacity.manage",
+			"dsh.dispatch_financial_eligibility.read", "dsh.dispatch_financial_eligibility.manage",
 			"dsh.operational_policy.audit.read",
 			"operations.special_requests.read", "operations.special_requests.transition", "operations.special_requests.dispatch",
 			"analytics.read",

@@ -292,7 +292,7 @@ func expectedPartnerVersion(r *http.Request) int {
 
 func unmaskedPayoutValue(value string) string {
 	value = strings.TrimSpace(value)
-	if strings.Contains(value, "*") || strings.Contains(value, "•") {
+	if strings.Contains(value, "*") || strings.Contains(value, "â€¢") {
 		return ""
 	}
 	return value

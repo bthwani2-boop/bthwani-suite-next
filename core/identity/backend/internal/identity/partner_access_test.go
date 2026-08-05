@@ -20,7 +20,7 @@ func TestPartnerCannotRequestPublicOTP(t *testing.T) {
 func TestPartnerDoesNotUseWorkforceActivationPath(t *testing.T) {
 	actor := Actor{
 		ID:        "partner-actor-1",
-		PhoneE164: "+967771000001",
+		PhoneE164: "+967771111111",
 		Roles:     []string{"partner"},
 	}
 	if err := validateExpectedActivationTarget(actor, "partner", "app-partner"); err == nil {

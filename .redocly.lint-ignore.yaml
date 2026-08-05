@@ -1,0 +1,522 @@
+# This file instructs Redocly's linter to ignore the rules contained for specific parts of your API.
+# See https://redocly.com/docs/cli/ for more information.
+services/dsh/contracts/generated/dsh.bundle.openapi.yaml:
+  no-empty-servers:
+    - '#/openapi'
+  info-license:
+    - '#/info'
+  operation-summary:
+    - '#/paths/~1dsh~1operator~1catalog~1domains/get/summary'
+    - '#/paths/~1dsh~1operator~1catalog~1domains/post/summary'
+    - '#/paths/~1dsh~1operator~1catalog~1domains~1{domainId}/patch/summary'
+    - '#/paths/~1dsh~1operator~1catalog~1nodes/get/summary'
+    - '#/paths/~1dsh~1operator~1catalog~1nodes/post/summary'
+    - '#/paths/~1dsh~1operator~1catalog~1nodes~1{nodeId}/patch/summary'
+    - '#/paths/~1dsh~1operator~1catalog~1master-products/get/summary'
+    - '#/paths/~1dsh~1operator~1catalog~1master-products/post/summary'
+    - '#/paths/~1dsh~1operator~1catalog~1master-products~1{productId}/get/summary'
+    - >-
+      #/paths/~1dsh~1operator~1catalog~1master-products~1{productId}/patch/summary
+    - '#/paths/~1dsh~1operator~1catalog~1product-proposals/get/summary'
+    - >-
+      #/paths/~1dsh~1operator~1catalog~1product-proposals~1{proposalId}~1decision/post/summary
+    - >-
+      #/paths/~1dsh~1operator~1catalog~1product-proposals~1{proposalId}~1transition/post/summary
+    - '#/paths/~1dsh~1operator~1catalog~1platform-policies/get/summary'
+    - >-
+      #/paths/~1dsh~1operator~1catalog~1platform-policies~1{policyId}/put/summary
+    - >-
+      #/paths/~1dsh~1operator~1catalog~1platform-policies~1{policyId}/patch/summary
+    - '#/paths/~1dsh~1operator~1catalog~1seed-status/get/summary'
+    - '#/paths/~1dsh~1operator~1catalog~1assets/get/summary'
+    - '#/paths/~1dsh~1operator~1catalog~1assets~1upload-intents/post/summary'
+    - '#/paths/~1dsh~1operator~1catalog~1assets~1{assetId}~1complete/post/summary'
+    - '#/paths/~1dsh~1operator~1catalog~1assets~1{assetId}/delete/summary'
+    - '#/paths/~1dsh~1operator~1catalog~1assets~1{assetId}/patch/summary'
+    - '#/paths/~1dsh~1operator~1catalog~1assets~1{assetId}~1review/post/summary'
+    - '#/paths/~1dsh~1operator~1catalog~1assets~1{assetId}~1link/post/summary'
+    - >-
+      #/paths/~1dsh~1operator~1catalog~1assets~1{assetId}~1links~1{linkId}/delete/summary
+    - '#/paths/~1dsh~1operator~1reels/get/summary'
+    - '#/paths/~1dsh~1operator~1reels~1{reelId}~1review/post/summary'
+    - '#/paths/~1dsh~1partner~1reels/get/summary'
+    - '#/paths/~1dsh~1partner~1reels/post/summary'
+    - '#/paths/~1dsh~1public~1reels/get/summary'
+    - '#/paths/~1dsh~1operator~1catalog~1asset-links/get/summary'
+    - >-
+      #/paths/~1dsh~1operator~1catalog~1domains~1{domainId}~1images~1{role}/put/summary
+    - >-
+      #/paths/~1dsh~1operator~1catalog~1nodes~1{nodeId}~1images~1{role}/put/summary
+    - >-
+      #/paths/~1dsh~1operator~1catalog~1master-products~1{productId}~1images~1{role}/put/summary
+    - >-
+      #/paths/~1dsh~1operator~1catalog~1product-proposals~1{proposalId}~1images~1{role}/put/summary
+    - '#/paths/~1dsh~1operator~1stores~1{storeId}~1assortment/get/summary'
+    - >-
+      #/paths/~1dsh~1operator~1stores~1{storeId}~1assortment~1{masterProductId}/put/summary
+    - '#/paths/~1dsh~1partner~1catalog~1taxonomy/get/summary'
+    - '#/paths/~1dsh~1partner~1catalog~1master-products/get/summary'
+    - '#/paths/~1dsh~1partner~1stores~1{storeId}~1assortment/get/summary'
+    - >-
+      #/paths/~1dsh~1partner~1stores~1{storeId}~1assortment~1{masterProductId}/put/summary
+    - '#/paths/~1dsh~1partner~1catalog~1product-proposals/get/summary'
+    - '#/paths/~1dsh~1partner~1catalog~1product-proposals/post/summary'
+    - >-
+      #/paths/~1dsh~1partner~1catalog~1product-proposals~1{proposalId}/patch/summary
+    - '#/paths/~1dsh~1field~1catalog~1taxonomy/get/summary'
+    - '#/paths/~1dsh~1field~1catalog~1master-products/get/summary'
+    - >-
+      #/paths/~1dsh~1field~1partners~1{partnerId}~1stores~1{storeId}~1assortment~1{masterProductId}/put/summary
+    - '#/paths/~1dsh~1field~1partners~1{partnerId}~1assortment/get/summary'
+    - >-
+      #/paths/~1dsh~1field~1partners~1{partnerId}~1catalog~1product-proposals/get/summary
+    - >-
+      #/paths/~1dsh~1field~1partners~1{partnerId}~1catalog~1product-proposals/post/summary
+    - >-
+      #/paths/~1dsh~1field~1partners~1{partnerId}~1catalog~1product-proposals~1{proposalId}/patch/summary
+    - '#/paths/~1dsh~1catalog~1domains/get/summary'
+    - '#/paths/~1dsh~1catalog~1domains/post/summary'
+    - '#/paths/~1dsh~1catalog~1domains~1{domainId}/patch/summary'
+    - '#/paths/~1dsh~1catalog~1nodes/get/summary'
+    - '#/paths/~1dsh~1catalog~1nodes/post/summary'
+    - '#/paths/~1dsh~1catalog~1nodes~1{nodeId}/patch/summary'
+    - '#/paths/~1dsh~1catalog~1master-products/get/summary'
+    - '#/paths/~1dsh~1catalog~1master-products/post/summary'
+    - '#/paths/~1dsh~1catalog~1master-products~1{productId}/patch/summary'
+    - '#/paths/~1dsh~1catalog~1proposals/get/summary'
+    - '#/paths/~1dsh~1catalog~1proposals~1{proposalId}~1decision/post/summary'
+    - '#/paths/~1dsh~1catalog~1proposals~1{proposalId}~1transitions/post/summary'
+    - '#/paths/~1dsh~1catalog~1policies/get/summary'
+    - '#/paths/~1dsh~1catalog~1policies~1{policyId}/patch/summary'
+    - '#/paths/~1dsh~1catalog~1stores~1{storeId}~1assortment/get/summary'
+    - >-
+      #/paths/~1dsh~1catalog~1stores~1{storeId}~1assortment~1{masterProductId}/put/summary
+    - '#/paths/~1dsh~1captain~1dispatch~1financial-eligibility/get/summary'
+    - >-
+      #/paths/~1dsh~1captain~1dispatch~1financial-eligibility~1refresh/post/summary
+    - >-
+      #/paths/~1dsh~1operator~1dispatch~1captains~1{captainId}~1financial-eligibility/get/summary
+    - >-
+      #/paths/~1dsh~1operator~1dispatch~1captains~1{captainId}~1financial-eligibility~1refresh/post/summary
+    - '#/paths/~1dsh~1captain~1me~1readiness/get/summary'
+    - >-
+      #/paths/~1dsh~1operator~1dispatch~1captains~1{captainId}~1readiness/get/summary
+    - '#/paths/~1dsh~1captain~1me~1finance~1commissions/get/summary'
+    - '#/paths/~1dsh~1captain~1me~1finance~1ledger-entries/get/summary'
+    - '#/paths/~1dsh~1captain~1me~1finance~1payout-requests/get/summary'
+    - '#/paths/~1dsh~1captain~1me~1finance~1payout-requests/post/summary'
+    - '#/paths/~1dsh~1captain~1me~1finance~1wallet/get/summary'
+    - '#/paths/~1dsh~1client~1me~1finance~1ledger-entries/get/summary'
+    - '#/paths/~1dsh~1client~1me~1finance~1wallet/get/summary'
+    - '#/paths/~1dsh~1partner~1me~1finance~1commissions/get/summary'
+    - '#/paths/~1dsh~1partner~1me~1finance~1ledger-entries/get/summary'
+    - '#/paths/~1dsh~1partner~1me~1finance~1payout-requests/get/summary'
+    - '#/paths/~1dsh~1partner~1me~1finance~1payout-requests/post/summary'
+    - '#/paths/~1dsh~1partner~1me~1finance~1wallet/get/summary'
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1wallets~1{actorType}~1{actorId}/get/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1wallets~1{actorType}~1{actorId}~1ledger-entries/get/summary
+    - '#/paths/~1dsh~1captain~1me~1finance~1payout-destination/get/summary'
+    - '#/paths/~1dsh~1captain~1me~1finance~1payout-destination/put/summary'
+    - >-
+      #/paths/~1dsh~1captain~1me~1finance~1payout-destination~1deactivate/post/summary
+    - '#/paths/~1dsh~1field~1me~1finance~1payout-destination/get/summary'
+    - '#/paths/~1dsh~1field~1me~1finance~1payout-destination/put/summary'
+    - >-
+      #/paths/~1dsh~1field~1me~1finance~1payout-destination~1deactivate/post/summary
+    - '#/paths/~1dsh~1partner~1me~1finance~1payout-destination/get/summary'
+    - '#/paths/~1dsh~1partner~1me~1finance~1payout-destination/put/summary'
+    - >-
+      #/paths/~1dsh~1partner~1me~1finance~1payout-destination~1deactivate/post/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1audit/get/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1reconcile/post/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases/get/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases~1{caseId}~1assign/post/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases~1{caseId}~1resolve/post/summary
+    - '#/paths/~1dsh~1partner~1me~1finance~1cod-records/get/summary'
+    - >-
+      #/paths/~1dsh~1partner~1me~1finance~1cod-records~1{recordId}~1remit/post/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}/get/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}~1adjust/post/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}~1confirm/post/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}~1reject/post/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}~1reverse/post/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}~1settle/post/summary
+    - '#/paths/~1dsh~1control-panel~1finance~1commission-policies/put/summary'
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1settlements~1{settlementId}~1evidence/get/summary
+    - '#/paths/~1dsh~1captain~1finance~1cod-records/get/summary'
+    - >-
+      #/paths/~1dsh~1captain~1finance~1cod-records~1{recordId}~1collect/post/summary
+    - >-
+      #/paths/~1dsh~1captain~1finance~1cod-records~1{recordId}~1remit/post/summary
+    - '#/paths/~1dsh~1operator~1support~1tickets~1{ticketId}/get/summary'
+    - '#/paths/~1dsh~1operator~1support~1tickets~1{ticketId}/patch/summary'
+    - >-
+      #/paths/~1dsh~1operator~1checkout-intents~1{intentId}~1reconcile/post/summary
+    - '#/paths/~1dsh~1operator~1platform~1change-sets/post/summary'
+    - '#/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}/get/summary'
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1submit/post/summary
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1approve/post/summary
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1apply/post/summary
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1reject/post/summary
+    - '#/paths/~1dsh~1operator~1platform~1providers/get/summary'
+    - >-
+      #/paths/~1dsh~1operator~1platform~1providers~1{providerId}~1status/post/summary
+  operation-4xx-response:
+    - '#/paths/~1dsh~1operator~1platform~1change-sets/post/responses'
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}/get/responses
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1submit/post/responses
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1approve/post/responses
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1apply/post/responses
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1reject/post/responses
+    - '#/paths/~1dsh~1operator~1platform~1providers/get/responses'
+    - >-
+      #/paths/~1dsh~1operator~1platform~1providers~1{providerId}~1status/post/responses
+  no-unused-components:
+    - '#/components/parameters/HomeContentKind'
+    - '#/components/parameters/StoreId'
+    - '#/components/schemas/DshAcknowledgeDeliveryExceptionRequest'
+    - '#/components/schemas/DshResolveDeliveryExceptionRequest'
+    - '#/components/schemas/DshDeliveryExceptionReasonCode'
+    - '#/components/schemas/DshDeliveryExceptionStatus'
+    - '#/components/schemas/DshDeliveryExceptionSeverity'
+    - '#/components/schemas/DshReportDeliveryExceptionRequest'
+    - '#/components/schemas/DshDeliveryException'
+    - '#/components/schemas/DshDeliveryExceptionResponse'
+    - '#/components/schemas/DshDeliveryExceptionListResponse'
+    - '#/components/schemas/DshStoreStatus'
+    - '#/components/schemas/DshStoreServiceabilityStatus'
+    - '#/components/schemas/DshStoreServiceabilitySummary'
+    - '#/components/schemas/DshStoreSummary'
+    - '#/components/schemas/DshStoreCategory'
+    - '#/components/schemas/DshStoreDeliveryMode'
+    - '#/components/schemas/DshPartnerOperationalScope'
+    - '#/components/schemas/DshStoreDetail'
+    - '#/components/schemas/DshFieldPartnerStoreDraft'
+    - '#/components/schemas/DshUpdateFieldPartnerStoreDraftRequest'
+    - '#/components/schemas/DshPagination'
+    - '#/components/schemas/DshStoreListResponse'
+    - '#/components/schemas/DshStoreDetailResponse'
+    - '#/components/schemas/DshErrorResponse'
+    - '#/components/schemas/DshStoreContextResponse'
+    - '#/components/schemas/PartnerStoreSettingsRequest'
+    - '#/components/schemas/FieldStoreVerificationRequest'
+    - '#/components/schemas/CaptainPickupReadinessRequest'
+    - '#/components/schemas/OperatorStoreGovernanceRequest'
+    - '#/components/schemas/DshStoreActionResponse'
+    - '#/components/schemas/DshStoreAuditEvent'
+    - '#/components/schemas/DshStoreAuditResponse'
+    - '#/components/schemas/DshCatalogAsset'
+    - '#/components/schemas/DshCatalogAssetListResponse'
+    - '#/components/schemas/DshMasterProduct'
+    - '#/components/schemas/MasterProductSummary'
+    - '#/components/schemas/DshMasterProductListResponse'
+    - '#/components/schemas/DshProductProposal'
+    - '#/components/schemas/DshProductProposalListResponse'
+    - '#/components/schemas/DshReel'
+    - '#/components/schemas/DshPublicReel'
+    - '#/components/schemas/DshCentralCatalogDomain'
+    - '#/components/schemas/DshCentralCatalogNode'
+    - '#/components/schemas/DshClientCatalogProduct'
+    - '#/components/schemas/DshCatalogAssetLink'
+    - '#/components/schemas/DshCatalogPolicySnapshot'
+    - '#/components/schemas/DshCatalogResponse'
+    - '#/components/schemas/DshHealthResponse'
+    - '#/components/schemas/DshReadinessResponse'
+    - '#/components/schemas/DshHomeBanner'
+    - '#/components/schemas/DshHomePromo'
+    - '#/components/schemas/DshHomeFilter'
+    - '#/components/schemas/DshHomeCategory'
+    - '#/components/schemas/DshHomeAdminContentItem'
+    - '#/components/schemas/DshHomeAdminContentInput'
+    - '#/components/schemas/DshHomeAdminListResponse'
+    - '#/components/schemas/DshHomeAdminItemResponse'
+    - '#/components/schemas/DshHomeDiscoveryResponse'
+    - '#/components/schemas/DshCartItem'
+    - '#/components/schemas/DshCart'
+    - '#/components/schemas/DshCartResponse'
+    - '#/components/schemas/DshUpsertCartItemRequest'
+    - '#/components/schemas/DshUpsertCartItemResponse'
+    - '#/components/schemas/DshOperatorCartsResponse'
+    - '#/components/schemas/CartServiceabilityRequest'
+    - '#/components/schemas/CartServiceabilityResult'
+    - '#/components/schemas/FulfillmentModeAvailability'
+    - '#/components/schemas/DshCheckoutIntent'
+    - '#/components/schemas/DshCreateCheckoutIntentRequest'
+    - '#/components/schemas/DshCheckoutIntentResponse'
+    - '#/components/schemas/DshOperatorCheckoutIntentsResponse'
+    - '#/components/schemas/DshOrderStatus'
+    - '#/components/schemas/DshFinancialClosureStatus'
+    - '#/components/schemas/DshOrderItem'
+    - '#/components/schemas/DshOrder'
+    - '#/components/schemas/DshOrderResponse'
+    - '#/components/schemas/DshOrdersResponse'
+    - '#/components/schemas/DshCreateOrderRequest'
+    - '#/components/schemas/DshRejectOrderRequest'
+    - '#/components/schemas/DshOrderCancellationReasonCode'
+    - '#/components/schemas/DshOrderCancellationRequest'
+    - '#/components/schemas/DshOrderCancellation'
+    - '#/components/schemas/DshOrderCancellationResponse'
+    - '#/components/schemas/DshCancelOrderResponse'
+    - '#/components/schemas/DshAssignmentStatus'
+    - '#/components/schemas/DshDeliveryStatus'
+    - '#/components/schemas/DshDelivery'
+    - '#/components/schemas/DshDispatchAssignment'
+    - '#/components/schemas/DshDispatchAssignmentResponse'
+    - '#/components/schemas/DshPartnerDispatchReference'
+    - '#/components/schemas/DshPartnerDispatchReferenceResponse'
+    - '#/components/schemas/DshDispatchAssignmentsResponse'
+    - '#/components/schemas/DshCreateAssignmentRequest'
+    - '#/components/schemas/DshDeclineAssignmentRequest'
+    - '#/components/schemas/DshUpdateDeliveryStatusRequest'
+    - '#/components/schemas/DshSubmitPoDRequest'
+    - '#/components/schemas/DshPushDispatchLocationRequest'
+    - '#/components/schemas/DshVisitType'
+    - '#/components/schemas/DshVisitStatus'
+    - '#/components/schemas/DshCheckType'
+    - '#/components/schemas/DshCheckStatus'
+    - '#/components/schemas/DshEscalationStatus'
+    - '#/components/schemas/DshEscalationSeverity'
+    - '#/components/schemas/DshEscalationCategory'
+    - '#/components/schemas/DshFieldVisit'
+    - '#/components/schemas/DshFieldVisitResponse'
+    - '#/components/schemas/DshFieldVisitsResponse'
+    - '#/components/schemas/DshCreateFieldVisitRequest'
+    - '#/components/schemas/DshReadinessCheck'
+    - '#/components/schemas/DshReadinessCheckResponse'
+    - '#/components/schemas/DshReadinessChecksResponse'
+    - '#/components/schemas/DshUpsertReadinessCheckRequest'
+    - '#/components/schemas/DshReadinessEscalation'
+    - '#/components/schemas/DshEscalationResponse'
+    - '#/components/schemas/DshEscalationsResponse'
+    - '#/components/schemas/DshFieldWorkQueueResponse'
+    - '#/components/schemas/DshCreateEscalationRequest'
+    - '#/components/schemas/DshUpdateEscalationRequest'
+    - '#/components/schemas/DshOnboardingStatusResponse'
+    - '#/components/schemas/DshTicketStatus'
+    - '#/components/schemas/DshTicketPriority'
+    - '#/components/schemas/DshTicketCategory'
+    - '#/components/schemas/DshSenderRole'
+    - '#/components/schemas/DshIncidentStatus'
+    - '#/components/schemas/DshIncidentSeverity'
+    - '#/components/schemas/DshIncidentScope'
+    - '#/components/schemas/DshSupportTicket'
+    - '#/components/schemas/DshTicketResponse'
+    - '#/components/schemas/DshTicketsResponse'
+    - '#/components/schemas/DshCreateTicketRequest'
+    - '#/components/schemas/DshUpdateTicketRequest'
+    - '#/components/schemas/DshSupportMessage'
+    - '#/components/schemas/DshSupportMediaKind'
+    - '#/components/schemas/DshSupportMediaUploadStatus'
+    - '#/components/schemas/DshSupportMessageAttachmentInput'
+    - '#/components/schemas/DshSupportMessageAttachment'
+    - '#/components/schemas/DshRichMessageRequest'
+    - '#/components/schemas/DshMessageResponse'
+    - '#/components/schemas/DshMessagesResponse'
+    - '#/components/schemas/DshAddMessageRequest'
+    - '#/components/schemas/DshIncident'
+    - '#/components/schemas/DshIncidentResponse'
+    - '#/components/schemas/DshIncidentsResponse'
+    - '#/components/schemas/DshCreateIncidentRequest'
+    - '#/components/schemas/DshUpdateIncidentRequest'
+    - '#/components/schemas/DshPlatformKpisResponse'
+    - '#/components/schemas/DshOrderStatusCount'
+    - '#/components/schemas/DshOrderAnalyticsResponse'
+    - '#/components/schemas/DshDeliveryAnalyticsResponse'
+    - '#/components/schemas/DshTicketCategoryCount'
+    - '#/components/schemas/DshSupportAnalyticsResponse'
+    - '#/components/schemas/DshStoreAnalyticsResponse'
+    - '#/components/schemas/DshPartnerPerformanceResponse'
+    - '#/components/schemas/WltPaymentCallbackEnvelope'
+    - '#/components/schemas/DshNotification'
+    - '#/components/schemas/DshNotificationsListResponse'
+    - '#/components/schemas/DshNotificationResponse'
+    - '#/components/schemas/DshUpdateNotificationPreferenceRequest'
+    - '#/components/schemas/DshNotificationPreference'
+    - '#/components/schemas/DshNotificationPreferenceResponse'
+    - '#/components/schemas/DshPlatformNotificationConfig'
+    - '#/components/schemas/DshPlatformNotificationConfigListResponse'
+    - '#/components/schemas/DshPlatformNotificationConfigResponse'
+    - '#/components/schemas/DshUpsertPlatformNotificationConfigRequest'
+    - '#/components/schemas/DshMarketingTargetType'
+    - '#/components/schemas/DshCampaign'
+    - '#/components/schemas/DshCampaignsListResponse'
+    - '#/components/schemas/DshCampaignResponse'
+    - '#/components/schemas/DshCreateCampaignRequest'
+    - '#/components/schemas/DshUpdateCampaignRequest'
+    - '#/components/schemas/DshPartner'
+    - '#/components/schemas/DshPartnersListResponse'
+    - '#/components/schemas/DshPartnerListResponse'
+    - '#/components/schemas/DshCreatePartnerRequest'
+    - '#/components/schemas/DshPartnerTransitionRequest'
+    - '#/components/schemas/DshPartnerTransitionResponse'
+    - '#/components/schemas/DshPartnerActivationStatus'
+    - '#/components/schemas/DshPartnerTeamMember'
+    - '#/components/schemas/DshPartnerStoreCourierSettings'
+    - '#/components/schemas/DshPartnerCoverageZone'
+    - '#/components/schemas/DshPartnerReadiness'
+    - '#/components/schemas/DshPartnerReadinessItem'
+    - '#/components/schemas/DshPartnerDocument'
+    - '#/components/schemas/DshPartnerDocumentsListResponse'
+    - '#/components/schemas/DshAddPartnerDocumentRequest'
+    - '#/components/schemas/DshReviewPartnerDocumentRequest'
+    - '#/components/schemas/DshPartnerDocumentReview'
+    - '#/components/schemas/DshPartnerDocumentReviewResponse'
+    - '#/components/schemas/DshPartnerLinkedStore'
+    - '#/components/schemas/DshPartnerStoresListResponse'
+    - '#/components/schemas/DshLinkPartnerStoreRequest'
+    - '#/components/schemas/DshPartnerAuditEvent'
+    - '#/components/schemas/DshPartnerAuditEventsListResponse'
+    - '#/components/schemas/DshUpdatePartnerRequest'
+    - '#/components/schemas/DshPartnerFieldVisit'
+    - '#/components/schemas/DshCreatePartnerFieldVisitRequest'
+    - '#/components/schemas/DshMarketingTicker'
+    - '#/components/schemas/DshMarketingTickersListResponse'
+    - '#/components/schemas/DshMarketingTickerResponse'
+    - '#/components/schemas/DshCreateMarketingTickerRequest'
+    - '#/components/schemas/DshUpdateMarketingTickerRequest'
+    - '#/components/schemas/DshPartnerOffer'
+    - '#/components/schemas/DshPartnerOffersListResponse'
+    - '#/components/schemas/DshPartnerOfferResponse'
+    - '#/components/schemas/DshUpdatePartnerOfferRequest'
+    - '#/components/schemas/DshSubmitPartnerOfferRequest'
+    - '#/components/schemas/DshZone'
+    - '#/components/schemas/DshZonesListResponse'
+    - '#/components/schemas/DshZoneResponse'
+    - '#/components/schemas/DshCreateZoneRequest'
+    - '#/components/schemas/DshUpdateZoneRequest'
+    - '#/components/schemas/DshSlaRule'
+    - '#/components/schemas/DshSlaRulesResponse'
+    - '#/components/schemas/DshUpsertSlaRulesRequest'
+    - '#/components/schemas/DshCapacityConfig'
+    - '#/components/schemas/DshCapacityConfigResponse'
+    - '#/components/schemas/DshUpsertCapacityConfigRequest'
+    - '#/components/schemas/DshZoneServiceabilityResponse'
+    - '#/components/schemas/DshOperationalPolicyFulfillmentMode'
+    - '#/components/schemas/DshOperationalPolicySla'
+    - '#/components/schemas/DshOperationalPolicyCapacity'
+    - '#/components/schemas/DshOperationalPolicyProfile'
+    - '#/components/schemas/DshOperationalPolicyProfileMutation'
+    - '#/components/schemas/DshOperationalPolicyDeliveryMode'
+    - '#/components/schemas/DshOperationalPolicyDeliveryModeMutation'
+    - '#/components/schemas/DshOperationalPolicyEvaluationInput'
+    - '#/components/schemas/DshOperationalPolicyEffects'
+    - '#/components/schemas/DshOperationalPolicyDecision'
+    - '#/components/schemas/DshOperationalPolicyAuditEvent'
+    - '#/components/schemas/DshOperationalPolicyRollbackRequest'
+    - '#/components/schemas/DshOperationalPolicyRollbackResult'
+    - '#/components/schemas/DshOperationalPolicyProfileResponse'
+    - '#/components/schemas/DshOperationalPolicyDeliveryModesResponse'
+    - '#/components/schemas/DshOperationalPolicyDeliveryModeResponse'
+    - '#/components/schemas/DshOperationalPolicyDecisionResponse'
+    - '#/components/schemas/DshOperationalPolicyAuditResponse'
+    - '#/components/schemas/DshOperationalPolicyRollbackResponse'
+    - '#/components/schemas/DshStoreOnboardingFeePolicy'
+    - '#/components/schemas/DshStoreOnboardingFeePolicyResponse'
+    - '#/components/schemas/DshUpsertStoreOnboardingFeePolicyRequest'
+    - '#/components/schemas/DshAdminRole'
+    - '#/components/schemas/DshAdminRolesListResponse'
+    - '#/components/schemas/DshAdminRoleResponse'
+    - '#/components/schemas/DshCreateAdminRoleRequest'
+    - '#/components/schemas/DshStaffMember'
+    - '#/components/schemas/DshStaffListResponse'
+    - '#/components/schemas/DshAssignStaffRoleRequest'
+    - '#/components/schemas/DshPartnerActivation'
+    - '#/components/schemas/DshPartnerActivationsListResponse'
+    - '#/components/schemas/DshActivatePartnerRequest'
+    - '#/components/schemas/DshBlockPartnerRequest'
+    - '#/components/schemas/DshCaptainCredential'
+    - '#/components/schemas/DshCaptainAppPersona'
+    - '#/components/schemas/DshCaptainIdentity'
+    - '#/components/schemas/DshCaptainCredentialsListResponse'
+    - '#/components/schemas/DshUpsertCaptainCredentialRequest'
+    - '#/components/schemas/DshAdminAuditEntry'
+    - '#/components/schemas/DshAdminAuditListResponse'
+    - '#/components/schemas/DshCreateSpecialRequest'
+    - '#/components/schemas/DshSpecialRequestResponse'
+    - '#/components/schemas/DshSpecialRequestListResponse'
+    - '#/components/schemas/DshUpdateSpecialRequest'
+    - '#/components/schemas/DshSpecialRequestInformationExchange'
+    - '#/components/schemas/DshSpecialRequestInformationExchangeResponse'
+    - '#/components/schemas/DshSpecialRequestInformationMutationResponse'
+    - '#/components/schemas/DshRequestSpecialRequestInformation'
+    - '#/components/schemas/DshRespondSpecialRequestInformation'
+    - '#/components/schemas/DshSpecialRequestExecutionException'
+    - '#/components/schemas/DshSpecialRequestExecution'
+    - '#/components/schemas/DshSpecialRequestPaymentSessionReadback'
+    - '#/components/schemas/DshSpecialRequestFinancialReadback'
+    - '#/components/schemas/DshSpecialRequestExecutionResponse'
+    - '#/components/schemas/DshPartnerDeliveryTaskStatus'
+    - '#/components/schemas/DshPartnerDeliveryTask'
+    - '#/components/schemas/DshPartnerDeliveryTaskResponse'
+    - '#/components/schemas/DshPartnerDeliveryStateResponse'
+    - '#/components/schemas/DshPartnerDeliveryTaskListResponse'
+    - '#/components/schemas/DshPartnerDeliveryMutationRequest'
+    - '#/components/schemas/DshAssignPartnerDeliveryTaskRequest'
+    - '#/components/schemas/DshSubmitPartnerDeliveryProofRequest'
+    - '#/components/schemas/DshRaisePartnerDeliveryExceptionRequest'
+    - '#/components/schemas/DshPickupSession'
+    - '#/components/schemas/DshPickupSessionResponse'
+    - '#/components/schemas/DshPickupSessionListResponse'
+    - '#/components/schemas/DshPartnerPickupStage'
+    - '#/components/schemas/DshPartnerPickupStateResponse'
+    - '#/components/schemas/DshPickupMutationRequest'
+    - '#/components/schemas/DshIssuePickupOtpRequest'
+    - '#/components/schemas/DshVerifyPickupOtpRequest'
+    - '#/components/schemas/DshPickupNoShowRequest'
+    - '#/components/schemas/DshExtendPickupWindowRequest'
+    - '#/components/schemas/DshPickupMarkReadyResponse'
+    - '#/components/schemas/DshPickupCustomerArrivedResponse'
+    - '#/components/schemas/DshPickupNotifyResponse'
+    - '#/components/schemas/DshPartnerOrderAction'
+    - '#/components/schemas/DshPreparationSlaState'
+    - '#/components/schemas/DshOrderPreparation'
+    - '#/components/schemas/DshPreparationIssueKind'
+    - '#/components/schemas/DshPreparationIssueStatus'
+    - '#/components/schemas/DshPreparationIssueCustomerDecision'
+    - '#/components/schemas/DshPreparationIssue'
+    - '#/components/schemas/DshCreatePreparationIssueInput'
+    - '#/components/schemas/DshDecidePreparationIssueInput'
+    - '#/components/schemas/DshResolvePreparationIssueInput'
+    - '#/components/schemas/DshPreparationIssueListResponse'
+    - '#/components/schemas/DshRevisePreparationEstimateInput'
+    - '#/components/schemas/DshStorePreparationPolicy'
+    - '#/components/schemas/DshUpdateStorePreparationPolicyInput'
+    - '#/components/schemas/DshPreparationAlertKind'
+    - '#/components/schemas/DshPreparationAlertStatus'
+    - '#/components/schemas/DshPreparationAlert'
+    - '#/components/schemas/DshRefreshPreparationAlertsResult'
+    - '#/components/schemas/DshAcknowledgePreparationAlertInput'
+    - '#/components/schemas/DshPreparationAlertListResponse'
+    - '#/components/schemas/DshPartnerOrderWorkboardOrder'
+    - '#/components/schemas/DshPartnerOrderWorkboardResponse'
+    - '#/components/schemas/DshReschedulePickupWindowRequest'
+    - '#/components/schemas/DshStoreOperationalContext'
+    - '#/components/responses/InvalidRequest'
+    - '#/components/responses/Unauthenticated'
+    - '#/components/responses/Forbidden'
+    - '#/components/responses/NotFound'
+    - '#/components/responses/Conflict'
+    - '#/components/responses/ServiceUnavailable'

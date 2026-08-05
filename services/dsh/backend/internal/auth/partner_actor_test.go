@@ -33,7 +33,7 @@ func TestProvisionPartnerActorUsesTrustedDSHBoundary(t *testing.T) {
 
 	client := NewClientWithInternalAccess(server.URL, "dsh-secret", "operator-main")
 	view, err := client.ProvisionPartnerActor(context.Background(), PartnerActorProvisionInput{
-		Username: "partner-967771000001", PhoneE164: "+967771000001", PermissionBundle: "manager", StoreID: "store-1",
+		Username: "partner-967771000001", PhoneE164: "+967771111111", PermissionBundle: "manager", StoreID: "store-1",
 	})
 	if err != nil || view.ActorID != "partner-actor-1" {
 		t.Fatalf("unexpected result view=%#v err=%v", view, err)
@@ -72,7 +72,7 @@ func TestIssuePartnerActivationForwardsIdempotencyAndCorrelation(t *testing.T) {
 func TestPartnerMutationClientFailsClosedWithoutTrustConfiguration(t *testing.T) {
 	client := NewClient("https://identity.internal")
 	_, err := client.ProvisionPartnerActor(context.Background(), PartnerActorProvisionInput{
-		Username: "partner-user", PhoneE164: "+967771000001", PermissionBundle: "staff", StoreID: "store-1",
+		Username: "partner-user", PhoneE164: "+967771111111", PermissionBundle: "staff", StoreID: "store-1",
 	})
 	if err != ErrIdentityUnavailable {
 		t.Fatalf("expected unavailable without service trust, got %v", err)

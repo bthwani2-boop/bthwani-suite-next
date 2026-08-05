@@ -118,8 +118,8 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 		id, username, role, surface, scope, phone string
 	}{
 		{"operator-local-001", "operator", "operator", "control-panel", "all", "+967770000000"},
-		{"partner-local-001", "bthwani", "partner", "app-partner", "own", "+967771000001"},
-		{"client-local-001", "client", "client", "app-client", "own", "+967774000004"},
+		{"partner-local-001", "bthwani", "partner", "app-partner", "own", "+967771111111"},
+		{"client-local-001", "client", "client", "app-client", "own", "+967772222222"},
 	}
 	// Field agents and captains are deliberately absent. Workforce owns provider
 	// actor creation and always provisions with a server-generated workforce code
@@ -165,8 +165,8 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 		}
 		_, err = r.db.ExecContext(ctx, `
 			INSERT INTO identity_actors
-				(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, active, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, true, now())
+				(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'ACTIVE', 1, now())
 			ON CONFLICT (id) DO UPDATE SET
 				username = EXCLUDED.username,
 				password_hash = EXCLUDED.password_hash,
@@ -174,7 +174,8 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 				phone_e164 = EXCLUDED.phone_e164,
 				roles = EXCLUDED.roles,
 				permissions = EXCLUDED.permissions,
-				active = true,
+				status = 'ACTIVE',
+				version = identity_actors.version + 1,
 				updated_at = now()`,
 			actor.id, actor.username, string(hash), operatorContextID, actor.phone,
 			pq.Array([]string{actor.role}), string(permissions))

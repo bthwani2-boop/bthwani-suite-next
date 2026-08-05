@@ -217,7 +217,8 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                 <CpDescriptionRow label="الاسم الظاهر">{viewModel.displayName}</CpDescriptionRow>
                 <CpDescriptionRow label="نوع الهوية">{viewModel.legalIdentityType}</CpDescriptionRow>
                 <CpDescriptionRow label="رقم الهوية">{viewModel.legalIdentityNumber}</CpDescriptionRow>
-                <CpDescriptionRow label="المالك">{viewModel.ownerName}</CpDescriptionRow>
+                <CpDescriptionRow label="Actor ID">{viewModel.ownerActorId}</CpDescriptionRow>
+                <CpDescriptionRow label="Workforce ID">{viewModel.workforcePersonId}</CpDescriptionRow>
                 <CpDescriptionRow label="الهاتف">{viewModel.primaryPhone}</CpDescriptionRow>
                 <CpDescriptionRow label="الفئة">{viewModel.category}</CpDescriptionRow>
                 <CpDescriptionRow label="الإصدار">{partner.version}</CpDescriptionRow>

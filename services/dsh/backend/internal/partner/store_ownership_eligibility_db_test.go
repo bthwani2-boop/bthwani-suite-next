@@ -17,7 +17,7 @@ func TestGovernedStoreTransferRejectsClosedPartnerStatesDBIntegration(t *testing
 	create := func(label string, phoneSuffix string) Partner {
 		t.Helper()
 		p, err := CreatePartnerForOperatorContext(db, operatorContextID, CreatePartnerInput{
-			LegalNameAr:         "شريك ملكية " + label + " " + suffix,
+			LegalNameAr:         "Ø´Ø±ÙŠÙƒ Ù…Ù„ÙƒÙŠØ© " + label + " " + suffix,
 			LegalNameEn:         "J024 ownership " + label + " " + suffix,
 			DisplayName:         "J024 " + label + " " + suffix,
 			LegalIdentityType:   "commercial_register",

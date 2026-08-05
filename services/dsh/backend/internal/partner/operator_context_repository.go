@@ -40,7 +40,8 @@ type partnerCreationFingerprint struct {
 	DisplayName         string `json:"displayName"`
 	LegalIdentityType   string `json:"legalIdentityType"`
 	LegalIdentityNumber string `json:"legalIdentityNumber"`
-	OwnerName           string `json:"ownerName"`
+	OwnerActorID        string `json:"ownerActorId"`
+	WorkforcePersonID   string `json:"workforcePersonId"`
 	PrimaryPhone        string `json:"primaryPhone"`
 	SecondaryPhone      string `json:"secondaryPhone"`
 	Email               string `json:"email"`
@@ -58,7 +59,8 @@ func hashPartnerCreation(operatorContextID string, input CreatePartnerInput) (st
 		DisplayName:         input.DisplayName,
 		LegalIdentityType:   input.LegalIdentityType,
 		LegalIdentityNumber: input.LegalIdentityNumber,
-		OwnerName:           input.OwnerName,
+		OwnerActorID:        input.OwnerActorID,
+		WorkforcePersonID:   input.WorkforcePersonID,
 		PrimaryPhone:        input.PrimaryPhone,
 		SecondaryPhone:      input.SecondaryPhone,
 		Email:               input.Email,
@@ -144,13 +146,13 @@ func createPartnerForOperatorContextTx(
 			operator_context_id,
 			legal_name_ar, legal_name_en, display_name,
 			legal_identity_type, legal_identity_number,
-			owner_name, primary_phone, secondary_phone, email,
-			category, notes, created_by_actor_id, created_by_surface
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+			owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
+			category, notes, created_by_actor_id, created_by_surface, onboarding_case_status
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'draft')
 		RETURNING id, legal_name_ar, legal_name_en, display_name,
 		          legal_identity_type, legal_identity_number,
-		          owner_name, primary_phone, secondary_phone, email,
-		          category, activation_status, created_by_actor_id, created_by_surface,
+		          owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
+		          category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 		          notes,
 		          COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
 		          COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
@@ -160,13 +162,13 @@ func createPartnerForOperatorContextTx(
 		operatorContextID,
 		input.LegalNameAr, input.LegalNameEn, input.DisplayName,
 		input.LegalIdentityType, input.LegalIdentityNumber,
-		input.OwnerName, input.PrimaryPhone, input.SecondaryPhone, input.Email,
+		input.OwnerActorID, input.WorkforcePersonID, input.PrimaryPhone, input.SecondaryPhone, input.Email,
 		input.Category, input.Notes, input.CreatedByActorID, input.CreatedBySurface,
 	).Scan(
 		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
 		&p.LegalIdentityType, &p.LegalIdentityNumber,
-		&p.OwnerName, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
-		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
+		&p.OwnerActorID, &p.WorkforcePersonID, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
+		&p.Category, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
 		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
 		&p.BeneficiaryName, &p.BankName, &p.BankBranch,
@@ -365,8 +367,8 @@ func GetPartnerForOperatorContext(db *sql.DB, operatorContextID, partnerID strin
 	err = db.QueryRow(`
 		SELECT id, legal_name_ar, legal_name_en, display_name,
 		       legal_identity_type, legal_identity_number,
-		       owner_name, primary_phone, secondary_phone, email,
-		       category, activation_status, created_by_actor_id, created_by_surface,
+		       owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
+		       category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 		       notes,
 		       COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
 		       COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
@@ -378,8 +380,8 @@ func GetPartnerForOperatorContext(db *sql.DB, operatorContextID, partnerID strin
 	).Scan(
 		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
 		&p.LegalIdentityType, &p.LegalIdentityNumber,
-		&p.OwnerName, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
-		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
+		&p.OwnerActorID, &p.WorkforcePersonID, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
+		&p.Category, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
 		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
 		&p.BeneficiaryName, &p.BankName, &p.BankBranch,

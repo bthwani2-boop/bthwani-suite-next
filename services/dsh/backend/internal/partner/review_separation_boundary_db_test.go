@@ -18,7 +18,7 @@ func createJ021Partner(t *testing.T, createdByActorID string) Partner {
 	db := openRequiredDB(t)
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
 	p, err := CreatePartnerForOperatorContext(db, "operator-context-j021-"+suffix, CreatePartnerInput{
-		LegalNameAr:         "شريك مراجعة " + suffix,
+		LegalNameAr:         "Ø´Ø±ÙŠÙƒ Ù…Ø±Ø§Ø¬Ø¹Ø© " + suffix,
 		LegalNameEn:         "J021 Review Partner " + suffix,
 		DisplayName:         "J021 Partner " + suffix,
 		LegalIdentityType:   "commercial_register",

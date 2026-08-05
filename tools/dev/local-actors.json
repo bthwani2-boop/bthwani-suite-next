@@ -19,7 +19,7 @@
       "role": "partner",
       "surface": "app-partner",
       "scope": "own",
-      "phoneE164": "+967771000001"
+      "phoneE164": "+967771111111"
     },
     "client": {
       "username": "client",
@@ -27,7 +27,7 @@
       "role": "client",
       "surface": "app-client",
       "scope": "own",
-      "phoneE164": "+967774000004"
+      "phoneE164": "+967772222222"
     }
   },
   "workforceProviders": {
@@ -35,7 +35,7 @@
       "role": "field",
       "surface": "app-field",
       "scope": "assigned",
-      "phoneE164": "+967774182730",
+      "phoneE164": "+967773333333",
       "fullNameAr": "مندوب بثواني المحلي",
       "fullNameEn": "BThwani Local Field Agent"
     },
@@ -43,7 +43,7 @@
       "role": "captain",
       "surface": "app-captain",
       "scope": "assigned",
-      "phoneE164": "+967773000003",
+      "phoneE164": "+967774444444",
       "fullNameAr": "كابتن بثواني المحلي",
       "fullNameEn": "BThwani Local Captain"
     }

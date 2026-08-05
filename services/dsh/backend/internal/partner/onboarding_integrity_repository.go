@@ -21,8 +21,8 @@ var (
 
 const governedPartnerColumns = `id, legal_name_ar, legal_name_en, display_name,
 	legal_identity_type, legal_identity_number,
-	owner_name, primary_phone, secondary_phone, email,
-	category, activation_status, created_by_actor_id, created_by_surface,
+	owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
+	category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 	notes,
 	COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
 	COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
@@ -43,8 +43,8 @@ func scanGovernedPartner(row partnerScanner) (Partner, error) {
 	err := row.Scan(
 		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
 		&p.LegalIdentityType, &p.LegalIdentityNumber,
-		&p.OwnerName, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
-		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
+		&p.OwnerActorID, &p.WorkforcePersonID, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
+		&p.Category, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
 		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
 		&p.BeneficiaryName, &p.BankName, &p.BankBranch,
@@ -92,11 +92,12 @@ func UpdatePartnerGoverned(db *sql.DB, partnerID string, input UpdatePartnerInpu
 		row = db.QueryRow(`
 			UPDATE dsh_partners SET
 				display_name = COALESCE(NULLIF($2,''), display_name),
-				owner_name = COALESCE(NULLIF($3,''), owner_name),
-				primary_phone = COALESCE(NULLIF($4,''), primary_phone),
-				secondary_phone = COALESCE(NULLIF($5,''), secondary_phone),
-				email = COALESCE(NULLIF($6,''), email),
-				notes = COALESCE(NULLIF($7,''), notes),
+				owner_actor_id = COALESCE(NULLIF($3,''), owner_actor_id),
+				workforce_person_id = COALESCE(NULLIF($4,''), workforce_person_id),
+				primary_phone = COALESCE(NULLIF($5,''), primary_phone),
+				secondary_phone = COALESCE(NULLIF($6,''), secondary_phone),
+				email = COALESCE(NULLIF($7,''), email),
+				notes = COALESCE(NULLIF($8,''), notes),
 				beneficiary_name = $9,
 				bank_name = $10,
 				bank_branch = $11,
@@ -109,9 +110,9 @@ func UpdatePartnerGoverned(db *sql.DB, partnerID string, input UpdatePartnerInpu
 				masked_mobile_number = $18,
 				version = version + 1,
 				updated_at = NOW()
-			WHERE id = $1 AND version = $8
+			WHERE id = $1 AND version = $9
 			RETURNING `+governedPartnerColumns,
-			partnerID, input.DisplayName, input.OwnerName, input.PrimaryPhone,
+			partnerID, input.DisplayName, input.OwnerActorID, input.WorkforcePersonID, input.PrimaryPhone,
 			input.SecondaryPhone, input.Email, input.Notes, expectedVersion,
 			input.BeneficiaryName, input.BankName, input.BankBranch,
 			input.SettlementPreference, holderMatchesOwner, input.BankNotes,
@@ -122,16 +123,17 @@ func UpdatePartnerGoverned(db *sql.DB, partnerID string, input UpdatePartnerInpu
 		row = db.QueryRow(`
 			UPDATE dsh_partners SET
 				display_name = COALESCE(NULLIF($2,''), display_name),
-				owner_name = COALESCE(NULLIF($3,''), owner_name),
-				primary_phone = COALESCE(NULLIF($4,''), primary_phone),
-				secondary_phone = COALESCE(NULLIF($5,''), secondary_phone),
-				email = COALESCE(NULLIF($6,''), email),
-				notes = COALESCE(NULLIF($7,''), notes),
+				owner_actor_id = COALESCE(NULLIF($3,''), owner_actor_id),
+				workforce_person_id = COALESCE(NULLIF($4,''), workforce_person_id),
+				primary_phone = COALESCE(NULLIF($5,''), primary_phone),
+				secondary_phone = COALESCE(NULLIF($6,''), secondary_phone),
+				email = COALESCE(NULLIF($7,''), email),
+				notes = COALESCE(NULLIF($8,''), notes),
 				version = version + 1,
 				updated_at = NOW()
-			WHERE id = $1 AND version = $8
+			WHERE id = $1 AND version = $9
 			RETURNING `+governedPartnerColumns,
-			partnerID, input.DisplayName, input.OwnerName, input.PrimaryPhone,
+			partnerID, input.DisplayName, input.OwnerActorID, input.WorkforcePersonID, input.PrimaryPhone,
 			input.SecondaryPhone, input.Email, input.Notes, expectedVersion,
 		)
 	}
@@ -454,7 +456,7 @@ func validateTransitionReadinessTx(ctx context.Context, tx *sql.Tx, p Partner, t
 	if requiresProfile {
 		if strings.TrimSpace(p.LegalNameAr) == "" ||
 			strings.TrimSpace(p.LegalIdentityNumber) == "" ||
-			strings.TrimSpace(p.OwnerName) == "" ||
+			(strings.TrimSpace(p.OwnerActorID) == "" && strings.TrimSpace(p.WorkforcePersonID) == "") ||
 			strings.TrimSpace(p.PrimaryPhone) == "" {
 			return fmt.Errorf("%w: legal identity, owner, and primary phone must be complete", ErrReadinessGate)
 		}
