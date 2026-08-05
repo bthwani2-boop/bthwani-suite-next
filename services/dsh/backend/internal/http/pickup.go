@@ -66,7 +66,7 @@ func writePickupError(w http.ResponseWriter, err error) {
 }
 
 func marshalPickupSession(s *pickup.PickupSession) map[string]any {
-	sla := pickup.EvaluateSLA(s, pickup.DefaultSLAThresholds(), time.Now().UTC())
+	sla := pickup.EvaluateSLA(s, nil, pickup.DefaultSLAThresholds(), time.Now().UTC())
 	return map[string]any{
 		"id":                 s.ID,
 		"orderId":            s.OrderID,

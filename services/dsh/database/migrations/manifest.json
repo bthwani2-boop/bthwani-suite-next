@@ -1502,6 +1502,13 @@
       "sha256": "c00c13d8822aee88d93e5911b5e07d1af40bc8a9252c8688d54356c19e8a1f22",
       "historicalPrefix": "994",
       "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 215,
+      "file": "dsh-146_operational_analytics_projections.sql",
+      "sha256": "4bc0c87683aac840de1b5f9127d2066f784458a69e5ac5fbea930b69ee29ea15",
+      "historicalPrefix": "146",
+      "state": "ACTIVE"
     }
   ]
 }

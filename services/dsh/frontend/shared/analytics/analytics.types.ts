@@ -23,6 +23,8 @@ export type DshAnalyticsMetadata = {
   windowTo: string;
   freshnessSeconds: number;
   lineage: readonly string[];
+  sampleSize: number;
+  insufficientSample: boolean;
 };
 
 export type DshPreparationSlaAnalytics = {

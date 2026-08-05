@@ -234,7 +234,12 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
           <Box style={styles.card}>
             <Box style={styles.sectionHeader}>
               <Text role="titleSm">SLA التحضير</Text>
-              <CpBadge tone="info">{`المصدر ${state.preparation.metadata.sourceSystem}`}</CpBadge>
+              <Box style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                {state.preparation.metadata.insufficientSample && (
+                  <CpBadge tone="warning">عينة غير كافية ({state.preparation.metadata.sampleSize})</CpBadge>
+                )}
+                <CpBadge tone="info">{`المصدر ${state.preparation.metadata.sourceSystem}`}</CpBadge>
+              </Box>
             </Box>
             <Box style={styles.grid}>
               <Metric label="طلبات مقاسة" value={state.preparation.totalMeasured} />

@@ -488,6 +488,20 @@
       "sha256": "537da068c2a4338b3d72d8862951ab4a557e757aaf4f137ab292ea9dd25996dd",
       "historicalPrefix": "907",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 70,
+      "file": "wlt-115_ledger_immutability.sql",
+      "sha256": "bb30274ab8d04fbc0719acb02217dae46f396a7531d95354eaa82180a7896349",
+      "historicalPrefix": "115",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 71,
+      "file": "wlt-116_ledger_account_classifications.sql",
+      "sha256": "1752fa2937de4755b3a8d03ad5d0eb110945163dc85685997f1119e605165840",
+      "historicalPrefix": "116",
+      "state": "ACTIVE"
     }
   ]
 }
