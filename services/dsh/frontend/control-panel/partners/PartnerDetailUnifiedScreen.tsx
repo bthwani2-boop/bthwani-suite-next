@@ -31,6 +31,7 @@ import {
   type DshPartnerReadiness,
 } from "../../shared/partner";
 import { OperatorDeliveryPricingPanel } from "./stores/OperatorDeliveryPricingPanel";
+import { PartnerStoreCreateWizard } from "./stores/PartnerStoreCreateWizard";
 import { PartnerCommercialModelPanel } from "./PartnerCommercialModelPanel";
 
 type Tab = "overview" | "documents" | "visits" | "stores" | "readiness" | "audit" | "commercial_model";
@@ -306,6 +307,9 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
 
         {tab === "stores" ? (
           <div style={{ display: "grid", gap: 12 }}>
+            <div style={{ display: "grid", gap: 12 }}>
+               <PartnerStoreCreateWizard partnerId={partnerId} onStoreCreated={() => stores.reload()} />
+            </div>
             {section("إسناد أو نقل ملكية متجر", (
               <div style={{ display: "grid", gap: 8 }}>
                 <CpStatePanel role="status" title="النقل محكوم" code="المتجر المملوك يتطلب سببًا وإصدارًا حاليًا، ويُحجب تلقائيًا عن العميل حتى إعادة اعتماد جميع البوابات. العمليات المفتوحة تمنع النقل." />

@@ -2,7 +2,9 @@ package store
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -113,4 +115,99 @@ func GetStoreByPartnerIDForOperatorContext(db *sql.DB, operatorContextID, partne
 		return nil, err
 	}
 	return &row, nil
+}
+
+func CreateStoreForOperatorContextIdempotent(
+	ctx context.Context,
+	db *sql.DB,
+	operatorContextID string,
+	actorID string,
+	idempotencyKey string,
+	correlationID string,
+	input CreateDraftStoreInput,
+) (DshStoreRow, bool, error) {
+	operatorContextID, err := normalizeStoreOperatorContextID(operatorContextID)
+	if err != nil {
+		return DshStoreRow{}, false, err
+	}
+	idempotencyKey = strings.TrimSpace(idempotencyKey)
+	if idempotencyKey == "" {
+		return DshStoreRow{}, false, errors.New("idempotency key is required")
+	}
+
+	requestBytes, _ := json.Marshal(input)
+	requestHash := fmt.Sprintf("%x", sha256.Sum256(requestBytes))
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return DshStoreRow{}, false, err
+	}
+	defer tx.Rollback()
+
+	var replayHash string
+	var replayJSON []byte
+	err = tx.QueryRowContext(ctx, `
+		SELECT request_hash, response_body
+		FROM dsh_store_idempotency
+		WHERE actor_id = $1 AND operation = 'create-store' AND idempotency_key = $2
+		FOR UPDATE`, actorID, idempotencyKey).Scan(&replayHash, &replayJSON)
+	if err == nil {
+		if replayHash != requestHash {
+			return DshStoreRow{}, false, ErrIdempotencyConflict
+		}
+		var replay DshStoreRow
+		if err := json.Unmarshal(replayJSON, &replay); err != nil {
+			return DshStoreRow{}, false, err
+		}
+		return replay, true, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return DshStoreRow{}, false, err
+	}
+
+	// Verify partner ownership and active state
+	var partnerStatus string
+	err = tx.QueryRowContext(ctx, `
+		SELECT activation_status 
+		FROM dsh_partners 
+		WHERE id = $1 AND operator_context_id = $2`, 
+		input.PartnerID, operatorContextID,
+	).Scan(&partnerStatus)
+	
+	if errors.Is(err, sql.ErrNoRows) {
+		return DshStoreRow{}, false, errors.New("partner not found or does not belong to operator context")
+	}
+	if err != nil {
+		return DshStoreRow{}, false, err
+	}
+	if partnerStatus != "active" {
+		return DshStoreRow{}, false, errors.New("partner must be active to create a new store")
+	}
+
+	storeRow, err := CreateDraftStore(tx, input)
+	if err != nil {
+		return DshStoreRow{}, false, err
+	}
+
+	// Link store to operator_context_id explicitly
+	if _, err = tx.ExecContext(ctx, `UPDATE dsh_stores SET operator_context_id = $1 WHERE id = $2`, operatorContextID, storeRow.ID); err != nil {
+		return DshStoreRow{}, false, err
+	}
+
+	responseJSON, _ := json.Marshal(storeRow)
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO dsh_store_idempotency
+			(actor_id, operation, idempotency_key, request_hash, response_body)
+		VALUES ($1, 'create-store', $2, $3, $4::jsonb)`,
+		actorID, idempotencyKey, requestHash, string(responseJSON))
+	if err != nil {
+		return DshStoreRow{}, false, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return DshStoreRow{}, false, err
+	}
+
+	storeRow.PartnerActivationStatus = partnerStatus
+	return storeRow, false, nil
 }

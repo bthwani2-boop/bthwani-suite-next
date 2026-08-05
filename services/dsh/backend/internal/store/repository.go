@@ -170,10 +170,13 @@ func GetStoreByPartnerID(db *sql.DB, partnerID string) (*DshStoreRow, error) {
 }
 
 type CreateDraftStoreInput struct {
-	PartnerID   string
-	DisplayName string
-	CityCode    string
-	Category    string
+	StoreID        string
+	PartnerID      string
+	DisplayName    string
+	CityCode       string
+	Category       string
+	AddressLine    string
+	OperatingHours string
 }
 
 type execQueryRower interface {
@@ -186,7 +189,13 @@ type execQueryRower interface {
 // serviceability=unavailable, and partner_readiness/catalog_approval_status/
 // marketing_visibility keep their safe column defaults (pending/draft/hidden).
 func CreateDraftStore(db execQueryRower, input CreateDraftStoreInput) (DshStoreRow, error) {
-	id := fmt.Sprintf("store-%d", time.Now().UnixNano())
+	id := strings.TrimSpace(input.StoreID)
+	if id == "" {
+		id = fmt.Sprintf("store-%d", time.Now().UnixNano())
+	} else if !strings.HasPrefix(id, "store-") {
+		// Ensure standard prefix if a raw UUID is passed
+		id = "store-" + id
+	}
 	catalogDomainID := catalogDomainIDForPartnerCategory(input.Category)
 	cityCode := input.CityCode
 	if cityCode == "" {
@@ -196,9 +205,11 @@ func CreateDraftStore(db execQueryRower, input CreateDraftStoreInput) (DshStoreR
 	_, err := db.Exec(`
 		INSERT INTO dsh_stores (
 			id, slug, display_name, status, city_code, service_area_code,
-			serviceability_status, is_visible, catalog_domain_id, partner_id
-		) VALUES ($1,$1,$2,'inactive',$3,$3,'unavailable',false,$4,$5)`,
+			serviceability_status, is_visible, catalog_domain_id, partner_id,
+			address_line, operating_hours
+		) VALUES ($1,$1,$2,'inactive',$3,$3,'unavailable',false,$4,$5,$6,$7)`,
 		id, input.DisplayName, cityCode, catalogDomainID, input.PartnerID,
+		input.AddressLine, input.OperatingHours,
 	)
 	if err != nil {
 		return DshStoreRow{}, fmt.Errorf("failed to create draft store: %w", err)
