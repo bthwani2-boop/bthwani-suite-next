@@ -96,6 +96,27 @@ func (r *OperationRegistry) registerDefaults() {
 		Timeout:            15 * time.Second,
 		Idempotent:         true,
 	})
+	r.register(FinanceOperation{
+		ID:                 "finance.cod.read",
+		Type:               OperationTypeRead,
+		RequiredPermission: "finance.read",
+		Timeout:            10 * time.Second,
+		Idempotent:         true,
+	})
+	r.register(FinanceOperation{
+		ID:                 "finance.cod.collect",
+		Type:               OperationTypeWrite,
+		RequiredPermission: "finance.manage",
+		Timeout:            15 * time.Second,
+		Idempotent:         true,
+	})
+	r.register(FinanceOperation{
+		ID:                 "finance.cod.remit",
+		Type:               OperationTypeWrite,
+		RequiredPermission: "finance.manage",
+		Timeout:            15 * time.Second,
+		Idempotent:         true,
+	})
 }
 
 func (r *OperationRegistry) register(op FinanceOperation) {

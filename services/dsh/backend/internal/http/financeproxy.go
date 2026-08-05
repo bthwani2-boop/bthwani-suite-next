@@ -124,7 +124,7 @@ func (s *protectedStoreServer) handleFinanceFinancialSummary(w http.ResponseWrit
 }
 
 func (s *protectedStoreServer) handleFinanceCodRecords(w http.ResponseWriter, r *http.Request) {
-	s.handleFacadeRead("finance.ledger.read", "/wlt/cod-records", []string{"captainId", "orderId", "limit", "cursor"})(w, r)
+	s.handleFacadeRead("finance.cod.read", "/wlt/cod-records", []string{"captainId", "orderId", "limit", "cursor"})(w, r)
 }
 
 func (s *protectedStoreServer) handleFinanceCommissions(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +154,7 @@ func (s *protectedStoreServer) handleCaptainFinanceCodRecords(w http.ResponseWri
 	}
 	query := url.Values{}
 	query.Set("captainId", actor.ID)
-	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.ledger.read", "/wlt/cod-records", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
+	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.cod.read", "/wlt/cod-records", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
 		return

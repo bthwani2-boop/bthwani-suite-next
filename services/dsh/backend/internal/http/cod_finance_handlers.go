@@ -15,7 +15,7 @@ func (s *protectedStoreServer) handlePartnerFinanceCodRecords(w http.ResponseWri
 		return
 	}
 	query := url.Values{"partnerId": {actor.ID}}
-	s.proxyFinanceRead(w, r, "finance.ledger.read", "/wlt/cod-records", query, actor.OperatorContextID)
+	s.proxyFinanceRead(w, r, "finance.cod.read", "/wlt/cod-records", query, actor.OperatorContextID)
 }
 
 func (s *protectedStoreServer) requirePartnerCodRecord(w http.ResponseWriter, r *http.Request, partnerID, recordID string) bool {
