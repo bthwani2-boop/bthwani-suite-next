@@ -34,14 +34,6 @@
       "rule": "Review GitHub Actions for least privilege, immutable action pins, safe event handling, untrusted-input isolation, fail-closed verification, no secret leakage, and the repository rule that CI must never mutate, commit, push, merge, or rewrite source."
     },
     {
-      "path": "services/wlt/**/*",
-      "rule": "Treat WLT as the exclusive owner of financial truth. Check ledger integrity, idempotency, reconciliation, transaction boundaries, immutable receipts, authorization, auditability, and that DSH or clients cannot create a parallel payment, wallet, refund, settlement, payout, commission, or reconciliation authority."
-    },
-    {
-      "path": "services/dsh/**/*",
-      "rule": "Treat DSH as operational commerce and fulfillment truth, not financial truth. Check lifecycle invariants, authorization, idempotency, concurrency, outbox and handoff reliability, failure recovery, DSH-to-WLT contract boundaries, route and consumer binding, and cross-surface behavior. Flag local financial mutation or duplicated contract authority."
-    },
-    {
       "path": "contracts/**/*",
       "rule": "Review contracts as canonical API authority. Check schema compatibility, required fields, status and error vocabulary, operation IDs, authorization scopes, generated-client provenance, runtime route binding, consumer compatibility, and removal of manually duplicated request, response, or status truth."
     },
@@ -54,6 +46,14 @@
       "rule": "Review migrations for forward-only ordering, unique identifiers, manifest registration, transactional safety, locking and downtime risk, backward compatibility, deterministic defaults, data preservation, constraints and indexes, rollback or remediation strategy, and consistency with the runtime code deployed in the same change."
     },
     {
+      "path": "**/*_test.go",
+      "rule": "Review Go tests as executable evidence. Check that assertions prove the changed behavior and failure paths, fixtures reflect production contracts, database tests isolate state, concurrency and idempotency cases are covered where applicable, and deleted or weakened tests do not hide regressions."
+    },
+    {
+      "path": "**/*.{test,spec}.{js,jsx,ts,tsx}",
+      "rule": "Review tests as executable evidence. Check that assertions prove observable behavior, negative and permission paths are covered, mocks preserve real contract semantics, async failures are awaited, and snapshots or fixtures do not replace meaningful assertions."
+    },
+    {
       "path": "apps/**/*.{ts,tsx,js,jsx}",
       "rule": "Review application surfaces for correct route, state, action, controller, generated-client, authentication, authorization, loading, empty, degraded, failure, retry, offline, and accessibility behavior. Reject local business or financial truth that belongs to shared DSH or WLT owners."
     },
@@ -62,12 +62,12 @@
       "rule": "Review shared and surface frontend code for owner boundaries, generated API usage, stable state transitions, permission gates, error and retry handling, accessibility, and complete cross-surface binding. View models may shape presentation but must not redefine transport, operational, or financial authority."
     },
     {
-      "path": "**/*_test.go",
-      "rule": "Review Go tests as executable evidence. Check that assertions prove the changed behavior and failure paths, fixtures reflect production contracts, database tests isolate state, concurrency and idempotency cases are covered where applicable, and deleted or weakened tests do not hide regressions."
+      "path": "services/wlt/**/*",
+      "rule": "Treat WLT as the exclusive owner of financial truth. Check ledger integrity, idempotency, reconciliation, transaction boundaries, immutable receipts, authorization, auditability, and that DSH or clients cannot create a parallel payment, wallet, refund, settlement, payout, commission, or reconciliation authority."
     },
     {
-      "path": "**/*.{test,spec}.{js,jsx,ts,tsx}",
-      "rule": "Review tests as executable evidence. Check that assertions prove observable behavior, negative and permission paths are covered, mocks preserve real contract semantics, async failures are awaited, and snapshots or fixtures do not replace meaningful assertions."
+      "path": "services/dsh/**/*",
+      "rule": "Treat DSH as operational commerce and fulfillment truth, not financial truth. Check lifecycle invariants, authorization, idempotency, concurrency, outbox and handoff reliability, failure recovery, DSH-to-WLT contract boundaries, route and consumer binding, and cross-surface behavior. Flag local financial mutation or duplicated contract authority."
     },
     {
       "path": "**/*.{go,ts,tsx,js,jsx,json,yaml,yml,sql,md}",
