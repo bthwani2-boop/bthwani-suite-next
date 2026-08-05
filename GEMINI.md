@@ -1,6 +1,6 @@
 # Gemini repository adapter
 
-`AGENTS.md` is the canonical repository authority. This file only adapts Gemini to that authority and cannot override it.
+`AGENTS.md` is the canonical repository authority. The authority chain is defined by `governance/authority/authority-precedence.json`. This file only adapts Gemini to those higher authorities and cannot override them.
 
 For repository work:
 
