@@ -1,4 +1,4 @@
-﻿import { ActivityIndicator, Linking, Platform, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, StyleSheet, Text, View } from "react-native";
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
@@ -40,7 +40,7 @@ function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
 async function getOrCreateFieldDeviceFingerprint(): Promise<string> {
   const existing = await SecureStore.getItemAsync(FIELD_DEVICE_FINGERPRINT_KEY);
   if (existing?.trim()) return existing;
-  const created = \ield-device:\\;
+  const created = `field-device:${Crypto.randomUUID()}`;
   await SecureStore.setItemAsync(FIELD_DEVICE_FINGERPRINT_KEY, created);
   return created;
 }
@@ -157,7 +157,7 @@ function AppContent() {
   useEffect(() => {
     let active = true;
     const installationPromise = Platform.OS === "web"
-      ? Promise.resolve(\ield-web:\\)
+      ? Promise.resolve("field-web")
       : getOrCreateFieldDeviceFingerprint();
 
     void installationPromise
@@ -251,3 +251,4 @@ const styles = StyleSheet.create({
   },
   installationError: { textAlign: "center" },
 });
+
