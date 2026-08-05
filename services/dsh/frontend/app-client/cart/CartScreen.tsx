@@ -22,6 +22,7 @@ import type {
   DshCart,
   DshCartItemValidation,
   DshFulfillmentMode,
+  DshPricingQuote,
   DshServiceabilityState,
 } from "../../shared/cart";
 import type { DshPaymentMethod } from "../../shared/checkout";
@@ -55,6 +56,69 @@ function fulfillmentLabel(mode: DshFulfillmentMode): string {
     case "pickup":
       return "استلام ذاتي";
   }
+}
+
+// WltQuoteSummary renders the authoritative financial quote from WLT verbatim.
+// DSH must never recompute, override, or locally sum these values.
+function WltQuoteSummary({ quote }: { readonly quote: DshPricingQuote | null }) {
+  if (!quote) return null;
+  const { currency } = quote;
+  const showDelivery = quote.deliveryFeeMinorUnits > 0;
+  const showService = quote.serviceFeeMinorUnits > 0;
+  const showTax = quote.taxMinorUnits > 0;
+  const showDiscount = quote.discountMinorUnits > 0;
+  const showRounding = quote.roundingMinorUnits !== 0;
+  return (
+    <Surface tone="default" style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text role="bodyStrong" style={styles.sectionTitle}>ملخص السعر</Text>
+        <Badge label="حُسب بواسطة WLT" tone="info" />
+      </View>
+      <View style={styles.quoteLine}>
+        <Text role="bodySm" style={styles.mutedText}>المجموع الجزئي</Text>
+        <Text role="bodySm" style={styles.quoteValue}>{formatWltMoney(quote.subtotalMinorUnits, currency)}</Text>
+      </View>
+      {showDelivery && (
+        <View style={styles.quoteLine}>
+          <Text role="bodySm" style={styles.mutedText}>رسوم التوصيل</Text>
+          <Text role="bodySm" style={styles.quoteValue}>{formatWltMoney(quote.deliveryFeeMinorUnits, currency)}</Text>
+        </View>
+      )}
+      {showService && (
+        <View style={styles.quoteLine}>
+          <Text role="bodySm" style={styles.mutedText}>رسوم الخدمة</Text>
+          <Text role="bodySm" style={styles.quoteValue}>{formatWltMoney(quote.serviceFeeMinorUnits, currency)}</Text>
+        </View>
+      )}
+      {showTax && (
+        <View style={styles.quoteLine}>
+          <Text role="bodySm" style={styles.mutedText}>الضريبة</Text>
+          <Text role="bodySm" style={styles.quoteValue}>{formatWltMoney(quote.taxMinorUnits, currency)}</Text>
+        </View>
+      )}
+      {showDiscount && (
+        <View style={styles.quoteLine}>
+          <Text role="bodySm" style={styles.mutedText}>الخصم</Text>
+          <Text role="bodySm" style={[styles.quoteValue, styles.discountText]}>− {formatWltMoney(quote.discountMinorUnits, currency)}</Text>
+        </View>
+      )}
+      {showRounding && (
+        <View style={styles.quoteLine}>
+          <Text role="bodySm" style={styles.mutedText}>تعديل التقريب</Text>
+          <Text role="bodySm" style={styles.quoteValue}>{formatWltMoney(quote.roundingMinorUnits, currency)}</Text>
+        </View>
+      )}
+      <View style={[styles.quoteLine, styles.quoteTotalLine]}>
+        <Text role="bodyStrong" style={styles.sectionTitle}>الإجمالي</Text>
+        <Text role="bodyStrong" style={styles.quoteTotalValue}>{formatWltMoney(quote.totalMinorUnits, currency)}</Text>
+      </View>
+      {quote.expiresAt ? (
+        <Text role="caption" style={styles.mutedText}>
+          صالح حتى: {new Date(quote.expiresAt).toLocaleTimeString("ar-SA")}
+        </Text>
+      ) : null}
+    </Surface>
+  );
 }
 
 function ServerPrice({ value, currency }: { readonly value: number; readonly currency: string }) {
@@ -481,6 +545,8 @@ export function CartScreen({
 
         {validationMessageText ? <Text role="caption" style={styles.errorText}>{validationMessageText}</Text> : null}
 
+        <WltQuoteSummary quote={cart?.quote ?? null} />
+
         <Button
           label="متابعة إلى مراجعة checkout"
           tone="primary"
@@ -604,6 +670,20 @@ const styles = StyleSheet.create({
     backgroundColor: alpha(colorRoles.danger, 0.06),
     gap: spacing[2],
   },
+  quoteLine: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  quoteValue: { color: colorRoles.textPrimary, textAlign: "left" },
+  discountText: { color: colorRoles.success },
+  quoteTotalLine: {
+    borderTopWidth: 1,
+    borderTopColor: colorRoles.borderSubtle,
+    paddingTop: spacing[2],
+    marginTop: spacing[1],
+  },
+  quoteTotalValue: { color: colorRoles.brandAction, fontSize: 17 },
   sectionHeader: {
     flexDirection: "row-reverse",
     alignItems: "center",

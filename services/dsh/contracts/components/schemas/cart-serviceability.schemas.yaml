@@ -19,7 +19,10 @@ DshStoreServiceabilitySummary:
 
 DshPricingQuoteLine:
   type: object
-  required: [masterProductId, productName, quantity, unitPriceMinorUnits, totalMinorUnits]
+  description: >
+    A single product line as computed by WLT's sovereign pricing engine.
+    DSH carries this as-is from WLT; it must never recompute individual line totals.
+  required: [masterProductId, quantity, unitPriceMinorUnits, totalMinorUnits]
   properties:
     masterProductId: { type: string }
     productName: { type: string }
@@ -29,6 +32,10 @@ DshPricingQuoteLine:
 
 DshPricingQuote:
   type: object
+  description: >
+    Authoritative financial quote owned by WLT (x-bthwani-financial-owner: wlt).
+    DSH must not re-compute, re-sum, or override any field in this schema.
+    Order of operations enforced by WLT: Subtotal -> Fees -> Discounts -> Taxes -> Rounding -> Total.
   required:
     - lines
     - subtotalMinorUnits
@@ -59,7 +66,7 @@ DshPricingQuote:
       type: array
       items: { type: string }
     hash: { type: string }
-    version: { type: integer, minimum: 1 }
+    version: { type: integer, minimum: 0 }
     expiresAt: { type: ["string", "null"], format: date-time }
 
 DshCartItem:
@@ -87,7 +94,7 @@ DshCartItem:
 
 DshCart:
   type: object
-  required: [id, clientId, storeId, fulfillmentMode, state, note, items, quote, version, createdAt, updatedAt]
+  required: [id, clientId, storeId, fulfillmentMode, state, note, items, version, createdAt, updatedAt]
   properties:
     id: { type: string }
     clientId: { type: string }
@@ -103,8 +110,13 @@ DshCart:
       type: array
       items:
         $ref: "../../dsh.openapi.yaml#/components/schemas/DshCartItem"
+    # quote is WLT-owned (x-bthwani-financial-owner: wlt).
+    # DSH attaches the WltPricingQuote verbatim; it must never mutate it.
+    # Nullable: absent when cart is empty or WLT pricing is unavailable.
     quote:
-      $ref: "#/DshPricingQuote"
+      anyOf:
+        - $ref: "#/DshPricingQuote"
+        - type: 'null'
     version: { type: integer }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
