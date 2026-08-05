@@ -81,6 +81,8 @@ tools/diagnostics/knip-report.json
 node-gates*.log
 *_HANDOFF.zip
 .claude/settings.local.json
+*.bak
+*.graphify-bak
 
 # OpenAPI bundles and clients are deterministic build artifacts. Canonical
 # entry contracts, modules, overlays and manifests are the only tracked truth.

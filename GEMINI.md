@@ -1,27 +1,22 @@
-# Gemini CLI Instructions
+# Gemini repository adapter
 
-Status: ADAPTER
+`AGENTS.md` is the canonical repository authority. This file only adapts Gemini to that authority and cannot override it.
 
-Apply authority in this order:
+For repository work:
 
-1. `governance/authority/authority-precedence.json`
-2. `AGENTS.md`
-3. one applicable governed skill from `.agents/skills`
+1. Pin the exact repository, user-named branch, and immutable commit SHA.
+2. Inspect the smallest directly relevant files first.
+3. Use Graphify only when ownership, cross-file relationships, dependency paths, or broad architecture remain unclear after direct inspection.
+4. Treat `graphify-out/` as generated application-code navigation, not complete repository, governance, CI, infrastructure, or runtime proof.
+5. Use LeanCTX only when it materially reduces context noise. It must not suppress required evidence, checks, risks, or decision boundaries.
+6. Use the smallest sufficient change and verification scope. Do not claim evidence outside what was actually inspected or executed.
 
-This adapter may not create policy, widen scope, or add mandatory tools. All writes and destructive commands must follow `.agents/COMMAND_SAFETY_POLICY.md`.
+## Graphify
 
-For repository tasks, pin the exact repository, user-named branch, and current commit SHA. Never substitute the default branch, stale diagnostics, prior work, or another ref.
+When Graphify is justified and `graphify-out/graph.json` exists, prefer scoped commands such as `graphify query`, `graphify path`, and `graphify explain`. Rebuild the application-code graph with:
 
-Use direct scoped inspection first. Load `.agents/INDEX.md` only when a skill must be selected. Graphify, LeanCTX, Nx, full verification, and runtime tooling are conditional and must be justified by the actual dependency or evidence need.
+```powershell
+graphify extract . --code-only --force
+```
 
-Use the smallest sufficient change and check. Do not claim evidence outside the scope actually verified.
-
-## graphify
-
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
-
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+Generated Graphify output remains ignored and non-authoritative.

@@ -1,18 +1,17 @@
-# Verify graphify tool availability and remind about graph.json usage.
-$ErrorActionPreference = "SilentlyContinue"
+param(
+  [string]$Question = ""
+)
 
-# 1. Search for graphify in PATH
-$graphifyCmd = Get-Command "graphify" -ErrorAction SilentlyContinue
+$ErrorActionPreference = "Stop"
+$root = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
+$graph = Join-Path $root "graphify-out/graph.json"
 
-if (-not $graphifyCmd) {
-    Write-Warning "graphify command was not found in your PATH."
-    Write-Host "Please ensure graphify is installed if relationship analysis is needed."
+if (-not (Test-Path -LiteralPath $graph -PathType Leaf)) {
+  Write-Output "Graphify graph unavailable. Use direct scoped inspection first. Rebuild only when relationship or architecture analysis is justified: graphify extract . --code-only --force"
+  exit 0
 }
 
-# 2. Check for graph.json
-$graphJsonPath = Join-Path (Get-Location) "graphify-out/graph.json"
-if (Test-Path $graphJsonPath) {
-    Write-Host "INFO: graphify-out/graph.json exists."
-    Write-Host "MANDATORY: Use Graphify before broad text search/grep to reduce token waste."
-    Write-Host "Run: graphify query `"<question>`" to query relationships."
+Write-Output "Graphify is available as optional application-code navigation. Use direct scoped inspection first; use graphify query/path/explain only when cross-file ownership or relationships remain unclear."
+if ($Question.Trim()) {
+  Write-Output "Suggested scoped query: graphify query `"$Question`""
 }

@@ -9,18 +9,5 @@
       "command": "lean-ctx",
       "trust": true
     }
-  },
-  "hooks": {
-    "BeforeTool": [
-      {
-        "matcher": "read_file|list_directory",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "C:/Users/bassa/AppData/Roaming/uv/tools/graphifyy/Scripts/graphify.exe hook-guard gemini"
-          }
-        ]
-      }
-    ]
   }
 }

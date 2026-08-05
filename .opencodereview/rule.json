@@ -18,7 +18,18 @@
     "**/generated/**",
     "**/*.min.js",
     "**/*.map",
-    "pnpm-lock.yaml"
+    "pnpm-lock.yaml",
+    "**/graphify-out/**",
+    "**/.diagnostics/**",
+    "**/.nx/**",
+    "**/.pnpm-store/**",
+    "**/.cache/**",
+    "**/.turbo/**",
+    "**/.yagni-out/**",
+    "**/.artifacts/**",
+    "**/*.log",
+    "**/*.bak",
+    "**/*.graphify-bak"
   ],
   "rules": [
     {

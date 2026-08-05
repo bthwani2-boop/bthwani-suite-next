@@ -1,8 +1,16 @@
-# Hook executed before tools to advise on Graphify usage if graph.json is present.
-$ErrorActionPreference = "SilentlyContinue"
+param(
+  [string]$ToolName = "",
+  [string]$InputText = ""
+)
 
-# Check if graph.json exists
-$graphJsonPath = Join-Path (Get-Location) "graphify-out/graph.json"
-if (Test-Path $graphJsonPath) {
-    Write-Host '{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"MANDATORY: graphify-out/graph.json exists. Before reading/grepping raw files, consider running graphify query/explain/path. Example: `graphify query \"<question>\"` or `graphify path \"<A>\" \"<B>\"`."}}'
+$ErrorActionPreference = "Stop"
+$root = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
+$graph = Join-Path $root "graphify-out/graph.json"
+
+if ($ToolName -match "read|search|grep|list") {
+  if (Test-Path -LiteralPath $graph -PathType Leaf) {
+    Write-Output "Repository policy: inspect the smallest directly relevant files first. Graphify is optional for unresolved cross-file ownership, dependency paths, or architecture."
+  } else {
+    Write-Output "Repository policy: inspect the smallest directly relevant files first. Graphify output is absent; rebuild only if relationship analysis is justified."
+  }
 }
