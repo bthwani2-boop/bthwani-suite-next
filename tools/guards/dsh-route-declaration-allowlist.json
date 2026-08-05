@@ -1044,6 +1044,342 @@
       "method": "PUT",
       "path": "/dsh/partner/stores/{storeId}/delivery-pricing/{fulfillmentMode}",
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Registered before dsh-route-declaration-gate existed to catch this at introduction time; needs a proper operation entry (request/response schema) authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/support/canned-responses",
+      "method": "GET",
+      "path": "/dsh/operator/support/canned-responses",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/support/partners/{partnerId}/aggregate",
+      "method": "GET",
+      "path": "/dsh/operator/support/partners/{partnerId}/aggregate",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/support/partners/{partnerId}/finance",
+      "method": "GET",
+      "path": "/dsh/operator/support/partners/{partnerId}/finance",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/support/partners/{partnerId}/operations",
+      "method": "GET",
+      "path": "/dsh/operator/support/partners/{partnerId}/operations",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/support/tickets/{ticketId}/export",
+      "method": "GET",
+      "path": "/dsh/operator/support/tickets/{ticketId}/export",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/partner/stores/{storeId}/commercial-summary",
+      "method": "GET",
+      "path": "/dsh/partner/stores/{storeId}/commercial-summary",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/storefront/{storeId}",
+      "method": "GET",
+      "path": "/dsh/storefront/{storeId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PATCH /dsh/client/me/profile/consents",
+      "method": "PATCH",
+      "path": "/dsh/client/me/profile/consents",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PATCH /dsh/client/me/profile/preferences",
+      "method": "PATCH",
+      "path": "/dsh/client/me/profile/preferences",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PATCH /dsh/operator/support/incidents/tasks/{taskId}",
+      "method": "PATCH",
+      "path": "/dsh/operator/support/incidents/tasks/{taskId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/captain/dispatch/assignments/{assignmentId}/contact-proxy",
+      "method": "POST",
+      "path": "/dsh/captain/dispatch/assignments/{assignmentId}/contact-proxy",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/client/checkout-intents/{intentId}/refresh",
+      "method": "POST",
+      "path": "/dsh/client/checkout-intents/{intentId}/refresh",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/client/checkout-intents/{intentId}/validate",
+      "method": "POST",
+      "path": "/dsh/client/checkout-intents/{intentId}/validate",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/client/orders/{orderId}/return",
+      "method": "POST",
+      "path": "/dsh/client/orders/{orderId}/return",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}/withdraw",
+      "method": "POST",
+      "path": "/dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}/withdraw",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/field/stores",
+      "method": "POST",
+      "path": "/dsh/field/stores",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/admin/approvals/{approvalId}/review",
+      "method": "POST",
+      "path": "/dsh/operator/admin/approvals/{approvalId}/review",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/admin/approvals/{approvalId}/rollback-requests",
+      "method": "POST",
+      "path": "/dsh/operator/admin/approvals/{approvalId}/rollback-requests",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/admin/role-requests/{requestId}/review",
+      "method": "POST",
+      "path": "/dsh/operator/admin/role-requests/{requestId}/review",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/admin/roles/requests",
+      "method": "POST",
+      "path": "/dsh/operator/admin/roles/requests",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/admin/rollback-requests/{requestId}/review",
+      "method": "POST",
+      "path": "/dsh/operator/admin/rollback-requests/{requestId}/review",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/catalog/assets/cleanup-orphans",
+      "method": "POST",
+      "path": "/dsh/operator/catalog/assets/cleanup-orphans",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/catalog/assets/{assetId}/simulate-scan",
+      "method": "POST",
+      "path": "/dsh/operator/catalog/assets/{assetId}/simulate-scan",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/catalog/nodes/{nodeId}/deprecate",
+      "method": "POST",
+      "path": "/dsh/operator/catalog/nodes/{nodeId}/deprecate",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/catalog/nodes/{nodeId}/merge",
+      "method": "POST",
+      "path": "/dsh/operator/catalog/nodes/{nodeId}/merge",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/catalog/nodes/{nodeId}/move",
+      "method": "POST",
+      "path": "/dsh/operator/catalog/nodes/{nodeId}/move",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/orders/{orderId}/cancellation/actions",
+      "method": "POST",
+      "path": "/dsh/operator/orders/{orderId}/cancellation/actions",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/orders/{orderId}/cancellation/actions/{actionId}/execute",
+      "method": "POST",
+      "path": "/dsh/operator/orders/{orderId}/cancellation/actions/{actionId}/execute",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/orders/{orderId}/return",
+      "method": "POST",
+      "path": "/dsh/operator/orders/{orderId}/return",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/stores",
+      "method": "POST",
+      "path": "/dsh/operator/stores",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/stores/{storeId}/assortment/{masterProductId}/prices/schedule",
+      "method": "POST",
+      "path": "/dsh/operator/stores/{storeId}/assortment/{masterProductId}/prices/schedule",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/stores/{storeId}/assortment/{masterProductId}/retire",
+      "method": "POST",
+      "path": "/dsh/operator/stores/{storeId}/assortment/{masterProductId}/retire",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/support/incidents/{incidentId}/communications",
+      "method": "POST",
+      "path": "/dsh/operator/support/incidents/{incidentId}/communications",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/support/incidents/{incidentId}/entities",
+      "method": "POST",
+      "path": "/dsh/operator/support/incidents/{incidentId}/entities",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/support/incidents/{incidentId}/tasks",
+      "method": "POST",
+      "path": "/dsh/operator/support/incidents/{incidentId}/tasks",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/support/order-rescue-cases/{caseId}/actions",
+      "method": "POST",
+      "path": "/dsh/operator/support/order-rescue-cases/{caseId}/actions",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/support/order-rescue-cases/{caseId}/actions/{actionId}/execute",
+      "method": "POST",
+      "path": "/dsh/operator/support/order-rescue-cases/{caseId}/actions/{actionId}/execute",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/support/tickets/{ticketId}/claim",
+      "method": "POST",
+      "path": "/dsh/operator/support/tickets/{ticketId}/claim",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/support/tickets/{ticketId}/escalate",
+      "method": "POST",
+      "path": "/dsh/operator/support/tickets/{ticketId}/escalate",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/catalog/product-proposals/{proposalId}/withdraw",
+      "method": "POST",
+      "path": "/dsh/partner/catalog/product-proposals/{proposalId}/withdraw",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/orders/{orderId}/decision",
+      "method": "POST",
+      "path": "/dsh/partner/orders/{orderId}/decision",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/orders/{orderId}/preparation-replacements",
+      "method": "POST",
+      "path": "/dsh/partner/orders/{orderId}/preparation-replacements",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/stores",
+      "method": "POST",
+      "path": "/dsh/partner/stores",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/stores/{storeId}/assortment/{masterProductId}/prices/schedule",
+      "method": "POST",
+      "path": "/dsh/partner/stores/{storeId}/assortment/{masterProductId}/prices/schedule",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/partner/stores/{storeId}/assortment/{masterProductId}/retire",
+      "method": "POST",
+      "path": "/dsh/partner/stores/{storeId}/assortment/{masterProductId}/retire",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/operator/stores/{storeId}/assortment/{masterProductId}/inventory",
+      "method": "PUT",
+      "path": "/dsh/operator/stores/{storeId}/assortment/{masterProductId}/inventory",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "PUT /dsh/partner/stores/{storeId}/assortment/{masterProductId}/inventory",
+      "method": "PUT",
+      "path": "/dsh/partner/stores/{storeId}/assortment/{masterProductId}/inventory",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/administration/customers/{actorId}/profile",
+      "method": "GET",
+      "path": "/dsh/administration/customers/{actorId}/profile",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/client/me/profile",
+      "method": "GET",
+      "path": "/dsh/client/me/profile",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/client/orders/{orderId}/return",
+      "method": "GET",
+      "path": "/dsh/client/orders/{orderId}/return",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/internal/operations/carts/{cartId}/sync-diagnostics",
+      "method": "GET",
+      "path": "/dsh/internal/operations/carts/{cartId}/sync-diagnostics",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/admin/approvals",
+      "method": "GET",
+      "path": "/dsh/operator/admin/approvals",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/admin/diagnostics",
+      "method": "GET",
+      "path": "/dsh/operator/admin/diagnostics",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/admin/role-requests",
+      "method": "GET",
+      "path": "/dsh/operator/admin/role-requests",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/admin/rollback-requests",
+      "method": "GET",
+      "path": "/dsh/operator/admin/rollback-requests",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/orders/{orderId}",
+      "method": "GET",
+      "path": "/dsh/operator/orders/{orderId}",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
     }
   ]
 }

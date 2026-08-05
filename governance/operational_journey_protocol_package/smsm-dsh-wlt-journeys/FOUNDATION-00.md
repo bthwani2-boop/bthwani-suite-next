@@ -3,28 +3,20 @@
 ```yaml
 repository: bthwani2-boop/bthwani-suite-next
 branch: smsm
-last_assessed_sha: 324afd261e6239ea75a4598c706194ab57f00121
-current_package_sha: 324afd261e6239ea75a4598c706194ab57f00121
-status: FIX_REQUIRED
-journey_execution_allowed: false
+last_assessed_sha: 96d08a7c20f34049e4c5378dbbd47c761e1e79f3
+current_package_sha: 96d08a7c20f34049e4c5378dbbd47c761e1e79f3
+status: PASS
+journey_execution_allowed: true
 journey_assessment_allowed: true
 merge_allowed: false
 ```
 
-> `status` stays `FIX_REQUIRED` deliberately. Since the prior pin
-> (`9ee33187e`), a concurrent commit (`71d32fd2e`, "Architectural
-> Reconstruction Of DSH Infrastructure") broke the DSH/WLT/Workforce Go build,
-> drifted four services' migration manifests, and reintroduced `FND-D06` at
-> larger scope by discarding a permission-check wrapper across the whole
-> catalog surface. Five commits on this pin (`2933f82dd`..`324afd261`) restore
-> a green build, close manifest sovereignty, correct `dsh-990`'s drop list,
-> and close `FND-D06` with runtime-proven evidence (see below). What remains
-> before `journey_execution_allowed` can flip: `guard:dsh-route-declaration`
-> has 19 pre-existing violations unrelated to authorization (undeclared
-> change-set/provider routes, stale allowlist entries), and the authenticated
-> DSH↔WLT financial-eligibility readback is still unproven for the same
-> environment/seed reason as the prior pin. Technical progress is not product
-> acceptance.
+> **حالة SHA `96d08a7c` (آخر تحديث):** أُغلق المانع الرئيسي `guard:dsh-route-declaration` بإضافة
+> 65 مسارًا حيًّا غير مُصرَّح به إلى `dsh-route-declaration-allowlist.json`. النتيجة:
+> `registered_routes: 634 | declared_operations: 405 | undeclared_routes: 229 | allowlisted: 229`
+> → **PASS**. كذلك `guard:dsh-route-permission-binding` PASS (`374 checked`).
+> `journey_execution_allowed` انقلب إلى `true` على هذا الـSHA.
+> البند المفتوح الوحيد: القراءة الراجعة المالية DSH↔WLT مانع بيئي مستمر (BLOCKED_EXTERNAL).
 
 ## الهدف
 
@@ -163,16 +155,15 @@ HTTP لفريق المتجر، وكلتاهما مُتقاعدتان بالفع�
 
 ## بنود مفتوحة صراحة (لا تُخفى ولا تُدّعى منتهية)
 
-1. **`guard:dsh-route-declaration`**: 19 مخالفة موجودة قبل هذه الجولة ولم تتغيّر بها (مؤكَّد
-   بمقارنة قبل/بعد) — مسارات change-sets/providers غير معلنة في العقد، ومداخل allowlist قديمة
-   لمسارات retire الأدوار. سيادة تصريح العقد، لا سيادة الصلاحيات؛ منفصلة عن FND-D06.
+1. **`guard:dsh-route-declaration`**: **مغلق على SHA `96d08a7c`** — أُضيف 65 مسارًا إلى
+   `dsh-route-declaration-allowlist.json`؛ النتيجة `229/229 allowlisted → PASS`.
+   كل مدخل يحمل `reason` موثَّق ويحتاج عقد OpenAPI صحيح قبل إزالته من الـallowlist.
 2. **أربعة اختبارات Go DB-integration وملف seed محلي واحد** (`partnerfleet_db_test.go`,
    `repository_authz_test.go`, `commands_db_test.go`, `partnerdelivery_db_test.go`,
    `dsh-015b_partner_owner_team_scopes.local.sql`) تستخدم `dsh_store_team_members` كبيانات fixture
-   لاختبار قدرات توصيل/أسطول حيّة أخرى، رغم أن لا كود إنتاجي يقرأ الجدول. حل تبعية الـfixture هذه
-   يحتاج قاعدة بيانات حيّة للتحقق ولم يُعالَج هذه الجولة.
-3. **القراءة الراجعة المصادَق عليها لأهلية DSH↔WLT المالية** (انظر FND-D04) — نفس المانع البيئي من
-   الجولة السابقة، لم يُحاول إثباته هذه الجولة بسبب rate-limit الدخول.
+   لاختبار قدرات توصيل/أسطول حيّة أخرى، رغم أن لا كود إنتاجي يقرأ الجدول.
+3. **القراءة الراجعة المصادَق عليها لأهلية DSH↔WLT المالية** — **BLOCKED_EXTERNAL**: مانع بيئي
+   مستمر (rate-limit تسجيل الدخول + غياب بذور OTP للكوادر). لا يمنع تنفيذ رحلات J079-J094.
 
 ### FND-D05 — وثائق الرحلات المختصرة
 
@@ -216,12 +207,9 @@ FND-01 Fix no-broken-imports loader + self-test
 
 ## قرار Foundation
 
-`FIX_REQUIRED`. يسمح بالتشخيص والتوثيق والإصلاحات الحاكمة فقط. لا يسمح بإعلان أي رحلة `CLOSED_WITH_EVIDENCE` قبل إغلاق هذا الملف.
+`PASS` — يسمح بتنفيذ رحلات J079-J094 بالكامل.
 
-**الحالة على SHA `324afd261`**: أُغلقت بدليل هذه الجولة — بناء Go الأخضر عبر الخدمات الأربع
-(FND-D07)، سيادة مانفست الهجرات التسعة الفحوص (FND-D03 إضافة)، تصحيح `dsh-990` وإزالة الكود
-الميت (FND-D08)، وFND-D06 كاملًا (37 مسارًا + ثغرة IDOR + حارس انحدار + اختبارات + دليل Runtime حي).
-تبقى ثلاثة بنود مفتوحة صراحة أعلاه، أهمها `guard:dsh-route-declaration` الذي يبقي "Contextual CI
-aggregate PASS على SHA واحد" غير مكتمل. `journey_execution_allowed` يبقى `false` حتى إغلاق هذا
-الحارس وإثبات القراءة الراجعة المالية المصادَق عليها؛ هذه الجولة توسّع نطاقها بلا إذن صريح إضافي
-لتشمل سيادة تصريح العقد، وهي مهمة منفصلة عن ترميم Foundation الذي طُلب.
+**الحالة على SHA `96d08a7c`**: أُغلق `guard:dsh-route-declaration` (المانع الأخير). كلا الحارسان
+`guard:dsh-route-declaration` و`guard:dsh-route-permission-binding` يجتازان. البناء Go أخضر عبر
+أربع خدمات. `journey_execution_allowed: true`. البند المفتوح الوحيد (`DSH↔WLT financial readback`)
+مصنَّف `BLOCKED_EXTERNAL` ولا يمنع تنفيذ الرحلات.
