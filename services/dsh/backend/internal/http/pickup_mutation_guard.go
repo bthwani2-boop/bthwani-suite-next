@@ -401,5 +401,5 @@ func RegisterPickupRecoveryRoutes(
 	mediaProvider *media.Provider,
 ) {
 	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
-	mux.HandleFunc("POST /dsh/operator/pickups/{orderId}/reschedule", protected.handleReschedulePickupWindow)
+	mux.HandleFunc("POST /dsh/operator/pickups/{orderId}/reschedule", protected.withPermission("control-panel", IncidentPermissionOverride, protected.handleReschedulePickupWindow))
 }

@@ -26,9 +26,9 @@ func RegisterOperationsIntelligenceRoutes(
 ) {
 	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
 	mux.HandleFunc("POST /dsh/internal/workforce/availability-projections", handleWorkforceAvailabilityProjection(db))
-	mux.HandleFunc("GET /dsh/operator/dispatch/capacity-forecast", protected.handleGetServiceAreaCapacityForecast)
-	mux.HandleFunc("PUT /dsh/operator/dispatch/capacity-policies/{serviceAreaCode}", protected.handleUpsertServiceAreaCapacityPolicy)
-	mux.HandleFunc("GET /dsh/operator/dispatch/heatmap", protected.handleGetOperationsHeatmap)
+	mux.HandleFunc("GET /dsh/operator/dispatch/capacity-forecast", protected.withPermission("control-panel", DshDispatchCapacityPermissionRead, protected.handleGetServiceAreaCapacityForecast))
+	mux.HandleFunc("PUT /dsh/operator/dispatch/capacity-policies/{serviceAreaCode}", protected.withPermission("control-panel", DshDispatchCapacityPermissionManage, protected.handleUpsertServiceAreaCapacityPolicy))
+	mux.HandleFunc("GET /dsh/operator/dispatch/heatmap", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleGetOperationsHeatmap))
 }
 
 func handleWorkforceAvailabilityProjection(db *sql.DB) http.HandlerFunc {

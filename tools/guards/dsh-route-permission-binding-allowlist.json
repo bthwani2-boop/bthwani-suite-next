@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "handler": "handleSupportSnapshot",
+      "reason": "Authenticates via its own hasSupportRead(identity) check against a scoped support.read permission, not ActorFromContext/withPermission; see administration_support_sessions.go."
+    },
+    {
+      "handler": "handleWltPaymentSessionEvent",
+      "reason": "Internal WLT-to-DSH webhook authenticated by requireWltServiceCaller (service token), not an end-user actor permission; see wlt_events.go."
+    }
+  ]
+}

@@ -12,6 +12,6 @@ func registerDeliveryProofRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/captain/dispatch/assignments/{assignmentId}/delivery-proof", s.handleGetCaptainDeliveryProof)
 	mux.HandleFunc("GET /dsh/operator/delivery-proofs", s.withPermission("control-panel", OperationsPermissionRead, s.handleListOperatorDeliveryProofs))
 	mux.HandleFunc("GET /dsh/operator/delivery-proofs/{proofId}", s.withPermission("control-panel", OperationsPermissionRead, s.handleGetOperatorDeliveryProof))
-	mux.HandleFunc("POST /dsh/operator/delivery-proofs/{proofId}/accept", s.handleAcceptOperatorDeliveryProof)
-	mux.HandleFunc("POST /dsh/operator/delivery-proofs/{proofId}/reject", s.handleRejectOperatorDeliveryProof)
+	mux.HandleFunc("POST /dsh/operator/delivery-proofs/{proofId}/accept", s.withPermission("control-panel", OperationsPermissionManage, s.handleAcceptOperatorDeliveryProof))
+	mux.HandleFunc("POST /dsh/operator/delivery-proofs/{proofId}/reject", s.withPermission("control-panel", OperationsPermissionManage, s.handleRejectOperatorDeliveryProof))
 }

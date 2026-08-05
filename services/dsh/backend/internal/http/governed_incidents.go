@@ -59,7 +59,7 @@ func marshalIncidentEvent(event support.IncidentEvent) map[string]any {
 }
 
 func (s *protectedStoreServer) handleCreateGovernedIncident(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
 	if !ok {
 		return
 	}
@@ -93,7 +93,7 @@ func (s *protectedStoreServer) handleCreateGovernedIncident(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleListGovernedIncidents(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.ActorFromContext(r.Context()); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead); !ok {
 		return
 	}
 	incidents, err := support.ListGovernedIncidents(s.db, r.URL.Query().Get("status"), 50)
@@ -109,7 +109,7 @@ func (s *protectedStoreServer) handleListGovernedIncidents(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleGetGovernedIncident(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.ActorFromContext(r.Context()); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead); !ok {
 		return
 	}
 	incident, err := support.GetGovernedIncident(s.db, r.PathValue("incidentId"))
@@ -121,7 +121,7 @@ func (s *protectedStoreServer) handleGetGovernedIncident(w http.ResponseWriter, 
 }
 
 func (s *protectedStoreServer) handleUpdateGovernedIncident(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
 	if !ok {
 		return
 	}
@@ -154,7 +154,7 @@ func (s *protectedStoreServer) handleUpdateGovernedIncident(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleListGovernedIncidentEvents(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.ActorFromContext(r.Context()); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead); !ok {
 		return
 	}
 	incidentID := r.PathValue("incidentId")
@@ -186,11 +186,11 @@ func RegisterGovernedIncidentRoutes(
 	mediaProvider *media.Provider,
 ) {
 	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
-	mux.HandleFunc("GET /dsh/operator/support/incidents", protected.handleListGovernedIncidents)
-	mux.HandleFunc("POST /dsh/operator/support/incidents", protected.handleCreateGovernedIncident)
-	mux.HandleFunc("GET /dsh/operator/support/incidents/{incidentId}", protected.handleGetGovernedIncident)
-	mux.HandleFunc("PATCH /dsh/operator/support/incidents/{incidentId}", protected.handleUpdateGovernedIncident)
-	mux.HandleFunc("GET /dsh/operator/support/incidents/{incidentId}/events", protected.handleListGovernedIncidentEvents)
+	mux.HandleFunc("GET /dsh/operator/support/incidents", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListGovernedIncidents))
+	mux.HandleFunc("POST /dsh/operator/support/incidents", protected.withPermission("control-panel", SupportPermissionManage, protected.handleCreateGovernedIncident))
+	mux.HandleFunc("GET /dsh/operator/support/incidents/{incidentId}", protected.withPermission("control-panel", SupportPermissionRead, protected.handleGetGovernedIncident))
+	mux.HandleFunc("PATCH /dsh/operator/support/incidents/{incidentId}", protected.withPermission("control-panel", SupportPermissionManage, protected.handleUpdateGovernedIncident))
+	mux.HandleFunc("GET /dsh/operator/support/incidents/{incidentId}/events", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListGovernedIncidentEvents))
 }
 
 // GovernedIncidentMiddleware replaces the legacy incident CRUD at runtime and

@@ -261,6 +261,6 @@ func RegisterOrderCancellationRoutes(
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}/cancellation", protected.handleClientOrderCancellation)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/cancel", protected.handlePartnerCancelOrder)
 	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/cancellation", protected.handlePartnerOrderCancellation)
-	mux.HandleFunc("POST /dsh/operator/orders/{orderId}/cancellation", protected.handleOperatorCancelOrderGoverned)
-	mux.HandleFunc("GET /dsh/operator/orders/{orderId}/cancellation", protected.handleOperatorOrderCancellation)
+	mux.HandleFunc("POST /dsh/operator/orders/{orderId}/cancellation", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleOperatorCancelOrderGoverned))
+	mux.HandleFunc("GET /dsh/operator/orders/{orderId}/cancellation", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleOperatorOrderCancellation))
 }

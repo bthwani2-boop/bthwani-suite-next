@@ -241,6 +241,7 @@
     "guard:runtime-real-bindings": "node tools/guards/runtime-real-bindings-gate.mjs",
     "openapi:lint:dsh": "node tools/guards/dsh-openapi-modular-gate.mjs",
     "guard:dsh-route-declaration": "node tools/guards/dsh-route-declaration-gate.mjs",
+    "guard:dsh-route-permission-binding": "node tools/guards/dsh-route-permission-binding-gate.mjs",
     "guard:go-handler-generation": "node tools/guards/go-handler-generation-gate.mjs",
     "guard:dispatch-contract-registry": "node tools/guards/dispatch-contract-registry-gate.mjs",
     "guard:local-dev-actors": "node tools/guards/local-dev-actors-gate.mjs",

@@ -89,7 +89,7 @@ func main() {
 	dshHttp.RegisterAdministrationRoutes(router, db, identityClient, wltClient, mediaProvider)
 
 
-	dshHttp.RegisterWorkforceScopesRoutes(router)
+	dshHttp.RegisterWorkforceScopesRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterGovernedIncidentRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterProviderRatingRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterOperationsIntelligenceRoutes(router, db, identityClient, wltClient, mediaProvider)
