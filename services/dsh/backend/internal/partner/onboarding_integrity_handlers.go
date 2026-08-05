@@ -155,8 +155,8 @@ func HandleGovernedActivationTransition(db *sql.DB, wltClient *wlt.Client) http.
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load partner")
 			return
 		}
-		if input.ToStatus == StatusPartnerDeactivated && current.PayoutDestinationID != "" && (wltClient == nil || !wltClient.Configured()) {
-			sendError(w, http.StatusServiceUnavailable, "WLT_UNAVAILABLE", "WLT is required before deactivating a partner with an active payout destination")
+		if (input.ToStatus == StatusPartnerSuspended || input.ToStatus == StatusPartnerTerminated) && current.PayoutDestinationID != "" && (wltClient == nil || !wltClient.Configured()) {
+			sendError(w, http.StatusServiceUnavailable, "WLT_UNAVAILABLE", "WLT is required before suspending or terminating a partner with an active payout destination")
 			return
 		}
 
@@ -165,7 +165,7 @@ func HandleGovernedActivationTransition(db *sql.DB, wltClient *wlt.Client) http.
 			return
 		}
 
-		if input.ToStatus == StatusPartnerDeactivated && updated.PayoutDestinationID != "" {
+		if (input.ToStatus == StatusPartnerSuspended || input.ToStatus == StatusPartnerTerminated) && updated.PayoutDestinationID != "" {
 			if err := wltClient.DeactivatePayoutDestination(
 				r.Context(), partnerID, actorID, input.CorrelationID,
 				governedMutationKey("partner-payout-deactivate", partnerID, event.ID),

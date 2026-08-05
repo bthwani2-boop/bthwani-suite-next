@@ -17,6 +17,7 @@ import (
 	"dsh-api/internal/platform/provider"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
+	"dsh-api/internal/platformclient"
 	"dsh-api/internal/workforceclient"
 )
 
@@ -24,6 +25,7 @@ type protectedStoreServer struct {
 	db              *sql.DB
 	identity        *auth.Client
 	wlt             *wlt.Client
+	platformClient  *platformclient.Client
 	media           *media.Provider
 	workforce       *workforceclient.Client
 	decisionService store.DecisionService
@@ -107,15 +109,16 @@ func (s *protectedStoreServer) writeHomeDiscoveryAdminResult(w http.ResponseWrit
 	store.SendJSON(w, status, map[string]any{"item": item})
 }
 
-func newProtectedStoreServer(db *sql.DB, identity *auth.Client, wltClient *wlt.Client, mediaProvider *media.Provider) *protectedStoreServer {
+func newProtectedStoreServer(db *sql.DB, identity *auth.Client, wltClient *wlt.Client, platformClient *platformclient.Client, mediaProvider *media.Provider) *protectedStoreServer {
 	return &protectedStoreServer{
-		db:         db,
-		identity:   identity,
-		wlt:        wltClient,
-		media:      mediaProvider,
-		workforce:  workforceclient.NewClient(os.Getenv("DSH_WORKFORCE_BASE_URL"), os.Getenv("WORKFORCE_DSH_SERVICE_TOKEN")),
-		changeSets: changeset.NewService(db),
-		providers:  provider.NewService(db),
+		db:             db,
+		identity:       identity,
+		wlt:            wltClient,
+		platformClient: platformClient,
+		media:          mediaProvider,
+		workforce:      workforceclient.NewClient(os.Getenv("DSH_WORKFORCE_BASE_URL"), os.Getenv("WORKFORCE_DSH_SERVICE_TOKEN")),
+		changeSets:     changeset.NewService(db),
+		providers:      provider.NewService(db),
 	}
 }
 

@@ -42,7 +42,7 @@ func TestGovernedStoreTransferRejectsClosedPartnerStatesDBIntegration(t *testing
 	}
 	originalVersion := sourceStore.Version
 
-	for _, status := range []ActivationStatus{StatusOpsRejected, StatusPartnerDeactivated} {
+	for _, status := range []ActivationStatus{StatusOpsRejected, StatusPartnerSuspended, StatusPartnerTerminated} {
 		if _, err := db.Exec(`
 			UPDATE dsh_partners
 			SET activation_status = $2, version = version + 1

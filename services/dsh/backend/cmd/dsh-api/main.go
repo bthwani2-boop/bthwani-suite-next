@@ -21,6 +21,7 @@ import (
 	"dsh-api/internal/operationaloutbox"
 	"dsh-api/internal/orders"
 	"dsh-api/internal/partnerwltoutbox"
+	"dsh-api/internal/platformclient"
 	"dsh-api/internal/promotionfundingoutbox"
 	"dsh-api/internal/wlt"
 	"dsh-api/internal/wltoutbox"
@@ -45,6 +46,8 @@ func main() {
 	wltServiceToken := os.Getenv("WLT_DSH_SERVICE_TOKEN")
 	pushProviderURL := os.Getenv("DSH_PUSH_PROVIDER_URL")
 	pushProviderToken := os.Getenv("DSH_PUSH_PROVIDER_TOKEN")
+	platformControlBaseURL := os.Getenv("DSH_PLATFORM_CONTROL_BASE_URL")
+	platformControlServiceToken := os.Getenv("PLATFORM_CONTROL_DSH_SERVICE_TOKEN")
 
 	log.Println("[dsh-api] connecting to database...")
 	db, err := sql.Open("postgres", databaseURL)
@@ -64,6 +67,7 @@ func main() {
 	mediaProvider := newMediaProvider(appCtx)
 	identityClient := auth.NewClientWithInternalAccess(identityBaseURL, identityServiceToken, operatorContextID)
 	wltClient := wlt.NewClient(wltBaseURL, wltServiceToken)
+	platformClient := platformclient.NewClient(platformControlBaseURL, platformControlServiceToken)
 
 	respCache := cache.NewClient(os.Getenv("DSH_VALKEY_ADDR"))
 	if respCache == nil {
@@ -72,7 +76,7 @@ func main() {
 		log.Println("[dsh-api] response cache enabled")
 	}
 
-	router := dshHttp.NewRouter(db, identityClient, wltClient, mediaProvider, respCache)
+	router := dshHttp.NewRouter(db, identityClient, wltClient, platformClient, mediaProvider, respCache)
 	dshHttp.RegisterPartnerLifecycleRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPartnerSelfRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterOperationalAnalyticsRoutes(router, db, identityClient, wltClient, mediaProvider)

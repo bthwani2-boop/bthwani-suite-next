@@ -20,6 +20,7 @@ import { DshPartnerStoreCourierScreen } from "./store/DshPartnerStoreCourierScre
 import { PartnerTeamManagementScreen } from "./team/PartnerTeamManagementScreen";
 import { PartnerEntryScreen } from "./account/PartnerEntryScreen";
 import { PartnerSupportScreen } from "./account/PartnerSupportScreen";
+import { PartnerCommercialSummaryScreen } from "./account/PartnerCommercialSummaryScreen";
 import { PartnerCatalogManagementScreen } from "./catalog/PartnerCatalogManagementScreen";
 import { ProductEditScreen } from "./catalog/ProductEditScreen";
 import { CategoryManagementScreen } from "./catalog/CategoryManagementScreen";
@@ -427,6 +428,15 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
         onInviteMember={onInviteMember}
         onMemberAction={onMemberAction}
       />,
+    );
+  }
+
+  if (route === "commercial-model") {
+    return renderSurfaceShell(
+      <PartnerCommercialSummaryScreen
+        storeId={scopedStoreId || null}
+        onBack={() => openAccountHub("operations")} // or setRoute("home") depending on where it came from
+      />
     );
   }
 

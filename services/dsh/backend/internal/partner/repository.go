@@ -661,36 +661,60 @@ func ListActivationEvents(db *sql.DB, partnerID string) ([]ActivationEvent, erro
 	return list, rows.Err()
 }
 
-// â”€â”€â”€ Store count for readiness â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-func CountStores(db *sql.DB, partnerID string) (int, error) {
-	var n int
-	return n, db.QueryRow(`SELECT COUNT(*) FROM dsh_stores WHERE partner_id = $1`, partnerID).Scan(&n)
-}
-
-func CountApprovedDocuments(db *sql.DB, partnerID string) (int, int, error) {
-	var total, approved int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_partner_documents WHERE partner_id = $1`, partnerID).Scan(&total); err != nil {
-		return 0, 0, err
-	}
-	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_partner_documents WHERE partner_id = $1 AND document_status = 'approved'`, partnerID).Scan(&approved); err != nil {
-		return 0, 0, err
-	}
-	return total, approved, nil
-}
-
-// â”€â”€â”€ Store team members â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 func ListStoreTeamMembers(db *sql.DB, storeID string) ([]StoreTeamMember, error) {
-	return nil, errors.New("J014: team members migrated to Workforce")
+	rows, err := db.Query(`
+		SELECT id, name, role, status, branch_assignment, permissions_summary,
+		       delivery_assignment, invite_lifecycle, operational_impact, audit_note
+		FROM dsh_store_team_members
+		WHERE store_id = $1
+		ORDER BY created_at ASC`, storeID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var members []StoreTeamMember
+	for rows.Next() {
+		var m StoreTeamMember
+		if err := rows.Scan(
+			&m.ID, &m.Name, &m.Role, &m.Status,
+			&m.BranchAssignment, &m.PermissionsSummary,
+			&m.DeliveryAssignment, &m.InviteLifecycle,
+			&m.OperationalImpact, &m.AuditNote,
+		); err != nil {
+			return nil, err
+		}
+		m.RoleLabel = roleLabel(m.Role)
+		m.StatusLabel = statusLabel(m.Status)
+		m.InlineAction = inlineActionForStatus(m.Status)
+		m.InlineActionLabel = inlineActionLabelForStatus(m.Status)
+		members = append(members, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if members == nil {
+		members = []StoreTeamMember{}
+	}
+	return members, nil
 }
 
 // InviteStoreTeamMember creates a pending invite row for identity against
-// storeID. There is no identity-resolution service wired up yet (FIX_REQUIRED
-// for a future round) â€” the raw identity string is stored as both the
-// member's placeholder display name and the invited_identity audit field.
+// storeID. DSH owns the operational partner membership relation (J022).
+// Identity-resolution is deferred: the raw identity string is stored as both
+// the member's placeholder display name and the invited_identity audit field.
 func InviteStoreTeamMember(db *sql.DB, storeID string, input InviteTeamMemberInput) error {
-	return errors.New("J014: team members migrated to Workforce")
+	if err := input.Validate(); err != nil {
+		return err
+	}
+	_, err := db.Exec(`
+		INSERT INTO dsh_store_team_members (
+			store_id, name, role, status,
+			invited_identity, invited_by_actor_id
+		) VALUES ($1, $2, $3, 'invited', $4, $5)`,
+		storeID, strings.TrimSpace(input.Identity), input.Role,
+		strings.TrimSpace(input.Identity), input.InvitedByActorID,
+	)
+	return err
 }
 
 // ListInvitesForPhone finds all pending team member records matching phone.
@@ -705,7 +729,20 @@ func AcceptInvite(db *sql.DB, inviteID, actorID, actorPhone string) error {
 
 // RejectInvite marks the member blocked/rejected.
 func RejectInvite(db *sql.DB, inviteID, actorID, actorPhone string) error {
-	return errors.New("J014: team members migrated to Workforce")
+	res, err := db.Exec(`
+		UPDATE dsh_store_team_members
+		SET status = 'blocked', version = version + 1, updated_at = NOW()
+		WHERE id = $1 AND lower(btrim(invited_identity)) = lower(btrim($2)) AND status = 'invited'`,
+		inviteID, actorPhone,
+	)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 // teamActionStatusMap maps the inlineActionLabel strings this backend itself
@@ -727,7 +764,45 @@ var teamActionStatusMap = map[string]string{
 // including labels this backend doesn't recognize (recorded with no status
 // change) so nothing is silently dropped.
 func ExecuteStoreTeamMemberAction(db *sql.DB, storeID, memberID string, input TeamMemberActionInput) error {
-	return errors.New("J014: team members migrated to Workforce")
+	if err := input.Validate(); err != nil {
+		return err
+	}
+	newStatus, known := teamActionStatusMap[input.Action]
+	if !known {
+		return ErrInvalid
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Cross-store IDOR guard: member must belong to the requested store.
+	res, err := tx.Exec(`
+		UPDATE dsh_store_team_members
+		SET status = $3, version = version + 1, updated_at = NOW()
+		WHERE id = $1 AND store_id = $2`,
+		memberID, storeID, newStatus,
+	)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrNotFound
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO dsh_store_team_member_actions (
+			member_id, store_id, action_label, to_status, actor_id
+		) VALUES ($1, $2, $3, $4, $5)`,
+		memberID, storeID, input.Action, newStatus, input.ActorID,
+	)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func roleLabel(role string) string {

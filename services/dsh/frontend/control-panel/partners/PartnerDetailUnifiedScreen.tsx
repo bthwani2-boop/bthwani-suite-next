@@ -31,8 +31,9 @@ import {
   type DshPartnerReadiness,
 } from "../../shared/partner";
 import { OperatorDeliveryPricingPanel } from "./stores/OperatorDeliveryPricingPanel";
+import { PartnerCommercialModelPanel } from "./PartnerCommercialModelPanel";
 
-type Tab = "overview" | "documents" | "visits" | "stores" | "readiness" | "audit";
+type Tab = "overview" | "documents" | "visits" | "stores" | "readiness" | "audit" | "commercial_model";
 type DocumentDecision = "rejected" | "needs_resubmit";
 
 type StoreReadiness = Readonly<{
@@ -55,12 +56,13 @@ type AggregatedReadiness = DshPartnerReadiness & Readonly<{
   generatedAt?: string;
 }>;
 
-const TABS: readonly Tab[] = ["overview", "documents", "visits", "stores", "readiness", "audit"];
+const TABS: readonly Tab[] = ["overview", "documents", "visits", "stores", "commercial_model", "readiness", "audit"];
 const TAB_LABELS: Record<Tab, string> = {
   overview: "نظرة عامة",
   documents: "الوثائق",
   visits: "الزيارات الميدانية",
   stores: "المتاجر والفروع",
+  commercial_model: "النموذج التجاري",
   readiness: "الجاهزية متعددة الفروع",
   audit: "سجل التدقيق",
 };
@@ -245,6 +247,20 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                 {detail.mutationState.kind === "error" ? <CpStateView kind="error" title="تعذر تطبيق القرار" code={detail.mutationState.message} /> : null}
               </div>
             ))}
+            
+            {section("روابط النطاقات التشغيلية (Cross-Domain)", (
+              <CpDescriptionList>
+                <CpDescriptionRow label="الهوية والصلاحيات">
+                  <a href={`/dsh/administration?actor=${viewModel.ownerActorId}`} style={{ color: "blue", textDecoration: "underline" }}>استعراض حساب الهوية ({viewModel.ownerActorId})</a>
+                </CpDescriptionRow>
+                <CpDescriptionRow label="الموارد البشرية (قوة العمل)">
+                  <a href={`/dsh/hr?person=${viewModel.workforcePersonId}`} style={{ color: "blue", textDecoration: "underline" }}>استعراض ملف الموظف ({viewModel.workforcePersonId})</a>
+                </CpDescriptionRow>
+                <CpDescriptionRow label="تذاكر الدعم والطلبات القانونية">
+                  <a href={`/dsh/support?partner=${partnerId}`} style={{ color: "blue", textDecoration: "underline" }}>فتح لوحة الدعم الفني للشريك</a>
+                </CpDescriptionRow>
+              </CpDescriptionList>
+            ))}
           </>
         ) : null}
 
@@ -308,6 +324,10 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                   : <><CpTable aria-label="فروع الشريك"><thead><tr><CpTableHeaderCell>الفرع</CpTableHeaderCell><CpTableHeaderCell>المدينة</CpTableHeaderCell><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>ظهور العميل</CpTableHeaderCell><CpTableHeaderCell>التسعير</CpTableHeaderCell></tr></thead><tbody>{stores.state.stores.map((store) => <tr key={store.id}><CpTableCell>{store.displayName}</CpTableCell><CpTableCell>{store.cityCode}</CpTableCell><CpTableCell>{store.status}</CpTableCell><CpTableCell>{store.isVisible ? "ظاهر" : "مخفي"}</CpTableCell><CpTableCell><CpButton onClick={() => setPricingStoreId((current) => current === store.id ? null : store.id)}>{pricingStoreId === store.id ? "إغلاق" : "إدارة التسعير"}</CpButton></CpTableCell></tr>)}</tbody></CpTable>{pricingStoreId ? <OperatorDeliveryPricingPanel storeId={pricingStoreId} /> : null}</>
             }
           </div>
+        ) : null}
+
+        {tab === "commercial_model" ? (
+          <PartnerCommercialModelPanel partnerId={partnerId} />
         ) : null}
 
         {tab === "readiness" ? (

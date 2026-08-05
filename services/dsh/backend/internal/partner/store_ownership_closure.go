@@ -63,7 +63,7 @@ func LinkPartnerStoreForOperatorContextGoverned(
 	if err != nil {
 		return nil, err
 	}
-	if targetStatus == StatusOpsRejected || targetStatus == StatusPartnerDeactivated {
+	if targetStatus == StatusOpsRejected || targetStatus == StatusPartnerSuspended || targetStatus == StatusPartnerTerminated {
 		return nil, ErrPartnerCannotOwnStore
 	}
 

@@ -58,7 +58,7 @@ func EvaluateOnboardingCaseStatus(ctx context.Context, tx *sql.Tx, partnerID str
 
 	var newStatus OnboardingCaseStatus
 	if allRequiredPresent {
-		newStatus = OnboardingStatusSubmitted
+		newStatus = OnboardingStatusDraft
 	} else {
 		newStatus = OnboardingStatusEvidencePending
 	}

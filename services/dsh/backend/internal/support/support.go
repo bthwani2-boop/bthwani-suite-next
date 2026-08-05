@@ -38,6 +38,7 @@ const (
 	CategoryPaymentRef    TicketCategory = "payment_reference"
 	CategoryAccountAccess TicketCategory = "account_access"
 	CategoryAppBug        TicketCategory = "app_bug"
+	CategoryLegalChange   TicketCategory = "legal_change"
 	CategoryOther         TicketCategory = "other"
 
 	RoleClient   ReporterRole = "client"

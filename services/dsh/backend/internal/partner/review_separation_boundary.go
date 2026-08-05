@@ -52,7 +52,7 @@ func partnerTransitionNeedsIndependentDecision(status ActivationStatus) bool {
 
 func partnerTransitionNeedsReason(status ActivationStatus) bool {
 	switch status {
-	case StatusOpsApproved, StatusOpsRejected, StatusPartnerDeactivated:
+	case StatusOpsApproved, StatusOpsRejected, StatusPartnerSuspended, StatusPartnerTerminated:
 		return true
 	default:
 		return false

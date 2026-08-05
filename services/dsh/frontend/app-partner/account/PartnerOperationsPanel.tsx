@@ -59,6 +59,7 @@ export function OperationsPanel({
   onBack: () => void;
   onOpenStoreCourierSetup?: () => void;
   onOpenTeamManagement?: () => void;
+  onOpenCommercialModel?: () => void;
   listingEnabled: boolean;
   storeVisibility: ReturnType<typeof resolveDshStoreClientVisibility>;
   visibilityLabel: string;
@@ -376,6 +377,20 @@ export function OperationsPanel({
             </Box>
           </Box>
         )}
+      </Box>
+
+      <Divider />
+
+      <Box gap={3} paddingY={2}>
+        <Box layoutDirection="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box style={{ gap: 2, alignItems: 'flex-start' }}>
+            <Text role="bodyStrong" align="start">النموذج التجاري والمالي</Text>
+            <Text role="caption" tone="muted" align="start">الالتزامات والنسب المرتبطة بهذا الفرع</Text>
+          </Box>
+          {onOpenCommercialModel ? (
+            <Button label="عرض التفاصيل" tone="secondary" size="sm" fullWidth={false} onPress={onOpenCommercialModel} />
+          ) : null}
+        </Box>
       </Box>
 
       <MobileStickyPrimaryAction

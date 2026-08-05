@@ -432,6 +432,14 @@ export type PartnerRuntimeProfile = {
   activeZoneLabel: string;
 };
 
+export type DshPartnerCommercialSummary = {
+  readonly modelType: string;
+  readonly value: number;
+  readonly currency: string;
+  readonly effectiveAt: string | null;
+  readonly endsAt: string | null;
+};
+
 export type DshPartnerRoute =
   | 'home'
   | 'entry'
@@ -446,6 +454,7 @@ export type DshPartnerRoute =
   | 'category-management'
   | 'product-media'
   | 'product-overrides'
+  | 'commercial-model'
   | 'team';
 
 export type PartnerHubSection = 'hub' | 'profile' | 'operations' | 'inventory' | 'wallet' | 'analytics' | 'settings';

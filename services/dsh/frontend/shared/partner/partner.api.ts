@@ -21,6 +21,7 @@ import type {
   DshPartnerTeamMember,
   DshPartnerStoreCourierSettings,
   DshPartnerCoverageZone,
+  DshPartnerCommercialSummary,
 } from "./partner.types";
 import { createPartnerMutationContext, type DshGovernedPartner, type PartnerMutationContext } from "./partner-onboarding.runtime";
 
@@ -240,6 +241,10 @@ export function updatePartnerStoreSettings(
 }
 
 // ── Field intake ────────────────────────────────────────────────────────────
+
+export function fetchPartnerCommercialSummary(storeId: string): Promise<DshPartnerCommercialSummary> {
+  return request(`/dsh/partner/stores/${storeId}/commercial-summary`);
+}
 
 export function fieldListDrafts(params: { status?: string; limit?: number; offset?: number } = {}): Promise<DshPartnerListResponse> {
   const q = new URLSearchParams();

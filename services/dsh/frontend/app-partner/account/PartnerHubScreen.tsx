@@ -166,6 +166,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     onOpenOperationalFlow,
     onOpenSupportScreen,
     onOpenStoreCourierSetup,
+    onOpenCommercialModel,
     canonicalStoreId,
     dshClientId,
     walletBalanceLabel,
@@ -481,7 +482,12 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
             canonicalStoreId={canonicalStoreId}
             activationStatus={activationStatus}
             serviceModes={serviceModes}
+            legalNameAr={selfStatusState.kind === "success" ? selfStatusState.partner.legalNameAr : undefined}
+            legalNameEn={selfStatusState.kind === "success" ? selfStatusState.partner.legalNameEn : undefined}
+            legalIdentityType={selfStatusState.kind === "success" ? selfStatusState.partner.legalIdentityType : undefined}
+            legalIdentityNumber={selfStatusState.kind === "success" ? selfStatusState.partner.legalIdentityNumber : undefined}
             {...(onOpenStoreScope ? { onOpenStoreScope } : {})}
+            onOpenSupportScreen={onOpenSupportScreen}
           />
         </HubSectionShell>
       );
@@ -596,6 +602,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           {...(props.onOpenTeamManagement
             ? { onOpenTeamManagement: props.onOpenTeamManagement }
             : {})}
+          {...(onOpenCommercialModel ? { onOpenCommercialModel } : {})}
           listingEnabled={resolvedListingEnabled}
           storeVisibility={storeVisibility}
           visibilityLabel={visibilityLabel}

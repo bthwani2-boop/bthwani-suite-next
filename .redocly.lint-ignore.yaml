@@ -520,3 +520,258 @@ services/dsh/contracts/generated/dsh.bundle.openapi.yaml:
     - '#/components/responses/NotFound'
     - '#/components/responses/Conflict'
     - '#/components/responses/ServiceUnavailable'
+services/dsh/contracts/dsh.openapi.yaml:
+  no-empty-servers:
+    - '#/openapi'
+  info-license:
+    - '#/info'
+services/dsh/contracts/paths/field.paths.yaml:
+  no-unresolved-refs:
+    - '#/~1dsh~1field~1me~1finance~1payout-requests/post/parameters/0'
+services/dsh/contracts/paths/catalog.paths.yaml:
+  operation-summary:
+    - '#/~1dsh~1operator~1catalog~1domains/get/summary'
+    - '#/~1dsh~1operator~1catalog~1domains/post/summary'
+    - '#/~1dsh~1operator~1catalog~1domains~1{domainId}/patch/summary'
+    - '#/~1dsh~1operator~1catalog~1nodes/get/summary'
+    - '#/~1dsh~1operator~1catalog~1nodes/post/summary'
+    - '#/~1dsh~1operator~1catalog~1nodes~1{nodeId}/patch/summary'
+    - '#/~1dsh~1operator~1catalog~1master-products/get/summary'
+    - '#/~1dsh~1operator~1catalog~1master-products/post/summary'
+    - '#/~1dsh~1operator~1catalog~1product-proposals/get/summary'
+    - >-
+      #/~1dsh~1operator~1catalog~1product-proposals~1{proposalId}~1decision/post/summary
+    - >-
+      #/~1dsh~1operator~1catalog~1product-proposals~1{proposalId}~1transition/post/summary
+    - '#/~1dsh~1operator~1catalog~1platform-policies/get/summary'
+    - '#/~1dsh~1operator~1catalog~1platform-policies~1{policyId}/put/summary'
+    - '#/~1dsh~1operator~1catalog~1platform-policies~1{policyId}/patch/summary'
+    - '#/~1dsh~1operator~1catalog~1seed-status/get/summary'
+    - '#/~1dsh~1operator~1catalog~1assets/get/summary'
+    - '#/~1dsh~1operator~1catalog~1assets~1upload-intents/post/summary'
+    - '#/~1dsh~1operator~1catalog~1assets~1{assetId}~1complete/post/summary'
+    - '#/~1dsh~1operator~1catalog~1assets~1{assetId}~1review/post/summary'
+    - '#/~1dsh~1operator~1catalog~1assets~1{assetId}~1link/post/summary'
+    - >-
+      #/~1dsh~1operator~1catalog~1assets~1{assetId}~1links~1{linkId}/delete/summary
+    - '#/~1dsh~1operator~1reels/get/summary'
+    - '#/~1dsh~1operator~1reels~1{reelId}~1review/post/summary'
+    - '#/~1dsh~1operator~1catalog~1asset-links/get/summary'
+    - >-
+      #/~1dsh~1operator~1catalog~1domains~1{domainId}~1images~1{role}/put/summary
+    - '#/~1dsh~1operator~1catalog~1nodes~1{nodeId}~1images~1{role}/put/summary'
+    - >-
+      #/~1dsh~1operator~1catalog~1master-products~1{productId}~1images~1{role}/put/summary
+    - >-
+      #/~1dsh~1operator~1catalog~1product-proposals~1{proposalId}~1images~1{role}/put/summary
+    - '#/~1dsh~1operator~1stores~1{storeId}~1assortment/get/summary'
+    - >-
+      #/~1dsh~1operator~1stores~1{storeId}~1assortment~1{masterProductId}/put/summary
+    - '#/~1dsh~1partner~1catalog~1taxonomy/get/summary'
+    - '#/~1dsh~1partner~1catalog~1master-products/get/summary'
+    - '#/~1dsh~1partner~1stores~1{storeId}~1assortment/get/summary'
+    - >-
+      #/~1dsh~1partner~1stores~1{storeId}~1assortment~1{masterProductId}/put/summary
+    - '#/~1dsh~1field~1catalog~1taxonomy/get/summary'
+    - '#/~1dsh~1field~1catalog~1master-products/get/summary'
+    - >-
+      #/~1dsh~1field~1partners~1{partnerId}~1stores~1{storeId}~1assortment~1{masterProductId}/put/summary
+    - '#/~1dsh~1field~1partners~1{partnerId}~1assortment/get/summary'
+services/dsh/contracts/dsh.catalog.openapi.yaml:
+  operation-summary:
+    - '#/paths/~1dsh~1operator~1catalog~1master-products~1{productId}/get/summary'
+    - >-
+      #/paths/~1dsh~1operator~1catalog~1master-products~1{productId}/patch/summary
+    - '#/paths/~1dsh~1operator~1catalog~1assets~1{assetId}/delete/summary'
+    - '#/paths/~1dsh~1operator~1catalog~1assets~1{assetId}/patch/summary'
+    - '#/paths/~1dsh~1partner~1catalog~1product-proposals/get/summary'
+    - '#/paths/~1dsh~1partner~1catalog~1product-proposals/post/summary'
+    - >-
+      #/paths/~1dsh~1partner~1catalog~1product-proposals~1{proposalId}/patch/summary
+    - >-
+      #/paths/~1dsh~1field~1partners~1{partnerId}~1catalog~1product-proposals/get/summary
+    - >-
+      #/paths/~1dsh~1field~1partners~1{partnerId}~1catalog~1product-proposals/post/summary
+    - >-
+      #/paths/~1dsh~1field~1partners~1{partnerId}~1catalog~1product-proposals~1{proposalId}/patch/summary
+    - '#/paths/~1dsh~1catalog~1domains/get/summary'
+    - '#/paths/~1dsh~1catalog~1domains/post/summary'
+    - '#/paths/~1dsh~1catalog~1domains~1{domainId}/patch/summary'
+    - '#/paths/~1dsh~1catalog~1nodes/get/summary'
+    - '#/paths/~1dsh~1catalog~1nodes/post/summary'
+    - '#/paths/~1dsh~1catalog~1nodes~1{nodeId}/patch/summary'
+    - '#/paths/~1dsh~1catalog~1master-products/get/summary'
+    - '#/paths/~1dsh~1catalog~1master-products/post/summary'
+    - '#/paths/~1dsh~1catalog~1master-products~1{productId}/patch/summary'
+    - '#/paths/~1dsh~1catalog~1proposals/get/summary'
+    - '#/paths/~1dsh~1catalog~1proposals~1{proposalId}~1decision/post/summary'
+    - '#/paths/~1dsh~1catalog~1proposals~1{proposalId}~1transitions/post/summary'
+    - '#/paths/~1dsh~1catalog~1policies/get/summary'
+    - '#/paths/~1dsh~1catalog~1policies~1{policyId}/patch/summary'
+    - '#/paths/~1dsh~1catalog~1stores~1{storeId}~1assortment/get/summary'
+    - >-
+      #/paths/~1dsh~1catalog~1stores~1{storeId}~1assortment~1{masterProductId}/put/summary
+services/dsh/contracts/dsh.reels.openapi.yaml:
+  operation-summary:
+    - '#/paths/~1dsh~1partner~1reels/get/summary'
+    - '#/paths/~1dsh~1partner~1reels/post/summary'
+services/dsh/contracts/paths/home-discovery.paths.yaml:
+  operation-summary:
+    - '#/~1dsh~1public~1reels/get/summary'
+services/dsh/contracts/dsh.captain-financial-eligibility.openapi.yaml:
+  operation-summary:
+    - '#/paths/~1dsh~1captain~1dispatch~1financial-eligibility/get/summary'
+    - >-
+      #/paths/~1dsh~1captain~1dispatch~1financial-eligibility~1refresh/post/summary
+    - >-
+      #/paths/~1dsh~1operator~1dispatch~1captains~1{captainId}~1financial-eligibility/get/summary
+    - >-
+      #/paths/~1dsh~1operator~1dispatch~1captains~1{captainId}~1financial-eligibility~1refresh/post/summary
+services/dsh/contracts/dsh.dispatch-governance.openapi.yaml:
+  operation-summary:
+    - '#/paths/~1dsh~1captain~1me~1readiness/get/summary'
+    - >-
+      #/paths/~1dsh~1operator~1dispatch~1captains~1{captainId}~1readiness/get/summary
+services/dsh/contracts/dsh.representative-finance.openapi.yaml:
+  operation-summary:
+    - '#/paths/~1dsh~1captain~1me~1finance~1commissions/get/summary'
+    - '#/paths/~1dsh~1captain~1me~1finance~1ledger-entries/get/summary'
+    - '#/paths/~1dsh~1captain~1me~1finance~1payout-requests/get/summary'
+    - '#/paths/~1dsh~1captain~1me~1finance~1payout-requests/post/summary'
+    - '#/paths/~1dsh~1captain~1me~1finance~1wallet/get/summary'
+    - '#/paths/~1dsh~1client~1me~1finance~1ledger-entries/get/summary'
+    - '#/paths/~1dsh~1client~1me~1finance~1wallet/get/summary'
+    - '#/paths/~1dsh~1partner~1me~1finance~1commissions/get/summary'
+    - '#/paths/~1dsh~1partner~1me~1finance~1ledger-entries/get/summary'
+    - '#/paths/~1dsh~1partner~1me~1finance~1payout-requests/get/summary'
+    - '#/paths/~1dsh~1partner~1me~1finance~1payout-requests/post/summary'
+    - '#/paths/~1dsh~1partner~1me~1finance~1wallet/get/summary'
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1wallets~1{actorType}~1{actorId}/get/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1wallets~1{actorType}~1{actorId}~1ledger-entries/get/summary
+services/dsh/contracts/dsh.payouts-destinations.openapi.yaml:
+  operation-summary:
+    - '#/paths/~1dsh~1captain~1me~1finance~1payout-destination/get/summary'
+    - '#/paths/~1dsh~1captain~1me~1finance~1payout-destination/put/summary'
+    - >-
+      #/paths/~1dsh~1captain~1me~1finance~1payout-destination~1deactivate/post/summary
+    - '#/paths/~1dsh~1field~1me~1finance~1payout-destination/get/summary'
+    - '#/paths/~1dsh~1field~1me~1finance~1payout-destination/put/summary'
+    - >-
+      #/paths/~1dsh~1field~1me~1finance~1payout-destination~1deactivate/post/summary
+    - '#/paths/~1dsh~1partner~1me~1finance~1payout-destination/get/summary'
+    - '#/paths/~1dsh~1partner~1me~1finance~1payout-destination/put/summary'
+    - >-
+      #/paths/~1dsh~1partner~1me~1finance~1payout-destination~1deactivate/post/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1audit/get/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1reconcile/post/summary
+services/dsh/contracts/dsh.cod-custody.openapi.yaml:
+  operation-summary:
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases/get/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases~1{caseId}~1assign/post/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases~1{caseId}~1resolve/post/summary
+    - '#/paths/~1dsh~1partner~1me~1finance~1cod-records/get/summary'
+    - >-
+      #/paths/~1dsh~1partner~1me~1finance~1cod-records~1{recordId}~1remit/post/summary
+    - '#/paths/~1dsh~1captain~1finance~1cod-records/get/summary'
+    - >-
+      #/paths/~1dsh~1captain~1finance~1cod-records~1{recordId}~1collect/post/summary
+    - >-
+      #/paths/~1dsh~1captain~1finance~1cod-records~1{recordId}~1remit/post/summary
+  no-unresolved-refs:
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases~1{caseId}~1assign/post/parameters/0
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases~1{caseId}~1assign/post/parameters/1
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases~1{caseId}~1resolve/post/parameters/0
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases~1{caseId}~1resolve/post/parameters/1
+    - >-
+      #/paths/~1dsh~1captain~1finance~1cod-records~1{recordId}~1collect/post/parameters/0
+    - >-
+      #/paths/~1dsh~1captain~1finance~1cod-records~1{recordId}~1collect/post/parameters/1
+    - >-
+      #/paths/~1dsh~1captain~1finance~1cod-records~1{recordId}~1remit/post/parameters/0
+    - >-
+      #/paths/~1dsh~1captain~1finance~1cod-records~1{recordId}~1remit/post/parameters/1
+services/dsh/contracts/dsh.settlements-commissions.openapi.yaml:
+  operation-summary:
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}/get/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}~1adjust/post/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}~1confirm/post/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}~1reject/post/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}~1reverse/post/summary
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}~1settle/post/summary
+    - '#/paths/~1dsh~1control-panel~1finance~1commission-policies/put/summary'
+    - >-
+      #/paths/~1dsh~1control-panel~1finance~1settlements~1{settlementId}~1evidence/get/summary
+services/dsh/contracts/paths/misc.paths.yaml:
+  no-unresolved-refs:
+    - >-
+      #/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1approve/post/parameters/1
+    - >-
+      #/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1reject/post/parameters/1
+    - >-
+      #/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1process/post/parameters/1
+    - >-
+      #/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1complete/post/parameters/1
+    - >-
+      #/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1fail/post/parameters/1
+    - >-
+      #/~1dsh~1control-panel~1finance~1settlements~1from-delivered-orders/post/parameters/0
+    - >-
+      #/~1dsh~1control-panel~1finance~1settlement-policies~1{partnerId}/put/parameters/1
+    - >-
+      #/~1dsh~1control-panel~1finance~1reconciliation-cases~1{caseId}~1assign/post/parameters/1
+    - >-
+      #/~1dsh~1control-panel~1finance~1reconciliation-cases~1{caseId}~1resolve/post/parameters/1
+services/dsh/contracts/dsh.support-governance.openapi.yaml:
+  operation-summary:
+    - '#/paths/~1dsh~1operator~1support~1tickets~1{ticketId}/get/summary'
+    - '#/paths/~1dsh~1operator~1support~1tickets~1{ticketId}/patch/summary'
+services/dsh/contracts/paths/checkout.paths.yaml:
+  operation-summary:
+    - '#/~1dsh~1operator~1checkout-intents~1{intentId}~1reconcile/post/summary'
+services/dsh/contracts/dsh.platform-policies.openapi.yaml:
+  operation-summary:
+    - '#/paths/~1dsh~1operator~1platform~1change-sets/post/summary'
+    - '#/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}/get/summary'
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1submit/post/summary
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1approve/post/summary
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1apply/post/summary
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1reject/post/summary
+    - '#/paths/~1dsh~1operator~1platform~1providers/get/summary'
+    - >-
+      #/paths/~1dsh~1operator~1platform~1providers~1{providerId}~1status/post/summary
+  operation-4xx-response:
+    - '#/paths/~1dsh~1operator~1platform~1change-sets/post/responses'
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}/get/responses
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1submit/post/responses
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1approve/post/responses
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1apply/post/responses
+    - >-
+      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1reject/post/responses
+    - '#/paths/~1dsh~1operator~1platform~1providers/get/responses'
+    - >-
+      #/paths/~1dsh~1operator~1platform~1providers~1{providerId}~1status/post/responses

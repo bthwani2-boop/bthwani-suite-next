@@ -11,9 +11,10 @@ import (
 	"dsh-api/internal/media"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
+	"dsh-api/internal/platformclient"
 )
 
-func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, mediaProvider *media.Provider, respCache *cache.Client) *http.ServeMux {
+func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, platformClient *platformclient.Client, mediaProvider *media.Provider, respCache *cache.Client) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /dsh/health", health.HandleHealth)
@@ -25,7 +26,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/public/reels", handlePublicReels(db))
 	mux.HandleFunc("GET /dsh/home-discovery", homediscovery.HandleHomeDiscovery(db, respCache))
 	mux.HandleFunc("POST /dsh/home-discovery/events", homediscovery.HandleHomeContentEvent(db))
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, platformClient, mediaProvider)
 	mux.HandleFunc("POST /dsh/field/media/uploads", protected.enforceFieldReadinessGate(protected.handleFieldMediaUpload))
 	mux.HandleFunc("GET /dsh/media", protected.handleMediaDownload)
 	mux.HandleFunc("GET /dsh/store-context", protected.handleStoreContext)
@@ -41,9 +42,15 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/coverage-zones", protected.handlePartnerCoverageZones)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/delivery-pricing", protected.handlePartnerListDeliveryPricing)
 	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/delivery-pricing/{fulfillmentMode}", protected.handlePartnerUpsertDeliveryPricing)
+	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/commercial-summary", protected.handlePartnerCommercialSummary)
 	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code", protected.handleIssuePartnerCourierConnectionCode)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/courier-connections", protected.handleListPartnerCourierConnections)
 	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/courier-connections/{connectionId}/revoke", protected.handleRevokePartnerCourierConnection)
+
+	// Partner team management (J022)
+	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/team", protected.handlePartnerListTeamMembers)
+	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/team/invites", protected.handlePartnerInviteTeamMember)
+	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/team/members/{memberId}/action", protected.handlePartnerTeamMemberAction)
 	mux.HandleFunc("GET /dsh/partner/scopes", protected.handlePartnerScopes)
 	mux.HandleFunc("POST /dsh/field/stores/{storeId}/verifications", protected.enforceFieldReadinessGate(protected.handleFieldVerification))
 	mux.HandleFunc("POST /dsh/captain/stores/{storeId}/pickup-readiness", protected.handleCaptainReadiness)

@@ -86,7 +86,7 @@ func BuildPartnerStateView(partner Partner, surface string) PartnerStateView {
 func operatorTransitionAction(status ActivationStatus) string {
 	switch status {
 	case StatusSubmitted:
-		return "return_to_submitted"
+		return "submit_for_review"
 	case StatusFieldVisitScheduled:
 		return "schedule_field_visit"
 	case StatusFieldVisitCompleted:
@@ -115,6 +115,10 @@ func operatorTransitionAction(status ActivationStatus) string {
 		return "activate_partner"
 	case StatusPartnerDeactivated:
 		return "deactivate_partner"
+	case StatusPartnerSuspended:
+		return "suspend_partner"
+	case StatusPartnerTerminated:
+		return "terminate_partner"
 	case StatusClientVisible:
 		return "publish_store"
 	case StatusClientHidden:

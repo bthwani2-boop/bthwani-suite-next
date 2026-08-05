@@ -36,7 +36,9 @@ const (
 	StatusOpsApproved           ActivationStatus = "ops_approved"
 	StatusOpsRejected           ActivationStatus = "ops_rejected"
 	StatusPartnerActive         ActivationStatus = "partner_active"
-	StatusPartnerDeactivated    ActivationStatus = "partner_deactivated"
+	StatusPartnerDeactivated    ActivationStatus = "partner_deactivated" // Legacy, kept for backwards compatibility parsing if needed
+	StatusPartnerSuspended      ActivationStatus = "partner_suspended"
+	StatusPartnerTerminated     ActivationStatus = "partner_terminated"
 	StatusClientVisible         ActivationStatus = "client_visible"
 	StatusClientHidden          ActivationStatus = "client_hidden"
 )
@@ -69,10 +71,12 @@ var allowedTransitions = map[ActivationStatus][]ActivationStatus{
 	StatusOpsReview:             {StatusOpsApproved, StatusOpsRejected},
 	StatusOpsApproved:           {StatusPartnerActive},
 	StatusOpsRejected:           {StatusSubmitted, StatusDocumentsMissing},
-	StatusPartnerActive:         {StatusClientVisible, StatusClientHidden, StatusPartnerDeactivated},
-	StatusPartnerDeactivated:    {StatusOpsReview, StatusSubmitted},
-	StatusClientVisible:         {StatusClientHidden, StatusPartnerDeactivated},
-	StatusClientHidden:          {StatusClientVisible, StatusPartnerDeactivated},
+	StatusPartnerActive:         {StatusClientVisible, StatusClientHidden, StatusPartnerSuspended, StatusPartnerTerminated},
+	StatusPartnerDeactivated:    {StatusOpsReview, StatusSubmitted}, // Legacy
+	StatusPartnerSuspended:      {StatusPartnerActive, StatusPartnerTerminated},
+	StatusPartnerTerminated:     {}, // Terminal state
+	StatusClientVisible:         {StatusClientHidden, StatusPartnerSuspended, StatusPartnerTerminated},
+	StatusClientHidden:          {StatusClientVisible, StatusPartnerSuspended, StatusPartnerTerminated},
 }
 
 // IsTransitionAllowed returns true if the status change is valid.

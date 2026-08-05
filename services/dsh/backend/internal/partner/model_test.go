@@ -32,13 +32,13 @@ func TestIsTransitionAllowed_legalPaths(t *testing.T) {
 		{StatusOpsRejected, StatusDocumentsMissing},
 		{StatusPartnerActive, StatusClientVisible},
 		{StatusPartnerActive, StatusClientHidden},
-		{StatusPartnerActive, StatusPartnerDeactivated},
+		{StatusPartnerActive, StatusPartnerTerminated},
 		{StatusClientVisible, StatusClientHidden},
-		{StatusClientVisible, StatusPartnerDeactivated},
+		{StatusClientVisible, StatusPartnerTerminated},
 		{StatusClientHidden, StatusClientVisible},
-		{StatusClientHidden, StatusPartnerDeactivated},
-		{StatusPartnerDeactivated, StatusOpsReview},
-		{StatusPartnerDeactivated, StatusSubmitted},
+		{StatusClientHidden, StatusPartnerTerminated},
+		{StatusPartnerTerminated, StatusOpsReview},
+		{StatusPartnerTerminated, StatusSubmitted},
 	}
 	for _, c := range cases {
 		if !IsTransitionAllowed(c.from, c.to) {
@@ -58,7 +58,7 @@ func TestIsTransitionAllowed_illegalPaths(t *testing.T) {
 		{StatusSubmitted, StatusPartnerActive, "cannot skip review stages"},
 		{StatusDocumentsMissing, StatusClientVisible, "missing docs cannot jump to visible"},
 		{StatusOpsRejected, StatusPartnerActive, "rejected cannot activate directly"},
-		{StatusPartnerDeactivated, StatusClientVisible, "deactivated cannot jump to visible"},
+		{StatusPartnerTerminated, StatusClientVisible, "deactivated cannot jump to visible"},
 		{StatusClientVisible, StatusDraft, "cannot go backwards to draft"},
 		{StatusPartnerActive, StatusDocumentsMissing, "active cannot go back to missing docs"},
 		{StatusDraft, StatusDraft, "same-status self-loop blocked"},
@@ -81,7 +81,7 @@ func TestIsClientVisible(t *testing.T) {
 	}
 	for _, s := range []ActivationStatus{
 		StatusDraft, StatusSubmitted, StatusPartnerActive,
-		StatusPartnerDeactivated, StatusClientHidden, StatusOpsApproved,
+		StatusPartnerTerminated, StatusClientHidden, StatusOpsApproved,
 	} {
 		if IsClientVisible(s) {
 			t.Errorf("expected IsClientVisible(%s) = false", s)
@@ -304,10 +304,10 @@ func TestFieldSurfaceCannotActivate(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestDeactivationRemovesClientVisibility(t *testing.T) {
-	if !IsTransitionAllowed(StatusClientVisible, StatusPartnerDeactivated) {
+	if !IsTransitionAllowed(StatusClientVisible, StatusPartnerTerminated) {
 		t.Fatal("client_visible â†’ partner_deactivated must be allowed for immediate hide")
 	}
-	if IsClientVisible(StatusPartnerDeactivated) {
+	if IsClientVisible(StatusPartnerTerminated) {
 		t.Fatal("deactivated partner must not be client_visible")
 	}
 }
@@ -320,7 +320,7 @@ func TestPartnerReadinessForActivationStatus(t *testing.T) {
 	}{
 		{StatusClientVisible, "ready", true},
 		{StatusClientHidden, "blocked", true},
-		{StatusPartnerDeactivated, "blocked", true},
+		{StatusPartnerTerminated, "blocked", true},
 		{StatusPartnerActive, "", false},
 	}
 

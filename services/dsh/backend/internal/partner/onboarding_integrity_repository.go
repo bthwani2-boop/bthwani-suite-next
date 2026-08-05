@@ -223,7 +223,7 @@ func TransitionStatusGoverned(ctx context.Context, db *sql.DB, partnerID string,
 	if !IsTransitionAllowed(current.ActivationStatus, input.ToStatus) {
 		return Partner{}, ActivationEvent{}, ErrInvalidTransition
 	}
-	if (input.ToStatus == StatusOpsRejected || input.ToStatus == StatusPartnerDeactivated) && strings.TrimSpace(input.Reason) == "" {
+	if (input.ToStatus == StatusOpsRejected || input.ToStatus == StatusPartnerDeactivated || input.ToStatus == StatusPartnerSuspended || input.ToStatus == StatusPartnerTerminated) && strings.TrimSpace(input.Reason) == "" {
 		return Partner{}, ActivationEvent{}, ErrInvalid
 	}
 	if err := validateTransitionReadinessTx(ctx, tx, current, input.ToStatus); err != nil {
@@ -233,6 +233,7 @@ func TransitionStatusGoverned(ctx context.Context, db *sql.DB, partnerID string,
 	updated, err := scanGovernedPartner(tx.QueryRowContext(ctx, `
 		UPDATE dsh_partners SET
 			activation_status = $2,
+			onboarding_case_status = CASE WHEN $2 = 'submitted' THEN 'submitted' ELSE onboarding_case_status END,
 			version = version + 1,
 			updated_at = NOW()
 		WHERE id = $1 AND version = $3
