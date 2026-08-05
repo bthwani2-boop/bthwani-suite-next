@@ -43,6 +43,8 @@ func (c *Client) RefundFromOutbox(ctx context.Context, input RefundOutboxInput) 
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
+	req.Header.Set("X-Service-Caller", "dsh")
 	if input.IdempotencyKey != "" {
 		req.Header.Set("Idempotency-Key", input.IdempotencyKey)
 	}
