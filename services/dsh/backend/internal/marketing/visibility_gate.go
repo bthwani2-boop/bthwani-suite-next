@@ -52,7 +52,7 @@ func validateStoreTarget(db *sql.DB, storeID string) (bool, string, error) {
 	err := db.QueryRow(`
 		SELECT EXISTS (
 		  SELECT 1 FROM dsh_stores
-		  WHERE id=$1 AND status='active' AND is_visible=true
+		  WHERE id=$1 AND status='published' AND is_visible=true
 		    AND serviceability_status IN ('serviceable','limited')
 		    AND partner_readiness='ready'
 		    AND catalog_approval_status='approved'
@@ -112,7 +112,7 @@ func validateProductTarget(db *sql.DB, productID string) (bool, string, error) {
 		    AND d.is_manual_request=false
 		    AND (n.id IS NULL OR (n.is_active=true AND n.is_client_visible=true))
 		    AND a.publication_status='client_visible' AND a.available=true
-		    AND s.status='active' AND s.is_visible=true
+		    AND s.status='published' AND s.is_visible=true
 		    AND s.serviceability_status IN ('serviceable','limited')
 		    AND s.partner_readiness='ready'
 		    AND s.catalog_approval_status='approved'
@@ -135,7 +135,7 @@ func validateCampaignTarget(db *sql.DB, campaignID string) (bool, string, error)
 	err := db.QueryRow(`
 		SELECT EXISTS (
 		  SELECT 1 FROM dsh_marketing_campaigns
-		  WHERE id=$1 AND status='active' AND archived_at IS NULL
+		  WHERE id=$1 AND status='published' AND archived_at IS NULL
 		    AND audience IN ('all','client')
 		    AND COALESCE(start_date,'') <> '' AND COALESCE(end_date,'') <> ''
 		    AND start_date <= TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')
@@ -165,7 +165,7 @@ func validateOfferTarget(db *sql.DB, offerID string) (bool, string, error) {
 		    AND o.active_from_date <> '' AND o.active_to_date <> ''
 		    AND o.active_from_date <= TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')
 		    AND o.active_to_date >= TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')
-		    AND s.status='active' AND s.is_visible=true
+		    AND s.status='published' AND s.is_visible=true
 		    AND s.serviceability_status IN ('serviceable','limited')
 		    AND s.partner_readiness='ready'
 		    AND s.catalog_approval_status='approved'

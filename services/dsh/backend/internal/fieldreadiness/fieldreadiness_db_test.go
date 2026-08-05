@@ -69,7 +69,7 @@ func seedFieldStore(t *testing.T, db *sql.DB, storeID, agentID string) {
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores
 			(id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, partner_id)
-		VALUES ($1, $1, 'Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true, $2)
+		VALUES ($1, $1, 'Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true, $2)
 		ON CONFLICT (id) DO UPDATE SET partner_id=COALESCE(dsh_stores.partner_id, EXCLUDED.partner_id)`, storeID, partnerID); err != nil {
 		t.Fatalf("seed store: %v", err)
 	}

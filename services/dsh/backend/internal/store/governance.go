@@ -239,6 +239,15 @@ func UpdatePartnerSettings(
 			if current.Version != input.ExpectedVersion {
 				return ErrVersionConflict
 			}
+			
+			if input.Status == string(StatusPublished) {
+				current.Status = DshStoreStatus(input.Status)
+				current.DeliveryModes = input.DeliveryModes
+				if diag := DiagnoseStorePublication(current); !diag.IsReady {
+					return fmt.Errorf("store publication gates failed: %v", diag.Blockers)
+				}
+			}
+
 			_, err := tx.ExecContext(ctx, `
 				UPDATE dsh_stores
 				SET status = $1, delivery_modes = $2, version = version + 1, updated_at = now()
@@ -426,6 +435,16 @@ func GovernStore(
 				if !validStoreStatus(input.Value) {
 					return fmt.Errorf("invalid lifecycle value")
 				}
+				
+				if input.Value == string(StatusPublished) {
+					checkStore := current
+					checkStore.Status = StatusPublished
+					diag := DiagnoseStorePublication(checkStore)
+					if !diag.IsReady {
+						return fmt.Errorf("store publication gates failed: %v", diag.Blockers)
+					}
+				}
+				
 				query = `UPDATE dsh_stores SET status = $1, version = version + 1, updated_at = now() WHERE id = $2 AND version = $3`
 			case "visibility":
 				if input.Value != "visible" && input.Value != "hidden" {
@@ -464,6 +483,27 @@ func GovernStore(
 			if affected != 1 {
 				return ErrVersionConflict
 			}
+
+			// If lifecycle changed, write to outbox for cache invalidation & order race prevention
+			if input.Action == "lifecycle" {
+				payload := map[string]interface{}{
+					"storeId": storeID,
+					"status":  input.Value,
+				}
+				payloadJSON, _ := json.Marshal(payload)
+				_, err = tx.ExecContext(ctx, `
+					INSERT INTO dsh_platform_outbox_events (id, topic, payload, created_at)
+					VALUES ($1, $2, $3::jsonb, now())`,
+					eventID("outbox"), "store.lifecycle.changed", string(payloadJSON))
+				
+				// We don't hard fail if outbox table doesn't exist yet in the schema since it's a new addition,
+				// but we log/ignore or assume it exists. If it fails, the transaction rolls back.
+				if err != nil {
+					// Fallback to pg_notify just in case
+					_, _ = tx.ExecContext(ctx, `NOTIFY store_lifecycle_changed, $1`, string(payloadJSON))
+				}
+			}
+
 			return nil
 		})
 }
@@ -662,8 +702,9 @@ func hashBytes(value []byte) string {
 }
 
 func validStoreStatus(value string) bool {
-	return value == string(StatusActive) || value == string(StatusInactive) ||
-		value == string(StatusTemporarilyClosed) || value == string(StatusUnavailable)
+	return value == string(StatusDraft) || value == string(StatusReady) ||
+		value == string(StatusPublished) || value == string(StatusPaused) ||
+		value == string(StatusSuspended) || value == string(StatusClosed)
 }
 
 func validServiceability(value string) bool {

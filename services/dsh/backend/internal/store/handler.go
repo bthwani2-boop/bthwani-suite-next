@@ -74,7 +74,7 @@ func ParseListQuery(q url.Values) (DshStoreListQuery, string) {
 		return DshStoreListQuery{}, "offset must be >= 0"
 	}
 	if status != "" {
-		if status != StatusActive && status != StatusInactive && status != StatusTemporarilyClosed && status != StatusUnavailable {
+		if status != StatusDraft && status != StatusReady && status != StatusPublished && status != StatusPaused && status != StatusSuspended && status != StatusClosed {
 			return DshStoreListQuery{}, "invalid status: " + string(status)
 		}
 	}

@@ -94,7 +94,7 @@ function formatFollowerCount(count: number): string | null {
 }
 
 export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel {
-  const isOpen = dto.status === "active";
+  const isOpen = dto.status === "published";
   const isServiceable =
     dto.serviceability.status === "serviceable" ||
     dto.serviceability.status === "limited";

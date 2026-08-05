@@ -44,7 +44,7 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
-		VALUES ($1, $1, 'Order Price Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true)`,
+		VALUES ($1, $1, 'Order Price Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true)`,
 		storeID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 	var cartID string
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_carts (client_id, store_id, fulfillment_mode, state)
-		VALUES ($1, $2, 'bthwani_delivery', 'active')
+		VALUES ($1, $2, 'bthwani_delivery', 'published')
 		RETURNING id::text`,
 		clientID, storeID,
 	).Scan(&cartID); err != nil {
@@ -127,7 +127,7 @@ func seedOrderFixture(t *testing.T, db *sql.DB, status string) (order *Order, pa
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
-		VALUES ($1, $1, 'Order Outbox Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true)`,
+		VALUES ($1, $1, 'Order Outbox Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true)`,
 		storeID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}

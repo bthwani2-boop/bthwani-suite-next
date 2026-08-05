@@ -7,10 +7,12 @@ type DshServiceabilityStatus string
 type DshStoreCategory string
 
 const (
-	StatusActive            DshStoreStatus = "active"
-	StatusInactive          DshStoreStatus = "inactive"
-	StatusTemporarilyClosed DshStoreStatus = "temporarily_closed"
-	StatusUnavailable       DshStoreStatus = "unavailable"
+	StatusDraft     DshStoreStatus = "draft"
+	StatusReady     DshStoreStatus = "ready"
+	StatusPublished DshStoreStatus = "published"
+	StatusPaused    DshStoreStatus = "paused"
+	StatusSuspended DshStoreStatus = "suspended"
+	StatusClosed    DshStoreStatus = "closed"
 )
 
 const (

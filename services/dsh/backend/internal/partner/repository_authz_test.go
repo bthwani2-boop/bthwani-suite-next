@@ -52,10 +52,9 @@ func TestPartnerScopeAuthorizationDB(t *testing.T) {
 	_, err = db.Exec(`
 		INSERT INTO dsh_stores
 			(id, operator_context_id, slug, display_name, status, city_code, service_area_code, serviceability_status, partner_id)
-		VALUES
-		($1, $6, $1, 'Store A1', 'active', 'SAH', 'SAH-CEN', 'serviceable', $4),
-		($2, $6, $2, 'Store A2', 'active', 'SAH', 'SAH-CEN', 'serviceable', $4),
-		($3, $6, $3, 'Store B1', 'active', 'SAH', 'SAH-CEN', 'serviceable', $5)
+		VALUES ($1, $6, $1, 'Store A1', 'published', 'SAH', 'SAH-CEN', 'serviceable', $4),
+		($2, $6, $2, 'Store A2', 'published', 'SAH', 'SAH-CEN', 'serviceable', $4),
+		($3, $6, $3, 'Store B1', 'published', 'SAH', 'SAH-CEN', 'serviceable', $5)
 	`, storeA1, storeA2, storeB1, partner1.ID, partner2.ID, partnerTestOperatorContextID)
 	if err != nil {
 		t.Fatal(err)

@@ -161,7 +161,7 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 			return Partner{}, ActivationEvent{}, err
 		}
 
-		if storeStatus != "active" ||
+		if storeStatus != "published" ||
 			!storeIsVisible ||
 			(storeServiceability != "serviceable" && storeServiceability != "limited") ||
 			storePartnerReadiness != "ready" ||

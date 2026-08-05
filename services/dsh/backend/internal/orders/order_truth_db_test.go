@@ -83,8 +83,7 @@ func seedOrderTruthDBFixture(t *testing.T, db *sql.DB) orderTruthDBFixture {
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores
 			(id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
-		VALUES
-			($1, $1, ' Truth Store', 'active', 'SAN', 'SAN-1', 'serviceable', true)`,
+		VALUES ($1, $1, ' Truth Store', 'published', 'SAN', 'SAN-1', 'serviceable', true)`,
 		fixture.StoreID,
 	); err != nil {
 		t.Fatalf("seed store: %v", err)

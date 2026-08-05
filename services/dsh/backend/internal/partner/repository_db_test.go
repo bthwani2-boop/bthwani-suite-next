@@ -93,7 +93,7 @@ func TestPartnerLifecycleDBIntegration(t *testing.T) {
 			// owning governance sections would produce after independent review.
 			if _, err := db.Exec(`
 				UPDATE dsh_stores
-				SET status = 'active',
+				SET status = 'published',
 				    is_visible = true,
 				    serviceability_status = 'serviceable',
 				    partner_readiness = 'ready',

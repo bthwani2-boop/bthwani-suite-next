@@ -180,8 +180,8 @@ func CreateStoreForOperatorContextIdempotent(
 	if err != nil {
 		return DshStoreRow{}, false, err
 	}
-	if partnerStatus != "active" {
-		return DshStoreRow{}, false, errors.New("partner must be active to create a new store")
+	if partnerStatus != "client_visible" {
+		return DshStoreRow{}, false, errors.New("partner must be client_visible to create a new store")
 	}
 
 	storeRow, err := CreateDraftStore(tx, input)

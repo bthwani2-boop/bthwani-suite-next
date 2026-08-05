@@ -269,9 +269,9 @@ func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCo
 	if err != nil {
 		return ServiceabilityResult{Serviceable: false, Code: "store_unavailable", Reason: "store lookup failed"}
 	}
-	if storeStatus != "active" {
+	if storeStatus != "published" {
 		return ServiceabilityResult{
-			Serviceable: false, Code: "store_unavailable", Reason: "store is not active",
+			Serviceable: false, Code: "store_unavailable", Reason: "store is not published",
 			AvailableModes: allModesUnavailable("store_unavailable"),
 		}
 	}

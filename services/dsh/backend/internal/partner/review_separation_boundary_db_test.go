@@ -170,7 +170,7 @@ func TestPartnerDeactivationBlocksActiveStoresAndAuditsReasonDBIntegration(t *te
 	}
 	if _, err := db.Exec(`
 		UPDATE dsh_stores
-		SET status = 'active', is_visible = true, partner_readiness = 'ready'
+		SET status = 'published', is_visible = true, partner_readiness = 'ready'
 		WHERE partner_id = $1`, p.ID); err != nil {
 		t.Fatal(err)
 	}

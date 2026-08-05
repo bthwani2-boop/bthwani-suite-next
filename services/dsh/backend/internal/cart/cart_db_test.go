@@ -46,7 +46,7 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
-		VALUES ($1, $1, 'Cart Price Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true)`,
+		VALUES ($1, $1, 'Cart Price Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true)`,
 		storeID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
@@ -149,7 +149,7 @@ func TestComputeCheckoutSnapshotRejectsUnpricedItemDBIntegration(t *testing.T) {
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
-		VALUES ($1, $1, 'Cart Price Test Store Unpriced', 'active', 'SAN', 'SAN-1', 'serviceable', true)`,
+		VALUES ($1, $1, 'Cart Price Test Store Unpriced', 'published', 'SAN', 'SAN-1', 'serviceable', true)`,
 		storeID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
@@ -191,7 +191,7 @@ func TestComputeCheckoutSnapshotRejectsMixedCurrenciesDBIntegration(t *testing.T
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
-		VALUES ($1, $1, 'Cart Currency Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true)`, storeID); err != nil {
+		VALUES ($1, $1, 'Cart Currency Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true)`, storeID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
 	t.Cleanup(func() {

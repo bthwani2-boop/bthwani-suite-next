@@ -69,7 +69,7 @@ func TestPostgresLifecycle(t *testing.T) {
 			catalog_approval_status, marketing_visibility
 		)
 		VALUES (
-			$1, $2, $3, 'active', $4, $4, 'serviceable', TRUE,
+			$1, $2, $3, 'published', $4, $4, 'serviceable', TRUE,
 			'ready', 'approved', 'visible'
 		)`,
 		storeID, storeID, " Store", cityCode,

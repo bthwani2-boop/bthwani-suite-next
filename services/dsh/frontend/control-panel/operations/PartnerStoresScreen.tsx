@@ -33,7 +33,7 @@ type CpStoreRow = {
 };
 
 function mapAdminRowToCpRow(row: DshStoreAdminTableRow): CpStoreRow {
-  const isOpenNow = row.isOpen && row.status === 'active';
+  const isOpenNow = row.isOpen && row.status === 'published';
   return {
     id: row.id,
     name: row.displayName,
@@ -79,7 +79,7 @@ export function PartnerStoresScreen({ focusParams }: PartnerStoresScreenProps) {
   }, [controller, router]);
 
   const updateLifecycle = React.useCallback(
-    (value: 'active' | 'temporarily_closed', reason: string) => {
+    (value: 'published' | 'paused', reason: string) => {
       if (!controller.selectedStoreId || !activeDetail) return;
       void controller.govern(controller.selectedStoreId, {
         expectedVersion: activeDetail.version,
@@ -212,14 +212,14 @@ export function PartnerStoresScreen({ focusParams }: PartnerStoresScreenProps) {
                     <Button
                       label={isSubmitting ? 'جاري الاستئناف...' : 'استئناف استقبال الطلبات'}
                       disabled={isSubmitting || !activeDetail}
-                      onPress={() => updateLifecycle('active', 'استئناف استقبال الطلبات من لوحة العمليات')}
+                      onPress={() => updateLifecycle('published', 'استئناف استقبال الطلبات من لوحة العمليات')}
                     />
                   ) : (
                     <Button
                       label={isSubmitting ? 'جاري الإيقاف...' : 'إيقاف استقبال الطلبات مؤقتًا'}
                       tone="danger"
                       disabled={isSubmitting || !activeDetail}
-                      onPress={() => updateLifecycle('temporarily_closed', 'إيقاف مؤقت لاستقبال الطلبات من لوحة العمليات')}
+                      onPress={() => updateLifecycle('paused', 'إيقاف مؤقت لاستقبال الطلبات من لوحة العمليات')}
                     />
                   )}
                 </Box>

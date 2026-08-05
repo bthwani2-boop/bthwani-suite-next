@@ -13,8 +13,8 @@ func DiagnoseStorePublication(row DshStoreRow) StorePublicationDiagnostics {
 		blockers = append(blockers, code+": "+message)
 	}
 
-	if row.Status != StatusActive {
-		add("STORE_NOT_ACTIVE", "Store lifecycle must be active")
+	if row.Status == StatusSuspended || row.Status == StatusClosed {
+		add("STORE_SUSPENDED_OR_CLOSED", "Store lifecycle must not be suspended or closed")
 	}
 	if !row.IsVisible {
 		add("STORE_HIDDEN", "Store visibility must be enabled")

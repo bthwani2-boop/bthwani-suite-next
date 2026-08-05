@@ -215,7 +215,7 @@ export function StoreProfileScreen({
     try {
       await updatePartnerStoreSettings(canonicalStoreId, {
         expectedVersion: loadState.settings.version,
-        status: desiredOpen ? 'active' : 'temporarily_closed',
+        status: desiredOpen ? 'published' : 'paused',
         deliveryModes: backendModes,
         reason: normalizedReason,
       });
