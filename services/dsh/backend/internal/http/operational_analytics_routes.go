@@ -22,7 +22,7 @@ func RegisterOperationalAnalyticsRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	s := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	s := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	mux.HandleFunc("GET /dsh/operator/analytics/platform", s.withPermission("control-panel", AnalyticsPermissionRead, s.handlePlatformKpis))
 	mux.HandleFunc("GET /dsh/operator/analytics/orders", s.withPermission("control-panel", AnalyticsPermissionRead, s.handleOrderAnalytics))
 	mux.HandleFunc("GET /dsh/operator/analytics/delivery", s.withPermission("control-panel", AnalyticsPermissionRead, s.handleDeliveryAnalytics))

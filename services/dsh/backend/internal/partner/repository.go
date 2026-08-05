@@ -811,8 +811,7 @@ func roleLabel(role string) string {
 		return "Ù…Ø§Ù„Ùƒ"
 	case "supervisor":
 		return "Ù…Ø´Ø±Ù"
-	case "courier":
-		return "Ù…ÙˆØµÙ„"
+
 	default:
 		return "Ù…ÙˆØ¸Ù"
 	}

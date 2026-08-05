@@ -352,7 +352,7 @@ func (s *protectedStoreServer) handleGetPartnerSettings(w http.ResponseWriter, r
 		"storeId":        row.ID,
 		"status":         row.Status,
 		"deliveryModes":  row.DeliveryModes,
-		"storeOpen":      row.Status == store.StatusActive,
+		"storeOpen":      string(row.Status) == "active",
 		"listingEnabled": row.IsVisible,
 		"version":        row.Version,
 	})

@@ -22,7 +22,7 @@ func RegisterPlatformPolicyRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	mux.HandleFunc("GET /dsh/operator/platform/map-provider-health", protected.withPermission("control-panel", "platform.read", protected.handleOperatorMapProviderHealth))
 	mux.HandleFunc("GET /dsh/operator/platform/service-areas/{serviceAreaCode}", protected.withPermission("control-panel", "platform.read", protected.handleOperatorGetServiceArea))
 	mux.HandleFunc("GET /dsh/operator/privacy/client-addresses/policy", protected.withPermission("control-panel", "platform.read", protected.handleGetClientAddressPrivacyPolicy))

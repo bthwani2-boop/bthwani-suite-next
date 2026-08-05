@@ -149,7 +149,7 @@ func RegisterSupportMessageDeliveryRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 
 	mux.HandleFunc("POST /dsh/support/tickets/{ticketId}/messages/{messageId}/attachments", protected.handleAttachActorSupportMessageAsset)
 	mux.HandleFunc("GET /dsh/support/tickets/{ticketId}/messages/{messageId}/attachments", protected.handleListActorSupportMessageAttachments)

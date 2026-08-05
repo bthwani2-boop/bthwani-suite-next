@@ -209,7 +209,7 @@ func PickupMutationGuard(
 	mediaProvider *media.Provider,
 	next http.Handler,
 ) http.Handler {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		route, guarded := matchPickupMutationRoute(r)
 		if !guarded {
@@ -400,6 +400,6 @@ func RegisterPickupRecoveryRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	mux.HandleFunc("POST /dsh/operator/pickups/{orderId}/reschedule", protected.withPermission("control-panel", IncidentPermissionOverride, protected.handleReschedulePickupWindow))
 }

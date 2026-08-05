@@ -59,7 +59,7 @@ func DeliveryExceptionGovernanceMiddleware(
 	mediaProvider *media.Provider,
 	next http.Handler,
 ) http.Handler {
-	governed := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	governed := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			if assignmentID, ok := deliveryExceptionPathID(

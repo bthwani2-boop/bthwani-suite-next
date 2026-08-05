@@ -185,7 +185,7 @@ func RegisterGovernedIncidentRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	mux.HandleFunc("GET /dsh/operator/support/incidents", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListGovernedIncidents))
 	mux.HandleFunc("POST /dsh/operator/support/incidents", protected.withPermission("control-panel", SupportPermissionManage, protected.handleCreateGovernedIncident))
 	mux.HandleFunc("GET /dsh/operator/support/incidents/{incidentId}", protected.withPermission("control-panel", SupportPermissionRead, protected.handleGetGovernedIncident))
@@ -203,7 +203,7 @@ func GovernedIncidentMiddleware(
 	mediaProvider *media.Provider,
 	next http.Handler,
 ) http.Handler {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		match, ok := matchGovernedIncidentRoute(r.URL.Path)
 		if !ok {

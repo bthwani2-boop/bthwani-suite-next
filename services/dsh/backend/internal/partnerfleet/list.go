@@ -16,7 +16,11 @@ type expiredConnectionProjection struct {
 }
 
 func expirePendingStoreCodes(ctx context.Context, db *sql.DB, storeID string) error {
-	return nil // J014: fleet connections migrated to Workforce
+	_, err := db.ExecContext(ctx, `
+		UPDATE dsh_partner_courier_connection_codes
+		SET status = 'expired', version = version + 1, updated_at = NOW()
+		WHERE store_id = $1 AND status = 'pending' AND expires_at <= NOW()`, storeID)
+	return err
 }
 
 func ListStoreConnections(ctx context.Context, db *sql.DB, storeID string) ([]ConnectionCode, error) {
@@ -52,5 +56,29 @@ func ListStoreConnections(ctx context.Context, db *sql.DB, storeID string) ([]Co
 }
 
 func ListCaptainMemberships(ctx context.Context, db *sql.DB, captainActorID string) ([]CaptainFleetMembership, error) {
-	return nil, fmt.Errorf("J014: captain memberships migrated to Workforce")
+	captainActorID = strings.TrimSpace(captainActorID)
+	if captainActorID == "" {
+		return nil, ErrInvalid
+	}
+	rows, err := db.QueryContext(ctx, `
+		SELECT m.id, m.store_id, COALESCE(s.name, ''), COALESCE(wp.full_name_ar, ''), m.status, m.branch_assignment, m.delivery_assignment, m.version
+		FROM dsh_captain_memberships m
+		LEFT JOIN dsh_stores s ON m.store_id = s.id
+		LEFT JOIN workforce_people wp ON m.captain_actor_id = wp.actor_id
+		WHERE m.captain_actor_id = $1
+		ORDER BY m.created_at DESC`, captainActorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	memberships := make([]CaptainFleetMembership, 0)
+	for rows.Next() {
+		var m CaptainFleetMembership
+		if err := rows.Scan(&m.TeamMemberID, &m.StoreID, &m.StoreName, &m.CourierName, &m.Status, &m.BranchAssignment, &m.DeliveryAssignment, &m.Version); err != nil {
+			return nil, err
+		}
+		memberships = append(memberships, m)
+	}
+	return memberships, rows.Err()
 }

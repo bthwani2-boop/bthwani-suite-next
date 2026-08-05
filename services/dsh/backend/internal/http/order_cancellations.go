@@ -256,7 +256,7 @@ func RegisterOrderCancellationRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	mux.HandleFunc("POST /dsh/client/orders/{orderId}/cancel", protected.handleClientCancelOrder)
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}/cancellation", protected.handleClientOrderCancellation)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/cancel", protected.handlePartnerCancelOrder)

@@ -113,7 +113,7 @@ func readinessHandler(db *sql.DB) http.HandlerFunc {
 		linkedStore, err := store.GetStoreByPartnerID(db, pid)
 		if err == nil && linkedStore != nil {
 			hasStore = true
-			storeActive = (linkedStore.Status == store.StatusActive)
+			storeActive = (string(linkedStore.Status) == "active")
 			storeServiceable = (linkedStore.ServiceabilityStatus == store.ServiceabilityServiceable || linkedStore.ServiceabilityStatus == store.ServiceabilityLimited)
 			storePartnerReadinessReady = (linkedStore.PartnerReadiness == "ready")
 			storeCatalogApproved = (linkedStore.CatalogApprovalStatus == "approved")

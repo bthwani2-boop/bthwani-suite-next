@@ -22,7 +22,7 @@ func RegisterAdministrationSupportRoutes(
 	supportClient *supportsession.Client,
 ) {
 	server := &administrationSupportServer{
-		protected: newProtectedStoreServer(db, identityClient, wltClient, mediaProvider),
+		protected: newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider),
 		db:        db,
 		identity:  supportClient,
 	}

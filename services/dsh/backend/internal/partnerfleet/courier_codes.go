@@ -126,11 +126,85 @@ func scanConnection(row interface{ Scan(dest ...any) error }) (ConnectionCode, e
 }
 
 func IssueCode(ctx context.Context, db *sql.DB, storeID, teamMemberID, actorID string, ttl time.Duration) (IssuedConnectionCode, error) {
-	return IssuedConnectionCode{}, errors.New("J014: fleet connection codes migrated to Workforce")
+	if err := ensureStoreEligible(ctx, db, storeID); err != nil {
+		return IssuedConnectionCode{}, err
+	}
+	var currentStatus string
+	err := db.QueryRowContext(ctx, `SELECT status FROM dsh_captain_memberships WHERE id = $1 AND store_id = $2`, teamMemberID, storeID).Scan(&currentStatus)
+	if errors.Is(err, sql.ErrNoRows) {
+		return IssuedConnectionCode{}, ErrNotFound
+	}
+	if err != nil {
+		return IssuedConnectionCode{}, err
+	}
+	if currentStatus != "invited" && currentStatus != "active" {
+		return IssuedConnectionCode{}, ErrCourierIneligible
+	}
+
+	codeStr, err := generateCode(10)
+	if err != nil {
+		return IssuedConnectionCode{}, err
+	}
+	hash := hashCode(codeStr)
+	last4 := codeStr[len(codeStr)-4:]
+	expiresAt := time.Now().Add(ttl)
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return IssuedConnectionCode{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	_, err = tx.ExecContext(ctx, `
+		UPDATE dsh_partner_courier_connection_codes
+		SET status = 'expired', version = version + 1, updated_at = NOW()
+		WHERE team_member_id = $1 AND store_id = $2 AND status = 'pending'`, teamMemberID, storeID)
+	if err != nil {
+		return IssuedConnectionCode{}, err
+	}
+
+	row := tx.QueryRowContext(ctx, `
+		INSERT INTO dsh_partner_courier_connection_codes (
+			store_id, team_member_id, code_hash, code_last4, status, expires_at, created_by_actor_id
+		) VALUES ($1, $2, $3, $4, 'pending', $5, $6)
+		RETURNING `+connectionSelectCols,
+		storeID, teamMemberID, hash, last4, expiresAt, actorID)
+
+	connection, scanErr := scanConnection(row)
+	if scanErr != nil {
+		return IssuedConnectionCode{}, scanErr
+	}
+	if err := tx.Commit(); err != nil {
+		return IssuedConnectionCode{}, err
+	}
+	return IssuedConnectionCode{Connection: connection, Code: codeStr}, nil
 }
 
 func RevokeCode(ctx context.Context, db *sql.DB, storeID, codeID, actorID string, expectedVersion int) (ConnectionCode, error) {
-	return ConnectionCode{}, errors.New("J014: fleet connection codes migrated to Workforce")
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return ConnectionCode{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	row := tx.QueryRowContext(ctx, `
+		UPDATE dsh_partner_courier_connection_codes
+		SET status = 'revoked', version = version + 1, revoked_at = NOW(), updated_at = NOW()
+		WHERE id = $1 AND store_id = $2 AND status = 'pending' AND version = $3
+		RETURNING `+connectionSelectCols,
+		codeID, storeID, expectedVersion)
+	
+	connection, err := scanConnection(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ConnectionCode{}, ErrNotFound
+	}
+	if err != nil {
+		return ConnectionCode{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return ConnectionCode{}, err
+	}
+	return connection, nil
 }
 
 func FormatCodeForDisplay(code string) string {

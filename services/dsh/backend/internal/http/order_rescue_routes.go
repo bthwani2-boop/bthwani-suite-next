@@ -142,7 +142,7 @@ func RegisterOrderRescueRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	mux.HandleFunc("POST /dsh/operator/support/order-rescue-cases", protected.withPermission("control-panel", SupportPermissionManage, protected.handleCreateOrderRescueCase))
 	mux.HandleFunc("GET /dsh/operator/support/order-rescue-cases", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListOrderRescueCases))
 	mux.HandleFunc("GET /dsh/operator/support/order-rescue-cases/{caseId}", protected.withPermission("control-panel", SupportPermissionRead, protected.handleGetOrderRescueCase))

@@ -8,6 +8,7 @@ import (
 	"dsh-api/internal/auth"
 	"dsh-api/internal/media"
 	"dsh-api/internal/partnerfleet"
+	"dsh-api/internal/platformclient"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
 )
@@ -19,9 +20,10 @@ func RegisterPartnerFleetOperatorRoutes(
 	db *sql.DB,
 	identityClient *auth.Client,
 	wltClient *wlt.Client,
+	platformClient *platformclient.Client,
 	mediaProvider *media.Provider,
 ) {
-	server := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	server := newProtectedStoreServer(db, identityClient, wltClient, platformClient, mediaProvider)
 	router.HandleFunc(
 		"GET /dsh/operator/stores/{storeId}/partner-fleet",
 		server.withPermission("control-panel", PartnersPermissionRead, server.handleOperatorPartnerFleetSnapshot),

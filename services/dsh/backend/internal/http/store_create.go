@@ -37,7 +37,11 @@ func (s *protectedStoreServer) handleFieldCreateStore(w http.ResponseWriter, r *
 }
 
 func (s *protectedStoreServer) createStore(w http.ResponseWriter, r *http.Request, operatorContextID string, surface string) {
-	actorID, _ := store.ActorFromContext(r)
+	actor, ok := s.ActorFromContext(r.Context())
+	if !ok {
+		return
+	}
+	actorID := actor.ID
 	if actorID == "" {
 		store.SendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "authentication required")
 		return

@@ -28,7 +28,7 @@ func RegisterWorkforceScopesRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	s := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	s := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	mux.HandleFunc("GET /dsh/operator/workforce/scopes/{actorId}", s.withPermission("control-panel", OperationsPermissionRead, s.handleGetOperatorWorkforceScopes))
 }
 

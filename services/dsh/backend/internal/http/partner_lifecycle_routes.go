@@ -19,7 +19,7 @@ func RegisterPartnerLifecycleRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 
 	// Control-panel: partner intake, review, activation, documents, stores,
 	// field evidence and immutable audit history.

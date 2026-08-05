@@ -2,10 +2,10 @@ package http
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"dsh-api/internal/auth"
+	"dsh-api/internal/store"
 )
 
 type commercialSummaryResponse struct {
@@ -13,28 +13,37 @@ type commercialSummaryResponse struct {
 	EffectiveFrom string `json:"effectiveFrom"`
 }
 
-func (s *protectedStoreServer) handlePartnerCommercialSummary(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *protectedStoreServer) handlePartnerCommercialSummary(w http.ResponseWriter, r *http.Request) {
+	_, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
 	storeId := r.PathValue("storeId")
 	if storeId == "" {
-		sendError(w, http.StatusBadRequest, "INVALID_STORE", "storeId is required")
+		store.SendError(w, http.StatusBadRequest, "INVALID_STORE", "storeId is required")
 		return
 	}
 
 	partnerId, ok := s.getPartnerIdForStore(r.Context(), storeId)
 	if !ok {
-		sendError(w, http.StatusForbidden, "FORBIDDEN", "not authorized for this store")
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "not authorized for this store")
+		return
+	}
+
+	if s.platformClient == nil {
+		store.SendJSON(w, http.StatusOK, commercialSummaryResponse{Model: "UNKNOWN", EffectiveFrom: ""})
 		return
 	}
 
 	// Fetch from platform client
 	variable, err := s.platformClient.GetVariable(r.Context(), "VAR_PARTNER_COMMERCIAL_MODEL", "partner", partnerId)
 	if err != nil {
-		sendError(w, http.StatusInternalServerError, "PLATFORM_CLIENT_ERROR", "failed to fetch commercial model from platform")
+		store.SendError(w, http.StatusInternalServerError, "PLATFORM_CLIENT_ERROR", "failed to fetch commercial model from platform")
 		return
 	}
 
 	if variable == nil {
-		sendJSON(w, http.StatusOK, commercialSummaryResponse{
+		store.SendJSON(w, http.StatusOK, commercialSummaryResponse{
 			Model:         "UNKNOWN",
 			EffectiveFrom: "",
 		})
@@ -48,7 +57,7 @@ func (s *protectedStoreServer) handlePartnerCommercialSummary(w http.ResponseWri
 		modelValue = "UNKNOWN"
 	}
 
-	sendJSON(w, http.StatusOK, commercialSummaryResponse{
+	store.SendJSON(w, http.StatusOK, commercialSummaryResponse{
 		Model:         modelValue,
 		EffectiveFrom: variable.EffectiveFrom,
 	})
@@ -63,3 +72,6 @@ func (s *protectedStoreServer) getPartnerIdForStore(ctx context.Context, storeId
 	}
 	return partnerId, true
 }
+
+// unused import reference for auth
+var _ auth.Identity

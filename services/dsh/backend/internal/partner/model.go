@@ -530,7 +530,7 @@ func (i InviteTeamMemberInput) Validate() error {
 	if strings.TrimSpace(i.Identity) == "" {
 		return ErrInvalid
 	}
-	if i.Role != "manager" && i.Role != "supervisor" && i.Role != "staff" && i.Role != "courier" {
+	if i.Role != "manager" && i.Role != "supervisor" && i.Role != "staff" && i.Role != "owner" {
 		return ErrInvalid
 	}
 	return nil

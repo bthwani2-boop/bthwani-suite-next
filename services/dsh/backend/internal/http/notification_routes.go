@@ -23,7 +23,7 @@ func RegisterActorNotificationRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	mux.HandleFunc("GET /dsh/notifications", protected.handleListNotifications)
 	mux.HandleFunc("GET /dsh/notifications/preferences", protected.handleListNotificationPreferences)
 	mux.HandleFunc("PUT /dsh/notifications/preferences", protected.handleUpdateNotificationPreferences)
