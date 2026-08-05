@@ -28,7 +28,7 @@ func TestDiagnoseStorePublicationReadyOnlyWhenAllGatesPass(t *testing.T) {
 
 func TestDiagnoseStorePublicationReportsEveryRequiredGate(t *testing.T) {
 	row := diagnosticReadyStoreRow()
-	row.Status = StatusInactive
+	row.Status = StatusSuspended
 	row.IsVisible = false
 	row.ServiceabilityStatus = ServiceabilityOutOfArea
 	row.PartnerReadiness = "blocked"
@@ -50,7 +50,7 @@ func TestDiagnoseStorePublicationReportsEveryRequiredGate(t *testing.T) {
 	}
 
 	expectedCodes := []string{
-		"STORE_NOT_ACTIVE",
+		"STORE_SUSPENDED_OR_CLOSED",
 		"STORE_HIDDEN",
 		"STORE_NOT_SERVICEABLE",
 		"PARTNER_NOT_READY",

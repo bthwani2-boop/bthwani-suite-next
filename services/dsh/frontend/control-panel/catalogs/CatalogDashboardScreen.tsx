@@ -777,7 +777,8 @@ export function CatalogDashboardScreen() {
                     const isCreate = createProductInsteadOfLink[p.id] ?? false;
                     const linkId = selectedAdoptedProductId[p.id] ?? "";
                     return (
-                      <tr key={p.id}>
+                      <React.Fragment key={p.id}>
+                        <tr>
                         <CpTableCell>{p.id}</CpTableCell>
                         <CpTableCell>
                           <strong>{p.proposedNameAr}</strong>

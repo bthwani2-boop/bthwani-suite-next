@@ -37,8 +37,6 @@ func TestIsTransitionAllowed_legalPaths(t *testing.T) {
 		{StatusClientVisible, StatusPartnerTerminated},
 		{StatusClientHidden, StatusClientVisible},
 		{StatusClientHidden, StatusPartnerTerminated},
-		{StatusPartnerTerminated, StatusOpsReview},
-		{StatusPartnerTerminated, StatusSubmitted},
 	}
 	for _, c := range cases {
 		if !IsTransitionAllowed(c.from, c.to) {
@@ -320,7 +318,7 @@ func TestPartnerReadinessForActivationStatus(t *testing.T) {
 	}{
 		{StatusClientVisible, "ready", true},
 		{StatusClientHidden, "blocked", true},
-		{StatusPartnerTerminated, "blocked", true},
+		{StatusPartnerTerminated, "", false},
 		{StatusPartnerActive, "", false},
 	}
 

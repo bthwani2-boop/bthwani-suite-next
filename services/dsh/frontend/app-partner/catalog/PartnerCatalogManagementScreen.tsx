@@ -28,6 +28,8 @@ import type {
   ProductProposal,
   StoreAssortment,
 } from "../../shared/catalog";
+import { InventoryConfigurationModal } from "./InventoryConfigurationModal";
+import { PriceScheduleModal } from "./PriceScheduleModal";
 import { PartnerReelsManagementSection } from "./PartnerReelsManagementSection";
 
 type Props = {
@@ -47,6 +49,8 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
   const [selectedProductId, setSelectedProductId] = React.useState("");
   const [price, setPrice] = React.useState("");
   const [note, setNote] = React.useState("");
+  const [inventoryModalProductId, setInventoryModalProductId] = React.useState<string | null>(null);
+  const [priceModalProductId, setPriceModalProductId] = React.useState<string | null>(null);
 
   const loadData = React.useCallback(async () => {
     if (identity.state.kind !== "authenticated") return;
@@ -228,12 +232,30 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
                     : "غير مضاف لتشكيلة المتجر"
                 }
                 trailing={
-                  <Button
-                    label={linked ? "تعديل" : "إضافة كمسودة"}
-                    tone="secondary"
-                    size="sm"
-                    onPress={() => startEditing(product)}
-                  />
+                  <View style={{ flexDirection: "row", gap: spacing.s }}>
+                    <Button
+                      label={linked ? "تعديل" : "إضافة كمسودة"}
+                      tone="secondary"
+                      size="sm"
+                      onPress={() => startEditing(product)}
+                    />
+                    {linked && (
+                      <>
+                        <Button
+                          label="المخزون"
+                          tone="secondary"
+                          size="sm"
+                          onPress={() => setInventoryModalProductId(product.id)}
+                        />
+                        <Button
+                          label="السعر والتحضير"
+                          tone="secondary"
+                          size="sm"
+                          onPress={() => setPriceModalProductId(product.id)}
+                        />
+                      </>
+                    )}
+                  </View>
                 }
               />
             );
@@ -347,6 +369,32 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
           })
         )}
       </Card>
+      
+      {inventoryModalProductId && (
+        <InventoryConfigurationModal
+          visible={true}
+          storeId={storeId}
+          masterProductId={inventoryModalProductId}
+          onClose={() => setInventoryModalProductId(null)}
+          onSave={() => {
+            setInventoryModalProductId(null);
+            void loadData();
+          }}
+        />
+      )}
+
+      {priceModalProductId && (
+        <PriceScheduleModal
+          visible={true}
+          storeId={storeId}
+          masterProductId={priceModalProductId}
+          onClose={() => setPriceModalProductId(null)}
+          onSave={() => {
+            setPriceModalProductId(null);
+            void loadData();
+          }}
+        />
+      )}
     </ScrollScreen>
   );
 }

@@ -20,7 +20,6 @@ func TestPartnerCreationUnknownResultRetryReplaysOriginalAuthorityDBIntegration(
 		DisplayName:         "J020 Partner " + suffix,
 		LegalIdentityType:   "commercial_register",
 		LegalIdentityNumber: "J020-CR-" + suffix,
-		OwnerName:           "J020 Owner",
 		PrimaryPhone:        "+9677" + suffix[len(suffix)-8:],
 		Category:            "restaurant",
 		CreatedByActorID:    actorID,

@@ -5,9 +5,11 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"time"
 
 	"github.com/lib/pq"
@@ -37,11 +39,13 @@ type CartItem struct {
 	StoreAssortmentID *string `json:"storeAssortmentId"`
 	ProductName       string  `json:"productName"`
 	PriceReference    string  `json:"priceReference"`
-	// UnitPrice and Currency are snapshotted together from the sovereign store
+	// UnitPriceMinorUnits and Currency are snapshotted together from the sovereign store
 	// assortment at add-to-cart time. Neither value is accepted from the client.
-	UnitPrice float64 `json:"unitPrice"`
+	UnitPriceMinorUnits int64 `json:"unitPriceMinorUnits"`
 	Currency  string  `json:"currency"`
 	Quantity  int     `json:"quantity"`
+	Options   []string `json:"options"`
+	Note      string  `json:"note"`
 	Version   int     `json:"version"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
@@ -55,9 +59,74 @@ type Cart struct {
 	State           string          `json:"state"`
 	Note            string          `json:"note"`
 	Items           []CartItem      `json:"items"`
+	Quote           PricingQuote    `json:"quote"`
 	Version         int             `json:"version"`
 	CreatedAt       time.Time       `json:"createdAt"`
 	UpdatedAt       time.Time       `json:"updatedAt"`
+}
+
+type PricingQuoteLine struct {
+	MasterProductID     string `json:"masterProductId"`
+	ProductName         string `json:"productName"`
+	Quantity            int    `json:"quantity"`
+	UnitPriceMinorUnits int64  `json:"unitPriceMinorUnits"`
+	TotalMinorUnits     int64  `json:"totalMinorUnits"`
+}
+
+type PricingQuote struct {
+	Lines                 []PricingQuoteLine `json:"lines"`
+	SubtotalMinorUnits    int64              `json:"subtotalMinorUnits"`
+	DeliveryFeeMinorUnits int64              `json:"deliveryFeeMinorUnits"`
+	ServiceFeeMinorUnits  int64              `json:"serviceFeeMinorUnits"`
+	TaxMinorUnits         int64              `json:"taxMinorUnits"`
+	DiscountMinorUnits    int64              `json:"discountMinorUnits"`
+	RoundingMinorUnits    int64              `json:"roundingMinorUnits"`
+	TotalMinorUnits       int64              `json:"totalMinorUnits"`
+	Currency              string             `json:"currency"`
+	FundingRefs           []string           `json:"fundingRefs"`
+	Hash                  string             `json:"hash"`
+	Version               int                `json:"version"`
+	ExpiresAt             *time.Time         `json:"expiresAt"`
+}
+
+func GenerateQuote(c *Cart, db *sql.DB, ctx context.Context) PricingQuote {
+	quote := PricingQuote{
+		Lines:       []PricingQuoteLine{},
+		FundingRefs: []string{},
+		Version:     c.Version,
+	}
+	var currency string
+	for _, item := range c.Items {
+		currency = item.Currency
+		lineTotal := item.UnitPriceMinorUnits * int64(item.Quantity)
+		quote.Lines = append(quote.Lines, PricingQuoteLine{
+			MasterProductID:     item.MasterProductID,
+			ProductName:         item.ProductName,
+			Quantity:            item.Quantity,
+			UnitPriceMinorUnits: item.UnitPriceMinorUnits,
+			TotalMinorUnits:     lineTotal,
+		})
+		quote.SubtotalMinorUnits += lineTotal
+	}
+	quote.Currency = currency
+
+	// Fetch delivery fee if available
+	var deliveryFee int64
+	err := db.QueryRowContext(ctx, "SELECT COALESCE(delivery_fee_minor, 0) FROM dsh_store_delivery_settings WHERE store_id = $1", c.StoreID).Scan(&deliveryFee)
+	if err == nil {
+		quote.DeliveryFeeMinorUnits = deliveryFee
+	}
+
+	quote.TotalMinorUnits = quote.SubtotalMinorUnits + quote.DeliveryFeeMinorUnits + quote.ServiceFeeMinorUnits + quote.TaxMinorUnits - quote.DiscountMinorUnits + quote.RoundingMinorUnits
+
+	b, _ := json.Marshal(quote)
+	h := sha256.Sum256(b)
+	quote.Hash = hex.EncodeToString(h[:])
+	
+	expiresAt := time.Now().Add(15 * time.Minute)
+	quote.ExpiresAt = &expiresAt
+
+	return quote
 }
 
 type ServiceabilityResult struct {
@@ -97,6 +166,22 @@ type UpsertItemInput struct {
 	// up server-side from the store assortment row, never trusted from the client.
 	MasterProductID string `json:"masterProductId"`
 	Quantity        int    `json:"quantity"`
+	Options         []string `json:"options"`
+	Note            string `json:"note"`
+	ExpectedVersion *int   `json:"expectedVersion,omitempty"`
+}
+
+func hashOptions(options []string) string {
+	if len(options) == 0 {
+		h := sha256.Sum256([]byte("[]"))
+		return hex.EncodeToString(h[:])
+	}
+	sorted := make([]string, len(options))
+	copy(sorted, options)
+	sort.Strings(sorted)
+	b, _ := json.Marshal(sorted)
+	h := sha256.Sum256(b)
+	return hex.EncodeToString(h[:])
 }
 
 func GetOrCreateActiveCart(ctx context.Context, db *sql.DB, clientID, storeID string, mode FulfillmentMode) (*Cart, error) {
@@ -119,6 +204,7 @@ func GetOrCreateActiveCart(ctx context.Context, db *sql.DB, clientID, storeID st
 		return nil, err
 	}
 	c.Items = items
+	c.Quote = GenerateQuote(&c, db, ctx)
 	return &c, nil
 }
 
@@ -142,6 +228,7 @@ func GetCart(ctx context.Context, db *sql.DB, clientID, storeID string) (*Cart, 
 		return nil, err
 	}
 	c.Items = items
+	c.Quote = GenerateQuote(&c, db, ctx)
 	return &c, nil
 }
 
@@ -149,51 +236,120 @@ func UpsertItem(ctx context.Context, db *sql.DB, storeID, cartID string, input U
 	if input.MasterProductID == "" || input.Quantity < 1 {
 		return nil, ErrInvalid
 	}
+	if len(input.Note) > 500 {
+		return nil, ErrInvalid
+	}
+	
+	// ETag/If-Match version check
+	if input.ExpectedVersion != nil {
+		var currentVersion int
+		err := db.QueryRowContext(ctx, `SELECT version FROM dsh_carts WHERE id = $1`, cartID).Scan(&currentVersion)
+		if err != nil {
+			return nil, err
+		}
+		if currentVersion != *input.ExpectedVersion {
+			return nil, ErrConflict
+		}
+	}
+
 	var assortmentID, name, currency string
-	var unitPrice float64
+	var unitPriceMinorUnits int64
 	var available bool
 	err := db.QueryRowContext(ctx,
-		`SELECT a.id, mp.canonical_name_ar, a.unit_price, a.currency, a.available
+		`SELECT a.id, mp.canonical_name_ar, COALESCE(p.amount_minor, 0), COALESCE(p.currency, ''), 
+			CASE 
+				WHEN p.amount_minor IS NULL THEN false
+				WHEN i.policy_type = 'signal' AND i.quantity > 0 THEN true 
+				WHEN i.policy_type = 'quantity' AND (i.quantity - i.reserved_quantity) >= $3 THEN true 
+				WHEN i.policy_type = 'infinite' THEN true 
+				ELSE false 
+			END AS available
 		 FROM dsh_store_assortments a
 		 JOIN dsh_master_products mp ON mp.id = a.master_product_id
-		 WHERE a.store_id = $1 AND a.master_product_id = $2`,
-		storeID, input.MasterProductID,
-	).Scan(&assortmentID, &name, &unitPrice, &currency, &available)
+		 LEFT JOIN dsh_store_assortment_prices p ON p.store_assortment_id = a.id AND p.effective_from <= NOW() AND (p.effective_until IS NULL OR p.effective_until > NOW())
+		 LEFT JOIN dsh_store_assortment_inventory i ON i.store_assortment_id = a.id
+		 WHERE a.store_id = $1 AND a.master_product_id = $2
+		 ORDER BY p.effective_from DESC LIMIT 1`,
+		storeID, input.MasterProductID, input.Quantity,
+	).Scan(&assortmentID, &name, &unitPriceMinorUnits, &currency, &available)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrInvalid
 	}
 	if err != nil {
 		return nil, err
 	}
-	if !available || unitPrice <= 0 || currency == "" {
+	if !available || unitPriceMinorUnits <= 0 || currency == "" {
 		return nil, ErrInvalid
 	}
-	priceReference := fmt.Sprintf("%.2f", unitPrice)
-	var item CartItem
-	err = db.QueryRowContext(ctx,
-		`INSERT INTO dsh_cart_items (cart_id, product_id, master_product_id, store_assortment_id, product_name, price_reference, unit_price, currency, quantity)
-		 VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8)
-		 ON CONFLICT (cart_id, product_id) DO UPDATE
-		   SET quantity            = EXCLUDED.quantity,
-		       master_product_id   = EXCLUDED.master_product_id,
-		       store_assortment_id = EXCLUDED.store_assortment_id,
-		       product_name        = EXCLUDED.product_name,
-		       price_reference     = EXCLUDED.price_reference,
-		       unit_price          = EXCLUDED.unit_price,
-		       currency            = EXCLUDED.currency,
-		       version             = dsh_cart_items.version + 1,
-		       updated_at          = NOW()
-		 RETURNING id, cart_id, product_id, master_product_id, store_assortment_id, product_name, price_reference, unit_price, currency, quantity, version, created_at, updated_at`,
-		cartID, input.MasterProductID, assortmentID, name, priceReference, unitPrice, currency, input.Quantity,
-	).Scan(&item.ID, &item.CartID, &item.ProductID, &item.MasterProductID, &item.StoreAssortmentID, &item.ProductName, &item.PriceReference, &item.UnitPrice, &item.Currency, &item.Quantity, &item.Version, &item.CreatedAt, &item.UpdatedAt)
+	optionsHash := hashOptions(input.Options)
+	optionsJSON, _ := json.Marshal(input.Options)
+	if input.Options == nil {
+		optionsJSON = []byte("[]")
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
+	defer tx.Rollback()
+
+	var item CartItem
+	var optsBytes []byte
+	err = tx.QueryRowContext(ctx,
+		`INSERT INTO dsh_cart_items (cart_id, product_id, master_product_id, store_assortment_id, product_name, price_reference, unit_price_minor, currency, quantity, options, note, options_hash)
+		 VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		 ON CONFLICT (cart_id, master_product_id, options_hash) DO UPDATE
+		   SET quantity            = EXCLUDED.quantity,
+		       store_assortment_id = EXCLUDED.store_assortment_id,
+		       product_name        = EXCLUDED.product_name,
+		       price_reference     = EXCLUDED.price_reference,
+		       unit_price_minor    = EXCLUDED.unit_price_minor,
+		       currency            = EXCLUDED.currency,
+		       note                = EXCLUDED.note,
+		       version             = dsh_cart_items.version + 1,
+		       updated_at          = NOW()
+		 RETURNING id, cart_id, product_id, master_product_id, store_assortment_id, product_name, price_reference, unit_price_minor, currency, quantity, options, note, version, created_at, updated_at`,
+		cartID, input.MasterProductID, assortmentID, name, "catalog", unitPriceMinorUnits, currency, input.Quantity, optionsJSON, input.Note, optionsHash,
+	).Scan(&item.ID, &item.CartID, &item.ProductID, &item.MasterProductID, &item.StoreAssortmentID, &item.ProductName, &item.PriceReference, &item.UnitPriceMinorUnits, &item.Currency, &item.Quantity, &optsBytes, &item.Note, &item.Version, &item.CreatedAt, &item.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	_ = json.Unmarshal(optsBytes, &item.Options)
+	if item.Options == nil {
+		item.Options = []string{}
+	}
+
+	_, err = tx.ExecContext(ctx, `UPDATE dsh_carts SET version = version + 1, updated_at = NOW() WHERE id = $1`, cartID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
 	return &item, nil
 }
 
-func RemoveItem(ctx context.Context, db *sql.DB, cartID, itemID string) error {
-	res, err := db.ExecContext(ctx,
+func RemoveItem(ctx context.Context, db *sql.DB, cartID, itemID string, expectedVersion *int) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if expectedVersion != nil {
+		var currentVersion int
+		err := tx.QueryRowContext(ctx, `SELECT version FROM dsh_carts WHERE id = $1`, cartID).Scan(&currentVersion)
+		if err != nil {
+			return err
+		}
+		if currentVersion != *expectedVersion {
+			return ErrConflict
+		}
+	}
+
+	res, err := tx.ExecContext(ctx,
 		`DELETE FROM dsh_cart_items WHERE id = $1 AND cart_id = $2`,
 		itemID, cartID,
 	)
@@ -204,15 +360,47 @@ func RemoveItem(ctx context.Context, db *sql.DB, cartID, itemID string) error {
 	if n == 0 {
 		return ErrNotFound
 	}
-	return nil
+	
+	_, err = tx.ExecContext(ctx, `UPDATE dsh_carts SET version = version + 1, updated_at = NOW() WHERE id = $1`, cartID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
-func ClearCart(ctx context.Context, db *sql.DB, cartID string) error {
-	_, err := db.ExecContext(ctx,
+func ClearCart(ctx context.Context, db *sql.DB, cartID string, expectedVersion *int) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if expectedVersion != nil {
+		var currentVersion int
+		err := tx.QueryRowContext(ctx, `SELECT version FROM dsh_carts WHERE id = $1`, cartID).Scan(&currentVersion)
+		if err != nil {
+			return err
+		}
+		if currentVersion != *expectedVersion {
+			return ErrConflict
+		}
+	}
+
+	_, err = tx.ExecContext(ctx,
 		`DELETE FROM dsh_cart_items WHERE cart_id = $1`,
 		cartID,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx, `UPDATE dsh_carts SET version = version + 1, updated_at = NOW() WHERE id = $1`, cartID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func UpdateFulfillmentMode(ctx context.Context, db *sql.DB, cartID string, mode FulfillmentMode) error {
@@ -390,7 +578,7 @@ func createCart(ctx context.Context, db *sql.DB, clientID, storeID string, mode 
 
 func listItems(ctx context.Context, db *sql.DB, cartID string) ([]CartItem, error) {
 	rows, err := db.QueryContext(ctx,
-		`SELECT id, cart_id, product_id, master_product_id, store_assortment_id, product_name, price_reference, unit_price, currency, quantity, version, created_at, updated_at
+		`SELECT id, cart_id, product_id, master_product_id, store_assortment_id, product_name, price_reference, unit_price_minor, currency, quantity, options, note, version, created_at, updated_at
 		 FROM dsh_cart_items WHERE cart_id = $1 ORDER BY created_at`,
 		cartID,
 	)
@@ -401,8 +589,13 @@ func listItems(ctx context.Context, db *sql.DB, cartID string) ([]CartItem, erro
 	var items []CartItem
 	for rows.Next() {
 		var item CartItem
-		if err := rows.Scan(&item.ID, &item.CartID, &item.ProductID, &item.MasterProductID, &item.StoreAssortmentID, &item.ProductName, &item.PriceReference, &item.UnitPrice, &item.Currency, &item.Quantity, &item.Version, &item.CreatedAt, &item.UpdatedAt); err != nil {
+		var optsBytes []byte
+		if err := rows.Scan(&item.ID, &item.CartID, &item.ProductID, &item.MasterProductID, &item.StoreAssortmentID, &item.ProductName, &item.PriceReference, &item.UnitPriceMinorUnits, &item.Currency, &item.Quantity, &optsBytes, &item.Note, &item.Version, &item.CreatedAt, &item.UpdatedAt); err != nil {
 			return nil, err
+		}
+		_ = json.Unmarshal(optsBytes, &item.Options)
+		if item.Options == nil {
+			item.Options = []string{}
 		}
 		items = append(items, item)
 	}
@@ -448,7 +641,7 @@ func ComputeCheckoutSnapshot(ctx context.Context, db *sql.DB, cartID string) (*C
 	hasher := sha256.New()
 	hasher.Write([]byte(cartID))
 	for _, item := range items {
-		if item.UnitPrice <= 0 {
+		if item.UnitPriceMinorUnits <= 0 {
 			return nil, ErrCartItemMissingPrice
 		}
 		if item.Currency == "" {
@@ -459,7 +652,7 @@ func ComputeCheckoutSnapshot(ctx context.Context, db *sql.DB, cartID string) (*C
 		} else if currency != item.Currency {
 			return nil, ErrCartItemCurrency
 		}
-		unitMinorUnits := int64(math.Round(item.UnitPrice * 100))
+		unitMinorUnits := item.UnitPriceMinorUnits
 		totalMinorUnits += unitMinorUnits * int64(item.Quantity)
 		hasher.Write([]byte(fmt.Sprintf("|%s:%d:%d:%s", item.ProductID, item.Quantity, unitMinorUnits, item.Currency)))
 	}

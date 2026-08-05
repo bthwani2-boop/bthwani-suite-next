@@ -169,6 +169,11 @@ type DshStoreListQuery struct {
 	ServiceAreaCode string
 	Status          DshStoreStatus
 	IsVisible       *bool
+	Search          string
+	Category        string
+	Sort            string
+	IsFreeDelivery  *bool
+	HasProBadge     *bool
 	Limit           int
 	Offset          int
 }

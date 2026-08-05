@@ -5,6 +5,7 @@ export * as cart from './cart';
 export * from './catalog';
 export * from './chat';
 export * from './checkout';
+export * as clientProfile from './client-profile';
 
 // Delivery public surface is expanded explicitly here instead of re-exporting
 // the delivery barrel. This prevents native app-captain runtime dependencies

@@ -50,6 +50,7 @@ func representativeFinanceRouterWithPermissions(
 		wlt.NewClient(wltServer.URL, "test-service-token"),
 		nil,
 		nil,
+		nil,
 	)
 }
 

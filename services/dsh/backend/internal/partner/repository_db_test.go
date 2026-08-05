@@ -42,7 +42,6 @@ func createPartnerFixture(t *testing.T, db *sql.DB, prefix string) Partner {
 		DisplayName:         "Ø´Ø±ÙŠÙƒ Ø§Ø®ØªØ¨Ø§Ø± " + prefix + " " + suffix,
 		LegalIdentityType:   "commercial_register",
 		LegalIdentityNumber: "YE-" + prefix + "-" + suffix,
-		OwnerName:           "Ù…Ø§Ù„Ùƒ Ø§Ø®ØªØ¨Ø§Ø±",
 		PrimaryPhone:        "+96777" + suffix[len(suffix)-7:],
 		Category:            "grocery",
 		CreatedByActorID:    "field-local-001",

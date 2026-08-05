@@ -22,7 +22,6 @@ func TestGovernedStoreTransferRejectsClosedPartnerStatesDBIntegration(t *testing
 			DisplayName:         "J024 " + label + " " + suffix,
 			LegalIdentityType:   "commercial_register",
 			LegalIdentityNumber: "J024-" + label + "-" + suffix,
-			OwnerName:           "J024 Owner " + label,
 			PrimaryPhone:        "+9677" + suffix[len(suffix)-7:] + phoneSuffix,
 			Category:            "restaurant",
 			CreatedByActorID:    "field-j024-" + label + "-" + suffix,

@@ -33,20 +33,20 @@ func DiagnoseIntegrity(ctx context.Context, db *sql.DB) (IntegrityDiagnostics, e
 		destination *int
 	}{
 		{
-			query:       `SELECT count(*) FROM dsh_client_addresses WHERE deleted_at IS NULL`,
+			query:       `SELECT count(*) FROM dsh_client_addresses WHERE status != 'DELETED'`,
 			destination: &diagnostics.ActiveAddresses,
 		},
 		{
 			query: `SELECT count(*) FROM (
 				SELECT client_id FROM dsh_client_addresses
-				WHERE deleted_at IS NULL GROUP BY client_id
+				WHERE status != 'DELETED' GROUP BY client_id
 			) active_clients`,
 			destination: &diagnostics.ClientsWithActiveAddresses,
 		},
 		{
 			query: `SELECT count(*) FROM (
 				SELECT client_id FROM dsh_client_addresses
-				WHERE deleted_at IS NULL AND is_default = TRUE
+				WHERE status = 'ACTIVE' AND is_default = TRUE
 				GROUP BY client_id HAVING count(*) > 1
 			) multiple_defaults`,
 			destination: &diagnostics.ClientsWithMultipleDefaults,
@@ -54,7 +54,7 @@ func DiagnoseIntegrity(ctx context.Context, db *sql.DB) (IntegrityDiagnostics, e
 		{
 			query: `SELECT count(*) FROM (
 				SELECT client_id FROM dsh_client_addresses
-				WHERE deleted_at IS NULL
+				WHERE status != 'DELETED'
 				GROUP BY client_id HAVING bool_or(is_default) = FALSE
 			) missing_defaults`,
 			destination: &diagnostics.ClientsWithoutDefault,
@@ -62,7 +62,7 @@ func DiagnoseIntegrity(ctx context.Context, db *sql.DB) (IntegrityDiagnostics, e
 		{
 			query: `SELECT count(*) FROM (
 				SELECT client_id, address_fingerprint FROM dsh_client_addresses
-				WHERE deleted_at IS NULL
+				WHERE status != 'DELETED'
 				GROUP BY client_id, address_fingerprint HAVING count(*) > 1
 			) duplicate_fingerprints`,
 			destination: &diagnostics.DuplicateActiveFingerprints,

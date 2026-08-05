@@ -5,10 +5,12 @@ export type DshRequestMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 export type DshRequestOptions = {
   readonly method?: DshRequestMethod;
   readonly body?: unknown;
-  readonly token?: string;
-  readonly idempotencyKey?: string;
-  readonly correlationId?: string;
-  readonly expectedVersion?: number;
+  readonly token?: string | undefined;
+  readonly idempotencyKey?: string | undefined;
+  readonly correlationId?: string | undefined;
+  readonly expectedVersion?: number | undefined;
+  readonly deviceId?: string | undefined;
+  readonly sessionId?: string | undefined;
 };
 
 export type DshSessionRequestResult<T> = {
@@ -158,6 +160,8 @@ export function createDshHttpClient(
           ...(options.expectedVersion !== undefined
             ? { "If-Match-Version": String(options.expectedVersion) }
             : {}),
+          ...(options.deviceId ? { "X-Dsh-Device-Id": options.deviceId } : {}),
+          ...(options.sessionId ? { "X-Dsh-Session-Id": options.sessionId } : {}),
           ...(requestBody !== undefined
             ? { "Content-Type": "application/json" }
             : {}),

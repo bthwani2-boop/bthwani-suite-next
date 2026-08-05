@@ -17,9 +17,54 @@ DshStoreServiceabilitySummary:
     status:
       $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreServiceabilityStatus"
 
+DshPricingQuoteLine:
+  type: object
+  required: [masterProductId, productName, quantity, unitPriceMinorUnits, totalMinorUnits]
+  properties:
+    masterProductId: { type: string }
+    productName: { type: string }
+    quantity: { type: integer, minimum: 1 }
+    unitPriceMinorUnits: { type: integer, format: int64, minimum: 0 }
+    totalMinorUnits: { type: integer, format: int64, minimum: 0 }
+
+DshPricingQuote:
+  type: object
+  required:
+    - lines
+    - subtotalMinorUnits
+    - deliveryFeeMinorUnits
+    - serviceFeeMinorUnits
+    - taxMinorUnits
+    - discountMinorUnits
+    - roundingMinorUnits
+    - totalMinorUnits
+    - currency
+    - fundingRefs
+    - hash
+    - version
+  properties:
+    lines:
+      type: array
+      items:
+        $ref: "#/DshPricingQuoteLine"
+    subtotalMinorUnits: { type: integer, format: int64, minimum: 0 }
+    deliveryFeeMinorUnits: { type: integer, format: int64, minimum: 0 }
+    serviceFeeMinorUnits: { type: integer, format: int64, minimum: 0 }
+    taxMinorUnits: { type: integer, format: int64, minimum: 0 }
+    discountMinorUnits: { type: integer, format: int64, minimum: 0 }
+    roundingMinorUnits: { type: integer, format: int64 }
+    totalMinorUnits: { type: integer, format: int64, minimum: 0 }
+    currency: { type: string, minLength: 3, maxLength: 3 }
+    fundingRefs:
+      type: array
+      items: { type: string }
+    hash: { type: string }
+    version: { type: integer, minimum: 1 }
+    expiresAt: { type: ["string", "null"], format: date-time }
+
 DshCartItem:
   type: object
-  required: [id, cartId, productId, masterProductId, storeAssortmentId, productName, priceReference, unitPrice, currency, quantity, version, createdAt, updatedAt]
+  required: [id, cartId, productId, masterProductId, storeAssortmentId, productName, priceReference, unitPriceMinorUnits, currency, quantity, options, note, version, createdAt, updatedAt]
   properties:
     id: { type: string }
     cartId: { type: string }
@@ -28,16 +73,21 @@ DshCartItem:
     storeAssortmentId: { type: ["string", "null"], description: "The dsh_store_assortments row this cart line resolved against." }
     productName: { type: string, description: "Snapshotted server-side from the catalog product at add-to-cart time." }
     priceReference: { type: string, description: "Display label snapshotted from catalog — not a computed financial amount." }
-    unitPrice: { type: number, format: double, minimum: 0, description: "Snapshotted from the catalog assortment at add-to-cart time." }
+    unitPriceMinorUnits: { type: integer, format: int64, minimum: 0, description: "Snapshotted from the catalog assortment at add-to-cart time." }
     currency: { type: string, pattern: "^[A-Z]{3}$", description: "Currency snapshotted with unitPrice from the same sovereign store assortment row." }
     quantity: { type: integer, minimum: 1 }
+    options: 
+      type: array
+      description: "Array of selected options (e.g. ['Extra Cheese', 'No Onions'])."
+      items: { type: string }
+    note: { type: string, description: "Customer note for this item (e.g. allergies, preparation requests)." }
     version: { type: integer }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
 
 DshCart:
   type: object
-  required: [id, clientId, storeId, fulfillmentMode, state, note, items, version, createdAt, updatedAt]
+  required: [id, clientId, storeId, fulfillmentMode, state, note, items, quote, version, createdAt, updatedAt]
   properties:
     id: { type: string }
     clientId: { type: string }
@@ -53,6 +103,8 @@ DshCart:
       type: array
       items:
         $ref: "../../dsh.openapi.yaml#/components/schemas/DshCartItem"
+    quote:
+      $ref: "#/DshPricingQuote"
     version: { type: integer }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
@@ -77,6 +129,11 @@ DshUpsertCartItemRequest:
       enum: [bthwani_delivery, partner_delivery, pickup]
     masterProductId: { type: string, description: "Sovereign central-catalog master product id to add/update in the cart." }
     quantity: { type: integer, minimum: 1 }
+    options:
+      type: array
+      items: { type: string }
+      description: "Optional array of selected options to distinguish item lines."
+    note: { type: string, description: "Optional customer note for this item." }
 
 DshUpsertCartItemResponse:
   type: object
@@ -109,7 +166,16 @@ CartServiceabilityResult:
     serviceable: { type: boolean }
     code:
       type: string
-      enum: [serviceable, store_unavailable, out_of_area, catalog_unavailable]
+      enum:
+        - serviceable
+        - store_unavailable
+        - out_of_area
+        - catalog_unavailable
+        - capacity_exhausted
+        - capacity_throttled
+        - mode_unavailable
+        - policy_unavailable
+        - provider_unavailable
     reason: { type: string }
     availableModes:
       type: array
@@ -119,6 +185,14 @@ CartServiceabilityResult:
         `serviceable`/`code`. Never a static three-mode list.
       items:
         $ref: "../../dsh.openapi.yaml#/components/schemas/FulfillmentModeAvailability"
+    etaWindow:
+      type: object
+      properties:
+        minMinutes: { type: integer }
+        maxMinutes: { type: integer }
+      description: "Estimated time of arrival window for delivery modes."
+    quoteVersion: { type: string, description: "Unique token for this serviceability quote." }
+    expiresAt: { type: string, format: date-time, description: "Expiration time for this quote." }
 
 DshZoneServiceabilityResponse:
   type: object

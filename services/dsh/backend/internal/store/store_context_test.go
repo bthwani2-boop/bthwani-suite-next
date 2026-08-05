@@ -15,7 +15,7 @@ func eligibleStoreRow() DshStoreRow {
 		HasApprovedAssortment:   true,
 		Slug:                    "store-",
 		DisplayName:             "متجر الرحلة الرابعة",
-		Status:                  StatusActive,
+		Status:                  StatusPublished,
 		CityCode:                "sana",
 		ServiceAreaCode:         "haddah",
 		ServiceabilityStatus:    ServiceabilityServiceable,
@@ -62,7 +62,7 @@ func TestPublicationEligibilityFailsClosedForEveryGovernanceGate(t *testing.T) {
 		name   string
 		mutate func(*DshStoreRow)
 	}{
-		{name: "inactive", mutate: func(row *DshStoreRow) { row.Status = StatusInactive }},
+		{name: "inactive", mutate: func(row *DshStoreRow) { row.Status = StatusSuspended }},
 		{name: "hidden", mutate: func(row *DshStoreRow) { row.IsVisible = false }},
 		{name: "out of area", mutate: func(row *DshStoreRow) { row.ServiceabilityStatus = ServiceabilityOutOfArea }},
 		{name: "partner blocked", mutate: func(row *DshStoreRow) { row.PartnerReadiness = "blocked" }},

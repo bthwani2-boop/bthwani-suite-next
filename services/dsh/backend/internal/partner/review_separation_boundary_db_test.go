@@ -23,7 +23,6 @@ func createJ021Partner(t *testing.T, createdByActorID string) Partner {
 		DisplayName:         "J021 Partner " + suffix,
 		LegalIdentityType:   "commercial_register",
 		LegalIdentityNumber: "J021-CR-" + suffix,
-		OwnerName:           "J021 Owner",
 		PrimaryPhone:        "+9677" + suffix[len(suffix)-8:],
 		Category:            "restaurant",
 		CreatedByActorID:    createdByActorID,

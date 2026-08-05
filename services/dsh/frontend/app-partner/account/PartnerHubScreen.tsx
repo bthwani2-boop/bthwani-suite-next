@@ -487,7 +487,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
             legalIdentityType={selfStatusState.kind === "success" ? selfStatusState.partner.legalIdentityType : undefined}
             legalIdentityNumber={selfStatusState.kind === "success" ? selfStatusState.partner.legalIdentityNumber : undefined}
             {...(onOpenStoreScope ? { onOpenStoreScope } : {})}
-            onOpenSupportScreen={onOpenSupportScreen}
+            onOpenSupportScreen={() => onOpenSupportScreen && onOpenSupportScreen('support-directory' as any)}
           />
         </HubSectionShell>
       );
@@ -596,13 +596,12 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           coverageZonesError={null}
           teamMembers={props.teamMembers ?? []}
           onBack={() => updateSection("hub")}
-          {...(onOpenStoreCourierSetup
-            ? { onOpenStoreCourierSetup }
-            : {})}
+          onOpenStoreCourierSetup={onOpenStoreCourierSetup}
+          onOpenCommercialModel={onOpenCommercialModel}
+          onOpenSupportScreen={() => onOpenSupportScreen && onOpenSupportScreen('support-directory' as any)}
           {...(props.onOpenTeamManagement
             ? { onOpenTeamManagement: props.onOpenTeamManagement }
             : {})}
-          {...(onOpenCommercialModel ? { onOpenCommercialModel } : {})}
           listingEnabled={resolvedListingEnabled}
           storeVisibility={storeVisibility}
           visibilityLabel={visibilityLabel}

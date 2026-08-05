@@ -21,6 +21,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("GET /dsh/readiness", health.HandleReadiness(db, mediaProvider, identityClient))
 	mux.HandleFunc("GET /dsh/stores", store.HandleListStores(db))
 	mux.HandleFunc("GET /dsh/stores/{storeId}", store.HandleGetStore(db))
+	mux.HandleFunc("GET /dsh/storefront/{storeId}", handlePublicStorefront(db))
 	mux.HandleFunc("GET /dsh/stores/{storeId}/catalog", handlePublicCatalog(db))
 	mux.HandleFunc("GET /dsh/public/media/{assetId}/{variant}", handlePublicMedia(db, mediaProvider))
 	mux.HandleFunc("GET /dsh/public/reels", handlePublicReels(db))
@@ -85,6 +86,13 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 
 
 	// Cart, client address book, governed maps, and serviceability.
+	mux.HandleFunc("GET /dsh/client/me/profile", protected.handleGetClientProfile)
+	mux.HandleFunc("PATCH /dsh/client/me/profile/preferences", protected.handleUpsertClientProfilePreferences)
+	mux.HandleFunc("PATCH /dsh/client/me/profile/consents", protected.handleUpsertClientProfileConsents)
+
+	// Admin Client Profile Endpoints (J041)
+	mux.HandleFunc("GET /dsh/administration/customers/{actorId}/profile", protected.handleAdminGetClientProfile)
+
 	mux.HandleFunc("GET /dsh/client/cart", protected.handleGetCart)
 	mux.HandleFunc("POST /dsh/client/cart/items", protected.handleUpsertCartItem)
 	mux.HandleFunc("DELETE /dsh/client/cart/items/{itemId}", protected.handleRemoveCartItem)
@@ -98,6 +106,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("POST /dsh/client/maps/search", protected.handleClientMapSearch)
 	mux.HandleFunc("POST /dsh/client/maps/reverse", protected.handleClientMapReverse)
 	mux.HandleFunc("GET /dsh/operator/carts", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleOperatorCarts))
+	mux.HandleFunc("GET /dsh/internal/operations/carts/{cartId}/sync-diagnostics", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleOperatorCartSyncDiagnostics))
 
 	// Checkout Intent & WLT Handoff
 	mux.HandleFunc("POST /dsh/client/checkout-intents", protected.handleCreateCheckoutIntent)

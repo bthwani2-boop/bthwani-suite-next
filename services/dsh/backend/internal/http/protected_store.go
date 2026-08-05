@@ -19,6 +19,7 @@ import (
 	"dsh-api/internal/wlt"
 	"dsh-api/internal/platformclient"
 	"dsh-api/internal/workforceclient"
+	"dsh-api/internal/mapproviders"
 )
 
 type protectedStoreServer struct {
@@ -31,6 +32,7 @@ type protectedStoreServer struct {
 	decisionService store.DecisionService
 	changeSets      *changeset.Service
 	providers       *provider.Service
+	maps            *mapproviders.Client
 }
 
 // Partners permission actions on the control-panel surface, covering store
@@ -119,6 +121,7 @@ func newProtectedStoreServer(db *sql.DB, identity *auth.Client, wltClient *wlt.C
 		workforce:      workforceclient.NewClient(os.Getenv("DSH_WORKFORCE_BASE_URL"), os.Getenv("WORKFORCE_DSH_SERVICE_TOKEN")),
 		changeSets:     changeset.NewService(db),
 		providers:      provider.NewService(db),
+		maps:           mapproviders.NewClient(os.Getenv("DSH_MAPS_BASE_URL"), nil),
 	}
 }
 

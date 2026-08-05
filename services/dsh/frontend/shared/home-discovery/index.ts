@@ -11,3 +11,4 @@ export * from './use-home-discovery-admin-controller';
 export * from './home-discovery-events.adapter';
 export * from './home-discovery-targeting';
 export * from './home-reels.api';
+export { fetchDiscoveryStores } from './store-discovery.api';

@@ -354,3 +354,21 @@ func getForUpdate(ctx context.Context, tx *sql.Tx, serviceAreaCode string) (Geof
 func validCoordinate(latitude, longitude float64) bool {
 	return !math.IsNaN(latitude) && !math.IsNaN(longitude) && !math.IsInf(latitude, 0) && !math.IsInf(longitude, 0) && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180
 }
+
+func pointInPolygon(latitude, longitude float64, polygon [][]float64) bool {
+	if len(polygon) < 3 {
+		return false
+	}
+	inside := false
+	j := len(polygon) - 1
+	for i := 0; i < len(polygon); i++ {
+		pi := polygon[i]
+		pj := polygon[j]
+		if (pi[1] > longitude) != (pj[1] > longitude) &&
+			latitude < (pj[0]-pi[0])*(longitude-pi[1])/(pj[1]-pi[1])+pi[0] {
+			inside = !inside
+		}
+		j = i
+	}
+	return inside
+}

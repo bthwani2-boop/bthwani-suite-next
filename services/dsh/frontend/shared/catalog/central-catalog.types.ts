@@ -178,6 +178,58 @@ export interface StoreAssortment {
   readonly updatedAt: string;
 }
 
+export interface StoreAssortmentInput {
+  readonly unitPrice: number;
+  readonly currency: string;
+  readonly available: boolean;
+  readonly stockStatus: "in_stock" | "low_stock" | "out_of_stock";
+  readonly localNote: string;
+  readonly customImageObjectKey: string | null;
+  readonly publicationStatus: "draft" | "submitted" | "approved" | "client_visible" | "rejected" | "hidden";
+}
+
+export interface StoreAssortmentInventoryInput {
+  readonly policyType: "signal" | "quantity" | "infinite";
+  readonly quantity: number;
+  readonly minOrderQuantity: number;
+  readonly maxOrderQuantity: number;
+  readonly stepQuantity: number;
+  readonly expectedVersion?: number;
+}
+
+export interface StoreAssortmentInventory {
+  readonly storeAssortmentId: string;
+  readonly policyType: "signal" | "quantity" | "infinite";
+  readonly quantity: number;
+  readonly reservedQuantity: number;
+  readonly minOrderQuantity: number;
+  readonly maxOrderQuantity: number;
+  readonly stepQuantity: number;
+  readonly version: number;
+  readonly updatedAt: string;
+}
+
+export interface StoreAssortmentPriceInput {
+  readonly amountMinor: number;
+  readonly currency: string;
+  readonly prepTimeMin: number;
+  readonly prepTimeMax: number;
+  readonly effectiveFrom: string;
+  readonly effectiveUntil?: string | null;
+}
+
+export interface StoreAssortmentPrice {
+  readonly id: string;
+  readonly storeAssortmentId: string;
+  readonly amountMinor: number;
+  readonly currency: string;
+  readonly prepTimeMin: number;
+  readonly prepTimeMax: number;
+  readonly effectiveFrom: string;
+  readonly effectiveUntil: string | null;
+  readonly version: number;
+}
+
 export interface CatalogPlatformPolicy {
   readonly id: string;
   readonly version: number;

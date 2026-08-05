@@ -142,6 +142,8 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("POST /dsh/operator/stores/{storeId}/assortment/{masterProductId}/pause", s.handlePauseOperatorAssortment)
 	mux.HandleFunc("POST /dsh/operator/stores/{storeId}/assortment/{masterProductId}/resume", s.handleResumeOperatorAssortment)
 	mux.HandleFunc("POST /dsh/operator/stores/{storeId}/assortment/{masterProductId}/retire", s.handleRetireOperatorAssortment)
+	mux.HandleFunc("PUT /dsh/operator/stores/{storeId}/assortment/{masterProductId}/inventory", s.handleOperatorUpsertAssortmentInventory)
+	mux.HandleFunc("POST /dsh/operator/stores/{storeId}/assortment/{masterProductId}/prices/schedule", s.handleOperatorScheduleAssortmentPrice)
 
 	// Partner and field taxonomy and store-scoped catalog operations.
 	mux.HandleFunc("GET /dsh/partner/catalog/taxonomy", s.handleCatalogTaxonomy)
@@ -159,6 +161,8 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/assortment/{masterProductId}/pause", s.handlePausePartnerAssortment)
 	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/assortment/{masterProductId}/resume", s.handleResumePartnerAssortment)
 	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/assortment/{masterProductId}/retire", s.handleRetirePartnerAssortment)
+	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/assortment/{masterProductId}/inventory", s.handlePartnerUpsertAssortmentInventory)
+	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/assortment/{masterProductId}/prices/schedule", s.handlePartnerScheduleAssortmentPrice)
 	mux.HandleFunc("GET /dsh/field/catalog/taxonomy", s.handleCatalogTaxonomy)
 	mux.HandleFunc("GET /dsh/field/catalog/attributes", s.handleListCatalogAttributes)
 	mux.HandleFunc("GET /dsh/field/catalog/attributes/{attributeId}/options", s.handleListCatalogAttributeOptions)

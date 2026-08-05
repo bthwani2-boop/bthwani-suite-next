@@ -825,6 +825,8 @@ components:
       $ref: "./components/schemas/store.schemas.yaml#/DshStoreListResponse"
     DshStoreDetailResponse:
       $ref: "./components/schemas/store.schemas.yaml#/DshStoreDetailResponse"
+    DshStorefrontResponse:
+      $ref: "./components/schemas/store.schemas.yaml#/DshStorefrontResponse"
     DshErrorResponse:
       $ref: "./components/schemas/common.schemas.yaml#/DshErrorResponse"
     DshStoreContextResponse:
@@ -895,6 +897,12 @@ components:
       $ref: "./components/schemas/common.schemas.yaml#/DshHomeAdminItemResponse"
     DshHomeDiscoveryResponse:
       $ref: "./components/schemas/discovery.schemas.yaml#/DshHomeDiscoveryResponse"
+    DshCheckoutFulfillmentMode:
+      $ref: "./components/schemas/checkout.schemas.yaml#/DshCheckoutFulfillmentMode"
+    DshPricingQuoteLine:
+      $ref: "./components/schemas/cart-serviceability.schemas.yaml#/DshPricingQuoteLine"
+    DshPricingQuote:
+      $ref: "./components/schemas/cart-serviceability.schemas.yaml#/DshPricingQuote"
     DshCartItem:
       $ref: "./components/schemas/cart-serviceability.schemas.yaml#/DshCartItem"
     DshCart:

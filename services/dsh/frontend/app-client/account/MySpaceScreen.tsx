@@ -17,6 +17,7 @@ export type MySpaceScreenProps = {
   onOpenIdentity?: () => void;
   onOpenBenefits?: () => void;
   onOpenPreferences?: () => void;
+  onOpenProfile?: () => void;
   onOpenSupport?: () => void;
 };
 
@@ -26,6 +27,7 @@ type MySpaceTab =
   | "identity"
   | "benefits"
   | "preferences"
+  | "profile"
   | "support";
 
 type TabConfig = {
@@ -40,6 +42,7 @@ const TABS: readonly TabConfig[] = [
   { id: "addresses", label: "العناوين والموقع", summary: "إدارة العناوين وتعليمات التوصيل", iconName: "location-outline" },
   { id: "identity", label: "الملف الشخصي", summary: "البيانات الشخصية والأمان", iconName: "person-outline" },
   { id: "benefits", label: "المزايا والولاء", summary: "النقاط والاشتراكات والعروض المعتمدة", iconName: "gift-outline" },
+  { id: "profile", label: "الملف التجاري", summary: "التفضيلات اللغوية والموافقات", iconName: "person-circle-outline" },
   { id: "preferences", label: "تفضيلات الإشعارات", summary: "إعدادات محفوظة في DSH ومقروءة بعد التعديل", iconName: "notifications-outline" },
   { id: "support", label: "الدعم والمساعدة", summary: "تذاكر الدعم ومتابعة المشاكل", iconName: "help-buoy-outline" },
 ];
@@ -81,6 +84,7 @@ export function MySpaceScreen({
   onOpenBenefits,
   onOpenPreferences,
   onOpenSupport,
+  onOpenProfile,
 }: MySpaceScreenProps) {
   const handleRowPress = (id: MySpaceTab) => {
     switch (id) {
@@ -89,6 +93,7 @@ export function MySpaceScreen({
       case "identity": return onOpenIdentity?.();
       case "benefits": return onOpenBenefits?.();
       case "preferences": return onOpenPreferences?.();
+      case "profile": return onOpenProfile?.();
       case "support": return onOpenSupport?.();
     }
   };

@@ -39,12 +39,7 @@ DshCheckoutIntent: &DshCheckoutIntent
     - state
     - paymentMethod
     - wltPaymentSessionId
-    - subtotalMinorUnits
-    - deliveryFeeMinorUnits
-    - discountMinorUnits
-    - totalMinorUnits
-    - currency
-    - pricingSnapshotHash
+    - quote
     - version
     - createdAt
     - updatedAt
@@ -62,12 +57,8 @@ DshCheckoutIntent: &DshCheckoutIntent
       description: "Opaque WLT-owned payment-session reference. DSH never mutates financial truth."
     deliveryAddress: { type: string }
     note: { type: string }
-    subtotalMinorUnits: { type: integer, format: int64, minimum: 0 }
-    deliveryFeeMinorUnits: { type: integer, format: int64, minimum: 0 }
-    discountMinorUnits: { type: integer, format: int64, minimum: 0 }
-    totalMinorUnits: { type: integer, format: int64, minimum: 0 }
-    currency: { type: string, minLength: 3, maxLength: 3 }
-    pricingSnapshotHash: { type: string, minLength: 1 }
+    quote:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPricingQuote"
     couponId: { type: string }
     couponRedemptionId: { type: string }
     couponCodeLast4: { type: string, maxLength: 4 }

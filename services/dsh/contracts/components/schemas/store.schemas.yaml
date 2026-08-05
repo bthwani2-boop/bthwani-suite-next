@@ -149,6 +149,17 @@ DshStoreDetailResponse:
     store:
       $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreDetail"
 
+DshStorefrontResponse:
+  type: object
+  required: [versionToken, store, catalog]
+  properties:
+    versionToken:
+      type: string
+    store:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreDetail"
+    catalog:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshCatalogResponse"
+
 DshStoreContextResponse:
   type: object
   required: [actorRole, scope, store]

@@ -108,8 +108,8 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UpsertItem failed: %v", err)
 	}
-	if item.UnitPrice != 25.50 {
-		t.Fatalf("expected cart item to snapshot catalog unitPrice=25.50, got %v", item.UnitPrice)
+	if item.UnitPriceMinorUnits != 2550 {
+		t.Fatalf("expected cart item to snapshot catalog unitPriceMinorUnits=2550, got %v", item.UnitPriceMinorUnits)
 	}
 	if item.Currency != "USD" {
 		t.Fatalf("expected cart item to snapshot assortment currency=USD, got %q", item.Currency)

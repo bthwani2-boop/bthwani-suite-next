@@ -32,7 +32,7 @@ func TestPreviouslyBareRoutesRejectUnauthenticatedCallers(t *testing.T) {
 	t.Parallel()
 
 	identityClient := auth.NewClient(unpermittedIdentitySessionServer(t).URL)
-	router := NewRouter(nil, identityClient, nil, nil, nil)
+	router := NewRouter(nil, identityClient, nil, nil, nil, nil)
 	RegisterGovernedIncidentRoutes(router, nil, identityClient, nil, nil)
 	RegisterPlatformPolicyRoutes(router, nil, identityClient, nil, nil)
 	RegisterWorkforceScopesRoutes(router, nil, identityClient, nil, nil)
@@ -80,7 +80,7 @@ func TestPreviouslyBareRoutesRejectAuthenticatedCallersWithoutPermission(t *test
 	identityServer := unpermittedIdentitySessionServer(t)
 	identityClient := auth.NewClient(identityServer.URL)
 
-	router := NewRouter(nil, identityClient, nil, nil, nil)
+	router := NewRouter(nil, identityClient, nil, nil, nil, nil)
 	RegisterGovernedIncidentRoutes(router, nil, identityClient, nil, nil)
 
 	cases := []struct {

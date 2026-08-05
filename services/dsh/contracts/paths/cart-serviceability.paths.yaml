@@ -18,6 +18,10 @@
         content:
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCartResponse" }
+        headers:
+          ETag:
+            schema: { type: string }
+            description: "Current cart version."
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
   delete:
@@ -32,6 +36,15 @@
       - name: storeId
         in: query
         schema: { type: string }
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: { type: string }
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+        description: "Expected cart version."
     responses:
       "204": { description: Cart cleared. }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
@@ -43,6 +56,16 @@
     summary: Add or update an item in the client cart. Creates cart if not exists.
     tags: [DshCart]
     security: [{ bearerAuth: [] }]
+    parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: { type: string }
+      - name: If-Match
+        in: header
+        required: false
+        schema: { type: string }
+        description: "Expected cart version (optional for first item)."
     requestBody:
       required: true
       content:
@@ -54,6 +77,10 @@
         content:
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpsertCartItemResponse" }
+        headers:
+          ETag:
+            schema: { type: string }
+            description: "New cart version."
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
@@ -72,6 +99,15 @@
         in: query
         required: true
         schema: { type: string }
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: { type: string }
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+        description: "Expected cart version."
     responses:
       "204": { description: Item removed. }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }

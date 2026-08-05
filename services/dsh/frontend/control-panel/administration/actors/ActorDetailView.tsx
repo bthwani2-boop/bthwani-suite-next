@@ -6,6 +6,7 @@ import { Text } from "@bthwani/ui-kit";
 import { getActor, suspendActor, reactivateActor, revokeActorSessions, type ActorSummary } from "../../../shared/identity";
 import { ActorActivationTab } from "./ActorActivationTab";
 import { ActorSessionsTab } from "./ActorSessionsTab";
+import { ActorCommercialProfileTab } from "./ActorCommercialProfileTab";
 
 export function ActorDetailView(props: {
   readonly actorId: string;
@@ -148,6 +149,8 @@ export function ActorDetailView(props: {
       <div style={{ background: "var(--bthwani-control-panel-surface)", padding: "1.5rem", borderRadius: "8px", border: "1px solid var(--bthwani-control-panel-border)" }}>
         <ActorSessionsTab actorId={actor.actorId} />
       </div>
+
+      <ActorCommercialProfileTab actorId={actor.actorId} />
     </div>
   );
 

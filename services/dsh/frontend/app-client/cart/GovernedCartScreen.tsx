@@ -55,7 +55,7 @@ export function GovernedCartScreen({
 
   const cart = cartController.state.kind === "success" ? cartController.state.cart : null;
   const presentationSubtotal = React.useMemo(
-    () => cart?.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0) ?? 0,
+    () => cart?.items.reduce((sum, item) => sum + item.unitPriceMinorUnits * item.quantity, 0) ?? 0,
     [cart],
   );
   const cartCurrencies = React.useMemo(
@@ -178,7 +178,7 @@ export function GovernedCartScreen({
                 <View style={{ flex: 1 }}>
                   <Text role="bodyStrong" align="start">{item.productName}</Text>
                   <Text role="caption" tone="muted" align="start">
-                    {formatWltMoney(item.unitPrice, item.currency)} × {item.quantity}
+                    {formatWltMoney(item.unitPriceMinorUnits, item.currency)} × {item.quantity}
                   </Text>
                 </View>
                 <View style={{ flexDirection: "row-reverse", gap: spacing[1] }}>

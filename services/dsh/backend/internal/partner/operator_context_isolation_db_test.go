@@ -21,7 +21,6 @@ func TestPartnerOperatorContextIsolationDB(t *testing.T) {
 			DisplayName:         name,
 			LegalIdentityType:   "commercial_register",
 			LegalIdentityNumber: legalIdentity,
-			OwnerName:           name + " owner",
 			PrimaryPhone:        phone,
 			Category:            "grocery",
 			CreatedByActorID:    actor,

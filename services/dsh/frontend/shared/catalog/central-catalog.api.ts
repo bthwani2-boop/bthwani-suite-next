@@ -11,6 +11,11 @@ import type {
   ClientVisibleCatalogResponse,
   CatalogAsset,
   CatalogAssetLink,
+  StoreAssortmentInput,
+  StoreAssortmentInventoryInput,
+  StoreAssortmentInventory,
+  StoreAssortmentPriceInput,
+  StoreAssortmentPrice,
 } from "./central-catalog.types";
 
 const baseUrl = resolveDshApiBaseUrl();
@@ -380,23 +385,10 @@ export async function fetchPartnerMasterProducts(query?: {
   return resp.masterProducts;
 }
 
-export async function fetchPartnerStoreAssortment(storeId: string): Promise<readonly StoreAssortment[]> {
-  const resp = await request<{ assortment: readonly StoreAssortment[] }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment`);
-  return resp.assortment;
-}
-
 export async function upsertPartnerStoreAssortment(
   storeId: string,
   masterProductId: string,
-  input: {
-    readonly unitPrice: number;
-    readonly currency: string;
-    readonly available: boolean;
-    readonly stockStatus: "in_stock" | "low_stock" | "out_of_stock";
-    readonly localNote: string;
-    readonly customImageObjectKey: string | null;
-    readonly publicationStatus: string;
-  },
+  input: StoreAssortmentInput,
 ): Promise<StoreAssortment> {
   const resp = await request<{ assortment: StoreAssortment }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}`, {
     method: "PUT",
@@ -404,6 +396,37 @@ export async function upsertPartnerStoreAssortment(
   });
   return resp.assortment;
 }
+
+export async function upsertPartnerStoreAssortmentInventory(
+  storeId: string,
+  masterProductId: string,
+  input: StoreAssortmentInventoryInput,
+): Promise<StoreAssortmentInventory> {
+  const resp = await request<{ inventory: StoreAssortmentInventory }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/inventory`, {
+    method: "PUT",
+    body: input,
+  });
+  return resp.inventory;
+}
+
+export async function schedulePartnerStoreAssortmentPrice(
+  storeId: string,
+  masterProductId: string,
+  input: StoreAssortmentPriceInput,
+): Promise<StoreAssortmentPrice> {
+  const resp = await request<{ priceSchedule: StoreAssortmentPrice }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/prices/schedule`, {
+    method: "POST",
+    body: input,
+  });
+  return resp.priceSchedule;
+}
+
+export async function fetchPartnerStoreAssortment(storeId: string): Promise<readonly StoreAssortment[]> {
+  const resp = await request<{ assortment: readonly StoreAssortment[] }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment`);
+  return resp.assortment;
+}
+
+
 
 export async function createPartnerProductProposal(input: {
   readonly proposedNameAr: string;

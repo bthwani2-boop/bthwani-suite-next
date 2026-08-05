@@ -28,6 +28,7 @@ import type { DshPaymentMethod } from "../../shared/checkout";
 import type { DshClientAddress } from "../../shared/client-address";
 import { formatWltMoney, useWltPaymentController } from "@bthwani/wlt/dsh";
 import { PaymentDecisionSection } from "./PaymentDecisionSection";
+import { CartConflictSheet } from "./CartConflictSheet";
 
 type Props = {
   readonly storeId: string;
@@ -125,10 +126,10 @@ function CartItemValidationNotice({
   return (
     <View style={styles.validationBox}>
       <Text role="caption" style={styles.errorText}>{validationMessage(validation)}</Text>
-      {validation.status === "price_changed" && validation.currentUnitPrice !== undefined ? (
+      {validation.status === "price_changed" && validation.currentUnitPriceMinorUnits !== undefined ? (
         <>
           <Text role="caption" style={styles.mutedText}>
-            الحقيقة الحالية: {formatWltMoney(validation.currentUnitPrice, validation.currentCurrency ?? validation.snapshotCurrency)}
+            الحقيقة الحالية: {formatWltMoney(validation.currentUnitPriceMinorUnits, validation.currentCurrency ?? validation.snapshotCurrency)}
           </Text>
           <Button
             label="اعتماد السعر والعملة الحاليين"
@@ -211,6 +212,13 @@ export function CartScreen({
     if (requiresDeliveryAddress && serviceabilityController.serviceability.kind !== "serviceable") {
       setValidationMessageText("يجب نجاح فحص DSH للعنوان والسعة وSLA قبل checkout.");
       return;
+    }
+    if (requiresDeliveryAddress && serviceabilityController.serviceability.kind === "serviceable") {
+      const expiresAt = serviceabilityController.serviceability.result.expiresAt;
+      if (expiresAt && new Date(expiresAt) < new Date()) {
+        setValidationMessageText("انتهت صلاحية وقت التوصيل (ETA). يرجى تحديث الصفحة لإعادة حسابه.");
+        return;
+      }
     }
     onProceedToCheckout(
       cart,
@@ -315,7 +323,17 @@ export function CartScreen({
               <View key={item.id} style={styles.itemCard}>
                 <View style={styles.itemText}>
                   <Text role="bodyStrong" style={styles.itemTitle}>{item.productName}</Text>
-                  <ServerPrice value={item.unitPrice} currency={item.currency} />
+                  <ServerPrice value={item.unitPriceMinorUnits} currency={item.currency} />
+                  {item.options && item.options.length > 0 ? (
+                    <Text role="caption" style={styles.mutedText}>
+                      الخيارات: {item.options.join("، ")}
+                    </Text>
+                  ) : null}
+                  {item.note ? (
+                    <Text role="caption" style={styles.mutedText}>
+                      ملاحظة: {item.note}
+                    </Text>
+                  ) : null}
                   <Text role="caption" style={styles.mutedText}>الكمية الحالية: {item.quantity}</Text>
                   <Text role="caption" style={styles.mutedText}>
                     مرجع التشكيلة: {item.storeAssortmentId ?? "غير مرتبط"}
@@ -329,6 +347,8 @@ export function CartScreen({
                     item.productName,
                     item.quantity,
                     item.priceReference,
+                    item.options,
+                    item.note,
                   )}
                 />
                 <View style={styles.itemActions}>
@@ -342,6 +362,8 @@ export function CartScreen({
                       item.productName,
                       item.quantity + 1,
                       item.priceReference,
+                      item.options,
+                      item.note,
                     )}
                   >
                     <Text style={styles.quantityButtonText}>+</Text>
@@ -356,6 +378,8 @@ export function CartScreen({
                       item.productName,
                       item.quantity - 1,
                       item.priceReference,
+                      item.options,
+                      item.note,
                     )}
                   >
                     <Text style={styles.quantityButtonText}>−</Text>
@@ -464,6 +488,19 @@ export function CartScreen({
           onPress={proceed}
         />
       </ScrollScreen>
+
+      {controller.action === "conflict" && (
+        <CartConflictSheet
+          onKeepServer={() => {
+            controller.clearOfflineQueue();
+            controller.retry();
+          }}
+          onReviewOffline={() => {
+            controller.clearOfflineQueue();
+            controller.retry();
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -534,22 +571,16 @@ function OperationalPolicyDetails({
 }) {
   return (
     <View style={styles.policyDetails}>
-      <Text role="caption" style={styles.mutedText}>
-        حالة السعة: {result.capacityState} · الطلبات النشطة: {result.activeOrders}
-        {result.maxConcurrentOrders !== undefined ? ` / ${result.maxConcurrentOrders}` : ""}
-      </Text>
-      {result.capacityLoadRatio !== undefined ? (
+      {result.etaWindow ? (
         <Text role="caption" style={styles.mutedText}>
-          نسبة الحمل: {Math.round(result.capacityLoadRatio * 100)}%
+          الوقت التقديري للتوصيل: {result.etaWindow.minMinutes} إلى {result.etaWindow.maxMinutes} دقيقة
         </Text>
       ) : null}
-      {result.slaConfigured ? (
+      {result.quoteVersion ? (
         <Text role="caption" style={styles.mutedText}>
-          SLA: تجهيز {result.slaPrepMinutes ?? "—"} دقيقة · توصيل {result.slaDeliveryMinutes ?? "—"} دقيقة
+          رقم التسعيرة: {result.quoteVersion.split("-")[0]} · صالح حتى: {result.expiresAt ? new Date(result.expiresAt).toLocaleTimeString("ar-SA") : "—"}
         </Text>
-      ) : (
-        <Text role="caption" style={styles.mutedText}>لا توجد قاعدة SLA مطابقة؛ الحالة معلنة وليست قيمة وهمية.</Text>
-      )}
+      ) : null}
     </View>
   );
 }

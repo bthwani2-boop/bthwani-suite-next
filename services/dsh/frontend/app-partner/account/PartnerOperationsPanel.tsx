@@ -42,6 +42,7 @@ export function OperationsPanel({
   onBack,
   onOpenStoreCourierSetup,
   onOpenTeamManagement,
+  onOpenCommercialModel,
   listingEnabled,
   storeVisibility,
   visibilityLabel,
@@ -83,7 +84,7 @@ export function OperationsPanel({
       const activeZoneCount = coverageZonesToUse.filter((zone) => zone.status === 'active').length;
       const pendingZoneCount = coverageZonesToUse.filter((zone) => zone.status === 'pending').length;
       const blockedZoneCount = coverageZonesToUse.filter((zone) => zone.status === 'blocked').length;
-      const teamRoleSummary = `مالك ${teamMembers.filter((member) => member.role === 'owner').length} · مشرف ${teamMembers.filter((member) => member.role === 'supervisor').length} · موظف ${teamMembers.filter((member) => member.role === 'staff').length} · موصل ${teamMembers.filter((member) => member.role === 'courier').length}`;
+      const teamRoleSummary = `مالك ${teamMembers.filter((member) => member.role === 'owner').length} · مشرف ${teamMembers.filter((member) => member.role === 'supervisor').length} · موظف ${teamMembers.filter((member) => member.role === 'staff').length}`;
       const teamStatusSummary = `نشط ${activeTeamCount} · موقوف ${pausedTeamCount} · مدعو ${invitedTeamCount} · محظور ${blockedTeamCount} · قيد المراجعة ${reviewTeamCount}`;
       const zoneStatusSummary = `نشطة ${activeZoneCount} · قيد المراجعة ${pendingZoneCount} · محجوبة ${blockedZoneCount}`;
 

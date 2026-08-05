@@ -16,13 +16,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func openRequiredDB(t *testing.T) *sql.DB {
-	t.Helper()
-	if os.Getenv("DSH_REQUIRE_DB_TESTS") != "true" {
-		t.Skip("set DSH_REQUIRE_DB_TESTS=true to run DSH DB integration tests")
-	}
-	dsn := os.Getenv("DATABASE_URL")
-
 func mockWFServer(t *testing.T) *workforceclient.Client {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -35,6 +28,13 @@ func mockWFServer(t *testing.T) *workforceclient.Client {
 	t.Cleanup(ts.Close)
 	return workforceclient.NewClient(ts.URL, "token")
 }
+
+func openRequiredDB(t *testing.T) *sql.DB {
+	t.Helper()
+	if os.Getenv("DSH_REQUIRE_DB_TESTS") != "true" {
+		t.Skip("set DSH_REQUIRE_DB_TESTS=true to run DSH DB integration tests")
+	}
+	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
 		t.Fatal("DATABASE_URL is required when DSH_REQUIRE_DB_TESTS=true")
 	}

@@ -1010,9 +1010,52 @@ type StoreAssortment struct {
 	Version              int       `json:"version"`
 }
 
+type StoreAssortmentInventory struct {
+	StoreAssortmentID string    `json:"storeAssortmentId"`
+	PolicyType        string    `json:"policyType"`
+	Quantity          int       `json:"quantity"`
+	ReservedQuantity  int       `json:"reservedQuantity"`
+	MinOrderQuantity  int       `json:"minOrderQuantity"`
+	MaxOrderQuantity  int       `json:"maxOrderQuantity"`
+	StepQuantity      int       `json:"stepQuantity"`
+	Version           int       `json:"version"`
+	UpdatedAt         time.Time `json:"updatedAt"`
+}
+
+type StoreAssortmentPrice struct {
+	ID                string     `json:"id"`
+	StoreAssortmentID string     `json:"storeAssortmentId"`
+	AmountMinor       int        `json:"amountMinor"`
+	Currency          string     `json:"currency"`
+	PrepTimeMin       int        `json:"prepTimeMin"`
+	PrepTimeMax       int        `json:"prepTimeMax"`
+	EffectiveFrom     time.Time  `json:"effectiveFrom"`
+	EffectiveUntil    *time.Time `json:"effectiveUntil"`
+	Version           int        `json:"version"`
+}
+
 var validStockStatus = map[string]bool{"in_stock": true, "low_stock": true, "out_of_stock": true}
 var validPublicationStatus = map[string]bool{
 	"draft": true, "submitted": true, "approved": true, "client_visible": true, "rejected": true, "hidden": true,
+}
+var validPolicyType = map[string]bool{"signal": true, "quantity": true, "infinite": true}
+
+type StoreAssortmentInventoryInput struct {
+	PolicyType       string `json:"policyType"`
+	Quantity         int    `json:"quantity"`
+	MinOrderQuantity int    `json:"minOrderQuantity"`
+	MaxOrderQuantity int    `json:"maxOrderQuantity"`
+	StepQuantity     int    `json:"stepQuantity"`
+	ExpectedVersion  int    `json:"expectedVersion"`
+}
+
+type StoreAssortmentPriceInput struct {
+	AmountMinor    int        `json:"amountMinor"`
+	Currency       string     `json:"currency"`
+	PrepTimeMin    int        `json:"prepTimeMin"`
+	PrepTimeMax    int        `json:"prepTimeMax"`
+	EffectiveFrom  time.Time  `json:"effectiveFrom"`
+	EffectiveUntil *time.Time `json:"effectiveUntil"`
 }
 
 type StoreAssortmentInput struct {
@@ -2898,4 +2941,126 @@ func SimulateAssetScan(ctx context.Context, db *sql.DB, id string, targetStatus 
 		return CatalogAsset{}, ErrNotFound
 	}
 	return GetAsset(ctx, db, id)
+}
+
+func UpsertAssortmentInventoryAtomic(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID string, input StoreAssortmentInventoryInput) (StoreAssortmentInventory, error) {
+	if !validPolicyType[input.PolicyType] {
+		return StoreAssortmentInventory{}, ErrInvalid
+	}
+	if input.Quantity < 0 || input.MinOrderQuantity < 1 || input.StepQuantity < 1 || input.MaxOrderQuantity < input.MinOrderQuantity {
+		return StoreAssortmentInventory{}, ErrInvalid
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return StoreAssortmentInventory{}, err
+	}
+	defer tx.Rollback()
+
+	var assortmentID string
+	err = tx.QueryRowContext(ctx, `SELECT id FROM dsh_store_assortments WHERE store_id=$1 AND master_product_id=$2 FOR UPDATE`, storeID, masterProductID).Scan(&assortmentID)
+	if err == sql.ErrNoRows {
+		return StoreAssortmentInventory{}, ErrNotFound
+	} else if err != nil {
+		return StoreAssortmentInventory{}, err
+	}
+
+	var inv StoreAssortmentInventory
+	if input.ExpectedVersion > 0 {
+		err = tx.QueryRowContext(ctx, `
+			UPDATE dsh_store_assortment_inventory
+			SET policy_type=$1, quantity=$2, min_order_quantity=$3, max_order_quantity=$4, step_quantity=$5, version=version+1, updated_at=now()
+			WHERE store_assortment_id=$6 AND version=$7
+			RETURNING store_assortment_id, policy_type, quantity, reserved_quantity, min_order_quantity, max_order_quantity, step_quantity, version, updated_at
+		`, input.PolicyType, input.Quantity, input.MinOrderQuantity, input.MaxOrderQuantity, input.StepQuantity, assortmentID, input.ExpectedVersion).
+			Scan(&inv.StoreAssortmentID, &inv.PolicyType, &inv.Quantity, &inv.ReservedQuantity, &inv.MinOrderQuantity, &inv.MaxOrderQuantity, &inv.StepQuantity, &inv.Version, &inv.UpdatedAt)
+		if err == sql.ErrNoRows {
+			return StoreAssortmentInventory{}, ErrConflict
+		}
+	} else {
+		err = tx.QueryRowContext(ctx, `
+			INSERT INTO dsh_store_assortment_inventory (
+				store_assortment_id, policy_type, quantity, min_order_quantity, max_order_quantity, step_quantity, version
+			) VALUES ($1, $2, $3, $4, $5, $6, 1)
+			ON CONFLICT (store_assortment_id) DO UPDATE SET
+				policy_type=EXCLUDED.policy_type,
+				quantity=EXCLUDED.quantity,
+				min_order_quantity=EXCLUDED.min_order_quantity,
+				max_order_quantity=EXCLUDED.max_order_quantity,
+				step_quantity=EXCLUDED.step_quantity,
+				version=dsh_store_assortment_inventory.version + 1,
+				updated_at=now()
+			RETURNING store_assortment_id, policy_type, quantity, reserved_quantity, min_order_quantity, max_order_quantity, step_quantity, version, updated_at
+		`, assortmentID, input.PolicyType, input.Quantity, input.MinOrderQuantity, input.MaxOrderQuantity, input.StepQuantity).
+			Scan(&inv.StoreAssortmentID, &inv.PolicyType, &inv.Quantity, &inv.ReservedQuantity, &inv.MinOrderQuantity, &inv.MaxOrderQuantity, &inv.StepQuantity, &inv.Version, &inv.UpdatedAt)
+	}
+	
+	if err != nil {
+		return StoreAssortmentInventory{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return StoreAssortmentInventory{}, err
+	}
+	return inv, nil
+}
+
+func ScheduleAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID string, input StoreAssortmentPriceInput) (StoreAssortmentPrice, error) {
+	if input.AmountMinor < 0 || input.PrepTimeMin < 0 || input.PrepTimeMax < input.PrepTimeMin {
+		return StoreAssortmentPrice{}, ErrInvalid
+	}
+	if len(input.Currency) != 3 {
+		return StoreAssortmentPrice{}, ErrInvalid
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	defer tx.Rollback()
+
+	var assortmentID string
+	err = tx.QueryRowContext(ctx, `SELECT id FROM dsh_store_assortments WHERE store_id=$1 AND master_product_id=$2 FOR UPDATE`, storeID, masterProductID).Scan(&assortmentID)
+	if err == sql.ErrNoRows {
+		return StoreAssortmentPrice{}, ErrNotFound
+	} else if err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+
+	// Ensure no overlap
+	var overlapCount int
+	overlapQuery := `
+		SELECT COUNT(*) FROM dsh_store_assortment_prices 
+		WHERE store_assortment_id = $1 
+		AND (effective_until IS NULL OR effective_until > $2)
+	`
+	if input.EffectiveUntil != nil {
+		overlapQuery += ` AND effective_from < $3`
+		err = tx.QueryRowContext(ctx, overlapQuery, assortmentID, input.EffectiveFrom, *input.EffectiveUntil).Scan(&overlapCount)
+	} else {
+		err = tx.QueryRowContext(ctx, overlapQuery, assortmentID, input.EffectiveFrom).Scan(&overlapCount)
+	}
+	if err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	if overlapCount > 0 {
+		return StoreAssortmentPrice{}, fmt.Errorf("%w: price schedule overlaps with existing schedule", ErrInvalid)
+	}
+
+	id := entityID("price")
+	var price StoreAssortmentPrice
+	err = tx.QueryRowContext(ctx, `
+		INSERT INTO dsh_store_assortment_prices (
+			id, store_assortment_id, amount_minor, currency, prep_time_min, prep_time_max, effective_from, effective_until
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, store_assortment_id, amount_minor, currency, prep_time_min, prep_time_max, effective_from, effective_until, version
+	`, id, assortmentID, input.AmountMinor, input.Currency, input.PrepTimeMin, input.PrepTimeMax, input.EffectiveFrom, input.EffectiveUntil).
+		Scan(&price.ID, &price.StoreAssortmentID, &price.AmountMinor, &price.Currency, &price.PrepTimeMin, &price.PrepTimeMax, &price.EffectiveFrom, &price.EffectiveUntil, &price.Version)
+	
+	if err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	return price, nil
 }

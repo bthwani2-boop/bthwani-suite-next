@@ -125,10 +125,10 @@ export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel 
     heroImageSource: resolveDshImageSource(dto.heroImageUrl),
     logoImageSource: resolveDshImageSource(dto.logoUrl),
     statusBadge:
-      dto.status === "temporarily_closed"
-        ? "مغلق مؤقتاً"
-        : dto.status === "inactive"
-          ? "غير متاح"
+      dto.status === "suspended"
+        ? "غير متاح"
+        : dto.status === "closed"
+          ? "مغلق مؤقتاً"
           : dto.serviceability.status === "limited"
             ? "توصيل محدود"
             : dto.serviceability.status === "out_of_area"

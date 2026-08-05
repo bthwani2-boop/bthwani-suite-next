@@ -79,11 +79,36 @@ func ParseListQuery(q url.Values) (DshStoreListQuery, string) {
 		}
 	}
 
+	var isFreeDelivery *bool
+	isFreeDeliveryStr := q.Get("isFreeDelivery")
+	if isFreeDeliveryStr == "true" {
+		v := true
+		isFreeDelivery = &v
+	} else if isFreeDeliveryStr == "false" {
+		v := false
+		isFreeDelivery = &v
+	}
+
+	var hasProBadge *bool
+	hasProBadgeStr := q.Get("hasProBadge")
+	if hasProBadgeStr == "true" {
+		v := true
+		hasProBadge = &v
+	} else if hasProBadgeStr == "false" {
+		v := false
+		hasProBadge = &v
+	}
+
 	return DshStoreListQuery{
 		CityCode:        q.Get("cityCode"),
 		ServiceAreaCode: q.Get("serviceAreaCode"),
 		Status:          status,
 		IsVisible:       isVisible,
+		Search:          q.Get("search"),
+		Category:        q.Get("category"),
+		Sort:            q.Get("sort"),
+		IsFreeDelivery:  isFreeDelivery,
+		HasProBadge:     hasProBadge,
 		Limit:           limit,
 		Offset:          offset,
 	}, ""

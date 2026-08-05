@@ -77,6 +77,17 @@ func ListAllStores(db *sql.DB, q DshStoreListQuery) (DshStoreListResult, error) 
 	return listStores(db, q, false)
 }
 
+func normalizeArabic(s string) string {
+	s = strings.TrimSpace(s)
+	s = strings.ToLower(s)
+	s = strings.ReplaceAll(s, "أ", "ا")
+	s = strings.ReplaceAll(s, "إ", "ا")
+	s = strings.ReplaceAll(s, "آ", "ا")
+	s = strings.ReplaceAll(s, "ة", "ه")
+	s = strings.ReplaceAll(s, "ى", "ي")
+	return s
+}
+
 func listStores(db *sql.DB, q DshStoreListQuery, publicOnly bool) (DshStoreListResult, error) {
 	conditions := []string{}
 	if publicOnly {
@@ -102,6 +113,25 @@ func listStores(db *sql.DB, q DshStoreListQuery, publicOnly bool) (DshStoreListR
 	if q.IsVisible != nil {
 		add("is_visible", *q.IsVisible)
 	}
+	if q.Category != "" {
+		add("catalog_domain_id", q.Category)
+	}
+	if q.IsFreeDelivery != nil {
+		add("is_free_delivery", *q.IsFreeDelivery)
+	}
+	if q.HasProBadge != nil {
+		add("has_pro_badge", *q.HasProBadge)
+	}
+	if q.Search != "" {
+		normalizedSearch := normalizeArabic(q.Search)
+		searchTerm := "%" + normalizedSearch + "%"
+		normSQL := func(col string) string {
+			return `REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(`+col+`), 'أ', 'ا'), 'إ', 'ا'), 'آ', 'ا'), 'ة', 'ه'), 'ى', 'ي')`
+		}
+		conditions = append(conditions, fmt.Sprintf("(%s LIKE $%d OR %s LIKE $%d)", normSQL("display_name"), idx, normSQL("slug"), idx))
+		params = append(params, searchTerm)
+		idx++
+	}
 
 	whereClause := ""
 	if len(conditions) > 0 {
@@ -113,9 +143,19 @@ func listStores(db *sql.DB, q DshStoreListQuery, publicOnly bool) (DshStoreListR
 		return DshStoreListResult{}, fmt.Errorf("failed to count stores: %w", err)
 	}
 
+	orderBy := "ORDER BY rating_average DESC NULLS LAST, display_name ASC"
+	switch q.Sort {
+	case "distance":
+		orderBy = "ORDER BY distance_km ASC NULLS LAST, rating_average DESC NULLS LAST"
+	case "eta":
+		orderBy = "ORDER BY delivery_eta_min ASC NULLS LAST, rating_average DESC NULLS LAST"
+	case "rating":
+		orderBy = "ORDER BY rating_average DESC NULLS LAST, display_name ASC"
+	}
+
 	query := fmt.Sprintf(`SELECT %s FROM dsh_stores %s
-		ORDER BY rating_average DESC NULLS LAST, display_name ASC
-		LIMIT $%d OFFSET $%d`, storeColumns, whereClause, idx, idx+1)
+		%s
+		LIMIT $%d OFFSET $%d`, storeColumns, whereClause, orderBy, idx, idx+1)
 	rows, err := db.Query(query, append(params, q.Limit, q.Offset)...)
 	if err != nil {
 		return DshStoreListResult{}, fmt.Errorf("failed to query stores: %w", err)

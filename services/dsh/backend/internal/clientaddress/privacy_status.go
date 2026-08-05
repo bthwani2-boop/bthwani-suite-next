@@ -27,19 +27,19 @@ func GetPrivacyQueueStatus(ctx context.Context, db *sql.DB) (PrivacyQueueStatus,
 			p.retention_days,
 			p.batch_limit,
 			COUNT(*) FILTER (
-				WHERE a.deleted_at IS NOT NULL
+				WHERE a.status = 'DELETED'
 				  AND a.pii_anonymized_at IS NULL
 				  AND a.pii_purge_after IS NOT NULL
 			)::int AS scheduled_count,
 			COUNT(*) FILTER (
-				WHERE a.deleted_at IS NOT NULL
+				WHERE a.status = 'DELETED'
 				  AND a.pii_anonymized_at IS NULL
 				  AND a.pii_purge_after IS NOT NULL
 				  AND a.pii_purge_after <= NOW()
 			)::int AS due_count,
 			COUNT(*) FILTER (WHERE a.pii_anonymized_at IS NOT NULL)::int AS anonymized_count,
 			MIN(a.pii_purge_after) FILTER (
-				WHERE a.deleted_at IS NOT NULL
+				WHERE a.status = 'DELETED'
 				  AND a.pii_anonymized_at IS NULL
 				  AND a.pii_purge_after IS NOT NULL
 			) AS next_purge_at

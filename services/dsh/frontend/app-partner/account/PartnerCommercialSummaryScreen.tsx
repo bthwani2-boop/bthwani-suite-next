@@ -30,37 +30,37 @@ export function PartnerCommercialSummaryScreen({ storeId, onBack }: PartnerComme
         <StateView kind="error" title="تعذر التحميل" description={state.message} onRetry={reload} />
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
-          <Box gap={spacing.medium} padding={spacing.large} style={{ backgroundColor: theme.colors.surfaceMuted, borderRadius: 12 }}>
+          <Box gap={spacing[4]} padding={spacing[6]} style={{ backgroundColor: theme.colors.surfaceMuted, borderRadius: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Icon name="storefront" size={24} color={theme.colors.primary} />
-              <Text variant="heading4">تفاصيل النموذج التجاري</Text>
+              <Text role="heading4">تفاصيل النموذج التجاري</Text>
             </View>
             <Divider />
             <View style={styles.row}>
-              <Text variant="body2" style={{ color: theme.colors.textMuted }}>نوع النموذج</Text>
-              <Text variant="body1">{state.summary.modelType}</Text>
+              <Text role="body" style={{ color: theme.colors.textMuted }}>نوع النموذج</Text>
+              <Text role="body">{state.summary.modelType}</Text>
             </View>
             <View style={styles.row}>
-              <Text variant="body2" style={{ color: theme.colors.textMuted }}>الرسوم / النسبة</Text>
-              <Text variant="body1">{state.summary.value} {state.summary.currency}</Text>
+              <Text role="body" style={{ color: theme.colors.textMuted }}>الرسوم / النسبة</Text>
+              <Text role="body">{state.summary.value} {state.summary.currency}</Text>
             </View>
             <View style={styles.row}>
-              <Text variant="body2" style={{ color: theme.colors.textMuted }}>تاريخ البدء</Text>
-              <Text variant="body1">{state.summary.effectiveAt ? new Date(state.summary.effectiveAt).toLocaleDateString('ar-SA') : 'غير محدد'}</Text>
+              <Text role="body" style={{ color: theme.colors.textMuted }}>تاريخ البدء</Text>
+              <Text role="body">{state.summary.effectiveAt ? new Date(state.summary.effectiveAt).toLocaleDateString('ar-SA') : 'غير محدد'}</Text>
             </View>
             <View style={styles.row}>
-              <Text variant="body2" style={{ color: theme.colors.textMuted }}>تاريخ الانتهاء</Text>
-              <Text variant="body1">{state.summary.endsAt ? new Date(state.summary.endsAt).toLocaleDateString('ar-SA') : 'مستمر'}</Text>
+              <Text role="body" style={{ color: theme.colors.textMuted }}>تاريخ الانتهاء</Text>
+              <Text role="body">{state.summary.endsAt ? new Date(state.summary.endsAt).toLocaleDateString('ar-SA') : 'مستمر'}</Text>
             </View>
           </Box>
 
-          <Box gap={spacing.medium} padding={spacing.large} style={{ backgroundColor: theme.colors.surfaceMuted, borderRadius: 12, marginTop: 16 }}>
+          <Box gap={spacing[4]} padding={spacing[6]} style={{ backgroundColor: theme.colors.surfaceMuted, borderRadius: 12, marginTop: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Icon name="account_balance_wallet" size={24} color={theme.colors.primary} />
-              <Text variant="heading4">الملخص المالي (WLT)</Text>
+              <Text role="heading4">الملخص المالي (WLT)</Text>
             </View>
             <Divider />
-            <Text variant="body2" style={{ color: theme.colors.textMuted, lineHeight: 22 }}>
+            <Text role="body" style={{ color: theme.colors.textMuted, lineHeight: 22 }}>
               يتم احتساب الرسوم والعمولات وإصدار الفواتير وتسويتها من خلال النظام المالي الموحد (WLT).
               يمكنك الاطلاع على كشف الحساب التفصيلي والالتزامات من خلال المحفظة.
             </Text>
