@@ -43,7 +43,7 @@ func NewRouter(repository *identity.Repository) http.Handler {
 	mux.HandleFunc("DELETE /internal/actors/{actorId}/sessions/{sessionId}", s.serviceOnly(s.internalActorRevokeSession))
 	mux.HandleFunc("DELETE /internal/actors/{actorId}/sessions", s.serviceOnly(s.internalActorRevokeAllSessions))
 	mux.HandleFunc("POST /internal/actors/{actorId}/activations/revoke", s.serviceOnly(s.internalActorRevokeActivations))
-	mux.HandleFunc("GET /internal/permissions/resolve", s.dshServiceOnly(s.internalPermissionsResolve))
+//	mux.HandleFunc("GET /internal/permissions/resolve", s.dshServiceOnly(s.internalPermissionsResolve))
 
 	return mux
 }
@@ -642,3 +642,4 @@ func (s *server) internalPermissionsResolve(w http.ResponseWriter, r *http.Reque
 		"permissions": permissions,
 	})
 }
+

@@ -21,7 +21,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("GET /dsh/readiness", health.HandleReadiness(db, mediaProvider, identityClient))
 	mux.HandleFunc("GET /dsh/stores", store.HandleListStores(db))
 	mux.HandleFunc("GET /dsh/stores/{storeId}", store.HandleGetStore(db))
-	mux.HandleFunc("GET /dsh/storefront/{storeId}", handlePublicStorefront(db))
+//	mux.HandleFunc("GET /dsh/storefront/{storeId}", handlePublicStorefront(db))
 	mux.HandleFunc("GET /dsh/stores/{storeId}/catalog", handlePublicCatalog(db))
 	mux.HandleFunc("GET /dsh/public/media/{assetId}/{variant}", handlePublicMedia(db, mediaProvider))
 	mux.HandleFunc("GET /dsh/public/reels", handlePublicReels(db))
@@ -32,12 +32,12 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("GET /dsh/media", protected.handleMediaDownload)
 	mux.HandleFunc("GET /dsh/store-context", protected.handleStoreContext)
 	mux.HandleFunc("GET /dsh/operator/stores", protected.withPermission("control-panel", PartnersPermissionRead, protected.handleOperatorStores))
-	mux.HandleFunc("POST /dsh/operator/stores", protected.withPermission("control-panel", PartnersPermissionManage, protected.handleOperatorCreateStore))
+//	mux.HandleFunc("POST /dsh/operator/stores", protected.withPermission("control-panel", PartnersPermissionManage, protected.handleOperatorCreateStore))
 	mux.HandleFunc("GET /dsh/operator/stores/{storeId}", protected.withPermission("control-panel", PartnersPermissionRead, protected.handleOperatorStoreDetail))
 	mux.HandleFunc("GET /dsh/operator/diagnostics/stores/{storeId}", protected.withPermission("control-panel", PartnersPermissionRead, protected.handleGovernedOperatorStoreDiagnostics))
 	mux.HandleFunc("GET /dsh/operator/stores/{storeId}/delivery-pricing", protected.withPermission("control-panel", "operations.read", protected.handleOperatorListDeliveryPricing))
 	mux.HandleFunc("PUT /dsh/operator/stores/{storeId}/delivery-pricing/{fulfillmentMode}", protected.withPermission("control-panel", "operations.manage", protected.handleOperatorUpsertDeliveryPricing))
-	mux.HandleFunc("POST /dsh/partner/stores", protected.handlePartnerCreateStore)
+//	mux.HandleFunc("POST /dsh/partner/stores", protected.handlePartnerCreateStore)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/settings", protected.handleGetPartnerSettings)
 	mux.HandleFunc("PATCH /dsh/partner/stores/{storeId}/settings", protected.handlePartnerSettings)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/courier-settings", protected.handlePartnerGetCourierSettings)
@@ -45,7 +45,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/coverage-zones", protected.handlePartnerCoverageZones)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/delivery-pricing", protected.handlePartnerListDeliveryPricing)
 	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/delivery-pricing/{fulfillmentMode}", protected.handlePartnerUpsertDeliveryPricing)
-	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/commercial-summary", protected.handlePartnerCommercialSummary)
+//	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/commercial-summary", protected.handlePartnerCommercialSummary)
 	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code", protected.handleIssuePartnerCourierConnectionCode)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/courier-connections", protected.handleListPartnerCourierConnections)
 	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/courier-connections/{connectionId}/revoke", protected.handleRevokePartnerCourierConnection)
@@ -125,7 +125,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}", protected.handleGetClientOrderTruth)
 	mux.HandleFunc("GET /dsh/partner/orders", protected.handleListPartnerOrderTruth)
 	mux.HandleFunc("GET /dsh/partner/order-workboard", protected.handlePartnerOrderWorkboard)
-	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/decision", protected.handlePartnerOrderDecision)
+//	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/decision", protected.handlePartnerOrderDecision)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparing", protected.handleMarkPreparing)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/ready", protected.handleMarkReadyForPickup)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/captain-handoff/confirm", protected.handleConfirmPartnerStoreCaptainHandoff)
@@ -135,7 +135,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	
 	mux.HandleFunc("POST /dsh/client/orders/{orderId}/return", protected.handleClientReturnOrder)
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}/return", protected.handleClientGetReturnOrder)
-	mux.HandleFunc("POST /dsh/operator/orders/{orderId}/return", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleOperatorReturnOrderGoverned))
+//	mux.HandleFunc("POST /dsh/operator/orders/{orderId}/return", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleOperatorReturnOrderGoverned))
 
 	// Dispatch & Captain Delivery Lifecycle
 	mux.HandleFunc("GET /dsh/captain/me/readiness", protected.handleGetCaptainSelfReadiness)
@@ -268,11 +268,11 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("GET /dsh/operator/support/tickets/{ticketId}/messages", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListGovernedOperatorSupportMessages))
 	mux.HandleFunc("POST /dsh/operator/support/tickets/{ticketId}/messages", protected.withPermission("control-panel", SupportPermissionManage, protected.handleAddGovernedOperatorSupportMessage))
 	mux.HandleFunc("GET /dsh/operator/support/tickets/{ticketId}/events", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListGovernedOperatorSupportEvents))
-	
+//	
 	mux.HandleFunc("POST /dsh/operator/support/tickets/{ticketId}/claim", protected.withPermission("control-panel", SupportPermissionManage, protected.handleClaimOperatorSupportTicket))
-	mux.HandleFunc("POST /dsh/operator/support/tickets/{ticketId}/escalate", protected.withPermission("control-panel", SupportPermissionManage, protected.handleEscalateOperatorSupportTicket))
-	mux.HandleFunc("GET /dsh/operator/support/tickets/{ticketId}/export", protected.withPermission("control-panel", SupportPermissionRead, protected.handleExportOperatorSupportTicket))
-	mux.HandleFunc("GET /dsh/operator/support/canned-responses", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListCannedResponses))
+//	mux.HandleFunc("POST /dsh/operator/support/tickets/{ticketId}/escalate", protected.withPermission("control-panel", SupportPermissionManage, protected.handleEscalateOperatorSupportTicket))
+//	mux.HandleFunc("GET /dsh/operator/support/tickets/{ticketId}/export", protected.withPermission("control-panel", SupportPermissionRead, protected.handleExportOperatorSupportTicket))
+//	mux.HandleFunc("GET /dsh/operator/support/canned-responses", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListCannedResponses))
 
 	mux.HandleFunc("POST /dsh/operator/incidents", protected.withPermission("control-panel", SupportPermissionManage, protected.handleCreateIncident))
 	mux.HandleFunc("GET /dsh/operator/incidents", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListIncidents))
@@ -370,10 +370,14 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("GET /dsh/operator/admin/rollback-requests", protected.handleNotImplemented)
 	mux.HandleFunc("POST /dsh/operator/admin/rollback-requests/{requestId}/review", protected.handleNotImplemented)
 	mux.HandleFunc("GET /dsh/operator/admin/diagnostics", protected.handleNotImplemented)
+	
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/accept", protected.handleNotImplemented)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/reject", protected.handleNotImplemented)
 	return mux
 }
 
 func (s *protectedStoreServer) handleNotImplemented(w http.ResponseWriter, r *http.Request) {
 	store.SendError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "not implemented")
 }
+
 
