@@ -51,15 +51,6 @@ export function OnboardingBasicsSection({ form, errors, readOnly, onChange }: Pr
       />
 
       <TextField
-        label="اسم المالك الثنائي/الثلاثي"
-        value={form.ownerName ?? ''}
-        disabled={readOnly}
-        {...(errors.ownerName ? { error: errors.ownerName } : {})}
-        onChangeText={(v) => onChange({ ownerName: v })}
-        placeholder="الاسم مطابق للهوية أو السجل التجاري"
-      />
-
-      <TextField
         label="رقم جوال المالك"
         value={form.primaryPhone ?? ''}
         disabled={readOnly}

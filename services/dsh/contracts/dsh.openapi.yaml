@@ -203,6 +203,8 @@ paths:
     $ref: "./paths/cart-serviceability.paths.yaml#/~1dsh~1client~1cart~1items~1{itemId}"
   /dsh/client/cart/serviceability:
     $ref: "./paths/cart-serviceability.paths.yaml#/~1dsh~1client~1cart~1serviceability"
+  /dsh/client/cart/fulfillment-modes:
+    $ref: "./paths/cart-serviceability.paths.yaml#/~1dsh~1client~1cart~1fulfillment-modes"
   /dsh/operator/carts:
     $ref: "./paths/cart-serviceability.paths.yaml#/~1dsh~1operator~1carts"
   /dsh/client/checkout-intents:
@@ -921,6 +923,8 @@ components:
       $ref: "./components/schemas/cart-serviceability.schemas.yaml#/CartServiceabilityResult"
     FulfillmentModeAvailability:
       $ref: "./components/schemas/orders.schemas.yaml#/FulfillmentModeAvailability"
+    FulfillmentModesResponse:
+      $ref: "./components/schemas/cart-serviceability.schemas.yaml#/FulfillmentModesResponse"
     DshCheckoutIntent:
       $ref: "./components/schemas/checkout.schemas.yaml#/DshCheckoutIntent"
     DshCreateCheckoutIntentRequest:

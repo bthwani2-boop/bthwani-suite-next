@@ -213,7 +213,7 @@ func ApplyWltPaymentEventTx(
 	current, err := scanIntent(tx.QueryRowContext(ctx, `
 		SELECT id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		       state, payment_method, wlt_payment_session_id,
-		       delivery_address, note, version, created_at, updated_at
+		       delivery_address, note, version, created_at, updated_at, expires_at, preview_hash, validation_issues
 		FROM dsh_checkout_intents
 		WHERE id=$1::uuid AND operator_context_id=$2
 		FOR UPDATE`, intentID, operatorContextID))
@@ -229,7 +229,7 @@ func ApplyWltPaymentEventTx(
 	if intermediate || current.State == targetState {
 		return current, nil
 	}
-	if current.State != StatePaymentPending {
+	if current.State != StateConfirming {
 		return nil, fmt.Errorf("%w: intent is not awaiting a payment outcome", ErrConflict)
 	}
 
@@ -237,10 +237,10 @@ func ApplyWltPaymentEventTx(
 		UPDATE dsh_checkout_intents
 		SET state=$1, version=version+1, updated_at=NOW()
 		WHERE id=$2::uuid AND operator_context_id=$3 AND wlt_payment_session_id=$4
-		  AND state='payment_pending'
+		  AND state='confirming'
 		RETURNING id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
-		          delivery_address, note, version, created_at, updated_at`,
+		          delivery_address, note, version, created_at, updated_at, expires_at, preview_hash, validation_issues`,
 		string(targetState), intentID, operatorContextID, paymentSessionID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: intent state changed concurrently", ErrConflict)

@@ -61,14 +61,15 @@ func CreatePricedIntentTx(ctx context.Context, tx *sql.Tx, input CreateIntentInp
 			(id,operator_context_id,client_id,cart_id,store_id,fulfillment_mode,state,payment_method,
 			wlt_payment_session_id,delivery_address,note,subtotal_minor_units,
 			delivery_fee_minor_units,discount_minor_units,total_minor_units,currency,
-			pricing_snapshot_hash,coupon_id,coupon_redemption_id,coupon_code_last4)
+			pricing_snapshot_hash,coupon_id,coupon_redemption_id,coupon_code_last4,
+			preview_hash,validation_issues)
 		VALUES ($1::uuid,$2,$3,$4::uuid,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,
-			NULLIF($18,'')::uuid,NULLIF($19,'')::uuid,$20)
+			NULLIF($18,'')::uuid,NULLIF($19,'')::uuid,$20,''::text,'[]'::jsonb)
 		RETURNING id,operator_context_id,client_id,cart_id::text,store_id::text,fulfillment_mode,
 			state,payment_method,wlt_payment_session_id,delivery_address,note,
-			version,created_at,updated_at`,
+			version,created_at,updated_at,expires_at,preview_hash,validation_issues`,
 		input.ID, input.OperatorContextID, input.ClientID, input.CartID, input.StoreID,
-		string(input.FulfillmentMode), string(StatePending), string(input.PaymentMethod),
+		string(input.FulfillmentMode), string(StateDraft), string(input.PaymentMethod),
 		input.WltPaymentSessionID, input.DeliveryAddress, input.Note,
 		pricing.SubtotalMinorUnits, pricing.DeliveryFeeMinorUnits, pricing.DiscountMinorUnits,
 		pricing.TotalMinorUnits, pricing.Currency, pricing.SnapshotHash, pricing.CouponID,

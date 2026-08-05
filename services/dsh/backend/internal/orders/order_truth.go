@@ -204,7 +204,7 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 	if err != nil {
 		return nil, false, err
 	}
-	eligible := checkoutState == "payment_confirmed" || (checkoutState == "payment_pending" && paymentMethod == "cod")
+	eligible := checkoutState == "confirmed" || (checkoutState == "confirming" && paymentMethod == "cod")
 	if !eligible {
 		return nil, false, fmt.Errorf("%w: checkout intent is not eligible for order creation", ErrConflict)
 	}
@@ -334,7 +334,7 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 		UPDATE dsh_checkout_intents
 		SET state='confirmed', version=version+1, updated_at=NOW()
 		WHERE id=$1::uuid AND operator_context_id=$2 AND client_id=$3
-		  AND state IN ('payment_pending','payment_confirmed')`,
+		  AND state IN ('confirming','confirmed')`,
 		input.CheckoutIntentID, input.OperatorContextID, input.ClientID,
 	)
 	if err != nil {

@@ -53,7 +53,19 @@ export function WorkforceAccessGate({
     );
   }
 
-  if (state.me.workforceKind !== expectedKind) {
+  if (state.kind === "suspended") {
+    return (
+      <GateFrame onLogout={onLogout}>
+        <StateView
+          tone="warning"
+          title="الملف التشغيلي موقوف"
+          description="لا يمكنك الوصول للنظام حاليا."
+        />
+      </GateFrame>
+    );
+  }
+
+  if (state.kind === "ready" && state.me.workforceKind !== expectedKind) {
     return (
       <GateFrame onLogout={onLogout}>
         <StateView

@@ -61,6 +61,8 @@ export function assetCardStateFromAsset(asset: CatalogAsset, link?: CatalogAsset
       return { kind: "rejected", asset, reason: asset.reviewNote };
     case "archived":
       return { kind: "archived", asset };
+    default:
+      return { kind: "draft", asset };
   }
 }
 

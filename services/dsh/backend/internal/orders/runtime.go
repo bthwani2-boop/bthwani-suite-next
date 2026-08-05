@@ -23,24 +23,7 @@ const (
 
 var ErrCancellationRequiresReview = errors.New("order cancellation requires operator review")
 
-func hydrateOrders(db *sql.DB, list []Order) ([]Order, error) {
-	for i := range list {
-		items, err := listOrderItems(db, list[i].ID)
-		if err != nil {
-			return nil, err
-		}
-		list[i].Items = items
-	}
-	return list, nil
-}
 
-func ListClientOrdersHydrated(db *sql.DB, operatorContextID, clientID string, limit int) ([]Order, error) {
-	list, err := ListClientOrders(db, operatorContextID, clientID, limit)
-	if err != nil {
-		return nil, err
-	}
-	return hydrateOrders(db, list)
-}
 
 type CancellationInput struct {
 	OrderID       string

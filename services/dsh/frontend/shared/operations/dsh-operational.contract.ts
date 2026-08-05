@@ -204,7 +204,6 @@ export type DshPartnerStoreOperationalRecord = DshOperationalBaseRecord & {
   readonly partnerId: string;
   readonly fieldLeadId?: string;
   readonly storeName: string;
-  readonly ownerName?: string;
   readonly documentsState: string;
   readonly visitState: string;
   readonly mediaState: string;

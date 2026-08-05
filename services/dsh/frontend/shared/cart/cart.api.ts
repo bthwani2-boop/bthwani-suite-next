@@ -88,6 +88,18 @@ export async function checkServiceability(
   });
 }
 
+export async function fetchFulfillmentModes(
+  storeId: string,
+  serviceAreaCode?: string,
+) {
+  const params = new URLSearchParams();
+  params.set("storeId", storeId);
+  if (serviceAreaCode) params.set("serviceAreaCode", serviceAreaCode);
+  return request<import("../checkout/checkout.types").DshFulfillmentModesResponse>(
+    `/dsh/client/cart/fulfillment-modes?${params.toString()}`,
+  );
+}
+
 export async function fetchOperatorCarts(state?: string): Promise<readonly DshCart[]> {
   const params = state ? `?state=${encodeURIComponent(state)}` : "";
   const data = await request<{ carts: DshCart[] }>(`/dsh/operator/carts${params}`);

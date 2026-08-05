@@ -205,10 +205,7 @@ export function useOperatorDeliveryPricingController(storeId: string) {
     setMutationLoading(true);
     setMutationError(null);
     try {
-      await updateOperatorDeliveryPricing(storeId, current.fulfillmentMode, {
-        ...input,
-        expectedVersion: current.version,
-      });
+      await updateOperatorDeliveryPricing(storeId, current.fulfillmentMode, input, current.version);
       return await reload();
     } catch (error) {
       setMutationError(resolveErrorMessage(error));

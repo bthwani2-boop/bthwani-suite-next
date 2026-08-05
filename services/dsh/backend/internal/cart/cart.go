@@ -138,6 +138,14 @@ type FulfillmentModeAvailability struct {
 	UnavailableReasonCode string          `json:"unavailableReasonCode,omitempty"`
 }
 
+// FulfillmentModesResponse is the J051 lightweight response for the dedicated
+// mode-capability endpoint.
+type FulfillmentModesResponse struct {
+	StoreID     string                        `json:"storeId"`
+	Modes       []FulfillmentModeAvailability `json:"modes"`
+	EvaluatedAt time.Time                     `json:"evaluatedAt"`
+}
+
 // storeDeliveryModeToFulfillmentMode maps the store-publication delivery-mode
 // vocabulary ("delivery" | "pickup" | "express", DshStoreDeliveryMode in the
 // OpenAPI contract) to the canonical checkout FulfillmentMode. This is the
@@ -491,6 +499,25 @@ func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCo
 		}
 	}
 	return ServiceabilityResult{Serviceable: true, Code: "serviceable", AvailableModes: availableModes}
+}
+
+// GetFulfillmentModes is the J051 lightweight mode capability fetcher.
+// It uses the same zone check as CheckServiceability but only returns modes.
+func GetFulfillmentModes(ctx context.Context, db *sql.DB, storeID, serviceAreaCode string, clientLat, clientLng *float64) FulfillmentModesResponse {
+	// Call CheckServiceability to run the identical store and zone constraints
+	res := CheckServiceability(ctx, db, storeID, serviceAreaCode, clientLat, clientLng)
+	
+	// If check failed early without computing modes, fallback to all unavailable
+	modes := res.AvailableModes
+	if len(modes) == 0 {
+		modes = allModesUnavailable("store_unavailable")
+	}
+
+	return FulfillmentModesResponse{
+		StoreID:     storeID,
+		Modes:       modes,
+		EvaluatedAt: time.Now().UTC(),
+	}
 }
 
 // computeFulfillmentModeAvailability derives per-mode availability from the

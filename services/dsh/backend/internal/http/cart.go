@@ -16,6 +16,26 @@ type cartServer struct {
 	protectedStoreServer
 }
 
+// GET /dsh/client/cart/fulfillment-modes
+func (s *protectedStoreServer) handleGetFulfillmentModes(w http.ResponseWriter, r *http.Request) {
+	_, ok := s.requireActor(w, r, "client")
+	if !ok {
+		return
+	}
+	storeID := r.URL.Query().Get("storeId")
+	if storeID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId query parameter is required")
+		return
+	}
+	serviceAreaCode := r.URL.Query().Get("serviceAreaCode")
+
+	// GetFulfillmentModes doesn't rely on full physical coordinates in the simple case, 
+	// but if we have an active address, we should technically use it. 
+	// For J051 lightweight capability fetch, we just rely on the zone/serviceAreaCode.
+	resp := cart.GetFulfillmentModes(r.Context(), s.db, storeID, serviceAreaCode, nil, nil)
+	store.SendJSON(w, http.StatusOK, resp)
+}
+
 // POST /dsh/client/cart/serviceability
 func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")

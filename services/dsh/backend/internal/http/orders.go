@@ -16,98 +16,7 @@ const (
 	OperationsPermissionManage = "operations.manage"
 )
 
-// POST /dsh/client/orders
-func (s *protectedStoreServer) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client")
-	if !ok {
-		return
-	}
-	var body struct {
-		CheckoutIntentID string `json:"checkoutIntentId"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	if body.CheckoutIntentID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "checkoutIntentId is required")
-		return
-	}
 
-	order, err := orders.CreateOrder(s.db, orders.CreateOrderInput{
-		CheckoutIntentID: body.CheckoutIntentID,
-		ClientID:         actor.ID,
-		OperatorContextID:         actor.OperatorContextID,
-	})
-	if errors.Is(err, orders.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-		return
-	}
-	if errors.Is(err, orders.ErrConflict) {
-		store.SendError(w, http.StatusConflict, "CONFLICT", err.Error())
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create order")
-		return
-	}
-
-	store.SendJSON(w, http.StatusCreated, map[string]any{"order": marshalOrder(order)})
-}
-
-// GET /dsh/client/orders
-func (s *protectedStoreServer) handleListClientOrders(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client")
-	if !ok {
-		return
-	}
-	list, err := orders.ListClientOrdersHydrated(s.db, actor.OperatorContextID, actor.ID, 50)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list orders")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"orders": marshalOrders(list)})
-}
-
-// GET /dsh/client/orders/{orderId}
-func (s *protectedStoreServer) handleGetClientOrder(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client")
-	if !ok {
-		return
-	}
-	orderID := r.PathValue("orderId")
-	if orderID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderId is required")
-		return
-	}
-	order, err := orders.GetClientOrder(s.db, orderID, actor.OperatorContextID, actor.ID)
-	if errors.Is(err, orders.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get order")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order)})
-}
-
-// GET /dsh/partner/orders?status=...
-// storeId is never taken from the request: it is resolved from the
-// authenticated partner actor, so a partner can never list another
-// partner's store orders by supplying an arbitrary storeId.
-func (s *protectedStoreServer) handleListPartnerOrders(w http.ResponseWriter, r *http.Request) {
-	_, storeID, ok := s.partnerStore(w, r)
-	if !ok {
-		return
-	}
-	statusFilter := r.URL.Query().Get("status")
-	list, err := orders.ListPartnerOrders(s.db, storeID, statusFilter, 50)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list partner orders")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"orders": marshalOrders(list)})
-}
 
 // POST /dsh/partner/orders/{orderId}/accept
 func (s *protectedStoreServer) handleAcceptOrder(w http.ResponseWriter, r *http.Request) {
@@ -207,20 +116,7 @@ func (s *protectedStoreServer) handleMarkReadyForPickup(w http.ResponseWriter, r
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order)})
 }
 
-// GET /dsh/operator/orders?status=...
-func (s *protectedStoreServer) handleListOperatorOrders(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
-	if !ok {
-		return
-	}
-	statusFilter := r.URL.Query().Get("status")
-	list, err := orders.ListOperatorOrders(s.db, statusFilter, 50)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list orders")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"orders": marshalOrders(list)})
-}
+
 
 // POST /dsh/operator/orders/{orderId}/cancel
 // Compatibility alias: all operator cancellation writes execute through the

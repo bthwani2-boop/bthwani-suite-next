@@ -73,7 +73,7 @@ function buildStoreDraftInput(form: Partial<FieldPartnerDraftForm>) {
 function buildUpdatePartnerInput(form: Partial<FieldPartnerDraftForm>) {
   return {
     displayName: form.displayName ?? "",
-    ownerName: form.ownerName ?? "",
+    legalNameAr: form.legalNameAr ?? "",
     primaryPhone: form.primaryPhone ?? "",
     secondaryPhone: form.secondaryPhone ?? "",
     email: form.email ?? "",
@@ -132,11 +132,9 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
 
     const form = { ...state.form };
     if (placeholder) {
-      if (!form.legalNameAr?.trim()) form.legalNameAr = "شريك جديد";
-      if (!form.displayName?.trim()) form.displayName = "شريك جديد";
+      if (!form.legalNameAr?.trim()) form.legalNameAr = "متجر افتراضي";
       if (!form.primaryPhone?.trim()) form.primaryPhone = "+967770000000";
       if (!form.legalIdentityNumber?.trim()) form.legalIdentityNumber = "temp-" + Date.now();
-      if (!form.ownerName?.trim()) form.ownerName = "مالك افتراضي";
     } else {
       const errors = { ...validateIdentityStep(form), ...validateOwnerStep(form) };
       if (Object.keys(errors).length > 0) {
@@ -155,7 +153,6 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         legalIdentityType: form.legalIdentityType ?? "commercial_register",
         legalIdentityNumber: form.legalIdentityNumber!,
         legalNameEn: form.legalNameEn ?? "",
-        ownerName: form.ownerName ?? "",
         secondaryPhone: form.secondaryPhone ?? "",
         email: form.email ?? "",
         category: form.category ?? "default",
@@ -209,7 +206,6 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
           displayName: partner.displayName,
           legalIdentityType: partner.legalIdentityType as FieldPartnerDraftForm["legalIdentityType"],
           legalIdentityNumber: partner.legalIdentityNumber,
-          ownerName: partner.ownerName,
           primaryPhone: partner.primaryPhone,
           secondaryPhone: partner.secondaryPhone,
           email: partner.email,

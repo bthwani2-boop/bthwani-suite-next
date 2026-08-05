@@ -8,15 +8,23 @@
 DshCheckoutIntentState: &DshCheckoutIntentState
   type: string
   enum:
-    - pending
-    - wlt_handoff_failed
-    - wlt_outcome_unknown
-    - payment_pending
+    - draft
+    - validating
+    - ready
+    - blocked
+    - confirming
     - confirmed
     - cancelled
-    - payment_confirmed
-    - payment_failed
     - expired
+
+DshCheckoutValidationIssue: &DshCheckoutValidationIssue
+  type: object
+  additionalProperties: false
+  required: [code, message]
+  properties:
+    code: { type: string }
+    message: { type: string }
+    field: { type: string }
 
 DshCheckoutPaymentMethod: &DshCheckoutPaymentMethod
   type: string
@@ -43,6 +51,8 @@ DshCheckoutIntent: &DshCheckoutIntent
     - version
     - createdAt
     - updatedAt
+    - previewHash
+    - validationIssues
   properties:
     id: { type: string, format: uuid }
     operatorContextId: { type: string, minLength: 1 }
@@ -67,6 +77,11 @@ DshCheckoutIntent: &DshCheckoutIntent
     version: { type: integer, minimum: 1 }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
+    expiresAt: { type: string, format: date-time, nullable: true }
+    previewHash: { type: string }
+    validationIssues:
+      type: array
+      items: *DshCheckoutValidationIssue
 
 DshCreateCheckoutIntentRequest:
   type: object

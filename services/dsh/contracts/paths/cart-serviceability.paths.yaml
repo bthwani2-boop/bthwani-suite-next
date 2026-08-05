@@ -133,6 +133,31 @@
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
+# J051: per-mode capability query — lightweight, no financial computation.
+/dsh/client/cart/fulfillment-modes:
+  get:
+    operationId: getDshCartFulfillmentModes
+    summary: Return per-mode availability for a store+location. Clients call this before the mode selector.
+    tags: [DshCart]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: storeId
+        in: query
+        required: true
+        schema: { type: string }
+      - name: serviceAreaCode
+        in: query
+        required: false
+        schema: { type: string }
+    responses:
+      "200":
+        description: Mode capability list for this store+location.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/FulfillmentModesResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
 /dsh/operator/carts:
   get:
     operationId: listOperatorCarts

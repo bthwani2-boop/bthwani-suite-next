@@ -11,7 +11,9 @@ import {
   TopBar,
   spacing,
 } from "@bthwani/ui-kit";
+import { useQuery } from "@tanstack/react-query";
 import { useCartController, useServiceabilityController } from "../../shared/cart";
+import { fetchFulfillmentModes } from "../../shared/cart/cart.api";
 import type { DshCart, DshFulfillmentMode } from "../../shared/cart";
 import type { DshPaymentMethod } from "../../shared/checkout";
 import { formatWltMoney, useWltPaymentController } from "@bthwani/wlt/dsh";
@@ -32,11 +34,12 @@ type Props = {
   readonly onBack?: () => void;
 };
 
-const FULFILLMENT_OPTIONS: readonly { value: DshFulfillmentMode; label: string; description: string }[] = [
-  { value: "bthwani_delivery", label: "توصيل بثواني", description: "رسومه تُحتسب من سياسة DSH المعتمدة للمتجر." },
-  { value: "partner_delivery", label: "توصيل المتجر", description: "ينفذه موصل مرتبط فعليًا بفريق المتجر." },
-  { value: "pickup", label: "استلم بنفسك", description: "تستلم الطلب من المتجر دون توصيل." },
-];
+// Fallback labels if backend doesn't provide them, though we just need the modes and availability.
+const MODE_LABELS: Record<string, { label: string; description: string }> = {
+  bthwani_delivery: { label: "توصيل بثواني", description: "رسومه تُحتسب من سياسة DSH المعتمدة للمتجر." },
+  partner_delivery: { label: "توصيل المتجر", description: "ينفذه موصل مرتبط فعليًا بفريق المتجر." },
+  pickup: { label: "استلم بنفسك", description: "تستلم الطلب من المتجر دون توصيل." },
+};
 
 export function GovernedCartScreen({
   storeId,
@@ -48,6 +51,11 @@ export function GovernedCartScreen({
 }: Props) {
   const cartController = useCartController(storeId, authKind);
   const serviceability = useServiceabilityController();
+  const modesQuery = useQuery({
+    queryKey: ["cart", "fulfillment-modes", storeId, serviceAreaCode],
+    queryFn: () => fetchFulfillmentModes(storeId, serviceAreaCode),
+  });
+  
   const [fulfillmentMode, setFulfillmentMode] = React.useState<DshFulfillmentMode>("bthwani_delivery");
   const [couponCode, setCouponCode] = React.useState("");
   const [deliveryAddress, setDeliveryAddress] = React.useState("");
@@ -116,14 +124,25 @@ export function GovernedCartScreen({
 
         <Card padding={3} gap={3}>
           <Text role="bodyStrong" align="start">طريقة التنفيذ</Text>
-          {FULFILLMENT_OPTIONS.map((option) => (
-            <Button
-              key={option.value}
-              label={`${option.label} — ${option.description}`}
-              tone={fulfillmentMode === option.value ? "brand" : "secondary"}
-              onPress={() => setFulfillmentMode(option.value)}
-            />
-          ))}
+          {modesQuery.isLoading ? (
+            <Text role="bodySm" tone="muted">جاري تحميل خيارات التنفيذ المتاحة...</Text>
+          ) : modesQuery.isError ? (
+            <Text role="bodySm" tone="danger">تعذر تحميل خيارات التنفيذ.</Text>
+          ) : modesQuery.data?.modes ? (
+            modesQuery.data.modes.map((mode) => {
+              const meta = MODE_LABELS[mode.mode] ?? { label: mode.mode, description: "" };
+              const isSelected = fulfillmentMode === mode.mode;
+              return (
+                <Button
+                  key={mode.mode}
+                  label={mode.available ? `${meta.label} — ${meta.description}` : `${meta.label} (غير متاح: ${mode.unavailableReasonCode})`}
+                  tone={isSelected ? "brand" : "secondary"}
+                  disabled={!mode.available}
+                  onPress={() => setFulfillmentMode(mode.mode as DshFulfillmentMode)}
+                />
+              );
+            })
+          ) : null}
         </Card>
 
         {fulfillmentRequiresAddress ? (

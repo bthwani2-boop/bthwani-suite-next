@@ -218,3 +218,19 @@ DshZoneServiceabilityResponse:
 # store_onboarding_fee_policy — DSH owns the policy DEFINITION only.
 # DSH never records WLT financial truth directly; WLT remains the sole
 # owner of settlement/payment truth once this fee is actually recorded.
+
+# J051: lightweight mode-capability response for the dedicated endpoint.
+# Clients use this to build mode selector UI before entering Checkout.
+FulfillmentModesResponse:
+  type: object
+  required: [storeId, modes, evaluatedAt]
+  properties:
+    storeId: { type: string }
+    modes:
+      type: array
+      description: >-
+        Per-mode availability for this store+location. Always contains
+        all three canonical modes. Never a partial list.
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/FulfillmentModeAvailability"
+    evaluatedAt: { type: string, format: date-time }

@@ -39,17 +39,19 @@ func TestPaymentMethodConstants(t *testing.T) {
 }
 
 func TestIntentStateConstants(t *testing.T) {
+	// J050: 8 canonical states in the new state machine.
 	states := map[IntentState]bool{
-		StatePending:           true,
-		StateWltHandoffFailed:  true,
-		StateWltOutcomeUnknown: true,
-		StatePaymentPending:    true,
-		StateConfirmed:         true,
-		StateCancelled:         true,
-		StateExpired:           true,
+		StateDraft:      true,
+		StateValidating: true,
+		StateReady:      true,
+		StateBlocked:    true,
+		StateConfirming: true,
+		StateConfirmed:  true,
+		StateCancelled:  true,
+		StateExpired:    true,
 	}
-	if len(states) != 7 {
-		t.Fatalf("expected 7 distinct intent states, got %d", len(states))
+	if len(states) != 8 {
+		t.Fatalf("expected 8 distinct intent states, got %d", len(states))
 	}
 }
 
