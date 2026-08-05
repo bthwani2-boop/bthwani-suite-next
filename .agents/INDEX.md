@@ -32,6 +32,7 @@ Load only the skill whose trigger matches the changed scope:
 - `bthwani-security-secrets-privacy` — auth, authorization, sessions, secrets, PII, privacy, or isolation.
 - `bthwani-service-fullstack-journey` — capability crossing contract, backend, data, shared state, and surfaces.
 - `bthwani-sdlc-stage-gate-orchestrator` — formal G0-G10, release, production, or risk-acceptance routing.
+- `open-code-review-delegate` — deterministic OCR review scoping and project rules with a subscription-based host agent; advisory only and never a formal approval authority.
 
 ## Routing constraints
 
@@ -40,4 +41,4 @@ Load only the skill whose trigger matches the changed scope:
 - Governance and CI approvals remain separate.
 - The independent reviewer must not author, execute, or coordinate the reviewed change.
 - Retired skills are never routed; Git history is the archive.
-- Graphify, LeanCTX, Nx, and runtime tooling are optional and evidence-driven.
+- Graphify, LeanCTX, Nx, OpenCodeReview, and runtime tooling are optional and evidence-driven.
