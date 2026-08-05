@@ -17,15 +17,15 @@ func RegisterProvisioningRoutes(handler http.Handler, repo *workforce.Repository
 	orchestrator := workforce.NewProvisioningOrchestrator(repo, identity, service)
 	s := &server{repo: repo, auth: authClient, service: service}
 //	
-	mux.HandleFunc("POST /workforce/provisioning-cases", s.operatorOnly("provider:create", func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+//	mux.HandleFunc("POST /workforce/provisioning-cases", s.operatorOnly("provider:create", func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 		startProvisioningCase(w, r, identity, orchestrator)
 	}))
 //	
-	mux.HandleFunc("GET /workforce/provisioning-cases/{id}", s.anyAuthenticated(func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+//	mux.HandleFunc("GET /workforce/provisioning-cases/{id}", s.anyAuthenticated(func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 		getProvisioningCase(w, r, s.repo)
 	}))
 //	
-	mux.HandleFunc("POST /workforce/provisioning-cases/{id}/resume", s.operatorOnly("provider:create", func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+//	mux.HandleFunc("POST /workforce/provisioning-cases/{id}/resume", s.operatorOnly("provider:create", func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 		resumeProvisioningCase(w, r, identity, orchestrator)
 	}))
 }
@@ -81,4 +81,5 @@ func resumeProvisioningCase(w http.ResponseWriter, r *http.Request, identity aut
 	
 	sendJSON(w, http.StatusOK, pc)
 }
+
 
