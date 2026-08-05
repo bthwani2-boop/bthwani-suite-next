@@ -177,7 +177,7 @@ func (s *protectedStoreServer) handleClaimOperatorSupportTicket(w http.ResponseW
 		return
 	}
 	var body struct {
-		ExpectedVersion int json:"expectedVersion"
+		ExpectedVersion int `json:"expectedVersion"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -197,8 +197,8 @@ func (s *protectedStoreServer) handleEscalateOperatorSupportTicket(w http.Respon
 		return
 	}
 	var body struct {
-		Reason          string json:"reason"
-		ExpectedVersion int    json:"expectedVersion"
+		Reason          string `json:"reason"`
+		ExpectedVersion int    `json:"expectedVersion"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return

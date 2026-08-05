@@ -191,6 +191,10 @@ func RegisterGovernedIncidentRoutes(
 	mux.HandleFunc("GET /dsh/operator/support/incidents/{incidentId}", protected.withPermission("control-panel", SupportPermissionRead, protected.handleGetGovernedIncident))
 	mux.HandleFunc("PATCH /dsh/operator/support/incidents/{incidentId}", protected.withPermission("control-panel", SupportPermissionManage, protected.handleUpdateGovernedIncident))
 	mux.HandleFunc("GET /dsh/operator/support/incidents/{incidentId}/events", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListGovernedIncidentEvents))
+	mux.HandleFunc("POST /dsh/operator/support/incidents/{incidentId}/tasks", protected.withPermission("control-panel", SupportPermissionManage, protected.handleCreateIncidentTask))
+	mux.HandleFunc("PATCH /dsh/operator/support/incidents/tasks/{taskId}", protected.withPermission("control-panel", SupportPermissionManage, protected.handleUpdateIncidentTask))
+	mux.HandleFunc("POST /dsh/operator/support/incidents/{incidentId}/communications", protected.withPermission("control-panel", SupportPermissionManage, protected.handleCreateIncidentCommunication))
+	mux.HandleFunc("POST /dsh/operator/support/incidents/{incidentId}/entities", protected.withPermission("control-panel", SupportPermissionManage, protected.handleCreateIncidentEntity))
 }
 
 // GovernedIncidentMiddleware replaces the legacy incident CRUD at runtime and
@@ -228,4 +232,96 @@ func GovernedIncidentMiddleware(
 			store.SendError(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "incident operation is not supported")
 		}
 	})
+}
+
+func (s *protectedStoreServer) handleCreateIncidentTask(w http.ResponseWriter, r *http.Request) {
+	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
+	if !ok {
+		return
+	}
+	var body struct {
+		AssigneeID   string `json:"assigneeId"`
+		AssigneeRole string `json:"assigneeRole"`
+		Description  string `json:"description"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	task, err := support.AddIncidentTask(s.db, r.PathValue("incidentId"), support.CreateIncidentTaskInput{
+		AssigneeID:   body.AssigneeID,
+		AssigneeRole: body.AssigneeRole,
+		Description:  body.Description,
+	})
+	if err != nil {
+		sendGovernedSupportError(w, err, "failed to add incident task")
+		return
+	}
+	store.SendJSON(w, http.StatusCreated, map[string]any{"task": task})
+}
+
+func (s *protectedStoreServer) handleUpdateIncidentTask(w http.ResponseWriter, r *http.Request) {
+	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
+	if !ok {
+		return
+	}
+	var body struct {
+		Status      string `json:"status"`
+		EvidenceURL string `json:"evidenceUrl"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	task, err := support.UpdateIncidentTaskStatus(s.db, r.PathValue("taskId"), support.UpdateIncidentTaskInput{
+		Status:      support.IncidentTaskStatus(body.Status),
+		EvidenceURL: body.EvidenceURL,
+	})
+	if err != nil {
+		sendGovernedSupportError(w, err, "failed to update incident task")
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"task": task})
+}
+
+func (s *protectedStoreServer) handleCreateIncidentCommunication(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
+	if !ok {
+		return
+	}
+	var body struct {
+		Body         string `json:"body"`
+		IsPublicSafe bool   `json:"isPublicSafe"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	comm, err := support.AddIncidentCommunication(s.db, r.PathValue("incidentId"), support.CreateIncidentCommunicationInput{
+		AuthorID:     actor.ID,
+		Body:         body.Body,
+		IsPublicSafe: body.IsPublicSafe,
+	})
+	if err != nil {
+		sendGovernedSupportError(w, err, "failed to add incident communication")
+		return
+	}
+	store.SendJSON(w, http.StatusCreated, map[string]any{"communication": comm})
+}
+
+func (s *protectedStoreServer) handleCreateIncidentEntity(w http.ResponseWriter, r *http.Request) {
+	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage)
+	if !ok {
+		return
+	}
+	var body struct {
+		EntityType string `json:"entityType"`
+		EntityID   string `json:"entityId"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	entity, err := support.AddIncidentEntity(s.db, r.PathValue("incidentId"), body.EntityType, body.EntityID)
+	if err != nil {
+		sendGovernedSupportError(w, err, "failed to add incident entity")
+		return
+	}
+	store.SendJSON(w, http.StatusCreated, map[string]any{"entity": entity})
 }

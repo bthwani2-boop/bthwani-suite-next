@@ -1,0 +1,13 @@
+{
+  "project": "bthwani-suite-next",
+  "contextFileName": "GEMINI.md",
+  "instructions": [
+    "AGENTS.md"
+  ],
+  "mcpServers": {
+    "lean-ctx": {
+      "command": "lean-ctx",
+      "trust": true
+    }
+  }
+}

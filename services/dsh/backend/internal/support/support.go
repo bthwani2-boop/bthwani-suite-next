@@ -10,7 +10,6 @@ var (
 	ErrNotFound  = errors.New("support record not found")
 	ErrInvalid   = errors.New("invalid support input")
 	ErrForbidden = errors.New("support access forbidden")
-	ErrConflict  = errors.New("support record conflict")
 )
 
 type TicketStatus string
@@ -48,8 +47,12 @@ const (
 	RoleOperator ReporterRole = "operator"
 
 	IncidentOpen       IncidentStatus = "open"
+	IncidentTriaged    IncidentStatus = "triaged"
+	IncidentContaining IncidentStatus = "containing"
+	IncidentMitigating IncidentStatus = "mitigating"
 	IncidentMonitoring IncidentStatus = "monitoring"
 	IncidentResolved   IncidentStatus = "resolved"
+	IncidentClosed     IncidentStatus = "closed"
 
 	SeverityLow      IncidentSeverity = "low"
 	SeverityMedium   IncidentSeverity = "medium"
@@ -404,7 +407,7 @@ func scanIncidentRow(rows *sql.Rows) (Incident, error) {
 }
 
 func ClaimTicket(db *sql.DB, ticketID string, assignedTo string, expectedVersion int) (Ticket, error) {
-	row := db.QueryRow(
+	row := db.QueryRow(`
 		UPDATE dsh_support_tickets
 		SET assigned_to = $2,
 		    claimed_by = $2,
@@ -415,7 +418,7 @@ func ClaimTicket(db *sql.DB, ticketID string, assignedTo string, expectedVersion
 		WHERE id = $1 AND version = $3
 		RETURNING id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
 		          status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at,
-		          version, COALESCE(claimed_by,''), claimed_at, sla_breach_at, escalated_at, COALESCE(escalation_reason,''),
+		          version, COALESCE(claimed_by,''), claimed_at, sla_breach_at, escalated_at, COALESCE(escalation_reason,'')`,
 		ticketID, assignedTo, expectedVersion,
 	)
 	t, err := scanTicket(row)
@@ -426,7 +429,7 @@ func ClaimTicket(db *sql.DB, ticketID string, assignedTo string, expectedVersion
 }
 
 func EscalateTicket(db *sql.DB, ticketID string, reason string, expectedVersion int) (Ticket, error) {
-	row := db.QueryRow(
+	row := db.QueryRow(`
 		UPDATE dsh_support_tickets
 		SET escalated_at = NOW(),
 		    escalation_reason = $2,
@@ -436,7 +439,7 @@ func EscalateTicket(db *sql.DB, ticketID string, reason string, expectedVersion 
 		WHERE id = $1 AND version = $3
 		RETURNING id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
 		          status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at,
-		          version, COALESCE(claimed_by,''), claimed_at, sla_breach_at, escalated_at, COALESCE(escalation_reason,''),
+		          version, COALESCE(claimed_by,''), claimed_at, sla_breach_at, escalated_at, COALESCE(escalation_reason,'')`,
 		ticketID, reason, expectedVersion,
 	)
 	t, err := scanTicket(row)
@@ -457,8 +460,8 @@ type CannedResponse struct {
 }
 
 func ListCannedResponses(db *sql.DB, categoryFilter string) ([]CannedResponse, error) {
-	q := SELECT id::text, title, body, category, is_active, created_at, updated_at
-	      FROM dsh_support_canned_responses
+	q := `SELECT id::text, title, body, category, is_active, created_at, updated_at
+	      FROM dsh_support_canned_responses`
 	var args []any
 	if categoryFilter != "" {
 		q += " WHERE category = $1"
@@ -480,3 +483,57 @@ func ListCannedResponses(db *sql.DB, categoryFilter string) ([]CannedResponse, e
 	}
 	return list, rows.Err()
 }
+
+type IncidentTaskStatus string
+
+const (
+	TaskPending    IncidentTaskStatus = "pending"
+	TaskInProgress IncidentTaskStatus = "in_progress"
+	TaskCompleted  IncidentTaskStatus = "completed"
+	TaskCanceled   IncidentTaskStatus = "canceled"
+)
+
+type IncidentTask struct {
+	ID           string             `json:"id"`
+	IncidentID   string             `json:"incidentId"`
+	AssigneeID   string             `json:"assigneeId"`
+	AssigneeRole string             `json:"assigneeRole"`
+	Description  string             `json:"description"`
+	Status       IncidentTaskStatus `json:"status"`
+	EvidenceURL  string             `json:"evidenceUrl,omitempty"`
+	CreatedAt    time.Time          `json:"createdAt"`
+	UpdatedAt    time.Time          `json:"updatedAt"`
+}
+
+type IncidentCommunication struct {
+	ID           string    `json:"id"`
+	IncidentID   string    `json:"incidentId"`
+	AuthorID     string    `json:"authorId"`
+	Body         string    `json:"body"`
+	IsPublicSafe bool      `json:"isPublicSafe"`
+	CreatedAt    time.Time `json:"createdAt"`
+}
+
+type IncidentEntity struct {
+	IncidentID string `json:"incidentId"`
+	EntityType string `json:"entityType"`
+	EntityID   string `json:"entityId"`
+}
+
+type CreateIncidentTaskInput struct {
+	AssigneeID   string
+	AssigneeRole string
+	Description  string
+}
+
+type UpdateIncidentTaskInput struct {
+	Status      IncidentTaskStatus
+	EvidenceURL string
+}
+
+type CreateIncidentCommunicationInput struct {
+	AuthorID     string
+	Body         string
+	IsPublicSafe bool
+}
+
