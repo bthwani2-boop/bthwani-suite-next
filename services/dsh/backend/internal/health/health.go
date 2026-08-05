@@ -14,7 +14,7 @@ import (
 
 const (
 	dshMigrationServiceName = "dsh"
-	dshLatestMigration      = "dsh-972_financial_eligibility_wlt_decision_boundary.sql"
+	dshLatestMigration      = "dsh-992_platform_providers_registry.sql"
 	dshReadinessTimeout     = 2 * time.Second
 )
 
@@ -105,7 +105,7 @@ func handleReadiness(readinessStore runtimeReadinessStore, storageStatus func(co
 		wltBaseURLStatus := configuredStatus(os.Getenv("DSH_WLT_BASE_URL"))
 		wltTokenStatus := configuredStatus(os.Getenv("WLT_DSH_SERVICE_TOKEN"))
 		storageDependencyStatus := storageStatus(ctx)
-		if storageDependencyStatus == "ready" || storageDependencyStatus == "HEALTHY" {
+		if storageDependencyStatus == "ready" || storageDependencyStatus == "ok" || storageDependencyStatus == "HEALTHY" {
 			storageDependencyStatus = "HEALTHY"
 		} else {
 			storageDependencyStatus = "NOT_READY"
