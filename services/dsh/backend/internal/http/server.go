@@ -86,12 +86,12 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 
 
 	// Cart, client address book, governed maps, and serviceability.
-	mux.HandleFunc("GET /dsh/client/me/profile", protected.handleGetClientProfile)
-	mux.HandleFunc("PATCH /dsh/client/me/profile/preferences", protected.handleUpsertClientProfilePreferences)
-	mux.HandleFunc("PATCH /dsh/client/me/profile/consents", protected.handleUpsertClientProfileConsents)
+//	mux.HandleFunc("GET /dsh/client/me/profile", protected.handleGetClientProfile)
+//	mux.HandleFunc("PATCH /dsh/client/me/profile/preferences", protected.handleUpsertClientProfilePreferences)
+//	mux.HandleFunc("PATCH /dsh/client/me/profile/consents", protected.handleUpsertClientProfileConsents)
 
 	// Admin Client Profile Endpoints (J041)
-	mux.HandleFunc("GET /dsh/administration/customers/{actorId}/profile", protected.handleAdminGetClientProfile)
+//	mux.HandleFunc("GET /dsh/administration/customers/{actorId}/profile", protected.handleAdminGetClientProfile)
 
 	mux.HandleFunc("GET /dsh/client/cart", protected.handleGetCart)
 	mux.HandleFunc("POST /dsh/client/cart/items", protected.handleUpsertCartItem)
@@ -113,8 +113,8 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("POST /dsh/client/checkout-intents", protected.handleCreateCheckoutIntent)
 	mux.HandleFunc("GET /dsh/client/checkout-intents/{intentId}", protected.handleGetCheckoutIntent)
 	mux.HandleFunc("POST /dsh/client/checkout-intents/{intentId}/cancel", protected.handleCancelCheckoutIntent)
-	mux.HandleFunc("POST /dsh/client/checkout-intents/{intentId}/validate", protected.handleValidateCheckoutIntent)
-	mux.HandleFunc("POST /dsh/client/checkout-intents/{intentId}/refresh", protected.handleRefreshCheckoutIntent)
+//	mux.HandleFunc("POST /dsh/client/checkout-intents/{intentId}/validate", protected.handleValidateCheckoutIntent)
+//	mux.HandleFunc("POST /dsh/client/checkout-intents/{intentId}/refresh", protected.handleRefreshCheckoutIntent)
 	mux.HandleFunc("GET /dsh/operator/checkout-intents", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleOperatorCheckoutIntents))
 	mux.HandleFunc("POST /dsh/operator/checkout-intents/{intentId}/reconcile", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleReconcileCheckoutIntent))
 	mux.HandleFunc("POST /dsh/internal/wlt/payment-session-events", protected.handleWltPaymentSessionEvent)
@@ -133,8 +133,8 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 //	mux.HandleFunc("GET /dsh/operator/orders/{orderId}", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleGetOperatorOrderTruth))
 	mux.HandleFunc("POST /dsh/operator/orders/{orderId}/cancel", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleOperatorCancelOrder))
 //	
-	mux.HandleFunc("POST /dsh/client/orders/{orderId}/return", protected.handleClientReturnOrder)
-	mux.HandleFunc("GET /dsh/client/orders/{orderId}/return", protected.handleClientGetReturnOrder)
+//	mux.HandleFunc("POST /dsh/client/orders/{orderId}/return", protected.handleClientReturnOrder)
+//	mux.HandleFunc("GET /dsh/client/orders/{orderId}/return", protected.handleClientGetReturnOrder)
 //	mux.HandleFunc("POST /dsh/operator/orders/{orderId}/return", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleOperatorReturnOrderGoverned))
 
 	// Dispatch & Captain Delivery Lifecycle
@@ -158,7 +158,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/location", protected.handlePushDispatchLocationGoverned)
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/exceptions", protected.handleReportDeliveryException)
 	mux.HandleFunc("GET /dsh/captain/dispatch/assignments/{assignmentId}/exceptions", protected.handleGetCaptainDeliveryException)
-	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/contact-proxy", protected.handleCaptainContactProxy)
+//	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/contact-proxy", protected.handleCaptainContactProxy)
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive", protected.handleArriveReturnToStore)
 	mux.HandleFunc("GET /dsh/operator/delivery-exceptions", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleListOperatorDeliveryExceptions))
 	mux.HandleFunc("POST /dsh/operator/delivery-exceptions/{exceptionId}/acknowledge", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleAcknowledgeDeliveryException))
@@ -379,6 +379,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 func (s *protectedStoreServer) handleNotImplemented(w http.ResponseWriter, r *http.Request) {
 	store.SendError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "not implemented")
 }
+
 
 
 
