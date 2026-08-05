@@ -1,10 +1,8 @@
-# LeanCTX repository adapter
 
-`AGENTS.md` is the canonical authority. LeanCTX is an optional context-reduction tool and never an approval, evidence, or repository authority.
+# LeanCTX Adapter
 
-- Start with direct, scoped inspection.
-- Use `ctx_*` tools only when they reduce repeated reads or excessive output for the current task.
-- Do not require `ctx_compose` before ordinary repository inspection.
-- Do not hide tool results, executed checks, blockers, remaining risks, or decision boundaries required by `AGENTS.md`.
-- Never present compressed context as proof of runtime behavior, security, finance, release, production, or final closure.
-- Keep machine-local LeanCTX state outside tracked repository truth.
+`AGENTS.md` is the canonical authority.
+The project tool policy is `.agents/tools/leanctx.md`.
+
+LeanCTX is optional context reduction. It cannot suppress exact evidence, checks, blockers,
+remaining risks, or decision boundaries, and it owns no approval or repository truth.

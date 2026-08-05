@@ -1,44 +1,54 @@
+
 # BThwani Agent Routing Index
 
 Status: DERIVED_SUPPORT
 
-Canonical source: `governance/skills/skills-registry.json`.
+Canonical sources:
 
-Use this index only when the task requires a governed skill. Normal focused code work does not require loading the whole skill layer.
+- `AGENTS.md`
+- `governance/skills/skills-registry.json`
+- `governance/tools/agent-tool-registry.json`
 
-## Always active for repository claims
+Use this index only when routing is not already obvious. Normal focused work must not preload the full skill or tool layer.
 
-- `bthwani-current-workspace-authority` — pin repository, branch, and commit.
-- `bthwani-universal-task-router` — classify mode and risk when scope is not already obvious.
-- `bthwani-evidence-gate-router` — select evidence only when a verification or closure claim is requested.
+## Active skill
+
+- `bthwani-current-workspace-authority` — pin repository, branch, commit, and ref provenance for repository claims.
 
 ## Conditional skills
 
-Load only the skill whose trigger matches the changed scope:
+Load only when the trigger matches:
 
-- `bthwani-agent-skill-integrity` — agents, adapters, skills, or routing contracts.
-- `bthwani-api-runtime-binding` — OpenAPI, route, generated client, or API consumer.
-- `bthwani-cost-aware-subagent-orchestrator` — two or more independent bounded work units.
+- `bthwani-universal-task-router` — task mode or risk is unclear.
+- `bthwani-evidence-gate-router` — verification, readiness, closure, or evidence scope is requested.
+- `bthwani-agent-skill-integrity` — agents, skills, registries, adapters, or routing change.
+- `bthwani-api-runtime-binding` — API contract, generated client, route, or consumer binding changes.
+- `bthwani-ci-workflow-guardian` — GitHub Actions or CI policy changes.
+- `bthwani-cost-aware-subagent-orchestrator` — two or more independent bounded work units justify delegation.
 - `bthwani-docker-journey-runtime` — Docker, persistence, startup, or live runtime proof.
-- `bthwani-dsh-wlt-finance-boundary` — payment, wallet, ledger, settlement, payout, refund, or commission.
-- `bthwani-final-journey-closure-judge` — explicitly requested final multi-scope closure.
+- `bthwani-dsh-wlt-finance-boundary` — payment, wallet, ledger, settlement, payout, refund, commission, or reconciliation.
+- `bthwani-final-journey-closure-judge` — explicit final multi-scope closure.
 - `bthwani-governance-contract-guardian` — governance contracts, authorities, registries, guards, or SDLC control plane.
-- `bthwani-ci-workflow-guardian` — GitHub Actions, workflow permissions, action pins, or CI aggregation.
-- `bthwani-guard-command-router` — resolving a required registered guard or canonical command.
+- `bthwani-guard-command-router` — registered guard or canonical command resolution.
 - `bthwani-independent-implementation-reviewer` — protected independent implementation review.
 - `bthwani-platform-runtime-config` — environment, provider, URL, port, CORS, or sensitive runtime configuration.
-- `bthwani-product-truth-governor` — user-visible, role-sensitive, cross-surface, commercial, or workflow behavior.
+- `bthwani-product-truth-governor` — user-visible, role-sensitive, commercial, cross-surface, or workflow behavior.
 - `bthwani-screen-flow-binding` — route, screen, state, action, or controller binding.
 - `bthwani-security-secrets-privacy` — auth, authorization, sessions, secrets, PII, privacy, or isolation.
 - `bthwani-service-fullstack-journey` — capability crossing contract, backend, data, shared state, and surfaces.
 - `bthwani-sdlc-stage-gate-orchestrator` — formal G0-G10, release, production, or risk-acceptance routing.
-- `open-code-review-delegate` — deterministic OCR review scoping and project rules with a subscription-based host agent; advisory only and never a formal approval authority.
 
-## Routing constraints
+## Conditional tools
 
-- Load no more than the smallest sufficient set of skills.
+Tool policies live under `.agents/tools/` and are loaded only after the tool is selected:
+
+- Graphify — unresolved application-code relationships.
+- LeanCTX — repeated reads or noisy output.
+- OpenCodeReview — bounded advisory diff, commit, or range review.
+
+## Constraints
+
+- Load the smallest sufficient skill set.
 - Tools and adapters own no approval.
-- Governance and CI approvals remain separate.
+- Retired skills are never routed and have no live `SKILL.md`.
 - The independent reviewer must not author, execute, or coordinate the reviewed change.
-- Retired skills are never routed; Git history is the archive.
-- Graphify, LeanCTX, Nx, OpenCodeReview, and runtime tooling are optional and evidence-driven.

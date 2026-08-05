@@ -1,3 +1,4 @@
+
 # BThwani Governance
 
 Status: ACTIVE_CANONICAL
@@ -6,8 +7,8 @@ Status: ACTIVE_CANONICAL
 
 The current user instruction owns task scope. Repository conflicts are resolved
 by `governance/authority/authority-precedence.json`, followed by `AGENTS.md`,
-these policies, and the machine-readable contracts they name. Skills, adapters,
-diagnostics, generated files, and historical Git content cannot create policy.
+these policies, and the machine-readable contracts they name. Skills, tools,
+adapters, diagnostics, generated files, and historical Git content cannot create policy.
 
 ## Repository execution
 
@@ -46,7 +47,7 @@ security, release, production, residual risk, and final closure remain protected
 - `governance/policies/release.md`
 
 Machine-readable state may remain outside these documents only when it is a
-unique executable contract, schema, lock, or current state record.
+unique executable contract, schema, lock, registry, or current state record.
 
 ## Registered machine and support paths
 
@@ -56,6 +57,7 @@ unique executable contract, schema, lock, or current state record.
 - `governance/policies/**`
 - `governance/agents/**`
 - `governance/skills/**`
+- `governance/tools/agent-tool-registry.json`
 - `governance/guards/**`
 - `governance/authority/**`
 - `governance/authority/direct-work-branch-execution-policy.json`
@@ -67,7 +69,14 @@ unique executable contract, schema, lock, or current state record.
 - `governance/product/**`
 - `tools/guards/guard-manifest.json`
 - `.agents/skills/**`
+- `.agents/tools/**`
+- `.agents/AUTHORITY_BOUNDARY.md`
+- `.agents/EVIDENCE_GATE_ROUTER.md`
+- `.agents/INDEX.md`
+- `.agents/SKILL_CATALOG.md`
+- `CLAUDE.md`
 - `GEMINI.md`
+- `LEAN-CTX.md`
 - `governance/github/**`
 - `governance/github/repository-enforcement.json`
 - `governance/operational_journey_protocol_package/**`
