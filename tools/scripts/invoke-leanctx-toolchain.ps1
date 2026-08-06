@@ -47,7 +47,7 @@ function Invoke-LeanCtx {
   }
 
   if ($exitCode -ne 0) {
-    throw "LeanCTX command failed with exit code $exitCode: lean-ctx $($Arguments -join ' ')"
+    throw "LeanCTX command failed with exit code ${exitCode}: lean-ctx $($Arguments -join ' ')"
   }
 
   return $output
@@ -65,7 +65,6 @@ try {
   $requiredMarkers = @(
     'shell_activation = "agents-only"',
     'cache_policy = "safe"',
-    'tool_profile = "lean"',
     'shadow_mode = false',
     'enable_wakeup_ctx = false',
     'auto_capture = false',
@@ -79,12 +78,8 @@ try {
     }
   }
 
-  if ($config -match '(?m)^\s*tool_profile\s*=\s*"power"\s*$') {
-    throw 'LeanCTX power profile is forbidden for the project default because it adds unnecessary fixed tool-schema cost.'
-  }
-
-  if ($config -match '(?m)^\s*shadow_mode\s*=\s*true\s*$') {
-    throw 'LeanCTX shadow mode must remain disabled for conditional, evidence-driven routing.'
+  if ($config -match '(?m)^\s*tool_profile\s*=') {
+    throw 'Do not persist a tool_profile in .lean-ctx.toml. The lazy-core surface is applied with lean-ctx tools lean.'
   }
 
   if ($Mode -in @("Repair", "Full")) {
@@ -92,9 +87,9 @@ try {
       throw "LeanCTX repair script is missing: $repairScript"
     }
 
-    & $repairScript -Apply
+    & $repairScript
     if ($LASTEXITCODE -ne 0) {
-      throw "LeanCTX local repair failed."
+      throw "LeanCTX unified repair failed."
     }
   }
 
@@ -106,14 +101,21 @@ try {
 
   $tools = Invoke-LeanCtx -Executable $leanCtx -Arguments @("tools", "show")
   if ($tools -notmatch '(?im)Tool Profile:\s*lean\b') {
-    throw "LeanCTX effective tool profile is not lean."
+    throw "LeanCTX effective tool profile is not lean. Run tools/scripts/repair-leanctx-local.ps1."
   }
 
   [void](Invoke-LeanCtx -Executable $leanCtx -Arguments @("tools", "health", "--json"))
-  [void](Invoke-LeanCtx -Executable $leanCtx -Arguments @("doctor"))
+  $doctor = Invoke-LeanCtx -Executable $leanCtx -Arguments @("doctor")
+  if ($doctor -match '(?im)Shadow mode\s+active') {
+    throw "LeanCTX shadow mode is active."
+  }
 
   if ($Mode -eq "Full") {
-    [void](Invoke-LeanCtx -Executable $leanCtx -Arguments @("doctor", "integrations"))
+    $integrations = Invoke-LeanCtx -Executable $leanCtx -Arguments @("doctor", "integrations")
+    if ($integrations -match '(?im)stale binary|hook wrappers\s+.*(?:stale|failed)|^\s*✗') {
+      throw "LeanCTX integrations contain a repairable failure."
+    }
+
     [void](Invoke-LeanCtx -Executable $leanCtx -Arguments @("status", "--json"))
 
     if (-not (Test-Path -LiteralPath $diagnosticScript -PathType Leaf)) {

@@ -1,7 +1,6 @@
-[CmdletBinding(SupportsShouldProcess)]
+[CmdletBinding()]
 param(
-  [switch]$Apply,
-  [switch]$SkipSetupFix
+  [switch]$SkipIntegrationRepair
 )
 
 $ErrorActionPreference = "Stop"
@@ -32,24 +31,40 @@ function Resolve-LeanCtxExecutable {
   throw "LeanCTX executable was not found."
 }
 
-function Invoke-LeanCtx {
+function Invoke-LeanCtxStreaming {
   param(
-    [Parameter(Mandatory)][string]$Executable,
     [Parameter(Mandatory)][string[]]$Arguments
   )
 
-  $output = (& $Executable @Arguments 2>&1 | Out-String).Trim()
+  Write-Host "`n==> lean-ctx $($Arguments -join ' ')" -ForegroundColor Cyan
+  & $script:LeanCtx @Arguments
   $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
-
-  if ($output) {
-    Write-Output $output
-  }
-
   if ($exitCode -ne 0) {
     throw "LeanCTX command failed with exit code ${exitCode}: lean-ctx $($Arguments -join ' ')"
   }
+}
 
-  return $output
+function Invoke-LeanCtxCapture {
+  param(
+    [Parameter(Mandatory)][string[]]$Arguments,
+    [switch]$AllowFailure
+  )
+
+  Write-Host "`n==> lean-ctx $($Arguments -join ' ')" -ForegroundColor Cyan
+  $lines = @(& $script:LeanCtx @Arguments 2>&1)
+  $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
+  foreach ($line in $lines) {
+    Write-Host ([string]$line)
+  }
+
+  if (-not $AllowFailure -and $exitCode -ne 0) {
+    throw "LeanCTX command failed with exit code ${exitCode}: lean-ctx $($Arguments -join ' ')"
+  }
+
+  return [pscustomobject]@{
+    exit_code = $exitCode
+    text = (($lines | ForEach-Object { [string]$_ }) -join "`n")
+  }
 }
 
 function Get-OptionalProperty {
@@ -101,8 +116,8 @@ function Remove-BlanketTrust {
   )
 
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-    Write-Output "skip_missing=${Label}::${Path}"
-    return $false
+    Write-Host "skip_missing=${Label}::${Path}"
+    return
   }
 
   try {
@@ -114,19 +129,14 @@ function Remove-BlanketTrust {
 
   $server = Get-LeanCtxServer -Json $json
   if ($null -eq $server) {
-    Write-Output "skip_no_leanctx=${Label}::${Path}"
-    return $false
+    Write-Host "skip_no_leanctx=${Label}::${Path}"
+    return
   }
 
   $trustProperty = $server.PSObject.Properties["trust"]
   if ($null -eq $trustProperty -or $trustProperty.Value -ne $true) {
-    Write-Output "trust_already_safe=${Label}::${Path}"
-    return $false
-  }
-
-  if (-not $Apply) {
-    Write-Output "would_remove_trust=${Label}::${Path}"
-    return $true
+    Write-Host "trust_already_safe=${Label}::${Path}"
+    return
   }
 
   New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
@@ -136,73 +146,94 @@ function Remove-BlanketTrust {
   [void]$server.PSObject.Properties.Remove("trust")
   $jsonText = $json | ConvertTo-Json -Depth 100
   Set-Content -LiteralPath $Path -Value $jsonText -Encoding utf8NoBOM
-
-  Write-Output "removed_trust=${Label}::${Path}"
-  return $true
+  Write-Host "removed_trust=${Label}::${Path}"
 }
 
-$leanCtx = Resolve-LeanCtxExecutable
+$script:LeanCtx = Resolve-LeanCtxExecutable
 
-if (-not $Apply) {
-  Write-Output "mode=DRY_RUN"
-  Write-Output "planned_action=run LeanCTX setup --fix to refresh stale wrappers"
-  Write-Output "planned_action=remove trust=true only from LeanCTX MCP entries in detected user JSON configs"
-  Write-Output "planned_action=validate config, lean tool profile, doctor, and integrations"
-}
-else {
-  Write-Output "mode=APPLY"
-}
+Push-Location $root
+try {
+  Write-Host "LeanCTX unified configuration for bthwani-suite-next" -ForegroundColor Green
+  Write-Host "repository_root=$root"
+  Write-Host "selected_profile=lean"
+  Write-Host "reason=lowest fixed MCP schema cost; specialized tools remain available through ctx_call"
 
-if ($Apply -and -not $SkipSetupFix) {
-  [void](Invoke-LeanCtx -Executable $leanCtx -Arguments @("setup", "--fix"))
-}
-
-$userJsonConfigs = @(
-  @{ path = (Join-Path $HOME ".gemini/settings.json"); label = "Gemini CLI" },
-  @{ path = (Join-Path $HOME ".gemini/antigravity/mcp_config.json"); label = "Antigravity IDE" },
-  @{ path = (Join-Path $HOME ".gemini/antigravity-cli/mcp_config.json"); label = "Antigravity CLI" },
-  @{ path = (Join-Path $HOME ".claude.json"); label = "Claude Code" },
-  @{ path = (Join-Path $HOME ".qoder/settings.json"); label = "Qoder CLI" }
-)
-
-if ($env:APPDATA) {
-  $userJsonConfigs += @{
-    path = (Join-Path $env:APPDATA "Qoder/SharedClientCache/mcp.json")
-    label = "Qoder"
+  $projectConfig = Join-Path $root ".lean-ctx.toml"
+  if (-not (Test-Path -LiteralPath $projectConfig -PathType Leaf)) {
+    throw "Missing project LeanCTX config: $projectConfig"
   }
-}
 
-foreach ($entry in $userJsonConfigs) {
-  [void](Remove-BlanketTrust -Path $entry.path -Label $entry.label)
-}
+  $configText = Get-Content -LiteralPath $projectConfig -Raw
+  if ($configText -match '(?m)^\s*tool_profile\s*=') {
+    throw "The project config must not persist tool_profile. Pull the current smsm branch and rerun."
+  }
+  if ($configText -notmatch '(?m)^\s*shadow_mode\s*=\s*false\s*$') {
+    throw "The project config must keep shadow_mode = false."
+  }
 
-if (-not $Apply) {
-  Write-Output "decision=DRY_RUN"
-  Write-Output "rerun_with=-Apply"
-  exit 0
-}
+  $preIntegration = Invoke-LeanCtxCapture -Arguments @("doctor", "integrations") -AllowFailure
+  $needsSetupFix = $preIntegration.exit_code -ne 0 -or $preIntegration.text -match '(?im)stale binary|hook wrappers\s+.*(?:stale|failed)|^\s*✗'
 
-$validation = Invoke-LeanCtx -Executable $leanCtx -Arguments @("config", "validate")
-if ($validation -notmatch '(?m)\[OK\]\s+All\s+\d+\s+keys\s+validated\s+successfully') {
-  throw "LeanCTX configuration validation did not report success."
-}
+  if ($needsSetupFix -and -not $SkipIntegrationRepair) {
+    Write-Host "`nIntegration drift detected; running setup --fix with live output." -ForegroundColor Yellow
+    Invoke-LeanCtxStreaming -Arguments @("setup", "--fix")
+  }
+  elseif ($needsSetupFix) {
+    throw "LeanCTX integration repair is required, but -SkipIntegrationRepair was supplied."
+  }
+  else {
+    Write-Host "integration_setup=already_healthy"
+  }
 
-$tools = Invoke-LeanCtx -Executable $leanCtx -Arguments @("tools", "show")
-if ($tools -notmatch '(?im)Tool Profile:\s*lean\b') {
-  throw "LeanCTX effective tool profile is not lean after repair."
-}
+  Invoke-LeanCtxStreaming -Arguments @("trust")
+  Invoke-LeanCtxStreaming -Arguments @("tools", "lean")
 
-$doctor = Invoke-LeanCtx -Executable $leanCtx -Arguments @("doctor")
-if ($doctor -match '(?im)Shadow mode\s+active') {
-  throw "LeanCTX shadow mode is still active for this project."
-}
+  $userJsonConfigs = @(
+    @{ path = (Join-Path $HOME ".gemini/settings.json"); label = "Gemini CLI" },
+    @{ path = (Join-Path $HOME ".gemini/antigravity/mcp_config.json"); label = "Antigravity IDE" },
+    @{ path = (Join-Path $HOME ".gemini/antigravity-cli/mcp_config.json"); label = "Antigravity CLI" },
+    @{ path = (Join-Path $HOME ".claude.json"); label = "Claude Code" },
+    @{ path = (Join-Path $HOME ".qoder/settings.json"); label = "Qoder CLI" }
+  )
 
-$integrations = Invoke-LeanCtx -Executable $leanCtx -Arguments @("doctor", "integrations")
-if ($integrations -match '(?im)stale binary|hook wrappers\s+.*(?:stale|failed)|^\s*✗') {
-  throw "LeanCTX integrations still report a repairable failure."
-}
+  if ($env:APPDATA) {
+    $userJsonConfigs += @{
+      path = (Join-Path $env:APPDATA "Qoder/SharedClientCache/mcp.json")
+      label = "Qoder"
+    }
+  }
 
-Write-Output "backup_directory=$backupRoot"
-Write-Output "leanctx_profile=lean"
-Write-Output "leanctx_shadow_mode=false"
-Write-Output "decision=PASS"
+  foreach ($entry in $userJsonConfigs) {
+    Remove-BlanketTrust -Path $entry.path -Label $entry.label
+  }
+
+  $validation = Invoke-LeanCtxCapture -Arguments @("config", "validate")
+  if ($validation.text -notmatch '(?m)\[OK\]\s+All\s+\d+\s+keys\s+validated\s+successfully') {
+    throw "LeanCTX configuration validation did not report success."
+  }
+
+  $tools = Invoke-LeanCtxCapture -Arguments @("tools", "show")
+  if ($tools.text -notmatch '(?im)Tool Profile:\s*lean\b') {
+    throw "LeanCTX effective tool profile is not lean."
+  }
+
+  $doctor = Invoke-LeanCtxCapture -Arguments @("doctor")
+  if ($doctor.text -match '(?im)Shadow mode\s+active') {
+    throw "LeanCTX shadow mode is still active."
+  }
+
+  $integrations = Invoke-LeanCtxCapture -Arguments @("doctor", "integrations")
+  if ($integrations.text -match '(?im)stale binary|hook wrappers\s+.*(?:stale|failed)|^\s*✗') {
+    throw "LeanCTX integrations still contain a repairable failure."
+  }
+
+  Invoke-LeanCtxStreaming -Arguments @("tools", "health")
+
+  Write-Host "`nleanctx_profile=lean" -ForegroundColor Green
+  Write-Host "leanctx_shadow_mode=false" -ForegroundColor Green
+  Write-Host "backup_directory=$backupRoot"
+  Write-Host "decision=PASS" -ForegroundColor Green
+}
+finally {
+  Pop-Location
+}
