@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 2,
+  "packageClass": "DERIVED_SUPPORT_ARTIFACT",
+  "task": {
+    "id": "TASK_PACKAGE_ID",
+    "name": "TASK_NAME",
+    "slug": "TASK_SLUG",
+    "objective": "TASK_OBJECTIVE",
+    "repository": "REPOSITORY_NAME",
+    "targetBranch": "TARGET_BRANCH",
+    "pinnedStartSha": "PINNED_START_SHA",
+    "latestObservedRemoteSha": "PINNED_START_SHA",
+    "mode": "REQUESTED_MODE",
+    "createdAt": "CREATED_AT_ISO",
+    "createdBy": "AGENT_OR_OPERATOR"
+  },
+  "authority": {
+    "rootAuthority": "governance/authority/authority-precedence.json",
+    "agentEntryPoint": "AGENTS.md",
+    "classification": "DERIVED_SUPPORT_ARTIFACT",
+    "canCreatePolicy": false,
+    "canOverrideCanonicalSource": false,
+    "executionAuthorization": "NOT_AUTHORIZED"
+  },
+  "status": {
+    "diagnosis": "DIAGNOSIS_IN_PROGRESS",
+    "plan": "NOT_READY",
+    "implementation": "NOT_STARTED",
+    "verification": "NOT_STARTED",
+    "decision": "NEEDS_EVIDENCE"
+  },
+  "coverage": {
+    "requiredSurfaces": [
+      "control-panel",
+      "app-client",
+      "app-partner",
+      "app-captain",
+      "app-field"
+    ],
+    "discoveredControlPanelSections": 0,
+    "discoveredControlPanelRouteFiles": 0,
+    "discoveredInteractiveSources": 0,
+    "ledgerRecords": 0
+  },
+  "gates": {
+    "unclassifiedSurfaces": 0,
+    "unclassifiedControlPanelSections": 0,
+    "unclassifiedControlPanelRoutes": 0,
+    "unclassifiedPagesAndTabs": 0,
+    "unmappedButtonsAndActions": 0,
+    "unmappedFeatures": 0,
+    "unmappedAdminWrites": 0,
+    "unmappedStateReaders": 0,
+    "unmappedCrossSurfaceConsumers": 0,
+    "unmappedInboundJourneys": 0,
+    "unmappedOutboundJourneys": 0,
+    "unverifiedCrossSurfaceEffects": 0,
+    "unverifiedPermissions": 0,
+    "unverifiedFailureStates": 0,
+    "claimsWithoutEvidence": 0,
+    "findingsWithoutRootCause": 0,
+    "findingsWithoutTruthOwner": 0,
+    "internalFindingsWithoutWorkItems": 0,
+    "workItemsWithoutAcceptance": 0,
+    "workItemsWithoutVerification": 0,
+    "unverifiedDeletions": 0,
+    "dependencyCycles": 0,
+    "openInternalGaps": 0,
+    "silentExclusions": 0
+  },
+  "execution": {
+    "oneWorkItemAtATime": true,
+    "currentWorkItem": null,
+    "lastCompletedWorkItem": null,
+    "lastVerifiedSha": null
+  },
+  "disposability": {
+    "mustBeSafeToDelete": true,
+    "runtimeDependsOnPackage": false,
+    "buildDependsOnPackage": false,
+    "ciDependsOnPackage": false,
+    "migrationDependsOnPackage": false,
+    "governanceDependsOnPackage": false,
+    "operationsDependOnPackage": false,
+    "containsOnlyCopyOfDurableDecision": false,
+    "containsSecretsOrProductionData": false,
+    "outsideReferences": [],
+    "durableOutputsMigratedToCanonicalOwners": false,
+    "referenceScanPassed": false
+  }
+}

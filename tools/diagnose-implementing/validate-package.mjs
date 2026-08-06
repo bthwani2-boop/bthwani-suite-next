@@ -1,589 +1,180 @@
 #!/usr/bin/env node
-
-import { readdir, readFile, stat } from 'node:fs/promises';
-import { dirname, extname, relative, resolve, sep } from 'node:path';
+import { access, readFile, readdir, stat } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const frameworkRoot = dirname(fileURLToPath(import.meta.url));
-const repositoryRoot = resolve(frameworkRoot, '..', '..');
-const rawArgs = process.argv.slice(2);
-const strict = rawArgs.includes('--strict');
-const disposal = rawArgs.includes('--disposal');
-const packageArg = rawArgs.find((arg) => !arg.startsWith('--'));
+const root = dirname(fileURLToPath(import.meta.url));
+const repo = resolve(root, '..', '..');
+const args = process.argv.slice(2);
+const strict = args.includes('--strict');
+const disposal = args.includes('--disposal');
+const input = args.find((x) => !x.startsWith('--'));
+if (!input) throw new Error('Usage: validate-package.mjs <package-path> [--strict] [--disposal]');
+const pkg = resolve(process.cwd(), input);
+if (!pkg.startsWith(`${resolve(root)}${sep}`) || pkg === resolve(root, '_template')) throw new Error('Invalid package path.');
 
-if (!packageArg) {
-  throw new Error(
-    'Usage: node tools/diagnose-implementing/validate-package.mjs <package-path> [--strict] [--disposal]',
-  );
-}
+const errors = [], warnings = [];
+const err = (x) => errors.push(x), warn = (x) => warnings.push(x);
+const required = ['STATE.json', 'PACKAGE.md', 'LEDGER.jsonl'];
+const surfaces = ['control-panel', 'app-client', 'app-partner', 'app-captain', 'app-field'];
+const classes = new Set(['AFFECTED','NOT_AFFECTED_WITH_EVIDENCE','OBSOLETE_CANDIDATE','DUPLICATE_CANDIDATE','MIGRATION_REQUIRED','EXTERNAL','UNPROVEN']);
+const markers = [/\bTASK_(?:NAME|SLUG|PACKAGE_ID|OBJECTIVE)\b/g,/\bTARGET_BRANCH\b/g,/\bPINNED_START_SHA\b/g,/\bREPOSITORY_NAME\b/g,/\bREQUESTED_MODE\b/g,/\bREPLACE(?:_[A-Z0-9_]+)?\b/g,/\bTODO\b/g,/\bTBD\b/g];
+const secrets = [/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,/\bAKIA[0-9A-Z]{16}\b/,/\bgh[pousr]_[A-Za-z0-9_]{20,}\b/,/\bgithub_pat_[A-Za-z0-9_]{20,}\b/,/\bsk-[A-Za-z0-9]{20,}\b/];
+const exists = async (p) => { try { await access(p, constants.F_OK); return true; } catch { return false; } };
+const text = async (p) => readFile(p, 'utf8');
+const nonempty = (v) => typeof v === 'string' && v.trim().length > 0;
+const arr = (v) => Array.isArray(v) ? v : [];
+const norm = (p) => relative(repo, p).split(sep).join('/');
+const need = (v, label) => { if (!nonempty(v)) err(`${label} is required.`); };
+const needArr = (v, label, requiredNow = false) => { if (!Array.isArray(v)) { err(`${label} must be an array.`); return []; } if (requiredNow && v.length === 0) err(`${label} must not be empty.`); return v; };
 
-const packagePath = resolve(process.cwd(), packageArg);
-const frameworkPrefix = `${resolve(frameworkRoot)}${sep}`;
-if (!packagePath.startsWith(frameworkPrefix) || packagePath === resolve(frameworkRoot, '_template')) {
-  throw new Error('Package path must be a concrete task directory under tools/diagnose-implementing.');
-}
-
-const errors = [];
-const warnings = [];
-const requiredFiles = [
-  '00-MANIFEST.json',
-  '01-DIAGNOSIS-REPORT.md',
-  '02-FINDINGS-REGISTER.json',
-  '03-EXECUTION-PLAN.md',
-  '04-WORK-ITEMS.json',
-  '05-VERIFICATION-MATRIX.json',
-  '06-CLOSURE-AND-DISPOSAL.md',
-  'evidence/README.md',
-  'phases/PHASE-00.md',
-  'tasks/TASK-0001.json',
-];
-
-const textExtensions = new Set([
-  '.md', '.txt', '.json', '.jsonl', '.yaml', '.yml', '.csv', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs',
-  '.go', '.sql', '.ps1', '.sh', '.toml', '.ini', '.env', '.graphql', '.gql', '.xml', '.html', '.css', '.scss',
-]);
-
-const unresolvedPatterns = [
-  /\bREPLACE(?:_[A-Z0-9_]+)?\b/g,
-  /\bTASK_NAME\b/g,
-  /\bTASK_SLUG\b/g,
-  /\bTARGET_BRANCH\b/g,
-  /\bPINNED_START_SHA\b/g,
-  /\b40_CHARACTER_SHA\b/g,
-  /\bREPOSITORY_PATH\b/g,
-  /\bEXACT_SYMBOL_OR_RANGE\b/g,
-  /\bUNRECORDED\b/g,
-  /\bTODO\b/g,
-  /\bTBD\b/g,
-];
-
-const secretPatterns = [
-  /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
-  /\bAKIA[0-9A-Z]{16}\b/,
-  /\bgh[pousr]_[A-Za-z0-9_]{20,}\b/,
-  /\bgithub_pat_[A-Za-z0-9_]{20,}\b/,
-  /\bsk-[A-Za-z0-9]{20,}\b/,
-  /\b(?:password|passwd|secret|token)\s*[:=]\s*["'][^"']{8,}["']/i,
-];
-
-function addError(message) {
-  errors.push(message);
-}
-
-function addWarning(message) {
-  warnings.push(message);
-}
-
-async function readText(path) {
-  return readFile(path, 'utf8');
-}
-
-async function readJson(path, label) {
-  try {
-    return JSON.parse(await readText(path));
-  } catch (error) {
-    addError(`${label} is not valid JSON: ${error.message}`);
-    return null;
-  }
-}
-
-function isNonEmptyString(value) {
-  return typeof value === 'string' && value.trim().length > 0;
-}
-
-function ensureNonEmpty(value, label) {
-  if (!isNonEmptyString(value)) {
-    addError(`${label} must be a non-empty string.`);
-  }
-}
-
-function ensureArray(value, label, { nonEmpty = false } = {}) {
-  if (!Array.isArray(value)) {
-    addError(`${label} must be an array.`);
-    return [];
-  }
-  if (nonEmpty && value.length === 0) {
-    addError(`${label} must not be empty.`);
-  }
-  return value;
-}
-
-function collectStrings(value, path = '$', output = []) {
-  if (typeof value === 'string') {
-    output.push({ path, value });
-  } else if (Array.isArray(value)) {
-    value.forEach((item, index) => collectStrings(item, `${path}[${index}]`, output));
-  } else if (value && typeof value === 'object') {
-    for (const [key, item] of Object.entries(value)) {
-      collectStrings(item, `${path}.${key}`, output);
+async function walk(base, predicate = () => true, skip = new Set()) {
+  if (!(await exists(base))) return [];
+  const out = [];
+  async function visit(dir) {
+    for (const e of await readdir(dir, { withFileTypes: true })) {
+      if (skip.has(e.name) || ['.git','node_modules','.next','dist'].includes(e.name)) continue;
+      const p = join(dir, e.name);
+      if (e.isDirectory()) await visit(p); else if (e.isFile() && predicate(p)) out.push(p);
     }
   }
-  return output;
+  await visit(base); return out.sort();
+}
+function scan(value, label) {
+  for (const p of markers) { p.lastIndex = 0; if (p.test(value)) (strict ? err : warn)(`${label} contains unresolved marker ${p}.`); }
+  for (const p of secrets) if (p.test(value)) err(`${label} appears to contain a secret.`);
 }
 
-let unresolvedMarkerCount = 0;
-
-function findUnresolvedMarkers(text, label) {
-  for (const pattern of unresolvedPatterns) {
-    pattern.lastIndex = 0;
-    const matches = text.match(pattern);
-    if (matches?.length) {
-      unresolvedMarkerCount += matches.length;
-      const message = `${label} contains unresolved marker ${matches[0]} (${matches.length} occurrence(s)).`;
-      strict ? addError(message) : addWarning(message);
-    }
+for (const f of required) if (!(await exists(join(pkg, f)))) err(`Missing ${f}.`);
+let state;
+try { state = JSON.parse(await text(join(pkg, 'STATE.json'))); } catch (e) { err(`Invalid STATE.json: ${e.message}`); }
+try { scan(await text(join(pkg, 'PACKAGE.md')), 'PACKAGE.md'); } catch (e) { err(`Cannot read PACKAGE.md: ${e.message}`); }
+const records = [];
+try {
+  const raw = await text(join(pkg, 'LEDGER.jsonl')); scan(raw, 'LEDGER.jsonl');
+  for (const [i, line] of raw.split(/\r?\n/).entries()) if (line.trim()) {
+    try { const r = JSON.parse(line); if (!r || Array.isArray(r) || typeof r !== 'object') err(`Ledger line ${i+1} is not an object.`); else records.push({ ...r, __line: i+1 }); }
+    catch (e) { err(`Invalid ledger line ${i+1}: ${e.message}`); }
   }
+} catch (e) { err(`Cannot read LEDGER.jsonl: ${e.message}`); }
+
+if (state) {
+  if (state.schemaVersion !== 2 || state.packageClass !== 'DERIVED_SUPPORT_ARTIFACT') err('STATE schemaVersion/packageClass is invalid.');
+  if (!/^[0-9a-f]{40}$/i.test(state.task?.pinnedStartSha ?? '')) err('Pinned SHA must be 40 hexadecimal characters.');
+  need(state.task?.repository, 'task.repository'); need(state.task?.targetBranch, 'task.targetBranch'); need(state.task?.objective, 'task.objective');
+  if (state.execution?.oneWorkItemAtATime !== true) err('oneWorkItemAtATime must be true.');
+  if (state.authority?.canCreatePolicy !== false || state.authority?.canOverrideCanonicalSource !== false) err('Package cannot create or override authority.');
+  for (const k of ['runtimeDependsOnPackage','buildDependsOnPackage','ciDependsOnPackage','migrationDependsOnPackage','governanceDependsOnPackage','operationsDependOnPackage','containsOnlyCopyOfDurableDecision','containsSecretsOrProductionData']) if (state.disposability?.[k] !== false) err(`disposability.${k} must be false.`);
+  if (!state.gates || typeof state.gates !== 'object') err('STATE.gates is required.'); else for (const [k,v] of Object.entries(state.gates)) {
+    if (!Number.isInteger(v) || v < 0) err(`gate ${k} must be a non-negative integer.`); else if (strict && v !== 0) err(`gate ${k} must be zero; found ${v}.`);
+  }
+  if (strict && (state.status?.diagnosis === 'DIAGNOSIS_IN_PROGRESS' || state.status?.plan === 'NOT_READY')) err('Strict mode requires completed diagnosis and ready plan.');
 }
 
-function checkSecrets(text, label) {
-  for (const pattern of secretPatterns) {
-    if (pattern.test(text)) {
-      addError(`${label} appears to contain a secret or private key pattern. Store only sanitized evidence references.`);
-    }
-  }
+const byType = new Map(), byId = new Map();
+for (const r of records) {
+  if (!nonempty(r.type) || !nonempty(r.id)) { err(`Ledger line ${r.__line} needs type and id.`); continue; }
+  if (byId.has(r.id)) err(`Duplicate id ${r.id}.`); else byId.set(r.id, r);
+  if (!byType.has(r.type)) byType.set(r.type, []); byType.get(r.type).push(r);
+}
+const of = (t) => byType.get(t) ?? [];
+if (of('package').length !== 1) err('Ledger must contain exactly one package record.');
+if (state && of('package')[0]) {
+  const p = of('package')[0];
+  if (p.sha !== state.task.pinnedStartSha || p.branch !== state.task.targetBranch || p.repository !== state.task.repository) err('Package record does not match STATE baseline.');
+}
+const maps = Object.fromEntries(['evidence','flow','finding','work_item','verification'].map((t) => [t, new Map(of(t).map((r) => [r.id, r]))]));
+function refs(value, type, label, requiredNow = false) {
+  const ids = needArr(value, label, strict && requiredNow);
+  for (const id of ids) if (!maps[type]?.has(id)) err(`${label} references unknown ${id}.`);
+  return ids;
 }
 
-async function walk(root, { skip = new Set() } = {}) {
-  const files = [];
-  async function visit(current) {
-    const entries = await readdir(current, { withFileTypes: true });
-    for (const entry of entries) {
-      const absolute = resolve(current, entry.name);
-      const rel = relative(root, absolute);
-      if (skip.has(entry.name) || [...skip].some((item) => rel === item || rel.startsWith(`${item}${sep}`))) {
-        continue;
-      }
-      if (entry.isDirectory()) {
-        await visit(absolute);
-      } else if (entry.isFile()) {
-        files.push(absolute);
-      }
-    }
-  }
-  await visit(root);
-  return files;
+for (const r of of('evidence')) {
+  need(r.claim, `${r.id}.claim`); need(r.sourceType, `${r.id}.sourceType`); need(r.pathOrSource, `${r.id}.pathOrSource`); need(r.result, `${r.id}.result`); need(r.limitations, `${r.id}.limitations`);
+  if (r.sourceType !== 'EXTERNAL_STATE' && !/^[0-9a-f]{40}$/i.test(r.sha ?? '')) err(`${r.id}.sha is invalid.`);
+  if (['SOURCE_CODE','CONTRACT','CONFIGURATION','MIGRATION','TEST'].includes(r.sourceType) && !nonempty(r.symbolOrRange)) err(`${r.id}.symbolOrRange is required.`);
 }
-
-for (const file of requiredFiles) {
-  try {
-    const fileStat = await stat(resolve(packagePath, file));
-    if (!fileStat.isFile()) {
-      addError(`Required path is not a file: ${file}`);
-    }
-  } catch {
-    addError(`Missing required file: ${file}`);
-  }
+for (const r of of('scope')) {
+  need(r.entity, `${r.id}.entity`); need(r.entityType, `${r.id}.entityType`); need(r.reason, `${r.id}.reason`);
+  if (!classes.has(r.classification)) err(`${r.id}.classification is invalid.`);
+  refs(r.evidenceIds, 'evidence', `${r.id}.evidenceIds`, r.classification !== 'UNPROVEN');
+  refs(r.flowIds ?? [], 'flow', `${r.id}.flowIds`);
+  if (strict && r.classification === 'UNPROVEN') err(`${r.id} remains UNPROVEN.`);
+  if (r.classification === 'NOT_AFFECTED_WITH_EVIDENCE' && !nonempty(r.reopenTrigger)) err(`${r.id}.reopenTrigger is required.`);
 }
-
-const packageFiles = await walk(packagePath);
-for (const file of packageFiles) {
-  const extension = extname(file).toLowerCase();
-  if (!textExtensions.has(extension) && extension !== '') {
-    continue;
-  }
-  const fileStat = await stat(file);
-  if (fileStat.size > 2_000_000) {
-    addWarning(`Skipped marker/secret scan for file larger than 2 MB: ${relative(packagePath, file)}`);
-    continue;
-  }
-  const text = await readText(file);
-  findUnresolvedMarkers(text, relative(packagePath, file));
-  checkSecrets(text, relative(packagePath, file));
+for (const r of of('authority')) { need(r.source, `${r.id}.source`); need(r.effect, `${r.id}.effect`); refs(r.evidenceIds, 'evidence', `${r.id}.evidenceIds`, true); }
+for (const r of of('flow')) {
+  for (const k of ['title','actor','intent','entry','success','failure','recovery','truthOwner']) need(r[k], `${r.id}.${k}`);
+  for (const k of ['steps','surfaces','stateWriters','stateReaders']) needArr(r[k], `${r.id}.${k}`, true);
+  needArr(r.sections, `${r.id}.sections`); refs(r.evidenceIds, 'evidence', `${r.id}.evidenceIds`, true);
 }
-
-const manifest = await readJson(resolve(packagePath, '00-MANIFEST.json'), '00-MANIFEST.json');
-const findingsRegister = await readJson(resolve(packagePath, '02-FINDINGS-REGISTER.json'), '02-FINDINGS-REGISTER.json');
-const workItemsRegister = await readJson(resolve(packagePath, '04-WORK-ITEMS.json'), '04-WORK-ITEMS.json');
-const verificationRegister = await readJson(resolve(packagePath, '05-VERIFICATION-MATRIX.json'), '05-VERIFICATION-MATRIX.json');
-
-if (manifest) {
-  if (manifest.packageClass !== 'DERIVED_SUPPORT_ARTIFACT') {
-    addError('Manifest packageClass must be DERIVED_SUPPORT_ARTIFACT.');
-  }
-  if (manifest.authority?.classification !== 'DERIVED_SUPPORT_ARTIFACT') {
-    addError('Manifest authority.classification must be DERIVED_SUPPORT_ARTIFACT.');
-  }
-  if (manifest.authority?.canCreatePolicy !== false || manifest.authority?.canOverrideCanonicalSource !== false) {
-    addError('A task package must not create policy or override canonical sources.');
-  }
-  if (!/^[0-9a-f]{40}$/i.test(manifest.task?.pinnedStartSha ?? '')) {
-    addError('Manifest task.pinnedStartSha must be an exact 40-character SHA.');
-  }
-  if (manifest.disposability?.mustBeSafeToDelete !== true) {
-    addError('Manifest disposability.mustBeSafeToDelete must be true.');
-  }
-  for (const key of [
-    'runtimeDependsOnPackage',
-    'buildDependsOnPackage',
-    'ciDependsOnPackage',
-    'migrationDependsOnPackage',
-    'governanceDependsOnPackage',
-    'operationsDependOnPackage',
-    'containsOnlyCopyOfDurableDecision',
-    'containsSecretsOrProductionData',
-  ]) {
-    if (manifest.disposability?.[key] !== false) {
-      addError(`Manifest disposability.${key} must be false.`);
-    }
-  }
+for (const r of of('finding')) {
+  for (const k of ['title','symptom','immediateCause','structuralCause','truthOwner','durableCorrection']) need(r[k], `${r.id}.${k}`);
+  needArr(r.affectedIds, `${r.id}.affectedIds`, true); refs(r.evidenceIds, 'evidence', `${r.id}.evidenceIds`, true);
+  refs(r.workItemIds, 'work_item', `${r.id}.workItemIds`, !['BLOCKED_EXTERNAL','REJECTED_WITH_EVIDENCE'].includes(r.status));
 }
-
-const findings = ensureArray(findingsRegister?.findings, 'findingsRegister.findings', { nonEmpty: strict });
-const workItems = ensureArray(workItemsRegister?.workItems, 'workItemsRegister.workItems', { nonEmpty: strict });
-const verifications = ensureArray(verificationRegister?.verifications, 'verificationRegister.verifications', { nonEmpty: strict });
-
-function uniqueIdMap(items, field, label, pattern) {
-  const map = new Map();
-  for (const [index, item] of items.entries()) {
-    const id = item?.[field];
-    if (!isNonEmptyString(id) || !pattern.test(id)) {
-      addError(`${label}[${index}].${field} is missing or invalid.`);
-      continue;
-    }
-    if (map.has(id)) {
-      addError(`Duplicate ${label} identifier: ${id}`);
-    }
-    map.set(id, item);
-  }
-  return map;
+let active = 0;
+for (const r of of('work_item')) {
+  need(r.title, `${r.id}.title`); need(r.objective, `${r.id}.objective`); refs(r.findingIds, 'finding', `${r.id}.findingIds`, true);
+  const changes = needArr(r.changes, `${r.id}.changes`, true); for (const [i,c] of changes.entries()) for (const k of ['path','symbol','action','after','forbidden']) need(c?.[k], `${r.id}.changes[${i}].${k}`);
+  needArr(r.affectedSurfaces, `${r.id}.affectedSurfaces`, true); needArr(r.affectedJourneys, `${r.id}.affectedJourneys`, true); needArr(r.acceptance, `${r.id}.acceptance`, true);
+  refs(r.verificationIds, 'verification', `${r.id}.verificationIds`, true); need(r.rollback, `${r.id}.rollback`); need(r.commitBoundary, `${r.id}.commitBoundary`); if (r.status === 'IN_PROGRESS') active++;
 }
-
-const findingMap = uniqueIdMap(findings, 'findingId', 'findings', /^FND-\d{4,}$/);
-const workItemMap = uniqueIdMap(workItems, 'workItemId', 'workItems', /^TASK-\d{4,}$/);
-const verificationMap = uniqueIdMap(verifications, 'verificationId', 'verifications', /^VER-\d{4,}$/);
-
-for (const finding of findings) {
-  if (!finding?.findingId) continue;
-  const label = `Finding ${finding.findingId}`;
-  ensureNonEmpty(finding.title, `${label}.title`);
-  ensureNonEmpty(finding.observation?.actualBehavior, `${label}.observation.actualBehavior`);
-  ensureNonEmpty(finding.observation?.expectedBehavior, `${label}.observation.expectedBehavior`);
-  const evidence = ensureArray(finding.evidence, `${label}.evidence`, { nonEmpty: strict });
-  for (const [index, item] of evidence.entries()) {
-    ensureNonEmpty(item?.evidenceId, `${label}.evidence[${index}].evidenceId`);
-    ensureNonEmpty(item?.pathOrSource, `${label}.evidence[${index}].pathOrSource`);
-    ensureNonEmpty(item?.resultSummary, `${label}.evidence[${index}].resultSummary`);
-    if (item?.type === 'SOURCE_CODE' && !isNonEmptyString(item?.lineOrSymbolRange)) {
-      addError(`${label}.evidence[${index}] source-code evidence requires lineOrSymbolRange.`);
-    }
-    if (!/^[0-9a-f]{40}$/i.test(item?.sha ?? '') && item?.type !== 'EXTERNAL_STATE') {
-      addError(`${label}.evidence[${index}] requires an exact repository SHA unless it is external state.`);
-    }
-  }
-  ensureNonEmpty(finding.rootCause?.immediateCause, `${label}.rootCause.immediateCause`);
-  ensureNonEmpty(finding.rootCause?.structuralCause, `${label}.rootCause.structuralCause`);
-  ensureNonEmpty(finding.rootCause?.incorrectOrMissingTruthOwner, `${label}.rootCause.incorrectOrMissingTruthOwner`);
-  ensureNonEmpty(finding.truthOwnership?.correctOwner, `${label}.truthOwnership.correctOwner`);
-  ensureNonEmpty(finding.resolution?.strategy, `${label}.resolution.strategy`);
-  const linkedTasks = ensureArray(finding.resolution?.workItemIds, `${label}.resolution.workItemIds`, {
-    nonEmpty: strict && finding.disposition?.decision !== 'BLOCKED_EXTERNAL',
-  });
-  for (const taskId of linkedTasks) {
-    if (!workItemMap.has(taskId)) {
-      addError(`${label} references unknown work item ${taskId}.`);
-    }
-  }
-  const criteria = ensureArray(finding.acceptance?.criteria, `${label}.acceptance.criteria`, { nonEmpty: strict });
-  for (const criterion of criteria) {
-    ensureNonEmpty(criterion?.criterionId, `${label}.acceptance criterion ID`);
-    ensureNonEmpty(criterion?.statement, `${label}.acceptance criterion statement`);
-    for (const verificationId of ensureArray(criterion?.verificationIds, `${label}.acceptance verificationIds`, { nonEmpty: strict })) {
-      if (!verificationMap.has(verificationId)) {
-        addError(`${label} acceptance criterion references unknown verification ${verificationId}.`);
-      }
-    }
-  }
+if (active > 1) err('Only one work item may be IN_PROGRESS.');
+for (const r of of('verification')) {
+  for (const k of ['title','command','proves','doesNotProve']) need(r[k], `${r.id}.${k}`); needArr(r.scopeIds, `${r.id}.scopeIds`, true);
+  if (strict && r.required === true && !['PASS','BLOCKED_EXTERNAL','NOT_RUN_WITH_REASON'].includes(r.result?.status)) err(`${r.id} lacks a required result.`);
 }
-
-let inProgressCount = 0;
-for (const workItem of workItems) {
-  if (!workItem?.workItemId) continue;
-  const label = `Work item ${workItem.workItemId}`;
-  if (workItem.status === 'IN_PROGRESS') inProgressCount += 1;
-  ensureNonEmpty(workItem.title, `${label}.title`);
-  ensureNonEmpty(workItem.objective, `${label}.objective`);
-  ensureNonEmpty(workItem.rationale, `${label}.rationale`);
-  for (const findingId of ensureArray(workItem.findingIds, `${label}.findingIds`, { nonEmpty: strict })) {
-    if (!findingMap.has(findingId)) {
-      addError(`${label} references unknown finding ${findingId}.`);
-    }
-  }
-  const exactChanges = ensureArray(workItem.changeSpecification?.exactChanges, `${label}.changeSpecification.exactChanges`, {
-    nonEmpty: strict,
-  });
-  for (const [index, change] of exactChanges.entries()) {
-    ensureNonEmpty(change?.path, `${label}.exactChanges[${index}].path`);
-    ensureNonEmpty(change?.action, `${label}.exactChanges[${index}].action`);
-    ensureNonEmpty(change?.after, `${label}.exactChanges[${index}].after`);
-    ensureNonEmpty(change?.implementationNotes, `${label}.exactChanges[${index}].implementationNotes`);
-  }
-  const positiveCriteria = ensureArray(workItem.acceptance?.positiveCriteria, `${label}.acceptance.positiveCriteria`, {
-    nonEmpty: strict,
-  });
-  for (const criterion of positiveCriteria) {
-    ensureNonEmpty(criterion?.criterionId, `${label}.acceptance criterion ID`);
-    ensureNonEmpty(criterion?.statement, `${label}.acceptance criterion statement`);
-  }
-  for (const verificationId of ensureArray(workItem.verification?.verificationIds, `${label}.verification.verificationIds`, {
-    nonEmpty: strict,
-  })) {
-    if (!verificationMap.has(verificationId)) {
-      addError(`${label} references unknown verification ${verificationId}.`);
-    }
-  }
-  if (workItem.execution?.oneWorkItemOpenAtATime !== true) {
-    addError(`${label} must set execution.oneWorkItemOpenAtATime to true.`);
-  }
-  if (workItem.verification?.checksAfterLastWrite !== true || workItem.verification?.sameCommitRequired !== true) {
-    addError(`${label} must require checks after the last write on the same commit.`);
-  }
+for (const r of of('deletion_candidate')) {
+  for (const k of ['path','reason','replacement','migrationPrerequisite','rollback']) need(r[k], `${r.id}.${k}`); refs(r.evidenceIds, 'evidence', `${r.id}.evidenceIds`, true);
+  if (strict && r.decision === 'DELETE' && r.verified !== true) err(`${r.id} deletion is unverified.`);
 }
+for (const r of of('decision')) { need(r.status, `${r.id}.status`); need(r.rationale, `${r.id}.rationale`); refs(r.evidenceIds, 'evidence', `${r.id}.evidenceIds`, true); }
 
-if (inProgressCount > 1) {
-  addError(`Only one work item may be IN_PROGRESS; found ${inProgressCount}.`);
+const sectionPaths = [];
+for (const p of ['apps/control-panel/runtime/src/app/(shell)/dsh','apps/control-panel/runtime/src/app/(shell)/wlt']) {
+  const d = resolve(repo, p); if (!(await exists(d))) continue;
+  for (const e of await readdir(d, { withFileTypes: true })) if (e.isDirectory()) sectionPaths.push(norm(join(d,e.name)));
 }
-
-for (const verification of verifications) {
-  if (!verification?.verificationId) continue;
-  const label = `Verification ${verification.verificationId}`;
-  ensureNonEmpty(verification.title, `${label}.title`);
-  ensureNonEmpty(verification.claim?.proves, `${label}.claim.proves`);
-  ensureNonEmpty(verification.procedure?.command, `${label}.procedure.command`);
-  ensureNonEmpty(verification.procedure?.expectedResult, `${label}.procedure.expectedResult`);
-  if (verification.claim?.sameCommitRequired !== true) {
-    addError(`${label} must require same-commit evidence.`);
-  }
-  for (const findingId of ensureArray(verification.linked?.findingIds, `${label}.linked.findingIds`, { nonEmpty: strict })) {
-    if (!findingMap.has(findingId)) addError(`${label} references unknown finding ${findingId}.`);
-  }
-  for (const taskId of ensureArray(verification.linked?.workItemIds, `${label}.linked.workItemIds`, { nonEmpty: strict })) {
-    if (!workItemMap.has(taskId)) addError(`${label} references unknown work item ${taskId}.`);
-  }
-  if (verification.result?.decision === 'PASS') {
-    if (!/^[0-9a-f]{40}$/i.test(verification.result?.sha ?? '')) {
-      addError(`${label} marked PASS without an exact result SHA.`);
-    }
-    if (verification.result?.rerunAfterLastWrite !== true) {
-      addError(`${label} marked PASS without rerunAfterLastWrite=true.`);
-    }
-    if (verification.result?.exitCode !== 0 && verification.verificationType !== 'MANUAL_REVIEW' && verification.verificationType !== 'EXTERNAL_EVIDENCE') {
-      addError(`${label} marked PASS without exitCode=0.`);
-    }
-  }
+const routeNames = new Set(['page.tsx','page.ts','route.ts','route.tsx','layout.tsx','loading.tsx','error.tsx','not-found.tsx','default.tsx']);
+const cpRoot = resolve(repo, 'apps/control-panel/runtime/src/app');
+const routePaths = (await walk(cpRoot, (p) => routeNames.has(p.split(sep).at(-1)))).map(norm);
+const patterns = [/<button\b|<Button\b|\bonClick\s*=|\bonPress\s*=/,/<form\b|<Form\b|\bonSubmit\s*=/,/<Tabs?\b|<TabList\b|<TabTrigger\b/,/<Dialog\b|<Modal\b|<Drawer\b|<Sheet\b/,/<Table\b|selectedRows|bulkAction|bulk-action/i,/import|export|upload|download/i];
+const interactive = new Set();
+for (const d of [cpRoot,resolve(repo,'services/dsh/frontend/control-panel'),resolve(repo,'services/wlt/frontend/shared/dsh')]) for (const p of await walk(d,(x)=>['.tsx','.jsx'].includes(extname(x).toLowerCase()))) { const source = await text(p); if (patterns.some((x)=>x.test(source))) interactive.add(norm(p)); }
+const scopes = of('scope');
+const keys = new Set(scopes.map((r) => `${r.entityType}:${r.path ?? r.entity}`));
+for (const s of surfaces) if (scopes.filter((r)=>r.entityType==='SURFACE'&&r.entity===s).length !== 1) err(`Required surface ${s} is missing or duplicated.`);
+for (const p of sectionPaths) if (!keys.has(`CONTROL_PANEL_SECTION:${p}`)) err(`Missing section ${p}.`);
+for (const p of routePaths) if (!keys.has(`CONTROL_PANEL_ROUTE_FILE:${p}`)) err(`Missing route ${p}.`);
+for (const p of interactive) if (!keys.has(`INTERACTIVE_SOURCE:${p}`)) err(`Missing interactive source ${p}.`);
+if (state) {
+  const c = state.coverage ?? {};
+  if (c.discoveredControlPanelSections !== sectionPaths.length) err('Control-panel section count drifted.');
+  if (c.discoveredControlPanelRouteFiles !== routePaths.length) err('Control-panel route count drifted.');
+  if (c.discoveredInteractiveSources !== interactive.size) err('Interactive-source count drifted.');
+  if (c.ledgerRecords !== records.length) err('Ledger count drifted.');
 }
-
-if (manifest) {
-  const counts = manifest.coverage ?? {};
-  const expectedCounts = {
-    findings: findings.length,
-    workItems: workItems.length,
-    verificationItems: verifications.length,
-    openFindings: findings.filter((item) => !['CLOSED_WITH_EVIDENCE'].includes(item.status)).length,
-    completedWorkItems: workItems.filter((item) => item.status === 'CLOSED_WITH_EVIDENCE').length,
-    failedRequiredChecks: verifications.filter((item) => item.required && ['FIX_REQUIRED', 'PROTOCOL_VIOLATION'].includes(item.result?.decision)).length,
-  };
-  for (const [key, expected] of Object.entries(expectedCounts)) {
-    if (strict && counts[key] !== expected) {
-      addError(`Manifest coverage.${key}=${counts[key]} does not match register count ${expected}.`);
-    } else if (!strict && counts[key] !== expected) {
-      addWarning(`Manifest coverage.${key}=${counts[key]} does not match register count ${expected}.`);
-    }
-  }
-  if (manifest.status?.decision === 'CLOSED_WITH_EVIDENCE') {
-    for (const key of [
-      'openFindings',
-      'unprovenItems',
-      'failedRequiredChecks',
-      'unverifiedRequiredBehaviors',
-      'unverifiedDeletions',
-      'externalBlockers',
-    ]) {
-      if (counts[key] !== 0) {
-        addError(`CLOSED_WITH_EVIDENCE is invalid while coverage.${key}=${counts[key]}.`);
-      }
-    }
-  }
+if (strict) {
+  if (!of('evidence').length || !of('authority').length || !of('decision').length) err('Strict mode requires evidence, authority, and decision records.');
+  if (scopes.some((r)=>['AFFECTED','MIGRATION_REQUIRED','OBSOLETE_CANDIDATE','DUPLICATE_CANDIDATE'].includes(r.classification)) && !of('flow').length) err('Affected scope requires a flow record.');
+  if (of('finding').length && !of('work_item').length) err('Findings require work items.');
+  if (of('work_item').length && !of('verification').length) err('Work items require verifications.');
 }
-
-// Plan-ready gate.
-//
-// The manifest documents qualityGates.planReady thresholds, but nothing used
-// to compare anything against them, so a package could satisfy the JSON schema
-// while failing the planning contract it declared. A previous package passed
-// --strict while reporting inventoryItems=0 with unclassifiedInventoryItems=1.
-//
-// Every metric below is measured from the registers rather than read from the
-// manifest's own coverage block, and the self-reported coverage is then checked
-// against those measurements, so an inaccurate self-report is itself an error.
-const PLAN_READY_METRICS = [
-  'unclassifiedInventoryItems',
-  'findingsWithoutEvidence',
-  'findingsWithoutRootCause',
-  'internalFindingsWithoutWorkItems',
-  'workItemsWithoutAcceptanceCriteria',
-  'workItemsWithoutVerification',
-  'unresolvedTemplateMarkers',
-  'dependencyCycles',
-];
-
-function countWorkItemDependencyCycles() {
-  const graph = new Map(
-    workItems
-      .filter((item) => item?.workItemId)
-      .map((item) => [
-        item.workItemId,
-        (Array.isArray(item.dependencies?.workItems) ? item.dependencies.workItems : []).filter((id) =>
-          workItemMap.has(id),
-        ),
-      ]),
-  );
-  const state = new Map();
-  let cycles = 0;
-  const visit = (node) => {
-    state.set(node, 'visiting');
-    for (const next of graph.get(node) ?? []) {
-      const nextState = state.get(next);
-      if (nextState === 'visiting') cycles += 1;
-      else if (nextState !== 'done') visit(next);
-    }
-    state.set(node, 'done');
-  };
-  for (const node of graph.keys()) {
-    if (!state.has(node)) visit(node);
-  }
-  return cycles;
-}
-
-const planReady = manifest?.qualityGates?.planReady;
-if (!planReady || typeof planReady !== 'object') {
-  addError('Manifest must declare qualityGates.planReady thresholds.');
-} else {
-  const isInternal = (finding) => finding?.disposition?.decision !== 'BLOCKED_EXTERNAL';
-  const coverage = manifest?.coverage ?? {};
-  const declaredInventory = Number(coverage.inventoryItems);
-  const declaredClassified = Number(coverage.classifiedInventoryItems);
-  const declaredUnclassified = Number(coverage.unclassifiedInventoryItems);
-
-  if (!Number.isInteger(declaredInventory) || declaredInventory <= 0) {
-    addError(`Manifest coverage.inventoryItems must be a positive integer; found ${coverage.inventoryItems}.`);
-  }
-  if (declaredClassified + declaredUnclassified !== declaredInventory) {
-    addError(
-      `Manifest coverage is inconsistent: classified (${declaredClassified}) + unclassified (${declaredUnclassified}) !== inventoryItems (${declaredInventory}).`,
-    );
-  }
-
-  const measured = {
-    unclassifiedInventoryItems: Number.isInteger(declaredUnclassified) ? declaredUnclassified : Number.NaN,
-    findingsWithoutEvidence: findings.filter((f) => !Array.isArray(f?.evidence) || f.evidence.length === 0).length,
-    findingsWithoutRootCause: findings.filter(
-      (f) =>
-        !isNonEmptyString(f?.rootCause?.immediateCause) ||
-        !isNonEmptyString(f?.rootCause?.structuralCause) ||
-        !isNonEmptyString(f?.rootCause?.incorrectOrMissingTruthOwner),
-    ).length,
-    internalFindingsWithoutWorkItems: findings.filter(
-      (f) => isInternal(f) && (!Array.isArray(f?.resolution?.workItemIds) || f.resolution.workItemIds.length === 0),
-    ).length,
-    workItemsWithoutAcceptanceCriteria: workItems.filter(
-      (w) =>
-        !Array.isArray(w?.acceptance?.positiveCriteria) || w.acceptance.positiveCriteria.length === 0,
-    ).length,
-    workItemsWithoutVerification: workItems.filter(
-      (w) => !Array.isArray(w?.verification?.verificationIds) || w.verification.verificationIds.length === 0,
-    ).length,
-    unresolvedTemplateMarkers: unresolvedMarkerCount,
-    dependencyCycles: countWorkItemDependencyCycles(),
-  };
-
-  for (const metric of PLAN_READY_METRICS) {
-    const threshold = planReady[metric];
-    if (!Number.isInteger(threshold)) {
-      addError(`qualityGates.planReady.${metric} must be declared as an integer threshold.`);
-      continue;
-    }
-    const actual = measured[metric];
-    if (!Number.isInteger(actual)) {
-      addError(`Plan-ready metric ${metric} could not be measured.`);
-      continue;
-    }
-    if (actual > threshold) {
-      addError(`Plan-ready gate failed: ${metric} measured ${actual}, threshold ${threshold}.`);
-    }
-  }
-
-  const reportedFindings = Number(coverage.findings);
-  if (Number.isInteger(reportedFindings) && reportedFindings !== findings.length) {
-    addError(`Manifest coverage.findings reports ${reportedFindings} but the register contains ${findings.length}.`);
-  }
-  const reportedWorkItems = Number(coverage.workItems);
-  if (Number.isInteger(reportedWorkItems) && reportedWorkItems !== workItems.length) {
-    addError(`Manifest coverage.workItems reports ${reportedWorkItems} but the register contains ${workItems.length}.`);
-  }
-  const reportedVerifications = Number(coverage.verificationItems);
-  if (Number.isInteger(reportedVerifications) && reportedVerifications !== verifications.length) {
-    addError(
-      `Manifest coverage.verificationItems reports ${reportedVerifications} but the register contains ${verifications.length}.`,
-    );
-  }
-}
-
 if (disposal) {
-  if (!strict) {
-    addError('--disposal requires --strict.');
+  if (!strict) err('--disposal requires --strict.');
+  if (state?.disposability?.durableOutputsMigratedToCanonicalOwners !== true || state?.disposability?.referenceScanPassed !== true) err('Disposal proof is incomplete.');
+  const rel = norm(pkg), refsFound = [];
+  for (const p of await walk(repo,()=>true,new Set(['.git','node_modules','.next','dist']))) {
+    if (p.startsWith(`${pkg}${sep}`) || (await stat(p)).size > 2_000_000) continue;
+    if (!['.md','.txt','.json','.jsonl','.yaml','.yml','.ts','.tsx','.js','.mjs','.cjs','.go','.sql','.ps1','.sh'].includes(extname(p).toLowerCase())) continue;
+    if ((await text(p)).includes(rel)) refsFound.push(norm(p));
   }
-  if (manifest?.disposability?.durableOutputsMigratedToCanonicalOwners !== true) {
-    addError('Disposal requires durableOutputsMigratedToCanonicalOwners=true.');
-  }
-  if (manifest?.disposability?.referenceScanPassed !== true) {
-    addError('Disposal requires referenceScanPassed=true after the actual repository scan.');
-  }
-  const packageRelative = relative(repositoryRoot, packagePath).split(sep).join('/');
-  const packageRelativeWindows = packageRelative.split('/').join('\\');
-  const repositoryFiles = await walk(repositoryRoot, {
-    skip: new Set(['.git', 'node_modules', '.pnpm-store', '.next', 'dist', 'build', 'coverage']),
-  });
-  const outsideReferences = [];
-  for (const file of repositoryFiles) {
-    if (file === packagePath || file.startsWith(`${packagePath}${sep}`)) continue;
-    const extension = extname(file).toLowerCase();
-    if (!textExtensions.has(extension) && extension !== '') continue;
-    const fileStat = await stat(file);
-    if (fileStat.size > 2_000_000) continue;
-    let text;
-    try {
-      text = await readText(file);
-    } catch {
-      continue;
-    }
-    if (text.includes(packageRelative) || text.includes(packageRelativeWindows)) {
-      outsideReferences.push(relative(repositoryRoot, file));
-    }
-  }
-  if (outsideReferences.length > 0) {
-    addError(`Package is not disposable; outside references found in: ${outsideReferences.join(', ')}`);
-  }
-  if (Array.isArray(manifest?.disposability?.outsideReferences) && manifest.disposability.outsideReferences.length > 0) {
-    addError('Manifest records outsideReferences; remove or migrate those dependencies before disposal.');
-  }
-  const closureText = await readText(resolve(packagePath, '06-CLOSURE-AND-DISPOSAL.md'));
-  if (!/disposal_decision:\s*READY_TO_DELETE/.test(closureText)) {
-    addError('Closure file must record disposal_decision: READY_TO_DELETE before deletion.');
-  }
+  if (refsFound.length) err(`Outside package references: ${refsFound.join(', ')}`);
 }
 
-for (const warning of warnings) {
-  console.warn(`WARN: ${warning}`);
-}
-for (const error of errors) {
-  console.error(`ERROR: ${error}`);
-}
-
-if (errors.length > 0) {
-  console.error(`Validation failed with ${errors.length} error(s) and ${warnings.length} warning(s).`);
-  process.exitCode = 1;
-} else {
-  console.log(`Validation passed with ${warnings.length} warning(s).`);
-  console.log(`Package: ${relative(repositoryRoot, packagePath)}`);
-  console.log(`Mode: ${strict ? 'strict' : 'development'}${disposal ? ' + disposal' : ''}`);
-}
+for (const x of warnings) console.warn(`WARN: ${x}`); for (const x of errors) console.error(`ERROR: ${x}`);
+console.log(JSON.stringify({ package:norm(pkg), strict, disposal, records:records.length, surfaces:scopes.filter((r)=>r.entityType==='SURFACE').length, controlPanelSections:sectionPaths.length, controlPanelRoutes:routePaths.length, interactiveSources:interactive.size, evidence:of('evidence').length, flows:of('flow').length, findings:of('finding').length, workItems:of('work_item').length, verifications:of('verification').length, errors:errors.length, warnings:warnings.length, decision:errors.length?'FIX_REQUIRED':'PASS' }, null, 2));
+if (errors.length) process.exitCode = 1;
