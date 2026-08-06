@@ -32,6 +32,12 @@ This catalog is checked for exact membership and status drift.
 - `bthwani-service-fullstack-journey` — full-stack multi-surface journey verification.
 - `bthwani-universal-task-router` — task-mode and risk routing.
 
+## Conditional tools
+
+- `graphify` — Advisory navigation only.
+- `leanctx` — Compressed context is navigation, not proof.
+- `open-code-review` — Advisory findings only; no independent or formal approval.
+
 ## Retired entries
 
 - `graphify` — retired as a skill; Graphify is a conditional tool documented under `.agents/tools/graphify.md`.

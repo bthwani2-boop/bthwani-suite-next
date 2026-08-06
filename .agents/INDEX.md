@@ -42,9 +42,9 @@ Load only when the trigger matches:
 
 Tool policies live under `.agents/tools/` and are loaded only after the tool is selected:
 
-- Graphify — unresolved application-code relationships.
-- LeanCTX — repeated reads or noisy output.
-- OpenCodeReview — bounded advisory diff, commit, or range review.
+- `graphify` — unresolved application-code relationships.
+- `leanctx` — repeated reads or noisy output.
+- `open-code-review` — bounded advisory diff, commit, or range review.
 
 ## Constraints
 

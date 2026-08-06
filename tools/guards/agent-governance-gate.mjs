@@ -156,6 +156,8 @@ const adapterRules = [
   ["CLAUDE.md", "authority-precedence.json"],
   ["GEMINI.md", "authority-precedence.json"],
   ["LEAN-CTX.md", ".agents/tools/leanctx.md"],
+  [".github/copilot-instructions.md", "AGENTS.md"],
+  ["opencode.json", "AGENTS.md"],
 ];
 for (const [file, marker] of adapterRules) {
   const content = read(file);
@@ -165,6 +167,7 @@ for (const [file, marker] of adapterRules) {
 
 const scanFiles = [
   "AGENTS.md", "CLAUDE.md", "GEMINI.md", "LEAN-CTX.md",
+  ".github/copilot-instructions.md", "opencode.json",
   ".agents/AUTHORITY_BOUNDARY.md", ".agents/AGENT_SYSTEM_UPDATE_POLICY.md",
   ".agents/INDEX.md", ".agents/SKILL_CATALOG.md",
   "governance/tools/agent-tool-registry.json",

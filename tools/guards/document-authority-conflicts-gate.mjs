@@ -38,38 +38,56 @@ function sectionIds(markdown, heading) {
 }
 
 const registry = readJson("governance/skills/skills-registry.json");
+const tools = readJson("governance/tools/agent-tool-registry.json");
 const precedence = readJson("governance/authority/authority-precedence.json");
 const catalogPath = path.join(repoRoot, ".agents/SKILL_CATALOG.md");
 const catalog = fs.existsSync(catalogPath) ? fs.readFileSync(catalogPath, "utf8") : "";
+const indexPath = path.join(repoRoot, ".agents/INDEX.md");
+const index = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf8") : "";
 
 if (!catalog) {
   violations.push({ file: ".agents/SKILL_CATALOG.md", line: 0, message: "MISSING_REQUIRED_FILE" });
 }
+if (!index) {
+  violations.push({ file: ".agents/INDEX.md", line: 0, message: "MISSING_REQUIRED_FILE" });
+}
 
-if (registry && catalog) {
+if (registry && tools && catalog && index) {
   const expected = {
     active: new Set((registry.entries ?? []).filter((entry) => entry.status === "active").map((entry) => entry.id)),
     conditional: new Set((registry.entries ?? []).filter((entry) => entry.status === "conditional").map((entry) => entry.id)),
     retired: new Set((registry.entries ?? []).filter((entry) => entry.status === "retired").map((entry) => entry.id)),
+    tools: new Set((tools.entries ?? []).map((entry) => entry.id)),
   };
-  const actual = {
+  const actualCatalog = {
     active: sectionIds(catalog, "Active skills"),
     conditional: sectionIds(catalog, "Conditional skills"),
     retired: sectionIds(catalog, "Retired entries"),
+    tools: sectionIds(catalog, "Conditional tools"),
+  };
+  const actualIndex = {
+    active: sectionIds(index, "Active skill"),
+    conditional: sectionIds(index, "Conditional skills"),
+    tools: sectionIds(index, "Conditional tools"),
   };
 
-  for (const status of Object.keys(expected)) {
-    for (const id of expected[status]) {
-      if (!actual[status].has(id)) {
-        violations.push({ file: ".agents/SKILL_CATALOG.md", line: 0, message: `CATALOG_MISSING ${status}:${id}` });
+  const checkDrift = (file, expectedMap, actualMap) => {
+    for (const status of Object.keys(actualMap)) {
+      for (const id of expectedMap[status]) {
+        if (!actualMap[status].has(id)) {
+          violations.push({ file, line: 0, message: `CATALOG_MISSING ${status}:${id}` });
+        }
+      }
+      for (const id of actualMap[status]) {
+        if (!expectedMap[status].has(id)) {
+          violations.push({ file, line: 0, message: `CATALOG_EXTRA_OR_WRONG_STATUS ${status}:${id}` });
+        }
       }
     }
-    for (const id of actual[status]) {
-      if (!expected[status].has(id)) {
-        violations.push({ file: ".agents/SKILL_CATALOG.md", line: 0, message: `CATALOG_EXTRA_OR_WRONG_STATUS ${status}:${id}` });
-      }
-    }
-  }
+  };
+
+  checkDrift(".agents/SKILL_CATALOG.md", expected, actualCatalog);
+  checkDrift(".agents/INDEX.md", expected, actualIndex);
 }
 
 if (precedence) {
