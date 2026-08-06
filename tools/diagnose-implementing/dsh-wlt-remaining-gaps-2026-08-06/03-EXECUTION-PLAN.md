@@ -11,7 +11,7 @@ Only one work item may be open. Before each item, fetch the latest `smsm` head, 
 | PHASE-00 | Evidence and authority freeze | Package passes strict structural validation and branch pin is current |
 | PHASE-01 | TASK-0001, TASK-0002 | One canonical role authority; assignment and rollback have real effect |
 | PHASE-02 | TASK-0003 | Administration contract and handlers have executable parity |
-| PHASE-03 | TASK-0004 | Registry, authority files, clients, and operation ownership compile and reconcile |
+| PHASE-03 | TASK-0004, TASK-0009 | Registry/client ownership compiles and the DSH migration chain is registered and repeatable |
 | PHASE-04 | TASK-0005 | One same-commit DSH readiness ledger drives every projection |
 | PHASE-05 | TASK-0006 | WLT non-production financial gates close with evidence |
 | PHASE-06 | TASK-0007 | Full dependency runtime evidence is unambiguous and reproducible |
