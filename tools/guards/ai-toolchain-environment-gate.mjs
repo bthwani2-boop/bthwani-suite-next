@@ -12,36 +12,95 @@ function resolveCommand(name) {
     windowsHide: true,
   });
 
-  if (result.error || result.status !== 0) return undefined;
+  if (result.error || result.status !== 0) {
+    return undefined;
+  }
 
   const paths = String(result.stdout || "")
     .split(/\r?\n/)
     .map((value) => value.trim())
     .filter(Boolean);
 
-  return (
-    paths.find((value) => /\.(?:exe|cmd|bat)$/i.test(value)) ||
-    paths[0]
-  );
+  if (process.platform === "win32") {
+    return (
+      paths.find((value) => /\.exe$/i.test(value)) ||
+      paths.find((value) => /\.cmd$/i.test(value)) ||
+      paths.find((value) => /\.bat$/i.test(value)) ||
+      paths[0]
+    );
+  }
+
+  return paths[0];
+}
+
+function executeVersionProbe(candidate, executable) {
+  if (process.platform === "win32") {
+    const comspec =
+      process.env.ComSpec ||
+      process.env.COMSPEC ||
+      "cmd.exe";
+
+    /*
+     * Execute by command name through cmd.exe so PATHEXT resolves
+     * .EXE, .CMD and .BAT exactly as an interactive Windows shell does.
+     *
+     * The command candidate is restricted before reaching this function.
+     */
+    return spawnSync(
+      comspec,
+      ["/d", "/s", "/c", `${candidate} --version`],
+      {
+        encoding: "utf8",
+        timeout: 10_000,
+        windowsHide: true,
+      },
+    );
+  }
+
+  return spawnSync(executable, ["--version"], {
+    encoding: "utf8",
+    timeout: 10_000,
+  });
 }
 
 function probe(candidates) {
+  const attempts = [];
+
   for (const candidate of candidates) {
+    if (!/^[A-Za-z0-9._-]+$/.test(candidate)) {
+      attempts.push({
+        candidate,
+        reason: "INVALID_COMMAND_NAME",
+      });
+      continue;
+    }
+
     const executable = resolveCommand(candidate);
-    if (!executable) continue;
 
-    const result = spawnSync(executable, ["--version"], {
-      encoding: "utf8",
-      timeout: 10_000,
-      windowsHide: true,
-      shell:
-        process.platform === "win32" &&
-        /\.(?:cmd|bat)$/i.test(executable),
-    });
+    if (!executable) {
+      attempts.push({
+        candidate,
+        reason: "COMMAND_NOT_FOUND",
+      });
+      continue;
+    }
 
-    if (result.error || result.status !== 0) continue;
+    const result = executeVersionProbe(candidate, executable);
 
-    const output = String(result.stdout || result.stderr || "").trim();
+    if (result.error || result.status !== 0) {
+      attempts.push({
+        candidate,
+        executable,
+        reason: result.error
+          ? String(result.error.code || result.error.message)
+          : `EXIT_${String(result.status)}`,
+      });
+      continue;
+    }
+
+    const output = String(
+      result.stdout || result.stderr || "",
+    ).trim();
 
     return {
       state: "VERIFIED_AVAILABLE",
@@ -52,12 +111,16 @@ function probe(candidates) {
 
   return {
     state: "VERIFIED_UNAVAILABLE",
+    attempts,
   };
 }
 
 const registry = JSON.parse(
   fs.readFileSync(
-    path.join(repoRoot, "governance/tools/agent-tool-registry.json"),
+    path.join(
+      repoRoot,
+      "governance/tools/agent-tool-registry.json",
+    ),
     "utf8",
   ),
 );
@@ -89,13 +152,16 @@ for (const core of ["node", "pnpm"]) {
     violations.push({
       file: "environment",
       line: 0,
-      message: "REQUIRED_CORE_TOOL_UNAVAILABLE " + core,
+      message: `REQUIRED_CORE_TOOL_UNAVAILABLE ${core}`,
     });
   }
 }
 
 for (const tool of registry.entries || []) {
-  const status = probe(commandCandidates[tool.id] || [tool.id]);
+  const status = probe(
+    commandCandidates[tool.id] || [tool.id],
+  );
+
   report.tools[tool.id] = status;
 
   if (
@@ -105,7 +171,8 @@ for (const tool of registry.entries || []) {
     violations.push({
       file: "environment",
       line: 0,
-      message: "EXPLICITLY_REQUIRED_TOOL_UNAVAILABLE " + tool.id,
+      message:
+        `EXPLICITLY_REQUIRED_TOOL_UNAVAILABLE ${tool.id}`,
     });
   }
 }
