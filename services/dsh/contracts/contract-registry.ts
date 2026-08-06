@@ -116,7 +116,7 @@ export const DSH_CONTRACT_REGISTRY = [
     path: "contracts/dsh.catalog.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
-    clientStrategy: "BOUNDED_CONTEXT_GENERATED",
+    clientStrategy: "SECONDARY_GENERATED_SUBSET",
     generatedClient: "clients/generated/dsh-api.ts",
   },
   {

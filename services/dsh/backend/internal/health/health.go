@@ -14,7 +14,7 @@ import (
 
 const (
 	dshMigrationServiceName = "dsh"
-	dshLatestMigration      = "dsh-995_promotion_funding_outbox_failed_status.sql"
+	dshLatestMigration      = "dsh-996_administration_approval_ledger.sql"
 	dshReadinessTimeout     = 2 * time.Second
 )
 
@@ -91,7 +91,7 @@ func HandleReadiness(db *sql.DB, mediaProvider *media.Provider, identityClient i
 func handleReadiness(readinessStore runtimeReadinessStore, storageStatus func(context.Context) string, identityCheck func(context.Context) string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
-		
+
 		ctx, cancel := context.WithTimeout(r.Context(), dshReadinessTimeout)
 		defer cancel()
 
@@ -153,4 +153,3 @@ func configuredStatus(value string) string {
 	}
 	return "configured"
 }
-

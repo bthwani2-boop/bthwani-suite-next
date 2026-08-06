@@ -11,6 +11,14 @@ import (
 var (
 	ErrNotFound = errors.New("not found")
 	ErrInvalid  = errors.New("invalid input")
+	// ErrIdentityUnavailable is returned when a review requires a canonical
+	// Identity mutation but no Identity client is configured.
+	ErrIdentityUnavailable = errors.New("identity is unavailable")
+	// ErrCanonicalMutationFailed is returned when Identity rejects the
+	// canonical authorization mutation an approval depends on. The approval
+	// must remain unapplied; this error must never be swallowed into a
+	// local-only status flip.
+	ErrCanonicalMutationFailed = errors.New("canonical authorization mutation failed")
 )
 
 // Role is the governed DSH authorization role projection. Identity owns the

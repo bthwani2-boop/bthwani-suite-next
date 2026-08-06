@@ -7,6 +7,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"dsh-api/internal/auth"
 )
 
 type RoleDefinitionRequest struct {
@@ -81,7 +83,7 @@ func ListRoleDefinitionRequests(ctx context.Context, db *sql.DB, status string) 
 	if db == nil {
 		return nil, ErrInvalid
 	}
-	
+
 	query := `
 		SELECT id, role_name, description, permissions, surfaces, requested_by, reason, status, 
 		       reviewed_by, review_note, version, created_at, updated_at, reviewed_at
@@ -123,7 +125,13 @@ type ReviewDecisionParams struct {
 	ExpectedVersion int    `json:"expectedVersion"`
 }
 
-func ReviewRoleDefinitionRequest(ctx context.Context, db *sql.DB, actorID string, requestID string, params ReviewDecisionParams) (*RoleDefinitionRequest, *Role, error) {
+// ReviewRoleDefinitionRequest reviews a pending role-definition request. On
+// approval, Identity's CreateRole is the canonical mutation: it must succeed
+// (or report the role as already canonical) before this request's status may
+// flip to approved. dsh_admin_roles is written only afterward, as a local
+// read projection of the Identity-confirmed role — never as an independent
+// authority. A failed Identity call leaves the request pending.
+func ReviewRoleDefinitionRequest(ctx context.Context, db *sql.DB, identityClient *auth.Client, actorID string, requestID string, params ReviewDecisionParams) (*RoleDefinitionRequest, *Role, error) {
 	if db == nil {
 		return nil, nil, ErrInvalid
 	}
@@ -163,7 +171,44 @@ func ReviewRoleDefinitionRequest(ctx context.Context, db *sql.DB, actorID string
 		return nil, nil, errors.New("cannot review own request")
 	}
 
-	// Update Request
+	_ = json.Unmarshal(permissionsJSON, &req.Permissions)
+	_ = json.Unmarshal(surfacesJSON, &req.Surfaces)
+
+	var newRole *Role
+	if params.Decision == "approved" {
+		if identityClient == nil {
+			return nil, nil, ErrIdentityUnavailable
+		}
+		canonicalRole, createErr := identityClient.CreateRole(ctx, req.RoleName, req.Description)
+		if createErr != nil && !errors.Is(createErr, auth.ErrRbacRoleAlreadyExists) {
+			return nil, nil, ErrCanonicalMutationFailed
+		}
+		_ = canonicalRole // Identity's id is not currently projected locally.
+
+		var role Role
+		err = tx.QueryRowContext(ctx, `
+			INSERT INTO dsh_admin_roles (name, description, permissions, surfaces, active)
+			VALUES ($1, $2, $3, $4, true)
+			ON CONFLICT (name) DO UPDATE SET
+				description = EXCLUDED.description,
+				permissions = EXCLUDED.permissions,
+				surfaces = EXCLUDED.surfaces,
+				active = true,
+				version = dsh_admin_roles.version + 1
+			RETURNING id, name, COALESCE(description,''), permissions, surfaces, active, version, created_at
+		`, req.RoleName, req.Description, permissionsJSON, surfacesJSON).Scan(
+			&role.ID, &role.Name, &role.Description, &permissionsJSON, &surfacesJSON,
+			&role.Active, &role.Version, &role.CreatedAt,
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+		_ = json.Unmarshal(permissionsJSON, &role.Permissions)
+		_ = json.Unmarshal(surfacesJSON, &role.Surfaces)
+		newRole = &role
+	}
+
+	// Update Request — only after the canonical mutation (if any) succeeded.
 	err = tx.QueryRowContext(ctx, `
 		UPDATE dsh_admin_role_definition_requests
 		SET status = $1, reviewed_by = $2, review_note = $3, version = version + 1, updated_at = NOW(), reviewed_at = NOW()
@@ -178,27 +223,6 @@ func ReviewRoleDefinitionRequest(ctx context.Context, db *sql.DB, actorID string
 	reviewer := actorID
 	req.ReviewedBy = &reviewer
 	req.ReviewNote = &params.ReviewNote
-	_ = json.Unmarshal(permissionsJSON, &req.Permissions)
-	_ = json.Unmarshal(surfacesJSON, &req.Surfaces)
-
-	var newRole *Role
-	if params.Decision == "approved" {
-		var role Role
-		err = tx.QueryRowContext(ctx, `
-			INSERT INTO dsh_admin_roles (name, description, permissions, surfaces, active)
-			VALUES ($1, $2, $3, $4, true)
-			RETURNING id, name, COALESCE(description,''), permissions, surfaces, active, version, created_at
-		`, req.RoleName, req.Description, permissionsJSON, surfacesJSON).Scan(
-			&role.ID, &role.Name, &role.Description, &permissionsJSON, &surfacesJSON,
-			&role.Active, &role.Version, &role.CreatedAt,
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-		_ = json.Unmarshal(permissionsJSON, &role.Permissions)
-		_ = json.Unmarshal(surfacesJSON, &role.Surfaces)
-		newRole = &role
-	}
 
 	_, _ = tx.ExecContext(ctx, `
 		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)

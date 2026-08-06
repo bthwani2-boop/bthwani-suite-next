@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	ErrNotConfigured = errors.New("identity support session client is not configured")
-	ErrIdentityDenied = errors.New("identity rejected support session action")
+	ErrNotConfigured    = errors.New("identity support session client is not configured")
+	ErrIdentityDenied   = errors.New("identity rejected support session action")
 	ErrIdentityConflict = errors.New("identity support session conflict")
 )
 
@@ -26,17 +26,17 @@ type Permission struct {
 }
 
 type Identity struct {
-	Subject          string       `json:"subject"`
-	OperatorContextID         string       `json:"operatorContextId"`
-	PhoneE164        string       `json:"phoneE164"`
-	Roles            []string     `json:"roles"`
-	Permissions      []Permission `json:"permissions"`
-	AuthState        string       `json:"authState"`
-	SessionID        string       `json:"sessionId"`
-	SessionKind      string       `json:"sessionKind"`
-	InitiatorActorID string       `json:"initiatorActorId"`
-	SupportRequestID string       `json:"supportRequestId"`
-	ExpiresAt        time.Time    `json:"expiresAt"`
+	Subject           string       `json:"subject"`
+	OperatorContextID string       `json:"operatorContextId"`
+	PhoneE164         string       `json:"phoneE164"`
+	Roles             []string     `json:"roles"`
+	Permissions       []Permission `json:"permissions"`
+	AuthState         string       `json:"authState"`
+	SessionID         string       `json:"sessionId"`
+	SessionKind       string       `json:"sessionKind"`
+	InitiatorActorID  string       `json:"initiatorActorId"`
+	SupportRequestID  string       `json:"supportRequestId"`
+	ExpiresAt         time.Time    `json:"expiresAt"`
 }
 
 type IssuedToken struct {
@@ -77,8 +77,8 @@ func (c *Client) do(ctx context.Context, path string, input any, output any) err
 		return err
 	}
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("X-Bthwani-Service-Caller", "dsh")
-	request.Header.Set("X-Bthwani-Service-Token", c.serviceToken)
+	request.Header.Set("Authorization", "Bearer "+c.serviceToken)
+	request.Header.Set("X-Service-Caller", "dsh")
 	response, err := c.httpClient.Do(request)
 	if err != nil {
 		return err

@@ -92,6 +92,12 @@
       "file": "dsh-912_partner_order_flow.sql",
       "sha256": "e4959dea6e14ea95833ac41cdcfe038bd8286acfcbabb738c4aea018867cb63f",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 232,
+      "file": "dsh-996_administration_approval_ledger.sql",
+      "sha256": "59fb5fd5e44dba5786ec8f80d1fe715da41c2782d87c255744a3b1ae344b62ab",
+      "state": "ACTIVE"
     }
   ]
 }

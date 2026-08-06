@@ -23,6 +23,7 @@ import (
 	"dsh-api/internal/partnerwltoutbox"
 	"dsh-api/internal/platformclient"
 	"dsh-api/internal/promotionfundingoutbox"
+	"dsh-api/internal/supportsession"
 	"dsh-api/internal/wlt"
 	"dsh-api/internal/wltoutbox"
 )
@@ -66,6 +67,7 @@ func main() {
 	appCtx, cancelApp := context.WithCancel(context.Background())
 	mediaProvider := newMediaProvider(appCtx)
 	identityClient := auth.NewClientWithInternalAccess(identityBaseURL, identityServiceToken, operatorContextID)
+	supportSessionClient := supportsession.NewClient(identityBaseURL, identityServiceToken)
 	wltClient := wlt.NewClient(wltBaseURL, wltServiceToken)
 	platformClient := platformclient.NewClient(platformControlBaseURL, platformControlServiceToken)
 
@@ -91,7 +93,7 @@ func main() {
 	dshHttp.RegisterPickupRecoveryRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPlatformPolicyRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterAdministrationRoutes(router, db, identityClient, wltClient, mediaProvider)
-
+	dshHttp.RegisterAdministrationSupportRoutes(router, db, identityClient, wltClient, mediaProvider, supportSessionClient)
 
 	dshHttp.RegisterWorkforceScopesRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterGovernedIncidentRoutes(router, db, identityClient, wltClient, mediaProvider)
@@ -207,6 +209,6 @@ func newMediaProvider(ctx context.Context) *media.Provider {
 		SecretKey:      secretKey,
 		Bucket:         bucket,
 		UseSSL:         useSSL,
-		PublicUseSSL:    publicUseSSL,
+		PublicUseSSL:   publicUseSSL,
 	}, 15*time.Second)
 }

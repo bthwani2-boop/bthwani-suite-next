@@ -1,0 +1,338 @@
+openapi: 3.1.0
+info:
+  title: BThwani Identity RBAC Administration API
+  version: 0.1.0
+  description: >-
+    Identity is the sole durable owner of role definitions and actor role
+    assignments (identity_roles, identity_role_permissions,
+    identity_actor_roles). DSH administration is a governed facade: it
+    records approval-workflow state and audit history, but every canonical
+    authorization mutation is applied here, exactly once, through this
+    internal service boundary. Self-grant and self-revoke are rejected as a
+    core security invariant.
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-owner: core/identity
+x-bthwani-runtime-dependency: true
+x-bthwani-extends: ./identity.openapi.yaml
+servers:
+  - url: http://localhost:58082
+    description: Local Identity runtime
+paths:
+  /internal/permissions/resolve:
+    get:
+      operationId: resolveActorPermissions
+      tags: [internal-rbac]
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/DshServiceCaller'
+        - name: actorId
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Canonical relational RBAC permissions for the actor.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [actorId, permissions]
+                properties:
+                  actorId:
+                    type: string
+                  permissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Permission'
+        '400':
+          description: actorId query parameter is missing.
+        '401':
+          description: Invalid DSH service token.
+        '403':
+          description: Caller is forbidden.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /internal/rbac/roles:
+    get:
+      operationId: listRbacRoles
+      tags: [internal-rbac]
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/DshServiceCaller'
+      responses:
+        '200':
+          description: All durable role definitions.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [roles]
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RbacRole'
+        '401':
+          description: Invalid DSH service token.
+        '403':
+          description: Caller is forbidden.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    post:
+      operationId: createRbacRole
+      tags: [internal-rbac]
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/DshServiceCaller'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RbacRoleCreateRequest'
+      responses:
+        '201':
+          description: Role definition created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RbacRole'
+        '400':
+          description: Invalid role name, description, or permission reference.
+        '401':
+          description: Invalid DSH service token.
+        '403':
+          description: Caller is forbidden.
+        '409':
+          description: A role with this name already exists.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /internal/rbac/staff:
+    get:
+      operationId: listRbacStaff
+      tags: [internal-rbac]
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/DshServiceCaller'
+      responses:
+        '200':
+          description: Every actor holding at least one durable role assignment.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [staff]
+                properties:
+                  staff:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RbacStaffActor'
+        '401':
+          description: Invalid DSH service token.
+        '403':
+          description: Caller is forbidden.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /internal/rbac/actors/{actorId}/roles:
+    post:
+      operationId: grantRbacRole
+      tags: [internal-rbac]
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/DshServiceCaller'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: actorId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RbacRoleGrantRequest'
+      responses:
+        '200':
+          description: Role already granted (idempotent readback).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RbacActorRoleAssignment'
+        '201':
+          description: Role granted to the actor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RbacActorRoleAssignment'
+        '400':
+          description: Self-grant, unknown actor, or unknown role.
+        '401':
+          description: Invalid DSH service token.
+        '403':
+          description: Caller is forbidden.
+        '404':
+          description: Role does not exist in the vocabulary.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    delete:
+      operationId: revokeRbacRole
+      tags: [internal-rbac]
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/DshServiceCaller'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: actorId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - name: roleName
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - name: requestedByActorId
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '204':
+          description: Role revoked (or already absent; idempotent).
+        '400':
+          description: Self-revoke or unknown role.
+        '401':
+          description: Invalid DSH service token.
+        '403':
+          description: Caller is forbidden.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+components:
+  securitySchemes:
+    serviceToken:
+      type: http
+      scheme: bearer
+  parameters:
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    DshServiceCaller:
+      name: X-Service-Caller
+      in: header
+      required: true
+      schema:
+        const: dsh
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+  responses:
+    ServiceUnavailable:
+      description: Identity RBAC store is unavailable.
+  schemas:
+    Permission:
+      type: object
+      additionalProperties: false
+      required: [service, surface, action, scope]
+      properties:
+        service:
+          type: string
+        surface:
+          type: string
+        action:
+          type: string
+        scope:
+          type: string
+    RbacRole:
+      type: object
+      additionalProperties: false
+      required: [id, name, description]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+    RbacRoleCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [name, description]
+      properties:
+        name:
+          type: string
+          pattern: '^[a-z][a-z0-9_-]{2,79}$'
+        description:
+          type: string
+          minLength: 1
+    RbacRoleGrantRequest:
+      type: object
+      additionalProperties: false
+      required: [roleName, requestedByActorId]
+      properties:
+        roleName:
+          type: string
+          minLength: 1
+        requestedByActorId:
+          type: string
+          minLength: 1
+    RbacStaffActor:
+      type: object
+      additionalProperties: false
+      required: [id, username, roles, grantedAt]
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        grantedAt:
+          type: string
+          format: date-time
+    RbacActorRoleAssignment:
+      type: object
+      additionalProperties: false
+      required: [actorId, roleId, roleName, grantedBy]
+      properties:
+        actorId:
+          type: string
+        roleId:
+          type: string
+        roleName:
+          type: string
+        grantedBy:
+          type: string

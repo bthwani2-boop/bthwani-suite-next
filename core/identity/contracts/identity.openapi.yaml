@@ -8,6 +8,8 @@ x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/identity
 x-bthwani-contracts:
   employeeAccess: ./employee-access.openapi.yaml
+  rbacAdmin: ./identity.rbac-admin.openapi.yaml
+  supportSessions: ./identity.support-sessions.openapi.yaml
 servers:
   - url: http://localhost:58082
     description: Local identity runtime

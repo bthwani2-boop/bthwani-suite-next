@@ -219,7 +219,9 @@
       "canonicalRoute": "/wlt/finance",
       "routes": [
         "/wlt/finance",
-        "/wlt/finance/payment-sessions"
+        "/wlt/finance/payment-sessions",
+        "/wlt/finance/cod-inspector",
+        "/wlt/finance/ledger-inspector"
       ],
       "purpose": "عرض وأوامر مالية عبر DSH facade فقط للمدفوعات وCOD والعمولات والاستردادات والتسويات والصرف والمصالحة والتقارير.",
       "capabilities": [

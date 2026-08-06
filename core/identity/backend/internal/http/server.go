@@ -43,7 +43,15 @@ func NewRouter(repository *identity.Repository) http.Handler {
 	mux.HandleFunc("DELETE /internal/actors/{actorId}/sessions/{sessionId}", s.serviceOnly(s.internalActorRevokeSession))
 	mux.HandleFunc("DELETE /internal/actors/{actorId}/sessions", s.serviceOnly(s.internalActorRevokeAllSessions))
 	mux.HandleFunc("POST /internal/actors/{actorId}/activations/revoke", s.serviceOnly(s.internalActorRevokeActivations))
-//	mux.HandleFunc("GET /internal/permissions/resolve", s.dshServiceOnly(s.internalPermissionsResolve))
+	mux.HandleFunc("GET /internal/permissions/resolve", s.dshServiceOnly(s.internalPermissionsResolve))
+	mux.HandleFunc("GET /internal/rbac/roles", s.dshServiceOnly(s.internalRbacListRoles))
+	mux.HandleFunc("GET /internal/rbac/staff", s.dshServiceOnly(s.internalRbacListStaff))
+	mux.HandleFunc("POST /internal/rbac/roles", s.dshServiceOnly(s.internalRbacCreateRole))
+	mux.HandleFunc("POST /internal/rbac/actors/{actorId}/roles", s.dshServiceOnly(s.internalRbacGrantRole))
+	mux.HandleFunc("DELETE /internal/rbac/actors/{actorId}/roles", s.dshServiceOnly(s.internalRbacRevokeRole))
+	mux.HandleFunc("POST /internal/support-sessions", s.dshServiceOnly(s.internalSupportSessionsIssue))
+	mux.HandleFunc("POST /internal/support-sessions/resolve", s.dshServiceOnly(s.internalSupportSessionsResolve))
+	mux.HandleFunc("POST /internal/support-sessions/{requestId}/revoke", s.dshServiceOnly(s.internalSupportSessionsRevoke))
 
 	return mux
 }
@@ -91,7 +99,6 @@ func (s *server) dshServiceOnly(next http.HandlerFunc) http.HandlerFunc {
 		next(w, r)
 	}
 }
-
 
 func allowedCorsOrigins() map[string]bool {
 	raw := strings.TrimSpace(os.Getenv("IDENTITY_CORS_ALLOWED_ORIGINS"))
@@ -639,3 +646,101 @@ func (s *server) internalPermissionsResolve(w http.ResponseWriter, r *http.Reque
 	})
 }
 
+// internalRbacListRoles returns every durable role definition. Identity is
+// the sole owner of this table; DSH must read it here rather than maintain
+// its own copy.
+func (s *server) internalRbacListRoles(w http.ResponseWriter, r *http.Request) {
+	roles, err := s.repository.Enforcer.ListRoles(r.Context())
+	if err != nil {
+		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "could not list roles")
+		return
+	}
+	if roles == nil {
+		roles = []identity.RbacRole{}
+	}
+	sendJSON(w, http.StatusOK, map[string]interface{}{"roles": roles})
+}
+
+// internalRbacListStaff returns every actor holding at least one durable
+// role assignment. This is the canonical source for "who is staff"; DSH's
+// administration staff listing reads it here instead of maintaining a local
+// copy or reporting a permanently empty list.
+func (s *server) internalRbacListStaff(w http.ResponseWriter, r *http.Request) {
+	staff, err := s.repository.Enforcer.ListStaffActors(r.Context())
+	if err != nil {
+		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "could not list staff")
+		return
+	}
+	if staff == nil {
+		staff = []identity.StaffActor{}
+	}
+	sendJSON(w, http.StatusOK, map[string]interface{}{"staff": staff})
+}
+
+// internalRbacCreateRole creates a new durable role definition. This is the
+// only path by which a role name becomes active; no other service may
+// activate a role name in a local table.
+func (s *server) internalRbacCreateRole(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}
+	if !decodeJSON(w, r, &request) {
+		return
+	}
+	role, err := s.repository.Enforcer.CreateRole(r.Context(), request.Name, request.Description)
+	if err != nil {
+		writeRbacError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusCreated, role)
+}
+
+// internalRbacGrantRole applies a canonical actor→role grant. Idempotent:
+// granting an already-held role returns 200 instead of 201.
+func (s *server) internalRbacGrantRole(w http.ResponseWriter, r *http.Request) {
+	actorID := r.PathValue("actorId")
+	var request struct {
+		RoleName           string `json:"roleName"`
+		RequestedByActorID string `json:"requestedByActorId"`
+	}
+	if !decodeJSON(w, r, &request) {
+		return
+	}
+	assignment, created, err := s.repository.Enforcer.GrantRole(r.Context(), actorID, request.RoleName, request.RequestedByActorID)
+	if err != nil {
+		writeRbacError(w, err)
+		return
+	}
+	status := http.StatusOK
+	if created {
+		status = http.StatusCreated
+	}
+	sendJSON(w, status, assignment)
+}
+
+// internalRbacRevokeRole applies a canonical actor role revocation. This is
+// the sole write path for the inverse of a role grant.
+func (s *server) internalRbacRevokeRole(w http.ResponseWriter, r *http.Request) {
+	actorID := r.PathValue("actorId")
+	roleName := r.URL.Query().Get("roleName")
+	requestedByActorID := r.URL.Query().Get("requestedByActorId")
+	if err := s.repository.Enforcer.RevokeRole(r.Context(), actorID, roleName, requestedByActorID); err != nil {
+		writeRbacError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func writeRbacError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, identity.ErrSelfGrantProhibited), errors.Is(err, identity.ErrInvalidRoleName):
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+	case errors.Is(err, identity.ErrRoleNotFound):
+		sendError(w, http.StatusNotFound, "ROLE_NOT_FOUND", err.Error())
+	case errors.Is(err, identity.ErrRoleAlreadyExists):
+		sendError(w, http.StatusConflict, "ROLE_ALREADY_EXISTS", err.Error())
+	default:
+		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "rbac request failed")
+	}
+}

@@ -6,6 +6,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"dsh-api/internal/auth"
 )
 
 type RollbackRequest struct {
@@ -99,7 +101,7 @@ func ListRollbackRequests(ctx context.Context, db *sql.DB, status string) ([]Rol
 	if db == nil {
 		return nil, ErrInvalid
 	}
-	
+
 	query := `
 		SELECT id, source_approval_id, inverse_action_type, target_actor_id, role_id, requested_by, reason, status, 
 		       reviewed_by, review_note, version, created_at, updated_at, reviewed_at
@@ -132,7 +134,12 @@ func ListRollbackRequests(ctx context.Context, db *sql.DB, status string) ([]Rol
 	return out, rows.Err()
 }
 
-func ReviewRollbackRequest(ctx context.Context, db *sql.DB, actorID string, requestID string, params ReviewDecisionParams) (*RollbackRequest, error) {
+// ReviewRollbackRequest reviews a pending rollback request. On approval,
+// Identity's RevokeRole is the canonical inverse mutation: it must succeed
+// before this request's status may flip to approved. A failed or
+// unreachable Identity call leaves the rollback pending — DSH never reports
+// a rollback as applied without the canonical revocation having occurred.
+func ReviewRollbackRequest(ctx context.Context, db *sql.DB, identityClient *auth.Client, actorID string, requestID string, params ReviewDecisionParams) (*RollbackRequest, error) {
 	if db == nil {
 		return nil, ErrInvalid
 	}
@@ -171,6 +178,26 @@ func ReviewRollbackRequest(ctx context.Context, db *sql.DB, actorID string, requ
 		return nil, errors.New("cannot review own request")
 	}
 
+	if params.Decision == "approved" {
+		if req.InverseActionType != "staff_role_revocation" {
+			return nil, errors.New("unsupported inverse action type")
+		}
+		if identityClient == nil {
+			return nil, ErrIdentityUnavailable
+		}
+		var roleName string
+		if scanErr := tx.QueryRowContext(ctx, `SELECT name FROM dsh_admin_roles WHERE id = $1`, req.RoleID).Scan(&roleName); scanErr != nil {
+			if scanErr == sql.ErrNoRows {
+				return nil, ErrNotFound
+			}
+			return nil, scanErr
+		}
+		if revokeErr := identityClient.RevokeRole(ctx, req.TargetActorID, roleName, actorID); revokeErr != nil {
+			return nil, ErrCanonicalMutationFailed
+		}
+	}
+
+	// Update status — only after the canonical revocation (if any) succeeded.
 	err = tx.QueryRowContext(ctx, `
 		UPDATE dsh_admin_rollback_requests
 		SET status = $1, reviewed_by = $2, review_note = $3, version = version + 1, updated_at = NOW(), reviewed_at = NOW()

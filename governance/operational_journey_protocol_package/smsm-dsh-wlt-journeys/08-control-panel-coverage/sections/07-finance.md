@@ -3,7 +3,7 @@
 ```yaml
 section_id: finance
 canonical_route: /wlt/finance
-routes: [/wlt/finance, /wlt/finance/payment-sessions]
+routes: [/wlt/finance, /wlt/finance/payment-sessions, /wlt/finance/cod-inspector, /wlt/finance/ledger-inspector]
 source_registry: ../CONTROL-PANEL-SECTION-REGISTRY.json
 status: OPEN_UNTIL_RUNTIME_AND_MANUAL_EVIDENCE
 ```
@@ -16,6 +16,8 @@ Payment Sessions، accounts/wallets، Ledger، COD/custody، eligibility، commi
 
 - `/wlt/finance`
 - `/wlt/finance/payment-sessions`
+- `/wlt/finance/cod-inspector`
+- `/wlt/finance/ledger-inspector`
 
 كل Route المبينة يجب أن تملك عنوانًا وغرضًا وscope ظاهرًا وbreadcrumbs وحالات تحميل/جاهزية/فراغ/خطأ/منع/قدم/تعارض/نتيجة مجهولة، ولا يجوز وجود Route أو صفحة Placeholder غير مصنفة.
 

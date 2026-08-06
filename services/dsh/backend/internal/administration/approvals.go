@@ -6,6 +6,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"dsh-api/internal/auth"
 )
 
 type RoleAssignmentApproval struct {
@@ -70,7 +72,7 @@ func ListRoleAssignmentApprovals(ctx context.Context, db *sql.DB, status string)
 	if db == nil {
 		return nil, ErrInvalid
 	}
-	
+
 	query := `
 		SELECT id, action_type, target_actor_id, role_id, requested_by, reason, status, 
 		       reviewed_by, review_note, version, created_at, updated_at, reviewed_at
@@ -103,17 +105,22 @@ func ListRoleAssignmentApprovals(ctx context.Context, db *sql.DB, status string)
 	return out, rows.Err()
 }
 
-func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, actorID string, approvalID string, params ReviewDecisionParams) (*RoleAssignmentApproval, error) {
+// ReviewRoleAssignmentApproval reviews a pending staff-role-assignment
+// approval. On approval, Identity's GrantRole is the canonical mutation:
+// it must succeed before this approval's status may flip to approved. A
+// failed or unreachable Identity call leaves the approval pending — DSH
+// never marks an assignment approved without the canonical grant applied.
+func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClient *auth.Client, actorID string, approvalID string, params ReviewDecisionParams) (*RoleAssignmentApproval, *auth.RbacActorRoleAssignment, error) {
 	if db == nil {
-		return nil, ErrInvalid
+		return nil, nil, ErrInvalid
 	}
 	if params.Decision != "approved" && params.Decision != "rejected" {
-		return nil, errors.New("invalid decision")
+		return nil, nil, errors.New("invalid decision")
 	}
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer tx.Rollback()
 
@@ -127,21 +134,44 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, actorID strin
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
+			return nil, nil, ErrNotFound
 		}
-		return nil, err
+		return nil, nil, err
 	}
 
 	if req.Status != "pending" {
-		return nil, errors.New("request is not pending")
+		return nil, nil, errors.New("request is not pending")
 	}
 	if req.Version != params.ExpectedVersion {
-		return nil, errors.New("version conflict")
+		return nil, nil, errors.New("version conflict")
 	}
 	if req.RequestedBy == actorID {
-		return nil, errors.New("cannot review own request")
+		return nil, nil, errors.New("cannot review own request")
 	}
 
+	var assignment *auth.RbacActorRoleAssignment
+	if params.Decision == "approved" {
+		if req.ActionType != "staff_role_assignment" {
+			return nil, nil, errors.New("unsupported action type")
+		}
+		if identityClient == nil {
+			return nil, nil, ErrIdentityUnavailable
+		}
+		var roleName string
+		if scanErr := tx.QueryRowContext(ctx, `SELECT name FROM dsh_admin_roles WHERE id = $1`, req.RoleID).Scan(&roleName); scanErr != nil {
+			if scanErr == sql.ErrNoRows {
+				return nil, nil, ErrNotFound
+			}
+			return nil, nil, scanErr
+		}
+		granted, grantErr := identityClient.GrantRole(ctx, req.TargetActorID, roleName, actorID)
+		if grantErr != nil {
+			return nil, nil, ErrCanonicalMutationFailed
+		}
+		assignment = &granted
+	}
+
+	// Update status — only after the canonical grant (if any) succeeded.
 	err = tx.QueryRowContext(ctx, `
 		UPDATE dsh_admin_approval_requests
 		SET status = $1, reviewed_by = $2, review_note = $3, version = version + 1, updated_at = NOW(), reviewed_at = NOW()
@@ -149,7 +179,7 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, actorID strin
 		RETURNING version, updated_at, reviewed_at
 	`, params.Decision, actorID, params.ReviewNote, approvalID).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	req.Status = params.Decision
@@ -157,22 +187,14 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, actorID strin
 	req.ReviewedBy = &reviewer
 	req.ReviewNote = &params.ReviewNote
 
-	if params.Decision == "approved" {
-		// NOTE: FND-D08 deleted dsh_admin_staff_assignments. 
-		// If approved, the assignment should be applied to Identity or Workforce, 
-		// or DSH needs to invoke an outbox/event. 
-		// For now, we only update the approval status, as DSH doesn't own the canonical staff table anymore.
-		// A full implementation would enqueue an event to notify the Workforce domain.
-	}
-
 	_, _ = tx.ExecContext(ctx, `
 		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
 		VALUES ($1, $2, $3, $4, 'HIGH', $5)
 	`, actorID, "ROLE_ASSIGNMENT_"+strings.ToUpper(params.Decision), req.ID, "Reviewed role assignment for: "+req.TargetActorID, req.ID)
 
 	if err := tx.Commit(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return &req, nil
+	return &req, assignment, nil
 }

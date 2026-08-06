@@ -21,6 +21,8 @@
   },
   "include": [
     "clients/**/*.ts",
+    "contracts/**/*.ts",
+    "service.manifest.ts",
     "frontend/**/*.d.ts",
     "frontend/shared/**/*.ts",
     "frontend/shared/**/*.tsx",
