@@ -19,6 +19,9 @@ func (s *protectedStoreServer) handleOperatorCreateStore(w http.ResponseWriter, 
 }
 
 func (s *protectedStoreServer) handlePartnerCreateStore(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireActor(w, r, "partner"); !ok {
+		return
+	}
 	operatorContextID, ok := partner.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")

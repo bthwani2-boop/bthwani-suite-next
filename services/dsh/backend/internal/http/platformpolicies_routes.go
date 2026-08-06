@@ -50,17 +50,18 @@ func RegisterPlatformPolicyRoutes(
 	mux.HandleFunc("GET /dsh/operator/platform/operational-policy/audit", protected.handleListOperationalPolicyAudit)
 	mux.HandleFunc("POST /dsh/operator/platform/operational-policy/audit/{eventId}/rollback", protected.handleRollbackOperationalPolicy)
 
-	// The following routes are registered via registerUnifiedCatalogRoutes in
-	// catalog_unified_routes.go to preserve one compatibility owner.
-	// mux.HandleFunc("GET /dsh/operator/platform/zones", protected.withPermission("control-panel", DshServiceZonesPermissionRead, protected.handleListZones))
-	// mux.HandleFunc("POST /dsh/operator/platform/zones", protected.withPermission("control-panel", DshServiceZonesPermissionManage, protected.handleCreateZone))
-	// mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", protected.withPermission("control-panel", DshServiceZonesPermissionManage, protected.handleUpdateZone))
-	// mux.HandleFunc("GET /dsh/operator/platform/sla-rules", protected.withPermission("control-panel", DshFulfillmentSlaPermissionRead, protected.handleListSlaRules))
-	// mux.HandleFunc("PUT /dsh/operator/platform/sla-rules", protected.withPermission("control-panel", DshFulfillmentSlaPermissionManage, protected.handleUpsertSlaRules))
-	// mux.HandleFunc("GET /dsh/operator/platform/capacity", protected.withPermission("control-panel", DshDispatchCapacityPermissionRead, protected.handleGetCapacityConfig))
-	// mux.HandleFunc("PUT /dsh/operator/platform/capacity", protected.withPermission("control-panel", DshDispatchCapacityPermissionManage, protected.handleUpsertCapacityConfig))
-	// mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", protected.withPermission("control-panel", DshServiceZonesPermissionRead, protected.handleGetZoneServiceability))
-	// mux.HandleFunc("GET /dsh/operator/platform/store-onboarding-fee", protected.withPermission("control-panel", "partners.read", protected.handleGetStoreOnboardingFeePolicy))
-	// mux.HandleFunc("PUT /dsh/operator/platform/store-onboarding-fee", protected.withPermission("control-panel", "partners.manage", protected.handleUpsertStoreOnboardingFeePolicy))
-	// mux.HandleFunc("GET /dsh/platform/store-onboarding-fee", protected.handleGetStoreOnboardingFeeReference)
+	// GET zones/sla-rules/capacity/serviceability are registered by
+	// registerUnifiedCatalogRoutes in catalog_unified_routes.go (single
+	// compatibility owner — registering them here too would panic on
+	// duplicate mux patterns).
+	//
+	// The write counterparts (POST/PATCH/PUT zones, PUT sla-rules, PUT
+	// capacity, GET/PUT store-onboarding-fee) are NOT registered anywhere:
+	// they are live 501 stubs in server.go (see the comment there). The
+	// handler names once referenced in this file's dead comments
+	// (handleCreateZone, handleUpdateZone, handleUpsertSlaRules,
+	// handleUpsertCapacityConfig, handleGetStoreOnboardingFeePolicy,
+	// handleUpsertStoreOnboardingFeePolicy, handleGetStoreOnboardingFeeReference)
+	// do not exist in this package — this is an unimplemented feature, not a
+	// registration bug.
 }
