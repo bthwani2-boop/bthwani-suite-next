@@ -59,39 +59,9 @@ paths:
     parameters:
       - $ref: '#/components/parameters/TicketId'
       - $ref: '#/components/parameters/MessageId'
-    get:
-      tags: [ "dsh-operator" ]
-      operationId: listDshOperatorSupportMessageAttachments
-      responses:
-        '200': { description: Operator-visible message attachments }
-        '403': { description: Missing support read permission }
-      security:
-        - bearerAuth: []
-    post:
-      tags: [ "dsh-operator" ]
-      operationId: attachDshOperatorSupportMessageAsset
-      description: Compatibility operation for linking one already-uploaded governed asset.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/AttachmentInput' }
-      responses:
-        '201': { description: Operator attachment linked to the message }
-        '403': { description: Missing support manage permission }
-      security:
-        - bearerAuth: []
   /dsh/operator/support/tickets/{ticketId}/messages/read:
     parameters:
       - $ref: '#/components/parameters/TicketId'
-    post:
-      tags: [ "dsh-operator" ]
-      operationId: markDshOperatorSupportMessagesRead
-      responses:
-        '200': { description: Durable operator read receipt }
-        '403': { description: Missing support read permission }
-      security:
-        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }

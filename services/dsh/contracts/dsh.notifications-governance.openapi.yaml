@@ -13,7 +13,7 @@ servers:
 tags:
   - name: DshNotificationGovernance
 paths:
-  /dsh/notifications/push-endpoints:
+  /dsh/notification-push-endpoints:
     put:
       operationId: upsertDshNotificationPushEndpoint
       summary: Register or refresh the authenticated actor's push endpoint.
@@ -36,7 +36,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
       security:
         - bearerAuth: []
-  /dsh/notifications/push-endpoints/{deviceId}:
+  /dsh/notification-push-endpoints/{deviceId}:
     delete:
       operationId: deactivateDshNotificationPushEndpoint
       summary: Deactivate an endpoint owned by the authenticated actor.

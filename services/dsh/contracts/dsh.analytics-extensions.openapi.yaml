@@ -2,130 +2,229 @@ openapi: 3.1.0
 info:
   title: BThwani DSH Analytics Extensions API
   version: 1.0.0
-  description: >-
-    Active standalone index for operational analytics path-items not yet
-    composed into the primary generated DSH document. The path-item definitions
-    remain sovereign in paths/analytics.paths.yaml.
+  description: Active standalone index for operational analytics path-items not yet
+    composed into the primary generated DSH document. The path-item definitions remain
+    sovereign in paths/analytics.paths.yaml.
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: MANUAL_TYPED_ADAPTER
 x-bthwani-runtime-dependency: true
 servers:
-  - url: http://localhost:58080
+- url: http://localhost:58080
 paths:
   /dsh/operator/analytics/preparation-sla:
-    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1preparation-sla"
+    $ref: ./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1preparation-sla
     get:
       tags:
-        - operator
+      - operator
       operationId: get_dsh_operator_analytics_preparation_sla
       responses:
-        "200":
+        '200':
           description: Auto-generated
           content:
             application/json:
               schema:
                 type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
       security:
-        - bearerAuth: []
+      - bearerAuth: []
   /dsh/operator/analytics/captains:
-    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1captains"
+    $ref: ./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1captains
     get:
       tags:
-        - operator
+      - operator
       operationId: get_dsh_operator_analytics_captains
       responses:
-        "200":
+        '200':
           description: Auto-generated
           content:
             application/json:
               schema:
                 type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
       security:
-        - bearerAuth: []
+      - bearerAuth: []
   /dsh/operator/analytics/field:
-    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1field"
+    $ref: ./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1field
     get:
       tags:
-        - operator
+      - operator
       operationId: get_dsh_operator_analytics_field
       responses:
-        "200":
+        '200':
           description: Auto-generated
           content:
             application/json:
               schema:
                 type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
       security:
-        - bearerAuth: []
+      - bearerAuth: []
   /dsh/operator/analytics/drill-down/orders:
-    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1drill-down~1or\
-      ders"
+    $ref: ./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1drill-down~1orders
     get:
       tags:
-        - operator
+      - operator
       operationId: get_dsh_operator_analytics_drill_down_orders
       responses:
-        "200":
+        '200':
           description: Auto-generated
           content:
             application/json:
               schema:
                 type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
       security:
-        - bearerAuth: []
+      - bearerAuth: []
   /dsh/operator/analytics/financial-snapshot:
-    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1financial-snap\
-      shot"
+    $ref: ./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1financial-snapshot
     get:
       tags:
-        - operator
+      - operator
       operationId: get_dsh_operator_analytics_financial_snapshot
       responses:
-        "200":
+        '200':
           description: Auto-generated
           content:
             application/json:
               schema:
                 type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
       security:
-        - bearerAuth: []
+      - bearerAuth: []
   /dsh/operator/analytics/export.csv:
-    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1export.csv"
+    $ref: ./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1export.csv
     get:
       tags:
-        - operator
+      - operator
       operationId: get_dsh_operator_analytics_export_csv
       responses:
-        "200":
+        '200':
           description: Auto-generated
           content:
             application/json:
               schema:
                 type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
       security:
-        - bearerAuth: []
+      - bearerAuth: []
   /dsh/operator/analytics/operations:
     get:
-      tags: [ "dsh-operator" ]
+      tags:
+      - dsh-operator
       operationId: getDshOperationsAnalytics
       summary: Return the governed operations analytics projection.
-      security: [ { bearerAuth: [] } ]
+      security:
+      - bearerAuth: []
       parameters:
-        - name: period
-          in: query
-          required: false
-          schema: { type: string, enum: [ today, week, month ], default: today }
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - today
+          - week
+          - month
+          default: today
       responses:
-        "200":
+        '200':
           description: Operations analytics projection.
           content:
             application/json:
-              schema: { type: object, additionalProperties: true }
-        "400": { description: Invalid analytics period. }
-        "401": { description: Authentication required. }
-        "403": { description: Analytics read permission required. }
-
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Invalid analytics period.
+        '401':
+          description: Authentication required.
+        '403':
+          description: Analytics read permission required.
 components:
   securitySchemes:
     bearerAuth:

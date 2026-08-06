@@ -77,7 +77,7 @@ DshCheckoutIntent: &DshCheckoutIntent
     version: { type: integer, minimum: 1 }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
-    expiresAt: { type: string, format: date-time, nullable: true }
+    expiresAt: { type: string, format: date-time }
     previewHash: { type: string }
     validationIssues:
       type: array

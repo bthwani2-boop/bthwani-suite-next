@@ -8,26 +8,32 @@ info:
 paths:
   /dsh/operator/workforce/scopes/{actorId}:
     get:
-      tags: [ "dsh-operator" ]
+      tags:
+      - dsh-operator
       operationId: getWorkforceActorScopes
       summary: Get workforce scope snapshot for a field or captain actor
-      description: >
-        Read-through proxy to Workforce. DSH exposes this as an operational
-        reference only. Workforce remains the sole owner of assignment and scope
-        mutations. Returns the current store and service-area assignments for
-        the given actor.
+      description: 'Read-through proxy to Workforce. DSH exposes this as an operational
+        reference only. Workforce remains the sole owner of assignment and scope mutations.
+        Returns the current store and service-area assignments for the given actor.
+
+        '
       x-bthwani-required-scope: workforce.scopes.read
       parameters:
-        - in: path
-          name: actorId
-          required: true
-          schema: { type: string }
-          description: The actor identifier (field agent or captain)
-        - in: query
-          name: actorRole
-          required: true
-          schema: { type: string, enum: [ field, captain ] }
-          description: The workforce role of the actor
+      - in: path
+        name: actorId
+        required: true
+        schema:
+          type: string
+        description: The actor identifier (field agent or captain)
+      - in: query
+        name: actorRole
+        required: true
+        schema:
+          type: string
+          enum:
+          - field
+          - captain
+        description: The workforce role of the actor
       responses:
         '200':
           description: Current scope snapshot for the actor
@@ -44,27 +50,41 @@ paths:
         '502':
           description: Workforce upstream unavailable
       security:
-        - bearerAuth: []
+      - bearerAuth: []
     parameters:
-      - name: actorId
-        in: path
-        required: true
-        schema:
-          type: string
+    - name: actorId
+      in: path
+      required: true
+      schema:
+        type: string
     put:
       tags:
-        - operator
+      - operator
       operationId: put_dsh_operator_workforce_scopes__actorId_
       responses:
-        "200":
+        '200':
           description: Auto-generated
           content:
             application/json:
               schema:
                 type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
       security:
-        - bearerAuth: []
-
+      - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -73,20 +93,28 @@ components:
   schemas:
     WorkforceScopeSnapshot:
       type: object
-      required: [ actorId, actorRole, storeIds, serviceAreaCodes ]
+      required:
+      - actorId
+      - actorRole
+      - storeIds
+      - serviceAreaCodes
       properties:
         actorId:
           type: string
           description: The actor identifier
         actorRole:
           type: string
-          enum: [ field, captain ]
+          enum:
+          - field
+          - captain
           description: The workforce role of the actor
         storeIds:
           type: array
-          items: { type: string }
+          items:
+            type: string
           description: Store IDs the actor is currently assigned to
         serviceAreaCodes:
           type: array
-          items: { type: string }
+          items:
+            type: string
           description: Service area codes active for the actor

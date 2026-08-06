@@ -1,4 +1,4 @@
-import { CodInspectorScreen } from "@bthwani/control-panel/finance";
+import { CodInspectorScreen } from "@bthwani/dsh/control-panel/finance";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
