@@ -40,8 +40,6 @@ This catalog is checked for exact membership and status drift.
 
 ## Retired entries
 
-- `graphify` — retired as a skill; Graphify is a conditional tool documented under `.agents/tools/graphify.md`.
-- `open-code-review-delegate` — retired as a skill; OpenCodeReview is a conditional tool documented under `.agents/tools/open-code-review.md`.
 
 ## Catalog rule
 
