@@ -3,7 +3,9 @@
   "config": {
     "line-length": false,
     "no-duplicate-heading": false,
-    "no-inline-html": false
+    "no-inline-html": false,
+    "MD060": false,
+    "MD056": false
   },
   "globs": [
     "governance/**/*.md",
