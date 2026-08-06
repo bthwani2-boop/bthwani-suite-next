@@ -40,5 +40,5 @@
   "gitlens.statusBar.enabled": false,
   "terminal.integrated.scrollback": 5000,
   "terminal.integrated.persistentSessionScrollback": 5000,
-  "leanctx.binaryPath": "C:\\Users\\bassa\\AppData\\Roaming\\npm\\lean-ctx.cmd"
+  "leanctx.binaryPath": "C:\\Users\\bassa\\AppData\\Roaming\\npm\\node_modules\\lean-ctx-bin\\bin\\lean-ctx.exe"
 }
