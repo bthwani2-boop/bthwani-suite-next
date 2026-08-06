@@ -93,7 +93,7 @@ func (s *Service) SearchSupervisors(ctx context.Context, kind, query string) ([]
 	} else if kind == "employee" {
 		expectedRole = "workforce.supervise.employee"
 	}
-	actors, err := s.identity.SearchActors(ctx, expectedRole, query)
+	actors, _, err := s.identity.SearchActors(ctx, expectedRole, query, "")
 	if err != nil {
 		return nil, err
 	}

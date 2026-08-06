@@ -29,24 +29,27 @@ func TestSearchActorsDecodesGovernedPageAndSendsServiceIdentity(t *testing.T) {
 		if got := r.Header.Get("X-Operator-Context-ID"); got != "context-main" {
 			t.Fatalf("unexpected operator context %q", got)
 		}
-		if r.URL.Query().Get("limit") != "100" || r.URL.Query().Get("offset") != "0" {
+		if r.URL.Query().Get("limit") != "100" {
 			t.Fatalf("missing pagination query: %s", r.URL.RawQuery)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(ActorSearchPage{Items: []ActorView{{
 			ActorID: "field-1", Username: "ali", PhoneE164: "+967770000001",
 			Roles: []string{"field"}, Active: true, Status: "ACTIVE",
-		}}, Limit: 100, Offset: 0, Total: 1})
+		}}, Limit: 100, NextCursor: "abc", Total: 1})
 	}))
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token", "context-main")
-	actors, err := client.SearchActors(context.Background(), "field", "ali")
+	actors, nextCursor, err := client.SearchActors(context.Background(), "field", "ali", "")
 	if err != nil {
 		t.Fatalf("SearchActors returned error: %v", err)
 	}
 	if len(actors) != 1 || actors[0].ActorID != "field-1" {
 		t.Fatalf("unexpected actors %#v", actors)
+	}
+	if nextCursor != "abc" {
+		t.Fatalf("unexpected next cursor %q", nextCursor)
 	}
 }
 
@@ -61,7 +64,7 @@ func TestClientSendsTrustedContextToEveryIdentityCall(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token", "context-main")
-	if _, err := client.SearchActors(context.Background(), "field", ""); err != nil {
+	if _, _, err := client.SearchActors(context.Background(), "field", "", ""); err != nil {
 		t.Fatalf("SearchActors returned error: %v", err)
 	}
 }

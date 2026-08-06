@@ -270,7 +270,8 @@ func (s *server) internalActorSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	query := r.URL.Query()
-	limit, offset := 25, 0
+	limit := 25
+	cursor := ""
 	if raw := strings.TrimSpace(query.Get("limit")); raw != "" {
 		parsed, err := strconv.Atoi(raw)
 		if err != nil {
@@ -279,13 +280,8 @@ func (s *server) internalActorSearch(w http.ResponseWriter, r *http.Request) {
 		}
 		limit = parsed
 	}
-	if raw := strings.TrimSpace(query.Get("offset")); raw != "" {
-		parsed, err := strconv.Atoi(raw)
-		if err != nil {
-			writeInternalActorError(w, identity.ErrInvalidActorQuery)
-			return
-		}
-		offset = parsed
+	if raw := strings.TrimSpace(query.Get("cursor")); raw != "" {
+		cursor = raw
 	}
 	page, err := s.repository.SearchActorsGoverned(r.Context(), identity.ActorSearchInput{
 		OperatorContextID: operatorContextID,
@@ -293,7 +289,7 @@ func (s *server) internalActorSearch(w http.ResponseWriter, r *http.Request) {
 		Query:             strings.TrimSpace(query.Get("q")),
 		Status:            identity.ActorLifecycleStatus(strings.TrimSpace(query.Get("status"))),
 		Limit:             limit,
-		Offset:            offset,
+		Cursor:            cursor,
 	})
 	if err != nil {
 		writeInternalActorError(w, err)

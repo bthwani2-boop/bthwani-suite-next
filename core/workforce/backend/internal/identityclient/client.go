@@ -10,9 +10,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
+
+// actorSearchPageSize is the page size requested from identity's keyset-paginated
+// actor search. Callers that need every match must follow NextCursor to exhaustion.
+const actorSearchPageSize = 100
 
 var (
 	ErrUnavailable              = errors.New("identity unavailable")
@@ -74,9 +79,9 @@ type ActorView struct {
 
 type ActorSearchPage struct {
 	Items  []ActorView `json:"items"`
-	Limit  int         `json:"limit"`
-	Offset int         `json:"offset"`
-	Total  int         `json:"total"`
+	Limit      int         `json:"limit"`
+	NextCursor string      `json:"nextCursor,omitempty"`
+	Total      int         `json:"total"`
 }
 
 type ProvisionInput struct {
@@ -118,13 +123,11 @@ func (c *Client) Actor(ctx context.Context, actorID string) (ActorView, error) {
 	return view, err
 }
 
-func (c *Client) SearchActors(ctx context.Context, role, q string) ([]ActorView, error) {
-	page, err := c.SearchActorPage(ctx, role, q, "", 100, 0)
-	return page.Items, err
-}
-
-func (c *Client) SearchActorPage(ctx context.Context, role, q, status string, limit, offset int) (ActorSearchPage, error) {
-	page := ActorSearchPage{Items: []ActorView{}, Limit: limit, Offset: offset}
+// SearchActors performs a keyset-paginated actor search against identity. An empty
+// cursor starts at the first page; the returned cursor is empty once the last page
+// has been read.
+func (c *Client) SearchActors(ctx context.Context, role, q, cursor string) ([]ActorView, string, error) {
+	result := ActorSearchPage{Items: []ActorView{}}
 	values := url.Values{}
 	if role != "" {
 		values.Set("role", role)
@@ -132,17 +135,16 @@ func (c *Client) SearchActorPage(ctx context.Context, role, q, status string, li
 	if q != "" {
 		values.Set("q", q)
 	}
-	if status != "" {
-		values.Set("status", status)
+	if cursor != "" {
+		values.Set("cursor", cursor)
 	}
-	values.Set("limit", fmt.Sprintf("%d", limit))
-	values.Set("offset", fmt.Sprintf("%d", offset))
+	values.Set("limit", strconv.Itoa(actorSearchPageSize))
 	path := "/internal/actors/search?" + values.Encode()
-	err := c.do(ctx, http.MethodGet, path, nil, &page, nil)
-	if page.Items == nil {
-		page.Items = []ActorView{}
+	err := c.do(ctx, http.MethodGet, path, nil, &result, nil)
+	if result.Items == nil {
+		result.Items = []ActorView{}
 	}
-	return page, err
+	return result.Items, result.NextCursor, err
 }
 
 // Deprovision initiates a hard delete of an unactivated actor. This is used exclusively

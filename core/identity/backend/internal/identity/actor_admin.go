@@ -117,7 +117,7 @@ func (r *Repository) ProvisionActorGoverned(ctx context.Context, input Provision
 // SearchActorsGoverned is the canonical live internal search/readback path.
 func (r *Repository) SearchActorsGoverned(ctx context.Context, input ActorSearchInput) (ActorSearchPage, error) {
 	operatorContextID := strings.TrimSpace(input.OperatorContextID)
-	if operatorContextID == "" || input.Offset < 0 {
+	if operatorContextID == "" {
 		return ActorSearchPage{}, ErrInvalidActorQuery
 	}
 	limit := input.Limit
@@ -164,9 +164,30 @@ func (r *Repository) SearchActorsGoverned(ctx context.Context, input ActorSearch
 	END`
 	args = append(args, string(status))
 	statusIndex := len(args)
-	args = append(args, limit, input.Offset)
-	limitIndex := len(args) - 1
-	offsetIndex := len(args)
+
+	var cursorUsername, cursorID string
+	if input.Cursor != "" {
+		decoded, err := base64.RawURLEncoding.DecodeString(input.Cursor)
+		if err == nil {
+			parts := strings.SplitN(string(decoded), "|", 2)
+			if len(parts) == 2 {
+				cursorUsername = parts[0]
+				cursorID = parts[1]
+			}
+		}
+	}
+	
+	cursorClause := ""
+	if cursorUsername != "" && cursorID != "" {
+		args = append(args, cursorUsername, cursorID)
+		uIdx := len(args) - 1
+		idIdx := len(args)
+		cursorClause = fmt.Sprintf(" AND (lower(username) > lower($%d) OR (lower(username) = lower($%d) AND id > $%d))", uIdx, uIdx, idIdx)
+	}
+
+	args = append(args, limit)
+	limitIndex := len(args)
+
 	query := `
 		WITH actor_projection AS (
 			SELECT id, username, COALESCE(phone_e164, '') AS phone_e164,
@@ -176,15 +197,15 @@ func (r *Repository) SearchActorsGoverned(ctx context.Context, input ActorSearch
 		)
 		SELECT id, username, phone_e164, roles, status, version, COUNT(*) OVER()
 		FROM actor_projection
-		WHERE $` + strconv.Itoa(statusIndex) + ` = '' OR lifecycle_status = $` + strconv.Itoa(statusIndex) + `
+		WHERE ($` + strconv.Itoa(statusIndex) + ` = '' OR lifecycle_status = $` + strconv.Itoa(statusIndex) + `)` + cursorClause + `
 		ORDER BY lower(username), id
-		LIMIT $` + strconv.Itoa(limitIndex) + ` OFFSET $` + strconv.Itoa(offsetIndex)
+		LIMIT $` + strconv.Itoa(limitIndex)
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return ActorSearchPage{}, err
 	}
 	defer rows.Close()
-	page := ActorSearchPage{Items: []ActorAdminView{}, Limit: limit, Offset: input.Offset}
+	page := ActorSearchPage{Items: []ActorAdminView{}, Limit: limit}
 	for rows.Next() {
 		var view ActorAdminView
 		var roles pq.StringArray
@@ -196,6 +217,11 @@ func (r *Repository) SearchActorsGoverned(ctx context.Context, input ActorSearch
 	}
 	if err := rows.Err(); err != nil {
 		return ActorSearchPage{}, err
+	}
+
+	if len(page.Items) == limit {
+		lastItem := page.Items[len(page.Items)-1]
+		page.NextCursor = base64.RawURLEncoding.EncodeToString([]byte(lastItem.Username + "|" + lastItem.ActorID))
 	}
 
 	return page, nil

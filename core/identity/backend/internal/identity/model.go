@@ -91,13 +91,13 @@ type ActorSearchInput struct {
 	Query             string
 	Status            ActorLifecycleStatus
 	Limit             int
-	Offset            int
+	Cursor            string
 }
 
 type ActorSearchPage struct {
 	Items  []ActorAdminView `json:"items"`
-	Limit  int              `json:"limit"`
-	Offset int              `json:"offset"`
+	Limit      int              `json:"limit"`
+	NextCursor string           `json:"nextCursor,omitempty"`
 	Total  int              `json:"total"`
 }
 
