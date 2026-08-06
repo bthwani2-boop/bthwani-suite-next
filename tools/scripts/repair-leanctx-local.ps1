@@ -54,9 +54,10 @@ function Invoke-LeanCtx {
   $startInfo.RedirectStandardError = $true
   $startInfo.CreateNoWindow = $true
 
-  foreach ($argument in $Arguments) {
-    [void]$startInfo.ArgumentList.Add($argument)
+  $escapedArgs = $Arguments | ForEach-Object {
+    if ($_ -match '\s|^$') { '"{0}"' -f ($_ -replace '"', '\"') } else { $_ }
   }
+  $startInfo.Arguments = $escapedArgs -join ' '
 
   $process = [System.Diagnostics.Process]::new()
   $process.StartInfo = $startInfo
@@ -241,7 +242,7 @@ try {
 
   [void](Invoke-LeanCtx -Arguments @("config", "set", "shadow_mode", "false"))
 
-  if ($IsWindows) {
+  if ($true) {
     $homePath = [IO.Path]::GetFullPath($HOME)
     $binaryPath = [IO.Path]::GetFullPath($script:LeanCtx)
     if ($binaryPath.StartsWith($homePath, [StringComparison]::OrdinalIgnoreCase)) {

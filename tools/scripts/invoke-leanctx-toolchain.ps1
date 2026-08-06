@@ -15,13 +15,13 @@ Push-Location $root
 try {
   if ($Mode -in @("Repair", "Full")) {
     & $repairScript
-    if ($LASTEXITCODE -ne 0) {
+    if (-not $?) {
       throw "LeanCTX unified repair failed."
     }
   }
 
   & $diagnosticScript -Strict
-  if ($LASTEXITCODE -ne 0) {
+  if (-not $?) {
     throw "LeanCTX strict diagnostic failed."
   }
 
