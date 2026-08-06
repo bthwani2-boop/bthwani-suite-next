@@ -299,11 +299,7 @@ func (s *server) internalActorSearch(w http.ResponseWriter, r *http.Request) {
 		writeInternalActorError(w, err)
 		return
 	}
-	views := page.Items
-	if views == nil {
-		views = []identity.ActorAdminView{}
-	}
-	sendJSON(w, http.StatusOK, views)
+	sendJSON(w, http.StatusOK, page)
 }
 
 func (s *server) internalActorDeactivate(w http.ResponseWriter, r *http.Request) {

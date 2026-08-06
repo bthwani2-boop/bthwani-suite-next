@@ -119,7 +119,12 @@ func (c *Client) Actor(ctx context.Context, actorID string) (ActorView, error) {
 }
 
 func (c *Client) SearchActors(ctx context.Context, role, q string) ([]ActorView, error) {
-	var result []ActorView
+	page, err := c.SearchActorPage(ctx, role, q, "", 100, 0)
+	return page.Items, err
+}
+
+func (c *Client) SearchActorPage(ctx context.Context, role, q, status string, limit, offset int) (ActorSearchPage, error) {
+	page := ActorSearchPage{Items: []ActorView{}, Limit: limit, Offset: offset}
 	values := url.Values{}
 	if role != "" {
 		values.Set("role", role)
@@ -127,14 +132,17 @@ func (c *Client) SearchActors(ctx context.Context, role, q string) ([]ActorView,
 	if q != "" {
 		values.Set("q", q)
 	}
-	values.Set("limit", "100")
-	values.Set("offset", "0")
-	path := "/internal/actors/search?" + values.Encode()
-	err := c.do(ctx, http.MethodGet, path, nil, &result, nil)
-	if result == nil {
-		result = []ActorView{}
+	if status != "" {
+		values.Set("status", status)
 	}
-	return result, err
+	values.Set("limit", fmt.Sprintf("%d", limit))
+	values.Set("offset", fmt.Sprintf("%d", offset))
+	path := "/internal/actors/search?" + values.Encode()
+	err := c.do(ctx, http.MethodGet, path, nil, &page, nil)
+	if page.Items == nil {
+		page.Items = []ActorView{}
+	}
+	return page, err
 }
 
 // Deprovision initiates a hard delete of an unactivated actor. This is used exclusively

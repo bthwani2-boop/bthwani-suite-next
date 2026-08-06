@@ -1142,6 +1142,36 @@
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
     },
     {
+      "route": "POST /dsh/operator/admin/approvals/{approvalId}/review",
+      "method": "POST",
+      "path": "/dsh/operator/admin/approvals/{approvalId}/review",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/admin/approvals/{approvalId}/rollback-requests",
+      "method": "POST",
+      "path": "/dsh/operator/admin/approvals/{approvalId}/rollback-requests",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/admin/role-requests/{requestId}/review",
+      "method": "POST",
+      "path": "/dsh/operator/admin/role-requests/{requestId}/review",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/admin/roles/requests",
+      "method": "POST",
+      "path": "/dsh/operator/admin/roles/requests",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "POST /dsh/operator/admin/rollback-requests/{requestId}/review",
+      "method": "POST",
+      "path": "/dsh/operator/admin/rollback-requests/{requestId}/review",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
       "route": "POST /dsh/operator/catalog/assets/cleanup-orphans",
       "method": "POST",
       "path": "/dsh/operator/catalog/assets/cleanup-orphans",
@@ -1319,6 +1349,30 @@
       "route": "GET /dsh/internal/operations/carts/{cartId}/sync-diagnostics",
       "method": "GET",
       "path": "/dsh/internal/operations/carts/{cartId}/sync-diagnostics",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/admin/approvals",
+      "method": "GET",
+      "path": "/dsh/operator/admin/approvals",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/admin/diagnostics",
+      "method": "GET",
+      "path": "/dsh/operator/admin/diagnostics",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/admin/role-requests",
+      "method": "GET",
+      "path": "/dsh/operator/admin/role-requests",
+      "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
+    },
+    {
+      "route": "GET /dsh/operator/admin/rollback-requests",
+      "method": "GET",
+      "path": "/dsh/operator/admin/rollback-requests",
       "reason": "Live, authenticated DSH route with no corresponding OpenAPI operation declaration. Introduced in recent commit without a contract entry; needs a proper operation entry authored and verified against the live handler before removal from this allowlist."
     },
     {

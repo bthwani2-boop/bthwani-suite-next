@@ -1,5 +1,5 @@
 import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
-import { createDshHttpClient, corrId } from "../dsh-link/dsh-http-request";
+import { createDshHttpClient } from "../dsh-link/dsh-http-request";
 import type { WltDshFinanceRuntimeResult, WltFinancialSummaryRaw } from "./finance-hub.types";
 
 const { request: financeRequest } = createDshHttpClient(resolveDshApiBaseUrl(), "finance-hub");
@@ -134,13 +134,9 @@ export type PayoutTransition = "approve" | "reject" | "process" | "complete" | "
 
 export async function transitionPayoutRequest(payoutId: string, transition: PayoutTransition): Promise<FinanceActionResult> {
   try {
-    const key = corrId(`${transition}-${payoutId}`);
     await financeRequest<unknown>(
       `/dsh/control-panel/finance/payout-requests/${encodeURIComponent(payoutId)}/${transition}`,
-      { 
-        method: "POST",
-        auth: { idempotencyKey: key, correlationId: key } 
-      },
+      { method: "POST" },
     );
     return { ok: true };
   } catch (error) {
@@ -175,7 +171,6 @@ export function failPayoutRequest(payoutId: string): Promise<FinanceActionResult
 
 export async function upsertSettlementPolicy(input: SettlementPolicyInput): Promise<SettlementActionResult> {
   try {
-    const key = corrId(`settlement-policy-${input.partnerId}`);
     const data = await financeRequest<unknown>(
       `/dsh/control-panel/finance/settlement-policies/${encodeURIComponent(input.partnerId)}`,
       {
@@ -188,7 +183,6 @@ export async function upsertSettlementPolicy(input: SettlementPolicyInput): Prom
           minimumNetMinorUnits: input.minimumNetMinorUnits,
           changeReason: input.changeReason,
         },
-        auth: { idempotencyKey: key, correlationId: key },
       },
     );
     return { ok: true, data };
@@ -204,7 +198,6 @@ export async function upsertSettlementPolicy(input: SettlementPolicyInput): Prom
 
 export async function createSettlementFromDeliveredOrders(input: GovernedSettlementInput): Promise<SettlementActionResult> {
   try {
-    const key = corrId(`settle-${input.partnerId}-${input.periodEnd}`);
     const data = await financeRequest<unknown>("/dsh/control-panel/finance/settlements/from-delivered-orders", {
       method: "POST",
       body: {
@@ -212,7 +205,6 @@ export async function createSettlementFromDeliveredOrders(input: GovernedSettlem
         periodStart: input.periodStart,
         periodEnd: input.periodEnd,
       },
-      auth: { idempotencyKey: key, correlationId: key },
     });
     return { ok: true, data };
   } catch (error) {
@@ -245,11 +237,7 @@ export async function loadOpenReconciliationCases(): Promise<LoadResult<readonly
 
 export async function assignReconciliationCase(caseId: string): Promise<FinanceActionResult> {
   try {
-    const key = corrId(`assign-case-${caseId}`);
-    await financeRequest<unknown>(`/dsh/control-panel/finance/reconciliation-cases/${encodeURIComponent(caseId)}/assign`, { 
-      method: "POST",
-      auth: { idempotencyKey: key, correlationId: key } 
-    });
+    await financeRequest<unknown>(`/dsh/control-panel/finance/reconciliation-cases/${encodeURIComponent(caseId)}/assign`, { method: "POST" });
     return { ok: true };
   } catch (error) {
     const err = error as ErrorShape;
@@ -263,11 +251,9 @@ export async function resolveReconciliationCase(
   resolutionNote: string,
 ): Promise<FinanceActionResult> {
   try {
-    const key = corrId(`resolve-case-${caseId}`);
     await financeRequest<unknown>(`/dsh/control-panel/finance/reconciliation-cases/${encodeURIComponent(caseId)}/resolve`, {
       method: "POST",
       body: { resolutionAction, resolutionNote },
-      auth: { idempotencyKey: key, correlationId: key }
     });
     return { ok: true };
   } catch (error) {

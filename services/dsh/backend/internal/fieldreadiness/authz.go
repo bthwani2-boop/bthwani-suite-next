@@ -19,14 +19,9 @@ func effectiveWorkforceScopeResolver(wf store.WorkforceScopeResolver) store.Work
 	return workforceScopeResolverOverride
 }
 
-type queryer interface {
-	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
-	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
-}
-
 // AuthorizeStore ensures the actor has an active canonical DSH store scope.
 // Identity roles or permission labels never bypass object authorization.
-func AuthorizeStore(ctx context.Context, db queryer, wf store.WorkforceScopeResolver, actor store.StoreActor, storeID string) error {
+func AuthorizeStore(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, storeID string) error {
 	allowed, err := store.ActorCanAccessStore(ctx, db, effectiveWorkforceScopeResolver(wf), actor, storeID)
 	if err != nil {
 		return err
@@ -40,7 +35,7 @@ func AuthorizeStore(ctx context.Context, db queryer, wf store.WorkforceScopeReso
 // GetOwnedVisit loads a visit and requires both visit ownership and canonical
 // store scope. Operators must use separate governed operator operations; a role
 // name never overrides field-agent ownership.
-func GetOwnedVisit(ctx context.Context, db queryer, wf store.WorkforceScopeResolver, actor store.StoreActor, visitID string) (Visit, error) {
+func GetOwnedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, visitID string) (Visit, error) {
 	v, err := GetVisit(ctx, db, visitID)
 	if err != nil {
 		return Visit{}, err

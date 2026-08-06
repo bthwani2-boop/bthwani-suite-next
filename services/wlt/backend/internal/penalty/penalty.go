@@ -23,7 +23,7 @@ var (
 
 type ProviderPenalty struct {
 	ID                          string     `json:"id"`
-	OperatorContextID           string     `json:"operatorContextId"`
+	OperatorContextID                    string     `json:"operatorContextId"`
 	IncidentID                  string     `json:"incidentId"`
 	ProviderActorID             string     `json:"providerActorId"`
 	ProviderActorType           string     `json:"providerActorType"`
@@ -160,9 +160,11 @@ func Post(ctx context.Context, db *sql.DB, operatorContextID, idempotencyKey str
 	if err != nil {
 		return ProviderPenalty{}, err
 	}
-	if _, err := func() (sql.Result, error) {
-		return shared.DummySqlResult{}, nil
-	}(); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE wlt_wallets SET
+		available_balance_minor_units=available_balance_minor_units-$1,
+		last_ledger_entry_at=now(),updated_at=now()
+		WHERE operator_context_id=$2 AND actor_type=$3 AND actor_id=$4`,
+		input.AmountMinorUnits, operatorContextID, input.ProviderActorType, input.ProviderActorID); err != nil {
 		return ProviderPenalty{}, err
 	}
 	item, err := scan(tx.QueryRowContext(ctx, `INSERT INTO wlt_provider_penalties(
@@ -222,9 +224,11 @@ func Reverse(ctx context.Context, db *sql.DB, operatorContextID, penaltyID strin
 	if err != nil {
 		return ProviderPenalty{}, err
 	}
-	if _, err := func() (sql.Result, error) {
-		return shared.DummySqlResult{}, nil
-	}(); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE wlt_wallets SET
+		available_balance_minor_units=available_balance_minor_units+$1,
+		last_ledger_entry_at=now(),updated_at=now()
+		WHERE operator_context_id=$2 AND actor_type=$3 AND actor_id=$4`,
+		item.AmountMinorUnits, operatorContextID, item.ProviderActorType, item.ProviderActorID); err != nil {
 		return ProviderPenalty{}, err
 	}
 	item, err = scan(tx.QueryRowContext(ctx, `UPDATE wlt_provider_penalties SET status='reversed',

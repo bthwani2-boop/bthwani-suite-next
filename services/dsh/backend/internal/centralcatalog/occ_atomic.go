@@ -151,6 +151,12 @@ func UpdateCatalogPolicyAtomic(ctx context.Context, db *sql.DB, id string, input
 	if err := validateExpectedVersion(input.ExpectedVersion); err != nil {
 		return CatalogPolicy{}, err
 	}
+	if input.PlatformCommissionRate != nil && (*input.PlatformCommissionRate < 0 || *input.PlatformCommissionRate > 1) {
+		return CatalogPolicy{}, ErrInvalid
+	}
+	if input.FieldPartnerOnboardingCommissionAmount != nil && *input.FieldPartnerOnboardingCommissionAmount < 0 {
+		return CatalogPolicy{}, ErrInvalid
+	}
 	if input.StoreOnboardingFeeAmount != nil && *input.StoreOnboardingFeeAmount < 0 {
 		return CatalogPolicy{}, ErrInvalid
 	}
@@ -162,9 +168,12 @@ func UpdateCatalogPolicyAtomic(ctx context.Context, db *sql.DB, id string, input
 	}
 
 	row := db.QueryRowContext(ctx, `UPDATE dsh_catalog_platform_policies SET
-		store_onboarding_fee_amount=COALESCE($1, store_onboarding_fee_amount),
-		store_onboarding_fee_currency=COALESCE($2, store_onboarding_fee_currency),
-		allows_store_product_custom_image=COALESCE($3, allows_store_product_custom_image),
+		platform_commission_rate=COALESCE($1, platform_commission_rate),
+		field_partner_onboarding_commission_amount=COALESCE($2, field_partner_onboarding_commission_amount),
+		field_partner_onboarding_commission_currency=COALESCE($3, field_partner_onboarding_commission_currency),
+		store_onboarding_fee_amount=COALESCE($4, store_onboarding_fee_amount),
+		store_onboarding_fee_currency=COALESCE($5, store_onboarding_fee_currency),
+		allows_store_product_custom_image=COALESCE($6, allows_store_product_custom_image),
 		allows_product_proposal=COALESCE($7, allows_product_proposal),
 		requires_barcode=COALESCE($8, requires_barcode),
 		requires_catalog_review=COALESCE($9, requires_catalog_review),
@@ -173,23 +182,17 @@ func UpdateCatalogPolicyAtomic(ctx context.Context, db *sql.DB, id string, input
 		requires_category_image=COALESCE($12, requires_category_image),
 		requires_description=COALESCE($13, requires_description),
 		requires_brand=COALESCE($14, requires_brand),
-		allows_product_proposal=COALESCE($4, allows_product_proposal),
-		requires_barcode=COALESCE($5, requires_barcode),
-		requires_catalog_review=COALESCE($6, requires_catalog_review),
-		requires_marketing_review=COALESCE($7, requires_marketing_review),
-		requires_product_image=COALESCE($8, requires_product_image),
-		requires_category_image=COALESCE($9, requires_category_image),
-		requires_description=COALESCE($10, requires_description),
-		requires_brand=COALESCE($11, requires_brand),
-		requires_unit=COALESCE($12, requires_unit),
-		product_data_quality_minimum_score=COALESCE($13, product_data_quality_minimum_score),
-		max_gallery_images=COALESCE($14, max_gallery_images),
-		manual_request_mode=COALESCE($15, manual_request_mode),
-		is_active=COALESCE($16, is_active),
-		effective_from=COALESCE($17, effective_from), notes=COALESCE($18, notes),
-		updated_at=now(), version = version + 1
-		WHERE id=$19 AND version=$20 RETURNING `+policyColumns+`;`,
-		input.StoreOnboardingFeeAmount,
+		requires_unit=COALESCE($15, requires_unit),
+		product_data_quality_minimum_score=COALESCE($16, product_data_quality_minimum_score),
+		max_gallery_images=COALESCE($17, max_gallery_images),
+		manual_request_mode=COALESCE($18, manual_request_mode),
+		is_active=COALESCE($19, is_active),
+		effective_from=COALESCE($20, effective_from), notes=COALESCE($21, notes),
+		updated_at=now(), version=version+1
+		WHERE id=$22 AND version=$23
+		RETURNING `+policyColumns,
+		input.PlatformCommissionRate, input.FieldPartnerOnboardingCommissionAmount,
+		input.FieldPartnerOnboardingCommissionCurrency, input.StoreOnboardingFeeAmount,
 		input.StoreOnboardingFeeCurrency, input.AllowsStoreProductCustomImage, input.AllowsProductProposal,
 		input.RequiresBarcode, input.RequiresCatalogReview, input.RequiresMarketingReview, input.RequiresProductImage,
 		input.RequiresCategoryImage, input.RequiresDescription, input.RequiresBrand, input.RequiresUnit,

@@ -111,18 +111,12 @@ func TestPayoutDestinationsRequestsAndWalletHoldsAreOperatorContextLocal(t *test
 	destinations := make(map[string]governedDestinationRef, len(OperatorContexts))
 	for _, operatorContextID := range OperatorContexts {
 		if _, err := db.Exec(`INSERT INTO wlt_wallets
-			(operator_context_id,actor_id,actor_type,status,currency)
-			VALUES ($1,$2,'field','active','YER')
+			(operator_context_id,actor_id,actor_type,status,currency,available_balance_minor_units)
+			VALUES ($1,$2,'field','active','YER',$3)
 			ON CONFLICT (operator_context_id,actor_type,actor_id) DO UPDATE SET
-			  status='active',currency='YER',updated_at=now()`, operatorContextID, actorID); err != nil {
+			  status='active',currency='YER',available_balance_minor_units=$3,
+			  held_balance_minor_units=0,updated_at=now()`, operatorContextID, actorID, initialBalance); err != nil {
 			t.Fatalf("seed %s wallet: %v", operatorContextID, err)
-		}
-		if _, err := db.Exec(`INSERT INTO wlt_ledger_accounts
-			(operator_context_id,actor_id,actor_type,account_type,currency,balance_minor_units)
-			VALUES ($1,$2,'field','wallet','YER',$3)
-			ON CONFLICT (operator_context_id,account_type,actor_type,actor_id,currency) WHERE account_type = 'wallet' DO UPDATE SET
-			  balance_minor_units=$3`, operatorContextID, actorID, -initialBalance); err != nil {
-			t.Fatalf("seed %s ledger: %v", operatorContextID, err)
 		}
 		destinations[operatorContextID] = executeDestinationUpsert(t, db, operatorContextID, actorID, "destination-"+operatorContextID)
 		res := executePayoutCreate(t, db, operatorContextID, actorID, destinations[operatorContextID].ID, idempotencyKey, amount)
@@ -134,7 +128,7 @@ func TestPayoutDestinationsRequestsAndWalletHoldsAreOperatorContextLocal(t *test
 	for _, operatorContextID := range OperatorContexts {
 		var available, held int64
 		if err := db.QueryRow(`SELECT available_balance_minor_units,held_balance_minor_units
-			FROM wlt_wallet_balances_view WHERE operator_context_id=$1 AND actor_type='field' AND actor_id=$2`, operatorContextID, actorID).Scan(&available, &held); err != nil {
+			FROM wlt_wallets WHERE operator_context_id=$1 AND actor_type='field' AND actor_id=$2`, operatorContextID, actorID).Scan(&available, &held); err != nil {
 			t.Fatal(err)
 		}
 		if available != initialBalance-amount || held != amount {
@@ -152,7 +146,7 @@ func TestPayoutDestinationsRequestsAndWalletHoldsAreOperatorContextLocal(t *test
 
 	beforeAvailable := int64(0)
 	beforeHeld := int64(0)
-	if err := db.QueryRow(`SELECT available_balance_minor_units,held_balance_minor_units FROM wlt_wallet_balances_view
+	if err := db.QueryRow(`SELECT available_balance_minor_units,held_balance_minor_units FROM wlt_wallets
 		WHERE operator_context_id=$1 AND actor_type='field' AND actor_id=$2`, OperatorContexts[0], actorID).Scan(&beforeAvailable, &beforeHeld); err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +155,7 @@ func TestPayoutDestinationsRequestsAndWalletHoldsAreOperatorContextLocal(t *test
 		t.Fatalf("expected cross-OperatorContext destination rejection, got %d: %s", crossOperatorContext.Code, crossOperatorContext.Body.String())
 	}
 	var afterAvailable, afterHeld int64
-	if err := db.QueryRow(`SELECT available_balance_minor_units,held_balance_minor_units FROM wlt_wallet_balances_view
+	if err := db.QueryRow(`SELECT available_balance_minor_units,held_balance_minor_units FROM wlt_wallets
 		WHERE operator_context_id=$1 AND actor_type='field' AND actor_id=$2`, OperatorContexts[0], actorID).Scan(&afterAvailable, &afterHeld); err != nil {
 		t.Fatal(err)
 	}

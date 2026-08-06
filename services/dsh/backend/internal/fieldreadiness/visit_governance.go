@@ -313,7 +313,7 @@ func validateCheckInput(input UpdateCheckInput) error {
 	return nil
 }
 
-func validateGovernedCheckEvidence(ctx context.Context, db queryer, wf store.WorkforceScopeResolver, actor store.StoreActor, storeID, mediaRef string) error {
+func validateGovernedCheckEvidence(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, storeID, mediaRef string) error {
 	ref := strings.TrimSpace(mediaRef)
 	if ref == "" {
 		return ErrEvidenceRequired

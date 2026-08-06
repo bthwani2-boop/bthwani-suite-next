@@ -322,14 +322,6 @@ func MarkSentWithReference(db *sql.DB, id, externalReference string) error {
 
 func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
 	nextAttempt := attemptCount + 1
-	if nextAttempt > 15 {
-		_, err := db.Exec(`
-			UPDATE dsh_wlt_outbox_events
-			SET status = 'failed', attempt_count = $2, last_error = $3, updated_at = NOW()
-			WHERE id = $1::uuid`, id, nextAttempt, cause.Error())
-		return err
-	}
-
 	backoff := time.Duration(1<<uint(min(nextAttempt, 10))) * time.Second
 	if backoff > 30*time.Minute {
 		backoff = 30 * time.Minute

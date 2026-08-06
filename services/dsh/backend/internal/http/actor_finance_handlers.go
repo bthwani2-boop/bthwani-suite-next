@@ -114,7 +114,7 @@ func (s *protectedStoreServer) handleCaptainCollectCod(w http.ResponseWriter, r 
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode COD collection evidence")
 		return
 	}
-	status, body, err := s.wlt.ExecuteFinanceWrite(r.Context(), "finance.cod.collect", http.MethodPost, "/wlt/cod-records/"+url.PathEscape(recordID)+"/collect", payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID)
+	status, body, err := s.wlt.FinanceWriteCodRecord(r.Context(), recordID, "collect", payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
@@ -151,7 +151,7 @@ func (s *protectedStoreServer) handleCaptainRemitCod(w http.ResponseWriter, r *h
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode COD remittance evidence")
 		return
 	}
-	status, body, err := s.wlt.ExecuteFinanceWrite(r.Context(), "finance.cod.remit", http.MethodPost, "/wlt/cod-records/"+url.PathEscape(recordID)+"/remit", payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID)
+	status, body, err := s.wlt.FinanceWriteCodRecord(r.Context(), recordID, "remit", payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
@@ -161,7 +161,7 @@ func (s *protectedStoreServer) handleCaptainFinanceCommissions(w http.ResponseWr
 		return
 	}
 	query := url.Values{"captainId": {actor.ID}}
-	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.commissions.read", "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
+	status, body, err := s.wlt.FinanceReadWithOperatorContext(r.Context(), "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 

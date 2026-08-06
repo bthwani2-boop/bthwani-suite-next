@@ -73,6 +73,25 @@ func insertPendingSettlement(
 	return settlement
 }
 
+func TestCreateSettlement_FailsClosedWithoutGovernedSource(t *testing.T) {
+	settlement, err := CreateSettlement(nil, CreateSettlementInput{
+		PartnerID:   "partner-untrusted",
+		PeriodStart: "2026-01-01",
+		PeriodEnd:   "2026-01-31",
+		GrossAmount: 1000,
+		PlatformFee: 100,
+		NetAmount:   900,
+		Currency:    "YER",
+		OrderCount:  1,
+	})
+	if settlement != nil {
+		t.Fatalf("expected no settlement from untrusted caller-supplied amounts")
+	}
+	if !errors.Is(err, ErrSettlementCalculationSourceRequired) {
+		t.Fatalf("expected ErrSettlementCalculationSourceRequired, got %v", err)
+	}
+}
+
 func TestPostSettlement_DoublePostConflict(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {

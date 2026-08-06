@@ -79,15 +79,13 @@ func (s *protectedStoreServer) handlePartnerRemitCodRecord(w http.ResponseWriter
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode COD remittance evidence")
 		return
 	}
-	status, body, err := s.wlt.ExecuteFinanceWrite(
+	status, body, err := s.wlt.FinanceWriteCodRecord(
 		r.Context(),
-		"finance.cod.remit",
-		http.MethodPost,
-		"/wlt/cod-records/"+url.PathEscape(recordID)+"/remit",
+		recordID,
+		"remit",
 		payload,
 		r.Header.Get("X-Correlation-ID"),
 		r.Header.Get("Idempotency-Key"),
-		actor.OperatorContextID,
 	)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
@@ -129,9 +127,8 @@ func (s *protectedStoreServer) handleAssignFinanceCodReconciliationCase(w http.R
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode reconciliation assignment")
 		return
 	}
-	status, body, err := s.wlt.ExecuteFinanceWrite(
+	status, body, err := s.wlt.FinanceWriteWithOperatorContext(
 		r.Context(),
-		"finance.cod_reconciliation.assign",
 		http.MethodPost,
 		"/wlt/cod-reconciliation-cases/"+url.PathEscape(caseID)+"/assign",
 		payload,
@@ -174,9 +171,8 @@ func (s *protectedStoreServer) handleResolveFinanceCodReconciliationCase(w http.
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode reconciliation resolution")
 		return
 	}
-	status, body, err := s.wlt.ExecuteFinanceWrite(
+	status, body, err := s.wlt.FinanceWriteWithOperatorContext(
 		r.Context(),
-		"finance.cod_reconciliation.resolve",
 		http.MethodPost,
 		"/wlt/cod-reconciliation-cases/"+url.PathEscape(caseID)+"/resolve",
 		payload,

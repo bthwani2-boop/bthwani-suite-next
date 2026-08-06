@@ -619,9 +619,15 @@ func SettleCommission(db *sql.DB, commissionID string) (*Commission, error) {
 		return nil, ErrCommissionNotInExpectedState
 	}
 
-	if _, err := func() (sql.Result, error) {
-		return shared.DummySqlResult{}, nil
-	}(); err != nil {
+	if _, err := tx.Exec(`
+		UPDATE wlt_wallets
+		SET pending_balance_minor_units = pending_balance_minor_units - $1,
+		    available_balance_minor_units = available_balance_minor_units + $1,
+		    settled_total_minor_units = settled_total_minor_units + $1,
+		    updated_at = NOW()
+		WHERE actor_type = $2 AND actor_id = $3`,
+		c.AmountMinorUnits, c.BeneficiaryActorType, c.BeneficiaryActorID,
+	); err != nil {
 		return nil, fmt.Errorf("update wallet balance: %w", err)
 	}
 
@@ -663,9 +669,14 @@ func RejectCommission(db *sql.DB, commissionID, note string) (*Commission, error
 	}
 
 	if c.SourceType == "field_visit" {
-		if _, err := func() (sql.Result, error) {
-			return shared.DummySqlResult{}, nil
-		}(); err != nil {
+		if _, err := tx.Exec(`
+			UPDATE wlt_wallets
+			SET pending_balance_minor_units = pending_balance_minor_units - $1,
+			    earned_total_minor_units = earned_total_minor_units - $1,
+			    updated_at = NOW()
+			WHERE actor_type = $2 AND actor_id = $3`,
+			c.AmountMinorUnits, c.BeneficiaryActorType, c.BeneficiaryActorID,
+		); err != nil {
 			return nil, fmt.Errorf("update wallet balance: %w", err)
 		}
 		ledgerLines := []ledger.LedgerLine{
@@ -713,9 +724,14 @@ func ReverseCommission(db *sql.DB, commissionID, note string) (*Commission, erro
 		return nil, ErrCommissionNotInExpectedState
 	}
 
-	if _, err := func() (sql.Result, error) {
-		return shared.DummySqlResult{}, nil
-	}(); err != nil {
+	if _, err := tx.Exec(`
+		UPDATE wlt_wallets
+		SET available_balance_minor_units = available_balance_minor_units - $1,
+		    settled_total_minor_units = settled_total_minor_units - $1,
+		    updated_at = NOW()
+		WHERE actor_type = $2 AND actor_id = $3`,
+		c.AmountMinorUnits, c.BeneficiaryActorType, c.BeneficiaryActorID,
+	); err != nil {
 		return nil, fmt.Errorf("update wallet balance: %w", err)
 	}
 	ledgerLines := []ledger.LedgerLine{

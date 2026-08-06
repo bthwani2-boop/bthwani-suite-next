@@ -19,7 +19,7 @@ type GovernedOrderCancellationInput struct {
 	Reason           string `json:"reason"`
 }
 
-func CancelOrderFinancially(ctx context.Context, db *sql.DB, input GovernedOrderCancellationInput) (*CancelForOrderResult, error) {
+func CancelOrderFinancially(db *sql.DB, input GovernedOrderCancellationInput) (*CancelForOrderResult, error) {
 	input.PaymentSessionID = strings.TrimSpace(input.PaymentSessionID)
 	input.OrderID = strings.TrimSpace(input.OrderID)
 	input.ClientID = strings.TrimSpace(input.ClientID)
@@ -61,21 +61,11 @@ func CancelOrderFinancially(ctx context.Context, db *sql.DB, input GovernedOrder
 		}
 		return &CancelForOrderResult{Action: "expired", PaymentSession: session}, nil
 	case "captured", "cod_collected":
-		operatorContextID, ok := shared.OperatorContextIDFromContext(ctx)
-		if !ok {
-			return nil, errors.New("missing operator context ID")
-		}
-		key := "order-cancellation:" + input.PaymentSessionID + ":" + input.OrderID
-		created, _, err := refund.CreateGovernedRefund(ctx, db, refund.GovernedCreateRefundInput{
-			OperatorContextID:     operatorContextID,
-			PaymentSessionID:      input.PaymentSessionID,
-			OrderID:               input.OrderID,
-			ClientID:              input.ClientID,
-			Reason:                input.Reason,
-			EligibilityReference:  "order-cancellation:" + input.OrderID,
-			RequestedByOperatorID: "dsh-order-cancellation",
-			IdempotencyKey:        key,
-			CorrelationID:         key,
+		created, _, err := refund.CreateRefundAtomic(db, refund.CreateRefundInput{
+			PaymentSessionID: input.PaymentSessionID,
+			OrderID:          input.OrderID,
+			ClientID:         input.ClientID,
+			Reason:           input.Reason,
 		})
 		if errors.Is(err, refund.ErrSessionNotRefundable) {
 			latest, getErr := getSession(db, input.PaymentSessionID)
@@ -124,7 +114,7 @@ func HandleGovernedOrderCancellation(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
-		result, err := CancelOrderFinancially(r.Context(), db, input)
+		result, err := CancelOrderFinancially(db, input)
 		writeGovernedCancellationResult(w, result, err)
 	}
 }
@@ -144,7 +134,7 @@ func HandleGovernedSessionCancellation(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
-		result, err := CancelOrderFinancially(r.Context(), db, GovernedOrderCancellationInput{
+		result, err := CancelOrderFinancially(db, GovernedOrderCancellationInput{
 			PaymentSessionID: r.PathValue("paymentSessionId"),
 			OrderID:          body.OrderID,
 			ClientID:         body.ClientID,

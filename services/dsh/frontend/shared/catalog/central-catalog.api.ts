@@ -308,7 +308,9 @@ export async function fetchCatalogPlatformPolicies(): Promise<readonly CatalogPl
 export async function updateCatalogPlatformPolicy(
   policyId: string,
   input: {
-    readonly policyScope: string;
+    readonly platformCommissionRate: number;
+    readonly fieldPartnerOnboardingCommissionAmount: number;
+    readonly fieldPartnerOnboardingCommissionCurrency: string;
     readonly storeOnboardingFeeAmount: number;
     readonly storeOnboardingFeeCurrency: string;
     readonly allowsStoreProductCustomImage: boolean;

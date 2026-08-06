@@ -101,11 +101,6 @@ func HandleProcessGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 		if !ok {
 			return
 		}
-		correlationID, err := governedCorrelationID(r)
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", err.Error())
-			return
-		}
 		providerClient, err := provider.NewDefaultPaymentProvider()
 		if err != nil {
 			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
@@ -173,13 +168,6 @@ func HandleProcessGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusConflict, "PAYOUT_ALREADY_CLAIMED", "payout request was already claimed for provider submission")
 			return
 		}
-		if err := appendPayoutAudit(r.Context(), tx, "payout_request", req.ID, "payout.processing", operatorID, "operator", "", correlationID, map[string]any{
-			"status": "provider_pending",
-			"payoutDestinationId": destination.ID,
-		}); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout processing")
-			return
-		}
 		if err := tx.Commit(); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to commit payout provider claim")
 			return
@@ -201,14 +189,14 @@ func HandleProcessGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 		if providerErr != nil {
 			var cleanDecline provider.Error
 			if errors.As(providerErr, &cleanDecline) && cleanDecline.StatusCode >= 400 && cleanDecline.StatusCode < 500 {
-				if failErr := failProviderDecline(r.Context(), db, req.ID, providerErr, correlationID, operatorID); failErr != nil {
+				if failErr := failProviderDecline(r.Context(), db, req.ID, providerErr); failErr != nil {
 					shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to persist provider payout decline")
 					return
 				}
 				shared.SendProviderError(w, providerErr)
 				return
 			}
-			markProviderResultUnknown(r.Context(), db, req.ID, providerErr, correlationID, operatorID)
+			markProviderResultUnknown(r.Context(), db, req.ID, providerErr)
 			shared.SendProviderError(w, providerErr)
 			return
 		}
@@ -216,14 +204,14 @@ func HandleProcessGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 		providerStatus := strings.ToLower(strings.TrimSpace(providerResult.Status))
 		if providerResult.ProviderReference == "" || (providerStatus != "processed" && providerStatus != "succeeded") {
 			invalidResponseErr := errors.New("provider response missing successful proof")
-			markProviderResultUnknown(r.Context(), db, req.ID, invalidResponseErr, correlationID, operatorID)
+			markProviderResultUnknown(r.Context(), db, req.ID, invalidResponseErr)
 			shared.SendError(w, http.StatusBadGateway, "PROVIDER_INVALID_RESPONSE", invalidResponseErr.Error())
 			return
 		}
 
 		finalTx, err := db.BeginTx(r.Context(), nil)
 		if err != nil {
-			markProviderResultUnknown(r.Context(), db, req.ID, err, correlationID, operatorID)
+			markProviderResultUnknown(r.Context(), db, req.ID, err)
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to start provider proof transaction")
 			return
 		}
@@ -248,21 +236,12 @@ func HandleProcessGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		if err != nil {
-			markProviderResultUnknown(r.Context(), db, req.ID, err, correlationID, operatorID)
+			markProviderResultUnknown(r.Context(), db, req.ID, err)
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to persist provider payout proof")
 			return
 		}
-		if err := appendPayoutAudit(r.Context(), finalTx, "payout_request", req.ID, "payout.provider_processed", operatorID, "operator", "", correlationID, map[string]any{
-			"status": "processing",
-			"providerStatus": providerStatus,
-			"providerReference": providerResult.ProviderReference,
-		}); err != nil {
-			markProviderResultUnknown(r.Context(), db, req.ID, err, correlationID, operatorID)
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit provider payout proof")
-			return
-		}
 		if err := finalTx.Commit(); err != nil {
-			markProviderResultUnknown(r.Context(), db, req.ID, err, correlationID, operatorID)
+			markProviderResultUnknown(r.Context(), db, req.ID, err)
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to commit provider payout proof")
 			return
 		}

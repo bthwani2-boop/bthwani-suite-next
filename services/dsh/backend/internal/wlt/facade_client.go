@@ -8,15 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"crypto/rand"
 )
-
-func generateCorrelationID() string {
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
-}
-
 
 func (c *Client) ExecuteFinanceRead(ctx context.Context, opID string, path string, query url.Values, correlationID, operatorContextID string) (int, []byte, error) {
 	if !c.Configured() {
@@ -32,11 +24,6 @@ func (c *Client) ExecuteFinanceRead(ctx context.Context, opID string, path strin
 
 	ctx, cancel := context.WithTimeout(ctx, op.Timeout)
 	defer cancel()
-
-	correlationID = strings.TrimSpace(correlationID)
-	if correlationID == "" {
-		correlationID = generateCorrelationID()
-	}
 
 	return c.financeReadRequest(ctx, path, query, correlationID, operatorContextID)
 }
@@ -61,7 +48,7 @@ func (c *Client) ExecuteFinanceWrite(ctx context.Context, opID string, method, p
 
 	correlationID = strings.TrimSpace(correlationID)
 	if correlationID == "" {
-		correlationID = generateCorrelationID()
+		return 0, nil, fmt.Errorf("WLT finance write correlation id is required")
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bytes.NewReader(body))
