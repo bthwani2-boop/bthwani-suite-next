@@ -11,7 +11,9 @@
     "**/dist/**": true,
     "**/build/**": true,
     "**/.next/**": true,
-    "**/coverage/**": true
+    "**/coverage/**": true,
+    "**/.codeatlas/**": true,
+    "**/.graphify/**": true
   },
   "search.exclude": {
     "**/node_modules/**": true,
@@ -21,7 +23,9 @@
     "**/dist/**": true,
     "**/build/**": true,
     "**/.next/**": true,
-    "**/coverage/**": true
+    "**/coverage/**": true,
+    "**/.codeatlas/**": true,
+    "**/.graphify/**": true
   },
   "typescript.tsserver.maxTsServerMemory": 4096,
   "eslint.workingDirectories": [
@@ -39,5 +43,8 @@
   "gitlens.currentLine.enabled": false,
   "gitlens.statusBar.enabled": false,
   "terminal.integrated.scrollback": 5000,
-  "terminal.integrated.persistentSessionScrollback": 5000
+  "terminal.integrated.persistentSessionScrollback": 5000,
+  "git.autorefresh": true,
+  "git.optimisticUpdate": true,
+  "git.openRepositoryInParentFolders": "never"
 }
