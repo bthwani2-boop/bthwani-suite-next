@@ -140,6 +140,14 @@ export function linkPartnerStore(
   });
 }
 
+export function createPartnerStore(
+  endpoint: string,
+  input: unknown,
+  mutation?: PartnerMutationContext,
+): Promise<{ id: string }> {
+  return request(endpoint, { method: "POST", body: input, mutation });
+}
+
 export function fetchPartnerAuditEvents(partnerId: string): Promise<{ events: DshPartnerAuditEvent[] }> {
   return request(`/dsh/operator/partners/${partnerId}/audit`);
 }

@@ -8,6 +8,7 @@ import {
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import { useIdentitySession } from "@bthwani/core-identity";
+import { createPartnerStore } from "../../../shared/partner";
 
 export type PartnerStoreCreateWizardProps = {
   readonly partnerId: string;
@@ -46,30 +47,16 @@ export function PartnerStoreCreateWizard({ partnerId, onStoreCreated, onCancel }
         endpoint = "/dsh/field/stores";
       }
 
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${sessionState.token || ""}`,
-          "Idempotency-Key": idempotencyKey,
-        },
-        body: JSON.stringify({
-          StoreID: storeId,
-          PartnerID: partnerId,
-          DisplayName: displayName,
-          CityCode: cityCode,
-          Category: category,
-          AddressLine: addressLine,
-          OperatingHours: operatingHours,
-        }),
-      });
+      const data = await createPartnerStore(endpoint, {
+        StoreID: storeId,
+        PartnerID: partnerId,
+        DisplayName: displayName,
+        CityCode: cityCode,
+        Category: category,
+        AddressLine: addressLine,
+        OperatingHours: operatingHours,
+      }, { idempotencyKey });
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({ message: "Unknown error" }));
-        throw new Error(err.message || err.code || "Failed to create store");
-      }
-
-      const data = await response.json();
       setStatus("success");
       if (onStoreCreated) {
         onStoreCreated(data.id);

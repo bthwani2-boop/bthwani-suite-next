@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView } from "react-native";
 import { UiText, UiButton, UiTextInput, UiLoader } from "@bthwani/ui-kit/mobile";
 import { useIdentitySession } from "@bthwani/core-identity/mobile";
 import { v4 as uuidv4 } from "uuid";
+import { createPartnerStore } from "../../shared/partner";
 
 export type PartnerStoreCreateWizardProps = {
   readonly partnerId: string;
@@ -41,37 +42,16 @@ export function PartnerStoreCreateWizard({ partnerId, onStoreCreated, onCancel }
         endpoint = "/dsh/field/stores";
       }
 
-      // We assume there is an API client configured for mobile. For now, fetch is used as standard.
-      // DshApiClient would normally be injected. Using absolute domain or relative depends on context.
-      // If we're inside React Native, fetch to relative path doesn't work, so we need to rely on the env host.
-      // Assuming API_HOST is available or managed by a custom fetch wrapper if it exists.
-      // Alternatively, we use DshPartnerClient if available.
-      // We will leave it as fetch for simplicity.
+      const data = await createPartnerStore(endpoint, {
+        StoreID: storeId,
+        PartnerID: partnerId,
+        DisplayName: displayName,
+        CityCode: cityCode,
+        Category: category,
+        AddressLine: addressLine,
+        OperatingHours: operatingHours,
+      }, { idempotencyKey });
 
-      const response = await fetch(`https://api.bthwani.com${endpoint}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session?.token || ""}`,
-          "Idempotency-Key": idempotencyKey,
-        },
-        body: JSON.stringify({
-          StoreID: storeId,
-          PartnerID: partnerId,
-          DisplayName: displayName,
-          CityCode: cityCode,
-          Category: category,
-          AddressLine: addressLine,
-          OperatingHours: operatingHours,
-        }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({ message: "Unknown error" }));
-        throw new Error(err.message || err.code || "Failed to create store");
-      }
-
-      const data = await response.json();
       setStatus("success");
       if (onStoreCreated) {
         onStoreCreated(data.id);

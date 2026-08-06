@@ -80,6 +80,7 @@ export {
   fieldUpdatePartnerStore,
   fetchPartnerScopes,
   fetchPartnerTeam,
+  createPartnerStore,
   invitePartnerTeamMember,
   executePartnerTeamMemberAction,
   fetchPartnerStoreCourierSettings,

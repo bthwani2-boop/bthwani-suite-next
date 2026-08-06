@@ -14,7 +14,7 @@ import (
 
 const (
 	dshMigrationServiceName = "dsh"
-	dshLatestMigration      = "dsh-992_platform_providers_registry.sql"
+	dshLatestMigration      = "dsh-995_promotion_funding_outbox_failed_status.sql"
 	dshReadinessTimeout     = 2 * time.Second
 )
 

@@ -15,7 +15,6 @@ export const CartConflictSheet: React.FC<CartConflictSheetProps> = ({
         <div className="p-6">
           <div className="flex items-center gap-3 mb-4 text-amber-600">
             <svg
-              xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
               strokeWidth={1.5}
