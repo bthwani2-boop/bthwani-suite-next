@@ -45,11 +45,8 @@ func (c *Client) RefundFromOutbox(ctx context.Context, input RefundOutboxInput) 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if input.IdempotencyKey != "" {
-		req.Header.Set("Idempotency-Key", input.IdempotencyKey)
-	}
-	if input.CorrelationID != "" {
-		req.Header.Set("X-Correlation-ID", input.CorrelationID)
+	if err := setRequiredMutationHeaders(req, input.CorrelationID, input.IdempotencyKey); err != nil {
+		return nil, fmt.Errorf("prepare WLT refund-from-outbox request: %w", err)
 	}
 
 	resp, err := c.http.Do(req)
