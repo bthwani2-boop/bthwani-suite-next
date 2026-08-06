@@ -1,8 +1,8 @@
 # Evidence index
 
-All source evidence in this package is pinned to `8465596195e5b3e8a57aff2ef11cdf149dcc287d` on branch `smsm`.
+All source evidence in this package is pinned to `8465596195e5b3e8a57aff2ef11cdf149dcc287d` on branch `smsm`, except `EVD-0010`, which records the later GitHub Actions failure at package head `3465cac2d5d3f0608310f56c412dda451c7cbf78`.
 
-The findings register contains nine primary evidence records, one for each residual finding. Each record identifies the repository path, symbol or range, factual observation, and exact source commit. No runtime result, build result, test result, release approval, or production state is claimed.
+The findings register contains ten primary evidence records, one for each residual finding. Nine are remote source observations and one is a failed canonical DSH migration run. No runtime readiness, release approval, or production state is claimed.
 
 ## Evidence handling
 
