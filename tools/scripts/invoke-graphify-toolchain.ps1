@@ -6,35 +6,57 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
-$root = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
-Push-Location $root
-try {
-  $command = Get-Command graphify -ErrorAction Stop
-  $version = (& $command.Source --version 2>&1 | Out-String).Trim()
-  if (-not $version) { throw "Graphify returned an empty version." }
 
-  $ignore = Get-Content -LiteralPath ".graphifyignore" -Raw
-  if ($ignore -match '(?m)^apps/control-panel/runtime/\s*$') {
-    throw ".graphifyignore excludes the complete control-panel runtime source."
+$Root = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
+$StampPath = "graphify-out/.bthwani-source.json"
+
+Push-Location $Root
+
+try {
+  $Graphify = Get-Command graphify -ErrorAction Stop
+  $Head = (& git rev-parse HEAD).Trim()
+
+  & git check-ignore -q "graphify-out/graph.json"
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "graphify-out must be ignored by Git."
   }
-  & git check-ignore -q graphify-out/graph.json
-  if ($LASTEXITCODE -ne 0) { throw "graphify-out is not ignored by Git." }
 
   if ($Mode -in @("Repair", "Full")) {
-    & $command.Source extract . --code-only --force
-    if ($LASTEXITCODE -ne 0) { throw "Graphify extraction failed." }
+    & $Graphify.Source extract . --code-only --force
+
+    if ($LASTEXITCODE -ne 0) {
+      throw "Graphify extraction failed."
+    }
+
+    New-Item -ItemType Directory -Path "graphify-out" -Force | Out-Null
+
+    [ordered]@{
+      schemaVersion   = 1
+      sourceSha       = $Head
+      generatedAt     = (Get-Date).ToUniversalTime().ToString("o")
+      coverage        = "APPLICATION_CODE_GRAPH"
+      graphifyVersion = (& $Graphify.Source --version 2>&1 | Out-String).Trim()
+    } |
+      ConvertTo-Json -Depth 20 |
+      Set-Content -LiteralPath $StampPath -Encoding utf8NoBOM
   }
 
-  if (-not (Test-Path -LiteralPath "graphify-out/graph.json" -PathType Leaf)) {
-    throw "Required Graphify output missing: graphify-out/graph.json. Run with -Mode Repair or -Mode Full."
-  }
-  $analysisCandidates = @("graphify-out/.graphify_analysis.json", ".graphify_analysis.json")
-  if (-not ($analysisCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf })) {
-    Write-Warning "Graphify analysis metadata was not found; graph.json remains the required application-code graph."
+  if (-not (Test-Path "graphify-out/graph.json" -PathType Leaf)) {
+    throw "Graphify output is missing. Run Repair mode when Graphify is needed."
   }
 
-  Write-Output "graphify_version=$version"
-  Write-Output "coverage=application-code"
+  if (-not (Test-Path $StampPath -PathType Leaf)) {
+    throw "Graphify source stamp is missing."
+  }
+
+  $Stamp = Get-Content $StampPath -Raw | ConvertFrom-Json
+
+  if ([string]$Stamp.sourceSha -ne $Head) {
+    throw "Graphify graph is stale. graph=$($Stamp.sourceSha) head=$Head"
+  }
+
+  Write-Output "graph_source_sha=$Head"
   Write-Output "decision=PASS"
 }
 finally {

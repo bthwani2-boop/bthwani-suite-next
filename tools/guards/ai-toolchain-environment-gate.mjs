@@ -1,60 +1,114 @@
 import fs from "node:fs";
 import path from "node:path";
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { fail, repoRoot } from "./_guard-utils.mjs";
 
-const guardId = "ai-toolchain-environment-gate";
 const violations = [];
 
-const checkCommand = (cmd) => {
-  try {
-    execSync(`${cmd} --version`, { stdio: "ignore", windowsHide: true });
-    return true;
-  } catch {
-    return false;
+function resolveCommand(name) {
+  const locator = process.platform === "win32" ? "where.exe" : "which";
+  const result = spawnSync(locator, [name], {
+    encoding: "utf8",
+    windowsHide: true,
+  });
+
+  if (result.error || result.status !== 0) return undefined;
+
+  const paths = String(result.stdout || "")
+    .split(/\r?\n/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return (
+    paths.find((value) => /\.(?:exe|cmd|bat)$/i.test(value)) ||
+    paths[0]
+  );
+}
+
+function probe(candidates) {
+  for (const candidate of candidates) {
+    const executable = resolveCommand(candidate);
+    if (!executable) continue;
+
+    const result = spawnSync(executable, ["--version"], {
+      encoding: "utf8",
+      timeout: 10_000,
+      windowsHide: true,
+      shell:
+        process.platform === "win32" &&
+        /\.(?:cmd|bat)$/i.test(executable),
+    });
+
+    if (result.error || result.status !== 0) continue;
+
+    const output = String(result.stdout || result.stderr || "").trim();
+
+    return {
+      state: "VERIFIED_AVAILABLE",
+      executable,
+      version: output.split(/\r?\n/)[0] || "unknown",
+    };
   }
+
+  return {
+    state: "VERIFIED_UNAVAILABLE",
+  };
+}
+
+const registry = JSON.parse(
+  fs.readFileSync(
+    path.join(repoRoot, "governance/tools/agent-tool-registry.json"),
+    "utf8",
+  ),
+);
+
+const required = new Set(
+  String(process.env.BTHWANI_REQUIRED_AI_TOOLS || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean),
+);
+
+const commandCandidates = {
+  graphify: ["graphify"],
+  leanctx: ["lean-ctx"],
+  "open-code-review": ["ocr"],
 };
 
-const checkNx = () => {
-  if (checkCommand("nx")) return true;
-  const nxBin = path.join(repoRoot, "node_modules", ".bin", "nx");
-  return fs.existsSync(nxBin) || fs.existsSync(nxBin + ".cmd");
-};
-
-const headSha = () => {
-  try {
-    return execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
-  } catch {
-    return undefined;
-  }
-};
-
-const environmentStatus = {
-  timestamp: new Date().toISOString(),
-  sourceSha: headSha(),
+const report = {
+  schemaVersion: 2,
+  required: [...required].sort(),
   tools: {
-    node: checkCommand("node"),
-    pnpm: checkCommand("pnpm"),
-    nx: checkNx(),
-    graphify: fs.existsSync(path.join(repoRoot, "tools/scripts/invoke-graphify-toolchain.ps1")),
-    leanctx: fs.existsSync(path.join(repoRoot, "tools/scripts/invoke-leanctx-toolchain.ps1")),
-    open_code_review: fs.existsSync(path.join(repoRoot, "tools/scripts/invoke-open-code-review-toolchain.ps1"))
-  }
+    node: probe(["node"]),
+    pnpm: probe(["pnpm"]),
+  },
 };
 
-const outputDir = path.join(repoRoot, ".artifacts", "diagnostics", "ai-toolchain");
-if (!fs.existsSync(outputDir)) {
-  fs.mkdirSync(outputDir, { recursive: true });
-}
-const outputPath = path.join(outputDir, "ai-toolchain-environment-latest.json");
-fs.writeFileSync(outputPath, JSON.stringify(environmentStatus, null, 2));
-
-// Ensure critical tools exist
-const required = ["node", "pnpm", "nx", "leanctx"];
-for (const req of required) {
-  if (!environmentStatus.tools[req]) {
-    violations.push({ file: "environment", line: 0, message: `MISSING_REQUIRED_AI_TOOLCHAIN_DEPENDENCY: ${req}` });
+for (const core of ["node", "pnpm"]) {
+  if (report.tools[core].state !== "VERIFIED_AVAILABLE") {
+    violations.push({
+      file: "environment",
+      line: 0,
+      message: "REQUIRED_CORE_TOOL_UNAVAILABLE " + core,
+    });
   }
 }
 
-fail(guardId, violations);
+for (const tool of registry.entries || []) {
+  const status = probe(commandCandidates[tool.id] || [tool.id]);
+  report.tools[tool.id] = status;
+
+  if (
+    required.has(tool.id) &&
+    status.state !== "VERIFIED_AVAILABLE"
+  ) {
+    violations.push({
+      file: "environment",
+      line: 0,
+      message: "EXPLICITLY_REQUIRED_TOOL_UNAVAILABLE " + tool.id,
+    });
+  }
+}
+
+console.log(JSON.stringify(report, null, 2));
+fail("ai-toolchain-environment-gate", violations);

@@ -184,7 +184,6 @@
     "diagnostics:operational:reconcile": "node tools/scripts/reconcile-operational-diagnostics.mjs",
     "guard:tool-catalog-coverage": "node tools/guards/tool-catalog-coverage-gate.mjs",
     "guard:toolchain-activation": "node tools/guards/toolchain-activation-gate.mjs",
-    "guard:ai-toolchain-environment": "node tools/guards/ai-toolchain-environment-gate.mjs",
     "guard:oss-toolchain-policy": "node tools/guards/oss-toolchain-policy-gate.mjs",
     "security:trivy": "node tools/scripts/run-trivy.mjs",
     "diagnostics:trivy": "node tools/scripts/run-trivy.mjs --diagnostic-only",
@@ -269,7 +268,8 @@
     "toolchain:ai:verify": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/verify-ai-toolchain.ps1 -Mode Verify",
     "toolchain:ai:full": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/verify-ai-toolchain.ps1 -Mode Full",
     "ocr:setup": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode Setup",
-    "ocr:audit": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode DelegateAudit"
+    "ocr:audit": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode DelegateAudit",
+    "guard:ai-toolchain-environment": "node tools/guards/ai-toolchain-environment-gate.mjs"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",
