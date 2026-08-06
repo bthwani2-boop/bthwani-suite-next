@@ -32,6 +32,7 @@ type Address struct {
 	Latitude             *float64  `json:"latitude"`
 	Longitude            *float64  `json:"longitude"`
 	IsDefault            bool      `json:"isDefault"`
+	Status               string    `json:"status"`
 	Version              int       `json:"version"`
 	CreatedAt            time.Time `json:"createdAt"`
 	UpdatedAt            time.Time `json:"updatedAt"`
@@ -63,7 +64,7 @@ type MutationContext struct {
 }
 
 const addressColumns = `id, label, recipient_name, phone_e164, address_line, service_area_code,
-	building, floor, unit, delivery_instructions, latitude, longitude, is_default, version, created_at, updated_at`
+	building, floor, unit, delivery_instructions, latitude, longitude, is_default, status, version, created_at, updated_at`
 
 func trimOptional(value *string, max int) (*string, bool) {
 	if value == nil {
@@ -114,23 +115,25 @@ func normalize(input CreateInput) (CreateInput, error) {
 	return input, nil
 }
 
-func scanAddress(scanner interface{ Scan(...any) error }) (*Address, error) {
-	var address Address
-	if err := scanner.Scan(
-		&address.ID, &address.Label, &address.RecipientName, &address.PhoneE164,
-		&address.AddressLine, &address.ServiceAreaCode, &address.Building, &address.Floor,
-		&address.Unit, &address.DeliveryInstructions, &address.Latitude, &address.Longitude,
-		&address.IsDefault, &address.Version, &address.CreatedAt, &address.UpdatedAt,
-	); err != nil {
+func scanAddress(scanner interface {
+	Scan(dest ...interface{}) error
+}) (*Address, error) {
+	var a Address
+	err := scanner.Scan(
+		&a.ID, &a.Label, &a.RecipientName, &a.PhoneE164, &a.AddressLine, &a.ServiceAreaCode,
+		&a.Building, &a.Floor, &a.Unit, &a.DeliveryInstructions,
+		&a.Latitude, &a.Longitude, &a.IsDefault, &a.Status, &a.Version, &a.CreatedAt, &a.UpdatedAt,
+	)
+	if err != nil {
 		return nil, err
 	}
-	return &address, nil
+	return &a, nil
 }
 
 func List(ctx context.Context, db *sql.DB, clientID string) ([]Address, error) {
 	rows, err := db.QueryContext(ctx, `SELECT `+addressColumns+`
 		FROM dsh_client_addresses
-		WHERE client_id = $1 AND deleted_at IS NULL
+		WHERE client_id = $1 AND status != 'DELETED'
 		ORDER BY is_default DESC, updated_at DESC, id ASC`, clientID)
 	if err != nil {
 		return nil, err
@@ -150,7 +153,7 @@ func List(ctx context.Context, db *sql.DB, clientID string) ([]Address, error) {
 func GetOwned(ctx context.Context, db *sql.DB, clientID, addressID string) (*Address, error) {
 	address, err := scanAddress(db.QueryRowContext(ctx, `SELECT `+addressColumns+`
 		FROM dsh_client_addresses
-		WHERE id = $1 AND client_id = $2 AND deleted_at IS NULL`, strings.TrimSpace(addressID), strings.TrimSpace(clientID)))
+		WHERE id = $1 AND client_id = $2 AND status != 'DELETED'`, strings.TrimSpace(addressID), strings.TrimSpace(clientID)))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -200,7 +203,7 @@ func Create(ctx context.Context, db *sql.DB, clientID string, raw CreateInput, m
 
 	existing, err := scanAddress(tx.QueryRowContext(ctx, `SELECT `+addressColumns+`
 		FROM dsh_client_addresses
-		WHERE client_id = $1 AND create_idempotency_key = $2 AND deleted_at IS NULL`,
+		WHERE client_id = $1 AND create_idempotency_key = $2 AND status != 'DELETED'`,
 		clientID, strings.TrimSpace(mutation.IdempotencyKey)))
 	if err == nil {
 		if commitErr := tx.Commit(); commitErr != nil {
@@ -213,13 +216,13 @@ func Create(ctx context.Context, db *sql.DB, clientID string, raw CreateInput, m
 	}
 
 	var activeCount int
-	if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM dsh_client_addresses WHERE client_id = $1 AND deleted_at IS NULL`, clientID).Scan(&activeCount); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM dsh_client_addresses WHERE client_id = $1 AND status != 'DELETED'`, clientID).Scan(&activeCount); err != nil {
 		return nil, false, err
 	}
 	makeDefault := input.MakeDefault || activeCount == 0
 	if makeDefault {
 		if _, err := tx.ExecContext(ctx, `UPDATE dsh_client_addresses SET is_default = FALSE, version = version + 1, updated_at = NOW()
-			WHERE client_id = $1 AND deleted_at IS NULL AND is_default = TRUE`, clientID); err != nil {
+			WHERE client_id = $1 AND status = 'ACTIVE' AND is_default = TRUE`, clientID); err != nil {
 			return nil, false, err
 		}
 	}
@@ -259,7 +262,7 @@ func Update(ctx context.Context, db *sql.DB, clientID, addressID string, raw Upd
 	var currentDefault bool
 	var currentVersion int
 	if err := tx.QueryRowContext(ctx, `SELECT is_default, version FROM dsh_client_addresses
-		WHERE id = $1 AND client_id = $2 AND deleted_at IS NULL FOR UPDATE`, addressID, clientID).Scan(&currentDefault, &currentVersion); errors.Is(err, sql.ErrNoRows) {
+		WHERE id = $1 AND client_id = $2 AND status != 'DELETED' FOR UPDATE`, addressID, clientID).Scan(&currentDefault, &currentVersion); errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	} else if err != nil {
 		return nil, err
@@ -270,7 +273,7 @@ func Update(ctx context.Context, db *sql.DB, clientID, addressID string, raw Upd
 	makeDefault := currentDefault || input.MakeDefault
 	if input.MakeDefault {
 		if _, err := tx.ExecContext(ctx, `UPDATE dsh_client_addresses SET is_default = FALSE, version = version + 1, updated_at = NOW()
-			WHERE client_id = $1 AND id <> $2 AND deleted_at IS NULL AND is_default = TRUE`, clientID, addressID); err != nil {
+			WHERE client_id = $1 AND id <> $2 AND status = 'ACTIVE' AND is_default = TRUE`, clientID, addressID); err != nil {
 			return nil, err
 		}
 	}
@@ -278,7 +281,7 @@ func Update(ctx context.Context, db *sql.DB, clientID, addressID string, raw Upd
 		label=$1, recipient_name=$2, phone_e164=$3, address_line=$4, service_area_code=$5,
 		building=$6, floor=$7, unit=$8, delivery_instructions=$9, latitude=$10, longitude=$11,
 		is_default=$12, version=version+1, updated_at=NOW()
-		WHERE id=$13 AND client_id=$14 AND deleted_at IS NULL AND version=$15
+		WHERE id=$13 AND client_id=$14 AND status != 'DELETED' AND version=$15
 		RETURNING `+addressColumns,
 		input.Label, input.RecipientName, input.PhoneE164, input.AddressLine, input.ServiceAreaCode,
 		input.Building, input.Floor, input.Unit, input.DeliveryInstructions, input.Latitude, input.Longitude,
@@ -308,7 +311,7 @@ func SetDefault(ctx context.Context, db *sql.DB, clientID, addressID, correlatio
 		return nil, err
 	}
 	current, err := scanAddress(tx.QueryRowContext(ctx, `SELECT `+addressColumns+` FROM dsh_client_addresses
-		WHERE id=$1 AND client_id=$2 AND deleted_at IS NULL FOR UPDATE`, addressID, clientID))
+		WHERE id=$1 AND client_id=$2 AND status != 'DELETED' FOR UPDATE`, addressID, clientID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -322,11 +325,11 @@ func SetDefault(ctx context.Context, db *sql.DB, clientID, addressID, correlatio
 		return current, nil
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE dsh_client_addresses SET is_default=FALSE, version=version+1, updated_at=NOW()
-		WHERE client_id=$1 AND id<>$2 AND deleted_at IS NULL AND is_default=TRUE`, clientID, addressID); err != nil {
+		WHERE client_id=$1 AND id<>$2 AND status = 'ACTIVE' AND is_default=TRUE`, clientID, addressID); err != nil {
 		return nil, err
 	}
 	address, err := scanAddress(tx.QueryRowContext(ctx, `UPDATE dsh_client_addresses SET is_default=TRUE, version=version+1, updated_at=NOW()
-		WHERE id=$1 AND client_id=$2 AND deleted_at IS NULL RETURNING `+addressColumns, addressID, clientID))
+		WHERE id=$1 AND client_id=$2 AND status != 'DELETED' RETURNING `+addressColumns, addressID, clientID))
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +357,7 @@ func Delete(ctx context.Context, db *sql.DB, clientID, addressID string, expecte
 	var currentDefault bool
 	var currentVersion int
 	if err := tx.QueryRowContext(ctx, `SELECT is_default, version FROM dsh_client_addresses
-		WHERE id=$1 AND client_id=$2 AND deleted_at IS NULL FOR UPDATE`, addressID, clientID).Scan(&currentDefault, &currentVersion); errors.Is(err, sql.ErrNoRows) {
+		WHERE id=$1 AND client_id=$2 AND status != 'DELETED' FOR UPDATE`, addressID, clientID).Scan(&currentDefault, &currentVersion); errors.Is(err, sql.ErrNoRows) {
 		return ErrNotFound
 	} else if err != nil {
 		return err
@@ -362,8 +365,8 @@ func Delete(ctx context.Context, db *sql.DB, clientID, addressID string, expecte
 	if currentVersion != expectedVersion {
 		return ErrConflict
 	}
-	result, err := tx.ExecContext(ctx, `UPDATE dsh_client_addresses SET deleted_at=NOW(), is_default=FALSE, version=version+1, updated_at=NOW()
-		WHERE id=$1 AND client_id=$2 AND deleted_at IS NULL AND version=$3`, addressID, clientID, expectedVersion)
+	result, err := tx.ExecContext(ctx, `UPDATE dsh_client_addresses SET status='DELETED', is_default=FALSE, version=version+1, updated_at=NOW()
+		WHERE id=$1 AND client_id=$2 AND status != 'DELETED' AND version=$3`, addressID, clientID, expectedVersion)
 	if err != nil {
 		return err
 	}
@@ -373,7 +376,7 @@ func Delete(ctx context.Context, db *sql.DB, clientID, addressID string, expecte
 	newVersion := expectedVersion + 1
 	if currentDefault {
 		if _, err := tx.ExecContext(ctx, `UPDATE dsh_client_addresses SET is_default=TRUE, version=version+1, updated_at=NOW()
-			WHERE id=(SELECT id FROM dsh_client_addresses WHERE client_id=$1 AND deleted_at IS NULL ORDER BY updated_at DESC, id ASC LIMIT 1)`, clientID); err != nil {
+			WHERE id=(SELECT id FROM dsh_client_addresses WHERE client_id=$1 AND status != 'DELETED' ORDER BY updated_at DESC, id ASC LIMIT 1)`, clientID); err != nil {
 			return err
 		}
 	}

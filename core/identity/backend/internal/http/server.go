@@ -8,21 +8,19 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"identity-api/internal/identity"
 )
 
 type server struct {
-	db         *sql.DB
 	repository *identity.Repository
 }
 
-func NewRouter(db *sql.DB, repository *identity.Repository) http.Handler {
-	s := &server{db: db, repository: repository}
+func NewRouter(repository *identity.Repository) http.Handler {
+	s := &server{repository: repository}
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /identity/health", s.health)
-	mux.HandleFunc("GET /identity/readiness", s.readiness)
 	mux.HandleFunc("POST /auth/login", s.login)
 	mux.HandleFunc("POST /auth/activate", s.activate)
 	mux.HandleFunc("POST /auth/refresh", s.refresh)
@@ -39,8 +37,14 @@ func NewRouter(db *sql.DB, repository *identity.Repository) http.Handler {
 	mux.HandleFunc("POST /internal/actors/{actorId}/deactivate", s.serviceOnly(s.internalActorDeactivate))
 	mux.HandleFunc("POST /internal/actors/{actorId}/reactivate", s.serviceOnly(s.internalActorReactivate))
 	mux.HandleFunc("POST /internal/actors/{actorId}/activations", s.serviceOnly(s.internalActorIssueActivation))
+	mux.HandleFunc("POST /internal/actors/{actorId}/activations/reissue", s.serviceOnly(s.internalActorIssueActivation))
 	mux.HandleFunc("GET /internal/actors/{actorId}/activations/latest", s.serviceOnly(s.internalActorLatestActivation))
+	mux.HandleFunc("GET /internal/actors/{actorId}/sessions", s.serviceOnly(s.internalActorListSessions))
+	mux.HandleFunc("DELETE /internal/actors/{actorId}/sessions/{sessionId}", s.serviceOnly(s.internalActorRevokeSession))
+	mux.HandleFunc("DELETE /internal/actors/{actorId}/sessions", s.serviceOnly(s.internalActorRevokeAllSessions))
 	mux.HandleFunc("POST /internal/actors/{actorId}/activations/revoke", s.serviceOnly(s.internalActorRevokeActivations))
+//	mux.HandleFunc("GET /internal/permissions/resolve", s.dshServiceOnly(s.internalPermissionsResolve))
+
 	return mux
 }
 
@@ -63,6 +67,31 @@ func (s *server) serviceOnly(next http.HandlerFunc) http.HandlerFunc {
 		next(w, r)
 	}
 }
+
+// dshServiceOnly guards internal endpoints that are exclusively called by the
+// DSH backend. It validates X-Service-Caller: dsh and the IDENTITY_DSH_SERVICE_TOKEN
+// bearer credential. No operator-context binding is enforced here; callers must
+// supply their own actorId query parameter as the resolution scope.
+func (s *server) dshServiceOnly(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if strings.TrimSpace(r.Header.Get("X-Service-Caller")) != "dsh" {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "X-Service-Caller is not allowed")
+			return
+		}
+		expected := strings.TrimSpace(os.Getenv("IDENTITY_DSH_SERVICE_TOKEN"))
+		if expected == "" {
+			sendError(w, http.StatusServiceUnavailable, "INTERNAL_API_UNAVAILABLE", "DSH internal API is not configured")
+			return
+		}
+		token, ok := bearerToken(r)
+		if !ok || subtle.ConstantTimeCompare([]byte(token), []byte(expected)) != 1 {
+			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "DSH service token is required")
+			return
+		}
+		next(w, r)
+	}
+}
+
 
 func allowedCorsOrigins() map[string]bool {
 	raw := strings.TrimSpace(os.Getenv("IDENTITY_CORS_ALLOWED_ORIGINS"))
@@ -97,18 +126,6 @@ func CorsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func (s *server) health(w http.ResponseWriter, _ *http.Request) {
-	sendJSON(w, http.StatusOK, map[string]string{"status": "healthy", "service": "core-identity"})
-}
-
-func (s *server) readiness(w http.ResponseWriter, r *http.Request) {
-	if err := s.db.PingContext(r.Context()); err != nil {
-		sendError(w, http.StatusServiceUnavailable, "IDENTITY_NOT_READY", "identity database is unavailable")
-		return
-	}
-	sendJSON(w, http.StatusOK, map[string]string{"status": "ready", "service": "core-identity"})
-}
-
 func (s *server) login(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		Username          string `json:"username"`
@@ -122,6 +139,10 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if err == identity.ErrLoginRateLimited {
 			sendError(w, http.StatusTooManyRequests, "LOGIN_RATE_LIMITED", "too many failed attempts; try again later")
+			return
+		}
+		if err == identity.ErrActorDeactivated {
+			sendError(w, http.StatusForbidden, "ACTOR_DEACTIVATED", "actor is deactivated")
 			return
 		}
 		sendError(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "invalid username or password")
@@ -204,17 +225,22 @@ func (s *server) introspect(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) provisionActor(w http.ResponseWriter, r *http.Request) {
 	var request struct {
-		Username  string `json:"username"`
-		PhoneE164 string `json:"phoneE164"`
-		Role      string `json:"role"`
-		OperatorContextID  string `json:"operatorContextId"`
+		Username          string `json:"username"`
+		PhoneE164         string `json:"phoneE164"`
+		Role              string `json:"role"`
+		OperatorContextID string `json:"operatorContextId"`
 	}
 	if !decodeJSON(w, r, &request) {
 		return
 	}
-	view, err := s.repository.ProvisionActor(r.Context(), identity.ProvisionActorInput{
+	operatorContextID, ok := trustedOperatorContext(r)
+	if !ok {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "trusted operator context is unavailable")
+		return
+	}
+	view, err := s.repository.ProvisionActorGoverned(r.Context(), identity.ProvisionActorInput{
 		Username: request.Username, PhoneE164: request.PhoneE164,
-		Role: request.Role, OperatorContextID: request.OperatorContextID,
+		Role: request.Role, OperatorContextID: operatorContextID,
 	})
 	if err != nil {
 		writeInternalActorError(w, err)
@@ -224,7 +250,12 @@ func (s *server) provisionActor(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) internalActorGet(w http.ResponseWriter, r *http.Request) {
-	view, err := s.repository.ActorAdminByID(r.Context(), r.PathValue("actorId"))
+	operatorContextID, ok := trustedOperatorContext(r)
+	if !ok {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "trusted operator context is unavailable")
+		return
+	}
+	view, err := s.repository.ActorAdminByIDGoverned(r.Context(), operatorContextID, r.PathValue("actorId"))
 	if err != nil {
 		writeInternalActorError(w, err)
 		return
@@ -233,22 +264,54 @@ func (s *server) internalActorGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) internalActorSearch(w http.ResponseWriter, r *http.Request) {
+	operatorContextID, ok := trustedOperatorContext(r)
+	if !ok {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "trusted operator context is unavailable")
+		return
+	}
 	query := r.URL.Query()
-	views, err := s.repository.SearchActors(
-		r.Context(), strings.TrimSpace(query.Get("role")), strings.TrimSpace(query.Get("q")), 25,
-	)
+	limit := 25
+	cursor := ""
+	if raw := strings.TrimSpace(query.Get("limit")); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil {
+			writeInternalActorError(w, identity.ErrInvalidActorQuery)
+			return
+		}
+		limit = parsed
+	}
+	if raw := strings.TrimSpace(query.Get("cursor")); raw != "" {
+		cursor = raw
+	}
+	page, err := s.repository.SearchActorsGoverned(r.Context(), identity.ActorSearchInput{
+		OperatorContextID: operatorContextID,
+		Role:              strings.TrimSpace(query.Get("role")),
+		Query:             strings.TrimSpace(query.Get("q")),
+		Status:            identity.ActorLifecycleStatus(strings.TrimSpace(query.Get("status"))),
+		Limit:             limit,
+		Cursor:            cursor,
+	})
 	if err != nil {
 		writeInternalActorError(w, err)
 		return
 	}
-	if views == nil {
-		views = []identity.ActorAdminView{}
-	}
-	sendJSON(w, http.StatusOK, views)
+	sendJSON(w, http.StatusOK, page)
 }
 
 func (s *server) internalActorDeactivate(w http.ResponseWriter, r *http.Request) {
-	if err := s.repository.DeactivateActor(r.Context(), r.PathValue("actorId")); err != nil {
+	var request struct {
+		RequestedByActorID string `json:"requestedByActorId"`
+		Reason             string `json:"reason"`
+		CorrelationID      string `json:"correlationId"`
+	}
+	if !decodeJSON(w, r, &request) {
+		return
+	}
+	if !validLifecycleRequest(request.RequestedByActorID, request.Reason, request.CorrelationID) {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "requestedByActorId, reason, and correlationId are required")
+		return
+	}
+	if err := s.repository.SuspendActor(r.Context(), r.PathValue("actorId"), request.RequestedByActorID, request.Reason, request.CorrelationID); err != nil {
 		writeInternalActorError(w, err)
 		return
 	}
@@ -256,11 +319,30 @@ func (s *server) internalActorDeactivate(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *server) internalActorReactivate(w http.ResponseWriter, r *http.Request) {
-	if err := s.repository.ReactivateActor(r.Context(), r.PathValue("actorId")); err != nil {
+	var request struct {
+		RequestedByActorID string `json:"requestedByActorId"`
+		Reason             string `json:"reason"`
+		CorrelationID      string `json:"correlationId"`
+	}
+	if !decodeJSON(w, r, &request) {
+		return
+	}
+	if !validLifecycleRequest(request.RequestedByActorID, request.Reason, request.CorrelationID) {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "requestedByActorId, reason, and correlationId are required")
+		return
+	}
+	if err := s.repository.ReactivateActor(r.Context(), r.PathValue("actorId"), request.RequestedByActorID, request.Reason, request.CorrelationID); err != nil {
 		writeInternalActorError(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func validLifecycleRequest(requestedByActorID, reason, correlationID string) bool {
+	requestedByActorID = strings.TrimSpace(requestedByActorID)
+	reason = strings.TrimSpace(reason)
+	correlationID = strings.TrimSpace(correlationID)
+	return requestedByActorID != "" && reason != "" && len(reason) <= 500 && correlationID != "" && len(correlationID) <= 128
 }
 
 func (s *server) internalActorIssueActivation(w http.ResponseWriter, r *http.Request) {
@@ -278,9 +360,9 @@ func (s *server) internalActorIssueActivation(w http.ResponseWriter, r *http.Req
 	}
 	result, err := s.repository.IssueActivationForActor(
 		r.Context(), r.PathValue("actorId"), identity.IssueActivationForActorInput{
-			IssuedByActorID: request.IssuedByActorID,
+			IssuedByActorID:   request.IssuedByActorID,
 			ExpectedActorType: request.ExpectedActorType,
-			ExpectedSurface: request.ExpectedSurface,
+			ExpectedSurface:   request.ExpectedSurface,
 		}, r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"),
 	)
 	if err != nil {
@@ -305,6 +387,56 @@ func (s *server) internalActorLatestActivation(w http.ResponseWriter, r *http.Re
 
 func (s *server) internalActorRevokeActivations(w http.ResponseWriter, r *http.Request) {
 	if err := s.repository.RevokeActivationChallenges(r.Context(), r.PathValue("actorId")); err != nil {
+		writeInternalActorError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *server) internalActorListSessions(w http.ResponseWriter, r *http.Request) {
+	actorID := r.PathValue("actorId")
+	if actorID == "" {
+		sendError(w, http.StatusBadRequest, "INVALID_INPUT", "actorId is required")
+		return
+	}
+	sessions, err := s.repository.ListSessions(r.Context(), actorID)
+	if err != nil {
+		writeInternalActorError(w, err)
+		return
+	}
+	if sessions == nil {
+		sessions = []identity.SessionInfo{}
+	}
+	sendJSON(w, http.StatusOK, sessions)
+}
+
+func (s *server) internalActorRevokeSession(w http.ResponseWriter, r *http.Request) {
+	actorID := r.PathValue("actorId")
+	sessionID := r.PathValue("sessionId")
+	if actorID == "" || sessionID == "" {
+		sendError(w, http.StatusBadRequest, "INVALID_INPUT", "actorId and sessionId are required")
+		return
+	}
+	err := s.repository.RevokeSession(r.Context(), actorID, sessionID)
+	if err != nil {
+		if err.Error() == "session not found" {
+			sendError(w, http.StatusNotFound, "NOT_FOUND", "session not found")
+			return
+		}
+		writeInternalActorError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *server) internalActorRevokeAllSessions(w http.ResponseWriter, r *http.Request) {
+	actorID := r.PathValue("actorId")
+	if actorID == "" {
+		sendError(w, http.StatusBadRequest, "INVALID_INPUT", "actorId is required")
+		return
+	}
+	err := s.repository.RevokeAllSessions(r.Context(), actorID)
+	if err != nil {
 		writeInternalActorError(w, err)
 		return
 	}
@@ -399,6 +531,14 @@ func writeInternalActorError(w http.ResponseWriter, err error) {
 		sendError(w, http.StatusConflict, "PHONE_ALREADY_BOUND", "phone is already bound to another actor")
 	case identity.ErrUsernameTaken:
 		sendError(w, http.StatusConflict, "USERNAME_TAKEN", "username is already taken")
+	case identity.ErrProvisionConflict:
+		sendError(w, http.StatusConflict, "ACTOR_PROVISION_CONFLICT", "provisioning input conflicts with the existing actor")
+	case identity.ErrForbidden:
+		sendError(w, http.StatusForbidden, "FORBIDDEN", "actor operation is forbidden")
+	case identity.ErrActorAlreadyDeactivated, identity.ErrActorAlreadyActive, identity.ErrInvalidActorTransition:
+		sendError(w, http.StatusConflict, "ACTOR_STATE_CONFLICT", "actor lifecycle transition conflicts with current state")
+	case identity.ErrInvalidActorQuery:
+		sendError(w, http.StatusBadRequest, "INVALID_ACTOR_QUERY", "actor query is invalid")
 	case identity.ErrActivationRateLimited:
 		sendError(w, http.StatusTooManyRequests, "ACTIVATION_RATE_LIMITED", "activation can be requested again later")
 	case identity.ErrActivationUnavailable:
@@ -412,11 +552,11 @@ func writeInternalActorError(w http.ResponseWriter, err error) {
 
 func tokenResponse(pair identity.TokenPair) map[string]any {
 	return map[string]any{
-		"accessToken": pair.AccessToken,
+		"accessToken":  pair.AccessToken,
 		"refreshToken": pair.RefreshToken,
-		"tokenType": "Bearer",
-		"expiresIn": 900,
-		"identity": pair.Identity,
+		"tokenType":    "Bearer",
+		"expiresIn":    900,
+		"identity":     pair.Identity,
 	}
 }
 
@@ -479,3 +619,23 @@ func writeActivationError(w http.ResponseWriter, err error) {
 		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
 	}
 }
+
+func (s *server) internalPermissionsResolve(w http.ResponseWriter, r *http.Request) {
+	actorID := r.URL.Query().Get("actorId")
+	if actorID == "" {
+		sendError(w, http.StatusBadRequest, "BAD_REQUEST", "actorId query parameter is required")
+		return
+	}
+
+	permissions, err := s.repository.Enforcer.GetActorPermissions(r.Context(), actorID)
+	if err != nil {
+		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "could not resolve permissions")
+		return
+	}
+
+	sendJSON(w, http.StatusOK, map[string]interface{}{
+		"actorId":     actorID,
+		"permissions": permissions,
+	})
+}
+

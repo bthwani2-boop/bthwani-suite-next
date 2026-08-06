@@ -8,6 +8,7 @@ import {
   fetchFieldMasterProducts,
   fetchFieldStoreAssortment,
   createFieldProductProposal,
+  withdrawFieldProductProposal,
 } from "../catalog/central-catalog.api";
 import { fetchFieldProductProposals } from "../catalog/product-proposal-readback.api";
 import {
@@ -75,6 +76,8 @@ export type FieldProductProposalInput = {
   readonly brand: string;
   readonly barcode: string | null;
   readonly imageObjectKey?: string | null;
+  readonly targetMasterProductId?: string;
+  readonly baseVersion?: number;
 };
 
 function mergeSavedAssortments(
@@ -227,6 +230,8 @@ export function useFieldCatalogController(partnerId: string) {
           brand: input.brand,
           barcode: input.barcode,
           imageObjectKey: input.imageObjectKey || null,
+          targetMasterProductId: input.targetMasterProductId,
+          baseVersion: input.baseVersion,
           sourceSurface: "app-field",
         });
         setProposals((previous) => [proposal, ...previous.filter((item) => item.id !== proposal.id)]);
@@ -240,6 +245,22 @@ export function useFieldCatalogController(partnerId: string) {
     [partnerId],
   );
 
+  const withdrawProposal = useCallback(
+    async (proposalId: string, expectedVersion: number): Promise<boolean> => {
+      setActionState({ kind: "submitting" });
+      try {
+        const proposal = await withdrawFieldProductProposal(partnerId, proposalId, expectedVersion);
+        setProposals((previous) => [proposal, ...previous.filter((item) => item.id !== proposal.id)]);
+        setActionState({ kind: "idle" });
+        return true;
+      } catch {
+        setActionState({ kind: "error", message: "تعذر سحب الاقتراح" });
+        return false;
+      }
+    },
+    [partnerId],
+  );
+
   return {
     storeState,
     taxonomyState,
@@ -248,6 +269,7 @@ export function useFieldCatalogController(partnerId: string) {
     assortmentItems,
     proposals,
     reloadStore: loadStore,
+    withdrawProposal,
     reloadTaxonomy: loadTaxonomy,
     searchMasterProducts,
     linkMasterProduct,

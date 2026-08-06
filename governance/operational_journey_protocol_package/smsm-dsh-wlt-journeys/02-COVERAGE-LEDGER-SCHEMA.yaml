@@ -1,0 +1,61 @@
+schemaVersion: 1
+package: smsm-dsh-wlt-journeys
+coverage_item:
+  required: [id, kind, path, canonical_owner, journey_id, slice_ids, status]
+  fields:
+    id: stable_identifier
+    kind: file|package|operation|route|handler|domain|db_object|event|job|runtime|surface|screen|control|state|test|workflow|guard
+    path: repository_path
+    symbol_or_operation_id: string
+    canonical_owner: identity|workforce|platform-control|providers|dsh|wlt|media|notifications|shared-ui
+    journey_id: J001..J107
+    slice_ids: [SL-01..SL-24]
+    required_surfaces: []
+    excluded_surfaces: [{surface: string, product_reason: string, evidence: string}]
+    actor_or_service_identity: []
+    permissions: []
+    trusted_scope: platform|operator|partner|store|area|actor|object
+    canonical_write_path: string
+    canonical_readback_path: string
+    persistence_or_provider_effect: string
+    positive_test: string
+    negative_tests: []
+    manual_test_case: string
+    runtime_proof: string
+    status: UNCLASSIFIED|CLASSIFIED|IN_PROGRESS|NOT_APPLICABLE_WITH_EVIDENCE|CLOSED
+    evidence_sha: string
+ui_control:
+  required: [control_id, surface, route, control_type, journey_id, slice_id, command_or_query]
+  fields:
+    control_id: stable_identifier
+    surface: app-client|app-partner|app-captain|app-field|control-panel
+    route: string
+    screen: string
+    tab_or_section: string
+    label_or_accessibility_name: string
+    control_type: button|icon|tab|link|form|modal|sheet|filter|sort|pagination
+    visibility_permission: string
+    enablement_condition: string
+    confirmation_required: boolean
+    journey_id: J001..J107
+    slice_id: SL-07
+    generated_client_operation: string
+    backend_handler: string
+    canonical_owner: string
+    success_readback: string
+    visible_states: []
+    offline_behavior: string
+    duplicate_click_behavior: string
+    audit_event: string
+    positive_test: string
+    forbidden_test: string
+    evidence_sha: string
+zero_gate:
+  unclassified_files: 0
+  unassigned_operations_routes_handlers: 0
+  unassigned_database_events_jobs: 0
+  unassigned_runtime_profiles: 0
+  unassigned_routes_screens_controls: 0
+  unassigned_visible_states: 0
+  controls_without_real_effect: 0
+  required_surfaces_without_readback: 0

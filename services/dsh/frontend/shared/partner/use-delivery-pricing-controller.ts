@@ -6,6 +6,7 @@ import {
   listPartnerDeliveryPricing,
   updateOperatorDeliveryPricing,
   updatePartnerDeliveryPricing,
+  type DeliveryPricingFulfillmentMode,
   type DeliveryPricingMode,
   type DeliveryPricingMutation,
   type DeliveryPricingRecord,
@@ -65,7 +66,7 @@ function useDeliveryPricingBase(
   const save = useCallback(async (
     record: DeliveryPricingRecord | null,
     input: Omit<DeliveryPricingMutation, "expectedVersion">,
-    requestedMode?: DeliveryPricingMode,
+    requestedMode?: DeliveryPricingFulfillmentMode,
   ) => {
     setMutationLoading(true);
     setMutationError(null);
@@ -80,7 +81,7 @@ function useDeliveryPricingBase(
         if (!fulfillmentMode) {
           throw new Error("تعذر تحديد وضع التوصيل المطلوب.");
         }
-        await updateOperatorDeliveryPricing(storeId, fulfillmentMode, {
+        await updateOperatorDeliveryPricing(storeId, fulfillmentMode as DeliveryPricingFulfillmentMode, {
           ...input,
           expectedVersion: record?.version ?? 0,
         });
@@ -108,7 +109,7 @@ export function useOperatorDeliveryPricingController(storeId: string) {
 
 export function findDeliveryPricing(
   records: readonly DeliveryPricingRecord[],
-  mode: DeliveryPricingMode,
+  mode: DeliveryPricingFulfillmentMode,
 ): DeliveryPricingRecord | null {
   return records.find((record) => record.fulfillmentMode === mode) ?? null;
 }

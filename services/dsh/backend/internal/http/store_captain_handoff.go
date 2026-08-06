@@ -18,14 +18,62 @@ func (s *protectedStoreServer) handleGovernedUpdateDeliveryStatus(w http.Respons
 		return
 	}
 	var body struct {
-		Status dispatch.DeliveryStatus `json:"status"`
+		Status          dispatch.DeliveryStatus `json:"status"`
+		Latitude        *float64                `json:"latitude,omitempty"`
+		Longitude       *float64                `json:"longitude,omitempty"`
+		ExpectedVersion int                     `json:"version,omitempty"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	assignmentID := r.PathValue("assignmentId")
+
+	// Verify assignment and version for offline action queueing
+	if body.ExpectedVersion > 0 {
+		meta, err := dispatch.GetAssignmentGovernance(s.db, assignmentID)
+		if err != nil {
+			writeGovernedDispatchError(w, err)
+			return
+		}
+		if meta.Version != body.ExpectedVersion {
+			store.SendError(w, http.StatusConflict, "STALE_OFFLINE_ACTION", "assignment version mismatch")
+			return
+		}
+	}
+
+	// Geofence enforcement (J066)
+	if body.Status == dispatch.DeliveryArrivedStore || body.Status == dispatch.DeliveryArrivedCustomer {
+		if body.Latitude == nil || body.Longitude == nil {
+			store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "latitude and longitude required for arrival")
+			return
+		}
+		var sLat, sLng, cLat, cLng float64
+		err := s.db.QueryRow(`
+			SELECT s.latitude, s.longitude,
+			       COALESCE((o.delivery_address_snapshot->>'latitude')::float8, 0),
+			       COALESCE((o.delivery_address_snapshot->>'longitude')::float8, 0)
+			FROM dsh_assignments a
+			JOIN dsh_orders o ON o.id = a.order_id
+			JOIN dsh_stores s ON s.id = o.store_id
+			WHERE a.id = $1::uuid
+		`, assignmentID).Scan(&sLat, &sLng, &cLat, &cLng)
+		if err == nil {
+			var dist float64
+			if body.Status == dispatch.DeliveryArrivedStore {
+				dist = distanceMeters(*body.Latitude, *body.Longitude, sLat, sLng)
+			} else {
+				dist = distanceMeters(*body.Latitude, *body.Longitude, cLat, cLng)
+			}
+			if dist > 150.0 {
+				store.SendError(w, http.StatusUnprocessableEntity, "GEOFENCE_VIOLATION", "captain is not within arrival radius")
+				return
+			}
+		}
+	}
+
 	assignment, err := dispatch.UpdateDeliveryStatusGovernedIdempotent(
 		s.db,
-		r.PathValue("assignmentId"),
+		assignmentID,
 		actor.ID,
 		body.Status,
 	)

@@ -3,7 +3,7 @@
   "service": "platform-control",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "platform-007_audit_actor_roles_normalization.sql",
+  "cutover": "platform-009_partner_commercial_truth_boundary.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -53,6 +53,20 @@
       "sha256": "9395e48444826b06cc2e79f44f86e5f4b0dc7a917a25eee77d47739e471b4a5a",
       "historicalPrefix": "007",
       "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 8,
+      "file": "platform-008_partner_commercial_model.sql",
+      "sha256": "52eda1faf121f113a327dfa4d3b31f5d055f6852f0476bde52d4826d73addb19",
+      "historicalPrefix": "008",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 9,
+      "file": "platform-009_partner_commercial_truth_boundary.sql",
+      "sha256": "e72e25fee9269e352a6ff208f48f164e5ef7e91f71fb4782d85530cb72bab0e8",
+      "historicalPrefix": "009",
+      "state": "ACTIVE"
     }
   ]
 }

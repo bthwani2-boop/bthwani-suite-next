@@ -6,21 +6,18 @@ import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import { CpBadge, CpButton, CpMutedInline, CpPageHeader, CpTextInput } from "@bthwani/control-panel/components";
 import { FinanceReadOnlyFrame } from "@bthwani/control-panel/shell";
 import {
+  formatWltMoney,
   presentWltPaymentSessionStatus,
   requiresWltPaymentReconciliation,
   type WltPaymentSessionTimeline,
-} from "../../shared/finance-wlt-link/payment";
+} from '@bthwani/wlt/dsh';
 import {
   loadPaymentSessionTimeline,
   refreshPaymentSessionProviderStatus,
   type PaymentSessionRuntimeError,
-} from "../../shared/finance-wlt-link/payment/payment-session-runtime.api";
+} from '@bthwani/wlt/dsh';
 
 type ScreenState = "idle" | "loading" | "ready" | "refreshing" | "offline" | "forbidden" | "not_found" | "conflict" | "error";
-
-function formatAmount(minorUnits: number, currency: string): string {
-  return `${new Intl.NumberFormat("ar-YE").format(minorUnits)} ${currency === "YER" ? "ر.ي" : currency}`;
-}
 
 function errorState(error: PaymentSessionRuntimeError): ScreenState {
   return error.state;
@@ -95,7 +92,8 @@ export function PaymentSessionOperationsScreen() {
     }
     if (!timeline || !presentation) return null;
 
-    const unknown = requiresWltPaymentReconciliation(timeline.paymentSession.status);
+    const capabilities = timeline.paymentSession.capabilities;
+    const reconciliationRequired = requiresWltPaymentReconciliation(capabilities);
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         <Card style={{ padding: "1.25rem" }}>
@@ -107,12 +105,12 @@ export function PaymentSessionOperationsScreen() {
             <CpBadge tone={toBadgeTone(presentation.tone)}>{timeline.paymentSession.status}</CpBadge>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem", marginTop: "1rem" }}>
-            <div><Text role="caption" tone="muted">المبلغ</Text><Text role="body">{formatAmount(timeline.paymentSession.amountMinorUnits, timeline.paymentSession.currency)}</Text></div>
+            <div><Text role="caption" tone="muted">المبلغ</Text><Text role="body">{formatWltMoney(timeline.paymentSession.amountMinorUnits, timeline.paymentSession.currency)}</Text></div>
             <div><Text role="caption" tone="muted">وسيلة الدفع</Text><Text role="body">{timeline.paymentSession.paymentMethod}</Text></div>
             <div><Text role="caption" tone="muted">مرجع المزود</Text><Text role="body">{timeline.paymentSession.providerReference || "—"}</Text></div>
             <div><Text role="caption" tone="muted">قيد التحصيل</Text><Text role="body">{timeline.captureLedgerTransactionId || "غير موجود"}</Text></div>
           </div>
-          {unknown ? (
+          {reconciliationRequired ? (
             <Card style={{ padding: "1rem", marginTop: "1rem" }}>
               <Text role="body">ممنوع إعادة التفويض أو التحصيل. استخدم تحديث حالة المزود، ثم عالج حالة المطابقة المفتوحة بناءً على دليل مزود موثوق.</Text>
             </Card>
@@ -121,7 +119,7 @@ export function PaymentSessionOperationsScreen() {
             <CpButton
               variant="secondary"
               onClick={refreshProvider}
-              disabled={state === "refreshing" || presentation.terminal}
+              disabled={state === "refreshing" || capabilities.terminal || capabilities.operationInProgress}
             >
               {state === "refreshing" ? "جارٍ الاستعلام من المزود..." : "تحديث حالة المزود"}
             </CpButton>

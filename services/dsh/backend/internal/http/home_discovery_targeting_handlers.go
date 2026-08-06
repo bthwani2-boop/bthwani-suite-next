@@ -9,7 +9,7 @@ import (
 )
 
 func (s *protectedStoreServer) handleHomeDiscoveryAdminTargetingGet(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -28,7 +28,7 @@ func (s *protectedStoreServer) handleHomeDiscoveryAdminTargetingGet(w http.Respo
 }
 
 func (s *protectedStoreServer) handleHomeDiscoveryAdminTargetingPut(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

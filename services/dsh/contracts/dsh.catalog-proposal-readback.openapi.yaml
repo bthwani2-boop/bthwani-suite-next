@@ -17,78 +17,14 @@ x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
 x-bthwani-adapter-owner: frontend/shared/catalog
 x-bthwani-runtime-dependency: true
 
-paths:
-  /dsh/operator/catalog/master-products/{productId}:
-    get:
-      operationId: getMasterProductOperator
-      tags: [CentralCatalog]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - name: productId
-          in: path
-          required: true
-          schema: { type: string, minLength: 1 }
-      responses:
-        "200":
-          description: Sovereign master-product detail
-          content:
-            application/json:
-              schema:
-                $ref: "./dsh.catalog.openapi.yaml#/components/schemas/MasterProductResponse"
-        "400":
-          $ref: "./dsh.catalog.openapi.yaml#/components/responses/InvalidRequest"
-        "401":
-          $ref: "./dsh.catalog.openapi.yaml#/components/responses/Unauthenticated"
-        "403":
-          $ref: "./dsh.catalog.openapi.yaml#/components/responses/Forbidden"
-        "404":
-          $ref: "./dsh.catalog.openapi.yaml#/components/responses/NotFound"
-
-  /dsh/partner/catalog/product-proposals:
-    get:
-      operationId: listPartnerProductProposals
-      tags: [CentralCatalog]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - { name: status, in: query, schema: { type: string } }
-        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
-        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
-      responses:
-        "200":
-          description: Proposals belonging to the authenticated partner store
-          content:
-            application/json:
-              schema:
-                $ref: "./dsh.catalog.openapi.yaml#/components/schemas/ProposalListResponse"
-        "401":
-          $ref: "./dsh.catalog.openapi.yaml#/components/responses/Unauthenticated"
-        "403":
-          $ref: "./dsh.catalog.openapi.yaml#/components/responses/Forbidden"
-
-  /dsh/field/partners/{partnerId}/catalog/product-proposals:
-    get:
-      operationId: listFieldProductProposals
-      tags: [CentralCatalog]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - name: partnerId
-          in: path
-          required: true
-          schema: { type: string }
-        - { name: status, in: query, schema: { type: string } }
-        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
-        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
-      responses:
-        "200":
-          description: Proposals belonging to the field-authorized partner store
-          content:
-            application/json:
-              schema:
-                $ref: "./dsh.catalog.openapi.yaml#/components/schemas/ProposalListResponse"
-        "401":
-          $ref: "./dsh.catalog.openapi.yaml#/components/responses/Unauthenticated"
-        "403":
-          $ref: "./dsh.catalog.openapi.yaml#/components/responses/Forbidden"
+# The three readback operations this fragment originally owned (operator
+# master-product detail, partner and field product-proposal listing) are now
+# declared directly in dsh.catalog.openapi.yaml, which dsh.openapi.yaml's
+# MODULAR entry actually composes. This file is kept registered (its
+# x-bthwani-owner/parent-contract metadata and the manual typed adapter at
+# frontend/shared/catalog still reference it) but carries no path content of
+# its own to avoid a duplicate-operation violation against the live source.
+paths: {}
 
 components:
   securitySchemes:

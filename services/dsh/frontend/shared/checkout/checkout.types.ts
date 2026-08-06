@@ -1,69 +1,57 @@
-export type DshPaymentMethod = "cod" | "wallet" | "mixed" | "official_wallet";
+import type { paths } from "@bthwani/dsh-openapi";
 
-export type DshIntentState =
-  | "pending"
-  | "wlt_handoff_failed"
-  | "wlt_outcome_unknown"
-  | "payment_pending"
-  | "confirmed"
-  | "cancelled"
-  | "payment_confirmed"
-  | "payment_failed"
-  | "expired";
+type CreateCheckoutIntentOperation = paths["/dsh/client/checkout-intents"]["post"];
+type CreateCheckoutIntentEnvelope =
+  CreateCheckoutIntentOperation["responses"][201]["content"]["application/json"];
 
-import type { DshFulfillmentDeliveryMode } from "../delivery/delivery.contract";
+/** Canonical DSH aliases extracted from the public OpenAPI operations. */
+export type DshCreateIntentInput = NonNullable<
+  CreateCheckoutIntentOperation["requestBody"]
+>["content"]["application/json"];
+export type DshCheckoutIntent = CreateCheckoutIntentEnvelope["intent"];
+export type DshPaymentMethod = NonNullable<DshCreateIntentInput["paymentMethod"]>;
+export type DshFulfillmentMode = NonNullable<DshCreateIntentInput["fulfillmentMode"]>;
+export type DshIntentState = DshCheckoutIntent["state"];
 
-export type DshFulfillmentMode = DshFulfillmentDeliveryMode;
+export type DshFulfillmentModesResponse =
+  paths["/dsh/client/cart/fulfillment-modes"]["get"]["responses"][200]["content"]["application/json"];
+export type DshFulfillmentModeAvailability =
+  DshFulfillmentModesResponse["modes"][number];
 
-export type DshCheckoutIntent = {
-  readonly id: string;
-  /** Present on all current server responses; optional only for legacy typed fixtures. */
-  readonly operatorContextId?: string;
-  readonly clientId: string;
-  readonly cartId: string;
-  readonly storeId: string;
-  readonly fulfillmentMode: DshFulfillmentMode;
-  readonly state: DshIntentState;
-  readonly paymentMethod: DshPaymentMethod;
-  readonly wltPaymentSessionId: string;
-  readonly deliveryAddress: string;
-  readonly note: string;
-  readonly subtotalMinorUnits: number;
-  readonly deliveryFeeMinorUnits: number;
-  readonly discountMinorUnits: number;
-  readonly totalMinorUnits: number;
-  readonly currency: string;
-  readonly pricingSnapshotHash: string;
-  readonly couponId?: string;
-  readonly couponRedemptionId?: string;
-  readonly couponCodeLast4?: string;
-  readonly version: number;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  readonly reconciliationRequired?: boolean;
-  readonly reconciliationAgeSeconds?: number;
+/** J050: states that allow the user to interact and progress. */
+export type DshIntentPreviewState = Extract<
+  DshIntentState,
+  "draft" | "validating" | "ready" | "blocked"
+>;
+
+/** J050: states that indicate active WLT payment processing. */
+export type DshIntentConfirmingState = Extract<DshIntentState, "confirming">;
+
+/** J050: terminal states — no further mutation possible from client. */
+export type DshCheckoutTerminalReason = Extract<DshIntentState, "cancelled" | "expired">;
+
+/** J050 validation issue descriptor — mirrors DshCheckoutValidationIssue. */
+export type DshValidationIssue = {
+  readonly code: string;
+  readonly message: string;
+  readonly field?: string;
 };
 
-export type DshCreateIntentInput = {
-  readonly cartId: string;
-  readonly storeId: string;
-  readonly fulfillmentMode?: DshFulfillmentMode;
-  readonly paymentMethod?: DshPaymentMethod;
-  /** Required for delivery; the backend resolves ownership and snapshots it. */
-  readonly deliveryAddressId?: string;
-  readonly note?: string;
-  readonly couponCode?: string;
-};
-
-export type DshCheckoutTerminalReason = "cancelled" | "expired" | "payment_failed";
-
+/**
+ * Presentation-only controller state.
+ * Runtime DTO and status authority remains OpenAPI-only.
+ * J050: 'confirming' replaces old 'payment_pending' (WLT handoff active).
+ */
 export type DshCheckoutState =
   | { readonly kind: "idle" }
   | { readonly kind: "loading" }
-  | { readonly kind: "confirming" }
-  | { readonly kind: "success"; readonly intent: DshCheckoutIntent }
-  | { readonly kind: "payment_pending"; readonly intent: DshCheckoutIntent }
+  | { readonly kind: "draft"; readonly intent: DshCheckoutIntent }
+  | { readonly kind: "validating"; readonly intent: DshCheckoutIntent }
+  | { readonly kind: "ready"; readonly intent: DshCheckoutIntent }
+  | { readonly kind: "blocked"; readonly intent: DshCheckoutIntent; readonly issues: DshValidationIssue[] }
+  | { readonly kind: "confirming"; readonly intent: DshCheckoutIntent }
   | { readonly kind: "reconciliation_pending"; readonly intent: DshCheckoutIntent }
+  | { readonly kind: "success"; readonly intent: DshCheckoutIntent }
   | { readonly kind: "terminal"; readonly intent: DshCheckoutIntent; readonly reason: DshCheckoutTerminalReason }
   | { readonly kind: "error"; readonly message: string }
   | { readonly kind: "blocked_payment_unavailable" }

@@ -4,13 +4,30 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
+	"dsh-api/internal/workforceclient"
 	_ "github.com/lib/pq"
 )
+
+func mockWFServer(t *testing.T) *workforceclient.Client {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if strings.Contains(r.URL.Path, "staff-") || strings.Contains(r.URL.Path, "paused-") || strings.Contains(r.URL.Path, "other-store-") {
+			w.Write([]byte(`{"activationReadiness":{"isActive":false}}`))
+		} else {
+			w.Write([]byte(`{"activationReadiness":{"isActive":true}}`))
+		}
+	}))
+	t.Cleanup(ts.Close)
+	return workforceclient.NewClient(ts.URL, "token")
+}
 
 func openRequiredDB(t *testing.T) *sql.DB {
 	t.Helper()
@@ -63,7 +80,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, partner_id)
-		VALUES ($1, $1, 'PD Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true, $2)`,
+		VALUES ($1, $1, 'PD Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true, $2)`,
 		f.storeID, f.partnerID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
@@ -71,7 +88,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	var cartID string
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_carts (client_id, store_id, fulfillment_mode, state)
-		VALUES ($1, $2, 'partner_delivery', 'active')
+		VALUES ($1, $2, 'partner_delivery', 'published')
 		RETURNING id::text`,
 		f.clientID, f.storeID,
 	).Scan(&cartID); err != nil {
@@ -102,14 +119,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 		t.Fatalf("failed to insert test order: %v", err)
 	}
 
-	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_store_team_members (store_id, name, role, status)
-		VALUES ($1, 'Test Courier', 'courier', 'active')
-		RETURNING id`,
-		f.storeID,
-	).Scan(&f.courierID); err != nil {
-		t.Fatalf("failed to insert test courier: %v", err)
-	}
+	f.courierID = "courier-" + suffix
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_media_refs (
@@ -126,7 +136,6 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_partner_delivery_audit_events WHERE entity_id IN (SELECT id FROM dsh_partner_delivery_tasks WHERE order_id = $1::uuid)`, f.orderID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_operational_outbox_events WHERE entity_type = 'partner_delivery_task' AND entity_id IN (SELECT id FROM dsh_partner_delivery_tasks WHERE order_id = $1::uuid)`, f.orderID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_partner_delivery_tasks WHERE order_id = $1::uuid`, f.orderID)
-		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_team_members WHERE store_id = $1`, f.storeID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_orders WHERE id = $1::uuid`, f.orderID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_checkout_intents WHERE id = $1::uuid`, checkoutIntentID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_carts WHERE id = $1::uuid`, cartID)
@@ -150,7 +159,7 @@ func TestAssignCourierBeforeReadyRejectedDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	f := seedFixture(t, db, "preparing")
 
-	svc := NewService(db)
+	svc := NewService(db, mockWFServer(t))
 	_, err := svc.AssignCourier(context.Background(), f.orderID, f.courierID, "operator-1", "operator", "")
 	if !errors.Is(err, ErrNotReadyForAssignment) {
 		t.Fatalf("expected ErrNotReadyForAssignment, got %v", err)
@@ -162,32 +171,19 @@ func TestAssignCourierIneligibleCourierRejectedDBIntegration(t *testing.T) {
 	f := seedFixture(t, db, "ready_for_pickup")
 	ctx := context.Background()
 
-	var staffID string
-	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_store_team_members (store_id, name, role, status)
-		VALUES ($1, 'Test Staff', 'staff', 'active') RETURNING id`, f.storeID).Scan(&staffID); err != nil {
-		t.Fatalf("failed to insert staff member: %v", err)
-	}
-	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_team_members WHERE id = $1`, staffID) })
-
-	svc := NewService(db)
+	staffID := "staff-1"
+	svc := NewService(db, mockWFServer(t))
 	if _, err := svc.AssignCourier(ctx, f.orderID, staffID, "operator-1", "operator", ""); !errors.Is(err, ErrCourierIneligible) {
 		t.Fatalf("expected ErrCourierIneligible for wrong role, got %v", err)
 	}
 
-	var pausedCourierID string
-	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_store_team_members (store_id, name, role, status)
-		VALUES ($1, 'Paused Courier', 'courier', 'paused') RETURNING id`, f.storeID).Scan(&pausedCourierID); err != nil {
-		t.Fatalf("failed to insert paused courier: %v", err)
-	}
-	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_team_members WHERE id = $1`, pausedCourierID) })
-
+	pausedCourierID := "paused-1"
 	if _, err := svc.AssignCourier(ctx, f.orderID, pausedCourierID, "operator-1", "operator", ""); !errors.Is(err, ErrCourierIneligible) {
 		t.Fatalf("expected ErrCourierIneligible for paused status, got %v", err)
 	}
 
 	other := seedFixture(t, db, "ready_for_pickup")
+	other.courierID = "other-store-" + other.courierID
 	if _, err := svc.AssignCourier(ctx, f.orderID, other.courierID, "operator-1", "operator", ""); !errors.Is(err, ErrCourierIneligible) {
 		t.Fatalf("expected ErrCourierIneligible for cross-store courier, got %v", err)
 	}
@@ -196,7 +192,7 @@ func TestAssignCourierIneligibleCourierRejectedDBIntegration(t *testing.T) {
 func TestAssignCourierDoubleAssignRejectedDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	f := seedFixture(t, db, "ready_for_pickup")
-	svc := NewService(db)
+	svc := NewService(db, mockWFServer(t))
 
 	task, err := svc.AssignCourier(context.Background(), f.orderID, f.courierID, "operator-1", "operator", "")
 	if err != nil {
@@ -214,7 +210,7 @@ func TestAssignCourierDoubleAssignRejectedDBIntegration(t *testing.T) {
 func TestAssignCourierVersionConflictOnConcurrentUpdateDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	f := seedFixture(t, db, "ready_for_pickup")
-	svc := NewService(db)
+	svc := NewService(db, mockWFServer(t))
 	ctx := context.Background()
 
 	task, err := svc.AssignCourier(ctx, f.orderID, f.courierID, "operator-1", "operator", "")
@@ -234,7 +230,7 @@ func TestAssignCourierVersionConflictOnConcurrentUpdateDBIntegration(t *testing.
 func TestPartnerDeliveryDepartureRequiresPickupDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	f := seedFixture(t, db, "ready_for_pickup")
-	svc := NewService(db)
+	svc := NewService(db, mockWFServer(t))
 	ctx := context.Background()
 
 	task, err := svc.AssignCourier(ctx, f.orderID, f.courierID, "operator-1", "operator", "corr-departure")
@@ -252,7 +248,7 @@ func TestPartnerDeliveryDepartureRequiresPickupDBIntegration(t *testing.T) {
 func TestPartnerDeliveryCompletesTaskAndOrderAtomicallyDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	f := seedFixture(t, db, "ready_for_pickup")
-	svc := NewService(db)
+	svc := NewService(db, mockWFServer(t))
 	ctx := context.Background()
 
 	task, err := svc.AssignCourier(ctx, f.orderID, f.courierID, "operator-1", "operator", "corr-complete")

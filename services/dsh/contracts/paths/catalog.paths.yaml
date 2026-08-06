@@ -4,6 +4,7 @@
 /dsh/stores/{storeId}/catalog:
   get:
     operationId: getPublishedDshCatalog
+    security: []
     deprecated: false # response shape changed: now { domains, products } from the master catalog (dsh-030); see CentralCatalog tag.
     summary: Return the approved, active catalog for a publicly eligible store.
     tags: [DshCatalog]
@@ -22,6 +23,7 @@
 /dsh/public/media/{assetId}/{variant}:
   get:
     operationId: getPublicCatalogMedia
+    security: []
     summary: Stream an approved DAM asset's binary. Unauthenticated -- only status=approved assets are ever served.
     tags: [DshCatalog]
     parameters:
@@ -52,12 +54,16 @@
     tags: [CentralCatalog]
     security: [{ bearerAuth: [] }]
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200": { description: BUSINESS_DOMAIN (L1) list. }
   post:
     operationId: createCatalogDomain
     tags: [CentralCatalog]
     security: [{ bearerAuth: [] }]
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "201": { description: Domain created. }
 
 /dsh/operator/catalog/domains/{domainId}:
@@ -88,6 +94,8 @@
               requiresProductCatalog: { type: boolean }
               isManualRequest: { type: boolean }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200": { description: Domain updated. }
 
 /dsh/operator/catalog/nodes:
@@ -103,12 +111,16 @@
         in: query
         schema: { type: string }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200": { description: BUSINESS_SUBDOMAIN/PRODUCT_MAIN_CLASS/PRODUCT_SUB_CLASS (L2-L4) list. }
   post:
     operationId: createCatalogNode
     tags: [CentralCatalog]
     security: [{ bearerAuth: [] }]
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "201": { description: Node created. }
 
 /dsh/operator/catalog/nodes/{nodeId}:
@@ -137,6 +149,8 @@
               isActive: { type: boolean }
               isClientVisible: { type: boolean }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200": { description: Node updated. }
 
 /dsh/operator/catalog/master-products:
@@ -182,6 +196,8 @@
         in: query
         schema: { type: integer, minimum: 0, default: 0 }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: MASTER_PRODUCT (L5) list.
         content:
@@ -193,6 +209,8 @@
     tags: [CentralCatalog]
     security: [{ bearerAuth: [] }]
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "201": { description: Master product created. }
 
 /dsh/operator/catalog/master-products/{productId}:
@@ -245,6 +263,8 @@
         in: query
         schema: { type: integer, minimum: 0, default: 0 }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: Product proposal queue (requests to add to the master catalog).
         content:
@@ -263,6 +283,8 @@
         required: true
         schema: { type: string }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200": { description: Proposal moved to under_review/adopted/rejected/needs_fix. }
 
 /dsh/operator/catalog/product-proposals/{proposalId}/transition:
@@ -276,6 +298,8 @@
         required: true
         schema: { type: string }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200": { description: Proposal transitioned along the multi-stage review pipeline. }
 
 /dsh/operator/catalog/platform-policies:
@@ -284,6 +308,8 @@
     tags: [CentralCatalog]
     security: [{ bearerAuth: [] }]
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200": { description: "Per-domain/per-node/default commission, fee, and capability policy rows." }
 
 /dsh/operator/catalog/platform-policies/{policyId}:
@@ -319,6 +345,8 @@
               manualRequestMode: { type: boolean }
               allowsStoreProductCustomImage: { type: boolean }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200": { description: Policy updated. }
   patch:
     operationId: patchCatalogPlatformPolicy
@@ -350,6 +378,8 @@
               manualRequestMode: { type: boolean }
               allowsStoreProductCustomImage: { type: boolean }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200": { description: Policy updated. }
 
 /dsh/operator/catalog/seed-status:
@@ -358,6 +388,8 @@
     tags: [CentralCatalog]
     security: [{ bearerAuth: [] }]
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: Seed status diagnostics.
 
@@ -380,6 +412,8 @@
         required: false
         schema: { type: integer, minimum: 0, default: 0 }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: List of DAM assets.
         content:
@@ -419,6 +453,8 @@
                 type: string
                 description: Optional DAM role for the target entity.
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "201":
         description: Upload intent created.
         content:
@@ -445,6 +481,8 @@
         required: true
         schema: { type: string }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: Asset upload verified against storage and moved out of draft.
 
@@ -515,6 +553,8 @@
                   draft assets may not be approved directly.
               reviewNote: { type: string }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: Asset reviewed by operator.
         content:
@@ -535,6 +575,8 @@
         required: true
         schema: { type: string }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "201":
         description: Link established.
 
@@ -561,6 +603,8 @@
         required: true
         schema: { type: string }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: Link removed.
 
@@ -583,6 +627,8 @@
         required: false
         schema: { type: integer, default: 0 }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: List of reels (operator view).
         content:
@@ -618,6 +664,8 @@
               targetId: { type: string }
               sortOrder: { type: integer }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: Reel reviewed.
         content:
@@ -672,6 +720,8 @@
         required: true
         schema: { type: string }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: List of links for the entity.
 
@@ -690,6 +740,8 @@
         required: true
         schema: { type: string }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: Domain image updated.
 
@@ -708,6 +760,8 @@
         required: true
         schema: { type: string }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: Node image updated.
 
@@ -726,6 +780,8 @@
         required: true
         schema: { type: string }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: Product image updated.
 
@@ -744,38 +800,11 @@
         required: true
         schema: { type: string }
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: Proposal image updated.
 
-/dsh/stores/{storeId}/images/{role}:
-  put:
-    operationId: putStoreImage
-    summary: Set a store's logo/cover/storefront/interior/signage photo. Callable by the store's own partner/field actor, not just operator.
-    tags: [CentralCatalog]
-    security: [{ bearerAuth: [] }]
-    parameters:
-      - name: storeId
-        in: path
-        required: true
-        schema: { type: string }
-      - name: role
-        in: path
-        required: true
-        schema:
-          type: string
-          enum: [store_logo, store_cover, storefront_photo, interior_photo, signage_photo]
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            required: [assetId]
-            properties:
-              assetId: { type: string }
-    responses:
-      "200":
-        description: Store image updated.
 
 /dsh/operator/stores/{storeId}/assortment:
   get:
@@ -784,6 +813,8 @@
     security: [{ bearerAuth: [] }]
     parameters: [{ $ref: "../dsh.openapi.yaml#/components/parameters/StoreId" }]
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200": { description: Store's master-product links (price/availability/stock/note/local image). }
 
 /dsh/operator/stores/{storeId}/assortment/{masterProductId}:
@@ -807,6 +838,8 @@
     tags: [CentralCatalog]
     security: [{ bearerAuth: [] }]
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200": { description: Read-only domain+node tree for the partner surface (never hardcode categories in app-partner). }
 
 /dsh/partner/catalog/master-products:
@@ -815,6 +848,8 @@
     tags: [CentralCatalog]
     security: [{ bearerAuth: [] }]
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200": { description: Searchable master product list for building an assortment. }
 
 /dsh/partner/stores/{storeId}/assortment:
@@ -824,6 +859,8 @@
     security: [{ bearerAuth: [] }]
     parameters: [{ $ref: "../dsh.openapi.yaml#/components/parameters/StoreId" }]
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200": { description: The authenticated partner's own store assortment. }
 
 /dsh/partner/stores/{storeId}/assortment/{masterProductId}:
@@ -868,6 +905,8 @@
     tags: [CentralCatalog]
     security: [{ bearerAuth: [] }]
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200": { description: Read-only domain+node tree for the field surface (never hardcode categories in app-field). }
 
 /dsh/field/catalog/master-products:
@@ -876,6 +915,8 @@
     tags: [CentralCatalog]
     security: [{ bearerAuth: [] }]
     responses:
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200": { description: Searchable master product list for the field surface. }
 
 /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/{masterProductId}:

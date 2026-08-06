@@ -1,9 +1,13 @@
 package http
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
+
+	"identity-api/internal/identity"
 )
 
 func TestClientIPPrefersForwardedFor(t *testing.T) {
@@ -47,5 +51,15 @@ func TestAllowedCorsOriginsReadsEnvAllowlist(t *testing.T) {
 	}
 	if allowed["http://localhost:13000"] {
 		t.Fatal("local dev origin must not be implicitly allowed once env is configured")
+	}
+}
+
+func TestInternalActorErrorMapsCrossContextProvisionToForbidden(t *testing.T) {
+	response := httptest.NewRecorder()
+
+	writeInternalActorError(response, identity.ErrForbidden)
+
+	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), `"code":"FORBIDDEN"`) {
+		t.Fatalf("cross-context provision error was not fail-closed: status=%d body=%s", response.Code, response.Body.String())
 	}
 }

@@ -66,28 +66,13 @@ export const PLATFORM_VAR_QUICK_PICKS: Record<string, readonly string[]> = {
 
 export type PlatformVarMutationAction = 'save-proposed' | 'apply' | 'rollback' | 'mark-contract-ready';
 
-const PLATFORM_VAR_MUTATION_DISABLED_REASON: Record<PlatformVarMutationAction, string> = {
+export const PLATFORM_VAR_MUTATION_DISABLED_REASON: Record<PlatformVarMutationAction, string> = {
   'save-proposed':       'حفظ المقترحات يتطلب عقد platform-control موثق — غير مفعّل حالياً',
   'apply':               'تطبيق مقترح يتطلب عقد Backend موثق — غير مفعّل حالياً',
   'rollback':            'الرجوع يتطلب مسار Backend موثق — غير مفعّل حالياً',
   'mark-contract-ready': 'التعليم بالعقد يتطلب مسار Backend موثق — غير مفعّل حالياً',
 };
 
-function isPlatformVarMutationAllowed(
-  action: PlatformVarMutationAction,
-  varKey: string,
-): boolean {
-  void varKey;
-  void action;
-  return false;
-}
-
 export function isPlatformDesignVar(varKey: string): boolean {
   return varKey.startsWith('VAR_UI_');
-}
-
-function isPlatformDesignValValid(varKey: string, proposedValue: string): boolean {
-  if (!isPlatformDesignVar(varKey)) return true;
-  const picks = PLATFORM_VAR_QUICK_PICKS[varKey];
-  return Array.isArray(picks) && picks.includes(proposedValue);
 }

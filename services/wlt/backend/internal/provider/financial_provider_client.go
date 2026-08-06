@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +15,8 @@ import (
 type Client struct {
 	baseURL    string
 	httpClient *http.Client
+	breaker    *CircuitBreaker
+	reg        *Registry
 }
 
 type ProviderResult struct {
@@ -23,12 +26,17 @@ type ProviderResult struct {
 	Message           string `json:"message,omitempty"`
 }
 
-func NewClient(config Config) *Client {
+func NewClient(config Config, reg *Registry) *Client {
 	return &Client{
 		baseURL: strings.TrimRight(config.BaseURL, "/"),
-		httpClient: &http.Client{
-			Timeout: 15 * time.Second,
-		},
+		// The timeout will be dynamically overridden per-request
+		httpClient: &http.Client{},
+		breaker: NewCircuitBreaker(CircuitBreakerConfig{
+			FailureThreshold: 5,
+			SuccessThreshold: 2,
+			Timeout:          30 * time.Second,
+		}),
+		reg: reg,
 	}
 }
 
@@ -50,7 +58,18 @@ func (c *Client) do(ctx context.Context, method string, path string, body any, m
 		reader = bytes.NewReader(payload)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, reader)
+	var reqCtx = ctx
+	if c.reg != nil {
+		// Example provider type lookup. This should ideally be passed in or configured on the client.
+		cfg, _, err := c.reg.GetActiveProvider(ctx, "payment-gateway", "production")
+		if err == nil && cfg.TimeoutBudget > 0 {
+			var cancel context.CancelFunc
+			reqCtx, cancel = context.WithTimeout(ctx, cfg.TimeoutBudget)
+			defer cancel()
+		}
+	}
+
+	req, err := http.NewRequestWithContext(reqCtx, method, c.baseURL+path, reader)
 	if err != nil {
 		return ProviderResult{}, err
 	}
@@ -58,10 +77,29 @@ func (c *Client) do(ctx context.Context, method string, path string, body any, m
 	req.Header.Set("X-Correlation-ID", meta.CorrelationID)
 	req.Header.Set("Idempotency-Key", meta.IdempotencyKey)
 
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return ProviderResult{}, err
+	var resp *http.Response
+	execErr := c.breaker.Execute(func() error {
+		var execError error
+		resp, execError = c.httpClient.Do(req)
+		if execError != nil {
+			return execError
+		}
+		if resp.StatusCode >= 500 {
+			return fmt.Errorf("upstream status %d", resp.StatusCode)
+		}
+		return nil
+	})
+
+	if execErr != nil {
+		if errors.Is(execErr, ErrCircuitOpen) {
+			return ProviderResult{}, fmt.Errorf("provider circuit breaker is OPEN")
+		}
 	}
+
+	if resp == nil {
+		return ProviderResult{}, execErr
+	}
+
 	defer resp.Body.Close()
 
 	var result ProviderResult

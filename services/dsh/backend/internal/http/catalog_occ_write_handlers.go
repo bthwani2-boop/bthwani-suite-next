@@ -45,7 +45,7 @@ func (s *protectedStoreServer) upsertStoreAssortmentAtomic(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleOperatorUpsertStoreAssortmentAtomic(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentManage, "operator")
+	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentManage)
 	if !ok {
 		return
 	}
@@ -90,7 +90,7 @@ func (s *protectedStoreServer) handleLegacyFieldUpsertStoreAssortmentAtomic(w ht
 		return
 	}
 	storeID := r.PathValue("storeId")
-	if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, storeID); err != nil {
+	if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, s.workforce, actor, storeID); err != nil {
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store is outside the field actor scope")
 		return
 	}
@@ -131,6 +131,44 @@ func (s *protectedStoreServer) handleUpdateFieldProductProposalAtomic(w http.Res
 	store.SendJSON(w, http.StatusOK, map[string]any{"proposal": proposal})
 }
 
+func (s *protectedStoreServer) handleWithdrawPartnerProductProposalAtomic(w http.ResponseWriter, r *http.Request) {
+	actor, _, ok := s.partnerStore(w, r)
+	if !ok {
+		return
+	}
+	var input struct {
+		ExpectedVersion *int `json:"expectedVersion"`
+	}
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	proposal, err := centralcatalog.WithdrawProposalAtomic(r.Context(), s.db, r.PathValue("proposalId"), actor.ID, input.ExpectedVersion)
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"proposal": proposal})
+}
+
+func (s *protectedStoreServer) handleWithdrawFieldProductProposalAtomic(w http.ResponseWriter, r *http.Request) {
+	actorID, _, ok := s.fieldPartnerStore(w, r)
+	if !ok {
+		return
+	}
+	var input struct {
+		ExpectedVersion *int `json:"expectedVersion"`
+	}
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	proposal, err := centralcatalog.WithdrawProposalAtomic(r.Context(), s.db, r.PathValue("proposalId"), actorID, input.ExpectedVersion)
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"proposal": proposal})
+}
+
 func (s *protectedStoreServer) handleUpdateCatalogAssetAtomic(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
 	if !ok {
@@ -153,7 +191,7 @@ func (s *protectedStoreServer) handleUpdateCatalogAssetAtomic(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleReviewCatalogAssetExpected(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaReview, "operator")
+	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaReview)
 	if !ok {
 		return
 	}

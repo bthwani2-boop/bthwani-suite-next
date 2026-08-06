@@ -2,7 +2,7 @@
 
 Status: ACTIVE_CANONICAL
 
-`contracts/master.openapi.yaml` is an index of exactly one entry contract per
+`contracts/openapi/index.yaml` is the canonical index of exactly one entry contract per
 bounded context. Each entry owns and declares its leaf modules. Every public
 route has one owner, one unique `operationId`, one runtime implementation, and
 one generated type source.

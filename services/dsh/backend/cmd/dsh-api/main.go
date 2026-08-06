@@ -21,6 +21,7 @@ import (
 	"dsh-api/internal/operationaloutbox"
 	"dsh-api/internal/orders"
 	"dsh-api/internal/partnerwltoutbox"
+	"dsh-api/internal/platformclient"
 	"dsh-api/internal/promotionfundingoutbox"
 	"dsh-api/internal/wlt"
 	"dsh-api/internal/wltoutbox"
@@ -39,10 +40,14 @@ func main() {
 
 	authMode := os.Getenv("DSH_AUTH_MODE")
 	identityBaseURL := os.Getenv("DSH_IDENTITY_BASE_URL")
+	identityServiceToken := os.Getenv("DSH_IDENTITY_SERVICE_TOKEN")
+	operatorContextID := os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID")
 	wltBaseURL := os.Getenv("DSH_WLT_BASE_URL")
 	wltServiceToken := os.Getenv("WLT_DSH_SERVICE_TOKEN")
 	pushProviderURL := os.Getenv("DSH_PUSH_PROVIDER_URL")
 	pushProviderToken := os.Getenv("DSH_PUSH_PROVIDER_TOKEN")
+	platformControlBaseURL := os.Getenv("DSH_PLATFORM_CONTROL_BASE_URL")
+	platformControlServiceToken := os.Getenv("PLATFORM_CONTROL_DSH_SERVICE_TOKEN")
 
 	log.Println("[dsh-api] connecting to database...")
 	db, err := sql.Open("postgres", databaseURL)
@@ -60,8 +65,9 @@ func main() {
 
 	appCtx, cancelApp := context.WithCancel(context.Background())
 	mediaProvider := newMediaProvider(appCtx)
-	identityClient := auth.NewClient(identityBaseURL)
+	identityClient := auth.NewClientWithInternalAccess(identityBaseURL, identityServiceToken, operatorContextID)
 	wltClient := wlt.NewClient(wltBaseURL, wltServiceToken)
+	platformClient := platformclient.NewClient(platformControlBaseURL, platformControlServiceToken)
 
 	respCache := cache.NewClient(os.Getenv("DSH_VALKEY_ADDR"))
 	if respCache == nil {
@@ -70,14 +76,14 @@ func main() {
 		log.Println("[dsh-api] response cache enabled")
 	}
 
-	router := dshHttp.NewRouter(db, identityClient, wltClient, mediaProvider, respCache)
+	router := dshHttp.NewRouter(db, identityClient, wltClient, platformClient, mediaProvider, respCache)
 	dshHttp.RegisterPartnerLifecycleRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPartnerSelfRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterOperationalAnalyticsRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterActorNotificationRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterFieldReadinessRoutes(router, db, identityClient, wltClient, mediaProvider)
-	dshHttp.RegisterPartnerFleetMembershipRoutes(router, db, identityClient, wltClient, mediaProvider)
-	dshHttp.RegisterPartnerFleetOperatorRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterPartnerFleetMembershipRoutes(router, db, identityClient, wltClient, platformClient, mediaProvider)
+	dshHttp.RegisterPartnerFleetOperatorRoutes(router, db, identityClient, wltClient, platformClient, mediaProvider)
 	dshHttp.RegisterSupportMessageDeliveryRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterOrderRescueRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterOrderJourneyRoutes(router, db, identityClient, wltClient, mediaProvider)
@@ -85,9 +91,9 @@ func main() {
 	dshHttp.RegisterPickupRecoveryRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPlatformPolicyRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterAdministrationRoutes(router, db, identityClient, wltClient, mediaProvider)
-	dshHttp.RegisterWorkforceScopeRoutes(router, db, identityClient, wltClient, mediaProvider)
-	dshHttp.RegisterWorkforceEmployeeMediaRoute(router, db, identityClient, wltClient, mediaProvider)
-	dshHttp.RegisterLegacyContractCompatibilityRoutes(router, db, identityClient, wltClient, mediaProvider)
+
+
+	dshHttp.RegisterWorkforceScopesRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterGovernedIncidentRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterProviderRatingRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterOperationsIntelligenceRoutes(router, db, identityClient, wltClient, mediaProvider)
@@ -110,8 +116,8 @@ func main() {
 		deliveryExceptionGovernedRouter,
 	)
 	availabilityGuardedRouter := dshHttp.OperationsAvailabilityMiddleware(db, governedIncidentRouter)
-	OperatorContextGuardedRouter := dshHttp.TrustedOperatorContextMiddleware(identityClient, availabilityGuardedRouter)
-	handler := dshHttp.CorsMiddleware(authMode, OperatorContextGuardedRouter)
+	operatorContextGuardedRouter := dshHttp.TrustedOperatorContextMiddleware(identityClient, availabilityGuardedRouter)
+	handler := dshHttp.CorsMiddleware(authMode, operatorContextGuardedRouter)
 
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
 	go orders.RunOrderEventBridgeWorker(outboxCtx, db, 5*time.Second)
@@ -125,13 +131,12 @@ func main() {
 		if pushErr != nil {
 			log.Printf("[dsh-api] push worker disabled: %v", pushErr)
 		} else {
-			go operationaloutbox.RunPushWorker(outboxCtx, db, pushProvider, 5*time.Second)
+			go operationaloutbox.RunPushWorker(outboxCtx, db, pushProvider, identityClient, 5*time.Second)
 			log.Println("[dsh-api] governed notification push worker enabled")
 		}
 	}
 
 	if wltClient.Configured() {
-		go orders.RunPaymentProjectionWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go wltoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go fieldcommissionoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go checkoutfinanceoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)

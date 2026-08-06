@@ -15,6 +15,7 @@ import {
   useOrderPreparationReadback,
 } from '../../shared/orders';
 import { OrderTruthReadbackSummary } from '../../shared/order-truth';
+import { formatWltMoney } from '@bthwani/wlt/dsh';
 import { useOperatorOrderWorkboard } from '../../shared/operations/use-operator-order-workboard';
 import type { OperationsFocusParams, OperatorOrderWorkboardRow } from '../../shared/operations';
 import { resolveRuntimeOrderStatusTone } from '../shared/ControlPanelDshDecisionBoard';
@@ -148,7 +149,7 @@ export function OrderJourneyLiveOrdersScreen({
               statusTone={resolveRuntimeOrderStatusTone(order.status)}
               reason={isCancelled(order.status)
                 ? `${order.cancellationReasonCode ?? 'cancelled'} · ${FINANCIAL_CLOSURE_LABELS[order.financialClosureStatus]}`
-                : `${modeLabel(order.fulfillmentMode)} · ${order.totalPrice.toLocaleString('ar-YE')} ر.ي`}
+                : `${modeLabel(order.fulfillmentMode)} · ${formatWltMoney(order.totalPrice, 'YER')}`}
               sla={`آخر تحديث: ${new Date(order.updatedAt).toLocaleString('ar-YE')}`}
               onInspect={() => setSelectedOrderId(order.id)}
               {...(order.fulfillmentMode === 'bthwani_delivery' && order.status === 'ready_for_pickup' && !order.captainId

@@ -67,6 +67,8 @@ type DeliveryException struct {
 	Version                 int
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
+	ProofMediaRef           *string
+	PolicyNextAction        string
 }
 
 type ReportDeliveryExceptionInput struct {
@@ -75,6 +77,7 @@ type ReportDeliveryExceptionInput struct {
 	CorrelationID string
 	Latitude      *float64
 	Longitude     *float64
+	ProofMediaRef string
 }
 
 var validDeliveryExceptionReasons = map[DeliveryExceptionReasonCode]bool{
@@ -102,10 +105,32 @@ func severityForDeliveryException(reason DeliveryExceptionReasonCode) DeliveryEx
 	switch reason {
 	case ExceptionAccident, ExceptionUnsafeLocation:
 		return DeliveryExceptionCritical
-	case ExceptionVehicleBreakdown, ExceptionDamagedOrder, ExceptionCashCollection, ExceptionWeatherRoadBlock:
+	case ExceptionDamagedOrder, ExceptionVehicleBreakdown, ExceptionCashCollection, ExceptionWeatherRoadBlock:
 		return DeliveryExceptionHigh
 	default:
 		return DeliveryExceptionMedium
+	}
+}
+
+func policyNextActionForException(reason DeliveryExceptionReasonCode) string {
+	switch reason {
+	case ExceptionDamagedOrder:
+		return "return"
+	case ExceptionCustomerUnreachable:
+		return "wait"
+	case ExceptionVehicleBreakdown, ExceptionAccident:
+		return "rescue"
+	default:
+		return "review"
+	}
+}
+
+func exceptionRequiresProof(reason DeliveryExceptionReasonCode) bool {
+	switch reason {
+	case ExceptionDamagedOrder, ExceptionVehicleBreakdown, ExceptionAccident, ExceptionUnsafeLocation:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -142,8 +167,12 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 	}
 	input.Note = strings.TrimSpace(input.Note)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
+	input.ProofMediaRef = strings.TrimSpace(input.ProofMediaRef)
 	if err := validateDeliveryExceptionInput(input); err != nil {
 		return nil, err
+	}
+	if exceptionRequiresProof(input.ReasonCode) && input.ProofMediaRef == "" {
+		return nil, fmt.Errorf("%w: proof media is required for reason %s", ErrInvalid, input.ReasonCode)
 	}
 
 	tx, err := db.Begin()
@@ -207,17 +236,19 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 		return nil, err
 	}
 
+	policyNextAction := policyNextActionForException(input.ReasonCode)
+
 	var id string
 	err = tx.QueryRow(`
 		INSERT INTO dsh_delivery_exceptions (
 			operator_context_id, assignment_id, order_id, special_request_id, captain_id, reason_code, note,
 			delivery_status_at_report, severity, correlation_id,
-			reported_latitude, reported_longitude
-		) VALUES ($1,$2::uuid,NULLIF($3,'')::uuid,NULLIF($4,'')::uuid,$5,$6,$7,$8,$9,$10,$11,$12)
+			reported_latitude, reported_longitude, proof_media_ref, policy_next_action
+		) VALUES ($1,$2::uuid,NULLIF($3,'')::uuid,NULLIF($4,'')::uuid,$5,$6,$7,$8,$9,$10,$11,$12,NULLIF($13,''),$14)
 		RETURNING id::text`,
 		operatorContextID, assignmentID, current.OrderID, current.SpecialRequestID, captainID, string(input.ReasonCode), input.Note,
 		string(current.Delivery.Status), string(severityForDeliveryException(input.ReasonCode)), input.CorrelationID,
-		input.Latitude, input.Longitude,
+		input.Latitude, input.Longitude, input.ProofMediaRef, policyNextAction,
 	).Scan(&id)
 	if err != nil {
 		return nil, err
@@ -509,7 +540,7 @@ func ResolveDeliveryExceptionCancelOrder(db *sql.DB, id string, expectedVersion 
 		return nil, fmt.Errorf("%w: cancel resolution is allowed only before pickup; use return-to-store after pickup", ErrConflict)
 	}
 
-	if _, err := orders.CancelOrder(db, orders.CancellationInput{
+	if _, err := orders.CancelOrderSync(db, orders.CreateCancellationCaseInput{
 		OrderID:       current.OrderID,
 		ActorID:       actorID,
 		ActorRole:     "operator",
@@ -862,7 +893,8 @@ const deliveryExceptionColumns = `
 	e.reason_code, e.note, e.delivery_status_at_report, e.severity, e.status,
 	e.correlation_id, e.reported_latitude, e.reported_longitude, e.reported_at,
 	e.acknowledged_at, e.acknowledged_by_actor_id, e.resolved_at, e.resolved_by_actor_id, e.resolution_action,
-	e.resolution_note, e.replacement_assignment_id::text, e.replacement_captain_id, e.return_started_at, e.return_arrived_at, e.returned_at, e.return_accepted_by_actor_id, e.version, e.created_at, e.updated_at`
+	e.resolution_note, e.replacement_assignment_id::text, e.replacement_captain_id, e.return_started_at, e.return_arrived_at, e.returned_at, e.return_accepted_by_actor_id, e.version, e.created_at, e.updated_at,
+	e.proof_media_ref, e.policy_next_action`
 
 type deliveryExceptionScanner func(dest ...any) error
 
@@ -874,6 +906,7 @@ func scanDeliveryException(scan deliveryExceptionScanner) (*DeliveryException, e
 		&item.CorrelationID, &item.ReportedLatitude, &item.ReportedLongitude, &item.ReportedAt,
 		&item.AcknowledgedAt, &item.AcknowledgedByActorID, &item.ResolvedAt, &item.ResolvedByActorID, &item.ResolutionAction,
 		&item.ResolutionNote, &item.ReplacementAssignmentID, &item.ReplacementCaptainID, &item.ReturnStartedAt, &item.ReturnArrivedAt, &item.ReturnedAt, &item.ReturnAcceptedByActorID, &item.Version, &item.CreatedAt, &item.UpdatedAt,
+		&item.ProofMediaRef, &item.PolicyNextAction,
 	)
 	return &item, err
 }
@@ -882,3 +915,4 @@ func getDeliveryExceptionByCorrelationTx(tx *sql.Tx, operatorContextID, correlat
 	row := tx.QueryRow(`SELECT `+deliveryExceptionColumns+` FROM dsh_delivery_exceptions e WHERE e.operator_context_id=$1 AND e.correlation_id=$2`, operatorContextID, correlationID)
 	return scanDeliveryException(row.Scan)
 }
+

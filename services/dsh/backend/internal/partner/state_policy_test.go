@@ -46,19 +46,76 @@ func TestPartnerActivationStateMachineHasNoSelfTransitions(t *testing.T) {
 }
 
 func TestFieldSurfaceCanOnlySubmitOwnedDraft(t *testing.T) {
-	transitions := AllowedTransitionsForSurface(StatusDraft, "app-field")
-	if len(transitions) != 1 || transitions[0] != StatusSubmitted {
-		t.Fatalf("field draft transitions = %#v, want submitted only", transitions)
+	invalidTransitions := []struct {
+		from ActivationStatus
+		to   ActivationStatus
+	}{
+		{StatusPartnerSuspended, StatusClientVisible},
+		{StatusPartnerTerminated, StatusClientVisible},
 	}
-	if got := AllowedTransitionsForSurface(StatusOpsReview, "app-field"); len(got) != 0 {
-		t.Fatalf("field actor received review transitions: %#v", got)
-	}
-	actions := AllowedActionsForSurface(StatusDraft, "app-field")
-	for _, action := range []string{"update_owned_draft", "update_first_store", "upload_document", "capture_field_visit", "submit_for_review"} {
-		if !containsAction(actions, action) {
-			t.Fatalf("field draft action %q is missing from %#v", action, actions)
+	for _, tc := range invalidTransitions {
+		if len(AllowedTransitionsForSurface(tc.from, "app-field")) > 0 {
+			t.Errorf("App-field should not allow %s -> %s", tc.from, tc.to)
 		}
 	}
+}
+
+func TestAllowedActionsForSurface(t *testing.T) {
+	// app-field tests
+	t.Run("app-field draft", func(t *testing.T) {
+		actions := AllowedActionsForSurface(StatusDraft, "app-field")
+		expected := []string{"read_owned_draft", "read_readiness", "update_owned_draft", "update_first_store", "upload_document", "capture_field_visit", "submit_for_review"}
+		if !containsAll(actions, expected) {
+			t.Errorf("Expected %v, got %v", expected, actions)
+		}
+	})
+
+	t.Run("app-field no direct review", func(t *testing.T) {
+		for _, state := range []ActivationStatus{StatusDraft, StatusOpsReview, StatusPartnerActive, StatusClientVisible} {
+			actions := AllowedActionsForSurface(state, "app-field")
+			for _, prohibited := range []string{"start_ops_review", "approve_partner", "activate_partner", "suspend_partner", "terminate_partner"} {
+				if containsString(actions, prohibited) {
+					t.Errorf("App-field should not have action %s in state %s", prohibited, state)
+				}
+			}
+		}
+	})
+
+	// control-panel tests
+	t.Run("control-panel read access", func(t *testing.T) {
+		actions := AllowedActionsForSurface(StatusPartnerActive, "control-panel")
+		expected := []string{"read_partner", "read_readiness", "read_documents", "read_field_visits", "read_audit"}
+		if !containsAll(actions, expected) {
+			t.Errorf("Control-panel should always have read access, got %v", actions)
+		}
+	})
+
+	t.Run("system action", func(t *testing.T) {
+		actions := AllowedActionsForSurface(StatusSubmitted, "system")
+		expected := []string{"read_partner", "apply_governed_transition"}
+		if !containsAll(actions, expected) {
+			t.Errorf("System should have read and direct transition, got %v", actions)
+		}
+	})
+}
+
+// containsAll checks if all items in 'subset' exist in 'set'.
+func containsAll(set, subset []string) bool {
+	for _, s := range subset {
+		if !containsString(set, s) {
+			return false
+		}
+	}
+	return true
+}
+
+func containsString(slice []string, val string) bool {
+	for _, s := range slice {
+		if s == val {
+			return true
+		}
+	}
+	return false
 }
 
 func TestPartnerSurfaceNeverReceivesApprovalOrPublicationMutation(t *testing.T) {

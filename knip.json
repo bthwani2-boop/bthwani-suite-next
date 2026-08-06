@@ -13,9 +13,9 @@
     "**/contracts/generated/**"
   ],
   "ignoreDependencies": [
+    "@react-native/metro-config",
     "@react-native-async-storage/async-storage",
     "@react-native-community/netinfo",
-    "@react-native/metro-config",
     "expo-file-system",
     "expo-haptics",
     "expo-image-picker",
@@ -29,10 +29,10 @@
     "react-native-svg",
     "react-native-worklets",
     "react-native-web",
-    "@bthwani/app-shell",
     "@expo/vector-icons",
     "@types/react",
     "@ast-grep/cli",
+    "@redocly/cli",
     "@stoplight/spectral-cli",
     "autocannon",
     "babel-plugin-react-compiler",
@@ -63,7 +63,8 @@
         "tools/guards/**/*.mjs",
         "tools/scripts/*.mjs",
         "tools/scripts/**/*.mjs",
-        "tools/verification/**/*.mjs"
+        "tools/verification/**/*.mjs",
+        "tools/diagnose-implementing/*.mjs"
       ],
       "ignoreFiles": [
         "tools/contracts/**/*.mjs",
@@ -85,7 +86,6 @@
         "fingerprint.config.js"
       ],
       "ignoreDependencies": [
-        "@bthwani/media-runtime",
         "@expo/fingerprint",
         "@tanstack/react-query",
         "expo-application",
@@ -101,7 +101,6 @@
         "fingerprint.config.js"
       ],
       "ignoreDependencies": [
-        "@bthwani/media-runtime",
         "@expo/fingerprint",
         "@tanstack/react-query",
         "expo-application",
@@ -118,7 +117,6 @@
         "fingerprint.config.js"
       ],
       "ignoreDependencies": [
-        "@bthwani/media-runtime",
         "@expo/fingerprint",
         "expo-application",
         "expo-battery",
@@ -135,7 +133,6 @@
         "fingerprint.config.js"
       ],
       "ignoreDependencies": [
-        "@bthwani/media-runtime",
         "@expo/fingerprint",
         "expo-application",
         "expo-battery",

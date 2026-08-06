@@ -13,13 +13,14 @@ import {
   CpTableHeaderCell,
   CpTextInput,
 } from "@bthwani/control-panel/components";
-import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
+import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
+import { formatWltMoney } from '@bthwani/wlt/dsh';
 import type {
-  RepresentativeActorType,
+  RepresentativeWalletActorType,
   RepresentativeLedgerEntry,
   RepresentativeWallet,
-} from "../../shared/finance-wlt-link/actor-wallet";
+} from '@bthwani/wlt/dsh';
 
 const { request } = createDshHttpClient(
   resolveDshApiBaseUrl(),
@@ -38,10 +39,7 @@ type LookupState =
     };
 
 function amountLabel(value: number, currency: string): string {
-  return `${(value / 100).toLocaleString("ar-YE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} ${currency}`;
+  return formatWltMoney(value, currency);
 }
 
 function statusTone(status: string): CpBadgeTone {
@@ -71,7 +69,7 @@ function ledgerDirectionLabel(entry: RepresentativeLedgerEntry): string {
 }
 
 export function RepresentativeWalletLookup() {
-  const [actorType, setActorType] = useState<RepresentativeActorType>("client");
+  const [actorType, setActorType] = useState<RepresentativeWalletActorType>("client");
   const [actorId, setActorId] = useState("");
   const [state, setState] = useState<LookupState>({ kind: "idle" });
 
@@ -129,7 +127,7 @@ export function RepresentativeWalletLookup() {
           <CpSelect
             aria-label="نوع الممثل"
             value={actorType}
-            onChange={(value) => setActorType(value as RepresentativeActorType)}
+            onChange={(value) => setActorType(value as RepresentativeWalletActorType)}
             options={ACTOR_TYPE_OPTIONS}
           />
         </label>

@@ -12,32 +12,6 @@ import (
 	"dsh-api/internal/wlt"
 )
 
-func HandleGovernedGetPartner(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		p, err := GetPartnerSanitized(db, partnerIDFromPath(r))
-		if errors.Is(err, ErrNotFound) {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
-			return
-		}
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get partner")
-			return
-		}
-		sendJSON(w, http.StatusOK, p)
-	}
-}
-
-func HandleGovernedFieldGetPartner(db *sql.DB) http.HandlerFunc {
-	inner := HandleGovernedGetPartner(db)
-	return func(w http.ResponseWriter, r *http.Request) {
-		actorID, _ := actorFromContext(r)
-		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
-			return
-		}
-		inner(w, r)
-	}
-}
-
 func HandleGovernedFieldUpdatePartner(db *sql.DB, wltClient *wlt.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		actorID, _ := actorFromContext(r)
@@ -181,8 +155,8 @@ func HandleGovernedActivationTransition(db *sql.DB, wltClient *wlt.Client) http.
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load partner")
 			return
 		}
-		if input.ToStatus == StatusPartnerDeactivated && current.PayoutDestinationID != "" && (wltClient == nil || !wltClient.Configured()) {
-			sendError(w, http.StatusServiceUnavailable, "WLT_UNAVAILABLE", "WLT is required before deactivating a partner with an active payout destination")
+		if (input.ToStatus == StatusPartnerSuspended || input.ToStatus == StatusPartnerTerminated) && current.PayoutDestinationID != "" && (wltClient == nil || !wltClient.Configured()) {
+			sendError(w, http.StatusServiceUnavailable, "WLT_UNAVAILABLE", "WLT is required before suspending or terminating a partner with an active payout destination")
 			return
 		}
 
@@ -191,7 +165,7 @@ func HandleGovernedActivationTransition(db *sql.DB, wltClient *wlt.Client) http.
 			return
 		}
 
-		if input.ToStatus == StatusPartnerDeactivated && updated.PayoutDestinationID != "" {
+		if (input.ToStatus == StatusPartnerSuspended || input.ToStatus == StatusPartnerTerminated) && updated.PayoutDestinationID != "" {
 			if err := wltClient.DeactivatePayoutDestination(
 				r.Context(), partnerID, actorID, input.CorrelationID,
 				governedMutationKey("partner-payout-deactivate", partnerID, event.ID),
@@ -201,37 +175,6 @@ func HandleGovernedActivationTransition(db *sql.DB, wltClient *wlt.Client) http.
 			}
 		}
 		sendJSON(w, http.StatusOK, map[string]any{"partner": updated, "event": event})
-	}
-}
-
-func HandleGovernedLinkPartnerStore(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		actorID, _ := actorFromContext(r)
-		var input struct {
-			StoreID string `json:"storeId"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
-			return
-		}
-		stores, err := LinkPartnerStoreGoverned(r.Context(), db, partnerIDFromPath(r), input.StoreID, actorID)
-		if errors.Is(err, ErrInvalid) {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "partnerId, storeId, and actor are required")
-			return
-		}
-		if errors.Is(err, ErrNotFound) {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner or store not found")
-			return
-		}
-		if errors.Is(err, ErrStoreOwnershipConflict) {
-			sendError(w, http.StatusConflict, "STORE_OWNERSHIP_CONFLICT", "store already belongs to another partner")
-			return
-		}
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to link partner store")
-			return
-		}
-		sendJSON(w, http.StatusOK, map[string]any{"stores": stores, "total": len(stores)})
 	}
 }
 
@@ -349,7 +292,7 @@ func expectedPartnerVersion(r *http.Request) int {
 
 func unmaskedPayoutValue(value string) string {
 	value = strings.TrimSpace(value)
-	if strings.Contains(value, "*") || strings.Contains(value, "•") {
+	if strings.Contains(value, "*") || strings.Contains(value, "â€¢") {
 		return ""
 	}
 	return value

@@ -20,7 +20,7 @@ func RegisterFieldReadinessRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 
 	mux.HandleFunc("POST /dsh/field/stores/{storeId}/visits", protected.handleCreateGovernedFieldVisit)
 	mux.HandleFunc("GET /dsh/field/stores/{storeId}/visits", protected.handleListFieldVisits)
@@ -29,7 +29,7 @@ func RegisterFieldReadinessRoutes(
 	mux.HandleFunc("PUT /dsh/field/visits/{visitId}/checks", protected.handleUpsertGovernedReadinessCheck)
 	mux.HandleFunc("GET /dsh/field/visits/{visitId}/checks", protected.handleListVisitChecks)
 	mux.HandleFunc("POST /dsh/field/stores/{storeId}/escalations", protected.handleCreateGovernedReadinessEscalation)
-	mux.HandleFunc("GET /dsh/operator/field-readiness/escalations", protected.handleListOperatorEscalations)
-	mux.HandleFunc("PATCH /dsh/operator/field-readiness/escalations/{escalationId}", protected.handleUpdateGovernedEscalation)
+	mux.HandleFunc("GET /dsh/operator/field-readiness/escalations", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleListOperatorEscalations))
+	mux.HandleFunc("PATCH /dsh/operator/field-readiness/escalations/{escalationId}", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleUpdateGovernedEscalation))
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/onboarding-status", protected.handleGovernedPartnerOnboardingStatus)
 }

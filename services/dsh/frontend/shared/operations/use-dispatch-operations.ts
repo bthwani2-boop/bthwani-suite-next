@@ -101,14 +101,12 @@ export function useDispatchOperations() {
       message: '',
     }));
     try {
-      const operatorContextId = assignment.operatorContextId ?? 'default';
       const decisionsPromise = fetchDispatchDecisions({
-        operatorContextId,
         assignmentId: assignment.id,
         limit: 100,
       });
       const candidates = assignment.serviceAreaCode
-        ? await fetchCaptainDispatchCandidates(assignment.serviceAreaCode, operatorContextId)
+        ? await fetchCaptainDispatchCandidates(assignment.serviceAreaCode)
         : [];
       const decisions = await decisionsPromise;
 
@@ -130,7 +128,7 @@ export function useDispatchOperations() {
   const expire = React.useCallback(async () => {
     setState((current) => ({ ...current, mutationKind: 'expiring', message: '' }));
     try {
-      const expiredCount = await expireDispatchAssignments('default', 200);
+      const expiredCount = await expireDispatchAssignments(200);
       await load({ preserveSelection: true });
       setState((current) => ({
         ...current,
@@ -183,7 +181,6 @@ export function useDispatchOperations() {
     setState((current) => ({ ...current, mutationKind: 'reassigning', message: '' }));
     try {
       await reassignDispatchAssignment(assignment.id, {
-        operatorContextId: assignment.operatorContextId ?? 'default',
         captainId: normalizedCaptainId,
         serviceAreaCode,
         idempotencyKey: buildDispatchAssignmentIdempotencyKey(assignment.orderId, normalizedCaptainId),

@@ -42,7 +42,7 @@ func TestCancelledOrderRemovesCaptainTaskAndRejectsStaleAcceptDBIntegration(t *t
 
 	if _, err := db.Exec(`
 		INSERT INTO dsh_stores(id,slug,display_name,status,city_code,service_area_code,serviceability_status,is_visible)
-		VALUES($1,$1,'Dispatch Cancellation Store','active','SAN','SAN-1','serviceable',true)`, storeID); err != nil {
+		VALUES ($1,$1,'Dispatch Cancellation Store', 'published','SAN','SAN-1','serviceable',true)`, storeID); err != nil {
 		t.Fatalf("insert store: %v", err)
 	}
 

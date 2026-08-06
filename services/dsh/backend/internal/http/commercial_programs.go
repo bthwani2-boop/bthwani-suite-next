@@ -128,7 +128,7 @@ func (s *protectedStoreServer) ensureWLTProduct(
 
 // GET /dsh/operator/marketing/loyalty-tiers
 func (s *protectedStoreServer) handleListLoyaltyTiers(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok || !s.requireWLTCommercial(w) {
 		return
 	}
@@ -153,7 +153,7 @@ func (s *protectedStoreServer) handleListLoyaltyTiers(w http.ResponseWriter, r *
 
 // POST /dsh/operator/marketing/loyalty-tiers
 func (s *protectedStoreServer) handleCreateLoyaltyTier(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -187,7 +187,7 @@ func (s *protectedStoreServer) handleCreateLoyaltyTier(w http.ResponseWriter, r 
 
 // PATCH /dsh/operator/marketing/loyalty-tiers/{tierId}
 func (s *protectedStoreServer) handleUpdateLoyaltyTier(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -242,7 +242,7 @@ func (s *protectedStoreServer) handleUpdateLoyaltyTier(w http.ResponseWriter, r 
 
 // GET /dsh/operator/marketing/subscription-plans
 func (s *protectedStoreServer) handleListSubscriptionPlans(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok || !s.requireWLTCommercial(w) {
 		return
 	}
@@ -271,7 +271,7 @@ func (s *protectedStoreServer) handleListSubscriptionPlans(w http.ResponseWriter
 
 // POST /dsh/operator/marketing/subscription-plans
 func (s *protectedStoreServer) handleCreateSubscriptionPlan(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok || !s.requireWLTCommercial(w) {
 		return
 	}
@@ -336,7 +336,7 @@ func (s *protectedStoreServer) handleCreateSubscriptionPlan(w http.ResponseWrite
 
 // PATCH /dsh/operator/marketing/subscription-plans/{planId}
 func (s *protectedStoreServer) handleUpdateSubscriptionPlan(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok || !s.requireWLTCommercial(w) {
 		return
 	}

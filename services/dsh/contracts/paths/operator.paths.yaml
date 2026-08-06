@@ -318,25 +318,6 @@
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshAdminRolesListResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-  post:
-    operationId: createDshAdminRole
-    summary: Create an admin role.
-    tags: [DshAdministration]
-    security:
-      - bearerAuth: []
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreateAdminRoleRequest" }
-    responses:
-      "200":
-        description: Admin role created.
-        content:
-          application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshAdminRoleResponse" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
 /dsh/operator/admin/staff:
   get:

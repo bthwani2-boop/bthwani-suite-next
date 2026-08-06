@@ -186,8 +186,7 @@ func TestPartnerWltReconciliationCreatesAndResolvesMaskedReadbackCaseDBIntegrati
 			payout_destination_id = 'wpd-reconciliation-ref',
 			masked_account_number = '*****1234',
 			masked_iban = '********5678',
-			masked_mobile_number = '',
-			bank_account_number = '', bank_iban = '', payout_mobile_number = ''
+			masked_mobile_number = ''
 		WHERE id = $1`, partnerID); err != nil {
 		t.Fatal(err)
 	}

@@ -87,7 +87,7 @@ export type WorkforceMe = FieldAgent & {
 export type CreateFieldAgentInput = {
   readonly fullNameAr: string;
   readonly fullNameEn?: string | undefined;
-  readonly phoneE164: string;
+  readonly actorId: string;
   readonly engagementType?: EngagementType | undefined;
   readonly engagementStartDate?: string | undefined;
   readonly serviceZoneId: string;
@@ -110,7 +110,7 @@ export type UpdateFieldAgentInput = {
 export type CreateCaptainInput = {
   readonly fullNameAr: string;
   readonly fullNameEn?: string | undefined;
-  readonly phoneE164: string;
+  readonly actorId: string;
   readonly engagementType?: EngagementType | undefined;
   readonly engagementStartDate?: string | undefined;
   readonly photoMediaRef?: string | undefined;
@@ -143,7 +143,7 @@ export type UpdateCaptainInput = {
 export type CreateEmployeeInput = {
   readonly fullNameAr: string;
   readonly fullNameEn?: string | undefined;
-  readonly phoneE164: string;
+  readonly actorId: string;
   readonly engagementType?: "employee" | undefined;
   readonly engagementStartDate?: string | undefined;
   readonly photoMediaRef?: string | undefined;
@@ -329,4 +329,44 @@ export const ENGAGEMENT_STATUS_LABEL_AR: Record<EngagementStatus, string> = {
 export const ENGAGEMENT_TYPE_LABEL_AR: Record<EngagementType, string> = {
   independent_contractor: "مقدم خدمة مستقل",
   employee: "موظف رسمي",
+};
+
+export type ProvisioningCase = {
+  readonly id: string;
+  readonly idempotencyKey: string;
+  readonly status: string;
+  readonly workforceKind: string;
+  readonly actorId?: string;
+  readonly workforceCode?: string;
+  readonly failureReason?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+export type StartProvisioningInput = {
+  readonly workforceKind: string;
+  readonly username: string;
+  readonly phoneE164: string;
+  readonly role: string;
+  readonly operatorContextId: string;
+  readonly payload: Record<string, unknown>;
+};
+
+export type BlockerReason =
+  | "IDENTITY_SUSPENDED"
+  | "PROFILE_INCOMPLETE"
+  | "DOCUMENTS_EXPIRED"
+  | "EMPLOYMENT_TERMINATED"
+  | "NO_ACTIVE_ASSIGNMENT"
+  | "SHIFT_INACTIVE"
+  | "OUTSIDE_ACTIVE_AREA"
+  | "FINANCIAL_ELIGIBILITY_BLOCKED"
+  | "ELIGIBILITY_UNAVAILABLE";
+
+export type ReadinessGate = {
+  readonly actorId: string;
+  readonly workforceKind: string;
+  readonly status: "ALLOWED" | "BLOCKED";
+  readonly blockerReasons: readonly BlockerReason[];
+  readonly checkedAt: string;
 };

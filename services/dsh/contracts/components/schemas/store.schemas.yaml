@@ -4,10 +4,12 @@
 DshStoreStatus:
   type: string
   enum:
-    - active
-    - inactive
-    - temporarily_closed
-    - unavailable
+    - draft
+    - ready
+    - published
+    - paused
+    - suspended
+    - closed
 
 DshStoreSummary:
   type: object
@@ -147,6 +149,17 @@ DshStoreDetailResponse:
     store:
       $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreDetail"
 
+DshStorefrontResponse:
+  type: object
+  required: [versionToken, store, catalog]
+  properties:
+    versionToken:
+      type: string
+    store:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreDetail"
+    catalog:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshCatalogResponse"
+
 DshStoreContextResponse:
   type: object
   required: [actorRole, scope, store]
@@ -160,8 +173,9 @@ DshStoreContextResponse:
     store:
       $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreDetail"
     latestAction:
-      $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreAuditEvent"
-      nullable: true
+      anyOf:
+        - $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreAuditEvent"
+        - type: 'null'
 
 OperatorStoreGovernanceRequest:
   type: object

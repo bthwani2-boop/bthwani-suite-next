@@ -1,8 +1,7 @@
 import React, { useCallback } from "react";
 import { I18nManager } from "react-native";
 import { LoadingState, StateView } from "@bthwani/ui-kit";
-import { useStoreDetailController } from "../../shared/store";
-import { usePublishedCatalogController } from "../../shared/catalog";
+import { useStorefrontController } from "../../shared/storefront";
 import type {
   CatalogCategory,
   CatalogProduct,
@@ -23,15 +22,13 @@ export function StoreDetailScreen({ storeId, onBack, onGoToCart }: Props) {
   const identity = useIdentitySession();
   const authKind =
     identity.state.kind === "authenticated" ? "authenticated" : "unauthenticated";
-  const storeCtrl = useStoreDetailController(storeId);
-  const catalogCtrl = usePublishedCatalogController(storeId);
+  const storefrontCtrl = useStorefrontController(storeId);
   const cartCtrl = useCartController(storeId, authKind);
 
   const handleRetry = useCallback(() => {
-    storeCtrl.retry();
-    catalogCtrl.retry();
+    storefrontCtrl.retry();
     cartCtrl.retry();
-  }, [storeCtrl, catalogCtrl, cartCtrl]);
+  }, [storefrontCtrl, cartCtrl]);
 
   const handleAddToCart = useCallback(
     async (
@@ -49,65 +46,44 @@ export function StoreDetailScreen({ storeId, onBack, onGoToCart }: Props) {
     [cartCtrl],
   );
 
-  if (storeCtrl.state.kind === "loading" || catalogCtrl.state.kind === "loading") {
+  if (storefrontCtrl.state.kind === "loading") {
     return <LoadingState title="جاري تحميل واجهة المتجر…" />;
   }
 
-  if (storeCtrl.state.kind === "service_unavailable") {
+  if (storefrontCtrl.state.kind === "not_found") {
     return (
       <StateView
-        title="الخدمة غير متاحة"
-        description="تعذر الوصول إلى الخادم، يرجى المحاولة لاحقاً."
+        title="المتجر غير متوفر"
+        description={storefrontCtrl.state.message}
         actionLabel="إعادة المحاولة"
         onActionPress={handleRetry}
       />
     );
   }
 
-  if (storeCtrl.state.kind === "error") {
-    return (
-      <StateView
-        title="تعذر تحميل المتجر"
-        description={storeCtrl.state.message}
-        actionLabel="إعادة المحاولة"
-        onActionPress={handleRetry}
-      />
-    );
-  }
-
-  if (
-    catalogCtrl.state.kind === "error" ||
-    catalogCtrl.state.kind === "permission_denied"
-  ) {
-    const message =
-      catalogCtrl.state.kind === "error"
-        ? catalogCtrl.state.message
-        : "لا توجد صلاحيات لعرض كتالوج هذا المتجر.";
-    return (
-      <StateView
-        title="تعذر تحميل المنتجات"
-        description={message}
-        actionLabel="إعادة المحاولة"
-        onActionPress={handleRetry}
-      />
-    );
-  }
-
-  if (
-    storeCtrl.state.kind !== "success" ||
-    catalogCtrl.state.kind !== "success"
-  ) {
+  if (storefrontCtrl.state.kind === "error") {
     return (
       <StateView
         title="تعذر عرض المتجر"
-        description="لم تعد بيانات المتجر أو الكتالوج في حالة قابلة للعرض."
+        description={storefrontCtrl.state.message}
         actionLabel="إعادة المحاولة"
         onActionPress={handleRetry}
       />
     );
   }
 
-  const store = storeCtrl.state.store;
+  if (storefrontCtrl.state.kind !== "success") {
+    return (
+      <StateView
+        title="خطأ غير معروف"
+        description="حدث خطأ غير معروف."
+        actionLabel="إعادة المحاولة"
+        onActionPress={handleRetry}
+      />
+    );
+  }
+
+  const store = storefrontCtrl.state.payload.store;
   if (!store.isClientEligible) {
     return (
       <StateView
@@ -136,7 +112,7 @@ export function StoreDetailScreen({ storeId, onBack, onGoToCart }: Props) {
     );
   }
 
-  const catalog = catalogCtrl.state.catalog;
+  const catalog = storefrontCtrl.state.payload.catalog;
   const categories = catalog.categories.filter(
     (category: CatalogCategory) => category.isActive,
   );

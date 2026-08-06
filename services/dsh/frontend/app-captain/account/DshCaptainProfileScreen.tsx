@@ -1,10 +1,12 @@
 import React from 'react';
+import { useIdentitySession } from '@bthwani/core-identity';
 import { Box, KeyValueList, SectionHeader, Divider,
   spacing,
 } from '@bthwani/ui-kit';
 import { DshOperationScreen } from '../DshOperationScreen';
 import type { DshCaptainProfileSnapshot } from '../dsh-captain.types';
 import type { DshCaptainProfileScreenState } from '../../shared/delivery';
+import { useCaptainReadinessController } from '../../shared/dispatch';
 
 export type DshCaptainProfileScreenProps = {
 	section?: 'profile-get' | 'tier-info' | 'tier-evaluate';
@@ -66,26 +68,43 @@ export function DshCaptainProfileScreen({
 	onBack,
 	onRetry,
 }: DshCaptainProfileScreenProps) {
-	const resolvedState = state ?? (snapshot ? 'ready' : 'loading');
+	const session = useIdentitySession();
+	const readinessController = useCaptainReadinessController(session.state.kind === 'authenticated' && !snapshot);
+	const liveSnapshot = session.state.kind === 'authenticated' && readinessController.state.kind === 'ready'
+		? {
+			displayName: session.state.identity.subject,
+			tierLabel: 'غير متاح من عقد الجاهزية',
+			readinessLabel: readinessController.state.readiness.ready
+				? 'جاهز لاستقبال المهام'
+				: `غير جاهز: ${readinessController.state.readiness.missing.join('، ')}`,
+		}
+		: undefined;
+	const resolvedSnapshot = snapshot ?? liveSnapshot;
+	const resolvedState: DshCaptainProfileScreenState = state
+		?? (resolvedSnapshot
+			? 'ready'
+			: readinessController.state.kind === 'error' || session.state.kind === 'signed_out' || session.state.kind === 'error'
+				? 'error'
+				: 'loading');
 	return (
 		<DshOperationScreen
 			state={resolvedState}
 			title="ملف الكابتن"
 			subtitle="لقطة موحدة للملف والطبقة والجاهزية بنفس أسلوب العرض المعتمد في تطبيق العميل."
-			content={snapshot ? (
+			content={resolvedSnapshot ? (
 				<Box gap={4}>
-					<ProfileSummarySection snapshot={snapshot} />
+					<ProfileSummarySection snapshot={resolvedSnapshot} />
 					<Divider />
-					{section === 'tier-info' ? <TierSection snapshot={snapshot} mode="tier-info" /> : null}
-					{section === 'tier-evaluate' ? <TierSection snapshot={snapshot} mode="tier-evaluate" /> : null}
-					{section === 'profile-get' ? <TierSection snapshot={snapshot} mode="tier-info" /> : null}
+					{section === 'tier-info' ? <TierSection snapshot={resolvedSnapshot} mode="tier-info" /> : null}
+					{section === 'tier-evaluate' ? <TierSection snapshot={resolvedSnapshot} mode="tier-evaluate" /> : null}
+					{section === 'profile-get' ? <TierSection snapshot={resolvedSnapshot} mode="tier-info" /> : null}
 				</Box>
 			) : null}
 			primaryActionLabel={onBack ? 'العودة' : undefined}
 			secondaryActionLabel={onRetry ? 'إعادة المحاولة' : undefined}
 			onPrimaryAction={onBack}
 			onSecondaryAction={onRetry}
-			onRetry={onRetry}
+			onRetry={onRetry ?? readinessController.retry}
 		/>
 	);
 }

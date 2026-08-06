@@ -5,6 +5,7 @@ export type {
   DeliveryPricingStatus,
   DeliveryPricingRecord,
   DeliveryPricingMutation,
+  DeliveryPricingFulfillmentMode,
 } from "./partner-delivery-pricing.api";
 
 export {

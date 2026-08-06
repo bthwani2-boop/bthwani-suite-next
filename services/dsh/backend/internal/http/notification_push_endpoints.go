@@ -10,7 +10,7 @@ import (
 
 // PUT /dsh/notifications/push-endpoints
 func (s *protectedStoreServer) handleUpsertNotificationPushEndpoint(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field")
 	if !ok {
 		return
 	}
@@ -24,10 +24,12 @@ func (s *protectedStoreServer) handleUpsertNotificationPushEndpoint(w http.Respo
 		return
 	}
 	endpoint, err := notifications.UpsertPushEndpoint(s.db, actor.ID, actor.Role, notifications.PushEndpointInput{
-		Provider:      body.Provider,
-		EndpointToken: body.EndpointToken,
-		DeviceID:      body.DeviceID,
-		Platform:      body.Platform,
+		Provider:          body.Provider,
+		EndpointToken:     body.EndpointToken,
+		DeviceID:          body.DeviceID,
+		Platform:          body.Platform,
+		IdentitySessionID: actor.SessionID,
+		Surface:           actor.SessionSurface,
 	})
 	if errors.Is(err, notifications.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "push endpoint is invalid")
@@ -42,7 +44,7 @@ func (s *protectedStoreServer) handleUpsertNotificationPushEndpoint(w http.Respo
 
 // DELETE /dsh/notifications/push-endpoints/{deviceId}
 func (s *protectedStoreServer) handleDeactivateNotificationPushEndpoint(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field")
 	if !ok {
 		return
 	}

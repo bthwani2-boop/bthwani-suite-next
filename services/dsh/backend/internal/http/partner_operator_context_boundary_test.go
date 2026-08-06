@@ -32,7 +32,7 @@ func TestTrustedPartnerOperatorContextComesFromIdentity(t *testing.T) {
 		Roles:     []string{"operator"},
 		AuthState: "authenticated",
 	})
-	protected := newProtectedStoreServer(nil, auth.NewClient(identityServer.URL), nil, nil)
+	protected := newProtectedStoreServer(nil, auth.NewClient(identityServer.URL), nil, nil, nil)
 
 	called := false
 	handler := protected.withTrustedPartnerOperatorContext(func(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +62,7 @@ func TestTrustedPartnerOperatorContextRejectsIdentityWithoutOperatorContext(t *t
 		Roles:     []string{"operator"},
 		AuthState: "authenticated",
 	})
-	protected := newProtectedStoreServer(nil, auth.NewClient(identityServer.URL), nil, nil)
+	protected := newProtectedStoreServer(nil, auth.NewClient(identityServer.URL), nil, nil, nil)
 
 	called := false
 	handler := protected.withTrustedPartnerOperatorContext(func(http.ResponseWriter, *http.Request) { called = true })
@@ -95,7 +95,7 @@ func TestTrustedPartnerOperatorContextUsesIdentityOperatorContextInsteadOfProces
 		Roles:     []string{"operator"},
 		AuthState: "authenticated",
 	})
-	protected := newProtectedStoreServer(nil, auth.NewClient(identityServer.URL), nil, nil)
+	protected := newProtectedStoreServer(nil, auth.NewClient(identityServer.URL), nil, nil, nil)
 
 	called := false
 	handler := protected.withTrustedPartnerOperatorContext(func(w http.ResponseWriter, r *http.Request) {

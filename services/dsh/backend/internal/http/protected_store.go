@@ -6,26 +6,37 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 
 	"dsh-api/internal/auth"
 	"dsh-api/internal/homediscovery"
 	"dsh-api/internal/media"
 	"dsh-api/internal/partner"
+	"dsh-api/internal/platform/changeset"
+	"dsh-api/internal/platform/provider"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
+	"dsh-api/internal/platformclient"
+	"dsh-api/internal/workforceclient"
+	"dsh-api/internal/mapproviders"
 )
 
 type protectedStoreServer struct {
-	db       *sql.DB
-	identity *auth.Client
-	wlt      *wlt.Client
-	media    *media.Provider
+	db              *sql.DB
+	identity        *auth.Client
+	wlt             *wlt.Client
+	platformClient  *platformclient.Client
+	media           *media.Provider
+	workforce       *workforceclient.Client
+	decisionService store.DecisionService
+	changeSets      *changeset.Service
+	providers       *provider.Service
+	maps            *mapproviders.Client
 }
 
 // Partners permission actions on the control-panel surface, covering store
-// listing/governance (partners & stores nav). "operator" remains a valid
-// fallback role during RBAC data migration.
+// listing and governance. Identity permissions are the only capability source.
 const (
 	PartnersPermissionRead     = "partners.read"
 	PartnersPermissionManage   = "partners.manage"
@@ -33,7 +44,7 @@ const (
 )
 
 func (s *protectedStoreServer) handleHomeDiscoveryAdminList(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionRead, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionRead)
 	if !ok {
 		return
 	}
@@ -46,7 +57,7 @@ func (s *protectedStoreServer) handleHomeDiscoveryAdminList(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleHomeDiscoveryAdminCreate(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage)
 	if !ok {
 		return
 	}
@@ -59,7 +70,7 @@ func (s *protectedStoreServer) handleHomeDiscoveryAdminCreate(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleHomeDiscoveryAdminUpdate(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage)
 	if !ok {
 		return
 	}
@@ -72,7 +83,7 @@ func (s *protectedStoreServer) handleHomeDiscoveryAdminUpdate(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleHomeDiscoveryAdminDelete(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage)
 	if !ok {
 		return
 	}
@@ -100,8 +111,18 @@ func (s *protectedStoreServer) writeHomeDiscoveryAdminResult(w http.ResponseWrit
 	store.SendJSON(w, status, map[string]any{"item": item})
 }
 
-func newProtectedStoreServer(db *sql.DB, identity *auth.Client, wltClient *wlt.Client, mediaProvider *media.Provider) *protectedStoreServer {
-	return &protectedStoreServer{db: db, identity: identity, wlt: wltClient, media: mediaProvider}
+func newProtectedStoreServer(db *sql.DB, identity *auth.Client, wltClient *wlt.Client, platformClient *platformclient.Client, mediaProvider *media.Provider) *protectedStoreServer {
+	return &protectedStoreServer{
+		db:             db,
+		identity:       identity,
+		wlt:            wltClient,
+		platformClient: platformClient,
+		media:          mediaProvider,
+		workforce:      workforceclient.NewClient(os.Getenv("DSH_WORKFORCE_BASE_URL"), os.Getenv("WORKFORCE_DSH_SERVICE_TOKEN")),
+		changeSets:     changeset.NewService(db),
+		providers:      provider.NewService(db),
+		maps:           mapproviders.NewClient(os.Getenv("DSH_MAPS_BASE_URL"), nil),
+	}
 }
 
 func (s *protectedStoreServer) mediaClient() *media.Client {
@@ -111,6 +132,8 @@ func (s *protectedStoreServer) mediaClient() *media.Client {
 	return s.media.Client()
 }
 
+type storeActorContextKeyType struct{}
+
 func partnerRequestWithActor(r *http.Request, actor store.StoreActor) *http.Request {
 	ctx := r.Context()
 	if strings.TrimSpace(actor.OperatorContextID) != "" {
@@ -119,7 +142,13 @@ func partnerRequestWithActor(r *http.Request, actor store.StoreActor) *http.Requ
 	ctx = context.WithValue(ctx, "actor_id", actor.ID)
 	ctx = context.WithValue(ctx, "actor_phone", actor.PhoneE164)
 	ctx = context.WithValue(ctx, "actor_surface", dshActorSurface(actor.Role))
+	ctx = context.WithValue(ctx, storeActorContextKeyType{}, actor)
 	return r.WithContext(ctx)
+}
+
+func (s *protectedStoreServer) ActorFromContext(ctx context.Context) (store.StoreActor, bool) {
+	actor, ok := ctx.Value(storeActorContextKeyType{}).(store.StoreActor)
+	return actor, ok
 }
 
 func dshActorSurface(role string) string {
@@ -158,18 +187,13 @@ func (s *protectedStoreServer) servePartnerHandler(
 	handler(w, partnerRequestWithActor(r, actor))
 }
 
-// servePartnerPermissionHandler is servePartnerHandler's fine-grained
-// counterpart: it grants access via a Permission{Service:"dsh",
-// Surface:"control-panel", Action:action} entry in addition to the
-// fallbackRoles, mirroring requirePermission.
 func (s *protectedStoreServer) servePartnerPermissionHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 	handler http.HandlerFunc,
 	action string,
-	fallbackRoles ...string,
 ) {
-	actor, ok := s.requirePermission(w, r, "control-panel", action, fallbackRoles...)
+	actor, ok := s.requirePermission(w, r, "control-panel", action)
 	if !ok {
 		return
 	}
@@ -185,7 +209,7 @@ func (s *protectedStoreServer) servePartnerSelfHandler(
 	if !ok {
 		return
 	}
-	row, _, err := store.ResolveActorStore(r.Context(), s.db, actor)
+	row, _, err := store.ResolveActorStore(r.Context(), s.db, s.workforce, actor)
 	if err != nil {
 		s.writeStoreError(w, err)
 		return
@@ -193,84 +217,32 @@ func (s *protectedStoreServer) servePartnerSelfHandler(
 	handler(w, partnerRequestWithStore(r, actor, row.ID))
 }
 
-func (s *protectedStoreServer) handleListPartners(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleListPartners(s.db), PartnersPermissionRead, "operator")
-}
-
-func (s *protectedStoreServer) handleCreatePartner(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleCreatePartner(s.db), PartnersPermissionManage, "operator")
-}
-
-func (s *protectedStoreServer) handleGetPartner(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleGetPartner(s.db), PartnersPermissionRead, "operator")
-}
-
-func (s *protectedStoreServer) handleActivationTransition(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleActivationTransition(s.db), PartnersPermissionActivate, "operator")
-}
-
-func (s *protectedStoreServer) handleGetPartnerReadiness(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleGetReadiness(s.db), PartnersPermissionRead, "operator")
-}
-
 func (s *protectedStoreServer) handleListPartnerDocuments(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleListDocuments(s.db), PartnersPermissionRead, "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleListDocuments(s.db), PartnersPermissionRead)
 }
 
 func (s *protectedStoreServer) handleAddPartnerDocument(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleAddDocument(s.db), PartnersPermissionManage, "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleAddDocument(s.db), PartnersPermissionManage)
 }
 
 func (s *protectedStoreServer) handleReviewPartnerDocument(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleReviewDocument(s.db), PartnersPermissionManage, "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleReviewDocument(s.db), PartnersPermissionManage)
 }
 
 func (s *protectedStoreServer) handleListPartnerStores(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleListPartnerStores(s.db), PartnersPermissionRead, "operator")
-}
-
-func (s *protectedStoreServer) handleLinkPartnerStore(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleLinkPartnerStore(s.db), PartnersPermissionManage, "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleListPartnerStores(s.db), PartnersPermissionRead)
 }
 
 func (s *protectedStoreServer) handleListPartnerFieldVisits(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleListFieldVisits(s.db), PartnersPermissionRead, "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleListFieldVisits(s.db), PartnersPermissionRead)
 }
 
 func (s *protectedStoreServer) handleListPartnerAudit(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleListAudit(s.db), PartnersPermissionRead, "operator")
-}
-
-func (s *protectedStoreServer) handleFieldListPartnerDrafts(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleListFieldPartnerDrafts(s.db), "field")
-}
-
-func (s *protectedStoreServer) handleFieldCreatePartnerDraft(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleFieldCreateDraft(s.db), "field")
-}
-
-func (s *protectedStoreServer) handleFieldGetPartnerDraft(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleFieldGetPartner(s.db), "field")
-}
-
-func (s *protectedStoreServer) handleFieldUpdatePartnerDraft(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleFieldUpdatePartner(s.db), "field")
+	s.servePartnerPermissionHandler(w, r, partner.HandleListAudit(s.db), PartnersPermissionRead)
 }
 
 func (s *protectedStoreServer) handleFieldUploadPartnerDocument(w http.ResponseWriter, r *http.Request) {
 	s.servePartnerHandler(w, r, partner.HandleFieldUploadDocument(s.db), "field")
-}
-
-func (s *protectedStoreServer) handleFieldCreatePartnerVisit(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleFieldCreateVisit(s.db), "field")
-}
-
-func (s *protectedStoreServer) handleFieldSubmitPartnerDraft(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleFieldSubmitPartner(s.db), "field")
-}
-
-func (s *protectedStoreServer) handleFieldGetPartnerReadiness(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleFieldGetReadiness(s.db), "field")
 }
 
 func (s *protectedStoreServer) handleFieldListPartnerDocuments(w http.ResponseWriter, r *http.Request) {
@@ -281,16 +253,12 @@ func (s *protectedStoreServer) handleFieldListPartnerFieldVisits(w http.Response
 	s.servePartnerHandler(w, r, partner.HandleFieldListFieldVisits(s.db), "field")
 }
 
-func (s *protectedStoreServer) handlePartnerActivationReadiness(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerSelfHandler(w, r, partner.HandlePartnerMeReadiness(s.db))
-}
-
 func (s *protectedStoreServer) handleStoreContext(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner", "field", "captain", "operator")
+	actor, ok := s.requireActor(w, r, "partner", "field", "captain")
 	if !ok {
 		return
 	}
-	row, scope, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, r.URL.Query().Get("storeId"))
+	row, scope, err := store.ResolveActorStoreForID(r.Context(), s.db, s.workforce, actor, r.URL.Query().Get("storeId"))
 	if err != nil {
 		s.writeStoreError(w, err)
 		return
@@ -309,7 +277,7 @@ func (s *protectedStoreServer) handleStoreContext(w http.ResponseWriter, r *http
 }
 
 func (s *protectedStoreServer) handleOperatorStores(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead)
 	if !ok {
 		return
 	}
@@ -331,7 +299,7 @@ func (s *protectedStoreServer) handleOperatorStores(w http.ResponseWriter, r *ht
 }
 
 func (s *protectedStoreServer) handleOperatorStoreDetail(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead)
 	if !ok {
 		return
 	}
@@ -357,7 +325,7 @@ func (s *protectedStoreServer) handlePartnerSettings(w http.ResponseWriter, r *h
 		return
 	}
 	response, err := store.UpdatePartnerSettings(
-		r.Context(), s.db, actor, r.PathValue("storeId"),
+		r.Context(), s.db, s.workforce, actor, r.PathValue("storeId"),
 		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input,
 	)
 	s.writeActionResponse(w, response, err)
@@ -369,7 +337,7 @@ func (s *protectedStoreServer) handleGetPartnerSettings(w http.ResponseWriter, r
 		return
 	}
 	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -387,7 +355,7 @@ func (s *protectedStoreServer) handleGetPartnerSettings(w http.ResponseWriter, r
 		"storeId":        row.ID,
 		"status":         row.Status,
 		"deliveryModes":  row.DeliveryModes,
-		"storeOpen":      row.Status == store.StatusActive,
+		"storeOpen":      string(row.Status) == "active",
 		"listingEnabled": row.IsVisible,
 		"version":        row.Version,
 	})
@@ -403,7 +371,7 @@ func (s *protectedStoreServer) handleFieldVerification(w http.ResponseWriter, r 
 		return
 	}
 	response, err := store.SubmitFieldVerification(
-		r.Context(), s.db, actor, r.PathValue("storeId"),
+		r.Context(), s.db, s.workforce, actor, r.PathValue("storeId"),
 		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input,
 	)
 	s.writeActionResponse(w, response, err)
@@ -419,14 +387,14 @@ func (s *protectedStoreServer) handleCaptainReadiness(w http.ResponseWriter, r *
 		return
 	}
 	response, err := store.ReportCaptainReadiness(
-		r.Context(), s.db, actor, r.PathValue("storeId"),
+		r.Context(), s.db, s.workforce, actor, r.PathValue("storeId"),
 		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input,
 	)
 	s.writeActionResponse(w, response, err)
 }
 
 func (s *protectedStoreServer) handleOperatorGovernance(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionManage)
 	if !ok {
 		return
 	}
@@ -435,14 +403,14 @@ func (s *protectedStoreServer) handleOperatorGovernance(w http.ResponseWriter, r
 		return
 	}
 	response, err := store.GovernStore(
-		r.Context(), s.db, actor, r.PathValue("storeId"),
+		r.Context(), s.db, s.workforce, actor, r.PathValue("storeId"),
 		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input,
 	)
 	s.writeActionResponse(w, response, err)
 }
 
 func (s *protectedStoreServer) handleStoreAudit(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead)
 	if !ok {
 		return
 	}
@@ -462,88 +430,7 @@ func (s *protectedStoreServer) handleStoreAudit(w http.ResponseWriter, r *http.R
 	store.SendJSON(w, http.StatusOK, map[string]any{"events": events})
 }
 
-// ─── Store team, courier settings, coverage zones, partner scopes ───────────
-// Thin auth wrappers: verify the actor can access storeId via the existing
-// store.ActorCanAccessStore primitive, then delegate to the pure business
-// handler in partner/handler.go. Mirrors handleGetPartnerSettings above.
 
-func (s *protectedStoreServer) handlePartnerStoreTeam(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
-	if !ok {
-		return
-	}
-	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
-		return
-	}
-	if !canAccess {
-		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
-		return
-	}
-	partner.HandleGetStoreTeam(s.db)(w, partnerRequestWithActor(r, actor))
-}
-
-func (s *protectedStoreServer) handlePartnerInviteTeamMember(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
-	if !ok {
-		return
-	}
-	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
-		return
-	}
-	if !canAccess {
-		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
-		return
-	}
-	partner.HandleInviteStoreTeamMember(s.db)(w, partnerRequestWithActor(r, actor))
-}
-
-func (s *protectedStoreServer) handlePartnerListInvites(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
-	if !ok {
-		return
-	}
-	partner.HandleListInvites(s.db)(w, partnerRequestWithActor(r, actor))
-}
-
-func (s *protectedStoreServer) handlePartnerAcceptInvite(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
-	if !ok {
-		return
-	}
-	partner.HandleAcceptInvite(s.db)(w, partnerRequestWithActor(r, actor))
-}
-
-func (s *protectedStoreServer) handlePartnerRejectInvite(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
-	if !ok {
-		return
-	}
-	partner.HandleRejectInvite(s.db)(w, partnerRequestWithActor(r, actor))
-}
-
-func (s *protectedStoreServer) handlePartnerTeamMemberAction(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
-	if !ok {
-		return
-	}
-	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
-		return
-	}
-	if !canAccess {
-		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
-		return
-	}
-	partner.HandleExecuteStoreTeamMemberAction(s.db)(w, partnerRequestWithActor(r, actor))
-}
 
 func (s *protectedStoreServer) handlePartnerGetCourierSettings(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "partner")
@@ -551,7 +438,7 @@ func (s *protectedStoreServer) handlePartnerGetCourierSettings(w http.ResponseWr
 		return
 	}
 	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -569,7 +456,7 @@ func (s *protectedStoreServer) handlePartnerUpdateCourierSettings(w http.Respons
 		return
 	}
 	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -587,7 +474,7 @@ func (s *protectedStoreServer) handlePartnerCoverageZones(w http.ResponseWriter,
 		return
 	}
 	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -600,7 +487,7 @@ func (s *protectedStoreServer) handlePartnerCoverageZones(w http.ResponseWriter,
 }
 
 func (s *protectedStoreServer) handlePartnerScopes(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerSelfHandler(w, r, partner.HandleListPartnerScopes(s.db))
+	s.servePartnerSelfHandler(w, r, partner.HandleListPartnerScopes(s.db, s.identity))
 }
 
 func (s *protectedStoreServer) requireActor(
@@ -619,29 +506,38 @@ func (s *protectedStoreServer) requireActor(
 	}
 	for _, role := range allowedRoles {
 		if identity.HasRole(role) {
-			return store.StoreActor{ID: identity.Subject, Role: role, OperatorContextID: identity.OperatorContextID, PhoneE164: identity.PhoneE164}, true
+			return store.StoreActor{
+				ID:                identity.Subject,
+				Role:              role,
+				OperatorContextID: identity.OperatorContextID,
+				SessionID:         identity.SessionID,
+				SessionSurface:    identity.SessionSurface,
+				PhoneE164:         identity.PhoneE164,
+			}, true
 		}
 	}
 	store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor role cannot perform this action")
 	return store.StoreActor{}, false
 }
 
-// requirePermission is the sovereign fine-grained access check: it keeps
-// 100% of the flat role-based access operators already have (via
-// fallbackRoles), but also grants access to any actor whose identity carries
-// a Permission{Service:"dsh", Surface:surface, Action:action} entry --
-// letting a non-operator be granted just one narrow capability (e.g. media
-// review) without full operator power. surface must be one of Identity's
-// contract-defined surfaces (core/identity/contracts/identity.openapi.yaml);
-// "control-panel" is used for every control-panel-governed domain (catalog,
-// marketing, finance, administration, ...) rather than inventing a
-// domain-specific surface per feature.
+func (s *protectedStoreServer) withPermission(surface, action string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		actor, ok := s.requirePermission(w, r, surface, action)
+		if !ok {
+			return
+		}
+		ctx := partnerRequestWithActor(r, actor).Context()
+		ctx = context.WithValue(ctx, "authorized_action", actor.AuthorizedAction)
+		ctx = context.WithValue(ctx, "authorization_scope", actor.AuthorizationScope)
+		next(w, r.WithContext(ctx))
+	}
+}
+
 func (s *protectedStoreServer) requirePermission(
 	w http.ResponseWriter,
 	r *http.Request,
 	surface string,
 	action string,
-	fallbackRoles ...string,
 ) (store.StoreActor, bool) {
 	identity, err := s.identity.Resolve(r.Context(), r.Header.Get("Authorization"))
 	if errors.Is(err, auth.ErrUnauthenticated) {
@@ -652,35 +548,77 @@ func (s *protectedStoreServer) requirePermission(
 		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
 		return store.StoreActor{}, false
 	}
-	for _, role := range fallbackRoles {
-		if identity.HasRole(role) {
-			return store.StoreActor{ID: identity.Subject, Role: role, OperatorContextID: identity.OperatorContextID, PhoneE164: identity.PhoneE164}, true
+
+	// For operator actors the RBAC registry is the single source of truth.
+	// Inline session claims (identity.Permissions) are stale snapshots and
+	// cannot be used as the authority for operator permission decisions.
+	// Deny-by-default: if ResolvePermissions is unavailable, access is denied.
+	if identity.HasRole("operator") {
+		rbacPerms, rbacErr := s.identity.ResolvePermissions(r.Context(), identity.Subject)
+		if rbacErr != nil {
+			store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "RBAC registry is unavailable")
+			return store.StoreActor{}, false
 		}
+		for _, p := range rbacPerms {
+			if p.Service == "dsh" && p.Surface == surface && p.Action == action {
+				scope := strings.TrimSpace(p.Scope)
+				if scope == "" {
+					continue
+				}
+				return store.StoreActor{
+					ID:                 identity.Subject,
+					Role:               "operator",
+					OperatorContextID:  identity.OperatorContextID,
+					PhoneE164:          identity.PhoneE164,
+					AuthorizedAction:   action,
+					AuthorizationScope: scope,
+				}, true
+			}
+		}
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor lacks required permission")
+		return store.StoreActor{}, false
 	}
+
+	// Non-operator roles (client, partner, captain, field) use inline session
+	// permission claims. These roles are authorised by role membership, not by
+	// fine-grained RBAC entries.
 	for _, p := range identity.Permissions {
 		if p.Service == "dsh" && p.Surface == surface && p.Action == action {
-			return store.StoreActor{ID: identity.Subject, Role: "permission:" + action, OperatorContextID: identity.OperatorContextID, PhoneE164: identity.PhoneE164}, true
+			scope := strings.TrimSpace(p.Scope)
+			if scope == "" {
+				continue
+			}
+			return store.StoreActor{
+				ID:                 identity.Subject,
+				Role:               "operator",
+				OperatorContextID:  identity.OperatorContextID,
+				PhoneE164:          identity.PhoneE164,
+				AuthorizedAction:   action,
+				AuthorizationScope: scope,
+			}, true
 		}
 	}
-	store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor role cannot perform this action")
+	store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor lacks required permission")
 	return store.StoreActor{}, false
 }
 
-// requireCatalogPermission is requirePermission scoped to the control-panel
-// surface, kept as a named wrapper because every centralcatalog.go call site
-// reads more clearly with the surface implied.
-func (s *protectedStoreServer) requireCatalogPermission(
-	w http.ResponseWriter,
-	r *http.Request,
-	action string,
-	fallbackRoles ...string,
-) (store.StoreActor, bool) {
-	return s.requirePermission(w, r, "control-panel", action, fallbackRoles...)
+func decodeProtectedJSON(w http.ResponseWriter, r *http.Request, target any) bool {
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(target); err != nil {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
+		return false
+	}
+	return true
 }
 
 func (s *protectedStoreServer) writeActionResponse(w http.ResponseWriter, response store.StoreActionResponse, err error) {
 	if err == nil {
-		store.SendJSON(w, http.StatusOK, response)
+		status := http.StatusOK
+		if response.Replayed {
+			w.Header().Set("Idempotent-Replayed", "true")
+		}
+		store.SendJSON(w, status, response)
 		return
 	}
 	s.writeStoreError(w, err)
@@ -689,26 +627,12 @@ func (s *protectedStoreServer) writeActionResponse(w http.ResponseWriter, respon
 func (s *protectedStoreServer) writeStoreError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, store.ErrScopedStoreNotFound):
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "store context not found")
+		store.SendError(w, http.StatusNotFound, "STORE_NOT_FOUND", "store was not found in actor scope")
 	case errors.Is(err, store.ErrVersionConflict):
-		store.SendError(w, http.StatusConflict, "VERSION_CONFLICT", "store version changed; reload before retrying")
+		store.SendError(w, http.StatusConflict, "VERSION_CONFLICT", "store version changed; refresh and retry")
 	case errors.Is(err, store.ErrIdempotencyConflict):
-		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "idempotency key was already used for a different request")
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "idempotency key was already used with a different request")
 	default:
-		if strings.Contains(err.Error(), "invalid") || strings.Contains(err.Error(), "required") {
-			store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "store action failed")
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 	}
-}
-
-func decodeProtectedJSON(w http.ResponseWriter, r *http.Request, target any) bool {
-	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(target); err != nil {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-		return false
-	}
-	return true
 }

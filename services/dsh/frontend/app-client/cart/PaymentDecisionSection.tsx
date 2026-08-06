@@ -11,7 +11,7 @@ import {
 import type {
   PaymentDecisionOption,
   PaymentMethodKey,
-} from "../../shared/finance-wlt-link";
+} from "@bthwani/wlt/dsh";
 
 type Props = {
   readonly paymentMethod: PaymentMethodKey;

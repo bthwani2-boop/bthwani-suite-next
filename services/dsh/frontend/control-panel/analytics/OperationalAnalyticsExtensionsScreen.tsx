@@ -13,6 +13,7 @@ import {
   CpTabs,
 } from "@bthwani/control-panel/components";
 import { MetricsPageFrame } from "@bthwani/control-panel/shell";
+import { formatWltMoney } from "@bthwani/wlt/dsh";
 import {
   fetchCaptainPerformanceAnalytics,
   fetchFieldPerformanceAnalytics,
@@ -233,7 +234,12 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
           <Box style={styles.card}>
             <Box style={styles.sectionHeader}>
               <Text role="titleSm">SLA التحضير</Text>
-              <CpBadge tone="info">{`المصدر ${state.preparation.metadata.sourceSystem}`}</CpBadge>
+              <Box style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                {state.preparation.metadata.insufficientSample && (
+                  <CpBadge tone="warning">عينة غير كافية ({state.preparation.metadata.sampleSize})</CpBadge>
+                )}
+                <CpBadge tone="info">{`المصدر ${state.preparation.metadata.sourceSystem}`}</CpBadge>
+              </Box>
             </Box>
             <Box style={styles.grid}>
               <Metric label="طلبات مقاسة" value={state.preparation.totalMeasured} />
@@ -320,7 +326,9 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
                 {state.finance.summary.currencies.map((currency) => (
                   <Box key={currency.currency} style={styles.row}>
                     <Text role="bodyStrong">{currency.currency}</Text>
-                    <Text role="bodySm">الأصول {currency.assetsMinorUnits} • الالتزامات {currency.liabilitiesMinorUnits} • صافي المركز {currency.netPositionMinorUnits}</Text>
+                    <Text role="bodySm">
+                      الأصول {formatWltMoney(currency.assetsMinorUnits, currency.currency)} • الالتزامات {formatWltMoney(currency.liabilitiesMinorUnits, currency.currency)} • صافي المركز {formatWltMoney(currency.netPositionMinorUnits, currency.currency)}
+                    </Text>
                   </Box>
                 ))}
               </Box>

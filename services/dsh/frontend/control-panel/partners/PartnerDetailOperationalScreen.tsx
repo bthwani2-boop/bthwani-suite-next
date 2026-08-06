@@ -169,7 +169,8 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
                 <CpDescriptionRow label="الاسم الإنجليزي">{vm.legalNameEn || "—"}</CpDescriptionRow>
                 <CpDescriptionRow label="نوع الهوية">{vm.legalIdentityType}</CpDescriptionRow>
                 <CpDescriptionRow label="رقم الهوية">{vm.legalIdentityNumber}</CpDescriptionRow>
-                <CpDescriptionRow label="المالك">{vm.ownerName}</CpDescriptionRow>
+                <CpDescriptionRow label="Actor ID">{vm.ownerActorId}</CpDescriptionRow>
+                <CpDescriptionRow label="Workforce ID">{vm.workforcePersonId}</CpDescriptionRow>
                 <CpDescriptionRow label="الهاتف">{vm.primaryPhone}</CpDescriptionRow>
                 <CpDescriptionRow label="الفئة">{vm.category}</CpDescriptionRow>
                 <CpDescriptionRow label="الإصدار التشغيلي">{partner.version}</CpDescriptionRow>

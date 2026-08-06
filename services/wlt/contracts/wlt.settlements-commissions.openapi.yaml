@@ -62,6 +62,9 @@ paths:
                   evidence:
                     type: array
                     items: { $ref: '#/components/schemas/SettlementEvidence' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
       security:
         - serviceBearer: []
   /wlt/settlement-policies/{partnerId}:
@@ -144,6 +147,8 @@ paths:
                   commissions:
                     type: array
                     items: { $ref: '#/components/schemas/Commission' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
       security:
         - serviceBearer: []
     post:
@@ -186,6 +191,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CommissionDetail' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
       security:
         - serviceBearer: []
   /wlt/commissions/{commissionId}/adjust:
@@ -411,7 +419,7 @@ components:
         fixedAmountMinorUnits: { type: integer, minimum: 0 }
         basisPoints: { type: integer, minimum: 0, maximum: 10000 }
         minimumAmountMinorUnits: { type: integer, minimum: 0 }
-        maximumAmountMinorUnits: { type: integer, minimum: 0, nullable: true }
+        maximumAmountMinorUnits: { type: [integer, 'null'], minimum: 0 }
         currency: { type: string, minLength: 1 }
         status: { type: string, enum: [ active, inactive ] }
         changeReason: { type: string, minLength: 1 }
@@ -437,8 +445,8 @@ components:
         beneficiaryActorType: { $ref: '#/components/schemas/RepresentativeActorType' }
         sourceType: { type: string, minLength: 1 }
         sourceId: { type: string, minLength: 1 }
-        visitId: { type: string, nullable: true }
-        storeId: { type: string, nullable: true }
+        visitId: { type: [string, 'null'] }
+        storeId: { type: [string, 'null'] }
         commissionType: { type: string, minLength: 1 }
         sourceEvidenceId: { type: string, minLength: 1 }
         sourceEvidenceHash: { type: string, minLength: 1 }
@@ -505,7 +513,7 @@ components:
         beneficiaryActorType: { $ref: '#/components/schemas/RepresentativeActorType' }
         sourceType: { type: string }
         sourceId: { type: string }
-        commissionPolicyId: { type: string, nullable: true }
+        commissionPolicyId: { type: [string, 'null'] }
         commissionType: { type: string }
         amountMinorUnits: { type: integer, minimum: 1, readOnly: true }
         currency: { type: string }

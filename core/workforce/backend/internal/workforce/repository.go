@@ -116,9 +116,6 @@ func (r *Repository) CreatePerson(ctx context.Context, actorID, workforceCode, c
 	if err := validateReferenceTx(ctx, tx, "workforce_cities", cityCode); err != nil {
 		return Person{}, err
 	}
-	if err := validateReferenceTx(ctx, tx, "workforce_shifts", input.ShiftCode); err != nil {
-		return Person{}, err
-	}
 
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO workforce_people
@@ -135,11 +132,14 @@ func (r *Repository) CreatePerson(ctx context.Context, actorID, workforceCode, c
 	if err != nil {
 		return Person{}, err
 	}
+	// Field providers are independent and do not own an externally selectable
+	// shift. Keep the historical column internal-only until it can be dropped;
+	// never accept shift authority from a request payload.
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO workforce_field_profiles
 			(actor_id, city_code, service_zone_id, shift_code, supervisor_actor_id, document_media_refs)
-		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), $6::jsonb)`,
-		actorID, cityCode, input.ServiceZoneID, input.ShiftCode, input.SupervisorActorID, string(documents))
+		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), 'not_applicable', NULLIF($4, ''), $5::jsonb)`,
+		actorID, cityCode, input.ServiceZoneID, input.SupervisorActorID, string(documents))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
@@ -487,11 +487,6 @@ func (r *Repository) UpdatePerson(ctx context.Context, actorID string, derivedCi
 			return Person{}, err
 		}
 	}
-	if input.ShiftCode != nil {
-		if err := validateReferenceTx(ctx, tx, "workforce_shifts", *input.ShiftCode); err != nil {
-			return Person{}, err
-		}
-	}
 
 	_, err = tx.ExecContext(ctx, `
 		UPDATE workforce_people SET
@@ -512,11 +507,10 @@ func (r *Repository) UpdatePerson(ctx context.Context, actorID string, derivedCi
 		UPDATE workforce_field_profiles SET
 			city_code = COALESCE(NULLIF($2, ''), city_code),
 			service_zone_id = COALESCE(NULLIF($3, ''), service_zone_id),
-			shift_code = COALESCE(NULLIF($4, ''), shift_code),
-			supervisor_actor_id = COALESCE(NULLIF($5, ''), supervisor_actor_id),
+			supervisor_actor_id = COALESCE(NULLIF($4, ''), supervisor_actor_id),
 			updated_at = now()
 		WHERE actor_id = $1`,
-		actorID, deref(derivedCityCode), deref(input.ServiceZoneID), deref(input.ShiftCode), deref(input.SupervisorActorID))
+		actorID, deref(derivedCityCode), deref(input.ServiceZoneID), deref(input.SupervisorActorID))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
@@ -825,4 +819,42 @@ func nonNil(values []string) []string {
 		return []string{}
 	}
 	return values
+}
+func (r *Repository) CreateProvisioningCase(ctx context.Context, c ProvisioningCase) error {
+	_, err := r.db.ExecContext(ctx, `
+		INSERT INTO workforce_provisioning_cases
+		(id, idempotency_key, status, workforce_kind, actor_id, workforce_code, payload, failure_reason)
+		VALUES ($1, $2, $3, $4, NULLIF($5, ''), NULLIF($6, ''), $7, NULLIF($8, ''))`,
+		c.ID, c.IdempotencyKey, c.Status, c.WorkforceKind, c.ActorID, c.WorkforceCode, c.Payload, c.FailureReason)
+	return err
+}
+
+func (r *Repository) UpdateProvisioningCase(ctx context.Context, c ProvisioningCase) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE workforce_provisioning_cases
+		SET status = $2, actor_id = NULLIF($3, ''), workforce_code = NULLIF($4, ''), 
+		    failure_reason = NULLIF($5, ''), updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1`,
+		c.ID, c.Status, c.ActorID, c.WorkforceCode, c.FailureReason)
+	return err
+}
+
+func (r *Repository) GetProvisioningCase(ctx context.Context, id string) (ProvisioningCase, error) {
+	var c ProvisioningCase
+	var actorID, code, failureReason sql.NullString
+	err := r.db.QueryRowContext(ctx, `
+		SELECT id, idempotency_key, status, workforce_kind, actor_id, workforce_code, payload, failure_reason, created_at, updated_at
+		FROM workforce_provisioning_cases
+		WHERE id = $1`, id).Scan(
+		&c.ID, &c.IdempotencyKey, &c.Status, &c.WorkforceKind, &actorID, &code, &c.Payload, &failureReason, &c.CreatedAt, &c.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ProvisioningCase{}, ErrNotFound
+		}
+		return ProvisioningCase{}, err
+	}
+	c.ActorID = actorID.String
+	c.WorkforceCode = code.String
+	c.FailureReason = failureReason.String
+	return c, nil
 }

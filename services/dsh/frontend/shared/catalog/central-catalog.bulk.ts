@@ -8,6 +8,8 @@ export interface BulkImportRow {
   readonly unit: string;
   readonly domainId: string;
   readonly categoryNodeId: string;
+  readonly parentId: string | null;
+  readonly isStandalone: boolean;
 }
 
 export interface BulkImportError {
@@ -40,7 +42,7 @@ export function parseAndValidateCSV(csvText: string): {
       continue;
     }
 
-    const [barcode, canonicalNameAr, canonicalNameEn, brand, unit, domainId, categoryNodeId] = parts;
+    const [barcode, canonicalNameAr, canonicalNameEn, brand, unit, domainId, categoryNodeId, parentId, isStandaloneStr] = parts;
 
     if (!canonicalNameAr) {
       errors.push({ rowIndex: i, column: "name_ar", error: "الاسم العربي مطلوب" });
@@ -57,6 +59,8 @@ export function parseAndValidateCSV(csvText: string): {
       unit: unit || "unit",
       domainId: domainId || "",
       categoryNodeId: categoryNodeId || "",
+      parentId: parentId || null,
+      isStandalone: isStandaloneStr !== "false",
     });
   }
 
@@ -64,7 +68,7 @@ export function parseAndValidateCSV(csvText: string): {
 }
 
 export function exportProductsToCSV(products: readonly MasterProduct[]): string {
-  const headers = "barcode,name_ar,name_en,brand,unit,domain_id,category_node_id";
+  const headers = "barcode,name_ar,name_en,brand,unit,domain_id,category_node_id,parent_id,is_standalone";
   const rows = products.map(
     (p) =>
       `"${p.barcode || ""}"` +
@@ -73,7 +77,9 @@ export function exportProductsToCSV(products: readonly MasterProduct[]): string 
       `,"${p.brand.replace(/"/g, '""')}"` +
       `,"${p.unit}"` +
       `,"${p.domainId}"` +
-      `,"${p.categoryNodeId || ""}"`
+      `,"${p.categoryNodeId || ""}"` +
+      `,"${p.parentId || ""}"` +
+      `,"${p.isStandalone}"`
   );
   return [headers, ...rows].join("\n");
 }

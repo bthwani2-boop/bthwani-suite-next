@@ -33,3 +33,4 @@ func TestHumanCancellationTargetsRemainRoleSpecific(t *testing.T) {
 		t.Fatalf("operator target=%q", got)
 	}
 }
+

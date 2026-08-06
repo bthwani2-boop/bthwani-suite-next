@@ -88,6 +88,13 @@ function commandRecord({ id, command, tool, blocking, classification, remediatio
   };
 }
 
+// A tool's package_script is not always the literal string CI invokes (e.g. nx's
+// package_script is "nx:projects" but CI runs the tool directly via "nx run-many"/
+// "nx affected"). These are additional real invocation needles, not a bypass.
+const workflowEvidenceOverridesById = {
+  nx: ["nx run-many", "nx affected"]
+};
+
 function workflowEvidenceFor(entry, command) {
   const id = String(entry.id || "").toLowerCase();
   const commandNeedle = String(command || "").toLowerCase();
@@ -98,14 +105,16 @@ function workflowEvidenceFor(entry, command) {
   const byFileName = workflowFiles.some((rel) => path.basename(rel).toLowerCase().includes(id));
   const byWorkflowName = workflowTextLower.includes(`name: ${id}`) || workflowTextLower.includes(`name: "${id}"`);
   const byAction = workflowTextLower.includes(`${id}-action`) || workflowTextLower.includes(`/${id}`) || workflowTextLower.includes(`${id} scan`);
+  const byOverride = (workflowEvidenceOverridesById[id] || []).some((needle) => workflowTextLower.includes(needle));
 
   return {
-    workflow_found: byCommand || byFileName || byWorkflowName || byAction,
+    workflow_found: byCommand || byFileName || byWorkflowName || byAction || byOverride,
     evidence: [
       byCommand ? "workflow_command" : "",
       byFileName ? "workflow_filename" : "",
       byWorkflowName ? "workflow_name" : "",
-      byAction ? "workflow_action_or_step" : ""
+      byAction ? "workflow_action_or_step" : "",
+      byOverride ? "workflow_tool_specific_invocation" : ""
     ].filter(Boolean)
   };
 }

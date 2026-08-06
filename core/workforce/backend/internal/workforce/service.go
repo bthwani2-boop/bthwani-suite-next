@@ -93,7 +93,7 @@ func (s *Service) SearchSupervisors(ctx context.Context, kind, query string) ([]
 	} else if kind == "employee" {
 		expectedRole = "workforce.supervise.employee"
 	}
-	actors, err := s.identity.SearchActors(ctx, expectedRole, query)
+	actors, _, err := s.identity.SearchActors(ctx, expectedRole, query, "")
 	if err != nil {
 		return nil, err
 	}
@@ -168,30 +168,25 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 		return Person{}, false, err
 	}
 
-	actor, err := s.identity.Provision(ctx, identityclient.ProvisionInput{
-		Username:  workforceCode,
-		PhoneE164: input.PhoneE164,
-		Role:      "field",
-	})
-	if err != nil {
-		return Person{}, false, err
+	if input.ActorID == "" {
+		return Person{}, false, ErrInvalidInput
 	}
 
-	if existing, lookupErr := s.repo.PersonByActorID(ctx, actor.ActorID); lookupErr == nil {
+	if existing, lookupErr := s.repo.PersonByActorID(ctx, input.ActorID); lookupErr == nil {
 		return existing, true, nil
 	}
 
-	person, err := s.repo.CreatePerson(ctx, actor.ActorID, workforceCode, zone.CityCode, input)
+	person, err := s.repo.CreatePerson(ctx, input.ActorID, workforceCode, zone.CityCode, input)
 	if err != nil {
 		if errors.Is(err, ErrDuplicateWorkforceCode) {
-			if existing, lookupErr := s.repo.PersonByActorID(ctx, actor.ActorID); lookupErr == nil {
+			if existing, lookupErr := s.repo.PersonByActorID(ctx, input.ActorID); lookupErr == nil {
 				return existing, true, nil
 			}
 		}
 		return Person{}, false, err
 	}
 
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actor.ActorID,
+	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, input.ActorID,
 		"field_agent.created", nil, person, "", correlationID); err != nil {
 		log.Printf("[workforce] RecordAudit error in CreateFieldAgent: %v", err)
 	}
@@ -243,29 +238,24 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 		return Person{}, false, err
 	}
 
-	actor, err := s.identity.Provision(ctx, identityclient.ProvisionInput{
-		Username:  workforceCode,
-		PhoneE164: input.PhoneE164,
-		Role:      "captain",
-	})
-	if err != nil {
-		return Person{}, false, err
+	if input.ActorID == "" {
+		return Person{}, false, ErrInvalidInput
 	}
 
-	if existing, lookupErr := s.repo.PersonByActorID(ctx, actor.ActorID); lookupErr == nil {
+	if existing, lookupErr := s.repo.PersonByActorID(ctx, input.ActorID); lookupErr == nil {
 		return existing, true, nil
 	}
 
-	person, err := s.repo.CreateCaptain(ctx, actor.ActorID, workforceCode, zone.CityCode, input)
+	person, err := s.repo.CreateCaptain(ctx, input.ActorID, workforceCode, zone.CityCode, input)
 	if err != nil {
 		if errors.Is(err, ErrDuplicateWorkforceCode) {
-			if existing, lookupErr := s.repo.PersonByActorID(ctx, actor.ActorID); lookupErr == nil {
+			if existing, lookupErr := s.repo.PersonByActorID(ctx, input.ActorID); lookupErr == nil {
 				return existing, true, nil
 			}
 		}
 		return Person{}, false, err
 	}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actor.ActorID,
+	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, input.ActorID,
 		"captain.created", nil, person, "", correlationID); err != nil {
 		log.Printf("[workforce] RecordAudit error in CreateCaptain: %v", err)
 	}
@@ -307,29 +297,24 @@ func (s *Service) CreateEmployee(ctx context.Context, operator Operator, input C
 		return Person{}, false, err
 	}
 
-	actor, err := s.identity.Provision(ctx, identityclient.ProvisionInput{
-		Username:  workforceCode,
-		PhoneE164: input.PhoneE164,
-		Role:      "employee",
-	})
-	if err != nil {
-		return Person{}, false, err
+	if input.ActorID == "" {
+		return Person{}, false, ErrInvalidInput
 	}
 
-	if existing, lookupErr := s.repo.PersonByActorID(ctx, actor.ActorID); lookupErr == nil {
+	if existing, lookupErr := s.repo.PersonByActorID(ctx, input.ActorID); lookupErr == nil {
 		return existing, true, nil
 	}
 
-	person, err := s.repo.CreateEmployee(ctx, actor.ActorID, workforceCode, input)
+	person, err := s.repo.CreateEmployee(ctx, input.ActorID, workforceCode, input)
 	if err != nil {
 		if errors.Is(err, ErrDuplicateWorkforceCode) {
-			if existing, lookupErr := s.repo.PersonByActorID(ctx, actor.ActorID); lookupErr == nil {
+			if existing, lookupErr := s.repo.PersonByActorID(ctx, input.ActorID); lookupErr == nil {
 				return existing, true, nil
 			}
 		}
 		return Person{}, false, err
 	}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actor.ActorID,
+	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, input.ActorID,
 		"employee.created", nil, person, "", correlationID); err != nil {
 		log.Printf("[workforce] RecordAudit error in CreateEmployee: %v", err)
 	}
@@ -452,7 +437,7 @@ func (s *Service) Suspend(ctx context.Context, operator Operator, actorID string
 	if err != nil {
 		return Person{}, err
 	}
-	if err := s.identity.Deactivate(ctx, actorID); err != nil {
+	if err := s.identity.Deactivate(ctx, actorID, operator.ActorID, reason, correlationID); err != nil {
 		// Identity is the auth gate: if it cannot be deactivated the
 		// suspension is not effective, so roll the status back and fail.
 		_, _ = s.repo.SetEngagementStatus(ctx, actorID, before.EngagementStatus, person.Version)
@@ -481,7 +466,7 @@ func (s *Service) Reactivate(ctx context.Context, operator Operator, actorID str
 	if err != nil {
 		return Person{}, err
 	}
-	if err := s.identity.Reactivate(ctx, actorID); err != nil {
+	if err := s.identity.Reactivate(ctx, actorID, operator.ActorID, reason, correlationID); err != nil {
 		_, _ = s.repo.SetEngagementStatus(ctx, actorID, "suspended", person.Version)
 		return Person{}, err
 	}

@@ -38,9 +38,9 @@ describe("checkout controller core", () => {
     );
   });
 
-  test("reload treats cancelled and expired intents as idle", () => {
-    assert.equal(resolveCheckoutReloadSuccess(intent({ state: "cancelled" })).kind, "idle");
-    assert.equal(resolveCheckoutReloadSuccess(intent({ state: "expired" })).kind, "idle");
+  test("reload treats cancelled and expired intents as terminal", () => {
+    assert.equal(resolveCheckoutReloadSuccess(intent({ state: "cancelled" })).kind, "terminal");
+    assert.equal(resolveCheckoutReloadSuccess(intent({ state: "expired" })).kind, "terminal");
   });
 
   test("maps submit errors and operator list state", () => {

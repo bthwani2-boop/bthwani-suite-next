@@ -9,7 +9,7 @@ func TestClientStorefrontPredicateContainsAllPublicationGates(t *testing.T) {
 	predicate := ClientStorefrontPredicate("s")
 	required := []string{
 		"s.is_visible = true",
-		"s.status = 'active'",
+		"s.status = 'published'",
 		"s.serviceability_status IN ('serviceable','limited')",
 		"s.partner_readiness = 'ready'",
 		"s.catalog_approval_status = 'approved'",

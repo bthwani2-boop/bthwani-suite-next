@@ -1,5 +1,10 @@
 import React from 'react';
-import { fetchPartnerTeam, invitePartnerTeamMember, executePartnerTeamMemberAction } from './partner.api';
+import {
+  fetchPartnerTeam,
+  invitePartnerTeamMember,
+  executePartnerTeamMemberAction,
+  type PartnerTeamInviteRole,
+} from './partner.api';
 import type { DshPartnerRoute } from './partner.types';
 import { toPartnerTeamMember, type PartnerTeamMember } from './partner-team.types';
 
@@ -50,11 +55,14 @@ export function usePartnerTeamController({
     loadTeam();
   }, [loadTeam]);
 
-  const onInviteMember = React.useCallback(async (identity: string): Promise<PartnerTeamMutationResult> => {
+  const onInviteMember = React.useCallback(async (
+    identity: string,
+    role: PartnerTeamInviteRole = 'staff',
+  ): Promise<PartnerTeamMutationResult> => {
     if (!activeStoreId) {
       return { ok: false, error: 'لا يوجد فرع محدد لإرسال الدعوة.' };
     }
-    return invitePartnerTeamMember(activeStoreId, identity).then((): PartnerTeamMutationResult => {
+    return invitePartnerTeamMember(activeStoreId, identity, role).then((): PartnerTeamMutationResult => {
       loadTeam();
       return { ok: true };
     }).catch((err: unknown): PartnerTeamMutationResult => {

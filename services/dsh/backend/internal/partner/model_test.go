@@ -32,17 +32,15 @@ func TestIsTransitionAllowed_legalPaths(t *testing.T) {
 		{StatusOpsRejected, StatusDocumentsMissing},
 		{StatusPartnerActive, StatusClientVisible},
 		{StatusPartnerActive, StatusClientHidden},
-		{StatusPartnerActive, StatusPartnerDeactivated},
+		{StatusPartnerActive, StatusPartnerTerminated},
 		{StatusClientVisible, StatusClientHidden},
-		{StatusClientVisible, StatusPartnerDeactivated},
+		{StatusClientVisible, StatusPartnerTerminated},
 		{StatusClientHidden, StatusClientVisible},
-		{StatusClientHidden, StatusPartnerDeactivated},
-		{StatusPartnerDeactivated, StatusOpsReview},
-		{StatusPartnerDeactivated, StatusSubmitted},
+		{StatusClientHidden, StatusPartnerTerminated},
 	}
 	for _, c := range cases {
 		if !IsTransitionAllowed(c.from, c.to) {
-			t.Errorf("expected %s → %s to be allowed", c.from, c.to)
+			t.Errorf("expected %s â†’ %s to be allowed", c.from, c.to)
 		}
 	}
 }
@@ -58,7 +56,7 @@ func TestIsTransitionAllowed_illegalPaths(t *testing.T) {
 		{StatusSubmitted, StatusPartnerActive, "cannot skip review stages"},
 		{StatusDocumentsMissing, StatusClientVisible, "missing docs cannot jump to visible"},
 		{StatusOpsRejected, StatusPartnerActive, "rejected cannot activate directly"},
-		{StatusPartnerDeactivated, StatusClientVisible, "deactivated cannot jump to visible"},
+		{StatusPartnerTerminated, StatusClientVisible, "deactivated cannot jump to visible"},
 		{StatusClientVisible, StatusDraft, "cannot go backwards to draft"},
 		{StatusPartnerActive, StatusDocumentsMissing, "active cannot go back to missing docs"},
 		{StatusDraft, StatusDraft, "same-status self-loop blocked"},
@@ -66,7 +64,7 @@ func TestIsTransitionAllowed_illegalPaths(t *testing.T) {
 	}
 	for _, c := range cases {
 		if IsTransitionAllowed(c.from, c.to) {
-			t.Errorf("expected %s → %s to be forbidden (%s)", c.from, c.to, c.desc)
+			t.Errorf("expected %s â†’ %s to be forbidden (%s)", c.from, c.to, c.desc)
 		}
 	}
 }
@@ -81,7 +79,7 @@ func TestIsClientVisible(t *testing.T) {
 	}
 	for _, s := range []ActivationStatus{
 		StatusDraft, StatusSubmitted, StatusPartnerActive,
-		StatusPartnerDeactivated, StatusClientHidden, StatusOpsApproved,
+		StatusPartnerTerminated, StatusClientHidden, StatusOpsApproved,
 	} {
 		if IsClientVisible(s) {
 			t.Errorf("expected IsClientVisible(%s) = false", s)
@@ -177,7 +175,7 @@ func TestComputeReadiness_partnerIDPropagated(t *testing.T) {
 
 func TestCreatePartnerInput_valid(t *testing.T) {
 	input := CreatePartnerInput{
-		LegalNameAr:         "شركة الاختبار",
+		LegalNameAr:         "Ø´Ø±ÙƒØ© Ø§Ù„Ø§Ø®ØªØ¨Ø§Ø±",
 		DisplayName:         "Test Partner",
 		PrimaryPhone:        "+9671234567",
 		LegalIdentityNumber: "CR-001",
@@ -198,7 +196,7 @@ func TestCreatePartnerInput_missingLegalNameAr(t *testing.T) {
 
 func TestCreatePartnerInput_missingDisplayName(t *testing.T) {
 	input := CreatePartnerInput{
-		LegalNameAr: "شركة", PrimaryPhone: "+967", LegalIdentityNumber: "CR-001",
+		LegalNameAr: "Ø´Ø±ÙƒØ©", PrimaryPhone: "+967", LegalIdentityNumber: "CR-001",
 	}
 	if err := input.Validate(); err == nil {
 		t.Fatal("expected error for missing DisplayName")
@@ -207,7 +205,7 @@ func TestCreatePartnerInput_missingDisplayName(t *testing.T) {
 
 func TestCreatePartnerInput_missingPhone(t *testing.T) {
 	input := CreatePartnerInput{
-		LegalNameAr: "شركة", DisplayName: "Test", LegalIdentityNumber: "CR-001",
+		LegalNameAr: "Ø´Ø±ÙƒØ©", DisplayName: "Test", LegalIdentityNumber: "CR-001",
 	}
 	if err := input.Validate(); err == nil {
 		t.Fatal("expected error for missing PrimaryPhone")
@@ -216,7 +214,7 @@ func TestCreatePartnerInput_missingPhone(t *testing.T) {
 
 func TestCreatePartnerInput_missingIdentityNumber(t *testing.T) {
 	input := CreatePartnerInput{
-		LegalNameAr: "شركة", DisplayName: "Test", PrimaryPhone: "+967",
+		LegalNameAr: "Ø´Ø±ÙƒØ©", DisplayName: "Test", PrimaryPhone: "+967",
 	}
 	if err := input.Validate(); err == nil {
 		t.Fatal("expected error for missing LegalIdentityNumber")
@@ -304,10 +302,10 @@ func TestFieldSurfaceCannotActivate(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestDeactivationRemovesClientVisibility(t *testing.T) {
-	if !IsTransitionAllowed(StatusClientVisible, StatusPartnerDeactivated) {
-		t.Fatal("client_visible → partner_deactivated must be allowed for immediate hide")
+	if !IsTransitionAllowed(StatusClientVisible, StatusPartnerTerminated) {
+		t.Fatal("client_visible â†’ partner_deactivated must be allowed for immediate hide")
 	}
-	if IsClientVisible(StatusPartnerDeactivated) {
+	if IsClientVisible(StatusPartnerTerminated) {
 		t.Fatal("deactivated partner must not be client_visible")
 	}
 }
@@ -320,7 +318,7 @@ func TestPartnerReadinessForActivationStatus(t *testing.T) {
 	}{
 		{StatusClientVisible, "ready", true},
 		{StatusClientHidden, "blocked", true},
-		{StatusPartnerDeactivated, "blocked", true},
+		{StatusPartnerTerminated, "", false},
 		{StatusPartnerActive, "", false},
 	}
 
@@ -358,7 +356,7 @@ func TestCreateFieldVisitRejectsPartialCoordinates(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Store publication gates (client_visible) — one case per gate
+// Store publication gates (client_visible) â€” one case per gate
 // ---------------------------------------------------------------------------
 
 func TestComputeReadiness_storePublicationGates(t *testing.T) {

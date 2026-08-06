@@ -1,4 +1,4 @@
-#  — Store Discovery and Governance Operations
+# Store Discovery and Governance Operations
 
 Status: `ACTIVE_RUNBOOK`
 

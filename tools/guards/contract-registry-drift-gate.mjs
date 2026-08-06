@@ -2,9 +2,9 @@
  * contract-registry-drift-gate.mjs
  *
  * The contract registry is a derived diagnostic, never a tracked source. This
- * gate rejects the old committed copy, generates a fresh report in an isolated
- * temporary directory, and validates that the six canonical bounded contexts
- * each resolve to exactly one generated OpenAPI TypeScript client.
+ * gate rejects committed derived copies, generates a fresh report in an
+ * isolated temporary directory, and validates that the six canonical bounded
+ * contexts each resolve to exactly one generated OpenAPI TypeScript client.
  */
 
 import fs from "node:fs";
@@ -15,6 +15,7 @@ import { fail, repoRoot } from "./_guard-utils.mjs";
 
 const guardId = "contract-registry-drift-gate";
 const violations = [];
+const canonicalIndex = "contracts/openapi/index.yaml";
 const trackedRegistryPath = "contracts/generated/contract-registry.json";
 const trackedRegistryAbsolute = path.join(repoRoot, trackedRegistryPath);
 
@@ -70,8 +71,11 @@ try {
       if (report.reportRole !== "DERIVED_DIAGNOSTIC_ONLY") {
         violations.push({ file: diagnosticPath, message: "CONTRACT_REGISTRY_REPORT_ROLE_INVALID" });
       }
-      if (report.master !== "contracts/master.openapi.yaml" || report.masterRole !== "MASTER_INDEX_ONLY") {
-        violations.push({ file: diagnosticPath, message: "CONTRACT_REGISTRY_MASTER_AUTHORITY_INVALID" });
+      if (report.schemaVersion !== 2 || report.canonicalIndex !== canonicalIndex) {
+        violations.push({ file: diagnosticPath, message: "CONTRACT_REGISTRY_CANONICAL_AUTHORITY_INVALID" });
+      }
+      if ("master" in report || "masterRole" in report) {
+        violations.push({ file: diagnosticPath, message: "CONTRACT_REGISTRY_RETIRED_MASTER_AUTHORITY_PRESENT" });
       }
       if (report.totals?.contexts !== expectedContexts.size || actualContexts.size !== expectedContexts.size) {
         violations.push({ file: diagnosticPath, message: "CONTRACT_REGISTRY_CONTEXT_COUNT_INVALID" });

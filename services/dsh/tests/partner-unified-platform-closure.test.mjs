@@ -89,11 +89,11 @@ describe("partner unified multi-surface platform closure", () => {
     ]) {
       assert.match(registry, new RegExp(`'${tab}'`));
     }
-    assert.match(queue, /useControlPanelSession/);
+    assert.match(queue, /useIdentitySession/);
     assert.match(queue, /StoreManagementScreen/);
     assert.match(queue, /FieldReadinessQueueScreen/);
     assert.match(queue, /PartnerCreatePanel/);
-    assert.match(detail, /useControlPanelSession/);
+    assert.match(detail, /useIdentitySession/);
     assert.match(detail, /useGovernedPartnerStoresController/);
     assert.match(detail, /aggregate\.stores/);
     assert.match(barrel, /PartnerDetailUnifiedScreen as PartnerDetailScreen/);

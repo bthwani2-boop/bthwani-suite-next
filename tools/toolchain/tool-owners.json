@@ -104,7 +104,7 @@
       "team": "BThwani Platform Team",
       "scope": "local/ci"
     },
-    "spectral": {
+    "redocly": {
       "team": "BThwani Backend Team",
       "scope": "local/ci"
     },
@@ -114,6 +114,10 @@
     },
     "graphify": {
       "team": "BThwani Core Team",
+      "scope": "local"
+    },
+    "open-code-review": {
+      "team": "BThwani Governance Review Team",
       "scope": "local"
     },
     "playwright": {

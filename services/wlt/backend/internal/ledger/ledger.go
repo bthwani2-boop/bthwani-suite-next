@@ -3,7 +3,6 @@ package ledger
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -224,24 +223,6 @@ func ListLedgerEntries(db *sql.DB, params ListLedgerEntriesParams) ([]*LedgerEnt
 }
 
 // HTTP handlers
-
-func HandleAppendLedgerEntry(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var input CreateLedgerEntryInput
-		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
-		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&input); err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-			return
-		}
-		e, err := AppendLedgerEntryForOperatorContext(r.Context(), db, input)
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		shared.SendJSON(w, http.StatusCreated, map[string]any{"ledgerEntry": e})
-	}
-}
 
 func HandleGetLedgerEntry(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

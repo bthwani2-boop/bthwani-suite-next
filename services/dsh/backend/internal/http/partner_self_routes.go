@@ -22,7 +22,7 @@ func RegisterPartnerSelfRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	mux.HandleFunc("GET /dsh/partner/activation/status", protected.withTrustedPartnerOperatorContext(protected.handleGovernedPartnerActivationStatus))
 	mux.HandleFunc("GET /dsh/partner/activation/readiness", protected.withTrustedPartnerOperatorContext(protected.handlePartnerAggregatedActivationReadiness))
 	mux.HandleFunc("GET /dsh/partner/analytics/performance", protected.withTrustedPartnerOperatorContext(protected.handlePartnerPerformance))

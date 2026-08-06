@@ -68,30 +68,6 @@ BEGIN
     SELECT 1
     FROM identity_actors
     WHERE 'employee' = ANY(roles)
-      AND permissions @> '[{"service":"workforce","surface":"control-panel","action":"leadership:create","scope":"all"}]'::jsonb
-      AND NOT permissions @> '[
-        {"service":"dsh","surface":"control-panel","action":"platform.read","scope":"all"},
-        {"service":"dsh","surface":"control-panel","action":"platform.manage","scope":"all"}
-      ]'::jsonb
-  ) THEN
-    RAISE EXCEPTION 'platform owner DSH permissions are incomplete';
-  END IF;
-
-  IF EXISTS (
-    SELECT 1
-    FROM identity_actors
-    WHERE 'employee' = ANY(roles)
-      AND permissions @> '[{"service":"workforce","surface":"control-panel","action":"leadership:read","scope":"all"}]'::jsonb
-      AND permissions @> '[{"service":"workforce","surface":"control-panel","action":"employee:create","scope":"all"}]'::jsonb
-      AND NOT permissions @> '[{"service":"dsh","surface":"control-panel","action":"platform.read","scope":"all"}]'::jsonb
-  ) THEN
-    RAISE EXCEPTION 'platform coordinator DSH permissions are incomplete';
-  END IF;
-
-  IF EXISTS (
-    SELECT 1
-    FROM identity_actors
-    WHERE 'employee' = ANY(roles)
       AND permissions @> '[{"service":"workforce","surface":"control-panel","action":"employee:create","scope":"department:operations"}]'::jsonb
       AND NOT permissions @> '[
         {"service":"dsh","surface":"control-panel","action":"operations.read","scope":"all"},
@@ -139,6 +115,32 @@ BEGIN
       ]'::jsonb
   ) THEN
     RAISE EXCEPTION 'support manager DSH permissions are incomplete';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM identity_actors
+    WHERE 'employee' = ANY(roles)
+      AND permissions @> '[{"service":"workforce","surface":"control-panel","action":"leadership:create","scope":"all"}]'::jsonb
+      AND NOT permissions @> '[
+        {"service":"dsh","surface":"control-panel","action":"platform.read","scope":"all"},
+        {"service":"dsh","surface":"control-panel","action":"platform.manage","scope":"all"}
+      ]'::jsonb
+  ) THEN
+    RAISE EXCEPTION 'platform owner DSH permissions are incomplete';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM identity_actors
+    WHERE 'employee' = ANY(roles)
+      AND permissions @> '[{"service":"workforce","surface":"control-panel","action":"leadership:read","scope":"all"}]'::jsonb
+      AND permissions @> '[{"service":"workforce","surface":"control-panel","action":"employee:create","scope":"all"}]'::jsonb
+      AND NOT permissions @> '[
+        {"service":"dsh","surface":"control-panel","action":"platform.read","scope":"all"}
+      ]'::jsonb
+  ) THEN
+    RAISE EXCEPTION 'platform coordinator DSH permissions are incomplete';
   END IF;
 END
 $$;

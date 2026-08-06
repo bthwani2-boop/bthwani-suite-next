@@ -14,7 +14,7 @@ import {
   CpTableHeaderCell,
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame, PaginationToolbar } from "@bthwani/control-panel/shell";
-import { useControlPanelSession } from "@dsh-shared/session/control-panel-session";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { usePartnerWorkspaceListController } from "../../shared/partner";
 
 const STATUS_OPTIONS = [
@@ -56,7 +56,7 @@ type Props = {
 };
 
 export function PartnerListScreen({ onSelectPartner, onCreatePartner }: Props) {
-  const { state: sessionState } = useControlPanelSession();
+  const { state: sessionState } = useIdentitySession();
   const controller = usePartnerWorkspaceListController(sessionState.kind);
 
   const stateView =

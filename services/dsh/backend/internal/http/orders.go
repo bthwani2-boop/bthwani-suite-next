@@ -3,6 +3,8 @@ package http
 import (
 	"errors"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"dsh-api/internal/orders"
 	"dsh-api/internal/store"
@@ -16,30 +18,64 @@ const (
 	OperationsPermissionManage = "operations.manage"
 )
 
-// POST /dsh/client/orders
-func (s *protectedStoreServer) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client")
+func parseIfMatchVersion(w http.ResponseWriter, r *http.Request) (int, bool) {
+	val := strings.TrimSpace(r.Header.Get("If-Match-Version"))
+	if val == "" {
+		store.SendError(w, http.StatusBadRequest, "EXPECTED_VERSION_REQUIRED", "If-Match-Version header is required")
+		return 0, false
+	}
+	version, err := strconv.Atoi(val)
+	if err != nil || version <= 0 {
+		store.SendError(w, http.StatusBadRequest, "EXPECTED_VERSION_REQUIRED", "If-Match-Version must be a positive integer")
+		return 0, false
+	}
+	return version, true
+}
+
+// POST /dsh/partner/orders/{orderId}/decision
+func (s *protectedStoreServer) handlePartnerOrderDecision(w http.ResponseWriter, r *http.Request) {
+	actor, ownedOrder, ok := s.partnerOrder(w, r)
 	if !ok {
 		return
 	}
+
 	var body struct {
-		CheckoutIntentID string `json:"checkoutIntentId"`
+		Decision   string `json:"decision"` // "accept" or "reject"
+		ReasonCode string `json:"reasonCode"`
+		ReasonNote string `json:"reasonNote"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	if body.CheckoutIntentID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "checkoutIntentId is required")
+
+	idempotencyKey := r.Header.Get("Idempotency-Key")
+	if idempotencyKey == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "Idempotency-Key header is required")
 		return
 	}
 
-	order, err := orders.CreateOrder(s.db, orders.CreateOrderInput{
-		CheckoutIntentID: body.CheckoutIntentID,
-		ClientID:         actor.ID,
-		OperatorContextID:         actor.OperatorContextID,
+	version, ok := parseIfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+
+	order, err := orders.DecidePartnerOrder(s.db, orders.DecidePartnerOrderInput{
+		OrderID:         ownedOrder.ID,
+		StoreID:         ownedOrder.StoreID,
+		ActorID:         actor.ID,
+		Decision:        body.Decision,
+		ReasonCode:      body.ReasonCode,
+		ReasonNote:      body.ReasonNote,
+		ExpectedVersion: version,
+		IdempotencyKey:  idempotencyKey,
 	})
+
 	if errors.Is(err, orders.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+	if errors.Is(err, orders.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return
 	}
 	if errors.Is(err, orders.ErrConflict) {
@@ -47,117 +83,7 @@ func (s *protectedStoreServer) handleCreateOrder(w http.ResponseWriter, r *http.
 		return
 	}
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create order")
-		return
-	}
-
-	store.SendJSON(w, http.StatusCreated, map[string]any{"order": marshalOrder(order)})
-}
-
-// GET /dsh/client/orders
-func (s *protectedStoreServer) handleListClientOrders(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client")
-	if !ok {
-		return
-	}
-	list, err := orders.ListClientOrdersHydrated(s.db, actor.OperatorContextID, actor.ID, 50)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list orders")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"orders": marshalOrders(list)})
-}
-
-// GET /dsh/client/orders/{orderId}
-func (s *protectedStoreServer) handleGetClientOrder(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client")
-	if !ok {
-		return
-	}
-	orderID := r.PathValue("orderId")
-	if orderID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderId is required")
-		return
-	}
-	order, err := orders.GetClientOrder(s.db, orderID, actor.OperatorContextID, actor.ID)
-	if errors.Is(err, orders.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get order")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order)})
-}
-
-// GET /dsh/partner/orders?status=...
-// storeId is never taken from the request: it is resolved from the
-// authenticated partner actor, so a partner can never list another
-// partner's store orders by supplying an arbitrary storeId.
-func (s *protectedStoreServer) handleListPartnerOrders(w http.ResponseWriter, r *http.Request) {
-	_, storeID, ok := s.partnerStore(w, r)
-	if !ok {
-		return
-	}
-	statusFilter := r.URL.Query().Get("status")
-	list, err := orders.ListPartnerOrders(s.db, storeID, statusFilter, 50)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list partner orders")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"orders": marshalOrders(list)})
-}
-
-// POST /dsh/partner/orders/{orderId}/accept
-func (s *protectedStoreServer) handleAcceptOrder(w http.ResponseWriter, r *http.Request) {
-	actor, ownedOrder, ok := s.partnerOrder(w, r)
-	if !ok {
-		return
-	}
-	order, err := orders.AcceptOrder(s.db, ownedOrder.ID, actor.ID)
-	if errors.Is(err, orders.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
-		return
-	}
-	if errors.Is(err, orders.ErrConflict) {
-		store.SendError(w, http.StatusConflict, "CONFLICT", "order cannot be accepted in current state")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to accept order")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order)})
-}
-
-// POST /dsh/partner/orders/{orderId}/reject
-func (s *protectedStoreServer) handleRejectOrder(w http.ResponseWriter, r *http.Request) {
-	actor, ownedOrder, ok := s.partnerOrder(w, r)
-	if !ok {
-		return
-	}
-	var body struct {
-		Reason string `json:"reason"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	if body.Reason == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "rejection reason is required")
-		return
-	}
-	order, err := orders.RejectOrder(s.db, ownedOrder.ID, actor.ID, body.Reason)
-	if errors.Is(err, orders.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-		return
-	}
-	if errors.Is(err, orders.ErrConflict) {
-		store.SendError(w, http.StatusConflict, "CONFLICT", "order cannot be rejected in current state")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to reject order")
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to process order decision")
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order)})
@@ -207,20 +133,7 @@ func (s *protectedStoreServer) handleMarkReadyForPickup(w http.ResponseWriter, r
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order)})
 }
 
-// GET /dsh/operator/orders?status=...
-func (s *protectedStoreServer) handleListOperatorOrders(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
-	if !ok {
-		return
-	}
-	statusFilter := r.URL.Query().Get("status")
-	list, err := orders.ListOperatorOrders(s.db, statusFilter, 50)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list orders")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"orders": marshalOrders(list)})
-}
+
 
 // POST /dsh/operator/orders/{orderId}/cancel
 // Compatibility alias: all operator cancellation writes execute through the

@@ -1,17 +1,19 @@
+
 # BThwani Agents
 
 ## Authority
 
-`AGENTS.md` is the default repository instruction entry point. Resolve conflicts through:
+`AGENTS.md` is the repository-agent execution entry point. Resolve conflicts in this order:
 
 1. `governance/authority/authority-precedence.json`
 2. active canonical governance and machine-readable contracts
 3. the smallest applicable governed skill
-4. thin tool adapters
+4. registered tool policies and thin platform adapters
 
 Decision vocabulary: `governance/contracts/decision-vocabulary.json`.
 Skill registry: `governance/skills/skills-registry.json`.
 Agent registry: `governance/agents/agent-registry.json`.
+Conditional tool registry: `governance/tools/agent-tool-registry.json`.
 
 ## Default execution model
 
@@ -20,9 +22,33 @@ Use `CODE_BASED_LEAN`:
 - inspect the smallest complete surface that can reveal the root cause;
 - make the smallest safe change that closes the requested scope;
 - verify only the affected behavior and actual risk;
-- expand scope only when ownership, dependencies, product impact, or safety evidence requires it.
+- expand only when ownership, dependencies, product impact, or safety evidence requires it.
 
-Words such as "deep", "complete", or "100%" increase accuracy requirements. They do not authorize an automatic full-repository scan.
+Words such as "deep", "complete", or "100%" raise the evidence standard. They do not authorize automatic full-repository scans, full tool suites, or unsupported completeness claims.
+
+## Truth domains
+
+Do not use one evidence order for every question.
+
+### Implementation truth
+
+For what code currently does, use:
+
+1. the exact pinned branch and commit;
+2. current source, contracts, configuration, migrations, and tests;
+3. focused runtime evidence when runtime behavior is claimed.
+
+### Authority truth
+
+For who owns policy, data, contracts, decisions, or source-of-truth boundaries, use:
+
+1. `governance/authority/authority-precedence.json`;
+2. active canonical governance;
+3. machine-readable contracts and registries;
+4. the smallest applicable owner skill;
+5. implementation evidence as conformity proof, never as authority creation.
+
+Code cannot grant itself ownership that conflicts with higher authority. DSH operational implementation cannot redefine WLT financial ownership, and handwritten consumers cannot replace canonical API contracts.
 
 ## Repository truth
 
@@ -33,7 +59,7 @@ For GitHub or remote work:
 - resolve the exact repository and user-named branch;
 - pin its current commit SHA before claims or writes;
 - use that ref only, never the default branch as a substitute;
-- re-resolve before each write batch and after the final push;
+- re-resolve immediately before a write batch and after the final push;
 - stop and reconcile safely if the target branch moves;
 - never force-push, reset, or overwrite newer work merely to simplify execution.
 
@@ -46,6 +72,7 @@ Agents must:
 - identify the owner of truth, allowed paths, forbidden paths, consumers, contracts, data, and tests actually affected;
 - reuse existing code, scripts, and focused guards before adding files or dependencies;
 - keep generated diagnostics, logs, screenshots, evidence packs, and temporary task state untracked by default;
+- track evidence only when a canonical registry or explicit current task requires a durable artifact with declared owner, schema, commit binding, and retention rule;
 - run verification after the final relevant write;
 - report only what current evidence proves.
 
@@ -54,13 +81,21 @@ Agents must not:
 - read every skill, governance file, journey, or registry by default;
 - run full Graphify, full Nx graph, full typecheck, full build, full test, full guard suites, or integrated runtime without proven need;
 - create scripts or reports merely to satisfy process wording;
-- treat fixtures, seeds, previews, fallbacks, or in-memory data as production or commercial proof;
+- treat fixtures, seeds, previews, fallbacks, compressed context, or in-memory data as production or commercial proof;
 - let CI mutate, commit, push, merge, or rewrite source;
 - archive removed material when Git history already preserves it.
 
+## Skills, tools, and adapters
+
+- A **governed skill** owns only a declared repository domain or routing decision and is registered in `governance/skills/skills-registry.json`.
+- A **tool** is an optional execution aid. It owns no approval or repository truth and is registered in `governance/tools/agent-tool-registry.json`.
+- A **platform adapter** only points a host tool to higher authority. It must remain short and cannot duplicate project policy.
+
+A multi-step tool workflow does not make the tool a skill. Tool documentation lives under `.agents/tools/`; live tool wrappers must not exist under `.agents/skills/`.
+
 ## Task modes
 
-Choose one primary mode. Add only the owner skill required by real risk.
+Choose one primary mode. Load only skills required by real risk.
 
 | Mode | Default verification |
 | --- | --- |
@@ -75,7 +110,7 @@ Choose one primary mode. Add only the owner skill required by real risk.
 | `SECURITY_PRIVACY` | targeted auth, isolation, secrets, or privacy verification |
 | `AGENT_SYSTEM` | affected agent, registry, governance, or workflow guards |
 | `DEPENDENCY_CI` | affected lockfile, package, workflow, or policy checks |
-| `REFACTOR_CLEANUP` | reference impact proof plus affected checks |
+| `REFACTOR_CLEANUP` | reference-impact proof plus affected checks |
 
 ## Tool ladder
 
@@ -86,10 +121,12 @@ Use tools in this order:
 3. one registered targeted guard;
 4. a small idempotent helper for a proven repeated pattern;
 5. Nx affected when workspace impact must be computed;
-6. Graphify only when ownership, dependency, duplication, or dead-code relationships remain unclear;
-7. runtime tooling only when runtime behavior changes or is claimed.
+6. LeanCTX only when it materially reduces repeated reads or noisy output;
+7. Graphify only when ownership, dependency, duplication, dead-code, or broad relationship questions remain unresolved;
+8. OpenCodeReview only for a bounded diff, commit, or branch-range review;
+9. runtime tooling only when runtime behavior changes or is claimed.
 
-LeanCTX and Graphify are optional tools, not mandatory first steps and not authorities.
+Tool use is conditional and evidence-driven. Tool output is advisory unless a higher contract explicitly defines a stronger assurance boundary.
 
 ## Authorities and protected work
 
@@ -135,3 +172,10 @@ remaining_risks:
 Do not overclaim.
 
 <!-- Mappings for agent-governance-gate: Command Safety Policy , Smart Execution Model -->
+
+<!-- lean-ctx -->
+## lean-ctx
+
+lean-ctx is active — the MCP tools replace native equivalents.
+Full rules: LEAN-CTX.md (open on demand — do not auto-load).
+<!-- /lean-ctx -->

@@ -1,0 +1,62 @@
+{
+  "verificationId": "VER-0001",
+  "title": "REPLACE_WITH_SPECIFIC_CLAIM_BEING_VERIFIED",
+  "status": "PLANNED",
+  "required": true,
+  "evidenceScope": "STATIC|PRODUCT|RUNTIME|VISUAL|QA|SECURITY|FINANCE|ISOLATION|GOVERNANCE|CI|RELEASE|PRODUCTION",
+  "verificationType": "REFERENCE_SEARCH|TYPECHECK|LINT|UNIT|INTEGRATION|CONTRACT|DATABASE|MIGRATION|SECURITY|NEGATIVE|REGRESSION|RUNTIME|CROSS_SURFACE|END_TO_END|ROLLBACK|MANUAL_REVIEW|EXTERNAL_EVIDENCE",
+  "linked": {
+    "findingIds": ["FND-0001"],
+    "workItemIds": ["TASK-0001"],
+    "acceptanceCriterionIds": ["AC-TASK-0001-01"],
+    "riskIds": []
+  },
+  "claim": {
+    "proves": "REPLACE_WITH_NARROW_EXACT_CLAIM",
+    "doesNotProve": [
+      "REPLACE_WITH_COMMON_OVERCLAIM_EXCLUDED_BY_THIS_CHECK"
+    ],
+    "preconditions": [],
+    "environment": "REPLACE_WITH_EXACT_ENVIRONMENT_OR_NOT_APPLICABLE",
+    "sameCommitRequired": true
+  },
+  "procedure": {
+    "workingDirectory": "REPOSITORY_ROOT_OR_EXACT_PATH",
+    "command": "REPLACE_WITH_EXACT_COMMAND_OR_MANUAL_PROCEDURE",
+    "inputs": [],
+    "fixturesOrData": [],
+    "expectedExitCode": 0,
+    "expectedResult": "REPLACE_WITH_BINARY_OBSERVABLE_RESULT",
+    "negativeExpectation": "REPLACE_OR_NOT_APPLICABLE",
+    "cleanup": "REPLACE_OR_NOT_APPLICABLE"
+  },
+  "result": {
+    "executedAt": null,
+    "repository": "bthwani2-boop/bthwani-suite-next",
+    "branch": "TARGET_BRANCH",
+    "sha": null,
+    "exitCode": null,
+    "actualResult": null,
+    "artifactOrLogReference": null,
+    "sanitized": true,
+    "decision": "NEEDS_EVIDENCE",
+    "failureClassification": null,
+    "rerunAfterLastWrite": false
+  },
+  "quality": {
+    "deterministic": "YES|NO_WITH_REASON",
+    "flakinessRisk": "NONE|LOW|MEDIUM|HIGH",
+    "falsePositiveRisk": "REPLACE",
+    "falseNegativeRisk": "REPLACE",
+    "limitations": [],
+    "independentAuthorityRequired": false,
+    "requiredAuthority": null
+  },
+  "failurePolicy": {
+    "keepFindingOpen": true,
+    "keepWorkItemOpen": true,
+    "doNotDeferFixableFailure": true,
+    "requiredNextAction": "DIAGNOSE_ROOT_CAUSE_FIX_AND_RERUN",
+    "externalBlockerCriteria": []
+  }
+}

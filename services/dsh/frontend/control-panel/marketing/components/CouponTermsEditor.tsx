@@ -2,6 +2,10 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
+import {
+  minorUnitsToWltMajorInput,
+  parseWltMajorInputToMinorUnits,
+} from "@bthwani/wlt/dsh";
 import { CpButton } from "@bthwani/control-panel/components";
 import type {
   CouponDiscountType,
@@ -48,10 +52,10 @@ export function CouponTermsEditor({ coupon, loading, onSave }: CouponTermsEditor
   const [discountValue, setDiscountValue] = useState(
     coupon.discountType === "percent"
       ? String(coupon.discountPercent)
-      : String(coupon.fixedDiscountMinorUnits / 100),
+      : minorUnitsToWltMajorInput(coupon.fixedDiscountMinorUnits, "YER"),
   );
-  const [minSubtotalYer, setMinSubtotalYer] = useState(String(coupon.minSubtotalMinorUnits / 100));
-  const [maxDiscountYer, setMaxDiscountYer] = useState(String(coupon.maxDiscountMinorUnits / 100));
+  const [minSubtotalYer, setMinSubtotalYer] = useState(minorUnitsToWltMajorInput(coupon.minSubtotalMinorUnits, "YER"));
+  const [maxDiscountYer, setMaxDiscountYer] = useState(minorUnitsToWltMajorInput(coupon.maxDiscountMinorUnits, "YER"));
   const [globalLimit, setGlobalLimit] = useState(String(coupon.globalUsageLimit));
   const [clientLimit, setClientLimit] = useState(String(coupon.perClientUsageLimit));
   const [modes, setModes] = useState<readonly CouponFulfillmentMode[]>(coupon.eligibleFulfillmentModes);
@@ -65,9 +69,9 @@ export function CouponTermsEditor({ coupon, loading, onSave }: CouponTermsEditor
     setDiscountType(coupon.discountType);
     setDiscountValue(coupon.discountType === "percent"
       ? String(coupon.discountPercent)
-      : String(coupon.fixedDiscountMinorUnits / 100));
-    setMinSubtotalYer(String(coupon.minSubtotalMinorUnits / 100));
-    setMaxDiscountYer(String(coupon.maxDiscountMinorUnits / 100));
+      : minorUnitsToWltMajorInput(coupon.fixedDiscountMinorUnits, "YER"));
+    setMinSubtotalYer(minorUnitsToWltMajorInput(coupon.minSubtotalMinorUnits, "YER"));
+    setMaxDiscountYer(minorUnitsToWltMajorInput(coupon.maxDiscountMinorUnits, "YER"));
     setGlobalLimit(String(coupon.globalUsageLimit));
     setClientLimit(String(coupon.perClientUsageLimit));
     setModes(coupon.eligibleFulfillmentModes);
@@ -82,15 +86,17 @@ export function CouponTermsEditor({ coupon, loading, onSave }: CouponTermsEditor
   };
 
   const save = async () => {
-    const discount = Number(discountValue);
-    const minimum = Number(minSubtotalYer);
-    const maximum = Number(maxDiscountYer);
+    const percentDiscount = Number(discountValue);
+    const fixedDiscount = parseWltMajorInputToMinorUnits(discountValue, "YER");
+    const minimum = parseWltMajorInputToMinorUnits(minSubtotalYer, "YER");
+    const maximum = parseWltMajorInputToMinorUnits(maxDiscountYer, "YER");
     const totalLimit = Number(globalLimit);
     const perClient = Number(clientLimit);
-    if (!nameAr.trim() || !Number.isFinite(discount) || discount <= 0 ||
-        (discountType === "percent" && discount > 100) ||
-        !Number.isFinite(minimum) || minimum < 0 ||
-        !Number.isFinite(maximum) || maximum < 0 ||
+    if (!nameAr.trim() ||
+        (discountType === "percent" && (!Number.isFinite(percentDiscount) || percentDiscount <= 0 || percentDiscount > 100)) ||
+        (discountType === "fixed" && (!fixedDiscount.ok || fixedDiscount.minorUnits <= 0)) ||
+        !minimum.ok || minimum.minorUnits < 0 ||
+        !maximum.ok || maximum.minorUnits < 0 ||
         !Number.isInteger(totalLimit) || totalLimit < 0 ||
         !Number.isInteger(perClient) || perClient <= 0 || modes.length === 0) return;
 
@@ -105,10 +111,10 @@ export function CouponTermsEditor({ coupon, loading, onSave }: CouponTermsEditor
       description: description.trim(),
       storeId: storeId.trim(),
       discountType,
-      discountPercent: discountType === "percent" ? discount : 0,
-      fixedDiscountMinorUnits: discountType === "fixed" ? Math.round(discount * 100) : 0,
-      minSubtotalMinorUnits: Math.round(minimum * 100),
-      maxDiscountMinorUnits: Math.round(maximum * 100),
+      discountPercent: discountType === "percent" ? percentDiscount : 0,
+      fixedDiscountMinorUnits: discountType === "fixed" && fixedDiscount.ok ? fixedDiscount.minorUnits : 0,
+      minSubtotalMinorUnits: minimum.minorUnits,
+      maxDiscountMinorUnits: maximum.minorUnits,
       globalUsageLimit: totalLimit,
       perClientUsageLimit: perClient,
       eligibleFulfillmentModes: modes,

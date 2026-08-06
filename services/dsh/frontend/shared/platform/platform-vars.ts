@@ -6,7 +6,7 @@ export interface PlatformVarsConfig {
   dshClientId: string | null;
   mediaBaseUrl: string | null;
   devMediaBaseUrl: string | null;
-  captainWalletBalanceThreshold: string | null;
+  codRemittanceDeadlineHours: number | null;
   dshVisibilityRegionSanaa: string | null;
   partnerAcceptanceTimeoutSecs: string | null;
   dispatchSearchRadiusKm: string | null;
@@ -20,7 +20,7 @@ export const DEFAULT_PLATFORM_VARS: PlatformVarsConfig = {
   dshClientId: null,
   mediaBaseUrl: null,
   devMediaBaseUrl: null,
-  captainWalletBalanceThreshold: null,
+  codRemittanceDeadlineHours: null,
   dshVisibilityRegionSanaa: null,
   partnerAcceptanceTimeoutSecs: null,
   dispatchSearchRadiusKm: null,

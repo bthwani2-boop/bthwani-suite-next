@@ -10,7 +10,7 @@ import type {
   OperationsPanelId,
   OperationsViewState,
 } from './operations.types';
-import { DSH_NAV_ITEMS } from '@bthwani/control-panel/shell';
+import { DSH_NAV_ITEMS } from "../navigation";
 import styles from '../shared/control-panel-surface.module.css';
 import {
   buildOperationsHref,
@@ -18,7 +18,7 @@ import {
   useOperationsController,
   useOperationsPermission,
 } from '../../shared/operations';
-import { useControlPanelSession } from '../../shared/session/control-panel-session';
+import { useIdentitySession } from "@bthwani/core-identity";
 
 const CommandCenterScreen = React.lazy(() =>
   import('./CommandCenterScreen').then((module) => ({ default: module.CommandCenterScreen })),
@@ -153,7 +153,7 @@ export function ControlPanelDshOperationsScreen({
     router,
   });
 
-  const { state: sessionState } = useControlPanelSession();
+  const { state: sessionState } = useIdentitySession();
   const hasPermission = useOperationsPermission(activeGroup, activeSubGroup);
   const screenConfig = SCREEN_RENDERERS[activeGroup];
   const ActiveScreen = ((activeSubGroup && screenConfig.bySubGroup?.[activeSubGroup])

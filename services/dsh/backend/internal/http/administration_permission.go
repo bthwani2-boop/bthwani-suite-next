@@ -45,15 +45,6 @@ func (s *protectedStoreServer) requireAdministrationPermission(
 		}
 	}
 
-	allowed, permissionErr := administration.ActorHasPermission(s.db, identity.Subject, action)
-	if permissionErr != nil {
-		store.SendError(w, http.StatusInternalServerError, "AUTHORIZATION_UNAVAILABLE", "administration authorization could not be verified")
-		return store.StoreActor{}, false
-	}
-	if !allowed {
-		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor is not approved for this administration action")
-		return store.StoreActor{}, false
-	}
-	actor.Role = "approved-role:" + action
-	return actor, true
+	store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor is not approved for this administration action")
+	return store.StoreActor{}, false
 }

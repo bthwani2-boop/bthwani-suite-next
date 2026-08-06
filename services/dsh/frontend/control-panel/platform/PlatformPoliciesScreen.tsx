@@ -22,7 +22,6 @@ import {
   useZonesController,
 } from "../../shared/platform";
 import { ClientAddressPrivacySection } from "./ClientAddressPrivacySection";
-import { DispatchBalancePolicySection } from "./DispatchBalancePolicySection";
 import { OperationalPolicySection } from "./OperationalPolicySection";
 import { MapProviderHealthCard } from "./MapProviderHealthCard";
 import { OperationalPolicyGovernanceSection } from "./OperationalPolicyGovernanceSection";
@@ -43,7 +42,7 @@ export function PlatformPoliciesContent({ embedded = false }: PlatformPoliciesCo
         <View style={styles.section}>
           <Text role="titleSm">سياسات المنصة ومناطق الخدمة</Text>
           <Text role="caption" tone="muted">
-            حقيقة DSH التشغيلية للخرائط والمناطق وخصوصية العناوين وSLA والسعة وأهلية الإسناد.
+            حقيقة DSH التشغيلية للخرائط والمناطق وخصوصية العناوين وSLA والسعة. قرارات الأهلية المالية للكابتن مملوكة لـWLT، وDSH يعرض قرارًا قصير العمر فقط عند الإسناد.
           </Text>
         </View>
       ) : null}
@@ -51,7 +50,6 @@ export function PlatformPoliciesContent({ embedded = false }: PlatformPoliciesCo
       <MapProviderHealthCard />
       <ServiceAreaGovernanceSection />
       <ClientAddressPrivacySection />
-      <DispatchBalancePolicySection />
 
       <View style={styles.section}>
         <Text role="titleSm">مناطق التشغيل المنطقية</Text>
@@ -163,7 +161,7 @@ export function PlatformPoliciesScreen() {
     <SettingsPageFrame
       header={
         <CpPageHeader title="سياسات المنصة ومناطق الخدمة">
-          <CpMutedInline>حقيقة DSH التشغيلية للخرائط والمناطق وخصوصية العناوين وSLA والسعة وأهلية الإسناد</CpMutedInline>
+          <CpMutedInline>حقيقة DSH التشغيلية للخرائط والمناطق وخصوصية العناوين وSLA والسعة. الحقيقة المالية للكابتن مملوكة لـWLT.</CpMutedInline>
         </CpPageHeader>
       }
     >

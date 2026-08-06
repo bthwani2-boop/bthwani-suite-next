@@ -1,9 +1,12 @@
 package http
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -21,16 +24,17 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		return
 	}
 	var body struct {
-		EventID          string `json:"eventId"`
-		CorrelationID    string `json:"correlationId"`
-		CheckoutIntentID string `json:"checkoutIntentId"`
-		SpecialRequestID string `json:"specialRequestId"`
-		OrderID          string `json:"orderId"`
-		RefundReference  string `json:"refundReference"`
-		Reason           string `json:"reason"`
-		OperatorContextID         string `json:"operatorContextId"`
-		PaymentSessionID string `json:"paymentSessionId"`
-		Status           string `json:"status"`
+		EventID           string `json:"eventId"`
+		CorrelationID     string `json:"correlationId"`
+		CheckoutIntentID  string `json:"checkoutIntentId"`
+		SpecialRequestID  string `json:"specialRequestId"`
+		OrderID           string `json:"orderId"`
+		RefundReference   string `json:"refundReference"`
+		Reason            string `json:"reason"`
+		OperatorContextID string `json:"operatorContextId"`
+		PaymentSessionID  string `json:"paymentSessionId"`
+		PaymentMethod     string `json:"paymentMethod"`
+		Status            string `json:"status"`
 	}
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
 	decoder.DisallowUnknownFields()
@@ -44,7 +48,9 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 	body.CheckoutIntentID = strings.TrimSpace(body.CheckoutIntentID)
 	body.SpecialRequestID = strings.TrimSpace(body.SpecialRequestID)
 	body.PaymentSessionID = strings.TrimSpace(body.PaymentSessionID)
+	body.PaymentMethod = strings.TrimSpace(body.PaymentMethod)
 	body.Status = strings.TrimSpace(body.Status)
+	body.OrderID = strings.TrimSpace(body.OrderID)
 	if body.OperatorContextID == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required")
 		return
@@ -132,12 +138,12 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 	}
 
 	eventEnvelope := checkout.WltPaymentEventEnvelope{
-		EventID:          body.EventID,
-		OperatorContextID:         body.OperatorContextID,
-		CheckoutIntentID: body.CheckoutIntentID,
-		PaymentSessionID: body.PaymentSessionID,
-		Status:           body.Status,
-		CorrelationID:    body.CorrelationID,
+		EventID:           body.EventID,
+		OperatorContextID: body.OperatorContextID,
+		CheckoutIntentID:  body.CheckoutIntentID,
+		PaymentSessionID:  body.PaymentSessionID,
+		Status:            body.Status,
+		CorrelationID:     body.CorrelationID,
 	}
 	eventKey, replayed, err := checkout.BeginWltPaymentEventTx(r.Context(), tx, eventEnvelope)
 	if errors.Is(err, checkout.ErrWltEventReplayConflict) {
@@ -163,6 +169,17 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 	if err := tx.Commit(); err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to commit WLT payment event")
 		return
+	}
+
+	if body.OrderID != "" {
+		if err := applyOrderPaymentProjection(r.Context(), s.db, body.OrderID, body.OperatorContextID, body.PaymentSessionID, body.PaymentMethod, body.Status, body.CorrelationID); err != nil {
+			// The WLT event itself is already accepted, so the request must not fail:
+			// this projection is eventually consistent and is repaired by replay.
+			// It is still recorded, because a silently dropped projection error would
+			// leave DSH's read model diverged from WLT with no operator signal.
+			log.Printf("[wlt-events] order payment projection failed for order %s (session %s, correlation %s): %v",
+				body.OrderID, body.PaymentSessionID, body.CorrelationID, err)
+		}
 	}
 
 	pricing, err := checkout.GetPricing(s.db, intent.ID)
@@ -219,4 +236,103 @@ func handleConfirmedRefundEffect(w http.ResponseWriter, s *protectedStoreServer,
 
 func requireWltServiceCaller(w http.ResponseWriter, r *http.Request) bool {
 	return store.RequireServiceCaller(w, r, "DSH_WLT_SERVICE_TOKEN", "wlt")
+}
+
+func applyOrderPaymentProjection(ctx context.Context, db *sql.DB, orderID, operatorContextID, sessionID, method, status, correlationID string) error {
+	projection, err := mapWltPaymentProjection(method, status)
+	if err != nil {
+		return err
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var currentProjection, currentOrderStatus, dbCorrelationID string
+	var currentVersion int
+	var currentSourceUpdated sql.NullTime
+	err = tx.QueryRowContext(ctx, `
+		SELECT payment_status_projection,status,correlation_id,version,payment_projection_source_updated_at
+		FROM dsh_orders
+		WHERE id=$1::uuid AND operator_context_id=$2 AND wlt_payment_ref_id=$3
+		FOR UPDATE`, orderID, operatorContextID, sessionID,
+	).Scan(&currentProjection, &currentOrderStatus, &dbCorrelationID, &currentVersion, &currentSourceUpdated)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil // Not found, maybe it's not created yet or wrong order ID
+	}
+	if err != nil {
+		return err
+	}
+
+	projectionChanged := currentProjection != projection
+	newVersion := currentVersion
+	if projectionChanged {
+		err = tx.QueryRowContext(ctx, `
+			UPDATE dsh_orders
+			SET payment_status_projection=$1,
+			    payment_projection_updated_at=NOW(),
+			    payment_projection_reconciled_at=NOW(),
+			    version=version+1,
+			    updated_at=NOW()
+			WHERE id=$3::uuid AND operator_context_id=$4 AND wlt_payment_ref_id=$5
+			RETURNING version`, projection, orderID, operatorContextID, sessionID,
+		).Scan(&newVersion)
+		if err != nil {
+			return err
+		}
+		metadata := fmt.Sprintf(`{"source":"WLT","paymentProjection":%q,"wltStatus":%q}`, projection, status)
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO dsh_order_status_events
+			(order_id,operator_context_id,actor_role,actor_id,from_status,to_status,note,event_type,
+			 correlation_id,causation_id,order_version,metadata)
+			VALUES ($1::uuid,$2,'system','wlt',$3,$3,'verified WLT projection changed',
+			        'order.payment_projection_updated',$4,$5,$6,$7::jsonb)`,
+			orderID,
+			operatorContextID,
+			currentOrderStatus,
+			correlationID,
+			sessionID,
+			newVersion,
+			metadata,
+		)
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err = tx.ExecContext(ctx, `
+			UPDATE dsh_orders
+			SET payment_projection_reconciled_at=NOW()
+			WHERE id=$1::uuid AND operator_context_id=$2 AND wlt_payment_ref_id=$3`,
+			orderID, operatorContextID, sessionID,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func mapWltPaymentProjection(method, status string) (string, error) {
+	method = strings.TrimSpace(strings.ToLower(method))
+	status = strings.TrimSpace(strings.ToLower(status))
+	switch status {
+	case "initiated", "reference_created":
+		if method == "cod" {
+			return "cash_due", nil
+		}
+		return "pending", nil
+	case "captured":
+		return "confirmed", nil
+	case "refunded":
+		return "refunded", nil
+	case "failed":
+		return "failed", nil
+	case "cancelled":
+		return "cancelled", nil
+	case "expired":
+		return "expired", nil
+	default:
+		return "", fmt.Errorf("unsupported WLT payment status %q", status)
+	}
 }

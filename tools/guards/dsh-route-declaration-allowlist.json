@@ -1,0 +1,4 @@
+{
+  "description": "Reviewed exceptions for dsh-route-declaration-gate. Every entry must carry a route and a precise reason. This is a closure list, not a permanent allowance -- routes should be removed as they are properly declared in the DSH OpenAPI contract. Snapshotted 2026-08-01 during root-cause remediation (C1/C2); this is the full pre-existing gap, not newly introduced debt.",
+  "entries": []
+}

@@ -13,7 +13,7 @@ func (s *protectedStoreServer) authorizePreparationIssueRead(
 	w http.ResponseWriter,
 	r *http.Request,
 ) (string, bool) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain")
 	if !ok {
 		return "", false
 	}
@@ -46,13 +46,7 @@ func (s *protectedStoreServer) authorizePreparationIssueRead(
 			return "", false
 		}
 	case "operator":
-		if _, permitted := s.requirePermission(
-			w,
-			r,
-			"control-panel",
-			OperationsPermissionRead,
-			"operator",
-		); !permitted {
+		if _, permitted := s.ActorFromContext(r.Context()); !permitted {
 			return "", false
 		}
 	}
@@ -259,4 +253,64 @@ func (s *protectedStoreServer) handleResolvePreparationIssue(w http.ResponseWrit
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"issue": issue})
+}
+
+func (s *protectedStoreServer) handleProposeReplacement(w http.ResponseWriter, r *http.Request) {
+	actor, ownedOrder, ok := s.partnerOrder(w, r)
+	if !ok {
+		return
+	}
+	var body struct {
+		OrderItemID            string  `json:"orderItemId"`
+		AffectedQuantity       int     `json:"affectedQuantity"`
+		Note                   string  `json:"note"`
+		ReplacementProductID   string  `json:"replacementProductId"`
+		ReplacementProductName string  `json:"replacementProductName"`
+		ReplacementQuantity    int     `json:"replacementQuantity"`
+		ReplacementUnitPrice   float64 `json:"replacementUnitPrice"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	body.OrderItemID = strings.TrimSpace(body.OrderItemID)
+	if body.OrderItemID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderItemId is required")
+		return
+	}
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	if correlationID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "X-Correlation-ID is required")
+		return
+	}
+
+	issue, err := orders.ProposeReplacement(s.db, orders.ProposeReplacementInput{
+		OrderID:                ownedOrder.ID,
+		StoreID:                ownedOrder.StoreID,
+		OrderItemID:            body.OrderItemID,
+		ActorID:                actor.ID,
+		AffectedQuantity:       body.AffectedQuantity,
+		Note:                   body.Note,
+		ReplacementProductID:   body.ReplacementProductID,
+		ReplacementProductName: body.ReplacementProductName,
+		ReplacementQuantity:    body.ReplacementQuantity,
+		ReplacementUnitPrice:   body.ReplacementUnitPrice,
+		CorrelationID:          correlationID,
+	})
+	if errors.Is(err, orders.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+	if errors.Is(err, orders.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order or order item not found")
+		return
+	}
+	if errors.Is(err, orders.ErrConflict) {
+		store.SendError(w, http.StatusConflict, "CONFLICT", err.Error())
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to propose replacement")
+		return
+	}
+	store.SendJSON(w, http.StatusCreated, map[string]any{"issue": issue})
 }

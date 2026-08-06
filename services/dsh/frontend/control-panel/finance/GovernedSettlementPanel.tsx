@@ -7,7 +7,7 @@ import {
   createSettlementFromDeliveredOrders,
   upsertSettlementPolicy,
   type SettlementActionResult,
-} from "../../shared/finance-wlt-link/finance/finance.controller";
+} from '@bthwani/wlt/dsh';
 
 type GovernedSettlementPanelProps = {
   readonly reload: () => Promise<void>;

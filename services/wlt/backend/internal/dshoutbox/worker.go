@@ -40,7 +40,7 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *dshnotify.Client) erro
 		err := client.NotifyEvent(notifyCtx, dshnotify.Event{
 			EventID: e.ID, CorrelationID: e.CorrelationID, OperatorContextID: e.OperatorContextID,
 			CheckoutIntentID: e.CheckoutIntentID, SpecialRequestID: e.SpecialRequestID,
-			PaymentSessionID: e.PaymentSessionID, Status: e.EventType,
+			PaymentSessionID: e.PaymentSessionID, PaymentMethod: e.PaymentMethod, Status: e.EventType,
 			OrderID: e.OrderID, RefundReference: e.RefundReference, Reason: e.Reason,
 		})
 		cancel()

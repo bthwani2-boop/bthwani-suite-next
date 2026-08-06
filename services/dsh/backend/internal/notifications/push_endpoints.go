@@ -8,23 +8,27 @@ import (
 )
 
 type PushEndpoint struct {
-	ID           string    `json:"id"`
-	ActorID      string    `json:"actorId"`
-	ActorType    string    `json:"actorType"`
-	Provider     string    `json:"provider"`
-	DeviceID     string    `json:"deviceId"`
-	Platform     string    `json:"platform"`
-	Active       bool      `json:"active"`
-	LastSeenAt   time.Time `json:"lastSeenAt"`
-	CreatedAt    time.Time `json:"createdAt"`
-	UpdatedAt    time.Time `json:"updatedAt"`
+	ID                string    `json:"id"`
+	ActorID           string    `json:"actorId"`
+	ActorType         string    `json:"actorType"`
+	IdentitySessionID string    `json:"identitySessionId"`
+	Surface           string    `json:"surface"`
+	Provider          string    `json:"provider"`
+	DeviceID          string    `json:"deviceId"`
+	Platform          string    `json:"platform"`
+	Active            bool      `json:"active"`
+	LastSeenAt        time.Time `json:"lastSeenAt"`
+	CreatedAt         time.Time `json:"createdAt"`
+	UpdatedAt         time.Time `json:"updatedAt"`
 }
 
 type PushEndpointInput struct {
-	Provider      string
-	EndpointToken string
-	DeviceID      string
-	Platform      string
+	Provider          string
+	EndpointToken     string
+	DeviceID          string
+	Platform          string
+	IdentitySessionID string
+	Surface           string
 }
 
 func UpsertPushEndpoint(db *sql.DB, actorID, actorType string, input PushEndpointInput) (PushEndpoint, error) {
@@ -66,22 +70,26 @@ func UpsertPushEndpoint(db *sql.DB, actorID, actorType string, input PushEndpoin
 	var endpoint PushEndpoint
 	err = tx.QueryRow(`
 		INSERT INTO dsh_notification_push_endpoints
-			(actor_id, actor_type, provider, endpoint_token, device_id, platform, active, last_seen_at)
-		VALUES ($1, $2, $3, $4, $5, $6, TRUE, NOW())
+			(actor_id, actor_type, provider, endpoint_token, device_id, platform, identity_session_id, surface, active, last_seen_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE, NOW())
 		ON CONFLICT (actor_id, actor_type, device_id)
 		DO UPDATE SET provider = EXCLUDED.provider,
 		              endpoint_token = EXCLUDED.endpoint_token,
 		              platform = EXCLUDED.platform,
+		              identity_session_id = EXCLUDED.identity_session_id,
+		              surface = EXCLUDED.surface,
 		              active = TRUE,
 		              last_seen_at = NOW(),
 		              updated_at = NOW()
-		RETURNING id::text, actor_id, actor_type, provider, device_id, platform,
+		RETURNING id::text, actor_id, actor_type, identity_session_id, surface, provider, device_id, platform,
 		          active, last_seen_at, created_at, updated_at`,
-		actorID, actorType, provider, token, deviceID, platform,
+		actorID, actorType, provider, token, deviceID, platform, input.IdentitySessionID, input.Surface,
 	).Scan(
 		&endpoint.ID,
 		&endpoint.ActorID,
 		&endpoint.ActorType,
+		&endpoint.IdentitySessionID,
+		&endpoint.Surface,
 		&endpoint.Provider,
 		&endpoint.DeviceID,
 		&endpoint.Platform,

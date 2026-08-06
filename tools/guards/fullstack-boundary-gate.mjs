@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fail, findImportSpecifiers, lineNumber, listCodeFiles, read, repoRoot, toPosix } from "./_guard-utils.mjs";
+import { parseIndexedContractModules, parseOpenApiContract } from "./_openapi-utils.mjs";
+import { MUTATION_METHODS, extractApiCallSites, pathsAreCompatible } from "./lib/api-operations.mjs";
 
 const guardId = "fullstack-boundary-gate";
 const violations = [];
@@ -27,8 +29,40 @@ function resolveSpecifier(file, specifier) {
 }
 
 const wltSharedDshPath = "services/wlt/frontend/shared/dsh/";
-const approvalPath = path.join(repoRoot, wltSharedDshPath, ".wlt-mutation-approved");
-const mutationApproved = fs.existsSync(approvalPath);
+
+// services/wlt/frontend/shared/dsh is the WLT-side integration layer. It may
+// issue mutations, but only through the governed DSH facade: every mutating
+// call must resolve to a real operation on a canonical DSH contract. That is an
+// operation-level authority check, not a directory-level exemption, so a call
+// to WLT directly, to an unknown path, or with a runtime-computed method is
+// still a violation.
+const governedOperations = (() => {
+  const masterContractPath = "contracts/openapi/index.yaml";
+  try {
+    const entryModules = parseIndexedContractModules(masterContractPath)
+      .filter((module) => module.exists)
+      .map((module) => module.file);
+    const allModules = new Set(entryModules);
+    for (const entry of entryModules) {
+      for (const nested of parseIndexedContractModules(entry)) {
+        if (nested.exists) allModules.add(nested.file);
+      }
+    }
+    return [...allModules].flatMap((relative) => parseOpenApiContract(relative));
+  } catch (error) {
+    violations.push({
+      file: masterContractPath,
+      message: `GOVERNED_OPERATIONS_UNRESOLVABLE ${error.message}`,
+    });
+    return [];
+  }
+})();
+
+function governedDshOperationExists(method, rawPath) {
+  return governedOperations.some(
+    (operation) => operation.method === method && pathsAreCompatible(rawPath, operation.path),
+  );
+}
 
 const FINANCIAL_MUTATION_PATTERNS = [
   /wallet_balance_mutation/,
@@ -41,12 +75,33 @@ const FINANCIAL_MUTATION_PATTERNS = [
   /\bfinalizeRefund\b/,
 ];
 
+function sortedUnique(values) {
+  return [...new Set(values)].sort();
+}
+
+function extractBracketEnumValues(block) {
+  return sortedUnique([...block.matchAll(/^\s*([a-z][a-z0-9_]*)\s*,?\s*$/gm)].map((match) => match[1]));
+}
+
+function extractQuotedUnionValues(block) {
+  return sortedUnique([...block.matchAll(/"([^"]+)"/g)].map((match) => match[1]));
+}
+
+
+
 for (const file of listCodeFiles()) {
   const content = read(file);
   const surfaceMatch = file.match(/^services\/([^/]+)\/frontend\/([^/]+)\//);
   const isSurface = surfaceMatch && surfaceMatch[2] !== "shared";
   const currentSurface = isSurface ? surfaceMatch[2] : null;
   const isShared = file.startsWith("shared/") || file.includes("/frontend/shared/");
+
+  if (!file.startsWith("tools/guards/") && (/PUT\s+\/dsh\/operator\/workforce\/scopes\//.test(content) || /handleUpdateOperatorWorkforceScopes/.test(content))) {
+    violations.push({
+      file,
+      message: "FORBIDDEN: DSH may read Workforce scopes only; assignment/scope mutations belong to Workforce",
+    });
+  }
 
   if (isSurface) {
     if (/\bfetch\(/.test(content)) {
@@ -86,10 +141,44 @@ for (const file of listCodeFiles()) {
     }
   }
 
-  if (file.startsWith(wltSharedDshPath) && !mutationApproved) {
-    const httpMutationRegex = /\bmethod\s*:\s*["'](?:POST|PUT|PATCH|DELETE)["']/i;
-    if (httpMutationRegex.test(content)) {
-      violations.push({ file, message: "FORBIDDEN: mutation HTTP method in read-only boundary file" });
+  if (file.startsWith(wltSharedDshPath)) {
+    for (const site of extractApiCallSites(file, content, { reportUnresolvedMutationPaths: true })) {
+      if (site.path === null) {
+        violations.push({
+          file,
+          line: site.line,
+          message: `FORBIDDEN: ${site.method} to a runtime-computed path cannot be proven against a governed DSH operation; pass an explicit contract path`,
+        });
+        continue;
+      }
+      // A computed method is unprovable, so it is rejected regardless of path.
+      if (site.methodSource === "dynamic") {
+        violations.push({
+          file,
+          line: site.line,
+          message: `FORBIDDEN: runtime-computed HTTP method for '${site.path}' cannot be proven against a governed DSH operation`,
+        });
+        continue;
+      }
+      // "absent" means a read helper such as tryGet(path, mapper): no options
+      // object, so the call carries no mutation intent.
+      if (site.methodSource === "absent" || !MUTATION_METHODS.has(site.method)) continue;
+
+      if (!site.path.startsWith("/dsh/")) {
+        violations.push({
+          file,
+          line: site.line,
+          message: `FORBIDDEN: ${site.method} ${site.path} does not go through the governed DSH facade; surfaces must never mutate WLT directly`,
+        });
+        continue;
+      }
+      if (!governedDshOperationExists(site.method, site.path)) {
+        violations.push({
+          file,
+          line: site.line,
+          message: `FORBIDDEN: ${site.method} ${site.path} is not a governed DSH contract operation`,
+        });
+      }
     }
   }
 

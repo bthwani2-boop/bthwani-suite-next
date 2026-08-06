@@ -4,7 +4,6 @@ import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import * as catalogApi from "./central-catalog.api";
 import type {
   CatalogAsset,
-  CatalogPlatformPolicy,
   CentralCatalogDomain,
   CentralCatalogNode,
   MasterProduct,
@@ -19,7 +18,6 @@ type NodeMutationInput = NonNullable<operations["updateCatalogNode"]["requestBod
 type ProductMutationInput = NonNullable<operations["updateMasterProduct"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
 type ProposalDecisionInput = Parameters<typeof catalogApi.decideProductProposal>[1] & { readonly expectedVersion: number };
 type ProposalTransitionInput = Parameters<typeof catalogApi.transitionProductProposal>[1] & { readonly expectedVersion: number };
-type PolicyMutationInput = NonNullable<operations["patchCatalogPlatformPolicy"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
 type AssortmentMutationInput = Parameters<typeof catalogApi.upsertOperatorStoreAssortment>[2] & { readonly expectedVersion?: number };
 type ProposalMutationInput = {
   readonly expectedVersion: number;
@@ -70,6 +68,7 @@ export type ProductProposalTransitionOCCInput = Omit<
 > & {
   readonly adoptedMasterProductId?: string | null | undefined;
   readonly createMasterProduct?: boolean | undefined;
+  readonly mergeData?: boolean | undefined;
 };
 
 export async function transitionProductProposalOCC(
@@ -81,14 +80,6 @@ export async function transitionProductProposalOCC(
     { method: "POST", body: input },
   );
   return response.proposal;
-}
-
-export async function updateCatalogPlatformPolicyOCC(policyId: string, input: PolicyMutationInput): Promise<CatalogPlatformPolicy> {
-  const response = await request<{ policy: CatalogPlatformPolicy }>(
-    `/dsh/operator/catalog/platform-policies/${encodeURIComponent(policyId)}`,
-    { method: "PATCH", body: input },
-  );
-  return response.policy;
 }
 
 export type StoreAssortmentOCCInput = Omit<AssortmentMutationInput, "expectedVersion"> & {

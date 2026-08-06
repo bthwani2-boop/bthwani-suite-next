@@ -14,4 +14,6 @@ client: ../clients/generated/identity-api.ts
 regenerateScript: pnpm run openapi:generate:identity
 modules:
   - ./employee-access.openapi.yaml
-overlays: []
+overlays:
+  - ./identity.actor-admin.overlay.yaml
+  - ./identity.runtime-readiness.overlay.yaml

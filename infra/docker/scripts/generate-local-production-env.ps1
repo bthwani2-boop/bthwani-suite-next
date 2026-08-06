@@ -32,20 +32,22 @@ $wltDshToken         = New-Secret 32
 $dshWltToken         = New-Secret 32
 $hmacSecret          = New-Secret 32
 $workforceToken      = New-Secret 32
+$dshIdentityToken    = New-Secret 32
 
 $template = Get-Content "infra\docker\env\runtime.local-production.env.example" -Raw
 
 $content = $template `
-  -replace "REPLACE_WITH_GENERATED_PG_PASSWORD",              $pgPassword `
-  -replace "REPLACE_WITH_GENERATED_DSH_DB_PASSWORD",          $dshDbPassword `
-  -replace "REPLACE_WITH_GENERATED_WLT_DB_PASSWORD",          $wltDbPassword `
-  -replace "REPLACE_WITH_GENERATED_IDENTITY_DB_PASSWORD",     $identityDbPassword `
-  -replace "REPLACE_WITH_GENERATED_WORKFORCE_DB_PASSWORD",    $workforceDbPassword `
-  -replace "REPLACE_WITH_GENERATED_MINIO_PASSWORD",           $minioPassword `
-  -replace "REPLACE_WITH_GENERATED_WLT_DSH_SERVICE_TOKEN",    $wltDshToken `
-  -replace "REPLACE_WITH_GENERATED_DSH_WLT_SERVICE_TOKEN",    $dshWltToken `
-  -replace "REPLACE_WITH_GENERATED_HMAC_SECRET_32BYTES",      $hmacSecret `
-  -replace "REPLACE_WITH_GENERATED_WORKFORCE_SERVICE_TOKEN",  $workforceToken
+  -replace "REPLACE_WITH_GENERATED_PG_PASSWORD",                $pgPassword `
+  -replace "REPLACE_WITH_GENERATED_DSH_DB_PASSWORD",            $dshDbPassword `
+  -replace "REPLACE_WITH_GENERATED_WLT_DB_PASSWORD",            $wltDbPassword `
+  -replace "REPLACE_WITH_GENERATED_IDENTITY_DB_PASSWORD",       $identityDbPassword `
+  -replace "REPLACE_WITH_GENERATED_WORKFORCE_DB_PASSWORD",      $workforceDbPassword `
+  -replace "REPLACE_WITH_GENERATED_MINIO_PASSWORD",             $minioPassword `
+  -replace "REPLACE_WITH_GENERATED_WLT_DSH_SERVICE_TOKEN",      $wltDshToken `
+  -replace "REPLACE_WITH_GENERATED_DSH_WLT_SERVICE_TOKEN",      $dshWltToken `
+  -replace "REPLACE_WITH_GENERATED_HMAC_SECRET_32BYTES",        $hmacSecret `
+  -replace "REPLACE_WITH_GENERATED_WORKFORCE_SERVICE_TOKEN",    $workforceToken `
+  -replace "REPLACE_WITH_GENERATED_DSH_IDENTITY_SERVICE_TOKEN", $dshIdentityToken
 
 $content | Set-Content -LiteralPath $OutFile -Encoding UTF8 -NoNewline
 Write-Host "Generated: $OutFile"

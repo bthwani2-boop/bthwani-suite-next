@@ -18,7 +18,7 @@ import { useIdentitySession } from "@bthwani/core-identity";
 import {
   getWltDshPartnerOperationalModeCommission,
   WltDshPartnerBridge,
-} from "../../shared/finance/partner-finance";
+} from "@bthwani/wlt/dsh";
 import { resolveDshStoreClientVisibility } from "../../shared/partner/dsh-client-visibility.model";
 import {
   isDshPartnerActivationComplete,
@@ -166,6 +166,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     onOpenOperationalFlow,
     onOpenSupportScreen,
     onOpenStoreCourierSetup,
+    onOpenCommercialModel,
     canonicalStoreId,
     dshClientId,
     walletBalanceLabel,
@@ -481,7 +482,12 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
             canonicalStoreId={canonicalStoreId}
             activationStatus={activationStatus}
             serviceModes={serviceModes}
+            legalNameAr={selfStatusState.kind === "success" ? selfStatusState.partner.legalNameAr : undefined}
+            legalNameEn={selfStatusState.kind === "success" ? selfStatusState.partner.legalNameEn : undefined}
+            legalIdentityType={selfStatusState.kind === "success" ? selfStatusState.partner.legalIdentityType : undefined}
+            legalIdentityNumber={selfStatusState.kind === "success" ? selfStatusState.partner.legalIdentityNumber : undefined}
             {...(onOpenStoreScope ? { onOpenStoreScope } : {})}
+            onOpenSupportScreen={() => onOpenSupportScreen && onOpenSupportScreen('support-directory' as any)}
           />
         </HubSectionShell>
       );
@@ -590,9 +596,9 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           coverageZonesError={null}
           teamMembers={props.teamMembers ?? []}
           onBack={() => updateSection("hub")}
-          {...(onOpenStoreCourierSetup
-            ? { onOpenStoreCourierSetup }
-            : {})}
+          onOpenStoreCourierSetup={onOpenStoreCourierSetup}
+          onOpenCommercialModel={onOpenCommercialModel}
+          onOpenSupportScreen={() => onOpenSupportScreen && onOpenSupportScreen('support-directory' as any)}
           {...(props.onOpenTeamManagement
             ? { onOpenTeamManagement: props.onOpenTeamManagement }
             : {})}

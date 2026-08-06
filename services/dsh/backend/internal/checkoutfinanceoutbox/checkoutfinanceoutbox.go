@@ -152,8 +152,16 @@ func MarkSent(db *sql.DB, id string) error {
 }
 
 func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
-	next := attemptCount + 1
-	backoff := time.Duration(1<<uint(min(next, 10))) * time.Second
+	nextAttempt := attemptCount + 1
+	if nextAttempt > 15 {
+		_, err := db.Exec(`
+			UPDATE dsh_checkout_financial_closure_outbox
+			SET status = 'failed', attempt_count = $2, last_error = $3, updated_at = NOW()
+			WHERE id = $1::uuid`, id, nextAttempt, cause.Error())
+		return err
+	}
+
+	backoff := time.Duration(1<<uint(min(nextAttempt, 10))) * time.Second
 	if backoff > 30*time.Minute {
 		backoff = 30 * time.Minute
 	}
@@ -161,7 +169,7 @@ func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
 		UPDATE dsh_checkout_financial_closure_outbox
 		SET attempt_count = $2, last_error = $3, next_retry_at = NOW() + $4::interval, updated_at = NOW()
 		WHERE id = $1::uuid`,
-		id, next, cause.Error(), backoff.String(),
+		id, nextAttempt, cause.Error(), backoff.String(),
 	)
 	return err
 }

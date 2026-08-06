@@ -1,62 +1,50 @@
+<#
+.SYNOPSIS
+  Applies governed DSH local fixtures and verifies central-catalog convergence.
+
+.DESCRIPTION
+  This command owns no migration or seed application engine. It delegates all
+  writes to invoke-dsh-database.ps1 and executes only the catalog assertion SQL
+  after the canonical governed seed run succeeds.
+#>
+
+[CmdletBinding()]
+param()
+
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../../..")).Path
 Set-Location -LiteralPath $RepoRoot
 
+$DshDatabaseRunner = Join-Path $RepoRoot "services/dsh/database/scripts/invoke-dsh-database.ps1"
 $ComposeFile = Join-Path $RepoRoot "infra/docker/compose.runtime.yml"
 $EnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
-$Migration30 = Join-Path $RepoRoot "services/dsh/database/migrations/dsh-030_central_catalog_sovereignty.sql"
-$Migration31 = Join-Path $RepoRoot "services/dsh/database/migrations/dsh-031_product_proposal_review_pipeline.sql"
-$Migration32 = Join-Path $RepoRoot "services/dsh/database/migrations/dsh-032_catalog_pim_dam_attributes_bulk_closure.sql"
-$Seed = Join-Path $RepoRoot "services/dsh/database/seeds/local/dsh-032_central_catalog_seed.local.sql"
-$Verify = Join-Path $RepoRoot "services/dsh/database/seeds/local/verify-central-catalog-seed.sql"
+$VerifyFile = Join-Path $RepoRoot "services/dsh/database/seeds/local/verify-central-catalog-seed.sql"
 
-Write-Host "=== apply-central-catalog-seed ==="
-Write-Host "Repo root: $RepoRoot"
-
-foreach ($file in @($ComposeFile, $EnvFile, $Migration30, $Migration31, $Migration32, $Seed, $Verify)) {
-  if (-not (Test-Path -LiteralPath $file -PathType Leaf)) {
-    throw "Required file missing: $file"
+foreach ($requiredFile in @($DshDatabaseRunner, $ComposeFile, $EnvFile, $VerifyFile)) {
+  if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
+    throw "Required central-catalog authority not found: $requiredFile"
   }
 }
 
-$composeArguments = @(
-  "compose",
-  "--env-file", $EnvFile,
-  "-f", $ComposeFile
-)
-
-Write-Host "`n--- Checking postgres health ---"
-$maxRetries = 20
-$attempt = 0
-do {
-  $attempt++
-  $status = docker @composeArguments ps --format json 2>$null |
-    ConvertFrom-Json -ErrorAction SilentlyContinue |
-    Where-Object { $_.Service -eq "postgres" } |
-    Select-Object -ExpandProperty Health -ErrorAction SilentlyContinue
-  if ($status -eq "healthy") { break }
-  if ($attempt -ge $maxRetries) { throw "Postgres not healthy after $maxRetries attempts" }
-  Write-Host "  Waiting for postgres (attempt $attempt/$maxRetries)..."
-  Start-Sleep -Seconds 3
-} while ($true)
-Write-Host "Postgres: healthy"
-
-Write-Host "`n--- Applying central catalog seed (upsert) ---"
-Get-Content -LiteralPath $Seed -Raw |
-  docker @composeArguments exec -T postgres `
-    psql -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1
-if ($LASTEXITCODE -ne 0) { throw "Central catalog seed failed (exit $LASTEXITCODE)" }
-Write-Host "Seed applied successfully"
-
-Write-Host "`n--- Verifying seed convergence ---"
-$verifyOutput = Get-Content -LiteralPath $Verify -Raw |
-  docker @composeArguments exec -T postgres `
-    psql -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1
-Write-Host $verifyOutput
-if ($LASTEXITCODE -ne 0) { throw "Seed verification query failed (exit $LASTEXITCODE)" }
-if ($verifyOutput -match '\|\s*f\s*$' -or $verifyOutput -match '\|\s*f\s*\r?\n') {
-  throw "Seed verification found at least one failing check (see 'f' rows above)"
+Write-Host "=== apply-central-catalog-seed ==="
+& $DshDatabaseRunner -Action seed -Transport docker -AllowLocalSeeds
+if ($LASTEXITCODE -ne 0) {
+  throw "Governed DSH seed convergence failed (exit $LASTEXITCODE)."
 }
 
-Write-Host "`napply-central-catalog-seed: PASS"
+Write-Host "`n--- Verifying central catalog convergence ---"
+$verifyOutput = Get-Content -LiteralPath $VerifyFile -Raw |
+  docker compose --env-file $EnvFile -f $ComposeFile exec -T postgres `
+    psql -U dsh_runtime -d dsh_runtime -X -v ON_ERROR_STOP=1
+$exitCode = $LASTEXITCODE
+$verifyOutput | ForEach-Object { Write-Host $_ }
+if ($exitCode -ne 0) {
+  throw "Central catalog verification failed (exit $exitCode)."
+}
+if (($verifyOutput -join "`n") -match '(?m)\|\s*f\s*$') {
+  throw "Central catalog verification returned a failing assertion row."
+}
+
+Write-Host "apply-central-catalog-seed: PASS authority=invoke-dsh-database.ps1"

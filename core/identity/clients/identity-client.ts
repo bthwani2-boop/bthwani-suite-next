@@ -2,6 +2,8 @@ import type { components, paths } from "./generated/identity-api.ts";
 
 export type ActorIdentity = components["schemas"]["ActorIdentity"];
 export type RuntimeStatus = components["schemas"]["RuntimeStatus"];
+export type IdentityRuntimeCheckStatus = components["schemas"]["RuntimeCheckStatus"];
+export type IdentityRuntimeStatus = RuntimeStatus;
 export type LoginRequest = components["schemas"]["LoginRequest"];
 export type OtpRequest = components["schemas"]["OtpRequest"];
 export type IssueActivationResponse = components["schemas"]["IssueActivationResponse"];
@@ -17,8 +19,8 @@ export type IdentityClientError =
   | { readonly kind: "network"; readonly message: string };
 
 export type IdentityClient = {
-  health(): Promise<RuntimeStatus>;
-  readiness(): Promise<RuntimeStatus>;
+  health(): Promise<IdentityRuntimeStatus>;
+  readiness(): Promise<IdentityRuntimeStatus>;
   login(request: LoginRequest): Promise<TokenResponse>;
   requestOtp(request: OtpRequest): Promise<IssueActivationResponse>;
   activate(request: ActivateRequest): Promise<TokenResponse>;
@@ -53,6 +55,7 @@ export function createIdentityClient(baseUrl: string): IdentityClient {
       body?: unknown;
       idempotencyKey?: string;
       correlationId?: string;
+      acceptedErrorStatuses?: readonly number[];
     },
   ): Promise<T> {
     let response: Response;
@@ -82,7 +85,8 @@ export function createIdentityClient(baseUrl: string): IdentityClient {
         message: error instanceof Error ? error.message : "identity network error",
       } satisfies IdentityClientError;
     }
-    if (!response.ok) {
+    const acceptedError = options.acceptedErrorStatuses?.includes(response.status) === true;
+    if (!response.ok && !acceptedError) {
       const body = (await response.json().catch(() => ({}))) as {
         code?: string;
         message?: string;
@@ -103,7 +107,10 @@ export function createIdentityClient(baseUrl: string): IdentityClient {
       return request("/identity/health", { method: "GET" });
     },
     readiness() {
-      return request("/identity/readiness", { method: "GET" });
+      return request("/identity/readiness", {
+        method: "GET",
+        acceptedErrorStatuses: [httpStatusServiceUnavailable],
+      });
     },
     login(body) {
       return request("/auth/login", { method: "POST", body });
@@ -147,3 +154,5 @@ export function createIdentityClient(baseUrl: string): IdentityClient {
     },
   };
 }
+
+const httpStatusServiceUnavailable = 503;

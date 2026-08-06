@@ -12,11 +12,9 @@ import (
 var ErrOperatorContextMismatch = errors.New("actor operator context does not match active runtime operator context")
 
 // otpRoleSurface and otpRolePermissions delegate to the single central
-// activation registry so the public OTP path can never diverge from it —
-// see TestActivationIssuancePoliciesSeparatePublicAndWorkforceRoles, which
-// asserts field/captain must stay Workforce-managed-only and unreachable
-// here.
+// activation registry so the public OTP path can never diverge from it.
 func otpRoleSurface(role string) (string, error) {
+	role = strings.TrimSpace(role)
 	if !publicOtpActorTypes[role] {
 		return "", ErrInvalidActivation
 	}
@@ -28,6 +26,10 @@ func otpRoleSurface(role string) (string, error) {
 }
 
 func otpRolePermissions(role, surface string) ([]byte, error) {
+	role = strings.TrimSpace(role)
+	if !publicOtpActorTypes[role] {
+		return nil, ErrInvalidActivation
+	}
 	return publicActorPermissions(role, surface)
 }
 
@@ -115,9 +117,8 @@ func (r *Repository) RequestOtpForOperatorContext(
 	// with a foreign key onto identity_actors, so the previous literal "system"
 	// always violated that key and turned every public client OTP request into
 	// an opaque 500. Recording the actor as their own issuer is the accurate
-	// audit statement and keeps the platform-access invariant intact: workforce
-	// and provider codes still go through IssueActivationForActor, which
-	// requires a real issuing operator.
+	// audit statement and keeps the platform-access invariant intact: governed
+	// actor codes still require an authenticated issuing service and operator.
 	result, err := r.issueChallengeTx(ctx, tx, actor, role, surface, actor.ID, "", "")
 	if err != nil {
 		return IssueActivationResult{}, err

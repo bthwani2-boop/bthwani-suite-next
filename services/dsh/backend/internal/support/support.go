@@ -38,6 +38,7 @@ const (
 	CategoryPaymentRef    TicketCategory = "payment_reference"
 	CategoryAccountAccess TicketCategory = "account_access"
 	CategoryAppBug        TicketCategory = "app_bug"
+	CategoryLegalChange   TicketCategory = "legal_change"
 	CategoryOther         TicketCategory = "other"
 
 	RoleClient   ReporterRole = "client"
@@ -46,8 +47,12 @@ const (
 	RoleOperator ReporterRole = "operator"
 
 	IncidentOpen       IncidentStatus = "open"
+	IncidentTriaged    IncidentStatus = "triaged"
+	IncidentContaining IncidentStatus = "containing"
+	IncidentMitigating IncidentStatus = "mitigating"
 	IncidentMonitoring IncidentStatus = "monitoring"
 	IncidentResolved   IncidentStatus = "resolved"
+	IncidentClosed     IncidentStatus = "closed"
 
 	SeverityLow      IncidentSeverity = "low"
 	SeverityMedium   IncidentSeverity = "medium"
@@ -77,6 +82,12 @@ type Ticket struct {
 	ClosedAt     *time.Time
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	Version      int
+	ClaimedBy    string
+	ClaimedAt    *time.Time
+	SlaBreachAt  *time.Time
+	EscalatedAt  *time.Time
+	EscalationReason string
 }
 
 type Message struct {
@@ -84,9 +95,11 @@ type Message struct {
 	TicketID   string
 	SenderID   string
 	SenderRole string
-	Body       string
-	IsInternal bool
-	CreatedAt  time.Time
+	Body            string
+	IsInternal      bool
+	ClientMessageID string
+	SequenceNum     int
+	CreatedAt       time.Time
 }
 
 type Incident struct {
@@ -118,6 +131,7 @@ type CreateTicketInput struct {
 type UpdateTicketInput struct {
 	Status     TicketStatus
 	AssignedTo string
+	Version    int
 }
 
 type AddMessageInput struct {
@@ -160,7 +174,8 @@ func CreateTicket(db *sql.DB, input CreateTicketInput) (Ticket, error) {
 		INSERT INTO dsh_support_tickets (store_id, reporter_id, reporter_role, subject, description, category, priority, order_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		          status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at`,
+		          status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at,
+		          version, COALESCE(claimed_by,''), claimed_at, sla_breach_at, escalated_at, COALESCE(escalation_reason,'')`,
 		storeID, input.ReporterID, input.ReporterRole, input.Subject, input.Description,
 		input.Category, priority, orderID,
 	)
@@ -170,7 +185,8 @@ func CreateTicket(db *sql.DB, input CreateTicketInput) (Ticket, error) {
 func GetTicket(db *sql.DB, ticketID string) (Ticket, error) {
 	row := db.QueryRow(`
 		SELECT id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		       status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at
+		       status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at,
+		       version, COALESCE(claimed_by,''), claimed_at, sla_breach_at, escalated_at, COALESCE(escalation_reason,'')
 		FROM dsh_support_tickets WHERE id = $1`, ticketID)
 	t, err := scanTicket(row)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -182,7 +198,8 @@ func GetTicket(db *sql.DB, ticketID string) (Ticket, error) {
 func ListReporterTickets(db *sql.DB, reporterID string, limit int) ([]Ticket, error) {
 	rows, err := db.Query(`
 		SELECT id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		       status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at
+		       status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at,
+		       version, COALESCE(claimed_by,''), claimed_at, sla_breach_at, escalated_at, COALESCE(escalation_reason,'')
 		FROM dsh_support_tickets WHERE reporter_id = $1
 		ORDER BY created_at DESC LIMIT $2`, reporterID, limit)
 	if err != nil {
@@ -194,7 +211,8 @@ func ListReporterTickets(db *sql.DB, reporterID string, limit int) ([]Ticket, er
 
 func ListOperatorTickets(db *sql.DB, statusFilter string, limit int) ([]Ticket, error) {
 	q := `SELECT id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-	             status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at
+	             status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at,
+	             version, COALESCE(claimed_by,''), claimed_at, sla_breach_at, escalated_at, COALESCE(escalation_reason,'')
 	      FROM dsh_support_tickets`
 	var args []any
 	if statusFilter != "" {
@@ -216,13 +234,15 @@ func UpdateTicket(db *sql.DB, ticketID string, input UpdateTicketInput) (Ticket,
 	row := db.QueryRow(`
 		UPDATE dsh_support_tickets
 		SET status = $2, assigned_to = $3,
+		    version = version + 1,
 		    resolved_at = CASE WHEN $2 = 'resolved' AND resolved_at IS NULL THEN NOW() ELSE resolved_at END,
 		    closed_at = CASE WHEN $2 = 'closed' AND closed_at IS NULL THEN NOW() ELSE closed_at END,
 		    updated_at = NOW()
-		WHERE id = $1
+		WHERE id = $1 AND version = $4
 		RETURNING id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		          status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at`,
-		ticketID, input.Status, input.AssignedTo,
+		          status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at,
+		          version, COALESCE(claimed_by,''), claimed_at, sla_breach_at, escalated_at, COALESCE(escalation_reason,'')`,
+		ticketID, input.Status, input.AssignedTo, input.Version,
 	)
 	t, err := scanTicket(row)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -238,11 +258,11 @@ func AddMessage(db *sql.DB, ticketID string, input AddMessageInput) (Message, er
 	row := db.QueryRow(`
 		INSERT INTO dsh_support_messages (ticket_id, sender_id, sender_role, body, is_internal)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, ticket_id, sender_id, sender_role, body, is_internal, created_at`,
+		RETURNING id, ticket_id, sender_id, sender_role, body, is_internal, created_at, COALESCE(client_message_id,''), COALESCE(sequence_num,0)`,
 		ticketID, input.SenderID, input.SenderRole, input.Body, input.IsInternal,
 	)
 	var m Message
-	err := row.Scan(&m.ID, &m.TicketID, &m.SenderID, &m.SenderRole, &m.Body, &m.IsInternal, &m.CreatedAt)
+	err := row.Scan(&m.ID, &m.TicketID, &m.SenderID, &m.SenderRole, &m.Body, &m.IsInternal, &m.CreatedAt, &m.ClientMessageID, &m.SequenceNum)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Message{}, ErrNotFound
 	}
@@ -250,7 +270,7 @@ func AddMessage(db *sql.DB, ticketID string, input AddMessageInput) (Message, er
 }
 
 func ListTicketMessages(db *sql.DB, ticketID string, includeInternal bool) ([]Message, error) {
-	q := `SELECT id, ticket_id, sender_id, sender_role, body, is_internal, created_at
+	q := `SELECT id, ticket_id, sender_id, sender_role, body, is_internal, created_at, COALESCE(client_message_id,''), COALESCE(sequence_num,0)
 	      FROM dsh_support_messages WHERE ticket_id = $1`
 	if !includeInternal {
 		q += " AND is_internal = FALSE"
@@ -264,7 +284,7 @@ func ListTicketMessages(db *sql.DB, ticketID string, includeInternal bool) ([]Me
 	var list []Message
 	for rows.Next() {
 		var m Message
-		if err := rows.Scan(&m.ID, &m.TicketID, &m.SenderID, &m.SenderRole, &m.Body, &m.IsInternal, &m.CreatedAt); err != nil {
+		if err := rows.Scan(&m.ID, &m.TicketID, &m.SenderID, &m.SenderRole, &m.Body, &m.IsInternal, &m.CreatedAt, &m.ClientMessageID, &m.SequenceNum); err != nil {
 			return nil, err
 		}
 		list = append(list, m)
@@ -346,6 +366,7 @@ func scanTicket(s ticketScanner) (Ticket, error) {
 		&t.ID, &t.StoreID, &t.ReporterID, &t.ReporterRole, &t.Subject, &t.Description,
 		&t.Category, &t.Priority, &t.Status, &t.AssignedTo, &t.OrderID,
 		&t.ResolvedAt, &t.ClosedAt, &t.CreatedAt, &t.UpdatedAt,
+		&t.Version, &t.ClaimedBy, &t.ClaimedAt, &t.SlaBreachAt, &t.EscalatedAt, &t.EscalationReason,
 	)
 	return t, err
 }
@@ -358,6 +379,7 @@ func scanTickets(rows *sql.Rows) ([]Ticket, error) {
 			&t.ID, &t.StoreID, &t.ReporterID, &t.ReporterRole, &t.Subject, &t.Description,
 			&t.Category, &t.Priority, &t.Status, &t.AssignedTo, &t.OrderID,
 			&t.ResolvedAt, &t.ClosedAt, &t.CreatedAt, &t.UpdatedAt,
+			&t.Version, &t.ClaimedBy, &t.ClaimedAt, &t.SlaBreachAt, &t.EscalatedAt, &t.EscalationReason,
 		); err != nil {
 			return nil, err
 		}
@@ -383,3 +405,135 @@ func scanIncidentRow(rows *sql.Rows) (Incident, error) {
 	)
 	return i, err
 }
+
+func ClaimTicket(db *sql.DB, ticketID string, assignedTo string, expectedVersion int) (Ticket, error) {
+	row := db.QueryRow(`
+		UPDATE dsh_support_tickets
+		SET assigned_to = $2,
+		    claimed_by = $2,
+		    claimed_at = NOW(),
+		    sla_breach_at = NOW() + INTERVAL '24 hours',
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE id = $1 AND version = $3
+		RETURNING id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
+		          status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at,
+		          version, COALESCE(claimed_by,''), claimed_at, sla_breach_at, escalated_at, COALESCE(escalation_reason,'')`,
+		ticketID, assignedTo, expectedVersion,
+	)
+	t, err := scanTicket(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Ticket{}, ErrConflict
+	}
+	return t, err
+}
+
+func EscalateTicket(db *sql.DB, ticketID string, reason string, expectedVersion int) (Ticket, error) {
+	row := db.QueryRow(`
+		UPDATE dsh_support_tickets
+		SET escalated_at = NOW(),
+		    escalation_reason = $2,
+		    priority = 'urgent',
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE id = $1 AND version = $3
+		RETURNING id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
+		          status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at,
+		          version, COALESCE(claimed_by,''), claimed_at, sla_breach_at, escalated_at, COALESCE(escalation_reason,'')`,
+		ticketID, reason, expectedVersion,
+	)
+	t, err := scanTicket(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Ticket{}, ErrConflict
+	}
+	return t, err
+}
+
+type CannedResponse struct {
+	ID        string    `json:"id"`
+	Title     string    `json:"title"`
+	Body      string    `json:"body"`
+	Category  string    `json:"category"`
+	IsActive  bool      `json:"isActive"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+func ListCannedResponses(db *sql.DB, categoryFilter string) ([]CannedResponse, error) {
+	q := `SELECT id::text, title, body, category, is_active, created_at, updated_at
+	      FROM dsh_support_canned_responses`
+	var args []any
+	if categoryFilter != "" {
+		q += " WHERE category = $1"
+		args = append(args, categoryFilter)
+	}
+	q += " ORDER BY title ASC"
+	rows, err := db.Query(q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var list []CannedResponse
+	for rows.Next() {
+		var c CannedResponse
+		if err := rows.Scan(&c.ID, &c.Title, &c.Body, &c.Category, &c.IsActive, &c.CreatedAt, &c.UpdatedAt); err != nil {
+			return nil, err
+		}
+		list = append(list, c)
+	}
+	return list, rows.Err()
+}
+
+type IncidentTaskStatus string
+
+const (
+	TaskPending    IncidentTaskStatus = "pending"
+	TaskInProgress IncidentTaskStatus = "in_progress"
+	TaskCompleted  IncidentTaskStatus = "completed"
+	TaskCanceled   IncidentTaskStatus = "canceled"
+)
+
+type IncidentTask struct {
+	ID           string             `json:"id"`
+	IncidentID   string             `json:"incidentId"`
+	AssigneeID   string             `json:"assigneeId"`
+	AssigneeRole string             `json:"assigneeRole"`
+	Description  string             `json:"description"`
+	Status       IncidentTaskStatus `json:"status"`
+	EvidenceURL  string             `json:"evidenceUrl,omitempty"`
+	CreatedAt    time.Time          `json:"createdAt"`
+	UpdatedAt    time.Time          `json:"updatedAt"`
+}
+
+type IncidentCommunication struct {
+	ID           string    `json:"id"`
+	IncidentID   string    `json:"incidentId"`
+	AuthorID     string    `json:"authorId"`
+	Body         string    `json:"body"`
+	IsPublicSafe bool      `json:"isPublicSafe"`
+	CreatedAt    time.Time `json:"createdAt"`
+}
+
+type IncidentEntity struct {
+	IncidentID string `json:"incidentId"`
+	EntityType string `json:"entityType"`
+	EntityID   string `json:"entityId"`
+}
+
+type CreateIncidentTaskInput struct {
+	AssigneeID   string
+	AssigneeRole string
+	Description  string
+}
+
+type UpdateIncidentTaskInput struct {
+	Status      IncidentTaskStatus
+	EvidenceURL string
+}
+
+type CreateIncidentCommunicationInput struct {
+	AuthorID     string
+	Body         string
+	IsPublicSafe bool
+}
+

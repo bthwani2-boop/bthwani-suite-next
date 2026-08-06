@@ -8,5 +8,5 @@ func NewMockClient() (*Client, error) {
 	if config.Mode == "" {
 		config.Mode = ModeMock
 	}
-	return NewClient(config), nil
+	return NewClient(config, nil), nil
 }

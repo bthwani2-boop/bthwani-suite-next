@@ -37,7 +37,8 @@ export type DshPartnerDetailViewModel = {
   readonly legalNameEn: string;
   readonly legalIdentityType: string;
   readonly legalIdentityNumber: string;
-  readonly ownerName: string;
+  readonly ownerActorId: string;
+  readonly workforcePersonId: string;
   readonly primaryPhone: string;
   readonly email: string;
   readonly category: string;
@@ -138,7 +139,8 @@ export function buildPartnerDetailViewModel(p: DshPartner): DshPartnerDetailView
     legalNameEn: p.legalNameEn,
     legalIdentityType: p.legalIdentityType,
     legalIdentityNumber: p.legalIdentityNumber,
-    ownerName: p.ownerName,
+    ownerActorId: p.ownerActorId,
+    workforcePersonId: p.workforcePersonId,
     primaryPhone: p.primaryPhone,
     email: p.email,
     category: p.category,

@@ -7,11 +7,19 @@ func TestIncidentTransitions(t *testing.T) {
 		from IncidentStatus
 		to   IncidentStatus
 	}{
-		{IncidentOpen, IncidentMonitoring},
+		{IncidentOpen, IncidentTriaged},
 		{IncidentOpen, IncidentResolved},
-		{IncidentMonitoring, IncidentOpen},
+		{IncidentTriaged, IncidentContaining},
+		{IncidentTriaged, IncidentMitigating},
+		{IncidentTriaged, IncidentMonitoring},
+		{IncidentContaining, IncidentMitigating},
+		{IncidentContaining, IncidentMonitoring},
+		{IncidentMitigating, IncidentMonitoring},
 		{IncidentMonitoring, IncidentResolved},
+		{IncidentMonitoring, IncidentOpen},
+		{IncidentResolved, IncidentClosed},
 		{IncidentResolved, IncidentMonitoring},
+		{IncidentClosed, IncidentOpen},
 	}
 	for _, tc := range allowed {
 		if !validIncidentTransition(tc.from, tc.to) {
@@ -23,7 +31,8 @@ func TestIncidentTransitions(t *testing.T) {
 		from IncidentStatus
 		to   IncidentStatus
 	}{
-		{IncidentResolved, IncidentOpen},
+		{IncidentOpen, IncidentMonitoring},
+		{IncidentResolved, IncidentContaining},
 		{IncidentStatus("invalid"), IncidentOpen},
 		{IncidentOpen, IncidentStatus("invalid")},
 	}

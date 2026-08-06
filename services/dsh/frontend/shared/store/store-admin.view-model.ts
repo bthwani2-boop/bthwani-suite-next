@@ -5,7 +5,7 @@ export type DshStoreAdminTableRow = {
   readonly displayName: string;
   readonly category: string;
   readonly categoryLabel: string;
-  readonly status: "active" | "inactive" | "temporarily_closed" | "unavailable";
+  readonly status: "draft" | "ready" | "published" | "paused" | "suspended" | "closed";
   readonly isVisible: boolean;
   readonly cityCode: string;
   readonly serviceAreaCode: string;
@@ -157,7 +157,7 @@ export function toAdminTableRow(dto: DshStoreSummaryDto): DshStoreAdminTableRow 
     serviceAreaCode: dto.serviceAreaCode,
     serviceabilityStatus: dto.serviceability.status,
     deliveryModes: [...dto.deliveryModes],
-    isOpen: dto.status === "active",
+    isOpen: dto.status === "published",
     isServiceable:
       dto.serviceability.status === "serviceable" ||
       dto.serviceability.status === "limited",

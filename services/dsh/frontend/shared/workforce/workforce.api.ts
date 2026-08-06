@@ -22,6 +22,9 @@ import type {
   WorkforceCity,
   WorkforceMe,
   WorkforceShift,
+  ProvisioningCase,
+  StartProvisioningInput,
+  ReadinessGate,
 } from "./workforce.types";
 
 // Same-origin BFF proxy (browser control-panel). Native apps import
@@ -260,4 +263,26 @@ export async function getWorkforceMe(): Promise<WorkforceMe> {
 
 export async function updateWorkforceMe(input: UpdateSelfInput): Promise<WorkforceMe> {
   return request<WorkforceMe>("/workforce/me", { method: "PATCH", body: input });
+}
+
+export async function startProvisioningCase(input: StartProvisioningInput): Promise<ProvisioningCase> {
+  return request<ProvisioningCase>("/workforce/provisioning-cases", {
+    method: "POST",
+    idempotencyKey: corrId("wf-provision"),
+    body: input,
+  });
+}
+
+export async function getProvisioningCase(id: string): Promise<ProvisioningCase> {
+  return request<ProvisioningCase>(`/workforce/provisioning-cases/${id}`);
+}
+
+export async function resumeProvisioningCase(id: string): Promise<ProvisioningCase> {
+  return request<ProvisioningCase>(`/workforce/provisioning-cases/${id}/resume`, {
+    method: "POST",
+  });
+}
+
+export async function getReadinessGate(actorId: string): Promise<ReadinessGate> {
+  return request<ReadinessGate>(`/workforce/readiness/${encodeURIComponent(actorId)}`);
 }

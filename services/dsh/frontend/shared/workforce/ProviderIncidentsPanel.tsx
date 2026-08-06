@@ -1,6 +1,7 @@
 import React from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Badge, Icon, StateView, Text, colorRoles, spacing } from "@bthwani/ui-kit";
+import { formatWltMoney } from "@bthwani/wlt/dsh";
 import {
   listOwnProviderIncidents,
   submitOwnProviderIncidentAppeal,
@@ -8,7 +9,7 @@ import {
 import type { ProviderIncident } from "./workforce.types";
 
 function amountLabel(minorUnits: number, currency: string): string {
-  return `${(minorUnits / 100).toLocaleString("ar-YE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+  return formatWltMoney(minorUnits, currency);
 }
 
 function statusLabel(status: string): string {

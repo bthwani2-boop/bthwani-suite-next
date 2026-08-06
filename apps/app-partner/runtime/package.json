@@ -13,13 +13,11 @@
     "eas-build-pre-install": "node ../../mobile/verify-eas-provider-inputs.mjs --app app-partner"
   },
   "devDependencies": {
-    "typescript": "~6.0.3"
+    "typescript": "7.0.2"
   },
   "dependencies": {
-    "@bthwani/app-shell": "workspace:*",
     "@bthwani/core-identity": "workspace:*",
     "@bthwani/data-runtime": "workspace:*",
-    "@bthwani/media-runtime": "workspace:*",
     "@bthwani/ui-kit": "workspace:*",
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "2.2.0",

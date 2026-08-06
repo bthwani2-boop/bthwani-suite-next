@@ -49,6 +49,7 @@ export * from "./use-partners-controller";
 export * from "./partner-workspace.controller";
 export * from "./partner-store-ownership.api";
 export * from "./use-governed-partner-stores-controller";
+export * from "./use-partner-commercial-summary-controller";
 
 export type {
   DeliveryPricingFulfillmentMode,
@@ -79,6 +80,7 @@ export {
   fieldUpdatePartnerStore,
   fetchPartnerScopes,
   fetchPartnerTeam,
+  createPartnerStore,
   invitePartnerTeamMember,
   executePartnerTeamMemberAction,
   fetchPartnerStoreCourierSettings,

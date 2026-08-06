@@ -117,7 +117,7 @@ func (s *protectedStoreServer) handleActorPayoutCreate(w http.ResponseWriter, r 
 		return
 	}
 	correlationID := correlationForActorMutation(r, input.IdempotencyKey)
-	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests", payload, correlationID)
+	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests", payload, correlationID, r.Header.Get("Idempotency-Key"))
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
@@ -170,7 +170,7 @@ func (s *protectedStoreServer) handleFieldCreatePayoutRequest(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleReconcileFinancePayoutRequest(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -189,13 +189,14 @@ func (s *protectedStoreServer) handleReconcileFinancePayoutRequest(w http.Respon
 		"/wlt/payout-requests/"+url.PathEscape(payoutID)+"/reconcile",
 		operatorWriteBody(actor.ID),
 		correlationForActorMutation(r, "payout-reconcile-"+payoutID),
+		r.Header.Get("Idempotency-Key"),
 		operatorContextID,
 	)
 	writeWltActorFinanceResponse(w, status, responseBody, err)
 }
 
 func (s *protectedStoreServer) handleFinancePayoutAudit(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

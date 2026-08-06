@@ -8,6 +8,7 @@ import (
 	"dsh-api/internal/auth"
 	"dsh-api/internal/media"
 	"dsh-api/internal/partnerfleet"
+	"dsh-api/internal/platformclient"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
 )
@@ -19,18 +20,23 @@ func RegisterPartnerFleetOperatorRoutes(
 	db *sql.DB,
 	identityClient *auth.Client,
 	wltClient *wlt.Client,
+	platformClient *platformclient.Client,
 	mediaProvider *media.Provider,
 ) {
-	server := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	server := newProtectedStoreServer(db, identityClient, wltClient, platformClient, mediaProvider)
 	router.HandleFunc(
 		"GET /dsh/operator/stores/{storeId}/partner-fleet",
-		server.handleOperatorPartnerFleetSnapshot,
+		server.withPermission("control-panel", PartnersPermissionRead, server.handleOperatorPartnerFleetSnapshot),
+	)
+	router.HandleFunc(
+		"GET /dsh/operator/captains/{captainId}/partner-fleet",
+		server.withPermission("control-panel", OperationsPermissionRead, server.handleOperatorCaptainMemberships),
 	)
 }
 
 // GET /dsh/operator/stores/{storeId}/partner-fleet
 func (s *protectedStoreServer) handleOperatorPartnerFleetSnapshot(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -57,4 +63,25 @@ func (s *protectedStoreServer) handleOperatorPartnerFleetSnapshot(w http.Respons
 		"connections": connections,
 		"members":     members,
 	})
+}
+
+// GET /dsh/operator/captains/{captainId}/partner-fleet
+func (s *protectedStoreServer) handleOperatorCaptainMemberships(w http.ResponseWriter, r *http.Request) {
+	_, ok := s.ActorFromContext(r.Context())
+	if !ok {
+		return
+	}
+
+	captainID := strings.TrimSpace(r.PathValue("captainId"))
+	if captainID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "captain id is required")
+		return
+	}
+
+	memberships, err := partnerfleet.ListCaptainMemberships(r.Context(), s.db, captainID)
+	if err != nil {
+		writePartnerFleetError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"memberships": memberships})
 }

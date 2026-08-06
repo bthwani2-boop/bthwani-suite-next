@@ -61,6 +61,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     searchMasterProducts,
     linkMasterProductsBatch,
     proposeNewProduct,
+    withdrawProposal,
   } = useFieldCatalogController(partnerId);
 
   const [searchText, setSearchText] = React.useState('');
@@ -79,6 +80,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
   const [proposeError, setProposeError] = React.useState<string | undefined>();
   const [proposeDomainId, setProposeDomainId] = React.useState('');
   const [proposeNodeId, setProposeNodeId] = React.useState('');
+  const [correctionTarget, setCorrectionTarget] = React.useState<{ id: string; version: number } | null>(null);
 
   React.useEffect(() => {
     if (taxonomyState.kind !== 'success' || selectedDomainId) return;
@@ -226,6 +228,16 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     setShowProposeForm(true);
   };
 
+  const startCorrection = (product: MasterProduct) => {
+    setProposeNameAr(product.canonicalNameAr);
+    setProposeNameEn(product.canonicalNameEn);
+    setProposeBrand(product.brand);
+    setProposeDomainId(product.domainId);
+    setProposeNodeId(product.categoryNodeId ?? "");
+    setCorrectionTarget({ id: product.id, version: product.version });
+    setShowProposeForm(true);
+  };
+
   const handlePropose = async () => {
     if (!proposeNameAr.trim()) {
       setProposeError('اسم المنتج مطلوب');
@@ -244,6 +256,8 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
       brand: proposeBrand.trim(),
       barcode: null,
       imageObjectKey: null,
+      targetMasterProductId: correctionTarget?.id,
+      baseVersion: correctionTarget?.version,
     });
     if (!proposal) {
       setProposeError('تعذر إرسال الاقتراح. تحقق من سياسة الفئة ثم أعد المحاولة.');
@@ -254,6 +268,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     setProposeBrand('');
     setProposeDomainId('');
     setProposeNodeId('');
+    setCorrectionTarget(null);
     setProposeError(undefined);
     setShowProposeForm(false);
   };
@@ -413,6 +428,12 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
                         ))}
                       </View>
                     </View>
+                    <Button
+                      label="طلب تصحيح المنتج المركزي"
+                      size="sm"
+                      tone="secondary"
+                      onPress={() => startCorrection(product)}
+                    />
                   </View>
                 ) : linked ? (
                   <View style={{ alignItems: 'flex-end', gap: 2 }}>
@@ -430,12 +451,15 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
 
         <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
         <View style={{ backgroundColor: colorRoles.surfaceMuted, padding: spacing[4], borderRadius: radius.lg, gap: spacing[3], borderWidth: borders.hairline, borderColor: colorRoles.borderSubtle }}>
-          <Pressable onPress={() => setShowProposeForm((value) => !value)} style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text role="bodyStrong" style={{ textAlign: 'right' }}>{showProposeForm ? 'إغلاق اقتراح المنتج' : 'المنتج غير موجود؟ أرسله للمراجعة'}</Text>
+          <Pressable onPress={() => { setShowProposeForm((value) => !value); setCorrectionTarget(null); }} style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text role="bodyStrong" style={{ textAlign: 'right' }}>{showProposeForm ? (correctionTarget ? 'إلغاء طلب التصحيح' : 'إغلاق اقتراح المنتج') : 'المنتج غير موجود؟ أرسله للمراجعة'}</Text>
             <Icon name={showProposeForm ? 'chevron-up-outline' : 'chevron-down-outline'} size={20} tone="muted" />
           </Pressable>
           {showProposeForm ? (
             <View style={{ gap: spacing[3] }}>
+              {correctionTarget && (
+                <Badge tone="info" label={`طلب تصحيح للمنتج: ${correctionTarget.id}`} />
+              )}
               <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
                 الاقتراح لا يصبح منتجًا قابلًا للبيع حتى تعتمده إدارة الكتالوج المركزي.
               </Text>
@@ -473,10 +497,24 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
             <Text role="bodyStrong" style={{ textAlign: 'right' }}>{`الاقتراحات المرسلة (${proposals.length})`}</Text>
             {proposals.map((proposal) => {
               const presentation = new ProductProposalAdapter(proposal);
+              const canWithdraw = ["catalog-draft", "partner-proposed", "needs-fix", "conflict"].includes(proposal.status);
               return (
-                <View key={proposal.id} style={{ padding: spacing[3], borderWidth: borders.hairline, borderColor: colorRoles.borderSubtle, borderRadius: radius.md, flexDirection: 'row-reverse', gap: spacing[2] }}>
-                  <Text role="bodyStrong" style={{ flex: 1, textAlign: 'right' }}>{proposal.proposedNameAr}</Text>
+                <View key={proposal.id} style={{ padding: spacing[3], borderWidth: borders.hairline, borderColor: colorRoles.borderSubtle, borderRadius: radius.md, flexDirection: 'row-reverse', gap: spacing[2], alignItems: 'center' }}>
+                  <View style={{ flex: 1, gap: spacing[1] }}>
+                    <Text role="bodyStrong" style={{ textAlign: 'right' }}>
+                      {proposal.proposedNameAr}
+                      {proposal.targetMasterProductId && <Text role="caption" tone="muted"> (تصحيح)</Text>}
+                    </Text>
+                  </View>
                   <Badge label={presentation.getArabicLabel()} tone={presentation.getTone()} />
+                  {canWithdraw && (
+                    <Button
+                      label="سحب"
+                      size="sm"
+                      tone="danger"
+                      onPress={() => void withdrawProposal(proposal.id, proposal.version)}
+                    />
+                  )}
                 </View>
               );
             })}

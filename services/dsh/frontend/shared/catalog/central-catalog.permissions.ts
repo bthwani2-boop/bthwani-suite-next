@@ -30,31 +30,19 @@ export type CatalogPermission =
   | "catalog.audit.read"
   | "catalog.cleanup.manage";
 
-export type CatalogPermissionIdentity = ControlPanelPermissionIdentity & {
-  readonly roles?: readonly string[];
-};
+export type CatalogPermissionIdentity = ControlPanelPermissionIdentity;
 
 /**
- * Resolves catalog authorization from Identity permission claims.
+ * Resolves catalog authorization exclusively from Identity permission claims.
  *
- * The operator role is retained only as the same explicit migration fallback
- * accepted by the DSH backend. No other local role-to-permission expansion is
- * allowed here; admin/staff/partner/field capabilities must arrive from
- * Identity as service=dsh, surface=control-panel permission claims.
+ * No local role is accepted as a shortcut. All access must be backed by an
+ * explicit Permission{Service:"dsh", Surface:"control-panel", Action:permission}
+ * entry issued by Identity and carried in the session token.
  */
 export function hasCatalogPermission(
-  identityOrFallbackRole: CatalogPermissionIdentity | string | null | undefined,
+  identity: CatalogPermissionIdentity | null | undefined,
   permission: CatalogPermission,
 ): boolean {
-  if (!identityOrFallbackRole) return false;
-
-  if (typeof identityOrFallbackRole === "string") {
-    return identityOrFallbackRole === "operator";
-  }
-
-  if (identityOrFallbackRole.roles?.includes("operator")) {
-    return true;
-  }
-
-  return hasServiceControlPanelPermission(identityOrFallbackRole, "dsh", permission);
+  if (!identity) return false;
+  return hasServiceControlPanelPermission(identity, "dsh", permission);
 }

@@ -32,7 +32,7 @@ func decodeSupportAttachmentInput(w http.ResponseWriter, r *http.Request) (suppo
 }
 
 func (s *protectedStoreServer) handleAttachActorSupportMessageAsset(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain")
 	if !ok {
 		return
 	}
@@ -56,7 +56,7 @@ func (s *protectedStoreServer) handleAttachActorSupportMessageAsset(w http.Respo
 }
 
 func (s *protectedStoreServer) handleListActorSupportMessageAttachments(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain")
 	if !ok {
 		return
 	}
@@ -76,7 +76,7 @@ func (s *protectedStoreServer) handleListActorSupportMessageAttachments(w http.R
 }
 
 func (s *protectedStoreServer) handleMarkActorSupportMessagesRead(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain")
 	if !ok {
 		return
 	}
@@ -94,7 +94,7 @@ func (s *protectedStoreServer) handleMarkActorSupportMessagesRead(w http.Respons
 }
 
 func (s *protectedStoreServer) handleAttachOperatorSupportMessageAsset(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -113,7 +113,7 @@ func (s *protectedStoreServer) handleAttachOperatorSupportMessageAsset(w http.Re
 }
 
 func (s *protectedStoreServer) handleListOperatorSupportMessageAttachments(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -128,7 +128,7 @@ func (s *protectedStoreServer) handleListOperatorSupportMessageAttachments(w htt
 }
 
 func (s *protectedStoreServer) handleMarkOperatorSupportMessagesRead(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -149,13 +149,13 @@ func RegisterSupportMessageDeliveryRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 
 	mux.HandleFunc("POST /dsh/support/tickets/{ticketId}/messages/{messageId}/attachments", protected.handleAttachActorSupportMessageAsset)
 	mux.HandleFunc("GET /dsh/support/tickets/{ticketId}/messages/{messageId}/attachments", protected.handleListActorSupportMessageAttachments)
 	mux.HandleFunc("POST /dsh/support/tickets/{ticketId}/messages/read", protected.handleMarkActorSupportMessagesRead)
 
-	mux.HandleFunc("POST /dsh/operator/support/tickets/{ticketId}/messages/{messageId}/attachments", protected.handleAttachOperatorSupportMessageAsset)
-	mux.HandleFunc("GET /dsh/operator/support/tickets/{ticketId}/messages/{messageId}/attachments", protected.handleListOperatorSupportMessageAttachments)
-	mux.HandleFunc("POST /dsh/operator/support/tickets/{ticketId}/messages/read", protected.handleMarkOperatorSupportMessagesRead)
+	mux.HandleFunc("POST /dsh/operator/support/tickets/{ticketId}/messages/{messageId}/attachments", protected.withPermission("control-panel", SupportPermissionManage, protected.handleAttachOperatorSupportMessageAsset))
+	mux.HandleFunc("GET /dsh/operator/support/tickets/{ticketId}/messages/{messageId}/attachments", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListOperatorSupportMessageAttachments))
+	mux.HandleFunc("POST /dsh/operator/support/tickets/{ticketId}/messages/read", protected.withPermission("control-panel", SupportPermissionRead, protected.handleMarkOperatorSupportMessagesRead))
 }

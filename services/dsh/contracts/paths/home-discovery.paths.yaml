@@ -4,6 +4,7 @@
 /dsh/home-discovery:
   get:
     operationId: getDshHomeDiscovery
+    security: []
     summary: Return home discovery payload for the client home screen.
     tags:
       - DshHomeDiscovery
@@ -163,6 +164,7 @@
 /dsh/public/reels:
   get:
     operationId: listPublicReels
+    security: []
     tags: [DshHomeDiscovery]
     parameters:
       - name: limit
@@ -170,6 +172,7 @@
         required: false
         schema: { type: integer, default: 20 }
     responses:
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "200":
         description: Approved reels for public home screen carousel.
         content:

@@ -27,7 +27,7 @@ func writeLoyaltyPolicyError(w http.ResponseWriter, err error) {
 
 // GET /dsh/operator/marketing/loyalty-earning-policies
 func (s *protectedStoreServer) handleListLoyaltyEarningPolicies(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionRead, "operator"); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	policies, err := marketing.ListLoyaltyEarningPolicies(s.db)
@@ -40,7 +40,7 @@ func (s *protectedStoreServer) handleListLoyaltyEarningPolicies(w http.ResponseW
 
 // POST /dsh/operator/marketing/loyalty-earning-policies
 func (s *protectedStoreServer) handleCreateLoyaltyEarningPolicy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -72,7 +72,7 @@ func (s *protectedStoreServer) handleCreateLoyaltyEarningPolicy(w http.ResponseW
 
 // PATCH /dsh/operator/marketing/loyalty-earning-policies/{policyId}
 func (s *protectedStoreServer) handleUpdateLoyaltyEarningPolicy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

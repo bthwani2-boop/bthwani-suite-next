@@ -712,67 +712,9 @@ func HandleCreateProduct(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func HandleUpdateProduct(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var input UpdateProductInput
-		if !decodeJSON(w, r, &input) {
-			return
-		}
-		product, err := UpdateProduct(db, r.PathValue("productReference"), input)
-		if err != nil {
-			writeError(w, err)
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"product": product})
-	}
-}
 
-func HandleGetClientBenefits(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		benefits, err := GetClientBenefits(db, r.PathValue("clientId"))
-		if err != nil {
-			writeError(w, err)
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"benefits": benefits})
-	}
-}
 
-func HandleAppendLoyaltyEntry(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var input AppendLoyaltyEntryInput
-		if !decodeJSON(w, r, &input) {
-			return
-		}
-		if input.IdempotencyKey == "" {
-			input.IdempotencyKey = r.Header.Get("Idempotency-Key")
-		}
-		if input.CorrelationID == "" {
-			input.CorrelationID = r.Header.Get("X-Correlation-ID")
-		}
-		entry, err := AppendLoyaltyEntry(db, input)
-		if err != nil {
-			writeError(w, err)
-			return
-		}
-		shared.SendJSON(w, http.StatusCreated, map[string]any{"entry": entry})
-	}
-}
 
-func HandleActivateSubscription(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var input ActivateSubscriptionInput
-		if !decodeJSON(w, r, &input) {
-			return
-		}
-		subscription, err := ActivateSubscription(db, input)
-		if err != nil {
-			writeError(w, err)
-			return
-		}
-		shared.SendJSON(w, http.StatusCreated, map[string]any{"subscription": subscription})
-	}
-}
 
 func ProductMatches(product *Product, displayName string, priceMinorUnits int64, currency, billingCycle string) error {
 	if product == nil {

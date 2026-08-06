@@ -3,116 +3,12 @@ package http
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/store"
 )
-
-// POST /dsh/operator/dispatch/assignments
-func (s *protectedStoreServer) handleCreateDispatchAssignment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
-	if !ok {
-		return
-	}
-	var body struct {
-		OrderID   string `json:"orderId"`
-		CaptainID string `json:"captainId"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	assignment, err := dispatch.CreateAssignment(s.db, dispatch.CreateAssignmentInput{
-		OrderID:   body.OrderID,
-		CaptainID: body.CaptainID,
-		ActorID:   actor.ID,
-	})
-	s.writeDispatchResult(w, http.StatusCreated, assignment, err)
-}
-
-// GET /dsh/operator/dispatch/assignments
-func (s *protectedStoreServer) handleListOperatorDispatchAssignments(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
-	if !ok {
-		return
-	}
-	list, err := dispatch.ListOperatorAssignments(s.db, 100)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list dispatch assignments")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"assignments": marshalDispatchAssignments(list)})
-}
-
-// GET /dsh/captain/dispatch/assignments
-func (s *protectedStoreServer) handleListCaptainDispatchAssignments(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "captain")
-	if !ok {
-		return
-	}
-	list, err := dispatch.ListCaptainAssignments(s.db, actor.ID, 50)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list captain assignments")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"assignments": marshalDispatchAssignments(list)})
-}
-
-// POST /dsh/captain/dispatch/assignments/{assignmentId}/accept
-func (s *protectedStoreServer) handleAcceptDispatchAssignment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "captain")
-	if !ok {
-		return
-	}
-	assignment, err := dispatch.AcceptAssignment(s.db, r.PathValue("assignmentId"), actor.ID)
-	s.writeDispatchResult(w, http.StatusOK, assignment, err)
-}
-
-// POST /dsh/captain/dispatch/assignments/{assignmentId}/decline
-func (s *protectedStoreServer) handleDeclineDispatchAssignment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "captain")
-	if !ok {
-		return
-	}
-	var body struct {
-		Reason string `json:"reason"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	assignment, err := dispatch.DeclineAssignment(s.db, r.PathValue("assignmentId"), actor.ID, body.Reason)
-	s.writeDispatchResult(w, http.StatusOK, assignment, err)
-}
-
-// POST /dsh/captain/dispatch/assignments/{assignmentId}/status
-func (s *protectedStoreServer) handleUpdateDeliveryStatus(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "captain")
-	if !ok {
-		return
-	}
-	var body struct {
-		Status dispatch.DeliveryStatus `json:"status"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	assignment, err := dispatch.UpdateDeliveryStatus(s.db, r.PathValue("assignmentId"), actor.ID, body.Status)
-	s.writeDispatchResult(w, http.StatusOK, assignment, err)
-}
-
-// POST /dsh/captain/dispatch/assignments/{assignmentId}/pod
-func (s *protectedStoreServer) handleSubmitDispatchPoD(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "captain")
-	if !ok {
-		return
-	}
-	var body dispatch.PoDInput
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	assignment, err := dispatch.SubmitPoD(s.db, r.PathValue("assignmentId"), actor.ID, body)
-	s.writeDispatchResult(w, http.StatusOK, assignment, err)
-}
 
 // POST /dsh/captain/dispatch/assignments/{assignmentId}/location
 //
@@ -158,6 +54,7 @@ func (s *protectedStoreServer) handleReportDeliveryException(w http.ResponseWrit
 		CorrelationID string                               `json:"correlationId"`
 		Latitude      *float64                             `json:"latitude"`
 		Longitude     *float64                             `json:"longitude"`
+		ProofMediaRef string                               `json:"proofMediaRef"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -166,6 +63,7 @@ func (s *protectedStoreServer) handleReportDeliveryException(w http.ResponseWrit
 		ReasonCode: body.ReasonCode, Note: body.Note,
 		CorrelationID: operationalCorrelationID(r, body.CorrelationID),
 		Latitude:      body.Latitude, Longitude: body.Longitude,
+		ProofMediaRef: strings.TrimSpace(body.ProofMediaRef),
 	})
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
@@ -190,7 +88,7 @@ func (s *protectedStoreServer) handleGetCaptainDeliveryException(w http.Response
 
 // GET /dsh/operator/delivery-exceptions
 func (s *protectedStoreServer) handleListOperatorDeliveryExceptions(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -240,12 +138,14 @@ func marshalDeliveryException(item *dispatch.DeliveryException) map[string]any {
 		"returnedAt":              item.ReturnedAt,
 		"returnAcceptedByActorId": item.ReturnAcceptedByActorID,
 		"version":                 item.Version, "createdAt": item.CreatedAt, "updatedAt": item.UpdatedAt,
+		"proofMediaRef": item.ProofMediaRef,
+		"policyNextAction": item.PolicyNextAction,
 	}
 }
 
 // POST /dsh/operator/delivery-exceptions/{exceptionId}/acknowledge
 func (s *protectedStoreServer) handleAcknowledgeDeliveryException(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -265,7 +165,7 @@ func (s *protectedStoreServer) handleAcknowledgeDeliveryException(w http.Respons
 
 // POST /dsh/operator/delivery-exceptions/{exceptionId}/resolve
 func (s *protectedStoreServer) handleResolveDeliveryException(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -312,38 +212,6 @@ func (s *protectedStoreServer) handleArriveReturnToStore(w http.ResponseWriter, 
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"exception": marshalDeliveryException(item)})
-}
-
-// GET /dsh/client/orders/{orderId}/tracking
-func (s *protectedStoreServer) handleGetClientTracking(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client")
-	if !ok {
-		return
-	}
-	assignment, err := dispatch.GetClientTracking(s.db, r.PathValue("orderId"), actor.ID)
-	s.writeDispatchResult(w, http.StatusOK, assignment, err)
-}
-
-// GET /dsh/partner/orders/{orderId}/dispatch-tracking
-//
-// The client boundary restricts the partner to a reference status read: no captain
-// location, no PoD reference — those stay client/operator/captain-only.
-func (s *protectedStoreServer) handleGetPartnerDispatchTracking(w http.ResponseWriter, r *http.Request) {
-	_, ownedOrder, ok := s.partnerOrder(w, r)
-	if !ok {
-		return
-	}
-	assignment, err := dispatch.GetPartnerTracking(s.db, ownedOrder.ID, ownedOrder.StoreID)
-	switch {
-	case err == nil:
-		store.SendJSON(w, http.StatusOK, map[string]any{"assignment": marshalDispatchAssignmentForPartner(*assignment)})
-	case errors.Is(err, dispatch.ErrNotFound):
-		store.SendJSON(w, http.StatusOK, map[string]any{"assignment": nil})
-	case errors.Is(err, dispatch.ErrInvalid):
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-	default:
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "dispatch operation failed")
-	}
 }
 
 func marshalDispatchAssignmentForPartner(a dispatch.Assignment) map[string]any {

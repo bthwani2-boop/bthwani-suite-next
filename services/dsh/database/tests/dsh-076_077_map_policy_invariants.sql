@@ -167,11 +167,10 @@ BEGIN
     AND table_name IN (
       'dsh_platform_zones',
       'dsh_platform_sla_rules',
-      'dsh_platform_capacity_configs',
-      'dsh_platform_store_onboarding_fee_policy'
+      'dsh_platform_capacity_configs'
     )
     AND column_name = 'version';
-  IF v_count <> 4 THEN
+  IF v_count <> 3 THEN
     RAISE EXCEPTION 'version column is missing from one or more governed policies: %', v_count;
   END IF;
 

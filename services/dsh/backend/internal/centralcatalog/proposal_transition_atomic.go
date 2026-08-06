@@ -198,9 +198,40 @@ func TransitionProposalAtomicExpected(
 
 	case "catalog-approved":
 		if proposal.AdoptedMasterProductID != nil {
-			_, updateErr := tx.ExecContext(ctx, `UPDATE dsh_master_products SET
-				approval_status='approved', is_active=true, updated_at=now(), version=version+1 WHERE id=$1`,
-				*proposal.AdoptedMasterProductID)
+			var updateErr error
+			if input.MergeData != nil && *input.MergeData {
+				_, updateErr = tx.ExecContext(ctx, `UPDATE dsh_master_products SET
+					canonical_name_ar = COALESCE(NULLIF($1, ''), canonical_name_ar),
+					canonical_name_en = COALESCE(NULLIF($2, ''), canonical_name_en),
+					brand = COALESCE(NULLIF($3, ''), brand),
+					barcode = COALESCE(NULLIF($4, ''), barcode),
+					approval_status='approved', is_active=true, updated_at=now(), version=version+1 WHERE id=$5`,
+					proposal.ProposedNameAr, proposal.ProposedNameEn, proposal.Brand, proposal.Barcode,
+					*proposal.AdoptedMasterProductID)
+				if updateErr == nil {
+					// Reassign media links
+					_, _ = tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET entity_id=$1 WHERE entity_type='product_proposal' AND entity_id=$2`,
+						*proposal.AdoptedMasterProductID, id)
+					// Migrate any store assortments that still reference the proposal's
+					// implicit "old" product entity — migrate only if a new master was chosen.
+					// This is a best-effort migration; the unique constraint prevents duplicate links.
+					_, _ = tx.ExecContext(ctx, `UPDATE dsh_store_assortments SET
+						master_product_id=$1, updated_at=NOW(), version=version+1
+						WHERE master_product_id IN (
+							SELECT DISTINCT target_master_product_id FROM dsh_product_proposals WHERE id=$2
+						)
+						AND NOT EXISTS (
+							SELECT 1 FROM dsh_store_assortments sa2
+							WHERE sa2.store_id=dsh_store_assortments.store_id
+							  AND sa2.master_product_id=$1
+						)`,
+						*proposal.AdoptedMasterProductID, id)
+				}
+			} else {
+				_, updateErr = tx.ExecContext(ctx, `UPDATE dsh_master_products SET
+					approval_status='approved', is_active=true, updated_at=now(), version=version+1 WHERE id=$1`,
+					*proposal.AdoptedMasterProductID)
+			}
 			if updateErr != nil {
 				return ProductProposal{}, updateErr
 			}

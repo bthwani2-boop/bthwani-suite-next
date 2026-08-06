@@ -9,7 +9,6 @@ const contractFile = "core/platform-control/contracts/platform-change-sets.opena
 const generatedClientFile = "core/platform-control/clients/generated/platform-control-api.ts";
 const typecheckFile = "services/dsh/tsconfig.platform-change-sets.json";
 const visualizationProofFile = "services/dsh/tests/platform-governance-visualization.test.mjs";
-const strictBoundaryFile = "core/platform-control/backend/internal/platformcontrol/change_set_strict_boundary.go";
 const strictBoundaryProofFile = "core/platform-control/backend/internal/platformcontrol/change_set_strict_boundary_test.go";
 const databaseProofFile = "core/platform-control/backend/internal/platformcontrol/change_set_database_sensitive_guard_test.go";
 const httpProofFile = "core/platform-control/backend/internal/http/change_set_workflow_handlers_test.go";
@@ -22,7 +21,6 @@ const requiredFiles = [
   "core/platform-control/backend/internal/platformcontrol/change_set_read_create.go",
   "core/platform-control/backend/internal/platformcontrol/change_set_workflow.go",
   "core/platform-control/backend/internal/platformcontrol/change_set_apply_rollback.go",
-  strictBoundaryFile,
   "core/platform-control/backend/internal/platformcontrol/change_set_governance_test.go",
   strictBoundaryProofFile,
   databaseProofFile,
@@ -89,31 +87,32 @@ if (failures.length === 0) {
     "verifyGovernedPreconditions",
     "ErrMakerCheckerReview",
     "pg_advisory_xact_lock",
+    "RejectChangeSet",
+    "maxGovernedTextLength",
   ]);
   requireText("core/platform-control/backend/internal/platformcontrol/change_set_apply_rollback.go", [
-    "RollbackChangeSetGoverned",
+    "RollbackChangeSet",
     "ErrRollbackReason",
     "variableStateSnapshot",
     "featureFlagStateSnapshot",
+    "maxGovernedTextLength",
   ]);
   requireText("core/platform-control/backend/internal/platformcontrol/change_set_read_create.go", [
+    "CreateChangeSet",
     "ErrSensitiveValue",
     "ensureGovernedTargetIsNotSensitive",
     "proposedValueContainsSecret",
     "valuesRedacted",
     "maxGovernedChangeSetItems",
-  ]);
-  requireText(strictBoundaryFile, [
-    "CreateChangeSetStrict",
-    "RejectChangeSetStrict",
-    "RollbackChangeSetStrict",
-    "confidential",
     "maxGovernedTextLength",
+    "isSensitiveClassification",
+    "confidential",
+    "restricted",
   ]);
   requireText("core/platform-control/backend/internal/platformcontrol/service.go", [
-    "CreateChangeSetStrict",
-    "RejectChangeSetStrict",
-    "RollbackChangeSetStrict",
+    "CreateChangeSet",
+    "RejectChangeSet",
+    "RollbackChangeSet",
   ]);
   requireText("core/platform-control/backend/internal/platformcontrol/change_set_governance_test.go", [
     "ErrTargetConflict",

@@ -21,6 +21,7 @@ import type {
   DshPartnerTeamMember,
   DshPartnerStoreCourierSettings,
   DshPartnerCoverageZone,
+  DshPartnerCommercialSummary,
 } from "./partner.types";
 import { createPartnerMutationContext, type DshGovernedPartner, type PartnerMutationContext } from "./partner-onboarding.runtime";
 
@@ -139,6 +140,14 @@ export function linkPartnerStore(
   });
 }
 
+export function createPartnerStore(
+  endpoint: string,
+  input: unknown,
+  mutation?: PartnerMutationContext,
+): Promise<{ id: string }> {
+  return request(endpoint, { method: "POST", body: input, mutation });
+}
+
 export function fetchPartnerAuditEvents(partnerId: string): Promise<{ events: DshPartnerAuditEvent[] }> {
   return request(`/dsh/operator/partners/${partnerId}/audit`);
 }
@@ -165,14 +174,31 @@ export function fetchPartnerTeam(storeId: string): Promise<{ members: DshPartner
   return request(`/dsh/partner/stores/${storeId}/team`);
 }
 
+export type PartnerTeamInviteRole = "manager" | "supervisor" | "staff";
+
+export type PartnerTeamInvitationResponse = {
+  readonly memberId: string;
+  readonly actorId: string;
+  readonly role: PartnerTeamInviteRole;
+  readonly replayed: boolean;
+  readonly activationState: "issued" | "unknown";
+  readonly activation?: {
+    readonly activationId: string;
+    readonly code: string;
+    readonly maskedPhone: string;
+    readonly expiresAt: string;
+  };
+};
+
 export function invitePartnerTeamMember(
   storeId: string,
   identity: string,
+  role: PartnerTeamInviteRole,
   mutation?: PartnerMutationContext,
-): Promise<{ success: boolean }> {
+): Promise<PartnerTeamInvitationResponse> {
   return request(`/dsh/partner/stores/${storeId}/team/invites`, {
     method: "POST",
-    body: { identity },
+    body: { identity, role },
     mutation,
   });
 }
@@ -223,6 +249,10 @@ export function updatePartnerStoreSettings(
 }
 
 // ── Field intake ────────────────────────────────────────────────────────────
+
+export function fetchPartnerCommercialSummary(storeId: string): Promise<DshPartnerCommercialSummary> {
+  return request(`/dsh/partner/stores/${storeId}/commercial-summary`);
+}
 
 export function fieldListDrafts(params: { status?: string; limit?: number; offset?: number } = {}): Promise<DshPartnerListResponse> {
   const q = new URLSearchParams();

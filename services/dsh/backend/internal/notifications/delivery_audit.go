@@ -44,9 +44,13 @@ type DeliveryAuditSummary struct {
 	DeadLetter     int `json:"deadLetter"`
 	PendingOutbox  int `json:"pendingOutbox"`
 	FailedOutbox   int `json:"failedOutbox"`
+	QueuedPush     int `json:"queuedPush"`
 	SentPush       int `json:"sentPush"`
-	PendingPush    int `json:"pendingPush"`
+	DeliveredPush  int `json:"deliveredPush"`
 	FailedPush     int `json:"failedPush"`
+	RetryingPush   int `json:"retryingPush"`
+	DeadPush       int `json:"deadPush"`
+	SuppressedPush int `json:"suppressedPush"`
 }
 
 func validDeliveryOutcome(value string) bool {
@@ -145,14 +149,22 @@ func ListDeliveryAttempts(db *sql.DB, outcome string, limit int) ([]DeliveryAtte
 	}
 	if err := db.QueryRow(`
 		SELECT
+			COUNT(*) FILTER (WHERE status = 'queued'),
 			COUNT(*) FILTER (WHERE status = 'sent'),
-			COUNT(*) FILTER (WHERE status = 'pending'),
-			COUNT(*) FILTER (WHERE status = 'failed')
+			COUNT(*) FILTER (WHERE status = 'delivered'),
+			COUNT(*) FILTER (WHERE status = 'failed'),
+			COUNT(*) FILTER (WHERE status = 'retrying'),
+			COUNT(*) FILTER (WHERE status = 'dead'),
+			COUNT(*) FILTER (WHERE status = 'suppressed')
 		FROM dsh_notification_channel_deliveries
 		WHERE channel = 'push'`).Scan(
+		&summary.QueuedPush,
 		&summary.SentPush,
-		&summary.PendingPush,
+		&summary.DeliveredPush,
 		&summary.FailedPush,
+		&summary.RetryingPush,
+		&summary.DeadPush,
+		&summary.SuppressedPush,
 	); err != nil {
 		return nil, DeliveryAuditSummary{}, err
 	}

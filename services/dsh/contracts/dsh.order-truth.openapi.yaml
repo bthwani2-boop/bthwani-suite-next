@@ -80,6 +80,12 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
       security:
         - bearerAuth: []
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
   /dsh/client/order-truth/{orderId}/events:
     get:
       tags: [ "dsh-client" ]
@@ -98,6 +104,12 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
       security:
         - bearerAuth: []
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
   /dsh/partner/order-truth:
     get:
       tags: [ "dsh-partner" ]
@@ -135,6 +147,12 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
       security:
         - bearerAuth: []
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
   /dsh/operator/order-truth:
     get:
       tags: [ "dsh-operator" ]
@@ -184,6 +202,167 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+      security:
+        - bearerAuth: []
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+  /dsh/client/me/ratings/pending-order:
+    get:
+      tags:
+        - client
+      operationId: get_dsh_client_me_ratings_pending_order
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/client/orders/{orderId}/delivery-proof:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - client
+      operationId: get_dsh_client_orders__orderId__delivery_proof
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/client/orders/{orderId}/rating-prompt:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - client
+      operationId: get_dsh_client_orders__orderId__rating_prompt
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/me/ratings/field/prompt:
+    get:
+      tags:
+        - partner
+      operationId: get_dsh_partner_me_ratings_field_prompt
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/client/orders/{orderId}/delivery-pin:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - client
+      operationId: post_dsh_client_orders__orderId__delivery_pin
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/client/orders/{orderId}/ratings:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - client
+      operationId: post_dsh_client_orders__orderId__ratings
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/me/ratings/field:
+    post:
+      tags:
+        - partner
+      operationId: post_dsh_partner_me_ratings_field
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/client/orders/{orderId}/return:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - client
+      operationId: post_dsh_client_orders__orderId__return
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+    get:
+      tags:
+        - client
+      operationId: get_dsh_client_orders__orderId__return
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
       security:
         - bearerAuth: []
 components:
@@ -268,7 +447,6 @@ components:
         - pricingSnapshotHash
         - wltPaymentRefId
         - paymentStatusProjection
-        - correlationId
         - version
         - items
         - statusTimeline
@@ -305,8 +483,7 @@ components:
           description: Opaque WLT reference; it does not transfer financial truth
             ownership to DSH.
         paymentStatusProjection: { type: string }
-        paymentProjectionUpdatedAt: { type: string, format: date-time, nullable: true }
-        correlationId: { type: string, minLength: 1 }
+        paymentProjectionUpdatedAt: { type: [ string, 'null' ], format: date-time }
         version: { type: integer, minimum: 1 }
         items:
           type: array
@@ -349,7 +526,6 @@ components:
           fromStatus,
           toStatus,
           actorRole,
-          correlationId,
           causationId,
           orderVersion,
           metadata,
@@ -361,7 +537,6 @@ components:
         fromStatus: { type: string }
         toStatus: { type: string }
         actorRole: { type: string }
-        correlationId: { type: string }
         causationId: { type: string }
         orderVersion: { type: integer, minimum: 1 }
         metadata:
@@ -401,7 +576,7 @@ components:
         pendingOutboxEvents: { type: integer, format: int64, minimum: 0 }
         retryingOutboxEvents: { type: integer, format: int64, minimum: 0 }
         deadLetterOutboxEvents: { type: integer, format: int64, minimum: 0 }
-        oldestUnpublishedEventAt: { type: string, format: date-time, nullable: true }
+        oldestUnpublishedEventAt: { type: [ string, 'null' ], format: date-time }
         unknownPaymentProjections: { type: integer, format: int64, minimum: 0 }
         stalePaymentProjections: { type: integer, format: int64, minimum: 0 }
         idempotencyConflictsLastHour: { type: integer, format: int64, minimum: 0 }

@@ -53,17 +53,3 @@ export async function getWorkforceScopes(
     `/dsh/operator/workforce/scopes/${encodeURIComponent(actorId)}?actorRole=${actorRole}`,
   );
 }
-
-export async function replaceWorkforceScopes(input: WorkforceScopeSnapshot): Promise<WorkforceScopeSnapshot> {
-  return request<WorkforceScopeSnapshot>(
-    `/dsh/operator/workforce/scopes/${encodeURIComponent(input.actorId)}`,
-    {
-      method: "PUT",
-      body: {
-        actorRole: input.actorRole,
-        storeIds: input.storeIds,
-        serviceAreaCodes: input.serviceAreaCodes,
-      },
-    },
-  );
-}

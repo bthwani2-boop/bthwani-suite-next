@@ -103,3 +103,4 @@ func TestCurrentOwnerFollowsOperationalState(t *testing.T) {
 		}
 	}
 }
+

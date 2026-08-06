@@ -271,6 +271,54 @@
             schema: { type: object, additionalProperties: true }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
+/dsh/partner/me/finance/cod-records:
+  get:
+    operationId: listDshPartnerFinanceCodRecords
+    summary: Partner reads their own governed WLT COD liability records.
+    tags: [DshFinanceProxy]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: WLT COD records view (verbatim passthrough).
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/partner/me/finance/cod-records/{recordId}/remit:
+  post:
+    operationId: remitDshPartnerCodRecord
+    summary: Partner records remittance of collected COD cash.
+    tags: [DshFinanceProxy]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: recordId
+        in: path
+        required: true
+        schema: { type: string }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [ proofReference ]
+            properties:
+              proofReference: { type: string, minLength: 1, maxLength: 512 }
+              note: { type: string, maxLength: 4000 }
+    responses:
+      "200":
+        {
+          description: COD remittance recorded (verbatim passthrough),
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
 /dsh/operator/platform/store-onboarding-fee:
   get:
     operationId: getDshStoreOnboardingFeePolicy
@@ -821,59 +869,7 @@
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerActivationsListResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
-/dsh/operator/admin/partners/{partnerId}/activate:
-  post:
-    operationId: activateDshPartner
-    summary: Activate a partner.
-    tags: [DshAdministration]
-    security:
-      - bearerAuth: []
-    parameters:
-      - name: partnerId
-        in: path
-        required: true
-        schema: { type: string }
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshActivatePartnerRequest" }
-    responses:
-      "200":
-        description: Partner activated.
-        content:
-          application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerActivation" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
-/dsh/operator/admin/partners/{partnerId}/block:
-  post:
-    operationId: blockDshPartner
-    summary: Block a partner.
-    tags: [DshAdministration]
-    security:
-      - bearerAuth: []
-    parameters:
-      - name: partnerId
-        in: path
-        required: true
-        schema: { type: string }
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshBlockPartnerRequest" }
-    responses:
-      "200":
-        description: Partner blocked.
-        content:
-          application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerActivation" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
 /dsh/partner/orders/{orderId}/partner-delivery:
   get:

@@ -18,14 +18,25 @@ func representativeFinanceRouter(
 	actorID string,
 	wltHandler http.HandlerFunc,
 ) *http.ServeMux {
+	return representativeFinanceRouterWithPermissions(t, role, actorID, nil, wltHandler)
+}
+
+func representativeFinanceRouterWithPermissions(
+	t *testing.T,
+	role string,
+	actorID string,
+	permissions []auth.Permission,
+	wltHandler http.HandlerFunc,
+) *http.ServeMux {
 	t.Helper()
 	identityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(auth.Identity{
-			Subject:   actorID,
-			OperatorContextID:  "dsh",
-			Roles:     []string{role},
-			AuthState: "authenticated",
+			Subject:           actorID,
+			OperatorContextID: "dsh",
+			Roles:             []string{role},
+			AuthState:         "authenticated",
+			Permissions:       permissions,
 		})
 	}))
 	t.Cleanup(identityServer.Close)
@@ -39,8 +50,10 @@ func representativeFinanceRouter(
 		wlt.NewClient(wltServer.URL, "test-service-token"),
 		nil,
 		nil,
+		nil,
 	)
 }
+
 
 func TestRepresentativeOwnWalletRoutesResolveAuthenticatedActor(t *testing.T) {
 	cases := []struct {
@@ -130,7 +143,9 @@ func TestRepresentativeOwnLedgerRoutesOverrideActorQuery(t *testing.T) {
 func TestControlPanelRepresentativeWalletValidatesTypeAndUsesPermissionFallback(t *testing.T) {
 	var gotPath string
 	var gotOperatorContext string
-	router := representativeFinanceRouter(t, "operator", "operator-1", func(w http.ResponseWriter, r *http.Request) {
+	// J008: control-panel finance endpoints require an explicit FinancePermissionRead claim.
+	financePerm := auth.Permission{Service: "dsh", Surface: "control-panel", Action: FinancePermissionRead, Scope: "all"}
+	router := representativeFinanceRouterWithPermissions(t, "finance", "finance-1", []auth.Permission{financePerm}, func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		gotOperatorContext = r.Header.Get("X-Operator-Context-ID")
 		_, _ = w.Write([]byte(`{"wallet":{"actorId":"client-9","actorType":"client"}}`))
@@ -163,7 +178,9 @@ func TestControlPanelRepresentativeLedgerPinsActorAndNoStore(t *testing.T) {
 	var gotPath string
 	var gotQuery string
 	var gotOperatorContext string
-	router := representativeFinanceRouter(t, "operator", "operator-1", func(w http.ResponseWriter, r *http.Request) {
+	// J008: control-panel finance endpoints require an explicit FinancePermissionRead claim.
+	financePerm := auth.Permission{Service: "dsh", Surface: "control-panel", Action: FinancePermissionRead, Scope: "all"}
+	router := representativeFinanceRouterWithPermissions(t, "finance", "finance-1", []auth.Permission{financePerm}, func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		gotQuery = r.URL.RawQuery
 		gotOperatorContext = r.Header.Get("X-Operator-Context-ID")
@@ -198,6 +215,6 @@ func TestControlPanelRepresentativeLedgerPinsActorAndNoStore(t *testing.T) {
 		t.Fatalf("expected operator Identity OperatorContext dsh, got %q", gotOperatorContext)
 	}
 	if rec.Header().Get("Cache-Control") != "private, no-store" {
-		t.Fatalf("expected no-store operator ledger response, got %q", rec.Header().Get("Cache-Control"))
+		t.Fatalf("expected no-store cache header, got %q", rec.Header().Get("Cache-Control"))
 	}
 }

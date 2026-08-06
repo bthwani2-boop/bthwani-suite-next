@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 
+	"strings"
+
 	"dsh-api/internal/store"
 	"dsh-api/internal/support"
 )
@@ -15,194 +17,29 @@ const (
 	SupportPermissionManage = "support.manage"
 )
 
-const errTicketNotFound = "ticket not found"
-
-// POST /dsh/support/tickets
-func (s *protectedStoreServer) handleCreateSupportTicket(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
-	if !ok {
-		return
+func partnerSupportMutationHeaders(w http.ResponseWriter, r *http.Request) (string, string, bool) {
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if idempotencyKey == "" {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key is required")
+		return "", "", false
 	}
-	var body struct {
-		StoreID     string `json:"storeId"`
-		Subject     string `json:"subject"`
-		Description string `json:"description"`
-		Category    string `json:"category"`
-		Priority    string `json:"priority"`
-		OrderID     string `json:"orderId"`
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	if correlationID == "" {
+		correlationID = idempotencyKey
 	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	ticket, err := support.CreateTicket(s.db, support.CreateTicketInput{
-		StoreID:      body.StoreID,
-		ReporterID:   actor.ID,
-		ReporterRole: support.ReporterRole(actor.Role),
-		Subject:      body.Subject,
-		Description:  body.Description,
-		Category:     support.TicketCategory(body.Category),
-		Priority:     support.TicketPriority(body.Priority),
-		OrderID:      body.OrderID,
-	})
-	if errors.Is(err, support.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "subject and description are required")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create ticket")
-		return
-	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"ticket": marshalTicket(ticket)})
+	return idempotencyKey, correlationID, true
 }
 
-// GET /dsh/support/tickets
-func (s *protectedStoreServer) handleListMyTickets(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
-	if !ok {
-		return
-	}
-	tickets, err := support.ListReporterTickets(s.db, actor.ID, 50)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list tickets")
-		return
-	}
-	result := make([]map[string]any, 0, len(tickets))
-	for _, t := range tickets {
-		result = append(result, marshalTicket(t))
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"tickets": result})
-}
 
-// GET /dsh/support/tickets/{ticketId}
-func (s *protectedStoreServer) handleGetTicket(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
-	if !ok {
-		return
-	}
-	ticketID := r.PathValue("ticketId")
-	ticket, ok := s.requireSupportTicketAccess(w, actor, ticketID)
-	if !ok {
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"ticket": marshalTicket(ticket)})
-}
 
-// POST /dsh/support/tickets/{ticketId}/messages
-func (s *protectedStoreServer) handleAddTicketMessage(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
-	if !ok {
-		return
-	}
-	ticketID := r.PathValue("ticketId")
-	if _, authorized := s.requireSupportTicketAccess(w, actor, ticketID); !authorized {
-		return
-	}
-	var body struct {
-		Body       string `json:"body"`
-		IsInternal bool   `json:"isInternal"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	msg, err := support.AddMessage(s.db, ticketID, support.AddMessageInput{
-		SenderID:   actor.ID,
-		SenderRole: actor.Role,
-		Body:       body.Body,
-		IsInternal: body.IsInternal && actor.Role == "operator",
-	})
-	if errors.Is(err, support.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "message body is required")
-		return
-	}
-	if errors.Is(err, support.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", errTicketNotFound)
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to add message")
-		return
-	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"message": marshalMessage(msg)})
-}
 
-// GET /dsh/support/tickets/{ticketId}/messages
-func (s *protectedStoreServer) handleListTicketMessages(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
-	if !ok {
-		return
-	}
-	ticketID := r.PathValue("ticketId")
-	if _, authorized := s.requireSupportTicketAccess(w, actor, ticketID); !authorized {
-		return
-	}
-	includeInternal := actor.Role == "operator"
-	messages, err := support.ListTicketMessages(s.db, ticketID, includeInternal)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list messages")
-		return
-	}
-	result := make([]map[string]any, 0, len(messages))
-	for _, m := range messages {
-		result = append(result, marshalMessage(m))
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"messages": result})
-}
 
-// GET /dsh/operator/support/tickets
-func (s *protectedStoreServer) handleOperatorListTickets(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
-	if !ok {
-		return
-	}
-	statusFilter := r.URL.Query().Get("status")
-	tickets, err := support.ListOperatorTickets(s.db, statusFilter, 100)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list tickets")
-		return
-	}
-	result := make([]map[string]any, 0, len(tickets))
-	for _, t := range tickets {
-		result = append(result, marshalTicket(t))
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"tickets": result})
-}
 
-// PATCH /dsh/operator/support/tickets/{ticketId}
-func (s *protectedStoreServer) handleOperatorUpdateTicket(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
-	if !ok {
-		return
-	}
-	ticketID := r.PathValue("ticketId")
-	var body struct {
-		Status     string `json:"status"`
-		AssignedTo string `json:"assignedTo"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	assignee := body.AssignedTo
-	if assignee == "" {
-		assignee = actor.ID
-	}
-	ticket, err := support.UpdateTicket(s.db, ticketID, support.UpdateTicketInput{
-		Status:     support.TicketStatus(body.Status),
-		AssignedTo: assignee,
-	})
-	if errors.Is(err, support.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", errTicketNotFound)
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to update ticket")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"ticket": marshalTicket(ticket)})
-}
+
 
 // POST /dsh/operator/incidents
 func (s *protectedStoreServer) handleCreateIncident(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -235,7 +72,7 @@ func (s *protectedStoreServer) handleCreateIncident(w http.ResponseWriter, r *ht
 
 // GET /dsh/operator/incidents
 func (s *protectedStoreServer) handleListIncidents(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -254,7 +91,7 @@ func (s *protectedStoreServer) handleListIncidents(w http.ResponseWriter, r *htt
 
 // PATCH /dsh/operator/incidents/{incidentId}
 func (s *protectedStoreServer) handleUpdateIncident(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -295,6 +132,9 @@ func marshalTicket(t support.Ticket) map[string]any {
 		"status":       t.Status,
 		"assignedTo":   t.AssignedTo,
 		"orderId":      t.OrderID,
+		"version":      t.Version,
+		"claimedBy":    t.ClaimedBy,
+		"escalationReason": t.EscalationReason,
 		"createdAt":    t.CreatedAt,
 		"updatedAt":    t.UpdatedAt,
 	}
@@ -304,18 +144,29 @@ func marshalTicket(t support.Ticket) map[string]any {
 	if t.ClosedAt != nil {
 		m["closedAt"] = t.ClosedAt
 	}
+	if t.ClaimedAt != nil {
+		m["claimedAt"] = t.ClaimedAt
+	}
+	if t.SlaBreachAt != nil {
+		m["slaBreachAt"] = t.SlaBreachAt
+	}
+	if t.EscalatedAt != nil {
+		m["escalatedAt"] = t.EscalatedAt
+	}
 	return m
 }
 
 func marshalMessage(m support.Message) map[string]any {
 	return map[string]any{
-		"id":         m.ID,
-		"ticketId":   m.TicketID,
-		"senderId":   m.SenderID,
-		"senderRole": m.SenderRole,
-		"body":       m.Body,
-		"isInternal": m.IsInternal,
-		"createdAt":  m.CreatedAt,
+		"id":              m.ID,
+		"ticketId":        m.TicketID,
+		"senderId":        m.SenderID,
+		"senderRole":      m.SenderRole,
+		"body":            m.Body,
+		"isInternal":      m.IsInternal,
+		"clientMessageId": m.ClientMessageID,
+		"sequenceNum":     m.SequenceNum,
+		"createdAt":       m.CreatedAt,
 	}
 }
 

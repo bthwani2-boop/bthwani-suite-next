@@ -14,7 +14,6 @@ func (s *protectedStoreServer) handleAggregatedPartnerReadiness(w http.ResponseW
 		r,
 		partner.HandleGetAggregatedReadiness(s.db),
 		PartnersPermissionRead,
-		"operator",
 	)
 }
 

@@ -8,6 +8,9 @@ import (
 	"math"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	"dsh-api/internal/mapproviders"
 )
 
 var ErrStoreConflict = errors.New("client already has an active cart for another store")
@@ -134,8 +137,8 @@ type CartItemValidation struct {
 	MasterProductID      string   `json:"masterProductId"`
 	Status               string   `json:"status"`
 	ReasonCode           string   `json:"reasonCode,omitempty"`
-	SnapshotUnitPrice    float64  `json:"snapshotUnitPrice"`
-	CurrentUnitPrice     *float64 `json:"currentUnitPrice,omitempty"`
+	SnapshotUnitPriceMinorUnits    int64  `json:"snapshotUnitPriceMinorUnits"`
+	CurrentUnitPriceMinorUnits     *int64 `json:"currentUnitPriceMinorUnits,omitempty"`
 	SnapshotCurrency     string   `json:"snapshotCurrency"`
 	CurrentCurrency      *string  `json:"currentCurrency,omitempty"`
 	SnapshotAssortmentID *string  `json:"snapshotAssortmentId,omitempty"`
@@ -172,10 +175,9 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 			ci.id::text,
 			ci.master_product_id,
 			ci.store_assortment_id,
-			ci.unit_price::double precision,
+			ci.unit_price_minor,
 			ci.currency,
 			a.id,
-			a.unit_price::double precision,
 			a.currency,
 			a.available
 		FROM dsh_cart_items ci
@@ -194,22 +196,28 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 		var item CartItemValidation
 		var snapshotAssortment sql.NullString
 		var currentAssortment sql.NullString
-		var currentPrice sql.NullFloat64
 		var currentCurrency sql.NullString
 		var currentAvailable sql.NullBool
 		if err := rows.Scan(
 			&item.ItemID,
 			&item.MasterProductID,
 			&snapshotAssortment,
-			&item.SnapshotUnitPrice,
+			&item.SnapshotUnitPriceMinorUnits,
 			&item.SnapshotCurrency,
 			&currentAssortment,
-			&currentPrice,
 			&currentCurrency,
 			&currentAvailable,
 		); err != nil {
 			return result, err
 		}
+
+		var currentPrice sql.NullInt64
+		err = db.QueryRowContext(ctx, "SELECT amount_minor FROM wlt_master_product_pricing WHERE master_product_id = $1 AND store_id = (SELECT store_id FROM dsh_carts WHERE id = $2::uuid) AND effective_from <= NOW() ORDER BY effective_from DESC LIMIT 1", item.MasterProductID, cartID).Scan(&currentPrice)
+		if err == nil && currentPrice.Valid {
+			value := currentPrice.Int64
+			item.CurrentUnitPriceMinorUnits = &value
+		}
+
 		if snapshotAssortment.Valid {
 			value := snapshotAssortment.String
 			item.SnapshotAssortmentID = &value
@@ -217,10 +225,6 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 		if currentAssortment.Valid {
 			value := currentAssortment.String
 			item.CurrentAssortmentID = &value
-		}
-		if currentPrice.Valid {
-			value := currentPrice.Float64
-			item.CurrentUnitPrice = &value
 		}
 		if currentCurrency.Valid {
 			value := currentCurrency.String
@@ -240,7 +244,7 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 		case snapshotAssortment.Valid && snapshotAssortment.String != currentAssortment.String:
 			item.Status = "assortment_changed"
 			item.ReasonCode = "ASSORTMENT_CHANGED"
-		case !currentPrice.Valid || currentPrice.Float64 <= 0:
+		case !currentPrice.Valid:
 			item.Status = "unpriced"
 			item.ReasonCode = "PRICE_UNAVAILABLE"
 		case strings.TrimSpace(item.SnapshotCurrency) == "":
@@ -253,7 +257,7 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 			item.Status = "price_changed"
 			item.ReasonCode = "CURRENCY_CHANGED"
 			result.PriceChanged = true
-		case int64(math.Round(item.SnapshotUnitPrice*100)) != int64(math.Round(currentPrice.Float64*100)):
+		case item.SnapshotUnitPriceMinorUnits != currentPrice.Int64:
 			item.Status = "price_changed"
 			item.ReasonCode = "PRICE_CHANGED"
 			result.PriceChanged = true
@@ -290,6 +294,11 @@ type GovernedServiceabilityResult struct {
 	SlaPrepMinutes      *int            `json:"slaPrepMinutes,omitempty"`
 	SlaDeliveryMinutes  *int            `json:"slaDeliveryMinutes,omitempty"`
 	CheckedAt           time.Time       `json:"checkedAt"`
+
+	EtaMinMinutes *int       `json:"etaMinMinutes,omitempty"`
+	EtaMaxMinutes *int       `json:"etaMaxMinutes,omitempty"`
+	QuoteVersion  string     `json:"quoteVersion,omitempty"`
+	ExpiresAt     *time.Time `json:"expiresAt,omitempty"`
 }
 
 // CheckGovernedServiceability extends geographic/store readiness with the
@@ -298,6 +307,7 @@ type GovernedServiceabilityResult struct {
 func CheckGovernedServiceability(
 	ctx context.Context,
 	db *sql.DB,
+	mapClient *mapproviders.Client,
 	storeID string,
 	serviceAreaCode string,
 	clientLat *float64,
@@ -417,5 +427,38 @@ func CheckGovernedServiceability(
 			result.Reason = "service area is temporarily throttled"
 		}
 	}
+
+	result.QuoteVersion = uuid.NewString()
+	expiry := time.Now().UTC().Add(15 * time.Minute)
+	result.ExpiresAt = &expiry
+
+	if result.Serviceable && mapClient != nil && (requestedMode == ModeBthwaniDelivery || requestedMode == ModePartnerDelivery) && clientLat != nil && clientLng != nil {
+		var storeLat, storeLng float64
+		err := db.QueryRowContext(ctx, `SELECT latitude, longitude FROM dsh_stores WHERE id = $1`, storeID).Scan(&storeLat, &storeLng)
+		if err == nil {
+			routeResponse, err := mapClient.Route(ctx, "", mapproviders.RouteInput{
+				OriginLatitude:       storeLat,
+				OriginLongitude:      storeLng,
+				DestinationLatitude:  *clientLat,
+				DestinationLongitude: *clientLng,
+			})
+			if err != nil {
+				result.Serviceable = false
+				result.Code = "provider_unavailable"
+				result.Reason = "routing provider could not estimate ETA"
+			} else {
+				routeMinutes := int(math.Ceil(routeResponse.DurationSeconds / 60.0))
+				prepMinutes := 15 // Default prep
+				if maxPrep.Valid {
+					prepMinutes = int(maxPrep.Int64)
+				}
+				minETA := prepMinutes + routeMinutes
+				maxETA := minETA + 15
+				result.EtaMinMinutes = &minETA
+				result.EtaMaxMinutes = &maxETA
+			}
+		}
+	}
+
 	return result
 }

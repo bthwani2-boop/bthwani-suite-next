@@ -8,6 +8,15 @@ import {
   upsertCartItem,
 } from "./cart.api";
 import {
+  clearCartSyncQueue,
+  generateIdempotencyKey,
+  getCartSyncQueue,
+  getDeviceId,
+  getSessionId,
+  pushToCartSyncQueue,
+  removeCartSyncCommand,
+} from "./cart-sync.queue";
+import {
   resolveCartLoadError,
   resolveCartLoadState,
   resolveQuantityRemoval,
@@ -77,47 +86,163 @@ export function useCartController(
     if (shouldLoadCart(authKind, storeId)) void load();
   }, [authKind, load, storeId]);
 
+  const syncQueue = useCallback(async () => {
+    const queue = getCartSyncQueue();
+    if (queue.length === 0) return;
+    
+    setAction("submitting");
+    let hasConflict = false;
+    let anySuccess = false;
+    
+    for (const q of queue) {
+      try {
+        const deviceId = getDeviceId();
+        const sessionId = getSessionId();
+        
+        if (q.command.kind === "add") {
+          await upsertCartItem({
+            storeId: q.command.storeId,
+            masterProductId: q.command.masterProductId,
+            quantity: q.command.quantity,
+            options: q.command.options,
+            note: q.command.note,
+            idempotencyKey: q.id,
+            deviceId,
+            sessionId,
+            ...(q.expectedVersion !== undefined ? { expectedVersion: q.expectedVersion } : {})
+          });
+        } else if (q.command.kind === "remove") {
+          await removeCartItem(q.command.cartId, q.command.itemId, q.id, q.expectedVersion ?? 0, deviceId, sessionId);
+        } else if (q.command.kind === "clear") {
+          await clearCart(q.id, q.command.cartId, q.command.storeId, q.expectedVersion, deviceId, sessionId);
+        }
+        
+        removeCartSyncCommand(q.id);
+        anySuccess = true;
+      } catch (error) {
+        const typed: CartMutationError = typeof error === "object" && error !== null ? error : {};
+        if (typed.kind === "network") {
+          setAction("offline_pending");
+          return;
+        }
+        if (typed.status === 412 || typed.code === "VERSION_CONFLICT") {
+          hasConflict = true;
+          setAction("conflict");
+          setActionError("تضارب في نسخة السلة. يرجى مراجعة التغييرات أو مزامنتها مع الخادم.");
+          break; // Stop processing further queued items on conflict
+        }
+        // For other errors, we just discard the bad queued command
+        removeCartSyncCommand(q.id);
+      }
+    }
+    
+    if (anySuccess && !hasConflict) {
+      await load();
+      setAction("success");
+    }
+  }, [load]);
+
+  useEffect(() => {
+    const handleOnline = () => { void syncQueue(); };
+    window.addEventListener("online", handleOnline);
+    // Try to sync on mount if online
+    if (typeof navigator !== "undefined" && navigator.onLine) {
+      void syncQueue();
+    }
+    return () => window.removeEventListener("online", handleOnline);
+  }, [syncQueue]);
+
   const addItem = useCallback(
     async (input: {
       masterProductId: string;
       productName: string;
       priceReference?: string;
       quantity: number;
+      options?: readonly string[];
+      note?: string;
       fulfillmentMode?: DshFulfillmentMode;
     }): Promise<boolean> => {
       if (!storeId) return false;
       setAction("submitting");
       setActionError(null);
+      const idempotencyKey = generateIdempotencyKey();
+      const expectedVersion = state.kind === "success" ? state.cart.version : undefined;
+      const deviceId = getDeviceId();
+      const sessionId = getSessionId();
+      
       try {
-        await upsertCartItem({ storeId, ...input });
+        await upsertCartItem({
+          storeId,
+          idempotencyKey,
+          deviceId,
+          sessionId,
+          ...(expectedVersion !== undefined ? { expectedVersion } : {}),
+          ...input,
+        });
         await load();
         setAction("success");
         return true;
       } catch (error) {
+        const typed: CartMutationError = typeof error === "object" && error !== null ? error : {};
+        if (typed.kind === "network") {
+          pushToCartSyncQueue({
+            id: idempotencyKey,
+            expectedVersion,
+            createdAt: Date.now(),
+            command: { kind: "add", storeId, masterProductId: input.masterProductId, quantity: input.quantity, options: input.options ? [...input.options] : [], note: input.note ?? "" }
+          });
+          setAction("offline_pending");
+          return true;
+        }
+        if (typed.status === 412 || typed.code === "VERSION_CONFLICT") {
+          setAction("conflict");
+          setActionError(mutationErrorMessage(error));
+          return false;
+        }
         setAction("error");
         setActionError(mutationErrorMessage(error));
         return false;
       }
     },
-    [storeId, load],
+    [storeId, load, state],
   );
 
   const removeItem = useCallback(
     async (cartId: string, itemId: string): Promise<boolean> => {
       setAction("submitting");
       setActionError(null);
+      const idempotencyKey = generateIdempotencyKey();
+      const expectedVersion = state.kind === "success" ? state.cart.version : 0;
+      const deviceId = getDeviceId();
+      const sessionId = getSessionId();
       try {
-        await removeCartItem(cartId, itemId);
+        await removeCartItem(cartId, itemId, idempotencyKey, expectedVersion, deviceId, sessionId);
         await load();
         setAction("success");
         return true;
       } catch (error) {
+        const typed: CartMutationError = typeof error === "object" && error !== null ? error : {};
+        if (typed.kind === "network") {
+          pushToCartSyncQueue({
+            id: idempotencyKey,
+            expectedVersion,
+            createdAt: Date.now(),
+            command: { kind: "remove", cartId, itemId }
+          });
+          setAction("offline_pending");
+          return true;
+        }
+        if (typed.status === 412 || typed.code === "VERSION_CONFLICT") {
+          setAction("conflict");
+          setActionError(mutationErrorMessage(error));
+          return false;
+        }
         setAction("error");
         setActionError(mutationErrorMessage(error));
         return false;
       }
     },
-    [load],
+    [load, state],
   );
 
   const updateItemQuantity = useCallback(
@@ -126,6 +251,8 @@ export function useCartController(
       productName: string,
       quantity: number,
       priceReference?: string,
+      options?: readonly string[],
+      note?: string,
     ): Promise<boolean> => {
       if (!storeId) return false;
       const cart = state.kind === "success" ? state.cart : null;
@@ -145,18 +272,44 @@ export function useCartController(
 
       setAction("submitting");
       setActionError(null);
+      const idempotencyKey = generateIdempotencyKey();
+      const expectedVersion = cart ? cart.version : undefined;
+      const deviceId = getDeviceId();
+      const sessionId = getSessionId();
       try {
         await upsertCartItem({
           storeId,
           masterProductId,
           productName,
           quantity,
+          ...(options ? { options: [...options] } : {}),
+          ...(note !== undefined ? { note } : {}),
+          idempotencyKey,
+          deviceId,
+          sessionId,
+          ...(expectedVersion !== undefined ? { expectedVersion } : {}),
           ...(priceReference !== undefined ? { priceReference } : {}),
         });
         await load();
         setAction("success");
         return true;
       } catch (error) {
+        const typed: CartMutationError = typeof error === "object" && error !== null ? error : {};
+        if (typed.kind === "network") {
+          pushToCartSyncQueue({
+            id: idempotencyKey,
+            expectedVersion,
+            createdAt: Date.now(),
+            command: { kind: "add", storeId, masterProductId, quantity, options: options ? [...options] : [], note: note ?? "" }
+          });
+          setAction("offline_pending");
+          return true;
+        }
+        if (typed.status === 412 || typed.code === "VERSION_CONFLICT") {
+          setAction("conflict");
+          setActionError(mutationErrorMessage(error));
+          return false;
+        }
         setAction("error");
         setActionError(mutationErrorMessage(error));
         return false;
@@ -168,12 +321,31 @@ export function useCartController(
   const clear = useCallback(async (cart: DshCart): Promise<boolean> => {
     setAction("submitting");
     setActionError(null);
+    const idempotencyKey = generateIdempotencyKey();
+    const deviceId = getDeviceId();
+    const sessionId = getSessionId();
     try {
-      await clearCart(cart.id);
+      await clearCart(idempotencyKey, cart.id, undefined, cart.version, deviceId, sessionId);
       await load();
       setAction("success");
       return true;
     } catch (error) {
+      const typed: CartMutationError = typeof error === "object" && error !== null ? error : {};
+      if (typed.kind === "network") {
+        pushToCartSyncQueue({
+          id: idempotencyKey,
+          expectedVersion: cart.version,
+          createdAt: Date.now(),
+          command: { kind: "clear", cartId: cart.id, storeId: cart.storeId }
+        });
+        setAction("offline_pending");
+        return true;
+      }
+      if (typed.status === 412 || typed.code === "VERSION_CONFLICT") {
+        setAction("conflict");
+        setActionError(mutationErrorMessage(error));
+        return false;
+      }
       setAction("error");
       setActionError(mutationErrorMessage(error));
       return false;
@@ -189,6 +361,8 @@ export function useCartController(
     updateItemQuantity,
     removeItem,
     clear,
+    syncQueue,
+    clearOfflineQueue: () => clearCartSyncQueue(),
   };
 }
 

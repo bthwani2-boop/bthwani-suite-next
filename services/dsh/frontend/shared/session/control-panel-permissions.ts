@@ -15,7 +15,6 @@ function isControlPanelPermission(
 ): boolean {
   return (
     (permission.surface === "control-panel" || permission.surface === "all" || permission.surface === "*") &&
-    (permission.scope === "all" || permission.scope === "*") &&
     (permission.action === action || permission.action === "*")
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useIdentityRuntimeStatus } from "@bthwani/core-identity";
 import { Box, Card, Text, TextField } from "@bthwani/ui-kit";
 import {
   CpBadge,
@@ -20,6 +21,7 @@ import {
   type FieldAgent,
 } from "../../shared/workforce";
 import { ProviderOperationalEnforcementPanel } from "./ProviderOperationalEnforcementPanel";
+import { ActorActivationCard } from "./ActorActivationCard";
 
 export type ProviderActivationWorkspaceProps = {
   readonly providerKind: "field" | "captain";
@@ -154,6 +156,16 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
     suspend,
     reactivate,
   } = useProviderActivationController(providerKind, actorId);
+  const identityRuntime = useIdentityRuntimeStatus();
+  const runtimeValue = identityRuntime.state.kind === "resolved"
+    ? identityRuntime.state.value
+    : identityRuntime.state.kind === "checking"
+      ? identityRuntime.state.previous
+      : undefined;
+  const identityReady = runtimeValue?.status === "HEALTHY";
+  const identityRuntimeReason = identityRuntime.state.kind === "unavailable"
+    ? identityRuntime.state.code
+    : (runtimeValue?.reasonCodes ?? ["IDENTITY_READINESS_UNPROVEN"]).join("، ");
   const [reason, setReason] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -175,7 +187,7 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
       missingReasons.push("رخصة القيادة منتهية الصلاحية");
     }
   }
-  const isReadyToIssue = managerAllowed && detail.readyToIssue && missingReasons.length === 0;
+  const isReadyToIssue = managerAllowed && identityReady && detail.readyToIssue && missingReasons.length === 0;
   const latest = detail.latestActivation;
 
   const copyCode = async (code: string) => {
@@ -201,6 +213,16 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
           <CpDescriptionRow label="حالة الهوية">{detail.authActive ? "نشطة" : "غير نشطة"}</CpDescriptionRow>
         </CpDescriptionList>
 
+        {!identityReady ? (
+          <CpStatePanel
+            role="alert"
+            title="Identity غير جاهزة؛ عمليات التفعيل متوقفة مغلقًا"
+            description={`السبب: ${identityRuntimeReason}. تبقى بيانات مقدم الخدمة متاحة للقراءة ولا تُحذف الجلسات المحفوظة.`}
+          >
+            <CpButton variant="secondary" onClick={() => void identityRuntime.refresh(true)}>إعادة فحص Identity</CpButton>
+          </CpStatePanel>
+        ) : null}
+
         {!managerAllowed ? (
           <CpStatePanel
             role="status"
@@ -216,33 +238,16 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
 
         {managerAllowed ? (
           <Box gap={2}>
-            {issuedCode ? (
-              <Box layoutDirection="row" justify="space-between" align="center">
-                <Box gap={0}>
-                  <Text role="caption" tone="muted">كود الدخول أحادي الاستخدام</Text>
-                  <Text role="titleMd">{issuedCode.code}</Text>
-                </Box>
-                <CpButton variant="secondary" onClick={() => void copyCode(issuedCode.code)}>{copied ? "تم النسخ" : "نسخ"}</CpButton>
-              </Box>
-            ) : latest ? (
-              <Box layoutDirection="row" justify="space-between" align="center">
-                <Box gap={0}>
-                  <Text role="bodyStrong">آخر كود: {latest.status}</Text>
-                  <Text role="caption" tone="muted">ينتهي: {new Date(latest.expiresAt).toLocaleString("ar-YE")}</Text>
-                </Box>
-                <CpButton variant="danger" disabled={actionBusy} onClick={() => void revokeCode().then(onReloadList)}>إبطال الأكواد</CpButton>
-              </Box>
-            ) : (
-              <CpMutedInline tight>لم يصدر كود دخول بعد.</CpMutedInline>
-            )}
+            <ActorActivationCard
+              actorId={actorId}
+              expectedActorType={providerKind}
+              expectedSurface={`app-${providerKind}`}
+              issuedByActorId="dsh-operator" // Would normally come from auth context
+              disabled={!isReadyToIssue}
+              disabledReason={!isReadyToIssue ? "لا يمكن الإصدار إلا إذا كانت الهوية جاهزة وجميع المتطلبات مكتملة" : undefined}
+            />
 
-            <CpButton
-              variant="primary"
-              disabled={!isReadyToIssue || actionBusy}
-              onClick={() => void issueCode().then(onReloadList)}
-            >
-              {actionBusy ? "جارٍ التنفيذ…" : "إصدار كود الدخول"}
-            </CpButton>
+
             <CpMutedInline>
               الخادم يعيد فحص الهوية والعقد والضمين والتجهيز والضمانة المالية والتدريب والاعتماد؛ لا يمكن تجاوز البوابة من الواجهة.
             </CpMutedInline>
@@ -251,7 +256,7 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
             {detail.engagementStatus === "suspended" ? (
               <CpButton
                 variant="primary"
-                disabled={actionBusy || reason.trim().length < 3}
+                disabled={actionBusy || !identityReady || reason.trim().length < 3}
                 onClick={() => void reactivate(reason.trim()).then((success) => { if (success) { setReason(""); void onReloadList(); } })}
               >
                 إعادة التفعيل
@@ -259,7 +264,7 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
             ) : (
               <CpButton
                 variant="danger"
-                disabled={actionBusy || reason.trim().length < 3}
+                disabled={actionBusy || !identityReady || reason.trim().length < 3}
                 onClick={() => void suspend(reason.trim()).then((success) => { if (success) { setReason(""); void onReloadList(); } })}
               >
                 إيقاف مقدم الخدمة

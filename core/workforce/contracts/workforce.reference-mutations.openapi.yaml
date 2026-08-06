@@ -13,6 +13,10 @@ paths:
       x-bthwani-required-scope: reference:manage
       responses:
         '201': { description: Created }
+        '400': { description: Invalid city reference input. }
+        '401': { description: Authentication required. }
+        '403': { description: reference:manage permission required. }
+        '409': { description: City code or version conflicts with existing truth. }
       security:
         - bearerAuth: []
   /workforce/reference/cities/{code}:
@@ -28,6 +32,11 @@ paths:
           schema: { type: string }
       responses:
         '200': { description: Updated }
+        '400': { description: Invalid city reference update. }
+        '401': { description: Authentication required. }
+        '403': { description: reference:manage permission required. }
+        '404': { description: City reference not found. }
+        '409': { description: City reference version conflict. }
       security:
         - bearerAuth: []
   /workforce/{collection}/{actorId}/documents:
@@ -59,6 +68,11 @@ paths:
                 mediaRef: { type: string, minLength: 1 }
       responses:
         '200': { description: Linked }
+        '400': { description: "Invalid collection, actor, version, or media reference." }
+        '401': { description: Authentication required. }
+        '403': { description: provider:update permission required. }
+        '404': { description: Workforce profile not found. }
+        '409': { description: Workforce profile version conflict. }
       security:
         - bearerAuth: []
 components:

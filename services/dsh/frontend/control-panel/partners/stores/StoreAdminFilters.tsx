@@ -8,10 +8,10 @@ type Props = {
 
 const STATUS_OPTIONS = [
   { value: "", label: "كل الحالات" },
-  { value: "active", label: "نشط" },
-  { value: "inactive", label: "غير نشط" },
-  { value: "temporarily_closed", label: "مغلق مؤقتاً" },
-  { value: "unavailable", label: "غير متاح" },
+  { value: "published", label: "منشور" },
+  { value: "paused", label: "موقوف مؤقتاً" },
+  { value: "suspended", label: "معلّق" },
+  { value: "closed", label: "مغلق" },
 ];
 
 const VISIBILITY_OPTIONS = [

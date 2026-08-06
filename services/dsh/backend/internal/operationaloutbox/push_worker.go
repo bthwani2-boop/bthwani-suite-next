@@ -114,7 +114,11 @@ func (p *HTTPPushProvider) Send(ctx context.Context, message PushMessage) (strin
 	return result.MessageID, nil
 }
 
-func RunPushWorker(ctx context.Context, db *sql.DB, provider PushProvider, interval time.Duration) {
+type SessionVerifier interface {
+	IsSessionValid(ctx context.Context, actorID, sessionID string) (bool, error)
+}
+
+func RunPushWorker(ctx context.Context, db *sql.DB, provider PushProvider, verifier SessionVerifier, interval time.Duration) {
 	if db == nil || provider == nil {
 		return
 	}
@@ -124,7 +128,7 @@ func RunPushWorker(ctx context.Context, db *sql.DB, provider PushProvider, inter
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	if err := ProcessPushOnce(ctx, db, provider); err != nil {
+	if err := ProcessPushOnce(ctx, db, provider, verifier); err != nil {
 		log.Printf("[notification-push] startup batch failed: %v", err)
 	}
 	for {
@@ -132,20 +136,35 @@ func RunPushWorker(ctx context.Context, db *sql.DB, provider PushProvider, inter
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if err := ProcessPushOnce(ctx, db, provider); err != nil {
+			if err := ProcessPushOnce(ctx, db, provider, verifier); err != nil {
 				log.Printf("[notification-push] batch failed: %v", err)
 			}
 		}
 	}
 }
 
-func ProcessPushOnce(ctx context.Context, db *sql.DB, provider PushProvider) error {
+func ProcessPushOnce(ctx context.Context, db *sql.DB, provider PushProvider, verifier SessionVerifier) error {
 	deliveries, err := claimPushBatch(db, pushWorkerBatchSize, pushWorkerLease)
 	if err != nil {
 		return err
 	}
 	for _, delivery := range deliveries {
-		tokens, err := listActivePushTokens(ctx, db, delivery.ActorID, delivery.ActorType)
+		endpoints, err := listActivePushEndpoints(ctx, db, delivery.ActorID, delivery.ActorType)
+		var tokens []string
+		if err == nil {
+			for _, ep := range endpoints {
+				// For critical OTP pushes or in general, verify session if a verifier is provided
+				if verifier != nil && ep.IdentitySessionID != "" {
+					valid, vErr := verifier.IsSessionValid(ctx, delivery.ActorID, ep.IdentitySessionID)
+					if vErr == nil && !valid {
+						// Deactivate the token locally
+						_ = deactivatePushEndpointByID(db, ep.ID)
+						continue
+					}
+				}
+				tokens = append(tokens, ep.Token)
+			}
+		}
 		if err == nil && len(tokens) == 0 {
 			err = fmt.Errorf("no active push endpoint for actor")
 		}
@@ -249,9 +268,15 @@ func claimPushBatch(db *sql.DB, limit int, lease time.Duration) ([]PushDelivery,
 	return deliveries, nil
 }
 
-func listActivePushTokens(ctx context.Context, db *sql.DB, actorID, actorType string) ([]string, error) {
+type pushEndpoint struct {
+	ID                string
+	Token             string
+	IdentitySessionID string
+}
+
+func listActivePushEndpoints(ctx context.Context, db *sql.DB, actorID, actorType string) ([]pushEndpoint, error) {
 	rows, err := db.QueryContext(ctx, `
-		SELECT endpoint_token
+		SELECT id::text, endpoint_token, COALESCE(identity_session_id, '')
 		FROM dsh_notification_push_endpoints
 		WHERE actor_id = $1 AND actor_type = $2 AND active = TRUE
 		ORDER BY last_seen_at DESC`, actorID, actorType)
@@ -259,15 +284,23 @@ func listActivePushTokens(ctx context.Context, db *sql.DB, actorID, actorType st
 		return nil, err
 	}
 	defer rows.Close()
-	var tokens []string
+	var endpoints []pushEndpoint
 	for rows.Next() {
-		var token string
-		if err := rows.Scan(&token); err != nil {
+		var ep pushEndpoint
+		if err := rows.Scan(&ep.ID, &ep.Token, &ep.IdentitySessionID); err != nil {
 			return nil, err
 		}
-		tokens = append(tokens, token)
+		endpoints = append(endpoints, ep)
 	}
-	return tokens, rows.Err()
+	return endpoints, rows.Err()
+}
+
+func deactivatePushEndpointByID(db *sql.DB, id string) error {
+	_, err := db.Exec(`
+		UPDATE dsh_notification_push_endpoints
+		SET active = FALSE, updated_at = NOW()
+		WHERE id = $1::uuid`, id)
+	return err
 }
 
 func markPushSent(db *sql.DB, deliveryID, providerMessageID string) error {

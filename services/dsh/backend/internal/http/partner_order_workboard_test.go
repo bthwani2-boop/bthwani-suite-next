@@ -3,6 +3,7 @@ package http
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestPartnerOrderAllowedActions(t *testing.T) {
@@ -14,6 +15,7 @@ func TestPartnerOrderAllowedActions(t *testing.T) {
 		openIssueCount       int
 		resolvableIssueCount int
 		handoffException     bool
+		deadlineAt           *time.Time
 		want                 []string
 	}{
 		{name: "pending decision", status: "pending", mode: "bthwani_delivery", want: []string{"accept", "reject"}},
@@ -43,6 +45,8 @@ func TestPartnerOrderAllowedActions(t *testing.T) {
 				tt.openIssueCount,
 				tt.resolvableIssueCount,
 				tt.handoffException,
+				tt.deadlineAt,
+				time.Now(),
 			)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Fatalf(

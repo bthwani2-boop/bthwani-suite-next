@@ -23,7 +23,7 @@ func (s *protectedStoreServer) handleListCatalogDomains(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleCreateCatalogDomain(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok {
 		return
 	}
 	var input centralcatalog.DomainInput
@@ -36,22 +36,6 @@ func (s *protectedStoreServer) handleCreateCatalogDomain(w http.ResponseWriter, 
 		return
 	}
 	store.SendJSON(w, http.StatusCreated, map[string]any{"domain": d})
-}
-
-func (s *protectedStoreServer) handleUpdateCatalogDomain(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok {
-		return
-	}
-	var input centralcatalog.DomainPatchInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	d, err := centralcatalog.UpdateDomain(r.Context(), s.db, r.PathValue("domainId"), input)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"domain": d})
 }
 
 // ── Operator: nodes (L2/L3/L4) ──────────────────────────────────────────────
@@ -69,7 +53,7 @@ func (s *protectedStoreServer) handleListCatalogNodes(w http.ResponseWriter, r *
 }
 
 func (s *protectedStoreServer) handleCreateCatalogNode(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok {
 		return
 	}
 	var input centralcatalog.NodeInput
@@ -84,15 +68,57 @@ func (s *protectedStoreServer) handleCreateCatalogNode(w http.ResponseWriter, r 
 	store.SendJSON(w, http.StatusCreated, map[string]any{"node": n})
 }
 
-func (s *protectedStoreServer) handleUpdateCatalogNode(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok {
+func (s *protectedStoreServer) handleMoveCatalogNode(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok {
 		return
 	}
-	var input centralcatalog.NodePatchInput
+	var input struct {
+		TargetParentID *string `json:"targetParentId"`
+	}
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	n, err := centralcatalog.UpdateNode(r.Context(), s.db, r.PathValue("nodeId"), input)
+	n, err := centralcatalog.MoveNode(r.Context(), s.db, r.PathValue("nodeId"), input.TargetParentID)
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"node": n})
+}
+
+func (s *protectedStoreServer) handleMergeCatalogNode(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok {
+		return
+	}
+	var input struct {
+		TargetNodeID string `json:"targetNodeId"`
+	}
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	tx, err := s.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	defer tx.Rollback()
+
+	if err := centralcatalog.MergeNode(r.Context(), tx, r.PathValue("nodeId"), input.TargetNodeID); err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"success": true})
+}
+
+func (s *protectedStoreServer) handleDeprecateCatalogNode(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok {
+		return
+	}
+	n, err := centralcatalog.DeprecateNode(r.Context(), s.db, r.PathValue("nodeId"))
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
 		return
@@ -103,7 +129,7 @@ func (s *protectedStoreServer) handleUpdateCatalogNode(w http.ResponseWriter, r 
 // ── Taxonomy (read-only domains+nodes) for partner/field surfaces ──────────
 
 func (s *protectedStoreServer) handleCatalogTaxonomy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner", "field", "operator")
+	actor, ok := s.requireActor(w, r, "partner", "field")
 	if !ok {
 		return
 	}
@@ -153,12 +179,25 @@ func (s *protectedStoreServer) handleListMasterProducts(w http.ResponseWriter, r
 		approvalStatus = "approved"
 		activeOnly = true
 	}
+	var parentIDFilter *string
+	if r.URL.Query().Has("parentId") {
+		val := r.URL.Query().Get("parentId")
+		parentIDFilter = &val
+	}
+	var isStandaloneFilter *bool
+	if r.URL.Query().Has("isStandalone") {
+		val := r.URL.Query().Get("isStandalone") == "true"
+		isStandaloneFilter = &val
+	}
+
 	filter := centralcatalog.MasterProductFilter{
 		DomainID:       r.URL.Query().Get("domainId"),
 		CategoryNodeID: r.URL.Query().Get("categoryNodeId"),
 		ApprovalStatus: approvalStatus,
 		ActiveOnly:     activeOnly,
 		Search:         r.URL.Query().Get("search"),
+		ParentID:       parentIDFilter,
+		IsStandalone:   isStandaloneFilter,
 		Limit:          limit,
 		Offset:         offset,
 	}
@@ -174,7 +213,7 @@ func (s *protectedStoreServer) handleListMasterProducts(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleCreateMasterProduct(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductManage); !ok {
 		return
 	}
 	var input centralcatalog.MasterProductInput
@@ -189,26 +228,10 @@ func (s *protectedStoreServer) handleCreateMasterProduct(w http.ResponseWriter, 
 	store.SendJSON(w, http.StatusCreated, map[string]any{"masterProduct": m})
 }
 
-func (s *protectedStoreServer) handleUpdateMasterProduct(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductManage, "operator"); !ok {
-		return
-	}
-	var input centralcatalog.MasterProductPatchInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	m, err := centralcatalog.UpdateMasterProduct(r.Context(), s.db, r.PathValue("productId"), input)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"masterProduct": m})
-}
-
 // ── Product proposals ────────────────────────────────────────────────────────
 
 func (s *protectedStoreServer) handleListProductProposals(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProposalRead, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProposalRead); !ok {
 		return
 	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
@@ -246,40 +269,6 @@ func proposalTransitionPermissionAction(nextStatus string) string {
 	}
 }
 
-func (s *protectedStoreServer) handleDecideProductProposal(w http.ResponseWriter, r *http.Request) {
-	var input centralcatalog.ProposalDecisionInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	actor, ok := s.requireCatalogPermission(w, r, decideProposalPermissionAction(input.Decision), "operator")
-	if !ok {
-		return
-	}
-	p, err := centralcatalog.DecideProposal(r.Context(), s.db, actor.ID, actor.Role, r.PathValue("proposalId"), input)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"proposal": p})
-}
-
-func (s *protectedStoreServer) handleTransitionProductProposal(w http.ResponseWriter, r *http.Request) {
-	var input centralcatalog.ProposalTransitionInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	actor, ok := s.requireCatalogPermission(w, r, proposalTransitionPermissionAction(input.NextStatus), "operator")
-	if !ok {
-		return
-	}
-	p, err := centralcatalog.TransitionProposal(r.Context(), s.db, actor.ID, actor.Role, r.PathValue("proposalId"), input)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"proposal": p})
-}
-
 func (s *protectedStoreServer) createProductProposal(w http.ResponseWriter, r *http.Request, actorID string, forcedStoreID *string) {
 	var input centralcatalog.ProductProposalInput
 	if !decodeProtectedJSON(w, r, &input) {
@@ -294,40 +283,6 @@ func (s *protectedStoreServer) createProductProposal(w http.ResponseWriter, r *h
 		return
 	}
 	store.SendJSON(w, http.StatusCreated, map[string]any{"proposal": p})
-}
-
-func (s *protectedStoreServer) handleUpdatePartnerProductProposal(w http.ResponseWriter, r *http.Request) {
-	actor, _, ok := s.partnerStore(w, r)
-	if !ok {
-		return
-	}
-	var input centralcatalog.ProductProposalPatchInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	p, err := centralcatalog.UpdateProposal(r.Context(), s.db, r.PathValue("proposalId"), actor.ID, input)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"proposal": p})
-}
-
-func (s *protectedStoreServer) handleUpdateFieldProductProposal(w http.ResponseWriter, r *http.Request) {
-	actorID, _, ok := s.fieldPartnerStore(w, r)
-	if !ok {
-		return
-	}
-	var input centralcatalog.ProductProposalPatchInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	p, err := centralcatalog.UpdateProposal(r.Context(), s.db, r.PathValue("proposalId"), actorID, input)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"proposal": p})
 }
 
 func (s *protectedStoreServer) handlePartnerCreateProductProposal(w http.ResponseWriter, r *http.Request) {

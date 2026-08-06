@@ -11,7 +11,33 @@ import (
 	"github.com/lib/pq"
 )
 
-const storeColumns = `id, COALESCE(partner_id,''), slug, display_name, status, city_code, service_area_code,
+const storeColumns = `id,
+	COALESCE(partner_id,''),
+	COALESCE((
+		SELECT partner.activation_status
+		FROM dsh_partners partner
+		WHERE partner.id = dsh_stores.partner_id
+	), ''),
+	EXISTS (
+		SELECT 1
+		FROM dsh_store_assortments assortment
+		JOIN dsh_master_products product
+		  ON product.id = assortment.master_product_id
+		JOIN dsh_catalog_domains domain
+		  ON domain.id = product.domain_id
+		JOIN dsh_store_catalog_domains store_domain
+		  ON store_domain.store_id = assortment.store_id
+		 AND store_domain.domain_id = product.domain_id
+		WHERE assortment.store_id = dsh_stores.id
+		  AND assortment.publication_status = 'client_visible'
+		  AND assortment.available = true
+		  AND product.approval_status = 'approved'
+		  AND product.is_active = true
+		  AND domain.is_active = true
+		  AND domain.is_client_visible = true
+		  AND store_domain.status = 'approved'
+	),
+	slug, display_name, status, city_code, service_area_code,
 	serviceability_status, rating_average, rating_count, delivery_eta_min,
 	delivery_eta_max, is_visible, hero_image_url, logo_url, catalog_domain_id,
 	COALESCE((SELECT d.name_ar FROM dsh_catalog_domains d WHERE d.id = dsh_stores.catalog_domain_id), ''),
@@ -26,7 +52,8 @@ const storeColumns = `id, COALESCE(partner_id,''), slug, display_name, status, c
 func scanStore(scanner interface{ Scan(...any) error }) (DshStoreRow, error) {
 	var row DshStoreRow
 	err := scanner.Scan(
-		&row.ID, &row.PartnerID, &row.Slug, &row.DisplayName, &row.Status, &row.CityCode,
+		&row.ID, &row.PartnerID, &row.PartnerActivationStatus, &row.HasApprovedAssortment,
+		&row.Slug, &row.DisplayName, &row.Status, &row.CityCode,
 		&row.ServiceAreaCode, &row.ServiceabilityStatus, &row.RatingAverage,
 		&row.RatingCount, &row.DeliveryEtaMin, &row.DeliveryEtaMax, &row.IsVisible,
 		&row.HeroImageURL, &row.LogoURL, &row.Category, &row.CategoryLabel, pq.Array(&row.DeliveryModes),
@@ -48,6 +75,17 @@ func ListStores(db *sql.DB, q DshStoreListQuery) (DshStoreListResult, error) {
 
 func ListAllStores(db *sql.DB, q DshStoreListQuery) (DshStoreListResult, error) {
 	return listStores(db, q, false)
+}
+
+func normalizeArabic(s string) string {
+	s = strings.TrimSpace(s)
+	s = strings.ToLower(s)
+	s = strings.ReplaceAll(s, "أ", "ا")
+	s = strings.ReplaceAll(s, "إ", "ا")
+	s = strings.ReplaceAll(s, "آ", "ا")
+	s = strings.ReplaceAll(s, "ة", "ه")
+	s = strings.ReplaceAll(s, "ى", "ي")
+	return s
 }
 
 func listStores(db *sql.DB, q DshStoreListQuery, publicOnly bool) (DshStoreListResult, error) {
@@ -75,6 +113,25 @@ func listStores(db *sql.DB, q DshStoreListQuery, publicOnly bool) (DshStoreListR
 	if q.IsVisible != nil {
 		add("is_visible", *q.IsVisible)
 	}
+	if q.Category != "" {
+		add("catalog_domain_id", q.Category)
+	}
+	if q.IsFreeDelivery != nil {
+		add("is_free_delivery", *q.IsFreeDelivery)
+	}
+	if q.HasProBadge != nil {
+		add("has_pro_badge", *q.HasProBadge)
+	}
+	if q.Search != "" {
+		normalizedSearch := normalizeArabic(q.Search)
+		searchTerm := "%" + normalizedSearch + "%"
+		normSQL := func(col string) string {
+			return `REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(`+col+`), 'أ', 'ا'), 'إ', 'ا'), 'آ', 'ا'), 'ة', 'ه'), 'ى', 'ي')`
+		}
+		conditions = append(conditions, fmt.Sprintf("(%s LIKE $%d OR %s LIKE $%d)", normSQL("display_name"), idx, normSQL("slug"), idx))
+		params = append(params, searchTerm)
+		idx++
+	}
 
 	whereClause := ""
 	if len(conditions) > 0 {
@@ -86,9 +143,19 @@ func listStores(db *sql.DB, q DshStoreListQuery, publicOnly bool) (DshStoreListR
 		return DshStoreListResult{}, fmt.Errorf("failed to count stores: %w", err)
 	}
 
+	orderBy := "ORDER BY rating_average DESC NULLS LAST, display_name ASC"
+	switch q.Sort {
+	case "distance":
+		orderBy = "ORDER BY distance_km ASC NULLS LAST, rating_average DESC NULLS LAST"
+	case "eta":
+		orderBy = "ORDER BY delivery_eta_min ASC NULLS LAST, rating_average DESC NULLS LAST"
+	case "rating":
+		orderBy = "ORDER BY rating_average DESC NULLS LAST, display_name ASC"
+	}
+
 	query := fmt.Sprintf(`SELECT %s FROM dsh_stores %s
-		ORDER BY rating_average DESC NULLS LAST, display_name ASC
-		LIMIT $%d OFFSET $%d`, storeColumns, whereClause, idx, idx+1)
+		%s
+		LIMIT $%d OFFSET $%d`, storeColumns, whereClause, orderBy, idx, idx+1)
 	rows, err := db.Query(query, append(params, q.Limit, q.Offset)...)
 	if err != nil {
 		return DshStoreListResult{}, fmt.Errorf("failed to query stores: %w", err)
@@ -143,10 +210,13 @@ func GetStoreByPartnerID(db *sql.DB, partnerID string) (*DshStoreRow, error) {
 }
 
 type CreateDraftStoreInput struct {
-	PartnerID   string
-	DisplayName string
-	CityCode    string
-	Category    string
+	StoreID        string
+	PartnerID      string
+	DisplayName    string
+	CityCode       string
+	Category       string
+	AddressLine    string
+	OperatingHours string
 }
 
 type execQueryRower interface {
@@ -159,7 +229,13 @@ type execQueryRower interface {
 // serviceability=unavailable, and partner_readiness/catalog_approval_status/
 // marketing_visibility keep their safe column defaults (pending/draft/hidden).
 func CreateDraftStore(db execQueryRower, input CreateDraftStoreInput) (DshStoreRow, error) {
-	id := fmt.Sprintf("store-%d", time.Now().UnixNano())
+	id := strings.TrimSpace(input.StoreID)
+	if id == "" {
+		id = fmt.Sprintf("store-%d", time.Now().UnixNano())
+	} else if !strings.HasPrefix(id, "store-") {
+		// Ensure standard prefix if a raw UUID is passed
+		id = "store-" + id
+	}
 	catalogDomainID := catalogDomainIDForPartnerCategory(input.Category)
 	cityCode := input.CityCode
 	if cityCode == "" {
@@ -169,9 +245,11 @@ func CreateDraftStore(db execQueryRower, input CreateDraftStoreInput) (DshStoreR
 	_, err := db.Exec(`
 		INSERT INTO dsh_stores (
 			id, slug, display_name, status, city_code, service_area_code,
-			serviceability_status, is_visible, catalog_domain_id, partner_id
-		) VALUES ($1,$1,$2,'inactive',$3,$3,'unavailable',false,$4,$5)`,
+			serviceability_status, is_visible, catalog_domain_id, partner_id,
+			address_line, operating_hours
+		) VALUES ($1,$1,$2,'inactive',$3,$3,'unavailable',false,$4,$5,$6,$7)`,
 		id, input.DisplayName, cityCode, catalogDomainID, input.PartnerID,
+		input.AddressLine, input.OperatingHours,
 	)
 	if err != nil {
 		return DshStoreRow{}, fmt.Errorf("failed to create draft store: %w", err)

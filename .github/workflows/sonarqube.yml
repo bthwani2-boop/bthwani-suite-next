@@ -1,0 +1,34 @@
+name: SonarQube
+
+on:
+  pull_request:
+    branches: ["**"]
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sonarqube-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    name: SonarQube scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    if: ${{ vars.SONAR_HOST_URL != '' }}
+    steps:
+      - name: Checkout immutable source with full history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+          show-progress: false
+          fetch-depth: 0
+
+      - name: SonarQube scan
+        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}

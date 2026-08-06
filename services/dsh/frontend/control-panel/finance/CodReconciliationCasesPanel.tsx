@@ -10,7 +10,8 @@ import {
   resolveCodReconciliationCase,
   type CodReconciliationCase,
   type CodResolutionAction,
-} from "../../shared/finance-wlt-link/finance/cod-reconciliation.api";
+  formatWltMoney,
+} from '@bthwani/wlt/dsh';
 
 const RESOLUTION_OPTIONS = [
   { value: "confirmed_variance", label: "تأكيد الفرق" },
@@ -20,7 +21,7 @@ const RESOLUTION_OPTIONS = [
 ] as const;
 
 function amount(value: number, currency: string): string {
-  return `${(value / 100).toLocaleString("ar-YE")} ${currency}`;
+  return formatWltMoney(value, currency);
 }
 
 function message(error: unknown): string {

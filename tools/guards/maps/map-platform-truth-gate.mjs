@@ -206,11 +206,10 @@ const rules = [
     ],
   ],
   [
-    "contracts/master.openapi.yaml",
+    "contracts/openapi/index.yaml",
     [],
     [
-      "dshClientMap: ../services/dsh/contracts/dsh.client-map.openapi.yaml",
-      "dshPlatformPolicies: ../services/dsh/contracts/dsh.platform-policies.openapi.yaml",
+      "dsh: ../../services/dsh/contracts/dsh.openapi.yaml",
     ],
   ],
 ];

@@ -9,13 +9,13 @@ param(
   [switch]$Force
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $RuntimeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
 $RuntimeSmokeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime-dispatch.ps1"
 $RuntimeEnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
-$CatalogSeedScript = Join-Path $RepoRoot "services/dsh/database/scripts/apply-central-catalog-seed.ps1"
-$LocalMediaSeedScript = Join-Path $RepoRoot "tools/scripts/runtime/seed-local-media.ps1"
 $CatalogReadbackScript = Join-Path $RepoRoot "tools/scripts/verify-catalog.ps1"
 $AuthenticatedWltSmokeScript = Join-Path $RepoRoot "tools/scripts/finance/smoke-wlt-authenticated-runtime.ps1"
 $DshSmokeDiagnosticScript = Join-Path $RepoRoot "tools/scripts/runtime/diagnose-dsh-smoke-auth-boundary.ps1"
@@ -30,9 +30,7 @@ function Import-CanonicalRuntimeEnvironment {
 
   foreach ($rawLine in Get-Content -LiteralPath $script:RuntimeEnvFile) {
     $line = $rawLine.Trim()
-    if (-not $line -or $line.StartsWith("#") -or -not $line.Contains("=")) {
-      continue
-    }
+    if (-not $line -or $line.StartsWith("#") -or -not $line.Contains("=")) { continue }
 
     $parts = $line.Split("=", 2)
     $key = $parts[0].Trim()
@@ -43,14 +41,11 @@ function Import-CanonicalRuntimeEnvironment {
       $value = $value.Substring(1, $value.Length - 2)
     }
 
-    $current = [System.Environment]::GetEnvironmentVariable($key, "Process")
-    if ([string]::IsNullOrWhiteSpace($current)) {
+    if ([string]::IsNullOrWhiteSpace([System.Environment]::GetEnvironmentVariable($key, "Process"))) {
       [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
     }
   }
 }
-
-Import-CanonicalRuntimeEnvironment
 
 function ConvertTo-StatusText {
   param([string]$Value, [int]$Limit = 140)
@@ -80,33 +75,56 @@ function Publish-RuntimeStatus {
   if ($context.Length -gt 100) { $context = $context.Substring(0, 100) }
   $apiUrl = if ($env:GITHUB_API_URL) { $env:GITHUB_API_URL } else { "https://api.github.com" }
   $serverUrl = if ($env:GITHUB_SERVER_URL) { $env:GITHUB_SERVER_URL } else { "https://github.com" }
-  $targetUrl = if ($env:GITHUB_RUN_ID) { "$serverUrl/$($env:GITHUB_REPOSITORY)/actions/runs/$($env:GITHUB_RUN_ID)" } else { $null }
   $payload = @{
     state = $State
     context = $context
     description = ConvertTo-StatusText -Value $Description
   }
-  if ($targetUrl) { $payload.target_url = $targetUrl }
-
-  $requestParameters = @{
-    Uri = "$apiUrl/repos/$($env:GITHUB_REPOSITORY)/statuses/$($env:GITHUB_SHA)"
-    Method = "Post"
-    Headers = @{
-      Accept = "application/vnd.github+json"
-      Authorization = "Bearer $($env:BTHWANI_STATUS_TOKEN)"
-      "X-GitHub-Api-Version" = "2022-11-28"
-    }
-    ContentType = "application/json"
-    Body = ($payload | ConvertTo-Json -Compress)
+  if ($env:GITHUB_RUN_ID) {
+    $payload.target_url = "$serverUrl/$($env:GITHUB_REPOSITORY)/actions/runs/$($env:GITHUB_RUN_ID)"
   }
 
   try {
-    Invoke-RestMethod @requestParameters | Out-Null
+    Invoke-RestMethod `
+      -Uri "$apiUrl/repos/$($env:GITHUB_REPOSITORY)/statuses/$($env:GITHUB_SHA)" `
+      -Method Post `
+      -Headers @{
+        Accept = "application/vnd.github+json"
+        Authorization = "Bearer $($env:BTHWANI_STATUS_TOKEN)"
+        "X-GitHub-Api-Version" = "2022-11-28"
+      } `
+      -ContentType "application/json" `
+      -Body ($payload | ConvertTo-Json -Compress) | Out-Null
   } catch {
     Write-Warning "Runtime status publication failed: $($_.Exception.Message)"
   }
 }
 
+function Invoke-RuntimeBasePhase {
+  param(
+    [Parameter(Mandatory = $true)][string]$ScriptPath,
+    [Parameter(Mandatory = $true)][hashtable]$Parameters,
+    [switch]$Append
+  )
+
+  $global:LASTEXITCODE = 0
+  if ($Append) {
+    & $ScriptPath @Parameters 2>&1 | Tee-Object -FilePath $LogPath -Append | Out-Host
+  } else {
+    & $ScriptPath @Parameters 2>&1 | Tee-Object -FilePath $LogPath | Out-Host
+  }
+  return [int]$LASTEXITCODE
+}
+
+function Test-TransientPostgresBootstrapRestart {
+  if ($Action -ne "up" -or -not (Test-Path -LiteralPath $LogPath -PathType Leaf)) {
+    return $false
+  }
+  $logText = Get-Content -LiteralPath $LogPath -Raw
+  return $logText -match "database system is shutting down|the database system is starting up"
+}
+
+Import-CanonicalRuntimeEnvironment
 foreach ($requiredScript in @($RuntimeScript, $RuntimeSmokeScript)) {
   if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
     Publish-RuntimeStatus -State error -Description "runtime script is missing" -Subject "missing-script"
@@ -122,42 +140,11 @@ $runtimeProfileList = if ($runAuthenticatedWltSmoke) {
 }
 $runtimeProfiles = $runtimeProfileList -join ","
 $phaseRuntimeScript = if ($Action -eq "smoke") { $RuntimeSmokeScript } else { $RuntimeScript }
-
 $runtimeParameters = @{
   Action = $Action
   Profiles = $runtimeProfiles
 }
 if ($Force) { $runtimeParameters.Force = $true }
-
-function Invoke-RuntimeBasePhase {
-  param([switch]$Append)
-
-  $global:LASTEXITCODE = 0
-  if ($Append) {
-    & $phaseRuntimeScript @runtimeParameters 2>&1 |
-      Tee-Object -FilePath $LogPath -Append |
-      Out-Host
-  } else {
-    & $phaseRuntimeScript @runtimeParameters 2>&1 |
-      Tee-Object -FilePath $LogPath |
-      Out-Host
-  }
-
-  # A PowerShell function emits every uncaptured pipeline object. Without
-  # Out-Host above, callers receive the complete runtime log plus the integer
-  # exit code, and the non-empty log is incorrectly treated as a failed code.
-  $exitCode = $LASTEXITCODE
-  return [int]$exitCode
-}
-
-function Test-TransientPostgresBootstrapRestart {
-  if ($Action -ne "up" -or -not (Test-Path -LiteralPath $LogPath -PathType Leaf)) {
-    return $false
-  }
-
-  $logText = Get-Content -LiteralPath $LogPath -Raw
-  return $logText -match "database system is shutting down|the database system is starting up"
-}
 
 try {
   Set-Location -LiteralPath $RepoRoot
@@ -170,26 +157,24 @@ try {
         throw "Central catalog readback script not found: $CatalogReadbackScript"
       }
       Write-Host "`n=== runtime:catalog-readback ==="
-      $global:LASTEXITCODE = 0
-      & $CatalogReadbackScript 2>&1 | Tee-Object -FilePath $LogPath
+      & $CatalogReadbackScript 2>&1 | Tee-Object -FilePath $LogPath | Out-Host
       if ($LASTEXITCODE -ne 0) {
         throw "Central catalog readback failed with exit code $LASTEXITCODE"
       }
     }
   } elseif ($runtimeProfileList.Count -gt 0) {
-    $runtimeExitCode = Invoke-RuntimeBasePhase
+    $runtimeExitCode = Invoke-RuntimeBasePhase -ScriptPath $phaseRuntimeScript -Parameters $runtimeParameters
     if ($runtimeExitCode -ne 0 -and (Test-TransientPostgresBootstrapRestart)) {
-      Write-Warning "PostgreSQL bootstrap performed its one expected temporary-server restart. Retrying runtime:up once after stabilization."
+      Write-Warning "PostgreSQL bootstrap performed its expected temporary-server restart. Retrying runtime:up once after stabilization."
       "=== transient-postgres-bootstrap-retry: one retry ===" | Add-Content -LiteralPath $LogPath
       Start-Sleep -Seconds 5
-      $runtimeExitCode = Invoke-RuntimeBasePhase -Append
+      $runtimeExitCode = Invoke-RuntimeBasePhase -ScriptPath $phaseRuntimeScript -Parameters $runtimeParameters -Append
     }
     if ($runtimeExitCode -ne 0) {
       throw "Runtime script action '$Action' failed with exit code $runtimeExitCode"
     }
   } else {
-    "Runtime base phase skipped: no non-WLT profiles remain for action '$Action'." |
-      Tee-Object -FilePath $LogPath
+    "Runtime base phase skipped: no non-WLT profiles remain for action '$Action'." | Tee-Object -FilePath $LogPath
   }
 
   if ($runAuthenticatedWltSmoke) {
@@ -197,45 +182,15 @@ try {
       throw "Authenticated WLT smoke script not found: $AuthenticatedWltSmokeScript"
     }
     Write-Host "`n=== runtime:wlt-authenticated-smoke ==="
-    $global:LASTEXITCODE = 0
-    & $AuthenticatedWltSmokeScript 2>&1 | Tee-Object -FilePath $LogPath -Append
+    & $AuthenticatedWltSmokeScript 2>&1 | Tee-Object -FilePath $LogPath -Append | Out-Host
     if ($LASTEXITCODE -ne 0) {
       throw "Authenticated WLT runtime smoke failed with exit code $LASTEXITCODE"
     }
   }
 
-  # Development catalog convergence has governed prerequisites: canonical SQL
-  # seeds establish relational truth and the media seed mirrors the exact
-  # governed fixture objects into the private MinIO bucket before readback.
-  if ($Action -eq "up" -and $ProfileList -contains "dsh") {
-    Write-Host "`n=== runtime:seed-prerequisites ==="
-    $global:LASTEXITCODE = 0
-    & $RuntimeScript -Action seed -Profiles $Profiles 2>&1 | Tee-Object -FilePath $LogPath -Append
-    if ($LASTEXITCODE -ne 0) {
-      throw "Runtime seed prerequisites failed with exit code $LASTEXITCODE"
-    }
-
-    if (-not (Test-Path -LiteralPath $LocalMediaSeedScript -PathType Leaf)) {
-      throw "Local media seed script not found: $LocalMediaSeedScript"
-    }
-    Write-Host "`n=== runtime:media-convergence ==="
-    $global:LASTEXITCODE = 0
-    & $LocalMediaSeedScript 2>&1 | Tee-Object -FilePath $LogPath -Append
-    if ($LASTEXITCODE -ne 0) {
-      throw "Local media convergence failed with exit code $LASTEXITCODE"
-    }
-
-    if (-not (Test-Path -LiteralPath $CatalogSeedScript -PathType Leaf)) {
-      throw "Central catalog convergence script not found: $CatalogSeedScript"
-    }
-    Write-Host "`n=== runtime:catalog-convergence ==="
-    $global:LASTEXITCODE = 0
-    & $CatalogSeedScript 2>&1 | Tee-Object -FilePath $LogPath -Append
-    if ($LASTEXITCODE -ne 0) {
-      throw "Central catalog convergence failed with exit code $LASTEXITCODE"
-    }
-  }
-
+  # bootstrap-dev is executed exactly once by runtime.ps1. No secondary seed,
+  # media, or catalog pass is permitted here; that would recreate parallel
+  # orchestration and conceal which pass produced the final database state.
   Publish-RuntimeStatus -State success -Description "runtime $Action passed"
 } catch {
   $message = $_.Exception.Message
@@ -244,10 +199,9 @@ try {
       (Test-Path -LiteralPath $DshSmokeDiagnosticScript -PathType Leaf)) {
     Write-Host "`n=== runtime:dsh-smoke-request-boundary-diagnosis ==="
     try {
-      & $DshSmokeDiagnosticScript 2>&1 | Tee-Object -FilePath $LogPath -Append
+      & $DshSmokeDiagnosticScript 2>&1 | Tee-Object -FilePath $LogPath -Append | Out-Host
     } catch {
-      $diagnosticMessage = $_.Exception.Message
-      Write-Host "DSH smoke request-boundary diagnosis failed: $diagnosticMessage"
+      Write-Host "DSH smoke request-boundary diagnosis failed: $($_.Exception.Message)"
       ($_ | Format-List * -Force | Out-String) | Add-Content -LiteralPath $LogPath
     }
   }

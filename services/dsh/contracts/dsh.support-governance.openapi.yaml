@@ -12,70 +12,6 @@ x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
 servers:
   - url: http://localhost:58080
 paths:
-  /dsh/client/support/tickets:
-    get:
-      tags: [ "dsh-client" ]
-      operationId: listDshClientSupportTickets
-      responses:
-        '200': { $ref: '#/components/responses/TicketList' }
-      security:
-        - bearerAuth: []
-    post:
-      tags: [ "dsh-client" ]
-      operationId: createDshClientSupportTicket
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/CreateTicketInput' }
-      responses:
-        '201': { $ref: '#/components/responses/Ticket' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-      security:
-        - bearerAuth: []
-  /dsh/client/support/tickets/{ticketId}:
-    parameters:
-      - $ref: '#/components/parameters/TicketId'
-    get:
-      tags: [ "dsh-client" ]
-      operationId: getDshClientSupportTicket
-      responses:
-        '200': { $ref: '#/components/responses/Ticket' }
-        '404': { $ref: '#/components/responses/Error' }
-      security:
-        - bearerAuth: []
-  /dsh/client/support/tickets/{ticketId}/messages:
-    parameters:
-      - $ref: '#/components/parameters/TicketId'
-    get:
-      tags: [ "dsh-client" ]
-      operationId: listDshClientSupportMessages
-      responses:
-        '200': { $ref: '#/components/responses/MessageList' }
-        '404': { $ref: '#/components/responses/Error' }
-      security:
-        - bearerAuth: []
-    post:
-      tags: [ "dsh-client" ]
-      operationId: addDshClientSupportMessage
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/AddMessageInput' }
-      responses:
-        '201': { $ref: '#/components/responses/Message' }
-        '400': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-      security:
-        - bearerAuth: []
   /dsh/operator/support/tickets:
     get:
       tags: [ "dsh-operator" ]
@@ -171,6 +107,483 @@ paths:
                     items: { $ref: '#/components/schemas/TicketEvent' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/incidents:
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_support_incidents
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_support_incidents
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/incidents/{incidentId}:
+    parameters:
+      - name: incidentId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_support_incidents__incidentId_
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+    patch:
+      tags:
+        - operator
+      operationId: patch_dsh_operator_support_incidents__incidentId_
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/incidents/{incidentId}/events:
+    parameters:
+      - name: incidentId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_support_incidents__incidentId__events
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/order-rescue-cases:
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_support_order_rescue_cases
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_support_order_rescue_cases
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/order-rescue-cases/{caseId}:
+    parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_support_order_rescue_cases__caseId_
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+    patch:
+      tags:
+        - operator
+      operationId: patch_dsh_operator_support_order_rescue_cases__caseId_
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/order-rescue-cases/{caseId}/events:
+    parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_support_order_rescue_cases__caseId__events
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/tickets/{ticketId}/messages/{messageId}/attachments:
+    parameters:
+      - name: ticketId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_support_tickets__ticketId__messages__messageId__attachments
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_support_tickets__ticketId__messages__messageId__attachments
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/tickets/{ticketId}/messages/read:
+    parameters:
+      - name: ticketId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_support_tickets__ticketId__messages_read
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/canned-responses:
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_support_canned_responses
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/partners/{partnerId}/aggregate:
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_support_partners__partnerId__aggregate
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/partners/{partnerId}/finance:
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_support_partners__partnerId__finance
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/partners/{partnerId}/operations:
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_support_partners__partnerId__operations
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/tickets/{ticketId}/export:
+    parameters:
+      - name: ticketId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_support_tickets__ticketId__export
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/incidents/tasks/{taskId}:
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      tags:
+        - operator
+      operationId: patch_dsh_operator_support_incidents_tasks__taskId_
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/incidents/{incidentId}/communications:
+    parameters:
+      - name: incidentId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_support_incidents__incidentId__communications
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/incidents/{incidentId}/entities:
+    parameters:
+      - name: incidentId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_support_incidents__incidentId__entities
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/incidents/{incidentId}/tasks:
+    parameters:
+      - name: incidentId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_support_incidents__incidentId__tasks
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/order-rescue-cases/{caseId}/actions:
+    parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_support_order_rescue_cases__caseId__actions
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/order-rescue-cases/{caseId}/actions/{actionId}/execute:
+    parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: actionId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_support_order_rescue_cases__caseId__actions__actionId__execute
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/tickets/{ticketId}/claim:
+    parameters:
+      - name: ticketId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_support_tickets__ticketId__claim
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/support/tickets/{ticketId}/escalate:
+    parameters:
+      - name: ticketId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_support_tickets__ticketId__escalate
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
       security:
         - bearerAuth: []
 components:
@@ -281,17 +694,7 @@ components:
         createdAt: { type: string, format: date-time }
     TicketEvent:
       type: object
-      required:
-        [
-          id,
-          ticketId,
-          reporterId,
-          actorId,
-          actorRole,
-          eventType,
-          correlationId,
-          createdAt
-        ]
+      required: [ id, ticketId, reporterId, actorId, actorRole, eventType, createdAt ]
       properties:
         id: { type: string }
         ticketId: { type: string }
@@ -303,7 +706,6 @@ components:
             type: string,
             enum: [ created, message_added, status_changed, escalated, closed ]
           }
-        correlationId: { type: string }
         createdAt: { type: string, format: date-time }
   responses:
     Ticket:

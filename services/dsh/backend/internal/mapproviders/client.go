@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"dsh-api/internal/providers"
 )
 
 var (
@@ -25,6 +27,8 @@ var (
 type Client struct {
 	baseURL string
 	http    *http.Client
+	breaker *providers.CircuitBreaker
+	reg     *providers.Registry
 }
 
 type SearchInput struct {
@@ -84,18 +88,32 @@ type upstreamError struct {
 	Message string `json:"message"`
 }
 
-func NewClient(baseURL string) *Client {
-	return NewClientWithTimeout(baseURL, 8*time.Second)
+func NewClient(baseURL string, reg *providers.Registry) *Client {
+	return &Client{
+		baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
+		// The http.Client timeout is overridden per request via Context when a
+		// registry-provided timeout budget is available; see get()/post().
+		http:    &http.Client{},
+		breaker: providers.NewCircuitBreaker(providers.CircuitBreakerConfig{
+			FailureThreshold: 5,
+			SuccessThreshold: 2,
+			Timeout:          30 * time.Second,
+		}),
+		reg: reg,
+	}
 }
 
+// NewClientWithTimeout builds a client bounded by a fixed http.Client timeout
+// instead of a provider registry budget, for callers that have no registry
+// (or, as in tests, need a deterministic short timeout regardless of any
+// registry-configured budget).
 func NewClientWithTimeout(baseURL string, timeout time.Duration) *Client {
 	if timeout <= 0 {
 		timeout = 8 * time.Second
 	}
-	return &Client{
-		baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
-		http:    &http.Client{Timeout: timeout},
-	}
+	client := NewClient(baseURL, nil)
+	client.http = &http.Client{Timeout: timeout}
+	return client
 }
 
 func (c *Client) Configured() bool {
@@ -233,7 +251,18 @@ func (c *Client) get(ctx context.Context, authorization, path string, output any
 	if !c.Configured() {
 		return ErrNotConfigured
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
+
+	var reqCtx = ctx
+	if c.reg != nil {
+		cfg, _, err := c.reg.GetActiveProvider(ctx, "map", "search", "production")
+		if err == nil && cfg.TimeoutBudget > 0 {
+			var cancel context.CancelFunc
+			reqCtx, cancel = context.WithTimeout(ctx, cfg.TimeoutBudget)
+			defer cancel()
+		}
+	}
+
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
 		return ErrUnavailable
 	}
@@ -250,7 +279,18 @@ func (c *Client) post(ctx context.Context, authorization, path string, input, ou
 	if err != nil {
 		return ErrInvalid
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(payload))
+
+	var reqCtx = ctx
+	if c.reg != nil {
+		cfg, _, err := c.reg.GetActiveProvider(ctx, "map", "search", "production")
+		if err == nil && cfg.TimeoutBudget > 0 {
+			var cancel context.CancelFunc
+			reqCtx, cancel = context.WithTimeout(ctx, cfg.TimeoutBudget)
+			defer cancel()
+		}
+	}
+
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodPost, c.baseURL+path, bytes.NewReader(payload))
 	if err != nil {
 		return ErrUnavailable
 	}
@@ -261,13 +301,29 @@ func (c *Client) post(ctx context.Context, authorization, path string, input, ou
 }
 
 func (c *Client) do(req *http.Request, output any) error {
-	resp, err := c.http.Do(req)
-	if err != nil {
-		var netError net.Error
-		if errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &netError) && netError.Timeout()) {
-			return fmt.Errorf("%w: %v", ErrTimeout, err)
+	var resp *http.Response
+	var err error
+
+	execErr := c.breaker.Execute(func() error {
+		resp, err = c.http.Do(req)
+		if err != nil {
+			var netError net.Error
+			if errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &netError) && netError.Timeout()) {
+				return fmt.Errorf("%w: %v", ErrTimeout, err)
+			}
+			return fmt.Errorf("%w: %v", ErrUnavailable, err)
 		}
-		return fmt.Errorf("%w: %v", ErrUnavailable, err)
+		if resp.StatusCode >= 500 {
+			return fmt.Errorf("%w: upstream status %d", ErrUnavailable, resp.StatusCode)
+		}
+		return nil
+	})
+
+	if execErr != nil {
+		if errors.Is(execErr, providers.ErrCircuitOpen) {
+			return ErrUnavailable
+		}
+		return execErr
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1024*1024))

@@ -1,4 +1,4 @@
-#  — Home Discovery Product Truth
+# Home Discovery Product Truth
 
 ## Source of truth
 
@@ -74,5 +74,5 @@
 - Source bindings: `services/dsh/tests/home-discovery-closure.test.mjs`.
 - Go invariants: `services/dsh/backend/internal/homediscovery/journey_007_test.go`.
 - PostgreSQL invariants: `services/dsh/database/tests/dsh-098_099_home_discovery_invariants.sql`.
-- Targeted typecheck: `services/dsh/tsconfig..json`.
+- Targeted typecheck: covered by the service-wide `services/dsh/tsconfig.json` (`pnpm run typecheck` in `services/dsh`, currently clean). The dedicated `services/dsh/tsconfig..json` referenced here previously no longer exists in the repository — it was removed prior to this session's work (absent as of commit `862e97015`, not renamed to `tsconfig.platform-change-sets.json`, which is an unrelated platform change-set config) — and is not recreated speculatively without a verified original include-list.
 - Same-commit gate: `journeys//home-discovery`.

@@ -1,6 +1,7 @@
 param(
   [string]$IdentityBaseUrl = "http://localhost:58082",
-  [string]$DshBaseUrl = "http://localhost:58080"
+  [string]$DshBaseUrl = "http://localhost:58080",
+  [string]$WorkforceBaseUrl = "http://localhost:58086"
 )
 
 Set-StrictMode -Version Latest
@@ -33,6 +34,68 @@ function Get-ActorToken {
     throw "Identity login for '$Username' did not return accessToken."
   }
   return [string]$login.accessToken
+}
+
+# Field agents and captains are provisioned by Workforce, not by the Identity
+# local bootstrap: they hold no password and their actor ids are generated at
+# runtime. They authenticate by redeeming an operator-issued activation code.
+$GeneratedActorRegistryPath = Join-Path $PSScriptRoot "../../../.artifacts/local-dev/workforce-actors.json"
+
+function Get-ProvisionedProvider {
+  param([Parameter(Mandatory = $true)][ValidateSet("field", "captain")][string]$Kind)
+
+  if (-not (Test-Path -LiteralPath $GeneratedActorRegistryPath -PathType Leaf)) {
+    throw "Provisioned Workforce actor registry not found at $GeneratedActorRegistryPath. Run pnpm runtime:full:bootstrap-dev."
+  }
+  $registry = Get-Content -LiteralPath $GeneratedActorRegistryPath -Raw | ConvertFrom-Json
+  $provider = $registry.actors.$Kind
+  if ($null -eq $provider -or [string]::IsNullOrWhiteSpace([string]$provider.actorId)) {
+    throw "Provisioned Workforce actor registry has no '$Kind' entry."
+  }
+  return $provider
+}
+
+function Get-ProviderToken {
+  param(
+    [Parameter(Mandatory = $true)][ValidateSet("field", "captain")][string]$Kind,
+    [Parameter(Mandatory = $true)][string]$ActorId,
+    [Parameter(Mandatory = $true)][string]$PhoneE164,
+    [Parameter(Mandatory = $true)][string]$OperatorToken
+  )
+
+  $endpoint = if ($Kind -eq "field") { "field-agents" } else { "captains" }
+  $encodedActorId = [Uri]::EscapeDataString($ActorId)
+  $headers = @{
+    Authorization = "Bearer $OperatorToken"
+    "X-Correlation-ID" = "financial-readback-activation-$Kind"
+    "Idempotency-Key" = "financial-readback-activation-$Kind-$([Guid]::NewGuid())"
+  }
+
+  $detail = Invoke-RestMethod -Method Get `
+    -Uri "$WorkforceBaseUrl/workforce/$endpoint/$encodedActorId" `
+    -Headers @{ Authorization = "Bearer $OperatorToken" } -TimeoutSec 20 -ErrorAction Stop
+
+  $issued = Invoke-RestMethod -Method Post `
+    -Uri "$WorkforceBaseUrl/workforce/$endpoint/$encodedActorId/activation-codes" `
+    -Headers $headers -ContentType "application/json" `
+    -Body (@{ expectedVersion = $detail.version } | ConvertTo-Json) `
+    -TimeoutSec 20 -ErrorAction Stop
+  if ([string]::IsNullOrWhiteSpace([string]$issued.code)) {
+    throw "Workforce did not return an activation code for '$Kind'."
+  }
+
+  $activated = Invoke-RestMethod -Method Post `
+    -Uri "$IdentityBaseUrl/auth/activate" -ContentType "application/json" `
+    -Body (@{
+      actorType = $Kind
+      phone = $PhoneE164
+      code = [string]$issued.code
+      deviceFingerprint = "financial-readback-$Kind"
+    } | ConvertTo-Json) -TimeoutSec 20 -ErrorAction Stop
+  if ([string]::IsNullOrWhiteSpace([string]$activated.accessToken)) {
+    throw "Identity activation for '$Kind' did not return accessToken."
+  }
+  return [string]$activated.accessToken
 }
 
 function Invoke-DshRead {
@@ -132,17 +195,23 @@ if ([string]$health.status -ne "healthy") {
 }
 
 $operatorToken = Get-ActorToken -Username (Get-LocalUsername "operator")
+$fieldProvider = Get-ProvisionedProvider -Kind "field"
+$captainProvider = Get-ProvisionedProvider -Kind "captain"
 $actors = @(
-  @{ Username = (Get-LocalUsername "client");  ActorType = "client";  ActorId = "client-local-001" },
-  @{ Username = (Get-LocalUsername "partner"); ActorType = "partner"; ActorId = "partner-local-001" },
-  @{ Username = (Get-LocalUsername "captain"); ActorType = "captain"; ActorId = "captain-local-001" },
-  @{ Username = (Get-LocalUsername "field");   ActorType = "field";   ActorId = "field-local-001" }
+  @{ ActorType = "client";  ActorId = "client-local-001";  Username = (Get-LocalUsername "client") },
+  @{ ActorType = "partner"; ActorId = "partner-local-001"; Username = (Get-LocalUsername "partner") },
+  @{ ActorType = "captain"; ActorId = [string]$captainProvider.actorId; PhoneE164 = [string]$captainProvider.phoneE164 },
+  @{ ActorType = "field";   ActorId = [string]$fieldProvider.actorId;   PhoneE164 = [string]$fieldProvider.phoneE164 }
 )
 
 foreach ($actor in $actors) {
   $actorType = [string]$actor.ActorType
   $actorId = [string]$actor.ActorId
-  $actorToken = Get-ActorToken -Username ([string]$actor.Username)
+  $actorToken = if ($actor.ContainsKey("PhoneE164")) {
+    Get-ProviderToken -Kind $actorType -ActorId $actorId -PhoneE164 ([string]$actor.PhoneE164) -OperatorToken $operatorToken
+  } else {
+    Get-ActorToken -Username ([string]$actor.Username)
+  }
   $encodedType = [Uri]::EscapeDataString($actorType)
   $encodedId = [Uri]::EscapeDataString($actorId)
   $correlationPrefix = "financial-readback-$actorType-$([Guid]::NewGuid())"

@@ -7,7 +7,6 @@ import type {
   MasterProduct,
   ProductProposal,
   StoreAssortment,
-  CatalogPlatformPolicy,
 } from "./central-catalog.types";
 
 interface CatalogVersionedEntity {
@@ -52,7 +51,7 @@ function resolveCatalogError(error: unknown, fallback: string): string {
 function requireCatalogVersion(
   entities: readonly CatalogVersionedEntity[],
   entityId: string,
-  entityKind: "domain" | "node" | "master_product" | "proposal" | "policy",
+  entityKind: "domain" | "node" | "master_product" | "proposal",
 ): number {
   const entity = entities.find((item) => item.id === entityId);
   if (!entity) throw new Error(`CATALOG_${entityKind.toUpperCase()}_NOT_LOADED`);
@@ -103,11 +102,6 @@ export interface CentralCatalogControllerState {
     readonly loading: boolean;
     readonly error: string | null;
   };
-  readonly policies: {
-    readonly items: readonly CatalogPlatformPolicy[];
-    readonly loading: boolean;
-    readonly error: string | null;
-  };
 }
 
 export function useCentralCatalogController(authKind = "unauthenticated") {
@@ -116,7 +110,6 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     nodes: { items: [], loading: false, error: null },
     masterProducts: { items: [], total: 0, loading: false, error: null },
     proposals: { items: [], total: 0, loading: false, error: null },
-    policies: { items: [], loading: false, error: null },
   });
 
   const [assortment, setAssortment] = useState<{
@@ -187,19 +180,6 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     }
   }, []);
 
-  const loadPolicies = useCallback(async () => {
-    setState((prev) => ({ ...prev, policies: { ...prev.policies, loading: true, error: null } }));
-    try {
-      const items = await api.fetchCatalogPlatformPolicies();
-      setState((prev) => ({ ...prev, policies: { items, loading: false, error: null } }));
-    } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        policies: { ...prev.policies, loading: false, error: resolveCatalogError(error, "Failed to load policies") },
-      }));
-    }
-  }, []);
-
   const loadStoreAssortment = useCallback(async (storeId: string) => {
     setAssortment({ items: [], loading: true, error: null });
     try {
@@ -220,8 +200,7 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     void loadNodes();
     void loadMasterProducts();
     void loadProposals();
-    void loadPolicies();
-  }, [isAuthed, loadDomains, loadNodes, loadMasterProducts, loadProposals, loadPolicies]);
+  }, [isAuthed, loadDomains, loadNodes, loadMasterProducts, loadProposals]);
 
   return {
     state,
@@ -231,7 +210,6 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     reloadNodes: loadNodes,
     reloadMasterProducts: loadMasterProducts,
     reloadProposals: loadProposals,
-    reloadPolicies: loadPolicies,
     reloadStoreAssortment: loadStoreAssortment,
 
     createDomain: async (input: Parameters<typeof api.createCatalogDomain>[0]) =>
@@ -255,6 +233,15 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
         loadNodes,
       );
     },
+
+    moveNode: async (nodeId: string, targetParentId: string | null) =>
+      runMutationWithReadback(() => api.moveCatalogNode(nodeId, targetParentId), loadNodes),
+
+    mergeNode: async (nodeId: string, targetNodeId: string) =>
+      runMutationWithReadback(() => api.mergeCatalogNode(nodeId, targetNodeId), loadNodes),
+
+    deprecateNode: async (nodeId: string) =>
+      runMutationWithReadback(() => api.deprecateCatalogNode(nodeId), loadNodes),
 
     createMasterProduct: async (input: Parameters<typeof api.createMasterProduct>[0]) =>
       runMutationWithReadback(() => api.createMasterProduct(input), loadMasterProducts),
@@ -323,14 +310,6 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
       return runMutationWithReadback(
         () => occApi.transitionProductProposalOCC(proposalId, { ...input, expectedVersion }),
         loadProposals,
-      );
-    },
-
-    updatePolicy: async (policyId: string, input: Parameters<typeof api.updateCatalogPlatformPolicy>[1]) => {
-      const expectedVersion = requireCatalogVersion(state.policies.items, policyId, "policy");
-      return runMutationWithReadback(
-        () => occApi.updateCatalogPlatformPolicyOCC(policyId, { ...input, expectedVersion }),
-        loadPolicies,
       );
     },
 

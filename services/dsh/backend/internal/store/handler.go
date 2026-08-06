@@ -74,9 +74,29 @@ func ParseListQuery(q url.Values) (DshStoreListQuery, string) {
 		return DshStoreListQuery{}, "offset must be >= 0"
 	}
 	if status != "" {
-		if status != StatusActive && status != StatusInactive && status != StatusTemporarilyClosed && status != StatusUnavailable {
+		if status != StatusDraft && status != StatusReady && status != StatusPublished && status != StatusPaused && status != StatusSuspended && status != StatusClosed {
 			return DshStoreListQuery{}, "invalid status: " + string(status)
 		}
+	}
+
+	var isFreeDelivery *bool
+	isFreeDeliveryStr := q.Get("isFreeDelivery")
+	if isFreeDeliveryStr == "true" {
+		v := true
+		isFreeDelivery = &v
+	} else if isFreeDeliveryStr == "false" {
+		v := false
+		isFreeDelivery = &v
+	}
+
+	var hasProBadge *bool
+	hasProBadgeStr := q.Get("hasProBadge")
+	if hasProBadgeStr == "true" {
+		v := true
+		hasProBadge = &v
+	} else if hasProBadgeStr == "false" {
+		v := false
+		hasProBadge = &v
 	}
 
 	return DshStoreListQuery{
@@ -84,6 +104,11 @@ func ParseListQuery(q url.Values) (DshStoreListQuery, string) {
 		ServiceAreaCode: q.Get("serviceAreaCode"),
 		Status:          status,
 		IsVisible:       isVisible,
+		Search:          q.Get("search"),
+		Category:        q.Get("category"),
+		Sort:            q.Get("sort"),
+		IsFreeDelivery:  isFreeDelivery,
+		HasProBadge:     hasProBadge,
 		Limit:           limit,
 		Offset:          offset,
 	}, ""

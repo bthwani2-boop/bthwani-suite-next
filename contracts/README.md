@@ -1,6 +1,6 @@
 # Platform contract index
 
-`master.openapi.yaml` is the sovereign contract index. It declares
+`openapi/index.yaml` is the sovereign contract index. It declares
 `x-bthwani-contract-role: MASTER_INDEX_ONLY`, owns `paths: {}`, and no client is
 ever generated from it.
 
@@ -10,7 +10,7 @@ The master indexes **exactly one canonical entry contract per bounded context**
 and never a context's internal modules.
 
 ```text
-contracts/master.openapi.yaml
+contracts/openapi/index.yaml
 ├── core/identity/contracts/identity.openapi.yaml
 ├── core/platform-control/contracts/platform-control.openapi.yaml
 ├── core/providers/contracts/providers.openapi.yaml

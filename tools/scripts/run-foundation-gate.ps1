@@ -50,5 +50,5 @@ foreach ($guardName in $foundationGuards) {
 
 $mode = if ($Full) { "full-explicit" } else { "targeted-default" }
 Write-Host ""
-Write-Host "RESULT: PASS scope=static mode=$mode" -ForegroundColor Green
-Write-Host "PASS is scoped evidence only and does not imply CLOSED_WITH_EVIDENCE." -ForegroundColor Yellow
+Write-Host 'RESULT: PASS scope=static mode=' $mode -ForegroundColor Green
+Write-Host 'PASS is scoped evidence only and does not imply CLOSED_WITH_EVIDENCE.' -ForegroundColor Yellow

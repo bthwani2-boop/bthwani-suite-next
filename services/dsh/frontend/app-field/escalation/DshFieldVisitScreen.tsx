@@ -47,6 +47,9 @@ async function captureGovernedLocation(): Promise<DshLocationEvidence> {
   if (!isValidLocation) {
     throw new Error("تعذر تأكيد موقعك بدقة كافية. تأكد من تفعيل GPS واتصال الإنترنت وحاول من داخل موقع المتجر.");
   }
+  if (accuracy && accuracy > 100) {
+    throw new Error(`دقة الموقع منخفضة جداً (${Math.round(accuracy)} متر). نرجو التأكد من تفعيل الـ GPS والوقوف في مكان مفتوح بجوار المتجر.`);
+  }
   return {
     latitude,
     longitude,

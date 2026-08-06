@@ -92,8 +92,8 @@ func (r *Repository) BootstrapLocalPlatformActors(ctx context.Context, input Loc
 		}
 		if _, err := r.db.ExecContext(ctx, `
 INSERT INTO identity_actors
-    (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, active, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, true, NOW())
+    (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'ACTIVE', 1, NOW())
 ON CONFLICT (id) DO UPDATE SET
     username = EXCLUDED.username,
     password_hash = EXCLUDED.password_hash,
@@ -101,7 +101,8 @@ ON CONFLICT (id) DO UPDATE SET
     phone_e164 = EXCLUDED.phone_e164,
     roles = EXCLUDED.roles,
     permissions = EXCLUDED.permissions,
-    active = true,
+    status = 'ACTIVE',
+    version = identity_actors.version + 1,
     updated_at = NOW()`,
 			actor.id,
 			actor.username,

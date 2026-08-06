@@ -6,6 +6,7 @@ import {
   loginIdentity,
   requestOtpIdentity,
   activateIdentity,
+  retryIdentityBootstrap,
   listIdentitySessions,
   revokeIdentitySession,
   logoutIdentity,
@@ -20,6 +21,13 @@ export type IdentityActivationAction = {
 
 let configuredActivationActorType: ActivationActorType | null = null;
 
+// React must receive the same server snapshot during SSR and the hydration
+// pass. The live store is process-global and may already have advanced on the
+// server while a fresh browser store is still bootstrapping. A stable restoring
+// snapshot prevents session/readiness timing from changing the rendered tree.
+const identityHydrationState = { kind: "restoring" } as const;
+const getIdentityHydrationState = () => identityHydrationState;
+
 export function configureIdentityActivationActorType(actorType: ActivationActorType): void {
   configuredActivationActorType = actorType;
 }
@@ -28,7 +36,7 @@ export function useIdentitySession() {
   const state = useSyncExternalStore(
     subscribeIdentityState,
     getIdentityState,
-    getIdentityState,
+    getIdentityHydrationState,
   );
 
   const login = useCallback(
@@ -51,6 +59,7 @@ export function useIdentitySession() {
     },
     [],
   );
+  const retryBootstrap = useCallback(() => retryIdentityBootstrap(), []);
   const listSessions = useCallback(() => listIdentitySessions(), []);
   const revokeSession = useCallback(
     (sessionId: string) => revokeIdentitySession(sessionId),
@@ -68,6 +77,7 @@ export function useIdentitySession() {
     login,
     requestOtp,
     activate,
+    retryBootstrap,
     listSessions,
     revokeSession,
     logout,

@@ -60,7 +60,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, partner_id)
-		VALUES ($1, $1, 'PK Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true, $2)`,
+		VALUES ($1, $1, 'PK Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true, $2)`,
 		f.storeID, f.partnerID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
@@ -68,7 +68,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	var cartID string
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_carts (client_id, store_id, fulfillment_mode, state)
-		VALUES ($1, $2, 'pickup', 'active')
+		VALUES ($1, $2, 'pickup', 'published')
 		RETURNING id::text`,
 		f.clientID, f.storeID,
 	).Scan(&cartID); err != nil {

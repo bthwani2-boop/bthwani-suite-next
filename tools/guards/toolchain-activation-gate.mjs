@@ -143,7 +143,7 @@ for (const entry of catalog.entries ?? []) {
   if (registeredGuard && expectedActivation === "active" && registeredGuard.exit_level !== "fail") {
     violations.push({ file: registryRelative, line: 0, message: `ACTIVE_TOOL_GUARD_MUST_FAIL ${entry.id} -> ${scriptName}` });
   }
-  if (registeredGuard && expectedActivation === "partial" && registeredGuard.exit_level === "fail" && !["axe", "playwright"].includes(entry.id)) {
+  if (registeredGuard && expectedActivation === "partial" && registeredGuard.exit_level === "fail" && !["axe", "markdownlint-cli2", "opa"].includes(entry.id)) {
     violations.push({ file: registryRelative, line: 0, message: `PARTIAL_TOOL_GUARD_LEVEL_DRIFT ${entry.id} -> ${scriptName}` });
   }
 }

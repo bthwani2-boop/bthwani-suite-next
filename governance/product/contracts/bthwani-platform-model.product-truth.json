@@ -17,7 +17,7 @@
  "evidenceState": "QUALITATIVE",
  "evidenceReferences": [
  "https://github.com/bthwani2-boop/bthwani-suite-next/pull/194#issuecomment-5119970807",
- "contracts/master.openapi.yaml",
+ "contracts/openapi/index.yaml",
  "governance/platform/platform-governance.json",
  "governance/product/platform-model.yaml"
  ]

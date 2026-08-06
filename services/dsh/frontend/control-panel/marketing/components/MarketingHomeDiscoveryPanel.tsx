@@ -14,7 +14,7 @@ import {
   CpTableHeaderCell,
   CpTextInput,
 } from "@bthwani/control-panel/components";
-import { useControlPanelSession } from "../../../shared/session/control-panel-session";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   formatTargetList,
   parseTargetList,
@@ -45,7 +45,7 @@ const PUBLICATION_LABELS: Record<string, string> = {
 };
 
 export function MarketingHomeDiscoveryPanel({ kind }: { readonly kind: DshHomeAdminKind }) {
-  const { state } = useControlPanelSession();
+  const { state } = useIdentitySession();
   const controller = useHomeDiscoveryAdminController(kind, state.kind);
   const meta = KIND_META[kind];
 

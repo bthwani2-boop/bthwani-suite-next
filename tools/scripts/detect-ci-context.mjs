@@ -97,7 +97,7 @@ export function classifyFiles(inputFiles, options = {}) {
   const secretsChanged = full || starts("governance/security/", "tools/security/") || has((file) =>
     /(^|\/)(secret|secrets|credential|credentials|signing|keystore|certificate)(\/|[-_.])/i.test(file)
   );
-  const operatorContextChanged = full || starts("governance/partner_platform/") || has((file) =>
+  const operatorContextChanged = full || starts("governance/platform/") || has((file) =>
     /(^|\/)(OperatorContext|tenancy|OperatorContext-context|OperatorContext-isolation|cross-OperatorContext)(\/|[-_.])/i.test(file)
   );
   const protectedSecurityChanged = authChanged || sessionChanged || rbacChanged || privacyChanged || piiChanged || secretsChanged || operatorContextChanged;
@@ -134,7 +134,7 @@ export function classifyFiles(inputFiles, options = {}) {
   const runtime = runtimeProfile !== "none";
 
   const sharedBrain = full || starts("shared/", "services/dsh/frontend/shared/", "services/wlt/frontend/shared/") || equals(
-    "contracts/master.openapi.yaml",
+    "contracts/openapi/index.yaml",
     "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md"
   );
 

@@ -3,6 +3,7 @@
 import { type CSSProperties } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
 import { CpButton } from "@bthwani/control-panel/components";
+import { formatWltMoney } from "@bthwani/wlt/dsh";
 import type { CouponFundingLifecycleRecord } from "../../../shared/marketing/coupons.types";
 
 type CouponFundingReconciliationPanelProps = {
@@ -21,7 +22,7 @@ const statusLabel: Record<CouponFundingLifecycleRecord["reconciliationStatus"], 
 };
 
 function formatMinorUnits(value: number, currency: string): string {
-  return `${(value / 100).toLocaleString("ar")} ${currency || "YER"}`;
+  return formatWltMoney(value, currency || "YER");
 }
 
 export function CouponFundingReconciliationPanel({

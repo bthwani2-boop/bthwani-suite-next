@@ -81,8 +81,6 @@ export async function reviewCatalogAsset(
 
 export * from "./use-central-catalog-controller";
 export * from "./central-catalog-product-pipeline";
-export * from "./central-catalog.controller-core";
-export * from "./central-catalog.policy";
 export * from "./central-catalog.media";
 export * from "./central-catalog.permissions";
 export * from "./central-catalog.bulk";

@@ -1,0 +1,99 @@
+name: CodeQL
+
+on:
+  pull_request:
+    branches: ["**"]
+  push:
+    branches: [master]
+  schedule:
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-javascript-typescript:
+    name: Analyze javascript-typescript
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+          show-progress: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
+        with:
+          category: "/language:javascript-typescript"
+
+  analyze-go:
+    name: Analyze go (${{ matrix.key }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - key: dsh
+            go_mod: services/dsh/backend/go.mod
+            workdir: services/dsh/backend
+          - key: wlt
+            go_mod: services/wlt/backend/go.mod
+            workdir: services/wlt/backend
+          - key: identity
+            go_mod: core/identity/backend/go.mod
+            workdir: core/identity/backend
+          - key: workforce
+            go_mod: core/workforce/backend/go.mod
+            workdir: core/workforce/backend
+          - key: platform-control
+            go_mod: core/platform-control/backend/go.mod
+            workdir: core/platform-control/backend
+          - key: providers
+            go_mod: core/providers/backend/go.mod
+            workdir: core/providers/backend
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+          show-progress: false
+
+      - name: Set up locked Go runtime
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: ${{ matrix.go_mod }}
+          cache-dependency-path: ${{ matrix.workdir }}/go.sum
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
+        with:
+          languages: go
+          build-mode: manual
+
+      - name: Build ${{ matrix.key }} backend for analysis
+        working-directory: ${{ matrix.workdir }}
+        run: go build ./...
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
+        with:
+          category: "/language:go-${{ matrix.key }}"

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
+import { formatWltMoney, parseWltMajorInputToMinorUnits } from "@bthwani/wlt/dsh";
 import { CpButton } from "@bthwani/control-panel/components";
 import { useCouponsController } from "../../../shared/marketing/use-coupons-controller";
 import type {
@@ -105,9 +106,10 @@ export function CouponsCommandDeck() {
   const [fundingPartnerId, setFundingPartnerId] = useState("");
 
   const createDraft = async () => {
-    const discount = Number(discountValue);
-    const minSubtotal = Number(minSubtotalYer);
-    const maxDiscount = Number(maxDiscountYer);
+    const percentDiscount = Number(discountValue);
+    const fixedDiscount = parseWltMajorInputToMinorUnits(discountValue, "YER");
+    const minSubtotal = parseWltMajorInputToMinorUnits(minSubtotalYer, "YER");
+    const maxDiscount = parseWltMajorInputToMinorUnits(maxDiscountYer, "YER");
     const totalLimit = Number(globalLimit);
     const perClient = Number(clientLimit);
     const platformPercent = fundingSource === "platform"
@@ -115,8 +117,10 @@ export function CouponsCommandDeck() {
       : fundingSource === "partner"
         ? 0
         : Number(platformSharePercent);
-    if (!nameAr.trim() || !code.trim() || !Number.isFinite(discount) || discount <= 0 ||
-        !Number.isFinite(minSubtotal) || minSubtotal < 0 || !Number.isFinite(maxDiscount) || maxDiscount < 0 ||
+    if (!nameAr.trim() || !code.trim() ||
+        (discountType === "percent" && (!Number.isFinite(percentDiscount) || percentDiscount <= 0 || percentDiscount > 100)) ||
+        (discountType === "fixed" && (!fixedDiscount.ok || fixedDiscount.minorUnits <= 0)) ||
+        !minSubtotal.ok || minSubtotal.minorUnits < 0 || !maxDiscount.ok || maxDiscount.minorUnits < 0 ||
         !Number.isInteger(totalLimit) || totalLimit < 0 || !Number.isInteger(perClient) || perClient <= 0 ||
         !Number.isFinite(platformPercent) || platformPercent < 0 || platformPercent > 100 ||
         ((fundingSource === "partner" || fundingSource === "shared") && (!storeId.trim() || !fundingPartnerId.trim()))) return;
@@ -130,10 +134,10 @@ export function CouponsCommandDeck() {
       ...(fundingSource === "platform" ? {} : { fundingPartnerId: fundingPartnerId.trim() }),
       discountType,
       ...(discountType === "percent"
-        ? { discountPercent: discount, fixedDiscountMinorUnits: 0 }
-        : { discountPercent: 0, fixedDiscountMinorUnits: Math.round(discount * 100) }),
-      minSubtotalMinorUnits: Math.round(minSubtotal * 100),
-      maxDiscountMinorUnits: Math.round(maxDiscount * 100),
+        ? { discountPercent: percentDiscount, fixedDiscountMinorUnits: 0 }
+        : { discountPercent: 0, fixedDiscountMinorUnits: fixedDiscount.ok ? fixedDiscount.minorUnits : 0 }),
+      minSubtotalMinorUnits: minSubtotal.minorUnits,
+      maxDiscountMinorUnits: maxDiscount.minorUnits,
       globalUsageLimit: totalLimit,
       perClientUsageLimit: perClient,
       eligibleFulfillmentModes: ["bthwani_delivery", "partner_delivery", "pickup"],
@@ -220,7 +224,7 @@ export function CouponsCommandDeck() {
                 <p style={styles.muted}>
                   {coupon.discountType === "percent"
                     ? `خصم ${coupon.discountPercent}%`
-                    : `خصم ${(coupon.fixedDiscountMinorUnits / 100).toLocaleString("ar")} ر.ي`}
+                    : `خصم ${formatWltMoney(coupon.fixedDiscountMinorUnits, "YER")}`}
                   {coupon.storeId ? ` · متجر ${coupon.storeId}` : " · عام"}
                 </p>
                 <p style={styles.muted}>حد العميل: {coupon.perClientUsageLimit} · الحد الإجمالي: {coupon.globalUsageLimit || "غير محدود"}</p>

@@ -275,21 +275,6 @@ func requireDshServiceCaller(w http.ResponseWriter, r *http.Request) bool {
 	return shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh")
 }
 
-func HandleGetPaymentSession(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		session, err := GetPaymentSession(db, r.PathValue("paymentSessionId"))
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		if session == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payment session not found")
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"paymentSession": session})
-	}
-}
-
 func scanPaymentSession(row *sql.Row) (*PaymentSession, error) {
 	var session PaymentSession
 	err := row.Scan(

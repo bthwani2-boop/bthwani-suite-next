@@ -32,6 +32,8 @@ export interface CentralCatalogNode {
   readonly allowsStoreProductCustomImage: boolean;
   readonly requiresCatalogReview: boolean;
   readonly requiresProductCatalog: boolean;
+  readonly lifecycleStatus: "active" | "deprecated" | "merged";
+  readonly mergedIntoId: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -55,6 +57,8 @@ export interface MasterProduct {
   readonly isActive: boolean;
   readonly duplicateGroupId: string | null;
   readonly createdSource: string;
+  readonly parentId: string | null;
+  readonly isStandalone: boolean;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -72,6 +76,8 @@ export interface MasterProductPatchInput {
   readonly measurementType?: string;
   readonly approvalStatus?: "draft" | "pending_review" | "approved" | "rejected" | "archived";
   readonly isActive?: boolean;
+  readonly parentId?: string | null;
+  readonly isStandalone?: boolean;
   readonly expectedVersion?: number;
 }
 
@@ -137,6 +143,9 @@ export interface ProductProposal {
   readonly status: ProductProposalPipelineStatus;
   readonly reviewNote: string;
   readonly adoptedMasterProductId: string | null;
+  readonly targetMasterProductId: string | null;
+  readonly baseVersion: number | null;
+  readonly duplicateCandidates: readonly string[] | null;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly reviewStage?: string;
@@ -167,6 +176,58 @@ export interface StoreAssortment {
   readonly approvedBy: string;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+export interface StoreAssortmentInput {
+  readonly unitPrice: number;
+  readonly currency: string;
+  readonly available: boolean;
+  readonly stockStatus: "in_stock" | "low_stock" | "out_of_stock";
+  readonly localNote: string;
+  readonly customImageObjectKey: string | null;
+  readonly publicationStatus: "draft" | "submitted" | "approved" | "client_visible" | "rejected" | "hidden";
+}
+
+export interface StoreAssortmentInventoryInput {
+  readonly policyType: "signal" | "quantity" | "infinite";
+  readonly quantity: number;
+  readonly minOrderQuantity: number;
+  readonly maxOrderQuantity: number;
+  readonly stepQuantity: number;
+  readonly expectedVersion?: number;
+}
+
+export interface StoreAssortmentInventory {
+  readonly storeAssortmentId: string;
+  readonly policyType: "signal" | "quantity" | "infinite";
+  readonly quantity: number;
+  readonly reservedQuantity: number;
+  readonly minOrderQuantity: number;
+  readonly maxOrderQuantity: number;
+  readonly stepQuantity: number;
+  readonly version: number;
+  readonly updatedAt: string;
+}
+
+export interface StoreAssortmentPriceInput {
+  readonly amountMinor: number;
+  readonly currency: string;
+  readonly prepTimeMin: number;
+  readonly prepTimeMax: number;
+  readonly effectiveFrom: string;
+  readonly effectiveUntil?: string | null;
+}
+
+export interface StoreAssortmentPrice {
+  readonly id: string;
+  readonly storeAssortmentId: string;
+  readonly amountMinor: number;
+  readonly currency: string;
+  readonly prepTimeMin: number;
+  readonly prepTimeMax: number;
+  readonly effectiveFrom: string;
+  readonly effectiveUntil: string | null;
+  readonly version: number;
 }
 
 export interface CatalogPlatformPolicy {
@@ -259,7 +320,7 @@ export interface CatalogAsset {
   readonly altAr: string;
   readonly altEn: string;
   readonly dominantColor: string | null;
-  readonly status: "draft" | "uploaded" | "pending_review" | "approved" | "rejected" | "archived";
+  readonly status: "draft" | "uploaded" | "scanning" | "quarantined" | "pending_review" | "approved" | "rejected" | "archived";
   readonly sourceSurface: "control-panel-catalog" | "control-panel-platform" | "app-partner" | "app-field" | "system";
   readonly uploadedBy: string;
   readonly reviewedBy: string | null;

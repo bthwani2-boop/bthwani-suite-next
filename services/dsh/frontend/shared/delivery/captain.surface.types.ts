@@ -44,7 +44,6 @@ export type DshCaptainSurfaceDerived = {
   isCaptainAvailable: boolean;
   isGpsEnabled: boolean;
   captainPodRequired: boolean;
-  captainCollectsCod: boolean;
   showBottomNav: boolean;
   captainBottomActiveId: string;
   currentAvailabilityMeta: CaptainAvailabilityMeta;

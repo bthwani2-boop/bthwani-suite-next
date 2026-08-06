@@ -70,6 +70,8 @@ type DeliveryProof struct {
 	Status                  DeliveryProofStatus
 	PhotoMediaRef           string
 	SignatureMediaRef       string
+	RecipientRelationship   string
+	RecipientName           string
 	CapturedLatitude        *float64
 	CapturedLongitude       *float64
 	CapturedAt              time.Time
@@ -88,9 +90,11 @@ type DeliveryProof struct {
 type SubmitDeliveryProofInput struct {
 	Method            DeliveryProofMethod
 	PIN               string
-	PhotoMediaRef     string
-	SignatureMediaRef string
-	CapturedLatitude  *float64
+	PhotoMediaRef         string
+	SignatureMediaRef     string
+	RecipientRelationship string
+	RecipientName         string
+	CapturedLatitude      *float64
 	CapturedLongitude *float64
 	CapturedAt        *time.Time
 	IdempotencyKey    string
@@ -192,6 +196,13 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 	if assignmentID == "" || captainID == "" || input.IdempotencyKey == "" {
 		return nil, fmt.Errorf("%w: assignment, captain and idempotencyKey are required", ErrInvalid)
 	}
+
+	if input.RecipientRelationship == "" {
+		input.RecipientRelationship = "customer"
+	}
+	input.RecipientRelationship = strings.TrimSpace(input.RecipientRelationship)
+	input.RecipientName = strings.TrimSpace(input.RecipientName)
+
 	if err := validateDeliveryProofInput(input); err != nil {
 		return nil, err
 	}
@@ -236,14 +247,23 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 	if err = ensureNoOpenDeliveryProof(tx, assignmentID); err != nil {
 		return nil, err
 	}
+	var allMediaClean = true
 	if input.PhotoMediaRef != "" {
-		if err = validateDeliveryProofMedia(tx, input.PhotoMediaRef, captainID, "delivery_proof"); err != nil {
+		clean, err := validateDeliveryProofMedia(tx, input.PhotoMediaRef, captainID, "delivery_proof", current.OrderID)
+		if err != nil {
 			return nil, err
+		}
+		if !clean {
+			allMediaClean = false
 		}
 	}
 	if input.SignatureMediaRef != "" {
-		if err = validateDeliveryProofMedia(tx, input.SignatureMediaRef, captainID, "delivery_signature"); err != nil {
+		clean, err := validateDeliveryProofMedia(tx, input.SignatureMediaRef, captainID, "delivery_signature", current.OrderID)
+		if err != nil {
 			return nil, err
+		}
+		if !clean {
+			allMediaClean = false
 		}
 	}
 
@@ -260,7 +280,11 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 			}
 			return nil, err
 		}
-		status = DeliveryProofAccepted
+		if allMediaClean {
+			status = DeliveryProofAccepted
+		} else {
+			status = DeliveryProofPendingReview
+		}
 	}
 
 	proof, err := insertDeliveryProof(tx, current, input, challengeID, fingerprint, capturedAt, status)
@@ -470,6 +494,20 @@ func validateDeliveryProofInput(input SubmitDeliveryProofInput) error {
 	default:
 		return fmt.Errorf("%w: unsupported proof method", ErrInvalid)
 	}
+
+	rel := input.RecipientRelationship
+	if rel == "" {
+		rel = "customer"
+	}
+	switch rel {
+	case "customer", "reception", "neighbor", "family_member", "other":
+	default:
+		return fmt.Errorf("%w: invalid recipient relationship", ErrInvalid)
+	}
+
+	if rel != "customer" && strings.TrimSpace(input.RecipientName) == "" {
+		return fmt.Errorf("%w: recipient name is required when relationship is not customer", ErrInvalid)
+	}
 	if (input.CapturedLatitude == nil) != (input.CapturedLongitude == nil) {
 		return fmt.Errorf("%w: latitude and longitude must be supplied together", ErrInvalid)
 	}
@@ -497,20 +535,22 @@ func ensureNoOpenDeliveryProof(tx *sql.Tx, assignmentID string) error {
 	return nil
 }
 
-func validateDeliveryProofMedia(tx *sql.Tx, mediaRef, captainID, purpose string) error {
-	var exists bool
+func validateDeliveryProofMedia(tx *sql.Tx, mediaRef, captainID, purpose, orderID string) (bool, error) {
+	var scanStatus string
 	if err := tx.QueryRow(`
-		SELECT EXISTS (
-			SELECT 1 FROM dsh_media_refs
-			WHERE media_ref=$1 AND owner_actor_id=$2 AND owner_actor_role='captain'
-			  AND purpose=$3 AND content_type LIKE 'image/%'
-		)`, mediaRef, captainID, purpose).Scan(&exists); err != nil {
-		return err
+		SELECT scan_status FROM dsh_media_refs
+		WHERE media_ref=$1 AND owner_actor_id=$2 AND owner_actor_role='captain'
+		  AND purpose=$3 AND order_id=$4::uuid AND content_type LIKE 'image/%'
+	`, mediaRef, captainID, purpose, orderID).Scan(&scanStatus); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, fmt.Errorf("%w: proof media is missing, unowned, cross-order bound, or has the wrong purpose", ErrInvalid)
+		}
+		return false, err
 	}
-	if !exists {
-		return fmt.Errorf("%w: proof media is missing, unowned, or has the wrong purpose", ErrInvalid)
+	if scanStatus == "failed" || scanStatus == "quarantined" {
+		return false, fmt.Errorf("%w: proof media failed security scan or is quarantined", ErrInvalid)
 	}
-	return nil
+	return scanStatus == "clean", nil
 }
 
 func verifyDeliveryPIN(tx *sql.Tx, assignmentID, pin string) (string, error) {
@@ -578,17 +618,18 @@ func insertDeliveryProof(
 	proof, _, err := scanDeliveryProofRow(tx.QueryRow(`
 		INSERT INTO dsh_delivery_proofs
 			(assignment_id,order_id,captain_id,verification_challenge_id,method,status,
-			 photo_media_ref,signature_media_ref,captured_latitude,captured_longitude,captured_at,
+			 photo_media_ref,signature_media_ref,recipient_relationship,recipient_name,captured_latitude,captured_longitude,captured_at,
 			 accepted_at,idempotency_key,request_fingerprint)
-		VALUES ($1::uuid,$2::uuid,$3,NULLIF($4,'')::uuid,$5,$6,NULLIF($7,''),NULLIF($8,''),$9,$10,$11,$12,$13,$14)
+		VALUES ($1::uuid,$2::uuid,$3,NULLIF($4,'')::uuid,$5,$6,NULLIF($7,''),NULLIF($8,''),$9,NULLIF($10,''),$11,$12,$13,$14,$15,$16)
 		RETURNING id::text,assignment_id::text,order_id::text,captain_id,
 			COALESCE(verification_challenge_id::text,''),method,status,
 			COALESCE(photo_media_ref,''),COALESCE(signature_media_ref,''),
+			recipient_relationship,COALESCE(recipient_name,''),
 			captured_latitude,captured_longitude,captured_at,submitted_at,reviewed_at,
 			COALESCE(reviewed_by_actor_id,''),COALESCE(review_reason,''),accepted_at,rejected_at,
 			idempotency_key,request_fingerprint,version,created_at,updated_at`,
 		current.ID, current.OrderID, current.CaptainID, challengeID, string(input.Method), string(status),
-		input.PhotoMediaRef, input.SignatureMediaRef, input.CapturedLatitude, input.CapturedLongitude,
+		input.PhotoMediaRef, input.SignatureMediaRef, input.RecipientRelationship, input.RecipientName, input.CapturedLatitude, input.CapturedLongitude,
 		capturedAt, acceptedAt, input.IdempotencyKey, fingerprint,
 	))
 	return proof, err
@@ -704,6 +745,7 @@ func scanDeliveryProofRow(scanner deliveryProofScanner) (*DeliveryProof, string,
 		&proof.ID, &proof.AssignmentID, &proof.OrderID, &proof.CaptainID,
 		&proof.VerificationChallengeID, &method, &status,
 		&proof.PhotoMediaRef, &proof.SignatureMediaRef,
+		&proof.RecipientRelationship, &proof.RecipientName,
 		&lat, &lng, &proof.CapturedAt, &proof.SubmittedAt, &reviewedAt,
 		&proof.ReviewedByActorID, &proof.ReviewReason, &acceptedAt, &rejectedAt,
 		&proof.IdempotencyKey, &fingerprint, &proof.Version, &proof.CreatedAt, &proof.UpdatedAt,

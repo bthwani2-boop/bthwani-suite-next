@@ -66,7 +66,9 @@ func GetProjection(ctx context.Context, db *sql.DB, serviceAreaCode string) (Pro
 		return Projection{}, ErrInvalid
 	}
 	row := db.QueryRowContext(ctx, `
-		SELECT service_area_code, display_name, polygon, active, priority, version, created_at, updated_at
+		SELECT service_area_code, display_name, polygon, active, priority,
+		       srid, overlap_policy, effective_from, expires_at,
+		       version, created_at, updated_at
 		FROM dsh_service_area_geofences
 		WHERE service_area_code = $1`, serviceAreaCode)
 	item, err := scanGeofence(row)

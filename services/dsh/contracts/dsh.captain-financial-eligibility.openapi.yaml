@@ -2,50 +2,78 @@ openapi: 3.1.0
 x-bthwani-owner: services/dsh
 info:
   title: BThwani DSH Captain Financial Eligibility API
-  version: 1.0.1
-  description: OperatorContext-scoped WLT wallet readback and DSH-owned dispatch
-    balance policy. No ledger or balance truth is stored in DSH.
+  version: 1.1.0
+  description: >-
+    OperatorContext-scoped WLT financial eligibility decision projection for
+    dispatch gating. WLT owns wallet state, balances, currency, thresholds, and
+    financial policy. DSH stores only opaque WLT decision metadata and a
+    short-lived eligibility boolean for assignment gating.
 servers:
   - url: /api/dsh
 paths:
   /dsh/operator/platform/dispatch-balance-policy:
     get:
       operationId: getDispatchBalancePolicy
+      x-bthwani-required-permissions: [ dsh.dispatch_capacity.read ]
+      x-bthwani-error-codes:
+        [
+          UNAUTHENTICATED,
+          IDENTITY_UNAVAILABLE,
+          FORBIDDEN,
+          DISPATCH_BALANCE_POLICY_OWNED_BY_WLT
+        ]
+      summary: Retired DSH dispatch-balance policy endpoint; WLT owns this policy.
+      tags: [ DispatchFinancialEligibility ]
       responses:
-        '200': { $ref: '#/components/responses/PolicyResponse' }
+        '410': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
       security:
         - bearerAuth: []
     put:
       operationId: upsertDispatchBalancePolicy
+      x-bthwani-required-permissions: [ dsh.dispatch_capacity.manage ]
+      x-bthwani-error-codes:
+        [
+          UNAUTHENTICATED,
+          IDENTITY_UNAVAILABLE,
+          FORBIDDEN,
+          DISPATCH_BALANCE_POLICY_OWNED_BY_WLT
+        ]
+      summary: Retired DSH dispatch-balance policy mutation; WLT owns this policy.
+      tags: [ DispatchFinancialEligibility ]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/DispatchBalancePolicyInput' }
       responses:
-        '200': { $ref: '#/components/responses/PolicyResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '410': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
       security:
         - bearerAuth: []
   /dsh/operator/dispatch/captains/{captainId}/financial-eligibility:
     parameters:
       - $ref: '#/components/parameters/CaptainId'
-      - $ref: '#/components/parameters/OperatorContextIdQuery'
     get:
       operationId: getOperatorCaptainFinancialEligibility
+      x-bthwani-required-permissions: [ dsh.dispatch_financial_eligibility.read ]
+      x-bthwani-error-codes:
+        [
+          UNAUTHENTICATED,
+          IDENTITY_UNAVAILABLE,
+          FORBIDDEN,
+          INVALID_REQUEST,
+          CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED,
+          INTERNAL_ERROR
+        ]
+      tags: [ DispatchFinancialEligibility ]
       responses:
         '200': { $ref: '#/components/responses/EligibilityResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
+        '500': { $ref: '#/components/responses/ErrorResponse' }
+        '503': { $ref: '#/components/responses/ErrorResponse' }
       security:
         - bearerAuth: []
   /dsh/operator/dispatch/captains/{captainId}/financial-eligibility/refresh:
@@ -54,16 +82,19 @@ paths:
       - $ref: '#/components/parameters/CorrelationId'
     post:
       operationId: refreshOperatorCaptainFinancialEligibility
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required: [ operatorContextId ]
-              properties:
-                operatorContextId: { type: string, minLength: 1 }
+      x-bthwani-required-permissions: [ dsh.dispatch_financial_eligibility.manage ]
+      x-bthwani-error-codes:
+        [
+          UNAUTHENTICATED,
+          IDENTITY_UNAVAILABLE,
+          FORBIDDEN,
+          INVALID_REQUEST,
+          WLT_FINANCIAL_ELIGIBILITY_UNAVAILABLE,
+          WLT_FINANCIAL_DECISION_INVALID,
+          CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED,
+          INTERNAL_ERROR
+        ]
+      tags: [ DispatchFinancialEligibility ]
       responses:
         '200': { $ref: '#/components/responses/EligibilityResponse' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
@@ -71,21 +102,49 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '503': { $ref: '#/components/responses/ErrorResponse' }
+        '500': { $ref: '#/components/responses/ErrorResponse' }
       security:
         - bearerAuth: []
   /dsh/captain/dispatch/financial-eligibility:
     get:
       operationId: getOwnCaptainFinancialEligibility
+      x-bthwani-actor-types: [ captain ]
+      x-bthwani-error-codes:
+        [
+          UNAUTHENTICATED,
+          IDENTITY_UNAVAILABLE,
+          FORBIDDEN,
+          OPERATOR_CONTEXT_REQUIRED,
+          CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED,
+          INTERNAL_ERROR
+        ]
+      tags: [ DispatchFinancialEligibility ]
       responses:
         '200': { $ref: '#/components/responses/EligibilityResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
+        '500': { $ref: '#/components/responses/ErrorResponse' }
+        '503': { $ref: '#/components/responses/ErrorResponse' }
       security:
         - bearerAuth: []
   /dsh/captain/dispatch/financial-eligibility/refresh:
     post:
       operationId: refreshOwnCaptainFinancialEligibility
+      x-bthwani-actor-types: [ captain ]
+      x-bthwani-error-codes:
+        [
+          UNAUTHENTICATED,
+          IDENTITY_UNAVAILABLE,
+          FORBIDDEN,
+          OPERATOR_CONTEXT_REQUIRED,
+          INVALID_REQUEST,
+          WLT_FINANCIAL_ELIGIBILITY_UNAVAILABLE,
+          WLT_FINANCIAL_DECISION_INVALID,
+          CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED,
+          INTERNAL_ERROR
+        ]
+      tags: [ DispatchFinancialEligibility ]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
       requestBody:
@@ -99,6 +158,21 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '503': { $ref: '#/components/responses/ErrorResponse' }
+        '500': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
+  /dsh/captain/me/ratings/summary:
+    get:
+      tags:
+        - captain
+      operationId: get_dsh_captain_me_ratings_summary
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
       security:
         - bearerAuth: []
 components:
@@ -110,11 +184,6 @@ components:
     CaptainId:
       name: captainId
       in: path
-      required: true
-      schema: { type: string, minLength: 1 }
-    OperatorContextIdQuery:
-      name: operatorContextId
-      in: query
       required: true
       schema: { type: string, minLength: 1 }
     IdempotencyKey:
@@ -133,17 +202,8 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
-    PolicyResponse:
-      description: Dispatch balance policy.
-      content:
-        application/json:
-          schema:
-            type: object
-            required: [ policy ]
-            properties:
-              policy: { $ref: '#/components/schemas/DispatchBalancePolicy' }
     EligibilityResponse:
-      description: Short-lived WLT-backed captain eligibility snapshot.
+      description: Short-lived WLT-owned captain financial eligibility decision projection.
       content:
         application/json:
           schema:
@@ -153,85 +213,32 @@ components:
               financialEligibility: { $ref: '#/components/schemas/CaptainFinancialEligibility' }
   schemas:
     Error:
-      type: object
-      required: [ code, message ]
-      properties:
-        code: { type: string }
-        message: { type: string }
-    DispatchBalancePolicy:
-      type: object
-      required:
-        - enabled
-        - requirePositiveBalance
-        - minimumDispatchBalanceMinorUnits
-        - minimumCodBalanceMinorUnits
-        - currency
-        - snapshotTtlSeconds
-        - notes
-        - updatedBy
-        - updatedAt
-        - version
-      properties:
-        enabled: { type: boolean }
-        requirePositiveBalance: { type: boolean }
-        minimumDispatchBalanceMinorUnits: { type: integer, format: int64, minimum: 0 }
-        minimumCodBalanceMinorUnits: { type: integer, format: int64, minimum: 0 }
-        currency: { type: string, minLength: 3, maxLength: 3 }
-        snapshotTtlSeconds: { type: integer, minimum: 30, maximum: 600 }
-        notes: { type: string, maxLength: 1000 }
-        updatedBy: { type: string }
-        updatedAt: { type: string, format: date-time }
-        version: { type: integer, minimum: 1 }
-    DispatchBalancePolicyInput:
-      type: object
-      additionalProperties: false
-      required:
-        - enabled
-        - requirePositiveBalance
-        - minimumDispatchBalanceMinorUnits
-        - minimumCodBalanceMinorUnits
-        - currency
-        - snapshotTtlSeconds
-        - notes
-        - expectedVersion
-        - reason
-      properties:
-        enabled: { type: boolean }
-        requirePositiveBalance: { type: boolean }
-        minimumDispatchBalanceMinorUnits: { type: integer, format: int64, minimum: 0 }
-        minimumCodBalanceMinorUnits: { type: integer, format: int64, minimum: 0 }
-        currency: { type: string, minLength: 3, maxLength: 3 }
-        snapshotTtlSeconds: { type: integer, minimum: 30, maximum: 600 }
-        notes: { type: string, maxLength: 1000 }
-        expectedVersion: { type: integer, minimum: 1 }
-        reason: { type: string, minLength: 3, maxLength: 500 }
+      $ref: '../../../contracts/shared/common.openapi.yaml#/components/schemas/Error'
     CaptainFinancialEligibility:
       type: object
       required:
         - operatorContextId
         - captainId
-        - walletId
-        - walletStatus
-        - availableBalanceMinorUnits
-        - minimumDispatchBalanceMinorUnits
-        - currency
+        - wltDecisionId
+        - wltReasonCode
+        - wltPolicyVersion
         - eligible
         - snapshotReference
         - checkedAt
+        - evaluatedAt
         - expiresAt
       properties:
         operatorContextId: { type: string, minLength: 1 }
         captainId: { type: string, minLength: 1 }
-        walletId: { type: string, minLength: 1 }
-        walletStatus: { type: string }
-        availableBalanceMinorUnits: { type: integer, format: int64 }
-        minimumDispatchBalanceMinorUnits: { type: integer, format: int64, minimum: 0 }
-        currency: { type: string, minLength: 3, maxLength: 3 }
+        wltDecisionId: { type: string, minLength: 1 }
+        wltReasonCode: { type: string, minLength: 1 }
+        wltPolicyVersion: { type: string, minLength: 1 }
         eligible: { type: boolean }
         ineligibilityReason: { type: string }
         snapshotReference: { type: string, minLength: 1 }
         checkedAt: { type: string, format: date-time }
+        evaluatedAt: { type: string, format: date-time }
         expiresAt: { type: string, format: date-time }
 x-bthwani-service: dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
-x-bthwani-financial-boundary: WLT_READBACK_ONLY
+x-bthwani-financial-boundary: WLT_DECISION_REFERENCE_ONLY

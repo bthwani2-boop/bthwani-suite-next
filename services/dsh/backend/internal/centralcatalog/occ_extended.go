@@ -54,6 +54,36 @@ func UpdateProposalAtomic(ctx context.Context, db *sql.DB, id, actorID string, i
 	}
 }
 
+func WithdrawProposalAtomic(ctx context.Context, db *sql.DB, id, actorID string, expectedVersion *int) (ProductProposal, error) {
+	if err := validateExpectedVersion(expectedVersion); err != nil {
+		return ProductProposal{}, err
+	}
+
+	row := db.QueryRowContext(ctx, `UPDATE dsh_product_proposals SET
+		status='withdrawn', updated_at=now(), version=version+1
+		WHERE id=$1 AND source_actor_id=$2 AND status IN ('partner-proposed', 'needs-fix', 'catalog-draft') AND version=$3
+		RETURNING `+proposalColumns,
+		id, actorID, *expectedVersion)
+	proposal, err := scanProposal(row)
+	if !errors.Is(err, ErrNotFound) {
+		return proposal, err
+	}
+
+	current, currentErr := GetProposal(ctx, db, id)
+	if currentErr != nil {
+		return ProductProposal{}, currentErr
+	}
+	if current.SourceActorID != actorID {
+		return ProductProposal{}, ErrForbidden
+	}
+	if current.Status != "partner-proposed" && current.Status != "needs-fix" && current.Status != "catalog-draft" {
+		return ProductProposal{}, fmt.Errorf("%w: can only withdraw proposals in pending statuses", ErrInvalid)
+	}
+	return ProductProposal{}, &ConflictError{
+		EntityID: id, ExpectedVersion: expectedVersion, CurrentVersion: current.Version, Message: "version mismatch",
+	}
+}
+
 func GetStoreAssortmentByKey(ctx context.Context, db *sql.DB, storeID, masterProductID string) (StoreAssortment, error) {
 	return scanAssortment(db.QueryRowContext(ctx, `SELECT `+assortmentColumns+`
 		FROM dsh_store_assortments WHERE store_id=$1 AND master_product_id=$2`, storeID, masterProductID))

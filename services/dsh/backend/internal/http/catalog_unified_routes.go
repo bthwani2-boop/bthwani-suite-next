@@ -33,7 +33,7 @@ func (s *protectedStoreServer) writeCatalogMutationError(w http.ResponseWriter, 
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogDomainAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok { return }
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok { return }
 	var input centralcatalog.DomainPatchInput
 	if !decodeProtectedJSON(w, r, &input) { return }
 	domain, err := centralcatalog.UpdateDomainAtomic(r.Context(), s.db, r.PathValue("domainId"), input)
@@ -42,7 +42,7 @@ func (s *protectedStoreServer) handleUpdateCatalogDomainAtomic(w http.ResponseWr
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogNodeAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok { return }
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok { return }
 	var input centralcatalog.NodePatchInput
 	if !decodeProtectedJSON(w, r, &input) { return }
 	node, err := centralcatalog.UpdateNodeAtomic(r.Context(), s.db, r.PathValue("nodeId"), input)
@@ -51,7 +51,7 @@ func (s *protectedStoreServer) handleUpdateCatalogNodeAtomic(w http.ResponseWrit
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogMasterProductAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductManage, "operator"); !ok { return }
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductManage); !ok { return }
 	var input centralcatalog.MasterProductPatchInput
 	if !decodeProtectedJSON(w, r, &input) { return }
 	product, err := centralcatalog.UpdateMasterProductAtomic(r.Context(), s.db, r.PathValue("productId"), input)
@@ -60,7 +60,7 @@ func (s *protectedStoreServer) handleUpdateCatalogMasterProductAtomic(w http.Res
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogPlatformPolicyAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionPolicyManage, "operator"); !ok { return }
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionPolicyManage); !ok { return }
 	var input centralcatalog.CatalogPolicyPatchInput
 	if !decodeProtectedJSON(w, r, &input) { return }
 	policy, err := centralcatalog.UpdateCatalogPolicyAtomic(r.Context(), s.db, r.PathValue("policyId"), input)
@@ -83,22 +83,25 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/client/order-truth/{orderId}/events", s.handleListClientOrderTruthEvents)
 	mux.HandleFunc("GET /dsh/partner/order-truth", s.handleListPartnerOrderTruth)
 	mux.HandleFunc("GET /dsh/partner/order-truth/{orderId}", s.handleGetPartnerOrderTruth)
-	mux.HandleFunc("GET /dsh/operator/order-truth", s.handleListOperatorOrderTruth)
-	mux.HandleFunc("GET /dsh/operator/order-truth/diagnostics", s.handleGetOrderTruthDiagnostics)
-	mux.HandleFunc("GET /dsh/operator/order-truth/{orderId}", s.handleGetOperatorOrderTruth)
+	mux.HandleFunc("GET /dsh/operator/order-truth", s.withPermission("control-panel", OperationsPermissionRead, s.handleListOperatorOrderTruth))
+	mux.HandleFunc("GET /dsh/operator/order-truth/diagnostics", s.withPermission("control-panel", OperationsPermissionRead, s.handleGetOrderTruthDiagnostics))
+	mux.HandleFunc("GET /dsh/operator/order-truth/{orderId}", s.withPermission("control-panel", OperationsPermissionRead, s.handleGetOperatorOrderTruth))
 
-	// Sovereign operational policy truth.
-	mux.HandleFunc("GET /dsh/operator/platform/zones", s.handleListPlatformZones)
-	mux.HandleFunc("POST /dsh/operator/platform/zones", s.handleCreatePlatformZone)
-	mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", s.handleUpdatePlatformZone)
-	mux.HandleFunc("GET /dsh/operator/platform/sla-rules", s.handleListPlatformSlaRules)
-	mux.HandleFunc("PUT /dsh/operator/platform/sla-rules", s.handleUpsertPlatformSlaRule)
-	mux.HandleFunc("GET /dsh/operator/platform/capacity", s.handleGetPlatformCapacity)
-	mux.HandleFunc("PUT /dsh/operator/platform/capacity", s.handleUpsertPlatformCapacity)
-	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", s.handleGetPlatformZoneServiceability)
-	mux.HandleFunc("GET /dsh/operator/platform/store-onboarding-fee", s.handleGetStoreOnboardingFeePolicy)
-	mux.HandleFunc("PUT /dsh/operator/platform/store-onboarding-fee", s.handleUpsertStoreOnboardingFeePolicy)
-	mux.HandleFunc("GET /dsh/platform/store-onboarding-fee", s.handleGetStoreOnboardingFeeReference)
+	// Sovereign operational policy truth. withPermission is what authenticates
+	// the caller and places the actor in the request context; these handlers
+	// resolve the actor with ActorFromContext and return silently when it is
+	// absent, so registering them bare answered 200 with an empty body instead
+	// of 401/403 and made the capability unusable.
+	mux.HandleFunc("GET /dsh/operator/platform/zones", s.withPermission("control-panel", DshServiceZonesPermissionRead, s.handleListZones))
+	mux.HandleFunc("GET /dsh/operator/platform/sla-rules", s.withPermission("control-panel", DshFulfillmentSlaPermissionRead, s.handleListSlaRules))
+	mux.HandleFunc("GET /dsh/operator/platform/capacity", s.withPermission("control-panel", DshDispatchCapacityPermissionRead, s.handleGetCapacityConfig))
+	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", s.withPermission("control-panel", DshServiceZonesPermissionRead, s.handleGetZoneServiceability))
+
+	// Platform change sets are registered by RegisterRoutes against the
+	// changeset service in platform_changesets_routes.go. They were also
+	// registered here against a second, separate implementation, which made
+	// ServeMux panic on the duplicate pattern and split approval authority
+	// across two owners.
 
 	// Operator taxonomy, products, attributes, relationships, proposals,
 	// policies, assortments, audit and rollback.
@@ -108,6 +111,9 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/operator/catalog/nodes", s.handleListCatalogNodes)
 	mux.HandleFunc("POST /dsh/operator/catalog/nodes", s.handleCreateCatalogNode)
 	mux.HandleFunc("PATCH /dsh/operator/catalog/nodes/{nodeId}", s.handleUpdateCatalogNodeAtomic)
+	mux.HandleFunc("POST /dsh/operator/catalog/nodes/{nodeId}/move", s.handleMoveCatalogNode)
+	mux.HandleFunc("POST /dsh/operator/catalog/nodes/{nodeId}/merge", s.handleMergeCatalogNode)
+	mux.HandleFunc("POST /dsh/operator/catalog/nodes/{nodeId}/deprecate", s.handleDeprecateCatalogNode)
 	mux.HandleFunc("GET /dsh/operator/catalog/attributes", s.handleListCatalogAttributes)
 	mux.HandleFunc("POST /dsh/operator/catalog/attributes", s.handleCreateCatalogAttribute)
 	mux.HandleFunc("GET /dsh/operator/catalog/attributes/{attributeId}/options", s.handleListCatalogAttributeOptions)
@@ -135,6 +141,9 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/operator/stores/{storeId}/assortment-pauses", s.handleListOperatorAssortmentPauses)
 	mux.HandleFunc("POST /dsh/operator/stores/{storeId}/assortment/{masterProductId}/pause", s.handlePauseOperatorAssortment)
 	mux.HandleFunc("POST /dsh/operator/stores/{storeId}/assortment/{masterProductId}/resume", s.handleResumeOperatorAssortment)
+	mux.HandleFunc("POST /dsh/operator/stores/{storeId}/assortment/{masterProductId}/retire", s.handleRetireOperatorAssortment)
+	mux.HandleFunc("PUT /dsh/operator/stores/{storeId}/assortment/{masterProductId}/inventory", s.handleOperatorUpsertAssortmentInventory)
+	mux.HandleFunc("POST /dsh/operator/stores/{storeId}/assortment/{masterProductId}/prices/schedule", s.handleOperatorScheduleAssortmentPrice)
 
 	// Partner and field taxonomy and store-scoped catalog operations.
 	mux.HandleFunc("GET /dsh/partner/catalog/taxonomy", s.handleCatalogTaxonomy)
@@ -145,11 +154,15 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/partner/catalog/product-proposals", s.handleListPartnerProductProposals)
 	mux.HandleFunc("POST /dsh/partner/catalog/product-proposals", s.handlePartnerCreateProductProposal)
 	mux.HandleFunc("PATCH /dsh/partner/catalog/product-proposals/{proposalId}", s.handleUpdatePartnerProductProposalAtomic)
+	mux.HandleFunc("POST /dsh/partner/catalog/product-proposals/{proposalId}/withdraw", s.handleWithdrawPartnerProductProposalAtomic)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/assortment", s.handlePartnerGetStoreAssortment)
 	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/assortment/{masterProductId}", s.handlePartnerUpsertStoreAssortmentAtomic)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/assortment-pauses", s.handleListPartnerAssortmentPauses)
 	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/assortment/{masterProductId}/pause", s.handlePausePartnerAssortment)
 	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/assortment/{masterProductId}/resume", s.handleResumePartnerAssortment)
+	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/assortment/{masterProductId}/retire", s.handleRetirePartnerAssortment)
+	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/assortment/{masterProductId}/inventory", s.handlePartnerUpsertAssortmentInventory)
+	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/assortment/{masterProductId}/prices/schedule", s.handlePartnerScheduleAssortmentPrice)
 	mux.HandleFunc("GET /dsh/field/catalog/taxonomy", s.handleCatalogTaxonomy)
 	mux.HandleFunc("GET /dsh/field/catalog/attributes", s.handleListCatalogAttributes)
 	mux.HandleFunc("GET /dsh/field/catalog/attributes/{attributeId}/options", s.handleListCatalogAttributeOptions)
@@ -158,6 +171,7 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/catalog/product-proposals", s.handleListFieldProductProposals)
 	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/catalog/product-proposals", s.handleFieldCreateProductProposal)
 	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}", s.handleUpdateFieldProductProposalAtomic)
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}/withdraw", s.handleWithdrawFieldProductProposalAtomic)
 	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/assortment", s.handleFieldGetStoreAssortment)
 	mux.HandleFunc("PUT /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/{masterProductId}", s.handleFieldUpsertStoreAssortmentAtomic)
 	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/batch", s.handleFieldUpsertStoreAssortmentBatch)
@@ -173,6 +187,8 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("PATCH /dsh/operator/catalog/assets/{assetId}", s.handleUpdateCatalogAssetAtomic)
 	mux.HandleFunc("POST /dsh/operator/catalog/assets/{assetId}/review", s.handleReviewCatalogAssetExpected)
 	mux.HandleFunc("DELETE /dsh/operator/catalog/assets/{assetId}", s.handleDeleteCatalogAssetSafe)
+	mux.HandleFunc("POST /dsh/operator/catalog/assets/cleanup-orphans", s.handleCleanupOrphanCatalogAssets)
+	mux.HandleFunc("POST /dsh/operator/catalog/assets/{assetId}/simulate-scan", s.handleSimulateAssetScan)
 	mux.HandleFunc("POST /dsh/operator/catalog/assets/{assetId}/link", s.handleLinkCatalogAssetSafe)
 	mux.HandleFunc("DELETE /dsh/operator/catalog/assets/{assetId}/links/{linkId}", s.handleUnlinkCatalogAssetSafe)
 	mux.HandleFunc("GET /dsh/operator/catalog/asset-links", s.handleListCatalogAssetLinks)

@@ -31,7 +31,7 @@ type PartnerAddMessageInput struct {
 func validTicketCategory(value TicketCategory) bool {
 	switch value {
 	case CategoryOrderIssue, CategoryDeliveryIssue, CategoryStoreQuality,
-		CategoryPaymentRef, CategoryAccountAccess, CategoryAppBug, CategoryOther:
+		CategoryPaymentRef, CategoryAccountAccess, CategoryAppBug, CategoryLegalChange, CategoryOther:
 		return true
 	default:
 		return false

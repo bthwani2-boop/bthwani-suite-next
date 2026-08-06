@@ -11,6 +11,8 @@ func diagnosticReadyStoreRow() DshStoreRow {
 	cover := "https://media.example/store/cover.webp"
 	row.LogoURL = &logo
 	row.HeroImageURL = &cover
+	row.PartnerActivationStatus = "client_visible"
+	row.HasApprovedAssortment = true
 	return row
 }
 
@@ -26,11 +28,13 @@ func TestDiagnoseStorePublicationReadyOnlyWhenAllGatesPass(t *testing.T) {
 
 func TestDiagnoseStorePublicationReportsEveryRequiredGate(t *testing.T) {
 	row := diagnosticReadyStoreRow()
-	row.Status = StatusInactive
+	row.Status = StatusSuspended
 	row.IsVisible = false
 	row.ServiceabilityStatus = ServiceabilityOutOfArea
 	row.PartnerReadiness = "blocked"
+	row.PartnerActivationStatus = "partner_active"
 	row.CatalogApprovalStatus = "draft"
+	row.HasApprovedAssortment = false
 	row.MarketingVisibility = "hidden"
 	row.DeliveryModes = nil
 	row.AddressLine = ""
@@ -46,11 +50,13 @@ func TestDiagnoseStorePublicationReportsEveryRequiredGate(t *testing.T) {
 	}
 
 	expectedCodes := []string{
-		"STORE_NOT_ACTIVE",
+		"STORE_SUSPENDED_OR_CLOSED",
 		"STORE_HIDDEN",
 		"STORE_NOT_SERVICEABLE",
 		"PARTNER_NOT_READY",
+		"PARTNER_NOT_CLIENT_VISIBLE",
 		"CATALOG_NOT_APPROVED",
+		"APPROVED_ASSORTMENT_MISSING",
 		"MARKETING_HIDDEN",
 		"DELIVERY_MODES_MISSING",
 		"ADDRESS_MISSING",

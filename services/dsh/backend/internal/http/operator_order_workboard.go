@@ -36,7 +36,7 @@ type operatorOrderWorkboardRow struct {
 // Returns one joined row per order. Assignment, preparation, cancellation and
 // financial closure values come from owning records; the UI never infers them.
 func (s *protectedStoreServer) handleOperatorOrderWorkboard(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

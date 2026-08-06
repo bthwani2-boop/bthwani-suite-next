@@ -14,16 +14,12 @@ export function checkoutLoadingState(): DshCheckoutState {
   return { kind: "loading" };
 }
 
-export function checkoutConfirmingState(): DshCheckoutState {
-  return { kind: "confirming" };
+export function checkoutConfirmingState(intent: DshCheckoutIntent): DshCheckoutState {
+  return { kind: "confirming", intent };
 }
 
 export function checkoutSuccessState(intent: DshCheckoutIntent): DshCheckoutState {
   return { kind: "success", intent };
-}
-
-export function checkoutPaymentPendingState(intent: DshCheckoutIntent): DshCheckoutState {
-  return { kind: "payment_pending", intent };
 }
 
 export function checkoutReconciliationPendingState(intent: DshCheckoutIntent): DshCheckoutState {

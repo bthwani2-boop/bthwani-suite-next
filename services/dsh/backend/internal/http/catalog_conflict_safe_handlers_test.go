@@ -50,7 +50,6 @@ func TestUnifiedCatalogRoutesUseConflictSafeHandlers(t *testing.T) {
 		"handlePutNodeImageSafe",
 		"handlePutMasterProductImageSafe",
 		"handlePutProductProposalImageSafe",
-		"handlePutStoreImageSafe",
 		"handleSubmitReelSafe",
 		"handleReviewReelSafe",
 	}
@@ -68,7 +67,6 @@ func TestUnifiedCatalogRoutesUseConflictSafeHandlers(t *testing.T) {
 		"s.handlePutNodeImage)",
 		"s.handlePutMasterProductImage)",
 		"s.handlePutProductProposalImage)",
-		"s.handlePutStoreImage)",
 		"s.handleSubmitReel)",
 		"s.handleReviewReel)",
 	} {

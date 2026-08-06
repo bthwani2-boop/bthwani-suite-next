@@ -28,7 +28,7 @@ func (s *protectedStoreServer) handleListCatalogAttributes(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleCreateCatalogAttribute(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAttributeManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAttributeManage); !ok {
 		return
 	}
 	var input centralcatalog.CatalogAttributeInput
@@ -56,7 +56,7 @@ func (s *protectedStoreServer) handleListCatalogAttributeOptions(w http.Response
 }
 
 func (s *protectedStoreServer) handleCreateCatalogAttributeOption(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAttributeManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAttributeManage); !ok {
 		return
 	}
 	var input centralcatalog.CatalogAttributeOptionInput
@@ -72,7 +72,7 @@ func (s *protectedStoreServer) handleCreateCatalogAttributeOption(w http.Respons
 }
 
 func (s *protectedStoreServer) handleUpsertCatalogNodeAttributeRule(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAttributeManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAttributeManage); !ok {
 		return
 	}
 	var input centralcatalog.CatalogNodeAttributeRuleInput
@@ -112,7 +112,7 @@ func (s *protectedStoreServer) handleListMasterProductAttributeValues(w http.Res
 }
 
 func (s *protectedStoreServer) handleUpsertMasterProductAttributeValue(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAttributeManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAttributeManage); !ok {
 		return
 	}
 	var input centralcatalog.MasterProductAttributeValueInput
@@ -152,7 +152,7 @@ func (s *protectedStoreServer) handleListMasterProductRelationships(w http.Respo
 }
 
 func (s *protectedStoreServer) handleUpsertMasterProductRelationship(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionAttributeManage, "operator")
+	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionAttributeManage)
 	if !ok {
 		return
 	}
@@ -169,7 +169,7 @@ func (s *protectedStoreServer) handleUpsertMasterProductRelationship(w http.Resp
 }
 
 func (s *protectedStoreServer) handleDeleteMasterProductRelationship(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAttributeManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAttributeManage); !ok {
 		return
 	}
 	expectedVersion, err := strconv.Atoi(r.URL.Query().Get("expectedVersion"))
@@ -233,14 +233,14 @@ func (s *protectedStoreServer) listAssortmentPauses(w http.ResponseWriter, r *ht
 }
 
 func (s *protectedStoreServer) handleListOperatorAssortmentPauses(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentRead, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentRead); !ok {
 		return
 	}
 	s.listAssortmentPauses(w, r, r.PathValue("storeId"))
 }
 
 func (s *protectedStoreServer) handlePauseOperatorAssortment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentManage, "operator")
+	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentManage)
 	if !ok {
 		return
 	}
@@ -248,7 +248,7 @@ func (s *protectedStoreServer) handlePauseOperatorAssortment(w http.ResponseWrit
 }
 
 func (s *protectedStoreServer) handleResumeOperatorAssortment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentManage, "operator")
+	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentManage)
 	if !ok {
 		return
 	}
@@ -315,8 +315,47 @@ func (s *protectedStoreServer) handleResumeFieldAssortment(w http.ResponseWriter
 	s.resumeAssortment(w, r, actorID, storeID)
 }
 
+// ── Retire assortment (permanent, requires reason) ──────────────────────────
+
+func (s *protectedStoreServer) retireAssortment(w http.ResponseWriter, r *http.Request, actorID, storeID string) {
+	var input struct {
+		ExpectedVersion *int   `json:"expectedVersion"`
+		Reason          string `json:"reason"`
+	}
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	productID := r.PathValue("masterProductId")
+	item, err := centralcatalog.RetireStoreAssortment(r.Context(), s.db, storeID, productID, actorID, input.ExpectedVersion, input.Reason)
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"assortment": item})
+}
+
+func (s *protectedStoreServer) handleRetireOperatorAssortment(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentManage)
+	if !ok {
+		return
+	}
+	s.retireAssortment(w, r, actor.ID, r.PathValue("storeId"))
+}
+
+func (s *protectedStoreServer) handleRetirePartnerAssortment(w http.ResponseWriter, r *http.Request) {
+	actor, storeID, ok := s.partnerStore(w, r)
+	if !ok {
+		return
+	}
+	if storeID != r.PathValue("storeId") {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store does not belong to you")
+		return
+	}
+	s.retireAssortment(w, r, actor.ID, storeID)
+}
+
 func (s *protectedStoreServer) handleListCatalogAudit(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAuditRead, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAuditRead); !ok {
 		return
 	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
@@ -339,7 +378,7 @@ func (s *protectedStoreServer) handleListCatalogAudit(w http.ResponseWriter, r *
 }
 
 func (s *protectedStoreServer) handleRollbackCatalogAudit(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionRollback, "operator")
+	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionRollback)
 	if !ok {
 		return
 	}

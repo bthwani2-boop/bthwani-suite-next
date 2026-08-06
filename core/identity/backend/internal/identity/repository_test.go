@@ -80,11 +80,12 @@ func TestActivationSurfaceRegistryCoversEveryActorType(t *testing.T) {
 	}
 }
 
-func TestActivationIssuancePoliciesSeparatePublicAndWorkforceRoles(t *testing.T) {
-	for _, role := range []string{"client", "partner"} {
-		if !publicOtpActorTypes[role] || workforceManagedActorTypes[role] {
-			t.Fatalf("role %q must be public OTP only", role)
-		}
+func TestActivationIssuancePoliciesSeparatePublicAndGovernedRoles(t *testing.T) {
+	if !publicOtpActorTypes["client"] || workforceManagedActorTypes["client"] {
+		t.Fatal("client must remain the only public OTP actor type")
+	}
+	if publicOtpActorTypes["partner"] || workforceManagedActorTypes["partner"] {
+		t.Fatal("partner must use the dedicated DSH-governed actor activation path")
 	}
 	for _, role := range []string{"field", "captain"} {
 		if publicOtpActorTypes[role] || !workforceManagedActorTypes[role] {
@@ -110,7 +111,7 @@ func TestValidateExpectedActivationTargetIgnoresRoleOrder(t *testing.T) {
 		t.Fatalf("wrong surface should be rejected, got %v", err)
 	}
 	if err := validateExpectedActivationTarget(actor, "partner", "app-partner"); !errors.Is(err, ErrInvalidActivation) {
-		t.Fatalf("public actor type must not use Workforce issuance, got %v", err)
+		t.Fatalf("partner must use the dedicated DSH-governed issuance path, got %v", err)
 	}
 }
 
@@ -143,15 +144,15 @@ func TestConsumeActivationRejectsRetiredCodeWithoutChallenge(t *testing.T) {
 	repo := newTestRepository(t, nil)
 	fakeDriverInst.setActors(t.Name(), map[string]Actor{
 		phone: {
-			ID:        "field-actor-1",
-			Username:  "field-actor",
-			OperatorContextID:  "context-1",
-			PhoneE164: phone,
-			Roles:     []string{"field"},
+			ID:                "field-actor-1",
+			Username:          "field-actor",
+			OperatorContextID: "context-1",
+			PhoneE164:         phone,
+			Roles:             []string{"field"},
 			Permissions: []Permission{
 				{Service: "dsh", Surface: "app-field", Action: "store:read", Scope: "assigned"},
 			},
-			Active: false,
+			Status: ActorStatusProvisioned, Version: 1,
 		},
 	})
 
@@ -169,13 +170,13 @@ func TestConsumeActivationRejectsRetiredCodeWithoutChallenge(t *testing.T) {
 func TestActorIdentityDerivesSurfaceAndServiceAccess(t *testing.T) {
 	expiresAt := time.Now().Add(time.Minute)
 	resolved := toIdentity(Actor{
-		ID:       "partner-1",
+		ID:                "partner-1",
 		OperatorContextID: "context-1",
-		Roles:    []string{"partner"},
+		Roles:             []string{"partner"},
 		Permissions: []Permission{
 			{Service: "dsh", Surface: "app-partner", Action: "store:write", Scope: "own"},
 		},
-	}, "session-1", expiresAt)
+	}, "session-1", "app-partner", expiresAt)
 
 	if !resolved.SurfaceAccess["app-partner"] || !resolved.ServiceAccess["dsh"] {
 		t.Fatalf("derived access is incomplete: %#v", resolved)
@@ -217,16 +218,17 @@ func TestResolveAccessTokenAcceptsRealSessionToken(t *testing.T) {
 		{
 			hash: tokenHash(token),
 			actor: Actor{
-				ID:       "operator-local-001",
-				Username: "operator",
+				ID:                "operator-local-001",
+				Username:          "operator",
 				OperatorContextID: "local-dsh",
-				Roles:    []string{"operator"},
+				Roles:             []string{"operator"},
 				Permissions: []Permission{
 					{Service: "dsh", Surface: "control-panel", Action: "store:read", Scope: "all"},
 				},
-				Active: true,
+				Status: ActorStatusActive, Version: 1,
 			},
 			sessionID: "session-real-1",
+			surface:   "control-panel",
 			expiresAt: expiresAt,
 		},
 	})
@@ -249,6 +251,7 @@ type fakeSessionRow struct {
 	hash      string
 	actor     Actor
 	sessionID string
+	surface   string
 	expiresAt time.Time
 }
 
@@ -349,7 +352,8 @@ func (s *fakeStmt) Query(args []driver.Value) (driver.Rows, error) {
 				actor.PhoneE164,
 				"{" + strings.Join(actor.Roles, ",") + "}",
 				permissions,
-				actor.Active,
+				actor.Status,
+				actor.Version,
 			},
 		}, nil
 	}
@@ -376,8 +380,10 @@ func (s *fakeStmt) Query(args []driver.Value) (driver.Rows, error) {
 					row.actor.PhoneE164,
 					"{" + strings.Join(row.actor.Roles, ",") + "}",
 					permissions,
-					row.actor.Active,
+					row.actor.Status,
+					row.actor.Version,
 					row.sessionID,
+					row.surface,
 					row.expiresAt,
 				},
 			}, nil
@@ -388,11 +394,11 @@ func (s *fakeStmt) Query(args []driver.Value) (driver.Rows, error) {
 }
 
 func actorPhoneColumns() []string {
-	return []string{"id", "username", "operator_context_id", "phone_e164", "roles", "permissions", "active"}
+	return []string{"id", "username", "operator_context_id", "phone_e164", "roles", "permissions", "status", "version"}
 }
 
 func sessionColumns() []string {
-	return []string{"id", "username", "password_hash", "operator_context_id", "phone_e164", "roles", "permissions", "active", "session_id", "expires_at"}
+	return []string{"id", "username", "password_hash", "operator_context_id", "phone_e164", "roles", "permissions", "status", "version", "session_id", "surface", "expires_at"}
 }
 
 type fakeResult int64

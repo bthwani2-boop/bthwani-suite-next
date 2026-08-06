@@ -10,7 +10,6 @@ export type FieldPartnerDraftForm = {
   displayName: string;
   legalIdentityType: "commercial_register" | "national_id" | "freelancer_certificate";
   legalIdentityNumber: string;
-  ownerName: string;
   primaryPhone: string;
   secondaryPhone: string;
   email: string;
@@ -167,7 +166,6 @@ export function validateIdentityStep(form: Partial<FieldPartnerDraftForm>): Fiel
 
 export function validateOwnerStep(form: Partial<FieldPartnerDraftForm>): FieldOnboardingValidationErrors {
   const errors: FieldOnboardingValidationErrors = {};
-  if (!form.ownerName?.trim()) errors.ownerName = "اسم المالك مطلوب للمطابقة القانونية";
   if (!form.primaryPhone?.trim()) errors.primaryPhone = "رقم جوال المالك مطلوب للتواصل المباشر";
   return errors;
 }
@@ -176,7 +174,6 @@ export function getBasicsProfileMissingCount(form: Partial<FieldPartnerDraftForm
   let count = 0;
   if (!form.legalNameAr?.trim()) count++;
   if (!form.legalIdentityNumber?.trim()) count++;
-  if (!form.ownerName?.trim()) count++;
   if (!form.primaryPhone?.trim()) count++;
   return count;
 }
@@ -227,7 +224,6 @@ export function getFieldRequiredMissingItems(
   const missing: string[] = [];
   if (!form.legalNameAr?.trim()) missing.push("اسم المتجر");
   if (!form.legalIdentityNumber?.trim()) missing.push("رقم الهوية القانونية");
-  if (!form.ownerName?.trim()) missing.push("اسم المالك");
   if (!form.primaryPhone?.trim()) missing.push("جوال المالك");
   if (!form.city?.trim()) missing.push("المدينة");
   if (!form.addressLine?.trim()) missing.push("العنوان");

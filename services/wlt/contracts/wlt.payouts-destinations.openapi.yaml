@@ -92,6 +92,8 @@ paths:
                     type: array
                     items: { $ref: '#/components/schemas/PayoutRequest' }
                   total: { type: integer, minimum: 0 }
+        '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
       security:
         - serviceBearer: []
     post:
@@ -233,6 +235,8 @@ paths:
                   auditEvents:
                     type: array
                     items: { $ref: '#/components/schemas/PayoutAuditEvent' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
+        '404': { $ref: '#/components/responses/PayoutNotFound' }
       security:
         - serviceBearer: []
 components:

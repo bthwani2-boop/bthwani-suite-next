@@ -57,7 +57,7 @@ DshPartnerPerformanceResponse:
 
 DshPartner:
   type: object
-  required: [id, legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerName, primaryPhone, category, activationStatus, version, createdAt, updatedAt]
+  required: [id, legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerActorId, workforcePersonId, primaryPhone, category, activationStatus, version, createdAt, updatedAt]
   properties:
     id: { type: string }
     legalNameAr: { type: string }
@@ -65,7 +65,9 @@ DshPartner:
     displayName: { type: string }
     legalIdentityType: { type: string, enum: [commercial_register, national_id, freelancer_certificate] }
     legalIdentityNumber: { type: string }
-    ownerName: { type: string }
+    ownerActorId: { type: string }
+    workforcePersonId: { type: string }
+    onboardingCaseStatus: { type: string }
     primaryPhone: { type: string }
     secondaryPhone: { type: string }
     email: { type: string }
@@ -136,14 +138,15 @@ DshPartnerListResponse:
 
 DshCreatePartnerRequest:
   type: object
-  required: [legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerName, primaryPhone, category]
+  required: [legalNameAr, displayName, legalIdentityType, legalIdentityNumber, primaryPhone, category]
   properties:
     legalNameAr: { type: string, minLength: 1 }
     legalNameEn: { type: string }
     displayName: { type: string, minLength: 1 }
     legalIdentityType: { type: string, enum: [national_id, commercial_registration, other] }
     legalIdentityNumber: { type: string, minLength: 1 }
-    ownerName: { type: string, minLength: 1 }
+    ownerActorId: { type: string, minLength: 1 }
+    workforcePersonId: { type: string, minLength: 1 }
     primaryPhone: { type: string, minLength: 8 }
     secondaryPhone: { type: string }
     email: { type: string }
@@ -357,7 +360,8 @@ DshUpdatePartnerRequest:
   type: object
   properties:
     displayName: { type: string }
-    ownerName: { type: string }
+    ownerActorId: { type: string }
+    workforcePersonId: { type: string }
     primaryPhone: { type: string }
     secondaryPhone: { type: string }
     email: { type: string }

@@ -1,0 +1,24 @@
+{
+  "name": "control-panel-shared",
+  "root": "shared/control-panel",
+  "sourceRoot": "shared/control-panel/src",
+  "projectType": "library",
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir shared/control-panel typecheck"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir shared/control-panel build"
+      }
+    }
+  },
+  "tags": [
+    "scope:control-panel",
+    "type:ui-library"
+  ]
+}

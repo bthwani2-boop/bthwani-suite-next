@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CpButton, CpMutedInline, CpPageHeader, CpStateView, CpTextInput } from "@bthwani/control-panel/components";
+import { CpButton, CpMutedInline, CpPageHeader, CpStateView, CpTabs, CpTextInput } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
 import { Text } from "@bthwani/ui-kit";
 
@@ -17,17 +17,23 @@ import { ProviderOperationalCorePanel } from "./ProviderOperationalCorePanel";
 import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState";
 import { SupervisorPicker } from "./SupervisorPicker";
 import { ZonePicker } from "./ZonePicker";
+import { useIdentitySession } from "@bthwani/core-identity";
 
 export function FieldAgentDetailView(props: { readonly actorId: string; readonly onBack: () => void }) {
   const controller = useFieldAgentDetailController(props.actorId);
   const agent = controller.state.kind === "ready" ? controller.state.agent : null;
+  const profile = agent?.fieldProfile;
 
+  const [activeTab, setActiveTab] = useState("profile");
   const [fullNameAr, setFullNameAr] = useState("");
   const [zoneId, setZoneId] = useState("");
   const [engagementStartDate, setEngagementStartDate] = useState("");
   const [supervisor, setSupervisor] = useState<SupervisorCandidate | null>(null);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  
+  const { state: identityState } = useIdentitySession();
+  const operatorContextId = identityState.kind === "active" ? identityState.identity.actorId : "";
 
   useEffect(() => {
     if (!agent) return;
@@ -81,11 +87,11 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
       setUploadError(null);
       const objectUrl = URL.createObjectURL(file);
       try {
-        const mediaRef = await uploadProviderMedia(agent.actorId, "field", {
+        const mediaRef = await uploadProviderMedia(agent.actorId, "field-agents", {
           uri: objectUrl,
           name: file.name,
           mimeType: file.type || "application/octet-stream",
-        });
+        }, operatorContextId);
         if (purpose === "photo") {
           await controller.update({ expectedVersion: agent.version, photoMediaRef: mediaRef });
         } else {
@@ -102,7 +108,6 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
     input.click();
   };
 
-  const profile = agent.fieldProfile;
   const canSave = fullNameAr.trim().length > 0 && zoneId.length > 0 && !controller.actionBusy;
 
   return (
@@ -114,93 +119,47 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
         </CpPageHeader>
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-        <CpMutedInline>
-          الميداني مقدم خدمة مستقل بلا وردية أو حضور. التفعيل وإصدار كود الدخول من صلاحية قسم الشراكات بعد اكتمال بوابة التفعيل.
-        </CpMutedInline>
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        <CpTabs
+          value={activeTab}
+          onChange={setActiveTab}
+          items={[
+            { label: "الملف الأساسي", value: "profile" },
+            { label: "الوثائق والصور", value: "media" },
+            { label: "التشغيل والربط", value: "ops" },
+          ]}
+        />
+        {activeTab === "profile" && (
+          <section style={{
+            padding: "24px",
+            border: "1px solid var(--bthwani-control-panel-border)",
+            borderRadius: "16px",
+            background: "var(--bthwani-control-panel-surface)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+          }}>
+            <Text role="titleMd">البيانات الأساسية</Text>
+            
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <div>
+                <Text role="bodySm" style={{ marginBottom: "8px", display: "block" }}>الاسم بالعربية *</Text>
+                <CpTextInput value={fullNameAr} onChange={setFullNameAr} aria-label="الاسم بالعربية" />
+              </div>
+              <div>
+                <Text role="bodySm" style={{ marginBottom: "8px", display: "block" }}>تاريخ بداية الارتباط</Text>
+                <CpTextInput type="date" value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية الارتباط" />
+              </div>
+            </div>
 
-        <section style={{
-          padding: "24px",
-          border: "1px solid var(--bthwani-control-panel-border)",
-          borderRadius: "16px",
-          background: "var(--bthwani-control-panel-surface)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
-        }}>
-          <Text role="titleMd" style={{ marginBottom: "8px" }}>المعلومات الأساسية</Text>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <Text role="bodySm" style={{ fontWeight: 600 }}>الاسم بالعربية *</Text>
-              <CpTextInput value={fullNameAr} onChange={setFullNameAr} aria-label="الاسم بالعربية" />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <Text role="bodySm" style={{ fontWeight: 600 }}>تاريخ بداية الارتباط</Text>
-              <CpTextInput type="date" value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية الارتباط" />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} />
             </div>
-          </div>
-          <div style={{ height: "1px", background: "var(--bthwani-control-panel-border)", margin: "8px 0" }} />
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <Text role="bodySm" style={{ fontWeight: 600 }}>مسؤول المتابعة والمشرف المباشر</Text>
-            <SupervisorPicker kind="field" selected={supervisor} onSelect={setSupervisor} />
-          </div>
-          {controller.actionError ? <CpStateView kind="error" title={controller.actionError} /> : null}
-
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px" }}>
-            <CpButton
-              variant="primary"
-              disabled={!canSave}
-              onClick={() =>
-                void controller.update({
-                  expectedVersion: agent.version,
-                  fullNameAr: fullNameAr.trim(),
-                  engagementStartDate: engagementStartDate.trim() || undefined,
-                  serviceZoneId: zoneId,
-                  supervisorActorId: supervisor?.actorId,
-                })
-              }
-            >
-              {controller.actionBusy ? "جارٍ الحفظ…" : "حفظ الملف التشغيلي"}
-            </CpButton>
-          </div>
-        </section>
-
-        <section style={{
-          padding: "24px",
-          border: "1px solid var(--bthwani-control-panel-border)",
-          borderRadius: "16px",
-          background: "var(--bthwani-control-panel-surface)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "16px",
-        }}>
-          <Text role="titleMd">الصورة والوثائق</Text>
-          <div style={{ display: "flex", gap: "24px" }}>
-            <Text role="bodySm">
-              <span style={{ color: "var(--bthwani-control-panel-text-muted)" }}>الصورة:</span>{" "}
-              <span style={{ fontWeight: 600 }}>{agent.photoMediaRef ? "مرتبطة" : "مفقودة"}</span>
-            </Text>
-            <Text role="bodySm">
-              <span style={{ color: "var(--bthwani-control-panel-text-muted)" }}>الوثائق:</span>{" "}
-              <span style={{ fontWeight: 600 }}>{profile?.documentMediaRefs.length ?? 0}</span>
-            </Text>
-          </div>
-          {uploadError ? <CpStateView kind="error" title={uploadError} /> : null}
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "8px" }}>
-            <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("photo")}>
-              {uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}
-            </CpButton>
-            <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("document")}>
-              {uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة"}
-            </CpButton>
-          </div>
-        </section>
-
-        <ProviderOperationalCorePanel actorId={agent.actorId} kind="field" />
-        <ProviderActivationWorkspace providerKind="field" initialActorId={agent.actorId} entrySource="hr" />
+          </section>
+        )}
+        {activeTab === "ops" && (
+          <ProviderActivationWorkspace providerKind="field" initialActorId={agent.actorId} entrySource="hr" />
+        )}
       </div>
     </DetailPageFrame>
   );

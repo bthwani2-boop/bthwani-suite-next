@@ -27,9 +27,11 @@ dist/
 dist-swagger/
 build/
 .next/
+apps/control-panel/runtime/next-env.d.ts
 .expo/
 coverage/
 *.tsbuildinfo
+*.exe
 .DS_Store
 Thumbs.db
 
@@ -67,20 +69,10 @@ services/dsh/database/seeds/local/media/
 .aider*
 !.aiderignore
 
-# Allow only bounded summaries/inventories/manifests inside .diagnostics
-!.diagnostics/
-.diagnostics/*
-!.diagnostics/operational-journey-factory/
-.diagnostics/operational-journey-factory/*
-.diagnostics/operational-journey-factory/tool-evidence/
-!.diagnostics/operational-journey-factory/inventories/
-!.diagnostics/operational-journey-factory/inventories/*
-!.diagnostics/operational-journey-factory/*.json
-!.diagnostics/operational-journey-factory/*.md
-!.diagnostics/operational-journey-factory/*.mjs
-# Raw diagnostic outputs must never be tracked (reconciliation gate policy)
-.diagnostics/operational-journey-factory/command-results.json
-.diagnostics/operational-journey-factory/knip-current.json
+# Diagnostics are transient evidence. Canonical policy, contracts, and source
+# live outside this directory; generated inventories and command output must
+# never become repository truth or same-commit closure evidence.
+.diagnostics/
 tools/diagnostics/graph.json
 tools/diagnostics/*.raw.json
 tools/diagnostics/*.full.json
@@ -89,6 +81,8 @@ tools/diagnostics/knip-report.json
 node-gates*.log
 *_HANDOFF.zip
 .claude/settings.local.json
+*.bak
+*.graphify-bak
 
 # OpenAPI bundles and clients are deterministic build artifacts. Canonical
 # entry contracts, modules, overlays and manifests are the only tracked truth.
@@ -140,6 +134,10 @@ node-gates*.log
 
 # Explicitly track the WLT Minimum Viable Financial Scope v1 governance doc
 !services/wlt/FINANCIAL_SCOPE_V1.md
+
+# Machine-local runtime output. The provisioned Workforce provider actor ids are
+# generated per developer environment and must never be shared between machines.
+.artifacts/local-dev/
 
 *.pem
 *.key

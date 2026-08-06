@@ -9,7 +9,7 @@ import type {
 
 export type CheckoutToOrderFlowState =
   | { readonly kind: "loading" }
-  | { readonly kind: "payment_pending"; readonly intent: DshCheckoutIntent }
+  | { readonly kind: "confirming"; readonly intent: DshCheckoutIntent }
   | { readonly kind: "reconciliation_pending"; readonly intent: DshCheckoutIntent }
   | { readonly kind: "terminal"; readonly intent: DshCheckoutIntent; readonly reason: DshCheckoutTerminalReason }
   | { readonly kind: "blocked_payment_unavailable" }
@@ -55,7 +55,7 @@ export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
     ? checkout.state.intent.id
     : null;
 
-  const pendingIntentId = checkout.state.kind === "payment_pending" ||
+  const pendingIntentId = checkout.state.kind === "confirming" ||
     checkout.state.kind === "reconciliation_pending"
     ? checkout.state.intent.id
     : null;
@@ -94,13 +94,12 @@ export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
   const state: CheckoutToOrderFlowState = (() => {
     if (
       checkout.state.kind === "idle" ||
-      checkout.state.kind === "confirming" ||
       checkout.state.kind === "loading"
     ) {
       return { kind: "loading" };
     }
-    if (checkout.state.kind === "payment_pending") {
-      return { kind: "payment_pending", intent: checkout.state.intent };
+    if (checkout.state.kind === "confirming") {
+      return { kind: "confirming", intent: checkout.state.intent };
     }
     if (checkout.state.kind === "reconciliation_pending") {
       return { kind: "reconciliation_pending", intent: checkout.state.intent };

@@ -28,11 +28,11 @@ var departmentCodePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{1,63}$`)
 // when it creates an administrative employee. Identity remains the only owner
 // of roles, permissions, sessions and the sovereign phone number.
 type EmployeeProvisionInput struct {
-	Username         string `json:"username"`
-	PhoneE164        string `json:"phoneE164"`
-	PermissionBundle string `json:"permissionBundle"`
-	DepartmentScope  string `json:"departmentScope"`
-	OperatorContextID         string `json:"operatorContextId,omitempty"`
+	Username          string `json:"username"`
+	PhoneE164         string `json:"phoneE164"`
+	PermissionBundle  string `json:"permissionBundle"`
+	DepartmentScope   string `json:"departmentScope"`
+	OperatorContextID string `json:"operatorContextId,omitempty"`
 }
 
 func init() {
@@ -51,8 +51,9 @@ func normalizeDepartmentCode(raw string) (string, error) {
 }
 
 // employeeDshPermissions maps administrative bundles to the exact DSH actions
-// consumed by control-panel routes. These grants replace broad operator-role
-// fallbacks for every non-owner employee.
+// consumed by control-panel routes. These grants are the authoritative source
+// of DSH capabilities for each employee role. The broad operator-role fallback
+// in requirePermission must not be relied on; all access must flow through here.
 func employeeDshPermissions(bundle string) []Permission {
 	grant := func(actions ...string) []Permission {
 		permissions := make([]Permission, 0, len(actions))
@@ -66,17 +67,66 @@ func employeeDshPermissions(bundle string) []Permission {
 
 	switch strings.TrimSpace(bundle) {
 	case EmployeeBundlePlatformOwner:
-		return grant("platform.read", "platform.manage")
+		// Sovereign platform owner: all DSH control-panel capabilities.
+		return grant(
+			"platform.read", "platform.manage",
+			"partners.read", "partners.manage", "partners.activate",
+			"catalog.taxonomy.manage",
+			"catalog.product.read", "catalog.product.manage", "catalog.product.approve", "catalog.product.publish",
+			"catalog.proposal.read", "catalog.proposal.review", "catalog.proposal.marketing_review",
+			"catalog.proposal.adopt", "catalog.proposal.publish",
+			"catalog.media.read", "catalog.media.upload", "catalog.media.review", "catalog.media.manage",
+			"catalog.policy.read", "catalog.policy.manage",
+			"catalog.assortment.read", "catalog.assortment.manage",
+			"catalog.seed.read",
+			"catalog.bulk.import", "catalog.bulk.export", "catalog.bulk.edit",
+			"catalog.audit.read", "catalog.cleanup.manage",
+			"marketing.read", "marketing.manage",
+			"finance.read", "finance.manage",
+			"analytics.read",
+			"operations.read", "operations.manage",
+			"dsh.service_zones.read", "dsh.service_zones.manage",
+			"dsh.fulfillment_sla.read", "dsh.fulfillment_sla.manage",
+			"dsh.dispatch_capacity.read", "dsh.dispatch_capacity.manage",
+			"dsh.dispatch_financial_eligibility.read", "dsh.dispatch_financial_eligibility.manage",
+			"dsh.operational_policy.audit.read", "dsh.operational_policy.rollback",
+			"operations.special_requests.read", "operations.special_requests.transition", "operations.special_requests.dispatch",
+			"support.read", "support.manage",
+			"administration.read", "administration.manage",
+			"administration.approve",
+			"administration.role.request", "administration.role.approve",
+			"administration.staff.request", "administration.staff.approve",
+			"administration.audit.read", "administration.diagnostics.read",
+			"administration.rollback.request", "administration.rollback.approve",
+		)
 	case EmployeeBundlePlatformCoordinator:
-		return grant("platform.read")
+		return grant(
+			"platform.read", "analytics.read",
+			"dsh.service_zones.read",
+			"dsh.fulfillment_sla.read",
+			"dsh.dispatch_capacity.read",
+			"dsh.dispatch_financial_eligibility.read",
+			"dsh.operational_policy.audit.read",
+		)
 	case EmployeeBundleOperationsManager:
-		return grant("operations.read", "operations.manage")
+		return grant(
+			"operations.read", "operations.manage",
+			"dsh.service_zones.read", "dsh.service_zones.manage",
+			"dsh.fulfillment_sla.read", "dsh.fulfillment_sla.manage",
+			"dsh.dispatch_capacity.read", "dsh.dispatch_capacity.manage",
+			"dsh.dispatch_financial_eligibility.read", "dsh.dispatch_financial_eligibility.manage",
+			"dsh.operational_policy.audit.read",
+			"operations.special_requests.read", "operations.special_requests.transition", "operations.special_requests.dispatch",
+			"analytics.read",
+		)
 	case EmployeeBundlePartnersManager:
 		return grant("partners.read", "partners.manage", "partners.activate")
 	case EmployeeBundleFinanceManager:
 		return grant("finance.read", "finance.manage")
 	case EmployeeBundleSupportManager:
 		return grant("support.read", "support.manage")
+	case EmployeeBundleHRManager:
+		return grant("administration.read", "administration.manage")
 	default:
 		return nil
 	}
@@ -270,8 +320,8 @@ func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvis
 	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO identity_actors
-			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, active, updated_at)
-		VALUES ($1,$2,'',$3,$4,$5,$6::jsonb,false,now())`,
+			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
+		VALUES ($1,$2,'',$3,$4,$5,$6::jsonb,'PROVISIONED',1,now())`,
 		actorID, username, operatorContextID, phone, pq.Array(roles), string(permissionsJSON))
 	if err != nil {
 		return ActorAdminView{}, mapUniqueViolation(err)
@@ -279,7 +329,7 @@ func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvis
 	if err := tx.Commit(); err != nil {
 		return ActorAdminView{}, err
 	}
-	return ActorAdminView{ActorID: actorID, Username: username, PhoneE164: phone, Roles: roles, Active: false}, nil
+	return ActorAdminView{ActorID: actorID, Username: username, PhoneE164: phone, Roles: roles, Status: ActorStatusProvisioned, Version: 1}, nil
 }
 
 // BootstrapSovereignLeadershipAccess upgrades only the explicit local operator

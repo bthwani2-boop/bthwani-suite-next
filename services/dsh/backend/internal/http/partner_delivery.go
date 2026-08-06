@@ -122,7 +122,7 @@ func (s *protectedStoreServer) handleAssignPartnerDelivery(w http.ResponseWriter
 		return
 	}
 	correlationID := partnerDeliveryCorrelationID(r, body.CorrelationID)
-	task, err := partnerdelivery.NewService(s.db).AssignCourierCommand(
+	task, err := partnerdelivery.NewService(s.db, s.workforce).AssignCourierCommand(
 		r.Context(), ownedOrder.ID, body.StoreCourierID, actor.ID, actor.Role, correlationID, body.CommandID,
 	)
 	if err != nil {
@@ -173,7 +173,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryTaskTransition(
 		return
 	}
 	updated, err := call(
-		partnerdelivery.NewService(s.db), task.ID, body.ExpectedVersion, actor.ID, actor.Role,
+		partnerdelivery.NewService(s.db, s.workforce), task.ID, body.ExpectedVersion, actor.ID, actor.Role,
 		partnerDeliveryCorrelationID(r, body.CorrelationID), body.CommandID,
 	)
 	if err != nil {
@@ -202,7 +202,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryProof(w http.ResponseWriter,
 		return
 	}
 	correlationID := partnerDeliveryCorrelationID(r, body.CorrelationID)
-	updated, err := partnerdelivery.NewService(s.db).SubmitProofCommand(
+	updated, err := partnerdelivery.NewService(s.db, s.workforce).SubmitProofCommand(
 		r.Context(), task.ID, body.ExpectedVersion, body.ProofMethod, body.ProofReference,
 		actor.ID, actor.Role, correlationID, body.CommandID,
 	)
@@ -218,7 +218,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryProof(w http.ResponseWriter,
 // own execution, so it requires IncidentPermissionOverride and is recorded
 // as an operational_incident before the task is actually mutated.
 func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", IncidentPermissionOverride, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -273,7 +273,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleListOperatorPartnerDeliveries(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -296,7 +296,7 @@ func (s *protectedStoreServer) handleListOperatorPartnerDeliveries(w http.Respon
 }
 
 func (s *protectedStoreServer) handleGetOperatorPartnerDelivery(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -309,7 +309,7 @@ func (s *protectedStoreServer) handleGetOperatorPartnerDelivery(w http.ResponseW
 }
 
 func (s *protectedStoreServer) handleGetOperatorPartnerDeliveryByOrder(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

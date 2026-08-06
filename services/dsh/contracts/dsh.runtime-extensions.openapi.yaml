@@ -16,7 +16,7 @@ paths:
   /dsh/internal/workforce/availability-projections:
     post:
       operationId: projectWorkforceAvailabilityIntoDsh
-      security: [{ serviceToken: [] }]
+      security: [ { serviceToken: [] } ]
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
@@ -35,7 +35,7 @@ paths:
   /dsh/operator/dispatch/capacity-forecast:
     get:
       operationId: getDispatchCapacityForecast
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/OperatorContextId'
       responses:
@@ -49,7 +49,7 @@ paths:
   /dsh/operator/dispatch/capacity-policies/{serviceAreaCode}:
     put:
       operationId: upsertDispatchCapacityPolicy
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/ServiceAreaCode'
         - $ref: '#/components/parameters/OperatorContextId'
@@ -67,7 +67,7 @@ paths:
   /dsh/operator/dispatch/heatmap:
     get:
       operationId: getDispatchHeatmap
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/OperatorContextId'
       responses:
@@ -78,6 +78,640 @@ paths:
               schema: { type: object, additionalProperties: true }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /dsh/field/me/ratings/summary:
+    get:
+      tags:
+        - field
+      operationId: get_dsh_field_me_ratings_summary
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/stores/{storeId}/assortment-pauses:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_stores__storeId__assortment_pauses
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/stores/{storeId}/delivery-pricing:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_stores__storeId__delivery_pricing
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/client/maps/reverse:
+    post:
+      tags:
+        - client
+      operationId: post_dsh_client_maps_reverse
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/client/maps/search:
+    post:
+      tags:
+        - client
+      operationId: post_dsh_client_maps_search
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/home-discovery/events:
+    post:
+      tags:
+        - home-discovery
+      operationId: post_dsh_home_discovery_events
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/stores/{storeId}/assortment/{masterProductId}/pause:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: masterProductId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_stores__storeId__assortment__masterProductId__pause
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/stores/{storeId}/assortment/{masterProductId}/resume:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: masterProductId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_stores__storeId__assortment__masterProductId__resume
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/orders/{orderId}/captain-handoff/confirm:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - partner
+      operationId: post_dsh_partner_orders__orderId__captain_handoff_confirm
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/orders/{orderId}/captain-handoff/exceptions:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - partner
+      operationId: post_dsh_partner_orders__orderId__captain_handoff_exceptions
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/orders/{orderId}/pickup/extend-window:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - partner
+      operationId: post_dsh_partner_orders__orderId__pickup_extend_window
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/orders/{orderId}/pickup/reschedule:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - partner
+      operationId: post_dsh_partner_orders__orderId__pickup_reschedule
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/stores/{storeId}/delivery-pricing/{fulfillmentMode}:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: fulfillmentMode
+        in: path
+        required: true
+        schema:
+          type: string
+    put:
+      tags:
+        - operator
+      operationId: put_dsh_operator_stores__storeId__delivery_pricing__fulfillmentMode_
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/storefront/{storeId}:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - storefront
+      operationId: get_dsh_storefront__storeId_
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/client/me/profile/consents:
+    patch:
+      tags:
+        - client
+      operationId: patch_dsh_client_me_profile_consents
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/client/me/profile/preferences:
+    patch:
+      tags:
+        - client
+      operationId: patch_dsh_client_me_profile_preferences
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/client/checkout-intents/{intentId}/refresh:
+    parameters:
+      - name: intentId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - client
+      operationId: post_dsh_client_checkout_intents__intentId__refresh
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/client/checkout-intents/{intentId}/validate:
+    parameters:
+      - name: intentId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - client
+      operationId: post_dsh_client_checkout_intents__intentId__validate
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/field/stores:
+    post:
+      tags:
+        - field
+      operationId: post_dsh_field_stores
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/orders/{orderId}/cancellation/actions:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_orders__orderId__cancellation_actions
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/orders/{orderId}/cancellation/actions/{actionId}/execute:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: actionId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_orders__orderId__cancellation_actions__actionId__execute
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/orders/{orderId}/return:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_orders__orderId__return
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/stores:
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_stores
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_stores
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/stores/{storeId}/assortment/{masterProductId}/prices/schedule:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: masterProductId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_stores__storeId__assortment__masterProductId__prices_schedule
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/stores/{storeId}/assortment/{masterProductId}/retire:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: masterProductId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_stores__storeId__assortment__masterProductId__retire
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/orders/{orderId}/decision:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - partner
+      operationId: post_dsh_partner_orders__orderId__decision
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/orders/{orderId}/preparation-replacements:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - partner
+      operationId: post_dsh_partner_orders__orderId__preparation_replacements
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/stores/{storeId}/assortment/{masterProductId}/inventory:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: masterProductId
+        in: path
+        required: true
+        schema:
+          type: string
+    put:
+      tags:
+        - operator
+      operationId: put_dsh_operator_stores__storeId__assortment__masterProductId__inventory
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/administration/customers/{actorId}/profile:
+    parameters:
+      - name: actorId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - administration
+      operationId: get_dsh_administration_customers__actorId__profile
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/client/me/profile:
+    get:
+      tags:
+        - client
+      operationId: get_dsh_client_me_profile
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/internal/operations/carts/{cartId}/sync-diagnostics:
+    parameters:
+      - name: cartId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - internal
+      operationId: get_dsh_internal_operations_carts__cartId__sync_diagnostics
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/orders/{orderId}:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_orders__orderId_
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:

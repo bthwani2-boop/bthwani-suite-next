@@ -188,7 +188,7 @@ func authorizePickupMutation(
 	// dsh_pickup_sessions.max_extensions) is exhausted -- not routine
 	// tooling -- so it requires the same override permission as any other
 	// sovereign intervention, not the ordinary PickupPermissionManage.
-	_, ok := protected.requirePermission(w, r, "control-panel", IncidentPermissionOverride, "operator")
+	_, ok := protected.requirePermission(w, r, "control-panel", IncidentPermissionOverride)
 	return ok
 }
 
@@ -209,7 +209,7 @@ func PickupMutationGuard(
 	mediaProvider *media.Provider,
 	next http.Handler,
 ) http.Handler {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		route, guarded := matchPickupMutationRoute(r)
 		if !guarded {
@@ -360,7 +360,7 @@ func PickupMutationGuard(
 // reschedule after no-show belongs to the partner (see
 // handlePartnerReschedulePickupWindow in pickup.go).
 func (s *protectedStoreServer) handleReschedulePickupWindow(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", IncidentPermissionOverride, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -400,6 +400,6 @@ func RegisterPickupRecoveryRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
-	mux.HandleFunc("POST /dsh/operator/pickups/{orderId}/reschedule", protected.handleReschedulePickupWindow)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
+	mux.HandleFunc("POST /dsh/operator/pickups/{orderId}/reschedule", protected.withPermission("control-panel", IncidentPermissionOverride, protected.handleReschedulePickupWindow))
 }

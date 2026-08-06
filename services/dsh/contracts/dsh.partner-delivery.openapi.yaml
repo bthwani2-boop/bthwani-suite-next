@@ -379,6 +379,12 @@ paths:
         '409': { $ref: '#/components/responses/ErrorResponse' }
       security:
         - bearerAuth: []
+    parameters:
+      - name: alertId
+        in: path
+        required: true
+        schema:
+          type: string
   /dsh/operator/pickups/sla-alerts/refresh:
     post:
       operationId: refreshDshPickupSlaAlerts
@@ -482,7 +488,6 @@ components:
       properties:
         expectedVersion: { type: integer, minimum: 0 }
         commandId: { type: string, minLength: 1, maxLength: 160 }
-        correlationId: { type: string, minLength: 1, maxLength: 128 }
         reason: { type: string, maxLength: 1000 }
     AssignRequest:
       allOf:

@@ -3,7 +3,7 @@
   "service": "identity",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "identity-012_activation_session_causality.sql",
+  "cutover": "identity-021_actor_lifecycle_status.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -78,7 +78,7 @@
     {
       "ordinal": 11,
       "file": "identity-011_employee_dsh_permission_backfill.sql",
-      "sha256": "6d9d22945272307a9f0035cdac4be7cd7d8b3042e0fb00176e109adcaea9fc1d",
+      "sha256": "58efbed6a60e4624c5b6c7e5e81663c577f490a7d184cf1b6a3bd0ee76cfd397",
       "historicalPrefix": "011",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -88,6 +88,69 @@
       "sha256": "62db708e2fcb5b6c5be51194e2472d45504093ffde2f36fb781b00995cfb07e8",
       "historicalPrefix": "012",
       "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 13,
+      "file": "identity-013_actor_provisioning_integrity.sql",
+      "sha256": "80f50cbb08692c26abe57ba9186378dfbd713a28c888a86204238467925fb631",
+      "historicalPrefix": "013",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 14,
+      "file": "identity-014_actor_lifecycle_audit.sql",
+      "sha256": "2b926ca48f3d669f2505bb170857e97ed66f6414cd22e7e0540db35ae1826450",
+      "historicalPrefix": "014",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 15,
+      "file": "identity-015_actor_lifecycle_integrity.sql",
+      "sha256": "65fef9621d9d6dd25abeee2393bfed6e09c9e15da6ba4e5bd328a98f4d4c52e3",
+      "historicalPrefix": "015",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 16,
+      "file": "identity-016_dsh_operational_policy_permissions.sql",
+      "sha256": "c7a7ba1e6a5d62aafa5279c13f90b4e22b835606d16e89b5db1cfb97b83ac8a8",
+      "historicalPrefix": "016",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 17,
+      "file": "identity-017_employee_dsh_permission_integrity.sql",
+      "sha256": "28d5384c6a38f960efb55b8bc64337b40b95404857c9fada92f466543fdb6c06",
+      "historicalPrefix": "017",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 18,
+      "file": "identity-018_session_surface.sql",
+      "sha256": "8518a3dd2f87e8f8ea1bf10ab006794dc0364543deb430aa0f0cb713a3d59adf",
+      "historicalPrefix": "018",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 19,
+      "file": "identity-019_session_family.sql",
+      "sha256": "a3c6fd01630356aefdff8d5923fb956a7c5fa36a477ecdcdb80b93d29de8a56c",
+      "historicalPrefix": "019",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 20,
+      "file": "identity-020_rbac_foundation.sql",
+      "sha256": "3e8ff87524965959477e7f1dd48ca616e22e32a0513275d73df7bfc2ba5fe229",
+      "historicalPrefix": "020",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 21,
+      "file": "identity-021_actor_lifecycle_status.sql",
+      "sha256": "c9b2c315845623d1874e5d07c319361ee13403b826769a94f2f03d4db70cea10",
+      "historicalPrefix": "021",
+      "state": "ACTIVE"
     }
   ]
 }

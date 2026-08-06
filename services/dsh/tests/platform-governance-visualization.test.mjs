@@ -4,11 +4,11 @@ import test from "node:test";
 
 const read = (path) => fs.readFileSync(path, "utf8");
 
-const page = read("apps/control-panel/runtime/src/app/dsh/platform/page.tsx");
+const page = read("apps/control-panel/runtime/src/app/(shell)/dsh/platform/page.tsx");
 const dashboard = read("services/dsh/frontend/control-panel/platform/PlatformDashboardScreen.tsx");
 const platformIndex = read("services/dsh/frontend/control-panel/platform/index.ts");
 const visual = read("services/dsh/frontend/control-panel/platform/PlatformGovernanceVisual.tsx");
-const session = read("services/dsh/frontend/shared/session/control-panel-session.tsx");
+const permissions = read("services/dsh/frontend/shared/session/control-panel-permissions.ts");
 const workflow = read("services/dsh/frontend/shared/platform/use-platform-change-workflow-controller.tsx");
 const platformApi = read("services/dsh/frontend/shared/platform/platform-control.api.ts");
 const identityContract = read("core/identity/clients/generated/identity-api.ts");
@@ -28,7 +28,9 @@ test("platform governance renders the live visualization on the sovereign platfo
 
 test("platform governance binds the visualization to authenticated partner_platform operator context", () => {
   assert.match(identityContract, /ActorIdentity:[\s\S]*operatorContextId: string/);
-  assert.match(session, /identity: ActorIdentity/);
+  assert.match(permissions, /ControlPanelPermissionIdentity/);
+  assert.match(permissions, /PLATFORM_PERMISSION_SERVICES/);
+  assert.match(permissions, /permission\.surface === "control-panel"/);
   assert.match(visual, /identity\?\.operatorContextId\.trim\(\)/);
   assert.match(visual, /hasControlPanelPermission\(identity, "platform:read"\)/);
   assert.doesNotMatch(visual, /local-dsh/);

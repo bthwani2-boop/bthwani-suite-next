@@ -7,23 +7,40 @@ import (
 
 func TestValidateGovernedCreateInputNormalizesDefaults(t *testing.T) {
 	input := GovernedCreateAssignmentInput{
-		OrderID:         " order-1 ",
-		CaptainID:       " captain-1 ",
-		ActorID:         " operator-1 ",
-		ServiceAreaCode: " sana-north ",
-		IdempotencyKey:  " dispatch-key-0001 ",
+		OrderID:           " order-1 ",
+		OperatorContextID: " operator-context-1 ",
+		CaptainID:         " captain-1 ",
+		ActorID:           " operator-1 ",
+		ServiceAreaCode:   " sana-north ",
+		IdempotencyKey:    " dispatch-key-0001 ",
 	}
 	if err := validateGovernedCreateInput(&input); err != nil {
 		t.Fatalf("expected valid input, got %v", err)
 	}
-	if input.OperatorContextID != DefaultDispatchOperatorContextID {
-		t.Fatalf("expected default OperatorContext, got %q", input.OperatorContextID)
+	if input.OperatorContextID != "operator-context-1" {
+		t.Fatalf("expected trimmed OperatorContext, got %q", input.OperatorContextID)
 	}
 	if input.ResponseTimeoutSecond != 90 {
 		t.Fatalf("expected default response timeout 90, got %d", input.ResponseTimeoutSecond)
 	}
 	if input.OrderID != "order-1" || input.CaptainID != "captain-1" || input.ServiceAreaCode != "sana-north" {
 		t.Fatalf("expected normalized identifiers, got %+v", input)
+	}
+}
+
+func TestValidateGovernedCreateInputFailsClosedOnMissingOperatorContext(t *testing.T) {
+	// T3 root-cause fix: an absent operatorContextId must be rejected, never
+	// silently defaulted -- a fail-open default is exactly the cross-context
+	// trust boundary bug this test guards against.
+	input := GovernedCreateAssignmentInput{
+		OrderID:         "order-1",
+		CaptainID:       "captain-1",
+		ActorID:         "operator-1",
+		ServiceAreaCode: "sana-north",
+		IdempotencyKey:  "dispatch-key-0001",
+	}
+	if err := validateGovernedCreateInput(&input); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected ErrInvalid for missing operatorContextId, got %v", err)
 	}
 }
 

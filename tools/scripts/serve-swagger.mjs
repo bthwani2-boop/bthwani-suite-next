@@ -9,7 +9,7 @@ const rootDir = path.resolve(__dirname, '../../');
 const contractsDir = path.resolve(rootDir, 'contracts');
 
 const specs = [
-  { input: 'contracts/master.openapi.yaml', output: 'contracts/master.bundled.json', name: 'Master API Index' },
+  { input: 'contracts/openapi/index.yaml', output: 'contracts/openapi-index.bundled.json', name: 'Canonical API Index' },
   { input: 'core/identity/contracts/identity.openapi.yaml', output: 'contracts/identity.bundled.json', name: 'Core - Identity API' },
   { input: 'core/providers/contracts/providers.openapi.yaml', output: 'contracts/providers.bundled.json', name: 'Core - Providers API' },
   { input: 'core/workforce/contracts/workforce.openapi.yaml', output: 'contracts/workforce.bundled.json', name: 'Core - Workforce API' },

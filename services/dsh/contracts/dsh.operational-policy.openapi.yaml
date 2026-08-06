@@ -428,7 +428,6 @@ components:
           enum: [ created, updated, activated, deactivated, rolled_back ]
         actorId: { type: string }
         actorSurface: { type: string }
-        correlationId: { type: string }
         reason: { type: string }
         fromVersion: { type: integer }
         toVersion: { type: integer }

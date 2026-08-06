@@ -11,7 +11,7 @@ import { resolveCheckoutIntentDisplayState } from "./checkout.view-model";
 export type CheckoutErrorKind = "permission_denied" | "conflict" | "offline" | "payment_unavailable" | "error";
 
 export function beginCheckoutSubmit(): DshCheckoutState {
-  return checkoutConfirmingState();
+  return checkoutLoadingState();
 }
 
 export function beginCheckoutReload(): DshCheckoutState {

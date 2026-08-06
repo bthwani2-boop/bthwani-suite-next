@@ -21,33 +21,40 @@ var (
 
 const governedPartnerColumns = `id, legal_name_ar, legal_name_en, display_name,
 	legal_identity_type, legal_identity_number,
-	owner_name, primary_phone, secondary_phone, email,
-	category, activation_status, created_by_actor_id, created_by_surface,
+	owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
+	category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 	notes,
 	COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
 	COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
-	beneficiary_name, bank_name, bank_branch, bank_account_number, bank_iban,
-	payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
+	beneficiary_name, bank_name, bank_branch,
+	settlement_preference, bank_account_holder_matches_owner, bank_notes,
 	version, created_at, updated_at`
 
 type partnerScanner interface {
 	Scan(dest ...any) error
 }
 
+// scanGovernedPartner populates the legacy raw-named JSON fields
+// (BankAccountNumber/BankIBAN/PayoutMobileNumber) from the masked columns --
+// DSH does not persist raw payout credentials (see D3 remediation); those
+// columns were dropped from dsh_partners.
 func scanGovernedPartner(row partnerScanner) (Partner, error) {
 	var p Partner
 	err := row.Scan(
 		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
 		&p.LegalIdentityType, &p.LegalIdentityNumber,
-		&p.OwnerName, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
-		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
+		&p.OwnerActorID, &p.WorkforcePersonID, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
+		&p.Category, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
 		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
-		&p.BeneficiaryName, &p.BankName, &p.BankBranch, &p.BankAccountNumber, &p.BankIBAN,
-		&p.PayoutMobileNumber, &p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
+		&p.BeneficiaryName, &p.BankName, &p.BankBranch,
+		&p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
 		&p.Version, &p.CreatedAt, &p.UpdatedAt,
 	)
-	return p, err
+	if err != nil {
+		return Partner{}, err
+	}
+	return SanitizePartnerForSurface(p), nil
 }
 
 // SanitizePartnerForSurface guarantees that no raw payout identifier can leave
@@ -85,17 +92,15 @@ func UpdatePartnerGoverned(db *sql.DB, partnerID string, input UpdatePartnerInpu
 		row = db.QueryRow(`
 			UPDATE dsh_partners SET
 				display_name = COALESCE(NULLIF($2,''), display_name),
-				owner_name = COALESCE(NULLIF($3,''), owner_name),
-				primary_phone = COALESCE(NULLIF($4,''), primary_phone),
-				secondary_phone = COALESCE(NULLIF($5,''), secondary_phone),
-				email = COALESCE(NULLIF($6,''), email),
-				notes = COALESCE(NULLIF($7,''), notes),
+				owner_actor_id = COALESCE(NULLIF($3,''), owner_actor_id),
+				workforce_person_id = COALESCE(NULLIF($4,''), workforce_person_id),
+				primary_phone = COALESCE(NULLIF($5,''), primary_phone),
+				secondary_phone = COALESCE(NULLIF($6,''), secondary_phone),
+				email = COALESCE(NULLIF($7,''), email),
+				notes = COALESCE(NULLIF($8,''), notes),
 				beneficiary_name = $9,
 				bank_name = $10,
 				bank_branch = $11,
-				bank_account_number = '',
-				bank_iban = '',
-				payout_mobile_number = '',
 				settlement_preference = $12,
 				bank_account_holder_matches_owner = COALESCE($13, bank_account_holder_matches_owner),
 				bank_notes = $14,
@@ -105,9 +110,9 @@ func UpdatePartnerGoverned(db *sql.DB, partnerID string, input UpdatePartnerInpu
 				masked_mobile_number = $18,
 				version = version + 1,
 				updated_at = NOW()
-			WHERE id = $1 AND version = $8
+			WHERE id = $1 AND version = $9
 			RETURNING `+governedPartnerColumns,
-			partnerID, input.DisplayName, input.OwnerName, input.PrimaryPhone,
+			partnerID, input.DisplayName, input.OwnerActorID, input.WorkforcePersonID, input.PrimaryPhone,
 			input.SecondaryPhone, input.Email, input.Notes, expectedVersion,
 			input.BeneficiaryName, input.BankName, input.BankBranch,
 			input.SettlementPreference, holderMatchesOwner, input.BankNotes,
@@ -118,16 +123,17 @@ func UpdatePartnerGoverned(db *sql.DB, partnerID string, input UpdatePartnerInpu
 		row = db.QueryRow(`
 			UPDATE dsh_partners SET
 				display_name = COALESCE(NULLIF($2,''), display_name),
-				owner_name = COALESCE(NULLIF($3,''), owner_name),
-				primary_phone = COALESCE(NULLIF($4,''), primary_phone),
-				secondary_phone = COALESCE(NULLIF($5,''), secondary_phone),
-				email = COALESCE(NULLIF($6,''), email),
-				notes = COALESCE(NULLIF($7,''), notes),
+				owner_actor_id = COALESCE(NULLIF($3,''), owner_actor_id),
+				workforce_person_id = COALESCE(NULLIF($4,''), workforce_person_id),
+				primary_phone = COALESCE(NULLIF($5,''), primary_phone),
+				secondary_phone = COALESCE(NULLIF($6,''), secondary_phone),
+				email = COALESCE(NULLIF($7,''), email),
+				notes = COALESCE(NULLIF($8,''), notes),
 				version = version + 1,
 				updated_at = NOW()
-			WHERE id = $1 AND version = $8
+			WHERE id = $1 AND version = $9
 			RETURNING `+governedPartnerColumns,
-			partnerID, input.DisplayName, input.OwnerName, input.PrimaryPhone,
+			partnerID, input.DisplayName, input.OwnerActorID, input.WorkforcePersonID, input.PrimaryPhone,
 			input.SecondaryPhone, input.Email, input.Notes, expectedVersion,
 		)
 	}
@@ -217,7 +223,7 @@ func TransitionStatusGoverned(ctx context.Context, db *sql.DB, partnerID string,
 	if !IsTransitionAllowed(current.ActivationStatus, input.ToStatus) {
 		return Partner{}, ActivationEvent{}, ErrInvalidTransition
 	}
-	if (input.ToStatus == StatusOpsRejected || input.ToStatus == StatusPartnerDeactivated) && strings.TrimSpace(input.Reason) == "" {
+	if (input.ToStatus == StatusOpsRejected || input.ToStatus == StatusPartnerDeactivated || input.ToStatus == StatusPartnerSuspended || input.ToStatus == StatusPartnerTerminated) && strings.TrimSpace(input.Reason) == "" {
 		return Partner{}, ActivationEvent{}, ErrInvalid
 	}
 	if err := validateTransitionReadinessTx(ctx, tx, current, input.ToStatus); err != nil {
@@ -227,6 +233,7 @@ func TransitionStatusGoverned(ctx context.Context, db *sql.DB, partnerID string,
 	updated, err := scanGovernedPartner(tx.QueryRowContext(ctx, `
 		UPDATE dsh_partners SET
 			activation_status = $2,
+			onboarding_case_status = CASE WHEN $2 = 'submitted' THEN 'submitted' ELSE onboarding_case_status END,
 			version = version + 1,
 			updated_at = NOW()
 		WHERE id = $1 AND version = $3
@@ -450,7 +457,7 @@ func validateTransitionReadinessTx(ctx context.Context, tx *sql.Tx, p Partner, t
 	if requiresProfile {
 		if strings.TrimSpace(p.LegalNameAr) == "" ||
 			strings.TrimSpace(p.LegalIdentityNumber) == "" ||
-			strings.TrimSpace(p.OwnerName) == "" ||
+			(strings.TrimSpace(p.OwnerActorID) == "" && strings.TrimSpace(p.WorkforcePersonID) == "") ||
 			strings.TrimSpace(p.PrimaryPhone) == "" {
 			return fmt.Errorf("%w: legal identity, owner, and primary phone must be complete", ErrReadinessGate)
 		}

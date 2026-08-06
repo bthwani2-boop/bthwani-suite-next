@@ -107,6 +107,28 @@ func deliverEvent(ctx context.Context, client *wlt.Client, event Event) (string,
 			return "", err
 		}
 		return result.ID, nil
+	case EventTypeOrderReturnApproved:
+		returnID, ok := event.Payload["returnId"].(string)
+		if !ok || returnID == "" {
+			return "", fmt.Errorf("return event lacks returnId")
+		}
+		amountMinorUnits, _ := event.Payload["amountMinorUnits"].(float64)
+		reason, _ := event.Payload["reason"].(string)
+
+		// This sends the refund request to WLT
+		refund, err := client.RefundFromOutbox(ctx, wlt.RefundOutboxInput{
+			OperatorContextID: event.OperatorContextID,
+			OrderID:           event.OrderID,
+			ReturnID:          returnID,
+			AmountMinorUnits:  int64(amountMinorUnits),
+			Reason:            reason,
+			IdempotencyKey:    "order:" + event.OrderID + ":return:" + returnID + ":refund",
+			CorrelationID:     "dsh-return-refund-" + returnID,
+		})
+		if err != nil {
+			return "", err
+		}
+		return refund.ID, nil
 	default:
 		return "", fmt.Errorf("unsupported WLT outbox event type %q", event.EventType)
 	}

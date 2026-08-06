@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"strings"
 
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/store"
@@ -13,6 +14,7 @@ type storeCaptainHandoffExceptionBody struct {
 	CorrelationID string                               `json:"correlationId"`
 	Latitude      *float64                             `json:"latitude"`
 	Longitude     *float64                             `json:"longitude"`
+	ProofMediaRef string                               `json:"proofMediaRef"`
 }
 
 // POST /dsh/captain/dispatch/assignments/{assignmentId}/handoff-exceptions
@@ -37,6 +39,7 @@ func (s *protectedStoreServer) handleReportCaptainStoreCaptainHandoffException(w
 			CorrelationID: operationalCorrelationID(r, body.CorrelationID),
 			Latitude:      body.Latitude,
 			Longitude:     body.Longitude,
+			ProofMediaRef: strings.TrimSpace(body.ProofMediaRef),
 		},
 	)
 	if err != nil {
@@ -70,6 +73,7 @@ func (s *protectedStoreServer) handleReportPartnerStoreCaptainHandoffException(w
 			CorrelationID: operationalCorrelationID(r, body.CorrelationID),
 			Latitude:      body.Latitude,
 			Longitude:     body.Longitude,
+			ProofMediaRef: strings.TrimSpace(body.ProofMediaRef),
 		},
 	)
 	if err != nil {

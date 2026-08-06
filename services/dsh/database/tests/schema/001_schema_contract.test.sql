@@ -5,8 +5,8 @@ DO $$
 DECLARE
   actual_type TEXT;
 BEGIN
-  IF to_regclass('public.runtime_schema_migrations') IS NULL THEN
-    RAISE EXCEPTION 'runtime_schema_migrations ledger is missing';
+  IF to_regclass('public.schema_migrations') IS NULL THEN
+    RAISE EXCEPTION 'schema_migrations ledger is missing';
   END IF;
 
   IF to_regclass('public.dsh_partners') IS NULL THEN

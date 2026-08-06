@@ -1,4 +1,4 @@
-#  Progressive Rollout Recovery
+# Progressive Rollout Recovery
 
 ## Ownership
 

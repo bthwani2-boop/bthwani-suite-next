@@ -20,8 +20,8 @@ paths:
     post:
       operationId: submitDshPoD
       summary: Upload captain-owned photo proof and complete an arrived delivery.
-      tags: [DshDeliveryProofMedia]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshDeliveryProofMedia ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: assignmentId
           in: path
@@ -38,12 +38,13 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [file]
+              required: [ file ]
               properties:
                 file:
                   type: string
                   format: binary
-                  description: JPEG, PNG, or WebP delivery proof within the governed media size limit.
+                  description: JPEG, PNG, or WebP delivery proof within the governed media size
+                    limit.
       responses:
         "200":
           description: Proof uploaded, registered, and delivery completed.
@@ -61,8 +62,8 @@ paths:
     post:
       operationId: submitDshPartnerDeliveryProof
       summary: Upload partner-owned photo proof and complete a store-courier delivery.
-      tags: [DshDeliveryProofMedia]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshDeliveryProofMedia ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: orderId
           in: path
@@ -84,12 +85,13 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [file]
+              required: [ file ]
               properties:
                 file:
                   type: string
                   format: binary
-                  description: JPEG, PNG, or WebP proof owned by the authenticated partner and order store.
+                  description: JPEG, PNG, or WebP proof owned by the authenticated partner and
+                    order store.
       responses:
         "200":
           description: Proof uploaded, registered, and partner delivery completed.
@@ -104,6 +106,80 @@ paths:
         "413": { $ref: "#/components/responses/UploadTooLarge" }
         "422": { $ref: "#/components/responses/InvalidTransition" }
         "503": { $ref: "#/components/responses/MediaUnavailable" }
+  /dsh/operator/delivery-proofs:
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_delivery_proofs
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/delivery-proofs/{proofId}:
+    parameters:
+      - name: proofId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_delivery_proofs__proofId_
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/delivery-proofs/{proofId}/accept:
+    parameters:
+      - name: proofId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_delivery_proofs__proofId__accept
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/delivery-proofs/{proofId}/reject:
+    parameters:
+      - name: proofId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_delivery_proofs__proofId__reject
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -114,14 +190,14 @@ components:
     ErrorEnvelope:
       type: object
       additionalProperties: true
-      required: [code, message]
+      required: [ code, message ]
       properties:
         code: { type: string }
         message: { type: string }
     DispatchAssignmentEnvelope:
       type: object
       additionalProperties: false
-      required: [assignment]
+      required: [ assignment ]
       properties:
         assignment:
           type: object
@@ -129,7 +205,7 @@ components:
     PartnerDeliveryTaskEnvelope:
       type: object
       additionalProperties: false
-      required: [task]
+      required: [ task ]
       properties:
         task:
           type: object
@@ -156,7 +232,8 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorEnvelope" }
     Conflict:
-      description: Actor ownership, command identity, version, or delivery state conflicts with the request.
+      description: Actor ownership, command identity, version, or delivery state
+        conflicts with the request.
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorEnvelope" }

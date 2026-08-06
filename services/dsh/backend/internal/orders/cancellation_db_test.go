@@ -15,20 +15,20 @@ func TestClientEarlyCancellationCreatesOneGovernedRecordDBIntegration(t *testing
 		_, _ = db.Exec(`DELETE FROM dsh_checkout_financial_closure_outbox WHERE payment_session_id=$1`, paymentSessionID)
 	})
 
-	input := CancellationInput{
+	input := CreateCancellationCaseInput{
 		OrderID:       order.ID,
 		ActorID:       order.ClientID,
 		ActorRole:     "client",
 		ReasonCode:    "changed_mind",
 		CorrelationID: correlationID,
 	}
-	first, err := CancelOrder(db, input)
+	first, err := CancelOrderSync(db, input)
 	if err != nil {
-		t.Fatalf("first CancelOrder failed: %v", err)
+		t.Fatalf("first CancelOrderSync failed: %v", err)
 	}
-	second, err := CancelOrder(db, input)
+	second, err := CancelOrderSync(db, input)
 	if err != nil {
-		t.Fatalf("idempotent CancelOrder replay failed: %v", err)
+		t.Fatalf("idempotent CancelOrderSync replay failed: %v", err)
 	}
 	if first.Status != StatusCancelledByClient || second.Status != StatusCancelledByClient {
 		t.Fatalf("expected client cancellation status, got first=%s second=%s", first.Status, second.Status)
@@ -64,7 +64,7 @@ func TestClientLateCancellationRequiresOperatorReviewDBIntegration(t *testing.T)
 		_, _ = db.Exec(`DELETE FROM dsh_checkout_financial_closure_outbox WHERE payment_session_id=$1`, paymentSessionID)
 	})
 
-	_, err := CancelOrder(db, CancellationInput{
+	_, err := CancelOrderSync(db, CreateCancellationCaseInput{
 		OrderID:       order.ID,
 		ActorID:       order.ClientID,
 		ActorRole:     "client",
@@ -111,7 +111,7 @@ func TestOperatorCancellationStopsDependentDispatchWorkDBIntegration(t *testing.
 		t.Fatalf("insert delivery: %v", err)
 	}
 
-	cancelled, err := CancelOrder(db, CancellationInput{
+	cancelled, err := CancelOrderSync(db, CreateCancellationCaseInput{
 		OrderID:       order.ID,
 		ActorID:       "operator-cancellation-test",
 		ActorRole:     "operator",
@@ -120,7 +120,7 @@ func TestOperatorCancellationStopsDependentDispatchWorkDBIntegration(t *testing.
 		CorrelationID: fmt.Sprintf("operator-cancel-%d", time.Now().UnixNano()),
 	})
 	if err != nil {
-		t.Fatalf("CancelOrder failed: %v", err)
+		t.Fatalf("CancelOrderSync failed: %v", err)
 	}
 	if cancelled.Status != StatusCancelledByOperator {
 		t.Fatalf("expected operator cancellation, got %s", cancelled.Status)
@@ -145,7 +145,7 @@ func TestPartnerCannotCancelAfterReadyForPickupDBIntegration(t *testing.T) {
 		_, _ = db.Exec(`DELETE FROM dsh_checkout_financial_closure_outbox WHERE payment_session_id=$1`, paymentSessionID)
 	})
 
-	_, err := CancelOrder(db, CancellationInput{
+	_, err := CancelOrderSync(db, CreateCancellationCaseInput{
 		OrderID:       order.ID,
 		ActorID:       "partner-cancellation-test",
 		ActorRole:     "partner",
@@ -156,3 +156,5 @@ func TestPartnerCannotCancelAfterReadyForPickupDBIntegration(t *testing.T) {
 		t.Fatalf("expected conflict for late partner cancellation, got %v", err)
 	}
 }
+
+

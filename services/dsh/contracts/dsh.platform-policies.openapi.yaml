@@ -2,7 +2,8 @@ openapi: 3.1.0
 info:
   title: BThwani DSH Platform Operational Policies API
   version: 0.2.0
-  description: Governed DSH zones, SLA, capacity, serviceability, and store-onboarding fee policy. WLT remains the sole financial truth owner.
+  description: Governed DSH zones, SLA, capacity, serviceability, and
+    store-onboarding fee policy. WLT remains the sole financial truth owner.
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED
@@ -13,8 +14,8 @@ paths:
   /dsh/operator/platform/zones:
     get:
       operationId: listDshZones
-      tags: [DshPlatformPolicies]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: includeInactive
           in: query
@@ -26,15 +27,15 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [zones]
+                required: [ zones ]
                 properties:
                   zones: { type: array, items: { $ref: "#/components/schemas/DshZone" } }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       operationId: createDshZone
-      tags: [DshPlatformPolicies]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/CorrelationId"
@@ -50,7 +51,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [zone]
+                required: [ zone ]
                 properties: { zone: { $ref: "#/components/schemas/DshZone" } }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
@@ -60,8 +61,8 @@ paths:
   /dsh/operator/platform/zones/{zoneId}:
     patch:
       operationId: updateDshZone
-      tags: [DshPlatformPolicies]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: zoneId
           in: path
@@ -81,7 +82,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [zone]
+                required: [ zone ]
                 properties: { zone: { $ref: "#/components/schemas/DshZone" } }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
@@ -92,8 +93,8 @@ paths:
   /dsh/operator/platform/sla-rules:
     get:
       operationId: getDshSlaRules
-      tags: [DshPlatformPolicies]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: zoneId
           in: query
@@ -105,15 +106,15 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [slaRules]
+                required: [ slaRules ]
                 properties:
                   slaRules: { type: array, items: { $ref: "#/components/schemas/DshSlaRule" } }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
     put:
       operationId: upsertDshSlaRules
-      tags: [DshPlatformPolicies]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/CorrelationId"
@@ -129,7 +130,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [slaRule]
+                required: [ slaRule ]
                 properties: { slaRule: { $ref: "#/components/schemas/DshSlaRule" } }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
@@ -139,8 +140,8 @@ paths:
   /dsh/operator/platform/capacity:
     get:
       operationId: getDshCapacityConfig
-      tags: [DshPlatformPolicies]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: zoneId
           in: query
@@ -153,15 +154,15 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [capacityConfig]
+                required: [ capacityConfig ]
                 properties: { capacityConfig: { $ref: "#/components/schemas/DshCapacityConfig" } }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
     put:
       operationId: upsertDshCapacityConfig
-      tags: [DshPlatformPolicies]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/CorrelationId"
@@ -177,7 +178,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [capacityConfig]
+                required: [ capacityConfig ]
                 properties: { capacityConfig: { $ref: "#/components/schemas/DshCapacityConfig" } }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
@@ -187,8 +188,8 @@ paths:
   /dsh/operator/platform/serviceability/{zoneId}:
     get:
       operationId: getDshZoneServiceability
-      tags: [DshPlatformPolicies]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: zoneId
           in: path
@@ -207,8 +208,8 @@ paths:
   /dsh/operator/platform/store-onboarding-fee:
     get:
       operationId: getDshStoreOnboardingFeePolicy
-      tags: [DshPlatformPolicies]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200":
           description: Policy returned.
@@ -216,14 +217,14 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [policy]
+                required: [ policy ]
                 properties: { policy: { $ref: "#/components/schemas/DshStoreOnboardingFeePolicy" } }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
     put:
       operationId: upsertDshStoreOnboardingFeePolicy
-      tags: [DshPlatformPolicies]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/CorrelationId"
@@ -239,7 +240,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [policy]
+                required: [ policy ]
                 properties: { policy: { $ref: "#/components/schemas/DshStoreOnboardingFeePolicy" } }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
@@ -249,8 +250,8 @@ paths:
   /dsh/platform/store-onboarding-fee:
     get:
       operationId: getDshStoreOnboardingFeeReference
-      tags: [DshPlatformPolicies]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200":
           description: Read-only policy reference for field and partner actors.
@@ -258,10 +259,237 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [policy]
+                required: [ policy ]
                 properties: { policy: { $ref: "#/components/schemas/DshStoreOnboardingFeePolicy" } }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/operator/platform/change-sets:
+    post:
+      operationId: createDshChangeSet
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
+      responses:
+        "201":
+          description: Change set created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { changeSet: { $ref: "#/components/schemas/DshChangeSet" } }
+  /dsh/operator/platform/change-sets/{changesetId}:
+    get:
+      operationId: getDshChangeSet
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: changesetId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Change set retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { changeSet: { $ref: "#/components/schemas/DshChangeSet" } }
+  /dsh/operator/platform/change-sets/{changesetId}/submit:
+    post:
+      operationId: submitDshChangeSet
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: changesetId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Change set submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { changeSet: { $ref: "#/components/schemas/DshChangeSet" } }
+  /dsh/operator/platform/change-sets/{changesetId}/approve:
+    post:
+      operationId: approveDshChangeSet
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: changesetId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Change set approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { changeSet: { $ref: "#/components/schemas/DshChangeSet" } }
+  /dsh/operator/platform/change-sets/{changesetId}/apply:
+    post:
+      operationId: applyDshChangeSet
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: changesetId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Change set applied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { changeSet: { $ref: "#/components/schemas/DshChangeSet" } }
+  /dsh/operator/platform/change-sets/{changesetId}/reject:
+    post:
+      operationId: rejectDshChangeSet
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: changesetId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Change set rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { changeSet: { $ref: "#/components/schemas/DshChangeSet" } }
+
+  /dsh/operator/platform/providers:
+    get:
+      operationId: listDshProviders
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
+      responses:
+        "200":
+          description: Providers retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  {
+                    providers: { type: array, items: { $ref: "#/components/schemas/DshProvider" } }
+                  }
+  /dsh/operator/platform/providers/{providerId}/status:
+    post:
+      operationId: updateDshProviderStatus
+      tags: [ DshPlatformPolicies ]
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: providerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Provider status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { provider: { $ref: "#/components/schemas/DshProvider" } }
+  /dsh/operator/platform/dispatch-balance-policy:
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_platform_dispatch_balance_policy
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+    put:
+      tags:
+        - operator
+      operationId: put_dsh_operator_platform_dispatch_balance_policy
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/platform/map-provider-health:
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_platform_map_provider_health
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/platform/service-areas:
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_platform_service_areas
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/platform/service-areas/{serviceAreaCode}:
+    parameters:
+      - name: serviceAreaCode
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_platform_service_areas__serviceAreaCode_
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+    put:
+      tags:
+        - operator
+      operationId: put_dsh_operator_platform_service_areas__serviceAreaCode_
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
 
 components:
   securitySchemes:
@@ -278,9 +506,27 @@ components:
       required: true
       schema: { type: string, minLength: 8, maxLength: 200 }
   schemas:
+    DshChangeSet:
+      type: object
+      properties:
+        id: { type: string }
+    DshProvider:
+      type: object
+      properties:
+        id: { type: string }
     DshZone:
       type: object
-      required: [id, name, cityCode, isActive, description, version, createdAt, updatedAt]
+      required:
+        [
+          id,
+          name,
+          cityCode,
+          isActive,
+          description,
+          version,
+          createdAt,
+          updatedAt
+        ]
       properties:
         id: { type: string }
         name: { type: string }
@@ -293,9 +539,13 @@ components:
     DshCreateZoneInput:
       type: object
       additionalProperties: false
-      required: [name, cityCode, reason]
+      required: [ name, cityCode, reason ]
       properties:
-        id: { type: string, description: Optional stable code used as the DSH service-area identifier. }
+        id:
+          {
+            type: string,
+            description: Optional stable code used as the DSH service-area identifier.
+          }
         name: { type: string, minLength: 2, maxLength: 160 }
         cityCode: { type: string, minLength: 1, maxLength: 80 }
         description: { type: string, maxLength: 1000 }
@@ -303,7 +553,7 @@ components:
     DshUpdateZoneInput:
       type: object
       additionalProperties: false
-      required: [expectedVersion, reason]
+      required: [ expectedVersion, reason ]
       properties:
         name: { type: string, minLength: 2, maxLength: 160 }
         description: { type: string, maxLength: 1000 }
@@ -312,7 +562,17 @@ components:
         reason: { type: string, minLength: 3, maxLength: 500 }
     DshSlaRule:
       type: object
-      required: [id, zoneId, category, maxPrepMins, maxDeliveryMins, version, updatedBy, updatedAt]
+      required:
+        [
+          id,
+          zoneId,
+          category,
+          maxPrepMins,
+          maxDeliveryMins,
+          version,
+          updatedBy,
+          updatedAt
+        ]
       properties:
         id: { type: string }
         zoneId: { type: string }
@@ -325,7 +585,7 @@ components:
     DshUpsertSlaInput:
       type: object
       additionalProperties: false
-      required: [zoneId, category, maxPrepMins, maxDeliveryMins, expectedVersion, reason]
+      required: [ zoneId, category, maxPrepMins, maxDeliveryMins, expectedVersion, reason ]
       properties:
         zoneId: { type: string }
         category: { type: string, minLength: 1, maxLength: 120 }
@@ -335,7 +595,17 @@ components:
         reason: { type: string, minLength: 3, maxLength: 500 }
     DshCapacityConfig:
       type: object
-      required: [id, zoneId, maxConcurrentOrders, maxCaptainsOnline, throttleThreshold, version, updatedBy, updatedAt]
+      required:
+        [
+          id,
+          zoneId,
+          maxConcurrentOrders,
+          maxCaptainsOnline,
+          throttleThreshold,
+          version,
+          updatedBy,
+          updatedAt
+        ]
       properties:
         id: { type: string }
         zoneId: { type: string }
@@ -348,7 +618,15 @@ components:
     DshUpsertCapacityInput:
       type: object
       additionalProperties: false
-      required: [zoneId, maxConcurrentOrders, maxCaptainsOnline, throttleThreshold, expectedVersion, reason]
+      required:
+        [
+          zoneId,
+          maxConcurrentOrders,
+          maxCaptainsOnline,
+          throttleThreshold,
+          expectedVersion,
+          reason
+        ]
       properties:
         zoneId: { type: string }
         maxConcurrentOrders: { type: integer, minimum: 1 }
@@ -358,7 +636,7 @@ components:
         reason: { type: string, minLength: 3, maxLength: 500 }
     DshZoneServiceability:
       type: object
-      required: [zoneId, isActive, activeStores, slaAvailable]
+      required: [ zoneId, isActive, activeStores, slaAvailable ]
       properties:
         zoneId: { type: string }
         isActive: { type: boolean }
@@ -366,15 +644,28 @@ components:
         slaAvailable: { type: boolean }
     DshStoreOnboardingFeePolicy:
       type: object
-      required: [enabled, amount, currency, appliesTo, chargeTiming, actorCharged, notes, updatedBy, updatedAt, version, isConfigured]
+      required:
+        [
+          enabled,
+          amount,
+          currency,
+          appliesTo,
+          chargeTiming,
+          actorCharged,
+          notes,
+          updatedBy,
+          updatedAt,
+          version,
+          isConfigured
+        ]
       properties:
         enabled: { type: boolean }
         amount: { type: number, minimum: 0 }
         currency: { type: string, minLength: 3, maxLength: 3 }
-        appliesTo: { type: string, enum: [first_store, additional_store, all_stores] }
-        chargeTiming: { type: string, enum: [on_approval, on_publication, on_first_order, manual] }
-        actorCharged: { type: string, enum: [partner] }
-        effectiveFrom: { type: [string, "null"], format: date-time }
+        appliesTo: { type: string, enum: [ first_store, additional_store, all_stores ] }
+        chargeTiming: { type: string, enum: [ on_approval, on_publication, on_first_order, manual ] }
+        actorCharged: { type: string, enum: [ partner ] }
+        effectiveFrom: { type: [ string, "null" ], format: date-time }
         notes: { type: string }
         updatedBy: { type: string }
         updatedAt: { type: string, format: date-time }
@@ -384,24 +675,53 @@ components:
     DshStoreOnboardingFeePolicyInput:
       type: object
       additionalProperties: false
-      required: [enabled, amount, currency, appliesTo, chargeTiming, expectedVersion, reason]
+      required:
+        [
+          enabled,
+          amount,
+          currency,
+          appliesTo,
+          chargeTiming,
+          expectedVersion,
+          reason
+        ]
       properties:
         enabled: { type: boolean }
         amount: { type: number, minimum: 0 }
         currency: { type: string, minLength: 3, maxLength: 3 }
-        appliesTo: { type: string, enum: [first_store, additional_store, all_stores] }
-        chargeTiming: { type: string, enum: [on_approval, on_publication, on_first_order, manual] }
-        effectiveFrom: { type: [string, "null"], format: date-time }
+        appliesTo: { type: string, enum: [ first_store, additional_store, all_stores ] }
+        chargeTiming: { type: string, enum: [ on_approval, on_publication, on_first_order, manual ] }
+        effectiveFrom: { type: [ string, "null" ], format: date-time }
         notes: { type: string, maxLength: 1000 }
         expectedVersion: { type: integer, minimum: 1 }
         reason: { type: string, minLength: 3, maxLength: 500 }
     DshError:
       type: object
-      required: [code, message]
+      required: [ code, message ]
       properties: { code: { type: string }, message: { type: string } }
   responses:
-    InvalidRequest: { description: Invalid request, content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } } }
-    Unauthenticated: { description: Authentication required, content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } } }
-    Forbidden: { description: Permission required, content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } } }
-    NotFound: { description: Record not found, content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } } }
-    Conflict: { description: Version or idempotency conflict, content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } } }
+    InvalidRequest:
+      {
+        description: Invalid request,
+        content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } }
+      }
+    Unauthenticated:
+      {
+        description: Authentication required,
+        content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } }
+      }
+    Forbidden:
+      {
+        description: Permission required,
+        content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } }
+      }
+    NotFound:
+      {
+        description: Record not found,
+        content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } }
+      }
+    Conflict:
+      {
+        description: Version or idempotency conflict,
+        content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } }
+      }

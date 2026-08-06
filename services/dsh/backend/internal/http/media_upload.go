@@ -62,7 +62,7 @@ func (s *protectedStoreServer) handleFieldMediaUpload(w http.ResponseWriter, r *
 			return
 		}
 	} else {
-		if err := fieldreadiness.AuthorizeStore(r.Context(), s.db, actor, storeID); err != nil {
+		if err := fieldreadiness.AuthorizeStore(r.Context(), s.db, s.workforce, actor, storeID); err != nil {
 			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
 			return
 		}
@@ -108,7 +108,7 @@ func (s *protectedStoreServer) handleFieldMediaUpload(w http.ResponseWriter, r *
 // GET /dsh/media?mediaRef=... streams back an authorized uploaded object
 // so control-panel/app-partner can preview evidence during document review.
 func (s *protectedStoreServer) handleMediaDownload(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "field", "partner", "operator")
+	actor, ok := s.requireActor(w, r, "field", "partner")
 	if !ok {
 		return
 	}
@@ -265,65 +265,6 @@ func (s *protectedStoreServer) actorCanAccessMediaReference(ctx context.Context,
 	default:
 		return false, nil
 	}
-}
-
-// POST /dsh/operator/workforce/media/uploads — an HR operator uploads a
-// provider-owned document (captain license/vehicle photo, field agent
-// document) while creating or editing a Workforce profile. Unlike
-// handleFieldMediaUpload, this is not tied to any dsh_partners row.
-func (s *protectedStoreServer) handleProviderMediaUpload(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", "provider.documents:upload", "operator")
-	if !ok {
-		return
-	}
-	mediaClient := s.mediaClient()
-	if mediaClient == nil {
-		store.SendError(w, http.StatusServiceUnavailable, "MEDIA_UNAVAILABLE", "media storage is not configured")
-		return
-	}
-	r.Body = http.MaxBytesReader(w, r.Body, maxMediaUploadBytes+mediaUploadMultipartOverheadBytes)
-	if err := r.ParseMultipartForm(maxMediaUploadBytes); err != nil {
-		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid multipart upload or file too large")
-		return
-	}
-	actorID := r.FormValue("actorId")
-	actorRole := r.FormValue("actorRole")
-	if actorID == "" || (actorRole != "field" && actorRole != "captain") {
-		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "actorId and actorRole (field|captain) are required")
-		return
-	}
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "file field is required")
-		return
-	}
-	defer file.Close()
-
-	uploadBody, contentType, err := prepareMediaUploadBody(file, header.Header.Get("Content-Type"))
-	if err != nil {
-		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "unsupported media type")
-		return
-	}
-	opaqueID := strings.ReplaceAll(uuid.NewString(), "-", "")
-	key := media.BuildKey("dsh-provider-documents", "objects", opaqueID, fmt.Sprintf("%d-%s", time.Now().UnixNano(), header.Filename))
-
-	if err := mediaClient.Upload(r.Context(), key, uploadBody, header.Size, contentType); err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to upload media")
-		return
-	}
-	var mediaRef string
-	err = s.db.QueryRowContext(r.Context(), `
-		INSERT INTO dsh_media_refs
-			(storage_key, owner_actor_id, owner_actor_role, purpose, content_type, original_filename)
-		VALUES ($1,$2,$3,$4,$5,$6)
-		RETURNING media_ref`,
-		key, actorID, actorRole, "provider_document", contentType, header.Filename,
-	).Scan(&mediaRef)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to register media reference")
-		return
-	}
-	store.SendJSON(w, http.StatusCreated, map[string]string{"mediaRef": mediaRef})
 }
 
 func prepareMediaUploadBody(file io.Reader, declaredContentType string) (io.Reader, string, error) {

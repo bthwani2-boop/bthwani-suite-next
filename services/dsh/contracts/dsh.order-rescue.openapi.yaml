@@ -237,17 +237,7 @@ components:
         updatedAt: { type: string, format: date-time }
     RescueEvent:
       type: object
-      required:
-        [
-          id,
-          rescueCaseId,
-          orderId,
-          actorId,
-          eventType,
-          toStatus,
-          correlationId,
-          createdAt
-        ]
+      required: [ id, rescueCaseId, orderId, actorId, eventType, toStatus, createdAt ]
       properties:
         id: { type: string }
         rescueCaseId: { type: string }
@@ -261,7 +251,6 @@ components:
             - { $ref: '#/components/schemas/RescueStatus' }
             - { type: string, maxLength: 0 }
         toStatus: { $ref: '#/components/schemas/RescueStatus' }
-        correlationId: { type: string }
         createdAt: { type: string, format: date-time }
   responses:
     RescueCase:

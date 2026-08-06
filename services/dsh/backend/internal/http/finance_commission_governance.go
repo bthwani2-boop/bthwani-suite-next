@@ -47,7 +47,7 @@ func writeGovernedCommissionProxyResponse(w http.ResponseWriter, status int, bod
 
 // PUT /dsh/control-panel/finance/commission-policies
 func (s *protectedStoreServer) handleUpsertFinanceCommissionPolicy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -90,13 +90,13 @@ func (s *protectedStoreServer) handleUpsertFinanceCommissionPolicy(w http.Respon
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode governed commission policy")
 		return
 	}
-	status, body, err := s.wlt.FinanceWriteCommission(r.Context(), http.MethodPut, "/wlt/commission-policies", payload, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceWriteCommission(r.Context(), http.MethodPut, "/wlt/commission-policies", payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
 	writeGovernedCommissionProxyResponse(w, status, body, err)
 }
 
 // GET /dsh/control-panel/finance/commissions/{commissionId}
 func (s *protectedStoreServer) handleFinanceCommissionDetail(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -105,12 +105,12 @@ func (s *protectedStoreServer) handleFinanceCommissionDetail(w http.ResponseWrit
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "commissionId is required")
 		return
 	}
-	s.proxyFinanceRead(w, r, "/wlt/commissions/"+url.PathEscape(commissionID), nil, actor.OperatorContextID)
+	s.proxyFinanceRead(w, r, "finance.ledger.read", "/wlt/commissions/"+url.PathEscape(commissionID), nil, actor.OperatorContextID)
 }
 
 // POST /dsh/control-panel/finance/commissions/{commissionId}/adjust
 func (s *protectedStoreServer) handleAdjustFinanceCommission(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -155,12 +155,12 @@ func (s *protectedStoreServer) proxyGovernedCommissionLifecycle(w http.ResponseW
 		return
 	}
 	path := "/wlt/commissions/" + url.PathEscape(commissionID) + "/" + action
-	status, body, err := s.wlt.FinanceWriteCommission(r.Context(), http.MethodPost, path, payload, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceWriteCommission(r.Context(), http.MethodPost, path, payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
 	writeGovernedCommissionProxyResponse(w, status, body, err)
 }
 
 func (s *protectedStoreServer) handleConfirmFinanceCommission(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -168,7 +168,7 @@ func (s *protectedStoreServer) handleConfirmFinanceCommission(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleSettleFinanceCommission(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -189,7 +189,7 @@ func (s *protectedStoreServer) decodeReasonedCommissionLifecycle(w http.Response
 }
 
 func (s *protectedStoreServer) handleRejectFinanceCommission(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -201,7 +201,7 @@ func (s *protectedStoreServer) handleRejectFinanceCommission(w http.ResponseWrit
 }
 
 func (s *protectedStoreServer) handleReverseFinanceCommission(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -214,7 +214,7 @@ func (s *protectedStoreServer) handleReverseFinanceCommission(w http.ResponseWri
 
 // GET /dsh/control-panel/finance/settlements/{settlementId}/evidence
 func (s *protectedStoreServer) handleFinanceSettlementEvidence(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -223,5 +223,5 @@ func (s *protectedStoreServer) handleFinanceSettlementEvidence(w http.ResponseWr
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "settlementId is required")
 		return
 	}
-	s.proxyFinanceRead(w, r, "/wlt/settlements/"+url.PathEscape(settlementID)+"/evidence", nil, actor.OperatorContextID)
+	s.proxyFinanceRead(w, r, "finance.settlements.read", "/wlt/settlements/"+url.PathEscape(settlementID)+"/evidence", nil, actor.OperatorContextID)
 }

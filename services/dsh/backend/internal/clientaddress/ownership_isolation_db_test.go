@@ -69,7 +69,7 @@ func TestClientAddressMutationOwnershipIsolation(t *testing.T) {
 	}
 
 	var ownerActive bool
-	if err := db.QueryRow(`SELECT deleted_at IS NULL FROM dsh_client_addresses WHERE id=$1 AND client_id=$2`, owned.ID, ownerID).Scan(&ownerActive); err != nil {
+	if err := db.QueryRow(`SELECT status != 'DELETED' FROM dsh_client_addresses WHERE id=$1 AND client_id=$2`, owned.ID, ownerID).Scan(&ownerActive); err != nil {
 		t.Fatalf("read owner address after isolation attempts: %v", err)
 	}
 	if !ownerActive {

@@ -1,4 +1,4 @@
-#  — التحليلات والأداء التشغيلي
+# التحليلات والأداء التشغيلي
 
 Status: IMPLEMENTED_PENDING_INDEPENDENT_ACCEPTANCE
 
