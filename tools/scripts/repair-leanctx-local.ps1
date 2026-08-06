@@ -46,7 +46,7 @@ function Invoke-LeanCtx {
   }
 
   if ($exitCode -ne 0) {
-    throw "LeanCTX command failed with exit code $exitCode: lean-ctx $($Arguments -join ' ')"
+    throw "LeanCTX command failed with exit code ${exitCode}: lean-ctx $($Arguments -join ' ')"
   }
 
   return $output
@@ -101,7 +101,7 @@ function Remove-BlanketTrust {
   )
 
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-    Write-Output "skip_missing=$Label::$Path"
+    Write-Output "skip_missing=${Label}::${Path}"
     return $false
   }
 
@@ -109,23 +109,23 @@ function Remove-BlanketTrust {
     $json = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -Depth 100
   }
   catch {
-    throw "Invalid JSON in $Label config '$Path': $($_.Exception.Message)"
+    throw "Invalid JSON in $Label config '${Path}': $($_.Exception.Message)"
   }
 
   $server = Get-LeanCtxServer -Json $json
   if ($null -eq $server) {
-    Write-Output "skip_no_leanctx=$Label::$Path"
+    Write-Output "skip_no_leanctx=${Label}::${Path}"
     return $false
   }
 
   $trustProperty = $server.PSObject.Properties["trust"]
   if ($null -eq $trustProperty -or $trustProperty.Value -ne $true) {
-    Write-Output "trust_already_safe=$Label::$Path"
+    Write-Output "trust_already_safe=${Label}::${Path}"
     return $false
   }
 
   if (-not $Apply) {
-    Write-Output "would_remove_trust=$Label::$Path"
+    Write-Output "would_remove_trust=${Label}::${Path}"
     return $true
   }
 
@@ -137,7 +137,7 @@ function Remove-BlanketTrust {
   $jsonText = $json | ConvertTo-Json -Depth 100
   Set-Content -LiteralPath $Path -Value $jsonText -Encoding utf8NoBOM
 
-  Write-Output "removed_trust=$Label::$Path"
+  Write-Output "removed_trust=${Label}::${Path}"
   return $true
 }
 
