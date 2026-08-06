@@ -21,8 +21,17 @@ const checkNx = () => {
   return fs.existsSync(nxBin) || fs.existsSync(nxBin + ".cmd");
 };
 
+const headSha = () => {
+  try {
+    return execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
+  } catch {
+    return undefined;
+  }
+};
+
 const environmentStatus = {
   timestamp: new Date().toISOString(),
+  sourceSha: headSha(),
   tools: {
     node: checkCommand("node"),
     pnpm: checkCommand("pnpm"),

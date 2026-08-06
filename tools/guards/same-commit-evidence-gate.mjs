@@ -18,6 +18,15 @@ function headSha() {
   }
 }
 
+function isWorktreeDirty() {
+  try {
+    const status = execFileSync("git", ["status", "--porcelain"], { cwd: repoRoot, encoding: "utf8" }).trim();
+    return status.length > 0;
+  } catch {
+    return true; // fail safe
+  }
+}
+
 function findManifests(dir, found = []) {
   if (!fs.existsSync(dir)) return found;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -26,7 +35,9 @@ function findManifests(dir, found = []) {
       findManifests(full, found);
       continue;
     }
-    if (entry.name === "manifest.json") found.push(full);
+    if (entry.name === "manifest.json" || entry.name.endsWith("-latest.json") || entry.name.endsWith("-diagnostic.json")) {
+      found.push(full);
+    }
   }
   return found;
 }
@@ -34,8 +45,19 @@ function findManifests(dir, found = []) {
 const head = headSha();
 if (!head) {
   violations.push({ file: ".git", line: 0, message: "HEAD_SHA_UNRESOLVED" });
+} else if (isWorktreeDirty()) {
+  violations.push({ file: "worktree", line: 0, message: "WORKTREE_DIRTY_EVIDENCE_INVALID" });
 } else {
-  for (const manifestPath of findManifests(evidenceRoot)) {
+  const manifests = [
+    ...findManifests(path.join(repoRoot, ".diagnostics")),
+    ...findManifests(path.join(repoRoot, ".artifacts", "diagnostics"))
+  ];
+  
+  if (manifests.length === 0) {
+    violations.push({ file: "evidence", line: 0, message: "NO_EVIDENCE_FOUND_FOR_COMMIT" });
+  }
+
+  for (const manifestPath of manifests) {
     let manifest;
     try {
       manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
@@ -44,10 +66,11 @@ if (!head) {
       continue;
     }
     const relative = path.relative(repoRoot, manifestPath).replaceAll("\\", "/");
-    if (!manifest.sourceSha) {
+    const sourceSha = manifest.sourceSha || manifest.sha || manifest.commit; // some diagnostics use different keys
+    if (!sourceSha) {
       violations.push({ file: relative, line: 0, message: "MANIFEST_MISSING_SOURCE_SHA" });
-    } else if (manifest.sourceSha !== head) {
-      violations.push({ file: relative, line: 0, message: `EVIDENCE_NOT_ON_CURRENT_HEAD manifest=${manifest.sourceSha} head=${head}` });
+    } else if (sourceSha !== head) {
+      violations.push({ file: relative, line: 0, message: `EVIDENCE_NOT_ON_CURRENT_HEAD manifest=${sourceSha} head=${head}` });
     }
   }
 }
