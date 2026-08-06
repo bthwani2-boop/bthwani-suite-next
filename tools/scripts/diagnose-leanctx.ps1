@@ -250,13 +250,20 @@ try {
     [void](Invoke-Probe "LeanCTX status" @("status", "--json"))
   }
 
-  $decision = if ($Findings.severity -contains "BLOCKED_EXTERNAL") {
+  $hasBlocked = $false; $hasFix = $false; $hasNeeds = $false
+  foreach ($f in $Findings) {
+    if ($f.severity -eq "BLOCKED_EXTERNAL") { $hasBlocked = $true }
+    elseif ($f.severity -eq "FIX_REQUIRED") { $hasFix = $true }
+    elseif ($f.severity -eq "NEEDS_EVIDENCE") { $hasNeeds = $true }
+  }
+
+  $decision = if ($hasBlocked) {
     "BLOCKED_EXTERNAL"
   }
-  elseif ($Findings.severity -contains "FIX_REQUIRED") {
+  elseif ($hasFix) {
     "FIX_REQUIRED"
   }
-  elseif ($Findings.severity -contains "NEEDS_EVIDENCE") {
+  elseif ($hasNeeds) {
     "NEEDS_EVIDENCE"
   }
   else {
