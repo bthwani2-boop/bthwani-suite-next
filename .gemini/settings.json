@@ -6,8 +6,7 @@
   ],
   "mcpServers": {
     "lean-ctx": {
-      "command": "lean-ctx",
-      "trust": true
+      "command": "lean-ctx"
     }
   }
 }
