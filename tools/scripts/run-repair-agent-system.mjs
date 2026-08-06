@@ -65,6 +65,55 @@ replaceRequired(
   "post-commit local evidence",
 );
 
+// The Copilot adapter is retired. Do not regenerate it in tests or adapter coverage.
+source = source.replaceAll('    ".github/copilot-instructions.md",\n', "");
+
+const copilotCleanup = String.raw`
+function removeRetiredCopilotAdapter() {
+  const agents = readJson("governance/agents/agent-registry.json");
+  agents.entries = (agents.entries || []).filter((entry) =>
+    entry.id !== "github-copilot" && entry.primary_file !== ".github/copilot-instructions.md"
+  );
+  writeJson("governance/agents/agent-registry.json", agents);
+
+  const precedence = readJson("governance/authority/authority-precedence.json");
+  precedence.documents = (precedence.documents || []).filter((entry) =>
+    entry.path !== ".github/copilot-instructions.md"
+  );
+  writeJson("governance/authority/authority-precedence.json", precedence);
+
+  const textFiles = [
+    "tools/guards/agent-governance-gate.mjs",
+    "tools/guards/document-authority-conflicts-gate.mjs",
+    "tools/scripts/detect-ci-context.test.mjs",
+  ];
+  for (const relative of textFiles) {
+    if (!fs.existsSync(path.join(root, relative))) continue;
+    let content = read(relative);
+    content = content
+      .replaceAll(', ".github/copilot-instructions.md"', "")
+      .replaceAll('  [".github/copilot-instructions.md", "AGENTS.md"],\n', "")
+      .replaceAll('  ".github/copilot-instructions.md", "opencode.json",\n', '  "opencode.json",\n')
+      .replaceAll('    [".github/copilot-instructions.md", "ADAPTER"],\n', "")
+      .replaceAll('    ".github/copilot-instructions.md",\n', "");
+    write(relative, content);
+  }
+
+  const relative = ".github/copilot-instructions.md";
+  const file = path.join(root, relative);
+  if (fs.existsSync(file)) {
+    changes.add(relative);
+    if (mode === "apply") fs.rmSync(file);
+  }
+}
+`;
+
+if (!source.includes("function removeRetiredCopilotAdapter()")) {
+  const anchor = "function applyRepairs() {\n";
+  if (!source.includes(anchor)) throw new Error("Cannot patch remediation engine: Copilot cleanup anchor");
+  source = source.replace(anchor, copilotCleanup + "\n" + anchor + "  removeRetiredCopilotAdapter();\n");
+}
+
 const selfSync = '  if (process.env.BTHWANI_REPAIR_ENGINE_SOURCE) write("tools/scripts/repair-agent-system.mjs", fs.readFileSync(process.env.BTHWANI_REPAIR_ENGINE_SOURCE, "utf8"));';
 if (!source.includes(selfSync)) {
   const anchor = "function applyRepairs() {\n";
