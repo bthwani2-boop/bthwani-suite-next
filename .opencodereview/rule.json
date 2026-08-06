@@ -1,11 +1,4 @@
 {
-  "include": [
-    "**/*_test.go",
-    "**/*.test.{js,jsx,ts,tsx}",
-    "**/*.spec.{js,jsx,ts,tsx}",
-    "**/__tests__/**",
-    "**/tests/**"
-  ],
   "exclude": [
     "**/node_modules/**",
     "**/vendor/**",
