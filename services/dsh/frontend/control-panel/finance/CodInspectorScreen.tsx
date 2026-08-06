@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Card, StateView, Text, Input } from "@bthwani/ui-kit";
+import { Card, StateView, Text } from "@bthwani/ui-kit";
 import {
   CpBadge,
   CpButton,
@@ -10,10 +10,11 @@ import {
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
+  CpTextInput,
 } from "@bthwani/control-panel/components";
 import { FinanceReadOnlyFrame } from "@bthwani/control-panel/shell";
-import { createDshHttpClient } from "../../../shared/_kernel/dsh-http-request";
-import { resolveDshApiBaseUrl } from "../../../shared/_kernel/dsh-api-base-url";
+import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
+import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
 import { formatWltMoney } from '@bthwani/wlt/dsh';
 
 const { request } = createDshHttpClient(
@@ -97,12 +98,12 @@ export function CodInspectorScreen() {
             هذه الشاشة توفر وصولاً للقراءة فقط إلى سجلات العهد المحصلة في الميدان. يتم إنشاء وتحديث هذه السجلات بواسطة WLT حصرياً لضمان Idempotency و Immutability.
           </Text>
           <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", maxWidth: "600px" }}>
-            <Input 
+            <CpTextInput 
               placeholder="بحث برقم الطلب (Order ID)..."
               value={orderId}
               onChange={(e) => setOrderId(e.target.value)}
             />
-            <Input 
+            <CpTextInput 
               placeholder="بحث برقم الكابتن (Captain ID)..."
               value={captainId}
               onChange={(e) => setCaptainId(e.target.value)}

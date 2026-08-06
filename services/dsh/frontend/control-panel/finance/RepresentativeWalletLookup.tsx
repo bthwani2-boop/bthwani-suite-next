@@ -13,8 +13,8 @@ import {
   CpTableHeaderCell,
   CpTextInput,
 } from "@bthwani/control-panel/components";
-import { createDshHttpClient } from "../../../shared/_kernel/dsh-http-request";
-import { resolveDshApiBaseUrl } from "../../../shared/_kernel/dsh-api-base-url";
+import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
+import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
 import { formatWltMoney } from '@bthwani/wlt/dsh';
 import type {
   RepresentativeWalletActorType,

@@ -60,11 +60,8 @@ func TestPartnerFleetLifecyclePostgres(t *testing.T) {
 	}
 	insertMember := func(id, store, name string) {
 		t.Helper()
-		_, err := db.ExecContext(ctx, `
-			INSERT INTO dsh_store_team_members
-				(id, store_id, name, role, status, branch_assignment, delivery_assignment, invited_identity)
-			VALUES ($1, $2, $3, 'courier', 'invited', 'main', 'delivery', $4)`,
-			id, store, name, id+"@.test")
+		// Table dropped: dsh_store_team_members
+		// _, err := db.ExecContext(ctx, ...
 		if err != nil {
 			t.Fatalf("insert member %s: %v", id, err)
 		}

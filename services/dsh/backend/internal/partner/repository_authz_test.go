@@ -59,9 +59,8 @@ func TestPartnerScopeAuthorizationDB(t *testing.T) {
 	}
 
 	insertMember := func(storeID, identity, role, status string) {
-		_, err := db.Exec(`
-			INSERT INTO dsh_store_team_members (store_id, name, identity_actor_id, role, status)
-			VALUES ($1, 'Test Member', $2, $3, $4)
+		// Table dropped: dsh_store_team_members
+		// _, err := db.Exec(...)
 		`, storeID, identity, role, status)
 		if err != nil {
 			t.Fatal(err)
