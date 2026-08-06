@@ -46,6 +46,14 @@ if (!fs.existsSync(migrationsDir)) {
   process.exit(1);
 }
 
+function canonicalSqlBuffer(buffer) {
+  const text = buffer.toString("utf8");
+  return Buffer.from(
+    text.replace(/\r\n?/g, "\n"),
+    "utf8",
+  );
+}
+
 function sortedFileNamesViaPowerShell(dir) {
   const script = `Get-ChildItem -LiteralPath '${dir.replaceAll("'", "''")}' -File -Filter '*.sql' | Sort-Object { $_.Name.ToLowerInvariant() }, Name | Select-Object -ExpandProperty Name`;
   const result = spawnSync("pwsh", ["-NoProfile", "-NonInteractive", "-Command", script], {
@@ -72,7 +80,7 @@ if (onDisk.size !== files.length || [...onDisk].some((name) => !files.includes(n
 
 const migrations = files.map((file, index) => {
   const fullPath = path.join(migrationsDir, file);
-  const sha256 = crypto.createHash("sha256").update(fs.readFileSync(fullPath)).digest("hex");
+  const sha256 = crypto.createHash("sha256").update(canonicalSqlBuffer(fs.readFileSync(fullPath))).digest("hex");
   const prefixMatch = file.match(/^[a-z]+-([0-9]+[a-z]?)_/i);
   return {
     ordinal: index + 1,

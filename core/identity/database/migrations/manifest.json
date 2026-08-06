@@ -141,7 +141,7 @@
     {
       "ordinal": 20,
       "file": "identity-020_rbac_foundation.sql",
-      "sha256": "3e8ff87524965959477e7f1dd48ca616e22e32a0513275d73df7bfc2ba5fe229",
+      "sha256": "2c610a5bed11b4c9302ff732948bf252d98568bb880f11e59c930af2031b5e8f",
       "historicalPrefix": "020",
       "state": "HISTORICAL_IMMUTABLE"
     },

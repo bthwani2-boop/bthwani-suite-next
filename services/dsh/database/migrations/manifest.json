@@ -15,7 +15,7 @@
     {
       "ordinal": 2,
       "file": "dsh-001b_store_governance.sql",
-      "sha256": "c07b8f96608878a0beedae3625a300900aa7b3886a16bb35d0f635b65a081555",
+      "sha256": "2550771838004df672cfbf4a380b43f738fb008a60eb135f8df5f7db55fda5dc",
       "historicalPrefix": "001b",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -99,7 +99,7 @@
     {
       "ordinal": 14,
       "file": "dsh-014_administration.sql",
-      "sha256": "3ae647dad86939dcd79468715fe2f9db3de63eb489369878c55d8f3277314463",
+      "sha256": "4fca703f20ac0a165a4001880fe54e19a208aa0a067a931863863686ab064f26",
       "historicalPrefix": "014",
       "state": "HISTORICAL_IMMUTABLE"
     },
