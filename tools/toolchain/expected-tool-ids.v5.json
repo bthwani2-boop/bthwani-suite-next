@@ -60,6 +60,7 @@
     "typescript",
     "xstate",
     "yamllint",
-    "zizmor"
+    "zizmor",
+    "leanctx"
   ]
 }

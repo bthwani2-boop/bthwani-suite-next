@@ -243,6 +243,10 @@
     "cucumber": {
       "team": "BThwani QA Team",
       "scope": "local"
+    },
+    "leanctx": {
+      "team": "BThwani Platform Team",
+      "scope": "tools"
     }
   }
 }

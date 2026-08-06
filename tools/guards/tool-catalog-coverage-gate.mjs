@@ -24,10 +24,13 @@ const expected = readJson("tools/toolchain/expected-tool-ids.v5.json");
 const decisions = readJson("tools/toolchain/tool-decisions.json");
 const owners = readJson("tools/toolchain/tool-owners.json");
 const baseline = readJson("tools/toolchain/tool-activation-baseline.json");
+const agentRegistry = readJson("governance/tools/agent-tool-registry.json");
+const pkg = readJson("package.json");
 
 const requiredKeys = ["id", "category", "priority", "oss_free", "decision", "activation"];
 const allowedActivation = new Set(["active", "partial", "optional", "missing", "disabled"]);
 const seen = new Set();
+const agentToolIds = new Set((agentRegistry?.entries || []).map(e => e.id));
 
 if (catalog?.entries) {
   for (const entry of catalog.entries) {
@@ -75,6 +78,33 @@ if (expected?.expected_tools) {
   for (const id of seen) {
     if (!expected.expected_tools.includes(id)) {
       violations.push({ file: "tools/toolchain/expected-tool-ids.v5.json", line: 0, message: `CATALOG_TOOL_NOT_EXPECTED: ${id}` });
+    }
+  }
+}
+
+// Cross-validate agent tools in catalog
+for (const id of agentToolIds) {
+  if (!seen.has(id)) {
+    violations.push({ file: "tools/toolchain/tool-catalog.v5.json", line: 0, message: `AGENT_TOOL_MISSING_IN_CATALOG: ${id}` });
+  }
+}
+
+// Validate package.json scripts against agent tool registry
+if (pkg?.scripts) {
+  const scripts = Object.keys(pkg.scripts);
+  const knownAgentPrefixes = {
+    "graphify": "graphify",
+    "leanctx": "leanctx",
+    "ocr": "open-code-review"
+  };
+  
+  for (const script of scripts) {
+    for (const [prefix, toolId] of Object.entries(knownAgentPrefixes)) {
+      if (script === prefix || script.startsWith(`${prefix}:`)) {
+        if (!agentToolIds.has(toolId)) {
+          violations.push({ file: "package.json", line: 0, message: `UNREGISTERED_AGENT_TOOL_COMMAND: ${script} refers to ${toolId} which is not in agent-tool-registry.json` });
+        }
+      }
     }
   }
 }

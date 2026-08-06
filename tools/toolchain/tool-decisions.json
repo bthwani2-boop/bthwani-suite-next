@@ -243,6 +243,10 @@
     "cucumber": {
       "action": "add",
       "reason": "Registered in V5 catalog as Testing/BDD; activation=optional."
+    },
+    "leanctx": {
+      "decision": "keep",
+      "reason": "LeanCTX context reduction"
     }
   }
 }

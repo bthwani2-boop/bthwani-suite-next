@@ -60,6 +60,7 @@
     "git-sizer": "optional",
     "syft": "optional",
     "cyclonedx": "optional",
-    "next-bundle": "optional"
+    "next-bundle": "optional",
+    "leanctx": "optional"
   }
 }
