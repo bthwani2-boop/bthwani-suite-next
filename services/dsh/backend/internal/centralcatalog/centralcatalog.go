@@ -1195,9 +1195,6 @@ type CatalogPolicy struct {
 	DomainID                                 *string   `json:"domainId"`
 	NodeID                                   *string   `json:"nodeId"`
 	PolicyScope                              string    `json:"policyScope"`
-	PlatformCommissionRate                   float64   `json:"platformCommissionRate"`
-	FieldPartnerOnboardingCommissionAmount   float64   `json:"fieldPartnerOnboardingCommissionAmount"`
-	FieldPartnerOnboardingCommissionCurrency string    `json:"fieldPartnerOnboardingCommissionCurrency"`
 	StoreOnboardingFeeAmount                 float64   `json:"storeOnboardingFeeAmount"`
 	StoreOnboardingFeeCurrency               string    `json:"storeOnboardingFeeCurrency"`
 	AllowsStoreProductCustomImage            bool      `json:"allowsStoreProductCustomImage"`
@@ -1220,8 +1217,7 @@ type CatalogPolicy struct {
 	UpdatedAt                                time.Time `json:"updatedAt"`
 }
 
-const policyColumns = `id, domain_id, node_id, policy_scope, platform_commission_rate,
-	field_partner_onboarding_commission_amount, field_partner_onboarding_commission_currency,
+const policyColumns = `id, domain_id, node_id, policy_scope,
 	store_onboarding_fee_amount, store_onboarding_fee_currency, allows_store_product_custom_image,
 	allows_product_proposal, requires_barcode, requires_catalog_review, requires_marketing_review,
 	requires_product_image, requires_category_image, requires_description, requires_brand, requires_unit,
@@ -1230,8 +1226,7 @@ const policyColumns = `id, domain_id, node_id, policy_scope, platform_commission
 
 func scanPolicy(scanner interface{ Scan(...any) error }) (CatalogPolicy, error) {
 	var p CatalogPolicy
-	err := scanner.Scan(&p.ID, &p.DomainID, &p.NodeID, &p.PolicyScope, &p.PlatformCommissionRate,
-		&p.FieldPartnerOnboardingCommissionAmount, &p.FieldPartnerOnboardingCommissionCurrency,
+	err := scanner.Scan(&p.ID, &p.DomainID, &p.NodeID, &p.PolicyScope,
 		&p.StoreOnboardingFeeAmount, &p.StoreOnboardingFeeCurrency, &p.AllowsStoreProductCustomImage,
 		&p.AllowsProductProposal, &p.RequiresBarcode, &p.RequiresCatalogReview, &p.RequiresMarketingReview,
 		&p.RequiresProductImage, &p.RequiresCategoryImage, &p.RequiresDescription, &p.RequiresBrand, &p.RequiresUnit,
@@ -1262,9 +1257,6 @@ func ListCatalogPolicies(ctx context.Context, db *sql.DB) ([]CatalogPolicy, erro
 }
 
 type CatalogPolicyInput struct {
-	PlatformCommissionRate                   *float64 `json:"platformCommissionRate"`
-	FieldPartnerOnboardingCommissionAmount   *float64 `json:"fieldPartnerOnboardingCommissionAmount"`
-	FieldPartnerOnboardingCommissionCurrency *string  `json:"fieldPartnerOnboardingCommissionCurrency"`
 	StoreOnboardingFeeAmount                 *float64 `json:"storeOnboardingFeeAmount"`
 	StoreOnboardingFeeCurrency               *string  `json:"storeOnboardingFeeCurrency"`
 	AllowsStoreProductCustomImage            *bool    `json:"allowsStoreProductCustomImage"`
@@ -1285,16 +1277,10 @@ type CatalogPolicyInput struct {
 }
 
 func UpdateCatalogPolicy(ctx context.Context, db *sql.DB, id string, input CatalogPolicyInput) (CatalogPolicy, error) {
-	if input.PlatformCommissionRate != nil && (*input.PlatformCommissionRate < 0 || *input.PlatformCommissionRate > 1) {
-		return CatalogPolicy{}, ErrInvalid
-	}
 	result, err := db.ExecContext(ctx, `UPDATE dsh_catalog_platform_policies SET
-		platform_commission_rate=COALESCE($1, platform_commission_rate),
-		field_partner_onboarding_commission_amount=COALESCE($2, field_partner_onboarding_commission_amount),
-		field_partner_onboarding_commission_currency=COALESCE($3, field_partner_onboarding_commission_currency),
-		store_onboarding_fee_amount=COALESCE($4, store_onboarding_fee_amount),
-		store_onboarding_fee_currency=COALESCE($5, store_onboarding_fee_currency),
-		allows_store_product_custom_image=COALESCE($6, allows_store_product_custom_image),
+		store_onboarding_fee_amount=COALESCE($1, store_onboarding_fee_amount),
+		store_onboarding_fee_currency=COALESCE($2, store_onboarding_fee_currency),
+		allows_store_product_custom_image=COALESCE($3, allows_store_product_custom_image),
 		allows_product_proposal=COALESCE($7, allows_product_proposal),
 		requires_barcode=COALESCE($8, requires_barcode),
 		requires_catalog_review=COALESCE($9, requires_catalog_review),
@@ -1310,9 +1296,8 @@ func UpdateCatalogPolicy(ctx context.Context, db *sql.DB, id string, input Catal
 		is_active=COALESCE($19, is_active),
 		notes=COALESCE($20, notes),
 		updated_at=now(), version = version + 1
-		WHERE id=$21`,
-		input.PlatformCommissionRate, input.FieldPartnerOnboardingCommissionAmount,
-		input.FieldPartnerOnboardingCommissionCurrency, input.StoreOnboardingFeeAmount,
+		WHERE id=$18`,
+		input.StoreOnboardingFeeAmount,
 		input.StoreOnboardingFeeCurrency, input.AllowsStoreProductCustomImage, input.AllowsProductProposal,
 		input.RequiresBarcode, input.RequiresCatalogReview, input.RequiresMarketingReview, input.RequiresProductImage,
 		input.RequiresCategoryImage, input.RequiresDescription, input.RequiresBrand, input.RequiresUnit,

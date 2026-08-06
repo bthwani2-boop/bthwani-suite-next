@@ -516,8 +516,9 @@ func TestCancelSessionForOrderSendsExactBodyAndHeaders(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if gotPath != "/wlt/order-cancellations" {
-		t.Fatalf("expected /wlt/order-cancellations, got %q", gotPath)
+	expectedPath := "/wlt/payment-sessions/sess-123/cancel-for-order"
+	if gotPath != expectedPath {
+		t.Fatalf("expected %s, got %q", expectedPath, gotPath)
 	}
 	if gotBody["orderId"] != "order-1" || gotBody["clientId"] != "client-1" || gotBody["reason"] != "store rejected order" {
 		t.Fatalf("unexpected request body: %+v", gotBody)

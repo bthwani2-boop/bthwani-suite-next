@@ -44,7 +44,7 @@ func scanWallet(s walletScanner) (*Wallet, error) {
 func GetWallet(db *sql.DB, actorType, actorID string) (*Wallet, error) {
 	const q = `
 		SELECT ` + walletCols + `
-		FROM wlt_wallets
+		FROM wlt_wallet_balances_view
 		WHERE operator_context_id = 'legacy-unscoped' AND actor_type = $1 AND actor_id = $2
 		LIMIT 1`
 
@@ -66,7 +66,7 @@ func GetWalletForOperatorContext(db *sql.DB, operatorContextID, actorType, actor
 	}
 	const q = `
 		SELECT ` + walletCols + `
-		FROM wlt_wallets
+		FROM wlt_wallet_balances_view
 		WHERE operator_context_id = $1 AND actor_type = $2 AND actor_id = $3
 		LIMIT 1`
 
@@ -104,12 +104,21 @@ func EnsureWalletForOperatorContextTx(ctx context.Context, tx *sql.Tx, actorType
 		return nil, fmt.Errorf("ensure OperatorContext wallet: insert: %w", err)
 	}
 
-	const selectQ = `
-		SELECT ` + walletCols + `
+	const lockQ = `
+		SELECT id
 		FROM wlt_wallets
 		WHERE operator_context_id = $1 AND actor_type = $2 AND actor_id = $3
 		FOR UPDATE`
-	row := tx.QueryRowContext(ctx, selectQ, operatorContextID, actorType, actorID)
+	var lockedID string
+	if err := tx.QueryRowContext(ctx, lockQ, operatorContextID, actorType, actorID).Scan(&lockedID); err != nil {
+		return nil, fmt.Errorf("ensure OperatorContext wallet: lock: %w", err)
+	}
+
+	const selectQ = `
+		SELECT ` + walletCols + `
+		FROM wlt_wallet_balances_view
+		WHERE id = $1`
+	row := tx.QueryRowContext(ctx, selectQ, lockedID)
 	w, err := scanWallet(row)
 	if err != nil {
 		return nil, fmt.Errorf("ensure OperatorContext wallet: select: %w", err)

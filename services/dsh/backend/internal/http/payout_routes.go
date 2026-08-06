@@ -81,7 +81,7 @@ func (s *protectedStoreServer) handleActorPayoutList(w http.ResponseWriter, r *h
 		return
 	}
 	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {actorType}}
-	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.payout_requests.read", "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
@@ -117,7 +117,7 @@ func (s *protectedStoreServer) handleActorPayoutCreate(w http.ResponseWriter, r 
 		return
 	}
 	correlationID := correlationForActorMutation(r, input.IdempotencyKey)
-	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests", payload, correlationID, r.Header.Get("Idempotency-Key"))
+	status, body, err := s.wlt.ExecuteFinanceWrite(r.Context(), "finance.payout_requests.create", http.MethodPost, "/wlt/payout-requests", payload, correlationID, r.Header.Get("Idempotency-Key"), actor.OperatorContextID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
@@ -183,8 +183,9 @@ func (s *protectedStoreServer) handleReconcileFinancePayoutRequest(w http.Respon
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId is required")
 		return
 	}
-	status, responseBody, err := s.wlt.FinanceWriteWithOperatorContext(
+	status, responseBody, err := s.wlt.ExecuteFinanceWrite(
 		r.Context(),
+		"finance.payout_requests.reconcile",
 		http.MethodPost,
 		"/wlt/payout-requests/"+url.PathEscape(payoutID)+"/reconcile",
 		operatorWriteBody(actor.ID),
@@ -209,8 +210,9 @@ func (s *protectedStoreServer) handleFinancePayoutAudit(w http.ResponseWriter, r
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId is required")
 		return
 	}
-	status, body, err := s.wlt.FinanceReadWithOperatorContext(
+	status, body, err := s.wlt.ExecuteFinanceRead(
 		r.Context(),
+		"finance.payout_requests.read",
 		"/wlt/payout-requests/"+url.PathEscape(payoutID)+"/audit",
 		nil,
 		r.Header.Get("X-Correlation-ID"),

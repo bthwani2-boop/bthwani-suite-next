@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Card, StateView, Text, Input } from "@bthwani/ui-kit";
+import { Card, StateView, Text } from "@bthwani/ui-kit";
 import {
   CpBadge,
   CpButton,
@@ -10,10 +10,11 @@ import {
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
+  CpTextInput,
 } from "@bthwani/control-panel/components";
 import { FinanceReadOnlyFrame } from "@bthwani/control-panel/shell";
-import { createDshHttpClient } from "../../../shared/_kernel/dsh-http-request";
-import { resolveDshApiBaseUrl } from "../../../shared/_kernel/dsh-api-base-url";
+import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
+import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
 import { formatWltMoney } from '@bthwani/wlt/dsh';
 
 const { request } = createDshHttpClient(
@@ -24,9 +25,7 @@ const { request } = createDshHttpClient(
 type CodRecord = {
   id: string;
   orderId: string;
-  expectedAmountMinorUnits: number;
-  collectedAmountMinorUnits: number;
-  remittedAmountMinorUnits: number;
+  amountMinorUnits: number;
   currency: string;
   status: string;
   captainId: string;
@@ -97,15 +96,15 @@ export function CodInspectorScreen() {
             هذه الشاشة توفر وصولاً للقراءة فقط إلى سجلات العهد المحصلة في الميدان. يتم إنشاء وتحديث هذه السجلات بواسطة WLT حصرياً لضمان Idempotency و Immutability.
           </Text>
           <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", maxWidth: "600px" }}>
-            <Input 
+            <CpTextInput 
               placeholder="بحث برقم الطلب (Order ID)..."
               value={orderId}
-              onChange={(e) => setOrderId(e.target.value)}
+              onChange={(e: any) => setOrderId(e.target.value)}
             />
-            <Input 
+            <CpTextInput 
               placeholder="بحث برقم الكابتن (Captain ID)..."
               value={captainId}
-              onChange={(e) => setCaptainId(e.target.value)}
+              onChange={(e: any) => setCaptainId(e.target.value)}
             />
           </div>
           <CpButton onClick={loadRecords} disabled={state === "loading"}>
@@ -141,21 +140,28 @@ export function CodInspectorScreen() {
                   </tr>
                 </thead>
                 <tbody>
-                  {records.map((record) => (
+                  {records.map((record) => {
+                    const isCollected = record.status === "collected" || record.status === "remitted" || record.status === "over_remitted" || record.status === "under_remitted";
+                    const isRemitted = record.status === "remitted" || record.status === "over_remitted" || record.status === "under_remitted";
+                    const expected = record.amountMinorUnits || 0;
+                    const collected = isCollected ? expected : 0;
+                    const remitted = isRemitted ? expected : 0;
+                    
+                    return (
                     <tr key={record.id}>
                       <CpTableCell><CpMutedInline tight>{record.id.split("-")[0]}</CpMutedInline></CpTableCell>
                       <CpTableCell>{record.orderId}</CpTableCell>
                       <CpTableCell>
-                        <CpBadge tone="neutral">{record.collectorType}: {record.collectorId}</CpBadge>
+                        <CpBadge tone="neutral">{record.collectorType}: {record.collectorId || record.captainId}</CpBadge>
                       </CpTableCell>
                       <CpTableCell>
-                        {formatWltMoney(record.expectedAmountMinorUnits, record.currency)}
+                        {formatWltMoney(expected, record.currency)}
                       </CpTableCell>
                       <CpTableCell>
-                        {formatWltMoney(record.collectedAmountMinorUnits, record.currency)}
+                        {formatWltMoney(collected, record.currency)}
                       </CpTableCell>
                       <CpTableCell>
-                        {formatWltMoney(record.remittedAmountMinorUnits, record.currency)}
+                        {formatWltMoney(remitted, record.currency)}
                       </CpTableCell>
                       <CpTableCell>
                         <CpBadge tone={getStatusTone(record.status)}>
@@ -164,7 +170,7 @@ export function CodInspectorScreen() {
                       </CpTableCell>
                       <CpTableCell>{record.createdAt}</CpTableCell>
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </CpTable>
             </div>

@@ -236,9 +236,6 @@ export interface CatalogPlatformPolicy {
   readonly domainId: string | null;
   readonly nodeId: string | null;
   readonly policyScope: string;
-  readonly platformCommissionRate: number;
-  readonly fieldPartnerOnboardingCommissionAmount: number;
-  readonly fieldPartnerOnboardingCommissionCurrency: string;
   readonly storeOnboardingFeeAmount: number;
   readonly storeOnboardingFeeCurrency: string;
   readonly allowsStoreProductCustomImage: boolean;

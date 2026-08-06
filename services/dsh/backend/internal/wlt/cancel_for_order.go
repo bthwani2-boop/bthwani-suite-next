@@ -52,12 +52,10 @@ func (c *Client) CancelSessionForOrderWithResult(
 		return nil, fmt.Errorf("paymentSessionId, orderId, clientId, and reason are required")
 	}
 	requestBody := struct {
-		PaymentSessionID string `json:"paymentSessionId"`
 		OrderID          string `json:"orderId"`
 		ClientID         string `json:"clientId"`
 		Reason           string `json:"reason"`
 	}{
-		PaymentSessionID: paymentSessionID,
 		OrderID:          input.OrderID,
 		ClientID:         input.ClientID,
 		Reason:           input.Reason,
@@ -66,7 +64,8 @@ func (c *Client) CancelSessionForOrderWithResult(
 	if err != nil {
 		return nil, fmt.Errorf("encode WLT cancel-for-order request: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/wlt/order-cancellations", bytes.NewReader(body))
+	url := fmt.Sprintf("%s/wlt/payment-sessions/%s/cancel-for-order", c.baseURL, paymentSessionID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("build WLT cancel-for-order request: %w", err)
 	}

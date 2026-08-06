@@ -303,7 +303,7 @@ const visitSelectCols = `id, store_id, field_agent_id, visit_type, status, COALE
 	start_distance_from_store_meters, completion_distance_from_store_meters,
 	start_geofence_status, completion_geofence_status`
 
-func GetVisit(ctx context.Context, db *sql.DB, visitID string) (Visit, error) {
+func GetVisit(ctx context.Context, db queryer, visitID string) (Visit, error) {
 	row := db.QueryRowContext(ctx, `SELECT `+visitSelectCols+` FROM dsh_field_visits WHERE id = $1`, visitID)
 	v, err := scanVisit(row)
 	if errors.Is(err, sql.ErrNoRows) {

@@ -26,8 +26,9 @@ func (s *protectedStoreServer) proxyFinancePayoutTransition(w http.ResponseWrite
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId is required")
 		return
 	}
-	status, body, err := s.wlt.FinanceWriteWithOperatorContext(
+	status, body, err := s.wlt.ExecuteFinanceWrite(
 		r.Context(),
+		"finance.payout_requests."+action,
 		http.MethodPost,
 		"/wlt/payout-requests/"+url.PathEscape(payoutID)+"/"+action,
 		operatorWriteBody(actor.ID),

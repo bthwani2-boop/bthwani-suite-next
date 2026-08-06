@@ -111,14 +111,7 @@ func scanSettlementRow(rows *sql.Rows) (*Settlement, error) {
 	return &s, nil
 }
 
-// CreateSettlement fails closed. Caller-supplied gross, fee, net and order
-// counts are not a governed financial source and therefore cannot be inserted
-// into WLT as settlement truth.
-func CreateSettlement(db *sql.DB, input CreateSettlementInput) (*Settlement, error) {
-	_ = db
-	_ = input
-	return nil, ErrSettlementCalculationSourceRequired
-}
+
 
 func getSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Settlement, error) {
 	settlementID = strings.TrimSpace(settlementID)
@@ -137,11 +130,7 @@ func getSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Settl
 	return s, err
 }
 
-// GetSettlement retains deferred-runtime compatibility. Embedded callers use
-// the HTTP handler, which provides the authenticated OperatorContext context.
-func GetSettlement(db *sql.DB, settlementID string) (*Settlement, error) {
-	return getSettlement(context.Background(), db, settlementID)
-}
+
 
 func ListPartnerSettlements(ctx context.Context, db *sql.DB, requestedOperatorContextID, partnerID string) ([]*Settlement, error) {
 	operatorContextID, err := shared.RequireOperatorContext(ctx)
@@ -314,20 +303,7 @@ func postSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Sett
 	return settlement, nil
 }
 
-// HandleCreateSettlement intentionally ignores the submitted body and fails
-// closed until a governed DSH order-derived calculation contract exists.
-func HandleCreateSettlement(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		_ = db
-		_ = r
-		shared.SendError(
-			w,
-			http.StatusConflict,
-			"SETTLEMENT_SOURCE_REQUIRED",
-			ErrSettlementCalculationSourceRequired.Error(),
-		)
-	}
-}
+
 
 func HandleGetSettlement(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

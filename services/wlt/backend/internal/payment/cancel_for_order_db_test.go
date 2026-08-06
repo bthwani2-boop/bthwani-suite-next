@@ -27,7 +27,8 @@ func TestCancelSessionForOrder_PreCapture_Expires(t *testing.T) {
 		t.Fatalf("failed to insert test session: %v", err)
 	}
 
-	result, err := CancelSessionForOrder(db, sessionID, orderID, "client-test", "customer requested cancellation")
+	ctx := shared.WithOperatorContext(context.Background(), "test-operator")
+	result, err := CancelSessionForOrder(ctx, db, sessionID, orderID, "client-test", "customer requested cancellation")
 	if err != nil {
 		t.Fatalf("CancelSessionForOrder returned error: %v", err)
 	}
@@ -69,7 +70,8 @@ func TestCancelSessionForOrder_Captured_CreatesRefund(t *testing.T) {
 		t.Fatalf("failed to insert test session: %v", err)
 	}
 
-	result, err := CancelSessionForOrder(db, sessionID, orderID, "client-test", "customer requested cancellation")
+	ctx := shared.WithOperatorContext(context.Background(), "test-operator")
+	result, err := CancelSessionForOrder(ctx, db, sessionID, orderID, "client-test", "customer requested cancellation")
 	if err != nil {
 		t.Fatalf("CancelSessionForOrder returned error: %v", err)
 	}
@@ -121,7 +123,8 @@ func TestCancelSessionForOrder_AlreadyTerminal_NoAction(t *testing.T) {
 		t.Fatalf("failed to insert test session: %v", err)
 	}
 
-	result, err := CancelSessionForOrder(db, sessionID, orderID, "client-test", "customer requested cancellation")
+	ctx := shared.WithOperatorContext(context.Background(), "test-operator")
+	result, err := CancelSessionForOrder(ctx, db, sessionID, orderID, "client-test", "customer requested cancellation")
 	if err != nil {
 		t.Fatalf("expected no error for an already-terminal session, got %v", err)
 	}

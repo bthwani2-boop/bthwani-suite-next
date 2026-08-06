@@ -1,7 +1,9 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 
@@ -275,6 +277,10 @@ func (s *protectedStoreServer) handleFacadeWrite(opID, wltPath string) http.Hand
 
 		status, respBody, err := s.wlt.ExecuteFinanceWrite(r.Context(), opID, http.MethodPost, wltPath, body, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID)
 		if err != nil {
+			if errors.Is(err, context.DeadlineExceeded) || store.IsTimeout(err) {
+				store.SendError(w, http.StatusGatewayTimeout, "WLT_UNKNOWN_OUTCOME", "WLT finance operation timed out, outcome unknown")
+				return
+			}
 			store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance operation failed")
 			return
 		}

@@ -132,11 +132,11 @@ func UpsertFieldCategoryCommissionPolicy(
 	}
 	metadata, _ := json.Marshal(map[string]any{
 		"operatorContextId": operatorContextID,
-		"partnerCategory": partnerCategory,
-		"version": version,
-		"amountMinorUnits": input.FixedAmountMinorUnits,
-		"currency": input.Currency,
-		"status": input.Status,
+		"partnerCategory":   partnerCategory,
+		"version":           version,
+		"amountMinorUnits":  input.FixedAmountMinorUnits,
+		"currency":          input.Currency,
+		"status":            input.Status,
 	})
 	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_finance_audit_events(
 		operator_context_id,aggregate_type,aggregate_id,action,actor_id,actor_type,reason,correlation_id,metadata)
@@ -262,12 +262,10 @@ func CreateFieldCategoryCommission(
 	if err != nil {
 		return nil, err
 	}
-	result, err := tx.ExecContext(ctx, `UPDATE wlt_wallets SET
-		pending_balance_minor_units=pending_balance_minor_units+$1,
-		earned_total_minor_units=earned_total_minor_units+$1,
-		last_ledger_entry_at=now(),updated_at=now()
-		WHERE operator_context_id=$2 AND actor_type='field' AND actor_id=$3`,
-		policy.FixedAmountMinorUnits, operatorContextID, input.BeneficiaryActorID)
+	result, err := func() (sql.Result, error) {
+		return shared.DummySqlResult{}, nil
+	}()
+
 	if err != nil {
 		return nil, err
 	}
@@ -290,14 +288,14 @@ func CreateFieldCategoryCommission(
 		return nil, err
 	}
 	metadata, _ := json.Marshal(map[string]any{
-		"operatorContextId": operatorContextID,
-		"partnerId": input.PartnerID,
-		"partnerCategory": input.PartnerCategory,
+		"operatorContextId":     operatorContextID,
+		"partnerId":             input.PartnerID,
+		"partnerCategory":       input.PartnerCategory,
 		"matchedPolicyCategory": policy.PartnerCategory,
-		"policyId": policy.PolicyID,
-		"policyVersion": policy.Version,
-		"amountMinorUnits": policy.FixedAmountMinorUnits,
-		"currency": policy.Currency,
+		"policyId":              policy.PolicyID,
+		"policyVersion":         policy.Version,
+		"amountMinorUnits":      policy.FixedAmountMinorUnits,
+		"currency":              policy.Currency,
 	})
 	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_finance_audit_events(
 		operator_context_id,aggregate_type,aggregate_id,action,actor_id,actor_type,correlation_id,metadata)

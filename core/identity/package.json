@@ -10,7 +10,7 @@
     "openapi:generate": "pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/identity.bundle.openapi.yaml -o clients/generated/identity-api.ts",
     "test": "cd backend && go test ./... && cd .. && node --test tests/*.test.mjs",
     "build": "node ../../tools/scripts/verify-go-build.mjs backend",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p ../../apps/app-client/runtime/tsconfig.json && tsc --noEmit -p ../../apps/app-partner/runtime/tsconfig.json && tsc --noEmit -p ../../apps/app-captain/runtime/tsconfig.json && tsc --noEmit -p ../../apps/app-field/runtime/tsconfig.json && tsc --noEmit -p ../../apps/control-panel/runtime/tsconfig.json",
     "typecheck:ts7": "tsc --noEmit -p tsconfig.json",
     "typecheck:ts6:compat": "tsc6 --noEmit -p tsconfig.json",
     "typecheck:all": "pnpm run typecheck:ts7 && pnpm run typecheck:ts6:compat"

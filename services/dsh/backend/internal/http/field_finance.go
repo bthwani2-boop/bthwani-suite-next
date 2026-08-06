@@ -15,8 +15,7 @@ func (s *protectedStoreServer) handleFieldMeWallet(w http.ResponseWriter, r *htt
 	if !ok {
 		return
 	}
-	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
-	status, body, err := s.wlt.FinanceReadWalletWithOperatorContext(trustedContext, "field", actor.ID, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
+	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.wallet.read", "/wlt/wallets/field/"+url.PathEscape(actor.ID), nil, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", err.Error())
 		return
@@ -34,8 +33,7 @@ func (s *protectedStoreServer) handleFieldMeCommissions(w http.ResponseWriter, r
 		return
 	}
 	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {"field"}}
-	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
-	status, body, err := s.wlt.FinanceReadWithOperatorContext(trustedContext, "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
+	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.commissions.read", "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", err.Error())
 		return
@@ -51,8 +49,7 @@ func (s *protectedStoreServer) handleFieldMeLedgerEntries(w http.ResponseWriter,
 		return
 	}
 	query := url.Values{"actorId": {actor.ID}, "actorType": {"field"}}
-	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
-	status, body, err := s.wlt.FinanceReadWithOperatorContext(trustedContext, "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
+	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.ledger.read", "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", err.Error())
 		return
@@ -70,8 +67,7 @@ func (s *protectedStoreServer) handleFieldMePayoutRequests(w http.ResponseWriter
 		return
 	}
 	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {"field"}}
-	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
-	status, body, err := s.wlt.FinanceReadWithOperatorContext(trustedContext, "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
+	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.payout_requests.read", "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", err.Error())
 		return
@@ -121,8 +117,7 @@ func (s *protectedStoreServer) handleSubmitFieldMePayoutRequest(w http.ResponseW
 	if correlationID == "" {
 		correlationID = request.IdempotencyKey
 	}
-	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
-	status, body, err := s.wlt.FinanceWriteWithOperatorContext(trustedContext, http.MethodPost, "/wlt/payout-requests", payloadBytes, correlationID, r.Header.Get("Idempotency-Key"), actor.OperatorContextID)
+	status, body, err := s.wlt.ExecuteFinanceWrite(r.Context(), "finance.payout_requests.create", http.MethodPost, "/wlt/payout-requests", payloadBytes, correlationID, r.Header.Get("Idempotency-Key"), actor.OperatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", err.Error())
 		return

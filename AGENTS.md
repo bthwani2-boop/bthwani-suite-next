@@ -153,6 +153,8 @@ Canonical outcomes include `PASS`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `BLOCKED_EX
 
 `CLOSED_WITH_EVIDENCE` requires every applicable same-commit scope: `static`, `product`, `runtime`, `visual`, `qa`, `security`, `finance`, `isolation`, `governance`, `ci`, `release`, and `production`, plus all applicable approvals and no unresolved blocker.
 
+يُحظر اعتبار أي تغيير برمجي مكتملًا قبل اجتيازه مراجعة **OpenCodeReview** ثم الحراس والاختبارات والتحقق على نفس الـSHA، مع استخدام **LeanCTX** افتراضيًا عند تضخم السياق، وإلزام **Graphify** فقط عند تعذّر حسم الملكية أو الاعتماديات أو أثر التغيير بالفحص المباشر.
+
 ## Final response
 
 Report:

@@ -34,9 +34,6 @@ func CreateGovernedVisitIdempotent(
 	if err := ValidateGovernedLocation(input.StartLocation, time.Now()); err != nil {
 		return Visit{}, err
 	}
-	if err := AuthorizeStore(ctx, db, wf, actor, input.StoreID); err != nil {
-		return Visit{}, err
-	}
 	latitude, longitude, err := loadStoreCoordinates(ctx, db, input.StoreID)
 	if err != nil {
 		return Visit{}, err
@@ -58,6 +55,10 @@ func CreateGovernedVisitIdempotent(
 		return Visit{}, err
 	}
 	defer tx.Rollback() //nolint:errcheck
+
+	if err := AuthorizeStore(ctx, tx, wf, actor, input.StoreID); err != nil {
+		return Visit{}, err
+	}
 
 	var replay Visit
 	found, err := loadMutationReceiptTx(ctx, tx, actor.ID, MutationCreateVisit, mutation, &replay)
@@ -133,7 +134,7 @@ func CompleteGovernedVisitIdempotent(
 	if actor.Role != "operator" && visit.FieldAgentID != actor.ID {
 		return Visit{}, ErrForbidden
 	}
-	allowed, err := store.ActorCanAccessStore(ctx, db, wf, actor, visit.StoreID)
+	allowed, err := store.ActorCanAccessStore(ctx, tx, wf, actor, visit.StoreID)
 	if err != nil {
 		return Visit{}, err
 	}
@@ -285,7 +286,13 @@ func UpsertGovernedReadinessCheckIdempotent(
 	if err := validateCheckInput(input); err != nil {
 		return ReadinessCheck{}, err
 	}
-	visit, err := GetOwnedVisit(ctx, db, wf, actor, visitID)
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return ReadinessCheck{}, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	visit, err := GetOwnedVisit(ctx, tx, wf, actor, visitID)
 	if err != nil {
 		return ReadinessCheck{}, err
 	}
@@ -293,22 +300,17 @@ func UpsertGovernedReadinessCheckIdempotent(
 		return ReadinessCheck{}, ErrVisitAlreadyComplete
 	}
 	if input.Status == CheckPassed {
-		if err := validateGovernedCheckEvidence(ctx, db, wf, actor, visit.StoreID, input.EvidenceURL); err != nil {
+		if err := validateGovernedCheckEvidence(ctx, tx, wf, actor, visit.StoreID, input.EvidenceURL); err != nil {
 			return ReadinessCheck{}, err
 		}
 	}
-
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return ReadinessCheck{}, err
-	}
-	defer tx.Rollback() //nolint:errcheck
 
 	var replay ReadinessCheck
 	found, err := loadMutationReceiptTx(ctx, tx, actor.ID, MutationUpsertCheck, mutation, &replay)
 	if err != nil {
 		return ReadinessCheck{}, err
 	}
+
 	if found {
 		return replay, nil
 	}

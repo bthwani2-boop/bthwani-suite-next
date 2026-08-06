@@ -3,7 +3,7 @@
   "service": "wlt",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "wlt-907_financial_providers.sql",
+  "cutover": "wlt-118_wallet_balances_view.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -501,6 +501,20 @@
       "file": "wlt-116_ledger_account_classifications.sql",
       "sha256": "1752fa2937de4755b3a8d03ad5d0eb110945163dc85685997f1119e605165840",
       "historicalPrefix": "116",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 72,
+      "file": "wlt-117_wallet_checkpoints.sql",
+      "sha256": "8ee9bd04741b13b2077a388befdbf269fd6327e5528f33a3d446466d022ab4f7",
+      "historicalPrefix": "117",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 73,
+      "file": "wlt-118_wallet_balances_view.sql",
+      "sha256": "ca87a36f5a67eeaaee775e1f2f94b56f9f6632a1382a54441ce2678c89500904",
+      "historicalPrefix": "118",
       "state": "ACTIVE"
     }
   ]

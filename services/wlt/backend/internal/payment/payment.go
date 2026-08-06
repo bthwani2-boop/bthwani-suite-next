@@ -551,7 +551,7 @@ func expireSessionTx(tx *sql.Tx, sessionID string) (*PaymentSession, error) {
 type CancelForOrderResult struct {
 	Action         string          `json:"action"`
 	PaymentSession *PaymentSession `json:"paymentSession,omitempty"`
-	Refund         *refund.Refund  `json:"refund,omitempty"`
+	Refund         *refund.GovernedRefund  `json:"refund,omitempty"`
 	SessionStatus  string          `json:"sessionStatus,omitempty"`
 }
 
@@ -565,8 +565,8 @@ type CancelForOrderResult struct {
 //   - anything else (already expired/failed/etc.): no action is needed; a
 //     cancellation racing with an already-terminal session is normal, not
 //     an error.
-func CancelSessionForOrder(db *sql.DB, sessionID, orderID, clientID, reason string) (*CancelForOrderResult, error) {
-	return CancelOrderFinancially(db, GovernedOrderCancellationInput{
+func CancelSessionForOrder(ctx context.Context, db *sql.DB, sessionID, orderID, clientID, reason string) (*CancelForOrderResult, error) {
+	return CancelOrderFinancially(ctx, db, GovernedOrderCancellationInput{
 		PaymentSessionID: sessionID,
 		OrderID:          orderID,
 		ClientID:         clientID,

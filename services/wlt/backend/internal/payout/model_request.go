@@ -32,14 +32,6 @@ type PayoutRequest struct {
 	IdempotencyKey           string     `json:"idempotencyKey"`
 }
 
-type CreatePayoutRequestInput struct {
-	BeneficiaryActorID   string `json:"beneficiaryActorId"`
-	BeneficiaryActorType string `json:"beneficiaryActorType"`
-	PayoutDestinationID string `json:"payoutDestinationId"`
-	AmountMinorUnits     int64  `json:"amountMinorUnits"`
-	Currency             string `json:"currency"`
-	IdempotencyKey       string `json:"idempotencyKey"`
-}
 
 type PayoutRequestResponse struct {
 	PayoutRequest *PayoutRequest `json:"payoutRequest"`
