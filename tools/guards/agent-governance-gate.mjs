@@ -146,6 +146,17 @@ if (agents) {
   for (const domain of ["implementation_review", "finance_approval", "residual_risk_acceptance"]) {
     if (!approvals.has(domain)) violations.push({ file: agentsFile, line: 0, message: `REQUIRED_APPROVAL_AUTHORITY_MISSING ${domain}` });
   }
+
+  // Check for unregistered adapter files
+  const potentialAdapters = ["AGENTS.md", "CLAUDE.md", "GEMINI.md", "LEAN-CTX.md", ".github/copilot-instructions.md", "opencode.json"];
+  for (const file of potentialAdapters) {
+    if (exists(file)) {
+      const isRegistered = agents.entries.some((a) => a.primary_file === file);
+      if (!isRegistered) {
+        violations.push({ file: agentsFile, line: 0, message: `UNREGISTERED_ADAPTER_FILE ${file}` });
+      }
+    }
+  }
 }
 
 for (const forbidden of [".agents/adapters", ".agents/hooks"]) {
