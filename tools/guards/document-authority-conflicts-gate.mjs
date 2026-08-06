@@ -88,6 +88,8 @@ if (precedence) {
     ["CLAUDE.md", "ADAPTER"],
     ["GEMINI.md", "ADAPTER"],
     ["LEAN-CTX.md", "ADAPTER"],
+    [".github/copilot-instructions.md", "ADAPTER"],
+    ["opencode.json", "ADAPTER"],
     [".agents/INDEX.md", "DERIVED_SUPPORT"],
     [".agents/SKILL_CATALOG.md", "DERIVED_SUPPORT"],
     ["governance/tools/agent-tool-registry.json", "DERIVED_SUPPORT"],

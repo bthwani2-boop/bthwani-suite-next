@@ -279,6 +279,22 @@
       ]
     },
     {
+      "path": ".github/copilot-instructions.md",
+      "classification": "ADAPTER",
+      "precedenceId": "TOOL_ADAPTER",
+      "authorityDomains": [
+        "copilot_adapter"
+      ]
+    },
+    {
+      "path": "opencode.json",
+      "classification": "ADAPTER",
+      "precedenceId": "TOOL_ADAPTER",
+      "authorityDomains": [
+        "opencode_adapter"
+      ]
+    },
+    {
       "path": ".agents/AUTHORITY_BOUNDARY.md",
       "classification": "DERIVED_SUPPORT",
       "precedenceId": "DERIVED_SUPPORT_ARTIFACT",

@@ -77,6 +77,8 @@ unique executable contract, schema, lock, registry, or current state record.
 - `CLAUDE.md`
 - `GEMINI.md`
 - `LEAN-CTX.md`
+- `.github/copilot-instructions.md`
+- `opencode.json`
 - `governance/github/**`
 - `governance/github/repository-enforcement.json`
 - `governance/operational_journey_protocol_package/**`
