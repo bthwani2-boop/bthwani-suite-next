@@ -14,7 +14,7 @@ This package closes only after every finding is closed with evidence, every work
 
 ## Current reason for remaining open
 
-Nine residual findings are open. Eight work items are planned. Nine required verifications have not been executed. DSH and WLT readiness cannot be promoted from static source inspection.
+Ten residual findings are open. Nine work items are planned. Ten required verifications have not been executed. DSH and WLT readiness cannot be promoted from static source inspection.
 
 ## Disposal requirements
 
