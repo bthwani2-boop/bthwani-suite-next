@@ -120,4 +120,32 @@ if (precedence) {
   }
 }
 
+// LeanCTX text conflict checks
+const leanCtxForbiddenPhrases = [
+  "always active",
+  "replaces native tools",
+  "replaces native",
+  "always enabled",
+  "replaces tools"
+];
+
+function checkForbiddenPhrases(filePath, content) {
+  const lowerContent = content.toLowerCase();
+  for (const phrase of leanCtxForbiddenPhrases) {
+    if (lowerContent.includes(phrase.toLowerCase())) {
+      violations.push({ file: filePath, line: 0, message: `CONTRADICTORY_STATEMENT leanctx_claims_unauthorized_authority: "${phrase}" found in ${filePath}` });
+    }
+  }
+}
+
+const agentsMdPath = path.join(repoRoot, "AGENTS.md");
+if (fs.existsSync(agentsMdPath)) checkForbiddenPhrases("AGENTS.md", fs.readFileSync(agentsMdPath, "utf8"));
+
+const leanCtxMdPath = path.join(repoRoot, "LEAN-CTX.md");
+if (fs.existsSync(leanCtxMdPath)) checkForbiddenPhrases("LEAN-CTX.md", fs.readFileSync(leanCtxMdPath, "utf8"));
+
+const leanCtxPolicyPath = path.join(repoRoot, ".agents/tools/leanctx.md");
+if (fs.existsSync(leanCtxPolicyPath)) checkForbiddenPhrases(".agents/tools/leanctx.md", fs.readFileSync(leanCtxPolicyPath, "utf8"));
+
+
 fail(guardId, violations);
