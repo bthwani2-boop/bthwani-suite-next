@@ -1,40 +1,29 @@
 #!/usr/bin/env node
 
-import { mkdir, readFile, writeFile, access } from 'node:fs/promises';
+import { access, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
-import { dirname, join, resolve, sep } from 'node:path';
+import { dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const frameworkRoot = dirname(fileURLToPath(import.meta.url));
 const templateRoot = join(frameworkRoot, '_template');
+const repositoryRoot = resolve(frameworkRoot, '..', '..');
 
 function parseArgs(argv) {
   const result = {};
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
-    if (!token.startsWith('--')) {
-      throw new Error(`Unexpected positional argument: ${token}`);
-    }
+    if (!token.startsWith('--')) throw new Error(`Unexpected positional argument: ${token}`);
     const key = token.slice(2);
     const value = argv[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw new Error(`Missing value for --${key}`);
-    }
+    if (!value || value.startsWith('--')) throw new Error(`Missing value for --${key}`);
     result[key] = value;
     index += 1;
   }
   return result;
 }
 
-function replaceAll(text, replacements) {
-  let output = text;
-  for (const [key, value] of Object.entries(replacements)) {
-    output = output.split(key).join(value);
-  }
-  return output;
-}
-
-async function pathExists(path) {
+async function exists(path) {
   try {
     await access(path, fsConstants.F_OK);
     return true;
@@ -43,13 +32,30 @@ async function pathExists(path) {
   }
 }
 
-async function readTemplate(name, replacements) {
-  const text = await readFile(join(templateRoot, name), 'utf8');
-  return replaceAll(text, replacements);
+function replaceAll(text, replacements) {
+  let output = text;
+  for (const [key, value] of Object.entries(replacements)) output = output.split(key).join(value);
+  return output;
 }
 
-async function writeJson(path, value) {
-  await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+async function walk(root, predicate = () => true) {
+  if (!(await exists(root))) return [];
+  const files = [];
+  async function visit(current) {
+    const entries = await readdir(current, { withFileTypes: true });
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      if (entry.name === '.git' || entry.name === 'node_modules' || entry.name === '.next' || entry.name === 'dist') continue;
+      const absolute = join(current, entry.name);
+      if (entry.isDirectory()) await visit(absolute);
+      else if (entry.isFile() && predicate(absolute)) files.push(absolute);
+    }
+  }
+  await visit(root);
+  return files;
+}
+
+function normalizePath(path) {
+  return relative(repositoryRoot, path).split(sep).join('/');
 }
 
 const args = parseArgs(process.argv.slice(2));
@@ -57,43 +63,24 @@ const name = args.name;
 const branch = args.branch;
 const sha = args.sha;
 const repository = args.repository ?? 'bthwani2-boop/bthwani-suite-next';
-const requestedMode = args.mode ?? 'DIAGNOSIS_AND_PLAN_ONLY';
+const mode = args.mode ?? 'DIAGNOSIS_AND_EXECUTION_PLAN';
+const objective = args.objective ?? `Diagnose and produce an executable evidence-backed plan for ${name ?? 'the requested task'}`;
 
 if (!name || !branch || !sha) {
-  throw new Error(
-    'Usage: node tools/diagnose-implementing/new-package.mjs --name <task-name> --branch <branch> --sha <40-character-sha> [--repository owner/repo] [--mode DIAGNOSIS_AND_PLAN_ONLY]',
-  );
+  throw new Error('Usage: node tools/diagnose-implementing/new-package.mjs --name <task-name> --branch <branch> --sha <40-character-sha> [--objective <measurable objective>] [--repository owner/repo] [--mode <mode>]');
 }
-
-if (!/^[a-z0-9][a-z0-9-]{2,79}$/.test(name)) {
-  throw new Error('Task name must be 3-80 characters using lowercase letters, digits, and hyphens only.');
+if (!/^[a-z0-9][a-z0-9-]{2,79}$/.test(name) || name === '_template' || name.includes('..')) {
+  throw new Error('Task name must be 3-80 lowercase letters, digits, or hyphens and may not be reserved.');
 }
-
-if (name === '_template' || name.startsWith('.') || name.includes('..')) {
-  throw new Error(`Reserved or unsafe task name: ${name}`);
-}
-
-if (!/^[0-9a-f]{40}$/i.test(sha)) {
-  throw new Error('The pinned SHA must contain exactly 40 hexadecimal characters.');
-}
-
+if (!/^[0-9a-f]{40}$/i.test(sha)) throw new Error('The pinned SHA must contain exactly 40 hexadecimal characters.');
 if (!/^[A-Za-z0-9._/-]+$/.test(branch) || branch.includes('..') || branch.startsWith('/') || branch.endsWith('/')) {
   throw new Error(`Unsafe branch value: ${branch}`);
 }
-
-if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) {
-  throw new Error(`Repository must use owner/name form: ${repository}`);
-}
+if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) throw new Error(`Repository must use owner/name form: ${repository}`);
 
 const destination = resolve(frameworkRoot, name);
-const allowedPrefix = `${resolve(frameworkRoot)}${sep}`;
-if (!destination.startsWith(allowedPrefix)) {
-  throw new Error('Resolved destination escapes tools/diagnose-implementing.');
-}
-
-if (await pathExists(destination)) {
-  throw new Error(`Destination already exists: ${destination}`);
-}
+if (!destination.startsWith(`${resolve(frameworkRoot)}${sep}`)) throw new Error('Destination escapes tools/diagnose-implementing.');
+if (await exists(destination)) throw new Error(`Destination already exists: ${destination}`);
 
 const now = new Date().toISOString();
 const taskId = `PKG-${name.toUpperCase().replace(/-/g, '_')}`;
@@ -101,87 +88,147 @@ const replacements = {
   TASK_NAME: name,
   TASK_SLUG: name,
   TASK_PACKAGE_ID: taskId,
+  TASK_OBJECTIVE: objective,
   TARGET_BRANCH: branch,
   PINNED_START_SHA: sha.toLowerCase(),
   CREATED_AT_ISO: now,
-  AGENT_OR_OPERATOR: 'UNRECORDED',
-  'bthwani2-boop/bthwani-suite-next': repository,
-  DIAGNOSIS_AND_PLAN_ONLY: requestedMode,
+  AGENT_OR_OPERATOR: args.actor ?? 'UNRECORDED',
+  REPOSITORY_NAME: repository,
+  REQUESTED_MODE: mode,
 };
 
-await mkdir(join(destination, 'evidence'), { recursive: true });
-await mkdir(join(destination, 'phases'), { recursive: true });
-await mkdir(join(destination, 'tasks'), { recursive: true });
+const requiredSurfaceCandidates = [
+  ['control-panel', ['apps/control-panel/runtime', 'services/dsh/frontend/control-panel']],
+  ['app-client', ['apps/app-client/runtime', 'services/dsh/frontend/app-client']],
+  ['app-partner', ['apps/app-partner/runtime', 'services/dsh/frontend/app-partner']],
+  ['app-captain', ['apps/app-captain/runtime', 'services/dsh/frontend/app-captain']],
+  ['app-field', ['apps/app-field/runtime', 'services/dsh/frontend/app-field']],
+];
 
-const manifestText = await readTemplate('00-MANIFEST.template.json', replacements);
-const manifest = JSON.parse(manifestText);
-manifest.task.requestedMode = requestedMode;
-manifest.task.repository = repository;
-manifest.task.createdAt = now;
-manifest.task.id = taskId;
-manifest.task.name = name;
-manifest.task.slug = name;
-await writeJson(join(destination, '00-MANIFEST.json'), manifest);
+const scopeRecords = [];
+let sequence = 1;
+const nextId = () => `SCP-${String(sequence++).padStart(5, '0')}`;
 
-await writeFile(
-  join(destination, '01-DIAGNOSIS-REPORT.md'),
-  await readTemplate('01-DIAGNOSIS-REPORT.template.md', replacements),
-  'utf8',
-);
+for (const [surface, candidates] of requiredSurfaceCandidates) {
+  const paths = [];
+  for (const candidate of candidates) if (await exists(resolve(repositoryRoot, candidate))) paths.push(candidate);
+  scopeRecords.push({
+    type: 'scope',
+    id: nextId(),
+    entity: surface,
+    entityType: 'SURFACE',
+    path: paths[0] ?? null,
+    paths,
+    parentId: null,
+    classification: 'UNPROVEN',
+    reason: 'Generated from the mandatory surface coverage rule; classify with evidence.',
+    evidenceIds: [],
+    consumerIds: [],
+    flowIds: [],
+  });
+}
 
-const finding = JSON.parse(await readTemplate('02-FINDING.template.json', replacements));
-await writeJson(join(destination, '02-FINDINGS-REGISTER.json'), {
-  schemaVersion: 1,
-  packageSlug: name,
-  repository,
-  targetBranch: branch,
-  pinnedStartSha: sha.toLowerCase(),
-  allowedStatuses: ['OPEN', 'IN_PROGRESS', 'FIXED_PENDING_VERIFICATION', 'BLOCKED_EXTERNAL', 'CLOSED_WITH_EVIDENCE'],
-  findings: [finding],
-});
+const controlPanelRoots = [
+  ['DSH', resolve(repositoryRoot, 'apps/control-panel/runtime/src/app/(shell)/dsh')],
+  ['WLT', resolve(repositoryRoot, 'apps/control-panel/runtime/src/app/(shell)/wlt')],
+];
 
-const executionPlan = `# Execution Plan — ${name}\n\n> Planning is not execution authorization. This package remains derived support and must defer to canonical repository authority and the current remote branch.\n\n## 1. Planning baseline\n\n\`\`\`yaml\nrepository: ${repository}\ntarget_branch: ${branch}\npinned_start_sha: ${sha.toLowerCase()}\nrequested_mode: ${requestedMode}\nexecution_authorization: NOT_AUTHORIZED\nplan_status: NOT_READY\n\`\`\`\n\n## 2. Dependency order\n\nDocument why each phase must precede the next. Order by truth ownership, migration safety, consumer dependencies, and operational behavior rather than file location.\n\n## 3. Phase index\n\n| Phase | Outcome | Owned findings | Preconditions | Exit gate | Status |\n| --- | --- | --- | --- | --- | --- |\n| PHASE-00 | Pin authority, scope, inventory, and evidence | FND-0001 | Exact remote SHA | Diagnosis zero gate | PLANNED |\n\n## 4. Vertical-slice rule\n\nEach implementation slice must close one behavior across every affected layer and surface before the next dependent slice opens. Do not execute all backend work, then all frontend work, when the behavior crosses both.\n\n## 5. Work-item ordering\n\n| Order | Work item | Atomic outcome | Depends on | Verification | Commit boundary |\n| ---: | --- | --- | --- | --- | --- |\n| 1 | TASK-0001 | REPLACE_WITH_ATOMIC_OUTCOME | None | VER-0001 | One logical commit and push |\n\n## 6. Per-phase zero gate\n\n\`\`\`yaml\nopen_internal_findings: 0\nfailed_required_checks: 0\nunverified_required_behaviors: 0\nduplicate_truth_owners: 0\ncontract_mismatches: 0\nunverified_deletions: 0\nunresolved_internal_blockers: 0\n\`\`\`\n\nThe next phase may not open while any applicable value is nonzero.\n\n## 7. Migration and deletion sequence\n\nFor each moved, renamed, replaced, or deleted element, define: replacement readiness, consumer migration, compatibility window, data migration, reference search, post-change verification, rollback, and final removal.\n\n## 8. Verification strategy\n\nMap each acceptance criterion to the smallest sufficient check. Add runtime, security, finance, isolation, migration, visual, release, or production evidence only when the claim requires it; never infer one scope from another.\n\n## 9. Commit and remote protocol\n\nFor each work item: re-pin the branch, reconcile unexpected movement, execute one logical unit, verify after the last write, commit, push, re-pin, record the resulting SHA, then open the next eligible work item. Never force-push or overwrite concurrent movement.\n\n## 10. Rollback strategy\n\nDefine code, contract, data, runtime, and operational rollback per phase. Identify irreversible operations before execution authorization.\n\n## 11. Plan-readiness gate\n\n\`\`\`yaml\nunclassified_inventory_items: 0\nfindings_without_evidence: 0\nfindings_without_root_cause: 0\ninternal_findings_without_work_items: 0\nwork_items_without_acceptance_criteria: 0\nwork_items_without_verification: 0\nunresolved_template_markers: 0\ndependency_cycles: 0\n\`\`\`\n\nAny nonzero value keeps the plan at \`NOT_READY\`.\n`;
-await writeFile(join(destination, '03-EXECUTION-PLAN.md'), executionPlan, 'utf8');
+const sectionPaths = [];
+for (const [domain, root] of controlPanelRoots) {
+  if (!(await exists(root))) continue;
+  const entries = await readdir(root, { withFileTypes: true });
+  for (const entry of entries.filter((item) => item.isDirectory()).sort((a, b) => a.name.localeCompare(b.name))) {
+    const path = normalizePath(join(root, entry.name));
+    sectionPaths.push(path);
+    scopeRecords.push({
+      type: 'scope', id: nextId(), entity: entry.name, entityType: 'CONTROL_PANEL_SECTION', domain,
+      path, parentId: null, classification: 'UNPROVEN',
+      reason: 'Discovered from the current control-panel route tree; inspect the section and everything beneath it.',
+      evidenceIds: [], consumerIds: [], flowIds: [],
+    });
+  }
+}
 
-const workItem = JSON.parse(await readTemplate('03-WORK-ITEM.template.json', replacements));
-await writeJson(join(destination, '04-WORK-ITEMS.json'), {
-  schemaVersion: 1,
-  packageSlug: name,
-  oneInProgressAtATime: true,
-  workItems: [workItem],
-});
-await writeJson(join(destination, 'tasks', 'TASK-0001.json'), workItem);
+const routeNames = new Set(['page.tsx', 'page.ts', 'route.ts', 'route.tsx', 'layout.tsx', 'loading.tsx', 'error.tsx', 'not-found.tsx', 'default.tsx']);
+const controlPanelAppRoot = resolve(repositoryRoot, 'apps/control-panel/runtime/src/app');
+const routeFiles = (await walk(controlPanelAppRoot, (path) => routeNames.has(path.split(sep).at(-1)))).sort();
+for (const absolute of routeFiles) {
+  const path = normalizePath(absolute);
+  scopeRecords.push({
+    type: 'scope', id: nextId(), entity: path.split('/').at(-1), entityType: 'CONTROL_PANEL_ROUTE_FILE',
+    path, parentId: null, classification: 'UNPROVEN',
+    reason: 'Discovered route-bearing file; classify its page, route, states, permissions, reads, writes, and cross-surface effects.',
+    evidenceIds: [], consumerIds: [], flowIds: [],
+  });
+}
 
-const verification = JSON.parse(await readTemplate('04-VERIFICATION.template.json', replacements));
-verification.result.branch = branch;
-await writeJson(join(destination, '05-VERIFICATION-MATRIX.json'), {
-  schemaVersion: 1,
-  packageSlug: name,
-  repository,
-  targetBranch: branch,
-  pinnedStartSha: sha.toLowerCase(),
-  verifications: [verification],
-});
+const interactivePatterns = [
+  ['BUTTON_OR_CLICK', /<button\b|<Button\b|\bonClick\s*=|\bonPress\s*=/],
+  ['FORM_OR_SUBMIT', /<form\b|<Form\b|\bonSubmit\s*=/],
+  ['TAB', /<Tabs?\b|<TabList\b|<TabTrigger\b/],
+  ['DIALOG_OR_DRAWER', /<Dialog\b|<Modal\b|<Drawer\b|<Sheet\b/],
+  ['TABLE_OR_BULK_ACTION', /<Table\b|selectedRows|bulkAction|bulk-action/i],
+  ['IMPORT_EXPORT_UPLOAD', /import|export|upload|download/i],
+];
+const candidateInteractiveRoots = [
+  controlPanelAppRoot,
+  resolve(repositoryRoot, 'services/dsh/frontend/control-panel'),
+  resolve(repositoryRoot, 'services/wlt/frontend/shared/dsh'),
+];
+const interactiveByPath = new Map();
+for (const root of candidateInteractiveRoots) {
+  for (const absolute of await walk(root, (path) => ['.tsx', '.jsx'].includes(extname(path).toLowerCase()))) {
+    const text = await readFile(absolute, 'utf8');
+    const kinds = interactivePatterns.filter(([, pattern]) => pattern.test(text)).map(([kind]) => kind);
+    if (kinds.length) interactiveByPath.set(normalizePath(absolute), [...new Set([...(interactiveByPath.get(normalizePath(absolute)) ?? []), ...kinds])]);
+  }
+}
+for (const [path, interactiveKinds] of [...interactiveByPath.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+  scopeRecords.push({
+    type: 'scope', id: nextId(), entity: path.split('/').at(-1), entityType: 'INTERACTIVE_SOURCE', path,
+    interactiveKinds, parentId: null, classification: 'UNPROVEN',
+    reason: 'Static discovery found interactive UI signals; enumerate and trace all actual tabs, features, actions, states, permissions, reads, writes, and journeys.',
+    evidenceIds: [], consumerIds: [], flowIds: [],
+  });
+}
 
-await writeFile(
-  join(destination, '06-CLOSURE-AND-DISPOSAL.md'),
-  await readTemplate('99-CLOSURE-AND-DISPOSAL.template.md', replacements),
-  'utf8',
-);
+await mkdir(destination, { recursive: false });
+const stateText = replaceAll(await readFile(join(templateRoot, 'STATE.template.json'), 'utf8'), replacements);
+const state = JSON.parse(stateText);
+state.task.mode = mode;
+state.task.objective = objective;
+state.coverage.discoveredControlPanelSections = sectionPaths.length;
+state.coverage.discoveredControlPanelRouteFiles = routeFiles.length;
+state.coverage.discoveredInteractiveSources = interactiveByPath.size;
+state.coverage.ledgerRecords = 1 + scopeRecords.length;
+state.gates.unclassifiedSurfaces = requiredSurfaceCandidates.length;
+state.gates.unclassifiedControlPanelSections = sectionPaths.length;
+state.gates.unclassifiedControlPanelRoutes = routeFiles.length;
+state.gates.unclassifiedPagesAndTabs = routeFiles.length;
+state.gates.unmappedButtonsAndActions = interactiveByPath.size;
+state.gates.unmappedFeatures = interactiveByPath.size;
+state.gates.unmappedAdminWrites = 1;
+state.gates.unmappedStateReaders = 1;
+state.gates.unmappedCrossSurfaceConsumers = 1;
+state.gates.unmappedInboundJourneys = 1;
+state.gates.unmappedOutboundJourneys = 1;
+state.gates.unverifiedCrossSurfaceEffects = 1;
+state.gates.unverifiedPermissions = 1;
+state.gates.unverifiedFailureStates = 1;
+state.gates.claimsWithoutEvidence = scopeRecords.length;
+state.gates.openInternalGaps = 1;
+await writeFile(join(destination, 'STATE.json'), `${JSON.stringify(state, null, 2)}\n`, 'utf8');
 
-await writeFile(
-  join(destination, 'evidence', 'README.md'),
-  `# Evidence index — ${name}\n\nStore only sanitized, task-relevant evidence references here. Prefer immutable repository paths and SHAs, exact commands and exit codes, or immutable external references.\n\nDo not store secrets, credentials, private keys, production data, personal data, raw database dumps, or sensitive screenshots.\n\nEach evidence item must include:\n\n- evidence ID;\n- claim supported;\n- source type;\n- repository/branch/SHA or immutable external reference;\n- exact path, symbol, line range, command, or result;\n- timestamp when temporal state matters;\n- confidence and limitations;\n- linked finding, work-item, acceptance, and verification IDs.\n`,
-  'utf8',
-);
+await writeFile(join(destination, 'PACKAGE.md'), replaceAll(await readFile(join(templateRoot, 'PACKAGE.template.md'), 'utf8'), replacements), 'utf8');
+const ledgerHeader = replaceAll(await readFile(join(templateRoot, 'LEDGER.template.jsonl'), 'utf8'), replacements).trim();
+const ledgerLines = [ledgerHeader, ...scopeRecords.map((record) => JSON.stringify(record))];
+await writeFile(join(destination, 'LEDGER.jsonl'), `${ledgerLines.join('\n')}\n`, 'utf8');
 
-await writeFile(
-  join(destination, 'phases', 'PHASE-00.md'),
-  `# PHASE-00 — Foundation and diagnosis\n\n## Outcome\n\nEstablish the exact remote baseline, authority, scope, complete classification, evidence ledger, findings, root causes, truth owners, and an executable dependency-ordered plan.\n\n## Inputs\n\n- Repository: \`${repository}\`\n- Branch: \`${branch}\`\n- Pinned SHA: \`${sha.toLowerCase()}\`\n\n## Owned findings\n\n- \`FND-0001\` — replace or expand after evidence collection.\n\n## Work items\n\n- \`TASK-0001\` — replace with one atomic diagnosis/planning outcome.\n\n## Exit gate\n\n- all in-scope inventory classified;\n- every material finding has evidence, root cause, truth owner, impact, and disposition;\n- every internal finding has an atomic work item;\n- every work item has measurable acceptance and verification;\n- no unresolved authority conflict, silent exclusion, dependency cycle, or template marker;\n- package validator passes in strict mode.\n\n## Status\n\n\`PLANNED\`\n`,
-  'utf8',
-);
-
-console.log(`Created disposable diagnosis/implementation package: ${destination}`);
+console.log(`Created compact diagnosis/execution package: ${destination}`);
 console.log(`Pinned remote baseline: ${repository}@${branch} ${sha.toLowerCase()}`);
-console.log(`Next: fill evidence and registers, then run:`);
+console.log(`Seeded mandatory surfaces: ${requiredSurfaceCandidates.length}`);
+console.log(`Discovered control-panel sections: ${sectionPaths.length}`);
+console.log(`Discovered control-panel route files: ${routeFiles.length}`);
+console.log(`Discovered interactive source files: ${interactiveByPath.size}`);
+console.log(`Next: classify every seeded record, add evidence/flows/findings/work items/verifications, set all gates to zero, then run:`);
 console.log(`node tools/diagnose-implementing/validate-package.mjs tools/diagnose-implementing/${name} --strict`);
