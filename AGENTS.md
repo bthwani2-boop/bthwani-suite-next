@@ -176,6 +176,6 @@ Do not overclaim.
 <!-- lean-ctx -->
 ## lean-ctx
 
-lean-ctx is active — the MCP tools replace native equivalents.
+lean-ctx is conditional — native tools remain available.
 Full rules: LEAN-CTX.md (open on demand — do not auto-load).
 <!-- /lean-ctx -->
