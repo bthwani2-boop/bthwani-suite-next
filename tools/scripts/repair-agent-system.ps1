@@ -25,7 +25,7 @@ Set-StrictMode -Version Latest
 $root = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $node = (Get-Command node -ErrorAction Stop).Source
 $arguments = [System.Collections.Generic.List[string]]::new()
-$arguments.Add((Join-Path $root "tools/scripts/repair-agent-system.mjs"))
+$arguments.Add((Join-Path $root "tools/scripts/run-repair-agent-system.mjs"))
 $arguments.Add("--mode")
 $arguments.Add($Mode.ToLowerInvariant())
 $arguments.Add("--branch")
