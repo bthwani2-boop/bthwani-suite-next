@@ -1509,6 +1509,13 @@
       "sha256": "4bc0c87683aac840de1b5f9127d2066f784458a69e5ac5fbea930b69ee29ea15",
       "historicalPrefix": "146",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 231,
+      "file": "dsh-995_promotion_funding_outbox_failed_status.sql",
+      "sha256": "b50b2eb1326f6b963420acfd74e633136a1403bfcd60d2560e5dc5df20101166",
+      "historicalPrefix": "995",
+      "state": "ACTIVE"
     }
   ]
 }

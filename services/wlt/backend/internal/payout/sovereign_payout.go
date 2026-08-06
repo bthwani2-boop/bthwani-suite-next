@@ -69,6 +69,11 @@ func HandleApprovePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 		if !ok {
 			return
 		}
+		correlationID, err := governedCorrelationID(r)
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", err.Error())
+			return
+		}
 		tx, err := db.BeginTx(r.Context(), nil)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to start payout approval")
@@ -99,6 +104,12 @@ func HandleApprovePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to approve payout request")
 			return
 		}
+		if err := appendPayoutAudit(r.Context(), tx, "payout_request", req.ID, "payout.approved", operatorID, "operator", "", correlationID, map[string]any{
+			"status": "approved",
+		}); err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout approval")
+			return
+		}
 		if err := tx.Commit(); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to commit payout approval")
 			return
@@ -111,6 +122,11 @@ func HandleRejectPayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorID, ok := decodeRequiredOperator(w, r)
 		if !ok {
+			return
+		}
+		correlationID, err := governedCorrelationID(r)
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", err.Error())
 			return
 		}
 		tx, err := db.BeginTx(r.Context(), nil)
@@ -154,6 +170,12 @@ func HandleRejectPayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to reject payout request")
 			return
 		}
+		if err := appendPayoutAudit(r.Context(), tx, "payout_request", req.ID, "payout.rejected", operatorID, "operator", "", correlationID, map[string]any{
+			"status": "rejected",
+		}); err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout rejection")
+			return
+		}
 		if err := tx.Commit(); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to commit payout rejection")
 			return
@@ -162,18 +184,27 @@ func HandleRejectPayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func markProviderResultUnknown(ctx context.Context, db *sql.DB, payoutID string, cause error) {
+func markProviderResultUnknown(ctx context.Context, db *sql.DB, payoutID string, cause error, correlationID string, operatorID string) {
 	reason := "provider result unknown"
 	if cause != nil {
 		reason = cause.Error()
 	}
-	_, _ = db.ExecContext(ctx, `
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return
+	}
+	defer tx.Rollback() //nolint:errcheck
+	_, _ = tx.ExecContext(ctx, `
 		UPDATE wlt_payout_requests
 		SET status = 'provider_result_unknown', provider_status = 'unknown', failure_reason = $2
 		WHERE id = $1 AND status = 'provider_pending'`, payoutID, reason)
+	_ = appendPayoutAudit(ctx, tx, "payout_request", payoutID, "payout.provider_unknown", operatorID, "operator", reason, correlationID, map[string]any{
+		"status": "provider_result_unknown",
+	})
+	_ = tx.Commit()
 }
 
-func failProviderDecline(ctx context.Context, db *sql.DB, payoutID string, cause error) error {
+func failProviderDecline(ctx context.Context, db *sql.DB, payoutID string, cause error, correlationID string, operatorID string) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -206,6 +237,12 @@ func failProviderDecline(ctx context.Context, db *sql.DB, payoutID string, cause
 		WHERE id = $1 AND status = 'provider_pending'`, payoutID, reason); err != nil {
 		return err
 	}
+	if err := appendPayoutAudit(ctx, tx, "payout_request", payoutID, "payout.failed", operatorID, "operator", reason, correlationID, map[string]any{
+		"status":         "failed",
+		"providerStatus": "declined",
+	}); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 
@@ -213,6 +250,11 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorID, ok := decodeRequiredOperator(w, r)
 		if !ok {
+			return
+		}
+		correlationID, err := governedCorrelationID(r)
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", err.Error())
 			return
 		}
 		tx, err := db.BeginTx(r.Context(), nil)
@@ -271,6 +313,12 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			req.ID, operatorID)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to complete payout request")
+			return
+		}
+		if err := appendPayoutAudit(r.Context(), tx, "payout_request", req.ID, "payout.completed", operatorID, "operator", "", correlationID, map[string]any{
+			"status": "completed",
+		}); err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout completion")
 			return
 		}
 		if err := tx.Commit(); err != nil {

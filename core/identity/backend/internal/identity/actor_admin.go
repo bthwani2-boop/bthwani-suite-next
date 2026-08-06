@@ -3,6 +3,7 @@ package identity
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -165,18 +166,23 @@ func (r *Repository) SearchActorsGoverned(ctx context.Context, input ActorSearch
 	args = append(args, string(status))
 	statusIndex := len(args)
 
+	// A malformed cursor is rejected rather than silently restarting from the first
+	// page: a caller paging through actors must never be handed page one while
+	// believing it advanced.
 	var cursorUsername, cursorID string
 	if input.Cursor != "" {
 		decoded, err := base64.RawURLEncoding.DecodeString(input.Cursor)
-		if err == nil {
-			parts := strings.SplitN(string(decoded), "|", 2)
-			if len(parts) == 2 {
-				cursorUsername = parts[0]
-				cursorID = parts[1]
-			}
+		if err != nil {
+			return ActorSearchPage{}, ErrInvalidActorQuery
 		}
+		parts := strings.SplitN(string(decoded), "|", 2)
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			return ActorSearchPage{}, ErrInvalidActorQuery
+		}
+		cursorUsername = parts[0]
+		cursorID = parts[1]
 	}
-	
+
 	cursorClause := ""
 	if cursorUsername != "" && cursorID != "" {
 		args = append(args, cursorUsername, cursorID)

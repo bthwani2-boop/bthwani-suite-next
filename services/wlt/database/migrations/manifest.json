@@ -502,6 +502,13 @@
       "sha256": "1752fa2937de4755b3a8d03ad5d0eb110945163dc85685997f1119e605165840",
       "historicalPrefix": "116",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 72,
+      "file": "wlt-117_dsh_outbox_events_failed_status.sql",
+      "sha256": "02eb2f995a6d25e5a4570ab5369e68b6fbe2b2b9152f30920644809e87c39328",
+      "historicalPrefix": "117",
+      "state": "ACTIVE"
     }
   ]
 }

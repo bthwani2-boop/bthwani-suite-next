@@ -95,10 +95,10 @@ type ActorSearchInput struct {
 }
 
 type ActorSearchPage struct {
-	Items  []ActorAdminView `json:"items"`
+	Items      []ActorAdminView `json:"items"`
 	Limit      int              `json:"limit"`
 	NextCursor string           `json:"nextCursor,omitempty"`
-	Total  int              `json:"total"`
+	Total      int              `json:"total"`
 }
 
 // ActorAdminView is the internal (service-to-service) projection of an actor.
