@@ -111,24 +111,24 @@
     ]
   },
   "coverage": {
-    "inventoryItems": 22,
-    "classifiedInventoryItems": 22,
+    "inventoryItems": 23,
+    "classifiedInventoryItems": 23,
     "unclassifiedInventoryItems": 0,
-    "evidenceItems": 9,
-    "findings": 9,
-    "openFindings": 9,
-    "unprovenItems": 9,
+    "evidenceItems": 10,
+    "findings": 10,
+    "openFindings": 10,
+    "unprovenItems": 10,
     "phases": 8,
-    "workItems": 8,
-    "readyWorkItems": 8,
+    "workItems": 9,
+    "readyWorkItems": 9,
     "completedWorkItems": 0,
-    "verificationItems": 9,
+    "verificationItems": 10,
     "failedRequiredChecks": 0,
-    "unverifiedRequiredBehaviors": 9,
+    "unverifiedRequiredBehaviors": 10,
     "deletionCandidates": 0,
     "unverifiedDeletions": 0,
     "duplicateTruthOwners": 3,
-    "contractMismatches": 3,
+    "contractMismatches": 4,
     "externalBlockers": 0
   },
   "requiredArtifacts": [
@@ -195,7 +195,7 @@
     "lastVerifiedSha": null,
     "failedChecks": [],
     "openBlockers": [
-      "All nine verification items require execution after operational implementation."
+      "All ten verification items require execution after operational implementation."
     ],
     "requiredNextCommands": [
       "Re-pin the latest smsm head and compare it with 8465596195e5b3e8a57aff2ef11cdf149dcc287d.",
