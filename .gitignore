@@ -144,3 +144,4 @@ node-gates*.log
 *.p8
 *.p12
 .artifacts/
+.codeatlas/
