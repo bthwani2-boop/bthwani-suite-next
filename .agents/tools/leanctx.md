@@ -6,11 +6,12 @@ LeanCTX reduces repeated reads and oversized tool output without becoming a repo
 
 ## Project defaults
 
-- The active MCP surface is the LeanCTX lazy core, applied with `lean-ctx tools lean` by `tools/scripts/repair-leanctx-local.ps1`.
-- Do not persist `tool_profile = "lean"` in `.lean-ctx.toml`; LeanCTX 3.9 uses `lean-ctx tools lean` for the lazy-core surface, while TOML profile tiers are `minimal`, `standard`, and `power`.
-- `shadow_mode = false` keeps LeanCTX conditional; native tools are not forcibly intercepted.
-- `cache_policy = "safe"` allows reuse only when the source has not materially changed.
-- Automatic capture, wake-up context, journaling, cloud contribution, and proxy behavior remain disabled unless separately approved.
+- **Tool profile:** `lean` lazy core, selected through `lean-ctx tools lean` rather than persisted as `tool_profile` in project TOML.
+- **Agent integration mode:** `hybrid` for Claude Code, Codex, Gemini, Antigravity, and Qoder so native tools remain available while reads/searches and noisy shell output can use LeanCTX.
+- `shadow_mode = false` and harden/Replace mode are forbidden as project defaults.
+- `cache_policy = "safe"` permits reuse only when source content remains materially unchanged.
+- automatic capture, wake-up context, journaling, cloud contribution, and proxy behavior remain disabled unless separately approved.
+- repository adapters must not set `trust=true`. LeanCTX may maintain its generated user-level Gemini integration contract, while the repository `.gemini/settings.json` remains non-trusting and therefore governs this workspace safely.
 
 ## Use when
 

@@ -1,10 +1,13 @@
 [CmdletBinding()]
 param(
-  [switch]$SkipIntegrationRepair
+  [ValidateRange(30, 900)]
+  [int]$TimeoutSeconds = 180
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $backupRoot = Join-Path $root (".artifacts/backups/leanctx-local/" + (Get-Date -Format "yyyyMMdd-HHmmss"))
@@ -31,30 +34,57 @@ function Resolve-LeanCtxExecutable {
   throw "LeanCTX executable was not found."
 }
 
-function Invoke-LeanCtxStreaming {
+function Invoke-LeanCtx {
   param(
-    [Parameter(Mandatory)][string[]]$Arguments
-  )
+    [Parameter(Mandatory)]
+    [string[]]$Arguments,
 
-  Write-Host "`n==> lean-ctx $($Arguments -join ' ')" -ForegroundColor Cyan
-  & $script:LeanCtx @Arguments
-  $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
-  if ($exitCode -ne 0) {
-    throw "LeanCTX command failed with exit code ${exitCode}: lean-ctx $($Arguments -join ' ')"
-  }
-}
+    [int]$Timeout = $TimeoutSeconds,
 
-function Invoke-LeanCtxCapture {
-  param(
-    [Parameter(Mandatory)][string[]]$Arguments,
     [switch]$AllowFailure
   )
 
   Write-Host "`n==> lean-ctx $($Arguments -join ' ')" -ForegroundColor Cyan
-  $lines = @(& $script:LeanCtx @Arguments 2>&1)
-  $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
-  foreach ($line in $lines) {
-    Write-Host ([string]$line)
+
+  $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+  $startInfo.FileName = $script:LeanCtx
+  $startInfo.WorkingDirectory = $root
+  $startInfo.UseShellExecute = $false
+  $startInfo.RedirectStandardOutput = $true
+  $startInfo.RedirectStandardError = $true
+  $startInfo.CreateNoWindow = $true
+
+  foreach ($argument in $Arguments) {
+    [void]$startInfo.ArgumentList.Add($argument)
+  }
+
+  $process = [System.Diagnostics.Process]::new()
+  $process.StartInfo = $startInfo
+
+  if (-not $process.Start()) {
+    throw "Failed to start LeanCTX."
+  }
+
+  $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+  $stderrTask = $process.StandardError.ReadToEndAsync()
+
+  if (-not $process.WaitForExit($Timeout * 1000)) {
+    try {
+      $process.Kill($true)
+    }
+    catch {
+      Write-Warning "Could not terminate timed-out LeanCTX process."
+    }
+    throw "LeanCTX command timed out after ${Timeout}s: lean-ctx $($Arguments -join ' ')"
+  }
+
+  $stdout = $stdoutTask.GetAwaiter().GetResult()
+  $stderr = $stderrTask.GetAwaiter().GetResult()
+  $text = (($stdout, $stderr) -join "`n").Trim()
+  $exitCode = [int]$process.ExitCode
+
+  if ($text) {
+    Write-Host $text
   }
 
   if (-not $AllowFailure -and $exitCode -ne 0) {
@@ -63,90 +93,134 @@ function Invoke-LeanCtxCapture {
 
   return [pscustomobject]@{
     exit_code = $exitCode
-    text = (($lines | ForEach-Object { [string]$_ }) -join "`n")
+    text = $text
   }
 }
 
-function Get-OptionalProperty {
+function Backup-File {
   param(
-    [AllowNull()]$Object,
-    [Parameter(Mandatory)][string]$Name
-  )
+    [Parameter(Mandatory)]
+    [string]$Path,
 
-  if ($null -eq $Object) {
-    return $null
-  }
-
-  $property = $Object.PSObject.Properties[$Name]
-  if ($null -eq $property) {
-    return $null
-  }
-
-  return $property.Value
-}
-
-function Get-LeanCtxServer {
-  param([AllowNull()]$Json)
-
-  if ($null -eq $Json) {
-    return $null
-  }
-
-  foreach ($containerName in @("mcpServers", "servers")) {
-    $container = Get-OptionalProperty -Object $Json -Name $containerName
-    if ($null -eq $container) {
-      continue
-    }
-
-    foreach ($serverName in @("lean-ctx", "lean_ctx")) {
-      $server = Get-OptionalProperty -Object $container -Name $serverName
-      if ($null -ne $server) {
-        return $server
-      }
-    }
-  }
-
-  return $null
-}
-
-function Remove-BlanketTrust {
-  param(
-    [Parameter(Mandatory)][string]$Path,
-    [Parameter(Mandatory)][string]$Label
+    [Parameter(Mandatory)]
+    [string]$Label
   )
 
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-    Write-Host "skip_missing=${Label}::${Path}"
-    return
-  }
-
-  try {
-    $json = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -Depth 100
-  }
-  catch {
-    throw "Invalid JSON in $Label config '${Path}': $($_.Exception.Message)"
-  }
-
-  $server = Get-LeanCtxServer -Json $json
-  if ($null -eq $server) {
-    Write-Host "skip_no_leanctx=${Label}::${Path}"
-    return
-  }
-
-  $trustProperty = $server.PSObject.Properties["trust"]
-  if ($null -eq $trustProperty -or $trustProperty.Value -ne $true) {
-    Write-Host "trust_already_safe=${Label}::${Path}"
     return
   }
 
   New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
   $safeName = (($Label + "-" + [IO.Path]::GetFileName($Path)) -replace '[^A-Za-z0-9._-]', '_')
   Copy-Item -LiteralPath $Path -Destination (Join-Path $backupRoot $safeName) -Force
+}
 
-  [void]$server.PSObject.Properties.Remove("trust")
-  $jsonText = $json | ConvertTo-Json -Depth 100
-  Set-Content -LiteralPath $Path -Value $jsonText -Encoding utf8NoBOM
-  Write-Host "removed_trust=${Label}::${Path}"
+function Test-AnyPath {
+  param([string[]]$Paths)
+  foreach ($path in $Paths) {
+    if ($path -and (Test-Path -LiteralPath $path)) {
+      return $true
+    }
+  }
+  return $false
+}
+
+function Initialize-DetectedAgents {
+  $targets = @(
+    @{
+      name = "claude"
+      paths = @((Join-Path $HOME ".claude"), (Join-Path $HOME ".claude.json"))
+    },
+    @{
+      name = "codex"
+      paths = @((Join-Path $HOME ".codex"))
+    },
+    @{
+      name = "gemini"
+      paths = @((Join-Path $HOME ".gemini"))
+    },
+    @{
+      name = "antigravity"
+      paths = @((Join-Path $HOME ".gemini/antigravity"))
+    },
+    @{
+      name = "antigravity-cli"
+      paths = @((Join-Path $HOME ".gemini/antigravity-cli"))
+    },
+    @{
+      name = "qoder"
+      paths = @((Join-Path $HOME ".qoder"))
+    },
+    @{
+      name = "qodercli"
+      paths = @((Join-Path $HOME ".qoder"))
+    }
+  )
+
+  foreach ($target in $targets) {
+    if (Test-AnyPath -Paths $target.paths) {
+      [void](Invoke-LeanCtx -Arguments @("init", "--agent", $target.name, "--mode", "hybrid") -Timeout 240)
+    }
+    else {
+      Write-Host "skip_not_detected=$($target.name)"
+    }
+  }
+}
+
+function Reset-ClaudeLeanCtxWrappers {
+  $hooksDirectory = Join-Path $HOME ".claude/hooks"
+  $wrapperNames = @(
+    "lean-ctx-rewrite.sh",
+    "lean-ctx-rewrite-native",
+    "lean-ctx-redirect-native"
+  )
+
+  foreach ($name in $wrapperNames) {
+    $path = Join-Path $hooksDirectory $name
+    if (Test-Path -LiteralPath $path -PathType Leaf) {
+      Backup-File -Path $path -Label "Claude-hook"
+      Remove-Item -LiteralPath $path -Force
+      Write-Host "removed_stale_wrapper=$path"
+    }
+  }
+}
+
+function Assert-RepositoryPolicy {
+  $projectConfig = Join-Path $root ".lean-ctx.toml"
+  if (-not (Test-Path -LiteralPath $projectConfig -PathType Leaf)) {
+    throw "Missing project LeanCTX config: $projectConfig"
+  }
+
+  $configText = Get-Content -LiteralPath $projectConfig -Raw
+
+  if ($configText -match '(?m)^\s*tool_profile\s*=') {
+    throw "The project config must not persist tool_profile. Use the CLI profile selector instead."
+  }
+
+  if ($configText -notmatch '(?m)^\s*shadow_mode\s*=\s*false\s*$') {
+    throw "The project config must keep shadow_mode = false."
+  }
+
+  foreach ($marker in @(
+    'shell_activation\s*=\s*"agents-only"',
+    'cache_policy\s*=\s*"safe"',
+    'auto_capture\s*=\s*false',
+    'journal_enabled\s*=\s*false',
+    'enable_wakeup_ctx\s*=\s*false',
+    'contribute_enabled\s*=\s*false'
+  )) {
+    if ($configText -notmatch $marker) {
+      throw "Required LeanCTX project marker is missing: $marker"
+    }
+  }
+
+  $geminiProjectSettings = Join-Path $root ".gemini/settings.json"
+  if (Test-Path -LiteralPath $geminiProjectSettings -PathType Leaf) {
+    $geminiText = Get-Content -LiteralPath $geminiProjectSettings -Raw
+    if ($geminiText -match '(?im)"trust"\s*:\s*true') {
+      throw "Repository-level Gemini settings must not enable trust=true."
+    }
+  }
 }
 
 $script:LeanCtx = Resolve-LeanCtxExecutable
@@ -155,81 +229,92 @@ Push-Location $root
 try {
   Write-Host "LeanCTX unified configuration for bthwani-suite-next" -ForegroundColor Green
   Write-Host "repository_root=$root"
-  Write-Host "selected_profile=lean"
-  Write-Host "reason=lowest fixed MCP schema cost; specialized tools remain available through ctx_call"
+  Write-Host "selected_tool_profile=lean"
+  Write-Host "selected_agent_mode=hybrid"
+  Write-Host "reason=lowest fixed schema cost while preserving native tools and on-demand ctx_call access"
 
-  $projectConfig = Join-Path $root ".lean-ctx.toml"
-  if (-not (Test-Path -LiteralPath $projectConfig -PathType Leaf)) {
-    throw "Missing project LeanCTX config: $projectConfig"
-  }
+  Assert-RepositoryPolicy
 
-  $configText = Get-Content -LiteralPath $projectConfig -Raw
-  if ($configText -match '(?m)^\s*tool_profile\s*=') {
-    throw "The project config must not persist tool_profile. Pull the current smsm branch and rerun."
-  }
-  if ($configText -notmatch '(?m)^\s*shadow_mode\s*=\s*false\s*$') {
-    throw "The project config must keep shadow_mode = false."
-  }
+  # Prevent inherited harden/shadow environment state from forcing Replace mode.
+  Remove-Item Env:LEAN_CTX_HARDEN -ErrorAction SilentlyContinue
+  $env:LEAN_CTX_SHADOW_MODE = "false"
 
-  $preIntegration = Invoke-LeanCtxCapture -Arguments @("doctor", "integrations") -AllowFailure
-  $needsSetupFix = $preIntegration.exit_code -ne 0 -or $preIntegration.text -match '(?im)stale binary|hook wrappers\s+.*(?:stale|failed)|^\s*✗'
+  [void](Invoke-LeanCtx -Arguments @("config", "set", "shadow_mode", "false"))
 
-  if ($needsSetupFix -and -not $SkipIntegrationRepair) {
-    Write-Host "`nIntegration drift detected; running setup --fix with live output." -ForegroundColor Yellow
-    Invoke-LeanCtxStreaming -Arguments @("setup", "--fix")
-  }
-  elseif ($needsSetupFix) {
-    throw "LeanCTX integration repair is required, but -SkipIntegrationRepair was supplied."
-  }
-  else {
-    Write-Host "integration_setup=already_healthy"
-  }
-
-  Invoke-LeanCtxStreaming -Arguments @("trust")
-  Invoke-LeanCtxStreaming -Arguments @("tools", "lean")
-
-  $userJsonConfigs = @(
-    @{ path = (Join-Path $HOME ".gemini/settings.json"); label = "Gemini CLI" },
-    @{ path = (Join-Path $HOME ".gemini/antigravity/mcp_config.json"); label = "Antigravity IDE" },
-    @{ path = (Join-Path $HOME ".gemini/antigravity-cli/mcp_config.json"); label = "Antigravity CLI" },
-    @{ path = (Join-Path $HOME ".claude.json"); label = "Claude Code" },
-    @{ path = (Join-Path $HOME ".qoder/settings.json"); label = "Qoder CLI" }
-  )
-
-  if ($env:APPDATA) {
-    $userJsonConfigs += @{
-      path = (Join-Path $env:APPDATA "Qoder/SharedClientCache/mcp.json")
-      label = "Qoder"
+  if ($IsWindows) {
+    $homePath = [IO.Path]::GetFullPath($HOME)
+    $binaryPath = [IO.Path]::GetFullPath($script:LeanCtx)
+    if ($binaryPath.StartsWith($homePath, [StringComparison]::OrdinalIgnoreCase)) {
+      $relative = $binaryPath.Substring($homePath.Length)
+      $relative = ($relative -replace '^[\\/]+', '') -replace '\\', '/'
+      $portableHookBinary = '$HOME/' + $relative
+      [void](Invoke-LeanCtx -Arguments @("config", "set", "hook_binary", $portableHookBinary))
     }
   }
 
-  foreach ($entry in $userJsonConfigs) {
-    Remove-BlanketTrust -Path $entry.path -Label $entry.label
-  }
+  # Trust must happen before agent setup so shadow_mode=false caps Replace to Hybrid.
+  [void](Invoke-LeanCtx -Arguments @("trust"))
 
-  $validation = Invoke-LeanCtxCapture -Arguments @("config", "validate")
+  # Revert any previously enabled strict enforcement before regenerating hooks.
+  [void](Invoke-LeanCtx -Arguments @("harden", "--undo") -AllowFailure -Timeout 90)
+
+  # Official repair first, then explicit Hybrid setup for every detected agent.
+  [void](Invoke-LeanCtx -Arguments @("doctor", "--fix") -AllowFailure -Timeout 300)
+  Initialize-DetectedAgents
+
+  # Tool schemas are selected independently from integration mode.
+  [void](Invoke-LeanCtx -Arguments @("tools", "lean"))
+
+  $validation = Invoke-LeanCtx -Arguments @("config", "validate")
   if ($validation.text -notmatch '(?m)\[OK\]\s+All\s+\d+\s+keys\s+validated\s+successfully') {
     throw "LeanCTX configuration validation did not report success."
   }
 
-  $tools = Invoke-LeanCtxCapture -Arguments @("tools", "show")
+  $tools = Invoke-LeanCtx -Arguments @("tools", "show")
   if ($tools.text -notmatch '(?im)Tool Profile:\s*lean\b') {
     throw "LeanCTX effective tool profile is not lean."
   }
 
-  $doctor = Invoke-LeanCtxCapture -Arguments @("doctor")
+  $doctor = Invoke-LeanCtx -Arguments @("doctor") -AllowFailure
   if ($doctor.text -match '(?im)Shadow mode\s+active') {
-    throw "LeanCTX shadow mode is still active."
+    # The wording "native tools denied" is harden/Replace state, not desired Hybrid mode.
+    [void](Invoke-LeanCtx -Arguments @("harden", "--undo") -AllowFailure -Timeout 90)
+    [void](Invoke-LeanCtx -Arguments @("config", "set", "shadow_mode", "false"))
+    [void](Invoke-LeanCtx -Arguments @("trust"))
+    Initialize-DetectedAgents
+    $doctor = Invoke-LeanCtx -Arguments @("doctor") -AllowFailure
   }
 
-  $integrations = Invoke-LeanCtxCapture -Arguments @("doctor", "integrations")
-  if ($integrations.text -match '(?im)stale binary|hook wrappers\s+.*(?:stale|failed)|^\s*✗') {
-    throw "LeanCTX integrations still contain a repairable failure."
+  if ($doctor.exit_code -ne 0) {
+    throw "LeanCTX doctor still reports a failure."
   }
 
-  Invoke-LeanCtxStreaming -Arguments @("tools", "health")
+  if ($doctor.text -match '(?im)Shadow mode\s+active') {
+    throw "LeanCTX remains in Replace/harden mode instead of Hybrid mode."
+  }
 
-  Write-Host "`nleanctx_profile=lean" -ForegroundColor Green
+  $integrations = Invoke-LeanCtx -Arguments @("doctor", "integrations") -AllowFailure
+
+  if ($integrations.text -match '(?im)Claude Code[\s\S]*?Hook wrappers\s+stale binary') {
+    Reset-ClaudeLeanCtxWrappers
+    [void](Invoke-LeanCtx -Arguments @("init", "--agent", "claude", "--mode", "hybrid") -Timeout 240)
+    $integrations = Invoke-LeanCtx -Arguments @("doctor", "integrations") -AllowFailure
+  }
+
+  if ($integrations.text -match '(?im)Gemini CLI[\s\S]*?Gemini hooks\s+drift') {
+    [void](Invoke-LeanCtx -Arguments @("init", "--agent", "gemini", "--mode", "hybrid") -Timeout 240)
+    $integrations = Invoke-LeanCtx -Arguments @("doctor", "integrations") -AllowFailure
+  }
+
+  if ($integrations.exit_code -ne 0 -or
+      $integrations.text -match '(?im)stale binary|hooks?\s+drift|hook wrappers\s+.*(?:stale|failed)') {
+    throw "LeanCTX integration health still reports repairable drift."
+  }
+
+  [void](Invoke-LeanCtx -Arguments @("tools", "health") -Timeout 180)
+
+  Write-Host "`nleanctx_tool_profile=lean" -ForegroundColor Green
+  Write-Host "leanctx_agent_mode=hybrid" -ForegroundColor Green
   Write-Host "leanctx_shadow_mode=false" -ForegroundColor Green
   Write-Host "backup_directory=$backupRoot"
   Write-Host "decision=PASS" -ForegroundColor Green
