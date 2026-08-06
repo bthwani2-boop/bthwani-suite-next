@@ -3,9 +3,9 @@ info:
   title: BThwani DSH Analytics Extensions API
   version: 1.0.0
   description: >-
-    Active standalone index for operational analytics path-items
-    not yet composed into the primary generated DSH document. The path-item
-    definitions remain sovereign in paths/analytics.paths.yaml.
+    Active standalone index for operational analytics path-items not yet
+    composed into the primary generated DSH document. The path-item definitions
+    remain sovereign in paths/analytics.paths.yaml.
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: MANUAL_TYPED_ADAPTER
@@ -15,27 +15,107 @@ servers:
 paths:
   /dsh/operator/analytics/preparation-sla:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1preparation-sla"
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_analytics_preparation_sla
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
   /dsh/operator/analytics/captains:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1captains"
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_analytics_captains
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
   /dsh/operator/analytics/field:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1field"
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_analytics_field
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
   /dsh/operator/analytics/drill-down/orders:
-    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1drill-down~1orders"
+    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1drill-down~1or\
+      ders"
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_analytics_drill_down_orders
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
   /dsh/operator/analytics/financial-snapshot:
-    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1financial-snapshot"
+    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1financial-snap\
+      shot"
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_analytics_financial_snapshot
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
   /dsh/operator/analytics/export.csv:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1export.csv"
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_analytics_export_csv
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
   /dsh/operator/analytics/operations:
     get:
-      tags: ["dsh-operator"]
+      tags: [ "dsh-operator" ]
       operationId: getDshOperationsAnalytics
       summary: Return the governed operations analytics projection.
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: period
           in: query
           required: false
-          schema: { type: string, enum: [today, week, month], default: today }
+          schema: { type: string, enum: [ today, week, month ], default: today }
       responses:
         "200":
           description: Operations analytics projection.

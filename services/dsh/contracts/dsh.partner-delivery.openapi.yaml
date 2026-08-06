@@ -379,6 +379,12 @@ paths:
         '409': { $ref: '#/components/responses/ErrorResponse' }
       security:
         - bearerAuth: []
+    parameters:
+      - name: alertId
+        in: path
+        required: true
+        schema:
+          type: string
   /dsh/operator/pickups/sla-alerts/refresh:
     post:
       operationId: refreshDshPickupSlaAlerts

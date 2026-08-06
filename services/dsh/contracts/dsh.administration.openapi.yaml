@@ -492,6 +492,237 @@ paths:
         "503": { description: Identity support-session integration is not configured. }
       security:
         - bearerAuth: []
+  /dsh/operator/admin/support-sessions:
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_admin_support_sessions
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_admin_support_sessions
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/admin/support/snapshot:
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_admin_support_snapshot
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/admin/support-sessions/{requestId}/review:
+    parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_admin_support_sessions__requestId__review
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/admin/support-sessions/{requestId}/revoke:
+    parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_admin_support_sessions__requestId__revoke
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/admin/approvals/{approvalId}/review:
+    parameters:
+      - name: approvalId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_admin_approvals__approvalId__review
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/admin/approvals/{approvalId}/rollback-requests:
+    parameters:
+      - name: approvalId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_admin_approvals__approvalId__rollback_requests
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/admin/role-requests/{requestId}/review:
+    parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_admin_role_requests__requestId__review
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/admin/roles/requests:
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_admin_roles_requests
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/admin/rollback-requests/{requestId}/review:
+    parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_admin_rollback_requests__requestId__review
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/admin/approvals:
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_admin_approvals
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/admin/diagnostics:
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_admin_diagnostics
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/admin/role-requests:
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_admin_role_requests
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/admin/rollback-requests:
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_admin_rollback_requests
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
 
 components:
   securitySchemes:
@@ -539,7 +770,16 @@ components:
         - administration.rollback.approve
     AdministrationSurface:
       type: string
-      enum: [ control-panel, app-client, app-partner, app-captain, app-field, webapp, website ]
+      enum:
+        [
+          control-panel,
+          app-client,
+          app-partner,
+          app-captain,
+          app-field,
+          webapp,
+          website
+        ]
     RoleChangeAction:
       type: string
       enum: [ staff_role_assignment, staff_role_revocation ]
@@ -636,7 +876,7 @@ components:
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        reviewedAt: { type: [string, 'null'], format: date-time }
+        reviewedAt: { type: [ string, 'null' ], format: date-time }
     StaffAssignment:
       type: object
       additionalProperties: false
@@ -697,7 +937,7 @@ components:
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        reviewedAt: { type: [string, 'null'], format: date-time }
+        reviewedAt: { type: [ string, 'null' ], format: date-time }
     RollbackRequest:
       type: object
       additionalProperties: false
@@ -736,7 +976,7 @@ components:
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        reviewedAt: { type: [string, 'null'], format: date-time }
+        reviewedAt: { type: [ string, 'null' ], format: date-time }
         sourceApprovedBy: { type: string }
     AdministrationDiagnostics:
       type: object

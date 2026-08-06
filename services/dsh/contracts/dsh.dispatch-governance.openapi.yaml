@@ -21,7 +21,8 @@ paths:
       security: [ { bearerAuth: [] } ]
       responses:
         '200':
-          description: Aggregated Workforce, DSH dispatch, and WLT-backed financial readiness for the authenticated captain.
+          description: Aggregated Workforce, DSH dispatch, and WLT-backed financial
+            readiness for the authenticated captain.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AggregatedCaptainReadiness' }
@@ -43,7 +44,8 @@ paths:
           schema: { type: string, minLength: 1 }
       responses:
         '200':
-          description: Operator-authorized aggregated readiness for the selected captain in the trusted operator context.
+          description: Operator-authorized aggregated readiness for the selected captain
+            in the trusted operator context.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AggregatedCaptainReadiness' }
@@ -219,6 +221,12 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
+    parameters:
+      - name: captainId
+        in: path
+        required: true
+        schema:
+          type: string
 
   /dsh/operator/dispatch/assignments/{assignmentId}/reassign:
     post:
@@ -243,6 +251,12 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+    parameters:
+      - name: assignmentId
+        in: path
+        required: true
+        schema:
+          type: string
 
   /dsh/operator/dispatch/assignments/{assignmentId}/cancel:
     post:
@@ -263,6 +277,12 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+    parameters:
+      - name: assignmentId
+        in: path
+        required: true
+        schema:
+          type: string
 
   /dsh/operator/dispatch/assignments/expire:
     post:
@@ -324,6 +344,141 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /dsh/captain/dispatch/assignments/{assignmentId}/delivery-proof:
+    parameters:
+      - name: assignmentId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - captain
+      operationId: get_dsh_captain_dispatch_assignments__assignmentId__delivery_proof
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - captain
+      operationId: post_dsh_captain_dispatch_assignments__assignmentId__delivery_proof
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/dispatch/capacity-forecast:
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_dispatch_capacity_forecast
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/dispatch/heatmap:
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_dispatch_heatmap
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/dispatch/tracking-alerts:
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_dispatch_tracking_alerts
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/captain/dispatch/assignments/{assignmentId}/handoff-exceptions:
+    parameters:
+      - name: assignmentId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - captain
+      operationId: post_dsh_captain_dispatch_assignments__assignmentId__handoff_exceptions
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/dispatch/capacity-policies/{serviceAreaCode}:
+    parameters:
+      - name: serviceAreaCode
+        in: path
+        required: true
+        schema:
+          type: string
+    put:
+      tags:
+        - operator
+      operationId: put_dsh_operator_dispatch_capacity_policies__serviceAreaCode_
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/captain/dispatch/assignments/{assignmentId}/contact-proxy:
+    parameters:
+      - name: assignmentId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - captain
+      operationId: post_dsh_captain_dispatch_assignments__assignmentId__contact_proxy
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
 
 components:
   securitySchemes:

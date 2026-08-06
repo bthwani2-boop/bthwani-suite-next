@@ -19,8 +19,8 @@ paths:
     get:
       operationId: listOperatorHomeDiscoveryContent
       summary: List marketing home content including publication governance metadata.
-      tags: [DshHomeMarketing]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshHomeMarketing ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: "#/components/parameters/ContentKind"
       responses:
@@ -31,7 +31,7 @@ paths:
               schema:
                 type: object
                 additionalProperties: false
-                required: [items]
+                required: [ items ]
                 properties:
                   items:
                     type: array
@@ -40,9 +40,10 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       operationId: createOperatorHomeDiscoveryContent
-      summary: Create banner or promo and record the authenticated marketing publication decision.
-      tags: [DshHomeMarketing]
-      security: [{ bearerAuth: [] }]
+      summary: Create banner or promo and record the authenticated marketing
+        publication decision.
+      tags: [ DshHomeMarketing ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: "#/components/parameters/ContentKind"
       requestBody:
@@ -64,8 +65,8 @@ paths:
     patch:
       operationId: updateOperatorHomeDiscoveryContent
       summary: Update content and publication decision using optimistic concurrency.
-      tags: [DshHomeMarketing]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshHomeMarketing ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: "#/components/parameters/ContentKind"
         - name: itemId
@@ -91,8 +92,8 @@ paths:
     delete:
       operationId: deleteOperatorHomeDiscoveryContent
       summary: Delete a banner or promo with an audit event.
-      tags: [DshHomeMarketing]
-      security: [{ bearerAuth: [] }]
+      tags: [ DshHomeMarketing ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: "#/components/parameters/ContentKind"
         - name: itemId
@@ -104,6 +105,44 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /dsh/operator/home-discovery/{kind}/{itemId}/targeting:
+    parameters:
+      - name: kind
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_home_discovery__kind___itemId__targeting
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+    put:
+      tags:
+        - operator
+      operationId: put_dsh_operator_home_discovery__kind___itemId__targeting
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
 
 components:
   securitySchemes:
@@ -118,7 +157,7 @@ components:
       required: true
       schema:
         type: string
-        enum: [banners, promos]
+        enum: [ banners, promos ]
 
   responses:
     InvalidRequest:
@@ -151,14 +190,14 @@ components:
     DshHomeMarketingError:
       type: object
       additionalProperties: false
-      required: [code, message]
+      required: [ code, message ]
       properties:
         code: { type: string }
         message: { type: string }
 
     DshHomePublicationStatus:
       type: string
-      enum: [draft, published, paused, archived]
+      enum: [ draft, published, paused, archived ]
 
     DshGovernedHomeContent:
       type: object
@@ -176,12 +215,12 @@ components:
         - version
       properties:
         id: { type: string }
-        kind: { type: string, enum: [banners, promos] }
+        kind: { type: string, enum: [ banners, promos ] }
         title: { type: string }
         subtitle: { type: string }
         badgeLabel: { type: string }
         imageUrl: { type: string }
-        actionType: { type: string, enum: [store, category, external, none] }
+        actionType: { type: string, enum: [ store, category, external, none ] }
         actionTarget: { type: string }
         sortOrder: { type: integer, minimum: 0 }
         isActive: { type: boolean }
@@ -196,13 +235,13 @@ components:
     DshGovernedHomeContentWrite:
       type: object
       additionalProperties: false
-      required: [title, imageUrl, actionType, actionTarget, sortOrder, isActive]
+      required: [ title, imageUrl, actionType, actionTarget, sortOrder, isActive ]
       properties:
         title: { type: string, minLength: 2 }
         subtitle: { type: string }
         badgeLabel: { type: string }
         imageUrl: { type: string, minLength: 1 }
-        actionType: { type: string, enum: [store, category, external, none] }
+        actionType: { type: string, enum: [ store, category, external, none ] }
         actionTarget: { type: string }
         sortOrder: { type: integer, minimum: 0 }
         isActive: { type: boolean }

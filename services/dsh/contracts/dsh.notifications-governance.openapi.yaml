@@ -63,6 +63,12 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
       security:
         - bearerAuth: []
+    parameters:
+      - name: deviceId
+        in: path
+        required: true
+        schema:
+          type: string
   /dsh/operator/notifications/delivery-attempts:
     get:
       operationId: listDshNotificationDeliveryAttempts

@@ -5,8 +5,8 @@ info:
   version: 1.1.0
   description: >-
     OperatorContext-scoped WLT financial eligibility decision projection for
-    dispatch gating. WLT owns wallet state, balances, currency, thresholds,
-    and financial policy. DSH stores only opaque WLT decision metadata and a
+    dispatch gating. WLT owns wallet state, balances, currency, thresholds, and
+    financial policy. DSH stores only opaque WLT decision metadata and a
     short-lived eligibility boolean for assignment gating.
 servers:
   - url: /api/dsh
@@ -14,10 +14,16 @@ paths:
   /dsh/operator/platform/dispatch-balance-policy:
     get:
       operationId: getDispatchBalancePolicy
-      x-bthwani-required-permissions: [dsh.dispatch_capacity.read]
-      x-bthwani-error-codes: [UNAUTHENTICATED, IDENTITY_UNAVAILABLE, FORBIDDEN, DISPATCH_BALANCE_POLICY_OWNED_BY_WLT]
+      x-bthwani-required-permissions: [ dsh.dispatch_capacity.read ]
+      x-bthwani-error-codes:
+        [
+          UNAUTHENTICATED,
+          IDENTITY_UNAVAILABLE,
+          FORBIDDEN,
+          DISPATCH_BALANCE_POLICY_OWNED_BY_WLT
+        ]
       summary: Retired DSH dispatch-balance policy endpoint; WLT owns this policy.
-      tags: [DispatchFinancialEligibility]
+      tags: [ DispatchFinancialEligibility ]
       responses:
         '410': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
@@ -26,10 +32,16 @@ paths:
         - bearerAuth: []
     put:
       operationId: upsertDispatchBalancePolicy
-      x-bthwani-required-permissions: [dsh.dispatch_capacity.manage]
-      x-bthwani-error-codes: [UNAUTHENTICATED, IDENTITY_UNAVAILABLE, FORBIDDEN, DISPATCH_BALANCE_POLICY_OWNED_BY_WLT]
+      x-bthwani-required-permissions: [ dsh.dispatch_capacity.manage ]
+      x-bthwani-error-codes:
+        [
+          UNAUTHENTICATED,
+          IDENTITY_UNAVAILABLE,
+          FORBIDDEN,
+          DISPATCH_BALANCE_POLICY_OWNED_BY_WLT
+        ]
       summary: Retired DSH dispatch-balance policy mutation; WLT owns this policy.
-      tags: [DispatchFinancialEligibility]
+      tags: [ DispatchFinancialEligibility ]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
@@ -44,9 +56,17 @@ paths:
       - $ref: '#/components/parameters/CaptainId'
     get:
       operationId: getOperatorCaptainFinancialEligibility
-      x-bthwani-required-permissions: [dsh.dispatch_financial_eligibility.read]
-      x-bthwani-error-codes: [UNAUTHENTICATED, IDENTITY_UNAVAILABLE, FORBIDDEN, INVALID_REQUEST, CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED, INTERNAL_ERROR]
-      tags: [DispatchFinancialEligibility]
+      x-bthwani-required-permissions: [ dsh.dispatch_financial_eligibility.read ]
+      x-bthwani-error-codes:
+        [
+          UNAUTHENTICATED,
+          IDENTITY_UNAVAILABLE,
+          FORBIDDEN,
+          INVALID_REQUEST,
+          CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED,
+          INTERNAL_ERROR
+        ]
+      tags: [ DispatchFinancialEligibility ]
       responses:
         '200': { $ref: '#/components/responses/EligibilityResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
@@ -62,9 +82,19 @@ paths:
       - $ref: '#/components/parameters/CorrelationId'
     post:
       operationId: refreshOperatorCaptainFinancialEligibility
-      x-bthwani-required-permissions: [dsh.dispatch_financial_eligibility.manage]
-      x-bthwani-error-codes: [UNAUTHENTICATED, IDENTITY_UNAVAILABLE, FORBIDDEN, INVALID_REQUEST, WLT_FINANCIAL_ELIGIBILITY_UNAVAILABLE, WLT_FINANCIAL_DECISION_INVALID, CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED, INTERNAL_ERROR]
-      tags: [DispatchFinancialEligibility]
+      x-bthwani-required-permissions: [ dsh.dispatch_financial_eligibility.manage ]
+      x-bthwani-error-codes:
+        [
+          UNAUTHENTICATED,
+          IDENTITY_UNAVAILABLE,
+          FORBIDDEN,
+          INVALID_REQUEST,
+          WLT_FINANCIAL_ELIGIBILITY_UNAVAILABLE,
+          WLT_FINANCIAL_DECISION_INVALID,
+          CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED,
+          INTERNAL_ERROR
+        ]
+      tags: [ DispatchFinancialEligibility ]
       responses:
         '200': { $ref: '#/components/responses/EligibilityResponse' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
@@ -78,9 +108,17 @@ paths:
   /dsh/captain/dispatch/financial-eligibility:
     get:
       operationId: getOwnCaptainFinancialEligibility
-      x-bthwani-actor-types: [captain]
-      x-bthwani-error-codes: [UNAUTHENTICATED, IDENTITY_UNAVAILABLE, FORBIDDEN, OPERATOR_CONTEXT_REQUIRED, CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED, INTERNAL_ERROR]
-      tags: [DispatchFinancialEligibility]
+      x-bthwani-actor-types: [ captain ]
+      x-bthwani-error-codes:
+        [
+          UNAUTHENTICATED,
+          IDENTITY_UNAVAILABLE,
+          FORBIDDEN,
+          OPERATOR_CONTEXT_REQUIRED,
+          CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED,
+          INTERNAL_ERROR
+        ]
+      tags: [ DispatchFinancialEligibility ]
       responses:
         '200': { $ref: '#/components/responses/EligibilityResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
@@ -93,9 +131,20 @@ paths:
   /dsh/captain/dispatch/financial-eligibility/refresh:
     post:
       operationId: refreshOwnCaptainFinancialEligibility
-      x-bthwani-actor-types: [captain]
-      x-bthwani-error-codes: [UNAUTHENTICATED, IDENTITY_UNAVAILABLE, FORBIDDEN, OPERATOR_CONTEXT_REQUIRED, INVALID_REQUEST, WLT_FINANCIAL_ELIGIBILITY_UNAVAILABLE, WLT_FINANCIAL_DECISION_INVALID, CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED, INTERNAL_ERROR]
-      tags: [DispatchFinancialEligibility]
+      x-bthwani-actor-types: [ captain ]
+      x-bthwani-error-codes:
+        [
+          UNAUTHENTICATED,
+          IDENTITY_UNAVAILABLE,
+          FORBIDDEN,
+          OPERATOR_CONTEXT_REQUIRED,
+          INVALID_REQUEST,
+          WLT_FINANCIAL_ELIGIBILITY_UNAVAILABLE,
+          WLT_FINANCIAL_DECISION_INVALID,
+          CAPTAIN_WLT_FINANCIAL_DECISION_REQUIRED,
+          INTERNAL_ERROR
+        ]
+      tags: [ DispatchFinancialEligibility ]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
       requestBody:
@@ -110,6 +159,20 @@ paths:
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '503': { $ref: '#/components/responses/ErrorResponse' }
         '500': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
+  /dsh/captain/me/ratings/summary:
+    get:
+      tags:
+        - captain
+      operationId: get_dsh_captain_me_ratings_summary
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
       security:
         - bearerAuth: []
 components:

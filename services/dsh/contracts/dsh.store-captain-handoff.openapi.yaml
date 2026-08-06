@@ -96,6 +96,54 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+  /dsh/operator/pickups/sla-alerts:
+    get:
+      tags:
+        - operator
+      operationId: get_dsh_operator_pickups_sla_alerts
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/pickups/sla-alerts/refresh:
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_pickups_sla_alerts_refresh
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/pickups/sla-alerts/{alertId}/acknowledge:
+    parameters:
+      - name: alertId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_pickups_sla_alerts__alertId__acknowledge
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
 
 components:
   securitySchemes:

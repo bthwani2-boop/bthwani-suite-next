@@ -1,8 +1,0 @@
-workflow,run_id,conclusion,claim_scope,head_sha
-FOUNDATION-00 Architecture Snapshot,30915539321,success,architecture snapshot only,f97dcbc3ecfbc19a130c4dbafef6cb7def9c3eb8
-FOUNDATION-00 Git Bundle,30915542720,success,immutable repository bundle for baseline,f97dcbc3ecfbc19a130c4dbafef6cb7def9c3eb8
-BThwani Lockfile Snapshot,30915538507,success,lockfile snapshot only,f97dcbc3ecfbc19a130c4dbafef6cb7def9c3eb8
-CodeQL,30915538400,success,CodeQL analysis only,f97dcbc3ecfbc19a130c4dbafef6cb7def9c3eb8
-DSH Database Contract,30915538485,failure,canonical DSH database contract,f97dcbc3ecfbc19a130c4dbafef6cb7def9c3eb8
-BThwani Contextual CI,30915539526,failure,contextual aggregate; see job matrix,f97dcbc3ecfbc19a130c4dbafef6cb7def9c3eb8
-SonarQube,30915539290,skipped,no analysis conclusion,f97dcbc3ecfbc19a130c4dbafef6cb7def9c3eb8

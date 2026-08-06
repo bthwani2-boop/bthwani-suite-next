@@ -13,9 +13,9 @@ paths:
       summary: Get workforce scope snapshot for a field or captain actor
       description: >
         Read-through proxy to Workforce. DSH exposes this as an operational
-        reference only. Workforce remains the sole owner of assignment and
-        scope mutations. Returns the current store and service-area assignments
-        for the given actor.
+        reference only. Workforce remains the sole owner of assignment and scope
+        mutations. Returns the current store and service-area assignments for
+        the given actor.
       x-bthwani-required-scope: workforce.scopes.read
       parameters:
         - in: path
@@ -43,6 +43,25 @@ paths:
           description: Actor not found in Workforce
         '502':
           description: Workforce upstream unavailable
+      security:
+        - bearerAuth: []
+    parameters:
+      - name: actorId
+        in: path
+        required: true
+        schema:
+          type: string
+    put:
+      tags:
+        - operator
+      operationId: put_dsh_operator_workforce_scopes__actorId_
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
       security:
         - bearerAuth: []
 

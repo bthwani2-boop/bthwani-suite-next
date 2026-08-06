@@ -324,6 +324,395 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
       security:
         - bearerAuth: []
+  /dsh/field/partners/{partnerId}/assortment-pauses:
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - field
+      operationId: get_dsh_field_partners__partnerId__assortment_pauses
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/stores/{storeId}/assortment-pauses:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - partner
+      operationId: get_dsh_partner_stores__storeId__assortment_pauses
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/stores/{storeId}/courier-connections:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - partner
+      operationId: get_dsh_partner_stores__storeId__courier_connections
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/stores/{storeId}/delivery-pricing:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - partner
+      operationId: get_dsh_partner_stores__storeId__delivery_pricing
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/field/partners/{partnerId}/assortment/{masterProductId}/pause:
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: masterProductId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - field
+      operationId: post_dsh_field_partners__partnerId__assortment__masterProductId__pause
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/field/partners/{partnerId}/assortment/{masterProductId}/resume:
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: masterProductId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - field
+      operationId: post_dsh_field_partners__partnerId__assortment__masterProductId__resume
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/pause:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: masterProductId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - partner
+      operationId: post_dsh_partner_stores__storeId__assortment__masterProductId__pause
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/resume:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: masterProductId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - partner
+      operationId: post_dsh_partner_stores__storeId__assortment__masterProductId__resume
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/stores/{storeId}/courier-connections/{connectionId}/revoke:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: connectionId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - partner
+      operationId: post_dsh_partner_stores__storeId__courier_connections__connectionId__revoke
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: memberId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - partner
+      operationId: post_dsh_partner_stores__storeId__couriers__memberId__connection_code
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/stores/{storeId}/delivery-pricing/{fulfillmentMode}:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: fulfillmentMode
+        in: path
+        required: true
+        schema:
+          type: string
+    put:
+      tags:
+        - partner
+      operationId: put_dsh_partner_stores__storeId__delivery_pricing__fulfillmentMode_
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/stores/{storeId}/commercial-summary:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - partner
+      operationId: get_dsh_partner_stores__storeId__commercial_summary
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}/withdraw:
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: proposalId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - field
+      operationId: post_dsh_field_partners__partnerId__catalog_product_proposals__proposalId__withdraw
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/stores:
+    post:
+      tags:
+        - partner
+      operationId: post_dsh_partner_stores
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/prices/schedule:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: masterProductId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - partner
+      operationId: post_dsh_partner_stores__storeId__assortment__masterProductId__prices_schedule
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/retire:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: masterProductId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - partner
+      operationId: post_dsh_partner_stores__storeId__assortment__masterProductId__retire
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/inventory:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: masterProductId
+        in: path
+        required: true
+        schema:
+          type: string
+    put:
+      tags:
+        - partner
+      operationId: put_dsh_partner_stores__storeId__assortment__masterProductId__inventory
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -351,7 +740,8 @@ components:
       in: header
       required: true
       schema: { type: string, minLength: 8, maxLength: 200 }
-      description: Retry identity scoped to the authenticated actor and trusted OperatorContext.
+      description: Retry identity scoped to the authenticated actor and trusted
+        OperatorContext.
     IdempotencyKey:
       name: Idempotency-Key
       in: header
@@ -391,7 +781,14 @@ components:
     PartnerCreateRequest:
       type: object
       additionalProperties: false
-      required: [ legalNameAr, displayName, legalIdentityType, legalIdentityNumber, primaryPhone ]
+      required:
+        [
+          legalNameAr,
+          displayName,
+          legalIdentityType,
+          legalIdentityNumber,
+          primaryPhone
+        ]
       properties:
         legalNameAr: { type: string, minLength: 1 }
         legalNameEn: { type: string }
@@ -411,9 +808,22 @@ components:
         notes: { type: string }
     PartnerCreationResult:
       type: object
-      required: [ id, legalNameAr, displayName, legalIdentityType, legalIdentityNumber,
-        primaryPhone, category, activationStatus, createdByActorId, createdBySurface,
-        version, createdAt, updatedAt ]
+      required:
+        [
+          id,
+          legalNameAr,
+          displayName,
+          legalIdentityType,
+          legalIdentityNumber,
+          primaryPhone,
+          category,
+          activationStatus,
+          createdByActorId,
+          createdBySurface,
+          version,
+          createdAt,
+          updatedAt
+        ]
       properties:
         id: { type: string }
         legalNameAr: { type: string }
@@ -518,7 +928,17 @@ components:
         event: { $ref: '#/components/schemas/ActivationEvent' }
     ActivationEvent:
       type: object
-      required: [ id, partnerId, fromStatus, toStatus, actorId, actorSurface, reason, createdAt ]
+      required:
+        [
+          id,
+          partnerId,
+          fromStatus,
+          toStatus,
+          actorId,
+          actorSurface,
+          reason,
+          createdAt
+        ]
       properties:
         id: { type: string }
         partnerId: { type: string }
@@ -551,7 +971,16 @@ components:
           additionalProperties: true
         review:
           type: object
-          required: [ id, documentId, partnerId, reviewedByActorId, decision, reason, createdAt ]
+          required:
+            [
+              id,
+              documentId,
+              partnerId,
+              reviewedByActorId,
+              decision,
+              reason,
+              createdAt
+            ]
           properties:
             id: { type: string }
             documentId: { type: string }
@@ -622,7 +1051,8 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     DecisionReasonRequired:
-      description: Approval, rejection, deactivation, and evidence review require an auditable reason.
+      description: Approval, rejection, deactivation, and evidence review require an
+        auditable reason.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -642,7 +1072,8 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     Conflict:
-      description: Version conflict, duplicate legal identity or primary phone, or idempotency key reuse with another payload.
+      description: Version conflict, duplicate legal identity or primary phone, or
+        idempotency key reuse with another payload.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }

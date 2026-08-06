@@ -150,6 +150,12 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
       security:
         - bearerAuth: []
+    parameters:
+      - name: incidentId
+        in: path
+        required: true
+        schema:
+          type: string
 
   /dsh/partner/me/ratings/field/prompt:
     get:

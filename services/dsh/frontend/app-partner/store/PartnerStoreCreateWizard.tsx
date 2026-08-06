@@ -57,7 +57,7 @@ export function PartnerStoreCreateWizard({ partnerId, onStoreCreated, onCancel }
         onStoreCreated(data.id);
       }
     } catch (e: any) {
-      setErrorMessage(e.message);
+      setErrorMessage(e.message || e.code || "Failed to create store");
       setStatus("error");
     }
   };

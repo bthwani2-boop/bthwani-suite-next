@@ -19,14 +19,14 @@ paths:
   /dsh/operator/catalog/attributes:
     get:
       operationId: listOperatorCatalogAttributes
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200": { description: Governed catalog attributes }
     post:
       operationId: createOperatorCatalogAttribute
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
       responses:
         "201": { description: Attribute created }
@@ -36,14 +36,14 @@ paths:
       - $ref: "#/components/parameters/AttributeId"
     get:
       operationId: listOperatorCatalogAttributeOptions
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200": { description: Attribute options }
     post:
       operationId: createOperatorCatalogAttributeOption
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
       responses:
         "201": { description: Attribute option created }
@@ -54,8 +54,8 @@ paths:
       - $ref: "#/components/parameters/AttributeId"
     put:
       operationId: upsertOperatorCatalogNodeAttributeRule
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
       responses:
         "200": { description: Node attribute rule saved }
@@ -65,8 +65,8 @@ paths:
       - $ref: "#/components/parameters/ProductId"
     get:
       operationId: listOperatorMasterProductAttributeValues
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200": { description: Master-product attribute values }
 
@@ -76,8 +76,8 @@ paths:
       - $ref: "#/components/parameters/AttributeId"
     put:
       operationId: upsertOperatorMasterProductAttributeValue
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
       responses:
         "200": { description: Master-product attribute value saved }
@@ -87,14 +87,14 @@ paths:
       - $ref: "#/components/parameters/ProductId"
     get:
       operationId: listOperatorMasterProductRelationships
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200": { description: Product alternatives, substitutes and complements }
     put:
       operationId: upsertOperatorMasterProductRelationship
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
       responses:
         "200": { description: Product relationship saved }
@@ -109,8 +109,8 @@ paths:
         schema: { type: integer, minimum: 1 }
     delete:
       operationId: deleteOperatorMasterProductRelationship
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "204": { description: Product relationship deleted }
 
@@ -119,8 +119,8 @@ paths:
       - $ref: "#/components/parameters/StoreId"
     get:
       operationId: listOperatorAssortmentPauses
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200": { description: Store assortment pause states }
 
@@ -130,8 +130,8 @@ paths:
       - $ref: "#/components/parameters/MasterProductId"
     post:
       operationId: pauseOperatorStoreAssortment
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
       responses:
         "200": { description: Assortment temporarily paused }
@@ -142,8 +142,8 @@ paths:
       - $ref: "#/components/parameters/MasterProductId"
     post:
       operationId: resumeOperatorStoreAssortment
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
       responses:
         "200": { description: Assortment resumed from temporary pause }
@@ -151,13 +151,21 @@ paths:
   /dsh/operator/catalog/audit:
     get:
       operationId: listOperatorCatalogAudit
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - { name: entityType, in: query, schema: { type: string } }
         - { name: entityId, in: query, schema: { type: string } }
-        - { name: action, in: query, schema: { type: string, enum: [INSERT, UPDATE, DELETE, ROLLBACK] } }
-        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+        - {
+            name: action,
+            in: query,
+            schema: { type: string, enum: [ INSERT, UPDATE, DELETE, ROLLBACK ] }
+          }
+        - {
+            name: limit,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 200 }
+          }
         - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
       responses:
         "200": { description: Append-only catalog audit page }
@@ -167,8 +175,8 @@ paths:
       - $ref: "#/components/parameters/AuditId"
     post:
       operationId: rollbackOperatorCatalogAudit
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
       responses:
         "200": { description: Guarded rollback completed }
@@ -177,8 +185,8 @@ paths:
   /dsh/partner/catalog/attributes:
     get:
       operationId: listPartnerCatalogAttributes
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200": { description: Published attribute definitions for partner catalog }
 
@@ -187,8 +195,8 @@ paths:
       - $ref: "#/components/parameters/AttributeId"
     get:
       operationId: listPartnerCatalogAttributeOptions
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200": { description: Published attribute options }
 
@@ -197,8 +205,8 @@ paths:
       - $ref: "#/components/parameters/ProductId"
     get:
       operationId: listPartnerMasterProductAttributeValues
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200": { description: Published product attribute values }
 
@@ -207,8 +215,8 @@ paths:
       - $ref: "#/components/parameters/ProductId"
     get:
       operationId: listPartnerMasterProductRelationships
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200": { description: Published product relationships }
 
@@ -217,8 +225,8 @@ paths:
       - $ref: "#/components/parameters/StoreId"
     get:
       operationId: listPartnerAssortmentPauses
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200": { description: Pause states for the authenticated partner store }
 
@@ -228,8 +236,8 @@ paths:
       - $ref: "#/components/parameters/MasterProductId"
     post:
       operationId: pausePartnerStoreAssortment
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
       responses:
         "200": { description: Partner assortment paused }
@@ -240,8 +248,8 @@ paths:
       - $ref: "#/components/parameters/MasterProductId"
     post:
       operationId: resumePartnerStoreAssortment
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
       responses:
         "200": { description: Partner assortment resumed }
@@ -249,8 +257,8 @@ paths:
   /dsh/field/catalog/attributes:
     get:
       operationId: listFieldCatalogAttributes
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200": { description: Published attribute definitions for field catalog }
 
@@ -259,8 +267,8 @@ paths:
       - $ref: "#/components/parameters/AttributeId"
     get:
       operationId: listFieldCatalogAttributeOptions
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200": { description: Published field attribute options }
 
@@ -269,8 +277,8 @@ paths:
       - $ref: "#/components/parameters/ProductId"
     get:
       operationId: listFieldMasterProductAttributeValues
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200": { description: Published field product attribute values }
 
@@ -279,8 +287,8 @@ paths:
       - $ref: "#/components/parameters/ProductId"
     get:
       operationId: listFieldMasterProductRelationships
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200": { description: Published field product relationships }
 
@@ -289,8 +297,8 @@ paths:
       - $ref: "#/components/parameters/PartnerId"
     get:
       operationId: listFieldAssortmentPauses
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200": { description: Pause states for field-authorized partner store }
 
@@ -300,8 +308,8 @@ paths:
       - $ref: "#/components/parameters/MasterProductId"
     post:
       operationId: pauseFieldStoreAssortment
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
       responses:
         "200": { description: Field-authorized assortment paused }
@@ -312,11 +320,105 @@ paths:
       - $ref: "#/components/parameters/MasterProductId"
     post:
       operationId: resumeFieldStoreAssortment
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags: [ CentralCatalogGovernance ]
+      security: [ { bearerAuth: [] } ]
       requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
       responses:
         "200": { description: Field-authorized assortment resumed }
+  /dsh/operator/catalog/assets/cleanup-orphans:
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_catalog_assets_cleanup_orphans
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/catalog/assets/{assetId}/simulate-scan:
+    parameters:
+      - name: assetId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_catalog_assets__assetId__simulate_scan
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/catalog/nodes/{nodeId}/deprecate:
+    parameters:
+      - name: nodeId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_catalog_nodes__nodeId__deprecate
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/catalog/nodes/{nodeId}/merge:
+    parameters:
+      - name: nodeId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_catalog_nodes__nodeId__merge
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /dsh/operator/catalog/nodes/{nodeId}/move:
+    parameters:
+      - name: nodeId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags:
+        - operator
+      operationId: post_dsh_operator_catalog_nodes__nodeId__move
+      responses:
+        "200":
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
 
 components:
   securitySchemes:

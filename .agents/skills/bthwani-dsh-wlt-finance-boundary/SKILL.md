@@ -49,7 +49,7 @@ This skill verifies ownership and evidence routing. WLT owns financial mutation 
 - Reading `_noncanonical` or historical files as active financial authority.
 - Mutating financial truth in DSH.
 - Using seed, fixture, in-memory, preview, or mock success as real financial proof.
-- Returning deprecated `DSH_WLT_CODE_CLOSURE_PASS` or `DSH_WLT_CODE_CLOSURE_FAIL` from new work.
+- Returning deprecated aliases from new work.
 - Claiming runtime or final closure from static boundary checks.
 
 ## Required output

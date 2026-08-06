@@ -63,7 +63,7 @@ func NewRouter(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionService) *ht
 	mux.HandleFunc("POST /wlt/refunds/{refundId}/reconcile", killGate(gate(serviceAuth(refund.RequireOperatorContextScope(db, refund.RequireMutationIdempotency(db, "reconcile", refund.HandleReconcileGovernedRefund(db)))))))
 
 	mux.HandleFunc("GET /wlt/settlements/summary", readGate(settlement.HandleGetSettlementSummaryGoverned(db)))
-	mux.HandleFunc("POST /wlt/settlements", killGate(gate(serviceAuth(settlement.HandleCreateEvidenceBackedSettlement(db)))))
+	mux.HandleFunc("POST /wlt/settlements", gate(serviceAuth(settlement.HandleCreateEvidenceBackedSettlement(db))))
 	mux.HandleFunc("GET /wlt/settlements/{settlementId}/evidence", readGate(settlement.HandleListSettlementEvidence(db)))
 	mux.HandleFunc("GET /wlt/settlements/{settlementId}", readGate(shared.RequireOperatorContextScope(db, shared.OperatorContextScopeConfig{Table: "wlt_settlements", IDPathValue: "settlementId"}, settlement.HandleGetSettlement(db))))
 	mux.HandleFunc("GET /wlt/settlements", readGate(shared.RequireOperatorContextScope(db, shared.OperatorContextScopeConfig{Table: "wlt_settlements", ListPath: "/wlt/settlements"}, settlement.HandleListSettlements(db))))

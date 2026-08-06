@@ -1,7 +1,0 @@
-check,result,evidence,required_action
-generator_used,PASS,new-package.mjs executed locally against official Git Bundle baseline,none
-strict_validator_current_package_before_rebuild,PROTOCOL_GAP,validator passed with inventoryItems=0 and unclassifiedInventoryItems=1,TASK-0007
-template_naming,FAIL,repository-naming-gate rejects _template,TASK-0007
-knip_entrypoint_provenance,FAIL,generator and validator reported unused,TASK-0010
-package_runtime_dependency,PASS,manifest declares no runtime/build/CI/migration/governance dependency,preserve
-disposal_readiness,NOT_READY,open findings and durable outputs not migrated,TASK-0018
