@@ -22,7 +22,7 @@ import {
   useIdentitySession,
 } from "@bthwani/core-identity";
 import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
-import { getReadinessGate } from "../../../../services/dsh/frontend/shared/workforce/workforce.api";
+import { fetchWorkforceReadiness } from "../../../../services/dsh/frontend/shared/workforce/workforce-me.api";
 import type { ReadinessGate } from "../../../../services/dsh/frontend/shared/workforce/workforce.types";
 import { ReadinessGateScreen } from "./features/readiness/ReadinessGateScreen";
 
@@ -120,7 +120,7 @@ function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
   const fetchReadiness = async () => {
     if (workforce.state.kind === "ready") {
       try {
-        const gate = await getReadinessGate(workforce.state.me.actorId);
+        const gate = await fetchWorkforceReadiness(workforce.state.me.actorId);
         setReadiness(gate);
       } catch (err) {
         setReadiness({
@@ -252,4 +252,3 @@ const styles = StyleSheet.create({
   },
   installationError: { textAlign: "center" },
 });
-
