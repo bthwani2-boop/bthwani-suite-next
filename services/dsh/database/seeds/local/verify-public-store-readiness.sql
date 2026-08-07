@@ -11,7 +11,7 @@ BEGIN
   FROM dsh_stores
   WHERE operator_context_id = 'local-dsh'
     AND is_visible = true
-    AND status = 'active'
+    AND status IN ('published', 'active')
     AND serviceability_status IN ('serviceable', 'limited')
     AND partner_readiness = 'ready'
     AND catalog_approval_status = 'approved'
@@ -32,7 +32,7 @@ BEGIN
   INTO incomplete_count
   FROM dsh_stores
   WHERE operator_context_id = 'local-dsh'
-    AND status = 'active'
+    AND status IN ('published', 'active')
     AND is_visible = true
     AND partner_readiness = 'ready'
     AND catalog_approval_status = 'approved'

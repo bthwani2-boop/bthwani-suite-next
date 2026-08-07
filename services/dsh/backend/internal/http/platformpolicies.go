@@ -85,3 +85,82 @@ func (s *protectedStoreServer) handleGetZoneServiceability(w http.ResponseWriter
 	}
 	store.SendJSON(w, http.StatusOK, result)
 }
+
+type createZoneRequest struct {
+	ID          string `json:"id,omitempty"`
+	Name        string `json:"name"`
+	CityCode    string `json:"cityCode"`
+	Description string `json:"description,omitempty"`
+	Reason      string `json:"reason,omitempty"`
+}
+
+type updateZoneRequest struct {
+	Name            *string `json:"name,omitempty"`
+	Description     *string `json:"description,omitempty"`
+	IsActive        *bool   `json:"isActive,omitempty"`
+	ExpectedVersion int     `json:"expectedVersion"`
+	Reason          string  `json:"reason,omitempty"`
+}
+
+func (s *protectedStoreServer) handleCreateZone(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requirePermission(w, r, "control-panel", DshServiceZonesPermissionManage)
+	if !ok {
+		return
+	}
+	var req createZoneRequest
+	if !decodeProtectedJSON(w, r, &req) {
+		return
+	}
+	reason := req.Reason
+	if reason == "" {
+		reason = "governed platform zone creation"
+	}
+	mutation, ok := platformPolicyMutation(w, r, actor.ID, reason)
+	if !ok {
+		return
+	}
+	input := platformpolicies.CreateZoneInput{
+		ID:          req.ID,
+		Name:        req.Name,
+		CityCode:    req.CityCode,
+		Description: req.Description,
+	}
+	item, err := platformpolicies.CreateZone(r.Context(), s.db, input, mutation)
+	if err != nil {
+		writePlatformPolicyError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusCreated, map[string]any{"zone": item})
+}
+
+func (s *protectedStoreServer) handleUpdateZone(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requirePermission(w, r, "control-panel", DshServiceZonesPermissionManage)
+	if !ok {
+		return
+	}
+	var req updateZoneRequest
+	if !decodeProtectedJSON(w, r, &req) {
+		return
+	}
+	reason := req.Reason
+	if reason == "" {
+		reason = "governed platform zone update"
+	}
+	mutation, ok := platformPolicyMutation(w, r, actor.ID, reason)
+	if !ok {
+		return
+	}
+	zoneID := r.PathValue("zoneId")
+	input := platformpolicies.UpdateZoneInput{
+		Name:            req.Name,
+		Description:     req.Description,
+		IsActive:        req.IsActive,
+		ExpectedVersion: req.ExpectedVersion,
+	}
+	item, err := platformpolicies.UpdateZone(r.Context(), s.db, zoneID, input, mutation)
+	if err != nil {
+		writePlatformPolicyError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"zone": item})
+}

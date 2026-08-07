@@ -1388,7 +1388,7 @@ type EffectiveImage struct {
 func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain, []Node, []ClientCatalogEntry, []CatalogAssetLinkWithAsset, []CatalogPolicy, error) {
 	var storePublished bool
 	err := db.QueryRowContext(ctx, `SELECT EXISTS (
-		SELECT 1 FROM dsh_stores WHERE id=$1 AND status='active' AND is_visible=true
+		SELECT 1 FROM dsh_stores WHERE id=$1 AND status IN ('published','active') AND is_visible=true
 		  AND serviceability_status IN ('serviceable','limited')
 	)`, storeID).Scan(&storePublished)
 	if err != nil {
@@ -1499,7 +1499,7 @@ func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain
 		if err := rows.Scan(&e.ID, &e.DomainID, &e.CategoryNodeID, &e.CanonicalNameAr, &e.CanonicalNameEn,
 			&e.Brand, &e.Barcode, &e.GTIN, &e.SKU, &e.Unit, &e.MeasurementType, &e.CanonicalImageObjectKey,
 			&e.ApprovalStatus, &e.IsActive, &e.DuplicateGroupID, &e.CreatedSource, &e.CreatedAt, &e.UpdatedAt,
-			&e.Version, &e.assortmentID, &e.UnitPrice, &e.Currency, &e.StockStatus, &e.ImageObjectKey); err != nil {
+			&e.Version, &e.ParentID, &e.IsStandalone, &e.assortmentID, &e.UnitPrice, &e.Currency, &e.StockStatus, &e.ImageObjectKey); err != nil {
 			return nil, nil, nil, nil, nil, err
 		}
 
@@ -1889,7 +1889,7 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id 
 		// Verify store is active and visible
 		var storeActive bool
 		var storeVisible bool
-		err = tx.QueryRowContext(ctx, `SELECT (status='active'), is_visible FROM dsh_stores WHERE id=$1`, *proposal.SourceStoreID).Scan(&storeActive, &storeVisible)
+		err = tx.QueryRowContext(ctx, `SELECT (status IN ('published','active')), is_visible FROM dsh_stores WHERE id=$1`, *proposal.SourceStoreID).Scan(&storeActive, &storeVisible)
 		if err != nil || !storeActive || !storeVisible {
 			return ProductProposal{}, fmt.Errorf("%w: store must be active and visible", ErrForbidden)
 		}

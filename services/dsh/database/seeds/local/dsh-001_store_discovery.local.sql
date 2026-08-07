@@ -35,7 +35,7 @@ INSERT INTO dsh_stores (
   longitude
 ) VALUES
   (
-    'store-test-grocery', 'local-dsh', 'haddah-central-market', 'أسواق حدة المركزية', 'active',
+    'store-test-grocery', 'local-dsh', 'haddah-central-market', 'أسواق حدة المركزية', 'published',
     'sana', 'haddah', 'serviceable', 4.80, 312, 25, 40, true,
     '/dsh-media/realistic/store-test-grocery-hero.jpg',
     '/dsh-media/realistic/store-test-grocery-logo.jpg',
@@ -50,7 +50,7 @@ INSERT INTO dsh_stores (
     15.3400, 44.1900
   ),
   (
-    'store-1002', 'local-dsh', 'al-sabeen-bakery', 'مخبز السبعين', 'active',
+    'store-1002', 'local-dsh', 'al-sabeen-bakery', 'مخبز السبعين', 'published',
     'sana', 'sabeen', 'serviceable', 4.60, 189, 20, 35, true,
     '/dsh-media/realistic/store-test-sweets-hero.jpg',
     '/dsh-media/realistic/store-test-sweets-logo.jpg',
@@ -65,7 +65,7 @@ INSERT INTO dsh_stores (
     15.3300, 44.2000
   ),
   (
-    'store-1003', 'local-dsh', 'taiz-street-market', 'سوق شارع تعز', 'active',
+    'store-1003', 'local-dsh', 'taiz-street-market', 'سوق شارع تعز', 'published',
     'sana', 'taiz-st', 'limited', 4.20, 97, 35, 55, true,
     '/dsh-media/realistic/store-test-grocery-hero.jpg',
     '/dsh-media/realistic/store-test-grocery-logo.jpg',
@@ -80,7 +80,7 @@ INSERT INTO dsh_stores (
     15.3200, 44.1800
   ),
   (
-    'store-1004', 'local-dsh', 'al-zubairi-grocery', 'بقالة الزبيري', 'temporarily_closed',
+    'store-1004', 'local-dsh', 'al-zubairi-grocery', 'بقالة الزبيري', 'paused',
     'sana', 'zubairi', 'unavailable', 4.50, 241, null, null, true,
     '/dsh-media/realistic/store-test-grocery-hero.jpg',
     '/dsh-media/realistic/store-test-grocery-logo.jpg',
@@ -95,7 +95,7 @@ INSERT INTO dsh_stores (
     15.3600, 44.1700
   ),
   (
-    'store-1005', 'local-dsh', 'old-city-restaurant', 'مطعم المدينة القديمة', 'active',
+    'store-1005', 'local-dsh', 'old-city-restaurant', 'مطعم المدينة القديمة', 'published',
     'sana', 'old-city', 'serviceable', 4.90, 524, 15, 30, true,
     '/dsh-media/realistic/store-test-restaurant-hero.jpg',
     '/dsh-media/realistic/store-test-restaurant-logo.jpg',
@@ -110,7 +110,7 @@ INSERT INTO dsh_stores (
     15.3560, 44.1800
   ),
   (
-    'store-1006', 'local-dsh', 'maeen-pharmacy', 'صيدلية معين', 'active',
+    'store-1006', 'local-dsh', 'maeen-pharmacy', 'صيدلية معين', 'published',
     'sana', 'maeen', 'serviceable', 4.70, 88, 20, 35, true,
     '/dsh-media/realistic/store-test-pharmacy-hero.jpg',
     '/dsh-media/realistic/store-test-pharmacy-logo.jpg',
@@ -125,7 +125,7 @@ INSERT INTO dsh_stores (
     15.3700, 44.1900
   ),
   (
-    'store-test-electronics', 'local-dsh', 'test-electronics', 'إلكترونيات المستقبل', 'active',
+    'store-test-electronics', 'local-dsh', 'test-electronics', 'إلكترونيات المستقبل', 'published',
     'sana', 'haddah', 'serviceable', 4.90, 500, 30, 60, true,
     '/dsh-media/realistic/store-test-electronics-hero.jpg',
     '/dsh-media/realistic/store-test-electronics-logo.jpg',

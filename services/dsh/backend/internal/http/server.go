@@ -353,8 +353,6 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	// duplicate handler elsewhere — the underlying admin governance and
 	// platform-policy CRUD features must be implemented first. Tracked as an
 	// open gap in governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys/FOUNDATION-00.md.
-	mux.HandleFunc("POST /dsh/operator/platform/zones", protected.handleNotImplemented)
-	mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", protected.handleNotImplemented)
 	mux.HandleFunc("PUT /dsh/operator/platform/sla-rules", protected.handleNotImplemented)
 	mux.HandleFunc("PUT /dsh/operator/platform/capacity", protected.handleNotImplemented)
 	mux.HandleFunc("GET /dsh/operator/platform/store-onboarding-fee", protected.handleNotImplemented)

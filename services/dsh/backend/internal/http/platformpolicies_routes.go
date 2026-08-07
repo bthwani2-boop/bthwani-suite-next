@@ -48,13 +48,12 @@ func RegisterPlatformPolicyRoutes(
 	mux.HandleFunc("GET /dsh/operator/platform/operational-policy/audit", protected.handleListOperationalPolicyAudit)
 	mux.HandleFunc("POST /dsh/operator/platform/operational-policy/audit/{eventId}/rollback", protected.handleRollbackOperationalPolicy)
 
+	// Zone creation and update.
+	mux.HandleFunc("POST /dsh/operator/platform/zones", protected.withPermission("control-panel", DshServiceZonesPermissionManage, protected.handleCreateZone))
+	mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", protected.withPermission("control-panel", DshServiceZonesPermissionManage, protected.handleUpdateZone))
+
 	// GET zones/sla-rules/capacity/serviceability are registered by
 	// registerUnifiedCatalogRoutes in catalog_unified_routes.go (single
 	// compatibility owner — registering them here too would panic on duplicate
 	// mux patterns).
-	//
-	// The write counterparts (POST/PATCH/PUT zones, PUT sla-rules, PUT capacity,
-	// GET/PUT store-onboarding-fee) are not registered anywhere: they are live
-	// 501 stubs in server.go. They remain an explicit unimplemented capability,
-	// not a route-registration defect.
 }
