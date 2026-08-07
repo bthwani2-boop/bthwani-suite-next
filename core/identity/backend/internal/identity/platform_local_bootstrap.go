@@ -10,19 +10,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var platformPrivilegedActions = map[string]struct{}{
-	"platform:variables:approve":  {},
-	"platform:variables:apply":    {},
-	"platform:variables:rollback": {},
-	"platform:rollouts:manage":    {},
-}
-
-var localOperatorPartnerPermissions = []Permission{
-	{Service: "dsh", Surface: "control-panel", Action: "partners.read", Scope: "all"},
-	{Service: "dsh", Surface: "control-panel", Action: "partners.manage", Scope: "all"},
-	{Service: "dsh", Surface: "control-panel", Action: "partners.activate", Scope: "all"},
-}
-
 // BootstrapLocalPlatformActors applies separation of duties to the local
 // control-plane accounts. It runs only when the existing local bootstrap is
 // explicitly enabled and never affects production actors.
@@ -124,52 +111,28 @@ ON CONFLICT (id) DO UPDATE SET
 	return nil
 }
 
+// reconcileLocalOperatorPermissions replaces the bootstrap actor's provisional
+// permission payload with the exact local-development contract. Replacement is
+// intentional: it removes stale aliases and privileged platform actions rather
+// than accumulating them across bootstrap runs.
 func (r *Repository) reconcileLocalOperatorPermissions(ctx context.Context) error {
-	var raw []byte
-	if err := r.db.QueryRowContext(ctx, `
-SELECT permissions
-FROM identity_actors
-WHERE id = 'operator-local-001'`).Scan(&raw); err != nil {
-		return err
-	}
-	var permissions []Permission
-	if err := json.Unmarshal(raw, &permissions); err != nil {
-		return err
-	}
-	filtered := make([]Permission, 0, len(permissions)+len(localOperatorPartnerPermissions))
-	for _, permission := range permissions {
-		if permission.Surface == "control-panel" && strings.HasPrefix(permission.Action, "platform:") {
-			if _, privileged := platformPrivilegedActions[permission.Action]; privileged {
-				continue
-			}
-		}
-		filtered = append(filtered, permission)
-	}
-	filtered = mergeRequiredPermissions(filtered, localOperatorPartnerPermissions)
-	encoded, err := json.Marshal(filtered)
+	encoded, err := json.Marshal(localOperatorDevelopmentPermissions())
 	if err != nil {
 		return err
 	}
-	_, err = r.db.ExecContext(ctx, `
+	result, err := r.db.ExecContext(ctx, `
 UPDATE identity_actors
 SET permissions = $2::jsonb, updated_at = NOW()
 WHERE id = $1`, "operator-local-001", string(encoded))
-	return err
-}
-
-func mergeRequiredPermissions(existing, required []Permission) []Permission {
-	merged := append([]Permission(nil), existing...)
-	for _, candidate := range required {
-		present := false
-		for _, permission := range merged {
-			if permission == candidate {
-				present = true
-				break
-			}
-		}
-		if !present {
-			merged = append(merged, candidate)
-		}
+	if err != nil {
+		return err
 	}
-	return merged
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return errors.New("operator-local-001 must exist before platform permission reconciliation")
+	}
+	return nil
 }
