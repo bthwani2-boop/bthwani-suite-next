@@ -1,6 +1,8 @@
 # الأمر الأول — إعداد حزمة التشخيص وخط الأساس وخطة التنفيذ
 
-> **التصنيف وحدود السلطة:** هذا الملف Prompt تنفيذي قابل لإعادة الاستخدام، وهو أداة دعم مشتقة لا تنشئ سياسة ولا تملك حقيقة المنتج أو البيانات أو العقود أو الموافقات. عند أي تعارض تُطبّق تعليمات المهمة الحالية ثم `governance/authority/authority-precedence.json` ثم `AGENTS.md` ثم المصادر الحاكمة التي يسجلها المرجع المثبت. لا تجعل اسم هذا الملف أو أي Prompt أو تقرير أو سجل رحلات أعلى سلطة من المستودع الحاكم.
+> **الغرض:** إعداد حزمة تشخيص وخطة تنفيذ مكتفية ذاتيًا داخل `tools/diagnose-implementing/<TASK_NAME>/` دون تعديل كود المنتج. هذا Prompt أداة دعم مشتقة؛ لا ينشئ سياسة ولا يتجاوز تعليمات المهمة الحالية أو `governance/authority/authority-precedence.json` أو `AGENTS.md` أو الحوكمة والعقود الحية.
+>
+> **مصدر الاستفادة:** تُستخلص القواعد الصحيحة المنطبقة من `tools/BThwani-unified-execution-command-final-authoritative.md` ومن إطار `tools/diagnose-implementing/`، لكن كلاهما يظل أدنى من السلطة الحاكمة الفعلية على الـSHA المثبت.
 
 ## 0. المدخلات
 
@@ -10,55 +12,70 @@
 اسم الحزمة: <TASK_NAME>
 نوع نقطة البداية: <JOURNEY | APPLICATION | SURFACE | SECTION | PAGE | FEATURE | FILE | SERVICE | DOMAIN | OTHER>
 نقطة البداية: <TARGET>
+المشكلة أو الهدف: <REPORTED_PROBLEM>
 النتيجة التشغيلية المطلوبة: <MEASURABLE_OBJECTIVE>
-تفويض التسليم: <NO_COMMIT | COMMIT | COMMIT_AND_PUSH>
+المستبعد صراحة: <EXCLUSIONS | []>
+تفويض تسليم الحزمة: <NO_COMMIT | COMMIT | COMMIT_AND_PUSH>
 ```
 
-نفّذ **مرحلة التشخيص والتخطيط وإعداد الحزمة فقط**. لا تعدّل في هذه المرحلة كود المنتج أو العقود أو قواعد البيانات أو الهجرات أو Runtime أو الاختبارات أو الحوكمة خارج مجلد الحزمة.
+نفّذ **التشخيص والتخطيط وإعداد الحزمة فقط**. لا تعدّل كود المنتج أو العقود أو قواعد البيانات أو الهجرات أو Runtime أو الاختبارات أو الحوكمة خارج مجلد الحزمة.
 
-الهدف هو حزمة مكتفية ذاتيًا يستطيع منفذ آخر استخدامها دون إعادة اكتشاف النطاق أو تخمين مالك الحقيقة أو اختراع الاختبارات أو شروط الإغلاق.
+النتيجة المطلوبة: حزمة يستطيع منفذ آخر استخدامها دون إعادة اكتشاف النطاق أو تخمين المالك أو إعادة تصميم الحل أو اختراع الفحوص أو شروط الإغلاق.
 
-## 1. معيار الدقة ونموذج العمل
+---
 
-استخدم `CODE_BASED_LEAN`:
+## 1. نموذج العمل والدقة
+
+استخدم نموذج `CODE_BASED_LEAN`:
 
 ```text
-أصغر فحص كامل يكشف السبب الجذري
-→ توسع مثبت بالأدلة فقط
-→ خطة ذرية غير متداخلة
-→ تحقق متناسب مع الادعاء
+أصغر نطاق كامل يكشف السبب الجذري
+→ توسع بسبب مثبت فقط
+→ خطة غير متداخلة
+→ تحقق متناسب مع المخاطر والادعاء
 ```
 
-عبارات مثل «عميق»، «شامل» أو «100%» ترفع معيار الدليل؛ لا تبرر تلقائيًا قراءة كل ملف أو كل حوكمة أو تشغيل Full Graphify أو Full Nx أو كامل typecheck/build/test/guards.
+كلمات مثل «عميق» و«شامل» و«100%» ترفع معيار الإثبات، ولا تعني تلقائيًا قراءة كل ملف أو كل Skill أو تشغيل Full Graphify/Nx/Typecheck/Build/Test/Guards.
 
-اعتبر النجاح الشكلي ممنوعًا:
+استهدف:
 
 ```text
 ZERO_FALSE_SUCCESS
 ZERO_UNASSESSED_REQUIRED_COVERAGE
 ZERO_UNMAPPED_RELATED_CONCERN
-ZERO_UNOWNED_WRITE_PATH
+ZERO_UNOWNED_CANONICAL_WRITE
 ZERO_UNJUSTIFIED_PARALLEL_TRUTH
-ZERO_UNPROVEN_CLOSURE
+ZERO_VAGUE_EXECUTION_TASK
+ZERO_UNPROVEN_CLOSURE_CLAIM
 ```
 
-واستخدم عند التشخيص:
+منهج التشخيص:
 
 ```text
-DISCOVER → DIAGNOSE → CROSS-CHECK → CHALLENGE → RE-DIAGNOSE → PLAN → VERIFY_PLAN
+DISCOVER
+→ DIAGNOSE
+→ CROSS-CHECK
+→ CHALLENGE
+→ RE-DIAGNOSE
+→ PLAN
+→ VERIFY_PLAN
 ```
+
+لا تعتمد أول تفسير يبدو مناسبًا. حاول إثبات أن فرضية السبب الجذري خاطئة قبل اعتمادها.
+
+---
 
 ## 2. تثبيت الحقيقة الريموت وقدرات المضيف
 
 قبل أي ادعاء أو كتابة:
 
-1. تحقق من المستودع والفرع/المرجع المطلوبين.
+1. تحقق من المستودع والفرع/المرجع بالاسم الذي حدده المستخدم؛ لا تستبدله بالفرع الافتراضي.
 2. اجلب أحدث رأس ريموت وثبّت SHA كاملًا بطول 40 حرفًا باسم `PINNED_REMOTE_SHA`.
-3. ابنِ الأدلة على هذا الـSHA فقط؛ لا تعتمد على الذاكرة أو نسخة محلية أو محادثة أو تقرير سابق لإثبات واقع الريموت.
-4. أعد حل المرجع قبل أي دفعة كتابة، وإذا تحرك الفرع فلا تكتب فوق عمل أحدث؛ حل الانحراف أولًا.
-5. لا تضع SHA ثابتًا داخل هذا الأمر الدائم.
+3. اقرأ من المرجع المثبت فقط، ولا تستخدم الذاكرة أو تقريرًا أو نسخة محلية لإثبات Remote truth.
+4. أعد حل رأس الفرع مباشرة قبل دفعة الكتابة؛ إذا تحرك، قارن التغيير الدلالي وصالح الخطة قبل الكتابة.
+5. لا تستخدم Force Push أو Reset أو كتابة فوق عمل أحدث.
 
-نفّذ Capability Preflight وسجّل ما هو متاح فعلًا:
+سجّل Capability Preflight:
 
 ```text
 CAN_READ_REPOSITORY
@@ -70,35 +87,44 @@ CAN_COMMIT
 CAN_PUSH
 ```
 
-إذا كان المضيف GitHub Remote/API بلا Shell، لا تدّع تشغيل `new-package.mjs` أو `new-unit.mjs` أو `validate-package.mjs`. إن سمحت المهمة الحالية بالكتابة الريموت فقط، يجوز إنشاء ناتج مطابق حرفيًا للمولد والقوالب الحالية عبر GitHub، لكن لا تخترع schema أو حقولًا أو enums، وتبقى نتيجة التحقق `NEEDS_EVIDENCE` حتى يُشغّل `--strict` فعليًا في بيئة قابلة للتنفيذ. إذا كانت المهمة تشترط تشغيل المولد نفسه ولا توجد قدرة تنفيذ، استخدم `BLOCKED_EXTERNAL` بدل التحايل.
+إذا كان المضيف GitHub Remote/API بلا Shell:
 
-## 3. السلطة مقابل الواقع
+- لا تدّع تشغيل `new-package.mjs` أو `new-unit.mjs` أو `validate-package.mjs`.
+- إذا كان المطلوب يفرض تشغيل الأدوات نفسها ولا توجد قدرة تنفيذ، فالقرار `BLOCKED_EXTERNAL`.
+- إذا سمحت المهمة بالكتابة الريموت فقط، لا تنشئ بنية أو Schema من الذاكرة؛ اقرأ القوالب الحالية أولًا، وأي تحقق لم يُشغّل فعليًا يبقى `NEEDS_EVIDENCE`.
 
-لا تخترع ترتيب سلطة ثابتًا؛ اقرأ `governance/authority/authority-precedence.json` على SHA المثبت وطبّقه. كحد أدنى افصل بين:
+---
+
+## 3. السلطة، الحقيقة، والمصادر المشتقة
+
+اقرأ `governance/authority/authority-precedence.json` و`AGENTS.md` على SHA المثبت، ثم اتبع الإحالات الحاكمة المنطبقة فقط.
+
+افصل بين:
 
 ```text
 AUTHORITY / NORMATIVE TRUTH
-من يملك السياسة والقرار والبيانات والعقد وما الذي يجب أن يكون.
+= ما يجب أن يكون ومن يملك القرار.
 
 IMPLEMENTATION TRUTH
-ما يفعله المصدر والعقود والمخططات والإعدادات والاختبارات على SHA المثبت.
+= الكود والعقود والمهاجرات والإعدادات والاختبارات الحالية.
 
 RUNTIME TRUTH
-ما يحدث فعليًا عند التشغيل عندما يكون الادعاء تشغيليًا.
+= ما يحدث فعليًا أثناء التشغيل والقراءة الراجعة.
 ```
 
-اقرأ فقط المصادر الحاكمة المنطبقة فعليًا. لا تسمح للكود أن يمنح نفسه ملكية تخالف سلطة أعلى، ولا تسمح لمصدر مشتق أن يصبح حقيقة حاكمة لمجرد اسمه.
+لا تجعل الكود الخاطئ ينشئ ملكية، ولا تجعل وثيقة نظرية تثبت Runtime.
 
-استخدم عند الانطباق كمصادر مساعدة لا كسلطة مستقلة:
+تعامل مع المصادر التالية كمصادر استدلال أو اكتشاف لا كحقيقة أعلى:
 
 ```text
 tools/BThwani-unified-execution-command-final-authoritative.md
 governance/operational_journey_protocol_package/
-governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys/
-journey registries / plans / reports / historical artifacts
+journey registries
+smsm-dsh-wlt-journeys
+reports / plans / historical evidence
 ```
 
-كل ادعاء مادي منها يُثبت مقابل المصادر الأعلى والكود والعقود والبيانات وRuntime. صنّفه تشخيصيًا عند الحاجة إلى:
+لكل ادعاء مادي مأخوذ من مصدر مشتق صنّف نتيجته نصيًا إلى:
 
 ```text
 CONFIRMED_BY_CANONICAL_EVIDENCE
@@ -112,11 +138,220 @@ UNPROVEN
 NOT_APPLICABLE
 ```
 
-هذه تصنيفات نصية للتشخيص وليست enums جديدة لـ`COVERAGE.json`.
+لا تضف هذه التصنيفات إلى JSON إذا لم يسمح الـSchema الحالي بها.
 
-خصوصًا `smsm-dsh-wlt-journeys`: لا تفترض عدد الرحلات أو ترتيبها أو اكتمالها أو وجوب 24 شريحة حرفيًا. استخدمها عدسة اكتشاف ومقارنة فقط، ثم أثبت كل ما يهم على المرجع الحالي.
+---
 
-## 4. إنشاء الحزمة من الإطار الحالي
+## 4. نموذج منصة بثواني وحدود الملكية
+
+تحقق من القيم الحية في `governance/product/platform-model.yaml` وProduct Truth والعقود، ولا تجمدها من هذا Prompt. استخدم النموذج التالي كمرشح تشخيصي ما دام متوافقًا مع المصادر الأعلى:
+
+```text
+Identity         → Actor, auth, sessions, devices, roles, permissions, service identity.
+Workforce        → workforce profile, employment, departments, supervisors, assignments, readiness.
+DSH              → Partner, Store, catalog, assortment, cart, order, fulfillment, dispatch, delivery.
+WLT              → ledger, balances, payment, commission, debt, settlement, refund, COD, payout, reconciliation.
+Platform Control → sovereign platform state, rollout and centrally governed operational policy.
+Providers        → provider definitions, capabilities, secret references and connection policy.
+Media            → file metadata, owner/scope/purpose and lifecycle.
+Shared Brains    → controllers/adapters/view-models consuming canonical contracts/clients.
+Surfaces         → presentation, composition, navigation and visible state; not domain truth owners.
+```
+
+ثبّت الفرق بين:
+
+```text
+Platform Context
+Operator Context
+Partner
+Store
+Actor
+Service Identity
+Assignment
+```
+
+لا تستخدم معرف نطاق عام لطمس المالك القانوني. `partner_id` و`store_id` محددات موارد، وليسا إثبات صلاحية بحد ذاتهما.
+
+الحقيقة المالية تبقى في WLT؛ لا تجعل Surface أو DSH يملك Ledger أو Balance mutation أو Settlement truth.
+
+---
+
+## 5. نمط المهمة وموجه المخاطر
+
+اختر نمط المخاطر الأساسي من القاموس الحي في `AGENTS.md`، مثل:
+
+```text
+TEXT_ONLY | CODE_ONLY | PRODUCT_MODEL | UI_CODE | UI_VISUAL | API_CONTRACT
+RUNTIME | DSH_WLT | SECURITY_PRIVACY | AGENT_SYSTEM | DEPENDENCY_CI | REFACTOR_CLEANUP
+```
+
+لا تخلط هذا مع نية المهمة؛ هنا النية هي `DIAGNOSE/PLAN`.
+
+وثّق أسباب توسيع الفحص عند تأثر أي من:
+
+```text
+product model
+shared contract/generated client
+migration/database ownership
+identity/auth/session/authorization
+trusted scope/isolation
+WLT/finance
+shared runtime/workspace dependency
+multiple bounded contexts or governed surfaces
+release/production-sensitive behavior
+```
+
+الوضع الافتراضي:
+
+```text
+AFFECTED_PLUS_RISK_EXPANSION
+```
+
+---
+
+## 6. تعريف النطاق بدقة
+
+قبل إنشاء الوحدات حدّد:
+
+```text
+requested outcome
+current behavior
+required behavior
+actors/service identities
+canonical truth owner
+canonical write path
+read consumers
+trusted scopes
+required surfaces
+control-panel sections
+contract operations/generated clients
+backend routes/domain services
+state machine/transitions
+DB tables/migrations/constraints/indexes
+Events/Outbox/Jobs/Cache/Search/Media/Providers
+runtime dependencies
+negative/retry/offline/recovery behavior
+allowed paths
+read-only paths
+forbidden paths
+acceptance criteria
+```
+
+قاعدة النطاق:
+
+```text
+DIAGNOSIS_SCOPE
+= أصغر نطاق مستودع كامل يكشف الروابط والسبب الجذري والمخاطر.
+
+EXECUTION_SCOPE
+= الهدف + كل اعتماد مباشر أو انتقالي مثبت
+  + كل أساس مشترك يلزم استقراره لإغلاق الهدف.
+```
+
+يصبح العنصر مرتبطًا إذا كان يملك الحقيقة أو يكتب/يقرأ الحالة أو يفرض صلاحية أو عقدًا أو Scope أو Migration أو رحلة سابقة/لاحقة أو Readback أو أثرًا ماليًا/أمنيًا/تشغيليًا أو يمثل نسخة موازية للحقيقة.
+
+العيب غير المرتبط:
+
+```text
+DEFECT_OUTSIDE_EXECUTION_SCOPE
+```
+
+مع الدليل، سبب الاستبعاد، أثر عدم المعالجة، وشرط إعادة الفتح.
+
+الاعتماد الخارجي:
+
+```text
+EXTERNAL_DEPENDENCY
+```
+
+مع المالك وشرط فك الحظر، ولا يستخدم لإخفاء خلل داخلي.
+
+---
+
+## 7. التشخيص المتعدد الجولات
+
+افحص بقدر الانطباق:
+
+### 7.1 Product/Architecture/Ownership
+- Product Truth والنتيجة التجارية.
+- Domain boundaries وTruth owners وwrite authority.
+- Dependency direction وforbidden imports.
+- Parallel truths وdual writes وlocal copies.
+- State machines والحالات والأفعال الممنوعة.
+
+### 7.2 Identity/Security/Scope
+- Authentication/session/device/service identity.
+- Roles/permissions/assignments.
+- Platform/Operator/Partner/Store/Actor scope.
+- Object authorization وIDOR وprivilege escalation.
+- Cross-partner/store/operator leakage.
+- Secret/PII/logging boundaries.
+
+### 7.3 Contracts/Backend/Data
+- OpenAPI، errors، enums، nullable/optional، idempotency.
+- Generated-client provenance وعدم وجود handwritten parallel types.
+- Handler/domain/repository/transactions/concurrency.
+- Migrations/schema/constraints/indexes/backfill/data integrity.
+
+### 7.4 Events/Runtime/Resilience
+- Outbox/Inbox/Jobs/Queues/DLQ/retry/dedupe.
+- Cache invalidation/search/media/providers.
+- timeout/unknown result/recovery/compensation/reconciliation.
+- Docker/env/ports/health/readiness/logs/metrics/traces.
+
+### 7.5 Multi-Surface/UI
+- كل Surface مثبت الارتباط.
+- routes/navigation/deep links/screens/pages/tabs/controls/forms.
+- loading/empty/error/blocked/conflict/offline/unknown-result/retry/recovery.
+- RTL/localization/accessibility/focus/large text/responsive behavior.
+- كل control إلى أثر Backend محفوظ ثم Readback.
+
+### 7.6 Legacy/Cleanup
+- dead code/stale routes/obsolete files/backups.
+- duplicated contracts/state machines.
+- runtime-reachable mocks/fixtures/seeds.
+- silent fallbacks/unused APIs/orphan tables.
+
+لكل Finding مادي وثّق على الأقل:
+
+```text
+path/symbol
+problem
+evidence
+root cause
+canonical owner
+affected consumers/surfaces
+security/data/runtime/financial/scope risk
+priority
+required fix
+required verification
+```
+
+لا تبدأ خطة تعديل تخمينية قبل إثبات السبب الجذري والمالك ومسار الكتابة والمستهلكين وحاجة Migration/Compatibility والاختبار الذي يمنع الرجوع.
+
+---
+
+## 8. فحص الموجود قبل اقتراح الجديد
+
+قبل التخطيط لإنشاء File/Component/Hook/Controller/API/Service/Migration/Guard/Test:
+
+1. ابحث بالاسم.
+2. ابحث بالمعنى الوظيفي.
+3. افحص imports/exports/routes/navigation/registries/manifests.
+4. افحص API/DB/test bindings.
+5. استخدم Graphify/Nx فقط إذا بقيت العلاقات غامضة.
+
+الأولوية:
+
+```text
+REUSE → EXTEND → MERGE → MOVE_TO_OWNER → SPLIT → CREATE_NEW
+```
+
+ولا تخطط للحذف حتى يثبت عدم الاستهلاك أو اكتمال مسار الترحيل.
+
+---
+
+## 9. إنشاء الحزمة بالإطار القائم فقط
 
 المسار الوحيد:
 
@@ -124,7 +359,7 @@ NOT_APPLICABLE
 tools/diagnose-implementing/<TASK_NAME>/
 ```
 
-اقرأ واستخدم الإطار الموجود فعليًا على SHA المثبت:
+الإطار الحالي:
 
 ```text
 tools/diagnose-implementing/_template/
@@ -133,7 +368,9 @@ tools/diagnose-implementing/new-unit.mjs
 tools/diagnose-implementing/validate-package.mjs
 ```
 
-عند توفر التنفيذ استخدم:
+لا تنشئ Framework موازياً ولا تعود إلى أشجار `topics/contexts/journeys/` المكررة.
+
+عند توفر Shell استخدم:
 
 ```powershell
 node tools/diagnose-implementing/new-package.mjs `
@@ -145,37 +382,17 @@ node tools/diagnose-implementing/new-package.mjs `
   --repository <OWNER/REPOSITORY>
 ```
 
-`--surface` اسم تقني لمدخل المولد الحالي ولا يعني أن الهدف Surface. سجّل نوع الهدف الحقيقي داخل المواضع التي يسمح بها المخطط الحالي دون تغيير `schemaVersion`.
+`--surface` اسم تقني للمدخل؛ لا يعني أن الهدف Surface.
 
-يُمنع إنشاء Framework موازٍ أو إعادة أشجار `topics/contexts/journeys` المستقلة. `COVERAGE.json` هو سجل التغطية المنظم الوحيد.
+لا تغيّر `schemaVersion` ولا تخترع حقول JSON إلزامية غير مدعومة.
 
-أنواع الوحدات المدعومة حاليًا فقط:
+---
 
-```text
-TOPIC | CONTEXT | JOURNEY | FOUNDATION | MIGRATION | CLEANUP | VERIFICATION
-```
+## 10. COVERAGE.json هو سجل التغطية المنظم الوحيد
 
-## 5. نطاق التشخيص ونطاق التنفيذ
+استكمل كل seeded entry، ولا تترك `UNASSESSED` عند الجاهزية.
 
-طبّق:
-
-```text
-COVERAGE_SCOPE
-= قيّم كل عناصر COVERAGE.json المولدة، بمستوى مضغوط حيث يكفي الدليل.
-
-DEEP_DIAGNOSIS_SCOPE
-= الهدف + كل concern يثبت ارتباطه أو مخاطره أو حاجته لدليل أعمق.
-
-EXECUTION_SCOPE
-= الهدف + كل اعتماد مباشر/انتقالي مثبت
-  + كل Foundation أو Shared prerequisite لازم لإغلاقه.
-```
-
-قيّم كل seeded coverage entry، لكن لا تفحص كل ملف تفصيليًا بلا سبب. توسع إلى المسار/الرمز/القارئ/الكاتب/الحالة/الرحلة فقط عندما يثبت الارتباط أو العيب المادي.
-
-يصبح العنصر مرتبطًا عندما يثبت أنه يملك الحقيقة أو الكتابة، يقرأ/يكتب الحالة، يبدأ أو يكمل رحلة، يعتمد على نتيجتها، يعرضها على Surface آخر، يستهلك العقد/الخدمة/الجدول/الحدث نفسه، يعتمد على الهوية/الصلاحية/التكليف/النطاق نفسه، يحمل أثرًا تشغيليًا/ماليًا/أمنيًا/تدقيقيًا، يحتوي نسخة قديمة أو موازية من الحقيقة، أو يلزم اختباره لإثبات الإغلاق.
-
-استخدم **فقط** assessments الحالية في `COVERAGE.json`:
+الـassessments المدعومة حاليًا:
 
 ```text
 UNASSESSED
@@ -185,33 +402,47 @@ DEFECT_OUTSIDE_EXECUTION_SCOPE
 EXTERNAL_DEPENDENCY
 ```
 
-العنصر `RELATED` يجب أن يربط دليلًا ووحدة. الاستبعاد يحتاج دليلًا وسببًا و`reopenTrigger`. الصمت ليس استبعادًا.
+افحص على الأقل:
 
-## 6. التشخيص متعدد العدسات والمضاد
+- repository.
+- control-panel / app-client / app-partner / app-captain / app-field.
+- كل current control-panel section المولدة.
+- DSH shared frontend/backend/database.
+- WLT related scope.
+- contracts/clients.
+- events/jobs/integrations.
+- identity/authorization/security.
+- tests/quality.
+- runtime/observability.
+- CI/tooling/automation.
+- governance/ownership.
 
-نفّذ فقط العدسات المنطبقة، وبالعمق الذي يتطلبه الدليل:
+ابقِ التغطية compact إذا ثبت عدم العلاقة، ووسع إلى paths/symbols/actions/writers/readers/states/journeys عند وجود قيمة تنفيذية.
 
-- المعمارية: Domain boundaries، Truth owners، write authority، dependency direction، imports، parallel truths، Shared Brains.
-- المنتج والتشغيل: Actors، outcomes، states، invariants، predecessors/successors، failure/compensation.
-- Identity/Security: session/device، roles، permissions، assignments، trusted scopes، object authorization، IDOR، privilege escalation، isolation، audit.
-- العقود والعملاء: OpenAPI/schema، request/response/errors، generated clients، provenance، compatibility، handwritten parallel types.
-- Backend: handlers، commands/queries، domain policy، state machines، repositories، transactions، validation، idempotency/concurrency.
-- PostgreSQL: migrations، schema، constraints، keys، indexes، integrity، backfill، compatibility، rollback/compensation.
-- Events/Jobs/Integrations: outbox/inbox، queues، DLQ، retries، dedupe، provider failure، timeout، unknown result، recovery.
-- Surfaces/UI: routes/screens/pages/controls/forms/navigation/deep links وكل الحالات المرئية المرتبطة.
-- Runtime/Observability: env، Docker، ports، health/readiness، logs/metrics/traces، startup/recovery.
-- Tests: ماذا يثبت كل اختبار؟ ماذا لا يثبت؟ وهل يمكن أن يمر والمنتج مكسور؟
-- Cleanup: dead code، stale routes، backups، duplicated contracts/state machines، legacy endpoints، mocks/fixtures/fallbacks في المسارات الحية.
+`RELATED` يجب أن يملك evidence وunit links. الاستبعاد يجب أن يملك evidence وreason وreopen trigger. الصمت ليس استبعادًا.
 
-بعد فرض Root Cause، حاول إثبات أنه خاطئ: ابحث عن writer/reader/contract/state/runtime path بديل، وحدد هل المشكلة عرض أم سبب، وهل الحل سيكسر رحلة أو Surface آخر. لا تعتمد السبب الجذري قبل استبعاد البدائل المادية المعقولة.
+---
 
-## 7. PHASE-00 — BASELINE_STABILIZATION
+## 11. PHASE-00 — BASELINE_STABILIZATION
 
-ابدأ الخطة بخط أساس **مرتبط بالمهمة فقط**؛ ليس الهدف إصلاح المستودع كله.
+ابدأ الخطة بخط أساس **مرتبط بالمهمة**؛ ليس إصلاحًا تلقائيًا للمستودع كله.
 
-افحص عند الانطباق: authority consistency، canonical ownership، identity/security/trusted scope، database/migration integrity، contracts/generated clients، service boundaries، shared state machines/brains، shared reads/writes، events/jobs، runtime health/readiness، foundational guards/tests، parallel truths.
+افحص:
 
-صنّف الفجوات تشخيصيًا:
+```text
+authority/product ownership
+identity/security/trusted scope
+canonical database/migration integrity
+contract/generated-client alignment
+service boundaries/shared state machines
+Shared Brains/cross-surface writes and reads
+Events/Jobs baseline
+runtime/health/readiness
+guards/tests required by the risk
+parallel truths/central duplicates
+```
+
+صنّف نصيًا:
 
 ```text
 FOUNDATION_BLOCKER
@@ -223,150 +454,329 @@ NON_BLOCKING_DEBT
 EXTERNAL_DEPENDENCY
 ```
 
-أي خلل يضرب عدة رحلات/أسطح أو مصدر حقيقة مركزي يُرفع إلى وحدة مشتركة `FOUNDATION` أو `MIGRATION`؛ ممنوع إصلاح السبب المركزي مرة في كل رحلة.
+عيب يضرب عدة رحلات/أسطح أو مالكًا مركزيًا يعالج مرة واحدة في `FOUNDATION` أو `MIGRATION`، لا داخل كل Journey.
 
-أنشئ وحدة `VERIFICATION` تمثل `FOUNDATION_CLOSURE_GATE` وتعتمد على وحدات الأساس المنطبقة. حتى إن لم توجد فجوة تأسيسية، يجب أن تثبت البوابة صلاحية الأساس. كل Journey مرتبطة يجب أن تعتمد عليها مباشرة أو انتقاليًا.
+أنشئ بعد وحدات الأساس `VERIFICATION` واحدة تمثل `FOUNDATION_CLOSURE_GATE`. حتى إذا لم توجد إصلاحات، يجب أن تثبت البوابة صلاحية الأساس.
 
-خطط لتشغيل `pnpm run guard:foundation` فقط عندما يكون موجودًا ومنطبقًا: baseline أولي، بعد إصلاح الأساس، قبل أول Journey، بعد أي تغيير تأسيسي لاحق، وقبل الإغلاق الذي يدعي صلاحية الأساس.
+كل Journey داخل النطاق تعتمد مباشرة أو انتقاليًا على هذه البوابة.
 
-## 8. الرحلات والأسطح العابرة
+خطط لـ`pnpm run guard:foundation` فقط إذا كان موجودًا ومنطبقًا، عند الحالة الأولية، وبعد إصلاح الأساس، وقبل أول Journey، وبعد mutation تأسيسي لاحق، وقبل الإغلاق.
 
-استخرج الرحلات من الحوكمة/السجلات **ومن الواقع**: contracts، code، database، surfaces، runtime، tests، events/jobs. ابحث عن documented/undocumented، registry-only، code-only، duplicate، stale، partial، closed-without-evidence، inbound/outbound journeys.
+---
 
-لكل رحلة مرتبطة تتبع عند الانطباق:
+## 12. اكتشاف الرحلات والشرائح الرأسية
+
+لا تفترض صحة Registry واحد. قارن Product Truth والحوكمة والسجلات والمصادر المشتقة مع code/contracts/database/runtime/surfaces/tests/events.
+
+ابحث عن:
 
 ```text
-Actor → Intent → Entry point → Route/Screen/Page → Visible Control
-→ Input validation → Identity/Session/Permission/Assignment/Trusted Scope/Object Authorization
-→ Command/Query → Canonical Contract → Generated Client → API → Handler
-→ Domain Policy/State Machine → Transaction → Database
-→ Event/Job/Integration → Operational/Financial Effect
-→ Persisted Readback → All Consuming Surfaces → Audit/Observability → Evidence
+documented / undocumented
+registry-only / code-only
+stale / duplicate / partial
+inbound / outbound
+closed-without-runtime-evidence
 ```
 
-غطِّ success، validation failure، denied/forbidden، conflict، duplicate، race، timeout، unknown result، offline، retry، reconnect، recovery، rollback، compensation، dependency degradation.
-
-استخدم شرائح `SL-01..SL-24` من SMSM فقط كعدسات فحص إذا ثبت انطباقها؛ لا تنشئ لها Schema موازية ولا تفترض وجوبها جميعًا.
-
-لكل Surface مرتبط اجرد controls ذات الصلة: routes/screens/pages/layouts/tabs/lists/cards/tables/buttons/links/icons/gestures/modals/drawers/forms/fields/filters/sort/pagination/refresh/import/export/upload/download/deep links/notifications/confirmation/back/state restoration. تحقق من visibility/enablement/permission/scope/validation/real contract/API/persisted effect/readback/duplicate interaction والحالات Loading/Empty/Partial/Success/Error/Denied/Blocked/Not Ready/Conflict/Stale/Offline/Unknown/Retry/Recovery، إضافة إلى RTL/localization/accessibility/focus/screen reader/large text/responsiveness/performance.
-
-لا تعتبر UI مكتملًا لمجرد ظهوره أو نجاح التنقل، ولا تقبل Mock/Fixture/constant/local state/manual parallel contract/legacy path/silent fallback كحقيقة تشغيلية.
-
-## 9. الوحدات والمهام والتحقق
-
-أنشئ وحدة واحدة لكل `executionConcern` مستقل غير متداخل. قد تخدم الوحدة عدة topics/contexts/journeys/surfaces إذا كان Root Cause وTruth Owner واحدًا. ممنوع duplicate concern أو dependency cycle أو gap بلا unit.
-
-في `DIAGNOSIS.md` وثّق: الواقع، الأدلة، الفرضيات البديلة التي اختُبرت، Root Cause، Truth Owner، writers/readers/consumers، surfaces/journeys، التصنيف، dependencies، ما الذي تفتحه الوحدة، الحدود و`must-not-change`، ولماذا الحل أفضل من البدائل.
-
-حافظ على schema الحالي لـ`EXECUTION.json`. كل Task يجب أن يحدد فعليًا:
+لكل Journey وثّق:
 
 ```text
-taskId / order / objective / paths / symbols / action
-currentProblem / requiredChange / targetState / mustNotChange
-acceptanceCriteria / verificationIds / rollback / commitBoundary
+actor/outcome
+predecessors/prerequisites
+foundation/shared dependencies
+truth owner/write path/readback
+required surfaces/control-panel consumers
+states/transitions
+blockers
+what it unlocks
 ```
 
-يُمنع استخدام «أصلح/راجع/حسّن/نظف/اربط/أكمل» وحدها دون أين وماذا ولماذا والحالة النهائية والتحقق.
-
-في `VERIFICATION.json` عرّف لكل check:
+عند الحاجة فكك Capability إلى شرائح رأسية:
 
 ```text
-verificationId / type / command / required / prerequisites
-passCriteria / failCriteria / proves / doesNotProve
+use case واحدة
+→ كل طبقاتها
+→ كل أسطحها
+→ تحققها
+→ إغلاقها
 ```
 
-لا تجعل فحصًا يثبت أكثر مما يستطيع إثباته.
+لا تستخدم التقسيم الأفقي: «كل Frontend ثم كل Backend ثم DB».
 
-## 10. ترتيب التنفيذ والسرعة
+إذا كانت مصادر مشتقة تعرض شرائح ثابتة مثل SMSM أو FS، استخدمها **كعدسات فحص بعد إثبات الانطباق** لا كSchema إلزامي ولا كعدد رحلات ثابت.
 
-استخدم `dependsOn` كرسم اعتماديات بلا دورات. الأولوية:
+---
+
+## 13. سلسلة التتبع Full-Stack
+
+لكل Journey/Capability مرتبطة تتبع بقدر الانطباق:
 
 ```text
-1 hard dependencies
-2 foundation blockers
-3 critical path
-4 opens most journeys
-5 opens most surfaces
-6 central/shared fix preventing repeated work
-7 high-risk/high-uncertainty early
-8 small high-impact fix
-9 minimize reopening stabilized contract/schema/files
-10 batch contract generation/client regeneration
-11 cleanup/non-blocking debt last
+Product Truth
+→ Actor / Service Identity
+→ Session/Device
+→ Platform/Operator/Partner/Store/Assignment trusted scope
+→ Role/Permission/Object authorization
+→ Surface/Route/Screen/Control
+→ Shared Brain
+→ Generated Client
+→ Canonical Contract
+→ API/Handler
+→ Domain policy/State machine
+→ Repository/Transaction/Database
+→ Cache/Idempotency
+→ Event/Outbox/Job/Provider
+→ WLT when financial
+→ Persisted Effect
+→ Readback
+→ Every required consumer surface
+→ Audit/Observability
+→ Runtime evidence
 ```
 
-وثّق سبب ترتيب كل وحدة وما تمنعه وما تفتحه. لا ترتب حسب رقم الوحدة فقط.
-
-يمكن توازي القراءة والبحث وتحليل العلاقات وجمع الأدلة والفحوص المستقلة. تبقى الكتابات المتعارضة، مصادر الحقيقة المشتركة، migrations/backfill، العقود والعملاء، shared schema، commits وتحديث حالات الوحدات متسلسلة. لا تخطط لأكثر من وحدة كتابة واحدة `IN_PROGRESS`.
-
-## 11. التحقق وإبطال الأدلة
-
-خطط Affected-First:
+غطِّ:
 
 ```text
-nearest targeted check
-→ unit/package test
-→ related integration
-→ affected lint/typecheck/test/build
-→ applicable targeted guards
-→ checkpoint-wide checks عند الحاجة
-→ runtime/smoke/E2E/manual acceptance/readback/observability فقط عندما يكون الادعاء يتطلبها
+success
+invalid input
+denied/forbidden
+wrong scope
+forbidden state
+duplicate/replay
+race/concurrency
+timeout/unknown result
+offline/reconnect
+retry/backoff
+partial failure/restart
+stale client/mixed version
+compensation/reconciliation
 ```
 
-أي تغيير في canonical truth أو identity/auth أو contract/generated client أو schema/migration أو shared state machine/brain أو foundational runtime يجب أن يحدد الأدلة التي أصبحت stale والوحدات والفحوص التي يجب إعادتها، وهل يجب إعادة فتح Foundation. لا تغلق بدليل أقدم من التغيير الذي أبطل معناه.
+أي حلقة لازمة مفقودة تصبح Finding وخطة.
 
-إذا ظهرت فجوة تأسيسية أثناء Journey لاحقًا:
+---
+
+## 14. قواعد خاصة يجب أن تدخل الخطة عند الانطباق
+
+### 14.1 PostgreSQL/Migrations
+- لا تعدّل Migration مطبقة؛ أنشئ Migration جديدة.
+- خطط `EXPAND → compatible code → BACKFILL → verify → switch writers → switch readers → remove fallbacks → CONTRACT` عند الحاجة.
+- اختبر قاعدة جديدة وغير فارغة وإعادة التشغيل والبيانات المتعارضة/اليتيمة/المكررة والفشل الجزئي.
+- خطط locks/index build/batching/idempotency/rollback أو roll-forward.
+- لا تستخدم `IF NOT EXISTS` لإخفاء Drift معروف.
+
+### 14.2 Compatibility
+عند تغيير API/Schema/Contract خطط لإثبات:
 
 ```text
-STOP affected path safely
-→ classify evidence
+old mobile + new backend
+new mobile + old backend عند الحاجة
+current control-panel + new backend
+generated client/event/cache compatibility
+mixed-version runtime
+rollback/roll-forward
+compatibility window owner + expiry + removal trigger
+```
+
+لا تفترض تحديث كل تطبيقات الهاتف لحظيًا. Compatibility المؤقتة يجب أن تكون محددة بمالك ومدة وخطة إزالة؛ لا Dual-write أو fallback دائم.
+
+### 14.3 Security/Privacy
+غطِّ auth/authz/session/token/secrets/PII/input/output/injection/SSRF/path traversal/upload/rate limit/replay/IDOR/cross-scope/audit/dependency/workflow permissions حسب الخطر. UI-only authorization غير مقبول.
+
+### 14.4 DSH/WLT
+أي أثر مالي يخطط عبر الحد الحاكم DSH↔WLT، مع WLT مالكًا للحقيقة المالية، وidempotency/audit/readback/reconciliation عند الانطباق.
+
+### 14.5 Mobile
+خطط عند التأثر لـnavigation/deep links/Expo/native permissions/push/maps/SecureStore/offline/native rebuild/OTA/EAS/signing/runtime env. نجاح Metro لا يثبت Native build.
+
+### 14.6 Control Panel
+خطط route+object authorization، server/client boundaries، scope selection الخادمي، pagination/filter/search isolation، bulk/destructive actions، audit، session expiration، error mapping وcross-surface readback.
+
+---
+
+## 15. إنشاء الوحدات غير المتداخلة
+
+استخدم الأنواع الحالية فقط:
+
+```text
+TOPIC
+CONTEXT
+JOURNEY
+FOUNDATION
+MIGRATION
+CLEANUP
+VERIFICATION
+```
+
+عند توفر Shell:
+
+```powershell
+node tools/diagnose-implementing/new-unit.mjs `
+  tools/diagnose-implementing/<TASK_NAME> `
+  --id <UNIT_ID> `
+  --name <UNIT_NAME> `
+  --kind <UNIT_KIND> `
+  --depends-on "<DEPENDENCY_IDS>"
+```
+
+أنشئ وحدة واحدة لكل `executionConcern` حقيقي. إذا كان Root Cause وTruth Owner واحدًا، لا تقسّمه حسب الأسطح.
+
+يُمنع:
+
+```text
+duplicate executionConcern
+unit بلا evidence
+gap مرتبط بلا unit
+dependency cycle
+unit ضخمة لمشكلات مستقلة
+screen-by-screen patching لسبب مركزي
+```
+
+### DIAGNOSIS.md
+يشرح: الواقع، الأدلة، البدائل المستبعدة، root cause، truth owner، writers/readers/consumers، surfaces/journeys، dependencies، what it unlocks، boundaries/must-not-change، مخاطر وتأثير التأخير، وسبب اختيار الحل.
+
+### EXECUTION.json
+حافظ على الـSchema الحالي. كل Task تحدد بدقة:
+
+```text
+taskId/order/objective
+paths/symbols
+action/currentProblem/requiredChange/targetState
+mustNotChange
+acceptanceCriteria
+verificationIds
+rollback
+commitBoundary
+```
+
+لا تستخدم «أصلح/راجع/حسّن/نظف/اربط» وحدها.
+
+### VERIFICATION.json
+لكل Check:
+
+```text
+verificationId/type/command/required/prerequisites
+passCriteria/failCriteria
+proves/doesNotProve
+```
+
+لا تجعل Static check يثبت Runtime أو Security أو Finance.
+
+---
+
+## 16. ترتيب التنفيذ الذكي والتوازي
+
+استخدم `dependsOn` كرسم بلا دورات، ووثّق سبب الترتيب والمسار الحرج داخل التشخيص دون اختراع Schema موازٍ.
+
+الأولوية:
+
+```text
+hard dependency
+→ foundation blockers
+→ critical path
+→ unlocks most journeys/surfaces
+→ central fix preventing repeated work
+→ high-risk/high-uncertainty early
+→ small high-impact
+→ minimize reopening stabilized contract/schema/file
+→ cleanup/non-blocking debt last
+```
+
+يمكن توازي القراءة/البحث/جمع الأدلة/فحوص مستقلة. تبقى الكتابة إلى truth owners والمهاجرات والعقود والعملاء المولدين والـCommits متسلسلة. خطط لوحدة كتابة واحدة `IN_PROGRESS` فقط.
+
+---
+
+## 17. استراتيجية التحقق المخطط
+
+لا تخترع أوامر؛ اقرأها من `package.json` وworkspace/service manifests وruntime scripts.
+
+التدرج:
+
+```text
+scoped inspection/search
+→ nearest targeted test/check
+→ package/unit integration
+→ affected typecheck/lint/test/build
+→ contract/binding/data/security checks
+→ runtime smoke عند الادعاء التشغيلي
+→ full verification عند سبب مثبت فقط
+```
+
+استخدم Graphify فقط عند غموض الملكية/العلاقات/dead code، وNx affected عند حساب الأثر، وأدوات الأمن/الأداء عند الخطر المنطبق.
+
+كل Check غير منفذ لا يعد PASS. أي Skip يجب أن يملك سبب `NOT_APPLICABLE` ودليل عدم التأثر.
+
+خطط Checkpoints عند الحاجة:
+
+```text
+0 pinned start
+1 foundation closure
+2 DB/contracts/generated clients stable
+3 services/state machines stable
+4 surfaces/UX integrated
+5 runtime/readback/evidence closure
+```
+
+---
+
+## 18. Evidence invalidation
+
+أي تغيير لاحق في:
+
+```text
+canonical truth
+identity/authz/trusted scope
+contract/generated client
+database schema/migration
+shared state machine/Shared Brain
+foundation runtime
+```
+
+يجب أن تحدد الخطة الأدلة والفحوص والوحدات التي تصبح stale وتحتاج إعادة تحقق.
+
+إذا ظهرت فجوة Foundation أثناء Journey:
+
+```text
+stop affected journey safely
+→ capture/classify evidence
 → reopen/create owning foundation unit
 → invalidate downstream evidence
-→ recompute dependencies/critical path
-→ fix foundation
-→ rerun foundation verification
+→ recompute order
+→ repair foundation
+→ rerun foundation gate
 → rerun affected checks
-→ resume
+→ resume from last valid checkpoint
 ```
 
-## 12. PostgreSQL والأمن عند الانطباق
+---
 
-كل تغيير PostgreSQL مخطط يجب أن يحدد SQL migration متسلسلة وحتمية، transaction عند إمكانها، compatibility، backfill، constraints/indexes، انتقال readers/writers، اختبارًا على PostgreSQL فعلي، invariant checks، rollback/compensation، وإزالة القديم بعد ترحيل المستهلكين.
+## 19. شروط جاهزية الحزمة
 
-لا تقبل ID أو Scope مرسلًا من العميل كإثبات صلاحية. الخدمة المالكة تملك منطق المجال وسلطة الكتابة، والبيانات المخزنة تُدار من مصدرها القانوني، ويجب منع IDOR وتسرب النطاق ورفع الصلاحية وفق القواعد الحاكمة المنطبقة.
-
-## 13. الأدوات والبحث الخارجي
-
-استخدم سلم الأدوات عند الحاجة:
-
-```text
-direct scoped inspection
-→ focused search / existing command
-→ targeted registered guard
-→ small helper for proven repetition
-→ Nx affected عند الحاجة لحساب الأثر
-→ LeanCTX إذا خفّض إعادة القراءة/الضوضاء فعليًا
-→ Graphify فقط إذا بقيت الملكية/الاعتماديات/التكرار/dead-code غامضة
-→ OpenCodeReview فقط لمراجعة diff/commit/range محدد
-→ runtime tooling عندما يتغير السلوك التشغيلي أو يُدّعى
-```
-
-عند غموض تقني مادي لا يحسمه المستودع، استخدم الوثائق/المواصفات/المصدر/الإصدارات الرسمية الحالية وOWASP عند الأمن. تحقق من إصدار المشروع. المصدر الخارجي يساعد على تنفيذ الحقيقة الحاكمة؛ لا يعيد تعريفها.
-
-## 14. جاهزية الحزمة وتسليمها
-
-قبل اعتبار الخطة جاهزة يجب أن تكون، وفق schema الحالي:
+قبل الجاهزية:
 
 ```text
 MANIFEST.status.diagnosis = COMPLETE
 MANIFEST.status.plan = READY
 COVERAGE.assessmentStatus = COMPLETE
 EXECUTION-ORDER.status = READY
+all planned units = READY (or valid pre-proven DONE)
 ```
 
-والوحدات `READY` أو `DONE` فقط بدليل صالح لم يُبطل، مع zero `UNASSESSED`، no missing/cyclic dependencies، no duplicated `executionConcern`، no vague tasks، no unknown verification IDs، bidirectional coverage links، no unresolved template markers أو secrets/production/personal data.
+تحقق من:
 
-عند توفر Shell شغّل فعليًا:
+```text
+zero UNASSESSED
+no missing/duplicate/cyclic dependencies
+no duplicated executionConcern
+no vague tasks
+no unknown verificationId
+bidirectional coverage links
+all relevant journeys depend on foundation gate
+no unresolved template markers
+no secret-like or production-sensitive content
+```
+
+عند توفر Shell شغّل:
 
 ```powershell
 node tools/diagnose-implementing/validate-package.mjs `
@@ -374,46 +784,60 @@ node tools/diagnose-implementing/validate-package.mjs `
   --strict
 ```
 
-يجب أن تصبح:
+النجاح المطلوب:
 
 ```text
 Validation summary: 0 error(s)
 ```
 
-الفاحص الحالي يدعم `--strict` و`--strict --closure` فقط؛ **لا تستخدم `--disposal`** ولا تحذف الحزمة تلقائيًا.
+لا تستخدم `--disposal`؛ الفاحص الحالي يدعم `--strict` و`--strict --closure` فقط.
+
+إذا لم يتوفر Shell فلا تزور هذه النتيجة: استخدم `NEEDS_EVIDENCE` حتى تشغيل Validator فعليًا.
+
+---
+
+## 20. تسليم الحزمة
 
 طبّق التفويض فقط:
 
 ```text
-NO_COMMIT      = لا Commit ولا Push
-COMMIT         = Commit للحزمة فقط
-COMMIT_AND_PUSH = Commit وPush للحزمة فقط
+NO_COMMIT
+COMMIT
+COMMIT_AND_PUSH
 ```
 
-لا PR أو Merge أو Release أو Production دون طلب صريح.
+إذا كان Commit/Push مصرحًا:
 
-قدّم في النهاية:
+- أعد تثبيت remote head قبل الكتابة.
+- اجعل Commit الحزمة فقط.
+- لا تضمّن ملفات تشغيلية.
+- Push بلا Force.
+- أعد تثبيت رأس الفرع بعد Push.
+
+لا PR ولا Merge ولا Release ولا Production إلا بطلب صريح منفصل.
+
+التقرير النهائي المركز:
 
 ```text
-repository / branch-ref / pinned remote SHA
-package path / package commit SHA إن وجد
-target kind / target / objective
-authority sources / derived sources / external sources used
-coverage counts and exclusions
+repository
+branch/ref
+pinned remote SHA
+package path
+package commit SHA إن وجد
+target + objective
+risk mode
+authority sources applied
+derived sources cross-checked
+coverage totals
+major root causes/truth owners
 foundation/migration/shared/journey/verification units
 related journeys/surfaces/control-panel sections
-critical path and planned order
-major root causes / truth owners / parallel truths / legacy paths
-strict validation command + actual result
-confirmation that no operational project file was modified
-resume point if incomplete
+critical path + planned order
+compatibility/migration/security/finance concerns
+external dependencies
+strict validator command/result أو NEEDS_EVIDENCE
+confirmation: no operational project file modified
+canonical decision
 ```
 
-استخدم مفردات `governance/contracts/decision-vocabulary.json` الحالية فقط:
-
-- `PASS` إذا اكتملت الحزمة ونجح `--strict` فعليًا على النسخة المسلّمة.
-- `NEEDS_EVIDENCE` إذا كانت الحزمة معدة لكن دليلًا إلزاميًا مثل تشغيل validator غير متاح أو stale.
-- `BLOCKED_EXTERNAL` إذا منع عامل خارجي حقيقي الإنشاء/التسليم/التحقق بعد إنجاز الممكن داخليًا.
-- `PROTOCOL_VIOLATION` إذا تعذر الالتزام بقاعدة حاكمة ولم يُصحح الانتهاك.
-
-لا تخترع قرارًا حاكمًا جديدًا، ولا تدّع تشغيل مولد أو فاحص أو Push لم يحدث فعليًا.
+القرار المقبول لهذه المرحلة يكون بما يطابق الحقيقة الفعلية، عادة `PASS` لنطاق إعداد مثبت، أو `NEEDS_EVIDENCE` إذا تعذر إثبات فحص مطلوب، أو `BLOCKED_EXTERNAL` عند مانع خارجي حقيقي. لا تستخدم `CLOSED_WITH_EVIDENCE` لمجرد أن خطة التنفيذ أصبحت جاهزة.
