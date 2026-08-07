@@ -258,7 +258,7 @@ func UpdatePartnerSettings(
 			if current.Version != input.ExpectedVersion {
 				return ErrVersionConflict
 			}
-			
+
 			if input.Status == string(StatusPublished) {
 				current.Status = DshStoreStatus(input.Status)
 				current.DeliveryModes = input.DeliveryModes
@@ -454,7 +454,7 @@ func GovernStore(
 				if !validStoreStatus(input.Value) {
 					return fmt.Errorf("invalid lifecycle value")
 				}
-				
+
 				if input.Value == string(StatusPublished) {
 					checkStore := current
 					checkStore.Status = StatusPublished
@@ -463,7 +463,7 @@ func GovernStore(
 						return fmt.Errorf("store publication gates failed: %v", diag.Blockers)
 					}
 				}
-				
+
 				query = `UPDATE dsh_stores SET status = $1, version = version + 1, updated_at = now() WHERE id = $2 AND version = $3`
 			case "visibility":
 				if input.Value != "visible" && input.Value != "hidden" {
@@ -514,7 +514,7 @@ func GovernStore(
 					INSERT INTO dsh_platform_outbox_events (id, topic, payload, created_at)
 					VALUES ($1, $2, $3::jsonb, now())`,
 					eventID("outbox"), "store.lifecycle.changed", string(payloadJSON))
-				
+
 				// We don't hard fail if outbox table doesn't exist yet in the schema since it's a new addition,
 				// but we log/ignore or assume it exists. If it fails, the transaction rolls back.
 				if err != nil {
@@ -575,17 +575,19 @@ func runMutation(
 	if !allowed {
 		return StoreActionResponse{}, ErrScopedStoreNotFound
 	}
-	requestJSON, err := json.Marshal(request)
+	requestHash, err := storeMutationRequestHash(actor.OperatorContextID, actor.ID, storeID, operation, request)
 	if err != nil {
 		return StoreActionResponse{}, err
 	}
-	requestHash := hashBytes(requestJSON)
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return StoreActionResponse{}, err
 	}
 	defer tx.Rollback()
+	if err := lockStoreMutationIdempotency(ctx, tx, actor.ID, operation, key); err != nil {
+		return StoreActionResponse{}, err
+	}
 
 	var replayHash string
 	var replayJSON []byte
