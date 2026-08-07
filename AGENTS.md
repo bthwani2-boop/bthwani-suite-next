@@ -78,6 +78,7 @@ Agents must:
 
 Agents must not:
 
+- leak task administration terminology (e.g., "unit", "jrn", "package", "coverage", "execution") into product code, variable names, file paths, or feature identifiers;
 - read every skill, governance file, journey, or registry by default;
 - run full Graphify, full Nx graph, full typecheck, full build, full test, full guard suites, or integrated runtime without proven need;
 - create scripts or reports merely to satisfy process wording;
