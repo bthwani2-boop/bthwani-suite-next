@@ -101,21 +101,48 @@ type WorkforceScopeResolver interface {
 // store-access boundary enforced by DSH. The resolver parameter is retained
 // temporarily for call-site compatibility and must not become a parallel
 // authorization source.
+func resolveStoreIDsForActor(ctx context.Context, db queryer, wf WorkforceScopeResolver, actorID, operatorContextID, role string) []string {
+	var storeIDs []string
+	if wf != nil {
+		actorScopes, err := wf.GetActorScopes(ctx, actorID, operatorContextID, role)
+		if err == nil && actorScopes != nil && len(actorScopes.StoreIDs) > 0 {
+			storeIDs = actorScopes.StoreIDs
+		}
+	}
+	if len(storeIDs) == 0 && db != nil {
+		rows, err := db.QueryContext(ctx, `
+			SELECT store_id
+			FROM dsh_store_actor_scopes
+			WHERE actor_id = $1 AND actor_role = $2 AND active = true AND (operator_context_id = $3 OR operator_context_id = '')
+			ORDER BY created_at ASC`, actorID, role, operatorContextID)
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var sid string
+				if err := rows.Scan(&sid); err == nil && sid != "" {
+					storeIDs = append(storeIDs, sid)
+				}
+			}
+		}
+	}
+	return storeIDs
+}
+
 func ResolveActorStore(ctx context.Context, db *sql.DB, wf WorkforceScopeResolver, actor StoreActor) (*DshStoreRow, StoreScope, error) {
 	actorID := strings.TrimSpace(actor.ID)
 	role := strings.TrimSpace(actor.Role)
 	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
-	if db == nil || wf == nil || actorID == "" || role == "" || operatorContextID == "" {
+	if db == nil || actorID == "" || role == "" || operatorContextID == "" {
 		return nil, StoreScope{}, ErrScopedStoreNotFound
 	}
 
-	actorScopes, err := wf.GetActorScopes(ctx, actorID, operatorContextID, role)
-	if err != nil || actorScopes == nil || len(actorScopes.StoreIDs) == 0 {
+	storeIDs := resolveStoreIDsForActor(ctx, db, wf, actorID, operatorContextID, role)
+	if len(storeIDs) == 0 {
 		return nil, StoreScope{}, ErrScopedStoreNotFound
 	}
 
 	scope := StoreScope{
-		StoreID: actorScopes.StoreIDs[0],
+		StoreID: storeIDs[0],
 		Type:    "store",
 	}
 
@@ -130,20 +157,16 @@ func ResolveActorStoreForID(ctx context.Context, db *sql.DB, wf WorkforceScopeRe
 	role := strings.TrimSpace(actor.Role)
 	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
 	storeID = strings.TrimSpace(storeID)
-	if db == nil || wf == nil || actorID == "" || role == "" || operatorContextID == "" {
+	if db == nil || actorID == "" || role == "" || operatorContextID == "" {
 		return nil, StoreScope{}, ErrScopedStoreNotFound
 	}
 	if storeID == "" {
 		return ResolveActorStore(ctx, db, wf, actor)
 	}
 
-	actorScopes, err := wf.GetActorScopes(ctx, actorID, operatorContextID, role)
-	if err != nil || actorScopes == nil {
-		return nil, StoreScope{}, ErrScopedStoreNotFound
-	}
-
+	storeIDs := resolveStoreIDsForActor(ctx, db, wf, actorID, operatorContextID, role)
 	hasScope := false
-	for _, id := range actorScopes.StoreIDs {
+	for _, id := range storeIDs {
 		if id == storeID {
 			hasScope = true
 			break
@@ -201,16 +224,12 @@ func ActorCanAccessStore(ctx context.Context, db queryer, wf WorkforceScopeResol
 			)`, storeID, operatorContextID).Scan(&exists)
 		return exists, err
 	}
-	if role == "" || wf == nil {
+	if role == "" {
 		return false, nil
 	}
 
-	actorScopes, err := wf.GetActorScopes(ctx, actorID, operatorContextID, role)
-	if err != nil || actorScopes == nil {
-		return false, nil
-	}
-
-	for _, id := range actorScopes.StoreIDs {
+	storeIDs := resolveStoreIDsForActor(ctx, db, wf, actorID, operatorContextID, role)
+	for _, id := range storeIDs {
 		if id == storeID {
 			// Additionally verify the store exists in DSH and matches operator context
 			err := db.QueryRowContext(ctx, `
@@ -534,6 +553,7 @@ func ListStoreAudit(ctx context.Context, db *sql.DB, storeID string, limit int) 
 
 type queryer interface {
 	QueryRowContext(context.Context, string, ...any) *sql.Row
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 }
 
 func runMutation(
@@ -655,6 +675,10 @@ func getStoreByIDTx(ctx context.Context, tx *sql.Tx, storeID string, lock bool) 
 }
 
 type txQueryer struct{ tx *sql.Tx }
+
+func (q txQueryer) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	return q.tx.QueryContext(ctx, query, args...)
+}
 
 func (q txQueryer) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
 	if len(args) == 1 {

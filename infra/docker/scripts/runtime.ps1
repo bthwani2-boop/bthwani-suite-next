@@ -379,7 +379,7 @@ function Wait-ForSelectedApis {
     Wait-ForHttpStatus -Name "WLT API" -Url "http://localhost:58083/wlt/readiness" -HealthyValues @("ready") | Out-Null
   }
   if ($ProfileList -contains "dsh") {
-    Wait-ForHttpStatus -Name "DSH API" -Url "http://localhost:58080/dsh/readiness" -HealthyValues @("ready") | Out-Null
+    Wait-ForHttpStatus -Name "DSH API" -Url "http://localhost:58080/dsh/readiness" -HealthyValues @("HEALTHY") | Out-Null
   }
   if ($ProfileList -contains "financial-simulators") {
     Invoke-RestMethod "http://localhost:58090/__admin/mappings" -TimeoutSec 10 -ErrorAction Stop | Out-Null
@@ -572,3 +572,4 @@ switch ($Action) {
     Write-Host "`nruntime:all: PASS"
   }
 }
+
