@@ -14,18 +14,17 @@ func TestPartnerStatusAllowsStoreOwnership(t *testing.T) {
 		"partner_active",
 		"client_visible",
 		"client_hidden",
-		"partner_deactivated",
 	}
 	for _, status := range allowed {
 		if !PartnerStatusAllowsStoreOwnership(status) {
-			t.Fatalf("expected %q to allow store ownership", status)
+			t.Fatalf("expected %q to allow store ownership acquisition", status)
 		}
 	}
 
-	blocked := []string{"", "ops_rejected", "partner_suspended", "partner_terminated"}
+	blocked := []string{"", "ops_rejected", "partner_deactivated", "partner_suspended", "partner_terminated"}
 	for _, status := range blocked {
 		if PartnerStatusAllowsStoreOwnership(status) {
-			t.Fatalf("expected %q to block store ownership", status)
+			t.Fatalf("expected %q to block store ownership acquisition", status)
 		}
 	}
 }
