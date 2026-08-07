@@ -6,21 +6,18 @@ import (
 	"time"
 )
 
-// EvaluateReadiness orchestrates checking the dependencies Workforce can
-// answer today: Identity activation status and the professional profile
-// (employment status, documents, supervisor assignment).
+// EvaluateReadiness orchestrates the Workforce-owned portion of provider
+// readiness: Identity activation state, engagement state, and the sovereign
+// professional profile. It deliberately fails closed when a role projection is
+// missing or incomplete.
 //
-// J012/J013 also require DSH active-assignment and WLT financial-eligibility
-// signals in the same gate. Neither dshclient nor wltclient currently exposes
-// a read for those, so this evaluation does not claim them: it reports a
-// gate scoped to what it can verify rather than fabricating an assignment or
-// eligibility check against a call that does not exist. Adding those signals
-// is J012/J013 journey work, not part of restoring a green build.
+// DSH active-assignment and WLT financial-eligibility are separate authorities
+// and are not fabricated here. They must be composed by the operational journey
+// that owns those cross-service decisions.
 func (s *Service) EvaluateReadiness(ctx context.Context, actorID string) (*ReadinessGate, error) {
 	person, err := s.repo.PersonByActorID(ctx, actorID)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			// Fast path for non-workforce actors.
 			return &ReadinessGate{
 				ActorID:        actorID,
 				Status:         ReadinessBlocked,
@@ -34,38 +31,46 @@ func (s *Service) EvaluateReadiness(ctx context.Context, actorID string) (*Readi
 	gate := &ReadinessGate{
 		ActorID:        actorID,
 		WorkforceKind:  person.WorkforceKind,
-		Status:         ReadinessAllowed, // Default to allowed until a blocker is found.
+		Status:         ReadinessAllowed,
 		BlockerReasons: make([]BlockerReason, 0),
 		CheckedAt:      time.Now(),
 	}
 
-	// Identity status. An Identity lookup failure is treated the same as an
-	// inactive actor: J001/J012 require failing closed, not assuming healthy.
+	// Identity status. A lookup failure fails closed rather than assuming the
+	// actor is healthy.
 	actor, err := s.identity.Actor(ctx, actorID)
 	if err != nil || !actor.Active {
 		gate.BlockerReasons = append(gate.BlockerReasons, BlockerIdentitySuspended)
 	}
 
-	// Employment status.
 	if person.EngagementStatus == "terminated" || person.EngagementStatus == "suspended" {
 		gate.BlockerReasons = append(gate.BlockerReasons, BlockerEmploymentTerminated)
 	}
 
-	// Profile documents and role-specific requirements.
-	if person.WorkforceKind == "captain" && person.CaptainProfile != nil {
-		if person.CaptainProfile.LicenseStatus == "expired" {
+	switch person.WorkforceKind {
+	case "captain":
+		profile := person.CaptainProfile
+		if profile == nil {
+			gate.BlockerReasons = append(gate.BlockerReasons, BlockerProfileIncomplete)
+			break
+		}
+		if profile.LicenseStatus == "expired" ||
+			(profile.LicenseStatus == "valid" && !isLicenseNotExpired(profile.LicenseExpiresAt)) {
 			gate.BlockerReasons = append(gate.BlockerReasons, BlockerDocumentsExpired)
-		}
-		if len(person.CaptainProfile.DocumentMediaRefs) == 0 {
+		} else if profile.LicenseStatus != "valid" {
 			gate.BlockerReasons = append(gate.BlockerReasons, BlockerProfileIncomplete)
 		}
-	}
+		if len(profile.DocumentMediaRefs) == 0 || profile.VehicleType == "" || profile.ServiceZoneID == "" {
+			gate.BlockerReasons = append(gate.BlockerReasons, BlockerProfileIncomplete)
+		}
 
-	if person.WorkforceKind == "field_agent" && person.FieldProfile != nil {
-		if len(person.FieldProfile.DocumentMediaRefs) == 0 {
+	case "field":
+		profile := person.FieldProfile
+		if profile == nil {
 			gate.BlockerReasons = append(gate.BlockerReasons, BlockerProfileIncomplete)
+			break
 		}
-		if person.FieldProfile.SupervisorActorID == "" {
+		if len(profile.DocumentMediaRefs) == 0 || profile.CityCode == "" || profile.ServiceZoneID == "" {
 			gate.BlockerReasons = append(gate.BlockerReasons, BlockerProfileIncomplete)
 		}
 	}
