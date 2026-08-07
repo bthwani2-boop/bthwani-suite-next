@@ -72,6 +72,7 @@ const agentRelative = "governance/agents/agent-registry.json";
 const skillRelative = "governance/skills/skills-registry.json";
 const guardRelative = "governance/guards/guard-registry.json";
 const assuranceRelative = "governance/guards/guard-assurance.json";
+const guardSetsRelative = "governance/guards/guard-sets.json";
 const bindingRelative = "governance/guards/frontend-binding-registry.json";
 const enforcementRelative = "governance/github/repository-enforcement.json";
 const workflowRegistryRelative = "governance/github/workflow-registry.json";
@@ -84,11 +85,11 @@ const agents = validateDocument(agentRelative, "governance/agents/agent-schema.j
 const skills = validateDocument(skillRelative, "governance/skills/skills-schema.json", "SKILL");
 const guards = validateDocument(guardRelative, "governance/guards/guard-schema.json", "GUARD");
 const guardAssurance = validateDocument(assuranceRelative, "governance/guards/guard-assurance.schema.json", "GUARD_ASSURANCE");
+const guardSets = validateDocument(guardSetsRelative, "governance/guards/guard-sets.schema.json", "GUARD_SETS");
 const frontendBindings = validateDocument(bindingRelative, "governance/guards/frontend-binding-registry.schema.json", "FRONTEND_BINDING");
 const repositoryEnforcement = validateDocument(enforcementRelative, "governance/github/repository-enforcement.schema.json", "GITHUB_ENFORCEMENT");
 validateDocument(workflowRegistryRelative, "governance/github/workflow-registry.schema.json", "WORKFLOW_REGISTRY");
 const singleOwnerMode = validateDocument(singleOwnerRelative, "governance/authority/single-owner-mode.schema.json", "SINGLE_OWNER_MODE");
-readJson("tools/guards/guard-manifest.json", "GUARD_MANIFEST");
 
 const canonicalProductSchema = "governance/product/product-truth.schema.json";
 const compatibilityProductSchema = "governance/product/product-truth.compatibility.schema.json";
@@ -220,7 +221,7 @@ if (authority) {
     singleOwnerRelative,
     "governance/authority/single-owner-mode.schema.json",
     canonicalProductSchema,
-    "tools/guards/guard-manifest.json",
+    guardSetsRelative,
   ]) {
     if (!documentPaths.has(requiredPath)) violations.push({ file: authorityRelative, line: 0, message: `MACHINE_AUTHORITY_NOT_REGISTERED ${requiredPath}` });
   }
@@ -303,8 +304,7 @@ if (decisions) {
   }
 }
 
-
-if (guards && guardAssurance) {
+if (guards && guardAssurance && guardSets) {
   const registeredGuardIds = new Set(guards.entries.map((entry) => entry.id));
   const assuranceIds = new Set();
   for (const entry of guardAssurance.entries) {
@@ -313,10 +313,24 @@ if (guards && guardAssurance) {
     if (!registeredGuardIds.has(entry.guardId)) violations.push({ file: assuranceRelative, line: 0, message: `ASSURANCE_REFERENCES_UNKNOWN_GUARD ${entry.guardId}` });
     if (entry.closureEligible !== false) violations.push({ file: assuranceRelative, line: 0, message: `SCOPE_GUARD_MUST_NOT_BE_CLOSURE_ELIGIBLE ${entry.guardId}` });
   }
+
+  const canonicalSetIds = new Set([
+    ...guardSets.guardSets.foundation,
+    ...guardSets.guardSets.journey,
+    ...guardSets.guardSets.governance,
+  ]);
+  for (const requiredId of canonicalSetIds) {
+    if (!registeredGuardIds.has(requiredId)) {
+      violations.push({ file: guardSetsRelative, line: 0, message: `GUARD_SET_REFERENCES_UNKNOWN_GUARD ${requiredId}` });
+    }
+    if (!assuranceIds.has(requiredId)) {
+      violations.push({ file: assuranceRelative, line: 0, message: `CANONICAL_GUARD_ASSURANCE_MISSING ${requiredId}` });
+    }
+  }
+
   for (const requiredId of [
-    "governance-schema", "agent-governance", "authority-separation", "guard-registry", "sdlc", "go-routes-ci",
-    "frontend-feature-binding", "logic-coverage", "runtime-real-bindings",
-    "performance-budget", "a11y", "a11y-runtime", "workflow-lint", "workflow-security", "actions-pin",
+    "go-routes-ci", "logic-coverage", "performance-budget", "a11y", "a11y-runtime",
+    "workflow-lint", "workflow-security", "actions-pin",
   ]) {
     if (!assuranceIds.has(requiredId)) violations.push({ file: assuranceRelative, line: 0, message: `REQUIRED_GUARD_ASSURANCE_MISSING ${requiredId}` });
   }
