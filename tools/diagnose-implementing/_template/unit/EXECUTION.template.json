@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 3,
+  "unitId": "UNIT_ID",
+  "name": "UNIT_NAME",
+  "kind": "UNIT_KIND",
+  "status": "DRAFT",
+  "executionConcern": "",
+  "objective": "",
+  "truthOwner": "",
+  "coverageIds": [],
+  "topics": [],
+  "contexts": [],
+  "journeys": [],
+  "affectedSurfaces": [],
+  "dependsOn": [],
+  "tasks": []
+}
