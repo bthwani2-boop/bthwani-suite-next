@@ -97,8 +97,12 @@ export function classifyFiles(inputFiles, options = {}) {
   const secretsChanged = full || starts("governance/security/", "tools/security/") || has((file) =>
     /(^|\/)(secret|secrets|credential|credentials|signing|keystore|certificate)(\/|[-_.])/i.test(file)
   );
-  const operatorContextChanged = full || starts("governance/platform/") || has((file) =>
-    /(^|\/)(OperatorContext|tenancy|OperatorContext-context|OperatorContext-isolation|cross-OperatorContext)(\/|[-_.])/i.test(file)
+  const operatorContextChanged = full || equals(
+    "governance/product/platform-model.yaml",
+    "governance/policies/product.md",
+    "governance/product/contracts/bthwani-platform-model.product-truth.json"
+  ) || has((file) =>
+    /(^|\/)(OperatorContext|operator-context|platform-context|tenancy|cross-OperatorContext)(\/|[-_.])/i.test(file)
   );
   const protectedSecurityChanged = authChanged || sessionChanged || rbacChanged || privacyChanged || piiChanged || secretsChanged || operatorContextChanged;
   const security = workflow || protectedSecurityChanged || starts("governance/security/", "tools/security/");
@@ -107,7 +111,7 @@ export function classifyFiles(inputFiles, options = {}) {
     "services/dsh/backend/internal/wlt/",
     "services/dsh/frontend/shared/finance-wlt-link/",
     "services/dsh/frontend/control-panel/finance/",
-    "governance/dsh-wlt",
+    "governance/domains/dsh-wlt/",
     "tools/scripts/finance/",
     "tools/scripts/smoke-wlt-",
     "tools/scripts/smoke-wiremock-"
@@ -135,13 +139,14 @@ export function classifyFiles(inputFiles, options = {}) {
 
   const sharedBrain = full || starts("shared/", "services/dsh/frontend/shared/", "services/wlt/frontend/shared/") || equals(
     "contracts/openapi/index.yaml",
-    "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md"
+    "tools/plans/journeys/FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md"
   );
 
   const productJourneyGovernance = has((file) =>
     file.startsWith("governance/product/") ||
     file.startsWith("governance/product-truth/") ||
     file.startsWith("governance/evidence/") ||
+    file === "tools/plans/journeys/FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md" ||
     file === "tools/scripts/run-journey-gate.ps1"
   );
   const journey = full || Boolean(manualJourney) || productJourneyGovernance;
@@ -170,7 +175,7 @@ export function classifyFiles(inputFiles, options = {}) {
   );
   const migrationChanged = full || includes("/migrations/");
   const sharedContractChanged = full || starts("contracts/") || includes("/contracts/", "/clients/generated/") || has((file) => file.endsWith(".openapi.yaml"));
-  const recoveryChanged = full || starts("governance/runbooks/") || has((file) =>
+  const recoveryChanged = full || starts("docs/runbooks/") || has((file) =>
     /backup/i.test(file) || /restore/i.test(file) || /recovery/i.test(file) || /rollback/i.test(file)
   );
   const observabilityChanged = full || starts("tools/observability/") || has((file) =>
