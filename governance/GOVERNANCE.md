@@ -57,11 +57,13 @@ Domain decisions, machine contracts and derived support must not masquerade as a
 The authority registry currently classifies the following paths; exact authority and scope are determined by `governance/authority/authority-precedence.json`:
 
 - `governance/GOVERNANCE.md`
+- `governance/README.md`
 - `AGENTS.md`
 - `governance/contracts/**`
 - `governance/agents/**`
 - `governance/skills/**`
 - `governance/guards/**`
+- `governance/guards/guard-sets.json`
 - `governance/authority/**`
 - `governance/authority/direct-work-branch-execution-policy.json`
 - `governance/authority/single-owner-mode.json`
@@ -73,7 +75,6 @@ The authority registry currently classifies the following paths; exact authority
 - `governance/github/**`
 - `governance/github/repository-enforcement.json`
 - `governance/operational_journey_protocol_package/**`
-- `tools/guards/guard-manifest.json`
 - `.agents/skills/**`
 - `.agents/tools/**`
 - `.agents/AUTHORITY_BOUNDARY.md`
