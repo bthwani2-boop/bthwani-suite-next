@@ -163,6 +163,18 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 		if marshalErr != nil {
 			return marshalErr
 		}
+
+		// 1. Ensure the role exists in identity_roles
+		var roleID string
+		err = r.db.QueryRowContext(ctx, `
+			INSERT INTO identity_roles (name, description) VALUES ($1, $2)
+			ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description
+			RETURNING id`, actor.role, "Local Bootstrap Role").Scan(&roleID)
+		if err != nil {
+			return err
+		}
+
+		// 2. Upsert the actor
 		_, err = r.db.ExecContext(ctx, `
 			INSERT INTO identity_actors
 				(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
@@ -181,6 +193,36 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 			pq.Array([]string{actor.role}), string(permissions))
 		if err != nil {
 			return err
+		}
+
+		// 3. Link actor to role
+		_, err = r.db.ExecContext(ctx, `
+			INSERT INTO identity_actor_roles (actor_id, role_id, granted_by)
+			VALUES ($1, $2, 'system_bootstrap')
+			ON CONFLICT DO NOTHING`, actor.id, roleID)
+		if err != nil {
+			return err
+		}
+
+		// 4. Map permissions to the role
+		for _, p := range actorPermissions {
+			var permID string
+			err = r.db.QueryRowContext(ctx, `
+				INSERT INTO identity_permission_vocabulary (service, surface, action, description)
+				VALUES ($1, $2, $3, 'Local Bootstrap Permission')
+				ON CONFLICT (service, surface, action) DO UPDATE SET description = EXCLUDED.description
+				RETURNING id`, p.Service, p.Surface, p.Action).Scan(&permID)
+			if err != nil {
+				return err
+			}
+
+			_, err = r.db.ExecContext(ctx, `
+				INSERT INTO identity_role_permissions (role_id, permission_id, scope)
+				VALUES ($1, $2, $3)
+				ON CONFLICT (role_id, permission_id) DO UPDATE SET scope = EXCLUDED.scope`, roleID, permID, p.Scope)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -303,6 +345,10 @@ func (r *Repository) issueChallengeTx(ctx context.Context, tx *sql.Tx, actor Act
 		return IssueActivationResult{}, err
 	}
 	expiresAt := r.now().Add(10 * time.Minute)
+	if _, err := tx.ExecContext(ctx, "SAVEPOINT idempotency_guard"); err != nil {
+		return IssueActivationResult{}, err
+	}
+
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO identity_activation_challenges
 			(id, actor_id, actor_type, phone_e164, surface, code_hash, expires_at,
@@ -314,6 +360,9 @@ func (r *Repository) issueChallengeTx(ctx context.Context, tx *sql.Tx, actor Act
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Code == "23505" && pqErr.Constraint == "identity_activation_idempotency_idx" {
+			if _, rbErr := tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT idempotency_guard"); rbErr != nil {
+				return IssueActivationResult{}, err
+			}
 			var existingID, existingPhone string
 			var existingExpiresAt time.Time
 			if selErr := tx.QueryRowContext(ctx, `
@@ -329,6 +378,9 @@ func (r *Repository) issueChallengeTx(ctx context.Context, tx *sql.Tx, actor Act
 				}, nil
 			}
 		}
+		return IssueActivationResult{}, err
+	}
+	if _, err := tx.ExecContext(ctx, "RELEASE SAVEPOINT idempotency_guard"); err != nil {
 		return IssueActivationResult{}, err
 	}
 	return IssueActivationResult{

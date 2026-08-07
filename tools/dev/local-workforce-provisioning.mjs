@@ -158,12 +158,12 @@ async function createProvider(operatorToken, kind, payload) {
   }
 }
 
-export function fieldCreatePayload(zoneId) {
+export function fieldCreatePayload(zoneId, actorId) {
   const fixture = LOCAL_WORKFORCE_PROVIDERS.field;
   return {
     fullNameAr: fixture.fullNameAr,
     fullNameEn: fixture.fullNameEn,
-    phoneE164: fixture.phoneE164,
+    actorId,
     engagementType: 'independent_contractor',
     engagementStartDate: '2026-01-01',
     serviceZoneId: zoneId,
@@ -175,12 +175,12 @@ export function fieldCreatePayload(zoneId) {
   };
 }
 
-export function captainCreatePayload(zoneId) {
+export function captainCreatePayload(zoneId, actorId) {
   const fixture = LOCAL_WORKFORCE_PROVIDERS.captain;
   return {
     fullNameAr: fixture.fullNameAr,
     fullNameEn: fixture.fullNameEn,
-    phoneE164: fixture.phoneE164,
+    actorId,
     engagementType: 'independent_contractor',
     engagementStartDate: '2026-01-01',
     photoMediaRef: 'local-dev/workforce/captain-profile.jpg',
@@ -282,12 +282,55 @@ export async function issueProviderToken(operatorToken, kind, actorId, phoneE164
   return pair.accessToken;
 }
 
+async function provisionIdentityActor(kind, phoneE164) {
+  const serviceToken = 'LOCAL_ONLY_replace_with_workforce_internal_service_token';
+  const result = await requestJson(
+    `identity:provision-actor`,
+    `${IDENTITY_API_BASE}/internal/actors/provision`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${serviceToken}`,
+        'X-Service-Caller': 'workforce',
+        'X-Operator-Context-ID': 'local-dsh',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username: kind === 'field' ? 'local-field-001' : 'local-captain-001',
+        phoneE164,
+        role: kind,
+        operatorContextID: 'local-dsh',
+      }),
+    }
+  );
+  if (!result?.actorId) throw new Error(`identity:provision-actor returned no actorId`);
+  return result.actorId;
+}
+
 async function provisionOne(operatorToken, kind, zone) {
-  const payload = kind === 'field' ? fieldCreatePayload(zone.id) : captainCreatePayload(zone.id);
   const existing = await findExistingProvider(operatorToken, kind);
-  const person = existing || (await createProvider(operatorToken, kind, payload));
-  const actorId = person?.actorId;
-  if (!actorId) throw new Error(`workforce:${kind} provisioning returned no actorId`);
+  if (existing) {
+    return {
+      actorId: existing.actorId,
+      workforceCode: existing.workforceCode,
+      phoneE164: LOCAL_WORKFORCE_PROVIDERS[kind].phoneE164,
+    };
+  }
+
+  const phoneE164 = LOCAL_WORKFORCE_PROVIDERS[kind].phoneE164;
+  let actorId;
+  try {
+    actorId = await provisionIdentityActor(kind, phoneE164);
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 409) {
+      throw new Error(`Identity actor with phone ${phoneE164} already exists but no workforce profile was found. Manual cleanup of identity_actors required.`);
+    }
+    throw error;
+  }
+
+  const payload = kind === 'field' ? fieldCreatePayload(zone.id, actorId) : captainCreatePayload(zone.id, actorId);
+  const person = await createProvider(operatorToken, kind, payload);
+  if (!person?.actorId) throw new Error(`workforce:${kind} provisioning returned no actorId`);
 
   const operationalCore = {
     ...commonOperationalCore(kind),

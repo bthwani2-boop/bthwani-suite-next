@@ -278,8 +278,8 @@ services:
       DSH_IDENTITY_BASE_URL: "http://identity-api:8082"
       DSH_IDENTITY_SERVICE_TOKEN: "${IDENTITY_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_dsh_identity_internal_service_token}"
       DSH_WLT_BASE_URL: "${DSH_WLT_BASE_URL:-http://wlt-api:8083}"
-      WLT_DSH_SERVICE_TOKEN: "${WLT_DSH_SERVICE_TOKEN:-}"
-      DSH_WLT_SERVICE_TOKEN: "${DSH_WLT_SERVICE_TOKEN:-}"
+      WLT_DSH_SERVICE_TOKEN: "${WLT_DSH_SERVICE_TOKEN:-dev-only-dsh-wlt-shared-secret}"
+      DSH_WLT_SERVICE_TOKEN: "${DSH_WLT_SERVICE_TOKEN:-dev-only-dsh-wlt-shared-secret}"
       DSH_WORKFORCE_SERVICE_TOKEN: "${WORKFORCE_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_workforce_dsh_service_token}"
       DSH_MINIO_ENDPOINT: "minio:9000"
       DSH_MINIO_PUBLIC_ENDPOINT: "${BTHWANI_MINIO_PUBLIC_ENDPOINT:-localhost:59000}"
@@ -299,9 +299,10 @@ services:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/dsh/readiness || exit 1"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 6
+      retries: 30
+      start_period: 10s
     networks:
       - bthwani-runtime
 

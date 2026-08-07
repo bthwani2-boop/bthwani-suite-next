@@ -116,7 +116,50 @@ ON CONFLICT (id) DO UPDATE SET
 // intentional: it removes stale aliases and privileged platform actions rather
 // than accumulating them across bootstrap runs.
 func (r *Repository) reconcileLocalOperatorPermissions(ctx context.Context) error {
-	encoded, err := json.Marshal(localOperatorDevelopmentPermissions())
+	perms := localOperatorDevelopmentPermissions()
+
+	// 1. Ensure the operator role exists
+	var roleID string
+	err := r.db.QueryRowContext(ctx, `
+		INSERT INTO identity_roles (name, description) VALUES ('operator', 'Local Development Operator')
+		ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description
+		RETURNING id
+	`).Scan(&roleID)
+	if err != nil {
+		return err
+	}
+
+	// 2. Link operator-local-001 to the operator role
+	_, err = r.db.ExecContext(ctx, `
+		INSERT INTO identity_actor_roles (actor_id, role_id, granted_by)
+		VALUES ($1, $2, 'system_bootstrap')
+		ON CONFLICT DO NOTHING`, "operator-local-001", roleID)
+	if err != nil {
+		return err
+	}
+
+	// 3. Map permissions to the role
+	for _, p := range perms {
+		var permID string
+		err = r.db.QueryRowContext(ctx, `
+			INSERT INTO identity_permission_vocabulary (service, surface, action, description)
+			VALUES ($1, $2, $3, 'Local Platform Permission')
+			ON CONFLICT (service, surface, action) DO UPDATE SET description = EXCLUDED.description
+			RETURNING id`, p.Service, p.Surface, p.Action).Scan(&permID)
+		if err != nil {
+			return err
+		}
+
+		_, err = r.db.ExecContext(ctx, `
+			INSERT INTO identity_role_permissions (role_id, permission_id, scope)
+			VALUES ($1, $2, $3)
+			ON CONFLICT (role_id, permission_id) DO UPDATE SET scope = EXCLUDED.scope`, roleID, permID, p.Scope)
+		if err != nil {
+			return err
+		}
+	}
+
+	encoded, err := json.Marshal(perms)
 	if err != nil {
 		return err
 	}

@@ -237,8 +237,8 @@ function Wait-ForHttpStatus {
     [string[]]$HealthyValues = @("healthy", "HEALTHY", "ready")
   )
 
-  for ($attempt = 1; $attempt -le 20; $attempt++) {
-    Write-Host "Waiting for $Name ($attempt/20)..."
+  for ($attempt = 1; $attempt -le 40; $attempt++) {
+    Write-Host "Waiting for $Name ($attempt/40)..."
     try {
       $body = Invoke-RestMethod $Url -TimeoutSec 5 -ErrorAction Stop
       if ($HealthyValues -contains [string]$body.status) {

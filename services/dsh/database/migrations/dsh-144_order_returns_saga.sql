@@ -6,7 +6,7 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS dsh_order_returns (
     id TEXT PRIMARY KEY,
-    order_id TEXT NOT NULL REFERENCES dsh_orders(id),
+    order_id UUID NOT NULL REFERENCES dsh_orders(id),
     status TEXT NOT NULL,
     actor_id TEXT NOT NULL,
     actor_role TEXT NOT NULL,
@@ -25,7 +25,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_dsh_order_returns_order_id ON dsh_order_re
 
 CREATE TABLE IF NOT EXISTS dsh_order_return_items (
     return_id TEXT NOT NULL REFERENCES dsh_order_returns(id),
-    order_item_id TEXT NOT NULL REFERENCES dsh_order_items(id),
+    order_item_id UUID NOT NULL REFERENCES dsh_order_items(id),
     quantity BIGINT NOT NULL CHECK (quantity > 0),
     PRIMARY KEY (return_id, order_item_id)
 );
