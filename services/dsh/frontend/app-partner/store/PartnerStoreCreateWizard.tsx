@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import * as Crypto from "expo-crypto";
-import { Button, Text, TextField, colorRoles, spacing } from "@bthwani/ui-kit";
+import { Button, StateView, Text, TextField, colorRoles, spacing } from "@bthwani/ui-kit";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { createPartnerStore } from "../../shared/partner";
+import { usePartnerSelfController } from "../../shared/partner/use-partner-self-controller";
 
 export type PartnerStoreCreateWizardProps = {
-  readonly partnerId: string;
   readonly onStoreCreated?: (storeId: string) => void;
   readonly onCancel?: () => void;
 };
@@ -26,10 +27,11 @@ function describeSubmissionError(error: unknown): string {
 }
 
 export function PartnerStoreCreateWizard({
-  partnerId,
   onStoreCreated,
   onCancel,
 }: PartnerStoreCreateWizardProps) {
+  const identity = useIdentitySession();
+  const self = usePartnerSelfController(identity.state.kind);
   const [displayName, setDisplayName] = useState("");
   const [cityCode, setCityCode] = useState("");
   const [category, setCategory] = useState("default");
@@ -38,13 +40,54 @@ export function PartnerStoreCreateWizard({
   const [status, setStatus] = useState<SubmissionStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
+  if (identity.state.kind === "restoring" || identity.state.kind === "authenticating") {
+    return <StateView loading title="جاري التحقق من جلسة الشريك…" />;
+  }
+
+  if (identity.state.kind !== "authenticated") {
+    return (
+      <StateView
+        tone="warning"
+        title="تسجيل الدخول مطلوب"
+        description="يجب استخدام جلسة شريك صالحة قبل إنشاء فرع جديد."
+      />
+    );
+  }
+
+  if (self.statusState.kind === "idle" || self.statusState.kind === "loading") {
+    return <StateView loading title="جاري تحميل هوية الشريك…" />;
+  }
+
+  if (self.statusState.kind === "error") {
+    return (
+      <StateView
+        tone="danger"
+        title="تعذر تحديد هوية الشريك"
+        description={self.statusState.message}
+        actionLabel="إعادة المحاولة"
+        onActionPress={self.reload}
+      />
+    );
+  }
+
+  if (self.statusState.kind !== "success") {
+    return (
+      <StateView
+        tone="danger"
+        title="هوية الشريك غير قابلة للاستخدام"
+        description="لم يعد DSH ملف شريك صريحًا لهذه الجلسة."
+      />
+    );
+  }
+
+  const partnerId = self.statusState.partner.id.trim();
+
   const handleSubmit = async () => {
-    const normalizedPartnerId = partnerId.trim();
     const normalizedDisplayName = displayName.trim();
     const normalizedCityCode = cityCode.trim();
     const normalizedCategory = category.trim();
 
-    if (!normalizedPartnerId || !normalizedDisplayName || !normalizedCityCode || !normalizedCategory) {
+    if (!partnerId || !normalizedDisplayName || !normalizedCityCode || !normalizedCategory) {
       setErrorMessage("أكمل اسم المتجر والمدينة والتصنيف، وتأكد من هوية الشريك.");
       setStatus("error");
       return;
@@ -60,7 +103,7 @@ export function PartnerStoreCreateWizard({
         "/dsh/partner/stores",
         {
           StoreID: storeId,
-          PartnerID: normalizedPartnerId,
+          PartnerID: partnerId,
           DisplayName: normalizedDisplayName,
           CityCode: normalizedCityCode,
           Category: normalizedCategory,
@@ -94,10 +137,10 @@ export function PartnerStoreCreateWizard({
 
   const submitting = status === "loading";
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <View style={styles.container}>
       <Text role="headingSm" style={styles.title}>إنشاء متجر جديد</Text>
       <Text role="bodySm" tone="muted">
-        يعيد الخادم التحقق من ملكية الشريك والصلاحيات عند تنفيذ العملية.
+        تُشتق هوية الشريك من الجلسة الحالية، ويعيد الخادم التحقق من الملكية والصلاحيات عند تنفيذ العملية.
       </Text>
 
       <TextField label="اسم المتجر" value={displayName} onChangeText={setDisplayName} placeholder="مطلوب" disabled={submitting} />
@@ -112,7 +155,7 @@ export function PartnerStoreCreateWizard({
         <Button label="إنشاء المتجر" onPress={() => void handleSubmit()} loading={submitting} disabled={submitting} fullWidth />
         {onCancel ? <Button label="إلغاء" tone="secondary" onPress={onCancel} disabled={submitting} fullWidth /> : null}
       </View>
-    </ScrollView>
+    </View>
   );
 }
 

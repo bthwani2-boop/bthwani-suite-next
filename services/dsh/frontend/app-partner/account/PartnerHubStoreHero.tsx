@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native';
 import { Badge, Box, Icon, Text, radius, spacing } from '@bthwani/ui-kit';
 import { partnerHubTheme as theme } from './PartnerHubNav';
 import type { PartnerOperationalMode } from '../../shared/partner/partner-hub.types';
+import { PartnerStoreCreateWizard } from '../store/PartnerStoreCreateWizard';
 
 export interface PartnerHubStoreHeroProps {
   direction: 'rtl' | 'ltr';
@@ -27,6 +28,8 @@ export function PartnerHubStoreHero({
   selectedModeId,
   setSelectedModeId,
 }: PartnerHubStoreHeroProps) {
+  const [showCreateStore, setShowCreateStore] = React.useState(false);
+
   return (
     <Box
       padding={4}
@@ -80,6 +83,14 @@ export function PartnerHubStoreHero({
         <View style={{ flexDirection: direction === 'rtl' ? 'row-reverse' : 'row', alignItems: 'center', gap: spacing[2] }}>
           <Badge label={isAvailable ? 'مفتوح' : 'مغلق'} tone={isAvailable ? 'success' : 'warning'} />
           <Pressable
+            onPress={() => setShowCreateStore((current) => !current)}
+            accessibilityRole="button"
+            accessibilityLabel={showCreateStore ? 'إغلاق إنشاء فرع' : 'إنشاء فرع جديد'}
+            style={{ padding: spacing[2], borderRadius: radius.md }}
+          >
+            <Icon name={showCreateStore ? 'close-circle-outline' : 'add-circle-outline'} size={18} tone="brand" />
+          </Pressable>
+          <Pressable
             onPress={onOpenStoreScope}
             accessibilityRole="button"
             accessibilityLabel="اختيار الفرع"
@@ -120,6 +131,15 @@ export function PartnerHubStoreHero({
           </Pressable>
         ))}
       </View>
+      {showCreateStore ? (
+        <PartnerStoreCreateWizard
+          onCancel={() => setShowCreateStore(false)}
+          onStoreCreated={() => {
+            setShowCreateStore(false);
+            onOpenStoreScope?.();
+          }}
+        />
+      ) : null}
     </Box>
   );
 }
