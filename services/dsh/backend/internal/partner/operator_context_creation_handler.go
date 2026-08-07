@@ -43,58 +43,32 @@ func writeIdempotentPartnerCreateResult(w http.ResponseWriter, p Partner, replay
 	}
 }
 
-// HandleOperatorContextCreatePartnerIdempotent is the control-panel creation
-// boundary. The browser may provide a retry identity, but it can never select
-// the OperatorContext or actor recorded by the immutable creation event.
 func HandleOperatorContextCreatePartnerIdempotent(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID, ok := requireOperatorContext(w, r)
-		if !ok {
-			return
-		}
+		if !ok { return }
 		actorID, surface := actorFromContext(r)
 		var input CreatePartnerInput
-		if !decodePartnerCreationInput(w, r, &input) {
-			return
-		}
+		if !decodePartnerCreationInput(w, r, &input) { return }
 		input.CreatedByActorID = actorID
 		input.CreatedBySurface = surface
-		p, replayed, err := CreatePartnerForOperatorContextIdempotent(
-			r.Context(),
-			db,
-			operatorContextID,
-			r.Header.Get("Idempotency-Key"),
-			r.Header.Get("X-Correlation-ID"),
-			input,
-		)
+		p, replayed, err := CreatePartnerForOperatorContextIdempotent(r.Context(), db, operatorContextID, r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input)
+		if err == nil { err = ReconcilePartnerCreationScopes(r.Context(), db, operatorContextID, p) }
 		writeIdempotentPartnerCreateResult(w, p, replayed, err, false)
 	}
 }
 
-// HandleOperatorContextFieldCreateDraftIdempotent closes the unknown-result
-// retry path for app-field. A replay returns the original Partner and therefore
-// the original first Store and scope instead of creating parallel authority.
 func HandleOperatorContextFieldCreateDraftIdempotent(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID, ok := requireOperatorContext(w, r)
-		if !ok {
-			return
-		}
+		if !ok { return }
 		actorID, _ := actorFromContext(r)
 		var input CreatePartnerInput
-		if !decodePartnerCreationInput(w, r, &input) {
-			return
-		}
+		if !decodePartnerCreationInput(w, r, &input) { return }
 		input.CreatedByActorID = actorID
 		input.CreatedBySurface = "app-field"
-		p, replayed, err := CreatePartnerForOperatorContextIdempotent(
-			r.Context(),
-			db,
-			operatorContextID,
-			r.Header.Get("Idempotency-Key"),
-			r.Header.Get("X-Correlation-ID"),
-			input,
-		)
+		p, replayed, err := CreatePartnerForOperatorContextIdempotent(r.Context(), db, operatorContextID, r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input)
+		if err == nil { err = ReconcilePartnerCreationScopes(r.Context(), db, operatorContextID, p) }
 		writeIdempotentPartnerCreateResult(w, p, replayed, err, true)
 	}
 }

@@ -1,29 +1,26 @@
 package partner
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"strings"
+
+	"dsh-api/internal/store"
+	"dsh-api/internal/storepolicy"
 )
 
 var (
-	ErrOpenStoreOperations  = errors.New("store has open operational records")
+	ErrOpenStoreOperations   = errors.New("store has open operational records")
 	ErrPartnerCannotOwnStore = errors.New("partner state does not allow store ownership assignment")
 )
 
-// GovernedStoreLinkInput is the only accepted shape for a transfer. Initial
-// assignment of an unowned store remains idempotent; reassignment requires a
-// reason and optimistic store version.
 type GovernedStoreLinkInput struct {
 	StoreID              string `json:"storeId"`
 	Reason               string `json:"reason"`
 	ExpectedStoreVersion int    `json:"expectedStoreVersion"`
 }
 
-// LinkPartnerStoreForOperatorContextGoverned preserves OperatorContext isolation, prevents silent
-// ownership replacement, blocks transfer while DSH operations are open, and
-// records a durable before/after audit row. A transfer safely unpublishes the
-// store so the new owner must pass readiness, catalog and marketing gates again.
 func LinkPartnerStoreForOperatorContextGoverned(
 	db *sql.DB,
 	operatorContextID, partnerID, actorID, correlationID string,
@@ -47,23 +44,21 @@ func LinkPartnerStoreForOperatorContextGoverned(
 	}
 	defer tx.Rollback() //nolint:errcheck
 
-	// Lock the target Partner before the Store. This matches lifecycle transitions,
-	// prevents a concurrent deactivation/rejection from racing the ownership change,
-	// and keeps lock ordering consistent when a transition also updates stores.
 	var targetStatus ActivationStatus
+	var targetOwnerActorID string
 	err = tx.QueryRow(`
-		SELECT activation_status
+		SELECT activation_status, COALESCE(owner_actor_id, '')
 		FROM dsh_partners
 		WHERE id = $1 AND operator_context_id = $2
 		FOR SHARE`, partnerID, operatorContextID,
-	).Scan(&targetStatus)
+	).Scan(&targetStatus, &targetOwnerActorID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	if targetStatus == StatusOpsRejected || targetStatus == StatusPartnerSuspended || targetStatus == StatusPartnerTerminated {
+	if !storepolicy.PartnerStatusAllowsStoreOwnership(string(targetStatus)) {
 		return nil, ErrPartnerCannotOwnStore
 	}
 
@@ -83,6 +78,9 @@ func LinkPartnerStoreForOperatorContextGoverned(
 	}
 
 	if currentPartnerID == partnerID {
+		if err := store.EnsurePartnerOwnerScopeTx(context.Background(), tx, operatorContextID, input.StoreID, targetOwnerActorID); err != nil {
+			return nil, err
+		}
 		if err := tx.Commit(); err != nil {
 			return nil, err
 		}
@@ -97,26 +95,17 @@ func LinkPartnerStoreForOperatorContextGoverned(
 		if input.ExpectedStoreVersion <= 0 || input.ExpectedStoreVersion != currentVersion {
 			return nil, ErrVersionConflict
 		}
-
 		var hasOpenOperations bool
 		if err := tx.QueryRow(`
 			SELECT EXISTS (
-				SELECT 1
-				FROM dsh_orders
-				WHERE store_id = $1
-				  AND status NOT IN ('delivered', 'cancelled')
-			)`, input.StoreID,
-		).Scan(&hasOpenOperations); err != nil {
+				SELECT 1 FROM dsh_orders
+				WHERE store_id = $1 AND status NOT IN ('delivered', 'cancelled')
+			)`, input.StoreID).Scan(&hasOpenOperations); err != nil {
 			return nil, err
 		}
 		if hasOpenOperations {
 			return nil, ErrOpenStoreOperations
 		}
-
-		// The database guard accepts partner replacement only inside this local
-		// transaction context. A deferred constraint trigger still requires the
-		// exact matching audit row below before COMMIT, so the flag alone cannot
-		// produce an untracked ownership change.
 		if _, err := tx.Exec(`SELECT set_config('bthwani.governed_store_partner_transfer', 'on', true)`); err != nil {
 			return nil, err
 		}
@@ -153,6 +142,10 @@ func LinkPartnerStoreForOperatorContextGoverned(
 	}
 	resultingVersion := currentVersion + 1
 
+	if err := store.RebindStoreOperationalScopesTx(context.Background(), tx, operatorContextID, input.StoreID, targetOwnerActorID); err != nil {
+		return nil, err
+	}
+
 	_, err = tx.Exec(`
 		INSERT INTO dsh_partner_store_transfer_audit (
 			operator_context_id, store_id, from_partner_id, to_partner_id,
@@ -167,17 +160,11 @@ func LinkPartnerStoreForOperatorContextGoverned(
 	}
 
 	if currentPartnerID != "" {
-		if err := recordActivationEvent(
-			tx, currentPartnerID, "store_transferred_out:"+input.StoreID,
-			actorID, "control-panel", input.Reason,
-		); err != nil {
+		if err := recordActivationEvent(tx, currentPartnerID, "store_transferred_out:"+input.StoreID, actorID, "control-panel", input.Reason); err != nil {
 			return nil, err
 		}
 	}
-	if err := recordActivationEvent(
-		tx, partnerID, "store_linked:"+input.StoreID,
-		actorID, "control-panel", input.Reason,
-	); err != nil {
+	if err := recordActivationEvent(tx, partnerID, "store_linked:"+input.StoreID, actorID, "control-panel", input.Reason); err != nil {
 		return nil, err
 	}
 
