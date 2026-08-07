@@ -1,4 +1,8 @@
-# DSH/WLT dispatch boundary
+# DSH/WLT Dispatch Boundary
+
+Status: ACTIVE_CANONICAL
+
+This domain decision refines the canonical platform model and the general product/contracts/data/security policies for dispatch-specific DSH/WLT ownership. It cannot override those higher/general authorities outside this domain.
 
 ## Ownership
 
@@ -13,7 +17,7 @@ DSH may persist actor identifiers, order identifiers, assignment identifiers, se
 
 ## Forbidden mutations
 
-The dispatch domain, HTTP handlers, database migration, frontend adapters, and operator/captain surfaces must never:
+The dispatch domain, HTTP handlers, database migrations, frontend adapters, and operator/captain surfaces must never:
 
 - credit or debit a wallet;
 - calculate or persist captain earnings as financial truth;
@@ -28,4 +32,4 @@ A WLT outage must not corrupt assignment truth. Dispatch remains operationally r
 
 ## Audit
 
-Operational actions are recorded in `dsh_dispatch_decisions`. Financial audit remains exclusively in WLT. Correlation uses identifiers only; no ledger payload is copied into DSH.
+Operational actions are recorded in the DSH-owned dispatch audit/decision model implemented by the current schema. Financial audit remains exclusively in WLT. Correlation crosses the boundary by stable identifiers and governed event/reference contracts, not by copying ledger truth into DSH.
