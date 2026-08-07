@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { Button, Text, TextField, colorRoles, spacing } from "@bthwani/ui-kit";
 import { createPartnerStore } from "../../shared/partner";
@@ -94,7 +94,7 @@ export function PartnerStoreCreateWizard({
 
   const submitting = status === "loading";
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <View style={styles.container}>
       <Text role="headingSm" style={styles.title}>إنشاء متجر للشريك</Text>
       <Text role="bodySm" tone="muted">
         تُرسل العملية حصريًا عبر مسار الميداني، ويعيد الخادم التحقق من التكليف والصلاحيات.
@@ -162,7 +162,7 @@ export function PartnerStoreCreateWizard({
           />
         ) : null}
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
