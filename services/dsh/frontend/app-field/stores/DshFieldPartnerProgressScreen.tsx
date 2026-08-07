@@ -22,7 +22,6 @@ import {
   getDshPartnerReadinessChecklist,
   DOCUMENT_TYPE_LABELS,
 } from '../../shared/partner';
-import { PartnerStoreCreateWizard } from './PartnerStoreCreateWizard';
 
 export type DshFieldPartnerProgressScreenProps = {
   readonly partnerId: string;
@@ -66,7 +65,6 @@ function SectionCard({ title, children }: { readonly title: string; readonly chi
 
 export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProducts, onOpenVisit, onOpenEscalation }: DshFieldPartnerProgressScreenProps) {
   const { state, statusLabel, isClientVisible, reload } = useFieldPartnerProgressController(partnerId);
-  const [showCreateStore, setShowCreateStore] = React.useState(false);
 
   if (state.kind === 'loading' || state.kind === 'idle') {
     return <StateView loading title="جاري تحميل تقدّم ملف الشريك…" />;
@@ -146,7 +144,7 @@ export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProduct
                   tone={DOCUMENT_STATUS_TONE[doc.documentStatus] ?? 'info'}
                 />
               </View>
-            ))
+            ))}
           )}
         </SectionCard>
 
@@ -186,24 +184,8 @@ export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProduct
                 onPress={() => onOpenEscalation(storeId)}
               />
             )}
-            <Button
-              label={showCreateStore ? 'إغلاق إنشاء الفرع' : 'إنشاء فرع جديد'}
-              tone="secondary"
-              onPress={() => setShowCreateStore((current) => !current)}
-            />
           </View>
         </SectionCard>
-
-        {showCreateStore ? (
-          <PartnerStoreCreateWizard
-            partnerId={partnerId}
-            onCancel={() => setShowCreateStore(false)}
-            onStoreCreated={() => {
-              setShowCreateStore(false);
-              void reload();
-            }}
-          />
-        ) : null}
 
         {onOpenProducts && (
           <Button
