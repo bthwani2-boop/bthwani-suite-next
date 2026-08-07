@@ -53,7 +53,6 @@ func HandleOperatorContextCreatePartnerIdempotent(db *sql.DB) http.HandlerFunc {
 		input.CreatedByActorID = actorID
 		input.CreatedBySurface = surface
 		p, replayed, err := CreatePartnerForOperatorContextIdempotent(r.Context(), db, operatorContextID, r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input)
-		if err == nil { err = ReconcilePartnerCreationScopes(r.Context(), db, operatorContextID, p) }
 		writeIdempotentPartnerCreateResult(w, p, replayed, err, false)
 	}
 }
@@ -68,7 +67,6 @@ func HandleOperatorContextFieldCreateDraftIdempotent(db *sql.DB) http.HandlerFun
 		input.CreatedByActorID = actorID
 		input.CreatedBySurface = "app-field"
 		p, replayed, err := CreatePartnerForOperatorContextIdempotent(r.Context(), db, operatorContextID, r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input)
-		if err == nil { err = ReconcilePartnerCreationScopes(r.Context(), db, operatorContextID, p) }
 		writeIdempotentPartnerCreateResult(w, p, replayed, err, true)
 	}
 }

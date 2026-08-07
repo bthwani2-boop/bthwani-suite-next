@@ -76,10 +76,6 @@ func hashPartnerCreation(operatorContextID string, input CreatePartnerInput) (st
 	return hex.EncodeToString(digest[:]), nil
 }
 
-// lockPartnerCreationUniqueness serializes both legal-identity and primary-phone
-// contenders. Database uniqueness still guards legal identity; the phone lock
-// and scoped existence check close the second J020 duplicate authority path
-// without trusting a preflight read that can race.
 func lockPartnerCreationUniqueness(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -183,9 +179,9 @@ func createPartnerForOperatorContextTx(
 	}
 	p = SanitizePartnerForSurface(p)
 
-	// The first store remains unpublished. The migration trigger derives its
-	// OperatorContext from the owning partner, and the explicit update provides a second
-	// invariant at the application boundary.
+	// Partner creation owns its unpublished first store. Store authorization is
+	// closed in this same transaction: only app-field receives an assigned field
+	// scope, while an already-bound partner owner receives canonical own access.
 	sRow, err := store.CreateDraftStore(tx, store.CreateDraftStoreInput{
 		PartnerID:   p.ID,
 		DisplayName: p.DisplayName,
@@ -197,19 +193,13 @@ func createPartnerForOperatorContextTx(
 	if _, err = tx.ExecContext(ctx, `UPDATE dsh_stores SET operator_context_id = $1 WHERE id = $2`, operatorContextID, sRow.ID); err != nil {
 		return Partner{}, err
 	}
-
-	if input.CreatedByActorID != "" {
-		_, err = tx.ExecContext(ctx, `
-			INSERT INTO dsh_store_actor_scopes
-				(operator_context_id, actor_id, actor_role, store_id, scope_type, active)
-			VALUES ($1, $2, 'field', $3, 'assigned', true)
-			ON CONFLICT (actor_id, actor_role, store_id) DO UPDATE
-			SET operator_context_id = EXCLUDED.operator_context_id, active = true`,
-			operatorContextID, input.CreatedByActorID, sRow.ID,
-		)
-		if err != nil {
+	if input.CreatedBySurface == "app-field" {
+		if err := store.EnsureFieldAssignedScopeTx(ctx, tx, operatorContextID, sRow.ID, input.CreatedByActorID); err != nil {
 			return Partner{}, err
 		}
+	}
+	if err := store.EnsurePartnerOwnerScopeTx(ctx, tx, operatorContextID, sRow.ID, input.OwnerActorID); err != nil {
+		return Partner{}, err
 	}
 
 	return p, nil
@@ -246,9 +236,10 @@ func CreatePartnerForOperatorContext(db *sql.DB, operatorContextID string, input
 }
 
 // CreatePartnerForOperatorContextIdempotent atomically creates the Partner,
-// its unpublished first Store, the field scope, and the immutable creation
-// event. The lifecycle audit event doubles as the retry journal, avoiding a
-// parallel source of truth while making unknown-result retries deterministic.
+// its unpublished first Store, surface-authorized store scopes, and the
+// immutable creation event. The lifecycle audit event doubles as the retry
+// journal, avoiding a parallel source of truth while making unknown-result
+// retries deterministic.
 func CreatePartnerForOperatorContextIdempotent(
 	ctx context.Context,
 	db *sql.DB,
