@@ -576,12 +576,6 @@ paths:
     $ref: ./paths/partner.paths.yaml#/~1dsh~1partner~1activation~1status
   /dsh/partner/activation/readiness:
     $ref: ./paths/system.paths.yaml#/~1dsh~1partner~1activation~1readiness
-  /dsh/partner/stores/{storeId}/team:
-    $ref: ./paths/partner.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1team
-  /dsh/partner/stores/{storeId}/team/invites:
-    $ref: ./paths/partner.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1team~1invites
-  /dsh/partner/stores/{storeId}/team/members/{memberId}/action:
-    $ref: ./paths/partner.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1team~1members~1{memberId}~1action
   /dsh/partner/scopes:
     $ref: ./paths/partner.paths.yaml#/~1dsh~1partner~1scopes
   /dsh/partner/invites:
@@ -756,12 +750,12 @@ paths:
     $ref: ./dsh.client-address.openapi.yaml#/paths/~1dsh~1client~1addresses
   /dsh/client/addresses/{addressId}/default:
     $ref: ./dsh.client-address.openapi.yaml#/paths/~1dsh~1client~1addresses~1{addressId}~1default
-  /dsh/notification-push-endpoints/{deviceId}:
-    $ref: ./dsh.notifications-governance.openapi.yaml#/paths/~1dsh~1notification-push-endpoints~1{deviceId}
+  /dsh/notifications/push-endpoints/{deviceId}:
+    $ref: ./dsh.notifications-governance.openapi.yaml#/paths/~1dsh~1notifications~1push-endpoints~1{deviceId}
   /dsh/operator/notifications/delivery-attempts:
     $ref: ./dsh.notifications-governance.openapi.yaml#/paths/~1dsh~1operator~1notifications~1delivery-attempts
-  /dsh/notification-push-endpoints:
-    $ref: ./dsh.notifications-governance.openapi.yaml#/paths/~1dsh~1notification-push-endpoints
+  /dsh/notifications/push-endpoints:
+    $ref: ./dsh.notifications-governance.openapi.yaml#/paths/~1dsh~1notifications~1push-endpoints
   /dsh/operator/catalog/master-products/{productId}/relationships/{relationshipId}:
     $ref: ./dsh.catalog-governance.openapi.yaml#/paths/~1dsh~1operator~1catalog~1master-products~1{productId}~1relationships~1{relationshipId}
   /dsh/operator/catalog/attributes:
@@ -817,13 +811,21 @@ paths:
   /dsh/captain/dispatch/assignments/{assignmentId}/contact-proxy:
     $ref: ./dsh.dispatch-governance.openapi.yaml#/paths/~1dsh~1captain~1dispatch~1assignments~1{assignmentId}~1contact-proxy
   /dsh/captain/me/ratings/summary:
-    $ref: ./dsh.partner-fleet.openapi.yaml#/paths/~1dsh~1captain~1partner-fleet~1memberships
+    $ref: ./dsh.incident-governance.openapi.yaml#/paths/~1dsh~1captain~1me~1ratings~1summary
   /dsh/captain/partner-fleet/connect:
     $ref: ./dsh.partner-fleet.openapi.yaml#/paths/~1dsh~1captain~1partner-fleet~1connect
+  /dsh/captain/partner-fleet/memberships:
+    $ref: ./dsh.partner-fleet.openapi.yaml#/paths/~1dsh~1captain~1partner-fleet~1memberships
+  /dsh/captain/partner-fleet/memberships/{teamMemberId}/disconnect:
+    $ref: ./dsh.partner-fleet.openapi.yaml#/paths/~1dsh~1captain~1partner-fleet~1memberships~1{teamMemberId}~1disconnect
+  /dsh/operator/stores/{storeId}/partner-fleet:
+    $ref: ./dsh.partner-fleet.openapi.yaml#/paths/~1dsh~1operator~1stores~1{storeId}~1partner-fleet
+  /dsh/operator/captains/{captainId}/partner-fleet:
+    $ref: ./dsh.partner-fleet.openapi.yaml#/paths/~1dsh~1operator~1captains~1{captainId}~1partner-fleet
   /dsh/client/benefits:
     $ref: ./dsh.marketing-commercial.openapi.yaml#/paths/~1dsh~1client~1benefits
-  /dsh/client/marketing/subscription-purchases/{purchaseId}:
-    $ref: ./dsh.marketing-commercial.openapi.yaml#/paths/~1dsh~1client~1marketing~1subscription-purchases~1{purchaseId}
+  /dsh/client/marketing/subscriptions/purchases/{purchaseId}:
+    $ref: ./dsh.marketing-commercial.openapi.yaml#/paths/~1dsh~1client~1marketing~1subscriptions~1purchases~1{purchaseId}
   /dsh/operator/marketing/coupons:
     $ref: ./dsh.marketing-commercial.openapi.yaml#/paths/~1dsh~1operator~1marketing~1coupons
   /dsh/operator/marketing/loyalty-earning-policies:
@@ -838,8 +840,8 @@ paths:
     $ref: ./dsh.marketing-commercial.openapi.yaml#/paths/~1dsh~1operator~1marketing~1subscription-plans~1{planId}
   /dsh/client/marketing/subscriptions/purchase:
     $ref: ./dsh.marketing-commercial.openapi.yaml#/paths/~1dsh~1client~1marketing~1subscriptions~1purchase
-  /dsh/client/marketing/subscriptions/{subscriptionId}/activate:
-    $ref: ./dsh.marketing-commercial.openapi.yaml#/paths/~1dsh~1client~1marketing~1subscriptions~1{subscriptionId}~1activate
+  /dsh/client/marketing/subscriptions/{purchaseId}/activate:
+    $ref: ./dsh.marketing-commercial.openapi.yaml#/paths/~1dsh~1client~1marketing~1subscriptions~1{purchaseId}~1activate
   /dsh/client/marketing/subscriptions/{subscriptionId}/cancel:
     $ref: ./dsh.marketing-commercial.openapi.yaml#/paths/~1dsh~1client~1marketing~1subscriptions~1{subscriptionId}~1cancel
   /dsh/client/marketing/subscriptions/{subscriptionId}/renew:
@@ -1062,8 +1064,6 @@ paths:
     $ref: ./dsh.partner-delivery.openapi.yaml#/paths/~1dsh~1operator~1pickups~1sla-alerts~1refresh
   /dsh/operator/pickups/sla-alerts/{alertId}/acknowledge:
     $ref: ./dsh.partner-delivery.openapi.yaml#/paths/~1dsh~1operator~1pickups~1sla-alerts~1{alertId}~1acknowledge
-  /dsh/operator/platform/dispatch-balance-policy:
-    $ref: ./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1dispatch-balance-policy
   /dsh/operator/platform/map-provider-health:
     $ref: ./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1map-provider-health
   /dsh/operator/platform/service-areas:
@@ -1130,8 +1130,8 @@ paths:
     $ref: ./dsh.support-message-delivery.openapi.yaml#/paths/~1dsh~1support~1tickets~1{ticketId}~1messages~1{messageId}~1attachments
   /dsh/support/tickets/{ticketId}/messages/read:
     $ref: ./dsh.support-message-delivery.openapi.yaml#/paths/~1dsh~1support~1tickets~1{ticketId}~1messages~1read
-  /dsh/operator/support/incident-tasks/{taskId}:
-    $ref: ./dsh.support-governance.openapi.yaml#/paths/~1dsh~1operator~1support~1incident-tasks~1{taskId}
+  /dsh/operator/support/incidents/tasks/{taskId}:
+    $ref: ./dsh.support-governance.openapi.yaml#/paths/~1dsh~1operator~1support~1incidents~1tasks~1{taskId}
 components:
   securitySchemes:
     serviceToken:

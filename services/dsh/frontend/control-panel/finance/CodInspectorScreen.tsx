@@ -101,12 +101,12 @@ export function CodInspectorScreen() {
             <CpTextInput 
               placeholder="بحث برقم الطلب (Order ID)..."
               value={orderId}
-              onChange={(e) => setOrderId(e.target.value)}
+              onChange={setOrderId}
             />
             <CpTextInput 
               placeholder="بحث برقم الكابتن (Captain ID)..."
               value={captainId}
-              onChange={(e) => setCaptainId(e.target.value)}
+              onChange={setCaptainId}
             />
           </div>
           <CpButton onClick={loadRecords} disabled={state === "loading"}>

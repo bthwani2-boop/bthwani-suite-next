@@ -131,12 +131,12 @@ export function StoreGovernanceActions({ store, actionState, diagnosticsState, o
         )}
       </div>
       {action === "lifecycle" && (value === "paused" || value === "suspended" || value === "closed") && (
-        <div style={{ marginTop: "0.75rem", padding: "0.5rem", background: "var(--color-danger-subtle, #ffebee)", color: "var(--color-danger, #c62828)", borderRadius: "0.25rem" }}>
+        <div style={{ marginTop: "0.75rem", padding: "0.5rem", background: "var(--bthwani-control-panel-surface-muted)", color: "var(--bthwani-control-panel-danger)", borderRadius: "0.25rem" }}>
           <strong>تنبيه:</strong> سيؤثر هذا الإجراء فوراً على المتجر ولن يظهر للعملاء الجدد. سيتم إلغاء الطلبات غير المكتملة بناءً على الإجراء.
         </div>
       )}
       {action === "lifecycle" && value === "published" && diagnosticsState?.kind === "success" && !diagnosticsState.isReady && (
-        <div style={{ marginTop: "0.75rem", padding: "0.5rem", background: "var(--color-danger-subtle, #ffebee)", color: "var(--color-danger, #c62828)", borderRadius: "0.25rem" }}>
+        <div style={{ marginTop: "0.75rem", padding: "0.5rem", background: "var(--bthwani-control-panel-surface-muted)", color: "var(--bthwani-control-panel-danger)", borderRadius: "0.25rem" }}>
           <strong>لا يمكن النشر:</strong> يرجى إكمال متطلبات الجاهزية (موانع النشر: {diagnosticsState.blockers.join("، ")}).
         </div>
       )}

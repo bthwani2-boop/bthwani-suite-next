@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { formatWltMoney } from "@bthwani/wlt/dsh";
 import { Button, LoadingState, StateView, Surface, Text, Badge, colorRoles, spacing, alpha, radius } from "@bthwani/ui-kit";
-import { View, StyleSheet, ScrollView } from "react-native";
 import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
 
@@ -58,29 +57,29 @@ export const CartSyncDiagnostics = ({ cartId, onBack }: { readonly cartId: strin
 
   return (
     <Surface tone="default" style={styles.container}>
-      <View style={styles.header}>
+      <div style={styles.header}>
         <Button label="عودة" tone="secondary" size="sm" onPress={onBack} />
-        <View style={styles.titleContainer}>
-          <Text role="title">سجل عمليات السلة (Diagnostics)</Text>
+        <div style={styles.titleContainer}>
+          <Text role="titleLg">سجل عمليات السلة (Diagnostics)</Text>
           <Text role="caption" style={styles.mutedText}>
             السلة: {data.cart.id} | الإصدار الحالي: {data.cart.version}
           </Text>
-        </View>
-      </View>
+        </div>
+      </div>
 
-      <ScrollView contentContainerStyle={styles.list}>
+      <div style={styles.list}>
         {data.history.length === 0 ? (
           <StateView title="لا توجد عمليات مسجلة" description="لم يتم تسجيل أي تعديلات على هذه السلة بعد." />
         ) : (
           data.history.map((record, i) => (
-            <View key={`${record.idempotencyKey}-${i}`} style={styles.recordCard}>
-              <View style={styles.recordHeader}>
+            <div key={`${record.idempotencyKey}-${i}`} style={styles.recordCard}>
+              <div style={styles.recordHeader}>
                 <Badge label={`الإصدار ${record.version}`} tone={record.version === data.cart.version ? "success" : "neutral"} />
                 <Text role="caption" style={styles.timeText}>
                   {new Date(record.createdAt).toLocaleString("ar-SA")}
                 </Text>
-              </View>
-              <View style={styles.recordDetails}>
+              </div>
+              <div style={styles.recordDetails}>
                 <Text role="bodySm" style={styles.detailRow}>
                   <Text weight="bold">مفتاح العملية (Idempotency): </Text>
                   <Text style={styles.mono}>{record.idempotencyKey}</Text>
@@ -93,16 +92,16 @@ export const CartSyncDiagnostics = ({ cartId, onBack }: { readonly cartId: strin
                   <Text weight="bold">الجلسة (Session ID): </Text>
                   <Text style={styles.mono}>{record.sessionId || "غير متوفر"}</Text>
                 </Text>
-              </View>
-            </View>
+              </div>
+            </div>
           ))
         )}
-      </ScrollView>
+      </div>
     </Surface>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     flex: 1,
     backgroundColor: colorRoles.surfaceWarm,
@@ -158,4 +157,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colorRoles.textSecondary,
   },
-});
+} as const;

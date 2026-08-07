@@ -5,6 +5,7 @@
 // depend on a surface module.
 
 export type PartnerTeamRole = 'owner' | 'supervisor' | 'staff';
+export type PartnerTeamInviteRole = 'manager' | 'supervisor' | 'staff';
 export type PartnerTeamStatus = 'active' | 'paused' | 'invited' | 'blocked' | 'review-needed';
 
 export type PartnerTeamMember = {

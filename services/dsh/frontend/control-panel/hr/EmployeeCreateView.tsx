@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import React, { useState } from "react";
-import { useIdentityRuntimeStatus } from "@bthwani/core-identity";
+import { useIdentityRuntimeStatus, useIdentitySession } from "@bthwani/core-identity";
 import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
 import { EditorPageFrame } from "@bthwani/control-panel/shell";
 import { Text } from "@bthwani/ui-kit";
@@ -19,6 +19,10 @@ export function EmployeeCreateView(props: {
 }) {
   const controller = useEmployeeCreateController();
   const identityRuntime = useIdentityRuntimeStatus();
+  const { state: identityState } = useIdentitySession();
+  const operatorContextId = identityState.kind === "authenticated"
+    ? identityState.identity.operatorContextId
+    : "";
   const runtimeValue = identityRuntime.state.kind === "resolved"
     ? identityRuntime.state.value
     : identityRuntime.state.kind === "checking"
@@ -67,15 +71,16 @@ export function EmployeeCreateView(props: {
 
   const renderProgress = () => {
     if (controller.state.kind !== "provisioning") return null;
+    const provisioningState = controller.state;
     return (
       <div style={{ padding: "16px", backgroundColor: "var(--bthwani-control-panel-surface)", border: "1px solid var(--bthwani-control-panel-border)", borderRadius: "8px", marginTop: "16px" }}>
         <Text role="titleSm" style={{ fontWeight: "700", marginBottom: "8px" }}>تقدم عملية الإنشاء الموحدة</Text>
         <Text role="bodySm" style={{ color: "var(--bthwani-control-panel-text-muted)" }}>
-          الحالة الحالية: {controller.state.status}
+          الحالة الحالية: {provisioningState.status}
         </Text>
         <div style={{ marginTop: "12px", display: "flex", gap: "8px" }}>
-          {controller.state.status === "FAILED_AT_WORKFORCE" && (
-            <CpButton variant="secondary" onClick={() => controller.resume(controller.state.caseId)}>محاولة استئناف العملية</CpButton>
+          {provisioningState.status === "FAILED_AT_WORKFORCE" && (
+            <CpButton variant="secondary" onClick={() => controller.resume(provisioningState.caseId)}>محاولة استئناف العملية</CpButton>
           )}
         </div>
       </div>
@@ -181,14 +186,15 @@ export function EmployeeCreateView(props: {
                   username: username.trim(),
                   phoneE164: phoneE164.trim(),
                   role: "workforce_employee", // Assuming base role
+                  operatorContextId,
                   payload: {
                     fullNameAr: fullNameAr.trim(),
-                    fullNameEn: fullNameEn.trim() || undefined,
                     department: department.trim(),
                     role: role.trim(),
-                    officeLocation: officeLocation.trim() || undefined,
-                    engagementStartDate: engagementStartDate.trim() || undefined,
-                    supervisorActorId: supervisor?.actorId,
+                    ...(fullNameEn.trim() ? { fullNameEn: fullNameEn.trim() } : {}),
+                    ...(officeLocation.trim() ? { officeLocation: officeLocation.trim() } : {}),
+                    ...(engagementStartDate.trim() ? { engagementStartDate: engagementStartDate.trim() } : {}),
+                    ...(supervisor ? { supervisorActorId: supervisor.actorId } : {}),
                   }
                 });
               }}

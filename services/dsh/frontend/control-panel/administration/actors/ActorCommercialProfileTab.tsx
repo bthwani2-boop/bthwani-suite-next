@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { CpStatePanel, CpButton } from "@bthwani/control-panel/components";
 import { Text } from "@bthwani/ui-kit";
-import { createDshHttpClient } from "../../../../shared/_kernel/dsh-http-request";
-import type { ClientProfile } from "../../../../shared/client-profile";
+import { createDshHttpClient } from "../../../shared/_kernel/dsh-http-request";
+import type { ClientProfile } from "../../../shared/client-profile";
 
 const { request } = createDshHttpClient("", "dsh-administration");
 
@@ -33,17 +33,18 @@ export function ActorCommercialProfileTab(props: { readonly actorId: string }) {
   }, [props.actorId]);
 
   if (loading) {
-    return <CpStatePanel state="loading" title="جاري التحميل..." />;
+    return <CpStatePanel role="status" title="جاري التحميل..." />;
   }
 
   if (error || !profile) {
     return (
-      <CpStatePanel 
-        state="error" 
-        title="تعذر تحميل الملف التجاري" 
-        description={error || "الملف غير موجود"} 
-        action={{ label: "إعادة المحاولة", onClick: loadProfile }}
-      />
+      <CpStatePanel
+        role="alert"
+        title="تعذر تحميل الملف التجاري"
+        description={error || "الملف غير موجود"}
+      >
+        <CpButton variant="secondary" onClick={() => void loadProfile()}>إعادة المحاولة</CpButton>
+      </CpStatePanel>
     );
   }
 
@@ -54,7 +55,7 @@ export function ActorCommercialProfileTab(props: { readonly actorId: string }) {
           <Text role="headingSm">الملف التجاري (J041)</Text>
           <Text role="bodySm" style={{ color: "var(--bthwani-control-panel-text-muted)" }}>تفضيلات التسوق والإشعارات الخاصة بالعميل</Text>
         </div>
-        <CpButton label="تحديث البيانات" variant="secondary" onClick={loadProfile} />
+        <CpButton variant="secondary" onClick={() => void loadProfile()}>تحديث البيانات</CpButton>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>

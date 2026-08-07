@@ -5,7 +5,7 @@ import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTextInput } from
 import { EditorPageFrame } from "@bthwani/control-panel/shell";
 import { Text } from "@bthwani/ui-kit";
 import { provisionActor, type ActorSummary } from "../../../shared/identity";
-import { generateUUID } from "../../../shared/platform/platform-utils";
+import { corrId } from "../../../shared/_kernel/dsh-http-request";
 
 export function ActorCreateView(props: {
   readonly onBack?: () => void;
@@ -31,13 +31,13 @@ export function ActorCreateView(props: {
     setSubmitting(true);
     setError(null);
     try {
-      const idempotencyKey = generateUUID();
+      const idempotencyKey = corrId("actor-create");
       const actor = await provisionActor({
         username: username.trim(),
-        phoneE164: phone.trim() || undefined,
         role: role.trim(),
-        internalRole: internalRole.trim() || undefined,
-        departmentScope: departmentScope.trim() || undefined,
+        ...(phone.trim() ? { phoneE164: phone.trim() } : {}),
+        ...(internalRole.trim() ? { internalRole: internalRole.trim() } : {}),
+        ...(departmentScope.trim() ? { departmentScope: departmentScope.trim() } : {}),
       }, idempotencyKey);
       setCreated(actor);
       if (props.onCreated) {
@@ -122,9 +122,11 @@ export function ActorCreateView(props: {
   }
   return (
     <EditorPageFrame
-      title="إنشاء هوية (Actor) جديدة"
-      onBack={props.onBack}
-      header={<CpPageHeader title="إنشاء هوية (Actor) جديدة" onBack={props.onBack} />}
+      header={(
+        <CpPageHeader title="إنشاء هوية (Actor) جديدة">
+          {props.onBack ? <CpButton variant="ghost" onClick={props.onBack}>العودة</CpButton> : null}
+        </CpPageHeader>
+      )}
     >
       <div style={{ padding: "2rem" }}>{body}</div>
     </EditorPageFrame>

@@ -12,8 +12,7 @@ import {
   radius,
   spacing,
 } from "@bthwani/ui-kit";
-import type { PartnerTeamInviteRole } from "../../shared/partner/partner.api";
-import type { PartnerTeamMember } from "./partner-team.types";
+import type { PartnerTeamInviteRole, PartnerTeamMember } from "./partner-team.types";
 import type { PartnerTeamMutationResult } from "./usePartnerTeamModel";
 
 export type { PartnerTeamMember } from "./partner-team.types";
@@ -65,7 +64,6 @@ const inviteRoles: readonly { id: PartnerTeamInviteRole; label: string }[] = [
   { id: "manager", label: "مدير" },
   { id: "supervisor", label: "مشرف" },
   { id: "staff", label: "موظف" },
-  { id: "courier", label: "موصل" },
 ];
 
 const sections: readonly { id: PartnerTeamSection; label: string }[] = [

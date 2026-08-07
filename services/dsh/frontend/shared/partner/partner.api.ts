@@ -18,7 +18,6 @@ import type {
   DshCreatePartnerFieldVisitRequest,
   DshPartnerListResponse,
   DshPartnerOperationalScope,
-  DshPartnerTeamMember,
   DshPartnerStoreCourierSettings,
   DshPartnerCoverageZone,
   DshPartnerCommercialSummary,
@@ -168,52 +167,6 @@ export function fetchPartnerSelfReadiness(): Promise<DshPartnerReadiness> {
 
 export function fetchPartnerScopes(): Promise<{ scopes: DshPartnerOperationalScope[] }> {
   return request("/dsh/partner/scopes");
-}
-
-export function fetchPartnerTeam(storeId: string): Promise<{ members: DshPartnerTeamMember[] }> {
-  return request(`/dsh/partner/stores/${storeId}/team`);
-}
-
-export type PartnerTeamInviteRole = "manager" | "supervisor" | "staff";
-
-export type PartnerTeamInvitationResponse = {
-  readonly memberId: string;
-  readonly actorId: string;
-  readonly role: PartnerTeamInviteRole;
-  readonly replayed: boolean;
-  readonly activationState: "issued" | "unknown";
-  readonly activation?: {
-    readonly activationId: string;
-    readonly code: string;
-    readonly maskedPhone: string;
-    readonly expiresAt: string;
-  };
-};
-
-export function invitePartnerTeamMember(
-  storeId: string,
-  identity: string,
-  role: PartnerTeamInviteRole,
-  mutation?: PartnerMutationContext,
-): Promise<PartnerTeamInvitationResponse> {
-  return request(`/dsh/partner/stores/${storeId}/team/invites`, {
-    method: "POST",
-    body: { identity, role },
-    mutation,
-  });
-}
-
-export function executePartnerTeamMemberAction(
-  storeId: string,
-  memberId: string,
-  action: string,
-  mutation?: PartnerMutationContext,
-): Promise<{ success: boolean }> {
-  return request(`/dsh/partner/stores/${storeId}/team/members/${memberId}/action`, {
-    method: "POST",
-    body: { action },
-    mutation,
-  });
 }
 
 export function fetchPartnerStoreCourierSettings(storeId: string): Promise<DshPartnerStoreCourierSettings> {

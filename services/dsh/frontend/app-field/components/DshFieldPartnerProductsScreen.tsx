@@ -256,8 +256,12 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
       brand: proposeBrand.trim(),
       barcode: null,
       imageObjectKey: null,
-      targetMasterProductId: correctionTarget?.id,
-      baseVersion: correctionTarget?.version,
+      ...(correctionTarget
+        ? {
+            targetMasterProductId: correctionTarget.id,
+            baseVersion: correctionTarget.version,
+          }
+        : {}),
     });
     if (!proposal) {
       setProposeError('تعذر إرسال الاقتراح. تحقق من سياسة الفئة ثم أعد المحاولة.');

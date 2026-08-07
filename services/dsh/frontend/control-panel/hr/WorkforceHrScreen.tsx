@@ -50,20 +50,20 @@ function WorkforceHrScreenInner() {
     if (kind === "employee") {
       return (
         <EditorPageFrame header={<CpPageHeader title="إضافة موظف إداري"><CpButton variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع</CpButton></CpPageHeader>}>
-          <EmployeeCreateView inline onCreated={(employee) => navigateTo("created-success", "employee", employee.actorId)} />
+          <EmployeeCreateView inline onCreated={(caseId) => navigateTo("created-success", "employee", caseId)} />
         </EditorPageFrame>
       );
     }
     if (kind === "captain") {
       return (
         <EditorPageFrame header={<CpPageHeader title="إضافة كابتن"><CpButton variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع</CpButton></CpPageHeader>}>
-          <CaptainCreateView inline onCreated={(captain) => navigateTo("created-success", "captain", captain.actorId)} />
+          <CaptainCreateView inline onCreated={(caseId) => navigateTo("created-success", "captain", caseId)} />
         </EditorPageFrame>
       );
     }
     return (
       <EditorPageFrame header={<CpPageHeader title="إضافة ميداني"><CpButton variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع</CpButton></CpPageHeader>}>
-        <FieldAgentCreateView inline onCreated={(agent) => navigateTo("created-success", "field", agent.actorId)} />
+        <FieldAgentCreateView inline onCreated={(caseId) => navigateTo("created-success", "field", caseId)} />
       </EditorPageFrame>
     );
   }

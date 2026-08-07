@@ -797,6 +797,19 @@ paths:
       tags:
       - internal
       operationId: get_dsh_internal_operations_carts__cartId__sync_diagnostics
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      - name: X-Service-Caller
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 1
       responses:
         '200':
           description: Auto-generated

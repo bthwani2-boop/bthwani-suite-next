@@ -658,7 +658,7 @@ export function CatalogDashboardScreen() {
                   render: (m: any) => {
                     if (m.isStandalone) return <CpBadge tone="neutral">مستقل</CpBadge>;
                     if (m.parentId) return <CpBadge tone="info">متغير</CpBadge>;
-                    return <CpBadge tone="primary">أساسي</CpBadge>;
+                    return <CpBadge tone="brand">أساسي</CpBadge>;
                   },
                 },
                 {
@@ -721,11 +721,11 @@ export function CatalogDashboardScreen() {
             {mediaDrawerProductId && (
               <div style={{
                 position: "fixed", top: 0, left: 0, right: 0, bottom: 0, 
-                backgroundColor: "rgba(0,0,0,0.5)", display: "flex", 
+                backgroundColor: "var(--bthwani-media-scrim-strong)", display: "flex",
                 justifyContent: "center", alignItems: "center", zIndex: 1000
               }}>
                 <div style={{
-                  backgroundColor: "var(--ds-background-surface, #fff)",
+                  backgroundColor: "var(--bthwani-control-panel-surface)",
                   padding: "24px", borderRadius: "8px", width: "80%", maxWidth: "800px",
                   maxHeight: "90vh", overflowY: "auto"
                 }}>
@@ -738,7 +738,7 @@ export function CatalogDashboardScreen() {
                     setMediaDrawerProductId(null);
                     setLinkEntityId(mediaDrawerProductId);
                     setLinkEntityType("master-products");
-                    controller.dispatch({ type: "SET_ACTIVE_TAB", tab: "marketing_media" });
+                    setActiveTab("marketing_media");
                   }}>الانتقال إلى تبويب إدارة الوسائط وربط صورة لهذا المنتج</CpButton>
                 </div>
               </div>
@@ -784,7 +784,7 @@ export function CatalogDashboardScreen() {
                           <strong>{p.proposedNameAr}</strong>
                           {p.proposedNameEn && <div style={proposalNameEnStyle}>{p.proposedNameEn}</div>}
                           {p.targetMasterProductId && (
-                            <CpBadge tone="info" style={{ marginTop: "0.25rem" }}>
+                            <CpBadge tone="info">
                               طلب تصحيح (للمنتج {p.targetMasterProductId})
                             </CpBadge>
                           )}
@@ -882,11 +882,11 @@ export function CatalogDashboardScreen() {
                       </tr>
                       {expandedProposalId === p.id && (
                         <tr key={`${p.id}-details`}>
-                          <td colSpan={5} style={{ padding: "16px", backgroundColor: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
+                              <td colSpan={5} style={{ padding: "16px", backgroundColor: "var(--bthwani-control-panel-surface-muted)", borderBottom: "1px solid var(--bthwani-control-panel-border)" }}>
                             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                               <div style={{ display: "flex", gap: "24px" }}>
-                                <div style={{ flex: 1, backgroundColor: "white", padding: "16px", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
-                                  <h4 style={{ margin: "0 0 12px 0", color: "#111827" }}>تفاصيل الاقتراح (Base)</h4>
+                                <div style={{ flex: 1, backgroundColor: "var(--bthwani-control-panel-surface)", padding: "16px", borderRadius: "8px", border: "1px solid var(--bthwani-control-panel-border)" }}>
+                                  <h4 style={{ margin: "0 0 12px 0", color: "var(--bthwani-control-panel-text)" }}>تفاصيل الاقتراح (Base)</h4>
                                   <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "0.875rem" }}>
                                     <div><strong>الاسم بالعربية:</strong> {p.proposedNameAr}</div>
                                     <div><strong>الاسم بالإنجليزية:</strong> {p.proposedNameEn || "—"}</div>
@@ -900,8 +900,8 @@ export function CatalogDashboardScreen() {
                                     )}
                                   </div>
                                 </div>
-                                <div style={{ flex: 1, backgroundColor: "white", padding: "16px", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
-                                  <h4 style={{ margin: "0 0 12px 0", color: "#111827" }}>المنتج المركزي (Canonical)</h4>
+                                <div style={{ flex: 1, backgroundColor: "var(--bthwani-control-panel-surface)", padding: "16px", borderRadius: "8px", border: "1px solid var(--bthwani-control-panel-border)" }}>
+                                  <h4 style={{ margin: "0 0 12px 0", color: "var(--bthwani-control-panel-text)" }}>المنتج المركزي (Canonical)</h4>
                                   {p.targetMasterProductId ? (
                                     <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "0.875rem" }}>
                                       {(() => {
@@ -916,8 +916,8 @@ export function CatalogDashboardScreen() {
                                             <div><strong>الباركود:</strong> {canonical.barcode || "—"}</div>
                                             <div>
                                               <strong>النسخة الحالية:</strong>{" "}
-                                              <CpBadge tone={isStale ? "critical" : "positive"}>{canonical.version}</CpBadge>
-                                              {isStale && <div style={{ color: "#dc2626", marginTop: "4px", fontSize: "0.75rem" }}>⚠️ نسخة الاقتراح قديمة، يجب تحديثها قبل الاعتماد!</div>}
+                                              <CpBadge tone={isStale ? "danger" : "success"}>{canonical.version}</CpBadge>
+                                              {isStale && <div style={{ color: "var(--bthwani-control-panel-danger)", marginTop: "4px", fontSize: "0.75rem" }}>⚠️ نسخة الاقتراح قديمة، يجب تحديثها قبل الاعتماد!</div>}
                                             </div>
                                           </>
                                         );
@@ -930,9 +930,9 @@ export function CatalogDashboardScreen() {
                               </div>
                               
                               {p.duplicateCandidates && p.duplicateCandidates.length > 0 && (
-                                <div style={{ backgroundColor: "white", padding: "16px", borderRadius: "8px", border: "1px solid #fca5a5" }}>
-                                  <h4 style={{ margin: "0 0 12px 0", color: "#b91c1c" }}>تعارض وتكرار محتمل (Duplicate Candidates)</h4>
-                                  <ul style={{ margin: 0, paddingInlineStart: "20px", fontSize: "0.875rem", color: "#991b1b" }}>
+                                <div style={{ backgroundColor: "var(--bthwani-control-panel-surface)", padding: "16px", borderRadius: "8px", border: "1px solid var(--bthwani-control-panel-danger)" }}>
+                                  <h4 style={{ margin: "0 0 12px 0", color: "var(--bthwani-control-panel-danger)" }}>تعارض وتكرار محتمل (Duplicate Candidates)</h4>
+                                  <ul style={{ margin: 0, paddingInlineStart: "20px", fontSize: "0.875rem", color: "var(--bthwani-control-panel-danger)" }}>
                                     {p.duplicateCandidates.map((candidateId) => (
                                       <li key={candidateId}>
                                         منتج مركزي مشابه: <code>{candidateId}</code>
@@ -1094,17 +1094,15 @@ export function CatalogDashboardScreen() {
 
             {/* ── Diagnostics strip ───────────────────────────────────────── */}
             {(() => {
-              const retiredCount = controller.assortment.items.filter(a => a.publicationStatus === "retired").length;
-              const stalePricedCount = controller.assortment.items.filter(a => a.unitPrice <= 0 && a.publicationStatus !== "retired").length;
+              const stalePricedCount = controller.assortment.items.filter(a => a.unitPrice <= 0).length;
               const orphanCount = controller.assortment.items.filter(a =>
                 !controller.state.masterProducts.items.some(mp => mp.id === a.masterProductId)
               ).length;
-              if (retiredCount + stalePricedCount + orphanCount === 0) return null;
+              if (stalePricedCount + orphanCount === 0) return null;
               return (
                 <div style={{ display: "flex", gap: "12px", padding: "12px 0", marginBottom: "12px" }}>
-                  {retiredCount > 0 && <CpBadge tone="neutral">متقاعد: {retiredCount}</CpBadge>}
                   {stalePricedCount > 0 && <CpBadge tone="warning">سعر صفري: {stalePricedCount}</CpBadge>}
-                  {orphanCount > 0 && <CpBadge tone="critical">روابط يتيمة: {orphanCount}</CpBadge>}
+                  {orphanCount > 0 && <CpBadge tone="danger">روابط يتيمة: {orphanCount}</CpBadge>}
                 </div>
               );
             })()}
@@ -1156,15 +1154,14 @@ export function CatalogDashboardScreen() {
                 {controller.assortment.items.map((a) => {
                   const canonical = controller.state.masterProducts.items.find(mp => mp.id === a.masterProductId);
                   const isOrphan = !canonical;
-                  const isRetired = a.publicationStatus === "retired";
-                  const isStalePrice = a.unitPrice <= 0 && !isRetired;
+                  const isStalePrice = a.unitPrice <= 0;
                   return (
-                    <tr key={a.id} style={{ opacity: isRetired ? 0.55 : 1, backgroundColor: isOrphan ? "#fef2f2" : undefined }}>
+                    <tr key={a.id} style={{ backgroundColor: isOrphan ? "var(--bthwani-control-panel-surface-muted)" : undefined }}>
                       <CpTableCell><code>{a.id}</code></CpTableCell>
                       <CpTableCell>
                         <div><code>{a.masterProductId}</code></div>
-                        {canonical && <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>{canonical.canonicalNameAr}</div>}
-                        {isOrphan && <CpBadge tone="critical">يتيم</CpBadge>}
+                        {canonical && <div style={{ fontSize: "0.75rem", color: "var(--bthwani-control-panel-text-muted)" }}>{canonical.canonicalNameAr}</div>}
+                        {isOrphan && <CpBadge tone="danger">يتيم</CpBadge>}
                       </CpTableCell>
                       <CpTableCell>
                         {isStalePrice ? <CpBadge tone="warning">{a.unitPrice} {a.currency} ⚠️</CpBadge> : <>{a.unitPrice} {a.currency}</>}
@@ -1180,14 +1177,12 @@ export function CatalogDashboardScreen() {
                       <CpTableCell>
                         <StatusBadge label={a.publicationStatus} tone={
                           a.publicationStatus === "client_visible" ? "success"
-                          : a.publicationStatus === "retired" ? "neutral"
                           : "neutral"
                         } />
-                        {a.version !== undefined && <CpBadge tone="neutral" style={{ marginInlineStart: "4px" }}>v{a.version}</CpBadge>}
+                        {a.version !== undefined && <CpBadge tone="neutral">v{a.version}</CpBadge>}
                       </CpTableCell>
                       <CpTableCell>
-                        {!isRetired && (
-                          <CpButton
+                        <CpButton
                             style={{ fontSize: "0.75rem" }}
                             onClick={async () => {
                               const reason = window.prompt("سبب التقاعد (مطلوب)");
@@ -1197,13 +1192,12 @@ export function CatalogDashboardScreen() {
                                   selectedStoreId, a.masterProductId, { reason: reason.trim(), expectedVersion: a.version }
                                 );
                                 alert("تم التقاعد بنجاح");
-                                await controller.loadAssortment(selectedStoreId);
+                                await controller.reloadStoreAssortment(selectedStoreId);
                               } catch (e: any) {
                                 alert("تعذر التقاعد: " + (e.message ?? e.toString()));
                               }
                             }}
                           >تقاعد</CpButton>
-                        )}
                       </CpTableCell>
                     </tr>
                   );
@@ -1260,8 +1254,6 @@ export function CatalogDashboardScreen() {
                       canonicalImageObjectKey: null,
                       approvalStatus: "draft",
                       isActive: true,
-                      parentId: row.parentId,
-                      isStandalone: row.isStandalone,
                       createdSource: "control-panel-catalog-csv",
                     });
                   }

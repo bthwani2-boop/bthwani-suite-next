@@ -524,7 +524,7 @@ paths:
           $ref: '#/components/responses/Error'
       security:
       - bearerAuth: []
-  /dsh/operator/support/incident-tasks/{taskId}:
+  /dsh/operator/support/incidents/tasks/{taskId}:
     parameters:
     - name: taskId
       in: path

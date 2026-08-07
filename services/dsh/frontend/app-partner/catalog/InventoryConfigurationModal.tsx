@@ -1,6 +1,6 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import { Button, Modal, Text, TextField, spacing } from "@bthwani/ui-kit";
+import { Button, Dialog, Text, TextField, spacing } from "@bthwani/ui-kit";
 import { upsertPartnerStoreAssortmentInventory } from "../../shared/catalog";
 import type { StoreAssortmentInventoryInput } from "../../shared/catalog";
 
@@ -48,27 +48,35 @@ export function InventoryConfigurationModal({
   };
 
   return (
-    <Modal visible={visible} onRequestClose={onClose}>
+    <Dialog
+      open={visible}
+      onOpenChange={(open) => {
+        if (!open && !saving) onClose();
+      }}
+      title="إعدادات المخزون"
+      confirmLabel="حفظ"
+      cancelLabel="إلغاء"
+      onConfirm={() => void handleSave()}
+    >
       <View style={styles.container}>
-        <Text role="heading2" style={styles.title}>
-          إعدادات المخزون
-        </Text>
-
         <View style={styles.buttonGroup}>
           <Button
-            title="إشارة فقط"
-            variant={policyType === "signal" ? "primary" : "outline"}
+            label="إشارة فقط"
+            tone={policyType === "signal" ? "brand" : "secondary"}
             onPress={() => setPolicyType("signal")}
+            fullWidth={false}
           />
           <Button
-            title="كمية دقيقة"
-            variant={policyType === "quantity" ? "primary" : "outline"}
+            label="كمية دقيقة"
+            tone={policyType === "quantity" ? "brand" : "secondary"}
             onPress={() => setPolicyType("quantity")}
+            fullWidth={false}
           />
           <Button
-            title="لا نهائي"
-            variant={policyType === "infinite" ? "primary" : "outline"}
+            label="لا نهائي"
+            tone={policyType === "infinite" ? "brand" : "secondary"}
             onPress={() => setPolicyType("infinite")}
+            fullWidth={false}
           />
         </View>
 
@@ -77,7 +85,7 @@ export function InventoryConfigurationModal({
             label="الكمية المتوفرة"
             value={quantity}
             onChangeText={setQuantity}
-            keyboardType="number-pad"
+            keyboardType="numeric"
           />
         )}
 
@@ -85,56 +93,39 @@ export function InventoryConfigurationModal({
           label="الحد الأدنى للطلب"
           value={minOrder}
           onChangeText={setMinOrder}
-          keyboardType="number-pad"
+          keyboardType="numeric"
         />
 
         <TextField
           label="الحد الأقصى للطلب"
           value={maxOrder}
           onChangeText={setMaxOrder}
-          keyboardType="number-pad"
+          keyboardType="numeric"
         />
 
         <TextField
           label="مقدار التدرج (Step)"
           value={stepQuantity}
           onChangeText={setStepQuantity}
-          keyboardType="number-pad"
+          keyboardType="numeric"
         />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        <View style={styles.actions}>
-          <Button title="إلغاء" variant="outline" onPress={onClose} disabled={saving} />
-          <Button title="حفظ" onPress={handleSave} loading={saving} />
-        </View>
+        {error ? <Text role="bodySm" tone="danger" align="center">{error}</Text> : null}
+        {saving ? <Text role="bodySm" tone="muted" align="center">جاري حفظ إعدادات المخزون…</Text> : null}
       </View>
-    </Modal>
+    </Dialog>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: spacing.m,
-    gap: spacing.m,
+    gap: spacing[4],
     minWidth: 320,
-  },
-  title: {
-    textAlign: "center",
   },
   buttonGroup: {
     flexDirection: "row",
-    gap: spacing.s,
+    gap: spacing[2],
     justifyContent: "center",
-  },
-  actions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: spacing.m,
-    marginTop: spacing.m,
-  },
-  error: {
-    color: "red",
-    textAlign: "center",
+    flexWrap: "wrap",
   },
 });

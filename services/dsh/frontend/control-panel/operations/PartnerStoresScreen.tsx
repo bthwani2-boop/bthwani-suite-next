@@ -34,18 +34,19 @@ type CpStoreRow = {
 
 function mapAdminRowToCpRow(row: DshStoreAdminTableRow): CpStoreRow {
   const isOpenNow = row.isOpen && row.status === 'published';
+  const isTemporarilyUnavailable = row.status === 'paused' || row.status === 'suspended';
   return {
     id: row.id,
     name: row.displayName,
     branch: row.cityCode,
-    status: isOpenNow ? 'مفتوح' : row.status === 'temporarily_closed' ? 'موقوف مؤقتًا' : 'مغلق',
+    status: isOpenNow ? 'مفتوح' : isTemporarilyUnavailable ? 'موقوف مؤقتًا' : 'مغلق',
     deliveryMode: row.deliveryModes.includes('delivery') ? 'bthwani_delivery' : 'partner_delivery',
     issue: row.isServiceable ? '' : 'خارج نطاق الخدمة الحالي',
     recommendation: row.catalogApprovalStatus === 'submitted'
       ? 'مراجعة الكتالوج لدى المالك المختص'
       : 'مراجعة بوابات الظهور لدى المالك المختص',
     recommendationReason: `${row.categoryLabel} — كتالوج: ${row.catalogApprovalStatus} — تسويق: ${row.marketingVisibility}`,
-    statusTone: isOpenNow ? 'success' : row.status === 'temporarily_closed' ? 'danger' : 'neutral',
+    statusTone: isOpenNow ? 'success' : isTemporarilyUnavailable ? 'danger' : 'neutral',
   };
 }
 

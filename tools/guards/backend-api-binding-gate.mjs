@@ -227,6 +227,8 @@ const services = [
     openapi: "core/identity/contracts/identity.openapi.yaml",
     additionalOpenapi: [
       "core/identity/contracts/employee-access.openapi.yaml",
+      "core/identity/contracts/identity.rbac-admin.openapi.yaml",
+      "core/identity/contracts/identity.support-sessions.openapi.yaml",
     ],
     router: "core/identity/backend/internal/http/server.go",
     routerDir: "core/identity/backend/internal/http",

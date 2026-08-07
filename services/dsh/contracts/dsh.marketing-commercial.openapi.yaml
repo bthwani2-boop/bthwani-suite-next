@@ -277,7 +277,7 @@ paths:
           $ref: '#/components/responses/ErrorResponse'
         '503':
           $ref: '#/components/responses/ErrorResponse'
-  /dsh/client/marketing/subscription-purchases/{purchaseId}:
+  /dsh/client/marketing/subscriptions/purchases/{purchaseId}:
     get:
       operationId: getDshClientSubscriptionPurchase
       tags:
@@ -449,7 +449,7 @@ paths:
           $ref: '#/components/responses/ErrorResponse'
         '503':
           $ref: '#/components/responses/ErrorResponse'
-  /dsh/client/marketing/subscriptions/{subscriptionId}/activate:
+  /dsh/client/marketing/subscriptions/{purchaseId}/activate:
     post:
       operationId: activateDshClientSubscriptionPurchase
       tags:
@@ -457,7 +457,7 @@ paths:
       security:
       - bearerAuth: []
       parameters:
-      - name: subscriptionId
+      - name: purchaseId
         in: path
         required: true
         schema:

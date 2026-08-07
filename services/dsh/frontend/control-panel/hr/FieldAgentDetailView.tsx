@@ -33,7 +33,9 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
   const [uploadError, setUploadError] = useState<string | null>(null);
   
   const { state: identityState } = useIdentitySession();
-  const operatorContextId = identityState.kind === "active" ? identityState.identity.actorId : "";
+  const operatorContextId = identityState.kind === "authenticated"
+    ? identityState.identity.operatorContextId
+    : "";
 
   useEffect(() => {
     if (!agent) return;

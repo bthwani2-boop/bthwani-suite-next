@@ -244,7 +244,9 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
               expectedSurface={`app-${providerKind}`}
               issuedByActorId="dsh-operator" // Would normally come from auth context
               disabled={!isReadyToIssue}
-              disabledReason={!isReadyToIssue ? "لا يمكن الإصدار إلا إذا كانت الهوية جاهزة وجميع المتطلبات مكتملة" : undefined}
+              {...(!isReadyToIssue
+                ? { disabledReason: "لا يمكن الإصدار إلا إذا كانت الهوية جاهزة وجميع المتطلبات مكتملة" }
+                : {})}
             />
 
 

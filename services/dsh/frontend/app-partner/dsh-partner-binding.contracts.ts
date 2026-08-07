@@ -89,6 +89,10 @@ const DSH_PARTNER_BINDING_CONTRACT_DEFINITIONS = {
     bindingName: 'partner-wallet-bridge',
     description: 'Read-only WLT wallet, commission, settlement, and payout reference bridge.',
   },
+  'commercial-model': {
+    bindingName: 'partner-commercial-model-binding',
+    description: 'DSH-owned commercial policy and store operating-model readback bridge.',
+  },
 } satisfies Record<DshPartnerSurfaceId, DshPartnerBindingContractDefinition>;
 
 export const DSH_PARTNER_BINDING_CONTRACTS: DshPartnerBindingContracts = (

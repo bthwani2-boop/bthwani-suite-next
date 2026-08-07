@@ -125,6 +125,35 @@ paths:
           $ref: '#/components/responses/ErrorResponse'
         '404':
           $ref: '#/components/responses/ErrorResponse'
+  /dsh/operator/captains/{captainId}/partner-fleet:
+    get:
+      operationId: getDshOperatorCaptainPartnerFleetMemberships
+      tags:
+      - DshPartnerFleet
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: captainId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          description: Operational memberships for the selected captain.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MembershipListResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
 components:
   securitySchemes:
     bearerAuth:

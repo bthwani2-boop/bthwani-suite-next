@@ -21,8 +21,8 @@ export function ActorsListView(props: {
     setError(null);
     try {
       const res = await searchActors({
-        role: role.trim() || undefined,
         limit: 50,
+        ...(role.trim() ? { role: role.trim() } : {}),
       });
       setActors(res.actors || []);
     } catch (err: any) {
@@ -105,7 +105,6 @@ export function ActorsListView(props: {
   }
   return (
     <EditorPageFrame
-      title="إدارة الهويات (Actors)"
       header={<CpPageHeader title="إدارة الهويات (Actors)" />}
     >
       <div style={{ padding: "2rem" }}>{body}</div>

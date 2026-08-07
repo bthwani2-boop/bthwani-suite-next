@@ -123,7 +123,9 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   const { state: identityState } = useIdentitySession();
-  const operatorContextId = identityState.kind === "active" ? identityState.identity.actorId : "";
+  const operatorContextId = identityState.kind === "authenticated"
+    ? identityState.identity.operatorContextId
+    : "";
 
   if (controller.state.kind === "loading") return <LoadingScreen />;
 

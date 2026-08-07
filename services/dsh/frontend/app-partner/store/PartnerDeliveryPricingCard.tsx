@@ -75,7 +75,7 @@ export function PartnerDeliveryPricingCard({ storeId }: PartnerDeliveryPricingCa
             value={partnerPolicy?.pricingMode === "free_delivery" ? "0" : feeYer}
             onChangeText={setFeeYer}
             keyboardType="numeric"
-            editable={partnerPolicy?.pricingMode !== "free_delivery"}
+            disabled={partnerPolicy?.pricingMode === "free_delivery"}
           />
           <TextField
             label="سبب التغيير"

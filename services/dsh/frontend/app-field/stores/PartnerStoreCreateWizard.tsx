@@ -138,7 +138,7 @@ export function PartnerStoreCreateWizard({
       />
 
       {status === "error" ? (
-        <Text role="bodySm" tone="danger" accessibilityLiveRegion="assertive">
+        <Text role="bodySm" tone="danger">
           {errorMessage}
         </Text>
       ) : null}

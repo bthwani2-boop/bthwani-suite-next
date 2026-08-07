@@ -39,6 +39,7 @@ export function CaptainCreateView(props: {
 
   const createdCaseId = state.kind === "created" ? state.caseId : null;
   const isProvisioning = state.kind === "provisioning";
+  const formLocked = Boolean(createdCaseId) || isProvisioning;
 
   const canSubmit =
     identityReady &&
@@ -134,17 +135,25 @@ export function CaptainCreateView(props: {
         
         <div>
           <Text role="bodySm" style={{ marginBottom: "6px", display: "block", fontWeight: "600", color: "var(--bthwani-control-panel-text-muted)" }}>منطقة الخدمة الأساسية *</Text>
-          <ZonePicker selected={zoneId} onSelect={setZoneId} disabled={Boolean(createdCaseId) || isProvisioning} />
+          <ZonePicker
+            value={zoneId}
+            onChange={(zone) => setZoneId(zone?.id ?? "")}
+            disabled={formLocked}
+          />
         </div>
 
         <div style={{ marginTop: "8px" }}>
           <Text role="bodySm" style={{ marginBottom: "6px", display: "block", fontWeight: "600", color: "var(--bthwani-control-panel-text-muted)" }}>نوع المركبة الأساسي *</Text>
-          <CpTabs
-            value={vehicleType}
-            onChange={setVehicleType}
-            items={VEHICLE_TYPES}
-            disabled={Boolean(createdCaseId) || isProvisioning}
-          />
+          {formLocked ? (
+            <Text role="bodySm">{VEHICLE_TYPES.find((item) => item.value === vehicleType)?.label ?? "—"}</Text>
+          ) : (
+            <CpTabs
+              value={vehicleType}
+              onChange={setVehicleType}
+              items={VEHICLE_TYPES}
+              aria-label="نوع المركبة الأساسي"
+            />
+          )}
         </div>
       </div>
 

@@ -94,7 +94,7 @@ export function StoreServiceAreaPanel({ serviceAreaCode }: Props) {
     if (finalPolygon.length >= 3) {
       const first = finalPolygon[0];
       const last = finalPolygon[finalPolygon.length - 1];
-      if (first[0] !== last[0] || first[1] !== last[1]) {
+      if (first && last && (first[0] !== last[0] || first[1] !== last[1])) {
         finalPolygon.push(first);
       }
     }
@@ -133,7 +133,7 @@ export function StoreServiceAreaPanel({ serviceAreaCode }: Props) {
     <div style={{ marginTop: 24, borderTop: "1px solid var(--cp-border-color)", paddingTop: 24 }}>
       <h3 style={{ margin: "0 0 16px 0", fontSize: 18 }}>محرر منطقة الخدمة ({serviceAreaCode})</h3>
       {errorMsg && (
-        <div style={{ color: "red", marginBottom: 16, padding: 12, backgroundColor: "#fee" }}>
+        <div style={{ color: "var(--bthwani-control-panel-danger)", marginBottom: 16, padding: 12, backgroundColor: "var(--bthwani-control-panel-surface-muted)" }}>
           {errorMsg}
         </div>
       )}
@@ -160,10 +160,10 @@ export function StoreServiceAreaPanel({ serviceAreaCode }: Props) {
           <CpButton onClick={() => void handleSave()} disabled={saving || !isDirty}>
             {saving ? "جاري الحفظ..." : "حفظ المسودة"}
           </CpButton>
-          <CpButton onClick={handleClearDraft} disabled={draftPolygon.length === 0} kind="secondary">
+          <CpButton onClick={handleClearDraft} disabled={draftPolygon.length === 0} variant="secondary">
             مسح النقاط
           </CpButton>
-          <CpButton onClick={handleRevert} disabled={!isDirty} kind="secondary">
+          <CpButton onClick={handleRevert} disabled={!isDirty} variant="secondary">
             إلغاء التعديلات
           </CpButton>
         </div>

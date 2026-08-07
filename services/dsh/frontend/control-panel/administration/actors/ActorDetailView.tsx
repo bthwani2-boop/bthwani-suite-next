@@ -61,11 +61,15 @@ export function ActorDetailView(props: {
   };
 
   if (loading) {
-    return <CpStatePanel state="loading" title="جاري التحميل..." />;
+    return <CpStatePanel role="status" title="جاري التحميل..." />;
   }
 
   if (error || !actor) {
-    return <CpStatePanel state="error" title="خطأ" description={error || "لم يتم العثور على الهوية"} action={{ label: "رجوع", onClick: () => props.onBack?.() }} />;
+    return (
+      <CpStatePanel role="alert" title="خطأ" description={error || "لم يتم العثور على الهوية"}>
+        {props.onBack ? <CpButton variant="secondary" onClick={props.onBack}>رجوع</CpButton> : null}
+      </CpStatePanel>
+    );
   }
 
   const isSuspended = actor.status === "SUSPENDED" || actor.status === "DEACTIVATED";
@@ -73,14 +77,9 @@ export function ActorDetailView(props: {
 
   const body = (
     <div style={{ maxWidth: "800px", margin: "0 auto", width: "100%", display: "flex", flexDirection: "column", gap: "2rem" }}>
-      <CpPageHeader
-        title={`تفاصيل الهوية: ${actor.username}`}
-        breadcrumbs={[
-          { label: "الإدارة", href: "/administration" },
-          { label: "المعرفات", onClick: props.onBack },
-          { label: actor.actorId }
-        ]}
-      />
+      <CpPageHeader title={`تفاصيل الهوية: ${actor.username}`}>
+        {props.onBack ? <CpButton variant="ghost" onClick={props.onBack}>العودة إلى المعرفات</CpButton> : null}
+      </CpPageHeader>
       
       <div style={{ background: "var(--bthwani-control-panel-surface)", padding: "1.5rem", borderRadius: "8px", border: "1px solid var(--bthwani-control-panel-border)" }}>
         <Text role="headingSm" style={{ marginBottom: "1rem", display: "block" }}>معلومات المعرف</Text>
@@ -124,7 +123,7 @@ export function ActorDetailView(props: {
           
           <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
             {isActive && (
-              <CpButton variant="destructive" onClick={() => handleAction("suspend")} disabled={actionLoading || !reason.trim()}>
+              <CpButton variant="danger" onClick={() => handleAction("suspend")} disabled={actionLoading || !reason.trim()}>
                 تعليق المعرف (Suspend)
               </CpButton>
             )}

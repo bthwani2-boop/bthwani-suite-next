@@ -61,6 +61,7 @@ function MediaUploadField({
   kind,
   accept = "image/*",
   onUploadError,
+  operatorContextId,
 }: {
   readonly value: string;
   readonly onChange: (value: string) => void;
@@ -216,7 +217,9 @@ function activationEvidenceError(form: FormState, kind: IndependentProviderKind)
 
 export function ProviderOperationalCorePanel({ actorId, kind }: { readonly actorId: string; readonly kind: IndependentProviderKind }) {
   const { state: identityState } = useIdentitySession();
-  const operatorContextId = identityState.kind === "active" ? identityState.identity.actorId : "";
+  const operatorContextId = identityState.kind === "authenticated"
+    ? identityState.identity.operatorContextId
+    : "";
 
   const [data, setData] = React.useState<OperationalCoreResponse | null>(null);
   const [form, setForm] = React.useState<FormState>(EMPTY_FORM);

@@ -11,7 +11,7 @@ import {
   TopBar,
   spacing,
 } from "@bthwani/ui-kit";
-import { useQuery } from "@tanstack/react-query";
+import { useBthwaniQuery } from "@bthwani/data-runtime";
 import { useCartController, useServiceabilityController } from "../../shared/cart";
 import { fetchFulfillmentModes } from "../../shared/cart/cart.api";
 import type { DshCart, DshFulfillmentMode } from "../../shared/cart";
@@ -51,7 +51,7 @@ export function GovernedCartScreen({
 }: Props) {
   const cartController = useCartController(storeId, authKind);
   const serviceability = useServiceabilityController();
-  const modesQuery = useQuery({
+  const modesQuery = useBthwaniQuery({
     queryKey: ["cart", "fulfillment-modes", storeId, serviceAreaCode],
     queryFn: () => fetchFulfillmentModes(storeId, serviceAreaCode),
   });

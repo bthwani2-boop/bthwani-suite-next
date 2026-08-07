@@ -1,6 +1,6 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import { Button, Modal, Text, TextField, spacing } from "@bthwani/ui-kit";
+import { Dialog, Text, TextField, spacing } from "@bthwani/ui-kit";
 import { schedulePartnerStoreAssortmentPrice } from "../../shared/catalog";
 import type { StoreAssortmentPriceInput } from "../../shared/catalog";
 
@@ -50,17 +50,22 @@ export function PriceScheduleModal({
   };
 
   return (
-    <Modal visible={visible} onRequestClose={onClose}>
+    <Dialog
+      open={visible}
+      onOpenChange={(open) => {
+        if (!open && !saving) onClose();
+      }}
+      title="تحديث السعر ووقت التحضير"
+      confirmLabel="حفظ"
+      cancelLabel="إلغاء"
+      onConfirm={() => void handleSave()}
+    >
       <View style={styles.container}>
-        <Text role="heading2" style={styles.title}>
-          تحديث السعر ووقت التحضير
-        </Text>
-
         <TextField
           label="السعر (بالوحدة الصغرى، مثلاً 1500 لـ 15.00)"
           value={amountMinor}
           onChangeText={setAmountMinor}
-          keyboardType="number-pad"
+          keyboardType="numeric"
         />
 
         <View style={styles.row}>
@@ -68,48 +73,31 @@ export function PriceScheduleModal({
             label="الحد الأدنى للتحضير (دقيقة)"
             value={prepTimeMin}
             onChangeText={setPrepTimeMin}
-            keyboardType="number-pad"
+            keyboardType="numeric"
           />
           <TextField
             label="الحد الأقصى للتحضير (دقيقة)"
             value={prepTimeMax}
             onChangeText={setPrepTimeMax}
-            keyboardType="number-pad"
+            keyboardType="numeric"
           />
         </View>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        <View style={styles.actions}>
-          <Button title="إلغاء" variant="outline" onPress={onClose} disabled={saving} />
-          <Button title="حفظ" onPress={handleSave} loading={saving} />
-        </View>
+        {error ? <Text role="bodySm" tone="danger" align="center">{error}</Text> : null}
+        {saving ? <Text role="bodySm" tone="muted" align="center">جاري حفظ السعر…</Text> : null}
       </View>
-    </Modal>
+    </Dialog>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: spacing.m,
-    gap: spacing.m,
+    gap: spacing[4],
     minWidth: 320,
-  },
-  title: {
-    textAlign: "center",
   },
   row: {
     flexDirection: "row",
-    gap: spacing.s,
-  },
-  actions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: spacing.m,
-    marginTop: spacing.m,
-  },
-  error: {
-    color: "red",
-    textAlign: "center",
+    gap: spacing[2],
+    flexWrap: "wrap",
   },
 });

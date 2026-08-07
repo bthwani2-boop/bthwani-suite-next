@@ -57,7 +57,7 @@ export function MyProfileScreen({ onBack, onRequestDataCopy, onRequestAccountDel
         setProfileState({
           kind: "ready",
           profile: {
-            clientId: sessionState.identity.id,
+            clientId: sessionState.identity.subject,
             locale: "ar",
             currencyPreference: "SAR",
             marketingConsentEmail: false,
@@ -109,7 +109,9 @@ export function MyProfileScreen({ onBack, onRequestDataCopy, onRequestAccountDel
         updatedProfile = await upsertClientProfilePreferences({
           locale,
           currencyPreference: currency,
-          expectedVersion: profileState.profile.version > 0 ? profileState.profile.version : undefined,
+          ...(profileState.profile.version > 0
+            ? { expectedVersion: profileState.profile.version }
+            : {}),
         });
       }
 
@@ -118,7 +120,9 @@ export function MyProfileScreen({ onBack, onRequestDataCopy, onRequestAccountDel
           marketingConsentEmail: consentEmail,
           marketingConsentSms: consentSms,
           marketingConsentPush: consentPush,
-          expectedVersion: isPreferencesChanged ? updatedProfile.version : (profileState.profile.version > 0 ? profileState.profile.version : undefined),
+          ...((isPreferencesChanged ? updatedProfile.version : profileState.profile.version) > 0
+            ? { expectedVersion: isPreferencesChanged ? updatedProfile.version : profileState.profile.version }
+            : {}),
         });
       }
 
@@ -173,7 +177,7 @@ export function MyProfileScreen({ onBack, onRequestDataCopy, onRequestAccountDel
         )}
 
         <View style={styles.card}>
-          <Text role="bodyStrong">المعرف: {identity.id}</Text>
+          <Text role="bodyStrong">المعرف: {identity.subject}</Text>
           <Text role="bodySm" tone="muted">يُدار الاسم ورقم الهاتف عبر شاشة الهوية المركزية.</Text>
         </View>
 
@@ -191,7 +195,7 @@ export function MyProfileScreen({ onBack, onRequestDataCopy, onRequestAccountDel
         {(profileState.kind === "ready" || profileState.kind === "conflict") && (
           <>
             <View style={styles.card}>
-              <Text role="heading3">الخيارات العامة</Text>
+              <Text role="headingSm">الخيارات العامة</Text>
               <View style={styles.row}>
                 <Text role="body">اللغة (Locale)</Text>
                 <Switch 
@@ -203,7 +207,7 @@ export function MyProfileScreen({ onBack, onRequestDataCopy, onRequestAccountDel
             </View>
 
             <View style={styles.card}>
-              <Text role="heading3">خيارات التواصل (التسويق)</Text>
+              <Text role="headingSm">خيارات التواصل (التسويق)</Text>
               <View style={styles.row}>
                 <Text role="body">البريد الإلكتروني</Text>
                 <Switch 
@@ -237,14 +241,24 @@ export function MyProfileScreen({ onBack, onRequestDataCopy, onRequestAccountDel
                 disabled={!hasChanges || saving} 
               />
               {hasChanges && !saving && (
-                <Button label="إلغاء" appearance="secondary" onPress={handleCancel} />
+                <Button label="إلغاء" tone="secondary" onPress={handleCancel} />
               )}
             </View>
 
             <View style={styles.dangerZone}>
-              <Text role="heading3" tone="danger">الخيارات المتقدمة</Text>
-              <Button label="طلب نسخة بياناتي" appearance="secondary" onPress={onRequestDataCopy} />
-              <Button label="طلب حذف الحساب" appearance="secondary" onPress={onRequestAccountDeletion} />
+              <Text role="headingSm" tone="danger">الخيارات المتقدمة</Text>
+              <Button
+                label="طلب نسخة بياناتي"
+                tone="secondary"
+                disabled={!onRequestDataCopy}
+                {...(onRequestDataCopy ? { onPress: onRequestDataCopy } : {})}
+              />
+              <Button
+                label="طلب حذف الحساب"
+                tone="secondary"
+                disabled={!onRequestAccountDeletion}
+                {...(onRequestAccountDeletion ? { onPress: onRequestAccountDeletion } : {})}
+              />
             </View>
           </>
         )}

@@ -53,9 +53,6 @@ export function GovernedCheckoutScreen({
   if (state.kind === "loading") {
     return <LoadingState title="جاري تثبيت العنوان والأسعار والتحقق من الكوبون…" />;
   }
-  if (state.kind === "validating") {
-    return <LoadingState title="جاري التحقق من صحة البيانات…" />;
-  }
   if (state.kind === "creating_order") {
     return <LoadingState title="تمت الموافقة المالية، جاري إنشاء الطلب…" />;
   }
@@ -157,63 +154,6 @@ export function GovernedCheckoutScreen({
             </Card>
             <Button label="تحديث الحالة الآن" tone="brand" onPress={() => refresh(intent.id)} />
             <Button label="إلغاء Checkout بأمان" tone="secondary" onPress={() => cancel(intent.id)} />
-          </View>
-        </ScrollScreen>
-      </View>
-    );
-  }
-
-  if (state.kind === "blocked") {
-    const { intent, issues } = state;
-    return (
-      <View style={{ flex: 1 }}>
-        <TopBar title="لا يمكن إتمام Checkout" {...(onCancel ? { onBack: onCancel } : {})} />
-        <ScrollScreen>
-          <View style={{ gap: spacing[3] }}>
-            <StateView
-              title="هناك مشكلة تمنع الإتمام"
-              description="يرجى مراجعة المشاكل أدناه وتصحيحها قبل المتابعة."
-              tone="danger"
-            />
-            <Card padding={3} gap={2}>
-              {issues.map((issue) => (
-                <Text key={issue.code} role="body" align="start">
-                  {`• ${issue.message}`}
-                </Text>
-              ))}
-            </Card>
-            <Button label="تحديث وإعادة التحقق" tone="brand" onPress={() => refresh(intent.id)} />
-            <Button label="إلغاء" tone="secondary" onPress={() => cancel(intent.id)} />
-          </View>
-        </ScrollScreen>
-      </View>
-    );
-  }
-
-  if (state.kind === "ready" || state.kind === "previewing") {
-    const { intent } = state;
-    return (
-      <View style={{ flex: 1 }}>
-        <TopBar title="مراجعة Checkout" {...(onCancel ? { onBack: onCancel } : {})} />
-        <ScrollScreen>
-          <View style={{ gap: spacing[3] }}>
-            <StateView
-              title="جاهز للتأكيد"
-              description="تم التحقق من العنوان والأسعار. يمكنك الآن تأكيد الطلب وتحويله لـ WLT."
-              tone="success"
-            />
-            <Card padding={3} gap={2}>
-              <KeyValueList items={[
-                { label: "عنوان التسليم", value: intent.deliveryAddress || "استلام ذاتي" },
-                { label: "إجمالي المنتجات", value: formatMinorUnits(intent.quote.subtotalMinorUnits, intent.quote.currency) },
-                { label: "رسوم التوصيل", value: formatMinorUnits(intent.quote.deliveryFeeMinorUnits, intent.quote.currency) },
-                { label: "الخصم", value: formatMinorUnits(intent.quote.discountMinorUnits, intent.quote.currency) },
-                { label: "الإجمالي", value: formatMinorUnits(intent.quote.totalMinorUnits, intent.quote.currency) },
-                { label: "صلاحية Preview", value: intent.expiresAt ? new Date(intent.expiresAt).toLocaleTimeString() : "—" },
-              ]} />
-            </Card>
-            <Button label="تأكيد وإتمام الدفع" tone="brand" onPress={() => refresh(intent.id)} />
-            <Button label="إلغاء" tone="secondary" onPress={() => cancel(intent.id)} />
           </View>
         </ScrollScreen>
       </View>

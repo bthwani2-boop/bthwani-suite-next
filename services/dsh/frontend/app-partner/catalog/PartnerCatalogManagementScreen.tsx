@@ -232,7 +232,7 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
                     : "غير مضاف لتشكيلة المتجر"
                 }
                 trailing={
-                  <View style={{ flexDirection: "row", gap: spacing.s }}>
+                  <View style={{ flexDirection: "row", gap: spacing[2] }}>
                     <Button
                       label={linked ? "تعديل" : "إضافة كمسودة"}
                       tone="secondary"
@@ -345,7 +345,6 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
           assortment.map((item) => {
             const canonicalName = namesByProduct.get(item.masterProductId);
             const isOrphan = !canonicalName;
-            const isRetired = item.publicationStatus === "retired";
             return (
               <ListItem
                 key={item.id}
@@ -353,15 +352,11 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
                 subtitle={`${item.unitPrice} ${item.currency} — ${item.publicationStatus}`}
                 trailing={
                   <View style={{ flexDirection: "row", gap: 4, alignItems: "center" }}>
-                    {isOrphan && <Badge label="يتيم" tone="critical" />}
-                    {isRetired ? (
-                      <Badge label="متقاعد" tone="neutral" />
-                    ) : (
-                      <Badge
-                        label={item.available ? "متاح" : "موقوف"}
-                        tone={item.available ? "success" : "warning"}
-                      />
-                    )}
+                    {isOrphan && <Badge label="يتيم" tone="danger" />}
+                    <Badge
+                      label={item.available ? "متاح" : "موقوف"}
+                      tone={item.available ? "success" : "warning"}
+                    />
                   </View>
                 }
               />

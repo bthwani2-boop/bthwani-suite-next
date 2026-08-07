@@ -45,11 +45,15 @@ export function ActorSessionsTab(props: { readonly actorId: string }) {
   };
 
   if (loading) {
-    return <CpStatePanel state="loading" title="جاري جلب الجلسات..." />;
+    return <CpStatePanel role="status" title="جاري جلب الجلسات..." />;
   }
 
   if (error) {
-    return <CpStatePanel state="error" title="خطأ" description={error} action={{ label: "إعادة المحاولة", onClick: loadSessions }} />;
+    return (
+      <CpStatePanel role="alert" title="خطأ" description={error}>
+        <CpButton variant="secondary" onClick={() => void loadSessions()}>إعادة المحاولة</CpButton>
+      </CpStatePanel>
+    );
   }
 
   if (sessions.length === 0) {
@@ -80,7 +84,7 @@ export function ActorSessionsTab(props: { readonly actorId: string }) {
             </div>
             <div>
               <CpButton 
-                variant="destructive" 
+                variant="danger"
                 onClick={() => handleRevokeSession(s.sessionId)} 
                 disabled={revoking === s.sessionId}
               >

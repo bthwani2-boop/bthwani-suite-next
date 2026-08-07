@@ -97,8 +97,8 @@ export function ActorActivationCard({ actorId, expectedActorType, expectedSurfac
             <Text>تاريخ الانتهاء: {new Date(activation.expiresAt).toLocaleString("ar-SA")}</Text>
             
             <Box style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
-              <CpButton variant="destructive" onClick={handleRevoke}>إلغاء الرمز (Revoke)</CpButton>
-              <CpButton variant="outline" disabled={disabled} onClick={() => handleIssue(true)}>
+              <CpButton variant="danger" onClick={handleRevoke}>إلغاء الرمز (Revoke)</CpButton>
+              <CpButton variant="secondary" disabled={disabled ?? false} onClick={() => handleIssue(true)}>
                 إعادة إصدار (Reissue)
               </CpButton>
             </Box>
@@ -109,7 +109,7 @@ export function ActorActivationCard({ actorId, expectedActorType, expectedSurfac
         {!loading && !activation && !error && (
           <Box gap={2}>
             <CpMutedInline>لا يوجد رمز تفعيل نشط لهذا المستخدم.</CpMutedInline>
-            <CpButton disabled={disabled} onClick={() => handleIssue(false)}>
+            <CpButton disabled={disabled ?? false} onClick={() => handleIssue(false)}>
               إصدار رمز تفعيل (Issue)
             </CpButton>
             {disabled && disabledReason && <CpMutedInline>{disabledReason}</CpMutedInline>}

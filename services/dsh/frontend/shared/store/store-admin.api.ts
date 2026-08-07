@@ -1,7 +1,11 @@
 import { createDshFlexibleHttpClient } from "../_kernel/dsh-http-request";
 import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl, validateDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import type { OperatorStoreListResponse, OperatorStoreDetailResponse } from "./store-discovery.types";
+import type {
+  DshStoreSummaryDto,
+  OperatorStoreListResponse,
+  OperatorStoreDetailResponse,
+} from "./store-discovery.types";
 import {
   toAdminTableRow,
   toAdminDetail,
@@ -64,12 +68,18 @@ export async function fetchAdminStoreList(params?: {
       return adminErrorState("INVALID_RESPONSE: stores array missing");
     }
 
-    const rows = response.stores.map(toAdminTableRow);
+    const stores = response.stores as readonly DshStoreSummaryDto[];
+    const rows = stores.map(toAdminTableRow);
+    const pagination = response.pagination as unknown as {
+      readonly total?: number;
+      readonly limit?: number;
+      readonly offset?: number;
+    } | undefined;
     return adminSuccessState(
       rows,
-      response.pagination.total,
-      response.pagination.limit,
-      response.pagination.offset,
+      pagination?.total ?? rows.length,
+      pagination?.limit ?? params?.limit ?? rows.length,
+      pagination?.offset ?? params?.offset ?? 0,
     );
   } catch (error: unknown) {
     return classifyAdminError(error);
