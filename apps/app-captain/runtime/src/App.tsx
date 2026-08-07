@@ -19,7 +19,7 @@ import {
   WorkforceProfileProvider,
   useWorkforceProfile,
 } from "../../../../services/dsh/frontend/shared/workforce";
-import { getReadinessGate } from "../../../../services/dsh/frontend/shared/workforce/workforce.api";
+import { fetchWorkforceReadiness } from "../../../../services/dsh/frontend/shared/workforce/workforce-me.api";
 import type { ReadinessGate } from "../../../../services/dsh/frontend/shared/workforce/workforce.types";
 import { ReadinessGateScreen } from "./features/readiness/ReadinessGateScreen";
 
@@ -50,7 +50,7 @@ function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
   const fetchReadiness = async () => {
     if (workforce.state.kind === "ready") {
       try {
-        const gate = await getReadinessGate(workforce.state.me.actorId);
+        const gate = await fetchWorkforceReadiness(workforce.state.me.actorId);
         setReadiness(gate);
       } catch (err) {
         setReadiness({
@@ -72,7 +72,7 @@ function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
     return <ReadinessGateScreen readiness={readiness} onRefresh={fetchReadiness} />;
   }
 
-  // Only render operational surface if explicitly allowed or still loading (in which case WorkforceAccessGate might show loading)
+  // Only render the operational surface after Workforce explicitly allows it.
   if (readiness && readiness.status === "ALLOWED") {
     return <>{children}</>;
   }
