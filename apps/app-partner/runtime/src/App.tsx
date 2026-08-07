@@ -12,7 +12,9 @@ import {
   type UploadFileSource,
 } from "../../../../services/dsh/frontend/shared/catalog";
 import * as SecureStore from "expo-secure-store";
+import * as Crypto from "expo-crypto";
 import {
+  configureIdentityDeviceFingerprintProvider,
   configureIdentitySession,
   configureIdentitySessionStorage,
   type SessionStorageAdapter,
@@ -22,12 +24,22 @@ import {
 import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
 import { useDshMobilePushRegistration } from "../../../../services/dsh/frontend/shared/notifications/use-mobile-push-registration";
 
+const PARTNER_DEVICE_FINGERPRINT_KEY = "bthwani.partner.device-fingerprint.v1";
+
 function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   return {
     getItem: (key: string) => SecureStore.getItemAsync(key),
     setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
     removeItem: (key: string) => SecureStore.deleteItemAsync(key),
   };
+}
+
+async function getOrCreatePartnerDeviceFingerprint(): Promise<string> {
+  const existing = await SecureStore.getItemAsync(PARTNER_DEVICE_FINGERPRINT_KEY);
+  if (existing?.trim()) return existing;
+  const created = `partner-device:${Crypto.randomUUID()}`;
+  await SecureStore.setItemAsync(PARTNER_DEVICE_FINGERPRINT_KEY, created);
+  return created;
 }
 
 async function pickCatalogFile(kind: CatalogMobileFileKind): Promise<UploadFileSource | null> {
@@ -49,6 +61,7 @@ async function pickCatalogFile(kind: CatalogMobileFileKind): Promise<UploadFileS
 
 if (Platform.OS !== "web") {
   configureIdentitySessionStorage(createSecureStoreSessionStorageAdapter());
+  configureIdentityDeviceFingerprintProvider(getOrCreatePartnerDeviceFingerprint);
   configureCatalogMobileFilePicker(pickCatalogFile);
 }
 configureIdentitySession(resolveIdentityApiBaseUrl());

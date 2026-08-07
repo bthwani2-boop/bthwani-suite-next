@@ -474,6 +474,59 @@ func (r *Repository) ConsumeActivation(ctx context.Context, input ConsumeActivat
 	return pair, nil
 }
 
+func actorCanAccessSurface(actor Actor, surface string) bool {
+for _, permission := range actor.Permissions {
+if permission.Surface == surface {
+return true
+}
+}
+return false
+}
+
+func resolvePasswordLoginSurface(actor Actor) (string, error) {
+roleSurface := map[string]string{
+"client":  "app-client",
+"partner": "app-partner",
+"field":   "app-field",
+"captain": "app-captain",
+}
+candidates := map[string]struct{}{}
+
+for _, role := range actor.Roles {
+if surface, ok := roleSurface[role]; ok {
+if actorCanAccessSurface(actor, surface) {
+candidates[surface] = struct{}{}
+}
+continue
+}
+if actorCanAccessSurface(actor, "control-panel") {
+candidates["control-panel"] = struct{}{}
+}
+}
+
+if len(candidates) == 1 {
+for surface := range candidates {
+return surface, nil
+}
+}
+if len(candidates) > 1 {
+return "", ErrForbidden
+}
+
+permissionSurfaces := map[string]struct{}{}
+for _, permission := range actor.Permissions {
+if strings.TrimSpace(permission.Surface) != "" {
+permissionSurfaces[permission.Surface] = struct{}{}
+}
+}
+if len(permissionSurfaces) == 1 {
+for surface := range permissionSurfaces {
+return surface, nil
+}
+}
+return "", ErrForbidden
+}
+
 // Login authenticates a username/password pair. Every attempt is recorded
 // in identity_login_attempts for audit and lockout purposes.
 func (r *Repository) Login(ctx context.Context, username, password, fingerprint, ipAddress string) (TokenPair, error) {

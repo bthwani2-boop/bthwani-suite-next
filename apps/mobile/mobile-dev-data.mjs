@@ -68,6 +68,35 @@ async function collectClientStorefrontFailures() {
 }
 
 /**
+ * Read-only startup check. It deliberately avoids password login, activation
+ * issuance/consumption, and provider session creation. Deep governed checks run
+ * in --repair, where mutations are explicitly allowed.
+ */
+async function collectReadOnlyReadinessFailures() {
+  const failures = await collectClientStorefrontFailures();
+  const registry = readGeneratedRegistry();
+
+  if (!registry?.actors) {
+    failures.push(
+      "app-field/app-captain: no provisioned Workforce providers. Run pnpm runtime:full:bootstrap-dev.",
+    );
+    return failures;
+  }
+
+  for (const role of ["field", "captain"]) {
+    const provisioned = registry.actors[role];
+    const fixture = LOCAL_WORKFORCE_PROVIDERS[role];
+    if (!provisioned?.actorId) failures.push(`app-${role}: missing actorId in generated Workforce registry`);
+    if (!provisioned?.workforceCode) failures.push(`app-${role}: missing workforceCode in generated Workforce registry`);
+    if (provisioned?.phoneE164 !== fixture.phoneE164) {
+      failures.push(`app-${role}: generated Workforce phone does not match canonical local fixture`);
+    }
+  }
+
+  return failures;
+}
+
+/**
  * Provider self-surface check. Workforce-provisioned actors have no password, so
  * the session is obtained the way the real apps obtain it: by redeeming an
  * operator-issued activation code.
@@ -159,14 +188,15 @@ async function main() {
     throw new Error('mobile development data access is forbidden in production');
   }
 
-  const operatorToken = await getPasswordToken(LOCAL_ACTORS.operator.username);
-
+  let failures;
   if (MODE === 'repair') {
+    const operatorToken = await getPasswordToken(LOCAL_ACTORS.operator.username);
     const { actors } = await provisionLocalWorkforceActors(operatorToken);
     await repairFieldSelfProfile(operatorToken, actors.field.actorId);
+    failures = await collectReadinessFailures(operatorToken);
+  } else {
+    failures = await collectReadOnlyReadinessFailures();
   }
-
-  const failures = await collectReadinessFailures(operatorToken);
   if (failures.length > 0) {
     console.error('Mobile development data is not ready:');
     for (const failure of failures) console.error(`- ${failure}`);

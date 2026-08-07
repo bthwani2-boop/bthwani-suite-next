@@ -6,6 +6,7 @@ import {
   type IdentityClientError,
   type IssueActivationResponse,
   type SessionInfo,
+  type TokenResponse,
 } from "./identity-client.ts";
 import {
   defaultSessionStorageAdapter,
@@ -29,7 +30,7 @@ export type IdentitySessionState =
 export type IdentityBeforeSessionEndHook = () => void | Promise<void>;
 export type IdentityDeviceFingerprintProvider = () => string | Promise<string>;
 
-type StoredSession = {
+export type StoredSession = {
   readonly accessToken: string;
   readonly refreshToken: string;
   readonly identity: ActorIdentity;
@@ -84,6 +85,10 @@ async function resolveDeviceFingerprint(): Promise<string> {
   return fingerprint;
 }
 
+export async function getIdentityDeviceFingerprint(): Promise<string> {
+  return resolveDeviceFingerprint();
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -104,7 +109,7 @@ function isValidPermission(value: unknown): boolean {
     && isNonEmptyString(value.scope);
 }
 
-function isValidActorIdentity(value: unknown): value is ActorIdentity {
+export function isStructurallyValidActorIdentity(value: unknown): value is ActorIdentity {
   if (!isRecord(value)) return false;
   if (
     !isNonEmptyString(value.subject)
@@ -118,7 +123,7 @@ function isValidActorIdentity(value: unknown): value is ActorIdentity {
   }
 
   const expiresAtMs = Date.parse(value.expiresAt);
-  if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) return false;
+  if (!Number.isFinite(expiresAtMs)) return false;
 
   if (
     !Array.isArray(value.roles)
@@ -134,14 +139,18 @@ function isValidActorIdentity(value: unknown): value is ActorIdentity {
     && isBooleanRecord(value.serviceAccess);
 }
 
-function parseStoredSession(raw: string): StoredSession | null {
+export function isFreshActorIdentity(value: unknown): value is ActorIdentity {
+  return isStructurallyValidActorIdentity(value) && Date.parse(value.expiresAt) > Date.now();
+}
+
+export function parseStoredSession(raw: string): StoredSession | null {
   try {
     const parsed: unknown = JSON.parse(raw);
     if (
       !isRecord(parsed)
       || !isNonEmptyString(parsed.accessToken)
       || !isNonEmptyString(parsed.refreshToken)
-      || !isValidActorIdentity(parsed.identity)
+      || !isStructurallyValidActorIdentity(parsed.identity)
     ) {
       return null;
     }
@@ -237,7 +246,7 @@ function resetBootstrapBackoff(): void {
 }
 
 function commitAuthenticatedSession(session: StoredSession, persist: boolean): void {
-  if (!isValidActorIdentity(session.identity)) {
+  if (!isFreshActorIdentity(session.identity)) {
     clearSession("IDENTITY_SESSION_INVALID");
     return;
   }
@@ -379,6 +388,26 @@ export function getIdentityState(): IdentitySessionState {
 export function subscribeIdentityState(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
+}
+
+export async function adoptIdentityTokenPair(pair: TokenResponse): Promise<void> {
+  if (client === null) {
+    setState({ kind: "error", message: "IDENTITY_NOT_CONFIGURED" });
+    return;
+  }
+  if (
+    !isNonEmptyString(pair.accessToken)
+    || !isNonEmptyString(pair.refreshToken)
+    || !isStructurallyValidActorIdentity(pair.identity)
+  ) {
+    setState({ kind: "error", message: "IDENTITY_SESSION_INVALID" });
+    return;
+  }
+  await restoreStoredSession(client, {
+    accessToken: pair.accessToken,
+    refreshToken: pair.refreshToken,
+    identity: pair.identity,
+  });
 }
 
 export async function loginIdentity(username: string, password: string): Promise<void> {

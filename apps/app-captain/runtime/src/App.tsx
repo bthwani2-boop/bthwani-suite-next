@@ -1,7 +1,9 @@
-﻿import React, { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Platform, StyleSheet, View } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import * as Crypto from "expo-crypto";
 import {
+  configureIdentityDeviceFingerprintProvider,
   configureIdentitySession,
   configureIdentitySessionStorage,
   resolveIdentityApiBaseUrl,
@@ -21,11 +23,24 @@ import { getReadinessGate } from "../../../../services/dsh/frontend/shared/workf
 import type { ReadinessGate } from "../../../../services/dsh/frontend/shared/workforce/workforce.types";
 import { ReadinessGateScreen } from "./features/readiness/ReadinessGateScreen";
 
-configureIdentitySessionStorage({
-  getItem: async (key: string) => SecureStore.getItemAsync(key),
-  setItem: async (key: string, value: string) => SecureStore.setItemAsync(key, value),
-  removeItem: async (key: string) => SecureStore.deleteItemAsync(key),
-});
+const CAPTAIN_DEVICE_FINGERPRINT_KEY = "bthwani.captain.device-fingerprint.v1";
+
+async function getOrCreateCaptainDeviceFingerprint(): Promise<string> {
+  const existing = await SecureStore.getItemAsync(CAPTAIN_DEVICE_FINGERPRINT_KEY);
+  if (existing?.trim()) return existing;
+  const created = `captain-device:${Crypto.randomUUID()}`;
+  await SecureStore.setItemAsync(CAPTAIN_DEVICE_FINGERPRINT_KEY, created);
+  return created;
+}
+
+if (Platform.OS !== "web") {
+  configureIdentitySessionStorage({
+    getItem: async (key: string) => SecureStore.getItemAsync(key),
+    setItem: async (key: string, value: string) => SecureStore.setItemAsync(key, value),
+    removeItem: async (key: string) => SecureStore.deleteItemAsync(key),
+  });
+  configureIdentityDeviceFingerprintProvider(getOrCreateCaptainDeviceFingerprint);
+}
 configureIdentitySession(resolveIdentityApiBaseUrl());
 
 function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {

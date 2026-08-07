@@ -1,5 +1,5 @@
 import { useCallback, useSyncExternalStore } from "react";
-import type { ActivationActorType } from "./identity-client.ts";
+import type { ActivationActorType, TokenResponse } from "./identity-client.ts";
 import {
   subscribeIdentityState,
   getIdentityState,
@@ -12,6 +12,7 @@ import {
   logoutIdentity,
   changePasswordIdentity,
   deleteAccountIdentity,
+  adoptIdentityTokenPair,
 } from "./identity-session-store.ts";
 
 export type IdentityActivationAction = {
@@ -60,6 +61,10 @@ export function useIdentitySession() {
     [],
   );
   const retryBootstrap = useCallback(() => retryIdentityBootstrap(), []);
+  const adoptSession = useCallback(
+    (pair: TokenResponse) => adoptIdentityTokenPair(pair),
+    [],
+  );
   const listSessions = useCallback(() => listIdentitySessions(), []);
   const revokeSession = useCallback(
     (sessionId: string) => revokeIdentitySession(sessionId),
@@ -78,6 +83,7 @@ export function useIdentitySession() {
     requestOtp,
     activate,
     retryBootstrap,
+    adoptSession,
     listSessions,
     revokeSession,
     logout,
