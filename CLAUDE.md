@@ -1,12 +1,7 @@
-
 # Claude Code Adapter
 
-`AGENTS.md` is the canonical repository instruction source.
-`governance/authority/authority-precedence.json` resolves authority conflicts.
+Use `governance/GOVERNANCE.md` as the unified repository governance entry point. `AGENTS.md` is the thin coding-agent adapter and `governance/authority/authority-precedence.json` resolves authority conflicts.
 
-Read `.agents/INDEX.md` only when a governed skill must be selected.
-Read `.agents/tools/<tool>.md` only after selecting that optional tool.
-Read `.agents/COMMAND_SAFETY_POLICY.md` before writes or destructive commands.
+Read `governance/product/PRD.md` and only the applicable general policy/Product Truth for the task. Read `.agents/INDEX.md` only when skill/tool routing is not obvious, then load only the selected `.agents/skills/.../SKILL.md` or `.agents/tools/<tool>.md`.
 
-Do not preload all skills, tools, governance documents, diagnostics, or historical reports.
-This adapter creates no policy and owns no approval.
+Planning artifacts live under `plans/`; do not treat them as policy or evidence. Do not preload the full governance, skill, tool, diagnostics, plans, or history trees. This adapter creates no policy, product truth, or approval.

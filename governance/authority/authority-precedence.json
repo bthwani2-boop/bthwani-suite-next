@@ -18,7 +18,6 @@
     {"path": "governance/policies/engineering.md", "classification": "ACTIVE_CANONICAL", "precedenceId": "UNIFIED_GOVERNANCE", "authorityDomains": ["architecture", "services", "surfaces", "api_binding", "ui_kit", "database", "migrations", "runtime", "providers", "observability", "performance", "technical_quality"]},
     {"path": "governance/policies/security.md", "classification": "ACTIVE_CANONICAL", "precedenceId": "UNIFIED_GOVERNANCE", "authorityDomains": ["security", "privacy", "secrets", "trusted_context", "isolation"]},
     {"path": "governance/policies/delivery.md", "classification": "ACTIVE_CANONICAL", "precedenceId": "UNIFIED_GOVERNANCE", "authorityDomains": ["branch_execution", "evidence", "sdlc", "ci", "stage_gates", "release", "deployment", "production", "cleanup"]},
-    {"path": "AGENTS.md", "classification": "ADAPTER", "precedenceId": "TOOL_ADAPTER", "authorityDomains": ["agent_entry_adapter"], "scopeLimit": "Thin pointer to the same unified governance used by human developers."},
 
     {"path": "governance/policies/repository-retention-policy.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["repository_retention", "repository_hygiene"]},
     {"path": "governance/contracts", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["decision_vocabulary", "shared_contract_schemas", "technical_registries"]},
@@ -36,7 +35,7 @@
     {"path": "governance/product/product-truth.schema.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["product_truth_schema"]},
     {"path": "governance/product/platform-model.yaml", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["platform_model"]},
 
-    {"path": ".agents/skills", "classification": "OWNER_CONTRACT", "precedenceId": "OWNER_SKILL_CONTRACT", "authorityDomains": ["declared_active_skill_scope"]},
+    {"path": "AGENTS.md", "classification": "ADAPTER", "precedenceId": "TOOL_ADAPTER", "authorityDomains": ["agent_entry_adapter"], "scopeLimit": "Thin coding-agent adapter to unified governance."},
     {"path": ".agents/tools", "classification": "ADAPTER", "precedenceId": "TOOL_ADAPTER", "authorityDomains": ["conditional_tool_policy"], "scopeLimit": "Tools own no approval or repository truth."},
     {"path": "governance/policies/governance.rego", "classification": "ADAPTER", "precedenceId": "TOOL_ADAPTER", "authorityDomains": ["governance_policy_enforcement"], "scopeLimit": "OPA/Conftest enforcement adapter only; creates no independent policy or approval."},
     {"path": "CLAUDE.md", "classification": "ADAPTER", "precedenceId": "TOOL_ADAPTER", "authorityDomains": ["claude_adapter"]},
@@ -44,13 +43,11 @@
     {"path": "LEAN-CTX.md", "classification": "ADAPTER", "precedenceId": "TOOL_ADAPTER", "authorityDomains": ["leanctx_adapter"]},
     {"path": "opencode.json", "classification": "ADAPTER", "precedenceId": "TOOL_ADAPTER", "authorityDomains": ["opencode_adapter"]},
 
-    {"path": ".agents/AUTHORITY_BOUNDARY.md", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["agent_boundary_summary"], "scopeLimit": "Cannot override unified governance."},
-    {"path": ".agents/EVIDENCE_GATE_ROUTER.md", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["evidence_routing_summary"], "scopeLimit": "Cannot grant approval or closure."},
-    {"path": ".agents/INDEX.md", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["skill_routing_index"]},
-    {"path": ".agents/SKILL_CATALOG.md", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["skill_catalog_projection"]},
+    {"path": ".agents/skills", "classification": "OWNER_CONTRACT", "precedenceId": "OWNER_SKILL_CONTRACT", "authorityDomains": ["declared_active_skill_scope"]},
+    {"path": ".agents/INDEX.md", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["skill_routing_index"], "scopeLimit": "Derived routing index generated/reconciled from skill/tool registries."},
     {"path": "governance/tools/agent-tool-registry.json", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["tool_inventory", "tool_routing_metadata"], "scopeLimit": "Tools own no approval or repository truth."},
     {"path": "governance/github/repository-enforcement.json", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["github_enforcement_snapshot"], "scopeLimit": "Observed snapshot only; live GitHub verification is required for current claims."},
     {"path": "governance/product/contracts", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["product_truth_instances"], "scopeLimit": "Capability Product Truth refines the PRD for its scope and cannot create a competing governance layer."},
-    {"path": "governance/operational_journey_protocol_package", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["sdlc_support"], "scopeLimit": "Reusable derived support only; it cannot override unified governance, Product Truth, implementation truth, approvals, or evidence."}
+    {"path": "governance/operational_journey_protocol_package", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["sdlc_support"], "scopeLimit": "Legacy reusable support only while consumers depend on it; no policy, Product Truth, approval, or closure authority."}
   ]
 }

@@ -1,4 +1,3 @@
-
 import fs from "node:fs";
 import path from "node:path";
 import { fail, repoRoot } from "./_guard-utils.mjs";
@@ -6,29 +5,26 @@ import { fail, repoRoot } from "./_guard-utils.mjs";
 const guardId = "document-authority-conflicts-gate";
 const violations = [];
 
+const exists = (relative) => fs.existsSync(path.join(repoRoot, relative));
+const read = (relative) => exists(relative) ? fs.readFileSync(path.join(repoRoot, relative), "utf8") : "";
+
 function readJson(relative) {
-  const full = path.join(repoRoot, relative);
-  if (!fs.existsSync(full)) {
+  if (!exists(relative)) {
     violations.push({ file: relative, line: 0, message: "MISSING_REQUIRED_FILE" });
     return null;
   }
-  try {
-    return JSON.parse(fs.readFileSync(full, "utf8"));
-  } catch (error) {
+  try { return JSON.parse(read(relative)); }
+  catch (error) {
     violations.push({ file: relative, line: 0, message: `INVALID_JSON ${error.message}` });
     return null;
   }
 }
 
 function sectionIds(markdown, heading) {
-  const lines = markdown.split(/\r?\n/);
   const ids = new Set();
   let active = false;
-  for (const line of lines) {
-    if (line === `## ${heading}`) {
-      active = true;
-      continue;
-    }
+  for (const line of markdown.split(/\r?\n/)) {
+    if (line === `## ${heading}`) { active = true; continue; }
     if (active && line.startsWith("## ")) break;
     if (!active) continue;
     const match = line.match(/^- `([^`]+)`/);
@@ -37,114 +33,77 @@ function sectionIds(markdown, heading) {
   return ids;
 }
 
-const registry = readJson("governance/skills/skills-registry.json");
+const skills = readJson("governance/skills/skills-registry.json");
 const tools = readJson("governance/tools/agent-tool-registry.json");
-const precedence = readJson("governance/authority/authority-precedence.json");
-const catalogPath = path.join(repoRoot, ".agents/SKILL_CATALOG.md");
-const catalog = fs.existsSync(catalogPath) ? fs.readFileSync(catalogPath, "utf8") : "";
-const indexPath = path.join(repoRoot, ".agents/INDEX.md");
-const index = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf8") : "";
+const authority = readJson("governance/authority/authority-precedence.json");
+const index = read(".agents/INDEX.md");
 
-if (!catalog) {
-  violations.push({ file: ".agents/SKILL_CATALOG.md", line: 0, message: "MISSING_REQUIRED_FILE" });
-}
-if (!index) {
-  violations.push({ file: ".agents/INDEX.md", line: 0, message: "MISSING_REQUIRED_FILE" });
-}
+if (!index) violations.push({ file: ".agents/INDEX.md", line: 0, message: "MISSING_REQUIRED_ROUTING_INDEX" });
 
-if (registry && tools && catalog && index) {
+if (skills && tools && index) {
   const expected = {
-    active: new Set((registry.entries ?? []).filter((entry) => entry.status === "active").map((entry) => entry.id)),
-    conditional: new Set((registry.entries ?? []).filter((entry) => entry.status === "conditional").map((entry) => entry.id)),
-    retired: new Set((registry.entries ?? []).filter((entry) => entry.status === "retired").map((entry) => entry.id)),
+    active: new Set((skills.entries ?? []).filter((entry) => entry.status === "active").map((entry) => entry.id)),
+    conditional: new Set((skills.entries ?? []).filter((entry) => entry.status === "conditional").map((entry) => entry.id)),
     tools: new Set((tools.entries ?? []).map((entry) => entry.id)),
   };
-  const actualCatalog = {
-    active: sectionIds(catalog, "Active skills"),
-    conditional: sectionIds(catalog, "Conditional skills"),
-    retired: sectionIds(catalog, "Retired entries"),
-    tools: sectionIds(catalog, "Conditional tools"),
-  };
-  const actualIndex = {
+  const actual = {
     active: sectionIds(index, "Active skill"),
     conditional: sectionIds(index, "Conditional skills"),
     tools: sectionIds(index, "Conditional tools"),
   };
 
-  const checkDrift = (file, expectedMap, actualMap) => {
-    for (const status of Object.keys(actualMap)) {
-      for (const id of expectedMap[status]) {
-        if (!actualMap[status].has(id)) {
-          violations.push({ file, line: 0, message: `CATALOG_MISSING ${status}:${id}` });
-        }
-      }
-      for (const id of actualMap[status]) {
-        if (!expectedMap[status].has(id)) {
-          violations.push({ file, line: 0, message: `CATALOG_EXTRA_OR_WRONG_STATUS ${status}:${id}` });
-        }
-      }
-    }
-  };
-
-  checkDrift(".agents/SKILL_CATALOG.md", expected, actualCatalog);
-  checkDrift(".agents/INDEX.md", expected, actualIndex);
+  for (const group of Object.keys(expected)) {
+    for (const id of expected[group]) if (!actual[group].has(id)) violations.push({ file: ".agents/INDEX.md", line: 0, message: `ROUTING_INDEX_MISSING ${group}:${id}` });
+    for (const id of actual[group]) if (!expected[group].has(id)) violations.push({ file: ".agents/INDEX.md", line: 0, message: `ROUTING_INDEX_EXTRA_OR_WRONG_STATUS ${group}:${id}` });
+  }
 }
 
-if (precedence) {
-  const seen = new Set();
-  for (const document of precedence.documents ?? []) {
-    if (seen.has(document.path)) {
-      violations.push({ file: "governance/authority/authority-precedence.json", line: 0, message: `DUPLICATE_DOCUMENT ${document.path}` });
-    }
-    seen.add(document.path);
+if (authority) {
+  const byPath = new Map();
+  for (const document of authority.documents ?? []) {
+    if (byPath.has(document.path)) violations.push({ file: "governance/authority/authority-precedence.json", line: 0, message: `DUPLICATE_DOCUMENT ${document.path}` });
+    byPath.set(document.path, document);
   }
 
-  const requiredClassifications = new Map([
-    ["AGENTS.md", "ACTIVE_CANONICAL"],
-    [".agents/skills", "OWNER_CONTRACT"],
-    [".agents/tools", "ADAPTER"],
+  const expected = new Map([
+    ["governance/GOVERNANCE.md", "ACTIVE_CANONICAL"],
+    ["governance/product/PRD.md", "ACTIVE_CANONICAL"],
+    ["governance/policies/engineering.md", "ACTIVE_CANONICAL"],
+    ["governance/policies/security.md", "ACTIVE_CANONICAL"],
+    ["governance/policies/delivery.md", "ACTIVE_CANONICAL"],
+    ["AGENTS.md", "ADAPTER"],
     ["CLAUDE.md", "ADAPTER"],
     ["GEMINI.md", "ADAPTER"],
     ["LEAN-CTX.md", "ADAPTER"],
     ["opencode.json", "ADAPTER"],
+    [".agents/skills", "OWNER_CONTRACT"],
+    [".agents/tools", "ADAPTER"],
     [".agents/INDEX.md", "DERIVED_SUPPORT"],
-    [".agents/SKILL_CATALOG.md", "DERIVED_SUPPORT"],
     ["governance/tools/agent-tool-registry.json", "DERIVED_SUPPORT"],
   ]);
-  const byPath = new Map((precedence.documents ?? []).map((entry) => [entry.path, entry]));
-  for (const [file, classification] of requiredClassifications) {
-    if (byPath.get(file)?.classification !== classification) {
-      violations.push({ file: "governance/authority/authority-precedence.json", line: 0, message: `DOCUMENT_CLASSIFICATION_DRIFT ${file} expected=${classification}` });
-    }
+  for (const [relative, classification] of expected) {
+    if (byPath.get(relative)?.classification !== classification) violations.push({ file: "governance/authority/authority-precedence.json", line: 0, message: `DOCUMENT_CLASSIFICATION_DRIFT ${relative} expected=${classification}` });
+  }
+
+  for (const forbidden of [
+    ".agents/AUTHORITY_BOUNDARY.md",
+    ".agents/COMMAND_SAFETY_POLICY.md",
+    ".agents/EVIDENCE_GATE_ROUTER.md",
+    ".agents/SKILL_CATALOG.md",
+    ".agents/UPDATE_POLICY.md",
+    "governance/domains",
+    "governance/product/decisions",
+    "tools/plans",
+    "tools/diagnose-implementing",
+  ]) {
+    if (byPath.has(forbidden)) violations.push({ file: "governance/authority/authority-precedence.json", line: 0, message: `RETIRED_PARALLEL_AUTHORITY_REGISTERED ${forbidden}` });
   }
 }
 
-// LeanCTX text conflict checks
-const leanCtxForbiddenPhrases = [
-  "always active",
-  "replaces native tools",
-  "replaces native",
-  "always enabled",
-  "replaces tools"
-];
-
-function checkForbiddenPhrases(filePath, content) {
-  const lowerContent = content.toLowerCase();
-  for (const phrase of leanCtxForbiddenPhrases) {
-    if (lowerContent.includes(phrase.toLowerCase())) {
-      violations.push({ file: filePath, line: 0, message: `CONTRADICTORY_STATEMENT leanctx_claims_unauthorized_authority: "${phrase}" found in ${filePath}` });
-    }
-  }
+const leanCtxForbidden = ["always active", "replaces native tools", "replaces native", "always enabled", "replaces tools"];
+for (const relative of ["AGENTS.md", "LEAN-CTX.md", ".agents/tools/leanctx.md"]) {
+  const content = read(relative).toLowerCase();
+  for (const phrase of leanCtxForbidden) if (content.includes(phrase)) violations.push({ file: relative, line: 0, message: `CONTRADICTORY_STATEMENT leanctx_claims_unauthorized_authority: ${phrase}` });
 }
-
-const agentsMdPath = path.join(repoRoot, "AGENTS.md");
-if (fs.existsSync(agentsMdPath)) checkForbiddenPhrases("AGENTS.md", fs.readFileSync(agentsMdPath, "utf8"));
-
-const leanCtxMdPath = path.join(repoRoot, "LEAN-CTX.md");
-if (fs.existsSync(leanCtxMdPath)) checkForbiddenPhrases("LEAN-CTX.md", fs.readFileSync(leanCtxMdPath, "utf8"));
-
-const leanCtxPolicyPath = path.join(repoRoot, ".agents/tools/leanctx.md");
-if (fs.existsSync(leanCtxPolicyPath)) checkForbiddenPhrases(".agents/tools/leanctx.md", fs.readFileSync(leanCtxPolicyPath, "utf8"));
-
 
 fail(guardId, violations);

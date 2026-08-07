@@ -1,91 +1,82 @@
 # BThwani Agents
 
-`AGENTS.md` is a thin execution adapter for coding agents. It does not define a separate governance model. Humans and agents follow the same entry point: `governance/GOVERNANCE.md`.
+`AGENTS.md` is a thin coding-agent adapter. Human developers and AI agents use the same governance entry point: `governance/GOVERNANCE.md`.
 
 ## Authority
 
-Resolve authority in this order:
+Resolve each task in this order:
 
 1. current authorized task instruction;
 2. `governance/authority/authority-precedence.json`;
 3. `governance/GOVERNANCE.md`;
 4. `governance/product/PRD.md` and the applicable general policy;
 5. applicable Product Truth and machine contracts;
-6. current pinned implementation/runtime evidence.
+6. exact pinned implementation/runtime evidence.
 
 Decision vocabulary: `governance/contracts/decision-vocabulary.json`.
 Skill registry: `governance/skills/skills-registry.json`.
 Agent registry: `governance/agents/agent-registry.json`.
 Conditional tool registry: `governance/tools/agent-tool-registry.json`.
 
-## Implementation truth
-
-For what code currently does, use the exact pinned branch/commit, current contracts/source/configuration/migrations/tests, then targeted runtime evidence when runtime behavior is claimed.
-
-## Authority truth
-
-For who owns product semantics, policy, data, financial truth, contracts, trusted context, approval, or evidence, use the authority registry and unified governance/PRD/policies. Implementation can prove conformity but cannot create higher authority.
-
-## Execution model
+## Execution
 
 Use `CODE_BASED_LEAN`:
 
+- pin the exact repository, user-named branch/ref, and remote SHA;
 - inspect the smallest complete affected vertical path;
 - identify the authoritative truth/write owner;
 - fix root cause at that owner;
-- migrate all affected consumers/readbacks;
-- remove obsolete/parallel behavior when safe;
+- migrate every affected consumer/readback;
+- remove obsolete or parallel behavior when safe;
 - run the smallest sufficient affected verification and expand only by proven risk;
 - re-verify after the final relevant write;
 - report only what the exact candidate proves.
 
-Do not read every governance file, Product Truth, skill, registry, or tool by default. Do not run full Graphify, full Nx, full build/test/guard/runtime suites without proven need.
+Do not preload the full governance tree, Product Truth catalog, skill set, tool set, plans, or guard suite. “Deep”, “complete”, and “100%” raise the evidence standard; they do not justify unrelated scans or unsupported claims.
 
-## Repository truth
+## Remote repository safety
 
-For GitHub/remote work:
+Re-resolve the user-named branch before every logical write batch and after the final write. Reconcile unexpected branch movement. Never substitute another branch, force/reset newer work, or perform merge/release/deploy without current-task authority.
 
-- resolve the exact repository and user-named branch;
-- pin its current remote SHA;
-- re-resolve before a logical write batch and after the final write;
-- reconcile unexpected branch movement safely;
-- never force-push, hard-reset newer work, substitute the default branch, auto-create a task branch, merge, release, or deploy without current-task authority.
+## Full-stack multi-surface work
 
-## Product/full-stack rule
+For product behavior read `governance/product/PRD.md` plus the applicable `governance/product/contracts/*.product-truth.json` when registered. Trace:
 
-For any product change, read `governance/product/PRD.md` plus the applicable `governance/product/contracts/*.product-truth.json` when registered. Trace the complete affected path across UI, shared code, generated contracts, backend/domain, persistence/events/integrations and every required consumer surface. A UI success without canonical persisted readback is not full-stack closure.
+`surface → shared controller/adapter → generated contract → backend/domain → persistence/events/integration → canonical readback → every affected required surface`
 
-## Security/finance rule
+A local UI success is not closure when persisted or cross-surface truth is required.
 
-Load `governance/policies/security.md` whenever authentication, authorization, sessions, trusted context, PII, secrets, provider credentials, isolation, or privileged service access is affected.
+## Security and finance
 
-WLT remains the sole authoritative financial-truth owner. DSH/surfaces may use only the bounded WLT-backed access/projections defined by current contracts.
+Use `governance/policies/security.md` whenever authentication, authorization, sessions, trusted context, PII, secrets, provider credentials, isolation, or privileged access is affected.
 
-## Evidence
+WLT remains the sole authoritative financial-truth owner. DSH and surfaces use only bounded WLT-backed operations/projections permitted by current contracts.
 
-Use `governance/policies/delivery.md`. Static success does not imply runtime, visual, QA, security, finance, isolation, CI, release or production success. `CLOSED_WITH_EVIDENCE` requires all applicable same-commit scopes and required approvals.
+## Evidence and decisions
+
+Use `governance/policies/delivery.md`. Evidence is candidate-bound and scope-specific. Static success never implies runtime, visual, QA, security, finance, isolation, CI, release, production, or final-closure success.
 
 An execution agent cannot impersonate the repository owner or self-grant protected approval.
 
-## Tools and skills
+## Plans, skills, and tools
 
-Skills and tools are conditional implementation aids, not separate policy layers. Load the smallest applicable skill/tool only when the task/risk requires it. Tool output is advisory unless a registered contract defines stronger assurance.
+Planning artifacts live only under `plans/`. `.agents/INDEX.md` is the only derived routing index. Load it only when routing is not obvious. Skills live under `.agents/skills/`; conditional tool policies live under `.agents/tools/`.
 
 Tool ladder:
 
 1. direct scoped inspection;
-2. focused search/existing command;
+2. focused search or existing command;
 3. one targeted registered guard;
-4. a small idempotent helper for proven repetition;
+4. small idempotent helper for proven repetition;
 5. Nx affected when workspace impact must be computed;
-6. LeanCTX when it materially reduces repeated reads/noise;
+6. LeanCTX only when it materially reduces repeated reads/noise;
 7. Graphify only when ownership/dependency/duplication remains unresolved;
 8. OpenCodeReview for a bounded diff/commit/range;
-9. runtime tooling only for runtime-changing/runtime-claimed work.
+9. runtime tooling only for runtime-changing or runtime-claimed work.
+
+Tools and adapters own no product truth or approval.
 
 ## Final response
-
-Report:
 
 ```text
 repository:
@@ -100,10 +91,3 @@ remaining_risks_or_missing_evidence:
 Do not overclaim.
 
 <!-- Mappings for agent-governance-gate: Command Safety Policy , Smart Execution Model -->
-
-<!-- lean-ctx -->
-## lean-ctx
-
-lean-ctx is active — the MCP tools replace native equivalents.
-Full rules: LEAN-CTX.md (open on demand — do not auto-load).
-<!-- /lean-ctx -->

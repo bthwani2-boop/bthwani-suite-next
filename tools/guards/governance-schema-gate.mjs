@@ -9,366 +9,363 @@ const violations = [];
 const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
 
-function readJson(relativePath, kind = "JSON") {
-  const fullPath = path.join(repoRoot, relativePath);
-  if (!fs.existsSync(fullPath)) {
-    violations.push({ file: relativePath, line: 0, message: `MISSING_${kind}` });
-    return undefined;
+const exists = (relative) => fs.existsSync(path.join(repoRoot, relative));
+const readText = (relative) => exists(relative) ? fs.readFileSync(path.join(repoRoot, relative), "utf8") : "";
+
+function readJson(relative, label = "JSON") {
+  if (!exists(relative)) {
+    violations.push({ file: relative, line: 0, message: `MISSING_${label}` });
+    return null;
   }
   try {
-    return JSON.parse(fs.readFileSync(fullPath, "utf8"));
+    return JSON.parse(readText(relative));
   } catch (error) {
-    violations.push({ file: relativePath, line: 0, message: `INVALID_JSON ${error.message}` });
-    return undefined;
+    violations.push({ file: relative, line: 0, message: `INVALID_JSON ${error.message}` });
+    return null;
   }
 }
 
-function compileSchema(schemaRelative) {
-  const schema = readJson(schemaRelative, "SCHEMA");
-  if (!schema) return undefined;
-  try {
-    return ajv.compile(schema);
-  } catch (error) {
-    violations.push({ file: schemaRelative, line: 0, message: `SCHEMA_COMPILE_FAILURE ${error.message}` });
-    return undefined;
+function compileSchema(relative) {
+  const schema = readJson(relative, "SCHEMA");
+  if (!schema) return null;
+  try { return ajv.compile(schema); }
+  catch (error) {
+    violations.push({ file: relative, line: 0, message: `SCHEMA_COMPILE_FAILURE ${error.message}` });
+    return null;
   }
 }
 
-function validateDocument(documentRelative, schemaRelative, label) {
-  const document = readJson(documentRelative, label);
-  const validate = compileSchema(schemaRelative);
-  if (!document || !validate) return undefined;
+function validateDocument(documentPath, schemaPath, label) {
+  const document = readJson(documentPath, label);
+  const validate = compileSchema(schemaPath);
+  if (!document || !validate) return document;
   if (!validate(document)) {
     for (const error of validate.errors ?? []) {
-      violations.push({
-        file: documentRelative,
-        line: 0,
-        message: `${label}_SCHEMA_VIOLATION ${error.instancePath || "/"} ${error.message} ${JSON.stringify(error.params)}`,
-      });
+      violations.push({ file: documentPath, line: 0, message: `${label}_SCHEMA_VIOLATION ${error.instancePath || "/"} ${error.message}` });
     }
   }
   return document;
 }
 
-function appendSchemaErrors(relative, label, validator) {
-  for (const error of validator.errors ?? []) {
-    violations.push({
-      file: relative,
-      line: 0,
-      message: `${label}_SCHEMA_VIOLATION ${error.instancePath || "/"} ${error.message}`,
-    });
+function listFiles(relativeRoot) {
+  if (!exists(relativeRoot)) return [];
+  const out = [];
+  const walk = (absolute, relative) => {
+    for (const entry of fs.readdirSync(absolute, { withFileTypes: true })) {
+      const nextAbsolute = path.join(absolute, entry.name);
+      const nextRelative = path.posix.join(relative.replaceAll("\\", "/"), entry.name);
+      if (entry.isDirectory()) walk(nextAbsolute, nextRelative);
+      else out.push(nextRelative);
+    }
+  };
+  walk(path.join(repoRoot, relativeRoot), relativeRoot);
+  return out.sort();
+}
+
+function requireExactDirectory(relative, allowedFiles, allowedDirs = []) {
+  if (!exists(relative)) {
+    violations.push({ file: relative, line: 0, message: "MISSING_REQUIRED_DIRECTORY" });
+    return;
+  }
+  const allowedFileSet = new Set(allowedFiles);
+  const allowedDirSet = new Set(allowedDirs);
+  for (const entry of fs.readdirSync(path.join(repoRoot, relative), { withFileTypes: true })) {
+    const child = `${relative}/${entry.name}`;
+    if (entry.isDirectory() && !allowedDirSet.has(entry.name)) violations.push({ file: child, line: 0, message: `UNCLASSIFIED_DIRECTORY ${entry.name}` });
+    if (entry.isFile() && !allowedFileSet.has(entry.name)) violations.push({ file: child, line: 0, message: `UNCLASSIFIED_FILE ${entry.name}` });
   }
 }
 
-function markerForAuthorityPath(authorityPath) {
-  const full = path.join(repoRoot, authorityPath);
-  if (fs.existsSync(full) && fs.statSync(full).isDirectory()) return `${authorityPath}/**`;
-  return authorityPath;
+const authorityPath = "governance/authority/authority-precedence.json";
+const decisionPath = "governance/contracts/decision-vocabulary.json";
+const agentPath = "governance/agents/agent-registry.json";
+const skillPath = "governance/skills/skills-registry.json";
+const guardPath = "governance/guards/guard-registry.json";
+const assurancePath = "governance/guards/guard-assurance.json";
+const guardSetsPath = "governance/guards/guard-sets.json";
+const bindingPath = "governance/guards/frontend-binding-registry.json";
+const enforcementPath = "governance/github/repository-enforcement.json";
+const workflowPath = "governance/github/workflow-registry.json";
+const singleOwnerPath = "governance/authority/single-owner-mode.json";
+
+const authority = validateDocument(authorityPath, "governance/authority/authority-precedence.schema.json", "AUTHORITY");
+const decisions = validateDocument(decisionPath, "governance/contracts/decision-vocabulary.schema.json", "DECISION");
+const agents = validateDocument(agentPath, "governance/agents/agent-schema.json", "AGENT");
+const skills = validateDocument(skillPath, "governance/skills/skills-schema.json", "SKILL");
+const guards = validateDocument(guardPath, "governance/guards/guard-schema.json", "GUARD");
+const assurance = validateDocument(assurancePath, "governance/guards/guard-assurance.schema.json", "GUARD_ASSURANCE");
+const guardSets = validateDocument(guardSetsPath, "governance/guards/guard-sets.schema.json", "GUARD_SETS");
+const bindings = validateDocument(bindingPath, "governance/guards/frontend-binding-registry.schema.json", "FRONTEND_BINDING");
+const enforcement = validateDocument(enforcementPath, "governance/github/repository-enforcement.schema.json", "GITHUB_ENFORCEMENT");
+validateDocument(workflowPath, "governance/github/workflow-registry.schema.json", "WORKFLOW_REGISTRY");
+const singleOwner = validateDocument(singleOwnerPath, "governance/authority/single-owner-mode.schema.json", "SINGLE_OWNER_MODE");
+
+// ---------------------------------------------------------------------------
+// Minimal governance layout.
+// ---------------------------------------------------------------------------
+requireExactDirectory("governance", ["GOVERNANCE.md"], [
+  "agents", "authority", "contracts", "github", "guards",
+  "operational_journey_protocol_package", "policies", "product", "skills", "tools"
+]);
+requireExactDirectory("governance/policies", [
+  "engineering.md", "security.md", "delivery.md",
+  "repository-retention-policy.json", "governance.rego"
+]);
+requireExactDirectory("governance/product", [
+  "PRD.md", "platform-model.yaml", "product-truth.schema.json", "product-truth.compatibility.schema.json"
+], ["contracts"]);
+requireExactDirectory(".agents", ["INDEX.md"], ["skills", "tools"]);
+requireExactDirectory("plans", [], ["diagnose-implementing", "smsm-dsh-wlt-journeys"]);
+
+for (const required of [
+  "governance/GOVERNANCE.md",
+  "governance/product/PRD.md",
+  "governance/policies/engineering.md",
+  "governance/policies/security.md",
+  "governance/policies/delivery.md",
+]) {
+  if (!/^Status:\s*ACTIVE_CANONICAL\s*$/m.test(readText(required))) {
+    violations.push({ file: required, line: 0, message: "ACTIVE_CANONICAL_STATUS_REQUIRED" });
+  }
 }
 
-const authorityRelative = "governance/authority/authority-precedence.json";
-const decisionRelative = "governance/contracts/decision-vocabulary.json";
-const agentRelative = "governance/agents/agent-registry.json";
-const skillRelative = "governance/skills/skills-registry.json";
-const guardRelative = "governance/guards/guard-registry.json";
-const assuranceRelative = "governance/guards/guard-assurance.json";
-const guardSetsRelative = "governance/guards/guard-sets.json";
-const bindingRelative = "governance/guards/frontend-binding-registry.json";
-const enforcementRelative = "governance/github/repository-enforcement.json";
-const workflowRegistryRelative = "governance/github/workflow-registry.json";
-const singleOwnerRelative = "governance/authority/single-owner-mode.json";
-const decisionIndexRelative = "governance/GOVERNANCE.md";
+for (const retired of [
+  "governance/README.md",
+  "governance/domains",
+  "governance/product/decisions",
+  "governance/policies/product.md",
+  "governance/policies/contracts.md",
+  "governance/policies/data.md",
+  "governance/policies/runtime.md",
+  "governance/policies/release.md",
+  "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md",
+  "governance/runbooks",
+  "governance/prompting",
+  "governance/partners",
+  "tools/diagnose-implementing",
+  "tools/plans",
+  "tools/implementing",
+  ".agents/README.md",
+  ".agents/AGENT_SYSTEM_UPDATE_POLICY.md",
+  ".agents/AUTHORITY_BOUNDARY.md",
+  ".agents/COMMAND_SAFETY_POLICY.md",
+  ".agents/EVIDENCE_GATE_ROUTER.md",
+  ".agents/GRAPHIFY.md",
+  ".agents/PONYTAIL_RULE.md",
+  ".agents/RESTORE_DECISION.md",
+  ".agents/SKILL_CATALOG.md",
+  ".agents/UPDATE_POLICY.md",
+  ".agents/rules",
+]) {
+  if (exists(retired)) violations.push({ file: retired, line: 0, message: "RETIRED_OR_PARALLEL_PATH_REINTRODUCED" });
+}
 
-const authority = validateDocument(authorityRelative, "governance/authority/authority-precedence.schema.json", "AUTHORITY");
-const decisions = validateDocument(decisionRelative, "governance/contracts/decision-vocabulary.schema.json", "DECISION");
-const agents = validateDocument(agentRelative, "governance/agents/agent-schema.json", "AGENT");
-const skills = validateDocument(skillRelative, "governance/skills/skills-schema.json", "SKILL");
-const guards = validateDocument(guardRelative, "governance/guards/guard-schema.json", "GUARD");
-const guardAssurance = validateDocument(assuranceRelative, "governance/guards/guard-assurance.schema.json", "GUARD_ASSURANCE");
-const guardSets = validateDocument(guardSetsRelative, "governance/guards/guard-sets.schema.json", "GUARD_SETS");
-const frontendBindings = validateDocument(bindingRelative, "governance/guards/frontend-binding-registry.schema.json", "FRONTEND_BINDING");
-const repositoryEnforcement = validateDocument(enforcementRelative, "governance/github/repository-enforcement.schema.json", "GITHUB_ENFORCEMENT");
-validateDocument(workflowRegistryRelative, "governance/github/workflow-registry.schema.json", "WORKFLOW_REGISTRY");
-const singleOwnerMode = validateDocument(singleOwnerRelative, "governance/authority/single-owner-mode.schema.json", "SINGLE_OWNER_MODE");
+for (const required of [
+  "plans/diagnose-implementing/README.md",
+  "plans/diagnose-implementing/new-package.mjs",
+  "plans/diagnose-implementing/new-unit.mjs",
+  "plans/diagnose-implementing/validate-package.mjs",
+  "plans/diagnose-implementing/_template/START-HERE.template.md",
+  "plans/diagnose-implementing/_template/MANIFEST.template.json",
+  "plans/diagnose-implementing/_template/GLOBAL-DIAGNOSIS.template.md",
+  "plans/diagnose-implementing/_template/COVERAGE.template.json",
+  "plans/diagnose-implementing/_template/EXECUTION-ORDER.template.json",
+  "plans/diagnose-implementing/_template/CLOSURE.template.md",
+  "plans/diagnose-implementing/_template/unit/DIAGNOSIS.template.md",
+  "plans/diagnose-implementing/_template/unit/EXECUTION.template.json",
+  "plans/diagnose-implementing/_template/unit/VERIFICATION.template.json",
+  "plans/diagnose-implementing/_template/unit/RESULT.template.json",
+  "plans/smsm-dsh-wlt-journeys/04-JOURNEY-REGISTRY.yaml",
+]) {
+  if (!exists(required)) violations.push({ file: required, line: 0, message: "REQUIRED_PLAN_FRAMEWORK_PATH_MISSING" });
+}
 
+// ---------------------------------------------------------------------------
+// Product Truth validation.
+// ---------------------------------------------------------------------------
 const canonicalProductSchema = "governance/product/product-truth.schema.json";
 const compatibilityProductSchema = "governance/product/product-truth.compatibility.schema.json";
 const canonicalProductValidator = compileSchema(canonicalProductSchema);
 const compatibilityProductValidator = compileSchema(compatibilityProductSchema);
-const productContractsDir = path.join(repoRoot, "governance/product/contracts");
-
-if (!fs.existsSync(productContractsDir)) {
-  violations.push({ file: "governance/product/contracts", line: 0, message: "MISSING_PRODUCT_TRUTH_CONTRACTS_DIRECTORY" });
+const productContractsRoot = "governance/product/contracts";
+if (!exists(productContractsRoot)) {
+  violations.push({ file: productContractsRoot, line: 0, message: "MISSING_PRODUCT_TRUTH_CONTRACTS_DIRECTORY" });
 } else if (canonicalProductValidator && compatibilityProductValidator) {
-  const contractFiles = fs.readdirSync(productContractsDir).filter((name) => name.endsWith(".product-truth.json")).sort();
-  if (!contractFiles.includes("TEMPLATE.product-truth.json")) {
-    violations.push({ file: "governance/product/contracts", line: 0, message: "MISSING_PRODUCT_TRUTH_TEMPLATE" });
-  }
-
   const capabilityIds = new Set();
-  const compatibilityJourneyIds = new Set();
-  for (const fileName of contractFiles) {
-    const relative = `governance/product/contracts/${fileName}`;
+  const journeyIds = new Set();
+  const files = fs.readdirSync(path.join(repoRoot, productContractsRoot)).filter((name) => name.endsWith(".product-truth.json")).sort();
+  if (!files.includes("TEMPLATE.product-truth.json")) violations.push({ file: productContractsRoot, line: 0, message: "MISSING_PRODUCT_TRUTH_TEMPLATE" });
+
+  for (const fileName of files) {
+    const relative = `${productContractsRoot}/${fileName}`;
     const contract = readJson(relative, "PRODUCT_TRUTH_CONTRACT");
     if (!contract) continue;
-
     const canonical = contract.schemaVersion === 1;
-    const validator = canonical ? canonicalProductValidator : compatibilityProductValidator;
-    const label = canonical ? "PRODUCT_TRUTH" : "PRODUCT_TRUTH_COMPATIBILITY";
-    if (!validator(contract)) {
-      appendSchemaErrors(relative, label, validator);
+    const validate = canonical ? canonicalProductValidator : compatibilityProductValidator;
+    if (!validate(contract)) {
+      for (const error of validate.errors ?? []) violations.push({ file: relative, line: 0, message: `PRODUCT_TRUTH_SCHEMA_VIOLATION ${error.instancePath || "/"} ${error.message}` });
       continue;
     }
 
     if (!canonical) {
-      if (compatibilityJourneyIds.has(contract.journeyId)) {
-        violations.push({ file: relative, line: 0, message: `DUPLICATE_COMPATIBILITY_JOURNEY_ID ${contract.journeyId}` });
-      }
-      compatibilityJourneyIds.add(contract.journeyId);
+      if (journeyIds.has(contract.journeyId)) violations.push({ file: relative, line: 0, message: `DUPLICATE_COMPATIBILITY_JOURNEY_ID ${contract.journeyId}` });
+      journeyIds.add(contract.journeyId);
       continue;
     }
 
-    if (capabilityIds.has(contract.capabilityId)) {
-      violations.push({ file: relative, line: 0, message: `DUPLICATE_PRODUCT_CAPABILITY_ID ${contract.capabilityId}` });
-    }
+    if (capabilityIds.has(contract.capabilityId)) violations.push({ file: relative, line: 0, message: `DUPLICATE_PRODUCT_CAPABILITY_ID ${contract.capabilityId}` });
     capabilityIds.add(contract.capabilityId);
-    if (contract.owners.productManager === contract.owners.productOwner) {
-      violations.push({ file: relative, line: 0, message: "PRODUCT_MANAGER_AND_PRODUCT_OWNER_MUST_BE_SEPARATE" });
-    }
+    if (contract.owners.productManager === contract.owners.productOwner) violations.push({ file: relative, line: 0, message: "PRODUCT_MANAGER_AND_PRODUCT_OWNER_MUST_BE_SEPARATE" });
 
-    const actorIds = new Set();
+    const actors = new Set();
     for (const actor of contract.actors) {
-      if (actorIds.has(actor.id)) violations.push({ file: relative, line: 0, message: `DUPLICATE_PRODUCT_ACTOR ${actor.id}` });
-      actorIds.add(actor.id);
+      if (actors.has(actor.id)) violations.push({ file: relative, line: 0, message: `DUPLICATE_PRODUCT_ACTOR ${actor.id}` });
+      actors.add(actor.id);
       const overlap = actor.permittedActions.filter((action) => actor.forbiddenActions.includes(action));
-      if (overlap.length) violations.push({ file: relative, line: 0, message: `ACTION_BOTH_PERMITTED_AND_FORBIDDEN ${actor.id}: ${overlap.join(", ")}` });
+      if (overlap.length) violations.push({ file: relative, line: 0, message: `ACTION_BOTH_PERMITTED_AND_FORBIDDEN ${actor.id}` });
     }
-
-    const surfaceIds = new Set();
+    const surfaces = new Set();
     for (const surface of contract.surfaces) {
-      if (surfaceIds.has(surface.id)) violations.push({ file: relative, line: 0, message: `DUPLICATE_PRODUCT_SURFACE ${surface.id}` });
-      surfaceIds.add(surface.id);
-      for (const actorId of surface.actors) {
-        if (!actorIds.has(actorId)) violations.push({ file: relative, line: 0, message: `SURFACE_REFERENCES_UNKNOWN_ACTOR ${surface.id} -> ${actorId}` });
-      }
-      if (surface.required && ["app-client", "app-partner", "app-captain", "app-field", "control-panel"].includes(surface.id) && !surface.routesOrScreens?.length) {
-        violations.push({ file: relative, line: 0, message: `REQUIRED_UI_SURFACE_HAS_NO_ROUTE_OR_SCREEN ${surface.id}` });
-      }
-      if (surface.required && surface.id === "backend" && !surface.operationIds?.length) {
-        violations.push({ file: relative, line: 0, message: "REQUIRED_BACKEND_SURFACE_HAS_NO_OPERATION_ID" });
-      }
+      if (surfaces.has(surface.id)) violations.push({ file: relative, line: 0, message: `DUPLICATE_PRODUCT_SURFACE ${surface.id}` });
+      surfaces.add(surface.id);
+      for (const actorId of surface.actors) if (!actors.has(actorId)) violations.push({ file: relative, line: 0, message: `SURFACE_REFERENCES_UNKNOWN_ACTOR ${surface.id}:${actorId}` });
+      if (surface.required && ["app-client","app-partner","app-captain","app-field","control-panel"].includes(surface.id) && !surface.routesOrScreens?.length) violations.push({ file: relative, line: 0, message: `REQUIRED_UI_SURFACE_HAS_NO_ROUTE_OR_SCREEN ${surface.id}` });
+      if (surface.required && surface.id === "backend" && !surface.operationIds?.length) violations.push({ file: relative, line: 0, message: "REQUIRED_BACKEND_SURFACE_HAS_NO_OPERATION_ID" });
     }
   }
 }
 
+// ---------------------------------------------------------------------------
+// Authority: one root, one active owner per exact authority domain, reverse registration.
+// ---------------------------------------------------------------------------
 if (authority) {
   const ranks = new Set();
   const precedenceIds = new Set();
   const rankById = new Map();
   for (const entry of authority.precedence) {
-    if (ranks.has(entry.rank)) violations.push({ file: authorityRelative, line: 0, message: `DUPLICATE_AUTHORITY_RANK ${entry.rank}` });
-    if (precedenceIds.has(entry.id)) violations.push({ file: authorityRelative, line: 0, message: `DUPLICATE_PRECEDENCE_ID ${entry.id}` });
-    ranks.add(entry.rank);
-    precedenceIds.add(entry.id);
-    rankById.set(entry.id, entry.rank);
+    if (ranks.has(entry.rank)) violations.push({ file: authorityPath, line: 0, message: `DUPLICATE_AUTHORITY_RANK ${entry.rank}` });
+    if (precedenceIds.has(entry.id)) violations.push({ file: authorityPath, line: 0, message: `DUPLICATE_PRECEDENCE_ID ${entry.id}` });
+    ranks.add(entry.rank); precedenceIds.add(entry.id); rankById.set(entry.id, entry.rank);
   }
 
-  const documentPaths = new Set();
+  const paths = new Set();
+  const activePaths = new Set();
   const roots = [];
-  const decisionIndexPath = path.join(repoRoot, decisionIndexRelative);
-  const decisionIndex = fs.existsSync(decisionIndexPath) ? fs.readFileSync(decisionIndexPath, "utf8") : "";
-  if (!decisionIndex) violations.push({ file: decisionIndexRelative, line: 0, message: "DECISION_INDEX_MISSING" });
+  const domainOwners = new Map();
+  const index = readText("governance/GOVERNANCE.md");
 
   for (const document of authority.documents) {
-    if (documentPaths.has(document.path)) violations.push({ file: authorityRelative, line: 0, message: `DUPLICATE_AUTHORITY_DOCUMENT ${document.path}` });
-    documentPaths.add(document.path);
-    if (!precedenceIds.has(document.precedenceId)) violations.push({ file: authorityRelative, line: 0, message: `UNKNOWN_PRECEDENCE_ID ${document.precedenceId}` });
+    if (paths.has(document.path)) violations.push({ file: authorityPath, line: 0, message: `DUPLICATE_AUTHORITY_DOCUMENT ${document.path}` });
+    paths.add(document.path);
+    if (!precedenceIds.has(document.precedenceId)) violations.push({ file: authorityPath, line: 0, message: `UNKNOWN_PRECEDENCE_ID ${document.precedenceId}` });
+    if (!exists(document.path)) violations.push({ file: document.path, line: 0, message: "REGISTERED_AUTHORITY_PATH_MISSING" });
     if (document.classification === "ROOT_AUTHORITY") roots.push(document.path);
+    if (!index.includes(document.path) && !index.includes(`${document.path}/**`)) violations.push({ file: "governance/GOVERNANCE.md", line: 0, message: `INDEX_MISSING_REGISTERED_AUTHORITY ${document.path}` });
 
-    const registeredPath = path.join(repoRoot, document.path);
-    if (!fs.existsSync(registeredPath)) violations.push({ file: document.path, line: 0, message: "REGISTERED_AUTHORITY_PATH_MISSING" });
-
-    const marker = markerForAuthorityPath(document.path);
-    if (decisionIndex && !decisionIndex.includes(document.path) && !decisionIndex.includes(marker)) {
-      violations.push({ file: decisionIndexRelative, line: 0, message: `INDEX_MISSING_REGISTERED_AUTHORITY ${document.path}` });
+    if (["ROOT_AUTHORITY","ACTIVE_CANONICAL","CONDITIONAL_CANONICAL"].includes(document.classification)) {
+      activePaths.add(document.path);
+      for (const domain of document.authorityDomains) {
+        if (domainOwners.has(domain) && domainOwners.get(domain) !== document.path) violations.push({ file: authorityPath, line: 0, message: `DUPLICATE_ACTIVE_AUTHORITY_DOMAIN ${domain}: ${domainOwners.get(domain)} <> ${document.path}` });
+        else domainOwners.set(domain, document.path);
+      }
     }
-
-    if (document.classification === "ACTIVE_CANONICAL" && document.path.endsWith(".md") && document.path !== "AGENTS.md" && fs.existsSync(registeredPath)) {
-      const content = fs.readFileSync(registeredPath, "utf8");
-      if (!/^Status:\s*ACTIVE_CANONICAL\s*$/m.test(content)) violations.push({ file: document.path, line: 0, message: "ACTIVE_CANONICAL_STATUS_DRIFT" });
-    }
+    if (document.classification === "ACTIVE_CANONICAL" && document.path.endsWith(".md") && !/^Status:\s*ACTIVE_CANONICAL\s*$/m.test(readText(document.path))) violations.push({ file: document.path, line: 0, message: "ACTIVE_CANONICAL_STATUS_DRIFT" });
   }
 
-  if (roots.length !== 1 || roots[0] !== authority.rootAuthority) {
-    violations.push({ file: authorityRelative, line: 0, message: `ROOT_AUTHORITY_MISMATCH ${JSON.stringify(roots)}` });
-  }
+  if (roots.length !== 1 || roots[0] !== authority.rootAuthority) violations.push({ file: authorityPath, line: 0, message: `ROOT_AUTHORITY_MISMATCH ${JSON.stringify(roots)}` });
 
-  const activeRanks = authority.documents
-    .filter((document) => ["ROOT_AUTHORITY", "ACTIVE_CANONICAL", "CONDITIONAL_CANONICAL"].includes(document.classification))
-    .map((document) => rankById.get(document.precedenceId));
-  const lowerRanks = authority.documents
-    .filter((document) => ["DERIVED_SUPPORT", "HISTORICAL_REFERENCE"].includes(document.classification))
-    .map((document) => rankById.get(document.precedenceId));
-  if (activeRanks.length && lowerRanks.length && Math.min(...lowerRanks) <= Math.max(...activeRanks)) {
-    violations.push({ file: authorityRelative, line: 0, message: "DERIVED_OR_HISTORICAL_AUTHORITY_OUTRANKS_ACTIVE_AUTHORITY" });
-  }
+  const activeRanks = authority.documents.filter((d) => ["ROOT_AUTHORITY","ACTIVE_CANONICAL","CONDITIONAL_CANONICAL"].includes(d.classification)).map((d) => rankById.get(d.precedenceId));
+  const lowerRanks = authority.documents.filter((d) => ["DERIVED_SUPPORT","HISTORICAL_REFERENCE"].includes(d.classification)).map((d) => rankById.get(d.precedenceId));
+  if (activeRanks.length && lowerRanks.length && Math.min(...lowerRanks) <= Math.max(...activeRanks)) violations.push({ file: authorityPath, line: 0, message: "DERIVED_OR_HISTORICAL_AUTHORITY_OUTRANKS_ACTIVE_AUTHORITY" });
 
-  for (const requiredPath of [
-    "governance/contracts",
-    "governance/agents",
-    "governance/skills",
-    "governance/guards",
-    singleOwnerRelative,
-    "governance/authority/single-owner-mode.schema.json",
-    canonicalProductSchema,
-    guardSetsRelative,
-  ]) {
-    if (!documentPaths.has(requiredPath)) violations.push({ file: authorityRelative, line: 0, message: `MACHINE_AUTHORITY_NOT_REGISTERED ${requiredPath}` });
+  for (const required of [
+    "governance/GOVERNANCE.md", "governance/product/PRD.md",
+    "governance/policies/engineering.md", "governance/policies/security.md", "governance/policies/delivery.md",
+    "governance/contracts", "governance/agents", "governance/skills", "governance/guards",
+    "governance/authority/authority-precedence.schema.json", singleOwnerPath,
+    "governance/authority/single-owner-mode.schema.json", canonicalProductSchema,
+    "governance/product/platform-model.yaml", workflowPath, "governance/github/full-verification-policy.json"
+  ]) if (!paths.has(required)) violations.push({ file: authorityPath, line: 0, message: `REQUIRED_AUTHORITY_NOT_REGISTERED ${required}` });
+
+  for (const relative of listFiles("governance").filter((file) => file.endsWith(".md"))) {
+    if (/^Status:\s*ACTIVE_CANONICAL\s*$/m.test(readText(relative)) && !activePaths.has(relative)) violations.push({ file: relative, line: 0, message: "UNREGISTERED_ACTIVE_CANONICAL_DOCUMENT" });
   }
 }
 
-if (singleOwnerMode) {
-  const requiredAllowedDomains = [
-    "product_model_approval",
-    "implementation_readiness",
-    "product_acceptance",
-    "ux_acceptance",
-    "architecture_approval",
-    "governance_contract_approval",
-    "ci_workflow_approval",
-    "implementation_review",
-    "qa_approval",
-  ];
-  const requiredProtectedDomains = [
-    "authentication_authorization_sessions",
-    "pii_privacy_secrets_credentials",
-    "operator_context_isolation",
-    "security_approval",
-    "financial_control",
-    "migrations_and_production_data",
-    "critical_high_vulnerability_acceptance",
-    "residual_risk_acceptance",
-    "release_approval",
-    "deployment",
-    "production_verification",
-    "final_closure",
-  ];
-  const allowedDomains = new Set(singleOwnerMode.approvalPolicy.allowedDomains);
-  const protectedDomains = new Set(singleOwnerMode.approvalPolicy.protectedDomains);
-
-  for (const domain of requiredAllowedDomains) {
-    if (!allowedDomains.has(domain)) violations.push({ file: singleOwnerRelative, line: 0, message: `SINGLE_OWNER_ALLOWED_DOMAIN_MISSING ${domain}` });
-  }
-  for (const domain of requiredProtectedDomains) {
-    if (!protectedDomains.has(domain)) violations.push({ file: singleOwnerRelative, line: 0, message: `SINGLE_OWNER_PROTECTED_DOMAIN_MISSING ${domain}` });
-  }
-  for (const domain of allowedDomains) {
-    if (protectedDomains.has(domain)) violations.push({ file: singleOwnerRelative, line: 0, message: `SINGLE_OWNER_DOMAIN_BOTH_ALLOWED_AND_PROTECTED ${domain}` });
-  }
-  if (singleOwnerMode.status === "ACTIVE" && singleOwnerMode.authoritySource !== "CURRENT_USER_INSTRUCTION") {
-    violations.push({ file: singleOwnerRelative, line: 0, message: "ACTIVE_SINGLE_OWNER_MODE_REQUIRES_CURRENT_USER_INSTRUCTION" });
-  }
+// ---------------------------------------------------------------------------
+// Sole-owner and final-decision controls.
+// ---------------------------------------------------------------------------
+if (singleOwner) {
+  const allowed = new Set(singleOwner.approvalPolicy.allowedDomains);
+  const protectedDomains = new Set(singleOwner.approvalPolicy.protectedDomains);
+  for (const domain of ["product_model_approval","implementation_readiness","product_acceptance","ux_acceptance","architecture_approval","governance_contract_approval","ci_workflow_approval","implementation_review","qa_approval"]) if (!allowed.has(domain)) violations.push({ file: singleOwnerPath, line: 0, message: `SINGLE_OWNER_ALLOWED_DOMAIN_MISSING ${domain}` });
+  for (const domain of ["authentication_authorization_sessions","pii_privacy_secrets_credentials","operator_context_isolation","security_approval","financial_control","migrations_and_production_data","critical_high_vulnerability_acceptance","residual_risk_acceptance","release_approval","deployment","production_verification","final_closure"]) if (!protectedDomains.has(domain)) violations.push({ file: singleOwnerPath, line: 0, message: `SINGLE_OWNER_PROTECTED_DOMAIN_MISSING ${domain}` });
+  for (const domain of allowed) if (protectedDomains.has(domain)) violations.push({ file: singleOwnerPath, line: 0, message: `SINGLE_OWNER_DOMAIN_BOTH_ALLOWED_AND_PROTECTED ${domain}` });
+  if (singleOwner.status === "ACTIVE" && singleOwner.authoritySource !== "CURRENT_USER_INSTRUCTION") violations.push({ file: singleOwnerPath, line: 0, message: "ACTIVE_SINGLE_OWNER_MODE_REQUIRES_CURRENT_USER_INSTRUCTION" });
 }
 
 if (decisions) {
-  const canonicalIds = new Set();
-  const canonicalClass = new Map();
-  const decisionById = new Map();
+  const ids = new Set();
+  const classes = new Map();
+  const byId = new Map();
   for (const decision of decisions.canonicalDecisions) {
-    if (canonicalIds.has(decision.id)) violations.push({ file: decisionRelative, line: 0, message: `DUPLICATE_CANONICAL_DECISION ${decision.id}` });
-    canonicalIds.add(decision.id);
-    canonicalClass.set(decision.id, decision.class);
-    decisionById.set(decision.id, decision);
+    if (ids.has(decision.id)) violations.push({ file: decisionPath, line: 0, message: `DUPLICATE_CANONICAL_DECISION ${decision.id}` });
+    ids.add(decision.id); classes.set(decision.id, decision.class); byId.set(decision.id, decision);
   }
-
   const aliases = new Set();
   for (const alias of decisions.aliases) {
-    if (aliases.has(alias.alias) || canonicalIds.has(alias.alias)) violations.push({ file: decisionRelative, line: 0, message: `DUPLICATE_OR_SHADOWING_ALIAS ${alias.alias}` });
+    if (aliases.has(alias.alias) || ids.has(alias.alias)) violations.push({ file: decisionPath, line: 0, message: `DUPLICATE_OR_SHADOWING_ALIAS ${alias.alias}` });
     aliases.add(alias.alias);
-    if (!canonicalIds.has(alias.canonical)) violations.push({ file: decisionRelative, line: 0, message: `UNKNOWN_ALIAS_TARGET ${alias.alias} -> ${alias.canonical}` });
+    if (!ids.has(alias.canonical)) violations.push({ file: decisionPath, line: 0, message: `UNKNOWN_ALIAS_TARGET ${alias.alias}` });
   }
+  const closed = decisions.closureRules.closedDecision;
+  if (classes.get(closed) !== "closed" || decisions.closureRules.scopePolicy !== "ALL_APPLICABLE" || byId.get(closed)?.scopePolicy !== "ALL_APPLICABLE") violations.push({ file: decisionPath, line: 0, message: "CLOSED_DECISION_POLICY_DRIFT" });
+  for (const scope of ["product","runtime","visual","qa","security","finance","isolation","governance","ci","release","production"]) if (!(decisions.closureRules.conditionalRequiredScopes ?? []).includes(scope)) violations.push({ file: decisionPath, line: 0, message: `CLOSURE_CONDITIONAL_SCOPE_MISSING ${scope}` });
+  for (const cls of ["fail","blocked","pending"]) if (!(decisions.closureRules.forbiddenOpenClasses ?? []).includes(cls)) violations.push({ file: decisionPath, line: 0, message: `CLOSURE_FORBIDDEN_OPEN_CLASS_MISSING ${cls}` });
+}
 
-  const closedId = decisions.closureRules.closedDecision;
-  if (canonicalClass.get(closedId) !== "closed") violations.push({ file: decisionRelative, line: 0, message: "INVALID_CLOSED_DECISION" });
-  if (decisions.closureRules.scopePolicy !== "ALL_APPLICABLE") violations.push({ file: decisionRelative, line: 0, message: "CLOSURE_MUST_REQUIRE_ALL_APPLICABLE_SCOPES" });
-  if (decisionById.get(closedId)?.scopePolicy !== "ALL_APPLICABLE") violations.push({ file: decisionRelative, line: 0, message: "CLOSED_DECISION_SCOPE_POLICY_DRIFT" });
-
-  const baseScopes = new Set(decisions.closureRules.baseRequiredScopes ?? []);
-  if (!baseScopes.has("static")) violations.push({ file: decisionRelative, line: 0, message: "CLOSURE_BASE_STATIC_SCOPE_MISSING" });
-  const conditionalScopes = new Set(decisions.closureRules.conditionalRequiredScopes ?? []);
-  for (const scope of ["product", "runtime", "visual", "qa", "security", "finance", "isolation", "governance", "ci", "release", "production"]) {
-    if (!conditionalScopes.has(scope)) violations.push({ file: decisionRelative, line: 0, message: `CLOSURE_CONDITIONAL_SCOPE_MISSING ${scope}` });
+// ---------------------------------------------------------------------------
+// Guard registry/assurance integrity.
+// ---------------------------------------------------------------------------
+if (guards && assurance && guardSets) {
+  const registered = new Set(guards.entries.map((entry) => entry.id));
+  const assured = new Set();
+  for (const entry of assurance.entries) {
+    if (assured.has(entry.guardId)) violations.push({ file: assurancePath, line: 0, message: `DUPLICATE_GUARD_ASSURANCE ${entry.guardId}` });
+    assured.add(entry.guardId);
+    if (!registered.has(entry.guardId)) violations.push({ file: assurancePath, line: 0, message: `ASSURANCE_REFERENCES_UNKNOWN_GUARD ${entry.guardId}` });
+    if (entry.closureEligible !== false) violations.push({ file: assurancePath, line: 0, message: `GUARD_MUST_NOT_SELF_GRANT_CLOSURE ${entry.guardId}` });
   }
-  for (const classId of ["fail", "blocked", "pending"]) {
-    if (!(decisions.closureRules.forbiddenOpenClasses ?? []).includes(classId)) violations.push({ file: decisionRelative, line: 0, message: `CLOSURE_FORBIDDEN_OPEN_CLASS_MISSING ${classId}` });
+  const canonicalSet = new Set([...guardSets.guardSets.foundation, ...guardSets.guardSets.journey, ...guardSets.guardSets.governance]);
+  for (const id of canonicalSet) {
+    if (!registered.has(id)) violations.push({ file: guardSetsPath, line: 0, message: `GUARD_SET_REFERENCES_UNKNOWN_GUARD ${id}` });
+    if (!assured.has(id)) violations.push({ file: assurancePath, line: 0, message: `CANONICAL_GUARD_ASSURANCE_MISSING ${id}` });
   }
 }
 
-if (guards && guardAssurance && guardSets) {
-  const registeredGuardIds = new Set(guards.entries.map((entry) => entry.id));
-  const assuranceIds = new Set();
-  for (const entry of guardAssurance.entries) {
-    if (assuranceIds.has(entry.guardId)) violations.push({ file: assuranceRelative, line: 0, message: `DUPLICATE_GUARD_ASSURANCE ${entry.guardId}` });
-    assuranceIds.add(entry.guardId);
-    if (!registeredGuardIds.has(entry.guardId)) violations.push({ file: assuranceRelative, line: 0, message: `ASSURANCE_REFERENCES_UNKNOWN_GUARD ${entry.guardId}` });
-    if (entry.closureEligible !== false) violations.push({ file: assuranceRelative, line: 0, message: `SCOPE_GUARD_MUST_NOT_BE_CLOSURE_ELIGIBLE ${entry.guardId}` });
+// ---------------------------------------------------------------------------
+// Observed GitHub state cannot overclaim desired/local configuration.
+// ---------------------------------------------------------------------------
+if (enforcement) {
+  const codeowners = readText(".github/CODEOWNERS");
+  if (!codeowners) violations.push({ file: ".github/CODEOWNERS", line: 0, message: "CODEOWNERS_FILE_MISSING" });
+  else {
+    const actualOwners = [...new Set([...codeowners.matchAll(/@([A-Za-z0-9-]+)/g)].map((m) => m[1]))].sort();
+    const declaredOwners = [...enforcement.observed.codeowners].sort();
+    if (JSON.stringify(actualOwners) !== JSON.stringify(declaredOwners)) violations.push({ file: enforcementPath, line: 0, message: "CODEOWNERS_EVIDENCE_DRIFT" });
+    const mode = actualOwners.length > 1 ? "MULTI_OWNER_ROUTING" : "SINGLE_OWNER_ROUTING";
+    if (enforcement.observed.codeownersMode !== mode) violations.push({ file: enforcementPath, line: 0, message: "CODEOWNERS_MODE_DRIFT" });
   }
-
-  const canonicalSetIds = new Set([
-    ...guardSets.guardSets.foundation,
-    ...guardSets.guardSets.journey,
-    ...guardSets.guardSets.governance,
-  ]);
-  for (const requiredId of canonicalSetIds) {
-    if (!registeredGuardIds.has(requiredId)) {
-      violations.push({ file: guardSetsRelative, line: 0, message: `GUARD_SET_REFERENCES_UNKNOWN_GUARD ${requiredId}` });
-    }
-    if (!assuranceIds.has(requiredId)) {
-      violations.push({ file: assuranceRelative, line: 0, message: `CANONICAL_GUARD_ASSURANCE_MISSING ${requiredId}` });
-    }
-  }
-
-  for (const requiredId of [
-    "go-routes-ci", "logic-coverage", "performance-budget", "a11y", "a11y-runtime",
-    "workflow-lint", "workflow-security", "actions-pin",
-  ]) {
-    if (!assuranceIds.has(requiredId)) violations.push({ file: assuranceRelative, line: 0, message: `REQUIRED_GUARD_ASSURANCE_MISSING ${requiredId}` });
-  }
+  const independent = enforcement.observed.independentReviewerIdentityState === "PROVEN" && enforcement.observed.codeownersMode === "MULTI_OWNER_ROUTING";
+  const sameCommitCi = enforcement.observed.sameCommitWorkflowRunsState === "PROVEN_PASS";
+  if (enforcement.claims.separationOfDutiesProven !== independent) violations.push({ file: enforcementPath, line: 0, message: "SEPARATION_OF_DUTIES_CLAIM_DOES_NOT_MATCH_EVIDENCE" });
+  if (enforcement.claims.sameCommitCiProven !== sameCommitCi) violations.push({ file: enforcementPath, line: 0, message: "SAME_COMMIT_CI_CLAIM_DOES_NOT_MATCH_EVIDENCE" });
+  const highRisk = independent && sameCommitCi && enforcement.observed.branchProtectionState === "PROVEN" && enforcement.observed.requiredChecksState === "PROVEN";
+  if (enforcement.claims.highRiskClosureAllowed !== highRisk) violations.push({ file: enforcementPath, line: 0, message: "HIGH_RISK_CLOSURE_CLAIM_DOES_NOT_MATCH_EVIDENCE" });
 }
 
-if (repositoryEnforcement) {
-  const codeownersRelative = ".github/CODEOWNERS";
-  const codeownersPath = path.join(repoRoot, codeownersRelative);
-  if (!fs.existsSync(codeownersPath)) {
-    violations.push({ file: codeownersRelative, line: 0, message: "CODEOWNERS_FILE_MISSING" });
-  } else {
-    const codeowners = fs.readFileSync(codeownersPath, "utf8");
-    const actualOwners = [...new Set([...codeowners.matchAll(/@([A-Za-z0-9-]+)/g)].map((match) => match[1]))].sort();
-    const declaredOwners = [...repositoryEnforcement.observed.codeowners].sort();
-    if (JSON.stringify(actualOwners) !== JSON.stringify(declaredOwners)) violations.push({ file: enforcementRelative, line: 0, message: `CODEOWNERS_EVIDENCE_DRIFT declared=${declaredOwners.join(",")} actual=${actualOwners.join(",")}` });
-    const actualMode = actualOwners.length > 1 ? "MULTI_OWNER_ROUTING" : "SINGLE_OWNER_ROUTING";
-    if (repositoryEnforcement.observed.codeownersMode !== actualMode) violations.push({ file: enforcementRelative, line: 0, message: `CODEOWNERS_MODE_DRIFT declared=${repositoryEnforcement.observed.codeownersMode} actual=${actualMode}` });
-    if (singleOwnerMode?.status === "ACTIVE" && !actualOwners.includes(singleOwnerMode.ownerIdentity)) {
-      violations.push({ file: singleOwnerRelative, line: 0, message: `SINGLE_OWNER_IDENTITY_NOT_IN_CODEOWNERS ${singleOwnerMode.ownerIdentity}` });
-    }
-  }
-
-  const observed = repositoryEnforcement.observed;
-  const claims = repositoryEnforcement.claims;
-  const independentlyProven = observed.independentReviewerIdentityState === "PROVEN" && observed.codeownersMode === "MULTI_OWNER_ROUTING";
-  if (claims.separationOfDutiesProven !== independentlyProven) violations.push({ file: enforcementRelative, line: 0, message: "SEPARATION_OF_DUTIES_CLAIM_DOES_NOT_MATCH_EVIDENCE" });
-  const sameCommitCiProven = observed.sameCommitWorkflowRunsState === "PROVEN_PASS";
-  if (claims.sameCommitCiProven !== sameCommitCiProven) violations.push({ file: enforcementRelative, line: 0, message: "SAME_COMMIT_CI_CLAIM_DOES_NOT_MATCH_EVIDENCE" });
-  const highRiskAllowed = independentlyProven && sameCommitCiProven && observed.branchProtectionState === "PROVEN" && observed.requiredChecksState === "PROVEN";
-  if (claims.highRiskClosureAllowed !== highRiskAllowed) violations.push({ file: enforcementRelative, line: 0, message: "HIGH_RISK_CLOSURE_CLAIM_DOES_NOT_MATCH_EVIDENCE" });
-  if (!claims.separationOfDutiesProven && repositoryEnforcement.decision === "CLOSED_WITH_EVIDENCE") violations.push({ file: enforcementRelative, line: 0, message: "CLOSURE_FORBIDDEN_WITHOUT_GITHUB_DUTY_SEPARATION" });
-  if (!claims.sameCommitCiProven && repositoryEnforcement.decision === "PASS") violations.push({ file: enforcementRelative, line: 0, message: "PASS_FORBIDDEN_WITHOUT_SAME_COMMIT_CI" });
-}
-
-for (const [label, registry] of [["AGENT", agents], ["SKILL", skills], ["GUARD", guards], ["FRONTEND_BINDING", frontendBindings]]) {
-  if (registry?.entries && new Set(registry.entries.map((entry) => entry.id)).size !== registry.entries.length) {
-    violations.push({ file: `<${label.toLowerCase()}-registry>`, line: 0, message: `${label}_DUPLICATE_ID` });
-  }
+for (const [label, registry] of [["AGENT", agents], ["SKILL", skills], ["GUARD", guards], ["FRONTEND_BINDING", bindings]]) {
+  if (registry?.entries && new Set(registry.entries.map((entry) => entry.id)).size !== registry.entries.length) violations.push({ file: `<${label.toLowerCase()}-registry>`, line: 0, message: `${label}_DUPLICATE_ID` });
 }
 
 fail(guardId, violations);
