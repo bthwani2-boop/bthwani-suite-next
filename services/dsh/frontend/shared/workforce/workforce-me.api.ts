@@ -1,11 +1,11 @@
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import { resolveWorkforceApiBaseUrl } from "../_kernel/workforce-api-base-url";
 import { workforceErrorCode, workforceErrorMessage } from "./workforce.api";
-import type { UpdateSelfInput, WorkforceMe } from "./workforce.types";
+import type { ReadinessGate, UpdateSelfInput, WorkforceMe } from "./workforce.types";
 
-// Native field-app client: talks to the workforce runtime directly with the
-// identity bearer token (no browser BFF). The sovereign profile displayed in
-// the app comes from here — never from identity.subject.
+// Native provider client: talks to the Workforce runtime directly with the
+// Identity bearer token (no browser BFF). Provider-facing profile/readiness
+// reads come from this transport; browser control-panel flows stay on the BFF.
 const { request } = createDshHttpClient(resolveWorkforceApiBaseUrl(), "workforce-me", 10000);
 
 export type WorkforceMeResult =
@@ -37,6 +37,13 @@ export async function fetchWorkforceMe(): Promise<WorkforceMeResult> {
   } catch (error) {
     return classifyError(error);
   }
+}
+
+export async function fetchWorkforceReadiness(actorId: string): Promise<ReadinessGate> {
+  if (!actorId.trim()) {
+    throw new Error("WORKFORCE_ACTOR_ID_REQUIRED");
+  }
+  return request<ReadinessGate>(`/workforce/readiness/${encodeURIComponent(actorId)}`);
 }
 
 export async function updateWorkforceMeSelf(input: UpdateSelfInput): Promise<WorkforceMeResult> {
