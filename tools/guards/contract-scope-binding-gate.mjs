@@ -1,40 +1,42 @@
 #!/usr/bin/env node
-// Verifies that every authorization scope/permission literal enforced by Go
-// route guards has a matching entry in governance/contracts/scope-vocabulary.json,
-// and that the vocabulary carries no stale entries no longer enforced anywhere.
-//
+// Verifies that every authorization scope/permission enforced by Go route
+// guards has a matching entry in governance/contracts/scope-vocabulary.json,
+// and that the vocabulary carries no stale entries.
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import YAML from "yaml";
+import {
+  collectHandleFuncRegistrations,
+  findMatchingDelimiter,
+  listGoFiles,
+  parseGoStringLiteral,
+} from "./lib/go-http-routes.mjs";
 
-const repositoryRoot = path.resolve(new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"), "..", "..");
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const vocabularyRelative = "governance/contracts/scope-vocabulary.json";
 const vocabulary = JSON.parse(fs.readFileSync(path.join(repositoryRoot, vocabularyRelative), "utf8"));
-
 const failures = [];
 
-// Scopes enforced only through dynamic dispatch (a helper function returns
-// one of several *Permission* constants at runtime based on input, and the
-// call site passes that return value straight into a require*Permission
-// wrapper). The static scan below cannot trace a value through a helper
-// function call, so these are recorded here after manual verification of
-// every branch of the deciding helper and its call site.
+// Scopes selected through a runtime decision helper rather than a literal at
+// the route/handler call site. Each entry is manually tied to the deciding
+// helper and remains subject to the same vocabulary strictness.
 const dynamicallyEnforcedScopes = new Map([
   [
     "catalog.proposal.adopt",
-    "services/dsh/backend/internal/http/centralcatalog_catalog.go: decideProposalPermissionAction/proposalTransitionPermissionAction, called from catalog_proposal_occ_handlers.go via requireCatalogPermission",
+    "services/dsh/backend/internal/http/centralcatalog_catalog.go: decideProposalPermissionAction/proposalTransitionPermissionAction",
   ],
   [
     "catalog.proposal.review",
-    "services/dsh/backend/internal/http/centralcatalog_catalog.go: decideProposalPermissionAction/proposalTransitionPermissionAction, called from catalog_proposal_occ_handlers.go via requireCatalogPermission",
+    "services/dsh/backend/internal/http/centralcatalog_catalog.go: decideProposalPermissionAction/proposalTransitionPermissionAction",
   ],
   [
     "catalog.proposal.marketing_review",
-    "services/dsh/backend/internal/http/centralcatalog_catalog.go: proposalTransitionPermissionAction, called from catalog_proposal_occ_handlers.go via requireCatalogPermission",
+    "services/dsh/backend/internal/http/centralcatalog_catalog.go: proposalTransitionPermissionAction",
   ],
   [
     "catalog.proposal.publish",
-    "services/dsh/backend/internal/http/centralcatalog_catalog.go: proposalTransitionPermissionAction, called from catalog_proposal_occ_handlers.go via requireCatalogPermission",
+    "services/dsh/backend/internal/http/centralcatalog_catalog.go: proposalTransitionPermissionAction",
   ],
 ]);
 
@@ -46,10 +48,14 @@ for (const family of vocabulary.families ?? []) {
   }
 }
 
-// Go source roots scanned for enforced scope/permission literals, and the
-// call-site patterns that carry a literal as an argument. Test files are
-// excluded: they may reference fixture scopes that were never wired to a
-// real route.
+function relativeGoFiles(rootRelative) {
+  const root = path.join(repositoryRoot, rootRelative);
+  return listGoFiles(root, { recursive: true }).map((absolute) => ({
+    absolute,
+    relative: path.relative(repositoryRoot, absolute).replaceAll("\\", "/"),
+  }));
+}
+
 const scanTargets = [
   {
     root: "core/workforce/backend",
@@ -82,106 +88,86 @@ const scanTargets = [
     root: "services/dsh/backend",
     patterns: [
       /requirePermission\(\s*w,\s*r,\s*"[^"]*",\s*"([a-zA-Z][a-zA-Z0-9_.:-]*)"/g,
-      // Covers requirePermission, requireCatalogPermission,
-      // requireAdministrationPermission, and any future require*Permission
-      // wrapper: they all take a *Permission* constant identifying the scope,
-      // just with different surrounding argument shapes.
       /require[A-Za-z]*Permission\(\s*w,\s*r,\s*(?:"[^"]*",\s*)?([A-Za-z][A-Za-z0-9]*Permission[A-Za-z0-9]*)\s*[,)]/g,
       /serve[A-Za-z]*PermissionHandler\(\s*w,\s*r,[\s\S]*?,\s*([A-Za-z][A-Za-z0-9]*Permission[A-Za-z0-9]*)\s*[,)]/g,
     ],
   },
 ];
 
-// DSH passes permission constants (not string literals) into requirePermission
-// at most call sites. Resolve `FooPermissionBar = "foo.bar"` declarations
-// first, then substitute constant names encountered at call sites.
-function collectDshPermissionConstants(root) {
+function collectDshPermissionConstants() {
   const constants = new Map();
   const constPattern = /([A-Za-z]+Permission[A-Za-z]*)\s*=\s*"([a-zA-Z0-9_.:-]+)"/g;
-  for (const file of walk(root)) {
-    if (file.endsWith("_test.go")) continue;
-    const text = fs.readFileSync(file, "utf8");
+  for (const { absolute } of relativeGoFiles("services/dsh/backend")) {
+    const text = fs.readFileSync(absolute, "utf8");
     for (const match of text.matchAll(constPattern)) constants.set(match[1], match[2]);
   }
   return constants;
 }
 
-function* walk(dir) {
-  const absolute = path.join(repositoryRoot, dir);
-  if (!fs.existsSync(absolute)) return;
-  for (const entry of fs.readdirSync(absolute, { withFileTypes: true })) {
-    const full = path.join(absolute, entry.name);
-    const relative = path.relative(repositoryRoot, full).replaceAll("\\", "/");
-    if (entry.isDirectory()) {
-      yield* walk(relative);
-    } else if (entry.name.endsWith(".go")) {
-      yield relative;
-    }
+const dshConstants = collectDshPermissionConstants();
+
+function resolveDshPermissionExpression(expression, context, { reportFailure = true } = {}) {
+  if (!expression) {
+    if (reportFailure) failures.push(`${context}: missing permission expression`);
+    return undefined;
   }
+  const literal = parseGoStringLiteral(expression);
+  if (literal) return literal;
+  const identifier = expression.trim();
+  if (/^[A-Za-z][A-Za-z0-9]*Permission[A-Za-z0-9]*$/.test(identifier)) {
+    const resolved = dshConstants.get(identifier);
+    if (resolved) return resolved;
+    if (reportFailure) failures.push(`${context}: unresolved permission constant '${identifier}'`);
+    return undefined;
+  }
+  if (reportFailure) failures.push(`${context}: unsupported permission expression '${identifier}'`);
+  return undefined;
 }
 
 const enforced = new Set(dynamicallyEnforcedScopes.keys());
-const dshConstants = collectDshPermissionConstants("services/dsh/backend");
-
 for (const target of scanTargets) {
-  for (const file of walk(target.root)) {
-    if (file.endsWith("_test.go")) continue;
-    const text = fs.readFileSync(path.join(repositoryRoot, file), "utf8");
+  for (const { absolute, relative } of relativeGoFiles(target.root)) {
+    const text = fs.readFileSync(absolute, "utf8");
     for (const pattern of target.patterns) {
+      pattern.lastIndex = 0;
       for (const match of text.matchAll(pattern)) {
-        if (match[1] && /^[A-Za-z][A-Za-z0-9]*Permission[A-Za-z0-9]*$/.test(match[1]) && !match[1].includes(".")) {
-          // Captured a *Permission* constant identifier, not a literal scope
-          // string -- resolve it through the constant declarations.
-          const resolved = dshConstants.get(match[1]);
+        const token = match[1];
+        if (!token) continue;
+        if (/^[A-Za-z][A-Za-z0-9]*Permission[A-Za-z0-9]*$/.test(token) && !token.includes(".")) {
+          const resolved = dshConstants.get(token);
           if (resolved) enforced.add(resolved);
-          else failures.push(`services/dsh/backend: unresolved permission constant '${match[1]}' referenced in ${file}`);
-          continue;
-        }
-        if (match[1]) {
-          enforced.add(match[1]);
-          continue;
-        }
-        // Constant-reference form: extract the trailing identifier and resolve it.
-        const constMatch = match[0].match(/([A-Za-z][A-Za-z0-9]*Permission[A-Za-z0-9]*),\s*$/);
-        if (constMatch) {
-          const resolved = dshConstants.get(constMatch[1]);
-          if (resolved) enforced.add(resolved);
-          else failures.push(`services/dsh/backend: unresolved permission constant '${constMatch[1]}' referenced in ${file}`);
+          else failures.push(`services/dsh/backend: unresolved permission constant '${token}' referenced in ${relative}`);
+        } else {
+          enforced.add(token);
         }
       }
     }
   }
 }
 
+// Route-level withPermission is first-class authorization. Previous versions
+// of this gate ignored it and therefore reported valid permissions as stale.
+const dshHttpRoot = path.join(repositoryRoot, "services/dsh/backend/internal/http");
+const dshRoutes = collectHandleFuncRegistrations(dshHttpRoot, { recursive: true });
+for (const route of dshRoutes) {
+  if (route.handler.kind !== "withPermission") continue;
+  const relative = path.relative(repositoryRoot, route.filePath).replaceAll("\\", "/");
+  const permission = resolveDshPermissionExpression(
+    route.handler.permissionExpression,
+    `${relative}:${route.line} ${route.route}`,
+  );
+  if (permission) enforced.add(permission);
+}
+
 for (const scope of enforced) {
-  if (!declared.has(scope)) {
-    failures.push(`Go enforces scope '${scope}' with no entry in ${vocabularyRelative}`);
-  }
+  if (!declared.has(scope)) failures.push(`Go enforces scope '${scope}' with no entry in ${vocabularyRelative}`);
 }
-
-// Every declared scope must be enforced somewhere -- a scope granted by
-// Identity/RBAC seed data but checked by no handler is either a capability
-// that was never finished or a stale leftover, and both are indistinguishable
-// from a silent authorization hole from the outside. This was a WARNING
-// until the vocabulary carried 49 such scopes; each was manually traced to
-// either genuine Go enforcement the scan patterns above now recognize, or a
-// capability that does not exist yet and was removed from the vocabulary.
-// No unenforced scope may be reintroduced without either wiring it to a real
-// authorization check or leaving it out of this file.
 for (const scope of declared) {
-  if (!enforced.has(scope)) {
-    failures.push(`${vocabularyRelative}: scope '${scope}' is declared but enforced nowhere in Go`);
-  }
+  if (!enforced.has(scope)) failures.push(`${vocabularyRelative}: scope '${scope}' is declared but enforced nowhere in Go`);
 }
 
-// The captain financial-eligibility slice is the first DSH contract with
-// operation-level authorization and error metadata. Bind that metadata to the
-// registered Go route and handler so future slices can adopt the same generic
-// extension without creating a parallel registry.
 const eligibilityContractRelative = "services/dsh/contracts/dsh.captain-financial-eligibility.openapi.yaml";
-const eligibilityContract = YAML.parse(
-  fs.readFileSync(path.join(repositoryRoot, eligibilityContractRelative), "utf8"),
-);
+const eligibilityContract = YAML.parse(fs.readFileSync(path.join(repositoryRoot, eligibilityContractRelative), "utf8"));
 const eligibilityOperations = new Map();
 for (const [routePath, pathItem] of Object.entries(eligibilityContract.paths ?? {})) {
   for (const method of ["get", "post", "put", "patch", "delete"]) {
@@ -196,8 +182,6 @@ for (const [routePath, pathItem] of Object.entries(eligibilityContract.paths ?? 
 }
 
 const permissionBoundOperationIds = new Set([
-  "getDispatchBalancePolicy",
-  "upsertDispatchBalancePolicy",
   "getOperatorCaptainFinancialEligibility",
   "refreshOperatorCaptainFinancialEligibility",
 ]);
@@ -207,29 +191,30 @@ const actorBoundOperationIds = new Set([
 ]);
 
 const routeBindings = new Map();
-for (const file of walk("services/dsh/backend/internal/http")) {
-  if (file.endsWith("_test.go")) continue;
-  const source = fs.readFileSync(path.join(repositoryRoot, file), "utf8");
-  for (const match of source.matchAll(/mux\.HandleFunc\("([A-Z]+) ([^"]+)",\s*protected\.([A-Za-z0-9_]+)\)/g)) {
-    routeBindings.set(`${match[1]} ${match[2]}`, { handler: match[3], file });
-  }
+for (const route of dshRoutes) {
+  const relative = path.relative(repositoryRoot, route.filePath).replaceAll("\\", "/");
+  const permission = route.handler.kind === "withPermission"
+    ? resolveDshPermissionExpression(route.handler.permissionExpression, `${relative}:${route.line} ${route.route}`, { reportFailure: false })
+    : undefined;
+  routeBindings.set(route.route, {
+    handler: route.handler.handlerName,
+    file: relative,
+    permission,
+  });
 }
 
 function findHandlerSource(handlerName) {
+  if (!handlerName) return null;
   const signature = `func (s *protectedStoreServer) ${handlerName}(`;
-  for (const file of walk("services/dsh/backend/internal/http")) {
-    if (file.endsWith("_test.go")) continue;
-    const source = fs.readFileSync(path.join(repositoryRoot, file), "utf8");
+  for (const { absolute, relative } of relativeGoFiles("services/dsh/backend/internal/http")) {
+    const source = fs.readFileSync(absolute, "utf8");
     const signatureIndex = source.indexOf(signature);
     if (signatureIndex < 0) continue;
     const bodyStart = source.indexOf("{", signatureIndex + signature.length);
-    if (bodyStart < 0) break;
-    let depth = 0;
-    for (let index = bodyStart; index < source.length; index += 1) {
-      if (source[index] === "{") depth += 1;
-      if (source[index] === "}") depth -= 1;
-      if (depth === 0) return { file, text: source.slice(bodyStart + 1, index) };
-    }
+    if (bodyStart < 0) continue;
+    const bodyEnd = findMatchingDelimiter(source, bodyStart, "{", "}");
+    if (bodyEnd < 0) continue;
+    return { file: relative, text: source.slice(bodyStart + 1, bodyEnd) };
   }
   return null;
 }
@@ -258,7 +243,7 @@ for (const [operationId, binding] of eligibilityOperations) {
   }
   const handler = findHandlerSource(route.handler);
   if (!handler) {
-    failures.push(`${route.file}: registered handler '${route.handler}' for ${operationId} was not found`);
+    failures.push(`${route.file}: registered handler '${route.handler ?? "unresolved"}' for ${operationId} was not found`);
     continue;
   }
 
@@ -267,8 +252,11 @@ for (const [operationId, binding] of eligibilityOperations) {
       failures.push(`${eligibilityContractRelative}: ${operationId} must declare exactly one vocabulary-backed permission`);
       continue;
     }
-    const permissionMatch = handler.text.match(/requirePermission\(w,\s*r,\s*"[^"]+",\s*([A-Za-z][A-Za-z0-9]*)\)/);
-    const enforcedPermission = permissionMatch ? dshConstants.get(permissionMatch[1]) : undefined;
+    let enforcedPermission = route.permission;
+    if (!enforcedPermission) {
+      const permissionMatch = handler.text.match(/requirePermission\(w,\s*r,\s*"[^"]+",\s*([A-Za-z][A-Za-z0-9]*)\)/);
+      enforcedPermission = permissionMatch ? dshConstants.get(permissionMatch[1]) : undefined;
+    }
     if (!enforcedPermission || enforcedPermission !== permissions[0]) {
       failures.push(`${handler.file}: ${route.handler} enforces '${enforcedPermission ?? "unresolved"}' but ${operationId} declares '${permissions[0]}'`);
     }
@@ -300,4 +288,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`contract-scope-binding-gate: OK (${declared.size} declared scopes, ${enforced.size} enforced literals, ${eligibilityOperations.size} eligibility operations bound to Go routes and contract metadata)`);
+console.log(`contract-scope-binding-gate: OK (${declared.size} declared scopes, ${enforced.size} enforced scopes, ${eligibilityOperations.size} eligibility operations bound to Go routes and contract metadata)`);

@@ -1,19 +1,12 @@
 // dsh-route-declaration-gate: enforces that every DSH HTTP route actually
 // registered in Go source is declared in the DSH OpenAPI contract, or is a
 // reviewed exception in dsh-route-declaration-allowlist.json.
-//
-// Root cause this closes: dsh-openapi-modular-gate.mjs (and
-// contracts-foundation.mjs) only ever enforced declared ⊆ implemented --
-// nothing enforced the opposite direction, so live routes could exist with
-// no contract, no generated client, and no client-side type safety. This
-// gate makes that direction fail-closed: any NEW undeclared route fails the
-// build; only routes already reviewed and recorded in the allowlist (with a
-// reason) are tolerated, and only until they are declared.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { composeContext } from "../scripts/openapi-context-composer.mjs";
 import { parse } from "yaml";
+import { composeContext } from "../scripts/openapi-context-composer.mjs";
+import { collectHandleFuncRegistrations } from "./lib/go-http-routes.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const guardId = "dsh-route-declaration-gate";
@@ -36,19 +29,6 @@ function fail(id, violations) {
   console.log(`${id}: PASS`);
 }
 
-function listGoFiles(directory) {
-  const results = [];
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    const fullPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) {
-      results.push(...listGoFiles(fullPath));
-    } else if (entry.name.endsWith(".go") && !entry.name.endsWith("_test.go")) {
-      results.push(fullPath);
-    }
-  }
-  return results;
-}
-
 function collectDeclaredPaths() {
   return composeContext("dsh", { write: false }).then(({ bundle }) => {
     const document = parse(bundle);
@@ -65,16 +45,9 @@ function collectDeclaredPaths() {
 }
 
 function collectRegisteredRoutes() {
-  const registered = new Set();
-  const pattern = /(?:mux|router)\.HandleFunc\("([A-Z]+) ([^"]+)"/g;
-  for (const filePath of listGoFiles(backendRoot)) {
-    const content = fs.readFileSync(filePath, "utf8");
-    let match;
-    while ((match = pattern.exec(content)) !== null) {
-      registered.add(`${match[1]} ${match[2]}`);
-    }
-  }
-  return registered;
+  return new Set(
+    collectHandleFuncRegistrations(backendRoot, { recursive: true }).map((registration) => registration.route),
+  );
 }
 
 function loadAllowlist() {
@@ -118,9 +91,7 @@ for (const route of staleAllowlistEntries) {
   );
 }
 for (const route of retiredClosureRoutes) {
-  if (registered.has(route)) {
-    violations.push(`retired DSH route was re-registered: ${route}`);
-  }
+  if (registered.has(route)) violations.push(`retired DSH route was re-registered: ${route}`);
 }
 
 fail(guardId, violations);

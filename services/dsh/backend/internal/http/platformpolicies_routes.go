@@ -9,12 +9,12 @@ import (
 	"dsh-api/internal/wlt"
 )
 
-// RegisterPlatformPolicyRoutes binds the DSH-owned operational platform
-// policies to the same protected server boundary used by the rest of DSH.
-// Platform Control remains the owner of runtime variables, flags, change sets,
-// and rollouts; DSH owns service zones, SLA, capacity, serviceability, map
-// provider readback, client-address privacy, onboarding fees, and dispatch
-// balance requirements. WLT remains the balance and ledger owner.
+// RegisterPlatformPolicyRoutes binds DSH-owned operational policies to the
+// same protected server boundary used by the rest of DSH. Platform Control
+// remains the owner of runtime variables, flags, change sets, and rollouts;
+// WLT remains the sole owner of wallet balances, financial thresholds, and
+// dispatch financial policy. DSH owns only the short-lived WLT eligibility
+// decision projection used for assignment gating.
 func RegisterPlatformPolicyRoutes(
 	mux *http.ServeMux,
 	db *sql.DB,
@@ -31,10 +31,8 @@ func RegisterPlatformPolicyRoutes(
 	mux.HandleFunc("GET /dsh/operator/privacy/client-addresses/events", protected.withPermission("control-panel", "platform.read", protected.handleListClientAddressPrivacyEvents))
 	mux.HandleFunc("POST /dsh/operator/privacy/client-addresses/anonymize", protected.withPermission("control-panel", "platform.manage", protected.handleAnonymizeExpiredClientAddresses))
 
-	// Captain financial eligibility. Refresh performs a OperatorContext-scoped WLT wallet
-	// read and stores only a short-lived DSH dispatch decision snapshot.
-	mux.HandleFunc("GET /dsh/operator/platform/dispatch-balance-policy", protected.withPermission("control-panel", DshDispatchCapacityPermissionRead, protected.handleGetDispatchBalancePolicy))
-	mux.HandleFunc("PUT /dsh/operator/platform/dispatch-balance-policy", protected.withPermission("control-panel", DshDispatchCapacityPermissionManage, protected.handleUpsertDispatchBalancePolicy))
+	// Captain financial eligibility. Refresh performs an OperatorContext-scoped
+	// WLT wallet decision read and stores only a short-lived DSH dispatch snapshot.
 	mux.HandleFunc("GET /dsh/operator/dispatch/captains/{captainId}/financial-eligibility", protected.withPermission("control-panel", DshDispatchFinancialEligibilityPermissionRead, protected.handleGetOperatorCaptainFinancialEligibility))
 	mux.HandleFunc("POST /dsh/operator/dispatch/captains/{captainId}/financial-eligibility/refresh", protected.withPermission("control-panel", DshDispatchFinancialEligibilityPermissionManage, protected.handleRefreshOperatorCaptainFinancialEligibility))
 	mux.HandleFunc("GET /dsh/captain/dispatch/financial-eligibility", protected.handleGetOwnCaptainFinancialEligibility)
@@ -52,16 +50,11 @@ func RegisterPlatformPolicyRoutes(
 
 	// GET zones/sla-rules/capacity/serviceability are registered by
 	// registerUnifiedCatalogRoutes in catalog_unified_routes.go (single
-	// compatibility owner — registering them here too would panic on
-	// duplicate mux patterns).
+	// compatibility owner — registering them here too would panic on duplicate
+	// mux patterns).
 	//
-	// The write counterparts (POST/PATCH/PUT zones, PUT sla-rules, PUT
-	// capacity, GET/PUT store-onboarding-fee) are NOT registered anywhere:
-	// they are live 501 stubs in server.go (see the comment there). The
-	// handler names once referenced in this file's dead comments
-	// (handleCreateZone, handleUpdateZone, handleUpsertSlaRules,
-	// handleUpsertCapacityConfig, handleGetStoreOnboardingFeePolicy,
-	// handleUpsertStoreOnboardingFeePolicy, handleGetStoreOnboardingFeeReference)
-	// do not exist in this package — this is an unimplemented feature, not a
-	// registration bug.
+	// The write counterparts (POST/PATCH/PUT zones, PUT sla-rules, PUT capacity,
+	// GET/PUT store-onboarding-fee) are not registered anywhere: they are live
+	// 501 stubs in server.go. They remain an explicit unimplemented capability,
+	// not a route-registration defect.
 }
