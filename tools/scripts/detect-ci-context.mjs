@@ -32,10 +32,7 @@ export function classifyFiles(inputFiles, options = {}) {
   const includes = (...parts) => has((file) => parts.some((part) => file.includes(part)));
 
   const workspaceManifest = equals("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "nx.json");
-  const ciRouter = has((file) =>
-    file === "tools/scripts/detect-ci-context.mjs" ||
-    file === "tools/scripts/detect-ci-context.test.mjs"
-  );
+  const ciRouter = has((file) => file === "tools/scripts/detect-ci-context.mjs" || file === "tools/scripts/detect-ci-context.test.mjs");
   const mobileTooling = full || starts("tools/mobile/") || equals(
     "tools/scripts/guard-mobile-apps.mjs",
     "tools/scripts/sync-mobile-apps.mjs",
@@ -48,14 +45,11 @@ export function classifyFiles(inputFiles, options = {}) {
     file === "tools/scripts/run-pinact.mjs"
   );
 
-  const governance = full || mobileTooling || equals("AGENTS.md", "GEMINI.md") || starts(".agents/", "governance/") || has((file) =>
+  const governance = full || mobileTooling || equals("AGENTS.md", "CLAUDE.md", "GEMINI.md", "LEAN-CTX.md", "opencode.json") || starts(".agents/", "governance/") || has((file) =>
     file.startsWith("tools/guards/") || workspaceManifest
   );
 
-  const infrastructure = full || starts("infra/") || has((file) =>
-    /(^|\/)Dockerfile(?:\.|$)/.test(file) ||
-    file.endsWith(".dockerfile")
-  );
+  const infrastructure = full || starts("infra/") || has((file) => /(^|\/)Dockerfile(?:\.|$)/.test(file) || file.endsWith(".dockerfile"));
 
   const dsh = full || starts("services/dsh/backend/", "services/dsh/database/");
   const wlt = full || starts("services/wlt/backend/", "services/wlt/database/");
@@ -79,39 +73,25 @@ export function classifyFiles(inputFiles, options = {}) {
   const contracts = full || backendApiSurface || starts("contracts/") || includes("/contracts/", "/clients/generated/") || has((file) => file.endsWith(".openapi.yaml"));
   const database = full || includes("/database/", "/migrations/") || starts("infra/docker/");
 
-  const authChanged = full || has((file) =>
-    file.startsWith("core/identity/") && /(^|\/)(auth|authentication|activation|otp|token|credential)(\/|[-_.])/i.test(file)
-  );
-  const sessionChanged = full || has((file) =>
-    /(^|\/)(session|sessions|refresh-token|revocation|device-fingerprint)(\/|[-_.])/i.test(file)
-  );
-  const rbacChanged = full || has((file) =>
-    /(^|\/)(rbac|role|roles|permission|permissions|authorization|policy-enforcement)(\/|[-_.])/i.test(file)
-  );
-  const privacyChanged = full || has((file) =>
-    /(^|\/)(privacy|consent|retention|redaction|anonymization)(\/|[-_.])/i.test(file)
-  );
-  const piiChanged = full || has((file) =>
-    /(^|\/)(pii|personal-data|national-id|identity-document)(\/|[-_.])/i.test(file)
-  );
-  const secretsChanged = full || starts("governance/security/", "tools/security/") || has((file) =>
-    /(^|\/)(secret|secrets|credential|credentials|signing|keystore|certificate)(\/|[-_.])/i.test(file)
-  );
+  const authChanged = full || has((file) => file.startsWith("core/identity/") && /(^|\/)(auth|authentication|activation|otp|token|credential)(\/|[-_.])/i.test(file));
+  const sessionChanged = full || has((file) => /(^|\/)(session|sessions|refresh-token|revocation|device-fingerprint)(\/|[-_.])/i.test(file));
+  const rbacChanged = full || has((file) => /(^|\/)(rbac|role|roles|permission|permissions|authorization|policy-enforcement)(\/|[-_.])/i.test(file));
+  const privacyChanged = full || has((file) => /(^|\/)(privacy|consent|retention|redaction|anonymization)(\/|[-_.])/i.test(file));
+  const piiChanged = full || has((file) => /(^|\/)(pii|personal-data|national-id|identity-document)(\/|[-_.])/i.test(file));
+  const secretsChanged = full || equals("governance/policies/security.md") || starts("tools/security/") || has((file) => /(^|\/)(secret|secrets|credential|credentials|signing|keystore|certificate)(\/|[-_.])/i.test(file));
   const operatorContextChanged = full || equals(
+    "governance/product/PRD.md",
     "governance/product/platform-model.yaml",
-    "governance/policies/product.md",
+    "governance/policies/security.md",
     "governance/product/contracts/bthwani-platform-model.product-truth.json"
-  ) || has((file) =>
-    /(^|\/)(OperatorContext|operator-context|platform-context|tenancy|cross-OperatorContext)(\/|[-_.])/i.test(file)
-  );
+  ) || has((file) => /(^|\/)(OperatorContext|operator-context|platform-context|tenancy|cross-OperatorContext)(\/|[-_.])/i.test(file));
   const protectedSecurityChanged = authChanged || sessionChanged || rbacChanged || privacyChanged || piiChanged || secretsChanged || operatorContextChanged;
-  const security = workflow || protectedSecurityChanged || starts("governance/security/", "tools/security/");
+  const security = workflow || protectedSecurityChanged || equals("governance/policies/security.md") || starts("tools/security/");
 
   const financialChanged = full || wlt || starts(
     "services/dsh/backend/internal/wlt/",
     "services/dsh/frontend/shared/finance-wlt-link/",
     "services/dsh/frontend/control-panel/finance/",
-    "governance/domains/dsh-wlt/",
     "tools/scripts/finance/",
     "tools/scripts/smoke-wlt-",
     "tools/scripts/smoke-wiremock-"
@@ -137,16 +117,10 @@ export function classifyFiles(inputFiles, options = {}) {
 
   const runtime = runtimeProfile !== "none";
 
-  const sharedBrain = full || starts("shared/", "services/dsh/frontend/shared/", "services/wlt/frontend/shared/") || equals(
-    "contracts/openapi/index.yaml",
-    "tools/plans/journeys/FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md"
-  );
+  const sharedBrain = full || starts("shared/", "services/dsh/frontend/shared/", "services/wlt/frontend/shared/") || equals("contracts/openapi/index.yaml");
 
   const productJourneyGovernance = has((file) =>
     file.startsWith("governance/product/") ||
-    file.startsWith("governance/product-truth/") ||
-    file.startsWith("governance/evidence/") ||
-    file === "tools/plans/journeys/FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md" ||
     file === "tools/scripts/run-journey-gate.ps1"
   );
   const journey = full || Boolean(manualJourney) || productJourneyGovernance;
@@ -163,24 +137,18 @@ export function classifyFiles(inputFiles, options = {}) {
     file === "tools/guards/platform-change-sets-gate.mjs"
   );
 
-  const cleanupChanged = full || starts("governance/cleanup/") || equals(
+  const cleanupChanged = full || equals(
+    "governance/policies/delivery.md",
+    "governance/policies/repository-retention-policy.json",
     "tools/scripts/apply-repository-cleanup.mjs",
     "tools/guards/cleanup-policy-gate.mjs",
     "tools/scripts/check-repository-hygiene.mjs"
   );
-  const visualChanged = full || starts("shared/ui-kit/") || has((file) =>
-    file.includes("/design-tokens/") ||
-    file.endsWith(".snap") ||
-    /ui-kit-visual-contract/i.test(file)
-  );
+  const visualChanged = full || starts("shared/ui-kit/") || has((file) => file.includes("/design-tokens/") || file.endsWith(".snap") || /ui-kit-visual-contract/i.test(file));
   const migrationChanged = full || includes("/migrations/");
   const sharedContractChanged = full || starts("contracts/") || includes("/contracts/", "/clients/generated/") || has((file) => file.endsWith(".openapi.yaml"));
-  const recoveryChanged = full || starts("docs/runbooks/") || has((file) =>
-    /backup/i.test(file) || /restore/i.test(file) || /recovery/i.test(file) || /rollback/i.test(file)
-  );
-  const observabilityChanged = full || starts("tools/observability/") || has((file) =>
-    /observability/i.test(file) || /\botel\b/i.test(file) || /(^|\/)tracing\//i.test(file)
-  );
+  const recoveryChanged = full || starts("docs/runbooks/") || has((file) => /backup/i.test(file) || /restore/i.test(file) || /recovery/i.test(file) || /rollback/i.test(file));
+  const observabilityChanged = full || starts("tools/observability/") || has((file) => /observability/i.test(file) || /\botel\b/i.test(file) || /(^|\/)tracing\//i.test(file));
 
   const governancePolicy = governance;
   const workflowPolicy = workflow;
@@ -263,12 +231,8 @@ function readChangedFiles(baseSha, headSha) {
   const args = validBase
     ? ["diff", "--name-only", "--diff-filter=ACMRDTUXB", baseSha, headSha, "--"]
     : ["show", "--pretty=format:", "--name-only", headSha, "--"];
-
   try {
-    return execFileSync("git", args, { encoding: "utf8" })
-      .split(/\r?\n/)
-      .map(normalizePath)
-      .filter(Boolean);
+    return execFileSync("git", args, { encoding: "utf8" }).split(/\r?\n/).map(normalizePath).filter(Boolean);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Unable to resolve changed files for ${baseSha || "<none>"}..${headSha}: ${message}`);
@@ -293,10 +257,7 @@ function main() {
   const mode = String(process.env.CI_MODE ?? "affected").trim() || "affected";
   const journey = String(process.env.CI_JOURNEY ?? "").trim();
   const providedFiles = String(process.env.CI_CHANGED_FILES ?? "").trim();
-  const files = providedFiles
-    ? providedFiles.split(/\r?\n/).map(normalizePath).filter(Boolean)
-    : readChangedFiles(baseSha, headSha);
-
+  const files = providedFiles ? providedFiles.split(/\r?\n/).map(normalizePath).filter(Boolean) : readChangedFiles(baseSha, headSha);
   const classification = classifyFiles(files, { mode, journey });
   const outputs = { base_sha: baseSha, head_sha: headSha, mode, ...classification };
   writeGitHubOutputs(outputs);

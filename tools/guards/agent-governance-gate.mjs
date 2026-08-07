@@ -4,23 +4,13 @@ import { fail, repoRoot, toPosix } from "./_guard-utils.mjs";
 
 const guardId = "agent-governance-gate";
 const violations = [];
-const readJson = (relative) => {
-  const full = path.join(repoRoot, relative);
-  if (!fs.existsSync(full)) {
-    violations.push({ file: relative, line: 0, message: "MISSING_REQUIRED_REGISTRY" });
-    return null;
-  }
-  try { return JSON.parse(fs.readFileSync(full, "utf8")); }
-  catch (error) {
-    violations.push({ file: relative, line: 0, message: `INVALID_JSON ${error.message}` });
-    return null;
-  }
-};
 const exists = (relative) => fs.existsSync(path.join(repoRoot, relative));
 const read = (relative) => exists(relative) ? fs.readFileSync(path.join(repoRoot, relative), "utf8") : "";
-const frontmatter = (content, key) =>
-  content.match(/^---\s*\n([\s\S]*?)\n---/m)?.[1]
-    ?.match(new RegExp(`^${key}:\\s*([^\\n]+)$`, "m"))?.[1]?.trim();
+const readJson = (relative) => {
+  if (!exists(relative)) { violations.push({ file: relative, line: 0, message: "MISSING_REQUIRED_REGISTRY" }); return null; }
+  try { return JSON.parse(read(relative)); } catch (error) { violations.push({ file: relative, line: 0, message: `INVALID_JSON ${error.message}` }); return null; }
+};
+const frontmatter = (content, key) => content.match(/^---\s*\n([\s\S]*?)\n---/m)?.[1]?.match(new RegExp(`^${key}:\\s*([^\\n]+)$`, "m"))?.[1]?.trim();
 const requiredSections = ["Purpose", "Invoke when", "Do not invoke when", "Authority boundary", "Required output"];
 
 const skillsFile = "governance/skills/skills-registry.json";
@@ -44,74 +34,48 @@ if (skills) {
     bySkill.set(skill.id, skill);
     const expected = `.agents/skills/${skill.id}`;
     if (toPosix(skill.path) !== expected) violations.push({ file: skillsFile, line: 0, message: `SKILL_PATH_MISMATCH ${skill.id}` });
-
     const live = ["active", "conditional"].includes(skill.status);
     const skillMd = `${expected}/SKILL.md`;
     if (live) {
       routable.add(skill.id);
       if (skill.contract_level !== "governed") violations.push({ file: skillsFile, line: 0, message: `ROUTABLE_SKILL_NOT_GOVERNED ${skill.id}` });
-      if (!exists(skillMd)) {
-        violations.push({ file: skillMd, line: 0, message: `MISSING_SKILL_MD ${skill.id}` });
-        continue;
-      }
+      if (!exists(skillMd)) { violations.push({ file: skillMd, line: 0, message: `MISSING_SKILL_MD ${skill.id}` }); continue; }
       const content = read(skillMd);
       if (frontmatter(content, "name") !== skill.id) violations.push({ file: skillMd, line: 0, message: `SKILL_NAME_DRIFT ${skill.id}` });
       if (frontmatter(content, "version") !== skill.version) violations.push({ file: skillMd, line: 0, message: `SKILL_VERSION_DRIFT ${skill.id}` });
-      for (const section of requiredSections) {
-        if (!new RegExp(`^##\\s+${section}\\b`, "mi").test(content)) violations.push({ file: skillMd, line: 0, message: `SKILL_MISSING_SECTION ${skill.id}:${section}` });
-      }
+      for (const section of requiredSections) if (!new RegExp(`^##\\s+${section}\\b`, "mi").test(content)) violations.push({ file: skillMd, line: 0, message: `SKILL_MISSING_SECTION ${skill.id}:${section}` });
       if (!index.includes(`\`${skill.id}\``)) violations.push({ file: indexFile, line: 0, message: `ROUTABLE_SKILL_MISSING_FROM_INDEX ${skill.id}` });
-      for (const token of [...content.matchAll(/`([A-Z][A-Z0-9_]+)`/g)].map((match) => match[1])) {
-        if ((token === "PASS" || token.endsWith("_REQUIRED") || canonicalDecisions.has(token) || deprecatedDecisions.has(token)) &&
-            (!canonicalDecisions.has(token) || deprecatedDecisions.has(token))) {
+      for (const token of [...content.matchAll(/`([A-Z][A-Z0-9_]+)`/g)].map((m) => m[1])) {
+        if ((token === "PASS" || token.endsWith("_REQUIRED") || canonicalDecisions.has(token) || deprecatedDecisions.has(token)) && (!canonicalDecisions.has(token) || deprecatedDecisions.has(token)))
           violations.push({ file: skillMd, line: 0, message: `NONCANONICAL_DECISION ${skill.id}:${token}` });
-        }
       }
     } else if (skill.status === "retired") {
       if (exists(expected)) violations.push({ file: expected, line: 0, message: `RETIRED_SKILL_DIRECTORY_PRESENT ${skill.id}` });
       if ((skill.authority?.length ?? 0) || (skill.depends_on?.length ?? 0)) violations.push({ file: skillsFile, line: 0, message: `RETIRED_SKILL_OWNS_LIVE_CONTRACT ${skill.id}` });
       if (!skill.retirement_reason) violations.push({ file: skillsFile, line: 0, message: `RETIRED_SKILL_REASON_MISSING ${skill.id}` });
-    } else {
-      violations.push({ file: skillsFile, line: 0, message: `UNKNOWN_SKILL_STATUS ${skill.id}` });
-    }
+    } else violations.push({ file: skillsFile, line: 0, message: `UNKNOWN_SKILL_STATUS ${skill.id}` });
   }
-
   const skillsDir = path.join(repoRoot, ".agents/skills");
-  if (fs.existsSync(skillsDir)) {
-    for (const entry of fs.readdirSync(skillsDir, { withFileTypes: true }).filter((entry) => entry.isDirectory())) {
-      const registered = bySkill.get(entry.name);
-      if (!registered) violations.push({ file: skillsFile, line: 0, message: `UNREGISTERED_SKILL ${entry.name}` });
-      else if (registered.status === "retired") violations.push({ file: `${registered.path}/SKILL.md`, line: 0, message: `RETIRED_SKILL_DISCOVERABLE ${entry.name}` });
-    }
+  if (fs.existsSync(skillsDir)) for (const entry of fs.readdirSync(skillsDir, { withFileTypes: true }).filter((entry) => entry.isDirectory())) {
+    const registered = bySkill.get(entry.name);
+    if (!registered) violations.push({ file: skillsFile, line: 0, message: `UNREGISTERED_SKILL ${entry.name}` });
+    else if (registered.status === "retired") violations.push({ file: `${registered.path}/SKILL.md`, line: 0, message: `RETIRED_SKILL_DISCOVERABLE ${entry.name}` });
   }
-
   for (const skill of skills.entries ?? []) {
-    for (const dependency of skill.depends_on ?? []) {
-      if (!routable.has(dependency)) violations.push({ file: skillsFile, line: 0, message: `INVALID_SKILL_DEPENDENCY ${skill.id}->${dependency}` });
-    }
-    for (const conflict of skill.conflicts_with ?? []) {
-      if (!(bySkill.get(conflict)?.conflicts_with ?? []).includes(skill.id)) violations.push({ file: skillsFile, line: 0, message: `ASYMMETRIC_SKILL_CONFLICT ${skill.id}<->${conflict}` });
-    }
+    for (const dependency of skill.depends_on ?? []) if (!routable.has(dependency)) violations.push({ file: skillsFile, line: 0, message: `INVALID_SKILL_DEPENDENCY ${skill.id}->${dependency}` });
+    for (const conflict of skill.conflicts_with ?? []) if (!(bySkill.get(conflict)?.conflicts_with ?? []).includes(skill.id)) violations.push({ file: skillsFile, line: 0, message: `ASYMMETRIC_SKILL_CONFLICT ${skill.id}<->${conflict}` });
   }
-  const visiting = new Set();
-  const visited = new Set();
+  const visiting = new Set(); const visited = new Set();
   const visit = (id, stack = []) => {
-    if (visiting.has(id)) {
-      violations.push({ file: skillsFile, line: 0, message: `SKILL_DEPENDENCY_CYCLE ${[...stack, id].join("->")}` });
-      return;
-    }
+    if (visiting.has(id)) { violations.push({ file: skillsFile, line: 0, message: `SKILL_DEPENDENCY_CYCLE ${[...stack, id].join("->")}` }); return; }
     if (visited.has(id) || !routable.has(id)) return;
-    visiting.add(id);
-    for (const dependency of bySkill.get(id)?.depends_on ?? []) visit(dependency, [...stack, id]);
-    visiting.delete(id);
-    visited.add(id);
+    visiting.add(id); for (const dependency of bySkill.get(id)?.depends_on ?? []) visit(dependency, [...stack, id]); visiting.delete(id); visited.add(id);
   };
   for (const id of routable) visit(id);
 }
 
 if (tools) {
-  const ids = new Set();
-  const policies = new Set();
+  const ids = new Set(); const policies = new Set();
   for (const tool of tools.entries ?? []) {
     if (ids.has(tool.id)) violations.push({ file: toolsFile, line: 0, message: `DUPLICATE_TOOL_ID ${tool.id}` });
     ids.add(tool.id);
@@ -126,8 +90,7 @@ if (tools) {
 }
 
 if (agents) {
-  const ids = new Set();
-  const approvals = new Map();
+  const ids = new Set(); const approvals = new Map();
   for (const agent of agents.entries ?? []) {
     if (ids.has(agent.id)) violations.push({ file: agentsFile, line: 0, message: `DUPLICATE_AGENT_ID ${agent.id}` });
     ids.add(agent.id);
@@ -143,53 +106,24 @@ if (agents) {
       approvals.set(domain, agent.id);
     }
   }
-  for (const domain of ["implementation_review", "finance_approval", "residual_risk_acceptance"]) {
-    if (!approvals.has(domain)) violations.push({ file: agentsFile, line: 0, message: `REQUIRED_APPROVAL_AUTHORITY_MISSING ${domain}` });
-  }
-
-  // Check for unregistered adapter files
-  const potentialAdapters = ["AGENTS.md", "CLAUDE.md", "GEMINI.md", "LEAN-CTX.md", "opencode.json"];
-  for (const file of potentialAdapters) {
-    if (exists(file)) {
-      const isRegistered = agents.entries.some((a) => a.primary_file === file);
-      if (!isRegistered) {
-        violations.push({ file: agentsFile, line: 0, message: `UNREGISTERED_ADAPTER_FILE ${file}` });
-      }
-    }
-  }
+  for (const domain of ["implementation_review", "finance_approval", "residual_risk_acceptance"]) if (!approvals.has(domain)) violations.push({ file: agentsFile, line: 0, message: `REQUIRED_APPROVAL_AUTHORITY_MISSING ${domain}` });
+  for (const file of ["AGENTS.md", "CLAUDE.md", "GEMINI.md", "LEAN-CTX.md", "opencode.json"]) if (exists(file) && !agents.entries.some((agent) => agent.primary_file === file)) violations.push({ file: agentsFile, line: 0, message: `UNREGISTERED_ADAPTER_FILE ${file}` });
 }
 
-for (const forbidden of [".agents/adapters", ".agents/hooks"]) {
-  if (exists(forbidden)) violations.push({ file: forbidden, line: 0, message: "PARALLEL_OR_AUTOMATIC_POLICY_LAYER_PRESENT" });
-}
+for (const forbidden of [".agents/adapters", ".agents/hooks", ".agents/rules", ".agents/SKILL_CATALOG.md", ".agents/AUTHORITY_BOUNDARY.md", ".agents/EVIDENCE_GATE_ROUTER.md"])
+  if (exists(forbidden)) violations.push({ file: forbidden, line: 0, message: "PARALLEL_OR_RETIRED_AGENT_POLICY_LAYER_PRESENT" });
 
-const adapterRules = [
-  ["CLAUDE.md", "authority-precedence.json"],
-  ["GEMINI.md", "authority-precedence.json"],
-  ["LEAN-CTX.md", ".agents/tools/leanctx.md"],
-  ["opencode.json", "AGENTS.md"],
-];
-for (const [file, marker] of adapterRules) {
+for (const [file, marker] of [["CLAUDE.md", "authority-precedence.json"], ["GEMINI.md", "authority-precedence.json"], ["LEAN-CTX.md", ".agents/tools/leanctx.md"], ["opencode.json", "AGENTS.md"]]) {
   const content = read(file);
   if (!content.includes("AGENTS.md") || !content.includes(marker)) violations.push({ file, line: 0, message: "THIN_ADAPTER_MISSING_AUTHORITY_POINTER" });
   if (content.length > 1800) violations.push({ file, line: 0, message: "ADAPTER_TOO_LARGE" });
 }
 
-const scanFiles = [
-  "AGENTS.md", "CLAUDE.md", "GEMINI.md", "LEAN-CTX.md",
-  "opencode.json",
-  ".agents/AUTHORITY_BOUNDARY.md", ".agents/AGENT_SYSTEM_UPDATE_POLICY.md",
-  ".agents/INDEX.md", ".agents/SKILL_CATALOG.md",
-  "governance/tools/agent-tool-registry.json",
-];
-for (const file of scanFiles) {
+for (const file of ["AGENTS.md", "CLAUDE.md", "GEMINI.md", "LEAN-CTX.md", "opencode.json", ".agents/INDEX.md", "governance/tools/agent-tool-registry.json"]) {
   const content = read(file);
-  if (/[A-Za-z]:[\\/](?:Users|Documents and Settings)[\\/]/i.test(content) || /\/home\/[^/\s]+\/|\/Users\/[^/\s]+\//.test(content)) {
-    violations.push({ file, line: 0, message: "MACHINE_SPECIFIC_ABSOLUTE_PATH" });
-  }
+  if (/[A-Za-z]:[\\/](?:Users|Documents and Settings)[\\/]/i.test(content) || /\/home\/[^/\s]+\/|\/Users\/[^/\s]+\//.test(content)) violations.push({ file, line: 0, message: "MACHINE_SPECIFIC_ABSOLUTE_PATH" });
 }
-const trackedSensitiveRoots = [".agents", "governance/tools"];
-for (const root of trackedSensitiveRoots) {
+for (const root of [".agents", "governance/tools"]) {
   const full = path.join(repoRoot, root);
   if (!fs.existsSync(full)) continue;
   const stack = [full];
@@ -204,8 +138,8 @@ for (const root of trackedSensitiveRoots) {
 }
 
 const agentsMd = read("AGENTS.md");
-if (!agentsMd.includes("governance/tools/agent-tool-registry.json")) violations.push({ file: "AGENTS.md", line: 0, message: "AGENTS_MISSING_TOOL_REGISTRY" });
-if (!agentsMd.includes("Implementation truth") || !agentsMd.includes("Authority truth")) violations.push({ file: "AGENTS.md", line: 0, message: "AGENTS_TRUTH_DOMAINS_NOT_SEPARATED" });
+for (const marker of ["governance/GOVERNANCE.md", "governance/product/PRD.md", "governance/tools/agent-tool-registry.json", "Implementation truth", "Authority truth"])
+  if (!agentsMd.includes(marker)) violations.push({ file: "AGENTS.md", line: 0, message: `AGENTS_MISSING_UNIFIED_GOVERNANCE_POINTER ${marker}` });
 if (/use Graphify first/i.test(read("GEMINI.md"))) violations.push({ file: "GEMINI.md", line: 0, message: "GEMINI_GRAPHIFY_FIRST" });
 
 fail(guardId, violations);
