@@ -6,6 +6,16 @@ import (
 	"time"
 )
 
+func identityReadinessBlocker(active bool, err error) (BlockerReason, bool) {
+	if err != nil {
+		return BlockerEligibilityUnavailable, true
+	}
+	if !active {
+		return BlockerIdentitySuspended, true
+	}
+	return "", false
+}
+
 // EvaluateReadiness orchestrates the Workforce-owned portion of provider
 // readiness: Identity activation state, engagement state, and the sovereign
 // professional profile. It deliberately fails closed when a role projection is
@@ -36,11 +46,11 @@ func (s *Service) EvaluateReadiness(ctx context.Context, actorID string) (*Readi
 		CheckedAt:      time.Now(),
 	}
 
-	// Identity status. A lookup failure fails closed rather than assuming the
-	// actor is healthy.
+	// Identity lifecycle truth comes from the canonical status field. Dependency
+	// failure is not a suspension: it blocks readiness as unavailable instead.
 	actor, err := s.identity.Actor(ctx, actorID)
-	if err != nil || !actor.Active {
-		gate.BlockerReasons = append(gate.BlockerReasons, BlockerIdentitySuspended)
+	if reason, blocked := identityReadinessBlocker(actor.IsActive(), err); blocked {
+		gate.BlockerReasons = append(gate.BlockerReasons, reason)
 	}
 
 	if person.EngagementStatus == "terminated" || person.EngagementStatus == "suspended" {

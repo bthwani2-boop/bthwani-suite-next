@@ -35,7 +35,7 @@ func TestSearchActorsDecodesGovernedPageAndSendsServiceIdentity(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(ActorSearchPage{Items: []ActorView{{
 			ActorID: "field-1", Username: "ali", PhoneE164: "+967770000001",
-			Roles: []string{"field"}, Active: true, Status: "ACTIVE",
+			Roles: []string{"field"}, Status: "ACTIVE",
 		}}, Limit: 100, NextCursor: "abc", Total: 1})
 	}))
 	defer server.Close()
@@ -47,6 +47,9 @@ func TestSearchActorsDecodesGovernedPageAndSendsServiceIdentity(t *testing.T) {
 	}
 	if len(actors) != 1 || actors[0].ActorID != "field-1" {
 		t.Fatalf("unexpected actors %#v", actors)
+	}
+	if !actors[0].IsActive() {
+		t.Fatalf("expected canonical ACTIVE status to be active, got %#v", actors[0])
 	}
 	if nextCursor != "abc" {
 		t.Fatalf("unexpected next cursor %q", nextCursor)

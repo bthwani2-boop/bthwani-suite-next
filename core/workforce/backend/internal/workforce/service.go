@@ -52,7 +52,7 @@ func (s *Service) validateSupervisor(ctx context.Context, supervisorActorID, wor
 		}
 		return err
 	}
-	if !actor.Active {
+	if !actor.IsActive() {
 		return ErrInvalidSupervisor
 	}
 	expectedRole := "workforce.supervise.field"
@@ -103,7 +103,7 @@ func (s *Service) SearchSupervisors(ctx context.Context, kind, query string) ([]
 			ActorID:  actor.ActorID,
 			Username: actor.Username,
 			Phone:    maskPhone(actor.PhoneE164),
-			Active:   actor.Active,
+			Active:   actor.IsActive(),
 		})
 	}
 	return candidates, nil
@@ -623,7 +623,7 @@ func (s *Service) FieldAgentByID(ctx context.Context, actorID string) (FieldAgen
 	}
 	if actor, err := s.identity.Actor(ctx, actorID); err == nil {
 		detail.PhoneMasked = maskPhone(actor.PhoneE164)
-		detail.AuthActive = actor.Active
+		detail.AuthActive = actor.IsActive()
 	}
 	if meta, err := s.identity.LatestActivation(ctx, actorID); err == nil && meta != nil {
 		detail.LatestActivation = meta

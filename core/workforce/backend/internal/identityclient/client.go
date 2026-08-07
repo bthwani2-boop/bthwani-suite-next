@@ -73,12 +73,18 @@ type ActorView struct {
 	Username  string   `json:"username"`
 	PhoneE164 string   `json:"phoneE164"`
 	Roles     []string `json:"roles"`
-	Active    bool     `json:"active"`
+	Version   int      `json:"version"`
 	Status    string   `json:"status"`
 }
 
+// IsActive derives lifecycle truth exclusively from Identity's canonical
+// status field. Identity does not expose a parallel JSON "active" boolean.
+func (a ActorView) IsActive() bool {
+	return strings.EqualFold(strings.TrimSpace(a.Status), "ACTIVE")
+}
+
 type ActorSearchPage struct {
-	Items  []ActorView `json:"items"`
+	Items      []ActorView `json:"items"`
 	Limit      int         `json:"limit"`
 	NextCursor string      `json:"nextCursor,omitempty"`
 	Total      int         `json:"total"`
