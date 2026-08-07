@@ -63,6 +63,13 @@ function Invoke-ComposePsql {
   }
 }
 
+if ($Service -eq "dsh") {
+  & (Join-Path $ScriptDir "recover-dsh-144-checksum.ps1") `
+    -SourceCommitSha $SourceCommitSha `
+    -ComposeFile $ComposeFile `
+    -EnvFile $EnvFile
+}
+
 $executeBatch = {
   param([string]$Sql)
   Invoke-ComposePsql -Sql $Sql

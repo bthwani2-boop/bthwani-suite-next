@@ -17,6 +17,12 @@ var platformPrivilegedActions = map[string]struct{}{
 	"platform:rollouts:manage":    {},
 }
 
+var localOperatorPartnerPermissions = []Permission{
+	{Service: "dsh", Surface: "control-panel", Action: "partners.read", Scope: "all"},
+	{Service: "dsh", Surface: "control-panel", Action: "partners.manage", Scope: "all"},
+	{Service: "dsh", Surface: "control-panel", Action: "partners.activate", Scope: "all"},
+}
+
 // BootstrapLocalPlatformActors applies separation of duties to the local
 // control-plane accounts. It runs only when the existing local bootstrap is
 // explicitly enabled and never affects production actors.
@@ -31,7 +37,7 @@ func (r *Repository) BootstrapLocalPlatformActors(ctx context.Context, input Loc
 	if operatorContextID == "" {
 		return errors.New("BTHWANI_OPERATOR_CONTEXT_ID is required when IDENTITY_LOCAL_BOOTSTRAP=true")
 	}
-	if err := r.restrictLocalOperatorPlatformPermissions(ctx); err != nil {
+	if err := r.reconcileLocalOperatorPermissions(ctx); err != nil {
 		return err
 	}
 
@@ -118,7 +124,7 @@ ON CONFLICT (id) DO UPDATE SET
 	return nil
 }
 
-func (r *Repository) restrictLocalOperatorPlatformPermissions(ctx context.Context) error {
+func (r *Repository) reconcileLocalOperatorPermissions(ctx context.Context) error {
 	var raw []byte
 	if err := r.db.QueryRowContext(ctx, `
 SELECT permissions
@@ -130,7 +136,7 @@ WHERE id = 'operator-local-001'`).Scan(&raw); err != nil {
 	if err := json.Unmarshal(raw, &permissions); err != nil {
 		return err
 	}
-	filtered := make([]Permission, 0, len(permissions))
+	filtered := make([]Permission, 0, len(permissions)+len(localOperatorPartnerPermissions))
 	for _, permission := range permissions {
 		if permission.Surface == "control-panel" && strings.HasPrefix(permission.Action, "platform:") {
 			if _, privileged := platformPrivilegedActions[permission.Action]; privileged {
@@ -139,6 +145,7 @@ WHERE id = 'operator-local-001'`).Scan(&raw); err != nil {
 		}
 		filtered = append(filtered, permission)
 	}
+	filtered = mergeRequiredPermissions(filtered, localOperatorPartnerPermissions)
 	encoded, err := json.Marshal(filtered)
 	if err != nil {
 		return err
@@ -148,4 +155,21 @@ UPDATE identity_actors
 SET permissions = $2::jsonb, updated_at = NOW()
 WHERE id = $1`, "operator-local-001", string(encoded))
 	return err
+}
+
+func mergeRequiredPermissions(existing, required []Permission) []Permission {
+	merged := append([]Permission(nil), existing...)
+	for _, candidate := range required {
+		present := false
+		for _, permission := range merged {
+			if permission == candidate {
+				present = true
+				break
+			}
+		}
+		if !present {
+			merged = append(merged, candidate)
+		}
+	}
+	return merged
 }

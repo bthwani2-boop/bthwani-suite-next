@@ -37,3 +37,28 @@ func TestDisabledLocalBootstrapDoesNotRequireOperatorContext(t *testing.T) {
 		t.Fatalf("disabled platform bootstrap must be a no-op: %v", err)
 	}
 }
+
+func TestMergeRequiredPermissionsAddsPartnerBundleWithoutDuplicates(t *testing.T) {
+	existing := []Permission{
+		{Service: "dsh", Surface: "control-panel", Action: "store:read", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "partners.read", Scope: "all"},
+	}
+
+	merged := mergeRequiredPermissions(existing, localOperatorPartnerPermissions)
+	for _, required := range localOperatorPartnerPermissions {
+		count := 0
+		for _, permission := range merged {
+			if permission == required {
+				count++
+			}
+		}
+		if count != 1 {
+			t.Fatalf("required permission %+v must exist exactly once; count=%d", required, count)
+		}
+	}
+
+	mergedAgain := mergeRequiredPermissions(merged, localOperatorPartnerPermissions)
+	if len(mergedAgain) != len(merged) {
+		t.Fatalf("permission reconciliation must be idempotent: first=%d second=%d", len(merged), len(mergedAgain))
+	}
+}
