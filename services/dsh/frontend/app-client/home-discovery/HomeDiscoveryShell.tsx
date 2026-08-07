@@ -206,6 +206,35 @@ export function HomeDiscoveryShell({
     onMarketingAction?.(reel.targetType, reel.targetId);
   }, [onMarketingAction]);
 
+  React.useEffect(() => {
+    if (state.kind !== "success") return;
+    
+    if (!searchText && activeFilter === 'all' && activeCategoryId === null) {
+      setQueriedStores(null);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setIsQuerying(true);
+      fetchDiscoveryStores({
+        ...(state.data.context.cityCode ? { cityCode: state.data.context.cityCode } : {}),
+        ...(state.data.context.serviceAreaCode ? { serviceAreaCode: state.data.context.serviceAreaCode } : {}),
+        ...(searchText ? { search: searchText } : {}),
+        ...(activeCategoryId ? { category: activeCategoryId } : {}),
+        sort: activeFilter === 'nearest' ? 'distance' : 'rating',
+        ...(activeFilter === 'offers' ? { isFreeDelivery: true } : {}),
+      }).then((stores) => {
+        setQueriedStores(stores);
+      }).catch((e) => {
+         setQueriedStores([]);
+      }).finally(() => {
+        setIsQuerying(false);
+      });
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchText, activeFilter, activeCategoryId, state.kind, state.kind === "success" ? state.data.context : null]);
+
   if (state.kind === "loading") {
     return <Screen padded={false}><LoadingState title="جاري التحميل..." /></Screen>;
   }
@@ -238,35 +267,6 @@ export function HomeDiscoveryShell({
       </Screen>
     );
   }
-
-  React.useEffect(() => {
-    if (state.kind !== "success") return;
-    
-    if (!searchText && activeFilter === 'all' && activeCategoryId === null) {
-      setQueriedStores(null);
-      return;
-    }
-
-    const timeoutId = setTimeout(() => {
-      setIsQuerying(true);
-      fetchDiscoveryStores({
-        ...(state.data.context.cityCode ? { cityCode: state.data.context.cityCode } : {}),
-        ...(state.data.context.serviceAreaCode ? { serviceAreaCode: state.data.context.serviceAreaCode } : {}),
-        ...(searchText ? { search: searchText } : {}),
-        ...(activeCategoryId ? { category: activeCategoryId } : {}),
-        sort: activeFilter === 'nearest' ? 'distance' : 'rating',
-        ...(activeFilter === 'offers' ? { isFreeDelivery: true } : {}),
-      }).then((stores) => {
-        setQueriedStores(stores);
-      }).catch((e) => {
-         setQueriedStores([]);
-      }).finally(() => {
-        setIsQuerying(false);
-      });
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchText, activeFilter, activeCategoryId, state.kind, state.kind === "success" ? state.data.context : null]);
 
   const { banners, promos, filters, categories, stores } = state.data;
   const filteredStores = queriedStores ?? stores;
