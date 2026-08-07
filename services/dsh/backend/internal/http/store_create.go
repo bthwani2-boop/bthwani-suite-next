@@ -88,5 +88,7 @@ func (s *protectedStoreServer) createOperatorStore(w http.ResponseWriter, r *htt
 		status = http.StatusOK
 		w.Header().Set("Idempotent-Replayed", "true")
 	}
-	store.SendJSON(w, status, storeRow)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(storeRow)
 }
