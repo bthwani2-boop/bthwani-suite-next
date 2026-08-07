@@ -67,7 +67,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FULL_VERIFICATION_TRIGGER: governance/github/full-verification.trigger.json
+  FULL_VERIFICATION_TRIGGER: governance/github/full-verification-policy.json
   GIT_CONFIG_COUNT: "1"
   GIT_CONFIG_KEY_0: init.defaultBranch
   GIT_CONFIG_VALUE_0: master
