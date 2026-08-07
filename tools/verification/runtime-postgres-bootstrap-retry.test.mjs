@@ -15,7 +15,10 @@ test("runtime retries only the transient PostgreSQL bootstrap restart", () => {
     /database system is shutting down\|the database system is starting up/,
   );
   assert.match(phaseScript, /Retrying runtime:up once after stabilization/);
-  assert.match(phaseScript, /Invoke-RuntimeBasePhase -Append/);
+  assert.match(
+    phaseScript,
+    /Invoke-RuntimeBasePhase\s+-ScriptPath\s+\$phaseRuntimeScript\s+-Parameters\s+\$runtimeParameters\s+-Append/,
+  );
   assert.doesNotMatch(phaseScript, /while\s*\(/);
   assert.doesNotMatch(phaseScript, /for\s*\([^)]*retry/i);
 });
