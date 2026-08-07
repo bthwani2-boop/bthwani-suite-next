@@ -6,9 +6,9 @@ param(
 Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $ErrorActionPreference = "Stop"
 
-$manifestPath = "tools\guards\guard-manifest.json"
+$manifestPath = "governance\guards\guard-sets.json"
 if (-not (Test-Path -LiteralPath $manifestPath)) {
-  throw "Guard manifest is missing: $manifestPath"
+  throw "Guard set contract is missing: $manifestPath"
 }
 
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
