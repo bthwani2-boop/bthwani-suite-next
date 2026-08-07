@@ -1,9 +1,5 @@
 # -Journey is an evidence label recorded with the run, not a guard selector.
-# The guard registry carries no per-journey capability metadata, so there is
-# nothing to select on; a previous Test-JourneyGuardSelected helper returned
-# $true unconditionally, which made the parameter look like a filter while
-# every registered journey guard ran regardless. Real selection is -Guard,
-# which is validated against the registered journey set below.
+# Real selection is -Guard, validated against the registered journey set.
 param(
   [switch]$Full,
   [switch]$Runtime,
@@ -14,7 +10,7 @@ param(
 Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $ErrorActionPreference = "Stop"
 
-$manifestPath = "tools\guards\guard-manifest.json"
+$manifestPath = "governance\guards\guard-sets.json"
 $registryPath = "governance\guards\guard-registry.json"
 foreach ($requiredPath in @($manifestPath, $registryPath)) {
   if (-not (Test-Path -LiteralPath $requiredPath)) {
@@ -41,9 +37,6 @@ if ($Guard) {
 $script:StepLog = [System.Collections.Generic.List[object]]::new()
 $script:SummaryPath = Join-Path ([string](Get-Location)) ".diagnostics/journey-gate/journey-gate-summary.json"
 
-# A bare "[ FAIL] <step>" told an operator which step threw, but not what the
-# gate had already proven nor the failing output. Every run now writes a
-# machine-readable summary so the uploaded CI artifact is diagnostic on its own.
 function Write-JourneyGateSummary {
   param([Parameter(Mandatory)][string]$Result, [string]$FailedStep = "", [string]$Detail = "")
   $summary = [ordered]@{
@@ -74,24 +67,16 @@ function Invoke-Step {
   try {
     $stepOutput = & $Block 2>&1
     $nativeExitCode = $global:LASTEXITCODE
-    foreach ($line in @($stepOutput)) {
-      Write-Host $line
-    }
+    foreach ($line in @($stepOutput)) { Write-Host $line }
     if ($nativeExitCode -ne 0) { throw "exit $nativeExitCode" }
     Write-Host "[ OK  ] $Name"
-    $script:StepLog.Add([ordered]@{
-        step = $Name; result = "PASS"; durationSeconds = [math]::Round(((Get-Date) - $startedAt).TotalSeconds, 2)
-      })
+    $script:StepLog.Add([ordered]@{ step = $Name; result = "PASS"; durationSeconds = [math]::Round(((Get-Date) - $startedAt).TotalSeconds, 2) })
   }
   catch {
     $detail = [string]$_
     $tail = @($stepOutput) | Select-Object -Last 40 | ForEach-Object { [string]$_ }
     Write-Host "[ FAIL] $Name - $detail"
-    $script:StepLog.Add([ordered]@{
-        step = $Name; result = "FAIL"; detail = $detail
-        durationSeconds = [math]::Round(((Get-Date) - $startedAt).TotalSeconds, 2)
-        outputTail = @($tail)
-      })
+    $script:StepLog.Add([ordered]@{ step = $Name; result = "FAIL"; detail = $detail; durationSeconds = [math]::Round(((Get-Date) - $startedAt).TotalSeconds, 2); outputTail = @($tail) })
     Write-JourneyGateSummary -Result "FAIL" -FailedStep $Name -Detail $detail
     Write-Output ""
     Write-Output "RESULT: FAIL step=$Name capability=$Journey"
@@ -110,22 +95,18 @@ if ($Full) {
     @{ Name = "typecheck"; Command = { pnpm run typecheck } },
     @{ Name = "test"; Command = { pnpm run test } },
     @{ Name = "build"; Command = { pnpm run build } }
-  )) {
-    Invoke-Step $step.Name $step.Command
-  }
+  )) { Invoke-Step $step.Name $step.Command }
 }
 
 foreach ($guardName in $journeyGuards) {
   $entry = $guardEntries[$guardName]
   if (-not $entry) { throw "Journey guard is not present in the guard registry: $guardName" }
-
   $stepName = "guard:$guardName"
   if ($entry.script) {
     $scriptName = [string]$entry.script
     Invoke-Step $stepName { pnpm run $scriptName }
     continue
   }
-
   $sourceFile = [string]$entry.source_file
   if (-not $sourceFile -or $sourceFile -notmatch '\.(mjs|cjs|js)$') {
     throw "Journey guard has no executable package script or Node source: $guardName"
@@ -138,9 +119,7 @@ if ($Runtime) {
     @{ Name = "runtime-full-reset"; Command = { pnpm run runtime:full:reset } },
     @{ Name = "runtime-full-smoke"; Command = { pnpm run runtime:full:smoke } },
     @{ Name = "wiremock-financial-smoke"; Command = { pnpm run runtime:wiremock:financial:smoke } }
-  )) {
-    Invoke-Step $step.Name $step.Command
-  }
+  )) { Invoke-Step $step.Name $step.Command }
 }
 
 $scope = if ($Runtime) { "runtime" } else { "static" }
