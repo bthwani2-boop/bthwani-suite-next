@@ -144,12 +144,18 @@ export function useCartController(
 
   useEffect(() => {
     const handleOnline = () => { void syncQueue(); };
-    window.addEventListener("online", handleOnline);
+    if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+      window.addEventListener("online", handleOnline);
+    }
     // Try to sync on mount if online
-    if (typeof navigator !== "undefined" && navigator.onLine) {
+    if (typeof navigator !== "undefined" && "onLine" in navigator && navigator.onLine) {
       void syncQueue();
     }
-    return () => window.removeEventListener("online", handleOnline);
+    return () => {
+      if (typeof window !== "undefined" && typeof window.removeEventListener === "function") {
+        window.removeEventListener("online", handleOnline);
+      }
+    };
   }, [syncQueue]);
 
   const addItem = useCallback(

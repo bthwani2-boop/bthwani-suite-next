@@ -144,7 +144,7 @@ export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProduct
                   tone={DOCUMENT_STATUS_TONE[doc.documentStatus] ?? 'info'}
                 />
               </View>
-            ))}
+            ))
           )}
         </SectionCard>
 
