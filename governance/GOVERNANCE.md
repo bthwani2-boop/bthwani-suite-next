@@ -8,7 +8,7 @@ This document is the human-readable governance index. Directory boundaries and c
 
 ## Authority
 
-The current user instruction owns current-task scope and requested actions, subject to platform safety and repository permissions. Repository authority then follows `governance/authority/authority-precedence.json`, `AGENTS.md`, the six active policies below, and the machine-readable contracts registered by the authority map.
+The current user instruction owns current-task scope and requested actions, subject to platform safety and repository permissions. Repository authority then follows `governance/authority/authority-precedence.json`, `AGENTS.md`, the six core policies below, explicitly registered domain decisions, and the machine-readable contracts registered by the authority map.
 
 Prompts, plans, diagnostics, runbooks, generated evidence, historical Git content, adapters and support packages do not create policy merely because they are committed.
 
@@ -41,7 +41,7 @@ Product, architecture, governance, CI, engineering, QA, security, finance, relea
 
 ## Active canonical policies
 
-Only these durable human-readable policies are the core policy set:
+Only these durable general policies are the core policy set:
 
 - `governance/policies/product.md`
 - `governance/policies/contracts.md`
@@ -50,7 +50,13 @@ Only these durable human-readable policies are the core policy set:
 - `governance/policies/runtime.md`
 - `governance/policies/release.md`
 
-Domain decisions, machine contracts and derived support must not masquerade as an additional general policy.
+Domain decisions may refine these policies only within a unique authority domain explicitly registered in the authority map. They must not create overlapping general policy.
+
+Current registered domain decisions:
+
+- `governance/product/decisions/CENTRAL_CATALOG_SOVEREIGNTY_DECISION.md` — catalog sovereignty.
+- `governance/domains/dsh-wlt/dispatch-boundary.md` — dispatch operational/financial ownership boundary.
+- `governance/domains/dsh-wlt/order-truth-boundary.md` — order operational/financial truth boundary.
 
 ## Registered machine and support paths
 
@@ -96,7 +102,7 @@ The following are explicitly not governance authority:
 - `docs/runbooks/**` — operational procedures;
 - CI artifacts, logs, screenshots, generated reports and historical state.
 
-`governance/operational_journey_protocol_package/**` is currently retained only as registered `DERIVED_SUPPORT` while its consumers are migrated. It may not describe itself as final/non-bypassable/canonical authority and may not override the six policies, machine contracts, live implementation truth or same-commit runtime evidence.
+`governance/operational_journey_protocol_package/**` is currently retained only as registered `DERIVED_SUPPORT` while its consumers are migrated. It may not describe itself as final/non-bypassable/canonical authority and may not override the core policies, registered domain decisions, machine contracts, live implementation truth or same-commit runtime evidence.
 
 ## Governance change invariant
 
