@@ -30,3 +30,12 @@ test("runtime still fails closed after the one narrow retry", () => {
     1,
   );
 });
+
+test("runtime accepts a single non-WLT profile under StrictMode", () => {
+  assert.match(phaseScript, /\$runtimeProfiles = \$runtimeProfileList -join ","/);
+  assert.match(
+    phaseScript,
+    /elseif \(-not \[string\]::IsNullOrWhiteSpace\(\$runtimeProfiles\)\)/,
+  );
+  assert.doesNotMatch(phaseScript, /\$runtimeProfileList\.Count/);
+});
