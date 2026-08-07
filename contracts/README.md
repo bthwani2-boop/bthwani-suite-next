@@ -33,8 +33,8 @@ x-bthwani-overlays:
 
 Resolution is **one level deep**. A module is a leaf: it must not declare its own
 `x-bthwani-contracts`, must not be indexed by two entries, and must not also be a
-master-indexed entry. `tools/important-scripts/contracts-foundation.mjs` enforces
-all three, and `tools/guards/api-binding-gate.mjs` follows master → entry → module
+master-indexed entry. `tools/scripts/contracts/foundation.mjs` enforces these
+invariants, and `tools/guards/api-binding-gate.mjs` follows master → entry → module
 when deciding whether a runtime path is registered.
 
 ## Per-context manifest
@@ -66,9 +66,13 @@ projection of the master index, context manifests, modules, overlays, bundles,
 clients, and path counts. It is not an authority source and must not be committed.
 
 ```sh
-pnpm run contracts:registry   # generate the ignored diagnostic report
-pnpm run contracts:lint       # foundation invariants + diagnostic integrity + spectral
+pnpm run contracts:registry
+pnpm run contracts:lint
 ```
+
+`tools/scripts/contracts/typecheck.mjs` performs the read-only aggregate OpenAPI
+verification; `tools/scripts/contracts/normalize-openapi-metadata.mjs` is its
+normalization helper. Contract tooling lives under one functional tool root.
 
 ## Layout ownership
 

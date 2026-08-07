@@ -6,9 +6,9 @@
   "sideEffects": false,
   "scripts": {
     "foundation": "pnpm run typecheck",
-    "typecheck": "node ../tools/important-scripts/contracts-typecheck.mjs && node ../tools/important-scripts/contracts-foundation.mjs && node ../tools/guards/generated-client-provenance-gate.mjs && node ../tools/guards/control-panel-architecture-gate.mjs && node ../tools/guards/service-workspace-gate.mjs",
+    "typecheck": "node ../tools/scripts/contracts/typecheck.mjs && node ../tools/scripts/contracts/foundation.mjs && node ../tools/guards/generated-client-provenance-gate.mjs && node ../tools/guards/control-panel-architecture-gate.mjs && node ../tools/guards/service-workspace-gate.mjs",
     "build": "pnpm run typecheck",
-    "test": "node ../tools/important-scripts/contracts-foundation.mjs && node ../tools/guards/generated-client-provenance-gate.mjs",
+    "test": "node ../tools/scripts/contracts/foundation.mjs && node ../tools/guards/generated-client-provenance-gate.mjs",
     "lint": "pnpm run typecheck && node ../tools/guards/api-binding-gate.mjs && node ../tools/guards/backend-api-binding-gate.mjs && node ../tools/guards/service-manifest-drift-gate.mjs"
   }
 }

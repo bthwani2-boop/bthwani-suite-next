@@ -9,7 +9,7 @@
   },
   "scripts": {
     "postinstall": "node tools/scripts/postinstall-generate-clients.mjs",
-    "contracts:redocly": "node tools/important-scripts/contracts-typecheck.mjs",
+    "contracts:redocly": "node tools/scripts/contracts/typecheck.mjs",
     "contracts:registry": "node tools/scripts/generate-contract-registry.mjs",
     "contracts:lint": "pnpm run contracts:redocly && pnpm run guard:contract-registry-drift",
     "typecheck": "pnpm -r --if-present typecheck",

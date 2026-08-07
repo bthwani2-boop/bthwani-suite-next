@@ -23,8 +23,8 @@
       "entry": [
         "tools/guards/*.mjs",
         "tools/guards/sdlc/*.mjs",
-        "tools/important-scripts/*.mjs",
         "tools/scripts/*.mjs",
+        "tools/scripts/contracts/*.mjs",
         "tools/verification/*.mjs",
         "tools/performance/**/*.{js,cjs}",
         "*.config.{js,mjs,cjs,ts}"

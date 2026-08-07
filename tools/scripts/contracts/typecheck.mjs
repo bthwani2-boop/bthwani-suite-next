@@ -2,12 +2,12 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync,
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { normalizeOpenApiMetadata } from "../contracts/normalize-openapi-metadata.mjs";
-import { composeContext } from "../scripts/openapi-context-composer.mjs";
+import { normalizeOpenApiMetadata } from "./normalize-openapi-metadata.mjs";
+import { composeContext } from "../openapi-context-composer.mjs";
 
 const contexts = ["identity", "workforce", "platform-control", "providers", "dsh", "wlt"];
 
-const repoRoot = new URL("../..", import.meta.url);
+const repoRoot = new URL("../../..", import.meta.url);
 const tempDir = mkdtempSync(join(tmpdir(), "bthwani-contracts-"));
 
 function firstActionableDiagnostic(output) {
@@ -87,7 +87,7 @@ async function verifyGeneratedBundle(context) {
 }
 
 try {
-  run("contracts-foundation", "node", ["tools/important-scripts/contracts-foundation.mjs"], {
+  run("contracts-foundation", "node", ["tools/scripts/contracts/foundation.mjs"], {
     stdio: "inherit",
   });
   materializeSharedContracts();
