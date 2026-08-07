@@ -9,7 +9,7 @@ const warnings = [];
 const registryRelative = "governance/guards/guard-registry.json";
 const directRegistrationRelative = "governance/guards/registrations/direct-work-branch-execution.json";
 const packageRelative = "package.json";
-const manifestRelative = "tools/guards/guard-manifest.json";
+const guardSetsRelative = "governance/guards/guard-sets.json";
 const workflowsRoot = ".github/workflows";
 const workflowsDir = path.join(repoRoot, workflowsRoot);
 const immutableCoreWorkflows = [
@@ -125,7 +125,7 @@ function verifyDirectWorkBranchRegistration(registration) {
 const registry = readJson(registryRelative);
 const directRegistration = readJson(directRegistrationRelative);
 const packageJson = readJson(packageRelative);
-const manifest = readJson(manifestRelative);
+const guardSets = readJson(guardSetsRelative);
 verifyDirectWorkBranchRegistration(directRegistration);
 const entries = Array.isArray(registry?.entries) ? registry.entries : [];
 const scripts = packageJson?.scripts ?? {};
@@ -162,13 +162,6 @@ for (const scriptName of Object.keys(scripts).filter((name) => name.startsWith("
   if (!aggregateScripts.has(scriptName) && !registeredScripts.has(scriptName)) violations.push({ file: packageRelative, line: 0, message: `UNREGISTERED_GUARD_SCRIPT ${scriptName}` });
 }
 
-// Reverse direction of the check above: every executable guard *source file*
-// on disk must be reachable from somewhere -- a root package.json script, a
-// contracts/package.json script (some guards are wired there instead), a
-// CI workflow invoking it directly, or the direct-work-branch-execution
-// registration file. A guard with none of these is orphaned: it can never
-// run, so it silently stops protecting anything the moment it bit-rots.
-// This is the structural fix for repeated "N unregistered guards" findings.
 {
   const guardsDir = path.join(repoRoot, "tools/guards");
   const guardFiles = fs.existsSync(guardsDir)
@@ -191,9 +184,15 @@ for (const scriptName of Object.keys(scripts).filter((name) => name.startsWith("
   }
 }
 
-const manifestGuardIds = new Set([...(manifest?.guardSets?.foundation ?? []), ...(manifest?.guardSets?.journey ?? []), ...(manifest?.guardSets?.governance ?? [])]);
-for (const id of manifestGuardIds) {
-  if (!entryById.has(id)) violations.push({ file: manifestRelative, line: 0, message: `MANIFEST_REFERENCES_UNKNOWN_GUARD ${id}` });
+const canonicalGuardIds = new Set([
+  ...(guardSets?.guardSets?.foundation ?? []),
+  ...(guardSets?.guardSets?.journey ?? []),
+  ...(guardSets?.guardSets?.governance ?? []),
+]);
+for (const id of canonicalGuardIds) {
+  if (!entryById.has(id)) violations.push({ file: guardSetsRelative, line: 0, message: `GUARD_SET_REFERENCES_UNKNOWN_GUARD ${id}` });
+  const entry = entryById.get(id);
+  if (entry && !entry.script && !entry.source_file) violations.push({ file: registryRelative, line: 0, message: `CANONICAL_GUARD_HAS_NO_EXECUTION_ROUTE ${id}` });
 }
 
 if (!fs.existsSync(workflowsDir)) {
