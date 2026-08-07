@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import ts from "typescript";
+import { ts } from "../../tools/guards/lib/typescript-compiler.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const appIndex = process.argv.indexOf("--app");

@@ -1,23 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, Button } from 'react-native';
-import { useBThwaniAppearance } from '@bthwani/ui-kit';
-
-export type BlockerReason = 
-  | "IDENTITY_SUSPENDED"
-  | "PROFILE_INCOMPLETE"
-  | "DOCUMENTS_EXPIRED"
-  | "EMPLOYMENT_TERMINATED"
-  | "NO_ACTIVE_ASSIGNMENT"
-  | "SHIFT_INACTIVE"
-  | "OUTSIDE_ACTIVE_AREA"
-  | "FINANCIAL_ELIGIBILITY_BLOCKED"
-  | "ELIGIBILITY_UNAVAILABLE";
-
-export interface ReadinessGate {
-  actorId: string;
-  status: "ALLOWED" | "BLOCKED";
-  blockerReasons: BlockerReason[];
-}
+import { View, StyleSheet } from 'react-native';
+import { Button, Text, useBThwaniAppearance } from '@bthwani/ui-kit';
+import type {
+  BlockerReason,
+  ReadinessGate,
+} from '../../../../../../services/dsh/frontend/shared/workforce/workforce.types';
 
 const REASON_MESSAGES: Record<BlockerReason, string> = {
   IDENTITY_SUSPENDED: "تم تعليق الهوية الرقمية الخاصة بك. يرجى مراجعة الإدارة.",
@@ -32,8 +19,8 @@ const REASON_MESSAGES: Record<BlockerReason, string> = {
 };
 
 interface Props {
-  readiness: ReadinessGate;
-  onRefresh: () => void;
+  readonly readiness: ReadinessGate;
+  readonly onRefresh: () => void;
 }
 
 export function ReadinessGateScreen({ readiness, onRefresh }: Props) {
@@ -45,7 +32,7 @@ export function ReadinessGateScreen({ readiness, onRefresh }: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: tokens.appBackground }]}>
-      <Text style={[styles.title, { color: tokens.textDanger }]}>لا يمكن بدء العمل حالياً</Text>
+      <Text role="titleLg" tone="danger" align="center" style={styles.title}>لا يمكن بدء العمل حالياً</Text>
       <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>الرجاء معالجة الملاحظات التالية قبل المتابعة:</Text>
       
       <View style={styles.reasonsContainer}>
@@ -56,7 +43,7 @@ export function ReadinessGateScreen({ readiness, onRefresh }: Props) {
         ))}
       </View>
 
-      <Button title="تحديث الحالة" onPress={onRefresh} />
+      <Button label="تحديث الحالة" onPress={onRefresh} />
     </View>
   );
 }

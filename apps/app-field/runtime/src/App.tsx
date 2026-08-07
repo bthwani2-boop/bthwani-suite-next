@@ -125,6 +125,7 @@ function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
       } catch (err) {
         setReadiness({
           actorId: workforce.state.me.actorId,
+          workforceKind: workforce.state.me.workforceKind,
           status: "BLOCKED",
           blockerReasons: ["ELIGIBILITY_UNAVAILABLE"],
           checkedAt: new Date().toISOString(),
