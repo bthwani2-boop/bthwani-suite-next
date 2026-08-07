@@ -58,306 +58,215 @@
       "path": "governance/authority/authority-precedence.json",
       "classification": "ROOT_AUTHORITY",
       "precedenceId": "AUTHORITY_PRECEDENCE_REGISTRY",
-      "authorityDomains": [
-        "authority_resolution",
-        "classification"
-      ]
+      "authorityDomains": ["authority_resolution", "classification"]
     },
     {
       "path": "AGENTS.md",
       "classification": "ACTIVE_CANONICAL",
       "precedenceId": "AGENT_EXECUTION_POLICY",
-      "authorityDomains": [
-        "agent_execution",
-        "scope_control",
-        "claim_safety"
-      ]
+      "authorityDomains": ["agent_execution", "scope_control", "claim_safety"]
     },
     {
       "path": "governance/GOVERNANCE.md",
       "classification": "ACTIVE_CANONICAL",
       "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": [
-        "governance_index",
-        "repository_boundaries",
-        "cleanup",
-        "branch_execution"
-      ]
+      "authorityDomains": ["governance_index", "repository_boundaries", "cleanup", "branch_execution"]
     },
     {
       "path": "governance/policies/product.md",
       "classification": "ACTIVE_CANONICAL",
       "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": [
-        "product_problem",
-        "product_scope",
-        "product_acceptance"
-      ]
+      "authorityDomains": ["product_problem", "product_scope", "product_acceptance"]
     },
     {
       "path": "governance/policies/contracts.md",
       "classification": "ACTIVE_CANONICAL",
       "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": [
-        "services",
-        "surfaces",
-        "api_binding",
-        "ui_kit"
-      ]
+      "authorityDomains": ["services", "surfaces", "api_binding", "ui_kit"]
     },
     {
       "path": "governance/policies/security.md",
       "classification": "ACTIVE_CANONICAL",
       "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": [
-        "security",
-        "privacy",
-        "secrets",
-        "isolation"
-      ]
+      "authorityDomains": ["security", "privacy", "secrets", "isolation"]
     },
     {
       "path": "governance/policies/data.md",
       "classification": "ACTIVE_CANONICAL",
       "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": [
-        "database",
-        "migrations",
-        "data_plane"
-      ]
+      "authorityDomains": ["database", "migrations", "data_plane"]
     },
     {
       "path": "governance/policies/runtime.md",
       "classification": "ACTIVE_CANONICAL",
       "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": [
-        "runtime",
-        "toolchain_versions",
-        "performance"
-      ]
+      "authorityDomains": ["runtime", "toolchain_versions", "performance"]
     },
     {
       "path": "governance/policies/release.md",
       "classification": "ACTIVE_CANONICAL",
       "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": [
-        "evidence",
-        "sdlc",
-        "stage_gates",
-        "release",
-        "production"
-      ]
+      "authorityDomains": ["evidence", "sdlc", "stage_gates", "release", "production"]
     },
     {
       "path": "governance/contracts",
       "classification": "ACTIVE_CANONICAL",
       "precedenceId": "MACHINE_READABLE_CONTRACT",
-      "authorityDomains": [
-        "decision_vocabulary",
-        "shared_contract_schemas"
-      ]
+      "authorityDomains": ["decision_vocabulary", "shared_contract_schemas"]
     },
     {
       "path": "governance/agents",
       "classification": "ACTIVE_CANONICAL",
       "precedenceId": "MACHINE_READABLE_CONTRACT",
-      "authorityDomains": [
-        "agent_roles",
-        "approval_domains"
-      ]
+      "authorityDomains": ["agent_roles", "approval_domains"]
     },
     {
       "path": "governance/skills",
       "classification": "ACTIVE_CANONICAL",
       "precedenceId": "MACHINE_READABLE_CONTRACT",
-      "authorityDomains": [
-        "skill_lifecycle",
-        "skill_dependencies",
-        "skill_routing"
-      ]
+      "authorityDomains": ["skill_lifecycle", "skill_dependencies", "skill_routing"]
     },
     {
       "path": "governance/guards",
       "classification": "ACTIVE_CANONICAL",
       "precedenceId": "MACHINE_READABLE_CONTRACT",
-      "authorityDomains": [
-        "guard_registry",
-        "guard_assurance",
-        "static_binding_registry"
-      ]
+      "authorityDomains": ["guard_registry", "guard_assurance", "guard_schemas", "static_binding_registry"]
+    },
+    {
+      "path": "governance/guards/guard-sets.json",
+      "classification": "ACTIVE_CANONICAL",
+      "precedenceId": "MACHINE_READABLE_CONTRACT",
+      "authorityDomains": ["guard_sets", "guard_execution_policy"]
     },
     {
       "path": "governance/authority/direct-work-branch-execution-policy.json",
       "classification": "ACTIVE_CANONICAL",
       "precedenceId": "MACHINE_READABLE_CONTRACT",
-      "authorityDomains": [
-        "branch_execution",
-        "repository_writes"
-      ]
+      "authorityDomains": ["branch_execution", "repository_writes"]
     },
     {
       "path": "governance/authority/single-owner-mode.json",
       "classification": "ACTIVE_CANONICAL",
       "precedenceId": "MACHINE_READABLE_CONTRACT",
-      "authorityDomains": [
-        "single_owner_approval",
-        "approval_identity_exception"
-      ]
+      "authorityDomains": ["single_owner_approval", "approval_identity_exception"]
     },
     {
       "path": "governance/authority/single-owner-mode.schema.json",
       "classification": "ACTIVE_CANONICAL",
       "precedenceId": "MACHINE_READABLE_CONTRACT",
-      "authorityDomains": [
-        "single_owner_mode_schema"
-      ]
+      "authorityDomains": ["single_owner_mode_schema"]
     },
     {
       "path": "governance/product/product-truth.schema.json",
       "classification": "ACTIVE_CANONICAL",
       "precedenceId": "MACHINE_READABLE_CONTRACT",
-      "authorityDomains": [
-        "product_truth_schema"
-      ]
+      "authorityDomains": ["product_truth_schema"]
     },
     {
       "path": "governance/product/platform-model.yaml",
       "classification": "ACTIVE_CANONICAL",
       "precedenceId": "MACHINE_READABLE_CONTRACT",
-      "authorityDomains": [
-        "platform_model"
-      ]
-    },
-    {
-      "path": "tools/guards/guard-manifest.json",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "MACHINE_READABLE_CONTRACT",
-      "authorityDomains": [
-        "guard_sets",
-        "guard_execution_policy"
-      ]
+      "authorityDomains": ["platform_model"]
     },
     {
       "path": ".agents/skills",
       "classification": "OWNER_CONTRACT",
       "precedenceId": "OWNER_SKILL_CONTRACT",
-      "authorityDomains": [
-        "declared_active_skill_scope"
-      ]
+      "authorityDomains": ["declared_active_skill_scope"]
     },
     {
       "path": ".agents/tools",
       "classification": "ADAPTER",
       "precedenceId": "TOOL_ADAPTER",
-      "authorityDomains": [
-        "conditional_tool_policy"
-      ],
+      "authorityDomains": ["conditional_tool_policy"],
       "scopeLimit": "Tools own no approval or repository truth."
     },
     {
       "path": "CLAUDE.md",
       "classification": "ADAPTER",
       "precedenceId": "TOOL_ADAPTER",
-      "authorityDomains": [
-        "claude_adapter"
-      ]
+      "authorityDomains": ["claude_adapter"]
     },
     {
       "path": "GEMINI.md",
       "classification": "ADAPTER",
       "precedenceId": "TOOL_ADAPTER",
-      "authorityDomains": [
-        "gemini_cli_adapter"
-      ]
+      "authorityDomains": ["gemini_cli_adapter"]
     },
     {
       "path": "LEAN-CTX.md",
       "classification": "ADAPTER",
       "precedenceId": "TOOL_ADAPTER",
-      "authorityDomains": [
-        "leanctx_adapter"
-      ]
+      "authorityDomains": ["leanctx_adapter"]
     },
     {
       "path": "opencode.json",
       "classification": "ADAPTER",
       "precedenceId": "TOOL_ADAPTER",
-      "authorityDomains": [
-        "opencode_adapter"
-      ]
+      "authorityDomains": ["opencode_adapter"]
+    },
+    {
+      "path": "governance/README.md",
+      "classification": "DERIVED_SUPPORT",
+      "precedenceId": "DERIVED_SUPPORT_ARTIFACT",
+      "authorityDomains": ["governance_directory_guide"],
+      "scopeLimit": "Human-readable directory guidance only; authority is resolved by the registered canonical sources."
     },
     {
       "path": ".agents/AUTHORITY_BOUNDARY.md",
       "classification": "DERIVED_SUPPORT",
       "precedenceId": "DERIVED_SUPPORT_ARTIFACT",
-      "authorityDomains": [
-        "agent_boundary_summary"
-      ],
+      "authorityDomains": ["agent_boundary_summary"],
       "scopeLimit": "Cannot override AGENTS.md or canonical governance."
     },
     {
       "path": ".agents/EVIDENCE_GATE_ROUTER.md",
       "classification": "DERIVED_SUPPORT",
       "precedenceId": "DERIVED_SUPPORT_ARTIFACT",
-      "authorityDomains": [
-        "evidence_routing_summary"
-      ],
+      "authorityDomains": ["evidence_routing_summary"],
       "scopeLimit": "Cannot grant approval or closure."
     },
     {
       "path": ".agents/INDEX.md",
       "classification": "DERIVED_SUPPORT",
       "precedenceId": "DERIVED_SUPPORT_ARTIFACT",
-      "authorityDomains": [
-        "skill_routing_index"
-      ],
+      "authorityDomains": ["skill_routing_index"],
       "scopeLimit": "Registry remains canonical."
     },
     {
       "path": ".agents/SKILL_CATALOG.md",
       "classification": "DERIVED_SUPPORT",
       "precedenceId": "DERIVED_SUPPORT_ARTIFACT",
-      "authorityDomains": [
-        "skill_catalog_projection"
-      ],
+      "authorityDomains": ["skill_catalog_projection"],
       "scopeLimit": "Registry remains canonical."
     },
     {
       "path": "governance/tools/agent-tool-registry.json",
       "classification": "DERIVED_SUPPORT",
       "precedenceId": "DERIVED_SUPPORT_ARTIFACT",
-      "authorityDomains": [
-        "tool_inventory",
-        "tool_routing_metadata"
-      ],
+      "authorityDomains": ["tool_inventory", "tool_routing_metadata"],
       "scopeLimit": "Tools and their registry own no approval or repository truth."
     },
     {
       "path": "governance/github/repository-enforcement.json",
       "classification": "DERIVED_SUPPORT",
       "precedenceId": "DERIVED_SUPPORT_ARTIFACT",
-      "authorityDomains": [
-        "github_enforcement_snapshot"
-      ],
+      "authorityDomains": ["github_enforcement_snapshot"],
       "scopeLimit": "Requires live GitHub verification before any current enforcement claim."
     },
     {
       "path": "governance/product/contracts",
       "classification": "DERIVED_SUPPORT",
       "precedenceId": "DERIVED_SUPPORT_ARTIFACT",
-      "authorityDomains": [
-        "product_truth_instances"
-      ],
+      "authorityDomains": ["product_truth_instances"],
       "scopeLimit": "Capability contracts cannot override the product policy or platform model."
     },
     {
       "path": "governance/operational_journey_protocol_package",
       "classification": "DERIVED_SUPPORT",
       "precedenceId": "DERIVED_SUPPORT_ARTIFACT",
-      "authorityDomains": [
-        "sdlc_support"
-      ],
-      "scopeLimit": "Machine support for validation; it creates no independent policy or approval."
+      "authorityDomains": ["sdlc_support"],
+      "scopeLimit": "Reusable journey and validation support only; it creates no independent policy, product truth, approval, or final closure."
     }
   ]
 }
