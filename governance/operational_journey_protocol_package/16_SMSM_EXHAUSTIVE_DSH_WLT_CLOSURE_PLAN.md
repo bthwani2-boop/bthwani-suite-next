@@ -1,21 +1,22 @@
 # SMSM DSH/WLT Closure Plan — Compatibility Entrypoint
 
-> **الحالة:** `REPLACED_WITH_CANONICAL_JOURNEY_PACKAGE`
+> **الحالة:** `REPLACED_WITH_DERIVED_PLAN_PACKAGE`
 >
-> هذا الملف ليس خطة موازية ولا يحتوي سجل حالة أو تعريفات رحلات مستقلة. نقطة التنفيذ الوحيدة هي:
+> هذا الملف نقطة توافق مؤقتة فقط، وليس خطة موازية ولا سجل حالة ولا سلطة حاكمة. الحزمة المشتقة الحالية موجودة في:
 >
-> `governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys/README.md`
+> `tools/plans/smsm-dsh-wlt-journeys/README.md`
 
-## الحزمة الحاكمة للتنفيذ
+## مصدر الخطة الحالي
 
-- السلطة والترتيب: `smsm-dsh-wlt-journeys/00-AUTHORITY-EXECUTION-ORDER.md`
-- عقد الرحلة والشرائح: `smsm-dsh-wlt-journeys/01-JOURNEY-SLICE-CONTRACT.md`
-- سجل التغطية: `smsm-dsh-wlt-journeys/02-COVERAGE-LEDGER-SCHEMA.yaml`
-- التجريب اليدوي: `smsm-dsh-wlt-journeys/03-MANUAL-ACCEPTANCE-STANDARD.md`
-- سجل الترتيب: `smsm-dsh-wlt-journeys/04-JOURNEY-REGISTRY.yaml`
-- سجل الإزالة: `smsm-dsh-wlt-journeys/05-RETIREMENT-REGISTER.md`
-- الرحلات: ملفات مستقلة `J001..J107` داخل المجلدات الستة.
+- ترتيب التنفيذ والمصادر: `tools/plans/smsm-dsh-wlt-journeys/00-AUTHORITY-EXECUTION-ORDER.md`
+- عقد الرحلة والشرائح: `tools/plans/smsm-dsh-wlt-journeys/01-JOURNEY-SLICE-CONTRACT.md`
+- سجل التغطية: `tools/plans/smsm-dsh-wlt-journeys/02-COVERAGE-LEDGER-SCHEMA.yaml`
+- التجريب اليدوي: `tools/plans/smsm-dsh-wlt-journeys/03-MANUAL-ACCEPTANCE-STANDARD.md`
+- سجل الرحلات: `tools/plans/smsm-dsh-wlt-journeys/04-JOURNEY-REGISTRY.yaml`
+- سجل الإزالة: `tools/plans/smsm-dsh-wlt-journeys/05-RETIREMENT-REGISTER.md`
 
-## القاعدة
+## حدود السلطة
 
-وجود الحزمة لا يعني تنفيذ الرحلات. كل رحلة تبدأ `NOT_ASSESSED`، وتغلق فقط بعد شرائحها الأربع والعشرين والتجريب اليدوي وRuntime Readback وSame-SHA Evidence.
+`tools/plans/smsm-dsh-wlt-journeys/` مادة تخطيط وتشخيص مشتقة. لا تنشئ سياسة أو موافقة أو حقيقة منتج، ولا تتجاوز `governance/authority/authority-precedence.json` أو `AGENTS.md` أو الحوكمة والعقود الحية أو الكود/البيانات/Runtime على SHA الجاري التحقق منه.
+
+وجود الحزمة أو ملف رحلة لا يعني تنفيذها. أي حالة أو عدد رحلات أو شرائح أو PASS تاريخي يجب إعادة إثباته قبل استخدامه كحقيقة حالية.
