@@ -162,7 +162,7 @@ try {
         throw "Central catalog readback failed with exit code $LASTEXITCODE"
       }
     }
-  } elseif ($runtimeProfileList.Count -gt 0) {
+  } elseif (-not [string]::IsNullOrWhiteSpace($runtimeProfiles)) {
     $runtimeExitCode = Invoke-RuntimeBasePhase -ScriptPath $phaseRuntimeScript -Parameters $runtimeParameters
     if ($runtimeExitCode -ne 0 -and (Test-TransientPostgresBootstrapRestart)) {
       Write-Warning "PostgreSQL bootstrap performed its expected temporary-server restart. Retrying runtime:up once after stabilization."
