@@ -656,7 +656,9 @@ func sovereignFieldsComplete(person Person) bool {
 		return false
 	}
 	if person.FieldProfile != nil {
-		return person.FieldProfile.CityCode != "" && person.FieldProfile.ShiftCode != ""
+		// Field providers no longer have shifts. Their sovereign routing minimum
+		// is the canonical city plus the governed DSH service-zone binding.
+		return person.FieldProfile.CityCode != "" && person.FieldProfile.ServiceZoneID != ""
 	}
 	if person.CaptainProfile != nil {
 		return person.CaptainProfile.VehicleType != "" &&
