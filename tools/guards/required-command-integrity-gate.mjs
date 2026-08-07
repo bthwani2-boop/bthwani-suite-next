@@ -7,7 +7,7 @@ const guardId = "required-command-integrity-gate";
 const violations = [];
 const packageFile = "package.json";
 const enforcementFile = "governance/github/repository-enforcement.json";
-const fullVerificationTrigger = "governance/github/full-verification.trigger.json";
+const fullVerificationPolicy = "governance/github/full-verification-policy.json";
 const workflowsRoot = ".github/workflows";
 const manualDeepRelative = `${workflowsRoot}/manual-deep-verification.yml`;
 const immutableCoreWorkflows = [
@@ -118,8 +118,8 @@ for (const [scriptName, command] of Object.entries(scripts)) {
   }
 }
 
-if (!exists(fullVerificationTrigger)) {
-  violations.push({ file: fullVerificationTrigger, line: 0, message: "FULL_VERIFICATION_TRIGGER_MISSING" });
+if (!exists(fullVerificationPolicy)) {
+  violations.push({ file: fullVerificationPolicy, line: 0, message: "FULL_VERIFICATION_POLICY_MISSING" });
 }
 
 const workflowDir = path.join(repoRoot, workflowsRoot);
@@ -170,7 +170,7 @@ rejectMarkers(manualDeepRelative, manualDeep, [
 
 const ci = requireMarkers(`${workflowsRoot}/ci.yml`, [
   "branches: [master]",
-  fullVerificationTrigger,
+  fullVerificationPolicy,
   "uses: ./.github/workflows/ci-policy.yml",
   "uses: ./.github/workflows/ci-node-diagnostics.yml",
   "uses: ./.github/workflows/ci-node-verification.yml",
@@ -188,7 +188,6 @@ requireMarkers(`${workflowsRoot}/ci-policy.yml`, [
   "guard:governance-schema",
   "guard:agent-governance",
   "guard:authority-separation",
-
   "guard:guard-registry",
   "guard:sdlc",
   "guard:cleanup-policy",
