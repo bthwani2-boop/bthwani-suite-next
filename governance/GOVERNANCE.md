@@ -45,7 +45,7 @@ governance/
    └─ governance.rego            # enforcement adapter, not independent policy
 ```
 
-The existing machine registries (`authority`, `contracts`, `agents`, `skills`, `guards`, `github`, `tools`) remain executable support while their consumers are consolidated. They are not additional human policy layers. New topic-specific governance directories or decision Markdown files are forbidden.
+The existing machine registries remain executable support while their consumers are consolidated. They are not additional human policy layers. New topic-specific governance directories or decision Markdown files are forbidden.
 
 `governance/operational_journey_protocol_package/` remains derived support only. Its protected `smsm-dsh-wlt-journeys` content is not modified by this restructuring and does not outrank this governance, the PRD, policies, Product Truth, or current implementation/runtime evidence.
 
@@ -73,11 +73,49 @@ Branch/repository safety, lifecycle, verification, CI, evidence, decisions, appr
 
 ### Machine registries
 
-Structured metadata required by validators/routers. They encode the human-readable rules; they must not invent contradictory policy.
+Structured metadata required by validators/routers. They encode the same rules; they must not invent contradictory policy.
 
 ### Outside governance
 
 Prompts, plans, runbooks, diagnostics, journey work packages, generated evidence, logs, screenshots, tool outputs and historical snapshots belong outside governance unless a machine contract explicitly requires the artifact.
+
+## Registered machine, adapter, and support paths
+
+These paths are registered for executable validation or bounded support; they are not extra human-readable policy layers:
+
+- `governance/authority/authority-precedence.json`
+- `governance/authority/authority-precedence.schema.json`
+- `governance/authority/direct-work-branch-execution-policy.json`
+- `governance/authority/direct-work-branch-execution-policy.schema.json`
+- `governance/authority/single-owner-mode.json`
+- `governance/authority/single-owner-mode.schema.json`
+- `governance/contracts/**`
+- `governance/agents/**`
+- `governance/skills/**`
+- `governance/guards/**`
+- `governance/github/workflow-registry.json`
+- `governance/github/full-verification-policy.json`
+- `governance/github/master-protection.ruleset.json`
+- `governance/github/repository-enforcement.json`
+- `governance/tools/agent-tool-registry.json`
+- `governance/product/platform-model.yaml`
+- `governance/product/product-truth.schema.json`
+- `governance/product/contracts/**`
+- `.agents/skills/**`
+- `.agents/tools/**`
+- `.agents/AUTHORITY_BOUNDARY.md`
+- `.agents/EVIDENCE_GATE_ROUTER.md`
+- `.agents/INDEX.md`
+- `.agents/SKILL_CATALOG.md`
+- `AGENTS.md`
+- `CLAUDE.md`
+- `GEMINI.md`
+- `LEAN-CTX.md`
+- `opencode.json`
+- `governance/policies/governance.rego`
+- `governance/operational_journey_protocol_package/**`
+
+The path list above is an index, not a second definition of the rules inside those contracts.
 
 ## Universal execution model
 
