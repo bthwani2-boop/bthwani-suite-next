@@ -19,7 +19,13 @@ import {
   createReadinessEscalation, fetchOperatorEscalations, updateEscalation,
   fetchPartnerOnboardingStatus, classifyFieldReadinessError,
 } from "./field-readiness.api";
-import type { DshCreateVisitInput, DshCompleteVisitInput, DshUpsertCheckInput, DshCreateEscalationInput, DshUpdateEscalationInput } from "./field-readiness.types";
+import type {
+  DshCreateVisitInput,
+  DshCompleteVisitInput,
+  DshUpsertCheckInput,
+  DshCreateEscalationInput,
+  DshUpdateEscalationInput,
+} from "./field-readiness.types";
 
 export type FieldVisitControllerState = {
   readonly listState: DshVisitListState;
@@ -46,7 +52,7 @@ export function makeFieldVisitController(
       const visits = await fetchFieldVisits(storeId);
       setState({ ...state, listState: visits.length === 0 ? visitEmptyState() : visitSuccessState(visits) });
     } catch (err) {
-      setState({ ...state, listState: visitErrorState(resolveMessage(err)) });
+      setState({ ...state, listState: visitErrorState(classifyFieldReadinessError(err)) });
     }
   }
 
@@ -56,7 +62,7 @@ export function makeFieldVisitController(
       const visit = await createFieldVisit(storeId, input);
       setState({ ...state, actionState: visitActionSuccessState(visit) });
     } catch (err) {
-      setState({ ...state, actionState: visitActionErrorState(resolveMessage(err)) });
+      setState({ ...state, actionState: visitActionErrorState(classifyFieldReadinessError(err)) });
     }
   }
 
@@ -66,7 +72,7 @@ export function makeFieldVisitController(
       const visit = await completeFieldVisit(visitId, input);
       setState({ ...state, actionState: visitActionSuccessState(visit) });
     } catch (err) {
-      setState({ ...state, actionState: visitActionErrorState(resolveMessage(err)) });
+      setState({ ...state, actionState: visitActionErrorState(classifyFieldReadinessError(err)) });
     }
   }
 
@@ -87,7 +93,7 @@ export function makeFieldChecklistController(
       const checks = await fetchVisitChecks(visit.id);
       setState({ ...state, checklistState: checklistSuccessState(visit, checks) });
     } catch (err) {
-      setState({ ...state, checklistState: checklistErrorState(resolveMessage(err)) });
+      setState({ ...state, checklistState: checklistErrorState(classifyFieldReadinessError(err)) });
     }
   }
 
@@ -97,7 +103,7 @@ export function makeFieldChecklistController(
       const check = await upsertReadinessCheck(visitId, input);
       setState({ ...state, checkActionState: checkActionSuccessState(check) });
     } catch (err) {
-      setState({ ...state, checkActionState: checkActionErrorState(resolveMessage(err)) });
+      setState({ ...state, checkActionState: checkActionErrorState(classifyFieldReadinessError(err)) });
     }
   }
 
@@ -118,7 +124,7 @@ export function makeFieldEscalationController(
       const escalations = await fetchOperatorEscalations(statusFilter);
       setState({ ...state, listState: escalations.length === 0 ? escalationEmptyState() : escalationSuccessState(escalations) });
     } catch (err) {
-      setState({ ...state, listState: escalationErrorState(resolveMessage(err)) });
+      setState({ ...state, listState: escalationErrorState(classifyFieldReadinessError(err)) });
     }
   }
 
@@ -128,7 +134,7 @@ export function makeFieldEscalationController(
       const escalation = await createReadinessEscalation(storeId, input);
       setState({ ...state, actionState: escalationActionSuccessState(escalation) });
     } catch (err) {
-      setState({ ...state, actionState: escalationActionErrorState(resolveMessage(err)) });
+      setState({ ...state, actionState: escalationActionErrorState(classifyFieldReadinessError(err)) });
     }
   }
 
@@ -138,7 +144,7 @@ export function makeFieldEscalationController(
       const escalation = await updateEscalation(escalationId, input);
       setState({ ...state, actionState: escalationActionSuccessState(escalation) });
     } catch (err) {
-      setState({ ...state, actionState: escalationActionErrorState(resolveMessage(err)) });
+      setState({ ...state, actionState: escalationActionErrorState(classifyFieldReadinessError(err)) });
     }
   }
 
@@ -159,21 +165,11 @@ export function makePartnerOnboardingStatusController(
       const status = await fetchPartnerOnboardingStatus(storeId);
       setState(onboardingStatusSuccessState(status));
     } catch (err) {
-      setState(onboardingStatusErrorState(resolveMessage(err)));
+      setState(onboardingStatusErrorState(classifyFieldReadinessError(err)));
     }
   }
 
   return { loadStatus };
-}
-
-function resolveMessage(err: unknown): string {
-  const classified = classifyFieldReadinessError(err);
-  switch (classified.kind) {
-    case "permission_denied": return "غير مصرح لك بهذه العملية";
-    case "offline": return "لا يوجد اتصال بالإنترنت";
-    case "not_found": return "لم يتم إيجاد السجل";
-    default: return "حدث خطأ، يرجى المحاولة مجدداً";
-  }
 }
 
 export function makeInitialVisitControllerState(): FieldVisitControllerState {
