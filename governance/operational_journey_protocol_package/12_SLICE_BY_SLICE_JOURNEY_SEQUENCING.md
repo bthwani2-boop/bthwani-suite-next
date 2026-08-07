@@ -1,162 +1,116 @@
 # 12 — Multi-Journey Selection & Slice-by-Slice Sequencing
 
-**Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v3
-**File:** `12 of 13`
-**Harvested from:** `governance/prompting/unified-operational-journey-execution-command.md` (a non-authoritative, unregistered usage template — see its header note). This file generalizes and merges its durable, ref-neutral, journey-neutral rules. It does not import that template's `write_authorization` block, its `journey_registry`/`journey_selection` example values, or its non-canonical result vocabulary.
+Status: DERIVED_SUPPORT
+Authority: `governance/authority/authority-precedence.json`
 
-**Repository:** `<REPO_REMOTE>`
-**Remote ref:** `<REF>`
-**Source path:** governance/operational_journey_protocol_package (self-contained)
+This file provides sequencing guidance only. It does not create journey authority, write authorization, approval or closure.
 
-> Governing rule: this file is part of a 13-file package. It is never used alone to declare acceptance. Any acceptance returns to `00_INDEX_AND_COVERAGE.md`, then applies every relevant file, including `10_EXECUTION_PLAN_NO_SKIP_GATE.md` and `11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
+## Scope
 
----
+Use this file when a current task explicitly covers multiple journeys or when one journey must be decomposed into vertical slices. The current derived journey index is:
 
-## 37) Scope of this file
+`tools/plans/journeys/FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md`
 
-Files `01`–`11` define what a single journey/topic must prove. This file adds the missing layer above that: how to work through **a range of journeys** (for example `..`) from a living journey registry, one journey at a time, and how to decompose a single journey into **vertical slices** that close one at a time instead of being treated as one large undifferentiated unit.
+The registry is planning support, not Product Truth or implementation evidence. Journey names/scopes must be reconciled against the current Product Truth, contracts, service manifests, source, migrations and runtime state on the pinned commit.
 
-This file does not create new authority. It generalizes sequencing discipline that was previously only described informally. The registry itself, `governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md`, remains `ACTIVE_CANONICAL` and outranks this package (see `governance/authority/authority-precedence.json`).
+## Journey selection
 
----
+Before opening a journey:
 
-## 38) Journey selection from the live registry
+1. Pin the exact repository, named branch/ref and current SHA.
+2. Resolve the requested outcome, actor, canonical truth owner, required consumer surfaces and hard dependencies.
+3. Read the derived registry only as an index/discovery aid; never accept a historical status or recalled scope as current truth.
+4. Determine order from operational dependencies and foundation prerequisites, not numeric ID alone.
+5. Work on one writable journey/slice at a time where shared truth/contracts/schema would conflict; independent read/analysis/check work may run in parallel.
+6. A newly discovered journey/capability gap updates planning support only after it is proven by current implementation/product evidence.
+7. Final decisions use `governance/contracts/decision-vocabulary.json` only.
 
-Before opening any journey:
+A current user instruction may authorize a range or set of journeys, but this file never grants Git write, PR, merge, release or production authority.
 
-1. Open `governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md` at the resolved commit. Never use journey names, IDs, or scopes recalled from memory or from a prior session.
-2. Extract, for each journey in the authorized selection: official name, owning service, related services, registered functional slices.
-3. Determine execution order by operational dependency, not by numeric ID order alone.
-4. Open exactly one journey at a time. Do not open a second journey while the first has open slices.
-5. When execution surfaces a capability, contract, operation, migration, route, screen/tab, state transition, affected surface, or DSH/WLT relationship that is not registered, that is a **registry gap** and must be added before the journey can close (see `06_ORGANIZATION_PERFORMANCE_CLEANUP_SEQUENCE.md` §17.14 `journey_sequence_matrix`).
-6. Never delete historical journeys from the registry. Use `MERGED_INTO`, `RETIRED`, or `OUT_OF_SCOPE_FOR_THIS_JOURNEY` (the canonical decision-vocabulary value) with a reason and reference.
+## Full-stack slice lenses
 
-A range such as `..` authorizes execution of exactly those journeys, in order, without requiring a fresh approval between journeys inside that same range — but it does not authorize opening any journey outside the range, and it does not by itself authorize Git/GitHub write actions (see `02_REMOTE_REF_SOURCE_GIT_GATES.md` §5 for what does).
+Use the coverage lenses defined by the derived registry and task/package. Do not treat FS-01..FS-18, SMSM slices, or any historical count as a mandatory universal schema. A lens is required only when the current journey/change impact makes it applicable.
 
----
-
-## 39) Fixed functional slices FS-01..FS-18
-
-In addition to any slices registered specifically for a journey, apply this fixed baseline set wherever applicable to the journey's scope:
+Every executable slice must be vertical:
 
 ```text
-FS-01 User intent and entry points
-FS-02 Navigation and routing
-FS-03 Primary data list/read surface
-FS-04 Primary detail/read surface
-FS-05 Create/mutate primary entity
-FS-06 Update/edit primary entity
-FS-07 State transitions and lifecycle
-FS-08 Permissions and role-based visibility
-FS-09 Search, filter, sort, pagination
-FS-10 Validation and error surfaces
-FS-11 Notifications and feedback
-FS-12 Cross-surface readback and refresh
-FS-13 DSH/WLT financial boundary (read-only refs in DSH, mutation only in WLT)
-FS-14 operator context/platform context propagation where `operator_context_boundary.mode != NOT_APPLICABLE`
-FS-15 Empty/loading/offline/blocked/forbidden/conflict states
-FS-16 Audit trail and event/outbox
-FS-17 Negative and edge-case scenarios
-FS-18 Runtime/CI targeted verification
+one use case/outcome
+→ affected UI/surfaces
+→ trusted auth/scope
+→ contract/client
+→ backend/domain state
+→ persistence/events/integrations
+→ persisted readback
+→ affected verification
 ```
 
-Rules:
+Do not group work horizontally as “all frontend, then backend, then database” when that prevents one use case from being proven end-to-end.
 
-- A journey does not need every FS-01..FS-18 slice to apply. A non-applicable slice is recorded `NOT_AFFECTED_WITH_REASON`, not silently dropped.
-- Additional slices forced by contracts, migrations, routes, screens, states, events, or integrations are appended after the fixed set, ordered by dependency.
-- It is forbidden to group slices horizontally by layer (`do all frontend, then all backend, then all database`). Every slice is vertical: one feature/use-case → every layer it touches → every surface it touches → its own verification → its own closure.
+## Sequential closure discipline
 
----
-
-## 40) Sequential slice closure
-
-Mandatory sequence per journey:
+Recommended sequence:
 
 ```text
-pin journey scope
-→ extract every slice for the journey (registered + FS-01..FS-18 + discovered)
-→ order slices by operational dependency
-→ open exactly one slice
-→ diagnose the slice's gaps
-→ find root cause and correct truth owner
-→ fix the live code
-→ complete binding across every affected layer and surface
-→ clean obsolete/duplicate/noise scoped to the slice
-→ run the smallest sufficient targeted verification
-→ resolve every failure
-→ re-verify after the last edit
-→ prove slice closure
-→ commit and push once the logical unit is complete, under whatever write authorization already governs this task (see `02_REMOTE_REF_SOURCE_GIT_GATES.md` §5 — this file does not grant that authorization by itself)
-→ re-pin the branch head
-→ move to the next slice
-→ repeat until the last slice closes
-→ run final integration verification for the whole journey
-→ apply the journey-level zero-gate
-→ issue the journey decision
-→ move to the next authorized journey only
+pin scope/SHA
+→ resolve foundation dependencies
+→ enumerate applicable vertical slices
+→ order by hard dependency/critical path
+→ open one writable slice
+→ diagnose root cause + truth owner
+→ implement centrally
+→ migrate affected consumers
+→ remove obsolete/parallel path when safe
+→ run smallest sufficient affected verification
+→ fix failures
+→ re-verify after final edit
+→ record same-commit result
+→ move to next ready slice
+→ run journey-level integration/readback evidence
+→ issue canonical decision
 ```
 
-### 40.1 Slice-open gate
+Do not open downstream work while an unresolved shared/foundation defect invalidates its evidence.
 
-Before opening any slice, the previous slice must already be: actually implemented, re-verified after its last edit, free of fixable internal gaps, not dependent on a mock or a production fallback, logically integrated with the shared brain/contracts/backend, pushed once its logical unit was complete, and recorded with a clear result. Never hold two slices open at once.
+## Per-slice zero conditions
 
-### 40.2 Per-slice zero-gate
+A slice cannot be represented as complete while an applicable condition remains unresolved, including:
 
-A slice cannot close, and the next slice cannot open, while any applicable value below is nonzero:
-
-```yaml
-slice_internal_gaps: 0
-slice_unbound_controls: 0
-slice_unbound_components_or_files: 0
-slice_frontend_backend_disconnections: 0
-slice_frontend_only_features: 0
-slice_backend_only_features: 0
-slice_contract_mismatches: 0
-slice_request_response_mismatches: 0
-slice_status_mismatches: 0
-slice_permission_mismatches: 0
-slice_error_mapping_mismatches: 0
-slice_duplicate_truth_owners: 0
-slice_local_surface_business_logic: 0
-slice_raw_surface_api_calls: 0
-slice_runtime_mock_truths: 0
-slice_obsolete_code: 0
-slice_failed_required_checks: 0
-slice_unverified_required_behavior: 0
+```text
+unbound required control/consumer
+frontend/backend/contract mismatch
+permission/object-scope mismatch
+parallel truth/write owner
+runtime-facing mock/fake success
+required migration/backfill gap
+missing persisted readback
+retry/recovery/idempotency gap
+failed required check
+stale evidence after later mutation
 ```
 
-This is the same family of zero-tolerance conditions already defined at journey scope in `11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md` §`frontend_backend_integrity_gate`, applied per-slice instead of only at journey level, so a broken slice cannot hide inside an otherwise-passing journey until the very end.
+A failed internal check is `FIX_REQUIRED` work, not a future-improvement note. A genuinely external dependency is recorded using the canonical vocabulary without hiding independent work that can still proceed.
 
-If a slice's verification fails: the slice stays open, the failure is fixed immediately, verification re-runs, and the gap is never deferred to a later slice or a later journey and never logged as a "future improvement" while it remains fixable in scope.
+## Journey-level close gate
 
-### 40.3 Journey-close gate
+A journey is not complete because most slices passed or a generic build succeeded. The claimed outcome requires every applicable slice/dependency, cross-surface readback, negative/recovery behavior and evidence scope on the candidate commit. Protected approvals remain separate.
 
-A journey is not complete because most of its slices closed, and not complete because a build or a generic workflow passed. It requires: every registered and every discovered slice closed; the registry updated with any newly discovered slices; cross-slice read/write/state-transition coherence verified; the full end-to-end journey scenario executed; applicable negative/edge scenarios passing; targeted integration checks passing; the journey-level zero-gate in `11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md` satisfied; and no fixable internal gap remaining.
+`CLOSED_WITH_EVIDENCE` can be issued only under the current decision contract and authority requirements; this derived package cannot issue it by itself.
 
-Forbidden: opening a new slice before the current one closes; running all slices in parallel; declaring journey completion from a majority of slices; deferring an incomplete slice to a different journey; treating a report/matrix/workflow run as a substitute for slice execution; treating a passing build, a passing backend-only test, or a passing frontend-only test as proof of journey completion.
+## Multi-journey report
 
----
-
-## 41) Multi-journey scope report
-
-After finishing the last authorized journey in a selection range, report:
+Report only current verified facts:
 
 ```yaml
 repository:
 target_ref:
-final_resolved_commit_sha:
+reviewed_commit_sha:
 authorized_journeys:
-completed_journeys:
-total_registered_slices:
-total_discovered_slices:
-total_closed_slices:
-total_open_slices: 0
-open_internal_gaps: 0
+completed_or_reviewed_journeys:
+open_internal_failures:
 open_external_blockers:
+missing_evidence:
 required_independent_reviews:
 final_decision:
 ```
 
-`final_decision` must be one of the canonical values in `governance/contracts/decision-vocabulary.json` (`PASS`, `FIX_REQUIRED`, `BLOCKED_EXTERNAL`, `NEEDS_EVIDENCE`, `READY_FOR_REVIEW`, `PROTOCOL_VIOLATION`, `CLOSED_WITH_EVIDENCE`, or an explicit `OUT_OF_SCOPE_FOR_THIS_JOURNEY` for excluded items). Files `01`, `02`, `07`, `08`, and `09` of this package still use an older, non-canonical result vocabulary (`ANALYSIS_PASS`, `IMPLEMENTATION_PASS`, `DO_NOT_MERGE`, `MERGE_READY`, `BLOCKED_NEEDS_EVIDENCE`). That drift is a known open finding — see `00_INDEX_AND_COVERAGE.md` §"Known vocabulary drift" — and this file (`12`) always defers to the canonical vocabulary, not to the older in-package terms.
-
-Do not create a Pull Request, do not merge, and do not open a scope beyond the authorized selection without a separate, explicit order.
+Do not store workflow-run history, old SHAs or implementation PASS snapshots in the journey registry itself. Git history and the task/evidence system remain the record for those facts.
