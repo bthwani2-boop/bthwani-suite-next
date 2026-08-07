@@ -475,56 +475,56 @@ func (r *Repository) ConsumeActivation(ctx context.Context, input ConsumeActivat
 }
 
 func actorCanAccessSurface(actor Actor, surface string) bool {
-for _, permission := range actor.Permissions {
-if permission.Surface == surface {
-return true
-}
-}
-return false
+	for _, permission := range actor.Permissions {
+		if permission.Surface == surface {
+			return true
+		}
+	}
+	return false
 }
 
 func resolvePasswordLoginSurface(actor Actor) (string, error) {
-roleSurface := map[string]string{
-"client":  "app-client",
-"partner": "app-partner",
-"field":   "app-field",
-"captain": "app-captain",
-}
-candidates := map[string]struct{}{}
+	roleSurface := map[string]string{
+		"client":  "app-client",
+		"partner": "app-partner",
+		"field":   "app-field",
+		"captain": "app-captain",
+	}
+	candidates := map[string]struct{}{}
 
-for _, role := range actor.Roles {
-if surface, ok := roleSurface[role]; ok {
-if actorCanAccessSurface(actor, surface) {
-candidates[surface] = struct{}{}
-}
-continue
-}
-if actorCanAccessSurface(actor, "control-panel") {
-candidates["control-panel"] = struct{}{}
-}
-}
+	for _, role := range actor.Roles {
+		if surface, ok := roleSurface[role]; ok {
+			if actorCanAccessSurface(actor, surface) {
+				candidates[surface] = struct{}{}
+			}
+			continue
+		}
+		if actorCanAccessSurface(actor, "control-panel") {
+			candidates["control-panel"] = struct{}{}
+		}
+	}
 
-if len(candidates) == 1 {
-for surface := range candidates {
-return surface, nil
-}
-}
-if len(candidates) > 1 {
-return "", ErrForbidden
-}
+	if len(candidates) == 1 {
+		for surface := range candidates {
+			return surface, nil
+		}
+	}
+	if len(candidates) > 1 {
+		return "", ErrForbidden
+	}
 
-permissionSurfaces := map[string]struct{}{}
-for _, permission := range actor.Permissions {
-if strings.TrimSpace(permission.Surface) != "" {
-permissionSurfaces[permission.Surface] = struct{}{}
-}
-}
-if len(permissionSurfaces) == 1 {
-for surface := range permissionSurfaces {
-return surface, nil
-}
-}
-return "", ErrForbidden
+	permissionSurfaces := map[string]struct{}{}
+	for _, permission := range actor.Permissions {
+		if strings.TrimSpace(permission.Surface) != "" {
+			permissionSurfaces[permission.Surface] = struct{}{}
+		}
+	}
+	if len(permissionSurfaces) == 1 {
+		for surface := range permissionSurfaces {
+			return surface, nil
+		}
+	}
+	return "", ErrForbidden
 }
 
 // Login authenticates a username/password pair. Every attempt is recorded
@@ -554,7 +554,13 @@ func (r *Repository) Login(ctx context.Context, username, password, fingerprint,
 		return TokenPair{}, ErrActorDeactivated
 	}
 
-	pair, err := r.createSession(ctx, actor, fingerprint, "control-panel")
+	surface, err := resolvePasswordLoginSurface(actor)
+	if err != nil {
+		r.recordLoginAttempt(ctx, normalizedUsername, false, ipAddress)
+		return TokenPair{}, err
+	}
+
+	pair, err := r.createSession(ctx, actor, fingerprint, surface)
 	if err != nil {
 		r.recordLoginAttempt(ctx, normalizedUsername, false, ipAddress)
 		return TokenPair{}, err

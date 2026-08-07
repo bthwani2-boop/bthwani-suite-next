@@ -152,6 +152,10 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 			sendError(w, http.StatusForbidden, "ACTOR_DEACTIVATED", "actor is deactivated")
 			return
 		}
+		if err == identity.ErrForbidden {
+			sendError(w, http.StatusForbidden, "LOGIN_SURFACE_FORBIDDEN", "actor has no unambiguous permitted login surface")
+			return
+		}
 		sendError(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "invalid username or password")
 		return
 	}

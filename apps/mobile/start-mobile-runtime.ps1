@@ -19,6 +19,8 @@ $RuntimeDir = Join-Path $RepoRoot "apps\$AppKey\runtime"
 $AdbHelper = Join-Path $PSScriptRoot "mobile-adb.ps1"
 $RuntimePhase = Join-Path $PSScriptRoot "invoke-runtime-phase.ps1"
 $MobileEnvFile = Join-Path $RepoRoot "infra\local\mobile.env"
+$DevSessionBrokerScript = Join-Path $RepoRoot "tools\dev\local-dev-session-broker.mjs"
+$DevSessionBrokerPort = 58100
 
 if (-not (Test-Path -LiteralPath $RuntimeDir -PathType Container)) {
     throw "Runtime directory not found: $RuntimeDir"
@@ -139,6 +141,73 @@ function Ensure-BthwaniMobileBackend {
     return "auto-started"
 }
 
+function Test-BthwaniDevSessionBroker {
+    try {
+        $response = Invoke-RestMethod `
+            -Uri "http://127.0.0.1:$DevSessionBrokerPort/health" `
+            -TimeoutSec 1 `
+            -ErrorAction Stop
+        return [string] $response.status -eq "healthy" `
+            -and [string] $response.service -eq "local-dev-session-broker"
+    } catch {
+        return $false
+    }
+}
+
+function Ensure-BthwaniDevSessionBroker {
+    if (Test-BthwaniDevSessionBroker) {
+        return "ready"
+    }
+
+    $listener = Get-NetTCPConnection `
+        -State Listen `
+        -LocalPort $DevSessionBrokerPort `
+        -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+
+    if ($listener) {
+        throw "Port $DevSessionBrokerPort is occupied by a process that is not the BThwani local dev session broker."
+    }
+    if (-not (Test-Path -LiteralPath $DevSessionBrokerScript -PathType Leaf)) {
+        throw "Local development session broker not found: $DevSessionBrokerScript"
+    }
+
+    $node = Get-Command node.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $node) {
+        $node = Get-Command node -ErrorAction SilentlyContinue | Select-Object -First 1
+    }
+    if (-not $node) {
+        throw "Node.js was not found; the local development session broker cannot start."
+    }
+
+    $runtimeMode = ([string] $env:BTHWANI_RUNTIME_MODE).Trim().ToLowerInvariant()
+    $nodeMode = ([string] $env:NODE_ENV).Trim().ToLowerInvariant()
+    if ($runtimeMode -in @("production", "prod") -or $nodeMode -in @("production", "prod")) {
+        throw "Quick developer login is forbidden in production mode."
+    }
+
+    $env:BTHWANI_DEV_SESSION_BROKER_PORT = [string] $DevSessionBrokerPort
+
+    $process = Start-Process `
+        -FilePath $node.Source `
+        -ArgumentList @($DevSessionBrokerScript) `
+        -WorkingDirectory $RepoRoot `
+        -PassThru `
+        -WindowStyle Hidden
+
+    for ($attempt = 1; $attempt -le 50; $attempt++) {
+        if ($process.HasExited) {
+            throw "Local development session broker exited during startup with code $($process.ExitCode)."
+        }
+        if (Test-BthwaniDevSessionBroker) {
+            return "started"
+        }
+        Start-Sleep -Milliseconds 100
+    }
+
+    throw "Local development session broker did not become healthy on port $DevSessionBrokerPort."
+}
+
 Import-BthwaniMobileEnvironment
 foreach ($name in @(
     "EXPO_PUBLIC_SENTRY_DSN",
@@ -164,6 +233,7 @@ $env:EXPO_PUBLIC_WORKFORCE_API_BASE_URL = "http://127.0.0.1:58086"
 $env:NEXT_PUBLIC_WORKFORCE_API_BASE_URL = "http://127.0.0.1:58086"
 
 $BackendState = Ensure-BthwaniMobileBackend
+$DevSessionBrokerState = Ensure-BthwaniDevSessionBroker
 Set-Location -LiteralPath $RuntimeDir
 
 # Fixed ports are part of the multi-app runtime contract. Never let Expo switch
@@ -226,7 +296,7 @@ $env:ANDROID_SERIAL = $SelectedSerial
 $env:BTHWANI_ANDROID_SERIAL = $SelectedSerial
 $env:ADB = $AdbPath
 
-$Ports = @(58080, 58082, 58086, 59000, $MetroPort)
+$Ports = @(58080, 58082, 58086, 58100, 59000, $MetroPort)
 Invoke-BthwaniAdbReverse `
     -AdbPath $AdbPath `
     -Serial $SelectedSerial `
@@ -256,6 +326,7 @@ Write-Host "=== MOBILE RUNTIME ==="
 Write-Host "App:          $AppKey"
 Write-Host "Runtime:      $RuntimeDir"
 Write-Host "Backend:      $BackendState"
+Write-Host "Dev login:    $DevSessionBrokerState (127.0.0.1:$DevSessionBrokerPort)"
 Write-Host "Metro URL:    http://127.0.0.1:$MetroPort"
 Write-Host "LAN IP:       $LanIp"
 Write-Host "ADB:          $AdbPath"

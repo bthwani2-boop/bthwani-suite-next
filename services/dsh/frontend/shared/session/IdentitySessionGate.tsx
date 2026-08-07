@@ -1,5 +1,5 @@
 import React, { useState, type ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import {
   Button,
   Card,
@@ -12,10 +12,12 @@ import {
   spacing,
 } from "@bthwani/ui-kit";
 import {
+  getIdentityDeviceFingerprint,
   identityErrorPresentation,
   useIdentitySession,
   type ActivationActorType,
   type ActorIdentity,
+  type TokenResponse,
 } from "@bthwani/core-identity";
 
 export type DshSurfaceRole = ActorIdentity["roles"][number];
@@ -25,6 +27,10 @@ export type IdentitySessionGateProps = {
   readonly requiredSurface?: string;
   readonly children: ReactNode;
 };
+
+declare const __DEV__: boolean;
+
+const DEV_SESSION_BROKER_BASE_URL = "http://127.0.0.1:58100";
 
 function isPlatformAccessActorType(role: DshSurfaceRole): role is ActivationActorType {
   return role === "partner" || role === "captain" || role === "field";
@@ -47,14 +53,46 @@ function errorCode(error: unknown): string {
   return "IDENTITY_UNAVAILABLE";
 }
 
+function quickDeveloperLoginLabel(
+  role: DshSurfaceRole,
+  surface?: string,
+): string | null {
+  switch (role) {
+    case "client":
+      return surface === "app-client" ? "دخول سريع كعميل التطوير المحلي" : null;
+    case "partner":
+      return surface === "app-partner" ? "دخول سريع كشريك التطوير المحلي" : null;
+    case "field":
+      return surface === "app-field" ? "دخول سريع كمندوب التطوير المحلي" : null;
+    case "captain":
+      return surface === "app-captain" ? "دخول سريع ككابتن التطوير المحلي" : null;
+    default:
+      return null;
+  }
+}
+
+function brokerErrorCode(body: unknown): string {
+  if (
+    typeof body === "object"
+    && body !== null
+    && "code" in body
+    && typeof (body as { code?: unknown }).code === "string"
+  ) {
+    return (body as { code: string }).code;
+  }
+  return "DEV_SESSION_BROKER_UNAVAILABLE";
+}
+
 function IdentityAccessPanel({
   requiredRole,
+  requiredSurface,
   errorMessage,
 }: {
   readonly requiredRole: DshSurfaceRole;
+  readonly requiredSurface?: string;
   readonly errorMessage?: string;
 }) {
-  const { login, activate } = useIdentitySession();
+  const { login, activate, adoptSession } = useIdentitySession();
   const platformAccessRequired = isPlatformAccessActorType(requiredRole);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -63,6 +101,12 @@ function IdentityAccessPanel({
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const errorPresentation = errorMessage ? identityErrorPresentation(errorMessage) : null;
+  const quickLoginLabel = quickDeveloperLoginLabel(requiredRole, requiredSurface);
+  const quickLoginEnabled =
+    Platform.OS !== "web"
+    && typeof __DEV__ !== "undefined"
+    && __DEV__
+    && quickLoginLabel !== null;
 
   const submitLogin = async () => {
     if (!username.trim() || !password) {
@@ -89,6 +133,36 @@ function IdentityAccessPanel({
     setFeedback("");
     try {
       await activate(requiredRole, phone.trim(), code.trim());
+    } catch (error) {
+      setFeedback(identityErrorPresentation(errorCode(error)).description);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const submitQuickDeveloperLogin = async () => {
+    if (!quickLoginEnabled || !requiredSurface) return;
+
+    setSubmitting(true);
+    setFeedback("");
+    try {
+      const deviceFingerprint = await getIdentityDeviceFingerprint();
+      const response = await fetch(`${DEV_SESSION_BROKER_BASE_URL}/session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: requiredRole,
+          surface: requiredSurface,
+          deviceFingerprint,
+        }),
+      });
+
+      const body: unknown = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(brokerErrorCode(body));
+      }
+
+      await adoptSession(body as TokenResponse);
     } catch (error) {
       setFeedback(identityErrorPresentation(errorCode(error)).description);
     } finally {
@@ -161,6 +235,20 @@ function IdentityAccessPanel({
           </View>
         )}
 
+        {quickLoginEnabled && quickLoginLabel ? (
+          <View style={styles.developmentLogin}>
+            <Text role="caption" tone="muted" style={styles.developmentNotice}>
+              بيئة التطوير المحلية فقط
+            </Text>
+            <Button
+              label={submitting ? "جاري الدخول السريع" : quickLoginLabel}
+              tone="secondary"
+              disabled={submitting}
+              onPress={submitQuickDeveloperLogin}
+            />
+          </View>
+        ) : null}
+
         {feedback ? <Text role="caption" style={styles.feedback}>{feedback}</Text> : null}
       </Card>
     </View>
@@ -202,10 +290,21 @@ export function IdentitySessionGate({
     }
 
     case "error":
-      return <IdentityAccessPanel requiredRole={requiredRole} errorMessage={state.message} />;
+      return (
+        <IdentityAccessPanel
+          requiredRole={requiredRole}
+          {...(requiredSurface === undefined ? {} : { requiredSurface })}
+          errorMessage={state.message}
+        />
+      );
 
     case "signed_out":
-      return <IdentityAccessPanel requiredRole={requiredRole} />;
+      return (
+        <IdentityAccessPanel
+          requiredRole={requiredRole}
+          {...(requiredSurface === undefined ? {} : { requiredSurface })}
+        />
+      );
 
     case "authenticated": {
       const hasRole = state.identity.roles.includes(requiredRole);
@@ -268,6 +367,13 @@ const styles = StyleSheet.create({
   },
   activationNotice: {
     textAlign: "right",
+  },
+  developmentLogin: {
+    gap: spacing[2],
+    paddingTop: spacing[2],
+  },
+  developmentNotice: {
+    textAlign: "center",
   },
   feedback: {
     textAlign: "right",

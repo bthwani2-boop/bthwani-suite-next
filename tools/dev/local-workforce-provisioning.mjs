@@ -76,17 +76,27 @@ export async function requestJson(operation, url, options = {}) {
 }
 
 /** Password login. Only bootstrap-seeded actors (operator, partner, client) have one. */
-export async function getPasswordToken(username) {
+export async function getPasswordSession(
+  username,
+  deviceFingerprint = `mobile-dev-${username}`,
+) {
   const result = await requestJson(`identity:login:${username}`, `${IDENTITY_API_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       username,
       password: localPassword(),
-      deviceFingerprint: `mobile-dev-${username}`,
+      deviceFingerprint,
     }),
   });
-  if (!result?.accessToken) throw new Error(`identity:login:${username} returned no access token`);
+  if (!result?.accessToken || !result?.refreshToken || !result?.identity?.subject) {
+    throw new Error(`identity:login:${username} returned an incomplete token pair`);
+  }
+  return result;
+}
+
+export async function getPasswordToken(username) {
+  const result = await getPasswordSession(username);
   return result.accessToken;
 }
 
@@ -247,7 +257,13 @@ export async function getProvider(operatorToken, kind, actorId) {
  * redeeming an operator-issued activation code, which is the real production
  * onboarding path for both mobile provider apps.
  */
-export async function issueProviderToken(operatorToken, kind, actorId, phoneE164) {
+export async function issueProviderSession(
+  operatorToken,
+  kind,
+  actorId,
+  phoneE164,
+  deviceFingerprint = `mobile-dev-${kind}`,
+) {
   const detail = await getProvider(operatorToken, kind, actorId);
   // Issuing an activation code is a fresh operation every time, never a replay:
   // a stable idempotency key collides with the previously issued challenge.
@@ -275,10 +291,17 @@ export async function issueProviderToken(operatorToken, kind, actorId, phoneE164
       actorType: kind,
       phone: phoneE164,
       code: issued.code,
-      deviceFingerprint: `mobile-dev-${kind}`,
+      deviceFingerprint,
     }),
   });
-  if (!pair?.accessToken) throw new Error(`identity:activate:${kind} returned no access token`);
+  if (!pair?.accessToken || !pair?.refreshToken || !pair?.identity?.subject) {
+    throw new Error(`identity:activate:${kind} returned an incomplete token pair`);
+  }
+  return pair;
+}
+
+export async function issueProviderToken(operatorToken, kind, actorId, phoneE164) {
+  const pair = await issueProviderSession(operatorToken, kind, actorId, phoneE164);
   return pair.accessToken;
 }
 

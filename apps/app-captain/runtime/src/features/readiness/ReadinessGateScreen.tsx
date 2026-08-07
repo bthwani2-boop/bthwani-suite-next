@@ -1,23 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet, Button } from 'react-native';
-import { useBThwaniAppearance } from '@bthwani/ui-kit';
-
-export type BlockerReason = 
-  | "IDENTITY_SUSPENDED"
-  | "PROFILE_INCOMPLETE"
-  | "DOCUMENTS_EXPIRED"
-  | "EMPLOYMENT_TERMINATED"
-  | "NO_ACTIVE_ASSIGNMENT"
-  | "SHIFT_INACTIVE"
-  | "OUTSIDE_ACTIVE_AREA"
-  | "FINANCIAL_ELIGIBILITY_BLOCKED"
-  | "ELIGIBILITY_UNAVAILABLE";
-
-export interface ReadinessGate {
-  actorId: string;
-  status: "ALLOWED" | "BLOCKED";
-  blockerReasons: BlockerReason[];
-}
+import React from "react";
+import { StyleSheet, View } from "react-native";
+import { Button, Text, useBThwaniAppearance } from "@bthwani/ui-kit";
+import type {
+  BlockerReason,
+  ReadinessGate,
+} from "../../../../../../services/dsh/frontend/shared/workforce/workforce.types";
 
 const REASON_MESSAGES: Record<BlockerReason, string> = {
   IDENTITY_SUSPENDED: "تم تعليق الهوية الرقمية الخاصة بك. يرجى مراجعة الإدارة.",
@@ -27,36 +14,54 @@ const REASON_MESSAGES: Record<BlockerReason, string> = {
   NO_ACTIVE_ASSIGNMENT: "لا يوجد تكليف نشط حالياً. يرجى انتظار تعيين منطقة.",
   SHIFT_INACTIVE: "لا توجد مناوبة فعالة حالياً.",
   OUTSIDE_ACTIVE_AREA: "أنت خارج منطقة الخدمة المحددة.",
-  FINANCIAL_ELIGIBILITY_BLOCKED: "تم إيقاف الأهلية المالية. يرجى تسوية المستحقات أو التواصل مع المالية.",
-  ELIGIBILITY_UNAVAILABLE: "تعذر التحقق من الأهلية التشغيلية والمالية. يرجى المحاولة لاحقاً.",
+  FINANCIAL_ELIGIBILITY_BLOCKED:
+    "تم إيقاف الأهلية المالية. يرجى تسوية المستحقات أو التواصل مع المالية.",
+  ELIGIBILITY_UNAVAILABLE:
+    "تعذر التحقق من الأهلية التشغيلية والمالية. يرجى المحاولة لاحقاً.",
 };
 
 interface Props {
-  readiness: ReadinessGate;
-  onRefresh: () => void;
+  readonly readiness: ReadinessGate;
+  readonly onRefresh: () => void;
 }
 
 export function ReadinessGateScreen({ readiness, onRefresh }: Props) {
   const { tokens } = useBThwaniAppearance();
-  
-  if (readiness.status === 'ALLOWED') {
-    return null; // Should not render if allowed
+
+  if (readiness.status === "ALLOWED") {
+    return null;
   }
 
   return (
     <View style={[styles.container, { backgroundColor: tokens.appBackground }]}>
-      <Text style={[styles.title, { color: tokens.textDanger }]}>لا يمكن بدء العمل حالياً</Text>
-      <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>الرجاء معالجة الملاحظات التالية قبل المتابعة:</Text>
-      
+      <Text role="titleLg" tone="danger" align="center" style={styles.title}>
+        لا يمكن بدء العمل حالياً
+      </Text>
+
+      <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>
+        الرجاء معالجة الملاحظات التالية قبل المتابعة:
+      </Text>
+
       <View style={styles.reasonsContainer}>
-        {readiness.blockerReasons.map(reason => (
-          <View key={reason} style={[styles.reasonCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
-            <Text style={[styles.reasonText, { color: tokens.textPrimary }]}>• {REASON_MESSAGES[reason] || reason}</Text>
+        {readiness.blockerReasons.map((reason) => (
+          <View
+            key={reason}
+            style={[
+              styles.reasonCard,
+              {
+                backgroundColor: tokens.surface,
+                borderColor: tokens.border,
+              },
+            ]}
+          >
+            <Text style={[styles.reasonText, { color: tokens.textPrimary }]}>
+              • {REASON_MESSAGES[reason] || reason}
+            </Text>
           </View>
         ))}
       </View>
 
-      <Button title="تحديث الحالة" onPress={onRefresh} />
+      <Button label="تحديث الحالة" onPress={onRefresh} />
     </View>
   );
 }
@@ -65,18 +70,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   title: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
     marginBottom: 24,
-    textAlign: 'center',
+    textAlign: "center",
   },
   reasonsContainer: {
     marginBottom: 32,
@@ -89,5 +94,5 @@ const styles = StyleSheet.create({
   },
   reasonText: {
     fontSize: 15,
-  }
+  },
 });
