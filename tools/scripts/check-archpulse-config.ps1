@@ -42,7 +42,7 @@ function Show-ArchPulseTextOverrides([string]$Path, [string]$Label) {
   $Raw = Get-Content -LiteralPath $Path -Raw
   $Matches = [regex]::Matches($Raw, '(?im)^\s*"archpulse\.[^"]+"\s*:\s*.*$')
   if ($Matches.Count -eq 0) {
-    Info "$Label: no ArchPulse keys ($Path)"
+    Info "${Label}: no ArchPulse keys ($Path)"
     return
   }
 
@@ -151,7 +151,7 @@ function Inspect-Extension([string]$ExtensionPath) {
       $Relative = [System.IO.Path]::GetRelativePath($ExtensionPath, $Hit.Path)
       $Text = $Hit.Line.Trim()
       if ($Text.Length -gt 220) { $Text = $Text.Substring(0, 220) + "..." }
-      Write-Host "        $Relative:$($Hit.LineNumber): $Text"
+      Write-Host "        ${Relative}:$($Hit.LineNumber): $Text"
     }
   } else {
     Warn "No clear archpulse.ignore read was found in non-node_modules compiled JS"
