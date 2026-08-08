@@ -144,6 +144,7 @@ func marshalVisit(v fieldreadiness.Visit) map[string]any {
 		"updatedAt":            v.UpdatedAt,
 		"geofenceRadiusMeters": v.GeofenceRadiusMeters,
 		"startIsMocked":        v.StartIsMocked,
+		"isStale":              v.IsStale,
 	}
 	if v.CompletedAt != nil {
 		m["completedAt"] = v.CompletedAt
@@ -197,6 +198,7 @@ func marshalEscalation(e fieldreadiness.Escalation) map[string]any {
 		"resolutionNote": e.ResolutionNote,
 		"createdAt":      e.CreatedAt,
 		"updatedAt":      e.UpdatedAt,
+		"isStale":        e.IsStale,
 	}
 	if e.ResolvedBy != "" {
 		m["resolvedBy"] = e.ResolvedBy

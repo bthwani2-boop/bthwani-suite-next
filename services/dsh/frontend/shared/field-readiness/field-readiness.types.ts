@@ -59,6 +59,7 @@ export type DshFieldVisit = {
   readonly completionDistanceFromStoreMeters?: number | null;
   readonly storeLatitude?: number | null;
   readonly storeLongitude?: number | null;
+  readonly isStale?: boolean;
 };
 
 export type DshReadinessCheck = {
@@ -88,6 +89,7 @@ export type DshReadinessEscalation = {
   readonly resolutionNote: string;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly isStale?: boolean;
 };
 
 export type DshFieldWorkQueue = {

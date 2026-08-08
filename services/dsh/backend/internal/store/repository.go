@@ -279,15 +279,56 @@ func catalogDomainIDForPartnerCategory(category string) string {
 	}
 }
 
-func UpdateFieldStoreDraft(ctx context.Context, db *sql.DB, storeID, actorID, correlationID string, input FieldStoreDraftInput) (FieldPartnerStoreDraft, StoreAuditEvent, error) {
+func UpdateFieldStoreDraft(
+	ctx context.Context,
+	db *sql.DB,
+	storeID, actorID, idempotencyKey, correlationID string,
+	input FieldStoreDraftInput,
+) (FieldPartnerStoreDraft, StoreAuditEvent, error) {
 	if storeID == "" || actorID == "" {
 		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, fmt.Errorf("invalid field store draft input")
 	}
+	idempotencyKey = strings.TrimSpace(idempotencyKey)
+	if idempotencyKey == "" {
+		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, errors.New("idempotency key is required")
+	}
+
+	requestBytes, _ := json.Marshal(input)
+	requestHash := fmt.Sprintf("%x", sha256.Sum256(requestBytes))
+
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
 	}
 	defer tx.Rollback()
+
+	if err := lockStoreMutationIdempotency(ctx, tx, actorID, "update-field-store-draft", idempotencyKey); err != nil {
+		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
+	}
+
+	var replayHash string
+	var replayJSON []byte
+	err = tx.QueryRowContext(ctx, `
+		SELECT request_hash, response_body
+		FROM dsh_store_idempotency
+		WHERE actor_id = $1 AND operation = 'update-field-store-draft' AND idempotency_key = $2
+		FOR UPDATE`, actorID, idempotencyKey).Scan(&replayHash, &replayJSON)
+	if err == nil {
+		if replayHash != requestHash {
+			return FieldPartnerStoreDraft{}, StoreAuditEvent{}, ErrIdempotencyConflict
+		}
+		var replay struct {
+			Store FieldPartnerStoreDraft `json:"store"`
+			Audit StoreAuditEvent        `json:"audit"`
+		}
+		if err := json.Unmarshal(replayJSON, &replay); err != nil {
+			return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
+		}
+		return replay.Store, replay.Audit, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
+	}
 
 	before, err := scanStore(tx.QueryRowContext(ctx, "SELECT "+storeColumns+" FROM dsh_stores WHERE id = $1", storeID))
 	if err == sql.ErrNoRows {
@@ -350,9 +391,26 @@ func UpdateFieldStoreDraft(ctx context.Context, db *sql.DB, storeID, actorID, co
 		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
 	}
 
+	responseBody := struct {
+		Store FieldPartnerStoreDraft `json:"store"`
+		Audit StoreAuditEvent        `json:"audit"`
+	}{
+		Store: RowToFieldPartnerStoreDraft(after),
+		Audit: audit,
+	}
+	responseJSON, _ := json.Marshal(responseBody)
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO dsh_store_idempotency
+			(actor_id, operation, idempotency_key, request_hash, response_body)
+		VALUES ($1, 'update-field-store-draft', $2, $3, $4::jsonb)`,
+		actorID, idempotencyKey, requestHash, string(responseJSON))
+	if err != nil {
+		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
+	}
+
 	if err := tx.Commit(); err != nil {
 		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
 	}
 
-	return RowToFieldPartnerStoreDraft(after), audit, nil
+	return responseBody.Store, responseBody.Audit, nil
 }

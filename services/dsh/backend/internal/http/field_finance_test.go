@@ -23,9 +23,10 @@ func fieldFinanceServer(t *testing.T, actorID string, wltHandler http.HandlerFun
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
 			Subject:   actorID,
-			OperatorContextID:  "dsh",
-			Roles:     []string{"field"},
-			AuthState: "authenticated",
+			OperatorContextID: "dsh",
+			Roles:             []string{"field"},
+			AuthState:         "authenticated",
+			SessionSurface:    "app-field",
 		})
 	}))
 	t.Cleanup(identityServer.Close)

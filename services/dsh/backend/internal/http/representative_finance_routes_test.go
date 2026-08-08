@@ -37,6 +37,7 @@ func representativeFinanceRouterWithPermissions(
 			Roles:             []string{role},
 			AuthState:         "authenticated",
 			Permissions:       permissions,
+			SessionSurface:    dshActorSurface(role),
 		})
 	}))
 	t.Cleanup(identityServer.Close)
