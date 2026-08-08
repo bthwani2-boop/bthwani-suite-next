@@ -40,6 +40,13 @@ This policy governs authentication, authorization, object/business scope, truste
 - WLT is the sole authoritative financial-truth owner.
 - No surface or DSH recovery/support path may directly mutate WLT ledger/balance/refund/settlement truth outside an explicitly governed WLT operation.
 - Financial mutations require authenticated server-side context, idempotency/correlation, legal state transition and finance controls appropriate to the operation.
+- An official-wallet payout destination must be verified and versioned before use. Changing the destination identifier creates a new verification requirement; trust cannot silently transfer from the old value.
+- Material payout data approved for execution—beneficiary, destination version, amount, currency and policy context—must be bound to an immutable server-owned approval snapshot. A material change requires a new governed approval path rather than in-place mutation.
+- Sensitive financial operations use least privilege and server-enforced separation of duties appropriate to the risk. Preparation, approval, external execution, independent verification/reconciliation and financial close must not collapse into an untracked self-approval path; any approved staffing exception is explicit, reasoned, time-bounded and auditable.
+- Manual external transfer completion cannot be established by a bare operator assertion or screenshot alone. The owning Product Truth defines the required execution reference/evidence, independent verification and authoritative external reconciliation needed before final completion.
+- Full official-wallet identifiers and external account identifiers are encrypted in canonical storage, masked by default, and revealed only to authorized operational roles when required. Reveal/export of unmasked financial data is auditable and may require step-up authorization.
+- Financial execution/import/export artifacts are integrity-protected and audited. Imports are treated as evidence to validate and reconcile; the presence or contents of a spreadsheet/file cannot directly mutate wallet or ledger truth.
+- Unresolved material financial exceptions, reconciliation mismatches or incomplete required evidence must fail closed for the affected completion/financial-close transition rather than being hidden by a manual status change.
 
 ## 7. Secure failure behavior
 
