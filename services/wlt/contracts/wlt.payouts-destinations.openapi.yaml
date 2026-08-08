@@ -330,17 +330,11 @@ components:
     PayoutDestinationInput:
       type: object
       additionalProperties: false
-      required: [ beneficiaryName, settlementPreference, bankAccountHolderMatchesOwner ]
+      required: [ beneficiaryName, destinationMethod, destinationReference ]
       properties:
         beneficiaryName: { type: string, minLength: 1 }
-        bankName: { type: string }
-        bankBranch: { type: string }
-        accountNumber: { type: string }
-        iban: { type: string }
-        payoutMobileNumber: { type: string }
-        settlementPreference: { type: string, enum: [ bank, mobile_money, manual ] }
-        bankAccountHolderMatchesOwner: { type: boolean }
-        bankNotes: { type: string }
+        destinationMethod: { type: string, enum: [ bank, mobile_money, manual ] }
+        destinationReference: { type: string, minLength: 1 }
         operatorId: { type: string, minLength: 1 }
     PayoutDestination:
       type: object
@@ -349,10 +343,9 @@ components:
           id,
           ownerActorId,
           ownerActorType,
-          settlementPreference,
-          maskedAccountNumber,
-          maskedIban,
-          maskedMobileNumber,
+          destinationMethod,
+          maskedDestinationReference,
+          destinationVerificationStatus,
           beneficiaryName,
           active,
           updatedAt
@@ -361,13 +354,10 @@ components:
         id: { type: string }
         ownerActorId: { type: string }
         ownerActorType: { $ref: '#/components/schemas/PayoutActorType' }
-        settlementPreference: { type: string, enum: [ bank, mobile_money, manual ] }
-        maskedAccountNumber: { type: string }
-        maskedIban: { type: string }
-        maskedMobileNumber: { type: string }
+        destinationMethod: { type: string, enum: [ bank, mobile_money, manual ] }
+        maskedDestinationReference: { type: string }
+        destinationVerificationStatus: { type: string, enum: [ unverified, verified, rejected ] }
         beneficiaryName: { type: string }
-        bankName: { type: string }
-        bankBranch: { type: string }
         active: { type: boolean }
         updatedAt: { type: string, format: date-time }
     PayoutDestinationEnvelope:

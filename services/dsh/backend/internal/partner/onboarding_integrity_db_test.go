@@ -87,29 +87,24 @@ func TestGovernedTransitionReplaysSameEventDBIntegration(t *testing.T) {
 	}
 }
 
+
+
 func TestUpdatePartnerGovernedPersistsOnlyWltReferenceDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	partner := createPartnerFixture(t, db, "PAYOUT-CACHE")
-	holderMatches := true
 	updated, err := UpdatePartnerGoverned(db, partner.ID, UpdatePartnerInput{
 		DisplayName: partner.DisplayName,
 		PayoutDestinationID: "wpd-governed-cache",
-		MaskedAccountNumber: "*****4321",
-		MaskedIBAN: "********8765",
-		MaskedMobileNumber: "*******0002",
+		DestinationMethod: "bank",
+		MaskedDestinationReference: "*****4321",
+		DestinationVerificationStatus: "verified",
 		BeneficiaryName: "Masked Owner",
-		BankName: "Governed Bank",
-		SettlementPreference: "bank_transfer",
-		BankAccountHolderMatchesOwner: &holderMatches,
-		BankAccountNumber: "must-not-persist",
-		BankIBAN: "must-not-persist",
-		PayoutMobileNumber: "must-not-persist",
 	}, partner.Version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if updated.BankAccountNumber != "*****4321" {
-		t.Fatalf("surface response did not use masked account value: %q", updated.BankAccountNumber)
+	if updated.MaskedDestinationReference != "*****4321" {
+		t.Fatalf("surface response did not use masked account value: %q", updated.MaskedDestinationReference)
 	}
 	// Raw bank_account_number/bank_iban/payout_mobile_number columns were
 	// dropped from dsh_partners entirely (dsh-963, D3 remediation) -- the

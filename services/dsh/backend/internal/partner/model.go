@@ -120,21 +120,10 @@ type Partner struct {
 	Notes               string           `json:"notes"`
 	// Payout destination reference â€” DSH holds only the WLT reference ID and
 	// masked display strings. Raw bank data is never stored in DSH after Phase 5.
-	PayoutDestinationID string `json:"payoutDestinationId"`
-	MaskedAccountNumber string `json:"maskedAccountNumber"`
-	MaskedIBAN          string `json:"maskedIban"`
-	MaskedMobileNumber  string `json:"maskedMobileNumber"`
-	// Legacy bank display fields retained for backward compatibility.
-	// New writes go through WLT; these are populated from masked values only.
-	BeneficiaryName               string    `json:"beneficiaryName"`
-	BankName                      string    `json:"bankName"`
-	BankBranch                    string    `json:"bankBranch"`
-	BankAccountNumber             string    `json:"accountNumber"`
-	BankIBAN                      string    `json:"iban"`
-	PayoutMobileNumber            string    `json:"payoutMobileNumber"`
-	SettlementPreference          string    `json:"settlementPreference"`
-	BankAccountHolderMatchesOwner bool      `json:"bankAccountHolderMatchesOwner"`
-	BankNotes                     string    `json:"bankNotes"`
+	PayoutDestinationID           string `json:"payoutDestinationId"`
+	DestinationMethod             string `json:"destinationMethod"`
+	MaskedDestinationReference    string `json:"maskedDestinationReference"`
+	DestinationVerificationStatus string `json:"destinationVerificationStatus"`
 	Version                       int       `json:"version"`
 	CreatedAt                     time.Time `json:"createdAt"`
 	UpdatedAt                     time.Time `json:"updatedAt"`
@@ -421,10 +410,10 @@ type UpdatePartnerInput struct {
 	BankAccountHolderMatchesOwner *bool  `json:"bankAccountHolderMatchesOwner"`
 	BankNotes                     string `json:"bankNotes"`
 	// WLT relay fields: populated by the repository after WLT upsert.
-	PayoutDestinationID string `json:"-"`
-	MaskedAccountNumber string `json:"-"`
-	MaskedIBAN          string `json:"-"`
-	MaskedMobileNumber  string `json:"-"`
+	PayoutDestinationID           string `json:"-"`
+	DestinationMethod             string `json:"-"`
+	MaskedDestinationReference    string `json:"-"`
+	DestinationVerificationStatus string `json:"-"`
 	// ActorID of the caller issuing the update â€” used for WLT audit.
 	UpdatedByActorID string `json:"-"`
 }

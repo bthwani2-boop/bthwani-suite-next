@@ -150,10 +150,8 @@ func createPartnerForOperatorContextTx(
 		          owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
 		          category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 		          notes,
-		          COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
-		          COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
-		          beneficiary_name, bank_name, bank_branch,
-		          settlement_preference, bank_account_holder_matches_owner, bank_notes,
+		          COALESCE(payout_destination_id,''), COALESCE(destination_method,''),
+		          COALESCE(masked_destination_reference,''), COALESCE(destination_verification_status,''),
 		          version, created_at, updated_at`,
 		operatorContextID,
 		input.LegalNameAr, input.LegalNameEn, input.DisplayName,
@@ -166,9 +164,7 @@ func createPartnerForOperatorContextTx(
 		&p.OwnerActorID, &p.WorkforcePersonID, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
 		&p.Category, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
-		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
-		&p.BeneficiaryName, &p.BankName, &p.BankBranch,
-		&p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
+		&p.PayoutDestinationID, &p.DestinationMethod, &p.MaskedDestinationReference, &p.DestinationVerificationStatus,
 		&p.Version, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {
@@ -361,10 +357,8 @@ func GetPartnerForOperatorContext(db *sql.DB, operatorContextID, partnerID strin
 		       owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
 		       category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 		       notes,
-		       COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
-		       COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
-		       beneficiary_name, bank_name, bank_branch,
-		       settlement_preference, bank_account_holder_matches_owner, bank_notes,
+		       COALESCE(payout_destination_id,''), COALESCE(destination_method,''),
+		       COALESCE(masked_destination_reference,''), COALESCE(destination_verification_status,''),
 		       version, created_at, updated_at
 		FROM dsh_partners
 		WHERE id = $1 AND operator_context_id = $2`, partnerID, operatorContextID,
@@ -374,9 +368,7 @@ func GetPartnerForOperatorContext(db *sql.DB, operatorContextID, partnerID strin
 		&p.OwnerActorID, &p.WorkforcePersonID, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
 		&p.Category, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
-		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
-		&p.BeneficiaryName, &p.BankName, &p.BankBranch,
-		&p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
+		&p.PayoutDestinationID, &p.DestinationMethod, &p.MaskedDestinationReference, &p.DestinationVerificationStatus,
 		&p.Version, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {

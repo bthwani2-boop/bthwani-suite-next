@@ -167,14 +167,10 @@ func TestOperatorAllowedActionsMirrorEveryTransition(t *testing.T) {
 func TestPartnerStateViewMasksPayoutDataAndIncludesPolicy(t *testing.T) {
 	view := BuildPartnerStateView(Partner{
 		ActivationStatus:    StatusClientVisible,
-		BankAccountNumber:   "raw-account",
-		BankIBAN:            "raw-iban",
-		PayoutMobileNumber:  "raw-mobile",
-		MaskedAccountNumber: "*****1234",
-		MaskedIBAN:          "********5678",
-		MaskedMobileNumber:  "*******0001",
+		DestinationMethod:   "bank",
+		MaskedDestinationReference: "*****1234",
 	}, "app-partner")
-	if view.BankAccountNumber != "*****1234" || view.BankIBAN != "********5678" || view.PayoutMobileNumber != "*******0001" {
+	if view.MaskedDestinationReference != "*****1234" {
 		t.Fatalf("state view leaked raw payout data: %#v", view)
 	}
 	if !containsAction(view.AllowedActions, "read_own_status") {

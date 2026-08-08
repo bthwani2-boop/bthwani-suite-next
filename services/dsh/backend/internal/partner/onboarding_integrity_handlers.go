@@ -44,7 +44,12 @@ func HandleGovernedFieldUpdatePartner(db *sql.DB, wltClient *wlt.Client) http.Ha
 		rawIBAN := unmaskedPayoutValue(input.BankIBAN)
 		rawMobile := unmaskedPayoutValue(input.PayoutMobileNumber)
 		preference, preferenceOK := normalizeDshPayoutPreference(input.SettlementPreference)
-		metadataChanged := payoutMetadataChanged(current, input)
+		
+		metadataChanged := false
+		if preference != "" && preference != current.DestinationMethod {
+			metadataChanged = true
+		}
+		
 		payoutMutation := rawAccount != "" || rawIBAN != "" || rawMobile != "" || metadataChanged
 
 		if payoutMutation {
@@ -71,36 +76,37 @@ func HandleGovernedFieldUpdatePartner(db *sql.DB, wltClient *wlt.Client) http.Ha
 			if correlation == "" {
 				correlation = governedMutationKey("partner-payout-correlation", partnerID, idempotency)
 			}
+			var destinationReference string
+			var destinationMethod string = preference
+
+			if destinationMethod == "bank" {
+				if rawIBAN != "" {
+					destinationReference = rawIBAN
+				} else {
+					destinationReference = rawAccount
+				}
+			} else if destinationMethod == "mobile_money" {
+				destinationReference = rawMobile
+			}
+
 			ref, handoffErr := wltClient.UpsertPayoutDestination(r.Context(), partnerID, wlt.PayoutDestinationUpsertInput{
-				BeneficiaryName:               input.BeneficiaryName,
-				BankName:                      input.BankName,
-				BankBranch:                    input.BankBranch,
-				AccountNumber:                 rawAccount,
-				IBAN:                          rawIBAN,
-				PayoutMobileNumber:            rawMobile,
-				SettlementPreference:          preference,
-				BankAccountHolderMatchesOwner: boolValue(input.BankAccountHolderMatchesOwner),
-				BankNotes:                     input.BankNotes,
-				CreatedByActorID:              actorID,
-				CorrelationID:                 correlation,
-				IdempotencyKey:                idempotency,
+				BeneficiaryName:      input.BeneficiaryName,
+				DestinationMethod:    destinationMethod,
+				DestinationReference: destinationReference,
+				CreatedByActorID:     actorID,
+				CorrelationID:        correlation,
+				IdempotencyKey:       idempotency,
 			})
 			if handoffErr != nil {
 				sendError(w, http.StatusBadGateway, "WLT_PAYOUT_HANDOFF_FAILED", handoffErr.Error())
 				return
 			}
 			input.PayoutDestinationID = ref.ID
-			input.MaskedAccountNumber = ref.MaskedAccountNumber
-			input.MaskedIBAN = ref.MaskedIBAN
-			input.MaskedMobileNumber = ref.MaskedMobileNumber
+			input.DestinationMethod = ref.DestinationMethod
+			input.MaskedDestinationReference = ref.MaskedDestinationReference
+			input.DestinationVerificationStatus = ref.DestinationVerificationStatus
 			input.BeneficiaryName = ref.BeneficiaryName
-			input.BankName = ref.BankName
-			input.BankBranch = ref.BankBranch
-			input.SettlementPreference = dshPayoutPreference(ref.SettlementPreference)
 		}
-		input.BankAccountNumber = ""
-		input.BankIBAN = ""
-		input.PayoutMobileNumber = ""
 		input.UpdatedByActorID = actorID
 
 		updated, err := UpdatePartnerGoverned(db, partnerID, input, expectedVersion)
@@ -322,15 +328,6 @@ func dshPayoutPreference(value string) string {
 	default:
 		return ""
 	}
-}
-
-func payoutMetadataChanged(current Partner, input UpdatePartnerInput) bool {
-	preference := strings.TrimSpace(input.SettlementPreference)
-	return (strings.TrimSpace(input.BeneficiaryName) != "" && strings.TrimSpace(input.BeneficiaryName) != strings.TrimSpace(current.BeneficiaryName)) ||
-		(strings.TrimSpace(input.BankName) != "" && strings.TrimSpace(input.BankName) != strings.TrimSpace(current.BankName)) ||
-		(strings.TrimSpace(input.BankBranch) != "" && strings.TrimSpace(input.BankBranch) != strings.TrimSpace(current.BankBranch)) ||
-		(preference != "" && preference != strings.TrimSpace(current.SettlementPreference)) ||
-		(strings.TrimSpace(input.BankNotes) != "" && strings.TrimSpace(input.BankNotes) != strings.TrimSpace(current.BankNotes))
 }
 
 func boolValue(value *bool) bool {

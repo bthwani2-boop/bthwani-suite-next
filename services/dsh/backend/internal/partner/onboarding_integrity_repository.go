@@ -24,10 +24,8 @@ const governedPartnerColumns = `id, legal_name_ar, legal_name_en, display_name,
 	owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
 	category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 	notes,
-	COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
-	COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
-	beneficiary_name, bank_name, bank_branch,
-	settlement_preference, bank_account_holder_matches_owner, bank_notes,
+	COALESCE(payout_destination_id,''), COALESCE(destination_method,''),
+	COALESCE(masked_destination_reference,''), COALESCE(destination_verification_status,''),
 	version, created_at, updated_at`
 
 type partnerScanner interface {
@@ -46,9 +44,7 @@ func scanGovernedPartner(row partnerScanner) (Partner, error) {
 		&p.OwnerActorID, &p.WorkforcePersonID, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
 		&p.Category, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
-		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
-		&p.BeneficiaryName, &p.BankName, &p.BankBranch,
-		&p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
+		&p.PayoutDestinationID, &p.DestinationMethod, &p.MaskedDestinationReference, &p.DestinationVerificationStatus,
 		&p.Version, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {
@@ -58,12 +54,8 @@ func scanGovernedPartner(row partnerScanner) (Partner, error) {
 }
 
 // SanitizePartnerForSurface guarantees that no raw payout identifier can leave
-// DSH. Legacy JSON fields carry masked compatibility values until all surfaces
-// consume the explicit masked fields.
+// DSH.
 func SanitizePartnerForSurface(p Partner) Partner {
-	p.BankAccountNumber = p.MaskedAccountNumber
-	p.BankIBAN = p.MaskedIBAN
-	p.PayoutMobileNumber = p.MaskedMobileNumber
 	return p
 }
 
@@ -85,10 +77,6 @@ func UpdatePartnerGoverned(db *sql.DB, partnerID string, input UpdatePartnerInpu
 
 	var row *sql.Row
 	if strings.TrimSpace(input.PayoutDestinationID) != "" {
-		var holderMatchesOwner sql.NullBool
-		if input.BankAccountHolderMatchesOwner != nil {
-			holderMatchesOwner = sql.NullBool{Bool: *input.BankAccountHolderMatchesOwner, Valid: true}
-		}
 		row = db.QueryRow(`
 			UPDATE dsh_partners SET
 				display_name = COALESCE(NULLIF($2,''), display_name),
@@ -98,26 +86,18 @@ func UpdatePartnerGoverned(db *sql.DB, partnerID string, input UpdatePartnerInpu
 				secondary_phone = COALESCE(NULLIF($6,''), secondary_phone),
 				email = COALESCE(NULLIF($7,''), email),
 				notes = COALESCE(NULLIF($8,''), notes),
-				beneficiary_name = $9,
-				bank_name = $10,
-				bank_branch = $11,
-				settlement_preference = $12,
-				bank_account_holder_matches_owner = COALESCE($13, bank_account_holder_matches_owner),
-				bank_notes = $14,
-				payout_destination_id = $15,
-				masked_account_number = $16,
-				masked_iban = $17,
-				masked_mobile_number = $18,
+				payout_destination_id = $10,
+				destination_method = $11,
+				masked_destination_reference = $12,
+				destination_verification_status = $13,
 				version = version + 1,
 				updated_at = NOW()
 			WHERE id = $1 AND version = $9
 			RETURNING `+governedPartnerColumns,
 			partnerID, input.DisplayName, input.OwnerActorID, input.WorkforcePersonID, input.PrimaryPhone,
 			input.SecondaryPhone, input.Email, input.Notes, expectedVersion,
-			input.BeneficiaryName, input.BankName, input.BankBranch,
-			input.SettlementPreference, holderMatchesOwner, input.BankNotes,
-			input.PayoutDestinationID, input.MaskedAccountNumber,
-			input.MaskedIBAN, input.MaskedMobileNumber,
+			input.PayoutDestinationID, input.DestinationMethod,
+			input.MaskedDestinationReference, input.DestinationVerificationStatus,
 		)
 	} else {
 		row = db.QueryRow(`

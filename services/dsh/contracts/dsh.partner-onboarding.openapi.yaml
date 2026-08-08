@@ -1258,21 +1258,13 @@ components:
         payoutDestinationId:
           type: string
           description: WLT reference only.
-        bankAccountNumber:
+        destinationMethod:
           type: string
-          description: Masked compatibility value; never raw.
-        bankIban:
+        maskedDestinationReference:
           type: string
-          description: Masked compatibility value; never raw.
-        payoutMobileNumber:
+        destinationVerificationStatus:
           type: string
-          description: Masked compatibility value; never raw.
-        maskedAccountNumber:
-          type: string
-        maskedIban:
-          type: string
-        maskedMobileNumber:
-          type: string
+          enum: [ unverified, verified, rejected ]
         version:
           type: integer
           minimum: 1

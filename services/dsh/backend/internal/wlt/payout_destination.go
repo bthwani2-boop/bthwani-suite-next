@@ -26,36 +26,27 @@ func partnerPayoutDestinationPath(partnerID string) string {
 // PayoutDestinationUpsertInput contains raw payout details only while the
 // request is in flight to WLT. DSH must never persist these raw values.
 type PayoutDestinationUpsertInput struct {
-	BeneficiaryName               string `json:"beneficiaryName"`
-	BankName                      string `json:"bankName"`
-	BankBranch                    string `json:"bankBranch"`
-	AccountNumber                 string `json:"accountNumber"`
-	IBAN                          string `json:"iban"`
-	PayoutMobileNumber            string `json:"payoutMobileNumber"`
-	SettlementPreference          string `json:"settlementPreference"`
-	BankAccountHolderMatchesOwner bool   `json:"bankAccountHolderMatchesOwner"`
-	BankNotes                     string `json:"bankNotes"`
-	CreatedByActorID              string `json:"operatorId"`
-	CorrelationID                 string `json:"-"`
-	IdempotencyKey                string `json:"-"`
+	BeneficiaryName      string `json:"beneficiaryName"`
+	DestinationMethod    string `json:"destinationMethod"`
+	DestinationReference string `json:"destinationReference"`
+	CreatedByActorID     string `json:"operatorId"`
+	CorrelationID        string `json:"-"`
+	IdempotencyKey       string `json:"-"`
 }
 
 // PayoutDestinationRef mirrors PayoutDestination in
 // services/wlt/contracts/wlt.payouts-destinations.openapi.yaml. Ownership is
 // expressed as an actor pair, not as a bare partner id.
 type PayoutDestinationRef struct {
-	ID                   string `json:"id"`
-	OwnerActorID         string `json:"ownerActorId"`
-	OwnerActorType       string `json:"ownerActorType"`
-	SettlementPreference string `json:"settlementPreference"`
-	MaskedAccountNumber  string `json:"maskedAccountNumber"`
-	MaskedIBAN           string `json:"maskedIban"`
-	MaskedMobileNumber   string `json:"maskedMobileNumber"`
-	BeneficiaryName      string `json:"beneficiaryName"`
-	BankName             string `json:"bankName"`
-	BankBranch           string `json:"bankBranch"`
-	Active               bool   `json:"active"`
-	UpdatedAt            string `json:"updatedAt"`
+	ID                            string `json:"id"`
+	OwnerActorID                  string `json:"ownerActorId"`
+	OwnerActorType                string `json:"ownerActorType"`
+	DestinationMethod             string `json:"destinationMethod"`
+	MaskedDestinationReference    string `json:"maskedDestinationReference"`
+	DestinationVerificationStatus string `json:"destinationVerificationStatus"`
+	BeneficiaryName               string `json:"beneficiaryName"`
+	Active                        bool   `json:"active"`
+	UpdatedAt                     string `json:"updatedAt"`
 }
 
 // payoutDestinationEnvelope mirrors PayoutDestinationEnvelope; WLT wraps every
@@ -70,13 +61,8 @@ func (c *Client) UpsertPayoutDestination(ctx context.Context, partnerID string, 
 	}
 	partnerID = strings.TrimSpace(partnerID)
 	input.BeneficiaryName = strings.TrimSpace(input.BeneficiaryName)
-	input.BankName = strings.TrimSpace(input.BankName)
-	input.BankBranch = strings.TrimSpace(input.BankBranch)
-	input.AccountNumber = strings.TrimSpace(input.AccountNumber)
-	input.IBAN = strings.TrimSpace(input.IBAN)
-	input.PayoutMobileNumber = strings.TrimSpace(input.PayoutMobileNumber)
-	input.SettlementPreference = strings.TrimSpace(input.SettlementPreference)
-	input.BankNotes = strings.TrimSpace(input.BankNotes)
+	input.DestinationMethod = strings.TrimSpace(input.DestinationMethod)
+	input.DestinationReference = strings.TrimSpace(input.DestinationReference)
 	input.CreatedByActorID = strings.TrimSpace(input.CreatedByActorID)
 	if partnerID == "" || input.BeneficiaryName == "" || input.CreatedByActorID == "" {
 		return nil, fmt.Errorf("partner, beneficiary, and creating actor are required")
@@ -105,10 +91,8 @@ func (c *Client) UpsertPayoutDestination(ctx context.Context, partnerID string, 
 			"partner-payout-destination",
 			partnerID,
 			input.CreatedByActorID,
-			input.SettlementPreference,
-			input.AccountNumber,
-			input.IBAN,
-			input.PayoutMobileNumber,
+			input.DestinationMethod,
+			input.DestinationReference,
 		)
 	}
 	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {

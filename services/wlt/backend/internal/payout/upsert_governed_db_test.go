@@ -48,15 +48,10 @@ func executeCanonicalPayoutDestinationRequest(
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	payload := governedDestinationInput{
-		BeneficiaryName:               "DB Partner Owner",
-		BankName:                      "DB Test Bank",
-		BankBranch:                    "Main",
-		AccountNumber:                 account,
-		IBAN:                          "YE00TEST" + account,
-		SettlementPreference:          "bank",
-		BankAccountHolderMatchesOwner: true,
-		BankNotes:                     "integration proof",
-		OperatorID:                    "field-db-001",
+		BeneficiaryName:      "DB Partner Owner",
+		DestinationMethod:    "bank",
+		DestinationReference: account,
+		OperatorID:           "field-db-001",
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -103,7 +98,7 @@ func TestCanonicalPayoutDestinationIdempotencyAndSingleActiveAreOperatorContextL
 		t.Fatalf("first payout status = %d, want 201; body=%s", first.Code, first.Body.String())
 	}
 	firstRef := decodeCanonicalPayoutRef(t, first)
-	if firstRef.ID == "" || firstRef.MaskedAccountNumber == "123456789" {
+	if firstRef.ID == "" || firstRef.MaskedDestinationReference == "123456789" {
 		t.Fatalf("first payout response is not masked: %#v", firstRef)
 	}
 

@@ -26,10 +26,8 @@ func executeDestinationUpsert(t *testing.T, db *sql.DB, operatorContextID, actor
 	t.Helper()
 	body := fmt.Sprintf(`{
 		"beneficiaryName":"OperatorContext Payout Test",
-		"bankName":"Test Bank",
-		"accountNumber":"1234567890",
-		"settlementPreference":"bank",
-		"bankAccountHolderMatchesOwner":true,
+		"destinationMethod":"bank",
+		"destinationReference":"1234567890",
 		"operatorId":"operator-test"
 	}`)
 	req := httptest.NewRequest(http.MethodPut, "/wlt/payout-destinations/field/"+actorID, strings.NewReader(body))

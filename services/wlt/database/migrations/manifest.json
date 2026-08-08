@@ -537,6 +537,20 @@
       "sha256": "74888e70c6d51be8ac1a215e2348c689490a77f30963986842e6a344f44f4695",
       "historicalPrefix": "911",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 77,
+      "file": "wlt-118_official_wallet_destination.sql",
+      "sha256": "c10db708be722b8f98ac7908ef7db91b87dce4e724f6f46ed32711ad25ecf730",
+      "historicalPrefix": "118",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 78,
+      "file": "wlt-119_payout_eligibility_and_snapshots.sql",
+      "sha256": "9244e61baef67f483c687006519537c0f82151190b6db1126c56a265d234810c",
+      "historicalPrefix": "119",
+      "state": "ACTIVE"
     }
   ]
 }

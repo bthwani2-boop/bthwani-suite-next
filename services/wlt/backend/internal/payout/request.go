@@ -149,8 +149,8 @@ func HandleCreatePayoutRequest(db *sql.DB) http.HandlerFunc {
 		}
 
 		// Verify balance
-		var available int64
-		err = tx.QueryRowContext(r.Context(), "SELECT available_balance_minor_units FROM wlt_wallets WHERE actor_id = $1 AND actor_type = $2 FOR UPDATE", input.BeneficiaryActorID, input.BeneficiaryActorType).Scan(&available)
+		var available, settled, paid, held int64
+		err = tx.QueryRowContext(r.Context(), "SELECT available_balance_minor_units, settled_total_minor_units, paid_total_minor_units, held_balance_minor_units FROM wlt_wallets WHERE actor_id = $1 AND actor_type = $2 FOR UPDATE", input.BeneficiaryActorID, input.BeneficiaryActorType).Scan(&available, &settled, &paid, &held)
 		if err == sql.ErrNoRows {
 			shared.SendError(w, http.StatusBadRequest, "NO_WALLET", "wallet not found")
 			return
@@ -159,8 +159,9 @@ func HandleCreatePayoutRequest(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		if available < input.AmountMinorUnits {
-			shared.SendError(w, http.StatusBadRequest, "INSUFFICIENT_FUNDS", "insufficient available balance")
+		withdrawable := settled - paid - held
+		if available < input.AmountMinorUnits || withdrawable < input.AmountMinorUnits {
+			shared.SendError(w, http.StatusBadRequest, "INSUFFICIENT_FUNDS", "insufficient withdrawable balance")
 			return
 		}
 
@@ -170,7 +171,7 @@ func HandleCreatePayoutRequest(db *sql.DB) http.HandlerFunc {
 			SET available_balance_minor_units = available_balance_minor_units - $1,
 			    held_balance_minor_units = held_balance_minor_units + $1,
 				updated_at = now()
-			WHERE actor_id = $2 AND actor_type = $3`,
+			WHERE actor_id = $2 AND actor_type = $3 AND available_balance_minor_units >= $1 AND (settled_total_minor_units - paid_total_minor_units - held_balance_minor_units) >= $1`,
 			input.AmountMinorUnits, input.BeneficiaryActorID, input.BeneficiaryActorType)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to update wallet")

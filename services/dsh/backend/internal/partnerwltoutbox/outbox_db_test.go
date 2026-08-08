@@ -184,9 +184,9 @@ func TestPartnerWltReconciliationCreatesAndResolvesMaskedReadbackCaseDBIntegrati
 	if _, err := db.Exec(`
 		UPDATE dsh_partners SET
 			payout_destination_id = 'wpd-reconciliation-ref',
-			masked_account_number = '*****1234',
-			masked_iban = '********5678',
-			masked_mobile_number = ''
+			destination_method = 'bank',
+			masked_destination_reference = '********5678',
+			destination_verification_status = 'unverified'
 		WHERE id = $1`, partnerID); err != nil {
 		t.Fatal(err)
 	}

@@ -59,7 +59,7 @@ func TestUpsertPayoutDestinationSendsOperatorIdAndReadsEnvelope(t *testing.T) {
 				"id":                   "wpd-1",
 				"ownerActorId":         "partner-1",
 				"ownerActorType":       "partner",
-				"settlementPreference": "bank",
+				"destinationMethod":    "bank",
 				"beneficiaryName":      "Owner",
 				"active":               true,
 				"updatedAt":            "2026-01-01T00:00:00Z",
@@ -71,9 +71,9 @@ func TestUpsertPayoutDestinationSendsOperatorIdAndReadsEnvelope(t *testing.T) {
 	client := NewClient(server.URL, "service-test-token")
 	ctx := WithOperatorContext(context.Background(), "OperatorContext-test")
 	ref, err := client.UpsertPayoutDestination(ctx, "partner-1", PayoutDestinationUpsertInput{
-		BeneficiaryName:      "Owner",
-		SettlementPreference: "bank",
-		CreatedByActorID:     "operator-1",
+		BeneficiaryName:   "Owner",
+		DestinationMethod: "bank",
+		CreatedByActorID:  "operator-1",
 	})
 	if err != nil {
 		t.Fatalf("upsert payout destination: %v", err)
