@@ -32,9 +32,10 @@ This skill reconciles independently produced evidence and issues the canonical f
 - `governance/contracts/sdlc/`
 - `governance/product/PRD.md` and applicable Product Truth
 - `governance/product/platform-model.yaml`
-- `governance/github/repository-enforcement.json`
+- `governance/github/master-protection.ruleset.json` only as desired configuration when applicable
 - `governance/guards/guard-assurance.json`
 - same-candidate evidence and approvals for every applicable scope
+- live GitHub branch/ruleset/check/workflow/review state whenever a GitHub enforcement claim matters
 
 ## Required evidence model
 
@@ -63,19 +64,24 @@ Every skipped stage must appear in `notApplicableStages` with matching `stageExc
 - A guard with `closureEligible: false` cannot independently support closure.
 - Static, configuration, schema, regression, syntax, pinning, and bounded runtime checks remain only their declared scope evidence.
 
-## GitHub enforcement rule
+## GitHub live-evidence rule
 
-- Verify `governance/github/repository-enforcement.json` against live GitHub state before protected closure.
-- If `highRiskClosureAllowed` is false, a high-risk capability cannot close.
-- If `separationOfDutiesProven` is false, a change requiring independent approval remains `NEEDS_EVIDENCE` or the applicable block decision.
-- A single CODEOWNERS identity proves routing only.
-- Unproven branch protection, required checks, stale-approval dismissal, or workflow success cannot be treated as pass.
+When branch protection, rulesets, required checks, reviewer separation, merge readiness, or workflow success are applicable:
+
+1. resolve the exact candidate SHA and target branch;
+2. query the live GitHub state for that branch/candidate;
+3. verify actual ruleset/branch-protection enforcement rather than a tracked desired configuration;
+4. verify required check names and exact-candidate outcomes;
+5. verify reviewer/approval identity and freshness where independent approval is required;
+6. treat absent, inaccessible, stale, pending, skipped-without-proof, or candidate-mismatched platform evidence as `NEEDS_EVIDENCE` or the applicable block decision.
+
+A tracked JSON/Markdown snapshot, CODEOWNERS file, desired ruleset file, previous workflow run, PR summary, or historical report is never current GitHub enforcement proof.
 
 ## Forbidden
 
 - Using implemented, code checked, guard passed, or workflow configured as a synonym for closure.
 - Closure with failed gates, missing scopes, unsupported stage exclusions, open blockers, unresolved protected risk, stale evidence, or self-approval.
-- Closure based on a merge ref, another branch, seed, fixture, mock, declaration, or documentation-only claim.
+- Closure based on a merge ref, another branch, seed, fixture, mock, declaration, snapshot, or documentation-only claim.
 - Promoting static/configuration/regression evidence into runtime, finance, isolation, QA, security, release, production, or product proof.
 - Treating partner/store/subscription records as proof of a separate platform instance or trusted isolation boundary.
 - Inventing collaborators, approvals, GitHub rules, checks, runtime, or production evidence.
@@ -92,7 +98,7 @@ stage_exclusion_evidence:
 missing_evidence:
 required_approvals:
 guard_assurance_reconciliation:
-github_enforcement_state:
+live_github_enforcement_state:
 separation_of_duties:
 open_blockers:
 residual_risks:
