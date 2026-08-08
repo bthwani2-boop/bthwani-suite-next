@@ -1,8 +1,8 @@
-# الأمر 1 — التشخيص وإنشاء خطة تنفيذ قابلة للتنفيذ
+# الأمر 1 — التشخيص العميق وإنشاء حزمة تنفيذ قابلة للتنفيذ
 
 Status: DERIVED_SUPPORT
 
-استخدم هذا الأمر عندما يكون المطلوب **تشخيص مهمة/رحلة/تطبيق/سطح/قسم/صفحة/ميزة/خدمة/نطاق ثم تجهيز حزمة تنفيذ مكتفية ذاتيًا** دون تنفيذ تغييرات المنتج نفسها.
+استخدم هذا الأمر عندما يكون المطلوب **تشخيص مهمة/رحلة/تطبيق/سطح/قسم/صفحة/ميزة/خدمة/نطاق بعمق ثم تجهيز حزمة تنفيذ مكتفية ذاتيًا** دون تنفيذ تغييرات المنتج نفسها.
 
 ## المدخلات
 
@@ -22,7 +22,7 @@ DELIVERY: <NO_COMMIT | COMMIT | COMMIT_AND_PUSH>
 
 ## 1. السلطة والحقيقة
 
-ابدأ من المرجع المثبت واقرأ فقط ما ينطبق وفق الترتيب الحاكم الحالي:
+ابدأ من المرجع المثبت واقرأ فقط ما ينطبق وفق ترتيب السلطة الحاكم الحالي على ذلك المرجع:
 
 ```text
 current authorized task
@@ -32,7 +32,7 @@ current authorized task
 → applicable engineering/security/delivery policy
 → applicable capability Product Truth
 → applicable machine contracts/registries
-→ exact pinned implementation/runtime/platform evidence
+→ exact pinned implementation/runtime/repository-platform evidence
 ```
 
 لا تجعل Prompt أو Plan أو تقريرًا أو Fixture أو Snapshot مصدر Product Truth أو Implementation/Runtime/Repository-Platform truth.
@@ -96,7 +96,7 @@ EXECUTION_SCOPE
 
 ## 4. المصادر المشتقة
 
-يمكن استخدام:
+يمكن استخدام ما هو موجود فعليًا على المرجع، مثل:
 
 ```text
 plans/smsm-dsh-wlt-journeys/
@@ -104,7 +104,7 @@ plans/diagnose-implementing/ packages
 historical plans/reports/evidence
 ```
 
-للاكتشاف والمقارنة فقط. لا تفترض عدد رحلات أو شرائح ثابتًا، ولا تورث حالة/SHA/قرارًا تاريخيًا. صنّف أي ادعاء مشتق مادي إلى أحد:
+للاكتشاف والمقارنة فقط. لا تفترض عدد رحلات أو شرائح ثابتًا، ولا تورث حالة/SHA/قرارًا تاريخيًا. صنّف أي ادعاء مشتق مادي نصيًا إلى أحد:
 
 ```text
 CONFIRMED
@@ -142,7 +142,7 @@ required target state
 required verification
 ```
 
-لا تعتمد أول تفسير. حاول إثبات أن Root Cause المقترح خاطئ، وابحث عن writer/reader/contract/state transition/runtime path بديل قبل تثبيته.
+لا تعتمد أول تفسير. حاول إثبات أن Root Cause المقترح خاطئ، وابحث عن writer/reader/contract/state-transition/runtime path بديل قبل تثبيته.
 
 ## 6. فحص الموجود قبل اقتراح الجديد
 
@@ -253,7 +253,7 @@ compatibility window: owner + expiry + removal trigger + monitoring/tests
 plans/diagnose-implementing/<TASK_NAME>/
 ```
 
-استخدم فقط:
+استخدم فقط الإطار الموجود فعليًا على المرجع، حاليًا:
 
 ```text
 plans/diagnose-implementing/_template/
@@ -349,7 +349,7 @@ hard dependency
 → cleanup/non-blocking debt last
 ```
 
-يمكن توازي القراءة والبحث وجمع الأدلة والفحوص المستقلة. خطط لوحدة كتابة واحدة `IN_PROGRESS` فقط، واجعل migrations/contracts/generated clients/shared truth writes والـcommits متسلسلة.
+يمكن توازي القراءة والبحث وجمع الأدلة والفحوص المستقلة. خطط لوحدة كتابة واحدة `IN_PROGRESS` فقط، واجعل migrations/contracts/generated clients/shared truth writes والـCommits متسلسلة.
 
 ## 14. خطة التحقق
 
@@ -369,7 +369,27 @@ scoped inspection/search
 
 أي تغيير لاحق في canonical truth/authz/contract/generated client/schema/shared state/runtime foundation يجب أن يحدد الأدلة التي تصبح stale والفحوص التي يلزم إعادتها.
 
-## 15. جاهزية الحزمة
+## 15. Execution/Review Handoff Contract
+
+قبل تسليم الحزمة، تأكد أن المنفذ أو المراجع اللاحق يستطيع استنتاج ما يلي من ملفات الحزمة الحالية **دون إعادة اكتشاف أو Schema موازٍ**:
+
+```text
+claimed outcome / measurable objective
+canonical owner + canonical write path
+required and explicitly excluded surfaces/journeys
+must-not-change boundaries
+final acceptance criteria
+required canonical persisted readback
+required verification IDs + proof limits
+expected applicable evidence scopes
+known protected/independent approvals that may gate final closure
+compatibility/migration/rollback obligations
+external dependencies + reopen/resume triggers
+```
+
+إذا كانت أي معلومة لازمة للإغلاق غير محسومة، سجّلها Finding أو Dependency أو Verification requirement؛ لا تتركها في المحادثة أو الذاكرة فقط.
+
+## 16. جاهزية الحزمة
 
 قبل اعتماد الخطة:
 
@@ -386,6 +406,7 @@ no vague task
 no unknown verificationId
 no unresolved template marker
 no secret/PII/production-sensitive content
+handoff contract is derivable from current package files
 ```
 
 عند توفر Shell شغّل:
@@ -398,7 +419,7 @@ node plans/diagnose-implementing/validate-package.mjs `
 
 لا تستخدم `--closure` في مرحلة التخطيط ولا أي flag غير مدعوم. إذا لم يُشغّل Validator فعليًا فلا تدّع PASS.
 
-## 16. التسليم والقرار
+## 17. التسليم والقرار
 
 طبّق فقط:
 
@@ -410,12 +431,7 @@ COMMIT_AND_PUSH
 
 Commit/Push الحزمة فقط، بلا تغييرات تشغيلية، بلا Force، وبلا PR/Merge/Release/Production ما لم يطلب ذلك صراحة بشكل منفصل.
 
-استخدم `governance/contracts/decision-vocabulary.json` فقط. عادة:
-
-- `PASS`: إعداد/strict scope محدد شُغّل ونجح فعليًا.
-- `NEEDS_EVIDENCE`: الخطة موجودة لكن تحقق مطلوب مفقود أو stale.
-- `FIX_REQUIRED`: نقص داخلي في الخطة/Schema/coverage/concerns.
-- `BLOCKED_EXTERNAL`: مانع خارجي حقيقي بعد استنفاد العمل الداخلي الآمن.
+استخدم `governance/contracts/decision-vocabulary.json` الحالي فقط؛ لا تحفظ نسخة محلية من القاموس داخل هذا Prompt. `PASS` يخص claim/evidence scope محددًا، وليس Final Closure.
 
 التقرير المركز:
 
@@ -427,6 +443,7 @@ risk/scope summary
 authority + derived sources used
 root causes + truth owners
 coverage + execution units + dependency order
+handoff outcome/readback/evidence/approval requirements
 compatibility/security/finance/data/runtime concerns
 strict validation actual result
 remaining unknown/external dependencies
