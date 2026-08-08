@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 3,
+  "unitId": "U006",
+  "name": "client-support-ratings-notifications-preferences",
+  "kind": "JOURNEY",
+  "status": "READY",
+  "executionConcern": "customer support, ratings, notifications, preferences and recovery interactions",
+  "objective": "Close customer support conversations, order rescue readback, rating eligibility/submission, notifications/deep links and preference mutations with owner-scoped authorization, retry-safe commands and canonical reload.",
+  "truthOwner": "DSH owns support/incident/rescue, ratings and notification preference operational truth; Notifications delivers messages but does not replace DSH state.",
+  "coverageIds": ["COV-001","COV-002","COV-003","COV-004","COV-016","COV-018","COV-019","COV-020","COV-021","COV-022"],
+  "topics": ["app-client","full-stack","multi-surface","root-cause"],
+  "contexts": ["client","canonical-readback","actor-object-isolation"],
+  "journeys": ["client support ticket/conversation","operator order rescue readback","post-order rating gate","notification center/deep links","notification preferences and retry/recovery"],
+  "affectedSurfaces": ["app-client","app-partner","app-captain","control-panel"],
+  "dependsOn": ["U001","U004"],
+  "tasks": [{
+    "taskId": "U006-T001",
+    "order": 1,
+    "objective": "Close customer support, rating and notification interaction loops",
+    "currentProblem": "Operational tests verify failure-safe support navigation and notification reload markers, while Product Truth requires actor-owned tickets, hidden internal notes and governed rescue; runtime isolation, idempotency and deep-link authorization remain unproven.",
+    "requiredChange": "Trace support/rating/notification/preference commands to contracts, handlers and persistence; fix ownership, expected-state/idempotency, internal-note redaction, post-mutation reload and deep-link object authorization.",
+    "targetState": "Client can access only owned support/rating/order notification objects, mutations are retry-safe, internal/operator data never leaks and every success reloads canonical state.",
+    "action": "Fix DSH owner/state-machine issues first, then shared controllers and client screens; include only partner/captain/operator slices necessary for the same ticket/order consequence.",
+    "paths": ["services/dsh/frontend/app-client/support","services/dsh/frontend/app-client/ratings","services/dsh/frontend/app-client/notifications","services/dsh/frontend/app-client/account/PreferencesHubScreen.tsx","services/dsh/frontend/shared/support","services/dsh/frontend/shared/notifications","services/dsh/backend/internal/support","services/dsh/backend","services/dsh/contracts","services/dsh/database","services/dsh/frontend/control-panel/support"],
+    "symbols": ["SupportTicketScreen","TicketDetailScreen","ClientOrderRatingGate","NotificationCenterScreen","notificationActionFromDeepLink","savePreference"],
+    "mustNotChange": ["Do not expose internal operator notes.","Do not allow another actor's ticket/order/rating through guessed IDs or deep links.","Do not use local-only rescue/support status.","Do not mutate WLT financial truth from support/rescue."],
+    "acceptanceCriteria": ["Support access is owner-scoped and internal notes are absent from client responses.","Duplicate message/rating/preference actions do not create duplicate effects.","Notification mutations reload canonical state and deep links re-authorize target objects.","Order rescue outcomes appear through canonical order/support readback without local financial mutation."],
+    "verificationIds": ["V601","V602","V603","V604"],
+    "rollback": "Revert the focused implementation commit or roll forward at the canonical owner while preserving audit/data evidence; never restore a parallel truth source.",
+    "commitBoundary": "One focused U006 implementation commit after owner correction, directly affected consumer migration, cleanup and all linked checks."
+  }]
+}

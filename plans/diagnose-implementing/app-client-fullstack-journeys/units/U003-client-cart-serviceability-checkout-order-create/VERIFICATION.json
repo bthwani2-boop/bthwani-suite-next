@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 3,
+  "unitId": "U003",
+  "checks": [
+    {"verificationId":"V301","type":"static","command":"rg -n \"CartScreen|GovernedCartScreen|GovernedCheckoutScreen|evaluateDshOperationalPolicy|idempot|checkout|order\" services/dsh/frontend/app-client/cart services/dsh/frontend/app-client/checkout services/dsh/frontend/shared services/dsh/backend services/dsh/contracts services/dsh/database","proves":"Maps cart/serviceability/checkout/order creation slice.","doesNotProve":"Does not prove concurrency/database behavior by itself.","passCriteria":"All state-changing paths have canonical contract/owner/readback and no local final truth.","failCriteria":"Parallel/local pricing, serviceability or final order truth is found.","required":true},
+    {"verificationId":"V302","type":"frontend","command":"pnpm --dir apps/app-client/runtime test","proves":"Runs client contract tests against final source wiring.","doesNotProve":"Does not prove concurrent order uniqueness.","passCriteria":"Command exits zero.","failCriteria":"Any test fails.","required":true},
+    {"verificationId":"V303","type":"backend","command":"cd services/dsh/backend && go test ./...","proves":"Exercises DSH backend order/policy/cart logic.","doesNotProve":"Does not independently prove PostgreSQL migration invariants.","passCriteria":"Command exits zero.","failCriteria":"Any Go test fails.","required":true},
+    {"verificationId":"V304","type":"database","command":"pnpm run runtime:smoke","proves":"Exercises repository runtime smoke against configured local services.","doesNotProve":"Does not replace targeted concurrency and negative evidence.","passCriteria":"Smoke exits zero and client-critical DSH/WLT health/readback is available.","failCriteria":"Smoke fails or canonical dependency is unavailable.","required":true}
+  ]
+}

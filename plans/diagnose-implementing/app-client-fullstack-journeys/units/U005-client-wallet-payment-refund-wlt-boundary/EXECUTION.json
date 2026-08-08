@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 3,
+  "unitId": "U005",
+  "name": "client-wallet-payment-refund-wlt-boundary",
+  "kind": "JOURNEY",
+  "status": "READY",
+  "executionConcern": "client wallet, ledger, payment and refund financial boundary",
+  "objective": "Keep every customer-visible balance, ledger, payment eligibility/status and refund consequence WLT-owned, actor/context isolated and consumed through governed DSH/WLT boundaries without parallel financial truth.",
+  "truthOwner": "WLT is sole financial truth owner; DSH may proxy/hold operational references but cannot mutate wallet or ledger truth.",
+  "coverageIds": ["COV-001","COV-002","COV-017","COV-018","COV-020","COV-021","COV-023","COV-024","COV-025"],
+  "topics": ["app-client","full-stack","multi-surface","root-cause"],
+  "contexts": ["client","canonical-readback","actor-object-isolation"],
+  "journeys": ["client wallet and ledger readback","checkout payment method/eligibility","payment status projection on order","refund/reversal consequence readback"],
+  "affectedSurfaces": ["app-client","control-panel"],
+  "dependsOn": ["U001","U003"],
+  "tasks": [{
+    "taskId": "U005-T001",
+    "order": 1,
+    "objective": "Close client financial ownership and isolation boundaries",
+    "currentProblem": "MySpace uses WLT shared ActorWalletPanel and Product Truth requires own actor/operator-context-bound reads, yet live backend/ledger authorization, payment/refund idempotency and stale financial display are not proven by static composition.",
+    "requiredChange": "Trace client wallet/ledger/payment/refund flows through WLT shared frontend, DSH BFF, WLT contracts/backend/database; correct scope, correlation, idempotency and readback while deleting any proven local balance derivation.",
+    "targetState": "Client sees only own WLT balances/ledger/payment/refund truth; unavailable finance fails closed; DSH stores no independent balance/ledger truth and money-moving actions use WLT-owned commands.",
+    "action": "Correct WLT owner/database invariants first, DSH proxy boundaries second and client presentation last; preserve financial audit lineage.",
+    "paths": ["services/dsh/frontend/app-client/finance","services/dsh/frontend/app-client/account/MySpaceScreen.tsx","services/wlt/frontend/shared/dsh","services/dsh/backend/internal/wlt","services/dsh/backend/internal/http/representative_finance_routes.go","services/wlt/backend","services/wlt/database","services/dsh/contracts/dsh.representative-finance.openapi.yaml","apps/control-panel/runtime/src/app/(shell)/wlt/finance"],
+    "symbols": ["ActorWalletPanel","WltClientWalletPanel","getDshClientOwnWallet","listDshClientOwnLedgerEntries"],
+    "mustNotChange": ["Do not accept arbitrary actor/operator context from app-client.","Do not derive wallet balance from DSH/order/settlement summaries.","Do not append ledger or mutate balance in DSH/frontend.","Do not expose finance.read as money-moving permission."],
+    "acceptanceCriteria": ["Cross-actor/context finance reads are denied/hidden.","Wallet and ledger values equal WLT readback with explicit unavailable/error states.","Payment/refund retries preserve one financial effect and correlated operational reference.","No DSH/frontend balance mutation path is introduced."],
+    "verificationIds": ["V501","V502","V503","V504"],
+    "rollback": "Revert the focused implementation commit or roll forward at the canonical owner while preserving audit/data evidence; never restore a parallel truth source.",
+    "commitBoundary": "One focused U005 implementation commit after owner correction, directly affected consumer migration, cleanup and all linked checks."
+  }]
+}
