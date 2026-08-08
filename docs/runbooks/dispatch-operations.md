@@ -2,13 +2,12 @@
 
 Status: OPERATIONAL_RUNBOOK
 Owner: DSH dispatch operations
-Canonical domain decision: `governance/domains/dsh-wlt/dispatch-boundary.md`
 
-Current dispatch contracts, state machine, schema and permissions override stale field/error names in this runbook.
+Current authority sources: `governance/product/PRD.md`, `governance/policies/engineering.md`, applicable Product Truth, and current DSH contracts/implementation. This runbook is operational guidance only.
 
 ## Scope
 
-Covers captain offer creation/response, timeout, cancellation, reassignment, capacity/service-area eligibility, operator monitoring and client tracking readback. DSH remains the operational-truth owner within the registered dispatch boundary.
+Covers captain offer creation/response, timeout, cancellation, reassignment, capacity/service-area eligibility, operator monitoring and client tracking readback. DSH remains the operational-truth owner for dispatch under the current product/domain ownership model unless a higher current authority explicitly changes that ownership.
 
 ## Primary signals
 
