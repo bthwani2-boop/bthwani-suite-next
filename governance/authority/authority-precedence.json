@@ -6,7 +6,7 @@
     {"rank": 2, "id": "AUTHORITY_PRECEDENCE_REGISTRY", "description": "This registry resolves repository governance authority conflicts."},
     {"rank": 3, "id": "UNIFIED_GOVERNANCE", "description": "GOVERNANCE.md, the PRD, and the three general policies define durable repository governance for humans and agents alike."},
     {"rank": 4, "id": "CAPABILITY_PRODUCT_TRUTH", "description": "A registered Product Truth contract defines capability-specific product semantics only within its declared scope and cannot contradict unified governance."},
-    {"rank": 5, "id": "MACHINE_READABLE_CONTRACT", "description": "Registered schemas, vocabularies, lifecycle, approval, workflow and guard contracts encode governance for automated validation."},
+    {"rank": 5, "id": "MACHINE_READABLE_CONTRACT", "description": "Registered schemas, vocabularies, lifecycle, approval, workflow, guard and tool-routing contracts encode governance for automated validation."},
     {"rank": 6, "id": "OWNER_SKILL_CONTRACT", "description": "An active governed skill owns only its declared execution domain and never creates higher policy."},
     {"rank": 7, "id": "TOOL_ADAPTER", "description": "Tools and adapters translate higher rules and own no product truth or approval."},
     {"rank": 8, "id": "DERIVED_SUPPORT_ARTIFACT", "description": "Plans, prompts, runbooks, diagnostics, evidence packages and snapshots assist execution but never override authority or live implementation/runtime truth."},
@@ -27,6 +27,7 @@
     {"path": "governance/agents", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["agent_roles", "approval_domains"]},
     {"path": "governance/skills", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["skill_lifecycle", "skill_dependencies", "skill_routing"]},
     {"path": "governance/guards", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["guard_registry", "guard_assurance", "guard_sets", "static_binding_registry"]},
+    {"path": "governance/tools/agent-tool-registry.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["tool_inventory", "tool_routing_metadata"], "scopeLimit": "This registry governs tool availability/routing metadata only; tools own no approval or repository truth."},
     {"path": "governance/github/workflow-registry.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["workflow_registry"]},
     {"path": "governance/github/full-verification-policy.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["full_verification_routing"]},
     {"path": "governance/github/master-protection.ruleset.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["github_desired_master_ruleset"], "scopeLimit": "Desired configuration only; live GitHub verification is required for enforcement claims."},
@@ -40,7 +41,6 @@
 
     {"path": ".agents/skills", "classification": "OWNER_CONTRACT", "precedenceId": "OWNER_SKILL_CONTRACT", "authorityDomains": ["declared_active_skill_scope"]},
     {"path": ".agents/tools", "classification": "ADAPTER", "precedenceId": "TOOL_ADAPTER", "authorityDomains": ["conditional_tool_policy"], "scopeLimit": "Tools own no approval or repository truth."},
-    {"path": "governance/policies/governance.rego", "classification": "ADAPTER", "precedenceId": "TOOL_ADAPTER", "authorityDomains": ["governance_policy_enforcement"], "scopeLimit": "OPA/Conftest enforcement adapter only; creates no independent policy or approval."},
     {"path": "AGENTS.md", "classification": "ADAPTER", "precedenceId": "TOOL_ADAPTER", "authorityDomains": ["agent_entry_adapter"], "scopeLimit": "Thin pointer to the same unified governance used by human developers."},
     {"path": "CLAUDE.md", "classification": "ADAPTER", "precedenceId": "TOOL_ADAPTER", "authorityDomains": ["claude_adapter"]},
     {"path": "GEMINI.md", "classification": "ADAPTER", "precedenceId": "TOOL_ADAPTER", "authorityDomains": ["gemini_cli_adapter"]},
@@ -48,7 +48,6 @@
     {"path": "opencode.json", "classification": "ADAPTER", "precedenceId": "TOOL_ADAPTER", "authorityDomains": ["opencode_adapter"]},
 
     {"path": ".agents/INDEX.md", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["skill_routing_index"]},
-    {"path": "governance/tools/agent-tool-registry.json", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["tool_inventory", "tool_routing_metadata"], "scopeLimit": "Tools own no approval or repository truth."},
     {"path": "governance/github/repository-enforcement.json", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["github_enforcement_snapshot"], "scopeLimit": "Observed snapshot only; live GitHub verification is required for current claims."},
     {"path": "plans/diagnose-implementing", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["diagnosis_execution_plans"], "scopeLimit": "Disposable task planning packages; no runtime, policy, approval, or product authority."},
     {"path": "plans/smsm-dsh-wlt-journeys", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["journey_discovery_support"], "scopeLimit": "DSH/WLT discovery and coverage support only."}
