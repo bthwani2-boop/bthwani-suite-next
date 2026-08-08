@@ -1,8 +1,9 @@
-name: SonarQube
+name: SonarQube Cloud
 
 on:
   pull_request:
-    branches: ["**"]
+    branches: [master]
+    types: [opened, synchronize, reopened]
   push:
     branches: [master]
 
@@ -10,15 +11,16 @@ permissions:
   contents: read
 
 concurrency:
-  group: sonarqube-${{ github.event.pull_request.number || github.ref }}
+  group: sonarqube-cloud-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   scan:
-    name: SonarQube scan
+    name: SonarQube Cloud scan
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    if: ${{ vars.SONAR_HOST_URL != '' }}
+    timeout-minutes: 30
+    if: ${{ vars.SONAR_ORGANIZATION != '' && vars.SONAR_PROJECT_KEY != '' }}
+
     steps:
       - name: Checkout immutable source with full history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -27,8 +29,21 @@ jobs:
           show-progress: false
           fetch-depth: 0
 
-      - name: SonarQube scan
-        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6
+      - name: Validate SonarQube Cloud credentials
+        shell: bash
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::error::SONAR_TOKEN is not configured. Add the SonarQube Cloud token in GitHub Actions secrets."
+            exit 1
+          fi
+
+      - name: SonarQube Cloud scan
+        uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
