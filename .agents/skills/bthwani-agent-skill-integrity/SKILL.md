@@ -1,4 +1,3 @@
-
 ---
 name: bthwani-agent-skill-integrity
 version: 2026.08.06-v2
@@ -9,8 +8,7 @@ summary: Reconcile active governed skills, retired lifecycle records, tool polic
 
 ## Purpose
 
-Own structural integrity checks for `AGENTS.md`, `.agents`, agent and skill registries,
-the conditional tool registry, governed skill contracts, adapters, and routing indexes.
+Own structural integrity checks for `AGENTS.md`, `.agents`, agent and skill registries, the conditional tool registry, governed skill contracts, adapters, and routing indexes.
 
 ## Invoke when
 
@@ -26,6 +24,7 @@ the conditional tool registry, governed skill contracts, adapters, and routing i
 ## Read before
 
 - `governance/authority/authority-precedence.json`
+- `governance/GOVERNANCE.md`
 - `AGENTS.md`
 - `governance/agents/agent-registry.json`
 - `governance/skills/skills-registry.json`
@@ -34,9 +33,7 @@ the conditional tool registry, governed skill contracts, adapters, and routing i
 
 ## Authority boundary
 
-This skill owns registry and routing integrity only. It cannot approve its own governance
-change, grant product, architecture, QA, security, CI, release, or closure approval, or
-promote a tool into an owner skill.
+This skill owns registry and routing integrity only. It cannot approve its own governance change, grant product, architecture, QA, security, CI, release, or closure approval, or promote a tool into an owner skill.
 
 ## Required checks
 
@@ -47,11 +44,11 @@ promote a tool into an owner skill.
 5. Agent primary skill files reference active or conditional governed skills only.
 6. Skill dependencies resolve without cycles and conflicts are symmetric.
 7. Platform adapters remain thin, contain no machine-specific paths, and own no approval.
-8. Backup files, hook-based policy injection, and parallel adapter directories are absent.
+8. Backup files, hook-based policy injection, parallel adapter directories, and retired generated routing catalogs are absent.
 
 ## Forbidden
 
-- Using `.agents/SKILL_CATALOG.md` as authority.
+- Treating a retired or generated routing catalog as authority.
 - Listing a retired skill as active, mandatory, default, owner, or approval authority.
 - Keeping retired or tool-wrapper `SKILL.md` files discoverable.
 - Treating Graphify, LeanCTX, OpenCodeReview, Nx, or runtime tooling as owner skills.
