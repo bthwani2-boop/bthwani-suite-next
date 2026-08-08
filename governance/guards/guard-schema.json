@@ -1,44 +1,44 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "BthwaniGuardSchema",
-  "description": "Schema for verifying guard definitions in guard-registry.json",
+  "title": "BThwani Guard Registry",
+  "description": "Canonical executable/diagnostic guard inventory. Every guard declares its kind, failure posture, purpose, and an execution route.",
   "type": "object",
-  "required": ["entries"],
+  "required": ["schemaVersion", "entries"],
   "additionalProperties": false,
   "properties": {
+    "schemaVersion": { "const": 2 },
     "entries": {
       "type": "array",
+      "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["id", "name", "exit_level", "description"],
+        "required": ["id", "name", "kind", "exit_level", "description"],
         "anyOf": [
           { "required": ["script"] },
           { "required": ["source_file"] }
         ],
         "additionalProperties": false,
         "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^[a-z0-9-]+$"
+          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "name": { "type": "string", "minLength": 1 },
+          "kind": {
+            "enum": ["AGGREGATE_GUARD", "EXECUTABLE_GUARD", "EXTERNAL_TOOL_GATE", "DIAGNOSTIC"]
           },
-          "name": {
-            "type": "string"
+          "script": { "type": "string", "pattern": "^guard:[a-z0-9-]+$" },
+          "exit_level": { "enum": ["fail", "warn"] },
+          "description": { "type": "string", "minLength": 1 },
+          "source_file": { "type": "string", "minLength": 1 }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "kind": { "const": "DIAGNOSTIC" } }, "required": ["kind"] },
+            "then": { "properties": { "exit_level": { "const": "warn" } } }
           },
-          "script": {
-            "type": "string",
-            "pattern": "^guard:[a-z0-9-]+$"
-          },
-          "exit_level": {
-            "type": "string",
-            "enum": ["fail", "warn"]
-          },
-          "description": {
-            "type": "string"
-          },
-          "source_file": {
-            "type": "string"
+          {
+            "if": { "properties": { "exit_level": { "const": "warn" } }, "required": ["exit_level"] },
+            "then": { "properties": { "kind": { "const": "DIAGNOSTIC" } } }
           }
-        }
+        ]
       }
     }
   }
