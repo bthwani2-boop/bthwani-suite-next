@@ -165,3 +165,10 @@ export const VISIT_STATUS_LABELS: Record<DshVisitStatus, string> = {
   complete: "مكتملة",
   escalated: "مُصعَّدة",
 };
+
+export const ESCALATION_STATUS_LABELS: Record<DshEscalationStatus, string> = {
+  open: "مفتوح",
+  acknowledged: "قيد المراجعة",
+  resolved: "تم الحل",
+  escalated_further: "مصعّد للإدارة",
+};

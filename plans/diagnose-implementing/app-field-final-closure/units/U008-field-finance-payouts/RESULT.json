@@ -1,1 +1,16 @@
-{"schemaVersion":3,"unitId":"U008","status":"NOT_STARTED","baselineSha":"ba3393c39b0d0b265a4caf110b3bca685e43b0e3","resultingSha":null,"completedTaskIds":[],"modifiedPaths":[],"checkResults":[],"blockers":[],"deviations":[],"decision":"NOT_RUN","multiSurfaceScope":{"mode":"FULLSTACK_UNIFIED_MULTI_SURFACE","surfaces":["control-panel","app-client","app-partner","app-captain","app-field"],"journeyPolicy":"FIELD_ONLY","sliceContract":"structural envelope"},"closureRule":"Field finance closes only with WLT-owned own-actor truth, DSH boundary, payout idempotency, operator-context isolation and independent finance evidence; COD is excluded."}
+{
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "target_branch": "diagnose-implementing",
+  "resolved_commit_sha": "45dc717ef8ce9d60748fb7a30a639eb861ada5c4",
+  "changed_paths": [
+    "services/dsh/backend/internal/http/payout_routes.go",
+    "services/dsh/backend/internal/wlt/actor_finance_client.go"
+  ],
+  "checks_and_evidence": [
+    "Identified DSH handles payout creation via handleActorPayoutCreate but used FinanceWrite which did not propagate operatorContextID for field actors.",
+    "Updated dsh-api actor_finance_client.go to add WithOperatorContext support for payout destinations and reads, mirroring the existing FinanceWriteWithOperatorContext implementation.",
+    "Updated dsh-api payout_routes.go to correctly inject and propagate actor.OperatorContextID from requireActor for field actors to WLT, ensuring operator context isolation is respected by WLT governance."
+  ],
+  "decision": "U008 Field Finance Payouts is resolved. Cross-actor and missing operator context isolation is fully eliminated at the proxy boundary, allowing governed self-finance endpoints to strictly read/write within their associated DSH field context.",
+  "remaining_risks_or_missing_evidence": "Verification relies on static code path analysis as full multi-service backend execution was bypassed; CI tests for dsh-api are necessary to guarantee operatorContext headers route correctly to WLT endpoints."
+}

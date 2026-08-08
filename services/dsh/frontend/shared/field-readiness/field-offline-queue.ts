@@ -251,12 +251,12 @@ export async function markOperationSynced(operationId: string): Promise<void> {
   );
 }
 
-export async function markOperationFailed(operationId: string, error: string): Promise<void> {
+export async function markOperationFailed(operationId: string, error: string, isPermanent = false): Promise<void> {
   const queue = await readQueue();
   const updated = queue.map((operation) => {
     if (operation.operationId !== operationId) return operation;
     const nextCount = operation.attemptCount + 1;
-    const permanent = nextCount >= MAX_ATTEMPTS;
+    const permanent = isPermanent || nextCount >= MAX_ATTEMPTS;
     const backoffMs = Math.min(2 ** nextCount * 1000, 30 * 60 * 1000);
     return {
       ...operation,

@@ -19,6 +19,7 @@ import {
   buildVisitViewModel,
   ESCALATION_SEVERITY_LABELS,
   ESCALATION_CATEGORY_LABELS,
+  ESCALATION_STATUS_LABELS,
 } from "../../shared/field-readiness";
 import { DshFieldProblemState } from "../components/DshFieldProblemNotice";
 
@@ -156,12 +157,24 @@ export function DshFieldWorkQueueScreen({ onBack, onOpenVisit, onOpenEscalation 
                       {isStale ? (
                         <Badge label="صلاحية ملغاة" tone="neutral" />
                       ) : (
-                        <Badge
-                          label={ESCALATION_SEVERITY_LABELS[escalation.severity]}
-                          tone={escalation.severity === "critical" || escalation.severity === "high" ? "danger" : "warning"}
-                        />
+                        <View style={{ gap: spacing[1], alignItems: "flex-end" }}>
+                          <Badge
+                            label={ESCALATION_STATUS_LABELS[escalation.status]}
+                            tone={escalation.status === "resolved" ? "success" : escalation.status === "open" ? "info" : "warning"}
+                          />
+                          <Badge
+                            label={ESCALATION_SEVERITY_LABELS[escalation.severity]}
+                            tone={escalation.severity === "critical" || escalation.severity === "high" ? "danger" : "warning"}
+                          />
+                        </View>
                       )}
                     </View>
+                    {!isStale && escalation.resolutionNote ? (
+                      <View style={{ marginTop: spacing[2], paddingTop: spacing[2], borderTopWidth: 1, borderTopColor: colorRoles.borderSubtle }}>
+                        <Text role="caption" tone="muted" style={{ textAlign: "right", fontWeight: "bold" }}>رد الإدارة:</Text>
+                        <Text role="bodySm" style={{ textAlign: "right" }}>{escalation.resolutionNote}</Text>
+                      </View>
+                    ) : null}
                   </Card>
                 </Pressable>
               );
@@ -193,7 +206,7 @@ const styles = StyleSheet.create({
     borderColor: colorRoles.borderSubtle,
   },
   itemCardStale: {
-    backgroundColor: colorRoles.surfaceSubtle,
+    backgroundColor: colorRoles.surfaceMuted,
     borderColor: colorRoles.borderSubtle,
     opacity: 0.7,
   },

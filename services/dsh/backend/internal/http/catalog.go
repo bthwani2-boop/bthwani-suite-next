@@ -148,7 +148,17 @@ func (s *protectedStoreServer) handleFieldUpdatePartnerStore(w http.ResponseWrit
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	row, audit, err := store.UpdateFieldStoreDraft(r.Context(), s.db, storeID, actorID, correlationID(r), input)
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if idempotencyKey == "" {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key header is required")
+		return
+	}
+
+	row, audit, err := store.UpdateFieldStoreDraft(r.Context(), s.db, storeID, actorID, idempotencyKey, correlationID(r), input)
+	if errors.Is(err, store.ErrIdempotencyConflict) {
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "idempotency key was already used with a different store draft update request")
+		return
+	}
 	if err != nil {
 		s.writeStoreError(w, err)
 		return

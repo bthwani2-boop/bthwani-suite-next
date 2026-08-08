@@ -80,6 +80,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
   const [proposeNameAr, setProposeNameAr] = React.useState('');
   const [proposeNameEn, setProposeNameEn] = React.useState('');
   const [proposeBrand, setProposeBrand] = React.useState('');
+  const [proposeBarcode, setProposeBarcode] = React.useState('');
   const [proposeError, setProposeError] = React.useState<string | undefined>();
   const [proposeDomainId, setProposeDomainId] = React.useState('');
   const [proposeNodeId, setProposeNodeId] = React.useState('');
@@ -235,6 +236,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     setProposeNameAr(product.canonicalNameAr);
     setProposeNameEn(product.canonicalNameEn);
     setProposeBrand(product.brand);
+    setProposeBarcode(product.barcode ?? '');
     setProposeDomainId(product.domainId);
     setProposeNodeId(product.categoryNodeId ?? "");
     setCorrectionTarget({ id: product.id, version: product.version });
@@ -257,7 +259,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
       domainId: proposeDomainId,
       categoryNodeId: matchedNode?.domainId === proposeDomainId ? matchedNode.id : null,
       brand: proposeBrand.trim(),
-      barcode: null,
+      barcode: proposeBarcode.trim() || null,
       imageObjectKey: null,
       ...(correctionTarget
         ? {
@@ -273,6 +275,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     setProposeNameAr('');
     setProposeNameEn('');
     setProposeBrand('');
+    setProposeBarcode('');
     setProposeDomainId('');
     setProposeNodeId('');
     setCorrectionTarget(null);
@@ -508,6 +511,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
               <TextField label="اسم المنتج بالعربية" value={proposeNameAr} onChangeText={setProposeNameAr} />
               <TextField label="اسم المنتج بالإنجليزية" value={proposeNameEn} onChangeText={setProposeNameEn} placeholder="اختياري" />
               <TextField label="العلامة التجارية" value={proposeBrand} onChangeText={setProposeBrand} placeholder="اختياري" />
+              <TextField label="الباركود (GTIN/EAN)" value={proposeBarcode} onChangeText={setProposeBarcode} placeholder="اختياري ما لم تشترط سياسة الفئة" />
               <Button label="إرسال الاقتراح للمراجعة" tone="primary" onPress={() => void handlePropose()} disabled={actionState.kind === 'submitting'} />
             </View>
           ) : null}

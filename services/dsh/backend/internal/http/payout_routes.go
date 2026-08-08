@@ -30,7 +30,7 @@ func (s *protectedStoreServer) handleActorPayoutDestinationRead(w http.ResponseW
 	if !ok {
 		return
 	}
-	status, body, err := s.wlt.FinanceReadPayoutDestination(r.Context(), actorType, actor.ID, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceReadPayoutDestinationWithOperatorContext(r.Context(), actorType, actor.ID, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
@@ -61,7 +61,7 @@ func (s *protectedStoreServer) handleActorPayoutDestinationUpsert(w http.Respons
 		return
 	}
 	correlationID := correlationForActorMutation(r, "payout-destination-"+actorType+"-"+actor.ID)
-	status, responseBody, err := s.wlt.FinanceUpsertPayoutDestination(r.Context(), actorType, actor.ID, body, correlationID)
+	status, responseBody, err := s.wlt.FinanceUpsertPayoutDestinationWithOperatorContext(r.Context(), actorType, actor.ID, body, correlationID, actor.OperatorContextID)
 	writeWltActorFinanceResponse(w, status, responseBody, err)
 }
 
@@ -71,7 +71,7 @@ func (s *protectedStoreServer) handleActorPayoutDestinationDeactivate(w http.Res
 		return
 	}
 	correlationID := correlationForActorMutation(r, "payout-destination-deactivate-"+actorType+"-"+actor.ID)
-	status, body, err := s.wlt.FinanceDeactivatePayoutDestination(r.Context(), actorType, actor.ID, correlationID)
+	status, body, err := s.wlt.FinanceDeactivatePayoutDestinationWithOperatorContext(r.Context(), actorType, actor.ID, correlationID, actor.OperatorContextID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
@@ -81,7 +81,7 @@ func (s *protectedStoreServer) handleActorPayoutList(w http.ResponseWriter, r *h
 		return
 	}
 	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {actorType}}
-	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceReadWithOperatorContext(r.Context(), "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
@@ -117,7 +117,7 @@ func (s *protectedStoreServer) handleActorPayoutCreate(w http.ResponseWriter, r 
 		return
 	}
 	correlationID := correlationForActorMutation(r, input.IdempotencyKey)
-	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests", payload, correlationID, r.Header.Get("Idempotency-Key"))
+	status, body, err := s.wlt.FinanceWriteWithOperatorContext(r.Context(), http.MethodPost, "/wlt/payout-requests", payload, correlationID, r.Header.Get("Idempotency-Key"), actor.OperatorContextID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 

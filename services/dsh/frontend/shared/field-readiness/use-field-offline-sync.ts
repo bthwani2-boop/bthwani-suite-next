@@ -84,8 +84,8 @@ export function useFieldOfflineSync(
           await executor(operation);
           await markOperationSynced(operation.operationId);
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          await markOperationFailed(operation.operationId, message);
+          const problem = classifyGovernedError(error);
+          await markOperationFailed(operation.operationId, problem.message, !problem.retryable);
         }
       }
       await purgeSyncedOperations();
