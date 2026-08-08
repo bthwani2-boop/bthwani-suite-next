@@ -26,7 +26,7 @@ for (const relative of requiredFiles) {
 const schemaFiles = [
   "governance/authority/authority-precedence.schema.json", "governance/contracts/decision-vocabulary.schema.json",
   "governance/agents/agent-schema.json", "governance/skills/skills-schema.json", "governance/guards/guard-schema.json",
-  "governance/guards/guard-assurance.schema.json", "governance/github/repository-enforcement.schema.json",
+  "governance/guards/guard-assurance.schema.json", "governance/github/workflow-registry.schema.json",
   "governance/product/product-truth.schema.json", `${sdlcRootRelative}/artifact-manifest.schema.json`, `${sdlcRootRelative}/change-impact.schema.json`
 ];
 const ajv = new Ajv({ allErrors: true, strict: false });
@@ -58,8 +58,9 @@ for (const requiredAuthority of [
   "governance/GOVERNANCE.md", "governance/product/PRD.md", "governance/product/platform-model.yaml",
   "governance/policies/engineering.md", "governance/policies/security.md", "governance/policies/delivery.md",
   "governance/authority/authority-precedence.json", "governance/contracts/decision-vocabulary.json",
-  "governance/agents/agent-registry.json", "governance/skills/skills-registry.json", "governance/guards/guard-registry.json",
-  "governance/guards/guard-assurance.json", "governance/github/repository-enforcement.json"
+  "governance/contracts/full-verification-policy.json", "governance/agents/agent-registry.json",
+  "governance/skills/skills-registry.json", "governance/guards/guard-registry.json",
+  "governance/guards/guard-assurance.json", "governance/github/workflow-registry.json"
 ]) if (!exists(requiredAuthority)) violations.push({ file: requiredAuthority, message: "MISSING_ACTIVE_SDLC_AUTHORITY" });
 
 fail(guardId, violations);
