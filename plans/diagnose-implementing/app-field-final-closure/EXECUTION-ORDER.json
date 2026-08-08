@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 3,
+  "taskId": "APP-FIELD-FINAL-CLOSURE",
+  "multiSurfaceScope": {"mode":"FULLSTACK_UNIFIED_MULTI_SURFACE","surfaces":["control-panel","app-client","app-partner","app-captain","app-field"],"journeyPolicy":"ONLY_FIELD_ORIGINATED_OR_FIELD_REQUIRED_EFFECTS_ARE_FUNCTIONALLY_IN_SCOPE","sliceContract":"affectedSurfaces define functional scope"},
+  "units": [
+    {"unitId":"U001","name":"field-closure-foundation","kind":"FOUNDATION","status":"READY","dependsOn":[],"affectedSurfaces":["app-field","control-panel"],"objective":"Reconcile field-only scope, canonical contracts and trustworthy field verification entry points before feature closure."},
+    {"unitId":"U002","name":"identity-workforce-readiness","kind":"JOURNEY","status":"READY","dependsOn":["U001"],"affectedSurfaces":["app-field","control-panel"],"objective":"Close field actor provisioning, activation, session/device, professional profile, assignment, readiness and revocation as one trust boundary."},
+    {"unitId":"U003","name":"field-work-center-navigation","kind":"JOURNEY","status":"READY","dependsOn":["U001","U002"],"affectedSurfaces":["app-field","control-panel"],"objective":"Make field home/work queue authoritative, assignment-scoped and safe across refresh, stale work and deep-link navigation."},
+    {"unitId":"U004","name":"partner-store-onboarding-publication","kind":"JOURNEY","status":"READY","dependsOn":["U001","U002"],"affectedSurfaces":["app-field","control-panel","app-partner","app-client"],"objective":"Close field-owned partner draft/evidence/first-store onboarding through operator review and required publication/readback."},
+    {"unitId":"U005","name":"visit-checklist-verification","kind":"JOURNEY","status":"READY","dependsOn":["U001","U002","U004"],"affectedSurfaces":["app-field","control-panel","app-partner"],"objective":"Close field visit, governed location, checklist, evidence, verification and store-readiness lifecycle."},
+    {"unitId":"U006","name":"catalog-products-public-readback","kind":"JOURNEY","status":"READY","dependsOn":["U001","U004","U005"],"affectedSurfaces":["app-field","control-panel","app-partner","app-client"],"objective":"Close field central-catalog lookup/link/proposal/store-local price-stock operations and required public readback."},
+    {"unitId":"U007","name":"escalation-offline-recovery","kind":"JOURNEY","status":"READY","dependsOn":["U001","U002","U005"],"affectedSurfaces":["app-field","control-panel","app-partner"],"objective":"Close field escalation readback and durable offline recovery without unauthorized replay, lost evidence or false success."},
+    {"unitId":"U008","name":"field-finance-payouts","kind":"JOURNEY","status":"READY","dependsOn":["U001","U002","U004"],"affectedSurfaces":["app-field","control-panel"],"objective":"Close the field actor's own wallet, ledger, commissions and payout requests through DSH while WLT remains financial truth."},
+    {"unitId":"U009","name":"field-final-verification-release","kind":"VERIFICATION","status":"READY","dependsOn":["U001","U002","U003","U004","U005","U006","U007","U008"],"affectedSurfaces":["app-field","control-panel","app-partner","app-client"],"objective":"Prove completed field scope on one SHA through automated, backend/database, security, native-device, accessibility and cross-surface evidence."}
+  ]
+}

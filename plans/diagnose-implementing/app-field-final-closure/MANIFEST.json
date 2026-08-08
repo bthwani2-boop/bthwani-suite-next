@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 3,
+  "packageClass": "DERIVED_SUPPORT_ARTIFACT",
+  "multiSurfaceScope": {
+    "mode": "FULLSTACK_UNIFIED_MULTI_SURFACE",
+    "surfaces": ["control-panel", "app-client", "app-partner", "app-captain", "app-field"],
+    "journeyPolicy": "ONLY_FIELD_ORIGINATED_OR_FIELD_REQUIRED_EFFECTS_ARE_FUNCTIONALLY_IN_SCOPE",
+    "sliceContract": "The five-surface envelope is structural; affectedSurfaces and COVERAGE evidence define actual app-field scope."
+  },
+  "task": {
+    "id": "APP-FIELD-FINAL-CLOSURE",
+    "name": "App Field Final Closure Diagnosis and Plan",
+    "objective": "Diagnose and plan only the remaining work required to close app-field and the exact surfaces, services, contracts, data, finance, runtime, security and readback effects causally required by field-originated or field-required journeys. Unrelated application journeys are explicitly excluded.",
+    "primarySurface": "app-field",
+    "createdAt": "2026-08-08T18:36:00+03:00"
+  },
+  "repository": {
+    "name": "bthwani2-boop/bthwani-suite-next",
+    "targetBranch": "abbas",
+    "pinnedStartSha": "ba3393c39b0d0b265a4caf110b3bca685e43b0e3",
+    "latestObservedRemoteSha": "a2373ded31dc04f807d182997d0f07f56cd1f3fb"
+  },
+  "authority": {
+    "root": "governance/authority/authority-precedence.json",
+    "entryPoint": "governance/GOVERNANCE.md",
+    "canCreatePolicy": false,
+    "canOverrideCanonicalSource": false
+  },
+  "derivedSupport": {
+    "priorPackage": "plans/diagnose-implementing/app-field-multisurface-journeys",
+    "journeyDiscovery": "plans/smsm-dsh-wlt-journeys",
+    "prompting": "tools/prompting/01-diagnose-plan-package.md"
+  },
+  "status": {
+    "diagnosis": "COMPLETE",
+    "plan": "READY",
+    "implementation": "NOT_STARTED",
+    "verification": "NOT_STARTED",
+    "decision": "NEEDS_EVIDENCE"
+  },
+  "disposability": {
+    "runtimeDependsOnPackage": false,
+    "buildDependsOnPackage": false,
+    "ciDependsOnPackage": false,
+    "migrationDependsOnPackage": false,
+    "governanceDependsOnPackage": false,
+    "operationsDependOnPackage": false,
+    "containsSecretsOrProductionData": false
+  }
+}
