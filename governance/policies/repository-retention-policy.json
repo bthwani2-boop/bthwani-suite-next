@@ -73,9 +73,9 @@
   },
   "documents": {
     "roots": ["docs/", "governance/"],
-    "archiveRoot": "governance/archive/",
+    "archiveRoot": null,
     "archiveByDefault": false,
-    "archiveRequiresClass": ["LEGAL_AUDIT", "SECURITY_EXCEPTION", "FINANCIAL_CONTROL", "RELEASE_AUDIT"],
+    "archiveRequiresClass": [],
     "retiredMarkers": [
       "status: retired",
       "status: obsolete",
