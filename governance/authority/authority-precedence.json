@@ -9,7 +9,7 @@
     {"rank": 5, "id": "MACHINE_READABLE_CONTRACT", "description": "Registered schemas, vocabularies, lifecycle, approval, workflow, guard and tool-routing contracts encode governance for automated validation."},
     {"rank": 6, "id": "OWNER_SKILL_CONTRACT", "description": "An active governed skill owns only its declared execution domain and never creates higher policy."},
     {"rank": 7, "id": "TOOL_ADAPTER", "description": "Tools and adapters translate higher rules and own no product truth or approval."},
-    {"rank": 8, "id": "DERIVED_SUPPORT_ARTIFACT", "description": "Plans, prompts, runbooks, diagnostics, evidence packages and snapshots assist execution but never override authority or live implementation/runtime truth."},
+    {"rank": 8, "id": "DERIVED_SUPPORT_ARTIFACT", "description": "Plans, prompts, runbooks, diagnostics and evidence packages assist execution but never override authority or live implementation/runtime/platform truth."},
     {"rank": 9, "id": "HISTORICAL_REFERENCE", "description": "Git history is evidence only and never current truth."}
   ],
   "documents": [
@@ -23,13 +23,12 @@
     {"path": "governance/product/contracts", "classification": "CONDITIONAL_CANONICAL", "precedenceId": "CAPABILITY_PRODUCT_TRUTH", "authorityDomains": ["capability_product_truth"], "appliesWhen": "The current task affects a capability represented by a registered Product Truth contract under this directory.", "scopeLimit": "Each contract governs only its declared capability and must conform to the PRD and general policies."},
 
     {"path": "governance/policies/repository-retention-policy.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["repository_retention", "repository_hygiene"]},
-    {"path": "governance/contracts", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["decision_vocabulary", "shared_contract_schemas", "technical_registries", "sdlc_machine_contract"]},
+    {"path": "governance/contracts", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["decision_vocabulary", "shared_contract_schemas", "technical_registries", "sdlc_machine_contract", "full_verification_routing"]},
     {"path": "governance/agents", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["agent_roles", "approval_domains"]},
     {"path": "governance/skills", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["skill_lifecycle", "skill_dependencies", "skill_routing"]},
     {"path": "governance/guards", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["guard_registry", "guard_assurance", "guard_sets", "static_binding_registry"]},
     {"path": "governance/tools/agent-tool-registry.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["tool_inventory", "tool_routing_metadata"], "scopeLimit": "This registry governs tool availability/routing metadata only; tools own no approval or repository truth."},
     {"path": "governance/github/workflow-registry.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["workflow_registry"]},
-    {"path": "governance/github/full-verification-policy.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["full_verification_routing"]},
     {"path": "governance/github/master-protection.ruleset.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["github_desired_master_ruleset"], "scopeLimit": "Desired configuration only; live GitHub verification is required for enforcement claims."},
     {"path": "governance/authority/direct-work-branch-execution-policy.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["repository_writes"]},
     {"path": "governance/authority/direct-work-branch-execution-policy.schema.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["repository_writes_schema"]},
@@ -48,7 +47,6 @@
     {"path": "opencode.json", "classification": "ADAPTER", "precedenceId": "TOOL_ADAPTER", "authorityDomains": ["opencode_adapter"]},
 
     {"path": ".agents/INDEX.md", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["skill_routing_index"]},
-    {"path": "governance/github/repository-enforcement.json", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["github_enforcement_snapshot"], "scopeLimit": "Observed snapshot only; live GitHub verification is required for current claims."},
     {"path": "plans/diagnose-implementing", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["diagnosis_execution_plans"], "scopeLimit": "Disposable task planning packages; no runtime, policy, approval, or product authority."},
     {"path": "plans/smsm-dsh-wlt-journeys", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["journey_discovery_support"], "scopeLimit": "DSH/WLT discovery and coverage support only."}
   ]
