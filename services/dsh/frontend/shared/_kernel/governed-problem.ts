@@ -15,6 +15,7 @@ export type GovernedNextAction =
   | "complete_checklist"
   | "add_evidence"
   | "resolve_escalation"
+  | "complete_profile"
   | "refresh_record"
   | "recapture_location"
   | "enable_location"
@@ -144,6 +145,81 @@ const DEFINITIONS: Readonly<Record<string, ProblemDefinition>> = {
     message: "تعذر رفع الدليل. تحقق من الاتصال ثم أعد المحاولة؛ لم يُفقد الدليل الملتقط.",
     retryable: true,
     nextAction: "retry",
+  },
+  // Workforce identity and engagement codes. The workforce runtime already
+  // emits these; declaring them here gives them the same next action and retry
+  // semantics as every other governed refusal.
+  PROFILE_NOT_PROVISIONED: {
+    kind: "blocked",
+    message: "لا يوجد ملف مهني مرتبط بهذا الحساب. تواصل مع المشرف لإنشاء الملف قبل المتابعة.",
+    retryable: false,
+    nextAction: "contact_support",
+  },
+  PROFILE_INCOMPLETE: {
+    kind: "blocked",
+    message: "ملفك المهني غير مكتمل. أكمل البيانات المطلوبة ثم أعد المحاولة.",
+    retryable: false,
+    nextAction: "complete_profile",
+  },
+  ENGAGEMENT_SUSPENDED: {
+    kind: "permission_denied",
+    message: "حسابك موقوف حاليًا، فلا يمكن تنفيذ هذا الإجراء. تواصل مع المشرف.",
+    retryable: false,
+    nextAction: "contact_support",
+  },
+  STATUS_NOT_ALLOWED: {
+    kind: "blocked",
+    message: "حالة ارتباطك الحالية لا تسمح بهذا الإجراء.",
+    retryable: false,
+    nextAction: "contact_support",
+  },
+  VERSION_CONFLICT: {
+    kind: "conflict",
+    message: "عُدّل السجل من جهة أخرى. حدّث البيانات ثم أعد المحاولة.",
+    retryable: false,
+    nextAction: "refresh_record",
+  },
+  IDEMPOTENCY_CONFLICT: {
+    kind: "conflict",
+    message: "أُرسل طلب مختلف بمفتاح منع التكرار نفسه. حدّث الشاشة وأعد المحاولة بطلب جديد.",
+    retryable: false,
+    nextAction: "refresh_record",
+  },
+  SESSION_NOT_FOUND: {
+    kind: "permission_denied",
+    message: "لم تعد الجلسة معروفة. سجّل الدخول مجددًا.",
+    retryable: false,
+    nextAction: "reauthenticate",
+  },
+  UNAUTHENTICATED: {
+    kind: "permission_denied",
+    message: "الجلسة غير موثقة. سجّل الدخول مجددًا.",
+    retryable: false,
+    nextAction: "reauthenticate",
+  },
+  EMPLOYEE_SCOPE_FORBIDDEN: {
+    kind: "permission_denied",
+    message: "هذا السجل خارج النطاق المسموح لجلستك. حدّث التكليفات أو تواصل مع المشرف.",
+    retryable: false,
+    nextAction: "refresh_scope",
+  },
+  ACTIVATION_RATE_LIMITED: {
+    kind: "blocked",
+    message: "صدر كود حديثًا لهذا الحساب. انتظر دقيقة ثم أعد المحاولة.",
+    retryable: true,
+    nextAction: "retry",
+  },
+  IDENTITY_UNAVAILABLE: {
+    kind: "internal",
+    message: "خدمة الهوية غير متاحة حاليًا. أعد المحاولة بعد قليل.",
+    retryable: true,
+    nextAction: "retry",
+  },
+  PARTIAL_BATCH_FAILURE: {
+    kind: "conflict",
+    message: "حُفظ جزء من العناصر وتعذّر حفظ الباقي. راجع العناصر غير المحفوظة ثم أعد إرسالها وحدها.",
+    retryable: false,
+    nextAction: "refresh_record",
   },
   OFFLINE_QUEUE_CORRUPT: {
     kind: "conflict",

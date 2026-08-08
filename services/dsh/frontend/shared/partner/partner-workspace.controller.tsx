@@ -1,5 +1,7 @@
 'use client';
 
+import { classifyGovernedError } from "../_kernel/governed-problem";
+import type { DshPartnerErrorState } from "./partner.states";
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { resolveDshApiBaseUrl } from '../_kernel/dsh-api-base-url';
 import { createDshHttpClient } from '../_kernel/dsh-http-request';
@@ -21,6 +23,11 @@ type ControllerError = Readonly<{
   kind?: string;
   message?: string;
 }>;
+
+function workspaceErrorState(error: unknown): DshPartnerErrorState {
+  const message = errorMessage(error);
+  return { kind: 'error', message, problem: { ...classifyGovernedError(error), message } };
+}
 
 function errorMessage(error: unknown): string {
   const typed = error as ControllerError;
@@ -73,7 +80,7 @@ export function usePartnerWorkspaceListController(
       const typed = error as ControllerError;
       setListState(typed.kind === 'network' || typed.status === 0
         ? { kind: 'offline' }
-        : { kind: 'error', message: errorMessage(error) });
+        : workspaceErrorState(error));
       return false;
     }
   }, [authenticated, filters, page]);
@@ -91,7 +98,7 @@ export function usePartnerWorkspaceListController(
       await load();
       return partner;
     } catch (error) {
-      setMutationState({ kind: 'error', message: errorMessage(error) });
+      setMutationState(workspaceErrorState(error));
       return null;
     }
   }, [authenticated, load]);

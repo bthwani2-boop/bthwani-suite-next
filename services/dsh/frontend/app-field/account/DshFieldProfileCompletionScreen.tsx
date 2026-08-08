@@ -3,6 +3,18 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Header, SegmentedControl, StateView, Text, TextField, colorRoles, spacing } from "@bthwani/ui-kit";
 
 import { useWorkforceProfile } from "../../shared/workforce";
+import {
+  classifyGovernedError,
+  type GovernedProblem,
+} from "../../shared/_kernel/governed-problem";
+import { DshFieldProblemNotice } from "../components/DshFieldProblemNotice";
+
+/** Non-`error` failure kinds map onto the same governed taxonomy. */
+const RESULT_KIND_CODES = {
+  not_provisioned: "PROFILE_NOT_PROVISIONED",
+  suspended: "ENGAGEMENT_SUSPENDED",
+  unauthenticated: "SESSION_EXPIRED",
+} as const;
 
 type DshFieldProfileCompletionScreenProps = {
   readonly onBack?: () => void;
@@ -22,6 +34,10 @@ export function DshFieldProfileCompletionScreen({ onBack, onLogout }: DshFieldPr
   const [policyConsent, setPolicyConsent] = useState(Boolean(fieldProfile?.policyConsentAt));
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  // Save failures are governed problems, not free-form notices: they carry a
+  // reason code and an allowed next action. Informational post-save notes stay
+  // in `message`.
+  const [problem, setProblem] = useState<GovernedProblem | null>(null);
 
   if (!me || me.workforceKind !== "field") {
     return (
@@ -45,6 +61,7 @@ export function DshFieldProfileCompletionScreen({ onBack, onLogout }: DshFieldPr
     if (!canSubmit) return;
     setSaving(true);
     setMessage(null);
+    setProblem(null);
     const result = await workforce.updateSelf({
       emergencyContactName: emergencyContactName.trim() || undefined,
       emergencyContactPhone: emergencyContactPhone.trim(),
@@ -54,7 +71,11 @@ export function DshFieldProfileCompletionScreen({ onBack, onLogout }: DshFieldPr
     setSaving(false);
 
     if (result.kind !== "ok") {
-      setMessage(result.kind === "error" ? result.message : "تعذر حفظ بياناتك.");
+      setProblem(
+        result.kind === "error"
+          ? result.problem
+          : classifyGovernedError({ code: RESULT_KIND_CODES[result.kind] }),
+      );
       return;
     }
     if (!result.me.profileComplete) {
@@ -116,7 +137,14 @@ export function DshFieldProfileCompletionScreen({ onBack, onLogout }: DshFieldPr
           </Text>
         </Pressable>
 
-        {message ? <Text role="bodySm" tone="danger" style={styles.rtl}>{message}</Text> : null}
+        {problem ? (
+          <DshFieldProblemNotice
+            problem={problem}
+            onRetry={() => void submit()}
+            onDismiss={() => setProblem(null)}
+          />
+        ) : null}
+        {message ? <Text role="bodySm" tone="warning" style={styles.rtl}>{message}</Text> : null}
 
         <Button
           label={saving ? "جارٍ الحفظ…" : "حفظ وإكمال الملف"}

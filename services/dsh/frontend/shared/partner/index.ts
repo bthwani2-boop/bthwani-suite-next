@@ -24,6 +24,7 @@ export type {
   DshPartnerListState, DshPartnerDetailState, DshPartnerMutationState,
   DshPartnerDocumentsState, DshPartnerReadinessState,
   DshPartnerAuditState, DshPartnerStoresState, DshPartnerVisitsState,
+  DshPartnerErrorState,
 } from "./partner.states";
 
 export type { DshPartnerListRowViewModel, DshPartnerDetailViewModel, DshPartnerReadinessViewModel, DshPartnerBankAccountViewModel } from "./partner.view-model";

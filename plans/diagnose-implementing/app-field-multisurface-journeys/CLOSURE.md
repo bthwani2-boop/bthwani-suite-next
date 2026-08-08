@@ -30,15 +30,19 @@ This dossier is open. Closure is forbidden until every field-related journey and
 
 ## Progress recorded so far
 
-One slice has been executed and verified from source: the governed reason code, its allowed next action, its retry semantics, and the support correlation id now survive from the DSH backend response through the transport kernel, the shared classifier, and the shared view model into every app-field screen and the control-panel reader that consume the field-readiness controller family. The rule is enforced by `guard:field-surface-truth`, which was previously orphaned and failing and is now registered in the journey guard set. See `units/U001-authority-inventory/RESULT.json`, `units/U003-experience-navigation-accessibility/RESULT.json`, and `units/U005-field-operations-offline/RESULT.json` for the literal command output.
+One slice has been executed and verified from source: the governed reason code, its allowed next action, its retry semantics, and the support correlation id now survive from the DSH backend response through the transport kernel, the shared classifier, and the shared view model into **every** app-field screen that narrows an error state, plus the control-panel field-readiness reader.
+
+The model was hoisted to `services/dsh/frontend/shared/_kernel/governed-problem.ts` so the partner, catalog, workforce, field-onboarding, and WLT controller families adopt it without an inverted dependency. WLT emits a stable reason code and the DSH surface maps it, preserving the financial boundary. Recovery and queued-operation decisions moved off message-substring matching onto stable codes.
+
+The rule is enforced by `guard:field-surface-truth`, previously orphaned and failing, now registered in the journey guard set with an empty `PROBLEM_RENDERING_DEBT` register. See `units/U001-authority-inventory/RESULT.json`, `units/U003-experience-navigation-accessibility/RESULT.json`, and `units/U005-field-operations-offline/RESULT.json` for the literal command output.
 
 This is scoped static and contract evidence. It is not closure and no unit is `DONE`.
 
 ## Remaining blockers and external evidence
 
-- Nine app-field screens still collapse failures into a generic message because the partner, catalog, workforce, field-onboarding, and wlt controller families carry no governed problem. They are tracked in the `PROBLEM_RENDERING_DEBT` register in `tools/guards/field/field-surface-truth-gate.mjs`; the guard fails if an entry is added or if a resolved entry is left behind.
 - Runtime device, provider credential, production-like data, native release-build, migration upgrade, security, accessibility, and operational approval evidence does not yet exist. These are explicit gates rather than silent assumptions.
 - `MAN-01` through `MAN-14` remain `NOT_RUN`.
+- No unit is `DONE`. The reason-code slice is closed in source and enforced by a guard, which is scoped static and contract evidence only.
 
 ## Disposability proof
 

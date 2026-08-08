@@ -2,12 +2,12 @@
   "schemaVersion": 3,
   "unitId": "U001",
   "status": "IN_PROGRESS",
-  "baselineSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+  "baselineSha": "38e3d2c47bd4900ad7441aec53ebebb9af09cd8d",
   "resultingSha": null,
   "completedTaskIds": [],
   "modifiedPaths": [
-    "services/dsh/frontend/shared/field-readiness/field-readiness.problem.ts",
-    "services/dsh/frontend/shared/field-readiness/field-readiness.problem-view.ts",
+    "services/dsh/frontend/shared/_kernel/governed-problem.ts",
+    "services/dsh/frontend/shared/_kernel/governed-problem-view.ts",
     "services/dsh/frontend/shared/field-readiness/field-readiness.states.ts",
     "services/dsh/frontend/shared/field-readiness/field-offline-queue.ts",
     "services/dsh/frontend/shared/field-readiness/use-field-offline-sync.ts",
@@ -39,7 +39,7 @@
       "status": "PASS",
       "command": "node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/app-field-multisurface-journeys --strict",
       "actualResult": "Validation summary: 0 error(s), 0 warning(s). Exit code 0. The command previously recorded in VERIFICATION.json pointed at tools/diagnose-implementing/, a path that does not exist in this repository; the package lives under plans/diagnose-implementing/. The recorded command was corrected before this run, so a real execution replaces the earlier NOT_RUN entry.",
-      "baselineSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "baselineSha": "38e3d2c47bd4900ad7441aec53ebebb9af09cd8d",
       "resultingSha": null,
       "proves": "The dossier schema, coverage links, dependency graph, files, and readiness are internally consistent, and the recorded verification command is executable.",
       "doesNotProve": "Nothing about product implementation, runtime behavior, device behavior, or closure."
@@ -48,8 +48,8 @@
       "verificationId": "V002",
       "status": "PASS",
       "command": "cd services/dsh && npx tsc -p tsconfig.json --noEmit",
-      "actualResult": "Exit code 0 with zero diagnostics against the working tree carrying this stage's changes. This supersedes the earlier FAIL recorded from GitHub Actions run 31146938964, which reported 162 TypeScript errors across 39 DSH files. Those errors are not reproducible at this baseline: the compiler is clean before and after this stage's edits. NOTE: after this run an unrelated, uncommitted third-party edit to services/dsh/frontend/app-field/stores/DshFieldStoresHistoryScreen.tsx appeared in the working tree and introduces 6 diagnostics referencing non-existent ui-kit tokens (surfaceNeutralSubtle, onSurfaceBase, onSurfaceNeutral, onSurfaceMuted, radius[4]). That file is excluded from this stage's commit and is recorded as a deviation, not as a pass.",
-      "baselineSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "actualResult": "Exit code 0 with zero diagnostics. This supersedes the earlier FAIL recorded from GitHub Actions run 31146938964, which reported 162 TypeScript errors across 39 DSH files; those are not reproducible at this baseline. An unrelated third-party edit to services/dsh/frontend/app-field/stores/DshFieldStoresHistoryScreen.tsx had introduced 6 diagnostics referencing ui-kit tokens that do not exist (surfaceNeutralSubtle, onSurfaceBase, onSurfaceNeutral, onSurfaceMuted, radius[4]); on explicit owner instruction these were mapped to the real roles (surfaceMuted, shadowBase, textSecondary, textMuted, radius.lg) and an invalid ionicons name was corrected, so DSH, WLT, and ui-kit all typecheck clean.",
+      "baselineSha": "38e3d2c47bd4900ad7441aec53ebebb9af09cd8d",
       "resultingSha": null,
       "proves": "The DSH TypeScript baseline is clean at this stage's tree, so DSH_TYPESCRIPT_BASELINE_FAILED no longer blocks journey units.",
       "doesNotProve": "It does not prove runtime behavior, cross-surface convergence, device behavior, or that any journey is closed."
@@ -59,7 +59,7 @@
       "status": "PASS",
       "command": "node tools/guards/field/field-surface-truth-gate.mjs",
       "actualResult": "field-surface-truth-gate: PASS, exit 0. Before this stage the guard was orphaned (absent from governance/guards/guard-registry.json, absent from every guard set, and absent from package.json), and running it manually produced 4 violations: one UNSAFE_FIELD_ANY_FORBIDDEN in OnboardingBasicsSection.tsx and three stale-path failures because the field-finance controller had moved to services/wlt/frontend/shared/dsh/field-finance. All four are fixed and the guard is now registered in the journey guard set, so the rules are enforced rather than dormant.",
-      "baselineSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "baselineSha": "38e3d2c47bd4900ad7441aec53ebebb9af09cd8d",
       "resultingSha": null,
       "proves": "Field-surface truth rules and the reason-code propagation rule are statically enforced in CI from this stage onward.",
       "doesNotProve": "Static enforcement does not prove runtime, provider, device, or cross-surface readback behavior."
@@ -68,8 +68,8 @@
       "verificationId": "V002",
       "status": "PASS",
       "command": "cd services/dsh && node --test tests/field-readiness-problem.test.mjs",
-      "actualResult": "12 tests, 12 pass, 0 fail across 3 suites. Coverage added this stage: transport correlation-id propagation, classifier preservation of correlationId with the reason code, absence of a fabricated correlation id, exhaustive next-action labelling, non-retryable blockers offering a recovery action instead of a bare retry, retryable failures staying retryable, client-detected refusals reusing the server taxonomy, and unmapped codes degrading to a diagnosable internal problem.",
-      "baselineSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "actualResult": "13 tests, 13 pass, 0 fail across 3 suites. Coverage added this stage: transport correlation-id propagation, classifier preservation of correlationId with the reason code, absence of a fabricated correlation id, exhaustive next-action labelling, non-retryable blockers offering a recovery action instead of a bare retry, retryable failures staying retryable, client-detected refusals reusing the server taxonomy, and unmapped codes degrading to a diagnosable internal problem.",
+      "baselineSha": "38e3d2c47bd4900ad7441aec53ebebb9af09cd8d",
       "resultingSha": null,
       "proves": "The backend reason code, its allowed next action, its retry semantics, and the support correlation id survive from transport to the shared view model.",
       "doesNotProve": "It does not prove the rendered screen, screen-reader announcement, or operator readback on a real device."
@@ -91,11 +91,11 @@
       "remainingWork": "None for this blocker."
     },
     {
-      "classification": "INTERNAL_FIXABLE_BLOCKER",
+      "classification": "RESOLVED",
       "code": "PROBLEM_MODEL_ABSENT_FROM_NON_FIELD_CONTROLLER_FAMILIES",
-      "evidence": "Nine app-field screens read from the partner, catalog, workforce, field-onboarding, and wlt controller families, whose error states carry only a message string and no problem. They are listed in the PROBLEM_RENDERING_DEBT register in tools/guards/field/field-surface-truth-gate.mjs, which fails the build if an entry is added or if a resolved entry is left behind.",
-      "impact": "Those nine screens still collapse failures into a generic message and cannot show a reason code, an allowed next action, or a support reference.",
-      "remainingWork": "Hoist the governed problem model from services/dsh/frontend/shared/field-readiness into services/dsh/frontend/shared/_kernel so partner, catalog, workforce, field-onboarding, and wlt can adopt it without an inverted dependency, then populate problem at each error-state construction site (approximately 54 sites) and migrate the nine screens. That work also affects app-partner, app-client, and control-panel readers of the same states, so it requires its own cross-surface verification."
+      "evidence": "The governed problem model was hoisted from services/dsh/frontend/shared/field-readiness into services/dsh/frontend/shared/_kernel/governed-problem.ts and governed-problem-view.ts, so partner, catalog, workforce, field-onboarding, and wlt adopt it without an inverted dependency. Its identifiers were renamed from field-specific to generic (GovernedProblem, classifyGovernedError, buildGovernedProblemView). All five families now carry a problem on their error states, and PROBLEM_RENDERING_DEBT in tools/guards/field/field-surface-truth-gate.mjs is empty with the guard passing.",
+      "impact": "None. Every app-field screen that narrows an error state now renders a governed reason code, an allowed next action, correct retry semantics, and a support reference.",
+      "remainingWork": "None for this blocker. Runtime, device, and manual cross-surface evidence remain required and are tracked separately."
     }
   ],
   "deviations": [

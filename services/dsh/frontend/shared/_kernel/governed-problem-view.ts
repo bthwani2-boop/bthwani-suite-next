@@ -38,6 +38,7 @@ const NEXT_ACTION_LABELS: Readonly<Record<GovernedNextAction, string | null>> = 
   complete_checklist: "استكمال قائمة التحقق",
   add_evidence: "إضافة الأدلة المطلوبة",
   resolve_escalation: "فتح التصعيد",
+  complete_profile: "استكمال الملف المهني",
   refresh_record: "تحديث البيانات",
   recapture_location: "التقاط الموقع مجددًا",
   enable_location: "تفعيل إذن الموقع",

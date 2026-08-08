@@ -20,6 +20,7 @@ import {
 } from '@bthwani/ui-kit';
 import { ProductProposalAdapter } from '../../shared/catalog';
 import { useFieldCatalogController } from '../../shared/partner';
+import { DshFieldProblemNotice, DshFieldProblemState } from './DshFieldProblemNotice';
 import type { MasterProduct } from '../../shared/catalog/central-catalog.types';
 
 export type DshFieldPartnerProductsScreenProps = {
@@ -58,6 +59,8 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     actionState,
     assortmentItems,
     proposals,
+    reloadStore,
+    reloadTaxonomy,
     searchMasterProducts,
     linkMasterProductsBatch,
     proposeNewProduct,
@@ -281,7 +284,16 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     return <StateView loading title="جاري تحميل متجر الشريك…" />;
   }
   if (storeState.kind === 'error') {
-    return <StateView tone="danger" title="تعذر التحميل" description={storeState.message} actionLabel="رجوع" onActionPress={onBack} />;
+    return (
+      <DshFieldProblemState
+        problem={storeState.problem}
+        handlers={{
+          refresh_record: () => void reloadStore(),
+          refresh_scope: () => void reloadStore(),
+        }}
+        onRetry={() => void reloadStore()}
+      />
+    );
   }
 
   return (
@@ -305,7 +317,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing[4], gap: spacing[4], paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
         <View style={{ gap: spacing[3] }}>
           {taxonomyState.kind === 'error' ? (
-            <StateView tone="danger" title="تعذر تحميل الفئات المركزية" description={taxonomyState.message} />
+            <DshFieldProblemNotice problem={taxonomyState.problem} onRetry={() => void reloadTaxonomy()} />
           ) : taxonomyState.kind === 'success' ? (
             <>
               <Text role="bodyStrong" style={{ textAlign: 'right' }}>المجال المركزي</Text>
@@ -362,7 +374,12 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
           ) : null}
         </View>
 
-        {actionState.kind === 'error' ? <StateView tone="warning" title="تعذر إكمال بعض العمليات" description={actionState.message} /> : null}
+        {actionState.kind === 'error' ? (
+          <DshFieldProblemNotice
+            problem={actionState.problem}
+            handlers={{ refresh_record: () => void reloadStore() }}
+          />
+        ) : null}
         {batchMessage ? <StateView tone={batchTone} title={batchTone === 'success' ? 'تم الحفظ' : 'نتيجة الحفظ الجماعي'} description={batchMessage} /> : null}
 
         <View style={{ gap: spacing[3] }}>

@@ -217,6 +217,27 @@ describe("field problem view model", () => {
     }
   });
 
+  test("workforce, catalog, and finance codes resolve in the same taxonomy", () => {
+    // These families previously collapsed every failure into a sentence. The
+    // governed model now owns their codes too, so one screen contract serves
+    // identity, catalog, and financial refusals alike.
+    for (const [code, expectedAction] of [
+      ["PROFILE_INCOMPLETE", "complete_profile"],
+      ["ENGAGEMENT_SUSPENDED", "contact_support"],
+      ["EMPLOYEE_SCOPE_FORBIDDEN", "refresh_scope"],
+      ["VERSION_CONFLICT", "refresh_record"],
+      ["PARTIAL_BATCH_FAILURE", "refresh_record"],
+      ["ACTIVATION_RATE_LIMITED", "retry"],
+    ]) {
+      const problem = classifyGovernedError({ code });
+      assert.equal(problem.code, code);
+      assert.equal(problem.nextAction, expectedAction, `${code} next action`);
+      const view = buildGovernedProblemView(problem);
+      assert.ok(view.primaryAction, `${code} must offer an action`);
+      assert.equal(view.primaryAction.actionId, expectedAction);
+    }
+  });
+
   test("an unmapped code degrades to a diagnosable internal problem", () => {
     const problem = classifyGovernedError({
       kind: "http",

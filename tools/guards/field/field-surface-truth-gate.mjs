@@ -150,31 +150,28 @@ for (const [relative, markers] of requiredMarkers) {
 // that narrows an error state must therefore render it through
 // DshFieldProblemNotice / DshFieldProblemState.
 //
-// The allowlist below is a shrinking debt register, not an exemption. Each
-// entry reads from a shared controller family (partner / catalog / workforce /
-// field-onboarding / wlt) whose error states do not carry a `problem` yet.
-// Removing an entry requires that controller family to carry the problem first.
-// Entries may be removed, never added.
-const PROBLEM_RENDERING_DEBT = new Set([
-  "services/dsh/frontend/app-field/account/DshFieldProfileCompletionScreen.tsx",
-  "services/dsh/frontend/app-field/account/DshFieldProfileHomeScreen.tsx",
-  "services/dsh/frontend/app-field/account/DshFieldProfileScreen.tsx",
-  "services/dsh/frontend/app-field/components/DshFieldAssortmentPauseScreen.tsx",
-  "services/dsh/frontend/app-field/components/DshFieldPartnerProductsScreen.tsx",
-  "services/dsh/frontend/app-field/finance/WltFieldFinanceScreen.tsx",
-  "services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx",
-  "services/dsh/frontend/app-field/stores/DshFieldPartnerProgressScreen.tsx",
-  "services/dsh/frontend/app-field/stores/DshFieldPartnersScreen.tsx",
-]);
+// The allowlist below is a debt register, not an exemption: an entry means a
+// screen still collapses failures because its controller family does not carry
+// a governed `problem`. It is now empty — the partner, catalog, workforce,
+// field-onboarding, and wlt families all carry one.
+// The register is empty: every app-field screen that narrows an error state now
+// renders it through a governed model. Entries may be added ONLY with a
+// recorded reason, and must be removed as soon as the screen is migrated.
+const PROBLEM_RENDERING_DEBT = new Set([]);
 
 const ERROR_NARROWING = /kind\s*===\s*["']error["']/;
+
+// Either governed renderer satisfies the rule: DshFieldProblemNotice/State is
+// the generic path, and the partner-onboarding visible-state model is an
+// equivalent domain-specific reason-code plus next-action contract.
+const GOVERNED_RENDERERS = ["DshFieldProblem", "resolvePartnerOnboardingFailureState"];
 
 for (const absolute of walk("services/dsh/frontend/app-field")) {
   const relative = toPosix(path.relative(repoRoot, absolute));
   if (PROBLEM_RENDERING_DEBT.has(relative)) continue;
   const content = fs.readFileSync(absolute, "utf8");
   if (!ERROR_NARROWING.test(content)) continue;
-  if (!content.includes("DshFieldProblem")) {
+  if (!GOVERNED_RENDERERS.some((marker) => content.includes(marker))) {
     violations.push({
       file: relative,
       line: lineNumber(content, content.search(ERROR_NARROWING)),
@@ -192,7 +189,7 @@ for (const relative of PROBLEM_RENDERING_DEBT) {
     continue;
   }
   const content = fs.readFileSync(absolute, "utf8");
-  if (content.includes("DshFieldProblem")) {
+  if (GOVERNED_RENDERERS.some((marker) => content.includes(marker))) {
     violations.push({
       file: relative,
       line: 0,

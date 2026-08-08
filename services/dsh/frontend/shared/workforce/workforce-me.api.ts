@@ -1,5 +1,6 @@
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import { resolveWorkforceApiBaseUrl } from "../_kernel/workforce-api-base-url";
+import { classifyGovernedError, type GovernedProblem } from "../_kernel/governed-problem";
 import { workforceErrorCode, workforceErrorMessage } from "./workforce.api";
 import type { ReadinessGate, UpdateSelfInput, WorkforceMe } from "./workforce.types";
 
@@ -13,7 +14,12 @@ export type WorkforceMeResult =
   | { kind: "not_provisioned" }
   | { kind: "suspended" }
   | { kind: "unauthenticated" }
-  | { kind: "error"; message: string };
+  /**
+   * `problem` carries the governed reason code, the allowed next action, the
+   * retry semantics, and the support correlation id. `message` is kept so
+   * existing readers keep compiling, but screens must render the problem.
+   */
+  | { kind: "error"; message: string; problem: GovernedProblem };
 
 function classifyError(error: unknown): WorkforceMeResult {
   const code = workforceErrorCode(error);
@@ -24,7 +30,14 @@ function classifyError(error: unknown): WorkforceMeResult {
       ? Number((error as { status: unknown }).status)
       : 0;
   if (status === 401) return { kind: "unauthenticated" };
-  return { kind: "error", message: workforceErrorMessage(error) };
+  // The workforce message map stays authoritative for wording; the governed
+  // classifier supplies everything the screen needs beyond the sentence.
+  const problem = classifyGovernedError(error);
+  return {
+    kind: "error",
+    message: workforceErrorMessage(error),
+    problem: { ...problem, message: workforceErrorMessage(error) },
+  };
 }
 
 export async function fetchWorkforceMe(): Promise<WorkforceMeResult> {

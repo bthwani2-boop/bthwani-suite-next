@@ -2,6 +2,10 @@
 // from the sovereign central catalog. Store-local truth is limited to price,
 // availability, stock, note, and governed media; product identity remains central.
 import { useCallback, useEffect, useState } from "react";
+import {
+  classifyGovernedError,
+  type GovernedProblem,
+} from "../_kernel/governed-problem";
 import { fieldGetPartnerStore } from "./partner.api";
 import {
   fetchFieldTaxonomy,
@@ -25,28 +29,47 @@ import type {
 } from "../catalog/central-catalog.types";
 import type { DshFieldPartnerStoreDraft } from "./partner.types";
 
+/**
+ * Catalog failures keep their catalog-specific sentence but must still carry
+ * the governed reason code, allowed next action, retry semantics, and support
+ * reference so the field screen can act on them.
+ */
+export type FieldCatalogErrorState = {
+  readonly kind: "error";
+  readonly message: string;
+  readonly problem: GovernedProblem;
+};
+
+function fieldCatalogErrorState(error: unknown, fallback: string): FieldCatalogErrorState {
+  const problem = classifyGovernedError(error);
+  // Prefer the server's own sentence when it sent one; otherwise use the
+  // catalog-specific fallback rather than a generic transport message.
+  const message = problem.serverMessage ?? fallback;
+  return { kind: "error", message, problem: { ...problem, message } };
+}
+
 export type FieldCatalogStoreState =
   | { readonly kind: "idle" }
   | { readonly kind: "loading" }
   | { readonly kind: "success"; readonly storeId: string; readonly store: DshFieldPartnerStoreDraft }
-  | { readonly kind: "error"; readonly message: string };
+  | FieldCatalogErrorState;
 
 export type FieldCatalogTaxonomyState =
   | { readonly kind: "idle" }
   | { readonly kind: "loading" }
   | { readonly kind: "success"; readonly domains: readonly CentralCatalogDomain[]; readonly nodes: readonly CentralCatalogNode[] }
-  | { readonly kind: "error"; readonly message: string };
+  | FieldCatalogErrorState;
 
 export type FieldCatalogMasterProductsState =
   | { readonly kind: "idle" }
   | { readonly kind: "loading" }
   | { readonly kind: "success"; readonly items: readonly MasterProduct[] }
-  | { readonly kind: "error"; readonly message: string };
+  | FieldCatalogErrorState;
 
 export type FieldCatalogActionState =
   | { readonly kind: "idle" }
   | { readonly kind: "submitting" }
-  | { readonly kind: "error"; readonly message: string };
+  | FieldCatalogErrorState;
 
 export type FieldStoreAssortmentInput = {
   readonly unitPrice: number;
@@ -114,8 +137,8 @@ export function useFieldCatalogController(partnerId: string) {
       setAssortmentItems(currentAssortment.assortment);
       setProposals(proposalPage.items);
       setStoreState({ kind: "success", storeId, store });
-    } catch {
-      setStoreState({ kind: "error", message: "تعذر تحميل متجر الشريك" });
+    } catch (error) {
+      setStoreState(fieldCatalogErrorState(error, "تعذر تحميل متجر الشريك"));
     }
   }, [partnerId]);
 
@@ -124,8 +147,8 @@ export function useFieldCatalogController(partnerId: string) {
     try {
       const { domains, nodes } = await fetchFieldTaxonomy();
       setTaxonomyState({ kind: "success", domains, nodes });
-    } catch {
-      setTaxonomyState({ kind: "error", message: "تعذر تحميل تصنيفات الكتالوج" });
+    } catch (error) {
+      setTaxonomyState(fieldCatalogErrorState(error, "تعذر تحميل تصنيفات الكتالوج"));
     }
   }, []);
 
@@ -135,8 +158,8 @@ export function useFieldCatalogController(partnerId: string) {
       try {
         const items = await fetchFieldMasterProducts({ ...query, limit: 100, offset: 0 });
         setMasterProductsState({ kind: "success", items });
-      } catch {
-        setMasterProductsState({ kind: "error", message: "تعذر تحميل المنتجات" });
+      } catch (error) {
+        setMasterProductsState(fieldCatalogErrorState(error, "تعذر تحميل المنتجات"));
       }
     },
     [],
@@ -167,9 +190,9 @@ export function useFieldCatalogController(partnerId: string) {
         });
         setActionState({ kind: "idle" });
         return true;
-      } catch {
+      } catch (error) {
         await loadStore();
-        setActionState({ kind: "error", message: "تعذر ربط المنتج بالمتجر" });
+        setActionState(fieldCatalogErrorState(error, "تعذر ربط المنتج بالمتجر"));
         return false;
       }
     },
@@ -204,14 +227,22 @@ export function useFieldCatalogController(partnerId: string) {
         setAssortmentItems((previous) => mergeSavedAssortments(previous, response.results));
         if (response.failed > 0) {
           await loadStore();
-          setActionState({ kind: "error", message: `تم حفظ ${response.succeeded} وتعذر حفظ ${response.failed}` });
+          // Partial batch failure is a distinct outcome, not a transport error:
+          // some rows persisted and the screen must say which and offer a
+          // targeted retry rather than resubmitting everything blindly.
+          setActionState(
+            fieldCatalogErrorState(
+              { code: "PARTIAL_BATCH_FAILURE" },
+              `تم حفظ ${response.succeeded} وتعذر حفظ ${response.failed}. راجع العناصر غير المحفوظة ثم أعد إرسالها وحدها.`,
+            ),
+          );
         } else {
           setActionState({ kind: "idle" });
         }
         return response;
-      } catch {
+      } catch (error) {
         await loadStore();
-        setActionState({ kind: "error", message: "تعذر حفظ مجموعة المنتجات" });
+        setActionState(fieldCatalogErrorState(error, "تعذر حفظ مجموعة المنتجات"));
         return { succeeded: 0, failed: items.length, results: [] };
       }
     },
@@ -237,8 +268,8 @@ export function useFieldCatalogController(partnerId: string) {
         setProposals((previous) => [proposal, ...previous.filter((item) => item.id !== proposal.id)]);
         setActionState({ kind: "idle" });
         return proposal;
-      } catch {
-        setActionState({ kind: "error", message: "تعذر إرسال اقتراح المنتج" });
+      } catch (error) {
+        setActionState(fieldCatalogErrorState(error, "تعذر إرسال اقتراح المنتج"));
         return null;
       }
     },
@@ -253,8 +284,8 @@ export function useFieldCatalogController(partnerId: string) {
         setProposals((previous) => [proposal, ...previous.filter((item) => item.id !== proposal.id)]);
         setActionState({ kind: "idle" });
         return true;
-      } catch {
-        setActionState({ kind: "error", message: "تعذر سحب الاقتراح" });
+      } catch (error) {
+        setActionState(fieldCatalogErrorState(error, "تعذر سحب الاقتراح"));
         return false;
       }
     },

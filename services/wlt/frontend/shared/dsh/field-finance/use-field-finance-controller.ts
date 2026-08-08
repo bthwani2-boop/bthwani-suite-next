@@ -18,7 +18,12 @@ import {
 type FieldFinanceState =
   | { kind: "idle" }
   | { kind: "loading" }
-  | { kind: "error"; message: string }
+  /**
+   * `code` is a stable reason code for the consuming surface to map to a
+   * governed presentation. WLT deliberately does not import the DSH view
+   * layer: it emits the code, the surface decides how to render it.
+   */
+  | { kind: "error"; message: string; code: string }
   | {
       kind: "loaded";
       wallet: FieldWallet;
@@ -42,7 +47,7 @@ type Action =
       commissionsError: string | null;
       payoutRequestsError: string | null;
     }
-  | { type: "ERROR"; message: string };
+  | { type: "ERROR"; message: string; code: string };
 
 function reducer(_state: FieldFinanceState, action: Action): FieldFinanceState {
   switch (action.type) {
@@ -60,7 +65,7 @@ function reducer(_state: FieldFinanceState, action: Action): FieldFinanceState {
         payoutRequestsError: action.payoutRequestsError,
       };
     case "ERROR":
-      return { kind: "error", message: action.message };
+      return { kind: "error", message: action.message, code: action.code };
   }
 }
 
@@ -89,7 +94,7 @@ export function useFieldFinanceController(): FieldFinanceController {
     ])
       .then(([walletResult, ledgerResult, commissionsResult, payoutsResult]) => {
         if (!walletResult.ok) {
-          dispatch({ type: "ERROR", message: walletResult.message });
+          dispatch({ type: "ERROR", message: walletResult.message, code: walletResult.code ?? "INTERNAL_ERROR" });
           return;
         }
         dispatch({
@@ -104,8 +109,14 @@ export function useFieldFinanceController(): FieldFinanceController {
         });
       })
       .catch((error: unknown) => {
+        const code =
+          typeof error === "object" && error !== null && "code" in error &&
+          typeof (error as { code: unknown }).code === "string"
+            ? (error as { code: string }).code
+            : "INTERNAL_ERROR";
         dispatch({
           type: "ERROR",
+          code,
           message: error instanceof Error ? error.message : "unknown error",
         });
       });

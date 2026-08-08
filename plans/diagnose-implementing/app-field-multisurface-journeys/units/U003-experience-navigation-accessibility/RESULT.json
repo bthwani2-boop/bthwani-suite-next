@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "unitId": "U003",
   "status": "IN_PROGRESS",
-  "baselineSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+  "baselineSha": "38e3d2c47bd4900ad7441aec53ebebb9af09cd8d",
   "resultingSha": null,
   "completedTaskIds": [],
   "modifiedPaths": [
@@ -16,7 +16,7 @@
       "status": "PASS",
       "command": "cd shared/ui-kit && npx tsc --noEmit -p tsconfig.json",
       "actualResult": "Exit code 0. InlineNotice and StateView previously carried no accessibility affordances at all: no role, no live region, no accessible name, and a tone conveyed only by border colour and an unlabelled icon. Both now expose accessibilityLiveRegion on the container (assertive for danger/warning, polite otherwise) and an accessible, labelled text block carrying title, description, and reason code, with the decorative tone icon hidden from assistive technology. The container deliberately does not set accessible, so action buttons remain individually focusable.",
-      "baselineSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "baselineSha": "38e3d2c47bd4900ad7441aec53ebebb9af09cd8d",
       "resultingSha": null,
       "proves": "The source now declares an accessible name, a role, and a live region for notice and state surfaces used by all five surfaces, and the reason code is exposed as text rather than colour alone.",
       "doesNotProve": "It does not prove that TalkBack or VoiceOver actually announce the notice, nor that focus order, contrast, touch target size, large font, or rotation behave correctly. Those require a physical device."

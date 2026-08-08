@@ -3,10 +3,23 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { fieldListDrafts, type DshPartnerListState, type DshPartnerSummary } from "../partner";
+import { classifyGovernedError } from "../_kernel/governed-problem";
+import {
+  fieldListDrafts,
+  type DshPartnerErrorState,
+  type DshPartnerListState,
+  type DshPartnerSummary,
+} from "../partner";
 
 const PAGE_SIZE = 100;
 const MAX_PARTNERS = 10_000;
+
+function draftsErrorState(err: unknown): DshPartnerErrorState {
+  const message = resolveErrorMessage(err);
+  // Keep the list wording, but carry the governed reason code and next action
+  // so the field screen can offer the right recovery instead of a bare retry.
+  return { kind: "error", message, problem: { ...classifyGovernedError(err), message } };
+}
 
 function resolveErrorMessage(err: unknown): string {
   const e = err as { status?: number };
@@ -57,7 +70,7 @@ export function useFieldPartnerDraftsController(): FieldPartnerDraftsController 
         }
       })
       .catch((err) => {
-        setListState({ kind: "error", message: resolveErrorMessage(err) });
+        setListState(draftsErrorState(err));
       });
   }, []);
 

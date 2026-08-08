@@ -13,6 +13,7 @@ import {
   Icon,
 } from '@bthwani/ui-kit';
 import { useWorkforceProfile } from '../../shared/workforce/use-workforce-profile';
+import { DshFieldProblemState } from '../components/DshFieldProblemNotice';
 import { ENGAGEMENT_STATUS_LABEL_AR } from '../../shared/workforce';
 import { ProviderAvailabilityNoticesPanel } from '../../shared/workforce/ProviderAvailabilityNoticesPanel';
 import { ProviderRatingSummaryPanel } from '../../shared/provider-ratings/ProviderRatingSummaryPanel';
@@ -71,12 +72,13 @@ export function DshFieldProfileHomeScreen({
 
   if (workforce.state.kind === 'error') {
     return (
-      <StateView
-        tone="danger"
-        title="تعذر تحميل ملف الميداني"
-        description={workforce.state.message}
-        actionLabel="إعادة المحاولة"
-        onActionPress={() => void workforce.reload()}
+      <DshFieldProblemState
+        problem={workforce.state.problem}
+        handlers={{
+          refresh_record: () => void workforce.reload(),
+          refresh_scope: () => void workforce.reload(),
+        }}
+        onRetry={() => void workforce.reload()}
       />
     );
   }

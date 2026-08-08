@@ -72,6 +72,13 @@ export type FieldPayoutRequest = {
   readonly failureReason: string | null;
 };
 
+/** Stable reason code for the consuming surface; never a localized sentence. */
+function codeFrom(error: unknown): string {
+  const err = error as { code?: unknown; status?: unknown };
+  if (typeof err.code === "string" && err.code.trim()) return err.code.trim();
+  return typeof err.status === "number" ? `HTTP_${err.status}` : "INTERNAL_ERROR";
+}
+
 function messageFrom(error: unknown): string {
   const err = error as { status?: number; message?: string };
   return err.message ?? `HTTP ${err.status ?? "error"}`;
@@ -79,19 +86,19 @@ function messageFrom(error: unknown): string {
 
 export async function fetchFieldMeWallet(): Promise<
   | { ok: true; wallet: FieldWallet }
-  | { ok: false; message: string }
+  | { ok: false; message: string; code: string }
 > {
   try {
     const data = await fieldGet<{ wallet: FieldWallet }>("/dsh/field/me/finance/wallet");
     return { ok: true, wallet: data.wallet };
   } catch (error) {
-    return { ok: false, message: messageFrom(error) };
+    return { ok: false, message: messageFrom(error), code: codeFrom(error) };
   }
 }
 
 export async function fetchFieldMeLedgerEntries(): Promise<
   | { ok: true; ledgerEntries: FieldLedgerEntry[] }
-  | { ok: false; message: string }
+  | { ok: false; message: string; code: string }
 > {
   try {
     const data = await fieldGet<{ ledgerEntries: FieldLedgerEntry[] }>(
@@ -99,13 +106,13 @@ export async function fetchFieldMeLedgerEntries(): Promise<
     );
     return { ok: true, ledgerEntries: data.ledgerEntries ?? [] };
   } catch (error) {
-    return { ok: false, message: messageFrom(error) };
+    return { ok: false, message: messageFrom(error), code: codeFrom(error) };
   }
 }
 
 export async function fetchFieldMeCommissions(): Promise<
   | { ok: true; commissions: FieldCommission[] }
-  | { ok: false; message: string }
+  | { ok: false; message: string; code: string }
 > {
   try {
     const data = await fieldGet<{ commissions: FieldCommission[] }>(
@@ -113,13 +120,13 @@ export async function fetchFieldMeCommissions(): Promise<
     );
     return { ok: true, commissions: data.commissions ?? [] };
   } catch (error) {
-    return { ok: false, message: messageFrom(error) };
+    return { ok: false, message: messageFrom(error), code: codeFrom(error) };
   }
 }
 
 export async function fetchFieldMePayoutRequests(): Promise<
   | { ok: true; payoutRequests: FieldPayoutRequest[] }
-  | { ok: false; message: string }
+  | { ok: false; message: string; code: string }
 > {
   try {
     const data = await fieldGet<{ payoutRequests: FieldPayoutRequest[] }>(
@@ -127,7 +134,7 @@ export async function fetchFieldMePayoutRequests(): Promise<
     );
     return { ok: true, payoutRequests: data.payoutRequests ?? [] };
   } catch (error) {
-    return { ok: false, message: messageFrom(error) };
+    return { ok: false, message: messageFrom(error), code: codeFrom(error) };
   }
 }
 
@@ -137,7 +144,7 @@ export async function submitFieldMePayoutRequest(
   idempotencyKey: string,
 ): Promise<
   | { ok: true; payoutRequest: FieldPayoutRequest }
-  | { ok: false; message: string }
+  | { ok: false; message: string; code: string }
 > {
   try {
     const data = await fieldGet<{ payoutRequest: FieldPayoutRequest }>(
@@ -150,6 +157,6 @@ export async function submitFieldMePayoutRequest(
     );
     return { ok: true, payoutRequest: data.payoutRequest };
   } catch (error) {
-    return { ok: false, message: messageFrom(error) };
+    return { ok: false, message: messageFrom(error), code: codeFrom(error) };
   }
 }

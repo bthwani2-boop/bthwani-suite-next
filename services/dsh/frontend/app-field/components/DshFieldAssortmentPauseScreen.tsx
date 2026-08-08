@@ -19,6 +19,19 @@ import {
   type AssortmentPauseState,
 } from "../../shared/catalog";
 import { fetchMasterProductById } from "../../shared/catalog/central-catalog.api";
+import {
+  classifyGovernedError,
+  createGovernedProblem,
+  type GovernedProblem,
+} from "../../shared/_kernel/governed-problem";
+import { DshFieldProblemNotice } from "./DshFieldProblemNotice";
+
+/** Keeps the assortment wording while carrying the governed reason code. */
+function assortmentProblem(caught: unknown, fallback: string): GovernedProblem {
+  const problem = classifyGovernedError(caught);
+  const message = problem.serverMessage ?? fallback;
+  return { ...problem, message };
+}
 
 export type DshFieldAssortmentPauseScreenProps = {
   readonly partnerId: string;
@@ -36,12 +49,12 @@ export function DshFieldAssortmentPauseScreen({
   const [selectedProductId, setSelectedProductId] = React.useState<string | null>(null);
   const [reason, setReason] = React.useState("");
   const [pausedUntil, setPausedUntil] = React.useState<Date | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
+  const [problem, setProblem] = React.useState<GovernedProblem | null>(null);
   const [notice, setNotice] = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
-    setError(null);
+    setProblem(null);
     try {
       const pauses = await fetchFieldAssortmentPauses(partnerId);
       setItems(pauses);
@@ -62,7 +75,7 @@ export function DshFieldAssortmentPauseScreen({
         setProductNames((current) => ({ ...current, ...Object.fromEntries(resolved) }));
       }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "تعذر تحميل حالات التشكيلة.");
+      setProblem(assortmentProblem(caught, "تعذر تحميل حالات التشكيلة."));
     } finally {
       setLoading(false);
     }
@@ -84,15 +97,15 @@ export function DshFieldAssortmentPauseScreen({
   const pause = async () => {
     const current = items.find((item) => item.masterProductId === selectedProductId);
     if (!current) {
-      setError("اختر منتجًا من قائمة منتجات المتجر أولاً.");
+      setProblem(createGovernedProblem("PRODUCT_NOT_SELECTED", "اختر منتجًا من قائمة منتجات المتجر أولاً.", { kind: "validation", nextAction: "correct_input" }));
       return;
     }
     if (reason.trim().length < 3) {
-      setError("سبب الإيقاف المؤقت مطلوب.");
+      setProblem(createGovernedProblem("PAUSE_REASON_REQUIRED", "سبب الإيقاف المؤقت مطلوب.", { kind: "validation", nextAction: "correct_input" }));
       return;
     }
     setSavingId(current.masterProductId);
-    setError(null);
+    setProblem(null);
     setNotice(null);
     try {
       const result = await pauseFieldStoreAssortment(partnerId, current.masterProductId, {
@@ -104,7 +117,7 @@ export function DshFieldAssortmentPauseScreen({
       setNotice(`تم إيقاف "${productNames[current.masterProductId] ?? "المنتج"}" مؤقتًا.`);
       setSelectedProductId(null); setReason(""); setPausedUntil(null);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "تعذر إيقاف المنتج.");
+      setProblem(assortmentProblem(caught, "تعذر إيقاف المنتج."));
       await load();
     } finally {
       setSavingId(null);
@@ -113,14 +126,14 @@ export function DshFieldAssortmentPauseScreen({
 
   const resume = async (item: AssortmentPauseState) => {
     setSavingId(item.masterProductId);
-    setError(null);
+    setProblem(null);
     setNotice(null);
     try {
       const result = await resumeFieldStoreAssortment(partnerId, item.masterProductId, item.version);
       replaceItem(result.pause);
       setNotice(`تم استئناف "${productNames[item.masterProductId] ?? "المنتج"}".`);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "تعذر استئناف المنتج.");
+      setProblem(assortmentProblem(caught, "تعذر استئناف المنتج."));
       await load();
     } finally {
       setSavingId(null);
@@ -135,7 +148,7 @@ export function DshFieldAssortmentPauseScreen({
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
       <Header title="إيقاف منتجات المتجر" subtitle="أوقف منتجًا مؤقتًا أو استأنفه" onBack={onBack} />
       <ScrollView contentContainerStyle={{ padding: spacing[4], gap: spacing[3], paddingBottom: 100 }}>
-        {error ? <StateView tone="danger" title="تعذر تنفيذ العملية" description={error} actionLabel="إعادة التحميل" onActionPress={load} /> : null}
+        {problem ? <DshFieldProblemNotice problem={problem} handlers={{ refresh_record: load }} onRetry={load} onDismiss={() => setProblem(null)} /> : null}
         {notice ? <Surface tone="success" padding={3} radiusToken="md"><Text role="bodyStrong" tone="success">{notice}</Text></Surface> : null}
 
         <Surface tone="inset" padding={3} gap={3} radiusToken="md">

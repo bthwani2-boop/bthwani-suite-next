@@ -14,6 +14,8 @@ import {
   formatDateTime,
 } from "@bthwani/ui-kit";
 import { formatWltMoney, useFieldFinanceController } from '@bthwani/wlt/dsh';
+import { classifyGovernedError } from '../../shared/_kernel/governed-problem';
+import { DshFieldProblemState } from '../components/DshFieldProblemNotice';
 import {
   PayoutDestinationPanel,
   commissionStatusLabel,
@@ -45,13 +47,17 @@ export function WltFieldFinanceScreen({ onBack }: WltFieldFinanceScreenProps) {
   }
 
   if (state.kind === "error") {
+    // WLT emits the reason code; this surface maps it to the governed
+    // presentation so financial failures read like every other refusal.
+    const problem = classifyGovernedError({ code: state.code, message: state.message });
     return (
-      <StateView
-        tone="danger"
-        title="تعذر الوصول للبيانات المالية"
-        description={state.message}
-        actionLabel="إعادة المحاولة"
-        onActionPress={controller.refresh}
+      <DshFieldProblemState
+        problem={problem}
+        handlers={{
+          refresh_record: controller.refresh,
+          refresh_scope: controller.refresh,
+        }}
+        onRetry={controller.refresh}
       />
     );
   }
