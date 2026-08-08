@@ -41,7 +41,7 @@ function listTextFiles(relativeRoot) {
     for (const entry of fs.readdirSync(path.join(repoRoot, current), { withFileTypes: true })) {
       const relative = path.posix.join(current.replaceAll("\\", "/"), entry.name);
       if (entry.isDirectory()) stack.push(relative);
-      else if (/\.(?:md|json|ya?ml|mjs|js|ts|tsx|ps1)$/i.test(entry.name)) files.push(relative);
+      else if (/\.(?:md|json|ya?ml|mjs|js|ts|tsx|ps1|sh)$/i.test(entry.name)) files.push(relative);
     }
   }
   return files.sort();
@@ -108,6 +108,7 @@ if (authority) {
     "governance/product/decisions",
     "governance/commercialization",
     "governance/operational_journey_protocol_package",
+    "governance/guards/registrations",
     "governance/github/repository-enforcement.json",
     "governance/github/full-verification-policy.json",
     "tools/plans",
@@ -115,6 +116,7 @@ if (authority) {
     "tools/important-scripts",
     "tools/contracts",
     "tools/rules",
+    "tools/yagni",
   ]) {
     if (byPath.has(forbidden)) violations.push({ file: "governance/authority/authority-precedence.json", line: 0, message: `RETIRED_PARALLEL_AUTHORITY_REGISTERED ${forbidden}` });
   }
@@ -131,6 +133,7 @@ const retiredReferences = [
   "governance/product/decisions/",
   "governance/commercialization/",
   "governance/operational_journey_protocol_package/",
+  "governance/guards/registrations/",
   "governance/github/repository-enforcement.json",
   "governance/github/repository-enforcement.schema.json",
   "governance/github/full-verification-policy.json",
@@ -141,11 +144,27 @@ const retiredReferences = [
   "tools/plans/",
   "tools/diagnose-implementing/",
   "tools/implementing/",
+  "tools/yagni/",
+  "tools/toolchain/tool-activation-baseline.json",
+  ".reviewdog.yml",
   ".agents/AUTHORITY_BOUNDARY.md",
   ".agents/COMMAND_SAFETY_POLICY.md",
   ".agents/EVIDENCE_GATE_ROUTER.md",
   ".agents/SKILL_CATALOG.md",
 ];
+
+const executableReferenceExclusions = new Set([
+  "tools/guards/governance-schema-gate.mjs",
+  "tools/guards/agent-governance-gate.mjs",
+  "tools/guards/document-authority-conflicts-gate.mjs",
+  "tools/guards/canonical-paths-gate.mjs",
+  "tools/guards/cleanup-policy-gate.mjs",
+  "tools/guards/repository-structure-gate.mjs",
+]);
+const executableFiles = [
+  ...listTextFiles("tools/guards"),
+  ...listTextFiles("tools/scripts"),
+].filter((relative) => !relative.endsWith(".test.mjs") && !executableReferenceExclusions.has(relative));
 
 const scannedFiles = new Set([
   "AGENTS.md", "CLAUDE.md", "GEMINI.md", "LEAN-CTX.md", "opencode.json",
@@ -153,6 +172,7 @@ const scannedFiles = new Set([
   ...listTextFiles(".github"),
   ...listTextFiles("docs"),
   ...listTextFiles("tools/prompting"),
+  ...executableFiles,
 ]);
 for (const relative of scannedFiles) {
   const content = read(relative);
