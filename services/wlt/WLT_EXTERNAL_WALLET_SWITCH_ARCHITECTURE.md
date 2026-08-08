@@ -1,409 +1,1132 @@
-# WLT External Wallet Rail Architecture
+# WLT External Wallet & Settlement Architecture
 
-**Status:** Proposed technical architecture / decision record  
+**Status:** Canonical target architecture / implementation decision record  
 **Service:** `WLT` — Wallet / Financial Truth  
-**Branch baseline:** `abbas`  
-**Prepared:** 2026-08-08  
-**Primary market target:** Yemen electronic wallets  
+**Branch:** `abbas`  
+**Updated:** 2026-08-08  
+**Primary market:** Yemen official electronic wallets  
 
 ---
 
 ## 1. Purpose
 
-This document defines the recommended architecture for integrating BThwani with official Yemeni electronic wallets while preserving WLT as the sole internal financial source of truth.
+This document defines the target financial architecture for BThwani.
 
-The architecture must support all of these realities without redesigning WLT:
+It consolidates the final decisions for:
 
-1. a common wallet switch/acquirer such as WeNet where one commercial/technical integration can reach multiple wallets;
-2. direct integrations with individual wallets when a common rail is unavailable, incomplete, commercially inferior, or missing a required capability;
-3. the existing local financial-provider simulator used for safe development and failure testing;
-4. provider sandbox/test environments before any real-money production activation;
-5. multiple stakeholder policies: customers, captains, field agents, partners, and BThwani treasury.
+- BThwani internal wallets;
+- customer and captain cash-in/top-up;
+- order payment allocation;
+- captain COD financial authorization;
+- partner, captain, and field earnings;
+- verified official-wallet settlement destinations;
+- governed manual external settlements;
+- settlement batches and XLSX execution files;
+- evidence, audit, reconciliation, exceptions, and daily finance close;
+- external wallet rails/providers;
+- accounting and double-entry rules;
+- finance control-panel responsibilities;
+- migration from legacy/preview financial concepts.
 
-The target is therefore **one internal financial architecture with pluggable external rails and environment-safe adapters**, not a WeNet-specific architecture and not a collection of independent wallet-specific financial systems.
-
-This document deliberately does **not** assume that WeNet exposes a public merchant REST API, acts as a custodian, supports refunds or payouts, or charges a specific fee. Those are contract and provider-documentation facts that must be proven before production activation.
-
----
-
-## 2. Executive architecture decision
-
-### 2.1 Canonical target
-
-```text
-                       BTHWANI WLT
-                            |
-                  FinancialRailRouter
-                            |
-                    ProviderRegistry
-                            |
-          +-----------------+-----------------+
-          |                 |                 |
-     Common Rail       Direct Wallet     Governed Manual
-    WeNet/Acquirer        Adapter            Rail
-          |                 |                 |
-   participating        one wallet       exception only
-      wallets
-```
-
-WLT remains authoritative for:
-
-- payment and funding intents;
-- internal wallet balances;
-- partner/captain/field payables;
-- payout requests and holds;
-- refunds;
-- double-entry ledger;
-- reconciliation;
-- settlement state;
-- financial audit and finance operations.
-
-External providers only move or report real external funds. They never become BThwani's internal source of financial truth.
-
-### 2.2 Launch strategy
-
-Adopt:
-
-> **One active real external provider at launch, multi-provider architecture from day one.**
-
-BThwani implements only the first real adapter for which it has:
-
-- an approved commercial relationship;
-- an approved technical specification;
-- sandbox/test access where available;
-- credentials/secrets;
-- reconciliation and settlement rules;
-- finance/security/release approval.
-
-Do **not** pre-build speculative production adapters for wallets whose real APIs are unknown.
-
-The architecture must already allow another adapter to be registered later without rewriting WLT, the ledger, applications, or stakeholder journeys.
-
-### 2.3 Direct adapters are not a failure mode
-
-If WeNet or another common rail is not suitable, the architecture becomes:
-
-```text
-                       BTHWANI WLT
-                            |
-                  FinancialRailRouter
-                            |
-                    ProviderRegistry
-                            |
-       +--------------------+--------------------+
-       |                    |                    |
-   JaibAdapter        OneCashAdapter       OtherAdapter
-       |                    |                    |
-      Jaib               ONE Cash              ...
-```
-
-That is an expected supported topology. It must not create separate ledgers, payout engines, reconciliation engines, or wallet systems per provider.
-
-### 2.4 Simulator remains part of the architecture
-
-The existing simulator is **not temporary throw-away business logic**.
-
-It remains a permanent non-production implementation used for:
-
-- local development;
-- automated tests;
-- deterministic failure simulation;
-- timeout/unknown-result testing;
-- duplicate/replay testing;
-- webhook and reconciliation scenarios;
-- development without real financial credentials.
-
-Before production, the simulator is **not deleted and replaced globally**. Instead, production routing is bound to a real approved adapter while `mock` remains isolated to development/test environments.
+The architecture is intentionally designed so that external-wallet providers can change without changing WLT's accounting truth or stakeholder business rules.
 
 ---
 
-## 3. Stakeholder financial policy
+# 2. Canonical financial decision
 
-Stakeholder policy and provider routing are separate concerns. Provider names must never be hard-coded into customer, captain, field, or partner domain rules.
+The target is:
 
-### 3.1 Policy matrix
+```text
+                            BTHWANI WLT
+                                |
+                       ONE FINANCIAL TRUTH
+                                |
+                 ONE DOUBLE-ENTRY LEDGER
+                                |
+        +-----------------------+-----------------------+
+        |                       |                       |
+     Payments                Wallets               Settlements
+        |                       |                       |
+        +-----------------------+-----------------------+
+                                |
+               +----------------+----------------+
+               |                |                |
+            Customer         Captain       Partner / Field
+               |                |                |
+          internal wallet   internal wallet   internal wallet
+               |                |                |
+               +----------------+----------------+
+                                |
+                         governed WLT state
+                                |
+             +------------------+------------------+
+             |                                     |
+          CASH-IN                              CASH-OUT
+             |                                     |
+   official wallet rails                  governed manual
+   / common switch / direct               external transfer
+             |                                     |
+   authoritative evidence                 official wallet app
+             |                                     |
+          WLT ledger                        proof + verification
+             |                                     |
+             +------------------+------------------+
+                                |
+                         reconciliation
+                                |
+                         financial close
+```
 
-| Stakeholder | Cash-in / top-up | Cash-out / payout | External-wallet policy |
-|---|---|---|---|
-| Customer | Yes | No general withdrawal by default | Multi-wallet |
-| Captain | Yes | Yes | Primary workforce wallet/rail, governed exception |
-| Field | Not required by default | Yes | Primary workforce wallet/rail, governed exception |
-| Partner | Not required by default | Yes | Multi-wallet from supported verified destinations |
-| BThwani treasury | Receives and settles | Funds stakeholder payouts | Multi-rail internally |
+The foundational rules are:
 
-The matrix is product/operational policy. It does not imply that every provider supports every operation.
+> **WLT is the sole internal financial source of truth.**
+
+> **External official wallets move real external money; they never own BThwani's internal balances, liabilities, payout state, or accounting truth.**
+
+> **Cash-In may be electronically integrated. Cash-Out/settlement is currently a governed manual external-wallet operation, not a provider payout API.**
+
+> **One internal wallet per actor, with one immutable ledger recording the nature and provenance of every movement.**
 
 ---
 
-## 4. Customer policy
+# 3. What BThwani Wallet is — and is not
 
-### 4.1 Customer funding
+BThwani Wallet is a private/internal platform ledger balance.
 
-The customer's BThwani balance is a **closed-loop internal platform balance / liability**, not an official external wallet.
+It is not an official national wallet and must not be presented as one.
 
-The customer may fund it from any external wallet route currently enabled by BThwani:
+For each actor, WLT may maintain balances/status such as:
 
 ```text
-Customer official wallet
-        |
-        v
-CashInRail
-        |
-        v
-Authoritative provider confirmation
-        |
-        v
-Reconciliation
-        |
-        v
-WLT double-entry ledger
-        |
-        v
-Customer BThwani balance
+available
+held
+pending
+earned
+settled
+withdrawal_eligible
 ```
 
-### 4.2 Customer withdrawal
+These are states/views over one financial truth. They must not create competing ledgers.
 
-General customer withdrawal or P2P transfer must not be inferred from top-up capability. It requires separate legal, product, fraud, accounting, and regulatory approval.
+External official-wallet accounts remain separate financial destinations/sources used to move real funds.
 
 ---
 
-## 5. Captain policy: cash-in and cash-out
+# 4. Stakeholder financial model
 
-The captain is explicitly a **two-direction financial actor**.
+| Stakeholder | Internal BThwani wallet | Cash-In / Top-up | COD | Earnings | Settlement request | External settlement |
+|---|---:|---:|---:|---:|---:|---|
+| Customer | Yes | Yes | Pays when applicable | No | No by default | N/A |
+| Captain | Yes | Yes | Financially reserved/debited from same wallet | Delivery/commission | Yes | Manual governed official-wallet transfer |
+| Partner | Yes | Optional only if product requires it | Receives governed order proceeds | Sales/net settlement | Yes | Manual governed official-wallet transfer |
+| Field | Yes | Not required by default | No | Field commission | Yes | Manual governed official-wallet transfer |
+| BThwani | Central WLT ledger | Receives external funds | Owns accounting truth | Fees/commissions | Operates settlement | Uses official corporate wallet accounts |
+
+No stakeholder gets a parallel financial system per provider.
+
+---
+
+# 5. Customer
+
+## 5.1 Customer top-up
+
+Canonical flow:
 
 ```text
-                         Captain WLT
-                             |
-                 +-----------+-----------+
-                 |                       |
-              Cash-In                  Cash-Out
-              Top-up                    Payout
-                 |                       |
-        official external          verified official
-             wallet                    wallet
+Customer
+   -> Create Funding Intent
+   -> select supported official wallet route
+   -> CashInRail
+   -> external provider/switch
+   -> authoritative confirmation
+   -> reconciliation
+   -> WLT double-entry posting
+   -> customer internal balance credited
 ```
 
-### 5.1 Captain top-up
+Screenshots, customer claims, or client-side success screens are never authoritative financial success.
 
-`CAPTAIN_TOPUP` uses the same canonical `CashInRail` architecture as customer top-up:
+Preferred authoritative evidence order:
+
+1. verified provider webhook;
+2. provider inquiry/read-back;
+3. reconciliation feed/statement;
+4. controlled finance reconciliation evidence.
+
+## 5.2 Customer withdrawal
+
+General withdrawal from the BThwani internal balance is not enabled by implication.
+
+It requires separate legal, product, fraud, accounting, and regulatory approval.
+
+---
+
+# 6. Captain — one wallet, Cash-In + COD + earnings + settlement
+
+The captain has **one internal WLT wallet**.
+
+Do not create separate visible wallets for top-up, COD, earnings, or settlement.
+
+The ledger records movement type instead:
 
 ```text
-Official wallet
-    -> Funding Intent / Payment Session
-    -> FinancialRailRouter
-    -> selected CashInRail
-    -> authoritative confirmation
-    -> reconciliation
-    -> ledger posting
-    -> captain internal balance
+CAPTAIN_OPENING_FUNDING
+CAPTAIN_TOPUP
+CAPTAIN_COD_RESERVE
+CAPTAIN_COD_RELEASE
+CAPTAIN_COD_DEBIT
+CAPTAIN_DELIVERY_EARNING
+CAPTAIN_COMMISSION
+CAPTAIN_ADJUSTMENT
+CAPTAIN_PAYOUT_HOLD
+CAPTAIN_PAYOUT_RELEASE
+CAPTAIN_PAYOUT_COMPLETED
 ```
 
-The accounting destination differs by funding purpose:
+## 6.1 Captain top-up
+
+Captain top-up uses the same canonical Cash-In engine as customer top-up:
+
+```text
+Official Wallet
+   -> Funding Intent
+   -> CashInRail
+   -> authoritative provider evidence
+   -> reconciliation
+   -> WLT ledger
+   -> wallet(captain)
+```
+
+The provider does not decide the accounting destination. The server-owned purpose does:
 
 ```text
 CUSTOMER_TOPUP -> wallet(customer)
 CAPTAIN_TOPUP  -> wallet(captain)
 ```
 
-Provider identity must never determine the accounting account. The server-owned financial purpose does.
+## 6.2 Captain COD must be order-specific
 
-### 5.2 Captain earnings and one visible balance
+General minimum-balance eligibility is not enough.
 
-Do not create a separate visible "top-up wallet" and "earnings wallet" unless future product requirements explicitly require that UX.
-
-The captain may see one financial balance, while WLT internally preserves movement origin and eligibility:
+The final authorization must be:
 
 ```text
-CAPTAIN_TOPUP
-CAPTAIN_EARNING
-CAPTAIN_COMMISSION
-CAPTAIN_ADJUSTMENT
-CAPTAIN_HOLD
-CAPTAIN_RELEASE
-CAPTAIN_PAYOUT
+General Captain Eligibility
+          |
+          v
+Order-specific COD amount
+          |
+          v
+available balance >= required COD exposure?
+          |
+          v
+atomic reserve
+          |
+          v
+assignment allowed
 ```
 
-The server must distinguish at least:
+This prevents two concurrent assignments from consuming the same captain balance.
+
+## 6.3 COD reserve instead of immediate irreversible debit
+
+Example:
 
 ```text
-available
-held
-pending
-withdrawal_eligible
+Captain available balance = 30,000 YER
+Order COD product exposure = 10,000 YER
 ```
 
-The entire displayed balance must not automatically be treated as withdrawable.
+On governed assignment/acceptance:
 
-### 5.3 Withdrawability of captain top-up principal
+```text
+CAPTAIN_COD_RESERVE 10,000
+available/spendable -> 20,000
+held                 -> 10,000
+```
 
-Product intent currently allows the captain to fund and withdraw money. Preserve that intent in the domain model, but production activation of withdrawal for externally topped-up principal is an explicit **legal/commercial/AML gate** because unrestricted cash-in -> internal balance -> cash-out can resemble stored-value or money-transfer activity.
+If the order is cancelled before settlement:
 
-Therefore WLT must implement **withdrawal eligibility as server-owned policy**, not `withdrawable = balance`.
+```text
+CAPTAIN_COD_RELEASE 10,000
+available -> 30,000
+```
 
-If approved, top-up principal can become withdrawal-eligible according to approved policy. If not approved, captain earnings can remain withdrawable while topped-up funds remain restricted to approved platform purposes.
+If delivered:
+
+```text
+reserved COD -> final COD debit
+```
+
+Then, if delivery earning is paid through WLT:
+
+```text
+CAPTAIN_DELIVERY_EARNING +800
+final visible balance -> 20,800
+```
+
+A hold is not a second wallet. It is a controlled restriction on part of the same financial balance.
 
 ---
 
-## 6. Workforce policy: captain and field
+# 7. PaymentAllocation — mandatory order-level financial truth
 
-### 6.1 Primary workforce financial rail
-
-To reduce operational fragmentation, BThwani should prefer one official wallet/provider for captain and field financial operations at launch, provided the selected provider has sufficient coverage and the required capabilities.
-
-Use policy, not hard-coded provider names:
+A critical canonical object is required for every order/payment path:
 
 ```text
-WorkforceFinancialPolicy
-  primaryCashInRail
-  primaryPayoutRail
-  exceptionRails
+PaymentAllocation
+  order_id
+  currency
+  subtotal
+  delivery_fee
+  discount
+  platform_subsidy
+  internal_wallet_amount
+  external_official_wallet_amount
+  cod_product_amount
+  cod_delivery_amount
+  total
+  policy_version
 ```
 
-Example configuration shape only:
+The server must enforce the conservation invariant:
 
 ```text
-primaryCashInRail = provider_x
-primaryPayoutRail = provider_x
+internal_wallet_amount
++ external_official_wallet_amount
++ cash_amount
++ platform_subsidy
+= governed total
 ```
 
-If the provider changes later, configuration and adapter routing change; captain/field domain models and the WLT ledger do not.
+No UI or provider may infer allocation from the payment-method label alone.
 
-### 6.2 Governed exception
+## 7.1 Delivery fee must never be counted twice
 
-Policy:
+The system must explicitly choose one governed policy.
 
-> **Primary Required/Preferred Settlement Wallet + Governed Exception**
+If the captain only receives product COD in cash and delivery earning is credited by WLT:
 
-An exception may be approved for geographic, accessibility, contractual, or operational reasons. Exceptions must be explicit and auditable; they must not silently turn workforce payout into unrestricted multi-wallet routing.
+```text
+COD product exposure = product cash amount
+Delivery earning     = separate WLT credit
+```
 
-### 6.3 Verified workforce destination
+If the captain retains delivery cash directly from the customer, WLT must not credit the same delivery earning a second time.
 
-Before a destination can receive payout, it must pass finance verification and become an active canonical destination.
+The allocation must make this mechanically testable.
 
-Changing destination requires re-verification. Trust must not automatically migrate from an old destination to a new one.
+## 7.2 Mixed payment
+
+Example:
+
+```text
+Product              10,000
+Customer WLT           4,000
+COD product exposure   6,000
+Delivery                 800
+```
+
+If delivery is separately credited by WLT, captain COD authorization covers `6,000`, not `10,800`.
 
 ---
 
-## 7. Partner policy: flexible verified settlement destination
+# 8. Partner earnings and settlement
 
-Partners are commercially different from workforce actors. BThwani should **not require every partner to open the same official wallet**.
+Partner financial truth must be derived from governed operational and financial evidence, including as applicable:
+
+- delivered order/pricing snapshot;
+- completion evidence;
+- completed refunds;
+- approved commission/fee policy;
+- idempotent settlement calculation;
+- WLT ledger posting.
+
+Canonical conceptual equation:
+
+```text
+gross governed proceeds
+- completed refunds
+- platform fees/commissions
++/- approved adjustments
+= partner payable
+```
+
+DSH provides operational evidence. WLT owns the financial calculation and posting.
+
+---
+
+# 9. Field earnings
+
+Field commission must not become finally earned merely because a visit form was completed.
+
+The target commercial trigger is the governed successful outcome, for example:
+
+```text
+Field visit completed
+        -> commission candidate
+        -> partner approved
+        -> store published
+        -> store client_visible
+        -> FIELD_COMMISSION_EARNING
+        -> field internal wallet
+```
+
+The exact event contract must be server-owned and versioned.
+
+---
+
+# 10. OfficialWalletDestination — only verified destinations can receive settlement
+
+The target payout destination is an official electronic-wallet account, not a bank/IBAN product model.
+
+Canonical model:
+
+```text
+OfficialWalletDestination
+  destination_id
+  actor_type
+  actor_id
+  provider_key
+  wallet_identifier_encrypted
+  wallet_identifier_masked
+  beneficiary_name
+  verification_status
+  status
+  version
+  submitted_at
+  submitted_by
+  verified_at
+  verified_by
+  verification_method
+  verification_evidence_reference
+  created_at
+  updated_at
+```
+
+Minimum lifecycle:
+
+```text
+SUBMITTED
+  -> PENDING_VERIFICATION
+  -> VERIFIED
+  -> ACTIVE_FOR_PAYOUT
+
+or
+
+PENDING_VERIFICATION
+  -> REJECTED
+
+ACTIVE_FOR_PAYOUT
+  -> SUSPENDED / RETIRED
+```
+
+A generic `active=true` flag is never a substitute for verified status.
+
+## 10.1 Destination change
+
+Trust never transfers automatically to a changed wallet number.
+
+```text
+Old destination = VERIFIED
+User requests new identifier
+        |
+        v
+New destination version = PENDING_VERIFICATION
+        |
+        v
+new payouts blocked until verification
+```
+
+An already approved payout snapshot is not silently rewritten after a destination change.
+
+---
+
+# 11. Destination and execution method are separate concepts
+
+Do not model:
+
+```text
+settlementPreference = manual
+```
+
+as if `manual` were the financial destination.
+
+Correct separation:
+
+```text
+DestinationType:
+  official_wallet
+
+ExecutionMethod:
+  manual_external_wallet_transfer
+```
+
+The destination says **where** the money goes.
+
+The execution method says **how** BThwani performed the external movement.
+
+---
+
+# 12. Current production target for Cash-Out: governed manual settlement
+
+For the current Yemen operating model, WLT must **not** assume a provider payout API.
+
+The canonical stakeholder settlement flow is:
+
+```text
+Beneficiary requests payout
+        |
+        v
+WLT validates withdrawal eligibility
+        |
+        v
+Funds placed on HOLD
+        |
+        v
+Verified OfficialWalletDestination required
+        |
+        v
+Risk / duplicate / policy checks
+        |
+        v
+Maker preparation
+        |
+        v
+Checker approval
+        |
+        v
+SettlementBatch
+        |
+        v
+FREEZE batch + control total + hash
+        |
+        v
+Execution Workbench / generated XLSX
+        |
+        v
+Finance executor opens BThwani official wallet app
+        |
+        v
+Manual external transfer
+        |
+        v
+Reference + evidence recorded
+        |
+        v
+Independent verification
+        |
+        v
+Official-wallet/provider statement reconciliation
+        |
+        v
+WLT ledger finalization
+        |
+        v
+COMPLETED
+```
+
+There is no unrestricted `Mark Paid` operation.
+
+A payout is completed only after governed execution and reconciliation requirements are satisfied.
+
+---
+
+# 13. Unified PayoutRequest
+
+Partner, captain, and field must use one canonical payout engine:
+
+```text
+PayoutRequest
+  payout_id
+  beneficiary_actor_type  // partner | captain | field
+  beneficiary_actor_id
+  amount
+  currency
+  destination_id
+  destination_version
+  status
+  hold_transaction_id
+  policy_version
+  requested_at
+```
+
+Do not build separate accounting engines for:
+
+```text
+CaptainPayout
+PartnerPayout
+FieldPayout
+```
+
+Stakeholder-specific eligibility belongs in policy, not in parallel ledgers/workflows.
+
+---
+
+# 14. ApprovedPayoutSnapshot — approved data becomes immutable
+
+At approval time, create an immutable snapshot containing at least:
+
+```text
+payout_id
+beneficiary_actor_id
+beneficiary_name
+provider_key
+masked_destination
+destination_id
+destination_version
+amount
+currency
+policy_version
+approved_at
+approved_by
+snapshot_hash
+```
+
+After approval, the executable amount, beneficiary, and destination cannot be edited in place.
+
+Any material change requires cancellation/rejection and a new approval path.
+
+This guarantees that the transaction executed is the transaction actually approved.
+
+---
+
+# 15. Maker / Checker / Executor / Reconciler / DayCloser
+
+Financial separation-of-duties is a backend control, not a UI convention.
+
+Canonical logical roles:
+
+```text
+Maker       -> prepares payout/batch
+Checker     -> independently approves/rejects
+Executor    -> performs manual external transfer
+Reconciler  -> matches external evidence/statement
+DayCloser   -> closes financial business date
+```
+
+Production rules must support, at minimum:
+
+- approval permission separated from preparation permission;
+- execution permission separated from verification/reconciliation permission;
+- server-side enforcement of legal state transitions;
+- auditable identity/time for each action;
+- configurable enhanced approval for sensitive/high-value cases;
+- no production mode in which required controls silently disappear because an environment variable was omitted.
+
+Recommended invariant when SoD is applicable:
+
+```text
+executed_by != independently_verified_by
+```
+
+Where staffing temporarily requires a controlled exception, the exception itself must be explicitly approved, reasoned, time-bounded, and audited. It must not be an invisible bypass.
+
+---
+
+# 16. SettlementBatch — immutable execution unit
+
+Approved payout requests are grouped into a settlement batch, typically by operational execution scope such as provider and currency.
+
+Canonical model:
+
+```text
+SettlementBatch
+  batch_id
+  provider_key
+  currency
+  status
+  row_count
+  total_amount
+  created_by
+  created_at
+  frozen_by
+  frozen_at
+  batch_hash
+  policy_version
+```
+
+Lifecycle:
+
+```text
+DRAFT
+  -> PREPARED
+  -> APPROVED
+  -> FROZEN
+  -> EXECUTION_IN_PROGRESS
+  -> AWAITING_VERIFICATION
+  -> AWAITING_RECONCILIATION
+  -> COMPLETED
+
+or -> CANCELLED / EXCEPTION
+```
+
+Once `FROZEN`:
+
+- no row may be added;
+- no row may be removed;
+- no amount may be changed;
+- no beneficiary may be changed;
+- no destination may be changed.
+
+A required change creates a new governed batch/version rather than mutating the frozen evidence.
+
+---
+
+# 17. XLSX is an execution artifact, never the database
+
+The authoritative direction is:
+
+```text
+WLT
+  -> immutable SettlementBatch snapshot
+  -> generated XLSX
+```
+
+Never:
+
+```text
+Excel edit
+  -> silently changes WLT financial truth
+```
+
+Generated rows should contain only the minimum necessary execution data, for example:
+
+```text
+row_sequence
+batch_id
+payout_id
+beneficiary
+provider
+masked/required execution identifier
+amount
+currency
+row_fingerprint
+```
+
+File metadata must be retained:
+
+```text
+batch_id
+generated_at
+generated_by
+row_count
+total_amount
+currency
+file_hash
+artifact_reference
+```
+
+Downloads/exports must be audited.
+
+Sensitive unmasked identifiers must be exposed only to authorized execution roles and only where operationally necessary.
+
+---
+
+# 18. Settlement Execution Workbench
+
+The control panel should provide a row-by-row execution workspace rather than forcing staff to operate from Excel alone.
+
+Example:
+
+```text
+Transfer 7 of 27
+
+Payout ID:   PAY-...
+Beneficiary: ...
+Provider:    ...
+Wallet:      masked / reveal-with-permission
+Amount:      50,000 YER
+
+[Copy wallet]
+[Copy amount]
+[Record transfer]
+```
+
+The executor must not be able to alter the approved beneficiary, wallet, or amount from the execution screen.
+
+`Record transfer` requires the governed execution fields; there is no bare success toggle.
+
+---
+
+# 19. ManualTransferEvidence
+
+Each executed external transfer records at least:
+
+```text
+transfer_execution_id
+batch_id
+payout_id
+approved_snapshot_hash
+executed_by
+executed_at
+provider_key
+external_transfer_reference
+amount
+currency
+destination_version
+evidence_references[]
+execution_status
+```
+
+Evidence can include a receipt/screenshot or provider-issued reference, but image evidence alone is not final financial truth.
+
+The server must prevent duplicate reuse of authoritative references where provider semantics require uniqueness.
+
+---
+
+# 20. Four-way settlement reconciliation
+
+A completed payout should be able to prove agreement between:
+
+```text
+1. WLT PayoutRequest / ApprovedPayoutSnapshot
+2. Frozen SettlementBatch row
+3. Manual transfer execution evidence/reference
+4. Official provider/wallet statement or authoritative external record
+```
+
+Expected result:
+
+```text
+amount        == amount
+currency      == currency
+beneficiary   == approved destination
+provider ref  == authoritative external evidence
+```
+
+Mismatch creates a reconciliation exception; it does not create a false completed payout.
+
+Example statuses:
+
+```text
+MATCHED
+UNMATCHED
+AMOUNT_MISMATCH
+DESTINATION_MISMATCH
+DUPLICATE_REFERENCE
+MISSING_TRANSFER
+UNKNOWN_EXTERNAL_TRANSACTION
+NEEDS_REVIEW
+```
+
+---
+
+# 21. Provider statement import
+
+Because an external API/feed may not exist, WLT should support controlled import of official wallet/provider statements or exports.
+
+The importer must:
+
+- preserve the original artifact and file hash;
+- record provider/account/business-date scope;
+- normalize rows without destroying source evidence;
+- match deterministically where possible;
+- route ambiguous/unmatched rows to exceptions;
+- be idempotent for the same source artifact;
+- never mutate ledger balances merely because a spreadsheet row exists.
+
+Automation can be added later if providers expose authoritative APIs or feeds.
+
+---
+
+# 22. SettlementAuditPack — canonical financial evidence package
+
+A useful concept from the legacy repository is retained and upgraded into a runtime-backed `SettlementAuditPack`.
+
+It is not preview data and not a second financial source of truth.
+
+Recommended contents:
+
+```text
+SettlementAuditPack
+  payoutSnapshot
+  destinationSnapshot
+  destinationSnapshotHash
+  approvals[]
+  settlementBatchId
+  settlementBatchHash
+  batchControlTotal
+  exportArtifactHash
+  executionRecord
+  externalTransferReference
+  transferEvidence[]
+  providerStatementReference
+  reconciliationResult
+  ledgerTransactionIds[]
+  exceptions[]
+  immutableAuditTimeline[]
+  generatedAt
+  packHash
+```
+
+The pack must make it possible to answer for each settled amount:
+
+- why did the money leave BThwani?
+- for whom?
+- how much?
+- which destination version was approved?
+- who prepared and approved it?
+- which batch contained it?
+- who executed it?
+- what external reference/evidence exists?
+- did the official statement confirm it?
+- what ledger transaction finalized it?
+- were any exceptions involved?
+
+---
+
+# 23. DailyFinanceClose — no silent unfinished money
+
+The legacy `DailyReconciliation` / close-gate concept is retained as a real backend-governed financial close.
+
+A business date cannot close while material unresolved conditions exist, including:
+
+- payout approved but unintentionally left unbatched;
+- frozen batch not fully accounted for;
+- executed transfer missing evidence/reference;
+- execution awaiting independent verification;
+- verified transfer not reconciled;
+- unresolved material reconciliation variance;
+- unmatched provider statement row requiring action;
+- open blocking finance exception;
+- batch control-total mismatch;
+- ledger/control totals not balanced under policy.
+
+Canonical gate:
+
+```text
+all required evidence complete
+AND all required approvals complete
+AND batch totals reconcile
+AND external statement reconciliation complete
+AND no blocking exceptions
+AND financial control totals balanced
+        |
+        v
+ALLOW DAILY CLOSE
+```
+
+Otherwise:
+
+```text
+BLOCK CLOSE
++ explicit unresolved exposure
++ owners
++ reasons
+```
+
+---
+
+# 24. Finance Exception Queue
+
+Financial anomalies must become first-class records, not free-text notes.
+
+Canonical examples:
+
+```text
+MISSING_RECEIPT
+MISSING_EXTERNAL_REFERENCE
+AMOUNT_MISMATCH
+BENEFICIARY_MISMATCH
+DUPLICATE_TRANSFER
+DUPLICATE_EXTERNAL_REFERENCE
+STATEMENT_NOT_FOUND
+BATCH_TOTAL_MISMATCH
+DESTINATION_CHANGED
+EXECUTION_TIMEOUT
+RECONCILIATION_VARIANCE
+UNEXPECTED_EXTERNAL_TRANSACTION
+CONTROL_TOTAL_MISMATCH
+```
+
+Each exception records:
+
+```text
+exception_id
+type
+severity
+financial_exposure
+related_entity_ids
+opened_at
+opened_by/automatic_source
+owner
+resolution
+resolution_reason
+resolution_evidence
+resolved_at
+resolved_by
+approval_if_required
+```
+
+Blocking exceptions prevent the relevant payout/batch/day from falsely closing.
+
+---
+
+# 25. Duplicate and anomaly protection
+
+Server-side protections must include:
+
+- payout idempotency;
+- batch idempotency;
+- unique external reference controls where valid;
+- duplicate statement import detection;
+- duplicate evidence-reference detection;
+- warnings/holds for suspicious same-beneficiary/same-amount repetitions;
+- destination-change risk signal;
+- recent financial-adjustment risk signal;
+- configurable enhanced review for high-value/sensitive transactions.
+
+Threshold amounts belong in versioned finance policy, never hard-coded architecture documentation.
+
+---
+
+# 26. Audit trail
+
+Every sensitive action is append-only/auditable, including:
+
+```text
+PAYOUT_REQUESTED
+FUNDS_HELD
+DESTINATION_VERIFIED
+PAYOUT_PREPARED
+PAYOUT_APPROVED
+BATCH_CREATED
+BATCH_FROZEN
+EXECUTION_FILE_EXPORTED
+TRANSFER_EXECUTED
+EVIDENCE_ADDED
+TRANSFER_VERIFIED
+STATEMENT_IMPORTED
+RECONCILIATION_MATCHED
+EXCEPTION_OPENED
+EXCEPTION_RESOLVED
+LEDGER_FINALIZED
+PAYOUT_COMPLETED
+DAY_CLOSED
+```
+
+Do not put secrets or full sensitive wallet identifiers into every audit event.
+
+Prefer references such as:
+
+```text
+destination_id
+destination_version
+masked_identifier
+snapshot_hash
+```
+
+The unmasked identifier remains encrypted in its canonical secure storage.
+
+---
+
+# 27. Step-up security for sensitive finance operations
+
+Production controls should support re-authentication/MFA or equivalent step-up authorization for sensitive operations such as:
+
+- verifying/changing a payout destination;
+- approving sensitive/high-value payout or batch;
+- freezing a batch;
+- exporting unmasked execution data;
+- performing privileged settlement actions;
+- overriding/closing blocking exceptions;
+- closing the financial day.
+
+Authorization tokens/approvals must be server-owned, scoped, time-limited where appropriate, and not reusable for a different transaction.
+
+---
+
+# 28. Reminder/escalation engine
+
+The system must reduce dependence on employee memory.
+
+Policy-driven reminders/escalations should detect conditions such as:
+
+```text
+approved payout not batched within policy window
+frozen/exported batch not executed
+executed transfer missing evidence
+transfer waiting for independent verification
+verified transfer waiting for reconciliation
+end-of-day unresolved settlement exposure
+```
+
+Time windows are configuration/policy, not hard-coded architecture constants.
+
+---
+
+# 29. Treasury view for BThwani external wallet accounts
+
+External official-wallet balances are operational treasury facts, not WLT wallet balances.
+
+WLT/Finance should maintain controlled views such as:
+
+```text
+ExternalProviderAccount
+  provider_key
+  account_reference
+  currency
+  opening_external_balance
+  expected_incoming
+  expected_outgoing
+  fees
+  expected_closing_balance
+  actual_closing_balance
+  variance
+  statement_reference
+  reconciliation_status
+```
+
+This enables reconciliation at two levels:
+
+1. each individual transfer/payment;
+2. the entire external wallet account/control total.
+
+External liquidity fragmentation across multiple providers must be visible before multiple production rails are enabled.
+
+---
+
+# 30. Cash-In provider architecture
+
+Cash-In remains pluggable and provider-independent.
+
+Target:
+
+```text
+                       BTHWANI WLT
+                            |
+                  FinancialRailRouter
+                            |
+                    ProviderRegistry
+                            |
+             +--------------+--------------+
+             |                             |
+        Common Rail                    Direct Rail
+      WeNet/acquirer                  wallet adapter
+             |                             |
+      supported wallets                one provider
+```
+
+A common switch is preferred when commercially/technically suitable, but is not a mandatory architectural dependency.
+
+A direct adapter is an expected supported topology, not a failure of the design.
+
+## 30.1 Launch strategy
 
 Adopt:
 
-> **Preferred Rail + Flexible Settlement Destination.**
+> **One active real Cash-In provider/rail at launch, multi-provider architecture from day one.**
 
-### 7.1 Supported partner destination catalogue
+Implement only providers for which BThwani has approved contract/technical evidence.
 
-Partners choose only from a BThwani-controlled list of currently supported payout destinations:
-
-```text
-SupportedPartnerSettlementRails
-  provider_a = enabled
-  provider_b = enabled
-  provider_c = disabled
-```
-
-Provider names must not become permanent hard-coded support truth. Coverage is administratively controlled configuration with effective dates and capability evidence.
-
-### 7.2 Preferred provider without mandatory lock-in
-
-BThwani may mark one provider preferred because it is cheaper, faster, or more automated, while allowing partners to choose another supported destination.
-
-Any difference in fees or settlement speed must be contractually valid, transparently represented, and approved by finance/product policy.
-
-### 7.3 Canonical partner payout destination
-
-A partner should not choose an arbitrary wallet on every payout request.
-
-Use one active verified canonical destination per supported policy scope:
-
-```text
-PartnerSettlementDestination
-  partner_id
-  provider_key
-  destination_reference_encrypted
-  masked_destination
-  verification_status
-  active
-  verified_at
-```
-
-Change flow:
-
-```text
-request change
-    -> verify new destination
-    -> approve
-    -> deactivate old destination
-    -> activate new destination
-```
-
-### 7.4 Provider without payout API
-
-Lack of an automated payout API does not automatically make a partner destination unsupported.
-
-A provider can temporarily use a **Governed Manual Rail** if finance approves it:
-
-```text
-Payout Request
-    -> Hold
-    -> Finance approval
-    -> controlled external transfer
-    -> provider/reference proof recorded
-    -> independent reconciliation
-    -> Settled
-```
-
-The manual rail must still obey maker/checker, audit, idempotency, proof, and reconciliation requirements. It must never be a simple "mark paid" button.
+Do not implement speculative production adapters from public assumptions.
 
 ---
 
-## 8. Critical domain distinction
+# 31. ProviderRegistry
 
-### 8.1 Network / switch
-
-Example candidate: `WeNet`.
-
-Potential responsibilities include routing, interoperability, clearing, messaging, and settlement coordination. It must not automatically be modeled as custodian of BThwani funds unless the contract explicitly establishes that role.
-
-### 8.2 Acquirer / merchant relationship
-
-The acquiring party is the institution through which BThwani receives merchant payments and obtains merchant identity/point/settlement arrangements.
-
-Possible shapes:
-
-```text
-BThwani <-> WeNet directly <-> participating wallets
-```
-
-or:
-
-```text
-BThwani <-> acquiring wallet <-> WeNet <-> participating wallets
-```
-
-### 8.3 Source wallet
-
-The wallet selected by the payer is transaction route metadata, not the internal financial authority.
-
-### 8.4 Destination wallet
-
-For partner/captain/field payout, the verified external destination is payout-routing data. It does not own the internal payable or wallet balance.
-
-### 8.5 WLT
-
-WLT remains the sole internal financial authority for balances, liabilities, payment state, payout state, ledger, reconciliation, and audit.
-
----
-
-## 9. FinancialRailRouter and ProviderRegistry
-
-These are required architectural components.
-
-### 9.1 ProviderRegistry
-
-The registry contains server-owned provider/rail configuration and capabilities:
+Canonical server-owned registration:
 
 ```text
 ProviderRegistration
@@ -413,6 +1136,7 @@ ProviderRegistration
   environment
   contract_status
   operational_status
+  supported_wallets
   capabilities
   credential_secret_reference
   webhook_verification_profile
@@ -421,16 +1145,40 @@ ProviderRegistration
   enabled_operations
 ```
 
-Provider names must not be scattered through business logic.
+Capabilities must be proven by approved documentation/test evidence, not guessed from provider names.
 
-### 9.2 FinancialRailRouter
+Useful vocabulary includes:
 
-The router selects an eligible rail from server-owned facts:
+```text
+cash_in
+payment_inquiry
+signed_webhook
+merchant_p2b
+wallet_topup
+qr
+redirect
+deep_link
+purchase_code
+merchant_binding
+refund_full
+refund_partial
+statement_export
+settlement_report
+reconciliation_feed
+idempotency
+```
+
+Missing/unknown capability fails closed.
+
+---
+
+# 32. FinancialRailRouter
+
+The router is server-owned and chooses only eligible routes based on:
 
 ```text
 operation
-stakeholder_type
-source/destination wallet route
+actor/purpose
 currency
 amount
 provider capabilities
@@ -438,42 +1186,38 @@ contract status
 operational health
 stakeholder policy
 pricing policy
-external liquidity policy
 environment
 ```
 
-At launch, routing should be deterministic and configuration-driven. Do not build complex automatic cost optimization until at least two real production rails exist and their behavior is proven.
+At launch, use deterministic configuration such as a primary route plus controlled fallback.
 
-### 9.3 No unsafe automatic failover
+Do not build complex smart cost routing before at least two real production rails exist and are proven.
 
-A payment or payout whose first provider call has an **ambiguous result** must never be immediately retried through a second provider.
+## 32.1 Ambiguous external results must not auto-failover
 
 Forbidden:
 
 ```text
-Provider A timeout
-    -> immediately send same money movement to Provider B
+Provider A mutation times out
+        -> immediately send same money movement through Provider B
 ```
 
 Correct:
 
 ```text
-Provider A timeout
-    -> provider_result_unknown
-    -> inquiry / webhook / reconciliation
-    -> establish authoritative outcome
-    -> only then allow a new intent/route if safe
+Provider A result unknown
+        -> inquiry/webhook/reconciliation
+        -> establish authoritative outcome
+        -> only then allow a new governed attempt if safe
 ```
 
-Failover is permitted only before an external mutation is attempted, after an explicit confirmed failure, or through a new idempotently governed operation according to provider semantics.
+This prevents duplicate external movements.
 
 ---
 
-## 10. Rail interfaces
+# 33. Rail interfaces — current and future
 
-The production-facing abstraction must express financial operations rather than raw provider URL paths.
-
-Recommended separation:
+The current target production interface is Cash-In oriented:
 
 ```go
 type CashInRail interface {
@@ -482,988 +1226,596 @@ type CashInRail interface {
     InquirePayment(ctx context.Context, req PaymentInquiryRequest) (PaymentResult, error)
     VerifyAndNormalizeWebhook(ctx context.Context, headers http.Header, body []byte) (NormalizedProviderEvent, error)
 }
+```
 
-type CashOutRail interface {
-    CreatePayout(ctx context.Context, req CreatePayoutRequest) (CreatePayoutResult, error)
-    InquirePayout(ctx context.Context, req PayoutInquiryRequest) (PayoutResult, error)
-}
+Refund capability should remain separate where supported:
 
+```go
 type RefundRail interface {
     CreateRefund(ctx context.Context, req RefundRequest) (RefundResult, error)
     InquireRefund(ctx context.Context, req RefundInquiryRequest) (RefundResult, error)
 }
 ```
 
-A single adapter may implement one, two, or all interfaces. Capability absence must fail closed.
+**Automated Cash-Out/Payout is not part of the current production target.**
 
-### 10.1 Recommended capability vocabulary
+A future `AutomatedPayoutRail` may be introduced only if a licensed/contracted provider actually exposes a suitable capability and BThwani approves its legal, security, reconciliation, and operational model.
 
-```text
-cash_in
-cash_out
-payment_inquiry
-payout_inquiry
-signed_webhook
-refund_full
-refund_partial
-void
-merchant_p2b
-wallet_topup
-qr
-redirect
-deep_link
-purchase_code
-merchant_binding
-statement_export
-settlement_report
-reconciliation_feed
-idempotency
-```
-
-Capabilities are derived from approved provider documentation and sandbox evidence, never guessed from provider names.
+Until then, stakeholder payouts use `ManualSettlementExecution`.
 
 ---
 
-## 11. Current WLT source assessment
+# 34. Simulator and environments
 
-The `abbas` branch already has important foundations that should remain canonical:
+The existing financial-provider simulator remains valuable and permanent for non-production use.
 
-1. `services/wlt/service.manifest.ts`
-   - WLT owns financial truth, wallets, payment sessions, refunds, settlements, payouts, ledger, reconciliation, and finance reports.
-   - production mutations are intentionally not considered ready.
+Use it for:
 
-2. `services/wlt/backend/internal/provider/provider_mode.go`
-   - `mock`, `sandbox`, and `production` modes already exist;
-   - mock requires explicit `WLT_ALLOW_MOCK_PROVIDER=true`;
-   - mock currently defaults to the local `wiremock-financial-provider` endpoint when no base URL is supplied;
-   - sandbox requires an explicit provider base URL;
-   - production is intentionally fail-closed until a real provider adapter, secrets, inquiry, webhook verification, reconciliation, and independent approvals exist.
+- local development;
+- deterministic automated tests;
+- timeout/unknown-result simulation;
+- duplicate/replay cases;
+- webhook verification tests;
+- reconciliation scenarios;
+- provider outage scenarios.
 
-3. `services/wlt/backend/internal/provider/payment_provider.go`
-   - an external-provider seam exists, but it is transport-oriented (`Post`, `Get`, `InquirePayout`).
+Production must fail closed unless a real approved adapter/configuration exists.
 
-4. `services/wlt/backend/internal/payment/payment.go`
-   - current provider calls include card-shaped paths such as `/financial/card/authorize` and `/financial/card/capture`;
-   - these must not be imposed on wallet P2B rails that may use immediate-payment semantics.
-
-5. `services/wlt/backend/internal/payment/provider_results.go`
-   - `ApplyAuthoritativeProviderEvent` is a strong canonical asynchronous/read-back finalizer;
-   - provider event identity, replay/conflict handling, legal transition, reconciliation resolution, ledger posting, and DSH outbox projection are coordinated atomically.
-
-6. `services/wlt/backend/internal/payment/provider_webhook.go`
-   - signed webhook verification, timestamp-skew control, hashing, replay protection, and idempotent application concepts already exist.
-
-7. `services/wlt/backend/internal/payment/provider_refresh.go`
-   - provider inquiry/read-back exists as a recovery mechanism.
-
-8. `services/wlt/backend/internal/ledger/kernel.go`
-   - `PostLedgerTransaction` is the sole runtime double-entry write path and rejects unbalanced postings.
-
-9. `services/wlt/backend/internal/payout/payout_governance.go`
-   - partner, captain, and field destinations are governed;
-   - `bank`, `mobile_money`, and `manual` settlement preferences exist;
-   - sensitive payout destination data is encrypted/masked.
-
-### 11.1 Required refactor before a real wallet provider
-
-Do not remove these foundations. Refactor only the external edge:
-
-- add `ProviderRegistry`;
-- add `FinancialRailRouter`;
-- replace raw URL-path semantics at the production boundary with domain rail interfaces;
-- preserve the current transport client beneath adapters if useful;
-- normalize provider-specific events before they reach payment/ledger logic;
-- preserve the simulator as a non-production adapter/test fixture;
-- add a real provider adapter alongside it rather than embedding provider logic into WLT business code.
+Mock/sandbox must never become an accidental production fallback.
 
 ---
 
-## 12. Provider-specific customer action model
+# 35. Canonical provider event finalization
 
-Frontends must not contain wallet-name condition forests such as:
+Provider-specific payloads must terminate at the adapter boundary.
 
-```text
-if jaib ...
-if one_cash ...
-if jawali ...
-```
-
-WLT should return a server-owned customer action/capability projection, for example:
+Canonical flow:
 
 ```text
-NONE
-REDIRECT
-DEEP_LINK
-DISPLAY_QR
-SCAN_QR
-ENTER_PURCHASE_CODE
-ENTER_CUSTOMER_IDENTIFIER
-MERCHANT_BINDING_REQUIRED
-WAIT_FOR_PROVIDER_CONFIRMATION
+Provider-specific request/webhook
+        |
+        v
+Adapter authentication/signature verification
+        |
+        v
+Normalize to WLT provider event
+        |
+        v
+ApplyAuthoritativeProviderEvent
+        |
+        +-- legal state transition
+        +-- provider-event idempotency/replay protection
+        +-- reconciliation update
+        +-- WLT ledger posting
+        +-- downstream outbox/event projection
 ```
 
-Only add action types proven by real provider documentation. The app renders the action; it does not re-derive provider rules.
+The existing `ApplyAuthoritativeProviderEvent` pattern should remain the canonical finalization seam and be extended, not bypassed.
 
 ---
 
-## 13. Payment lifecycle must be capability-aware
+# 36. Refund policy follows original money source
 
-The current WLT lifecycle contains card-oriented states such as `authorization_pending`, `authorized`, and `capture_pending`.
-
-For immediate wallet P2B, support a path such as:
+Refund semantics are server-owned and source-aware:
 
 ```text
-reference_created
-    -> pending_provider
-    -> captured
+Internal BThwani wallet payment
+   -> refund/credit internal wallet according to policy
+
+External official-wallet payment
+   -> original-rail refund if provider/contract supports it
+   -> otherwise governed finance exception/manual refund process
+
+COD
+   -> COD-specific reversal/refund accounting
 ```
 
-If a provider explicitly has authorization/capture semantics:
-
-```text
-reference_created
-    -> authorization_pending
-    -> authorized
-    -> capture_pending
-    -> captured
-```
-
-`PaymentSessionCapabilities` remains the server-owned behavioral projection. Frontends must not infer legal actions from provider names or raw status strings.
+Do not silently convert an external-wallet refund into internal BThwani balance merely because it is easier technically, unless approved product/legal policy explicitly allows it.
 
 ---
 
-## 14. Webhook and provider-event architecture
+# 37. Ledger remains the sole accounting kernel
 
-Keep `ApplyAuthoritativeProviderEvent` as the internal authoritative event application boundary.
+All financial value changes pass through the canonical WLT double-entry kernel.
 
-The current webhook handler uses a BThwani-defined HMAC header format. Do not assume WeNet or any real wallet uses the same scheme.
+Required invariants include:
 
-Each real adapter must:
+- at least two lines per transaction;
+- positive amounts;
+- debit/credit validity;
+- balanced entries per currency;
+- idempotent transaction references;
+- operator/system context;
+- exact replay/conflict detection.
 
-1. authenticate according to the provider's actual specification;
-2. validate certificate/signature/MAC, timestamp, and nonce where applicable;
-3. reject replay;
-4. validate merchant/account identity, amount, and currency;
-5. normalize the provider payload to the canonical internal event;
-6. call the existing authoritative event-application path.
-
-Provider-specific payloads and headers must not leak into ledger or stakeholder business logic.
-
-The simulator may continue to use its controlled test contract, but no simulator signature/header convention may be silently promoted to real-provider truth.
+No frontend, reconciliation UI, spreadsheet, provider callback, or DSH handler writes a balance directly.
 
 ---
 
-## 15. Funding and accounting policy
+# 38. Canonical accounting examples
 
-Accounting must be purpose-driven.
-
-### 15.1 Customer top-up
+## 38.1 Customer top-up
 
 ```text
 Dr provider_clearing
-Cr wallet(customer)
+Cr wallet_liability(customer)
 ```
 
-### 15.2 Captain top-up
+## 38.2 Captain top-up
 
 ```text
 Dr provider_clearing
-Cr wallet(captain)
+Cr wallet_liability(captain)
 ```
 
-### 15.3 Order payment
+## 38.3 Provider settlement with BThwani-absorbed fee
 
-Order checkout can continue through the approved platform clearing/payable accounting policy rather than automatically using a wallet top-up entry.
-
-### 15.4 Provider settles net of fees
-
-If BThwani absorbs an external fee, recognize the fee separately during settlement reconciliation rather than reducing customer/captain credited principal without an explicit product rule.
-
-Illustrative pattern:
+Example only:
 
 ```text
-At authoritative funding:
-Dr provider_clearing          gross amount
-Cr wallet(actor)              gross amount
+Gross provider clearing 10,000
+Provider settles          9,900
+Fee                         100
 
-At settlement:
-Dr external_settlement_cash   net amount
-Dr payment_processing_expense fee amount
-Cr provider_clearing          gross amount
+Dr external_settlement_cash   9,900
+Dr payment_processing_expense   100
+Cr provider_clearing         10,000
 ```
 
-### 15.5 Ledger classification requirement
+The ledger classifier must support real account classes, including at least:
 
-Before adding fee accounting, explicitly classify expense and external cash/settlement accounts. Do not allow a new expense account type to inherit a default liability classification.
+```text
+asset
+liability
+income
+expense
+```
+
+Do not let unknown/new expense accounts fall through to `liability` classification.
+
+## 38.4 Fees
+
+Fee policy may be:
+
+```text
+fixed
+percentage
+fixed_plus_percentage
+tiered
+capped
+```
+
+Fee bearer may be:
+
+```text
+platform
+customer_explicit
+shared
+```
+
+Never hide a fee by net-crediting the internal wallet unless policy/accounting explicitly specifies that treatment.
+
+A constant percentage fee is not reduced merely by batching transactions; batching only reduces fixed/minimum/operational overhead unless the commercial tariff itself changes.
 
 ---
 
-## 16. Fees and routing are separate
+# 39. Finance Control Center
 
-Do not hard-code historical/provider-discussion values such as `2%` or `1.5%` as contractual truth.
+The useful information architecture from the legacy financial workspace should be retained, but rebuilt on canonical runtime truth.
 
-Commercial configuration should support at least:
-
-```text
-fee_type:
-  fixed
-  percentage
-  fixed_plus_percentage
-  tiered
-  capped
-
-fee_bearer:
-  platform
-  customer_explicit
-  shared
-
-settlement_basis:
-  gross
-  net
-```
-
-A unified API does not guarantee unified or cheap pricing.
-
-If a provider charges 2% of gross inflow:
+Recommended sections:
 
 ```text
-10 x 1,000 at 2% = 200
-1 x 10,000 at 2% = 200
+Finance Command Center
+Ledger & Financial Events
+Payments & Internal Wallets
+External Wallet Accounts
+Payout Requests
+Settlement Batches
+Manual Transfer Execution
+Evidence & Audit Packs
+Reconciliation
+Finance Exceptions
+Commissions & Fees
+Refunds & Holds
+Policies & Approvals
+Daily Finance Close
+Reports
 ```
 
-Top-up aggregation only reduces cost when there are fixed/minimum fees, operational overhead, or a different funding tariff. The real economic objective is lower, capped, or otherwise acceptable rail/acquirer pricing.
+The control panel is an operational/read-control surface. It is not a parallel ledger.
 
 ---
 
-## 17. Reconciliation architecture
+# 40. Legacy concepts intentionally retained
 
-Every external money movement must converge through reconciliation even when a synchronous response says success.
+The old `bthwani-suite` repository contains useful concepts that should be **re-implemented**, not copied as runtime truth:
 
-Preferred evidence order:
-
-1. provider-signed event/webhook;
-2. authenticated provider inquiry/read-back;
-3. official reconciliation/settlement feed;
-4. official statement/API/export;
-5. controlled finance manual reconciliation as an exception.
-
-### 17.1 Canonical matching keys
-
-Where supported:
+## 40.1 Retain and upgrade
 
 ```text
-provider/network
-acquirer
-merchant_id / point_id
-external_transaction_id
-provider_reference
-BThwani operation reference
-amount
-currency
-source/destination wallet route
-occurred_at
-settlement_batch_id
+DailyReconciliationWorkbench
+  -> Settlement/Reconciliation Workbench
+
+Daily reconciliation read model
+  -> expected / actual / variance / evidence / reconciliation runtime model
+
+Maker-Checker preview
+  -> mandatory backend Approval/SoD policy
+
+AuditPack preview
+  -> SettlementAuditPack
+
+FinanceClose / Close Gate
+  -> DailyFinanceClose
+
+Finance registry
+  -> Finance Control Center
+
+Exception/variance model
+  -> Finance Exception Queue
+
+Posting-rule concepts
+  -> versioned WLT Ledger Posting Policies
+
+Subledger/read models
+  -> reporting/read models only above the canonical ledger
 ```
 
-### 17.2 Exception states
+## 40.2 Do not revive
 
-At minimum:
+Do not copy/reintroduce:
+
+- bank/IBAN as the target stakeholder payout product model;
+- provider-managed automated payout as V1 truth;
+- frontend financial authority;
+- preview/mock data as runtime truth;
+- parallel subledgers as independent sources of truth;
+- generic `bank-statement` assumptions where official-wallet/provider evidence is the real source;
+- legacy COD calculations that do not support order-specific allocation/reserve;
+- legacy hard-coded fees, thresholds, or provider semantics.
+
+---
+
+# 41. Target canonical financial event taxonomy
+
+Use a stable, versioned vocabulary such as:
 
 ```text
-provider_result_unknown
-unmatched
-amount_mismatch
-currency_mismatch
-merchant_mismatch
-destination_mismatch
-duplicate_external_transaction
-duplicate_callback
-late_success
-late_failure
-settlement_shortfall
-settlement_overage
-fee_mismatch
-manual_review
-resolved
-```
-
-No ambiguous result may silently become `captured`, `paid`, or `settled`.
-
----
-
-## 18. Treasury and external liquidity
-
-Multi-wallet partner payouts and direct integrations can fragment BThwani's real external liquidity.
-
-Example:
-
-```text
-BThwani @ Provider A: high balance
-BThwani @ Provider B: low balance
-Partner payouts due @ Provider B: high
-```
-
-WLT therefore needs a treasury/liquidity projection for external accounts without creating a second financial ledger.
-
-Recommended model:
-
-```text
-ExternalProviderAccount
-  provider_key
-  account_reference
-  currency
-  reported_available_balance
-  pending_incoming
-  pending_outgoing
-  required_payout_liquidity
-  minimum_operational_buffer
-  last_reconciled_at
-```
-
-This is an operational reconciliation/treasury view over authoritative external evidence and WLT obligations. It must not replace the double-entry ledger.
-
-Rebalancing between external providers is a governed treasury operation and must only be implemented where contractually and operationally supported.
-
----
-
-## 19. External financial connection configuration
-
-Store no production secret in source code or ordinary configuration rows.
-
-Recommended entity:
-
-```text
-ExternalFinancialConnection
-  id
-  operator_context_id
-  provider_key
-  network_key
-  acquirer_key
-  merchant_id
-  merchant_point_id
-  settlement_account_reference
-  credential_secret_reference
-  webhook_secret_or_certificate_reference
-  environment
-  status
-  capability_snapshot
-  contract_version
-  pricing_version
-  activated_at
-  disabled_at
-```
-
-Secrets remain in the approved secret store; WLT stores references and non-secret identifiers.
-
-`environment` is mandatory. A connection configured for `mock` or `sandbox` must never be selected by a production router.
-
----
-
-## 20. Participating wallet coverage
-
-Public/historical material has referenced wallets including ONE Cash, Floosak, Jawali, Mahfathati, Jaib, and Cash.
-
-This is **not production configuration**.
-
-Production coverage must come from current signed provider/switch/acquirer documentation and be represented as administratively controlled route/capability configuration with effective dates.
-
-If a wallet exits a switch or a direct provider is disabled, BThwani must be able to disable the route without code deployment.
-
----
-
-## 21. Refund policy
-
-Refund support is provider capability, not a universal assumption.
-
-Rules:
-
-1. prefer original-rail refund when supported;
-2. support full/partial refund only when documented;
-3. normalize external refund state into WLT's governed refund lifecycle;
-4. never mark refund complete from frontend action alone;
-5. never silently substitute internal wallet credit for an external refund unless product, accounting, and legal policy explicitly allows that fallback.
-
----
-
-## 22. Security and production gates
-
-Production activation requires:
-
-- exact provider authentication from approved documentation;
-- TLS validation and mTLS if required;
-- secret/certificate rotation procedure;
-- no provider credentials in repository, logs, or frontend bundles;
-- webhook/callback verification;
-- replay protection;
-- idempotency on every financial mutation;
-- strict amount/currency/merchant/destination validation;
-- outbound timeouts and bounded retry semantics;
-- circuit breaker;
-- correlation ID propagation;
-- immutable provider event identity/hash;
-- operator-context isolation;
-- maker/checker for financial releases;
-- reconciliation and settlement evidence;
-- no UI scraping, notification interception, robotic wallet login, or ADB automation as a financial integration.
-
-Keep production provider mode fail-closed until these gates and same-commit runtime evidence are complete.
-
----
-
-## 23. Observability and finance control plane
-
-Required metrics should include:
-
-```text
-payments_created_total
-payments_captured_total
-payments_failed_total
-funding_customer_total
-funding_captain_total
-provider_result_unknown_total
-provider_webhook_invalid_total
-provider_webhook_replay_total
-provider_inquiry_latency
-reconciliation_open_total
-reconciliation_age_seconds
-settlement_variance_minor_units
-provider_fee_minor_units
-provider_effective_fee_bps
-external_liquidity_shortfall_total
-payout_unknown_total
-refund_unknown_total
-route_selection_total
-route_unavailable_total
-```
-
-Finance/control-panel views should expose, without secrets:
-
-- active providers and rails;
-- provider capabilities;
-- stakeholder routing policy;
-- workforce primary provider;
-- supported partner settlement destinations;
-- provider connection state;
-- environment (`mock`, `sandbox`, `production`);
-- pricing/contract version;
-- reconciliation exceptions;
-- settlement batches;
-- fee variance;
-- external-liquidity alerts;
-- payout/refund exceptions;
-- audit history.
-
-A UI toggle alone must never be sufficient to enable production money movement.
-
----
-
-## 24. Commercial due-diligence checklist
-
-Before implementing any real provider, obtain written answers for:
-
-| Item | Required answer |
-|---|---|
-| Contract topology | Direct BThwani-provider/switch contract or acquiring-wallet contract? |
-| Cash-in | Customer top-up/order payment support? |
-| Captain cash-in | Can workforce funding use the same rail? |
-| Cash-out | Partner/captain/field payout capability? |
-| Setup fee | One-time onboarding/integration cost |
-| Monthly/annual | Recurring cost |
-| P2B fee | Fixed fee per merchant payment |
-| Percentage | Percentage of transaction value |
-| Source-wallet fee | Issuer/source-wallet fee and bearer |
-| Network fee | Included in acquiring price or separate? |
-| Settlement fee | Cost per settlement/batch |
-| Settlement timing | Real-time, T+0, T+1, other |
-| Settlement basis | Gross or net of fees |
-| API fee | API/webhook/inquiry pricing |
-| Refund | Full/partial capability and cost |
-| Minimum volume | Minimum transactions/value/commitment |
-| Wallet coverage | Exact current wallet coverage per operation |
-| Merchant identity | Merchant/point allocation model |
-| API model | Direct switch API or acquirer API over switch |
-| Sandbox | Credentials, endpoints, restrictions, and test cases |
-| Webhook | Authentication/signature specification |
-| Inquiry | Authoritative status endpoint |
-| Reconciliation | Feed/report/statement format |
-| Idempotency | Mutation replay semantics |
-| Payout destination validation | Available validation/KYC data |
-| SLA | Availability/support/incident SLA |
-| Treasury transfer | Whether provider-to-provider rebalancing is supported |
-
-BThwani should prefer switch/acquirer-level pricing over multiple high wallet-specific merchant percentages, but technical unification must never be mistaken for proof of lower commercial cost.
-
----
-
-## 25. Implementation sequence
-
-### Phase 0 — Contract, legal, and product policy
-
-Obtain:
-
-- first provider commercial offer;
-- cash-in/cash-out capability matrix;
-- merchant/acquirer topology;
-- integration guide;
-- sandbox credentials;
-- wallet coverage;
-- webhook/inquiry/reconciliation specs;
-- settlement/fee rules;
-- captain top-up withdrawal policy approval;
-- workforce primary-wallet policy;
-- partner supported-destination policy.
-
-### Phase 1 — Internal rail architecture
-
-Implement/refactor:
-
-- `ProviderRegistry`;
-- `FinancialRailRouter`;
-- `CashInRail`, `CashOutRail`, `RefundRail` domain interfaces;
-- provider capability model;
-- server-owned stakeholder routing policy;
-- normalized provider customer-action model;
-- no ambiguous-result automatic failover;
-- environment-safe adapter selection.
-
-### Phase 2 — Preserve and align the simulator
-
-The current simulator remains the development/test rail.
-
-Refactor it only as needed so it implements the same **canonical domain contracts** used by future real adapters.
-
-It must support deterministic testing of:
-
-```text
-success
-decline
-timeout-before-acceptance
-timeout-after-possible-acceptance
-duplicate-request
-duplicate-event
-conflicting-replay
-late-success
-late-failure
-invalid-webhook
-reconciliation-mismatch
-```
-
-Do not add fake provider-specific behavior to the canonical WLT domain merely because the simulator currently exposes card-shaped paths.
-
-### Phase 3 — Funding purposes
-
-Introduce server-owned purposes while reusing canonical WLT payment/event/ledger boundaries:
-
-```text
-CUSTOMER_TOPUP
+CUSTOMER_WALLET_TOPUP
 CAPTAIN_TOPUP
-ORDER_PAYMENT
+
+CAPTAIN_COD_RESERVE
+CAPTAIN_COD_RELEASE
+CAPTAIN_COD_DEBIT
+CAPTAIN_DELIVERY_EARNING
+CAPTAIN_COMMISSION
+
+PARTNER_ORDER_EARNING
+FIELD_COMMISSION_CANDIDATE
+FIELD_COMMISSION_EARNING
+
+PAYOUT_REQUESTED
+PAYOUT_HOLD
+PAYOUT_RELEASE
+
+SETTLEMENT_BATCH_CREATED
+SETTLEMENT_BATCH_FROZEN
+
+MANUAL_EXTERNAL_TRANSFER_RECORDED
+MANUAL_EXTERNAL_TRANSFER_VERIFIED
+
+PROVIDER_STATEMENT_IMPORTED
+PROVIDER_STATEMENT_MATCHED
+RECONCILIATION_EXCEPTION
+
+PAYOUT_COMPLETED
+DAILY_FINANCE_CLOSED
 ```
 
-Post ledger entries according to purpose, not provider name.
+Exact names are implementation details, but the semantic distinctions are mandatory.
 
-### Phase 4 — First real sandbox adapter
+---
 
-Implement only documented capabilities for the first contracted provider against its real sandbox/test environment where available:
+# 42. Security invariants
 
-- create cash-in payment if supported;
-- inquiry;
-- webhook normalization/verification if provided;
-- idempotency;
-- timeout/unknown-result handling;
-- reconciliation feed/import;
-- payout only if separately documented.
+Production must fail closed if any required invariant is unavailable.
 
-Run the same canonical contract test suite against simulator and sandbox adapter, while allowing provider-specific extension tests.
+Minimum invariants:
 
-### Phase 5 — Workforce rollout
+1. WLT is the only balance/accounting writer.
+2. Provider identity never determines ledger account selection.
+3. No client-supplied amount overrides server-owned financial truth.
+4. No unverified settlement destination can receive payout.
+5. Approved payout data cannot be edited in place.
+6. Frozen batches are immutable.
+7. No bare `mark paid` state transition.
+8. External execution requires evidence/reference according to policy.
+9. Execution and independent verification are separated where required.
+10. Reconciliation mismatch blocks final completion/close.
+11. Duplicate/replay/idempotency controls apply at every financial boundary.
+12. Provider webhooks are authenticated before normalization/finalization.
+13. Sensitive wallet identifiers are encrypted and masked.
+14. Secrets live outside source code and outside client bundles.
+15. Mock/sandbox can never serve as accidental production fallback.
+16. Audit events are append-only and protected.
+17. Spreadsheet artifacts do not become financial truth.
+18. Manual overrides create explicit auditable exceptions, never silent mutations.
 
-- configure primary workforce rail;
-- verify captain/field official destinations;
-- enable captain top-up;
-- enable governed payout;
-- implement exception workflow.
+---
 
-### Phase 6 — Partner multi-destination payout
+# 43. Observability and operational controls
 
-- supported partner destination catalogue;
-- verified canonical destination;
-- automated adapter payout where supported;
-- governed manual payout rail where approved;
-- partner payout reconciliation.
-
-### Phase 7 — Treasury/liquidity controls
-
-- external account reconciliation;
-- required payout liquidity;
-- threshold/shortfall alerts;
-- governed rebalancing where supported.
-
-### Phase 8 — Additional adapters
-
-A new provider should require only:
+Metrics/alerts should cover at least:
 
 ```text
-Adapter
-+ registration
-+ environment-specific credentials/secrets
-+ capabilities
-+ request/response mapping
-+ webhook verification
-+ reconciliation mapping
-+ canonical contract tests
-+ provider-specific tests
-+ operational approval
+cash-in creation/success/failure/unknown result
+webhook signature failure/replay
+provider inquiry latency/error
+unreconciled provider events
+wallet top-up posting latency
+COD reserve conflicts
+payout holds
+approved-but-unbatched payouts
+frozen-but-unexecuted batches
+executed-without-evidence transfers
+verification backlog
+reconciliation exceptions
+unmatched statement rows
+batch control-total variance
+external wallet account variance
+daily close blocked exposure
 ```
 
-It must not require rewriting WLT, the ledger, stakeholder wallets, DSH, or mobile applications.
-
-### Phase 9 — Production promotion
-
-Production is a **promotion of a proven adapter/configuration**, not replacement of the WLT architecture.
-
-Promote only after:
-
-- provider sandbox/acceptance testing is complete;
-- production merchant/account identifiers are issued;
-- production secrets are installed in the approved secret store;
-- production webhook/certificate configuration is verified;
-- reconciliation and settlement process is operationally proven;
-- finance/security/release approval is recorded;
-- runtime evidence is produced from the same commit intended for release.
+Observability never substitutes for accounting evidence.
 
 ---
 
-## 26. Required test matrix
+# 44. Backup and disaster recovery
 
-At minimum test:
+The canonical database/object storage must preserve:
 
-1. customer top-up success;
-2. captain top-up success;
-3. order payment success;
-4. explicit provider decline;
-5. timeout before known provider acceptance;
-6. timeout after possible provider acceptance;
-7. duplicate create request;
-8. duplicate webhook with identical payload;
-9. duplicate event with conflicting payload;
-10. invalid signature/certificate;
-11. stale webhook;
-12. amount mismatch;
-13. currency mismatch;
-14. merchant/point mismatch;
-15. destination mismatch;
-16. provider success after local timeout;
-17. provider failure after local timeout;
-18. late callback after terminal state;
-19. customer top-up accounting;
-20. captain top-up accounting;
-21. checkout accounting;
-22. gross settlement;
-23. net settlement with fee;
-24. fee mismatch;
-25. captain payout to verified primary workforce destination;
-26. field payout to verified primary workforce destination;
-27. workforce governed exception;
-28. partner payout to each enabled destination type;
-29. partner destination change and re-verification;
-30. governed manual partner settlement;
-31. partial refund if supported;
-32. refund unknown state;
-33. payout unknown state;
-34. attempted failover while first provider result is unknown — must be blocked;
-35. confirmed provider failure followed by safe new route;
-36. route disabled while requests exist;
-37. wallet removed from a common switch;
-38. provider contract disabled;
-39. external liquidity below threshold;
-40. cross-operator-context access attempt;
-41. secret/certificate rotation;
-42. provider outage and circuit-breaker recovery;
-43. withdrawal-eligibility enforcement for captain top-up principal;
-44. customer general withdrawal remains unavailable unless separately enabled;
-45. mock adapter canonical contract suite;
-46. sandbox adapter canonical contract suite;
-47. production configuration refuses mock credentials/endpoints;
-48. production router refuses `mock` and `sandbox` registrations;
-49. production cannot fall back from real adapter to simulator;
-50. environment mismatch fails closed before any financial mutation.
+- payout requests;
+- holds;
+- destination versions;
+- immutable payout snapshots;
+- approvals;
+- settlement batches;
+- generated-artifact metadata/hashes;
+- execution records;
+- evidence metadata/files;
+- provider statement imports;
+- reconciliation results;
+- exceptions;
+- audit events;
+- ledger transactions;
+- daily close records.
+
+Losing an employee laptop or XLSX file must not lose the financial history.
+
+Backup/restore procedures must be tested, not merely configured.
 
 ---
 
-## 27. Explicitly forbidden designs
+# 45. Current code gaps to remove before real-money production
+
+The target architecture requires resolving at least these gaps in the current codebase:
+
+## P0 — before real money
+
+1. Introduce server-owned `PaymentAllocation` for COD/wallet/mixed/official-wallet payment composition.
+2. Make delivery-fee accounting explicit so it cannot be counted twice.
+3. Implement order-specific atomic captain COD reserve/release/final debit.
+4. Replace bank/IBAN-oriented payout target model with `OfficialWalletDestination` for the target product path.
+5. Implement destination verification lifecycle and require `VERIFIED/ACTIVE_FOR_PAYOUT` before hold/execution.
+6. Replace provider-managed payout as the current target journey with `ManualSettlementExecution`.
+7. Implement unified `PayoutRequest` + hold lifecycle for partner/captain/field.
+8. Implement immutable `ApprovedPayoutSnapshot`.
+9. Implement backend-enforced Maker/Checker/Executor/Reconciler controls.
+10. Implement immutable `SettlementBatch`, batch control totals, and hashes.
+11. Implement generated XLSX artifact metadata/hash plus audit.
+12. Implement `ManualTransferEvidence` and prevent bare `mark paid`.
+13. Implement provider/official-wallet statement import and four-way reconciliation.
+14. Implement `SettlementAuditPack`.
+15. Implement `DailyFinanceClose` with blocking gates.
+16. Correct ledger account classification for expenses and external settlement assets.
+17. Implement/finish customer + captain Cash-In through canonical `CashInRail`.
+18. Keep production provider mode fail-closed until real provider evidence/configuration exists.
+
+## P1 — before broad commercial scale
+
+1. Finalize field commission trigger on the governed successful commercial event (`client_visible` or its canonical successor).
+2. Complete partner settlement end-to-end on the unified payout engine.
+3. Add Finance Exception Queue and resolution workflow.
+4. Add treasury/external-wallet account reconciliation views.
+5. Finalize source-aware refund mapping.
+6. Add step-up authentication for sensitive finance actions.
+7. Add reminder/escalation engine.
+8. Add finance dashboards for unresolved external-settlement exposure.
+9. Version posting rules, fee policies, eligibility policies, and close policies.
+
+## P2 — only after the core is proven
+
+1. Add a second real Cash-In provider/rail.
+2. Add more sophisticated routing where justified.
+3. Automate statement reconciliation if provider feeds/APIs become available.
+4. Add automated payout only if future provider, legal, security, finance, and reconciliation requirements are all proven and approved.
+
+---
+
+# 46. Required test matrix
+
+At minimum, test:
+
+## Cash-In
+
+- successful customer top-up;
+- successful captain top-up;
+- duplicate intent;
+- duplicate webhook;
+- conflicting replay;
+- provider timeout before mutation;
+- provider timeout with unknown result;
+- webhook/inquiry disagreement;
+- statement-only recovery;
+- fee posting;
+- unsupported provider capability;
+- mock accidentally requested in production.
+
+## COD / order allocation
+
+- COD amount smaller/equal/larger than captain available balance;
+- concurrent assignment reserve race;
+- cancellation releases reserve exactly once;
+- delivery converts reserve to debit exactly once;
+- delivery earning credited once;
+- mixed payment allocation conservation;
+- full electronic payment creates zero COD exposure.
+
+## Destination / payout
+
+- unverified destination rejected;
+- destination change forces re-verification;
+- approved snapshot remains immutable;
+- duplicate payout request idempotency;
+- hold/release correctness;
+- unauthorized role transition rejected;
+- SoD conflict rejected/explicitly governed.
+
+## Batch / manual execution
+
+- frozen batch cannot mutate;
+- batch row count/total exact;
+- generated XLSX hash recorded;
+- duplicate external reference rejected where required;
+- execution without evidence blocked;
+- executor cannot alter beneficiary/amount/destination;
+- incomplete batch cannot complete.
+
+## Reconciliation / close
+
+- exact four-way match;
+- amount mismatch;
+- destination mismatch;
+- missing external transaction;
+- unknown external transaction;
+- duplicate statement import;
+- unresolved exception blocks completion;
+- blocking exposure prevents daily close;
+- resolved zero-variance day closes once idempotently.
+
+---
+
+# 47. Explicitly forbidden architectures
 
 Do not implement:
 
-- a second ledger for WeNet or any wallet;
-- a second source of payment truth outside WLT;
-- provider names hard-coded into captain/field/partner business rules;
-- a provider-specific partner payout engine per wallet;
-- direct wallet balance mutation from frontend code;
-- credit from customer/captain screenshot alone;
-- hard-coded fee percentages as contractual truth;
-- hard-coded permanent participating-wallet lists;
-- copy-pasted full financial flows per provider;
-- assumption that WeNet holds/custodies BThwani funds without proof;
-- assumption that P2B implies outbound payout capability;
-- assumption that wallet payments all use `authorize -> capture`;
-- assumption that current simulator HMAC/header format matches a real provider;
-- automatic second-provider retry after an ambiguous first-provider mutation;
-- `withdrawable_balance = total_balance` for captain without policy;
-- arbitrary partner destination per payout without verification;
-- ungoverned manual payout or a simple "mark paid" action;
-- wallet-app scraping, notification interception, ADB automation, or robotic login as payment integration;
-- production provider enablement before the existing fail-closed requirements are satisfied;
-- production fallback to `mock` after real-provider failure;
-- use of simulator credentials, endpoints, or events as production evidence;
-- treating simulator success as proof that a real provider contract/API is production-ready.
+- a separate ledger per provider;
+- a separate wallet system per stakeholder/provider;
+- frontend balance mutation;
+- screenshot-based top-up success;
+- manual payout completion without governed execution evidence;
+- editable frozen settlement spreadsheets as source of truth;
+- automatic provider failover after an ambiguous mutation result;
+- provider-name branching throughout business code;
+- hard-coded provider fees or capabilities without approved evidence;
+- unrestricted reuse of external references;
+- unverified payout destinations;
+- silent financial overrides;
+- parallel preview/subledger databases as financial authority;
+- automated Cash-Out in V1 merely because a generic provider interface exists.
 
 ---
 
-## 28. Evidence boundary and legacy material
-
-Older BThwani repositories and prior analysis contain useful historical product intent: internal BThwani balances, external official wallets as cash-in/cash-out rails, multiple Yemeni providers, provider fees, and stakeholder settlement flows.
-
-They are **evidence of intent, not current provider contracts or current API truth**.
-
-Current public WeNet material supports treating it as a candidate common switch/UPI/P2B rail. It does not substitute for private merchant pricing, current participant coverage, API documentation, custody terms, refund capability, or payout capability.
-
-No historical mock fee, generic purchase-code UX, or assumed provider behavior may be copied into production without current evidence.
-
-Simulator results are **test evidence only**. They prove BThwani's internal handling of a declared scenario, not that a real provider behaves that way.
-
----
-
-## 29. Simulator -> Sandbox -> Production promotion model
-
-This section is normative.
-
-### 29.1 Three distinct environments
-
-```text
-LOCAL / CI
-   |
-   v
-MOCK ADAPTER / SIMULATOR
-   |
-   | canonical WLT contract tests
-   v
-PROVIDER SANDBOX / TEST ENVIRONMENT
-   |
-   | real provider protocol + acceptance tests
-   v
-PRODUCTION ADAPTER
-   |
-   v
-REAL MONEY MOVEMENT
-```
-
-They are not interchangeable environments.
-
-### 29.2 Mock mode
-
-Current configuration already exposes:
-
-```text
-WLT_FINANCIAL_PROVIDER_MODE=mock
-WLT_ALLOW_MOCK_PROVIDER=true
-```
-
-Mock mode is allowed only for explicitly controlled development/test contexts.
-
-Its responsibilities are:
-
-- deterministic simulation;
-- exercising WLT state machines;
-- testing ledger/reconciliation behavior;
-- testing failure and ambiguity handling;
-- supporting local/CI workflows without external credentials.
-
-Mock events must be visibly attributable to the mock environment in logs/evidence.
-
-Mock mode must never create production readiness claims by itself.
-
-### 29.3 Sandbox mode
-
-```text
-WLT_FINANCIAL_PROVIDER_MODE=sandbox
-```
-
-Sandbox mode connects to the **real provider's approved test/sandbox environment**, not to the local simulator unless the provider itself explicitly supplies such a mock endpoint.
-
-Sandbox validates provider-specific realities including:
-
-- authentication;
-- actual request/response schema;
-- provider identifiers;
-- provider status semantics;
-- webhook/callback verification;
-- inquiry behavior;
-- idempotency behavior;
-- timeout behavior;
-- refund/payout semantics where supported;
-- reconciliation artifacts where available.
-
-Passing mock tests is a prerequisite for confidence in WLT logic; passing sandbox tests is the prerequisite for confidence in the real adapter protocol.
-
-### 29.4 Production mode
-
-```text
-WLT_FINANCIAL_PROVIDER_MODE=production
-```
-
-Production must select only provider registrations whose environment is exactly `production` and whose production gates are approved.
-
-Production must have:
-
-```text
-real adapter
-+ production endpoint
-+ production merchant/account identity
-+ production secret/certificate references
-+ real webhook verification
-+ real inquiry/readback
-+ real reconciliation/settlement process
-+ approved capabilities
-+ release evidence
-```
-
-### 29.5 No mock fallback in production
-
-This is strictly forbidden:
-
-```text
-Production real provider error
-        -> mock adapter
-        -> simulated success
-        -> real WLT credit/payout
-```
-
-Correct behavior:
-
-```text
-Production real provider error
-        -> confirmed failure
-           OR provider_result_unknown
-        -> inquiry / webhook / reconciliation
-        -> governed recovery
-```
-
-A production outage is a production outage. The simulator must never hide it.
-
-### 29.6 Environment isolation invariant
-
-The router must enforce:
-
-```text
-runtime_environment == provider_registration.environment
-```
-
-before any external financial mutation.
-
-At minimum:
-
-```text
-local/test  -> mock allowed
-sandbox     -> sandbox allowed
-production  -> production only
-```
-
-Any mismatch fails closed.
-
-### 29.7 Same contracts, different evidence
-
-The simulator and real adapters should implement the same canonical WLT-facing rail interfaces where capabilities overlap.
-
-This gives:
-
-```text
-same WLT business logic
-same ledger
-same reconciliation authority
-same stakeholder policies
-same internal state machines
-```
-
-while allowing:
-
-```text
-different provider protocol
-different authentication
-different webhook format
-different capabilities
-different settlement behavior
-```
-
-The simulator must model canonical scenarios, not force real providers to imitate the simulator's transport shape.
-
-### 29.8 Promotion evidence ladder
-
-A financial capability progresses through:
-
-```text
-NOT_IMPLEMENTED
-    -> MOCK_VERIFIED
-    -> SANDBOX_VERIFIED
-    -> PRODUCTION_CONFIGURED
-    -> PRODUCTION_APPROVED
-    -> PRODUCTION_RUNTIME_VERIFIED
-```
-
-No earlier state may be presented as a later state.
-
-A capability can be production-enabled only if its own evidence ladder is complete. For example, verified `cash_in` must not automatically promote `cash_out` or `refund`.
-
----
-
-## 30. Final target model
+# 48. Final target
 
 ```text
                               BTHWANI WLT
                                    |
-                         FinancialRailRouter
+                         ONE FINANCIAL TRUTH
                                    |
-                           ProviderRegistry
+                  +----------------+----------------+
+                  |                                 |
+               CASH-IN                         INTERNAL MONEY
+                  |                                 |
+        FinancialRailRouter                  wallets + ledger
+                  |                                 |
+          ProviderRegistry                         |
+          /             \                           |
+   Common Switch      Direct Rail                   |
+          |               |                         |
+          +------- authoritative evidence ----------+
                                    |
-             +---------------------+---------------------+
-             |                     |                     |
-         Common Rail          Direct Adapters       Manual Rail
-         if suitable            if required        governed only
-             |
-      participating wallets
-
-Environment implementations:
-
-Local / CI
-  -> simulator / mock adapter
-
-Sandbox
-  -> real provider sandbox adapter/configuration
-
-Production
-  -> approved real provider adapter only
-
-Stakeholder policy above the router:
-
-Customer
-  -> multi-wallet cash-in
-
-Captain
-  -> primary workforce cash-in
-  -> primary workforce cash-out
-  -> governed exception
-
-Field
-  -> primary workforce cash-out
-  -> governed exception
-
-Partner
-  -> flexible supported verified cash-out destination
-  -> preferred provider optional, never mandatory
+                          payments / top-ups
+                                   |
+        +--------------------------+--------------------------+
+        |                          |                          |
+     Customer                    Captain               Partner / Field
+                                   |
+                          COD reserve + earnings
+                                   |
+                            PayoutRequest
+                                   |
+                                 HOLD
+                                   |
+                      verified wallet destination
+                                   |
+                        Maker / Checker approval
+                                   |
+                           SettlementBatch
+                                   |
+                                FREEZE
+                                   |
+                      XLSX + Execution Workbench
+                                   |
+                      manual official-wallet transfer
+                                   |
+                     reference + evidence + checker
+                                   |
+                         provider/wallet statement
+                                   |
+                      FOUR-WAY RECONCILIATION
+                                   |
+                         SettlementAuditPack
+                                   |
+                        ledger finalization
+                                   |
+                              COMPLETED
+                                   |
+                         DailyFinanceClose
 ```
 
-The core architectural rule is:
+The operational rule is:
 
-> **One WLT, one ledger, one reconciliation authority, one routing layer, many pluggable external rails — with strict environment isolation.**
+> **There is no financial state called simply “paid”. A settlement is requested, held, verified, approved, frozen into a batch, executed externally, evidenced, independently checked, reconciled, ledger-finalized, and only then completed.**
 
-BThwani should launch with one real production provider adapter, while keeping the simulator permanently for development/testing and remaining structurally ready for WeNet, direct wallet adapters, or a hybrid model without financial re-platforming.
+The architecture deliberately keeps the real-money provider boundary replaceable while making WLT accounting, audit, reconciliation, and stakeholder financial rules stable.
+
+---
+
+# 49. Final decision summary
+
+BThwani should proceed with:
+
+- **one WLT**;
+- **one canonical double-entry ledger**;
+- **one internal wallet per actor**;
+- **one server-owned PaymentAllocation per order**;
+- **Cash-In through approved official-wallet rails**;
+- **captain top-up through the same Cash-In engine as customer top-up**;
+- **captain COD as an atomic reserve/debit on the same wallet**;
+- **partner/captain/field settlement through one PayoutRequest engine**;
+- **verified official-wallet destinations only**;
+- **manual external Cash-Out settlement as the current production model**;
+- **SettlementBatch + immutable snapshot + hash**;
+- **XLSX as an execution artifact only**;
+- **ExecutionWorkbench + evidence + independent verification**;
+- **provider/official-wallet statement reconciliation**;
+- **SettlementAuditPack**;
+- **Finance Exception Queue**;
+- **DailyFinanceClose**;
+- **one active real Cash-In rail initially, multi-provider architecture from day one**;
+- **simulator retained permanently for non-production testing**;
+- **future automated payout only after explicit capability, contractual, legal, security, accounting, and reconciliation proof**.
+
+This is the canonical target architecture to use when changing WLT backend, database migrations, finance control-panel flows, DSH financial boundaries, mobile journeys, tests, and governance documentation.
