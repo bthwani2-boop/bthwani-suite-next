@@ -34,14 +34,25 @@ for (const retired of [
   "tools/plans",
   "tools/implementing",
   "tools/diagnose-implementing",
+  "tools/yagni",
+  "tools/toolchain/tool-activation-baseline.json",
+  ".reviewdog.yml",
   "governance/operational_journey_protocol_package",
   "governance/domains",
   "governance/product/decisions",
   "governance/prompting",
   "governance/runbooks",
+  "governance/guards/registrations",
+  "governance/policies/governance.rego",
+  "governance/github/repository-enforcement.json",
+  "governance/github/repository-enforcement.schema.json",
+  "governance/github/full-verification-policy.json",
   ".agents/rules",
+  ".agents/adapters",
+  ".agents/hooks",
   ".agents/SKILL_CATALOG.md",
   ".agents/AUTHORITY_BOUNDARY.md",
+  ".agents/COMMAND_SAFETY_POLICY.md",
   ".agents/EVIDENCE_GATE_ROUTER.md",
 ]) {
   if (exists(retired)) {
@@ -100,7 +111,7 @@ const APPROVED_TOP_LEVEL = new Set([
 ]);
 for (const entry of fs.readdirSync(repoRoot, { withFileTypes: true })) {
   if (!entry.isDirectory() || APPROVED_TOP_LEVEL.has(entry.name) || entry.name.startsWith(".")) continue;
-  warnings.push({
+  violations.push({
     file: entry.name + "/",
     line: 0,
     message: `UNAPPROVED_TOP_LEVEL: '${entry.name}' is not a registered top-level responsibility.`,
