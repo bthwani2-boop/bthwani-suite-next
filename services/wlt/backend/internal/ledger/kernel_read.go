@@ -10,23 +10,6 @@ import (
 	"wlt-api/internal/shared"
 )
 
-// accountTypeMeta assigns each fixed WLT account type its accounting category
-// and normal balance side. Financial summaries derive signed balances from
-// immutable journal lines rather than trusting projection counters.
-type accountTypeMeta struct {
-	Category          string // asset | liability | revenue | expense
-	NormalBalanceSide string // debit | credit
-}
-
-var accountTypeMetadata = map[string]accountTypeMeta{
-	"provider_clearing":              {Category: "asset", NormalBalanceSide: "debit"},
-	"cash_in_transit":                {Category: "asset", NormalBalanceSide: "debit"},
-	"platform_commission_receivable": {Category: "asset", NormalBalanceSide: "debit"},
-	"wallet":                         {Category: "liability", NormalBalanceSide: "credit"},
-	"platform_payable":               {Category: "liability", NormalBalanceSide: "credit"},
-	"platform_revenue":               {Category: "revenue", NormalBalanceSide: "credit"},
-}
-
 // Capture and COD collection/remittance are posted by the sovereign live
 // handlers. Keep this list empty unless a concrete financial event remains
 // outside the ledger kernel.
@@ -80,9 +63,9 @@ func BuildFinancialSummary(ctx context.Context, db *sql.DB) (*FinancialSummary, 
 			return nil, fmt.Errorf("scan account balance row: %w", err)
 		}
 
-		meta, ok := accountTypeMetadata[accountType]
-		if !ok {
-			return nil, fmt.Errorf("no accounting metadata registered for account_type %q", accountType)
+		meta, err := resolveAccountTaxonomy(accountType)
+		if err != nil {
+			return nil, fmt.Errorf("no accounting metadata registered for account_type %q: %w", accountType, err)
 		}
 
 		balance := creditTotal - debitTotal

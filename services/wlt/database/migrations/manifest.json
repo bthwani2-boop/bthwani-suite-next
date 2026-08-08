@@ -3,7 +3,7 @@
   "service": "wlt",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "wlt-908_payment_financial_purpose_and_allocation.sql",
+  "cutover": "wlt-910_ledger_capital_contribution_account.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -515,6 +515,20 @@
       "file": "wlt-908_payment_financial_purpose_and_allocation.sql",
       "sha256": "b4d4f34941becfa960c460e25920576bbdcdede0b1eb099aa9171adb53ca2609",
       "historicalPrefix": "908",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 74,
+      "file": "wlt-909_ledger_account_classification_fail_closed.sql",
+      "sha256": "96ae5a567a3048e973eb0699c76617be368e228e040edfc457bc7489dc07422f",
+      "historicalPrefix": "909",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 75,
+      "file": "wlt-910_ledger_capital_contribution_account.sql",
+      "sha256": "94fa8ce42602c4dc825711e53c27d343af25912dad90e91d7ad29fa393381777",
+      "historicalPrefix": "910",
       "state": "ACTIVE"
     }
   ]

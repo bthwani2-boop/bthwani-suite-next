@@ -238,7 +238,11 @@ func ledgerLineKey(line LedgerLine) string {
 func getOrCreateAccountTx(ctx context.Context, tx *sql.Tx, operatorContextID, accountType, actorType, actorID, currency string) (string, error) {
 	var id string
 	var err error
-	classification := ledgerAccountClassification(accountType)
+	taxonomy, err := resolveAccountTaxonomy(accountType)
+	if err != nil {
+		return "", err
+	}
+	classification := taxonomy.Classification
 	if accountType == "wallet" {
 		err = tx.QueryRowContext(ctx, `
 			SELECT id FROM wlt_ledger_accounts
@@ -282,15 +286,4 @@ func getOrCreateAccountTx(ctx context.Context, tx *sql.Tx, operatorContextID, ac
 		return "", err
 	}
 	return id, nil
-}
-
-func ledgerAccountClassification(accountType string) string {
-	switch accountType {
-	case "provider_clearing", "platform_commission_receivable":
-		return "asset"
-	case "platform_revenue":
-		return "income"
-	default:
-		return "liability"
-	}
 }
