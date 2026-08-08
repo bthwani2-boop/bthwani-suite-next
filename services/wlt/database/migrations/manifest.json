@@ -476,83 +476,104 @@
     },
     {
       "ordinal": 68,
+      "file": "wlt-120_settlement_batches.sql",
+      "sha256": "46731b0af33cb0a5fb8147ff982ca0b990c7bb71ea1591a3c4c8c55d336d2209",
+      "historicalPrefix": "120",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 69,
+      "file": "wlt-121_manual_transfer_evidence.sql",
+      "sha256": "aab0d700905d24dabbc7f781f79f9d6accf18dbb44cc4e07b3722cac7f7da03c",
+      "historicalPrefix": "121",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 70,
+      "file": "wlt-122_daily_finance_close.sql",
+      "sha256": "f0c8bd665bfcb9fbc301b9e6aa37f4a8f67fe29f8f7f578d96b286c37b1871c3",
+      "historicalPrefix": "122",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 71,
       "file": "wlt-901_reconciliation_operator_context_guard.sql",
       "sha256": "eefbe734f917806ed9f72c2cf43f8a345d7d026a94830692446899fed3b3ef7d",
       "historicalPrefix": "901",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
-      "ordinal": 69,
+      "ordinal": 72,
       "file": "wlt-902_contextual_finance_object_names.sql",
       "sha256": "27d318c2ea95d8b1ccd46c94c1833f3ba8f30a4123de54de15091e28813c6168",
       "historicalPrefix": "902",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
-      "ordinal": 70,
+      "ordinal": 73,
       "file": "wlt-903_drop_unconsumed_payout_outbox.sql",
       "sha256": "f76982b4cabf9c250765def7e8ed5415974ed3dbc22b133af848e04615248720",
       "historicalPrefix": "903",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
-      "ordinal": 71,
+      "ordinal": 74,
       "file": "wlt-904_reconciliation_claim_guard_repair.sql",
       "sha256": "2f881eb64d0270e5ead84190764e3845d81c77b7e9e73281f3b485e9dd4c1ccd",
       "historicalPrefix": "904",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
-      "ordinal": 72,
+      "ordinal": 75,
       "file": "wlt-905_dispatch_financial_eligibility_decisions.sql",
       "sha256": "0bf33b301dc64f877a77877b1cf2b9bd408ecc96313f3d9a3c45bdbf5a3b5e4b",
       "historicalPrefix": "905",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
-      "ordinal": 73,
+      "ordinal": 76,
       "file": "wlt-906_store_onboarding_fee_policy.sql",
       "sha256": "bc2751f56a68d67957dc9d45819c8858ba26b6b9bfa3583ceadd494ea546e705",
       "historicalPrefix": "906",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
-      "ordinal": 74,
+      "ordinal": 77,
       "file": "wlt-907_financial_providers.sql",
       "sha256": "537da068c2a4338b3d72d8862951ab4a557e757aaf4f137ab292ea9dd25996dd",
       "historicalPrefix": "907",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
-      "ordinal": 75,
+      "ordinal": 78,
       "file": "wlt-908_payment_financial_purpose_and_allocation.sql",
       "sha256": "b4d4f34941becfa960c460e25920576bbdcdede0b1eb099aa9171adb53ca2609",
       "historicalPrefix": "908",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
-      "ordinal": 76,
+      "ordinal": 79,
       "file": "wlt-909_ledger_account_classification_fail_closed.sql",
       "sha256": "96ae5a567a3048e973eb0699c76617be368e228e040edfc457bc7489dc07422f",
       "historicalPrefix": "909",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
-      "ordinal": 77,
+      "ordinal": 80,
       "file": "wlt-910_ledger_capital_contribution_account.sql",
       "sha256": "94fa8ce42602c4dc825711e53c27d343af25912dad90e91d7ad29fa393381777",
       "historicalPrefix": "910",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
-      "ordinal": 78,
+      "ordinal": 81,
       "file": "wlt-911_payment_topup_source_and_purpose.sql",
       "sha256": "74888e70c6d51be8ac1a215e2348c689490a77f30963986842e6a344f44f4695",
       "historicalPrefix": "911",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
-      "ordinal": 79,
+      "ordinal": 82,
       "file": "wlt-912_cod_captain_reservation.sql",
       "sha256": "21dd85de5c689d7d8031d0aa47a9d5b18b63ff77c373a656d54c0f2303feda08",
       "historicalPrefix": "912",

@@ -109,10 +109,10 @@ func TestPayoutDestinationsRequestsAndWalletHoldsAreOperatorContextLocal(t *test
 	destinations := make(map[string]governedDestinationRef, len(OperatorContexts))
 	for _, operatorContextID := range OperatorContexts {
 		if _, err := db.Exec(`INSERT INTO wlt_wallets
-			(operator_context_id,actor_id,actor_type,status,currency,available_balance_minor_units)
-			VALUES ($1,$2,'field','active','YER',$3)
+			(operator_context_id,actor_id,actor_type,status,currency,available_balance_minor_units,settled_total_minor_units)
+			VALUES ($1,$2,'field','active','YER',$3,$3)
 			ON CONFLICT (operator_context_id,actor_type,actor_id) DO UPDATE SET
-			  status='active',currency='YER',available_balance_minor_units=$3,
+			  status='active',currency='YER',available_balance_minor_units=$3,settled_total_minor_units=$3,
 			  held_balance_minor_units=0,updated_at=now()`, operatorContextID, actorID, initialBalance); err != nil {
 			t.Fatalf("seed %s wallet: %v", operatorContextID, err)
 		}
