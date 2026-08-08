@@ -1,3 +1,4 @@
+import type { FieldOfflineOperationType } from "./field-offline-queue";
 import type { FieldReadinessProblem } from "./field-readiness.problem";
 import type { DshFieldVisit, DshReadinessCheck, DshReadinessEscalation, DshOnboardingStatus, DshFieldWorkQueue } from "./field-readiness.types";
 
@@ -14,11 +15,22 @@ export type DshVisitListState =
   | { readonly kind: "empty" }
   | DshFieldReadinessErrorState;
 
+/**
+ * A queued operation is identified by its operation type, never by matching
+ * the human-readable message: the copy is localized and may be reworded.
+ */
+export type DshQueuedActionState = {
+  readonly kind: "queued";
+  readonly operationId: string;
+  readonly operationType: FieldOfflineOperationType;
+  readonly message: string;
+};
+
 export type DshVisitActionState =
   | { readonly kind: "idle" }
   | { readonly kind: "submitting" }
   | { readonly kind: "success"; readonly visit: DshFieldVisit }
-  | { readonly kind: "queued"; readonly operationId: string; readonly message: string }
+  | DshQueuedActionState
   | DshFieldReadinessErrorState;
 
 export type DshChecklistState =
@@ -31,7 +43,7 @@ export type DshCheckActionState =
   | { readonly kind: "idle" }
   | { readonly kind: "submitting" }
   | { readonly kind: "success"; readonly check: DshReadinessCheck }
-  | { readonly kind: "queued"; readonly operationId: string; readonly message: string }
+  | DshQueuedActionState
   | DshFieldReadinessErrorState;
 
 export type DshEscalationListState =
@@ -45,7 +57,7 @@ export type DshEscalationActionState =
   | { readonly kind: "idle" }
   | { readonly kind: "submitting" }
   | { readonly kind: "success"; readonly escalation: DshReadinessEscalation }
-  | { readonly kind: "queued"; readonly operationId: string; readonly message: string }
+  | DshQueuedActionState
   | DshFieldReadinessErrorState;
 
 export type DshOnboardingStatusState =
@@ -79,7 +91,7 @@ export function visitSuccessState(visits: readonly DshFieldVisit[]): DshVisitLis
 export function visitActionIdleState(): DshVisitActionState { return { kind: "idle" }; }
 export function visitActionSubmittingState(): DshVisitActionState { return { kind: "submitting" }; }
 export function visitActionSuccessState(visit: DshFieldVisit): DshVisitActionState { return { kind: "success", visit }; }
-export function visitActionQueuedState(operationId: string, message: string): DshVisitActionState { return { kind: "queued", operationId, message }; }
+export function visitActionQueuedState(operationId: string, operationType: FieldOfflineOperationType, message: string): DshVisitActionState { return { kind: "queued", operationId, operationType, message }; }
 export function visitActionErrorState(problem: FieldReadinessProblem | string): DshVisitActionState { return errorState(problem); }
 
 export function checklistIdleState(): DshChecklistState { return { kind: "idle" }; }
@@ -90,7 +102,7 @@ export function checklistErrorState(problem: FieldReadinessProblem | string): Ds
 export function checkActionIdleState(): DshCheckActionState { return { kind: "idle" }; }
 export function checkActionSubmittingState(): DshCheckActionState { return { kind: "submitting" }; }
 export function checkActionSuccessState(check: DshReadinessCheck): DshCheckActionState { return { kind: "success", check }; }
-export function checkActionQueuedState(operationId: string, message: string): DshCheckActionState { return { kind: "queued", operationId, message }; }
+export function checkActionQueuedState(operationId: string, operationType: FieldOfflineOperationType, message: string): DshCheckActionState { return { kind: "queued", operationId, operationType, message }; }
 export function checkActionErrorState(problem: FieldReadinessProblem | string): DshCheckActionState { return errorState(problem); }
 
 export function escalationIdleState(): DshEscalationListState { return { kind: "idle" }; }
@@ -102,7 +114,7 @@ export function escalationSuccessState(escalations: readonly DshReadinessEscalat
 export function escalationActionIdleState(): DshEscalationActionState { return { kind: "idle" }; }
 export function escalationActionSubmittingState(): DshEscalationActionState { return { kind: "submitting" }; }
 export function escalationActionSuccessState(escalation: DshReadinessEscalation): DshEscalationActionState { return { kind: "success", escalation }; }
-export function escalationActionQueuedState(operationId: string, message: string): DshEscalationActionState { return { kind: "queued", operationId, message }; }
+export function escalationActionQueuedState(operationId: string, operationType: FieldOfflineOperationType, message: string): DshEscalationActionState { return { kind: "queued", operationId, operationType, message }; }
 export function escalationActionErrorState(problem: FieldReadinessProblem | string): DshEscalationActionState { return errorState(problem); }
 
 export function onboardingStatusIdleState(): DshOnboardingStatusState { return { kind: "idle" }; }

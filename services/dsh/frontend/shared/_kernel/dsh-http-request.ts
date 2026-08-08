@@ -87,7 +87,10 @@ async function fetchWithControlPanelSessionRetry(
   return response;
 }
 
-async function parseResponse<T>(response: Response): Promise<T> {
+async function parseResponse<T>(
+  response: Response,
+  correlationId?: string,
+): Promise<T> {
   if (!response.ok) {
     const body = await response.text().catch(() => "");
     let code: string | undefined;
@@ -99,7 +102,9 @@ async function parseResponse<T>(response: Response): Promise<T> {
     } catch {
       // Non-JSON errors preserve the raw body only.
     }
-    throw { kind: "http", status: response.status, body, code, message };
+    // The correlation id travels with the failure so every surface can show a
+    // support reference instead of a generic "something went wrong".
+    throw { kind: "http", status: response.status, body, code, message, correlationId };
   }
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
@@ -187,9 +192,10 @@ export function createDshHttpClient(
       throw {
         kind: "network",
         message: error instanceof Error ? error.message : "network error",
+        correlationId,
       };
     }
-    return parseResponse<T>(response);
+    return parseResponse<T>(response, correlationId);
   }
 
   return { request };
@@ -241,10 +247,11 @@ export function createDshPublicHttpClient(
 ) {
   const cookieMode = isRelativeBaseUrl(baseUrl);
   async function request<T>(path: string): Promise<T> {
+    const correlationId = corrId("dsh-public");
     let response: Response;
     try {
       response = await fetch(resolveRequestUrl(path, baseUrl), {
-        headers: { Accept: "application/json" },
+        headers: { Accept: "application/json", "X-Correlation-ID": correlationId },
         ...requestCredentials(cookieMode),
         signal: AbortSignal.timeout(timeoutMs),
       });
@@ -252,9 +259,10 @@ export function createDshPublicHttpClient(
       throw {
         kind: "network",
         message: error instanceof Error ? error.message : "network error",
+        correlationId,
       };
     }
-    return parseResponse<T>(response);
+    return parseResponse<T>(response, correlationId);
   }
   return { request };
 }
@@ -300,6 +308,7 @@ export function createDshFlexibleHttpClient(
       }
     }
 
+    const correlationId = options.auth?.correlationId ?? corrId("dsh-flexible");
     let response: Response;
     try {
       response = await fetch(requestUrl, {
@@ -308,6 +317,7 @@ export function createDshFlexibleHttpClient(
           Accept: "application/json",
           "Cache-Control": "no-cache",
           Pragma: "no-cache",
+          "X-Correlation-ID": correlationId,
           ...(options.body !== undefined
             ? { "Content-Type": "application/json" }
             : {}),
@@ -320,7 +330,6 @@ export function createDshFlexibleHttpClient(
                   ? { Authorization: `Bearer ${options.auth.accessToken}` }
                   : {}),
                 "Idempotency-Key": options.auth.idempotencyKey,
-                "X-Correlation-ID": options.auth.correlationId,
               }
             : {}),
         },
@@ -334,9 +343,10 @@ export function createDshFlexibleHttpClient(
       throw {
         kind: "network",
         message: error instanceof Error ? error.message : "network error",
+        correlationId,
       };
     }
-    return parseResponse<T>(response);
+    return parseResponse<T>(response, correlationId);
   }
 
   return { request };
@@ -350,8 +360,9 @@ export function createDshRawHttpClient(
   const cookieMode = isRelativeBaseUrl(baseUrl);
 
   async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
+    const correlationId = corrId(corrPrefix);
     const token = cookieMode ? null : getIdentityAccessToken();
-    if (!cookieMode && !token) throw { kind: "http", status: 401 };
+    if (!cookieMode && !token) throw { kind: "http", status: 401, correlationId };
 
     let response: Response;
     try {
@@ -363,7 +374,7 @@ export function createDshRawHttpClient(
           ...(!cookieMode && token
             ? { Authorization: `Bearer ${token}` }
             : {}),
-          "X-Correlation-ID": corrId(corrPrefix),
+          "X-Correlation-ID": correlationId,
           ...(init.headers ?? {}),
         },
         ...requestCredentials(cookieMode),
@@ -373,9 +384,10 @@ export function createDshRawHttpClient(
       throw {
         kind: "network",
         message: error instanceof Error ? error.message : "network error",
+        correlationId,
       };
     }
-    return parseResponse<T>(response);
+    return parseResponse<T>(response, correlationId);
   }
 
   return { req };

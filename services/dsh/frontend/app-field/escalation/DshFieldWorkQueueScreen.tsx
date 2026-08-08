@@ -20,6 +20,7 @@ import {
   ESCALATION_SEVERITY_LABELS,
   ESCALATION_CATEGORY_LABELS,
 } from "../../shared/field-readiness";
+import { DshFieldProblemState } from "../components/DshFieldProblemNotice";
 
 type Props = {
   readonly onBack?: () => void;
@@ -58,12 +59,10 @@ export function DshFieldWorkQueueScreen({ onBack, onOpenVisit, onOpenEscalation 
     return (
       <View style={styles.root}>
         <Header title="مهام التحقق" />
-        <StateView
-          tone="danger"
-          title="تعذر تحميل المهام"
-          description={state.message}
-          actionLabel="إعادة المحاولة"
-          onActionPress={() => void reload()}
+        <DshFieldProblemState
+          problem={state.problem}
+          handlers={{ refresh_record: () => void reload(), refresh_scope: () => void reload() }}
+          onRetry={() => void reload()}
         />
       </View>
     );

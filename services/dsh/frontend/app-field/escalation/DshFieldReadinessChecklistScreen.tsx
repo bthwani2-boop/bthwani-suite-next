@@ -19,11 +19,17 @@ import {
   buildChecklistViewModel,
   CHECK_TYPE_LABELS,
   VISIT_STATUS_LABELS,
+  classifyFieldReadinessError,
   type DshCheckType,
   type DshCheckStatus,
+  type FieldReadinessProblem,
 } from "../../shared/field-readiness";
 import { uploadFieldStoreMedia } from "../../shared/media";
 import { DshFieldReferenceTag } from "../components/DshFieldReferenceTag";
+import {
+  DshFieldProblemNotice,
+  DshFieldProblemState,
+} from "../components/DshFieldProblemNotice";
 
 type Props = {
   readonly storeId: string;
@@ -39,7 +45,7 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
   const [evidenceUrl, setEvidenceUrl] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [uploadingEvidence, setUploadingEvidence] = React.useState(false);
-  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const [uploadProblem, setUploadProblem] = React.useState<FieldReadinessProblem | null>(null);
 
   if (identity.state.kind !== "authenticated") {
     return (
@@ -57,12 +63,10 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
   }
   if (checklistState.kind === "error") {
     return (
-      <StateView
-        tone="danger"
-        title="تعذر تحميل قائمة التحقق"
-        description={checklistState.message}
-        actionLabel="إعادة المحاولة"
-        onActionPress={() => void reload()}
+      <DshFieldProblemState
+        problem={checklistState.problem}
+        handlers={{ refresh_record: () => void reload(), refresh_scope: () => void reload() }}
+        onRetry={() => void reload()}
       />
     );
   }
@@ -74,13 +78,13 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
   async function pickEvidence(source: "camera" | "library") {
     if (!activeCheck || !editable) return;
     setUploadingEvidence(true);
-    setUploadError(null);
+    setUploadProblem(null);
     try {
       const permission = source === "camera"
         ? await ImagePicker.requestCameraPermissionsAsync()
         : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        setUploadError("لم تُمنح صلاحية الوصول المطلوبة لرفع الدليل.");
+        setUploadProblem(classifyFieldReadinessError({ code: "MEDIA_PERMISSION_DENIED" }));
         return;
       }
       const result = source === "camera"
@@ -93,10 +97,13 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
         name: asset.fileName ?? `${activeCheck}-evidence.jpg`,
         mimeType: asset.mimeType ?? "image/jpeg",
       });
-      if (!mediaRef.trim()) throw new Error("لم يُرجع مزود الوسائط مرجع دليل صالحًا.");
+      if (!mediaRef.trim()) {
+        setUploadProblem(classifyFieldReadinessError({ code: "MEDIA_UPLOAD_FAILED" }));
+        return;
+      }
       setEvidenceUrl(mediaRef.trim());
     } catch (error) {
-      setUploadError(error instanceof Error ? error.message : String(error));
+      setUploadProblem(classifyFieldReadinessError(error));
     } finally {
       setUploadingEvidence(false);
     }
@@ -113,7 +120,7 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
       setActiveCheck(null);
       setEvidenceUrl("");
       setNotes("");
-      setUploadError(null);
+      setUploadProblem(null);
     });
   }
 
@@ -122,7 +129,7 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
     setActiveCheck(item.checkType);
     setEvidenceUrl(item.evidenceUrl);
     setNotes(item.notes);
-    setUploadError(null);
+    setUploadProblem(null);
   }
 
   return (
@@ -150,11 +157,14 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
       </Card>
 
       {checkActionState.kind === "error" ? (
-        <InlineNotice
-          tone="danger"
-          title="تعذر تسجيل الفحص"
-          description={checkActionState.message}
-          action={<Button label="إغلاق" tone="ghost" onPress={resetCheckAction} />}
+        <DshFieldProblemNotice
+          problem={checkActionState.problem}
+          handlers={{
+            refresh_record: () => void reload(),
+            refresh_scope: () => void reload(),
+          }}
+          onRetry={() => void reload()}
+          onDismiss={resetCheckAction}
         />
       ) : null}
 
@@ -207,7 +217,13 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
                   onPress={() => void pickEvidence("library")}
                 />
               </View>
-              {uploadError ? <Text role="caption" tone="danger" style={styles.rtl}>{uploadError}</Text> : null}
+              {uploadProblem ? (
+                <DshFieldProblemNotice
+                  problem={uploadProblem}
+                  onRetry={() => void pickEvidence("camera")}
+                  onDismiss={() => setUploadProblem(null)}
+                />
+              ) : null}
               <TextField label="ملاحظات" value={notes} onChangeText={setNotes} placeholder="وصف الفحص" multiline />
               <View style={styles.formActions}>
                 <Button

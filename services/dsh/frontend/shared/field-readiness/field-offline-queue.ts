@@ -135,6 +135,19 @@ async function removeLegacyQueue(): Promise<void> {
   ]);
 }
 
+/**
+ * Carries a stable reason code so callers decide recover-vs-retry from the
+ * code, never from matching the message text.
+ */
+export class FieldOfflineQueueCorruptError extends Error {
+  readonly code = "OFFLINE_QUEUE_CORRUPT";
+
+  constructor(cause: string) {
+    super(`field offline queue is corrupt and was preserved for recovery: ${cause}`);
+    this.name = "FieldOfflineQueueCorruptError";
+  }
+}
+
 async function readQueue(): Promise<FieldOfflineOperation[]> {
   const scope = requireScope();
   const key = storageKey(scope);
@@ -148,8 +161,8 @@ async function readQueue(): Promise<FieldOfflineOperation[]> {
     return parsed;
   } catch (error) {
     await storageAdapter.setItem(corruptStorageKey(scope), raw);
-    throw new Error(
-      `field offline queue is corrupt and was preserved for recovery: ${error instanceof Error ? error.message : String(error)}`,
+    throw new FieldOfflineQueueCorruptError(
+      error instanceof Error ? error.message : String(error),
     );
   }
 }

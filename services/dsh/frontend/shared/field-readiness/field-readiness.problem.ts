@@ -17,7 +17,9 @@ export type FieldReadinessNextAction =
   | "resolve_escalation"
   | "refresh_record"
   | "recapture_location"
+  | "enable_location"
   | "move_into_geofence"
+  | "recover_queue"
   | "correct_input"
   | "retry"
   | "contact_support"
@@ -31,9 +33,14 @@ export type FieldReadinessProblem = {
   readonly nextAction: FieldReadinessNextAction;
   readonly status?: number;
   readonly serverMessage?: string;
+  /** Support reference echoed from the request that produced this failure. */
+  readonly correlationId?: string;
 };
 
-type ProblemDefinition = Omit<FieldReadinessProblem, "code" | "status" | "serverMessage">;
+type ProblemDefinition = Omit<
+  FieldReadinessProblem,
+  "code" | "status" | "serverMessage" | "correlationId"
+>;
 
 type ErrorLike = {
   readonly kind?: unknown;
@@ -41,6 +48,7 @@ type ErrorLike = {
   readonly code?: unknown;
   readonly message?: unknown;
   readonly body?: unknown;
+  readonly correlationId?: unknown;
 };
 
 const DEFINITIONS: Readonly<Record<string, ProblemDefinition>> = {
@@ -109,6 +117,39 @@ const DEFINITIONS: Readonly<Record<string, ProblemDefinition>> = {
     message: "يلزم التقاط موقع الجهاز لإثبات الزيارة.",
     retryable: true,
     nextAction: "recapture_location",
+  },
+  // Client-origin location codes. They intentionally share the taxonomy with
+  // the server codes above so a locally detected refusal reads the same as a
+  // server refusal on every surface.
+  LOCATION_PERMISSION_DENIED: {
+    kind: "location",
+    message: "لم تُمنح صلاحية الوصول إلى الموقع. فعّل إذن الموقع للتطبيق ثم أعد المحاولة.",
+    retryable: false,
+    nextAction: "enable_location",
+  },
+  LOCATION_SERVICES_DISABLED: {
+    kind: "location",
+    message: "خدمة تحديد الموقع متوقفة على الجهاز. شغّلها ثم التقط الموقع مجددًا.",
+    retryable: false,
+    nextAction: "enable_location",
+  },
+  MEDIA_PERMISSION_DENIED: {
+    kind: "permission_denied",
+    message: "لم تُمنح صلاحية الكاميرا أو الملفات. فعّل الإذن من إعدادات الجهاز ثم أعد التقاط الدليل.",
+    retryable: false,
+    nextAction: "add_evidence",
+  },
+  MEDIA_UPLOAD_FAILED: {
+    kind: "internal",
+    message: "تعذر رفع الدليل. تحقق من الاتصال ثم أعد المحاولة؛ لم يُفقد الدليل الملتقط.",
+    retryable: true,
+    nextAction: "retry",
+  },
+  OFFLINE_QUEUE_CORRUPT: {
+    kind: "conflict",
+    message: "تعذّرت قراءة طابور العمليات المحفوظة. حُفظت نسخة للاسترجاع، ويلزم تشغيل الاستعادة قبل المزامنة.",
+    retryable: false,
+    nextAction: "recover_queue",
   },
   LOCATION_STALE: {
     kind: "location",
@@ -187,6 +228,7 @@ export function createFieldReadinessProblem(
     readonly nextAction?: FieldReadinessNextAction;
     readonly status?: number;
     readonly serverMessage?: string;
+    readonly correlationId?: string;
   } = {},
 ): FieldReadinessProblem {
   return {
@@ -197,10 +239,23 @@ export function createFieldReadinessProblem(
     nextAction: options.nextAction ?? "correct_input",
     ...(options.status !== undefined ? { status: options.status } : {}),
     ...(options.serverMessage ? { serverMessage: options.serverMessage } : {}),
+    ...(options.correlationId ? { correlationId: options.correlationId } : {}),
   };
 }
 
+/**
+ * Classifies a transport/domain failure into the governed field taxonomy and
+ * attaches the request correlation id so every surface can render a support
+ * reference instead of collapsing the failure into a generic message.
+ */
 export function classifyFieldReadinessError(error: unknown): FieldReadinessProblem {
+  const problem = classifyProblem(error);
+  const typed = (error && typeof error === "object" ? error : {}) as ErrorLike;
+  const correlationId = asNonEmptyString(typed.correlationId);
+  return correlationId ? { ...problem, correlationId } : problem;
+}
+
+function classifyProblem(error: unknown): FieldReadinessProblem {
   const typed = (error && typeof error === "object" ? error : {}) as ErrorLike;
   const status = typeof typed.status === "number" && Number.isFinite(typed.status)
     ? typed.status

@@ -55,6 +55,7 @@ export function useFieldEscalationSubmissionController() {
           setActionState(
             escalationActionQueuedState(
               queued.operationId,
+              "create_escalation",
               "تم حفظ التصعيد للمزامنة عند عودة الاتصال.",
             ),
           );

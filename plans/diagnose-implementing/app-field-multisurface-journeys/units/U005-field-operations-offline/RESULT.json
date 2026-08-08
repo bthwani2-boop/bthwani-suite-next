@@ -1,1 +1,101 @@
-{"schemaVersion":3,"unitId":"U005","status":"NOT_STARTED","baselineSha":"f1f9664838ddac7dec5cd26cd5fe9dcfdcd84b14","resultingSha":null,"completedTaskIds":[],"modifiedPaths":[],"checkResults":[],"blockers":[],"deviations":[],"decision":"NOT_RUN","multiSurfaceScope":{"mode":"FULLSTACK_UNIFIED_MULTI_SURFACE","surfaces":["control-panel","app-client","app-partner","app-captain","app-field"],"journeyPolicy":"NO_JOURNEY_OR_SLICE_MAY_BE_EXECUTED_OR_CLOSED_IN_ISOLATION","sliceContract":"all 24 journey slices are integrated in every stage"},"closureRule":"No result can pass from one surface or one journey slice alone."}
+{
+  "schemaVersion": 3,
+  "unitId": "U005",
+  "status": "IN_PROGRESS",
+  "baselineSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+  "resultingSha": null,
+  "completedTaskIds": [],
+  "modifiedPaths": [
+    "services/dsh/frontend/shared/_kernel/dsh-http-request.ts",
+    "services/dsh/frontend/shared/field-readiness/field-readiness.problem.ts",
+    "services/dsh/frontend/shared/field-readiness/field-readiness.problem-view.ts",
+    "services/dsh/frontend/shared/field-readiness/field-readiness.states.ts",
+    "services/dsh/frontend/shared/field-readiness/field-offline-queue.ts",
+    "services/dsh/frontend/shared/field-readiness/use-field-offline-sync.ts",
+    "services/dsh/frontend/shared/field-readiness/use-field-readiness-controller.tsx",
+    "services/dsh/frontend/shared/field-readiness/use-field-escalation-submission-controller.ts",
+    "services/dsh/frontend/app-field/components/DshFieldProblemNotice.tsx",
+    "services/dsh/frontend/app-field/components/DshFieldSurface.tsx",
+    "services/dsh/frontend/app-field/escalation/DshFieldVisitScreen.tsx",
+    "services/dsh/frontend/app-field/escalation/DshFieldReadinessChecklistScreen.tsx",
+    "services/dsh/frontend/app-field/escalation/DshFieldEscalationScreen.tsx",
+    "services/dsh/frontend/app-field/escalation/DshFieldWorkQueueScreen.tsx",
+    "services/dsh/frontend/app-field/stores/DshFieldStoreVerificationScreen.tsx",
+    "services/dsh/frontend/control-panel/shared/ControlPanelFieldProblemPanel.tsx",
+    "services/dsh/frontend/control-panel/partners/field-readiness/FieldReadinessQueueScreen.tsx"
+  ],
+  "checkResults": [
+    {
+      "verificationId": "REASON-CODE-CHAIN",
+      "status": "PASS",
+      "command": "cd services/dsh && node --test tests/field-readiness-problem.test.mjs",
+      "actualResult": "12 tests pass. Diagnosed and closed gap: the DSH backend emits precise operational refusals (CHECKLIST_INCOMPLETE, EVIDENCE_REQUIRED, OPEN_ESCALATION, VISIT_ALREADY_COMPLETE, VISIT_ALREADY_IN_PROGRESS, LOCATION_REQUIRED, LOCATION_STALE, LOCATION_ACCURACY, LOCATION_MOCKED, GEOFENCE_VIOLATION) and the shared classifier resolved them, but zero of twenty-six app-field files and zero control-panel readers consumed problem.code, problem.nextAction, or problem.retryable. Every consumer of the field-readiness controllers now renders through the governed view model: six app-field screens and the control-panel field-readiness queue.",
+      "baselineSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "resultingSha": null,
+      "proves": "The reason code, the allowed next action, the retry semantics, and the support correlation id survive from the backend response to the shared view model consumed by app-field and control-panel.",
+      "doesNotProve": "It does not prove the rendered pixels, the operator readback against a live backend, or convergence with app-partner, app-client, and app-captain."
+    },
+    {
+      "verificationId": "OFFLINE-RECOVERY-BY-CODE",
+      "status": "PASS",
+      "command": "node tools/guards/field/field-surface-truth-gate.mjs",
+      "actualResult": "PASS. Two message-text dependencies were found and removed. DshFieldSurface decided recover-versus-retry by matching the substring 'field offline queue is corrupt' against the error message; the queue now throws FieldOfflineQueueCorruptError carrying code OFFLINE_QUEUE_CORRUPT and the surface branches on that code. DshFieldVisitScreen detected a queued start-visit operation by matching the Arabic substring 'بدء الزيارة'; the queued state now carries operationType and the screen compares against create_visit. The guard forbids .message.includes/startsWith/endsWith/match inside the field roots so neither pattern can return.",
+      "baselineSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "resultingSha": null,
+      "proves": "Offline recovery and queued-operation identification are driven by stable codes rather than localized copy, so rewording or translating a message cannot change behavior.",
+      "doesNotProve": "It does not prove real queue corruption recovery, reconnect replay, duplicate suppression, or evidence retention on a device."
+    },
+    {
+      "verificationId": "LOCATION-TAXONOMY-UNIFIED",
+      "status": "PASS",
+      "command": "cd services/dsh && npx tsc -p tsconfig.json --noEmit",
+      "actualResult": "Exit 0. captureGovernedLocation in DshFieldVisitScreen threw bare Error objects with hardcoded prose for permission denial, mocked location, invalid fix, and poor accuracy, bypassing the taxonomy entirely so client-detected location refusals read differently from identical server refusals. It now resolves canonical definitions through the shared classifier and emits LOCATION_SERVICES_DISABLED, LOCATION_PERMISSION_DENIED, LOCATION_MOCKED, LOCATION_REQUIRED, and LOCATION_ACCURACY. A device-services check was added ahead of the permission prompt. Media evidence failures likewise emit MEDIA_PERMISSION_DENIED and MEDIA_UPLOAD_FAILED instead of raw strings.",
+      "baselineSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "resultingSha": null,
+      "proves": "A locally detected location or media refusal carries the same code, next action, and retry semantics as the equivalent server refusal.",
+      "doesNotProve": "It does not prove real GPS accuracy handling, mock-location detection, geofence enforcement, or camera and permission behavior on a device."
+    },
+    {
+      "verificationId": "MAN-01..MAN-14",
+      "status": "NOT_RUN",
+      "command": "manual cross-surface acceptance on a single implementation SHA",
+      "actualResult": "Not executed. No device, provider credentials, production-like data, or running runtime were available in this execution environment.",
+      "baselineSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "resultingSha": null,
+      "proves": "Nothing.",
+      "doesNotProve": "Happy path, denial, out-of-scope access, duplicate submission, concurrency, network loss, provider outage, offline work, reconnect, restart, reinstall, accessibility, cross-surface convergence, and legacy path removal all remain unproven."
+    }
+  ],
+  "blockers": [
+    {
+      "classification": "EXTERNAL_EVIDENCE_REQUIRED",
+      "code": "RUNTIME_AND_DEVICE_EVIDENCE_UNAVAILABLE",
+      "evidence": "No running DSH or WLT runtime, no provider credentials, no production-like data, and no physical Android or iOS build were available.",
+      "impact": "Offline queue corruption and recovery, reconnect replay, idempotent duplicate suppression, evidence retention across process kill and reinstall, GPS and geofence behavior, and COD reconciliation remain unproven.",
+      "remainingWork": "Execute MAN-01 through MAN-14 and the runtime, provider, migration, security, and rollback gates on one implementation SHA."
+    },
+    {
+      "classification": "INTERNAL_FIXABLE_BLOCKER",
+      "code": "NINE_APP_FIELD_SCREENS_STILL_COLLAPSE_FAILURES",
+      "evidence": "PROBLEM_RENDERING_DEBT in tools/guards/field/field-surface-truth-gate.mjs lists nine screens whose controller families carry no problem: the three account profile screens, DshFieldAssortmentPauseScreen, DshFieldPartnerProductsScreen, WltFieldFinanceScreen, DshFieldOnboardingScreen, DshFieldPartnerProgressScreen, and DshFieldPartnersScreen.",
+      "impact": "Those screens still show a generic message with no reason code, no allowed next action, and no support reference.",
+      "remainingWork": "See PROBLEM_MODEL_ABSENT_FROM_NON_FIELD_CONTROLLER_FAMILIES in U001. The register is enforced: adding an entry fails the guard, and leaving a resolved entry behind also fails it."
+    }
+  ],
+  "deviations": [
+    {
+      "type": "SCOPE_PARTIALLY_EXECUTED",
+      "fromSha": "f1f9664838ddac7dec5cd26cd5fe9dcfdcd84b14",
+      "observedSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "resolution": "This stage executed the reason-code, next-action, retry-semantics, and support-reference slice end to end for the field-readiness controller family only. Visit lifecycle, checklist content rules, evidence lifecycle, escalation lifecycle, and offline replay behavior were not otherwise changed and remain unproven."
+    }
+  ],
+  "decision": "PARTIAL",
+  "multiSurfaceScope": {
+    "mode": "FULLSTACK_UNIFIED_MULTI_SURFACE",
+    "surfaces": ["control-panel", "app-client", "app-partner", "app-captain", "app-field"],
+    "journeyPolicy": "NO_JOURNEY_OR_SLICE_MAY_BE_EXECUTED_OR_CLOSED_IN_ISOLATION",
+    "sliceContract": "all 24 journey slices are integrated in every stage"
+  },
+  "closureRule": "No result can pass from one surface or one journey slice alone."
+}

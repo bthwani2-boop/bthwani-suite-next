@@ -57,6 +57,7 @@
     "guard:ui-kit-boundary": "node tools/guards/ui-kit-boundary-gate.mjs",
     "guard:fullstack-boundary": "node tools/guards/fullstack-boundary-gate.mjs",
     "guard:wlt-financial-boundary": "node tools/guards/wlt-financial-boundary-gate.mjs",
+    "guard:field-surface-truth": "node tools/guards/field/field-surface-truth-gate.mjs",
     "guard:runtime-config": "node tools/guards/runtime-config-gate.mjs",
     "guard:no-broken-imports": "node tools/guards/no-broken-imports.mjs",
     "guard:cleanup-policy": "node tools/guards/cleanup-policy-gate.mjs",

@@ -1,5 +1,6 @@
 export * from "./field-readiness.types";
 export * from "./field-readiness.problem";
+export * from "./field-readiness.problem-view";
 export * from "./field-readiness.states";
 export * from "./field-readiness.policy";
 export * from "./field-readiness.view-model";
@@ -38,6 +39,7 @@ export {
   purgeSyncedOperations,
   getAllOperations,
   recoverCorruptFieldOfflineQueue,
+  FieldOfflineQueueCorruptError,
 } from "./field-offline-queue";
 export type {
   FieldOfflineQueueScope,

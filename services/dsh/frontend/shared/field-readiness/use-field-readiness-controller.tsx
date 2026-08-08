@@ -92,7 +92,7 @@ export function useFieldVisitController(storeId: string, authKind = "unauthentic
       try {
         const queued = await enqueueIfOffline(error, "create_visit", { storeId, input }, context);
         if (queued) {
-          setActionState(visitActionQueuedState(queued.operationId, "تم حفظ بدء الزيارة للمزامنة عند عودة الاتصال."));
+          setActionState(visitActionQueuedState(queued.operationId, "create_visit", "تم حفظ بدء الزيارة للمزامنة عند عودة الاتصال."));
           return;
         }
       } catch (queueError) {
@@ -114,7 +114,7 @@ export function useFieldVisitController(storeId: string, authKind = "unauthentic
       try {
         const queued = await enqueueIfOffline(error, "complete_visit", { visitId, input }, context);
         if (queued) {
-          setActionState(visitActionQueuedState(queued.operationId, "تم حفظ إتمام الزيارة للمزامنة عند عودة الاتصال."));
+          setActionState(visitActionQueuedState(queued.operationId, "complete_visit", "تم حفظ إتمام الزيارة للمزامنة عند عودة الاتصال."));
           return;
         }
       } catch (queueError) {
@@ -187,7 +187,7 @@ export function useFieldChecklistController(
       try {
         const queued = await enqueueIfOffline(error, "upsert_readiness_check", { visitId, input }, context);
         if (queued) {
-          setCheckActionState(checkActionQueuedState(queued.operationId, "تم حفظ نتيجة التحقق للمزامنة عند عودة الاتصال."));
+          setCheckActionState(checkActionQueuedState(queued.operationId, "upsert_readiness_check", "تم حفظ نتيجة التحقق للمزامنة عند عودة الاتصال."));
           return true;
         }
       } catch (queueError) {
@@ -236,7 +236,7 @@ export function useFieldEscalationController(authKind = "unauthenticated") {
       try {
         const queued = await enqueueIfOffline(error, "create_escalation", { storeId, input }, context);
         if (queued) {
-          setActionState(escalationActionQueuedState(queued.operationId, "تم حفظ التصعيد للمزامنة عند عودة الاتصال."));
+          setActionState(escalationActionQueuedState(queued.operationId, "create_escalation", "تم حفظ التصعيد للمزامنة عند عودة الاتصال."));
           return true;
         }
       } catch (queueError) {

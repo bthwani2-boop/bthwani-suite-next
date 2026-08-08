@@ -4,6 +4,7 @@ import React from 'react';
 import { BackHandler, Platform, View, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { spacing, colorRoles, StateView, TabBar, type TabBarItem } from '@bthwani/ui-kit';
+import { DshFieldProblemState } from './DshFieldProblemNotice';
 import { useDshFieldSurfaceModel } from '../field.surface-model';
 import type { DshFieldSurfaceProps } from '../dsh-field.routes';
 import { DshFieldRouteRenderer } from './DshFieldRouteRenderer';
@@ -120,16 +121,13 @@ export function DshFieldSurface({ command, onExit, installationId }: DshFieldSur
   }
 
   if (offlineSync.state.kind === 'error') {
-    const corrupt = offlineSync.state.message.includes('field offline queue is corrupt');
     return (
       <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase, justifyContent: 'center', padding: spacing[4] }}>
         <StatusBar backgroundColor={colorRoles.brandAction} barStyle="light-content" translucent={false} />
-        <StateView
-          tone="danger"
-          title="تعذر ضمان مزامنة العمل الميداني"
-          description={offlineSync.state.message}
-          actionLabel={corrupt ? 'حفظ النسخة التالفة واستعادة الطابور' : 'إعادة المحاولة'}
-          onActionPress={corrupt ? offlineSync.recover : offlineSync.retry}
+        <DshFieldProblemState
+          problem={offlineSync.state.problem}
+          handlers={{ recover_queue: offlineSync.recover }}
+          onRetry={offlineSync.retry}
         />
       </View>
     );

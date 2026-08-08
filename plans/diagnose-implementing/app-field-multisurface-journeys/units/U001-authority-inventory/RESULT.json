@@ -1,1 +1,135 @@
-{"schemaVersion":3,"unitId":"U001","status":"IN_PROGRESS","baselineSha":"6747872c3ad9c03013d199c1ea03150228b778db","resultingSha":"350505aedcd7235ed40b72bf9b514d08b96add95","completedTaskIds":[],"modifiedPaths":["services/dsh/frontend/shared/field-readiness/field-readiness.problem.ts","services/dsh/frontend/shared/field-readiness/field-readiness.api.ts","services/dsh/frontend/shared/field-readiness/field-readiness.states.ts","services/dsh/frontend/shared/field-readiness/field-readiness.controller-core.ts","services/dsh/frontend/shared/field-readiness/use-field-readiness-controller.tsx","services/dsh/frontend/shared/field-readiness/index.ts","services/dsh/tests/field-readiness-problem.test.mjs","services/dsh/capabilities.ts","services/dsh/frontend/app-field/stores/PartnerStoreCreateWizard.tsx","services/dsh/frontend/app-partner/account/PartnerCommercialSummaryScreen.tsx","services/dsh/frontend/control-panel/partners/stores/PartnerStoreCreateWizard.tsx"],"checkResults":[{"verificationId":"V001","status":"NOT_RUN","command":"node tools/diagnose-implementing/validate-package.mjs tools/diagnose-implementing/app-field-multisurface-journeys --strict","actualResult":"The strict validator was not executed in a checked-out runtime during this remote-only execution segment; no pass is claimed.","baselineSha":"6747872c3ad9c03013d199c1ea03150228b778db","resultingSha":"350505aedcd7235ed40b72bf9b514d08b96add95","proves":"Nothing until the command is run on the recorded package state.","doesNotProve":"Package consistency, implementation correctness, runtime behavior, or closure."},{"verificationId":"V002","status":"FAIL","command":"GitHub Actions run 31146938964: static diagnostics and Node verification","actualResult":"The immutable CI run failed. The uploaded Node graph artifact reported 162 TypeScript errors across 39 DSH files; the newly added field-readiness files were not among those compiler errors, but the new contract test could not run because DSH compilation stopped first.","baselineSha":"a6273e5c464281507734345b9e78bc24a97b679d","resultingSha":"a6273e5c464281507734345b9e78bc24a97b679d","proves":"The repository has an unresolved foundation blocker spanning app-client, app-partner, app-captain, app-field, control-panel, shared contracts, and workforce bindings.","doesNotProve":"That the remaining error count is unchanged after later commits, that runtime behavior passes, or that any journey is closed."}],"blockers":[{"classification":"INTERNAL_FIXABLE_BLOCKER","code":"DSH_TYPESCRIPT_BASELINE_FAILED","evidence":"GitHub Actions run 31146938964 and artifact node-graph-verification-31146938964","impact":"PHASE-00 BASELINE_STABILIZATION cannot close and no JOURNEY unit may start.","remainingWork":"Eliminate the remaining DSH compiler and static-diagnostics failures, rerun affected verification, then run guard:foundation and the package strict validator."},{"classification":"ENVIRONMENT_UNAVAILABLE","code":"REMOTE_COMMAND_RUNNER_NOT_AVAILABLE","evidence":"This execution used repository and GitHub Actions writes/reads; no checked-out command runner was available for direct pnpm guard:foundation or validate-package invocation.","impact":"The required local command evidence remains unexecuted and cannot be converted to PASS.","remainingWork":"Run the exact required commands in CI or a checked-out repository and retain logs tied to the resulting SHA."}],"deviations":[{"type":"BRANCH_DRIFT_RECONCILED","fromSha":"66ecabcc87cf8549761fa8526a3a32508b18b83a","observedSha":"6747872c3ad9c03013d199c1ea03150228b778db","resolution":"Compared and incorporated the runtime ledger and local-operator changes into foundation scope before writing."},{"type":"CONCURRENT_FAST_FORWARD_RECONCILED","fromSha":"a6273e5c464281507734345b9e78bc24a97b679d","observedSha":"2cf04219bc9702fa91fce92ce4b50f0c5854d477","resolution":"Verified the concurrent database-rebuild commit was a direct descendant, reviewed its migration and identity impact, and continued only from its tree without force or history rewrite."}],"decision":"BLOCKED","multiSurfaceScope":{"mode":"FULLSTACK_UNIFIED_MULTI_SURFACE","surfaces":["control-panel","app-client","app-partner","app-captain","app-field"],"journeyPolicy":"NO_JOURNEY_OR_SLICE_MAY_BE_EXECUTED_OR_CLOSED_IN_ISOLATION","sliceContract":"all 24 journey slices are integrated in every stage"},"closureRule":"No result can pass from one surface or one journey slice alone."}
+{
+  "schemaVersion": 3,
+  "unitId": "U001",
+  "status": "IN_PROGRESS",
+  "baselineSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+  "resultingSha": null,
+  "completedTaskIds": [],
+  "modifiedPaths": [
+    "services/dsh/frontend/shared/field-readiness/field-readiness.problem.ts",
+    "services/dsh/frontend/shared/field-readiness/field-readiness.problem-view.ts",
+    "services/dsh/frontend/shared/field-readiness/field-readiness.states.ts",
+    "services/dsh/frontend/shared/field-readiness/field-offline-queue.ts",
+    "services/dsh/frontend/shared/field-readiness/use-field-offline-sync.ts",
+    "services/dsh/frontend/shared/field-readiness/use-field-readiness-controller.tsx",
+    "services/dsh/frontend/shared/field-readiness/use-field-escalation-submission-controller.ts",
+    "services/dsh/frontend/shared/field-readiness/index.ts",
+    "services/dsh/frontend/shared/_kernel/dsh-http-request.ts",
+    "services/dsh/frontend/app-field/components/DshFieldProblemNotice.tsx",
+    "services/dsh/frontend/app-field/components/DshFieldSurface.tsx",
+    "services/dsh/frontend/app-field/components/OnboardingBasicsSection.tsx",
+    "services/dsh/frontend/app-field/escalation/DshFieldVisitScreen.tsx",
+    "services/dsh/frontend/app-field/escalation/DshFieldReadinessChecklistScreen.tsx",
+    "services/dsh/frontend/app-field/escalation/DshFieldEscalationScreen.tsx",
+    "services/dsh/frontend/app-field/escalation/DshFieldWorkQueueScreen.tsx",
+    "services/dsh/frontend/app-field/stores/DshFieldStoreVerificationScreen.tsx",
+    "services/dsh/frontend/control-panel/shared/ControlPanelFieldProblemPanel.tsx",
+    "services/dsh/frontend/control-panel/partners/field-readiness/FieldReadinessQueueScreen.tsx",
+    "shared/ui-kit/src/components/InlineNotice/InlineNotice.tsx",
+    "shared/ui-kit/src/components/StateView/StateView.tsx",
+    "services/dsh/tests/field-readiness-problem.test.mjs",
+    "tools/guards/field/field-surface-truth-gate.mjs",
+    "governance/guards/guard-registry.json",
+    "governance/guards/guard-sets.json",
+    "package.json"
+  ],
+  "checkResults": [
+    {
+      "verificationId": "V001",
+      "status": "PASS",
+      "command": "node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/app-field-multisurface-journeys --strict",
+      "actualResult": "Validation summary: 0 error(s), 0 warning(s). Exit code 0. The command previously recorded in VERIFICATION.json pointed at tools/diagnose-implementing/, a path that does not exist in this repository; the package lives under plans/diagnose-implementing/. The recorded command was corrected before this run, so a real execution replaces the earlier NOT_RUN entry.",
+      "baselineSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "resultingSha": null,
+      "proves": "The dossier schema, coverage links, dependency graph, files, and readiness are internally consistent, and the recorded verification command is executable.",
+      "doesNotProve": "Nothing about product implementation, runtime behavior, device behavior, or closure."
+    },
+    {
+      "verificationId": "V002",
+      "status": "PASS",
+      "command": "cd services/dsh && npx tsc -p tsconfig.json --noEmit",
+      "actualResult": "Exit code 0 with zero diagnostics against the working tree carrying this stage's changes. This supersedes the earlier FAIL recorded from GitHub Actions run 31146938964, which reported 162 TypeScript errors across 39 DSH files. Those errors are not reproducible at this baseline: the compiler is clean before and after this stage's edits. NOTE: after this run an unrelated, uncommitted third-party edit to services/dsh/frontend/app-field/stores/DshFieldStoresHistoryScreen.tsx appeared in the working tree and introduces 6 diagnostics referencing non-existent ui-kit tokens (surfaceNeutralSubtle, onSurfaceBase, onSurfaceNeutral, onSurfaceMuted, radius[4]). That file is excluded from this stage's commit and is recorded as a deviation, not as a pass.",
+      "baselineSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "resultingSha": null,
+      "proves": "The DSH TypeScript baseline is clean at this stage's tree, so DSH_TYPESCRIPT_BASELINE_FAILED no longer blocks journey units.",
+      "doesNotProve": "It does not prove runtime behavior, cross-surface convergence, device behavior, or that any journey is closed."
+    },
+    {
+      "verificationId": "V002",
+      "status": "PASS",
+      "command": "node tools/guards/field/field-surface-truth-gate.mjs",
+      "actualResult": "field-surface-truth-gate: PASS, exit 0. Before this stage the guard was orphaned (absent from governance/guards/guard-registry.json, absent from every guard set, and absent from package.json), and running it manually produced 4 violations: one UNSAFE_FIELD_ANY_FORBIDDEN in OnboardingBasicsSection.tsx and three stale-path failures because the field-finance controller had moved to services/wlt/frontend/shared/dsh/field-finance. All four are fixed and the guard is now registered in the journey guard set, so the rules are enforced rather than dormant.",
+      "baselineSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "resultingSha": null,
+      "proves": "Field-surface truth rules and the reason-code propagation rule are statically enforced in CI from this stage onward.",
+      "doesNotProve": "Static enforcement does not prove runtime, provider, device, or cross-surface readback behavior."
+    },
+    {
+      "verificationId": "V002",
+      "status": "PASS",
+      "command": "cd services/dsh && node --test tests/field-readiness-problem.test.mjs",
+      "actualResult": "12 tests, 12 pass, 0 fail across 3 suites. Coverage added this stage: transport correlation-id propagation, classifier preservation of correlationId with the reason code, absence of a fabricated correlation id, exhaustive next-action labelling, non-retryable blockers offering a recovery action instead of a bare retry, retryable failures staying retryable, client-detected refusals reusing the server taxonomy, and unmapped codes degrading to a diagnosable internal problem.",
+      "baselineSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "resultingSha": null,
+      "proves": "The backend reason code, its allowed next action, its retry semantics, and the support correlation id survive from transport to the shared view model.",
+      "doesNotProve": "It does not prove the rendered screen, screen-reader announcement, or operator readback on a real device."
+    }
+  ],
+  "blockers": [
+    {
+      "classification": "RESOLVED",
+      "code": "DSH_TYPESCRIPT_BASELINE_FAILED",
+      "evidence": "cd services/dsh && npx tsc -p tsconfig.json --noEmit exits 0 with zero diagnostics at baseline 1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14 and after this stage's edits.",
+      "impact": "None. The recorded 162-error CI failure is not reproducible at this baseline; intervening commits resolved it.",
+      "remainingWork": "None for this blocker."
+    },
+    {
+      "classification": "RESOLVED",
+      "code": "REMOTE_COMMAND_RUNNER_NOT_AVAILABLE",
+      "evidence": "A checked-out command runner was available for this stage; validate-package, tsc, the field guard, the guard-registry gate, and the DSH contract test were all executed directly with their literal output recorded above.",
+      "impact": "None.",
+      "remainingWork": "None for this blocker."
+    },
+    {
+      "classification": "INTERNAL_FIXABLE_BLOCKER",
+      "code": "PROBLEM_MODEL_ABSENT_FROM_NON_FIELD_CONTROLLER_FAMILIES",
+      "evidence": "Nine app-field screens read from the partner, catalog, workforce, field-onboarding, and wlt controller families, whose error states carry only a message string and no problem. They are listed in the PROBLEM_RENDERING_DEBT register in tools/guards/field/field-surface-truth-gate.mjs, which fails the build if an entry is added or if a resolved entry is left behind.",
+      "impact": "Those nine screens still collapse failures into a generic message and cannot show a reason code, an allowed next action, or a support reference.",
+      "remainingWork": "Hoist the governed problem model from services/dsh/frontend/shared/field-readiness into services/dsh/frontend/shared/_kernel so partner, catalog, workforce, field-onboarding, and wlt can adopt it without an inverted dependency, then populate problem at each error-state construction site (approximately 54 sites) and migrate the nine screens. That work also affects app-partner, app-client, and control-panel readers of the same states, so it requires its own cross-surface verification."
+    }
+  ],
+  "deviations": [
+    {
+      "type": "RECORDED_COMMAND_PATH_CORRECTED",
+      "fromSha": "f1f9664838ddac7dec5cd26cd5fe9dcfdcd84b14",
+      "observedSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "resolution": "VERIFICATION.json recorded the validator under tools/diagnose-implementing/, which does not exist. Corrected to plans/diagnose-implementing/ so the required command is executable rather than nominal."
+    },
+    {
+      "type": "CONCURRENT_BRANCH_MOVEMENT_OBSERVED",
+      "fromSha": "91b4ad789e894a907b9fd598513ea72d3e0d1a1b",
+      "observedSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "resolution": "Branch abbas advanced during this stage through concurrent work and is behind origin/abbas. No reset, clean, force, rewrite, or merge was performed. Only this stage's own paths were staged."
+    },
+    {
+      "type": "UNRELATED_UNCOMMITTED_WORK_ISOLATED",
+      "fromSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "observedSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "resolution": "Third-party uncommitted edits were present in the working tree and were left untouched and excluded from this stage's commit: services/dsh/backend/internal/http/protected_store.go, services/dsh/backend/internal/partner/handler.go, services/dsh/backend/internal/partner/operator_context_handler.go, services/dsh/frontend/app-field/stores/DshFieldStoresHistoryScreen.tsx, and the untracked services/dsh/backend/internal/partner/actor_context.go and test_context.go. The DshFieldStoresHistoryScreen.tsx edit does not compile; it is the sole source of the DSH diagnostics currently observable in the working tree and is not this stage's work."
+    },
+    {
+      "type": "RESULTING_SHA_NOT_SELF_REFERENTIAL",
+      "fromSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "observedSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "resolution": "resultingSha is left null because this file is part of the commit it would name. The resulting SHA is stamped by the next stage rather than fabricated here."
+    }
+  ],
+  "decision": "PARTIAL",
+  "multiSurfaceScope": {
+    "mode": "FULLSTACK_UNIFIED_MULTI_SURFACE",
+    "surfaces": ["control-panel", "app-client", "app-partner", "app-captain", "app-field"],
+    "journeyPolicy": "NO_JOURNEY_OR_SLICE_MAY_BE_EXECUTED_OR_CLOSED_IN_ISOLATION",
+    "sliceContract": "all 24 journey slices are integrated in every stage"
+  },
+  "closureRule": "No result can pass from one surface or one journey slice alone."
+}

@@ -5,6 +5,15 @@ import { View } from 'react-native';
 import { TextField, Text, SegmentedControl, spacing, colorRoles } from '@bthwani/ui-kit';
 import type { FieldPartnerDraftForm } from '../../shared/field-onboarding';
 
+const LEGAL_IDENTITY_TYPES: readonly {
+  readonly value: FieldPartnerDraftForm['legalIdentityType'];
+  readonly label: string;
+}[] = [
+  { value: 'commercial_register', label: 'سجل تجاري' },
+  { value: 'national_id', label: 'هوية وطنية' },
+  { value: 'freelancer_certificate', label: 'وثيقة عمل حر' },
+];
+
 type Props = {
   readonly form: Partial<FieldPartnerDraftForm>;
   readonly errors: Partial<Record<keyof FieldPartnerDraftForm, string>>;
@@ -31,13 +40,14 @@ export function OnboardingBasicsSection({ form, errors, readOnly, onChange }: Pr
       <View style={{ gap: spacing[2] }}>
         <Text role="bodySm" style={{ textAlign: 'right', color: colorRoles.textPrimary }}>نوع الهوية التجارية</Text>
         <SegmentedControl
-          items={[
-            { value: 'commercial_register', label: 'سجل تجاري' },
-            { value: 'national_id', label: 'هوية وطنية' },
-            { value: 'freelancer_certificate', label: 'وثيقة عمل حر' },
-          ]}
+          items={LEGAL_IDENTITY_TYPES}
           value={form.legalIdentityType ?? 'commercial_register'}
-          onValueChange={(v) => onChange({ legalIdentityType: v as any })}
+          onValueChange={(v) => {
+            // Narrow against the governed option list instead of casting: an
+            // unknown value must be ignored, never written into the draft.
+            const match = LEGAL_IDENTITY_TYPES.find((item) => item.value === v);
+            if (match) onChange({ legalIdentityType: match.value });
+          }}
         />
       </View>
 

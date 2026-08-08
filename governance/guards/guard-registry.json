@@ -503,6 +503,14 @@
       "source_file": "tools/guards/runtime-real-bindings-gate.mjs"
     },
     {
+      "id": "field-surface-truth",
+      "name": "Field Surface Truth Gate",
+      "script": "guard:field-surface-truth",
+      "exit_level": "fail",
+      "description": "Statically enforces field-surface truth ownership and requires backend reason codes, allowed next actions, and support correlation ids to reach the screen instead of collapsing into a generic message; it does not prove runtime or device behavior.",
+      "source_file": "tools/guards/field/field-surface-truth-gate.mjs"
+    },
+    {
       "id": "dsh-openapi-modular",
       "name": "DSH Modular OpenAPI Gate",
       "exit_level": "fail",

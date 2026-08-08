@@ -13,6 +13,11 @@ const {
 } = await import(
   "../dist/services/dsh/frontend/shared/field-readiness/field-readiness.states.js"
 );
+const {
+  buildFieldProblemView,
+} = await import(
+  "../dist/services/dsh/frontend/shared/field-readiness/field-readiness.problem-view.js"
+);
 
 const backendSource = await readFile(
   new URL("../backend/internal/http/fieldreadiness.go", import.meta.url),
@@ -21,6 +26,20 @@ const backendSource = await readFile(
 const problemSource = await readFile(
   new URL(
     "../frontend/shared/field-readiness/field-readiness.problem.ts",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const problemViewSource = await readFile(
+  new URL(
+    "../frontend/shared/field-readiness/field-readiness.problem-view.ts",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const transportSource = await readFile(
+  new URL(
+    "../frontend/shared/_kernel/dsh-http-request.ts",
     import.meta.url,
   ),
   "utf8",
@@ -113,5 +132,101 @@ describe("field readiness problem contract", () => {
     assert.equal(state.kind, "error");
     assert.equal(state.message, problem.message);
     assert.deepEqual(state.problem, problem);
+  });
+});
+
+describe("field problem support reference", () => {
+  test("transport attaches the request correlation id to failures", () => {
+    // Without this the employee and support have no shared reference for the
+    // failed request.
+    assert.match(transportSource, /parseResponse<T>\(response, correlationId\)/);
+    assert.match(transportSource, /kind: "http", status: response\.status, body, code, message, correlationId/);
+  });
+
+  test("classifier preserves the correlation id alongside the reason code", () => {
+    const problem = classifyFieldReadinessError({
+      kind: "http",
+      status: 409,
+      code: "OPEN_ESCALATION",
+      correlationId: "field-readiness-8f3a2c",
+    });
+    assert.equal(problem.code, "OPEN_ESCALATION");
+    assert.equal(problem.nextAction, "resolve_escalation");
+    assert.equal(problem.correlationId, "field-readiness-8f3a2c");
+  });
+
+  test("absent correlation id does not fabricate one", () => {
+    const problem = classifyFieldReadinessError({ kind: "http", status: 403 });
+    assert.equal(problem.correlationId, undefined);
+    assert.equal(buildFieldProblemView(problem).correlationId, null);
+  });
+});
+
+describe("field problem view model", () => {
+  test("labels every declared next action", () => {
+    // An unlabeled next action would render a button with no text, so the map
+    // must stay exhaustive as the taxonomy grows.
+    const declared = [
+      ...problemSource.matchAll(/^\s*\|\s*"([a-z_]+)"$/gm),
+    ].map((match) => match[1]);
+    const nextActions = declared.filter((value) =>
+      new RegExp(`^\\s*${value}:`, "m").test(problemViewSource),
+    );
+    assert.ok(nextActions.length >= 12, "next action labels must be present");
+
+    for (const code of BACKEND_CODES) {
+      const view = buildFieldProblemView(classifyFieldReadinessError({ code }));
+      assert.ok(view.title, `${code} must produce a title`);
+      assert.ok(view.description, `${code} must produce a description`);
+      assert.equal(view.code, code);
+    }
+  });
+
+  test("a non-retryable blocker offers its recovery action and no bare retry", () => {
+    const view = buildFieldProblemView(
+      classifyFieldReadinessError({ code: "CHECKLIST_INCOMPLETE" }),
+    );
+    assert.equal(view.retryable, false);
+    assert.deepEqual(view.primaryAction, {
+      actionId: "complete_checklist",
+      label: "استكمال قائمة التحقق",
+    });
+  });
+
+  test("a retryable failure stays retryable", () => {
+    const view = buildFieldProblemView(
+      classifyFieldReadinessError({ kind: "network", message: "socket closed" }),
+    );
+    assert.equal(view.retryable, true);
+    assert.equal(view.primaryAction?.actionId, "retry");
+  });
+
+  test("client-detected refusals reuse the governed server taxonomy", () => {
+    // A locally detected location or media refusal must read the same as the
+    // equivalent server refusal on every surface.
+    for (const [code, expectedAction] of [
+      ["LOCATION_PERMISSION_DENIED", "enable_location"],
+      ["LOCATION_SERVICES_DISABLED", "enable_location"],
+      ["MEDIA_PERMISSION_DENIED", "add_evidence"],
+      ["OFFLINE_QUEUE_CORRUPT", "recover_queue"],
+    ]) {
+      const problem = classifyFieldReadinessError({ code });
+      assert.equal(problem.code, code);
+      assert.equal(problem.nextAction, expectedAction);
+      assert.equal(problem.retryable, false, `${code} must not offer a bare retry`);
+    }
+  });
+
+  test("an unmapped code degrades to a diagnosable internal problem", () => {
+    const problem = classifyFieldReadinessError({
+      kind: "http",
+      status: 500,
+      code: "SOME_FUTURE_CODE",
+      correlationId: "cid-1",
+    });
+    const view = buildFieldProblemView(problem);
+    assert.equal(view.code, "SOME_FUTURE_CODE");
+    assert.equal(view.correlationId, "cid-1");
+    assert.ok(view.supportHint, "internal failures must point at support");
   });
 });

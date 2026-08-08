@@ -21,6 +21,7 @@ import {
   ESCALATION_CATEGORY_LABELS,
   type DshEscalationStatus,
 } from "../../../shared/field-readiness";
+import { ControlPanelFieldProblemPanel } from "../../shared/ControlPanelFieldProblemPanel";
 
 type FollowUpStatus = "resolved" | "escalated_further";
 
@@ -85,9 +86,9 @@ export function FieldReadinessQueueScreen() {
   const stateView =
     listState.kind === "loading" ? <CpStateView kind="loading" title="جاري تحميل التصعيدات…" /> :
     listState.kind === "error" ? (
-      <CpStatePanel role="alert" title="تعذر التحميل" code={listState.message}>
+      <ControlPanelFieldProblemPanel problem={listState.problem}>
         <CpRetryButton onClick={() => void loadOperatorEscalations(activeFilter || undefined)}>إعادة المحاولة</CpRetryButton>
-      </CpStatePanel>
+      </ControlPanelFieldProblemPanel>
     ) :
     listState.kind === "empty" ? <CpStatePanel role="status" title="لا توجد تصعيدات" description="لا توجد تصعيدات بالفلتر الحالي." /> :
     undefined;
@@ -111,9 +112,9 @@ export function FieldReadinessQueueScreen() {
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1rem" }}>
         {actionState.kind === "error" ? (
-          <CpStatePanel role="alert" title={actionState.message}>
+          <ControlPanelFieldProblemPanel problem={actionState.problem}>
             <CpRetryButton onClick={resetAction}>إغلاق</CpRetryButton>
-          </CpStatePanel>
+          </ControlPanelFieldProblemPanel>
         ) : null}
 
         {listState.kind === "success"
