@@ -49,6 +49,23 @@ func bindCanonicalCommissionFinancialTruth(
 		if status != "captured" && status != "cod_collected" {
 			return fmt.Errorf("payment session status %q is not commission-eligible", status)
 		}
+
+		if input.CommissionType == "delivery_fee" {
+			var allocAmount int64
+			errAlloc := db.QueryRow(`
+				SELECT amount_minor_units
+				FROM wlt_payment_allocation_components
+				WHERE operator_context_id=$1 AND payment_session_id=$2 AND component=$3`,
+				operatorContextID, paymentSessionID, input.CommissionType).Scan(&allocAmount)
+			if errAlloc == nil {
+				amountMinorUnits = allocAmount
+			} else if errors.Is(errAlloc, sql.ErrNoRows) {
+				return fmt.Errorf("commission requires payment allocation component %q which is missing", input.CommissionType)
+			} else {
+				return errAlloc
+			}
+		}
+
 		if amountMinorUnits <= 0 || len(strings.TrimSpace(currency)) != 3 {
 			return ErrCommissionSourceFinancialTruthMissing
 		}

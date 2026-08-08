@@ -68,13 +68,25 @@ func deliverEvent(ctx context.Context, client *wlt.Client, event Event) (string,
 			collectorType = CollectorCaptain
 			collectorID = event.CaptainID
 		}
-		return "", client.NotifyDeliveryCollection(ctx, wlt.NotifyDeliveryCollectionInput{
+		if err := client.NotifyDeliveryCollection(ctx, wlt.NotifyDeliveryCollectionInput{
 			OrderID:          event.OrderID,
 			CollectorType:    collectorType,
 			CollectorID:      collectorID,
 			PartnerID:        event.PartnerID,
 			CheckoutIntentID: event.CheckoutIntentID,
-		})
+		}); err != nil {
+			return "", err
+		}
+		if event.CaptainID != "" {
+			if err := client.DeliverCaptainCommission(ctx, wlt.DeliverCaptainCommissionInput{
+				CaptainID:        event.CaptainID,
+				OrderID:          event.OrderID,
+				CheckoutIntentID: event.CheckoutIntentID,
+			}); err != nil {
+				return "", err
+			}
+		}
+		return "", nil
 	case EventTypeLoyaltyEarned:
 		if event.ClientID == "" || event.Points <= 0 {
 			return "", fmt.Errorf("invalid loyalty-earned payload")

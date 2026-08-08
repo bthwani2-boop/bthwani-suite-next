@@ -6,7 +6,8 @@
   "resultingSha": null,
   "completedTaskIds": [
     "U003-T001",
-    "U003-T002"
+    "U003-T002",
+    "U003-T003"
   ],
   "modifiedPaths": [
     "services/wlt/contracts/wlt.cod-records.openapi.yaml",
@@ -16,7 +17,10 @@
     "services/dsh/backend/internal/orders/lifecycle.go",
     "services/dsh/backend/internal/wlt/cod_reservations.go",
     "services/dsh/backend/internal/http/dispatch_governance_handlers.go",
-    "services/dsh/backend/internal/http/delivery_proof_completion.go"
+    "services/dsh/backend/internal/http/delivery_proof_completion.go",
+    "services/wlt/backend/internal/cod/canonical_commission_create.go",
+    "services/dsh/backend/internal/wlt/client.go",
+    "services/dsh/backend/internal/wltoutbox/worker.go"
   ],
   "checkResults": [],
   "blockers": [],
