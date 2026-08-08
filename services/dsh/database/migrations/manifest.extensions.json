@@ -98,6 +98,12 @@
       "file": "dsh-996_administration_approval_ledger.sql",
       "sha256": "59fb5fd5e44dba5786ec8f80d1fe715da41c2782d87c255744a3b1ae344b62ab",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 233,
+      "file": "dsh-997_operator_store_creation_idempotency.sql",
+      "sha256": "abb3e570e71e8243b1241fad48970b3fbbc530e2331dcb803c28f7f73fd616f6",
+      "state": "ACTIVE"
     }
   ]
 }

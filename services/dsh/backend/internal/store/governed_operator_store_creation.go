@@ -83,16 +83,30 @@ func CreateGovernedStoreForOperatorContextIdempotent(
 		return DshStoreRow{}, false, err
 	}
 
+	// Expiry is scoped to the same durable retry identity as replay. Removing
+	// only this context/actor/key lets an expired key be reused without touching
+	// independent OperatorContexts that happen to use the same actor/key pair.
+	if _, err := tx.ExecContext(ctx, `
+		DELETE FROM dsh_operator_store_creation_idempotency
+		WHERE operator_context_id = $1
+		  AND actor_id = $2
+		  AND idempotency_key = $3
+		  AND expires_at <= NOW()`,
+		operatorContextID, actorID, idempotencyKey,
+	); err != nil {
+		return DshStoreRow{}, false, err
+	}
+
 	var replayHash string
 	var replayJSON []byte
 	err = tx.QueryRowContext(ctx, `
 		SELECT request_hash, response_body
-		FROM dsh_store_idempotency
-		WHERE actor_id = $1
-		  AND operation = 'create-store'
-		  AND idempotency_key = $2
+		FROM dsh_operator_store_creation_idempotency
+		WHERE operator_context_id = $1
+		  AND actor_id = $2
+		  AND idempotency_key = $3
 		FOR UPDATE`,
-		actorID, idempotencyKey,
+		operatorContextID, actorID, idempotencyKey,
 	).Scan(&replayHash, &replayJSON)
 	if err == nil {
 		if replayHash != requestHash {
@@ -176,10 +190,10 @@ func CreateGovernedStoreForOperatorContextIdempotent(
 		return DshStoreRow{}, false, err
 	}
 	if _, err = tx.ExecContext(ctx, `
-		INSERT INTO dsh_store_idempotency
-			(actor_id, operation, idempotency_key, request_hash, response_body)
-		VALUES ($1, 'create-store', $2, $3, $4::jsonb)`,
-		actorID, idempotencyKey, requestHash, string(responseJSON),
+		INSERT INTO dsh_operator_store_creation_idempotency
+			(operator_context_id, actor_id, idempotency_key, request_hash, response_body)
+		VALUES ($1, $2, $3, $4, $5::jsonb)`,
+		operatorContextID, actorID, idempotencyKey, requestHash, string(responseJSON),
 	); err != nil {
 		return DshStoreRow{}, false, err
 	}
