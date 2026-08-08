@@ -17,13 +17,13 @@ For any task, read only what is applicable and in this order:
 5. applicable `governance/policies/engineering.md`, `governance/policies/security.md`, and/or `governance/policies/delivery.md`;
 6. applicable capability Product Truth under `governance/product/contracts/`;
 7. required machine contracts/registries;
-8. exact pinned implementation, migrations, tests, and runtime evidence for the claim.
+8. exact pinned implementation, migrations, tests, live platform state, and runtime evidence for the claim.
 
 Do not preload the whole governance tree, every Product Truth, every skill, every guard, or every plan.
 
 ## Governance structure
 
-Durable human-readable governance is intentionally small:
+Durable governance is intentionally small and contains authority or machine contracts only:
 
 ```text
 governance/
@@ -37,8 +37,7 @@ governance/
 │  ├─ engineering.md
 │  ├─ security.md
 │  ├─ delivery.md
-│  ├─ repository-retention-policy.json
-│  └─ governance.rego
+│  └─ repository-retention-policy.json
 ├─ authority/
 ├─ contracts/
 │  └─ sdlc/
@@ -49,7 +48,7 @@ governance/
 └─ tools/
 ```
 
-No topic-specific governance directory or decision Markdown is permitted. Capability rules belong in the PRD, general policies, Product Truth, service contracts, and implementation ownership—not a new governance file.
+No topic-specific governance directory, execution prompt, report, snapshot, runbook, or decision Markdown is permitted inside governance merely because it affects governed work. Capability rules belong in the PRD, general policies, Product Truth, service contracts, and implementation ownership—not a new governance file.
 
 ## Product governance
 
@@ -61,7 +60,7 @@ No topic-specific governance directory or decision Markdown is permitted. Capabi
 - `governance/policies/security.md`: authentication, authorization, trusted context, object/business isolation, sessions, credentials, secrets, privacy/PII, provider/service security, security evidence.
 - `governance/policies/delivery.md`: repository writes, lifecycle, verification, CI, evidence, decisions, approvals, release, deployment, rollback, production verification.
 
-`governance/policies/repository-retention-policy.json` is the machine retention contract. `governance/policies/governance.rego` is an enforcement adapter, not an additional policy source.
+`governance/policies/repository-retention-policy.json` is the machine retention contract. Executable policy enforcement is implementation under `tools/guards/` and never an additional policy source.
 
 ## Machine contracts and registries
 
@@ -87,7 +86,17 @@ Machine-readable contracts encode the same governance for validation/routing and
 - `governance/product/product-truth.schema.json`
 - `governance/product/contracts/**`
 
-`governance/github/master-protection.ruleset.json` describes desired configuration. `governance/github/repository-enforcement.json` is an observed snapshot. Neither proves current live GitHub enforcement without live readback.
+`governance/github/master-protection.ruleset.json` describes desired configuration. Any repository-enforcement snapshot is support evidence only; current enforcement claims require live GitHub readback against the exact candidate.
+
+## Enforcement implementations
+
+Repository enforcement code lives outside policy authority:
+
+- `tools/guards/**`
+- `tools/guards/opa/governance.rego`
+- registered package commands and read-only CI consumers.
+
+A validator, Rego rule, script, workflow, diagnostic, or generated report cannot create policy merely by encoding or checking it.
 
 ## Agent and tool adapters
 
@@ -139,8 +148,9 @@ Use `CODE_BASED_LEAN`:
 - **Product truth:** what a capability must do and its legal states/invariants.
 - **Implementation truth:** exact pinned source, contracts, configuration, migrations, and tests.
 - **Runtime truth:** actual candidate-bound runtime/readback evidence.
+- **Repository-platform truth:** live GitHub or other platform state queried for the exact claim; a tracked snapshot cannot substitute for it.
 
-Code cannot silently create a new platform model, financial owner, authorization context, contract owner, or governance layer. A plan, prompt, fixture, or historical report cannot prove implementation/runtime truth.
+Code cannot silently create a new platform model, financial owner, authorization context, contract owner, or governance layer. A plan, prompt, fixture, snapshot, or historical report cannot prove implementation/runtime/platform truth.
 
 ## Full-stack multi-surface rule
 
@@ -162,7 +172,8 @@ A surface may be excluded only by Product Truth or proven non-applicability.
 - one guard registry/assurance/set model;
 - one planning root: `plans/`;
 - no runtime-facing local/mock/fallback truth;
-- no topic-specific governance files.
+- no topic-specific governance files;
+- no tracked snapshot may masquerade as current repository-platform state.
 
 ## Repository safety
 
@@ -172,7 +183,7 @@ Resolve the exact user-named branch and current remote SHA. Re-resolve before a 
 
 Use `governance/contracts/decision-vocabulary.json`. Evidence is candidate-bound and scope-specific. Static, product, runtime, visual, QA, security, finance, isolation, governance, CI, release, and production evidence are distinct when applicable.
 
-Canonical SDLC lifecycle, roles, gates, evidence manifests, impact schemas, and templates live under `governance/contracts/sdlc/`. `CLOSED_WITH_EVIDENCE` requires every applicable same-candidate evidence scope and required protected approval, with no unresolved fail/blocked/pending class.
+Canonical SDLC lifecycle, roles, gates, evidence manifests, impact schemas, and templates live under `governance/contracts/sdlc/`. `CLOSED_WITH_EVIDENCE` requires every applicable same-candidate evidence scope and required protected approval, with no unresolved fail/blocked/pending class. GitHub branch protection, rulesets, required checks, reviewers, and workflow success must be read live when those claims matter.
 
 Implementation agents cannot fabricate unavailable evidence or self-grant protected approvals.
 
