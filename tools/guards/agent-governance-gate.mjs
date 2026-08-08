@@ -12,6 +12,22 @@ const readJson = (relative) => {
 };
 const frontmatter = (content, key) => content.match(/^---\s*\n([\s\S]*?)\n---/m)?.[1]?.match(new RegExp(`^${key}:\\s*([^\\n]+)$`, "m"))?.[1]?.trim();
 const requiredSections = ["Purpose", "Invoke when", "Do not invoke when", "Authority boundary", "Required output"];
+const retiredInstructionRefs = [
+  "governance/policies/product.md",
+  "governance/policies/contracts.md",
+  "governance/policies/data.md",
+  "governance/policies/runtime.md",
+  "governance/policies/release.md",
+  "governance/domains/",
+  "governance/product/decisions/",
+  "governance/operational_journey_protocol_package/",
+  "tools/diagnose-implementing/",
+  "tools/plans/",
+  "tools/implementing/",
+  ".agents/AUTHORITY_BOUNDARY.md",
+  ".agents/EVIDENCE_GATE_ROUTER.md",
+  ".agents/SKILL_CATALOG.md",
+];
 
 const skillsFile = "governance/skills/skills-registry.json";
 const toolsFile = "governance/tools/agent-tool-registry.json";
@@ -45,6 +61,9 @@ if (skills) {
       if (frontmatter(content, "version") !== skill.version) violations.push({ file: skillMd, line: 0, message: `SKILL_VERSION_DRIFT ${skill.id}` });
       for (const section of requiredSections) if (!new RegExp(`^##\\s+${section}\\b`, "mi").test(content)) violations.push({ file: skillMd, line: 0, message: `SKILL_MISSING_SECTION ${skill.id}:${section}` });
       if (!index.includes(`\`${skill.id}\``)) violations.push({ file: indexFile, line: 0, message: `ROUTABLE_SKILL_MISSING_FROM_INDEX ${skill.id}` });
+      for (const retiredRef of retiredInstructionRefs) {
+        if (content.includes(retiredRef)) violations.push({ file: skillMd, line: 0, message: `RETIRED_GOVERNANCE_REFERENCE ${retiredRef}` });
+      }
       for (const token of [...content.matchAll(/`([A-Z][A-Z0-9_]+)`/g)].map((m) => m[1])) {
         if ((token === "PASS" || token.endsWith("_REQUIRED") || canonicalDecisions.has(token) || deprecatedDecisions.has(token)) && (!canonicalDecisions.has(token) || deprecatedDecisions.has(token)))
           violations.push({ file: skillMd, line: 0, message: `NONCANONICAL_DECISION ${skill.id}:${token}` });
