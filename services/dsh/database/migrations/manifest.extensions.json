@@ -104,6 +104,12 @@
       "file": "dsh-997_operator_store_creation_idempotency.sql",
       "sha256": "abb3e570e71e8243b1241fad48970b3fbbc530e2331dcb803c28f7f73fd616f6",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 234,
+      "file": "dsh-998_operator_store_creation_idempotency_backfill.sql",
+      "sha256": "0323a14ecb4224b29ee4b06c08f9edb35659459a5893d94ce91bd7aa86f2d570",
+      "state": "ACTIVE"
     }
   ]
 }
