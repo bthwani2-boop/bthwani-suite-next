@@ -35,10 +35,6 @@ type CreateRefundInput struct {
 	Reason           string `json:"reason"`
 }
 
-type financialProvider interface {
-	Post(ctx context.Context, path string, body any, meta provider.RequestMeta) (provider.ProviderResult, error)
-}
-
 func trustedRefundContext(db *sql.DB, refundID string) (context.Context, error) {
 	refundID = strings.TrimSpace(refundID)
 	if refundID == "" {
@@ -111,8 +107,8 @@ func CompleteRefund(db *sql.DB, refundID string) (*Refund, error) {
 	return legacyRefundView(item), err
 }
 
-func CompleteRefundWithProvider(ctx context.Context, db *sql.DB, client financialProvider, refundID string, meta provider.RequestMeta) (*Refund, error) {
-	item, err := CompleteGovernedRefundWithProvider(ctx, db, client, refundID, "legacy-refund-executor", meta.CorrelationID)
+func CompleteRefundWithProvider(ctx context.Context, db *sql.DB, rail provider.CashInRail, refundID string, meta provider.RequestMeta) (*Refund, error) {
+	item, err := CompleteGovernedRefundWithProvider(ctx, db, rail, refundID, "legacy-refund-executor", meta.CorrelationID)
 	return legacyRefundView(item), err
 }
 

@@ -16,72 +16,81 @@ import (
 )
 
 var (
-	ErrRefundAmountUnavailable    = errors.New("requested refund amount exceeds the remaining refundable amount")
+	ErrRefundAmountUnavailable   = errors.New("requested refund amount exceeds the remaining refundable amount")
 	ErrRefundIdempotencyConflict = errors.New("refund idempotency key was already used with a different payload")
 	ErrRefundMakerChecker        = errors.New("refund maker cannot review the same refund")
 	ErrRefundProviderUnknown     = errors.New("refund provider result is unknown and requires reconciliation")
 	ErrRefundReconcileEvidence   = errors.New("refund reconciliation requires an evidence note")
+	// ErrRefundSourceNotProviderBacked is returned when a refund's original
+	// payment session was not actually captured through the card provider
+	// (e.g. it was funded via cod_collected, cash collected in person, with
+	// no provider charge to reverse). Routing such a refund through
+	// CashInRail.Refund would call a provider that never processed the
+	// original payment. This is an explicit blocked state requiring the
+	// relevant COD/manual reversal path -- never an implicit internal-wallet
+	// credit.
+	ErrRefundSourceNotProviderBacked = errors.New("refund source was not captured through the card provider and cannot be routed through the payment rail")
 )
 
 type GovernedRefund struct {
-	ID                      string  `json:"id"`
-	OperatorContextID                string  `json:"operatorContextId"`
-	PaymentSessionID        string  `json:"paymentSessionId"`
-	OrderID                 string  `json:"orderId"`
-	ClientID                string  `json:"clientId"`
-	AmountMinorUnits        int64   `json:"amountMinorUnits"`
-	Currency                string  `json:"currency"`
-	Reason                  string  `json:"reason"`
-	Status                  string  `json:"status"`
-	RequestedByOperatorID   string  `json:"requestedByOperatorId"`
-	ApprovedByOperatorID    string  `json:"approvedByOperatorId,omitempty"`
-	RejectedByOperatorID    string  `json:"rejectedByOperatorId,omitempty"`
-	DecisionReason          string  `json:"decisionReason,omitempty"`
-	EligibilityReference    string  `json:"eligibilityReference"`
-	IdempotencyKey          string  `json:"idempotencyKey"`
-	ProviderIdempotencyKey  string  `json:"providerIdempotencyKey"`
-	ProviderReference       string  `json:"providerReference,omitempty"`
-	ProviderStatus          string  `json:"providerStatus,omitempty"`
-	ProviderError           string  `json:"providerError,omitempty"`
-	ReconciliationCaseID    string  `json:"reconciliationCaseId,omitempty"`
-	Version                 int     `json:"version"`
-	ProviderAttemptedAt     *string `json:"providerAttemptedAt,omitempty"`
-	ResolvedAt              *string `json:"resolvedAt,omitempty"`
-	CreatedAt               string  `json:"createdAt"`
-	UpdatedAt               string  `json:"updatedAt"`
+	ID                     string  `json:"id"`
+	OperatorContextID      string  `json:"operatorContextId"`
+	PaymentSessionID       string  `json:"paymentSessionId"`
+	OrderID                string  `json:"orderId"`
+	ClientID               string  `json:"clientId"`
+	AmountMinorUnits       int64   `json:"amountMinorUnits"`
+	Currency               string  `json:"currency"`
+	Reason                 string  `json:"reason"`
+	Status                 string  `json:"status"`
+	RequestedByOperatorID  string  `json:"requestedByOperatorId"`
+	ApprovedByOperatorID   string  `json:"approvedByOperatorId,omitempty"`
+	RejectedByOperatorID   string  `json:"rejectedByOperatorId,omitempty"`
+	DecisionReason         string  `json:"decisionReason,omitempty"`
+	EligibilityReference   string  `json:"eligibilityReference"`
+	IdempotencyKey         string  `json:"idempotencyKey"`
+	ProviderIdempotencyKey string  `json:"providerIdempotencyKey"`
+	ProviderReference      string  `json:"providerReference,omitempty"`
+	ProviderStatus         string  `json:"providerStatus,omitempty"`
+	ProviderError          string  `json:"providerError,omitempty"`
+	ReconciliationCaseID   string  `json:"reconciliationCaseId,omitempty"`
+	Version                int     `json:"version"`
+	ProviderAttemptedAt    *string `json:"providerAttemptedAt,omitempty"`
+	ResolvedAt             *string `json:"resolvedAt,omitempty"`
+	CreatedAt              string  `json:"createdAt"`
+	UpdatedAt              string  `json:"updatedAt"`
 }
 
 type GovernedCreateRefundInput struct {
-	OperatorContextID             string `json:"operatorContextId"`
-	PaymentSessionID     string `json:"paymentSessionId"`
-	OrderID              string `json:"orderId"`
-	ClientID             string `json:"clientId"`
-	AmountMinorUnits     int64  `json:"amountMinorUnits"`
-	Reason               string `json:"reason"`
-	EligibilityReference string `json:"eligibilityReference"`
+	OperatorContextID     string `json:"operatorContextId"`
+	PaymentSessionID      string `json:"paymentSessionId"`
+	OrderID               string `json:"orderId"`
+	ClientID              string `json:"clientId"`
+	AmountMinorUnits      int64  `json:"amountMinorUnits"`
+	Reason                string `json:"reason"`
+	EligibilityReference  string `json:"eligibilityReference"`
 	RequestedByOperatorID string `json:"requestedByOperatorId"`
-	IdempotencyKey       string `json:"-"`
-	CorrelationID        string `json:"-"`
+	IdempotencyKey        string `json:"-"`
+	CorrelationID         string `json:"-"`
 }
 
 type RefundDecisionInput struct {
-	OperatorID   string `json:"operatorId"`
-	Reason       string `json:"reason"`
+	OperatorID    string `json:"operatorId"`
+	Reason        string `json:"reason"`
 	CorrelationID string `json:"-"`
 }
 
 type RefundReconciliationInput struct {
-	OperatorID       string `json:"operatorId"`
-	ResolutionAction string `json:"resolutionAction"`
-	EvidenceNote     string `json:"evidenceNote"`
+	OperatorID        string `json:"operatorId"`
+	ResolutionAction  string `json:"resolutionAction"`
+	EvidenceNote      string `json:"evidenceNote"`
 	ProviderReference string `json:"providerReference"`
-	CorrelationID    string `json:"-"`
+	CorrelationID     string `json:"-"`
 }
 
 type RefundAuditEvent struct {
 	ID                string `json:"id"`
 	RefundID          string `json:"refundId"`
-	OperatorContextID          string `json:"operatorContextId"`
+	OperatorContextID string `json:"operatorContextId"`
 	EventType         string `json:"eventType"`
 	ActorID           string `json:"actorId"`
 	ActorType         string `json:"actorType"`
@@ -562,7 +571,30 @@ func finalizeGovernedRefundSuccess(ctx context.Context, db *sql.DB, refundID, ac
 	return updated, nil
 }
 
-func CompleteGovernedRefundWithProvider(ctx context.Context, db *sql.DB, client financialProvider, refundID, operatorID, correlationID string) (*GovernedRefund, error) {
+// resolveRefundSourceStatus reads the current status of the refund's
+// original payment session -- the trusted fact this function uses to decide
+// whether the refund's value actually passed through the card provider (see
+// ErrRefundSourceNotProviderBacked).
+func resolveRefundSourceStatus(ctx context.Context, db *sql.DB, paymentSessionID string) (string, error) {
+	var status string
+	err := db.QueryRowContext(ctx, `SELECT status FROM wlt_payment_sessions WHERE id=$1`, paymentSessionID).Scan(&status)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", fmt.Errorf("payment session %s not found while resolving refund source", paymentSessionID)
+	}
+	return status, err
+}
+
+// CompleteGovernedRefundWithProvider routes an approved refund through
+// CashInRail.Refund (U002-T001's capability-checked rail) rather than an
+// arbitrary Post to a caller-chosen path. Before doing so it resolves the
+// refund's original funding source (U002-T003): only a session that actually
+// reached 'captured' -- meaning its value was captured through the card
+// provider -- can be reversed through that same provider. A session funded
+// through any other terminal path (e.g. cod_collected, cash collected by a
+// captain with no provider charge behind it) fails closed with
+// ErrRefundSourceNotProviderBacked instead of calling a provider that never
+// processed the original payment.
+func CompleteGovernedRefundWithProvider(ctx context.Context, db *sql.DB, rail provider.CashInRail, refundID, operatorID, correlationID string) (*GovernedRefund, error) {
 	claimed, err := claimGovernedRefundExecution(ctx, db, refundID, operatorID, correlationID)
 	if err != nil || claimed == nil {
 		return claimed, err
@@ -571,7 +603,19 @@ func CompleteGovernedRefundWithProvider(ctx context.Context, db *sql.DB, client 
 	if meta.CorrelationID == "" {
 		meta.CorrelationID = "refund-" + claimed.ID
 	}
-	result, err := client.Post(ctx, "/financial/card/refund", map[string]any{
+
+	sourceStatus, err := resolveRefundSourceStatus(ctx, db, claimed.PaymentSessionID)
+	if err != nil {
+		_ = markGovernedRefundProviderUnknown(ctx, db, claimed, fmt.Errorf("resolve refund funding source: %w", err), meta.CorrelationID)
+		return nil, ErrRefundProviderUnknown
+	}
+	if sourceStatus != "captured" {
+		cause := fmt.Errorf("%w: original payment session status is %q", ErrRefundSourceNotProviderBacked, sourceStatus)
+		_ = markGovernedRefundProviderFailure(ctx, db, claimed, cause, meta.CorrelationID)
+		return nil, cause
+	}
+
+	result, err := rail.Refund(ctx, map[string]any{
 		"refundId": claimed.ID, "paymentSessionId": claimed.PaymentSessionID,
 		"orderId": claimed.OrderID, "clientId": claimed.ClientID,
 		"amountMinorUnits": claimed.AmountMinorUnits, "currency": claimed.Currency,
@@ -763,10 +807,15 @@ func HandleApproveGovernedRefund(db *sql.DB) http.HandlerFunc {
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
 		item, err := ApproveGovernedRefund(r.Context(), db, r.PathValue("refundId"), input)
 		if err != nil {
-			if !sendGovernedRefundError(w, err) { shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error()) }
+			if !sendGovernedRefundError(w, err) {
+				shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			}
 			return
 		}
-		if item == nil { shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "refund not found"); return }
+		if item == nil {
+			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "refund not found")
+			return
+		}
 		shared.SendJSON(w, http.StatusOK, map[string]any{"refund": item})
 	}
 }
@@ -774,14 +823,21 @@ func HandleApproveGovernedRefund(db *sql.DB) http.HandlerFunc {
 func HandleRejectGovernedRefund(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var input RefundDecisionInput
-		if !decodeGovernedJSON(w, r, &input) { return }
+		if !decodeGovernedJSON(w, r, &input) {
+			return
+		}
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
 		item, err := RejectGovernedRefund(r.Context(), db, r.PathValue("refundId"), input)
 		if err != nil {
-			if !sendGovernedRefundError(w, err) { shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error()) }
+			if !sendGovernedRefundError(w, err) {
+				shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			}
 			return
 		}
-		if item == nil { shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "refund not found"); return }
+		if item == nil {
+			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "refund not found")
+			return
+		}
 		shared.SendJSON(w, http.StatusOK, map[string]any{"refund": item})
 	}
 }
@@ -789,14 +845,21 @@ func HandleRejectGovernedRefund(db *sql.DB) http.HandlerFunc {
 func HandleReconcileGovernedRefund(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var input RefundReconciliationInput
-		if !decodeGovernedJSON(w, r, &input) { return }
+		if !decodeGovernedJSON(w, r, &input) {
+			return
+		}
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
 		item, err := ReconcileGovernedRefund(r.Context(), db, r.PathValue("refundId"), input)
 		if err != nil {
-			if !sendGovernedRefundError(w, err) { shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error()) }
+			if !sendGovernedRefundError(w, err) {
+				shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			}
 			return
 		}
-		if item == nil { shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "refund not found"); return }
+		if item == nil {
+			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "refund not found")
+			return
+		}
 		shared.SendJSON(w, http.StatusOK, map[string]any{"refund": item})
 	}
 }
@@ -804,7 +867,10 @@ func HandleReconcileGovernedRefund(db *sql.DB) http.HandlerFunc {
 func HandleListGovernedRefundAudit(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		items, err := ListGovernedRefundAudit(db, r.PathValue("refundId"))
-		if err != nil { shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error()); return }
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			return
+		}
 		shared.SendJSON(w, http.StatusOK, map[string]any{"auditEvents": items})
 	}
 }
