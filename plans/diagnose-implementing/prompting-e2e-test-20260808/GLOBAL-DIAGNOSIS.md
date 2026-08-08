@@ -1,3 +1,0 @@
-# Global Diagnosis
-
-This is an intentionally incomplete experimental package used to verify that the execution prompt does not treat package existence as package readiness. It contains no execution units and no completed coverage assessment. A correct executor must classify it as not ready, avoid product writes, and require package repair or a different test path. The package is also used to exercise same-name collision detection, remote-head movement, stale candidate prevention, and retention cleanup. It carries no Product Truth and must never be used by runtime, CI, migrations, governance, or operations.
