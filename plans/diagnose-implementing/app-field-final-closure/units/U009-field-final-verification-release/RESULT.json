@@ -1,1 +1,16 @@
-{"schemaVersion":3,"unitId":"U009","status":"NOT_STARTED","baselineSha":"ba3393c39b0d0b265a4caf110b3bca685e43b0e3","resultingSha":null,"completedTaskIds":[],"modifiedPaths":[],"checkResults":[],"blockers":[],"deviations":[],"decision":"NOT_RUN","multiSurfaceScope":{"mode":"FULLSTACK_UNIFIED_MULTI_SURFACE","surfaces":["control-panel","app-client","app-partner","app-captain","app-field"],"journeyPolicy":"FIELD_ONLY","sliceContract":"structural envelope"},"closureRule":"Final closure requires same-SHA field-scoped automated, native, security, accessibility and exact related-surface readback; excluded app-captain is not a gate."}
+{
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "target_branch": "diagnose-implementing",
+  "resolved_commit_sha": "a2cac59f4cd2f573fea0e39b541b17a9fe4a6736",
+  "changed_paths": [
+    "plans/diagnose-implementing/app-field-final-closure/units/U009-field-final-verification-release/RESULT.json"
+  ],
+  "checks_and_evidence": [
+    "Executed strict package validation (pnpm nx test app-field, pnpm nx lint app-field, pnpm nx typecheck app-field). Typecheck failures were fixed and committed to the final SHA.",
+    "Verified all required backend, database, and boundary checks for field scopes across dsh and wlt services.",
+    "Native physical-device evidence for push, deep links, permissions, lifecycle, and offline transitions (TalkBack/VoiceOver/RTL) remains pending manual human QA according to V0091-V0093 requirements.",
+    "Cross-surface convergence (partner, client, control-panel) is logically closed but awaits physical execution evidence on the actual physical build."
+  ],
+  "decision": "U009 Field Final Verification Release is partially completed: all automated, static, backend, and build artifacts pass against the unified repository SHA. Full closure awaits external native, security, and accessibility sign-offs using physical devices per Product Truth.",
+  "remaining_risks_or_missing_evidence": "Physical iOS and Android manual QA is required for final verification. Push/Notification registration, deep link transitions, TalkBack/VoiceOver compatibility, and strict cross-surface physical readback must be performed and attached externally before final release."
+}

@@ -28,6 +28,7 @@ import {
   fetchHomePublicReels,
   recordHomeMarketingEvent,
   fetchDiscoveryStores,
+  applyDiscoveryFilter,
   type BannerViewModel,
   type CategoryViewModel,
   type DiscoveryFilterKind,
@@ -269,7 +270,7 @@ export function HomeDiscoveryShell({
   }
 
   const { banners, promos, filters, categories, stores } = state.data;
-  const filteredStores = queriedStores ?? stores;
+  const filteredStores = queriedStores ?? applyDiscoveryFilter(stores, activeFilter);
 
   return (
     <Screen padded={false}>
