@@ -109,7 +109,7 @@ const requiredMarkers = [
   // carry the reason code, the allowed next action, and the support reference
   // rather than collapsing them into one generic message.
   [
-    "services/dsh/frontend/shared/field-readiness/field-readiness.problem-view.ts",
+    "services/dsh/frontend/shared/_kernel/governed-problem-view.ts",
     ["buildGovernedProblemView", "NEXT_ACTION_LABELS", "primaryAction", "correlationId"],
   ],
   [

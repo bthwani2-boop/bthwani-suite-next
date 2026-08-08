@@ -6,7 +6,7 @@ const {
   classifyGovernedError,
   createGovernedProblem,
 } = await import(
-  "../dist/services/dsh/frontend/shared/field-readiness/field-readiness.problem.js"
+  "../dist/services/dsh/frontend/shared/_kernel/governed-problem.js"
 );
 const {
   visitActionErrorState,
@@ -16,7 +16,7 @@ const {
 const {
   buildGovernedProblemView,
 } = await import(
-  "../dist/services/dsh/frontend/shared/field-readiness/field-readiness.problem-view.js"
+  "../dist/services/dsh/frontend/shared/_kernel/governed-problem-view.js"
 );
 
 const backendSource = await readFile(
@@ -25,14 +25,14 @@ const backendSource = await readFile(
 );
 const problemSource = await readFile(
   new URL(
-    "../frontend/shared/field-readiness/field-readiness.problem.ts",
+    "../frontend/shared/_kernel/governed-problem.ts",
     import.meta.url,
   ),
   "utf8",
 );
 const problemViewSource = await readFile(
   new URL(
-    "../frontend/shared/field-readiness/field-readiness.problem-view.ts",
+    "../frontend/shared/_kernel/governed-problem-view.ts",
     import.meta.url,
   ),
   "utf8",
