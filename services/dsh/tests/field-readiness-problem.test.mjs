@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const {
-  classifyFieldReadinessError,
-  createFieldReadinessProblem,
+  classifyGovernedError,
+  createGovernedProblem,
 } = await import(
   "../dist/services/dsh/frontend/shared/field-readiness/field-readiness.problem.js"
 );
@@ -14,7 +14,7 @@ const {
   "../dist/services/dsh/frontend/shared/field-readiness/field-readiness.states.js"
 );
 const {
-  buildFieldProblemView,
+  buildGovernedProblemView,
 } = await import(
   "../dist/services/dsh/frontend/shared/field-readiness/field-readiness.problem-view.js"
 );
@@ -72,7 +72,7 @@ describe("field readiness problem contract", () => {
 
   test("preserves business blockers and their allowed recovery action", () => {
     assert.deepEqual(
-      classifyFieldReadinessError({
+      classifyGovernedError({
         kind: "http",
         status: 409,
         code: "CHECKLIST_INCOMPLETE",
@@ -89,7 +89,7 @@ describe("field readiness problem contract", () => {
       },
     );
 
-    const geofence = classifyFieldReadinessError({
+    const geofence = classifyGovernedError({
       kind: "http",
       status: 409,
       body: JSON.stringify({
@@ -104,26 +104,26 @@ describe("field readiness problem contract", () => {
   });
 
   test("distinguishes revocation, offline, not-found, and generic conflicts", () => {
-    const forbidden = classifyFieldReadinessError({ kind: "http", status: 403 });
+    const forbidden = classifyGovernedError({ kind: "http", status: 403 });
     assert.equal(forbidden.kind, "permission_denied");
     assert.equal(forbidden.nextAction, "refresh_scope");
 
-    const offline = classifyFieldReadinessError({ kind: "network", message: "socket closed" });
+    const offline = classifyGovernedError({ kind: "network", message: "socket closed" });
     assert.equal(offline.kind, "offline");
     assert.equal(offline.retryable, true);
     assert.equal(offline.code, "NETWORK_UNAVAILABLE");
 
-    const missing = classifyFieldReadinessError({ kind: "http", status: 404 });
+    const missing = classifyGovernedError({ kind: "http", status: 404 });
     assert.equal(missing.kind, "not_found");
     assert.equal(missing.nextAction, "refresh_record");
 
-    const conflict = classifyFieldReadinessError({ kind: "http", status: 409 });
+    const conflict = classifyGovernedError({ kind: "http", status: 409 });
     assert.equal(conflict.kind, "conflict");
     assert.equal(conflict.code, "STATE_CONFLICT");
   });
 
   test("keeps structured problem metadata in controller error states", () => {
-    const problem = createFieldReadinessProblem(
+    const problem = createGovernedProblem(
       "VISIT_NOT_EDITABLE",
       "لا يمكن تعديل الزيارة في حالتها الحالية.",
       { kind: "blocked", nextAction: "refresh_record" },
@@ -144,7 +144,7 @@ describe("field problem support reference", () => {
   });
 
   test("classifier preserves the correlation id alongside the reason code", () => {
-    const problem = classifyFieldReadinessError({
+    const problem = classifyGovernedError({
       kind: "http",
       status: 409,
       code: "OPEN_ESCALATION",
@@ -156,9 +156,9 @@ describe("field problem support reference", () => {
   });
 
   test("absent correlation id does not fabricate one", () => {
-    const problem = classifyFieldReadinessError({ kind: "http", status: 403 });
+    const problem = classifyGovernedError({ kind: "http", status: 403 });
     assert.equal(problem.correlationId, undefined);
-    assert.equal(buildFieldProblemView(problem).correlationId, null);
+    assert.equal(buildGovernedProblemView(problem).correlationId, null);
   });
 });
 
@@ -175,7 +175,7 @@ describe("field problem view model", () => {
     assert.ok(nextActions.length >= 12, "next action labels must be present");
 
     for (const code of BACKEND_CODES) {
-      const view = buildFieldProblemView(classifyFieldReadinessError({ code }));
+      const view = buildGovernedProblemView(classifyGovernedError({ code }));
       assert.ok(view.title, `${code} must produce a title`);
       assert.ok(view.description, `${code} must produce a description`);
       assert.equal(view.code, code);
@@ -183,8 +183,8 @@ describe("field problem view model", () => {
   });
 
   test("a non-retryable blocker offers its recovery action and no bare retry", () => {
-    const view = buildFieldProblemView(
-      classifyFieldReadinessError({ code: "CHECKLIST_INCOMPLETE" }),
+    const view = buildGovernedProblemView(
+      classifyGovernedError({ code: "CHECKLIST_INCOMPLETE" }),
     );
     assert.equal(view.retryable, false);
     assert.deepEqual(view.primaryAction, {
@@ -194,8 +194,8 @@ describe("field problem view model", () => {
   });
 
   test("a retryable failure stays retryable", () => {
-    const view = buildFieldProblemView(
-      classifyFieldReadinessError({ kind: "network", message: "socket closed" }),
+    const view = buildGovernedProblemView(
+      classifyGovernedError({ kind: "network", message: "socket closed" }),
     );
     assert.equal(view.retryable, true);
     assert.equal(view.primaryAction?.actionId, "retry");
@@ -210,7 +210,7 @@ describe("field problem view model", () => {
       ["MEDIA_PERMISSION_DENIED", "add_evidence"],
       ["OFFLINE_QUEUE_CORRUPT", "recover_queue"],
     ]) {
-      const problem = classifyFieldReadinessError({ code });
+      const problem = classifyGovernedError({ code });
       assert.equal(problem.code, code);
       assert.equal(problem.nextAction, expectedAction);
       assert.equal(problem.retryable, false, `${code} must not offer a bare retry`);
@@ -218,13 +218,13 @@ describe("field problem view model", () => {
   });
 
   test("an unmapped code degrades to a diagnosable internal problem", () => {
-    const problem = classifyFieldReadinessError({
+    const problem = classifyGovernedError({
       kind: "http",
       status: 500,
       code: "SOME_FUTURE_CODE",
       correlationId: "cid-1",
     });
-    const view = buildFieldProblemView(problem);
+    const view = buildGovernedProblemView(problem);
     assert.equal(view.code, "SOME_FUTURE_CODE");
     assert.equal(view.correlationId, "cid-1");
     assert.ok(view.supportHint, "internal failures must point at support");

@@ -139,9 +139,8 @@ func partnerRequestWithActor(r *http.Request, actor store.StoreActor) *http.Requ
 	if strings.TrimSpace(actor.OperatorContextID) != "" {
 		ctx = partner.WithOperatorContext(ctx, actor.OperatorContextID)
 	}
-	ctx = context.WithValue(ctx, "actor_id", actor.ID)
+	ctx = partner.WithActorContext(ctx, actor.ID, dshActorSurface(actor.Role))
 	ctx = context.WithValue(ctx, "actor_phone", actor.PhoneE164)
-	ctx = context.WithValue(ctx, "actor_surface", dshActorSurface(actor.Role))
 	ctx = context.WithValue(ctx, storeActorContextKeyType{}, actor)
 	return r.WithContext(ctx)
 }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   buildFieldMutationContext,
-  createFieldReadinessProblem,
+  createGovernedProblem,
   createFieldVisit,
   fetchFieldVisits,
   completeFieldVisit,
@@ -12,9 +12,9 @@ import {
   updateEscalation,
   fetchPartnerOnboardingStatus,
   fetchFieldWorkQueue,
-  classifyFieldReadinessError,
+  classifyGovernedError,
   type FieldMutationContext,
-  type FieldReadinessProblem,
+  type GovernedProblem,
 } from "./field-readiness.api";
 import { enqueueFieldOperation, type FieldOfflineOperationType } from "./field-offline-queue";
 import {
@@ -37,8 +37,8 @@ import type {
   DshReadinessCheck,
 } from "./field-readiness.types";
 
-function resolveProblem(error: unknown): FieldReadinessProblem {
-  return classifyFieldReadinessError(error);
+function resolveProblem(error: unknown): GovernedProblem {
+  return classifyGovernedError(error);
 }
 
 function isAuthenticated(authKind: string) {
@@ -147,7 +147,7 @@ export function useFieldChecklistController(
       ]);
       const visit = visits.find((candidate) => candidate.id === visitId);
       if (!visit) {
-        setChecklistState(checklistErrorState(createFieldReadinessProblem(
+        setChecklistState(checklistErrorState(createGovernedProblem(
           "VISIT_NOT_IN_STORE_SCOPE",
           "لم يتم إيجاد الزيارة المحددة ضمن المتجر أو نطاق التكليف الحالي.",
           { kind: "not_found", nextAction: "refresh_record" },
@@ -166,7 +166,7 @@ export function useFieldChecklistController(
 
   const submitCheck = useCallback(async (input: DshUpsertCheckInput) => {
     if (checklistState.kind !== "success" || checklistState.visit.status !== "in_progress") {
-      setCheckActionState(checkActionErrorState(createFieldReadinessProblem(
+      setCheckActionState(checkActionErrorState(createGovernedProblem(
         "VISIT_NOT_EDITABLE",
         "لا يمكن تعديل قائمة التحقق بعد إغلاق الزيارة أو قبل تحميلها.",
         { kind: "blocked", nextAction: "refresh_record" },
@@ -306,7 +306,7 @@ export function useFieldWorkQueueController(authKind = "unauthenticated") {
 export type FieldVerificationLoadState =
   | { readonly kind: "idle" }
   | { readonly kind: "loading" }
-  | { readonly kind: "error"; readonly message: string; readonly problem: FieldReadinessProblem }
+  | { readonly kind: "error"; readonly message: string; readonly problem: GovernedProblem }
   | {
       readonly kind: "success";
       readonly visit: DshFieldVisit;
@@ -330,7 +330,7 @@ export function useFieldVerificationController(
       ]);
       const visit = visits.find((item) => item.id === visitId);
       if (!visit) {
-        const problem = createFieldReadinessProblem(
+        const problem = createGovernedProblem(
           "VISIT_NOT_IN_STORE_SCOPE",
           "لم يتم إيجاد الزيارة المحددة ضمن المتجر أو نطاق التكليف الحالي.",
           { kind: "not_found", nextAction: "refresh_record" },

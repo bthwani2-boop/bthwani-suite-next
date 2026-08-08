@@ -14,14 +14,14 @@ import type {
 } from "./field-readiness.types";
 
 export {
-  classifyFieldReadinessError,
-  createFieldReadinessProblem,
-} from "./field-readiness.problem";
+  classifyGovernedError,
+  createGovernedProblem,
+} from "../_kernel/governed-problem";
 export type {
-  FieldReadinessNextAction,
-  FieldReadinessProblem,
-  FieldReadinessProblemKind,
-} from "./field-readiness.problem";
+  GovernedNextAction,
+  GovernedProblem,
+  GovernedProblemKind,
+} from "../_kernel/governed-problem";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "field-readiness");
 

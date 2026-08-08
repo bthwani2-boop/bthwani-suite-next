@@ -87,7 +87,7 @@ export function DshFieldStoresHistoryScreen({ onBack }: DshFieldStoresHistoryScr
                 <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle, marginVertical: spacing[3] }} />
                 
                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: spacing[2] }}>
-                  <Icon name="event" size={14} color={colorRoles.textMuted} />
+                  <Icon name="calendar-outline" size={14} color={colorRoles.textMuted} />
                   <Text role="caption" tone="muted">
                     {new Date(partner.updatedAt).toLocaleDateString('ar-YE', { year: 'numeric', month: 'long', day: 'numeric' })}
                   </Text>

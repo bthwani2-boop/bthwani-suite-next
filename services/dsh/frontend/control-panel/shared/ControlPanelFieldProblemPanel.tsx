@@ -10,12 +10,12 @@
 import type { ReactNode } from "react";
 import { CpStatePanel } from "@bthwani/control-panel/components";
 import {
-  buildFieldProblemView,
-  type FieldReadinessProblem,
+  buildGovernedProblemView,
+  type GovernedProblem,
 } from "../../shared/field-readiness";
 
 export type ControlPanelFieldProblemPanelProps = {
-  readonly problem: FieldReadinessProblem;
+  readonly problem: GovernedProblem;
   /** Overrides the kind-derived title when the surrounding context needs one. */
   readonly title?: string;
   readonly children?: ReactNode;
@@ -26,7 +26,7 @@ export function ControlPanelFieldProblemPanel({
   title,
   children,
 }: ControlPanelFieldProblemPanelProps) {
-  const view = buildFieldProblemView(problem);
+  const view = buildGovernedProblemView(problem);
   // The reason code belongs in the `code` slot; putting the message there
   // leaves operators without the code they need to escalate.
   const reference = view.correlationId

@@ -1,4 +1,4 @@
-export type FieldReadinessProblemKind =
+export type GovernedProblemKind =
   | "permission_denied"
   | "offline"
   | "not_found"
@@ -9,7 +9,7 @@ export type FieldReadinessProblemKind =
   | "location"
   | "internal";
 
-export type FieldReadinessNextAction =
+export type GovernedNextAction =
   | "reauthenticate"
   | "refresh_scope"
   | "complete_checklist"
@@ -25,12 +25,12 @@ export type FieldReadinessNextAction =
   | "contact_support"
   | "none";
 
-export type FieldReadinessProblem = {
-  readonly kind: FieldReadinessProblemKind;
+export type GovernedProblem = {
+  readonly kind: GovernedProblemKind;
   readonly code: string;
   readonly message: string;
   readonly retryable: boolean;
-  readonly nextAction: FieldReadinessNextAction;
+  readonly nextAction: GovernedNextAction;
   readonly status?: number;
   readonly serverMessage?: string;
   /** Support reference echoed from the request that produced this failure. */
@@ -38,7 +38,7 @@ export type FieldReadinessProblem = {
 };
 
 type ProblemDefinition = Omit<
-  FieldReadinessProblem,
+  GovernedProblem,
   "code" | "status" | "serverMessage" | "correlationId"
 >;
 
@@ -219,18 +219,18 @@ function normalizeCode(value: string | undefined): string | undefined {
   return value?.trim().toUpperCase().replaceAll("-", "_");
 }
 
-export function createFieldReadinessProblem(
+export function createGovernedProblem(
   code: string,
   message: string,
   options: {
-    readonly kind?: FieldReadinessProblemKind;
+    readonly kind?: GovernedProblemKind;
     readonly retryable?: boolean;
-    readonly nextAction?: FieldReadinessNextAction;
+    readonly nextAction?: GovernedNextAction;
     readonly status?: number;
     readonly serverMessage?: string;
     readonly correlationId?: string;
   } = {},
-): FieldReadinessProblem {
+): GovernedProblem {
   return {
     kind: options.kind ?? "validation",
     code: normalizeCode(code) ?? "CLIENT_ERROR",
@@ -248,14 +248,14 @@ export function createFieldReadinessProblem(
  * attaches the request correlation id so every surface can render a support
  * reference instead of collapsing the failure into a generic message.
  */
-export function classifyFieldReadinessError(error: unknown): FieldReadinessProblem {
+export function classifyGovernedError(error: unknown): GovernedProblem {
   const problem = classifyProblem(error);
   const typed = (error && typeof error === "object" ? error : {}) as ErrorLike;
   const correlationId = asNonEmptyString(typed.correlationId);
   return correlationId ? { ...problem, correlationId } : problem;
 }
 
-function classifyProblem(error: unknown): FieldReadinessProblem {
+function classifyProblem(error: unknown): GovernedProblem {
   const typed = (error && typeof error === "object" ? error : {}) as ErrorLike;
   const status = typeof typed.status === "number" && Number.isFinite(typed.status)
     ? typed.status
@@ -277,7 +277,7 @@ function classifyProblem(error: unknown): FieldReadinessProblem {
   }
 
   if (typed.kind === "invalid_request") {
-    return createFieldReadinessProblem(
+    return createGovernedProblem(
       "INVALID_REQUEST",
       serverMessage ?? "تعذر إرسال العملية بسبب بيانات غير صالحة. راجع المدخلات ثم أعد المحاولة.",
       {

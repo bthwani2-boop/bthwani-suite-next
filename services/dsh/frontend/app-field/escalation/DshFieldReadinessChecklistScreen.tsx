@@ -19,10 +19,10 @@ import {
   buildChecklistViewModel,
   CHECK_TYPE_LABELS,
   VISIT_STATUS_LABELS,
-  classifyFieldReadinessError,
+  classifyGovernedError,
   type DshCheckType,
   type DshCheckStatus,
-  type FieldReadinessProblem,
+  type GovernedProblem,
 } from "../../shared/field-readiness";
 import { uploadFieldStoreMedia } from "../../shared/media";
 import { DshFieldReferenceTag } from "../components/DshFieldReferenceTag";
@@ -45,7 +45,7 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
   const [evidenceUrl, setEvidenceUrl] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [uploadingEvidence, setUploadingEvidence] = React.useState(false);
-  const [uploadProblem, setUploadProblem] = React.useState<FieldReadinessProblem | null>(null);
+  const [uploadProblem, setUploadProblem] = React.useState<GovernedProblem | null>(null);
 
   if (identity.state.kind !== "authenticated") {
     return (
@@ -84,7 +84,7 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
         ? await ImagePicker.requestCameraPermissionsAsync()
         : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        setUploadProblem(classifyFieldReadinessError({ code: "MEDIA_PERMISSION_DENIED" }));
+        setUploadProblem(classifyGovernedError({ code: "MEDIA_PERMISSION_DENIED" }));
         return;
       }
       const result = source === "camera"
@@ -98,12 +98,12 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
         mimeType: asset.mimeType ?? "image/jpeg",
       });
       if (!mediaRef.trim()) {
-        setUploadProblem(classifyFieldReadinessError({ code: "MEDIA_UPLOAD_FAILED" }));
+        setUploadProblem(classifyGovernedError({ code: "MEDIA_UPLOAD_FAILED" }));
         return;
       }
       setEvidenceUrl(mediaRef.trim());
     } catch (error) {
-      setUploadProblem(classifyFieldReadinessError(error));
+      setUploadProblem(classifyGovernedError(error));
     } finally {
       setUploadingEvidence(false);
     }

@@ -67,6 +67,10 @@ func HandleOperatorContextListFieldPartnerDrafts(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		actorID, _ := actorFromContext(r)
+		if strings.TrimSpace(actorID) == "" {
+			sendError(w, http.StatusUnauthorized, "UNAUTHORIZED", "authenticated actor context is required for field operations")
+			return
+		}
 		query := parsePartnerListQuery(r, actorID)
 		category := strings.TrimSpace(r.URL.Query().Get("category"))
 		partners, total, err := ListPartnersForOperatorContextCategory(db, operatorContextID, query, category)

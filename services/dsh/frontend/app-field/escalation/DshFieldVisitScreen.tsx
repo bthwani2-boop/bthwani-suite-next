@@ -19,9 +19,9 @@ import {
 import {
   useFieldVisitController,
   buildVisitViewModel,
-  classifyFieldReadinessError,
+  classifyGovernedError,
   type DshLocationEvidence,
-  type FieldReadinessProblem,
+  type GovernedProblem,
 } from "../../shared/field-readiness";
 import { DshFieldReferenceTag } from "../components/DshFieldReferenceTag";
 import {
@@ -42,7 +42,7 @@ type Props = {
  * semantics as the equivalent server refusal.
  */
 class FieldLocationProblemError extends Error {
-  constructor(readonly problem: FieldReadinessProblem) {
+  constructor(readonly problem: GovernedProblem) {
     super(problem.message);
     this.name = "FieldLocationProblemError";
   }
@@ -53,7 +53,7 @@ class FieldLocationProblemError extends Error {
  * codes) and only then applies an optional, more specific message.
  */
 function rejectLocation(code: string, message?: string): never {
-  const canonical = classifyFieldReadinessError({ code });
+  const canonical = classifyGovernedError({ code });
   throw new FieldLocationProblemError(
     message ? { ...canonical, message } : canonical,
   );
@@ -93,9 +93,9 @@ async function captureGovernedLocation(): Promise<DshLocationEvidence> {
   };
 }
 
-function toLocationProblem(error: unknown): FieldReadinessProblem {
+function toLocationProblem(error: unknown): GovernedProblem {
   if (error instanceof FieldLocationProblemError) return error.problem;
-  return classifyFieldReadinessError(error);
+  return classifyGovernedError(error);
 }
 
 export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVerification }: Props) {
@@ -103,7 +103,7 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
   const { listState, actionState, reload, startVisit, completeVisit, resetAction } =
     useFieldVisitController(storeId, identity.state.kind);
   const [locationBusy, setLocationBusy] = useState(false);
-  const [locationProblem, setLocationProblem] = useState<FieldReadinessProblem | null>(null);
+  const [locationProblem, setLocationProblem] = useState<GovernedProblem | null>(null);
 
   const hasActiveVisit = useMemo(
     () => listState.kind === "success" && listState.visits.some((visit) => visit.status === "in_progress"),
@@ -129,7 +129,7 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
     if (hasActiveVisit || startQueued) {
       // Same reason code the server would return, so the employee reads one
       // consistent explanation whichever side detects the conflict.
-      setLocationProblem(classifyFieldReadinessError({ code: "VISIT_ALREADY_IN_PROGRESS" }));
+      setLocationProblem(classifyGovernedError({ code: "VISIT_ALREADY_IN_PROGRESS" }));
       return;
     }
     setLocationBusy(true);

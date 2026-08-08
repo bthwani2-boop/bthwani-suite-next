@@ -17,7 +17,7 @@ import {
   createFieldVisit, fetchFieldVisits, completeFieldVisit,
   upsertReadinessCheck, fetchVisitChecks,
   createReadinessEscalation, fetchOperatorEscalations, updateEscalation,
-  fetchPartnerOnboardingStatus, classifyFieldReadinessError,
+  fetchPartnerOnboardingStatus, classifyGovernedError,
 } from "./field-readiness.api";
 import type {
   DshCreateVisitInput,
@@ -52,7 +52,7 @@ export function makeFieldVisitController(
       const visits = await fetchFieldVisits(storeId);
       setState({ ...state, listState: visits.length === 0 ? visitEmptyState() : visitSuccessState(visits) });
     } catch (err) {
-      setState({ ...state, listState: visitErrorState(classifyFieldReadinessError(err)) });
+      setState({ ...state, listState: visitErrorState(classifyGovernedError(err)) });
     }
   }
 
@@ -62,7 +62,7 @@ export function makeFieldVisitController(
       const visit = await createFieldVisit(storeId, input);
       setState({ ...state, actionState: visitActionSuccessState(visit) });
     } catch (err) {
-      setState({ ...state, actionState: visitActionErrorState(classifyFieldReadinessError(err)) });
+      setState({ ...state, actionState: visitActionErrorState(classifyGovernedError(err)) });
     }
   }
 
@@ -72,7 +72,7 @@ export function makeFieldVisitController(
       const visit = await completeFieldVisit(visitId, input);
       setState({ ...state, actionState: visitActionSuccessState(visit) });
     } catch (err) {
-      setState({ ...state, actionState: visitActionErrorState(classifyFieldReadinessError(err)) });
+      setState({ ...state, actionState: visitActionErrorState(classifyGovernedError(err)) });
     }
   }
 
@@ -93,7 +93,7 @@ export function makeFieldChecklistController(
       const checks = await fetchVisitChecks(visit.id);
       setState({ ...state, checklistState: checklistSuccessState(visit, checks) });
     } catch (err) {
-      setState({ ...state, checklistState: checklistErrorState(classifyFieldReadinessError(err)) });
+      setState({ ...state, checklistState: checklistErrorState(classifyGovernedError(err)) });
     }
   }
 
@@ -103,7 +103,7 @@ export function makeFieldChecklistController(
       const check = await upsertReadinessCheck(visitId, input);
       setState({ ...state, checkActionState: checkActionSuccessState(check) });
     } catch (err) {
-      setState({ ...state, checkActionState: checkActionErrorState(classifyFieldReadinessError(err)) });
+      setState({ ...state, checkActionState: checkActionErrorState(classifyGovernedError(err)) });
     }
   }
 
@@ -124,7 +124,7 @@ export function makeFieldEscalationController(
       const escalations = await fetchOperatorEscalations(statusFilter);
       setState({ ...state, listState: escalations.length === 0 ? escalationEmptyState() : escalationSuccessState(escalations) });
     } catch (err) {
-      setState({ ...state, listState: escalationErrorState(classifyFieldReadinessError(err)) });
+      setState({ ...state, listState: escalationErrorState(classifyGovernedError(err)) });
     }
   }
 
@@ -134,7 +134,7 @@ export function makeFieldEscalationController(
       const escalation = await createReadinessEscalation(storeId, input);
       setState({ ...state, actionState: escalationActionSuccessState(escalation) });
     } catch (err) {
-      setState({ ...state, actionState: escalationActionErrorState(classifyFieldReadinessError(err)) });
+      setState({ ...state, actionState: escalationActionErrorState(classifyGovernedError(err)) });
     }
   }
 
@@ -144,7 +144,7 @@ export function makeFieldEscalationController(
       const escalation = await updateEscalation(escalationId, input);
       setState({ ...state, actionState: escalationActionSuccessState(escalation) });
     } catch (err) {
-      setState({ ...state, actionState: escalationActionErrorState(classifyFieldReadinessError(err)) });
+      setState({ ...state, actionState: escalationActionErrorState(classifyGovernedError(err)) });
     }
   }
 
@@ -165,7 +165,7 @@ export function makePartnerOnboardingStatusController(
       const status = await fetchPartnerOnboardingStatus(storeId);
       setState(onboardingStatusSuccessState(status));
     } catch (err) {
-      setState(onboardingStatusErrorState(classifyFieldReadinessError(err)));
+      setState(onboardingStatusErrorState(classifyGovernedError(err)));
     }
   }
 

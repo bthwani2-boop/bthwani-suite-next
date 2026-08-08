@@ -21,9 +21,9 @@ import {
   type FieldOfflineOperation,
 } from "./field-offline-queue";
 import {
-  classifyFieldReadinessError,
-  type FieldReadinessProblem,
-} from "./field-readiness.problem";
+  classifyGovernedError,
+  type GovernedProblem,
+} from "../_kernel/governed-problem";
 
 export type FieldOfflineExecutorMap = Partial<
   Record<FieldOfflineOperationType, (op: FieldOfflineOperation) => Promise<void>>
@@ -37,7 +37,7 @@ export type FieldOfflineSyncState =
       readonly kind: "error";
       readonly message: string;
       /** Carries the reason code so callers never branch on message text. */
-      readonly problem: FieldReadinessProblem;
+      readonly problem: GovernedProblem;
     };
 
 export type FieldOfflineSyncController = {
@@ -47,7 +47,7 @@ export type FieldOfflineSyncController = {
 };
 
 function queueErrorState(error: unknown): FieldOfflineSyncState {
-  const problem = classifyFieldReadinessError(error);
+  const problem = classifyGovernedError(error);
   return { kind: "error", message: problem.message, problem };
 }
 

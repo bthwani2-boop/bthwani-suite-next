@@ -110,7 +110,7 @@ const requiredMarkers = [
   // rather than collapsing them into one generic message.
   [
     "services/dsh/frontend/shared/field-readiness/field-readiness.problem-view.ts",
-    ["buildFieldProblemView", "NEXT_ACTION_LABELS", "primaryAction", "correlationId"],
+    ["buildGovernedProblemView", "NEXT_ACTION_LABELS", "primaryAction", "correlationId"],
   ],
   [
     "services/dsh/frontend/shared/_kernel/dsh-http-request.ts",
@@ -118,11 +118,11 @@ const requiredMarkers = [
   ],
   [
     "services/dsh/frontend/app-field/components/DshFieldProblemNotice.tsx",
-    ["buildFieldProblemView", "view.retryable && Boolean(onRetry)", "DshFieldReferenceTag"],
+    ["buildGovernedProblemView", "view.retryable && Boolean(onRetry)", "DshFieldReferenceTag"],
   ],
   [
     "services/dsh/frontend/control-panel/shared/ControlPanelFieldProblemPanel.tsx",
-    ["buildFieldProblemView", "code={reference}"],
+    ["buildGovernedProblemView", "code={reference}"],
   ],
 ];
 

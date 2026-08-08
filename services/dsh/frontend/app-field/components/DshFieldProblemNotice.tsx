@@ -11,19 +11,19 @@ import React from 'react';
 import { View } from 'react-native';
 import { Button, InlineNotice, StateView, spacing } from '@bthwani/ui-kit';
 import {
-  buildFieldProblemView,
-  type FieldReadinessNextAction,
-  type FieldReadinessProblem,
+  buildGovernedProblemView,
+  type GovernedNextAction,
+  type GovernedProblem,
 } from '../../shared/field-readiness';
 import { DshFieldReferenceTag } from './DshFieldReferenceTag';
 
 /** Handlers keyed by the server-declared next action. */
 export type DshFieldProblemHandlers = Partial<
-  Record<FieldReadinessNextAction, () => void>
+  Record<GovernedNextAction, () => void>
 >;
 
 export type DshFieldProblemNoticeProps = {
-  readonly problem: FieldReadinessProblem;
+  readonly problem: GovernedProblem;
   /** Handler per allowed next action; the button appears only when handled. */
   readonly handlers?: DshFieldProblemHandlers;
   /** Plain retry. Offered only when the problem is actually retryable. */
@@ -38,7 +38,7 @@ export function DshFieldProblemNotice({
   onRetry,
   onDismiss,
 }: DshFieldProblemNoticeProps) {
-  const view = buildFieldProblemView(problem);
+  const view = buildGovernedProblemView(problem);
   const primaryHandler = view.primaryAction
     ? handlers?.[view.primaryAction.actionId]
     : undefined;
@@ -80,7 +80,7 @@ export function DshFieldProblemNotice({
 }
 
 export type DshFieldProblemStateProps = {
-  readonly problem: FieldReadinessProblem;
+  readonly problem: GovernedProblem;
   readonly handlers?: DshFieldProblemHandlers;
   readonly onRetry?: (() => void) | undefined;
   readonly onContactSupport?: (() => void) | undefined;
@@ -93,7 +93,7 @@ export function DshFieldProblemState({
   onRetry,
   onContactSupport,
 }: DshFieldProblemStateProps) {
-  const view = buildFieldProblemView(problem);
+  const view = buildGovernedProblemView(problem);
   const primaryHandler = view.primaryAction
     ? handlers?.[view.primaryAction.actionId]
     : undefined;

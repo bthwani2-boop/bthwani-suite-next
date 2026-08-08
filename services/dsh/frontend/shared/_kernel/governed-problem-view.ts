@@ -1,8 +1,8 @@
 import type {
-  FieldReadinessNextAction,
-  FieldReadinessProblem,
-  FieldReadinessProblemKind,
-} from "./field-readiness.problem";
+  GovernedNextAction,
+  GovernedProblem,
+  GovernedProblemKind,
+} from "./governed-problem";
 
 /**
  * Single presentation source for a governed field failure.
@@ -12,27 +12,27 @@ import type {
  * the same title, the same next action, and the same retry affordance
  * everywhere. Screens must not re-derive intent from the message text.
  */
-export type FieldProblemAction = {
-  readonly actionId: FieldReadinessNextAction;
+export type GovernedProblemAction = {
+  readonly actionId: GovernedNextAction;
   readonly label: string;
 };
 
-export type FieldProblemView = {
+export type GovernedProblemView = {
   readonly title: string;
   readonly description: string;
   readonly code: string;
   readonly correlationId: string | null;
   /** True only when re-issuing the identical request can succeed. */
   readonly retryable: boolean;
-  readonly primaryAction: FieldProblemAction | null;
+  readonly primaryAction: GovernedProblemAction | null;
   readonly supportHint: string | null;
 };
 
 /**
- * Exhaustive record: adding a `FieldReadinessNextAction` without a label is a
+ * Exhaustive record: adding a `GovernedNextAction` without a label is a
  * compile error rather than a silently unlabeled button.
  */
-const NEXT_ACTION_LABELS: Readonly<Record<FieldReadinessNextAction, string | null>> = {
+const NEXT_ACTION_LABELS: Readonly<Record<GovernedNextAction, string | null>> = {
   reauthenticate: "تسجيل الدخول مجددًا",
   refresh_scope: "تحديث التكليفات",
   complete_checklist: "استكمال قائمة التحقق",
@@ -49,7 +49,7 @@ const NEXT_ACTION_LABELS: Readonly<Record<FieldReadinessNextAction, string | nul
   none: null,
 };
 
-const KIND_TITLES: Readonly<Record<FieldReadinessProblemKind, string>> = {
+const KIND_TITLES: Readonly<Record<GovernedProblemKind, string>> = {
   permission_denied: "الصلاحية غير متاحة",
   offline: "لا يوجد اتصال بالخدمة",
   not_found: "السجل غير متاح",
@@ -61,15 +61,15 @@ const KIND_TITLES: Readonly<Record<FieldReadinessProblemKind, string>> = {
   internal: "خلل تشغيلي",
 };
 
-const SUPPORT_HINT_KINDS: ReadonlySet<FieldReadinessProblemKind> = new Set<FieldReadinessProblemKind>([
+const SUPPORT_HINT_KINDS: ReadonlySet<GovernedProblemKind> = new Set<GovernedProblemKind>([
   "internal",
   "conflict",
   "permission_denied",
 ]);
 
-export function buildFieldProblemView(problem: FieldReadinessProblem): FieldProblemView {
+export function buildGovernedProblemView(problem: GovernedProblem): GovernedProblemView {
   const label = NEXT_ACTION_LABELS[problem.nextAction];
-  const primaryAction: FieldProblemAction | null =
+  const primaryAction: GovernedProblemAction | null =
     label === null ? null : { actionId: problem.nextAction, label };
 
   return {
@@ -89,6 +89,6 @@ export function buildFieldProblemView(problem: FieldReadinessProblem): FieldProb
  * Convenience for surfaces that only need to know whether a bare retry button
  * is legitimate. A non-retryable problem must never offer a plain retry.
  */
-export function fieldProblemAllowsRetry(problem: FieldReadinessProblem): boolean {
+export function governedProblemAllowsRetry(problem: GovernedProblem): boolean {
   return problem.retryable;
 }

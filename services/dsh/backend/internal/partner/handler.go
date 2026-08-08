@@ -35,8 +35,8 @@ func idempotencyKey(r *http.Request) string {
 }
 
 func actorFromContext(r *http.Request) (actorID, surface string) {
-	actorID, _ = r.Context().Value("actor_id").(string)
-	surface, _ = r.Context().Value("actor_surface").(string)
+	actorID, _ = r.Context().Value(actorIDKey).(string)
+	surface, _ = r.Context().Value(actorSurfaceKey).(string)
 	return actorID, surface
 }
 
