@@ -20,7 +20,7 @@
     {"path": "governance/policies/security.md", "classification": "ACTIVE_CANONICAL", "precedenceId": "UNIFIED_GOVERNANCE", "authorityDomains": ["security", "privacy", "secrets", "trusted_context", "isolation"]},
     {"path": "governance/policies/delivery.md", "classification": "ACTIVE_CANONICAL", "precedenceId": "UNIFIED_GOVERNANCE", "authorityDomains": ["branch_execution", "evidence", "sdlc", "ci", "stage_gates", "release", "deployment", "production", "cleanup"]},
 
-    {"path": "governance/product/contracts", "classification": "CONDITIONAL_CANONICAL", "precedenceId": "CAPABILITY_PRODUCT_TRUTH", "authorityDomains": ["capability_product_truth"], "scopeLimit": "Each contract governs only its declared capability and must conform to the PRD and general policies."},
+    {"path": "governance/product/contracts", "classification": "CONDITIONAL_CANONICAL", "precedenceId": "CAPABILITY_PRODUCT_TRUTH", "authorityDomains": ["capability_product_truth"], "appliesWhen": "The current task affects a capability represented by a registered Product Truth contract under this directory.", "scopeLimit": "Each contract governs only its declared capability and must conform to the PRD and general policies."},
 
     {"path": "governance/policies/repository-retention-policy.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["repository_retention", "repository_hygiene"]},
     {"path": "governance/contracts", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["decision_vocabulary", "shared_contract_schemas", "technical_registries", "sdlc_machine_contract"]},
