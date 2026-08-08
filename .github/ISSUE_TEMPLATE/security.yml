@@ -1,23 +1,52 @@
-name: Security Incident or Advisory
-description: Report a security-sensitive issue or maintainer review request.
-labels: ["security"]
-body:
-  - type: markdown
-    attributes:
-      value: |
-        WARNING: Do NOT disclose zero-day or high-risk vulnerabilities publicly.
-        Use this issue template only for internal tasks, hardening, or general maintainer policy.
-  - type: textarea
-    id: details
-    attributes:
-      label: Hardening Details
-      placeholder: Describe the security area (e.g. CORS, Identity token, Auth checks).
-    validations:
-      required: true
-  - type: textarea
-    id: resolution
-    attributes:
-      label: Proposed Mitigation
-      placeholder: Describe steps taken or required to harden.
-    validations:
-      required: true
+name: Security Hardening or Review
+ description: Track non-secret security hardening, review, or remediation work. Do not disclose exploitable sensitive details publicly.
+ labels: ["security"]
+ body:
+   - type: markdown
+     attributes:
+       value: |
+         Do not publish credentials, tokens, PII, private keys, exploit payloads, undisclosed vulnerability details, production secrets, or sensitive provider data in a public issue. If safe public description is not possible, stop here and use the repository owner's approved private security-reporting channel.
+   - type: input
+     id: candidate
+     attributes:
+       label: Candidate or affected commit
+       placeholder: Exact SHA, range, or N/A for preventive hardening
+     validations:
+       required: true
+   - type: dropdown
+     id: domain
+     attributes:
+       label: Security domain
+       options:
+         - Authentication / sessions
+         - Authorization / object scope
+         - Trusted context / isolation
+         - Privacy / PII
+         - Secrets / credentials
+         - Service-to-service / provider security
+         - Dependency / supply chain
+         - CI / workflow security
+         - Other safe-to-disclose hardening
+     validations:
+       required: true
+   - type: textarea
+     id: scope
+     attributes:
+       label: Safe scope description
+       placeholder: Describe affected boundary and observable risk without exploit details, secrets, or personal data.
+     validations:
+       required: true
+   - type: textarea
+     id: mitigation
+     attributes:
+       label: Required mitigation and invariant
+       placeholder: State the security invariant that must hold and the remediation class; avoid sensitive reproduction payloads.
+     validations:
+       required: true
+   - type: textarea
+     id: evidence
+     attributes:
+       label: Sanitized verification references
+       placeholder: Candidate-bound guard/test/run references, reviewer evidence, or NEEDS_EVIDENCE. Do not paste restricted raw logs.
+     validations:
+       required: true
