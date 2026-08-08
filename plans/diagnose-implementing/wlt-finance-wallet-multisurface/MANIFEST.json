@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 3,
+  "packageClass": "DERIVED_SUPPORT_ARTIFACT",
+  "task": {
+    "id": "PKG-WLT_FINANCE_WALLET_MULTISURFACE",
+    "name": "wlt-finance-wallet-multisurface",
+    "objective": "Diagnose and prepare complete, finance-only implementation for WLT money movement, wallets, payments, Cash-In, COD, commissions, payouts, settlements, reconciliation, treasury and finance control across every materially affected BThwani surface without adding unrelated product scope.",
+    "primarySurface": "finance-wallet-domain",
+    "createdAt": "2026-08-08T14:20:00Z"
+  },
+  "repository": {
+    "name": "bthwani2-boop/bthwani-suite-next",
+    "targetBranch": "abbas",
+    "pinnedStartSha": "4445b3e8a9d25d0e19d4ee92c6f6a6f5f7e52133",
+    "latestObservedRemoteSha": "4445b3e8a9d25d0e19d4ee92c6f6a6f5f7e52133"
+  },
+  "authority": {
+    "root": "governance/authority/authority-precedence.json",
+    "entryPoint": "AGENTS.md",
+    "canCreatePolicy": false,
+    "canOverrideCanonicalSource": false
+  },
+  "status": {
+    "diagnosis": "COMPLETE",
+    "plan": "READY",
+    "implementation": "NOT_STARTED",
+    "verification": "NOT_STARTED",
+    "decision": "NEEDS_EVIDENCE"
+  },
+  "disposability": {
+    "runtimeDependsOnPackage": false,
+    "buildDependsOnPackage": false,
+    "ciDependsOnPackage": false,
+    "migrationDependsOnPackage": false,
+    "governanceDependsOnPackage": false,
+    "operationsDependOnPackage": false,
+    "containsSecretsOrProductionData": false
+  }
+}
