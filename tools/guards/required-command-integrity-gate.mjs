@@ -6,8 +6,7 @@ import { resolveWorkflowInventory } from "./_workflow-registry.mjs";
 const guardId = "required-command-integrity-gate";
 const violations = [];
 const packageFile = "package.json";
-const enforcementFile = "governance/github/repository-enforcement.json";
-const fullVerificationPolicy = "governance/github/full-verification-policy.json";
+const fullVerificationPolicy = "governance/contracts/full-verification-policy.json";
 const workflowsRoot = ".github/workflows";
 const manualDeepRelative = `${workflowsRoot}/manual-deep-verification.yml`;
 const immutableCoreWorkflows = [
@@ -55,7 +54,6 @@ function rejectMarkers(relativePath, content, markers) {
 }
 
 const packageJson = JSON.parse(text(packageFile));
-const enforcement = JSON.parse(text(enforcementFile));
 const scripts = packageJson.scripts ?? {};
 
 const requiredFailClosedScripts = [
@@ -169,7 +167,7 @@ rejectMarkers(manualDeepRelative, manualDeep, [
 ]);
 
 const ci = requireMarkers(`${workflowsRoot}/ci.yml`, [
-  "branches: [master]",
+  "branches: [\"**\"]",
   fullVerificationPolicy,
   "uses: ./.github/workflows/ci-policy.yml",
   "uses: ./.github/workflows/ci-node-diagnostics.yml",
@@ -229,9 +227,5 @@ requireMarkers(`${workflowsRoot}/ci-node-verification.yml`, [
 requireMarkers(`${workflowsRoot}/ci-backends.yml`, ["Select affected backends", "Apply migrations", "go test ./...", "go build ./..."]);
 requireMarkers(`${workflowsRoot}/ci-runtime.yml`, ["runtime:full:smoke", "Stop runtime"]);
 requireMarkers(`${workflowsRoot}/dsh-database.yml`, ["contents: read", "postgres:16-alpine", "invoke-dsh-database.ps1"]);
-
-if (enforcement.targetBranch !== "master") {
-  violations.push({ file: enforcementFile, line: 0, message: "TARGET_BRANCH_MUST_BE_MASTER" });
-}
 
 fail(guardId, violations);
