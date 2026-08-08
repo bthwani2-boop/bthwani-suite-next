@@ -1,4 +1,0 @@
-runner:
-  semgrep:
-    cmd: semgrep scan --config tools/yagni/semgrep/bthwani-yagni.yml --sarif
-    format: sarif
