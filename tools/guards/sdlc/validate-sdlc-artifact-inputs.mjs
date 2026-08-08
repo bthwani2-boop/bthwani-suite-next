@@ -56,6 +56,10 @@ if (artifact && impact) {
   const notApplicableStages = new Set(artifact.notApplicableStages ?? []);
   const exclusionByStage = new Map();
 
+  if (passDecision && artifact.evidenceCommitSha !== artifact.resolvedCommitSha) {
+    violations.push({ file: artifactPath, message: "PASS_REQUIRES_SAME_CANDIDATE_EVIDENCE_COMMIT" });
+  }
+
   for (const exclusion of artifact.stageExclusions ?? []) {
     if (exclusionByStage.has(exclusion.stage)) violations.push({ file: artifactPath, message: `DUPLICATE_STAGE_EXCLUSION ${exclusion.stage}` });
     exclusionByStage.set(exclusion.stage, exclusion);
@@ -123,10 +127,7 @@ if (artifact && impact) {
   if (closureDecision) {
     for (const scope of applicableScopes) if (!passedScopes.has(scope)) violations.push({ file: artifactPath, message: `CLOSURE_APPLICABLE_SCOPE_NOT_PASSED ${scope}` });
     for (const scope of requiredScopes) if (!passedScopes.has(scope)) violations.push({ file: artifactPath, message: `CLOSURE_REQUIRED_SCOPE_NOT_PASSED ${scope}` });
-    if (highRisk) {
-      const enforcement = readAndValidate("governance/github/repository-enforcement.json", "governance/github/repository-enforcement.schema.json");
-      if (!enforcement?.claims?.highRiskClosureAllowed) violations.push({ file: "governance/github/repository-enforcement.json", message: "HIGH_RISK_CLOSURE_BLOCKED_BY_GITHUB_ENFORCEMENT" });
-    }
+    if (highRisk && !applicableScopes.has("ci")) violations.push({ file: artifactPath, message: "HIGH_RISK_CLOSURE_REQUIRES_CI_EVIDENCE_SCOPE" });
   }
 }
 
