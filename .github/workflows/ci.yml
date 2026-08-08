@@ -18,7 +18,6 @@ on:
         required: true
         default: false
         type: boolean
-  # Legacy guard compatibility marker; actual coverage is universal: branches: [master]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches: ["**"]
@@ -67,7 +66,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FULL_VERIFICATION_TRIGGER: governance/github/full-verification-policy.json
+  FULL_VERIFICATION_TRIGGER: governance/contracts/full-verification-policy.json
   GIT_CONFIG_COUNT: "1"
   GIT_CONFIG_KEY_0: init.defaultBranch
   GIT_CONFIG_VALUE_0: master
