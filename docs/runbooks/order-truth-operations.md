@@ -2,9 +2,8 @@
 
 Status: OPERATIONAL_RUNBOOK
 Owner: DSH order operations
-Canonical domain decision: `governance/domains/dsh-wlt/order-truth-boundary.md`
 
-Current order contracts, state machine, migrations and diagnostics override stale field/error names in this runbook.
+Current authority sources: `governance/product/PRD.md`, `governance/policies/engineering.md`, applicable Product Truth, and current DSH contracts/state-machine/migrations. This runbook is operational guidance only.
 
 ## Operational objectives
 
