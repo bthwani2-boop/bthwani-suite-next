@@ -59,6 +59,7 @@ on:
       - "nx.json"
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -132,21 +133,63 @@ jobs:
           DISPATCH_MODE: ${{ inputs.mode }}
           DISPATCH_JOURNEY: ${{ inputs.journey }}
           EVENT_NAME: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           HEAD_SHA="$(git rev-parse HEAD)"
           BASE_SHA="${PR_BASE_SHA:-${EVENT_BEFORE:-}}"
+          VERIFIED_PUSH_BASE=false
+
+          # Push runs carry forward every change since the most recent successful
+          # CI ancestor. A cancelled or failed run therefore remains verification
+          # debt and is automatically included in the next affected calculation.
+          if [[ "${EVENT_NAME}" == "push" ]]; then
+            if ! SUCCESSFUL_RUN_SHAS="$(
+              gh api --method GET \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" \
+                -f branch="${GITHUB_REF_NAME}" \
+                -f event=push \
+                -f status=success \
+                -f per_page=100 \
+                --jq '.workflow_runs[].head_sha'
+            )"; then
+              echo "::error title=CI verification base unavailable::failed to query successful contextual CI runs"
+              exit 1
+            fi
+
+            while IFS= read -r candidate; do
+              if [[ -z "${candidate}" || "${candidate}" == "${HEAD_SHA}" ]]; then
+                continue
+              fi
+              if git merge-base --is-ancestor "${candidate}" "${HEAD_SHA}" 2>/dev/null; then
+                BASE_SHA="${candidate}"
+                VERIFIED_PUSH_BASE=true
+                break
+              fi
+            done <<< "${SUCCESSFUL_RUN_SHAS}"
+          fi
+
           if [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
             BASE_SHA="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${HEAD_SHA}")"
           fi
 
           FULL_VERIFICATION=false
-          if [[ "${EVENT_NAME}" == "workflow_dispatch" && "${DISPATCH_MODE:-affected}" == "full" ]]; then
+          if [[ "${EVENT_NAME}" == "push" && "${VERIFIED_PUSH_BASE}" != "true" ]]; then
+            # No trusted successful ancestor means there is no safe affected-only
+            # baseline. Establish one by running the full verification contract.
+            FULL_VERIFICATION=true
+          elif [[ "${EVENT_NAME}" == "workflow_dispatch" && "${DISPATCH_MODE:-affected}" == "full" ]]; then
             FULL_VERIFICATION=true
           elif git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" | grep -Fxq "${FULL_VERIFICATION_TRIGGER}"; then
             FULL_VERIFICATION=true
+          elif git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" | grep -Eq '^\.github/workflows/'; then
+            # Verification machinery cannot certify itself with a partial run.
+            FULL_VERIFICATION=true
           fi
           echo "full_verification=${FULL_VERIFICATION}" >> "${GITHUB_OUTPUT}"
+
+          printf '%s\n' "verification base=${BASE_SHA} head=${HEAD_SHA} trusted_push_base=${VERIFIED_PUSH_BASE} full=${FULL_VERIFICATION}"
 
           MODE="${DISPATCH_MODE:-affected}"
           if [[ "${FULL_VERIFICATION}" == "true" ]]; then MODE="full"; fi
