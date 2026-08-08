@@ -10,6 +10,9 @@ import { PayoutRequestsPanel } from "./PayoutRequestsPanel";
 import { ReconciliationCasesPanel } from "./ReconciliationCasesPanel";
 import { CodReconciliationCasesPanel } from "./CodReconciliationCasesPanel";
 import { RefundsCommandPanel } from "./RefundsCommandPanel";
+import { LedgerInspectorScreen } from "./LedgerInspectorScreen";
+import { CodInspectorScreen } from "./CodInspectorScreen";
+import { RepresentativeWalletLookup } from "./RepresentativeWalletLookup";
 import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from '@bthwani/wlt/dsh';
 
 type FinanceTabItem = { readonly id: string; readonly label: string; readonly active: boolean };
@@ -145,6 +148,19 @@ export function FinanceDashboardScreen() {
           <Text role="body" tone="muted" style={{ marginTop: "0.5rem" }}>
             {`الوضع التشغيلي: ${financeHubView.operationalRisk} · حظر الصرف/التسوية: ${financeHubView.holdsStatus} · الإجراء المطلوب: ${financeHubView.requiredAction}`}
           </Text>
+        </Card>
+      );
+    }
+    if (activeGroup === "ledger-order-finance") {
+      if (activeSub === "ledger") return <LedgerInspectorScreen />;
+    }
+    if (activeGroup === "reconciliation-risk") {
+      if (activeSub === "reconciliation") return <CodInspectorScreen />;
+    }
+    if (activeGroup === "payments-wallets") {
+      return (
+        <Card style={{ padding: "1rem" }}>
+          <RepresentativeWalletLookup />
         </Card>
       );
     }

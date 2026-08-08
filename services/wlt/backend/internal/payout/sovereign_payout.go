@@ -317,6 +317,20 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read payout provider proof")
 			return
 		}
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "OperatorContext_REQUIRED", err.Error())
+			return
+		}
+		var destinationMethod string
+		if err := tx.QueryRowContext(r.Context(), `SELECT destination_method FROM wlt_payout_destinations WHERE id = $1 AND operator_context_id = $2`, req.PayoutDestinationID, operatorContextID).Scan(&destinationMethod); err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read payout destination method")
+			return
+		}
+		if destinationMethod == "manual" {
+			shared.SendError(w, http.StatusConflict, "MANUAL_COMPLETION_PROHIBITED", "manual payouts must be completed through daily finance close reconciliation")
+			return
+		}
 		if req.Status != "processing" || providerReference == "" || (providerStatus != "processed" && providerStatus != "succeeded") {
 			shared.SendError(w, http.StatusConflict, "PROVIDER_PROOF_REQUIRED", "payout cannot complete without successful provider proof")
 			return
