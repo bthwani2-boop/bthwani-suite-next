@@ -140,6 +140,7 @@ type Visit struct {
 	CompletionDistanceFromStoreMeters *float64
 	StartGeofenceStatus               *string
 	CompletionGeofenceStatus          *string
+	IsStale                           bool
 }
 
 type ReadinessCheck struct {
@@ -169,6 +170,7 @@ type Escalation struct {
 	ResolutionNote string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	IsStale        bool
 }
 
 type CreateVisitInput struct {

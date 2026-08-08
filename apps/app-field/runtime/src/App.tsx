@@ -138,14 +138,27 @@ function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
     fetchReadiness();
   }, [workforce.state]);
 
-  if (readiness && readiness.status === "BLOCKED") {
+  if (!readiness) {
+    return (
+      <View style={styles.installationState}>
+        <ActivityIndicator accessibilityLabel="جارٍ التحقق من الجاهزية..." />
+      </View>
+    );
+  }
+
+  if (readiness.status === "BLOCKED") {
     return <ReadinessGateScreen readiness={readiness} onRefresh={fetchReadiness} />;
   }
 
-  if (readiness && readiness.status === "ALLOWED") {
+  if (readiness.status === "ALLOWED") {
     return <>{children}</>;
   }
-  return null;
+
+  return (
+    <View style={styles.installationState}>
+      <Text style={styles.installationError}>حالة جاهزية غير معروفة. يرجى المحاولة مرة أخرى.</Text>
+    </View>
+  );
 }
 
 function AppContent() {

@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"testing"
+
+	"dsh-api/internal/store"
 )
 
 func testMutationContext(t *testing.T, key string, request any) MutationContext {
@@ -248,5 +250,40 @@ func TestCompleteGovernedVisitIdempotentDoesNotDuplicateCommissionOutbox(t *test
 	}
 	if outboxCount != 1 {
 		t.Fatalf("expected one commission outbox event, got %d", outboxCount)
+	}
+}
+
+func TestRevokedActorCannotExecuteStaleMutations(t *testing.T) {
+	db := openRequiredDB(t)
+	ctx := context.Background()
+	agentID := uniqueID("agent-revoked")
+	partnerID := seedPartner(t, db, agentID)
+	storeID := uniqueID("store-revoked")
+	seedFieldStoreForPartner(t, db, storeID, agentID, partnerID)
+	registerGovernedStoreLocation(t, db, storeID, partnerID)
+	actor := testFieldActor(t, agentID)
+	cleanupFieldMutationReceipts(t, db, agentID)
+
+	// Revoke the actor's assignment by setting active = false
+	if _, err := db.ExecContext(ctx, `
+		UPDATE dsh_store_actor_scopes
+		SET active = false
+		WHERE actor_id = $1 AND store_id = $2`,
+		agentID, storeID,
+	); err != nil {
+		t.Fatalf("revoke actor scope: %v", err)
+	}
+
+	input := CreateVisitInput{
+		StoreID:       storeID,
+		FieldAgentID:  agentID,
+		VisitType:     VisitTypeOnboarding,
+		StartLocation: testValidLocation(),
+	}
+	mutation := testMutationContext(t, uniqueID("revoked-mutation"), input)
+
+	_, err := CreateGovernedVisitIdempotent(ctx, db, nil, actor, input, mutation)
+	if !errors.Is(err, store.ErrScopedStoreNotFound) && !errors.Is(err, ErrForbidden) {
+		t.Fatalf("expected revoked actor to fail with authorization error, got %v", err)
 	}
 }
