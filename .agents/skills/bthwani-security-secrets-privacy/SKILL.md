@@ -8,25 +8,26 @@ summary: Route authentication, authorization, secrets, PII, sensitive logs, and 
 
 ## Purpose
 
-Own security-evidence routing and sanitized review for authentication, authorization, sessions, secrets, credentials, PII, payment data, logs, CORS, and sensitive provider configuration.
+Own security-evidence routing and sanitized review for authentication, authorization, sessions, secrets, credentials, PII, payment data, logs, CORS, isolation, and sensitive provider configuration.
 
 ## Invoke when
 
-- Authentication, authorization, RBAC, sessions, tokens, keys, credentials, PII, payment data, logs, CORS, or sensitive provider configuration changes.
+- Authentication, authorization, RBAC, sessions, tokens, keys, credentials, PII, payment data, logs, CORS, trusted context, isolation, or sensitive provider configuration changes.
 - A diff, runtime output, or artifact contains secret-like or private material.
-- Independent security review is required by SDLC or the declared risk.
+- Independent security review is required by SDLC or declared risk.
 
 ## Do not invoke when
 
-- No security, privacy, secret, authentication, authorization, or sensitive-data boundary is affected.
+- No security, privacy, secret, authentication, authorization, isolation, or sensitive-data boundary is affected.
 - The task is a non-sensitive wording change with no behavioral or configuration claim.
 
 ## Read before
 
-- `AGENTS.md`
+- `governance/GOVERNANCE.md`
 - `governance/policies/security.md`
-- `governance/policies/release.md`
-- applicable contracts, configuration, logs, and data-flow paths
+- `governance/policies/delivery.md`
+- `governance/contracts/sdlc/` when formal security-stage evidence is applicable
+- applicable Product Truth, contracts, configuration, logs, and data-flow paths
 
 ## Authority boundary
 
@@ -34,10 +35,10 @@ This skill detects, sanitizes, and routes findings. It does not replace `APPLICA
 
 ## Required checks
 
-1. Inspect affected diffs and outputs for credentials, private keys, tokens, PII, payment data, unsafe logs, broad CORS, and credential persistence.
+1. Inspect affected diffs and outputs for credentials, private keys, tokens, PII, payment data, unsafe logs, broad CORS, weak trusted-context derivation, isolation failures, and credential persistence.
 2. Redact values before recording or communicating evidence.
-3. Distinguish a detected secret, unsafe configuration, missing evidence, and independently approved security state.
-4. Require same-commit security approval for applicable high-risk transitions.
+3. Distinguish detected defect, unsafe configuration, missing evidence, and independently approved security state.
+4. Require same-candidate security approval for applicable protected transitions.
 5. Keep security failures fail-closed.
 
 ## Forbidden
@@ -45,7 +46,7 @@ This skill detects, sanitizes, and routes findings. It does not replace `APPLICA
 - Pasting or committing real secrets or private data.
 - Converting placeholders into live credentials.
 - Hiding a security finding as a warning or generic code failure.
-- Emitting deprecated security decision aliases; use the canonical `SECURITY_BLOCK` decision.
+- Emitting deprecated security decision aliases; use canonical `SECURITY_BLOCK` where applicable.
 - Self-approving security remediation or residual risk.
 
 ## Required output
