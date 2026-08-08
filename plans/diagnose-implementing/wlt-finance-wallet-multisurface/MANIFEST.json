@@ -23,8 +23,8 @@
   "status": {
     "diagnosis": "COMPLETE",
     "plan": "READY",
-    "implementation": "NOT_STARTED",
-    "verification": "NOT_STARTED",
+    "implementation": "IN_PROGRESS",
+    "verification": "IN_PROGRESS",
     "decision": "NEEDS_EVIDENCE"
   },
   "disposability": {

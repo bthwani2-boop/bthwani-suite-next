@@ -3,7 +3,7 @@
   "taskId": "PKG-WLT_FINANCE_WALLET_MULTISURFACE",
   "status": "READY",
   "units": [
-    {"unitId":"U001","path":"units/U001-financial-core","dependsOn":[],"status":"READY"},
+    {"unitId":"U001","path":"units/U001-financial-core","dependsOn":[],"status":"DONE"},
     {"unitId":"U002","path":"units/U002-cashin-provider-refund","dependsOn":["U001"],"status":"READY"},
     {"unitId":"U003","path":"units/U003-captain-cod-earnings","dependsOn":["U001"],"status":"READY"},
     {"unitId":"U004","path":"units/U004-manual-settlement-reconciliation","dependsOn":["U001","U003"],"status":"READY"},

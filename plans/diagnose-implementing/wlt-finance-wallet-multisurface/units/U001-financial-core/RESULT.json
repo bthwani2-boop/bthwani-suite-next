@@ -1,1 +1,89 @@
-{"schemaVersion":3,"unitId":"U001","status":"NOT_STARTED","baselineSha":null,"resultingSha":null,"completedTaskIds":[],"modifiedPaths":[],"checkResults":[],"blockers":[],"deviations":[],"decision":"NOT_RUN"}
+{
+  "schemaVersion": 3,
+  "unitId": "U001",
+  "status": "DONE",
+  "baselineSha": "ba3393c39b0d0b265a4caf110b3bca685e43b0e3",
+  "resultingSha": null,
+  "completedTaskIds": ["U001-T001", "U001-T002", "U001-T003"],
+  "modifiedPaths": [
+    "services/wlt/contracts/wlt.payments.openapi.yaml",
+    "services/wlt/backend/internal/payment/financial_purpose.go",
+    "services/wlt/backend/internal/payment/financial_purpose_test.go",
+    "services/wlt/backend/internal/payment/allocation_conservation_db_test.go",
+    "services/wlt/backend/internal/payment/payment.go",
+    "services/wlt/backend/internal/payment/provider_results.go",
+    "services/wlt/backend/internal/payment/sovereign_authorize.go",
+    "services/wlt/backend/internal/payment/sovereign_capture.go",
+    "services/wlt/backend/internal/payment/timeline.go",
+    "services/wlt/backend/internal/reference/payment_session.go",
+    "services/wlt/backend/internal/reference/payment_session_allocation_db_test.go",
+    "services/wlt/backend/internal/ledger/kernel.go",
+    "services/wlt/backend/internal/ledger/kernel_read.go",
+    "services/wlt/backend/internal/ledger/kernel_test.go",
+    "services/wlt/backend/internal/ledger/account_taxonomy.go",
+    "services/wlt/backend/internal/ledger/account_taxonomy_test.go",
+    "services/wlt/backend/internal/ledger/opening_balance.go",
+    "services/wlt/backend/internal/ledger/opening_balance_test.go",
+    "services/wlt/backend/internal/ledger/refund_operator_context_resolution_test.go",
+    "services/wlt/backend/internal/payment/cancel_for_order_db_test.go",
+    "services/wlt/backend/internal/payment/expire_db_test.go",
+    "services/wlt/backend/internal/payment/payment_concurrency_test.go",
+    "services/wlt/backend/internal/payment/payment_provider_db_test.go",
+    "services/wlt/backend/internal/reconciliation/reconciliation_db_test.go",
+    "services/wlt/backend/internal/refund/refund_db_test.go",
+    "services/wlt/database/migrations/wlt-908_payment_financial_purpose_and_allocation.sql",
+    "services/wlt/database/migrations/wlt-909_ledger_account_classification_fail_closed.sql",
+    "services/wlt/database/migrations/wlt-910_ledger_capital_contribution_account.sql",
+    "services/wlt/database/migrations/manifest.json",
+    "plans/diagnose-implementing/wlt-finance-wallet-multisurface/units/U001-financial-core/VERIFICATION.json",
+    "plans/diagnose-implementing/wlt-finance-wallet-multisurface/units/U001-financial-core/RESULT.json",
+    "plans/diagnose-implementing/wlt-finance-wallet-multisurface/EXECUTION-ORDER.json",
+    "plans/diagnose-implementing/wlt-finance-wallet-multisurface/MANIFEST.json"
+  ],
+  "checkResults": [
+    {
+      "verificationId": "V101",
+      "result": "PASS",
+      "evidence": "ctx_search regex sweep of services/wlt + services/dsh/backend for balance_minor_units|UPDATE .*wallet|PaymentAllocation|FinancialPurpose|ledgerAccountClassification (150 matches). FinancialPurpose/AllocationLine/AllocationComponent have exactly one authoritative definition (services/wlt/backend/internal/payment/financial_purpose.go). ledgerAccountClassification (the old fail-open switch) is gone; classification is now sourced from the single accountTaxonomy map (services/wlt/backend/internal/ledger/account_taxonomy.go), consumed by both the write path (kernel.go) and the read path (kernel_read.go). Every remaining direct `UPDATE/INSERT wlt_wallets` site is inventoried below; none is new in this delta and none is claimed fixed by this unit."
+    },
+    {
+      "verificationId": "V102",
+      "result": "PASS",
+      "evidence": "go build ./... clean; go test ./... all packages ok (cod 6-13s, commercial, http, ledger, payment, payout, reconciliation, reference, refund, settlement, wallet, etc.) on Postgres 16 in the local runtime stack, run repeatedly across T001/T002/T003. New tests: financial_purpose_test.go, allocation_conservation_db_test.go, payment_session_allocation_db_test.go, account_taxonomy_test.go, opening_balance_test.go, plus 2 added cases in kernel_test.go. Node/Go suite via `pnpm --dir services/wlt test` reuses the same Go tests plus the Node openapi-bundle test; not separately re-run after final freeze at time of this write (re-run required at Phase B, see Phase B verification)."
+    },
+    {
+      "verificationId": "V103",
+      "result": "PASS",
+      "evidence": "guard:migration-manifest-drift: PASS for wlt (and all other services) after registering wlt-908/909/910 by hand-appending single ordinal entries (append-only; no existing historical hash rewritten -- see deviation below on generator drift). pnpm run runtime:wlt:migrate: PASS, files=75, applied wlt-908 (backfilled 99 existing payment_session rows with a derived financial_purpose), wlt-909 (0 cash_in_transit rows existed to backfill in this environment), wlt-910 (chart extension only). No wlt-migration-probes.ps1 script exists in this repository; command corrected in VERIFICATION.json pre-Freeze, see deviation."
+    },
+    {
+      "verificationId": "V104",
+      "result": "PASS",
+      "evidence": "pnpm --dir services/wlt run openapi:generate then openapi:verify: WLT OpenAPI bundle gate passed, pathCount=88, operationCount=95. FinancialPurpose/AllocationComponent/AllocationLine schemas added to wlt.payments.openapi.yaml; PaymentSession.financialPurpose is required; CreatePaymentSessionRequest.allocation is optional. Generated bundle/client are gitignored build artifacts (contracts/generated/*.bundle.openapi.yaml, clients/generated/*-api.ts) and correctly show no git diff after regeneration."
+    }
+  ],
+  "blockers": [],
+  "deviations": [
+    {
+      "type": "PACKAGE_DEFECT_CORRECTED_PRE_FREEZE",
+      "description": "VERIFICATION.json's V103 (and, by the same authoring pattern, U003's V303 and U004's V403 in the same package) referenced infra/docker/scripts/wlt-migration-probes.ps1, which does not exist anywhere in the repository. Corrected V103's command in this unit to the real, already-registered migration path (guard:migration-manifest-drift + runtime:wlt:migrate + runtime:wlt:smoke) before Freeze, per governing prompt PHASE A rule that a Package's internal defect blocks Product write until fixed. V303/V403 were NOT touched: they belong to U003/U004, which are out of scope for this round; flagged here as a reopen trigger for whoever executes those units."
+    },
+    {
+      "type": "TOOLING_DEFECT_NOTED_NOT_FIXED",
+      "description": "tools/scripts/generate-migration-manifest.mjs recomputes a different sha256 for every one of the 72 pre-existing HISTORICAL_IMMUTABLE/ACTIVE manifest entries than what is currently committed in services/wlt/database/migrations/manifest.json, even with the tree at HEAD and no migration files touched (verified by stashing this unit's new migration file and regenerating against a clean checkout). The manifest-drift guard (tools/guards/migration-manifest-drift-gate.mjs) does not use the generator's algorithm -- it independently accepts any of raw/LF-normalized/CRLF-normalized digests per file -- so this generator/guard mismatch does not block CI or this unit's V103. To avoid an unauthorized rewrite of 72 immutable hash entries, this unit registered wlt-908/909/910 by hand-appending exactly one new ordinal entry per migration (matching the LF-normalized digest the generator would itself produce for a from-scratch file) rather than running the generator. Root cause not diagnosed further; out of this unit's scope, flagged for governance/tooling ownership with a reopen trigger."
+    },
+    {
+      "type": "PACKAGE_DEFECT_NOTED_NOT_FIXED",
+      "description": "pnpm run guard:wlt-financial-boundary fails with 2 findings, both inside this same plan package: COVERAGE.json and units/U002-cashin-provider-refund/VERIFICATION.json contain the literal evidence-quote substring '/financial/card/' (from diagnosis evidence E005 describing services/wlt/backend/internal/payment/payment.go, which is itself an allowed path). Confirmed pre-existing via git stash (fails identically at ba3393c39 before this unit's changes). Not fixed: COVERAGE.json belongs to package-wide bookkeeping and units/U002/VERIFICATION.json belongs to U002, both outside this unit's explicit scope; fixing either is package-bookkeeping-adjacent cleanup this unit's plan did not authorize. U001's own required checks (V101-V104) do not depend on this guard; pnpm --dir services/wlt run lint does, and therefore currently fails for this pre-existing, unrelated reason -- not because of anything in this unit's delta."
+    },
+    {
+      "type": "OUT_OF_SCOPE_DEFECT_NOTED_NOT_FIXED",
+      "description": "pnpm run guard:generated-client-provenance fails while generating the DSH client (ambiguous OpenAPI path collisions and an unused path parameter in services/dsh/contracts). Confirmed pre-existing via git stash (fails identically at ba3393c39). Entirely inside services/dsh, unrelated to WLT/finance; not touched per package boundary 'No unrelated repository cleanup is bundled into this execution.' Flagged for the owning DSH surface with a reopen trigger."
+    },
+    {
+      "type": "DIRECT_WALLET_WRITER_INVENTORY",
+      "description": "U001-T003 built the ledger-backed opening-balance/correction mechanism and a canonical read projection (PostOpeningBalance, PostFinancialCorrection, GetWalletLedgerProjection in services/wlt/backend/internal/ledger/opening_balance.go) but did NOT migrate the legacy wlt_wallets writers below, per this round's explicit scope ruling (COD/payout lifecycle rewrites belong to U003/U004, not U001, and U001's mustNotChange forbids touching COD/payout state machines). Every site below is a pre-existing direct SQL mutation of wlt_wallets (available/pending/held/earned/settled/paid_total_balance_minor_units), parallel to wlt_ledger_accounts.balance_minor_units, confirmed present at STARTING_REMOTE_SHA (none were introduced by this unit's delta):\n\n- services/wlt/backend/internal/cod/cod.go (4 sites: CreateCommission, SettleCommission, RejectCommission, ReverseCommission) -- owner: U003 (captain-cod-earnings), reopen trigger: U003-T003.\n- services/wlt/backend/internal/cod/commission_governance.go (3 sites: CreateGovernedCommission, ApplyGovernedCommissionAdjustment) -- owner: U003, reopen trigger: U003-T003.\n- services/wlt/backend/internal/cod/commission_lifecycle.go (3 sites: SettleGovernedCommission, RejectGovernedCommission, ReverseGovernedCommission) -- owner: U003, reopen trigger: U003-T003.\n- services/wlt/backend/internal/cod/field_category_commission.go (1 site) -- owner: U003, reopen trigger: U003-T003.\n- services/wlt/backend/internal/cod/idempotent_lifecycle.go (3 sites: applyGovernedCommissionLifecycleIdempotent) -- owner: U003, reopen trigger: U003-T003.\n- services/wlt/backend/internal/payout/payout_governance.go (3 sites: HandleCreateGovernedPayoutRequest, HandleReconcileGovernedPayoutRequest) -- owner: U004 (manual-settlement-reconciliation), reopen trigger: U004-T002.\n- services/wlt/backend/internal/payout/request.go (3 sites: HandleCreatePayoutRequest, HandleCompletePayoutRequest, HandleFailPayoutRequest) -- owner: U004, reopen trigger: U004-T002.\n- services/wlt/backend/internal/payout/sovereign_payout.go (3 sites: HandleRejectPayoutRequestSovereign, failProviderDecline, HandleCompletePayoutRequestSovereign) -- owner: U004, reopen trigger: U004-T002.\n- services/wlt/backend/internal/penalty/penalty.go (2 sites: Post, Reverse) -- owner: unassigned in this package's unit map; nearest fit is U003 (captain-adjacent financial adjustment) on topic proximity only, not an explicit COVERAGE.json binding. Reopen trigger: confirm ownership with product authority before U003/U004 execution.\n- services/wlt/backend/internal/wallet/repository.go (1 site: EnsureWalletForOperatorContextTx) -- this is zero-balance row creation only (wallet lifecycle bootstrap), not a balance-changing write; left as-is, no reopen trigger needed.\n\nNone of these sites double-counts against this unit's new opening-balance/correction mechanism: they operate exclusively on wlt_wallets, never on wlt_ledger_accounts via PostOpeningBalance/PostFinancialCorrection, so no order/value can be affected by both paths simultaneously in the current delta. This finding does not rise to BLOCKER per this unit's diagnosis, because every writer is owned by a named later unit (U003/U004) with a coverage entry already IN_SCOPE for it -- it is recorded as a reopen trigger, not left silent."
+    }
+  ],
+  "decision": "UNIT_COMPLETE_CANDIDATE_UNFROZEN"
+}
