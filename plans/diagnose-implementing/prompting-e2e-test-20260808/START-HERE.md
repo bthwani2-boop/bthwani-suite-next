@@ -2,6 +2,6 @@
 
 Status: EXPERIMENTAL_TEST_ONLY
 
-This temporary package exists only to exercise prompting concurrency, collision, candidate, and cleanup rules. It must be deleted before the test task is closed.
+Agent B remote-head change modifies the same package entry from baseline 1a9c427a0f95f4435fddd28396b494f16e33cd3e.
 
-Baseline: c50ccdd3e30cdc83065b04c25ea49321bda1e5a0
+Expected protocol behavior: Agent A's sibling candidate becomes stale and must fail the fast-forward push gate.
