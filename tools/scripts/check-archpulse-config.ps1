@@ -1,14 +1,14 @@
 <#
 .SYNOPSIS
-  Non-destructive diagnosis of the effective ArchPulse VS Code-compatible IDE configuration.
+  Non-destructive diagnosis of the effective ArchPulse configuration in VS Code-compatible IDEs.
 
 .DESCRIPTION
-  Verifies the repository workspace settings, detects user/workspace overrides, locates
-  installed ArchPulse extension copies, and inspects the extension manifest to prove
-  whether archpulse.ignore is actually supported by the installed version.
+  Verifies repository workspace settings, detects user/workspace overrides, locates the
+  actually installed ArchPulse extension (including Google Antigravity IDE), and inspects
+  its manifest/compiled code to prove whether archpulse.ignore is declared and consumed.
 
   This script does not generate, edit, or delete architecture diagrams and does not
-  modify IDE settings.
+  modify IDE or repository settings.
 #>
 
 [CmdletBinding()]
@@ -36,8 +36,20 @@ function Get-JsonPropertyValue($Object, [string]$Name) {
   return $Property.Value
 }
 
+function Add-UniquePath([System.Collections.Generic.List[string]]$List, [string]$Path) {
+  if ([string]::IsNullOrWhiteSpace($Path)) { return }
+  try {
+    $Full = [System.IO.Path]::GetFullPath($Path)
+  } catch {
+    return
+  }
+  if (-not ($List -contains $Full)) {
+    $List.Add($Full)
+  }
+}
+
 function Show-ArchPulseTextOverrides([string]$Path, [string]$Label) {
-  if (-not (Test-Path $Path)) { return }
+  if (-not (Test-Path -LiteralPath $Path)) { return }
 
   $Raw = Get-Content -LiteralPath $Path -Raw
   $Matches = [regex]::Matches($Raw, '(?im)^\s*"archpulse\.[^"]+"\s*:\s*.*$')
@@ -52,21 +64,114 @@ function Show-ArchPulseTextOverrides([string]$Path, [string]$Label) {
   }
 }
 
-function Find-ArchPulseExtensions {
+function Get-ProductJsonCandidates([string]$ExecutablePath) {
   $Candidates = New-Object System.Collections.Generic.List[string]
-  $Roots = @(
+  if ([string]::IsNullOrWhiteSpace($ExecutablePath)) { return @() }
+
+  $ExeDir = Split-Path -Parent $ExecutablePath
+  Add-UniquePath $Candidates (Join-Path $ExeDir "resources/app/product.json")
+  Add-UniquePath $Candidates (Join-Path $ExeDir "../resources/app/product.json")
+  Add-UniquePath $Candidates (Join-Path $ExeDir "../../resources/app/product.json")
+  return @($Candidates)
+}
+
+function Add-RootsFromProductJson(
+  [System.Collections.Generic.List[string]]$Roots,
+  [string]$ProductJsonPath
+) {
+  if (-not (Test-Path -LiteralPath $ProductJsonPath)) { return }
+
+  try {
+    $Product = Get-Content -LiteralPath $ProductJsonPath -Raw | ConvertFrom-Json
+    Info "Product manifest: $ProductJsonPath"
+    if ($Product.nameLong) { Info "Product name: $($Product.nameLong)" }
+    if ($Product.dataFolderName) {
+      Info "Product dataFolderName: $($Product.dataFolderName)"
+      Add-UniquePath $Roots (Join-Path $HOME "$($Product.dataFolderName)/extensions")
+    }
+  } catch {
+    Warn "Could not parse product.json at $ProductJsonPath: $($_.Exception.Message)"
+  }
+}
+
+function Get-RunningIdeEvidence {
+  $Evidence = @()
+  try {
+    $Processes = Get-CimInstance Win32_Process -ErrorAction Stop |
+      Where-Object {
+        $_.Name -match '(?i)(antigravity|agy|code|cursor|windsurf)' -or
+        $_.ExecutablePath -match '(?i)(antigravity|agy|code|cursor|windsurf)'
+      }
+
+    foreach ($Process in $Processes) {
+      $Evidence += [pscustomobject]@{
+        Name = $Process.Name
+        ExecutablePath = $Process.ExecutablePath
+        CommandLine = $Process.CommandLine
+      }
+    }
+  } catch {
+    Warn "Could not inspect running IDE processes: $($_.Exception.Message)"
+  }
+  return @($Evidence)
+}
+
+function Find-ArchPulseExtensions([object[]]$RunningIdeEvidence) {
+  $Roots = New-Object System.Collections.Generic.List[string]
+  $Candidates = New-Object System.Collections.Generic.List[string]
+
+  foreach ($Root in @(
     (Join-Path $HOME ".vscode/extensions"),
     (Join-Path $HOME ".vscode-insiders/extensions"),
     (Join-Path $HOME ".antigravity/extensions"),
+    (Join-Path $HOME ".antigravity-ide/extensions"),
+    (Join-Path $HOME ".antigravity-server/extensions"),
+    (Join-Path $HOME ".agy/extensions"),
+    (Join-Path $HOME ".agy-ide/extensions"),
     (Join-Path $HOME ".cursor/extensions"),
-    (Join-Path $HOME ".windsurf/extensions")
-  ) | Select-Object -Unique
+    (Join-Path $HOME ".windsurf/extensions"),
+    (Join-Path $env:LOCALAPPDATA "Antigravity/extensions"),
+    (Join-Path $env:LOCALAPPDATA "Antigravity IDE/extensions"),
+    (Join-Path $env:APPDATA "Antigravity/extensions"),
+    (Join-Path $env:APPDATA "Antigravity IDE/extensions")
+  )) {
+    Add-UniquePath $Roots $Root
+  }
 
-  foreach ($Root in $Roots) {
-    if (-not (Test-Path $Root)) { continue }
-    Get-ChildItem -LiteralPath $Root -Directory -ErrorAction SilentlyContinue |
-      Where-Object { $_.Name -match '(?i)archpulse' } |
-      ForEach-Object { $Candidates.Add($_.FullName) }
+  # Discover VS Code-family data folders from running IDE product.json metadata.
+  foreach ($Process in $RunningIdeEvidence) {
+    if ([string]::IsNullOrWhiteSpace($Process.ExecutablePath)) { continue }
+    foreach ($ProductJson in (Get-ProductJsonCandidates $Process.ExecutablePath)) {
+      Add-RootsFromProductJson -Roots $Roots -ProductJsonPath $ProductJson
+    }
+  }
+
+  # Discover hidden user data folders without recursively crawling the profile.
+  try {
+    Get-ChildItem -LiteralPath $HOME -Directory -Force -ErrorAction SilentlyContinue |
+      Where-Object { $_.Name -match '(?i)(vscode|code|antigravity|agy|cursor|windsurf)' } |
+      ForEach-Object { Add-UniquePath $Roots (Join-Path $_.FullName "extensions") }
+  } catch {}
+
+  foreach ($Base in @($env:LOCALAPPDATA, $env:APPDATA)) {
+    if ([string]::IsNullOrWhiteSpace($Base) -or -not (Test-Path -LiteralPath $Base)) { continue }
+    try {
+      Get-ChildItem -LiteralPath $Base -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match '(?i)(antigravity|agy|code|cursor|windsurf)' } |
+        ForEach-Object { Add-UniquePath $Roots (Join-Path $_.FullName "extensions") }
+    } catch {}
+  }
+
+  foreach ($Root in ($Roots | Select-Object -Unique)) {
+    if (-not (Test-Path -LiteralPath $Root)) { continue }
+    Info "Extension root exists: $Root"
+    try {
+      Get-ChildItem -LiteralPath $Root -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match '(?i)archpulse' } |
+        ForEach-Object { Add-UniquePath $Candidates $_.FullName }
+    } catch {
+      Warn "Could not enumerate extension root $Root: $($_.Exception.Message)"
+    }
   }
 
   return @($Candidates | Select-Object -Unique)
@@ -76,7 +181,7 @@ function Inspect-Extension([string]$ExtensionPath) {
   $ManifestPath = Join-Path $ExtensionPath "package.json"
   Info "Extension path: $ExtensionPath"
 
-  if (-not (Test-Path $ManifestPath)) {
+  if (-not (Test-Path -LiteralPath $ManifestPath)) {
     Fail "package.json is missing from extension directory"
     return
   }
@@ -126,8 +231,10 @@ function Inspect-Extension([string]$ExtensionPath) {
     "archpulse.autoGenerate",
     "archpulse.showHealthInStatusBar"
   )) {
-    if ($null -ne (Get-JsonPropertyValue $Properties $Key)) {
+    $Definition = Get-JsonPropertyValue $Properties $Key
+    if ($null -ne $Definition) {
       Pass "Installed extension declares $Key"
+      if ($null -ne $Definition.scope) { Info "$Key scope: $($Definition.scope)" }
     } else {
       Warn "Installed extension does not declare $Key"
     }
@@ -158,6 +265,42 @@ function Inspect-Extension([string]$ExtensionPath) {
   }
 }
 
+function Inspect-Cli([string]$CommandName, [System.Collections.Generic.List[string]]$LocatedExtensions) {
+  $Command = Get-Command $CommandName -ErrorAction SilentlyContinue
+  if ($null -eq $Command) { return }
+
+  Info "$CommandName => $($Command.Source)"
+
+  try {
+    $Inventory = & $CommandName --list-extensions --show-versions 2>$null
+    $ArchPulseLine = @($Inventory | Where-Object { $_ -match '(?i)archpulse' })
+    if ($ArchPulseLine.Count -gt 0) {
+      Pass "$CommandName reports: $($ArchPulseLine -join ', ')"
+    } else {
+      Warn "$CommandName does not report an ArchPulse extension"
+    }
+  } catch {
+    Warn "$CommandName extension inventory failed: $($_.Exception.Message)"
+  }
+
+  # VS Code-family CLIs may expose --locate-extension. Use it only if advertised.
+  try {
+    $HelpText = (& $CommandName --help 2>$null) -join "`n"
+    if ($HelpText -match '(?i)--locate-extension') {
+      $Located = (& $CommandName --locate-extension $ExtensionId 2>$null | Select-Object -First 1)
+      if (-not [string]::IsNullOrWhiteSpace($Located)) {
+        $Located = $Located.Trim()
+        Pass "$CommandName located ArchPulse at: $Located"
+        Add-UniquePath $LocatedExtensions $Located
+      }
+    } else {
+      Info "$CommandName does not advertise --locate-extension"
+    }
+  } catch {
+    Warn "$CommandName locate-extension check failed: $($_.Exception.Message)"
+  }
+}
+
 Write-Host ""
 Write-Host "╔════════════════════════════════════════════╗" -ForegroundColor Cyan
 Write-Host "║  ArchPulse Effective Configuration Check   ║" -ForegroundColor Cyan
@@ -182,7 +325,7 @@ try {
 }
 
 Section "Repository workspace settings"
-if (-not (Test-Path $WorkspaceSettings)) {
+if (-not (Test-Path -LiteralPath $WorkspaceSettings)) {
   Fail "Missing $WorkspaceSettings"
   exit 2
 }
@@ -229,13 +372,15 @@ $UserSettingCandidates = @(
   @{ Label = "VS Code"; Path = (Join-Path $env:APPDATA "Code/User/settings.json") },
   @{ Label = "VS Code Insiders"; Path = (Join-Path $env:APPDATA "Code - Insiders/User/settings.json") },
   @{ Label = "Antigravity"; Path = (Join-Path $env:APPDATA "Antigravity/User/settings.json") },
+  @{ Label = "Antigravity IDE"; Path = (Join-Path $env:APPDATA "Antigravity IDE/User/settings.json") },
+  @{ Label = "Google Antigravity"; Path = (Join-Path $env:APPDATA "Google Antigravity/User/settings.json") },
   @{ Label = "Cursor"; Path = (Join-Path $env:APPDATA "Cursor/User/settings.json") },
   @{ Label = "Windsurf"; Path = (Join-Path $env:APPDATA "Windsurf/User/settings.json") }
 )
 
 $FoundUserSettings = $false
 foreach ($Candidate in $UserSettingCandidates) {
-  if (Test-Path $Candidate.Path) {
+  if (Test-Path -LiteralPath $Candidate.Path) {
     $FoundUserSettings = $true
     Show-ArchPulseTextOverrides -Path $Candidate.Path -Label $Candidate.Label
   }
@@ -254,40 +399,47 @@ if ($WorkspaceFiles.Count -eq 0) {
   }
 }
 
-Section "Installed extension"
-$ExtensionPaths = @(Find-ArchPulseExtensions)
-if ($ExtensionPaths.Count -eq 0) {
-  Fail "No ArchPulse extension directory found in known VS Code-compatible extension locations"
-  Info "Run the command from the same IDE terminal where ArchPulse is installed."
+Section "Running IDE processes"
+$RunningIdeEvidence = @(Get-RunningIdeEvidence)
+if ($RunningIdeEvidence.Count -eq 0) {
+  Warn "No VS Code-family IDE process was detected"
 } else {
-  Info "Found $($ExtensionPaths.Count) ArchPulse extension installation(s)"
-  foreach ($ExtensionPath in $ExtensionPaths) {
-    Inspect-Extension -ExtensionPath $ExtensionPath
+  foreach ($Process in $RunningIdeEvidence) {
+    Info "$($Process.Name) => $($Process.ExecutablePath)"
   }
 }
 
 Section "CLI extension inventories"
-foreach ($CommandName in @("code", "antigravity", "cursor", "windsurf")) {
-  $Command = Get-Command $CommandName -ErrorAction SilentlyContinue
-  if ($null -eq $Command) { continue }
+$CliLocatedExtensions = New-Object System.Collections.Generic.List[string]
+foreach ($CommandName in @("agy-ide", "antigravity", "code", "cursor", "windsurf")) {
+  Inspect-Cli -CommandName $CommandName -LocatedExtensions $CliLocatedExtensions
+}
+if ($CliLocatedExtensions.Count -eq 0) {
+  Info "No CLI directly returned an ArchPulse installation path"
+}
 
-  Info "$CommandName => $($Command.Source)"
-  try {
-    $Inventory = & $CommandName --list-extensions --show-versions 2>$null
-    $ArchPulseLine = $Inventory | Where-Object { $_ -match '(?i)archpulse' }
-    if ($ArchPulseLine) {
-      Pass "$CommandName reports: $($ArchPulseLine -join ', ')"
-    } else {
-      Warn "$CommandName does not report an ArchPulse extension"
-    }
-  } catch {
-    Warn "$CommandName extension inventory failed: $($_.Exception.Message)"
+Section "Installed extension"
+$ExtensionPaths = New-Object System.Collections.Generic.List[string]
+foreach ($Path in (Find-ArchPulseExtensions -RunningIdeEvidence $RunningIdeEvidence)) {
+  Add-UniquePath $ExtensionPaths $Path
+}
+foreach ($Path in $CliLocatedExtensions) {
+  Add-UniquePath $ExtensionPaths $Path
+}
+
+if ($ExtensionPaths.Count -eq 0) {
+  Fail "ArchPulse is active in the IDE but its installation directory was not located"
+  Info "The next useful evidence is the Antigravity IDE command path and running executable path shown above."
+} else {
+  Info "Found $($ExtensionPaths.Count) ArchPulse extension installation(s)"
+  foreach ($ExtensionPath in ($ExtensionPaths | Select-Object -Unique)) {
+    Inspect-Extension -ExtensionPath $ExtensionPath
   }
 }
 
 Section "Interpretation"
 if (($Ignore -contains "plans/**") -and ($Ignore -contains "tools/**")) {
   Info "Repository configuration explicitly excludes Plans and Tools."
-  Info "If a fresh ArchPulse run still reports Plans/Tools, the effective IDE configuration is not being consumed or the installed extension has an ignore-handling defect."
+  Info "A fresh ArchPulse graph that still contains Plans/Tools proves the effective extension is not applying workspace ignore configuration correctly."
 }
 Info "This script made no changes."
