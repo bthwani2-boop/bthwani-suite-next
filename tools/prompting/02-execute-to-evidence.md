@@ -2,7 +2,7 @@
 
 Status: DERIVED_SUPPORT
 
-استخدم هذا الأمر لتنفيذ **حزمة موجودة تحت `plans/diagnose-implementing/` أو مهمة مباشرة** داخل المستودع حتى أعلى نتيجة يمكن إثباتها، دون ترقيعات سطحية أو ادعاءات تتجاوز الأدلة.
+استخدم هذا الأمر لتنفيذ **حزمة موجودة تحت `plans/diagnose-implementing/` أو مهمة مباشرة** حتى أعلى نتيجة يمكن إثباتها، مع إصلاح السبب الجذري ومنع النجاح الشكلي.
 
 ## المدخلات
 
@@ -12,18 +12,29 @@ TARGET_REF: <branch-or-ref>
 MODE: <PACKAGE | DIRECT_TASK>
 PACKAGE_PATH: <plans/diagnose-implementing/<task> | N/A>
 TASK: <direct task when MODE=DIRECT_TASK>
-DELIVERY: <NO_COMMIT | COMMIT | COMMIT_AND_PUSH>
+DELIVERY: <LOCAL_ONLY | COMMIT | COMMIT_AND_PUSH>
 ```
 
-## أمر التنفيذ
+## 1. السلطة وتثبيت التنفيذ
 
-نفّذ العمل وفق `governance/GOVERNANCE.md` و`governance/product/PRD.md` والسياسات العامة المنطبقة وProduct Truth الحالي. ثبّت أحدث SHA للفرع الذي حدده المستخدم، أعد حل الرأس قبل كل دفعة كتابة وبعدها، ولا تستبدل الفرع ولا تستخدم force/reset ولا تطمس تغييرات أحدث.
-
-### 1. Preflight
-
-سجّل القدرة الفعلية:
+اتبع الترتيب الحاكم الحالي من المرجع نفسه:
 
 ```text
+current authorized task
+→ governance/authority/authority-precedence.json
+→ governance/GOVERNANCE.md
+→ governance/product/PRD.md
+→ applicable engineering/security/delivery policy
+→ applicable capability Product Truth + machine contracts
+→ exact pinned implementation/runtime/platform evidence
+```
+
+استخدم `CODE_BASED_LEAN`: أصلح أصغر نطاق جذري كامل، ووسّع فقط بسبب مثبت.
+
+قبل أي كتابة سجّل:
+
+```text
+STARTING_REMOTE_SHA
 CAN_READ_REPOSITORY
 CAN_WRITE_REPOSITORY
 CAN_EXECUTE_SHELL
@@ -34,218 +45,370 @@ CAN_COMMIT
 CAN_PUSH
 ```
 
-لا تدّع أي تنفيذ غير متاح للمضيف.
+أعد حل رأس الفرع قبل كل دفعة كتابة وبعد كل Push/آخر كتابة. لا تستبدل الفرع، ولا Force Push/Reset/history rewrite، ولا تدمج/تطلق/تنشر دون تفويض المهمة الحالية.
 
-### 2. Package mode
+## 2. Package mode / Direct task mode
 
-إذا كان `MODE=PACKAGE`:
+### Package
 
-1. اقرأ `MANIFEST.json`, `COVERAGE.json`, `EXECUTION-ORDER.json` والوحدة الجاهزة فقط.
-2. تحقق من أن pinned baseline ما زال صالحًا أو نفّذ impact reconciliation مع الرأس الحالي.
-3. شغّل قبل التنفيذ إن أمكن:
+اقرأ بالترتيب:
+
+```text
+START-HERE.md
+→ MANIFEST.json
+→ GLOBAL-DIAGNOSIS.md
+→ COVERAGE.json
+→ EXECUTION-ORDER.json
+→ current unit DIAGNOSIS/EXECUTION/VERIFICATION/RESULT
+```
+
+عند توفر Shell:
 
 ```powershell
 node plans/diagnose-implementing/validate-package.mjs <PACKAGE_PATH> --strict
 ```
 
-4. لا تبدأ وحدة تعتمد على dependency غير `DONE`.
-5. لا تجعل أكثر من وحدة كتابة `IN_PROGRESS` في الوقت نفسه.
+إذا فشل strict بسبب الخطة، أصلح الحزمة أولًا دون تخفيف الهدف أو acceptance criteria. إذا تحرك الفرع منذ `pinnedStartSha`، نفّذ impact reconciliation على paths/symbols/contracts/generated clients/schema/migrations/owners/dependencies/journeys/verifications المتأثرة فقط، ثم أعد strict.
 
-إذا فشل strict بسبب الخطة نفسها، أصلح الحزمة قبل تنفيذ المنتج. إذا صار سبب الفشل نتيجة drift حقيقي في المستودع، أعد تشخيص الأثر وحدّث الخطة بأقل توسع لازم.
+لا تبدأ وحدة تعتمد على dependency غير `DONE`، ولا تسمح بأكثر من وحدة كتابة `IN_PROGRESS`.
 
-### 3. Direct task mode
+### Direct task
 
-إذا كان `MODE=DIRECT_TASK` فابدأ مباشرة فقط عندما تكون الملكية والنطاق والنتيجة واضحة ومحدودة. إذا أثبت التشخيص أن المهمة واسعة/متعددة الملكيات/عالية المخاطر أو تحتاج عدة concerns مترابطة، حوّلها إلى حزمة `plans/diagnose-implementing/` بدل إدارة الخطة في المحادثة أو الذاكرة.
+نفّذ مباشرة فقط إذا كانت الملكية والنطاق والنتيجة محدودة وواضحة. إذا ثبتت عدة Root Causes مستقلة أو multi-domain/multi-surface foundation/migration concerns، أنشئ حزمة `plans/diagnose-implementing/` بدل إدارة الخطة في الذاكرة أو المحادثة.
 
-### 4. حل السبب الجذري
+## 3. قاعدة الاستمرار
+
+أي خلل داخلي مرتبط وقابل للإصلاح هو دليل جديد، لا سبب للتوقف:
+
+```text
+FAILURE
+→ classify evidence
+→ re-diagnose root cause/owner
+→ fix canonical owner
+→ targeted verify
+→ affected verify
+→ continue
+```
+
+لا تكرر الأمر الفاشل بلا فرضية جديدة. إذا تكررت محاولات متشابهة بلا تقدم، أوقف Patch loop وأعد تشخيص الملكية والافتراضات قبل الاستمرار.
+
+## 4. Foundation Gate عند ثبوت الحاجة
+
+في Journey/Application/Surface/Feature عابرة للأسطح، لا تبدأ وحدات تابعة إذا بقي concern تأسيسي مثبت يمنعها.
+
+نفّذ أولًا `FOUNDATION`/`MIGRATION`/shared prerequisite اللازمة فقط، ثم بوابة التحقق المخططة، وبعدها الوحدات التابعة. لا تجعل Foundation مسحًا شاملاً للمستودع بلا دليل.
+
+إذا ظهر Foundation defect أثناء Journey:
+
+```text
+stop affected path safely
+→ capture evidence
+→ reopen/create owning foundation unit
+→ invalidate dependent evidence
+→ recompute order
+→ fix foundation
+→ rerun affected foundation checks
+→ resume from last valid checkpoint
+```
+
+## 5. إصلاح السبب الجذري
 
 لكل concern:
 
 ```text
-current symptom
-→ authoritative owner
-→ root cause
+symptom
+→ authoritative truth/write owner
+→ proven root cause
 → canonical target state
 → central fix
-→ affected consumer migration
-→ obsolete/parallel path removal
+→ migrate every affected writer/reader/consumer
+→ regenerate derivatives when required
+→ remove obsolete/parallel path after migration
 → persisted/canonical readback
 → affected verification
 ```
 
 ممنوع:
 
-- إصلاح UI يخفي خلل backend/domain؛
-- local/mock/fallback state يمثل runtime truth؛
-- handwritten API types/client عندما يوجد contract-generated owner؛
-- duplicate write path أو dual truth؛
-- bypass للـauthorization/serviceability/readiness/state machine؛
-- DSH/frontend mutation لحقيقة مالية يملكها WLT؛
-- تعديل migration مطبق بدل forward migration؛
-- تغيير status مباشرة في DB لتجاوز transition حاكم؛
-- retry مالي/خارجي بهوية جديدة قبل حسم unknown outcome.
+```text
+temporary patch / silent fallback
+parallel truth / permanent dual-write
+handwritten parallel contract/type/client
+business logic duplicated into surface/shared UI
+runtime mock/fixture as truth
+fake control with no persisted effect
+UI-only authorization
+test weakening / guard disabling
+rewriting applied migration
+manual state mutation to bypass state machine
+financial retry with a new identity before resolving unknown outcome
+legacy path left reachable after cutover
+```
 
-### 5. Full-stack multi-surface
+## 6. Full-Stack Multi-Surface closure
 
-أي state يكتب في سطح ويقرأ/يؤثر في سطح آخر يُنفذ كمسار واحد:
+اسم التطبيق/السطح/الصفحة هو نقطة البداية فقط. أغلق كل علاقة مثبتة:
 
 ```text
 interaction
 → shared controller/adapter
 → generated contract/client
-→ route/domain
-→ persistence/events/integration
-→ canonical readback
-→ كل سطح مطلوب متأثر
+→ API/handler/domain/state machine
+→ transaction/database
+→ events/jobs/providers/WLT when applicable
+→ persisted canonical readback
+→ every required affected surface
 ```
 
-لا تعتبر المهمة مغلقة لأن السطح الابتدائي يعمل وحده.
+لا تعتبر السطح الأول مغلقًا إذا كانت النتيجة يجب أن تظهر أو تُستهلك في سطح آخر.
 
-### 6. الهوية والأمن
+## 7. Compatibility وRollout
+
+عند تغيير API/Schema/Contract/Mobile-facing behavior، أثبت ما ينطبق:
+
+```text
+old mobile + new backend
+new mobile + old backend عند الحاجة
+current control-panel + new backend
+generated-client/event/cache compatibility
+mixed-version runtime
+feature-flag safe default عند وجوده
+rollback/roll-forward
+compatibility window: owner + expiry + removal trigger + monitoring/tests
+```
+
+لا تفترض تحديث كل تطبيقات الهاتف لحظيًا. Compatibility المؤقتة لا تتحول إلى fallback أو dual-write دائم.
+
+## 8. الأمن والهوية والنطاق
 
 عند الانطباق تحقق من:
 
 ```text
-authentication
-session/activation/revocation
+authentication/session/device/revocation
 role + permission
 trusted Platform/Operator context
-Partner/Store/Actor business scope
+Partner/Store/Actor/Assignment scope
 object authorization / IDOR
+cross-scope leakage / privilege escalation
 service authentication
 PII/secrets/logging
-cross-scope negative paths
+provider signature/replay/rate limits
+negative paths
 ```
 
-Client-controlled context لا يملك صلاحية الثقة.
+Client-controlled IDs محددات موارد وليست إثبات صلاحية.
 
-### 7. DSH / WLT
+## 9. DSH / WLT
 
-- DSH: operational truth + bounded application-facing WLT references/projections فقط.
-- WLT: ledger, wallet, payment, refund, settlement, payout, commission, reconciliation truth.
-- أي financial mutation يجب أن تمر بالمالك WLT وبـidempotency/correlation/state constraints الحالية.
-- timeout/unknown provider outcome يبقى reconcilable ولا يتحول إلى نجاح محلي.
+أعد إثبات الحدود من Product Truth والعقود الحالية. عند الأثر المالي:
 
-### 8. PostgreSQL
+- WLT يبقى مالك ledger/balance/payment/refund/settlement/payout/commission/reconciliation truth.
+- DSH/surfaces لا تنشئ حقيقة مالية موازية.
+- تحقق من idempotency/correlation/state constraints/readback/reconciliation/compensation.
+- timeout/unknown provider outcome يبقى reconcilable ولا يتحول إلى نجاح محلي أو retry عشوائي عبر مزود آخر.
 
-عند تغير البيانات/schema:
+## 10. PostgreSQL والأنظمة الموزعة
 
-- migration forward/ordered/deterministic؛
+أي Schema/data change:
+
+- forward ordered deterministic migration؛
+- transaction عند الإمكان؛
 - constraints/indexes/FKs/checks حسب invariant؛
-- transaction/concurrency/idempotency واضحة؛
-- backfill آمن وقابل للتحقق؛
-- لا rewrite لتاريخ migration مطبق؛
-- لا drop/destructive cleanup قبل إثبات consumers/data/rollback.
+- compatibility + backfill + writer/reader transition؛
+- اختبار PostgreSQL فعلي على fresh/non-empty عند الحاجة؛
+- locks/concurrency/idempotency؛
+- rollback أو roll-forward/compensation؛
+- cleanup فقط بعد ترحيل كل المستهلكين.
 
-### 9. Events/jobs/providers
-
-تحقق عند الانطباق من transaction/outbox, stable event identity, idempotent consumers, retry/backoff/DLQ/lease, reconciliation, provider auth/signature/replay protection, timeout وunknown result، ولا تنشئ duplicate side effect لتحسين المظهر التشغيلي.
-
-### 10. UI/UX
-
-لكل سطح مطلوب راجع controls/routes/screens والنواتج الحقيقية، مع الحالات المنطبقة:
+عند Events/Jobs/Providers اختبر حسب الأثر:
 
 ```text
-loading
-empty
-offline
-forbidden
-conflict
-partial
-unknown-result
-error
-retry/recovery
-success after canonical readback
+stable identity / duplicate delivery / out-of-order/replay
+outbox/inbox / retry/backoff / DLQ/lease
+timeout / partial failure / unknown result
+reconciliation / compensation / restart recovery
 ```
 
-وتحقق من RTL/localization/accessibility/focus/large text/device/network عند تأثرها.
+## 11. UI/UX + Mobile + Control Panel
 
-### 11. Tool ladder
-
-استخدم أصغر أداة تحقق الحاجة:
+لكل Surface مطلوب افحص controls/routes/screens مع الحالات المنطبقة:
 
 ```text
-direct inspection
-→ focused search/existing command
-→ targeted registered guard
-→ small idempotent helper
-→ Nx affected
-→ LeanCTX only if it materially reduces repeated context
-→ Graphify only if ownership/dependency remains unresolved
-→ OpenCodeReview for bounded diff/range
-→ runtime tools only for runtime-changing/claimed work
+loading / empty / partial / success / error
+forbidden / blocked / conflict / stale
+offline / unknown-result / retry / recovery
+canonical persisted readback
 ```
 
-لا تشغّل full tool suite تلقائيًا.
+وتحقق من RTL/localization/accessibility/focus/large text/responsive/device/network عند تأثرها.
 
-### 12. Verification
+عند Mobile افحص navigation/deep links/native permissions/push/maps/SecureStore/offline/native rebuild/OTA/EAS/signing/runtime env؛ نجاح Metro لا يثبت Native build.
 
-ابدأ بالأصغر الكافي ثم توسع بالمخاطر:
+عند Control Panel افحص route/object authorization، server/client boundary، trusted scope selection، pagination/filter/search isolation، bulk/destructive actions، audit، session expiry، error mapping، optimistic rollback/readback، cross-surface readback.
+
+## 12. التحقق والأدوات — Affected First
+
+اقرأ الأوامر الفعلية من manifests/scripts؛ لا تخترع commands.
 
 ```text
-targeted unit/domain
-→ type/lint/static
-→ contracts/generated clients/bindings
-→ migrations/database integration
-→ cross-service/integration
-→ targeted runtime/startup/health/readback
-→ visual/device/a11y/performance when claimed
+nearest targeted check
+→ unit/package test
+→ related integration
+→ affected typecheck/lint/test/build
+→ contract/generated client/db/security checks
+→ runtime health/readiness/smoke/readback when claimed
+→ cross-surface E2E/manual visual-operational acceptance when claimed
 → full workspace/runtime only when impact requires it
 ```
 
-أي تعديل بعد دليل يؤثر على claim يبطل ذلك الدليل ويستلزم إعادة تشغيله.
-
-### 13. Package result updates
-
-في Package mode حدّث ملفات الوحدة والحزمة بالحقيقة الفعلية فقط. لا تكتب `PASS` لفحص لم يُنفذ، ولا تحول blocker داخلي إلى `BLOCKED_EXTERNAL`.
-
-بعد كل وحدة مكتملة:
+Tool ladder:
 
 ```text
-RESULT.json = actual changed paths / resulting SHA / decision / evidence / blockers
-EXECUTION-ORDER.json = current status
-COVERAGE.json = only if impact assessment changed
-MANIFEST.json = current implementation/verification state
+direct scoped inspection
+→ focused search/existing command
+→ targeted registered guard
+→ small idempotent helper for proven repetition
+→ Nx affected
+→ LeanCTX only if it materially reduces repeated reads/noise
+→ Graphify only if ownership/dependency/duplication/dead-code remains unresolved
+→ OpenCodeReview for bounded diff/commit/range
+→ runtime tooling only for runtime-changing/claimed work
 ```
 
-### 14. Commit/push
+لا تدّع Guard/Build/Test/Review/Runtime لم يُنفذ.
 
-نفّذ commit منطقيًا حسب concern عندما يسمح `DELIVERY`. قبل push أعد حل رأس الفرع وصالح أي حركة جديدة. لا تخلط إصلاحًا غير مرتبط داخل نفس commit فقط لتقليل العدد.
+## 13. Manual acceptance وEvidence invalidation
 
-### 15. القرار النهائي
+Runtime/Visual/Operational claims تحتاج عند الانطباق actor حقيقيًا إلى persisted effect/readback، لا screenshot أو static success فقط. اختبر success/denied/wrong-scope/conflict/stale/slow-network/offline/duplicate/reconnect/restart بقدر الخطر.
 
-استخدم القاموس الحالي فقط:
+أي relevant write لاحق في canonical truth/auth/authz/contract/generated client/schema/shared state/runtime foundation يبطل الأدلة السابقة المتأثرة. حددها وأعدها؛ لا تستخدم PASS أقدم من mutation أبطل معناه.
 
-- `PASS`: الادعاء المحدد مثبت.
-- `FIX_REQUIRED`: عيب داخلي مطلوب الإصلاح بقي مفتوحًا.
-- `NEEDS_EVIDENCE`: التنفيذ قد يكون صحيحًا لكن دليل مطلوب مفقود/stale/unavailable.
-- `BLOCKED_EXTERNAL`: اعتماد خارجي حقيقي يمنع الباقي.
-- `READY_FOR_REVIEW`: التنفيذ والأدلة جاهزة لمراجعة مستقلة/محمية.
-- `PROTOCOL_VIOLATION`: تم خرق قاعدة تنفيذ حاكمة.
-- لا تصدر `CLOSED_WITH_EVIDENCE` إلا إذا كانت كل scopes والاعتمادات المطلوبة مثبتة على نفس candidate وفق Delivery policy.
+## 14. أقصى تقدم والعوائق
 
-إذا كانت الحزمة جاهزة للإغلاق وشروط validator متحققة شغّل فقط:
+`BLOCKED_EXTERNAL` ليس اختصارًا لأي فشل داخلي. إذا حُجب مسار واحد خارجيًا:
+
+1. جمّد المسار المتأثر فقط.
+2. نفّذ كل العمل الداخلي المستقل الممكن.
+3. وثّق blocker owner/evidence/attempts/minimum unblock action/resume point.
+
+استخدم `NEEDS_EVIDENCE` عندما التنفيذ قد يكون صحيحًا لكن الدليل المطلوب مفقود أو stale. استخدم `FIX_REQUIRED` عندما بقي عيب داخلي قابل للإصلاح.
+
+## 15. تحديث الحزمة
+
+في Package mode حدّث Schema الحالي بالحقيقة الفعلية فقط:
+
+```text
+RESULT.json = status/baselineSha/resultingSha/completed tasks/modified paths/check results/blockers/deviations/decision
+EXECUTION.json + EXECUTION-ORDER.json = actual state; max one IN_PROGRESS
+COVERAGE.json = only when impact assessment changed
+MANIFEST.json = latest observed SHA + actual implementation/verification/decision state allowed by schema
+```
+
+لا تجعل `PASS/DONE` مع required check فاشل/غير منفذ أو blocker/deviation مفتوح.
+
+## 16. Commit وPush
+
+نفّذ Commit عند حد concern منطقي وبعد الفحوص اللازمة لذلك الحد:
+
+```text
+LOCAL_ONLY      = no commit / no push
+COMMIT          = commit only
+COMMIT_AND_PUSH = commit + push to TARGET_REF
+```
+
+لا PR/Merge/Release/Production دون طلب صريح منفصل. بعد Push أعد تثبيت الرأس.
+
+## 17. جولة إغلاق عدائية
+
+بعد اعتقادك أن التنفيذ اكتمل، لا تغلق مباشرة. راجع الـdiff والمسار كخصم وابحث عن:
+
+```text
+unfixed root cause
+parallel truth / stale contract / legacy route
+hidden writer/reader/consumer
+missing migration/compatibility consumer
+journey/surface/control gap
+security bypass / missing negative path
+retry/recovery/unknown-result gap
+runtime-only defect
+stale evidence
+observability/audit gap
+out-of-scope diff
+```
+
+أي خلل داخلي جديد يعيد `DIAGNOSE → FIX → VERIFY`. هذه الجولة ليست موافقة مستقلة ولا تسمح للمنفذ باعتماد نفسه.
+
+## 18. Read-only final verification
+
+بعد آخر كتابة:
+
+```text
+FREEZE WRITES
+→ pin final candidate SHA
+→ run required final checks read-only
+→ confirm generated outputs clean
+→ confirm no out-of-scope diff
+→ confirm required readbacks/evidence belong to final SHA
+→ decide
+```
+
+يُمنع في التحقق النهائي أي أمر يغير المصدر أو الدليل الذي يثبته، بما في ذلك `--fix`, formatter, generation, cleanup apply, lockfile/migration mutation, commit, push, merge أو ابتلاع exit code. إذا غيّر التحقق المصدر، عد إلى التنفيذ ثم أعد تحققًا جديدًا.
+
+## 19. Package closure والموافقات
+
+قبل `CLOSED_WITH_EVIDENCE` اقرأ `governance/contracts/decision-vocabulary.json` وDelivery policy وحدد كل evidence scope منطبق. لا يمنح المنفذ نفسه Product/QA/Security/Finance/Isolation/Release/Production/final-closure approval محميًا.
+
+عند الحزمة، لا تغلق قبل ثبوت:
+
+```text
+all in-scope units DONE
+all required checks PASS on valid recorded SHAs
+root causes removed
+no relevant parallel truth
+owners/contracts/clients/migrations aligned
+writers/readers/consumers migrated
+required journeys/surfaces/readbacks closed
+security/negative/retry/recovery evidence when applicable
+no stale evidence
+no fixable in-scope defect
+```
+
+وعند توفر Shell وشروط الحزمة:
 
 ```powershell
 node plans/diagnose-implementing/validate-package.mjs <PACKAGE_PATH> --strict --closure
 ```
 
-وجود validator PASS لا يمنح approval محميًا غير موجود.
+Validator PASS يثبت تماسك الحزمة ضمن ما يفحصه، ولا يخلق approval محميًا.
 
-## التقرير
+## 20. القرار والتقرير
+
+استخدم القاموس الحالي فقط:
+
+- `PASS`: claim/evidence scope معلن مثبت؛ ليس إغلاقًا نهائيًا.
+- `FIX_REQUIRED`: بقي فشل داخلي.
+- `NEEDS_EVIDENCE`: دليل مطلوب مفقود/stale/unavailable.
+- `BLOCKED_EXTERNAL`: مانع خارجي حقيقي بعد استنفاد العمل الداخلي الممكن.
+- `READY_FOR_REVIEW`: التنفيذ والفحوص المستهدفة جاهزة لمراجعة مستقلة/محمية.
+- `PROTOCOL_VIOLATION`: خرق قاعدة حاكمة.
+- `CLOSED_WITH_EVIDENCE`: كل applicable evidence scopes + required approvals مكتملة على candidate نفسه بلا fail/blocked/pending.
+
+التقرير:
 
 ```text
-repository
-target_branch
-start_sha
-final_sha
+repository / target_ref
+starting_sha / final_sha
 package_or_task
 root_causes_fixed
-changed_paths
-removed_parallel_or_legacy_paths
-checks_with_actual_results
-runtime/readback evidence
-unavailable_or_stale evidence
+changed/removed/moved paths
+contracts/clients/migrations/data changes
+surfaces/journeys/readbacks closed
+checks with actual results + proof limits
+runtime/security/finance/isolation/manual evidence
+invalidated evidence rerun
+out-of-scope diff
+commits/push result
+remaining external blocker or missing evidence + resume point
 required independent/protected reviews
-final_decision
+final decision
 ```
