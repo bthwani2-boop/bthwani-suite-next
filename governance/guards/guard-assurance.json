@@ -158,6 +158,14 @@
       "requiredFollowUpForRuntimeClaim": ["Same-commit runtime smoke", "Backend and database readback"]
     },
     {
+      "guardId": "field-surface-truth",
+      "assuranceClass": "STATIC_ANTI_STUB",
+      "proves": ["Field surface source paths do not contain fabricated actors, stores, visits, or locations", "Field truth ownership stays with the canonical owner and financial truth stays under WLT", "Backend reason codes, allowed next actions, retry semantics, and support correlation ids reach the screen instead of collapsing into a generic message", "Recovery and queued-operation decisions branch on stable codes rather than localized message text", "The registered debt of screens still collapsing failures neither grows nor retains resolved entries"],
+      "doesNotProve": ["A runtime is running", "Device or screen-reader behavior", "Provider, camera, or location behavior", "Cross-surface readback", "Journey completion"],
+      "closureEligible": false,
+      "requiredFollowUpForRuntimeClaim": ["Same-commit runtime smoke", "Physical Android and iOS accessibility and lifecycle evidence", "Manual cross-surface acceptance MAN-01 through MAN-14"]
+    },
+    {
       "guardId": "performance-budget",
       "assuranceClass": "CONFIGURATION_BUDGET",
       "proves": ["Performance budget configuration exists and is internally valid"],
