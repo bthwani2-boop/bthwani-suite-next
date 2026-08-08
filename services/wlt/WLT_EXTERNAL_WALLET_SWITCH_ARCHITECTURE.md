@@ -3,7 +3,6 @@
 **Status:** Proposed technical architecture / decision record  
 **Service:** `WLT` — Wallet / Financial Truth  
 **Branch baseline:** `abbas`  
-**Baseline SHA reviewed:** `98cda4a75ce1e9e4be7b30e29937ec817f1d3a85`  
 **Prepared:** 2026-08-08  
 **Primary market target:** Yemen electronic wallets  
 
@@ -13,12 +12,15 @@
 
 This document defines the recommended architecture for integrating BThwani with official Yemeni electronic wallets while preserving WLT as the sole internal financial source of truth.
 
-The architecture must support both of these external realities without redesigning WLT:
+The architecture must support all of these realities without redesigning WLT:
 
-1. a common wallet switch/acquirer such as WeNet where one commercial/technical integration can reach multiple wallets; and
-2. direct integrations with individual wallets when a common rail is unavailable, incomplete, commercially inferior, or missing a required capability.
+1. a common wallet switch/acquirer such as WeNet where one commercial/technical integration can reach multiple wallets;
+2. direct integrations with individual wallets when a common rail is unavailable, incomplete, commercially inferior, or missing a required capability;
+3. the existing local financial-provider simulator used for safe development and failure testing;
+4. provider sandbox/test environments before any real-money production activation;
+5. multiple stakeholder policies: customers, captains, field agents, partners, and BThwani treasury.
 
-The target is therefore **one internal financial architecture with pluggable external rails**, not a WeNet-specific architecture and not a collection of independent wallet-specific financial systems.
+The target is therefore **one internal financial architecture with pluggable external rails and environment-safe adapters**, not a WeNet-specific architecture and not a collection of independent wallet-specific financial systems.
 
 This document deliberately does **not** assume that WeNet exposes a public merchant REST API, acts as a custodian, supports refunds or payouts, or charges a specific fee. Those are contract and provider-documentation facts that must be proven before production activation.
 
@@ -62,11 +64,20 @@ External providers only move or report real external funds. They never become BT
 
 Adopt:
 
-> **One active external provider at launch, multi-provider architecture from day one.**
+> **One active real external provider at launch, multi-provider architecture from day one.**
 
-This means BThwani implements only the first real adapter for which it has an approved contract, technical specification, sandbox and credentials. It must **not** pre-build speculative adapters for wallets whose APIs are unknown.
+BThwani implements only the first real adapter for which it has:
 
-The architecture, however, must already allow another adapter to be registered later without rewriting WLT, the ledger, applications or stakeholder journeys.
+- an approved commercial relationship;
+- an approved technical specification;
+- sandbox/test access where available;
+- credentials/secrets;
+- reconciliation and settlement rules;
+- finance/security/release approval.
+
+Do **not** pre-build speculative production adapters for wallets whose real APIs are unknown.
+
+The architecture must already allow another adapter to be registered later without rewriting WLT, the ledger, applications, or stakeholder journeys.
 
 ### 2.3 Direct adapters are not a failure mode
 
@@ -86,13 +97,29 @@ If WeNet or another common rail is not suitable, the architecture becomes:
       Jaib               ONE Cash              ...
 ```
 
-That is an expected supported topology. It must not create separate ledgers, payout engines, reconciliation engines or wallet systems per provider.
+That is an expected supported topology. It must not create separate ledgers, payout engines, reconciliation engines, or wallet systems per provider.
+
+### 2.4 Simulator remains part of the architecture
+
+The existing simulator is **not temporary throw-away business logic**.
+
+It remains a permanent non-production implementation used for:
+
+- local development;
+- automated tests;
+- deterministic failure simulation;
+- timeout/unknown-result testing;
+- duplicate/replay testing;
+- webhook and reconciliation scenarios;
+- development without real financial credentials.
+
+Before production, the simulator is **not deleted and replaced globally**. Instead, production routing is bound to a real approved adapter while `mock` remains isolated to development/test environments.
 
 ---
 
 ## 3. Stakeholder financial policy
 
-Stakeholder policy and provider routing are separate concerns. The provider must never be hard-coded into a customer, captain, field or partner domain model.
+Stakeholder policy and provider routing are separate concerns. Provider names must never be hard-coded into customer, captain, field, or partner domain rules.
 
 ### 3.1 Policy matrix
 
@@ -104,7 +131,7 @@ Stakeholder policy and provider routing are separate concerns. The provider must
 | Partner | Not required by default | Yes | Multi-wallet from supported verified destinations |
 | BThwani treasury | Receives and settles | Funds stakeholder payouts | Multi-rail internally |
 
-The matrix is a product/operational policy. It does not imply that every provider supports every operation.
+The matrix is product/operational policy. It does not imply that every provider supports every operation.
 
 ---
 
@@ -137,7 +164,7 @@ Customer BThwani balance
 
 ### 4.2 Customer withdrawal
 
-General customer withdrawal or P2P transfer must not be inferred from the existence of top-up. It requires separate legal, product, fraud and accounting approval.
+General customer withdrawal or P2P transfer must not be inferred from top-up capability. It requires separate legal, product, fraud, accounting, and regulatory approval.
 
 ---
 
@@ -159,7 +186,7 @@ The captain is explicitly a **two-direction financial actor**.
 
 ### 5.1 Captain top-up
 
-`CAPTAIN_TOPUP` must use the same canonical `CashInRail` architecture as customer top-up:
+`CAPTAIN_TOPUP` uses the same canonical `CashInRail` architecture as customer top-up:
 
 ```text
 Official wallet
@@ -183,9 +210,9 @@ Provider identity must never determine the accounting account. The server-owned 
 
 ### 5.2 Captain earnings and one visible balance
 
-Do not create a separate visible "top-up wallet" and "earnings wallet" for the captain unless product requirements later demand that UX.
+Do not create a separate visible "top-up wallet" and "earnings wallet" unless future product requirements explicitly require that UX.
 
-The captain may see one financial balance, while WLT internally preserves the origin and eligibility of each movement:
+The captain may see one financial balance, while WLT internally preserves movement origin and eligibility:
 
 ```text
 CAPTAIN_TOPUP
@@ -210,11 +237,11 @@ The entire displayed balance must not automatically be treated as withdrawable.
 
 ### 5.3 Withdrawability of captain top-up principal
 
-Product intent currently allows the captain to fund and withdraw money. That intent must be preserved in the model, but production activation of withdrawal for externally topped-up principal is an explicit **legal/commercial/AML gate** because unrestricted cash-in -> internal balance -> cash-out can resemble stored-value or money-transfer activity.
+Product intent currently allows the captain to fund and withdraw money. Preserve that intent in the domain model, but production activation of withdrawal for externally topped-up principal is an explicit **legal/commercial/AML gate** because unrestricted cash-in -> internal balance -> cash-out can resemble stored-value or money-transfer activity.
 
-Therefore WLT must implement **withdrawal eligibility as server-owned policy**, not as `withdrawable = balance`.
+Therefore WLT must implement **withdrawal eligibility as server-owned policy**, not `withdrawable = balance`.
 
-If approved, top-up principal can become withdrawal-eligible according to the approved policy. If not approved, captain earnings can remain withdrawable while top-up funds are restricted to approved platform purposes.
+If approved, top-up principal can become withdrawal-eligible according to approved policy. If not approved, captain earnings can remain withdrawable while topped-up funds remain restricted to approved platform purposes.
 
 ---
 
@@ -222,7 +249,7 @@ If approved, top-up principal can become withdrawal-eligible according to the ap
 
 ### 6.1 Primary workforce financial rail
 
-To reduce operational fragmentation, BThwani should prefer one official wallet/provider for captain and field financial operations at launch, provided that the selected provider has sufficient coverage and the required capabilities.
+To reduce operational fragmentation, BThwani should prefer one official wallet/provider for captain and field financial operations at launch, provided the selected provider has sufficient coverage and the required capabilities.
 
 Use policy, not hard-coded provider names:
 
@@ -240,21 +267,21 @@ primaryCashInRail = provider_x
 primaryPayoutRail = provider_x
 ```
 
-If the provider changes later, configuration and adapter routing change; the captain/field domain and WLT ledger do not.
+If the provider changes later, configuration and adapter routing change; captain/field domain models and the WLT ledger do not.
 
 ### 6.2 Governed exception
 
-The workforce policy should be:
+Policy:
 
 > **Primary Required/Preferred Settlement Wallet + Governed Exception**
 
-An exception may be approved for geographic, accessibility, contractual or operational reasons. Exceptions must be explicit and auditable; they must not silently turn workforce payout into unrestricted multi-wallet routing.
+An exception may be approved for geographic, accessibility, contractual, or operational reasons. Exceptions must be explicit and auditable; they must not silently turn workforce payout into unrestricted multi-wallet routing.
 
 ### 6.3 Verified workforce destination
 
-Before a destination can receive payout, it must pass the approved finance verification process and become an active canonical destination.
+Before a destination can receive payout, it must pass finance verification and become an active canonical destination.
 
-Changing the destination must require re-verification. Trust must not automatically migrate from an old destination to a new one.
+Changing destination requires re-verification. Trust must not automatically migrate from an old destination to a new one.
 
 ---
 
@@ -277,19 +304,19 @@ SupportedPartnerSettlementRails
   provider_c = disabled
 ```
 
-Do not hard-code provider names as permanent support truth. Coverage is administrative configuration with effective dates and capability evidence.
+Provider names must not become permanent hard-coded support truth. Coverage is administratively controlled configuration with effective dates and capability evidence.
 
 ### 7.2 Preferred provider without mandatory lock-in
 
-BThwani may mark one provider as preferred because it is cheaper, faster or more automated, but partners remain able to choose another supported destination.
+BThwani may mark one provider preferred because it is cheaper, faster, or more automated, while allowing partners to choose another supported destination.
 
-Any difference in fees or settlement speed must be contractually valid, transparently represented and approved by finance/product policy.
+Any difference in fees or settlement speed must be contractually valid, transparently represented, and approved by finance/product policy.
 
 ### 7.3 Canonical partner payout destination
 
 A partner should not choose an arbitrary wallet on every payout request.
 
-Use one active verified canonical destination per supported policy scope, for example:
+Use one active verified canonical destination per supported policy scope:
 
 ```text
 PartnerSettlementDestination
@@ -302,7 +329,7 @@ PartnerSettlementDestination
   verified_at
 ```
 
-A change request follows:
+Change flow:
 
 ```text
 request change
@@ -328,21 +355,21 @@ Payout Request
     -> Settled
 ```
 
-The manual rail must still obey maker/checker, audit, idempotency, proof and reconciliation requirements. It must never be a simple "mark paid" button.
+The manual rail must still obey maker/checker, audit, idempotency, proof, and reconciliation requirements. It must never be a simple "mark paid" button.
 
 ---
 
-## 8. Critical domain distinction: network != acquirer != source wallet != destination wallet != WLT
+## 8. Critical domain distinction
 
 ### 8.1 Network / switch
 
 Example candidate: `WeNet`.
 
-Potential responsibilities include routing, interoperability, clearing, messaging and settlement coordination. It must not automatically be modeled as custodian of BThwani funds unless the contract explicitly establishes that role.
+Potential responsibilities include routing, interoperability, clearing, messaging, and settlement coordination. It must not automatically be modeled as custodian of BThwani funds unless the contract explicitly establishes that role.
 
 ### 8.2 Acquirer / merchant relationship
 
-The acquiring party is the institution through which BThwani receives merchant payments and obtains merchant identity / point / settlement arrangements.
+The acquiring party is the institution through which BThwani receives merchant payments and obtains merchant identity/point/settlement arrangements.
 
 Possible shapes:
 
@@ -366,7 +393,7 @@ For partner/captain/field payout, the verified external destination is payout-ro
 
 ### 8.5 WLT
 
-WLT remains the sole internal financial authority for balances, liabilities, payment state, payout state, ledger, reconciliation and audit.
+WLT remains the sole internal financial authority for balances, liabilities, payment state, payout state, ledger, reconciliation, and audit.
 
 ---
 
@@ -394,11 +421,11 @@ ProviderRegistration
   enabled_operations
 ```
 
-A provider name must not be scattered through business logic.
+Provider names must not be scattered through business logic.
 
 ### 9.2 FinancialRailRouter
 
-The router selects an eligible rail based on server-owned facts:
+The router selects an eligible rail from server-owned facts:
 
 ```text
 operation
@@ -412,6 +439,7 @@ operational health
 stakeholder policy
 pricing policy
 external liquidity policy
+environment
 ```
 
 At launch, routing should be deterministic and configuration-driven. Do not build complex automatic cost optimization until at least two real production rails exist and their behavior is proven.
@@ -420,16 +448,14 @@ At launch, routing should be deterministic and configuration-driven. Do not buil
 
 A payment or payout whose first provider call has an **ambiguous result** must never be immediately retried through a second provider.
 
-Example forbidden behavior:
+Forbidden:
 
 ```text
 Provider A timeout
     -> immediately send same money movement to Provider B
 ```
 
-That can create duplicate charges or duplicate payouts.
-
-Correct behavior:
+Correct:
 
 ```text
 Provider A timeout
@@ -468,7 +494,7 @@ type RefundRail interface {
 }
 ```
 
-A single adapter may implement one, two or all interfaces. Capability absence must fail closed.
+A single adapter may implement one, two, or all interfaces. Capability absence must fail closed.
 
 ### 10.1 Recommended capability vocabulary
 
@@ -503,26 +529,29 @@ Capabilities are derived from approved provider documentation and sandbox eviden
 The `abbas` branch already has important foundations that should remain canonical:
 
 1. `services/wlt/service.manifest.ts`
-   - WLT owns financial truth, wallets, payment sessions, refunds, settlements, payouts, ledger, reconciliation and finance reports.
+   - WLT owns financial truth, wallets, payment sessions, refunds, settlements, payouts, ledger, reconciliation, and finance reports.
    - production mutations are intentionally not considered ready.
 
 2. `services/wlt/backend/internal/provider/provider_mode.go`
-   - `mock`, `sandbox` and `production` modes exist;
-   - production is fail-closed until real adapter, secrets, inquiry, webhook verification, reconciliation and approvals exist.
+   - `mock`, `sandbox`, and `production` modes already exist;
+   - mock requires explicit `WLT_ALLOW_MOCK_PROVIDER=true`;
+   - mock currently defaults to the local `wiremock-financial-provider` endpoint when no base URL is supplied;
+   - sandbox requires an explicit provider base URL;
+   - production is intentionally fail-closed until a real provider adapter, secrets, inquiry, webhook verification, reconciliation, and independent approvals exist.
 
 3. `services/wlt/backend/internal/provider/payment_provider.go`
-   - an external-provider seam already exists, but it is transport-oriented (`Post`, `Get`, `InquirePayout`).
+   - an external-provider seam exists, but it is transport-oriented (`Post`, `Get`, `InquirePayout`).
 
 4. `services/wlt/backend/internal/payment/payment.go`
-   - current provider calls include card-shaped paths such as `/financial/card/authorize` and `/financial/card/capture`.
-   - this must not be imposed on wallet P2B rails that may use immediate-payment semantics.
+   - current provider calls include card-shaped paths such as `/financial/card/authorize` and `/financial/card/capture`;
+   - these must not be imposed on wallet P2B rails that may use immediate-payment semantics.
 
 5. `services/wlt/backend/internal/payment/provider_results.go`
    - `ApplyAuthoritativeProviderEvent` is a strong canonical asynchronous/read-back finalizer;
-   - provider event identity, replay/conflict handling, legal transition, reconciliation resolution, ledger posting and DSH outbox projection are coordinated atomically.
+   - provider event identity, replay/conflict handling, legal transition, reconciliation resolution, ledger posting, and DSH outbox projection are coordinated atomically.
 
 6. `services/wlt/backend/internal/payment/provider_webhook.go`
-   - signed webhook verification, timestamp-skew control, hashing and replay/idempotency concepts already exist.
+   - signed webhook verification, timestamp-skew control, hashing, replay protection, and idempotent application concepts already exist.
 
 7. `services/wlt/backend/internal/payment/provider_refresh.go`
    - provider inquiry/read-back exists as a recovery mechanism.
@@ -531,8 +560,8 @@ The `abbas` branch already has important foundations that should remain canonica
    - `PostLedgerTransaction` is the sole runtime double-entry write path and rejects unbalanced postings.
 
 9. `services/wlt/backend/internal/payout/payout_governance.go`
-   - partner, captain and field destinations are already governed;
-   - `bank`, `mobile_money` and `manual` settlement preferences exist;
+   - partner, captain, and field destinations are governed;
+   - `bank`, `mobile_money`, and `manual` settlement preferences exist;
    - sensitive payout destination data is encrypted/masked.
 
 ### 11.1 Required refactor before a real wallet provider
@@ -542,8 +571,10 @@ Do not remove these foundations. Refactor only the external edge:
 - add `ProviderRegistry`;
 - add `FinancialRailRouter`;
 - replace raw URL-path semantics at the production boundary with domain rail interfaces;
-- preserve current transport client beneath adapters if useful;
-- normalize provider-specific events before they reach payment/ledger logic.
+- preserve the current transport client beneath adapters if useful;
+- normalize provider-specific events before they reach payment/ledger logic;
+- preserve the simulator as a non-production adapter/test fixture;
+- add a real provider adapter alongside it rather than embedding provider logic into WLT business code.
 
 ---
 
@@ -577,7 +608,7 @@ Only add action types proven by real provider documentation. The app renders the
 
 ## 13. Payment lifecycle must be capability-aware
 
-The current WLT lifecycle contains card-oriented states such as `authorization_pending`, `authorized` and `capture_pending`.
+The current WLT lifecycle contains card-oriented states such as `authorization_pending`, `authorized`, and `capture_pending`.
 
 For immediate wallet P2B, support a path such as:
 
@@ -605,24 +636,26 @@ reference_created
 
 Keep `ApplyAuthoritativeProviderEvent` as the internal authoritative event application boundary.
 
-The current webhook handler uses a BThwani-defined HMAC header format. Do not assume WeNet or any wallet uses the same scheme.
+The current webhook handler uses a BThwani-defined HMAC header format. Do not assume WeNet or any real wallet uses the same scheme.
 
-Each adapter must:
+Each real adapter must:
 
 1. authenticate according to the provider's actual specification;
-2. validate certificate/signature/MAC, timestamp and nonce where applicable;
+2. validate certificate/signature/MAC, timestamp, and nonce where applicable;
 3. reject replay;
-4. validate merchant/account identity, amount and currency;
+4. validate merchant/account identity, amount, and currency;
 5. normalize the provider payload to the canonical internal event;
 6. call the existing authoritative event-application path.
 
 Provider-specific payloads and headers must not leak into ledger or stakeholder business logic.
 
+The simulator may continue to use its controlled test contract, but no simulator signature/header convention may be silently promoted to real-provider truth.
+
 ---
 
 ## 15. Funding and accounting policy
 
-The current captured-provider posting pattern is not universally correct for every financial purpose. Accounting must be purpose-driven.
+Accounting must be purpose-driven.
 
 ### 15.1 Customer top-up
 
@@ -644,7 +677,7 @@ Order checkout can continue through the approved platform clearing/payable accou
 
 ### 15.4 Provider settles net of fees
 
-If BThwani absorbs an external fee, recognize the fee separately during settlement reconciliation rather than reducing the customer's/captain's credited principal without an explicit product rule.
+If BThwani absorbs an external fee, recognize the fee separately during settlement reconciliation rather than reducing customer/captain credited principal without an explicit product rule.
 
 Illustrative pattern:
 
@@ -698,7 +731,7 @@ If a provider charges 2% of gross inflow:
 1 x 10,000 at 2% = 200
 ```
 
-Top-up aggregation only reduces cost when there are fixed/minimum fees, operational overhead, or a different funding tariff. The real economic objective is lower, capped or otherwise acceptable rail/acquirer pricing.
+Top-up aggregation only reduces cost when there are fixed/minimum fees, operational overhead, or a different funding tariff. The real economic objective is lower, capped, or otherwise acceptable rail/acquirer pricing.
 
 ---
 
@@ -754,7 +787,7 @@ manual_review
 resolved
 ```
 
-No ambiguous result may silently become `captured`, `paid` or `settled`.
+No ambiguous result may silently become `captured`, `paid`, or `settled`.
 
 ---
 
@@ -770,7 +803,7 @@ BThwani @ Provider B: low balance
 Partner payouts due @ Provider B: high
 ```
 
-WLT therefore needs a treasury/liquidity projection for external accounts, without creating a second financial ledger.
+WLT therefore needs a treasury/liquidity projection for external accounts without creating a second financial ledger.
 
 Recommended model:
 
@@ -822,15 +855,17 @@ ExternalFinancialConnection
 
 Secrets remain in the approved secret store; WLT stores references and non-secret identifiers.
 
+`environment` is mandatory. A connection configured for `mock` or `sandbox` must never be selected by a production router.
+
 ---
 
 ## 20. Participating wallet coverage
 
-Public/historical material has referenced wallets including ONE Cash, Floosak, Jawali, Mahfathati, Jaib and Cash.
+Public/historical material has referenced wallets including ONE Cash, Floosak, Jawali, Mahfathati, Jaib, and Cash.
 
 This is **not production configuration**.
 
-Production coverage must come from the current signed provider/switch/acquirer documentation and be represented as administratively controlled route/capability configuration with effective dates.
+Production coverage must come from current signed provider/switch/acquirer documentation and be represented as administratively controlled route/capability configuration with effective dates.
 
 If a wallet exits a switch or a direct provider is disabled, BThwani must be able to disable the route without code deployment.
 
@@ -846,7 +881,7 @@ Rules:
 2. support full/partial refund only when documented;
 3. normalize external refund state into WLT's governed refund lifecycle;
 4. never mark refund complete from frontend action alone;
-5. never silently substitute internal wallet credit for an external refund unless product, accounting and legal policy explicitly allows that fallback.
+5. never silently substitute internal wallet credit for an external refund unless product, accounting, and legal policy explicitly allows that fallback.
 
 ---
 
@@ -857,7 +892,7 @@ Production activation requires:
 - exact provider authentication from approved documentation;
 - TLS validation and mTLS if required;
 - secret/certificate rotation procedure;
-- no provider credentials in repository, logs or frontend bundles;
+- no provider credentials in repository, logs, or frontend bundles;
 - webhook/callback verification;
 - replay protection;
 - idempotency on every financial mutation;
@@ -869,7 +904,7 @@ Production activation requires:
 - operator-context isolation;
 - maker/checker for financial releases;
 - reconciliation and settlement evidence;
-- no UI scraping, notification interception, robotic wallet login or ADB automation as a financial integration.
+- no UI scraping, notification interception, robotic wallet login, or ADB automation as a financial integration.
 
 Keep production provider mode fail-closed until these gates and same-commit runtime evidence are complete.
 
@@ -909,6 +944,7 @@ Finance/control-panel views should expose, without secrets:
 - workforce primary provider;
 - supported partner settlement destinations;
 - provider connection state;
+- environment (`mock`, `sandbox`, `production`);
 - pricing/contract version;
 - reconciliation exceptions;
 - settlement batches;
@@ -946,7 +982,7 @@ Before implementing any real provider, obtain written answers for:
 | Wallet coverage | Exact current wallet coverage per operation |
 | Merchant identity | Merchant/point allocation model |
 | API model | Direct switch API or acquirer API over switch |
-| Sandbox | Credentials and test cases |
+| Sandbox | Credentials, endpoints, restrictions, and test cases |
 | Webhook | Authentication/signature specification |
 | Inquiry | Authoritative status endpoint |
 | Reconciliation | Feed/report/statement format |
@@ -961,7 +997,7 @@ BThwani should prefer switch/acquirer-level pricing over multiple high wallet-sp
 
 ## 25. Implementation sequence
 
-### Phase 0 — Contract, legal and product policy
+### Phase 0 — Contract, legal, and product policy
 
 Obtain:
 
@@ -987,9 +1023,34 @@ Implement/refactor:
 - provider capability model;
 - server-owned stakeholder routing policy;
 - normalized provider customer-action model;
-- no ambiguous-result automatic failover.
+- no ambiguous-result automatic failover;
+- environment-safe adapter selection.
 
-### Phase 2 — Funding purposes
+### Phase 2 — Preserve and align the simulator
+
+The current simulator remains the development/test rail.
+
+Refactor it only as needed so it implements the same **canonical domain contracts** used by future real adapters.
+
+It must support deterministic testing of:
+
+```text
+success
+decline
+timeout-before-acceptance
+timeout-after-possible-acceptance
+duplicate-request
+duplicate-event
+conflicting-replay
+late-success
+late-failure
+invalid-webhook
+reconciliation-mismatch
+```
+
+Do not add fake provider-specific behavior to the canonical WLT domain merely because the simulator currently exposes card-shaped paths.
+
+### Phase 3 — Funding purposes
 
 Introduce server-owned purposes while reusing canonical WLT payment/event/ledger boundaries:
 
@@ -1001,9 +1062,9 @@ ORDER_PAYMENT
 
 Post ledger entries according to purpose, not provider name.
 
-### Phase 3 — First real adapter
+### Phase 4 — First real sandbox adapter
 
-Implement only documented capabilities for the first contracted provider:
+Implement only documented capabilities for the first contracted provider against its real sandbox/test environment where available:
 
 - create cash-in payment if supported;
 - inquiry;
@@ -1013,7 +1074,9 @@ Implement only documented capabilities for the first contracted provider:
 - reconciliation feed/import;
 - payout only if separately documented.
 
-### Phase 4 — Workforce rollout
+Run the same canonical contract test suite against simulator and sandbox adapter, while allowing provider-specific extension tests.
+
+### Phase 5 — Workforce rollout
 
 - configure primary workforce rail;
 - verify captain/field official destinations;
@@ -1021,7 +1084,7 @@ Implement only documented capabilities for the first contracted provider:
 - enable governed payout;
 - implement exception workflow.
 
-### Phase 5 — Partner multi-destination payout
+### Phase 6 — Partner multi-destination payout
 
 - supported partner destination catalogue;
 - verified canonical destination;
@@ -1029,47 +1092,45 @@ Implement only documented capabilities for the first contracted provider:
 - governed manual payout rail where approved;
 - partner payout reconciliation.
 
-### Phase 6 — Treasury/liquidity controls
+### Phase 7 — Treasury/liquidity controls
 
 - external account reconciliation;
 - required payout liquidity;
 - threshold/shortfall alerts;
 - governed rebalancing where supported.
 
-### Phase 7 — Additional adapters
+### Phase 8 — Additional adapters
 
 A new provider should require only:
 
 ```text
 Adapter
 + registration
-+ credentials/secrets
++ environment-specific credentials/secrets
 + capabilities
 + request/response mapping
 + webhook verification
 + reconciliation mapping
-+ contract tests
++ canonical contract tests
++ provider-specific tests
 + operational approval
 ```
 
-It must not require rewriting WLT, the ledger, stakeholder wallets, DSH or mobile applications.
+It must not require rewriting WLT, the ledger, stakeholder wallets, DSH, or mobile applications.
 
-### Phase 8 — Production release gate
+### Phase 9 — Production promotion
 
-Require:
+Production is a **promotion of a proven adapter/configuration**, not replacement of the WLT architecture.
 
-- sandbox contract tests;
-- provider failure/negative tests;
-- migration tests;
-- ledger balance tests;
-- duplicate/replay tests;
-- timeout/unknown-result tests;
-- reconciliation tests;
-- gross/net fee tests;
-- stakeholder policy tests;
-- operator-context isolation tests;
-- finance/security/release approvals;
-- same-commit runtime evidence.
+Promote only after:
+
+- provider sandbox/acceptance testing is complete;
+- production merchant/account identifiers are issued;
+- production secrets are installed in the approved secret store;
+- production webhook/certificate configuration is verified;
+- reconciliation and settlement process is operationally proven;
+- finance/security/release approval is recorded;
+- runtime evidence is produced from the same commit intended for release.
 
 ---
 
@@ -1120,7 +1181,13 @@ At minimum test:
 41. secret/certificate rotation;
 42. provider outage and circuit-breaker recovery;
 43. withdrawal-eligibility enforcement for captain top-up principal;
-44. customer general withdrawal remains unavailable unless separately enabled.
+44. customer general withdrawal remains unavailable unless separately enabled;
+45. mock adapter canonical contract suite;
+46. sandbox adapter canonical contract suite;
+47. production configuration refuses mock credentials/endpoints;
+48. production router refuses `mock` and `sandbox` registrations;
+49. production cannot fall back from real adapter to simulator;
+50. environment mismatch fails closed before any financial mutation.
 
 ---
 
@@ -1140,29 +1207,216 @@ Do not implement:
 - assumption that WeNet holds/custodies BThwani funds without proof;
 - assumption that P2B implies outbound payout capability;
 - assumption that wallet payments all use `authorize -> capture`;
-- assumption that current generic HMAC webhook format matches a real provider;
+- assumption that current simulator HMAC/header format matches a real provider;
 - automatic second-provider retry after an ambiguous first-provider mutation;
 - `withdrawable_balance = total_balance` for captain without policy;
 - arbitrary partner destination per payout without verification;
 - ungoverned manual payout or a simple "mark paid" action;
-- wallet-app scraping, notification interception, ADB automation or robotic login as payment integration;
-- production provider enablement before the existing fail-closed requirements are satisfied.
+- wallet-app scraping, notification interception, ADB automation, or robotic login as payment integration;
+- production provider enablement before the existing fail-closed requirements are satisfied;
+- production fallback to `mock` after real-provider failure;
+- use of simulator credentials, endpoints, or events as production evidence;
+- treating simulator success as proof that a real provider contract/API is production-ready.
 
 ---
 
 ## 28. Evidence boundary and legacy material
 
-Older BThwani repositories and prior analysis contain useful historical product intent: internal BThwani balances, external official wallets as cash-in/cash-out rails, multiple Yemeni providers, provider fees and stakeholder settlement flows.
+Older BThwani repositories and prior analysis contain useful historical product intent: internal BThwani balances, external official wallets as cash-in/cash-out rails, multiple Yemeni providers, provider fees, and stakeholder settlement flows.
 
 They are **evidence of intent, not current provider contracts or current API truth**.
 
-Current public WeNet material supports treating it as a candidate common switch/UPI/P2B rail. It does not substitute for private merchant pricing, current participant coverage, API documentation, custody terms, refund capability or payout capability.
+Current public WeNet material supports treating it as a candidate common switch/UPI/P2B rail. It does not substitute for private merchant pricing, current participant coverage, API documentation, custody terms, refund capability, or payout capability.
 
 No historical mock fee, generic purchase-code UX, or assumed provider behavior may be copied into production without current evidence.
 
+Simulator results are **test evidence only**. They prove BThwani's internal handling of a declared scenario, not that a real provider behaves that way.
+
 ---
 
-## 29. Final target model
+## 29. Simulator -> Sandbox -> Production promotion model
+
+This section is normative.
+
+### 29.1 Three distinct environments
+
+```text
+LOCAL / CI
+   |
+   v
+MOCK ADAPTER / SIMULATOR
+   |
+   | canonical WLT contract tests
+   v
+PROVIDER SANDBOX / TEST ENVIRONMENT
+   |
+   | real provider protocol + acceptance tests
+   v
+PRODUCTION ADAPTER
+   |
+   v
+REAL MONEY MOVEMENT
+```
+
+They are not interchangeable environments.
+
+### 29.2 Mock mode
+
+Current configuration already exposes:
+
+```text
+WLT_FINANCIAL_PROVIDER_MODE=mock
+WLT_ALLOW_MOCK_PROVIDER=true
+```
+
+Mock mode is allowed only for explicitly controlled development/test contexts.
+
+Its responsibilities are:
+
+- deterministic simulation;
+- exercising WLT state machines;
+- testing ledger/reconciliation behavior;
+- testing failure and ambiguity handling;
+- supporting local/CI workflows without external credentials.
+
+Mock events must be visibly attributable to the mock environment in logs/evidence.
+
+Mock mode must never create production readiness claims by itself.
+
+### 29.3 Sandbox mode
+
+```text
+WLT_FINANCIAL_PROVIDER_MODE=sandbox
+```
+
+Sandbox mode connects to the **real provider's approved test/sandbox environment**, not to the local simulator unless the provider itself explicitly supplies such a mock endpoint.
+
+Sandbox validates provider-specific realities including:
+
+- authentication;
+- actual request/response schema;
+- provider identifiers;
+- provider status semantics;
+- webhook/callback verification;
+- inquiry behavior;
+- idempotency behavior;
+- timeout behavior;
+- refund/payout semantics where supported;
+- reconciliation artifacts where available.
+
+Passing mock tests is a prerequisite for confidence in WLT logic; passing sandbox tests is the prerequisite for confidence in the real adapter protocol.
+
+### 29.4 Production mode
+
+```text
+WLT_FINANCIAL_PROVIDER_MODE=production
+```
+
+Production must select only provider registrations whose environment is exactly `production` and whose production gates are approved.
+
+Production must have:
+
+```text
+real adapter
++ production endpoint
++ production merchant/account identity
++ production secret/certificate references
++ real webhook verification
++ real inquiry/readback
++ real reconciliation/settlement process
++ approved capabilities
++ release evidence
+```
+
+### 29.5 No mock fallback in production
+
+This is strictly forbidden:
+
+```text
+Production real provider error
+        -> mock adapter
+        -> simulated success
+        -> real WLT credit/payout
+```
+
+Correct behavior:
+
+```text
+Production real provider error
+        -> confirmed failure
+           OR provider_result_unknown
+        -> inquiry / webhook / reconciliation
+        -> governed recovery
+```
+
+A production outage is a production outage. The simulator must never hide it.
+
+### 29.6 Environment isolation invariant
+
+The router must enforce:
+
+```text
+runtime_environment == provider_registration.environment
+```
+
+before any external financial mutation.
+
+At minimum:
+
+```text
+local/test  -> mock allowed
+sandbox     -> sandbox allowed
+production  -> production only
+```
+
+Any mismatch fails closed.
+
+### 29.7 Same contracts, different evidence
+
+The simulator and real adapters should implement the same canonical WLT-facing rail interfaces where capabilities overlap.
+
+This gives:
+
+```text
+same WLT business logic
+same ledger
+same reconciliation authority
+same stakeholder policies
+same internal state machines
+```
+
+while allowing:
+
+```text
+different provider protocol
+different authentication
+different webhook format
+different capabilities
+different settlement behavior
+```
+
+The simulator must model canonical scenarios, not force real providers to imitate the simulator's transport shape.
+
+### 29.8 Promotion evidence ladder
+
+A financial capability progresses through:
+
+```text
+NOT_IMPLEMENTED
+    -> MOCK_VERIFIED
+    -> SANDBOX_VERIFIED
+    -> PRODUCTION_CONFIGURED
+    -> PRODUCTION_APPROVED
+    -> PRODUCTION_RUNTIME_VERIFIED
+```
+
+No earlier state may be presented as a later state.
+
+A capability can be production-enabled only if its own evidence ladder is complete. For example, verified `cash_in` must not automatically promote `cash_out` or `refund`.
+
+---
+
+## 30. Final target model
 
 ```text
                               BTHWANI WLT
@@ -1177,6 +1431,17 @@ No historical mock fee, generic purchase-code UX, or assumed provider behavior m
          if suitable            if required        governed only
              |
       participating wallets
+
+Environment implementations:
+
+Local / CI
+  -> simulator / mock adapter
+
+Sandbox
+  -> real provider sandbox adapter/configuration
+
+Production
+  -> approved real provider adapter only
 
 Stakeholder policy above the router:
 
@@ -1199,6 +1464,6 @@ Partner
 
 The core architectural rule is:
 
-> **One WLT, one ledger, one reconciliation authority, one routing layer, many pluggable external rails.**
+> **One WLT, one ledger, one reconciliation authority, one routing layer, many pluggable external rails — with strict environment isolation.**
 
-BThwani should launch with one real provider adapter, but the system must be structurally ready for WeNet, direct wallet adapters, or a hybrid model without financial re-platforming.
+BThwani should launch with one real production provider adapter, while keeping the simulator permanently for development/testing and remaining structurally ready for WeNet, direct wallet adapters, or a hybrid model without financial re-platforming.
