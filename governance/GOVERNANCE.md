@@ -73,20 +73,19 @@ Machine-readable contracts encode the same governance for validation/routing and
 - `governance/authority/single-owner-mode.json`
 - `governance/authority/single-owner-mode.schema.json`
 - `governance/contracts/**`
+- `governance/contracts/full-verification-policy.json`
 - `governance/contracts/sdlc/**`
 - `governance/agents/**`
 - `governance/skills/**`
 - `governance/guards/**`
 - `governance/github/workflow-registry.json`
-- `governance/github/full-verification-policy.json`
 - `governance/github/master-protection.ruleset.json`
-- `governance/github/repository-enforcement.json`
 - `governance/tools/agent-tool-registry.json`
 - `governance/product/platform-model.yaml`
 - `governance/product/product-truth.schema.json`
 - `governance/product/contracts/**`
 
-`governance/github/master-protection.ruleset.json` describes desired configuration. Any repository-enforcement snapshot is support evidence only; current enforcement claims require live GitHub readback against the exact candidate.
+`governance/github/master-protection.ruleset.json` describes desired configuration only. Branch protection, rulesets, required checks, workflow outcomes, reviewers, and approval freshness are repository-platform state and must be queried live when the claim depends on them. No tracked snapshot is authoritative current enforcement evidence.
 
 ## Enforcement implementations
 
