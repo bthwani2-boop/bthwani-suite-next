@@ -1,22 +1,50 @@
-name: Runtime Gate
-description: Run or verify runtime gates/smoke tests.
+name: Runtime Evidence
+description: Track candidate-bound runtime verification or a runtime blocker without pasting sensitive raw logs.
 labels: ["runtime", "gate"]
 body:
   - type: markdown
     attributes:
       value: |
-        Track local or CI-based runtime gates and smoke assertions.
+        Runtime evidence must identify the exact candidate/environment and the claim it proves. Do not paste secrets, tokens, credentials, PII, private provider payloads, or unsanitized production logs.
+  - type: input
+    id: candidate
+    attributes:
+      label: Candidate commit SHA
+      placeholder: Exact 40-character SHA
+    validations:
+      required: true
   - type: input
     id: environment
     attributes:
-      label: Target Environment
-      placeholder: e.g., local-docker, staging
+      label: Target environment/profile
+      placeholder: e.g. local Docker profile, preview, staging
     validations:
       required: true
   - type: textarea
-    id: results
+    id: claim
     attributes:
-      label: Smoke Test Results
-      placeholder: Paste command line logs or validation outputs.
+      label: Runtime claim being verified
+      placeholder: Startup/readiness, actor operation, persistence readback, provider flow, failure/retry path, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: commands
+    attributes:
+      label: Registered commands or workflow runs
+      placeholder: Exact current command names/run IDs and relevant sanitized status/error codes.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized result and readback
+      placeholder: Summarize observable result, persistence/readback, correlation IDs, and limitations. Link raw restricted evidence only through an approved private location when required.
+    validations:
+      required: true
+  - type: textarea
+    id: missing
+    attributes:
+      label: Missing evidence or blockers
+      placeholder: None, or explain what prevents PASS and whether it is internal or external.
     validations:
       required: true
