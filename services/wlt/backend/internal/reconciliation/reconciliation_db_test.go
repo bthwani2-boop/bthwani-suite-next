@@ -47,8 +47,8 @@ func insertTestCase(t *testing.T, db *sql.DB) string {
 	checkoutIntentID := fmt.Sprintf("test-checkout-recon-%d", time.Now().UnixNano())
 	var sessionID string
 	err := db.QueryRow(`
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency)
-		VALUES ($1, $2, 'client-test', 'store-test', 'official_wallet', 'provider_result_unknown', 1000, 'YER')
+		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
+		VALUES ($1, $2, 'client-test', 'store-test', 'official_wallet', 'provider_result_unknown', 1000, 'YER', 'order_payment')
 		RETURNING id`, reconciliationTestOperatorContext, checkoutIntentID).Scan(&sessionID)
 	if err != nil {
 		t.Fatalf("failed to insert test session: %v", err)

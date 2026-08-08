@@ -49,10 +49,10 @@ type PaymentReconciliationView struct {
 }
 
 type PaymentSessionTimeline struct {
-	PaymentSession             *PaymentSession              `json:"paymentSession"`
-	CaptureLedgerTransactionID string                       `json:"captureLedgerTransactionId,omitempty"`
-	LastProviderEventID        string                       `json:"lastProviderEventId,omitempty"`
-	LastProviderStatus         string                       `json:"lastProviderStatus,omitempty"`
+	PaymentSession             *PaymentSession               `json:"paymentSession"`
+	CaptureLedgerTransactionID string                        `json:"captureLedgerTransactionId,omitempty"`
+	LastProviderEventID        string                        `json:"lastProviderEventId,omitempty"`
+	LastProviderStatus         string                        `json:"lastProviderStatus,omitempty"`
 	OperationReceipts          []PaymentOperationReceiptView `json:"operationReceipts"`
 	ProviderEvents             []PaymentProviderEventView    `json:"providerEvents"`
 	ReconciliationCases        []PaymentReconciliationView   `json:"reconciliationCases"`
@@ -62,9 +62,7 @@ func ReadPaymentSessionTimeline(db *sql.DB, operatorContextID, sessionID string)
 	var session PaymentSession
 	var ledgerID, lastEventID, lastProviderStatus string
 	err := db.QueryRow(`
-		SELECT id, checkout_intent_id, special_request_id, operator_context_id, client_id,
-		       store_id, payment_method, status, provider_reference,
-		       amount_minor_units, currency, captured_at, created_at, updated_at,
+		SELECT `+sessionCols+`,
 		       COALESCE(capture_ledger_transaction_id, ''),
 		       COALESCE(last_provider_event_id, ''), last_provider_status
 		FROM wlt_payment_sessions
@@ -72,8 +70,8 @@ func ReadPaymentSessionTimeline(db *sql.DB, operatorContextID, sessionID string)
 		&session.ID, &session.CheckoutIntentID, &session.SpecialRequestID,
 		&session.OperatorContextID, &session.ClientID, &session.StoreID,
 		&session.PaymentMethod, &session.Status, &session.ProviderReference,
-		&session.AmountMinorUnits, &session.Currency, &session.CapturedAt,
-		&session.CreatedAt, &session.UpdatedAt,
+		&session.AmountMinorUnits, &session.Currency, &session.FinancialPurpose,
+		&session.CapturedAt, &session.CreatedAt, &session.UpdatedAt,
 		&ledgerID, &lastEventID, &lastProviderStatus,
 	)
 	if err == sql.ErrNoRows {

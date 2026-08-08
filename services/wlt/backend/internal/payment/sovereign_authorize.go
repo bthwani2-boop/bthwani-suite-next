@@ -60,11 +60,7 @@ func AuthorizeSessionWithProviderSovereign(ctx context.Context, db *sql.DB, clie
 		SET status = 'authorized', provider_reference = $2,
 		    last_provider_status = 'authorized', updated_at = NOW()
 		WHERE id = $1 AND status = 'authorization_pending'
-		RETURNING id, checkout_intent_id, special_request_id,
-		          operator_context_id,
-		          client_id, store_id, payment_method,
-		          status, provider_reference, amount_minor_units, currency,
-		          captured_at, created_at, updated_at`
+		RETURNING ` + sessionCols
 	session, err := scanSession(tx.QueryRowContext(ctx, q, sessionID, result.ProviderReference))
 	if errors.Is(err, sql.ErrNoRows) {
 		return finalizationFailure(fmt.Errorf("session %s was no longer authorization_pending when finalizing authorize", sessionID))

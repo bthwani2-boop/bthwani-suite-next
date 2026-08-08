@@ -42,7 +42,7 @@ type PaymentSession struct {
 	ID                string  `json:"id"`
 	CheckoutIntentID  *string `json:"checkoutIntentId"`
 	SpecialRequestID  *string `json:"specialRequestId"`
-	OperatorContextID          string  `json:"operatorContextId"`
+	OperatorContextID string  `json:"operatorContextId"`
 	ClientID          string  `json:"clientId"`
 	StoreID           string  `json:"storeId"`
 	PaymentMethod     string  `json:"paymentMethod"`
@@ -50,9 +50,13 @@ type PaymentSession struct {
 	ProviderReference string  `json:"providerReference"`
 	AmountMinorUnits  int64   `json:"amountMinorUnits"`
 	Currency          string  `json:"currency"`
-	CapturedAt        *string `json:"capturedAt"`
-	CreatedAt         string  `json:"createdAt"`
-	UpdatedAt         string  `json:"updatedAt"`
+	// FinancialPurpose is the server-derived accounting meaning of this
+	// session. It is set once at creation and is never rewritten by a
+	// lifecycle transition, so it stays a stable audit fact.
+	FinancialPurpose string  `json:"financialPurpose"`
+	CapturedAt       *string `json:"capturedAt"`
+	CreatedAt        string  `json:"createdAt"`
+	UpdatedAt        string  `json:"updatedAt"`
 }
 
 // strOrEmpty dereferences a nullable text-column pointer (CheckoutIntentID /
@@ -85,6 +89,7 @@ func scanSession(row *sql.Row) (*PaymentSession, error) {
 		&s.ProviderReference,
 		&s.AmountMinorUnits,
 		&s.Currency,
+		&s.FinancialPurpose,
 		&s.CapturedAt,
 		&s.CreatedAt,
 		&s.UpdatedAt,
@@ -107,12 +112,19 @@ func getSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 	return s, err
 }
 
-const selectCols = `
-	SELECT id, checkout_intent_id, special_request_id,
+// sessionCols is the single column list every payment-session read and
+// RETURNING clause shares. scanSession scans exactly these columns in exactly
+// this order, so keeping one constant is what prevents a new column from being
+// added to the scanner while one of the seven producing statements still
+// selects the old set.
+const sessionCols = `id, checkout_intent_id, special_request_id,
 	       operator_context_id,
 	       client_id, store_id, payment_method,
 	       status, provider_reference, amount_minor_units, currency,
-	       captured_at, created_at, updated_at
+	       financial_purpose, captured_at, created_at, updated_at`
+
+const selectCols = `
+	SELECT ` + sessionCols + `
 	FROM wlt_payment_sessions
 	WHERE id = $1`
 
@@ -223,11 +235,7 @@ func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, client financ
 		UPDATE wlt_payment_sessions
 		SET status = 'authorized', provider_reference = $2, updated_at = NOW()
 		WHERE id = $1 AND status = 'authorization_pending'
-		RETURNING id, checkout_intent_id, special_request_id,
-		          operator_context_id,
-		          client_id, store_id, payment_method,
-		          status, provider_reference, amount_minor_units, currency,
-		          captured_at, created_at, updated_at`
+		RETURNING ` + sessionCols
 	row := tx.QueryRow(q, sessionID, result.ProviderReference)
 	s, err := scanSession(row)
 	if err == sql.ErrNoRows {
@@ -413,11 +421,7 @@ func captureSessionAndNotify(db *sql.DB, sessionID, providerReference string) (*
 		UPDATE wlt_payment_sessions
 		SET status = 'captured', provider_reference = $2, captured_at = NOW(), updated_at = NOW()
 		WHERE id = $1 AND status = 'capture_pending'
-		RETURNING id, checkout_intent_id, special_request_id,
-		          operator_context_id,
-		          client_id, store_id, payment_method,
-		          status, provider_reference, amount_minor_units, currency,
-		          captured_at, created_at, updated_at`
+		RETURNING ` + sessionCols
 	row := tx.QueryRow(q, sessionID, providerReference)
 	s, err := scanSession(row)
 	if err == sql.ErrNoRows {
@@ -445,11 +449,7 @@ func MarkCodPending(db *sql.DB, sessionID string) (*PaymentSession, error) {
 		UPDATE wlt_payment_sessions
 		SET status = 'cod_pending', updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, checkout_intent_id, special_request_id,
-		          operator_context_id,
-		          client_id, store_id, payment_method,
-		          status, provider_reference, amount_minor_units, currency,
-		          captured_at, created_at, updated_at`
+		RETURNING ` + sessionCols
 	row := db.QueryRow(q, sessionID)
 	s, err := scanSession(row)
 	if err == sql.ErrNoRows {
@@ -466,11 +466,7 @@ func MarkCodCollected(db *sql.DB, sessionID string) (*PaymentSession, error) {
 		UPDATE wlt_payment_sessions
 		SET status = 'cod_collected', captured_at = NOW(), updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, checkout_intent_id, special_request_id,
-		          operator_context_id,
-		          client_id, store_id, payment_method,
-		          status, provider_reference, amount_minor_units, currency,
-		          captured_at, created_at, updated_at`
+		RETURNING ` + sessionCols
 	row := db.QueryRow(q, sessionID)
 	s, err := scanSession(row)
 	if err == sql.ErrNoRows {
@@ -526,11 +522,7 @@ func expireSessionTx(tx *sql.Tx, sessionID string) (*PaymentSession, error) {
 		UPDATE wlt_payment_sessions
 		SET status = 'expired', updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, checkout_intent_id, special_request_id,
-		          operator_context_id,
-		          client_id, store_id, payment_method,
-		          status, provider_reference, amount_minor_units, currency,
-		          captured_at, created_at, updated_at`
+		RETURNING ` + sessionCols
 	row := tx.QueryRow(q, sessionID)
 	s, err := scanSession(row)
 	if err == sql.ErrNoRows {

@@ -20,8 +20,8 @@ func TestCancelSessionForOrder_PreCapture_Expires(t *testing.T) {
 	checkoutIntentID := "checkout-" + orderID
 	var sessionID string
 	err := db.QueryRow(`
-		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency)
-		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'authorized', 1000, 'YER')
+		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
+		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'authorized', 1000, 'YER', 'order_payment')
 		RETURNING id`, checkoutIntentID).Scan(&sessionID)
 	if err != nil {
 		t.Fatalf("failed to insert test session: %v", err)
@@ -62,8 +62,8 @@ func TestCancelSessionForOrder_Captured_CreatesRefund(t *testing.T) {
 	checkoutIntentID := "checkout-" + orderID
 	var sessionID string
 	err := db.QueryRow(`
-		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, captured_at)
-		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'captured', 'card-cap-cfo', 2500, 'YER', NOW())
+		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, captured_at, financial_purpose)
+		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'captured', 'card-cap-cfo', 2500, 'YER', NOW(), 'order_payment')
 		RETURNING id`, checkoutIntentID).Scan(&sessionID)
 	if err != nil {
 		t.Fatalf("failed to insert test session: %v", err)
@@ -114,8 +114,8 @@ func TestCancelSessionForOrder_AlreadyTerminal_NoAction(t *testing.T) {
 	checkoutIntentID := "checkout-" + orderID
 	var sessionID string
 	err := db.QueryRow(`
-		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency)
-		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'expired', 1000, 'YER')
+		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
+		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'expired', 1000, 'YER', 'order_payment')
 		RETURNING id`, checkoutIntentID).Scan(&sessionID)
 	if err != nil {
 		t.Fatalf("failed to insert test session: %v", err)

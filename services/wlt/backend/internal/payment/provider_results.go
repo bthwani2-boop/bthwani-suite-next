@@ -17,7 +17,7 @@ var ErrProviderOperatorContextMismatch = errors.New("provider event OperatorCont
 
 type ProviderEventInput struct {
 	EventID           string
-	OperatorContextID          string
+	OperatorContextID string
 	PaymentSessionID  string
 	EventType         string
 	ProviderStatus    string
@@ -184,9 +184,7 @@ func legalAuthoritativeTransition(current, next string) bool {
 
 func getSessionForUpdateTx(tx *sql.Tx, sessionID string) (*PaymentSession, error) {
 	return scanSessionNullable(tx.QueryRow(`
-		SELECT id, checkout_intent_id, special_request_id, operator_context_id, client_id,
-		       store_id, payment_method, status, provider_reference,
-		       amount_minor_units, currency, captured_at, created_at, updated_at
+		SELECT `+sessionCols+`
 		FROM wlt_payment_sessions WHERE id = $1 FOR UPDATE`, sessionID))
 }
 
@@ -215,9 +213,7 @@ func postCapturedProviderResult(ctx context.Context, tx *sql.Tx, session *Paymen
 		    capture_ledger_transaction_id = $3, last_provider_event_id = $4,
 		    last_provider_status = 'captured', updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, checkout_intent_id, special_request_id, operator_context_id, client_id,
-		          store_id, payment_method, status, provider_reference,
-		          amount_minor_units, currency, captured_at, created_at, updated_at`,
+		RETURNING `+sessionCols,
 		session.ID, providerReference, ledgerTransactionID, eventID)
 	updated, err := scanSession(row)
 	if err != nil {
@@ -236,9 +232,7 @@ func updateAuthoritativeSessionState(ctx context.Context, tx *sql.Tx, session *P
 		SET status = $2, provider_reference = CASE WHEN $3 = '' THEN provider_reference ELSE $3 END,
 		    last_provider_event_id = $4, last_provider_status = $2, updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, checkout_intent_id, special_request_id, operator_context_id, client_id,
-		          store_id, payment_method, status, provider_reference,
-		          amount_minor_units, currency, captured_at, created_at, updated_at`,
+		RETURNING `+sessionCols,
 		session.ID, status, providerReference, eventID)
 	updated, err := scanSession(row)
 	if err != nil {

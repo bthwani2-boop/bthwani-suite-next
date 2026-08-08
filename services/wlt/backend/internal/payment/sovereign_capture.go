@@ -73,11 +73,7 @@ func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, client
 		    capture_ledger_transaction_id = $3, last_provider_status = 'captured',
 		    updated_at = NOW()
 		WHERE id = $1 AND status = 'capture_pending'
-		RETURNING id, checkout_intent_id, special_request_id,
-		          operator_context_id,
-		          client_id, store_id, payment_method,
-		          status, provider_reference, amount_minor_units, currency,
-		          captured_at, created_at, updated_at`
+		RETURNING ` + sessionCols
 	s, err := scanSession(tx.QueryRowContext(ctx, q, sessionID, result.ProviderReference, ledgerTransactionID))
 	if err == sql.ErrNoRows {
 		return finalizationFailure(fmt.Errorf("session %s was no longer capture_pending when finalizing capture", sessionID))

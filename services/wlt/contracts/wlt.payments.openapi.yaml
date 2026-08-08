@@ -330,6 +330,43 @@ components:
           expired,
           provider_result_unknown
         ]
+    FinancialPurpose:
+      type: string
+      description: >-
+        Server-derived accounting meaning of a payment session, resolved from
+        the trusted source identity (checkoutIntentId, specialRequestId or
+        subscriptionPurchaseId). Never accepted from a caller.
+      enum:
+        [
+          order_payment,
+          special_request_payment,
+          subscription_purchase
+        ]
+    AllocationComponent:
+      type: string
+      description: One accounting bucket within a payment session's conserved breakdown.
+      enum:
+        [
+          goods_subtotal,
+          delivery_fee,
+          service_fee,
+          tax,
+          discount,
+          tip
+        ]
+    AllocationLine:
+      type: object
+      additionalProperties: false
+      required: [ component, amountMinorUnits ]
+      properties:
+        component: { $ref: '#/components/schemas/AllocationComponent' }
+        amountMinorUnits:
+          type: integer
+          format: int64
+          description: >-
+            Positive for every component except discount, which must be
+            negative or zero. The full set must sum to exactly the session's
+            amountMinorUnits.
     PaymentSession:
       type: object
       required:
@@ -343,6 +380,7 @@ components:
           providerReference,
           amountMinorUnits,
           currency,
+          financialPurpose,
           createdAt,
           updatedAt
         ]
@@ -360,6 +398,11 @@ components:
         providerReference: { type: string }
         amountMinorUnits: { type: integer, format: int64, minimum: 1 }
         currency: { type: string, minLength: 3, maxLength: 3 }
+        financialPurpose: { $ref: '#/components/schemas/FinancialPurpose' }
+        allocation:
+          type: array
+          description: Conserved breakdown of amountMinorUnits. Empty when the caller did not itemise the session.
+          items: { $ref: '#/components/schemas/AllocationLine' }
         capturedAt: { type: [ string, 'null' ], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -385,6 +428,13 @@ components:
         amountMinorUnits: { type: integer, format: int64, minimum: 1 }
         currency: { type: string, default: YER }
         cartSnapshotHash: { type: string }
+        allocation:
+          type: array
+          description: >-
+            Optional price breakdown of amountMinorUnits. Rejected outright if
+            the components do not conserve the total; omitting it records no
+            breakdown rather than defaulting one.
+          items: { $ref: '#/components/schemas/AllocationLine' }
       oneOf:
         - required: [ checkoutIntentId ]
         - required: [ specialRequestId ]
