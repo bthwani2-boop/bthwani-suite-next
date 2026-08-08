@@ -1,0 +1,48 @@
+name: BThwani Lockfile Integrity
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "apps/**/package.json"
+      - "services/**/package.json"
+      - "shared/**/package.json"
+      - "core/**/package.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lockfile-integrity-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Prepare pnpm 10.30.3
+        run: corepack prepare pnpm@10.30.3 --activate
+
+      - name: Verify frozen lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Reject tracked source mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          git diff --quiet --exit-code
+          git diff --cached --quiet --exit-code
