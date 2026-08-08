@@ -13,7 +13,7 @@ import (
 
 const (
 	wltMigrationServiceName = "wlt"
-	wltLatestMigration      = "wlt-905_dispatch_financial_eligibility_decisions.sql"
+	wltLatestMigration      = "wlt-911_payment_topup_source_and_purpose.sql"
 	wltReadinessTimeout     = 2 * time.Second
 )
 
