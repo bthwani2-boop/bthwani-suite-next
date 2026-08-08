@@ -76,6 +76,20 @@ Applications access financial state only through the current governed applicatio
 
 Every financial mutation is server-side, authenticated, idempotent, correlated, auditable, and reconciled against WLT/provider authority. Unknown outcomes remain unknown/reconcilable; they are never converted into fabricated success.
 
+BThwani's internal wallet is a private WLT ledger balance, not an official external electronic wallet. Each actor has one canonical internal wallet; `available`, `held`, `pending`, earned/settled totals, and withdrawal eligibility are states or projections over that one WLT truth, not parallel wallets or ledgers.
+
+For an order that can combine internal wallet, external official-wallet payment, COD, subsidy, discount, or delivery charges, WLT owns one server-derived payment allocation that conserves the governed order total. A payment-method label alone is not sufficient financial truth, and the same delivery fee or earning must never be counted twice.
+
+Captain COD financial authorization is order-specific and atomic against the captain's same internal wallet. Required COD exposure is reserved before assignment is allowed, released exactly once when the governed order outcome requires release, and finalized exactly once when the governed outcome requires debit. Delivery earnings are a separate WLT movement and cannot be used to fabricate pre-existing COD capacity.
+
+Approved official electronic-wallet rails may move external money into BThwani for supported Cash-In/top-up/payment purposes. Customer or operator claims, screenshots, client-side success screens, or unverified provider responses never create internal wallet credit; authoritative provider evidence and WLT reconciliation/posting are required.
+
+The current stakeholder Cash-Out model for partner, captain, and field is a governed manual external transfer from BThwani's official wallet accounts to a verified, versioned official-wallet destination. Funds move through hold, approval, immutable execution snapshot/batch, external execution evidence, independent verification as required, reconciliation, and only then completion. A spreadsheet/export is an execution artifact and never financial truth.
+
+One visible internal balance does not imply that every unit is withdrawable. Withdrawal eligibility is server-owned policy. General customer withdrawal and withdrawal of externally funded principal are not enabled by implication and require an explicit approved Product Truth/legal-financial policy before activation.
+
+Automated external payout is not implied by a generic provider adapter. It requires a separate approved capability with proven provider support, security, accounting, reconciliation, contractual and applicable regulatory evidence before it can replace the governed manual settlement path.
+
 ### Promotions and funding
 
 Every promotion has stable identity/version, eligibility, scope, validity window and explicit funding model. Client-supplied totals/discounts are untrusted. Checkout/order captures the commercial snapshot required to reproduce the accepted transaction. WLT owns the authoritative financial consequences, reimbursement, settlement and refund effects.
