@@ -1,1 +1,25 @@
-{"schemaVersion":3,"unitId":"U003","status":"NOT_STARTED","baselineSha":null,"resultingSha":null,"completedTaskIds":[],"modifiedPaths":[],"checkResults":[],"blockers":[],"deviations":[],"decision":"NOT_RUN"}
+{
+  "schemaVersion": 3,
+  "unitId": "U003",
+  "status": "IN_PROGRESS",
+  "baselineSha": null,
+  "resultingSha": null,
+  "completedTaskIds": [
+    "U003-T001",
+    "U003-T002"
+  ],
+  "modifiedPaths": [
+    "services/wlt/contracts/wlt.cod-records.openapi.yaml",
+    "services/wlt/backend/internal/http/server.go",
+    "services/wlt/backend/internal/cod/reservation.go",
+    "services/wlt/backend/internal/cod/sovereign_cod.go",
+    "services/dsh/backend/internal/orders/lifecycle.go",
+    "services/dsh/backend/internal/wlt/cod_reservations.go",
+    "services/dsh/backend/internal/http/dispatch_governance_handlers.go",
+    "services/dsh/backend/internal/http/delivery_proof_completion.go"
+  ],
+  "checkResults": [],
+  "blockers": [],
+  "deviations": [],
+  "decision": "NOT_RUN"
+}

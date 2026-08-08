@@ -79,6 +79,10 @@ func NewRouter(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionService) *ht
 	mux.HandleFunc("GET /wlt/settlements", readGate(shared.RequireOperatorContextScope(db, shared.OperatorContextScopeConfig{Table: "wlt_settlements", ListPath: "/wlt/settlements"}, settlement.HandleListSettlements(db))))
 	mux.HandleFunc("POST /wlt/settlements/{settlementId}/post", gate(serviceAuth(settlement.HandlePostSettlement(db))))
 	mux.HandleFunc("PUT /wlt/settlement-policies/{partnerId}", gate(serviceAuth(settlement.HandleUpsertGovernedSettlementPolicyIdempotent(db))))
+	mux.HandleFunc("POST /wlt/cod-reservations/reserve", gate(serviceAuth(cod.HandleReserveCodCapacity(db))))
+	mux.HandleFunc("POST /wlt/cod-reservations/release", gate(serviceAuth(cod.HandleReleaseCodReservation(db))))
+	mux.HandleFunc("POST /wlt/cod-reservations/finalize", gate(serviceAuth(cod.HandleFinalizeCodReservation(db))))
+	mux.HandleFunc("GET /wlt/cod-reservations/{orderId}", readGate(cod.HandleGetCodReservation(db)))
 
 	mux.HandleFunc("POST /wlt/cod-records", gate(serviceAuth(cod.HandleCreateCodRecordOperatorContext(db))))
 	mux.HandleFunc("GET /wlt/cod-records/{codRecordId}", readGate(shared.RequireOperatorContextScope(db, shared.OperatorContextScopeConfig{Table: "wlt_cod_records", IDPathValue: "codRecordId"}, cod.HandleGetCodRecord(db))))

@@ -285,6 +285,13 @@ func MarkCodCollectedSovereign(ctx context.Context, db *sql.DB, codRecordID stri
 	if err != nil || record == nil {
 		return nil, err
 	}
+	var hasReservation bool
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM wlt_cod_reservations WHERE operator_context_id = $1 AND order_id = $2)`, operatorContextID, record.OrderID).Scan(&hasReservation); err != nil {
+		return nil, err
+	}
+	if hasReservation {
+		return nil, fmt.Errorf("%w: legacy collection is disabled for funded-wallet orders", ErrCodStateConflict)
+	}
 	if !actorMatchesCollector(record, actorID, actorType) {
 		return nil, ErrCodActorMismatch
 	}
@@ -390,6 +397,13 @@ func MarkCodRemittedSovereign(ctx context.Context, db *sql.DB, codRecordID strin
 	record, err := getCodRecordForUpdate(ctx, tx, operatorContextID, codRecordID)
 	if err != nil || record == nil {
 		return nil, err
+	}
+	var hasReservation bool
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM wlt_cod_reservations WHERE operator_context_id = $1 AND order_id = $2)`, operatorContextID, record.OrderID).Scan(&hasReservation); err != nil {
+		return nil, err
+	}
+	if hasReservation {
+		return nil, fmt.Errorf("%w: legacy remittance is disabled for funded-wallet orders", ErrCodStateConflict)
 	}
 	if !actorMayRemit(record, actorID, actorType) {
 		return nil, ErrCodActorMismatch

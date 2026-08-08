@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"dsh-api/internal/dispatch"
+	"dsh-api/internal/orders"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
 )
@@ -172,8 +174,53 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 		return
 	}
 
-	assignment, err := dispatch.AcceptGovernedAssignment(s.db, r.PathValue("assignmentId"), actor.ID)
+	assignment, err := dispatch.GetCaptainAssignment(s.db, r.PathValue("assignmentId"), actor.ID)
 	if err != nil {
+		writeGovernedDispatchError(w, err)
+		return
+	}
+
+	var isCod bool
+	var sessionID string
+	var orderAmount int64
+	var orderCurrency string
+
+	tx, err := s.db.BeginTx(r.Context(), nil)
+	if err == nil {
+		deliveryCtx, err := orders.GetOrderDeliveryContext(tx, assignment.OrderID)
+		if err == nil && deliveryCtx.PaymentMethod == "cod" && deliveryCtx.WltPaymentSessionID != "" {
+			isCod = true
+			sessionID = deliveryCtx.WltPaymentSessionID
+		}
+		tx.Rollback()
+	}
+
+	correlationID := r.Header.Get("X-Correlation-Id")
+
+	if isCod {
+		session, err := s.wlt.GetPaymentSession(r.Context(), sessionID)
+		if err != nil {
+			store.SendError(w, http.StatusServiceUnavailable, "WLT_UNAVAILABLE", "failed to verify COD capacity")
+			return
+		}
+		orderAmount = session.Amount
+		orderCurrency = session.Currency
+		_, _, err = s.wlt.ReserveCodCapacity(r.Context(), assignment.OrderID, actor.ID, orderAmount, orderCurrency, correlationID, "accept_"+assignment.ID)
+		if err != nil {
+			if strings.Contains(err.Error(), "INSUFFICIENT") {
+				store.SendError(w, http.StatusConflict, "INSUFFICIENT_COD_CAPACITY", "insufficient COD capacity to accept this order")
+			} else {
+				store.SendError(w, http.StatusConflict, "COD_RESERVATION_FAILED", err.Error())
+			}
+			return
+		}
+	}
+
+	assignment, err = dispatch.AcceptGovernedAssignment(s.db, r.PathValue("assignmentId"), actor.ID)
+	if err != nil {
+		if isCod {
+			s.wlt.ReleaseCodReservation(r.Context(), assignment.OrderID, "assignment_accept_failed", correlationID)
+		}
 		writeGovernedDispatchError(w, err)
 		return
 	}
@@ -197,12 +244,18 @@ func (s *protectedStoreServer) handleDeclineGovernedDispatchAssignment(w http.Re
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	assignmentID := r.PathValue("assignmentId")
+	assignment, _ := dispatch.GetCaptainAssignment(s.db, assignmentID, actor.ID)
+
 	assignment, err := dispatch.DeclineGovernedAssignment(
-		s.db, r.PathValue("assignmentId"), actor.ID, body.ReasonCode, body.Reason,
+		s.db, assignmentID, actor.ID, body.ReasonCode, body.Reason,
 	)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
+	}
+	if assignment != nil {
+		go s.wlt.ReleaseCodReservation(context.Background(), assignment.OrderID, "declined: "+body.ReasonCode, r.Header.Get("X-Correlation-Id"))
 	}
 	payload, err := s.marshalGovernedDispatchAssignment(assignment)
 	if err != nil {
@@ -321,8 +374,11 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 	if idempotencyKey == "" {
 		idempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	}
+	assignmentID := r.PathValue("assignmentId")
+	existingAssignment, _ := dispatch.GetCaptainAssignment(s.db, assignmentID, actor.ID)
+
 	assignment, err := dispatch.ReassignGovernedAssignment(s.db, dispatch.ReassignAssignmentInput{
-		AssignmentID: r.PathValue("assignmentId"), OperatorContextID: operatorContextID,
+		AssignmentID: assignmentID, OperatorContextID: operatorContextID,
 		CaptainID: body.CaptainID, ActorID: actor.ID, ServiceAreaCode: body.ServiceAreaCode,
 		IdempotencyKey: idempotencyKey, Priority: body.Priority, DistanceMeters: body.DistanceMeters,
 		Reason: body.Reason, ResponseTimeoutSecond: body.ResponseTimeoutSeconds,
@@ -330,6 +386,9 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
+	}
+	if existingAssignment != nil {
+		go s.wlt.ReleaseCodReservation(context.Background(), existingAssignment.OrderID, "reassigned: "+body.Reason, r.Header.Get("X-Correlation-Id"))
 	}
 	payload, err := s.marshalGovernedDispatchAssignment(assignment)
 	if err != nil {
@@ -351,11 +410,17 @@ func (s *protectedStoreServer) handleCancelGovernedDispatchAssignment(w http.Res
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	assignmentID := r.PathValue("assignmentId")
+	existingAssignment, _ := dispatch.GetCaptainAssignment(s.db, assignmentID, actor.ID)
+
 	if err := dispatch.CancelGovernedAssignment(
-		s.db, r.PathValue("assignmentId"), actor.ID, body.ReasonCode, body.Reason,
+		s.db, assignmentID, actor.ID, body.ReasonCode, body.Reason,
 	); err != nil {
 		writeGovernedDispatchError(w, err)
 		return
+	}
+	if existingAssignment != nil {
+		go s.wlt.ReleaseCodReservation(context.Background(), existingAssignment.OrderID, "cancelled: "+body.ReasonCode, r.Header.Get("X-Correlation-Id"))
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
