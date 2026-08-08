@@ -231,6 +231,86 @@ paths:
               schema: { type: object, additionalProperties: true }
         '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+  /wlt/topup-sessions:
+    post:
+      operationId: createWltTopUpSession
+      summary: Create or replay a Cash-In wallet topup session (customer or captain).
+      description: >-
+        A distinct source identity from order/special-request/subscription
+        payment sessions (wlt-911): no order or subscription sits behind a
+        wallet topup, only the actor being credited.
+      tags: [ WltPayments ]
+      security: [ { serviceBearer: [] } ]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTopUpSessionRequest' }
+      responses:
+        '201':
+          description: Created or replayed topup session.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentSessionResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+  /wlt/topup-sessions/{paymentSessionId}/authorize:
+    post:
+      operationId: authorizeWltTopUpSession
+      summary: Authorize a topup session through the capability-checked CashInRail.
+      tags: [ WltPayments ]
+      security: [ { serviceBearer: [] } ]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/PaymentSessionId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Authorized or exact idempotent replay.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentOperationResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '502': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+  /wlt/topup-sessions/{paymentSessionId}/capture:
+    post:
+      operationId: captureWltTopUpSession
+      summary: Capture an authorized topup session and atomically post the actor's
+        wallet credit.
+      tags: [ WltPayments ]
+      security: [ { serviceBearer: [] } ]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/PaymentSessionId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Captured with exactly-once wallet-credit ledger effect or exact replay.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentOperationResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '502': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/order-cancellations:
     post:
       operationId: cancelWltOrderFinancially
@@ -334,14 +414,21 @@ components:
       type: string
       description: >-
         Server-derived accounting meaning of a payment session, resolved from
-        the trusted source identity (checkoutIntentId, specialRequestId or
-        subscriptionPurchaseId). Never accepted from a caller.
+        the trusted source identity (checkoutIntentId, specialRequestId,
+        subscriptionPurchaseId or topupReference). Never accepted from a
+        caller.
       enum:
         [
           order_payment,
           special_request_payment,
-          subscription_purchase
+          subscription_purchase,
+          customer_topup,
+          captain_topup
         ]
+    TopUpActorType:
+      type: string
+      description: Which actor type a Cash-In wallet topup session credits.
+      enum: [ customer, captain ]
     AllocationComponent:
       type: string
       description: One accounting bucket within a payment session's conserved breakdown.
@@ -390,6 +477,11 @@ components:
         specialRequestId: { type: [ string, 'null' ] }
         subscriptionPurchaseId: { type: [ string, 'null' ] }
         commercialProductReference: { type: [ string, 'null' ] }
+        topupReference: { type: [ string, 'null' ] }
+        topupActorType:
+          oneOf:
+            - $ref: '#/components/schemas/TopUpActorType'
+            - type: 'null'
         operatorContextId: { type: string, description: Server-owned financial compatibility scope. }
         clientId: { type: string }
         storeId: { type: string }
@@ -439,6 +531,16 @@ components:
         - required: [ checkoutIntentId ]
         - required: [ specialRequestId ]
         - required: [ subscriptionPurchaseId, commercialProductReference ]
+    CreateTopUpSessionRequest:
+      type: object
+      additionalProperties: false
+      required: [ actorType, actorId, topupReference, amountMinorUnits, currency ]
+      properties:
+        actorType: { $ref: '#/components/schemas/TopUpActorType' }
+        actorId: { type: string }
+        topupReference: { type: string }
+        amountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string, default: YER }
     PaymentSessionResponse:
       type: object
       required: [ paymentSession ]

@@ -26,6 +26,12 @@ const (
 	PurposeSubscriptionPurchase  FinancialPurpose = "subscription_purchase"
 	PurposeOpeningBalance        FinancialPurpose = "opening_balance"
 	PurposeFinancialCorrection   FinancialPurpose = "financial_correction"
+	// PurposeCustomerTopUp and PurposeCaptainTopUp are the two Cash-In
+	// wallet-funding purposes (U002-T002): the actor tops up their own
+	// wallet directly, with no order/subscription/special-request behind
+	// the movement at all.
+	PurposeCustomerTopUp FinancialPurpose = "customer_topup"
+	PurposeCaptainTopUp  FinancialPurpose = "captain_topup"
 )
 
 // ErrPurposeNotDerivable is returned when the trusted source identity does not
@@ -42,7 +48,18 @@ type SessionSource struct {
 	CheckoutIntentID       string
 	SpecialRequestID       string
 	SubscriptionPurchaseID string
+	// TopUpReference is the fourth source identity (wlt-911): set only for a
+	// Cash-In wallet top-up session. TopUpActorType must accompany it and
+	// resolves which of the two top-up purposes applies.
+	TopUpReference string
+	TopUpActorType string
 }
+
+// ErrUnknownTopUpActorType is returned when TopUpReference is present but
+// TopUpActorType is not one of the two actor types a wallet top-up may
+// credit. Kept distinct from ErrPurposeNotDerivable so a caller can tell "no
+// source" apart from "a top-up source with a corrupt/unsupported actor type".
+var ErrUnknownTopUpActorType = errors.New("topup actor type is not recognised")
 
 // DerivePaymentSessionPurpose maps a trusted payment source to its accounting
 // purpose. Exactly one identifier must be present; zero or several means the
@@ -62,6 +79,17 @@ func DerivePaymentSessionPurpose(source SessionSource) (FinancialPurpose, error)
 	if source.SubscriptionPurchaseID != "" {
 		present++
 		purpose = PurposeSubscriptionPurchase
+	}
+	if source.TopUpReference != "" {
+		present++
+		switch source.TopUpActorType {
+		case "customer":
+			purpose = PurposeCustomerTopUp
+		case "captain":
+			purpose = PurposeCaptainTopUp
+		default:
+			return "", fmt.Errorf("%w: %q", ErrUnknownTopUpActorType, source.TopUpActorType)
+		}
 	}
 
 	if present != 1 {

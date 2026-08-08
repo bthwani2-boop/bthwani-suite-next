@@ -16,6 +16,7 @@ var ErrIdempotencyConflict = errors.New("payment session idempotency conflict")
 
 const paymentSessionCols = `id, checkout_intent_id, special_request_id,
 	 subscription_purchase_id, commercial_product_reference,
+	 topup_reference, topup_actor_type,
 	 operator_context_id,
 	 client_id, store_id, payment_method, status, provider_reference, amount_minor_units,
 	 currency, financial_purpose, captured_at, created_at, updated_at`
@@ -26,6 +27,8 @@ type PaymentSession struct {
 	SpecialRequestID           *string `json:"specialRequestId,omitempty"`
 	SubscriptionPurchaseID     *string `json:"subscriptionPurchaseId,omitempty"`
 	CommercialProductReference *string `json:"commercialProductReference,omitempty"`
+	TopUpReference             *string `json:"topupReference,omitempty"`
+	TopUpActorType             *string `json:"topupActorType,omitempty"`
 	OperatorContextID          string  `json:"operatorContextId"`
 	ClientID                   string  `json:"clientId"`
 	StoreID                    string  `json:"storeId"`
@@ -52,6 +55,11 @@ type CreatePaymentSessionInput struct {
 	SpecialRequestID           string `json:"specialRequestId"`
 	SubscriptionPurchaseID     string `json:"subscriptionPurchaseId"`
 	CommercialProductReference string `json:"commercialProductReference"`
+	// TopUpReference and TopUpActorType are the fourth source identity
+	// (wlt-911): a Cash-In wallet top-up session. Both must be set together
+	// or both left empty -- see sourceCount and CreatePaymentSession.
+	TopUpReference string `json:"topupReference"`
+	TopUpActorType string `json:"topupActorType"`
 	// OperatorContextID is a temporary persistence compatibility field. The
 	// HTTP handler ignores any caller value and overwrites it from authenticated
 	// server configuration before validation or database access.
@@ -82,18 +90,27 @@ func sourceCount(input CreatePaymentSessionInput) int {
 	if input.SubscriptionPurchaseID != "" {
 		count++
 	}
+	if input.TopUpReference != "" {
+		count++
+	}
 	return count
 }
 
 func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*PaymentSession, error) {
 	if sourceCount(input) != 1 {
-		return nil, fmt.Errorf("exactly one of checkoutIntentId, specialRequestId or subscriptionPurchaseId is required")
+		return nil, fmt.Errorf("exactly one of checkoutIntentId, specialRequestId, subscriptionPurchaseId or topupReference is required")
 	}
 	if input.SubscriptionPurchaseID != "" && input.CommercialProductReference == "" {
 		return nil, fmt.Errorf("commercialProductReference is required for a subscription purchase")
 	}
 	if input.SubscriptionPurchaseID == "" && input.CommercialProductReference != "" {
 		return nil, fmt.Errorf("commercialProductReference is only valid for a subscription purchase")
+	}
+	if input.TopUpReference != "" && input.TopUpActorType == "" {
+		return nil, fmt.Errorf("topupActorType is required for a topupReference")
+	}
+	if input.TopUpReference == "" && input.TopUpActorType != "" {
+		return nil, fmt.Errorf("topupActorType is only valid for a topupReference")
 	}
 	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	if input.OperatorContextID == "" || input.ClientID == "" || input.StoreID == "" {
@@ -113,6 +130,9 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	if input.SubscriptionPurchaseID != "" && input.PaymentMethod == "cod" {
 		return nil, fmt.Errorf("cod is not supported for subscription purchases")
 	}
+	if input.TopUpReference != "" && input.PaymentMethod == "cod" {
+		return nil, fmt.Errorf("cod is not supported for a wallet topup")
+	}
 	if input.AmountMinorUnits <= 0 {
 		return nil, fmt.Errorf("amountMinorUnits must be greater than 0")
 	}
@@ -123,6 +143,8 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 		CheckoutIntentID:       input.CheckoutIntentID,
 		SpecialRequestID:       input.SpecialRequestID,
 		SubscriptionPurchaseID: input.SubscriptionPurchaseID,
+		TopUpReference:         input.TopUpReference,
+		TopUpActorType:         input.TopUpActorType,
 	})
 	if err != nil {
 		return nil, err
@@ -137,8 +159,10 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 		existing, err = getPaymentSessionByCheckoutIntent(db, input.OperatorContextID, input.CheckoutIntentID)
 	case input.SpecialRequestID != "":
 		existing, err = getPaymentSessionBySpecialRequest(db, input.OperatorContextID, input.SpecialRequestID)
-	default:
+	case input.SubscriptionPurchaseID != "":
 		existing, err = getPaymentSessionBySubscriptionPurchase(db, input.OperatorContextID, input.SubscriptionPurchaseID)
+	default:
+		existing, err = getPaymentSessionByTopUpReference(db, input.OperatorContextID, input.TopUpReference)
 	}
 	if err != nil {
 		return nil, err
@@ -155,6 +179,7 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 			existing.AmountMinorUnits != input.AmountMinorUnits ||
 			existing.Currency != input.Currency ||
 			stringValue(existing.CommercialProductReference) != input.CommercialProductReference ||
+			stringValue(existing.TopUpActorType) != input.TopUpActorType ||
 			!sameAllocation(existing.Allocation, input.Allocation) {
 			return nil, ErrIdempotencyConflict
 		}
@@ -164,11 +189,12 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	const q = `
 		INSERT INTO wlt_payment_sessions
 			(checkout_intent_id, special_request_id, subscription_purchase_id,
-			 commercial_product_reference, operator_context_id, client_id, store_id,
+			 commercial_product_reference, topup_reference, topup_actor_type,
+			 operator_context_id, client_id, store_id,
 			 payment_method, status, amount_minor_units, currency, financial_purpose,
 			 cart_snapshot_hash, idempotency_key, correlation_id)
-		VALUES (NULLIF($1, ''), NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''),
-			$5, $6, $7, $8, 'reference_created', $9, $10, $11, $12, $13, $14)
+		VALUES (NULLIF($1, ''), NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''),
+			$7, $8, $9, $10, 'reference_created', $11, $12, $13, $14, $15, $16)
 		RETURNING ` + paymentSessionCols
 
 	// The session and its allocation are one financial fact and are written in
@@ -186,6 +212,8 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 		input.SpecialRequestID,
 		input.SubscriptionPurchaseID,
 		input.CommercialProductReference,
+		input.TopUpReference,
+		input.TopUpActorType,
 		input.OperatorContextID,
 		input.ClientID,
 		input.StoreID,
@@ -393,6 +421,20 @@ func getPaymentSessionBySubscriptionPurchase(db *sql.DB, operatorContextID strin
 	return attachAllocation(db, session, err)
 }
 
+func getPaymentSessionByTopUpReference(db *sql.DB, operatorContextID string, topUpReference string) (*PaymentSession, error) {
+	q := `SELECT ` + paymentSessionCols + ` FROM wlt_payment_sessions WHERE topup_reference = $1`
+	args := []any{topUpReference}
+	if operatorContextID != "" {
+		q += ` AND operator_context_id = $2`
+		args = append(args, operatorContextID)
+	}
+	session, err := scanPaymentSession(db.QueryRow(q, args...))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return attachAllocation(db, session, err)
+}
+
 func requireDshServiceCaller(w http.ResponseWriter, r *http.Request) bool {
 	return shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh")
 }
@@ -405,6 +447,8 @@ func scanPaymentSession(row *sql.Row) (*PaymentSession, error) {
 		&session.SpecialRequestID,
 		&session.SubscriptionPurchaseID,
 		&session.CommercialProductReference,
+		&session.TopUpReference,
+		&session.TopUpActorType,
 		&session.OperatorContextID,
 		&session.ClientID,
 		&session.StoreID,

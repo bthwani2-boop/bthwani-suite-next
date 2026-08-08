@@ -51,6 +51,16 @@ func NewRouter(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionService) *ht
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/expire", gate(serviceAuth(payment.HandleOperatorContextScopedPaymentSession(db, payment.HandleExpireSession(db)))))
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/cod-collect", gate(serviceAuth(payment.HandleCodCollectionViaPaymentSessionBlocked(db))))
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/cancel-for-order", gate(serviceAuth(payment.HandleOperatorContextScopedPaymentSession(db, payment.HandleGovernedSessionCancellation(db)))))
+
+	// Cash-In wallet top-up (U002-T002): a distinct route namespace, not the
+	// order-payment authorize/capture routes above, because these route
+	// through provider.CashInRail (the capability-checked rail from
+	// U002-T001) instead of the raw provider client, and reject any session
+	// whose purpose is not customer_topup/captain_topup.
+	mux.HandleFunc("POST /wlt/topup-sessions", gate(serviceAuth(killGate(reference.HandleCreateTopUpSessionTrustedDsh(db)))))
+	mux.HandleFunc("POST /wlt/topup-sessions/{paymentSessionId}/authorize", gate(serviceAuth(payment.HandleGovernedPaymentOperation(db, "authorize", payment.HandleAuthorizeTopUpSession(db)))))
+	mux.HandleFunc("POST /wlt/topup-sessions/{paymentSessionId}/capture", gate(serviceAuth(payment.HandleGovernedPaymentOperation(db, "capture", payment.HandleCaptureTopUpSession(db)))))
+
 	mux.HandleFunc("POST /wlt/provider/webhooks/payment", gate(payment.HandlePaymentProviderWebhook(db)))
 
 	mux.HandleFunc("POST /wlt/refunds", gate(serviceAuth(killGate(refund.RequireOperatorContextScope(db, refund.RequireMutationIdempotency(db, "create", refund.HandleCreateGovernedRefund(db)))))))
@@ -116,7 +126,7 @@ func NewRouter(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionService) *ht
 	mux.HandleFunc("POST /wlt/payout-requests/{payoutId}/reconcile", gate(serviceAuth(killGate(payout.HandleReconcileGovernedPayoutRequest(db)))))
 
 	mux.HandleFunc("GET /wlt/commercial/summary", readGate(commercial.HandleGetSummary(db)))
-//	mux.HandleFunc("POST /wlt/internal/quotes/calculate", gate(serviceAuth(HandleCalculateQuote())))
+	//	mux.HandleFunc("POST /wlt/internal/quotes/calculate", gate(serviceAuth(HandleCalculateQuote())))
 	mux.HandleFunc("GET /wlt/commercial/products/{productReference}", readGate(commercial.HandleGetProduct(db)))
 	mux.HandleFunc("POST /wlt/commercial/products", gate(serviceAuth(commercial.HandleCreateProduct(db))))
 	mux.HandleFunc("PATCH /wlt/commercial/products/{productReference}", gate(serviceAuth(commercial.HandleUpdateProductGoverned(db))))
@@ -216,4 +226,3 @@ func newKillSwitchGate(ds wallet.DecisionService) func(http.HandlerFunc) http.Ha
 		}
 	}
 }
-
