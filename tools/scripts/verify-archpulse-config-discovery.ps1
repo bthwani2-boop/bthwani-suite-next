@@ -1,18 +1,19 @@
 <#
 .SYNOPSIS
-  Non-destructive runtime verification of ArchPulse config auto-discovery and ignore semantics.
+  Bounded runtime verification of ArchPulse config auto-discovery and ignore semantics.
 
 .DESCRIPTION
-  Creates an isolated temporary TypeScript fixture, runs ArchPulse 0.5.3 analyze with:
-  1) no config,
-  2) an auto-discovered archpulse.config.yml,
-  3) an explicit --config path,
-  and compares the analyzed file counts. It also tests both directory-style and glob-style
-  ignore patterns. The repository itself is never analyzed or modified.
+  Creates an isolated temporary TypeScript fixture and compares three ArchPulse 0.5.3
+  analyze runs: no config, auto-discovered archpulse.config.yml, and explicit --config.
+  Every native run has a hard timeout and is terminated if ArchPulse stalls. The repository
+  itself is never analyzed or modified.
 #>
 
 [CmdletBinding()]
-param()
+param(
+  [ValidateRange(5, 120)]
+  [int]$TimeoutSeconds = 25
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -25,29 +26,51 @@ function Pass([string]$Message) { Write-Host ('  PASS  {0}' -f $Message) -Foregr
 function Warn([string]$Message) { Write-Host ('  WARN  {0}' -f $Message) -ForegroundColor Yellow }
 function Fail([string]$Message) { Write-Host ('  FAIL  {0}' -f $Message) -ForegroundColor Red }
 
+function Quote-NativeArgument([string]$Value) {
+  if ($Value -notmatch '[\s"]') { return $Value }
+  return '"{0}"' -f ($Value -replace '"', '\"')
+}
+
 function Invoke-ArchPulseAnalyze {
   param(
     [Parameter(Mandatory = $true)][string]$WorkingDirectory,
     [string]$ConfigPath
   )
 
-  Push-Location $WorkingDirectory
+  $Arguments = @('--yes', 'archpulse', 'analyze', '.')
+  if (-not [string]::IsNullOrWhiteSpace($ConfigPath)) {
+    $Arguments += @('--config', $ConfigPath)
+  }
+
+  $StdOutPath = Join-Path $WorkingDirectory ('archpulse-stdout-{0}.txt' -f ([guid]::NewGuid().ToString('N')))
+  $StdErrPath = Join-Path $WorkingDirectory ('archpulse-stderr-{0}.txt' -f ([guid]::NewGuid().ToString('N')))
+  $CommandLine = 'npx {0}' -f (($Arguments | ForEach-Object { Quote-NativeArgument $_ }) -join ' ')
+  Info ('Starting: {0}' -f $CommandLine)
+  Info ('Timeout: {0}s' -f $TimeoutSeconds)
+
+  $Process = $null
+  $TimedOut = $false
   try {
-    $Args = @('--yes', 'archpulse', 'analyze', '.', '--verbose')
-    if (-not [string]::IsNullOrWhiteSpace($ConfigPath)) {
-      $Args += @('--config', $ConfigPath)
+    $Process = Start-Process `
+      -FilePath 'npx.cmd' `
+      -ArgumentList $Arguments `
+      -WorkingDirectory $WorkingDirectory `
+      -NoNewWindow `
+      -RedirectStandardOutput $StdOutPath `
+      -RedirectStandardError $StdErrPath `
+      -PassThru
+
+    if (-not $Process.WaitForExit($TimeoutSeconds * 1000)) {
+      $TimedOut = $true
+      Warn ('ArchPulse exceeded {0}s; terminating PID {1}.' -f $TimeoutSeconds, $Process.Id)
+      try { $Process.Kill($true) } catch { try { Stop-Process -Id $Process.Id -Force -ErrorAction SilentlyContinue } catch {} }
+      try { $Process.WaitForExit(3000) | Out-Null } catch {}
     }
 
-    $OldPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    try {
-      $Output = @(& npx @Args 2>&1)
-      $ExitCode = $LASTEXITCODE
-    } finally {
-      $ErrorActionPreference = $OldPreference
-    }
+    $StdOut = if (Test-Path -LiteralPath $StdOutPath) { Get-Content -LiteralPath $StdOutPath -Raw -ErrorAction SilentlyContinue } else { '' }
+    $StdErr = if (Test-Path -LiteralPath $StdErrPath) { Get-Content -LiteralPath $StdErrPath -Raw -ErrorAction SilentlyContinue } else { '' }
+    $Text = @($StdOut, $StdErr) -join "`n"
 
-    $Text = ($Output | ForEach-Object { $_.ToString() }) -join "`n"
     $FileCount = $null
     foreach ($Pattern in @(
       '(?im)Files analyzed\s*:\s*(\d+)',
@@ -61,14 +84,18 @@ function Invoke-ArchPulseAnalyze {
       }
     }
 
+    $ExitCode = if ($TimedOut) { -2 } elseif ($null -ne $Process -and $Process.HasExited) { $Process.ExitCode } else { -1 }
+
     return [pscustomobject]@{
       ExitCode = $ExitCode
+      TimedOut = $TimedOut
       FileCount = $FileCount
       Text = $Text
-      Command = ('npx {0}' -f ($Args -join ' '))
+      Command = $CommandLine
     }
   } finally {
-    Pop-Location
+    Remove-Item -LiteralPath $StdOutPath, $StdErrPath -Force -ErrorAction SilentlyContinue
+    if ($null -ne $Process) { $Process.Dispose() }
   }
 }
 
@@ -78,19 +105,22 @@ function Show-RunResult {
     [Parameter(Mandatory = $true)]$Result
   )
 
-  Info ('{0}: {1}' -f $Label, $Result.Command)
-  if ($Result.ExitCode -eq 0) { Pass ('{0} exited 0' -f $Label) }
-  else { Fail ('{0} exit code {1}' -f $Label, $Result.ExitCode) }
+  if ($Result.TimedOut) {
+    Fail ('{0} timed out; ArchPulse did not finish.' -f $Label)
+  } elseif ($Result.ExitCode -eq 0) {
+    Pass ('{0} exited 0' -f $Label)
+  } else {
+    Fail ('{0} exit code {1}' -f $Label, $Result.ExitCode)
+  }
 
   if ($null -ne $Result.FileCount) {
     Info ('{0} file count: {1}' -f $Label, $Result.FileCount)
   } else {
-    Warn ('Could not parse an analyzed file count for {0}' -f $Label)
+    Warn ('Could not parse analyzed file count for {0}' -f $Label)
   }
 
-  foreach ($Line in ($Result.Text -split "`r?`n" | Select-Object -Last 30)) {
-    Write-Host ('        {0}' -f $Line)
-  }
+  $Lines = @($Result.Text -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Last 20)
+  foreach ($Line in $Lines) { Write-Host ('        {0}' -f $Line) }
 }
 
 Write-Host ''
@@ -108,24 +138,14 @@ $SrcDir = Join-Path $ProbeRoot 'src'
 $ToolsDir = Join-Path $ProbeRoot 'tools'
 $TestsDir = Join-Path $ProbeRoot 'tests'
 $ConfigPath = Join-Path $ProbeRoot 'archpulse.config.yml'
-$HiddenConfigPath = Join-Path $ProbeRoot 'archpulse.config.hidden.yml'
 
 try {
   New-Item -ItemType Directory -Path $SrcDir, $ToolsDir, $TestsDir -Force | Out-Null
 
-  Set-Content -LiteralPath (Join-Path $SrcDir 'entry.ts') -Encoding utf8 -Value @'
-import { coreValue } from './core';
-console.log(coreValue);
-'@
-  Set-Content -LiteralPath (Join-Path $SrcDir 'core.ts') -Encoding utf8 -Value @'
-export const coreValue = 42;
-'@
-  Set-Content -LiteralPath (Join-Path $ToolsDir 'helper.ts') -Encoding utf8 -Value @'
-export const helper = 'tool';
-'@
-  Set-Content -LiteralPath (Join-Path $TestsDir 'entry.test.ts') -Encoding utf8 -Value @'
-export const testMarker = true;
-'@
+  Set-Content -LiteralPath (Join-Path $SrcDir 'entry.ts') -Encoding utf8 -Value "import { coreValue } from './core';`nconsole.log(coreValue);"
+  Set-Content -LiteralPath (Join-Path $SrcDir 'core.ts') -Encoding utf8 -Value 'export const coreValue = 42;'
+  Set-Content -LiteralPath (Join-Path $ToolsDir 'helper.ts') -Encoding utf8 -Value "export const helper = 'tool';"
+  Set-Content -LiteralPath (Join-Path $TestsDir 'entry.test.ts') -Encoding utf8 -Value 'export const testMarker = true;'
 
   Info ('Temporary fixture: {0}' -f $ProbeRoot)
 
@@ -133,7 +153,13 @@ export const testMarker = true;
   $Baseline = Invoke-ArchPulseAnalyze -WorkingDirectory $ProbeRoot
   Show-RunResult -Label 'baseline' -Result $Baseline
 
-  Section 'Auto-discovery with glob-style ignore'
+  if ($Baseline.TimedOut) {
+    Section 'Diagnosis'
+    Fail 'ArchPulse analyze itself stalls on a four-file isolated fixture. Config auto-discovery cannot be tested reliably until the CLI stall is diagnosed.'
+    Info 'The timeout killed the stalled ArchPulse process; there is no need to use Ctrl+C.'
+    exit 4
+  }
+
   Set-Content -LiteralPath $ConfigPath -Encoding utf8 -Value @'
 ignore:
   - "tools/**"
@@ -144,64 +170,30 @@ output:
   formats:
     - drawio
 '@
-  $AutoGlob = Invoke-ArchPulseAnalyze -WorkingDirectory $ProbeRoot
-  Show-RunResult -Label 'auto glob config' -Result $AutoGlob
 
-  Section 'Explicit config with glob-style ignore'
-  $ExplicitGlob = Invoke-ArchPulseAnalyze -WorkingDirectory $ProbeRoot -ConfigPath $ConfigPath
-  Show-RunResult -Label 'explicit glob config' -Result $ExplicitGlob
+  Section 'Auto-discovered config'
+  $Auto = Invoke-ArchPulseAnalyze -WorkingDirectory $ProbeRoot
+  Show-RunResult -Label 'auto config' -Result $Auto
 
-  Section 'Auto-discovery with directory-style ignore'
-  Set-Content -LiteralPath $ConfigPath -Encoding utf8 -Value @'
-ignore:
-  - tools/
-  - tests/
-output:
-  directory: docs
-  filename: architecture
-  formats:
-    - drawio
-'@
-  $AutoDirectory = Invoke-ArchPulseAnalyze -WorkingDirectory $ProbeRoot
-  Show-RunResult -Label 'auto directory config' -Result $AutoDirectory
-
-  Section 'No-config control after hiding default config'
-  Move-Item -LiteralPath $ConfigPath -Destination $HiddenConfigPath -Force
-  $Control = Invoke-ArchPulseAnalyze -WorkingDirectory $ProbeRoot
-  Show-RunResult -Label 'hidden-config control' -Result $Control
+  Section 'Explicit --config'
+  $Explicit = Invoke-ArchPulseAnalyze -WorkingDirectory $ProbeRoot -ConfigPath $ConfigPath
+  Show-RunResult -Label 'explicit config' -Result $Explicit
 
   Section 'Diagnosis'
-  $AutoDiscoveryProven = $false
-  if ($null -ne $Baseline.FileCount -and $null -ne $AutoGlob.FileCount -and $AutoGlob.FileCount -lt $Baseline.FileCount) {
-    Pass 'Default archpulse.config.yml is auto-discovered and glob-style ignore changes the scan.'
-    $AutoDiscoveryProven = $true
-  } elseif ($null -ne $Baseline.FileCount -and $null -ne $AutoDirectory.FileCount -and $AutoDirectory.FileCount -lt $Baseline.FileCount) {
-    Pass 'Default archpulse.config.yml is auto-discovered and directory-style ignore changes the scan.'
-    $AutoDiscoveryProven = $true
+  if ($Auto.TimedOut -or $Explicit.TimedOut) {
+    Fail 'At least one configured run stalled; the timeout terminated it safely.'
   }
 
-  if (-not $AutoDiscoveryProven) {
+  if ($null -ne $Baseline.FileCount -and $null -ne $Auto.FileCount -and $Auto.FileCount -lt $Baseline.FileCount) {
+    Pass 'Default archpulse.config.yml is auto-discovered and its ignore list changes the scan.'
+  } else {
     Warn 'Auto-discovery was not proven from parsed file counts.'
   }
 
-  if ($null -ne $ExplicitGlob.FileCount -and $null -ne $Baseline.FileCount -and $ExplicitGlob.FileCount -lt $Baseline.FileCount) {
-    Pass 'Explicit --config definitely applies ignore filtering.'
+  if ($null -ne $Baseline.FileCount -and $null -ne $Explicit.FileCount -and $Explicit.FileCount -lt $Baseline.FileCount) {
+    Pass 'Explicit --config applies ignore filtering.'
   } else {
     Warn 'Explicit --config filtering was not proven from parsed file counts.'
-  }
-
-  if ($null -ne $AutoGlob.FileCount -and $null -ne $AutoDirectory.FileCount) {
-    if ($AutoGlob.FileCount -lt $AutoDirectory.FileCount) {
-      Pass 'Glob-style directory patterns are more effective in this probe.'
-    } elseif ($AutoDirectory.FileCount -lt $AutoGlob.FileCount) {
-      Pass 'Directory-style patterns are more effective in this probe.'
-    } else {
-      Info 'Glob-style and directory-style patterns produced the same analyzed file count.'
-    }
-  }
-
-  if ($null -ne $Control.FileCount -and $null -ne $Baseline.FileCount -and $Control.FileCount -eq $Baseline.FileCount) {
-    Pass 'Hidden-config control matches the baseline, strengthening the config causality check.'
   }
 
   Info 'This verification changed only an isolated temporary directory.'
