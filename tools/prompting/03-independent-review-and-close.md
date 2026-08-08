@@ -2,7 +2,7 @@
 
 Status: DERIVED_SUPPORT
 
-استخدم هذا الأمر بعد اكتمال التنفيذ عندما يكون المطلوب **مراجعة مستقلة للـdiff/candidate والأدلة ثم إصدار أعلى قرار مسموح**. المراجع لا يكتب الإصلاح الذي يراجعه ولا ينتحل اعتمادًا محميًا.
+استخدم هذا الأمر بعد اكتمال التنفيذ عندما يكون المطلوب **مراجعة مستقلة للـcandidate والـdiff والأدلة ثم إصدار أعلى قرار تسمح به السلطة الحالية**. المراجع لا يكتب الإصلاح الذي يراجعه ولا ينتحل اعتمادًا محميًا.
 
 ## المدخلات
 
@@ -15,138 +15,209 @@ PACKAGE_PATH: <plans/diagnose-implementing/<task> | N/A>
 CLAIMED_OUTCOME: <what is claimed complete>
 ```
 
-## أمر المراجعة
+## 1. السلطة وتثبيت المرشح
 
-ثبّت candidate immutable من الفرع الذي حدده المستخدم، واقرأ `governance/GOVERNANCE.md`, `governance/product/PRD.md`, السياسات المنطبقة، Product Truth الحالي، والـdiff/implementation evidence الفعلي. لا تعتمد تقرير المنفذ أو package result كدليل كافٍ بذاته.
+ثبّت Candidate immutable من الفرع الذي حدده المستخدم واقرأ وفق الترتيب الحاكم الحالي:
 
-### 1. استقلال المراجع
+```text
+current authorized review task
+→ governance/authority/authority-precedence.json
+→ governance/GOVERNANCE.md
+→ governance/product/PRD.md
+→ applicable engineering/security/delivery policy
+→ applicable Product Truth + machine contracts
+→ candidate implementation/runtime evidence
+→ live repository-platform evidence when claimed
+```
+
+لا تعتمد تقرير المنفذ أو `RESULT.json` أو CI قديمًا كدليل كافٍ بذاته.
+
+## 2. استقلال المراجع
 
 المراجع:
 
 - لا يكون مؤلف التغيير الذي يراجعه عندما تكون المراجعة المستقلة مطلوبة؛
 - لا يصلح الكود ثم يراجع إصلاحه على أنه مستقل في الدورة نفسها؛
-- لا يمنح product/security/finance/release/production/final closure authority ما لم يكن هو صاحب الاعتماد الحالي المسموح صراحة؛
-- يمكنه إصدار findings و`FIX_REQUIRED` و`NEEDS_EVIDENCE` و`READY_FOR_REVIEW` ضمن حدود الصلاحية.
+- لا يمنح Product/QA/Security/Finance/Isolation/Release/Production/final-closure approval ما لم يكن هو صاحب السلطة المسموح بها صراحة؛
+- لا يعدّل المصدر أثناء هذه المراجعة؛ إذا ظهر Fix يعاد إلى منفذ التغيير ثم يراجع Candidate جديدًا.
 
-### 2. راجع الادعاء لا الملفات فقط
+## 3. راجع الادعاء والأثر لا الملفات فقط
 
 ابدأ من `CLAIMED_OUTCOME` وحدد:
 
 ```text
-actors
+actors/service identities
 required/excluded surfaces
 canonical truth/write owners
-legal state transitions
-security/trusted scopes
-financial ownership
-persistence/events/integrations
+legal states/transitions
+trusted scopes + permissions + object authorization
+contracts/generated clients
+persistence/events/jobs/providers
+financial ownership when applicable
 canonical readbacks
-failure/recovery paths
-required evidence scopes
+failure/retry/offline/recovery behavior
+compatibility/mixed-version obligations
+required evidence scopes + protected approvals
 ```
 
-ثم اثبت أن الـdiff يحقق هذه النتيجة كاملة دون parallel truth أو side path غير مراجع.
+ثم تحقق أن الـdiff يحقق النتيجة بلا side path أو parallel truth غير مراجع.
 
-### 3. مراجعة السبب الجذري
+## 4. Diff integrity وScope drift
+
+راجع Base→Candidate:
+
+```text
+changed files + commits
+unexpected generated or lockfile changes
+out-of-scope paths
+unrelated cleanup mixed into fix
+missing consumer migration
+legacy path still reachable
+unreviewed migration/contract/runtime side effect
+```
+
+أي تغيير خارج النطاق بلا سبب مثبت Finding، وأي dependency لازمة غير موجودة في الـdiff Finding أيضًا.
+
+## 5. Root Cause وCanonical Ownership
 
 لكل تغيير جوهري اسأل:
 
 ```text
-هل عولج المالك الحاكم أم عُولج العرض فقط؟
+هل عولج المالك الحاكم أم العرض فقط؟
 هل بقي write/read path قديم يناقض الجديد؟
-هل جرى نسخ business logic إلى Surface/shared code؟
-هل Generated contract/client ما زال من مصدره الحاكم؟
+هل جرى نسخ business logic/state machine إلى Surface/shared code؟
+هل Generated contract/client ما زال من المصدر الحاكم؟
 هل migration/invariant يحمي الحقيقة عند concurrency/retry؟
 هل success UI يقرأ persisted/canonical state؟
 هل rollback/recovery يعيد invariant لا مجرد الواجهة؟
+هل أزيل fallback/dual-write بعد اكتمال migration؟
 ```
 
-أي workaround يخفي الخلل دون إزالة سببه = finding.
+أي workaround يخفي السبب دون إزالته = Finding.
 
-### 4. مراجعة Full‑Stack متعددة الأسطح
+## 6. Full-Stack Multi-Surface review
 
-راجع المسار الكامل:
+راجع المسار الكامل بقدر الانطباق:
 
 ```text
-entry/action
+Product Truth
+→ Actor/Session/Trusted Scope/Permission
+→ Surface action/control
 → shared controller/adapter
-→ contract/generated client
-→ backend/domain
-→ database/events/jobs/provider
-→ canonical readback
+→ generated client/canonical contract
+→ API/handler/domain/state machine
+→ transaction/database
+→ events/jobs/providers/WLT
+→ persisted canonical readback
 → every required affected surface
 ```
 
 افحص الأسطح الأخرى حتى لو لم تكن نقطة البداية عندما تستهلك نفس الحالة أو نتيجة الرحلة.
 
-### 5. الأمن والعزل
+## 7. Compatibility وRollout
 
-عند الانطباق افحص أدلة إيجابية وسلبية لـ:
+عند Contract/API/Schema/Mobile change راجع ما ينطبق:
+
+```text
+old mobile + new backend
+new mobile + old backend when required
+current control-panel + new backend
+generated client/event/cache compatibility
+mixed-version runtime
+feature-flag safe default
+rollback/roll-forward
+compatibility owner + expiry + removal trigger + monitoring/tests
+```
+
+رفض Compatibility دائم بلا مالك/مدة/إزالة، ورفض fallback أو dual-write يحافظ على الحقيقة القديمة بعد cutover.
+
+## 8. الأمن والعزل
+
+عند الانطباق اطلب evidence إيجابيًا وسلبيًا لـ:
 
 ```text
 authentication/session/revocation
 role + permission
 trusted Platform/Operator context
-Partner/Store/Actor scope
+Partner/Store/Actor/Assignment scope
 object authorization / IDOR
-cross-scope leakage
+cross-scope leakage / privilege escalation
 service authentication
 secrets/PII/logging
-webhook signature/replay
+provider signature/replay/rate-limit
 ```
 
-لا تعتبر إخفاء زر UI authorization.
+إخفاء زر UI لا يثبت Authorization.
 
-### 6. المال
+## 9. المال
 
-عند وجود payment/refund/settlement/payout/commission/wallet/ledger/reconciliation:
+عند payment/refund/settlement/payout/commission/wallet/ledger/reconciliation:
 
 - تحقق أن WLT ما زال المالك المالي الوحيد؛
-- DSH/surfaces لا تحسب أو تكتب truth مالية؛
-- idempotency/correlation/unknown outcome/reconciliation صحيحة؛
+- DSH/surfaces لا تحسب أو تكتب Financial truth موازية؛
+- idempotency/correlation/state constraints/unknown outcome/reconciliation صحيحة؛
 - provider/runtime evidence منفصل عن mock/local success؛
 - finance approval مستقل عندما تتطلبه الحوكمة.
 
-### 7. البيانات والمهاجرات
+## 10. البيانات والمهاجرات
 
 راجع:
 
 ```text
-forward migration order
+forward migration order + no applied-history rewrite
 constraints/FK/unique/check/indexes
 transaction + locking/versioning
-backfill correctness
-upgrade path
-retention/destructive cleanup impact
-no rewrite of applied migration history
+backfill correctness/idempotency/batching
+fresh + non-empty upgrade path
+partial failure/restart
+rollback or roll-forward/compensation
+destructive cleanup only after consumers/data proof
 ```
 
-لا تعتمد test in-memory لإثبات claim PostgreSQL يتطلب integration/database evidence.
+لا تعتمد in-memory test لإثبات PostgreSQL claim يتطلب DB integration evidence.
 
-### 8. Events/jobs/retries
+## 11. Events/Jobs/Providers
 
-راجع stable identity, duplicate delivery, contradictory replay, retry/backoff/DLQ/lease, transactional outbox/inbox, reconciliation، وfailure recovery. لا يكفي happy path.
+راجع stable identity، duplicate/out-of-order/replay، transactional outbox/inbox، retry/backoff/DLQ/lease، timeout/partial/unknown result، reconciliation/compensation، provider auth/signature، restart recovery. Happy path وحده لا يكفي.
 
-### 9. UI/UX وruntime
+## 12. UI/UX + Mobile + Control Panel + Runtime
 
-عندما الادعاء يشمل سطحًا مرئيًا، راجع الحالات المنطبقة:
+عندما يشمل الادعاء سطحًا مرئيًا راجع الحالات المنطبقة:
 
 ```text
-loading / empty / offline / forbidden / conflict / partial
-unknown-result / error / retry / recovery / success readback
+loading / empty / partial / success / error
+forbidden / blocked / conflict / stale
+offline / unknown-result / retry / recovery
+canonical persisted readback
 RTL / localization / accessibility / responsive/device behavior
 ```
 
-Static code review لا يثبت visual/runtime behavior. اطلب الأدلة المناسبة للادعاء.
+Static code review لا يثبت Visual/Runtime behavior.
 
-### 10. الأدلة
+عند Mobile راجع navigation/deep-links/native permissions/push/maps/SecureStore/offline/native rebuild/OTA/EAS/signing/runtime env؛ Metro PASS لا يثبت Native build.
 
-ابنِ evidence matrix للـcandidate نفسه:
+عند Control Panel راجع route/object authorization، server/client boundary، trusted scope selection، pagination/filter/search isolation، bulk/destructive actions، audit، session expiry، error mapping، optimistic rollback/readback، cross-surface readback.
+
+## 13. فعالية الاختبارات
+
+لا تكتفِ بأن الاختبار أخضر. لكل Test/Guard مهم اسأل:
+
+```text
+what exact claim does it falsify?
+can it pass while the product remains broken?
+does it exercise the real contract/database/runtime path?
+does it cover negative/retry/concurrency/recovery risk where applicable?
+was it weakened, mocked, skipped, or redirected to make the change pass?
+```
+
+اختبار لا يستطيع كشف رجوع Root Cause لا يثبت إغلاقه.
+
+## 14. Evidence matrix على Candidate نفسه
+
+ابنِ مصفوفة الأدلة من `governance/contracts/decision-vocabulary.json` وDelivery policy:
 
 ```text
 static
-database
-contract
 product
 runtime
 visual
@@ -168,36 +239,49 @@ PASS | FAIL | MISSING | STALE | BLOCKED
 source/command/run/artifact
 candidate_sha
 proof_limit
+required approval owner when applicable
 ```
 
-أي دليل على SHA أقدم يصبح historical إذا كان التغيير اللاحق قد يؤثر على claim.
+لا scope يثبت Scope آخر. أي دليل أقدم من mutation يؤثر على claim يصبح Historical/Stale.
 
-### 11. مراجعة الحزمة
+## 15. مراجعة الحزمة
 
 إذا وُجد `PACKAGE_PATH`:
 
 - قارن الخطة بما نُفذ فعليًا؛
 - تحقق أن concerns لم تتداخل أو تُغلق بصمت؛
-- تحقق من changed paths/resulting SHA/check results/blockers؛
-- لا تعتبر كتابة `DONE/PASS` داخل الحزمة دليلًا مستقلًا؛
-- شغّل validator إذا كان Shell متاحًا:
+- تحقق من changed paths/resulting SHA/check results/blockers/deviations؛
+- لا تعتبر `DONE/PASS` داخل الحزمة دليلًا مستقلًا؛
+- عند توفر Shell شغّل:
 
 ```powershell
 node plans/diagnose-implementing/validate-package.mjs <PACKAGE_PATH> --strict --closure
 ```
 
-فشل validator = لا إغلاق. نجاحه يثبت تماسك الحزمة فقط ضمن ما يفحصه، ولا يخلق approval محميًا.
+فشل Validator يمنع الإغلاق. نجاحه يثبت تماسك الحزمة ضمن ما يفحصه ولا يخلق approval محميًا.
 
-### 12. مراجعة GitHub/CI
+## 16. GitHub/CI وRepository-Platform truth
 
-- تحقق من أن CI المطلوب اختبر `CANDIDATE_SHA` نفسه؛
-- cancelled/older run ليس PASS؛
-- local desired ruleset JSON لا يثبت أن GitHub يفرضه فعليًا؛
-- branch protection/required checks/rulesets تحتاج live GitHub evidence إذا كان الادعاء يعتمد عليها.
+تحقق حيًا عند اعتماد الادعاء عليها من:
 
-### 13. تصنيف findings
+```text
+candidate/head SHA
+workflow runs + required checks
+cancelled/superseded/older runs
+review threads/reviews
+branch protection/rulesets/required reviewers
+merge conflicts/base/head relationship
+```
 
-لكل finding سجّل:
+CI يجب أن يخص `CANDIDATE_SHA` نفسه. tracked ruleset/workflow config يصف المرغوب ولا يثبت enforcement الحي. لا تعِد تشغيل Job فاشلًا كبديل عن تشخيص Root Cause أو Flakiness.
+
+## 17. Protected approvals
+
+افصل التنفيذ التقني عن الاعتمادات المنطبقة. لا يمنح المراجع نفسه سلطة غير مسجلة. إذا كانت التقنية سليمة لكن approval محميًا مفقودًا، القرار ليس `CLOSED_WITH_EVIDENCE`.
+
+## 18. Findings
+
+لكل Finding سجّل:
 
 ```text
 severity: BLOCKER | HIGH | MEDIUM | LOW
@@ -205,40 +289,43 @@ category: PRODUCT | ARCHITECTURE | SECURITY | FINANCE | DATA | CONTRACT | RUNTIM
 claim_affected
 exact_path_or_evidence
 why_it_is_wrong
+root_cause_or_missing_proof
 required_owner
-required_fix_or_missing_evidence
+required_fix_or_evidence
 ```
 
-لا تضف تفضيلات style غير مؤثرة كـblockers.
+لا تحول تفضيل style غير مؤثر إلى Blocker.
 
-### 14. القرار
+## 19. القرار
 
 استخدم القاموس الحالي فقط:
 
-- `FIX_REQUIRED` إذا بقي عيب داخلي يؤثر على outcome/invariant.
-- `NEEDS_EVIDENCE` إذا لا يوجد عيب مثبت لكن evidence مطلوبة مفقودة/stale.
-- `BLOCKED_EXTERNAL` إذا dependency خارجية حقيقية تمنع قرارًا أعلى.
-- `READY_FOR_REVIEW` إذا implementation/evidence التقنية جاهزة لكن اعتمادًا مستقلًا/محميًا بقي مطلوبًا.
-- `PASS` لclaim مراجعة محدود مثبت ضمن صلاحية المراجع.
-- `CLOSED_WITH_EVIDENCE` فقط عندما يثبت `governance/contracts/decision-vocabulary.json` وDelivery policy أن **كل applicable evidence scopes + كل required approvals** مكتملة على candidate نفسه، بلا fail/blocked/pending.
+- `FIX_REQUIRED`: بقي عيب داخلي يؤثر على outcome/invariant.
+- `NEEDS_EVIDENCE`: لا عيب مثبت لكن evidence مطلوبة مفقودة/stale.
+- `BLOCKED_EXTERNAL`: dependency خارجية حقيقية تمنع قرارًا أعلى.
+- `READY_FOR_REVIEW`: implementation/evidence التقنية جاهزة لكن اعتمادًا مستقلًا/محميًا بقي مطلوبًا.
+- `PASS`: claim مراجعة محدود مثبت ضمن صلاحية المراجع.
+- `PROTOCOL_VIOLATION`: خرق قاعدة حاكمة.
+- `CLOSED_WITH_EVIDENCE`: كل applicable evidence scopes + required approvals مكتملة على **نفس immutable candidate** بلا fail/blocked/pending.
 
-إذا لم تكن لديك صلاحية اعتماد final closure المحمية، لا تصدرها حتى لو كانت التقنية سليمة؛ أصدر أعلى قرار مسموح واذكر الاعتماد المتبقي.
+إذا لم تكن لديك سلطة final closure المحمية، أصدر أعلى قرار مسموح واذكر الاعتماد المتبقي.
 
-## التقرير النهائي
+## 20. التقرير النهائي
 
 ```text
-repository
-target_ref
-candidate_sha
-reviewed_range
+repository / target_ref
+candidate_sha / reviewed_range
 claimed_outcome
+changed + out-of-scope diff assessment
+root-cause/canonical-owner assessment
 findings_by_severity
-evidence_matrix
-same_commit_ci_state
+evidence_matrix + proof limits
+compatibility/migration/security/finance/runtime assessment
+same-candidate CI/repository-platform state
 package_validation
-required_independent_or_protected_approvals
+required independent/protected approvals
 final_decision
-exact_remaining_actions
+exact remaining actions
 ```
 
-لا تعدّل المصدر أثناء هذه المراجعة المستقلة؛ إذا لزم إصلاح، أعده إلى منفذ التغيير ثم راجع candidate جديدًا.
+لا تعدّل المصدر أثناء المراجعة. إذا لزم Fix، أعده إلى منفذ التغيير ثم راجع Candidate جديدًا.
