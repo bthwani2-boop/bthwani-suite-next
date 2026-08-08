@@ -36,6 +36,8 @@
     {"path": "governance/authority/single-owner-mode.schema.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["single_owner_mode_schema"]},
     {"path": "governance/authority/authority-precedence.schema.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["authority_registry_schema"]},
     {"path": "governance/product/product-truth.schema.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["product_truth_schema"]},
+    {"path": "governance/product/product-truth.compatibility.schema.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["product_truth_compatibility_schema"]},
+    {"path": "governance/github/workflow-registry.schema.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["workflow_registry_schema"]},
     {"path": "governance/product/platform-model.yaml", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["platform_model_machine_contract"]},
 
     {"path": ".agents/skills", "classification": "OWNER_CONTRACT", "precedenceId": "OWNER_SKILL_CONTRACT", "authorityDomains": ["declared_active_skill_scope"]},

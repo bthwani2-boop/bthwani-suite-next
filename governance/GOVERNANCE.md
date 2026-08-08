@@ -12,7 +12,7 @@ For any task, read only what is applicable and in this order:
 
 1. current authorized task instruction and exact repository/ref;
 2. `governance/authority/authority-precedence.json`;
-3. this file;
+3. this file, `governance/GOVERNANCE.md`;
 4. `governance/product/PRD.md`;
 5. applicable `governance/policies/engineering.md`, `governance/policies/security.md`, and/or `governance/policies/delivery.md`;
 6. applicable capability Product Truth under `governance/product/contracts/`;
@@ -79,10 +79,12 @@ Machine-readable contracts encode the same governance for validation/routing and
 - `governance/skills/**`
 - `governance/guards/**`
 - `governance/github/workflow-registry.json`
+- `governance/github/workflow-registry.schema.json`
 - `governance/github/master-protection.ruleset.json`
 - `governance/tools/agent-tool-registry.json`
 - `governance/product/platform-model.yaml`
 - `governance/product/product-truth.schema.json`
+- `governance/product/product-truth.compatibility.schema.json`
 - `governance/product/contracts/**`
 
 `governance/github/master-protection.ruleset.json` describes desired configuration only. Branch protection, rulesets, required checks, workflow outcomes, reviewers, and approval freshness are repository-platform state and must be queried live when the claim depends on them. No tracked snapshot is authoritative current enforcement evidence.

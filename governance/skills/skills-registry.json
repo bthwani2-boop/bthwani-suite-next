@@ -292,7 +292,7 @@
       "evidence_required": true,
       "contract_level": "governed",
       "status": "conditional",
-      "version": "2026.07.17-v1",
+      "version": "2026.08.08-v2",
       "authority": [
         "guard_selection",
         "guard_command_resolution"
