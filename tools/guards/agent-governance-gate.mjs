@@ -18,13 +18,23 @@ const retiredInstructionRefs = [
   "governance/policies/data.md",
   "governance/policies/runtime.md",
   "governance/policies/release.md",
+  "governance/policies/governance.rego",
   "governance/domains/",
   "governance/product/decisions/",
+  "governance/commercialization/",
   "governance/operational_journey_protocol_package/",
+  "governance/github/repository-enforcement.json",
+  "governance/github/repository-enforcement.schema.json",
+  "governance/github/full-verification-policy.json",
+  "governance/github/remediation-branch-return-policy.json",
   "tools/diagnose-implementing/",
   "tools/plans/",
   "tools/implementing/",
+  "tools/important-scripts/",
+  "tools/contracts/",
+  "tools/rules/",
   ".agents/AUTHORITY_BOUNDARY.md",
+  ".agents/COMMAND_SAFETY_POLICY.md",
   ".agents/EVIDENCE_GATE_ROUTER.md",
   ".agents/SKILL_CATALOG.md",
 ];
@@ -61,12 +71,16 @@ if (skills) {
       if (frontmatter(content, "version") !== skill.version) violations.push({ file: skillMd, line: 0, message: `SKILL_VERSION_DRIFT ${skill.id}` });
       for (const section of requiredSections) if (!new RegExp(`^##\\s+${section}\\b`, "mi").test(content)) violations.push({ file: skillMd, line: 0, message: `SKILL_MISSING_SECTION ${skill.id}:${section}` });
       if (!index.includes(`\`${skill.id}\``)) violations.push({ file: indexFile, line: 0, message: `ROUTABLE_SKILL_MISSING_FROM_INDEX ${skill.id}` });
-      for (const retiredRef of retiredInstructionRefs) {
-        if (content.includes(retiredRef)) violations.push({ file: skillMd, line: 0, message: `RETIRED_GOVERNANCE_REFERENCE ${retiredRef}` });
-      }
+      for (const retiredRef of retiredInstructionRefs) if (content.includes(retiredRef)) violations.push({ file: skillMd, line: 0, message: `RETIRED_GOVERNANCE_REFERENCE ${retiredRef}` });
       for (const token of [...content.matchAll(/`([A-Z][A-Z0-9_]+)`/g)].map((m) => m[1])) {
         if ((token === "PASS" || token.endsWith("_REQUIRED") || canonicalDecisions.has(token) || deprecatedDecisions.has(token)) && (!canonicalDecisions.has(token) || deprecatedDecisions.has(token)))
           violations.push({ file: skillMd, line: 0, message: `NONCANONICAL_DECISION ${skill.id}:${token}` });
+      }
+      for (const entry of fs.readdirSync(path.join(repoRoot, expected), { withFileTypes: true })) {
+        if (entry.isFile() && entry.name !== "SKILL.md") violations.push({ file: `${expected}/${entry.name}`, line: 0, message: "UNREGISTERED_SKILL_TOP_LEVEL_FILE" });
+        if (entry.isDirectory() && ["references", "rules", "policy", "policies", "prompts"].includes(entry.name.toLowerCase())) {
+          violations.push({ file: `${expected}/${entry.name}`, line: 0, message: "HIDDEN_OR_PARALLEL_SKILL_POLICY_LAYER" });
+        }
       }
     } else if (skill.status === "retired") {
       if (exists(expected)) violations.push({ file: expected, line: 0, message: `RETIRED_SKILL_DIRECTORY_PRESENT ${skill.id}` });
@@ -74,6 +88,7 @@ if (skills) {
       if (!skill.retirement_reason) violations.push({ file: skillsFile, line: 0, message: `RETIRED_SKILL_REASON_MISSING ${skill.id}` });
     } else violations.push({ file: skillsFile, line: 0, message: `UNKNOWN_SKILL_STATUS ${skill.id}` });
   }
+
   const skillsDir = path.join(repoRoot, ".agents/skills");
   if (fs.existsSync(skillsDir)) for (const entry of fs.readdirSync(skillsDir, { withFileTypes: true }).filter((entry) => entry.isDirectory())) {
     const registered = bySkill.get(entry.name);
@@ -141,7 +156,9 @@ for (const [file, marker] of [["CLAUDE.md", "authority-precedence.json"], ["GEMI
 for (const file of ["AGENTS.md", "CLAUDE.md", "GEMINI.md", "LEAN-CTX.md", "opencode.json", ".agents/INDEX.md", "governance/tools/agent-tool-registry.json"]) {
   const content = read(file);
   if (/[A-Za-z]:[\\/](?:Users|Documents and Settings)[\\/]/i.test(content) || /\/home\/[^/\s]+\/|\/Users\/[^/\s]+\//.test(content)) violations.push({ file, line: 0, message: "MACHINE_SPECIFIC_ABSOLUTE_PATH" });
+  for (const retiredRef of retiredInstructionRefs) if (content.includes(retiredRef)) violations.push({ file, line: 0, message: `RETIRED_GOVERNANCE_REFERENCE ${retiredRef}` });
 }
+
 for (const root of [".agents", "governance/tools"]) {
   const full = path.join(repoRoot, root);
   if (!fs.existsSync(full)) continue;

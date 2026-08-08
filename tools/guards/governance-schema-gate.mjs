@@ -55,17 +55,17 @@ function validateDocument(documentPath, schemaPath, label) {
 
 function listFiles(relativeRoot) {
   if (!exists(relativeRoot)) return [];
-  const out = [];
+  const files = [];
   const walk = (directory, relative) => {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
       const nextAbsolute = path.join(directory, entry.name);
       const nextRelative = path.posix.join(relative.replaceAll("\\", "/"), entry.name);
       if (entry.isDirectory()) walk(nextAbsolute, nextRelative);
-      else out.push(nextRelative);
+      else files.push(nextRelative);
     }
   };
   walk(absolute(relativeRoot), relativeRoot);
-  return out.sort();
+  return files.sort();
 }
 
 function requireExactDirectory(relative, allowedFiles = [], allowedDirs = []) {
@@ -79,8 +79,7 @@ function requireExactDirectory(relative, allowedFiles = [], allowedDirs = []) {
     const child = `${relative}/${entry.name}`;
     if (entry.isDirectory() && !dirs.has(entry.name)) {
       violations.push({ file: child, line: 0, message: `UNCLASSIFIED_DIRECTORY ${entry.name}` });
-    }
-    if (entry.isFile() && !files.has(entry.name)) {
+    } else if (entry.isFile() && !files.has(entry.name)) {
       violations.push({ file: child, line: 0, message: `UNCLASSIFIED_FILE ${entry.name}` });
     }
   }
@@ -111,6 +110,7 @@ const singleOwner = validateDocument(singleOwnerPath, "governance/authority/sing
 
 requireExactDirectory("governance", ["GOVERNANCE.md"], ["agents", "authority", "contracts", "github", "guards", "policies", "product", "skills", "tools"]);
 requireExactDirectory("governance/policies", ["engineering.md", "security.md", "delivery.md", "repository-retention-policy.json"]);
+requireExactDirectory("governance/github", ["master-protection.ruleset.json", "workflow-registry.json", "workflow-registry.schema.json"]);
 requireExactDirectory("governance/product", ["PRD.md", "platform-model.yaml", "product-truth.schema.json", "product-truth.compatibility.schema.json"], ["contracts"]);
 requireExactDirectory("governance/tools", ["agent-tool-registry.json"]);
 requireExactDirectory(".agents", ["INDEX.md"], ["skills", "tools"]);
@@ -140,6 +140,9 @@ for (const retired of [
   "governance/policies/runtime.md",
   "governance/policies/release.md",
   "governance/policies/governance.rego",
+  "governance/github/repository-enforcement.json",
+  "governance/github/repository-enforcement.schema.json",
+  "governance/github/full-verification-policy.json",
   "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md",
   "governance/runbooks",
   "governance/prompting",
@@ -169,6 +172,7 @@ for (const retired of [
 }
 
 for (const required of [
+  "governance/contracts/full-verification-policy.json",
   "tools/guards/opa/governance.rego",
   "plans/diagnose-implementing/README.md",
   "plans/diagnose-implementing/new-package.mjs",
@@ -283,6 +287,9 @@ if (authority) {
     if (!index.includes(document.path) && !index.includes(`${document.path}/**`)) {
       violations.push({ file: "governance/GOVERNANCE.md", line: 0, message: `INDEX_MISSING_REGISTERED_AUTHORITY ${document.path}` });
     }
+    if (document.path.startsWith("governance/") && ["DERIVED_SUPPORT", "HISTORICAL_REFERENCE"].includes(document.classification)) {
+      violations.push({ file: document.path, line: 0, message: "DERIVED_OR_HISTORICAL_ARTIFACT_FORBIDDEN_INSIDE_GOVERNANCE" });
+    }
     if (["ROOT_AUTHORITY", "ACTIVE_CANONICAL", "CONDITIONAL_CANONICAL"].includes(document.classification)) {
       activePaths.add(document.path);
       for (const domain of document.authorityDomains) {
@@ -301,6 +308,7 @@ if (authority) {
   if (roots.length !== 1 || roots[0] !== authority.rootAuthority) {
     violations.push({ file: authorityPath, line: 0, message: `ROOT_AUTHORITY_MISMATCH ${JSON.stringify(roots)}` });
   }
+
   const activeRanks = authority.documents
     .filter((document) => ["ROOT_AUTHORITY", "ACTIVE_CANONICAL", "CONDITIONAL_CANONICAL"].includes(document.classification))
     .map((document) => rankById.get(document.precedenceId));
@@ -322,22 +330,35 @@ if (authority) {
     "governance/agents",
     "governance/skills",
     "governance/guards",
+    "governance/tools/agent-tool-registry.json",
     "governance/authority/authority-precedence.schema.json",
     singleOwnerPath,
     "governance/authority/single-owner-mode.schema.json",
     canonicalProductSchema,
     "governance/product/platform-model.yaml",
     workflowPath,
-    "governance/github/full-verification-policy.json",
+    "governance/github/master-protection.ruleset.json",
     "plans/diagnose-implementing",
     "plans/smsm-dsh-wlt-journeys",
   ]) {
     if (!paths.has(required)) violations.push({ file: authorityPath, line: 0, message: `REQUIRED_AUTHORITY_NOT_REGISTERED ${required}` });
   }
 
+  const governanceAuthorityRoots = authority.documents
+    .filter((document) => document.path.startsWith("governance/"))
+    .map((document) => document.path);
+  for (const relative of listFiles("governance")) {
+    const covered = governanceAuthorityRoots.some((ownerPath) => relative === ownerPath || relative.startsWith(`${ownerPath}/`));
+    if (!covered) violations.push({ file: relative, line: 0, message: "UNCLASSIFIED_GOVERNANCE_FILE" });
+  }
+
   for (const relative of listFiles("governance").filter((file) => file.endsWith(".md"))) {
     if (/^Status:\s*ACTIVE_CANONICAL\s*$/m.test(readText(relative)) && !activePaths.has(relative)) {
-      violations.push({ file: relative, line: 0, message: "UNREGISTERED_ACTIVE_CANONICAL_DOCUMENT" });
+      const coveredByCanonicalDirectory = authority.documents.some((document) =>
+        ["ACTIVE_CANONICAL", "CONDITIONAL_CANONICAL"].includes(document.classification) &&
+        relative.startsWith(`${document.path}/`),
+      );
+      if (!coveredByCanonicalDirectory) violations.push({ file: relative, line: 0, message: "UNREGISTERED_ACTIVE_CANONICAL_DOCUMENT" });
     }
   }
 }
@@ -346,36 +367,18 @@ if (singleOwner) {
   const allowed = new Set(singleOwner.approvalPolicy.allowedDomains);
   const protectedDomains = new Set(singleOwner.approvalPolicy.protectedDomains);
   for (const domain of [
-    "product_model_approval",
-    "implementation_readiness",
-    "product_acceptance",
-    "ux_acceptance",
-    "architecture_approval",
-    "governance_contract_approval",
-    "ci_workflow_approval",
-    "implementation_review",
-    "qa_approval",
-  ]) {
-    if (!allowed.has(domain)) violations.push({ file: singleOwnerPath, line: 0, message: `SINGLE_OWNER_ALLOWED_DOMAIN_MISSING ${domain}` });
-  }
+    "product_model_approval", "implementation_readiness", "product_acceptance", "ux_acceptance",
+    "architecture_approval", "governance_contract_approval", "ci_workflow_approval", "implementation_review", "qa_approval",
+  ]) if (!allowed.has(domain)) violations.push({ file: singleOwnerPath, line: 0, message: `SINGLE_OWNER_ALLOWED_DOMAIN_MISSING ${domain}` });
+
   for (const domain of [
-    "authentication_authorization_sessions",
-    "pii_privacy_secrets_credentials",
-    "operator_context_isolation",
-    "security_approval",
-    "financial_control",
-    "migrations_and_production_data",
-    "critical_high_vulnerability_acceptance",
-    "residual_risk_acceptance",
-    "release_approval",
-    "deployment",
-    "production_verification",
-    "final_closure",
-  ]) {
-    if (!protectedDomains.has(domain)) violations.push({ file: singleOwnerPath, line: 0, message: `SINGLE_OWNER_PROTECTED_DOMAIN_MISSING ${domain}` });
-  }
-  for (const domain of allowed) {
-    if (protectedDomains.has(domain)) violations.push({ file: singleOwnerPath, line: 0, message: `SINGLE_OWNER_DOMAIN_BOTH_ALLOWED_AND_PROTECTED ${domain}` });
+    "authentication_authorization_sessions", "pii_privacy_secrets_credentials", "operator_context_isolation",
+    "security_approval", "financial_control", "migrations_and_production_data", "critical_high_vulnerability_acceptance",
+    "residual_risk_acceptance", "release_approval", "deployment", "production_verification", "final_closure",
+  ]) if (!protectedDomains.has(domain)) violations.push({ file: singleOwnerPath, line: 0, message: `SINGLE_OWNER_PROTECTED_DOMAIN_MISSING ${domain}` });
+
+  for (const domain of allowed) if (protectedDomains.has(domain)) {
+    violations.push({ file: singleOwnerPath, line: 0, message: `SINGLE_OWNER_DOMAIN_BOTH_ALLOWED_AND_PROTECTED ${domain}` });
   }
   if (singleOwner.status === "ACTIVE" && singleOwner.authoritySource !== "CURRENT_USER_INSTRUCTION") {
     violations.push({ file: singleOwnerPath, line: 0, message: "ACTIVE_SINGLE_OWNER_MODE_REQUIRES_CURRENT_USER_INSTRUCTION" });
@@ -423,23 +426,14 @@ if (guards && assurance && guardSets) {
     if (!registered.has(entry.guardId)) violations.push({ file: assurancePath, line: 0, message: `ASSURANCE_REFERENCES_UNKNOWN_GUARD ${entry.guardId}` });
     if (entry.closureEligible !== false) violations.push({ file: assurancePath, line: 0, message: `GUARD_MUST_NOT_SELF_GRANT_CLOSURE ${entry.guardId}` });
   }
-  const canonicalSet = new Set([
-    ...guardSets.guardSets.foundation,
-    ...guardSets.guardSets.journey,
-    ...guardSets.guardSets.governance,
-  ]);
+  const canonicalSet = new Set([...guardSets.guardSets.foundation, ...guardSets.guardSets.journey, ...guardSets.guardSets.governance]);
   for (const id of canonicalSet) {
     if (!registered.has(id)) violations.push({ file: guardSetsPath, line: 0, message: `GUARD_SET_REFERENCES_UNKNOWN_GUARD ${id}` });
     if (!assured.has(id)) violations.push({ file: assurancePath, line: 0, message: `CANONICAL_GUARD_ASSURANCE_MISSING ${id}` });
   }
 }
 
-for (const [label, registry] of [
-  ["AGENT", agents],
-  ["SKILL", skills],
-  ["GUARD", guards],
-  ["FRONTEND_BINDING", bindings],
-]) {
+for (const [label, registry] of [["AGENT", agents], ["SKILL", skills], ["GUARD", guards], ["FRONTEND_BINDING", bindings]]) {
   if (registry?.entries && new Set(registry.entries.map((entry) => entry.id)).size !== registry.entries.length) {
     violations.push({ file: `<${label.toLowerCase()}-registry>`, line: 0, message: `${label}_DUPLICATE_ID` });
   }

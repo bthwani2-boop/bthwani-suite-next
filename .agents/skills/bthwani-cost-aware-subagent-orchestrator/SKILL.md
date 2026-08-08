@@ -1,4 +1,3 @@
-
 ---
 name: bthwani-cost-aware-subagent-orchestrator
 version: 2026.08.06-v3
@@ -9,8 +8,7 @@ summary: Coordinate independent bounded work units with minimum sufficient conte
 
 ## Purpose
 
-Coordinate broad tasks when decomposition reduces context, execution time, or integration risk.
-This skill orchestrates only; higher authorities and owner skills remain unchanged.
+Coordinate broad tasks when decomposition reduces context, execution time, or integration risk. This skill orchestrates only; higher authorities and owner skills remain unchanged.
 
 ## Invoke when
 
@@ -28,19 +26,16 @@ This skill orchestrates only; higher authorities and owner skills remain unchang
 ## Read before
 
 - `AGENTS.md`
+- `governance/GOVERNANCE.md`
 - `governance/agents/agent-registry.json`
 - `governance/skills/skills-registry.json`
-- `references/WORK_UNIT_CONTRACT.md`
-- `references/MODEL_ROUTING_AND_TOKEN_POLICY.md`
+- `governance/contracts/decision-vocabulary.json`
 
-Load product, security, finance, runtime, or evidence skills only when their triggers apply.
+Load Product Truth, engineering, security, finance, runtime, SDLC, or evidence skills only when their triggers apply. Do not load separate model/token/work-unit policy documents; this `SKILL.md` is the complete orchestrator contract.
 
 ## Authority boundary
 
-This skill owns coordination and work-unit routing only. It cannot approve product,
-architecture, finance, governance, CI, QA, security, release, risk, production, or final closure.
-
-The coordinator must not act as the independent reviewer of work it coordinated.
+This skill owns coordination and work-unit routing only. It cannot approve product, architecture, finance, governance, CI, QA, security, release, risk, production, or final closure. The coordinator must not act as the independent reviewer of work it coordinated.
 
 ## Routing method
 
@@ -52,7 +47,7 @@ The coordinator must not act as the independent reviewer of work it coordinated.
 6. Select the lowest capable tier that satisfies risk and verification.
 7. Reject incomplete handoffs and resolve conflicts without force operations.
 8. Re-pin after writes and before final verification.
-9. Return only a canonical scoped decision.
+9. Return only a canonical scoped decision from `governance/contracts/decision-vocabulary.json`.
 
 Capability tiers:
 
@@ -61,8 +56,7 @@ Capability tiers:
 - `T2_SPECIALIST` — contracts, data, runtime, security, finance, migrations, CI, and independent review.
 - `T3_ADVISORY_MAX` — cross-domain coordination, architecture conflict resolution, and final scoped synthesis.
 
-Never lower capability for cost in security, privacy, finance, migrations, production data,
-public contracts, CI, release, or protected approval work.
+Never lower capability for cost in security, privacy, finance, migrations, production data, public contracts, CI, release, or protected approval work. Model/provider choice is an execution concern, not repository authority; use the capable connected executor available for the work unit without encoding provider-specific truth in governance.
 
 ## Work-unit contract
 
@@ -84,25 +78,24 @@ mode:
 expected_output:
 ```
 
-Two units must not write the same file or a source and its generated consumer concurrently.
-Serialize contracts before generated clients, and migrations before dependent code and tests.
+Two units must not write the same file or a source and its generated consumer concurrently. Serialize contracts before generated clients, migrations before dependent code/tests, and any authoritative owner mutation before affected read-model/surface consumers.
 
 ## Context and parallelism
 
-- Send only relevant files, symbols, contracts, and relationship summaries.
+- Send only relevant files, symbols, contracts, relationships, and acceptance criteria.
 - Reference global policies instead of copying them.
-- Exclude generated, cache, diagnostic, binary, and historical output unless required.
-- Reuse findings within the run and stop a worker when acceptance is met.
+- Exclude generated, cache, diagnostic, binary, historical, and unrelated output unless required by the work unit.
+- Reuse verified findings within the same candidate and stop a worker when acceptance is met.
 - Require concise structured handoffs, not private reasoning.
-- Default to two parallel executors; raise to four only for four proven independent scopes.
-- Independent review starts only after the target revision is stable.
+- Default to two parallel executors; raise concurrency only when write scopes and dependencies prove independence.
+- Independent review starts only after the candidate revision is stable.
 
 ## Failure handling
 
-- Re-pin and stop if the branch moves unexpectedly.
-- Retry an unchanged assertion at most twice, with only the failure and changed hypothesis.
+- Re-pin and stop the affected write batch if the branch moves unexpectedly.
+- Retry an unchanged assertion at most twice and only with a changed hypothesis or new evidence.
 - Never force-push, reset, discard concurrent work, or hide failed checks.
-- Map unresolved work to `FIX_REQUIRED`, `NEEDS_EVIDENCE`, or `BLOCKED_EXTERNAL`.
+- Map unresolved work only to canonical decisions such as `FIX_REQUIRED`, `NEEDS_EVIDENCE`, or `BLOCKED_EXTERNAL`.
 
 ## Required output
 

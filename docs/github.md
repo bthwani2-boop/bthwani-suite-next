@@ -1,16 +1,17 @@
 # GitHub and CI Operations
 
-This document is an operational guide. It does not override `governance/GOVERNANCE.md`, `governance/policies/delivery.md`, or the machine contracts under `governance/github/`.
+This document is operational guidance. It does not override `governance/GOVERNANCE.md`, `governance/policies/delivery.md`, or the machine contracts under `governance/github/` and `governance/contracts/`.
 
 ## Sources of truth
 
 - Workflow inventory and lifecycle: `governance/github/workflow-registry.json`.
 - Desired `master` protection configuration: `governance/github/master-protection.ruleset.json`.
-- Last recorded enforcement observation: `governance/github/repository-enforcement.json`.
+- Full-verification routing: `governance/contracts/full-verification-policy.json`.
 - Direct-work write rules: `governance/authority/direct-work-branch-execution-policy.json`.
 - Required evidence/approval semantics: `governance/policies/delivery.md` and `governance/contracts/sdlc/`.
+- Actual branch protection, rulesets, required checks, workflow outcomes, reviews, and approval freshness: query GitHub live for the exact target branch and candidate SHA.
 
-A desired ruleset file does not prove GitHub is enforcing it. An observed snapshot is not permanently current. Claims about live protection, required checks, same-commit CI, or independent review require current GitHub readback.
+A desired ruleset file does not prove GitHub is enforcing it. No tracked snapshot is current repository-platform truth. Claims about live protection, required checks, same-commit CI, or independent review require current GitHub readback.
 
 ## Repository flow
 
@@ -33,11 +34,11 @@ CI is read-only with respect to tracked source and must evaluate the exact candi
 Rules:
 
 - run affected verification plus risk-based expansion;
-- full verification is controlled by `governance/github/full-verification-policy.json` and current impact;
+- full verification is controlled by `governance/contracts/full-verification-policy.json` and current impact;
 - skipped jobs are acceptable only when routing proves non-applicability;
 - cancelled, superseded, or older-SHA runs are not PASS for the current candidate;
 - a workflow result proves only its declared evidence scope;
-- required-check names and GitHub enforcement are verified from current configuration, not copied from an old document.
+- required-check names and GitHub enforcement are verified from current GitHub state, not copied from an old document.
 
 ## Reviews and approvals
 
@@ -47,7 +48,7 @@ An execution agent cannot self-grant protected approvals. `CLOSED_WITH_EVIDENCE`
 
 ## Current enforcement status
 
-Do not duplicate the current snapshot here. Read `governance/github/repository-enforcement.json` and, for any consequential claim, verify GitHub live. If desired and observed states differ, report the drift explicitly instead of treating the repository file as enforcement.
+Never persist a “current enforcement” snapshot in governance and treat it as live truth. For a consequential claim, resolve the exact branch/candidate and read GitHub directly. If desired repository configuration differs from live enforcement, report the drift explicitly and keep the desired configuration file as intent only.
 
 ## Change procedure
 
@@ -57,4 +58,4 @@ When changing workflows, rulesets, CODEOWNERS, or CI routing:
 2. update executable consumers/guards in the same logical change;
 3. run applicable workflow-policy/static validation;
 4. verify live GitHub state when the change concerns enforcement;
-5. record only candidate-bound evidence.
+5. record only candidate-bound evidence outside durable governance unless a canonical machine contract explicitly requires persistence.
