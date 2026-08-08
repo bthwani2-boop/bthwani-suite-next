@@ -22,34 +22,34 @@ Own verification of the DSH/WLT financial boundary for checkout, payments, COD, 
 
 ## Read before
 
-- `governance/policies/contracts.md`
-- `governance/policies/release.md`
-- `services/dsh/service.manifest.ts`, including its capability, surface, runtime, and contract registries
-- `services/wlt/service.manifest.ts`
-- `services/dsh/contracts/contract.manifest.yaml` and `services/wlt/contracts/contract.manifest.yaml`
-- `services/wlt/contracts/operation-state.json`
-- `services/wlt/docker/RUNTIME_CONTRACT.md`
-- applicable DSH and WLT contracts, manifests, backend, database, clients, and shared frontend paths
+- `governance/GOVERNANCE.md`
+- `governance/product/PRD.md`
+- `governance/policies/engineering.md`
+- `governance/policies/security.md`
+- `governance/policies/delivery.md`
+- `governance/contracts/sdlc/` when formal finance/release evidence is applicable
+- `services/dsh/service.manifest.ts` and `services/wlt/service.manifest.ts`
+- DSH/WLT contract manifests, current WLT operation-state contract, runtime contracts, backend/database/generated-client/shared-frontend paths materially affected
 
 ## Authority boundary
 
-This skill verifies ownership and evidence routing. WLT owns financial mutation and truth. DSH may request a financial operation and retain references or projected status only. This skill cannot grant finance, QA, security, release, production, or final-closure approval.
+This skill verifies ownership and evidence routing. WLT owns financial mutation and truth. DSH may request a financial operation and retain bounded references or projections permitted by current contracts. This skill cannot grant finance, QA, security, release, production, or final-closure approval.
 
 ## Required invariants
 
 1. Ledger, wallet, payment, refund, settlement, payout, commission, COD financial truth, and reconciliation mutations remain in WLT.
 2. DSH contains no duplicate financial calculation or authoritative financial balance.
-3. DSH surfaces consume shared contracts/controllers and do not fabricate payment success.
+3. DSH surfaces consume canonical contracts/controllers and do not fabricate financial success.
 4. Cross-service identifiers and statuses are contract-bound and read back from the owning service.
-5. Static evidence is reported as `PASS` with a static scope only; runtime financial claims require same-commit runtime and persistence readback.
-6. High-risk financial closure requires independent finance, QA, security, and release evidence as applicable.
+5. Static evidence is reported only as static scope; runtime financial claims require same-candidate runtime and persistence readback.
+6. High-risk financial closure requires independent finance, QA, security, release, and other applicable evidence/approvals.
 
 ## Forbidden
 
-- Reading `_noncanonical` or historical files as active financial authority.
+- Reading historical or explicitly noncanonical files as active financial authority.
 - Mutating financial truth in DSH.
 - Using seed, fixture, in-memory, preview, or mock success as real financial proof.
-- Returning deprecated aliases from new work.
+- Returning deprecated decision aliases from new work.
 - Claiming runtime or final closure from static boundary checks.
 
 ## Required output
