@@ -1,15 +1,14 @@
 <#
 .SYNOPSIS
-  Non-destructive diagnosis of how ArchPulse VS Code 0.1.x invokes its bundled CLI.
+  Non-destructive diagnosis of the ArchPulse VS Code wrapper and the live npm CLI it invokes.
 
 .DESCRIPTION
-  Locates the ArchPulse extension installed for Antigravity IDE, inspects its compiled
-  extension wrapper and packaged files, and prints focused evidence about the CLI command,
-  arguments, executable/package location, and any ignore/exclude capability exposed by
-  the packaged CLI.
+  Locates the ArchPulse extension installed for Antigravity IDE, proves how its wrapper
+  invokes ArchPulse, then queries npm/npx for the actual ArchPulse CLI version and help
+  text used at runtime. This distinguishes extension settings from CLI capabilities.
 
-  This script does not modify the repository, IDE settings, extension installation,
-  or generated architecture files.
+  This script does not generate diagrams and does not modify repository files, IDE
+  settings, or the extension installation. npx/npm may update their normal package cache.
 #>
 
 [CmdletBinding()]
@@ -68,6 +67,47 @@ function Show-AllContexts {
   }
 }
 
+function Invoke-NativeProbe {
+  param(
+    [Parameter(Mandatory = $true)][string]$Label,
+    [Parameter(Mandatory = $true)][string]$Command,
+    [Parameter(Mandatory = $true)][string[]]$Arguments
+  )
+
+  Info ('Probe: {0}' -f $Label)
+  Info ('Command: {0} {1}' -f $Command, ($Arguments -join ' '))
+
+  $OldPreference = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    $Output = @(& $Command @Arguments 2>&1)
+    $ExitCode = $LASTEXITCODE
+  } catch {
+    $Output = @($_.Exception.Message)
+    $ExitCode = -1
+  } finally {
+    $ErrorActionPreference = $OldPreference
+  }
+
+  if ($ExitCode -eq 0) { Pass ('{0} exited 0' -f $Label) }
+  else { Warn ('{0} exit code: {1}' -f $Label, $ExitCode) }
+
+  $Text = ($Output | ForEach-Object { $_.ToString() }) -join "`n"
+  if ([string]::IsNullOrWhiteSpace($Text)) {
+    Warn ('{0} produced no output' -f $Label)
+  } else {
+    foreach ($Line in ($Text -split "`r?`n")) {
+      Write-Host ('        {0}' -f $Line)
+    }
+  }
+
+  return [pscustomobject]@{
+    Label = $Label
+    ExitCode = $ExitCode
+    Text = $Text
+  }
+}
+
 Write-Host ''
 Write-Host '╔════════════════════════════════════════════╗' -ForegroundColor Cyan
 Write-Host '║       ArchPulse CLI Invocation Check       ║' -ForegroundColor Cyan
@@ -96,77 +136,82 @@ Info ('Version: {0}' -f $Manifest.version)
 Info ('Main: {0}' -f $Manifest.main)
 
 Section 'Wrapper invocation evidence'
-Show-AllContexts -Text $Compiled -Pattern 'runArchpulseCLI' -Label 'runArchpulseCLI' -Radius 1300
-Show-AllContexts -Text $Compiled -Pattern 'child_process' -Label 'child_process' -Radius 1200
-Show-AllContexts -Text $Compiled -Pattern '\bexecFile\b|\bexec\b|\bspawn\b' -Label 'exec/spawn API' -Radius 1400
-Show-AllContexts -Text $Compiled -Pattern 'npx|node_modules|archpulse|\.cmd|\.exe|\.js' -Label 'CLI path/command strings' -Radius 1200 -Limit 8
+Show-AllContexts -Text $Compiled -Pattern 'runArchpulseCLI' -Label 'runArchpulseCLI' -Radius 1300 -Limit 2
+Show-AllContexts -Text $Compiled -Pattern '\bspawn\b' -Label 'spawn API' -Radius 1400 -Limit 2
+
+$GenerateInvocation = [regex]::Match(
+  $Compiled,
+  'spawn\)\(a,\["archpulse",\.\.\.o\].*?let o=\["generate","\.","--output",t\]',
+  [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+)
+if ($Compiled -match '\["generate","\.","--output",t\]' -and $Compiled -match '\["archpulse",\.\.\.o\]') {
+  Pass 'Wrapper command is effectively: npx archpulse generate . --output <outputDirectory>'
+} else {
+  Warn 'Could not prove the exact generate argument array with the compact signature probe.'
+}
 
 Section 'Configuration keys actually read by wrapper'
 $GetMatches = [regex]::Matches($Compiled, '\.get\(["'']([^"'']+)["'']\)')
-if ($GetMatches.Count -eq 0) {
+$Keys = @($GetMatches | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+if ($Keys.Count -eq 0) {
   Warn 'No .get("...") configuration reads were detected.'
 } else {
-  $Keys = @($GetMatches | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
   foreach ($Key in $Keys) { Info ('wrapper reads setting key: {0}' -f $Key) }
-  if ($Keys -contains 'ignore') { Pass 'Wrapper reads the ignore setting.' }
-  else { Fail 'Wrapper does not read the ignore setting.' }
+}
+if ($Keys -contains 'ignore') { Pass 'Wrapper reads archpulse.ignore.' }
+else { Fail 'Wrapper does not read archpulse.ignore.' }
+if ($Keys -contains 'outputFormats') { Pass 'Wrapper reads archpulse.outputFormats.' }
+else { Warn 'Wrapper does not read archpulse.outputFormats for generation.' }
+
+Section 'Runtime package resolution'
+if ($null -eq (Get-Command npm -ErrorAction SilentlyContinue)) {
+  Fail 'npm is not available on PATH.'
+  exit 4
+}
+if ($null -eq (Get-Command npx -ErrorAction SilentlyContinue)) {
+  Fail 'npx is not available on PATH.'
+  exit 4
 }
 
-Section 'Packaged ArchPulse files'
-$InterestingFiles = @(
-  Get-ChildItem -LiteralPath $ExtensionPath -Recurse -File -ErrorAction SilentlyContinue |
-    Where-Object {
-      $_.FullName -notmatch '[\\/]node_modules[\\/]' -and
-      ($_.Name -match '(?i)(archpulse|cli|bin|package|config)' -or $_.Extension -in @('.cmd', '.ps1', '.sh', '.exe'))
-    } |
-    Select-Object -First 120
+$RegistryVersion = Invoke-NativeProbe -Label 'npm registry version' -Command 'npm' -Arguments @('view', 'archpulse', 'version')
+$RegistryTags = Invoke-NativeProbe -Label 'npm dist-tags' -Command 'npm' -Arguments @('view', 'archpulse', 'dist-tags', '--json')
+$RuntimeVersion = Invoke-NativeProbe -Label 'npx ArchPulse version' -Command 'npx' -Arguments @('--yes', 'archpulse', '--version')
+
+Section 'Live CLI help'
+$RootHelp = Invoke-NativeProbe -Label 'ArchPulse root help' -Command 'npx' -Arguments @('--yes', 'archpulse', '--help')
+$GenerateHelp = Invoke-NativeProbe -Label 'ArchPulse generate help' -Command 'npx' -Arguments @('--yes', 'archpulse', 'generate', '--help')
+$AnalyzeHelp = Invoke-NativeProbe -Label 'ArchPulse analyze help' -Command 'npx' -Arguments @('--yes', 'archpulse', 'analyze', '--help')
+
+Section 'Live CLI capability classification'
+$AllHelp = @($RootHelp.Text, $GenerateHelp.Text, $AnalyzeHelp.Text) -join "`n"
+$Capabilities = @(
+  @{ Name = 'ignore'; Pattern = '(?i)(--ignore\b|ignore[- ]patterns?|ignore\s+glob)' },
+  @{ Name = 'exclude'; Pattern = '(?i)(--exclude\b|exclude[- ]patterns?|exclude\s+glob)' },
+  @{ Name = 'config'; Pattern = '(?i)(--config\b|configuration\s+file|config\s+file)' },
+  @{ Name = 'include'; Pattern = '(?i)--include\b' },
+  @{ Name = 'format'; Pattern = '(?i)(--format\b|--formats\b)' },
+  @{ Name = 'output'; Pattern = '(?i)--output\b' }
 )
-if ($InterestingFiles.Count -eq 0) {
-  Warn 'No obvious packaged CLI/config files found outside node_modules.'
+
+foreach ($Capability in $Capabilities) {
+  if ($AllHelp -match $Capability.Pattern) {
+    Pass ('CLI help exposes {0}-related capability' -f $Capability.Name)
+  } else {
+    Warn ('CLI help exposes no {0}-related capability' -f $Capability.Name)
+  }
+}
+
+$HasIgnore = $AllHelp -match '(?i)(--ignore\b|--exclude\b|ignore[- ]patterns?|exclude[- ]patterns?)'
+$HasConfig = $AllHelp -match '(?i)(--config\b|configuration\s+file|config\s+file)'
+
+Section 'Diagnosis'
+Fail 'ArchPulse VS Code 0.1.3 declares archpulse.ignore but its generation wrapper does not read or forward it.'
+if ($HasIgnore) {
+  Pass 'The live CLI exposes an ignore/exclude mechanism. A repository wrapper can use it without patching generated diagrams.'
+} elseif ($HasConfig) {
+  Pass 'The live CLI exposes configuration-file support. Inspect that format as the preferred repository-level workaround.'
 } else {
-  foreach ($File in $InterestingFiles) {
-    $Relative = [System.IO.Path]::GetRelativePath($ExtensionPath, $File.FullName)
-    Info $Relative
-  }
+  Fail 'The live CLI help exposes neither ignore/exclude nor an obvious config-file mechanism.'
+  Info 'In that case archpulse.ignore is non-functional end-to-end for this extension/CLI path; use a fixed upstream version or a controlled repository wrapper/filtering strategy.'
 }
-
-Section 'Packaged package manifests'
-$PackageFiles = @(
-  Get-ChildItem -LiteralPath $ExtensionPath -Recurse -File -Filter 'package.json' -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -notmatch '[\\/]node_modules[\\/]' }
-)
-foreach ($PackageFile in $PackageFiles) {
-  try {
-    $Package = Get-Content -LiteralPath $PackageFile.FullName -Raw | ConvertFrom-Json
-    $Relative = [System.IO.Path]::GetRelativePath($ExtensionPath, $PackageFile.FullName)
-    Info ('{0} => name={1}; version={2}; bin={3}' -f $Relative, $Package.name, $Package.version, (($Package.bin | ConvertTo-Json -Compress) -replace '^null$', '<none>'))
-  } catch {
-    Warn ('Could not parse {0}' -f $PackageFile.FullName)
-  }
-}
-
-Section 'Potential CLI option strings in packaged JavaScript'
-$CandidateJs = @(
-  Get-ChildItem -LiteralPath $ExtensionPath -Recurse -File -Include '*.js','*.cjs','*.mjs' -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -notmatch '[\\/]node_modules[\\/]' }
-)
-$OptionPatterns = @('--ignore', '--exclude', 'ignorePatterns', 'excludePatterns', 'ignore', 'exclude')
-foreach ($Option in $OptionPatterns) {
-  $Found = $false
-  foreach ($File in $CandidateJs) {
-    $Hits = Select-String -LiteralPath $File.FullName -SimpleMatch -Pattern $Option -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($Hits) {
-      $Relative = [System.IO.Path]::GetRelativePath($ExtensionPath, $File.FullName)
-      Pass ('{0} appears in {1}' -f $Option, $Relative)
-      $Found = $true
-      break
-    }
-  }
-  if (-not $Found) { Warn ('No packaged JavaScript contains {0}' -f $Option) }
-}
-
-Section 'Conclusion hints'
-Info 'If the wrapper reads only outputDirectory and invokes an external CLI without ignore arguments, archpulse.ignore is manifest-only in this extension version.'
-Info 'If the CLI exposes an ignore/exclude flag, that gives us a practical wrapper/workaround path.'
-Info 'If neither wrapper nor CLI exposes ignore, the setting is non-functional in this installed version and a version change/fix is required.'
-Info 'This diagnostic made no changes.'
+Info 'This diagnostic did not generate or edit architecture files.'
