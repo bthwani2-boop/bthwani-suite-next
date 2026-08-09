@@ -41,16 +41,16 @@ func hasPermissionScope(permissions []Permission, scope string) bool {
 
 func loadActorAccessState(t *testing.T, db *sql.DB, actorID string) (bool, []Permission) {
 	t.Helper()
-	var active bool
+	var status ActorLifecycleStatus
 	var raw []byte
-	if err := db.QueryRow(`SELECT active, permissions FROM identity_actors WHERE id = $1`, actorID).Scan(&active, &raw); err != nil {
+	if err := db.QueryRow(`SELECT status, permissions FROM identity_actors WHERE id = $1`, actorID).Scan(&status, &raw); err != nil {
 		t.Fatal(err)
 	}
 	var permissions []Permission
 	if err := json.Unmarshal(raw, &permissions); err != nil {
 		t.Fatal(err)
 	}
-	return active, permissions
+	return status == ActorStatusActive, permissions
 }
 
 func insertLiveIdentitySession(t *testing.T, db *sql.DB, actorID, suffix string) string {
@@ -100,8 +100,8 @@ func TestPartnerStoreAccessChangeRevokesSessionsAndPreservesOtherStoresDBIntegra
 	_, err = db.Exec(`
 		INSERT INTO identity_actors (
 			id, username, password_hash, operator_context_id, phone_e164,
-			roles, permissions, active
-		) VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, true)`,
+			roles, permissions, status, version
+		) VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, 'ACTIVE', 1)`,
 		actorID,
 		"partner-j022-user-"+suffix,
 		operatorContextID,
