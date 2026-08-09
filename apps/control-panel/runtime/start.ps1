@@ -111,6 +111,7 @@ function Ensure-ControlPanelDependencies {
 
 $DevSessionBrokerScript = Join-Path $RepoRoot "tools\dev\local-dev-session-broker.mjs"
 $DevSessionBrokerPort = 58100
+$DevSessionBrokerContractVersion = 2
 
 function Test-BthwaniDevSessionBroker {
     try {
@@ -119,10 +120,49 @@ function Test-BthwaniDevSessionBroker {
             -TimeoutSec 1 `
             -ErrorAction Stop
         return [string] $response.status -eq "healthy" `
-            -and [string] $response.service -eq "local-dev-session-broker"
+            -and [string] $response.service -eq "local-dev-session-broker" `
+            -and [int] $response.contractVersion -eq $DevSessionBrokerContractVersion
     } catch {
         return $false
     }
+}
+
+function Get-BthwaniDevSessionBrokerListener {
+    return Get-NetTCPConnection `
+        -State Listen `
+        -LocalPort $DevSessionBrokerPort `
+        -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+}
+
+function Stop-BthwaniStaleDevSessionBroker {
+    param([Parameter(Mandatory)] $Listener)
+
+    $owner = Get-CimInstance `
+        -ClassName Win32_Process `
+        -Filter "ProcessId = $($Listener.OwningProcess)" `
+        -ErrorAction SilentlyContinue
+    $ownerName = if ($owner) { [string] $owner.Name } else { "" }
+    $ownerCommandLine = if ($owner) { [string] $owner.CommandLine } else { "" }
+    $isBrokerProcess = $owner `
+        -and $ownerName -match '^node(?:\.exe)?$' `
+        -and $ownerCommandLine -like '*local-dev-session-broker.mjs*'
+
+    if (-not $isBrokerProcess) {
+        throw "Port $DevSessionBrokerPort is occupied by a process that is not the BThwani local dev session broker."
+    }
+
+    Write-Host "Replacing stale local dev session broker contract on port $DevSessionBrokerPort..." -ForegroundColor DarkGray
+    Stop-Process -Id $Listener.OwningProcess -Force -ErrorAction Stop
+
+    for ($attempt = 1; $attempt -le 30; $attempt++) {
+        if (-not (Get-BthwaniDevSessionBrokerListener)) {
+            return
+        }
+        Start-Sleep -Milliseconds 100
+    }
+
+    throw "Stale local dev session broker did not release port $DevSessionBrokerPort."
 }
 
 function Ensure-BthwaniDevSessionBroker {
@@ -130,14 +170,9 @@ function Ensure-BthwaniDevSessionBroker {
         return "ready"
     }
 
-    $listener = Get-NetTCPConnection `
-        -State Listen `
-        -LocalPort $DevSessionBrokerPort `
-        -ErrorAction SilentlyContinue |
-        Select-Object -First 1
-
+    $listener = Get-BthwaniDevSessionBrokerListener
     if ($listener) {
-        throw "Port $DevSessionBrokerPort is occupied by a process that is not the BThwani local dev session broker."
+        Stop-BthwaniStaleDevSessionBroker -Listener $listener
     }
     if (-not (Test-Path -LiteralPath $DevSessionBrokerScript -PathType Leaf)) {
         throw "Local development session broker not found: $DevSessionBrokerScript"
@@ -176,7 +211,7 @@ function Ensure-BthwaniDevSessionBroker {
         Start-Sleep -Milliseconds 100
     }
 
-    throw "Local development session broker did not become healthy on port $DevSessionBrokerPort."
+    throw "Local development session broker contract v$DevSessionBrokerContractVersion did not become healthy on port $DevSessionBrokerPort."
 }
 
 Import-EnvironmentFile -Path $GoogleEnvironmentPath
