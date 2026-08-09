@@ -45,10 +45,18 @@ func main() {
 		Password:          os.Getenv("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD"),
 		OperatorContextID: bootstrapOperatorContextID,
 	}
-	if db != nil {
-		go retryLocalBootstrap(repository, localBootstrap)
-	} else {
-		log.Printf("[identity-api] local bootstrap deferred until a database is configured")
+
+	// Local bootstrap owns password-authenticated development fixtures. Those
+	// fixtures must be fully converged before any authentication endpoint can
+	// accept requests; otherwise readiness can race ahead of credential repair and
+	// mobile bootstrap requests can turn a stale local password into a lockout.
+	// Production is unaffected because this path is inactive unless the explicit
+	// local bootstrap switch is enabled.
+	if db != nil && localBootstrap.Enabled {
+		log.Printf("[identity-api] authentication serving deferred until local development bootstrap converges")
+		convergeLocalBootstrapBeforeServing(repository, localBootstrap)
+	} else if db == nil && localBootstrap.Enabled {
+		log.Printf("[identity-api] local bootstrap cannot converge until a database is configured; readiness remains fail-closed")
 	}
 
 	router := identityhttp.NewRouter(repository)
@@ -112,18 +120,16 @@ func openIdentityDatabase(databaseURL string) (*sql.DB, error) {
 	return db, nil
 }
 
-func retryLocalBootstrap(repository *identity.Repository, bootstrap identity.LocalBootstrap) {
+func convergeLocalBootstrapBeforeServing(repository *identity.Repository, bootstrap identity.LocalBootstrap) {
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 		err := bootstrapLocalIdentityState(ctx, repository, bootstrap)
 		cancel()
 		if err == nil {
-			if bootstrap.Enabled {
-				log.Printf("[identity-api] local development identity bootstrap is ready")
-			}
+			log.Printf("[identity-api] local development identity bootstrap is ready")
 			return
 		}
-		log.Printf("[identity-api] local bootstrap deferred; readiness remains authoritative: %v", err)
+		log.Printf("[identity-api] local bootstrap not yet converged; authentication serving remains closed: %v", err)
 		time.Sleep(localBootstrapRetryInterval)
 	}
 }
@@ -139,7 +145,10 @@ func bootstrapLocalIdentityState(
 	if err := repository.BootstrapLocalPlatformActors(ctx, bootstrap); err != nil {
 		return err
 	}
-	return repository.BootstrapSovereignLeadershipAccess(ctx, bootstrap)
+	if err := repository.BootstrapSovereignLeadershipAccess(ctx, bootstrap); err != nil {
+		return err
+	}
+	return repository.ReconcileLocalBootstrapSecurityState(ctx, bootstrap)
 }
 
 func envOr(name, fallback string) string {
