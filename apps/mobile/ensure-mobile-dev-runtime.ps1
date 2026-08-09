@@ -59,7 +59,7 @@ function Test-BthwaniHealthEndpoint {
 
 function Test-BthwaniMobileBackend {
   $checks = @(
-    @{ Uri = "http://127.0.0.1:58082/identity/health"; Status = "healthy" },
+    @{ Uri = "http://127.0.0.1:58082/identity/readiness"; Status = "HEALTHY" },
     @{ Uri = "http://127.0.0.1:58086/workforce/health"; Status = "healthy" },
     @{ Uri = "http://127.0.0.1:58080/dsh/health"; Status = "healthy" }
   )
