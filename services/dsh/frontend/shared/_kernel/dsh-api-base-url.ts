@@ -37,7 +37,10 @@ export function resolveDshApiBaseUrl(): string {
   }
 
   if (!url) {
-    url = isReactNative() ? "http://10.0.2.2:58080" : "http://localhost:58080";
+    url =
+      isReactNative() && !isDshDeviceLoopbackBridgeEnabled()
+        ? "http://10.0.2.2:58080"
+        : "http://127.0.0.1:58080";
   }
   return url;
 }
