@@ -20,6 +20,7 @@ var (
 )
 
 var canonicalUsernamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,63}$`)
+var canonicalProvisionedActorIDPattern = regexp.MustCompile(`^[a-z][A-Za-z0-9._:-]{1,127}$`)
 
 func NormalizeUsername(raw string) (string, error) {
 	username := strings.ToLower(strings.TrimSpace(raw))
@@ -29,9 +30,23 @@ func NormalizeUsername(raw string) (string, error) {
 	return username, nil
 }
 
+func normalizeProvisionedActorID(raw, role string) (string, error) {
+	actorID := strings.TrimSpace(raw)
+	if actorID == "" {
+		return "", nil
+	}
+	if !canonicalProvisionedActorIDPattern.MatchString(actorID) || !strings.HasPrefix(actorID, role+"-") {
+		return "", ErrInvalidActivation
+	}
+	return actorID, nil
+}
+
 // ProvisionActorGoverned is the sole live Workforce provisioning path. Phone,
 // canonical username, role and operator context form the idempotency fingerprint;
-// retries with a different fingerprint fail explicitly.
+// retries with a different fingerprint fail explicitly. Workforce may also
+// provide the already-sovereign actor id when recovering a missing Identity row;
+// Identity only accepts that id when it is role-scoped, unused, and consistent
+// with the same immutable provisioning fingerprint.
 func (r *Repository) ProvisionActorGoverned(ctx context.Context, input ProvisionActorInput) (ActorAdminView, error) {
 	role := strings.ToLower(strings.TrimSpace(input.Role))
 	surface, ok := workforceActivationSurfaceFor(role)
@@ -39,6 +54,10 @@ func (r *Repository) ProvisionActorGoverned(ctx context.Context, input Provision
 		return ActorAdminView{}, ErrInvalidActivation
 	}
 	username, err := NormalizeUsername(input.Username)
+	if err != nil {
+		return ActorAdminView{}, err
+	}
+	requestedActorID, err := normalizeProvisionedActorID(input.ActorID, role)
 	if err != nil {
 		return ActorAdminView{}, err
 	}
@@ -57,7 +76,11 @@ func (r *Repository) ProvisionActorGoverned(ctx context.Context, input Provision
 	}
 	defer tx.Rollback()
 
-	for _, key := range []string{"identity:phone:" + phone, "identity:username:" + username} {
+	lockKeys := []string{"identity:phone:" + phone, "identity:username:" + username}
+	if requestedActorID != "" {
+		lockKeys = append(lockKeys, "identity:actor:"+requestedActorID)
+	}
+	for _, key := range lockKeys {
 		if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, key); err != nil {
 			return ActorAdminView{}, err
 		}
@@ -77,10 +100,21 @@ func (r *Repository) ProvisionActorGoverned(ctx context.Context, input Provision
 		if !hasRole(existing.Roles, role) {
 			return ActorAdminView{}, ErrProvisionConflict
 		}
+		if requestedActorID != "" && existing.ID != requestedActorID {
+			return ActorAdminView{}, ErrProvisionConflict
+		}
 		if err := tx.Commit(); err != nil {
 			return ActorAdminView{}, err
 		}
 		return r.ActorAdminByIDGoverned(ctx, operatorContextID, existing.ID)
+	}
+
+	if requestedActorID != "" {
+		if _, err = actorByIDForUpdateTx(ctx, tx, requestedActorID); err == nil {
+			return ActorAdminView{}, ErrProvisionConflict
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			return ActorAdminView{}, err
+		}
 	}
 
 	if _, err = actorByUsernameForUpdateTx(ctx, tx, username); err == nil {
@@ -89,11 +123,14 @@ func (r *Repository) ProvisionActorGoverned(ctx context.Context, input Provision
 		return ActorAdminView{}, err
 	}
 
-	suffix, err := randomToken(9)
-	if err != nil {
-		return ActorAdminView{}, err
+	actorID := requestedActorID
+	if actorID == "" {
+		suffix, err := randomToken(9)
+		if err != nil {
+			return ActorAdminView{}, err
+		}
+		actorID = role + "-" + suffix
 	}
-	actorID := role + "-" + suffix
 	permissions, err := providerPermissions(surface)
 	if err != nil {
 		return ActorAdminView{}, err
