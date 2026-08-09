@@ -16,6 +16,7 @@ func cleanupJ002Actors(t *testing.T, db *sql.DB, phones ...string) {
 				t.Errorf("clean up J002 actor %s: %v", phone, err)
 			}
 		}
+	}
 	clean()
 	t.Cleanup(clean)
 }
