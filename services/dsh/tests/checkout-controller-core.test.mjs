@@ -17,7 +17,7 @@ const intent = (overrides = {}) => ({
   cartId: "cart-1",
   storeId: "store-1",
   fulfillmentMode: "bthwani_delivery",
-  state: "payment_pending",
+  state: "confirming",
   paymentMethod: "cod",
   wltPaymentSessionId: "",
   deliveryAddress: "",
@@ -29,11 +29,11 @@ const intent = (overrides = {}) => ({
 });
 
 describe("checkout controller core", () => {
-  test("keeps empty WLT session as payment pending reference", () => {
+  test("keeps empty WLT session as confirming reference", () => {
     assert.equal(checkoutIntentHasWltSession(intent()), false);
-    assert.equal(resolveCheckoutSubmitSuccess(intent()).kind, "payment_pending");
+    assert.equal(resolveCheckoutSubmitSuccess(intent()).kind, "confirming");
     assert.equal(
-      resolveCheckoutSubmitSuccess(intent({ wltPaymentSessionId: "wlt-1" })).kind,
+      resolveCheckoutSubmitSuccess(intent({ state: "confirmed", wltPaymentSessionId: "wlt-1" })).kind,
       "success",
     );
   });
@@ -52,18 +52,18 @@ describe("checkout controller core", () => {
 });
 
 describe("checkout controller core: non-COD payment confirmation", () => {
-  test("wallet/mixed/official_wallet intents stay payment_pending until WLT confirms", () => {
+  test("wallet/mixed/official_wallet intents stay confirming until WLT confirms", () => {
     const walletIntent = intent({ paymentMethod: "wallet", wltPaymentSessionId: "wlt-1" });
-    assert.equal(resolveCheckoutSubmitSuccess(walletIntent).kind, "payment_pending");
+    assert.equal(resolveCheckoutSubmitSuccess(walletIntent).kind, "confirming");
   });
 
-  test("payment_confirmed is success regardless of payment method", () => {
-    const confirmed = intent({ paymentMethod: "wallet", state: "payment_confirmed", wltPaymentSessionId: "wlt-1" });
+  test("confirmed is success regardless of payment method", () => {
+    const confirmed = intent({ paymentMethod: "wallet", state: "confirmed", wltPaymentSessionId: "wlt-1" });
     assert.equal(resolveCheckoutSubmitSuccess(confirmed).kind, "success");
   });
 
-  test("payment_failed is a blocked_payment_unavailable state", () => {
-    const failed = intent({ paymentMethod: "mixed", state: "payment_failed", wltPaymentSessionId: "wlt-1" });
-    assert.equal(resolveCheckoutSubmitSuccess(failed).kind, "blocked_payment_unavailable");
+  test("payment_failed maps to blocked state", () => {
+    const failed = intent({ paymentMethod: "mixed", state: "blocked", wltPaymentSessionId: "wlt-1" });
+    assert.equal(resolveCheckoutSubmitSuccess(failed).kind, "blocked");
   });
 });

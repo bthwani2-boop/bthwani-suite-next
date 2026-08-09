@@ -12,7 +12,7 @@ const makeDto = (overrides = {}) => ({
   id: "store-001",
   slug: "test-store",
   displayName: "Test Store",
-  status: "active",
+  status: "published",
   cityCode: "sana",
   serviceAreaCode: "haddah",
   serviceability: { status: "serviceable" },
@@ -49,8 +49,8 @@ describe("toAdminTableRow", () => {
     assert.equal(row.isOpen, true);
   });
 
-  test("inactive store maps isOpen=false", () => {
-    const row = toAdminTableRow(makeDto({ status: "inactive" }));
+  test("paused store maps isOpen=false", () => {
+    const row = toAdminTableRow(makeDto({ status: "paused" }));
     assert.equal(row.isOpen, false);
   });
 
@@ -122,9 +122,9 @@ describe("toAdminDetail", () => {
 describe("toAdminKpiSummary", () => {
   test("counts totals correctly", () => {
     const rows = [
-      makeDto({ status: "active", isVisible: true, category: "restaurant" }),
-      makeDto({ id: "s2", status: "inactive", isVisible: false, category: "grocery" }),
-      makeDto({ id: "s3", status: "active", isVisible: true, category: "restaurant" }),
+      makeDto({ status: "published", isVisible: true, category: "restaurant" }),
+      makeDto({ id: "s2", status: "paused", isVisible: false, category: "grocery" }),
+      makeDto({ id: "s3", status: "published", isVisible: true, category: "restaurant" }),
     ].map(toAdminTableRow);
 
     const kpi = toAdminKpiSummary(rows, 10);

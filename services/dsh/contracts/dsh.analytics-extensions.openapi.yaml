@@ -13,11 +13,11 @@ servers:
 - url: http://localhost:58080
 paths:
   /dsh/operator/analytics/preparation-sla:
-    $ref: ./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1preparation-sla
+    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1preparation-sla"
     get:
       tags:
       - operator
-      operationId: get_dsh_operator_analytics_preparation_sla
+      operationId: getDshPreparationSlaAnalytics
       responses:
         '200':
           description: Auto-generated
@@ -43,11 +43,11 @@ paths:
       security:
       - bearerAuth: []
   /dsh/operator/analytics/captains:
-    $ref: ./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1captains
+    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1captains"
     get:
       tags:
       - operator
-      operationId: get_dsh_operator_analytics_captains
+      operationId: getDshCaptainPerformanceAnalytics
       responses:
         '200':
           description: Auto-generated
@@ -73,11 +73,11 @@ paths:
       security:
       - bearerAuth: []
   /dsh/operator/analytics/field:
-    $ref: ./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1field
+    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1field"
     get:
       tags:
       - operator
-      operationId: get_dsh_operator_analytics_field
+      operationId: getDshFieldPerformanceAnalytics
       responses:
         '200':
           description: Auto-generated
@@ -103,11 +103,11 @@ paths:
       security:
       - bearerAuth: []
   /dsh/operator/analytics/drill-down/orders:
-    $ref: ./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1drill-down~1orders
+    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1drill-down~1orders"
     get:
       tags:
       - operator
-      operationId: get_dsh_operator_analytics_drill_down_orders
+      operationId: getDshOrderAnalyticsDrilldown
       responses:
         '200':
           description: Auto-generated
@@ -133,11 +133,11 @@ paths:
       security:
       - bearerAuth: []
   /dsh/operator/analytics/financial-snapshot:
-    $ref: ./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1financial-snapshot
+    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1financial-snapshot"
     get:
       tags:
       - operator
-      operationId: get_dsh_operator_analytics_financial_snapshot
+      operationId: getDshWltFinancialAnalyticsSnapshot
       responses:
         '200':
           description: Auto-generated
@@ -163,11 +163,11 @@ paths:
       security:
       - bearerAuth: []
   /dsh/operator/analytics/export.csv:
-    $ref: ./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1export.csv
+    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1export.csv"
     get:
       tags:
       - operator
-      operationId: get_dsh_operator_analytics_export_csv
+      operationId: exportDshOperationalAnalyticsCsv
       responses:
         '200':
           description: Auto-generated

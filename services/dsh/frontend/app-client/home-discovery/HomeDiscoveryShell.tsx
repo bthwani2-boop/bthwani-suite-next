@@ -271,7 +271,7 @@ export function HomeDiscoveryShell({
 
   const { banners, promos, filters, categories, stores } = state.data;
   // Satisfy contract test: const filteredStores = applyDiscoveryFilter(stores, activeFilter);
-  const filteredStores = queriedStores ?? applyDiscoveryFilter(stores, activeFilter);
+  const filteredStores = (queriedStores ?? applyDiscoveryFilter(stores, activeFilter)) as HomeStoreCardViewModel[];
 
   return (
     <Screen padded={false}>
@@ -330,7 +330,7 @@ export function HomeDiscoveryShell({
           onFilterChange={onFilterChange}
         />
         <HomeStoreFeedSection
-          stores={filteredStores as HomeStoreCardViewModel[]}
+          stores={filteredStores}
           activeFilter={activeFilter}
           onStorePress={onStorePress}
         />

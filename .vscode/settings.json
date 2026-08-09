@@ -53,5 +53,9 @@
   "terminal.integrated.persistentSessionScrollback": 5000,
   "git.autorefresh": true,
   "git.optimisticUpdate": true,
-  "git.openRepositoryInParentFolders": "never"
+  "git.openRepositoryInParentFolders": "never",
+  "sonarlint.connectedMode.project": {
+    "connectionId": "bthwani2-boop",
+    "projectKey": "bthwani2-boop_bthwani-suite-next"
+  }
 }

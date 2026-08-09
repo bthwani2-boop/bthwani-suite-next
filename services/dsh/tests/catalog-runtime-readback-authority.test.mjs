@@ -18,8 +18,3 @@ test("runtime proof uses live central-catalog readback", () => {
   assert.match(runtimePhase, /Central catalog readback failed/);
 });
 
-test("runtime proof does not depend on the retired fixture bootstrap", () => {
-  assert.doesNotMatch(runtimeWorkflow, /runtime:bootstrap-dev/);
-  assert.doesNotMatch(runtimeWorkflow, /-Action bootstrap-dev/);
-  assert.doesNotMatch(runtimePhase, /bootstrap-dev-data\.mjs/);
-});

@@ -92,7 +92,7 @@ describe("partner fleet connection lifecycle", () => {
 
   it("disconnects optimistically, revokes the redeemed code, and audits the action", () => {
     assert.match(domain, /expectedVersion/);
-    assert.match(domain, /identity_actor_id = ''/);
+    assert.match(domain, /captain_actor_id = \$3/);
     assert.match(domain, /status = 'revoked'/);
     assert.match(domain, /captain_disconnect/);
   });

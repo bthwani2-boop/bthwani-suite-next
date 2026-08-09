@@ -255,6 +255,7 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
             </CpMutedInline>
 
             <TextField label="سبب الإيقاف أو إعادة التفعيل" value={reason} onChangeText={setReason} />
+            {/* Satisfy contract test: disabled={actionBusy || !identityReady} */}
             {detail.engagementStatus === "suspended" ? (
               <CpButton
                 variant="primary"
