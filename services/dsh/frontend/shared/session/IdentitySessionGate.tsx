@@ -1,5 +1,5 @@
 import React, { useState, type ReactNode } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import {
   Button,
   Card,
@@ -30,7 +30,10 @@ export type IdentitySessionGateProps = {
 
 declare const __DEV__: boolean;
 
-const DEV_SESSION_BROKER_BASE_URL = Platform.OS === "web" ? "http://127.0.0.1:58100" : "http://10.0.2.2:58100";
+// Native development traffic uses the same host-loopback contract as the
+// application APIs. apps/mobile/start-mobile-runtime.ps1 reverse-bridges this
+// fixed port with adb, so emulator-specific host aliases must not be used here.
+const DEV_SESSION_BROKER_BASE_URL = "http://127.0.0.1:58100";
 
 function isPlatformAccessActorType(role: DshSurfaceRole): role is ActivationActorType {
   return role === "partner" || role === "captain" || role === "field";
