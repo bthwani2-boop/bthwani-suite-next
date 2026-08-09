@@ -30,7 +30,7 @@ export type IdentitySessionGateProps = {
 
 declare const __DEV__: boolean;
 
-const DEV_SESSION_BROKER_BASE_URL = "http://127.0.0.1:58100";
+const DEV_SESSION_BROKER_BASE_URL = Platform.OS === "web" ? "http://127.0.0.1:58100" : "http://10.0.2.2:58100";
 
 function isPlatformAccessActorType(role: DshSurfaceRole): role is ActivationActorType {
   return role === "partner" || role === "captain" || role === "field";
