@@ -154,6 +154,8 @@ func dshActorSurface(role string) string {
 	switch role {
 	case "operator":
 		return "control-panel"
+	case "client":
+		return "app-client"
 	case "partner":
 		return "app-partner"
 	case "field":
