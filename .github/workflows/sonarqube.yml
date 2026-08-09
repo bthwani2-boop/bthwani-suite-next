@@ -19,7 +19,6 @@ jobs:
     name: SonarQube Cloud scan
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    if: ${{ vars.SONAR_ORGANIZATION != '' && vars.SONAR_PROJECT_KEY != '' }}
 
     steps:
       - name: Checkout immutable source with full history
@@ -29,7 +28,7 @@ jobs:
           show-progress: false
           fetch-depth: 0
 
-      - name: Validate SonarQube Cloud credentials
+      - name: Validate SonarQube Cloud token
         shell: bash
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -43,7 +42,3 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
-            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
