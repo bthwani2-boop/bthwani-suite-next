@@ -3,6 +3,19 @@ $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 $GoogleEnvironmentPath = Join-Path $RepoRoot "infra\local\control-panel.google.env"
+$SourceIntegrityGuard = Join-Path $RepoRoot "tools\guards\source-integrity-gate.mjs"
+
+if (-not (Test-Path -LiteralPath $SourceIntegrityGuard -PathType Leaf)) {
+    throw "Source-integrity guard not found: $SourceIntegrityGuard"
+}
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+    throw "Node.js is required to verify repository source integrity before Control Panel startup."
+}
+
+& node $SourceIntegrityGuard
+if ($LASTEXITCODE -ne 0) {
+    throw "Repository source integrity failed. Resolve the reported merge state before running the Control Panel."
+}
 
 function Import-EnvironmentFile {
     param([Parameter(Mandatory)][string] $Path)
