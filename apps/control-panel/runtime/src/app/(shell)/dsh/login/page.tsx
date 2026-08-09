@@ -28,6 +28,7 @@ function DshLoginForm() {
   const searchParams = useSearchParams();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [quickLoginPending, setQuickLoginPending] = useState(false);
   const [quickLoginError, setQuickLoginError] = useState<string | null>(null);
 
   const returnTo = resolveSafeReturnTo(searchParams.get("returnTo"));
@@ -39,16 +40,15 @@ function DshLoginForm() {
   }, [state.kind, returnTo, router]);
 
   async function handleQuickLogin() {
+    if (quickLoginPending) return;
+    setQuickLoginPending(true);
     setQuickLoginError(null);
     try {
-      const response = await fetch("http://127.0.0.1:58100/session", {
+      const response = await fetch("/api/auth/dev-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          role: "operator",
-          surface: "control-panel",
-          deviceFingerprint: "browser-dev",
-        }),
+        credentials: "same-origin",
+        signal: AbortSignal.timeout(8_000),
       });
       const body = await response.json().catch(() => null);
       if (!response.ok) {
@@ -57,10 +57,18 @@ function DshLoginForm() {
       if (body?.accessToken && body?.refreshToken && body?.identity) {
         await adoptSession(body);
       } else {
-        throw new Error("DEV_SESSION_BROKER_UNAVAILABLE");
+        throw new Error("DEV_SESSION_BINDING_INVALID");
       }
-    } catch (err: any) {
-      setQuickLoginError(err.message || "DEV_SESSION_BROKER_UNAVAILABLE");
+    } catch (error) {
+      setQuickLoginError(
+        error instanceof Error && error.name === "TimeoutError"
+          ? "DEV_SESSION_BROKER_UNAVAILABLE"
+          : error instanceof Error
+            ? error.message
+            : "DEV_SESSION_BROKER_UNAVAILABLE",
+      );
+    } finally {
+      setQuickLoginPending(false);
     }
   }
 
@@ -209,7 +217,7 @@ function DshLoginForm() {
 
         <button
           type="submit"
-          disabled={submitDisabled}
+          disabled={submitDisabled || quickLoginPending}
           style={{
             padding: "0.75rem",
             borderRadius: "0.5rem",
@@ -218,7 +226,7 @@ function DshLoginForm() {
             color: "white",
             fontWeight: 700,
             cursor: isSubmitting ? "wait" : submitDisabled ? "not-allowed" : "pointer",
-            opacity: submitDisabled ? 0.65 : 1,
+            opacity: submitDisabled || quickLoginPending ? 0.65 : 1,
           }}
         >
           {isSubmitting ? "جاري التحقق..." : "تسجيل الدخول"}
@@ -228,7 +236,7 @@ function DshLoginForm() {
           <button
             type="button"
             onClick={handleQuickLogin}
-            disabled={isSubmitting}
+            disabled={isSubmitting || quickLoginPending}
             style={{
               padding: "0.75rem",
               borderRadius: "0.5rem",
@@ -236,12 +244,12 @@ function DshLoginForm() {
               background: "transparent",
               color: "var(--text-primary)",
               fontWeight: 700,
-              cursor: isSubmitting ? "wait" : "pointer",
-              opacity: isSubmitting ? 0.65 : 1,
+              cursor: isSubmitting || quickLoginPending ? "wait" : "pointer",
+              opacity: isSubmitting || quickLoginPending ? 0.65 : 1,
               marginTop: "0.5rem",
             }}
           >
-            دخول سريع كمشغل التطوير المحلي
+            {quickLoginPending ? "جاري الدخول السريع..." : "دخول سريع كمشغل التطوير المحلي"}
           </button>
         ) : null}
       </form>
