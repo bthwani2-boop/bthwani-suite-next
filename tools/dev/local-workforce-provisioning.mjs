@@ -332,28 +332,27 @@ async function provisionIdentityActor(kind, phoneE164) {
 
 async function provisionOne(operatorToken, kind, zone) {
   const existing = await findExistingProvider(operatorToken, kind);
-  if (existing) {
-    return {
-      actorId: existing.actorId,
-      workforceCode: existing.workforceCode,
-      phoneE164: LOCAL_WORKFORCE_PROVIDERS[kind].phoneE164,
-    };
-  }
-
-  const phoneE164 = LOCAL_WORKFORCE_PROVIDERS[kind].phoneE164;
   let actorId;
-  try {
-    actorId = await provisionIdentityActor(kind, phoneE164);
-  } catch (error) {
-    if (error instanceof HttpError && error.status === 409) {
-      throw new Error(`Identity actor with phone ${phoneE164} already exists but no workforce profile was found. Manual cleanup of identity_actors required.`);
-    }
-    throw error;
-  }
+  let person;
 
-  const payload = kind === 'field' ? fieldCreatePayload(zone.id, actorId) : captainCreatePayload(zone.id, actorId);
-  const person = await createProvider(operatorToken, kind, payload);
-  if (!person?.actorId) throw new Error(`workforce:${kind} provisioning returned no actorId`);
+  if (existing) {
+    actorId = existing.actorId;
+    person = existing;
+  } else {
+    const phoneE164 = LOCAL_WORKFORCE_PROVIDERS[kind].phoneE164;
+    try {
+      actorId = await provisionIdentityActor(kind, phoneE164);
+    } catch (error) {
+      if (error instanceof HttpError && error.status === 409) {
+        throw new Error(`Identity actor with phone ${phoneE164} already exists but no workforce profile was found. Manual cleanup of identity_actors required.`);
+      }
+      throw error;
+    }
+
+    const payload = kind === 'field' ? fieldCreatePayload(zone.id, actorId) : captainCreatePayload(zone.id, actorId);
+    person = await createProvider(operatorToken, kind, payload);
+    if (!person?.actorId) throw new Error(`workforce:${kind} provisioning returned no actorId`);
+  }
 
   const operationalCore = {
     ...commonOperationalCore(kind),

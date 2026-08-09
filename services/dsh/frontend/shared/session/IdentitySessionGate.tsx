@@ -58,6 +58,8 @@ function quickDeveloperLoginLabel(
   surface?: string,
 ): string | null {
   switch (role) {
+    case "operator":
+      return surface === "control-panel" ? "دخول سريع كمشغل التطوير المحلي" : null;
     case "client":
       return surface === "app-client" ? "دخول سريع كعميل التطوير المحلي" : null;
     case "partner":
@@ -103,8 +105,7 @@ function IdentityAccessPanel({
   const errorPresentation = errorMessage ? identityErrorPresentation(errorMessage) : null;
   const quickLoginLabel = quickDeveloperLoginLabel(requiredRole, requiredSurface);
   const quickLoginEnabled =
-    Platform.OS !== "web"
-    && typeof __DEV__ !== "undefined"
+    typeof __DEV__ !== "undefined"
     && __DEV__
     && quickLoginLabel !== null;
 

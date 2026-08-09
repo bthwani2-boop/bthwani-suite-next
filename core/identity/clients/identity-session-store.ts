@@ -299,24 +299,53 @@ async function restoreStoredSession(identityClient: IdentityClient, session: Sto
 
 async function performIdentityBootstrap(identityClient: IdentityClient): Promise<void> {
   setState({ kind: "restoring" });
-  try {
-    const readiness = await identityClient.readiness();
-    if (readiness.status !== "HEALTHY") {
-      setServiceUnavailable("IDENTITY_NOT_READY");
-      return;
-    }
-  } catch (error) {
-    setServiceUnavailable(identityErrorCode(error));
-    return;
-  }
 
   const saved = stored ?? await loadStoredSession();
   stored = saved;
+  
   if (!saved) {
+    try {
+      const readiness = await identityClient.readiness();
+      if (readiness.status !== "HEALTHY") {
+        setServiceUnavailable("IDENTITY_NOT_READY");
+        return;
+      }
+    } catch (error) {
+      setServiceUnavailable(identityErrorCode(error));
+      return;
+    }
     resetBootstrapBackoff();
     setState({ kind: "signed_out" });
     return;
   }
+
+  if (isFreshActorIdentity(saved.identity)) {
+    commitAuthenticatedSession(saved, false);
+    
+    void (async () => {
+      try {
+        const identity = await identityClient.session(saved.accessToken);
+        commitAuthenticatedSession({ ...saved, identity }, true);
+      } catch (error) {
+        if (isIdentityInvalidSessionError(error)) {
+          try {
+            const refreshed = await identityClient.refresh(saved.refreshToken);
+            commitAuthenticatedSession({
+              accessToken: refreshed.accessToken,
+              refreshToken: refreshed.refreshToken,
+              identity: refreshed.identity,
+            }, true);
+          } catch (refreshError) {
+             if (isIdentityInvalidSessionError(refreshError)) {
+               clearSession("IDENTITY_SESSION_INVALID");
+             }
+          }
+        }
+      }
+    })();
+    return;
+  }
+
   await restoreStoredSession(identityClient, saved);
 }
 
@@ -428,10 +457,6 @@ export async function loginIdentity(username: string, password: string): Promise
       identity: response.identity,
     }, true);
   } catch (error) {
-    if (isIdentityAvailabilityError(error)) {
-      setServiceUnavailable(identityErrorCode(error));
-      return;
-    }
     setState({ kind: "error", message: identityErrorCode(error) });
   }
 }
@@ -467,10 +492,6 @@ export async function activateIdentity(
       identity: response.identity,
     }, true);
   } catch (error) {
-    if (isIdentityAvailabilityError(error)) {
-      setServiceUnavailable(identityErrorCode(error));
-      return;
-    }
     setState({ kind: "error", message: identityErrorCode(error) });
   }
 }

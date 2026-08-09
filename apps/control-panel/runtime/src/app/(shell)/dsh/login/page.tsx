@@ -23,11 +23,12 @@ export default function DshLoginPage() {
 }
 
 function DshLoginForm() {
-  const { state, login, retryBootstrap } = useControlPanelSession();
+  const { state, login, retryBootstrap, adoptSession } = useControlPanelSession() as any;
   const router = useRouter();
   const searchParams = useSearchParams();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [quickLoginError, setQuickLoginError] = useState<string | null>(null);
 
   const returnTo = resolveSafeReturnTo(searchParams.get("returnTo"));
 
@@ -36,6 +37,32 @@ function DshLoginForm() {
       router.replace(returnTo);
     }
   }, [state.kind, returnTo, router]);
+
+  async function handleQuickLogin() {
+    setQuickLoginError(null);
+    try {
+      const response = await fetch("http://127.0.0.1:58100/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: "operator",
+          surface: "control-panel",
+          deviceFingerprint: "browser-dev",
+        }),
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(body?.code || "DEV_SESSION_BROKER_UNAVAILABLE");
+      }
+      if (body?.accessToken && body?.refreshToken && body?.identity) {
+        await adoptSession(body);
+      } else {
+        throw new Error("DEV_SESSION_BROKER_UNAVAILABLE");
+      }
+    } catch (err: any) {
+      setQuickLoginError(err.message || "DEV_SESSION_BROKER_UNAVAILABLE");
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -174,6 +201,12 @@ function DshLoginForm() {
           </p>
         ) : null}
 
+        {quickLoginError ? (
+          <p role="alert" style={{ margin: 0, color: colorRoles.danger, fontSize: "0.875rem" }}>
+            {identityErrorPresentation(quickLoginError).title}: {identityErrorPresentation(quickLoginError).description}
+          </p>
+        ) : null}
+
         <button
           type="submit"
           disabled={submitDisabled}
@@ -190,6 +223,27 @@ function DshLoginForm() {
         >
           {isSubmitting ? "جاري التحقق..." : "تسجيل الدخول"}
         </button>
+
+        {process.env.NODE_ENV === "development" ? (
+          <button
+            type="button"
+            onClick={handleQuickLogin}
+            disabled={isSubmitting}
+            style={{
+              padding: "0.75rem",
+              borderRadius: "0.5rem",
+              border: "1px solid var(--card-border)",
+              background: "transparent",
+              color: "var(--text-primary)",
+              fontWeight: 700,
+              cursor: isSubmitting ? "wait" : "pointer",
+              opacity: isSubmitting ? 0.65 : 1,
+              marginTop: "0.5rem",
+            }}
+          >
+            دخول سريع كمشغل التطوير المحلي
+          </button>
+        ) : null}
       </form>
     </div>
   );
