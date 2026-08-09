@@ -16,6 +16,7 @@ const PORT = Number(process.env.BTHWANI_DEV_SESSION_BROKER_PORT || 58100);
 const HOST = '127.0.0.1';
 const MAX_BODY_BYTES = 16 * 1024;
 const ROLE_SURFACE = Object.freeze({
+  operator: 'control-panel',
   client: 'app-client',
   partner: 'app-partner',
   field: 'app-field',
@@ -84,7 +85,7 @@ async function createSessionForRole(role, surface, deviceFingerprint) {
   }
 
   let pair;
-  if (role === 'client' || role === 'partner') {
+  if (role === 'operator' || role === 'client' || role === 'partner') {
     pair = await getPasswordSession(
       LOCAL_ACTORS[role].username,
       deviceFingerprint.trim(),
