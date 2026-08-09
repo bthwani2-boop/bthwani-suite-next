@@ -69,6 +69,7 @@ type ConsumeActivationInput struct {
 }
 
 type ProvisionActorInput struct {
+	ActorID           string
 	Username          string
 	PhoneE164         string
 	Role              string

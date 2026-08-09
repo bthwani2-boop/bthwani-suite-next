@@ -2,10 +2,10 @@
 // governed Workforce path, exactly as an operator would in the Control Panel.
 //
 // These two providers are deliberately absent from the Identity local bootstrap:
-// Workforce owns provider actor creation, and it always provisions Identity with
-// a server-generated workforce code as the username. A pre-seeded actor holding
-// the same phone under a friendly username can never be adopted by that path, so
-// the bootstrap must not claim these phones at all.
+// Workforce owns provider actor creation. The generated actor id is persisted in
+// Workforce and is therefore sovereign across later Identity rebuilds; when a
+// local Identity database is recreated, this module restores the missing actor
+// under that same id instead of minting a divergent replacement.
 //
 // Because the resulting actor ids are generated at runtime, they cannot be
 // hardcoded in SQL fixtures. This module writes them to a generated registry
@@ -28,6 +28,10 @@ export const GENERATED_REGISTRY_PATH = path.join(
 export const DSH_API_BASE = process.env.DSH_API_BASE || 'http://127.0.0.1:58080';
 export const IDENTITY_API_BASE = process.env.IDENTITY_API_BASE || 'http://127.0.0.1:58082';
 export const WORKFORCE_API_BASE = process.env.WORKFORCE_API_BASE || 'http://127.0.0.1:58086';
+const IDENTITY_WORKFORCE_SERVICE_TOKEN =
+  process.env.IDENTITY_WORKFORCE_SERVICE_TOKEN ||
+  'LOCAL_ONLY_replace_with_workforce_internal_service_token';
+const LOCAL_OPERATOR_CONTEXT_ID = process.env.BTHWANI_OPERATOR_CONTEXT_ID || 'local-dsh';
 
 export class HttpError extends Error {
   constructor(operation, status, body) {
@@ -44,6 +48,14 @@ export function stableToken(value) {
 
 export function authorization(token) {
   return { Authorization: `Bearer ${token}` };
+}
+
+function identityWorkforceHeaders() {
+  return {
+    Authorization: `Bearer ${IDENTITY_WORKFORCE_SERVICE_TOKEN}`,
+    'X-Service-Caller': 'workforce',
+    'X-Operator-Context-ID': LOCAL_OPERATOR_CONTEXT_ID,
+  };
 }
 
 export function mutationHeaders(token, operation, payload) {
@@ -129,8 +141,9 @@ function endpointFor(kind) {
 }
 
 /**
- * Workforce list search matches names and workforce codes, not phones, so the
- * canonical Arabic fixture name is what makes re-provisioning idempotent.
+ * Workforce list search matches names and workforce codes, not phones. Prefer
+ * the actor recorded in the generated registry so DSH/WLT local fixtures keep
+ * the same sovereign cross-service key after a partial Identity rebuild.
  */
 async function findExistingProvider(operatorToken, kind) {
   const fullNameAr = LOCAL_WORKFORCE_PROVIDERS[kind].fullNameAr;
@@ -139,10 +152,16 @@ async function findExistingProvider(operatorToken, kind) {
     `${WORKFORCE_API_BASE}/workforce/${endpointFor(kind)}?q=${encodeURIComponent(fullNameAr)}&limit=100`,
     { headers: authorization(operatorToken) },
   );
-  const people = list(result?.fieldAgents).concat(list(result?.captains));
-  const matches = people.filter((person) => person?.fullNameAr === fullNameAr);
-  
-  for (const person of matches) {
+  const exact = list(result?.fieldAgents)
+    .concat(list(result?.captains))
+    .filter((person) => person?.fullNameAr === fullNameAr);
+
+  const preferredActorId = readGeneratedRegistry()?.actors?.[kind]?.actorId;
+  const preferredPerson = exact.find((person) => person?.actorId === preferredActorId);
+
+  const peopleToCheck = preferredPerson ? [preferredPerson, ...exact.filter(p => p.actorId !== preferredActorId)] : exact;
+
+  for (const person of peopleToCheck) {
     try {
       const attempt = randomUUID();
       await requestJson(
@@ -185,14 +204,11 @@ async function createProvider(operatorToken, kind, payload) {
     );
   } catch (error) {
     if (!(error instanceof HttpError)) throw error;
-    // 409 means the phone is already provisioned. That is only recoverable when
-    // Workforce itself owns the actor; a bootstrap-owned actor cannot be adopted.
     if (error.status !== 409) throw error;
     const existing = await findExistingProvider(operatorToken, kind);
     if (existing) return existing;
     throw new Error(
-      `workforce:create-${kind} conflicted on phone ${payload.phoneE164} but no Workforce profile owns it. ` +
-        'An Identity actor outside Workforce holds this phone — remove it before provisioning.',
+      `workforce:create-${kind} conflicted but no canonical Workforce profile was found for the local fixture.`,
     );
   }
 }
@@ -281,6 +297,32 @@ export async function getProvider(operatorToken, kind, actorId) {
   );
 }
 
+async function getIdentityActor(actorId) {
+  try {
+    return await requestJson(
+      `identity:get-actor:${actorId}`,
+      `${IDENTITY_API_BASE}/internal/actors/${encodeURIComponent(actorId)}`,
+      { headers: identityWorkforceHeaders() },
+    );
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+function assertIdentityBinding(kind, actorId, actor) {
+  const fixture = LOCAL_WORKFORCE_PROVIDERS[kind];
+  if (actor?.actorId !== actorId) {
+    throw new Error(`${kind} Identity recovery returned a divergent actorId`);
+  }
+  if (actor?.phoneE164 !== fixture.phoneE164) {
+    throw new Error(`${kind} Identity actor phone does not match the canonical local fixture`);
+  }
+  if (!list(actor?.roles).includes(kind)) {
+    throw new Error(`${kind} Identity actor does not hold the required role`);
+  }
+}
+
 /**
  * Workforce-provisioned actors never hold a password: they authenticate by
  * redeeming an operator-issued activation code, which is the real production
@@ -334,53 +376,81 @@ export async function issueProviderToken(operatorToken, kind, actorId, phoneE164
   return pair.accessToken;
 }
 
-async function provisionIdentityActor(kind, phoneE164) {
-  const serviceToken = 'LOCAL_ONLY_replace_with_workforce_internal_service_token';
+async function provisionIdentityActor(kind, phoneE164, actorId = '') {
+  const body = {
+    username: kind === 'field' ? 'local-field-001' : 'local-captain-001',
+    phoneE164,
+    role: kind,
+    operatorContextId: LOCAL_OPERATOR_CONTEXT_ID,
+  };
+  if (actorId) body.actorId = actorId;
+
   const result = await requestJson(
-    `identity:provision-actor`,
+    `identity:provision-actor:${kind}`,
     `${IDENTITY_API_BASE}/internal/actors/provision`,
     {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${serviceToken}`,
-        'X-Service-Caller': 'workforce',
-        'X-Operator-Context-ID': 'local-dsh',
+        ...identityWorkforceHeaders(),
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        username: kind === 'field' ? 'local-field-001' : 'local-captain-001',
-        phoneE164,
-        role: kind,
-        operatorContextID: 'local-dsh',
-      }),
-    }
+      body: JSON.stringify(body),
+    },
   );
-  if (!result?.actorId) throw new Error(`identity:provision-actor returned no actorId`);
-  return result.actorId;
+  if (!result?.actorId) throw new Error(`identity:provision-actor:${kind} returned no actorId`);
+  return result;
 }
 
 async function provisionOne(operatorToken, kind, zone) {
   const existing = await findExistingProvider(operatorToken, kind);
+  const phoneE164 = LOCAL_WORKFORCE_PROVIDERS[kind].phoneE164;
   let actorId;
   let person;
 
   if (existing) {
     actorId = existing.actorId;
     person = existing;
+    if (!actorId) throw new Error(`workforce:${kind} existing profile has no actorId`);
+
+    let identityActor = await getIdentityActor(actorId);
+    if (!identityActor) {
+      console.log(
+        `[local-workforce] restoring missing Identity actor ${actorId} for existing ${kind} Workforce profile`,
+      );
+      try {
+        identityActor = await provisionIdentityActor(kind, phoneE164, actorId);
+      } catch (error) {
+        if (error instanceof HttpError && error.status === 409) {
+          throw new Error(
+            `Cannot restore ${kind} actor ${actorId}: the canonical phone/username is already owned by a different Identity actor.`,
+          );
+        }
+        throw error;
+      }
+    }
+    assertIdentityBinding(kind, actorId, identityActor);
   } else {
-    const phoneE164 = LOCAL_WORKFORCE_PROVIDERS[kind].phoneE164;
+    let identityActor;
     try {
-      actorId = await provisionIdentityActor(kind, phoneE164);
+      identityActor = await provisionIdentityActor(kind, phoneE164);
     } catch (error) {
       if (error instanceof HttpError && error.status === 409) {
-        throw new Error(`Identity actor with phone ${phoneE164} already exists but no workforce profile was found. Manual cleanup of identity_actors required.`);
+        throw new Error(
+          `Identity actor with phone ${phoneE164} already exists but no Workforce profile was found. ` +
+            'The local databases are inconsistent and must not mint a second sovereign provider.',
+        );
       }
       throw error;
     }
+    actorId = identityActor.actorId;
+    assertIdentityBinding(kind, actorId, identityActor);
 
     const payload = kind === 'field' ? fieldCreatePayload(zone.id, actorId) : captainCreatePayload(zone.id, actorId);
     person = await createProvider(operatorToken, kind, payload);
     if (!person?.actorId) throw new Error(`workforce:${kind} provisioning returned no actorId`);
+    if (person.actorId !== actorId) {
+      throw new Error(`workforce:${kind} provisioning returned a divergent actorId`);
+    }
   }
 
   const operationalCore = {
@@ -413,7 +483,7 @@ async function provisionOne(operatorToken, kind, zone) {
   return {
     actorId,
     workforceCode: person.workforceCode,
-    phoneE164: LOCAL_WORKFORCE_PROVIDERS[kind].phoneE164,
+    phoneE164,
   };
 }
 

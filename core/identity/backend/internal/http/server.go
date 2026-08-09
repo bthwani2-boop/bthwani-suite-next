@@ -236,6 +236,7 @@ func (s *server) introspect(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) provisionActor(w http.ResponseWriter, r *http.Request) {
 	var request struct {
+		ActorID           string `json:"actorId"`
 		Username          string `json:"username"`
 		PhoneE164         string `json:"phoneE164"`
 		Role              string `json:"role"`
@@ -250,7 +251,7 @@ func (s *server) provisionActor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	view, err := s.repository.ProvisionActorGoverned(r.Context(), identity.ProvisionActorInput{
-		Username: request.Username, PhoneE164: request.PhoneE164,
+		ActorID: request.ActorID, Username: request.Username, PhoneE164: request.PhoneE164,
 		Role: request.Role, OperatorContextID: operatorContextID,
 	})
 	if err != nil {
