@@ -14,6 +14,7 @@ import {
 
 const PORT = Number(process.env.BTHWANI_DEV_SESSION_BROKER_PORT || 58100);
 const HOST = '127.0.0.1';
+const BROKER_CONTRACT_VERSION = 2;
 const MAX_BODY_BYTES = 16 * 1024;
 const ROLE_SURFACE = Object.freeze({
   operator: 'control-panel',
@@ -155,6 +156,8 @@ const server = http.createServer(async (req, res) => {
     sendJson(res, 200, {
       status: 'healthy',
       service: 'local-dev-session-broker',
+      contractVersion: BROKER_CONTRACT_VERSION,
+      pid: process.pid,
     });
     return;
   }
@@ -181,5 +184,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Local development session broker listening on http://${HOST}:${PORT}`);
+  console.log(`Local development session broker v${BROKER_CONTRACT_VERSION} listening on http://${HOST}:${PORT}`);
 });
