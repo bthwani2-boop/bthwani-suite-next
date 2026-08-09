@@ -23,6 +23,45 @@ func localBootstrapSecurityUsernames() []string {
 	}
 }
 
+// LocalBootstrapConverged reports whether every password-authenticated actor
+// owned by the local bootstrap is present, ACTIVE, and bound to the active
+// operator context.
+//
+// The runtime supervisor consults this before re-running the bootstrap so a
+// healthy runtime is never re-converged. That distinction is load bearing:
+// re-running the bootstrap regenerates password hashes and advances updated_at,
+// which ReconcileLocalBootstrapSecurityState reads as a new credential epoch and
+// uses to discard earlier failed attempts. Re-running it on a timer would
+// therefore erase the login rate limit on every tick, so convergence must be
+// repaired only when it is genuinely broken.
+func (r *Repository) LocalBootstrapConverged(ctx context.Context, input LocalBootstrap) (bool, error) {
+	if !input.Enabled {
+		return true, nil
+	}
+	if r == nil || r.db == nil {
+		return false, errors.New("local identity bootstrap convergence check requires a database")
+	}
+	operatorContextID := strings.TrimSpace(input.OperatorContextID)
+	if operatorContextID == "" {
+		return false, errors.New("BTHWANI_OPERATOR_CONTEXT_ID is required when IDENTITY_LOCAL_BOOTSTRAP=true")
+	}
+
+	expected := localBootstrapSecurityUsernames()
+	var present int
+	if err := r.db.QueryRowContext(ctx, `
+SELECT count(*)
+FROM identity_actors
+WHERE username = ANY($1)
+  AND operator_context_id = $2
+  AND status = 'ACTIVE'`,
+		pq.Array(expected),
+		operatorContextID,
+	).Scan(&present); err != nil {
+		return false, err
+	}
+	return present == len(expected), nil
+}
+
 // ReconcileLocalBootstrapSecurityState completes local bootstrap convergence
 // after all canonical local actors have been upserted successfully.
 //

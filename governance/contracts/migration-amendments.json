@@ -8,6 +8,21 @@
   "amendments": [
     {
       "service": "dsh",
+      "migrationId": "dsh-100_cart_sync_diagnostics.sql",
+      "originalBlobSha": "1a9516b5b954ab65c9cbb3f2b5eaab56ac1deb0f",
+      "replacementSha256": "a30e3e0f83fb3453fb39fa0cbc7cf2638d4cbb2ecd748fb77bca20b3f200cc34",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The migration was written in the foreign '-- +migrate Up/Down' convention, which the governed runner does not parse: it executed the whole file, so the Down block dropped the two columns the Up block had just added. It also ALTERs dsh_cart_idempotency at ordinal 140 while dsh-136_cart_options_idempotency.sql creates that table at ordinal 165, so every clean installation failed here with 'relation \"dsh_cart_idempotency\" does not exist'. The migration has therefore never succeeded in any environment.",
+      "evidence": {
+        "cleanInstallCommitSha": "0bd6d82a54c7f813b3706ee3382329e96de8e65a",
+        "cleanInstallResult": "FAILED_AT_THIS_MIGRATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Drop the unparsed Down block, guard the ALTER on the table's existence because the governed order derives from the filename sort and cannot be changed, and add dsh-999_cart_idempotency_sync_diagnostics.sql as the explicit forward recovery so a database that reaches dsh-136 first still gains device_id and session_id."
+    },
+    {
+      "service": "dsh",
       "migrationId": "dsh-056_client_addresses.sql",
       "originalBlobSha": "82e89d17c80d9037bbffb42b12542e25446111a7",
       "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",

@@ -1649,6 +1649,20 @@
       "sha256": "0323a14ecb4224b29ee4b06c08f9edb35659459a5893d94ce91bd7aa86f2d570",
       "historicalPrefix": "998",
       "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 236,
+      "file": "dsh-999_cart_idempotency_sync_diagnostics.sql",
+      "sha256": "d099fcc5f088fadcebfce2558227c39a716a480c75956dd80b9d09aca8d2a229",
+      "historicalPrefix": "999",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 237,
+      "file": "dsh-999_partner_destination_defaults.sql",
+      "sha256": "236202ed6ab9b238248f3813528aa471440a6d1e8e8f43f7e23ed14dac424724",
+      "historicalPrefix": "999",
+      "state": "ACTIVE"
     }
   ]
 }

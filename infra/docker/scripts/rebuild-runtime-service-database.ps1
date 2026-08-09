@@ -121,9 +121,11 @@ $runningServices = @(
 if ($LASTEXITCODE -ne 0) {
   throw "Unable to determine running compose services."
 }
+$apiServiceWasStopped = $false
 if ($runningServices -contains $apiService) {
   Write-Host "Stopping $apiService before rebuilding $databaseName..."
   Invoke-ComposeCommand -CommandArguments @("stop", $apiService)
+  $apiServiceWasStopped = $true
 }
 
 $recreateSql = @"
@@ -135,13 +137,32 @@ WHERE datname = '$databaseName'
 DROP DATABASE IF EXISTS "$databaseName";
 CREATE DATABASE "$databaseName" OWNER "$databaseOwner" TEMPLATE template0 ENCODING 'UTF8';
 "@
-Invoke-AdminPsql -Database "postgres" -Sql $recreateSql
 
-foreach ($extension in @($config.Extensions)) {
-  if ([string]$extension -notmatch '^[a-z][a-z0-9_]*$') {
-    throw "Unsafe governed extension identifier: $extension"
+try {
+  Invoke-AdminPsql -Database "postgres" -Sql $recreateSql
+
+  foreach ($extension in @($config.Extensions)) {
+    if ([string]$extension -notmatch '^[a-z][a-z0-9_]*$') {
+      throw "Unsafe governed extension identifier: $extension"
+    }
+    Invoke-AdminPsql -Database $databaseName -Sql "CREATE EXTENSION IF NOT EXISTS `"$extension`";"
   }
-  Invoke-AdminPsql -Database $databaseName -Sql "CREATE EXTENSION IF NOT EXISTS `"$extension`";"
+} finally {
+  # A service this script stopped must never be left down, including when the
+  # rebuild itself fails. Leaving it stopped is how a governed ledger conflict
+  # turned into a runtime whose API never came back and whose start-only local
+  # bootstrap therefore never ran again.
+  #
+  # A restart failure must not mask the rebuild failure that caused it, so it is
+  # reported as a warning and the original error keeps propagating.
+  if ($apiServiceWasStopped) {
+    Write-Host "Restarting $apiService after rebuilding $databaseName..."
+    try {
+      Invoke-ComposeCommand -CommandArguments @("up", "-d", $apiService)
+    } catch {
+      Write-Warning "Could not restart '$apiService' after the database rebuild: $($_.Exception.Message)"
+    }
+  }
 }
 
 Write-Host "Governed local-development database rebuild: PASS service=$Service database=$databaseName"

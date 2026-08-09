@@ -54,7 +54,9 @@ function Assert-Health {
   if ($status -notin @("healthy", "ready", "HEALTHY")) {
     throw "$Name returned unexpected health status '$status' at $Uri"
   }
-  Write-Host "$Name: $status"
+  # ${Name} is required: PowerShell reads "$Name:" as a scoped variable reference
+  # (like $env:PATH) and fails to parse the whole file.
+  Write-Host "${Name}: $status"
 }
 
 if (([string]$env:NODE_ENV).Trim().ToLowerInvariant() -eq "production" -or
