@@ -81,6 +81,8 @@ jobs:
             return "${PIPESTATUS[0]}"
           }
           status=0
+          run_check node tools/guards/mobile-test-policy-gate.mjs || status=$?
+          run_check node --test apps/mobile/tests/*.test.mjs || status=$?
           if [[ "${FULL_VERIFICATION}" == "true" ]]; then
             run_check pnpm run nx:typecheck || status=$?
             run_check pnpm run nx:lint || status=$?
