@@ -20,9 +20,7 @@ function Invoke-VerifiedStep {
   $global:LASTEXITCODE = 0
   & $Action
   $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
-  if ($exitCode -ne 0) {
-    throw "$Name failed with exit code $exitCode"
-  }
+  if ($exitCode -ne 0) { throw "$Name failed with exit code $exitCode" }
 }
 
 Invoke-VerifiedStep "Canonical command and mobile-test policy" {
@@ -31,6 +29,10 @@ Invoke-VerifiedStep "Canonical command and mobile-test policy" {
 
 Invoke-VerifiedStep "Deterministic OpenAPI contract and client materialization" {
   node tools/scripts/materialize-openapi-artifacts.mjs
+}
+
+Invoke-VerifiedStep "Canonical Android+iOS evidence contract" {
+  node --test tools/scripts/verify-mobile-evidence-receipts.test.mjs
 }
 
 Invoke-VerifiedStep "Shared mobile contracts and application-surface ownership" {
@@ -53,10 +55,7 @@ if ($requiresRuntime) {
   Invoke-VerifiedStep "Governed mobile backend/data readiness" {
     & pwsh -NoProfile -ExecutionPolicy Bypass -File apps/mobile/ensure-mobile-dev-runtime.ps1
   }
-
-  Invoke-VerifiedStep "Full governed runtime smoke" {
-    pnpm run runtime:full:smoke
-  }
+  Invoke-VerifiedStep "Full governed runtime smoke" { pnpm run runtime:full:smoke }
 }
 
 if ($Integration -or $Full) {
@@ -72,18 +71,10 @@ if ($LanRuntime -or $Full) {
 }
 
 if ($Full) {
-  Invoke-VerifiedStep "Nx full typecheck" {
-    pnpm run nx:typecheck
-  }
-  Invoke-VerifiedStep "Nx full lint" {
-    pnpm run nx:lint
-  }
-  Invoke-VerifiedStep "Nx full tests" {
-    pnpm exec nx run-many -t test --all --outputStyle=stream
-  }
-  Invoke-VerifiedStep "Nx full build" {
-    pnpm run nx:build
-  }
+  Invoke-VerifiedStep "Nx full typecheck" { pnpm run nx:typecheck }
+  Invoke-VerifiedStep "Nx full lint" { pnpm run nx:lint }
+  Invoke-VerifiedStep "Nx full tests" { pnpm exec nx run-many -t test --all --outputStyle=stream }
+  Invoke-VerifiedStep "Nx full build" { pnpm run nx:build }
 }
 
 Write-Host "`nmobile-and-control-test-stack: PASS" -ForegroundColor Green

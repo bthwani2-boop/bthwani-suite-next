@@ -46,9 +46,7 @@ jobs:
           $profile = if ([string]::IsNullOrWhiteSpace($env:RUNTIME_PROFILE)) { "none" } else { $env:RUNTIME_PROFILE }
           $sourceSha = if ([string]::IsNullOrWhiteSpace($env:SOURCE_SHA)) { throw "SOURCE_SHA is required" } else { $env:SOURCE_SHA }
           $checkedOutSha = (git rev-parse HEAD).Trim()
-          if ($checkedOutSha -ne $sourceSha) {
-            throw "Runtime checkout SHA mismatch: expected $sourceSha, got $checkedOutSha"
-          }
+          if ($checkedOutSha -ne $sourceSha) { throw "Runtime checkout SHA mismatch: expected $sourceSha, got $checkedOutSha" }
           $logPath = Join-Path $PWD "runtime-smoke.log"
           $resultPath = Join-Path $PWD "runtime-proof.json"
           "Runtime proof started for $sourceSha profile=$profile os=ubuntu" | Set-Content -LiteralPath $logPath
@@ -76,53 +74,33 @@ jobs:
           }
 
           try {
-            if ($profile -eq "mobile-config") {
+            if ($profile -in @("mobile-config", "mobile-native")) {
               Invoke-Phase "mobile:apps:check" { pnpm run mobile:apps:check }
               Invoke-Phase "mobile:expo:verify" { pnpm run mobile:expo:verify }
-            } elseif ($profile -eq "mobile-native") {
-              Invoke-Phase "mobile:apps:check" { pnpm run mobile:apps:check }
-              Invoke-Phase "mobile:expo:verify" { pnpm run mobile:expo:verify }
-              Invoke-Phase "mobile:android:native-build" { node apps/mobile/verify-mobile-native.mjs --platform android --build }
             } else {
               $requiresDshBootstrap = @($profiles.Split(",") | ForEach-Object { $_.Trim() }) -contains "dsh"
               if ($requiresDshBootstrap) {
-                Invoke-Phase "runtime:bootstrap-dev" {
-                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action bootstrap-dev -Profiles $profiles -Force
-                }
+                Invoke-Phase "runtime:bootstrap-dev" { & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action bootstrap-dev -Profiles $profiles -Force }
               } else {
-                Invoke-Phase "runtime:up" {
-                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action up -Profiles $profiles
-                }
+                Invoke-Phase "runtime:up" { & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action up -Profiles $profiles }
               }
-              Invoke-Phase "runtime:catalog-readback" {
-                & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action catalog-readback -Profiles $profiles
-              }
+              Invoke-Phase "runtime:catalog-readback" { & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action catalog-readback -Profiles $profiles }
               if ($profile -eq "full") {
-                Invoke-Phase "dsh-operator-governance-preflight" {
-                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/runtime/smoke-dsh-operator-governance-preflight.ps1
-                }
+                Invoke-Phase "dsh-operator-governance-preflight" { & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/runtime/smoke-dsh-operator-governance-preflight.ps1 }
                 Invoke-Phase "runtime:full:smoke" { pnpm run runtime:full:smoke }
-                Invoke-Phase "mobile:four-app-integration" {
-                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/test-dsh-multisurface-runtime-matrix-v2.ps1
-                }
+                Invoke-Phase "mobile:four-app-integration" { & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/test-dsh-multisurface-runtime-matrix-v2.ps1 }
               } else {
-                Invoke-Phase "runtime:smoke" {
-                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action smoke -Profiles $profiles
-                }
+                Invoke-Phase "runtime:smoke" { & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action smoke -Profiles $profiles }
               }
               if ($profile -in @("identity-security", "full")) {
-                Invoke-Phase "mobile:lan-runtime" {
-                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/verify-mobile-lan-runtime.ps1
-                }
+                Invoke-Phase "mobile:lan-runtime" { & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/verify-mobile-lan-runtime.ps1 }
               }
               if ($profile -in @("wlt-finance", "full")) {
-                Invoke-Phase "representative-financial-readback" {
-                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/finance/smoke-dsh-wlt-representative-readback.ps1
-                }
+                Invoke-Phase "representative-financial-readback" { & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/finance/smoke-dsh-wlt-representative-readback.ps1 }
               }
             }
 
-            $evidenceScope = if ($profile -eq "mobile-native") { "android-native" } elseif ($profile -eq "mobile-config") { "mobile-config" } else { "ubuntu-runtime" }
+            $evidenceScope = if ($profile -in @("mobile-native", "mobile-config")) { "mobile-config" } else { "ubuntu-runtime" }
             @{
               schemaVersion = 2
               sourceSha = $sourceSha
@@ -162,9 +140,7 @@ jobs:
             "full" { "identity,workforce,dsh,wlt,financial-simulators,mail,media" }
             default { "" }
           }
-          if ($profiles) {
-            & pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles $profiles
-          }
+          if ($profiles) { & pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles $profiles }
 
       - name: Upload Ubuntu runtime proof
         if: ${{ always() }}
@@ -204,8 +180,48 @@ jobs:
           $ErrorActionPreference = "Stop"
           node --test apps/mobile/tests/mobile-runtime-transport.contract.test.mjs
           if ($LASTEXITCODE -ne 0) { throw "Windows mobile transport contracts failed" }
-          & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/verify-mobile-test-stack.ps1 -NoAndroidSmoke
+          & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/verify-mobile-test-stack.ps1
           if ($LASTEXITCODE -ne 0) { throw "Windows mobile verification stack failed" }
+
+  android-native:
+    name: Android native build proof
+    if: ${{ inputs.full_verification == 'true' || inputs.runtime_profile == 'mobile-native' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify canonical configuration and Android build
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          java -version
+          pnpm run mobile:apps:check
+          pnpm run mobile:expo:verify
+          node apps/mobile/verify-mobile-native.mjs --platform android --build
+          mkdir -p .diagnostics/mobile-evidence
+          node - <<'NODE'
+          const fs = require('fs');
+          const manifest = JSON.parse(fs.readFileSync('tools/mobile/mobile-apps.manifest.json','utf8'));
+          const receipt = {schemaVersion:1,sourceSha:process.env.SOURCE_SHA,result:'PASS',producer:'.github/workflows/ci-runtime.yml#android-native',apps:Object.keys(manifest.apps).sort(),tiers:['mobile:android:native-build'],platform:'android',physicalDevice:false};
+          fs.writeFileSync('.diagnostics/mobile-evidence/android-native.json', JSON.stringify(receipt,null,2)+'\n');
+          NODE
+      - name: Upload Android native evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mobile-evidence-android-native-${{ github.run_id }}
+          path: .diagnostics/mobile-evidence/android-native.json
+          if-no-files-found: error
+          retention-days: 7
 
   ios-native:
     name: iOS Xcode and Simulator proof
@@ -231,15 +247,29 @@ jobs:
           xcodebuild -version
           xcrun simctl help >/dev/null
           pod --version
-      - name: Verify canonical mobile configuration
+      - name: Build and launch all iOS Dev Clients in Simulator
         shell: bash
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           pnpm run mobile:apps:check
           pnpm run mobile:expo:verify
-      - name: Build and launch all iOS Dev Clients in Simulator
-        shell: bash
-        run: node apps/mobile/verify-mobile-native.mjs --platform ios --build --simulator
+          node apps/mobile/verify-mobile-native.mjs --platform ios --build --simulator
+          mkdir -p .diagnostics/mobile-evidence
+          node - <<'NODE'
+          const fs = require('fs');
+          const manifest = JSON.parse(fs.readFileSync('tools/mobile/mobile-apps.manifest.json','utf8'));
+          const receipt = {schemaVersion:1,sourceSha:process.env.SOURCE_SHA,result:'PASS',producer:'.github/workflows/ci-runtime.yml#ios-native',apps:Object.keys(manifest.apps).sort(),tiers:['mobile:ios:native-build','mobile:ios:simulator-launch'],platform:'ios',physicalDevice:false};
+          fs.writeFileSync('.diagnostics/mobile-evidence/ios-native-simulator.json', JSON.stringify(receipt,null,2)+'\n');
+          NODE
+      - name: Upload iOS native evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mobile-evidence-ios-native-${{ github.run_id }}
+          path: .diagnostics/mobile-evidence/ios-native-simulator.json
+          if-no-files-found: error
+          retention-days: 7
 
   not-required:
     name: Runtime proof not required
