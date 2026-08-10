@@ -109,7 +109,33 @@ const sharedMobileTestsRelative = "apps/mobile/tests";
 const sharedMobileTestsDir = path.join(repoRoot, sharedMobileTestsRelative);
 if (!fs.existsSync(sharedMobileTestsDir)) violations.push({ file: sharedMobileTestsRelative, line: 0, message: "MOBILE_SHARED_TEST_DIRECTORY_MISSING" });
 else if (!fs.readdirSync(sharedMobileTestsDir).some((name) => name.endsWith(".test.mjs"))) violations.push({ file: sharedMobileTestsRelative, line: 0, message: "MOBILE_SHARED_TESTS_MISSING" });
+for (const requiredSharedTest of [
+  "identity-development.contract.test.mjs",
+  "mobile-dev-gateway-client.execution.test.mjs",
+  "mobile-dev-gateway.execution.test.mjs",
+  "mobile-runtime-transport.contract.test.mjs",
+  "dsh-binary-http-request.execution.test.mjs",
+  "mobile-nx-ownership.execution.test.mjs",
+  "mobile-lan-powershell.execution.test.mjs",
+]) {
+  if (!exists(`${sharedMobileTestsRelative}/${requiredSharedTest}`)) {
+    violations.push({ file: `${sharedMobileTestsRelative}/${requiredSharedTest}`, line: 0, message: "MOBILE_REQUIRED_SHARED_EVIDENCE_MISSING" });
+  }
+}
 requireMarkers("apps/mobile/test-mobile-runtime-contract.mjs", ["test:app", "test:runtime", "*.execution.test.mjs"]);
+requireMarkers("tools/scripts/verify-mobile-test-stack.ps1", [
+  "node --test apps/mobile/tests/*.test.mjs",
+  "test-dsh-multisurface-runtime-matrix-v2.ps1",
+  "verify-mobile-lan-runtime.ps1",
+  "nx run-many -t test --all --outputStyle=stream",
+]);
+requireMarkers("tools/scripts/verify-mobile-android-smoke.ps1", [
+  "tools/mobile/mobile-apps.manifest.json",
+  "shell pm path",
+  "shell monkey",
+  "shell pidof",
+  "dumpsys activity activities",
+]);
 
 const workflowFiles = exists(workflowsRoot) ? fs.readdirSync(path.join(repoRoot, workflowsRoot)).filter((name) => /\.ya?ml$/i.test(name)).sort() : [];
 if (JSON.stringify(workflowFiles) !== JSON.stringify(expectedWorkflowFiles)) violations.push({ file: workflowsRoot, line: 0, message: `WORKFLOW_INVENTORY_DRIFT expected=${expectedWorkflowFiles.join(",")} actual=${workflowFiles.join(",")}` });
@@ -168,7 +194,7 @@ rejectMarkers(`${workflowsRoot}/ci-policy.yml`, ciPolicy, [
 requireMarkers(`${workflowsRoot}/ci-node-diagnostics.yml`, ["pnpm exec knip", "guard:logic-coverage", "guard:a11y", "guard:dependency-graph", "guard:ast-grep-rules", "guard:repo-naming", "guard:repo-structure", "guard:api-binding", "guard:backend-api-binding", "guard:frontend-feature-binding"]);
 requireMarkers(`${workflowsRoot}/ci-node-verification.yml`, ["node --test apps/mobile/tests/*.test.mjs", "pnpm exec nx run-many -t test --all --outputStyle=stream", "pnpm exec nx affected -t test --outputStyle=stream", "pnpm run nx:typecheck", "pnpm run nx:lint", "pnpm run nx:build"]);
 requireMarkers(`${workflowsRoot}/ci-backends.yml`, ["Select affected backends", "Apply migrations", "go test ./...", "go build ./..."]);
-requireMarkers(`${workflowsRoot}/ci-runtime.yml`, ["runtime:full:smoke", "Stop runtime"]);
+requireMarkers(`${workflowsRoot}/ci-runtime.yml`, ["runtime:full:smoke", "mobile:four-app-integration", "test-dsh-multisurface-runtime-matrix-v2.ps1", "mobile:lan-runtime", "Stop runtime"]);
 requireMarkers(`${workflowsRoot}/dsh-database.yml`, ["contents: read", "postgis/postgis:16-3.4-alpine", "invoke-dsh-database.ps1"]);
 
 fail(guardId, violations);
