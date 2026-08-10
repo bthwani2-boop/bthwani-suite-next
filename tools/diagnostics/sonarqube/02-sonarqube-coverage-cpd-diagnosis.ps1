@@ -5,7 +5,7 @@ param(
     [string]$Branch = "master",
     [string]$OutputRoot = "",
     [switch]$RunCoverage,
-    [ValidateRange(1, 60)]
+    [ValidateRange(1,60)]
     [int]$GoTestTimeoutMinutes = 8
 )
 
@@ -115,29 +115,42 @@ try {
             try {
                 & go test -count=1 -timeout $timeoutArg ./... -coverprofile="$cover" 2>&1 |
                     Tee-Object -FilePath $log
-                $exit = $LASTEXITCODE
+                $testExit = $LASTEXITCODE
             } finally {
                 Pop-Location
             }
 
-            $elapsed = (Get-Date) - $started
             $total = $null
-            if ($exit -eq 0 -and (Test-Path $cover)) {
-                $coverText = & go tool cover -func="$cover" 2>&1
-                $line = $coverText | Select-String '^total:\s+\(statements\)\s+([0-9.]+)%' | Select-Object -Last 1
-                if ($line) { $total = [double]$line.Matches[0].Groups[1].Value }
+            $coverToolExit = $null
+            if ($testExit -eq 0 -and (Test-Path $cover)) {
+                Push-Location $moduleDir
+                try {
+                    $coverText = & go tool cover -func="$cover" 2>&1
+                    $coverToolExit = $LASTEXITCODE
+                } finally {
+                    Pop-Location
+                }
+                $coverText | Add-Content -LiteralPath $log -Encoding utf8
+                if ($coverToolExit -eq 0) {
+                    $line = $coverText | Select-String '^total:\s+\(statements\)\s+([0-9.]+)%' | Select-Object -Last 1
+                    if ($line) { $total = [double]$line.Matches[0].Groups[1].Value }
+                } else {
+                    Write-Warning "go tool cover failed for $($m.ModulePath); see $log"
+                }
             }
 
+            $elapsed = (Get-Date) - $started
             $coverageResults += [pscustomobject]@{
                 ModulePath = $m.ModulePath
-                ExitCode = $exit
+                ExitCode = $testExit
+                CoverToolExitCode = $coverToolExit
                 CoveragePercent = $total
                 DurationSeconds = [math]::Round($elapsed.TotalSeconds, 1)
                 InSonarWorkflow = $workflowModules -contains $m.ModulePath
                 Log = $log
             }
 
-            Write-Host "[$moduleIndex/$($goMods.Count)] END $($m.ModulePath) exit=$exit duration=$([math]::Round($elapsed.TotalSeconds,1))s coverage=$total%"
+            Write-Host "[$moduleIndex/$($goMods.Count)] END $($m.ModulePath) testExit=$testExit coverToolExit=$coverToolExit duration=$([math]::Round($elapsed.TotalSeconds,1))s coverage=$total%"
         }
         $coverageResults | Format-Table -AutoSize
         $coverageResults | Export-Csv -NoTypeInformation -Encoding utf8 (Join-Path $DiagDir "go-coverage-results.csv")
@@ -154,6 +167,8 @@ try {
     if ($RunCoverage) {
         $failed = @($coverageResults | Where-Object ExitCode -ne 0)
         if ($failed.Count -gt 0) { $findings.Add("HIGH: $($failed.Count) Go module test suite(s) failed during coverage generation.") }
+        $coverToolFailed = @($coverageResults | Where-Object { $_.ExitCode -eq 0 -and $_.CoverToolExitCode -ne 0 })
+        if ($coverToolFailed.Count -gt 0) { $findings.Add("MEDIUM: $($coverToolFailed.Count) Go module(s) generated coverage but go tool cover could not calculate the aggregate percentage.") }
     }
     $findings | Tee-Object -FilePath (Join-Path $DiagDir "summary.txt")
     if ($findings.Count -eq 0) { 'No coverage/CPD gaps detected.' | Tee-Object -FilePath (Join-Path $DiagDir "summary.txt") -Append }
