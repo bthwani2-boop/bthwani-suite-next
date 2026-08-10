@@ -131,9 +131,7 @@ function runCommand(command, args, options = {}) {
     shell: false,
   });
   if (result.error) throw result.error;
-  if (result.status !== 0) {
-    throw new Error(`${executable} exited with status ${result.status}`);
-  }
+  if (result.status !== 0) throw new Error(`${executable} exited with status ${result.status}`);
 }
 
 function resolveLcovSource(source, suiteCwd) {
@@ -155,9 +153,7 @@ function resolveLcovSource(source, suiteCwd) {
   for (const absolute of attempts) {
     const relative = normalizePath(path.relative(repoRoot, absolute));
     if (!relative || relative.startsWith("../") || path.isAbsolute(relative)) continue;
-    if (existsSync(absolute) && statSync(absolute).isFile()) {
-      return { absolute, relative };
-    }
+    if (existsSync(absolute) && statSync(absolute).isFile()) return { absolute, relative };
   }
   return null;
 }
@@ -172,7 +168,7 @@ function sourceLineCount(absolute) {
 export function validateLcovLineMappings(lines, absolute, source) {
   const maxLine = sourceLineCount(absolute);
   for (const line of lines) {
-    const match = /^(DA|BRDA|FN):(\d+)(?:,|$)/.exec(line);
+    const match = /^(DA|BRDA):(\d+)(?:,|$)/.exec(line);
     if (!match) continue;
     const lineNumber = Number.parseInt(match[2], 10);
     if (!Number.isSafeInteger(lineNumber) || lineNumber < 1 || lineNumber > maxLine) {
@@ -199,8 +195,6 @@ function addSafeIntegers(left, right, label) {
 function parseLcovRecord(record) {
   const state = {
     source: "",
-    functions: new Map(),
-    functionHits: new Map(),
     branches: new Map(),
     lines: new Map(),
   };
@@ -208,6 +202,7 @@ function parseLcovRecord(record) {
   for (const rawLine of String(record ?? "").split(/\r?\n/)) {
     const line = rawLine.trim();
     if (!line || line === "end_of_record" || line.startsWith("TN:")) continue;
+
     if (line.startsWith("SF:")) {
       const source = normalizePath(line.slice(3));
       if (!source) throw new Error("LCOV record has an empty SF field");
@@ -215,26 +210,15 @@ function parseLcovRecord(record) {
       state.source = source;
       continue;
     }
-    if (line.startsWith("FN:")) {
-      const match = /^FN:(\d+),(.+)$/.exec(line);
-      if (!match) throw new Error(`Invalid LCOV FN field: ${line}`);
-      const lineNumber = parseNonNegativeInteger(match[1], "FN line");
-      const name = match[2];
-      const existing = state.functions.get(name);
-      if (existing !== undefined && existing !== lineNumber) {
-        throw new Error(`LCOV function '${name}' maps to conflicting lines ${existing} and ${lineNumber}`);
-      }
-      state.functions.set(name, lineNumber);
+
+    // Node/V8 can emit function mappings such as `FN:undefined,get` after
+    // source-map remapping. Sonar coverage is defined from executable lines and
+    // conditions, so function records are intentionally not carried into the
+    // canonical report rather than fabricating a source line for them.
+    if (line.startsWith("FN:") || line.startsWith("FNDA:") || /^(?:FNF|FNH):\d+$/.test(line)) {
       continue;
     }
-    if (line.startsWith("FNDA:")) {
-      const match = /^FNDA:(\d+),(.+)$/.exec(line);
-      if (!match) throw new Error(`Invalid LCOV FNDA field: ${line}`);
-      const hits = parseNonNegativeInteger(match[1], "FNDA hits");
-      const name = match[2];
-      state.functionHits.set(name, addSafeIntegers(state.functionHits.get(name) ?? 0, hits, "FNDA"));
-      continue;
-    }
+
     if (line.startsWith("BRDA:")) {
       const match = /^BRDA:(\d+),([^,]+),([^,]+),(-|\d+)$/.exec(line);
       if (!match) throw new Error(`Invalid LCOV BRDA field: ${line}`);
@@ -246,6 +230,7 @@ function parseLcovRecord(record) {
       else if (taken !== null) state.branches.set(key, addSafeIntegers(existing ?? 0, taken, "BRDA"));
       continue;
     }
+
     if (line.startsWith("DA:")) {
       const match = /^DA:(\d+),(\d+)(?:,([^,]+))?$/.exec(line);
       if (!match) throw new Error(`Invalid LCOV DA field: ${line}`);
@@ -253,7 +238,7 @@ function parseLcovRecord(record) {
       const hits = parseNonNegativeInteger(match[2], "DA hits");
       const checksum = match[3] ?? "";
       const existing = state.lines.get(lineNumber);
-      if (existing && existing.checksum && checksum && existing.checksum !== checksum) {
+      if (existing?.checksum && checksum && existing.checksum !== checksum) {
         throw new Error(`LCOV line ${lineNumber} has conflicting checksums`);
       }
       state.lines.set(lineNumber, {
@@ -262,7 +247,8 @@ function parseLcovRecord(record) {
       });
       continue;
     }
-    if (/^(?:FNF|FNH|BRF|BRH|LF|LH):\d+$/.test(line)) continue;
+
+    if (/^(?:BRF|BRH|LF|LH):\d+$/.test(line)) continue;
     throw new Error(`Unsupported LCOV field: ${line}`);
   }
 
@@ -273,21 +259,12 @@ function parseLcovRecord(record) {
 function mergeParsedLcov(target, incoming) {
   if (target.source !== incoming.source) throw new Error("Cannot merge different LCOV sources");
 
-  for (const [name, lineNumber] of incoming.functions) {
-    const existing = target.functions.get(name);
-    if (existing !== undefined && existing !== lineNumber) {
-      throw new Error(`LCOV function '${name}' maps to conflicting lines ${existing} and ${lineNumber}`);
-    }
-    target.functions.set(name, lineNumber);
-  }
-  for (const [name, hits] of incoming.functionHits) {
-    target.functionHits.set(name, addSafeIntegers(target.functionHits.get(name) ?? 0, hits, "FNDA"));
-  }
   for (const [key, taken] of incoming.branches) {
     const existing = target.branches.get(key);
     if (existing === undefined) target.branches.set(key, taken);
     else if (taken !== null) target.branches.set(key, addSafeIntegers(existing ?? 0, taken, "BRDA"));
   }
+
   for (const [lineNumber, value] of incoming.lines) {
     const existing = target.lines.get(lineNumber);
     if (existing?.checksum && value.checksum && existing.checksum !== value.checksum) {
@@ -302,11 +279,6 @@ function mergeParsedLcov(target, incoming) {
 }
 
 function serializeParsedLcov(state) {
-  for (const name of state.functionHits.keys()) {
-    if (!state.functions.has(name)) throw new Error(`LCOV FNDA references unknown function '${name}'`);
-  }
-
-  const functionEntries = [...state.functions.entries()].sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]));
   const branchEntries = [...state.branches.entries()].sort((a, b) => {
     const [aLine, aBlock, aBranch] = a[0].split(",");
     const [bLine, bBlock, bBranch] = b[0].split(",");
@@ -315,14 +287,11 @@ function serializeParsedLcov(state) {
   const lineEntries = [...state.lines.entries()].sort((a, b) => a[0] - b[0]);
 
   const output = ["TN:", `SF:${state.source}`];
-  for (const [name, lineNumber] of functionEntries) output.push(`FN:${lineNumber},${name}`);
-  for (const [name] of functionEntries) output.push(`FNDA:${state.functionHits.get(name) ?? 0},${name}`);
-  output.push(`FNF:${functionEntries.length}`);
-  output.push(`FNH:${functionEntries.filter(([name]) => (state.functionHits.get(name) ?? 0) > 0).length}`);
-
   for (const [key, taken] of branchEntries) output.push(`BRDA:${key},${taken === null ? "-" : taken}`);
-  output.push(`BRF:${branchEntries.length}`);
-  output.push(`BRH:${branchEntries.filter(([, taken]) => taken !== null && taken > 0).length}`);
+  if (branchEntries.length > 0) {
+    output.push(`BRF:${branchEntries.length}`);
+    output.push(`BRH:${branchEntries.filter(([, taken]) => taken !== null && taken > 0).length}`);
+  }
 
   for (const [lineNumber, value] of lineEntries) {
     output.push(`DA:${lineNumber},${value.hits}${value.checksum ? `,${value.checksum}` : ""}`);
