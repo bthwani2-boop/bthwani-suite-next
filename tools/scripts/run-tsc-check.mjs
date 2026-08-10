@@ -2,6 +2,7 @@
 
 import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { resolvePackageManagerInvocation } from "./lib/package-manager-invocation.mjs";
 
 function fail(message, exitCode = 2) {
   process.stderr.write(`${message}\n`);
@@ -31,12 +32,18 @@ for (let index = 0; index < args.length; index += 1) {
 if (!project) fail("run-tsc-check requires --project <tsconfig path>");
 if (!existsSync(project)) fail(`[${label}] TypeScript project does not exist: ${project}`, 1);
 
+const invocation = resolvePackageManagerInvocation(
+  "pnpm",
+  ["exec", "tsc", "--noEmit", "-p", project],
+  process.env,
+);
 process.stdout.write(`[${label}] pnpm exec tsc --noEmit -p ${project}\n`);
-const result = spawnSync("pnpm", ["exec", "tsc", "--noEmit", "-p", project], {
+const result = spawnSync(invocation.executable, invocation.args, {
   cwd: process.cwd(),
   env: process.env,
   stdio: "inherit",
-  shell: process.platform === "win32",
+  shell: false,
+  windowsHide: true,
 });
 
 if (result.error) {
