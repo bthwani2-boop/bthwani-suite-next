@@ -63,8 +63,8 @@ foreach ($AppKey in $Apps) {
   }
 
   Start-Sleep -Seconds 5
-  $pid = (& $Adb -s $Serial shell pidof $Package 2>$null).Trim()
-  if (-not $pid) {
+  $processId = (& $Adb -s $Serial shell pidof $Package 2>$null).Trim()
+  if (-not $processId) {
     throw "$AppKey process is not alive after launch."
   }
 
@@ -73,7 +73,7 @@ foreach ($AppKey in $Apps) {
     throw "$AppKey has no visible/resumed activity evidence after launch."
   }
 
-  Write-Host "$AppKey Android launch smoke: PASS pid=$pid" -ForegroundColor Green
+  Write-Host "$AppKey Android launch smoke: PASS pid=$processId" -ForegroundColor Green
 }
 
 Write-Host "`nmobile-android-smoke: PASS device=$Serial" -ForegroundColor Green
