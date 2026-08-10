@@ -16,7 +16,10 @@ if (-not $AdbCommand) {
 }
 $Adb = $AdbCommand.Source
 
-$deviceLines = & $Adb devices | Select-Object -Skip 1 | Where-Object { $_ -match "\sdevice$" }
+$deviceLines = @(& $Adb devices | Select-Object -Skip 1 | Where-Object { $_ -match "\sdevice$" })
+if ($LASTEXITCODE -ne 0) {
+  throw "adb devices failed with exit code $LASTEXITCODE."
+}
 if ($Serial) {
   if (-not ($deviceLines | Where-Object { $_ -match "^$([regex]::Escape($Serial))\s+device$" })) {
     throw "ADB device '$Serial' is not connected in device state."
