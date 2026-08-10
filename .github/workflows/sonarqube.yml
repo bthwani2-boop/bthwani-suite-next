@@ -96,6 +96,7 @@ jobs:
           cache: false
 
       - name: Generate affected Go coverage reports
+        id: go_coverage
         if: ${{ steps.scope.outputs.dsh == 'true' || steps.scope.outputs.wlt == 'true' || steps.scope.outputs.identity == 'true' || steps.scope.outputs.workforce == 'true' || steps.scope.outputs.platform == 'true' || steps.scope.outputs.providers == 'true' }}
         shell: bash
         env:
@@ -127,10 +128,11 @@ jobs:
             module_name="$(cd "$module" && go list -m)"
             sed "s#^${module_name}/#${module}/#" "$raw_report" > "$report"
           done
+          echo 'scan_args=-Dsonar.go.coverage.reportPaths=**/.sonar/coverage.out' >> "$GITHUB_OUTPUT"
 
       - name: SonarQube Cloud scan
         uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
         with:
-          args: ${{ steps.node_coverage.outputs.scan_args }}
+          args: ${{ steps.node_coverage.outputs.scan_args }} ${{ steps.go_coverage.outputs.scan_args }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
