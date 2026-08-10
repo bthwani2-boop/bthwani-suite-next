@@ -31,6 +31,7 @@ const suiteDefinitions = {
   },
   dsh: {
     cwd: "services/dsh",
+    testCwd: ".",
     testRoot: "services/dsh/tests",
     sourcePrefixes: ["services/dsh/frontend/"],
     prepare: ["pnpm", "--dir", "services/dsh", "exec", "tsc", "-p", "tsconfig.json"],
@@ -204,13 +205,14 @@ function executeSuite(suiteName, reportDir) {
   if (!definition) throw new Error(`Unknown Sonar coverage suite '${suiteName}'`);
 
   prepareSuite(suiteName);
-  const cwd = path.resolve(repoRoot, definition.cwd);
+  const testCwd = path.resolve(repoRoot, definition.testCwd ?? definition.cwd);
   const tests = discoverTests(path.resolve(repoRoot, definition.testRoot));
   if (tests.length === 0) throw new Error(`${suiteName}: no node:test files found`);
 
   const rawReport = path.join(reportDir, `${suiteName}.raw.lcov`);
-  const testArgs = tests.map((file) => path.relative(cwd, file));
+  const testArgs = tests.map((file) => path.relative(testCwd, file));
   runCommand(process.execPath, [
+    "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON",
     "--enable-source-maps",
     "--test",
     "--experimental-test-coverage",
@@ -219,10 +221,10 @@ function executeSuite(suiteName, reportDir) {
     "--test-reporter-destination=stdout",
     `--test-reporter-destination=${rawReport}`,
     ...testArgs,
-  ], { cwd });
+  ], { cwd: testCwd });
 
   if (!existsSync(rawReport)) throw new Error(`${suiteName}: Node did not produce ${rawReport}`);
-  const retained = filterLcov(readFileSync(rawReport, "utf8"), suiteName, cwd);
+  const retained = filterLcov(readFileSync(rawReport, "utf8"), suiteName, testCwd);
   if (retained.length === 0) {
     throw new Error(`${suiteName}: coverage ran but no real repository source records were retained`);
   }
