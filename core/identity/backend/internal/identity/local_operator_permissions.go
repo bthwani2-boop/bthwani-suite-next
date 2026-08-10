@@ -26,6 +26,17 @@ func localOperatorDevelopmentPermissions() []Permission {
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.catalog.discounts.read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.catalog.discounts.manage", Scope: "all"},
 
+		// Central-catalog runtime journeys use the same fine-grained actions as
+		// production employees. Keep this list explicit: the local operator must
+		// exercise RBAC, not a role-name bypass or a wildcard grant.
+		{Service: "dsh", Surface: "control-panel", Action: "catalog.proposal.review", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "catalog.proposal.marketing_review", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "catalog.proposal.adopt", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "catalog.proposal.publish", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "catalog.media.manage", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "catalog.assortment.read", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "catalog.assortment.manage", Scope: "all"},
+
 		{Service: "workforce", Surface: "control-panel", Action: "provider:read", Scope: "all"},
 		{Service: "workforce", Surface: "control-panel", Action: "provider:create", Scope: "all"},
 		{Service: "workforce", Surface: "control-panel", Action: "provider:update", Scope: "all"},

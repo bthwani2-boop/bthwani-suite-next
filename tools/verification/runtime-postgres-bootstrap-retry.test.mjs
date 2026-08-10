@@ -6,6 +6,14 @@ const phaseScript = await readFile(
   new URL("../scripts/invoke-runtime-phase.ps1", import.meta.url),
   "utf8",
 );
+const dshCatalogSmoke = await readFile(
+  new URL("../../infra/docker/scripts/runtime/smoke-dsh-catalog.ps1", import.meta.url),
+  "utf8",
+);
+const dshRuntimeSmoke = await readFile(
+  new URL("../../infra/docker/scripts/smoke-dsh-runtime.ps1", import.meta.url),
+  "utf8",
+);
 
 test("runtime retries only the transient PostgreSQL bootstrap restart", () => {
   assert.match(phaseScript, /function Test-TransientPostgresBootstrapRestart/);
@@ -53,4 +61,12 @@ test("PowerShell-only runtime phases use the initialized exit-code boundary", ()
     /\$wltSmokeExitCode = Invoke-RuntimeBasePhase -ScriptPath \$AuthenticatedWltSmokeScript -Parameters @\{\} -Append/,
   );
   assert.doesNotMatch(phaseScript, /if \(\$LASTEXITCODE -ne 0\)/);
+});
+
+test("DSH runtime smoke enforces the canonical HEALTHY readiness state", () => {
+  assert.match(dshCatalogSmoke, /\$readiness\.status -eq "HEALTHY"/);
+  assert.match(dshRuntimeSmoke, /\$readiness\.status -ne "HEALTHY"/);
+  assert.doesNotMatch(dshCatalogSmoke, /\$readiness\.status -eq "ready"/);
+  assert.doesNotMatch(dshRuntimeSmoke, /\$readiness\.status -ne "ready"/);
+  assert.doesNotMatch(dshRuntimeSmoke, /\$storeId:/);
 });

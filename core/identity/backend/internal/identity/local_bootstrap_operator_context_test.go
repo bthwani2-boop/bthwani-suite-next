@@ -55,6 +55,13 @@ func TestLocalOperatorDevelopmentPermissionsAreCanonical(t *testing.T) {
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.service_zones.manage", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.catalog.stores.read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.catalog.stores.manage", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "catalog.proposal.review", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "catalog.proposal.marketing_review", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "catalog.proposal.adopt", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "catalog.proposal.publish", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "catalog.media.manage", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "catalog.assortment.read", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "catalog.assortment.manage", Scope: "all"},
 		{Service: "workforce", Surface: "control-panel", Action: "provider:create", Scope: "all"},
 		{Service: "workforce", Surface: "control-panel", Action: "provider.activation:issue", Scope: "all"},
 	}
