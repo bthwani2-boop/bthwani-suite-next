@@ -15,9 +15,10 @@ function isIdentityDeviceLoopbackBridgeEnabled(): boolean {
 
 /**
  * Resolve the Identity transport at the Identity package boundary.
- * The control panel may use a same-origin HttpOnly BFF; native apps use the
- * direct runtime URL backed by bearer sessions in SecureStore. Local Android
- * traffic reaches host loopback through the governed adb reverse contract.
+ * The control panel may use a same-origin HttpOnly BFF. The governed mobile
+ * launcher injects an explicit native URL: LAN uses the Mobile Dev Gateway and
+ * ADB uses verified loopback reverse. The Android-emulator/loopback values below
+ * are development fallbacks only when the governed launcher did not inject one.
  */
 export function resolveIdentityApiBaseUrl(): string {
   if (
