@@ -89,18 +89,25 @@ test('every mobile launcher reaches the shared preflight before Metro', () => {
   }
 });
 
-test('Android development client opens once outside Expo stream piping', () => {
+test('Android development client launch is owned only by the ADB transport', () => {
   const compatibility = read('tools/scripts/start-mobile-runtime.ps1');
   const source = read('apps/mobile/start-mobile-runtime.ps1');
   assert.match(compatibility, /apps\\mobile\\start-mobile-runtime\.ps1/);
 
-  const argumentsStart = source.indexOf('$ExpoArguments = @(');
-  const argumentsEnd = source.indexOf('if ($ShouldClearCache) {', argumentsStart);
+  const argumentsStart = source.indexOf('$expoArguments = @(');
+  const argumentsEnd = source.indexOf('$androidLaunchJob = $null', argumentsStart);
   assert.ok(argumentsStart >= 0 && argumentsEnd > argumentsStart, 'Expo argument array is missing');
   const expoArguments = source.slice(argumentsStart, argumentsEnd);
   assert.doesNotMatch(expoArguments, /--android/);
-  assert.match(source, /shell am start -W/);
-  assert.match(source, /Metro port \$LaunchPort did not become ready for Android launch/);
+  assert.match(expoArguments, /\$expoHostFlag/);
+
+  const launchStart = source.indexOf('$androidLaunchJob = $null');
+  const launchEnd = source.indexOf('$adbWatchdog = $null', launchStart);
+  assert.ok(launchStart >= 0 && launchEnd > launchStart, 'ADB launch block is missing');
+  const launchBlock = source.slice(launchStart, launchEnd);
+  assert.match(launchBlock, /if \(\$resolvedTransport -eq "adb"\)/);
+  assert.match(launchBlock, /shell am start -W/);
+  assert.match(launchBlock, /Metro port \$LaunchPort did not become ready for Android launch/);
 });
 
 test('Sentry root instrumentation is conditional on successful initialization', () => {
