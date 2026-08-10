@@ -25,7 +25,7 @@ function Get-RepoRoot {
 function Get-Checks([string]$Sha) {
     $json = gh api -H "Accept: application/vnd.github+json" "repos/$Repository/commits/$Sha/check-runs?per_page=100"
     if ($LASTEXITCODE -ne 0) { throw "Unable to read GitHub check runs for $Sha." }
-    return (($json | ConvertFrom-Json).check_runs)
+    return @(($json | ConvertFrom-Json).check_runs)
 }
 
 function Wait-Checks([string]$Sha,[string[]]$Names,[int]$Minutes) {
@@ -77,19 +77,16 @@ if ($remoteBranch) { throw "Remote branch '$WorkBranch' already exists without a
 Invoke-Native { git switch -c $WorkBranch } "Unable to create hardening branch."
 
 $propsPath = Join-Path $repoRoot "sonar-project.properties"
+$ciPath = Join-Path $repoRoot ".github\workflows\ci.yml"
 if (-not (Test-Path $propsPath)) { throw "sonar-project.properties is missing." }
+if (-not (Test-Path $ciPath)) { throw ".github/workflows/ci.yml is missing." }
+
+# 1) Enable real Sonar coverage and duplication metrics.
 $raw = Get-Content $propsPath -Raw
-
-if ($raw -notmatch '(?m)^sonar\.coverage\.exclusions=\*\*/\*$') {
-    throw "Expected global coverage exclusion was not found; refusing an unreviewed rewrite."
-}
-if ($raw -notmatch '(?m)^sonar\.cpd\.exclusions=\*\*/\*$') {
-    throw "Expected global CPD exclusion was not found; refusing an unreviewed rewrite."
-}
-
+if ($raw -notmatch '(?m)^sonar\.coverage\.exclusions=\*\*/\*$') { throw "Expected global coverage exclusion was not found; refusing an unreviewed rewrite." }
+if ($raw -notmatch '(?m)^sonar\.cpd\.exclusions=\*\*/\*$') { throw "Expected global CPD exclusion was not found; refusing an unreviewed rewrite." }
 $raw = [regex]::Replace($raw, '(?ms)# The repository''s executable verification is heterogeneous.*?sonar\.coverage\.exclusions=\*\*/\*\r?\n', '')
 $raw = [regex]::Replace($raw, '(?ms)# Duplicate detection is not meaningful.*?sonar\.cpd\.exclusions=\*\*/\*\r?\n', '')
-
 $anchor = 'sonar.go.coverage.reportPaths=**/.sonar/coverage.out'
 if (-not $raw.Contains($anchor)) { throw "Go coverage report configuration is missing." }
 $replacement = @"
@@ -101,33 +98,42 @@ $anchor
 $raw = $raw.Replace($anchor, $replacement)
 Set-Content -LiteralPath $propsPath -Value $raw -Encoding utf8
 
+# 2) A required PR check must always be created. Remove the pull_request path
+# filter only; the workflow's internal contextual router still decides depth.
+$ci = Get-Content $ciPath -Raw
+$prPattern = '(?ms)(  pull_request:\r?\n    types: \[opened, synchronize, reopened, ready_for_review\]\r?\n    branches: \["\*\*"\]\r?\n)    paths:\r?\n(?:      - .*\r?\n)+(?=  push:)'
+$updatedCi = [regex]::Replace($ci, $prPattern, '$1')
+if ($updatedCi -eq $ci) { throw "Expected pull_request paths block was not found in ci.yml; refusing an unreviewed workflow rewrite." }
+Set-Content -LiteralPath $ciPath -Value $updatedCi -Encoding utf8
+
 Invoke-Native { pnpm run diagnostics:sonarqube:config } "Repository Sonar configuration diagnostic failed after the edit."
 
-$diff = git diff -- sonar-project.properties
+$diff = git diff -- sonar-project.properties .github/workflows/ci.yml
 if (-not $diff) { throw "No hardening diff was produced." }
 Write-Host $diff
 
-Invoke-Native { git add -- sonar-project.properties } "Unable to stage sonar-project.properties."
-$staged = git diff --cached --name-only
-if (@($staged) -ne 'sonar-project.properties') { throw "Unexpected staged paths detected: $($staged -join ', ')" }
-Invoke-Native { git commit -m "fix(sonar): enable real coverage and duplication metrics" } "Commit failed."
+Invoke-Native { git add -- sonar-project.properties .github/workflows/ci.yml } "Unable to stage hardening files."
+$staged = @(git diff --cached --name-only)
+$expected = @('.github/workflows/ci.yml','sonar-project.properties')
+if (@($staged | Sort-Object) -join '|' -ne @($expected | Sort-Object) -join '|') { throw "Unexpected staged paths detected: $($staged -join ', ')" }
+Invoke-Native { git commit -m "fix(quality): enable real Sonar metrics and always-on PR gate" } "Commit failed."
 Invoke-Native { git push -u origin $WorkBranch } "Push failed."
 
 $body = @"
 ## Purpose
 
-Harden SonarQube Cloud analysis without changing application behavior.
+Harden SonarQube Cloud and GitHub merge gates without changing application behavior.
 
-- remove repository-wide coverage suppression
-- remove repository-wide duplication suppression
+- remove repository-wide Sonar coverage suppression
+- remove repository-wide Sonar duplication suppression
 - keep Go coverage report import enabled
-- use this PR as the live proof that SonarQube Cloud, CodeQL and BThwani CI all decorate a work branch before master protection is activated
+- make BThwani CI create its aggregate PR check for every PR (no PR path filter)
+- prove SonarQube Cloud, CodeQL and BThwani CI on a real Draft PR before master protection is activated
 
-This PR must not be merged unless all required automated checks are present and successful.
+This PR must not be merged unless all future required automated checks are present and successful.
 "@
 
 Invoke-Native { gh pr create --repo $Repository --draft --base $BaseBranch --head $WorkBranch --title $Title --body $body } "Unable to create hardening Draft PR."
-
 $pr = gh pr view --repo $Repository $WorkBranch --json number,url,headRefOid,isDraft,baseRefName | ConvertFrom-Json
 Write-Host "Draft PR: $($pr.url)"
 Write-Host "Head SHA: $($pr.headRefOid)"
@@ -144,7 +150,6 @@ $required = @(
     'Analyze go (workforce)',
     'Analyze javascript-typescript'
 )
-
 Write-Host "Waiting for live PR proof of every future required check..."
 Wait-Checks -Sha $pr.headRefOid -Names $required -Minutes $WaitMinutes
 Write-Host ""
