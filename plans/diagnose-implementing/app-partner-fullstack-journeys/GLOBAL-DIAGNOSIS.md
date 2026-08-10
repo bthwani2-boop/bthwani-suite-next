@@ -1,80 +1,123 @@
 # Global diagnosis — app-partner-fullstack-journeys
 
-Pinned baseline: `bthwani2-boop/bthwani-suite-next@abbas` at `4dbcc1c39190d6c19da0a54e0a6db1f6f0582ce0`.
+Pinned diagnosis baseline: `bthwani2-boop/bthwani-suite-next@BB` at `629b86b9a3ca8fadc16158b6c9a078217ebe4af4`. Latest remote head observed and reconciled before write: `086e48f8f8ed9deaa9d1525f379505af056df355`.
 
-## 1. Diagnosis scope and method
+## 1. Diagnosis decision
 
-The diagnosis followed the current authority chain rather than treating source code as policy. Current instruction was bounded to `app-partner` plus only proven dependencies. The active authority registry, unified governance, PRD, Engineering/Security/Delivery policies, applicable Product Truth, the current package schema/validator, Partner runtime/surface/shared code, DSH/WLT boundaries, control-panel section inventory, and the requested derived journey registry were inspected. Every seeded surface, control-panel section and cross-cutting domain has a classified record in `COVERAGE.json`; unrelated areas are explicitly excluded with reopen triggers rather than silently ignored.
+The existing package is retained and rebaselined; no replacement package is created. The prior package had become mixed-baseline: root metadata still named `abbas` and an old SHA while later coverage evidence referenced newer source, and it still classified `docs/architecture.drawio` as empty even though the current branch contains a populated ArchPulse draw.io document. That inconsistency is repaired here.
 
-`docs/architecture.drawio` was also inspected as requested and is zero bytes on the pinned commit. It is therefore evidence of an unavailable architecture artifact, not evidence of architecture. Architecture conclusions below come from canonical authority plus current code/contracts only. `plans/smsm-dsh-wlt-journeys/04-JOURNEY-REGISTRY.yaml` is used only as discovery support because the authority registry classifies that planning tree as derived support.
+The eight existing concerns remain a coherent Partner closure decomposition and do not need duplication: access/readiness/store scope; order intake/preparation; catalog/store publication; team/fleet connection; handoff/delivery exceptions; support/order rescue; WLT finance/COD; analytics/commercial readback. Their implementation plans remain useful because current source still exposes those exact Partner boundaries. This reconciliation changes the source baseline and evidence interpretation, not the product truth owner.
 
-## 2. Repository architecture and truth ownership
+## 2. Strict scope boundary
 
-The platform is one multi-surface system. Identity owns authentication, sessions, roles/permissions and trusted identity context. DSH owns Partner/Store operational state, catalog consumption/publication, order lifecycle, dispatch/custody, serviceability, support/rescue and operational analytics facts/projections. WLT exclusively owns wallet, ledger, payment/refund, settlement, payout, commission, COD financial custody/reconciliation and related financial mutation. Surface code renders, collects intent and coordinates canonical contracts; it cannot become a competing owner.
+The package is app-partner bounded. The primary implementation surface is `apps/app-partner/runtime` plus `services/dsh/frontend/app-partner`. Shared code is in scope only when the Partner surface directly imports it or when it is the canonical controller/contract for a Partner operation.
 
-The current Partner runtime already shows several good fail-closed patterns: secure session storage and role/surface gating in `apps/app-partner/runtime/src/App.tsx`; explicit route-binding registry; no silent all-store fallback for store-scoped catalog/team/courier routes; server-backed order reads; and a Partner guard that rejects fake readiness, seeded scopes, unsafe catalog defaults, local optimistic order success, fake team results and local support cases. These controls reduce known failure classes but do not prove backend, database, runtime or cross-surface closure.
+A non-Partner surface is included only as a narrow mandatory counterpart when current Product Truth proves that a Partner mutation cannot be considered correct without that readback or coordinated action. This permits, for example, Partner onboarding operator/field/client publication slices, Store-Captain fleet/handoff counterpart behavior, support/rescue operator compatibility, and WLT finance ownership. It does not permit unrelated Client commerce, Captain workforce/finance, Field workforce, generic control-panel pages, or generic platform/tooling cleanup.
 
-## 3. Surfaces and control-panel boundary
+The authoritative execution pattern is: Partner intent -> trusted Identity/session context -> Partner/shared adapter or generated contract -> DSH or WLT canonical owner -> PostgreSQL/ledger transaction and invariant -> event/reconciliation where applicable -> canonical readback -> only required counterpart consumers. Any shortcut that creates local final truth is a defect.
 
-`app-partner` is fully in scope only for its proven product capabilities: activation/readiness, Store scope and settings, orders/notifications, central catalog and media/overrides, team/fleet, handoff/delivery exceptions, support, WLT-facing finance and Partner analytics/commercial readback.
+## 3. Current Partner runtime and frontend architecture
 
-Other surfaces are deliberately partial. `app-field` participates in Partner onboarding draft/evidence/submission only. `app-captain` participates in one-time Partner fleet binding, bilateral store handoff and shared support compatibility only. `app-client` participates when Partner/store publication or Partner order/custody truth changes what customers can discover/read, plus shared support-contract compatibility. `control-panel` participates through only the Partner-related slices of administration/roles, analytics, catalogs, marketing visibility gates, operations, partners, platform serviceability, support and WLT finance.
+`apps/app-partner/runtime/src/App.tsx` composes a real mobile Partner runtime. It configures SecureStore-backed Identity session storage, a stable device fingerprint, native catalog file picking, the Identity API base, Partner mobile push registration, and a role/surface gate requiring `partner` + `app-partner` before rendering `DshPartnerSurface`.
 
-Generic DSH dashboard, HR and control-panel login sections are not canonical Partner writers or required Partner journey surfaces in the applicable Product Truth set and are excluded. Their exclusion must be reopened if implementation discovery proves a mandatory Partner dependency.
+`services/dsh/frontend/app-partner/dsh-partner-binding.contracts.ts` provides compile-time coverage for the routable Partner surface registry, including home/entry, order inbox/detail/rejection, notifications, support, inventory, store courier, product edit/category/media/overrides, team, wallet bridge, and commercial model. `useDshPartnerSurfaceModel.ts` composes profile, Store scope, orders, support, operational summary, and team models rather than owning duplicate business state.
 
-## 4. Backend, contracts, data, events, and integrations
+`services/dsh/frontend/shared/partner/store-scope.model.ts` loads Partner scopes from DSH, resolves the selected Store, and re-reads Store role context before exposing runtime Store profile data. This is materially stronger than the old package baseline. The remaining rule is unchanged: selection is user intent; server authorization is the security boundary.
 
-Partner state-changing flows must follow the canonical path: surface intent → shared controller/adapter → registered contract/client → DSH or WLT owning backend → service-owned PostgreSQL state/transaction/audit/outbox as applicable → canonical readback → affected surface consumers. Partner/store scope must be proved server-side and cross-scope identifiers must fail without disclosure where the current contract requires it. Retriable mutations need stable idempotency; stale state requires OCC/locking; events and reconciliation must not create a second state machine.
+`docs/architecture.drawio` is now a populated XML diagram generated by ArchPulse. It is supporting dependency evidence only. Governance, Product Truth, contracts, code, and persistence invariants remain stronger authorities.
 
-DSH/WLT is the highest-risk boundary. The current Partner finance presentation composes actor wallet, commissions, payout destination and COD custody panels. The COD remit API is a real mutation carrying correlation and idempotency, so it must be proven all the way through authenticated DSH proxy/orchestration to WLT-owned ledger/audit/reconciliation. Settlement/commission values may not be calculated authoritatively by DSH or frontend.
+## 4. Current canonical ownership
 
-## 5. Cross-surface Partner journeys
+- Identity owns authentication, sessions, roles/permissions, device/session identity and trusted identity context.
+- DSH owns Partner/Store lifecycle, Store scope, serviceability, catalog publication/overrides, order lifecycle, team/fleet operational state, custody/handoff, support/rescue and operational analytics facts/projections.
+- WLT owns wallet/ledger, COD financial custody, settlement, commission, payout destination and all authoritative financial mutation/readback.
+- Frontends collect intent and render canonical results. They must not calculate or persist authoritative Partner operational or financial state.
 
-Eight non-overlapping concerns capture the complete evidence-backed Partner boundary:
+The migration-governance changes observed during reconciliation reinforce rather than relax this boundary: migration checksum/amendment integrity is now an explicit repository concern. Partner implementation cannot claim persistence closure if a required Identity/DSH/WLT schema is not cleanly applicable and invariant-safe.
 
-1. Partner access, activation/readiness, trusted Store scope, field evidence, operator approval, serviceability and client publication prerequisites.
-2. Partner order intake/accept/reject/preparation and canonical order readback before custody transfer.
-3. Central catalog assortment, price/stock/media overrides, store settings, marketing visibility gates and client publication.
-4. Store team plus one-time Partner fleet connection shared with Captain and redacted operator readback.
-5. Bilateral store-to-Captain custody, reassignment and persistent handoff exceptions with client/operator readback.
-6. Partner support conversation, order issue escalation and operator-owned incident/rescue with actor isolation.
-7. Partner WLT readback and COD custody/remit through the financial ownership boundary.
-8. Partner operational analytics/commercial readback and multi-store scoping.
+## 5. Current material findings
 
-These map to `U001` through `U008` and the dependency DAG in `EXECUTION-ORDER.json`.
+### PRT-BB-001 — P1 — selected-Store analytics contract remains ambiguous
 
-## 6. Material defects and root causes
+Evidence: `PartnerAnalyticsInsightsPanel` accepts `canonicalStoreId`, refetches when it changes, labels the result as Store-scoped, and prints the selected operational scope. `fetchPartnerPerformance(period)` sends only `/dsh/partner/analytics/performance?period=...`. `handlePartnerPerformance` obtains `storeID` independently through `partnerStore` before calling `GetPartnerPerformance`.
 
-### D1 — Partner analytics selected-store binding is not explicit
+Consequence: for a Partner with more than one Store, the displayed Store selection and the Store chosen by the analytics endpoint cannot be proven to be the same operation scope. Refetching on `canonicalStoreId` change does not solve the mismatch because that value is not sent.
 
-The app supports a selected Partner Store scope and `AnalyticsInsightsPanel` receives `canonicalStoreId`, but `fetchPartnerPerformance(period)` sends no Store identifier. The backend `handlePartnerPerformance` resolves a Store through `partnerStore` and therefore cannot receive the UI-selected Store through this operation. In a Partner model that permits multiple Stores, the UI label/selection and the analytics query cannot currently be proven to refer to the same Store. Root cause: the analytics contract models actor-scoped performance but the surface presents selected-Store-scoped performance without an explicit authorized Store-intent contract. `U008` must resolve this at the contract/backend authorization boundary rather than by trusting an arbitrary client Store ID.
+Root cause: the UI models selected-Store analytics while the API models implicit Partner Store resolution. `U008` must choose one canonical semantic: authorized selected-Store intent, or explicitly Partner-wide/default-Store analytics with matching UI semantics. Do not patch the label and do not trust an arbitrary client Store ID as authorization.
 
-### D2 — Architecture artifact requested for review is unavailable
+### PRT-BB-002 — P1 — capability lifecycle prevents false closure claims
 
-`docs/architecture.drawio` is empty on the pinned baseline. This is a repository documentation gap, but the task is not authorized to invent architecture content inside the package phase. Implementation must not use historical architecture assumptions. The reopen condition is a newer current-head architecture file or an explicit task to repair documentation.
+Current Partner onboarding/store publication Product Truth is `READY_FOR_IMPLEMENTATION`. Current support/incidents/order-rescue Product Truth is `DISCOVERY`. These states explicitly describe unresolved implementation/evidence work and protected acceptance. Existing source, tests, or screens cannot be treated as proof that the whole journey is closed.
 
-### D3 — Several Partner-critical Product Truth capabilities are not closed product states
+Consequence: implementation must bind evidence to the exact Product Truth acceptance criteria and final candidate rather than declaring success because routes compile or UI smoke passes.
 
-Onboarding is marked `READY_FOR_IMPLEMENTATION`; serviceability, support/rescue and settlement/commission capabilities are in `DISCOVERY`; handoff is a compatibility product model. Current code/guards therefore cannot be interpreted as evidence that these journeys are complete. The root cause is evidence/lifecycle incompleteness, not necessarily one code defect. Each affected unit defines the exact implementation and verification boundary needed before a stronger decision.
+Root cause: lifecycle/evidence state is intentionally ahead of final acceptance. This is not fixed by adding another local test or package assertion.
 
-### D4 — Partner finance bridge requires vertical proof, especially COD remit
+### PRT-BB-003 — P0 — Partner finance requires WLT-owned vertical proof
 
-The UI bridge exposes actual financial panels, and COD remit accepts a proof reference and sends an idempotent mutation. Static frontend success is insufficient: WLT-owned authorization, legal state, ledger effect, reconciliation, audit, failure/unknown outcome and readback must all be proven. Any DSH/frontend-owned final financial truth is forbidden.
+Partner finance is presented through WLT-facing wallet/COD/commission/settlement/payout bridges. Any actual COD remit or settlement-affecting operation is financial state, not a UI-only action.
 
-### D5 — Cross-surface success can be falsely inferred from Partner-only tests
+Consequence: a frontend/DSH success response without WLT authorization, idempotency, legal state, ledger/reconciliation, audit, unknown-outcome handling and canonical readback can create financial divergence.
 
-Fleet, handoff, publication, support and financial journeys have required consumers outside `app-partner`. A Partner UI pass cannot prove Captain, Client, operator, database or WLT readback. The execution units therefore bind cross-surface compatibility and negative-path verification to the same candidate.
+Root cause: cross-service financial orchestration is safe only when WLT remains the sole truth owner and DSH is a bounded authenticated bridge. `U007` remains mandatory and must reject any DSH/frontend-owned final financial truth.
 
-## 7. Execution boundary
+### PRT-BB-004 — P1 — cross-surface counterpart evidence is required but must stay narrow
 
-Included areas are present only because a current Product Truth, canonical ownership rule, route/binding, backend contract, persistence invariant, security boundary or required readback ties them to Partner behavior. Generic areas are not included for completeness theater. In particular, Captain/Field financial/workforce flows, generic dashboard/HR/login work, unrelated marketing programs, unrelated provider/platform administration and unrelated client commerce are outside the execution boundary unless new pinned evidence proves a direct dependency and `COVERAGE.json` is updated first.
+Onboarding/publication, fleet/handoff, support/rescue and some order readbacks have required actors outside app-partner. Those counterpart slices are directly related to Partner correctness, but their host applications contain much more functionality that is unrelated.
 
-No product/runtime/governance code is changed by this package commit. All actual implementation occurs later inside the exact unit paths and must be re-based on the then-current remote head.
+Consequence: omitting required readback creates false Partner closure; broadening into the whole Client/Captain/Field/Control Panel creates scope contamination and unrelated risk.
 
-## 7.1 Latest-head reconciliation before write
+Root cause: multi-surface Product Truth requires vertical slices, not application-wide rewrites. Every external path in a unit must be justified by one concrete Partner transition/readback and `mustNotChange` boundaries.
 
-The diagnosis was first assembled against `d354e757966296236c9a3c809e4d591dae72e13d`. Immediately before the write batch, `abbas` resolved to `4dbcc1c39190d6c19da0a54e0a6db1f6f0582ce0`. A GitHub commit comparison showed three intervening commits with only `tools/scripts/check-archpulse-config.ps1` changed. That path is outside the Partner execution boundary and did not alter the package schema, authority, Product Truth, DSH/WLT Partner paths, or the requested architecture artifact. The package was therefore re-pinned to the latest head without changing its diagnosis. `docs/architecture.drawio` was fetched again at the new head and remained zero bytes.
+### PRT-BB-005 — P1 — runtime/persistence evidence cannot be inherited from earlier SHAs
 
-## 8. Residual uncertainty
+`BB` advanced by hundreds of commits beyond the former package source and moved again while this diagnosis was being prepared. Current changes include Partner runtime/Identity wiring, frontend bindings, backend behavior, tests, architecture output and migration-governance work.
 
-No shell/runtime execution was available through the GitHub connector during package preparation. Therefore the official Node package validator, TypeScript, Go, PostgreSQL, mobile runtime, visual/RTL/accessibility, network failure, security isolation, WLT reconciliation and GitHub CI checks are not claimed as PASS here. The package is structured for strict validation and remote readback, but implementation closure remains `NEEDS_EVIDENCE` until the recorded commands run against the exact final implementation candidate. Current live branch movement must also be rechecked immediately before implementation.
+Consequence: evidence from the old `abbas` SHA cannot close the current branch. Runtime, database, security, finance and CI evidence must be produced against the exact final implementation candidate after the last write.
+
+Root cause: the old package baseline was stale and internally inconsistent. This rewrite resolves the planning baseline only; implementation evidence still has to be regenerated.
+
+### PRT-BB-006 — P1 — mobile development transport is shared infrastructure, not Partner truth
+
+The latest reconciled commit `086e48f8f8ed9deaa9d1525f379505af056df355` fixes `apps/mobile/mobile-lan.ps1`: a PowerShell parameter named `$Pid` collided case-insensitively with the read-only automatic `$PID`, causing the shared mobile gateway start to fail. The commit renames that parameter and adds executable PowerShell coverage.
+
+Consequence: Partner runtime testing over the shared LAN gateway may have been blocked by tooling even when Partner product code was correct. Conversely, a working gateway does not prove Partner Identity/API/business behavior.
+
+Root cause: shared runtime transport tooling had a PowerShell automatic-variable collision. This is already fixed on the latest observed head; Partner execution should consume and verify the fixed transport path when relevant, but must not reopen unrelated mobile application scope.
+
+## 6. Resolved or superseded old findings
+
+The old finding that `docs/architecture.drawio` is zero bytes is resolved on current `BB`; the file is populated and must no longer be listed as a blocker.
+
+The current Partner runtime also contains stronger fail-closed building blocks than the old baseline: SecureStore Identity session integration, role/surface gate, Partner push binding, server-loaded Store scopes, compile-time route bindings, and targeted Partner smoke/guard work added in intervening commits. These improvements reduce earlier ambiguity but do not eliminate the remaining vertical verification requirements.
+
+No previously recorded issue is allowed to remain merely because it existed in the old package. During implementation, each unit must first reproduce its current problem on the then-current SHA; a task already fully solved by current code is removed or narrowed rather than reimplemented.
+
+## 7. Unit reconciliation
+
+- `U001`: keep. Reverify Identity/session, activation/readiness, Store scope, serviceability/publication prerequisites and stale actor/device recovery on current code. External Field/Client/operator paths are only mandatory onboarding/publication counterparts.
+- `U002`: keep. Verify Partner order commands, legal transitions, idempotency/OCC, audit and canonical read-after-write. Client/operator paths are readback compatibility only.
+- `U003`: keep. Verify central catalog, assortment, stock/price/media overrides, Store publication and only the marketing/serviceability gates that affect Partner Store publication.
+- `U004`: keep. Verify Partner team and fleet connection; Captain/operator paths are only the counterpart of the same fleet lifecycle.
+- `U005`: keep. Verify Store-to-Captain custody/handoff and exceptions; no unrelated dispatch/Captain redesign.
+- `U006`: keep. Verify Partner support and order rescue ownership/isolation; operator/Captain/client compatibility only where the same governed support contract requires it.
+- `U007`: keep at highest financial rigor. WLT is authoritative; DSH/app-partner are bounded consumers/orchestrators.
+- `U008`: keep and prioritize the reproduced selected-Store analytics mismatch above.
+
+The existing dependency DAG remains valid: access/scope precedes Store-scoped operations; order intake precedes handoff/support and contributes facts used by finance/analytics.
+
+## 8. Head-movement reconciliation
+
+The main re-diagnosis was pinned at `629b86b9a3ca8fadc16158b6c9a078217ebe4af4`. Before package write, `BB` advanced to `086e48f8f8ed9deaa9d1525f379505af056df355` by exactly one commit. Comparison showed only `apps/mobile/mobile-lan.ps1` and `apps/mobile/tests/mobile-lan-powershell.execution.test.mjs` changed. The change repairs shared mobile development transport and adds tests; it does not alter Partner routes, Partner contracts, Identity authorization, DSH/WLT ownership or the eight-unit decomposition. The package therefore keeps `629b86b...` as the immutable diagnosis baseline, records `086e48f...` as latest observed remote head, and incorporates the delta as runtime-environment verification context.
+
+## 9. Verification and final closure policy
+
+Planning readiness is not implementation closure. For each unit, execute the registered verification checks plus any newly required test discovered from current code. At minimum, affected changes must cover type/contract checks, relevant Go tests, PostgreSQL/migration invariants, server-side authorization negative paths, idempotency/OCC where state changes, runtime smoke, and Partner RTL/accessibility/visual behavior when UI changes.
+
+Financial paths require WLT-specific evidence and cannot be self-certified from DSH tests. Security isolation requires negative cross-Partner/Store tests. Migration changes require clean-install and governed checksum/amendment compatibility evidence. Shared mobile LAN/gateway tests prove only development transport behavior. A passing test from a different SHA is not transferable.
+
+Immediately before final decision: fetch latest `BB`, compare it with the candidate, reconcile any concurrent delta, rerun affected verification, and bind every PASS to the exact candidate SHA. Only then may `RESULT.json`, manifest closure state, and `CLOSURE.md` move beyond `NEEDS_EVIDENCE`.
+
+## 10. Residual uncertainty
+
+This GitHub-only diagnosis can inspect repository truth and update the planning package, but it cannot honestly assert device runtime, live PostgreSQL, financial reconciliation, visual behavior, or local command execution without those checks actually running. The package is therefore `COMPLETE/READY` for diagnosis/plan and deliberately remains `NOT_STARTED/NEEDS_EVIDENCE` for implementation/closure.
