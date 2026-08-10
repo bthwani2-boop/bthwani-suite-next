@@ -38,6 +38,19 @@ export function classifyFiles(inputFiles, options = {}) {
     "tools/scripts/sync-mobile-apps.mjs",
     "tools/scripts/eas-build-mobile.mjs"
   );
+  const mobileRuntimeTransport = full || equals(
+    "apps/mobile/start-mobile-runtime.ps1",
+    "apps/mobile/mobile-lan.ps1",
+    "tools/dev/mobile-dev-gateway.mjs",
+    "tools/scripts/verify-mobile-lan-runtime.ps1",
+    "services/dsh/frontend/shared/_kernel/mobile-dev-gateway.ts",
+    "services/dsh/frontend/shared/_kernel/dsh-api-base-url.ts",
+    "services/dsh/frontend/shared/_kernel/workforce-api-base-url.ts",
+    "services/dsh/frontend/shared/session/dev-session-broker.adapter.ts",
+    "services/dsh/frontend/shared/media/presigned-upload.client.ts",
+    "services/dsh/frontend/shared/catalog/catalog-binary-upload.adapter.ts",
+    "core/identity/clients/identity-api-config.ts"
+  );
 
   const workflow = full || starts(".github/") || ciRouter || has((file) =>
     file === "tools/scripts/run-actionlint.mjs" ||
@@ -69,7 +82,7 @@ export function classifyFiles(inputFiles, options = {}) {
     "tools/guards/backend-api-binding-gate.mjs"
   );
 
-  const frontend = full || mobileTooling || workspaceManifest || starts("apps/", "shared/") || includes("/frontend/", "/clients/generated/");
+  const frontend = full || mobileTooling || mobileRuntimeTransport || workspaceManifest || starts("apps/", "shared/") || includes("/frontend/", "/clients/generated/");
   const contracts = full || backendApiSurface || starts("contracts/") || includes("/contracts/", "/clients/generated/") || has((file) => file.endsWith(".openapi.yaml"));
   const database = full || includes("/database/", "/migrations/") || starts("infra/docker/");
 
@@ -86,7 +99,7 @@ export function classifyFiles(inputFiles, options = {}) {
     "governance/product/contracts/bthwani-platform-model.product-truth.json"
   ) || has((file) => /(^|\/)(OperatorContext|operator-context|platform-context|tenancy|cross-OperatorContext)(\/|[-_.])/i.test(file));
   const protectedSecurityChanged = authChanged || sessionChanged || rbacChanged || privacyChanged || piiChanged || secretsChanged || operatorContextChanged;
-  const security = workflow || protectedSecurityChanged || equals("governance/policies/security.md") || starts("tools/security/");
+  const security = workflow || mobileRuntimeTransport || protectedSecurityChanged || equals("governance/policies/security.md") || starts("tools/security/");
 
   const financialChanged = full || wlt || starts(
     "services/dsh/backend/internal/wlt/",
@@ -112,6 +125,7 @@ export function classifyFiles(inputFiles, options = {}) {
   if (full || infrastructure || runtimeTooling) runtimeProfile = "full";
   else if (financialChanged) runtimeProfile = "wlt-finance";
   else if (protectedSecurityChanged) runtimeProfile = "identity-security";
+  else if (mobileRuntimeTransport) runtimeProfile = "identity-security";
   else if (nativeChanged) runtimeProfile = "mobile-native";
   else if (mobileTooling) runtimeProfile = "mobile-config";
 
@@ -158,7 +172,7 @@ export function classifyFiles(inputFiles, options = {}) {
   const policy = governancePolicy || workflowPolicy || securityPolicy || infrastructurePolicy;
   const node = frontend || contracts || journey || platformChangeSets;
   const backendChanged = dsh || wlt || identity || workforce || platform || providers;
-  const deepRisk = full || workflow || security || infrastructure || workspaceManifest || mobileTooling || runtimeTooling || financialChanged || migrationChanged || nativeChanged || recoveryChanged;
+  const deepRisk = full || workflow || security || infrastructure || workspaceManifest || mobileTooling || mobileRuntimeTransport || runtimeTooling || financialChanged || migrationChanged || nativeChanged || recoveryChanged;
   const standardRisk = deepRisk || policy || sharedBrain || database || contracts || backendChanged || journey;
   const verificationTier = deepRisk ? "deep" : standardRisk ? "standard" : "fast";
   const heavy = verificationTier === "deep";
