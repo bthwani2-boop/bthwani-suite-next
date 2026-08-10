@@ -66,6 +66,51 @@ for (const [scriptName, command] of Object.entries(scripts)) {
 }
 if (!exists(fullVerificationPolicy)) violations.push({ file: fullVerificationPolicy, line: 0, message: "FULL_VERIFICATION_POLICY_MISSING" });
 
+const mobileManifestRelative = "tools/mobile/mobile-apps.manifest.json";
+let mobileManifest = {};
+try { mobileManifest = JSON.parse(text(mobileManifestRelative)); }
+catch (error) { violations.push({ file: mobileManifestRelative, line: 0, message: `INVALID_MOBILE_MANIFEST ${error.message}` }); }
+const mobileApps = Object.keys(mobileManifest.apps ?? {}).sort();
+const expectedMobileApps = ["app-captain", "app-client", "app-field", "app-partner"];
+if (JSON.stringify(mobileApps) !== JSON.stringify(expectedMobileApps)) {
+  violations.push({ file: mobileManifestRelative, line: 0, message: `MOBILE_APP_INVENTORY_DRIFT expected=${expectedMobileApps.join(",")} actual=${mobileApps.join(",")}` });
+}
+for (const appKey of mobileApps) {
+  const appPackageRelative = `apps/${appKey}/runtime/package.json`;
+  const testsRelative = `apps/${appKey}/runtime/tests`;
+  if (!exists(appPackageRelative)) continue;
+  let appPackage = {};
+  try { appPackage = JSON.parse(text(appPackageRelative)); }
+  catch (error) { violations.push({ file: appPackageRelative, line: 0, message: `INVALID_MOBILE_PACKAGE ${error.message}` }); continue; }
+  const appScripts = appPackage.scripts ?? {};
+  const expectedMobileScripts = {
+    "test:app": "node --test tests/*.test.mjs",
+    "test:runtime": `node ../../mobile/test-mobile-runtime-contract.mjs --app ${appKey}`,
+    test: "pnpm run test:app && pnpm run test:runtime",
+  };
+  for (const [scriptName, expected] of Object.entries(expectedMobileScripts)) {
+    if (appScripts[scriptName] !== expected) violations.push({ file: appPackageRelative, line: 0, message: `MOBILE_TEST_COMMAND_DRIFT ${scriptName}` });
+  }
+  const testsDir = path.join(repoRoot, testsRelative);
+  if (!fs.existsSync(testsDir)) { violations.push({ file: testsRelative, line: 0, message: "MOBILE_TEST_DIRECTORY_MISSING" }); continue; }
+  const testFiles = fs.readdirSync(testsDir).filter((name) => name.endsWith(".test.mjs")).sort();
+  if (testFiles.length === 0) { violations.push({ file: testsRelative, line: 0, message: "MOBILE_OWNED_TESTS_MISSING" }); continue; }
+  if (!testFiles.some((name) => name.endsWith(".execution.test.mjs"))) violations.push({ file: testsRelative, line: 0, message: "MOBILE_EXECUTION_TEST_MISSING" });
+  for (const name of testFiles) {
+    const relative = `${testsRelative}/${name}`;
+    const content = text(relative);
+    if (/\|\|\s*true|process\.exit\(0\)|continue-on-error/i.test(content)) violations.push({ file: relative, line: 0, message: "MOBILE_TEST_FALSE_SUCCESS_FORBIDDEN" });
+    for (const sibling of expectedMobileApps) {
+      if (sibling !== appKey && content.includes(`apps/${sibling}/runtime/`)) violations.push({ file: relative, line: 0, message: `MOBILE_TEST_SIBLING_OWNERSHIP_FORBIDDEN ${sibling}` });
+    }
+  }
+}
+const sharedMobileTestsRelative = "apps/mobile/tests";
+const sharedMobileTestsDir = path.join(repoRoot, sharedMobileTestsRelative);
+if (!fs.existsSync(sharedMobileTestsDir)) violations.push({ file: sharedMobileTestsRelative, line: 0, message: "MOBILE_SHARED_TEST_DIRECTORY_MISSING" });
+else if (!fs.readdirSync(sharedMobileTestsDir).some((name) => name.endsWith(".test.mjs"))) violations.push({ file: sharedMobileTestsRelative, line: 0, message: "MOBILE_SHARED_TESTS_MISSING" });
+requireMarkers("apps/mobile/test-mobile-runtime-contract.mjs", ["test:app", "test:runtime", "*.execution.test.mjs"]);
+
 const workflowFiles = exists(workflowsRoot) ? fs.readdirSync(path.join(repoRoot, workflowsRoot)).filter((name) => /\.ya?ml$/i.test(name)).sort() : [];
 if (JSON.stringify(workflowFiles) !== JSON.stringify(expectedWorkflowFiles)) violations.push({ file: workflowsRoot, line: 0, message: `WORKFLOW_INVENTORY_DRIFT expected=${expectedWorkflowFiles.join(",")} actual=${workflowFiles.join(",")}` });
 for (const workflowFile of workflowFiles) {
@@ -121,7 +166,7 @@ rejectMarkers(`${workflowsRoot}/ci-policy.yml`, ciPolicy, [
 ]);
 
 requireMarkers(`${workflowsRoot}/ci-node-diagnostics.yml`, ["pnpm exec knip", "guard:logic-coverage", "guard:a11y", "guard:dependency-graph", "guard:ast-grep-rules", "guard:repo-naming", "guard:repo-structure", "guard:api-binding", "guard:backend-api-binding", "guard:frontend-feature-binding"]);
-requireMarkers(`${workflowsRoot}/ci-node-verification.yml`, ["pnpm exec nx run-many -t test --all --outputStyle=stream", "pnpm exec nx affected -t test --outputStyle=stream", "pnpm run nx:typecheck", "pnpm run nx:lint", "pnpm run nx:build"]);
+requireMarkers(`${workflowsRoot}/ci-node-verification.yml`, ["node --test apps/mobile/tests/*.test.mjs", "pnpm exec nx run-many -t test --all --outputStyle=stream", "pnpm exec nx affected -t test --outputStyle=stream", "pnpm run nx:typecheck", "pnpm run nx:lint", "pnpm run nx:build"]);
 requireMarkers(`${workflowsRoot}/ci-backends.yml`, ["Select affected backends", "Apply migrations", "go test ./...", "go build ./..."]);
 requireMarkers(`${workflowsRoot}/ci-runtime.yml`, ["runtime:full:smoke", "Stop runtime"]);
 requireMarkers(`${workflowsRoot}/dsh-database.yml`, ["contents: read", "postgis/postgis:16-3.4-alpine", "invoke-dsh-database.ps1"]);
