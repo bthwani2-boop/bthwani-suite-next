@@ -1,5 +1,6 @@
 param(
-  [switch]$Full
+  [switch]$Full,
+  [switch]$LanRuntime
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,7 +18,7 @@ function Invoke-VerifiedStep {
   Write-Host "`n=== $Name ===" -ForegroundColor Cyan
   $global:LASTEXITCODE = 0
   & $Action
-  $exitCode = $LASTEXITCODE
+  $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
   if ($exitCode -ne 0) {
     throw "$Name failed with exit code $exitCode"
   }
@@ -35,6 +36,15 @@ $Apps = @("app-client", "app-partner", "app-captain", "app-field")
 foreach ($App in $Apps) {
   Invoke-VerifiedStep "$App owned app + runtime tests" {
     pnpm --dir "apps/$App/runtime" test
+  }
+}
+
+if ($LanRuntime) {
+  Invoke-VerifiedStep "Governed mobile backend/data readiness" {
+    & pwsh -NoProfile -ExecutionPolicy Bypass -File apps/mobile/ensure-mobile-dev-runtime.ps1
+  }
+  Invoke-VerifiedStep "Live LAN gateway runtime proof (no ADB)" {
+    & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/verify-mobile-lan-runtime.ps1
   }
 }
 
