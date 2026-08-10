@@ -40,8 +40,10 @@ if ([string]$registry.rulesetName -ne $RulesetName) {
 }
 $requiredEntries = @($registry.requiredChecks)
 $requiredNames = @($requiredEntries | ForEach-Object { [string]$_.context })
-$expectedProducer = @{}
-foreach ($entry in $requiredEntries) { $expectedProducer[[string]$entry.context] = [string]$entry.producer }
+$expectedIntegrationId = @{}
+foreach ($entry in $requiredEntries) {
+    $expectedIntegrationId[[string]$entry.context] = [int64]$entry.integrationId
+}
 
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "gh CLI is required." }
 Invoke-Native { gh auth status } "GitHub CLI authentication is not ready."
@@ -57,25 +59,29 @@ $checks = @(($checksJson | ConvertFrom-Json).check_runs)
 $rows = foreach ($name in $requiredNames) {
     $run = @($checks | Where-Object name -eq $name | Sort-Object started_at -Descending | Select-Object -First 1)
     if ($run.Count -eq 0) {
-        [pscustomobject]@{Name=$name;Status='missing';Conclusion='';App='';IntegrationId=$null;ProducerMatch=$false}
+        [pscustomobject]@{Name=$name;Status='missing';Conclusion='';App='';IntegrationId=$null;IntegrationMatch=$false}
     } else {
-        $app = [string]$run[0].app.slug
+        $integrationId = [int64]$run[0].app.id
         [pscustomobject]@{
             Name=$name
             Status=[string]$run[0].status
             Conclusion=[string]$run[0].conclusion
-            App=$app
-            IntegrationId=$run[0].app.id
-            ProducerMatch=($app -eq $expectedProducer[$name])
+            App=[string]$run[0].app.slug
+            IntegrationId=$integrationId
+            IntegrationMatch=($integrationId -eq [int64]$expectedIntegrationId[$name])
         }
     }
 }
 $rows | Format-Table -AutoSize | Out-Host
 $bad = @($rows | Where-Object {
-    $_.Status -ne 'completed' -or $_.Conclusion -ne 'success' -or -not $_.ProducerMatch -or -not $_.IntegrationId -or [int64]$_.IntegrationId -le 0
+    $_.Status -ne 'completed' -or
+    $_.Conclusion -ne 'success' -or
+    -not $_.IntegrationMatch -or
+    -not $_.IntegrationId -or
+    [int64]$_.IntegrationId -le 0
 })
 if ($bad.Count -gt 0) {
-    throw "Refusing ruleset sync: $($bad.Count) registry-defined checks are missing, failing, or produced by the wrong GitHub App on $BaseBranch."
+    throw "Refusing ruleset sync: $($bad.Count) desired checks are missing, failing, or produced by the wrong GitHub App integration on $BaseBranch."
 }
 
 $rulesetsJson = gh api -H "X-GitHub-Api-Version: $ApiVersion" "repos/$Repository/rulesets"
@@ -96,11 +102,11 @@ $statusRules[0].parameters.do_not_enforce_on_create = $false
 
 function New-RequiredContexts([bool]$BindApps) {
     return @(
-        foreach ($row in $rows) {
+        foreach ($entry in $requiredEntries) {
             if ($BindApps) {
-                [ordered]@{context=[string]$row.Name;integration_id=[int64]$row.IntegrationId}
+                [ordered]@{context=[string]$entry.context;integration_id=[int64]$entry.integrationId}
             } else {
-                [ordered]@{context=[string]$row.Name}
+                [ordered]@{context=[string]$entry.context}
             }
         }
     )
@@ -138,14 +144,13 @@ if (-not $Apply) {
     exit 0
 }
 
-# Stage the exact contexts without app binding while keeping all existing rules
-# active, then bind each context to the GitHub App that actually produced the
-# successful check. This avoids replacing or dropping unrelated rules such as
-# future code-scanning requirements.
-Write-Host "Staging registry-defined required contexts while preserving all existing rules..."
+# Stage the exact desired contexts without app binding while preserving every
+# unrelated active rule. Then bind each context to the integration declared by
+# the desired master-protection contract.
+Write-Host "Staging desired required contexts while preserving all existing rules..."
 Put-Body -Body (New-Body -RequiredContexts (New-RequiredContexts -BindApps $false)) -Failure "Required-context staging failed."
 
-Write-Host "Binding required contexts to their proven GitHub App integrations..."
+Write-Host "Binding desired contexts to their declared GitHub App integrations..."
 Put-Body -Body (New-Body -RequiredContexts $boundContexts) -Failure "App-bound required-context synchronization failed."
 
 $verifyJson = gh api -H "X-GitHub-Api-Version: $ApiVersion" "repos/$Repository/rulesets/$rulesetId"
@@ -161,7 +166,12 @@ $unbound = @($configured | Where-Object { -not $_.integration_id -or [int64]$_.i
 if ($missing.Count -gt 0 -or $unexpected.Count -gt 0 -or $unbound.Count -gt 0) {
     throw "Ruleset sync verification failed. missing=[$($missing -join ', ')] unexpected=[$($unexpected -join ', ')] unbound=$($unbound.Count)"
 }
+foreach ($item in $configured) {
+    if ([int64]$item.integration_id -ne [int64]$expectedIntegrationId[[string]$item.context]) {
+        throw "Ruleset sync verification failed for '$($item.context)': live=$($item.integration_id) desired=$($expectedIntegrationId[[string]$item.context])."
+    }
+}
 if (-not $verifyStatus[0].parameters.strict_required_status_checks_policy) { throw "Ruleset strict required-status policy is disabled after sync." }
 
 Write-Host "MASTER REQUIRED QUALITY CHECKS: SYNCHRONIZED"
-Write-Host "Ruleset $RulesetName remains active and all registry-defined contexts are strict and integration-bound."
+Write-Host "Ruleset $RulesetName remains active and all desired contexts are strict and integration-bound."
