@@ -17,20 +17,22 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $RuntimeDir = Join-Path $RepoRoot "apps\$AppKey\runtime"
 $AdbHelper = Join-Path $PSScriptRoot "mobile-adb.ps1"
-$RuntimePhase = Join-Path $PSScriptRoot "invoke-runtime-phase.ps1"
+$LanHelper = Join-Path $PSScriptRoot "mobile-lan.ps1"
 $MobileEnvFile = Join-Path $RepoRoot "infra\local\mobile.env"
 $DevSessionBrokerScript = Join-Path $RepoRoot "tools\dev\local-dev-session-broker.mjs"
 $DevSessionBrokerPort = 58100
 $DevSessionBrokerContractVersion = 2
+$DevGatewayPort = 58110
+$DevGatewayContractVersion = 1
 
 if (-not (Test-Path -LiteralPath $RuntimeDir -PathType Container)) {
     throw "Runtime directory not found: $RuntimeDir"
 }
-if (-not (Test-Path -LiteralPath $AdbHelper -PathType Leaf)) {
-    throw "ADB helper not found: $AdbHelper"
+if (-not (Test-Path -LiteralPath $LanHelper -PathType Leaf)) {
+    throw "LAN transport helper not found: $LanHelper"
 }
-if (-not (Test-Path -LiteralPath $RuntimePhase -PathType Leaf)) {
-    throw "Runtime phase helper not found: $RuntimePhase"
+if (-not (Test-Path -LiteralPath $DevSessionBrokerScript -PathType Leaf)) {
+    throw "Local development session broker not found: $DevSessionBrokerScript"
 }
 
 function Import-BthwaniMobileEnvironment {
@@ -47,13 +49,10 @@ function Import-BthwaniMobileEnvironment {
         $parts = $line.Split("=", 2)
         $key = $parts[0].Trim()
         $value = $parts[1].Trim()
-        if (-not $key) {
-            continue
-        }
+        if (-not $key) { continue }
         if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) {
             $value = $value.Substring(1, $value.Length - 2)
         }
-
         if (-not (Get-Item -Path "Env:$key" -ErrorAction SilentlyContinue)) {
             [Environment]::SetEnvironmentVariable($key, $value, "Process")
         }
@@ -72,74 +71,11 @@ function Copy-AppScopedEnvironmentValue {
     }
 }
 
-function Test-BthwaniHealthEndpoint {
-    param(
-        [Parameter(Mandatory)][string] $Uri,
-        [Parameter(Mandatory)][string] $ExpectedStatus
-    )
-
-    try {
-        $response = Invoke-RestMethod -Uri $Uri -TimeoutSec 3 -ErrorAction Stop
-        return [string] $response.status -eq $ExpectedStatus
-    } catch {
-        return $false
+function Clear-BthwaniProcessEnvironment {
+    param([Parameter(Mandatory)][string[]] $Names)
+    foreach ($name in $Names) {
+        Remove-Item -Path "Env:$name" -ErrorAction SilentlyContinue
     }
-}
-
-function Test-BthwaniMobileBackend {
-    $checks = @(
-        @{ Uri = "http://127.0.0.1:58082/identity/health"; Status = "healthy" },
-        @{ Uri = "http://127.0.0.1:58086/workforce/health"; Status = "healthy" },
-        @{ Uri = "http://127.0.0.1:58080/dsh/health"; Status = "healthy" }
-    )
-
-    foreach ($check in $checks) {
-        if (-not (Test-BthwaniHealthEndpoint -Uri $check.Uri -ExpectedStatus $check.Status)) {
-            return $false
-        }
-    }
-    return $true
-}
-
-function Ensure-BthwaniMobileBackend {
-    if (Test-BthwaniMobileBackend) {
-        return "ready"
-    }
-
-    $setting = ([string] $env:BTHWANI_AUTO_START_BACKEND).Trim().ToLowerInvariant()
-    $autoStart = $setting -notin @("0", "false", "off", "disabled")
-    if (-not $autoStart) {
-        throw "Mobile backend is not ready. Run 'pnpm run runtime:mobile:up' and 'pnpm run runtime:mobile:bootstrap-dev', or remove BTHWANI_AUTO_START_BACKEND=0."
-    }
-    if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-        throw "Mobile backend is not ready and Docker was not found. Start Docker Desktop, then run the app again."
-    }
-
-    Write-Host "Mobile backend is not ready; starting governed local services..."
-    Push-Location -LiteralPath $RepoRoot
-    try {
-        & pwsh -NoProfile -ExecutionPolicy Bypass -File $RuntimePhase `
-            -Action up `
-            -Profiles "identity,workforce,dsh,wlt,media"
-        if ($LASTEXITCODE -ne 0) {
-            throw "Mobile backend startup failed (exit $LASTEXITCODE)."
-        }
-
-        & pwsh -NoProfile -ExecutionPolicy Bypass -File $RuntimePhase `
-            -Action bootstrap-dev `
-            -Profiles "identity,workforce,dsh,wlt,media" `
-            -Force
-        if ($LASTEXITCODE -ne 0) {
-            throw "Mobile development bootstrap failed (exit $LASTEXITCODE)."
-        }
-    } finally {
-        Pop-Location
-    }
-
-    if (-not (Test-BthwaniMobileBackend)) {
-        throw "Mobile backend startup completed but one or more application-facing APIs are still unhealthy (Identity 58082, Workforce 58086, DSH 58080)."
-    }
-    return "auto-started"
 }
 
 function Test-BthwaniDevSessionBroker {
@@ -157,6 +93,9 @@ function Test-BthwaniDevSessionBroker {
 }
 
 function Get-BthwaniDevSessionBrokerListener {
+    if (-not (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue)) {
+        return $null
+    }
     return Get-NetTCPConnection `
         -State Listen `
         -LocalPort $DevSessionBrokerPort `
@@ -167,6 +106,9 @@ function Get-BthwaniDevSessionBrokerListener {
 function Stop-BthwaniStaleDevSessionBroker {
     param([Parameter(Mandatory)] $Listener)
 
+    if (-not (Get-Command Get-CimInstance -ErrorAction SilentlyContinue)) {
+        throw "Port $DevSessionBrokerPort is occupied and the owning process cannot be verified safely."
+    }
     $owner = Get-CimInstance `
         -ClassName Win32_Process `
         -Filter "ProcessId = $($Listener.OwningProcess)" `
@@ -183,14 +125,10 @@ function Stop-BthwaniStaleDevSessionBroker {
 
     Write-Host "Replacing stale local dev session broker contract on port $DevSessionBrokerPort..." -ForegroundColor DarkGray
     Stop-Process -Id $Listener.OwningProcess -Force -ErrorAction Stop
-
     for ($attempt = 1; $attempt -le 30; $attempt++) {
-        if (-not (Get-BthwaniDevSessionBrokerListener)) {
-            return
-        }
+        if (-not (Get-BthwaniDevSessionBrokerListener)) { return }
         Start-Sleep -Milliseconds 100
     }
-
     throw "Stale local dev session broker did not release port $DevSessionBrokerPort."
 }
 
@@ -203,17 +141,10 @@ function Ensure-BthwaniDevSessionBroker {
     if ($listener) {
         Stop-BthwaniStaleDevSessionBroker -Listener $listener
     }
-    if (-not (Test-Path -LiteralPath $DevSessionBrokerScript -PathType Leaf)) {
-        throw "Local development session broker not found: $DevSessionBrokerScript"
-    }
 
     $node = Get-Command node.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (-not $node) {
-        $node = Get-Command node -ErrorAction SilentlyContinue | Select-Object -First 1
-    }
-    if (-not $node) {
-        throw "Node.js was not found; the local development session broker cannot start."
-    }
+    if (-not $node) { $node = Get-Command node -ErrorAction SilentlyContinue | Select-Object -First 1 }
+    if (-not $node) { throw "Node.js was not found; the local development session broker cannot start." }
 
     $runtimeMode = ([string] $env:BTHWANI_RUNTIME_MODE).Trim().ToLowerInvariant()
     $nodeMode = ([string] $env:NODE_ENV).Trim().ToLowerInvariant()
@@ -222,7 +153,6 @@ function Ensure-BthwaniDevSessionBroker {
     }
 
     $env:BTHWANI_DEV_SESSION_BROKER_PORT = [string] $DevSessionBrokerPort
-
     $process = Start-Process `
         -FilePath $node.Source `
         -ArgumentList @($DevSessionBrokerScript) `
@@ -239,8 +169,23 @@ function Ensure-BthwaniDevSessionBroker {
         }
         Start-Sleep -Milliseconds 100
     }
-
     throw "Local development session broker contract v$DevSessionBrokerContractVersion did not become healthy on port $DevSessionBrokerPort."
+}
+
+function Assert-BthwaniMetroPortAvailable {
+    if (-not (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue)) {
+        return
+    }
+    $listener = Get-NetTCPConnection -State Listen -LocalPort $MetroPort -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if (-not $listener) { return }
+
+    $ownerLabel = "PID $($listener.OwningProcess)"
+    try {
+        $owner = Get-Process -Id $listener.OwningProcess -ErrorAction Stop
+        $ownerLabel = "$($owner.ProcessName) (PID $($owner.Id))"
+    } catch { }
+    throw "Metro port $MetroPort is already in use by $ownerLabel. Stop that process before starting $AppKey."
 }
 
 Import-BthwaniMobileEnvironment
@@ -252,246 +197,256 @@ foreach ($name in @(
     Copy-AppScopedEnvironmentValue -Name $name
 }
 
-. $AdbHelper
+$requestedTransport = ([string] $env:BTHWANI_MOBILE_TRANSPORT).Trim().ToLowerInvariant()
+if (-not $requestedTransport) { $requestedTransport = "lan" }
+if ($requestedTransport -notin @("lan", "adb", "auto")) {
+    throw "BTHWANI_MOBILE_TRANSPORT must be one of: lan, adb, auto."
+}
 
-# Metro and local APIs are reached from Android through explicit reverse bridges.
-$env:NODE_OPTIONS = "--dns-result-order=ipv4first"
-$env:REACT_NATIVE_PACKAGER_HOSTNAME = "127.0.0.1"
-$env:EXPO_PACKAGER_PROXY_URL = "http://127.0.0.1:$MetroPort"
-$env:BTHWANI_ADB_REVERSE_ENABLED = "1"
-$env:EXPO_PUBLIC_ADB_REVERSE_ENABLED = "true"
-$env:EXPO_PUBLIC_DSH_API_BASE_URL       = "http://127.0.0.1:58080"
-$env:NEXT_PUBLIC_DSH_API_BASE_URL       = "http://127.0.0.1:58080"
-$env:EXPO_PUBLIC_IDENTITY_API_BASE_URL  = "http://127.0.0.1:58082"
-$env:NEXT_PUBLIC_IDENTITY_API_BASE_URL  = "http://127.0.0.1:58082"
-$env:EXPO_PUBLIC_WORKFORCE_API_BASE_URL = "http://127.0.0.1:58086"
-$env:NEXT_PUBLIC_WORKFORCE_API_BASE_URL = "http://127.0.0.1:58086"
-
-$BackendState = Ensure-BthwaniMobileBackend
-$DevSessionBrokerState = Ensure-BthwaniDevSessionBroker
-Set-Location -LiteralPath $RuntimeDir
-
-# Fixed ports are part of the multi-app runtime contract. Never let Expo switch
-# interactively to another port because that invalidates adb reverse and scripts.
-$ExistingListener = Get-NetTCPConnection `
-    -State Listen `
-    -LocalPort $MetroPort `
-    -ErrorAction SilentlyContinue |
-    Select-Object -First 1
-
-if ($ExistingListener) {
-    $OwnerLabel = "PID $($ExistingListener.OwningProcess)"
+$resolvedTransport = $null
+$lanContext = $null
+$autoFallbackReason = ""
+if ($requestedTransport -in @("lan", "auto")) {
+    . $LanHelper
     try {
-        $OwnerProcess = Get-Process -Id $ExistingListener.OwningProcess -ErrorAction Stop
-        $OwnerLabel = "$($OwnerProcess.ProcessName) (PID $($OwnerProcess.Id))"
+        $lanContext = Resolve-BthwaniMobileLanContext
+        $resolvedTransport = "lan"
     } catch {
-        # The listener can disappear between discovery and process resolution.
+        if ($requestedTransport -eq "lan") { throw }
+        $autoFallbackReason = $_.Exception.Message
     }
-    throw "Metro port $MetroPort is already in use by $OwnerLabel. Stop that process before starting $AppKey."
 }
 
-# LAN information is diagnostic only. Runtime traffic uses adb reverse, so VPNs,
-# missing default routes, or network-interface changes must not block startup.
-$LanIp = "not-required (adb reverse)"
-try {
-    $DefaultRoute = Get-NetRoute `
-        -AddressFamily IPv4 `
-        -DestinationPrefix "0.0.0.0/0" `
-        -ErrorAction Stop |
-        Sort-Object RouteMetric, InterfaceMetric |
-        Select-Object -First 1
-
-    if ($DefaultRoute) {
-        $HostAddress = Get-NetIPAddress `
-            -AddressFamily IPv4 `
-            -InterfaceIndex $DefaultRoute.InterfaceIndex `
-            -ErrorAction Stop |
-            Where-Object {
-                -not $_.SkipAsSource -and
-                $_.IPAddress -notmatch "^(127\.|169\.254\.)"
-            } |
-            Select-Object -First 1
-
-        if ($HostAddress) {
-            $LanIp = $HostAddress.IPAddress
-        }
+if (-not $resolvedTransport) {
+    if (-not (Test-Path -LiteralPath $AdbHelper -PathType Leaf)) {
+        throw "ADB fallback was selected but the ADB helper is missing: $AdbHelper"
     }
-} catch {
-    # The selected device still reaches localhost through adb reverse.
+    . $AdbHelper
+    $resolvedTransport = "adb"
 }
 
-$AdbPath = Resolve-BthwaniAdb
-Start-BthwaniAdbServer -AdbPath $AdbPath
-Write-Host "ADB server ready."
-
-$Devices = Get-BthwaniAndroidDevices -AdbPath $AdbPath
-$SelectedDevice = Select-BthwaniAndroidDevice -Devices $Devices
-$SelectedSerial = $SelectedDevice.Serial
-$env:ANDROID_SERIAL = $SelectedSerial
-$env:BTHWANI_ANDROID_SERIAL = $SelectedSerial
-$env:ADB = $AdbPath
-
-$Ports = @(58080, 58082, 58086, 58100, 59000, $MetroPort)
-Invoke-BthwaniAdbReverse `
-    -AdbPath $AdbPath `
-    -Serial $SelectedSerial `
-    -Ports $Ports
-
-$ShouldMirror = $MirrorDevice -or $env:BTHWANI_MIRROR_DEVICE -eq "1"
-if ($ShouldMirror) {
-    $Scrcpy = Get-Command scrcpy.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (-not $Scrcpy) {
-        throw "scrcpy.exe was requested but was not found in PATH."
-    }
-    Start-Process -FilePath $Scrcpy.Source -ArgumentList @("-s", $SelectedSerial)
+if ($resolvedTransport -eq "lan" -and ($MirrorDevice -or $env:BTHWANI_MIRROR_DEVICE -eq "1")) {
+    throw "Device mirroring is an ADB diagnostic capability and is not part of LAN runtime. Use AirDroid Cast independently, or run with BTHWANI_MOBILE_TRANSPORT=adb when scrcpy is required."
 }
 
-$ShouldClearCache = $ClearCache -or $env:BTHWANI_METRO_CLEAR -eq "1"
-$WatchdogSetting = [string] $env:BTHWANI_ADB_WATCHDOG
-$WatchdogEnabled = $WatchdogSetting.Trim().ToLowerInvariant() -in @("1", "true", "reverse")
-$WatchdogEligible = $SelectedDevice.IsTcpIp -and $WatchdogEnabled
-$SentryState = if ([string]::IsNullOrWhiteSpace($env:EXPO_PUBLIC_SENTRY_DSN)) {
+$devSessionBrokerState = Ensure-BthwaniDevSessionBroker
+Set-Location -LiteralPath $RuntimeDir
+Assert-BthwaniMetroPortAvailable
+
+$shouldClearCache = $ClearCache -or $env:BTHWANI_METRO_CLEAR -eq "1"
+$sentryState = if ([string]::IsNullOrWhiteSpace($env:EXPO_PUBLIC_SENTRY_DSN)) {
     "disabled (configure infra/local/mobile.env)"
 } else {
     "enabled"
 }
 
-Write-Host ""
-Write-Host "=== MOBILE RUNTIME ==="
-Write-Host "App:          $AppKey"
-Write-Host "Runtime:      $RuntimeDir"
-Write-Host "Backend:      $BackendState"
-Write-Host "Dev login:    $DevSessionBrokerState (127.0.0.1:$DevSessionBrokerPort, contract v$DevSessionBrokerContractVersion)"
-Write-Host "Metro URL:    http://127.0.0.1:$MetroPort"
-Write-Host "LAN IP:       $LanIp"
-Write-Host "ADB:          $AdbPath"
-Write-Host "Device:       $SelectedSerial"
-Write-Host "Transport:    $(if ($SelectedDevice.IsTcpIp) { 'tcp' } else { 'usb' })"
-Write-Host "Metro port:   $MetroPort"
-Write-Host "Reverse:      verified"
-Write-Host "Watchdog:     $(if ($WatchdogEligible) { 'reverse-only' } else { 'off' })"
-Write-Host "Sentry:       $SentryState"
-Write-Host "Mirror:       $ShouldMirror"
-Write-Host "Cache clear:  $ShouldClearCache"
-Write-Host ""
+$metroHost = ""
+$expoHostFlag = ""
+$transportDetail = ""
+$devLoginDetail = ""
+$reverseDetail = "not-used"
+$watchdogDetail = "off"
+$gatewayDetail = "not-used"
+$adbPath = $null
+$selectedDevice = $null
+$selectedSerial = ""
+$ports = @()
+$watchdogEligible = $false
 
-$ExpoArguments = @(
-    "exec",
-    "expo",
-    "start",
-    "--dev-client",
-    "--localhost",
-    "--port",
-    [string] $MetroPort
+Clear-BthwaniProcessEnvironment -Names @(
+    "EXPO_PUBLIC_BTHWANI_DEV_GATEWAY_BASE_URL",
+    "EXPO_PUBLIC_BTHWANI_DEV_GATEWAY_TOKEN",
+    "ANDROID_SERIAL",
+    "BTHWANI_ANDROID_SERIAL",
+    "ADB"
 )
 
-if ($ShouldClearCache) {
-    $ExpoArguments += "--clear"
+$env:NODE_OPTIONS = "--dns-result-order=ipv4first"
+$env:BTHWANI_MOBILE_TRANSPORT_RESOLVED = $resolvedTransport
+$env:EXPO_PUBLIC_BTHWANI_MOBILE_TRANSPORT = $resolvedTransport
+
+if ($resolvedTransport -eq "lan") {
+    $gateway = Ensure-BthwaniMobileDevGateway `
+        -RepoRoot $RepoRoot `
+        -LanHost $lanContext.Host `
+        -Port $DevGatewayPort `
+        -ContractVersion $DevGatewayContractVersion
+
+    $metroHost = [string] $lanContext.Host
+    $expoHostFlag = "--lan"
+    $gatewayBase = [string] $gateway.BaseUrl
+
+    $env:BTHWANI_ADB_REVERSE_ENABLED = "0"
+    $env:EXPO_PUBLIC_ADB_REVERSE_ENABLED = "false"
+    $env:EXPO_PUBLIC_BTHWANI_DEV_GATEWAY_BASE_URL = $gatewayBase
+    $env:EXPO_PUBLIC_BTHWANI_DEV_GATEWAY_TOKEN = [string] $gateway.Capability
+    $env:EXPO_PUBLIC_DSH_API_BASE_URL = $gatewayBase
+    $env:EXPO_PUBLIC_IDENTITY_API_BASE_URL = $gatewayBase
+    $env:EXPO_PUBLIC_WORKFORCE_API_BASE_URL = $gatewayBase
+
+    $transportDetail = "lan ($($lanContext.Source), profile=$($lanContext.NetworkCategory))"
+    $gatewayDetail = "$($gateway.State) $gatewayBase (contract v$DevGatewayContractVersion, pid=$($gateway.Pid))"
+    $devLoginDetail = "$devSessionBrokerState via gateway -> 127.0.0.1:$DevSessionBrokerPort"
+} else {
+    $metroHost = "127.0.0.1"
+    $expoHostFlag = "--localhost"
+
+    $env:BTHWANI_ADB_REVERSE_ENABLED = "1"
+    $env:EXPO_PUBLIC_ADB_REVERSE_ENABLED = "true"
+    $env:EXPO_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
+    $env:EXPO_PUBLIC_IDENTITY_API_BASE_URL = "http://127.0.0.1:58082"
+    $env:EXPO_PUBLIC_WORKFORCE_API_BASE_URL = "http://127.0.0.1:58086"
+
+    $adbPath = Resolve-BthwaniAdb
+    Start-BthwaniAdbServer -AdbPath $adbPath
+    $devices = Get-BthwaniAndroidDevices -AdbPath $adbPath
+    $selectedDevice = Select-BthwaniAndroidDevice -Devices $devices
+    $selectedSerial = $selectedDevice.Serial
+    $env:ANDROID_SERIAL = $selectedSerial
+    $env:BTHWANI_ANDROID_SERIAL = $selectedSerial
+    $env:ADB = $adbPath
+
+    $ports = @(58080, 58082, 58086, 58100, 59000, $MetroPort)
+    Invoke-BthwaniAdbReverse -AdbPath $adbPath -Serial $selectedSerial -Ports $ports
+
+    $shouldMirror = $MirrorDevice -or $env:BTHWANI_MIRROR_DEVICE -eq "1"
+    if ($shouldMirror) {
+        $scrcpy = Get-Command scrcpy.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $scrcpy) { throw "scrcpy.exe was requested but was not found in PATH." }
+        Start-Process -FilePath $scrcpy.Source -ArgumentList @("-s", $selectedSerial)
+    }
+
+    $watchdogSetting = ([string] $env:BTHWANI_ADB_WATCHDOG).Trim().ToLowerInvariant()
+    $watchdogEnabled = $watchdogSetting -in @("1", "true", "reverse")
+    $watchdogEligible = $selectedDevice.IsTcpIp -and $watchdogEnabled
+    $transportDetail = "adb/$(if ($selectedDevice.IsTcpIp) { 'tcp' } else { 'usb' })"
+    $devLoginDetail = "$devSessionBrokerState via verified reverse -> 127.0.0.1:$DevSessionBrokerPort"
+    $reverseDetail = "verified"
+    $watchdogDetail = if ($watchdogEligible) { "reverse-only" } else { "off" }
 }
 
-# Expo's --android path can repeatedly pipe ADB output after the stream closes on
-# TCP devices. Start Metro without it and open the development client once after
-# the fixed port is listening.
-$SlugByApp = @{
+$env:REACT_NATIVE_PACKAGER_HOSTNAME = $metroHost
+$env:EXPO_PACKAGER_PROXY_URL = "http://${metroHost}:$MetroPort"
+
+$slugByApp = @{
     "app-client"  = "app-client-next"
     "app-partner" = "app-partner-next"
     "app-captain" = "app-captain-next"
     "app-field"   = "app-field-next"
 }
-$EncodedMetroUrl = [Uri]::EscapeDataString("http://127.0.0.1:$MetroPort")
-$DevelopmentClientUrl = "exp+$($SlugByApp[$AppKey])://expo-development-client/?url=$EncodedMetroUrl"
-$AndroidLaunchJob = Start-Job `
-    -ArgumentList @($AdbPath, $SelectedSerial, $MetroPort, $DevelopmentClientUrl) `
-    -ScriptBlock {
-        param(
-            [string] $LaunchAdb,
-            [string] $LaunchSerial,
-            [int] $LaunchPort,
-            [string] $LaunchUrl
-        )
+$encodedMetroUrl = [Uri]::EscapeDataString("http://${metroHost}:$MetroPort")
+$developmentClientUrl = "exp+$($slugByApp[$AppKey])://expo-development-client/?url=$encodedMetroUrl"
 
-        $ErrorActionPreference = "SilentlyContinue"
-        for ($attempt = 1; $attempt -le 120; $attempt++) {
-            $client = [Net.Sockets.TcpClient]::new()
-            try {
-                $connect = $client.ConnectAsync("127.0.0.1", $LaunchPort)
-                if ($connect.Wait(500) -and $client.Connected) {
-                    & $LaunchAdb -s $LaunchSerial shell am start -W `
-                        -a android.intent.action.VIEW `
-                        -d $LaunchUrl 2>$null | Out-Null
-                    return
+Write-Host ""
+Write-Host "=== MOBILE RUNTIME ==="
+Write-Host "App:          $AppKey"
+Write-Host "Runtime:      $RuntimeDir"
+Write-Host "Transport:    $transportDetail"
+if ($requestedTransport -eq "auto" -and $resolvedTransport -eq "adb") {
+    Write-Host "LAN fallback: $autoFallbackReason"
+}
+Write-Host "Metro URL:    http://${metroHost}:$MetroPort"
+Write-Host "Dev Client:   $developmentClientUrl"
+Write-Host "Gateway:      $gatewayDetail"
+Write-Host "Dev login:    $devLoginDetail"
+Write-Host "Reverse:      $reverseDetail"
+Write-Host "Watchdog:     $watchdogDetail"
+Write-Host "Sentry:       $sentryState"
+Write-Host "Cache clear:  $shouldClearCache"
+if ($resolvedTransport -eq "adb") {
+    Write-Host "ADB:          $adbPath"
+    Write-Host "Device:       $selectedSerial"
+} else {
+    Write-Host "ADB:          not used"
+    Write-Host "Device open:  open the installed Dev Client manually; AirDroid/scrcpy are independent of LAN runtime"
+}
+Write-Host ""
+
+$expoArguments = @(
+    "exec",
+    "expo",
+    "start",
+    "--dev-client",
+    $expoHostFlag,
+    "--port",
+    [string] $MetroPort
+)
+if ($shouldClearCache) { $expoArguments += "--clear" }
+
+$androidLaunchJob = $null
+if ($resolvedTransport -eq "adb") {
+    $androidLaunchJob = Start-Job `
+        -ArgumentList @($adbPath, $selectedSerial, $MetroPort, $developmentClientUrl) `
+        -ScriptBlock {
+            param(
+                [string] $LaunchAdb,
+                [string] $LaunchSerial,
+                [int] $LaunchPort,
+                [string] $LaunchUrl
+            )
+            $ErrorActionPreference = "SilentlyContinue"
+            for ($attempt = 1; $attempt -le 120; $attempt++) {
+                $client = [Net.Sockets.TcpClient]::new()
+                try {
+                    $connect = $client.ConnectAsync("127.0.0.1", $LaunchPort)
+                    if ($connect.Wait(500) -and $client.Connected) {
+                        & $LaunchAdb -s $LaunchSerial shell am start -W `
+                            -a android.intent.action.VIEW `
+                            -d $LaunchUrl 2>$null | Out-Null
+                        return
+                    }
+                } catch { } finally {
+                    $client.Dispose()
                 }
-            } catch {
-                # Metro is still starting.
-            } finally {
-                $client.Dispose()
+                Start-Sleep -Seconds 1
             }
-            Start-Sleep -Seconds 1
+            throw "Metro port $LaunchPort did not become ready for Android launch."
         }
-        throw "Metro port $LaunchPort did not become ready for Android launch."
-    }
+}
 
-# Optional TCP watchdog repairs only missing reverse mappings. It deliberately
-# never runs `adb disconnect` or `adb connect`, which previously caused periodic
-# Wi-Fi transport drops and interrupted scrcpy/Metro sessions.
-$AdbWatchdog = $null
-if ($WatchdogEligible) {
-    $WatchPortsCsv = $Ports -join ","
-    $AdbWatchdog = Start-Job `
-        -ArgumentList @($AdbPath, $SelectedSerial, $WatchPortsCsv) `
+$adbWatchdog = $null
+if ($resolvedTransport -eq "adb" -and $watchdogEligible) {
+    $watchPortsCsv = $ports -join ","
+    $adbWatchdog = Start-Job `
+        -ArgumentList @($adbPath, $selectedSerial, $watchPortsCsv) `
         -ScriptBlock {
             param(
                 [string] $WatchAdb,
                 [string] $WatchSerial,
                 [string] $WatchPortsCsv
             )
-
             $ErrorActionPreference = "SilentlyContinue"
             [int[]] $WatchPorts = @(
                 $WatchPortsCsv.Split(",", [StringSplitOptions]::RemoveEmptyEntries) |
                     ForEach-Object { [int] $_ }
             )
-
             while ($true) {
-                $State = (
-                    & $WatchAdb -s $WatchSerial get-state 2>$null |
-                    Out-String
-                ).Trim()
-
-                if ($LASTEXITCODE -eq 0 -and $State -eq "device") {
-                    $Mappings = @(
+                $state = (& $WatchAdb -s $WatchSerial get-state 2>$null | Out-String).Trim()
+                if ($LASTEXITCODE -eq 0 -and $state -eq "device") {
+                    $mappings = @(
                         & $WatchAdb -s $WatchSerial reverse --list 2>$null |
                         ForEach-Object { [string] $_ }
                     )
-
-                    foreach ($WatchPort in ($WatchPorts | Select-Object -Unique)) {
-                        $Pattern = "tcp:$WatchPort\s+tcp:$WatchPort(?:\s|$)"
-                        $Exists = @($Mappings | Where-Object { $_ -match $Pattern }).Count -gt 0
-                        if (-not $Exists) {
-                            & $WatchAdb `
-                                -s $WatchSerial `
-                                reverse `
-                                "tcp:$WatchPort" `
-                                "tcp:$WatchPort" `
-                                2>$null |
-                                Out-Null
+                    foreach ($watchPort in ($WatchPorts | Select-Object -Unique)) {
+                        $pattern = "tcp:$watchPort\s+tcp:$watchPort(?:\s|$)"
+                        $exists = @($mappings | Where-Object { $_ -match $pattern }).Count -gt 0
+                        if (-not $exists) {
+                            & $WatchAdb -s $WatchSerial reverse "tcp:$watchPort" "tcp:$watchPort" 2>$null | Out-Null
                         }
                     }
                 }
-
                 Start-Sleep -Seconds 10
             }
         }
 }
 
 try {
-    & pnpm @ExpoArguments
-
+    & pnpm @expoArguments
     if ($LASTEXITCODE -ne 0) {
         throw "Expo runtime failed for $AppKey."
     }
 } finally {
-    foreach ($job in @($AndroidLaunchJob, $AdbWatchdog)) {
+    foreach ($job in @($androidLaunchJob, $adbWatchdog)) {
         if ($null -ne $job) {
             Stop-Job -Job $job -ErrorAction SilentlyContinue
             Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
