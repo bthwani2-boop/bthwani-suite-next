@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
 import {
@@ -68,15 +68,27 @@ function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
     fetchReadiness();
   }, [workforce.state]);
 
-  if (readiness && readiness.status === "BLOCKED") {
+  if (!readiness) {
+    return (
+      <View style={styles.readinessState}>
+        <ActivityIndicator accessibilityLabel="جارٍ التحقق من جاهزية الكابتن..." />
+      </View>
+    );
+  }
+
+  if (readiness.status === "BLOCKED") {
     return <ReadinessGateScreen readiness={readiness} onRefresh={fetchReadiness} />;
   }
 
-  // Only render the operational surface after Workforce explicitly allows it.
-  if (readiness && readiness.status === "ALLOWED") {
+  if (readiness.status === "ALLOWED") {
     return <>{children}</>;
   }
-  return null;
+
+  return (
+    <View style={styles.readinessState}>
+      <Text style={styles.readinessError}>حالة جاهزية غير معروفة. يرجى المحاولة مرة أخرى.</Text>
+    </View>
+  );
 }
 
 function AppContent() {
@@ -112,5 +124,15 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colorRoles.surfaceBase,
+  },
+  readinessState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: colorRoles.surfaceBase,
+  },
+  readinessError: {
+    textAlign: "center",
   },
 });
