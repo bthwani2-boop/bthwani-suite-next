@@ -11,15 +11,15 @@ import (
 
 	"dsh-api/internal/auth"
 	"dsh-api/internal/homediscovery"
+	"dsh-api/internal/mapproviders"
 	"dsh-api/internal/media"
 	"dsh-api/internal/partner"
 	"dsh-api/internal/platform/changeset"
 	"dsh-api/internal/platform/provider"
+	"dsh-api/internal/platformclient"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
-	"dsh-api/internal/platformclient"
 	"dsh-api/internal/workforceclient"
-	"dsh-api/internal/mapproviders"
 )
 
 type protectedStoreServer struct {
@@ -226,10 +226,6 @@ func (s *protectedStoreServer) handleAddPartnerDocument(w http.ResponseWriter, r
 	s.servePartnerPermissionHandler(w, r, partner.HandleAddDocument(s.db), PartnersPermissionManage)
 }
 
-func (s *protectedStoreServer) handleReviewPartnerDocument(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerPermissionHandler(w, r, partner.HandleReviewDocument(s.db), PartnersPermissionManage)
-}
-
 func (s *protectedStoreServer) handleListPartnerStores(w http.ResponseWriter, r *http.Request) {
 	s.servePartnerPermissionHandler(w, r, partner.HandleListPartnerStores(s.db), PartnersPermissionRead)
 }
@@ -430,8 +426,6 @@ func (s *protectedStoreServer) handleStoreAudit(w http.ResponseWriter, r *http.R
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"events": events})
 }
-
-
 
 func (s *protectedStoreServer) handlePartnerGetCourierSettings(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "partner")
