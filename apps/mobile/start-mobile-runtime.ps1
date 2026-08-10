@@ -199,10 +199,19 @@ foreach ($name in @(
     Copy-AppScopedEnvironmentValue -Name $name
 }
 
+$requestedPlatform = ([string] $env:BTHWANI_MOBILE_PLATFORM).Trim().ToLowerInvariant()
+if (-not $requestedPlatform) { $requestedPlatform = "auto" }
+if ($requestedPlatform -notin @("auto", "android", "ios")) {
+    throw "BTHWANI_MOBILE_PLATFORM must be one of: auto, android, ios."
+}
+
 $requestedTransport = ([string] $env:BTHWANI_MOBILE_TRANSPORT).Trim().ToLowerInvariant()
-if (-not $requestedTransport) { $requestedTransport = "lan" }
+if (-not $requestedTransport) { $requestedTransport = "auto" }
 if ($requestedTransport -notin @("lan", "adb", "auto")) {
     throw "BTHWANI_MOBILE_TRANSPORT must be one of: lan, adb, auto."
+}
+if ($requestedTransport -eq "adb" -and $requestedPlatform -eq "ios") {
+    throw "BTHWANI_MOBILE_TRANSPORT=adb is Android-only; iOS does not support the ADB fallback. Use LAN for iOS development."
 }
 
 $resolvedTransport = $null
@@ -220,15 +229,29 @@ if ($requestedTransport -in @("lan", "auto")) {
 }
 
 if (-not $resolvedTransport) {
+    if ($requestedPlatform -eq "ios") {
+        throw "LAN transport could not be resolved for iOS. iOS does not support the ADB fallback. LAN failure: $autoFallbackReason"
+    }
+    if ($requestedTransport -eq "auto" -and $requestedPlatform -eq "auto" -and $IsMacOS) {
+        throw "LAN transport could not be resolved on macOS while BTHWANI_MOBILE_PLATFORM=auto. Set BTHWANI_MOBILE_PLATFORM=android to permit Android ADB fallback, or repair LAN for iOS. LAN failure: $autoFallbackReason"
+    }
     if (-not (Test-Path -LiteralPath $AdbHelper -PathType Leaf)) {
-        throw "ADB fallback was selected but the ADB helper is missing: $AdbHelper"
+        throw "Android ADB fallback was selected but the ADB helper is missing: $AdbHelper"
     }
     . $AdbHelper
     $resolvedTransport = "adb"
 }
 
 if ($resolvedTransport -eq "lan" -and ($MirrorDevice -or $env:BTHWANI_MIRROR_DEVICE -eq "1")) {
-    throw "Device mirroring is an ADB diagnostic capability and is not part of LAN runtime. Use AirDroid Cast independently, or run with BTHWANI_MOBILE_TRANSPORT=adb when scrcpy is required."
+    throw "Device mirroring is not part of the LAN runtime contract. Use AirDroid Cast independently; scrcpy requires the Android ADB transport."
+}
+
+$resolvedPlatform = if ($resolvedTransport -eq "adb") {
+    "android"
+} elseif ($requestedPlatform -eq "auto") {
+    "shared"
+} else {
+    $requestedPlatform
 }
 
 $devSessionBrokerState = Ensure-BthwaniDevSessionBroker
@@ -257,7 +280,7 @@ $watchdogEligible = $false
 
 # Gateway values are generated per LAN gateway instance and must never leak from
 # a previous invocation. ADB preferences are intentionally preserved until the
-# ADB branch consumes them.
+# Android ADB branch consumes them.
 Clear-BthwaniProcessEnvironment -Names @(
     "EXPO_PUBLIC_BTHWANI_DEV_GATEWAY_BASE_URL",
     "EXPO_PUBLIC_BTHWANI_DEV_GATEWAY_TOKEN"
@@ -269,6 +292,8 @@ if ($currentNodeOptions -notmatch '(?:^|\s)--dns-result-order=') {
 }
 $env:BTHWANI_MOBILE_TRANSPORT_RESOLVED = $resolvedTransport
 $env:EXPO_PUBLIC_BTHWANI_MOBILE_TRANSPORT = $resolvedTransport
+$env:BTHWANI_MOBILE_PLATFORM_RESOLVED = $resolvedPlatform
+$env:EXPO_PUBLIC_BTHWANI_MOBILE_PLATFORM = $resolvedPlatform
 
 if ($resolvedTransport -eq "lan") {
     Clear-BthwaniProcessEnvironment -Names @("ANDROID_SERIAL", "BTHWANI_ANDROID_SERIAL", "ADB")
@@ -348,6 +373,7 @@ Write-Host ""
 Write-Host "=== MOBILE RUNTIME ==="
 Write-Host "App:          $AppKey"
 Write-Host "Runtime:      $RuntimeDir"
+Write-Host "Platform:     $resolvedPlatform"
 Write-Host "Transport:    $transportDetail"
 if ($requestedTransport -eq "auto" -and $resolvedTransport -eq "adb") {
     Write-Host "LAN fallback: $autoFallbackReason"
@@ -365,7 +391,7 @@ if ($resolvedTransport -eq "adb") {
     Write-Host "Device:       $selectedSerial"
 } else {
     Write-Host "ADB:          not used"
-    Write-Host "Device open:  open the installed Dev Client manually; AirDroid/scrcpy are independent of LAN runtime"
+    Write-Host "Device open:  open the installed Dev Client manually; mirroring is independent of LAN runtime"
 }
 Write-Host ""
 

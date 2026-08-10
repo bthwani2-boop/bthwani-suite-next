@@ -27,7 +27,7 @@ test("all mobile wrappers stay thin and bind canonical fixed Metro ports", () =>
   }
 });
 
-test("mobile runtime defaults to LAN, resolves LAN before optional ADB fallback, and keeps backend lifecycle outside transport", () => {
+test("mobile runtime defaults to auto, resolves LAN before platform-aware Android fallback, and keeps backend lifecycle outside transport", () => {
   const shared = read("apps/mobile/mobile.ps1");
   const launcher = read("apps/mobile/start-mobile-runtime.ps1");
 
@@ -36,12 +36,16 @@ test("mobile runtime defaults to LAN, resolves LAN before optional ADB fallback,
   assert.doesNotMatch(launcher, /Ensure-BthwaniMobileBackend|invoke-runtime-phase\.ps1|runtime:mobile:up|bootstrap-dev/);
 
   assert.match(launcher, /BTHWANI_MOBILE_TRANSPORT/);
-  assert.match(launcher, /if \(-not \$requestedTransport\) \{ \$requestedTransport = "lan" \}/);
+  assert.match(launcher, /if \(-not \$requestedTransport\) \{ \$requestedTransport = "auto" \}/);
+  assert.match(launcher, /BTHWANI_MOBILE_PLATFORM/);
+  assert.match(launcher, /if \(-not \$requestedPlatform\) \{ \$requestedPlatform = "auto" \}/);
+  assert.match(launcher, /BTHWANI_MOBILE_PLATFORM must be one of: auto, android, ios/);
+  assert.match(launcher, /iOS does not support the ADB fallback/);
   assert.match(launcher, /Resolve-BthwaniMobileLanContext/);
   assert.match(launcher, /\. \$AdbHelper/);
   assert.ok(
     launcher.indexOf("Resolve-BthwaniMobileLanContext") < launcher.indexOf(". $AdbHelper"),
-    "auto must attempt LAN before loading the ADB helper",
+    "auto must attempt LAN before loading the Android ADB helper",
   );
   assert.match(launcher, /"--lan"/);
   assert.match(launcher, /"--localhost"/);
@@ -139,7 +143,7 @@ test("developer session and presigned media clients use the governed gateway onl
   assert.match(partnerUpload, /rewriteMobileDevPresignedMediaUrl/);
 });
 
-test("ADB remains an explicit fallback with verified reverse mappings and preserves explicit device selection", () => {
+test("ADB remains an explicit Android fallback with verified reverse mappings and preserves explicit device selection", () => {
   const helper = read("apps/mobile/mobile-adb.ps1");
   const launcher = read("apps/mobile/start-mobile-runtime.ps1");
   for (const marker of [
@@ -182,7 +186,8 @@ test("app env examples cannot reintroduce active direct LAN backend configuratio
     assert.match(envExample, /BThwani Mobile Dev Gateway/);
   }
   const mobileEnv = read("infra/local/mobile.env.example");
-  assert.match(mobileEnv, /^BTHWANI_MOBILE_TRANSPORT=lan$/m);
+  assert.match(mobileEnv, /^BTHWANI_MOBILE_TRANSPORT=auto$/m);
+  assert.match(mobileEnv, /^BTHWANI_MOBILE_PLATFORM=auto$/m);
   assert.match(mobileEnv, /^BTHWANI_MOBILE_LAN_HOST=$/m);
 });
 
