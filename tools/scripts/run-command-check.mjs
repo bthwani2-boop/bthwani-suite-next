@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import { resolvePackageManagerInvocation } from "./lib/package-manager-invocation.mjs";
 
 function fail(message, exitCode = 2) {
   process.stderr.write(`${message}\n`);
@@ -27,13 +28,15 @@ for (let index = 0; index < options.length; index += 1) {
 }
 
 const [command, ...commandArgs] = process.argv.slice(separatorIndex + 1);
+const invocation = resolvePackageManagerInvocation(command, commandArgs, process.env);
 process.stdout.write(`[${label}] ${[command, ...commandArgs].join(" ")}\n`);
 
-const result = spawnSync(command, commandArgs, {
+const result = spawnSync(invocation.executable, invocation.args, {
   cwd: process.cwd(),
   env: process.env,
   stdio: "inherit",
-  shell: process.platform === "win32",
+  shell: false,
+  windowsHide: true,
 });
 
 if (result.error) {
