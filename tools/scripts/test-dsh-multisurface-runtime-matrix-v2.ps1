@@ -15,6 +15,9 @@ if ([string]::IsNullOrWhiteSpace($IdentityPassword)) {
   $IdentityPassword = Get-LocalPassword
 }
 $RunId = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
+$RuntimeComposeFile = Join-Path $RepoRoot "infra/docker/compose.runtime.yml"
+$RuntimeEnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
 
 function Get-Value([object]$Object, [string]$Name) {
   if ($null -eq $Object) { return $null }
@@ -53,6 +56,68 @@ function Require([bool]$Condition, [string]$Message) {
   if (-not $Condition) { throw $Message }
 }
 
+function Invoke-DshRuntimeScalar {
+  param([Parameter(Mandatory = $true)][string]$Statement)
+
+  foreach ($required in @($RuntimeComposeFile, $RuntimeEnvFile)) {
+    if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
+      throw "governed runtime authority is missing: $required"
+    }
+  }
+
+  $Output = docker compose --env-file $RuntimeEnvFile -f $RuntimeComposeFile exec -T postgres `
+    psql -X -v ON_ERROR_STOP=1 -U dsh_runtime -d dsh_runtime -qAt -c $Statement
+  if ($LASTEXITCODE -ne 0) {
+    throw "governed DSH runtime SQL readback failed with exit code $LASTEXITCODE"
+  }
+  return (($Output -join "`n").Trim())
+}
+
+function Resolve-GovernedStoreServicePoint {
+  param([Parameter(Mandatory = $true)][string]$StoreId)
+
+  $SafeStoreId = $StoreId.Replace("'", "''")
+  $Statement = @"
+WITH target_store AS (
+  SELECT latitude, longitude
+  FROM dsh_stores
+  WHERE id = '$SafeStoreId'
+    AND latitude IS NOT NULL
+    AND longitude IS NOT NULL
+),
+effective_versions AS (
+  SELECT DISTINCT ON (service_area_code)
+         service_area_code, polygon, active, priority, effective_from, expires_at, version
+  FROM dsh_service_area_versions
+  WHERE effective_from <= NOW()
+    AND (expires_at IS NULL OR expires_at > NOW())
+  ORDER BY service_area_code, effective_from DESC, version DESC
+)
+SELECT v.service_area_code || '|' || s.latitude::text || '|' || s.longitude::text
+FROM target_store s
+JOIN effective_versions v
+  ON v.active = TRUE
+ AND ST_Contains(v.polygon, ST_SetSRID(ST_MakePoint(s.longitude, s.latitude), 4326))
+ORDER BY v.priority DESC, v.service_area_code ASC
+LIMIT 1;
+"@
+  $Row = Invoke-DshRuntimeScalar -Statement $Statement
+  Require (-not [string]::IsNullOrWhiteSpace($Row)) "store $StoreId is outside every effective active DSH service-area geofence"
+  $Parts = $Row.Split("|", [StringSplitOptions]::None)
+  Require ($Parts.Count -eq 3) "governed service-area readback returned an invalid row for $StoreId"
+
+  $Latitude = 0.0
+  $Longitude = 0.0
+  Require ([double]::TryParse($Parts[1], [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$Latitude)) "invalid governed latitude for $StoreId"
+  Require ([double]::TryParse($Parts[2], [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$Longitude)) "invalid governed longitude for $StoreId"
+  return [pscustomobject]@{
+    StoreId = $StoreId
+    ServiceAreaCode = $Parts[0]
+    Latitude = $Latitude
+    Longitude = $Longitude
+  }
+}
+
 function Login-Actor([string]$Username, [string]$ExpectedRole) {
   $Login = Invoke-Api POST "$IdentityBaseUrl/auth/login" @{} @{
     username = $Username
@@ -82,20 +147,25 @@ function Find-Id([object[]]$Items, [string]$Id) {
   return @($Items | Where-Object { "$(Get-Value $_ 'id')" -eq $Id })
 }
 
-function Ensure-ClientAddress([object]$Client) {
+function Ensure-ClientAddress([object]$Client, [object]$ServicePoint) {
   $List = Invoke-Api GET "$DshBaseUrl/dsh/client/addresses" (Headers $Client "address-list" -ReadOnly)
   Require-Status $List @(200) "client address list"
   $Addresses = @((Get-Value $List.Json 'addresses'))
-  if ($Addresses.Count -gt 0) { return "$(Get-Value $Addresses[0] 'id')" }
+  $Matching = @($Addresses | Where-Object {
+    "$(Get-Value $_ 'serviceAreaCode')" -eq $ServicePoint.ServiceAreaCode -and
+    [math]::Abs([double](Get-Value $_ 'latitude') - $ServicePoint.Latitude) -lt 0.000001 -and
+    [math]::Abs([double](Get-Value $_ 'longitude') - $ServicePoint.Longitude) -lt 0.000001
+  })
+  if ($Matching.Count -gt 0) { return "$(Get-Value $Matching[0] 'id')" }
 
   $Create = Invoke-Api POST "$DshBaseUrl/dsh/client/addresses" (Headers $Client "address-create") @{
     label = "runtime-$RunId"
     recipientName = "Runtime Client"
     phoneE164 = "+967711111111"
-    addressLine = "Sanaa governed runtime address $RunId"
-    serviceAreaCode = "sanaa"
-    latitude = 15.35
-    longitude = 44.20
+    addressLine = "Governed runtime address $RunId"
+    serviceAreaCode = $ServicePoint.ServiceAreaCode
+    latitude = $ServicePoint.Latitude
+    longitude = $ServicePoint.Longitude
     makeDefault = $true
   }
   Require-Status $Create @(200, 201) "client address create"
@@ -103,15 +173,15 @@ function Ensure-ClientAddress([object]$Client) {
   Require (-not [string]::IsNullOrWhiteSpace($AddressId)) "client address returned no id"
 
   $ReplayHeaders = Headers $Client "address-create-replay"
-  $ReplayHeaders["Idempotency-Key"] = $CreateHeadersKey = "lian-address-replay-$RunId"
+  $ReplayHeaders["Idempotency-Key"] = "lian-address-replay-$RunId"
   $ReplayBody = @{
     label = "runtime-replay-$RunId"
     recipientName = "Runtime Client"
     phoneE164 = "+967711111111"
-    addressLine = "Sanaa governed runtime replay address $RunId"
-    serviceAreaCode = "sanaa"
-    latitude = 15.35
-    longitude = 44.20
+    addressLine = "Governed runtime replay address $RunId"
+    serviceAreaCode = $ServicePoint.ServiceAreaCode
+    latitude = $ServicePoint.Latitude
+    longitude = $ServicePoint.Longitude
     makeDefault = $false
   }
   $ReplayFirst = Invoke-Api POST "$DshBaseUrl/dsh/client/addresses" $ReplayHeaders $ReplayBody
@@ -149,13 +219,14 @@ $Field = [pscustomobject]@{
     -DeviceFingerprint "dsh-multisurface"
   Subject = [string]$FieldProvider.actorId
 }
+$StorePoint = Resolve-GovernedStoreServicePoint -StoreId "store-test-grocery"
 
 $Anonymous = Invoke-Api GET "$DshBaseUrl/dsh/client/orders"
 Require-Status $Anonymous @(401) "anonymous client orders"
 $CrossRole = Invoke-Api GET "$DshBaseUrl/dsh/client/orders" (Headers $Partner "cross-role" -ReadOnly)
 Require-Status $CrossRole @(403) "partner reading client orders"
 
-$AddressId = Ensure-ClientAddress $Client
+$AddressId = Ensure-ClientAddress $Client $StorePoint
 $ExistingCart = Invoke-Api GET "$DshBaseUrl/dsh/client/cart?storeId=store-test-grocery" (Headers $Client "cart-read" -ReadOnly)
 Require-Status $ExistingCart @(200) "client cart read"
 if ($null -ne (Get-Value $ExistingCart.Json 'cart')) {
@@ -241,25 +312,25 @@ Require-Status $CaptainAssignments @(200) "captain assignments"
 Require ((Find-Id @((Get-Value $CaptainAssignments.Json 'assignments')) $AssignmentId).Count -eq 1) "captain did not receive assignment"
 
 $BeforeAcceptLocation = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/location" (Headers $Captain "location-before-accept") @{
-  latitude = 15.35; longitude = 44.20; recordedAt = [DateTimeOffset]::UtcNow.ToString("o")
+  latitude = $StorePoint.Latitude; longitude = $StorePoint.Longitude; recordedAt = [DateTimeOffset]::UtcNow.ToString("o")
 }
 Require-Status $BeforeAcceptLocation @(409) "location before accept"
 $Accept = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/accept" (Headers $Captain "captain-accept")
 Require-Status $Accept @(200) "captain accept"
 $InvalidLocation = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/location" (Headers $Captain "location-invalid") @{
-  latitude = 95; longitude = 44.20; recordedAt = [DateTimeOffset]::UtcNow.ToString("o")
+  latitude = 95; longitude = $StorePoint.Longitude; recordedAt = [DateTimeOffset]::UtcNow.ToString("o")
 }
 Require-Status $InvalidLocation @(400) "invalid captain latitude"
 $OutOfOrder = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" (Headers $Captain "pickup-out-of-order") @{ status = "picked_up" }
 Require-Status $OutOfOrder @(409) "pickup before store arrival"
 $Location = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/location" (Headers $Captain "location-valid") @{
-  latitude = 15.3501; longitude = 44.2001; recordedAt = [DateTimeOffset]::UtcNow.ToString("o")
+  latitude = $StorePoint.Latitude; longitude = $StorePoint.Longitude; recordedAt = [DateTimeOffset]::UtcNow.ToString("o")
 }
 Require-Status $Location @(200) "valid captain location"
 $Tracking = Invoke-Api GET "$DshBaseUrl/dsh/client/orders/$OrderId/tracking" (Headers $Client "tracking" -ReadOnly)
 Require-Status $Tracking @(200) "client tracking"
 $TrackingAssignment = Get-Value $Tracking.Json 'assignment'
-Require ([math]::Abs([double](Get-Value $TrackingAssignment 'lastLatitude') - 15.3501) -lt 0.000001) "tracking latitude mismatch"
+Require ([math]::Abs([double](Get-Value $TrackingAssignment 'lastLatitude') - $StorePoint.Latitude) -lt 0.000001) "tracking latitude mismatch"
 
 foreach ($Status in @("driver_arrived_store", "picked_up", "arrived_customer")) {
   $Progress = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" (Headers $Captain "delivery-$Status") @{ status = $Status }
@@ -292,15 +363,13 @@ $PartnerMatch = Find-Id @((Get-Value $FinalPartner.Json 'orders')) $OrderId
 Require ($PartnerMatch.Count -eq 1 -and "$(Get-Value $PartnerMatch[0] 'status')" -eq "delivered") "partner did not read delivered status"
 
 $OutboxSql = "SELECT COUNT(*) FROM dsh_wlt_outbox_events WHERE event_type='delivery_completed' AND order_id='$OrderId'::uuid AND status IN ('pending','processing','sent');"
-$OutboxCount = docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml exec -T postgres `
-  psql -U dsh_runtime -d dsh_runtime -tAc $OutboxSql
-if ($LASTEXITCODE -ne 0) { throw "could not inspect DSH WLT outbox" }
-Require ([int](($OutboxCount -join "").Trim()) -eq 1) "delivery did not create exactly one WLT outbox event"
+$OutboxCount = Invoke-DshRuntimeScalar -Statement $OutboxSql
+Require ([int]$OutboxCount -eq 1) "delivery did not create exactly one WLT outbox event"
 
 $MockedVisit = Invoke-Api POST "$DshBaseUrl/dsh/field/stores/store-test-grocery/visits" (Headers $Field "field-mocked") @{
-  visitType = "periodic"; storeLatitude = 15.35; storeLongitude = 44.20
+  visitType = "periodic"; storeLatitude = $StorePoint.Latitude; storeLongitude = $StorePoint.Longitude
   startLocation = @{
-    latitude = 15.35; longitude = 44.20; accuracyMeters = 5
+    latitude = $StorePoint.Latitude; longitude = $StorePoint.Longitude; accuracyMeters = 5
     capturedAt = [DateTimeOffset]::UtcNow.ToString("o")
     provider = "android-fused"; deviceReference = "lian-field-$RunId"; isMocked = $true
   }
@@ -309,9 +378,9 @@ Require-Status $MockedVisit @(400) "mocked field GPS"
 Require ("$(Get-Value $MockedVisit.Json 'code')" -eq "LOCATION_MOCKED") "mocked GPS code mismatch"
 
 $ValidVisit = Invoke-Api POST "$DshBaseUrl/dsh/field/stores/store-test-grocery/visits" (Headers $Field "field-visit") @{
-  visitType = "periodic"; storeLatitude = 15.35; storeLongitude = 44.20
+  visitType = "periodic"; storeLatitude = $StorePoint.Latitude; storeLongitude = $StorePoint.Longitude
   startLocation = @{
-    latitude = 15.35; longitude = 44.20; accuracyMeters = 5
+    latitude = $StorePoint.Latitude; longitude = $StorePoint.Longitude; accuracyMeters = 5
     capturedAt = [DateTimeOffset]::UtcNow.ToString("o")
     provider = "android-fused"; deviceReference = "lian-field-$RunId"; isMocked = $false
   }
@@ -344,7 +413,7 @@ Require ("$(Get-Value (Get-Value $Resolve.Json 'escalation') 'status')" -eq "res
 
 $PrematureCompletion = Invoke-Api POST "$DshBaseUrl/dsh/field/visits/$VisitId/complete" (Headers $Field "field-complete-early") @{
   completionLocation = @{
-    latitude = 15.35; longitude = 44.20; accuracyMeters = 5
+    latitude = $StorePoint.Latitude; longitude = $StorePoint.Longitude; accuracyMeters = 5
     capturedAt = [DateTimeOffset]::UtcNow.ToString("o")
     provider = "android-fused"; deviceReference = "lian-field-$RunId"; isMocked = $false
   }
@@ -356,6 +425,7 @@ Require ("$(Get-Value $PrematureCompletion.Json 'code')" -eq "CHECKLIST_INCOMPLE
   state = "PASS"
   runId = $RunId
   surfaces = @("app-client", "app-partner", "app-captain", "app-field", "control-panel")
+  serviceAreaCode = $StorePoint.ServiceAreaCode
   addressId = $AddressId
   checkoutIntentId = $CheckoutId
   wltPaymentSessionId = $WltPaymentSessionId
@@ -365,6 +435,7 @@ Require ("$(Get-Value $PrematureCompletion.Json 'code')" -eq "CHECKLIST_INCOMPLE
   escalationId = $EscalationId
   proven = @(
     "authentication and role isolation",
+    "governed service-area resolution",
     "address idempotency and ownership",
     "central catalog cart checkout and WLT handoff",
     "duplicate order and assignment rejection",
