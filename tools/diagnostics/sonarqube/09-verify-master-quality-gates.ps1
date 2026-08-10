@@ -21,16 +21,23 @@ $RequiredNames = @(
 )
 
 function Fail([string]$Message) { throw "QUALITY-GATE VERIFY FAILED: $Message" }
+function Get-NativeText {
+    param([scriptblock]$Command,[string]$Failure,[switch]$AllowEmpty)
+    $lines = @(& $Command)
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) { Fail $Failure }
+    $text = ($lines -join "`n").Trim()
+    if (-not $AllowEmpty -and -not $text) { Fail $Failure }
+    return $text
+}
 
-$root = (& git rev-parse --show-toplevel 2>$null).Trim()
-if ($LASTEXITCODE -ne 0 -or -not $root) { Fail "Run from inside the repository." }
+$root = Get-NativeText -Command { git rev-parse --show-toplevel 2>$null } -Failure "Run from inside the repository."
 Set-Location $root
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { Fail "gh CLI is required." }
 & gh auth status
 if ($LASTEXITCODE -ne 0) { Fail "GitHub CLI authentication is not ready." }
 
-$sha = (gh api "repos/$Repository/commits/$BaseBranch" --jq .sha).Trim()
-if ($LASTEXITCODE -ne 0 -or -not $sha) { Fail "Cannot resolve remote master SHA." }
+$sha = Get-NativeText -Command { gh api "repos/$Repository/commits/$BaseBranch" --jq .sha } -Failure "Cannot resolve remote master SHA."
 Write-Host "Remote $BaseBranch SHA: $sha"
 
 $rulesets = gh api "repos/$Repository/rulesets" | ConvertFrom-Json
@@ -38,7 +45,7 @@ if ($LASTEXITCODE -ne 0) { Fail "Cannot list rulesets." }
 $match = @($rulesets | Where-Object name -eq $RulesetName)
 if ($match.Count -ne 1) { Fail "Expected exactly one '$RulesetName' ruleset." }
 $ruleset = gh api "repos/$Repository/rulesets/$($match[0].id)" | ConvertFrom-Json
-if ($LASTEXITCODE -ne 0) { Fail "Cannot read ruleset details." }
+if ($LASTEXITCODE -ne 0 -or -not $ruleset) { Fail "Cannot read ruleset details." }
 if ($ruleset.enforcement -ne 'active') { Fail "Ruleset enforcement is '$($ruleset.enforcement)', not active." }
 if ($ruleset.conditions.ref_name.include -notcontains "refs/heads/$BaseBranch") { Fail "Ruleset does not target $BaseBranch." }
 
@@ -54,8 +61,9 @@ if ($unexpectedConfigured.Count -gt 0) { Fail "Unexpected stale required context
 $unbound = @($configured | Where-Object { -not $_.integration_id -or [int64]$_.integration_id -le 0 })
 if ($unbound.Count -gt 0) { Fail "One or more required checks are not bound to a GitHub App integration." }
 
-$checks = @(((gh api -H "Accept: application/vnd.github+json" "repos/$Repository/commits/$sha/check-runs?per_page=100" | ConvertFrom-Json).check_runs))
-if ($LASTEXITCODE -ne 0) { Fail "Cannot read current master checks." }
+$checksResponse = gh api -H "Accept: application/vnd.github+json" "repos/$Repository/commits/$sha/check-runs?per_page=100" | ConvertFrom-Json
+if ($LASTEXITCODE -ne 0 -or -not $checksResponse) { Fail "Cannot read current master checks." }
+$checks = @($checksResponse.check_runs)
 $rows = foreach ($name in $RequiredNames) {
     $r = @($checks | Where-Object name -eq $name | Sort-Object started_at -Descending | Select-Object -First 1)
     if ($r.Count -eq 0) { [pscustomobject]@{Name=$name;Status='missing';Conclusion='';App=''} }
