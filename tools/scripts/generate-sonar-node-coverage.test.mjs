@@ -20,6 +20,20 @@ test("coverage ownership is manifest-derived and exposes unresolved source autho
   assert.equal(model.projects["ui-kit"].strategy, "required");
 });
 
+test("coverage preparation is an ordered shell-free command contract", () => {
+  const model = loadCoverageOwnershipModel();
+  assert.deepEqual(model.suites.dsh.prepare, [
+    "pnpm",
+    "--dir",
+    "services/dsh",
+    "exec",
+    "tsc",
+    "-p",
+    "tsconfig.json",
+  ]);
+  assert.equal(model.suites.identity.prepare, null);
+});
+
 test("coverage planning is source-authority based rather than app-name based", () => {
   assert.deepEqual(planCoverageSuites(["services/dsh/frontend/shared/catalog/a.ts"]), ["dsh"]);
   assert.deepEqual(planCoverageSuites(["shared/data-runtime/src/a.ts"]), ["data-runtime"]);

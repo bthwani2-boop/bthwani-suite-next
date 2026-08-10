@@ -38,6 +38,17 @@ function requireStringArray(value, label, { allowEmpty = false } = {}) {
   return normalized;
 }
 
+function requireOrderedCommandArray(value, label) {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error(`${label} must be a non-empty ordered command array`);
+  }
+  const command = value.map((item) => String(item ?? "").trim());
+  if (command.some((item) => !item)) {
+    throw new Error(`${label} must contain only non-empty command tokens`);
+  }
+  return command;
+}
+
 export function loadCoverageOwnershipModel(manifestPath = path.resolve(repoRoot, OWNERSHIP_MANIFEST)) {
   if (!existsSync(manifestPath)) throw new Error(`Coverage ownership manifest is missing: ${OWNERSHIP_MANIFEST}`);
   let manifest;
@@ -77,7 +88,7 @@ export function loadCoverageOwnershipModel(manifestPath = path.resolve(repoRoot,
       const cwd = normalizePath(coverage.cwd ?? raw.root ?? ".") || ".";
       const prepare = coverage.prepare === undefined
         ? null
-        : requireStringArray(coverage.prepare, `projects.${name}.coverage.prepare`);
+        : requireOrderedCommandArray(coverage.prepare, `projects.${name}.coverage.prepare`);
       suites[name] = { ...project, cwd, testRoots, prepare };
     }
     projects[name] = project;

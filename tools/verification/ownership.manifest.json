@@ -24,6 +24,7 @@
       "coverage": {
         "strategy": "node-lcov",
         "cwd": ".",
+        "prepare": ["pnpm", "--dir", "services/dsh", "exec", "tsc", "-p", "tsconfig.json"],
         "testRoots": [
           "services/dsh/tests",
           "apps/app-client/runtime/tests",
