@@ -93,7 +93,9 @@ test("LAN helper rejects unsafe addressing and owns one versioned singleton gate
   ]) {
     assert.ok(lan.includes(marker), `missing LAN transport marker: ${marker}`);
   }
-  assert.doesNotMatch(lan, /0\.0\.0\.0/);
+  assert.match(lan, /-DestinationPrefix "0\.0\.0\.0\/0"/, "default-route discovery must stay explicit");
+  assert.doesNotMatch(lan, /BTHWANI_MOBILE_DEV_GATEWAY_HOST\s*=\s*["']0\.0\.0\.0["']/);
+  assert.doesNotMatch(lan, /-LanHost\s+["']0\.0\.0\.0["']/);
   assert.doesNotMatch(lan, /Resolve-BthwaniAdb|adb devices|adb reverse|scrcpy/);
 });
 
@@ -109,7 +111,7 @@ test("development gateway is allowlisted and the underlying broker and MinIO sta
     "'/__dev-session'",
     "'/__media'",
     "MOBILE_DEV_GATEWAY_MEDIA_SIGNATURE_REQUIRED",
-    "X-Bthwani-Dev-Capability",
+    "x-bthwani-dev-capability",
     "127.0.0.1",
     "59000",
   ]) {
@@ -137,7 +139,7 @@ test("developer session and presigned media clients use the governed gateway onl
   assert.match(partnerUpload, /rewriteMobileDevPresignedMediaUrl/);
 });
 
-test("ADB remains an explicit fallback with verified reverse mappings and no reconnect watchdog", () => {
+test("ADB remains an explicit fallback with verified reverse mappings and preserves explicit device selection", () => {
   const helper = read("apps/mobile/mobile-adb.ps1");
   const launcher = read("apps/mobile/start-mobile-runtime.ps1");
   for (const marker of [
@@ -151,15 +153,24 @@ test("ADB remains an explicit fallback with verified reverse mappings and no rec
   }
   assert.match(launcher, /Invoke-BthwaniAdbReverse/);
   assert.match(launcher, /58080, 58082, 58086, 58100, 59000, \$MetroPort/);
+  assert.match(launcher, /Clear-BthwaniProcessEnvironment -Names @\("ANDROID_SERIAL", "BTHWANI_ANDROID_SERIAL", "ADB"\)/);
+  assert.ok(
+    launcher.indexOf('Clear-BthwaniProcessEnvironment -Names @("ANDROID_SERIAL", "BTHWANI_ANDROID_SERIAL", "ADB")')
+      > launcher.indexOf('if ($resolvedTransport -eq "lan") {'),
+    "ADB selection environment may only be cleared inside the LAN branch",
+  );
+  assert.match(launcher, /\$currentNodeOptions/);
+  assert.doesNotMatch(launcher, /\$env:NODE_OPTIONS\s*=\s*"--dns-result-order=ipv4first"/);
   assert.doesNotMatch(launcher, /&\s+\$WatchAdb[\s\S]{0,120}\bdisconnect\s+\$WatchSerial/);
   assert.doesNotMatch(launcher, /&\s+\$WatchAdb[\s\S]{0,120}\bconnect\s+\$WatchSerial/);
 });
 
-test("app env examples cannot reintroduce direct LAN backend ports", () => {
+test("app env examples cannot reintroduce active direct LAN backend configuration", () => {
   for (const appKey of mobileApps.keys()) {
     const envExample = read(`apps/${appKey}/runtime/.env.example`);
-    assert.doesNotMatch(envExample, /MACHINE_LAN_IP/);
-    assert.doesNotMatch(envExample, /^EXPO_PUBLIC_(?:DSH|IDENTITY|WORKFORCE)_API_BASE_URL=/m);
+    assert.doesNotMatch(envExample, /<MACHINE_LAN_IP>/);
+    assert.doesNotMatch(envExample, /^MACHINE_LAN_IP\s*=/m);
+    assert.doesNotMatch(envExample, /^EXPO_PUBLIC_(?:DSH|IDENTITY|WORKFORCE)_API_BASE_URL\s*=/m);
     assert.match(envExample, /BThwani Mobile Dev Gateway/);
   }
   const mobileEnv = read("infra/local/mobile.env.example");
@@ -183,6 +194,7 @@ test("PowerShell parses every governed mobile launcher and transport verifier", 
     "tools/scripts/start-mobile-runtime.ps1",
     "tools/scripts/verify-mobile-test-stack.ps1",
     "tools/scripts/verify-mobile-android-smoke.ps1",
+    "tools/scripts/verify-mobile-lan-runtime.ps1",
     "apps/mobile/mobile-adb.ps1",
     "apps/mobile/mobile-lan.ps1",
     "apps/mobile/start-mobile-runtime.ps1",
