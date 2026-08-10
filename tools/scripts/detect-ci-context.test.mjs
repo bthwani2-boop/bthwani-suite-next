@@ -103,6 +103,28 @@ test("native mobile changes use mobile native runtime profile", () => {
   assert.equal(result.verification_tier, "deep");
 });
 
+test("mobile transport authority changes require deep security and live identity-workforce-dsh runtime", () => {
+  for (const file of [
+    "apps/mobile/start-mobile-runtime.ps1",
+    "apps/mobile/mobile-lan.ps1",
+    "tools/dev/mobile-dev-gateway.mjs",
+    "tools/scripts/verify-mobile-lan-runtime.ps1",
+    "services/dsh/frontend/shared/_kernel/mobile-dev-gateway.ts",
+    "services/dsh/frontend/shared/session/dev-session-broker.adapter.ts",
+    "services/dsh/frontend/shared/media/presigned-upload.client.ts",
+    "services/dsh/frontend/shared/catalog/catalog-binary-upload.adapter.ts",
+    "core/identity/clients/identity-api-config.ts",
+  ]) {
+    const result = classifyFiles([file]);
+    assert.equal(result.frontend, true, file);
+    assert.equal(result.security_policy, true, file);
+    assert.equal(result.runtime, true, file);
+    assert.equal(result.runtime_profile, "identity-security", file);
+    assert.equal(result.verification_tier, "deep", file);
+    assert.equal(result.diagnostics, true, file);
+  }
+});
+
 test("infrastructure and runtime tooling use full runtime", () => {
   for (const file of ["infra/docker/compose.runtime.yml", "tools/scripts/runtime/smoke.ps1"]) {
     const result = classifyFiles([file]);
