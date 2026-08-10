@@ -161,7 +161,7 @@ function Read-BthwaniMobileGatewayDescriptor {
 
 function Write-BthwaniMobileGatewayDescriptor {
     param(
-        [Parameter(Mandatory)][string] $Host,
+        [Parameter(Mandatory)][string] $LanHost,
         [Parameter(Mandatory)][int] $Port,
         [Parameter(Mandatory)][int] $Pid,
         [Parameter(Mandatory)][string] $Capability,
@@ -170,7 +170,7 @@ function Write-BthwaniMobileGatewayDescriptor {
 
     $path = Get-BthwaniMobileGatewayDescriptorPath
     [pscustomobject]@{
-        host = $Host
+        host = $LanHost
         port = $Port
         pid = $Pid
         capability = $Capability
@@ -181,21 +181,21 @@ function Write-BthwaniMobileGatewayDescriptor {
 
 function Test-BthwaniMobileDevGateway {
     param(
-        [Parameter(Mandatory)][string] $Host,
+        [Parameter(Mandatory)][string] $LanHost,
         [Parameter(Mandatory)][int] $Port,
         [Parameter(Mandatory)][int] $ContractVersion
     )
 
     try {
         $response = Invoke-RestMethod `
-            -Uri "http://${Host}:${Port}/__bthwani/health" `
+            -Uri "http://${LanHost}:${Port}/__bthwani/health" `
             -TimeoutSec 1 `
             -ErrorAction Stop
         if (
             [string] $response.status -ne "healthy" -or
             [string] $response.service -ne "bthwani-mobile-dev-gateway" -or
             [int] $response.contractVersion -ne $ContractVersion -or
-            [string] $response.host -ne $Host -or
+            [string] $response.host -ne $LanHost -or
             [int] $response.port -ne $Port
         ) {
             return $null
@@ -269,7 +269,7 @@ function Ensure-BthwaniMobileDevGateway {
             throw "Timed out waiting for mobile development gateway ownership."
         }
 
-        $health = Test-BthwaniMobileDevGateway -Host $LanHost -Port $Port -ContractVersion $ContractVersion
+        $health = Test-BthwaniMobileDevGateway -LanHost $LanHost -Port $Port -ContractVersion $ContractVersion
         $descriptor = Read-BthwaniMobileGatewayDescriptor
         if (
             $health -and $descriptor -and
@@ -292,7 +292,7 @@ function Ensure-BthwaniMobileDevGateway {
             Stop-BthwaniStaleMobileDevGateway -Listener $listener -Port $Port
         }
 
-        $gatewayScript = Join-Path $RepoRoot "tools\dev\mobile-dev-gateway.mjs"
+        $gatewayScript = Join-Path $RepoRoot "tools/dev/mobile-dev-gateway.mjs"
         if (-not (Test-Path -LiteralPath $gatewayScript -PathType Leaf)) {
             throw "Mobile development gateway not found: $gatewayScript"
         }
@@ -312,21 +312,23 @@ function Ensure-BthwaniMobileDevGateway {
         $env:BTHWANI_MOBILE_DEV_GATEWAY_TOKEN = $capability
         $env:BTHWANI_MOBILE_SIGNED_MEDIA_HOST = "localhost:59000"
 
-        $process = Start-Process `
-            -FilePath $node.Source `
-            -ArgumentList @($gatewayScript) `
-            -WorkingDirectory $RepoRoot `
-            -PassThru `
-            -WindowStyle Hidden
+        $startParameters = @{
+            FilePath = $node.Source
+            ArgumentList = @($gatewayScript)
+            WorkingDirectory = $RepoRoot
+            PassThru = $true
+        }
+        if ($IsWindows) { $startParameters.WindowStyle = "Hidden" }
+        $process = Start-Process @startParameters
 
         for ($attempt = 1; $attempt -le 60; $attempt++) {
             if ($process.HasExited) {
                 throw "Mobile development gateway exited during startup with code $($process.ExitCode)."
             }
-            $health = Test-BthwaniMobileDevGateway -Host $LanHost -Port $Port -ContractVersion $ContractVersion
+            $health = Test-BthwaniMobileDevGateway -LanHost $LanHost -Port $Port -ContractVersion $ContractVersion
             if ($health) {
                 Write-BthwaniMobileGatewayDescriptor `
-                    -Host $LanHost `
+                    -LanHost $LanHost `
                     -Port $Port `
                     -Pid ([int] $health.pid) `
                     -Capability $capability `
