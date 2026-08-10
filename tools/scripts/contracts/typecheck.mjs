@@ -10,6 +10,13 @@ const contexts = ["identity", "workforce", "platform-control", "providers", "dsh
 
 const repoRoot = new URL("../../..", import.meta.url);
 const tempDir = mkdtempSync(join(tmpdir(), "bthwani-contracts-"));
+const redoclyEnvironment = {
+  ...process.env,
+  // Contract verification must be deterministic and must not start background
+  // update or telemetry network work that can outlive the CLI on Windows.
+  REDOCLY_SUPPRESS_UPDATE_NOTICE: "true",
+  REDOCLY_TELEMETRY: "off",
+};
 
 function firstActionableDiagnostic(output) {
   const lines = String(output ?? "")
@@ -93,7 +100,11 @@ try {
       "--max-problems",
       "1000",
       contract.normalized,
-    ], { stdio: "pipe", rejectWarnings: true });
+    ], {
+      stdio: "pipe",
+      rejectWarnings: true,
+      env: redoclyEnvironment,
+    });
   }
 
   for (const contract of verificationContracts) {
