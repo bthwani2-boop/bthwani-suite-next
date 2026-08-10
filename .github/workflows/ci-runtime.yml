@@ -167,17 +167,13 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Verify immutable Windows checkout
+      - name: Execute Windows-native mobile contracts
         shell: pwsh
         env:
           SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          $actual = (git rev-parse HEAD).Trim()
-          if ($actual -ne $env:SOURCE_SHA) { throw "Windows checkout SHA mismatch: expected $env:SOURCE_SHA, got $actual" }
-      - name: Execute Windows-native mobile contracts
-        shell: pwsh
-        run: |
           $ErrorActionPreference = "Stop"
+          if ((git rev-parse HEAD).Trim() -ne $env:SOURCE_SHA) { throw "Windows checkout SHA mismatch" }
           node --test apps/mobile/tests/mobile-runtime-transport.contract.test.mjs
           if ($LASTEXITCODE -ne 0) { throw "Windows mobile transport contracts failed" }
           & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/verify-mobile-test-stack.ps1
@@ -207,14 +203,14 @@ jobs:
           java -version
           pnpm run mobile:apps:check
           pnpm run mobile:expo:verify
+          node --test tools/scripts/write-mobile-evidence-receipt.test.mjs
           node apps/mobile/verify-mobile-native.mjs --platform android --build
-          mkdir -p .diagnostics/mobile-evidence
-          node - <<'NODE'
-          const fs = require('fs');
-          const manifest = JSON.parse(fs.readFileSync('tools/mobile/mobile-apps.manifest.json','utf8'));
-          const receipt = {schemaVersion:1,sourceSha:process.env.SOURCE_SHA,result:'PASS',producer:'.github/workflows/ci-runtime.yml#android-native',apps:Object.keys(manifest.apps).sort(),tiers:['mobile:android:native-build'],platform:'android',physicalDevice:false};
-          fs.writeFileSync('.diagnostics/mobile-evidence/android-native.json', JSON.stringify(receipt,null,2)+'\n');
-          NODE
+          node tools/scripts/write-mobile-evidence-receipt.mjs \
+            --output .diagnostics/mobile-evidence/android-native.json \
+            --sha "$SOURCE_SHA" \
+            --producer .github/workflows/ci-runtime.yml#android-native \
+            --platform android \
+            --tier mobile:android:native-build
       - name: Upload Android native evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -237,7 +233,7 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Verify immutable macOS checkout
+      - name: Build and launch all iOS Dev Clients in Simulator
         shell: bash
         env:
           SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -247,22 +243,17 @@ jobs:
           xcodebuild -version
           xcrun simctl help >/dev/null
           pod --version
-      - name: Build and launch all iOS Dev Clients in Simulator
-        shell: bash
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          set -euo pipefail
           pnpm run mobile:apps:check
           pnpm run mobile:expo:verify
+          node --test tools/scripts/write-mobile-evidence-receipt.test.mjs
           node apps/mobile/verify-mobile-native.mjs --platform ios --build --simulator
-          mkdir -p .diagnostics/mobile-evidence
-          node - <<'NODE'
-          const fs = require('fs');
-          const manifest = JSON.parse(fs.readFileSync('tools/mobile/mobile-apps.manifest.json','utf8'));
-          const receipt = {schemaVersion:1,sourceSha:process.env.SOURCE_SHA,result:'PASS',producer:'.github/workflows/ci-runtime.yml#ios-native',apps:Object.keys(manifest.apps).sort(),tiers:['mobile:ios:native-build','mobile:ios:simulator-launch'],platform:'ios',physicalDevice:false};
-          fs.writeFileSync('.diagnostics/mobile-evidence/ios-native-simulator.json', JSON.stringify(receipt,null,2)+'\n');
-          NODE
+          node tools/scripts/write-mobile-evidence-receipt.mjs \
+            --output .diagnostics/mobile-evidence/ios-native-simulator.json \
+            --sha "$SOURCE_SHA" \
+            --producer .github/workflows/ci-runtime.yml#ios-native \
+            --platform ios \
+            --tier mobile:ios:native-build \
+            --tier mobile:ios:simulator-launch
       - name: Upload iOS native evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

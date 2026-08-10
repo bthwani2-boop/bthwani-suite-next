@@ -32,7 +32,7 @@ Invoke-VerifiedStep "Deterministic OpenAPI contract and client materialization" 
 }
 
 Invoke-VerifiedStep "Canonical Android+iOS evidence contract" {
-  node --test tools/scripts/verify-mobile-evidence-receipts.test.mjs
+  node --test tools/scripts/write-mobile-evidence-receipt.test.mjs tools/scripts/verify-mobile-evidence-receipts.test.mjs
 }
 
 Invoke-VerifiedStep "Shared mobile contracts and application-surface ownership" {
