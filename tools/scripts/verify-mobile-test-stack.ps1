@@ -45,6 +45,10 @@ if ($requiresRuntime) {
   Invoke-VerifiedStep "Governed mobile backend/data readiness" {
     & pwsh -NoProfile -ExecutionPolicy Bypass -File apps/mobile/ensure-mobile-dev-runtime.ps1
   }
+
+  Invoke-VerifiedStep "Full governed runtime smoke" {
+    pnpm run runtime:full:smoke
+  }
 }
 
 if ($Integration -or $Full) {
