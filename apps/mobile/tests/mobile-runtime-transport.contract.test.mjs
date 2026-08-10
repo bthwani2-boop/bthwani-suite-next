@@ -165,6 +165,14 @@ test("ADB remains an explicit fallback with verified reverse mappings and preser
   assert.doesNotMatch(launcher, /&\s+\$WatchAdb[\s\S]{0,120}\bconnect\s+\$WatchSerial/);
 });
 
+test("runtime contract executes Expo through the governed pnpm CLI without shell parsing", () => {
+  const contract = read("apps/mobile/test-mobile-runtime-contract.mjs");
+  assert.match(contract, /process\.env\.npm_execpath/);
+  assert.match(contract, /spawnSync\(\s*process\.execPath/);
+  assert.doesNotMatch(contract, /shell\s*:/);
+  assert.doesNotMatch(contract, /pnpm\.cmd/);
+});
+
 test("app env examples cannot reintroduce active direct LAN backend configuration", () => {
   for (const appKey of mobileApps.keys()) {
     const envExample = read(`apps/${appKey}/runtime/.env.example`);
@@ -192,7 +200,11 @@ test("PowerShell parses every governed mobile launcher and transport verifier", 
   const scripts = [
     "tools/scripts/mobile-adb.ps1",
     "tools/scripts/start-mobile-runtime.ps1",
+    "tools/scripts/start-mobile-validation.ps1",
     "tools/scripts/verify-mobile-test-stack.ps1",
+    "tools/scripts/verify-mobile-node-closure.ps1",
+    "tools/scripts/verify-mobile-runtime-closure.ps1",
+    "tools/scripts/verify-mobile-final-closure.ps1",
     "tools/scripts/verify-mobile-android-smoke.ps1",
     "tools/scripts/verify-mobile-lan-runtime.ps1",
     "apps/mobile/mobile-adb.ps1",
