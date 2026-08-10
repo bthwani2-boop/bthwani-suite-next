@@ -1,0 +1,11 @@
+{
+  "schemaVersion":3,
+  "unitId":"U002",
+  "checks":[
+    {"verificationId":"V201","type":"backend","command":"pnpm --dir core/identity test","proves":"Identity Go and repository-native session/contract tests pass.","doesNotProve":"Does not prove Control Panel visual behavior or every object-scope path.","passCriteria":"All Identity tests pass.","failCriteria":"Any Identity test fails.","required":true},
+    {"verificationId":"V202","type":"contract","command":"pnpm --dir core/identity run typecheck:all","proves":"Identity client/types remain compatible across supported TypeScript compilers.","doesNotProve":"Type compatibility does not prove runtime authorization.","passCriteria":"Both configured typechecks exit zero.","failCriteria":"Any Identity typecheck fails.","required":true},
+    {"verificationId":"V203","type":"database","command":"node tools/guards/migration-manifest-drift-gate.mjs","proves":"Governed migration manifest/amendment rules including immutable digest stability hold on the candidate.","doesNotProve":"Does not apply or exercise the database by itself.","passCriteria":"Guard exits zero without unregistered historical mutation.","failCriteria":"Any governed migration drift/amendment violation.","required":true},
+    {"verificationId":"V204","type":"security","command":"pnpm --dir apps/control-panel/runtime test","proves":"Control Panel auth/session route tests remain passing after Identity changes.","doesNotProve":"Existing tests may not cover every adversarial scope combination.","passCriteria":"All Control Panel tests pass, including auth tests present in the suite.","failCriteria":"Any required test fails.","required":true},
+    {"verificationId":"V205","type":"backend","command":"pnpm --dir services/dsh test","proves":"DSH Administration/delegation/backend behavior remains compatible and its test suite passes.","doesNotProve":"Does not replace independent approval/security review.","passCriteria":"DSH build and tests exit zero.","failCriteria":"Any DSH required test fails.","required":true}
+  ]
+}

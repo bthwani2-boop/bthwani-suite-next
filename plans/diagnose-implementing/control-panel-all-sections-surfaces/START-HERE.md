@@ -1,21 +1,27 @@
-# Control Panel — START HERE
+# Control Panel all sections and directly related surfaces — execution entry
 
-This package is the implementation handoff for the entire Control Panel on branch `abbas`, pinned at `69abee4dc54601fbf5a8ad8a5c486d708ee4ae39`. It was produced under `tools/prompting/01-diagnose-plan-package.md`; no runtime/product file is changed by this package.
+This package is a derived implementation plan for `bthwani2-boop/bthwani-suite-next` on branch `BB`. Its directly relevant diagnosis baseline is `de34ec33ff9ee52d0228a340453272d4e03ba7b1`: while diagnosis was in progress the branch advanced from `a93586e91d1850b1db77a5514be65472056ec655` with a governed Identity migration-history repair, which is directly relevant to Control Panel authentication/session behavior and was therefore absorbed into the baseline. The branch later advanced through `0916eb2500a0f6d83c47ed44124c02665f9cd0f9`; that delta was disjoint from this package and was preserved. Immediately before publication, `BB` advanced again to `f28911467127c71c99a666a81558d723a6140444`; comparison showed a broader governed migration-amendment update covering runtime migration history plus changes to another diagnose package. The migration-governance part is directly relevant to Identity, Workforce and DSH paths in this package, so it was reconciled and the package was rebuilt on the `f2891146…` tree. No concurrent change was overwritten or force-applied.
 
-## Scope rule
+## Scope boundary
 
-Start from every current Control Panel section and expand only through proven direct dependencies. The mandatory inventory is DSH `administration`, `analytics`, `catalogs`, `dashboard`, `hr`, `login`, `marketing`, `operations`, `partners`, `platform`, `support`, plus WLT `finance`. Coverage also includes nested/detail routes, `src/shell`, `src/app/api`, `src/server`, every module under `services/dsh/frontend/control-panel` (including `carts`, DSH-facing `finance`, and `maps`), WLT shared financial presentation, DSH/WLT backend+database ownership, and direct readbacks on Client/Partner/Captain/Field.
+The primary surface is `apps/control-panel/runtime`. Every current Control Panel section is in scope: DSH `administration`, `analytics`, `catalogs`, `dashboard`, `hr`, `login`, `marketing`, `operations`, `partners`, `platform`, `support`, plus WLT `finance`. Hidden/detail routes, root bootstrap/providers/styles, shell/navigation, BFF/API/server/session code, `services/dsh/frontend/control-panel`, and directly reached sovereign owners are also in scope.
 
-The SMSM Control Panel section registry and journey registry are completeness aids only. `docs/architecture.drawio` is empty on the pinned head and therefore supplies no architectural evidence.
+Non-Control-Panel surfaces are included only when a Control Panel action or read model has a proven direct consequence there. No unrelated mobile feature, website/webapp area, deployment activity, or product domain may be pulled in merely for completeness.
 
-## Execution
+## Sovereign ownership
 
-Follow `EXECUTION-ORDER.json`. Each unit contains diagnosis, precise tasks, non-negotiable boundaries and verification. Correct the earliest authoritative divergence rather than patching UI symptoms. Never create parallel DSH/WLT truth, never trust operator-selected scope without server authorization, and never treat a successful mutation response as sufficient without canonical readback.
+Identity owns actors, credentials, roles/permissions, sessions and trusted identity context. Workforce owns employment/workforce profiles and readiness. Platform Control owns governed platform configuration/change sets/rollouts. Providers owns provider registry/capability/connection policy. DSH owns operational commerce, Partner/Store, catalog consumption/publication, order/dispatch/support/service-area truth. WLT exclusively owns wallets, ledger, payment/refund/COD financial effects, commissions, payouts, settlements and reconciliation. Control Panel composes and operates these owners; it does not become a parallel truth source.
 
-## Package validation
+## Execution order
 
-Run:
+Execute `EXECUTION-ORDER.json` exactly. U001 closes the runtime/BFF foundation first. U002 closes Identity and Administration. U003 closes Platform Control, Providers, dashboard and analytics. U004 closes operations/support/maps/cart diagnostics. U005 closes Partner/Store/catalog/marketing publication. U006 closes Workforce/HR. U007 closes WLT finance. U008 is a same-candidate cross-surface closure gate.
+
+Every mutation must be traced UI → shared controller/adapter → contract/generated client → sovereign backend → persistence/event/integration → canonical readback → directly affected surfaces. Fix the earliest incorrect owner or invariant; do not mask downstream symptoms.
+
+## Mandatory package validation
+
+Run from repository root before implementation begins and again after any package edit:
 
 `node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/control-panel-all-sections-surfaces --strict`
 
-Implementation remains `NOT_STARTED` until the unit results are populated from candidate-bound evidence.
+A successful structural validator is necessary but not sufficient for product closure. Runtime, database, security/isolation, financial, visual/accessibility and independent approval evidence remain required where the applicable Product Truth requires them.

@@ -1,0 +1,10 @@
+{
+  "schemaVersion":3,
+  "unitId":"U001",
+  "checks":[
+    {"verificationId":"V101","type":"static","command":"rg -n \"layout|providers|ControlPanelShell|ControlPanelNavigation|session|api/|bff|proxy\" apps/control-panel/runtime/src services/dsh/frontend/control-panel","proves":"Maps the common Control Panel bootstrap, shell, session and BFF composition points.","doesNotProve":"Static mapping alone does not prove runtime security.","passCriteria":"All common entry/proxy/session paths are accounted for by one intended composition model.","failCriteria":"An alternate bootstrap/session/proxy path bypasses the intended boundary.","required":true},
+    {"verificationId":"V102","type":"frontend","command":"pnpm --dir apps/control-panel/runtime run typecheck","proves":"Control Panel generated Next types and TypeScript compile on the candidate.","doesNotProve":"Compilation does not prove session or proxy behavior.","passCriteria":"Command exits zero.","failCriteria":"Any type or generated-route error.","required":true},
+    {"verificationId":"V103","type":"frontend","command":"pnpm --dir apps/control-panel/runtime test","proves":"Repository-native Control Panel tests pass.","doesNotProve":"Existing tests may not cover every negative runtime path.","passCriteria":"All tests pass with zero skipped required failures.","failCriteria":"Any required test fails.","required":true},
+    {"verificationId":"V104","type":"security","command":"pnpm --dir apps/control-panel/runtime lint","proves":"Current Control Panel/UI boundary guard passes after foundation changes.","doesNotProve":"Lint does not prove upstream authorization.","passCriteria":"Command exits zero with no boundary violation.","failCriteria":"Any guard/lint violation.","required":true}
+  ]
+}

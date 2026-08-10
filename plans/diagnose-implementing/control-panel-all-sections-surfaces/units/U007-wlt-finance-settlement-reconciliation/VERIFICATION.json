@@ -1,0 +1,12 @@
+{
+  "schemaVersion":3,
+  "unitId":"U007",
+  "checks":[
+    {"verificationId":"V701","type":"backend","command":"pnpm --dir services/wlt test","proves":"WLT repository-native Node and Go financial tests pass.","doesNotProve":"Does not alone prove full external/manual settlement runtime evidence.","passCriteria":"All WLT tests pass.","failCriteria":"Any WLT test fails.","required":true},
+    {"verificationId":"V702","type":"security-finance","command":"pnpm --dir services/wlt lint","proves":"Full-stack and WLT financial/OpenAPI boundary guards pass for finance changes.","doesNotProve":"Does not replace independent finance/security review.","passCriteria":"All WLT lint/financial boundary guards exit zero.","failCriteria":"Any financial/boundary guard fails.","required":true},
+    {"verificationId":"V703","type":"contract","command":"pnpm --dir services/wlt run typecheck && pnpm --dir services/wlt run openapi:verify","proves":"WLT shared types and generated OpenAPI bundle remain aligned.","doesNotProve":"Does not prove ledger/reconciliation runtime behavior.","passCriteria":"Both commands exit zero.","failCriteria":"Any WLT type/contract verification fails.","required":true},
+    {"verificationId":"V704","type":"backend","command":"pnpm --dir services/dsh test","proves":"DSH operational evidence/facade remains compatible without becoming monetary owner.","doesNotProve":"Does not prove external financial provider behavior.","passCriteria":"DSH build/tests pass.","failCriteria":"Any DSH required test fails.","required":true},
+    {"verificationId":"V705","type":"frontend","command":"pnpm --dir apps/control-panel/runtime run typecheck","proves":"Control Panel finance and hidden inspector routes compile on canonical bindings.","doesNotProve":"Final runtime/visual/financial-control evidence remains required.","passCriteria":"Command exits zero.","failCriteria":"Any Control Panel finance type/route error.","required":true},
+    {"verificationId":"V706","type":"frontend","command":"pnpm --dir apps/app-client/runtime run typecheck && pnpm --dir apps/app-partner/runtime run typecheck && pnpm --dir apps/app-captain/runtime run typecheck && pnpm --dir apps/app-field/runtime run typecheck","proves":"All directly affected mobile financial consumers compile against final contracts.","doesNotProve":"Compilation does not prove actor isolation or device-visible financial state.","passCriteria":"All four typechecks exit zero.","failCriteria":"Any direct consumer typecheck fails.","required":true}
+  ]
+}
