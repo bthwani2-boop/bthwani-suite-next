@@ -143,7 +143,7 @@ DshCreatePartnerRequest:
     legalNameAr: { type: string, minLength: 1 }
     legalNameEn: { type: string }
     displayName: { type: string, minLength: 1 }
-    legalIdentityType: { type: string, enum: [national_id, commercial_registration, other] }
+    legalIdentityType: { type: string, enum: [commercial_register, national_id, freelancer_certificate] }
     legalIdentityNumber: { type: string, minLength: 1 }
     ownerActorId: { type: string, minLength: 1 }
     workforcePersonId: { type: string, minLength: 1 }

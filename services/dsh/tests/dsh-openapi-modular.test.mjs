@@ -12,6 +12,10 @@ import {
 
 const contractsDirectory = path.join(repositoryRoot, "services/dsh/contracts");
 const entryContractPath = path.join(contractsDirectory, "dsh.openapi.yaml");
+const partnerSchemasPath = path.join(
+  contractsDirectory,
+  "components/schemas/partner.schemas.yaml",
+);
 
 function read(filePath) {
   return fs.readFileSync(filePath, "utf8").replace(/\r\n/g, "\n");
@@ -43,6 +47,23 @@ test("generated bundle composition is deterministic and self-contained", async (
     assertNoUnresolvedLocalOpenApiReferences(first.bundle, first));
   assert.match(first.bundle, /operationId:\s*getDshHealth/);
   assert.match(first.bundle, /operationId:\s*getDshPartnerOrderWorkboard/);
+});
+
+test("partner draft identity types match domain, database, and field surfaces", () => {
+  const schemas = read(partnerSchemasPath);
+  const createRequest = schemas.match(
+    /DshCreatePartnerRequest:[\s\S]*?\nDshPartnerTransitionRequest:/,
+  );
+  assert.ok(createRequest, "DshCreatePartnerRequest schema is missing");
+  const identityTypeLine = createRequest[0].match(
+    /legalIdentityType:\s*\{[^\n]+\}/,
+  );
+  assert.ok(identityTypeLine, "legalIdentityType schema is missing");
+  assert.match(
+    identityTypeLine[0],
+    /enum: \[commercial_register, national_id, freelancer_certificate\]/,
+  );
+  assert.doesNotMatch(identityTypeLine[0], /commercial_registration|\bother\b/);
 });
 
 test("composition integrity fails closed on unresolved local references", () => {
