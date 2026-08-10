@@ -163,7 +163,12 @@ function Write-BthwaniMobileGatewayDescriptor {
     param(
         [Parameter(Mandatory)][string] $LanHost,
         [Parameter(Mandatory)][int] $Port,
-        [Parameter(Mandatory)][int] $Pid,
+        # Must not be named $Pid: PowerShell variable names are case-insensitive,
+        # so it would collide with the read-only automatic $PID and fail binding
+        # with "Cannot overwrite variable Pid because it is read-only or constant."
+        # The emitted 'pid' property below is the public descriptor contract and
+        # stays as is.
+        [Parameter(Mandatory)][int] $GatewayProcessId,
         [Parameter(Mandatory)][string] $Capability,
         [Parameter(Mandatory)][int] $ContractVersion
     )
@@ -172,7 +177,7 @@ function Write-BthwaniMobileGatewayDescriptor {
     [pscustomobject]@{
         host = $LanHost
         port = $Port
-        pid = $Pid
+        pid = $GatewayProcessId
         capability = $Capability
         contractVersion = $ContractVersion
         writtenAtUtc = [DateTime]::UtcNow.ToString("o")
@@ -330,7 +335,7 @@ function Ensure-BthwaniMobileDevGateway {
                 Write-BthwaniMobileGatewayDescriptor `
                     -LanHost $LanHost `
                     -Port $Port `
-                    -Pid ([int] $health.pid) `
+                    -GatewayProcessId ([int] $health.pid) `
                     -Capability $capability `
                     -ContractVersion $ContractVersion
                 return [pscustomobject]@{
