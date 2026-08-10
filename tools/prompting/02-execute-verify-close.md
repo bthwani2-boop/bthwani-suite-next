@@ -341,6 +341,8 @@ symptom
 
 ممنوع temporary patch/silent fallback/parallel truth/permanent dual-write/parallel handwritten client/business logic in surface/runtime fixture as truth/fake control/UI-only auth/test weakening/applied-migration rewrite/state bypass/new financial retry identity before unknown-result reconciliation/legacy path left reachable/acceptance weakening.
 
+نفّذ تنظيفًا شاملًا لكل ما تبقى عبر الـ Backend والـ Frontend والـ APIs وقواعد البيانات، واحذف فورًا كل كود أو مكوّن مكرر، مهجور، أو عديم الفائدة (Dead code/Orphans) لضمان عدم ترك أي ديون تقنية بعد الإصلاح الجذري.
+
 ## 13. Full-Stack Multi-Surface closure
 
 تتبع بقدر الانطباق:
@@ -401,6 +403,7 @@ nearest root-cause regression check
 ```
 
 كل Check له claim وproof limit. لا Scope يثبت آخر.
+يجب أن يشمل الاختبار جميع المسارات والتكاملات والسيناريوهات الفعلية (Actual Scenarios) من البداية للنهاية، ولا تكتفِ بالاختبارات المعزولة (Isolated/Mocked tests) حتى التحقق النهائي من سلامة النظام.
 
 أي related mutation أو concurrent change يبطل الأدلة المتأثرة ويعيدها على Candidate جديد.
 
@@ -441,7 +444,7 @@ FREEZE WRITES
 
 ## 19. Adversarial closing pass
 
-ابحث عن root cause غير مغلق، parallel/stale truth، hidden writer/reader، missing migration/consumer، surface gap، security bypass، retry/unknown/recovery gap، runtime-only defect، stale evidence، audit gap، foreign/out-of-scope delta.
+ابحث عن root cause غير مغلق، parallel/stale truth، hidden writer/reader، missing migration/consumer، surface gap، security bypass، retry/unknown/recovery gap، runtime-only defect، stale evidence، audit gap، foreign/out-of-scope delta، أو أي فجوة أو تناقض (Contradiction) في العقود بين الـ APIs والـ Bindings.
 
 أي Finding يحتاج كتابة يعيد Phase A.
 

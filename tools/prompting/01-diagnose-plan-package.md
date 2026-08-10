@@ -148,6 +148,7 @@ required verification
 ```
 
 حاول تكذيب Root Cause قبل اعتماده وابحث عن writer/reader/contract/state/runtime path بديل.
+اعتمد الحل الجذري الصحيح دائماً بدل أي ترقيع (Patching) أو حل مؤقت. لا تقبل بأي Workaround يتجاهل السبب الجذري للخلل.
 
 قبل إنشاء شيء جديد:
 
@@ -187,6 +188,7 @@ Product Truth
 ```
 
 غطِّ success/invalid/denied/wrong-scope/forbidden-state/duplicate/replay/race/concurrency/timeout/unknown-result/offline/reconnect/retry/partial-failure/restart/mixed-version/compensation/reconciliation حسب الأثر.
+أغلق أي فجوة، خطأ، أو تناقض (Contradiction) في العقود (Contracts) بين الـ APIs والـ Bindings وتطبيقات الـ Frontend والـ Backend، وتأكد من توحيد منطق التشغيل عبر جميع المسارات.
 
 ## 7. مخاطر يجب أن تدخل الخطة عند الانطباق
 
