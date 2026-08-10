@@ -150,31 +150,6 @@ func (s *protectedStoreServer) authorizeAssetLinkEntity(w http.ResponseWriter, r
 	}
 }
 
-func (s *protectedStoreServer) handleLinkCatalogAsset(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
-	if !ok {
-		return
-	}
-	var input centralcatalog.AssetLinkInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	input.AssetID = r.PathValue("assetId")
-	input.IsPrimary = false
-	if !s.authorizeAssetAccess(w, r, actor, input.AssetID) {
-		return
-	}
-	if !s.authorizeAssetLinkEntity(w, r, actor, input.EntityType, input.EntityID) {
-		return
-	}
-	link, err := centralcatalog.LinkAsset(r.Context(), s.db, input)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"link": link})
-}
-
 func (s *protectedStoreServer) handleUnlinkCatalogAsset(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
 	if !ok {

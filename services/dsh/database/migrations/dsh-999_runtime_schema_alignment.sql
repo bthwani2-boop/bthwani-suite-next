@@ -159,4 +159,167 @@ AFTER UPDATE OF status ON dsh_orders
 FOR EACH ROW
 EXECUTE FUNCTION dsh_cancel_order_dependent_work();
 
+-- dsh-130 and dsh-958 were authored against the retired store status `active`
+-- and execute on opposite sides of dsh-135. Rebuild both projections at the
+-- final boundary so every current read owner uses the canonical `published`
+-- lifecycle and reports the same readiness result as the Go publication gate.
+DROP INDEX IF EXISTS idx_dsh_stores_operational_visibility_area;
+ALTER TABLE dsh_stores
+  DROP CONSTRAINT IF EXISTS dsh_stores_visibility_status_projection_check;
+ALTER TABLE dsh_stores
+  DROP COLUMN IF EXISTS visibility_status;
+ALTER TABLE dsh_stores
+  ADD COLUMN visibility_status TEXT
+  GENERATED ALWAYS AS (
+    CASE
+      WHEN is_visible = TRUE
+       AND status = 'published'
+       AND serviceability_status IN ('serviceable', 'limited')
+       AND partner_readiness = 'ready'
+       AND catalog_approval_status = 'approved'
+       AND marketing_visibility = 'visible'
+      THEN 'visible'
+      ELSE 'hidden'
+    END
+  ) STORED;
+ALTER TABLE dsh_stores
+  ADD CONSTRAINT dsh_stores_visibility_status_projection_check
+  CHECK (visibility_status IN ('visible', 'hidden'));
+CREATE INDEX idx_dsh_stores_operational_visibility_area
+  ON dsh_stores(service_area_code, visibility_status)
+  WHERE visibility_status = 'visible';
+
+DROP INDEX IF EXISTS idx_dsh_stores_public_discovery_gate;
+CREATE INDEX idx_dsh_stores_public_discovery_gate
+  ON dsh_stores(city_code, service_area_code, display_name, id)
+  WHERE is_visible = TRUE
+    AND status = 'published'
+    AND serviceability_status IN ('serviceable', 'limited')
+    AND partner_readiness = 'ready'
+    AND catalog_approval_status = 'approved'
+    AND marketing_visibility = 'visible'
+    AND COALESCE(cardinality(delivery_modes), 0) > 0
+    AND btrim(COALESCE(address_line, '')) <> ''
+    AND btrim(COALESCE(coverage_summary, '')) <> ''
+    AND btrim(COALESCE(operating_hours, '')) <> ''
+    AND delivery_readiness = 'ready'
+    AND btrim(COALESCE(hero_image_url, '')) <> ''
+    AND btrim(COALESCE(logo_url, '')) <> '';
+
+CREATE OR REPLACE VIEW dsh_partner_store_readiness_v AS
+SELECT
+  s.operator_context_id,
+  s.partner_id,
+  s.id AS store_id,
+  s.display_name,
+  s.status,
+  (
+    s.is_visible = TRUE
+    AND s.status = 'published'
+    AND s.serviceability_status IN ('serviceable', 'limited')
+    AND s.partner_readiness = 'ready'
+    AND s.catalog_approval_status = 'approved'
+    AND s.marketing_visibility = 'visible'
+    AND COALESCE(cardinality(s.delivery_modes), 0) > 0
+    AND btrim(COALESCE(s.address_line, '')) <> ''
+    AND btrim(COALESCE(s.coverage_summary, '')) <> ''
+    AND btrim(COALESCE(s.operating_hours, '')) <> ''
+    AND s.delivery_readiness = 'ready'
+    AND btrim(COALESCE(s.hero_image_url, '')) <> ''
+    AND btrim(COALESCE(s.logo_url, '')) <> ''
+    AND EXISTS (
+      SELECT 1 FROM dsh_partners partner
+      WHERE partner.id = s.partner_id
+        AND partner.activation_status = 'client_visible'
+        AND partner.archived_at IS NULL
+    )
+    AND EXISTS (
+      SELECT 1
+      FROM dsh_store_assortments assortment
+      JOIN dsh_master_products product ON product.id = assortment.master_product_id
+      JOIN dsh_catalog_domains domain ON domain.id = product.domain_id
+      JOIN dsh_store_catalog_domains store_domain
+        ON store_domain.store_id = assortment.store_id
+       AND store_domain.domain_id = product.domain_id
+      WHERE assortment.store_id = s.id
+        AND assortment.publication_status = 'client_visible'
+        AND assortment.available = TRUE
+        AND product.approval_status = 'approved'
+        AND product.is_active = TRUE
+        AND domain.is_active = TRUE
+        AND domain.is_client_visible = TRUE
+        AND store_domain.status = 'approved'
+    )
+  ) AS is_visible,
+  s.serviceability_status,
+  s.partner_readiness,
+  s.catalog_approval_status,
+  s.marketing_visibility,
+  (
+    s.status = 'published'
+    AND s.is_visible = TRUE
+    AND s.serviceability_status IN ('serviceable', 'limited')
+    AND s.partner_readiness = 'ready'
+    AND s.catalog_approval_status = 'approved'
+    AND s.marketing_visibility = 'visible'
+    AND COALESCE(cardinality(s.delivery_modes), 0) > 0
+    AND btrim(COALESCE(s.address_line, '')) <> ''
+    AND btrim(COALESCE(s.coverage_summary, '')) <> ''
+    AND btrim(COALESCE(s.operating_hours, '')) <> ''
+    AND s.delivery_readiness = 'ready'
+    AND btrim(COALESCE(s.hero_image_url, '')) <> ''
+    AND btrim(COALESCE(s.logo_url, '')) <> ''
+    AND EXISTS (
+      SELECT 1
+      FROM dsh_store_assortments assortment
+      JOIN dsh_master_products product ON product.id = assortment.master_product_id
+      JOIN dsh_catalog_domains domain ON domain.id = product.domain_id
+      JOIN dsh_store_catalog_domains store_domain
+        ON store_domain.store_id = assortment.store_id
+       AND store_domain.domain_id = product.domain_id
+      WHERE assortment.store_id = s.id
+        AND assortment.publication_status = 'client_visible'
+        AND assortment.available = TRUE
+        AND product.approval_status = 'approved'
+        AND product.is_active = TRUE
+        AND domain.is_active = TRUE
+        AND domain.is_client_visible = TRUE
+        AND store_domain.status = 'approved'
+    )
+  ) AS store_gates_passed,
+  ARRAY_REMOVE(ARRAY[
+    CASE WHEN s.status <> 'published' THEN 'STORE_NOT_PUBLISHED' END,
+    CASE WHEN s.is_visible = FALSE THEN 'STORE_HIDDEN' END,
+    CASE WHEN s.serviceability_status NOT IN ('serviceable', 'limited') THEN 'STORE_NOT_SERVICEABLE' END,
+    CASE WHEN s.partner_readiness <> 'ready' THEN 'PARTNER_READINESS_PENDING' END,
+    CASE WHEN s.catalog_approval_status <> 'approved' THEN 'CATALOG_NOT_APPROVED' END,
+    CASE WHEN s.marketing_visibility <> 'visible' THEN 'MARKETING_NOT_VISIBLE' END,
+    CASE WHEN COALESCE(cardinality(s.delivery_modes), 0) = 0 THEN 'DELIVERY_MODES_MISSING' END,
+    CASE WHEN btrim(COALESCE(s.address_line, '')) = '' THEN 'ADDRESS_MISSING' END,
+    CASE WHEN btrim(COALESCE(s.coverage_summary, '')) = '' THEN 'COVERAGE_MISSING' END,
+    CASE WHEN btrim(COALESCE(s.operating_hours, '')) = '' THEN 'OPERATING_HOURS_MISSING' END,
+    CASE WHEN s.delivery_readiness <> 'ready' THEN 'DELIVERY_NOT_READY' END,
+    CASE WHEN btrim(COALESCE(s.hero_image_url, '')) = '' THEN 'STORE_COVER_MISSING' END,
+    CASE WHEN btrim(COALESCE(s.logo_url, '')) = '' THEN 'STORE_LOGO_MISSING' END,
+    CASE WHEN NOT EXISTS (
+      SELECT 1
+      FROM dsh_store_assortments assortment
+      JOIN dsh_master_products product ON product.id = assortment.master_product_id
+      JOIN dsh_catalog_domains domain ON domain.id = product.domain_id
+      JOIN dsh_store_catalog_domains store_domain
+        ON store_domain.store_id = assortment.store_id
+       AND store_domain.domain_id = product.domain_id
+      WHERE assortment.store_id = s.id
+        AND assortment.publication_status = 'client_visible'
+        AND assortment.available = TRUE
+        AND product.approval_status = 'approved'
+        AND product.is_active = TRUE
+        AND domain.is_active = TRUE
+        AND domain.is_client_visible = TRUE
+        AND store_domain.status = 'approved'
+    ) THEN 'APPROVED_ASSORTMENT_MISSING' END
+  ], NULL) AS blocked_reason_codes
+FROM dsh_stores s
+WHERE s.partner_id IS NOT NULL;
+
 COMMIT;

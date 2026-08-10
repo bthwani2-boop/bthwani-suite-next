@@ -101,29 +101,29 @@ func IsClientVisible(status ActivationStatus) bool {
 // â”€â”€â”€ Partner entity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type Partner struct {
-	ID                  string           `json:"id"`
-	LegalNameAr         string           `json:"legalNameAr"`
-	LegalNameEn         string           `json:"legalNameEn"`
-	DisplayName         string           `json:"displayName"`
-	LegalIdentityType   string           `json:"legalIdentityType"`
-	LegalIdentityNumber string           `json:"legalIdentityNumber"`
-	OwnerActorID        string           `json:"ownerActorId"`
-	WorkforcePersonID   string           `json:"workforcePersonId"`
-	PrimaryPhone        string           `json:"primaryPhone"`
-	SecondaryPhone      string           `json:"secondaryPhone"`
-	Email               string           `json:"email"`
-	Category             string           `json:"category"`
-	ActivationStatus     ActivationStatus `json:"activationStatus"`
+	ID                   string               `json:"id"`
+	LegalNameAr          string               `json:"legalNameAr"`
+	LegalNameEn          string               `json:"legalNameEn"`
+	DisplayName          string               `json:"displayName"`
+	LegalIdentityType    string               `json:"legalIdentityType"`
+	LegalIdentityNumber  string               `json:"legalIdentityNumber"`
+	OwnerActorID         string               `json:"ownerActorId"`
+	WorkforcePersonID    string               `json:"workforcePersonId"`
+	PrimaryPhone         string               `json:"primaryPhone"`
+	SecondaryPhone       string               `json:"secondaryPhone"`
+	Email                string               `json:"email"`
+	Category             string               `json:"category"`
+	ActivationStatus     ActivationStatus     `json:"activationStatus"`
 	OnboardingCaseStatus OnboardingCaseStatus `json:"onboardingCaseStatus"`
-	CreatedByActorID    string           `json:"createdByActorId"`
-	CreatedBySurface    string           `json:"createdBySurface"`
-	Notes               string           `json:"notes"`
+	CreatedByActorID     string               `json:"createdByActorId"`
+	CreatedBySurface     string               `json:"createdBySurface"`
+	Notes                string               `json:"notes"`
 	// Payout destination reference â€” DSH holds only the WLT reference ID and
 	// masked display strings. Raw bank data is never stored in DSH after Phase 5.
-	PayoutDestinationID           string `json:"payoutDestinationId"`
-	DestinationMethod             string `json:"destinationMethod"`
-	MaskedDestinationReference    string `json:"maskedDestinationReference"`
-	DestinationVerificationStatus string `json:"destinationVerificationStatus"`
+	PayoutDestinationID           string    `json:"payoutDestinationId"`
+	DestinationMethod             string    `json:"destinationMethod"`
+	MaskedDestinationReference    string    `json:"maskedDestinationReference"`
+	DestinationVerificationStatus string    `json:"destinationVerificationStatus"`
 	Version                       int       `json:"version"`
 	CreatedAt                     time.Time `json:"createdAt"`
 	UpdatedAt                     time.Time `json:"updatedAt"`
@@ -224,7 +224,7 @@ func ComputeReadiness(
 	p Partner,
 	documentCount, approvedDocCount int,
 	hasStore bool,
-	storeActive bool,
+	storePublished bool,
 	storeServiceable bool,
 	storePartnerReadinessReady bool,
 	storeCatalogApproved bool,
@@ -245,7 +245,7 @@ func ComputeReadiness(
 	canActivatePartner := docsDone && hasStore && IsTransitionAllowed(p.ActivationStatus, StatusPartnerActive)
 
 	canPublishStoreToClient := hasStore &&
-		storeActive &&
+		storePublished &&
 		storeIsVisible &&
 		storeServiceable &&
 		storePartnerReadinessReady &&
@@ -269,8 +269,8 @@ func ComputeReadiness(
 		storePublicationBlockedReason = "Ù„Ø§ ÙŠÙˆØ¬Ø¯ ÙØ±Ø¹ Ù…Ø±Ø¨ÙˆØ· Ø¨Ø§Ù„Ø´Ø±ÙŠÙƒ"
 	} else if !partnerActiveDone {
 		storePublicationBlockedReason = "Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù†Ø´Ø· Ø­Ø§Ù„ÙŠØ§Ù‹"
-	} else if !storeActive {
-		storePublicationBlockedReason = "Ø­Ø§Ù„Ø© Ø§Ù„ÙØ±Ø¹ ØºÙŠØ± Ù†Ø´Ø·Ø©"
+	} else if !storePublished {
+		storePublicationBlockedReason = "حالة الفرع غير منشورة"
 	} else if !storeIsVisible {
 		storePublicationBlockedReason = "Ø§Ù„ÙØ±Ø¹ Ù…Ø®ÙÙŠ Ù…Ù† Ù„ÙˆØ­Ø© Ø§Ù„ØªØ­ÙƒÙ…"
 	} else if !storeServiceable {
@@ -317,10 +317,10 @@ func ComputeReadiness(
 				BlockedReason: map[bool]string{false: "Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù†Ø´Ø·"}[partnerActiveDone],
 			},
 			{
-				ID:            "store_status_active",
-				Label:         "Ø­Ø§Ù„Ø© Ø§Ù„ÙØ±Ø¹ Ù†Ø´Ø·Ø©",
-				Satisfied:     storeActive,
-				BlockedReason: map[bool]string{false: "Ø­Ø§Ù„Ø© Ø§Ù„ÙØ±Ø¹ ØºÙŠØ± Ù†Ø´Ø·Ø©"}[storeActive],
+				ID:            "store_status_published",
+				Label:         "حالة الفرع منشورة",
+				Satisfied:     storePublished,
+				BlockedReason: map[bool]string{false: "حالة الفرع غير منشورة"}[storePublished],
 			},
 			{
 				ID:            "store_serviceability",
@@ -392,13 +392,13 @@ func (i CreatePartnerInput) Validate() error {
 }
 
 type UpdatePartnerInput struct {
-	DisplayName        string `json:"displayName"`
-	OwnerActorID       string `json:"ownerActorId"`
-	WorkforcePersonID  string `json:"workforcePersonId"`
-	PrimaryPhone       string `json:"primaryPhone"`
-	SecondaryPhone string `json:"secondaryPhone"`
-	Email          string `json:"email"`
-	Notes          string `json:"notes"`
+	DisplayName       string `json:"displayName"`
+	OwnerActorID      string `json:"ownerActorId"`
+	WorkforcePersonID string `json:"workforcePersonId"`
+	PrimaryPhone      string `json:"primaryPhone"`
+	SecondaryPhone    string `json:"secondaryPhone"`
+	Email             string `json:"email"`
+	Notes             string `json:"notes"`
 	// Bank account fields forwarded to WLT; never stored raw in DSH after Phase 5.
 	BeneficiaryName               string `json:"beneficiaryName"`
 	BankName                      string `json:"bankName"`

@@ -1674,7 +1674,7 @@
     {
       "ordinal": 239,
       "file": "dsh-999_runtime_schema_alignment.sql",
-      "sha256": "066c55b82200f81940d13905e3b3624d3ec4a8023cf8f26ca568d63972f0946a",
+      "sha256": "4c6ed5cec1906985db3c0f7794c07317a32738fa9ee7a79b3580187272ffa377",
       "historicalPrefix": "999",
       "state": "ACTIVE"
     }

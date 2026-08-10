@@ -22,6 +22,10 @@ const dshPartnerOnboardingSmoke = await readFile(
   new URL("../../infra/docker/scripts/runtime/smoke-dsh-partner-onboarding.ps1", import.meta.url),
   "utf8",
 );
+const dshRuntimeDispatcher = await readFile(
+  new URL("../../infra/docker/scripts/runtime-dispatch.ps1", import.meta.url),
+  "utf8",
+);
 
 test("runtime retries only the transient PostgreSQL bootstrap restart", () => {
   assert.match(phaseScript, /function Test-TransientPostgresBootstrapRestart/);
@@ -93,4 +97,18 @@ test("partner onboarding uses the governed owner and idempotent creation contrac
     /\$partnerDraftHeaders\["Idempotency-Key"\]/,
   );
   assert.doesNotMatch(dshPartnerOnboardingSmoke, /\n\s*ownerName\s*=/);
+});
+
+test("partner onboarding closes the canonical store publication journey", () => {
+  assert.match(dshRuntimeDispatcher, /DSH partner onboarding smoke[\s\S]*StatePath = \$statePath/);
+  assert.match(dshPartnerOnboardingSmoke, /catalogState\.masterProductId/);
+  assert.match(dshPartnerOnboardingSmoke, /status = "ready"[\s\S]*deliveryModes = @\("delivery", "pickup"\)/);
+  assert.match(dshPartnerOnboardingSmoke, /role = "store_logo"/);
+  assert.match(dshPartnerOnboardingSmoke, /role = "store_cover"/);
+  assert.match(dshPartnerOnboardingSmoke, /isPrimary = \$true/);
+  assert.match(dshPartnerOnboardingSmoke, /publicationStatus = "client_visible"/);
+  assert.match(dshPartnerOnboardingSmoke, /"lifecycle" "published"/);
+  assert.match(dshPartnerOnboardingSmoke, /\/dsh\/stores\/\$smokeStoreId"/);
+  assert.match(dshPartnerOnboardingSmoke, /\/dsh\/stores\/\$smokeStoreId\/catalog"/);
+  assert.doesNotMatch(dshPartnerOnboardingSmoke, /"lifecycle" "active"/);
 });

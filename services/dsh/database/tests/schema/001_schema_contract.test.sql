@@ -4,6 +4,8 @@
 DO $$
 DECLARE
   actual_type TEXT;
+  generated_expression TEXT;
+  readiness_view_definition TEXT;
 BEGIN
   IF to_regclass('public.schema_migrations') IS NULL THEN
     RAISE EXCEPTION 'schema_migrations ledger is missing';
@@ -62,6 +64,29 @@ BEGIN
       AND index_meta.indisvalid
   ) THEN
     RAISE EXCEPTION 'idx_dsh_partners_archived_at is missing or invalid';
+  END IF;
+
+  SELECT pg_get_expr(attribute_default.adbin, attribute_default.adrelid)
+  INTO generated_expression
+  FROM pg_attribute attribute
+  JOIN pg_attrdef attribute_default
+    ON attribute_default.adrelid = attribute.attrelid
+   AND attribute_default.adnum = attribute.attnum
+  WHERE attribute.attrelid = 'public.dsh_stores'::regclass
+    AND attribute.attname = 'visibility_status'
+    AND attribute.attgenerated = 's';
+
+  IF generated_expression IS NULL
+     OR generated_expression NOT LIKE '%published%'
+     OR generated_expression LIKE '%active%' THEN
+    RAISE EXCEPTION 'dsh_stores.visibility_status must use only the canonical published lifecycle, found %', COALESCE(generated_expression, '<missing>');
+  END IF;
+
+  SELECT pg_get_viewdef('public.dsh_partner_store_readiness_v'::regclass, TRUE)
+  INTO readiness_view_definition;
+  IF readiness_view_definition NOT LIKE '%published%'
+     OR readiness_view_definition LIKE '%active%' THEN
+    RAISE EXCEPTION 'dsh_partner_store_readiness_v must use only the canonical published lifecycle, found %', readiness_view_definition;
   END IF;
 END
 $$;

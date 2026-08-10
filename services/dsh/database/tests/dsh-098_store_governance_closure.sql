@@ -38,7 +38,7 @@ INSERT INTO dsh_stores (
   hero_image_url, logo_url, version
 ) VALUES (
   'store-db-proof', 'store-db-proof', 'متجر إثبات الرحلة الرابعة',
-  'active', 'sana', 'haddah', 'serviceable', true, 'default',
+  'published', 'sana', 'haddah', 'serviceable', true, 'default',
   ARRAY['delivery']::text[], 'ready', 'approved', 'visible',
   'شارع حدة', 'حدة والمناطق المجاورة', '08:00-23:00', 'ready',
   'https://cdn.example.test/store-cover.jpg', 'https://cdn.example.test/store-logo.jpg', 1

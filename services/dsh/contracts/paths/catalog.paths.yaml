@@ -569,6 +569,25 @@
     operationId: linkCatalogAsset
     tags: [CentralCatalog]
     security: [{ bearerAuth: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [entityType, entityId, role]
+            properties:
+              entityType:
+                type: string
+                enum: [domain, node, master_product, product_proposal, store_assortment, collection, campaign, store]
+              entityId: { type: string, minLength: 1 }
+              role: { type: string, minLength: 1 }
+              sortOrder: { type: integer, default: 0 }
+              isPrimary:
+                type: boolean
+                default: false
+                description: Replaces the current primary link atomically; the asset must already be approved.
     parameters:
       - name: assetId
         in: path

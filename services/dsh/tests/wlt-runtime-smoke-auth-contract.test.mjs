@@ -14,7 +14,12 @@ describe("authenticated WLT runtime smoke", () => {
     assert.match(phase, /\$runAuthenticatedWltSmoke = \$Action -eq "smoke" -and \$ProfileList -contains "wlt"/);
     assert.match(phase, /Where-Object \{ \$_ -ne "wlt" \}/);
     assert.match(phase, /=== runtime:wlt-authenticated-smoke ===/);
-    assert.match(phase, /& \$AuthenticatedWltSmokeScript/);
+    assert.match(phase, /function Invoke-RuntimeBasePhase/);
+    assert.match(
+      phase,
+      /\$wltSmokeExitCode = Invoke-RuntimeBasePhase -ScriptPath \$AuthenticatedWltSmokeScript -Parameters @\{\} -Append/,
+    );
+    assert.doesNotMatch(phase, /^\s*& \$AuthenticatedWltSmokeScript/m);
     assert.match(phase, /Authenticated WLT runtime smoke failed with exit code/);
   });
 

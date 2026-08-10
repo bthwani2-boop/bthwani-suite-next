@@ -31,7 +31,7 @@ SET address_line = CASE id
       ELSE 'يوميًا 08:00-23:00'
     END,
     delivery_readiness = CASE
-      WHEN status IN ('published', 'active') THEN 'ready'
+      WHEN status = 'published' THEN 'ready'
       ELSE 'paused'
     END,
     storefront_photo_ref = CASE id
@@ -112,7 +112,7 @@ SET address_line = CASE
     END,
     updated_at = NOW()
 WHERE operator_context_id = 'local-dsh'
-  AND status IN ('published', 'active')
+  AND status = 'published'
   AND is_visible = true
   AND partner_readiness = 'ready'
   AND catalog_approval_status = 'approved'

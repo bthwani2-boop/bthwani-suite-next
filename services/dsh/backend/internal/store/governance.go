@@ -257,7 +257,7 @@ func UpdatePartnerSettings(
 			if input.Status == string(StatusPublished) {
 				current.Status = DshStoreStatus(input.Status)
 				current.DeliveryModes = input.DeliveryModes
-				if diag := DiagnoseStorePublication(current); !diag.IsReady {
+				if diag := DiagnoseStorePublicationReadiness(current); !diag.IsReady {
 					return fmt.Errorf("store publication gates failed: %v", diag.Blockers)
 				}
 			}
@@ -451,9 +451,7 @@ func GovernStore(
 				}
 
 				if input.Value == string(StatusPublished) {
-					checkStore := current
-					checkStore.Status = StatusPublished
-					diag := DiagnoseStorePublication(checkStore)
+					diag := DiagnoseStorePublicationReadiness(current)
 					if !diag.IsReady {
 						return fmt.Errorf("store publication gates failed: %v", diag.Blockers)
 					}
@@ -496,6 +494,32 @@ func GovernStore(
 			affected, _ := result.RowsAffected()
 			if affected != 1 {
 				return ErrVersionConflict
+			}
+
+			// The store-level catalog status is a projection of the canonical
+			// store/domain association. Mutate both in one transaction so an
+			// approved store can never retain a pending domain gate.
+			if input.Action == "catalog-approval" {
+				domainStatus := "pending"
+				if input.Value == "approved" || input.Value == "rejected" {
+					domainStatus = input.Value
+				}
+				_, err = tx.ExecContext(ctx, `
+					INSERT INTO dsh_store_catalog_domains
+					  (store_id, domain_id, status, approved_by, approved_at)
+					SELECT id, catalog_domain_id, $1,
+					       CASE WHEN $1 = 'approved' THEN $2 ELSE NULL END,
+					       CASE WHEN $1 = 'approved' THEN NOW() ELSE NULL END
+					FROM dsh_stores
+					WHERE id = $3 AND catalog_domain_id IS NOT NULL
+					ON CONFLICT (store_id, domain_id) DO UPDATE SET
+					  status = EXCLUDED.status,
+					  approved_by = EXCLUDED.approved_by,
+					  approved_at = EXCLUDED.approved_at,
+					  updated_at = NOW()`, domainStatus, actor.ID, storeID)
+				if err != nil {
+					return err
+				}
 			}
 
 			// If lifecycle changed, write to outbox for cache invalidation & order race prevention

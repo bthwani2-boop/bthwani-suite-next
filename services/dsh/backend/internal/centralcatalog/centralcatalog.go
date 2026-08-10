@@ -1887,10 +1887,10 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id 
 		}
 
 		// Verify store is active and visible
-		var storeActive bool
+		var storePublished bool
 		var storeVisible bool
-		err = tx.QueryRowContext(ctx, `SELECT (status = 'published'), is_visible FROM dsh_stores WHERE id=$1`, *proposal.SourceStoreID).Scan(&storeActive, &storeVisible)
-		if err != nil || !storeActive || !storeVisible {
+		err = tx.QueryRowContext(ctx, `SELECT (status = 'published'), is_visible FROM dsh_stores WHERE id=$1`, *proposal.SourceStoreID).Scan(&storePublished, &storeVisible)
+		if err != nil || !storePublished || !storeVisible {
 			return ProductProposal{}, fmt.Errorf("%w: store must be active and visible", ErrForbidden)
 		}
 

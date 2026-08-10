@@ -138,6 +138,17 @@ func TestGovernedOperatorStoreCreationIdempotencyIsContextScopedDBIntegration(t 
 		if gotContext != item.operatorContextID {
 			t.Fatalf("store %s escaped OperatorContext: got=%q want=%q", item.storeID, gotContext, item.operatorContextID)
 		}
+		var domainID, domainStatus string
+		if err := db.QueryRow(`
+			SELECT domain_id, status
+			FROM dsh_store_catalog_domains
+			WHERE store_id = $1`, item.storeID,
+		).Scan(&domainID, &domainStatus); err != nil {
+			t.Fatalf("draft store %s has no canonical catalog-domain link: %v", item.storeID, err)
+		}
+		if domainID != "domain-groceries" || domainStatus != "pending" {
+			t.Fatalf("draft store %s domain link=(%q,%q), want (domain-groceries,pending)", item.storeID, domainID, domainStatus)
+		}
 	}
 
 	var retryRows int

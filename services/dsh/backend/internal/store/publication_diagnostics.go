@@ -13,8 +13,8 @@ func DiagnoseStorePublication(row DshStoreRow) StorePublicationDiagnostics {
 		blockers = append(blockers, code+": "+message)
 	}
 
-	if row.Status == StatusSuspended || row.Status == StatusClosed {
-		add("STORE_SUSPENDED_OR_CLOSED", "Store lifecycle must not be suspended or closed")
+	if row.Status != StatusPublished {
+		add("STORE_NOT_PUBLISHED", "Store lifecycle must be published")
 	}
 	if !row.IsVisible {
 		add("STORE_HIDDEN", "Store visibility must be enabled")
@@ -63,4 +63,16 @@ func DiagnoseStorePublication(row DshStoreRow) StorePublicationDiagnostics {
 		IsReady:  len(blockers) == 0,
 		Blockers: blockers,
 	}
+}
+
+// DiagnoseStorePublicationReadiness validates whether an operator may move a
+// store into the published lifecycle. The owning partner must already be active,
+// while client_visible is evaluated as the next audited partner state. Public
+// reads remain denied until that transition actually commits.
+func DiagnoseStorePublicationReadiness(row DshStoreRow) StorePublicationDiagnostics {
+	row.Status = StatusPublished
+	if row.PartnerActivationStatus == "partner_active" || row.PartnerActivationStatus == "client_visible" {
+		row.PartnerActivationStatus = "client_visible"
+	}
+	return DiagnoseStorePublication(row)
 }
