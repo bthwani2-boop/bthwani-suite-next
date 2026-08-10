@@ -41,7 +41,7 @@ function Wait-Checks([string]$Sha,[string[]]$Names,[int]$Minutes) {
             if ($r.Count -eq 0) { [pscustomobject]@{Name=$name;Status='missing';Conclusion=''} }
             else { [pscustomobject]@{Name=$name;Status=$r[0].status;Conclusion=$r[0].conclusion} }
         }
-        $rows | Format-Table -AutoSize
+        $rows | Format-Table -AutoSize | Out-Host
         if (@($rows | Where-Object { $_.Status -ne 'completed' -or $_.Conclusion -ne 'success' }).Count -eq 0) { return }
         Start-Sleep -Seconds 15
     } while ((Get-Date) -lt $deadline)
@@ -50,6 +50,13 @@ function Wait-Checks([string]$Sha,[string[]]$Names,[int]$Minutes) {
 
 $repoRoot = Get-RepoRoot
 Set-Location $repoRoot
+$common = Join-Path $PSScriptRoot 'quality-gate-common.ps1'
+if (-not (Test-Path -LiteralPath $common)) { throw "Missing shared quality-gate helper: $common" }
+. $common
+$registry = Get-BThwaniQualityGateRegistry -RepoRoot $repoRoot
+$RequiredNames = @($registry.requiredChecks | ForEach-Object { [string]$_.context })
+if ([string]$registry.baseBranch -ne $BaseBranch) { throw "Registry base branch '$($registry.baseBranch)' does not match '$BaseBranch'." }
+
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "gh CLI is required." }
 Invoke-Native { gh auth status } "GitHub CLI authentication is not ready."
 
@@ -68,8 +75,7 @@ if ($LASTEXITCODE -ne 0) { throw "Unable to inspect existing readiness PRs." }
 if ($existing -and @($existing).Count -gt 0) {
     $pr = @($existing)[0]
     Write-Host "Existing readiness PR: $($pr.url)"
-    $required = @('BThwani CI result','SonarQube Cloud scan','SonarCloud Code Analysis','Analyze go (dsh)','Analyze go (identity)','Analyze go (platform-control)','Analyze go (providers)','Analyze go (wlt)','Analyze go (workforce)','Analyze javascript-typescript')
-    Wait-Checks -Sha $pr.headRefOid -Names $required -Minutes $WaitMinutes
+    Wait-Checks -Sha $pr.headRefOid -Names $RequiredNames -Minutes $WaitMinutes
     Write-Host "PROTECTION READINESS: PASS"
     return
 }
@@ -148,8 +154,8 @@ $body = @"
 Prepare fail-closed master protection without changing application code or Sonar coverage policy.
 
 - make BThwani CI result appear on every pull request
-- prove the exact future required checks on a real Draft PR
-- do not activate master protection until every check is observed and successful
+- prove the canonical required-check inventory on a real Draft PR
+- do not activate master protection until every registry-defined check is observed and successful
 
 Coverage/CPD hardening is deliberately a separate PR after master is protected.
 "@
@@ -159,7 +165,6 @@ if ($LASTEXITCODE -ne 0 -or -not $pr) { throw "Draft PR was created but could no
 Write-Host "Draft PR: $($pr.url)"
 Write-Host "Head SHA: $($pr.headRefOid)"
 
-$required = @('BThwani CI result','SonarQube Cloud scan','SonarCloud Code Analysis','Analyze go (dsh)','Analyze go (identity)','Analyze go (platform-control)','Analyze go (providers)','Analyze go (wlt)','Analyze go (workforce)','Analyze javascript-typescript')
-Wait-Checks -Sha $pr.headRefOid -Names $required -Minutes $WaitMinutes
+Wait-Checks -Sha $pr.headRefOid -Names $RequiredNames -Minutes $WaitMinutes
 Write-Host "PROTECTION READINESS: PASS"
 Write-Host "Next: 06-finalize-and-protect-master.ps1 -PrNumber $($pr.number)"
