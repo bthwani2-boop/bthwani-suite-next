@@ -119,7 +119,7 @@ test("development gateway is allowlisted and the underlying broker and MinIO sta
   assert.match(broker, /const HOST = '127\.0\.0\.1'/);
   assert.match(broker, /DEV_SESSION_LOOPBACK_REQUIRED/);
   assert.match(compose, /127\.0\.0\.1:\$\{BTHWANI_DSH_API_HOST_PORT:-58080\}:8080/);
-  assert.match(compose, /127\.0\.0\.1:\$\{BTHWANI_MINIO_API_HOST_PORT:-59000\}:9000/);
+  assert.match(compose, /127\.0\.0\.1:\$\{BTHWANI_MINIO_API_PORT:-59000\}:9000/);
   assert.doesNotMatch(gateway, /58083/);
 });
 
