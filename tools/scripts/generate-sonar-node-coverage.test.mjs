@@ -81,7 +81,7 @@ test("LCOV filtering fails before Sonar when a mapped line is outside the source
   );
 });
 
-test("canonical LCOV merge sums duplicate line and branch evidence exactly", () => {
+test("canonical LCOV merge sums resolvable evidence and omits unmappable source-map metadata", () => {
   const source = "shared/data-runtime/src/create-query-client.ts";
   const first = [
     "TN:",
@@ -90,10 +90,11 @@ test("canonical LCOV merge sums duplicate line and branch evidence exactly", () 
     "FNDA:1,get",
     "FNF:1",
     "FNH:1",
+    "BRDA:undefined,2,0,1",
     "BRDA:1,0,0,1",
     "BRDA:1,0,1,-",
-    "BRF:2",
-    "BRH:1",
+    "BRF:3",
+    "BRH:2",
     "DA:1,1",
     "DA:2,0",
     "LF:2",
@@ -122,6 +123,7 @@ test("canonical LCOV merge sums duplicate line and branch evidence exactly", () 
   assert.equal(merged.length, 1);
   assert.equal((merged[0].match(/^SF:/gm) ?? []).length, 1);
   assert.doesNotMatch(merged[0], /^(?:FN|FNDA|FNF|FNH):/m);
+  assert.doesNotMatch(merged[0], /^BRDA:undefined,/m);
   assert.match(merged[0], /^BRDA:1,0,0,3$/m);
   assert.match(merged[0], /^BRDA:1,0,1,1$/m);
   assert.match(merged[0], /^BRF:2$/m);
