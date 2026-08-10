@@ -37,16 +37,16 @@ function Get-RequiredRows([string]$Sha) {
     foreach ($name in $RequiredNames) {
         $r = @($runs | Where-Object name -eq $name | Sort-Object started_at -Descending | Select-Object -First 1)
         if ($r.Count -eq 0) {
-            [pscustomobject]@{Name=$name;Status='missing';Conclusion='';App='';IntegrationId=$null;ProducerMatch=$false}
+            [pscustomobject]@{Name=$name;Status='missing';Conclusion='';App='';IntegrationId=$null;IntegrationMatch=$false}
         } else {
-            $app = [string]$r[0].app.slug
+            $integrationId = [int64]$r[0].app.id
             [pscustomobject]@{
                 Name=$name
                 Status=$r[0].status
                 Conclusion=$r[0].conclusion
-                App=$app
-                IntegrationId=$r[0].app.id
-                ProducerMatch=($app -eq $ExpectedProducer[$name])
+                App=[string]$r[0].app.slug
+                IntegrationId=$integrationId
+                IntegrationMatch=($integrationId -eq [int64]$ExpectedIntegrationId[$name])
             }
         }
     }
@@ -59,14 +59,14 @@ function Wait-Required([string]$Sha,[int]$Minutes) {
         $bad = @($rows | Where-Object {
             $_.Status -ne 'completed' -or
             $_.Conclusion -ne 'success' -or
-            -not $_.ProducerMatch -or
+            -not $_.IntegrationMatch -or
             -not $_.IntegrationId -or
             [int64]$_.IntegrationId -le 0
         })
         if ($bad.Count -eq 0) { return $rows }
         Start-Sleep -Seconds 15
     } while ((Get-Date) -lt $deadline)
-    throw "Required checks did not all become successful from their expected producers. No ruleset changes were made."
+    throw "Required checks did not all become successful from their expected GitHub App integrations. No ruleset changes were made."
 }
 function Assert-RequiredRows([object[]]$Rows) {
     if ($Rows.Count -ne $RequiredNames.Count) {
@@ -77,7 +77,7 @@ function Assert-RequiredRows([object[]]$Rows) {
     $unexpected = @($names | Where-Object { $_ -notin $RequiredNames })
     $duplicates = @($names | Group-Object | Where-Object Count -ne 1 | ForEach-Object Name)
     $invalid = @($Rows | Where-Object {
-        -not $_.Name -or -not $_.ProducerMatch -or -not $_.IntegrationId -or [int64]$_.IntegrationId -le 0
+        -not $_.Name -or -not $_.IntegrationMatch -or -not $_.IntegrationId -or [int64]$_.IntegrationId -le 0
     })
     if ($missing.Count -gt 0 -or $unexpected.Count -gt 0 -or $duplicates.Count -gt 0 -or $invalid.Count -gt 0) {
         throw "Invalid required-check inventory. missing=[$($missing -join ', ')] unexpected=[$($unexpected -join ', ')] duplicates=[$($duplicates -join ', ')] invalid=$($invalid.Count)"
@@ -89,7 +89,7 @@ function New-RulesetBody([object[]]$Rows,[string]$Enforcement,[bool]$BindApps) {
     $requiredStatus = @(
         foreach ($row in $Rows) {
             if ($BindApps) {
-                [ordered]@{ context=[string]$row.Name; integration_id=[int64]$row.IntegrationId }
+                [ordered]@{ context=[string]$row.Name; integration_id=[int64]$ExpectedIntegrationId[[string]$row.Name] }
             } else {
                 [ordered]@{ context=[string]$row.Name }
             }
@@ -157,6 +157,11 @@ function Assert-RulesetContexts([object]$Ruleset,[bool]$RequireBindings) {
     if ($RequireBindings) {
         $unbound = @($configured | Where-Object { -not $_.integration_id -or [int64]$_.integration_id -le 0 })
         if ($unbound.Count -gt 0) { throw "$($unbound.Count) required context(s) are not integration-bound." }
+        foreach ($item in $configured) {
+            if ([int64]$item.integration_id -ne [int64]$ExpectedIntegrationId[[string]$item.context]) {
+                throw "Ruleset integration binding drift for '$($item.context)': live=$($item.integration_id) desired=$($ExpectedIntegrationId[[string]$item.context])."
+            }
+        }
     }
 }
 
@@ -166,8 +171,8 @@ if (-not (Test-Path -LiteralPath $common)) { throw "Missing shared quality-gate 
 . $common
 $registry = Get-BThwaniQualityGateRegistry -RepoRoot $repoRoot
 $RequiredNames = @($registry.requiredChecks | ForEach-Object { [string]$_.context })
-$ExpectedProducer = @{}
-foreach ($entry in @($registry.requiredChecks)) { $ExpectedProducer[[string]$entry.context] = [string]$entry.producer }
+$ExpectedIntegrationId = @{}
+foreach ($entry in @($registry.requiredChecks)) { $ExpectedIntegrationId[[string]$entry.context] = [int64]$entry.integrationId }
 if ([string]$registry.baseBranch -ne $BaseBranch) { throw "Registry base branch '$($registry.baseBranch)' does not match '$BaseBranch'." }
 if ([string]$registry.rulesetName -ne $RulesetName) { throw "Registry ruleset '$($registry.rulesetName)' does not match '$RulesetName'." }
 
