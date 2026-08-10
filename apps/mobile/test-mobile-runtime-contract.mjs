@@ -49,14 +49,24 @@ if (!testFiles.some((name) => name.endsWith(".execution.test.mjs"))) {
   fail(`${appKey}: at least one executable logic test (*.execution.test.mjs) is required`);
 }
 
-const executable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-const result = spawnSync(executable, ["--dir", appDir, "exec", "expo", "config", "--json"], {
-  cwd: repoRoot,
-  encoding: "utf8",
-  env: { ...process.env, CI: "1", EXPO_NO_TELEMETRY: "1", COREPACK_ENABLE_DOWNLOAD_PROMPT: "0" },
-  windowsHide: true,
-  shell: process.platform === "win32",
-});
+// The runtime contract is itself a governed pnpm package script. Reuse the
+// exact pnpm CLI that launched this process and execute it through Node. This
+// avoids shell parsing entirely on Windows and keeps arguments unambiguous.
+const pnpmCli = process.env.npm_execpath;
+if (!pnpmCli || !fs.existsSync(pnpmCli)) {
+  fail(`${appKey}: governed pnpm CLI path is unavailable; run the canonical package test instead of invoking this contract through a shell`);
+}
+
+const result = spawnSync(
+  process.execPath,
+  [pnpmCli, "--dir", appDir, "exec", "expo", "config", "--json"],
+  {
+    cwd: repoRoot,
+    encoding: "utf8",
+    env: { ...process.env, CI: "1", EXPO_NO_TELEMETRY: "1", COREPACK_ENABLE_DOWNLOAD_PROMPT: "0" },
+    windowsHide: true,
+  },
+);
 if (result.error) fail(`${appKey}: Expo config could not start: ${result.error.message}`);
 if (result.status !== 0) {
   process.stdout.write(result.stdout ?? "");
