@@ -6,14 +6,7 @@
     {"context":"BThwani CI result","producer":"github-actions","purpose":"Fail-closed aggregate result for contextual CI."},
     {"context":"SonarQube Cloud scan","producer":"github-actions","purpose":"Repository-driven SonarQube Cloud scan execution."},
     {"context":"SonarCloud Code Analysis","producer":"sonarqubecloud","purpose":"SonarQube Cloud Quality Gate result."},
-    {"context":"Analyze actions","producer":"github-actions","purpose":"CodeQL analysis of GitHub Actions workflow code."},
-    {"context":"Analyze javascript-typescript","producer":"github-actions","purpose":"CodeQL analysis of JavaScript and TypeScript."},
-    {"context":"Analyze go (dsh)","producer":"github-actions","purpose":"CodeQL analysis of DSH Go backend."},
-    {"context":"Analyze go (identity)","producer":"github-actions","purpose":"CodeQL analysis of Identity Go backend."},
-    {"context":"Analyze go (platform-control)","producer":"github-actions","purpose":"CodeQL analysis of Platform Control Go backend."},
-    {"context":"Analyze go (providers)","producer":"github-actions","purpose":"CodeQL analysis of Providers Go backend."},
-    {"context":"Analyze go (wlt)","producer":"github-actions","purpose":"CodeQL analysis of WLT Go backend."},
-    {"context":"Analyze go (workforce)","producer":"github-actions","purpose":"CodeQL analysis of Workforce Go backend."},
+    {"context":"CodeQL result","producer":"github-actions","purpose":"Fail-closed aggregate for affected-scope CodeQL analysis; protected-branch pushes and scheduled runs remain full scans."},
     {"context":"Dependency review","producer":"github-actions","purpose":"Blocks newly introduced dependencies with known vulnerabilities."}
   ]
 }
