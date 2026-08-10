@@ -6,9 +6,13 @@ import {
   markOrderPreparing,
   markOrderReady,
 } from './orders.api';
-import type { DshPartnerOrderAction } from './orders.types';
+import {
+  type PartnerOrderMutationCommand,
+  resolvePartnerOrderMutation,
+} from './partner-order-mutation.policy';
 
-export type PartnerOrderMutationCommand = 'accept' | 'prepare' | 'ready' | 'handoff';
+export { resolvePartnerOrderMutation } from './partner-order-mutation.policy';
+export type { PartnerOrderMutationCommand } from './partner-order-mutation.policy';
 
 export type PartnerOrderCommandState =
   | { readonly kind: 'idle' }
@@ -21,20 +25,6 @@ export type PartnerOrderCommandState =
       readonly message?: string;
     }
   | { readonly kind: 'error'; readonly command: PartnerOrderMutationCommand; readonly orderId: string; readonly message: string };
-
-export function resolvePartnerOrderMutation(
-  actionId: string,
-  allowedActions: readonly DshPartnerOrderAction[],
-): PartnerOrderMutationCommand | null {
-  if (actionId === 'accept' && allowedActions.includes('accept')) return 'accept';
-  if (actionId === 'ready' && allowedActions.includes('ready')) return 'ready';
-  if (actionId === 'handoff' && allowedActions.includes('handoff')) return 'handoff';
-  if (actionId === 'prepare') {
-    if (allowedActions.includes('prepare')) return 'prepare';
-    if (allowedActions.includes('ready')) return 'ready';
-  }
-  return null;
-}
 
 function resolveErrorMessage(error: unknown): string {
   const classified = classifyOrderError(error);
