@@ -100,9 +100,11 @@ jobs:
           if [[ "${PLATFORM}" == "true" ]]; then add_go platform-control core/platform-control/backend/go.mod core/platform-control/backend; fi
           if [[ "${PROVIDERS}" == "true" ]]; then add_go providers core/providers/backend/go.mod core/providers/backend; fi
 
-          printf 'actions=%s\n' "${actions}" >> "${GITHUB_OUTPUT}"
-          printf 'javascript=%s\n' "${javascript}" >> "${GITHUB_OUTPUT}"
-          printf 'go_matrix={"include":%s}\n' "${include}" >> "${GITHUB_OUTPUT}"
+          {
+            printf 'actions=%s\n' "${actions}"
+            printf 'javascript=%s\n' "${javascript}"
+            printf 'go_matrix={"include":%s}\n' "${include}"
+          } >> "${GITHUB_OUTPUT}"
 
           {
             echo "### CodeQL contextual routing"
