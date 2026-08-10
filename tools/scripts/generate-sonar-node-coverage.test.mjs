@@ -60,3 +60,19 @@ test("LCOV filtering rejects records outside the suite authority", () => {
   assert.deepEqual(filterLcov(raw, "data-runtime"), []);
   assert.throws(() => filterLcov(raw, "unknown-suite"), /Unknown Sonar coverage suite/);
 });
+
+test("LCOV filtering fails before Sonar when a mapped line is outside the source file", () => {
+  const raw = [
+    "TN:",
+    "SF:shared/data-runtime/src/create-query-client.ts",
+    "DA:999999,1",
+    "LF:1",
+    "LH:1",
+    "end_of_record",
+  ].join("\n");
+
+  assert.throws(
+    () => filterLcov(raw, "data-runtime"),
+    /LCOV DA line 999999 is outside shared\/data-runtime\/src\/create-query-client\.ts/,
+  );
+});
