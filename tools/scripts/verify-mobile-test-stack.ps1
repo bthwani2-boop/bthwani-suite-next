@@ -29,7 +29,7 @@ Invoke-VerifiedStep "Canonical command and mobile-test policy" {
   node tools/guards/required-command-integrity-gate.mjs
 }
 
-Invoke-VerifiedStep "Shared mobile contracts" {
+Invoke-VerifiedStep "Shared mobile contracts and application-surface ownership" {
   node --test apps/mobile/tests/*.test.mjs
 }
 
@@ -38,6 +38,10 @@ foreach ($App in $Apps) {
   Invoke-VerifiedStep "$App owned app + runtime tests" {
     pnpm --dir "apps/$App/runtime" test
   }
+}
+
+Invoke-VerifiedStep "control-panel owned tests" {
+  pnpm --dir apps/control-panel/runtime test
 }
 
 $requiresRuntime = $Integration -or $LanRuntime -or $Full
@@ -78,4 +82,4 @@ if ($Full) {
   }
 }
 
-Write-Host "`nmobile-test-stack: PASS" -ForegroundColor Green
+Write-Host "`nmobile-and-control-test-stack: PASS" -ForegroundColor Green
