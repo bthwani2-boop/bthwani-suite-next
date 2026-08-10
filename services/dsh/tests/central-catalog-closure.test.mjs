@@ -3,6 +3,7 @@ import fs from "node:fs";
 import test from "node:test";
 
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+const escapeRegexLiteral = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 test("runtime routes expose central catalog only", () => {
   const router = read("backend/internal/http/server.go");
@@ -16,7 +17,7 @@ test("runtime routes expose central catalog only", () => {
     "/dsh/partner/stores/{storeId}/catalog/media",
     "/dsh/operator/catalog/submissions",
   ]) {
-    assert.doesNotMatch(contract, new RegExp(removedPath.replace(/[{}]/g, "\\$&")));
+    assert.doesNotMatch(contract, new RegExp(escapeRegexLiteral(removedPath)));
   }
 
   assert.match(runtimeRoutes, /GET \/dsh\/partner\/catalog\/taxonomy/);

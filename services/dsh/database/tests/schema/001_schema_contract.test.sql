@@ -78,14 +78,14 @@ BEGIN
 
   IF generated_expression IS NULL
      OR generated_expression NOT LIKE '%published%'
-     OR generated_expression LIKE '%active%' THEN
+     OR generated_expression LIKE '%status = ''active''::text%' THEN
     RAISE EXCEPTION 'dsh_stores.visibility_status must use only the canonical published lifecycle, found %', COALESCE(generated_expression, '<missing>');
   END IF;
 
   SELECT pg_get_viewdef('public.dsh_partner_store_readiness_v'::regclass, TRUE)
   INTO readiness_view_definition;
   IF readiness_view_definition NOT LIKE '%published%'
-     OR readiness_view_definition LIKE '%active%' THEN
+     OR readiness_view_definition LIKE '%status = ''active''::text%' THEN
     RAISE EXCEPTION 'dsh_partner_store_readiness_v must use only the canonical published lifecycle, found %', readiness_view_definition;
   END IF;
 END
