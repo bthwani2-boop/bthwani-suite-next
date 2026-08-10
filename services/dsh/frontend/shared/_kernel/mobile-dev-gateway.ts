@@ -22,9 +22,11 @@ function isPrivateIpv4(value: string): boolean {
   if (parts.length !== 4) return false;
   const octets = parts.map((part) => Number(part));
   if (octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
-  if (octets[0] === 10) return true;
-  if (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) return true;
-  return octets[0] === 192 && octets[1] === 168;
+  const first = octets[0] ?? -1;
+  const second = octets[1] ?? -1;
+  if (first === 10) return true;
+  if (first === 172 && second >= 16 && second <= 31) return true;
+  return first === 192 && second === 168;
 }
 
 function hasPresignedQuery(url: URL): boolean {
