@@ -4,6 +4,13 @@
   "sourceRoot": "contracts",
   "projectType": "library",
   "targets": {
+    "materialize": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "node tools/scripts/materialize-openapi-artifacts.mjs"
+      }
+    },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
