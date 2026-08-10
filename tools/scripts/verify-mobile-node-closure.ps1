@@ -26,7 +26,7 @@ Invoke-VerifiedStep "Canonical mobile test policy" {
   node tools/guards/required-command-integrity-gate.mjs
 }
 
-Invoke-VerifiedStep "Shared mobile contracts and Nx ownership" {
+Invoke-VerifiedStep "Shared mobile contracts, Nx ownership, and control-panel propagation" {
   node --test apps/mobile/tests/*.test.mjs
 }
 
@@ -36,9 +36,13 @@ foreach ($App in @("app-client", "app-partner", "app-captain", "app-field")) {
   }
 }
 
+Invoke-VerifiedStep "control-panel canonical package test" {
+  pnpm --dir apps/control-panel/runtime test
+}
+
 Invoke-VerifiedStep "Nx full typecheck" { pnpm run nx:typecheck }
 Invoke-VerifiedStep "Nx full lint" { pnpm run nx:lint }
 Invoke-VerifiedStep "Nx full tests" { pnpm exec nx run-many -t test --all --outputStyle=stream }
 Invoke-VerifiedStep "Nx full build" { pnpm run nx:build }
 
-Write-Host "`nmobile-node-closure: PASS" -ForegroundColor Green
+Write-Host "`nmobile-and-control-node-closure: PASS" -ForegroundColor Green
