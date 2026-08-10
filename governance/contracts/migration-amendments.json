@@ -79,6 +79,24 @@
       "requiredCorrection": "Keep the repair bounded to operator_context_id, use the folded lowercase constraint identifier consistently, and fail closed for blank operator context values."
     },
     {
+      "service": "identity",
+      "migrationId": "identity-018_session_surface.sql",
+      "originalBlobSha": "f458827cf028520ac393c22138272dbf77ddca8f",
+      "replacementSha256": "bb0d70855597f5ec20f98e2a5e396555cbc6b6cba5f11fe54128e7c48e583479",
+      "acceptedHistoricalSha256": [
+        "8518a3dd2f87e8f8ea1bf10ab006794dc0364543deb430aa0f0cb713a3d59adf"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Commit 2f1568ed3c56e5cf365d02ccf6654aa949910f03 removed a single trailing space after 'ALTER TABLE identity_sessions' while the manifest declares this file HISTORICAL_IMMUTABLE, and updated the manifest digest without registering the authorizing amendment. The edit is whitespace-only: both digests parse to the identical statement and produce the identical schema, so a database that recorded either digest holds the same surface column. Because the manifest moved to the new digest alone, every database bootstrapped before that commit fails the governed ledger check permanently with no forward path. Clean installations never expose this because they record the new digest directly.",
+      "evidence": {
+        "cleanInstallCommitSha": "2f1568ed3c56e5cf365d02ccf6654aa949910f03",
+        "cleanInstallResult": "CLEAN_INSTALL_PASSES_PREEXISTING_LEDGER_CONFLICTS",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Record the pre-edit digest 8518a3dd2f87e8f8ea1bf10ab006794dc0364543deb430aa0f0cb713a3d59adf as an accepted historical checksum so pre-existing databases converge without a destructive rebuild. No forward-recovery migration is required because the two digests are schema-equivalent."
+    },
+    {
       "service": "providers",
       "migrationId": "providers-002_operator_execution_context.sql",
       "originalBlobSha": "191ab23a055720124ecd50cdc9148178b880907f",

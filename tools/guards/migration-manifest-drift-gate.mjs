@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { execFileSync } from "node:child_process";
 
 const repositoryRoot = path.resolve(new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"), "..", "..");
 
@@ -337,6 +338,111 @@ function checkDshFinancialSovereigntyMigrations() {
   return failures;
 }
 
+function git(args) {
+  return execFileSync("git", args, {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+}
+
+// A HISTORICAL_IMMUTABLE migration's declared digest must never be replaced
+// silently. Editing a frozen migration and updating its manifest digest in the
+// same commit leaves the manifest self-consistent -- checkService() still
+// passes -- while every database that recorded the previous digest fails the
+// governed ledger check permanently, with no forward path. Clean installs never
+// expose it because they record the new digest directly. So the manifest's own
+// history is the evidence: any superseded digest must be registered in
+// migration-amendments.json as acceptedHistoricalSha256.
+function checkHistoricalImmutableDigestStability(service) {
+  const failures = [];
+  const dir = servicePaths[service];
+  const manifestRelative = `${dir}/manifest.json`;
+  if (!fs.existsSync(path.join(repositoryRoot, manifestRelative))) return failures;
+
+  let manifest;
+  try {
+    manifest = JSON.parse(read(manifestRelative));
+  } catch {
+    return failures;
+  }
+
+  const immutable = new Map(
+    (manifest.migrations ?? [])
+      .filter((entry) => entry.state === "HISTORICAL_IMMUTABLE" && entry.file && entry.sha256)
+      .map((entry) => [entry.file, entry.sha256]),
+  );
+  if (immutable.size === 0) return failures;
+
+  // Scope: digests introduced by the change-set under review, measured against
+  // the integration baseline. The gate's job is to stop NEW breaches from
+  // merging -- it deliberately does not retroactively fail on digests that were
+  // already replaced on the baseline, because those predate the rule and their
+  // amendment evidence cannot be reconstructed here. Run with
+  // --immutable-baseline <ref> to audit against a different baseline.
+  const baselineIndex = args.indexOf("--immutable-baseline");
+  const requestedBaseline = baselineIndex !== -1 ? args[baselineIndex + 1] : null;
+  const baseline = resolveImmutableBaseline(requestedBaseline);
+  if (!baseline) return failures;
+
+  let baselineManifest;
+  try {
+    baselineManifest = JSON.parse(
+      execFileSync("git", ["show", `${baseline}:${manifestRelative}`], {
+        cwd: repositoryRoot,
+        encoding: "utf8",
+        maxBuffer: 64 * 1024 * 1024,
+        stdio: ["ignore", "pipe", "ignore"],
+      }),
+    );
+  } catch {
+    // Manifest absent or unparseable at the baseline (new service); nothing to compare.
+    return failures;
+  }
+
+  const baselineDigests = new Map(
+    (baselineManifest.migrations ?? [])
+      .filter((entry) => entry?.file && entry.sha256)
+      .map((entry) => [entry.file, entry.sha256]),
+  );
+
+  for (const [file, currentDigest] of immutable) {
+    const baselineDigest = baselineDigests.get(file);
+    if (!baselineDigest || baselineDigest === currentDigest) continue;
+
+    const amendment = amendments.get(`${service}:${file}`);
+    const authorized = new Set(amendment?.acceptedHistoricalSha256 ?? []);
+    if (authorized.has(baselineDigest)) continue;
+
+    failures.push(
+      `HISTORICAL_IMMUTABLE digest replaced without amendment: ${file} ` +
+        `baseline=${baselineDigest} current=${currentDigest} -- a frozen migration ` +
+        `cannot change digest silently; every database that recorded the baseline digest ` +
+        `would fail the governed ledger check permanently. Register the baseline digest in ` +
+        `governance/contracts/migration-amendments.json acceptedHistoricalSha256`,
+    );
+  }
+
+  return failures;
+}
+
+function resolveImmutableBaseline(requested) {
+  const candidates = requested
+    ? [requested]
+    : [process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : null, "origin/master", "master"].filter(
+        Boolean,
+      );
+  for (const candidate of candidates) {
+    try {
+      const mergeBase = git(["merge-base", "HEAD", candidate]).trim();
+      if (mergeBase) return mergeBase;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
 const targetServices = requestedServices ?? Object.keys(servicePaths);
 let anyFailure = false;
 for (const service of targetServices) {
@@ -346,6 +452,7 @@ for (const service of targetServices) {
     continue;
   }
   const result = checkService(service);
+  result.failures.push(...checkHistoricalImmutableDigestStability(service));
   if (result.failures.length > 0) {
     anyFailure = true;
     console.error(`migration-manifest-drift-gate: FAIL ${service}`);
