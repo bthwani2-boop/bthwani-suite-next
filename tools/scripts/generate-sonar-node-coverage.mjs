@@ -165,6 +165,27 @@ function resolveLcovSource(source, suiteCwd) {
   return null;
 }
 
+function sourceLineCount(absolute) {
+  const source = readFileSync(absolute, "utf8");
+  if (source.length === 0) return 0;
+  const lines = source.split(/\r\n|\r|\n/).length;
+  return /(?:\r\n|\r|\n)$/.test(source) ? lines - 1 : lines;
+}
+
+export function validateLcovLineMappings(lines, absolute, source) {
+  const maxLine = sourceLineCount(absolute);
+  for (const line of lines) {
+    const match = /^(DA|BRDA|FN):(\d+)(?:,|$)/.exec(line);
+    if (!match) continue;
+    const lineNumber = Number.parseInt(match[2], 10);
+    if (!Number.isSafeInteger(lineNumber) || lineNumber < 1 || lineNumber > maxLine) {
+      throw new Error(
+        `LCOV ${match[1]} line ${match[2]} is outside ${source} (source lines=${maxLine})`,
+      );
+    }
+  }
+}
+
 export function filterLcov(rawLcov, suiteName, suiteCwd = repoRoot) {
   const definition = suiteDefinitions[suiteName];
   if (!definition) throw new Error(`Unknown Sonar coverage suite '${suiteName}'`);
@@ -187,6 +208,7 @@ export function filterLcov(rawLcov, suiteName, suiteCwd = repoRoot) {
     if (source.includes("/generated/") || source.includes("/node_modules/")) continue;
     if (!definition.sourcePrefixes.some((prefix) => source.startsWith(prefix))) continue;
 
+    validateLcovLineMappings(lines, resolved.absolute, source);
     lines[sfIndex] = `SF:${source}`;
     retained.push(`${lines.join("\n")}\nend_of_record\n`);
   }
