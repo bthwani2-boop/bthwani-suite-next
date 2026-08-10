@@ -30,8 +30,23 @@ if (!["app.config.js", "app.config.ts", "app.json"].some((file) => fs.existsSync
 }
 
 const pkg = JSON.parse(fs.readFileSync(path.join(appDir, "package.json"), "utf8"));
-for (const script of ["typecheck", "lint", "test", "build", "eas-build-pre-install"]) {
+for (const script of ["typecheck", "lint", "test:app", "test:runtime", "test", "build", "eas-build-pre-install"]) {
   if (!pkg.scripts?.[script]) fail(`${appKey}: missing required script '${script}'`);
+}
+
+const expectedTestApp = "node --test tests/*.test.mjs";
+const expectedTestRuntime = `node ../../mobile/test-mobile-runtime-contract.mjs --app ${appKey}`;
+const expectedTest = "pnpm run test:app && pnpm run test:runtime";
+if (pkg.scripts["test:app"] !== expectedTestApp) fail(`${appKey}: test:app must run the complete owned test suite`);
+if (pkg.scripts["test:runtime"] !== expectedTestRuntime) fail(`${appKey}: test:runtime command drift`);
+if (pkg.scripts.test !== expectedTest) fail(`${appKey}: test must fail closed across app and runtime layers`);
+
+const testsDir = path.join(appDir, "tests");
+if (!fs.existsSync(testsDir)) fail(`${appKey}: missing tests directory`);
+const testFiles = fs.readdirSync(testsDir).filter((name) => name.endsWith(".test.mjs"));
+if (testFiles.length === 0) fail(`${appKey}: no owned test files`);
+if (!testFiles.some((name) => name.endsWith(".execution.test.mjs"))) {
+  fail(`${appKey}: at least one executable logic test (*.execution.test.mjs) is required`);
 }
 
 const executable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
