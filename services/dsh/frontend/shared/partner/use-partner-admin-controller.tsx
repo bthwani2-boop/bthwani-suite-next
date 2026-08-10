@@ -1,3 +1,5 @@
+import { classifyGovernedError } from "../_kernel/governed-problem";
+import type { DshPartnerErrorState } from "./partner.states";
 import { useCallback, useEffect, useState } from "react";
 import {
   fetchPartners, fetchPartner, createPartner, transitionPartner,
@@ -24,6 +26,13 @@ type PartnerControllerError = {
 function isNetworkError(err: unknown): boolean {
   const e = err as PartnerControllerError;
   return e?.kind === "network" || e?.status === 0;
+}
+
+function partnerErrorState(err: unknown): DshPartnerErrorState {
+  const message = resolveErrorMessage(err);
+  // Preserve the governed reason code and next action; the partner wording
+  // above stays authoritative for the sentence shown to the user.
+  return { kind: "error", message, problem: { ...classifyGovernedError(err), message } };
 }
 
 function resolveErrorMessage(err: unknown): string {
@@ -69,7 +78,7 @@ export function usePartnerAdminController(authKind: string) {
     } catch (err) {
       setListState(isNetworkError(err)
         ? { kind: "offline" }
-        : { kind: "error", message: resolveErrorMessage(err) });
+        : partnerErrorState(err));
       return false;
     }
   }, [isAuth]);
@@ -89,7 +98,7 @@ export function usePartnerAdminController(authKind: string) {
       const e = err as PartnerControllerError;
       if (e?.status === 404) setDetailState({ kind: "not_found" });
       else if (e?.status === 403) setDetailState({ kind: "forbidden" });
-      else setDetailState({ kind: "error", message: resolveErrorMessage(err) });
+      else setDetailState(partnerErrorState(err));
       return false;
     }
   }, [isAuth]);
@@ -102,7 +111,7 @@ export function usePartnerAdminController(authKind: string) {
       await loadList(filters, page);
       return partner;
     } catch (err) {
-      setMutationState({ kind: "error", message: resolveErrorMessage(err) });
+      setMutationState(partnerErrorState(err));
       return null;
     }
   }, [filters, page, loadList]);
@@ -123,7 +132,7 @@ export function usePartnerAdminController(authKind: string) {
       } else if (e?.status === 409) {
         setMutationState({ kind: "version_conflict" });
       } else {
-        setMutationState({ kind: "error", message: resolveErrorMessage(err) });
+        setMutationState(partnerErrorState(err));
       }
       return null;
     }
@@ -173,7 +182,7 @@ export function usePartnerDocumentsController(partnerId: string, authKind: strin
         : { kind: "success", documents, total: documents.length });
       return true;
     } catch (err) {
-      setState({ kind: "error", message: resolveErrorMessage(err) });
+      setState(partnerErrorState(err));
       return false;
     }
   }, [isAuth, partnerId]);
@@ -188,7 +197,7 @@ export function usePartnerDocumentsController(partnerId: string, authKind: strin
       setActionState({ kind: "idle" });
       return true;
     } catch (err) {
-      setActionState({ kind: "error", message: resolveErrorMessage(err) });
+      setActionState(partnerErrorState(err));
       return false;
     }
   }, [partnerId, load]);
@@ -201,7 +210,7 @@ export function usePartnerDocumentsController(partnerId: string, authKind: strin
       setActionState({ kind: "idle" });
       return true;
     } catch (err) {
-      setActionState({ kind: "error", message: resolveErrorMessage(err) });
+      setActionState(partnerErrorState(err));
       return false;
     }
   }, [partnerId, load]);
@@ -221,7 +230,7 @@ export function usePartnerReadinessController(partnerId: string, authKind: strin
       setState({ kind: "success", readiness });
       return true;
     } catch (err) {
-      setState({ kind: "error", message: resolveErrorMessage(err) });
+      setState(partnerErrorState(err));
       return false;
     }
   }, [isAuth, partnerId]);
@@ -243,7 +252,7 @@ export function usePartnerAuditController(partnerId: string, authKind: string) {
       setState(events.length === 0 ? { kind: "empty" } : { kind: "success", events });
       return true;
     } catch (err) {
-      setState({ kind: "error", message: resolveErrorMessage(err) });
+      setState(partnerErrorState(err));
       return false;
     }
   }, [isAuth, partnerId]);
@@ -268,7 +277,7 @@ export function usePartnerDetailController(partnerId: string, authKind: string) 
       const e = err as PartnerControllerError;
       if (e?.status === 404) setDetailState({ kind: "not_found" });
       else if (e?.status === 403) setDetailState({ kind: "forbidden" });
-      else setDetailState({ kind: "error", message: resolveErrorMessage(err) });
+      else setDetailState(partnerErrorState(err));
       return false;
     }
   }, [isAuth, partnerId]);
@@ -289,7 +298,7 @@ export function usePartnerDetailController(partnerId: string, authKind: string) 
       } else if (e?.status === 409) {
         setMutationState({ kind: "version_conflict" });
       } else {
-        setMutationState({ kind: "error", message: resolveErrorMessage(err) });
+        setMutationState(partnerErrorState(err));
       }
       return false;
     }
@@ -314,7 +323,7 @@ export function usePartnerStoresController(partnerId: string, authKind: string) 
         : { kind: "success", stores, total });
       return true;
     } catch (err) {
-      setState({ kind: "error", message: resolveErrorMessage(err) });
+      setState(partnerErrorState(err));
       return false;
     }
   }, [isAuth, partnerId]);
@@ -329,7 +338,7 @@ export function usePartnerStoresController(partnerId: string, authKind: string) 
       setActionState({ kind: "idle" });
       return true;
     } catch (err) {
-      setActionState({ kind: "error", message: resolveErrorMessage(err) });
+      setActionState(partnerErrorState(err));
       return false;
     }
   }, [partnerId, load]);
@@ -349,7 +358,7 @@ export function usePartnerVisitsController(partnerId: string, authKind: string) 
       setState(visits.length === 0 ? { kind: "empty" } : { kind: "success", visits });
       return true;
     } catch (err) {
-      setState({ kind: "error", message: resolveErrorMessage(err) });
+      setState(partnerErrorState(err));
       return false;
     }
   }, [isAuth, partnerId]);

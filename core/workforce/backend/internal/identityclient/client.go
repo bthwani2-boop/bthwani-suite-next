@@ -10,18 +10,28 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
 
+// actorSearchPageSize is the page size requested from identity's keyset-paginated
+// actor search. Callers that need every match must follow NextCursor to exhaustion.
+const actorSearchPageSize = 100
+
 var (
+	ErrUnavailable              = errors.New("identity unavailable")
 	ErrPhoneAlreadyBound        = errors.New("phone already bound to another actor")
 	ErrUsernameTaken            = errors.New("username already taken")
 	ErrActorNotFound            = errors.New("actor not found")
 	ErrRateLimited              = errors.New("activation rate limited")
 	ErrInvalidActor             = errors.New("actor input invalid")
-	ErrOperatorContextForbidden = errors.New("operator context forbidden")
-	ErrUnavailable              = errors.New("identity unavailable")
+	ErrOperatorContextForbidden = fmt.Errorf("%w: operator context forbidden", ErrUnavailable)
+	ErrActorStateConflict       = errors.New("actor state conflict")
+	// ErrProvisionConflict is identity's ACTOR_PROVISION_CONFLICT: an actor
+	// already holds this phone under a different username or role, so the
+	// provisioning input cannot be replayed idempotently.
+	ErrProvisionConflict = errors.New("actor provisioning conflict")
 )
 
 type Client struct {
@@ -63,7 +73,21 @@ type ActorView struct {
 	Username  string   `json:"username"`
 	PhoneE164 string   `json:"phoneE164"`
 	Roles     []string `json:"roles"`
-	Active    bool     `json:"active"`
+	Version   int      `json:"version"`
+	Status    string   `json:"status"`
+}
+
+// IsActive derives lifecycle truth exclusively from Identity's canonical
+// status field. Identity does not expose a parallel JSON "active" boolean.
+func (a ActorView) IsActive() bool {
+	return strings.EqualFold(strings.TrimSpace(a.Status), "ACTIVE")
+}
+
+type ActorSearchPage struct {
+	Items      []ActorView `json:"items"`
+	Limit      int         `json:"limit"`
+	NextCursor string      `json:"nextCursor,omitempty"`
+	Total      int         `json:"total"`
 }
 
 type ProvisionInput struct {
@@ -105,8 +129,11 @@ func (c *Client) Actor(ctx context.Context, actorID string) (ActorView, error) {
 	return view, err
 }
 
-func (c *Client) SearchActors(ctx context.Context, role, q string) ([]ActorView, error) {
-	var result []ActorView
+// SearchActors performs a keyset-paginated actor search against identity. An empty
+// cursor starts at the first page; the returned cursor is empty once the last page
+// has been read.
+func (c *Client) SearchActors(ctx context.Context, role, q, cursor string) ([]ActorView, string, error) {
+	result := ActorSearchPage{Items: []ActorView{}}
 	values := url.Values{}
 	if role != "" {
 		values.Set("role", role)
@@ -114,23 +141,40 @@ func (c *Client) SearchActors(ctx context.Context, role, q string) ([]ActorView,
 	if q != "" {
 		values.Set("q", q)
 	}
-	path := "/internal/actors/search"
-	if encoded := values.Encode(); encoded != "" {
-		path += "?" + encoded
+	if cursor != "" {
+		values.Set("cursor", cursor)
 	}
+	values.Set("limit", strconv.Itoa(actorSearchPageSize))
+	path := "/internal/actors/search?" + values.Encode()
 	err := c.do(ctx, http.MethodGet, path, nil, &result, nil)
-	if result == nil {
-		result = []ActorView{}
+	if result.Items == nil {
+		result.Items = []ActorView{}
 	}
-	return result, err
+	return result.Items, result.NextCursor, err
 }
 
-func (c *Client) Deactivate(ctx context.Context, actorID string) error {
-	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/deactivate", nil, nil, nil)
+// Deprovision initiates a hard delete of an unactivated actor. This is used exclusively
+// for saga compensation when a downstream creation step fails.
+func (c *Client) Deprovision(ctx context.Context, actorID string) error {
+	return c.do(ctx, http.MethodDelete, "/internal/actors/"+url.PathEscape(actorID), nil, nil, nil)
 }
 
-func (c *Client) Reactivate(ctx context.Context, actorID string) error {
-	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/reactivate", nil, nil, nil)
+func (c *Client) Deactivate(ctx context.Context, actorID, requestedByActorID, reason, correlationID string) error {
+	body := map[string]string{
+		"requestedByActorId": requestedByActorID,
+		"reason":             reason,
+		"correlationId":      correlationID,
+	}
+	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/deactivate", body, nil, nil)
+}
+
+func (c *Client) Reactivate(ctx context.Context, actorID, requestedByActorID, reason, correlationID string) error {
+	body := map[string]string{
+		"requestedByActorId": requestedByActorID,
+		"reason":             reason,
+		"correlationId":      correlationID,
+	}
+	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/reactivate", body, nil, nil)
 }
 
 func canonicalActivationSurface(expectedActorType, expectedSurface string) string {
@@ -226,13 +270,25 @@ func (c *Client) do(ctx context.Context, method, path string, body, target any, 
 		return ErrActorNotFound
 	case "ACTIVATION_RATE_LIMITED":
 		return ErrRateLimited
-	case "INVALID_ACTOR_INPUT":
+	case "INVALID_REQUEST", "INVALID_ACTOR_INPUT":
 		return ErrInvalidActor
 	case "OPERATOR_CONTEXT_REQUIRED", "OPERATOR_CONTEXT_FORBIDDEN":
 		return ErrOperatorContextForbidden
+	case "ACTOR_STATE_CONFLICT":
+		return ErrActorStateConflict
+	case "ACTOR_PROVISION_CONFLICT":
+		return ErrProvisionConflict
+	case "INTERNAL_API_UNAVAILABLE", "IDENTITY_DEPENDENCY_TIMEOUT", "SERVICE_UNAVAILABLE":
+		return ErrUnavailable
 	}
 	if response.StatusCode == http.StatusNotFound {
 		return ErrActorNotFound
+	}
+	if response.StatusCode == http.StatusTooManyRequests {
+		return ErrRateLimited
+	}
+	if response.StatusCode == http.StatusServiceUnavailable || response.StatusCode == http.StatusGatewayTimeout {
+		return ErrUnavailable
 	}
 	return fmt.Errorf("identity returned HTTP %d (%s)", response.StatusCode, apiErr.Code)
 }

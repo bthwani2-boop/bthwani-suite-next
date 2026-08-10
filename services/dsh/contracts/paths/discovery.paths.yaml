@@ -4,6 +4,7 @@
 /dsh/stores:
   get:
     operationId: listDshStores
+    security: []
     summary: List discoverable stores.
     tags:
       - DshStoreDiscovery
@@ -32,6 +33,37 @@
         schema:
           type: boolean
         description: Filter by visibility flag.
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter by normalized search query.
+      - name: category
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter by category (domain/node ID).
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [rating, distance, eta]
+        description: Sort results by a specific metric.
+      - name: isFreeDelivery
+        in: query
+        required: false
+        schema:
+          type: boolean
+        description: Filter by free delivery.
+      - name: hasProBadge
+        in: query
+        required: false
+        schema:
+          type: boolean
+        description: Filter by pro badge.
       - name: limit
         in: query
         required: false
@@ -70,6 +102,7 @@
 /dsh/stores/{storeId}:
   get:
     operationId: getDshStore
+    security: []
     summary: Get a single store by ID.
     tags:
       - DshStoreDiscovery
@@ -95,6 +128,46 @@
               $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
       "404":
         description: Store not found.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+      "500":
+        description: Internal server error.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+
+/dsh/storefront/{storeId}:
+  get:
+    operationId: getDshStorefront
+    security: []
+    summary: Get an aggregated storefront (store detail + published catalog) for a single store by ID.
+    tags:
+      - DshStoreDiscovery
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Store identifier.
+    responses:
+      "200":
+        description: Aggregated Storefront detail.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStorefrontResponse"
+      "400":
+        description: Invalid store ID.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+      "404":
+        description: Storefront not found.
         content:
           application/json:
             schema:

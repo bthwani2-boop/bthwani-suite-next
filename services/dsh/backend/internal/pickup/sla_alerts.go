@@ -86,7 +86,7 @@ func RefreshPickupSLAAlerts(db *sql.DB, correlationID string, now time.Time) (*R
 	overdue := make(map[string]overdueInfo, len(sessions))
 	for i := range sessions {
 		session := &sessions[i]
-		sla := EvaluateSLA(session, thresholds, now)
+		sla := EvaluateSLA(session, nil, thresholds, now)
 		if sla.State == SLAOverdue {
 			overdue[session.ID] = overdueInfo{leg: sla.CurrentLeg, orderID: session.OrderID, storeID: session.StoreID}
 		}

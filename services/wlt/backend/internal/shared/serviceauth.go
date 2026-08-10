@@ -9,23 +9,10 @@ import (
 
 const legacyOperatorContextHeader = "X-Operator-Context-ID"
 
-// configuredFinancialCompatibilityScope returns the server-owned compatibility
-// value required by the current WLT schema while operator_context_id is removed
-// from the financial domain model. It is configuration, not caller-selected
-// ownership and not an active tenant boundary.
-func configuredFinancialCompatibilityScope(w http.ResponseWriter) (string, bool) {
-	scopeID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
-	if scopeID == "" {
-		SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_CONFIGURED", "BTHWANI_OPERATOR_CONTEXT_ID is required while the legacy WLT scope columns are being retired")
-		return "", false
-	}
-	return scopeID, true
-}
-
 // RequireServiceCaller validates the shared-secret bearer token and expected
-// service identity. After authentication, WLT replaces any caller-supplied
-// X-Operator-Context-ID with the server-owned compatibility value. Callers
-// cannot select financial ownership or isolation scope.
+// service identity before accepting the delegated OperatorContext. The context
+// header is trusted only on this authenticated server-to-server path; browser
+// and end-user requests must derive it from Identity instead.
 func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, expectedCaller string) bool {
 	expectedToken := os.Getenv(tokenEnvVar)
 	if expectedToken == "" {
@@ -46,11 +33,12 @@ func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, e
 		return false
 	}
 
-	scopeID, ok := configuredFinancialCompatibilityScope(w)
-	if !ok {
+	operatorContextID := strings.TrimSpace(r.Header.Get(legacyOperatorContextHeader))
+	if operatorContextID == "" {
+		SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "authenticated service delegation requires X-Operator-Context-ID")
 		return false
 	}
-	r.Header.Set(legacyOperatorContextHeader, scopeID)
-	*r = *r.WithContext(WithOperatorContext(r.Context(), scopeID))
+	r.Header.Set(legacyOperatorContextHeader, operatorContextID)
+	*r = *r.WithContext(WithOperatorContext(r.Context(), operatorContextID))
 	return true
 }

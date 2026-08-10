@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { useControlPanelSession } from "../../shared/session/control-panel-session";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { Box, Card, Text, spacing } from "@bthwani/ui-kit";
 import {
   CpBadge,
@@ -39,7 +39,7 @@ const PERIOD_TABS = (["today", "week", "month"] as DshAnalyticsPeriod[]).map((va
 
 export function AnalyticsDashboardScreen() {
   const router = useRouter();
-  const { state } = useControlPanelSession();
+  const { state } = useIdentitySession();
   const [period, setPeriod] = React.useState<DshAnalyticsPeriod>("today");
 
   const { platformState, orderState, deliveryState, supportState, storeState, reload } =

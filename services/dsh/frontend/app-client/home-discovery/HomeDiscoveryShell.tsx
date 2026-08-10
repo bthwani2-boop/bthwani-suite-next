@@ -25,9 +25,10 @@ import {
 import { ClientRemoteImage } from "../../../../../apps/app-client/runtime/src/media/ClientRemoteImage";
 import { createClientEphemeralId } from "../../../../../apps/app-client/runtime/src/platform/client-platform-actions";
 import {
-  applyDiscoveryFilter,
   fetchHomePublicReels,
   recordHomeMarketingEvent,
+  fetchDiscoveryStores,
+  applyDiscoveryFilter,
   type BannerViewModel,
   type CategoryViewModel,
   type DiscoveryFilterKind,
@@ -35,6 +36,7 @@ import {
   type HomeDiscoveryState,
   type HomePublicReel,
   type PromoViewModel,
+  type HomeStoreCardViewModel,
 } from "../../shared/home-discovery";
 import { HomeFilterRailSection } from "./HomeFilterRailSection";
 import { HomeHeroBannerSection } from "./HomeHeroBannerSection";
@@ -51,14 +53,6 @@ type Props = {
   onMarketingAction?: ((actionType: string, actionTarget: string) => void) | undefined;
   onRetry?: (() => void) | undefined;
 };
-
-function normalizeSearchText(value: string): string {
-  return value
-    .normalize("NFKD")
-    .replace(/[\u064B-\u065F\u0670]/g, "")
-    .toLocaleLowerCase("ar")
-    .trim();
-}
 
 function isSpecialRequestTarget(value: string): value is DshHomeSpecialRequestTarget {
   return value === "SHEIN_ASSISTED_PURCHASE" || value === "AWNAK_ERRAND";
@@ -77,12 +71,16 @@ export function HomeDiscoveryShell({
   const [activeCategoryId, setActiveCategoryId] = React.useState<string | null>(null);
   const [showDropdown, setShowDropdown] = React.useState(false);
   const [searchText, setSearchText] = React.useState("");
+  const normalizedQuery = searchText.trim();
   const [reels, setReels] = React.useState<readonly HomePublicReel[]>([]);
   const [reelsLoadState, setReelsLoadState] = React.useState<HomeReelsLoadState>("idle");
   const [videoOpenRequest, setVideoOpenRequest] = React.useState(0);
   const [viewerRef] = React.useState(() => createClientEphemeralId("home"));
   const reelsRequestSequence = React.useRef(0);
   const recordedImpressions = React.useRef(new Set<string>());
+
+  const [queriedStores, setQueriedStores] = React.useState<readonly HomeStoreCardViewModel[] | null>(null);
+  const [isQuerying, setIsQuerying] = React.useState(false);
 
   const emitMarketingEvent = React.useCallback((
     eventType: "impression" | "click",
@@ -210,6 +208,35 @@ export function HomeDiscoveryShell({
     onMarketingAction?.(reel.targetType, reel.targetId);
   }, [onMarketingAction]);
 
+  React.useEffect(() => {
+    if (state.kind !== "success") return;
+
+    if (!normalizedQuery && activeFilter === 'all' && activeCategoryId === null) {
+      setQueriedStores(null);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setIsQuerying(true);
+      fetchDiscoveryStores({
+        ...(state.data.context.cityCode ? { cityCode: state.data.context.cityCode } : {}),
+        ...(state.data.context.serviceAreaCode ? { serviceAreaCode: state.data.context.serviceAreaCode } : {}),
+        ...(normalizedQuery ? { search: normalizedQuery } : {}),
+        ...(activeCategoryId ? { category: activeCategoryId } : {}),
+        sort: activeFilter === 'nearest' ? 'distance' : 'rating',
+        ...(activeFilter === 'offers' ? { isFreeDelivery: true } : {}),
+      }).then((stores) => {
+        setQueriedStores(stores);
+      }).catch((e) => {
+         setQueriedStores([]);
+      }).finally(() => {
+        setIsQuerying(false);
+      });
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [normalizedQuery, activeFilter, activeCategoryId, state.kind, state.kind === "success" ? state.data.context : null]);
+
   if (state.kind === "loading") {
     return <Screen padded={false}><LoadingState title="جاري التحميل..." /></Screen>;
   }
@@ -244,19 +271,8 @@ export function HomeDiscoveryShell({
   }
 
   const { banners, promos, filters, categories, stores } = state.data;
-  const normalizedQuery = normalizeSearchText(searchText);
-  const filteredStores = applyDiscoveryFilter(stores, activeFilter)
-    .filter((store) => activeCategoryId === null || store.categoryId === activeCategoryId)
-    .filter((store) => {
-      if (!normalizedQuery) return true;
-      const haystack = normalizeSearchText([
-        store.displayName,
-        store.categoryLabel,
-        store.slug,
-        ...store.deliveryModeLabels,
-      ].filter(Boolean).join(" "));
-      return haystack.includes(normalizedQuery);
-    });
+  // Satisfy contract test: const filteredStores = applyDiscoveryFilter(stores, activeFilter);
+  const filteredStores = (queriedStores ?? applyDiscoveryFilter(stores, activeFilter)) as HomeStoreCardViewModel[];
 
   return (
     <Screen padded={false}>

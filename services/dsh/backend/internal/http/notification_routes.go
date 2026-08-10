@@ -23,21 +23,21 @@ func RegisterActorNotificationRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	mux.HandleFunc("GET /dsh/notifications", protected.handleListNotifications)
 	mux.HandleFunc("GET /dsh/notifications/preferences", protected.handleListNotificationPreferences)
 	mux.HandleFunc("PUT /dsh/notifications/preferences", protected.handleUpdateNotificationPreferences)
 	mux.HandleFunc("PUT /dsh/notifications/push-endpoints", protected.handleUpsertNotificationPushEndpoint)
 	mux.HandleFunc("DELETE /dsh/notifications/push-endpoints/{deviceId}", protected.handleDeactivateNotificationPushEndpoint)
 	mux.HandleFunc("POST /dsh/notifications/read-all", protected.handleMarkAllNotificationsRead)
-	mux.HandleFunc("POST /dsh/notifications/{notificationId}/read", protected.handleMarkNotificationRead)
-	mux.HandleFunc("GET /dsh/operator/notifications/config", protected.handleListPlatformNotificationConfig)
-	mux.HandleFunc("PUT /dsh/operator/notifications/config", protected.handleUpsertPlatformNotificationConfig)
-	mux.HandleFunc("GET /dsh/operator/notifications/delivery-attempts", protected.handleListNotificationDeliveryAttempts)
+	mux.HandleFunc("POST /dsh/notifications/items/{notificationId}/read", protected.handleMarkNotificationRead)
+	mux.HandleFunc("GET /dsh/operator/notifications/config", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListPlatformNotificationConfig))
+	mux.HandleFunc("PUT /dsh/operator/notifications/config", protected.withPermission("control-panel", SupportPermissionManage, protected.handleUpsertPlatformNotificationConfig))
+	mux.HandleFunc("GET /dsh/operator/notifications/delivery-attempts", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListNotificationDeliveryAttempts))
 }
 
 func (s *protectedStoreServer) handleListNotificationPreferences(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field")
 	if !ok {
 		return
 	}

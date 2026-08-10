@@ -89,6 +89,9 @@ export type CategoryControlRoomProps = {
   onUpdateDomain: (domainId: string, input: Parameters<typeof updateCatalogDomain>[1]) => Promise<unknown>;
   onCreateNode: (input: Parameters<typeof createCatalogNode>[0]) => Promise<unknown>;
   onUpdateNode: (nodeId: string, input: Parameters<typeof updateCatalogNode>[1]) => Promise<unknown>;
+  onMoveNode: (nodeId: string, targetParentId: string | null) => Promise<unknown>;
+  onMergeNode: (nodeId: string, targetNodeId: string) => Promise<unknown>;
+  onDeprecateNode: (nodeId: string) => Promise<unknown>;
 };
 
 function slugify(label: string): string {
@@ -104,6 +107,9 @@ export function CategoryControlRoom({
   onUpdateDomain,
   onCreateNode,
   onUpdateNode,
+  onMoveNode,
+  onMergeNode,
+  onDeprecateNode,
 }: CategoryControlRoomProps) {
   const [open, setOpen] = useState(true);
   const [catError, setCatError] = useState<string | null>(null);
@@ -250,6 +256,24 @@ export function CategoryControlRoom({
     void runMutation(() => onUpdateNode(node.id, { isActive: !node.isActive }));
   };
 
+  const handleMoveNode = (node: CentralCatalogNode) => {
+    const targetId = window.prompt("أدخل ID العقدة الأب الجديدة (أو اتركه فارغاً لجعله رئيسياً):", "");
+    if (targetId === null) return;
+    void runMutation(() => onMoveNode(node.id, targetId.trim() || null));
+  };
+
+  const handleMergeNode = (node: CentralCatalogNode) => {
+    const targetId = window.prompt("أدخل ID العقدة التي سيتم الدمج إليها:");
+    if (!targetId || !targetId.trim()) return;
+    void runMutation(() => onMergeNode(node.id, targetId.trim()));
+  };
+
+  const handleDeprecateNode = (node: CentralCatalogNode) => {
+    if (window.confirm(`هل أنت متأكد من إهمال العقدة ${node.nameAr}؟`)) {
+      void runMutation(() => onDeprecateNode(node.id));
+    }
+  };
+
   const handleStartDomainEdit = (domain: CentralCatalogDomain) => {
     setEditingEntry({ kind: "domain", id: domain.id });
     setEditLabel(domain.nameAr);
@@ -350,6 +374,9 @@ export function CategoryControlRoom({
                 resetForms={resetForms}
                 onToggleDomainActive={handleToggleDomainActive}
                 onToggleNodeActive={handleToggleNodeActive}
+                onMoveNode={handleMoveNode}
+                onMergeNode={handleMergeNode}
+                onDeprecateNode={handleDeprecateNode}
                 onStartDomainEdit={handleStartDomainEdit}
                 onStartNodeEdit={handleStartNodeEdit}
                 onApplyEdit={handleApplyEdit}
@@ -382,6 +409,9 @@ function DomainRow({
   resetForms,
   onToggleDomainActive,
   onToggleNodeActive,
+  onMoveNode,
+  onMergeNode,
+  onDeprecateNode,
   onStartDomainEdit,
   onStartNodeEdit,
   onApplyEdit,
@@ -405,6 +435,9 @@ function DomainRow({
   resetForms: () => void;
   onToggleDomainActive: (domain: CentralCatalogDomain) => void;
   onToggleNodeActive: (node: CentralCatalogNode) => void;
+  onMoveNode: (node: CentralCatalogNode) => void;
+  onMergeNode: (node: CentralCatalogNode) => void;
+  onDeprecateNode: (node: CentralCatalogNode) => void;
   onStartDomainEdit: (domain: CentralCatalogDomain) => void;
   onStartNodeEdit: (node: CentralCatalogNode) => void;
   onApplyEdit: () => void;
@@ -470,6 +503,9 @@ function DomainRow({
               setFormLabel={setFormLabel}
               resetForms={resetForms}
               onToggleNodeActive={onToggleNodeActive}
+              onMoveNode={onMoveNode}
+              onMergeNode={onMergeNode}
+              onDeprecateNode={onDeprecateNode}
               onStartNodeEdit={onStartNodeEdit}
               onApplyEdit={onApplyEdit}
               onAddMainClassification={onAddMainClassification}
@@ -497,6 +533,9 @@ function SubNodeRow({
   setFormLabel,
   resetForms,
   onToggleNodeActive,
+  onMoveNode,
+  onMergeNode,
+  onDeprecateNode,
   onStartNodeEdit,
   onApplyEdit,
   onAddMainClassification,
@@ -516,6 +555,9 @@ function SubNodeRow({
   setFormLabel: (v: string) => void;
   resetForms: () => void;
   onToggleNodeActive: (node: CentralCatalogNode) => void;
+  onMoveNode: (node: CentralCatalogNode) => void;
+  onMergeNode: (node: CentralCatalogNode) => void;
+  onDeprecateNode: (node: CentralCatalogNode) => void;
   onStartNodeEdit: (node: CentralCatalogNode) => void;
   onApplyEdit: () => void;
   onAddMainClassification: (domainId: string, subNodeId: string) => void;
@@ -540,6 +582,9 @@ function SubNodeRow({
               <CpButton onClick={() => { resetForms(); setAddingMainClassifUnder(isAdding ? null : { domainId: domain.id, subNodeId: subNode.id }); }}>+ تصنيف</CpButton>
               <CpButton onClick={() => onStartNodeEdit(subNode)}>تعديل</CpButton>
               <CpButton onClick={() => onToggleNodeActive(subNode)}>{subNode.isActive ? "إخفاء" : "إظهار"}</CpButton>
+              <CpButton onClick={() => onMoveNode(subNode)}>نقل</CpButton>
+              <CpButton onClick={() => onMergeNode(subNode)}>دمج</CpButton>
+              <CpButton onClick={() => onDeprecateNode(subNode)}>إهمال</CpButton>
             </div>
           </>
         )}
@@ -573,6 +618,9 @@ function SubNodeRow({
               setFormLabel={setFormLabel}
               resetForms={resetForms}
               onToggleNodeActive={onToggleNodeActive}
+              onMoveNode={onMoveNode}
+              onMergeNode={onMergeNode}
+              onDeprecateNode={onDeprecateNode}
               onStartNodeEdit={onStartNodeEdit}
               onApplyEdit={onApplyEdit}
               onAddSubClassification={onAddSubClassification}
@@ -598,6 +646,9 @@ function MainClassifRow({
   setFormLabel,
   resetForms,
   onToggleNodeActive,
+  onMoveNode,
+  onMergeNode,
+  onDeprecateNode,
   onStartNodeEdit,
   onApplyEdit,
   onAddSubClassification,
@@ -615,6 +666,9 @@ function MainClassifRow({
   setFormLabel: (v: string) => void;
   resetForms: () => void;
   onToggleNodeActive: (node: CentralCatalogNode) => void;
+  onMoveNode: (node: CentralCatalogNode) => void;
+  onMergeNode: (node: CentralCatalogNode) => void;
+  onDeprecateNode: (node: CentralCatalogNode) => void;
   onStartNodeEdit: (node: CentralCatalogNode) => void;
   onApplyEdit: () => void;
   onAddSubClassification: (domainId: string, subNodeId: string, mainClassifNodeId: string) => void;
@@ -638,6 +692,9 @@ function MainClassifRow({
               <CpButton onClick={() => { resetForms(); setAddingSubClassifUnder(isAdding ? null : { domainId: domain.id, subNodeId: subNode.id, mainClassifNodeId: mainClassifNode.id }); }}>+ فرعي</CpButton>
               <CpButton onClick={() => onStartNodeEdit(mainClassifNode)}>تعديل</CpButton>
               <CpButton onClick={() => onToggleNodeActive(mainClassifNode)}>{mainClassifNode.isActive ? "إخفاء" : "إظهار"}</CpButton>
+              <CpButton onClick={() => onMoveNode(mainClassifNode)}>نقل</CpButton>
+              <CpButton onClick={() => onMergeNode(mainClassifNode)}>دمج</CpButton>
+              <CpButton onClick={() => onDeprecateNode(mainClassifNode)}>إهمال</CpButton>
             </div>
           </>
         )}
@@ -661,6 +718,9 @@ function MainClassifRow({
               <div style={rowActionsStyle}>
                 <CpButton onClick={() => onStartNodeEdit(sc)}>تعديل</CpButton>
                 <CpButton onClick={() => onToggleNodeActive(sc)}>{sc.isActive ? "إخفاء" : "إظهار"}</CpButton>
+                <CpButton onClick={() => onMoveNode(sc)}>نقل</CpButton>
+                <CpButton onClick={() => onMergeNode(sc)}>دمج</CpButton>
+                <CpButton onClick={() => onDeprecateNode(sc)}>إهمال</CpButton>
               </div>
             </div>
           ))}

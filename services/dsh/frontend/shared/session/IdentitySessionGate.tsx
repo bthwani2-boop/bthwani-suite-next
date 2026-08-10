@@ -1,5 +1,5 @@
 import React, { useState, type ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, Platform } from "react-native";
 import {
   Button,
   Card,
@@ -12,11 +12,13 @@ import {
   spacing,
 } from "@bthwani/ui-kit";
 import {
+  getIdentityDeviceFingerprint,
   identityErrorPresentation,
   useIdentitySession,
   type ActivationActorType,
   type ActorIdentity,
 } from "@bthwani/core-identity";
+import { requestDevelopmentSession } from "./dev-session-broker.adapter";
 
 export type DshSurfaceRole = ActorIdentity["roles"][number];
 
@@ -25,6 +27,8 @@ export type IdentitySessionGateProps = {
   readonly requiredSurface?: string;
   readonly children: ReactNode;
 };
+
+declare const __DEV__: boolean;
 
 function isPlatformAccessActorType(role: DshSurfaceRole): role is ActivationActorType {
   return role === "partner" || role === "captain" || role === "field";
@@ -47,14 +51,36 @@ function errorCode(error: unknown): string {
   return "IDENTITY_UNAVAILABLE";
 }
 
+function quickDeveloperLoginLabel(
+  role: DshSurfaceRole,
+  surface?: string,
+): string | null {
+  switch (role) {
+    case "operator":
+      return surface === "control-panel" ? "دخول سريع كمشغل التطوير المحلي" : null;
+    case "client":
+      return surface === "app-client" ? "دخول سريع كعميل التطوير المحلي" : null;
+    case "partner":
+      return surface === "app-partner" ? "دخول سريع كشريك التطوير المحلي" : null;
+    case "field":
+      return surface === "app-field" ? "دخول سريع كمندوب التطوير المحلي" : null;
+    case "captain":
+      return surface === "app-captain" ? "دخول سريع ككابتن التطوير المحلي" : null;
+    default:
+      return null;
+  }
+}
+
 function IdentityAccessPanel({
   requiredRole,
+  requiredSurface,
   errorMessage,
 }: {
   readonly requiredRole: DshSurfaceRole;
+  readonly requiredSurface?: string;
   readonly errorMessage?: string;
 }) {
-  const { login, activate } = useIdentitySession();
+  const { login, activate, adoptSession } = useIdentitySession();
   const platformAccessRequired = isPlatformAccessActorType(requiredRole);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -63,6 +89,12 @@ function IdentityAccessPanel({
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const errorPresentation = errorMessage ? identityErrorPresentation(errorMessage) : null;
+  const quickLoginLabel = quickDeveloperLoginLabel(requiredRole, requiredSurface);
+  const quickLoginEnabled =
+    typeof __DEV__ !== "undefined"
+    && __DEV__
+    && Platform.OS !== "web"
+    && quickLoginLabel !== null;
 
   const submitLogin = async () => {
     if (!username.trim() || !password) {
@@ -89,6 +121,25 @@ function IdentityAccessPanel({
     setFeedback("");
     try {
       await activate(requiredRole, phone.trim(), code.trim());
+    } catch (error) {
+      setFeedback(identityErrorPresentation(errorCode(error)).description);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const submitQuickDeveloperLogin = async () => {
+    if (!quickLoginEnabled || !requiredSurface) return;
+
+    setSubmitting(true);
+    setFeedback("");
+    try {
+      const deviceFingerprint = await getIdentityDeviceFingerprint();
+      await adoptSession(await requestDevelopmentSession({
+        role: requiredRole,
+        surface: requiredSurface,
+        deviceFingerprint,
+      }));
     } catch (error) {
       setFeedback(identityErrorPresentation(errorCode(error)).description);
     } finally {
@@ -161,6 +212,20 @@ function IdentityAccessPanel({
           </View>
         )}
 
+        {quickLoginEnabled && quickLoginLabel ? (
+          <View style={styles.developmentLogin}>
+            <Text role="caption" tone="muted" style={styles.developmentNotice}>
+              بيئة التطوير المحلية فقط
+            </Text>
+            <Button
+              label={submitting ? "جاري الدخول السريع" : quickLoginLabel}
+              tone="secondary"
+              disabled={submitting}
+              onPress={submitQuickDeveloperLogin}
+            />
+          </View>
+        ) : null}
+
         {feedback ? <Text role="caption" style={styles.feedback}>{feedback}</Text> : null}
       </Card>
     </View>
@@ -172,7 +237,7 @@ export function IdentitySessionGate({
   requiredSurface,
   children,
 }: IdentitySessionGateProps) {
-  const { state } = useIdentitySession();
+  const { state, retryBootstrap } = useIdentitySession();
 
   switch (state.kind) {
     case "restoring":
@@ -187,11 +252,36 @@ export function IdentitySessionGate({
         />
       );
 
+    case "service_unavailable": {
+      const presentation = identityErrorPresentation(state.message);
+      return (
+        <ErrorState
+          title={presentation.title}
+          description={state.retainedSession
+            ? "تعذر التحقق من الخدمة مؤقتًا. بقيت الجلسة محفوظة ولن يُطلب منك تسجيل الدخول بسبب الانقطاع."
+            : presentation.description}
+          actionLabel="إعادة الفحص"
+          onActionPress={() => void retryBootstrap()}
+        />
+      );
+    }
+
     case "error":
-      return <IdentityAccessPanel requiredRole={requiredRole} errorMessage={state.message} />;
+      return (
+        <IdentityAccessPanel
+          requiredRole={requiredRole}
+          {...(requiredSurface === undefined ? {} : { requiredSurface })}
+          errorMessage={state.message}
+        />
+      );
 
     case "signed_out":
-      return <IdentityAccessPanel requiredRole={requiredRole} />;
+      return (
+        <IdentityAccessPanel
+          requiredRole={requiredRole}
+          {...(requiredSurface === undefined ? {} : { requiredSurface })}
+        />
+      );
 
     case "authenticated": {
       const hasRole = state.identity.roles.includes(requiredRole);
@@ -254,6 +344,13 @@ const styles = StyleSheet.create({
   },
   activationNotice: {
     textAlign: "right",
+  },
+  developmentLogin: {
+    gap: spacing[2],
+    paddingTop: spacing[2],
+  },
+  developmentNotice: {
+    textAlign: "center",
   },
   feedback: {
     textAlign: "right",

@@ -8,18 +8,16 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "node ../../mobile/verify-mobile-source.mjs --app app-field",
-    "test": "node ../../mobile/test-mobile-runtime-contract.mjs --app app-field",
+    "test": "node ../../mobile/test-mobile-runtime-contract.mjs --app app-field && node --test tests/readiness-transport-contract.test.mjs",
     "build": "node ../../mobile/verify-mobile-export.mjs --app app-field",
     "eas-build-pre-install": "node ../../mobile/verify-eas-provider-inputs.mjs --app app-field"
   },
   "devDependencies": {
-    "typescript": "~6.0.3"
+    "typescript": "npm:@typescript/typescript6@6.0.2"
   },
   "dependencies": {
-    "@bthwani/app-shell": "workspace:*",
     "@bthwani/core-identity": "workspace:*",
     "@bthwani/data-runtime": "workspace:*",
-    "@bthwani/media-runtime": "workspace:*",
     "@bthwani/ui-kit": "workspace:*",
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "2.2.0",

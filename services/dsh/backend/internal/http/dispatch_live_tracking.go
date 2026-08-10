@@ -102,7 +102,7 @@ func routeEta(
 	destinationLatitude float64,
 	destinationLongitude float64,
 ) (*dispatchEtaProjection, error) {
-	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"))
+	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"), nil)
 	route, err := client.Route(ctx, authorization, mapproviders.RouteInput{
 		OriginLatitude:       originLatitude,
 		OriginLongitude:      originLongitude,
@@ -254,7 +254,7 @@ func (s *protectedStoreServer) handleGetPartnerDispatchTrackingReference(w http.
 }
 
 func (s *protectedStoreServer) handleListDispatchTrackingAlerts(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator"); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	assignments, err := dispatch.ListOperatorAssignments(s.db, 200)

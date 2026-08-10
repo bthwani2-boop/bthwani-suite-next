@@ -49,12 +49,26 @@ type SLA struct {
 	LegStartedAt     *time.Time `json:"legStartedAt"`
 	LegDeadline      *time.Time `json:"legDeadline"`
 	RemainingSeconds int64      `json:"remainingSeconds"`
+	IsPaused         bool       `json:"isPaused"`
+	PausedUntil      *time.Time `json:"pausedUntil"`
+}
+
+// SLAAlert represents the detached alert state in dsh_sla_alerts
+type SLAAlert struct {
+	ID             string     `json:"id"`
+	ReferenceType  string     `json:"referenceType"` // 'pickup_session'
+	ReferenceID    string     `json:"referenceId"`
+	StoreID        string     `json:"storeId"`
+	AlertType      string     `json:"alertType"`
+	State          string     `json:"state"` // 'active', 'acknowledged', 'resolved', 'paused'
+	PauseReason    string     `json:"pauseReason"`
+	PausedUntil    *time.Time `json:"pausedUntil"`
+	AcknowledgedAt *time.Time `json:"acknowledgedAt"`
 }
 
 // EvaluateSLA derives the current leg and its SLA state from a pickup
-// session's timestamps. It performs no I/O and mutates nothing -- callers
-// embed the result in read responses.
-func EvaluateSLA(session *PickupSession, thresholds SLAThresholds, now time.Time) SLA {
+// session's timestamps. If an active alert exists, it applies pause rules.
+func EvaluateSLA(session *PickupSession, alert *SLAAlert, thresholds SLAThresholds, now time.Time) SLA {
 	if session == nil {
 		return SLA{State: SLANotStarted}
 	}
@@ -79,13 +93,32 @@ func EvaluateSLA(session *PickupSession, thresholds SLAThresholds, now time.Time
 	}
 
 	deadline := start.Add(budget)
+
+	// Apply Pause Logic
+	isPaused := false
+	var pausedUntil *time.Time
+	if alert != nil && alert.State == "paused" && alert.PausedUntil != nil && alert.PausedUntil.After(now) {
+		isPaused = true
+		pausedUntil = alert.PausedUntil
+		// Extend deadline by the pause duration (simplified)
+		deadline = deadline.Add(alert.PausedUntil.Sub(now))
+	}
+
 	remaining := deadline.Sub(now)
 	sla := SLA{
 		CurrentLeg:       leg,
 		LegStartedAt:     start,
 		LegDeadline:      &deadline,
 		RemainingSeconds: int64(remaining.Seconds()),
+		IsPaused:         isPaused,
+		PausedUntil:      pausedUntil,
 	}
+
+	if isPaused {
+		sla.State = SLAOnTrack // Avoid alerting while paused
+		return sla
+	}
+
 	switch {
 	case remaining <= 0:
 		sla.State = SLAOverdue

@@ -13,27 +13,6 @@ import (
 
 const maxPlatformRequestBytes int64 = 1 << 20
 
-func (s *server) publicHealth(w http.ResponseWriter, r *http.Request) {
-	status := "healthy"
-	code := http.StatusOK
-	if err := s.service.Ready(r.Context()); err != nil {
-		status = "unhealthy"
-		code = http.StatusServiceUnavailable
-	}
-	sendJSON(w, code, map[string]any{"status": status, "service": "platform-control"})
-}
-
-func (s *server) publicReadiness(w http.ResponseWriter, r *http.Request) {
-	if err := s.service.Ready(r.Context()); err != nil {
-		sendJSON(w, http.StatusServiceUnavailable, map[string]any{
-			"status":  "not_ready",
-			"service": "platform-control",
-			"reason":  "database_unavailable",
-		})
-		return
-	}
-	sendJSON(w, http.StatusOK, map[string]any{"status": "ready", "service": "platform-control"})
-}
 
 func (s *server) getChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 	_ = identity

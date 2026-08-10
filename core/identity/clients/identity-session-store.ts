@@ -6,6 +6,7 @@ import {
   type IdentityClientError,
   type IssueActivationResponse,
   type SessionInfo,
+  type TokenResponse,
 } from "./identity-client.ts";
 import {
   defaultSessionStorageAdapter,
@@ -18,12 +19,18 @@ export type IdentitySessionState =
   | { readonly kind: "signed_out" }
   | { readonly kind: "authenticating" }
   | { readonly kind: "authenticated"; readonly identity: ActorIdentity; readonly accessToken: string }
+  | {
+      readonly kind: "service_unavailable";
+      readonly message: string;
+      readonly retainedSession: boolean;
+      readonly retryAfterMs: number;
+    }
   | { readonly kind: "error"; readonly message: string };
 
 export type IdentityBeforeSessionEndHook = () => void | Promise<void>;
 export type IdentityDeviceFingerprintProvider = () => string | Promise<string>;
 
-type StoredSession = {
+export type StoredSession = {
   readonly accessToken: string;
   readonly refreshToken: string;
   readonly identity: ActorIdentity;
@@ -31,20 +38,17 @@ type StoredSession = {
 
 const STORAGE_KEY = "bthwani-identity-session";
 const RUNTIME_DEVICE_FINGERPRINT = `bthwani-runtime-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-const ACTOR_ROLES = new Set([
-  "client",
-  "partner",
-  "captain",
-  "field",
-  "operator",
-  "system",
-]);
+const INITIAL_BOOTSTRAP_RETRY_MS = 1_000;
+const MAX_BOOTSTRAP_RETRY_MS = 30_000;
 
 let client: IdentityClient | null = null;
 let state: IdentitySessionState = { kind: "unconfigured" };
 let stored: StoredSession | null = null;
 let storageAdapter: SessionStorageAdapter = defaultSessionStorageAdapter();
 let deviceFingerprintProvider: IdentityDeviceFingerprintProvider = () => RUNTIME_DEVICE_FINGERPRINT;
+let bootstrapInFlight: Promise<void> | null = null;
+let nextBootstrapAttemptAt = 0;
+let bootstrapRetryMs = INITIAL_BOOTSTRAP_RETRY_MS;
 const listeners = new Set<() => void>();
 const beforeSessionEndHooks = new Set<IdentityBeforeSessionEndHook>();
 
@@ -81,6 +85,10 @@ async function resolveDeviceFingerprint(): Promise<string> {
   return fingerprint;
 }
 
+export async function getIdentityDeviceFingerprint(): Promise<string> {
+  return resolveDeviceFingerprint();
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -89,7 +97,7 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function isBooleanRecord(value: unknown): boolean {
+function isBooleanRecord(value: unknown): value is Record<string, boolean> {
   return isRecord(value) && Object.values(value).every((entry) => typeof entry === "boolean");
 }
 
@@ -101,13 +109,14 @@ function isValidPermission(value: unknown): boolean {
     && isNonEmptyString(value.scope);
 }
 
-function isValidActorIdentity(value: unknown): value is ActorIdentity {
+export function isStructurallyValidActorIdentity(value: unknown): value is ActorIdentity {
   if (!isRecord(value)) return false;
   if (
     !isNonEmptyString(value.subject)
     || !isNonEmptyString(value.operatorContextId)
     || !isNonEmptyString(value.phoneE164)
     || value.authState !== "authenticated"
+    || !isNonEmptyString(value.sessionSurface)
     || !isNonEmptyString(value.sessionId)
     || !isNonEmptyString(value.expiresAt)
   ) {
@@ -115,12 +124,12 @@ function isValidActorIdentity(value: unknown): value is ActorIdentity {
   }
 
   const expiresAtMs = Date.parse(value.expiresAt);
-  if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) return false;
+  if (!Number.isFinite(expiresAtMs)) return false;
 
   if (
     !Array.isArray(value.roles)
     || value.roles.length === 0
-    || !value.roles.every((role) => typeof role === "string" && ACTOR_ROLES.has(role))
+    || !value.roles.every((role) => typeof role === "string")
   ) {
     return false;
   }
@@ -128,17 +137,22 @@ function isValidActorIdentity(value: unknown): value is ActorIdentity {
   return Array.isArray(value.permissions)
     && value.permissions.every(isValidPermission)
     && isBooleanRecord(value.surfaceAccess)
+    && value.surfaceAccess[value.sessionSurface] === true
     && isBooleanRecord(value.serviceAccess);
 }
 
-function parseStoredSession(raw: string): StoredSession | null {
+export function isFreshActorIdentity(value: unknown): value is ActorIdentity {
+  return isStructurallyValidActorIdentity(value) && Date.parse(value.expiresAt) > Date.now();
+}
+
+export function parseStoredSession(raw: string): StoredSession | null {
   try {
     const parsed: unknown = JSON.parse(raw);
     if (
       !isRecord(parsed)
       || !isNonEmptyString(parsed.accessToken)
       || !isNonEmptyString(parsed.refreshToken)
-      || !isValidActorIdentity(parsed.identity)
+      || !isStructurallyValidActorIdentity(parsed.identity)
     ) {
       return null;
     }
@@ -186,18 +200,60 @@ function identityErrorCode(error: unknown): string {
       : "IDENTITY_UNAVAILABLE";
 }
 
+function isIdentityAvailabilityError(error: unknown): boolean {
+  const typed = error as Partial<IdentityClientError>;
+  if (typed.kind === "network") return true;
+  if (typed.kind !== "http") return false;
+  return typed.status === 502
+    || typed.status === 503
+    || typed.status === 504
+    || typed.code === "IDENTITY_NOT_READY"
+    || typed.code === "IDENTITY_UNAVAILABLE"
+    || typed.code === "BFF_UPSTREAM_UNAVAILABLE"
+    || typed.code === "BFF_UPSTREAM_NOT_CONFIGURED"
+    || typed.code === "INTERNAL_API_UNAVAILABLE";
+}
+
+function isIdentityInvalidSessionError(error: unknown): boolean {
+  const typed = error as Partial<IdentityClientError>;
+  if (typed.kind !== "http") return false;
+  return typed.status === 401
+    || typed.code === "UNAUTHENTICATED"
+    || typed.code === "INVALID_REFRESH_TOKEN"
+    || typed.code === "IDENTITY_SESSION_INVALID"
+    || typed.code === "SESSION_NOT_FOUND";
+}
+
 function clearSession(message?: string): void {
   stored = null;
   void saveStoredSession(null).catch(() => undefined);
   setState(message ? { kind: "error", message } : { kind: "signed_out" });
 }
 
+function setServiceUnavailable(message = "IDENTITY_UNAVAILABLE"): void {
+  const retryAfterMs = bootstrapRetryMs;
+  nextBootstrapAttemptAt = Date.now() + retryAfterMs;
+  bootstrapRetryMs = Math.min(bootstrapRetryMs * 2, MAX_BOOTSTRAP_RETRY_MS);
+  setState({
+    kind: "service_unavailable",
+    message,
+    retainedSession: stored !== null,
+    retryAfterMs,
+  });
+}
+
+function resetBootstrapBackoff(): void {
+  nextBootstrapAttemptAt = 0;
+  bootstrapRetryMs = INITIAL_BOOTSTRAP_RETRY_MS;
+}
+
 function commitAuthenticatedSession(session: StoredSession, persist: boolean): void {
-  if (!isValidActorIdentity(session.identity)) {
+  if (!isFreshActorIdentity(session.identity)) {
     clearSession("IDENTITY_SESSION_INVALID");
     return;
   }
   stored = session;
+  resetBootstrapBackoff();
   if (persist) void saveStoredSession(session).catch(() => undefined);
   setState({
     kind: "authenticated",
@@ -212,8 +268,15 @@ async function restoreStoredSession(identityClient: IdentityClient, session: Sto
     const identity = await identityClient.session(session.accessToken);
     commitAuthenticatedSession({ ...session, identity }, true);
     return;
-  } catch {
-    // Continue with governed refresh-token rotation.
+  } catch (error) {
+    if (isIdentityAvailabilityError(error)) {
+      setServiceUnavailable(identityErrorCode(error));
+      return;
+    }
+    if (!isIdentityInvalidSessionError(error)) {
+      setServiceUnavailable("IDENTITY_UNAVAILABLE");
+      return;
+    }
   }
 
   try {
@@ -223,29 +286,139 @@ async function restoreStoredSession(identityClient: IdentityClient, session: Sto
       refreshToken: refreshed.refreshToken,
       identity: refreshed.identity,
     }, true);
-  } catch {
-    clearSession("IDENTITY_SESSION_INVALID");
+  } catch (error) {
+    if (isIdentityAvailabilityError(error)) {
+      setServiceUnavailable(identityErrorCode(error));
+      return;
+    }
+    if (isIdentityInvalidSessionError(error)) {
+      clearSession("IDENTITY_SESSION_INVALID");
+      return;
+    }
+    setServiceUnavailable("IDENTITY_UNAVAILABLE");
   }
+}
+
+async function performIdentityBootstrap(identityClient: IdentityClient): Promise<void> {
+  setState({ kind: "restoring" });
+
+  const saved = stored ?? await loadStoredSession();
+  stored = saved;
+
+  try {
+    const readiness = await identityClient.readiness();
+    if (readiness.status !== "HEALTHY") {
+      setServiceUnavailable("IDENTITY_NOT_READY");
+      return;
+    }
+  } catch (error) {
+    setServiceUnavailable(identityErrorCode(error));
+    return;
+  }
+
+  if (!saved) {
+    resetBootstrapBackoff();
+    setState({ kind: "signed_out" });
+    return;
+  }
+
+  if (isFreshActorIdentity(saved.identity)) {
+    commitAuthenticatedSession(saved, false);
+
+    void (async () => {
+      try {
+        const identity = await identityClient.session(saved.accessToken);
+        commitAuthenticatedSession({ ...saved, identity }, true);
+      } catch (error) {
+        if (isIdentityInvalidSessionError(error)) {
+          try {
+            const refreshed = await identityClient.refresh(saved.refreshToken);
+            commitAuthenticatedSession({
+              accessToken: refreshed.accessToken,
+              refreshToken: refreshed.refreshToken,
+              identity: refreshed.identity,
+            }, true);
+          } catch (refreshError) {
+            if (isIdentityInvalidSessionError(refreshError)) {
+              clearSession("IDENTITY_SESSION_INVALID");
+            } else {
+              setServiceUnavailable(
+                isIdentityAvailabilityError(refreshError)
+                  ? identityErrorCode(refreshError)
+                  : "IDENTITY_UNAVAILABLE",
+              );
+            }
+          }
+        } else {
+          setServiceUnavailable(
+            isIdentityAvailabilityError(error)
+              ? identityErrorCode(error)
+              : "IDENTITY_UNAVAILABLE",
+          );
+        }
+      }
+    })();
+    return;
+  }
+
+  await restoreStoredSession(identityClient, saved);
 }
 
 export function configureIdentitySession(baseUrl: string): void {
   if (!baseUrl || client !== null) return;
-  const configuredClient = createIdentityClient(baseUrl);
-  client = configuredClient;
-  setState({ kind: "restoring" });
+  client = createIdentityClient(baseUrl);
+  void retryIdentityBootstrap(true);
+}
 
-  void (async () => {
+let refreshInFlight: Promise<boolean> | null = null;
+
+export async function refreshIdentitySession(): Promise<boolean> {
+  if (refreshInFlight) return refreshInFlight;
+  if (client === null || stored === null) return false;
+
+  const configuredClient = client;
+  const session = stored;
+
+  const promise = (async () => {
     try {
-      const saved = await loadStoredSession();
-      if (!saved) {
-        setState({ kind: "signed_out" });
-        return;
+      const refreshed = await configuredClient.refresh(session.refreshToken);
+      commitAuthenticatedSession({
+        accessToken: refreshed.accessToken,
+        refreshToken: refreshed.refreshToken,
+        identity: refreshed.identity,
+      }, true);
+      return true;
+    } catch (error) {
+      if (isIdentityInvalidSessionError(error)) {
+        clearSession("IDENTITY_SESSION_INVALID");
       }
-      await restoreStoredSession(configuredClient, saved);
-    } catch {
-      setState({ kind: "signed_out" });
+      return false;
     }
   })();
+
+  refreshInFlight = promise;
+  try {
+    return await promise;
+  } finally {
+    if (refreshInFlight === promise) {
+      refreshInFlight = null;
+    }
+  }
+}
+
+export async function retryIdentityBootstrap(force = false): Promise<void> {
+  if (client === null) {
+    setState({ kind: "error", message: "IDENTITY_NOT_CONFIGURED" });
+    return;
+  }
+  if (bootstrapInFlight !== null) return bootstrapInFlight;
+  if (!force && Date.now() < nextBootstrapAttemptAt) return;
+
+  const configuredClient = client;
+  bootstrapInFlight = performIdentityBootstrap(configuredClient).finally(() => {
+    bootstrapInFlight = null;
+  });
+  return bootstrapInFlight;
 }
 
 export function getIdentityAccessToken(): string | null {
@@ -259,6 +432,26 @@ export function getIdentityState(): IdentitySessionState {
 export function subscribeIdentityState(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
+}
+
+export async function adoptIdentityTokenPair(pair: TokenResponse): Promise<void> {
+  if (client === null) {
+    setState({ kind: "error", message: "IDENTITY_NOT_CONFIGURED" });
+    return;
+  }
+  if (
+    !isNonEmptyString(pair.accessToken)
+    || !isNonEmptyString(pair.refreshToken)
+    || !isStructurallyValidActorIdentity(pair.identity)
+  ) {
+    setState({ kind: "error", message: "IDENTITY_SESSION_INVALID" });
+    return;
+  }
+  await restoreStoredSession(client, {
+    accessToken: pair.accessToken,
+    refreshToken: pair.refreshToken,
+    identity: pair.identity,
+  });
 }
 
 export async function loginIdentity(username: string, password: string): Promise<void> {
@@ -279,7 +472,7 @@ export async function loginIdentity(username: string, password: string): Promise
       identity: response.identity,
     }, true);
   } catch (error) {
-    clearSession(identityErrorCode(error));
+    setState({ kind: "error", message: identityErrorCode(error) });
   }
 }
 
@@ -314,7 +507,7 @@ export async function activateIdentity(
       identity: response.identity,
     }, true);
   } catch (error) {
-    clearSession(identityErrorCode(error));
+    setState({ kind: "error", message: identityErrorCode(error) });
   }
 }
 
@@ -360,4 +553,4 @@ export async function deleteAccountIdentity(): Promise<void> {
   clearSession();
 }
 
-// Compliance marker: IDENTITY_SESSION_INVALID
+// Compliance markers: IDENTITY_SESSION_INVALID, IDENTITY_NOT_READY, SERVICE_UNAVAILABLE_PRESERVES_SESSION

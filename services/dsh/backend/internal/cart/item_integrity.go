@@ -59,7 +59,7 @@ func HydrateOperatorCartItems(ctx context.Context, db *sql.DB, carts []Cart) ([]
 
 	rows, err := db.QueryContext(ctx, `
 		SELECT id, cart_id, product_id, master_product_id, store_assortment_id,
-		       product_name, price_reference, unit_price, quantity, version,
+		       product_name, price_reference, unit_price_minor, currency, quantity, version,
 		       created_at, updated_at
 		FROM dsh_cart_items
 		WHERE cart_id = ANY($1)
@@ -81,7 +81,8 @@ func HydrateOperatorCartItems(ctx context.Context, db *sql.DB, carts []Cart) ([]
 			&item.StoreAssortmentID,
 			&item.ProductName,
 			&item.PriceReference,
-			&item.UnitPrice,
+			&item.UnitPriceMinorUnits,
+			&item.Currency,
 			&item.Quantity,
 			&item.Version,
 			&item.CreatedAt,

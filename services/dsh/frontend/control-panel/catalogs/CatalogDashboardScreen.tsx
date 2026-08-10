@@ -2,7 +2,7 @@
 // dynamic-exception: DataGrid used directly for master-products bulk multi-select + numeric pagination,
 // a feature CpTable/CpSelectableTableRow do not provide (see banned-pattern #6 migration exception).
 import { DataGrid as DataTable } from '@bthwani/ui-kit';
-import { useState, useEffect, useMemo, useRef, type CSSProperties } from "react";
+import React, { useState, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import {
@@ -24,7 +24,7 @@ import {
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import { OperationsRoomFrame } from "@bthwani/control-panel/shell";
-import { useControlPanelSession } from "../../shared/session/control-panel-session";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   useCentralCatalogController,
   type ProductProposalPipelineStatus,
@@ -39,6 +39,8 @@ import {
   parseAndValidateCSV,
   exportProductsToCSV,
   uploadAndLinkAsset,
+  cleanupOrphanCatalogAssets,
+  simulateAssetScan,
   type CatalogAsset,
   reviewReel,
 } from "../../shared/catalog";
@@ -160,7 +162,7 @@ export const MAIN_TAB_GROUPS: MainTabGroup[] = [
 const DAM_ENTITY_TYPES: readonly DamEntityType[] = ["domains", "nodes", "master-products", "product-proposals"];
 
 export function CatalogDashboardScreen() {
-  const { state } = useControlPanelSession();
+  const { state } = useIdentitySession();
   const controller = useCentralCatalogController(state.kind);
 
   const searchParams = useSearchParams();
@@ -183,6 +185,8 @@ export function CatalogDashboardScreen() {
   const [selectedProposalStatus, setSelectedProposalStatus] = useState<ProductProposalPipelineStatus>("partner-proposed");
   const [selectedAdoptedProductId, setSelectedAdoptedProductId] = useState<Record<string, string>>({});
   const [createProductInsteadOfLink, setCreateProductInsteadOfLink] = useState<Record<string, boolean>>({});
+  const [proposalMergeData, setProposalMergeData] = useState<Record<string, boolean>>({});
+  const [expandedProposalId, setExpandedProposalId] = useState<string | null>(null);
 
   const [seedStatus, setSeedStatus] = useState<{
     domainsCount: number;
@@ -226,6 +230,7 @@ export function CatalogDashboardScreen() {
   const [importing, setImporting] = useState(false);
 
   const [productPage, setProductPage] = useState(0);
+  const [mediaDrawerProductId, setMediaDrawerProductId] = useState<string | null>(null);
   const productsPerPage = 20;
 
   useEffect(() => {
@@ -306,6 +311,7 @@ export function CatalogDashboardScreen() {
     note: string,
     adoptedMasterProductId?: string | null,
     createMasterProduct?: boolean,
+    mergeData?: boolean,
   ) => {
     try {
       await controller.transitionProposal(proposalId, {
@@ -313,6 +319,7 @@ export function CatalogDashboardScreen() {
         note,
         adoptedMasterProductId,
         createMasterProduct,
+        mergeData,
       });
       alert("تمت ترقية حالة الاقتراح بنجاح");
       setReasonByProposal((curr) => ({ ...curr, [proposalId]: "" }));
@@ -338,6 +345,29 @@ export function CatalogDashboardScreen() {
       await reloadAssets();
     } catch (e: any) {
       alert("فشل مراجعة الصورة: " + (e.message ?? e.toString()));
+    }
+  };
+
+  const handleCleanupOrphans = async () => {
+    if (!confirm("هل أنت متأكد من رغبتك في تنظيف الأصول الرقمية اليتيمة (التي لا ترتبط بأي عنصر ومر عليها 24 ساعة)؟")) return;
+    try {
+      const count = await cleanupOrphanCatalogAssets();
+      alert(`تم حذف ${count} من الأصول الرقمية اليتيمة.`);
+      await reloadAssets();
+    } catch (e: any) {
+      alert("فشل تنظيف الأصول الرقمية: " + (e.message ?? e.toString()));
+    }
+  };
+
+  const handleSimulateScan = async (assetId: string) => {
+    const status = prompt("أدخل الحالة المستهدفة (approved أو quarantined أو rejected):", "approved");
+    if (!status) return;
+    try {
+      await simulateAssetScan(assetId, status);
+      alert("تمت محاكاة الفحص بنجاح");
+      await reloadAssets();
+    } catch (e: any) {
+      alert("فشل محاكاة فحص الصورة: " + (e.message ?? e.toString()));
     }
   };
 
@@ -580,6 +610,9 @@ export function CatalogDashboardScreen() {
               onUpdateDomain={controller.updateDomain}
               onCreateNode={controller.createNode}
               onUpdateNode={controller.updateNode}
+              onMoveNode={controller.moveNode}
+              onMergeNode={controller.mergeNode}
+              onDeprecateNode={controller.deprecateNode}
             />
           </div>
         )}
@@ -620,6 +653,15 @@ export function CatalogDashboardScreen() {
               columns={[
                 { key: "id", header: "المعرف", render: (m: any) => m.id },
                 {
+                  key: "type",
+                  header: "النوع",
+                  render: (m: any) => {
+                    if (m.isStandalone) return <CpBadge tone="neutral">مستقل</CpBadge>;
+                    if (m.parentId) return <CpBadge tone="info">متغير</CpBadge>;
+                    return <CpBadge tone="brand">أساسي</CpBadge>;
+                  },
+                },
+                {
                   key: "name",
                   header: "الاسم المركزي",
                   render: (m: any) => (
@@ -657,6 +699,15 @@ export function CatalogDashboardScreen() {
                   header: "الحالة",
                   render: (m: any) => <StatusBadge label={m.isActive ? "نشط" : "معطل"} tone={m.isActive ? "success" : "neutral"} />,
                 },
+                {
+                  key: "actions",
+                  header: "إجراءات",
+                  render: (m: any) => (
+                    <CpButton onClick={() => setMediaDrawerProductId(m.id)}>
+                      إدارة الوسائط
+                    </CpButton>
+                  ),
+                },
               ]}
               rows={visibleMasterProducts}
               getRowKey={(m) => m.id}
@@ -666,6 +717,32 @@ export function CatalogDashboardScreen() {
               totalPages={Math.max(1, Math.ceil(controller.state.masterProducts.total / productsPerPage))}
               onPageChange={(p) => setProductPage(p - 1)}
             />
+
+            {mediaDrawerProductId && (
+              <div style={{
+                position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: "var(--bthwani-media-scrim-strong)", display: "flex",
+                justifyContent: "center", alignItems: "center", zIndex: 1000
+              }}>
+                <div style={{
+                  backgroundColor: "var(--bthwani-control-panel-surface)",
+                  padding: "24px", borderRadius: "8px", width: "80%", maxWidth: "800px",
+                  maxHeight: "90vh", overflowY: "auto"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
+                    <h3>إدارة وسائط المنتج: {mediaDrawerProductId}</h3>
+                    <CpButton onClick={() => setMediaDrawerProductId(null)}>إغلاق</CpButton>
+                  </div>
+                  <p>تتم إدارة أصول المنتج وربطها عبر تبويب "مراجعة التسويق والصور DAM".</p>
+                  <CpButton onClick={() => {
+                    setMediaDrawerProductId(null);
+                    setLinkEntityId(mediaDrawerProductId);
+                    setLinkEntityType("master-products");
+                    setActiveTab("marketing_media");
+                  }}>الانتقال إلى تبويب إدارة الوسائط وربط صورة لهذا المنتج</CpButton>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -700,11 +777,17 @@ export function CatalogDashboardScreen() {
                     const isCreate = createProductInsteadOfLink[p.id] ?? false;
                     const linkId = selectedAdoptedProductId[p.id] ?? "";
                     return (
-                      <tr key={p.id}>
+                      <React.Fragment key={p.id}>
+                        <tr>
                         <CpTableCell>{p.id}</CpTableCell>
                         <CpTableCell>
                           <strong>{p.proposedNameAr}</strong>
                           {p.proposedNameEn && <div style={proposalNameEnStyle}>{p.proposedNameEn}</div>}
+                          {p.targetMasterProductId && (
+                            <CpBadge tone="info">
+                              طلب تصحيح (للمنتج {p.targetMasterProductId})
+                            </CpBadge>
+                          )}
                         </CpTableCell>
                         <CpTableCell>{p.brand || "—"} / <code>{p.barcode || "—"}</code></CpTableCell>
                         <CpTableCell><code>{p.sourceSurface}</code></CpTableCell>
@@ -721,12 +804,24 @@ export function CatalogDashboardScreen() {
                                   <span>إنشاء منتج مركزي جديد (Master Product)</span>
                                 </label>
                                 {!isCreate && (
-                                  <ProductPicker
-                                    value={linkId}
-                                    onChange={(val) => setSelectedAdoptedProductId((curr) => ({ ...curr, [p.id]: val }))}
-                                    label="ربط بمنتج مركزي موجود (L5)"
-                                    domainId={p.domainId}
-                                  />
+                                  <>
+                                    <ProductPicker
+                                      value={linkId}
+                                      onChange={(val) => setSelectedAdoptedProductId((curr) => ({ ...curr, [p.id]: val }))}
+                                      label="ربط بمنتج مركزي موجود (L5)"
+                                      domainId={p.domainId}
+                                    />
+                                    {(linkId.trim() || p.targetMasterProductId) && (
+                                      <label style={{ ...marketingReviewLabelStyle, marginTop: "8px" }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={proposalMergeData[p.id] ?? false}
+                                          onChange={(e) => setProposalMergeData((curr) => ({ ...curr, [p.id]: e.target.checked }))}
+                                        />
+                                        <span>دمج بيانات الاقتراح مع المنتج المركزي المحدد (تحديث الاسم، الماركة، الباركود)</span>
+                                      </label>
+                                    )}
+                                  </>
                                 )}
                               </div>
                             )}
@@ -757,7 +852,7 @@ export function CatalogDashboardScreen() {
 
                               {selectedProposalStatus === "marketing-review" && (
                                 <>
-                                  <CpButton disabled={!note.trim() || (!isCreate && !linkId.trim())} onClick={() => handleProposalTransition(p.id, "catalog-adopted", note, isCreate ? null : linkId, isCreate)}>اعتماد ودمج</CpButton>
+                                  <CpButton disabled={!note.trim() || (!isCreate && !linkId.trim() && !p.targetMasterProductId)} onClick={() => handleProposalTransition(p.id, "catalog-adopted", note, p.targetMasterProductId || (isCreate ? null : linkId), isCreate, proposalMergeData[p.id])}>اعتماد ودمج</CpButton>
                                   <CpButton disabled={!note.trim()} onClick={() => handleProposalTransition(p.id, "needs-fix", note)}>طلب تعديل</CpButton>
                                   <CpButton disabled={!note.trim()} onClick={() => handleProposalTransition(p.id, "rejected", note)}>رفض</CpButton>
                                 </>
@@ -770,12 +865,89 @@ export function CatalogDashboardScreen() {
                               {selectedProposalStatus === "catalog-approved" && (
                                 <CpButton disabled={!note.trim()} onClick={() => handleProposalTransition(p.id, "client-visible", note)}>نشر ورؤية للعملاء</CpButton>
                               )}
+
+                              {selectedProposalStatus === "conflict" && (
+                                <CpMutedInline>الاقتراح في حالة تعارض، بانتظار تحديث الشريك أو سحبه.</CpMutedInline>
+                              )}
+
+                              {selectedProposalStatus === "withdrawn" && (
+                                <CpMutedInline>الاقتراح مسحوب من قبل الشريك.</CpMutedInline>
+                              )}
                             </div>
+                            <CpButton style={{ marginTop: "16px" }} onClick={() => setExpandedProposalId(expandedProposalId === p.id ? null : p.id)}>
+                              {expandedProposalId === p.id ? "إخفاء التفاصيل" : "عرض تفاصيل الاقتراح (Compare)"}
+                            </CpButton>
                           </div>
                         </CpTableCell>
                       </tr>
-                    );
-                  })}
+                      {expandedProposalId === p.id && (
+                        <tr key={`${p.id}-details`}>
+                              <td colSpan={5} style={{ padding: "16px", backgroundColor: "var(--bthwani-control-panel-surface-muted)", borderBottom: "1px solid var(--bthwani-control-panel-border)" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                              <div style={{ display: "flex", gap: "24px" }}>
+                                <div style={{ flex: 1, backgroundColor: "var(--bthwani-control-panel-surface)", padding: "16px", borderRadius: "8px", border: "1px solid var(--bthwani-control-panel-border)" }}>
+                                  <h4 style={{ margin: "0 0 12px 0", color: "var(--bthwani-control-panel-text)" }}>تفاصيل الاقتراح (Base)</h4>
+                                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "0.875rem" }}>
+                                    <div><strong>الاسم بالعربية:</strong> {p.proposedNameAr}</div>
+                                    <div><strong>الاسم بالإنجليزية:</strong> {p.proposedNameEn || "—"}</div>
+                                    <div><strong>الماركة:</strong> {p.brand || "—"}</div>
+                                    <div><strong>الباركود:</strong> {p.barcode || "—"}</div>
+                                    {p.baseVersion !== undefined && (
+                                      <div>
+                                        <strong>نسخة القاعدة (Base Version):</strong>{" "}
+                                        <CpBadge tone="neutral">{p.baseVersion}</CpBadge>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <div style={{ flex: 1, backgroundColor: "var(--bthwani-control-panel-surface)", padding: "16px", borderRadius: "8px", border: "1px solid var(--bthwani-control-panel-border)" }}>
+                                  <h4 style={{ margin: "0 0 12px 0", color: "var(--bthwani-control-panel-text)" }}>المنتج المركزي (Canonical)</h4>
+                                  {p.targetMasterProductId ? (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "0.875rem" }}>
+                                      {(() => {
+                                        const canonical = controller.state.masterProducts.items.find(mp => mp.id === p.targetMasterProductId);
+                                        if (!canonical) return <CpMutedInline>لم يتم تحميل بيانات المنتج المركزي ({p.targetMasterProductId}).</CpMutedInline>;
+                                        const isStale = p.baseVersion !== undefined && p.baseVersion !== canonical.version;
+                                        return (
+                                          <>
+                                            <div><strong>الاسم بالعربية:</strong> {canonical.canonicalNameAr}</div>
+                                            <div><strong>الاسم بالإنجليزية:</strong> {canonical.canonicalNameEn || "—"}</div>
+                                            <div><strong>الماركة:</strong> {canonical.brand || "—"}</div>
+                                            <div><strong>الباركود:</strong> {canonical.barcode || "—"}</div>
+                                            <div>
+                                              <strong>النسخة الحالية:</strong>{" "}
+                                              <CpBadge tone={isStale ? "danger" : "success"}>{canonical.version}</CpBadge>
+                                              {isStale && <div style={{ color: "var(--bthwani-control-panel-danger)", marginTop: "4px", fontSize: "0.75rem" }}>⚠️ نسخة الاقتراح قديمة، يجب تحديثها قبل الاعتماد!</div>}
+                                            </div>
+                                          </>
+                                        );
+                                      })()}
+                                    </div>
+                                  ) : (
+                                    <CpMutedInline>لا يوجد منتج مركزي مستهدف (اقتراح منتج جديد).</CpMutedInline>
+                                  )}
+                                </div>
+                              </div>
+
+                              {p.duplicateCandidates && p.duplicateCandidates.length > 0 && (
+                                <div style={{ backgroundColor: "var(--bthwani-control-panel-surface)", padding: "16px", borderRadius: "8px", border: "1px solid var(--bthwani-control-panel-danger)" }}>
+                                  <h4 style={{ margin: "0 0 12px 0", color: "var(--bthwani-control-panel-danger)" }}>تعارض وتكرار محتمل (Duplicate Candidates)</h4>
+                                  <ul style={{ margin: 0, paddingInlineStart: "20px", fontSize: "0.875rem", color: "var(--bthwani-control-panel-danger)" }}>
+                                    {p.duplicateCandidates.map((candidateId) => (
+                                      <li key={candidateId}>
+                                        منتج مركزي مشابه: <code>{candidateId}</code>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </CpTable>
           </div>
@@ -783,7 +955,10 @@ export function CatalogDashboardScreen() {
 
         {activeTab === "marketing_media" && (
           <div style={damSectionStyle}>
-            <h3>مكتبة ومراجعة الصور DAM</h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ margin: 0 }}>مكتبة ومراجعة الصور DAM</h3>
+              <CpButton onClick={() => void handleCleanupOrphans()}>تنظيف الأصول الرقمية اليتيمة</CpButton>
+            </div>
 
             <div style={damPanelStyle}>
               <h4 style={damPanelTitleStyle}>رفع صورة جديدة وربطها بعنصر</h4>
@@ -847,6 +1022,11 @@ export function CatalogDashboardScreen() {
                 <tbody dir="rtl">
                   {assets.map((asset) => {
                     const note = reasonByProposal[asset.id] ?? "";
+                    const badgeTone = asset.status === "approved" ? "success"
+                                    : asset.status === "rejected" ? "danger"
+                                    : asset.status === "quarantined" ? "danger"
+                                    : asset.status === "scanning" ? "info"
+                                    : "warning";
                     return (
                       <tr key={asset.id}>
                         <CpTableCell>{asset.id}</CpTableCell>
@@ -860,7 +1040,7 @@ export function CatalogDashboardScreen() {
                         <CpTableCell>{asset.originalFileName}</CpTableCell>
                         <CpTableCell><code>{asset.sourceSurface}</code></CpTableCell>
                         <CpTableCell>
-                          <StatusBadge label={asset.status} tone={asset.status === "approved" ? "success" : asset.status === "rejected" ? "danger" : "warning"} />
+                          <StatusBadge label={asset.status} tone={badgeTone} />
                         </CpTableCell>
                         <CpTableCell>
                           <div style={assetReviewRowStyle}>
@@ -870,6 +1050,9 @@ export function CatalogDashboardScreen() {
                               placeholder="ملاحظة للمراجعة..."
                               aria-label={`ملاحظة مراجعة الصورة ${asset.id}`}
                             />
+                            {asset.status === "scanning" && (
+                              <CpButton onClick={() => handleSimulateScan(asset.id)}>محاكاة الفحص</CpButton>
+                            )}
                             <CpButton onClick={() => handleAssetReview(asset.id, "approved", note)}>موافقة</CpButton>
                             <CpButton onClick={() => handleAssetReview(asset.id, "rejected", note)}>رفض</CpButton>
                             <CpButton onClick={() => handleAssetReview(asset.id, "archived", note)}>أرشفة</CpButton>
@@ -893,42 +1076,37 @@ export function CatalogDashboardScreen() {
         )}
 
         {activeTab === "policies" && (
-          <div>
-            <h3>سياسات الفئة والمنصة</h3>
-            <CpTable aria-label="جدول السياسات">
-              <thead>
-                <tr dir="rtl">
-                  <CpTableHeaderCell>المعرف</CpTableHeaderCell>
-                  <CpTableHeaderCell>النطاق</CpTableHeaderCell>
-                  <CpTableHeaderCell>عمولة المنصة</CpTableHeaderCell>
-                  <CpTableHeaderCell>يسمح بصورة مخصصة</CpTableHeaderCell>
-                  <CpTableHeaderCell>يتطلب باركود</CpTableHeaderCell>
-                  <CpTableHeaderCell>يتطلب صورة منتج</CpTableHeaderCell>
-                  <CpTableHeaderCell>الحالة</CpTableHeaderCell>
-                </tr>
-              </thead>
-              <tbody dir="rtl">
-                {controller.state.policies.items.map((p) => (
-                  <tr key={p.id}>
-                    <CpTableCell>{p.id}</CpTableCell>
-                    <CpTableCell><code>{p.policyScope}</code></CpTableCell>
-                    <CpTableCell>{p.platformCommissionRate * 100}%</CpTableCell>
-                    <CpTableCell>{p.allowsStoreProductCustomImage ? "نعم" : "لا"}</CpTableCell>
-                    <CpTableCell>{p.requiresBarcode ? "نعم" : "لا"}</CpTableCell>
-                    <CpTableCell>{p.requiresProductImage ? "نعم" : "لا"}</CpTableCell>
-                    <CpTableCell>
-                      <StatusBadge label={p.isActive ? "نشط" : "معطل"} tone={p.isActive ? "success" : "neutral"} />
-                    </CpTableCell>
-                  </tr>
-                ))}
-              </tbody>
-            </CpTable>
-          </div>
+          <CpStatePanel
+            role="status"
+            title="إدارة السياسات"
+            description="تم نقل إدارة السياسات والصلاحيات إلى مسار منصة الحوكمة السيادي."
+            code="CATALOG_POLICIES_MOVED"
+          >
+            <CpButton onClick={() => router.push("/dsh/catalogs/governance")}>
+              فتح منصة الحوكمة
+            </CpButton>
+          </CpStatePanel>
         )}
 
         {activeTab === "assortment" && (
           <div>
             <h3>تشكيلة المتجر الفعالة ({selectedStoreId})</h3>
+
+            {/* ── Diagnostics strip ───────────────────────────────────────── */}
+            {(() => {
+              const stalePricedCount = controller.assortment.items.filter(a => a.unitPrice <= 0).length;
+              const orphanCount = controller.assortment.items.filter(a =>
+                !controller.state.masterProducts.items.some(mp => mp.id === a.masterProductId)
+              ).length;
+              if (stalePricedCount + orphanCount === 0) return null;
+              return (
+                <div style={{ display: "flex", gap: "12px", padding: "12px 0", marginBottom: "12px" }}>
+                  {stalePricedCount > 0 && <CpBadge tone="warning">سعر صفري: {stalePricedCount}</CpBadge>}
+                  {orphanCount > 0 && <CpBadge tone="danger">روابط يتيمة: {orphanCount}</CpBadge>}
+                </div>
+              );
+            })()}
+
             <div style={filterRowStyle}>
               <CpTextInput value={assortmentProductId} onChange={setAssortmentProductId} placeholder="معرف المنتج المركزي" />
               <CpTextInput value={assortmentPrice} onChange={setAssortmentPrice} placeholder="السعر المحلي YER" />
@@ -968,28 +1146,62 @@ export function CatalogDashboardScreen() {
                   <CpTableHeaderCell>التوفر</CpTableHeaderCell>
                   <CpTableHeaderCell>حالة المخزون</CpTableHeaderCell>
                   <CpTableHeaderCell>ملاحظة محلية</CpTableHeaderCell>
-                  <CpTableHeaderCell>حالة النشر</CpTableHeaderCell>
+                  <CpTableHeaderCell>حالة النشر / التشخيص</CpTableHeaderCell>
+                  <CpTableHeaderCell>الإجراءات</CpTableHeaderCell>
                 </tr>
               </thead>
               <tbody dir="rtl">
-                {controller.assortment.items.map((a) => (
-                  <tr key={a.id}>
-                    <CpTableCell>{a.id}</CpTableCell>
-                    <CpTableCell>{a.masterProductId}</CpTableCell>
-                    <CpTableCell>{a.unitPrice} {a.currency}</CpTableCell>
-                    <CpTableCell>{a.available ? "متاح" : "غير متاح"}</CpTableCell>
-                    <CpTableCell>
-                      <StatusBadge
-                        label={a.stockStatus}
-                        tone={a.stockStatus === "in_stock" ? "success" : a.stockStatus === "low_stock" ? "warning" : "danger"}
-                      />
-                    </CpTableCell>
-                    <CpTableCell>{a.localNote || "—"}</CpTableCell>
-                    <CpTableCell>
-                      <StatusBadge label={a.publicationStatus} tone={a.publicationStatus === "client_visible" ? "success" : "neutral"} />
-                    </CpTableCell>
-                  </tr>
-                ))}
+                {controller.assortment.items.map((a) => {
+                  const canonical = controller.state.masterProducts.items.find(mp => mp.id === a.masterProductId);
+                  const isOrphan = !canonical;
+                  const isStalePrice = a.unitPrice <= 0;
+                  return (
+                    <tr key={a.id} style={{ backgroundColor: isOrphan ? "var(--bthwani-control-panel-surface-muted)" : undefined }}>
+                      <CpTableCell><code>{a.id}</code></CpTableCell>
+                      <CpTableCell>
+                        <div><code>{a.masterProductId}</code></div>
+                        {canonical && <div style={{ fontSize: "0.75rem", color: "var(--bthwani-control-panel-text-muted)" }}>{canonical.canonicalNameAr}</div>}
+                        {isOrphan && <CpBadge tone="danger">يتيم</CpBadge>}
+                      </CpTableCell>
+                      <CpTableCell>
+                        {isStalePrice ? <CpBadge tone="warning">{a.unitPrice} {a.currency} ⚠️</CpBadge> : <>{a.unitPrice} {a.currency}</>}
+                      </CpTableCell>
+                      <CpTableCell>{a.available ? "متاح" : "غير متاح"}</CpTableCell>
+                      <CpTableCell>
+                        <StatusBadge
+                          label={a.stockStatus}
+                          tone={a.stockStatus === "in_stock" ? "success" : a.stockStatus === "low_stock" ? "warning" : "danger"}
+                        />
+                      </CpTableCell>
+                      <CpTableCell>{a.localNote || "—"}</CpTableCell>
+                      <CpTableCell>
+                        <StatusBadge label={a.publicationStatus} tone={
+                          a.publicationStatus === "client_visible" ? "success"
+                          : "neutral"
+                        } />
+                        {a.version !== undefined && <CpBadge tone="neutral">v{a.version}</CpBadge>}
+                      </CpTableCell>
+                      <CpTableCell>
+                        <CpButton
+                            style={{ fontSize: "0.75rem" }}
+                            onClick={async () => {
+                              const reason = window.prompt("سبب التقاعد (مطلوب)");
+                              if (!reason?.trim()) return;
+                              try {
+                                await (await import("../../shared/catalog/catalog-governance.api")).retireOperatorStoreAssortment(
+                                  selectedStoreId, a.masterProductId, { reason: reason.trim(), expectedVersion: a.version }
+                                );
+                                alert("تم التقاعد بنجاح");
+                                await controller.reloadStoreAssortment(selectedStoreId);
+                              } catch (e: any) {
+                                alert("تعذر التقاعد: " + (e.message ?? e.toString()));
+                              }
+                            }}
+                          >تقاعد</CpButton>
+                      </CpTableCell>
+                    </tr>
+                  );
+                })}
               </tbody>
             </CpTable>
           </div>

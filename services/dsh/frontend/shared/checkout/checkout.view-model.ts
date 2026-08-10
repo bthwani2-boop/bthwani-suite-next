@@ -1,10 +1,10 @@
 import type { DshCheckoutIntent } from "./checkout.types";
 import {
   checkoutBlockedPaymentUnavailableState,
-  checkoutIdleState,
-  checkoutPaymentPendingState,
+  checkoutConfirmingState,
   checkoutReconciliationPendingState,
   checkoutSuccessState,
+  checkoutTerminalState,
 } from "./checkout.states";
 
 export function checkoutIntentHasWltSession(intent: DshCheckoutIntent): boolean {
@@ -13,25 +13,21 @@ export function checkoutIntentHasWltSession(intent: DshCheckoutIntent): boolean 
 
 export function resolveCheckoutIntentDisplayState(intent: DshCheckoutIntent) {
   switch (intent.state) {
-    case "cancelled":
-    case "expired":
-      return checkoutIdleState();
-    case "payment_failed":
-    case "wlt_handoff_failed":
-      return checkoutBlockedPaymentUnavailableState();
-    case "wlt_outcome_unknown":
-      return checkoutReconciliationPendingState(intent);
-    case "payment_confirmed":
+    case "draft":
+      return { kind: "draft", intent } as const;
+    case "validating":
+      return { kind: "validating", intent } as const;
+    case "ready":
+      return { kind: "ready", intent } as const;
+    case "blocked":
+      return { kind: "blocked", intent, issues: intent.validationIssues ?? [] } as const;
+    case "confirming":
+      return checkoutConfirmingState(intent);
     case "confirmed":
       return checkoutSuccessState(intent);
-    case "payment_pending":
-      // COD creates only a WLT reference at checkout. With that reference
-      // attached, DSH may create the order without pretending cash was captured.
-      return intent.paymentMethod === "cod" && checkoutIntentHasWltSession(intent)
-        ? checkoutSuccessState(intent)
-        : checkoutPaymentPendingState(intent);
-    case "pending":
-      return checkoutPaymentPendingState(intent);
+    case "cancelled":
+    case "expired":
+      return checkoutTerminalState(intent, intent.state);
     default: {
       const exhaustive: never = intent.state;
       return exhaustive;

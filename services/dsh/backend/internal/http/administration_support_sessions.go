@@ -22,7 +22,7 @@ func RegisterAdministrationSupportRoutes(
 	supportClient *supportsession.Client,
 ) {
 	server := &administrationSupportServer{
-		protected: newProtectedStoreServer(db, identityClient, wltClient, mediaProvider),
+		protected: newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider),
 		db:        db,
 		identity:  supportClient,
 	}
@@ -31,6 +31,9 @@ func RegisterAdministrationSupportRoutes(
 	router.HandleFunc("POST /dsh/operator/admin/support-sessions/{requestId}/review", server.handleReviewRequest)
 	router.HandleFunc("POST /dsh/operator/admin/support-sessions/{requestId}/revoke", server.handleRevokeRequest)
 	router.HandleFunc("GET /dsh/operator/admin/support/snapshot", server.handleSupportSnapshot)
+	router.HandleFunc("GET /dsh/operator/support/partners/{partnerId}/aggregate", server.handleGetPartnerSupportAggregate)
+	router.HandleFunc("GET /dsh/operator/support/partners/{partnerId}/finance", server.handleGetPartnerSupportFinance)
+	router.HandleFunc("GET /dsh/operator/support/partners/{partnerId}/operations", server.handleGetPartnerSupportOperations)
 }
 
 type administrationSupportServer struct {
@@ -202,4 +205,28 @@ func (s *administrationSupportServer) handleSupportSnapshot(w http.ResponseWrite
 		"identity": identity,
 		"snapshot": snapshot,
 	})
+}
+
+func (s *administrationSupportServer) requirePartnerSupportSession(w http.ResponseWriter, r *http.Request, targetPartnerID string) (supportsession.Identity, bool) {
+	accessToken := bearerToken(r.Header.Get("Authorization"))
+	if accessToken == "" {
+		store.SendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "support bearer session is required")
+		return supportsession.Identity{}, false
+	}
+	identity, err := s.identity.Resolve(r.Context(), accessToken)
+	if err != nil || !hasSupportRead(identity) {
+		store.SendError(w, http.StatusForbidden, "SUPPORT_SESSION_FORBIDDEN", "support session is invalid, expired, or outside its read scope")
+		return supportsession.Identity{}, false
+	}
+	if identity.Subject != targetPartnerID {
+		store.SendError(w, http.StatusForbidden, "SUPPORT_TARGET_MISMATCH", "support session is not bound to the requested partner")
+		return supportsession.Identity{}, false
+	}
+	// Log the access to audit
+	_, _ = s.db.ExecContext(r.Context(), `
+		INSERT INTO dsh_admin_audit (id, actor_id, target_id, action, detail)
+		VALUES (gen_random_uuid(), $1, $2, 'partner_support_access', $3)`,
+		identity.InitiatorActorID, targetPartnerID, "accessed partner support center via session")
+
+	return identity, true
 }

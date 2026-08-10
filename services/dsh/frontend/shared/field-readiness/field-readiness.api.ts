@@ -13,6 +13,16 @@ import type {
   DshFieldWorkQueue,
 } from "./field-readiness.types";
 
+export {
+  classifyGovernedError,
+  createGovernedProblem,
+} from "../_kernel/governed-problem";
+export type {
+  GovernedNextAction,
+  GovernedProblem,
+  GovernedProblemKind,
+} from "../_kernel/governed-problem";
+
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "field-readiness");
 
 export type FieldMutationContext = {
@@ -168,16 +178,4 @@ export async function fetchPartnerOnboardingStatus(storeId: string): Promise<Dsh
 
 export async function fetchFieldWorkQueue(): Promise<DshFieldWorkQueue> {
   return request<DshFieldWorkQueue>("/dsh/field/work-queue");
-}
-
-export function classifyFieldReadinessError(error: unknown): {
-  kind: "permission_denied" | "offline" | "not_found" | "error";
-} {
-  const typed = error as { kind?: string; status?: number };
-  if (typed.kind === "http") {
-    if (typed.status === 401 || typed.status === 403) return { kind: "permission_denied" };
-    if (typed.status === 404) return { kind: "not_found" };
-  }
-  if (typed.kind === "network") return { kind: "offline" };
-  return { kind: "error" };
 }

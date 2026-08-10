@@ -39,17 +39,19 @@ func TestPaymentMethodConstants(t *testing.T) {
 }
 
 func TestIntentStateConstants(t *testing.T) {
+	// J050: 8 canonical states in the new state machine.
 	states := map[IntentState]bool{
-		StatePending:           true,
-		StateWltHandoffFailed:  true,
-		StateWltOutcomeUnknown: true,
-		StatePaymentPending:    true,
-		StateConfirmed:         true,
-		StateCancelled:         true,
-		StateExpired:           true,
+		StateDraft:      true,
+		StateValidating: true,
+		StateReady:      true,
+		StateBlocked:    true,
+		StateConfirming: true,
+		StateConfirmed:  true,
+		StateCancelled:  true,
+		StateExpired:    true,
 	}
-	if len(states) != 7 {
-		t.Fatalf("expected 7 distinct intent states, got %d", len(states))
+	if len(states) != 8 {
+		t.Fatalf("expected 8 distinct intent states, got %d", len(states))
 	}
 }
 
@@ -75,15 +77,7 @@ func TestApplyWltPaymentEventRejectsUnsupportedStatus(t *testing.T) {
 	}
 }
 
-func TestNewPaymentConfirmationStateConstants(t *testing.T) {
-	states := map[IntentState]bool{
-		StatePaymentConfirmed: true,
-		StatePaymentFailed:    true,
-	}
-	if len(states) != 2 {
-		t.Fatalf("expected 2 distinct new payment confirmation states, got %d", len(states))
-	}
-}
+
 
 func TestPaymentEventTargetStateDistinguishesExpired(t *testing.T) {
 	state, intermediate, err := paymentEventTargetState("expired")
@@ -97,7 +91,7 @@ func TestPaymentEventTargetStateDistinguishesExpired(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if intermediate || state != StatePaymentFailed {
-		t.Fatalf("expected terminal payment_failed state, got state=%q intermediate=%v", state, intermediate)
+	if intermediate || state != StateCancelled {
+		t.Fatalf("expected terminal cancelled state, got state=%q intermediate=%v", state, intermediate)
 	}
 }

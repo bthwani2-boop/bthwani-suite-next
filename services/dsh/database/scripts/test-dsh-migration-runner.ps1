@@ -1,10 +1,11 @@
 <#
 .SYNOPSIS
-  Destructive-on-isolated-database verification for the canonical DSH runner.
+  Isolated verification for the canonical governed DSH migration authority.
 
 .DESCRIPTION
-  This script is CI-only. It proves that checksum drift is rejected and that a
-  migration failure rolls back both schema effects and its ledger record.
+  Proves that governed checksum drift is rejected through schema_migrations and
+  that a failing manifest-registered migration rolls back both schema effects
+  and its ledger row before a corrected roll-forward succeeds.
 #>
 
 [CmdletBinding()]
@@ -21,92 +22,218 @@ if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) {
 if (-not (Get-Command psql -ErrorAction SilentlyContinue)) {
   throw "psql is required for migration-runner verification."
 }
+if (-not (Get-Command pwsh -ErrorAction SilentlyContinue)) {
+  throw "pwsh is required for migration-runner verification."
+}
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = (Resolve-Path (Join-Path $ScriptDir "../../../..")).Path
-$Runner = Join-Path $ScriptDir "invoke-dsh-database.ps1"
+$DshRunner = Join-Path $ScriptDir "invoke-dsh-database.ps1"
+$ServiceRunner = Join-Path $RepoRoot "tools/scripts/invoke-service-migrations.ps1"
+$GovernedRunner = Join-Path $RepoRoot "infra/docker/scripts/schema-migration-runner.ps1"
 $MigrationDir = Join-Path $RepoRoot "services/dsh/database/migrations"
-$ProbeName = "dsh-999_ci_atomicity_probe.sql"
-$ProbePath = Join-Path $MigrationDir $ProbeName
+
+foreach ($requiredFile in @($DshRunner, $ServiceRunner, $GovernedRunner)) {
+  if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
+    throw "Required governed migration authority not found: $requiredFile"
+  }
+}
+
+. $GovernedRunner
 
 function Invoke-ProbePsql {
   param([Parameter(Mandatory = $true)][string]$Sql)
-  $output = $Sql | & psql $DatabaseUrl -X -q -v ON_ERROR_STOP=1 -tA
-  if ($LASTEXITCODE -ne 0) {
-    throw "Probe psql command failed (exit $LASTEXITCODE)."
+
+  $output = $Sql | & psql $DatabaseUrl -X -q -v ON_ERROR_STOP=1 -tA 2>&1
+  $exitCode = $LASTEXITCODE
+  if ($exitCode -ne 0) {
+    $message = (($output | ForEach-Object { "$_" }) -join "`n").Trim()
+    throw "Probe psql command failed (exit $exitCode).`n$message"
   }
   return (($output | ForEach-Object { "$_" }) -join "`n").Trim()
 }
 
+function Invoke-RunnerProcess {
+  param(
+    [Parameter(Mandatory = $true)][string]$RunnerPath,
+    [Parameter(Mandatory = $true)][string[]]$Arguments,
+    [Parameter(Mandatory = $true)][bool]$ExpectSuccess,
+    [string]$ExpectedFailurePattern = ""
+  )
+
+  $output = & pwsh -NoProfile -ExecutionPolicy Bypass -File $RunnerPath @Arguments 2>&1
+  $exitCode = $LASTEXITCODE
+  $message = (($output | ForEach-Object { "$_" }) -join "`n").Trim()
+  foreach ($line in $output) { Write-Host "$line" }
+
+  if ($ExpectSuccess -and $exitCode -ne 0) {
+    throw "Migration runner unexpectedly failed (exit $exitCode).`n$message"
+  }
+  if (-not $ExpectSuccess -and $exitCode -eq 0) {
+    throw "Migration runner unexpectedly succeeded for a required failure probe."
+  }
+  if (-not $ExpectSuccess -and -not [string]::IsNullOrWhiteSpace($ExpectedFailurePattern) -and
+      $message -notmatch $ExpectedFailurePattern) {
+    throw "Migration runner failed for an unexpected reason. Expected pattern '$ExpectedFailurePattern'.`n$message"
+  }
+
+  return $message
+}
+
+function ConvertTo-SqlLiteralValue {
+  param([Parameter(Mandatory = $true)][string]$Value)
+  return $Value.Replace("'", "''")
+}
+
+function Write-ProbeManifest {
+  param(
+    [Parameter(Mandatory = $true)][string]$Directory,
+    [Parameter(Mandatory = $true)][string]$ServiceName,
+    [Parameter(Mandatory = $true)][System.IO.FileInfo]$MigrationFile
+  )
+
+  $checksum = (Get-BthwaniPortableSqlChecksums -File $MigrationFile).Canonical
+  $manifest = [ordered]@{
+    schemaVersion = 1
+    service = $ServiceName
+    ordering = "explicit"
+    orderingSource = "ci-generated"
+    cutover = $MigrationFile.Name
+    migrations = @(
+      [ordered]@{
+        ordinal = 1
+        file = $MigrationFile.Name
+        sha256 = $checksum
+        historicalPrefix = "ci-001"
+        state = "ACTIVE"
+      }
+    )
+  }
+  $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $Directory "manifest.json") -Encoding utf8NoBOM
+}
+
 $firstMigration = Get-ChildItem -LiteralPath $MigrationDir -File -Filter "*.sql" |
-  Where-Object Name -ne $ProbeName |
-  Sort-Object Name |
+  Sort-Object { $_.Name.ToLowerInvariant() }, Name |
   Select-Object -First 1
 if (-not $firstMigration) {
   throw "No DSH migration is available for checksum verification."
 }
 
-$escapedFirstName = $firstMigration.Name.Replace("'", "''")
-$originalChecksum = Invoke-ProbePsql "SELECT checksum FROM runtime_schema_migrations WHERE migration_name = '$escapedFirstName';"
+$escapedFirstName = ConvertTo-SqlLiteralValue $firstMigration.Name
+$originalChecksum = Invoke-ProbePsql @"
+SELECT checksum_sha256
+FROM schema_migrations
+WHERE service_name = 'dsh' AND migration_id = '$escapedFirstName';
+"@
 if ([string]::IsNullOrWhiteSpace($originalChecksum)) {
-  throw "Canonical migration ledger does not contain $($firstMigration.Name)."
+  throw "Canonical schema_migrations ledger does not contain $($firstMigration.Name)."
 }
 
-Write-Host "--- Verifying checksum drift rejection ---"
+Write-Host "--- Verifying governed checksum drift rejection ---"
 try {
-  Invoke-ProbePsql "UPDATE runtime_schema_migrations SET checksum = repeat('0', 64) WHERE migration_name = '$escapedFirstName';" | Out-Null
+  Invoke-ProbePsql @"
+UPDATE schema_migrations
+SET checksum_sha256 = repeat('0', 64)
+WHERE service_name = 'dsh' AND migration_id = '$escapedFirstName';
+"@ | Out-Null
 
-  $checksumRejected = $false
-  try {
-    & $Runner -Action migrate -Transport url -DatabaseUrl $DatabaseUrl
-  } catch {
-    $checksumRejected = $_.Exception.Message -match "checksum mismatch"
-  }
-
-  if (-not $checksumRejected) {
-    throw "Canonical runner did not reject migration checksum drift."
-  }
+  Invoke-RunnerProcess `
+    -RunnerPath $DshRunner `
+    -Arguments @("-Action", "migrate", "-Transport", "url", "-DatabaseUrl", $DatabaseUrl) `
+    -ExpectSuccess $false `
+    -ExpectedFailurePattern "GOVERNED_MIGRATION_LEDGER_CONFLICT|MIGRATION_CHECKSUM_MISMATCH" | Out-Null
 } finally {
-  $escapedChecksum = $originalChecksum.Replace("'", "''")
-  Invoke-ProbePsql "UPDATE runtime_schema_migrations SET checksum = '$escapedChecksum' WHERE migration_name = '$escapedFirstName';" | Out-Null
+  $escapedChecksum = ConvertTo-SqlLiteralValue $originalChecksum
+  Invoke-ProbePsql @"
+UPDATE schema_migrations
+SET checksum_sha256 = '$escapedChecksum'
+WHERE service_name = 'dsh' AND migration_id = '$escapedFirstName';
+"@ | Out-Null
 }
 Write-Host "Checksum drift rejection: PASS"
 
-Write-Host "--- Verifying atomic migration rollback ---"
-@"
-CREATE TABLE dsh_ci_atomicity_probe (
-  id INTEGER PRIMARY KEY
-);
-
-SELECT 1 / 0;
-"@ | Set-Content -LiteralPath $ProbePath -Encoding utf8NoBOM
+Write-Host "--- Verifying atomic migration rollback and roll-forward ---"
+$ProbeService = "dsh-ci-atomicity-probe"
+$ProbeServiceSql = ConvertTo-SqlLiteralValue $ProbeService
+$ProbeFileName = "ci-atomicity-001.sql"
+$ProbeFileNameSql = ConvertTo-SqlLiteralValue $ProbeFileName
+$ProbeTable = "dsh_ci_atomicity_probe_table"
+$TemporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) "bthwani-dsh-atomicity-$([guid]::NewGuid().ToString('N'))"
+$ProbePath = Join-Path $TemporaryRoot $ProbeFileName
+New-Item -ItemType Directory -Path $TemporaryRoot -Force | Out-Null
 
 try {
-  $probeRejected = $false
-  try {
-    & $Runner -Action migrate -Transport url -DatabaseUrl $DatabaseUrl
-  } catch {
-    $probeRejected = $true
+  Invoke-ProbePsql @"
+DROP TABLE IF EXISTS $ProbeTable;
+DELETE FROM schema_migrations WHERE service_name = '$ProbeServiceSql';
+"@ | Out-Null
+
+  @"
+CREATE TABLE $ProbeTable (
+  id INTEGER PRIMARY KEY,
+  payload TEXT NOT NULL
+);
+INSERT INTO $ProbeTable (id, payload) VALUES (1, 'must-rollback');
+SELECT 1 / 0;
+"@ | Set-Content -LiteralPath $ProbePath -Encoding utf8NoBOM
+  Write-ProbeManifest -Directory $TemporaryRoot -ServiceName $ProbeService -MigrationFile (Get-Item -LiteralPath $ProbePath)
+
+  Invoke-RunnerProcess `
+    -RunnerPath $ServiceRunner `
+    -Arguments @("-ServiceKey", $ProbeService, "-MigrationDirectory", $TemporaryRoot, "-DatabaseUrl", $DatabaseUrl) `
+    -ExpectSuccess $false `
+    -ExpectedFailurePattern "division by zero|MIGRATION_EXECUTION_FAILED|Governed migration execution failed" | Out-Null
+
+  $tableExistsAfterFailure = Invoke-ProbePsql "SELECT CASE WHEN to_regclass('public.$ProbeTable') IS NULL THEN '0' ELSE '1' END;"
+  $ledgerRowsAfterFailure = Invoke-ProbePsql @"
+SELECT count(*)
+FROM schema_migrations
+WHERE service_name = '$ProbeServiceSql' AND migration_id = '$ProbeFileNameSql';
+"@
+  if ($tableExistsAfterFailure -ne "0") {
+    throw "Atomic rollback failed: $ProbeTable still exists."
+  }
+  if ($ledgerRowsAfterFailure -ne "0") {
+    throw "Atomic rollback failed: the failed probe was recorded in schema_migrations."
   }
 
-  if (-not $probeRejected) {
-    throw "The intentionally failing migration unexpectedly succeeded."
-  }
+  @"
+CREATE TABLE $ProbeTable (
+  id INTEGER PRIMARY KEY,
+  payload TEXT NOT NULL
+);
+INSERT INTO $ProbeTable (id, payload) VALUES (1, 'recovered');
+"@ | Set-Content -LiteralPath $ProbePath -Encoding utf8NoBOM
+  Write-ProbeManifest -Directory $TemporaryRoot -ServiceName $ProbeService -MigrationFile (Get-Item -LiteralPath $ProbePath)
 
-  $tableExists = Invoke-ProbePsql "SELECT CASE WHEN to_regclass('public.dsh_ci_atomicity_probe') IS NULL THEN '0' ELSE '1' END;"
-  $ledgerExists = Invoke-ProbePsql "SELECT COUNT(*) FROM runtime_schema_migrations WHERE migration_name = '$ProbeName';"
+  Invoke-RunnerProcess `
+    -RunnerPath $ServiceRunner `
+    -Arguments @("-ServiceKey", $ProbeService, "-MigrationDirectory", $TemporaryRoot, "-DatabaseUrl", $DatabaseUrl) `
+    -ExpectSuccess $true | Out-Null
 
-  if ($tableExists -ne "0") {
-    throw "Atomic rollback failed: dsh_ci_atomicity_probe still exists."
-  }
-  if ($ledgerExists -ne "0") {
-    throw "Atomic rollback failed: probe migration was written to the ledger."
+  $recoveredData = Invoke-ProbePsql "SELECT count(*) FROM $ProbeTable WHERE id = 1 AND payload = 'recovered';"
+  $recoveredLedger = Invoke-ProbePsql @"
+SELECT count(*)
+FROM schema_migrations
+WHERE service_name = '$ProbeServiceSql'
+  AND migration_id = '$ProbeFileNameSql'
+  AND success
+  AND NOT dirty;
+"@
+  if ($recoveredData -ne "1" -or $recoveredLedger -ne "1") {
+    throw "Roll-forward verification failed for the governed atomicity probe."
   }
 } finally {
-  Remove-Item -LiteralPath $ProbePath -Force -ErrorAction SilentlyContinue
-  Invoke-ProbePsql "DROP TABLE IF EXISTS dsh_ci_atomicity_probe; DELETE FROM runtime_schema_migrations WHERE migration_name = '$ProbeName';" | Out-Null
+  Remove-Item -LiteralPath $TemporaryRoot -Recurse -Force -ErrorAction SilentlyContinue
+  Invoke-ProbePsql @"
+DROP TABLE IF EXISTS $ProbeTable;
+DELETE FROM schema_migrations WHERE service_name = '$ProbeServiceSql';
+"@ | Out-Null
 }
-Write-Host "Atomic migration rollback: PASS"
+Write-Host "Atomic migration rollback and roll-forward: PASS"
 
-& $Runner -Action migrate -Transport url -DatabaseUrl $DatabaseUrl
+Invoke-RunnerProcess `
+  -RunnerPath $DshRunner `
+  -Arguments @("-Action", "migrate", "-Transport", "url", "-DatabaseUrl", $DatabaseUrl) `
+  -ExpectSuccess $true | Out-Null
 Write-Host "Canonical migration runner verification: PASS"

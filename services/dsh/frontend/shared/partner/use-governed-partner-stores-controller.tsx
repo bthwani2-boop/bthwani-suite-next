@@ -1,5 +1,7 @@
 "use client";
 
+import { classifyGovernedError } from "../_kernel/governed-problem";
+import type { DshPartnerErrorState } from "./partner.states";
 import { useCallback, useEffect, useState } from "react";
 import type { DshPartnerStoresState, DshPartnerMutationState } from "./partner.states";
 import {
@@ -14,6 +16,11 @@ type ControllerError = Readonly<{
   code?: string;
   message?: string;
 }>;
+
+function governedStoresErrorState(error: unknown): DshPartnerErrorState {
+  const message = messageFor(error);
+  return { kind: "error", message, problem: { ...classifyGovernedError(error), message } };
+}
 
 function messageFor(error: unknown): string {
   const typed = error as ControllerError;
@@ -41,7 +48,7 @@ export function useGovernedPartnerStoresController(partnerId: string, authKind: 
         : { kind: "success", stores: result.stores, total: result.total });
       return true;
     } catch (error) {
-      setState({ kind: "error", message: messageFor(error) });
+      setState(governedStoresErrorState(error));
       return false;
     }
   }, [authenticated, partnerId]);
@@ -59,7 +66,7 @@ export function useGovernedPartnerStoresController(partnerId: string, authKind: 
       setActionState({ kind: "idle" });
       return true;
     } catch (error) {
-      setActionState({ kind: "error", message: messageFor(error) });
+      setActionState(governedStoresErrorState(error));
       return false;
     }
   }, [authenticated, partnerId, reload]);

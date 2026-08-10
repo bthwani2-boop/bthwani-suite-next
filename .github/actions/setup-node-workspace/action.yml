@@ -1,5 +1,5 @@
 name: Setup BThwani Node workspace
-description: Install the repository-pinned PNPM and Node toolchain, then materialize deterministic OpenAPI build artifacts from canonical bounded-context sources.
+description: Install the repository-pinned PNPM and Node toolchain. The root postinstall materializes deterministic OpenAPI artifacts exactly once.
 
 inputs:
   node-version:
@@ -26,7 +26,7 @@ runs:
         cache: pnpm
         cache-dependency-path: pnpm-lock.yaml
 
-    - name: Install frozen workspace
+    - name: Install frozen workspace and materialize generated clients once
       id: install
       continue-on-error: true
       shell: bash
@@ -49,31 +49,5 @@ runs:
       shell: bash
       run: |
         echo "::error title=Frozen PNPM installation failed::The complete log was uploaded as an artifact."
-        tail -n 160 "${RUNNER_TEMP}/pnpm-install.log"
-        exit 1
-
-    - name: Materialize deterministic OpenAPI artifacts
-      id: openapi
-      continue-on-error: true
-      shell: bash
-      run: |
-        set -uo pipefail
-        log="${RUNNER_TEMP}/openapi-materialization.log"
-        pnpm run openapi:generate:all >"${log}" 2>&1
-
-    - name: Upload OpenAPI materialization failure log
-      if: ${{ steps.openapi.outcome == 'failure' }}
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-      with:
-        name: ${{ github.job }}-openapi-materialization-${{ github.run_id }}
-        path: ${{ runner.temp }}/openapi-materialization.log
-        if-no-files-found: error
-        retention-days: 7
-
-    - name: Fail closed on OpenAPI materialization error
-      if: ${{ steps.openapi.outcome == 'failure' }}
-      shell: bash
-      run: |
-        echo "::error title=OpenAPI materialization failed::Canonical contract sources could not produce their deterministic bundles and clients."
-        tail -n 200 "${RUNNER_TEMP}/openapi-materialization.log"
+        tail -n 200 "${RUNNER_TEMP}/pnpm-install.log"
         exit 1

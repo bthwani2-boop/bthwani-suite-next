@@ -580,22 +580,7 @@ func RollbackPolicyEvent(
 				snapshot.SlaCategory, mutation.ActorID, input.ExpectedCurrentVersion,
 			).Scan(&result.ToVersion)
 			restored = snapshot
-		case "store_onboarding_fee":
-			var snapshot StoreOnboardingFeePolicy
-			if err := json.Unmarshal(event.Payload, &snapshot); err != nil {
-				return result, ErrInvalid
-			}
-			err = tx.QueryRowContext(ctx, `
-				UPDATE dsh_platform_store_onboarding_fee_policy
-				SET enabled = $1, amount = $2, currency = $3, applies_to = $4,
-				    charge_timing = $5, effective_from = $6, notes = $7,
-				    updated_by = $8, version = version + 1, updated_at = NOW()
-				WHERE id = 1 AND version = $9
-				RETURNING version`, snapshot.Enabled, snapshot.Amount, snapshot.Currency,
-				snapshot.AppliesTo, snapshot.ChargeTiming, snapshot.EffectiveFrom,
-				snapshot.Notes, mutation.ActorID, input.ExpectedCurrentVersion,
-			).Scan(&result.ToVersion)
-			restored = snapshot
+
 		default:
 			return result, ErrInvalid
 		}

@@ -54,7 +54,7 @@ func seedArrivedCustomerFixture(t *testing.T, db *sql.DB, paymentMethod string) 
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, partner_id)
-		VALUES ($1, $1, 'PoD Outbox Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true, $2)`,
+		VALUES ($1, $1, 'PoD Outbox Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true, $2)`,
 		storeID, partnerID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
@@ -77,7 +77,7 @@ func seedArrivedCustomerFixture(t *testing.T, db *sql.DB, paymentMethod string) 
 			total_minor_units, currency, pricing_snapshot_hash
 		)
 		VALUES (
-			$1, $2, $3::uuid, $4, 'payment_pending', 'bthwani_delivery',
+			$1, $2, $3::uuid, $4, 'confirmed', 'bthwani_delivery',
 			$5, $6,
 			1000, 0, 0, 1000, 'YER', repeat('f', 64)
 		)

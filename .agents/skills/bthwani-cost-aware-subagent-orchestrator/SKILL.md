@@ -1,227 +1,105 @@
 ---
 name: bthwani-cost-aware-subagent-orchestrator
-version: 2026.07.26-v2
-summary: Coordinate product-aware hierarchical subagents with non-overlapping ownership, minimum sufficient context, independent review, and deterministic merge.
+version: 2026.08.06-v3
+summary: Coordinate independent bounded work units with minimum sufficient context, non-overlapping writes, deterministic integration, and protected review.
 ---
 
 # bthwani-cost-aware-subagent-orchestrator
 
 ## Purpose
 
-Coordinate broad BThwani tasks so the strongest available agent remains the advisory supervisor while the lowest-cost capable agents execute bounded non-overlapping work units. Preserve product intent, authority separation, architecture ownership, minimal context, deterministic integration, and independent review.
-
-This skill orchestrates only. It does not replace Product Truth, architecture, QA, security, release, WLT finance, runtime, or final-closure authorities.
+Coordinate broad tasks when decomposition reduces context, execution time, or integration risk. This skill orchestrates only; higher authorities and owner skills remain unchanged.
 
 ## Invoke when
 
-- The user explicitly requests subagents, hierarchical delegation, or cost-aware routing.
-- At least two independent work units exist with non-overlapping write scopes.
-- A task crosses product, contract, backend, database, frontend, runtime, or verification boundaries.
-- Decomposition reduces context, execution time, or risk without fragmenting ownership.
+- The user requests subagents or delegated execution.
+- At least two independent work units have non-overlapping write scopes.
+- A cross-layer task can be decomposed without splitting one source-of-truth decision.
 
 ## Do not invoke when
 
-- The task is a small or indivisible edit.
-- The platform offers no real subagent capability.
-- Two work units would write the same file or shared generated boundary concurrently.
-- Coordination overhead exceeds direct execution value.
-- The task is analysis or wording only and needs no delegated execution.
+- The task is small, indivisible, analysis-only, or text-only.
+- The platform has no real subagent capability.
+- Work units would write the same file or mutually generated boundary.
+- Coordination would cost more context than direct execution.
 
 ## Read before
 
-- `governance/authority/authority-precedence.json`
 - `AGENTS.md`
-- `governance/contracts/decision-vocabulary.json`
-- `governance/policies/product.md` when product impact applies
+- `governance/GOVERNANCE.md`
 - `governance/agents/agent-registry.json`
 - `governance/skills/skills-registry.json`
-- `references/WORK_UNIT_CONTRACT.md`
-- `references/MODEL_ROUTING_AND_TOKEN_POLICY.md`
+- `governance/contracts/decision-vocabulary.json`
+
+Load Product Truth, engineering, security, finance, runtime, SDLC, or evidence skills only when their triggers apply. Do not load separate model/token/work-unit policy documents; this `SKILL.md` is the complete orchestrator contract.
 
 ## Authority boundary
 
-- `MASTER_ADVISORY_SUPERVISOR` owns coordination, risk routing, conflict resolution, and scoped final synthesis.
-- `PRODUCT_MANAGER_AUTHORITY` owns the problem, actors, outcome, scope, exclusions, priority, and product-model approval.
-- `PRODUCT_OWNER_ACCEPTANCE_AUTHORITY` owns functional behavior, permissions, states, cross-surface acceptance, implementation readiness, and product acceptance.
-- `UX_JOURNEY_AUTHORITY` owns human-facing journey coherence.
-- `ARCHITECTURE_AUTHORITY` owns service boundaries, contracts, data flow, and dependency direction.
-- Engineering executors own implementation and developer verification only.
-- Independent QA, application security, release, and risk-acceptance authorities retain their formal decisions.
-- Agent review never fabricates a missing human, regulatory, QA, security, release, or production approval.
-- commercial platform implementation is outside this skill unless explicitly authorized in a separate task.
+This skill owns coordination and work-unit routing only. It cannot approve product, architecture, finance, governance, CI, QA, security, release, risk, production, or final closure. The coordinator must not act as the independent reviewer of work it coordinated.
 
-## Supervisor contract
+## Routing method
 
-The supervisor must:
+1. Pin the exact repository, branch, and commit.
+2. Classify task mode, risk, owner paths, and protected domains.
+3. Define one objective and one owner for each work unit.
+4. Declare allowed read/write paths, forbidden paths, dependencies, acceptance, and focused verification.
+5. Build a dependency DAG; parallelize only proven independent units.
+6. Select the lowest capable tier that satisfies risk and verification.
+7. Reject incomplete handoffs and resolve conflicts without force operations.
+8. Re-pin after writes and before final verification.
+9. Return only a canonical scoped decision from `governance/contracts/decision-vocabulary.json`.
 
-1. Pin repository, remote branch, and immutable commit.
-2. Classify task mode, risk, and affected authorities.
-3. Resolve Product Truth before architecture when product impact applies.
-4. Define one objective and one owner for each work unit.
-5. Define allowed read/write paths and forbidden paths.
-6. Build a dependency DAG and identify safe parallelism.
-7. Select the lowest capability tier that satisfies risk and verification needs.
-8. Review every structured result and reject incomplete handoffs.
-9. Resolve conflicts without force-merging or hiding failed checks.
-10. Re-pin the branch after writes and before final verification.
-11. Issue only a decision allowed by the canonical vocabulary.
+Capability tiers:
 
-## Logical roles
+- `T0_MINIMAL` — extraction, formatting, and mechanical bounded edits.
+- `T1_BALANCED` — focused module work under one owner.
+- `T2_SPECIALIST` — contracts, data, runtime, security, finance, migrations, CI, and independent review.
+- `T3_ADVISORY_MAX` — cross-domain coordination, architecture conflict resolution, and final scoped synthesis.
 
-Create only roles needed by the current task:
-
-```text
-PRODUCT_MANAGER_ANALYST
-PRODUCT_OWNER_ACCEPTANCE_REVIEWER
-UX_JOURNEY_REVIEWER
-RESEARCH_AGENT
-ARCHITECTURE_PLANNER
-API_CONTRACT_EXECUTOR
-BACKEND_EXECUTOR
-DATABASE_EXECUTOR
-FRONTEND_EXECUTOR
-RUNTIME_EXECUTOR
-SECURITY_SPECIALIST
-FINANCE_WLT_SPECIALIST
-VERIFICATION_AGENT
-INDEPENDENT_REVIEWER
-```
-
-The supervisor plans by default. A separate planning role is justified only when it reduces total context or isolates a specialist authority.
-
-## Work order
-
-For product-impacting capabilities:
-
-```text
-Problem and evidence
-→ actors and role boundaries
-→ required and excluded surfaces
-→ outcome and acceptance
-→ Product Manager approval
-→ Product Owner functional approval
-→ architecture and ownership
-→ API and data contracts
-→ backend and database
-→ generated clients and adapters
-→ surfaces and UI
-→ runtime
-→ product acceptance
-→ independent QA/security/release as applicable
-→ scoped decision
-```
-
-For behavior-preserving internal work with `product_impact: NONE`, begin at the relevant owner boundary.
+Never lower capability for cost in security, privacy, finance, migrations, production data, public contracts, CI, release, or protected approval work. Model/provider choice is an execution concern, not repository authority; use the capable connected executor available for the work unit without encoding provider-specific truth in governance.
 
 ## Work-unit contract
 
-Each work unit must declare:
-
-- `work_unit_id`;
-- objective;
-- owner role;
-- risk class and required capability tier;
-- dependencies;
-- allowed read paths;
-- allowed write paths;
-- forbidden paths;
-- bounded inputs;
-- acceptance criteria;
-- targeted verification;
-- read-only or write mode;
-- expected structured output.
-
-Two units must not write the same file or mutually generated boundaries concurrently.
-
-## Capability routing
+Each unit declares:
 
 ```text
-T0_MINIMAL
-  scoped reads, extraction, formatting, and small mechanical edits
-
-T1_BALANCED
-  focused module work and bounded multi-file implementation under one owner
-
-T2_SPECIALIST
-  Product Truth, API contracts, database logic, runtime, security, finance,
-  migrations, CI, and independent review
-
-T3_ADVISORY_MAX
-  coordination, cross-domain architecture, conflict resolution, high-risk review,
-  and final scoped synthesis
+work_unit_id:
+objective:
+owner_role:
+risk_tier:
+dependencies:
+allowed_read_paths:
+allowed_write_paths:
+forbidden_paths:
+bounded_inputs:
+acceptance:
+verification:
+mode:
+expected_output:
 ```
 
-Selection rule:
+Two units must not write the same file or a source and its generated consumer concurrently. Serialize contracts before generated clients, migrations before dependent code/tests, and any authoritative owner mutation before affected read-model/surface consumers.
 
-```text
-selected_tier = lowest tier
-  satisfying required capability
-  + risk constraints
-  + verification requirements
-```
+## Context and parallelism
 
-Never reduce capability for cost when money, security, privacy, data, public contracts, migrations, CI, release, or product authority is involved.
+- Send only relevant files, symbols, contracts, relationships, and acceptance criteria.
+- Reference global policies instead of copying them.
+- Exclude generated, cache, diagnostic, binary, historical, and unrelated output unless required by the work unit.
+- Reuse verified findings within the same candidate and stop a worker when acceptance is met.
+- Require concise structured handoffs, not private reasoning.
+- Default to two parallel executors; raise concurrency only when write scopes and dependencies prove independence.
+- Independent review starts only after the candidate revision is stable.
 
-## Context minimization
+## Failure handling
 
-- Send only relevant files, symbols, contracts, and relationship summaries.
-- Never broadcast the full repository or full Git history.
-- Exclude generated, cache, build, diagnostic, and binary outputs unless directly required.
-- Reference global policies instead of repeating them.
-- Reuse findings within the same run.
-- Stop a worker when its acceptance criteria are met.
-- Require concise structured handoffs; do not request private chain-of-thought.
-- Do not create tracked logs or evidence packs by default.
-
-## Parallel execution
-
-- Default maximum parallel executors: 2.
-- Raise to 4 only for four proven independent scopes.
-- Serialize contract edits before generated clients and consumers.
-- Serialize migration edits before dependent code and tests.
-- Independent review begins only after the target version is stable.
-- All results return to the supervisor; no open swarm or ungoverned agent network is allowed.
-
-## Independent review
-
-Independent review is mandatory for:
-
-- product-model and product-acceptance decisions;
-- auth, sessions, RBAC, PII, secrets, and privacy;
-- WLT, payments, ledger, settlement, payout, reconciliation, and commission;
-- migrations and production data;
-- infrastructure, CI, release, rollback, and signing;
-- critical or high vulnerabilities;
-- final closure.
-
-An executor cannot finally approve its own high-risk work.
-
-## Failure and escalation
-
-- Escalate capability only when the same assertion requires deeper expertise.
-- Maximum two attempts for the same unchanged assertion.
-- On retry, send only the failure, affected context, previous attempt, and changed hypothesis.
-- If the branch moves unexpectedly, stop, re-pin, and re-read affected files.
-- Never force-push, reset, or discard concurrent work to simplify integration.
-- A repeated unresolved assertion becomes `FIX_REQUIRED`, `NEEDS_EVIDENCE`, or `BLOCKED_EXTERNAL` as applicable.
-
-## Forbidden behavior
-
-- Beginning from architecture or a feature list when Product Truth is required.
-- Treating UI, backend, or tests alone as proof of product completeness.
-- Letting one actor receive another actor’s actions or surfaces.
-- Allowing parallel overlapping writes.
-- Hardcoding commercial model names or prices.
-- Using a low-capability agent for security, finance, migrations, CI, or release.
-- Letting an executor self-approve high-risk work.
-- Adding agent-framework runtime dependencies without explicit need and approval.
-- Committing generated diagnostics, execution logs, or evidence packs.
-- Claiming runtime, visual, QA, security, release, production, or closure evidence not actually produced.
-- Activating platform commercialization from this skill.
+- Re-pin and stop the affected write batch if the branch moves unexpectedly.
+- Retry an unchanged assertion at most twice and only with a changed hypothesis or new evidence.
+- Never force-push, reset, discard concurrent work, or hide failed checks.
+- Map unresolved work only to canonical decisions such as `FIX_REQUIRED`, `NEEDS_EVIDENCE`, or `BLOCKED_EXTERNAL`.
 
 ## Required output
 
-Each executor returns:
+Worker:
 
 ```text
 work_unit_id:
@@ -236,13 +114,12 @@ conflicts:
 handoff:
 ```
 
-The supervisor returns:
+Coordinator:
 
 ```text
 repository:
 target_branch:
 resolved_commit_sha:
-product_truth_state:
 work_units:
 independent_reviews:
 checks:
@@ -250,4 +127,4 @@ decision:
 remaining_risks:
 ```
 
-Allowed canonical decisions are `PASS`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `BLOCKED_EXTERNAL`, and `PROTOCOL_VIOLATION`. This skill cannot issue `CLOSED_WITH_EVIDENCE` by itself.
+Allowed decisions: `PASS`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `BLOCKED_EXTERNAL`, and `PROTOCOL_VIOLATION`.

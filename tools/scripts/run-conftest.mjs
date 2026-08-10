@@ -11,7 +11,7 @@ const args = [
   "governance/skills/skills-registry.json",
   "governance/guards/guard-registry.json",
   "--policy",
-  "governance/policies",
+  "tools/guards/opa",
 ];
 
 function execute(binary) {

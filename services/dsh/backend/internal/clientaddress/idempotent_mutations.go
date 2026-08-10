@@ -94,7 +94,7 @@ func replayAddressMutation(ctx context.Context, tx *sql.Tx, clientID string, rec
 	}
 	address, err := scanAddress(tx.QueryRowContext(ctx, `SELECT `+addressColumns+`
 		FROM dsh_client_addresses
-		WHERE id = $1 AND client_id = $2 AND deleted_at IS NULL`, receipt.AddressID, strings.TrimSpace(clientID)))
+		WHERE id = $1 AND client_id = $2 AND status != 'DELETED'`, receipt.AddressID, strings.TrimSpace(clientID)))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -162,7 +162,7 @@ func UpdateIdempotent(
 	var currentDefault bool
 	var currentVersion int
 	if err := tx.QueryRowContext(ctx, `SELECT is_default, version FROM dsh_client_addresses
-		WHERE id = $1 AND client_id = $2 AND deleted_at IS NULL FOR UPDATE`,
+		WHERE id = $1 AND client_id = $2 AND status != 'DELETED' FOR UPDATE`,
 		strings.TrimSpace(addressID), strings.TrimSpace(clientID),
 	).Scan(&currentDefault, &currentVersion); errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -177,7 +177,7 @@ func UpdateIdempotent(
 	if input.MakeDefault {
 		if _, err := tx.ExecContext(ctx, `UPDATE dsh_client_addresses
 			SET is_default = FALSE, version = version + 1, updated_at = NOW()
-			WHERE client_id = $1 AND id <> $2 AND deleted_at IS NULL AND is_default = TRUE`,
+			WHERE client_id = $1 AND id <> $2 AND status = 'ACTIVE' AND is_default = TRUE`,
 			strings.TrimSpace(clientID), strings.TrimSpace(addressID),
 		); err != nil {
 			return nil, err
@@ -188,7 +188,7 @@ func UpdateIdempotent(
 		label=$1, recipient_name=$2, phone_e164=$3, address_line=$4, service_area_code=$5,
 		building=$6, floor=$7, unit=$8, delivery_instructions=$9, latitude=$10, longitude=$11,
 		is_default=$12, version=version+1, updated_at=NOW()
-		WHERE id=$13 AND client_id=$14 AND deleted_at IS NULL AND version=$15
+		WHERE id=$13 AND client_id=$14 AND status != 'DELETED' AND version=$15
 		RETURNING `+addressColumns,
 		input.Label, input.RecipientName, input.PhoneE164, input.AddressLine, input.ServiceAreaCode,
 		input.Building, input.Floor, input.Unit, input.DeliveryInstructions, input.Latitude, input.Longitude,
@@ -258,7 +258,7 @@ func SetDefaultIdempotent(
 	}
 
 	current, err := scanAddress(tx.QueryRowContext(ctx, `SELECT `+addressColumns+` FROM dsh_client_addresses
-		WHERE id=$1 AND client_id=$2 AND deleted_at IS NULL FOR UPDATE`,
+		WHERE id=$1 AND client_id=$2 AND status != 'DELETED' FOR UPDATE`,
 		strings.TrimSpace(addressID), strings.TrimSpace(clientID),
 	))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -282,14 +282,14 @@ func SetDefaultIdempotent(
 
 	if _, err := tx.ExecContext(ctx, `UPDATE dsh_client_addresses
 		SET is_default=FALSE, version=version+1, updated_at=NOW()
-		WHERE client_id=$1 AND id<>$2 AND deleted_at IS NULL AND is_default=TRUE`,
+		WHERE client_id=$1 AND id<>$2 AND status = 'ACTIVE' AND is_default=TRUE`,
 		strings.TrimSpace(clientID), strings.TrimSpace(addressID),
 	); err != nil {
 		return nil, err
 	}
 	address, err := scanAddress(tx.QueryRowContext(ctx, `UPDATE dsh_client_addresses
 		SET is_default=TRUE, version=version+1, updated_at=NOW()
-		WHERE id=$1 AND client_id=$2 AND deleted_at IS NULL AND version=$3
+		WHERE id=$1 AND client_id=$2 AND status != 'DELETED' AND version=$3
 		RETURNING `+addressColumns,
 		strings.TrimSpace(addressID), strings.TrimSpace(clientID), expectedVersion,
 	))
@@ -352,7 +352,7 @@ func DeleteIdempotent(
 	var currentDefault bool
 	var currentVersion int
 	if err := tx.QueryRowContext(ctx, `SELECT is_default, version FROM dsh_client_addresses
-		WHERE id=$1 AND client_id=$2 AND deleted_at IS NULL FOR UPDATE`,
+		WHERE id=$1 AND client_id=$2 AND status != 'DELETED' FOR UPDATE`,
 		strings.TrimSpace(addressID), strings.TrimSpace(clientID),
 	).Scan(&currentDefault, &currentVersion); errors.Is(err, sql.ErrNoRows) {
 		return ErrNotFound
@@ -364,8 +364,8 @@ func DeleteIdempotent(
 	}
 
 	result, err := tx.ExecContext(ctx, `UPDATE dsh_client_addresses
-		SET deleted_at=NOW(), is_default=FALSE, version=version+1, updated_at=NOW()
-		WHERE id=$1 AND client_id=$2 AND deleted_at IS NULL AND version=$3`,
+		SET status='DELETED', is_default=FALSE, version=version+1, updated_at=NOW()
+		WHERE id=$1 AND client_id=$2 AND status != 'DELETED' AND version=$3`,
 		strings.TrimSpace(addressID), strings.TrimSpace(clientID), expectedVersion,
 	)
 	if err != nil {
@@ -383,7 +383,7 @@ func DeleteIdempotent(
 			SET is_default=TRUE, version=version+1, updated_at=NOW()
 			WHERE id=(
 				SELECT id FROM dsh_client_addresses
-				WHERE client_id=$1 AND deleted_at IS NULL
+				WHERE client_id=$1 AND status != 'DELETED'
 				ORDER BY updated_at DESC, id ASC LIMIT 1
 			)
 			RETURNING id, version`, strings.TrimSpace(clientID)).Scan(&promotedID, &promotedVersion)

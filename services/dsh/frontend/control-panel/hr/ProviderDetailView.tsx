@@ -23,6 +23,7 @@ import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState"
 import { uploadProviderMedia } from "../../shared/media/field-document-media";
 import { ProviderActivationWorkspace } from "../shared";
 import { ProviderOperationalCorePanel } from "./ProviderOperationalCorePanel";
+import { useIdentitySession } from "@bthwani/core-identity";
 
 export function ProviderDetailView(props: { readonly actorId: string; readonly kind: ProviderKind; readonly onBack: () => void }) {
   if (props.kind === "captain") {
@@ -121,6 +122,11 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  const { state: identityState } = useIdentitySession();
+  const operatorContextId = identityState.kind === "authenticated"
+    ? identityState.identity.operatorContextId
+    : "";
+
   if (controller.state.kind === "loading") return <LoadingScreen />;
 
   if (controller.state.kind === "error") {
@@ -183,10 +189,10 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
       setUploadBusy(true);
       const objectUrl = URL.createObjectURL(file);
       try {
-        await uploadProviderMedia(props.actorId, "captain", {
+        await uploadProviderMedia(props.actorId, "employees", {
           uri: objectUrl,
           name: file.name,
-          mimeType: file.type || "application/octet-stream" });
+          mimeType: file.type || "application/octet-stream" }, operatorContextId);
         await controller.reload();
       } catch {
         setUploadError("تعذر رفع الملف — حاول مجددًا");

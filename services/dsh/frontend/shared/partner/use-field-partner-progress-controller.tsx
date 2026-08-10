@@ -6,6 +6,8 @@ import { fieldGetPartner, fieldGetPartnerStore, fieldGetReadiness, fieldListDocu
 import type { DshPartner, DshPartnerReadiness, DshPartnerDocument, DshPartnerFieldVisit } from "./partner.types";
 import { buildPartnerReadinessViewModel } from "./partner.view-model";
 import { getDshPartnerActivationStatusLabel, isDshPartnerClientVisible } from "./partner-activation.model";
+import { classifyGovernedError } from "../_kernel/governed-problem";
+import type { DshPartnerErrorState } from "./partner.states";
 
 export type FieldPartnerProgressState =
   | { readonly kind: "idle" }
@@ -20,7 +22,7 @@ export type FieldPartnerProgressState =
     }
   | { readonly kind: "forbidden" }
   | { readonly kind: "not_found" }
-  | { readonly kind: "error"; readonly message: string };
+  | DshPartnerErrorState;
 
 export function useFieldPartnerProgressController(partnerId: string) {
   const [state, setState] = useState<FieldPartnerProgressState>({ kind: "idle" });
@@ -48,7 +50,10 @@ export function useFieldPartnerProgressController(partnerId: string) {
       const e = err as { status?: number };
       if (e?.status === 403) setState({ kind: "forbidden" });
       else if (e?.status === 404) setState({ kind: "not_found" });
-      else setState({ kind: "error", message: "تعذر تحميل تقدم ملف الشريك" });
+      else {
+        const problem = classifyGovernedError(err);
+        setState({ kind: "error", message: problem.message, problem });
+      }
     }
   }, [partnerId]);
 

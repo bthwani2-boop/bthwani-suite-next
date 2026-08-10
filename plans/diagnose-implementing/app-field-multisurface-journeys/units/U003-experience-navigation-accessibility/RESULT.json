@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 3,
+  "unitId": "U003",
+  "status": "IN_PROGRESS",
+  "baselineSha": "38e3d2c47bd4900ad7441aec53ebebb9af09cd8d",
+  "resultingSha": null,
+  "completedTaskIds": [],
+  "modifiedPaths": [
+    "shared/ui-kit/src/components/InlineNotice/InlineNotice.tsx",
+    "shared/ui-kit/src/components/StateView/StateView.tsx",
+    "services/dsh/frontend/app-field/components/DshFieldProblemNotice.tsx"
+  ],
+  "checkResults": [
+    {
+      "verificationId": "STATIC-A11Y-SOURCE",
+      "status": "PASS",
+      "command": "cd shared/ui-kit && npx tsc --noEmit -p tsconfig.json",
+      "actualResult": "Exit code 0. InlineNotice and StateView previously carried no accessibility affordances at all: no role, no live region, no accessible name, and a tone conveyed only by border colour and an unlabelled icon. Both now expose accessibilityLiveRegion on the container (assertive for danger/warning, polite otherwise) and an accessible, labelled text block carrying title, description, and reason code, with the decorative tone icon hidden from assistive technology. The container deliberately does not set accessible, so action buttons remain individually focusable.",
+      "baselineSha": "38e3d2c47bd4900ad7441aec53ebebb9af09cd8d",
+      "resultingSha": null,
+      "proves": "The source now declares an accessible name, a role, and a live region for notice and state surfaces used by all five surfaces, and the reason code is exposed as text rather than colour alone.",
+      "doesNotProve": "It does not prove that TalkBack or VoiceOver actually announce the notice, nor that focus order, contrast, touch target size, large font, or rotation behave correctly. Those require a physical device."
+    }
+  ],
+  "blockers": [
+    {
+      "classification": "EXTERNAL_EVIDENCE_REQUIRED",
+      "code": "PHYSICAL_DEVICE_ACCESSIBILITY_UNVERIFIED",
+      "evidence": "No Android or iOS device, development build, or release build was available in this execution environment.",
+      "impact": "TalkBack and VoiceOver announcement, focus order, contrast, touch target size, large-font layout, rotation, low-memory, and suspend/resume behavior remain unproven.",
+      "remainingWork": "Run the accessibility and lifecycle checks on physical Android and iOS builds and attach the evidence to this unit."
+    }
+  ],
+  "deviations": [
+    {
+      "type": "SCOPE_PARTIALLY_EXECUTED",
+      "fromSha": "f1f9664838ddac7dec5cd26cd5fe9dcfdcd84b14",
+      "observedSha": "1e0cd0b0452d2cf2f422b2d5ed74b4d6ef29cf14",
+      "resolution": "Only the accessibility slice reachable from source was executed in this stage: announcement, accessible naming, and non-colour-only status on the shared notice and state components. Navigation, deep links, notification entry points, and the remaining experience slices of this unit are untouched and remain NOT_RUN."
+    }
+  ],
+  "decision": "PARTIAL",
+  "multiSurfaceScope": {
+    "mode": "FULLSTACK_UNIFIED_MULTI_SURFACE",
+    "surfaces": ["control-panel", "app-client", "app-partner", "app-captain", "app-field"],
+    "journeyPolicy": "NO_JOURNEY_OR_SLICE_MAY_BE_EXECUTED_OR_CLOSED_IN_ISOLATION",
+    "sliceContract": "all 24 journey slices are integrated in every stage"
+  },
+  "closureRule": "No result can pass from one surface or one journey slice alone."
+}

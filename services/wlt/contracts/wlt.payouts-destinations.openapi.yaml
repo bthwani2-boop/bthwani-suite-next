@@ -92,6 +92,8 @@ paths:
                     type: array
                     items: { $ref: '#/components/schemas/PayoutRequest' }
                   total: { type: integer, minimum: 0 }
+        '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
       security:
         - serviceBearer: []
     post:
@@ -233,6 +235,134 @@ paths:
                   auditEvents:
                     type: array
                     items: { $ref: '#/components/schemas/PayoutAuditEvent' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
+        '404': { $ref: '#/components/responses/PayoutNotFound' }
+      security:
+        - serviceBearer: []
+  /wlt/settlement-batches:
+    post:
+      tags: [ "wlt-settlement-batches" ]
+      operationId: createWltSettlementBatch
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ providerId, currency, operatorId ]
+              properties:
+                providerId: { type: string, minLength: 1 }
+                currency: { type: string, minLength: 3, maxLength: 3 }
+                operatorId: { type: string, minLength: 1 }
+      responses:
+        '201':
+          description: Settlement batch created from open approved payout snapshots.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SettlementBatchEnvelope' }
+        '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
+      security:
+        - serviceBearer: []
+  /wlt/settlement-batches/{batchId}/freeze:
+    post:
+      tags: [ "wlt-settlement-batches" ]
+      operationId: freezeWltSettlementBatch
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+      requestBody: { $ref: '#/components/requestBodies/OperatorBody' }
+      responses:
+        '200':
+          description: Settlement batch frozen and artifact hashed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SettlementBatchEnvelope' }
+        '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
+        '409': { $ref: '#/components/responses/PayoutConflict' }
+      security:
+        - serviceBearer: []
+  /wlt/settlement-batches/{batchId}/export:
+    get:
+      tags: [ "wlt-settlement-batches" ]
+      operationId: exportWltSettlementBatch
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Settlement batch export structure.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
+      security:
+        - serviceBearer: []
+  /wlt/settlement-batches/{batchId}/evidence:
+    post:
+      tags: [ "wlt-settlement-batches" ]
+      operationId: submitWltManualTransferEvidence
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ approvedSnapshotId, externalTransferReference, amountMinorUnits, currency, operatorId ]
+              properties:
+                approvedSnapshotId: { type: string, minLength: 1 }
+                externalTransferReference: { type: string, minLength: 1 }
+                amountMinorUnits: { type: integer, minimum: 1 }
+                currency: { type: string, minLength: 3, maxLength: 3 }
+                operatorId: { type: string, minLength: 1 }
+      responses:
+        '201':
+          description: Manual transfer evidence accepted.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '409': { $ref: '#/components/responses/PayoutConflict' }
+      security:
+        - serviceBearer: []
+  /wlt/finance-close:
+    post:
+      tags: [ "wlt-finance-close" ]
+      operationId: executeWltDailyFinanceClose
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ businessDate, operatorId ]
+              properties:
+                businessDate: { type: string, format: date }
+                operatorId: { type: string, minLength: 1 }
+      responses:
+        '201':
+          description: Daily finance closed and audit pack compiled.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '409': { $ref: '#/components/responses/PayoutConflict' }
       security:
         - serviceBearer: []
 components:
@@ -326,17 +456,11 @@ components:
     PayoutDestinationInput:
       type: object
       additionalProperties: false
-      required: [ beneficiaryName, settlementPreference, bankAccountHolderMatchesOwner ]
+      required: [ beneficiaryName, destinationMethod, destinationReference ]
       properties:
         beneficiaryName: { type: string, minLength: 1 }
-        bankName: { type: string }
-        bankBranch: { type: string }
-        accountNumber: { type: string }
-        iban: { type: string }
-        payoutMobileNumber: { type: string }
-        settlementPreference: { type: string, enum: [ bank, mobile_money, manual ] }
-        bankAccountHolderMatchesOwner: { type: boolean }
-        bankNotes: { type: string }
+        destinationMethod: { type: string, enum: [ bank, mobile_money, manual ] }
+        destinationReference: { type: string, minLength: 1 }
         operatorId: { type: string, minLength: 1 }
     PayoutDestination:
       type: object
@@ -345,10 +469,9 @@ components:
           id,
           ownerActorId,
           ownerActorType,
-          settlementPreference,
-          maskedAccountNumber,
-          maskedIban,
-          maskedMobileNumber,
+          destinationMethod,
+          maskedDestinationReference,
+          destinationVerificationStatus,
           beneficiaryName,
           active,
           updatedAt
@@ -357,13 +480,10 @@ components:
         id: { type: string }
         ownerActorId: { type: string }
         ownerActorType: { $ref: '#/components/schemas/PayoutActorType' }
-        settlementPreference: { type: string, enum: [ bank, mobile_money, manual ] }
-        maskedAccountNumber: { type: string }
-        maskedIban: { type: string }
-        maskedMobileNumber: { type: string }
+        destinationMethod: { type: string, enum: [ bank, mobile_money, manual ] }
+        maskedDestinationReference: { type: string }
+        destinationVerificationStatus: { type: string, enum: [ unverified, verified, rejected ] }
         beneficiaryName: { type: string }
-        bankName: { type: string }
-        bankBranch: { type: string }
         active: { type: boolean }
         updatedAt: { type: string, format: date-time }
     PayoutDestinationEnvelope:
@@ -457,3 +577,22 @@ components:
         correlationId: { type: string }
         metadata: { type: object, additionalProperties: true }
         createdAt: { type: string, format: date-time }
+    SettlementBatch:
+      type: object
+      required: [ id, providerId, currency, batchHash, controlTotalMinorUnits, rowCount, status, createdAt ]
+      properties:
+        id: { type: string }
+        providerId: { type: string }
+        currency: { type: string }
+        batchHash: { type: string }
+        controlTotalMinorUnits: { type: integer }
+        rowCount: { type: integer }
+        status: { type: string, enum: [ open, frozen, cancelled, completed ] }
+        createdAt: { type: string, format: date-time }
+        frozenAt: { type: [ string, 'null' ], format: date-time }
+        createdByOperatorId: { type: string }
+    SettlementBatchEnvelope:
+      type: object
+      required: [ settlementBatch ]
+      properties:
+        settlementBatch: { $ref: '#/components/schemas/SettlementBatch' }

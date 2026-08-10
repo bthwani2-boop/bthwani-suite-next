@@ -1,7 +1,14 @@
+import { classifyGovernedError } from "../_kernel/governed-problem";
+import type { DshPartnerErrorState } from "./partner.states";
 import { useCallback, useEffect, useState } from "react";
 import { fetchPartnerSelfStatus, fetchPartnerSelfReadiness } from "./partner.api";
 import type { DshPartnerDetailState, DshPartnerReadinessState } from "./partner.states";
 import { buildPartnerDetailViewModel, buildPartnerReadinessViewModel } from "./partner.view-model";
+
+function partnerSelfErrorState(err: unknown): DshPartnerErrorState {
+  const message = resolveMessage(err);
+  return { kind: "error", message, problem: { ...classifyGovernedError(err), message } };
+}
 
 function resolveMessage(err: unknown): string {
   const e = err as { status?: number; kind?: string };
@@ -29,7 +36,7 @@ export function usePartnerSelfController(authKind: string) {
       // app-partner Product Truth exposes one recoverable error state rather
       // than separate operator-facing not-found/forbidden states. Preserve the
       // precise explanation while routing both through the Hub retry boundary.
-      setStatusState({ kind: "error", message: resolveMessage(err) });
+      setStatusState(partnerSelfErrorState(err));
     }
   }, [isAuth]);
 
@@ -40,7 +47,7 @@ export function usePartnerSelfController(authKind: string) {
       const readiness = await fetchPartnerSelfReadiness();
       setReadinessState({ kind: "success", readiness });
     } catch (err) {
-      setReadinessState({ kind: "error", message: resolveMessage(err) });
+      setReadinessState(partnerSelfErrorState(err));
     }
   }, [isAuth]);
 

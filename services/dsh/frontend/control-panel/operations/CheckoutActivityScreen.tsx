@@ -25,12 +25,11 @@ const FULFILLMENT_LABELS: Record<DshFulfillmentMode, string> = {
 };
 
 const STATE_LABELS: Record<DshIntentState, string> = {
-  pending: "قيد الانتظار",
-  wlt_handoff_failed: "فشل تحويل الدفع إلى WLT",
-  wlt_outcome_unknown: "نتيجة WLT غير معروفة",
-  payment_pending: "في انتظار الدفع",
-  payment_confirmed: "تم تأكيد الدفع",
-  payment_failed: "فشل الدفع",
+  draft: "مسودة",
+  validating: "قيد التحقق",
+  ready: "جاهز",
+  blocked: "محظور",
+  confirming: "جاري التأكيد",
   confirmed: "مؤكد",
   cancelled: "ملغي",
   expired: "منتهي",
@@ -66,9 +65,7 @@ export function CheckoutActivityScreen() {
       filters={(
         <CpFilterBar label="مرشحات حالة checkout">
           <CpButton onClick={() => controller.reload()}>كل الحالات</CpButton>
-          <CpButton onClick={() => controller.reload("wlt_outcome_unknown")}>تحتاج مصالحة</CpButton>
-          <CpButton onClick={() => controller.reload("wlt_handoff_failed")}>فشل التسليم إلى WLT</CpButton>
-          <CpButton onClick={() => controller.reload("payment_pending")}>في انتظار نتيجة الدفع</CpButton>
+          <CpButton onClick={() => controller.reload("confirming")}>قيد التأكيد (WLT)</CpButton>
         </CpFilterBar>
       )}
       stateView={stateView}
@@ -154,12 +151,11 @@ function StatusBadge({ state }: { readonly state: DshIntentState }) {
 }
 
 const STATUS_TONE: Record<DshIntentState, CpBadgeTone> = {
-  pending: "neutral",
-  wlt_handoff_failed: "danger",
-  wlt_outcome_unknown: "warning",
-  payment_pending: "info",
-  payment_confirmed: "success",
-  payment_failed: "danger",
+  draft: "neutral",
+  validating: "info",
+  ready: "success",
+  blocked: "warning",
+  confirming: "info",
   confirmed: "success",
   cancelled: "danger",
   expired: "neutral",

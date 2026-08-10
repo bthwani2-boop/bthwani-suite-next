@@ -35,33 +35,50 @@ func GetPlatformKpis(db *sql.DB, period string) (PlatformKpis, error) {
 	since := periodFilter(period)
 	kpis := PlatformKpis{Period: period, GeneratedAt: time.Now().UTC()}
 
-	rows := []struct {
-		dest *int
-		q    string
-		args []any
-	}{
-		{&kpis.TotalOrders, `SELECT COUNT(*) FROM dsh_orders WHERE created_at >= $1`, []any{since}},
-		{&kpis.DeliveredOrders, `SELECT COUNT(*) FROM dsh_orders WHERE status = 'delivered' AND created_at >= $1`, []any{since}},
-		{&kpis.CancelledOrders, `SELECT COUNT(*) FROM dsh_orders WHERE (status = 'cancelled' OR status LIKE 'cancelled_%') AND created_at >= $1`, []any{since}},
-		{&kpis.ActiveStores, `SELECT COUNT(*) FROM dsh_stores WHERE status = 'active' AND is_visible = TRUE`, nil},
-		{&kpis.OpenTickets, `SELECT COUNT(*) FROM dsh_support_tickets WHERE status NOT IN ('resolved','closed')`, nil},
-		{&kpis.FieldVisitsCompleted, `SELECT COUNT(*) FROM dsh_field_visits WHERE status = 'complete' AND created_at >= $1`, []any{since}},
-		{&kpis.OpenEscalations, `SELECT COUNT(*) FROM dsh_readiness_escalations WHERE status <> 'resolved'`, nil},
-		{&kpis.OpenIncidents, `SELECT COUNT(*) FROM dsh_incidents WHERE status <> 'resolved'`, nil},
+	// Ensure we get actual freshness from projections
+	if freshness, err := GetFreshness(db, "platform.orders"); err == nil {
+		kpis.GeneratedAt = freshness
 	}
 
-	for _, row := range rows {
-		var err error
-		if row.args != nil {
-			err = db.QueryRow(row.q, row.args...).Scan(row.dest)
-		} else {
-			err = db.QueryRow(row.q).Scan(row.dest)
-		}
-		if err != nil {
+	// Read from versioned projections instead of raw dsh_orders table
+	query := `
+		SELECT metric_id, COALESCE(SUM(metric_value), 0)
+		FROM dsh_analytics_projections
+		WHERE metric_id LIKE 'platform.%' AND period_start >= $1
+		GROUP BY metric_id
+	`
+	rows, err := db.Query(query, since)
+	if err != nil {
+		return kpis, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var metricID string
+		var value int
+		if err := rows.Scan(&metricID, &value); err != nil {
 			return kpis, err
 		}
+		switch metricID {
+		case "platform.orders.total":
+			kpis.TotalOrders = value
+		case "platform.orders.delivered":
+			kpis.DeliveredOrders = value
+		case "platform.orders.cancelled":
+			kpis.CancelledOrders = value
+		case "platform.stores.active":
+			kpis.ActiveStores = value
+		case "platform.support.open_tickets":
+			kpis.OpenTickets = value
+		case "platform.field.visits_completed":
+			kpis.FieldVisitsCompleted = value
+		case "platform.readiness.open_escalations":
+			kpis.OpenEscalations = value
+		case "platform.incidents.open":
+			kpis.OpenIncidents = value
+		}
 	}
-	return kpis, nil
+	return kpis, rows.Err()
 }
 
 type OrderStatusCount struct {
@@ -115,21 +132,37 @@ type DeliveryAnalytics struct {
 func GetDeliveryAnalytics(db *sql.DB, period string) (DeliveryAnalytics, error) {
 	since := periodFilter(period)
 	out := DeliveryAnalytics{Period: period, GeneratedAt: time.Now().UTC()}
-	queries := []struct {
-		dest *int
-		q    string
-	}{
-		{&out.TotalAssignments, `SELECT COUNT(*) FROM dsh_assignments WHERE created_at >= $1`},
-		{&out.AcceptedAssignments, `SELECT COUNT(*) FROM dsh_assignments WHERE status IN ('accepted','completed') AND created_at >= $1`},
-		{&out.CompletedAssignments, `SELECT COUNT(*) FROM dsh_assignments WHERE status = 'completed' AND created_at >= $1`},
-		{&out.DeclinedAssignments, `SELECT COUNT(*) FROM dsh_assignments WHERE status = 'declined' AND created_at >= $1`},
+	// Read from versioned projections instead of raw dsh_assignments table
+	query := `
+		SELECT metric_id, COALESCE(SUM(metric_value), 0)
+		FROM dsh_analytics_projections
+		WHERE metric_id LIKE 'platform.assignments.%' AND period_start >= $1
+		GROUP BY metric_id
+	`
+	rows, err := db.Query(query, since)
+	if err != nil {
+		return out, err
 	}
-	for _, query := range queries {
-		if err := db.QueryRow(query.q, since).Scan(query.dest); err != nil {
+	defer rows.Close()
+
+	for rows.Next() {
+		var metricID string
+		var value int
+		if err := rows.Scan(&metricID, &value); err != nil {
 			return out, err
 		}
+		switch metricID {
+		case "platform.assignments.total":
+			out.TotalAssignments = value
+		case "platform.assignments.accepted":
+			out.AcceptedAssignments = value
+		case "platform.assignments.completed":
+			out.CompletedAssignments = value
+		case "platform.assignments.declined":
+			out.DeclinedAssignments = value
+		}
 	}
-	return out, nil
+	return out, rows.Err()
 }
 
 type TicketCategoryCount struct {
@@ -149,17 +182,32 @@ type SupportAnalytics struct {
 func GetSupportAnalytics(db *sql.DB, period string) (SupportAnalytics, error) {
 	since := periodFilter(period)
 	out := SupportAnalytics{Period: period, GeneratedAt: time.Now().UTC()}
-	queries := []struct {
-		dest *int
-		q    string
-	}{
-		{&out.TotalTickets, `SELECT COUNT(*) FROM dsh_support_tickets WHERE created_at >= $1`},
-		{&out.OpenTickets, `SELECT COUNT(*) FROM dsh_support_tickets WHERE status NOT IN ('resolved','closed') AND created_at >= $1`},
-		{&out.ResolvedTickets, `SELECT COUNT(*) FROM dsh_support_tickets WHERE status IN ('resolved','closed') AND created_at >= $1`},
+	// Read from versioned projections instead of raw dsh_support_tickets table
+	query := `
+		SELECT metric_id, COALESCE(SUM(metric_value), 0)
+		FROM dsh_analytics_projections
+		WHERE metric_id LIKE 'platform.support.%' AND period_start >= $1
+		GROUP BY metric_id
+	`
+	metricRows, err := db.Query(query, since)
+	if err != nil {
+		return out, err
 	}
-	for _, query := range queries {
-		if err := db.QueryRow(query.q, since).Scan(query.dest); err != nil {
+	defer metricRows.Close()
+
+	for metricRows.Next() {
+		var metricID string
+		var value int
+		if err := metricRows.Scan(&metricID, &value); err != nil {
 			return out, err
+		}
+		switch metricID {
+		case "platform.support.total_tickets":
+			out.TotalTickets = value
+		case "platform.support.open_tickets":
+			out.OpenTickets = value
+		case "platform.support.resolved_tickets":
+			out.ResolvedTickets = value
 		}
 	}
 
@@ -200,7 +248,7 @@ func GetStoreAnalytics(db *sql.DB) (StoreAnalytics, error) {
 		q    string
 	}{
 		{&out.TotalStores, `SELECT COUNT(*) FROM dsh_stores`},
-		{&out.ActiveStores, `SELECT COUNT(*) FROM dsh_stores WHERE status = 'active' AND is_visible = TRUE`},
+		{&out.ActiveStores, `SELECT COUNT(*) FROM dsh_stores WHERE status = 'published' AND is_visible = TRUE`},
 		{&out.SuspendedStores, `SELECT COUNT(*) FROM dsh_stores WHERE status IN ('inactive','unavailable') OR is_visible = FALSE`},
 		{&out.PendingReadiness, `SELECT COUNT(*) FROM dsh_stores s WHERE NOT EXISTS (
 			SELECT 1 FROM dsh_field_visits fv WHERE fv.store_id = s.id AND fv.status = 'complete'

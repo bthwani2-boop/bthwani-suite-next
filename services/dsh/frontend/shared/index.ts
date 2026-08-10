@@ -5,6 +5,7 @@ export * as cart from './cart';
 export * from './catalog';
 export * from './chat';
 export * from './checkout';
+export * as clientProfile from './client-profile';
 
 // Delivery public surface is expanded explicitly here instead of re-exporting
 // the delivery barrel. This prevents native app-captain runtime dependencies
@@ -30,7 +31,6 @@ export * from './delivery/captain.surface.types';
 export * from './dispatch';
 export * from './field-onboarding';
 export * from './field-readiness';
-export * from './finance-wlt-link';
 export * from './geo';
 export * as homeDiscovery from './home-discovery';
 export * from './identity-access';

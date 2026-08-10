@@ -1,28 +1,83 @@
-import React from "react";
-import { StyleSheet, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Platform, StyleSheet, View } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import * as Crypto from "expo-crypto";
 import {
+  configureIdentityDeviceFingerprintProvider,
   configureIdentitySession,
   configureIdentitySessionStorage,
+  resolveIdentityApiBaseUrl,
   useIdentitySession,
 } from "@bthwani/core-identity";
 import { colorRoles } from "@bthwani/ui-kit";
 
 import { DshCaptainSurface } from "../../../../services/dsh/frontend/app-captain";
-import { resolveIdentityApiBaseUrl } from "../../../../services/dsh/frontend/shared/_kernel/identity-api-base-url";
 import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
 import { useDshMobilePushRegistration } from "../../../../services/dsh/frontend/shared/notifications/use-mobile-push-registration";
 import {
   WorkforceAccessGate,
   WorkforceProfileProvider,
+  useWorkforceProfile,
 } from "../../../../services/dsh/frontend/shared/workforce";
+import { fetchWorkforceReadiness } from "../../../../services/dsh/frontend/shared/workforce/workforce-me.api";
+import type { ReadinessGate } from "../../../../services/dsh/frontend/shared/workforce/workforce.types";
+import { ReadinessGateScreen } from "./features/readiness/ReadinessGateScreen";
 
-configureIdentitySessionStorage({
-  getItem: async (key: string) => SecureStore.getItemAsync(key),
-  setItem: async (key: string, value: string) => SecureStore.setItemAsync(key, value),
-  removeItem: async (key: string) => SecureStore.deleteItemAsync(key),
-});
+const CAPTAIN_DEVICE_FINGERPRINT_KEY = "bthwani.captain.device-fingerprint.v1";
+
+async function getOrCreateCaptainDeviceFingerprint(): Promise<string> {
+  const existing = await SecureStore.getItemAsync(CAPTAIN_DEVICE_FINGERPRINT_KEY);
+  if (existing?.trim()) return existing;
+  const created = `captain-device:${Crypto.randomUUID()}`;
+  await SecureStore.setItemAsync(CAPTAIN_DEVICE_FINGERPRINT_KEY, created);
+  return created;
+}
+
+if (Platform.OS !== "web") {
+  configureIdentitySessionStorage({
+    getItem: async (key: string) => SecureStore.getItemAsync(key),
+    setItem: async (key: string, value: string) => SecureStore.setItemAsync(key, value),
+    removeItem: async (key: string) => SecureStore.deleteItemAsync(key),
+  });
+  configureIdentityDeviceFingerprintProvider(getOrCreateCaptainDeviceFingerprint);
+}
 configureIdentitySession(resolveIdentityApiBaseUrl());
+
+function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
+  const workforce = useWorkforceProfile();
+  const [readiness, setReadiness] = useState<ReadinessGate | null>(null);
+
+  const fetchReadiness = async () => {
+    if (workforce.state.kind === "ready") {
+      try {
+        const gate = await fetchWorkforceReadiness(workforce.state.me.actorId);
+        setReadiness(gate);
+      } catch (err) {
+        setReadiness({
+          actorId: workforce.state.me.actorId,
+          workforceKind: workforce.state.me.workforceKind,
+          status: "BLOCKED",
+          blockerReasons: ["ELIGIBILITY_UNAVAILABLE"],
+          checkedAt: new Date().toISOString(),
+        });
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchReadiness();
+  }, [workforce.state]);
+
+  if (readiness && readiness.status === "BLOCKED") {
+    return <ReadinessGateScreen readiness={readiness} onRefresh={fetchReadiness} />;
+  }
+
+  // Only render the operational surface after Workforce explicitly allows it.
+  if (readiness && readiness.status === "ALLOWED") {
+    return <>{children}</>;
+  }
+  return null;
+}
 
 function AppContent() {
   const identity = useIdentitySession();
@@ -36,7 +91,9 @@ function AppContent() {
     <View style={styles.root}>
       <IdentitySessionGate requiredRole="captain" requiredSurface="app-captain">
         <WorkforceAccessGate expectedKind="captain" onLogout={logout}>
-          <DshCaptainSurface command={{ token: 0, target: "home" }} />
+          <UnifiedReadinessWrapper>
+            <DshCaptainSurface command={{ token: 0, target: "home" }} />
+          </UnifiedReadinessWrapper>
         </WorkforceAccessGate>
       </IdentitySessionGate>
     </View>

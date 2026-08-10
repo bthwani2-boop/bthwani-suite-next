@@ -1,11 +1,13 @@
 param(
   [string]$IdentityBaseUrl = "http://localhost:58082",
-  [string]$DshBaseUrl = "http://localhost:58080"
+  [string]$DshBaseUrl = "http://localhost:58080",
+  [string]$WorkforceBaseUrl = "http://localhost:58086"
 )
 
 Set-StrictMode -Version Latest
 
 . (Join-Path $PSScriptRoot "../../dev/local-actors.ps1")
+. (Join-Path $PSScriptRoot "../../dev/local-workforce-actors.ps1")
 $ErrorActionPreference = "Stop"
 
 $password = Get-LocalPassword
@@ -132,17 +134,28 @@ if ([string]$health.status -ne "healthy") {
 }
 
 $operatorToken = Get-ActorToken -Username (Get-LocalUsername "operator")
+$fieldProvider = Get-ProvisionedWorkforceActor -Kind "field"
+$captainProvider = Get-ProvisionedWorkforceActor -Kind "captain"
 $actors = @(
-  @{ Username = (Get-LocalUsername "client");  ActorType = "client";  ActorId = "client-local-001" },
-  @{ Username = (Get-LocalUsername "partner"); ActorType = "partner"; ActorId = "partner-local-001" },
-  @{ Username = (Get-LocalUsername "captain"); ActorType = "captain"; ActorId = "captain-local-001" },
-  @{ Username = (Get-LocalUsername "field");   ActorType = "field";   ActorId = "field-local-001" }
+  @{ ActorType = "client";  ActorId = "client-local-001";  Username = (Get-LocalUsername "client") },
+  @{ ActorType = "partner"; ActorId = "partner-local-001"; Username = (Get-LocalUsername "partner") },
+  @{ ActorType = "captain"; ActorId = [string]$captainProvider.actorId; PhoneE164 = [string]$captainProvider.phoneE164 },
+  @{ ActorType = "field";   ActorId = [string]$fieldProvider.actorId;   PhoneE164 = [string]$fieldProvider.phoneE164 }
 )
 
 foreach ($actor in $actors) {
   $actorType = [string]$actor.ActorType
   $actorId = [string]$actor.ActorId
-  $actorToken = Get-ActorToken -Username ([string]$actor.Username)
+  $actorToken = if ($actor.ContainsKey("PhoneE164")) {
+    Get-ProvisionedWorkforceActorToken `
+      -Kind $actorType `
+      -OperatorToken $operatorToken `
+      -WorkforceBaseUrl $WorkforceBaseUrl `
+      -IdentityBaseUrl $IdentityBaseUrl `
+      -DeviceFingerprint "financial-readback"
+  } else {
+    Get-ActorToken -Username ([string]$actor.Username)
+  }
   $encodedType = [Uri]::EscapeDataString($actorType)
   $encodedId = [Uri]::EscapeDataString($actorId)
   $correlationPrefix = "financial-readback-$actorType-$([Guid]::NewGuid())"

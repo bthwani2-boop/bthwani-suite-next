@@ -1,17 +1,7 @@
-# Gemini CLI Instructions
+# Gemini CLI Adapter
 
-Status: ADAPTER
+Use `governance/GOVERNANCE.md` as the unified repository governance entry point. `AGENTS.md` is the thin coding-agent adapter and `governance/authority/authority-precedence.json` resolves authority conflicts.
 
-Apply authority in this order:
+Pin the exact user-named branch and commit. Read `governance/product/PRD.md` and only the applicable general policy/Product Truth. Use `.agents/INDEX.md` only when routing is not obvious, and load a policy under `.agents/tools/` only after selecting that conditional tool.
 
-1. `governance/authority/authority-precedence.json`
-2. `AGENTS.md`
-3. one applicable governed skill from `.agents/skills`
-
-This adapter may not create policy, widen scope, or add mandatory tools. All writes and destructive commands must follow `.agents/COMMAND_SAFETY_POLICY.md`.
-
-For repository tasks, pin the exact repository, user-named branch, and current commit SHA. Never substitute the default branch, stale diagnostics, prior work, or another ref.
-
-Use direct scoped inspection first. Load `.agents/INDEX.md` only when a skill must be selected. Graphify, LeanCTX, Nx, full verification, and runtime tooling are conditional and must be justified by the actual dependency or evidence need.
-
-Use the smallest sufficient change and check. Do not claim evidence outside the scope actually verified.
+Planning artifacts live under `plans/`. Graphify, LeanCTX, OpenCodeReview, Nx, runtime environments, and full verification suites are optional and evidence-driven. This adapter creates no policy, product truth, or approval.

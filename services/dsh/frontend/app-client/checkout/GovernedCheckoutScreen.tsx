@@ -11,6 +11,7 @@ import {
   TopBar,
   spacing,
 } from "@bthwani/ui-kit";
+import { formatWltMoney } from "@bthwani/wlt/dsh";
 import { useCheckoutToOrderFlow } from "../../shared/checkout";
 import type { DshCart } from "../../shared/cart";
 import type { DshCreateIntentInput, DshPaymentMethod } from "../../shared/checkout";
@@ -26,8 +27,7 @@ type Props = {
 };
 
 function formatMinorUnits(value: number, currency: string): string {
-  const major = value / 100;
-  return `${major.toLocaleString("ar")} ${currency === "YER" ? "ر.ي" : currency}`;
+  return formatWltMoney(value, currency);
 }
 
 export function GovernedCheckoutScreen({
@@ -54,7 +54,7 @@ export function GovernedCheckoutScreen({
     return <LoadingState title="جاري تثبيت العنوان والأسعار والتحقق من الكوبون…" />;
   }
   if (state.kind === "creating_order") {
-    return <LoadingState title="تمت الموافقة المالية، جاري إنشاء الطلب وقراءة حقيقته من الخادم…" />;
+    return <LoadingState title="تمت الموافقة المالية، جاري إنشاء الطلب…" />;
   }
   if (state.kind === "blocked_payment_unavailable") {
     return (
@@ -148,7 +148,7 @@ export function GovernedCheckoutScreen({
               <KeyValueList items={[
                 { label: "مرجع Checkout", value: intent.id },
                 { label: "مرجع WLT", value: intent.wltPaymentSessionId || "قيد المصالحة" },
-                { label: "الإجمالي", value: formatMinorUnits(intent.totalMinorUnits, intent.currency) },
+                { label: "الإجمالي", value: formatMinorUnits(intent.quote.totalMinorUnits, intent.quote.currency) },
                 { label: "نسخة الحالة", value: String(intent.version) },
               ]} />
             </Card>
@@ -160,23 +160,23 @@ export function GovernedCheckoutScreen({
     );
   }
 
-  if (state.kind === "payment_pending") {
+  if (state.kind === "confirming") {
     const { intent } = state;
     return (
       <View style={{ flex: 1 }}>
         <TopBar title="في انتظار WLT" {...(onCancel ? { onBack: onCancel } : {})} />
         <ScrollScreen>
           <View style={{ gap: spacing[3] }}>
-            <StateView title="تم تثبيت عنوان وتسعير DSH" description="العنوان أدناه snapshot من دفتر العناوين المملوك لحسابك، والإجمالي هو نفس المبلغ المرسل إلى WLT. ستُحدّث الحالة تلقائيًا." tone="warning" />
+            <StateView title="تم إرسال الطلب لـ WLT" description="تتم معالجة الدفع. ستُحدّث الحالة تلقائيًا." tone="warning" />
             <Card padding={3} gap={2}>
               <KeyValueList items={[
                 { label: "عنوان التسليم", value: intent.deliveryAddress || "استلام ذاتي" },
-                { label: "إجمالي المنتجات", value: formatMinorUnits(intent.subtotalMinorUnits, intent.currency) },
-                { label: "رسوم التوصيل", value: formatMinorUnits(intent.deliveryFeeMinorUnits, intent.currency) },
-                { label: "الخصم", value: formatMinorUnits(intent.discountMinorUnits, intent.currency) },
-                { label: "الإجمالي إلى WLT", value: formatMinorUnits(intent.totalMinorUnits, intent.currency) },
+                { label: "إجمالي المنتجات", value: formatMinorUnits(intent.quote.subtotalMinorUnits, intent.quote.currency) },
+                { label: "رسوم التوصيل", value: formatMinorUnits(intent.quote.deliveryFeeMinorUnits, intent.quote.currency) },
+                { label: "الخصم", value: formatMinorUnits(intent.quote.discountMinorUnits, intent.quote.currency) },
+                { label: "الإجمالي", value: formatMinorUnits(intent.quote.totalMinorUnits, intent.quote.currency) },
                 { label: "آخر أربعة للكوبون", value: intent.couponCodeLast4 || "لا يوجد" },
-                { label: "مرجع snapshot", value: intent.pricingSnapshotHash.slice(0, 16) },
+                { label: "مرجع snapshot", value: intent.quote?.hash?.slice(0, 16) || "none" },
               ]} />
             </Card>
             <Button label="تحديث حالة الدفع" tone="brand" onPress={() => refresh(intent.id)} />
@@ -200,10 +200,10 @@ export function GovernedCheckoutScreen({
                 { label: "المعرف التقني", value: state.orderId },
                 { label: "مرجع التتبع", value: state.correlationId },
                 { label: "عنوان التسليم", value: state.intent.deliveryAddress || "استلام ذاتي" },
-                { label: "إجمالي المنتجات", value: formatMinorUnits(state.intent.subtotalMinorUnits, state.intent.currency) },
-                { label: "رسوم التوصيل", value: formatMinorUnits(state.intent.deliveryFeeMinorUnits, state.intent.currency) },
-                { label: "الخصم", value: formatMinorUnits(state.intent.discountMinorUnits, state.intent.currency) },
-                { label: "الإجمالي المدفوع/المستحق", value: formatMinorUnits(state.intent.totalMinorUnits, state.intent.currency) },
+                { label: "إجمالي المنتجات", value: formatMinorUnits(state.intent.quote.subtotalMinorUnits, state.intent.quote.currency) },
+                { label: "رسوم التوصيل", value: formatMinorUnits(state.intent.quote.deliveryFeeMinorUnits, state.intent.quote.currency) },
+                { label: "الخصم", value: formatMinorUnits(state.intent.quote.discountMinorUnits, state.intent.quote.currency) },
+                { label: "الإجمالي المدفوع/المستحق", value: formatMinorUnits(state.intent.quote.totalMinorUnits, state.intent.quote.currency) },
               ]} />
             </Card>
             <Button label="فتح الطلب" tone="brand" onPress={() => onSuccess?.(state.orderId)} />

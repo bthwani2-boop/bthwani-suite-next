@@ -4,7 +4,6 @@
 
 # ── IDE / editor runtime bundles ─────────────────────────────────────────────
 resources/
-apps/control-panel/runtime/
 
 # ── Dockerfile and extension-less config files ───────────────────────────────
 Dockerfile

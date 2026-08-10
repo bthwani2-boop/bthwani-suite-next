@@ -2,7 +2,12 @@ openapi: 3.1.0
 info:
   title: BThwani DSH Client Address API
   version: 0.3.0
-  description: Authenticated client-owned delivery address book for DSH checkout and serviceability. Active address writes require coordinates that resolve to the supplied active DSH-owned service-area geofence. Every mutation is retry-safe; update, delete and set-default use durable PII-free idempotency receipts, and update/delete/set-default are protected by optimistic concurrency.
+  description: Authenticated client-owned delivery address book for DSH checkout
+    and serviceability. Active address writes require coordinates that resolve
+    to the supplied active DSH-owned service-area geofence. Every mutation is
+    retry-safe; update, delete and set-default use durable PII-free idempotency
+    receipts, and update/delete/set-default are protected by optimistic
+    concurrency.
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED
@@ -13,9 +18,9 @@ paths:
   /dsh/client/addresses:
     get:
       operationId: listDshClientAddresses
-      tags: [DshClientAddress]
+      tags: [ DshClientAddress ]
       summary: List active addresses owned by the authenticated client.
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       responses:
         "200":
           description: Address list.
@@ -23,7 +28,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [addresses]
+                required: [ addresses ]
                 properties:
                   addresses:
                     type: array
@@ -31,9 +36,10 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
     post:
       operationId: createDshClientAddress
-      tags: [DshClientAddress]
-      summary: Create an address owned by the authenticated client after governed geofence verification.
-      security: [{ bearerAuth: [] }]
+      tags: [ DshClientAddress ]
+      summary: Create an address owned by the authenticated client after governed
+        geofence verification.
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/CorrelationId"
@@ -49,7 +55,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [address]
+                required: [ address ]
                 properties:
                   address: { $ref: "#/components/schemas/DshClientAddress" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
@@ -62,9 +68,10 @@ paths:
       - $ref: "#/components/parameters/AddressId"
     patch:
       operationId: updateDshClientAddress
-      tags: [DshClientAddress]
-      summary: Update an owned address exactly once using durable idempotency, optimistic concurrency and governed geofence verification.
-      security: [{ bearerAuth: [] }]
+      tags: [ DshClientAddress ]
+      summary: Update an owned address exactly once using durable idempotency,
+        optimistic concurrency and governed geofence verification.
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/CorrelationId"
@@ -80,7 +87,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [address]
+                required: [ address ]
                 properties:
                   address: { $ref: "#/components/schemas/DshClientAddress" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
@@ -90,9 +97,10 @@ paths:
         "422": { $ref: "#/components/responses/ServiceAreaUnverified" }
     delete:
       operationId: deleteDshClientAddress
-      tags: [DshClientAddress]
-      summary: Soft-delete an owned address exactly once using durable idempotency and optimistic concurrency.
-      security: [{ bearerAuth: [] }]
+      tags: [ DshClientAddress ]
+      summary: Soft-delete an owned address exactly once using durable idempotency and
+        optimistic concurrency.
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/ExpectedVersion"
@@ -109,9 +117,10 @@ paths:
       - $ref: "#/components/parameters/AddressId"
     post:
       operationId: setDshClientDefaultAddress
-      tags: [DshClientAddress]
-      summary: Make one active address the sole default exactly once using durable idempotency and optimistic concurrency.
-      security: [{ bearerAuth: [] }]
+      tags: [ DshClientAddress ]
+      summary: Make one active address the sole default exactly once using durable
+        idempotency and optimistic concurrency.
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/ExpectedVersion"
@@ -123,7 +132,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [address]
+                required: [ address ]
                 properties:
                   address: { $ref: "#/components/schemas/DshClientAddress" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
@@ -148,7 +157,8 @@ components:
       name: Idempotency-Key
       in: header
       required: true
-      description: Client-scoped retry identity. Reuse with a different request returns IDEMPOTENCY_CONFLICT.
+      description: Client-scoped retry identity. Reuse with a different request
+        returns IDEMPOTENCY_CONFLICT.
       schema: { type: string, minLength: 8, maxLength: 200 }
     CorrelationId:
       name: X-Correlation-ID
@@ -159,7 +169,8 @@ components:
       name: If-Match-Version
       in: header
       required: true
-      description: Positive committed address version required for update-adjacent mutations.
+      description: Positive committed address version required for update-adjacent
+        mutations.
       schema: { type: integer, minimum: 1 }
 
   schemas:
@@ -183,12 +194,12 @@ components:
         phoneE164: { type: string }
         addressLine: { type: string }
         serviceAreaCode: { type: string }
-        building: { type: string, nullable: true }
-        floor: { type: string, nullable: true }
-        unit: { type: string, nullable: true }
-        deliveryInstructions: { type: string, nullable: true }
-        latitude: { type: number, format: double, minimum: -90, maximum: 90, nullable: true }
-        longitude: { type: number, format: double, minimum: -180, maximum: 180, nullable: true }
+        building: { type: [ string, 'null' ] }
+        floor: { type: [ string, 'null' ] }
+        unit: { type: [ string, 'null' ] }
+        deliveryInstructions: { type: [ string, 'null' ] }
+        latitude: { type: [ number, 'null' ], format: double, minimum: -90, maximum: 90 }
+        longitude: { type: [ number, 'null' ], format: double, minimum: -180, maximum: 180 }
         isDefault: { type: boolean }
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
@@ -197,7 +208,16 @@ components:
     DshCreateClientAddressInput:
       type: object
       additionalProperties: false
-      required: [label, recipientName, phoneE164, addressLine, serviceAreaCode, latitude, longitude]
+      required:
+        [
+          label,
+          recipientName,
+          phoneE164,
+          addressLine,
+          serviceAreaCode,
+          latitude,
+          longitude
+        ]
       properties:
         label: { type: string, minLength: 1, maxLength: 80 }
         recipientName: { type: string, minLength: 2, maxLength: 160 }
@@ -207,7 +227,8 @@ components:
           type: string
           minLength: 1
           maxLength: 80
-          description: Must equal the active DSH service-area code resolved from latitude and longitude.
+          description: Must equal the active DSH service-area code resolved from latitude
+            and longitude.
         building: { type: string, maxLength: 120 }
         floor: { type: string, maxLength: 40 }
         unit: { type: string, maxLength: 40 }
@@ -220,13 +241,13 @@ components:
       allOf:
         - $ref: "#/components/schemas/DshCreateClientAddressInput"
         - type: object
-          required: [expectedVersion]
+          required: [ expectedVersion ]
           properties:
             expectedVersion: { type: integer, minimum: 1 }
 
     DshError:
       type: object
-      required: [code, message]
+      required: [ code, message ]
       properties:
         code: { type: string }
         message: { type: string }
@@ -248,12 +269,14 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/DshError" }
     Conflict:
-      description: Idempotency-key reuse, duplicate-address, or optimistic-concurrency conflict.
+      description: Idempotency-key reuse, duplicate-address, or optimistic-concurrency
+        conflict.
       content:
         application/json:
           schema: { $ref: "#/components/schemas/DshError" }
     ServiceAreaUnverified:
-      description: Coordinates are missing, outside active service areas, or do not match serviceAreaCode.
+      description: Coordinates are missing, outside active service areas, or do not
+        match serviceAreaCode.
       content:
         application/json:
           schema: { $ref: "#/components/schemas/DshError" }

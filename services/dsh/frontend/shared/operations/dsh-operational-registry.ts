@@ -201,7 +201,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'detail-on-open',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'dsh/frontend/app-partner/screens/OrdersInboxScreen.tsx',
+    currentEvidencePath: 'dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx',
     notes: 'Preparation records explain whether delay belongs to store, item issue, substitution, or handoff.',
   },
   {
@@ -264,7 +264,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'detail-on-open',
     dataClassification: 'WLT_READ_ONLY_REFERENCE',
     currentClosureStatus: 'blocked-by-wlt',
-    currentEvidencePath: 'wlt/SERVICE_BLUEPRINT.md',
+    currentEvidencePath: 'wlt/contracts/wlt.cod-custody.openapi.yaml',
     notes: 'DSH records COD event only; WLT owns liability, ledger, reconciliation, and settlement.',
   },
   {
@@ -327,7 +327,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'summary-only',
     dataClassification: 'WLT_READ_ONLY_REFERENCE',
     currentClosureStatus: 'blocked-by-wlt',
-    currentEvidencePath: 'wlt/SERVICE_BLUEPRINT.md',
+    currentEvidencePath: 'wlt/contracts/wlt.settlements-commissions.openapi.yaml',
     notes: 'DSH emits operational candidates only. WLT accepts, rejects, reconciles, and accounts.',
   },
   {
@@ -508,7 +508,7 @@ const PARTNER_ORDER_LIFECYCLE: readonly DshFlowRegistryEntry[] = [
     visibleSurfaces: ['app-partner'],
     visibility: 'primary',
     routeId: 'order-get',
-    screenHint: 'OrdersInboxScreen',
+    screenHint: 'OperationalOrdersInboxScreen',
     onDemandPolicy: 'detail-on-open',
     allowedActions: ['عرض تفاصيل الطلب'],
     forbiddenActions: ['تعديل بيانات الطلب الأصلية'],

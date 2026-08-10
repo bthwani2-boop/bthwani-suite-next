@@ -7,7 +7,9 @@ export type ProductProposalPipelineStatus =
   | "catalog-approved"
   | "client-visible"
   | "needs-fix"
-  | "rejected";
+  | "rejected"
+  | "conflict"
+  | "withdrawn";
 
 export interface ProductApprovalStateMetadata {
   readonly status: ProductProposalPipelineStatus;
@@ -138,5 +140,30 @@ export const PRODUCT_PROPOSAL_PIPELINE_METADATA: Record<ProductProposalPipelineS
     partnerCanAdvance: false,
     auditRequired: true,
     tone: "danger",
+  },
+  "conflict": {
+    status: "conflict",
+    labelAr: "تعارض في النسخة",
+    labelEn: "Conflict",
+    ownerSurface: "app-partner",
+    allowedNextStatuses: ["partner-proposed"],
+    isClientVisible: false,
+    isPartnerVisible: true,
+    partnerCanAdvance: true,
+    primaryActionLabel: "تحديث وحل التعارض",
+    auditRequired: true,
+    tone: "danger",
+  },
+  "withdrawn": {
+    status: "withdrawn",
+    labelAr: "مسحوب",
+    labelEn: "Withdrawn",
+    ownerSurface: "app-partner",
+    allowedNextStatuses: [],
+    isClientVisible: false,
+    isPartnerVisible: true,
+    partnerCanAdvance: false,
+    auditRequired: true,
+    tone: "neutral",
   },
 };

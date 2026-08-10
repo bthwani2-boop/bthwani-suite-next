@@ -51,9 +51,27 @@ type changeSetAuditItem struct {
 	ExpectedRevision int64            `json:"expectedRevision"`
 }
 
-func (r *Repository) ChangeSetsGoverned(ctx context.Context) ([]ChangeSet, error) {
-	changeSets, err := r.ChangeSets(ctx)
+func (r *Repository) ChangeSets(ctx context.Context) ([]ChangeSet, error) {
+	rows, err := r.db.QueryContext(ctx, changeSetSelect+`
+ORDER BY created_at DESC
+LIMIT 100`)
 	if err != nil {
+		return nil, err
+	}
+
+	changeSets := make([]ChangeSet, 0)
+	for rows.Next() {
+		changeSet, scanErr := scanChangeSet(rows)
+		if scanErr != nil {
+			rows.Close()
+			return nil, scanErr
+		}
+		changeSets = append(changeSets, changeSet)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 	for index := range changeSets {
@@ -66,8 +84,11 @@ func (r *Repository) ChangeSetsGoverned(ctx context.Context) ([]ChangeSet, error
 	return changeSets, nil
 }
 
-func (r *Repository) GetChangeSetGoverned(ctx context.Context, id string) (ChangeSet, error) {
-	changeSet, err := r.GetChangeSet(ctx, id)
+func (r *Repository) GetChangeSet(ctx context.Context, id string) (ChangeSet, error) {
+	changeSet, err := scanChangeSet(r.db.QueryRowContext(ctx, changeSetSelect+` WHERE id = $1::uuid`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return ChangeSet{}, ErrNotFound
+	}
 	if err != nil {
 		return ChangeSet{}, err
 	}
@@ -181,7 +202,7 @@ FOR UPDATE`, id)
 	return items, rows.Err()
 }
 
-func (r *Repository) CreateChangeSetGoverned(
+func (r *Repository) CreateChangeSet(
 	ctx context.Context,
 	actorID string,
 	actorRoles []string,
@@ -255,7 +276,7 @@ VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)`,
 	if err := tx.Commit(); err != nil {
 		return ChangeSet{}, err
 	}
-	return r.GetChangeSetGoverned(ctx, id)
+	return r.GetChangeSet(ctx, id)
 }
 
 func ensureGovernedTargetIsNotSensitive(ctx context.Context, tx *sql.Tx, item CreateChangeSetItemInput) error {
@@ -361,7 +382,7 @@ func normalizeGovernedCreateItem(item CreateChangeSetItemInput) CreateChangeSetI
 
 func isSensitiveClassification(classification string) bool {
 	switch strings.ToLower(strings.TrimSpace(classification)) {
-	case "secret", "credential", "credentials", "password", "token", "private_key", "api_key", "client_secret":
+	case "secret", "sensitive", "confidential", "restricted", "credential", "credentials", "password", "token", "private_key", "api_key", "client_secret":
 		return true
 	default:
 		return false

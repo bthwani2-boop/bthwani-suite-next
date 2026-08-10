@@ -2,7 +2,9 @@ package payout
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,7 +12,6 @@ import (
 	"strings"
 
 	"wlt-api/internal/ledger"
-	"wlt-api/internal/provider"
 	"wlt-api/internal/shared"
 )
 
@@ -70,6 +71,11 @@ func HandleApprovePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 		if !ok {
 			return
 		}
+		correlationID, err := governedCorrelationID(r)
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", err.Error())
+			return
+		}
 		tx, err := db.BeginTx(r.Context(), nil)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to start payout approval")
@@ -89,15 +95,59 @@ func HandleApprovePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			shared.SendJSON(w, http.StatusOK, PayoutRequestResponse{PayoutRequest: req})
 			return
 		}
+		if req.OperatorID != "" && req.OperatorID == operatorID {
+			shared.SendError(w, http.StatusForbidden, "SEPARATION_OF_DUTIES_VIOLATION", "maker cannot approve their own request")
+			return
+		}
 		if req.Status != "pending" {
 			shared.SendError(w, http.StatusConflict, "INVALID_STATUS", fmt.Sprintf("cannot approve payout from %s", req.Status))
 			return
 		}
+
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "OperatorContext_REQUIRED", err.Error())
+			return
+		}
+
+		var destVerificationStatus string
+		if err := tx.QueryRowContext(r.Context(), "SELECT destination_verification_status FROM wlt_payout_destinations WHERE id = $1 AND operator_context_id = $2", req.PayoutDestinationID, operatorContextID).Scan(&destVerificationStatus); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payout destination not found")
+			} else {
+				shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to check destination verification status")
+			}
+			return
+		}
+		if destVerificationStatus != "verified" {
+			shared.SendError(w, http.StatusConflict, "DESTINATION_UNVERIFIED", "cannot approve payout to an unverified destination")
+			return
+		}
+
+		snapshotHash := sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%s|%d|%s", req.BeneficiaryActorID, req.BeneficiaryActorType, req.PayoutDestinationID, req.AmountMinorUnits, req.Currency)))
+		snapshotHashHex := hex.EncodeToString(snapshotHash[:])
+
+		_, err = tx.ExecContext(r.Context(), `
+			INSERT INTO wlt_approved_payout_snapshots
+			(operator_context_id, payout_request_id, payout_destination_id, amount_minor_units, currency, beneficiary_actor_id, beneficiary_actor_type, snapshot_hash, approved_by_operator_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			operatorContextID, req.ID, req.PayoutDestinationID, req.AmountMinorUnits, req.Currency, req.BeneficiaryActorID, req.BeneficiaryActorType, snapshotHashHex, operatorID)
+		if err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to snapshot approved payout")
+			return
+		}
+
 		updated, err := payoutAfterUpdate(r.Context(), tx,
-			"UPDATE wlt_payout_requests SET status = 'approved', approved_at = now(), approved_by_operator_id = $2, operator_id = $2 WHERE id = $1 RETURNING "+requestCols,
+			"UPDATE wlt_payout_requests SET status = 'approved', approved_at = now(), approved_by_operator_id = $2 WHERE id = $1 RETURNING "+requestCols,
 			req.ID, operatorID)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to approve payout request")
+			return
+		}
+		if err := appendPayoutAudit(r.Context(), tx, "payout_request", req.ID, "payout.approved", operatorID, "operator", "", correlationID, map[string]any{
+			"status": "approved",
+		}); err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout approval")
 			return
 		}
 		if err := tx.Commit(); err != nil {
@@ -112,6 +162,11 @@ func HandleRejectPayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorID, ok := decodeRequiredOperator(w, r)
 		if !ok {
+			return
+		}
+		correlationID, err := governedCorrelationID(r)
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", err.Error())
 			return
 		}
 		tx, err := db.BeginTx(r.Context(), nil)
@@ -155,6 +210,12 @@ func HandleRejectPayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to reject payout request")
 			return
 		}
+		if err := appendPayoutAudit(r.Context(), tx, "payout_request", req.ID, "payout.rejected", operatorID, "operator", "", correlationID, map[string]any{
+			"status": "rejected",
+		}); err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout rejection")
+			return
+		}
 		if err := tx.Commit(); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to commit payout rejection")
 			return
@@ -163,18 +224,27 @@ func HandleRejectPayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func markProviderResultUnknown(ctx context.Context, db *sql.DB, payoutID string, cause error) {
+func markProviderResultUnknown(ctx context.Context, db *sql.DB, payoutID string, cause error, correlationID string, operatorID string) {
 	reason := "provider result unknown"
 	if cause != nil {
 		reason = cause.Error()
 	}
-	_, _ = db.ExecContext(ctx, `
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return
+	}
+	defer tx.Rollback() //nolint:errcheck
+	_, _ = tx.ExecContext(ctx, `
 		UPDATE wlt_payout_requests
 		SET status = 'provider_result_unknown', provider_status = 'unknown', failure_reason = $2
 		WHERE id = $1 AND status = 'provider_pending'`, payoutID, reason)
+	_ = appendPayoutAudit(ctx, tx, "payout_request", payoutID, "payout.provider_unknown", operatorID, "operator", reason, correlationID, map[string]any{
+		"status": "provider_result_unknown",
+	})
+	_ = tx.Commit()
 }
 
-func failProviderDecline(ctx context.Context, db *sql.DB, payoutID string, cause error) error {
+func failProviderDecline(ctx context.Context, db *sql.DB, payoutID string, cause error, correlationID string, operatorID string) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -207,113 +277,24 @@ func failProviderDecline(ctx context.Context, db *sql.DB, payoutID string, cause
 		WHERE id = $1 AND status = 'provider_pending'`, payoutID, reason); err != nil {
 		return err
 	}
-	return tx.Commit()
-}
-
-func HandleProcessPayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		operatorID, ok := decodeRequiredOperator(w, r)
-		if !ok {
-			return
-		}
-		client, err := provider.NewDefaultPaymentProvider()
-		if err != nil {
-			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
-			return
-		}
-
-		tx, err := db.BeginTx(r.Context(), nil)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to start payout processing")
-			return
-		}
-		defer tx.Rollback()
-		req, err := lockedPayout(r.Context(), tx, r.PathValue("payoutId"))
-		if errors.Is(err, sql.ErrNoRows) {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payout request not found")
-			return
-		}
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read payout request")
-			return
-		}
-		if req.Status != "approved" {
-			shared.SendError(w, http.StatusConflict, "INVALID_STATUS", "payout must be approved before provider processing")
-			return
-		}
-		if req.ApprovedByOperatorID == "" || req.ApprovedByOperatorID == operatorID {
-			shared.SendError(w, http.StatusForbidden, "MAKER_CHECKER_VIOLATION", "payout processor must differ from the approving operator")
-			return
-		}
-		if _, err := tx.ExecContext(r.Context(), `
-			UPDATE wlt_payout_requests
-			SET status = 'provider_pending', processed_by_operator_id = $2, operator_id = $2
-			WHERE id = $1 AND status = 'approved'`, req.ID, operatorID); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to claim payout for provider processing")
-			return
-		}
-		if err := tx.Commit(); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to commit payout provider claim")
-			return
-		}
-
-		providerResult, providerErr := client.Post(r.Context(), "/financial/payout/process", map[string]any{
-			"payoutRequestId":      req.ID,
-			"beneficiaryActorId":   req.BeneficiaryActorID,
-			"beneficiaryActorType": req.BeneficiaryActorType,
-			"amountMinorUnits":     req.AmountMinorUnits,
-			"currency":             req.Currency,
-		}, provider.RequestMetaFromHTTP(r, "wlt-payout"))
-		if providerErr != nil {
-			var cleanDecline provider.Error
-			if errors.As(providerErr, &cleanDecline) {
-				_ = failProviderDecline(r.Context(), db, req.ID, providerErr)
-			} else {
-				markProviderResultUnknown(r.Context(), db, req.ID, providerErr)
-			}
-			shared.SendProviderError(w, providerErr)
-			return
-		}
-		if providerResult.ProviderReference == "" || (providerResult.Status != "processed" && providerResult.Status != "succeeded") {
-			unknownErr := fmt.Errorf("provider returned invalid payout proof")
-			markProviderResultUnknown(r.Context(), db, req.ID, unknownErr)
-			shared.SendError(w, http.StatusBadGateway, "PROVIDER_INVALID_RESPONSE", unknownErr.Error())
-			return
-		}
-
-		finalTx, err := db.BeginTx(r.Context(), nil)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to finalize provider payout")
-			return
-		}
-		defer finalTx.Rollback()
-		updated, err := payoutAfterUpdate(r.Context(), finalTx, `
-			UPDATE wlt_payout_requests
-			SET status = 'processing', processed_at = now(), provider_reference = $2,
-			    provider_status = $3, provider_processed_at = now()
-			WHERE id = $1 AND status = 'provider_pending'
-			RETURNING `+requestCols,
-			req.ID, providerResult.ProviderReference, providerResult.Status)
-		if errors.Is(err, sql.ErrNoRows) {
-			shared.SendError(w, http.StatusConflict, "INVALID_STATUS", "payout provider result arrived after state changed")
-			return
-		}
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to persist provider payout proof")
-			return
-		}
-		if err := finalTx.Commit(); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to commit provider payout proof")
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, PayoutRequestResponse{PayoutRequest: updated})
+	if err := appendPayoutAudit(ctx, tx, "payout_request", payoutID, "payout.failed", operatorID, "operator", reason, correlationID, map[string]any{
+		"status":         "failed",
+		"providerStatus": "declined",
+	}); err != nil {
+		return err
 	}
+	return tx.Commit()
 }
 
 func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorID, ok := decodeRequiredOperator(w, r)
 		if !ok {
+			return
+		}
+		correlationID, err := governedCorrelationID(r)
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", err.Error())
 			return
 		}
 		tx, err := db.BeginTx(r.Context(), nil)
@@ -334,6 +315,20 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 		var providerReference, providerStatus string
 		if err := tx.QueryRowContext(r.Context(), `SELECT provider_reference, provider_status FROM wlt_payout_requests WHERE id = $1`, req.ID).Scan(&providerReference, &providerStatus); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read payout provider proof")
+			return
+		}
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "OperatorContext_REQUIRED", err.Error())
+			return
+		}
+		var destinationMethod string
+		if err := tx.QueryRowContext(r.Context(), `SELECT destination_method FROM wlt_payout_destinations WHERE id = $1 AND operator_context_id = $2`, req.PayoutDestinationID, operatorContextID).Scan(&destinationMethod); err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read payout destination method")
+			return
+		}
+		if destinationMethod == "manual" {
+			shared.SendError(w, http.StatusConflict, "MANUAL_COMPLETION_PROHIBITED", "manual payouts must be completed through daily finance close reconciliation")
 			return
 		}
 		if req.Status != "processing" || providerReference == "" || (providerStatus != "processed" && providerStatus != "succeeded") {
@@ -372,6 +367,12 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			req.ID, operatorID)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to complete payout request")
+			return
+		}
+		if err := appendPayoutAudit(r.Context(), tx, "payout_request", req.ID, "payout.completed", operatorID, "operator", "", correlationID, map[string]any{
+			"status": "completed",
+		}); err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout completion")
 			return
 		}
 		if err := tx.Commit(); err != nil {

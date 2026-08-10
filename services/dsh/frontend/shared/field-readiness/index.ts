@@ -1,4 +1,6 @@
 export * from "./field-readiness.types";
+export * from "../_kernel/governed-problem";
+export * from "../_kernel/governed-problem-view";
 export * from "./field-readiness.states";
 export * from "./field-readiness.policy";
 export * from "./field-readiness.view-model";
@@ -14,7 +16,6 @@ export {
   updateEscalation,
   fetchPartnerOnboardingStatus,
   fetchFieldWorkQueue,
-  classifyFieldReadinessError,
 } from "./field-readiness.api";
 export type { FieldMutationContext } from "./field-readiness.api";
 export {
@@ -38,6 +39,7 @@ export {
   purgeSyncedOperations,
   getAllOperations,
   recoverCorruptFieldOfflineQueue,
+  FieldOfflineQueueCorruptError,
 } from "./field-offline-queue";
 export type {
   FieldOfflineQueueScope,

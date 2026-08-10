@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "policyId": "FULL_VERIFICATION_POLICY",
+  "status": "ACTIVE_CANONICAL",
+  "defaultMode": "AFFECTED_PLUS_RISK_EXPANSION",
+  "fullVerificationAllowedWhen": [
+    "WORKFLOW_DISPATCH_EXPLICIT_FULL_MODE",
+    "THIS_POLICY_CHANGES",
+    "CURRENT_CHANGE_IMPACT_REQUIRES_FULL_VERIFICATION"
+  ],
+  "principles": {
+    "fullWorkspaceNotDefault": true,
+    "sameImmutableCommitRequired": true,
+    "verificationReadOnly": true,
+    "runtimeProofRequiredForRuntimeClaims": true,
+    "databaseIntegrationRequiredForDatabaseClaims": true,
+    "mobileBuildReadinessRequiredForNativeBuildClaims": true,
+    "productionDeploymentAuthorized": false
+  },
+  "evidenceScopes": [
+    "static",
+    "product",
+    "runtime",
+    "visual",
+    "qa",
+    "security",
+    "finance",
+    "isolation",
+    "governance",
+    "ci",
+    "release",
+    "production"
+  ],
+  "rule": "Select the smallest complete affected verification set first and expand to full verification only by explicit dispatch or evidence-driven change impact. A full run is evidence for the exact candidate only and does not grant merge, release, production, protected approval, or final closure."
+}

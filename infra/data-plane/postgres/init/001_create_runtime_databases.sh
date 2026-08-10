@@ -55,3 +55,6 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'providers_runtime')\g
 SELECT 'CREATE DATABASE platform_control_runtime OWNER platform_control_runtime'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'platform_control_runtime')\gexec
 SQL
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "dsh_runtime" -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "dsh_local" -c "CREATE EXTENSION IF NOT EXISTS postgis;"

@@ -1,29 +1,65 @@
-name: Feature Journey
-description: Propose or track a new operational journey / capability.
+name: Capability or Journey
+description: Propose or track a product capability or operational journey from outcome through affected surfaces and evidence.
 labels: ["journey", "needs-evidence"]
 body:
   - type: markdown
     attributes:
       value: |
-        Track implementation of feature journeys with required evidence.
+        Start from the product outcome, actors, authoritative owners, surfaces, states, and evidence—not from a file list. This issue is planning/tracking support and does not create Product Truth or approval.
   - type: input
-    id: journey-id
+    id: capability-id
     attributes:
-      label: Journey ID
-      placeholder: e.g., notifications
+      label: Capability or journey ID
+      placeholder: Stable capability ID, existing Product Truth ID, or proposed identifier
     validations:
       required: true
   - type: textarea
-    id: overview
+    id: outcome
     attributes:
-      label: Overview & Scope
-      placeholder: Describe the goal and affected boundaries/surfaces.
+      label: Problem and observable outcome
+      placeholder: What user/operator problem changes and what observable result should exist?
     validations:
       required: true
   - type: textarea
-    id: checklist
+    id: actors
     attributes:
-      label: Implementation Checklist
-      placeholder: List of files and systems affected.
+      label: Actors and forbidden behavior
+      placeholder: Affected actors, permitted outcome, and important actions/states that must remain forbidden.
+    validations:
+      required: true
+  - type: textarea
+    id: ownership
+    attributes:
+      label: Authoritative owners and boundaries
+      placeholder: Identity / Workforce / DSH / WLT / Platform Control / Provider / Media or other current contract owner.
+    validations:
+      required: true
+  - type: textarea
+    id: surfaces
+    attributes:
+      label: Required and excluded surfaces
+      placeholder: app-client, app-partner, app-captain, app-field, control-panel, backend; explain exclusions.
+    validations:
+      required: true
+  - type: textarea
+    id: states
+    attributes:
+      label: States, transitions, and cross-surface readback
+      placeholder: Write path, legal/forbidden transitions, downstream consumers, failure/retry/recovery states.
+    validations:
+      required: true
+  - type: textarea
+    id: product-truth
+    attributes:
+      label: Product Truth
+      description: Reference the applicable existing Product Truth, or state that a new/changed Product Truth must be created through current governance.
+      placeholder: governance/product/contracts/<capability>.product-truth.json or REQUIRED
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Applicable evidence scopes
+      placeholder: static, product, runtime, visual, qa, security, finance, isolation, governance, ci, release, production — only what impact requires.
     validations:
       required: true

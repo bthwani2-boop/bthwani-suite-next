@@ -25,7 +25,7 @@ import {
   type PlatformRolloutRecoveryGuide,
 } from "../../shared/platform";
 import { hasControlPanelPermission } from "../../shared/session/control-panel-permissions";
-import { useControlPanelSession } from "../../shared/session/control-panel-session";
+import { useIdentitySession } from "@bthwani/core-identity";
 
 export type PlatformRolloutPanelProps = {
   readonly changeSets: readonly PlatformChangeSet[];
@@ -57,7 +57,7 @@ function hasGovernedTargetScope(scope: Record<string, unknown>): boolean {
 }
 
 export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: PlatformRolloutPanelProps) {
-  const { state: sessionState } = useControlPanelSession();
+  const { state: sessionState } = useIdentitySession();
   const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
   const canRead = hasControlPanelPermission(identity, "platform:read");
   const canManage = hasControlPanelPermission(identity, "platform:rollouts:manage");

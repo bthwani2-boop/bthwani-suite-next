@@ -15,28 +15,19 @@ import (
 
 func canonicalDestinationRequestHash(operatorContextID, actorType, actorID string, input governedDestinationInput) string {
 	canonical := struct {
-		OperatorContextID                      string `json:"operatorContextId"`
-		ActorType                     string `json:"actorType"`
-		ActorID                       string `json:"actorId"`
-		BeneficiaryName               string `json:"beneficiaryName"`
-		BankName                      string `json:"bankName"`
-		BankBranch                    string `json:"bankBranch"`
-		AccountNumber                 string `json:"accountNumber"`
-		IBAN                          string `json:"iban"`
-		PayoutMobileNumber            string `json:"payoutMobileNumber"`
-		SettlementPreference          string `json:"settlementPreference"`
-		BankAccountHolderMatchesOwner bool   `json:"bankAccountHolderMatchesOwner"`
-		BankNotes                     string `json:"bankNotes"`
-		OperatorID                    string `json:"operatorId"`
+		OperatorContextID    string `json:"operatorContextId"`
+		ActorType            string `json:"actorType"`
+		ActorID              string `json:"actorId"`
+		BeneficiaryName      string `json:"beneficiaryName"`
+		DestinationMethod    string `json:"destinationMethod"`
+		DestinationReference string `json:"destinationReference"`
+		OperatorID           string `json:"operatorId"`
 	}{
 		OperatorContextID: operatorContextID, ActorType: actorType, ActorID: actorID,
 		BeneficiaryName: strings.TrimSpace(input.BeneficiaryName),
-		BankName: strings.TrimSpace(input.BankName), BankBranch: strings.TrimSpace(input.BankBranch),
-		AccountNumber: strings.TrimSpace(input.AccountNumber), IBAN: strings.TrimSpace(input.IBAN),
-		PayoutMobileNumber: strings.TrimSpace(input.PayoutMobileNumber),
-		SettlementPreference: strings.TrimSpace(input.SettlementPreference),
-		BankAccountHolderMatchesOwner: input.BankAccountHolderMatchesOwner,
-		BankNotes: strings.TrimSpace(input.BankNotes), OperatorID: strings.TrimSpace(input.OperatorID),
+		DestinationMethod: strings.TrimSpace(input.DestinationMethod),
+		DestinationReference: strings.TrimSpace(input.DestinationReference),
+		OperatorID: strings.TrimSpace(input.OperatorID),
 	}
 	encoded, _ := json.Marshal(canonical)
 	sum := sha256.Sum256(encoded)
@@ -45,32 +36,23 @@ func canonicalDestinationRequestHash(operatorContextID, actorType, actorID strin
 
 func validateCanonicalDestinationInput(input *governedDestinationInput) error {
 	input.BeneficiaryName = strings.TrimSpace(input.BeneficiaryName)
-	input.BankName = strings.TrimSpace(input.BankName)
-	input.BankBranch = strings.TrimSpace(input.BankBranch)
-	input.AccountNumber = strings.TrimSpace(input.AccountNumber)
-	input.IBAN = strings.TrimSpace(input.IBAN)
-	input.PayoutMobileNumber = strings.TrimSpace(input.PayoutMobileNumber)
-	input.SettlementPreference = strings.TrimSpace(input.SettlementPreference)
-	input.BankNotes = strings.TrimSpace(input.BankNotes)
+	input.DestinationMethod = strings.TrimSpace(input.DestinationMethod)
+	input.DestinationReference = strings.TrimSpace(input.DestinationReference)
 	input.OperatorID = strings.TrimSpace(input.OperatorID)
-	if input.SettlementPreference == "" {
-		input.SettlementPreference = "bank"
+	if input.DestinationMethod == "" {
+		input.DestinationMethod = "bank"
 	}
 	if input.BeneficiaryName == "" {
 		return fmt.Errorf("beneficiaryName is required")
 	}
-	switch input.SettlementPreference {
-	case "bank":
-		if input.AccountNumber == "" && input.IBAN == "" {
-			return fmt.Errorf("bank payout requires accountNumber or iban")
-		}
-	case "mobile_money":
-		if input.PayoutMobileNumber == "" {
-			return fmt.Errorf("mobile-money payout requires payoutMobileNumber")
+	switch input.DestinationMethod {
+	case "bank", "mobile_money":
+		if input.DestinationReference == "" {
+			return fmt.Errorf("destinationReference is required for non-manual payout methods")
 		}
 	case "manual":
 	default:
-		return fmt.Errorf("unsupported settlementPreference")
+		return fmt.Errorf("unsupported destinationMethod")
 	}
 	return nil
 }
@@ -170,17 +152,16 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 		}
 		destination, err := scanGovernedDestination(tx.QueryRowContext(r.Context(), `
 			INSERT INTO wlt_payout_destinations
-				(operator_context_id,partner_id,owner_actor_id,owner_actor_type,beneficiary_name,bank_name,bank_branch,
-				 account_number_encrypted,iban_encrypted,payout_mobile_number_encrypted,
-				 settlement_preference,bank_account_holder_matches_owner,bank_notes,
-				 masked_account_number,masked_iban,masked_mobile_number,active,created_by_actor_id)
-			VALUES($1,$2,$2,$3,$4,$5,$6,pgp_sym_encrypt($7,$8),pgp_sym_encrypt($9,$8),pgp_sym_encrypt($10,$8),
-				$11,$12,$13,$14,$15,$16,true,$17)
+				(operator_context_id,partner_id,owner_actor_id,owner_actor_type,beneficiary_name,
+				 destination_reference_encrypted,
+				 destination_method,masked_destination_reference,destination_verification_status,active,created_by_actor_id)
+			VALUES($1,$2,$2,$3,$4,
+				pgp_sym_encrypt($5,$6),
+				$7,$8,'unverified',true,$9)
 			RETURNING `+governedDestinationReturning,
-			operatorContextID, actorID, actorType, input.BeneficiaryName, input.BankName, input.BankBranch,
-			input.AccountNumber, key, input.IBAN, input.PayoutMobileNumber, input.SettlementPreference,
-			input.BankAccountHolderMatchesOwner, input.BankNotes, maskLast4(input.AccountNumber),
-			maskLast4(input.IBAN), maskLast4(input.PayoutMobileNumber), operatorID))
+			operatorContextID, actorID, actorType, input.BeneficiaryName,
+			input.DestinationReference, key,
+			input.DestinationMethod, maskLast4(input.DestinationReference), operatorID))
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to persist payout destination")
 			return
@@ -192,7 +173,7 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		if err := appendPayoutAudit(r.Context(), tx, "payout_destination", destination.ID, "destination.upserted", operatorID, actorType, "", correlationID, map[string]any{
-			"ownerActorId": actorID, "ownerActorType": actorType, "settlementPreference": destination.SettlementPreference,
+			"ownerActorId": actorID, "ownerActorType": actorType, "destinationMethod": destination.DestinationMethod,
 		}); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout destination")
 			return

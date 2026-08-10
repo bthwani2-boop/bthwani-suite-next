@@ -11,6 +11,14 @@ import (
 var (
 	ErrNotFound = errors.New("not found")
 	ErrInvalid  = errors.New("invalid input")
+	// ErrIdentityUnavailable is returned when a review requires a canonical
+	// Identity mutation but no Identity client is configured.
+	ErrIdentityUnavailable = errors.New("identity is unavailable")
+	// ErrCanonicalMutationFailed is returned when Identity rejects the
+	// canonical authorization mutation an approval depends on. The approval
+	// must remain unapplied; this error must never be swallowed into a
+	// local-only status flip.
+	ErrCanonicalMutationFailed = errors.New("canonical authorization mutation failed")
 )
 
 // Role is the governed DSH authorization role projection. Identity owns the
@@ -83,74 +91,6 @@ func AdministrationPermissionCandidates(action string) []string {
 		candidates = append(candidates, "administration.read")
 	}
 	return candidates
-}
-
-// ActorHasPermission evaluates only approved, active DSH role assignments. It
-// never authenticates the actor and never expands access outside the DSH
-// administration action namespace or the control-panel surface.
-func ActorHasPermission(db *sql.DB, actorID string, action string) (bool, error) {
-	actorID = strings.TrimSpace(actorID)
-	candidates := AdministrationPermissionCandidates(action)
-	if db == nil || actorID == "" || len(candidates) == 0 {
-		return false, ErrInvalid
-	}
-	candidate1, candidate2 := candidates[0], candidates[0]
-	if len(candidates) > 1 {
-		candidate2 = candidates[1]
-	}
-	var allowed bool
-	err := db.QueryRow(`
-		SELECT EXISTS (
-			SELECT 1
-			FROM dsh_admin_staff_assignments assignment
-			JOIN dsh_admin_roles role ON role.id = assignment.role_id
-			WHERE assignment.actor_id = $1
-			  AND role.active = TRUE
-			  AND role.surfaces ? 'control-panel'
-			  AND (role.permissions ? $2 OR role.permissions ? $3)
-		)`, actorID, candidate1, candidate2).Scan(&allowed)
-	return allowed, err
-}
-
-// StaffMember is an approved role-assignment projection. Writes are performed
-// only by ReviewStaffRoleAssignment or an independently approved rollback.
-type StaffMember struct {
-	ID         string    `json:"id"`
-	ActorID    string    `json:"actorId"`
-	RoleID     string    `json:"roleId"`
-	RoleName   string    `json:"roleName"`
-	AssignedBy string    `json:"assignedBy"`
-	AssignedAt time.Time `json:"assignedAt"`
-}
-
-func ListStaff(db *sql.DB) ([]StaffMember, error) {
-	if db == nil {
-		return nil, ErrInvalid
-	}
-	rows, err := db.Query(`
-		SELECT sa.id, sa.actor_id, sa.role_id, r.name,
-		       COALESCE(sa.assigned_by,''), sa.assigned_at
-		FROM dsh_admin_staff_assignments sa
-		JOIN dsh_admin_roles r ON r.id=sa.role_id
-		WHERE r.active = TRUE
-		  AND r.surfaces ? 'control-panel'
-		ORDER BY sa.assigned_at DESC`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := make([]StaffMember, 0)
-	for rows.Next() {
-		var member StaffMember
-		if err := rows.Scan(
-			&member.ID, &member.ActorID, &member.RoleID, &member.RoleName,
-			&member.AssignedBy, &member.AssignedAt,
-		); err != nil {
-			return nil, err
-		}
-		out = append(out, member)
-	}
-	return out, rows.Err()
 }
 
 // PartnerActivation is a privacy-minimized read-only compatibility projection.

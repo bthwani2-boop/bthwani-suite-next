@@ -18,7 +18,7 @@ import { useIdentitySession } from "@bthwani/core-identity";
 import {
   getWltDshPartnerOperationalModeCommission,
   WltDshPartnerBridge,
-} from "../../shared/finance/partner-finance";
+} from "@bthwani/wlt/dsh";
 import { resolveDshStoreClientVisibility } from "../../shared/partner/dsh-client-visibility.model";
 import {
   isDshPartnerActivationComplete,
@@ -166,6 +166,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     onOpenOperationalFlow,
     onOpenSupportScreen,
     onOpenStoreCourierSetup,
+    onOpenCommercialModel,
     canonicalStoreId,
     dshClientId,
     walletBalanceLabel,
@@ -481,7 +482,14 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
             canonicalStoreId={canonicalStoreId}
             activationStatus={activationStatus}
             serviceModes={serviceModes}
+            {...(selfStatusState.partner.legalNameAr ? { legalNameAr: selfStatusState.partner.legalNameAr } : {})}
+            {...(selfStatusState.partner.legalNameEn ? { legalNameEn: selfStatusState.partner.legalNameEn } : {})}
+            {...(selfStatusState.partner.legalIdentityType ? { legalIdentityType: selfStatusState.partner.legalIdentityType } : {})}
+            {...(selfStatusState.partner.legalIdentityNumber ? { legalIdentityNumber: selfStatusState.partner.legalIdentityNumber } : {})}
             {...(onOpenStoreScope ? { onOpenStoreScope } : {})}
+            {...(onOpenSupportScreen
+              ? { onOpenSupportScreen: () => { onOpenSupportScreen('support-directory' as any); } }
+              : {})}
           />
         </HubSectionShell>
       );
@@ -590,8 +598,10 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           coverageZonesError={null}
           teamMembers={props.teamMembers ?? []}
           onBack={() => updateSection("hub")}
-          {...(onOpenStoreCourierSetup
-            ? { onOpenStoreCourierSetup }
+          {...(onOpenStoreCourierSetup ? { onOpenStoreCourierSetup } : {})}
+          {...(onOpenCommercialModel ? { onOpenCommercialModel } : {})}
+          {...(onOpenSupportScreen
+            ? { onOpenSupportScreen: () => { onOpenSupportScreen('support-directory' as any); } }
             : {})}
           {...(props.onOpenTeamManagement
             ? { onOpenTeamManagement: props.onOpenTeamManagement }

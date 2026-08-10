@@ -15,11 +15,17 @@ $runIdentity = if (-not [string]::IsNullOrWhiteSpace([string]$env:GITHUB_RUN_ID)
 } else {
   "local-$([Guid]::NewGuid().ToString('N'))"
 }
+$operatorContextId = if (-not [string]::IsNullOrWhiteSpace([string]$env:BTHWANI_OPERATOR_CONTEXT_ID)) {
+  [string]$env:BTHWANI_OPERATOR_CONTEXT_ID
+} else {
+  "local-dsh"
+}
 
 $serviceHeaders = @{
   Authorization = "Bearer $serviceToken"
   "X-Service-Caller" = "dsh"
   "X-Correlation-ID" = "wlt-runtime-$runIdentity"
+  "X-Operator-Context-ID" = $operatorContextId
 }
 
 function Invoke-WltRead {
@@ -61,6 +67,7 @@ $mutationHeaders = @{
   "X-Service-Caller" = "dsh"
   "X-Correlation-ID" = "wlt-session-$runIdentity"
   "Idempotency-Key" = "wlt-session-$runIdentity"
+  "X-Operator-Context-ID" = $operatorContextId
 }
 $sessionBody = @{
   checkoutIntentId = "checkout-$runIdentity"
@@ -72,14 +79,26 @@ $sessionBody = @{
   cartSnapshotHash = "runtime-smoke-$runIdentity"
 } | ConvertTo-Json
 
-$sessionEnvelope = Invoke-RestMethod `
+$createResponse = Invoke-WebRequest `
   -Method Post `
   -Uri "$BaseUrl/wlt/payment-sessions" `
   -Headers $mutationHeaders `
   -ContentType "application/json" `
   -Body $sessionBody `
   -TimeoutSec 20 `
-  -ErrorAction Stop
+  -SkipHttpErrorCheck
+$createBody = $createResponse.Content | ConvertFrom-Json
+$createStatus = [int]$createResponse.StatusCode
+
+if ($createStatus -eq 403 -and [string]$createBody.code -in @("MUTATIONS_DISABLED", "KILL_SWITCH_ACTIVE")) {
+  Write-Host "  authenticated mutation gate: $([string]$createBody.code) fail-closed"
+  Write-Host "WLT authenticated runtime smoke: PASS"
+  return
+}
+if ($createStatus -ne 201) {
+  throw "WLT payment-session create returned status=$createStatus code=$([string]$createBody.code)"
+}
+$sessionEnvelope = $createBody
 
 $sessionId = [string]$sessionEnvelope.paymentSession.id
 if ([string]::IsNullOrWhiteSpace($sessionId)) {

@@ -126,151 +126,79 @@ func scanConnection(row interface{ Scan(dest ...any) error }) (ConnectionCode, e
 }
 
 func IssueCode(ctx context.Context, db *sql.DB, storeID, teamMemberID, actorID string, ttl time.Duration) (IssuedConnectionCode, error) {
-	storeID = strings.TrimSpace(storeID)
-	teamMemberID = strings.TrimSpace(teamMemberID)
-	actorID = strings.TrimSpace(actorID)
-	if storeID == "" || teamMemberID == "" || actorID == "" {
-		return IssuedConnectionCode{}, ErrInvalid
-	}
-	if ttl <= 0 {
-		ttl = 24 * time.Hour
-	}
-	if ttl < 15*time.Minute || ttl > 48*time.Hour {
-		return IssuedConnectionCode{}, ErrInvalid
-	}
-	plain, err := generateCode(10)
-	if err != nil {
+	if err := ensureStoreEligible(ctx, db, storeID); err != nil {
 		return IssuedConnectionCode{}, err
 	}
-	expiresAt := time.Now().UTC().Add(ttl)
-
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return IssuedConnectionCode{}, err
-	}
-	defer tx.Rollback()
-
-	if err := ensureStoreEligible(ctx, tx, storeID); err != nil {
-		return IssuedConnectionCode{}, err
-	}
-
-	var role, status, identityActorID, courierName string
-	err = tx.QueryRowContext(ctx, `
-		SELECT role,status,identity_actor_id,name
-		FROM dsh_store_team_members
-		WHERE id=$1 AND store_id=$2
-		FOR UPDATE`, teamMemberID, storeID).Scan(&role, &status, &identityActorID, &courierName)
+	var currentStatus string
+	err := db.QueryRowContext(ctx, `SELECT status FROM dsh_captain_memberships WHERE id = $1 AND store_id = $2`, teamMemberID, storeID).Scan(&currentStatus)
 	if errors.Is(err, sql.ErrNoRows) {
 		return IssuedConnectionCode{}, ErrNotFound
 	}
 	if err != nil {
 		return IssuedConnectionCode{}, err
 	}
-	if role != "courier" || status == "blocked" || status == "review-needed" {
+	if currentStatus != "invited" && currentStatus != "active" {
 		return IssuedConnectionCode{}, ErrCourierIneligible
 	}
-	if identityActorID != "" {
-		return IssuedConnectionCode{}, ErrAlreadyBound
-	}
 
-	if _, err := tx.ExecContext(ctx, `
-		UPDATE dsh_partner_courier_connection_codes
-		SET status='revoked',revoked_at=NOW(),version=version+1,updated_at=NOW()
-		WHERE team_member_id=$1 AND status='pending'`, teamMemberID); err != nil {
+	codeStr, err := generateCode(10)
+	if err != nil {
 		return IssuedConnectionCode{}, err
 	}
+	hash := hashCode(codeStr)
+	last4 := codeStr[len(codeStr)-4:]
+	expiresAt := time.Now().Add(ttl)
 
-	connection, err := scanConnection(tx.QueryRowContext(ctx, `
-		INSERT INTO dsh_partner_courier_connection_codes
-			(store_id,team_member_id,code_hash,code_last4,expires_at,created_by_actor_id)
-		VALUES ($1,$2,$3,$4,$5,$6)
-		RETURNING `+connectionSelectCols,
-		storeID, teamMemberID, hashCode(plain), plain[len(plain)-4:], expiresAt, actorID))
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return IssuedConnectionCode{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	_, err = tx.ExecContext(ctx, `
+		UPDATE dsh_partner_courier_connection_codes
+		SET status = 'expired', version = version + 1, updated_at = NOW()
+		WHERE team_member_id = $1 AND store_id = $2 AND status = 'pending'`, teamMemberID, storeID)
 	if err != nil {
 		return IssuedConnectionCode{}, err
 	}
 
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO dsh_store_team_member_actions
-			(member_id,store_id,action_label,from_status,to_status,actor_id,idempotency_key)
-		VALUES ($1,$2,'issue_captain_connection_code',$3,$3,$4,$5)`,
-		teamMemberID, storeID, status, actorID, auditIdempotencyKey("issue", connection.ID)); err != nil {
-		return IssuedConnectionCode{}, err
-	}
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO dsh_notifications
-			(actor_id, actor_type, topic, title, body, action_url)
-		VALUES ($1, 'partner', 'partner_fleet_connection',
-		        'تم إصدار رمز ربط للكابتن',
-		        $2,
-		        '/team')`,
-		actorID, "تم إصدار رمز ربط آمن للموصل "+courierName+" وينتهي تلقائيًا في الموعد المحدد."); err != nil {
-		return IssuedConnectionCode{}, err
+	row := tx.QueryRowContext(ctx, `
+		INSERT INTO dsh_partner_courier_connection_codes (
+			store_id, team_member_id, code_hash, code_last4, status, expires_at, created_by_actor_id
+		) VALUES ($1, $2, $3, $4, 'pending', $5, $6)
+		RETURNING `+connectionSelectCols,
+		storeID, teamMemberID, hash, last4, expiresAt, actorID)
+
+	connection, scanErr := scanConnection(row)
+	if scanErr != nil {
+		return IssuedConnectionCode{}, scanErr
 	}
 	if err := tx.Commit(); err != nil {
 		return IssuedConnectionCode{}, err
 	}
-	return IssuedConnectionCode{Connection: connection, Code: plain}, nil
+	return IssuedConnectionCode{Connection: connection, Code: codeStr}, nil
 }
 
 func RevokeCode(ctx context.Context, db *sql.DB, storeID, codeID, actorID string, expectedVersion int) (ConnectionCode, error) {
-	storeID = strings.TrimSpace(storeID)
-	codeID = strings.TrimSpace(codeID)
-	actorID = strings.TrimSpace(actorID)
-	if storeID == "" || codeID == "" || actorID == "" || expectedVersion <= 0 {
-		return ConnectionCode{}, ErrInvalid
-	}
-
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return ConnectionCode{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
-	var teamMemberID, codeStatus, memberStatus, courierName string
-	var version int
-	err = tx.QueryRowContext(ctx, `
-		SELECT c.team_member_id, c.status, c.version, m.status, m.name
-		FROM dsh_partner_courier_connection_codes c
-		JOIN dsh_store_team_members m ON m.id = c.team_member_id AND m.store_id = c.store_id
-		WHERE c.id::text = $1 AND c.store_id = $2
-		FOR UPDATE`, codeID, storeID).Scan(&teamMemberID, &codeStatus, &version, &memberStatus, &courierName)
+	row := tx.QueryRowContext(ctx, `
+		UPDATE dsh_partner_courier_connection_codes
+		SET status = 'revoked', version = version + 1, revoked_at = NOW(), updated_at = NOW()
+		WHERE id = $1 AND store_id = $2 AND status = 'pending' AND version = $3
+		RETURNING `+connectionSelectCols,
+		codeID, storeID, expectedVersion)
+
+	connection, err := scanConnection(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ConnectionCode{}, ErrNotFound
 	}
 	if err != nil {
-		return ConnectionCode{}, err
-	}
-	if codeStatus != "pending" || version != expectedVersion {
-		return ConnectionCode{}, ErrVersionConflict
-	}
-
-	connection, err := scanConnection(tx.QueryRowContext(ctx, `
-		UPDATE dsh_partner_courier_connection_codes
-		SET status='revoked',revoked_at=NOW(),version=version+1,updated_at=NOW()
-		WHERE id::text=$1 AND store_id=$2 AND status='pending' AND version=$3
-		RETURNING `+connectionSelectCols, codeID, storeID, expectedVersion))
-	if errors.Is(err, sql.ErrNoRows) {
-		return ConnectionCode{}, ErrVersionConflict
-	}
-	if err != nil {
-		return ConnectionCode{}, err
-	}
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO dsh_store_team_member_actions
-			(member_id,store_id,action_label,from_status,to_status,actor_id,idempotency_key)
-		VALUES ($1,$2,'revoke_captain_connection_code',$3,$3,$4,$5)`,
-		teamMemberID, storeID, memberStatus, actorID, auditIdempotencyKey("revoke", codeID)); err != nil {
-		return ConnectionCode{}, err
-	}
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO dsh_notifications
-			(actor_id, actor_type, topic, title, body, action_url)
-		VALUES ($1, 'partner', 'partner_fleet_connection',
-		        'تم سحب رمز ربط الكابتن',
-		        $2,
-		        '/team')`,
-		actorID, "تم سحب رمز الربط المعلق للموصل "+courierName+" ولن يمكن استخدامه."); err != nil {
 		return ConnectionCode{}, err
 	}
 	if err := tx.Commit(); err != nil {

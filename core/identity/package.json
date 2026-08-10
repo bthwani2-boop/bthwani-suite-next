@@ -6,9 +6,14 @@
   "main": "clients/index.ts",
   "types": "clients/index.ts",
   "scripts": {
-    "test": "cd backend && go test ./...",
-    "build": "cd backend && go build ./...",
-    "typecheck": "tsc --noEmit -p tsconfig.json && pnpm --dir ../../apps/app-client/runtime typecheck && pnpm --dir ../../apps/app-partner/runtime typecheck && pnpm --dir ../../apps/app-captain/runtime typecheck && pnpm --dir ../../apps/app-field/runtime typecheck && pnpm --dir ../../apps/control-panel/runtime typecheck"
+    "openapi:compose": "node ../../tools/scripts/compose-openapi-context.mjs identity",
+    "openapi:generate": "pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/identity.bundle.openapi.yaml -o clients/generated/identity-api.ts",
+    "test": "cd backend && go test ./... && cd .. && node --test tests/*.test.mjs",
+    "build": "node ../../tools/scripts/verify-go-build.mjs backend",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck:ts7": "tsc --noEmit -p tsconfig.json",
+    "typecheck:ts6:compat": "tsc6 --noEmit -p tsconfig.json",
+    "typecheck:all": "pnpm run typecheck:ts7 && pnpm run typecheck:ts6:compat"
   },
   "peerDependencies": {
     "react": "19.2.3"
@@ -16,6 +21,11 @@
   "devDependencies": {
     "@types/react": "19.2.17",
     "react": "19.2.3",
-    "typescript": "~6.0.3"
+    "typescript": "7.0.2",
+    "@typescript/typescript6": "6.0.2"
+  },
+  "exports": {
+    ".": "./clients/index.ts",
+    "./server": "./clients/identity-client.ts"
   }
 }

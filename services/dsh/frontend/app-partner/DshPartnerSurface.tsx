@@ -3,7 +3,7 @@ import { ActivityIndicator, BackHandler, Platform, View, Pressable, StyleSheet, 
 import { Icon, Text, spacing, colorRoles } from '@bthwani/ui-kit';
 import type { DshPartnerSurfaceProps } from './dsh-partner.types';
 import { useDshPartnerSurfaceModel } from './useDshPartnerSurfaceModel';
-import { PlatformVarsProvider, FeatureFlagProvider, usePlatformVars } from '../shared/platform';
+import { PlatformVarsProvider, usePlatformVars } from '../shared/platform';
 import { PartnerStoreScopeSheet } from './store/PartnerStoreScopeSheet';
 import { DshPartnerOrderJourneyRenderer } from './DshPartnerOrderJourneyRenderer';
 
@@ -30,9 +30,7 @@ type PartnerNavItem = {
 export function DshPartnerSurface(props: DshPartnerSurfaceProps) {
   return (
     <PlatformVarsProvider>
-      <FeatureFlagProvider>
-        <DshPartnerSurfaceInner {...props} />
-      </FeatureFlagProvider>
+      <DshPartnerSurfaceInner {...props} />
     </PlatformVarsProvider>
   );
 }

@@ -23,15 +23,19 @@ func writeDeliveryPricingError(w http.ResponseWriter, err error) {
 }
 
 func decodeDeliveryPricingMutation(w http.ResponseWriter, r *http.Request) (struct {
+	PricingMode     string `json:"pricingMode"`
 	FeeMinorUnits   int64  `json:"feeMinorUnits"`
 	Currency        string `json:"currency"`
+	PricingConfig   string `json:"pricingConfig"`
 	Status          string `json:"status"`
 	ExpectedVersion int    `json:"expectedVersion"`
 	Reason          string `json:"reason"`
 }, bool) {
 	var body struct {
+		PricingMode     string `json:"pricingMode"`
 		FeeMinorUnits   int64  `json:"feeMinorUnits"`
 		Currency        string `json:"currency"`
+		PricingConfig   string `json:"pricingConfig"`
 		Status          string `json:"status"`
 		ExpectedVersion int    `json:"expectedVersion"`
 		Reason          string `json:"reason"`
@@ -49,7 +53,7 @@ func decodeDeliveryPricingMutation(w http.ResponseWriter, r *http.Request) (stru
 
 // GET /dsh/operator/stores/{storeId}/delivery-pricing
 func (s *protectedStoreServer) handleOperatorListDeliveryPricing(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", "operations.read", "operator"); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	items, err := checkout.ListDeliveryPricing(s.db, r.PathValue("storeId"))
@@ -62,7 +66,7 @@ func (s *protectedStoreServer) handleOperatorListDeliveryPricing(w http.Response
 
 // PUT /dsh/operator/stores/{storeId}/delivery-pricing/{fulfillmentMode}
 func (s *protectedStoreServer) handleOperatorUpsertDeliveryPricing(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", "operations.manage", "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -71,8 +75,10 @@ func (s *protectedStoreServer) handleOperatorUpsertDeliveryPricing(w http.Respon
 		return
 	}
 	record, err := checkout.UpsertDeliveryPricing(r.Context(), s.db, r.PathValue("storeId"), r.PathValue("fulfillmentMode"), checkout.UpsertDeliveryPricingInput{
+		PricingMode:     body.PricingMode,
 		FeeMinorUnits:   body.FeeMinorUnits,
 		Currency:        body.Currency,
+		PricingConfig:   body.PricingConfig,
 		Status:          body.Status,
 		PricingSource:   "control_panel",
 		ExpectedVersion: body.ExpectedVersion,
@@ -125,8 +131,10 @@ func (s *protectedStoreServer) handlePartnerUpsertDeliveryPricing(w http.Respons
 		return
 	}
 	record, err := checkout.UpsertDeliveryPricing(r.Context(), s.db, storeID, "partner_delivery", checkout.UpsertDeliveryPricingInput{
+		PricingMode:     body.PricingMode,
 		FeeMinorUnits:   body.FeeMinorUnits,
 		Currency:        body.Currency,
+		PricingConfig:   body.PricingConfig,
 		Status:          body.Status,
 		PricingSource:   "partner_store",
 		ExpectedVersion: body.ExpectedVersion,

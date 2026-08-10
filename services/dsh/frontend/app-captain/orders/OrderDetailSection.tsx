@@ -60,7 +60,7 @@ export const OrderDetailSection = React.memo(function OrderDetailSection({
 							items={[
 								{ label: 'الاستلام', value: summary?.pickupLabel ?? '', tone: 'brand' },
 								{ label: 'التسليم', value: summary?.dropoffLabel ?? '' },
-								{ label: 'الوقت المتوقع', value: summary?.etaLabel ?? '', tone: 'warning' },
+								{ label: 'الوقت المتوقع', value: summary?.etaLabel ? `${summary.etaLabel} (تقديري)` : '', tone: 'warning' },
 								{ label: 'الخطوة التالية', value: summary?.nextActionLabel ?? '', tone: 'success' },
 							]}
 						/>

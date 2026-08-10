@@ -5,12 +5,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Card, StateView, Text } from "@bthwani/ui-kit";
 import { CpBadge, CpButton, CpKpiCard, CpKpiStrip, CpTabs } from "@bthwani/control-panel/components";
 import { OverviewPageFrame } from "@bthwani/control-panel/shell";
-import { useFinanceController } from "../../shared/finance-wlt-link/finance/finance.controller";
+import { useFinanceController } from '@bthwani/wlt/dsh';
 import { PayoutRequestsPanel } from "./PayoutRequestsPanel";
 import { ReconciliationCasesPanel } from "./ReconciliationCasesPanel";
 import { CodReconciliationCasesPanel } from "./CodReconciliationCasesPanel";
 import { RefundsCommandPanel } from "./RefundsCommandPanel";
-import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from "../../shared/finance-wlt-link/finance/finance-hub.types";
+import { LedgerInspectorScreen } from "./LedgerInspectorScreen";
+import { CodInspectorScreen } from "./CodInspectorScreen";
+import { RepresentativeWalletLookup } from "./RepresentativeWalletLookup";
+import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from '@bthwani/wlt/dsh';
 
 type FinanceTabItem = { readonly id: string; readonly label: string; readonly active: boolean };
 
@@ -145,6 +148,19 @@ export function FinanceDashboardScreen() {
           <Text role="body" tone="muted" style={{ marginTop: "0.5rem" }}>
             {`الوضع التشغيلي: ${financeHubView.operationalRisk} · حظر الصرف/التسوية: ${financeHubView.holdsStatus} · الإجراء المطلوب: ${financeHubView.requiredAction}`}
           </Text>
+        </Card>
+      );
+    }
+    if (activeGroup === "ledger-order-finance") {
+      if (activeSub === "ledger") return <LedgerInspectorScreen />;
+    }
+    if (activeGroup === "reconciliation-risk") {
+      if (activeSub === "reconciliation") return <CodInspectorScreen />;
+    }
+    if (activeGroup === "payments-wallets") {
+      return (
+        <Card style={{ padding: "1rem" }}>
+          <RepresentativeWalletLookup />
         </Card>
       );
     }

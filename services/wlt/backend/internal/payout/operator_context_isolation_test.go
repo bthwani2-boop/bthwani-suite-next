@@ -1,5 +1,12 @@
 package payout
 
+// Note: these tests exercise the per-row operator_context_id scoping guards
+// inside a single WLT deployment (WHERE operator_context_id=$1 filters and
+// RequireOperatorContextScope checks). They do not exercise or assert
+// network-level multi-tenant isolation -- the DSH service bridge binds every
+// request to one fixed deployment-owned context (see
+// internal/shared/serviceauth.go). See governance decision Q1/T4.
+
 import (
 	"bytes"
 	"context"
@@ -19,10 +26,8 @@ func executeDestinationUpsert(t *testing.T, db *sql.DB, operatorContextID, actor
 	t.Helper()
 	body := fmt.Sprintf(`{
 		"beneficiaryName":"OperatorContext Payout Test",
-		"bankName":"Test Bank",
-		"accountNumber":"1234567890",
-		"settlementPreference":"bank",
-		"bankAccountHolderMatchesOwner":true,
+		"destinationMethod":"bank",
+		"destinationReference":"1234567890",
 		"operatorId":"operator-test"
 	}`)
 	req := httptest.NewRequest(http.MethodPut, "/wlt/payout-destinations/field/"+actorID, strings.NewReader(body))
@@ -93,7 +98,6 @@ func TestPayoutDestinationsRequestsAndWalletHoldsAreOperatorContextLocal(t *test
 	const amount int64 = 25000
 
 	t.Cleanup(func() {
-		_, _ = db.Exec(`DELETE FROM wlt_payout_outbox WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))
 		_, _ = db.Exec(`DELETE FROM wlt_payout_reconciliations WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))
 		_, _ = db.Exec(`DELETE FROM wlt_payout_audit_events WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))
 		_, _ = db.Exec(`DELETE FROM wlt_payout_requests WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))
@@ -105,10 +109,10 @@ func TestPayoutDestinationsRequestsAndWalletHoldsAreOperatorContextLocal(t *test
 	destinations := make(map[string]governedDestinationRef, len(OperatorContexts))
 	for _, operatorContextID := range OperatorContexts {
 		if _, err := db.Exec(`INSERT INTO wlt_wallets
-			(operator_context_id,actor_id,actor_type,status,currency,available_balance_minor_units)
-			VALUES ($1,$2,'field','active','YER',$3)
+			(operator_context_id,actor_id,actor_type,status,currency,available_balance_minor_units,settled_total_minor_units)
+			VALUES ($1,$2,'field','active','YER',$3,$3)
 			ON CONFLICT (operator_context_id,actor_type,actor_id) DO UPDATE SET
-			  status='active',currency='YER',available_balance_minor_units=$3,
+			  status='active',currency='YER',available_balance_minor_units=$3,settled_total_minor_units=$3,
 			  held_balance_minor_units=0,updated_at=now()`, operatorContextID, actorID, initialBalance); err != nil {
 			t.Fatalf("seed %s wallet: %v", operatorContextID, err)
 		}

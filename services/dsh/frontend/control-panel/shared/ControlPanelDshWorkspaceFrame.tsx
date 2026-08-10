@@ -11,7 +11,7 @@ import {
   CpPageHeader,
 } from '@bthwani/control-panel/components';
 import type { CpBadgeTone } from '@bthwani/control-panel/components';
-import { useCpFrameTokens } from '../../../../../apps/control-panel/runtime/src/shell/frameTokens';
+import { useCpFrameTokens } from '@bthwani/control-panel/shell';
 import { ControlPanelDshDecisionBoard, type DshUnifiedRecommendation } from './ControlPanelDshDecisionBoard';
 
 type WorkspaceSignal = {

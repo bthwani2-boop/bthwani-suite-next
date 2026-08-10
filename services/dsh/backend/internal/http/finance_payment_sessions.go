@@ -21,7 +21,7 @@ func requiredPaymentPlatformContext(w http.ResponseWriter, actorPlatformContextI
 
 // GET /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/timeline
 func (s *protectedStoreServer) handleFinancePaymentSessionTimeline(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -50,7 +50,7 @@ func (s *protectedStoreServer) handleFinancePaymentSessionTimeline(w http.Respon
 
 // POST /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status
 func (s *protectedStoreServer) handleRefreshFinancePaymentSessionProviderStatus(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

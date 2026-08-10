@@ -9,12 +9,12 @@ import (
 	"dsh-api/internal/wlt"
 )
 
-// RegisterPlatformPolicyRoutes binds the DSH-owned operational platform
-// policies to the same protected server boundary used by the rest of DSH.
-// Platform Control remains the owner of runtime variables, flags, change sets,
-// and rollouts; DSH owns service zones, SLA, capacity, serviceability, map
-// provider readback, client-address privacy, onboarding fees, and dispatch
-// balance requirements. WLT remains the balance and ledger owner.
+// RegisterPlatformPolicyRoutes binds DSH-owned operational policies to the
+// same protected server boundary used by the rest of DSH. Platform Control
+// remains the owner of runtime variables, flags, change sets, and rollouts;
+// WLT remains the sole owner of wallet balances, financial thresholds, and
+// dispatch financial policy. DSH owns only the short-lived WLT eligibility
+// decision projection used for assignment gating.
 func RegisterPlatformPolicyRoutes(
 	mux *http.ServeMux,
 	db *sql.DB,
@@ -22,21 +22,19 @@ func RegisterPlatformPolicyRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
-	mux.HandleFunc("GET /dsh/operator/platform/map-provider-health", protected.handleOperatorMapProviderHealth)
-	mux.HandleFunc("GET /dsh/operator/platform/service-areas/{serviceAreaCode}", protected.handleOperatorGetServiceArea)
-	mux.HandleFunc("GET /dsh/operator/privacy/client-addresses/policy", protected.handleGetClientAddressPrivacyPolicy)
-	mux.HandleFunc("PUT /dsh/operator/privacy/client-addresses/policy", protected.handleUpdateClientAddressPrivacyPolicy)
-	mux.HandleFunc("GET /dsh/operator/privacy/client-addresses/status", protected.handleGetClientAddressPrivacyStatus)
-	mux.HandleFunc("GET /dsh/operator/privacy/client-addresses/events", protected.handleListClientAddressPrivacyEvents)
-	mux.HandleFunc("POST /dsh/operator/privacy/client-addresses/anonymize", protected.handleAnonymizeExpiredClientAddresses)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
+	mux.HandleFunc("GET /dsh/operator/platform/map-provider-health", protected.withPermission("control-panel", "platform.read", protected.handleOperatorMapProviderHealth))
+	mux.HandleFunc("GET /dsh/operator/platform/service-areas/{serviceAreaCode}", protected.withPermission("control-panel", "platform.read", protected.handleOperatorGetServiceArea))
+	mux.HandleFunc("GET /dsh/operator/privacy/client-addresses/policy", protected.withPermission("control-panel", "platform.read", protected.handleGetClientAddressPrivacyPolicy))
+	mux.HandleFunc("PUT /dsh/operator/privacy/client-addresses/policy", protected.withPermission("control-panel", "platform.manage", protected.handleUpdateClientAddressPrivacyPolicy))
+	mux.HandleFunc("GET /dsh/operator/privacy/client-addresses/status", protected.withPermission("control-panel", "platform.read", protected.handleGetClientAddressPrivacyStatus))
+	mux.HandleFunc("GET /dsh/operator/privacy/client-addresses/events", protected.withPermission("control-panel", "platform.read", protected.handleListClientAddressPrivacyEvents))
+	mux.HandleFunc("POST /dsh/operator/privacy/client-addresses/anonymize", protected.withPermission("control-panel", "platform.manage", protected.handleAnonymizeExpiredClientAddresses))
 
-	// Captain financial eligibility. Refresh performs a OperatorContext-scoped WLT wallet
-	// read and stores only a short-lived DSH dispatch decision snapshot.
-	mux.HandleFunc("GET /dsh/operator/platform/dispatch-balance-policy", protected.handleGetDispatchBalancePolicy)
-	mux.HandleFunc("PUT /dsh/operator/platform/dispatch-balance-policy", protected.handleUpsertDispatchBalancePolicy)
-	mux.HandleFunc("GET /dsh/operator/dispatch/captains/{captainId}/financial-eligibility", protected.handleGetOperatorCaptainFinancialEligibility)
-	mux.HandleFunc("POST /dsh/operator/dispatch/captains/{captainId}/financial-eligibility/refresh", protected.handleRefreshOperatorCaptainFinancialEligibility)
+	// Captain financial eligibility. Refresh performs an OperatorContext-scoped
+	// WLT wallet decision read and stores only a short-lived DSH dispatch snapshot.
+	mux.HandleFunc("GET /dsh/operator/dispatch/captains/{captainId}/financial-eligibility", protected.withPermission("control-panel", DshDispatchFinancialEligibilityPermissionRead, protected.handleGetOperatorCaptainFinancialEligibility))
+	mux.HandleFunc("POST /dsh/operator/dispatch/captains/{captainId}/financial-eligibility/refresh", protected.withPermission("control-panel", DshDispatchFinancialEligibilityPermissionManage, protected.handleRefreshOperatorCaptainFinancialEligibility))
 	mux.HandleFunc("GET /dsh/captain/dispatch/financial-eligibility", protected.handleGetOwnCaptainFinancialEligibility)
 	mux.HandleFunc("POST /dsh/captain/dispatch/financial-eligibility/refresh", protected.handleRefreshOwnCaptainFinancialEligibility)
 
@@ -50,17 +48,12 @@ func RegisterPlatformPolicyRoutes(
 	mux.HandleFunc("GET /dsh/operator/platform/operational-policy/audit", protected.handleListOperationalPolicyAudit)
 	mux.HandleFunc("POST /dsh/operator/platform/operational-policy/audit/{eventId}/rollback", protected.handleRollbackOperationalPolicy)
 
-	// The following routes are registered via registerUnifiedCatalogRoutes in
-	// catalog_unified_routes.go to preserve one compatibility owner.
-	// mux.HandleFunc("GET /dsh/operator/platform/zones", protected.handleListZones)
-	// mux.HandleFunc("POST /dsh/operator/platform/zones", protected.handleCreateZone)
-	// mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", protected.handleUpdateZone)
-	// mux.HandleFunc("GET /dsh/operator/platform/sla-rules", protected.handleListSlaRules)
-	// mux.HandleFunc("PUT /dsh/operator/platform/sla-rules", protected.handleUpsertSlaRules)
-	// mux.HandleFunc("GET /dsh/operator/platform/capacity", protected.handleGetCapacityConfig)
-	// mux.HandleFunc("PUT /dsh/operator/platform/capacity", protected.handleUpsertCapacityConfig)
-	// mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", protected.handleGetZoneServiceability)
-	// mux.HandleFunc("GET /dsh/operator/platform/store-onboarding-fee", protected.handleGetStoreOnboardingFeePolicy)
-	// mux.HandleFunc("PUT /dsh/operator/platform/store-onboarding-fee", protected.handleUpsertStoreOnboardingFeePolicy)
-	// mux.HandleFunc("GET /dsh/platform/store-onboarding-fee", protected.handleGetStoreOnboardingFeeReference)
+	// Zone creation and update.
+	mux.HandleFunc("POST /dsh/operator/platform/zones", protected.withPermission("control-panel", DshServiceZonesPermissionManage, protected.handleCreateZone))
+	mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", protected.withPermission("control-panel", DshServiceZonesPermissionManage, protected.handleUpdateZone))
+
+	// GET zones/sla-rules/capacity/serviceability are registered by
+	// registerUnifiedCatalogRoutes in catalog_unified_routes.go (single
+	// compatibility owner — registering them here too would panic on duplicate
+	// mux patterns).
 }

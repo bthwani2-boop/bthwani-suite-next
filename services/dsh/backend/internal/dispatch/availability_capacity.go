@@ -29,7 +29,11 @@ type ProviderAvailabilityProjection struct {
 }
 
 func normalizeAvailabilityProjection(input *ProviderAvailabilityProjectionInput) error {
-	input.OperatorContextID = normalizeOperatorContextID(input.OperatorContextID)
+	var err error
+	input.OperatorContextID, err = normalizeOperatorContextID(input.OperatorContextID)
+	if err != nil {
+		return err
+	}
 	input.NoticeID = strings.TrimSpace(input.NoticeID)
 	input.ActorType = strings.ToLower(strings.TrimSpace(input.ActorType))
 	input.ActorID = strings.TrimSpace(input.ActorID)
@@ -82,7 +86,10 @@ func UpsertProviderAvailabilityProjection(ctx context.Context, db *sql.DB, input
 }
 
 func CaptainUnavailableAt(ctx context.Context, db *sql.DB, operatorContextID, captainID string, at time.Time) (bool, error) {
-	operatorContextID = normalizeOperatorContextID(operatorContextID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return false, err
+	}
 	captainID = strings.TrimSpace(captainID)
 	if captainID == "" {
 		return false, ErrInvalid
@@ -91,7 +98,7 @@ func CaptainUnavailableAt(ctx context.Context, db *sql.DB, operatorContextID, ca
 		at = time.Now().UTC()
 	}
 	var unavailable bool
-	err := db.QueryRowContext(ctx, `SELECT EXISTS(
+	err = db.QueryRowContext(ctx, `SELECT EXISTS(
 		SELECT 1 FROM dsh_provider_availability_projections
 		WHERE operator_context_id=$1 AND actor_type='captain' AND actor_id=$2 AND status='active'
 		  AND $3 >= starts_at AND $3 < ends_at
@@ -106,10 +113,14 @@ func ApplyWorkforceAvailability(ctx context.Context, db *sql.DB, operatorContext
 	if at.IsZero() {
 		at = time.Now().UTC()
 	}
+	normCtx, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return err
+	}
 	rows, err := db.QueryContext(ctx, `SELECT DISTINCT actor_id
 		FROM dsh_provider_availability_projections
 		WHERE operator_context_id=$1 AND actor_type='captain' AND status='active'
-		  AND $2 >= starts_at AND $2 < ends_at`, normalizeOperatorContextID(operatorContextID), at)
+		  AND $2 >= starts_at AND $2 < ends_at`, normCtx, at)
 	if err != nil {
 		return err
 	}
@@ -160,7 +171,11 @@ type UpsertServiceAreaCapacityPolicyInput struct {
 }
 
 func UpsertServiceAreaCapacityPolicy(ctx context.Context, db *sql.DB, input UpsertServiceAreaCapacityPolicyInput) (ServiceAreaCapacityPolicy, error) {
-	input.OperatorContextID = normalizeOperatorContextID(input.OperatorContextID)
+	var err error
+	input.OperatorContextID, err = normalizeOperatorContextID(input.OperatorContextID)
+	if err != nil {
+		return ServiceAreaCapacityPolicy{}, err
+	}
 	input.ServiceAreaCode = strings.TrimSpace(input.ServiceAreaCode)
 	input.UpdatedBy = strings.TrimSpace(input.UpdatedBy)
 	if input.MinimumAvailableCaptains < 0 || input.TargetAvailableCaptains < input.MinimumAvailableCaptains ||
@@ -171,7 +186,7 @@ func UpsertServiceAreaCapacityPolicy(ctx context.Context, db *sql.DB, input Upse
 		return ServiceAreaCapacityPolicy{}, ErrInvalid
 	}
 	var policy ServiceAreaCapacityPolicy
-	err := db.QueryRowContext(ctx, `INSERT INTO dsh_service_area_capacity_policies(
+	err = db.QueryRowContext(ctx, `INSERT INTO dsh_service_area_capacity_policies(
 		operator_context_id,service_area_code,minimum_available_captains,target_available_captains,
 		demand_buffer_basis_points,mass_absence_threshold_basis_points,
 		forecast_horizon_minutes,updated_by)
@@ -207,11 +222,15 @@ func UpsertServiceAreaCapacityPolicy(ctx context.Context, db *sql.DB, input Upse
 
 func loadCapacityPolicy(ctx context.Context, db *sql.DB, operatorContextID, serviceAreaCode string) (ServiceAreaCapacityPolicy, error) {
 	var policy ServiceAreaCapacityPolicy
-	err := db.QueryRowContext(ctx, `SELECT operator_context_id,service_area_code,
+	normCtx, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return ServiceAreaCapacityPolicy{}, err
+	}
+	err = db.QueryRowContext(ctx, `SELECT operator_context_id,service_area_code,
 		minimum_available_captains,target_available_captains,demand_buffer_basis_points,
 		mass_absence_threshold_basis_points,forecast_horizon_minutes,updated_by,version,updated_at
 		FROM dsh_service_area_capacity_policies WHERE operator_context_id=$1 AND service_area_code=$2`,
-		normalizeOperatorContextID(operatorContextID), strings.TrimSpace(serviceAreaCode),
+		normCtx, strings.TrimSpace(serviceAreaCode),
 	).Scan(
 		&policy.OperatorContextID, &policy.ServiceAreaCode, &policy.MinimumAvailableCaptains,
 		&policy.TargetAvailableCaptains, &policy.DemandBufferBasisPoints,
@@ -220,7 +239,7 @@ func loadCapacityPolicy(ctx context.Context, db *sql.DB, operatorContextID, serv
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ServiceAreaCapacityPolicy{
-			OperatorContextID: normalizeOperatorContextID(operatorContextID), ServiceAreaCode: strings.TrimSpace(serviceAreaCode),
+			OperatorContextID: normCtx, ServiceAreaCode: strings.TrimSpace(serviceAreaCode),
 			MinimumAvailableCaptains: 1, TargetAvailableCaptains: 2,
 			DemandBufferBasisPoints: 2000, MassAbsenceThresholdBasisPoints: 4000,
 			ForecastHorizonMinutes: 180, UpdatedBy: "default", Version: 0,
@@ -250,7 +269,10 @@ type ServiceAreaCapacityForecast struct {
 }
 
 func GetServiceAreaCapacityForecast(ctx context.Context, db *sql.DB, operatorContextID, serviceAreaCode string, at time.Time) (ServiceAreaCapacityForecast, error) {
-	operatorContextID = normalizeOperatorContextID(operatorContextID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return ServiceAreaCapacityForecast{}, err
+	}
 	serviceAreaCode = strings.TrimSpace(serviceAreaCode)
 	if serviceAreaCode == "" {
 		return ServiceAreaCapacityForecast{}, ErrInvalid
@@ -269,18 +291,12 @@ func GetServiceAreaCapacityForecast(ctx context.Context, db *sql.DB, operatorCon
 	}
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(DISTINCT p.captain_id)::int
 		FROM dsh_captain_dispatch_profiles p
-		JOIN dsh_actor_service_area_scopes scope
-		  ON scope.actor_id=p.captain_id AND scope.actor_role='captain'
-		 AND scope.active=true AND scope.service_area_code=$2
-		WHERE p.operator_context_id=$1`, operatorContextID, serviceAreaCode).Scan(&forecast.TotalScopedCaptains); err != nil {
+		WHERE p.operator_context_id=$1`, operatorContextID).Scan(&forecast.TotalScopedCaptains); err != nil {
 		return forecast, err
 	}
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*)::int FROM (
 		SELECT p.captain_id
 		FROM dsh_captain_dispatch_profiles p
-		JOIN dsh_actor_service_area_scopes scope
-		  ON scope.actor_id=p.captain_id AND scope.actor_role='captain'
-		 AND scope.active=true AND scope.service_area_code=$2
 		LEFT JOIN dsh_captain_financial_eligibility financial
 		  ON financial.operator_context_id=p.operator_context_id AND financial.captain_id=p.captain_id
 		LEFT JOIN dsh_assignments assignment
@@ -288,6 +304,7 @@ func GetServiceAreaCapacityForecast(ctx context.Context, db *sql.DB, operatorCon
 		 AND (assignment.status='accepted' OR (assignment.status='offered' AND assignment.response_deadline_at>$3))
 		WHERE p.operator_context_id=$1 AND p.accreditation_status='approved'
 		  AND p.availability_status='available'
+		  AND p.updated_at > NOW() - INTERVAL '24 hours'
 		  AND COALESCE(financial.eligible,false)=true AND financial.expires_at>$3
 		  AND NOT EXISTS (
 		    SELECT 1 FROM dsh_provider_availability_projections absence
@@ -297,18 +314,15 @@ func GetServiceAreaCapacityForecast(ctx context.Context, db *sql.DB, operatorCon
 		  )
 		GROUP BY p.captain_id,p.max_active_assignments
 		HAVING COUNT(assignment.id)<p.max_active_assignments
-	) available`, operatorContextID, serviceAreaCode, at).Scan(&forecast.CurrentlyAvailableCaptains); err != nil {
+	) available`, operatorContextID, at).Scan(&forecast.CurrentlyAvailableCaptains); err != nil {
 		return forecast, err
 	}
 	if err := db.QueryRowContext(ctx, `SELECT
-		COUNT(DISTINCT actor_id) FILTER (WHERE $3>=starts_at AND $3<ends_at)::int,
-		COUNT(DISTINCT actor_id) FILTER (WHERE starts_at>$3 AND starts_at<$4)::int
+		COUNT(DISTINCT actor_id) FILTER (WHERE $2>=starts_at AND $2<ends_at)::int,
+		COUNT(DISTINCT actor_id) FILTER (WHERE starts_at>$2 AND starts_at<$3)::int
 		FROM dsh_provider_availability_projections absence
-		WHERE operator_context_id=$1 AND actor_type='captain' AND status='active'
-		  AND EXISTS (SELECT 1 FROM dsh_actor_service_area_scopes scope
-		    WHERE scope.actor_id=absence.actor_id AND scope.actor_role='captain'
-		      AND scope.active=true AND scope.service_area_code=$2)`,
-		operatorContextID, serviceAreaCode, at, horizon,
+		WHERE operator_context_id=$1 AND actor_type='captain' AND status='active'`,
+		operatorContextID, at, horizon,
 	).Scan(&forecast.ActiveAbsences, &forecast.PlannedAbsences); err != nil {
 		return forecast, err
 	}
@@ -362,7 +376,10 @@ type heatmapAccumulator struct {
 }
 
 func GetOperationsHeatmap(ctx context.Context, db *sql.DB, operatorContextID, serviceAreaCode string, now time.Time) ([]OperationsHeatmapCell, error) {
-	operatorContextID = normalizeOperatorContextID(operatorContextID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	serviceAreaCode = strings.TrimSpace(serviceAreaCode)
 	if now.IsZero() {
 		now = time.Now().UTC()

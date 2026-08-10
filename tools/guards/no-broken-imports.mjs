@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import ts from "typescript";
 import {
   existsResolved,
   fail,
@@ -10,6 +9,7 @@ import {
   read,
   repoRoot
 } from "./_guard-utils.mjs";
+import { scriptKindForFile, ts } from "./lib/typescript-compiler.mjs";
 
 const guardId = "no-broken-imports";
 const violations = [];
@@ -21,15 +21,8 @@ function aliasExists(alias) {
   return fs.existsSync(path.join(repoRoot, target));
 }
 
-function scriptKindFor(file) {
-  if (file.endsWith(".tsx")) return ts.ScriptKind.TSX;
-  if (file.endsWith(".jsx")) return ts.ScriptKind.JSX;
-  if (file.endsWith(".js") || file.endsWith(".mjs") || file.endsWith(".cjs")) return ts.ScriptKind.JS;
-  return ts.ScriptKind.TS;
-}
-
 function findParsedImportSpecifiers(file, content) {
-  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindFor(file));
+  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindForFile(file));
   const specs = [];
 
   function addSpecifier(node) {

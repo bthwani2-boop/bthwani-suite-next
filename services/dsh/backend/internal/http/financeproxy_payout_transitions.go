@@ -9,7 +9,7 @@ import (
 )
 
 func (s *protectedStoreServer) proxyFinancePayoutTransition(w http.ResponseWriter, r *http.Request, action string) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -32,6 +32,7 @@ func (s *protectedStoreServer) proxyFinancePayoutTransition(w http.ResponseWrite
 		"/wlt/payout-requests/"+url.PathEscape(payoutID)+"/"+action,
 		operatorWriteBody(actor.ID),
 		correlationForActorMutation(r, "payout-"+action+"-"+payoutID),
+		r.Header.Get("Idempotency-Key"),
 		operatorContextID,
 	)
 	if err != nil {

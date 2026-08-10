@@ -454,24 +454,6 @@ func HandleCreateEvidenceBackedSettlement(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func HandleUpsertGovernedSettlementPolicy(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var input UpsertGovernedSettlementPolicyInput
-		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 128*1024))
-		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&input); err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-			return
-		}
-		policy, err := UpsertGovernedSettlementPolicy(r.Context(), db, r.PathValue("partnerId"), input, r.Header.Get("X-Correlation-ID"))
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"settlementPolicy": policy})
-	}
-}
-
 func HandleListSettlementEvidence(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		evidence, err := ListSettlementEvidence(r.Context(), db, r.PathValue("settlementId"))

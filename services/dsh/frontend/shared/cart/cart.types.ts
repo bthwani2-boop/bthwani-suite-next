@@ -3,6 +3,37 @@ import type { DshFulfillmentDeliveryMode } from "../delivery/delivery.contract";
 // Canonical source: shared/delivery/delivery.contract.ts (DshFulfillmentDeliveryMode).
 export type DshFulfillmentMode = DshFulfillmentDeliveryMode;
 
+// ─── WLT Sovereign Pricing Quote ──────────────────────────────────────────────
+// These types mirror WLT's internal/pricing/quote.go.
+// DSH must carry them verbatim; it must never recompute, re-sum, or override
+// any field. Financial truth is owned exclusively by WLT (J049).
+
+export type DshPricingQuoteLine = {
+  readonly masterProductId: string;
+  readonly productName?: string;
+  readonly quantity: number;
+  readonly unitPriceMinorUnits: number;
+  readonly totalMinorUnits: number;
+};
+
+export type DshPricingQuote = {
+  readonly lines: readonly DshPricingQuoteLine[];
+  readonly subtotalMinorUnits: number;
+  readonly deliveryFeeMinorUnits: number;
+  readonly serviceFeeMinorUnits: number;
+  readonly taxMinorUnits: number;
+  readonly discountMinorUnits: number;
+  readonly roundingMinorUnits: number;
+  readonly totalMinorUnits: number;
+  readonly currency: string;
+  readonly fundingRefs: readonly string[];
+  readonly hash: string;
+  readonly version: number;
+  readonly expiresAt?: string | null;
+};
+// ──────────────────────────────────────────────────────────────────────────────
+
+
 export type DshCartItem = {
   readonly id: string;
   readonly cartId: string;
@@ -14,10 +45,12 @@ export type DshCartItem = {
   readonly productName: string;
   readonly priceReference: string;
   /** Snapshotted server-side from the store assortment at add-to-cart time. */
-  readonly unitPrice: number;
+  readonly unitPriceMinorUnits: number;
   /** Snapshotted with unitPrice from the same sovereign store assortment row. */
   readonly currency: string;
   readonly quantity: number;
+  readonly options?: readonly string[];
+  readonly note?: string;
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -37,8 +70,8 @@ export type DshCartItemValidation = {
   readonly masterProductId: string;
   readonly status: DshCartItemValidationStatus;
   readonly reasonCode?: string;
-  readonly snapshotUnitPrice: number;
-  readonly currentUnitPrice?: number;
+  readonly snapshotUnitPriceMinorUnits: number;
+  readonly currentUnitPriceMinorUnits?: number;
   readonly snapshotCurrency: string;
   readonly currentCurrency?: string;
   readonly snapshotAssortmentId?: string;
@@ -63,6 +96,8 @@ export type DshCart = {
   readonly note: string;
   readonly items: readonly DshCartItem[];
   readonly validation?: DshCartValidation;
+  // quote is WLT-owned. DSH never mutates it. Null when cart is empty or WLT unavailable.
+  readonly quote: DshPricingQuote | null;
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -76,7 +111,8 @@ export type DshServiceabilityCode =
   | "mode_unavailable"
   | "capacity_exhausted"
   | "capacity_throttled"
-  | "policy_unavailable";
+  | "policy_unavailable"
+  | "provider_unavailable";
 
 export type DshFulfillmentModeAvailability = {
   readonly mode: DshFulfillmentMode;
@@ -96,6 +132,9 @@ export type DshServiceabilityResult = {
   readonly code: DshServiceabilityCode;
   readonly reason?: string;
   readonly availableModes?: readonly DshFulfillmentModeAvailability[];
+  readonly etaWindow?: { minMinutes: number; maxMinutes: number };
+  readonly quoteVersion?: string;
+  readonly expiresAt?: string;
   readonly addressId?: string;
   readonly addressVersion?: number;
   readonly requestedMode?: DshFulfillmentMode;
@@ -135,4 +174,4 @@ export type DshServiceabilityState =
     }
   | { readonly kind: "error"; readonly message: string };
 
-export type DshCartActionState = "idle" | "submitting" | "success" | "error";
+export type DshCartActionState = "idle" | "submitting" | "success" | "error" | "offline_pending" | "conflict";

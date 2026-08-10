@@ -27,6 +27,11 @@ export type StateViewProps = {
   icon?: ReactNode | undefined;
   actionLabel?: string | undefined;
   onActionPress?: (() => void) | undefined;
+  /** Stable reason code shown as a support reference, e.g. `CHECKLIST_INCOMPLETE`. */
+  code?: string | undefined;
+  /** Secondary affordance, e.g. "contact support" beside a retry. */
+  secondaryActionLabel?: string | undefined;
+  onSecondaryActionPress?: (() => void) | undefined;
 };
 
 const STATE_PRESENTATION: Readonly<Record<StateViewId, {
@@ -48,24 +53,55 @@ export function StateView({
   loading,
   icon,
   actionLabel,
-  onActionPress
+  onActionPress,
+  code,
+  secondaryActionLabel,
+  onSecondaryActionPress
 }: StateViewProps) {
   const semanticPresentation = stateId ? STATE_PRESENTATION[stateId] : undefined;
   const resolvedTone = tone ?? (kind === "warning" ? "warning" : semanticPresentation?.tone) ?? "neutral";
   const resolvedLoading = loading ?? semanticPresentation?.loading ?? false;
   const surfaceTone = resolvedTone === "neutral" ? "inset" : resolvedTone;
+  // A colour change alone is not perceivable feedback: announce the state and
+  // keep the reason code readable as text.
+  const isUrgent = resolvedTone === "danger" || resolvedTone === "warning";
+  const announcement = [title, description, code ? `رمز السبب: ${code}` : null]
+    .filter(Boolean)
+    .join(". ");
 
   return (
     <Surface tone={surfaceTone} centered padding="$6" width="100%">
-      <Block alignItems="center" gap="$3" maxWidth={520}>
+      <Block
+        alignItems="center"
+        gap="$3"
+        maxWidth={520}
+        accessibilityLiveRegion={isUrgent ? "assertive" : "polite"}
+      >
         {resolvedLoading ? <Spinner size="large" color="$action" /> : icon}
-        <Text role="titleMd" align="center">{title}</Text>
-        {description ? <Text role="body" tone="secondary" align="center">{description}</Text> : null}
+        <Block
+          accessible
+          accessibilityRole={isUrgent ? "alert" : "text"}
+          accessibilityLabel={announcement}
+          alignItems="center"
+          gap="$2"
+        >
+          <Text role="titleMd" align="center">{title}</Text>
+          {description ? <Text role="body" tone="secondary" align="center">{description}</Text> : null}
+          {code ? <Text role="caption" tone="secondary" align="center">{`رمز السبب: ${code}`}</Text> : null}
+        </Block>
         {actionLabel && onActionPress ? (
           <Button
             label={actionLabel}
             tone={resolvedTone === "danger" ? "danger" : "primary"}
             onPress={onActionPress}
+            fullWidth={false}
+          />
+        ) : null}
+        {secondaryActionLabel && onSecondaryActionPress ? (
+          <Button
+            label={secondaryActionLabel}
+            tone="ghost"
+            onPress={onSecondaryActionPress}
             fullWidth={false}
           />
         ) : null}

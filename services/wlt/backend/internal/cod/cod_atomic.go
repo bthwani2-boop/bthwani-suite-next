@@ -2,13 +2,10 @@ package cod
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 
 	"wlt-api/internal/reference"
-	"wlt-api/internal/shared"
 )
 
 var ErrCodReferenceConflict = errors.New("existing COD record does not match delivery references")
@@ -86,32 +83,4 @@ func CreateCodRecordAtomic(db *sql.DB, input CreateCodRecordInput) (*CodRecord, 
 		return nil, false, err
 	}
 	return existing, false, nil
-}
-
-func HandleCreateCodRecordAtomic(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !requireDshServiceCaller(w, r) {
-			return
-		}
-		var input CreateCodRecordInput
-		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
-		if err := decoder.Decode(&input); err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-			return
-		}
-		record, created, err := CreateCodRecordAtomic(db, input)
-		if errors.Is(err, ErrCodReferenceConflict) {
-			shared.SendError(w, http.StatusConflict, "COD_REFERENCE_CONFLICT", err.Error())
-			return
-		}
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		status := http.StatusOK
-		if created {
-			status = http.StatusCreated
-		}
-		shared.SendJSON(w, status, map[string]any{"codRecord": record, "replayed": !created})
-	}
 }

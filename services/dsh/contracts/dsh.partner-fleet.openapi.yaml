@@ -2,7 +2,8 @@ openapi: 3.1.0
 info:
   title: BThwani DSH Partner Fleet Connection API
   version: 0.5.1
-  description: Partner-store courier connection codes and authenticated captain fleet memberships, including governed disconnect and redacted operator readback.
+  description: Partner-store courier connection codes and authenticated captain fleet
+    memberships, including governed disconnect and redacted operator readback.
 x-bthwani-owner: services/dsh
 x-bthwani-parent-contract: services/dsh/contracts/dsh.openapi.yaml
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -10,318 +11,428 @@ x-bthwani-client-generation: DISABLED
 x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
 x-bthwani-runtime-dependency: true
 paths:
-  /dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code:
-    post:
-      operationId: issueDshPartnerCourierConnectionCode
-      tags: [DshPartnerFleet]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: '#/components/parameters/StoreId'
-        - name: memberId
-          in: path
-          required: true
-          schema: { type: string, minLength: 1 }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/IssueConnectionCodeRequest' }
-      responses:
-        '201':
-          description: One-time plaintext code plus its persisted redacted connection projection.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/IssueConnectionCodeResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
-        '422': { $ref: '#/components/responses/ErrorResponse' }
-  /dsh/partner/stores/{storeId}/courier-connections:
-    get:
-      operationId: listDshPartnerCourierConnections
-      tags: [DshPartnerFleet]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: '#/components/parameters/StoreId'
-      responses:
-        '200':
-          description: Authoritative connection lifecycle for the authenticated partner store.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ConnectionListResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-  /dsh/partner/stores/{storeId}/courier-connections/{connectionId}/revoke:
-    post:
-      operationId: revokeDshPartnerCourierConnection
-      tags: [DshPartnerFleet]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: '#/components/parameters/StoreId'
-        - name: connectionId
-          in: path
-          required: true
-          schema: { type: string, minLength: 1 }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/ExpectedVersionRequest' }
-      responses:
-        '200':
-          description: Revoked connection projection.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ConnectionResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/captain/partner-fleet/connect:
     post:
       operationId: connectDshCaptainToPartnerFleet
-      tags: [DshPartnerFleet]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - DshPartnerFleet
+      security:
+      - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/ConnectCaptainRequest' }
+            schema:
+              $ref: '#/components/schemas/ConnectCaptainRequest'
       responses:
         '200':
           description: Activated captain membership.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/MembershipResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
-        '410': { $ref: '#/components/responses/ErrorResponse' }
-        '422': { $ref: '#/components/responses/ErrorResponse' }
+              schema:
+                $ref: '#/components/schemas/MembershipResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+        '410':
+          $ref: '#/components/responses/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ErrorResponse'
   /dsh/captain/partner-fleet/memberships:
     get:
       operationId: listDshCaptainPartnerFleetMemberships
-      tags: [DshPartnerFleet]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - DshPartnerFleet
+      security:
+      - bearerAuth: []
       responses:
         '200':
           description: All memberships owned by the authenticated captain across stores.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/MembershipListResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
+              schema:
+                $ref: '#/components/schemas/MembershipListResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
   /dsh/captain/partner-fleet/memberships/{teamMemberId}/disconnect:
     post:
       operationId: disconnectDshCaptainPartnerFleetMembership
-      tags: [DshPartnerFleet]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - DshPartnerFleet
+      security:
+      - bearerAuth: []
       parameters:
-        - name: teamMemberId
-          in: path
-          required: true
-          schema: { type: string, minLength: 1 }
+      - name: teamMemberId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/DisconnectMembershipRequest' }
+            schema:
+              $ref: '#/components/schemas/DisconnectMembershipRequest'
       responses:
         '200':
           description: Paused membership after authenticated captain disconnect.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/MembershipResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
+              schema:
+                $ref: '#/components/schemas/MembershipResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
   /dsh/operator/stores/{storeId}/partner-fleet:
     get:
       operationId: getDshOperatorPartnerFleetSnapshot
-      tags: [DshPartnerFleet]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - DshPartnerFleet
+      security:
+      - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/StoreId'
       responses:
         '200':
-          description: Redacted operational snapshot. Plaintext codes and code hashes are never returned.
+          description: Redacted operational snapshot. Plaintext codes and code hashes
+            are never returned.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/OperatorPartnerFleetSnapshot' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
+              schema:
+                $ref: '#/components/schemas/OperatorPartnerFleetSnapshot'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+  /dsh/operator/captains/{captainId}/partner-fleet:
+    get:
+      operationId: getDshOperatorCaptainPartnerFleetMemberships
+      tags:
+      - DshPartnerFleet
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: captainId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          description: Operational memberships for the selected captain.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MembershipListResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
 components:
   securitySchemes:
-    bearerAuth: { type: http, scheme: bearer }
+    bearerAuth:
+      type: http
+      scheme: bearer
   parameters:
     StoreId:
       name: storeId
       in: path
       required: true
-      schema: { type: string, minLength: 1 }
+      schema:
+        type: string
+        minLength: 1
   responses:
     ErrorResponse:
       description: Governed error response.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+          schema:
+            $ref: '#/components/schemas/Error'
   schemas:
     IssueConnectionCodeRequest:
       type: object
       additionalProperties: false
       properties:
-        expiresInHours: { type: integer, minimum: 1, maximum: 48, default: 24 }
+        expiresInHours:
+          type: integer
+          minimum: 1
+          maximum: 48
+          default: 24
     ExpectedVersionRequest:
       type: object
       additionalProperties: false
-      required: [expectedVersion]
+      required:
+      - expectedVersion
       properties:
-        expectedVersion: { type: integer, minimum: 1 }
+        expectedVersion:
+          type: integer
+          minimum: 1
     ConnectCaptainRequest:
       type: object
       additionalProperties: false
-      required: [code]
+      required:
+      - code
       properties:
         code:
           type: string
           minLength: 8
           maxLength: 16
-          pattern: '^[A-Za-z0-9-]+$'
+          pattern: ^[A-Za-z0-9-]+$
     DisconnectMembershipRequest:
       type: object
       additionalProperties: false
-      required: [storeId, expectedVersion]
+      required:
+      - storeId
+      - expectedVersion
       properties:
-        storeId: { type: string, minLength: 1 }
-        expectedVersion: { type: integer, minimum: 1 }
+        storeId:
+          type: string
+          minLength: 1
+        expectedVersion:
+          type: integer
+          minimum: 1
     ConnectionStatus:
       type: string
-      enum: [pending, redeemed, revoked, expired]
+      enum:
+      - pending
+      - redeemed
+      - revoked
+      - expired
     ConnectionCode:
       type: object
       additionalProperties: false
       required:
-        - id
-        - storeId
-        - teamMemberId
-        - codeLast4
-        - status
-        - expiresAt
-        - createdByActorId
-        - version
-        - createdAt
-        - updatedAt
+      - id
+      - storeId
+      - teamMemberId
+      - codeLast4
+      - status
+      - expiresAt
+      - createdByActorId
+      - version
+      - createdAt
+      - updatedAt
       properties:
-        id: { type: string, minLength: 1 }
-        storeId: { type: string, minLength: 1 }
-        teamMemberId: { type: string, minLength: 1 }
-        codeLast4: { type: string, minLength: 4, maxLength: 4 }
-        status: { $ref: '#/components/schemas/ConnectionStatus' }
-        expiresAt: { type: string, minLength: 1 }
-        createdByActorId: { type: string, minLength: 1 }
-        redeemedByCaptainActorId: { type: string, minLength: 1 }
-        redeemedAt: { type: string, minLength: 1 }
-        version: { type: integer, minimum: 1 }
-        createdAt: { type: string, minLength: 1 }
-        updatedAt: { type: string, minLength: 1 }
+        id:
+          type: string
+          minLength: 1
+        storeId:
+          type: string
+          minLength: 1
+        teamMemberId:
+          type: string
+          minLength: 1
+        codeLast4:
+          type: string
+          minLength: 4
+          maxLength: 4
+        status:
+          $ref: '#/components/schemas/ConnectionStatus'
+        expiresAt:
+          type: string
+          minLength: 1
+        createdByActorId:
+          type: string
+          minLength: 1
+        redeemedByCaptainActorId:
+          type: string
+          minLength: 1
+        redeemedAt:
+          type: string
+          minLength: 1
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          minLength: 1
+        updatedAt:
+          type: string
+          minLength: 1
     IssuedConnectionCode:
       type: object
       additionalProperties: false
-      required: [connection, code]
+      required:
+      - connection
+      - code
       properties:
-        connection: { $ref: '#/components/schemas/ConnectionCode' }
+        connection:
+          $ref: '#/components/schemas/ConnectionCode'
         code:
           type: string
           minLength: 8
           maxLength: 16
-          pattern: '^[A-Z0-9-]+$'
-          description: Returned once. The server persists only a SHA-256 digest and the last four characters.
+          pattern: ^[A-Z0-9-]+$
+          description: Returned once. The server persists only a SHA-256 digest and
+            the last four characters.
     CaptainFleetMembership:
       type: object
       additionalProperties: false
-      required: [teamMemberId, storeId, storeName, courierName, status, branchAssignment, deliveryAssignment, version]
+      required:
+      - teamMemberId
+      - storeId
+      - storeName
+      - courierName
+      - status
+      - branchAssignment
+      - deliveryAssignment
+      - version
       properties:
-        teamMemberId: { type: string, minLength: 1 }
-        storeId: { type: string, minLength: 1 }
-        storeName: { type: string, minLength: 1 }
-        courierName: { type: string, minLength: 1 }
-        status: { type: string, minLength: 1 }
-        branchAssignment: { type: string }
-        deliveryAssignment: { type: string }
-        version: { type: integer, minimum: 1 }
+        teamMemberId:
+          type: string
+          minLength: 1
+        storeId:
+          type: string
+          minLength: 1
+        storeName:
+          type: string
+          minLength: 1
+        courierName:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          minLength: 1
+        branchAssignment:
+          type: string
+        deliveryAssignment:
+          type: string
+        version:
+          type: integer
+          minimum: 1
     OperatorStoreFleetMember:
       type: object
       additionalProperties: false
-      required: [teamMemberId, storeId, courierName, status, branchAssignment, deliveryAssignment, version]
+      required:
+      - teamMemberId
+      - storeId
+      - courierName
+      - status
+      - branchAssignment
+      - deliveryAssignment
+      - version
       properties:
-        teamMemberId: { type: string, minLength: 1 }
-        storeId: { type: string, minLength: 1 }
-        courierName: { type: string, minLength: 1 }
-        status: { type: string, minLength: 1 }
-        captainActorId: { type: string, minLength: 1 }
-        branchAssignment: { type: string }
-        deliveryAssignment: { type: string }
-        version: { type: integer, minimum: 1 }
+        teamMemberId:
+          type: string
+          minLength: 1
+        storeId:
+          type: string
+          minLength: 1
+        courierName:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          minLength: 1
+        captainActorId:
+          type: string
+          minLength: 1
+        branchAssignment:
+          type: string
+        deliveryAssignment:
+          type: string
+        version:
+          type: integer
+          minimum: 1
     IssueConnectionCodeResponse:
       type: object
       additionalProperties: false
-      required: [issued]
+      required:
+      - issued
       properties:
-        issued: { $ref: '#/components/schemas/IssuedConnectionCode' }
+        issued:
+          $ref: '#/components/schemas/IssuedConnectionCode'
     ConnectionListResponse:
       type: object
       additionalProperties: false
-      required: [connections]
+      required:
+      - connections
       properties:
         connections:
           type: array
-          items: { $ref: '#/components/schemas/ConnectionCode' }
+          items:
+            $ref: '#/components/schemas/ConnectionCode'
     ConnectionResponse:
       type: object
       additionalProperties: false
-      required: [connection]
+      required:
+      - connection
       properties:
-        connection: { $ref: '#/components/schemas/ConnectionCode' }
+        connection:
+          $ref: '#/components/schemas/ConnectionCode'
     MembershipListResponse:
       type: object
       additionalProperties: false
-      required: [memberships]
+      required:
+      - memberships
       properties:
         memberships:
           type: array
-          items: { $ref: '#/components/schemas/CaptainFleetMembership' }
+          items:
+            $ref: '#/components/schemas/CaptainFleetMembership'
     MembershipResponse:
       type: object
       additionalProperties: false
-      required: [membership]
+      required:
+      - membership
       properties:
-        membership: { $ref: '#/components/schemas/CaptainFleetMembership' }
+        membership:
+          $ref: '#/components/schemas/CaptainFleetMembership'
     OperatorPartnerFleetSnapshot:
       type: object
       additionalProperties: false
-      required: [storeId, connections, members]
+      required:
+      - storeId
+      - connections
+      - members
       properties:
-        storeId: { type: string, minLength: 1 }
+        storeId:
+          type: string
+          minLength: 1
         connections:
           type: array
-          items: { $ref: '#/components/schemas/ConnectionCode' }
+          items:
+            $ref: '#/components/schemas/ConnectionCode'
         members:
           type: array
-          items: { $ref: '#/components/schemas/OperatorStoreFleetMember' }
+          items:
+            $ref: '#/components/schemas/OperatorStoreFleetMember'
     Error:
       type: object
       additionalProperties: false
-      required: [code, message]
+      required:
+      - code
+      - message
       properties:
-        code: { type: string, minLength: 1 }
-        message: { type: string, minLength: 1 }
+        code:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1

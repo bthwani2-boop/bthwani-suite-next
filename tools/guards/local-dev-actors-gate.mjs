@@ -9,7 +9,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fail, lineNumber, read, repoRoot } from "./_guard-utils.mjs";
-import { LOCAL_ACTORS, LOCAL_PLATFORM_ACTORS, localPasswordDefault } from "../dev/local-actors.mjs";
+import { LOCAL_ACTORS, LOCAL_PLATFORM_ACTORS, LOCAL_WORKFORCE_PROVIDERS, localPasswordDefault } from "../dev/local-actors.mjs";
 
 const guardId = "local-dev-actors-gate";
 const violations = [];
@@ -56,6 +56,31 @@ if (!goTable) {
   }
   for (const orphan of declared.keys()) {
     violations.push({ file: goBootstrapFile, message: `LOCAL_ACTOR_MISSING_IN_REGISTRY:${orphan} — add it to ${registryFile}` });
+  }
+}
+
+// --- 1b. Workforce providers must never be bootstrap actors -------------------
+//
+// Workforce provisions Identity with a server-generated workforce code as the
+// username. If the bootstrap pre-seeds an actor holding one of these phones, the
+// provisioning path conflicts permanently and the provider can never be created.
+
+for (const [key, provider] of Object.entries(LOCAL_WORKFORCE_PROVIDERS)) {
+  for (const forbidden of [provider.phoneE164, `${key}-local-001`]) {
+    const index = goSource.indexOf(`"${forbidden}"`);
+    if (index >= 0) {
+      violations.push({
+        file: goBootstrapFile,
+        line: lineNumber(goSource, index),
+        message: `WORKFORCE_PROVIDER_IN_BOOTSTRAP:${key} — "${forbidden}" must not be seeded by the Identity bootstrap; Workforce owns provider actor creation`,
+      });
+    }
+  }
+  if (provider.username || provider.actorId) {
+    violations.push({
+      file: registryFile,
+      message: `WORKFORCE_PROVIDER_FIXED_IDENTITY:${key} — workforceProviders must not declare a username or actorId; both are generated at provisioning time`,
+    });
   }
 }
 
@@ -145,6 +170,16 @@ for (const file of scannedRoots.flatMap((dir) => walk(dir))) {
       file,
       line: lineNumber(content, match.index),
       message: `HARDCODED_LOCAL_USERNAME:${match[1]} — use the accessor from ${registryFile} instead`,
+    });
+  }
+
+  const passwordProviderLookup = /Get-LocalUsername\s+["'](?:field|captain)["']/g;
+  while ((match = passwordProviderLookup.exec(content))) {
+    violations.push({
+      file,
+      line: lineNumber(content, match.index),
+      message:
+        "WORKFORCE_PROVIDER_PASSWORD_LOGIN — field/captain must use the generated Workforce registry and activation flow",
     });
   }
 }

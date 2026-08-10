@@ -49,7 +49,7 @@ func TestOtpBoundaryUsesTrustedRuntimeOperatorContextForClient(t *testing.T) {
 	handler.ServeHTTP(response, request)
 
 	if nextCalled {
-		t.Fatal("active partner_platform client OTP request fell through to legacy handler")
+		t.Fatal("active platform client OTP request fell through to legacy handler")
 	}
 	if repository.calls != 1 || repository.operatorContextID != "OperatorContext-main" {
 		t.Fatalf("unexpected repository call count=%d OperatorContext=%q", repository.calls, repository.operatorContextID)

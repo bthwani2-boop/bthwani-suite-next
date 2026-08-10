@@ -1,5 +1,7 @@
 package partner
 
+import "dsh-api/internal/storepolicy"
+
 // PartnerStateView is a backward-compatible partner payload with the server-
 // owned state policy flattened beside the existing Partner JSON fields.
 type PartnerStateView struct {
@@ -35,26 +37,16 @@ func AllowedActionsForSurface(status ActivationStatus, surface string) []string 
 		actions = append(actions, "read_owned_draft", "read_readiness")
 		switch status {
 		case StatusDraft, StatusFieldVisitScheduled, StatusDocumentsMissing, StatusOpsRejected:
-			actions = append(actions,
-				"update_owned_draft",
-				"update_first_store",
-				"upload_document",
-				"capture_field_visit",
-			)
+			actions = append(actions, "update_owned_draft", "update_first_store", "upload_document", "capture_field_visit")
 		}
 		if len(AllowedTransitionsForSurface(status, surface)) > 0 {
 			actions = append(actions, "submit_for_review")
 		}
 	case "control-panel":
-		actions = append(actions,
-			"read_partner",
-			"read_readiness",
-			"read_documents",
-			"read_field_visits",
-			"read_audit",
-			"link_unowned_store",
-			"review_documents",
-		)
+		actions = append(actions, "read_partner", "read_readiness", "read_documents", "read_field_visits", "read_audit", "link_unowned_store", "review_documents")
+		if storepolicy.PartnerStatusAllowsStoreOwnership(string(status)) {
+			actions = append(actions, "create_store")
+		}
 		for _, transition := range AllowedTransitionsForSurface(status, surface) {
 			actions = append(actions, operatorTransitionAction(transition))
 		}
@@ -76,17 +68,13 @@ func AllowedActionsForSurface(status ActivationStatus, surface string) []string 
 
 func BuildPartnerStateView(partner Partner, surface string) PartnerStateView {
 	partner = SanitizePartnerForSurface(partner)
-	return PartnerStateView{
-		Partner:            partner,
-		AllowedActions:     AllowedActionsForSurface(partner.ActivationStatus, surface),
-		AllowedTransitions: AllowedTransitionsForSurface(partner.ActivationStatus, surface),
-	}
+	return PartnerStateView{Partner: partner, AllowedActions: AllowedActionsForSurface(partner.ActivationStatus, surface), AllowedTransitions: AllowedTransitionsForSurface(partner.ActivationStatus, surface)}
 }
 
 func operatorTransitionAction(status ActivationStatus) string {
 	switch status {
 	case StatusSubmitted:
-		return "return_to_submitted"
+		return "submit_for_review"
 	case StatusFieldVisitScheduled:
 		return "schedule_field_visit"
 	case StatusFieldVisitCompleted:
@@ -115,6 +103,10 @@ func operatorTransitionAction(status ActivationStatus) string {
 		return "activate_partner"
 	case StatusPartnerDeactivated:
 		return "deactivate_partner"
+	case StatusPartnerSuspended:
+		return "suspend_partner"
+	case StatusPartnerTerminated:
+		return "terminate_partner"
 	case StatusClientVisible:
 		return "publish_store"
 	case StatusClientHidden:

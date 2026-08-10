@@ -40,6 +40,15 @@ test("control-panel startup keeps service origins in server-only environment var
   }
 });
 
+
+test("control-panel startup exposes the JavaScript TypeScript compiler API without package mutation", () => {
+  assert.match(startScript, /typescript\/lib\/typescript\.js/);
+  assert.match(startScript, /@typescript\/typescript6\/lib\/typescript\.js/);
+  assert.match(startScript, /New-Item -ItemType Junction/);
+  assert.match(startScript, /pnpm install --frozen-lockfile/);
+  assert.doesNotMatch(startScript, /pnpm (?:add|install).*typescript/);
+});
+
 test("control-panel PowerShell startup script parses cleanly", (t) => {
   const probe = spawnSync("pwsh", ["-NoLogo", "-NoProfile", "-Command", "$PSVersionTable.PSVersion.ToString()"], {
     encoding: "utf8",

@@ -1,6 +1,6 @@
 'use client';
 
-import { useControlPanelSession } from '../session/control-panel-session';
+import { useIdentitySession } from "@bthwani/core-identity";
 import type { CanonicalOperationsGroupId } from './operations.types';
 
 type ReadRequirement = {
@@ -48,7 +48,7 @@ export function useOperationsPermission(
   group: CanonicalOperationsGroupId,
   subGroup?: string,
 ): boolean {
-  const { state } = useControlPanelSession();
+  const { state } = useIdentitySession();
 
   if (state.kind !== 'authenticated') {
     return false;

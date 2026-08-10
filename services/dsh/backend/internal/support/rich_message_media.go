@@ -254,11 +254,11 @@ func addRichMessage(
 
 	var message Message
 	err = tx.QueryRow(`
-		SELECT id::text, ticket_id::text, sender_id, sender_role, body, is_internal, created_at
+		SELECT id::text, ticket_id::text, sender_id, sender_role, body, is_internal, created_at, COALESCE(client_message_id,''), COALESCE(sequence_num,0)
 		FROM dsh_support_messages
 		WHERE ticket_id = $1::uuid AND sender_id = $2 AND create_idempotency_key = $3`,
 		input.TicketID, input.ActorID, idempotencyKey,
-	).Scan(&message.ID, &message.TicketID, &message.SenderID, &message.SenderRole, &message.Body, &message.IsInternal, &message.CreatedAt)
+	).Scan(&message.ID, &message.TicketID, &message.SenderID, &message.SenderRole, &message.Body, &message.IsInternal, &message.CreatedAt, &message.ClientMessageID, &message.SequenceNum)
 	if err == nil {
 		attachmentsByMessage, listErr := listRichAttachmentsTx(tx, input.TicketID, operatorWide)
 		if listErr != nil {
@@ -276,12 +276,12 @@ func addRichMessage(
 	err = tx.QueryRow(`
 		INSERT INTO dsh_support_messages (
 			ticket_id, sender_id, sender_role, body, is_internal,
-			create_idempotency_key, correlation_id
-		) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7)
-		RETURNING id::text, ticket_id::text, sender_id, sender_role, body, is_internal, created_at`,
+			create_idempotency_key, correlation_id, client_message_id
+		) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $6)
+		RETURNING id::text, ticket_id::text, sender_id, sender_role, body, is_internal, created_at, COALESCE(client_message_id,''), COALESCE(sequence_num,0)`,
 		input.TicketID, input.ActorID, senderRole, input.Body, input.IsInternal && operatorWide,
 		idempotencyKey, correlationID,
-	).Scan(&message.ID, &message.TicketID, &message.SenderID, &message.SenderRole, &message.Body, &message.IsInternal, &message.CreatedAt)
+	).Scan(&message.ID, &message.TicketID, &message.SenderID, &message.SenderRole, &message.Body, &message.IsInternal, &message.CreatedAt, &message.ClientMessageID, &message.SequenceNum)
 	if err != nil {
 		return RichMessage{}, err
 	}
@@ -343,7 +343,7 @@ func listRichMessages(
 		return nil, ErrNotFound
 	}
 	rows, err := tx.Query(`
-		SELECT id::text, ticket_id::text, sender_id, sender_role, body, is_internal, created_at
+		SELECT id::text, ticket_id::text, sender_id, sender_role, body, is_internal, created_at, COALESCE(client_message_id,''), COALESCE(sequence_num,0)
 		FROM dsh_support_messages
 		WHERE ticket_id = $1::uuid AND ($2::boolean = TRUE OR is_internal = FALSE)
 		ORDER BY created_at, id`, ticketID, operatorWide)
@@ -353,7 +353,7 @@ func listRichMessages(
 	messages := make([]RichMessage, 0)
 	for rows.Next() {
 		var message Message
-		if scanErr := rows.Scan(&message.ID, &message.TicketID, &message.SenderID, &message.SenderRole, &message.Body, &message.IsInternal, &message.CreatedAt); scanErr != nil {
+		if scanErr := rows.Scan(&message.ID, &message.TicketID, &message.SenderID, &message.SenderRole, &message.Body, &message.IsInternal, &message.CreatedAt, &message.ClientMessageID, &message.SequenceNum); scanErr != nil {
 			rows.Close()
 			return nil, scanErr
 		}

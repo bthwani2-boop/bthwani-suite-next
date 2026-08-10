@@ -19,7 +19,7 @@ export async function createSupportTicket(
   input: DshCreateTicketInput,
   context: SupportMutationContext,
 ): Promise<DshSupportTicket> {
-  const data = await request<{ ticket: DshSupportTicket }>("/dsh/client/support/tickets", {
+  const data = await request<{ ticket: DshSupportTicket }>("/dsh/support/tickets", {
     method: "POST",
     body: input,
     idempotencyKey: context.idempotencyKey,
@@ -29,13 +29,13 @@ export async function createSupportTicket(
 }
 
 export async function fetchMyTickets(): Promise<readonly DshSupportTicket[]> {
-  const data = await request<{ tickets: DshSupportTicket[] }>("/dsh/client/support/tickets");
+  const data = await request<{ tickets: DshSupportTicket[] }>("/dsh/support/tickets");
   return data.tickets ?? [];
 }
 
 export async function fetchTicket(ticketId: string): Promise<DshSupportTicket> {
   const data = await request<{ ticket: DshSupportTicket }>(
-    `/dsh/client/support/tickets/${encodeURIComponent(ticketId)}`,
+    `/dsh/support/tickets/${encodeURIComponent(ticketId)}`,
   );
   return data.ticket;
 }
@@ -49,7 +49,7 @@ export async function addTicketMessage(
     throw new Error("SUPPORT_MESSAGE_BODY_OR_ATTACHMENT_REQUIRED");
   }
   const data = await request<{ message: DshSupportMessage }>(
-    `/dsh/client/support/tickets/${encodeURIComponent(ticketId)}/messages`,
+    `/dsh/support/tickets/${encodeURIComponent(ticketId)}/messages`,
     {
       method: "POST",
       body: input,
@@ -62,7 +62,7 @@ export async function addTicketMessage(
 
 export async function fetchTicketMessages(ticketId: string): Promise<readonly DshSupportMessage[]> {
   const data = await request<{ messages: DshSupportMessage[] }>(
-    `/dsh/client/support/tickets/${encodeURIComponent(ticketId)}/messages`,
+    `/dsh/support/tickets/${encodeURIComponent(ticketId)}/messages`,
   );
   return data.messages ?? [];
 }

@@ -18,9 +18,9 @@ import type {
   DshCreatePartnerFieldVisitRequest,
   DshPartnerListResponse,
   DshPartnerOperationalScope,
-  DshPartnerTeamMember,
   DshPartnerStoreCourierSettings,
   DshPartnerCoverageZone,
+  DshPartnerCommercialSummary,
 } from "./partner.types";
 import { createPartnerMutationContext, type DshGovernedPartner, type PartnerMutationContext } from "./partner-onboarding.runtime";
 
@@ -139,6 +139,14 @@ export function linkPartnerStore(
   });
 }
 
+export function createPartnerStore(
+  endpoint: string,
+  input: unknown,
+  mutation?: PartnerMutationContext,
+): Promise<{ id: string }> {
+  return request(endpoint, { method: "POST", body: input, mutation });
+}
+
 export function fetchPartnerAuditEvents(partnerId: string): Promise<{ events: DshPartnerAuditEvent[] }> {
   return request(`/dsh/operator/partners/${partnerId}/audit`);
 }
@@ -159,35 +167,6 @@ export function fetchPartnerSelfReadiness(): Promise<DshPartnerReadiness> {
 
 export function fetchPartnerScopes(): Promise<{ scopes: DshPartnerOperationalScope[] }> {
   return request("/dsh/partner/scopes");
-}
-
-export function fetchPartnerTeam(storeId: string): Promise<{ members: DshPartnerTeamMember[] }> {
-  return request(`/dsh/partner/stores/${storeId}/team`);
-}
-
-export function invitePartnerTeamMember(
-  storeId: string,
-  identity: string,
-  mutation?: PartnerMutationContext,
-): Promise<{ success: boolean }> {
-  return request(`/dsh/partner/stores/${storeId}/team/invites`, {
-    method: "POST",
-    body: { identity },
-    mutation,
-  });
-}
-
-export function executePartnerTeamMemberAction(
-  storeId: string,
-  memberId: string,
-  action: string,
-  mutation?: PartnerMutationContext,
-): Promise<{ success: boolean }> {
-  return request(`/dsh/partner/stores/${storeId}/team/members/${memberId}/action`, {
-    method: "POST",
-    body: { action },
-    mutation,
-  });
 }
 
 export function fetchPartnerStoreCourierSettings(storeId: string): Promise<DshPartnerStoreCourierSettings> {
@@ -223,6 +202,10 @@ export function updatePartnerStoreSettings(
 }
 
 // ── Field intake ────────────────────────────────────────────────────────────
+
+export function fetchPartnerCommercialSummary(storeId: string): Promise<DshPartnerCommercialSummary> {
+  return request(`/dsh/partner/stores/${storeId}/commercial-summary`);
+}
 
 export function fieldListDrafts(params: { status?: string; limit?: number; offset?: number } = {}): Promise<DshPartnerListResponse> {
   const q = new URLSearchParams();

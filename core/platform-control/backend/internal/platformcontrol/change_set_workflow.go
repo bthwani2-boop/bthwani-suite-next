@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func (r *Repository) ValidateChangeSetGoverned(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
+func (r *Repository) ValidateChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return ChangeSet{}, err
@@ -73,10 +73,10 @@ WHERE id = $1::uuid`, id); err != nil {
 	if err := tx.Commit(); err != nil {
 		return ChangeSet{}, err
 	}
-	return r.GetChangeSetGoverned(ctx, id)
+	return r.GetChangeSet(ctx, id)
 }
 
-func (r *Repository) SubmitChangeSetGoverned(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
+func (r *Repository) SubmitChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
 	return r.governedTransitionWithPreconditions(ctx, id, ChangeSetValidated, ChangeSetSubmitted, actorID, roles, correlationID, "change_set_submitted")
 }
 
@@ -124,10 +124,10 @@ WHERE id = $1::uuid`, id); err != nil {
 	if err := tx.Commit(); err != nil {
 		return ChangeSet{}, err
 	}
-	return r.GetChangeSetGoverned(ctx, id)
+	return r.GetChangeSet(ctx, id)
 }
 
-func (r *Repository) ApproveChangeSetGoverned(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
+func (r *Repository) ApproveChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return ChangeSet{}, err
@@ -171,12 +171,12 @@ WHERE id = $1::uuid`, id, actorID); err != nil {
 	if err := tx.Commit(); err != nil {
 		return ChangeSet{}, err
 	}
-	return r.GetChangeSetGoverned(ctx, id)
+	return r.GetChangeSet(ctx, id)
 }
 
-func (r *Repository) RejectChangeSetGoverned(ctx context.Context, id, actorID string, roles []string, correlationID, reason string) (ChangeSet, error) {
+func (r *Repository) RejectChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID, reason string) (ChangeSet, error) {
 	reason = strings.TrimSpace(reason)
-	if reason == "" {
+	if reason == "" || len(reason) > maxGovernedTextLength {
 		return ChangeSet{}, ErrValidation
 	}
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
@@ -215,7 +215,7 @@ WHERE id = $1::uuid`, id, actorID, reason); err != nil {
 	if err := tx.Commit(); err != nil {
 		return ChangeSet{}, err
 	}
-	return r.GetChangeSetGoverned(ctx, id)
+	return r.GetChangeSet(ctx, id)
 }
 
 func verifyGovernedPreconditions(ctx context.Context, tx *sql.Tx, items []ChangeSetItem) error {
@@ -369,4 +369,18 @@ func decodeSnapshot(value any, destination any) error {
 		return err
 	}
 	return json.Unmarshal(raw, destination)
+}
+
+func lockChangeSetStatus(ctx context.Context, tx *sql.Tx, id string) (ChangeSetStatus, error) {
+	var raw string
+	if err := tx.QueryRowContext(ctx, `
+SELECT status
+FROM platform_change_sets
+WHERE id = $1::uuid
+FOR UPDATE`, id).Scan(&raw); errors.Is(err, sql.ErrNoRows) {
+		return "", ErrNotFound
+	} else if err != nil {
+		return "", err
+	}
+	return ChangeSetStatus(raw), nil
 }

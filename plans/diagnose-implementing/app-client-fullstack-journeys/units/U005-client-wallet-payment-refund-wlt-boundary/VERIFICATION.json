@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 3,
+  "unitId": "U005",
+  "checks": [
+    {"verificationId":"V501","type":"static","command":"rg -n \"ActorWalletPanel|getDshClientOwnWallet|listDshClientOwnLedgerEntries|operator.*context|wallet|ledger\" services/dsh/frontend/app-client services/wlt/frontend/shared/dsh services/dsh/backend/internal/wlt services/wlt/backend services/wlt/database","proves":"Maps client finance ownership boundary.","doesNotProve":"Does not prove live WLT ledger correctness.","passCriteria":"All wallet/ledger truth remains WLT-owned and self reads are actor/context scoped.","failCriteria":"DSH/frontend balance mutation or arbitrary self actor/context input is found.","required":true},
+    {"verificationId":"V502","type":"frontend","command":"pnpm --dir apps/app-client/runtime typecheck","proves":"Compiles app-client finance presentation integration.","doesNotProve":"Does not prove financial authorization.","passCriteria":"Command exits zero.","failCriteria":"Typecheck fails.","required":true},
+    {"verificationId":"V503","type":"dsh-backend","command":"cd services/dsh/backend && go test ./...","proves":"Tests DSH finance proxy/boundary code in backend suite.","doesNotProve":"Does not prove WLT persistence alone.","passCriteria":"Command exits zero.","failCriteria":"DSH backend test fails.","required":true},
+    {"verificationId":"V504","type":"wlt-backend","command":"cd services/wlt/backend && go test ./...","proves":"Tests WLT wallet/ledger/payment backend packages.","doesNotProve":"Does not prove physical client presentation.","passCriteria":"Command exits zero.","failCriteria":"WLT backend test fails.","required":true}
+  ]
+}

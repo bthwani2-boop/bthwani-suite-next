@@ -12,7 +12,7 @@ func TestStrictBoundaryRejectsExpandedSensitiveClassifications(t *testing.T) {
 	repository := &Repository{}
 	for _, classification := range []string{"sensitive", "confidential", "restricted"} {
 		t.Run(classification, func(t *testing.T) {
-			_, err := repository.CreateChangeSetStrict(
+			_, err := repository.CreateChangeSet(
 				context.Background(),
 				"maker",
 				nil,
@@ -45,13 +45,13 @@ func TestStrictBoundaryEnforcesReasonLength(t *testing.T) {
 	repository := &Repository{}
 	tooLong := strings.Repeat("x", maxGovernedTextLength+1)
 
-	if _, err := repository.RejectChangeSetStrict(context.Background(), "id", "reviewer", nil, "reason-limit", tooLong); !errors.Is(err, ErrValidation) {
+	if _, err := repository.RejectChangeSet(context.Background(), "id", "reviewer", nil, "reason-limit", tooLong); !errors.Is(err, ErrValidation) {
 		t.Fatalf("expected overlong rejection reason validation error, got %v", err)
 	}
-	if _, err := repository.RollbackChangeSetStrict(context.Background(), "id", "operator", nil, "reason-limit", ""); !errors.Is(err, ErrRollbackReason) {
+	if _, err := repository.RollbackChangeSet(context.Background(), "id", "operator", nil, "reason-limit", ""); !errors.Is(err, ErrRollbackReason) {
 		t.Fatalf("expected missing rollback reason error, got %v", err)
 	}
-	if _, err := repository.RollbackChangeSetStrict(context.Background(), "id", "operator", nil, "reason-limit", tooLong); !errors.Is(err, ErrValidation) {
+	if _, err := repository.RollbackChangeSet(context.Background(), "id", "operator", nil, "reason-limit", tooLong); !errors.Is(err, ErrValidation) {
 		t.Fatalf("expected overlong rollback reason validation error, got %v", err)
 	}
 }

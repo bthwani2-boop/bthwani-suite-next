@@ -14,7 +14,7 @@ import (
 // Pending moderation assets never become reachable through the public media
 // endpoint.
 func (s *protectedStoreServer) handlePreviewOperatorReelMedia(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
 		return
 	}
 	client := s.mediaClient()

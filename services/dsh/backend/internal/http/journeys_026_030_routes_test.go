@@ -6,9 +6,9 @@ import (
 )
 
 func TestJourneys026To030ExposeGovernedRoutes(t *testing.T) {
-	router := NewRouter(nil, nil, nil, nil, nil)
-	RegisterPartnerFleetMembershipRoutes(router, nil, nil, nil, nil)
-	RegisterPartnerFleetOperatorRoutes(router, nil, nil, nil, nil)
+	router := NewRouter(nil, nil, nil, nil, nil, nil)
+	RegisterPartnerFleetMembershipRoutes(router, nil, nil, nil, nil, nil)
+	RegisterPartnerFleetOperatorRoutes(router, nil, nil, nil, nil, nil)
 
 	cases := []struct {
 		journey string
@@ -31,7 +31,7 @@ func TestJourneys026To030ExposeGovernedRoutes(t *testing.T) {
 		{journey: " create subscription plan", method: http.MethodPost, path: "/dsh/operator/marketing/subscription-plans", pattern: "POST /dsh/operator/marketing/subscription-plans"},
 		{journey: " update subscription plan", method: http.MethodPatch, path: "/dsh/operator/marketing/subscription-plans/plan-1", pattern: "PATCH /dsh/operator/marketing/subscription-plans/{planId}"},
 		{journey: " purchase subscription", method: http.MethodPost, path: "/dsh/client/marketing/subscriptions/purchase", pattern: "POST /dsh/client/marketing/subscriptions/purchase"},
-		{journey: " activate subscription", method: http.MethodPost, path: "/dsh/client/marketing/subscriptions/purchase-1/activate", pattern: "POST /dsh/client/marketing/subscriptions/{purchaseId}/activate"},
+		{journey: " activate subscription", method: http.MethodPost, path: "/dsh/client/marketing/subscriptions/purchases/purchase-1/activate", pattern: "POST /dsh/client/marketing/subscriptions/purchases/{purchaseId}/activate"},
 		{journey: " read client benefits", method: http.MethodGet, path: "/dsh/client/benefits", pattern: "GET /dsh/client/benefits"},
 
 		//  — governed service areas and delivery-mode pricing projections.

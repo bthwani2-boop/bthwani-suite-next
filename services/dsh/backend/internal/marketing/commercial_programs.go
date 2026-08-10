@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 )
@@ -173,10 +172,17 @@ const loyaltyTierSelectCols = `id::TEXT, name_ar, name_en, min_points,
 	created_by_actor_id, approved_by_actor_id, approved_at::TEXT,
 	created_at::TEXT, updated_at::TEXT`
 
+// Per-plan subscriber count is not tracked in DSH -- WLT is the sole owner
+// of subscription lifecycle truth and does not expose a per-product
+// breakdown today (only the platform-wide aggregate via GetCommercialSummary,
+// used directly by handleListSubscriptionPlans). This column is a literal 0
+// placeholder rather than a query against the removed dsh_client_subscriptions
+// table (see D2 remediation); a real per-plan count needs a WLT aggregate
+// endpoint, which is future work.
 const subscriptionPlanSelectCols = `p.id::TEXT, p.name_ar, p.name_en, p.price_yer,
 	p.billing_cycle, p.include_free_delivery, p.points_multiplier, p.order_cap,
 	p.badge, p.status,
-	(SELECT COUNT(*) FROM dsh_client_subscriptions s WHERE s.plan_id = p.id AND s.status = 'active'),
+	0,
 	p.wlt_product_reference, p.version, p.created_by_actor_id, p.approved_by_actor_id,
 	p.approved_at::TEXT, p.created_at::TEXT, p.updated_at::TEXT`
 
@@ -358,19 +364,6 @@ func UpdateLoyaltyTier(db *sql.DB, id string, in UpdateLoyaltyTierInput) (Loyalt
 	return tier, nil
 }
 
-func LoyaltySummary(db *sql.DB) (LoyaltyProgramSummary, error) {
-	var out LoyaltyProgramSummary
-	err := db.QueryRow(`
-		SELECT
-			(SELECT COUNT(*) FROM dsh_loyalty_tiers WHERE status='active' AND archived_at IS NULL),
-			(SELECT COUNT(*) FROM dsh_client_loyalty_accounts),
-			(SELECT COALESCE(SUM(points_delta),0) FROM dsh_loyalty_ledger
-			 WHERE points_delta > 0 AND created_at >= date_trunc('month', NOW()))`).
-		Scan(&out.ActiveTiers, &out.TotalEnrolledClients, &out.PointsIssuedThisMonth)
-	out.IsBackedByAPI = true
-	return out, err
-}
-
 func ListSubscriptionPlans(db *sql.DB, activeOnly bool) ([]SubscriptionPlan, error) {
 	query := `SELECT ` + subscriptionPlanSelectCols + ` FROM dsh_subscription_plans p WHERE p.archived_at IS NULL`
 	if activeOnly {
@@ -506,25 +499,6 @@ func UpdateSubscriptionPlan(db *sql.DB, id string, in UpdateSubscriptionPlanInpu
 	return plan, nil
 }
 
-func SubscriptionSummary(db *sql.DB) (SubscriptionsSummary, error) {
-	var out SubscriptionsSummary
-	err := db.QueryRow(`
-		SELECT
-			(SELECT COUNT(*) FROM dsh_subscription_plans WHERE status='active' AND archived_at IS NULL),
-			(SELECT COUNT(*) FROM dsh_client_subscriptions WHERE status='active'),
-			(SELECT COALESCE(SUM(CASE p.billing_cycle
-				WHEN 'monthly' THEN p.price_yer
-				WHEN 'quarterly' THEN p.price_yer / 3
-				WHEN 'annual' THEN p.price_yer / 12
-				ELSE 0 END),0)
-			 FROM dsh_client_subscriptions s
-			 JOIN dsh_subscription_plans p ON p.id=s.plan_id
-			 WHERE s.status='active')`).
-		Scan(&out.ActivePlans, &out.TotalActiveSubscribers, &out.MRR)
-	out.IsBackedByAPI = true
-	return out, err
-}
-
 func ListPublishedPartnerOffers(db *sql.DB) ([]PartnerOffer, error) {
 	rows, err := db.Query(`SELECT ` + partnerOfferSelectCols + `
 		FROM dsh_partner_offers
@@ -545,85 +519,4 @@ func ListPublishedPartnerOffers(db *sql.DB) ([]PartnerOffer, error) {
 		out = append(out, offer)
 	}
 	return out, rows.Err()
-}
-
-func getClientLoyaltyAccount(db *sql.DB, actorID string) (*ClientLoyaltyAccount, error) {
-	var account ClientLoyaltyAccount
-	var tierID sql.NullString
-	err := db.QueryRow(`SELECT points_balance,lifetime_points,tier_id::TEXT
-		FROM dsh_client_loyalty_accounts WHERE client_actor_id=$1`, actorID).
-		Scan(&account.PointsBalance, &account.LifetimePoints, &tierID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	if tierID.Valid && tierID.String != "" {
-		tier, tierErr := GetLoyaltyTier(db, tierID.String)
-		if tierErr != nil && !errors.Is(tierErr, ErrNotFound) {
-			return nil, tierErr
-		}
-		if tierErr == nil {
-			account.Tier = &tier
-		}
-	}
-	return &account, nil
-}
-
-func getActiveClientSubscription(db *sql.DB, actorID string) (*ClientSubscriptionEntitlement, error) {
-	var entitlement ClientSubscriptionEntitlement
-	var startsAt, endsAt sql.NullString
-	var planID string
-	err := db.QueryRow(`SELECT id::TEXT,status,wlt_subscription_reference,starts_at::TEXT,ends_at::TEXT,plan_id::TEXT
-		FROM dsh_client_subscriptions
-		WHERE client_actor_id=$1 AND status='active'
-		  AND (starts_at IS NULL OR starts_at <= NOW())
-		  AND (ends_at IS NULL OR ends_at > NOW())
-		ORDER BY starts_at DESC NULLS LAST LIMIT 1`, actorID).
-		Scan(&entitlement.ID, &entitlement.Status, &entitlement.WLTSubscriptionReference, &startsAt, &endsAt, &planID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	entitlement.StartsAt = nullableString(startsAt)
-	entitlement.EndsAt = nullableString(endsAt)
-	plan, err := GetSubscriptionPlan(db, planID)
-	if err != nil {
-		return nil, fmt.Errorf("load active subscription plan: %w", err)
-	}
-	entitlement.Plan = plan
-	return &entitlement, nil
-}
-
-func GetClientBenefits(db *sql.DB, actorID string) (ClientBenefits, error) {
-	tiers, err := ListLoyaltyTiers(db, true)
-	if err != nil {
-		return ClientBenefits{}, err
-	}
-	plans, err := ListSubscriptionPlans(db, true)
-	if err != nil {
-		return ClientBenefits{}, err
-	}
-	offers, err := ListPublishedPartnerOffers(db)
-	if err != nil {
-		return ClientBenefits{}, err
-	}
-	account, err := getClientLoyaltyAccount(db, actorID)
-	if err != nil {
-		return ClientBenefits{}, err
-	}
-	subscription, err := getActiveClientSubscription(db, actorID)
-	if err != nil {
-		return ClientBenefits{}, err
-	}
-	return ClientBenefits{
-		LoyaltyAccount:     account,
-		AvailableTiers:     tiers,
-		AvailablePlans:     plans,
-		ActiveSubscription: subscription,
-		Offers:             offers,
-	}, nil
 }

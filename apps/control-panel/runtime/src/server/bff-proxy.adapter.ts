@@ -159,7 +159,7 @@ export async function proxyControlPanelRequest(
     return jsonError(
       503,
       "BFF_UPSTREAM_NOT_CONFIGURED",
-      `Server-only upstream ${SERVICE_CONFIG[service].env} is required in production.`,
+      "The requested upstream service is not configured.",
     );
   }
 
@@ -188,11 +188,11 @@ export async function proxyControlPanelRequest(
       cache: "no-store",
       signal: AbortSignal.timeout(15_000),
     });
-  } catch (error) {
+  } catch {
     return jsonError(
       502,
       "BFF_UPSTREAM_UNAVAILABLE",
-      error instanceof Error ? error.message : "Upstream request failed.",
+      "The requested upstream service is temporarily unavailable.",
     );
   }
 

@@ -43,10 +43,11 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	clientID := "cart-price-test-client-" + suffix
 	domainID := "domain-" + suffix
 	productID := "prod-" + suffix
+	assortmentID := "assortment-" + suffix
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
-		VALUES ($1, $1, 'Cart Price Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true)`,
+		VALUES ($1, $1, 'Cart Price Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true)`,
 		storeID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
@@ -89,9 +90,23 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_store_assortments (id, store_id, master_product_id, unit_price, currency, available)
 		VALUES ($1, $2, $3, 25.50, 'USD', true)`,
-		"assortment-"+suffix, storeID, productID,
+		assortmentID, storeID, productID,
 	); err != nil {
 		t.Fatalf("failed to insert test store assortment: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_store_assortment_prices
+			(id, store_assortment_id, amount_minor, currency, effective_from)
+		VALUES ($1, $2, 2550, 'USD', NOW())`,
+		"price-"+suffix, assortmentID,
+	); err != nil {
+		t.Fatalf("failed to insert test assortment price: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_store_assortment_inventory
+			(store_assortment_id, policy_type, quantity, reserved_quantity)
+		VALUES ($1, 'quantity', 100, 0)`, assortmentID); err != nil {
+		t.Fatalf("failed to insert test assortment inventory: %v", err)
 	}
 
 	var cartID string
@@ -108,8 +123,8 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UpsertItem failed: %v", err)
 	}
-	if item.UnitPrice != 25.50 {
-		t.Fatalf("expected cart item to snapshot catalog unitPrice=25.50, got %v", item.UnitPrice)
+	if item.UnitPriceMinorUnits != 2550 {
+		t.Fatalf("expected cart item to snapshot catalog unitPriceMinorUnits=2550, got %v", item.UnitPriceMinorUnits)
 	}
 	if item.Currency != "USD" {
 		t.Fatalf("expected cart item to snapshot assortment currency=USD, got %q", item.Currency)
@@ -149,7 +164,7 @@ func TestComputeCheckoutSnapshotRejectsUnpricedItemDBIntegration(t *testing.T) {
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
-		VALUES ($1, $1, 'Cart Price Test Store Unpriced', 'active', 'SAN', 'SAN-1', 'serviceable', true)`,
+		VALUES ($1, $1, 'Cart Price Test Store Unpriced', 'published', 'SAN', 'SAN-1', 'serviceable', true)`,
 		storeID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
@@ -170,8 +185,9 @@ func TestComputeCheckoutSnapshotRejectsUnpricedItemDBIntegration(t *testing.T) {
 	}
 
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_cart_items (cart_id, product_id, product_name, price_reference, unit_price, currency, quantity)
-		VALUES ($1, 'unpriced-product', 'Unpriced Product', 'n/a', 0, 'USD', 1)`,
+		INSERT INTO dsh_cart_items
+			(cart_id, product_id, master_product_id, product_name, price_reference, unit_price_minor, currency, quantity)
+		VALUES ($1, 'unpriced-product', 'unpriced-product', 'Unpriced Product', 'n/a', 0, 'USD', 1)`,
 		cartID); err != nil {
 		t.Fatalf("failed to insert unpriced cart item: %v", err)
 	}
@@ -191,7 +207,7 @@ func TestComputeCheckoutSnapshotRejectsMixedCurrenciesDBIntegration(t *testing.T
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
-		VALUES ($1, $1, 'Cart Currency Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true)`, storeID); err != nil {
+		VALUES ($1, $1, 'Cart Currency Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true)`, storeID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
 	t.Cleanup(func() {
@@ -207,9 +223,10 @@ func TestComputeCheckoutSnapshotRejectsMixedCurrenciesDBIntegration(t *testing.T
 		t.Fatalf("failed to insert test cart: %v", err)
 	}
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_cart_items (cart_id, product_id, product_name, price_reference, unit_price, currency, quantity)
-		VALUES ($1, 'product-usd', 'USD Product', '10.00', 10, 'USD', 1),
-		       ($1, 'product-eur', 'EUR Product', '12.00', 12, 'EUR', 1)`, cartID); err != nil {
+		INSERT INTO dsh_cart_items
+			(cart_id, product_id, master_product_id, product_name, price_reference, unit_price_minor, currency, quantity)
+		VALUES ($1, 'product-usd', 'product-usd', 'USD Product', '10.00', 1000, 'USD', 1),
+		       ($1, 'product-eur', 'product-eur', 'EUR Product', '12.00', 1200, 'EUR', 1)`, cartID); err != nil {
 		t.Fatalf("failed to insert mixed-currency cart items: %v", err)
 	}
 

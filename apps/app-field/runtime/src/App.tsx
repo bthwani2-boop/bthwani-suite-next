@@ -1,9 +1,9 @@
 import { ActivityIndicator, Linking, Platform, StyleSheet, Text, View } from "react-native";
-
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
+
 import { DshFieldSurface } from "../../../../services/dsh/frontend/app-field";
 import type { DshFieldNavigationCommand } from "../../../../services/dsh/frontend/app-field/dsh-field.routes";
 import { DshFieldProfileCompletionScreen } from "../../../../services/dsh/frontend/app-field/account/DshFieldProfileCompletionScreen";
@@ -11,16 +11,20 @@ import { useDshMobilePushRegistration } from "../../../../services/dsh/frontend/
 import {
   WorkforceAccessGate,
   WorkforceProfileProvider,
+  useWorkforceProfile,
 } from "../../../../services/dsh/frontend/shared/workforce";
 import {
   configureIdentityDeviceFingerprintProvider,
   configureIdentitySession,
   configureIdentitySessionStorage,
   type SessionStorageAdapter,
+  resolveIdentityApiBaseUrl,
   useIdentitySession,
 } from "@bthwani/core-identity";
-import { resolveIdentityApiBaseUrl } from "../../../../services/dsh/frontend/shared/_kernel/identity-api-base-url";
 import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
+import { fetchWorkforceReadiness } from "../../../../services/dsh/frontend/shared/workforce/workforce-me.api";
+import type { ReadinessGate } from "../../../../services/dsh/frontend/shared/workforce/workforce.types";
+import { ReadinessGateScreen } from "./features/readiness/ReadinessGateScreen";
 
 const FIELD_APP_SCHEME = "bthwani-field-next";
 const FIELD_DEVICE_FINGERPRINT_KEY = "bthwani.field.device-fingerprint.v1";
@@ -47,7 +51,6 @@ if (Platform.OS !== "web") {
 }
 configureIdentitySession(resolveIdentityApiBaseUrl());
 
-// URL scheme: bthwani-field-next://route?storeId=X&visitId=Y&partnerId=Z
 function decodeQueryValue(value: string): string {
   return decodeURIComponent(value.replaceAll("+", " "));
 }
@@ -110,6 +113,54 @@ type InstallationState =
   | { readonly kind: "ready"; readonly installationId: string }
   | { readonly kind: "error" };
 
+function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
+  const workforce = useWorkforceProfile();
+  const [readiness, setReadiness] = useState<ReadinessGate | null>(null);
+
+  const fetchReadiness = async () => {
+    if (workforce.state.kind === "ready") {
+      try {
+        const gate = await fetchWorkforceReadiness(workforce.state.me.actorId);
+        setReadiness(gate);
+      } catch (err) {
+        setReadiness({
+          actorId: workforce.state.me.actorId,
+          workforceKind: workforce.state.me.workforceKind,
+          status: "BLOCKED",
+          blockerReasons: ["ELIGIBILITY_UNAVAILABLE"],
+          checkedAt: new Date().toISOString(),
+        });
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchReadiness();
+  }, [workforce.state]);
+
+  if (!readiness) {
+    return (
+      <View style={styles.installationState}>
+        <ActivityIndicator accessibilityLabel="جارٍ التحقق من الجاهزية..." />
+      </View>
+    );
+  }
+
+  if (readiness.status === "BLOCKED") {
+    return <ReadinessGateScreen readiness={readiness} onRefresh={fetchReadiness} />;
+  }
+
+  if (readiness.status === "ALLOWED") {
+    return <>{children}</>;
+  }
+
+  return (
+    <View style={styles.installationState}>
+      <Text style={styles.installationError}>حالة جاهزية غير معروفة. يرجى المحاولة مرة أخرى.</Text>
+    </View>
+  );
+}
+
 function AppContent() {
   const identity = useIdentitySession();
   useDshMobilePushRegistration(identity.state.kind, "app-field", FIELD_APP_SCHEME);
@@ -120,7 +171,7 @@ function AppContent() {
   useEffect(() => {
     let active = true;
     const installationPromise = Platform.OS === "web"
-      ? Promise.resolve(`field-web:${Crypto.randomUUID()}`)
+      ? Promise.resolve("field-web")
       : getOrCreateFieldDeviceFingerprint();
 
     void installationPromise
@@ -137,8 +188,6 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    // Governed notification actionUrl payloads are handled by
-    // useDshMobilePushRegistration. Only the application URL scheme is accepted here.
     void Linking.getInitialURL().then((url) => {
       if (url) {
         const cmd = parseDeepLink(url);
@@ -183,10 +232,12 @@ function AppContent() {
             onLogout={logout}
             incompleteContent={<DshFieldProfileCompletionScreen onLogout={logout} />}
           >
-            <DshFieldSurface
-              {...(navCommand ? { command: navCommand } : {})}
-              installationId={installationState.installationId}
-            />
+            <UnifiedReadinessWrapper>
+              <DshFieldSurface
+                {...(navCommand ? { command: navCommand } : {})}
+                installationId={installationState.installationId}
+              />
+            </UnifiedReadinessWrapper>
           </WorkforceAccessGate>
         </IdentitySessionGate>
       </View>

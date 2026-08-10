@@ -38,9 +38,9 @@ func TestGovernedSubmissionRequiresWltPayoutReferenceDBIntegration(t *testing.T)
 	}
 
 	_, _, err := TransitionStatusGoverned(context.Background(), db, partner.ID, TransitionInput{
-		ToStatus: StatusSubmitted,
-		ActorID: "field-local-001",
-		ActorSurface: "app-field",
+		ToStatus:       StatusSubmitted,
+		ActorID:        "field-local-001",
+		ActorSurface:   "app-field",
 		IdempotencyKey: "submit-payout-required",
 	}, partner.Version)
 	if !errors.Is(err, ErrReadinessGate) {
@@ -55,8 +55,9 @@ func TestGovernedTransitionReplaysSameEventDBIntegration(t *testing.T) {
 	if _, err := db.Exec(`
 		UPDATE dsh_partners
 		SET payout_destination_id = 'wpd-test-replay',
-		    masked_account_number = '*****1234',
-		    bank_account_number = '', bank_iban = '', payout_mobile_number = ''
+		    destination_method = 'bank',
+		    masked_destination_reference = '*****1234',
+		    destination_verification_status = 'unverified'
 		WHERE id = $1`, partner.ID); err != nil {
 		t.Fatal(err)
 	}
@@ -68,12 +69,12 @@ func TestGovernedTransitionReplaysSameEventDBIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	input := TransitionInput{
-		ToStatus: StatusSubmitted,
-		Reason: "governed replay",
-		ActorID: "field-local-001",
-		ActorSurface: "app-field",
+		ToStatus:       StatusSubmitted,
+		Reason:         "governed replay",
+		ActorID:        "field-local-001",
+		ActorSurface:   "app-field",
 		IdempotencyKey: "partner-submit-replay-key",
-		CorrelationID: "partner-submit-replay-correlation",
+		CorrelationID:  "partner-submit-replay-correlation",
 	}
 	firstPartner, firstEvent, err := TransitionStatusGoverned(context.Background(), db, partner.ID, input, partner.Version)
 	if err != nil {
@@ -91,36 +92,33 @@ func TestGovernedTransitionReplaysSameEventDBIntegration(t *testing.T) {
 func TestUpdatePartnerGovernedPersistsOnlyWltReferenceDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	partner := createPartnerFixture(t, db, "PAYOUT-CACHE")
-	holderMatches := true
 	updated, err := UpdatePartnerGoverned(db, partner.ID, UpdatePartnerInput{
-		DisplayName: partner.DisplayName,
-		PayoutDestinationID: "wpd-governed-cache",
-		MaskedAccountNumber: "*****4321",
-		MaskedIBAN: "********8765",
-		MaskedMobileNumber: "*******0002",
-		BeneficiaryName: "Masked Owner",
-		BankName: "Governed Bank",
-		SettlementPreference: "bank_transfer",
-		BankAccountHolderMatchesOwner: &holderMatches,
-		BankAccountNumber: "must-not-persist",
-		BankIBAN: "must-not-persist",
-		PayoutMobileNumber: "must-not-persist",
+		DisplayName:                   partner.DisplayName,
+		PayoutDestinationID:           "wpd-governed-cache",
+		DestinationMethod:             "bank",
+		MaskedDestinationReference:    "*****4321",
+		DestinationVerificationStatus: "verified",
+		BeneficiaryName:               "Masked Owner",
 	}, partner.Version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if updated.BankAccountNumber != "*****4321" {
-		t.Fatalf("surface response did not use masked account value: %q", updated.BankAccountNumber)
+	if updated.MaskedDestinationReference != "*****4321" {
+		t.Fatalf("surface response did not use masked account value: %q", updated.MaskedDestinationReference)
 	}
-	var account, iban, mobile, reference string
+	// Raw bank_account_number/bank_iban/payout_mobile_number columns were
+	// dropped from dsh_partners entirely (dsh-963, D3 remediation) -- the
+	// schema itself now guarantees no raw payout data can be persisted, so
+	// only the WLT reference needs to be verified here.
+	var reference string
 	if err := db.QueryRow(`
-		SELECT bank_account_number, bank_iban, payout_mobile_number, payout_destination_id
+		SELECT payout_destination_id
 		FROM dsh_partners WHERE id = $1`, partner.ID,
-	).Scan(&account, &iban, &mobile, &reference); err != nil {
+	).Scan(&reference); err != nil {
 		t.Fatal(err)
 	}
-	if account != "" || iban != "" || mobile != "" || reference != "wpd-governed-cache" {
-		t.Fatalf("DSH persisted raw payout data: account=%q iban=%q mobile=%q ref=%q", account, iban, mobile, reference)
+	if reference != "wpd-governed-cache" {
+		t.Fatalf("DSH did not persist the WLT payout reference: ref=%q", reference)
 	}
 }
 
@@ -129,14 +127,40 @@ func TestCreateFieldVisitGovernedBindsFirstStoreDBIntegration(t *testing.T) {
 	partner := createPartnerFixture(t, db, "VISIT-STORE")
 	wantStoreID := partnerStoreID(t, db, partner.ID)
 	visit, err := CreateFieldVisitGoverned(db, CreateFieldVisitInput{
-		PartnerID: partner.ID,
+		PartnerID:    partner.ID,
 		FieldActorID: "field-local-001",
-		VisitNotes: "evidence-bearing visit",
+		VisitNotes:   "evidence-bearing visit",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if visit.StoreID != wantStoreID {
 		t.Fatalf("field visit store = %q, want %q", visit.StoreID, wantStoreID)
+	}
+}
+
+// TestPartnerRawPayoutColumnsStayDroppedDBIntegration locks the D3/dsh-963
+// ownership boundary at the schema level: WLT is the sole owner of raw payout
+// data, and DSH keeps only the reference plus masked display strings. A test
+// that merely checks "we did not write raw values" passes again the moment
+// someone re-adds the columns, so this asserts the columns themselves are
+// absent -- the only form of the check that cannot be silently regressed.
+func TestPartnerRawPayoutColumnsStayDroppedDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	for _, column := range []string{"bank_account_number", "bank_iban", "payout_mobile_number"} {
+		var present bool
+		if err := db.QueryRow(`
+			SELECT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_schema = 'public'
+				  AND table_name = 'dsh_partners'
+				  AND column_name = $1
+			)`, column,
+		).Scan(&present); err != nil {
+			t.Fatal(err)
+		}
+		if present {
+			t.Fatalf("dsh_partners.%s is back; raw payout data belongs to WLT only (see dsh-963)", column)
+		}
 	}
 }

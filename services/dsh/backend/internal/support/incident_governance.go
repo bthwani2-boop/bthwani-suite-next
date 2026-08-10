@@ -40,7 +40,7 @@ type GovernedIncidentTransitionInput struct {
 
 func validIncidentStatus(status IncidentStatus) bool {
 	switch status {
-	case IncidentOpen, IncidentMonitoring, IncidentResolved:
+	case IncidentOpen, IncidentTriaged, IncidentContaining, IncidentMitigating, IncidentMonitoring, IncidentResolved, IncidentClosed:
 		return true
 	default:
 		return false
@@ -71,11 +71,19 @@ func validIncidentTransition(from, to IncidentStatus) bool {
 	}
 	switch from {
 	case IncidentOpen:
+		return to == IncidentTriaged || to == IncidentResolved || to == IncidentClosed
+	case IncidentTriaged:
+		return to == IncidentContaining || to == IncidentMitigating || to == IncidentMonitoring || to == IncidentResolved
+	case IncidentContaining:
+		return to == IncidentMitigating || to == IncidentMonitoring || to == IncidentResolved
+	case IncidentMitigating:
 		return to == IncidentMonitoring || to == IncidentResolved
 	case IncidentMonitoring:
-		return to == IncidentOpen || to == IncidentResolved
+		return to == IncidentResolved || to == IncidentOpen || to == IncidentTriaged
 	case IncidentResolved:
-		return to == IncidentMonitoring
+		return to == IncidentClosed || to == IncidentMonitoring || to == IncidentOpen
+	case IncidentClosed:
+		return to == IncidentOpen // reopened
 	default:
 		return false
 	}
@@ -85,14 +93,22 @@ func incidentEventType(from, to IncidentStatus) string {
 	if from == to {
 		return "status_changed"
 	}
-	if to == IncidentResolved {
-		return "resolved"
-	}
-	if from == IncidentResolved {
+	if from == IncidentClosed && to != IncidentClosed {
 		return "reopened"
 	}
-	if to == IncidentMonitoring {
+	switch to {
+	case IncidentTriaged:
+		return "triaged"
+	case IncidentContaining:
+		return "containing_started"
+	case IncidentMitigating:
+		return "mitigating_started"
+	case IncidentMonitoring:
 		return "monitoring_started"
+	case IncidentResolved:
+		return "resolved"
+	case IncidentClosed:
+		return "closed"
 	}
 	return "status_changed"
 }
@@ -257,6 +273,23 @@ func UpdateGovernedIncident(db *sql.DB, input GovernedIncidentTransitionInput) (
 		postmortem = currentPostmortem
 	}
 
+	if input.Status == IncidentClosed {
+		if postmortem == "" {
+			return Incident{}, errors.New("incident cannot be closed without a postmortem URL")
+		}
+		var openTasks int
+		err = tx.QueryRow(`
+			SELECT COUNT(*) FROM dsh_incident_tasks
+			WHERE incident_id = $1::uuid AND status IN ('pending', 'in_progress')
+		`, input.IncidentID).Scan(&openTasks)
+		if err != nil {
+			return Incident{}, err
+		}
+		if openTasks > 0 {
+			return Incident{}, errors.New("incident cannot be closed with unresolved tasks")
+		}
+	}
+
 	if currentStatus != input.Status || currentPostmortem != postmortem {
 		_, err = tx.Exec(`
 			UPDATE dsh_incidents
@@ -333,4 +366,95 @@ func ListIncidentEvents(db *sql.DB, incidentID string, limit int) ([]IncidentEve
 		items = append(items, item)
 	}
 	return items, rows.Err()
+}
+
+func AddIncidentTask(db *sql.DB, incidentID string, input CreateIncidentTaskInput) (IncidentTask, error) {
+	if db == nil || strings.TrimSpace(incidentID) == "" {
+		return IncidentTask{}, ErrInvalid
+	}
+	input.AssigneeID = strings.TrimSpace(input.AssigneeID)
+	input.Description = strings.TrimSpace(input.Description)
+	if input.AssigneeID == "" || input.Description == "" || input.AssigneeRole == "" {
+		return IncidentTask{}, ErrInvalid
+	}
+
+	row := db.QueryRow(`
+		INSERT INTO dsh_incident_tasks (incident_id, assignee_id, assignee_role, description)
+		VALUES ($1::uuid, $2, $3, $4)
+		RETURNING id, incident_id, assignee_id, assignee_role, description, status, COALESCE(evidence_url,''), created_at, updated_at`,
+		incidentID, input.AssigneeID, input.AssigneeRole, input.Description,
+	)
+	var t IncidentTask
+	err := row.Scan(&t.ID, &t.IncidentID, &t.AssigneeID, &t.AssigneeRole, &t.Description, &t.Status, &t.EvidenceURL, &t.CreatedAt, &t.UpdatedAt)
+	return t, err
+}
+
+func UpdateIncidentTaskStatus(db *sql.DB, taskID string, input UpdateIncidentTaskInput) (IncidentTask, error) {
+	if db == nil || strings.TrimSpace(taskID) == "" {
+		return IncidentTask{}, ErrInvalid
+	}
+	input.EvidenceURL = strings.TrimSpace(input.EvidenceURL)
+	if input.Status == "" {
+		return IncidentTask{}, ErrInvalid
+	}
+	if input.Status == TaskCompleted && input.EvidenceURL == "" {
+		return IncidentTask{}, errors.New("completed task requires evidence URL")
+	}
+
+	row := db.QueryRow(`
+		UPDATE dsh_incident_tasks
+		SET status = $2, evidence_url = NULLIF($3, ''), updated_at = NOW()
+		WHERE id = $1::uuid
+		RETURNING id, incident_id, assignee_id, assignee_role, description, status, COALESCE(evidence_url,''), created_at, updated_at`,
+		taskID, input.Status, input.EvidenceURL,
+	)
+	var t IncidentTask
+	err := row.Scan(&t.ID, &t.IncidentID, &t.AssigneeID, &t.AssigneeRole, &t.Description, &t.Status, &t.EvidenceURL, &t.CreatedAt, &t.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return IncidentTask{}, ErrNotFound
+	}
+	return t, err
+}
+
+func AddIncidentCommunication(db *sql.DB, incidentID string, input CreateIncidentCommunicationInput) (IncidentCommunication, error) {
+	if db == nil || strings.TrimSpace(incidentID) == "" {
+		return IncidentCommunication{}, ErrInvalid
+	}
+	input.AuthorID = strings.TrimSpace(input.AuthorID)
+	input.Body = strings.TrimSpace(input.Body)
+	if input.AuthorID == "" || input.Body == "" {
+		return IncidentCommunication{}, ErrInvalid
+	}
+
+	row := db.QueryRow(`
+		INSERT INTO dsh_incident_communications (incident_id, author_id, body, is_public_safe)
+		VALUES ($1::uuid, $2, $3, $4)
+		RETURNING id, incident_id, author_id, body, is_public_safe, created_at`,
+		incidentID, input.AuthorID, input.Body, input.IsPublicSafe,
+	)
+	var c IncidentCommunication
+	err := row.Scan(&c.ID, &c.IncidentID, &c.AuthorID, &c.Body, &c.IsPublicSafe, &c.CreatedAt)
+	return c, err
+}
+
+func AddIncidentEntity(db *sql.DB, incidentID string, entityType string, entityID string) (IncidentEntity, error) {
+	if db == nil || strings.TrimSpace(incidentID) == "" {
+		return IncidentEntity{}, ErrInvalid
+	}
+	entityType = strings.TrimSpace(entityType)
+	entityID = strings.TrimSpace(entityID)
+	if entityType == "" || entityID == "" {
+		return IncidentEntity{}, ErrInvalid
+	}
+
+	_, err := db.Exec(`
+		INSERT INTO dsh_incident_entities (incident_id, entity_type, entity_id)
+		VALUES ($1::uuid, $2, $3)
+		ON CONFLICT (incident_id, entity_type, entity_id) DO NOTHING`,
+		incidentID, entityType, entityID,
+	)
+	if err != nil {
+		return IncidentEntity{}, err
+	}
+	return IncidentEntity{IncidentID: incidentID, EntityType: entityType, EntityID: entityID}, nil
 }

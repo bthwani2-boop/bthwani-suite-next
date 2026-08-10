@@ -178,7 +178,6 @@ function AuthenticatedCaptainSurface({
           inboxState={state.inboxState}
           captainRuntimeId={captainId}
           captainPodRequired={derived.captainPodRequired}
-          captainCollectsCod={derived.captainCollectsCod}
           isStoreCourierMode={derived.isStoreCourierMode}
           isCaptainAvailable={derived.isCaptainAvailable}
           selectedSupportScreen={state.selectedSupportScreen}

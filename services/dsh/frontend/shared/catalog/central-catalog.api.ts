@@ -11,6 +11,11 @@ import type {
   ClientVisibleCatalogResponse,
   CatalogAsset,
   CatalogAssetLink,
+  StoreAssortmentInput,
+  StoreAssortmentInventoryInput,
+  StoreAssortmentInventory,
+  StoreAssortmentPriceInput,
+  StoreAssortmentPrice,
 } from "./central-catalog.types";
 
 const baseUrl = resolveDshApiBaseUrl();
@@ -120,6 +125,28 @@ export async function updateCatalogNode(
   const resp = await request<{ node: CentralCatalogNode }>(`/dsh/operator/catalog/nodes/${encodeURIComponent(nodeId)}`, {
     method: "PATCH",
     body: input,
+  });
+  return resp.node;
+}
+
+export async function moveCatalogNode(nodeId: string, targetParentId: string | null): Promise<CentralCatalogNode> {
+  const resp = await request<{ node: CentralCatalogNode }>(`/dsh/operator/catalog/nodes/${encodeURIComponent(nodeId)}/move`, {
+    method: "POST",
+    body: { targetParentId },
+  });
+  return resp.node;
+}
+
+export async function mergeCatalogNode(nodeId: string, targetNodeId: string): Promise<void> {
+  await request<{ success: boolean }>(`/dsh/operator/catalog/nodes/${encodeURIComponent(nodeId)}/merge`, {
+    method: "POST",
+    body: { targetNodeId },
+  });
+}
+
+export async function deprecateCatalogNode(nodeId: string): Promise<CentralCatalogNode> {
+  const resp = await request<{ node: CentralCatalogNode }>(`/dsh/operator/catalog/nodes/${encodeURIComponent(nodeId)}/deprecate`, {
+    method: "POST",
   });
   return resp.node;
 }
@@ -245,6 +272,7 @@ export async function decideProductProposal(
     readonly decision: "under_review" | "adopted" | "rejected" | "needs_fix";
     readonly reviewNote: string;
     readonly adoptedMasterProductId?: string | null;
+    readonly expectedVersion?: number;
   },
 ): Promise<ProductProposal> {
   const resp = await request<{ proposal: ProductProposal }>(`/dsh/operator/catalog/product-proposals/${encodeURIComponent(proposalId)}/decision`, {
@@ -261,6 +289,8 @@ export async function transitionProductProposal(
     readonly note: string;
     readonly adoptedMasterProductId?: string | null | undefined;
     readonly createMasterProduct?: boolean | undefined;
+    readonly mergeData?: boolean | undefined;
+    readonly expectedVersion?: number | undefined;
   },
 ): Promise<ProductProposal> {
   const resp = await request<{ proposal: ProductProposal }>(`/dsh/operator/catalog/product-proposals/${encodeURIComponent(proposalId)}/transition`, {
@@ -355,23 +385,10 @@ export async function fetchPartnerMasterProducts(query?: {
   return resp.masterProducts;
 }
 
-export async function fetchPartnerStoreAssortment(storeId: string): Promise<readonly StoreAssortment[]> {
-  const resp = await request<{ assortment: readonly StoreAssortment[] }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment`);
-  return resp.assortment;
-}
-
 export async function upsertPartnerStoreAssortment(
   storeId: string,
   masterProductId: string,
-  input: {
-    readonly unitPrice: number;
-    readonly currency: string;
-    readonly available: boolean;
-    readonly stockStatus: "in_stock" | "low_stock" | "out_of_stock";
-    readonly localNote: string;
-    readonly customImageObjectKey: string | null;
-    readonly publicationStatus: string;
-  },
+  input: StoreAssortmentInput,
 ): Promise<StoreAssortment> {
   const resp = await request<{ assortment: StoreAssortment }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}`, {
     method: "PUT",
@@ -379,6 +396,37 @@ export async function upsertPartnerStoreAssortment(
   });
   return resp.assortment;
 }
+
+export async function upsertPartnerStoreAssortmentInventory(
+  storeId: string,
+  masterProductId: string,
+  input: StoreAssortmentInventoryInput,
+): Promise<StoreAssortmentInventory> {
+  const resp = await request<{ inventory: StoreAssortmentInventory }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/inventory`, {
+    method: "PUT",
+    body: input,
+  });
+  return resp.inventory;
+}
+
+export async function schedulePartnerStoreAssortmentPrice(
+  storeId: string,
+  masterProductId: string,
+  input: StoreAssortmentPriceInput,
+): Promise<StoreAssortmentPrice> {
+  const resp = await request<{ priceSchedule: StoreAssortmentPrice }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/prices/schedule`, {
+    method: "POST",
+    body: input,
+  });
+  return resp.priceSchedule;
+}
+
+export async function fetchPartnerStoreAssortment(storeId: string): Promise<readonly StoreAssortment[]> {
+  const resp = await request<{ assortment: readonly StoreAssortment[] }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment`);
+  return resp.assortment;
+}
+
+
 
 export async function createPartnerProductProposal(input: {
   readonly proposedNameAr: string;
@@ -388,11 +436,22 @@ export async function createPartnerProductProposal(input: {
   readonly brand: string;
   readonly barcode: string | null;
   readonly imageObjectKey: string | null;
-  readonly sourceSurface: "app-partner";
+  readonly targetMasterProductId?: string | undefined;
+  readonly baseVersion?: number | undefined;
+  readonly duplicateCandidates?: readonly string[] | undefined;
+  readonly sourceSurface: "app-partner" | "control-panel" | "app-field";
 }): Promise<ProductProposal> {
   const resp = await request<{ proposal: ProductProposal }>("/dsh/partner/catalog/product-proposals", {
     method: "POST",
     body: input,
+  });
+  return resp.proposal;
+}
+
+export async function withdrawPartnerProductProposal(proposalId: string, expectedVersion: number): Promise<ProductProposal> {
+  const resp = await request<{ proposal: ProductProposal }>(`/dsh/partner/catalog/product-proposals/${encodeURIComponent(proposalId)}/withdraw`, {
+    method: "POST",
+    body: { expectedVersion },
   });
   return resp.proposal;
 }
@@ -467,11 +526,22 @@ export async function createFieldProductProposal(partnerId: string, input: {
   readonly brand: string;
   readonly barcode: string | null;
   readonly imageObjectKey: string | null;
+  readonly targetMasterProductId?: string | undefined;
+  readonly baseVersion?: number | undefined;
+  readonly duplicateCandidates?: readonly string[] | undefined;
   readonly sourceSurface: "app-field";
 }): Promise<ProductProposal> {
   const resp = await request<{ proposal: ProductProposal }>(`/dsh/field/partners/${encodeURIComponent(partnerId)}/catalog/product-proposals`, {
     method: "POST",
     body: input,
+  });
+  return resp.proposal;
+}
+
+export async function withdrawFieldProductProposal(partnerId: string, proposalId: string, expectedVersion: number): Promise<ProductProposal> {
+  const resp = await request<{ proposal: ProductProposal }>(`/dsh/field/partners/${encodeURIComponent(partnerId)}/catalog/product-proposals/${encodeURIComponent(proposalId)}/withdraw`, {
+    method: "POST",
+    body: { expectedVersion },
   });
   return resp.proposal;
 }
@@ -563,6 +633,21 @@ export async function reviewCatalogAsset(assetId: string, input: {
   const resp = await request<{ asset: CatalogAsset }>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}/review`, {
     method: "POST",
     body: input,
+  });
+  return resp.asset;
+}
+
+export async function cleanupOrphanCatalogAssets(): Promise<number> {
+  const resp = await request<{ deletedCount: number }>("/dsh/operator/catalog/assets/cleanup-orphans", {
+    method: "POST",
+  });
+  return resp.deletedCount;
+}
+
+export async function simulateAssetScan(assetId: string, targetStatus: string): Promise<CatalogAsset> {
+  const resp = await request<{ asset: CatalogAsset }>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}/simulate-scan`, {
+    method: "POST",
+    body: { targetStatus },
   });
   return resp.asset;
 }

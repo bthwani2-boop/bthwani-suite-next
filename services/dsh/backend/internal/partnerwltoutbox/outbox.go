@@ -31,13 +31,13 @@ type Event struct {
 }
 
 type partnerReadback struct {
-	OperatorContextID          string
-	PartnerID         string
-	PayoutDestination string
-	MaskedAccount     string
-	MaskedIBAN        string
-	MaskedMobile      string
-	ActivationStatus  string
+	OperatorContextID             string
+	PartnerID                     string
+	PayoutDestination             string
+	DestinationMethod             string
+	MaskedDestinationReference    string
+	DestinationVerificationStatus string
+	ActivationStatus              string
 }
 
 // RunWorker drains durable partner-to-WLT events and periodically compares DSH
@@ -192,9 +192,9 @@ func Reconcile(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 	rows, err := db.QueryContext(ctx, `
 		SELECT btrim(operator_context_id), id,
 		       COALESCE(payout_destination_id,''),
-		       COALESCE(masked_account_number,''),
-		       COALESCE(masked_iban,''),
-		       COALESCE(masked_mobile_number,''),
+		       COALESCE(destination_method,''),
+		       COALESCE(masked_destination_reference,''),
+		       COALESCE(destination_verification_status,''),
 		       activation_status
 		FROM dsh_partners
 		WHERE btrim(operator_context_id) <> ''
@@ -212,9 +212,9 @@ func Reconcile(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 			&partner.OperatorContextID,
 			&partner.PartnerID,
 			&partner.PayoutDestination,
-			&partner.MaskedAccount,
-			&partner.MaskedIBAN,
-			&partner.MaskedMobile,
+			&partner.DestinationMethod,
+			&partner.MaskedDestinationReference,
+			&partner.DestinationVerificationStatus,
 			&partner.ActivationStatus,
 		); err != nil {
 			return err
@@ -248,9 +248,9 @@ func Reconcile(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 			issue = "dsh_reference_missing"
 		case partner.PayoutDestination != ref.ID:
 			issue = "reference_mismatch"
-		case partner.MaskedAccount != ref.MaskedAccountNumber ||
-			partner.MaskedIBAN != ref.MaskedIBAN ||
-			partner.MaskedMobile != ref.MaskedMobileNumber:
+		case partner.DestinationMethod != ref.DestinationMethod ||
+			partner.MaskedDestinationReference != ref.MaskedDestinationReference ||
+			partner.DestinationVerificationStatus != ref.DestinationVerificationStatus:
 			issue = "masked_readback_mismatch"
 		}
 		if issue == "" {
@@ -267,31 +267,31 @@ func Reconcile(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 }
 
 func upsertCase(ctx context.Context, db *sql.DB, partner partnerReadback, issue string, ref *wlt.PayoutDestinationRef) error {
-	var wltID, account, iban, mobile string
+	var wltID, method, reference, verificationStatus string
 	if ref != nil {
 		wltID = ref.ID
-		account = ref.MaskedAccountNumber
-		iban = ref.MaskedIBAN
-		mobile = ref.MaskedMobileNumber
+		method = ref.DestinationMethod
+		reference = ref.MaskedDestinationReference
+		verificationStatus = ref.DestinationVerificationStatus
 	}
 	_, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_partner_wlt_reconciliation_cases (
 			partner_id, issue_type, dsh_payout_destination_id,
-			wlt_payout_destination_id, wlt_masked_account_number,
-			wlt_masked_iban, wlt_masked_mobile_number
+			wlt_payout_destination_id, wlt_destination_method,
+			wlt_masked_destination_reference, wlt_destination_verification_status
 		)
 		SELECT $1,$2,$3,$4,$5,$6,$7
 		WHERE EXISTS (SELECT 1 FROM dsh_partners WHERE id=$1 AND operator_context_id=$8)
 		ON CONFLICT (partner_id, issue_type) DO UPDATE SET
 			dsh_payout_destination_id = EXCLUDED.dsh_payout_destination_id,
 			wlt_payout_destination_id = EXCLUDED.wlt_payout_destination_id,
-			wlt_masked_account_number = EXCLUDED.wlt_masked_account_number,
-			wlt_masked_iban = EXCLUDED.wlt_masked_iban,
-			wlt_masked_mobile_number = EXCLUDED.wlt_masked_mobile_number,
+			wlt_destination_method = EXCLUDED.wlt_destination_method,
+			wlt_masked_destination_reference = EXCLUDED.wlt_masked_destination_reference,
+			wlt_destination_verification_status = EXCLUDED.wlt_destination_verification_status,
 			status = 'open', resolved_at = NULL, resolution_note = '',
 			last_detected_at = now()`,
 		partner.PartnerID, issue, partner.PayoutDestination,
-		wltID, account, iban, mobile, partner.OperatorContextID,
+		wltID, method, reference, verificationStatus, partner.OperatorContextID,
 	)
 	return err
 }

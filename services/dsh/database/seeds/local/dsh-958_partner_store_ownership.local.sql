@@ -16,35 +16,35 @@ INSERT INTO dsh_partners (
         'prt_partner_local_002', 'local-dsh', 'مؤسسة مخبز السبعين', 'Al Sabeen Bakery Est', 'مخبز السبعين',
         'commercial_register', 'YE-CR-LOCAL-BAKERY-002', 'محمد السبعيني',
         '+967771000102', '', 'bakery.partner@local.test', 'bakery',
-        'client_visible', 'field-local-001', 'app-field',
+        'client_visible', '@@FIELD_ACTOR_ID@@', 'app-field',
         'شريك محلي مستقل لمخبز السبعين', 8, NOW() - INTERVAL '2 days', NOW()
     ),
     (
         'prt_partner_local_003', 'local-dsh', 'مؤسسة سوق شارع تعز', 'Taiz Street Market Est', 'سوق شارع تعز',
         'commercial_register', 'YE-CR-LOCAL-MARKET-003', 'علي التعزي',
         '+967771000103', '', 'taiz.market@local.test', 'grocery',
-        'client_visible', 'field-local-001', 'app-field',
+        'client_visible', '@@FIELD_ACTOR_ID@@', 'app-field',
         'شريك محلي مستقل لسوق شارع تعز', 8, NOW() - INTERVAL '2 days', NOW()
     ),
     (
         'prt_partner_local_005', 'local-dsh', 'مؤسسة مطعم المدينة القديمة', 'Old City Restaurant Est', 'مطعم المدينة القديمة',
         'commercial_register', 'YE-CR-LOCAL-RESTAURANT-005', 'أحمد الصنعاني',
         '+967771000105', '', 'oldcity.restaurant@local.test', 'restaurant',
-        'client_visible', 'field-local-001', 'app-field',
+        'client_visible', '@@FIELD_ACTOR_ID@@', 'app-field',
         'شريك محلي مستقل لمطعم المدينة القديمة', 8, NOW() - INTERVAL '2 days', NOW()
     ),
     (
         'prt_partner_local_006', 'local-dsh', 'مؤسسة صيدلية معين', 'Maeen Pharmacy Est', 'صيدلية معين',
         'commercial_register', 'YE-CR-LOCAL-PHARMACY-006', 'سامي معين',
         '+967771000106', '', 'maeen.pharmacy@local.test', 'pharmacy',
-        'client_visible', 'field-local-001', 'app-field',
+        'client_visible', '@@FIELD_ACTOR_ID@@', 'app-field',
         'شريك محلي مستقل لصيدلية معين', 8, NOW() - INTERVAL '2 days', NOW()
     ),
     (
         'prt_partner_local_007', 'local-dsh', 'مؤسسة إلكترونيات المستقبل', 'Future Electronics Est', 'إلكترونيات المستقبل',
         'commercial_register', 'YE-CR-LOCAL-ELECTRONICS-007', 'خالد المستقبل',
         '+967771000107', '', 'future.electronics@local.test', 'default',
-        'client_visible', 'field-local-001', 'app-field',
+        'client_visible', '@@FIELD_ACTOR_ID@@', 'app-field',
         'شريك محلي مستقل لإلكترونيات المستقبل', 8, NOW() - INTERVAL '2 days', NOW()
     )
 ON CONFLICT (id) DO UPDATE SET
@@ -62,28 +62,8 @@ ON CONFLICT (id) DO UPDATE SET
     notes = EXCLUDED.notes,
     updated_at = NOW();
 
-INSERT INTO dsh_partner_brands (
-    id, operator_context_id, partner_id, name_ar, name_en, category, status
-) VALUES
-    ('pbr_local_haddah',      'local-dsh', 'prt_partner_local_001', 'أسواق حدة المركزية', 'Haddah Central Market', 'grocery', 'active'),
-    ('pbr_local_sabeen',      'local-dsh', 'prt_partner_local_002', 'مخبز السبعين', 'Al Sabeen Bakery', 'bakery', 'active'),
-    ('pbr_local_taiz_market', 'local-dsh', 'prt_partner_local_003', 'سوق شارع تعز', 'Taiz Street Market', 'grocery', 'active'),
-    ('pbr_local_old_city',    'local-dsh', 'prt_partner_local_005', 'مطعم المدينة القديمة', 'Old City Restaurant', 'restaurant', 'active'),
-    ('pbr_local_maeen',       'local-dsh', 'prt_partner_local_006', 'صيدلية معين', 'Maeen Pharmacy', 'pharmacy', 'active'),
-    ('pbr_local_electronics', 'local-dsh', 'prt_partner_local_007', 'إلكترونيات المستقبل', 'Future Electronics', 'electronics', 'active')
-ON CONFLICT (id) DO UPDATE SET
-    operator_context_id = EXCLUDED.operator_context_id,
-    partner_id = EXCLUDED.partner_id,
-    name_ar = EXCLUDED.name_ar,
-    name_en = EXCLUDED.name_en,
-    category = EXCLUDED.category,
-    status = EXCLUDED.status,
-    version = dsh_partner_brands.version + 1,
-    updated_at = NOW();
-
 UPDATE dsh_stores
 SET partner_id = 'prt_partner_local_001',
-    brand_id = 'pbr_local_haddah',
     updated_at = NOW()
 WHERE id = 'store-test-grocery'
   AND operator_context_id = 'local-dsh';
@@ -93,21 +73,20 @@ WHERE id = 'store-test-grocery'
 -- every changed store and rejects the transaction if one is missing.
 SELECT set_config('bthwani.governed_store_partner_transfer', 'on', true);
 
-WITH transfer_plan(store_id, to_partner_id, brand_id) AS (
+WITH transfer_plan(store_id, to_partner_id) AS (
     VALUES
-        ('store-1002', 'prt_partner_local_002', 'pbr_local_sabeen'),
-        ('store-1003', 'prt_partner_local_003', 'pbr_local_taiz_market'),
-        ('store-1005', 'prt_partner_local_005', 'pbr_local_old_city'),
-        ('store-1006', 'prt_partner_local_006', 'pbr_local_maeen'),
-        ('store-test-electronics', 'prt_partner_local_007', 'pbr_local_electronics')
+        ('store-1002', 'prt_partner_local_002'),
+        ('store-1003', 'prt_partner_local_003'),
+        ('store-1005', 'prt_partner_local_005'),
+        ('store-1006', 'prt_partner_local_006'),
+        ('store-test-electronics', 'prt_partner_local_007')
 ), current_rows AS MATERIALIZED (
     SELECT
         store.operator_context_id,
         store.id AS store_id,
         store.partner_id AS from_partner_id,
         store.version AS expected_store_version,
-        plan.to_partner_id,
-        plan.brand_id
+        plan.to_partner_id
     FROM dsh_stores store
     JOIN transfer_plan plan ON plan.store_id = store.id
     WHERE store.operator_context_id = 'local-dsh'
@@ -116,7 +95,6 @@ WITH transfer_plan(store_id, to_partner_id, brand_id) AS (
 ), updated AS (
     UPDATE dsh_stores store
     SET partner_id = current_rows.to_partner_id,
-        brand_id = current_rows.brand_id,
         partner_readiness = 'ready',
         catalog_approval_status = 'approved',
         marketing_visibility = 'visible',
@@ -182,11 +160,11 @@ INSERT INTO dsh_partner_documents (
     id, partner_id, document_type, document_status,
     uploaded_by_actor_id, media_ref, notes, version, created_at, updated_at
 ) VALUES
-    ('doc_local_002_cr', 'prt_partner_local_002', 'commercial_register', 'approved', 'field-local-001', 'media_local_002_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
-    ('doc_local_003_cr', 'prt_partner_local_003', 'commercial_register', 'approved', 'field-local-001', 'media_local_003_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
-    ('doc_local_005_cr', 'prt_partner_local_005', 'commercial_register', 'approved', 'field-local-001', 'media_local_005_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
-    ('doc_local_006_cr', 'prt_partner_local_006', 'commercial_register', 'approved', 'field-local-001', 'media_local_006_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
-    ('doc_local_007_cr', 'prt_partner_local_007', 'commercial_register', 'approved', 'field-local-001', 'media_local_007_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW())
+    ('doc_local_002_cr', 'prt_partner_local_002', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_002_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
+    ('doc_local_003_cr', 'prt_partner_local_003', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_003_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
+    ('doc_local_005_cr', 'prt_partner_local_005', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_005_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
+    ('doc_local_006_cr', 'prt_partner_local_006', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_006_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
+    ('doc_local_007_cr', 'prt_partner_local_007', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_007_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW())
 ON CONFLICT (id) DO UPDATE SET
     document_status = 'approved',
     notes = EXCLUDED.notes,

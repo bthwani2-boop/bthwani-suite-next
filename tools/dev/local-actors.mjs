@@ -10,6 +10,12 @@ const registry = JSON.parse(fs.readFileSync(registryPath, 'utf-8'));
 
 export const LOCAL_ACTORS = Object.freeze(registry.actors);
 export const LOCAL_PLATFORM_ACTORS = Object.freeze(registry.platformActors);
+/**
+ * Field/captain provider fixtures. Unlike LOCAL_ACTORS these have no actorId or
+ * username: Workforce generates both at provisioning time. See
+ * tools/dev/local-workforce-provisioning.mjs.
+ */
+export const LOCAL_WORKFORCE_PROVIDERS = Object.freeze(registry.workforceProviders);
 export const LOCAL_PASSWORD_ENV_VAR = registry.passwordEnvVar;
 
 /** Local bootstrap password: an environment override wins, the registry is the default. */

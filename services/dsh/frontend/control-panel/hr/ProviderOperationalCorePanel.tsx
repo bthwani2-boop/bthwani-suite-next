@@ -21,6 +21,7 @@ import type {
   ReferralSourceType,
 } from "../../shared/workforce";
 import { uploadProviderMedia } from "../../shared/media/field-document-media";
+import { useIdentitySession } from "@bthwani/core-identity";
 
 const REFERRAL_OPTIONS: Array<{ value: ReferralSourceType; label: string }> = [
   { value: "employee", label: "موظف" },
@@ -60,6 +61,7 @@ function MediaUploadField({
   kind,
   accept = "image/*",
   onUploadError,
+  operatorContextId,
 }: {
   readonly value: string;
   readonly onChange: (value: string) => void;
@@ -68,6 +70,7 @@ function MediaUploadField({
   readonly kind: IndependentProviderKind;
   readonly accept?: string;
   readonly onUploadError: (msg: string) => void;
+  readonly operatorContextId: string;
 }) {
   const [busy, setBusy] = React.useState(false);
   const pickFile = () => {
@@ -81,11 +84,11 @@ function MediaUploadField({
       setBusy(true);
       const objectUrl = URL.createObjectURL(file);
       try {
-        const mediaRef = await uploadProviderMedia(actorId, kind, {
+        const mediaRef = await uploadProviderMedia(actorId, "employees", {
           uri: objectUrl,
           name: file.name,
           mimeType: file.type || "application/octet-stream",
-        });
+        }, operatorContextId);
         onChange(mediaRef);
       } catch {
         onUploadError("تعذر رفع الملف — حاول مجدداً");
@@ -213,6 +216,11 @@ function activationEvidenceError(form: FormState, kind: IndependentProviderKind)
 }
 
 export function ProviderOperationalCorePanel({ actorId, kind }: { readonly actorId: string; readonly kind: IndependentProviderKind }) {
+  const { state: identityState } = useIdentitySession();
+  const operatorContextId = identityState.kind === "authenticated"
+    ? identityState.identity.operatorContextId
+    : "";
+
   const [data, setData] = React.useState<OperationalCoreResponse | null>(null);
   const [form, setForm] = React.useState<FormState>(EMPTY_FORM);
   const [loading, setLoading] = React.useState(true);
@@ -423,14 +431,14 @@ export function ProviderOperationalCorePanel({ actorId, kind }: { readonly actor
 
       <Section title="الهوية والعقد">
         <CpTextInput value={form.nationalIdNumber} onChange={(value) => setField("nationalIdNumber", value)} placeholder="الرقم الوطني" aria-label="الرقم الوطني" />
-        <MediaUploadField value={form.identityFrontMediaRef} onChange={(value) => setField("identityFrontMediaRef", value)} placeholder="مرجع صورة وجه الهوية" actorId={actorId} kind={kind} onUploadError={setError} />
-        <MediaUploadField value={form.identityBackMediaRef} onChange={(value) => setField("identityBackMediaRef", value)} placeholder="مرجع صورة خلف الهوية" actorId={actorId} kind={kind} onUploadError={setError} />
+        <MediaUploadField value={form.identityFrontMediaRef} onChange={(value) => setField("identityFrontMediaRef", value)} placeholder="مرجع صورة وجه الهوية" actorId={actorId} kind={kind} onUploadError={setError} operatorContextId={operatorContextId} />
+        <MediaUploadField value={form.identityBackMediaRef} onChange={(value) => setField("identityBackMediaRef", value)} placeholder="مرجع صورة خلف الهوية" actorId={actorId} kind={kind} onUploadError={setError} operatorContextId={operatorContextId} />
         <select value={form.identityStatus} onChange={(event) => setField("identityStatus", event.target.value as IdentityVerificationStatus)} style={selectStyle} aria-label="حالة مراجعة الهوية">
           <option value="pending">الهوية قيد الاستكمال</option><option value="under_review">الهوية تحت المراجعة</option>
           <option value="approved">الهوية معتمدة</option><option value="rejected">الهوية مرفوضة</option>
           <option value="needs_resubmission">الهوية تحتاج إعادة رفع</option><option value="expired">الهوية منتهية</option>
         </select>
-        <MediaUploadField value={form.contractMediaRef} onChange={(value) => setField("contractMediaRef", value)} placeholder="مرجع العقد المرفق" actorId={actorId} kind={kind} accept="image/*,application/pdf" onUploadError={setError} />
+        <MediaUploadField value={form.contractMediaRef} onChange={(value) => setField("contractMediaRef", value)} placeholder="مرجع العقد المرفق" actorId={actorId} kind={kind} accept="image/*,application/pdf" onUploadError={setError} operatorContextId={operatorContextId} />
         <select value={form.contractStatus} onChange={(event) => setField("contractStatus", event.target.value as ContractReviewStatus)} style={selectStyle} aria-label="حالة مراجعة العقد">
           <option value="pending">العقد قيد الاستكمال</option><option value="under_review">العقد تحت المراجعة</option>
           <option value="approved">العقد معتمد</option><option value="rejected">العقد مرفوض</option>

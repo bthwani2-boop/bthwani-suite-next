@@ -19,7 +19,7 @@ import {
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
-import { useControlPanelSession } from "@dsh-shared/session/control-panel-session";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   useGovernedPartnerStoresController,
   usePartnerAuditController,
@@ -31,8 +31,10 @@ import {
   type DshPartnerReadiness,
 } from "../../shared/partner";
 import { OperatorDeliveryPricingPanel } from "./stores/OperatorDeliveryPricingPanel";
+import { PartnerStoreCreateWizard } from "./stores/PartnerStoreCreateWizard";
+import { PartnerCommercialModelPanel } from "./PartnerCommercialModelPanel";
 
-type Tab = "overview" | "documents" | "visits" | "stores" | "readiness" | "audit";
+type Tab = "overview" | "documents" | "visits" | "stores" | "readiness" | "audit" | "commercial_model";
 type DocumentDecision = "rejected" | "needs_resubmit";
 
 type StoreReadiness = Readonly<{
@@ -55,12 +57,13 @@ type AggregatedReadiness = DshPartnerReadiness & Readonly<{
   generatedAt?: string;
 }>;
 
-const TABS: readonly Tab[] = ["overview", "documents", "visits", "stores", "readiness", "audit"];
+const TABS: readonly Tab[] = ["overview", "documents", "visits", "stores", "commercial_model", "readiness", "audit"];
 const TAB_LABELS: Record<Tab, string> = {
   overview: "نظرة عامة",
   documents: "الوثائق",
   visits: "الزيارات الميدانية",
   stores: "المتاجر والفروع",
+  commercial_model: "النموذج التجاري",
   readiness: "الجاهزية متعددة الفروع",
   audit: "سجل التدقيق",
 };
@@ -85,7 +88,7 @@ export type PartnerDetailUnifiedScreenProps = {
 };
 
 export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailUnifiedScreenProps) {
-  const { state: sessionState } = useControlPanelSession();
+  const { state: sessionState } = useIdentitySession();
   const authKind = sessionState.kind;
   const detail = usePartnerDetailController(partnerId, authKind);
   const documents = usePartnerDocumentsController(partnerId, authKind);
@@ -217,7 +220,8 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                 <CpDescriptionRow label="الاسم الظاهر">{viewModel.displayName}</CpDescriptionRow>
                 <CpDescriptionRow label="نوع الهوية">{viewModel.legalIdentityType}</CpDescriptionRow>
                 <CpDescriptionRow label="رقم الهوية">{viewModel.legalIdentityNumber}</CpDescriptionRow>
-                <CpDescriptionRow label="المالك">{viewModel.ownerName}</CpDescriptionRow>
+                <CpDescriptionRow label="Actor ID">{viewModel.ownerActorId}</CpDescriptionRow>
+                <CpDescriptionRow label="Workforce ID">{viewModel.workforcePersonId}</CpDescriptionRow>
                 <CpDescriptionRow label="الهاتف">{viewModel.primaryPhone}</CpDescriptionRow>
                 <CpDescriptionRow label="الفئة">{viewModel.category}</CpDescriptionRow>
                 <CpDescriptionRow label="الإصدار">{partner.version}</CpDescriptionRow>
@@ -234,9 +238,7 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                   <>
                     <CpTextInput value={transitionReason} onChange={setTransitionReason} placeholder="سبب القرار أو الملاحظة التشغيلية" aria-label="سبب انتقال حالة الشريك" />
                     <div style={{ display: "flex", gap: 8 }}>
-                      <CpButton disabled={detail.mutationState.kind === "loading" || (REASON_REQUIRED.has(transitionTarget) && !transitionReason.trim())} onClick={() => void confirmTransition()}>
-                        {detail.mutationState.kind === "loading" ? "جاري الحفظ…" : "تأكيد القرار"}
-                      </CpButton>
+                      <CpButton disabled={detail.mutationState.kind === "loading" || (REASON_REQUIRED.has(transitionTarget) && !transitionReason.trim())} onClick={() => void confirmTransition()}>تأكيد</CpButton>
                       <CpButton onClick={() => setTransitionTarget(null)}>إلغاء</CpButton>
                     </div>
                   </>
@@ -245,6 +247,20 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                 {detail.mutationState.kind === "invalid_transition" ? <CpStateView kind="error" title="القرار محجوب" code={detail.mutationState.message} /> : null}
                 {detail.mutationState.kind === "error" ? <CpStateView kind="error" title="تعذر تطبيق القرار" code={detail.mutationState.message} /> : null}
               </div>
+            ))}
+
+            {section("روابط النطاقات التشغيلية (Cross-Domain)", (
+              <CpDescriptionList>
+                <CpDescriptionRow label="الهوية والصلاحيات">
+                  <a href={`/dsh/administration?actor=${viewModel.ownerActorId}`} style={{ color: "blue", textDecoration: "underline" }}>استعراض حساب الهوية ({viewModel.ownerActorId})</a>
+                </CpDescriptionRow>
+                <CpDescriptionRow label="الموارد البشرية (قوة العمل)">
+                  <a href={`/dsh/hr?person=${viewModel.workforcePersonId}`} style={{ color: "blue", textDecoration: "underline" }}>استعراض ملف الموظف ({viewModel.workforcePersonId})</a>
+                </CpDescriptionRow>
+                <CpDescriptionRow label="تذاكر الدعم والطلبات القانونية">
+                  <a href={`/dsh/support?partner=${partnerId}`} style={{ color: "blue", textDecoration: "underline" }}>فتح لوحة الدعم الفني للشريك</a>
+                </CpDescriptionRow>
+              </CpDescriptionList>
             ))}
           </>
         ) : null}
@@ -291,6 +307,9 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
 
         {tab === "stores" ? (
           <div style={{ display: "grid", gap: 12 }}>
+            <div style={{ display: "grid", gap: 12 }}>
+               <PartnerStoreCreateWizard partnerId={partnerId} onStoreCreated={() => stores.reload()} />
+            </div>
             {section("إسناد أو نقل ملكية متجر", (
               <div style={{ display: "grid", gap: 8 }}>
                 <CpStatePanel role="status" title="النقل محكوم" code="المتجر المملوك يتطلب سببًا وإصدارًا حاليًا، ويُحجب تلقائيًا عن العميل حتى إعادة اعتماد جميع البوابات. العمليات المفتوحة تمنع النقل." />
@@ -309,6 +328,10 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                   : <><CpTable aria-label="فروع الشريك"><thead><tr><CpTableHeaderCell>الفرع</CpTableHeaderCell><CpTableHeaderCell>المدينة</CpTableHeaderCell><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>ظهور العميل</CpTableHeaderCell><CpTableHeaderCell>التسعير</CpTableHeaderCell></tr></thead><tbody>{stores.state.stores.map((store) => <tr key={store.id}><CpTableCell>{store.displayName}</CpTableCell><CpTableCell>{store.cityCode}</CpTableCell><CpTableCell>{store.status}</CpTableCell><CpTableCell>{store.isVisible ? "ظاهر" : "مخفي"}</CpTableCell><CpTableCell><CpButton onClick={() => setPricingStoreId((current) => current === store.id ? null : store.id)}>{pricingStoreId === store.id ? "إغلاق" : "إدارة التسعير"}</CpButton></CpTableCell></tr>)}</tbody></CpTable>{pricingStoreId ? <OperatorDeliveryPricingPanel storeId={pricingStoreId} /> : null}</>
             }
           </div>
+        ) : null}
+
+        {tab === "commercial_model" ? (
+          <PartnerCommercialModelPanel partnerId={partnerId} />
         ) : null}
 
         {tab === "readiness" ? (

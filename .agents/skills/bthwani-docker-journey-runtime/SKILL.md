@@ -18,12 +18,14 @@ Own runtime-evidence routing for Docker, data-plane, service startup, health, mi
 ## Do not invoke when
 
 - The task is static or documentation-only and makes no runtime claim.
-- Runtime is explicitly outside the declared journey.
+- Runtime is explicitly outside the proven affected scope.
 
 ## Read before
 
-- `governance/policies/runtime.md`
-- `governance/policies/release.md`
+- `governance/GOVERNANCE.md`
+- `governance/policies/engineering.md`
+- `governance/policies/delivery.md`
+- `governance/contracts/sdlc/` when a formal lifecycle/evidence transition is requested
 - `package.json`
 - applicable runtime scripts, compose files, service manifests, migrations, and health endpoints
 
@@ -38,14 +40,14 @@ This skill selects and reconciles runtime evidence only. It cannot approve produ
 3. Startup and health result for affected services.
 4. Request/response evidence for claimed endpoints.
 5. Persistence or readback evidence when mutation or database state is claimed.
-6. Failure-path evidence when required by the journey.
+6. Failure-path evidence when required by Product Truth or the affected behavior.
 7. Explicit missing evidence and blocker classification.
 
 ## Forbidden
 
 - Running runtime gates for agent-only or documentation-only changes.
 - Treating memory repositories, mocks, seeds, fixtures, or declarations as live proof.
-- Using floating or unverified container references where the canonical runtime policy requires locks.
+- Using floating or unverified container references where the engineering/runtime contract requires immutable identity.
 - Moving service business schema into infrastructure provisioning.
 - Claiming production readiness from local or CI runtime smoke alone.
 

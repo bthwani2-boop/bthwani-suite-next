@@ -12,7 +12,7 @@ func (s *protectedStoreServer) handleDecideCatalogProposalExpected(w http.Respon
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	actor, ok := s.requireCatalogPermission(w, r, decideProposalPermissionAction(input.Decision), "operator")
+	actor, ok := s.requireCatalogPermission(w, r, decideProposalPermissionAction(input.Decision))
 	if !ok {
 		return
 	}
@@ -31,7 +31,7 @@ func (s *protectedStoreServer) handleTransitionCatalogProposalExpected(w http.Re
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	actor, ok := s.requireCatalogPermission(w, r, proposalTransitionPermissionAction(input.NextStatus), "operator")
+	actor, ok := s.requireCatalogPermission(w, r, proposalTransitionPermissionAction(input.NextStatus))
 	if !ok {
 		return
 	}

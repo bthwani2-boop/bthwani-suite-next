@@ -1,4 +1,11 @@
 {
+  "archpulse.outputDirectory": "docs",
+  "archpulse.outputFormats": [
+    "drawio"
+  ],
+  "archpulse.autoGenerate": false,
+  "archpulse.showHealthInStatusBar": true,
+  "leanctx.binaryPath": "C:/Users/bassa/AppData/Roaming/npm/node_modules/lean-ctx-bin/bin/lean-ctx.exe",
   "files.watcherExclude": {
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
@@ -11,7 +18,9 @@
     "**/dist/**": true,
     "**/build/**": true,
     "**/.next/**": true,
-    "**/coverage/**": true
+    "**/coverage/**": true,
+    "**/.codeatlas/**": true,
+    "**/.graphify/**": true
   },
   "search.exclude": {
     "**/node_modules/**": true,
@@ -21,7 +30,9 @@
     "**/dist/**": true,
     "**/build/**": true,
     "**/.next/**": true,
-    "**/coverage/**": true
+    "**/coverage/**": true,
+    "**/.codeatlas/**": true,
+    "**/.graphify/**": true
   },
   "typescript.tsserver.maxTsServerMemory": 4096,
   "eslint.workingDirectories": [
@@ -39,5 +50,12 @@
   "gitlens.currentLine.enabled": false,
   "gitlens.statusBar.enabled": false,
   "terminal.integrated.scrollback": 5000,
-  "terminal.integrated.persistentSessionScrollback": 5000
+  "terminal.integrated.persistentSessionScrollback": 5000,
+  "git.autorefresh": true,
+  "git.optimisticUpdate": true,
+  "git.openRepositoryInParentFolders": "never",
+  "sonarlint.connectedMode.project": {
+    "connectionId": "bthwani2-boop",
+    "projectKey": "bthwani2-boop_bthwani-suite-next"
+  }
 }

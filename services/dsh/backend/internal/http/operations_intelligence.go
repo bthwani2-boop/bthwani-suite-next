@@ -24,11 +24,11 @@ func RegisterOperationsIntelligenceRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	mux.HandleFunc("POST /dsh/internal/workforce/availability-projections", handleWorkforceAvailabilityProjection(db))
-	mux.HandleFunc("GET /dsh/operator/dispatch/capacity-forecast", protected.handleGetServiceAreaCapacityForecast)
-	mux.HandleFunc("PUT /dsh/operator/dispatch/capacity-policies/{serviceAreaCode}", protected.handleUpsertServiceAreaCapacityPolicy)
-	mux.HandleFunc("GET /dsh/operator/dispatch/heatmap", protected.handleGetOperationsHeatmap)
+	mux.HandleFunc("GET /dsh/operator/dispatch/capacity-forecast", protected.withPermission("control-panel", DshDispatchCapacityPermissionRead, protected.handleGetServiceAreaCapacityForecast))
+	mux.HandleFunc("PUT /dsh/operator/dispatch/capacity-policies/{serviceAreaCode}", protected.withPermission("control-panel", DshDispatchCapacityPermissionManage, protected.handleUpsertServiceAreaCapacityPolicy))
+	mux.HandleFunc("GET /dsh/operator/dispatch/heatmap", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleGetOperationsHeatmap))
 }
 
 func handleWorkforceAvailabilityProjection(db *sql.DB) http.HandlerFunc {
@@ -50,11 +50,16 @@ func handleWorkforceAvailabilityProjection(db *sql.DB) http.HandlerFunc {
 }
 
 func (s *protectedStoreServer) handleGetServiceAreaCapacityForecast(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator"); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
+		return
+	}
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
 		return
 	}
 	forecast, err := dispatch.GetServiceAreaCapacityForecast(
-		r.Context(), s.db, r.URL.Query().Get("operatorContextId"),
+		r.Context(), s.db, operatorContextID,
 		r.URL.Query().Get("serviceAreaCode"), time.Now().UTC(),
 	)
 	if err != nil {
@@ -65,7 +70,7 @@ func (s *protectedStoreServer) handleGetServiceAreaCapacityForecast(w http.Respo
 }
 
 func (s *protectedStoreServer) handleUpsertServiceAreaCapacityPolicy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -84,11 +89,16 @@ func (s *protectedStoreServer) handleUpsertServiceAreaCapacityPolicy(w http.Resp
 }
 
 func (s *protectedStoreServer) handleGetOperationsHeatmap(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator"); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
+		return
+	}
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
 		return
 	}
 	cells, err := dispatch.GetOperationsHeatmap(
-		r.Context(), s.db, r.URL.Query().Get("operatorContextId"),
+		r.Context(), s.db, operatorContextID,
 		r.URL.Query().Get("serviceAreaCode"), time.Now().UTC(),
 	)
 	if err != nil {
@@ -99,7 +109,6 @@ func (s *protectedStoreServer) handleGetOperationsHeatmap(w http.ResponseWriter,
 }
 
 type availabilityDispatchBody struct {
-	OperatorContextID  string `json:"operatorContextId"`
 	CaptainID string `json:"captainId"`
 }
 
@@ -118,7 +127,11 @@ func unavailableCaptainForRequest(r *http.Request, db *sql.DB) (bool, string, er
 		if json.Unmarshal(payload, &body) != nil || strings.TrimSpace(body.CaptainID) == "" {
 			return false, "", nil
 		}
-		unavailable, err := dispatch.CaptainUnavailableAt(r.Context(), db, body.OperatorContextID, body.CaptainID, time.Now().UTC())
+		operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+		if !ok {
+			return false, "", nil
+		}
+		unavailable, err := dispatch.CaptainUnavailableAt(r.Context(), db, operatorContextID, body.CaptainID, time.Now().UTC())
 		return unavailable, body.CaptainID, err
 	}
 	if strings.HasPrefix(path, "/dsh/captain/dispatch/assignments/") && strings.HasSuffix(path, "/accept") {
@@ -171,7 +184,8 @@ func OperationsAvailabilityMiddleware(db *sql.DB, next http.Handler) http.Handle
 				Candidates []dispatch.CaptainDispatchCandidate `json:"candidates"`
 			}
 			if json.Unmarshal(recorder.Body.Bytes(), &envelope) == nil {
-				if err := dispatch.ApplyWorkforceAvailability(r.Context(), db, r.URL.Query().Get("operatorContextId"), time.Now().UTC(), envelope.Candidates); err == nil {
+				operatorContextID, hasOperatorContext := wlt.OperatorContextIDFromContext(r.Context())
+				if hasOperatorContext && dispatch.ApplyWorkforceAvailability(r.Context(), db, operatorContextID, time.Now().UTC(), envelope.Candidates) == nil {
 					store.SendJSON(w, http.StatusOK, map[string]any{"candidates": envelope.Candidates})
 					return
 				}

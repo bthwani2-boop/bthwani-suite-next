@@ -284,6 +284,62 @@ func (c *Client) DeliverFieldCommission(ctx context.Context, input DeliverFieldC
 	return nil
 }
 
+type DeliverCaptainCommissionInput struct {
+	CaptainID        string `json:"beneficiaryActorId"`
+	OrderID          string `json:"sourceId"`
+	CheckoutIntentID string `json:"sourceEvidenceId"`
+	IdempotencyKey   string `json:"idempotencyKey"`
+	CorrelationID    string `json:"-"`
+}
+
+func (c *Client) DeliverCaptainCommission(ctx context.Context, input DeliverCaptainCommissionInput) error {
+	if !c.Configured() {
+		return fmt.Errorf("WLT commission handoff is not configured")
+	}
+	if strings.TrimSpace(input.IdempotencyKey) == "" {
+		input.IdempotencyKey = deterministicMutationKey("captain-delivery-commission", input.OrderID, input.CheckoutIntentID, input.CaptainID)
+	}
+	correlationID := strings.TrimSpace(input.CorrelationID)
+	if correlationID == "" {
+		correlationID = strings.TrimSpace(input.OrderID)
+	}
+	body, err := json.Marshal(map[string]string{
+		"beneficiaryActorType": "captain",
+		"beneficiaryActorId":   input.CaptainID,
+		"sourceType":           "order",
+		"sourceId":             input.OrderID,
+		"commissionType":       "delivery_fee",
+		"sourceEvidenceId":     input.CheckoutIntentID,
+		"sourceEvidenceStatus": "completed",
+	})
+	if err != nil {
+		return fmt.Errorf("encode WLT captain commission request: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/wlt/commissions", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("build WLT captain commission request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
+	req.Header.Set("X-Service-Caller", "dsh")
+	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+		return fmt.Errorf("prepare WLT commission OperatorContext: %w", err)
+	}
+	if err := setRequiredMutationHeaders(req, correlationID, input.IdempotencyKey); err != nil {
+		return fmt.Errorf("prepare WLT captain commission request: %w", err)
+	}
+	response, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("call WLT captain commission: %w", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return fmt.Errorf("WLT captain commission returned HTTP %d", response.StatusCode)
+	}
+	return nil
+}
+
 func (c *Client) ExpireSession(ctx context.Context, paymentSessionID, correlationID string) error {
 	if !c.Configured() {
 		return fmt.Errorf("WLT payment-session handoff is not configured")

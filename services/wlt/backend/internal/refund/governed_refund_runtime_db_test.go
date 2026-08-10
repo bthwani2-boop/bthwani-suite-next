@@ -16,16 +16,25 @@ type governedRuntimeProvider struct {
 	result   provider.ProviderResult
 	err      error
 	calls    int
-	lastPath string
 	lastMeta provider.RequestMeta
 }
 
-func (p *governedRuntimeProvider) Post(_ context.Context, path string, _ any, meta provider.RequestMeta) (provider.ProviderResult, error) {
+func (p *governedRuntimeProvider) Authorize(_ context.Context, _ any, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	return provider.ProviderResult{}, fmt.Errorf("not used in this test")
+}
+func (p *governedRuntimeProvider) Capture(_ context.Context, _ any, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	return provider.ProviderResult{}, fmt.Errorf("not used in this test")
+}
+func (p *governedRuntimeProvider) Refund(_ context.Context, _ any, meta provider.RequestMeta) (provider.ProviderResult, error) {
 	p.calls++
-	p.lastPath = path
 	p.lastMeta = meta
 	return p.result, p.err
 }
+func (p *governedRuntimeProvider) Status(_ context.Context, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	return provider.ProviderResult{}, fmt.Errorf("not used in this test")
+}
+
+var _ provider.CashInRail = (*governedRuntimeProvider)(nil)
 
 func createGovernedRuntimeRefund(t *testing.T, db *sql.DB, sessionID, orderID string, amount int64, suffix string) *GovernedRefund {
 	t.Helper()
@@ -35,13 +44,13 @@ func createGovernedRuntimeRefund(t *testing.T, db *sql.DB, sessionID, orderID st
 	}
 	key := fmt.Sprintf("runtime-%s-%d", suffix, time.Now().UnixNano())
 	created, replayed, err := CreateGovernedRefund(context.Background(), db, GovernedCreateRefundInput{
-		OperatorContextID:              operatorContextID,
+		OperatorContextID:     operatorContextID,
 		PaymentSessionID:      sessionID,
 		OrderID:               orderID,
 		ClientID:              clientID,
 		AmountMinorUnits:      amount,
 		Reason:                " runtime evidence " + suffix,
-		EligibilityReference: "runtime-evidence:" + suffix,
+		EligibilityReference:  "runtime-evidence:" + suffix,
 		RequestedByOperatorID: "maker-" + suffix,
 		IdempotencyKey:        key,
 		CorrelationID:         "corr-create-" + suffix,
@@ -123,8 +132,8 @@ func TestGovernedRefundRuntimeProviderSuccessLedgerAndOutboxRetry(t *testing.T) 
 	if completed.Status != "completed" || completed.ProviderStatus != "refunded" {
 		t.Fatalf("unexpected completed refund state: status=%q providerStatus=%q", completed.Status, completed.ProviderStatus)
 	}
-	if stub.calls != 1 || stub.lastPath != "/financial/card/refund" || stub.lastMeta.IdempotencyKey == "" {
-		t.Fatalf("provider execution evidence invalid: calls=%d path=%q idempotency=%q", stub.calls, stub.lastPath, stub.lastMeta.IdempotencyKey)
+	if stub.calls != 1 || stub.lastMeta.IdempotencyKey == "" {
+		t.Fatalf("provider execution evidence invalid: calls=%d idempotency=%q", stub.calls, stub.lastMeta.IdempotencyKey)
 	}
 	assertRuntimeFinancialArtifacts(t, db, completed.ID, completed.AmountMinorUnits, 1)
 

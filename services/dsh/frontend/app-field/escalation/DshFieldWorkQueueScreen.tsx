@@ -19,7 +19,9 @@ import {
   buildVisitViewModel,
   ESCALATION_SEVERITY_LABELS,
   ESCALATION_CATEGORY_LABELS,
+  ESCALATION_STATUS_LABELS,
 } from "../../shared/field-readiness";
+import { DshFieldProblemState } from "../components/DshFieldProblemNotice";
 
 type Props = {
   readonly onBack?: () => void;
@@ -58,12 +60,10 @@ export function DshFieldWorkQueueScreen({ onBack, onOpenVisit, onOpenEscalation 
     return (
       <View style={styles.root}>
         <Header title="مهام التحقق" />
-        <StateView
-          tone="danger"
-          title="تعذر تحميل المهام"
-          description={state.message}
-          actionLabel="إعادة المحاولة"
-          onActionPress={() => void reload()}
+        <DshFieldProblemState
+          problem={state.problem}
+          handlers={{ refresh_record: () => void reload(), refresh_scope: () => void reload() }}
+          onRetry={() => void reload()}
         />
       </View>
     );
@@ -105,15 +105,26 @@ export function DshFieldWorkQueueScreen({ onBack, onOpenVisit, onOpenEscalation 
             <Text role="bodyStrong" style={styles.sectionTitle}>الزيارات الجارية</Text>
             {visits.map((visit) => {
               const viewModel = buildVisitViewModel(visit);
+              const isStale = visit.isStale;
               return (
-                <Pressable key={viewModel.id} onPress={() => onOpenVisit(viewModel.storeId)}>
-                  <Card style={styles.itemCard}>
+                <Pressable
+                  key={viewModel.id}
+                  onPress={() => !isStale && onOpenVisit(viewModel.storeId)}
+                  disabled={isStale}
+                >
+                  <Card style={[styles.itemCard, isStale && styles.itemCardStale]}>
                     <View style={styles.itemRow}>
                       <View style={styles.itemInfo}>
-                        <Text role="titleSm" style={styles.itemTitle}>{viewModel.visitTypeLabel}</Text>
+                        <Text role="titleSm" style={[styles.itemTitle, isStale && styles.itemTextStale]}>
+                          {viewModel.visitTypeLabel}
+                        </Text>
                         <Text role="caption" tone="muted" style={styles.itemMeta}>{viewModel.startedAt}</Text>
                       </View>
-                      <Badge label={viewModel.statusLabel} tone={viewModel.isComplete ? "success" : "info"} />
+                      {isStale ? (
+                        <Badge label="صلاحية ملغاة" tone="neutral" />
+                      ) : (
+                        <Badge label={viewModel.statusLabel} tone={viewModel.isComplete ? "success" : "info"} />
+                      )}
                     </View>
                   </Card>
                 </Pressable>
@@ -125,27 +136,49 @@ export function DshFieldWorkQueueScreen({ onBack, onOpenVisit, onOpenEscalation 
         {escalations.length > 0 ? (
           <View style={styles.section}>
             <Text role="bodyStrong" style={styles.sectionTitle}>التصعيدات المفتوحة</Text>
-            {escalations.map((escalation) => (
-              <Pressable
-                key={escalation.id}
-                onPress={() => onOpenEscalation(escalation.storeId, escalation.visitId || undefined)}
-              >
-                <Card style={styles.itemCard}>
-                  <View style={styles.itemRow}>
-                    <View style={styles.itemInfo}>
-                      <Text role="titleSm" style={styles.itemTitle} numberOfLines={2}>{escalation.description}</Text>
-                      <Text role="caption" tone="muted" style={styles.itemMeta}>
-                        {ESCALATION_CATEGORY_LABELS[escalation.category]}
-                      </Text>
+            {escalations.map((escalation) => {
+              const isStale = escalation.isStale;
+              return (
+                <Pressable
+                  key={escalation.id}
+                  onPress={() => !isStale && onOpenEscalation(escalation.storeId, escalation.visitId || undefined)}
+                  disabled={isStale}
+                >
+                  <Card style={[styles.itemCard, isStale && styles.itemCardStale]}>
+                    <View style={styles.itemRow}>
+                      <View style={styles.itemInfo}>
+                        <Text role="titleSm" style={[styles.itemTitle, isStale && styles.itemTextStale]} numberOfLines={2}>
+                          {escalation.description}
+                        </Text>
+                        <Text role="caption" tone="muted" style={styles.itemMeta}>
+                          {ESCALATION_CATEGORY_LABELS[escalation.category]}
+                        </Text>
+                      </View>
+                      {isStale ? (
+                        <Badge label="صلاحية ملغاة" tone="neutral" />
+                      ) : (
+                        <View style={{ gap: spacing[1], alignItems: "flex-end" }}>
+                          <Badge
+                            label={ESCALATION_STATUS_LABELS[escalation.status]}
+                            tone={escalation.status === "resolved" ? "success" : escalation.status === "open" ? "info" : "warning"}
+                          />
+                          <Badge
+                            label={ESCALATION_SEVERITY_LABELS[escalation.severity]}
+                            tone={escalation.severity === "critical" || escalation.severity === "high" ? "danger" : "warning"}
+                          />
+                        </View>
+                      )}
                     </View>
-                    <Badge
-                      label={ESCALATION_SEVERITY_LABELS[escalation.severity]}
-                      tone={escalation.severity === "critical" || escalation.severity === "high" ? "danger" : "warning"}
-                    />
-                  </View>
-                </Card>
-              </Pressable>
-            ))}
+                    {!isStale && escalation.resolutionNote ? (
+                      <View style={{ marginTop: spacing[2], paddingTop: spacing[2], borderTopWidth: 1, borderTopColor: colorRoles.borderSubtle }}>
+                        <Text role="caption" tone="muted" style={{ textAlign: "right", fontWeight: "bold" }}>رد الإدارة:</Text>
+                        <Text role="bodySm" style={{ textAlign: "right" }}>{escalation.resolutionNote}</Text>
+                      </View>
+                    ) : null}
+                  </Card>
+                </Pressable>
+              );
+            })}
           </View>
         ) : null}
       </ScrollView>
@@ -172,8 +205,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
   },
+  itemCardStale: {
+    backgroundColor: colorRoles.surfaceMuted,
+    borderColor: colorRoles.borderSubtle,
+    opacity: 0.7,
+  },
   itemRow: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", gap: spacing[2] },
   itemInfo: { flex: 1, alignItems: "flex-end" },
   itemTitle: { fontWeight: "bold", textAlign: "right" },
+  itemTextStale: { color: colorRoles.textMuted, textDecorationLine: "line-through" },
   itemMeta: { marginTop: 2, textAlign: "right" },
 });

@@ -4,6 +4,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { KeyValueList, StateView, Header, spacing, colorRoles } from '@bthwani/ui-kit';
 import { useWorkforceProfile } from '../../shared/workforce/use-workforce-profile';
+import { DshFieldProblemState } from '../components/DshFieldProblemNotice';
 import { ENGAGEMENT_STATUS_LABEL_AR } from '../../shared/workforce';
 
 type DshFieldProfileScreenProps = {
@@ -44,12 +45,13 @@ export function DshFieldProfileScreen({ onBack }: DshFieldProfileScreenProps) {
 
   if (state.kind === 'error') {
     return (
-      <StateView
-        tone="danger"
-        title="تعذر تحميل بيانات الحساب التشغيلية"
-        description={state.message}
-        actionLabel="إعادة المحاولة"
-        onActionPress={() => void workforce.reload()}
+      <DshFieldProblemState
+        problem={state.problem}
+        handlers={{
+          refresh_record: () => void workforce.reload(),
+          refresh_scope: () => void workforce.reload(),
+        }}
+        onRetry={() => void workforce.reload()}
       />
     );
   }

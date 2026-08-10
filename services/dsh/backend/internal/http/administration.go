@@ -26,19 +26,7 @@ func (s *protectedStoreServer) handleListRoles(w http.ResponseWriter, r *http.Re
 	store.SendJSON(w, http.StatusOK, map[string]any{"roles": roles})
 }
 
-// GET /dsh/operator/admin/staff
-func (s *protectedStoreServer) handleListStaff(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
-	if !ok {
-		return
-	}
-	staff, err := administration.ListStaff(s.db)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list staff")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"staff": staff})
-}
+
 
 // GET /dsh/operator/admin/partners
 func (s *protectedStoreServer) handleListPartnerActivations(w http.ResponseWriter, r *http.Request) {

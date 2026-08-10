@@ -18,6 +18,7 @@ function mergeCapabilityExtension(
 ): DshMergedCapability {
   if (!extension) return capability;
 
+  const topic = extension.topic ?? capability.topic;
   return {
     ...capability,
     status: extension.status,
@@ -28,7 +29,7 @@ function mergeCapabilityExtension(
     surfaces: unique([...capability.surfaces, ...extension.surfaces]),
     runtimeBound: capability.runtimeBound && extension.runtimeBound,
     closureState: extension.closureState,
-    topic: extension.topic ?? capability.topic,
+    ...(topic !== undefined ? { topic } : {}),
     topicScope: unique([
       ...(capability.topicScope ?? []),
       ...extension.topicScope,

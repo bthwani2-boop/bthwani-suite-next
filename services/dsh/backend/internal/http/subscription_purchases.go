@@ -16,7 +16,7 @@ import (
 
 type subscriptionPurchase struct {
 	ID                    string `json:"id"`
-	OperatorContextID              string `json:"operatorContextId"`
+	OperatorContextID     string `json:"operatorContextId"`
 	ClientID              string `json:"clientId"`
 	PlanID                string `json:"planId"`
 	WLTProductReference   string `json:"wltProductReference"`
@@ -286,7 +286,7 @@ func (s *protectedStoreServer) bindSubscriptionPaymentSession(
 	session, err := s.wlt.CreateBoundSubscriptionPaymentSession(r.Context(), wltclient.BoundSubscriptionPaymentInput{
 		SubscriptionPurchaseID: item.ID,
 		ProductReference:       product.Reference,
-		OperatorContextID:               item.OperatorContextID,
+		OperatorContextID:      item.OperatorContextID,
 		ClientID:               item.ClientID,
 		PaymentMethod:          item.PaymentMethod,
 		AmountMinorUnits:       product.PriceMinorUnits,
@@ -438,7 +438,7 @@ func (s *protectedStoreServer) handleGetSubscriptionPurchase(w http.ResponseWrit
 	store.SendJSON(w, http.StatusOK, map[string]any{"purchase": item, "paymentSession": session})
 }
 
-// POST /dsh/client/marketing/subscriptions/{purchaseId}/activate
+// POST /dsh/client/marketing/subscriptions/purchases/{purchaseId}/activate
 func (s *protectedStoreServer) handleActivateSubscriptionPurchase(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
 	if !ok || !s.requireWLTCommercial(w) {
@@ -544,7 +544,7 @@ func (s *protectedStoreServer) handleActivateSubscriptionPurchase(w http.Respons
 	store.SendJSON(w, http.StatusOK, map[string]any{"purchase": item, "subscription": subscription})
 }
 
-// POST /dsh/client/marketing/subscriptions/{subscriptionId}/renew
+// POST /dsh/client/marketing/subscriptions/instances/{subscriptionId}/renew
 func (s *protectedStoreServer) handleRenewSubscriptionPurchase(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
 	if !ok || !s.requireWLTCommercial(w) {
@@ -623,7 +623,7 @@ func (s *protectedStoreServer) handleRenewSubscriptionPurchase(w http.ResponseWr
 	store.SendJSON(w, http.StatusCreated, map[string]any{"purchase": item, "paymentSession": session})
 }
 
-// POST /dsh/client/marketing/subscriptions/{subscriptionId}/cancel
+// POST /dsh/client/marketing/subscriptions/instances/{subscriptionId}/cancel
 func (s *protectedStoreServer) handleCancelSubscriptionPurchase(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
 	if !ok || !s.requireWLTCommercial(w) {

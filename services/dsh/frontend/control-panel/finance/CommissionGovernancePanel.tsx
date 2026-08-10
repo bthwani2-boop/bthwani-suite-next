@@ -4,8 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, Text } from "@bthwani/ui-kit";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import { CpBadge, CpButton, CpSelect, CpTextInput } from "@bthwani/control-panel/components";
-import { resolveDshApiBaseUrl } from "../../shared/finance-wlt-link/_kernel/dsh-api-base-url";
-import { createDshHttpClient } from "../../shared/finance-wlt-link/_kernel/dsh-http-request";
+import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
+import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
+import { formatWltMoney } from '@bthwani/wlt/dsh';
 import {
   adjustCommission,
   confirmCommission,
@@ -16,7 +17,7 @@ import {
   type Commission,
   type CommissionPolicyInput,
   type RepresentativeActorType,
-} from "../../shared/finance-wlt-link/commissions";
+} from '@bthwani/wlt/dsh';
 
 const { request } = createDshHttpClient(
   resolveDshApiBaseUrl(),
@@ -50,10 +51,7 @@ const STATUS_OPTIONS = [
 ] as const;
 
 function formatMoney(amountMinorUnits: number, currency: string): string {
-  return `${(amountMinorUnits / 100).toLocaleString("ar-YE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} ${currency}`;
+  return formatWltMoney(amountMinorUnits, currency);
 }
 
 function validatePolicy(policy: CommissionPolicyInput): string | null {

@@ -4,7 +4,7 @@
  * native File directly through `toUploadFileSource`.
  */
 import * as catalogMediaApi from "./central-catalog.api";
-import { uploadBinaryToPresignedUrl } from "../media/presigned-upload";
+import { uploadBinaryToPresignedUrl } from "../media/presigned-upload.client";
 import type {
   CatalogAsset,
   CatalogAssetLink,

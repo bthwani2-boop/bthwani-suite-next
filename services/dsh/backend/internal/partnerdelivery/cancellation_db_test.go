@@ -8,7 +8,7 @@ import (
 func TestOrderCancellationCancelsPartnerDeliveryTaskDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	fixture := seedFixture(t, db, "ready_for_pickup")
-	service := NewService(db)
+	service := NewService(db, mockWFServer(t))
 
 	task, err := service.AssignCourier(
 		context.Background(),

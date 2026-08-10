@@ -12,8 +12,8 @@ function isReactNative(): boolean {
 
 export function isDshDeviceLoopbackBridgeEnabled(): boolean {
   if (typeof process === "undefined" || !process.env) return false;
-  const expoFlag = process.env["EXPO_PUBLIC_ADB_REVERSE_ENABLED"]?.trim().toLowerCase();
-  const runtimeFlag = process.env["BTHWANI_ADB_REVERSE_ENABLED"]?.trim().toLowerCase();
+  const expoFlag = process.env.EXPO_PUBLIC_ADB_REVERSE_ENABLED?.trim().toLowerCase();
+  const runtimeFlag = process.env.BTHWANI_ADB_REVERSE_ENABLED?.trim().toLowerCase();
   return expoFlag === "true" || runtimeFlag === "1" || runtimeFlag === "true";
 }
 
@@ -27,17 +27,20 @@ export function resolveDshApiBaseUrl(): string {
 
   let url = "";
   if (typeof process !== "undefined" && process.env) {
-    const expo = process.env["EXPO_PUBLIC_DSH_API_BASE_URL"];
+    const expo = process.env.EXPO_PUBLIC_DSH_API_BASE_URL;
     if (expo && expo.trim().length > 0) url = expo.trim();
 
     if (!url) {
-      const next = process.env["NEXT_PUBLIC_DSH_API_BASE_URL"];
+      const next = process.env.NEXT_PUBLIC_DSH_API_BASE_URL;
       if (next && next.trim().length > 0) url = next.trim();
     }
   }
 
   if (!url) {
-    url = isReactNative() ? "http://10.0.2.2:58080" : "http://localhost:58080";
+    url =
+      isReactNative() && !isDshDeviceLoopbackBridgeEnabled()
+        ? "http://10.0.2.2:58080"
+        : "http://127.0.0.1:58080";
   }
   return url;
 }

@@ -2,29 +2,34 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"crypto/subtle"
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
-
-	"github.com/lib/pq"
-
-	"identity-api/internal/identity"
 )
 
 type provisionActorOperatorRequest struct {
-	Username  string `json:"username"`
-	PhoneE164 string `json:"phoneE164"`
-	Role      string `json:"role"`
-	OperatorContextID  string `json:"operatorContextId"`
+	Username          string `json:"username"`
+	PhoneE164         string `json:"phoneE164"`
+	Role              string `json:"role"`
+	OperatorContextID string `json:"operatorContextId"`
 }
 
+type trustedOperatorContextKey struct{}
 
+func withTrustedOperatorContext(r *http.Request, operatorContextID string) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), trustedOperatorContextKey{}, operatorContextID))
+}
+
+func trustedOperatorContext(r *http.Request) (string, bool) {
+	value, ok := r.Context().Value(trustedOperatorContextKey{}).(string)
+	value = strings.TrimSpace(value)
+	return value, ok && value != ""
+}
 
 func validateInternalOperatorRequest(w http.ResponseWriter, r *http.Request, operatorContextID string) bool {
 	if strings.TrimSpace(r.Header.Get("X-Service-Caller")) != "workforce" {
@@ -53,7 +58,7 @@ func validateInternalOperatorRequest(w http.ResponseWriter, r *http.Request, ope
 	return true
 }
 
-func rewriteProvisionOperatorContext(w http.ResponseWriter, r *http.Request, db *sql.DB, operatorContextID string) bool {
+func rewriteProvisionOperatorContext(w http.ResponseWriter, r *http.Request, operatorContextID string) bool {
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 32*1024))
 	decoder.DisallowUnknownFields()
 	var input provisionActorOperatorRequest
@@ -66,49 +71,23 @@ func rewriteProvisionOperatorContext(w http.ResponseWriter, r *http.Request, db 
 		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "provisioned actor context cannot override the active runtime context")
 		return false
 	}
-	phone, err := identity.NormalizePhoneE164(input.PhoneE164)
-	if err != nil {
-		sendError(w, http.StatusUnprocessableEntity, "INVALID_ACTOR_INPUT", "actor input is invalid")
-		return false
-	}
-	var existingOperatorContextID string
-	err = db.QueryRowContext(r.Context(), `
-		SELECT operator_context_id
-		FROM identity_actors
-		WHERE phone_e164 = $1
-		LIMIT 1`, phone).Scan(&existingOperatorContextID)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
-		return false
-	}
-	if err == nil && strings.TrimSpace(existingOperatorContextID) != operatorContextID {
-		sendError(w, http.StatusConflict, "PHONE_BOUND_TO_ANOTHER_OPERATOR_CONTEXT", "phone is already bound to an actor in another operator context")
-		return false
-	}
 	input.OperatorContextID = operatorContextID
 	body, err := json.Marshal(input)
 	if err != nil {
 		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
 		return false
 	}
-	r.Body = http.NoBody
-	if len(body) > 0 {
-		r.Body = ioNopCloser(bytes.NewReader(body))
-	}
+	r.Body = ioNopCloser(bytes.NewReader(body))
 	r.ContentLength = int64(len(body))
 	r.Header.Set("Content-Type", "application/json")
 	return true
 }
 
-// ioNopCloser is kept local to make the middleware's body rewrite explicit
-// without exposing a package-level mutable buffer.
 func ioNopCloser(reader *bytes.Reader) httpBodyReadCloser {
 	return httpBodyReadCloser{Reader: reader}
 }
 
-type httpBodyReadCloser struct {
-	*bytes.Reader
-}
+type httpBodyReadCloser struct{ *bytes.Reader }
 
 func (httpBodyReadCloser) Close() error { return nil }
 
@@ -124,6 +103,10 @@ func actorIDFromInternalPath(path string) string {
 	return actorID
 }
 
+func isDirectActorRead(r *http.Request, actorID string) bool {
+	return r.Method == http.MethodGet && r.URL.Path == "/internal/actors/"+actorID
+}
+
 func actorBelongsToOperatorContext(w http.ResponseWriter, r *http.Request, db *sql.DB, actorID, operatorContextID string) bool {
 	var actorOperatorContextID string
 	err := db.QueryRowContext(r.Context(), `
@@ -137,66 +120,16 @@ func actorBelongsToOperatorContext(w http.ResponseWriter, r *http.Request, db *s
 		return false
 	}
 	if strings.TrimSpace(actorOperatorContextID) != operatorContextID {
-		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "actor belongs to another operator context")
+		sendError(w, http.StatusNotFound, "ACTOR_NOT_FOUND", "actor was not found")
 		return false
 	}
 	return true
 }
 
-func handleOperatorContextActorSearch(w http.ResponseWriter, r *http.Request, db *sql.DB, operatorContextID string) {
-	queryValues := r.URL.Query()
-	role := strings.TrimSpace(queryValues.Get("role"))
-	q := strings.TrimSpace(queryValues.Get("q"))
-	limit := 25
-	if raw := strings.TrimSpace(queryValues.Get("limit")); raw != "" {
-		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 && parsed <= 100 {
-			limit = parsed
-		}
-	}
-	clauses := []string{"active", "operator_context_id = $1"}
-	args := []any{operatorContextID}
-	if role != "" {
-		args = append(args, role)
-		clauses = append(clauses, fmt.Sprintf("$%d = ANY(roles)", len(args)))
-	}
-	if q != "" {
-		args = append(args, "%"+q+"%")
-		clauses = append(clauses, fmt.Sprintf("(username ILIKE $%d OR COALESCE(phone_e164, '') ILIKE $%d)", len(args), len(args)))
-	}
-	args = append(args, limit)
-	rows, err := db.QueryContext(r.Context(), `
-		SELECT id, username, COALESCE(phone_e164, ''), roles, active
-		FROM identity_actors
-		WHERE `+strings.Join(clauses, " AND ")+`
-		ORDER BY username
-		LIMIT $`+strconv.Itoa(len(args)), args...)
-	if err != nil {
-		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
-		return
-	}
-	defer rows.Close()
-	views := []identity.ActorAdminView{}
-	for rows.Next() {
-		var view identity.ActorAdminView
-		var roles pq.StringArray
-		if err := rows.Scan(&view.ActorID, &view.Username, &view.PhoneE164, &roles, &view.Active); err != nil {
-			sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
-			return
-		}
-		view.Roles = []string(roles)
-		views = append(views, view)
-	}
-	if err := rows.Err(); err != nil {
-		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
-		return
-	}
-	sendJSON(w, http.StatusOK, views)
-}
-
-// OperatorBoundary scopes every Workforce-to-Identity actor administration
-// request to the trusted service operator context. It never trusts operatorContextId from
-// the request body and prevents search, read, activation and lifecycle
-// operations from crossing operator context boundaries before the repository executes.
+// OperatorBoundary authenticates the Workforce service once, derives one
+// trusted operator context, and passes that context to the canonical repository
+// search/read path. Mutations retain an early object-scope check as defense in
+// depth; direct reads are scoped atomically by their repository query.
 func OperatorBoundary(db *sql.DB, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.Path, "/internal/actors") {
@@ -204,25 +137,22 @@ func OperatorBoundary(db *sql.DB, next http.Handler) http.Handler {
 			return
 		}
 		configuredOperatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
-		requestedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
-		expectedOperatorContextID := requestedOperatorContextID
-		if configuredOperatorContextID != "" {
-			expectedOperatorContextID = configuredOperatorContextID
+		if configuredOperatorContextID == "" {
+			sendError(w, http.StatusServiceUnavailable, "INTERNAL_API_UNAVAILABLE", "internal operator context is not configured")
+			return
 		}
-		if !validateInternalOperatorRequest(w, r, expectedOperatorContextID) {
+		requestedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		if !validateInternalOperatorRequest(w, r, configuredOperatorContextID) {
 			return
 		}
 		operatorContextID := requestedOperatorContextID
+		r = withTrustedOperatorContext(r, operatorContextID)
 		if r.Method == http.MethodPost && r.URL.Path == "/internal/actors/provision" {
-			if !rewriteProvisionOperatorContext(w, r, db, operatorContextID) {
+			if !rewriteProvisionOperatorContext(w, r, operatorContextID) {
 				return
 			}
 		}
-		if r.Method == http.MethodGet && r.URL.Path == "/internal/actors/search" {
-			handleOperatorContextActorSearch(w, r, db, operatorContextID)
-			return
-		}
-		if actorID := actorIDFromInternalPath(r.URL.Path); actorID != "" {
+		if actorID := actorIDFromInternalPath(r.URL.Path); actorID != "" && !isDirectActorRead(r, actorID) {
 			if !actorBelongsToOperatorContext(w, r, db, actorID, operatorContextID) {
 				return
 			}

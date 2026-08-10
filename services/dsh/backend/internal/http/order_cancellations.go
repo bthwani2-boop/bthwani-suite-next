@@ -95,24 +95,22 @@ func (s *protectedStoreServer) handleClientCancelOrder(w http.ResponseWriter, r 
 	if !ok {
 		return
 	}
-	order, err := orders.CancelOrder(s.db, orders.CancellationInput{
-		OrderID:       orderID,
-		OperatorContextID:      actor.OperatorContextID,
-		ActorID:       actor.ID,
-		ActorRole:     "client",
-		ReasonCode:    body.ReasonCode,
-		ReasonNote:    body.ReasonNote,
-		CorrelationID: cancellationCorrelation(r, body),
+	_, err := orders.CancelOrderSync(s.db, orders.CreateCancellationCaseInput{
+		OrderID:           orderID,
+		OperatorContextID: actor.OperatorContextID,
+		ActorID:           actor.ID,
+		ActorRole:         "client",
+		ReasonCode:        body.ReasonCode,
+		ReasonNote:        body.ReasonNote,
+		CorrelationID:     cancellationCorrelation(r, body),
 	})
 	if err != nil {
 		writeOrderCancellationError(w, err)
 		return
 	}
-	cancellation, err := orders.GetCancellation(s.db, orderID)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cancellation projection unavailable")
-		return
-	}
+
+	order, _ := orders.GetOrder(s.db, orderID)
+	cancellation, _ := orders.GetCancellation(s.db, orderID)
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order), "cancellation": cancellation})
 }
 
@@ -125,24 +123,22 @@ func (s *protectedStoreServer) handlePartnerCancelOrder(w http.ResponseWriter, r
 	if !ok {
 		return
 	}
-	order, err := orders.CancelOrder(s.db, orders.CancellationInput{
-		OrderID:       ownedOrder.ID,
-		OperatorContextID:      actor.OperatorContextID,
-		ActorID:       actor.ID,
-		ActorRole:     "partner",
-		ReasonCode:    body.ReasonCode,
-		ReasonNote:    body.ReasonNote,
-		CorrelationID: cancellationCorrelation(r, body),
+	_, err := orders.CancelOrderSync(s.db, orders.CreateCancellationCaseInput{
+		OrderID:           ownedOrder.ID,
+		OperatorContextID: actor.OperatorContextID,
+		ActorID:           actor.ID,
+		ActorRole:         "partner",
+		ReasonCode:        body.ReasonCode,
+		ReasonNote:        body.ReasonNote,
+		CorrelationID:     cancellationCorrelation(r, body),
 	})
 	if err != nil {
 		writeOrderCancellationError(w, err)
 		return
 	}
-	cancellation, err := orders.GetCancellation(s.db, ownedOrder.ID)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cancellation projection unavailable")
-		return
-	}
+
+	order, _ := orders.GetOrder(s.db, ownedOrder.ID)
+	cancellation, _ := orders.GetCancellation(s.db, ownedOrder.ID)
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order), "cancellation": cancellation})
 }
 
@@ -152,7 +148,7 @@ func (s *protectedStoreServer) handlePartnerCancelOrder(w http.ResponseWriter, r
 // override always carries a reason and ticket reference in a durable,
 // queryable record.
 func (s *protectedStoreServer) handleOperatorCancelOrderGoverned(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", IncidentPermissionOverride, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -171,33 +167,39 @@ func (s *protectedStoreServer) handleOperatorCancelOrderGoverned(w http.Response
 		reason = body.ReasonCode
 	}
 	reported, err := incident.NewService(s.db).Report(r.Context(), incident.ReportInput{
-		OrderID:          orderID,
-		OperatorContextID:         actor.OperatorContextID,
-		TargetEntityType: incident.TargetOrder,
-		TargetEntityID:   orderID,
-		IncidentType:     incident.TypeCancel,
-		Reason:           reason,
-		TicketReference:  body.TicketReference,
-		ActorID:          actor.ID,
-		ActorRole:        "operator",
-		CorrelationID:    cancellationCorrelation(r, body),
-		ReasonCode:       body.ReasonCode,
-		ReasonNote:       body.ReasonNote,
+		OrderID:           orderID,
+		OperatorContextID: actor.OperatorContextID,
+		TargetEntityType:  incident.TargetOrder,
+		TargetEntityID:    orderID,
+		IncidentType:      incident.TypeCancel,
+		Reason:            reason,
+		TicketReference:   body.TicketReference,
+		ActorID:           actor.ID,
+		ActorRole:         "operator",
+		CorrelationID:     cancellationCorrelation(r, body),
+		ReasonCode:        body.ReasonCode,
+		ReasonNote:        body.ReasonNote,
 	})
 	if err != nil {
 		writeOrderCancellationError(w, err)
 		return
 	}
-	order, err := orders.GetOrder(s.db, orderID)
+	_, err = orders.CancelOrderSync(s.db, orders.CreateCancellationCaseInput{
+		OrderID:           orderID,
+		OperatorContextID: actor.OperatorContextID,
+		ActorID:           actor.ID,
+		ActorRole:         "operator",
+		ReasonCode:        body.ReasonCode,
+		ReasonNote:        body.ReasonNote,
+		CorrelationID:     cancellationCorrelation(r, body),
+	})
 	if err != nil {
 		writeOrderCancellationError(w, err)
 		return
 	}
-	cancellation, err := orders.GetCancellation(s.db, order.ID)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cancellation projection unavailable")
-		return
-	}
+
+	order, _ := orders.GetOrder(s.db, orderID)
+	cancellation, _ := orders.GetCancellation(s.db, orderID)
 	store.SendJSON(w, http.StatusOK, map[string]any{
 		"order":        marshalOrder(order),
 		"cancellation": cancellation,
@@ -237,7 +239,7 @@ func (s *protectedStoreServer) handlePartnerOrderCancellation(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleOperatorOrderCancellation(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -249,6 +251,64 @@ func (s *protectedStoreServer) handleOperatorOrderCancellation(w http.ResponseWr
 	store.SendJSON(w, http.StatusOK, map[string]any{"cancellation": cancellation})
 }
 
+func (s *protectedStoreServer) handleCreateOrderCancellationAction(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.ActorFromContext(r.Context())
+	if !ok {
+		return
+	}
+	idempotencyKey, correlationID, ok := partnerSupportMutationHeaders(w, r)
+	if !ok {
+		return
+	}
+	var body struct {
+		ActionType string `json:"actionType"`
+		Payload    string `json:"payload"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	orderID := r.PathValue("orderId")
+	caseItem, err := orders.GetCancellation(s.db, orderID)
+	if err != nil {
+		writeOrderCancellationError(w, err)
+		return
+	}
+	item, err := orders.CreateCancellationAction(s.db, orders.CreateCancellationActionInput{
+		ActorID:        actor.ID,
+		CaseID:         caseItem.ID,
+		ActionType:     orders.CancellationActionType(body.ActionType),
+		Payload:        body.Payload,
+		IdempotencyKey: idempotencyKey,
+		CorrelationID:  correlationID,
+	})
+	if err != nil {
+		writeOrderCancellationError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusCreated, map[string]any{"action": item})
+}
+
+func (s *protectedStoreServer) handleExecuteOrderCancellationAction(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.ActorFromContext(r.Context())
+	if !ok {
+		return
+	}
+	_, correlationID, ok := partnerSupportMutationHeaders(w, r)
+	if !ok {
+		return
+	}
+	item, err := orders.ExecuteCancellationAction(s.db, orders.ExecuteCancellationActionInput{
+		ActorID:       actor.ID,
+		ActionID:      r.PathValue("actionId"),
+		CorrelationID: correlationID,
+	})
+	if err != nil {
+		writeOrderCancellationError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"action": item})
+}
+
 func RegisterOrderCancellationRoutes(
 	mux *http.ServeMux,
 	db *sql.DB,
@@ -256,11 +316,14 @@ func RegisterOrderCancellationRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	mux.HandleFunc("POST /dsh/client/orders/{orderId}/cancel", protected.handleClientCancelOrder)
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}/cancellation", protected.handleClientOrderCancellation)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/cancel", protected.handlePartnerCancelOrder)
 	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/cancellation", protected.handlePartnerOrderCancellation)
-	mux.HandleFunc("POST /dsh/operator/orders/{orderId}/cancellation", protected.handleOperatorCancelOrderGoverned)
-	mux.HandleFunc("GET /dsh/operator/orders/{orderId}/cancellation", protected.handleOperatorOrderCancellation)
+	mux.HandleFunc("POST /dsh/operator/orders/{orderId}/cancellation", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleOperatorCancelOrderGoverned))
+	mux.HandleFunc("GET /dsh/operator/orders/{orderId}/cancellation", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleOperatorOrderCancellation))
+
+	mux.HandleFunc("POST /dsh/operator/orders/{orderId}/cancellation/actions", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleCreateOrderCancellationAction))
+	mux.HandleFunc("POST /dsh/operator/orders/{orderId}/cancellation/actions/{actionId}/execute", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleExecuteOrderCancellationAction))
 }

@@ -39,10 +39,10 @@ const rules = [
     ],
   ],
   [
-    "contracts/master.openapi.yaml",
+    "contracts/openapi/index.yaml",
     [],
     [
-      "dshClientAddressPrivacy: ../services/dsh/contracts/dsh.client-address-privacy.openapi.yaml",
+      "dsh: ../../services/dsh/contracts/dsh.openapi.yaml",
     ],
   ],
   [

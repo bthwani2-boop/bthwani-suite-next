@@ -43,8 +43,7 @@ test("Order Fulfillment routes are implemented and registered at runtime", async
   assert.match(router, /dsh\/client\/orders/);
   assert.match(router, /dsh\/partner\/orders/);
   assert.match(router, /dsh\/operator\/orders/);
-  assert.match(router, /handleAcceptOrder/);
-  assert.match(router, /handleRejectOrder/);
+  assert.match(router, /handlePartnerOrderDecision/);
   assert.doesNotMatch(contract, /\bledger mutation\b|\brefund finalization\b|\bsettlement posting\b/i);
 });
 

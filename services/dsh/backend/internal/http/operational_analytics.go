@@ -41,15 +41,9 @@ func analyticsLimit(r *http.Request, fallback int) int {
 	return value
 }
 
-func (s *protectedStoreServer) requireAnalyticsOperator(w http.ResponseWriter, r *http.Request) bool {
-	_, ok := s.requirePermission(w, r, "control-panel", AnalyticsPermissionRead, "operator")
-	return ok
-}
+
 
 func (s *protectedStoreServer) handlePreparationSLAAnalytics(w http.ResponseWriter, r *http.Request) {
-	if !s.requireAnalyticsOperator(w, r) {
-		return
-	}
 	window, ok := parseAnalyticsWindow(w, r)
 	if !ok {
 		return
@@ -63,9 +57,6 @@ func (s *protectedStoreServer) handlePreparationSLAAnalytics(w http.ResponseWrit
 }
 
 func (s *protectedStoreServer) handleCaptainPerformanceAnalytics(w http.ResponseWriter, r *http.Request) {
-	if !s.requireAnalyticsOperator(w, r) {
-		return
-	}
 	window, ok := parseAnalyticsWindow(w, r)
 	if !ok {
 		return
@@ -79,9 +70,6 @@ func (s *protectedStoreServer) handleCaptainPerformanceAnalytics(w http.Response
 }
 
 func (s *protectedStoreServer) handleFieldPerformanceAnalytics(w http.ResponseWriter, r *http.Request) {
-	if !s.requireAnalyticsOperator(w, r) {
-		return
-	}
 	window, ok := parseAnalyticsWindow(w, r)
 	if !ok {
 		return
@@ -95,9 +83,6 @@ func (s *protectedStoreServer) handleFieldPerformanceAnalytics(w http.ResponseWr
 }
 
 func (s *protectedStoreServer) handleOrderAnalyticsDrilldown(w http.ResponseWriter, r *http.Request) {
-	if !s.requireAnalyticsOperator(w, r) {
-		return
-	}
 	window, ok := parseAnalyticsWindow(w, r)
 	if !ok {
 		return
@@ -117,9 +102,6 @@ func (s *protectedStoreServer) handleOrderAnalyticsDrilldown(w http.ResponseWrit
 }
 
 func (s *protectedStoreServer) handleAnalyticsFinancialSnapshot(w http.ResponseWriter, r *http.Request) {
-	if !s.requireAnalyticsOperator(w, r) {
-		return
-	}
 	snapshot, err := s.wlt.ReadAnalyticsFinancialSnapshot(r.Context())
 	if err != nil {
 		store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
@@ -135,9 +117,6 @@ func (s *protectedStoreServer) handleAnalyticsFinancialSnapshot(w http.ResponseW
 }
 
 func (s *protectedStoreServer) handleAnalyticsExportCSV(w http.ResponseWriter, r *http.Request) {
-	if !s.requireAnalyticsOperator(w, r) {
-		return
-	}
 	window, ok := parseAnalyticsWindow(w, r)
 	if !ok {
 		return

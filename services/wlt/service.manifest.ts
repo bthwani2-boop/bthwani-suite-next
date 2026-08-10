@@ -20,7 +20,7 @@ export const wltServiceManifest = {
   implementationReadiness: {
     backend: true,
     database: false,
-    generatedClient: false,
+    generatedClient: true,
     frontend: true,
     frontendDshBoundary: true,
     paymentSessionReference: true,
@@ -38,7 +38,7 @@ export const wltServiceManifest = {
     productionMutationsVerified: false,
     evidenceState: "NEEDS_EVIDENCE",
     reason:
-      "Implementation exists, but database migration, generated/manual clients, reference, mutation, reconciliation, operator-context-isolation, and cross-service journeys require fresh same-commit evidence.",
+      "clients/generated/wlt-api.ts regenerates byte-identical to the committed file from contracts/generated/wlt.bundle.openapi.yaml (verified 2026-08-06; `pnpm run openapi:generate` produces zero diff), so generatedClient is proven. Database migration, reference, mutation, reconciliation, operator-context-isolation, and cross-service journeys still require fresh same-commit runtime evidence this static file cannot provide.",
   },
 
   productionReadiness: {
@@ -52,7 +52,7 @@ export const wltServiceManifest = {
   // simulator configuration must not promote runtime or financial readiness.
   backendRuntimeReady: false,
   databaseReady: false,
-  generatedClientReady: false,
+  generatedClientReady: true,
   frontendReady: true,
   frontendDshBoundaryReady: true,
   referenceRuntimeVerified: false,

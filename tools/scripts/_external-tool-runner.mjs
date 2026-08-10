@@ -3,14 +3,37 @@ import fs from "node:fs";
 import path from "node:path";
 import { repoRoot } from "../guards/_guard-utils.mjs";
 
-function readActivation(toolId) {
-  const baselinePath = path.join(repoRoot, "tools/toolchain/tool-activation-baseline.json");
-  try {
-    const data = JSON.parse(fs.readFileSync(baselinePath, "utf8"));
-    return data.baseline?.[toolId] || "optional";
-  } catch {
-    return "optional";
+const activationPolicyPath = path.join(repoRoot, "tools/toolchain/tool-activation-policy.json");
+const allowedActivations = new Set(["active", "partial", "optional", "missing", "disabled"]);
+let activationPolicy;
+
+function loadActivationPolicy() {
+  if (activationPolicy) return activationPolicy;
+  if (!fs.existsSync(activationPolicyPath)) {
+    console.error("[TOOLCHAIN FAIL] tool activation policy missing: tools/toolchain/tool-activation-policy.json decision=FIX_REQUIRED");
+    process.exit(1);
   }
+  try {
+    activationPolicy = JSON.parse(fs.readFileSync(activationPolicyPath, "utf8"));
+  } catch (error) {
+    console.error(`[TOOLCHAIN FAIL] invalid tool activation policy: ${error.message} decision=FIX_REQUIRED`);
+    process.exit(1);
+  }
+  if (activationPolicy.schemaVersion !== 1 || activationPolicy.policyId !== "TOOL_ACTIVATION_POLICY" || typeof activationPolicy.activations !== "object" || activationPolicy.activations === null) {
+    console.error("[TOOLCHAIN FAIL] malformed tool activation policy decision=FIX_REQUIRED");
+    process.exit(1);
+  }
+  return activationPolicy;
+}
+
+function readActivation(toolId) {
+  const policy = loadActivationPolicy();
+  const activation = policy.activations[toolId];
+  if (!allowedActivations.has(activation)) {
+    console.error(`[TOOLCHAIN FAIL] missing or invalid activation for ${toolId}: ${String(activation)} decision=FIX_REQUIRED`);
+    process.exit(1);
+  }
+  return activation;
 }
 
 export function hasBinary(binary) {
@@ -66,22 +89,23 @@ function handleMissingBinary(toolId, binary, required) {
   const diagnostic = isDiagnosticMode();
   const enforce = required && !diagnostic;
 
-  if (enforce) {
+  if (enforce || activation === "active") {
     console.error(`[${toolId.toUpperCase()} FAIL] required binary missing: ${binary} activation=${activation} decision=FIX_REQUIRED`);
     process.exit(1);
   }
-
-  if (diagnostic || activation === "optional") {
+  if (activation === "disabled") {
+    console.log(`[${toolId.toUpperCase()} SKIP] tool is disabled by activation policy.`);
+    process.exit(0);
+  }
+  if (diagnostic || activation === "optional" || activation === "missing") {
     console.log(`[${toolId.toUpperCase()} SKIP] '${binary}' is not installed. activation=${activation} decision=NEEDS_EVIDENCE`);
     process.exit(0);
   }
-
   if (activation === "partial") {
     console.warn(`[${toolId.toUpperCase()} WARN] '${binary}' is not installed. activation=partial decision=NEEDS_EVIDENCE`);
     process.exit(0);
   }
-
-  console.error(`[${toolId.toUpperCase()} FAIL] active binary missing: ${binary} decision=FIX_REQUIRED`);
+  console.error(`[${toolId.toUpperCase()} FAIL] unsupported activation state: ${activation} decision=FIX_REQUIRED`);
   process.exit(1);
 }
 
@@ -94,21 +118,22 @@ function handleCommandFailure(toolId, required) {
     console.error(`[${toolId.toUpperCase()} FAIL] command failed. activation=${activation} decision=FIX_REQUIRED`);
     process.exit(1);
   }
-
-  if (diagnostic || activation === "partial" || activation === "optional") {
+  if (activation === "disabled") {
+    console.log(`[${toolId.toUpperCase()} SKIP] tool is disabled by activation policy.`);
+    process.exit(0);
+  }
+  if (diagnostic || activation === "partial" || activation === "optional" || activation === "missing") {
     console.warn(`[${toolId.toUpperCase()} WARN] command failed. activation=${activation} decision=NEEDS_EVIDENCE`);
     process.exit(0);
   }
-
+  console.error(`[${toolId.toUpperCase()} FAIL] unsupported activation state: ${activation} decision=FIX_REQUIRED`);
   process.exit(1);
 }
 
 export function runTool({ toolId, binary, command, diagnosticCommand, required = false }) {
   if (!hasBinary(binary)) handleMissingBinary(toolId, binary, required);
-
   ensureDir(".diagnostics/security");
   ensureDir(".diagnostics/toolchain");
-
   const cmd = isDiagnosticMode() && diagnosticCommand ? diagnosticCommand : command;
   console.log(`Running: ${cmd}`);
   try {
@@ -120,12 +145,10 @@ export function runTool({ toolId, binary, command, diagnosticCommand, required =
 
 export function runFilesTool({ toolId, binary, files, makeCommand, noFilesMessage, required = false }) {
   if (!hasBinary(binary)) handleMissingBinary(toolId, binary, required);
-
   if (!files.length) {
     console.log(noFilesMessage || "No files found.");
     process.exit(0);
   }
-
   const cmd = makeCommand(files);
   console.log(`Running: ${cmd}`);
   try {

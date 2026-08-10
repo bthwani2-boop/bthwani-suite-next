@@ -7,7 +7,8 @@ export type DshPartner = {
   readonly displayName: string;
   readonly legalIdentityType: string;
   readonly legalIdentityNumber: string;
-  readonly ownerName: string;
+  readonly ownerActorId: string;
+  readonly workforcePersonId: string;
   readonly primaryPhone: string;
   readonly secondaryPhone: string;
   readonly email: string;
@@ -153,7 +154,8 @@ export type DshCreatePartnerInput = {
   readonly displayName: string;
   readonly legalIdentityType: string;
   readonly legalIdentityNumber: string;
-  readonly ownerName?: string;
+  readonly ownerActorId?: string;
+  readonly workforcePersonId?: string;
   readonly primaryPhone: string;
   readonly secondaryPhone?: string;
   readonly email?: string;
@@ -163,7 +165,8 @@ export type DshCreatePartnerInput = {
 
 export type DshUpdatePartnerRequest = {
   readonly displayName?: string;
-  readonly ownerName?: string;
+  readonly ownerActorId?: string;
+  readonly workforcePersonId?: string;
   readonly primaryPhone?: string;
   readonly secondaryPhone?: string;
   readonly email?: string;
@@ -379,7 +382,7 @@ export type DshPartnerOperationalScope = {
 export type DshPartnerTeamMember = {
   readonly id: string;
   readonly name: string;
-  readonly role: 'owner' | 'supervisor' | 'staff' | 'courier';
+  readonly role: 'owner' | 'supervisor' | 'staff';
   readonly roleLabel: string;
   readonly status: 'active' | 'paused' | 'invited' | 'blocked' | 'review-needed';
   readonly statusLabel: string;
@@ -429,6 +432,14 @@ export type PartnerRuntimeProfile = {
   activeZoneLabel: string;
 };
 
+export type DshPartnerCommercialSummary = {
+  readonly modelType: string;
+  readonly value: number;
+  readonly currency: string;
+  readonly effectiveAt: string | null;
+  readonly endsAt: string | null;
+};
+
 export type DshPartnerRoute =
   | 'home'
   | 'entry'
@@ -443,6 +454,7 @@ export type DshPartnerRoute =
   | 'category-management'
   | 'product-media'
   | 'product-overrides'
+  | 'commercial-model'
   | 'team';
 
 export type PartnerHubSection = 'hub' | 'profile' | 'operations' | 'inventory' | 'wallet' | 'analytics' | 'settings';

@@ -8,7 +8,7 @@ summary: Verify the contract-to-runtime binding chain without owning product sco
 
 ## Purpose
 
-Own verification of the chain from service OpenAPI and backend operation through generated client, adapter or controller, consumer state, and runtime proof when runtime behavior is claimed.
+Own verification of the chain from service OpenAPI and backend operation through generated client, adapter/controller, consumer state, and runtime proof when runtime behavior is claimed.
 
 ## Invoke when
 
@@ -20,28 +20,31 @@ Own verification of the chain from service OpenAPI and backend operation through
 - No API, backend route, generated client, adapter, controller, or runtime binding is affected.
 - The task is product discovery, visual-only design, or a behavior-preserving internal refactor.
 
-## Authority boundary
-
-This skill owns API/runtime binding analysis and verification only. It does not approve product scope, UX allocation, database ownership, QA, security, release, production readiness, or final closure.
-
 ## Read before
 
-- `governance/policies/contracts.md`
-- the owning service OpenAPI contract
+- `governance/GOVERNANCE.md`
+- `governance/policies/engineering.md`
+- applicable Product Truth when public behavior changes
+- owning service OpenAPI contract and contract manifest
 - backend router and handler
 - generated client
 - adapter/controller and consuming surface
+- `governance/policies/delivery.md` when runtime/evidence/closure is claimed
+
+## Authority boundary
+
+This skill owns API/runtime binding analysis and verification only. It does not approve product scope, UX allocation, database ownership, QA, security, release, production readiness, or final closure.
 
 ## Execution contract
 
 Verify, in order:
 
 1. operation is declared by the owning service contract;
-2. backend route and handler implement the declared operation;
-3. generated client matches the contract;
+2. backend route/handler implements the declared operation;
+3. generated client matches canonical contract provenance;
 4. adapter/controller uses the generated or typed client;
-5. consumer state represents success, empty, loading, forbidden, and failure states as applicable;
-6. runtime evidence is tied to the same commit when runtime behavior is claimed.
+5. consumer state represents applicable success, empty, loading, forbidden, conflict, and failure states;
+6. runtime evidence is tied to the same candidate when runtime behavior is claimed.
 
 ## Forbidden
 
@@ -49,7 +52,7 @@ Verify, in order:
 - Undocumented endpoints or invented operation IDs.
 - Generated clients derived from a non-owning master index.
 - Fake actor identifiers, seed success, or local state presented as runtime proof.
-- Treating static binding checks as production or journey closure.
+- Treating static binding checks as runtime, production, or journey closure.
 
 ## Required output
 

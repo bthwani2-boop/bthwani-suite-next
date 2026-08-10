@@ -20,8 +20,8 @@ var ErrRefundOutcomePersistence = errors.New("refund provider outcome could not 
 // retries the state transition once when the first persistence attempt did not
 // commit. If persistence still fails, callers receive an explicit joined error
 // instead of a misleading provider-only response.
-func CompleteGovernedRefundWithProviderDurable(ctx context.Context, db *sql.DB, client financialProvider, refundID, operatorID, correlationID string) (*GovernedRefund, error) {
-	item, operationErr := CompleteGovernedRefundWithProvider(ctx, db, client, refundID, operatorID, correlationID)
+func CompleteGovernedRefundWithProviderDurable(ctx context.Context, db *sql.DB, rail provider.CashInRail, refundID, operatorID, correlationID string) (*GovernedRefund, error) {
+	item, operationErr := CompleteGovernedRefundWithProvider(ctx, db, rail, refundID, operatorID, correlationID)
 	if operationErr == nil {
 		return item, nil
 	}
@@ -60,7 +60,7 @@ func HandleCompleteGovernedRefundDurable(db *sql.DB) http.HandlerFunc {
 		if !decodeGovernedJSON(w, r, &input) {
 			return
 		}
-		client, err := provider.NewDefaultPaymentProvider()
+		rail, err := provider.NewDefaultFinancialRailRouter()
 		if err != nil {
 			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
 			return
@@ -68,7 +68,7 @@ func HandleCompleteGovernedRefundDurable(db *sql.DB) http.HandlerFunc {
 		item, err := CompleteGovernedRefundWithProviderDurable(
 			r.Context(),
 			db,
-			client,
+			rail,
 			r.PathValue("refundId"),
 			input.OperatorID,
 			r.Header.Get("X-Correlation-ID"),

@@ -9,7 +9,7 @@ import {
   WebControlPanelKpiStrip,
   WebControlPanelRecommendation,
 } from '@bthwani/ui-kit/web';
-import { useControlPanelSession } from '../../shared/session/control-panel-session';
+import { useIdentitySession } from "@bthwani/core-identity";
 import { buildOperationsHref } from './operations.registry';
 import { useStoreAdminController, type DshStoreAdminTableRow } from '../../shared/store';
 import styles from '../shared/control-panel-surface.module.css';
@@ -33,19 +33,20 @@ type CpStoreRow = {
 };
 
 function mapAdminRowToCpRow(row: DshStoreAdminTableRow): CpStoreRow {
-  const isOpenNow = row.isOpen && row.status === 'active';
+  const isOpenNow = row.isOpen && row.status === 'published';
+  const isTemporarilyUnavailable = row.status === 'paused' || row.status === 'suspended';
   return {
     id: row.id,
     name: row.displayName,
     branch: row.cityCode,
-    status: isOpenNow ? 'مفتوح' : row.status === 'temporarily_closed' ? 'موقوف مؤقتًا' : 'مغلق',
+    status: isOpenNow ? 'مفتوح' : isTemporarilyUnavailable ? 'موقوف مؤقتًا' : 'مغلق',
     deliveryMode: row.deliveryModes.includes('delivery') ? 'bthwani_delivery' : 'partner_delivery',
     issue: row.isServiceable ? '' : 'خارج نطاق الخدمة الحالي',
     recommendation: row.catalogApprovalStatus === 'submitted'
       ? 'مراجعة الكتالوج لدى المالك المختص'
       : 'مراجعة بوابات الظهور لدى المالك المختص',
     recommendationReason: `${row.categoryLabel} — كتالوج: ${row.catalogApprovalStatus} — تسويق: ${row.marketingVisibility}`,
-    statusTone: isOpenNow ? 'success' : row.status === 'temporarily_closed' ? 'danger' : 'neutral',
+    statusTone: isOpenNow ? 'success' : isTemporarilyUnavailable ? 'danger' : 'neutral',
   };
 }
 
@@ -53,7 +54,7 @@ export function PartnerStoresScreen({ focusParams }: PartnerStoresScreenProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlStoreId = focusParams?.orderId ?? searchParams.get('orderId') ?? null;
-  const { state: identity } = useControlPanelSession();
+  const { state: identity } = useIdentitySession();
   const controller = useStoreAdminController(identity.kind);
 
   const rows = React.useMemo(
@@ -79,7 +80,7 @@ export function PartnerStoresScreen({ focusParams }: PartnerStoresScreenProps) {
   }, [controller, router]);
 
   const updateLifecycle = React.useCallback(
-    (value: 'active' | 'temporarily_closed', reason: string) => {
+    (value: 'published' | 'paused', reason: string) => {
       if (!controller.selectedStoreId || !activeDetail) return;
       void controller.govern(controller.selectedStoreId, {
         expectedVersion: activeDetail.version,
@@ -212,14 +213,14 @@ export function PartnerStoresScreen({ focusParams }: PartnerStoresScreenProps) {
                     <Button
                       label={isSubmitting ? 'جاري الاستئناف...' : 'استئناف استقبال الطلبات'}
                       disabled={isSubmitting || !activeDetail}
-                      onPress={() => updateLifecycle('active', 'استئناف استقبال الطلبات من لوحة العمليات')}
+                      onPress={() => updateLifecycle('published', 'استئناف استقبال الطلبات من لوحة العمليات')}
                     />
                   ) : (
                     <Button
                       label={isSubmitting ? 'جاري الإيقاف...' : 'إيقاف استقبال الطلبات مؤقتًا'}
                       tone="danger"
                       disabled={isSubmitting || !activeDetail}
-                      onPress={() => updateLifecycle('temporarily_closed', 'إيقاف مؤقت لاستقبال الطلبات من لوحة العمليات')}
+                      onPress={() => updateLifecycle('paused', 'إيقاف مؤقت لاستقبال الطلبات من لوحة العمليات')}
                     />
                   )}
                 </Box>

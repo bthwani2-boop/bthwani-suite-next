@@ -38,6 +38,36 @@ jobs:
             exit 1
           fi
 
+      - name: Set up Go for coverage
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: false
+
+      - name: Generate Go coverage reports
+        shell: bash
+        run: |
+          set -euo pipefail
+          modules=(
+            core/workforce/backend
+            core/providers/backend
+            core/identity/backend
+            core/platform-control/backend
+            services/dsh/backend
+            services/wlt/backend
+          )
+          for module in "${modules[@]}"; do
+            report="$GITHUB_WORKSPACE/$module/.sonar/coverage.out"
+            raw_report="$GITHUB_WORKSPACE/$module/.sonar/coverage.raw.out"
+            mkdir -p "$(dirname "$report")"
+            (
+              cd "$module"
+              go test ./... -coverprofile="$raw_report"
+            )
+            module_name="$(cd "$module" && go list -m)"
+            sed "s#^${module_name}/#${module}/#" "$raw_report" > "$report"
+          done
+
       - name: SonarQube Cloud scan
         uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
         env:

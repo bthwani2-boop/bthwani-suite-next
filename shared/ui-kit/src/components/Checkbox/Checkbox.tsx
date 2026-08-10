@@ -4,7 +4,7 @@ import React, {
   useImperativeHandle,
   useRef,
 } from 'react';
-import './Checkbox.css';
+import './Checkbox.styles.css';
 
 export interface CheckboxProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {

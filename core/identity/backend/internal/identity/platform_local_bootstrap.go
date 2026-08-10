@@ -10,13 +10,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var platformPrivilegedActions = map[string]struct{}{
-	"platform:variables:approve":  {},
-	"platform:variables:apply":    {},
-	"platform:variables:rollback": {},
-	"platform:rollouts:manage":    {},
-}
-
 // BootstrapLocalPlatformActors applies separation of duties to the local
 // control-plane accounts. It runs only when the existing local bootstrap is
 // explicitly enabled and never affects production actors.
@@ -31,7 +24,7 @@ func (r *Repository) BootstrapLocalPlatformActors(ctx context.Context, input Loc
 	if operatorContextID == "" {
 		return errors.New("BTHWANI_OPERATOR_CONTEXT_ID is required when IDENTITY_LOCAL_BOOTSTRAP=true")
 	}
-	if err := r.restrictLocalOperatorPlatformPermissions(ctx); err != nil {
+	if err := r.reconcileLocalOperatorPermissions(ctx); err != nil {
 		return err
 	}
 
@@ -92,8 +85,8 @@ func (r *Repository) BootstrapLocalPlatformActors(ctx context.Context, input Loc
 		}
 		if _, err := r.db.ExecContext(ctx, `
 INSERT INTO identity_actors
-    (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, active, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, true, NOW())
+    (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'ACTIVE', 1, NOW())
 ON CONFLICT (id) DO UPDATE SET
     username = EXCLUDED.username,
     password_hash = EXCLUDED.password_hash,
@@ -101,7 +94,8 @@ ON CONFLICT (id) DO UPDATE SET
     phone_e164 = EXCLUDED.phone_e164,
     roles = EXCLUDED.roles,
     permissions = EXCLUDED.permissions,
-    active = true,
+    status = 'ACTIVE',
+    version = identity_actors.version + 1,
     updated_at = NOW()`,
 			actor.id,
 			actor.username,
@@ -117,34 +111,71 @@ ON CONFLICT (id) DO UPDATE SET
 	return nil
 }
 
-func (r *Repository) restrictLocalOperatorPlatformPermissions(ctx context.Context) error {
-	var raw []byte
-	if err := r.db.QueryRowContext(ctx, `
-SELECT permissions
-FROM identity_actors
-WHERE id = 'operator-local-001'`).Scan(&raw); err != nil {
-		return err
-	}
-	var permissions []Permission
-	if err := json.Unmarshal(raw, &permissions); err != nil {
-		return err
-	}
-	filtered := make([]Permission, 0, len(permissions))
-	for _, permission := range permissions {
-		if permission.Surface == "control-panel" && strings.HasPrefix(permission.Action, "platform:") {
-			if _, privileged := platformPrivilegedActions[permission.Action]; privileged {
-				continue
-			}
-		}
-		filtered = append(filtered, permission)
-	}
-	encoded, err := json.Marshal(filtered)
+// reconcileLocalOperatorPermissions replaces the bootstrap actor's provisional
+// permission payload with the exact local-development contract. Replacement is
+// intentional: it removes stale aliases and privileged platform actions rather
+// than accumulating them across bootstrap runs.
+func (r *Repository) reconcileLocalOperatorPermissions(ctx context.Context) error {
+	perms := localOperatorDevelopmentPermissions()
+
+	// 1. Ensure the operator role exists
+	var roleID string
+	err := r.db.QueryRowContext(ctx, `
+		INSERT INTO identity_roles (name, description) VALUES ('operator', 'Local Development Operator')
+		ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description
+		RETURNING id
+	`).Scan(&roleID)
 	if err != nil {
 		return err
 	}
+
+	// 2. Link operator-local-001 to the operator role
 	_, err = r.db.ExecContext(ctx, `
+		INSERT INTO identity_actor_roles (actor_id, role_id, granted_by)
+		VALUES ($1, $2, 'system_bootstrap')
+		ON CONFLICT DO NOTHING`, "operator-local-001", roleID)
+	if err != nil {
+		return err
+	}
+
+	// 3. Map permissions to the role
+	for _, p := range perms {
+		var permID string
+		err = r.db.QueryRowContext(ctx, `
+			INSERT INTO identity_permission_vocabulary (service, surface, action, description)
+			VALUES ($1, $2, $3, 'Local Platform Permission')
+			ON CONFLICT (service, surface, action) DO UPDATE SET description = EXCLUDED.description
+			RETURNING id`, p.Service, p.Surface, p.Action).Scan(&permID)
+		if err != nil {
+			return err
+		}
+
+		_, err = r.db.ExecContext(ctx, `
+			INSERT INTO identity_role_permissions (role_id, permission_id, scope)
+			VALUES ($1, $2, $3)
+			ON CONFLICT (role_id, permission_id) DO UPDATE SET scope = EXCLUDED.scope`, roleID, permID, p.Scope)
+		if err != nil {
+			return err
+		}
+	}
+
+	encoded, err := json.Marshal(perms)
+	if err != nil {
+		return err
+	}
+	result, err := r.db.ExecContext(ctx, `
 UPDATE identity_actors
 SET permissions = $2::jsonb, updated_at = NOW()
 WHERE id = $1`, "operator-local-001", string(encoded))
-	return err
+	if err != nil {
+		return err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return errors.New("operator-local-001 must exist before platform permission reconciliation")
+	}
+	return nil
 }

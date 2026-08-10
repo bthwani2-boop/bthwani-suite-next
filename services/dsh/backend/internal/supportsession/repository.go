@@ -274,31 +274,18 @@ func LoadSnapshot(ctx context.Context, db *sql.DB, targetActorID string) (Snapsh
 	if db == nil || targetActorID == "" {
 		return Snapshot{}, ErrInvalid
 	}
+	// Roles is intentionally empty: dsh_admin_staff_assignments (a local DSH
+	// role-assignment table) was retired in favor of Identity as the single
+	// registry of roles, permissions and assignments (J008); Identity's
+	// permission grants carry no roleId/assignedBy/assignedAt, so they cannot
+	// be mapped onto SnapshotRole without inventing data. A permission-summary
+	// replacement for this field is J008 surface work, not part of restoring
+	// this endpoint to a non-erroring state.
 	snapshot := Snapshot{
 		TargetActorID: targetActorID,
 		Roles:         []SnapshotRole{},
 		RecentAudit:   []SnapshotAudit{},
 		GeneratedAt:   time.Now().UTC(),
-	}
-	roleRows, err := db.QueryContext(ctx, `
-		SELECT a.role_id::TEXT, r.name, COALESCE(a.assigned_by,''), a.assigned_at
-		FROM dsh_admin_staff_assignments a
-		JOIN dsh_admin_roles r ON r.id = a.role_id
-		WHERE a.actor_id = $1
-		ORDER BY a.assigned_at DESC`, targetActorID)
-	if err != nil {
-		return Snapshot{}, err
-	}
-	for roleRows.Next() {
-		var role SnapshotRole
-		if err := roleRows.Scan(&role.RoleID, &role.RoleName, &role.AssignedBy, &role.AssignedAt); err != nil {
-			roleRows.Close()
-			return Snapshot{}, err
-		}
-		snapshot.Roles = append(snapshot.Roles, role)
-	}
-	if err := roleRows.Close(); err != nil {
-		return Snapshot{}, err
 	}
 	auditRows, err := db.QueryContext(ctx, `
 		SELECT action, COALESCE(target_id,''), COALESCE(detail,''), created_at

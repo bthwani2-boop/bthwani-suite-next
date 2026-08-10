@@ -9,7 +9,7 @@ const makeDto = (overrides = {}) => ({
   id: "store-001",
   slug: "test-store",
   displayName: "Test Store",
-  status: "active",
+  status: "published",
   cityCode: "city-a",
   serviceAreaCode: "area-a",
   serviceability: { status: "serviceable" },
@@ -44,8 +44,8 @@ describe("toCardViewModel", () => {
     assert.equal(vm.isOpen, false);
   });
 
-  test("temporarily_closed produces statusBadge", () => {
-    const vm = toCardViewModel(makeDto({ status: "temporarily_closed" }));
+  test("closed produces statusBadge", () => {
+    const vm = toCardViewModel(makeDto({ status: "closed" }));
     assert.equal(vm.statusBadge, "مغلق مؤقتاً");
   });
 

@@ -39,7 +39,7 @@ func (l sqlActorAccessLookup) AccessForActor(ctx context.Context, actorID string
 	var access activationActorAccess
 	var permissionsJSON []byte
 	err := l.db.QueryRowContext(ctx, `
-		SELECT operator_context_id, active, permissions
+		SELECT operator_context_id, status = 'ACTIVE' AS active, permissions
 		FROM identity_actors
 		WHERE id = $1`, actorID).Scan(&access.OperatorContextID, &access.Active, &permissionsJSON)
 	if err != nil {

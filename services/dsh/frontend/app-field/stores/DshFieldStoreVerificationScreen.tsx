@@ -22,6 +22,7 @@ import {
   useStoreRoleContextController,
 } from "../../shared/store";
 import { useFieldVerificationController } from "../../shared/field-readiness";
+import { DshFieldProblemState } from "../components/DshFieldProblemNotice";
 
 type Props = {
   readonly storeId: string;
@@ -70,11 +71,13 @@ export function DshFieldStoreVerificationScreen({ storeId, visitId, onBack }: Pr
 
   if (verification.state.kind === "error") {
     return (
-      <StateView
-        title="تعذر تحميل زيارة التحقق"
-        description={verification.state.message}
-        actionLabel="إعادة المحاولة"
-        onActionPress={() => void verification.reload()}
+      <DshFieldProblemState
+        problem={verification.state.problem}
+        handlers={{
+          refresh_record: () => void verification.reload(),
+          refresh_scope: () => void verification.reload(),
+        }}
+        onRetry={() => void verification.reload()}
       />
     );
   }

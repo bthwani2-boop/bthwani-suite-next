@@ -28,7 +28,7 @@ func TestSearchNormalizesInputAndAcceptsGovernedResults(t *testing.T) {
 	}))
 	defer server.Close()
 
-	response, err := NewClient(server.URL).Search(context.Background(), "Bearer client", SearchInput{
+	response, err := NewClient(server.URL, nil).Search(context.Background(), "Bearer client", SearchInput{
 		Query: "  جامعة صنعاء  ", CountryCodes: []string{" ye "},
 	})
 	if err != nil {
@@ -47,14 +47,14 @@ func TestSearchRejectsMalformedProviderResult(t *testing.T) {
 	}))
 	defer server.Close()
 
-	_, err := NewClient(server.URL).Search(context.Background(), "Bearer client", SearchInput{Query: "صنعاء"})
+	_, err := NewClient(server.URL, nil).Search(context.Background(), "Bearer client", SearchInput{Query: "صنعاء"})
 	if !errors.Is(err, ErrUncertain) {
 		t.Fatalf("Search() error = %v, want ErrUncertain", err)
 	}
 }
 
 func TestSearchRejectsInvalidInputBeforeProviderCall(t *testing.T) {
-	_, err := NewClient("http://unused.invalid").Search(context.Background(), "", SearchInput{Query: "x"})
+	_, err := NewClient("http://unused.invalid", nil).Search(context.Background(), "", SearchInput{Query: "x"})
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("Search() error = %v, want ErrInvalid", err)
 	}

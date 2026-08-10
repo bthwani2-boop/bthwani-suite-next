@@ -31,7 +31,7 @@ func namedAnalyticsPeriod(w http.ResponseWriter, r *http.Request) (string, bool)
 
 // GET /dsh/operator/analytics/platform
 func (s *protectedStoreServer) handlePlatformKpis(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", AnalyticsPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -49,7 +49,7 @@ func (s *protectedStoreServer) handlePlatformKpis(w http.ResponseWriter, r *http
 
 // GET /dsh/operator/analytics/orders
 func (s *protectedStoreServer) handleOrderAnalytics(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", AnalyticsPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -67,7 +67,7 @@ func (s *protectedStoreServer) handleOrderAnalytics(w http.ResponseWriter, r *ht
 
 // GET /dsh/operator/analytics/delivery
 func (s *protectedStoreServer) handleDeliveryAnalytics(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", AnalyticsPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -85,7 +85,7 @@ func (s *protectedStoreServer) handleDeliveryAnalytics(w http.ResponseWriter, r 
 
 // GET /dsh/operator/analytics/support
 func (s *protectedStoreServer) handleSupportAnalytics(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", AnalyticsPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -103,7 +103,7 @@ func (s *protectedStoreServer) handleSupportAnalytics(w http.ResponseWriter, r *
 
 // GET /dsh/operator/analytics/stores
 func (s *protectedStoreServer) handleStoreAnalytics(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", AnalyticsPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

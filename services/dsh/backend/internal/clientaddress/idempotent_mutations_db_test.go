@@ -217,7 +217,7 @@ func TestIdempotentAddressMutationsAreExactlyOnceAndClientScoped(t *testing.T) {
 
 	var activeCount, defaultCount int
 	if err := db.QueryRow(`SELECT count(*), count(*) FILTER (WHERE is_default)
-		FROM dsh_client_addresses WHERE client_id=$1 AND deleted_at IS NULL`, clientA).Scan(&activeCount, &defaultCount); err != nil {
+		FROM dsh_client_addresses WHERE client_id=$1 AND status != 'DELETED'`, clientA).Scan(&activeCount, &defaultCount); err != nil {
 		t.Fatalf("read active/default counts: %v", err)
 	}
 	if activeCount != 1 || defaultCount != 1 {

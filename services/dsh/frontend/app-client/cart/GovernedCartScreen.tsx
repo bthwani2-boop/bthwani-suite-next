@@ -11,10 +11,12 @@ import {
   TopBar,
   spacing,
 } from "@bthwani/ui-kit";
+import { useBthwaniQuery } from "@bthwani/data-runtime";
 import { useCartController, useServiceabilityController } from "../../shared/cart";
+import { fetchFulfillmentModes } from "../../shared/cart/cart.api";
 import type { DshCart, DshFulfillmentMode } from "../../shared/cart";
 import type { DshPaymentMethod } from "../../shared/checkout";
-import { useDshPaymentController } from "../../shared/finance-wlt-link";
+import { formatWltMoney, useWltPaymentController } from "@bthwani/wlt/dsh";
 import { PaymentDecisionSection } from "./PaymentDecisionSection";
 
 type Props = {
@@ -32,11 +34,12 @@ type Props = {
   readonly onBack?: () => void;
 };
 
-const FULFILLMENT_OPTIONS: readonly { value: DshFulfillmentMode; label: string; description: string }[] = [
-  { value: "bthwani_delivery", label: "توصيل بثواني", description: "رسومه تُحتسب من سياسة DSH المعتمدة للمتجر." },
-  { value: "partner_delivery", label: "توصيل المتجر", description: "ينفذه موصل مرتبط فعليًا بفريق المتجر." },
-  { value: "pickup", label: "استلم بنفسك", description: "تستلم الطلب من المتجر دون توصيل." },
-];
+// Fallback labels if backend doesn't provide them, though we just need the modes and availability.
+const MODE_LABELS: Record<string, { label: string; description: string }> = {
+  bthwani_delivery: { label: "توصيل بثواني", description: "رسومه تُحتسب من سياسة DSH المعتمدة للمتجر." },
+  partner_delivery: { label: "توصيل المتجر", description: "ينفذه موصل مرتبط فعليًا بفريق المتجر." },
+  pickup: { label: "استلم بنفسك", description: "تستلم الطلب من المتجر دون توصيل." },
+};
 
 export function GovernedCartScreen({
   storeId,
@@ -48,6 +51,11 @@ export function GovernedCartScreen({
 }: Props) {
   const cartController = useCartController(storeId, authKind);
   const serviceability = useServiceabilityController();
+  const modesQuery = useBthwaniQuery({
+    queryKey: ["cart", "fulfillment-modes", storeId, serviceAreaCode],
+    queryFn: () => fetchFulfillmentModes(storeId, serviceAreaCode),
+  });
+
   const [fulfillmentMode, setFulfillmentMode] = React.useState<DshFulfillmentMode>("bthwani_delivery");
   const [couponCode, setCouponCode] = React.useState("");
   const [deliveryAddress, setDeliveryAddress] = React.useState("");
@@ -55,7 +63,7 @@ export function GovernedCartScreen({
 
   const cart = cartController.state.kind === "success" ? cartController.state.cart : null;
   const presentationSubtotal = React.useMemo(
-    () => cart?.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0) ?? 0,
+    () => cart?.items.reduce((sum, item) => sum + item.unitPriceMinorUnits * item.quantity, 0) ?? 0,
     [cart],
   );
   const cartCurrencies = React.useMemo(
@@ -64,7 +72,7 @@ export function GovernedCartScreen({
   );
   const presentationCurrency = cartCurrencies.size === 1 ? [...cartCurrencies][0] ?? "" : "";
   const currencySnapshotValid = cartCurrencies.size === 1 && presentationCurrency.length === 3;
-  const payment = useDshPaymentController();
+  const payment = useWltPaymentController();
 
   React.useEffect(() => {
     if (cart) setFulfillmentMode(cart.fulfillmentMode);
@@ -116,14 +124,25 @@ export function GovernedCartScreen({
 
         <Card padding={3} gap={3}>
           <Text role="bodyStrong" align="start">طريقة التنفيذ</Text>
-          {FULFILLMENT_OPTIONS.map((option) => (
-            <Button
-              key={option.value}
-              label={`${option.label} — ${option.description}`}
-              tone={fulfillmentMode === option.value ? "brand" : "secondary"}
-              onPress={() => setFulfillmentMode(option.value)}
-            />
-          ))}
+          {modesQuery.isLoading ? (
+            <Text role="bodySm" tone="muted">جاري تحميل خيارات التنفيذ المتاحة...</Text>
+          ) : modesQuery.isError ? (
+            <Text role="bodySm" tone="danger">تعذر تحميل خيارات التنفيذ.</Text>
+          ) : modesQuery.data?.modes ? (
+            modesQuery.data.modes.map((mode) => {
+              const meta = MODE_LABELS[mode.mode] ?? { label: mode.mode, description: "" };
+              const isSelected = fulfillmentMode === mode.mode;
+              return (
+                <Button
+                  key={mode.mode}
+                  label={mode.available ? `${meta.label} — ${meta.description}` : `${meta.label} (غير متاح: ${mode.unavailableReasonCode})`}
+                  tone={isSelected ? "brand" : "secondary"}
+                  disabled={!mode.available}
+                  onPress={() => setFulfillmentMode(mode.mode as DshFulfillmentMode)}
+                />
+              );
+            })
+          ) : null}
         </Card>
 
         {fulfillmentRequiresAddress ? (
@@ -178,7 +197,7 @@ export function GovernedCartScreen({
                 <View style={{ flex: 1 }}>
                   <Text role="bodyStrong" align="start">{item.productName}</Text>
                   <Text role="caption" tone="muted" align="start">
-                    {item.unitPrice.toLocaleString("ar")} {item.currency} × {item.quantity}
+                    {formatWltMoney(item.unitPriceMinorUnits, item.currency)} × {item.quantity}
                   </Text>
                 </View>
                 <View style={{ flexDirection: "row-reverse", gap: spacing[1] }}>
@@ -190,7 +209,7 @@ export function GovernedCartScreen({
             </View>
           ))}
           <Text role="bodySm" align="start">
-            إجمالي المنتجات التقديري: {presentationSubtotal.toLocaleString("ar")} {presentationCurrency}
+            إجمالي المنتجات التقديري: {formatWltMoney(presentationSubtotal, presentationCurrency)}
           </Text>
           <Text role="caption" tone="muted" align="start">الإجمالي النهائي يظهر بعد إنشاء intent من DSH.</Text>
           <Button label="حذف جميع العناصر" tone="secondary" onPress={() => void cartController.clear(cart)} />

@@ -239,8 +239,8 @@ export function DshCaptainHomeOrderPanel({
         <Button size="sm" fullWidth={false} tone="secondary" label="توسيع" onPress={onExpandOrder} />
       </Box>
       <Text role="bodySm" numberOfLines={1} tone="muted">{activeOrderCompactRouteLabel}</Text>
-      <Box layoutDirection="row" align="center" justify="space-between" gap={2}>
-        <Text role="caption" tone="muted">{activeSummary.etaLabel}</Text>
+      <Box layoutDirection="row" align="center" gap={1}>
+        <Text role="caption" tone="muted">{activeSummary.etaLabel} (تقديري)</Text>
       </Box>
     </SurfaceAny>
   );

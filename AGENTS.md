@@ -1,137 +1,105 @@
 # BThwani Agents
 
+`AGENTS.md` is a thin coding-agent adapter. Human developers and AI agents use the same authority and execution model in `governance/GOVERNANCE.md`.
+
 ## Authority
 
-`AGENTS.md` is the default repository instruction entry point. Resolve conflicts through:
+Resolve each task in this order:
 
-1. `governance/authority/authority-precedence.json`
-2. active canonical governance and machine-readable contracts
-3. the smallest applicable governed skill
-4. thin tool adapters
+1. current authorized task instruction;
+2. `governance/authority/authority-precedence.json`;
+3. `governance/GOVERNANCE.md`;
+4. `governance/product/PRD.md` and applicable Engineering/Security/Delivery policy;
+5. applicable capability Product Truth and machine contracts;
+6. exact pinned implementation and runtime evidence.
 
-Decision vocabulary: `governance/contracts/decision-vocabulary.json`.
-Skill registry: `governance/skills/skills-registry.json`.
-Agent registry: `governance/agents/agent-registry.json`.
+Registries:
 
-## Default execution model
+- decisions: `governance/contracts/decision-vocabulary.json`
+- agents: `governance/agents/agent-registry.json`
+- skills: `governance/skills/skills-registry.json`
+- tools: `governance/tools/agent-tool-registry.json`
+- guards: `governance/guards/guard-registry.json`
+- workflows: `governance/github/workflow-registry.json`
+
+## Truth boundaries
+
+**Authority truth** determines who owns policy, product semantics, writes, approvals, and evidence rules.
+
+**Product truth** determines capability behavior, actors, states, surfaces, invariants, and acceptance.
+
+**Implementation truth** is the exact pinned source, contracts, configuration, migrations, and tests.
+
+**Runtime truth** is actual candidate-bound runtime/readback evidence. No other truth class may be inferred from a plan, prompt, report, fixture, or historical result.
+
+## Execution
 
 Use `CODE_BASED_LEAN`:
 
-- inspect the smallest complete surface that can reveal the root cause;
-- make the smallest safe change that closes the requested scope;
-- verify only the affected behavior and actual risk;
-- expand scope only when ownership, dependencies, product impact, or safety evidence requires it.
+- pin the exact repository, user-named branch/ref, and remote SHA;
+- inspect the smallest complete affected vertical path;
+- identify the authoritative truth/write owner;
+- fix root cause at that owner;
+- migrate every affected consumer/readback;
+- remove obsolete or parallel behavior when safe;
+- run the smallest sufficient affected verification and expand only by proven risk;
+- re-run invalidated evidence after the final relevant write;
+- report only what the exact candidate proves.
 
-Words such as "deep", "complete", or "100%" increase accuracy requirements. They do not authorize an automatic full-repository scan.
+“Deep”, “complete”, and “100%” raise the evidence standard; they do not justify unrelated scans, every tool, or unsupported completeness claims.
 
-## Repository truth
+## Repository safety
 
-For local work, use the active local branch unless the user names another target.
+Re-resolve the user-named branch before every logical write batch and after the final write. Reconcile unexpected branch movement. Never substitute another branch, force/reset newer work, or merge/release/deploy without current-task authority.
 
-For GitHub or remote work:
+## Full-stack multi-surface
 
-- resolve the exact repository and user-named branch;
-- pin its current commit SHA before claims or writes;
-- use that ref only, never the default branch as a substitute;
-- re-resolve before each write batch and after the final push;
-- stop and reconcile safely if the target branch moves;
-- never force-push, reset, or overwrite newer work merely to simplify execution.
+For product behavior read `governance/product/PRD.md` plus the applicable `governance/product/contracts/*.product-truth.json`. Trace the full affected path:
 
-Use `bthwani-current-workspace-authority` only when repository or ref truth is involved.
+`surface → shared controller/adapter → generated contract/client → backend/domain → persistence/events/integration → canonical readback → every affected required surface`
 
-## Scope rules
+A local UI success is not closure when persisted or cross-surface truth is required.
 
-Agents must:
+## Security and finance
 
-- identify the owner of truth, allowed paths, forbidden paths, consumers, contracts, data, and tests actually affected;
-- reuse existing code, scripts, and focused guards before adding files or dependencies;
-- keep generated diagnostics, logs, screenshots, evidence packs, and temporary task state untracked by default;
-- run verification after the final relevant write;
-- report only what current evidence proves.
+Use `governance/policies/security.md` whenever authentication, authorization, sessions, trusted context, PII, secrets, provider credentials, isolation, or privileged access is affected.
 
-Agents must not:
+WLT remains the authoritative financial-truth owner. DSH and surfaces may use only bounded WLT-backed operations/projections permitted by current contracts.
 
-- read every skill, governance file, journey, or registry by default;
-- run full Graphify, full Nx graph, full typecheck, full build, full test, full guard suites, or integrated runtime without proven need;
-- create scripts or reports merely to satisfy process wording;
-- treat fixtures, seeds, previews, fallbacks, or in-memory data as production or commercial proof;
-- let CI mutate, commit, push, merge, or rewrite source;
-- archive removed material when Git history already preserves it.
+## Evidence and approvals
 
-## Task modes
+Use `governance/policies/delivery.md`, `governance/contracts/sdlc/`, and `governance/contracts/decision-vocabulary.json`. Evidence is candidate-bound and scope-specific. Static success never implies runtime, visual, QA, security, finance, isolation, CI, release, production, or final closure.
 
-Choose one primary mode. Add only the owner skill required by real risk.
+Logical approval authorities remain separated by the agent registry. An execution agent cannot impersonate the owner or self-grant a protected approval.
 
-| Mode | Default verification |
-| --- | --- |
-| `TEXT_ONLY` | direct review and diff check |
-| `CODE_ONLY` | one targeted type, lint, test, or guard check |
-| `PRODUCT_MODEL` | product problem, actors, states, surfaces, exclusions, and acceptance |
-| `UI_CODE` | affected route, state, controller, or package check |
-| `UI_VISUAL` | code check; visual proof only when explicitly required |
-| `API_CONTRACT` | affected contract, route, generated client, and consumer binding |
-| `RUNTIME` | targeted startup or smoke proof |
-| `DSH_WLT` | paired financial-boundary checks and independent financial evidence |
-| `SECURITY_PRIVACY` | targeted auth, isolation, secrets, or privacy verification |
-| `AGENT_SYSTEM` | affected agent, registry, governance, or workflow guards |
-| `DEPENDENCY_CI` | affected lockfile, package, workflow, or policy checks |
-| `REFACTOR_CLEANUP` | reference impact proof plus affected checks |
+## Plans, skills, and tools
 
-## Tool ladder
+Planning artifacts live only under `plans/`. `.agents/INDEX.md` is the only derived routing index. Skills live under `.agents/skills/`; conditional tool policies live under `.agents/tools/`.
 
-Use tools in this order:
+Tool ladder:
 
-1. direct scoped file inspection;
-2. focused search or an existing package command;
-3. one registered targeted guard;
-4. a small idempotent helper for a proven repeated pattern;
+1. direct scoped inspection;
+2. focused search or existing command;
+3. one targeted registered guard;
+4. small idempotent helper for proven repetition;
 5. Nx affected when workspace impact must be computed;
-6. Graphify only when ownership, dependency, duplication, or dead-code relationships remain unclear;
-7. runtime tooling only when runtime behavior changes or is claimed.
+6. LeanCTX only when it materially reduces repeated reads/noise;
+7. Graphify only when ownership/dependency/duplication remains unresolved;
+8. OpenCodeReview for a bounded diff/commit/range;
+9. runtime tooling only for runtime-changing or runtime-claimed work.
 
-LeanCTX and Graphify are optional tools, not mandatory first steps and not authorities.
-
-## Authorities and protected work
-
-The logical authorities remain separate:
-
-- `SDLC_PROGRAM_AUTHORITY` owns formal stage state;
-- product management and product acceptance own product model and readiness;
-- `GOVERNANCE_CONTRACT_AUTHORITY` owns governance-contract approval;
-- `CI_WORKFLOW_AUTHORITY` owns CI-workflow approval;
-- the independent reviewer owns protected implementation review;
-- `FINANCIAL_CONTROL_AUTHORITY` owns finance approval;
-- security, QA, release, and production authorities own their evidence domains;
-- `RISK_ACCEPTANCE_AUTHORITY` alone may accept documented residual risk.
-
-The repository's sole owner may fulfill eligible human roles under `governance/authority/single-owner-mode.json`, but an execution agent cannot impersonate the owner, approve unseen work, waive failures, or self-grant protected approval.
-
-Formal routing and independent evidence are required for authentication, authorization, sessions, PII, secrets, isolation, finance, migrations, production data, critical vulnerabilities, governance, CI, release, deployment, and final closure.
-
-## Evidence and decisions
-
-Use targeted evidence proportional to the claim. Static success does not prove runtime, visual, security, finance, isolation, release, or production behavior.
-
-Canonical outcomes include `PASS`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `BLOCKED_EXTERNAL`, `READY_FOR_REVIEW`, and `PROTOCOL_VIOLATION`.
-
-`CLOSED_WITH_EVIDENCE` requires every applicable same-commit scope: `static`, `product`, `runtime`, `visual`, `qa`, `security`, `finance`, `isolation`, `governance`, `ci`, `release`, and `production`, plus all applicable approvals and no unresolved blocker.
+Tools and adapters own no Product Truth or approval.
 
 ## Final response
 
-Report:
-
 ```text
-repository_mode:
 repository:
 target_branch:
 resolved_commit_sha:
-mode:
 changed_paths:
-checks:
+checks_and_evidence:
 decision:
-remaining_risks:
+remaining_risks_or_missing_evidence:
 ```
 
 Do not overclaim.
-
-<!-- Mappings for agent-governance-gate: Command Safety Policy , Smart Execution Model -->

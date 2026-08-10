@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   buildFieldMutationContext,
+  createGovernedProblem,
   createFieldVisit,
   fetchFieldVisits,
   completeFieldVisit,
@@ -11,8 +12,9 @@ import {
   updateEscalation,
   fetchPartnerOnboardingStatus,
   fetchFieldWorkQueue,
-  classifyFieldReadinessError,
+  classifyGovernedError,
   type FieldMutationContext,
+  type GovernedProblem,
 } from "./field-readiness.api";
 import { enqueueFieldOperation, type FieldOfflineOperationType } from "./field-offline-queue";
 import {
@@ -35,12 +37,8 @@ import type {
   DshReadinessCheck,
 } from "./field-readiness.types";
 
-function resolveMessage(error: unknown): string {
-  const classification = classifyFieldReadinessError(error);
-  if (classification.kind === "permission_denied") return "غير مصرح لك بهذه العملية";
-  if (classification.kind === "offline") return "لا يوجد اتصال بالإنترنت";
-  if (classification.kind === "not_found") return "لم يتم إيجاد السجل";
-  return error instanceof Error && error.message ? error.message : "حدث خطأ، يرجى المحاولة مجدداً";
+function resolveProblem(error: unknown): GovernedProblem {
+  return classifyGovernedError(error);
 }
 
 function isAuthenticated(authKind: string) {
@@ -53,7 +51,7 @@ async function enqueueIfOffline<P>(
   payload: P,
   context: FieldMutationContext,
 ) {
-  if (classifyFieldReadinessError(error).kind !== "offline") return null;
+  if (resolveProblem(error).kind !== "offline") return null;
   return enqueueFieldOperation(
     operationType,
     payload,
@@ -72,7 +70,7 @@ export function useFieldVisitController(storeId: string, authKind = "unauthentic
       const visits = await fetchFieldVisits(storeId);
       setListState(visits.length === 0 ? visitEmptyState() : visitSuccessState(visits));
     } catch (error) {
-      setListState(visitErrorState(resolveMessage(error)));
+      setListState(visitErrorState(resolveProblem(error)));
     }
   }, [storeId]);
 
@@ -94,14 +92,14 @@ export function useFieldVisitController(storeId: string, authKind = "unauthentic
       try {
         const queued = await enqueueIfOffline(error, "create_visit", { storeId, input }, context);
         if (queued) {
-          setActionState(visitActionQueuedState(queued.operationId, "تم حفظ بدء الزيارة للمزامنة عند عودة الاتصال."));
+          setActionState(visitActionQueuedState(queued.operationId, "create_visit", "تم حفظ بدء الزيارة للمزامنة عند عودة الاتصال."));
           return;
         }
       } catch (queueError) {
-        setActionState(visitActionErrorState(resolveMessage(queueError)));
+        setActionState(visitActionErrorState(resolveProblem(queueError)));
         return;
       }
-      setActionState(visitActionErrorState(resolveMessage(error)));
+      setActionState(visitActionErrorState(resolveProblem(error)));
     }
   }, [storeId, load]);
 
@@ -116,14 +114,14 @@ export function useFieldVisitController(storeId: string, authKind = "unauthentic
       try {
         const queued = await enqueueIfOffline(error, "complete_visit", { visitId, input }, context);
         if (queued) {
-          setActionState(visitActionQueuedState(queued.operationId, "تم حفظ إتمام الزيارة للمزامنة عند عودة الاتصال."));
+          setActionState(visitActionQueuedState(queued.operationId, "complete_visit", "تم حفظ إتمام الزيارة للمزامنة عند عودة الاتصال."));
           return;
         }
       } catch (queueError) {
-        setActionState(visitActionErrorState(resolveMessage(queueError)));
+        setActionState(visitActionErrorState(resolveProblem(queueError)));
         return;
       }
-      setActionState(visitActionErrorState(resolveMessage(error)));
+      setActionState(visitActionErrorState(resolveProblem(error)));
     }
   }, [load]);
 
@@ -149,12 +147,16 @@ export function useFieldChecklistController(
       ]);
       const visit = visits.find((candidate) => candidate.id === visitId);
       if (!visit) {
-        setChecklistState(checklistErrorState("لم يتم إيجاد الزيارة المحددة ضمن المتجر."));
+        setChecklistState(checklistErrorState(createGovernedProblem(
+          "VISIT_NOT_IN_STORE_SCOPE",
+          "لم يتم إيجاد الزيارة المحددة ضمن المتجر أو نطاق التكليف الحالي.",
+          { kind: "not_found", nextAction: "refresh_record" },
+        )));
         return;
       }
       setChecklistState(checklistSuccessState(visit, checks));
     } catch (error) {
-      setChecklistState(checklistErrorState(resolveMessage(error)));
+      setChecklistState(checklistErrorState(resolveProblem(error)));
     }
   }, [storeId, visitId]);
 
@@ -164,7 +166,11 @@ export function useFieldChecklistController(
 
   const submitCheck = useCallback(async (input: DshUpsertCheckInput) => {
     if (checklistState.kind !== "success" || checklistState.visit.status !== "in_progress") {
-      setCheckActionState(checkActionErrorState("لا يمكن تعديل قائمة التحقق بعد إغلاق الزيارة أو قبل تحميلها."));
+      setCheckActionState(checkActionErrorState(createGovernedProblem(
+        "VISIT_NOT_EDITABLE",
+        "لا يمكن تعديل قائمة التحقق بعد إغلاق الزيارة أو قبل تحميلها.",
+        { kind: "blocked", nextAction: "refresh_record" },
+      )));
       return false;
     }
     setCheckActionState(checkActionSubmittingState());
@@ -181,14 +187,14 @@ export function useFieldChecklistController(
       try {
         const queued = await enqueueIfOffline(error, "upsert_readiness_check", { visitId, input }, context);
         if (queued) {
-          setCheckActionState(checkActionQueuedState(queued.operationId, "تم حفظ نتيجة التحقق للمزامنة عند عودة الاتصال."));
+          setCheckActionState(checkActionQueuedState(queued.operationId, "upsert_readiness_check", "تم حفظ نتيجة التحقق للمزامنة عند عودة الاتصال."));
           return true;
         }
       } catch (queueError) {
-        setCheckActionState(checkActionErrorState(resolveMessage(queueError)));
+        setCheckActionState(checkActionErrorState(resolveProblem(queueError)));
         return false;
       }
-      setCheckActionState(checkActionErrorState(resolveMessage(error)));
+      setCheckActionState(checkActionErrorState(resolveProblem(error)));
       return false;
     }
   }, [checklistState, visitId, load]);
@@ -208,7 +214,7 @@ export function useFieldEscalationController(authKind = "unauthenticated") {
       const escalations = await fetchOperatorEscalations(statusFilter);
       setListState(escalations.length === 0 ? escalationEmptyState() : escalationSuccessState(escalations));
     } catch (error) {
-      setListState(escalationErrorState(resolveMessage(error)));
+      setListState(escalationErrorState(resolveProblem(error)));
     }
   }, []);
 
@@ -230,14 +236,14 @@ export function useFieldEscalationController(authKind = "unauthenticated") {
       try {
         const queued = await enqueueIfOffline(error, "create_escalation", { storeId, input }, context);
         if (queued) {
-          setActionState(escalationActionQueuedState(queued.operationId, "تم حفظ التصعيد للمزامنة عند عودة الاتصال."));
+          setActionState(escalationActionQueuedState(queued.operationId, "create_escalation", "تم حفظ التصعيد للمزامنة عند عودة الاتصال."));
           return true;
         }
       } catch (queueError) {
-        setActionState(escalationActionErrorState(resolveMessage(queueError)));
+        setActionState(escalationActionErrorState(resolveProblem(queueError)));
         return false;
       }
-      setActionState(escalationActionErrorState(resolveMessage(error)));
+      setActionState(escalationActionErrorState(resolveProblem(error)));
       return false;
     }
   }, []);
@@ -248,7 +254,7 @@ export function useFieldEscalationController(authKind = "unauthenticated") {
       const escalation = await updateEscalation(escalationId, input);
       setActionState(escalationActionSuccessState(escalation));
     } catch (error) {
-      setActionState(escalationActionErrorState(resolveMessage(error)));
+      setActionState(escalationActionErrorState(resolveProblem(error)));
     }
   }, []);
 
@@ -266,7 +272,7 @@ function usePartnerOnboardingStatusController(storeId: string, authKind = "unaut
       const status = await fetchPartnerOnboardingStatus(storeId);
       setState(onboardingStatusSuccessState(status));
     } catch (error) {
-      setState(onboardingStatusErrorState(resolveMessage(error)));
+      setState(onboardingStatusErrorState(resolveProblem(error)));
     }
   }, [storeId]);
 
@@ -286,7 +292,7 @@ export function useFieldWorkQueueController(authKind = "unauthenticated") {
       const queue = await fetchFieldWorkQueue();
       setState(workQueueSuccessState(queue));
     } catch (error) {
-      setState(workQueueErrorState(resolveMessage(error)));
+      setState(workQueueErrorState(resolveProblem(error)));
     }
   }, []);
 
@@ -300,7 +306,7 @@ export function useFieldWorkQueueController(authKind = "unauthenticated") {
 export type FieldVerificationLoadState =
   | { readonly kind: "idle" }
   | { readonly kind: "loading" }
-  | { readonly kind: "error"; readonly message: string }
+  | { readonly kind: "error"; readonly message: string; readonly problem: GovernedProblem }
   | {
       readonly kind: "success";
       readonly visit: DshFieldVisit;
@@ -324,12 +330,18 @@ export function useFieldVerificationController(
       ]);
       const visit = visits.find((item) => item.id === visitId);
       if (!visit) {
-        setState({ kind: "error", message: "لم يتم إيجاد الزيارة المحددة" });
+        const problem = createGovernedProblem(
+          "VISIT_NOT_IN_STORE_SCOPE",
+          "لم يتم إيجاد الزيارة المحددة ضمن المتجر أو نطاق التكليف الحالي.",
+          { kind: "not_found", nextAction: "refresh_record" },
+        );
+        setState({ kind: "error", message: problem.message, problem });
         return;
       }
       setState({ kind: "success", visit, checks, canVerify: visit.status === "complete" });
     } catch (error) {
-      setState({ kind: "error", message: resolveMessage(error) });
+      const problem = resolveProblem(error);
+      setState({ kind: "error", message: problem.message, problem });
     }
   }, [storeId, visitId]);
 

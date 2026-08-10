@@ -53,6 +53,7 @@ describe("partner unified multi-surface platform closure", () => {
 
   test("computes readiness for every linked store and binds operator, field and partner surfaces", () => {
     const readiness = read("services/dsh/backend/internal/partner/partner_readiness_aggregate.go");
+    const documentCount = read("services/dsh/backend/internal/partner/document_count.go");
     const routes = read("services/dsh/backend/internal/http/partner_lifecycle_routes.go");
     const selfRoutes = read("services/dsh/backend/internal/http/partner_self_routes.go");
 
@@ -61,9 +62,21 @@ describe("partner unified multi-surface platform closure", () => {
     assert.match(readiness, /StoreSummary/);
     assert.match(readiness, /Stores\s+\[\]StorePublicationReadiness/);
     assert.doesNotMatch(readiness, /LIMIT 1/);
+    assert.match(documentCount, /document_status = 'approved'/);
+    assert.doesNotMatch(documentCount, /review_status/);
     assert.match(routes, /handleAggregatedPartnerReadiness/);
     assert.match(routes, /handleFieldAggregatedPartnerReadiness/);
     assert.match(selfRoutes, /handlePartnerAggregatedActivationReadiness/);
+  });
+
+  test("keeps lifecycle mutation and audit atomic without unbound shadow events", () => {
+    const governance = read("services/dsh/backend/internal/store/governance.go");
+
+    assert.match(governance, /UPDATE dsh_stores SET status = \$1, version = version \+ 1/);
+    assert.match(governance, /INSERT INTO dsh_store_action_audit/);
+    assert.doesNotMatch(governance, /dsh_platform_outbox_events/);
+    assert.doesNotMatch(governance, /store_lifecycle_changed/);
+    assert.doesNotMatch(governance, /store\.lifecycle\.changed/);
   });
 
   test("restores every partner workspace and connects real operational surfaces", () => {
@@ -89,11 +102,11 @@ describe("partner unified multi-surface platform closure", () => {
     ]) {
       assert.match(registry, new RegExp(`'${tab}'`));
     }
-    assert.match(queue, /useControlPanelSession/);
+    assert.match(queue, /useIdentitySession/);
     assert.match(queue, /StoreManagementScreen/);
     assert.match(queue, /FieldReadinessQueueScreen/);
     assert.match(queue, /PartnerCreatePanel/);
-    assert.match(detail, /useControlPanelSession/);
+    assert.match(detail, /useIdentitySession/);
     assert.match(detail, /useGovernedPartnerStoresController/);
     assert.match(detail, /aggregate\.stores/);
     assert.match(barrel, /PartnerDetailUnifiedScreen as PartnerDetailScreen/);

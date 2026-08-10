@@ -4,7 +4,7 @@
  * Verifies the OpenAPI-first binding chain:
  *   Master contract index → active contract → generated/shared client → API adapter.
  *
- * Side contracts that are not present in contracts/master.openapi.yaml are not
+ * Side contracts that are not present in contracts/openapi/index.yaml are not
  * accepted as runtime truth. This prevents contract-only features from making
  * frontend adapters appear bound while no router, repository, or migration exists.
  *
@@ -15,30 +15,33 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import ts from "typescript";
-import { fail, listCodeFiles, read, repoRoot, toPosix } from "./_guard-utils.mjs";
+import { fail, listCodeFiles, read, repoRoot } from "./_guard-utils.mjs";
 import { parseIndexedContractModules, parseOpenApiContract } from "./_openapi-utils.mjs";
+import {
+  callName,
+  materializeTemplatePath,
+  pathsAreCompatible,
+  staticMethodFromCall,
+  staticPathValue,
+} from "./lib/api-operations.mjs";
+import { scriptKindForFile, ts } from "./lib/typescript-compiler.mjs";
 
 const guardId = "api-binding-gate";
 const violations = [];
-const masterContractPath = "contracts/master.openapi.yaml";
+const masterContractPath = "contracts/openapi/index.yaml";
 
 function loadMasterContractReferences() {
-  const master = read(masterContractPath);
+  const modules = parseIndexedContractModules(masterContractPath);
   const references = [];
-  for (const line of master.split(/\r?\n/)) {
-    const match = line.match(/^\s+[A-Za-z0-9_-]+:\s+(\.\.\/[^\s]+\.openapi\.yaml)\s*$/);
-    if (!match) continue;
-    const absolute = path.resolve(repoRoot, "contracts", match[1]);
-    const relative = toPosix(path.relative(repoRoot, absolute));
-    if (!fs.existsSync(absolute)) {
+  for (const module of modules) {
+    if (!module.exists) {
       violations.push({
         file: masterContractPath,
-        message: `MASTER_CONTRACT_REFERENCE_MISSING ${relative}`,
+        message: `MASTER_CONTRACT_REFERENCE_MISSING ${module.file}`,
       });
       continue;
     }
-    references.push(relative);
+    references.push(module.file);
   }
   if (references.length === 0) {
     violations.push({ file: masterContractPath, message: "MASTER_CONTRACT_INDEX_EMPTY" });
@@ -69,29 +72,6 @@ const masterReferences = expandEntryModules(loadMasterContractReferences());
 const contractOperations = masterReferences.flatMap((relative) => parseOpenApiContract(relative));
 const knownPaths = new Set(contractOperations.map((operation) => operation.path));
 
-function normalizePath(rawPath) {
-  return rawPath
-    .replace(/[?#].*$/, "")
-    .replace(/\{[^}]+\}/g, "{param}")
-    .replace(/`/g, "")
-    .replace(/\/+$/, "");
-}
-
-function pathSegments(rawPath) {
-  return normalizePath(rawPath).split("/").filter(Boolean);
-}
-
-function pathsAreCompatible(candidatePath, contractPath) {
-  const candidate = pathSegments(candidatePath);
-  const contract = pathSegments(contractPath);
-  if (candidate.length !== contract.length) return false;
-
-  return candidate.every((segment, index) => {
-    const contractSegment = contract[index];
-    return segment === contractSegment || segment === "{param}" || contractSegment === "{param}";
-  });
-}
-
 function isKnownPath(rawPath) {
   for (const known of knownPaths) {
     if (pathsAreCompatible(rawPath, known)) return true;
@@ -108,72 +88,8 @@ function isKnownOperation(method, rawPath) {
   );
 }
 
-function scriptKindFor(file) {
-  if (file.endsWith(".tsx")) return ts.ScriptKind.TSX;
-  if (file.endsWith(".jsx")) return ts.ScriptKind.JSX;
-  if (file.endsWith(".js") || file.endsWith(".mjs") || file.endsWith(".cjs")) return ts.ScriptKind.JS;
-  return ts.ScriptKind.TS;
-}
-
-function materializeTemplatePath(node) {
-  let value = node.head.text;
-  for (const span of node.templateSpans) {
-    if (/[?#]/.test(value)) break;
-    if (!value.endsWith("/")) {
-      // Expressions appended to a complete route are query fragments or other
-      // runtime suffixes, not path parameters. The contract path ends here.
-      break;
-    }
-    value += `{param}${span.literal.text}`;
-  }
-  return value;
-}
-
-function staticPathValue(node) {
-  if (ts.isStringLiteralLike(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
-    return node.text;
-  }
-  if (ts.isTemplateExpression(node)) {
-    return materializeTemplatePath(node);
-  }
-  return null;
-}
-
-function propertyNameText(name) {
-  if (!name) return "";
-  if (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) return name.text;
-  return "";
-}
-
-function callName(node) {
-  if (ts.isIdentifier(node.expression)) return node.expression.text;
-  if (ts.isPropertyAccessExpression(node.expression)) return node.expression.name.text;
-  return "";
-}
-
-function staticMethodFromCall(node) {
-  const name = callName(node).toLowerCase();
-  if (["get", "post", "put", "patch", "delete", "options", "head"].includes(name)) {
-    return name.toUpperCase();
-  }
-
-  const options = node.arguments[1];
-  if (!options) return "GET";
-  if (!ts.isObjectLiteralExpression(options)) return null;
-
-  for (const property of options.properties) {
-    if (!ts.isPropertyAssignment(property) || propertyNameText(property.name) !== "method") continue;
-    const initializer = property.initializer;
-    if (ts.isStringLiteralLike(initializer) || ts.isNoSubstitutionTemplateLiteral(initializer)) {
-      return initializer.text.toUpperCase();
-    }
-    return null;
-  }
-  return "GET";
-}
-
 function extractApiPathLiterals(file, content) {
-  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindFor(file));
+  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindForFile(file));
   const paths = new Set();
 
   function record(value) {
@@ -195,11 +111,9 @@ function extractApiPathLiterals(file, content) {
 }
 
 function extractApiOperationCalls(file, content) {
-  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindFor(file));
+  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindForFile(file));
   const operations = new Map();
   const approvedCallNames = new Set([
-    "request",
-    "wltfetchjson",
     "fetch",
     "get",
     "post",
@@ -230,7 +144,6 @@ function extractApiOperationCalls(file, content) {
 }
 
 const DSH_HTTP_CLIENT_PATTERN = /\bcreate(?:Dsh|DshPublic|DshFlexible|DshRaw)HttpClient\b/;
-const WLT_HTTP_CLIENT_PATTERN = /\bwltFetchJson\b/;
 const RAW_FETCH_PATTERN = /\bfetch\s*\(/g;
 const MOCK_RESOLVE_PATTERN = /\breturn\s+Promise\.resolve\s*\(\s*[\[{]/;
 const HARDCODED_URL_PATTERN = /https?:\/\/(?!localhost|127\.0\.0\.1|\.\.\.|example\.com)/;
@@ -282,15 +195,14 @@ for (const file of apiFiles) {
     }
   }
 
-  const usesApprovedClient =
-    DSH_HTTP_CLIENT_PATTERN.test(content) || WLT_HTTP_CLIENT_PATTERN.test(content);
+  const usesApprovedClient = DSH_HTTP_CLIENT_PATTERN.test(content);
   const isMultipartUploadAdapter = content.includes("new FormData(");
   if (!usesApprovedClient && !isMultipartUploadAdapter) {
     const fetchMatches = [...content.matchAll(RAW_FETCH_PATTERN)];
     if (fetchMatches.length > 0) {
       violations.push({
         file,
-        message: "FORBIDDEN: raw fetch() in adapter without approved HTTP client (createDsh*HttpClient or wltFetchJson)",
+        message: "FORBIDDEN: raw fetch() in adapter without approved HTTP client (createDsh*HttpClient)",
       });
     }
   }

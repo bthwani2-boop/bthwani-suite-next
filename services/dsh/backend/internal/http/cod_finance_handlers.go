@@ -15,7 +15,7 @@ func (s *protectedStoreServer) handlePartnerFinanceCodRecords(w http.ResponseWri
 		return
 	}
 	query := url.Values{"partnerId": {actor.ID}}
-	s.proxyFinanceRead(w, r, "/wlt/cod-records", query, actor.OperatorContextID)
+	s.proxyFinanceRead(w, r, "finance.cod.read", "/wlt/cod-records", query, actor.OperatorContextID)
 }
 
 func (s *protectedStoreServer) requirePartnerCodRecord(w http.ResponseWriter, r *http.Request, partnerID, recordID string) bool {
@@ -85,20 +85,21 @@ func (s *protectedStoreServer) handlePartnerRemitCodRecord(w http.ResponseWriter
 		"remit",
 		payload,
 		r.Header.Get("X-Correlation-ID"),
+		r.Header.Get("Idempotency-Key"),
 	)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
 func (s *protectedStoreServer) handleFinanceCodReconciliationCases(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
-	s.proxyFinanceRead(w, r, "/wlt/cod-reconciliation-cases", financeQuery(r, "status"), actor.OperatorContextID)
+	s.proxyFinanceRead(w, r, "finance.reconciliation.read", "/wlt/cod-reconciliation-cases", financeQuery(r, "status"), actor.OperatorContextID)
 }
 
 func (s *protectedStoreServer) handleAssignFinanceCodReconciliationCase(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -132,13 +133,14 @@ func (s *protectedStoreServer) handleAssignFinanceCodReconciliationCase(w http.R
 		"/wlt/cod-reconciliation-cases/"+url.PathEscape(caseID)+"/assign",
 		payload,
 		r.Header.Get("X-Correlation-ID"),
+		r.Header.Get("Idempotency-Key"),
 		actor.OperatorContextID,
 	)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
 func (s *protectedStoreServer) handleResolveFinanceCodReconciliationCase(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -175,6 +177,7 @@ func (s *protectedStoreServer) handleResolveFinanceCodReconciliationCase(w http.
 		"/wlt/cod-reconciliation-cases/"+url.PathEscape(caseID)+"/resolve",
 		payload,
 		r.Header.Get("X-Correlation-ID"),
+		r.Header.Get("Idempotency-Key"),
 		actor.OperatorContextID,
 	)
 	writeWltActorFinanceResponse(w, status, body, err)

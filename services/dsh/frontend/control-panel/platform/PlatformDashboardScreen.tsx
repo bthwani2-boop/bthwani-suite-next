@@ -26,7 +26,7 @@ import {
   type PlatformMainTabId,
 } from "../../shared/platform";
 import { hasControlPanelPermission } from "../../shared/session/control-panel-permissions";
-import { useControlPanelSession } from "../../shared/session/control-panel-session";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { PlatformChangeWorkflowPanel } from "./PlatformChangeWorkflowPanel";
 import { PlatformGovernanceVisual } from "./PlatformGovernanceVisual";
 import { PlatformPoliciesContent } from "./PlatformPoliciesScreen";
@@ -367,7 +367,7 @@ export function PlatformDashboardScreen({
   initialTab = "overview",
 }: PlatformDashboardScreenProps) {
   const [mainTab, setMainTab] = useState<ExecutiveTabId>(initialTab);
-  const { state } = useControlPanelSession();
+  const { state } = useIdentitySession();
   const identity = state.kind === "authenticated" ? state.identity : null;
   const canReadPlatform = hasControlPanelPermission(identity, "platform:read");
   const canReadHealth = hasControlPanelPermission(identity, "platform:health:read");

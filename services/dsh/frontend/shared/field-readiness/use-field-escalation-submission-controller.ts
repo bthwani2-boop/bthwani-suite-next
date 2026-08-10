@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import {
   buildFieldMutationContext,
-  classifyFieldReadinessError,
+  classifyGovernedError,
   createReadinessEscalation,
 } from "./field-readiness.api";
 import {
@@ -17,7 +17,7 @@ import {
 import type { DshCreateEscalationInput } from "./field-readiness.types";
 
 function resolveMessage(error: unknown): string {
-  const classification = classifyFieldReadinessError(error);
+  const classification = classifyGovernedError(error);
   if (classification.kind === "permission_denied") return "غير مصرح لك بهذه العملية";
   if (classification.kind === "offline") return "لا يوجد اتصال بالإنترنت";
   if (classification.kind === "not_found") return "لم يتم إيجاد السجل";
@@ -44,7 +44,7 @@ export function useFieldEscalationSubmissionController() {
       setActionState(escalationActionSuccessState(escalation));
       return true;
     } catch (error) {
-      if (classifyFieldReadinessError(error).kind === "offline") {
+      if (classifyGovernedError(error).kind === "offline") {
         try {
           const queued = await enqueueFieldOperation(
             "create_escalation",
@@ -55,6 +55,7 @@ export function useFieldEscalationSubmissionController() {
           setActionState(
             escalationActionQueuedState(
               queued.operationId,
+              "create_escalation",
               "تم حفظ التصعيد للمزامنة عند عودة الاتصال.",
             ),
           );

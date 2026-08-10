@@ -8,6 +8,7 @@ import { OverviewPageFrame } from "@bthwani/control-panel/shell";
 import { useOperatorAnalyticsDashboardController, buildPlatformKpisViewModel } from "../../shared/analytics";
 import { usePartnerAdminController } from "../../shared/partner";
 import { DispatchTrackingAlertsPanel } from "./DispatchTrackingAlertsPanel";
+import { IdentityRuntimeHealthPanel } from "./IdentityRuntimeHealthPanel";
 // surfaceInfoCard is a shared, token-driven layout primitive (CSS custom
 // properties, no hardcoded colors) reused across dozens of control-panel
 // screens; there is no Cp* list-item equivalent yet, so it is kept here.
@@ -53,6 +54,8 @@ export function DshOperationalDashboardScreen() {
       }
     >
       <Box style={styles_content}>
+        <IdentityRuntimeHealthPanel />
+
         <WebControlPanelKpiStrip
           items={[
             { id: "orders", label: "إجمالي الطلبات", value: String(kpis.totalOrders), tone: "success" },

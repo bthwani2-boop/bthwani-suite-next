@@ -48,7 +48,7 @@ func LoadConfig() (Config, error) {
 func NewPaymentProvider(config Config) (PaymentProvider, error) {
 	switch config.Mode {
 	case ModeMock, ModeSandbox:
-		return NewClient(config), nil
+		return NewClient(config, nil), nil
 	case ModeProduction:
 		return nil, fmt.Errorf("%w: production provider construction is disabled", ErrProductionProviderUnavailable)
 	default:

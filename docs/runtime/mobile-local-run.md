@@ -11,10 +11,10 @@ pnpm runtime:full:up
 pnpm runtime:full:smoke
 ```
 
-2. تأكد أن الهاتف ظاهر بحالة `device` في ADB. عند وجود USB وWi-Fi معًا يختار المشغّل USB افتراضيًا للاستقرار. لتحديد اتصال بعينه:
+2. تأكد أن الهاتف ظاهر بحالة `device` في ADB. عند وجود USB وWi-Fi معًا يختار المشغّل USB افتراضيًا للاستقرار. لتحديد اتصال بعينه استخدم serial الفعلي الذي يعرضه `adb devices`، مثل:
 
 ```powershell
-$env:BTHWANI_ANDROID_SERIAL = "192.168.0.104:5555"
+$env:BTHWANI_ANDROID_SERIAL = "<DEVICE_IP>:5555"
 ```
 
 أو لاختيار نوع النقل دون تثبيت serial:

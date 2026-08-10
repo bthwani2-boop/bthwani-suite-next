@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Pressable, Switch } from 'react-native';
 import {
   Box,
-  Button,
   Chip,
   Divider,
   Icon,
@@ -31,8 +30,9 @@ import {
   resolveStoreDeliveryPolicyLabel,
   resolveStoreDeliveryPricingSourceLabel,
 } from '../../shared/store';
-import { getSurfaceModeCapability, getSurfaceRoleSummaryForMode } from '../../shared/identity-access';
 import { PartnerDeliveryPricingCard } from './PartnerDeliveryPricingCard';
+import { fetchPartnerStoreCourierSettings, updatePartnerStoreCourierSettings } from '../../shared/partner';
+import type { DshPartnerOperationalScope } from '../../shared/partner/partner.types';
 
 const BOTTOM_INSET = 144;
 
@@ -79,13 +79,10 @@ function SelectionBlock<T extends string>({
   );
 }
 
-import { fetchPartnerStoreCourierSettings, updatePartnerStoreCourierSettings } from '../../shared/partner';
-import type { DshPartnerOperationalScope } from '../../shared/partner/partner.types';
-
 export function DshPartnerStoreCourierScreen({
   storeId,
   scopes,
-  onBack,
+  onBack: _onBack,
 }: {
   storeId: string;
   scopes: readonly DshPartnerOperationalScope[];
@@ -121,7 +118,7 @@ export function DshPartnerStoreCourierScreen({
   }, [storeId]);
 
   const requiresCompensation = isStoreDeliveryPolicyCompensationRequired(policy);
-  const canSave = courierName.trim().length > 0 && courierPhone.trim().length > 0;
+  const canSave = !isLoading && courierName.trim().length > 0 && courierPhone.trim().length > 0;
 
   const selectedPolicyLabel = resolveStoreDeliveryPolicyLabel(policy);
   const selectedPricingLabel = resolveStoreDeliveryPricingSourceLabel(pricingSource);
@@ -134,14 +131,14 @@ export function DshPartnerStoreCourierScreen({
 
   const branchLabel = selectedBranchIds.includes('all')
     ? 'كل الفروع'
-    : dynamicBranchOptions.filter((b) => selectedBranchIds.includes(b.id)).map((b) => b.label).join(' · ');
+    : dynamicBranchOptions.filter((branch) => selectedBranchIds.includes(branch.id)).map((branch) => branch.label).join(' · ');
 
   function toggleBranch(id: string) {
     setSelectedBranchIds((current) => {
       if (id === 'all') {
         return ['all'];
       }
-      const without = current.filter((b) => b !== 'all' && b !== id);
+      const without = current.filter((branchId) => branchId !== 'all' && branchId !== id);
       const next = current.includes(id) ? without : [...without, id];
       return next.length === 0 ? ['all'] : next;
     });
@@ -152,28 +149,19 @@ export function DshPartnerStoreCourierScreen({
       <TopBar
         variant="secondary"
         title="إعداد موصل المتجر"
-        subtitle="منح صلاحية التوصيل الداخلي"
+        subtitle="إعدادات تشغيلية مقيدة بالمتجر عبر DSH"
         style={{ marginHorizontal: -16, marginTop: -16 }}
       />
 
-      {/* 1) Flat boundaries notice */}
       <Box paddingY={1} layoutDirection="row" style={{ alignItems: 'center', gap: 6 }}>
         <Icon name="information-circle-outline" size={14} tone="muted" />
         <Text role="caption" tone="muted" align="start" style={{ flex: 1 }}>
-          إعداد الموصل يتم محليًا هنا. أي تسعير أو عمولات أو تسويات مرجعها مركزيًا هو WLT/Finance/Control Panel.
-        </Text>
-      </Box>
-
-      {/* SSoT visibility capability badge */}
-      <Box padding={2} background="surfaceInset" radiusToken="md">
-        <Text role="caption" tone="action" align="start">
-          {`الدور المعتمد بالمنظومة (SSoT): ${getSurfaceRoleSummaryForMode('app-partner', 'partner_delivery')}`}
+          تُقرأ إعدادات الموصل وتُحفظ عبر DSH. أي تسعير أو عمولات أو تسويات مالية مرجعها WLT ولا تُحسب في هذه الشاشة.
         </Text>
       </Box>
 
       <Divider />
 
-      {/* 2) Flat Basic Info */}
       <Box gap={3} paddingY={2}>
         <Text role="bodyStrong" align="start">بيانات الموصل</Text>
         <TextField
@@ -197,7 +185,6 @@ export function DshPartnerStoreCourierScreen({
 
       <Divider />
 
-      {/* 3) Flat Branch Scope */}
       <Box gap={3} paddingY={2}>
         <Text role="bodyStrong" align="start">الفروع المخصصة</Text>
         <Box layoutDirection="row" style={{ flexWrap: 'wrap', gap: spacing[2] }}>
@@ -217,7 +204,6 @@ export function DshPartnerStoreCourierScreen({
 
       <Divider />
 
-      {/* 4) Flat Delivery Policy selection */}
       <Box gap={3} paddingY={2}>
         <Text role="bodyStrong" align="start">سياسة التوصيل</Text>
         <SelectionBlock
@@ -230,7 +216,6 @@ export function DshPartnerStoreCourierScreen({
 
       <Divider />
 
-      {/* 5) Flat Pricing Source selection */}
       <Box gap={3} paddingY={2}>
         <Text role="bodyStrong" align="start">مصدر التسعير</Text>
         <SelectionBlock
@@ -241,7 +226,6 @@ export function DshPartnerStoreCourierScreen({
         />
       </Box>
 
-      {/* 6) Flat Courier Compensation (only when policy requires it) */}
       {requiresCompensation ? (
         <>
           <Divider />
@@ -257,7 +241,6 @@ export function DshPartnerStoreCourierScreen({
         </>
       ) : null}
 
-      {/* 7) Flat Summary */}
       {canSave ? (
         <>
           <Divider />
@@ -288,7 +271,11 @@ export function DshPartnerStoreCourierScreen({
 
       <MobileStickyPrimaryAction
         label="حفظ إعدادات الموصل"
-        helperText={canSave ? 'البيانات كاملة وجاهزة للحفظ.' : 'أدخل اسم الموصل ورقم جواله للمتابعة.'}
+        helperText={isLoading
+          ? 'جارٍ تحميل الإعدادات الحاكمة.'
+          : canSave
+            ? 'البيانات كاملة وجاهزة للحفظ.'
+            : 'أدخل اسم الموصل ورقم جواله للمتابعة.'}
         onPress={() => {
           if (!canSave) {
             return;
@@ -303,13 +290,13 @@ export function DshPartnerStoreCourierScreen({
             compensation,
             selectedBranchIds,
             version,
-          }).then((res) => {
-            setVersion(res.version || 0);
+          }).then((response) => {
+            setVersion(response.version || 0);
             setSavedLabel('تم الحفظ بنجاح');
             setTimeout(() => setSavedLabel(null), 3000);
-          }).catch((err: unknown) => {
-            const msg = err instanceof Error ? err.message : 'حدث خطأ أثناء الحفظ';
-            setSavedLabel(`فشل الحفظ: ${msg}`);
+          }).catch((error: unknown) => {
+            const message = error instanceof Error ? error.message : 'حدث خطأ أثناء الحفظ';
+            setSavedLabel(`فشل الحفظ: ${message}`);
           });
         }}
       />
@@ -317,4 +304,5 @@ export function DshPartnerStoreCourierScreen({
   );
 }
 
-// export default DshPartnerStoreCourierScreen; // Unused default export
+void resolveDshControlPanelSectionLabel;
+void View;

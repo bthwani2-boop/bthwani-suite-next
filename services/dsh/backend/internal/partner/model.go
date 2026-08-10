@@ -11,12 +11,12 @@ var (
 	ErrInvalid                     = errors.New("invalid partner input")
 	ErrForbidden                   = errors.New("partner action forbidden")
 	ErrInvalidTransition           = errors.New("invalid partner status transition")
-	ErrConflict                    = errors.New("partner conflict — duplicate legal identity")
-	ErrVersionConflict             = errors.New("optimistic concurrency control failed — version mismatch")
+	ErrConflict                    = errors.New("partner conflict â€” duplicate legal identity")
+	ErrVersionConflict             = errors.New("optimistic concurrency control failed â€” version mismatch")
 	ErrStorePublicationGatesFailed = errors.New("store publication gates failed: linked store must be active, visible, serviceable, partner-ready, catalog approved, and marketing visible")
 )
 
-// ─── Activation status (18 states) ────────────────────────────────────────
+// â”€â”€â”€ Activation status (18 states) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type ActivationStatus string
 
@@ -36,13 +36,26 @@ const (
 	StatusOpsApproved           ActivationStatus = "ops_approved"
 	StatusOpsRejected           ActivationStatus = "ops_rejected"
 	StatusPartnerActive         ActivationStatus = "partner_active"
-	StatusPartnerDeactivated    ActivationStatus = "partner_deactivated"
+	StatusPartnerDeactivated    ActivationStatus = "partner_deactivated" // Legacy, kept for backwards compatibility parsing if needed
+	StatusPartnerSuspended      ActivationStatus = "partner_suspended"
+	StatusPartnerTerminated     ActivationStatus = "partner_terminated"
 	StatusClientVisible         ActivationStatus = "client_visible"
 	StatusClientHidden          ActivationStatus = "client_hidden"
 )
 
+type OnboardingCaseStatus string
+
+const (
+	OnboardingStatusDraft              OnboardingCaseStatus = "draft"
+	OnboardingStatusDuplicateSuspected OnboardingCaseStatus = "duplicate_suspected"
+	OnboardingStatusValidationFailed   OnboardingCaseStatus = "validation_failed"
+	OnboardingStatusEvidencePending    OnboardingCaseStatus = "evidence_pending"
+	OnboardingStatusUnknownResult      OnboardingCaseStatus = "unknown_result"
+	OnboardingStatusSubmitted          OnboardingCaseStatus = "submitted"
+)
+
 // allowedTransitions defines the valid state machine for partner activation.
-// Backend enforces these — no surface can bypass them.
+// Backend enforces these â€” no surface can bypass them.
 var allowedTransitions = map[ActivationStatus][]ActivationStatus{
 	StatusDraft:                 {StatusSubmitted, StatusFieldVisitScheduled},
 	StatusSubmitted:             {StatusFieldVisitScheduled, StatusDocumentsMissing, StatusDocumentsUploaded},
@@ -58,10 +71,12 @@ var allowedTransitions = map[ActivationStatus][]ActivationStatus{
 	StatusOpsReview:             {StatusOpsApproved, StatusOpsRejected},
 	StatusOpsApproved:           {StatusPartnerActive},
 	StatusOpsRejected:           {StatusSubmitted, StatusDocumentsMissing},
-	StatusPartnerActive:         {StatusClientVisible, StatusClientHidden, StatusPartnerDeactivated},
-	StatusPartnerDeactivated:    {StatusOpsReview, StatusSubmitted},
-	StatusClientVisible:         {StatusClientHidden, StatusPartnerDeactivated},
-	StatusClientHidden:          {StatusClientVisible, StatusPartnerDeactivated},
+	StatusPartnerActive:         {StatusClientVisible, StatusClientHidden, StatusPartnerSuspended, StatusPartnerTerminated},
+	StatusPartnerDeactivated:    {StatusOpsReview, StatusSubmitted}, // Legacy
+	StatusPartnerSuspended:      {StatusPartnerActive, StatusPartnerTerminated},
+	StatusPartnerTerminated:     {}, // Terminal state
+	StatusClientVisible:         {StatusClientHidden, StatusPartnerSuspended, StatusPartnerTerminated},
+	StatusClientHidden:          {StatusClientVisible, StatusPartnerSuspended, StatusPartnerTerminated},
 }
 
 // IsTransitionAllowed returns true if the status change is valid.
@@ -83,41 +98,32 @@ func IsClientVisible(status ActivationStatus) bool {
 	return status == StatusClientVisible
 }
 
-// ─── Partner entity ────────────────────────────────────────────────────────
+// â”€â”€â”€ Partner entity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type Partner struct {
-	ID                  string           `json:"id"`
-	LegalNameAr         string           `json:"legalNameAr"`
-	LegalNameEn         string           `json:"legalNameEn"`
-	DisplayName         string           `json:"displayName"`
-	LegalIdentityType   string           `json:"legalIdentityType"`
-	LegalIdentityNumber string           `json:"legalIdentityNumber"`
-	OwnerName           string           `json:"ownerName"`
-	PrimaryPhone        string           `json:"primaryPhone"`
-	SecondaryPhone      string           `json:"secondaryPhone"`
-	Email               string           `json:"email"`
-	Category            string           `json:"category"`
-	ActivationStatus    ActivationStatus `json:"activationStatus"`
-	CreatedByActorID    string           `json:"createdByActorId"`
-	CreatedBySurface    string           `json:"createdBySurface"`
-	Notes               string           `json:"notes"`
-	// Payout destination reference — DSH holds only the WLT reference ID and
+	ID                   string               `json:"id"`
+	LegalNameAr          string               `json:"legalNameAr"`
+	LegalNameEn          string               `json:"legalNameEn"`
+	DisplayName          string               `json:"displayName"`
+	LegalIdentityType    string               `json:"legalIdentityType"`
+	LegalIdentityNumber  string               `json:"legalIdentityNumber"`
+	OwnerActorID         string               `json:"ownerActorId"`
+	WorkforcePersonID    string               `json:"workforcePersonId"`
+	PrimaryPhone         string               `json:"primaryPhone"`
+	SecondaryPhone       string               `json:"secondaryPhone"`
+	Email                string               `json:"email"`
+	Category             string               `json:"category"`
+	ActivationStatus     ActivationStatus     `json:"activationStatus"`
+	OnboardingCaseStatus OnboardingCaseStatus `json:"onboardingCaseStatus"`
+	CreatedByActorID     string               `json:"createdByActorId"`
+	CreatedBySurface     string               `json:"createdBySurface"`
+	Notes                string               `json:"notes"`
+	// Payout destination reference â€” DSH holds only the WLT reference ID and
 	// masked display strings. Raw bank data is never stored in DSH after Phase 5.
-	PayoutDestinationID string `json:"payoutDestinationId"`
-	MaskedAccountNumber string `json:"maskedAccountNumber"`
-	MaskedIBAN          string `json:"maskedIban"`
-	MaskedMobileNumber  string `json:"maskedMobileNumber"`
-	// Legacy bank display fields retained for backward compatibility.
-	// New writes go through WLT; these are populated from masked values only.
-	BeneficiaryName               string    `json:"beneficiaryName"`
-	BankName                      string    `json:"bankName"`
-	BankBranch                    string    `json:"bankBranch"`
-	BankAccountNumber             string    `json:"accountNumber"`
-	BankIBAN                      string    `json:"iban"`
-	PayoutMobileNumber            string    `json:"payoutMobileNumber"`
-	SettlementPreference          string    `json:"settlementPreference"`
-	BankAccountHolderMatchesOwner bool      `json:"bankAccountHolderMatchesOwner"`
-	BankNotes                     string    `json:"bankNotes"`
+	PayoutDestinationID           string    `json:"payoutDestinationId"`
+	DestinationMethod             string    `json:"destinationMethod"`
+	MaskedDestinationReference    string    `json:"maskedDestinationReference"`
+	DestinationVerificationStatus string    `json:"destinationVerificationStatus"`
 	Version                       int       `json:"version"`
 	CreatedAt                     time.Time `json:"createdAt"`
 	UpdatedAt                     time.Time `json:"updatedAt"`
@@ -134,7 +140,7 @@ type PartnerSummary struct {
 	UpdatedAt        time.Time        `json:"updatedAt"`
 }
 
-// ─── Document ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Document â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type Document struct {
 	ID                string    `json:"id"`
@@ -150,7 +156,7 @@ type Document struct {
 	UpdatedAt         time.Time `json:"updatedAt"`
 }
 
-// ─── Document review ───────────────────────────────────────────────────────
+// â”€â”€â”€ Document review â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type DocumentReview struct {
 	ID                string    `json:"id"`
@@ -163,7 +169,7 @@ type DocumentReview struct {
 	CreatedAt         time.Time `json:"createdAt"`
 }
 
-// ─── Field visit (partner-centric) ────────────────────────────────────────
+// â”€â”€â”€ Field visit (partner-centric) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type FieldVisit struct {
 	ID                string     `json:"id"`
@@ -180,7 +186,7 @@ type FieldVisit struct {
 	SubmittedAt       *time.Time `json:"submittedAt"`
 }
 
-// ─── Activation event (audit) ──────────────────────────────────────────────
+// â”€â”€â”€ Activation event (audit) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type ActivationEvent struct {
 	ID            string    `json:"id"`
@@ -194,7 +200,7 @@ type ActivationEvent struct {
 	CreatedAt     time.Time `json:"createdAt"`
 }
 
-// ─── Readiness checklist ───────────────────────────────────────────────────
+// â”€â”€â”€ Readiness checklist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type ReadinessItem struct {
 	ID            string `json:"id"`
@@ -218,7 +224,7 @@ func ComputeReadiness(
 	p Partner,
 	documentCount, approvedDocCount int,
 	hasStore bool,
-	storeActive bool,
+	storePublished bool,
 	storeServiceable bool,
 	storePartnerReadinessReady bool,
 	storeCatalogApproved bool,
@@ -239,7 +245,7 @@ func ComputeReadiness(
 	canActivatePartner := docsDone && hasStore && IsTransitionAllowed(p.ActivationStatus, StatusPartnerActive)
 
 	canPublishStoreToClient := hasStore &&
-		storeActive &&
+		storePublished &&
 		storeIsVisible &&
 		storeServiceable &&
 		storePartnerReadinessReady &&
@@ -249,32 +255,32 @@ func ComputeReadiness(
 
 	partnerActivationBlockedReason := ""
 	if !docsDone {
-		partnerActivationBlockedReason = "وثائق مطلوبة غائبة أو غير معتمدة"
+		partnerActivationBlockedReason = "ÙˆØ«Ø§Ø¦Ù‚ Ù…Ø·Ù„ÙˆØ¨Ø© ØºØ§Ø¦Ø¨Ø© Ø£Ùˆ ØºÙŠØ± Ù…Ø¹ØªÙ…Ø¯Ø©"
 	} else if !hasStore {
-		partnerActivationBlockedReason = "لا يوجد فرع مربوط بالشريك"
+		partnerActivationBlockedReason = "Ù„Ø§ ÙŠÙˆØ¬Ø¯ ÙØ±Ø¹ Ù…Ø±Ø¨ÙˆØ· Ø¨Ø§Ù„Ø´Ø±ÙŠÙƒ"
 	} else if !canActivatePartner {
 		if p.ActivationStatus != StatusPartnerActive && p.ActivationStatus != StatusClientVisible && p.ActivationStatus != StatusClientHidden {
-			partnerActivationBlockedReason = "الحالة الحالية لا تسمح بالتفعيل المباشر — أكمل المراحل السابقة أولاً"
+			partnerActivationBlockedReason = "Ø§Ù„Ø­Ø§Ù„Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ© Ù„Ø§ ØªØ³Ù…Ø­ Ø¨Ø§Ù„ØªÙØ¹ÙŠÙ„ Ø§Ù„Ù…Ø¨Ø§Ø´Ø± â€” Ø£ÙƒÙ…Ù„ Ø§Ù„Ù…Ø±Ø§Ø­Ù„ Ø§Ù„Ø³Ø§Ø¨Ù‚Ø© Ø£ÙˆÙ„Ø§Ù‹"
 		}
 	}
 
 	storePublicationBlockedReason := ""
 	if !hasStore {
-		storePublicationBlockedReason = "لا يوجد فرع مربوط بالشريك"
+		storePublicationBlockedReason = "Ù„Ø§ ÙŠÙˆØ¬Ø¯ ÙØ±Ø¹ Ù…Ø±Ø¨ÙˆØ· Ø¨Ø§Ù„Ø´Ø±ÙŠÙƒ"
 	} else if !partnerActiveDone {
-		storePublicationBlockedReason = "الشريك غير نشط حالياً"
-	} else if !storeActive {
-		storePublicationBlockedReason = "حالة الفرع غير نشطة"
+		storePublicationBlockedReason = "Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù†Ø´Ø· Ø­Ø§Ù„ÙŠØ§Ù‹"
+	} else if !storePublished {
+		storePublicationBlockedReason = "حالة الفرع غير منشورة"
 	} else if !storeIsVisible {
-		storePublicationBlockedReason = "الفرع مخفي من لوحة التحكم"
+		storePublicationBlockedReason = "Ø§Ù„ÙØ±Ø¹ Ù…Ø®ÙÙŠ Ù…Ù† Ù„ÙˆØ­Ø© Ø§Ù„ØªØ­ÙƒÙ…"
 	} else if !storeServiceable {
-		storePublicationBlockedReason = "الفرع خارج الخدمة أو غير متوفر حالياً"
+		storePublicationBlockedReason = "Ø§Ù„ÙØ±Ø¹ Ø®Ø§Ø±Ø¬ Ø§Ù„Ø®Ø¯Ù…Ø© Ø£Ùˆ ØºÙŠØ± Ù…ØªÙˆÙØ± Ø­Ø§Ù„ÙŠØ§Ù‹"
 	} else if !storePartnerReadinessReady {
-		storePublicationBlockedReason = "جاهزية الشريك غير مكتملة للفرع"
+		storePublicationBlockedReason = "Ø¬Ø§Ù‡Ø²ÙŠØ© Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø© Ù„Ù„ÙØ±Ø¹"
 	} else if !storeCatalogApproved {
-		storePublicationBlockedReason = "الكتالوج الخاص بالفرع غير معتمد"
+		storePublicationBlockedReason = "Ø§Ù„ÙƒØªØ§Ù„ÙˆØ¬ Ø§Ù„Ø®Ø§Øµ Ø¨Ø§Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…Ø¹ØªÙ…Ø¯"
 	} else if !storeMarketingVisible {
-		storePublicationBlockedReason = "الظهور التسويقي للفرع غير مفعل"
+		storePublicationBlockedReason = "Ø§Ù„Ø¸Ù‡ÙˆØ± Ø§Ù„ØªØ³ÙˆÙŠÙ‚ÙŠ Ù„Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…ÙØ¹Ù„"
 	}
 
 	return PartnerReadiness{
@@ -288,69 +294,69 @@ func ComputeReadiness(
 		Checklist: []ReadinessItem{
 			{
 				ID:            "documents",
-				Label:         "الوثائق معتمدة",
+				Label:         "Ø§Ù„ÙˆØ«Ø§Ø¦Ù‚ Ù…Ø¹ØªÙ…Ø¯Ø©",
 				Satisfied:     docsDone,
-				BlockedReason: map[bool]string{false: "الوثائق غير مكتملة أو لم يتم التحقق منها"}[docsDone],
+				BlockedReason: map[bool]string{false: "Ø§Ù„ÙˆØ«Ø§Ø¦Ù‚ ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø© Ø£Ùˆ Ù„Ù… ÙŠØªÙ… Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù†Ù‡Ø§"}[docsDone],
 			},
 			{
 				ID:            "linked_store",
-				Label:         "فرع مربوط بالشريك",
+				Label:         "ÙØ±Ø¹ Ù…Ø±Ø¨ÙˆØ· Ø¨Ø§Ù„Ø´Ø±ÙŠÙƒ",
 				Satisfied:     hasStore,
-				BlockedReason: map[bool]string{false: "لا يوجد فرع مربوط بالشريك"}[hasStore],
+				BlockedReason: map[bool]string{false: "Ù„Ø§ ÙŠÙˆØ¬Ø¯ ÙØ±Ø¹ Ù…Ø±Ø¨ÙˆØ· Ø¨Ø§Ù„Ø´Ø±ÙŠÙƒ"}[hasStore],
 			},
 			{
 				ID:            "ops_approved",
-				Label:         "اعتماد العمليات",
+				Label:         "Ø§Ø¹ØªÙ…Ø§Ø¯ Ø§Ù„Ø¹Ù…Ù„ÙŠØ§Øª",
 				Satisfied:     opsApprovedDone,
-				BlockedReason: map[bool]string{false: "بانتظار اعتماد العمليات"}[opsApprovedDone],
+				BlockedReason: map[bool]string{false: "Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ø¹ØªÙ…Ø§Ø¯ Ø§Ù„Ø¹Ù…Ù„ÙŠØ§Øª"}[opsApprovedDone],
 			},
 			{
 				ID:            "partner_active",
-				Label:         "الشريك نشط",
+				Label:         "Ø§Ù„Ø´Ø±ÙŠÙƒ Ù†Ø´Ø·",
 				Satisfied:     partnerActiveDone,
-				BlockedReason: map[bool]string{false: "الشريك غير نشط"}[partnerActiveDone],
+				BlockedReason: map[bool]string{false: "Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù†Ø´Ø·"}[partnerActiveDone],
 			},
 			{
-				ID:            "store_status_active",
-				Label:         "حالة الفرع نشطة",
-				Satisfied:     storeActive,
-				BlockedReason: map[bool]string{false: "حالة الفرع غير نشطة"}[storeActive],
+				ID:            "store_status_published",
+				Label:         "حالة الفرع منشورة",
+				Satisfied:     storePublished,
+				BlockedReason: map[bool]string{false: "حالة الفرع غير منشورة"}[storePublished],
 			},
 			{
 				ID:            "store_serviceability",
-				Label:         "تغطية الخدمة للفرع",
+				Label:         "ØªØºØ·ÙŠØ© Ø§Ù„Ø®Ø¯Ù…Ø© Ù„Ù„ÙØ±Ø¹",
 				Satisfied:     storeServiceable,
-				BlockedReason: map[bool]string{false: "الفرع غير مغطى بالخدمة حالياً"}[storeServiceable],
+				BlockedReason: map[bool]string{false: "Ø§Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…ØºØ·Ù‰ Ø¨Ø§Ù„Ø®Ø¯Ù…Ø© Ø­Ø§Ù„ÙŠØ§Ù‹"}[storeServiceable],
 			},
 			{
 				ID:            "partner_readiness_ready",
-				Label:         "جاهزية الشريك للفرع",
+				Label:         "Ø¬Ø§Ù‡Ø²ÙŠØ© Ø§Ù„Ø´Ø±ÙŠÙƒ Ù„Ù„ÙØ±Ø¹",
 				Satisfied:     storePartnerReadinessReady,
-				BlockedReason: map[bool]string{false: "جاهزية الشريك غير مكتملة للفرع"}[storePartnerReadinessReady],
+				BlockedReason: map[bool]string{false: "Ø¬Ø§Ù‡Ø²ÙŠØ© Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø© Ù„Ù„ÙØ±Ø¹"}[storePartnerReadinessReady],
 			},
 			{
 				ID:            "catalog_approved",
-				Label:         "كتالوج الفرع معتمد",
+				Label:         "ÙƒØªØ§Ù„ÙˆØ¬ Ø§Ù„ÙØ±Ø¹ Ù…Ø¹ØªÙ…Ø¯",
 				Satisfied:     storeCatalogApproved,
-				BlockedReason: map[bool]string{false: "كتالوج الفرع غير معتمد"}[storeCatalogApproved],
+				BlockedReason: map[bool]string{false: "ÙƒØªØ§Ù„ÙˆØ¬ Ø§Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…Ø¹ØªÙ…Ø¯"}[storeCatalogApproved],
 			},
 			{
 				ID:            "marketing_visible",
-				Label:         "الظهور التسويقي للفرع",
+				Label:         "Ø§Ù„Ø¸Ù‡ÙˆØ± Ø§Ù„ØªØ³ÙˆÙŠÙ‚ÙŠ Ù„Ù„ÙØ±Ø¹",
 				Satisfied:     storeMarketingVisible,
-				BlockedReason: map[bool]string{false: "الظهور التسويقي للفرع غير مفعل"}[storeMarketingVisible],
+				BlockedReason: map[bool]string{false: "Ø§Ù„Ø¸Ù‡ÙˆØ± Ø§Ù„ØªØ³ÙˆÙŠÙ‚ÙŠ Ù„Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…ÙØ¹Ù„"}[storeMarketingVisible],
 			},
 			{
 				ID:            "is_visible",
-				Label:         "الفرع مرئي",
+				Label:         "Ø§Ù„ÙØ±Ø¹ Ù…Ø±Ø¦ÙŠ",
 				Satisfied:     storeIsVisible,
-				BlockedReason: map[bool]string{false: "الفرع مخفي"}[storeIsVisible],
+				BlockedReason: map[bool]string{false: "Ø§Ù„ÙØ±Ø¹ Ù…Ø®ÙÙŠ"}[storeIsVisible],
 			},
 		},
 	}
 }
 
-// ─── Input types ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Input types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type CreatePartnerInput struct {
 	LegalNameAr         string `json:"legalNameAr"`
@@ -358,7 +364,8 @@ type CreatePartnerInput struct {
 	DisplayName         string `json:"displayName"`
 	LegalIdentityType   string `json:"legalIdentityType"`
 	LegalIdentityNumber string `json:"legalIdentityNumber"`
-	OwnerName           string `json:"ownerName"`
+	OwnerActorID        string `json:"ownerActorId"`
+	WorkforcePersonID   string `json:"workforcePersonId"`
 	PrimaryPhone        string `json:"primaryPhone"`
 	SecondaryPhone      string `json:"secondaryPhone"`
 	Email               string `json:"email"`
@@ -385,12 +392,13 @@ func (i CreatePartnerInput) Validate() error {
 }
 
 type UpdatePartnerInput struct {
-	DisplayName    string `json:"displayName"`
-	OwnerName      string `json:"ownerName"`
-	PrimaryPhone   string `json:"primaryPhone"`
-	SecondaryPhone string `json:"secondaryPhone"`
-	Email          string `json:"email"`
-	Notes          string `json:"notes"`
+	DisplayName       string `json:"displayName"`
+	OwnerActorID      string `json:"ownerActorId"`
+	WorkforcePersonID string `json:"workforcePersonId"`
+	PrimaryPhone      string `json:"primaryPhone"`
+	SecondaryPhone    string `json:"secondaryPhone"`
+	Email             string `json:"email"`
+	Notes             string `json:"notes"`
 	// Bank account fields forwarded to WLT; never stored raw in DSH after Phase 5.
 	BeneficiaryName               string `json:"beneficiaryName"`
 	BankName                      string `json:"bankName"`
@@ -402,11 +410,11 @@ type UpdatePartnerInput struct {
 	BankAccountHolderMatchesOwner *bool  `json:"bankAccountHolderMatchesOwner"`
 	BankNotes                     string `json:"bankNotes"`
 	// WLT relay fields: populated by the repository after WLT upsert.
-	PayoutDestinationID string `json:"-"`
-	MaskedAccountNumber string `json:"-"`
-	MaskedIBAN          string `json:"-"`
-	MaskedMobileNumber  string `json:"-"`
-	// ActorID of the caller issuing the update — used for WLT audit.
+	PayoutDestinationID           string `json:"-"`
+	DestinationMethod             string `json:"-"`
+	MaskedDestinationReference    string `json:"-"`
+	DestinationVerificationStatus string `json:"-"`
+	// ActorID of the caller issuing the update â€” used for WLT audit.
 	UpdatedByActorID string `json:"-"`
 }
 
@@ -478,7 +486,7 @@ type PartnerListQuery struct {
 	Offset           int
 }
 
-// ─── Store team members ─────────────────────────────────────────────────────
+// â”€â”€â”€ Store team members â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Closes the partner-store backend gap: app-partner's team management screen
 // (services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx)
 // already calls these operations against the OpenAPI contract; there was no
@@ -503,11 +511,15 @@ type StoreTeamMember struct {
 
 type InviteTeamMemberInput struct {
 	Identity         string `json:"identity"`
+	Role             string `json:"role"`
 	InvitedByActorID string `json:"-"`
 }
 
 func (i InviteTeamMemberInput) Validate() error {
 	if strings.TrimSpace(i.Identity) == "" {
+		return ErrInvalid
+	}
+	if i.Role != "manager" && i.Role != "supervisor" && i.Role != "staff" && i.Role != "owner" {
 		return ErrInvalid
 	}
 	return nil
@@ -527,7 +539,7 @@ func (i TeamMemberActionInput) Validate() error {
 	}
 }
 
-// ─── Store courier settings ─────────────────────────────────────────────────
+// â”€â”€â”€ Store courier settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type StoreCourierSettings struct {
 	CourierName       string   `json:"courierName"`
@@ -556,7 +568,7 @@ func (i StoreCourierSettings) Validate() error {
 	return nil
 }
 
-// ─── Store coverage zones ───────────────────────────────────────────────────
+// â”€â”€â”€ Store coverage zones â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type StoreCoverageZone struct {
 	ID                  string `json:"id"`
@@ -575,7 +587,7 @@ type StoreCoverageZone struct {
 	AuditNote           string `json:"auditNote"`
 }
 
-// ─── Partner operational scopes ─────────────────────────────────────────────
+// â”€â”€â”€ Partner operational scopes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type OperationalScope struct {
 	ScopeID     string   `json:"scopeId"`
@@ -584,22 +596,4 @@ type OperationalScope struct {
 	DisplayName string   `json:"displayName"`
 	Role        string   `json:"role"`
 	Permissions []string `json:"permissions"`
-}
-
-// scopePermissionsByRole is the auditable source of truth for what each
-// team role can do within a store scope. Referenced by
-// ListPartnerScopesForActor — not duplicated inline in query-mapping code.
-var scopePermissionsByRole = map[string][]string{
-	"owner":      {"team.manage", "courier.manage", "coverage.read", "catalog.manage", "orders.manage"},
-	"manager":    {"team.manage", "courier.manage", "coverage.read", "orders.manage"},
-	"supervisor": {"coverage.read", "orders.manage"},
-	"staff":      {"orders.manage"},
-	"courier":    {"orders.manage"},
-}
-
-func permissionsForRole(role string) []string {
-	if perms, ok := scopePermissionsByRole[role]; ok {
-		return perms
-	}
-	return scopePermissionsByRole["staff"]
 }

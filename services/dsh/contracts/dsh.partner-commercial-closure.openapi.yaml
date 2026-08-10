@@ -2,11 +2,12 @@ openapi: 3.1.0
 info:
   title: BThwani DSH Delivery Pricing and Loyalty API
   version: 1.0.0
-  description: >
-    Active DSH contract shard for store delivery pricing and loyalty earning
-    policies. DSH owns operational eligibility and immutable checkout pricing;
-    WLT owns financial balances, funding and paid entitlements. Marketing
-    coupons are owned by dsh.marketing-commercial.openapi.yaml.
+  description: 'Active DSH contract shard for store delivery pricing and loyalty earning
+    policies. DSH owns operational eligibility and immutable checkout pricing; WLT
+    owns financial balances, funding and paid entitlements. Marketing coupons are
+    owned by dsh.marketing-commercial.openapi.yaml.
+
+    '
 x-bthwani-owner: services/dsh
 x-bthwani-parent-contract: services/dsh/contracts/dsh.openapi.yaml
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -16,10 +17,12 @@ paths:
   /dsh/operator/stores/{storeId}/delivery-pricing:
     get:
       operationId: listOperatorDshStoreDeliveryPricing
-      tags: [DshDeliveryPricing]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - DshDeliveryPricing
+      security:
+      - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/StoreId'
       responses:
         '200':
           description: All governed fulfillment pricing records for the store.
@@ -27,25 +30,33 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [pricing]
+                required:
+                - pricing
                 properties:
-                  pricing: { type: array, items: { $ref: '#/components/schemas/DshDeliveryPricing' } }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-
+                  pricing:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DshDeliveryPricing'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
   /dsh/operator/stores/{storeId}/delivery-pricing/{fulfillmentMode}:
     put:
       operationId: upsertOperatorDshStoreDeliveryPricing
-      tags: [DshDeliveryPricing]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - DshDeliveryPricing
+      security:
+      - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/StoreId'
-        - $ref: '#/components/parameters/FulfillmentMode'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/FulfillmentMode'
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/DshDeliveryPricingMutation' }
+            schema:
+              $ref: '#/components/schemas/DshDeliveryPricingMutation'
       responses:
         '200':
           description: Delivery pricing saved with a new version and audit event.
@@ -53,70 +64,26 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [pricing]
+                required:
+                - pricing
                 properties:
-                  pricing: { $ref: '#/components/schemas/DshDeliveryPricing' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
-
-  /dsh/partner/stores/{storeId}/delivery-pricing:
-    get:
-      operationId: listPartnerDshStoreDeliveryPricing
-      tags: [DshDeliveryPricing]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: '#/components/parameters/StoreId'
-      responses:
-        '200':
-          description: Store pricing visible to the authenticated partner.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [pricing]
-                properties:
-                  pricing: { type: array, items: { $ref: '#/components/schemas/DshDeliveryPricing' } }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-
-  /dsh/partner/stores/{storeId}/delivery-pricing/{fulfillmentMode}:
-    put:
-      operationId: upsertPartnerDshStoreDeliveryPricing
-      description: The partner may mutate only partner_delivery for its resolved store.
-      tags: [DshDeliveryPricing]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: '#/components/parameters/StoreId'
-        - $ref: '#/components/parameters/FulfillmentMode'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/DshDeliveryPricingMutation' }
-      responses:
-        '200':
-          description: Partner-delivery pricing saved.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [pricing]
-                properties:
-                  pricing: { $ref: '#/components/schemas/DshDeliveryPricing' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
-
+                  pricing:
+                    $ref: '#/components/schemas/DshDeliveryPricing'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
   /dsh/operator/marketing/loyalty-earning-policies:
     get:
       operationId: listDshLoyaltyEarningPolicies
-      tags: [DshMarketing]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - DshMarketing
+      security:
+      - bearerAuth: []
       responses:
         '200':
           description: Earning policies.
@@ -124,20 +91,29 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [policies]
+                required:
+                - policies
                 properties:
-                  policies: { type: array, items: { $ref: '#/components/schemas/DshLoyaltyEarningPolicy' } }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
+                  policies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DshLoyaltyEarningPolicy'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
     post:
       operationId: createDshLoyaltyEarningPolicy
-      tags: [DshMarketing]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - DshMarketing
+      security:
+      - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/DshLoyaltyEarningPolicyCreate' }
+            schema:
+              $ref: '#/components/schemas/DshLoyaltyEarningPolicyCreate'
       responses:
         '201':
           description: Draft policy created.
@@ -145,28 +121,37 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [policy]
+                required:
+                - policy
                 properties:
-                  policy: { $ref: '#/components/schemas/DshLoyaltyEarningPolicy' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-
+                  policy:
+                    $ref: '#/components/schemas/DshLoyaltyEarningPolicy'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
   /dsh/operator/marketing/loyalty-earning-policies/{policyId}:
     patch:
       operationId: updateDshLoyaltyEarningPolicy
-      tags: [DshMarketing]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - DshMarketing
+      security:
+      - bearerAuth: []
       parameters:
-        - name: policyId
-          in: path
-          required: true
-          schema: { type: string, minLength: 1 }
+      - name: policyId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/DshLoyaltyEarningPolicyUpdate' }
+            schema:
+              $ref: '#/components/schemas/DshLoyaltyEarningPolicyUpdate'
       responses:
         '200':
           description: Policy updated.
@@ -174,114 +159,273 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [policy]
+                required:
+                - policy
                 properties:
-                  policy: { $ref: '#/components/schemas/DshLoyaltyEarningPolicy' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
-
+                  policy:
+                    $ref: '#/components/schemas/DshLoyaltyEarningPolicy'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
 components:
   securitySchemes:
-    bearerAuth: { type: http, scheme: bearer }
+    bearerAuth:
+      type: http
+      scheme: bearer
   parameters:
     StoreId:
       name: storeId
       in: path
       required: true
-      schema: { type: string, minLength: 1 }
+      schema:
+        type: string
+        minLength: 1
     FulfillmentMode:
       name: fulfillmentMode
       in: path
       required: true
-      schema: { type: string, enum: [bthwani_delivery, partner_delivery, pickup] }
+      schema:
+        type: string
+        enum:
+        - bthwani_delivery
+        - partner_delivery
+        - pickup
   responses:
     ErrorResponse:
       description: Governed API error.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+          schema:
+            $ref: '#/components/schemas/Error'
   schemas:
     Error:
       type: object
       additionalProperties: false
-      required: [code, message]
+      required:
+      - code
+      - message
       properties:
-        code: { type: string }
-        message: { type: string }
-
+        code:
+          type: string
+        message:
+          type: string
     DshDeliveryPricing:
       type: object
       additionalProperties: false
-      required: [storeId, fulfillmentMode, feeMinorUnits, currency, status, pricingSource, version, createdAt, updatedAt]
+      required:
+      - storeId
+      - fulfillmentMode
+      - feeMinorUnits
+      - currency
+      - status
+      - pricingSource
+      - version
+      - createdAt
+      - updatedAt
       properties:
-        storeId: { type: string }
-        fulfillmentMode: { type: string, enum: [bthwani_delivery, partner_delivery, pickup] }
-        feeMinorUnits: { type: integer, format: int64, minimum: 0 }
-        currency: { type: string, enum: [YER] }
-        status: { type: string, enum: [active, paused, archived] }
-        pricingSource: { type: string, enum: [control_panel, partner_store, platform_default, migration_legacy] }
-        createdByActorId: { type: string }
-        approvedByActorId: { type: string }
-        approvedAt: { type: string, format: date-time }
-        version: { type: integer, minimum: 1 }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-
+        storeId:
+          type: string
+        fulfillmentMode:
+          type: string
+          enum:
+          - bthwani_delivery
+          - partner_delivery
+          - pickup
+        feeMinorUnits:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          type: string
+          enum:
+          - YER
+        status:
+          type: string
+          enum:
+          - active
+          - paused
+          - archived
+        pricingSource:
+          type: string
+          enum:
+          - control_panel
+          - partner_store
+          - platform_default
+          - migration_legacy
+        createdByActorId:
+          type: string
+        approvedByActorId:
+          type: string
+        approvedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
     DshDeliveryPricingMutation:
       type: object
       additionalProperties: false
-      required: [feeMinorUnits, currency, status, expectedVersion, reason]
+      required:
+      - feeMinorUnits
+      - currency
+      - status
+      - expectedVersion
+      - reason
       properties:
-        feeMinorUnits: { type: integer, format: int64, minimum: 0 }
-        currency: { type: string, enum: [YER] }
-        status: { type: string, enum: [active, paused, archived] }
-        expectedVersion: { type: integer, minimum: 0 }
-        reason: { type: string, minLength: 1 }
-
+        feeMinorUnits:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          type: string
+          enum:
+          - YER
+        status:
+          type: string
+          enum:
+          - active
+          - paused
+          - archived
+        expectedVersion:
+          type: integer
+          minimum: 0
+        reason:
+          type: string
+          minLength: 1
     DshLoyaltyEarningPolicy:
       type: object
       additionalProperties: false
-      required: [id, nameAr, pointsNumerator, eligibleMinorUnitsDenominator, minimumPoints, maximumPointsPerOrder, status, createdByActorId, version, createdAt, updatedAt]
+      required:
+      - id
+      - nameAr
+      - pointsNumerator
+      - eligibleMinorUnitsDenominator
+      - minimumPoints
+      - maximumPointsPerOrder
+      - status
+      - createdByActorId
+      - version
+      - createdAt
+      - updatedAt
       properties:
-        id: { type: string }
-        nameAr: { type: string }
-        pointsNumerator: { type: integer, format: int64, minimum: 1 }
-        eligibleMinorUnitsDenominator: { type: integer, format: int64, minimum: 1 }
-        minimumPoints: { type: integer, format: int64, minimum: 0 }
-        maximumPointsPerOrder: { type: integer, format: int64, minimum: 0 }
-        status: { type: string, enum: [draft, active, paused, archived] }
-        createdByActorId: { type: string }
-        approvedByActorId: { type: string }
-        approvedAt: { type: string, format: date-time }
-        version: { type: integer, minimum: 1 }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-
+        id:
+          type: string
+        nameAr:
+          type: string
+        pointsNumerator:
+          type: integer
+          format: int64
+          minimum: 1
+        eligibleMinorUnitsDenominator:
+          type: integer
+          format: int64
+          minimum: 1
+        minimumPoints:
+          type: integer
+          format: int64
+          minimum: 0
+        maximumPointsPerOrder:
+          type: integer
+          format: int64
+          minimum: 0
+        status:
+          type: string
+          enum:
+          - draft
+          - active
+          - paused
+          - archived
+        createdByActorId:
+          type: string
+        approvedByActorId:
+          type: string
+        approvedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
     DshLoyaltyEarningPolicyCreate:
       type: object
       additionalProperties: false
-      required: [nameAr, pointsNumerator, eligibleMinorUnitsDenominator, minimumPoints, maximumPointsPerOrder]
+      required:
+      - nameAr
+      - pointsNumerator
+      - eligibleMinorUnitsDenominator
+      - minimumPoints
+      - maximumPointsPerOrder
       properties:
-        nameAr: { type: string, minLength: 1 }
-        pointsNumerator: { type: integer, format: int64, minimum: 1 }
-        eligibleMinorUnitsDenominator: { type: integer, format: int64, minimum: 1 }
-        minimumPoints: { type: integer, format: int64, minimum: 0 }
-        maximumPointsPerOrder: { type: integer, format: int64, minimum: 0 }
-
+        nameAr:
+          type: string
+          minLength: 1
+        pointsNumerator:
+          type: integer
+          format: int64
+          minimum: 1
+        eligibleMinorUnitsDenominator:
+          type: integer
+          format: int64
+          minimum: 1
+        minimumPoints:
+          type: integer
+          format: int64
+          minimum: 0
+        maximumPointsPerOrder:
+          type: integer
+          format: int64
+          minimum: 0
     DshLoyaltyEarningPolicyUpdate:
       allOf:
-        - type: object
-          properties:
-            nameAr: { type: string }
-            pointsNumerator: { type: integer, format: int64, minimum: 1 }
-            eligibleMinorUnitsDenominator: { type: integer, format: int64, minimum: 1 }
-            minimumPoints: { type: integer, format: int64, minimum: 0 }
-            maximumPointsPerOrder: { type: integer, format: int64, minimum: 0 }
-            status: { type: string, enum: [draft, active, paused, archived] }
-        - type: object
-          required: [expectedVersion]
-          properties:
-            expectedVersion: { type: integer, minimum: 1 }
+      - type: object
+        properties:
+          nameAr:
+            type: string
+          pointsNumerator:
+            type: integer
+            format: int64
+            minimum: 1
+          eligibleMinorUnitsDenominator:
+            type: integer
+            format: int64
+            minimum: 1
+          minimumPoints:
+            type: integer
+            format: int64
+            minimum: 0
+          maximumPointsPerOrder:
+            type: integer
+            format: int64
+            minimum: 0
+          status:
+            type: string
+            enum:
+            - draft
+            - active
+            - paused
+            - archived
+      - type: object
+        required:
+        - expectedVersion
+        properties:
+          expectedVersion:
+            type: integer
+            minimum: 1

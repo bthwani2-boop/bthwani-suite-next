@@ -8,7 +8,7 @@ summary: Judge final closure only from same-commit, all-applicable-scope, indepe
 
 ## Purpose
 
-Own final evidence reconciliation for deciding whether a governed journey may be classified as `CLOSED_WITH_EVIDENCE`.
+Own final evidence reconciliation for deciding whether a governed journey or capability may be classified as `CLOSED_WITH_EVIDENCE`.
 
 ## Invoke when
 
@@ -26,17 +26,20 @@ This skill reconciles independently produced evidence and issues the canonical f
 
 ## Read before
 
+- `governance/GOVERNANCE.md`
 - `governance/contracts/decision-vocabulary.json`
-- `governance/policies/release.md`
+- `governance/policies/delivery.md`
+- `governance/contracts/sdlc/`
+- `governance/product/PRD.md` and applicable Product Truth
 - `governance/product/platform-model.yaml`
-- `governance/github/repository-enforcement.json`
+- `governance/github/master-protection.ruleset.json` only as desired configuration when applicable
 - `governance/guards/guard-assurance.json`
-- applicable Product Truth, SDLC artifact, and change-impact documents;
-- same-commit evidence and approvals for every applicable scope.
+- same-candidate evidence and approvals for every applicable scope
+- live GitHub branch/ruleset/check/workflow/review state whenever a GitHub enforcement claim matters
 
 ## Required evidence model
 
-Reconcile the exact `applicableEvidenceScopes` declared by impact:
+Reconcile the exact `applicableEvidenceScopes` declared by current impact:
 
 1. `static`: contracts, architecture, code, data ownership, generated clients, bindings, and targeted checks.
 2. `product`: Product Manager model and Product Owner acceptance.
@@ -45,38 +48,43 @@ Reconcile the exact `applicableEvidenceScopes` declared by impact:
 5. `qa`: independent QA, negative tests, cross-surface consistency, and accessibility acceptance.
 6. `security`: independent security, privacy, authorization, vulnerability, and secret evidence.
 7. `finance`: independent Financial Control approval for WLT financial truth and DSH/WLT handoffs.
-8. `isolation`: independent isolation-security evidence when operator-context, organization, partner, store, actor, or other legally scoped data boundaries are affected.
+8. `isolation`: independent isolation-security evidence when platform/operator/business/object boundaries are affected.
 9. `governance`: Governance Contract approval for control-plane changes.
-10. `ci`: CI Workflow approval, immutable action checks, syntax/security analysis, and actual same-commit results.
+10. `ci`: CI Workflow approval, immutable action checks, syntax/security analysis, and actual same-candidate results.
 11. `release`: release readiness, rollback, monitoring, support ownership, and residual-risk decision.
 12. `production`: deployment, production smoke/readback, telemetry review, and rollback readiness.
 
-Every skipped stage must appear in `notApplicableStages` with matching `stageExclusions` evidence. A scope-specific pass never upgrades another scope, and prior evidence never overrides a newer failure or commit.
+Every skipped stage must appear in `notApplicableStages` with matching `stageExclusions` evidence. A scope-specific pass never upgrades another scope, and prior evidence never overrides a newer failure or candidate.
 
 ## Guard assurance rule
 
 - Resolve every guard result through `governance/guards/guard-assurance.json`.
 - `proves` is the maximum positive claim supported by that guard.
-- Every `doesNotProve` item remains unresolved without separate same-commit evidence.
+- Every `doesNotProve` item remains unresolved without separate candidate-bound evidence.
 - A guard with `closureEligible: false` cannot independently support closure.
 - Static, configuration, schema, regression, syntax, pinning, and bounded runtime checks remain only their declared scope evidence.
 
-## GitHub enforcement rule
+## GitHub live-evidence rule
 
-- Verify `governance/github/repository-enforcement.json` against live GitHub state before protected closure.
-- If `highRiskClosureAllowed` is false, a high-risk journey cannot close.
-- If `separationOfDutiesProven` is false, a journey requiring independent approval returns `NEEDS_EVIDENCE` or the applicable block decision.
-- A single CODEOWNERS identity proves routing only.
-- Unproven branch protection, required checks, stale-approval dismissal, or workflow success cannot be treated as pass.
+When branch protection, rulesets, required checks, reviewer separation, merge readiness, or workflow success are applicable:
+
+1. resolve the exact candidate SHA and target branch;
+2. query the live GitHub state for that branch/candidate;
+3. verify actual ruleset/branch-protection enforcement rather than a tracked desired configuration;
+4. verify required check names and exact-candidate outcomes;
+5. verify reviewer/approval identity and freshness where independent approval is required;
+6. treat absent, inaccessible, stale, pending, skipped-without-proof, or candidate-mismatched platform evidence as `NEEDS_EVIDENCE` or the applicable block decision.
+
+A tracked JSON/Markdown snapshot, CODEOWNERS file, desired ruleset file, previous workflow run, PR summary, or historical report is never current GitHub enforcement proof.
 
 ## Forbidden
 
 - Using implemented, code checked, guard passed, or workflow configured as a synonym for closure.
-- Closure with failed gates, missing scopes, stage exclusions without evidence, open blockers, unresolved risk, stale evidence, or self-approval.
-- Closure based on a merge ref, another branch, seed, fixture, mock, declaration, or documentation-only claim.
-- Promoting static/configuration/regression evidence into runtime, finance, isolation, QA, security, release, production, or product-category proof.
-- Treating partner subscriptions as proof of independent platform instance, entitlements, or an independent platform instance.
-- Inventing collaborators, teams, approvals, GitHub rules, checks, runtime, or production evidence.
+- Closure with failed gates, missing scopes, unsupported stage exclusions, open blockers, unresolved protected risk, stale evidence, or self-approval.
+- Closure based on a merge ref, another branch, seed, fixture, mock, declaration, snapshot, or documentation-only claim.
+- Promoting static/configuration/regression evidence into runtime, finance, isolation, QA, security, release, production, or product proof.
+- Treating partner/store/subscription records as proof of a separate platform instance or trusted isolation boundary.
+- Inventing collaborators, approvals, GitHub rules, checks, runtime, or production evidence.
 
 ## Required output
 
@@ -90,7 +98,7 @@ stage_exclusion_evidence:
 missing_evidence:
 required_approvals:
 guard_assurance_reconciliation:
-github_enforcement_state:
+live_github_enforcement_state:
 separation_of_duties:
 open_blockers:
 residual_risks:

@@ -554,6 +554,8 @@ components:
               resolutionAction:
                 const: confirmed_success
           then:
+            properties:
+              providerReference: {}
             required:
               - providerReference
     RefundAuditEvent:
@@ -590,8 +592,6 @@ components:
         toStatus:
           type: string
         reason:
-          type: string
-        correlationId:
           type: string
         createdAt:
           type: string

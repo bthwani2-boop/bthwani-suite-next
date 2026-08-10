@@ -1,6 +1,9 @@
 package workforce
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // Person is the sovereign unified person profile. The workforce kind selects a
 // separate employee, captain or field projection. Independent providers are
@@ -60,7 +63,7 @@ type EmployeeProfile struct {
 type CreateFieldAgentInput struct {
 	FullNameAr          string   `json:"fullNameAr"`
 	FullNameEn          string   `json:"fullNameEn"`
-	PhoneE164           string   `json:"phoneE164"`
+	ActorID             string   `json:"actorId"`
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
 	ServiceZoneID       string   `json:"serviceZoneId"`
@@ -73,7 +76,7 @@ type CreateFieldAgentInput struct {
 type CreateCaptainInput struct {
 	FullNameAr          string   `json:"fullNameAr"`
 	FullNameEn          string   `json:"fullNameEn"`
-	PhoneE164           string   `json:"phoneE164"`
+	ActorID             string   `json:"actorId"`
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
 	PhotoMediaRef       string   `json:"photoMediaRef"`
@@ -107,7 +110,7 @@ type UpdateCaptainInput struct {
 	EngagementStartDate *string `json:"engagementStartDate"`
 	PhotoMediaRef       *string `json:"photoMediaRef"`
 	VehicleType         *string `json:"vehicleType"`
-	VehicleIdentifier  *string `json:"vehicleIdentifier"`
+	VehicleIdentifier   *string `json:"vehicleIdentifier"`
 	LicenseStatus       *string `json:"licenseStatus"`
 	LicenseExpiresAt    *string `json:"licenseExpiresAt"`
 	ServiceZoneID       *string `json:"serviceZoneId"`
@@ -118,7 +121,7 @@ type UpdateCaptainInput struct {
 type CreateEmployeeInput struct {
 	FullNameAr          string   `json:"fullNameAr"`
 	FullNameEn          string   `json:"fullNameEn"`
-	PhoneE164           string   `json:"phoneE164"`
+	ActorID             string   `json:"actorId"`
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
 	PhotoMediaRef       string   `json:"photoMediaRef"`
@@ -187,4 +190,83 @@ type Shift struct {
 type ApiError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
+}
+
+type OperationalAssignment struct {
+	ID                string     `json:"id"`
+	ActorID           string     `json:"actorId"`
+	OperatorContextID string     `json:"operatorContextId"`
+	Role              string     `json:"role"`
+	ScopeType         string     `json:"scopeType"`
+	ScopeTargetID     string     `json:"scopeTargetId"`
+	StartsOn          time.Time  `json:"startsOn"`
+	EndsOn            *time.Time `json:"endsOn,omitempty"`
+	Active            bool       `json:"active"`
+	AssignedBy        string     `json:"assignedBy,omitempty"`
+	CreatedAt         time.Time  `json:"createdAt"`
+}
+
+type OperationalAssignmentInput struct {
+	ScopeType     string     `json:"scopeType"`
+	ScopeTargetID string     `json:"scopeTargetId"`
+	StartsOn      time.Time  `json:"startsOn"`
+	EndsOn        *time.Time `json:"endsOn,omitempty"`
+}
+
+type ActorScopes struct {
+	ActorID           string   `json:"actorId"`
+	Role              string   `json:"role"`
+	OperatorContextID string   `json:"operatorContextId"`
+	StoreIDs          []string `json:"storeIds"`
+	ServiceAreaCodes  []string `json:"serviceAreaCodes"`
+	PartnerIDs        []string `json:"partnerIds"`
+	ShiftCodes        []string `json:"shiftCodes"`
+}
+type ProvisioningCase struct {
+	ID             string          `json:"id"`
+	IdempotencyKey string          `json:"idempotencyKey"`
+	Status         string          `json:"status"`
+	WorkforceKind  string          `json:"workforceKind"`
+	ActorID        string          `json:"actorId,omitempty"`
+	WorkforceCode  string          `json:"workforceCode,omitempty"`
+	Payload        json.RawMessage `json:"payload"`
+	FailureReason  string          `json:"failureReason,omitempty"`
+	CreatedAt      time.Time       `json:"createdAt"`
+	UpdatedAt      time.Time       `json:"updatedAt"`
+}
+
+type StartProvisioningInput struct {
+	WorkforceKind string          `json:"workforceKind"`
+	Payload       json.RawMessage `json:"payload"`
+}
+// BlockerReason represents a specific reason why an actor is blocked from operations.
+type BlockerReason string
+
+const (
+	BlockerIdentitySuspended      BlockerReason = "IDENTITY_SUSPENDED"
+	BlockerProfileIncomplete      BlockerReason = "PROFILE_INCOMPLETE"
+	BlockerDocumentsExpired       BlockerReason = "DOCUMENTS_EXPIRED"
+	BlockerEmploymentTerminated   BlockerReason = "EMPLOYMENT_TERMINATED"
+	BlockerNoActiveAssignment     BlockerReason = "NO_ACTIVE_ASSIGNMENT"
+	BlockerShiftInactive          BlockerReason = "SHIFT_INACTIVE"
+	BlockerOutsideActiveArea      BlockerReason = "OUTSIDE_ACTIVE_AREA"
+	BlockerFinancialEligibility   BlockerReason = "FINANCIAL_ELIGIBILITY_BLOCKED"
+	BlockerEligibilityUnavailable BlockerReason = "ELIGIBILITY_UNAVAILABLE"
+)
+
+// ReadinessStatus indicates the overall operational readiness.
+type ReadinessStatus string
+
+const (
+	ReadinessAllowed ReadinessStatus = "ALLOWED"
+	ReadinessBlocked ReadinessStatus = "BLOCKED"
+)
+
+// ReadinessGate aggregates readiness from Identity, Workforce, DSH, and Finance.
+type ReadinessGate struct {
+	ActorID        string          `json:"actorId"`
+	WorkforceKind  string          `json:"workforceKind"`
+	Status         ReadinessStatus `json:"status"`
+	BlockerReasons []BlockerReason `json:"blockerReasons"`
+	CheckedAt      time.Time       `json:"checkedAt"`
 }

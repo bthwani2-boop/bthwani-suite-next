@@ -10,7 +10,7 @@ readonly REGAL_VERSION="v0.25.0"
 readonly CONFTEST_VERSION="v0.55.0"
 readonly HADOLINT_VERSION="v2.12.0"
 readonly GITLEAKS_VERSION="v8.23.0"
-readonly OSV_SCANNER_VERSION="v1.9.0"
+readonly OSV_SCANNER_VERSION="v2.4.0"
 
 echo "Installing locked OSS toolchain binaries for mode: ${MODE}"
 
@@ -21,7 +21,7 @@ install_common_go_tools() {
     exit 1
   fi
 
-  go install "github.com/google/osv-scanner/cmd/osv-scanner@${OSV_SCANNER_VERSION}"
+  go install "github.com/google/osv-scanner/v2/cmd/osv-scanner@${OSV_SCANNER_VERSION}"
   go install "github.com/rhysd/actionlint/cmd/actionlint@${ACTIONLINT_VERSION}"
   go install "github.com/suzuki-shunsuke/pinact/cmd/pinact@${PINACT_VERSION}"
   echo "$HOME/go/bin" >> "$GITHUB_PATH"

@@ -70,7 +70,6 @@ func TestPrepareMediaUploadBodyRejectsUnsafeTypes(t *testing.T) {
 	}
 }
 
-// Helper to open the test database if enabled
 func openTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	if os.Getenv("DSH_REQUIRE_DB_TESTS") != "true" {
@@ -91,14 +90,9 @@ func openTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
-// TestActorCanAccessMediaReferenceUnit verifies authorization logic directly
 func TestActorCanAccessMediaReferenceUnit(t *testing.T) {
-	s := &protectedStoreServer{
-		db: nil, // Not needed for unit tests (operator and field)
-	}
-
+	s := &protectedStoreServer{db: nil}
 	ctx := context.Background()
-
 	ref := mediaReference{
 		MediaRef:       "ref-123",
 		StorageKey:     "key-123",
@@ -107,7 +101,6 @@ func TestActorCanAccessMediaReferenceUnit(t *testing.T) {
 		PartnerID:      "",
 	}
 
-	// 1. Operator has full download access
 	{
 		actor := store.StoreActor{ID: "op-1", Role: "operator"}
 		allowed, err := s.actorCanAccessMediaReference(ctx, actor, ref)
@@ -119,7 +112,6 @@ func TestActorCanAccessMediaReferenceUnit(t *testing.T) {
 		}
 	}
 
-	// 2. Field owner has access
 	{
 		actor := store.StoreActor{ID: "field-1", Role: "field"}
 		allowed, err := s.actorCanAccessMediaReference(ctx, actor, ref)
@@ -131,7 +123,6 @@ func TestActorCanAccessMediaReferenceUnit(t *testing.T) {
 		}
 	}
 
-	// 3. Field non-owner does not have access
 	{
 		actor := store.StoreActor{ID: "field-2", Role: "field"}
 		allowed, err := s.actorCanAccessMediaReference(ctx, actor, ref)
@@ -143,7 +134,6 @@ func TestActorCanAccessMediaReferenceUnit(t *testing.T) {
 		}
 	}
 
-	// 4. Captain does not have access
 	{
 		actor := store.StoreActor{ID: "captain-1", Role: "captain"}
 		allowed, err := s.actorCanAccessMediaReference(ctx, actor, ref)
@@ -155,7 +145,6 @@ func TestActorCanAccessMediaReferenceUnit(t *testing.T) {
 		}
 	}
 
-	// 5. Unknown role does not have access
 	{
 		actor := store.StoreActor{ID: "unknown-1", Role: "unknown"}
 		allowed, err := s.actorCanAccessMediaReference(ctx, actor, ref)
@@ -168,20 +157,16 @@ func TestActorCanAccessMediaReferenceUnit(t *testing.T) {
 	}
 }
 
-// TestActorCanAccessMediaReferenceDBIntegration verifies partner DB-based scoping
 func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 	db := openTestDB(t)
 	s := &protectedStoreServer{db: db}
 	ctx := context.Background()
-
-	// Setup clean data
 	partnerID := "test-partner-1"
 	storeID := "test-store-1"
 	actorID := "test-actor-1"
 	operatorContextID := "local-dsh"
 	mediaRefStr := "test-media-ref-1"
 
-	// Insert test store and partner/scope mapping
 	_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_actor_scopes WHERE actor_id = $1`, actorID)
 	_, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID)
 	_, _ = db.ExecContext(ctx, `DELETE FROM dsh_media_references WHERE media_ref = $1`, mediaRefStr)
@@ -197,7 +182,7 @@ func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, operator_context_id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, partner_id)
-		VALUES ($1, $3, $1, 'Test Store for Media', 'active', 'SAN', 'SAN-1', 'serviceable', true, $2)`,
+		VALUES ($1, $3, $1, 'Test Store for Media', 'published', 'SAN', 'SAN-1', 'serviceable', true, $2)`,
 		storeID, partnerID, operatorContextID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
@@ -219,7 +204,6 @@ func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 		PartnerID:      partnerID,
 	}
 
-	// 1. Partner in scope should be allowed
 	{
 		actor := store.StoreActor{ID: actorID, Role: "partner", OperatorContextID: operatorContextID}
 		allowed, err := s.actorCanAccessMediaReference(ctx, actor, ref)
@@ -231,7 +215,6 @@ func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 		}
 	}
 
-	// 2. Partner outside scope (different partner ID or no scopes) should be forbidden
 	{
 		actor := store.StoreActor{ID: "other-actor-no-scope", Role: "partner", OperatorContextID: operatorContextID}
 		allowed, err := s.actorCanAccessMediaReference(ctx, actor, ref)
@@ -244,9 +227,7 @@ func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 	}
 }
 
-// TestHandleMediaDownloadEndpoint tests the HTTP request handling of download endpoint
 func TestHandleMediaDownloadEndpoint(t *testing.T) {
-	// Start Mock Identity/Auth Server
 	mockAuthServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		w.Header().Set("Content-Type", "application/json")
@@ -254,11 +235,11 @@ func TestHandleMediaDownloadEndpoint(t *testing.T) {
 		var identity auth.Identity
 		switch authHeader {
 		case "Bearer operator-token":
-			identity = auth.Identity{Subject: "op-1", OperatorContextID: "OperatorContext-a", Roles: []string{"operator"}, AuthState: "authenticated"}
+			identity = auth.Identity{Subject: "op-1", OperatorContextID: "OperatorContext-a", Roles: []string{"operator"}, AuthState: "authenticated", SessionSurface: "dsh-portal"}
 		case "Bearer field-owner-token":
-			identity = auth.Identity{Subject: "field-1", OperatorContextID: "OperatorContext-a", Roles: []string{"field"}, AuthState: "authenticated"}
+			identity = auth.Identity{Subject: "field-1", OperatorContextID: "OperatorContext-a", Roles: []string{"field"}, AuthState: "authenticated", SessionSurface: "app-field"}
 		case "Bearer field-non-owner-token":
-			identity = auth.Identity{Subject: "field-2", OperatorContextID: "OperatorContext-a", Roles: []string{"field"}, AuthState: "authenticated"}
+			identity = auth.Identity{Subject: "field-2", OperatorContextID: "OperatorContext-a", Roles: []string{"field"}, AuthState: "authenticated", SessionSurface: "app-field"}
 		default:
 			w.WriteHeader(http.StatusUnauthorized)
 			_, _ = w.Write([]byte(`{"message":"unauthenticated"}`))
@@ -270,56 +251,46 @@ func TestHandleMediaDownloadEndpoint(t *testing.T) {
 
 	authClient := auth.NewClient(mockAuthServer.URL)
 
-	// 1. Missing mediaRef -> returns 400 Bad Request
 	{
 		s := &protectedStoreServer{
 			db:       nil,
 			identity: authClient,
-			media:    media.NewStaticProvider(&media.Client{}), // dummy media client so it passes the nil check
+			media:    media.NewStaticProvider(&media.Client{}),
 		}
 		req := httptest.NewRequest(http.MethodGet, "/dsh/media", nil)
-		req.Header.Set("Authorization", "Bearer operator-token")
+		req.Header.Set("Authorization", "Bearer field-owner-token")
 		rec := httptest.NewRecorder()
-
 		s.handleMediaDownload(rec, req)
-
 		if rec.Code != http.StatusBadRequest {
 			t.Fatalf("expected 400, got %d. Body: %s", rec.Code, rec.Body.String())
 		}
 	}
 
-	// 2. Media client unconfigured (s.media == nil) -> returns 503 Service Unavailable
 	{
 		s := &protectedStoreServer{
 			db:       nil,
 			identity: authClient,
-			media:    nil, // unconfigured
+			media:    nil,
 		}
 		req := httptest.NewRequest(http.MethodGet, "/dsh/media?mediaRef=some-ref", nil)
-		req.Header.Set("Authorization", "Bearer operator-token")
+		req.Header.Set("Authorization", "Bearer field-owner-token")
 		rec := httptest.NewRecorder()
-
 		s.handleMediaDownload(rec, req)
-
 		if rec.Code != http.StatusServiceUnavailable {
 			t.Fatalf("expected 503, got %d. Body: %s", rec.Code, rec.Body.String())
 		}
 	}
 }
 
-// TestHandleMediaDownloadEndpointDBIntegration verifies DB cases for HTTP download handler
 func TestHandleMediaDownloadEndpointDBIntegration(t *testing.T) {
 	db := openTestDB(t)
-
-	// Start Mock Identity/Auth Server
 	mockAuthServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		w.Header().Set("Content-Type", "application/json")
-
 		var identity auth.Identity
 		switch authHeader {
-		case "Bearer operator-token":
-			identity = auth.Identity{Subject: "op-1", OperatorContextID: "local-dsh", Roles: []string{"operator"}, AuthState: "authenticated"}
+		case "Bearer partner-token":
+			identity = auth.Identity{Subject: "partner-1", OperatorContextID: "local-dsh", Roles: []string{"partner"}, AuthState: "authenticated", SessionSurface: "app-partner"}
 		default:
 			w.WriteHeader(http.StatusUnauthorized)
 			return
@@ -329,21 +300,17 @@ func TestHandleMediaDownloadEndpointDBIntegration(t *testing.T) {
 	defer mockAuthServer.Close()
 
 	authClient := auth.NewClient(mockAuthServer.URL)
-
 	s := &protectedStoreServer{
 		db:       db,
 		identity: authClient,
-		media:    media.NewStaticProvider(&media.Client{}), // Dummy media client to bypass nil check
+		media:    media.NewStaticProvider(&media.Client{}),
 	}
 
-	// Unknown mediaRef (not present in DB) -> returns 404 Not Found
 	{
 		req := httptest.NewRequest(http.MethodGet, "/dsh/media?mediaRef=totally-unknown-ref-123456", nil)
-		req.Header.Set("Authorization", "Bearer operator-token")
+		req.Header.Set("Authorization", "Bearer partner-token")
 		rec := httptest.NewRecorder()
-
 		s.handleMediaDownload(rec, req)
-
 		if rec.Code != http.StatusNotFound {
 			t.Fatalf("expected 404, got %d. Body: %s", rec.Code, rec.Body.String())
 		}

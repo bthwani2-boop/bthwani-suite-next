@@ -6,9 +6,9 @@ param(
 Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $ErrorActionPreference = "Stop"
 
-$manifestPath = "tools\guards\guard-manifest.json"
+$manifestPath = "governance\guards\guard-sets.json"
 if (-not (Test-Path -LiteralPath $manifestPath)) {
-  throw "Guard manifest is missing: $manifestPath"
+  throw "Guard set contract is missing: $manifestPath"
 }
 
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
@@ -37,6 +37,8 @@ function Invoke-Step {
   }
 }
 
+Invoke-Step "source-integrity-tests" { node --test tools/guards/source-integrity-gate.test.mjs }
+Invoke-Step "source-integrity" { node tools/guards/source-integrity-gate.mjs }
 Invoke-Step "git-diff-check" { git --no-pager diff --check }
 
 if ($Full) {
@@ -50,5 +52,5 @@ foreach ($guardName in $foundationGuards) {
 
 $mode = if ($Full) { "full-explicit" } else { "targeted-default" }
 Write-Host ""
-Write-Host "RESULT: PASS scope=static mode=$mode" -ForegroundColor Green
-Write-Host "PASS is scoped evidence only and does not imply CLOSED_WITH_EVIDENCE." -ForegroundColor Yellow
+Write-Host 'RESULT: PASS scope=static mode=' $mode -ForegroundColor Green
+Write-Host 'PASS is scoped evidence only and does not imply CLOSED_WITH_EVIDENCE.' -ForegroundColor Yellow

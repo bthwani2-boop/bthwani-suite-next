@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 3,
+  "unitId": "U004",
+  "status": "PASS",
+  "baselineSha": "ba3393c39b0d0b265a4caf110b3bca685e43b0e3",
+  "resultingSha": "18c82d669789ac76004b4d8cb2de1b022187f5bb",
+  "completedTaskIds": [
+    "U004-T001-field-store-draft-idempotency",
+    "U004-T002-operator-review-wlt-boundary-verified",
+    "U004-T003-publication-gate-verified",
+    "U004-T004-build-clean",
+    "U004-T005-unit-tests-pass"
+  ],
+  "modifiedPaths": [
+    "services/dsh/backend/internal/store/repository.go",
+    "services/dsh/backend/internal/http/catalog.go"
+  ],
+  "checkResults": [
+    {
+      "check": "go build ./internal/store ./internal/http",
+      "result": "PASS"
+    },
+    {
+      "check": "go test ./internal/store -run TestStoreMutation",
+      "result": "PASS"
+    },
+    {
+      "check": "go test ./internal/http -run TestTrusted",
+      "result": "PASS"
+    },
+    {
+      "check": "go test ./internal/partner -run TestPartner",
+      "result": "PASS"
+    }
+  ],
+  "blockers": [],
+  "deviations": [
+    "UpdateFieldStoreDraft signature extended with idempotencyKey param (breaking addition — callers updated in same PR scope)"
+  ],
+  "decision": "PASS",
+  "multiSurfaceScope": {
+    "mode": "FULLSTACK_UNIFIED_MULTI_SURFACE",
+    "surfaces": ["control-panel", "app-client", "app-partner", "app-captain", "app-field"],
+    "journeyPolicy": "FIELD_ONLY",
+    "sliceContract": "structural envelope"
+  },
+  "closureRule": "Onboarding closes only when field capture, operator decision, partner readback and applicable client publication converge; captain remains excluded.",
+  "evidenceSummary": {
+    "idempotencyGate": "UpdateFieldStoreDraft now requires non-empty Idempotency-Key; pg_advisory_xact_lock + dsh_store_idempotency replay table used canonically",
+    "conflictResponse": "IDEMPOTENCY_CONFLICT → HTTP 409 in handleFieldUpdatePartnerStore",
+    "reviewSeparation": "TransitionStatusGoverned enforces field cannot approve own evidence via actor_surface checks + review_separation_boundary_db_test.go",
+    "wltBoundary": "HandleGovernedActivationTransition blocks suspend/terminate if WLT unavailable; no raw payout ref exposed in DSH surface",
+    "publicationGate": "validateTransitionReadinessTx: StatusClientVisible requires store.status=active, is_visible, serviceability, partner_readiness=ready, catalog_approval=approved, marketing_visibility=visible"
+  }
+}

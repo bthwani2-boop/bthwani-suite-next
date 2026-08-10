@@ -1,61 +1,133 @@
 # BThwani DSH OpenAPI schemas module: checkout.
-# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+# Canonical checkout request/response/status authority. Referenced by
+# dsh.openapi.yaml and checkout path shards.
+#
+# YAML anchors intentionally keep intra-module schemas single-sourced without
+# creating file-relative $ref values that become invalid after bundle inlining.
 
-DshCheckoutIntent:
+DshCheckoutIntentState: &DshCheckoutIntentState
+  type: string
+  enum:
+    - draft
+    - validating
+    - ready
+    - blocked
+    - confirming
+    - confirmed
+    - cancelled
+    - expired
+
+DshCheckoutValidationIssue: &DshCheckoutValidationIssue
   type: object
-  required: [id, clientId, cartId, storeId, fulfillmentMode, state, paymentMethod, wltPaymentSessionId, deliveryAddress, note, version, createdAt, updatedAt]
+  additionalProperties: false
+  required: [code, message]
   properties:
-    id: { type: string }
-    clientId: { type: string }
-    cartId: { type: string }
-    storeId: { type: string }
-    fulfillmentMode:
-      type: string
-      enum: [bthwani_delivery, partner_delivery, pickup]
-    state:
-      type: string
-      enum: [pending, wlt_handoff_failed, wlt_outcome_unknown, payment_pending, payment_confirmed, payment_failed, confirmed, cancelled, expired]
-    paymentMethod:
-      type: string
-      enum: [cod, wallet, mixed, official_wallet]
+    code: { type: string }
+    message: { type: string }
+    field: { type: string }
+
+DshCheckoutPaymentMethod: &DshCheckoutPaymentMethod
+  type: string
+  enum: [cod, wallet, mixed, official_wallet]
+
+DshCheckoutFulfillmentMode: &DshCheckoutFulfillmentMode
+  type: string
+  enum: [bthwani_delivery, partner_delivery, pickup]
+
+DshCheckoutIntent: &DshCheckoutIntent
+  type: object
+  additionalProperties: false
+  required:
+    - id
+    - operatorContextId
+    - clientId
+    - cartId
+    - storeId
+    - fulfillmentMode
+    - state
+    - paymentMethod
+    - wltPaymentSessionId
+    - quote
+    - version
+    - createdAt
+    - updatedAt
+    - previewHash
+    - validationIssues
+  properties:
+    id: { type: string, format: uuid }
+    operatorContextId: { type: string, minLength: 1 }
+    clientId: { type: string, minLength: 1 }
+    cartId: { type: string, format: uuid }
+    storeId: { type: string, minLength: 1 }
+    fulfillmentMode: *DshCheckoutFulfillmentMode
+    state: *DshCheckoutIntentState
+    paymentMethod: *DshCheckoutPaymentMethod
     wltPaymentSessionId:
       type: string
       description: "Opaque WLT-owned payment-session reference. DSH never mutates financial truth."
     deliveryAddress: { type: string }
     note: { type: string }
-    version: { type: integer }
+    quote:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPricingQuote"
+    couponId: { type: string }
+    couponRedemptionId: { type: string }
+    couponCodeLast4: { type: string, maxLength: 4 }
+    reconciliationRequired: { type: boolean }
+    reconciliationAgeSeconds: { type: integer, format: int64, minimum: 0 }
+    version: { type: integer, minimum: 1 }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
+    expiresAt: { type: string, format: date-time }
+    previewHash: { type: string }
+    validationIssues:
+      type: array
+      items: *DshCheckoutValidationIssue
 
 DshCreateCheckoutIntentRequest:
   type: object
+  additionalProperties: false
   required: [cartId, storeId]
   properties:
-    cartId: { type: string }
-    storeId: { type: string }
-    fulfillmentMode:
-      type: string
-      enum: [bthwani_delivery, partner_delivery, pickup]
-    paymentMethod:
-      type: string
-      enum: [cod, wallet, mixed, official_wallet]
-    deliveryAddress: { type: string }
-    note: { type: string }
+    cartId: { type: string, format: uuid }
+    storeId: { type: string, minLength: 1 }
+    fulfillmentMode: *DshCheckoutFulfillmentMode
+    paymentMethod: *DshCheckoutPaymentMethod
+    deliveryAddressId: { type: string, format: uuid }
+    note: { type: string, maxLength: 1000 }
+    couponCode: { type: string, maxLength: 32 }
 
 DshCheckoutIntentResponse:
   type: object
+  additionalProperties: false
   required: [intent]
   properties:
-    intent:
-      $ref: "../../dsh.openapi.yaml#/components/schemas/DshCheckoutIntent"
+    intent: *DshCheckoutIntent
 
 DshOperatorCheckoutIntentsResponse:
   type: object
+  additionalProperties: false
   required: [intents]
   properties:
     intents:
       type: array
-      items:
-        $ref: "../../dsh.openapi.yaml#/components/schemas/DshCheckoutIntent"
+      items: *DshCheckoutIntent
 
-# ─── Order schemas ──────────────────────────────────────────────
+DshWltPaymentSessionEvent:
+  type: object
+  additionalProperties: false
+  required: [operatorContextId, checkoutIntentId, paymentSessionId, status]
+  properties:
+    eventId: { type: string, minLength: 8, maxLength: 200 }
+    operatorContextId: { type: string, minLength: 1 }
+    checkoutIntentId: { type: string, format: uuid }
+    paymentSessionId: { type: string, minLength: 1 }
+    status:
+      type: string
+      enum:
+        - authorized
+        - reference_created
+        - cod_pending
+        - captured
+        - cod_collected
+        - failed
+        - expired

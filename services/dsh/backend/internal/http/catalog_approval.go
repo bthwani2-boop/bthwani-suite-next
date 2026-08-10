@@ -46,7 +46,7 @@ func requireCatalogApprovalOperatorContext(w http.ResponseWriter, actor store.St
 
 // POST /dsh/catalog-approvals
 func (s *protectedStoreServer) handleCreateCatalogApproval(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner", "field", "operator")
+	actor, ok := s.requireActor(w, r, "partner", "field")
 	if !ok {
 		return
 	}
@@ -100,7 +100,7 @@ func (s *protectedStoreServer) handleCreateCatalogApproval(w http.ResponseWriter
 
 // GET /dsh/catalog-approvals
 func (s *protectedStoreServer) handleListCatalogApprovals(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", CatalogApprovalPermissionRead, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -144,7 +144,7 @@ func (s *protectedStoreServer) handleListPartnerCatalogApprovals(w http.Response
 // GET /dsh/catalog-approvals/{recordId}
 // Full metadata and audit are restricted to the governed control-panel reader.
 func (s *protectedStoreServer) handleGetCatalogApproval(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", CatalogApprovalPermissionRead, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -166,7 +166,7 @@ func (s *protectedStoreServer) handleGetCatalogApproval(w http.ResponseWriter, r
 
 // POST /dsh/catalog-approvals/{recordId}/transition
 func (s *protectedStoreServer) handleTransitionCatalogApproval(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", CatalogApprovalPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

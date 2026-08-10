@@ -8,7 +8,7 @@ summary: Govern environment, provider, service-slot, base-URL, CORS, and sensiti
 
 ## Purpose
 
-Own verification of runtime configuration boundaries so environment, provider, service-slot, base-URL, CORS, feature posture, and sensitive settings remain centralized and truthful.
+Own verification of runtime-configuration boundaries so environment, provider, service-slot, base-URL, CORS, feature posture, and sensitive settings remain centralized and truthful.
 
 ## Invoke when
 
@@ -18,18 +18,19 @@ Own verification of runtime configuration boundaries so environment, provider, s
 ## Do not invoke when
 
 - No runtime configuration, provider boundary, or sensitive setting is affected.
-- The task is only static UI presentation with no configuration dependency.
+- The task is static UI presentation with no configuration dependency.
 
 ## Read before
 
-- `governance/policies/contracts.md`
-- `governance/policies/runtime.md`
+- `governance/GOVERNANCE.md`
+- `governance/policies/engineering.md`
 - `governance/policies/security.md`
-- applicable shared configuration owners, runtime manifests, and consumers
+- `governance/policies/delivery.md` when runtime/evidence/release claims are involved
+- applicable Product Truth, shared configuration owners, runtime manifests, provider contracts, and consumers
 
 ## Authority boundary
 
-This skill owns configuration-boundary verification only. It cannot approve application security, provider production activation, release, runtime success, or final closure. Sensitive findings are routed to the independent security authority.
+This skill owns configuration-boundary verification only. It cannot approve application security, provider production activation, release, runtime success, or final closure. Sensitive findings route to the independent security authority.
 
 ## Required invariants
 
@@ -37,7 +38,7 @@ This skill owns configuration-boundary verification only. It cannot approve appl
 2. Screens and leaf components do not own base URLs, provider secrets, CORS policy, or service slots.
 3. Production provider activation is explicit and fail-closed.
 4. Defaults do not broaden CORS, bypass authentication, expose credentials, or present mock posture as production.
-5. Runtime behavior claims require same-commit runtime evidence.
+5. Runtime behavior claims require same-candidate runtime evidence.
 
 ## Forbidden
 
@@ -45,7 +46,7 @@ This skill owns configuration-boundary verification only. It cannot approve appl
 - Preview, demo, fixture, or mock state presented as live runtime truth.
 - Provider mutation hidden in frontend code.
 - Broad CORS or unsafe production defaults.
-- Emitting deprecated security decision aliases; use the canonical `SECURITY_BLOCK` decision.
+- Emitting deprecated security decision aliases; use canonical `SECURITY_BLOCK`.
 
 ## Required output
 

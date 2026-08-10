@@ -91,6 +91,75 @@ func TestPostLedgerTransaction_RejectsTooFewLines(t *testing.T) {
 	}
 }
 
+// TestPostLedgerTransaction_RejectsUnknownAccountType proves the fail-closed
+// taxonomy is actually wired into the write path, not just unit-tested in
+// isolation: posting a balanced transaction against an account_type outside
+// accountTaxonomy must be rejected before any row is written, and must leave
+// no partially-created account behind.
+func TestPostLedgerTransaction_RejectsUnknownAccountType(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	ctx := trustedLedgerTestContext()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("begin tx: %v", err)
+	}
+	defer tx.Rollback()
+
+	actorID := uniqueActorID("client")
+	lines := []LedgerLine{
+		{AccountType: "wallet", ActorType: "client", ActorID: actorID, DebitCredit: "debit", AmountMinorUnits: 1000, Currency: "YER"},
+		{AccountType: "not_a_real_account_type", DebitCredit: "credit", AmountMinorUnits: 1000, Currency: "YER"},
+	}
+	_, err = PostLedgerTransaction(ctx, tx, "test_capture", "test", uniqueActorID("ref"), lines, Actor{ID: "system", Type: "system"})
+	if !errors.Is(err, ErrUnknownAccountType) {
+		t.Fatalf("expected ErrUnknownAccountType, got %v", err)
+	}
+
+	var accountCount int
+	if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM wlt_ledger_accounts WHERE operator_context_id = $1 AND account_type = 'not_a_real_account_type'", "OperatorContext-ledger-tests").Scan(&accountCount); err != nil {
+		t.Fatalf("count accounts: %v", err)
+	}
+	if accountCount != 0 {
+		t.Fatalf("expected no account to be created for an unknown account_type, found %d", accountCount)
+	}
+}
+
+// TestPostLedgerTransaction_CashInTransitPostsAsAsset proves the corrected
+// classification is what actually lands in the database column, not just
+// what the taxonomy map says in isolation.
+func TestPostLedgerTransaction_CashInTransitPostsAsAsset(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	ctx := trustedLedgerTestContext()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("begin tx: %v", err)
+	}
+	defer tx.Rollback()
+
+	captainID := uniqueActorID("captain")
+	lines := []LedgerLine{
+		{AccountType: "cash_in_transit", DebitCredit: "debit", AmountMinorUnits: 2000, Currency: "YER"},
+		{AccountType: "wallet", ActorType: "captain", ActorID: captainID, DebitCredit: "credit", AmountMinorUnits: 2000, Currency: "YER"},
+	}
+	if _, err := PostLedgerTransaction(ctx, tx, "test_cod_collect", "test", uniqueActorID("ref"), lines, Actor{ID: "system", Type: "system"}); err != nil {
+		t.Fatalf("expected cash_in_transit posting to succeed: %v", err)
+	}
+
+	var classification string
+	if err := tx.QueryRowContext(ctx, "SELECT classification FROM wlt_ledger_accounts WHERE operator_context_id = $1 AND account_type = 'cash_in_transit' AND currency = 'YER'", "OperatorContext-ledger-tests").Scan(&classification); err != nil {
+		t.Fatalf("read persisted classification: %v", err)
+	}
+	if classification != "asset" {
+		t.Fatalf("expected cash_in_transit to persist as asset, got %q", classification)
+	}
+}
+
 func TestPostLedgerTransaction_BalancedMultiLineTransaction(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {

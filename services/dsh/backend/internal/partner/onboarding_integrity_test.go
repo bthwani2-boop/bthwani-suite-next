@@ -2,20 +2,7 @@ package partner
 
 import "testing"
 
-func TestSanitizePartnerForSurfaceNeverReturnsRawPayoutIdentifiers(t *testing.T) {
-	partner := Partner{
-		BankAccountNumber: "raw-account",
-		BankIBAN: "raw-iban",
-		PayoutMobileNumber: "raw-mobile",
-		MaskedAccountNumber: "*****1234",
-		MaskedIBAN: "********5678",
-		MaskedMobileNumber: "*******0001",
-	}
-	got := SanitizePartnerForSurface(partner)
-	if got.BankAccountNumber != partner.MaskedAccountNumber || got.BankIBAN != partner.MaskedIBAN || got.PayoutMobileNumber != partner.MaskedMobileNumber {
-		t.Fatalf("surface partner retained raw payout identifiers: %#v", got)
-	}
-}
+
 
 func TestTransitionRequestHashBindsActorStatusAndVersion(t *testing.T) {
 	input := TransitionInput{

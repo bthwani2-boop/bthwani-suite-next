@@ -149,8 +149,8 @@ func HandleCreatePayoutRequest(db *sql.DB) http.HandlerFunc {
 		}
 
 		// Verify balance
-		var available int64
-		err = tx.QueryRowContext(r.Context(), "SELECT available_balance_minor_units FROM wlt_wallets WHERE actor_id = $1 AND actor_type = $2 FOR UPDATE", input.BeneficiaryActorID, input.BeneficiaryActorType).Scan(&available)
+		var available, settled, paid, held int64
+		err = tx.QueryRowContext(r.Context(), "SELECT available_balance_minor_units, settled_total_minor_units, paid_total_minor_units, held_balance_minor_units FROM wlt_wallets WHERE actor_id = $1 AND actor_type = $2 FOR UPDATE", input.BeneficiaryActorID, input.BeneficiaryActorType).Scan(&available, &settled, &paid, &held)
 		if err == sql.ErrNoRows {
 			shared.SendError(w, http.StatusBadRequest, "NO_WALLET", "wallet not found")
 			return
@@ -159,8 +159,9 @@ func HandleCreatePayoutRequest(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		if available < input.AmountMinorUnits {
-			shared.SendError(w, http.StatusBadRequest, "INSUFFICIENT_FUNDS", "insufficient available balance")
+		withdrawable := settled - paid - held
+		if available < input.AmountMinorUnits || withdrawable < input.AmountMinorUnits {
+			shared.SendError(w, http.StatusBadRequest, "INSUFFICIENT_FUNDS", "insufficient withdrawable balance")
 			return
 		}
 
@@ -170,7 +171,7 @@ func HandleCreatePayoutRequest(db *sql.DB) http.HandlerFunc {
 			SET available_balance_minor_units = available_balance_minor_units - $1,
 			    held_balance_minor_units = held_balance_minor_units + $1,
 				updated_at = now()
-			WHERE actor_id = $2 AND actor_type = $3`,
+			WHERE actor_id = $2 AND actor_type = $3 AND available_balance_minor_units >= $1 AND (settled_total_minor_units - paid_total_minor_units - held_balance_minor_units) >= $1`,
 			input.AmountMinorUnits, input.BeneficiaryActorID, input.BeneficiaryActorType)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to update wallet")
@@ -197,71 +198,7 @@ func HandleCreatePayoutRequest(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func HandleListPayoutRequests(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		beneficiaryActorID := r.URL.Query().Get("beneficiaryActorId")
-		beneficiaryActorType := r.URL.Query().Get("beneficiaryActorType")
 
-		query := "SELECT " + requestCols + " FROM wlt_payout_requests"
-		args := []any{}
-
-		switch {
-		case beneficiaryActorID != "" && beneficiaryActorType != "":
-			query += " WHERE beneficiary_actor_id = $1 AND beneficiary_actor_type = $2"
-			args = append(args, beneficiaryActorID, beneficiaryActorType)
-		case beneficiaryActorID != "" || beneficiaryActorType != "":
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "beneficiaryActorId and beneficiaryActorType must be supplied together")
-			return
-		default:
-			// No beneficiary scoping supplied: only an internal/service caller
-			// (e.g. an operator console) may list across all beneficiaries.
-			if !shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh") {
-				return
-			}
-		}
-		query += " ORDER BY requested_at DESC"
-
-		rows, err := db.QueryContext(r.Context(), query, args...)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to query payout requests")
-			return
-		}
-		defer rows.Close()
-
-		reqs := make([]*PayoutRequest, 0)
-		for rows.Next() {
-			req, err := scanPayoutRequest(rows)
-			if err == nil {
-				reqs = append(reqs, req)
-			}
-		}
-
-		shared.SendJSON(w, http.StatusOK, PayoutRequestListResponse{PayoutRequests: reqs, Total: len(reqs)})
-	}
-}
-
-func HandleGetPayoutRequest(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		payoutID := r.PathValue("payoutId")
-		if payoutID == "" {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId required")
-			return
-		}
-
-		rows, err := db.QueryContext(r.Context(), "SELECT "+requestCols+" FROM wlt_payout_requests WHERE id = $1 LIMIT 1", payoutID)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to query request")
-			return
-		}
-		defer rows.Close()
-		if !rows.Next() {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payout request not found")
-			return
-		}
-		req, _ := scanPayoutRequest(rows)
-		shared.SendJSON(w, http.StatusOK, PayoutRequestResponse{PayoutRequest: req})
-	}
-}
 
 func changePayoutStatus(db *sql.DB, w http.ResponseWriter, r *http.Request, fromStatus string, toStatus string, actionCol string, operatorCol string) {
 	payoutID := r.PathValue("payoutId")
@@ -320,51 +257,6 @@ func HandleApprovePayoutRequest(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func HandleRejectPayoutRequest(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		payoutID := r.PathValue("payoutId")
-		operatorID := operatorIDFromRequest(r)
-
-		tx, err := db.BeginTx(r.Context(), nil)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to start tx")
-			return
-		}
-		defer tx.Rollback()
-
-		rows, err := tx.QueryContext(r.Context(), "SELECT "+requestCols+" FROM wlt_payout_requests WHERE id = $1 FOR UPDATE", payoutID)
-		if err != nil || !rows.Next() {
-			if rows != nil {
-				rows.Close()
-			}
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "not found")
-			return
-		}
-		req, _ := scanPayoutRequest(rows)
-		rows.Close()
-
-		if req.Status != "pending" && req.Status != "approved" {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_STATUS", "cannot reject")
-			return
-		}
-
-		// return held funds
-		_, err = tx.ExecContext(r.Context(), "UPDATE wlt_wallets SET available_balance_minor_units = available_balance_minor_units + $1, held_balance_minor_units = held_balance_minor_units - $1, updated_at = now() WHERE actor_id = $2 AND actor_type = $3", req.AmountMinorUnits, req.BeneficiaryActorID, req.BeneficiaryActorType)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "wallet update failed")
-			return
-		}
-
-		q := "UPDATE wlt_payout_requests SET status = 'rejected', rejected_at = now(), rejected_by_operator_id = NULLIF($2, ''), operator_id = NULLIF($2, '') WHERE id = $1 RETURNING " + requestCols
-		rows2, _ := tx.QueryContext(r.Context(), q, payoutID, operatorID)
-		defer rows2.Close()
-		rows2.Next()
-		updated, _ := scanPayoutRequest(rows2)
-		tx.Commit()
-
-		shared.SendJSON(w, http.StatusOK, PayoutRequestResponse{PayoutRequest: updated})
-	}
-}
 
 func HandleProcessPayoutRequest(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

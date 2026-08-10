@@ -36,16 +36,16 @@ func AttachWltPaymentSessionIdempotent(
 		    END
 		WHERE id = $3::uuid AND operator_context_id = $4 AND client_id = $5
 		  AND (
-		      state IN ('pending', 'wlt_handoff_failed', 'wlt_outcome_unknown')
-		      OR (state = 'payment_pending' AND wlt_payment_session_id = $2)
+		      state IN ('ready', 'blocked', 'draft', 'validating')
+		      OR (state = 'confirming' AND wlt_payment_session_id = $2)
 		  )
 		RETURNING id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
-		          delivery_address, note, version, created_at, updated_at`
+		          delivery_address, note, version, created_at, updated_at, expires_at, preview_hash, validation_issues`
 
 	row := db.QueryRow(
 		q,
-		string(StatePaymentPending),
+		string(StateConfirming),
 		paymentSessionID,
 		intentID,
 		operatorContextID,

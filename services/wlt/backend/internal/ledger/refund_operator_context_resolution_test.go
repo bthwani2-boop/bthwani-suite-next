@@ -29,8 +29,8 @@ func seedRefundLedgerReference(t *testing.T, operatorContextID string) (*sqlTest
 	clientID := "refund-client-" + suffix
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO wlt_payment_sessions
-			(id,operator_context_id,checkout_intent_id,client_id,store_id,payment_method,status,amount_minor_units,currency)
-		VALUES($1,$2,$3,$4,'store-refund-ledger','official_wallet','captured',1000,'YER')`,
+			(id,operator_context_id,checkout_intent_id,client_id,store_id,payment_method,status,amount_minor_units,currency,financial_purpose)
+		VALUES($1,$2,$3,$4,'store-refund-ledger','official_wallet','captured',1000,'YER','order_payment')`,
 		sessionID, operatorContextID, "checkout-"+suffix, clientID); err != nil {
 		_ = tx.Rollback()
 		_ = db.Close()

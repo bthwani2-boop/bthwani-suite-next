@@ -50,7 +50,7 @@ func (s *protectedStoreServer) handleClientMapSearch(w http.ResponseWriter, r *h
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"))
+	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"), nil)
 	response, err := client.Search(r.Context(), r.Header.Get("Authorization"), input)
 	if err != nil {
 		writeClientMapError(w, err)
@@ -76,7 +76,7 @@ func (s *protectedStoreServer) handleClientMapReverse(w http.ResponseWriter, r *
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"))
+	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"), nil)
 	response, err := client.Reverse(r.Context(), r.Header.Get("Authorization"), input)
 	if err != nil {
 		writeClientMapError(w, err)
@@ -91,10 +91,10 @@ func (s *protectedStoreServer) handleClientMapReverse(w http.ResponseWriter, r *
 }
 
 func (s *protectedStoreServer) handleOperatorMapProviderHealth(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read", "operator"); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
-	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"))
+	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"), nil)
 	health, err := client.Health(r.Context(), r.Header.Get("Authorization"))
 	if err != nil {
 		writeClientMapError(w, err)
@@ -118,7 +118,7 @@ func (s *protectedStoreServer) verifyMapLocation(r *http.Request, location mappr
 }
 
 func (s *protectedStoreServer) handleOperatorListServiceAreas(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read", "operator"); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	items, err := servicearea.ListProjections(r.Context(), s.db)
@@ -130,7 +130,7 @@ func (s *protectedStoreServer) handleOperatorListServiceAreas(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleOperatorGetServiceArea(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read", "operator"); !ok {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
 	item, err := servicearea.GetProjection(r.Context(), s.db, r.PathValue("serviceAreaCode"))
@@ -142,7 +142,7 @@ func (s *protectedStoreServer) handleOperatorGetServiceArea(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleOperatorUpsertServiceArea(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", "platform.manage", "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

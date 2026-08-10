@@ -71,17 +71,6 @@ func (s *protectedStoreServer) handleOwnRepresentativeCommissions(w http.Respons
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
-func (s *protectedStoreServer) handleOwnRepresentativePayoutRequests(w http.ResponseWriter, r *http.Request, actorType string) {
-	actor, ok := s.requireActor(w, r, actorType)
-	if !ok {
-		return
-	}
-	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {actorType}}
-	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
-	status, body, err := s.wlt.FinanceReadWithOperatorContext(trustedContext, "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
-	writeRepresentativeFinanceResponse(w, status, body, err)
-}
-
 func (s *protectedStoreServer) handleClientOwnWallet(w http.ResponseWriter, r *http.Request) {
 	s.handleOwnRepresentativeWallet(w, r, "client")
 }
@@ -96,9 +85,6 @@ func (s *protectedStoreServer) handlePartnerOwnLedger(w http.ResponseWriter, r *
 }
 func (s *protectedStoreServer) handlePartnerOwnCommissions(w http.ResponseWriter, r *http.Request) {
 	s.handleOwnRepresentativeCommissions(w, r, "partner")
-}
-func (s *protectedStoreServer) handlePartnerOwnPayoutRequests(w http.ResponseWriter, r *http.Request) {
-	s.handleOwnRepresentativePayoutRequests(w, r, "partner")
 }
 func (s *protectedStoreServer) handleCaptainOwnWallet(w http.ResponseWriter, r *http.Request) {
 	s.handleOwnRepresentativeWallet(w, r, "captain")
@@ -128,7 +114,7 @@ func resolveControlPanelRepresentativeActor(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *protectedStoreServer) handleControlPanelRepresentativeWallet(w http.ResponseWriter, r *http.Request) {
-	operator, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	operator, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -142,7 +128,7 @@ func (s *protectedStoreServer) handleControlPanelRepresentativeWallet(w http.Res
 }
 
 func (s *protectedStoreServer) handleControlPanelRepresentativeLedger(w http.ResponseWriter, r *http.Request) {
-	operator, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	operator, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -199,20 +185,20 @@ func registerRepresentativeFinanceRoutes(mux *http.ServeMux, s *protectedStoreSe
 	mux.HandleFunc("GET /dsh/field/finance/payout-destinations/{destinationId}", s.handleFieldPayoutDestinationRead)
 	mux.HandleFunc("DELETE /dsh/field/finance/payout-destinations/{destinationId}", s.handleFieldPayoutDestinationDeactivate)
 
-	mux.HandleFunc("GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}", s.handleControlPanelRepresentativeWallet)
-	mux.HandleFunc("GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries", s.handleControlPanelRepresentativeLedger)
-	mux.HandleFunc("POST /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status", s.handleRefreshFinancePaymentSessionProviderStatus)
-	mux.HandleFunc("POST /dsh/control-panel/finance/settlements/from-delivered-orders", s.handleCreateFinanceSettlementFromDeliveredOrders)
-	mux.HandleFunc("GET /dsh/control-panel/finance/settlement-policies/{partnerId}", s.handleGetFinanceSettlementPolicy)
-	mux.HandleFunc("PUT /dsh/control-panel/finance/settlement-policies/{partnerId}", s.handleUpsertFinanceSettlementPolicy)
-	mux.HandleFunc("GET /dsh/control-panel/finance/settlements/{settlementId}/evidence", s.handleFinanceSettlementEvidence)
-	mux.HandleFunc("PUT /dsh/control-panel/finance/commission-policies", s.handleUpsertFinanceCommissionPolicy)
-	mux.HandleFunc("GET /dsh/control-panel/finance/commissions/{commissionId}", s.handleFinanceCommissionDetail)
-	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/adjust", s.handleAdjustFinanceCommission)
-	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/confirm", s.handleConfirmFinanceCommission)
-	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/settle", s.handleSettleFinanceCommission)
-	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/reject", s.handleRejectFinanceCommission)
-	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/reverse", s.handleReverseFinanceCommission)
-	mux.HandleFunc("GET /dsh/control-panel/finance/payout-requests/{payoutId}/audit", s.handleFinancePayoutAudit)
-	mux.HandleFunc("POST /dsh/control-panel/finance/payout-requests/{payoutId}/reconcile", s.handleReconcileFinancePayoutRequest)
+	mux.HandleFunc("GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}", s.withPermission("control-panel", FinancePermissionRead, s.handleControlPanelRepresentativeWallet))
+	mux.HandleFunc("GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries", s.withPermission("control-panel", FinancePermissionRead, s.handleControlPanelRepresentativeLedger))
+	mux.HandleFunc("POST /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status", s.withPermission("control-panel", FinancePermissionManage, s.handleRefreshFinancePaymentSessionProviderStatus))
+	mux.HandleFunc("POST /dsh/control-panel/finance/settlements/from-delivered-orders", s.withPermission("control-panel", FinancePermissionManage, s.handleCreateFinanceSettlementFromDeliveredOrders))
+	mux.HandleFunc("GET /dsh/control-panel/finance/settlement-policies/{partnerId}", s.withPermission("control-panel", FinancePermissionRead, s.handleGetFinanceSettlementPolicy))
+	mux.HandleFunc("PUT /dsh/control-panel/finance/settlement-policies/{partnerId}", s.withPermission("control-panel", FinancePermissionManage, s.handleUpsertFinanceSettlementPolicy))
+	mux.HandleFunc("GET /dsh/control-panel/finance/settlements/{settlementId}/evidence", s.withPermission("control-panel", FinancePermissionRead, s.handleFinanceSettlementEvidence))
+	mux.HandleFunc("PUT /dsh/control-panel/finance/commission-policies", s.withPermission("control-panel", FinancePermissionManage, s.handleUpsertFinanceCommissionPolicy))
+	mux.HandleFunc("GET /dsh/control-panel/finance/commissions/{commissionId}", s.withPermission("control-panel", FinancePermissionRead, s.handleFinanceCommissionDetail))
+	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/adjust", s.withPermission("control-panel", FinancePermissionManage, s.handleAdjustFinanceCommission))
+	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/confirm", s.withPermission("control-panel", FinancePermissionManage, s.handleConfirmFinanceCommission))
+	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/settle", s.withPermission("control-panel", FinancePermissionManage, s.handleSettleFinanceCommission))
+	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/reject", s.withPermission("control-panel", FinancePermissionManage, s.handleRejectFinanceCommission))
+	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/reverse", s.withPermission("control-panel", FinancePermissionManage, s.handleReverseFinanceCommission))
+	mux.HandleFunc("GET /dsh/control-panel/finance/payout-requests/{payoutId}/audit", s.withPermission("control-panel", FinancePermissionRead, s.handleFinancePayoutAudit))
+	mux.HandleFunc("POST /dsh/control-panel/finance/payout-requests/{payoutId}/reconcile", s.withPermission("control-panel", FinancePermissionManage, s.handleReconcileFinancePayoutRequest))
 }

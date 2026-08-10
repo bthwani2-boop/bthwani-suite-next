@@ -26,8 +26,8 @@ func TestValidateDispatchLocationTimestamp(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := validateDispatchLocationTimestamp(tt.recordedAt, now, tt.previous); got != tt.want {
-				t.Fatalf("validateDispatchLocationTimestamp() = %q, want %q", got, tt.want)
+			if got := validateDispatchLocationIntegrity(tt.recordedAt, now, 0.0, 0.0, tt.previous, nil, nil); got != tt.want {
+				t.Fatalf("validateDispatchLocationIntegrity() = %q, want %q", got, tt.want)
 			}
 		})
 	}

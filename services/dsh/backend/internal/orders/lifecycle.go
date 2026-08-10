@@ -7,30 +7,7 @@ import (
 	"strings"
 )
 
-// AcceptOrder is the compatibility entry point used by existing HTTP routes.
-// It delegates to the canonical acceptance implementation so acceptance always initializes
-// the store policy snapshot and authoritative preparation SLA timestamps.
-func AcceptOrder(db *sql.DB, orderID, actorID string) (*Order, error) {
-	return AcceptOrderWithPreparation(db, orderID, actorID)
-}
-
-// RejectOrder is retained as a compatibility entry point. It delegates to the
-// governed cancellation runtime so no caller can write the obsolete generic
-// cancelled status or bypass financial closure.
-func RejectOrder(db *sql.DB, orderID, actorID, reason string) (*Order, error) {
-	reason = strings.TrimSpace(reason)
-	if reason == "" {
-		return nil, fmt.Errorf("%w: rejection reason is required", ErrInvalid)
-	}
-	return CancelOrder(db, CancellationInput{
-		OrderID:       orderID,
-		ActorID:       actorID,
-		ActorRole:     "partner",
-		ReasonCode:    "other",
-		ReasonNote:    reason,
-		CorrelationID: "partner-reject:" + orderID,
-	})
-}
+// Legacy entry points removed; use DecidePartnerOrder instead.
 
 // CancelOrderByOperator is retained for existing callers and routes every
 // mutation through the same cancellation record, task shutdown and WLT outbox.
@@ -39,7 +16,7 @@ func CancelOrderByOperator(db *sql.DB, orderID, actorID, reason string) (*Order,
 	if reason == "" {
 		return nil, fmt.Errorf("%w: cancellation reason is required", ErrInvalid)
 	}
-	return CancelOrder(db, CancellationInput{
+	return CancelOrderSync(db, CreateCancellationCaseInput{
 		OrderID:       orderID,
 		ActorID:       actorID,
 		ActorRole:     "operator",
@@ -240,22 +217,23 @@ func scanOrders(rows *sql.Rows) ([]Order, error) {
 }
 
 type DeliveryCompletionContext struct {
-	CheckoutIntentID string
-	PaymentMethod    string
-	PartnerID        string
+	CheckoutIntentID    string
+	PaymentMethod       string
+	PartnerID           string
+	WltPaymentSessionID string
 }
 
 func GetOrderDeliveryContext(tx *sql.Tx, orderID string) (*DeliveryCompletionContext, error) {
 	var context DeliveryCompletionContext
 	var partnerID sql.NullString
 	err := tx.QueryRow(`
-		SELECT o.checkout_intent_id::text, ci.payment_method, s.partner_id
+		SELECT o.checkout_intent_id::text, ci.payment_method, s.partner_id, ci.wlt_payment_session_id
 		FROM dsh_orders o
 		JOIN dsh_checkout_intents ci ON ci.id = o.checkout_intent_id
 		JOIN dsh_stores s ON s.id = o.store_id
 		WHERE o.id = $1::uuid`,
 		orderID,
-	).Scan(&context.CheckoutIntentID, &context.PaymentMethod, &partnerID)
+	).Scan(&context.CheckoutIntentID, &context.PaymentMethod, &partnerID, &context.WltPaymentSessionID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}

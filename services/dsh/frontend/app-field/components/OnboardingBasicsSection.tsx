@@ -5,6 +5,15 @@ import { View } from 'react-native';
 import { TextField, Text, SegmentedControl, spacing, colorRoles } from '@bthwani/ui-kit';
 import type { FieldPartnerDraftForm } from '../../shared/field-onboarding';
 
+const LEGAL_IDENTITY_TYPES: readonly {
+  readonly value: FieldPartnerDraftForm['legalIdentityType'];
+  readonly label: string;
+}[] = [
+  { value: 'commercial_register', label: 'سجل تجاري' },
+  { value: 'national_id', label: 'هوية وطنية' },
+  { value: 'freelancer_certificate', label: 'وثيقة عمل حر' },
+];
+
 type Props = {
   readonly form: Partial<FieldPartnerDraftForm>;
   readonly errors: Partial<Record<keyof FieldPartnerDraftForm, string>>;
@@ -31,13 +40,14 @@ export function OnboardingBasicsSection({ form, errors, readOnly, onChange }: Pr
       <View style={{ gap: spacing[2] }}>
         <Text role="bodySm" style={{ textAlign: 'right', color: colorRoles.textPrimary }}>نوع الهوية التجارية</Text>
         <SegmentedControl
-          items={[
-            { value: 'commercial_register', label: 'سجل تجاري' },
-            { value: 'national_id', label: 'هوية وطنية' },
-            { value: 'freelancer_certificate', label: 'وثيقة عمل حر' },
-          ]}
+          items={LEGAL_IDENTITY_TYPES}
           value={form.legalIdentityType ?? 'commercial_register'}
-          onValueChange={(v) => onChange({ legalIdentityType: v as any })}
+          onValueChange={(v) => {
+            // Narrow against the governed option list instead of casting: an
+            // unknown value must be ignored, never written into the draft.
+            const match = LEGAL_IDENTITY_TYPES.find((item) => item.value === v);
+            if (match) onChange({ legalIdentityType: match.value });
+          }}
         />
       </View>
 
@@ -48,15 +58,6 @@ export function OnboardingBasicsSection({ form, errors, readOnly, onChange }: Pr
         {...(errors.legalIdentityNumber ? { error: errors.legalIdentityNumber } : {})}
         onChangeText={(v) => onChange({ legalIdentityNumber: v })}
         placeholder="رقم السجل التجاري أو الهوية"
-      />
-
-      <TextField
-        label="اسم المالك الثنائي/الثلاثي"
-        value={form.ownerName ?? ''}
-        disabled={readOnly}
-        {...(errors.ownerName ? { error: errors.ownerName } : {})}
-        onChangeText={(v) => onChange({ ownerName: v })}
-        placeholder="الاسم مطابق للهوية أو السجل التجاري"
       />
 
       <TextField

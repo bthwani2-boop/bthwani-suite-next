@@ -7,10 +7,12 @@ type DshServiceabilityStatus string
 type DshStoreCategory string
 
 const (
-	StatusActive            DshStoreStatus = "active"
-	StatusInactive          DshStoreStatus = "inactive"
-	StatusTemporarilyClosed DshStoreStatus = "temporarily_closed"
-	StatusUnavailable       DshStoreStatus = "unavailable"
+	StatusDraft     DshStoreStatus = "draft"
+	StatusReady     DshStoreStatus = "ready"
+	StatusPublished DshStoreStatus = "published"
+	StatusPaused    DshStoreStatus = "paused"
+	StatusSuspended DshStoreStatus = "suspended"
+	StatusClosed    DshStoreStatus = "closed"
 )
 
 const (
@@ -29,44 +31,46 @@ const (
 )
 
 type DshStoreRow struct {
-	ID                    string
-	PartnerID             string
-	Slug                  string
-	DisplayName           string
-	Status                DshStoreStatus
-	CityCode              string
-	ServiceAreaCode       string
-	ServiceabilityStatus  DshServiceabilityStatus
-	RatingAverage         *float64
-	RatingCount           int
-	DeliveryEtaMin        *int
-	DeliveryEtaMax        *int
-	IsVisible             bool
-	HeroImageURL          *string
-	LogoURL               *string
-	Category              DshStoreCategory
-	CategoryLabel         string
-	DeliveryModes         []string
-	IsFreeDelivery        bool
-	DistanceKM            *float64
-	FollowerCount         int
-	HasProBadge           bool
-	HasCouponBadge        bool
-	PointsMultiplier      *int
-	IsPopular             bool
-	PartnerReadiness      string
-	CatalogApprovalStatus string
-	MarketingVisibility   string
-	AddressLine           string
-	CoverageSummary       string
-	OperatingHours        string
-	DeliveryReadiness     string
-	StorefrontPhotoRef    string
-	InteriorPhotoRef      string
-	SignagePhotoRef       string
-	Version               int
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
+	ID                      string
+	PartnerID               string
+	PartnerActivationStatus string
+	HasApprovedAssortment   bool
+	Slug                    string
+	DisplayName             string
+	Status                  DshStoreStatus
+	CityCode                string
+	ServiceAreaCode         string
+	ServiceabilityStatus    DshServiceabilityStatus
+	RatingAverage           *float64
+	RatingCount             int
+	DeliveryEtaMin          *int
+	DeliveryEtaMax          *int
+	IsVisible               bool
+	HeroImageURL            *string
+	LogoURL                 *string
+	Category                DshStoreCategory
+	CategoryLabel           string
+	DeliveryModes           []string
+	IsFreeDelivery          bool
+	DistanceKM              *float64
+	FollowerCount           int
+	HasProBadge             bool
+	HasCouponBadge          bool
+	PointsMultiplier        *int
+	IsPopular               bool
+	PartnerReadiness        string
+	CatalogApprovalStatus   string
+	MarketingVisibility     string
+	AddressLine             string
+	CoverageSummary         string
+	OperatingHours          string
+	DeliveryReadiness       string
+	StorefrontPhotoRef      string
+	InteriorPhotoRef        string
+	SignagePhotoRef         string
+	Version                 int
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
 }
 
 type ServiceabilityInfo struct {
@@ -165,6 +169,11 @@ type DshStoreListQuery struct {
 	ServiceAreaCode string
 	Status          DshStoreStatus
 	IsVisible       *bool
+	Search          string
+	Category        string
+	Sort            string
+	IsFreeDelivery  *bool
+	HasProBadge     *bool
 	Limit           int
 	Offset          int
 }

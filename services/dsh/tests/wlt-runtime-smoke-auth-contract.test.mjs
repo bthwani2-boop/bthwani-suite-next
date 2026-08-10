@@ -14,15 +14,21 @@ describe("authenticated WLT runtime smoke", () => {
     assert.match(phase, /\$runAuthenticatedWltSmoke = \$Action -eq "smoke" -and \$ProfileList -contains "wlt"/);
     assert.match(phase, /Where-Object \{ \$_ -ne "wlt" \}/);
     assert.match(phase, /=== runtime:wlt-authenticated-smoke ===/);
-    assert.match(phase, /& \$AuthenticatedWltSmokeScript/);
+    assert.match(phase, /function Invoke-RuntimeBasePhase/);
+    assert.match(
+      phase,
+      /\$wltSmokeExitCode = Invoke-RuntimeBasePhase -ScriptPath \$AuthenticatedWltSmokeScript -Parameters @\{\} -Append/,
+    );
+    assert.doesNotMatch(phase, /^\s*& \$AuthenticatedWltSmokeScript/m);
     assert.match(phase, /Authenticated WLT runtime smoke failed with exit code/);
   });
 
-  it("requires the governed DSH service identity while leaving financial scope server-owned", () => {
+  it("requires the governed DSH service identity and its trusted operator context", () => {
     assert.match(smoke, /WLT_DSH_SERVICE_TOKEN is required/);
     assert.match(smoke, /Authorization = "Bearer \$serviceToken"/);
     assert.match(smoke, /"X-Service-Caller" = "dsh"/);
-    assert.doesNotMatch(smoke, /X-Operator-Context-ID/);
+    assert.match(smoke, /BTHWANI_OPERATOR_CONTEXT_ID/);
+    assert.match(smoke, /"X-Operator-Context-ID" = \$operatorContextId/);
     assert.match(smoke, /Invoke-WltRead -Path "\/wlt\/references\/payment-status/);
     assert.match(smoke, /Invoke-WltRead -Path "\/wlt\/references\/wallet-status/);
     assert.match(smoke, /Invoke-WltRead -Path "\/wlt\/payment-sessions\/\$\(\[Uri\]::EscapeDataString/);

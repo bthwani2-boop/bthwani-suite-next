@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 3,
+  "packageClass": "DERIVED_SUPPORT_ARTIFACT",
+  "task": {
+    "id": "TASK_PACKAGE_ID",
+    "name": "TASK_NAME",
+    "objective": "TASK_OBJECTIVE",
+    "primarySurface": "PRIMARY_SURFACE",
+    "createdAt": "CREATED_AT_ISO"
+  },
+  "repository": {
+    "name": "REPOSITORY_NAME",
+    "targetBranch": "TARGET_BRANCH",
+    "pinnedStartSha": "PINNED_START_SHA",
+    "latestObservedRemoteSha": "PINNED_START_SHA"
+  },
+  "authority": {
+    "root": "governance/authority/authority-precedence.json",
+    "entryPoint": "AGENTS.md",
+    "canCreatePolicy": false,
+    "canOverrideCanonicalSource": false
+  },
+  "status": {
+    "diagnosis": "IN_PROGRESS",
+    "plan": "DRAFT",
+    "implementation": "NOT_STARTED",
+    "verification": "NOT_STARTED",
+    "decision": "NEEDS_EVIDENCE"
+  },
+  "disposability": {
+    "runtimeDependsOnPackage": false,
+    "buildDependsOnPackage": false,
+    "ciDependsOnPackage": false,
+    "migrationDependsOnPackage": false,
+    "governanceDependsOnPackage": false,
+    "operationsDependOnPackage": false,
+    "containsSecretsOrProductionData": false
+  }
+}

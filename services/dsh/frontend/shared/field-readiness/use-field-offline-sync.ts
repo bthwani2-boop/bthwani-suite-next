@@ -20,6 +20,10 @@ import {
   type FieldOfflineOperationType,
   type FieldOfflineOperation,
 } from "./field-offline-queue";
+import {
+  classifyGovernedError,
+  type GovernedProblem,
+} from "../_kernel/governed-problem";
 
 export type FieldOfflineExecutorMap = Partial<
   Record<FieldOfflineOperationType, (op: FieldOfflineOperation) => Promise<void>>
@@ -29,13 +33,23 @@ export type FieldOfflineSyncState =
   | { readonly kind: "idle" }
   | { readonly kind: "syncing" }
   | { readonly kind: "ready" }
-  | { readonly kind: "error"; readonly message: string };
+  | {
+      readonly kind: "error";
+      readonly message: string;
+      /** Carries the reason code so callers never branch on message text. */
+      readonly problem: GovernedProblem;
+    };
 
 export type FieldOfflineSyncController = {
   readonly state: FieldOfflineSyncState;
   readonly retry: () => void;
   readonly recover: () => void;
 };
+
+function queueErrorState(error: unknown): FieldOfflineSyncState {
+  const problem = classifyGovernedError(error);
+  return { kind: "error", message: problem.message, problem };
+}
 
 export function useFieldOfflineSync(
   executors: FieldOfflineExecutorMap | undefined,
@@ -70,17 +84,14 @@ export function useFieldOfflineSync(
           await executor(operation);
           await markOperationSynced(operation.operationId);
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          await markOperationFailed(operation.operationId, message);
+          const problem = classifyGovernedError(error);
+          await markOperationFailed(operation.operationId, problem.message, !problem.retryable);
         }
       }
       await purgeSyncedOperations();
       setState({ kind: "ready" });
     } catch (error) {
-      setState({
-        kind: "error",
-        message: error instanceof Error ? error.message : String(error),
-      });
+      setState(queueErrorState(error));
     } finally {
       syncRef.current = false;
     }
@@ -97,10 +108,7 @@ export function useFieldOfflineSync(
     void recoverCorruptFieldOfflineQueue()
       .then(drainQueue)
       .catch((error: unknown) => {
-        setState({
-          kind: "error",
-          message: error instanceof Error ? error.message : String(error),
-        });
+        setState(queueErrorState(error));
       });
   }, [drainQueue]);
 

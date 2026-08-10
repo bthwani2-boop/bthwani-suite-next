@@ -23,6 +23,7 @@ import {
   type DshEscalationCategory,
 } from "../../shared/field-readiness";
 import { DshFieldReferenceTag } from "../components/DshFieldReferenceTag";
+import { DshFieldProblemNotice } from "../components/DshFieldProblemNotice";
 
 type Props = {
   readonly storeId: string;
@@ -118,12 +119,7 @@ export function DshFieldEscalationScreen({ storeId, visitId, onBack }: Props) {
 
       {actionState.kind === "error" ? (
         <View style={{ marginBottom: spacing[3] }}>
-          <InlineNotice
-            tone="danger"
-            title="تعذر رفع التصعيد"
-            description={actionState.message}
-            action={<Button label="إغلاق" tone="ghost" size="sm" onPress={resetAction} />}
-          />
+          <DshFieldProblemNotice problem={actionState.problem} onDismiss={resetAction} />
         </View>
       ) : null}
 

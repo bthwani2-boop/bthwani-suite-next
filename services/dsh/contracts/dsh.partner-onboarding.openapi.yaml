@@ -3,64 +3,178 @@ x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: BThwani DSH Partner Onboarding API
-  version: 1.0.0
-  description: Governed contract for partner onboarding, first-store ownership,
-    evidence review, state transitions, and partner readback.
+  version: 1.2.0
+  description: Governed contract for retry-safe partner creation, independent evidence
+    review, audited lifecycle decisions, first-store ownership, and synchronized partner
+    readback.
 servers:
-  - url: http://localhost:58080
+- url: http://localhost:58080
 paths:
-  /dsh/operator/partners/{partnerId}:
-    get:
-      tags: [ "dsh-operator" ]
-      operationId: getDshPartner
-      summary: Read governed partner state for control-panel
-      parameters:
-        - $ref: '#/components/parameters/PartnerId'
-      responses:
-        '200':
-          description: Partner state with server-owned allowed actions and masked payout
-            compatibility values.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/PartnerState' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-      security:
-        - bearerAuth: []
-  /dsh/operator/partners/{partnerId}/transition:
+  /dsh/operator/partners:
     post:
-      tags: [ "dsh-operator" ]
-      operationId: transitionDshPartner
-      summary: Apply one governed partner activation transition
+      tags:
+      - dsh-operator
+      operationId: createDshPartner
+      summary: Create one governed partner and its unpublished first store
+      description: Creates the Partner, first Store, creator scope, and immutable
+        creation event as one transaction. Retrying the same Idempotency-Key with
+        the same payload replays the original Partner; reusing it with another payload
+        fails with IDEMPOTENCY_CONFLICT.
       parameters:
-        - $ref: '#/components/parameters/PartnerId'
-        - $ref: '#/components/parameters/ExpectedVersion'
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/PartnerCreationIdempotencyKey'
+      - $ref: '#/components/parameters/CorrelationId'
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/PartnerTransitionRequest' }
+            schema:
+              $ref: '#/components/schemas/PartnerCreateRequest'
+      responses:
+        '201':
+          description: Partner created or the original creation result replayed.
+          headers:
+            Idempotent-Replayed:
+              description: Present with value true when the original result was replayed.
+              schema:
+                type: string
+                const: 'true'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerCreationResult'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      security:
+      - bearerAuth: []
+  /dsh/operator/partners/{partnerId}:
+    get:
+      tags:
+      - dsh-operator
+      operationId: getDshPartner
+      summary: Read governed partner state for control-panel
+      parameters:
+      - $ref: '#/components/parameters/PartnerId'
+      responses:
+        '200':
+          description: Partner state with server-owned allowed actions and masked
+            payout compatibility values.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerState'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+      - bearerAuth: []
+  /dsh/operator/partners/{partnerId}/transition:
+    post:
+      tags:
+      - dsh-operator
+      operationId: transitionDshPartner
+      summary: Apply one independently reviewed partner lifecycle decision
+      description: The creator cannot approve or activate the same Partner. Approval,
+        rejection, and deactivation require an auditable reason. Expected version
+        and idempotency protect concurrent and unknown-result retries.
+      parameters:
+      - $ref: '#/components/parameters/PartnerId'
+      - $ref: '#/components/parameters/ExpectedVersion'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerTransitionRequest'
       responses:
         '200':
           description: Applied transition or identical idempotent replay.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PartnerTransitionResponse' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/ReadinessFailed' }
-        '428': { $ref: '#/components/responses/VersionRequired' }
-        '503': { $ref: '#/components/responses/WltUnavailable' }
+              schema:
+                $ref: '#/components/schemas/PartnerTransitionResponse'
+        '400':
+          $ref: '#/components/responses/DecisionReasonRequired'
+        '403':
+          $ref: '#/components/responses/IndependentReviewRequired'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ReadinessFailed'
+        '428':
+          $ref: '#/components/responses/VersionRequired'
+        '503':
+          $ref: '#/components/responses/WltUnavailable'
       security:
-        - bearerAuth: []
+      - bearerAuth: []
+  /dsh/operator/partners/{partnerId}/documents/{docId}/review:
+    patch:
+      tags:
+      - dsh-operator
+      operationId: reviewDshPartnerDocument
+      summary: Record an independent evidence review decision
+      description: The authenticated reviewer cannot review evidence uploaded by the
+        same actor. Every approval, rejection, or resubmission decision requires a
+        non-empty reason and produces immutable decision audit.
+      parameters:
+      - $ref: '#/components/parameters/PartnerId'
+      - $ref: '#/components/parameters/DocumentId'
+      - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentReviewRequest'
+      responses:
+        '200':
+          description: Document and immutable review decision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentReviewResponse'
+        '400':
+          $ref: '#/components/responses/DecisionReasonRequired'
+        '403':
+          $ref: '#/components/responses/IndependentReviewRequired'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+      - bearerAuth: []
   /dsh/operator/partners/{partnerId}/stores:
+    get:
+      operationId: listDshPartnerStores
+      summary: List stores linked to a partner.
+      tags:
+      - dsh-operator
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/PartnerId'
+      responses:
+        '200':
+          description: Partner stores.
+          content:
+            application/json:
+              schema:
+                $ref: ./dsh.openapi.yaml#/components/schemas/DshPartnerStoresListResponse
+        '401':
+          $ref: ./dsh.openapi.yaml#/components/responses/Unauthenticated
+        '404':
+          $ref: ./dsh.openapi.yaml#/components/responses/NotFound
     post:
-      tags: [ "dsh-operator" ]
+      tags:
+      - dsh-operator
       operationId: linkDshPartnerStore
       summary: Link an unowned store to a partner
       parameters:
-        - $ref: '#/components/parameters/PartnerId'
+      - $ref: '#/components/parameters/PartnerId'
       requestBody:
         required: true
         content:
@@ -68,99 +182,164 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [ storeId ]
+              required:
+              - storeId
               properties:
-                storeId: { type: string, minLength: 1 }
+                storeId:
+                  type: string
+                  minLength: 1
       responses:
         '200':
-          description: Store ownership is linked or the existing same ownership is returned.
+          description: Store ownership is linked or the existing same ownership is
+            returned.
           content:
             application/json:
               schema:
                 type: object
-                required: [ stores, total ]
+                required:
+                - stores
+                - total
                 properties:
                   stores:
                     type: array
-                    items: { $ref: '#/components/schemas/LinkedStore' }
-                  total: { type: integer, minimum: 0 }
-        '409': { $ref: '#/components/responses/StoreOwnershipConflict' }
+                    items:
+                      $ref: '#/components/schemas/LinkedStore'
+                  total:
+                    type: integer
+                    minimum: 0
+        '409':
+          $ref: '#/components/responses/StoreOwnershipConflict'
       security:
-        - bearerAuth: []
+      - bearerAuth: []
+  /dsh/field/partners/drafts:
+    post:
+      tags:
+      - dsh-field
+      operationId: createFieldPartnerDraft
+      summary: Create one field-owned partner intake draft
+      description: The authenticated field actor and trusted OperatorContext own the
+        creation. The first Store remains unpublished. Unknown-result retries replay
+        the original Partner rather than creating parallel authority.
+      parameters:
+      - $ref: '#/components/parameters/PartnerCreationIdempotencyKey'
+      - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerCreateRequest'
+      responses:
+        '201':
+          description: Partner draft created or the original result replayed.
+          headers:
+            Idempotent-Replayed:
+              description: Present with value true when the original result was replayed.
+              schema:
+                type: string
+                const: 'true'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerCreationResult'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      security:
+      - bearerAuth: []
   /dsh/field/partners/{partnerId}:
     get:
-      tags: [ "dsh-field" ]
+      tags:
+      - dsh-field
       operationId: getFieldPartnerDraft
       summary: Read an owned field partner draft
       parameters:
-        - $ref: '#/components/parameters/PartnerId'
+      - $ref: '#/components/parameters/PartnerId'
       responses:
         '200':
           description: Owned partner draft and allowed actions.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PartnerState' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+              schema:
+                $ref: '#/components/schemas/PartnerState'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+      - bearerAuth: []
     patch:
-      tags: [ "dsh-field" ]
+      tags:
+      - dsh-field
       operationId: updateFieldPartnerDraft
       summary: Update an owned draft and hand raw payout details to WLT
       parameters:
-        - $ref: '#/components/parameters/PartnerId'
-        - $ref: '#/components/parameters/ExpectedVersion'
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/PartnerId'
+      - $ref: '#/components/parameters/ExpectedVersion'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CorrelationId'
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/PartnerUpdateRequest' }
+            schema:
+              $ref: '#/components/schemas/PartnerUpdateRequest'
       responses:
         '200':
           description: Updated draft; payout fields in the response are masked.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PartnerState' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/ReadinessFailed' }
-        '428': { $ref: '#/components/responses/VersionRequired' }
-        '502': { $ref: '#/components/responses/WltUnavailable' }
+              schema:
+                $ref: '#/components/schemas/PartnerState'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ReadinessFailed'
+        '428':
+          $ref: '#/components/responses/VersionRequired'
+        '502':
+          $ref: '#/components/responses/WltUnavailable'
       security:
-        - bearerAuth: []
+      - bearerAuth: []
   /dsh/field/partners/{partnerId}/visits:
     post:
-      tags: [ "dsh-field" ]
+      tags:
+      - dsh-field
       operationId: createFieldPartnerVisit
       summary: Create an evidence-bearing field visit bound to the first store
       parameters:
-        - $ref: '#/components/parameters/PartnerId'
-        - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/PartnerId'
+      - $ref: '#/components/parameters/CorrelationId'
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/FieldVisitRequest' }
+            schema:
+              $ref: '#/components/schemas/FieldVisitRequest'
       responses:
         '201':
           description: Field visit recorded.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/FieldVisit' }
-        '422': { $ref: '#/components/responses/ReadinessFailed' }
+              schema:
+                $ref: '#/components/schemas/FieldVisit'
+        '422':
+          $ref: '#/components/responses/ReadinessFailed'
       security:
-        - bearerAuth: []
+      - bearerAuth: []
   /dsh/field/partners/{partnerId}/submit:
     post:
-      tags: [ "dsh-field" ]
+      tags:
+      - dsh-field
       operationId: submitFieldPartnerDraft
       summary: Submit an owned draft for independent review
       parameters:
-        - $ref: '#/components/parameters/PartnerId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/PartnerId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CorrelationId'
       requestBody:
         required: false
         content:
@@ -169,19 +348,24 @@ paths:
               type: object
               additionalProperties: false
               properties:
-                reason: { type: string, maxLength: 500 }
+                reason:
+                  type: string
+                  maxLength: 500
       responses:
         '200':
           description: Submitted state or identical replay.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PartnerTransitionResponse' }
-        '422': { $ref: '#/components/responses/ReadinessFailed' }
+              schema:
+                $ref: '#/components/schemas/PartnerTransitionResponse'
+        '422':
+          $ref: '#/components/responses/ReadinessFailed'
       security:
-        - bearerAuth: []
+      - bearerAuth: []
   /dsh/partner/activation/status:
     get:
-      tags: [ "dsh-partner" ]
+      tags:
+      - dsh-partner
       operationId: getDshPartnerActivationStatus
       summary: Read the authenticated partner activation state and allowed actions
       responses:
@@ -189,13 +373,16 @@ paths:
           description: Partner self state.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PartnerState' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+              schema:
+                $ref: '#/components/schemas/PartnerState'
+        '403':
+          $ref: '#/components/responses/Forbidden'
       security:
-        - bearerAuth: []
+      - bearerAuth: []
   /dsh/partner/activation/readiness:
     get:
-      tags: [ "dsh-partner" ]
+      tags:
+      - dsh-partner
       operationId: getDshPartnerSelfReadiness
       summary: Read authenticated partner readiness gates
       responses:
@@ -203,10 +390,656 @@ paths:
           description: Readiness result.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Readiness' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+              schema:
+                $ref: '#/components/schemas/Readiness'
+        '403':
+          $ref: '#/components/responses/Forbidden'
       security:
-        - bearerAuth: []
+      - bearerAuth: []
+  /dsh/field/partners/{partnerId}/assortment-pauses:
+    parameters:
+    - name: partnerId
+      in: path
+      required: true
+      schema:
+        type: string
+    get:
+      tags:
+      - field
+      operationId: get_dsh_field_partners__partnerId__assortment_pauses
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/partner/stores/{storeId}/assortment-pauses:
+    parameters:
+    - name: storeId
+      in: path
+      required: true
+      schema:
+        type: string
+    get:
+      tags:
+      - partner
+      operationId: get_dsh_partner_stores__storeId__assortment_pauses
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/partner/stores/{storeId}/courier-connections:
+    parameters:
+    - name: storeId
+      in: path
+      required: true
+      schema:
+        type: string
+    get:
+      tags:
+      - partner
+      operationId: get_dsh_partner_stores__storeId__courier_connections
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/partner/stores/{storeId}/delivery-pricing:
+    parameters:
+    - name: storeId
+      in: path
+      required: true
+      schema:
+        type: string
+    get:
+      tags:
+      - partner
+      operationId: get_dsh_partner_stores__storeId__delivery_pricing
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/field/partners/{partnerId}/assortment/{masterProductId}/pause:
+    parameters:
+    - name: partnerId
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: masterProductId
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      tags:
+      - field
+      operationId: post_dsh_field_partners__partnerId__assortment__masterProductId__pause
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/field/partners/{partnerId}/assortment/{masterProductId}/resume:
+    parameters:
+    - name: partnerId
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: masterProductId
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      tags:
+      - field
+      operationId: post_dsh_field_partners__partnerId__assortment__masterProductId__resume
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/pause:
+    parameters:
+    - name: storeId
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: masterProductId
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      tags:
+      - partner
+      operationId: post_dsh_partner_stores__storeId__assortment__masterProductId__pause
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/resume:
+    parameters:
+    - name: storeId
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: masterProductId
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      tags:
+      - partner
+      operationId: post_dsh_partner_stores__storeId__assortment__masterProductId__resume
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/partner/stores/{storeId}/courier-connections/{connectionId}/revoke:
+    parameters:
+    - name: storeId
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: connectionId
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      tags:
+      - partner
+      operationId: post_dsh_partner_stores__storeId__courier_connections__connectionId__revoke
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code:
+    parameters:
+    - name: storeId
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: memberId
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      tags:
+      - partner
+      operationId: post_dsh_partner_stores__storeId__couriers__memberId__connection_code
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/partner/stores/{storeId}/delivery-pricing/{fulfillmentMode}:
+    parameters:
+    - name: storeId
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: fulfillmentMode
+      in: path
+      required: true
+      schema:
+        type: string
+    put:
+      tags:
+      - partner
+      operationId: put_dsh_partner_stores__storeId__delivery_pricing__fulfillmentMode_
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/partner/stores/{storeId}/commercial-summary:
+    parameters:
+    - name: storeId
+      in: path
+      required: true
+      schema:
+        type: string
+    get:
+      tags:
+      - partner
+      operationId: get_dsh_partner_stores__storeId__commercial_summary
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}/withdraw:
+    parameters:
+    - name: partnerId
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: proposalId
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      tags:
+      - field
+      operationId: post_dsh_field_partners__partnerId__catalog_product_proposals__proposalId__withdraw
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/partner/stores:
+    post:
+      tags:
+      - partner
+      operationId: post_dsh_partner_stores
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/prices/schedule:
+    parameters:
+    - name: storeId
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: masterProductId
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      tags:
+      - partner
+      operationId: post_dsh_partner_stores__storeId__assortment__masterProductId__prices_schedule
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/retire:
+    parameters:
+    - name: storeId
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: masterProductId
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      tags:
+      - partner
+      operationId: post_dsh_partner_stores__storeId__assortment__masterProductId__retire
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/inventory:
+    parameters:
+    - name: storeId
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: masterProductId
+      in: path
+      required: true
+      schema:
+        type: string
+    put:
+      tags:
+      - partner
+      operationId: put_dsh_partner_stores__storeId__assortment__masterProductId__inventory
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -218,226 +1051,561 @@ components:
       name: partnerId
       in: path
       required: true
-      schema: { type: string, minLength: 1 }
+      schema:
+        type: string
+        minLength: 1
+    DocumentId:
+      name: docId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
     ExpectedVersion:
       name: version
       in: query
       required: true
-      schema: { type: integer, minimum: 1 }
+      schema:
+        type: integer
+        minimum: 1
+    PartnerCreationIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 200
+      description: Retry identity scoped to the authenticated actor and trusted OperatorContext.
     IdempotencyKey:
       name: Idempotency-Key
       in: header
       required: false
-      schema: { type: string, minLength: 8 }
+      schema:
+        type: string
+        minLength: 8
       description: Omission is accepted only where the server derives a deterministic
         key from the versioned command.
     CorrelationId:
       name: X-Correlation-ID
       in: header
       required: false
-      schema: { type: string, minLength: 1 }
+      schema:
+        type: string
+        minLength: 1
   schemas:
     ActivationStatus:
       type: string
       enum:
-        [
-          draft,
-          submitted,
-          field_visit_scheduled,
-          field_visit_completed,
-          documents_missing,
-          documents_uploaded,
-          documents_verified,
-          catalog_not_ready,
-          catalog_ready,
-          delivery_modes_not_ready,
-          delivery_modes_ready,
-          ops_review,
-          ops_approved,
-          ops_rejected,
-          partner_active,
-          partner_deactivated,
-          client_visible,
-          client_hidden
-        ]
+      - draft
+      - submitted
+      - field_visit_scheduled
+      - field_visit_completed
+      - documents_missing
+      - documents_uploaded
+      - documents_verified
+      - catalog_not_ready
+      - catalog_ready
+      - delivery_modes_not_ready
+      - delivery_modes_ready
+      - ops_review
+      - ops_approved
+      - ops_rejected
+      - partner_active
+      - partner_deactivated
+      - client_visible
+      - client_hidden
+    PartnerCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - legalNameAr
+      - displayName
+      - legalIdentityType
+      - legalIdentityNumber
+      - primaryPhone
+      properties:
+        legalNameAr:
+          type: string
+          minLength: 1
+        legalNameEn:
+          type: string
+        displayName:
+          type: string
+          minLength: 1
+        legalIdentityType:
+          type: string
+          enum:
+          - commercial_register
+          - national_id
+          - freelancer_certificate
+        legalIdentityNumber:
+          type: string
+          minLength: 1
+        ownerActorId:
+          type: string
+        workforcePersonId:
+          type: string
+        primaryPhone:
+          type: string
+          minLength: 8
+          maxLength: 20
+        secondaryPhone:
+          type: string
+          maxLength: 20
+        email:
+          type: string
+        category:
+          type: string
+          enum:
+          - restaurant
+          - grocery
+          - pharmacy
+          - bakery
+          - default
+        notes:
+          type: string
+    PartnerCreationResult:
+      type: object
+      required:
+      - id
+      - legalNameAr
+      - displayName
+      - legalIdentityType
+      - legalIdentityNumber
+      - primaryPhone
+      - category
+      - activationStatus
+      - createdByActorId
+      - createdBySurface
+      - version
+      - createdAt
+      - updatedAt
+      properties:
+        id:
+          type: string
+        legalNameAr:
+          type: string
+        legalNameEn:
+          type: string
+        displayName:
+          type: string
+        legalIdentityType:
+          type: string
+        legalIdentityNumber:
+          type: string
+        ownerActorId:
+          type: string
+        workforcePersonId:
+          type: string
+        onboardingCaseStatus:
+          type: string
+        primaryPhone:
+          type: string
+        secondaryPhone:
+          type: string
+        email:
+          type: string
+        category:
+          type: string
+        activationStatus:
+          $ref: '#/components/schemas/ActivationStatus'
+        createdByActorId:
+          type: string
+        createdBySurface:
+          type: string
+        notes:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
     PartnerState:
       type: object
       required:
-        [
-          id,
-          displayName,
-          activationStatus,
-          version,
-          allowedActions,
-          allowedTransitions
-        ]
+      - id
+      - displayName
+      - activationStatus
+      - version
+      - allowedActions
+      - allowedTransitions
       properties:
-        id: { type: string }
-        legalNameAr: { type: string }
-        legalNameEn: { type: string }
-        displayName: { type: string }
-        ownerName: { type: string }
-        primaryPhone: { type: string }
-        category: { type: string }
-        activationStatus: { $ref: '#/components/schemas/ActivationStatus' }
-        payoutDestinationId: { type: string, description: WLT reference only. }
-        bankAccountNumber: { type: string, description: Masked compatibility value; never raw. }
-        bankIban: { type: string, description: Masked compatibility value; never raw. }
-        payoutMobileNumber: { type: string, description: Masked compatibility value; never raw. }
-        maskedAccountNumber: { type: string }
-        maskedIban: { type: string }
-        maskedMobileNumber: { type: string }
-        version: { type: integer, minimum: 1 }
+        id:
+          type: string
+        legalNameAr:
+          type: string
+        legalNameEn:
+          type: string
+        displayName:
+          type: string
+        ownerActorId:
+          type: string
+        workforcePersonId:
+          type: string
+        onboardingCaseStatus:
+          type: string
+        primaryPhone:
+          type: string
+        category:
+          type: string
+        activationStatus:
+          $ref: '#/components/schemas/ActivationStatus'
+        payoutDestinationId:
+          type: string
+          description: WLT reference only.
+        destinationMethod:
+          type: string
+        maskedDestinationReference:
+          type: string
+        destinationVerificationStatus:
+          type: string
+          enum: [ unverified, verified, rejected ]
+        version:
+          type: integer
+          minimum: 1
         allowedActions:
           type: array
-          items: { type: string }
+          items:
+            type: string
         allowedTransitions:
           type: array
-          items: { $ref: '#/components/schemas/ActivationStatus' }
+          items:
+            $ref: '#/components/schemas/ActivationStatus'
     PartnerUpdateRequest:
       type: object
       additionalProperties: false
       properties:
-        displayName: { type: string }
-        ownerName: { type: string }
-        primaryPhone: { type: string }
-        secondaryPhone: { type: string }
-        email: { type: string }
-        notes: { type: string }
-        beneficiaryName: { type: string }
-        bankName: { type: string }
-        bankBranch: { type: string }
-        accountNumber: { type: string, writeOnly: true }
-        iban: { type: string, writeOnly: true }
-        payoutMobileNumber: { type: string, writeOnly: true }
+        displayName:
+          type: string
+        ownerActorId:
+          type: string
+        workforcePersonId:
+          type: string
+        primaryPhone:
+          type: string
+        secondaryPhone:
+          type: string
+        email:
+          type: string
+        notes:
+          type: string
+        beneficiaryName:
+          type: string
+        bankName:
+          type: string
+        bankBranch:
+          type: string
+        accountNumber:
+          type: string
+          writeOnly: true
+        iban:
+          type: string
+          writeOnly: true
+        payoutMobileNumber:
+          type: string
+          writeOnly: true
         settlementPreference:
           type: string
-          enum: [ bank_transfer, mobile_wallet, manual ]
-        bankAccountHolderMatchesOwner: { type: boolean }
-        bankNotes: { type: string }
+          enum:
+          - bank_transfer
+          - mobile_wallet
+          - manual
+        bankAccountHolderMatchesOwner:
+          type: boolean
+        bankNotes:
+          type: string
     PartnerTransitionRequest:
       type: object
       additionalProperties: false
-      required: [ toStatus ]
+      required:
+      - toStatus
       properties:
-        toStatus: { $ref: '#/components/schemas/ActivationStatus' }
-        reason: { type: string, maxLength: 500 }
+        toStatus:
+          $ref: '#/components/schemas/ActivationStatus'
+        reason:
+          type: string
+          maxLength: 500
+      allOf:
+      - if:
+          properties:
+            toStatus:
+              enum:
+              - ops_approved
+              - ops_rejected
+              - partner_deactivated
+          required:
+          - toStatus
+        then:
+          required:
+          - reason
+          properties:
+            reason:
+              type: string
+              minLength: 1
+              maxLength: 500
     PartnerTransitionResponse:
       type: object
-      required: [ partner, event ]
+      required:
+      - partner
+      - event
       properties:
-        partner: { $ref: '#/components/schemas/PartnerState' }
-        event: { $ref: '#/components/schemas/ActivationEvent' }
+        partner:
+          $ref: '#/components/schemas/PartnerState'
+        event:
+          $ref: '#/components/schemas/ActivationEvent'
     ActivationEvent:
       type: object
       required:
-        [
-          id,
-          partnerId,
-          fromStatus,
-          toStatus,
-          actorId,
-          actorSurface,
-          correlationId,
-          createdAt
-        ]
+      - id
+      - partnerId
+      - fromStatus
+      - toStatus
+      - actorId
+      - actorSurface
+      - reason
+      - createdAt
       properties:
-        id: { type: string }
-        partnerId: { type: string }
-        fromStatus: { $ref: '#/components/schemas/ActivationStatus' }
-        toStatus: { $ref: '#/components/schemas/ActivationStatus' }
-        actorId: { type: string }
-        actorSurface: { type: string }
-        reason: { type: string }
-        correlationId: { type: string }
-        createdAt: { type: string, format: date-time }
+        id:
+          type: string
+        partnerId:
+          type: string
+        fromStatus:
+          oneOf:
+          - $ref: '#/components/schemas/ActivationStatus'
+          - type: string
+            const: none
+          description: none is used only by the immutable Partner creation event.
+        toStatus:
+          $ref: '#/components/schemas/ActivationStatus'
+        actorId:
+          type: string
+        actorSurface:
+          type: string
+        reason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    DocumentReviewRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - decision
+      - reason
+      properties:
+        decision:
+          type: string
+          enum:
+          - approved
+          - rejected
+          - needs_resubmit
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+    DocumentReviewResponse:
+      type: object
+      required:
+      - document
+      - review
+      properties:
+        document:
+          type: object
+          additionalProperties: true
+        review:
+          type: object
+          required:
+          - id
+          - documentId
+          - partnerId
+          - reviewedByActorId
+          - decision
+          - reason
+          - createdAt
+          properties:
+            id:
+              type: string
+            documentId:
+              type: string
+            partnerId:
+              type: string
+            reviewedByActorId:
+              type: string
+            decision:
+              type: string
+            reason:
+              type: string
+            correlationId:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
     LinkedStore:
       type: object
-      required: [ storeId, displayName ]
+      required:
+      - storeId
+      - displayName
       properties:
-        storeId: { type: string }
-        displayName: { type: string }
-        status: { type: string }
-        isVisible: { type: boolean }
-        partnerReadiness: { type: string }
-        publicationEligible: { type: boolean }
+        storeId:
+          type: string
+        displayName:
+          type: string
+        status:
+          type: string
+        isVisible:
+          type: boolean
+        partnerReadiness:
+          type: string
+        publicationEligible:
+          type: boolean
     FieldVisitRequest:
       type: object
       additionalProperties: false
       properties:
-        storeId: { type: string }
-        visitNotes: { type: string }
-        locationLatitude: { type: number, minimum: -90, maximum: 90 }
-        locationLongitude: { type: number, minimum: -180, maximum: 180 }
+        storeId:
+          type: string
+        visitNotes:
+          type: string
+        locationLatitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        locationLongitude:
+          type: number
+          minimum: -180
+          maximum: 180
         evidenceMediaRefs:
           type: array
-          items: { type: string }
+          items:
+            type: string
       anyOf:
-        - required: [ visitNotes ]
-        - required: [ locationLatitude, locationLongitude ]
-        - required: [ evidenceMediaRefs ]
+      - required:
+        - visitNotes
+      - required:
+        - locationLatitude
+        - locationLongitude
+      - required:
+        - evidenceMediaRefs
     FieldVisit:
       type: object
-      required: [ id, partnerId, storeId, fieldActorId, visitStatus, createdAt ]
+      required:
+      - id
+      - partnerId
+      - storeId
+      - fieldActorId
+      - visitStatus
+      - createdAt
       properties:
-        id: { type: string }
-        partnerId: { type: string }
-        storeId: { type: string }
-        fieldActorId: { type: string }
-        visitStatus: { type: string }
-        visitNotes: { type: string }
+        id:
+          type: string
+        partnerId:
+          type: string
+        storeId:
+          type: string
+        fieldActorId:
+          type: string
+        visitStatus:
+          type: string
+        visitNotes:
+          type: string
         evidenceMediaRefs:
           type: array
-          items: { type: string }
-        createdAt: { type: string, format: date-time }
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
     Readiness:
       type: object
-      required: [ ready, missingRequirements, currentStatus ]
+      required:
+      - ready
+      - missingRequirements
+      - currentStatus
       properties:
-        ready: { type: boolean }
+        ready:
+          type: boolean
         missingRequirements:
           type: array
-          items: { type: string }
-        currentStatus: { $ref: '#/components/schemas/ActivationStatus' }
+          items:
+            type: string
+        currentStatus:
+          $ref: '#/components/schemas/ActivationStatus'
     Error:
       type: object
-      required: [ code, message ]
+      required:
+      - code
+      - message
       properties:
-        code: { type: string }
-        message: { type: string }
+        code:
+          type: string
+        message:
+          type: string
   responses:
+    InvalidRequest:
+      description: Request validation failed or Idempotency-Key is missing.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    DecisionReasonRequired:
+      description: Approval, rejection, deactivation, and evidence review require
+        an auditable reason.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    IndependentReviewRequired:
+      description: The creator or evidence uploader cannot approve the same owned
+        record.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     Forbidden:
       description: Actor is not authorized for this partner or surface.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+          schema:
+            $ref: '#/components/schemas/Error'
     NotFound:
-      description: Partner or store was not found.
+      description: Partner, document, or store was not found.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+          schema:
+            $ref: '#/components/schemas/Error'
     Conflict:
-      description: Version conflict or idempotency key reuse with another payload.
+      description: Version conflict, duplicate legal identity or primary phone, or
+        idempotency key reuse with another payload.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+          schema:
+            $ref: '#/components/schemas/Error'
     StoreOwnershipConflict:
       description: Store already belongs to another partner.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+          schema:
+            $ref: '#/components/schemas/Error'
     ReadinessFailed:
       description: Required onboarding evidence or publication gate is incomplete.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+          schema:
+            $ref: '#/components/schemas/Error'
     VersionRequired:
       description: A positive expected version is required.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+          schema:
+            $ref: '#/components/schemas/Error'
     WltUnavailable:
       description: The WLT payout owner is unavailable or rejected the handoff.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+          schema:
+            $ref: '#/components/schemas/Error'

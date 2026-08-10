@@ -3,8 +3,8 @@ package store
 import "testing"
 
 func TestStoreGovernanceValidationSets(t *testing.T) {
-	for _, status := range []string{"active", "inactive", "temporarily_closed", "unavailable"} {
-		if !validStoreStatus(status) {
+	for _, status := range []DshStoreStatus{StatusPublished, StatusPaused, StatusSuspended, StatusClosed, StatusReady, StatusDraft} {
+		if !validStoreStatus(string(status)) {
 			t.Fatalf("expected valid store status %q", status)
 		}
 	}

@@ -50,28 +50,31 @@ func (s *employeeAccessServer) permissionBundles(w http.ResponseWriter, _ *http.
 }
 
 func (s *employeeAccessServer) provision(w http.ResponseWriter, r *http.Request) {
-	var input identity.EmployeeProvisionInput
-	if !decodeJSON(w, r, &input) {
+	var request struct {
+		Username         string `json:"username"`
+		PhoneE164        string `json:"phoneE164"`
+		PermissionBundle string `json:"permissionBundle"`
+		DepartmentScope  string `json:"departmentScope"`
+	}
+	if !decodeJSON(w, r, &request) {
 		return
 	}
-	trustedOperatorContextID := strings.TrimSpace(input.OperatorContextID)
 	operatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
-	if operatorContextID != "" {
-		if !validateInternalOperatorRequest(w, r, operatorContextID) {
-			return
-		}
-		if trustedOperatorContextID != "" && trustedOperatorContextID != operatorContextID {
-			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "provisioned employee operator context cannot override the active runtime operator context")
-			return
-		}
-		trustedOperatorContextID = operatorContextID
-	}
-	if trustedOperatorContextID == "" {
-		sendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "trusted operator context is required for employee provisioning")
+	if operatorContextID == "" {
+		sendError(w, http.StatusServiceUnavailable, "INTERNAL_API_UNAVAILABLE", "trusted operator context is not configured")
 		return
 	}
-	input.OperatorContextID = trustedOperatorContextID
-	if err := s.repository.ValidateEmployeePhoneOperatorContext(r.Context(), input.PhoneE164, trustedOperatorContextID); err != nil {
+	if !validateInternalOperatorRequest(w, r, operatorContextID) {
+		return
+	}
+	input := identity.EmployeeProvisionInput{
+		Username:          request.Username,
+		PhoneE164:         request.PhoneE164,
+		PermissionBundle:  request.PermissionBundle,
+		DepartmentScope:   request.DepartmentScope,
+		OperatorContextID: operatorContextID,
+	}
+	if err := s.repository.ValidateEmployeePhoneOperatorContext(r.Context(), input.PhoneE164, operatorContextID); err != nil {
 		writeInternalActorError(w, err)
 		return
 	}

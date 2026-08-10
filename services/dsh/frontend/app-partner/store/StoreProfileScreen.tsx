@@ -41,6 +41,11 @@ export type StoreProfileScreenProps = {
   publishStage?: string;
   activationStatus?: DshPartnerActivationStatus;
   serviceModes?: readonly { id: string; enabled: boolean; title?: string }[];
+  legalNameAr?: string;
+  legalNameEn?: string;
+  legalIdentityType?: string;
+  legalIdentityNumber?: string;
+  onOpenSupportScreen?: () => void;
   onOpenStoreScope?: () => void;
 };
 
@@ -140,7 +145,12 @@ export function StoreProfileScreen({
   publishStage,
   activationStatus,
   serviceModes = [],
+  legalNameAr,
+  legalNameEn,
+  legalIdentityType,
+  legalIdentityNumber,
   onOpenStoreScope,
+  onOpenSupportScreen,
 }: StoreProfileScreenProps) {
   const { direction } = useDirection();
   const [operationsOpen, setOperationsOpen] = React.useState(true);
@@ -205,7 +215,7 @@ export function StoreProfileScreen({
     try {
       await updatePartnerStoreSettings(canonicalStoreId, {
         expectedVersion: loadState.settings.version,
-        status: desiredOpen ? 'active' : 'temporarily_closed',
+        status: desiredOpen ? 'published' : 'paused',
         deliveryModes: backendModes,
         reason: normalizedReason,
       });
@@ -345,7 +355,34 @@ export function StoreProfileScreen({
       <Divider />
 
       <SectionBlock
-        title="الظهور والنطاق"
+        title="البيانات القانونية"
+        subtitle="الاسم ورقم السجل المرتبط بالحساب. لا يمكن تعديلها مباشرة لضمان سلامة الهوية القانونية."
+        actionLabel="طلب تغيير"
+        expanded={false}
+        onToggle={() => {
+          onOpenSupportScreen?.();
+        }}
+      >
+        <KeyValueList
+          dense
+          items={[
+            { label: 'الاسم القانوني (عربي)', value: legalNameAr || 'غير محدد' },
+            { label: 'الاسم القانوني (إنجليزي)', value: legalNameEn || 'غير محدد' },
+            { label: 'نوع الهوية', value: legalIdentityType || 'غير محدد' },
+            { label: 'رقم الهوية / السجل', value: legalIdentityNumber || 'غير محدد' },
+          ]}
+        />
+        <Box style={{ paddingTop: 8 }}>
+          <Text role="caption" tone="muted" align="start">
+            لأي تعديل على البيانات القانونية، يرجى تقديم "طلب تغيير قانوني" من خلال قسم الدعم وسيقوم فريق المختص بمراجعته.
+          </Text>
+        </Box>
+      </SectionBlock>
+
+      <Divider />
+
+      <SectionBlock
+        title="التشغيل الذاتي"
         subtitle="قرار الظهور مشتق من حالة التفعيل والكتالوج والتغطية والتشغيل."
         actionLabel="مراجعة النطاق"
         expanded={visibilityOpen}

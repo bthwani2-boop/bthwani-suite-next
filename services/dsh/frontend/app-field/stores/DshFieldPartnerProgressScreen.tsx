@@ -22,6 +22,7 @@ import {
   getDshPartnerReadinessChecklist,
   DOCUMENT_TYPE_LABELS,
 } from '../../shared/partner';
+import { DshFieldProblemState } from '../components/DshFieldProblemNotice';
 
 export type DshFieldPartnerProgressScreenProps = {
   readonly partnerId: string;
@@ -76,7 +77,13 @@ export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProduct
     return <StateView title="الملف غير موجود" actionLabel="رجوع" onActionPress={onBack} />;
   }
   if (state.kind === 'error') {
-    return <StateView tone="danger" title="تعذر التحميل" description={state.message} actionLabel="إعادة المحاولة" onActionPress={() => void reload()} />;
+    return (
+      <DshFieldProblemState
+        problem={state.problem}
+        handlers={{ refresh_record: () => void reload(), refresh_scope: () => void reload() }}
+        onRetry={() => void reload()}
+      />
+    );
   }
 
   const { partner, readiness, documents, fieldVisits, storeId } = state;

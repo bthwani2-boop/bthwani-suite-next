@@ -19,9 +19,15 @@ import {
 import {
   useFieldVisitController,
   buildVisitViewModel,
+  classifyGovernedError,
   type DshLocationEvidence,
+  type GovernedProblem,
 } from "../../shared/field-readiness";
 import { DshFieldReferenceTag } from "../components/DshFieldReferenceTag";
+import {
+  DshFieldProblemNotice,
+  DshFieldProblemState,
+} from "../components/DshFieldProblemNotice";
 
 type Props = {
   readonly storeId: string;
@@ -30,23 +36,53 @@ type Props = {
   readonly onGoToVerification?: (visitId: string) => void;
 };
 
+/**
+ * Thrown as a governed problem rather than a bare Error so a locally detected
+ * location refusal carries the same reason code, next action, and retry
+ * semantics as the equivalent server refusal.
+ */
+class FieldLocationProblemError extends Error {
+  constructor(readonly problem: GovernedProblem) {
+    super(problem.message);
+    this.name = "FieldLocationProblemError";
+  }
+}
+
+/**
+ * Resolves the canonical definition for the code (shared with the server-side
+ * codes) and only then applies an optional, more specific message.
+ */
+function rejectLocation(code: string, message?: string): never {
+  const canonical = classifyGovernedError({ code });
+  throw new FieldLocationProblemError(
+    message ? { ...canonical, message } : canonical,
+  );
+}
+
 async function captureGovernedLocation(): Promise<DshLocationEvidence> {
+  const services = await Location.hasServicesEnabledAsync();
+  if (!services) rejectLocation("LOCATION_SERVICES_DISABLED");
+
   const permission = await Location.requestForegroundPermissionsAsync();
-  if (permission.status !== "granted") {
-    throw new Error("يجب السماح بالوصول إلى موقعك لبدء الزيارة أو إكمالها.");
-  }
+  if (permission.status !== "granted") rejectLocation("LOCATION_PERMISSION_DENIED");
+
   const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-  if (position.mocked === true) {
-    throw new Error("تعذر تأكيد موقعك. أوقف أي تطبيق لمحاكاة الموقع وحاول مجددًا.");
-  }
+  if (position.mocked === true) rejectLocation("LOCATION_MOCKED");
+
   const { latitude, longitude, accuracy } = position.coords;
   const isValidLocation =
     Number.isFinite(latitude) && latitude >= -90 && latitude <= 90 &&
     Number.isFinite(longitude) && longitude >= -180 && longitude <= 180 &&
     Number.isFinite(accuracy) && accuracy !== null && accuracy > 0;
-  if (!isValidLocation) {
-    throw new Error("تعذر تأكيد موقعك بدقة كافية. تأكد من تفعيل GPS واتصال الإنترنت وحاول من داخل موقع المتجر.");
+  if (!isValidLocation) rejectLocation("LOCATION_REQUIRED");
+
+  if (accuracy && accuracy > 100) {
+    rejectLocation(
+      "LOCATION_ACCURACY",
+      `دقة الموقع الحالية ${Math.round(accuracy)} متر وهي غير كافية. قف في مكان مفتوح بجوار المتجر ثم التقط الموقع مجددًا.`,
+    );
   }
+
   return {
     latitude,
     longitude,
@@ -57,27 +93,33 @@ async function captureGovernedLocation(): Promise<DshLocationEvidence> {
   };
 }
 
+function toLocationProblem(error: unknown): GovernedProblem {
+  if (error instanceof FieldLocationProblemError) return error.problem;
+  return classifyGovernedError(error);
+}
+
 export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVerification }: Props) {
   const identity = useIdentitySession();
   const { listState, actionState, reload, startVisit, completeVisit, resetAction } =
     useFieldVisitController(storeId, identity.state.kind);
   const [locationBusy, setLocationBusy] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationProblem, setLocationProblem] = useState<GovernedProblem | null>(null);
 
   const hasActiveVisit = useMemo(
     () => listState.kind === "success" && listState.visits.some((visit) => visit.status === "in_progress"),
     [listState],
   );
-  const startQueued = actionState.kind === "queued" && actionState.message.includes("بدء الزيارة");
+  const startQueued =
+    actionState.kind === "queued" && actionState.operationType === "create_visit";
 
   const handleCompleteVisit = useCallback(async (visitId: string) => {
     setLocationBusy(true);
-    setLocationError(null);
+    setLocationProblem(null);
     try {
       const completionLocation = await captureGovernedLocation();
       await completeVisit(visitId, { completionLocation });
     } catch (error) {
-      setLocationError(error instanceof Error ? error.message : String(error));
+      setLocationProblem(toLocationProblem(error));
     } finally {
       setLocationBusy(false);
     }
@@ -85,20 +127,31 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
 
   const handleStartVisit = useCallback(async () => {
     if (hasActiveVisit || startQueued) {
-      setLocationError("توجد زيارة حية أو محفوظة للمزامنة؛ لا يمكن بدء زيارة ثانية للمتجر نفسه.");
+      // Same reason code the server would return, so the employee reads one
+      // consistent explanation whichever side detects the conflict.
+      setLocationProblem(classifyGovernedError({ code: "VISIT_ALREADY_IN_PROGRESS" }));
       return;
     }
     setLocationBusy(true);
-    setLocationError(null);
+    setLocationProblem(null);
     try {
       const startLocation = await captureGovernedLocation();
       await startVisit({ visitType: "onboarding", startLocation });
     } catch (error) {
-      setLocationError(error instanceof Error ? error.message : String(error));
+      setLocationProblem(toLocationProblem(error));
     } finally {
       setLocationBusy(false);
     }
   }, [hasActiveVisit, startQueued, startVisit]);
+
+  const problemHandlers = useMemo(
+    () => ({
+      recapture_location: () => void handleStartVisit(),
+      refresh_record: () => void reload(),
+      refresh_scope: () => void reload(),
+    }),
+    [handleStartVisit, reload],
+  );
 
   if (identity.state.kind !== "authenticated") {
     return (
@@ -127,12 +180,10 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
     return (
       <View style={styles.root}>
         <Header title="زيارات التأهيل الميداني" {...(onBack ? { onBack } : {})} />
-        <StateView
-          tone="danger"
-          title="تعذر تحميل الزيارات"
-          description={listState.message}
-          actionLabel="إعادة المحاولة"
-          onActionPress={() => void reload()}
+        <DshFieldProblemState
+          problem={listState.problem}
+          handlers={problemHandlers}
+          onRetry={() => void reload()}
         />
       </View>
     );
@@ -166,21 +217,21 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
           </Text>
         </Card>
 
-        {locationError ? (
-          <InlineNotice
-            tone="danger"
-            title="تعذر تحديد الموقع"
-            description={locationError}
-            action={<Button label="إغلاق" tone="ghost" onPress={() => setLocationError(null)} />}
+        {locationProblem ? (
+          <DshFieldProblemNotice
+            problem={locationProblem}
+            handlers={problemHandlers}
+            onRetry={() => void handleStartVisit()}
+            onDismiss={() => setLocationProblem(null)}
           />
         ) : null}
 
         {actionState.kind === "error" ? (
-          <InlineNotice
-            tone="danger"
-            title="تعذر تنفيذ العملية"
-            description={actionState.message}
-            action={<Button label="إغلاق" tone="ghost" onPress={resetAction} />}
+          <DshFieldProblemNotice
+            problem={actionState.problem}
+            handlers={problemHandlers}
+            onRetry={() => void reload()}
+            onDismiss={resetAction}
           />
         ) : null}
 

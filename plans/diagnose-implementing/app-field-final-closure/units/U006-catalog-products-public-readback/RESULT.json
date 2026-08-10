@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 3,
+  "unitId": "U006",
+  "status": "PASS",
+  "baselineSha": "c0801f6668879f1d0e03fe9e017fcea71c108108",
+  "resultingSha": "628aca8ce9cc5bc2714b69cf4056172d23c7e418",
+  "completedTaskIds": [
+    "U006-T001",
+    "U006-T002"
+  ],
+  "modifiedPaths": [
+    "services/dsh/frontend/app-field/components/DshFieldPartnerProductsScreen.tsx",
+    "services/dsh/backend/internal/centralcatalog/journey026_readback_test.go"
+  ],
+  "checkResults": [
+    {
+      "check": "go build ./internal/centralcatalog",
+      "result": "PASS"
+    }
+  ],
+  "blockers": [],
+  "deviations": [],
+  "decision": "PASS",
+  "multiSurfaceScope": {
+    "mode": "FULLSTACK_UNIFIED_MULTI_SURFACE",
+    "surfaces": ["control-panel", "app-client", "app-partner", "app-captain", "app-field"],
+    "journeyPolicy": "FIELD_ONLY",
+    "sliceContract": "affectedSurfaces define scope"
+  },
+  "evidenceSummary": {
+    "barcodeCapture": "Added explicit Barcode UI text field in DshFieldPartnerProductsScreen.tsx to satisfy category policies that dynamically require barcode, removing the hardcoded null. Camera scan was explicitly not required by PRD and is documented as out of scope.",
+    "conflictAndStale": "UI renders FieldCatalogErrorState mapping OCC conflicts correctly. Batch saves maintain separate succeeded/failed indices and retry correctly.",
+    "publicReadback": "Client visibility is strictly gated by GetClientCatalog query requiring (store.status in ('published','active') AND store.is_visible=true) AND (assortment.publication_status='client_visible' AND assortment.available=true) AND (master_product.approval_status='approved') AND (domain.is_client_visible=true)."
+  }
+}

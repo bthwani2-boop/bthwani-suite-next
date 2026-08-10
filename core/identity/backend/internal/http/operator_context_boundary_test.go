@@ -49,7 +49,7 @@ func TestProvisionOperatorContextOverrideIsRejectedBeforeDatabaseAccess(t *testi
 	)
 	response := httptest.NewRecorder()
 
-	if rewriteProvisionOperatorContext(response, request, nil, "OperatorContext-main") {
+	if rewriteProvisionOperatorContext(response, request, "OperatorContext-main") {
 		t.Fatal("cross-OperatorContext provision request was accepted")
 	}
 	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
@@ -91,4 +91,36 @@ func configureIdentity(t *testing.T) {
 	t.Helper()
 	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "OperatorContext-main")
 	t.Setenv("IDENTITY_WORKFORCE_SERVICE_TOKEN", "service-token")
+}
+
+func TestOperatorBoundaryFailsClosedWithoutRuntimeContext(t *testing.T) {
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
+	t.Setenv("IDENTITY_WORKFORCE_SERVICE_TOKEN", "service-token")
+	request := internalActorRequest(http.MethodGet, "/internal/actors/search")
+	request.Header.Set("X-Operator-Context-ID", "attacker-selected-context")
+	response := httptest.NewRecorder()
+
+	OperatorBoundary(nil, http.NotFoundHandler()).ServeHTTP(response, request)
+	if response.Code != http.StatusServiceUnavailable || !strings.Contains(response.Body.String(), "INTERNAL_API_UNAVAILABLE") {
+		t.Fatalf("missing runtime context did not fail closed: status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestOperatorBoundaryPassesTrustedContextToCanonicalSearchHandler(t *testing.T) {
+	configureIdentity(t)
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		contextID, ok := trustedOperatorContext(r)
+		if !ok || contextID != "OperatorContext-main" {
+			t.Fatalf("trusted context missing: %q ok=%v", contextID, ok)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	request := internalActorRequest(http.MethodGet, "/internal/actors/search?limit=10")
+	request.Header.Set("X-Operator-Context-ID", "OperatorContext-main")
+	response := httptest.NewRecorder()
+
+	OperatorBoundary(nil, next).ServeHTTP(response, request)
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("search did not reach canonical handler: %d %s", response.Code, response.Body.String())
+	}
 }

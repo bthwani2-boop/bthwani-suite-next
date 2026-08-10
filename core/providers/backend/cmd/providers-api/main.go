@@ -44,7 +44,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:         ":" + port,
-		Handler:      providershttp.CorsMiddleware(providershttp.NewRouter(db, service, repo, authClient)),
+		Handler:      providershttp.RuntimeReadinessBoundary(providershttp.CorsMiddleware(providershttp.NewRouter(db, service, repo, authClient)), db),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,

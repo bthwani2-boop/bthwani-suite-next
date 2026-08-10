@@ -18,7 +18,7 @@ if ($health.status -ne "healthy") { throw "DSH health status is not healthy: $($
 Write-Host "`n--- GET /dsh/readiness ---"
 $readiness = Invoke-RestMethod -Uri "$DshBaseUrl/dsh/readiness" -Method GET -TimeoutSec 10
 Write-Host ($readiness | ConvertTo-Json -Depth 5)
-if ($readiness.status -ne "ready") { throw "DSH readiness status is not ready: $($readiness.status)" }
+if ($readiness.status -ne "HEALTHY") { throw "DSH readiness status is not HEALTHY: $($readiness.status)" }
 
 Write-Host "`n--- GET /dsh/stores ---"
 $stores = Invoke-RestMethod -Uri "$DshBaseUrl/dsh/stores" -Method GET -TimeoutSec 10
@@ -46,7 +46,7 @@ foreach ($homeStore in $homeStores) {
     throw "DSH store detail response missing 'store' for $storeId"
   }
   if ([string]$detail.store.id -ne $storeId) {
-    throw "DSH store detail returned wrong id for $storeId: $($detail.store.id)"
+    throw "DSH store detail returned wrong id for ${storeId}: $($detail.store.id)"
   }
 
   Write-Host "--- GET /dsh/stores/$storeId/catalog ---"

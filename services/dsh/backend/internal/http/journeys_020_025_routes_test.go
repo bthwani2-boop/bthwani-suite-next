@@ -6,7 +6,7 @@ import (
 )
 
 func TestJourneys020To025ExposeGovernedRoutes(t *testing.T) {
-	router := NewRouter(nil, nil, nil, nil, nil)
+	router := NewRouter(nil, nil, nil, nil, nil, nil)
 	RegisterActorNotificationRoutes(router, nil, nil, nil, nil)
 	RegisterFieldReadinessRoutes(router, nil, nil, nil, nil)
 
@@ -46,7 +46,7 @@ func TestJourneys020To025ExposeGovernedRoutes(t *testing.T) {
 		{journey: " read preferences", method: http.MethodGet, path: "/dsh/notifications/preferences", pattern: "GET /dsh/notifications/preferences"},
 		{journey: " update preferences", method: http.MethodPut, path: "/dsh/notifications/preferences", pattern: "PUT /dsh/notifications/preferences"},
 		{journey: " mark all read", method: http.MethodPost, path: "/dsh/notifications/read-all", pattern: "POST /dsh/notifications/read-all"},
-		{journey: " mark one read", method: http.MethodPost, path: "/dsh/notifications/notif-1/read", pattern: "POST /dsh/notifications/{notificationId}/read"},
+		{journey: " mark one read", method: http.MethodPost, path: "/dsh/notifications/items/notif-1/read", pattern: "POST /dsh/notifications/items/{notificationId}/read"},
 		{journey: " operator config read", method: http.MethodGet, path: "/dsh/operator/notifications/config", pattern: "GET /dsh/operator/notifications/config"},
 		{journey: " operator config write", method: http.MethodPut, path: "/dsh/operator/notifications/config", pattern: "PUT /dsh/operator/notifications/config"},
 

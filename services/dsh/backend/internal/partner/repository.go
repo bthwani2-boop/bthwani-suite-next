@@ -1,138 +1,47 @@
 package partner
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"strings"
 	"time"
 
 	"github.com/lib/pq"
-
-	"dsh-api/internal/store"
 )
 
-// ─── Partner CRUD ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Partner CRUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-func CreatePartner(db *sql.DB, input CreatePartnerInput) (Partner, error) {
-	if err := input.Validate(); err != nil {
-		return Partner{}, err
-	}
-
-	category := input.Category
-	if category == "" {
-		category = "default"
-	}
-	surface := input.CreatedBySurface
-	if surface == "" {
-		surface = "app-field"
-	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return Partner{}, err
-	}
-	defer tx.Rollback()
-
-	var p Partner
-	err = tx.QueryRow(`
-		INSERT INTO dsh_partners (
-			legal_name_ar, legal_name_en, display_name,
-			legal_identity_type, legal_identity_number,
-			owner_name, primary_phone, secondary_phone, email,
-			category, notes, created_by_actor_id, created_by_surface
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-		RETURNING id, legal_name_ar, legal_name_en, display_name,
-		          legal_identity_type, legal_identity_number,
-		          owner_name, primary_phone, secondary_phone, email,
-		          category, activation_status, created_by_actor_id, created_by_surface,
-		          notes,
-		          COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
-		          COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
-		          beneficiary_name, bank_name, bank_branch, bank_account_number, bank_iban,
-		          payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
-		          version, created_at, updated_at`,
-		input.LegalNameAr, input.LegalNameEn, input.DisplayName,
-		input.LegalIdentityType, input.LegalIdentityNumber,
-		input.OwnerName, input.PrimaryPhone, input.SecondaryPhone, input.Email,
-		category, input.Notes, input.CreatedByActorID, surface,
-	).Scan(
-		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
-		&p.LegalIdentityType, &p.LegalIdentityNumber,
-		&p.OwnerName, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
-		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
-		&p.Notes,
-		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
-		&p.BeneficiaryName, &p.BankName, &p.BankBranch, &p.BankAccountNumber, &p.BankIBAN,
-		&p.PayoutMobileNumber, &p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
-		&p.Version, &p.CreatedAt, &p.UpdatedAt,
-	)
-	if err != nil {
-		if isPgUniqueViolation(err) {
-			return Partner{}, ErrConflict
-		}
-		return Partner{}, err
-	}
-
-	// Every partner owns exactly one store from creation onward (app-field
-	// collects the first store's data as part of the onboarding file). The
-	// store starts fully unpublished — is_visible=false, status=inactive —
-	// and stays invisible to app-client until control-panel approves it.
-	sRow, err := store.CreateDraftStore(tx, store.CreateDraftStoreInput{
-		PartnerID:   p.ID,
-		DisplayName: p.DisplayName,
-		Category:    p.Category,
-	})
-	if err != nil {
-		return Partner{}, err
-	}
-
-	if input.CreatedByActorID != "" {
-		_, err = tx.Exec(`
-			INSERT INTO dsh_store_actor_scopes (actor_id, actor_role, store_id, scope_type, active)
-			VALUES ($1, 'field', $2, 'assigned', true)
-			ON CONFLICT (actor_id, actor_role, store_id) DO NOTHING`,
-			input.CreatedByActorID, sRow.ID)
-		if err != nil {
-			return Partner{}, err
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return Partner{}, err
-	}
-
-	return p, nil
-}
+// CreatePartner was removed. Use CreatePartnerForOperatorContextIdempotent instead.
 
 func GetPartner(db *sql.DB, partnerID string) (Partner, error) {
 	var p Partner
 	err := db.QueryRow(`
 		SELECT id, legal_name_ar, legal_name_en, display_name,
 		       legal_identity_type, legal_identity_number,
-		       owner_name, primary_phone, secondary_phone, email,
-		       category, activation_status, created_by_actor_id, created_by_surface,
+		       owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
+		       category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 		       notes,
-		       COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
-		       COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
-		       beneficiary_name, bank_name, bank_branch, bank_account_number, bank_iban,
-		       payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
+		       COALESCE(payout_destination_id,''), COALESCE(destination_method,''),
+		       COALESCE(masked_destination_reference,''), COALESCE(destination_verification_status,''),
 		       version, created_at, updated_at
 		FROM dsh_partners WHERE id = $1`, partnerID,
 	).Scan(
 		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
 		&p.LegalIdentityType, &p.LegalIdentityNumber,
-		&p.OwnerName, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
-		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
+		&p.OwnerActorID, &p.WorkforcePersonID, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
+		&p.Category, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
-		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
-		&p.BeneficiaryName, &p.BankName, &p.BankBranch, &p.BankAccountNumber, &p.BankIBAN,
-		&p.PayoutMobileNumber, &p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
+		&p.PayoutDestinationID, &p.DestinationMethod, &p.MaskedDestinationReference, &p.DestinationVerificationStatus,
 		&p.Version, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Partner{}, ErrNotFound
 	}
-	return p, err
+	if err != nil {
+		return Partner{}, err
+	}
+	return SanitizePartnerForSurface(p), nil
 }
 
 func ListPartners(db *sql.DB, q PartnerListQuery) ([]PartnerSummary, int, error) {
@@ -195,70 +104,7 @@ func ListPartners(db *sql.DB, q PartnerListQuery) ([]PartnerSummary, int, error)
 	return list, total, rows.Err()
 }
 
-func UpdatePartner(db *sql.DB, partnerID string, input UpdatePartnerInput, expectedVersion int) (Partner, error) {
-	var p Partner
-	var holderMatchesOwner sql.NullBool
-	if input.BankAccountHolderMatchesOwner != nil {
-		holderMatchesOwner = sql.NullBool{Bool: *input.BankAccountHolderMatchesOwner, Valid: true}
-	}
-	err := db.QueryRow(`
-		UPDATE dsh_partners SET
-			display_name         = COALESCE(NULLIF($2,''), display_name),
-			owner_name           = COALESCE(NULLIF($3,''), owner_name),
-			primary_phone        = COALESCE(NULLIF($4,''), primary_phone),
-			secondary_phone      = COALESCE(NULLIF($5,''), secondary_phone),
-			email                = COALESCE(NULLIF($6,''), email),
-			notes                = COALESCE(NULLIF($7,''), notes),
-			beneficiary_name     = COALESCE(NULLIF($9,''), beneficiary_name),
-			bank_name            = COALESCE(NULLIF($10,''), bank_name),
-			bank_branch          = COALESCE(NULLIF($11,''), bank_branch),
-			bank_account_number  = COALESCE(NULLIF($12,''), bank_account_number),
-			bank_iban            = COALESCE(NULLIF($13,''), bank_iban),
-			payout_mobile_number = COALESCE(NULLIF($14,''), payout_mobile_number),
-			settlement_preference = COALESCE(NULLIF($15,''), settlement_preference),
-			bank_account_holder_matches_owner = COALESCE($16, bank_account_holder_matches_owner),
-			bank_notes           = COALESCE(NULLIF($17,''), bank_notes),
-			payout_destination_id  = COALESCE(NULLIF($18,''), payout_destination_id),
-			masked_account_number  = COALESCE(NULLIF($19,''), masked_account_number),
-			masked_iban            = COALESCE(NULLIF($20,''), masked_iban),
-			masked_mobile_number   = COALESCE(NULLIF($21,''), masked_mobile_number),
-			version          = version + 1,
-			updated_at       = NOW()
-		WHERE id = $1 AND version = $8
-		RETURNING id, legal_name_ar, legal_name_en, display_name,
-		          legal_identity_type, legal_identity_number,
-		          owner_name, primary_phone, secondary_phone, email,
-		          category, activation_status, created_by_actor_id, created_by_surface,
-		          notes,
-		          COALESCE(payout_destination_id,''), COALESCE(masked_account_number,''),
-		          COALESCE(masked_iban,''), COALESCE(masked_mobile_number,''),
-		          beneficiary_name, bank_name, bank_branch, bank_account_number, bank_iban,
-		          payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
-		          version, created_at, updated_at`,
-		partnerID, input.DisplayName, input.OwnerName,
-		input.PrimaryPhone, input.SecondaryPhone, input.Email,
-		input.Notes, expectedVersion,
-		input.BeneficiaryName, input.BankName, input.BankBranch, input.BankAccountNumber, input.BankIBAN,
-		input.PayoutMobileNumber, input.SettlementPreference, holderMatchesOwner, input.BankNotes,
-		input.PayoutDestinationID, input.MaskedAccountNumber, input.MaskedIBAN, input.MaskedMobileNumber,
-	).Scan(
-		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
-		&p.LegalIdentityType, &p.LegalIdentityNumber,
-		&p.OwnerName, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
-		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
-		&p.Notes,
-		&p.PayoutDestinationID, &p.MaskedAccountNumber, &p.MaskedIBAN, &p.MaskedMobileNumber,
-		&p.BeneficiaryName, &p.BankName, &p.BankBranch, &p.BankAccountNumber, &p.BankIBAN,
-		&p.PayoutMobileNumber, &p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
-		&p.Version, &p.CreatedAt, &p.UpdatedAt,
-	)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Partner{}, ErrNotFound
-	}
-	return p, err
-}
-
-// ─── Activation transition ─────────────────────────────────────────────────
+// â”€â”€â”€ Activation transition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expectedVersion int) (Partner, ActivationEvent, error) {
 	tx, err := db.Begin()
@@ -311,7 +157,7 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 			return Partner{}, ActivationEvent{}, err
 		}
 
-		if storeStatus != "active" ||
+		if storeStatus != "published" ||
 			!storeIsVisible ||
 			(storeServiceability != "serviceable" && storeServiceability != "limited") ||
 			storePartnerReadiness != "ready" ||
@@ -330,26 +176,26 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		WHERE id = $1
 		RETURNING id, legal_name_ar, legal_name_en, display_name,
 		          legal_identity_type, legal_identity_number,
-		          owner_name, primary_phone, secondary_phone, email,
-		          category, activation_status, created_by_actor_id, created_by_surface,
+		          owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
+		          category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 		          notes,
-		          beneficiary_name, bank_name, bank_branch, bank_account_number, bank_iban,
-		          payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
+		          COALESCE(payout_destination_id,''), COALESCE(destination_method,''),
+		          COALESCE(masked_destination_reference,''), COALESCE(destination_verification_status,''),
 		          version, created_at, updated_at`,
 		partnerID, input.ToStatus,
 	).Scan(
 		&updated.ID, &updated.LegalNameAr, &updated.LegalNameEn, &updated.DisplayName,
 		&updated.LegalIdentityType, &updated.LegalIdentityNumber,
-		&updated.OwnerName, &updated.PrimaryPhone, &updated.SecondaryPhone, &updated.Email,
-		&updated.Category, &updated.ActivationStatus, &updated.CreatedByActorID, &updated.CreatedBySurface,
+		&updated.OwnerActorID, &updated.WorkforcePersonID, &updated.PrimaryPhone, &updated.SecondaryPhone, &updated.Email,
+		&updated.Category, &updated.ActivationStatus, &updated.OnboardingCaseStatus, &updated.CreatedByActorID, &updated.CreatedBySurface,
 		&updated.Notes,
-		&updated.BeneficiaryName, &updated.BankName, &updated.BankBranch, &updated.BankAccountNumber, &updated.BankIBAN,
-		&updated.PayoutMobileNumber, &updated.SettlementPreference, &updated.BankAccountHolderMatchesOwner, &updated.BankNotes,
+		&updated.PayoutDestinationID, &updated.DestinationMethod, &updated.MaskedDestinationReference, &updated.DestinationVerificationStatus,
 		&updated.Version, &updated.CreatedAt, &updated.UpdatedAt,
 	)
 	if err != nil {
 		return Partner{}, ActivationEvent{}, err
 	}
+	updated = SanitizePartnerForSurface(updated)
 
 	var evt ActivationEvent
 	err = tx.QueryRow(`
@@ -366,7 +212,7 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 	}
 
 	// Propagate partner_readiness to linked stores inside the same transaction.
-	// client_visible → stores become discoverable; client_hidden/deactivated → stores hidden.
+	// client_visible â†’ stores become discoverable; client_hidden/deactivated â†’ stores hidden.
 	if readiness, ok := partnerReadinessForActivationStatus(input.ToStatus); ok {
 		if _, err = tx.Exec(
 			`UPDATE dsh_stores SET partner_readiness = $2, version = version + 1, updated_at = NOW() WHERE partner_id = $1`,
@@ -405,14 +251,14 @@ func partnerReadinessForActivationStatus(status ActivationStatus) (string, bool)
 	switch status {
 	case StatusClientVisible:
 		return "ready", true
-	case StatusClientHidden, StatusPartnerDeactivated:
+	case StatusClientHidden, StatusPartnerDeactivated, StatusPartnerSuspended, StatusPartnerTerminated:
 		return "blocked", true
 	default:
 		return "", false
 	}
 }
 
-// ─── Documents ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Documents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 func UploadDocument(db *sql.DB, partnerID string, input UploadDocumentInput) (Document, error) {
 	if err := input.Validate(); err != nil {
@@ -447,6 +293,10 @@ func UploadDocument(db *sql.DB, partnerID string, input UploadDocumentInput) (Do
 		return Document{}, err
 	}
 	if err := recordActivationEvent(tx, partnerID, "document_uploaded:"+d.DocumentType, input.UploadedByActorID, "app-field", input.Notes); err != nil {
+		return Document{}, err
+	}
+
+	if err := EvaluateOnboardingCaseStatus(context.Background(), tx, partnerID); err != nil {
 		return Document{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -543,7 +393,7 @@ func ReviewDocument(db *sql.DB, partnerID, documentID string, input ReviewDocume
 	return d, rev, nil
 }
 
-// ─── Field visits ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Field visits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, error) {
 	if input.PartnerID == "" || input.FieldActorID == "" {
@@ -762,7 +612,7 @@ func SubmitFieldVisit(db *sql.DB, partnerID, visitID, actorID string) (FieldVisi
 	return v, nil
 }
 
-// ─── Activation audit ──────────────────────────────────────────────────────
+// â”€â”€â”€ Activation audit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // execer is satisfied by both *sql.DB and *sql.Tx, letting audit events be
 // recorded either standalone or as part of an existing transaction.
@@ -806,267 +656,7 @@ func ListActivationEvents(db *sql.DB, partnerID string) ([]ActivationEvent, erro
 	return list, rows.Err()
 }
 
-// ─── Store count for readiness ──────────────────────────────────────────────
-
-func CountStores(db *sql.DB, partnerID string) (int, error) {
-	var n int
-	return n, db.QueryRow(`SELECT COUNT(*) FROM dsh_stores WHERE partner_id = $1`, partnerID).Scan(&n)
-}
-
-func CountApprovedDocuments(db *sql.DB, partnerID string) (int, int, error) {
-	var total, approved int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_partner_documents WHERE partner_id = $1`, partnerID).Scan(&total); err != nil {
-		return 0, 0, err
-	}
-	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_partner_documents WHERE partner_id = $1 AND document_status = 'approved'`, partnerID).Scan(&approved); err != nil {
-		return 0, 0, err
-	}
-	return total, approved, nil
-}
-
-// ─── Store team members ─────────────────────────────────────────────────────
-
-func ListStoreTeamMembers(db *sql.DB, storeID string) ([]StoreTeamMember, error) {
-	rows, err := db.Query(`
-		SELECT id, name, role, status, branch_assignment, permissions_summary,
-		       delivery_assignment, invite_lifecycle, operational_impact, audit_note
-		FROM dsh_store_team_members
-		WHERE store_id = $1
-		ORDER BY created_at ASC`, storeID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	members := []StoreTeamMember{}
-	for rows.Next() {
-		var m StoreTeamMember
-		if err := rows.Scan(&m.ID, &m.Name, &m.Role, &m.Status, &m.BranchAssignment,
-			&m.PermissionsSummary, &m.DeliveryAssignment, &m.InviteLifecycle,
-			&m.OperationalImpact, &m.AuditNote); err != nil {
-			return nil, err
-		}
-		m.RoleLabel = roleLabel(m.Role)
-		m.StatusLabel = statusLabel(m.Status)
-		m.InlineAction = inlineActionForStatus(m.Status)
-		m.InlineActionLabel = inlineActionLabelForStatus(m.Status)
-		members = append(members, m)
-	}
-	return members, rows.Err()
-}
-
-// InviteStoreTeamMember creates a pending invite row for identity against
-// storeID. There is no identity-resolution service wired up yet (FIX_REQUIRED
-// for a future round) — the raw identity string is stored as both the
-// member's placeholder display name and the invited_identity audit field.
-func InviteStoreTeamMember(db *sql.DB, storeID string, input InviteTeamMemberInput) error {
-	if err := input.Validate(); err != nil {
-		return err
-	}
-	_, err := db.Exec(`
-		INSERT INTO dsh_store_team_members (
-			store_id, name, role, status, invite_lifecycle, invited_identity, invited_by_actor_id
-		) VALUES ($1, $2, 'staff', 'invited', 'دعوة أُرسلت وبانتظار القبول', $2, $3)`,
-		storeID, input.Identity, input.InvitedByActorID)
-	return err
-}
-
-// ListInvitesForPhone finds all pending team member records matching phone.
-func ListInvitesForPhone(db *sql.DB, phone string) ([]StoreTeamMember, error) {
-	rows, err := db.Query(`
-		SELECT id, name, role, status, branch_assignment, permissions_summary,
-		       delivery_assignment, invite_lifecycle, operational_impact, audit_note
-		FROM dsh_store_team_members
-		WHERE invited_identity = $1 AND status = 'invited'
-		ORDER BY created_at ASC`, phone)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	members := []StoreTeamMember{}
-	for rows.Next() {
-		var m StoreTeamMember
-		if err := rows.Scan(&m.ID, &m.Name, &m.Role, &m.Status, &m.BranchAssignment,
-			&m.PermissionsSummary, &m.DeliveryAssignment, &m.InviteLifecycle,
-			&m.OperationalImpact, &m.AuditNote); err != nil {
-			return nil, err
-		}
-		m.RoleLabel = roleLabel(m.Role)
-		m.StatusLabel = statusLabel(m.Status)
-		m.InlineAction = inlineActionForStatus(m.Status)
-		m.InlineActionLabel = inlineActionLabelForStatus(m.Status)
-		members = append(members, m)
-	}
-	return members, rows.Err()
-}
-
-// AcceptInvite binds the identity_actor_id and marks the member active.
-func AcceptInvite(db *sql.DB, inviteID, actorID, actorPhone string) error {
-	res, err := db.Exec(`
-		UPDATE dsh_store_team_members
-		SET status = 'active',
-		    identity_actor_id = $1,
-		    invite_lifecycle = 'دعوة مقبولة',
-		    version = version + 1,
-		    updated_at = NOW()
-		WHERE id = $2 AND invited_identity = $3 AND status = 'invited'`,
-		actorID, inviteID, actorPhone)
-	if err != nil {
-		return err
-	}
-	affected, _ := res.RowsAffected()
-	if affected == 0 {
-		return ErrNotFound
-	}
-	return nil
-}
-
-// RejectInvite marks the member blocked/rejected.
-func RejectInvite(db *sql.DB, inviteID, actorID, actorPhone string) error {
-	res, err := db.Exec(`
-		UPDATE dsh_store_team_members
-		SET status = 'blocked',
-		    identity_actor_id = $1,
-		    invite_lifecycle = 'دعوة مرفوضة',
-		    version = version + 1,
-		    updated_at = NOW()
-		WHERE id = $2 AND invited_identity = $3 AND status = 'invited'`,
-		actorID, inviteID, actorPhone)
-	if err != nil {
-		return err
-	}
-	affected, _ := res.RowsAffected()
-	if affected == 0 {
-		return ErrNotFound
-	}
-	return nil
-}
-
-// teamActionStatusMap maps the inlineActionLabel strings this backend itself
-// generates (see inlineActionLabelForStatus) back to the resulting status.
-// executeDshPartnerTeamMemberAction's actionLabel is free-form per the
-// OpenAPI contract, but since this backend is also the sole producer of the
-// labels shown to the user, the round-trip is closed and unambiguous.
-var teamActionStatusMap = map[string]string{
-	"pause":         "paused",
-	"activate":      "active",
-	"block":         "blocked",
-	"resend-invite": "invited",
-	"cancel-invite": "blocked",
-}
-
-// ExecuteStoreTeamMemberAction applies actionLabel to memberID, guarding
-// against cross-store IDOR by requiring the member's store_id to match
-// storeID. Every action is recorded in dsh_store_team_member_actions,
-// including labels this backend doesn't recognize (recorded with no status
-// change) so nothing is silently dropped.
-func ExecuteStoreTeamMemberAction(db *sql.DB, storeID, memberID string, input TeamMemberActionInput) error {
-	if err := input.Validate(); err != nil {
-		return err
-	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	var currentStoreID, fromStatus string
-	err = tx.QueryRow(`SELECT store_id, status FROM dsh_store_team_members WHERE id = $1`, memberID).
-		Scan(&currentStoreID, &fromStatus)
-	if errors.Is(err, sql.ErrNoRows) {
-		return ErrNotFound
-	}
-	if err != nil {
-		return err
-	}
-	if currentStoreID != storeID {
-		return ErrForbidden
-	}
-
-	toStatus := teamActionStatusMap[input.Action]
-	if toStatus != "" {
-		if _, err := tx.Exec(`
-			UPDATE dsh_store_team_members
-			SET status = $1, version = version + 1, updated_at = NOW()
-			WHERE id = $2`, toStatus, memberID); err != nil {
-			return err
-		}
-	}
-
-	if _, err := tx.Exec(`
-		INSERT INTO dsh_store_team_member_actions (
-			member_id, store_id, action_label, from_status, to_status, actor_id
-		) VALUES ($1, $2, $3, $4, $5, $6)`,
-		memberID, storeID, input.Action, fromStatus, toStatus, input.ActorID); err != nil {
-		return err
-	}
-
-	return tx.Commit()
-}
-
-func roleLabel(role string) string {
-	switch role {
-	case "owner":
-		return "مالك"
-	case "supervisor":
-		return "مشرف"
-	case "courier":
-		return "موصل"
-	default:
-		return "موظف"
-	}
-}
-
-func statusLabel(status string) string {
-	switch status {
-	case "active":
-		return "نشط"
-	case "paused":
-		return "موقوف"
-	case "invited":
-		return "بانتظار القبول"
-	case "blocked":
-		return "محظور"
-	case "review-needed":
-		return "بحاجة مراجعة"
-	default:
-		return status
-	}
-}
-
-func inlineActionLabelForStatus(status string) string {
-	switch status {
-	case "active":
-		return "إيقاف"
-	case "paused":
-		return "تفعيل"
-	case "invited":
-		return "إعادة إرسال الدعوة"
-	case "blocked":
-		return "تفعيل"
-	default:
-		return "مراجعة"
-	}
-}
-
-func inlineActionForStatus(status string) string {
-	switch status {
-	case "active":
-		return "pause"
-	case "paused":
-		return "activate"
-	case "invited":
-		return "resend-invite"
-	case "blocked":
-		return "activate"
-	default:
-		return ""
-	}
-}
-
-// ─── Store courier settings ─────────────────────────────────────────────────
+// â”€â”€â”€ Store courier settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 func GetStoreCourierSettings(db *sql.DB, storeID string) (StoreCourierSettings, error) {
 	var s StoreCourierSettings
@@ -1075,7 +665,7 @@ func GetStoreCourierSettings(db *sql.DB, storeID string) (StoreCourierSettings, 
 		FROM dsh_store_courier_settings WHERE store_id = $1`, storeID).
 		Scan(&s.CourierName, &s.CourierPhone, &s.IsActive, &s.Policy, &s.PricingSource, &s.Compensation, pq.Array(&s.SelectedBranchIDs), &s.Version)
 	if errors.Is(err, sql.ErrNoRows) {
-		// The OpenAPI contract has no 404 response for this operation — return
+		// The OpenAPI contract has no 404 response for this operation â€” return
 		// the zero-value settings shape instead of an error.
 		return StoreCourierSettings{
 			Policy:            "free_delivery",
@@ -1147,7 +737,7 @@ func UpsertStoreCourierSettings(db *sql.DB, storeID string, input StoreCourierSe
 	return s, nil
 }
 
-// ─── Store coverage zones ───────────────────────────────────────────────────
+// â”€â”€â”€ Store coverage zones â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 func ListStoreCoverageZones(db *sql.DB, storeID string) ([]StoreCoverageZone, error) {
 	rows, err := db.Query(`
@@ -1176,38 +766,16 @@ func ListStoreCoverageZones(db *sql.DB, storeID string) ([]StoreCoverageZone, er
 	return zones, rows.Err()
 }
 
-// ─── Partner operational scopes ─────────────────────────────────────────────
+// â”€â”€â”€ Partner operational scopes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Scopes derive from dsh_stores.partner_id: a partner's stores are their
 // scopes. Role comes from the actor's own team-member row per store when one
 // exists (matched by invited_identity); absent a team-member row, the caller
 // is the store's owning partner and defaults to "owner".
-func ListPartnerScopesForActor(db *sql.DB, partnerID, actorIdentity string) ([]OperationalScope, error) {
-	rows, err := db.Query(`
-		SELECT s.id, s.partner_id, s.display_name, tm.role AS role
-		FROM dsh_stores s
-		INNER JOIN dsh_store_team_members tm
-			ON tm.store_id = s.id AND tm.identity_actor_id = $2 AND tm.status = 'active'
-		WHERE s.partner_id = $1
-		ORDER BY s.display_name ASC`, partnerID, actorIdentity)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	scopes := []OperationalScope{}
-	for rows.Next() {
-		var sc OperationalScope
-		if err := rows.Scan(&sc.StoreID, &sc.PartnerID, &sc.DisplayName, &sc.Role); err != nil {
-			return nil, err
-		}
-		sc.ScopeID = sc.StoreID
-		sc.Permissions = permissionsForRole(sc.Role)
-		scopes = append(scopes, sc)
-	}
-	return scopes, rows.Err()
+func ListPartnerScopesForActor(db *sql.DB, partnerID, actorIdentity string, resolver map[string][]string) ([]OperationalScope, error) {
+	return nil, errors.New("J014: scopes migrated to Workforce")
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 func isPgUniqueViolation(err error) bool {
 	if err == nil {

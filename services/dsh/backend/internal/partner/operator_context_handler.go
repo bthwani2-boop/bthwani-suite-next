@@ -34,27 +34,8 @@ func parsePartnerListQuery(r *http.Request, actorID string) PartnerListQuery {
 	return query
 }
 
-func writeOperatorContextPartnerCreateResult(w http.ResponseWriter, partner Partner, err error, draft bool) {
-	switch {
-	case errors.Is(err, ErrOperatorContextRequired):
-		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", err.Error())
-	case errors.Is(err, ErrInvalid):
-		sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
-	case errors.Is(err, ErrConflict):
-		sendError(w, http.StatusConflict, "CONFLICT", "partner with this legal identity already exists in the current OperatorContext")
-	case err != nil:
-		message := "failed to create partner"
-		if draft {
-			message = "failed to create draft"
-		}
-		sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", message)
-	default:
-		sendJSON(w, http.StatusCreated, partner)
-	}
-}
-
 // HandleOperatorContextListPartners lists only partners owned by the authenticated
-// OperatorContext. A OperatorContext selector supplied by the browser is intentionally ignored.
+// OperatorContext. An OperatorContext selector supplied by the browser is intentionally ignored.
 func HandleOperatorContextListPartners(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID, ok := requireOperatorContext(w, r)
@@ -79,25 +60,6 @@ func HandleOperatorContextListPartners(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func HandleOperatorContextCreatePartner(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID, ok := requireOperatorContext(w, r)
-		if !ok {
-			return
-		}
-		actorID, surface := actorFromContext(r)
-		var input CreatePartnerInput
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
-			return
-		}
-		input.CreatedByActorID = actorID
-		input.CreatedBySurface = surface
-		partner, err := CreatePartnerForOperatorContext(db, operatorContextID, input)
-		writeOperatorContextPartnerCreateResult(w, partner, err, false)
-	}
-}
-
 func HandleOperatorContextListFieldPartnerDrafts(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID, ok := requireOperatorContext(w, r)
@@ -105,6 +67,10 @@ func HandleOperatorContextListFieldPartnerDrafts(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		actorID, _ := actorFromContext(r)
+		if strings.TrimSpace(actorID) == "" {
+			sendError(w, http.StatusUnauthorized, "UNAUTHORIZED", "authenticated actor context is required for field operations")
+			return
+		}
 		query := parsePartnerListQuery(r, actorID)
 		category := strings.TrimSpace(r.URL.Query().Get("category"))
 		partners, total, err := ListPartnersForOperatorContextCategory(db, operatorContextID, query, category)
@@ -120,25 +86,6 @@ func HandleOperatorContextListFieldPartnerDrafts(db *sql.DB) http.HandlerFunc {
 				"offset": query.Offset,
 			},
 		})
-	}
-}
-
-func HandleOperatorContextFieldCreateDraft(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID, ok := requireOperatorContext(w, r)
-		if !ok {
-			return
-		}
-		actorID, _ := actorFromContext(r)
-		var input CreatePartnerInput
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
-			return
-		}
-		input.CreatedByActorID = actorID
-		input.CreatedBySurface = "app-field"
-		partner, err := CreatePartnerForOperatorContext(db, operatorContextID, input)
-		writeOperatorContextPartnerCreateResult(w, partner, err, true)
 	}
 }
 
@@ -170,6 +117,8 @@ func HandleOperatorContextLinkPartnerStore(db *sql.DB) http.HandlerFunc {
 			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner or store not found")
 		case errors.Is(err, ErrOperatorContextRequired):
 			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", err.Error())
+		case errors.Is(err, ErrPartnerCannotOwnStore):
+			sendError(w, http.StatusUnprocessableEntity, "PARTNER_OWNERSHIP_INELIGIBLE", "rejected or deactivated partner cannot receive store ownership")
 		case errors.Is(err, ErrStoreOwnershipConflict):
 			sendError(w, http.StatusConflict, "STORE_OWNERSHIP_CONFLICT", "owned store transfer requires a reason and expectedStoreVersion")
 		case errors.Is(err, ErrVersionConflict):

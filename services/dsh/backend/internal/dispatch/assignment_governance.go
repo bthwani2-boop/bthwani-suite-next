@@ -13,9 +13,11 @@ import (
 	"github.com/lib/pq"
 )
 
-const DefaultDispatchOperatorContextID = "default"
-
 var (
+	ErrStale                      = errors.New("dispatch mutation rejected due to stale version")
+	ErrPreconditionFailed         = errors.New("dispatch mutation rejected due to precondition failure")
+	ErrAssignmentNotFound         = errors.New("assignment not found")
+	ErrCaptainProfileNotFound     = errors.New("captain dispatch profile not found")
 	ErrCaptainNotEligible = errors.New("captain is not eligible for dispatch")
 	ErrCaptainAtCapacity  = errors.New("captain dispatch capacity reached")
 	ErrOfferExpired       = errors.New("dispatch offer expired")
@@ -90,17 +92,21 @@ type ReassignAssignmentInput struct {
 	ResponseTimeoutSecond int
 }
 
-func normalizeOperatorContextID(value string) string {
+func normalizeOperatorContextID(value string) (string, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return DefaultDispatchOperatorContextID
+		return "", fmt.Errorf("%w: operatorContextId is required", ErrInvalid)
 	}
-	return value
+	return value, nil
 }
 
 func validateGovernedCreateInput(input *GovernedCreateAssignmentInput) error {
 	input.OrderID = strings.TrimSpace(input.OrderID)
-	input.OperatorContextID = normalizeOperatorContextID(input.OperatorContextID)
+	var err error
+	input.OperatorContextID, err = normalizeOperatorContextID(input.OperatorContextID)
+	if err != nil {
+		return err
+	}
 	input.CaptainID = strings.TrimSpace(input.CaptainID)
 	input.ActorID = strings.TrimSpace(input.ActorID)
 	input.ServiceAreaCode = strings.TrimSpace(input.ServiceAreaCode)
@@ -128,8 +134,42 @@ func validateGovernedCreateInput(input *GovernedCreateAssignmentInput) error {
 	return nil
 }
 
+func GetCaptainDispatchProfile(db *sql.DB, operatorContextID, captainID string) (*CaptainDispatchCandidate, error) {
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
+	captainID = strings.TrimSpace(captainID)
+	if captainID == "" {
+		return nil, fmt.Errorf("%w: captainId is required", ErrInvalid)
+	}
+
+	var candidate CaptainDispatchCandidate
+	err = db.QueryRow(`
+		SELECT accreditation_status, availability_status, max_active_assignments, priority_score, version
+		FROM dsh_captain_dispatch_profiles
+		WHERE operator_context_id = $1 AND captain_id = $2
+	`, operatorContextID, captainID).Scan(
+		&candidate.AccreditationStatus, &candidate.AvailabilityStatus,
+		&candidate.MaxActiveAssignments, &candidate.PriorityScore, &candidate.Version,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrCaptainProfileNotFound
+		}
+		return nil, err
+	}
+	candidate.CaptainID = captainID
+	candidate.Eligible = true
+	return &candidate, nil
+}
+
 func UpsertCaptainDispatchProfile(db *sql.DB, input CaptainDispatchProfileInput) (*CaptainDispatchCandidate, error) {
-	input.OperatorContextID = normalizeOperatorContextID(input.OperatorContextID)
+	var err error
+	input.OperatorContextID, err = normalizeOperatorContextID(input.OperatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	input.CaptainID = strings.TrimSpace(input.CaptainID)
 	input.ActorID = strings.TrimSpace(input.ActorID)
 	input.AccreditationStatus = strings.TrimSpace(input.AccreditationStatus)
@@ -150,7 +190,7 @@ func UpsertCaptainDispatchProfile(db *sql.DB, input CaptainDispatchProfileInput)
 		return nil, fmt.Errorf("%w: invalid capacity or priority score", ErrInvalid)
 	}
 	var version int
-	err := db.QueryRow(`
+	err = db.QueryRow(`
 		INSERT INTO dsh_captain_dispatch_profiles (
 			operator_context_id, captain_id, accreditation_status, availability_status,
 			max_active_assignments, priority_score, updated_by
@@ -197,7 +237,10 @@ func UpsertCaptainDispatchProfile(db *sql.DB, input CaptainDispatchProfileInput)
 }
 
 func ListCaptainDispatchCandidates(db *sql.DB, operatorContextID, serviceAreaCode string, limit int) ([]CaptainDispatchCandidate, error) {
-	operatorContextID = normalizeOperatorContextID(operatorContextID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	serviceAreaCode = strings.TrimSpace(serviceAreaCode)
 	if serviceAreaCode == "" {
 		return nil, fmt.Errorf("%w: serviceAreaCode is required", ErrInvalid)
@@ -206,23 +249,32 @@ func ListCaptainDispatchCandidates(db *sql.DB, operatorContextID, serviceAreaCod
 		limit = 100
 	}
 	rows, err := db.Query(`
-		SELECT p.operator_context_id, p.captain_id, s.service_area_code,
+		SELECT p.operator_context_id, p.captain_id, $2,
 		       p.accreditation_status, p.availability_status,
 		       p.max_active_assignments,
 		       COUNT(a.id) FILTER (WHERE a.status='accepted' OR (a.status='offered' AND a.response_deadline_at>NOW()))::int,
 		       p.priority_score, p.version, p.updated_at
 		FROM dsh_captain_dispatch_profiles p
-		JOIN dsh_actor_service_area_scopes s
-		  ON s.actor_id=p.captain_id AND s.actor_role='captain' AND s.active=true
-		 AND s.service_area_code=$2
+		LEFT JOIN dsh_captain_financial_eligibility financial
+		  ON financial.operator_context_id=p.operator_context_id AND financial.captain_id=p.captain_id
 		LEFT JOIN dsh_assignments a
 		  ON a.operator_context_id=p.operator_context_id AND a.captain_id=p.captain_id
 		 AND (a.status='accepted' OR (a.status='offered' AND a.response_deadline_at>NOW()))
 		WHERE p.operator_context_id=$1
-		GROUP BY p.operator_context_id,p.captain_id,s.service_area_code,p.accreditation_status,
+		  AND p.accreditation_status='approved'
+		  AND p.availability_status='available'
+		  AND COALESCE(financial.eligible,false)=true AND financial.expires_at>NOW()
+		  AND p.updated_at > NOW() - INTERVAL '24 hours'
+		  AND NOT EXISTS (
+		    SELECT 1 FROM dsh_provider_availability_projections absence
+		    WHERE absence.operator_context_id=p.operator_context_id AND absence.actor_type='captain'
+		      AND absence.actor_id=p.captain_id AND absence.status='active'
+		      AND NOW()>=absence.starts_at AND NOW()<absence.ends_at
+		  )
+		GROUP BY p.operator_context_id,p.captain_id,p.accreditation_status,
 		         p.availability_status,p.max_active_assignments,p.priority_score,p.version,p.updated_at
+		HAVING COUNT(a.id) < p.max_active_assignments
 		ORDER BY
-		  CASE WHEN p.accreditation_status='approved' AND p.availability_status='available' THEN 0 ELSE 1 END,
 		  p.priority_score DESC,
 		  COUNT(a.id) ASC,
 		  p.updated_at DESC
@@ -248,16 +300,7 @@ func ListCaptainDispatchCandidates(db *sql.DB, operatorContextID, serviceAreaCod
 
 func getCaptainCandidate(db *sql.DB, operatorContextID, captainID, serviceAreaCode string) (*CaptainDispatchCandidate, error) {
 	if serviceAreaCode == "" {
-		err := db.QueryRow(`
-			SELECT service_area_code FROM dsh_actor_service_area_scopes
-			WHERE actor_id=$1 AND actor_role='captain' AND active=true
-			ORDER BY service_area_code LIMIT 1`, captainID).Scan(&serviceAreaCode)
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrCaptainNotEligible
-		}
-		if err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("%w: serviceAreaCode is required, cannot determine from local DB anymore", ErrInvalid)
 	}
 	items, err := ListCaptainDispatchCandidates(db, operatorContextID, serviceAreaCode, 200)
 	if err != nil {
@@ -285,43 +328,37 @@ func finalizeCandidate(item *CaptainDispatchCandidate) {
 }
 
 func validateCaptainForAssignmentTx(tx *sql.Tx, operatorContextID, captainID, serviceAreaCode string) error {
-	var accreditation, availability string
-	var maxActive int
+	var maxActive, active int
+	var financialEligible, hasAbsence, isFresh bool
 	err := tx.QueryRow(`
-		SELECT accreditation_status, availability_status, max_active_assignments
-		FROM dsh_captain_dispatch_profiles
-		WHERE operator_context_id=$1 AND captain_id=$2
-		FOR UPDATE`, operatorContextID, captainID,
-	).Scan(&accreditation, &availability, &maxActive)
+		SELECT p.max_active_assignments,
+		       COUNT(a.id) FILTER (WHERE a.status='accepted' OR (a.status='offered' AND a.response_deadline_at>NOW()))::int,
+		       COALESCE(f.eligible,false) AND f.expires_at>NOW(),
+		       EXISTS (
+		         SELECT 1 FROM dsh_provider_availability_projections absence
+		         WHERE absence.operator_context_id=p.operator_context_id AND absence.actor_type='captain'
+		           AND absence.actor_id=p.captain_id AND absence.status='active'
+		           AND NOW()>=absence.starts_at AND NOW()<absence.ends_at
+		       ),
+		       p.updated_at > NOW() - INTERVAL '24 hours'
+		FROM dsh_captain_dispatch_profiles p
+		LEFT JOIN dsh_captain_financial_eligibility f
+		  ON f.operator_context_id=p.operator_context_id AND f.captain_id=p.captain_id
+		LEFT JOIN dsh_assignments a
+		  ON a.operator_context_id=p.operator_context_id AND a.captain_id=p.captain_id
+		WHERE p.operator_context_id=$1 AND p.captain_id=$2
+		  AND p.accreditation_status='approved' AND p.availability_status='available'
+		GROUP BY p.operator_context_id, p.captain_id, p.max_active_assignments, f.eligible, f.expires_at, p.updated_at
+		FOR UPDATE OF p`, operatorContextID, captainID,
+	).Scan(&maxActive, &active, &financialEligible, &hasAbsence, &isFresh)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrCaptainNotEligible
 	}
 	if err != nil {
 		return err
 	}
-	if accreditation != "approved" || availability != "available" {
+	if !financialEligible || hasAbsence || !isFresh {
 		return ErrCaptainNotEligible
-	}
-	var scoped int
-	err = tx.QueryRow(`
-		SELECT 1 FROM dsh_actor_service_area_scopes
-		WHERE actor_id=$1 AND actor_role='captain' AND active=true AND service_area_code=$2`,
-		captainID, serviceAreaCode,
-	).Scan(&scoped)
-	if errors.Is(err, sql.ErrNoRows) {
-		return ErrCaptainNotEligible
-	}
-	if err != nil {
-		return err
-	}
-	var active int
-	if err = tx.QueryRow(`
-		SELECT COUNT(*)::int FROM dsh_assignments
-		WHERE operator_context_id=$1 AND captain_id=$2
-		  AND (status='accepted' OR (status='offered' AND response_deadline_at>NOW()))`,
-		operatorContextID, captainID,
-	).Scan(&active); err != nil {
-		return err
 	}
 	if active >= maxActive {
 		return ErrCaptainAtCapacity
@@ -330,20 +367,30 @@ func validateCaptainForAssignmentTx(tx *sql.Tx, operatorContextID, captainID, se
 }
 
 func validateCaptainAcceptanceTx(tx *sql.Tx, operatorContextID, captainID string) error {
-	var accreditation, availability string
+	var financialEligible, hasAbsence, isFresh bool
 	err := tx.QueryRow(`
-		SELECT accreditation_status, availability_status
-		FROM dsh_captain_dispatch_profiles
-		WHERE operator_context_id=$1 AND captain_id=$2
-		FOR UPDATE`, operatorContextID, captainID,
-	).Scan(&accreditation, &availability)
+		SELECT COALESCE(f.eligible,false) AND f.expires_at>NOW(),
+		       EXISTS (
+		         SELECT 1 FROM dsh_provider_availability_projections absence
+		         WHERE absence.operator_context_id=p.operator_context_id AND absence.actor_type='captain'
+		           AND absence.actor_id=p.captain_id AND absence.status='active'
+		           AND NOW()>=absence.starts_at AND NOW()<absence.ends_at
+		       ),
+		       p.updated_at > NOW() - INTERVAL '24 hours'
+		FROM dsh_captain_dispatch_profiles p
+		LEFT JOIN dsh_captain_financial_eligibility f
+		  ON f.operator_context_id=p.operator_context_id AND f.captain_id=p.captain_id
+		WHERE p.operator_context_id=$1 AND p.captain_id=$2
+		  AND p.accreditation_status='approved' AND p.availability_status='available'
+		FOR UPDATE OF p`, operatorContextID, captainID,
+	).Scan(&financialEligible, &hasAbsence, &isFresh)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrCaptainNotEligible
 	}
 	if err != nil {
 		return err
 	}
-	if accreditation != "approved" || availability != "available" {
+	if !financialEligible || hasAbsence || !isFresh {
 		return ErrCaptainNotEligible
 	}
 	return nil
@@ -601,7 +648,10 @@ func DeclineGovernedAssignment(db *sql.DB, assignmentID, captainID, reasonCode, 
 }
 
 func ExpireOverdueAssignments(db *sql.DB, operatorContextID, actorID string, limit int) (int, error) {
-	operatorContextID = normalizeOperatorContextID(operatorContextID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return 0, err
+	}
 	actorID = strings.TrimSpace(actorID)
 	if actorID == "" {
 		actorID = "dispatch-expiry-worker"
@@ -715,7 +765,11 @@ func CancelGovernedAssignment(db *sql.DB, assignmentID, actorID, reasonCode, rea
 
 func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Assignment, error) {
 	input.AssignmentID = strings.TrimSpace(input.AssignmentID)
-	input.OperatorContextID = normalizeOperatorContextID(input.OperatorContextID)
+	var err error
+	input.OperatorContextID, err = normalizeOperatorContextID(input.OperatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	input.CaptainID = strings.TrimSpace(input.CaptainID)
 	input.ActorID = strings.TrimSpace(input.ActorID)
 	input.ServiceAreaCode = strings.TrimSpace(input.ServiceAreaCode)
@@ -856,7 +910,10 @@ func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Ass
 }
 
 func ListDispatchDecisions(db *sql.DB, operatorContextID, assignmentID, orderID string, limit int) ([]DispatchDecision, error) {
-	operatorContextID = normalizeOperatorContextID(operatorContextID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	assignmentID = strings.TrimSpace(assignmentID)
 	orderID = strings.TrimSpace(orderID)
 	if assignmentID == "" && orderID == "" {
@@ -892,7 +949,10 @@ func ListDispatchDecisions(db *sql.DB, operatorContextID, assignmentID, orderID 
 }
 
 func ListOperatorAssignmentsInOperatorContext(db *sql.DB, operatorContextID string, limit int) ([]Assignment, error) {
-	operatorContextID = normalizeOperatorContextID(operatorContextID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	if limit <= 0 || limit > 500 {
 		limit = 200
 	}
@@ -908,7 +968,10 @@ func ListOperatorAssignmentsInOperatorContext(db *sql.DB, operatorContextID stri
 }
 
 func ListCaptainAssignmentsInOperatorContext(db *sql.DB, operatorContextID, captainID string, limit int) ([]Assignment, error) {
-	operatorContextID = normalizeOperatorContextID(operatorContextID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	captainID = strings.TrimSpace(captainID)
 	if captainID == "" {
 		return nil, fmt.Errorf("%w: captain actor is required", ErrInvalid)
@@ -938,11 +1001,15 @@ func insertDispatchDecisionTx(tx *sql.Tx, operatorContextID, assignmentID, order
 	if err != nil {
 		return err
 	}
+	normCtx, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return err
+	}
 	_, err = tx.Exec(`
 		INSERT INTO dsh_dispatch_decisions (
 			operator_context_id,assignment_id,order_id,captain_id,action,reason_code,reason,actor_id,actor_role,metadata
 		) VALUES ($1,NULLIF($2,'')::uuid,NULLIF($3,'')::uuid,NULLIF($4,''),$5,NULLIF($6,''),NULLIF($7,''),$8,$9,$10::jsonb)`,
-		normalizeOperatorContextID(operatorContextID), assignmentID, orderID, captainID, action, reasonCode, reason, actorID, actorRole, string(encoded))
+		normCtx, assignmentID, orderID, captainID, action, reasonCode, reason, actorID, actorRole, string(encoded))
 	return err
 }
 

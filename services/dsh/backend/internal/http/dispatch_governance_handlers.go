@@ -1,6 +1,8 @@
 package http
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -8,17 +10,22 @@ import (
 	"time"
 
 	"dsh-api/internal/dispatch"
+	"dsh-api/internal/orders"
 	"dsh-api/internal/store"
+	"dsh-api/internal/wlt"
 )
 
 func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
+		return
+	}
+	if err := store.EnforceKillSwitch(r.Context(), s.decisionService, "dispatch_assignment", actor.ID); err != nil {
+		store.SendError(w, http.StatusForbidden, "KILL_SWITCH_ACTIVE", err.Error())
 		return
 	}
 	var body struct {
 		OrderID                string `json:"orderId"`
-		OperatorContextID               string `json:"operatorContextId"`
 		CaptainID              string `json:"captainId"`
 		ServiceAreaCode        string `json:"serviceAreaCode"`
 		IdempotencyKey         string `json:"idempotencyKey"`
@@ -30,7 +37,12 @@ func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.Res
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	financialEligibility, err := s.refreshCaptainFinancialEligibility(r, body.OperatorContextID, body.CaptainID)
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
+		return
+	}
+	financialEligibility, err := s.refreshCaptainFinancialEligibility(r, operatorContextID, body.CaptainID)
 	if err != nil {
 		writeCaptainFinancialEligibilityError(w, err)
 		return
@@ -44,7 +56,7 @@ func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.Res
 		idempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	}
 	assignment, replayed, err := dispatch.CreateGovernedAssignment(s.db, dispatch.GovernedCreateAssignmentInput{
-		OrderID: body.OrderID, OperatorContextID: body.OperatorContextID, CaptainID: body.CaptainID,
+		OrderID: body.OrderID, OperatorContextID: operatorContextID, CaptainID: body.CaptainID,
 		ActorID: actor.ID, ServiceAreaCode: body.ServiceAreaCode, IdempotencyKey: idempotencyKey,
 		Priority: body.Priority, DistanceMeters: body.DistanceMeters, OfferReason: body.OfferReason,
 		ResponseTimeoutSecond: body.ResponseTimeoutSeconds,
@@ -66,11 +78,18 @@ func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.Res
 }
 
 func (s *protectedStoreServer) handleListGovernedOperatorDispatchAssignments(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
-	operatorContextID := r.URL.Query().Get("operatorContextId")
+	// operatorContextId must come from the authenticated Identity session, not from
+	// client-supplied query parameters. A browser-controlled ID is a resource locator
+	// claim and confers no authorization (J009).
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+		return
+	}
 	if _, err := dispatch.ExpireOverdueAssignments(s.db, operatorContextID, actor.ID, 100); err != nil {
 		writeGovernedDispatchError(w, err)
 		return
@@ -93,7 +112,27 @@ func (s *protectedStoreServer) handleListGovernedCaptainDispatchAssignments(w ht
 	if !ok {
 		return
 	}
-	operatorContextID := r.URL.Query().Get("operatorContextId")
+	// OperatorContext must come from the trusted Identity session, not the browser (J009).
+	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
+	if operatorContextID == "" {
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+		return
+	}
+
+	readiness, err := s.getCaptainAggregatedReadiness(r, operatorContextID, actor.ID)
+	if err != nil {
+		writeGovernedDispatchError(w, err)
+		return
+	}
+	if !readiness.Ready {
+		store.SendJSON(w, http.StatusForbidden, map[string]any{
+			"error":   "CAPTAIN_NOT_READY",
+			"message": "you must complete your readiness requirements before listing assignments",
+			"missing": readiness.Missing,
+		})
+		return
+	}
+
 	if _, err := dispatch.ExpireOverdueAssignments(s.db, operatorContextID, "dispatch-captain-inbox", 100); err != nil {
 		writeGovernedDispatchError(w, err)
 		return
@@ -120,17 +159,68 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "captain OperatorContext context is required")
 		return
 	}
-	financialEligibility, err := s.refreshCaptainFinancialEligibility(r, actor.OperatorContextID, actor.ID)
+
+	readiness, err := s.getCaptainAggregatedReadiness(r, actor.OperatorContextID, actor.ID)
 	if err != nil {
-		writeCaptainFinancialEligibilityError(w, err)
+		writeGovernedDispatchError(w, err)
 		return
 	}
-	if !financialEligibility.Eligible {
-		store.SendError(w, http.StatusConflict, financialEligibility.IneligibilityReason, "captain does not meet the WLT-backed dispatch balance requirement")
+	if !readiness.Ready {
+		store.SendJSON(w, http.StatusForbidden, map[string]any{
+			"error":   "CAPTAIN_NOT_READY",
+			"message": "you must complete your readiness requirements before accepting assignments",
+			"missing": readiness.Missing,
+		})
 		return
 	}
-	assignment, err := dispatch.AcceptGovernedAssignment(s.db, r.PathValue("assignmentId"), actor.ID)
+
+	assignment, err := dispatch.GetCaptainAssignment(s.db, r.PathValue("assignmentId"), actor.ID)
 	if err != nil {
+		writeGovernedDispatchError(w, err)
+		return
+	}
+
+	var isCod bool
+	var sessionID string
+	var orderAmount int64
+	var orderCurrency string
+
+	tx, err := s.db.BeginTx(r.Context(), nil)
+	if err == nil {
+		deliveryCtx, err := orders.GetOrderDeliveryContext(tx, assignment.OrderID)
+		if err == nil && deliveryCtx.PaymentMethod == "cod" && deliveryCtx.WltPaymentSessionID != "" {
+			isCod = true
+			sessionID = deliveryCtx.WltPaymentSessionID
+		}
+		tx.Rollback()
+	}
+
+	correlationID := r.Header.Get("X-Correlation-Id")
+
+	if isCod {
+		session, err := s.wlt.GetPaymentSession(r.Context(), sessionID)
+		if err != nil {
+			store.SendError(w, http.StatusServiceUnavailable, "WLT_UNAVAILABLE", "failed to verify COD capacity")
+			return
+		}
+		orderAmount = session.Amount
+		orderCurrency = session.Currency
+		_, _, err = s.wlt.ReserveCodCapacity(r.Context(), assignment.OrderID, actor.ID, orderAmount, orderCurrency, correlationID, "accept_"+assignment.ID)
+		if err != nil {
+			if strings.Contains(err.Error(), "INSUFFICIENT") {
+				store.SendError(w, http.StatusConflict, "INSUFFICIENT_COD_CAPACITY", "insufficient COD capacity to accept this order")
+			} else {
+				store.SendError(w, http.StatusConflict, "COD_RESERVATION_FAILED", err.Error())
+			}
+			return
+		}
+	}
+
+	assignment, err = dispatch.AcceptGovernedAssignment(s.db, r.PathValue("assignmentId"), actor.ID)
+	if err != nil {
+		if isCod {
+			s.wlt.ReleaseCodReservation(r.Context(), assignment.OrderID, "assignment_accept_failed", correlationID)
+		}
 		writeGovernedDispatchError(w, err)
 		return
 	}
@@ -154,12 +244,18 @@ func (s *protectedStoreServer) handleDeclineGovernedDispatchAssignment(w http.Re
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	assignmentID := r.PathValue("assignmentId")
+	assignment, _ := dispatch.GetCaptainAssignment(s.db, assignmentID, actor.ID)
+
 	assignment, err := dispatch.DeclineGovernedAssignment(
-		s.db, r.PathValue("assignmentId"), actor.ID, body.ReasonCode, body.Reason,
+		s.db, assignmentID, actor.ID, body.ReasonCode, body.Reason,
 	)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
+	}
+	if assignment != nil {
+		go s.wlt.ReleaseCodReservation(context.Background(), assignment.OrderID, "declined: "+body.ReasonCode, r.Header.Get("X-Correlation-Id"))
 	}
 	payload, err := s.marshalGovernedDispatchAssignment(assignment)
 	if err != nil {
@@ -170,12 +266,11 @@ func (s *protectedStoreServer) handleDeclineGovernedDispatchAssignment(w http.Re
 }
 
 func (s *protectedStoreServer) handleUpsertCaptainDispatchProfile(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
 	var body struct {
-		OperatorContextID             string `json:"operatorContextId"`
 		AccreditationStatus  string `json:"accreditationStatus"`
 		AvailabilityStatus   string `json:"availabilityStatus"`
 		MaxActiveAssignments int    `json:"maxActiveAssignments"`
@@ -185,8 +280,13 @@ func (s *protectedStoreServer) handleUpsertCaptainDispatchProfile(w http.Respons
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
+		return
+	}
 	candidate, err := dispatch.UpsertCaptainDispatchProfile(s.db, dispatch.CaptainDispatchProfileInput{
-		OperatorContextID: body.OperatorContextID, CaptainID: r.PathValue("captainId"),
+		OperatorContextID: operatorContextID, CaptainID: r.PathValue("captainId"),
 		AccreditationStatus: body.AccreditationStatus, AvailabilityStatus: body.AvailabilityStatus,
 		MaxActiveAssignments: body.MaxActiveAssignments, PriorityScore: body.PriorityScore,
 		ExpectedVersion: body.ExpectedVersion, ActorID: actor.ID,
@@ -195,7 +295,7 @@ func (s *protectedStoreServer) handleUpsertCaptainDispatchProfile(w http.Respons
 		writeGovernedDispatchError(w, err)
 		return
 	}
-	financial, financialErr := dispatch.GetCaptainFinancialEligibilitySnapshot(r.Context(), s.db, body.OperatorContextID, r.PathValue("captainId"))
+	financial, financialErr := dispatch.GetCaptainFinancialEligibilitySnapshot(r.Context(), s.db, operatorContextID, r.PathValue("captainId"))
 	if financialErr != nil || !financial.Eligible || !financial.ExpiresAt.After(time.Now()) {
 		candidate.Eligible = false
 		candidate.IneligibilityReason = "CAPTAIN_FINANCIAL_ELIGIBILITY_REQUIRED"
@@ -207,11 +307,16 @@ func (s *protectedStoreServer) handleUpsertCaptainDispatchProfile(w http.Respons
 }
 
 func (s *protectedStoreServer) handleListCaptainDispatchCandidates(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
-	operatorContextID := r.URL.Query().Get("operatorContextId")
+	// OperatorContext must come from the trusted Identity session (J009).
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+		return
+	}
 	limit := parseDispatchLimit(r.URL.Query().Get("limit"), 100)
 	items, err := dispatch.ListCaptainDispatchCandidates(
 		s.db, operatorContextID, r.URL.Query().Get("serviceAreaCode"), limit,
@@ -235,12 +340,11 @@ func (s *protectedStoreServer) handleListCaptainDispatchCandidates(w http.Respon
 }
 
 func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
 	var body struct {
-		OperatorContextID               string `json:"operatorContextId"`
 		CaptainID              string `json:"captainId"`
 		ServiceAreaCode        string `json:"serviceAreaCode"`
 		IdempotencyKey         string `json:"idempotencyKey"`
@@ -252,7 +356,12 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	financialEligibility, err := s.refreshCaptainFinancialEligibility(r, body.OperatorContextID, body.CaptainID)
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
+		return
+	}
+	financialEligibility, err := s.refreshCaptainFinancialEligibility(r, operatorContextID, body.CaptainID)
 	if err != nil {
 		writeCaptainFinancialEligibilityError(w, err)
 		return
@@ -265,8 +374,11 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 	if idempotencyKey == "" {
 		idempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	}
+	assignmentID := r.PathValue("assignmentId")
+	existingAssignment, _ := dispatch.GetCaptainAssignment(s.db, assignmentID, actor.ID)
+
 	assignment, err := dispatch.ReassignGovernedAssignment(s.db, dispatch.ReassignAssignmentInput{
-		AssignmentID: r.PathValue("assignmentId"), OperatorContextID: body.OperatorContextID,
+		AssignmentID: assignmentID, OperatorContextID: operatorContextID,
 		CaptainID: body.CaptainID, ActorID: actor.ID, ServiceAreaCode: body.ServiceAreaCode,
 		IdempotencyKey: idempotencyKey, Priority: body.Priority, DistanceMeters: body.DistanceMeters,
 		Reason: body.Reason, ResponseTimeoutSecond: body.ResponseTimeoutSeconds,
@@ -274,6 +386,9 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
+	}
+	if existingAssignment != nil {
+		go s.wlt.ReleaseCodReservation(context.Background(), existingAssignment.OrderID, "reassigned: "+body.Reason, r.Header.Get("X-Correlation-Id"))
 	}
 	payload, err := s.marshalGovernedDispatchAssignment(assignment)
 	if err != nil {
@@ -284,7 +399,7 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 }
 
 func (s *protectedStoreServer) handleCancelGovernedDispatchAssignment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -295,28 +410,38 @@ func (s *protectedStoreServer) handleCancelGovernedDispatchAssignment(w http.Res
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	assignmentID := r.PathValue("assignmentId")
+	existingAssignment, _ := dispatch.GetCaptainAssignment(s.db, assignmentID, actor.ID)
+
 	if err := dispatch.CancelGovernedAssignment(
-		s.db, r.PathValue("assignmentId"), actor.ID, body.ReasonCode, body.Reason,
+		s.db, assignmentID, actor.ID, body.ReasonCode, body.Reason,
 	); err != nil {
 		writeGovernedDispatchError(w, err)
 		return
+	}
+	if existingAssignment != nil {
+		go s.wlt.ReleaseCodReservation(context.Background(), existingAssignment.OrderID, "cancelled: "+body.ReasonCode, r.Header.Get("X-Correlation-Id"))
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *protectedStoreServer) handleExpireGovernedDispatchAssignments(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
 	var body struct {
-		OperatorContextID string `json:"operatorContextId"`
 		Limit    int    `json:"limit"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	count, err := dispatch.ExpireOverdueAssignments(s.db, body.OperatorContextID, actor.ID, body.Limit)
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
+		return
+	}
+	count, err := dispatch.ExpireOverdueAssignments(s.db, operatorContextID, actor.ID, body.Limit)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
@@ -325,12 +450,18 @@ func (s *protectedStoreServer) handleExpireGovernedDispatchAssignments(w http.Re
 }
 
 func (s *protectedStoreServer) handleListDispatchDecisions(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
+	// OperatorContext must come from the trusted Identity session (J009).
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+		return
+	}
 	items, err := dispatch.ListDispatchDecisions(
-		s.db, r.URL.Query().Get("operatorContextId"), r.URL.Query().Get("assignmentId"),
+		s.db, operatorContextID, r.URL.Query().Get("assignmentId"),
 		r.URL.Query().Get("orderId"), parseDispatchLimit(r.URL.Query().Get("limit"), 100),
 	)
 	if err != nil {
@@ -357,6 +488,23 @@ func (s *protectedStoreServer) marshalGovernedDispatchAssignment(item *dispatch.
 	payload["cancelledBy"] = governance.CancelledBy
 	payload["supersedesAssignmentId"] = governance.SupersedesAssignmentID
 	payload["version"] = governance.Version
+	payload["allowedActions"] = dispatch.AssignmentAllowedActions(item.Status, item.Delivery.Status)
+
+	var rawAddress []byte
+	err = s.db.QueryRow(`SELECT delivery_address_snapshot FROM dsh_orders WHERE id = $1::uuid`, item.OrderID).Scan(&rawAddress)
+	if err == nil && len(rawAddress) > 0 {
+		var addr map[string]any
+		if err := json.Unmarshal(rawAddress, &addr); err == nil {
+			if item.Delivery.Status == dispatch.DeliveryAssigned || item.Delivery.Status == dispatch.DeliveryDriverAssigned || item.Delivery.Status == dispatch.DeliveryArrivedStore {
+				delete(addr, "address1")
+				delete(addr, "address2")
+				delete(addr, "contactPhone")
+				delete(addr, "instructions")
+			}
+			payload["deliveryAddress"] = addr
+		}
+	}
+
 	return payload, nil
 }
 
@@ -387,6 +535,23 @@ func (s *protectedStoreServer) marshalGovernedDispatchAssignments(items []dispat
 		row["cancelledBy"] = meta.CancelledBy
 		row["supersedesAssignmentId"] = meta.SupersedesAssignmentID
 		row["version"] = meta.Version
+		row["allowedActions"] = dispatch.AssignmentAllowedActions(items[i].Status, items[i].Delivery.Status)
+
+		var rawAddress []byte
+		err := s.db.QueryRow(`SELECT delivery_address_snapshot FROM dsh_orders WHERE id = $1::uuid`, items[i].OrderID).Scan(&rawAddress)
+		if err == nil && len(rawAddress) > 0 {
+			var addr map[string]any
+			if err := json.Unmarshal(rawAddress, &addr); err == nil {
+				if items[i].Delivery.Status == dispatch.DeliveryAssigned || items[i].Delivery.Status == dispatch.DeliveryDriverAssigned || items[i].Delivery.Status == dispatch.DeliveryArrivedStore {
+					delete(addr, "address1")
+					delete(addr, "address2")
+					delete(addr, "contactPhone")
+					delete(addr, "instructions")
+				}
+				row["deliveryAddress"] = addr
+			}
+		}
+
 		payload[i] = row
 	}
 	return payload, nil

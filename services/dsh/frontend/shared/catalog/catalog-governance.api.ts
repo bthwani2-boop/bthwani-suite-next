@@ -310,6 +310,30 @@ export async function resumeFieldStoreAssortment(
   );
 }
 
+// ── Retire assortment (permanent lifecycle closure) ──────────────────────────
+
+export async function retireOperatorStoreAssortment(
+  storeId: string,
+  productId: string,
+  input: { readonly reason: string; readonly expectedVersion: number },
+): Promise<{ readonly assortment: StoreAssortment }> {
+  return request<{ readonly assortment: StoreAssortment }>(
+    `/dsh/operator/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(productId)}/retire`,
+    { method: "POST", body: input },
+  );
+}
+
+export async function retirePartnerStoreAssortment(
+  storeId: string,
+  productId: string,
+  input: { readonly reason: string; readonly expectedVersion: number },
+): Promise<{ readonly assortment: StoreAssortment }> {
+  return request<{ readonly assortment: StoreAssortment }>(
+    `/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(productId)}/retire`,
+    { method: "POST", body: input },
+  );
+}
+
 export async function fetchOperatorCatalogAudit(query?: {
   readonly entityType?: string;
   readonly entityId?: string;

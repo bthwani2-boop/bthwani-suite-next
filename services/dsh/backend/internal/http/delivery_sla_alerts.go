@@ -12,7 +12,7 @@ import (
 )
 
 func (s *protectedStoreServer) handleRefreshDeliverySLAAlerts(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionManage, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -30,7 +30,7 @@ func (s *protectedStoreServer) handleRefreshDeliverySLAAlerts(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleListDeliverySLAAlerts(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionRead, "operator")
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -53,7 +53,7 @@ func (s *protectedStoreServer) handleListDeliverySLAAlerts(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleAcknowledgeDeliverySLAAlert(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

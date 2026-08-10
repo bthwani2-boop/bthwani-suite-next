@@ -268,7 +268,7 @@ func TestMarketingTargetVisibilityGateDBIntegration(t *testing.T) {
 			id, slug, display_name, status, city_code, service_area_code,
 			serviceability_status, is_visible, partner_readiness,
 			catalog_approval_status, marketing_visibility
-		) VALUES ($1, $1, 'Marketing Gate Store', 'active', 'SAN', 'SAN-1',
+		) VALUES ($1, $1, 'Marketing Gate Store', 'published', 'SAN', 'SAN-1',
 			'serviceable', true, 'ready', 'approved', 'visible')`, storeID)
 	if err != nil {
 		t.Fatalf("seed eligible marketing target store: %v", err)

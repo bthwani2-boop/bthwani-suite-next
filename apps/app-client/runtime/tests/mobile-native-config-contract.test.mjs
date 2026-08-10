@@ -21,6 +21,26 @@ function withRestoredEnvironment(run) {
   }
 }
 
+function withLocalFirebaseDiscoveryDisabled(run) {
+  const originalExistsSync = fs.existsSync;
+  fs.existsSync = (candidate) => {
+    const normalized = String(candidate).replaceAll("\\", "/").toLowerCase();
+    if (
+      normalized.endsWith("/google-services.json") ||
+      normalized.endsWith("/secrets.local.mobile.json")
+    ) {
+      return false;
+    }
+    return originalExistsSync(candidate);
+  };
+
+  try {
+    return run();
+  } finally {
+    fs.existsSync = originalExistsSync;
+  }
+}
+
 test("placeholder Firebase files are never tracked as native credentials", () => {
   for (const appKey of mobileApps) {
     const file = path.join(repoRoot, "apps", appKey, "runtime", "google-services.json");
@@ -29,7 +49,7 @@ test("placeholder Firebase files are never tracked as native credentials", () =>
 });
 
 test("Android Firebase configuration is isolated per application", () => {
-  withRestoredEnvironment(() => {
+  withRestoredEnvironment(() => withLocalFirebaseDiscoveryDisabled(() => {
     delete process.env.GOOGLE_SERVICES_JSON;
     delete process.env.GOOGLE_SERVICES_JSON_APP_CLIENT;
 
@@ -41,7 +61,7 @@ test("Android Firebase configuration is isolated per application", () => {
     const configured = defineBthwaniExpoApp("app-client");
     assert.equal(configured.android.googleServicesFile, "C:/secure/app-client/google-services.json");
     assert.equal(configured.extra.notifications.androidNativeConfigured, true);
-  });
+  }));
 });
 
 test("mobile startup proves backends before Metro and avoids Expo Android stream piping", () => {

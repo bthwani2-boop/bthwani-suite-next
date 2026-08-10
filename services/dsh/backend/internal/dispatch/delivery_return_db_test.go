@@ -16,7 +16,7 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 	storeID := "return-store-" + suffix
 	captainID := "return-captain-" + suffix
 	clientID := uuid.NewString()
-	if _, err := db.Exec(`INSERT INTO dsh_stores(id,slug,display_name,status,city_code,service_area_code,serviceability_status,is_visible) VALUES($1,$1,'Return Store','active','SAN','SAN-1','serviceable',true)`, storeID); err != nil {
+	if _, err := db.Exec(`INSERT INTO dsh_stores(id,slug,display_name,status,city_code,service_area_code,serviceability_status,is_visible) VALUES($1,$1,'Return Store','published','SAN','SAN-1','serviceable',true)`, storeID); err != nil {
 		t.Fatal(err)
 	}
 	var checkoutIntentID string

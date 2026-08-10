@@ -3,7 +3,6 @@ package http
 import (
 	"database/sql"
 	"errors"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -68,15 +67,12 @@ func handlePublicMedia(db *sql.DB, mediaProvider *media.Provider) http.HandlerFu
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load media asset")
 			return
 		}
-		reader, contentType, err := mediaClient.Get(r.Context(), asset.ObjectKey)
+		signedURL, _, err := mediaClient.PresignGet(r.Context(), asset.ObjectKey, 2*time.Hour)
 		if err != nil {
-			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "media not found")
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to generate preview url")
 			return
 		}
-		defer reader.Close()
-		w.Header().Set("Content-Type", contentType)
-		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-		_, _ = io.Copy(w, reader)
+		http.Redirect(w, r, signedURL, http.StatusFound)
 	}
 }
 
@@ -85,7 +81,7 @@ func (s *protectedStoreServer) partnerStore(w http.ResponseWriter, r *http.Reque
 	if !ok {
 		return store.StoreActor{}, "", false
 	}
-	row, _, err := store.ResolveActorStore(r.Context(), s.db, actor)
+	row, _, err := store.ResolveActorStore(r.Context(), s.db, s.workforce, actor)
 	if err != nil {
 		s.writeStoreError(w, err)
 		return store.StoreActor{}, "", false
@@ -152,7 +148,17 @@ func (s *protectedStoreServer) handleFieldUpdatePartnerStore(w http.ResponseWrit
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	row, audit, err := store.UpdateFieldStoreDraft(r.Context(), s.db, storeID, actorID, correlationID(r), input)
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if idempotencyKey == "" {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key header is required")
+		return
+	}
+
+	row, audit, err := store.UpdateFieldStoreDraft(r.Context(), s.db, storeID, actorID, idempotencyKey, correlationID(r), input)
+	if errors.Is(err, store.ErrIdempotencyConflict) {
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "idempotency key was already used with a different store draft update request")
+		return
+	}
 	if err != nil {
 		s.writeStoreError(w, err)
 		return

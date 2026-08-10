@@ -2,10 +2,8 @@ openapi: 3.1.0
 info:
   title: BThwani DSH Catalog Governance API
   version: 1.0.0
-  description: >-
-    Governed catalog contract for PIM attributes, product relationships,
+  description: Governed catalog contract for PIM attributes, product relationships,
     temporary assortment pauses, catalog audit readback and guarded rollback.
-
 x-bthwani-owner: services/dsh
 x-bthwani-parent-contract: contracts/dsh.catalog.openapi.yaml
 x-bthwani-contract-role: executable-fragment
@@ -14,310 +12,898 @@ x-bthwani-client-generation: DISABLED
 x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
 x-bthwani-adapter-owner: frontend/shared/catalog/catalog-governance.api.ts
 x-bthwani-runtime-dependency: true
-
 paths:
   /dsh/operator/catalog/attributes:
     get:
       operationId: listOperatorCatalogAttributes
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
       responses:
-        "200": { description: Governed catalog attributes }
+        '200':
+          description: Governed catalog attributes
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
     post:
       operationId: createOperatorCatalogAttribute
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
-        "201": { description: Attribute created }
-
+        '201':
+          description: Attribute created
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /dsh/operator/catalog/attributes/{attributeId}/options:
     parameters:
-      - $ref: "#/components/parameters/AttributeId"
+    - $ref: '#/components/parameters/AttributeId'
     get:
       operationId: listOperatorCatalogAttributeOptions
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
       responses:
-        "200": { description: Attribute options }
+        '200':
+          description: Attribute options
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
     post:
       operationId: createOperatorCatalogAttributeOption
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
-        "201": { description: Attribute option created }
-
+        '201':
+          description: Attribute option created
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /dsh/operator/catalog/nodes/{nodeId}/attributes/{attributeId}:
     parameters:
-      - $ref: "#/components/parameters/NodeId"
-      - $ref: "#/components/parameters/AttributeId"
+    - $ref: '#/components/parameters/NodeId'
+    - $ref: '#/components/parameters/AttributeId'
     put:
       operationId: upsertOperatorCatalogNodeAttributeRule
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
-        "200": { description: Node attribute rule saved }
-
+        '200':
+          description: Node attribute rule saved
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /dsh/operator/catalog/master-products/{productId}/attribute-values:
     parameters:
-      - $ref: "#/components/parameters/ProductId"
+    - name: productId
+      in: path
+      required: true
+      schema:
+        type: string
     get:
       operationId: listOperatorMasterProductAttributeValues
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
       responses:
-        "200": { description: Master-product attribute values }
-
+        '200':
+          description: Master-product attribute values
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /dsh/operator/catalog/master-products/{productId}/attribute-values/{attributeId}:
     parameters:
-      - $ref: "#/components/parameters/ProductId"
-      - $ref: "#/components/parameters/AttributeId"
+    - name: productId
+      in: path
+      required: true
+      schema:
+        type: string
+    - $ref: '#/components/parameters/AttributeId'
     put:
       operationId: upsertOperatorMasterProductAttributeValue
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
-        "200": { description: Master-product attribute value saved }
-
+        '200':
+          description: Master-product attribute value saved
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /dsh/operator/catalog/master-products/{productId}/relationships:
     parameters:
-      - $ref: "#/components/parameters/ProductId"
+    - name: productId
+      in: path
+      required: true
+      schema:
+        type: string
     get:
       operationId: listOperatorMasterProductRelationships
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
       responses:
-        "200": { description: Product alternatives, substitutes and complements }
+        '200':
+          description: Product alternatives
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
     put:
       operationId: upsertOperatorMasterProductRelationship
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
-        "200": { description: Product relationship saved }
-
+        '200':
+          description: Product relationship saved
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /dsh/operator/catalog/master-products/{productId}/relationships/{relationshipId}:
     parameters:
-      - $ref: "#/components/parameters/ProductId"
-      - $ref: "#/components/parameters/RelationshipId"
-      - name: expectedVersion
-        in: query
-        required: true
-        schema: { type: integer, minimum: 1 }
+    - name: productId
+      in: path
+      required: true
+      schema:
+        type: string
+    - $ref: '#/components/parameters/RelationshipId'
+    - name: expectedVersion
+      in: query
+      required: true
+      schema:
+        type: integer
+        minimum: 1
     delete:
       operationId: deleteOperatorMasterProductRelationship
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
       responses:
-        "204": { description: Product relationship deleted }
-
+        '204':
+          description: Product relationship deleted
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /dsh/operator/stores/{storeId}/assortment-pauses:
     parameters:
-      - $ref: "#/components/parameters/StoreId"
+    - $ref: '#/components/parameters/StoreId'
     get:
       operationId: listOperatorAssortmentPauses
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
       responses:
-        "200": { description: Store assortment pause states }
-
+        '200':
+          description: Store assortment pause states
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /dsh/operator/stores/{storeId}/assortment/{masterProductId}/pause:
     parameters:
-      - $ref: "#/components/parameters/StoreId"
-      - $ref: "#/components/parameters/MasterProductId"
+    - $ref: '#/components/parameters/StoreId'
+    - $ref: '#/components/parameters/MasterProductId'
     post:
       operationId: pauseOperatorStoreAssortment
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
-        "200": { description: Assortment temporarily paused }
-
+        '200':
+          description: Assortment temporarily paused
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /dsh/operator/stores/{storeId}/assortment/{masterProductId}/resume:
     parameters:
-      - $ref: "#/components/parameters/StoreId"
-      - $ref: "#/components/parameters/MasterProductId"
+    - $ref: '#/components/parameters/StoreId'
+    - $ref: '#/components/parameters/MasterProductId'
     post:
       operationId: resumeOperatorStoreAssortment
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
-        "200": { description: Assortment resumed from temporary pause }
-
+        '200':
+          description: Assortment resumed from temporary pause
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /dsh/operator/catalog/audit:
     get:
       operationId: listOperatorCatalogAudit
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
       parameters:
-        - { name: entityType, in: query, schema: { type: string } }
-        - { name: entityId, in: query, schema: { type: string } }
-        - { name: action, in: query, schema: { type: string, enum: [INSERT, UPDATE, DELETE, ROLLBACK] } }
-        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
-        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      - name: entityType
+        in: query
+        schema:
+          type: string
+      - name: entityId
+        in: query
+        schema:
+          type: string
+      - name: action
+        in: query
+        schema:
+          type: string
+          enum:
+          - INSERT
+          - UPDATE
+          - DELETE
+          - ROLLBACK
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          minimum: 0
       responses:
-        "200": { description: Append-only catalog audit page }
-
+        '200':
+          description: Append-only catalog audit page
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /dsh/operator/catalog/audit/{auditId}/rollback:
     parameters:
-      - $ref: "#/components/parameters/AuditId"
+    - $ref: '#/components/parameters/AuditId'
     post:
       operationId: rollbackOperatorCatalogAudit
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
-        "200": { description: Guarded rollback completed }
-        "409": { description: Entity version changed after the audited update }
-
+        '200':
+          description: Guarded rollback completed
+        '409':
+          description: Entity version changed after the audited update
   /dsh/partner/catalog/attributes:
     get:
       operationId: listPartnerCatalogAttributes
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
       responses:
-        "200": { description: Published attribute definitions for partner catalog }
-
+        '200':
+          description: Published attribute definitions for partner catalog
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /dsh/partner/catalog/attributes/{attributeId}/options:
     parameters:
-      - $ref: "#/components/parameters/AttributeId"
+    - $ref: '#/components/parameters/AttributeId'
     get:
       operationId: listPartnerCatalogAttributeOptions
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
       responses:
-        "200": { description: Published attribute options }
-
+        '200':
+          description: Published attribute options
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /dsh/partner/catalog/master-products/{productId}/attribute-values:
     parameters:
-      - $ref: "#/components/parameters/ProductId"
+    - name: productId
+      in: path
+      required: true
+      schema:
+        type: string
     get:
       operationId: listPartnerMasterProductAttributeValues
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
       responses:
-        "200": { description: Published product attribute values }
-
+        '200':
+          description: Published product attribute values
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema: &id001
+          type: string
   /dsh/partner/catalog/master-products/{productId}/relationships:
     parameters:
-      - $ref: "#/components/parameters/ProductId"
+    - name: productId
+      in: path
+      required: true
+      schema:
+        type: string
     get:
       operationId: listPartnerMasterProductRelationships
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
       responses:
-        "200": { description: Published product relationships }
-
-  /dsh/partner/stores/{storeId}/assortment-pauses:
-    parameters:
-      - $ref: "#/components/parameters/StoreId"
-    get:
-      operationId: listPartnerAssortmentPauses
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200": { description: Pause states for the authenticated partner store }
-
-  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/pause:
-    parameters:
-      - $ref: "#/components/parameters/StoreId"
-      - $ref: "#/components/parameters/MasterProductId"
-    post:
-      operationId: pausePartnerStoreAssortment
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
-      responses:
-        "200": { description: Partner assortment paused }
-
-  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/resume:
-    parameters:
-      - $ref: "#/components/parameters/StoreId"
-      - $ref: "#/components/parameters/MasterProductId"
-    post:
-      operationId: resumePartnerStoreAssortment
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
-      responses:
-        "200": { description: Partner assortment resumed }
-
+        '200':
+          description: Published product relationships
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /dsh/field/catalog/attributes:
     get:
       operationId: listFieldCatalogAttributes
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
       responses:
-        "200": { description: Published attribute definitions for field catalog }
-
+        '200':
+          description: Published attribute definitions for field catalog
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /dsh/field/catalog/attributes/{attributeId}/options:
     parameters:
-      - $ref: "#/components/parameters/AttributeId"
+    - $ref: '#/components/parameters/AttributeId'
     get:
       operationId: listFieldCatalogAttributeOptions
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
       responses:
-        "200": { description: Published field attribute options }
-
+        '200':
+          description: Published field attribute options
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /dsh/field/catalog/master-products/{productId}/attribute-values:
     parameters:
-      - $ref: "#/components/parameters/ProductId"
+    - name: productId
+      in: path
+      required: true
+      schema:
+        type: string
     get:
       operationId: listFieldMasterProductAttributeValues
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
       responses:
-        "200": { description: Published field product attribute values }
-
+        '200':
+          description: Published field product attribute values
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema: *id001
   /dsh/field/catalog/master-products/{productId}/relationships:
     parameters:
-      - $ref: "#/components/parameters/ProductId"
+    - name: productId
+      in: path
+      required: true
+      schema:
+        type: string
     get:
       operationId: listFieldMasterProductRelationships
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
+      tags:
+      - CentralCatalogGovernance
+      security:
+      - bearerAuth: []
       responses:
-        "200": { description: Published field product relationships }
-
-  /dsh/field/partners/{partnerId}/assortment-pauses:
-    parameters:
-      - $ref: "#/components/parameters/PartnerId"
-    get:
-      operationId: listFieldAssortmentPauses
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200": { description: Pause states for field-authorized partner store }
-
-  /dsh/field/partners/{partnerId}/assortment/{masterProductId}/pause:
-    parameters:
-      - $ref: "#/components/parameters/PartnerId"
-      - $ref: "#/components/parameters/MasterProductId"
+        '200':
+          description: Published field product relationships
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /dsh/operator/catalog/assets/cleanup-orphans:
     post:
-      operationId: pauseFieldStoreAssortment
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      tags:
+      - operator
+      operationId: post_dsh_operator_catalog_assets_cleanup_orphans
       responses:
-        "200": { description: Field-authorized assortment paused }
-
-  /dsh/field/partners/{partnerId}/assortment/{masterProductId}/resume:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/operator/catalog/assets/{assetId}/simulate-scan:
     parameters:
-      - $ref: "#/components/parameters/PartnerId"
-      - $ref: "#/components/parameters/MasterProductId"
+    - name: assetId
+      in: path
+      required: true
+      schema:
+        type: string
     post:
-      operationId: resumeFieldStoreAssortment
-      tags: [CentralCatalogGovernance]
-      security: [{ bearerAuth: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      tags:
+      - operator
+      operationId: post_dsh_operator_catalog_assets__assetId__simulate_scan
       responses:
-        "200": { description: Field-authorized assortment resumed }
-
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/operator/catalog/nodes/{nodeId}/deprecate:
+    parameters:
+    - name: nodeId
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      tags:
+      - operator
+      operationId: post_dsh_operator_catalog_nodes__nodeId__deprecate
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/operator/catalog/nodes/{nodeId}/merge:
+    parameters:
+    - name: nodeId
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      tags:
+      - operator
+      operationId: post_dsh_operator_catalog_nodes__nodeId__merge
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
+  /dsh/operator/catalog/nodes/{nodeId}/move:
+    parameters:
+    - name: nodeId
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      tags:
+      - operator
+      operationId: post_dsh_operator_catalog_nodes__nodeId__move
+      responses:
+        '200':
+          description: Auto-generated
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -325,11 +911,51 @@ components:
       scheme: bearer
       bearerFormat: JWT
   parameters:
-    AttributeId: { name: attributeId, in: path, required: true, schema: { type: string } }
-    NodeId: { name: nodeId, in: path, required: true, schema: { type: string } }
-    ProductId: { name: productId, in: path, required: true, schema: { type: string } }
-    MasterProductId: { name: masterProductId, in: path, required: true, schema: { type: string } }
-    RelationshipId: { name: relationshipId, in: path, required: true, schema: { type: string } }
-    StoreId: { name: storeId, in: path, required: true, schema: { type: string } }
-    PartnerId: { name: partnerId, in: path, required: true, schema: { type: string } }
-    AuditId: { name: auditId, in: path, required: true, schema: { type: string } }
+    AttributeId:
+      name: attributeId
+      in: path
+      required: true
+      schema:
+        type: string
+    NodeId:
+      name: nodeId
+      in: path
+      required: true
+      schema:
+        type: string
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema:
+        type: string
+    MasterProductId:
+      name: masterProductId
+      in: path
+      required: true
+      schema:
+        type: string
+    RelationshipId:
+      name: relationshipId
+      in: path
+      required: true
+      schema:
+        type: string
+    StoreId:
+      name: storeId
+      in: path
+      required: true
+      schema:
+        type: string
+    PartnerId:
+      name: partnerId
+      in: path
+      required: true
+      schema:
+        type: string
+    AuditId:
+      name: auditId
+      in: path
+      required: true
+      schema:
+        type: string

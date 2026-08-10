@@ -1,0 +1,29 @@
+schemaVersion: 1
+package: smsm-dsh-wlt-journeys
+execution: STRICT_SEQUENTIAL
+defaultStatus: NOT_ASSESSED
+foundation:
+  required: true
+  gates: [authority, branch_pin, coverage, workspaces, contracts, generated_clients, migrations, runtime, ci, same_sha_evidence]
+orderedGroups:
+  - range: J001..J019
+    directory: 01-identity-workforce-platform-providers
+  - range: J020..J040
+    directory: 02-partner-store-catalog-marketing
+  - range: J041..J055
+    directory: 03-customer-cart-checkout-order
+  - range: J056..J078
+    directory: 04-fulfillment-delivery-support
+  - range: J079..J094
+    directory: 05-financial-closure
+  - range: J095..J107
+    directory: 06-cross-cutting-final
+rules:
+  expectedJourneyCount: 107
+  requiredSlicesPerJourney: 24
+  openOnlyAfterDependenciesClosed: true
+  requiredManualAcceptance: true
+  requiredRuntimeReadback: true
+  requiredSameShaEvidence: true
+  zeroUnmappedControls: true
+  zeroParallelTruths: true

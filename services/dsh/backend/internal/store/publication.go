@@ -21,7 +21,7 @@ func ClientStorefrontPredicate(alias string) string {
 	}
 
 	return fmt.Sprintf(`%[1]sis_visible = true
-	AND %[1]sstatus = 'active'
+	AND %[1]sstatus = 'published'
 	AND %[1]sserviceability_status IN ('serviceable','limited')
 	AND %[1]spartner_readiness = 'ready'
 	AND %[1]scatalog_approval_status = 'approved'

@@ -133,7 +133,7 @@ Invoke-RuntimeEngine -EngineAction "seed" -EngineProfiles "dsh,media"
 $statePath = Join-Path ([System.IO.Path]::GetTempPath()) "bthwani-dsh-smoke-$([Guid]::NewGuid().ToString('N')).json"
 try {
   Invoke-DshSmokeScript -Name "DSH catalog smoke" -ScriptPath $DshCatalogSmoke -Parameters @{ StatePath = $statePath }
-  Invoke-DshSmokeScript -Name "DSH partner onboarding smoke" -ScriptPath $DshPartnerSmoke
+  Invoke-DshSmokeScript -Name "DSH partner onboarding smoke" -ScriptPath $DshPartnerSmoke -Parameters @{ StatePath = $statePath }
 
   $clientParameters = @{ StatePath = $statePath }
   if ($profileList -contains "wlt") { $clientParameters.WltEnabled = $true }

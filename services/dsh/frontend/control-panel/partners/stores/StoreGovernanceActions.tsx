@@ -13,20 +13,21 @@ import type {
 type Props = {
   readonly store: DshStoreAdminDetail;
   readonly actionState: StoreActionState;
+  readonly diagnosticsState?: any; // DshStorePublicationDiagnosticsState
   readonly onSubmit: (input: OperatorStoreGovernanceRequest) => Promise<void>;
 };
 
-export function StoreGovernanceActions({ store, actionState, onSubmit }: Props) {
+export function StoreGovernanceActions({ store, actionState, diagnosticsState, onSubmit }: Props) {
   const [action, setAction] = useState<OperatorStoreGovernanceRequest["action"]>("lifecycle");
-  const [value, setValue] = useState("active");
+  const [value, setValue] = useState("published");
   const [reason, setReason] = useState("");
 
   const options = action === "lifecycle"
     ? [
-        { value: "active", label: "نشط" },
-        { value: "inactive", label: "غير نشط" },
-        { value: "temporarily_closed", label: "إغلاق مؤقت" },
-        { value: "unavailable", label: "غير متاح" },
+        { value: "published", label: "نشر" },
+        { value: "paused", label: "إيقاف مؤقت" },
+        { value: "suspended", label: "تعليق" },
+        { value: "closed", label: "إغلاق دائم" },
       ]
     : action === "visibility" || action === "marketing-visibility"
       ? [
@@ -91,7 +92,7 @@ export function StoreGovernanceActions({ store, actionState, onSubmit }: Props) 
                 : nextAction === "serviceability" ? "serviceable"
                 : nextAction === "partner-readiness" ? "pending"
                 : nextAction === "catalog-approval" ? "draft"
-                : "active",
+                : "published",
             );
           }}
         />
@@ -110,7 +111,11 @@ export function StoreGovernanceActions({ store, actionState, onSubmit }: Props) 
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
         <CpButton
-          disabled={reason.trim().length < 3 || actionState.kind === "submitting"}
+          disabled={
+            reason.trim().length < 3 ||
+            actionState.kind === "submitting" ||
+            (action === "lifecycle" && value === "published" && diagnosticsState?.kind === "success" && !diagnosticsState.isReady)
+          }
           onClick={() => void onSubmit({
             expectedVersion: store.version,
             action,
@@ -125,6 +130,16 @@ export function StoreGovernanceActions({ store, actionState, onSubmit }: Props) 
           <span role="alert">{actionState.message}</span>
         )}
       </div>
+      {action === "lifecycle" && (value === "paused" || value === "suspended" || value === "closed") && (
+        <div style={{ marginTop: "0.75rem", padding: "0.5rem", background: "var(--bthwani-control-panel-surface-muted)", color: "var(--bthwani-control-panel-danger)", borderRadius: "0.25rem" }}>
+          <strong>تنبيه:</strong> سيؤثر هذا الإجراء فوراً على المتجر ولن يظهر للعملاء الجدد. سيتم إلغاء الطلبات غير المكتملة بناءً على الإجراء.
+        </div>
+      )}
+      {action === "lifecycle" && value === "published" && diagnosticsState?.kind === "success" && !diagnosticsState.isReady && (
+        <div style={{ marginTop: "0.75rem", padding: "0.5rem", background: "var(--bthwani-control-panel-surface-muted)", color: "var(--bthwani-control-panel-danger)", borderRadius: "0.25rem" }}>
+          <strong>لا يمكن النشر:</strong> يرجى إكمال متطلبات الجاهزية (موانع النشر: {diagnosticsState.blockers.join("، ")}).
+        </div>
+      )}
     </section>
   );
 }

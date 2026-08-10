@@ -294,9 +294,10 @@
  "contextSemantics": {
  "type": "object",
  "additionalProperties": false,
- "required": ["operatorContext", "operatorContextPurpose", "partnerOrganization", "store"],
+ "required": ["platformContext", "operatorContext", "operatorContextPurpose", "partnerOrganization", "store"],
  "properties": {
- "operatorContext": { "const": "PLATFORM_ISOLATION_CONTEXT" },
+ "platformContext": { "const": "PLATFORM_ISOLATION_BOUNDARY" },
+ "operatorContext": { "const": "TRUSTED_OPERATIONAL_CONTEXT_WITHIN_PLATFORM_CONTEXT" },
  "operatorContextPurpose": { "const": "TRUST_AND_DATA_ISOLATION" },
  "partnerOrganization": { "const": "BUSINESS_SCOPE_NOT_OPERATOR_CONTEXT" },
  "store": { "const": "BUSINESS_SCOPE_NOT_OPERATOR_CONTEXT" }

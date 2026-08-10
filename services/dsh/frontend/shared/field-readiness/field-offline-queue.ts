@@ -135,6 +135,19 @@ async function removeLegacyQueue(): Promise<void> {
   ]);
 }
 
+/**
+ * Carries a stable reason code so callers decide recover-vs-retry from the
+ * code, never from matching the message text.
+ */
+export class FieldOfflineQueueCorruptError extends Error {
+  readonly code = "OFFLINE_QUEUE_CORRUPT";
+
+  constructor(cause: string) {
+    super(`field offline queue is corrupt and was preserved for recovery: ${cause}`);
+    this.name = "FieldOfflineQueueCorruptError";
+  }
+}
+
 async function readQueue(): Promise<FieldOfflineOperation[]> {
   const scope = requireScope();
   const key = storageKey(scope);
@@ -148,8 +161,8 @@ async function readQueue(): Promise<FieldOfflineOperation[]> {
     return parsed;
   } catch (error) {
     await storageAdapter.setItem(corruptStorageKey(scope), raw);
-    throw new Error(
-      `field offline queue is corrupt and was preserved for recovery: ${error instanceof Error ? error.message : String(error)}`,
+    throw new FieldOfflineQueueCorruptError(
+      error instanceof Error ? error.message : String(error),
     );
   }
 }
@@ -238,12 +251,12 @@ export async function markOperationSynced(operationId: string): Promise<void> {
   );
 }
 
-export async function markOperationFailed(operationId: string, error: string): Promise<void> {
+export async function markOperationFailed(operationId: string, error: string, isPermanent = false): Promise<void> {
   const queue = await readQueue();
   const updated = queue.map((operation) => {
     if (operation.operationId !== operationId) return operation;
     const nextCount = operation.attemptCount + 1;
-    const permanent = nextCount >= MAX_ATTEMPTS;
+    const permanent = isPermanent || nextCount >= MAX_ATTEMPTS;
     const backoffMs = Math.min(2 ** nextCount * 1000, 30 * 60 * 1000);
     return {
       ...operation,

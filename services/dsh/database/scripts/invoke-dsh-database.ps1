@@ -1,12 +1,12 @@
 <#
 .SYNOPSIS
-  Canonical DSH database runner for local Docker and CI PostgreSQL.
+  Thin DSH database adapter for governed migration, seed, and assertion tools.
 
 .DESCRIPTION
-  Owns DSH migration, local seed, and schema-test execution. Every migration
-  and seed file is applied atomically. Migration history is immutable and
-  protected by SHA-256 checksums. Local seeds are explicitly opt-in and are
-  audited separately from schema migrations.
+  This script owns no migration ordering, checksum policy, migration ledger,
+  seed discovery, seed transaction, or seed ledger. Both Docker and URL/CI
+  transports delegate writes to repository-wide canonical runners. Direct psql
+  execution is retained only for isolated database assertion files.
 #>
 
 [CmdletBinding()]
@@ -25,13 +25,18 @@ param(
 
   [switch]$AllowLocalSeeds,
 
-  [string]$ComposeFile = "infra/docker/compose.runtime.yml",
+  # Runtime-generated actor identifiers used by governed local seed templates.
+  # The canonical seed runner validates and substitutes this JSON map.
+  [string]$PlaceholderFile = "",
 
-  [string]$EnvFile = "infra/docker/env/runtime.env.example"
+  [string]$ComposeFile = "infra/docker/compose.runtime.yml",
+  [string]$EnvFile = "infra/docker/env/runtime.env.example",
+  [string]$SourceCommitSha = ""
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = (Resolve-Path (Join-Path $ScriptDir "../../../..")).Path
 Set-Location -LiteralPath $RepoRoot
@@ -41,9 +46,28 @@ $SeedDir = Join-Path $RepoRoot "services/dsh/database/seeds/local"
 $TestRoot = Join-Path $RepoRoot "services/dsh/database/tests"
 $ComposeFilePath = if ([System.IO.Path]::IsPathRooted($ComposeFile)) { $ComposeFile } else { Join-Path $RepoRoot $ComposeFile }
 $EnvFilePath = if ([System.IO.Path]::IsPathRooted($EnvFile)) { $EnvFile } else { Join-Path $RepoRoot $EnvFile }
+$RuntimeMigrationRunner = Join-Path $RepoRoot "infra/docker/scripts/invoke-runtime-database-migrations.ps1"
+$ServiceMigrationRunner = Join-Path $RepoRoot "tools/scripts/invoke-service-migrations.ps1"
+$ServiceSeedRunner = Join-Path $RepoRoot "tools/scripts/invoke-service-seeds.ps1"
+
+foreach ($requiredFile in @($RuntimeMigrationRunner, $ServiceMigrationRunner, $ServiceSeedRunner)) {
+  if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
+    throw "Required governed database authority not found: $requiredFile"
+  }
+}
 
 if ($Transport -eq "auto") {
   $Transport = if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) { "docker" } else { "url" }
+}
+if ([string]::IsNullOrWhiteSpace($SourceCommitSha)) {
+  if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_SHA)) {
+    $SourceCommitSha = $env:GITHUB_SHA
+  } else {
+    $SourceCommitSha = (& git rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($SourceCommitSha)) {
+      throw "Unable to resolve source commit SHA."
+    }
+  }
 }
 
 if ($Transport -eq "url") {
@@ -53,23 +77,15 @@ if ($Transport -eq "url") {
   if (-not (Get-Command psql -ErrorAction SilentlyContinue)) {
     throw "psql is required when Transport=url."
   }
-}
-
-if ($Transport -eq "docker") {
+} else {
   if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     throw "docker is required when Transport=docker."
   }
-  if (-not (Test-Path -LiteralPath $ComposeFilePath)) {
-    throw "Compose file not found: $ComposeFilePath"
+  foreach ($requiredFile in @($ComposeFilePath, $EnvFilePath)) {
+    if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
+      throw "Required Docker runtime file not found: $requiredFile"
+    }
   }
-  if (-not (Test-Path -LiteralPath $EnvFilePath)) {
-    throw "Runtime env file not found: $EnvFilePath"
-  }
-}
-
-function ConvertTo-SqlLiteral {
-  param([Parameter(Mandatory = $true)][string]$Value)
-  return $Value.Replace("'", "''")
 }
 
 function Get-DockerComposeBaseArguments {
@@ -80,10 +96,10 @@ function Ensure-DockerDshPostgres {
   $startArguments = @(Get-DockerComposeBaseArguments) + @("up", "-d", "postgres")
   & docker @startArguments | Out-Host
   if ($LASTEXITCODE -ne 0) {
-    throw "Unable to start the PostgreSQL runtime container (exit $LASTEXITCODE)."
+    throw "Unable to start PostgreSQL runtime (exit $LASTEXITCODE)."
   }
 
-  for ($attempt = 1; $attempt -le 30; $attempt += 1) {
+  for ($attempt = 1; $attempt -le 30; $attempt++) {
     $readyArguments = @(Get-DockerComposeBaseArguments) + @(
       "exec", "-T", "postgres", "pg_isready",
       "-U", "dsh_runtime", "-d", "dsh_runtime"
@@ -95,216 +111,119 @@ function Ensure-DockerDshPostgres {
     }
     Start-Sleep -Seconds 2
   }
-
-  throw "DSH PostgreSQL did not become ready after 60 seconds."
+  throw "DSH PostgreSQL did not become ready."
 }
 
-function Invoke-DshPsql {
-  param(
-    [Parameter(Mandatory = $true)][string]$Sql,
-    [switch]$TuplesOnly,
-    [switch]$SingleTransaction
-  )
+function Invoke-DshTestSql {
+  param([Parameter(Mandatory = $true)][string]$Sql)
 
   if ($Transport -eq "url") {
-    $arguments = @($DatabaseUrl, "-X", "-q", "-v", "ON_ERROR_STOP=1")
-    if ($TuplesOnly) { $arguments += "-tA" }
-    if ($SingleTransaction) { $arguments += "--single-transaction" }
-    $output = $Sql | & psql @arguments
+    $Sql | & psql $DatabaseUrl -X -q -v ON_ERROR_STOP=1 --single-transaction
   } else {
     $arguments = @(Get-DockerComposeBaseArguments) + @(
       "exec", "-T", "postgres", "psql",
       "-U", "dsh_runtime", "-d", "dsh_runtime",
-      "-X", "-q", "-v", "ON_ERROR_STOP=1"
+      "-X", "-q", "-v", "ON_ERROR_STOP=1", "--single-transaction"
     )
-    if ($TuplesOnly) { $arguments += "-tA" }
-    if ($SingleTransaction) { $arguments += "--single-transaction" }
-    $output = $Sql | & docker @arguments
+    $Sql | & docker @arguments
   }
-
   if ($LASTEXITCODE -ne 0) {
-    throw "DSH psql command failed using transport '$Transport' (exit $LASTEXITCODE)."
+    throw "DSH database assertion failed using transport '$Transport' (exit $LASTEXITCODE)."
   }
-
-  return (($output | ForEach-Object { "$_" }) -join "`n").Trim()
 }
 
-function Get-OrderedSqlFiles {
-  param(
-    [Parameter(Mandatory = $true)][string]$Directory,
-    [Parameter(Mandatory = $true)][string]$Description
-  )
+function Get-TestFiles {
+  param([Parameter(Mandatory = $true)][string]$Directory)
 
-  if (-not (Test-Path -LiteralPath $Directory)) {
-    throw "$Description directory not found: $Directory"
+  if (-not (Test-Path -LiteralPath $Directory -PathType Container)) {
+    throw "Database test directory not found: $Directory"
   }
-
   $files = @(Get-ChildItem -LiteralPath $Directory -File -Filter "*.sql" | Sort-Object Name)
   if ($files.Count -eq 0) {
-    throw "No $Description SQL files found in $Directory"
+    throw "No database tests found in $Directory"
   }
-
-  $duplicates = $files |
-    Group-Object { $_.Name.ToLowerInvariant() } |
-    Where-Object Count -gt 1
-  if ($duplicates) {
-    throw "Duplicate $Description filenames detected: $($duplicates.Name -join ', ')"
-  }
-
   return $files
 }
 
-function Initialize-DshDatabaseLedgers {
-  Invoke-DshPsql -Sql @"
-CREATE TABLE IF NOT EXISTS runtime_schema_migrations (
-  migration_name TEXT        PRIMARY KEY,
-  checksum       TEXT        NOT NULL,
-  applied_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS runtime_seed_runs (
-  seed_name   TEXT        PRIMARY KEY,
-  checksum    TEXT        NOT NULL,
-  run_count   BIGINT      NOT NULL DEFAULT 1 CHECK (run_count > 0),
-  applied_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-"@ | Out-Null
-}
-
-function Invoke-DshMigrations {
-  $files = Get-OrderedSqlFiles -Directory $MigrationDir -Description "migration"
-  Initialize-DshDatabaseLedgers
-
-  Write-Host "`n--- Applying canonical DSH migrations ($Transport) ---"
-  foreach ($file in $files) {
-    $checksum = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-    $nameSql = ConvertTo-SqlLiteral $file.Name
-    $recorded = Invoke-DshPsql -TuplesOnly -Sql "SELECT checksum FROM runtime_schema_migrations WHERE migration_name = '$nameSql';"
-
-    if ($recorded -eq $checksum) {
-      Write-Host "  Skipping (already applied): $($file.Name)"
-      continue
-    }
-    if (-not [string]::IsNullOrWhiteSpace($recorded)) {
-      throw "Migration checksum mismatch for $($file.Name): recorded=$recorded current=$checksum. Applied migrations are immutable; add a new migration."
-    }
-
-    $migrationSql = Get-Content -Raw -LiteralPath $file.FullName
-    if ($migrationSql -match '(?im)^\s*CREATE\s+(UNIQUE\s+)?INDEX\s+CONCURRENTLY\b') {
-      throw "Migration $($file.Name) uses CREATE INDEX CONCURRENTLY, which is incompatible with the required atomic transaction. Use a separately governed online migration procedure."
-    }
-
-    $payload = @"
-$migrationSql
-
-INSERT INTO runtime_schema_migrations (migration_name, checksum)
-VALUES ('$nameSql', '$checksum');
-"@
-
-    Write-Host "  Applying atomically: $($file.Name)"
-    Invoke-DshPsql -Sql $payload -SingleTransaction | Out-Null
-
-    $verified = Invoke-DshPsql -TuplesOnly -Sql "SELECT checksum FROM runtime_schema_migrations WHERE migration_name = '$nameSql';"
-    if ($verified -ne $checksum) {
-      throw "Migration ledger verification failed for $($file.Name)."
-    }
-    Write-Host "  $($file.Name): PASS"
+function Invoke-GovernedDshMigrations {
+  if ($Transport -eq "docker") {
+    Ensure-DockerDshPostgres
+    & $RuntimeMigrationRunner -Service dsh -SourceCommitSha $SourceCommitSha
+  } else {
+    & $ServiceMigrationRunner `
+      -ServiceKey dsh `
+      -MigrationDirectory $MigrationDir `
+      -DatabaseUrl $DatabaseUrl `
+      -SourceCommitSha $SourceCommitSha
   }
-
-  Write-Host "DSH migrations: PASS"
+  if ($LASTEXITCODE -ne 0) {
+    throw "Governed DSH migrations failed (exit $LASTEXITCODE)."
+  }
+  Write-Host "DSH migrations: PASS ledger=schema_migrations"
 }
 
-function Assert-LocalSeedEnvironment {
+function Invoke-GovernedDshSeeds {
   if (-not $AllowLocalSeeds) {
-    throw "Local DSH seeds are opt-in. Re-run with -AllowLocalSeeds only for local development or isolated CI databases."
+    throw "Local DSH seeds require -AllowLocalSeeds."
   }
 
-  $environmentName = @($env:BTHWANI_ENVIRONMENT, $env:APP_ENV, $env:NODE_ENV) |
-    Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
-    Select-Object -First 1
+  if ($Transport -eq "docker") {
+    Ensure-DockerDshPostgres
+  }
+  Invoke-GovernedDshMigrations
 
-  if (-not $environmentName) {
-    if ($Transport -ne "docker") {
-      throw "Local DSH seeds require BTHWANI_ENVIRONMENT, APP_ENV, or NODE_ENV when Transport is not docker."
-    }
-    return
+  $seedParameters = @{
+    ServiceKey = "dsh"
+    SeedDirectory = $SeedDir
+    Transport = $Transport
+    SourceCommitSha = $SourceCommitSha
+    AllowLocalSeeds = $true
+  }
+  if (-not [string]::IsNullOrWhiteSpace($PlaceholderFile)) {
+    $seedParameters.PlaceholderFile = $PlaceholderFile
+  }
+  if ($Transport -eq "url") {
+    $seedParameters.DatabaseUrl = $DatabaseUrl
+  } else {
+    $seedParameters.DockerUser = "dsh_runtime"
+    $seedParameters.DockerDatabase = "dsh_runtime"
+    $seedParameters.ComposeFile = $ComposeFilePath
+    $seedParameters.EnvFile = $EnvFilePath
   }
 
-  $allowed = @("local", "development", "dev", "test", "ci")
-  if ($allowed -notcontains $environmentName.ToLowerInvariant()) {
-    throw "Local DSH seeds are forbidden in environment '$environmentName'. Allowed: $($allowed -join ', ')."
+  & $ServiceSeedRunner @seedParameters
+  if ($LASTEXITCODE -ne 0) {
+    throw "Governed DSH local seeds failed (exit $LASTEXITCODE)."
   }
-}
-
-function Invoke-DshLocalSeeds {
-  Assert-LocalSeedEnvironment
-  $files = Get-OrderedSqlFiles -Directory $SeedDir -Description "local seed"
-  Initialize-DshDatabaseLedgers
-
-  Write-Host "`n--- Applying local-only DSH seeds atomically ($Transport) ---"
-  foreach ($file in $files) {
-    $checksum = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-    $nameSql = ConvertTo-SqlLiteral $file.Name
-    $previous = Invoke-DshPsql -TuplesOnly -Sql "SELECT checksum FROM runtime_seed_runs WHERE seed_name = '$nameSql';"
-    if ($previous -and $previous -ne $checksum) {
-      Write-Warning "Local seed content changed since its previous run: $($file.Name). This is permitted for local fixtures and recorded in runtime_seed_runs."
-    }
-
-    $seedSql = Get-Content -Raw -LiteralPath $file.FullName
-    $payload = @"
-$seedSql
-
-INSERT INTO runtime_seed_runs (seed_name, checksum, run_count, applied_at)
-VALUES ('$nameSql', '$checksum', 1, NOW())
-ON CONFLICT (seed_name) DO UPDATE SET
-  checksum = EXCLUDED.checksum,
-  run_count = runtime_seed_runs.run_count + 1,
-  applied_at = NOW();
-"@
-
-    Write-Host "  Seeding atomically: $($file.Name)"
-    Invoke-DshPsql -Sql $payload -SingleTransaction | Out-Null
-    Write-Host "  $($file.Name): PASS"
-  }
-
-  $ledgerCount = [int](Invoke-DshPsql -TuplesOnly -Sql "SELECT COUNT(*) FROM runtime_seed_runs;")
-  if ($ledgerCount -lt $files.Count) {
-    throw "Seed ledger is incomplete: expected at least $($files.Count), recorded $ledgerCount."
-  }
-
-  Write-Host "DSH local seeds: PASS"
+  Write-Host "DSH local seeds: PASS ledger=runtime_seed_history authority=invoke-service-seeds.ps1"
 }
 
 function Invoke-DshDatabaseTests {
+  if ($Transport -eq "docker") {
+    Ensure-DockerDshPostgres
+  }
+
   $directories = @()
-  if ($TestSuite -eq "schema" -or $TestSuite -eq "all") {
+  if ($TestSuite -in @("schema", "all")) {
     $directories += (Join-Path $TestRoot "schema")
   }
-  if ($TestSuite -eq "seed" -or $TestSuite -eq "all") {
+  if ($TestSuite -in @("seed", "all")) {
     $directories += (Join-Path $TestRoot "seed")
   }
 
-  Write-Host "`n--- Running DSH database tests: $TestSuite ($Transport) ---"
+  Write-Host "`n--- Running DSH database assertions: $TestSuite ($Transport) ---"
   foreach ($directory in $directories) {
-    $suiteName = Split-Path -Leaf $directory
-    $files = Get-OrderedSqlFiles -Directory $directory -Description "$suiteName test"
-    foreach ($file in $files) {
-      Write-Host "  Testing: $suiteName/$($file.Name)"
-      $sql = Get-Content -Raw -LiteralPath $file.FullName
-      Invoke-DshPsql -Sql $sql -SingleTransaction | Out-Null
-      Write-Host "  $suiteName/$($file.Name): PASS"
+    foreach ($file in Get-TestFiles -Directory $directory) {
+      Write-Host "  Testing: $($file.FullName.Substring($TestRoot.Length + 1))"
+      Invoke-DshTestSql -Sql (Get-Content -Raw -LiteralPath $file.FullName)
+      Write-Host "  $($file.Name): PASS"
     }
   }
-
   Write-Host "DSH database tests ($TestSuite): PASS"
 }
 
-if ($Transport -eq "docker") {
-  Ensure-DockerDshPostgres
-}
-
 switch ($Action) {
-  "migrate" { Invoke-DshMigrations }
-  "seed" { Invoke-DshLocalSeeds }
+  "migrate" { Invoke-GovernedDshMigrations }
+  "seed" { Invoke-GovernedDshSeeds }
   "test" { Invoke-DshDatabaseTests }
 }

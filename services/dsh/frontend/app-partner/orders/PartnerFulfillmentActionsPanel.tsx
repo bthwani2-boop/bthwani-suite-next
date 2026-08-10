@@ -102,7 +102,7 @@ function PartnerDeliveryActions({
     : message;
 
   const eligibleCouriers = React.useMemo(
-    () => teamMembers.filter((member) => member.role === 'courier' && member.status === 'active'),
+    () => teamMembers.filter((member) => member.role === 'staff' && member.status === 'active'),
     [teamMembers],
   );
 

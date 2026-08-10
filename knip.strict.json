@@ -23,8 +23,8 @@
       "entry": [
         "tools/guards/*.mjs",
         "tools/guards/sdlc/*.mjs",
-        "tools/important-scripts/*.mjs",
         "tools/scripts/*.mjs",
+        "tools/scripts/contracts/*.mjs",
         "tools/verification/*.mjs",
         "tools/performance/**/*.{js,cjs}",
         "*.config.{js,mjs,cjs,ts}"
@@ -88,15 +88,7 @@
       ],
       "project": ["frontend/**/*.{ts,tsx}", "*.ts"]
     },
-    "shared/app-shell": {
-      "entry": ["src/index.{ts,tsx}", "index.{ts,tsx}"],
-      "project": ["src/**/*.{ts,tsx}", "*.{ts,tsx}"]
-    },
     "shared/data-runtime": {
-      "entry": ["src/index.{ts,tsx}", "index.{ts,tsx}"],
-      "project": ["src/**/*.{ts,tsx}", "*.{ts,tsx}"]
-    },
-    "shared/media-runtime": {
       "entry": ["src/index.{ts,tsx}", "index.{ts,tsx}"],
       "project": ["src/**/*.{ts,tsx}", "*.{ts,tsx}"]
     },

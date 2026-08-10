@@ -13,10 +13,10 @@ func TestEmployeeExactPermissionDoesNotCrossDshDomains(t *testing.T) {
 	s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
-			Subject:   "operations-manager-1",
-			OperatorContextID:  "OperatorContext-main",
-			Roles:     []string{"employee", "workforce.supervise.employee"},
-			AuthState: "authenticated",
+			Subject:           "operations-manager-1",
+			OperatorContextID: "OperatorContext-main",
+			Roles:             []string{"employee", "workforce.supervise.employee"},
+			AuthState:         "authenticated",
 			Permissions: []auth.Permission{
 				{Service: "dsh", Surface: "control-panel", Action: OperationsPermissionRead, Scope: "all"},
 				{Service: "dsh", Surface: "control-panel", Action: OperationsPermissionManage, Scope: "all"},
@@ -32,13 +32,15 @@ func TestEmployeeExactPermissionDoesNotCrossDshDomains(t *testing.T) {
 		allowedRequest,
 		"control-panel",
 		OperationsPermissionManage,
-		"operator",
 	)
 	if !ok {
 		t.Fatalf("operations manager exact grant was rejected with status %d", allowedResponse.Code)
 	}
-	if actor.ID != "operations-manager-1" || actor.Role != "permission:"+OperationsPermissionManage {
+	if actor.ID != "operations-manager-1" || actor.Role != "operator" {
 		t.Fatalf("unexpected authorized actor %#v", actor)
+	}
+	if actor.AuthorizedAction != OperationsPermissionManage || actor.AuthorizationScope != "all" {
+		t.Fatalf("Identity permission action/scope were not preserved: %#v", actor)
 	}
 
 	for _, denied := range []string{
@@ -47,13 +49,13 @@ func TestEmployeeExactPermissionDoesNotCrossDshDomains(t *testing.T) {
 		PartnersPermissionRead,
 		PartnersPermissionManage,
 		SupportPermissionManage,
-		PlatformPermissionManage,
+		DshDispatchCapacityPermissionManage,
 	} {
 		t.Run("deny-"+denied, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, "/dsh/operator/cross-domain", nil)
 			request.Header.Set("Authorization", "Bearer operations-manager-token")
 			response := httptest.NewRecorder()
-			if _, allowed := s.requirePermission(response, request, "control-panel", denied, "operator"); allowed {
+			if _, allowed := s.requirePermission(response, request, "control-panel", denied); allowed {
 				t.Fatalf("operations manager crossed into %s", denied)
 			}
 			if response.Code != http.StatusForbidden {
@@ -67,10 +69,10 @@ func TestRegularEmployeeHasNoImplicitOperatorAuthority(t *testing.T) {
 	s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
-			Subject:   "staff-1",
-			OperatorContextID:  "OperatorContext-main",
-			Roles:     []string{"employee"},
-			AuthState: "authenticated",
+			Subject:           "staff-1",
+			OperatorContextID: "OperatorContext-main",
+			Roles:             []string{"employee"},
+			AuthState:         "authenticated",
 		})
 	})
 
@@ -82,9 +84,32 @@ func TestRegularEmployeeHasNoImplicitOperatorAuthority(t *testing.T) {
 		request,
 		"control-panel",
 		OperationsPermissionRead,
-		"operator",
 	); allowed {
 		t.Fatal("regular employee received implicit operator authority")
+	}
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", response.Code)
+	}
+}
+
+func TestPermissionWithoutScopeFailsClosed(t *testing.T) {
+	s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(auth.Identity{
+			Subject:           "scope-less-manager",
+			OperatorContextID: "OperatorContext-main",
+			AuthState:         "authenticated",
+			Permissions: []auth.Permission{
+				{Service: "dsh", Surface: "control-panel", Action: PartnersPermissionManage},
+			},
+		})
+	})
+
+	request := httptest.NewRequest(http.MethodPost, "/dsh/operator/stores/store-1/govern", nil)
+	request.Header.Set("Authorization", "Bearer scope-less-token")
+	response := httptest.NewRecorder()
+	if _, allowed := s.requirePermission(response, request, "control-panel", PartnersPermissionManage); allowed {
+		t.Fatal("scope-less Identity permission must fail closed")
 	}
 	if response.Code != http.StatusForbidden {
 		t.Fatalf("expected 403, got %d", response.Code)

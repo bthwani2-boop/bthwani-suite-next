@@ -54,7 +54,7 @@ SELECT 'client_visible_products_exist', EXISTS (
     AND p.is_active = TRUE
     AND d.is_active = TRUE
     AND d.is_client_visible = TRUE
-    AND s.status = 'active'
+    AND s.status = 'published'
     AND s.is_visible = TRUE
 )
 UNION ALL

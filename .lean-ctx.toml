@@ -1,11 +1,11 @@
 # LeanCTX policy for bthwani-suite-next
-# الهدف: متاح للوكلاء فقط، بدون تغيير سلوك التطبيق أو CI.
+# Agent-only context reduction. Never changes application or CI runtime behavior.
 
 shell_activation = "agents-only"
 rules_injection = "dedicated"
 cache_policy = "safe"
 response_verbosity = "headers_only"
-tool_profile = "power"
+shadow_mode = false
 
 enable_wakeup_ctx = false
 auto_capture = false

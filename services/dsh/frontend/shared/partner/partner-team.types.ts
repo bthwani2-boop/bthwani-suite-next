@@ -4,7 +4,8 @@
 // in the DSH shared brain (not on a UI screen) so non-UI code does not
 // depend on a surface module.
 
-export type PartnerTeamRole = 'owner' | 'supervisor' | 'staff' | 'courier';
+export type PartnerTeamRole = 'owner' | 'supervisor' | 'staff';
+export type PartnerTeamInviteRole = 'manager' | 'supervisor' | 'staff';
 export type PartnerTeamStatus = 'active' | 'paused' | 'invited' | 'blocked' | 'review-needed';
 
 export type PartnerTeamMember = {
@@ -24,7 +25,17 @@ export type PartnerTeamMember = {
   readonly inlineActionLabel: string;
 };
 
-const PARTNER_TEAM_ROLES: readonly PartnerTeamRole[] = ['owner', 'supervisor', 'staff', 'courier'];
+/** Map of team role identifiers to Arabic labels */
+export const PARTNER_TEAM_ROLE_LABELS: Record<PartnerTeamRole, string> = {
+  owner: 'المالك / المدير العام',
+  supervisor: 'مشرف المتجر',
+  staff: 'عضو فريق المبيعات / التشغيل',
+};
+
+/**
+ * Array of available team roles ordered by descending privilege level.
+ */
+export const PARTNER_TEAM_ROLES: readonly PartnerTeamRole[] = ['owner', 'supervisor', 'staff'];
 const PARTNER_TEAM_STATUSES: readonly PartnerTeamStatus[] = ['active', 'paused', 'invited', 'blocked', 'review-needed'];
 
 function isPartnerTeamRole(value: unknown): value is PartnerTeamRole {

@@ -16,6 +16,7 @@ import {
   type DshStoreAuditState,
 } from "../../../shared/store";
 import { uploadAndLinkAsset } from "../../../shared/catalog";
+import { StoreServiceAreaPanel } from "./StoreServiceAreaPanel";
 
 type Props = {
   readonly state: DshStoreAdminDetailState;
@@ -251,6 +252,9 @@ export function StoreDetailAdminPanel({ state, diagnosticsState, auditState, onC
             {new Date(state.detail.updatedAt).toLocaleString("ar")}
           </CpDescriptionRow>
           <StoreImageUploadForm storeId={state.detail.id} />
+          {state.detail.serviceAreaCode && (
+            <StoreServiceAreaPanel serviceAreaCode={state.detail.serviceAreaCode} />
+          )}
         </CpDescriptionList>
       )}
     </CpDetailPanel>

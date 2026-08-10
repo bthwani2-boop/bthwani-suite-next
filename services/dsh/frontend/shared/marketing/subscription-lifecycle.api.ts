@@ -39,7 +39,7 @@ export function getDshSubscriptionPurchase(purchaseId: string) {
 
 export function activateDshSubscriptionPurchase(purchaseId: string) {
   return request<SubscriptionActivationEnvelope>(
-    `/dsh/client/marketing/subscriptions/${encodeURIComponent(purchaseId)}/activate`,
+    `/dsh/client/marketing/subscriptions/purchases/${encodeURIComponent(purchaseId)}/activate`,
     {
       method: "POST",
       body: {},
@@ -53,7 +53,7 @@ export function renewDshSubscription(
   paymentMethod: SubscriptionPaymentMethod = "official_wallet",
 ) {
   return request<SubscriptionPurchaseEnvelope>(
-    `/dsh/client/marketing/subscriptions/${encodeURIComponent(subscriptionId)}/renew`,
+    `/dsh/client/marketing/subscriptions/instances/${encodeURIComponent(subscriptionId)}/renew`,
     {
       method: "POST",
       body: { paymentMethod },
@@ -64,7 +64,7 @@ export function renewDshSubscription(
 
 export function cancelDshSubscription(subscriptionId: string, reason: string) {
   return request<SubscriptionCancellationEnvelope>(
-    `/dsh/client/marketing/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
+    `/dsh/client/marketing/subscriptions/instances/${encodeURIComponent(subscriptionId)}/cancel`,
     {
       method: "POST",
       body: { reason: reason.trim() },

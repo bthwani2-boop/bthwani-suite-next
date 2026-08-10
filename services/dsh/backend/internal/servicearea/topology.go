@@ -9,16 +9,15 @@ import (
 const topologyEpsilon = 1e-10
 
 func UpsertGoverned(ctx context.Context, db *sql.DB, serviceAreaCode string, input UpsertInput) (Geofence, error) {
-	if !validPolygonTopology(input.Polygon) {
-		return Geofence{}, ErrInvalid
-	}
 	return Upsert(ctx, db, serviceAreaCode, input)
 }
 
 func validPolygonTopology(polygon [][]float64) bool {
-	if !validPolygon(polygon) {
+	normalized, valid := normalizePolygonRing(polygon)
+	if !valid {
 		return false
 	}
+	polygon = normalized
 	for index := range polygon {
 		next := (index + 1) % len(polygon)
 		if samePoint(polygon[index], polygon[next]) {

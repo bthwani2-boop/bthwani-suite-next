@@ -14,13 +14,9 @@ import (
 
 type payoutProviderDestination struct {
 	ID                   string
-	SettlementPreference string
+	DestinationMethod    string
 	BeneficiaryName      string
-	BankName             string
-	BankBranch           string
-	AccountNumber        string
-	IBAN                 string
-	MobileNumber         string
+	DestinationReference string
 }
 
 func loadPayoutProviderDestination(
@@ -32,13 +28,9 @@ func loadPayoutProviderDestination(
 	var destination payoutProviderDestination
 	err := tx.QueryRowContext(ctx, `
 		SELECT d.id,
-		       d.settlement_preference,
+		       d.destination_method,
 		       d.beneficiary_name,
-		       d.bank_name,
-		       d.bank_branch,
-		       COALESCE(pgp_sym_decrypt(d.account_number_encrypted, $2), ''),
-		       COALESCE(pgp_sym_decrypt(d.iban_encrypted, $2), ''),
-		       COALESCE(pgp_sym_decrypt(d.payout_mobile_number_encrypted, $2), '')
+		       COALESCE(pgp_sym_decrypt(d.destination_reference_encrypted, $2), '')
 		FROM wlt_payout_requests p
 		JOIN wlt_payout_destinations d
 		  ON d.id = p.payout_destination_id
@@ -47,26 +39,18 @@ func loadPayoutProviderDestination(
 		WHERE p.id = $1
 		FOR SHARE OF d`, payoutID, encryptionKey).Scan(
 		&destination.ID,
-		&destination.SettlementPreference,
+		&destination.DestinationMethod,
 		&destination.BeneficiaryName,
-		&destination.BankName,
-		&destination.BankBranch,
-		&destination.AccountNumber,
-		&destination.IBAN,
-		&destination.MobileNumber,
+		&destination.DestinationReference,
 	)
 	return destination, err
 }
 
 func (destination payoutProviderDestination) validateForProvider() error {
-	switch destination.SettlementPreference {
-	case "bank":
-		if strings.TrimSpace(destination.AccountNumber) == "" && strings.TrimSpace(destination.IBAN) == "" {
-			return errors.New("bank payout destination has no account number or IBAN")
-		}
-	case "mobile_money":
-		if strings.TrimSpace(destination.MobileNumber) == "" {
-			return errors.New("mobile-money payout destination has no mobile number")
+	switch destination.DestinationMethod {
+	case "bank", "mobile_money":
+		if strings.TrimSpace(destination.DestinationReference) == "" {
+			return errors.New("provider payout destination has no reference")
 		}
 	case "manual":
 		return errors.New("manual payout destinations cannot be submitted to a provider")
@@ -81,14 +65,10 @@ func (destination payoutProviderDestination) validateForProvider() error {
 
 func destinationProviderPayload(destination payoutProviderDestination) map[string]any {
 	return map[string]any{
-		"id":                 destination.ID,
-		"type":               destination.SettlementPreference,
-		"beneficiaryName":    destination.BeneficiaryName,
-		"bankName":           destination.BankName,
-		"bankBranch":         destination.BankBranch,
-		"accountNumber":      destination.AccountNumber,
-		"iban":               destination.IBAN,
-		"payoutMobileNumber": destination.MobileNumber,
+		"id":                   destination.ID,
+		"type":                 destination.DestinationMethod,
+		"beneficiaryName":      destination.BeneficiaryName,
+		"destinationReference": destination.DestinationReference,
 	}
 }
 
@@ -99,6 +79,11 @@ func HandleProcessGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorID, ok := decodeRequiredOperator(w, r)
 		if !ok {
+			return
+		}
+		correlationID, err := governedCorrelationID(r)
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", err.Error())
 			return
 		}
 		providerClient, err := provider.NewDefaultPaymentProvider()
@@ -168,6 +153,13 @@ func HandleProcessGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusConflict, "PAYOUT_ALREADY_CLAIMED", "payout request was already claimed for provider submission")
 			return
 		}
+		if err := appendPayoutAudit(r.Context(), tx, "payout_request", req.ID, "payout.processing", operatorID, "operator", "", correlationID, map[string]any{
+			"status":              "provider_pending",
+			"payoutDestinationId": destination.ID,
+		}); err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout processing")
+			return
+		}
 		if err := tx.Commit(); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to commit payout provider claim")
 			return
@@ -180,23 +172,23 @@ func HandleProcessGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 				"payoutId":             req.ID,
 				"beneficiaryActorId":   req.BeneficiaryActorID,
 				"beneficiaryActorType": req.BeneficiaryActorType,
-				"amountMinorUnits":      req.AmountMinorUnits,
-				"currency":              req.Currency,
-				"destination":           destinationProviderPayload(destination),
+				"amountMinorUnits":     req.AmountMinorUnits,
+				"currency":             req.Currency,
+				"destination":          destinationProviderPayload(destination),
 			},
 			provider.RequestMetaFromHTTP(r, "wlt-payout-process"),
 		)
 		if providerErr != nil {
 			var cleanDecline provider.Error
 			if errors.As(providerErr, &cleanDecline) && cleanDecline.StatusCode >= 400 && cleanDecline.StatusCode < 500 {
-				if failErr := failProviderDecline(r.Context(), db, req.ID, providerErr); failErr != nil {
+				if failErr := failProviderDecline(r.Context(), db, req.ID, providerErr, correlationID, operatorID); failErr != nil {
 					shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to persist provider payout decline")
 					return
 				}
 				shared.SendProviderError(w, providerErr)
 				return
 			}
-			markProviderResultUnknown(r.Context(), db, req.ID, providerErr)
+			markProviderResultUnknown(r.Context(), db, req.ID, providerErr, correlationID, operatorID)
 			shared.SendProviderError(w, providerErr)
 			return
 		}
@@ -204,14 +196,14 @@ func HandleProcessGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 		providerStatus := strings.ToLower(strings.TrimSpace(providerResult.Status))
 		if providerResult.ProviderReference == "" || (providerStatus != "processed" && providerStatus != "succeeded") {
 			invalidResponseErr := errors.New("provider response missing successful proof")
-			markProviderResultUnknown(r.Context(), db, req.ID, invalidResponseErr)
+			markProviderResultUnknown(r.Context(), db, req.ID, invalidResponseErr, correlationID, operatorID)
 			shared.SendError(w, http.StatusBadGateway, "PROVIDER_INVALID_RESPONSE", invalidResponseErr.Error())
 			return
 		}
 
 		finalTx, err := db.BeginTx(r.Context(), nil)
 		if err != nil {
-			markProviderResultUnknown(r.Context(), db, req.ID, err)
+			markProviderResultUnknown(r.Context(), db, req.ID, err, correlationID, operatorID)
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to start provider proof transaction")
 			return
 		}
@@ -236,12 +228,21 @@ func HandleProcessGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		if err != nil {
-			markProviderResultUnknown(r.Context(), db, req.ID, err)
+			markProviderResultUnknown(r.Context(), db, req.ID, err, correlationID, operatorID)
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to persist provider payout proof")
 			return
 		}
+		if err := appendPayoutAudit(r.Context(), finalTx, "payout_request", req.ID, "payout.provider_processed", operatorID, "operator", "", correlationID, map[string]any{
+			"status":            "processing",
+			"providerStatus":    providerStatus,
+			"providerReference": providerResult.ProviderReference,
+		}); err != nil {
+			markProviderResultUnknown(r.Context(), db, req.ID, err, correlationID, operatorID)
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit provider payout proof")
+			return
+		}
 		if err := finalTx.Commit(); err != nil {
-			markProviderResultUnknown(r.Context(), db, req.ID, err)
+			markProviderResultUnknown(r.Context(), db, req.ID, err, correlationID, operatorID)
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to commit provider payout proof")
 			return
 		}

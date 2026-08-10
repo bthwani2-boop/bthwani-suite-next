@@ -8,6 +8,21 @@
   "amendments": [
     {
       "service": "dsh",
+      "migrationId": "dsh-100_cart_sync_diagnostics.sql",
+      "originalBlobSha": "1a9516b5b954ab65c9cbb3f2b5eaab56ac1deb0f",
+      "replacementSha256": "a30e3e0f83fb3453fb39fa0cbc7cf2638d4cbb2ecd748fb77bca20b3f200cc34",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The migration was written in the foreign '-- +migrate Up/Down' convention, which the governed runner does not parse: it executed the whole file, so the Down block dropped the two columns the Up block had just added. It also ALTERs dsh_cart_idempotency at ordinal 140 while dsh-136_cart_options_idempotency.sql creates that table at ordinal 165, so every clean installation failed here with 'relation \"dsh_cart_idempotency\" does not exist'. The migration has therefore never succeeded in any environment.",
+      "evidence": {
+        "cleanInstallCommitSha": "0bd6d82a54c7f813b3706ee3382329e96de8e65a",
+        "cleanInstallResult": "FAILED_AT_THIS_MIGRATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Drop the unparsed Down block, guard the ALTER on the table's existence because the governed order derives from the filename sort and cannot be changed, and add dsh-999_cart_idempotency_sync_diagnostics.sql as the explicit forward recovery so a database that reaches dsh-136 first still gains device_id and session_id."
+    },
+    {
+      "service": "dsh",
       "migrationId": "dsh-056_client_addresses.sql",
       "originalBlobSha": "82e89d17c80d9037bbffb42b12542e25446111a7",
       "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
@@ -203,6 +218,9 @@
       "migrationId": "wlt-108_wallet_operator_context_identity.sql",
       "originalBlobSha": "55d751028ecb8ab0e27ec0c397ac60e592686610",
       "replacementSha256": "9b853be93ed0a56d92a6f7affcadad11c4649e9ec4d1a8765410fd627338b307",
+      "acceptedHistoricalSha256": [
+        "fc8d428499d909963cd8a406ba61ea275f84469cd3443ba1bc8f7ffcf93b7baa"
+      ],
       "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
       "reason": "Wallet identity is operator-context scoped and the migration now drops its governed uniqueness constraint before recreating it so replay remains safe across pre-release databases that recorded an earlier constraint shape.",
       "evidence": {
@@ -217,6 +235,9 @@
       "service": "wlt",
       "migrationId": "wlt-109_cod_custody_operator_context.sql",
       "replacementSha256": "e14cb987338829e8213c717760c60fbf35c4aaa2c97d6ab6b1154b84238710ef",
+      "acceptedHistoricalSha256": [
+        "6ec72dacd926e4e8a322486bb4354c2da41d52559a0df1334f74e77c1e7f5c0a"
+      ],
       "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
       "reason": "The COD custody migration must drop both legacy and governed uniqueness constraints before recreating the canonical operator-context constraints, otherwise replay against pre-release databases fails on duplicate constraint names.",
       "evidence": {
@@ -231,6 +252,9 @@
       "service": "wlt",
       "migrationId": "wlt-112_payout_operator_context.sql",
       "replacementSha256": "71425d7bf316e90c36c03e8e7aab8f21d0464373713b14a8a7fcd0aa3ea6aaf1",
+      "acceptedHistoricalSha256": [
+        "9dab5166fb7d28448ce578e24d3fb8991fd0e2dd11e247d0de586271359d8bad"
+      ],
       "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
       "reason": "The payout operator-context migration must drop previously created composite uniqueness and foreign-key constraints before recreating them, preventing replay failures across pre-release databases with partially applied payout governance.",
       "evidence": {
@@ -254,6 +278,39 @@
         "productionApprovalEvidence": false
       },
       "requiredCorrection": "Rename only obsolete database object names while preserving financial truth and data."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-966_drop_dead_partner_brand.sql",
+      "originalBlobSha": "0c4c3330556f6d7ccf77eabe8a3f4258c166385e",
+      "replacementSha256": "46b09fcb4f60f61c5121430b15e2c051713c43b48a8772cc59d74df24057f0b6",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The destructive migration asserted that dsh_stores.brand_id was never populated, but governed runtime verification reached this migration with six valid store-to-brand ownership links and failed before any destructive statement. Dropping the relation would destroy commercial ownership truth.",
+      "evidence": {
+        "cleanInstallCommitSha": "76172f83ada5434d5f10e201d406b47a3d153948",
+        "cleanInstallResult": "DATA_RETENTION_GUARD_FAILED_BEFORE_DROP",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Preserve dsh_partner_brands and dsh_stores.brand_id, validate operator-context and partner ownership, and retain dsh-971 as the structural forward recovery for any environment that applied the superseded destructive form. Deleted commercial rows must be restored from governed backup evidence, never fabricated."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-144_order_returns_saga.sql",
+      "replacementSha256": "ad7e72a34d6fa7097cc883e5d0b2f2b2655b86a892024359c4a9233ef561d99b",
+      "acceptedHistoricalSha256": [
+        "13947a2eb899a58c72b6875ab8425c6271249127018aa73834e2930d0e26961b",
+        "382d928f0ac14beae4309786ee9a92b6b947e1e4e1ad4d61d5a02489a7021ed7"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The DSH-144 order returns saga migration was amended to fix a foreign key type mismatch: order_id and order_item_id must be UUID to match dsh_orders.id and dsh_order_items.id respectively. The replacement also removes trailing whitespace required by the immutable diff contract without changing SQL semantics.",
+      "evidence": {
+        "cleanInstallCommitSha": "76172f83ada5434d5f10e201d406b47a3d153948",
+        "cleanInstallResult": "CURRENT_BASELINE_REACHED_MIGRATION_VERIFICATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Fix FK column types from TEXT to UUID to match parent table primary keys."
     }
   ]
 }

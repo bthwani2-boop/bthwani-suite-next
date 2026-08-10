@@ -23,9 +23,9 @@ Establish one immutable repository truth before diagnosis, analysis, execution, 
 ## Read before
 
 - `governance/authority/authority-precedence.json`
+- `governance/GOVERNANCE.md`
+- `governance/policies/delivery.md`
 - `AGENTS.md`
-- `.agents/AUTHORITY_BOUNDARY.md`
-- `.agents/COMMAND_SAFETY_POLICY.md`
 
 ## Authority boundary
 
@@ -41,8 +41,8 @@ Use when the user names GitHub, a remote branch, or explicitly requires remote a
 2. Resolve the explicitly named remote branch exactly.
 3. Resolve its current commit SHA from the remote repository.
 4. Read every source file using that branch or immutable SHA.
-5. Write only to that branch.
-6. Re-resolve the branch after every write batch and before final verification.
+5. Write only to that branch when the current task authorizes writes.
+6. Re-resolve the branch before each logical write batch and after the final write.
 7. Never substitute `master`, the default branch, another feature branch, a local branch, or a prior remembered SHA.
 
 ```text
@@ -83,7 +83,7 @@ Return or retain internally:
 
 ## Concurrency rule
 
-If the remote branch moves unexpectedly during a write batch, stop further writes, re-read the affected files from the new head, and classify the result through `governance/contracts/decision-vocabulary.json`. Never force-update the branch to erase concurrent work.
+If the remote branch moves unexpectedly during a write batch, stop further writes, re-read the affected files from the new head, and reconcile the movement before continuing. Never force-update the branch to erase concurrent work.
 
 ## Forbidden behavior
 

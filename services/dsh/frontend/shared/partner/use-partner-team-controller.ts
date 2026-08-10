@@ -1,16 +1,12 @@
 import React from 'react';
-import { fetchPartnerTeam, invitePartnerTeamMember, executePartnerTeamMemberAction } from './partner.api';
 import type { DshPartnerRoute } from './partner.types';
-import { toPartnerTeamMember, type PartnerTeamMember } from './partner-team.types';
+import type { PartnerTeamInviteRole, PartnerTeamMember } from './partner-team.types';
 
 export type PartnerTeamMutationResult = { readonly ok: true } | { readonly ok: false; readonly error: string };
 export type PartnerTeamModelStatus = 'idle' | 'loading' | 'error' | 'ready';
 
-function resolveErrorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === 'string') return err;
-  return 'خطأ غير متوقع أثناء الاتصال بـ runtime.';
-}
+const TEAM_AUTHORITY_UNAVAILABLE =
+  'إدارة فريق المتجر غير متاحة من DSH؛ يجب إكمال ربط الإسناد من خدمة Workforce المالكة.';
 
 export function usePartnerTeamController({
   route,
@@ -28,50 +24,35 @@ export function usePartnerTeamController({
 
   const loadTeam = React.useCallback(() => {
     if (route !== 'team' || !activeStoreId) return;
-    setLoading(true);
-    setStatus('loading');
-    fetchPartnerTeam(activeStoreId).then((res) => {
-      const normalized = (res.members ?? [])
-        .map(toPartnerTeamMember)
-        .filter((member): member is PartnerTeamMember => member !== null);
-      setMembers(normalized);
-      setError(null);
-      setStatus('ready');
-    }).catch((err: unknown) => {
-      setMembers([]);
-      setError(resolveErrorMessage(err));
-      setStatus('error');
-    }).finally(() => {
-      setLoading(false);
-    });
+    setMembers([]);
+    setLoading(false);
+    setError(TEAM_AUTHORITY_UNAVAILABLE);
+    setStatus('error');
   }, [route, activeStoreId]);
 
   React.useEffect(() => {
     loadTeam();
   }, [loadTeam]);
 
-  const onInviteMember = React.useCallback(async (identity: string): Promise<PartnerTeamMutationResult> => {
+  const onInviteMember = React.useCallback(async (
+    identity: string,
+    role: PartnerTeamInviteRole = 'staff',
+  ): Promise<PartnerTeamMutationResult> => {
     if (!activeStoreId) {
       return { ok: false, error: 'لا يوجد فرع محدد لإرسال الدعوة.' };
     }
-    return invitePartnerTeamMember(activeStoreId, identity).then((): PartnerTeamMutationResult => {
-      loadTeam();
-      return { ok: true };
-    }).catch((err: unknown): PartnerTeamMutationResult => {
-      return { ok: false, error: resolveErrorMessage(err) };
-    });
+    void identity;
+    void role;
+    return { ok: false, error: TEAM_AUTHORITY_UNAVAILABLE };
   }, [activeStoreId, loadTeam]);
 
   const onMemberAction = React.useCallback(async (memberId: string, action: string): Promise<PartnerTeamMutationResult> => {
     if (!activeStoreId) {
       return { ok: false, error: 'لا يوجد فرع محدد لتنفيذ الإجراء.' };
     }
-    return executePartnerTeamMemberAction(activeStoreId, memberId, action).then((): PartnerTeamMutationResult => {
-      loadTeam();
-      return { ok: true };
-    }).catch((err: unknown): PartnerTeamMutationResult => {
-      return { ok: false, error: resolveErrorMessage(err) };
-    });
+    void memberId;
+    void action;
+    return { ok: false, error: TEAM_AUTHORITY_UNAVAILABLE };
   }, [activeStoreId, loadTeam]);
 
   return {

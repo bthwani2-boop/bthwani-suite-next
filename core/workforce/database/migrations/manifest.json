@@ -3,7 +3,7 @@
   "service": "workforce",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "workforce-013_captain_license_evidence_gate.sql",
+  "cutover": "workforce-016_provisioning_cases.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -95,6 +95,27 @@
       "sha256": "3d1308868d8949d6543e47afe47170a1f3b18b6071b2f32b3776be627392d82e",
       "historicalPrefix": "013",
       "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 14,
+      "file": "workforce-014_operational_assignments_integrity.sql",
+      "sha256": "5517ef53d10a4430e2ae914caa26ddb35082fc83b35db43b745a99a412a6f716",
+      "historicalPrefix": "014",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 15,
+      "file": "workforce-015_workforce_code_sequence_reconciliation.sql",
+      "sha256": "3ee3e9c4af204ea59cc1ae60ba43ec01ce36ed7413379f0410748f9f4b1314cd",
+      "historicalPrefix": "015",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 16,
+      "file": "workforce-016_provisioning_cases.sql",
+      "sha256": "1d365c309420eed09c7b27c589a55768100b1379702404338216fafcf36b80dc",
+      "historicalPrefix": "016",
+      "state": "ACTIVE"
     }
   ]
 }

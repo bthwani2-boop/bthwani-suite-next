@@ -3,6 +3,10 @@
 import React from "react";
 import { colorRoles } from "@bthwani/ui-kit";
 import {
+  minorUnitsToWltMajorInput,
+  parseWltMajorInputToMinorUnits,
+} from "@bthwani/wlt/dsh";
+import {
   CpButton,
   CpRetryButton,
   CpSelect,
@@ -17,6 +21,7 @@ import {
   findDeliveryPricing,
   useOperatorDeliveryPricingController,
   type DeliveryPricingMode,
+  type DeliveryPricingFulfillmentMode,
   type DeliveryPricingRecord,
 } from "../../../shared/partner/operator-delivery-pricing.public";
 import { OperatorPartnerFleetPanel } from "./OperatorPartnerFleetPanel";
@@ -26,14 +31,15 @@ export type OperatorDeliveryPricingPanelProps = {
 };
 
 type Draft = {
+  readonly pricingMode: DeliveryPricingMode;
   readonly feeYer: string;
   readonly status: DeliveryPricingRecord["status"];
   readonly reason: string;
 };
 
-const MODES: readonly DeliveryPricingMode[] = ["bthwani_delivery", "partner_delivery", "pickup"];
+const MODES: readonly DeliveryPricingFulfillmentMode[] = ["bthwani_delivery", "partner_delivery", "pickup"];
 
-const MODE_LABEL: Record<DeliveryPricingMode, string> = {
+const MODE_LABEL: Record<DeliveryPricingFulfillmentMode, string> = {
   bthwani_delivery: "توصيل بثواني",
   partner_delivery: "توصيل المتجر",
   pickup: "استلم بنفسك",
@@ -41,18 +47,21 @@ const MODE_LABEL: Record<DeliveryPricingMode, string> = {
 
 export function OperatorDeliveryPricingPanel({ storeId }: OperatorDeliveryPricingPanelProps) {
   const controller = useOperatorDeliveryPricingController(storeId);
-  const [drafts, setDrafts] = React.useState<Record<DeliveryPricingMode, Draft>>({
-    bthwani_delivery: { feeYer: "0", status: "paused", reason: "" },
-    partner_delivery: { feeYer: "0", status: "paused", reason: "" },
-    pickup: { feeYer: "0", status: "active", reason: "" },
+  const [drafts, setDrafts] = React.useState<Record<DeliveryPricingFulfillmentMode, Draft>>({
+    bthwani_delivery: { pricingMode: "bthwani_pricing", feeYer: "0", status: "paused", reason: "" },
+    partner_delivery: { pricingMode: "partner_fixed_pricing", feeYer: "0", status: "paused", reason: "" },
+    pickup: { pricingMode: "free_delivery", feeYer: "0", status: "active", reason: "" },
   });
 
   React.useEffect(() => {
-    const next = {} as Record<DeliveryPricingMode, Draft>;
+    const next = {} as Record<DeliveryPricingFulfillmentMode, Draft>;
     for (const mode of MODES) {
       const record = findDeliveryPricing(controller.records, mode);
       next[mode] = {
-        feeYer: mode === "pickup" ? "0" : String((record?.feeMinorUnits ?? 0) / 100),
+        pricingMode: record?.pricingMode ?? (mode === "pickup" ? "free_delivery" : (mode === "bthwani_delivery" ? "bthwani_pricing" : "partner_fixed_pricing")),
+        feeYer: mode === "pickup"
+          ? "0"
+          : minorUnitsToWltMajorInput(record?.feeMinorUnits ?? 0, record?.currency ?? "YER"),
         status: record?.status ?? (mode === "pickup" ? "active" : "paused"),
         reason: "",
       };
@@ -60,22 +69,26 @@ export function OperatorDeliveryPricingPanel({ storeId }: OperatorDeliveryPricin
     setDrafts(next);
   }, [controller.records]);
 
-  const patchDraft = (mode: DeliveryPricingMode, patch: Partial<Draft>) => {
+  const patchDraft = (mode: DeliveryPricingFulfillmentMode, patch: Partial<Draft>) => {
     setDrafts((current) => ({
       ...current,
       [mode]: { ...current[mode], ...patch },
     }));
   };
 
-  const save = async (mode: DeliveryPricingMode) => {
+  const save = async (mode: DeliveryPricingFulfillmentMode) => {
     const record = findDeliveryPricing(controller.records, mode);
     const draft = drafts[mode];
     if (!draft.reason.trim()) return;
-    const fee = mode === "pickup" ? 0 : Number(draft.feeYer);
-    if (!Number.isFinite(fee) || fee < 0) return;
+    const fee = (mode === "pickup" || draft.pricingMode === "free_delivery")
+      ? { ok: true as const, minorUnits: 0 }
+      : parseWltMajorInputToMinorUnits(draft.feeYer, record?.currency ?? "YER");
+    if (!fee.ok || fee.minorUnits < 0) return;
     const succeeded = await controller.save(record, {
-      feeMinorUnits: Math.round(fee * 100),
+      pricingMode: draft.pricingMode,
+      feeMinorUnits: fee.minorUnits,
       currency: "YER",
+      pricingConfig: "{}",
       status: !record && draft.status === "archived" ? "paused" : draft.status,
       reason: draft.reason.trim(),
     }, mode);
@@ -112,6 +125,7 @@ export function OperatorDeliveryPricingPanel({ storeId }: OperatorDeliveryPricin
           <thead>
             <tr>
               <CpTableHeaderCell>النمط</CpTableHeaderCell>
+              <CpTableHeaderCell>نوع التسعير</CpTableHeaderCell>
               <CpTableHeaderCell>الرسم ر.ي</CpTableHeaderCell>
               <CpTableHeaderCell>الحالة</CpTableHeaderCell>
               <CpTableHeaderCell>المصدر</CpTableHeaderCell>
@@ -129,15 +143,28 @@ export function OperatorDeliveryPricingPanel({ storeId }: OperatorDeliveryPricin
                 { value: "paused", label: "موقوف" },
                 ...(record ? [{ value: "archived", label: "مؤرشف" }] : []),
               ];
+              const pricingModeOptions = [
+                { value: "free_delivery", label: "مجاني" },
+                { value: "bthwani_pricing", label: "تسعير بثواني" },
+                { value: "partner_fixed_pricing", label: "مبلغ ثابت للمتجر" },
+                { value: "zone_pricing", label: "تسعير مناطقي" },
+              ];
               return (
                 <tr key={mode}>
                   <CpTableCell>{MODE_LABEL[mode]}</CpTableCell>
                   <CpTableCell>
+                    <CpSelect
+                      value={draft.pricingMode}
+                      onChange={(value) => patchDraft(mode, { pricingMode: value as DeliveryPricingMode })}
+                      options={pricingModeOptions}
+                    />
+                  </CpTableCell>
+                  <CpTableCell>
                     <CpTextInput
-                      value={draft.feeYer}
+                      value={draft.pricingMode === "free_delivery" ? "0" : draft.feeYer}
                       onChange={(value) => patchDraft(mode, { feeYer: value })}
                       aria-label={`رسم ${MODE_LABEL[mode]}`}
-                      disabled={mode === "pickup"}
+                      disabled={mode === "pickup" || draft.pricingMode === "free_delivery"}
                     />
                   </CpTableCell>
                   <CpTableCell>

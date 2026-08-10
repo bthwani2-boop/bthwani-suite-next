@@ -94,7 +94,7 @@ function formatFollowerCount(count: number): string | null {
 }
 
 export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel {
-  const isOpen = dto.status === "active";
+  const isOpen = dto.status === "published";
   const isServiceable =
     dto.serviceability.status === "serviceable" ||
     dto.serviceability.status === "limited";
@@ -125,10 +125,10 @@ export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel 
     heroImageSource: resolveDshImageSource(dto.heroImageUrl),
     logoImageSource: resolveDshImageSource(dto.logoUrl),
     statusBadge:
-      dto.status === "temporarily_closed"
-        ? "مغلق مؤقتاً"
-        : dto.status === "inactive"
-          ? "غير متاح"
+      dto.status === "suspended"
+        ? "غير متاح"
+        : dto.status === "closed"
+          ? "مغلق مؤقتاً"
           : dto.serviceability.status === "limited"
             ? "توصيل محدود"
             : dto.serviceability.status === "out_of_area"

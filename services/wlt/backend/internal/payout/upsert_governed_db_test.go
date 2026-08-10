@@ -48,15 +48,10 @@ func executeCanonicalPayoutDestinationRequest(
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	payload := governedDestinationInput{
-		BeneficiaryName:               "DB Partner Owner",
-		BankName:                      "DB Test Bank",
-		BankBranch:                    "Main",
-		AccountNumber:                 account,
-		IBAN:                          "YE00TEST" + account,
-		SettlementPreference:          "bank",
-		BankAccountHolderMatchesOwner: true,
-		BankNotes:                     "integration proof",
-		OperatorID:                    "field-db-001",
+		BeneficiaryName:      "DB Partner Owner",
+		DestinationMethod:    "bank",
+		DestinationReference: account,
+		OperatorID:           "field-db-001",
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -103,7 +98,7 @@ func TestCanonicalPayoutDestinationIdempotencyAndSingleActiveAreOperatorContextL
 		t.Fatalf("first payout status = %d, want 201; body=%s", first.Code, first.Body.String())
 	}
 	firstRef := decodeCanonicalPayoutRef(t, first)
-	if firstRef.ID == "" || firstRef.MaskedAccountNumber == "123456789" {
+	if firstRef.ID == "" || firstRef.MaskedDestinationReference == "123456789" {
 		t.Fatalf("first payout response is not masked: %#v", firstRef)
 	}
 
@@ -162,22 +157,21 @@ func TestCanonicalPayoutDestinationIdempotencyAndSingleActiveAreOperatorContextL
 		t.Fatalf("OperatorContext-local request counts are wrong: OperatorContextA=%d OperatorContextB=%d", OperatorContextARequestCount, OperatorContextBRequestCount)
 	}
 
-	var rawAccount, rawIBAN, rawMobile string
-	var accountEncrypted, ibanEncrypted, mobileEncrypted bool
+	var decryptedReference string
+	var referenceEncrypted bool
 	if err := db.QueryRow(`
-		SELECT account_number, iban, payout_mobile_number,
-		       account_number_encrypted IS NOT NULL,
-		       iban_encrypted IS NOT NULL,
-		       payout_mobile_number_encrypted IS NOT NULL
+		SELECT pgp_sym_decrypt(destination_reference_encrypted, $3),
+		       destination_reference_encrypted IS NOT NULL
 		FROM wlt_payout_destinations
 		WHERE operator_context_id=$1 AND id=$2`, OperatorContextA, secondRef.ID,
-	).Scan(&rawAccount, &rawIBAN, &rawMobile, &accountEncrypted, &ibanEncrypted, &mobileEncrypted); err != nil {
+		"db-test-encryption-key",
+	).Scan(&decryptedReference, &referenceEncrypted); err != nil {
 		t.Fatal(err)
 	}
-	if rawAccount != "" || rawIBAN != "" || rawMobile != "" {
-		t.Fatalf("plaintext payout data persisted: account=%q iban=%q mobile=%q", rawAccount, rawIBAN, rawMobile)
+	if decryptedReference != "987654321" {
+		t.Fatalf("decrypted payout reference mismatch: %q", decryptedReference)
 	}
-	if !accountEncrypted || !ibanEncrypted || !mobileEncrypted {
-		t.Fatalf("encrypted payout columns incomplete: account=%v iban=%v mobile=%v", accountEncrypted, ibanEncrypted, mobileEncrypted)
+	if !referenceEncrypted {
+		t.Fatal("encrypted payout reference is missing")
 	}
 }

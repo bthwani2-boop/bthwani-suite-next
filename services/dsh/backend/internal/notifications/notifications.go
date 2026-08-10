@@ -64,6 +64,8 @@ type PlatformNotificationConfig struct {
 	Topic           string    `json:"topic"`
 	ActorTypes      []string  `json:"actorTypes"`
 	IsEnabled       bool      `json:"isEnabled"`
+	IsMandatory     bool      `json:"isMandatory"`
+	Version         int       `json:"version"`
 	Description     string    `json:"description"`
 	DefaultChannels []string  `json:"defaultChannels"`
 	TitleAR         string    `json:"titleAr"`
@@ -80,6 +82,8 @@ type PlatformNotificationConfigInput struct {
 	Topic           string
 	ActorTypes      []string
 	IsEnabled       bool
+	IsMandatory     bool
+	Version         int
 	Description     string
 	DefaultChannels []string
 	TitleAR         string
@@ -242,7 +246,7 @@ func ListPlatformNotificationConfigs(db *sql.DB) ([]PlatformNotificationConfig, 
 		return nil, ErrInvalid
 	}
 	rows, err := db.Query(`
-		SELECT id, topic, actor_types, is_enabled,
+		SELECT id, topic, actor_types, is_enabled, is_mandatory, version,
 		       COALESCE(description,''), default_channels,
 		       title_ar, body_ar, title_en, body_en, variables, deep_link_pattern,
 		       COALESCE(updated_by,''), updated_at
@@ -252,24 +256,15 @@ func ListPlatformNotificationConfigs(db *sql.DB) ([]PlatformNotificationConfig, 
 		return nil, err
 	}
 	defer rows.Close()
+
 	var out []PlatformNotificationConfig
 	for rows.Next() {
 		var c PlatformNotificationConfig
 		if err := rows.Scan(
-			&c.ID,
-			&c.Topic,
-			pq_TextArray(&c.ActorTypes),
-			&c.IsEnabled,
-			&c.Description,
-			pq_TextArray(&c.DefaultChannels),
-			&c.TitleAR,
-			&c.BodyAR,
-			&c.TitleEN,
-			&c.BodyEN,
-			pq_TextArray(&c.Variables),
-			&c.DeepLinkPattern,
-			&c.UpdatedBy,
-			&c.UpdatedAt,
+			&c.ID, &c.Topic, pq_TextArray(&c.ActorTypes), &c.IsEnabled, &c.IsMandatory, &c.Version,
+			&c.Description, pq_TextArray(&c.DefaultChannels),
+			&c.TitleAR, &c.BodyAR, &c.TitleEN, &c.BodyEN, pq_TextArray(&c.Variables), &c.DeepLinkPattern,
+			&c.UpdatedBy, &c.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -319,12 +314,14 @@ func UpsertPlatformNotificationConfigPolicy(db *sql.DB, input PlatformNotificati
 	var c PlatformNotificationConfig
 	err = db.QueryRow(`
 		INSERT INTO dsh_platform_notification_config
-			(topic, actor_types, is_enabled, description, default_channels,
+			(topic, actor_types, is_enabled, is_mandatory, version, description, default_channels,
 			 title_ar, body_ar, title_en, body_en, variables, deep_link_pattern, updated_by, updated_at)
-		VALUES ($1, $2::TEXT[], $3, $4, $5::TEXT[], $6, $7, $8, $9, $10::TEXT[], $11, $12, $13)
+		VALUES ($1, $2::TEXT[], $3, $4, $5, $6, $7::TEXT[], $8, $9, $10, $11, $12::TEXT[], $13, $14, $15)
 		ON CONFLICT (topic) DO UPDATE
 		SET actor_types=EXCLUDED.actor_types,
 		    is_enabled=EXCLUDED.is_enabled,
+		    is_mandatory=EXCLUDED.is_mandatory,
+		    version=EXCLUDED.version,
 		    description=EXCLUDED.description,
 		    default_channels=EXCLUDED.default_channels,
 		    title_ar=EXCLUDED.title_ar,
@@ -335,12 +332,14 @@ func UpsertPlatformNotificationConfigPolicy(db *sql.DB, input PlatformNotificati
 		    deep_link_pattern=EXCLUDED.deep_link_pattern,
 		    updated_by=EXCLUDED.updated_by,
 		    updated_at=EXCLUDED.updated_at
-		RETURNING id, topic, actor_types, is_enabled, COALESCE(description,''),
+		RETURNING id, topic, actor_types, is_enabled, is_mandatory, version, COALESCE(description,''),
 		          default_channels, title_ar, body_ar, title_en, body_en, variables,
 		          deep_link_pattern, COALESCE(updated_by,''), updated_at`,
 		input.Topic,
 		formatPgTextArray(actorTypes),
 		input.IsEnabled,
+		input.IsMandatory,
+		input.Version,
 		strings.TrimSpace(input.Description),
 		formatPgTextArray(channels),
 		strings.TrimSpace(input.TitleAR),
@@ -356,6 +355,8 @@ func UpsertPlatformNotificationConfigPolicy(db *sql.DB, input PlatformNotificati
 		&c.Topic,
 		pq_TextArray(&c.ActorTypes),
 		&c.IsEnabled,
+		&c.IsMandatory,
+		&c.Version,
 		&c.Description,
 		pq_TextArray(&c.DefaultChannels),
 		&c.TitleAR,

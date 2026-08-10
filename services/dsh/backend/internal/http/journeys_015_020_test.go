@@ -7,7 +7,7 @@ import (
 )
 
 func TestJourneys015Through020ExposeGovernedRoutes(t *testing.T) {
-	router := NewRouter(nil, nil, nil, nil, nil)
+	router := NewRouter(nil, nil, nil, nil, nil, nil)
 	cases := []struct {
 		journey string
 		method  string
@@ -60,8 +60,8 @@ func TestDispatchLocationTimestampPolicy(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := validateDispatchLocationTimestamp(tc.recordedAt, now, tc.previous); got != tc.want {
-				t.Fatalf("expected %q, got %q", tc.want, got)
+			if got := validateDispatchLocationIntegrity(tc.recordedAt, now, 0.0, 0.0, tc.previous, nil, nil); got != tc.want {
+				t.Fatalf("validateDispatchLocationIntegrity() = %q, want %q", got, tc.want)
 			}
 		})
 	}

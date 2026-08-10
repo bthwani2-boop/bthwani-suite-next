@@ -3,85 +3,106 @@ x-bthwani-owner: services/dsh
 info:
   title: DSH Governed Incident and Provider Rating API
   version: 1.2.0
-  description: >-
-    Permission-scoped support incidents, sovereign operational interventions,
-    and source-bound provider ratings with retry-safe mutations, evidence
-    references and append-only audit readback.
+  description: Permission-scoped support incidents, sovereign operational interventions,
+    and source-bound provider ratings with retry-safe mutations, evidence references
+    and append-only audit readback.
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-runtime-dependency: true
 x-bthwani-generation: DISABLED
 x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
 servers:
-  - url: http://localhost:58080
+- url: http://localhost:58080
 paths:
   /dsh/operator/support/incidents:
     get:
-      tags: [ "dsh-operator" ]
+      tags:
+      - dsh-operator
       operationId: listDshGovernedIncidents
       parameters:
-        - name: status
-          in: query
-          required: false
-          schema: { $ref: '#/components/schemas/IncidentStatus' }
+      - name: status
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/IncidentStatus'
       responses:
-        '200': { $ref: '#/components/responses/IncidentList' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '200':
+          $ref: '#/components/responses/IncidentList'
+        '400':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
       security:
-        - bearerAuth: []
+      - bearerAuth: []
     post:
-      tags: [ "dsh-operator" ]
+      tags:
+      - dsh-operator
       operationId: createDshGovernedIncident
       parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CorrelationId'
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/CreateIncidentInput' }
+            schema:
+              $ref: '#/components/schemas/CreateIncidentInput'
       responses:
-        '201': { $ref: '#/components/responses/Incident' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '201':
+          $ref: '#/components/responses/Incident'
+        '400':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
       security:
-        - bearerAuth: []
+      - bearerAuth: []
   /dsh/operator/support/incidents/{incidentId}:
     parameters:
-      - $ref: '#/components/parameters/IncidentId'
+    - $ref: '#/components/parameters/IncidentId'
     get:
-      tags: [ "dsh-operator" ]
+      tags:
+      - dsh-operator
       operationId: getDshGovernedIncident
       responses:
-        '200': { $ref: '#/components/responses/Incident' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '200':
+          $ref: '#/components/responses/Incident'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
       security:
-        - bearerAuth: []
+      - bearerAuth: []
     patch:
-      tags: [ "dsh-operator" ]
+      tags:
+      - dsh-operator
       operationId: updateDshGovernedIncident
       parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CorrelationId'
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/UpdateIncidentInput' }
+            schema:
+              $ref: '#/components/schemas/UpdateIncidentInput'
       responses:
-        '200': { $ref: '#/components/responses/Incident' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
+        '200':
+          $ref: '#/components/responses/Incident'
+        '400':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
       security:
-        - bearerAuth: []
+      - bearerAuth: []
   /dsh/operator/support/incidents/{incidentId}/events:
     parameters:
-      - $ref: '#/components/parameters/IncidentId'
+    - $ref: '#/components/parameters/IncidentId'
     get:
-      tags: [ "dsh-operator" ]
+      tags:
+      - dsh-operator
       operationId: listDshGovernedIncidentEvents
       responses:
         '200':
@@ -90,168 +111,123 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [ events ]
+                required:
+                - events
                 properties:
                   events:
                     type: array
-                    items: { $ref: '#/components/schemas/IncidentEvent' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+                    items:
+                      $ref: '#/components/schemas/IncidentEvent'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
       security:
-        - bearerAuth: []
-
+      - bearerAuth: []
   /dsh/operator/operational-incidents:
     get:
-      tags: [ "dsh-operator" ]
+      tags:
+      - dsh-operator
       operationId: listDshOperationalIncidents
       parameters:
-        - { name: orderId, in: query, required: false, schema: { type: string } }
-        - {
-            name: limit,
-            in: query,
-            required: false,
-            schema: { type: integer, minimum: 1, maximum: 200 }
-          }
-        - {
-            name: offset,
-            in: query,
-            required: false,
-            schema: { type: integer, minimum: 0 }
-          }
+      - name: orderId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
       responses:
-        '200': { $ref: '#/components/responses/OperationalIncidentList' }
-        '403': { $ref: '#/components/responses/Error' }
+        '200':
+          $ref: '#/components/responses/OperationalIncidentList'
+        '403':
+          $ref: '#/components/responses/Error'
       security:
-        - bearerAuth: []
+      - bearerAuth: []
     post:
-      tags: [ "dsh-operator" ]
+      tags:
+      - dsh-operator
       operationId: reportDshOperationalIncident
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/ReportOperationalIncidentInput' }
+            schema:
+              $ref: '#/components/schemas/ReportOperationalIncidentInput'
       responses:
-        '200': { $ref: '#/components/responses/OperationalIncident' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '422': { $ref: '#/components/responses/Error' }
+        '200':
+          $ref: '#/components/responses/OperationalIncident'
+        '400':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
       security:
-        - bearerAuth: []
+      - bearerAuth: []
   /dsh/operator/operational-incidents/{incidentId}:
     get:
-      tags: [ "dsh-operator" ]
+      tags:
+      - dsh-operator
       operationId: getDshOperationalIncident
       parameters:
-        - $ref: '#/components/parameters/IncidentId'
+      - $ref: '#/components/parameters/IncidentId'
       responses:
-        '200': { $ref: '#/components/responses/OperationalIncident' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '200':
+          $ref: '#/components/responses/OperationalIncident'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
       security:
-        - bearerAuth: []
-
-  /dsh/partner/me/ratings/field/prompt:
-    get:
-      tags: [ "dsh-provider-ratings" ]
-      operationId: getDshPartnerFieldRatingPrompt
-      summary: Return the authenticated partner's post-activation field rating prompt.
-      responses:
-        '200': { $ref: '#/components/responses/PartnerFieldRatingPrompt' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-      security:
-        - bearerAuth: []
-  /dsh/partner/me/ratings/field:
-    post:
-      tags: [ "dsh-provider-ratings" ]
-      operationId: submitDshPartnerFieldRating
-      summary: Rate the attributed field provider after partner activation.
-      parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/SingleRatingInput' }
-      responses:
-        '200': { $ref: '#/components/responses/ProviderRating' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
-      security:
-        - bearerAuth: []
-  /dsh/client/me/ratings/pending-order:
-    get:
-      tags: [ "dsh-provider-ratings" ]
-      operationId: getDshPendingClientOrderRatingPrompt
-      summary: Return the newest delivered order awaiting client ratings.
-      responses:
-        '200': { $ref: '#/components/responses/ClientOrderRatingPrompt' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-      security:
-        - bearerAuth: []
-  /dsh/client/orders/{orderId}/rating-prompt:
-    get:
-      tags: [ "dsh-provider-ratings" ]
-      operationId: getDshClientOrderRatingPrompt
-      summary: Return rating eligibility for an owned delivered order.
-      parameters:
-        - $ref: '#/components/parameters/OrderId'
-      responses:
-        '200': { $ref: '#/components/responses/ClientOrderRatingPrompt' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-      security:
-        - bearerAuth: []
-  /dsh/client/orders/{orderId}/ratings:
-    post:
-      tags: [ "dsh-provider-ratings" ]
-      operationId: submitDshClientOrderRatings
-      summary: Rate the captain and the order after verified delivery.
-      parameters:
-        - $ref: '#/components/parameters/OrderId'
-        - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/OrderRatingsInput' }
-      responses:
-        '200': { $ref: '#/components/responses/ProviderRatings' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
-      security:
-        - bearerAuth: []
+      - bearerAuth: []
+    parameters:
+    - name: incidentId
+      in: path
+      required: true
+      schema:
+        type: string
   /dsh/field/me/ratings/summary:
     get:
-      tags: [ "dsh-provider-ratings" ]
+      tags:
+      - dsh-provider-ratings
       operationId: getDshFieldOwnRatingSummary
       summary: Return the authenticated field provider's partner rating summary.
       responses:
-        '200': { $ref: '#/components/responses/ProviderRatingSummary' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '200':
+          $ref: '#/components/responses/ProviderRatingSummary'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
       security:
-        - bearerAuth: []
+      - bearerAuth: []
   /dsh/captain/me/ratings/summary:
     get:
-      tags: [ "dsh-provider-ratings" ]
+      tags:
+      - dsh-provider-ratings
       operationId: getDshCaptainOwnRatingSummary
       summary: Return the authenticated captain's client rating summary.
       responses:
-        '200': { $ref: '#/components/responses/ProviderRatingSummary' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '200':
+          $ref: '#/components/responses/ProviderRatingSummary'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
       security:
-        - bearerAuth: []
-
+      - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -263,165 +239,290 @@ components:
       name: incidentId
       in: path
       required: true
-      schema: { type: string, minLength: 1 }
+      schema:
+        type: string
+        minLength: 1
     OrderId:
       name: orderId
       in: path
       required: true
-      schema: { type: string, minLength: 1 }
+      schema:
+        type: string
+        minLength: 1
     IdempotencyKey:
       name: Idempotency-Key
       in: header
       required: true
-      schema: { type: string, minLength: 1, maxLength: 200 }
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 200
     CorrelationId:
       name: X-Correlation-ID
       in: header
       required: false
-      schema: { type: string, minLength: 1, maxLength: 200 }
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 200
   schemas:
     IncidentStatus:
       type: string
-      enum: [ open, monitoring, resolved ]
+      enum:
+      - open
+      - monitoring
+      - resolved
     IncidentSeverity:
       type: string
-      enum: [ low, medium, high, critical ]
+      enum:
+      - low
+      - medium
+      - high
+      - critical
     IncidentScope:
       type: string
-      enum: [ delivery, stores, payments, platform, unknown ]
+      enum:
+      - delivery
+      - stores
+      - payments
+      - platform
+      - unknown
     CreateIncidentInput:
       type: object
-      required: [ title, description, severity ]
+      required:
+      - title
+      - description
+      - severity
       properties:
-        title: { type: string, minLength: 3, maxLength: 160 }
-        description: { type: string, minLength: 5, maxLength: 4000 }
-        severity: { $ref: '#/components/schemas/IncidentSeverity' }
-        affectedScope: { $ref: '#/components/schemas/IncidentScope' }
+        title:
+          type: string
+          minLength: 3
+          maxLength: 160
+        description:
+          type: string
+          minLength: 5
+          maxLength: 4000
+        severity:
+          $ref: '#/components/schemas/IncidentSeverity'
+        affectedScope:
+          $ref: '#/components/schemas/IncidentScope'
     UpdateIncidentInput:
       type: object
-      required: [ expectedStatus, status ]
+      required:
+      - expectedStatus
+      - status
       properties:
-        expectedStatus: { $ref: '#/components/schemas/IncidentStatus' }
-        status: { $ref: '#/components/schemas/IncidentStatus' }
-        postmortemUrl: { type: string, maxLength: 1000 }
+        expectedStatus:
+          $ref: '#/components/schemas/IncidentStatus'
+        status:
+          $ref: '#/components/schemas/IncidentStatus'
+        postmortemUrl:
+          type: string
+          maxLength: 1000
     Incident:
       type: object
       required:
-        [
-          id,
-          title,
-          description,
-          severity,
-          status,
-          affectedScope,
-          raisedBy,
-          postmortemUrl,
-          createdAt,
-          updatedAt
-        ]
+      - id
+      - title
+      - description
+      - severity
+      - status
+      - affectedScope
+      - raisedBy
+      - postmortemUrl
+      - createdAt
+      - updatedAt
       properties:
-        id: { type: string }
-        title: { type: string }
-        description: { type: string }
-        severity: { $ref: '#/components/schemas/IncidentSeverity' }
-        status: { $ref: '#/components/schemas/IncidentStatus' }
-        affectedScope: { $ref: '#/components/schemas/IncidentScope' }
-        raisedBy: { type: string }
-        resolvedBy: { type: string }
-        resolvedAt: { type: [ string, 'null' ], format: date-time }
-        postmortemUrl: { type: string }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        severity:
+          $ref: '#/components/schemas/IncidentSeverity'
+        status:
+          $ref: '#/components/schemas/IncidentStatus'
+        affectedScope:
+          $ref: '#/components/schemas/IncidentScope'
+        raisedBy:
+          type: string
+        resolvedBy:
+          type: string
+        resolvedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        postmortemUrl:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
     IncidentEvent:
       type: object
-      required: [ id, incidentId, actorId, eventType, toStatus, correlationId, createdAt ]
+      required:
+      - id
+      - incidentId
+      - actorId
+      - eventType
+      - toStatus
+      - createdAt
       properties:
-        id: { type: string }
-        incidentId: { type: string }
-        actorId: { type: string }
+        id:
+          type: string
+        incidentId:
+          type: string
+        actorId:
+          type: string
         eventType:
           type: string
-          enum: [ created, monitoring_started, reopened, resolved, status_changed ]
+          enum:
+          - created
+          - monitoring_started
+          - reopened
+          - resolved
+          - status_changed
         fromStatus:
           oneOf:
-            - { $ref: '#/components/schemas/IncidentStatus' }
-            - { type: string, maxLength: 0 }
-        toStatus: { $ref: '#/components/schemas/IncidentStatus' }
-        correlationId: { type: string }
-        createdAt: { type: string, format: date-time }
+          - $ref: '#/components/schemas/IncidentStatus'
+          - type: string
+            maxLength: 0
+        toStatus:
+          $ref: '#/components/schemas/IncidentStatus'
+        createdAt:
+          type: string
+          format: date-time
     OperationalIncidentType:
       type: string
-      enum: [ cancel, suspend, raise_exception ]
+      enum:
+      - cancel
+      - suspend
+      - raise_exception
     OperationalTargetEntityType:
       type: string
-      enum: [ partner_delivery_task, pickup_session, order ]
+      enum:
+      - partner_delivery_task
+      - pickup_session
+      - order
     ReportOperationalIncidentInput:
       type: object
       additionalProperties: false
       required:
-        [
-          orderId,
-          targetEntityType,
-          targetEntityId,
-          incidentType,
-          reason,
-          ticketReference,
-          expectedVersion
-        ]
+      - orderId
+      - targetEntityType
+      - targetEntityId
+      - incidentType
+      - reason
+      - ticketReference
+      - expectedVersion
       properties:
-        orderId: { type: string, minLength: 1 }
-        targetEntityType: { $ref: '#/components/schemas/OperationalTargetEntityType' }
-        targetEntityId: { type: string, minLength: 1 }
-        incidentType: { $ref: '#/components/schemas/OperationalIncidentType' }
-        reason: { type: string, minLength: 1, maxLength: 2000 }
-        ticketReference: { type: string, minLength: 1, maxLength: 256 }
-        correlationId: { type: string, maxLength: 200 }
-        expectedVersion: { type: integer, minimum: 0 }
+        orderId:
+          type: string
+          minLength: 1
+        targetEntityType:
+          $ref: '#/components/schemas/OperationalTargetEntityType'
+        targetEntityId:
+          type: string
+          minLength: 1
+        incidentType:
+          $ref: '#/components/schemas/OperationalIncidentType'
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        ticketReference:
+          type: string
+          minLength: 1
+          maxLength: 256
+        expectedVersion:
+          type: integer
+          minimum: 0
         evidenceReferences:
           type: array
           maxItems: 20
-          items: { type: string, minLength: 1, maxLength: 512 }
-        reasonCode: { type: string, maxLength: 128 }
-        reasonNote: { type: string, maxLength: 2000 }
+          items:
+            type: string
+            minLength: 1
+            maxLength: 512
+        reasonCode:
+          type: string
+          maxLength: 128
+        reasonNote:
+          type: string
+          maxLength: 2000
     OperationalIncident:
       type: object
       additionalProperties: true
       required:
-        [
-          id,
-          orderId,
-          targetEntityType,
-          targetEntityId,
-          incidentType,
-          status,
-          reason,
-          ticketReference,
-          actorId,
-          actorRole,
-          correlationId,
-          createdAt,
-          updatedAt
-        ]
+      - id
+      - orderId
+      - targetEntityType
+      - targetEntityId
+      - incidentType
+      - status
+      - reason
+      - ticketReference
+      - actorId
+      - actorRole
+      - createdAt
+      - updatedAt
       properties:
-        id: { type: string }
-        orderId: { type: string }
-        targetEntityType: { $ref: '#/components/schemas/OperationalTargetEntityType' }
-        targetEntityId: { type: string }
-        incidentType: { $ref: '#/components/schemas/OperationalIncidentType' }
-        status: { type: string }
-        reason: { type: string }
-        ticketReference: { type: string }
-        actorId: { type: string }
-        actorRole: { type: string }
-        beforeState: { type: [ object, 'null' ], additionalProperties: true }
-        afterState: { type: [ object, 'null' ], additionalProperties: true }
-        failureReason: { type: [ string, 'null' ] }
-        partnerNotified: { type: boolean }
-        partnerNotifiedAt: { type: [ string, 'null' ], format: date-time }
-        correlationId: { type: string }
-        appliedAt: { type: [ string, 'null' ], format: date-time }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
+        id:
+          type: string
+        orderId:
+          type: string
+        targetEntityType:
+          $ref: '#/components/schemas/OperationalTargetEntityType'
+        targetEntityId:
+          type: string
+        incidentType:
+          $ref: '#/components/schemas/OperationalIncidentType'
+        status:
+          type: string
+        reason:
+          type: string
+        ticketReference:
+          type: string
+        actorId:
+          type: string
+        actorRole:
+          type: string
+        beforeState:
+          type:
+          - object
+          - 'null'
+          additionalProperties: true
+        afterState:
+          type:
+          - object
+          - 'null'
+          additionalProperties: true
+        failureReason:
+          type:
+          - string
+          - 'null'
+        partnerNotified:
+          type: boolean
+        partnerNotifiedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        appliedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
     RatingScore:
       type: integer
       minimum: 1
@@ -429,88 +530,167 @@ components:
     SingleRatingInput:
       type: object
       additionalProperties: false
-      required: [ score ]
+      required:
+      - score
       properties:
-        score: { $ref: '#/components/schemas/RatingScore' }
-        comment: { type: string, maxLength: 1000 }
+        score:
+          $ref: '#/components/schemas/RatingScore'
+        comment:
+          type: string
+          maxLength: 1000
     OrderRatingsInput:
       type: object
       additionalProperties: false
-      required: [ captainScore, orderScore ]
+      required:
+      - captainScore
+      - orderScore
       properties:
-        captainScore: { $ref: '#/components/schemas/RatingScore' }
-        orderScore: { $ref: '#/components/schemas/RatingScore' }
-        captainComment: { type: string, maxLength: 1000 }
-        orderComment: { type: string, maxLength: 1000 }
+        captainScore:
+          $ref: '#/components/schemas/RatingScore'
+        orderScore:
+          $ref: '#/components/schemas/RatingScore'
+        captainComment:
+          type: string
+          maxLength: 1000
+        orderComment:
+          type: string
+          maxLength: 1000
     ProviderRating:
       type: object
       additionalProperties: false
       required:
-        [
-          id,
-          operatorContextId,
-          raterKind,
-          raterActorId,
-          targetKind,
-          sourceKind,
-          sourceId,
-          score,
-          status,
-          createdAt,
-          updatedAt
-        ]
+      - id
+      - operatorContextId
+      - raterKind
+      - raterActorId
+      - targetKind
+      - sourceKind
+      - sourceId
+      - score
+      - status
+      - createdAt
+      - updatedAt
       properties:
-        id: { type: string }
-        operatorContextId: { type: string }
-        raterKind: { type: string, enum: [ partner, client ] }
-        raterActorId: { type: string }
-        targetKind: { type: string, enum: [ field, captain, order ] }
-        targetActorId: { type: string }
-        sourceKind: { type: string, enum: [ partner_activation, order_delivery ] }
-        sourceId: { type: string }
-        score: { $ref: '#/components/schemas/RatingScore' }
-        comment: { type: string }
-        status: { type: string, enum: [ active, retracted ] }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
+        id:
+          type: string
+        operatorContextId:
+          type: string
+        raterKind:
+          type: string
+          enum:
+          - partner
+          - client
+        raterActorId:
+          type: string
+        targetKind:
+          type: string
+          enum:
+          - field
+          - captain
+          - order
+        targetActorId:
+          type: string
+        sourceKind:
+          type: string
+          enum:
+          - partner_activation
+          - order_delivery
+        sourceId:
+          type: string
+        score:
+          $ref: '#/components/schemas/RatingScore'
+        comment:
+          type: string
+        status:
+          type: string
+          enum:
+          - active
+          - retracted
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
     PartnerFieldRatingPrompt:
       type: object
       additionalProperties: false
-      required: [ eligible, completed ]
+      required:
+      - eligible
+      - completed
       properties:
-        eligible: { type: boolean }
-        completed: { type: boolean }
-        partnerId: { type: string }
-        partnerName: { type: string }
-        fieldActorId: { type: string }
-        activationStatus: { type: string }
-        reason: { type: string }
+        eligible:
+          type: boolean
+        completed:
+          type: boolean
+        partnerId:
+          type: string
+        partnerName:
+          type: string
+        fieldActorId:
+          type: string
+        activationStatus:
+          type: string
+        reason:
+          type: string
     ClientOrderRatingPrompt:
       type: object
       additionalProperties: false
-      required: [ eligible, completed, orderId, captainRated, orderRated ]
+      required:
+      - eligible
+      - completed
+      - orderId
+      - captainRated
+      - orderRated
       properties:
-        eligible: { type: boolean }
-        completed: { type: boolean }
-        orderId: { type: string }
-        orderNumber: { type: string }
-        captainActorId: { type: string }
-        captainRated: { type: boolean }
-        orderRated: { type: boolean }
-        reason: { type: string }
+        eligible:
+          type: boolean
+        completed:
+          type: boolean
+        orderId:
+          type: string
+        orderNumber:
+          type: string
+        captainActorId:
+          type: string
+        captainRated:
+          type: boolean
+        orderRated:
+          type: boolean
+        reason:
+          type: string
     ProviderRatingSummary:
       type: object
       additionalProperties: false
-      required: [ targetKind, targetActorId, averageScore, ratingCount, distribution ]
+      required:
+      - targetKind
+      - targetActorId
+      - averageScore
+      - ratingCount
+      - distribution
       properties:
-        targetKind: { type: string, enum: [ field, captain ] }
-        targetActorId: { type: string }
-        averageScore: { type: number, minimum: 0, maximum: 5 }
-        ratingCount: { type: integer, minimum: 0 }
+        targetKind:
+          type: string
+          enum:
+          - field
+          - captain
+        targetActorId:
+          type: string
+        averageScore:
+          type: number
+          minimum: 0
+          maximum: 5
+        ratingCount:
+          type: integer
+          minimum: 0
         distribution:
           type: object
-          additionalProperties: { type: integer, minimum: 0 }
-        lastRatedAt: { type: string, format: date-time }
+          additionalProperties:
+            type: integer
+            minimum: 0
+        lastRatedAt:
+          type: string
+          format: date-time
   responses:
     Incident:
       description: Operational support incident.
@@ -518,96 +698,118 @@ components:
         application/json:
           schema:
             type: object
-            required: [ incident ]
+            required:
+            - incident
             properties:
-              incident: { $ref: '#/components/schemas/Incident' }
+              incident:
+                $ref: '#/components/schemas/Incident'
     IncidentList:
       description: Operational support incidents.
       content:
         application/json:
           schema:
             type: object
-            required: [ incidents ]
+            required:
+            - incidents
             properties:
               incidents:
                 type: array
-                items: { $ref: '#/components/schemas/Incident' }
+                items:
+                  $ref: '#/components/schemas/Incident'
     OperationalIncident:
       description: Sovereign operational intervention record.
       content:
         application/json:
           schema:
             type: object
-            required: [ incident ]
+            required:
+            - incident
             properties:
-              incident: { $ref: '#/components/schemas/OperationalIncident' }
+              incident:
+                $ref: '#/components/schemas/OperationalIncident'
     OperationalIncidentList:
       description: Sovereign operational intervention records.
       content:
         application/json:
           schema:
             type: object
-            required: [ incidents ]
+            required:
+            - incidents
             properties:
               incidents:
                 type: array
-                items: { $ref: '#/components/schemas/OperationalIncident' }
+                items:
+                  $ref: '#/components/schemas/OperationalIncident'
     PartnerFieldRatingPrompt:
       description: Partner activation rating prompt.
       content:
         application/json:
           schema:
             type: object
-            required: [ prompt ]
+            required:
+            - prompt
             properties:
-              prompt: { $ref: '#/components/schemas/PartnerFieldRatingPrompt' }
+              prompt:
+                $ref: '#/components/schemas/PartnerFieldRatingPrompt'
     ClientOrderRatingPrompt:
       description: Delivered-order rating prompt.
       content:
         application/json:
           schema:
             type: object
-            required: [ prompt ]
+            required:
+            - prompt
             properties:
-              prompt: { $ref: '#/components/schemas/ClientOrderRatingPrompt' }
+              prompt:
+                $ref: '#/components/schemas/ClientOrderRatingPrompt'
     ProviderRating:
       description: Governed provider rating.
       content:
         application/json:
           schema:
             type: object
-            required: [ rating ]
+            required:
+            - rating
             properties:
-              rating: { $ref: '#/components/schemas/ProviderRating' }
+              rating:
+                $ref: '#/components/schemas/ProviderRating'
     ProviderRatings:
       description: Governed captain and order ratings.
       content:
         application/json:
           schema:
             type: object
-            required: [ ratings ]
+            required:
+            - ratings
             properties:
               ratings:
                 type: array
                 minItems: 2
                 maxItems: 2
-                items: { $ref: '#/components/schemas/ProviderRating' }
+                items:
+                  $ref: '#/components/schemas/ProviderRating'
     ProviderRatingSummary:
       description: Provider rating summary.
       content:
         application/json:
           schema:
             type: object
-            required: [ summary ]
+            required:
+            - summary
             properties:
-              summary: { $ref: '#/components/schemas/ProviderRatingSummary' }
+              summary:
+                $ref: '#/components/schemas/ProviderRatingSummary'
     Error:
       description: Governed error response.
       content:
         application/json:
           schema:
             type: object
-            required: [ code, message ]
+            required:
+            - code
+            - message
             properties:
-              code: { type: string }
-              message: { type: string }
+              code:
+                type: string
+              message:
+                type: string

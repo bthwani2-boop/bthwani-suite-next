@@ -8,13 +8,13 @@ type StorePublicationDiagnostics struct {
 }
 
 func DiagnoseStorePublication(row DshStoreRow) StorePublicationDiagnostics {
-	blockers := make([]string, 0, 13)
+	blockers := make([]string, 0, 15)
 	add := func(code, message string) {
 		blockers = append(blockers, code+": "+message)
 	}
 
-	if row.Status != StatusActive {
-		add("STORE_NOT_ACTIVE", "Store lifecycle must be active")
+	if row.Status != StatusPublished {
+		add("STORE_NOT_PUBLISHED", "Store lifecycle must be published")
 	}
 	if !row.IsVisible {
 		add("STORE_HIDDEN", "Store visibility must be enabled")
@@ -25,8 +25,14 @@ func DiagnoseStorePublication(row DshStoreRow) StorePublicationDiagnostics {
 	if row.PartnerReadiness != "ready" {
 		add("PARTNER_NOT_READY", "Partner readiness must be ready")
 	}
+	if row.PartnerActivationStatus != "client_visible" {
+		add("PARTNER_NOT_CLIENT_VISIBLE", "Owning Partner must be client visible")
+	}
 	if row.CatalogApprovalStatus != "approved" {
 		add("CATALOG_NOT_APPROVED", "Catalog must be approved")
+	}
+	if !row.HasApprovedAssortment {
+		add("APPROVED_ASSORTMENT_MISSING", "At least one client-visible approved assortment is required")
 	}
 	if row.MarketingVisibility != "visible" {
 		add("MARKETING_HIDDEN", "Marketing visibility must be visible")
@@ -57,4 +63,16 @@ func DiagnoseStorePublication(row DshStoreRow) StorePublicationDiagnostics {
 		IsReady:  len(blockers) == 0,
 		Blockers: blockers,
 	}
+}
+
+// DiagnoseStorePublicationReadiness validates whether an operator may move a
+// store into the published lifecycle. The owning partner must already be active,
+// while client_visible is evaluated as the next audited partner state. Public
+// reads remain denied until that transition actually commits.
+func DiagnoseStorePublicationReadiness(row DshStoreRow) StorePublicationDiagnostics {
+	row.Status = StatusPublished
+	if row.PartnerActivationStatus == "partner_active" || row.PartnerActivationStatus == "client_visible" {
+		row.PartnerActivationStatus = "client_visible"
+	}
+	return DiagnoseStorePublication(row)
 }

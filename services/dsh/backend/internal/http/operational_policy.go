@@ -8,8 +8,36 @@ import (
 	"dsh-api/internal/store"
 )
 
+func (s *protectedStoreServer) requireOperationalProfileRead(w http.ResponseWriter, r *http.Request) bool {
+	for _, permission := range []string{
+		DshServiceZonesPermissionRead,
+		DshFulfillmentSlaPermissionRead,
+		DshDispatchCapacityPermissionRead,
+	} {
+		if _, ok := s.requirePermission(w, r, "control-panel", permission); !ok {
+			return false
+		}
+	}
+	return true
+}
+
+// requireOperationalProfileManage enforces the contract's declared multi-scope
+// requirement for mutating an operational profile
+// (dsh.operational-policy-permissions.overlay.yaml): both fulfillment SLA and
+// dispatch capacity manage permissions, since the profile spans both.
+func (s *protectedStoreServer) requireOperationalProfileManage(w http.ResponseWriter, r *http.Request) (store.StoreActor, bool) {
+	actor, ok := s.requirePermission(w, r, "control-panel", DshFulfillmentSlaPermissionManage)
+	if !ok {
+		return store.StoreActor{}, false
+	}
+	if _, ok := s.requirePermission(w, r, "control-panel", DshDispatchCapacityPermissionManage); !ok {
+		return store.StoreActor{}, false
+	}
+	return actor, true
+}
+
 func (s *protectedStoreServer) handleGetOperationalProfile(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator"); !ok {
+	if !s.requireOperationalProfileRead(w, r) {
 		return
 	}
 	profile, err := platformpolicies.GetOperationalProfile(
@@ -26,7 +54,7 @@ func (s *protectedStoreServer) handleGetOperationalProfile(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleUpsertOperationalProfile(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage, "operator")
+	actor, ok := s.requireOperationalProfileManage(w, r)
 	if !ok {
 		return
 	}
@@ -78,7 +106,7 @@ func (s *protectedStoreServer) handleUpsertOperationalProfile(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleListOperationalDeliveryModes(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", DshFulfillmentSlaPermissionRead); !ok {
 		return
 	}
 	items, err := platformpolicies.ListDeliveryModePolicies(r.Context(), s.db, r.PathValue("zoneId"))
@@ -90,7 +118,7 @@ func (s *protectedStoreServer) handleListOperationalDeliveryModes(w http.Respons
 }
 
 func (s *protectedStoreServer) handleUpsertOperationalDeliveryMode(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", DshFulfillmentSlaPermissionManage)
 	if !ok {
 		return
 	}
@@ -127,7 +155,7 @@ func (s *protectedStoreServer) handleUpsertOperationalDeliveryMode(w http.Respon
 }
 
 func (s *protectedStoreServer) handleEvaluateOperationalPolicy(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "client", "partner", "captain", "operator"); !ok {
+	if _, ok := s.requireActor(w, r, "client", "partner", "captain"); !ok {
 		return
 	}
 	var body platformpolicies.OperationalEvaluationInput
@@ -143,7 +171,7 @@ func (s *protectedStoreServer) handleEvaluateOperationalPolicy(w http.ResponseWr
 }
 
 func (s *protectedStoreServer) handleListOperationalPolicyAudit(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyAuditPermissionRead); !ok {
 		return
 	}
 	limit := 50
@@ -170,7 +198,7 @@ func (s *protectedStoreServer) handleListOperationalPolicyAudit(w http.ResponseW
 }
 
 func (s *protectedStoreServer) handleRollbackOperationalPolicy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", DshOperationalPolicyRollbackPermission)
 	if !ok {
 		return
 	}

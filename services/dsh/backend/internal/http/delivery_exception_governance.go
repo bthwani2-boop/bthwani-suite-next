@@ -59,7 +59,7 @@ func DeliveryExceptionGovernanceMiddleware(
 	mediaProvider *media.Provider,
 	next http.Handler,
 ) http.Handler {
-	governed := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	governed := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			if assignmentID, ok := deliveryExceptionPathID(
@@ -100,6 +100,7 @@ func (s *protectedStoreServer) handleReportDeliveryExceptionGoverned(w http.Resp
 		CorrelationID string                               `json:"correlationId"`
 		Latitude      *float64                             `json:"latitude"`
 		Longitude     *float64                             `json:"longitude"`
+		ProofMediaRef string                               `json:"proofMediaRef"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -114,6 +115,7 @@ func (s *protectedStoreServer) handleReportDeliveryExceptionGoverned(w http.Resp
 		CorrelationID: operationalCorrelationID(r, body.CorrelationID),
 		Latitude:      body.Latitude,
 		Longitude:     body.Longitude,
+		ProofMediaRef: strings.TrimSpace(body.ProofMediaRef),
 	})
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
@@ -126,7 +128,7 @@ func (s *protectedStoreServer) handleReportDeliveryExceptionGoverned(w http.Resp
 // gate before any retry, reassignment, return, or cancellation decision. A
 // resolved item remains eligible only for the domain layer's idempotent replay.
 func (s *protectedStoreServer) handleResolveDeliveryExceptionGoverned(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}

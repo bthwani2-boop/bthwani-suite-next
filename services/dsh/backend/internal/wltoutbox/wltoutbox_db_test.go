@@ -46,7 +46,7 @@ func seedOrderFixture(t *testing.T, db *sql.DB) (orderID, checkoutIntentID strin
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
-		VALUES ($1, $1, 'Outbox Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true)`,
+		VALUES ($1, $1, 'Outbox Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true)`,
 		storeID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
@@ -69,7 +69,7 @@ func seedOrderFixture(t *testing.T, db *sql.DB) (orderID, checkoutIntentID strin
 			subtotal_minor_units, delivery_fee_minor_units, discount_minor_units,
 			total_minor_units, currency, pricing_snapshot_hash
 		)
-		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'bthwani_delivery', 'cod', $5,
+		VALUES ($1, $2, $3::uuid, $4, 'confirmed', 'bthwani_delivery', 'cod', $5,
 		        1000, 0, 0, 1000, 'YER', repeat('f', 64))
 		RETURNING id::text`,
 		operatorContextID, clientID, cartID, storeID, "wlt-ps-"+suffix,

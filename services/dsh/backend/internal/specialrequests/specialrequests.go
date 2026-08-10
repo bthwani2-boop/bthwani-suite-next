@@ -85,6 +85,13 @@ type SpecialRequest struct {
 	CaptainAssignedAt         *time.Time
 	PickedUpAt                *time.Time
 	DeliveredAt               *time.Time
+
+	// J059 Extensions
+	QuoteExpiresAt    *time.Time
+	MediaID           *string
+	SafetyStatus      *string
+	ModerationNote    *string
+	IsUnsafeContent   bool
 }
 
 type CreateInput struct {
@@ -111,6 +118,9 @@ type CreateInput struct {
 
 	// workflowStage is derived by the service layer, not accepted from callers.
 	workflowStage *string
+
+	// J059 Extensions
+	MediaID *string
 }
 
 type UpdateInput struct {
@@ -141,6 +151,12 @@ type UpdateInput struct {
 	// it never derives them from Status itself.
 	setCompletedAt bool
 	setCancelledAt bool
+
+	// J059 Extensions
+	QuoteExpiresAt  *time.Time
+	SafetyStatus    *string
+	ModerationNote  *string
+	IsUnsafeContent *bool
 }
 
 type Repository interface {
@@ -191,7 +207,8 @@ const specialRequestColumns = `
 	created_at, updated_at, completed_at, cancelled_at,
 	quote_prepared_at, customer_approved_at, purchase_batch_id, purchased_at,
 	inbound_reference, inbound_received_at, sorting_started_at, sorting_completed_at,
-	fulfillment_prepared_at, ready_for_delivery_at, captain_assigned_at, picked_up_at, delivered_at
+	fulfillment_prepared_at, ready_for_delivery_at, captain_assigned_at, picked_up_at, delivered_at,
+	quote_expires_at, media_id, safety_status, moderation_note, is_unsafe_content
 `
 
 func scanSpecialRequest(scan func(...any) error) (*SpecialRequest, error) {
@@ -207,6 +224,7 @@ func scanSpecialRequest(scan func(...any) error) (*SpecialRequest, error) {
 		&req.QuotePreparedAt, &req.CustomerApprovedAt, &req.PurchaseBatchID, &req.PurchasedAt,
 		&req.InboundReference, &req.InboundReceivedAt, &req.SortingStartedAt, &req.SortingCompletedAt,
 		&req.FulfillmentPreparedAt, &req.ReadyForDeliveryAt, &req.CaptainAssignedAt, &req.PickedUpAt, &req.DeliveredAt,
+		&req.QuoteExpiresAt, &req.MediaID, &req.SafetyStatus, &req.ModerationNote, &req.IsUnsafeContent,
 	)
 	if err != nil {
 		return nil, err
@@ -241,11 +259,13 @@ func (r *PostgresRepository) createWith(ctx context.Context, exec queryRower, in
 		INSERT INTO dsh_special_requests (
 			id, operator_context_id, client_id, request_type, status, idempotency_key, workflow_stage, correlation_id,
 			customer_notes, product_url, quantity, size, color, variant_notes, delivery_address_reference,
-			pickup_address_reference, dropoff_address_reference, pickup_location, dropoff_location, item_type, schedule_mode, scheduled_at, handling_requirements
+			pickup_address_reference, dropoff_address_reference, pickup_location, dropoff_location, item_type, schedule_mode, scheduled_at, handling_requirements,
+			media_id, safety_status, is_unsafe_content
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8,
 			$9, $10, $11, $12, $13, $14, $15,
-			$16, $17, $18::jsonb, $19::jsonb, $20, $21, $22, $23
+			$16, $17, $18::jsonb, $19::jsonb, $20, $21, $22, $23,
+			$24, 'pending', false
 		)
 		ON CONFLICT (operator_context_id, client_id, idempotency_key) WHERE idempotency_key IS NOT NULL
 		DO UPDATE SET updated_at = now()
@@ -255,6 +275,7 @@ func (r *PostgresRepository) createWith(ctx context.Context, exec queryRower, in
 		id, input.OperatorContextID, input.ClientID, input.RequestType, StatusSubmitted, input.IdempotencyKey, input.workflowStage, input.CorrelationID,
 		input.CustomerNotes, input.ProductUrl, input.Quantity, input.Size, input.Color, input.VariantNotes, input.DeliveryAddressReference,
 		input.PickupAddressReference, input.DropoffAddressReference, nullableJSON(input.PickupLocation), nullableJSON(input.DropoffLocation), input.ItemType, input.ScheduleMode, input.ScheduledAt, input.HandlingRequirements,
+		input.MediaID,
 	)
 	return scanSpecialRequest(row.Scan)
 }
@@ -311,9 +332,10 @@ func (r *PostgresRepository) updateWith(ctx context.Context, exec queryRower, op
 		input.QuotePreparedAt, input.CustomerApprovedAt, input.PurchaseBatchID, input.PurchasedAt,
 		input.InboundReference, input.InboundReceivedAt, input.SortingStartedAt, input.SortingCompletedAt,
 		input.FulfillmentPreparedAt, input.ReadyForDeliveryAt, input.CaptainAssignedAt, input.PickedUpAt, input.DeliveredAt,
+		input.QuoteExpiresAt, input.SafetyStatus, input.ModerationNote, input.IsUnsafeContent,
 	}
 	if operatorContextID != "" {
-		where = "operator_context_id = $25 AND id = $1 AND version = $2"
+		where = "operator_context_id = $29 AND id = $1 AND version = $2"
 		args = append(args, operatorContextID)
 	}
 	query := `
@@ -339,6 +361,10 @@ func (r *PostgresRepository) updateWith(ctx context.Context, exec queryRower, op
 			captain_assigned_at = COALESCE($22, captain_assigned_at),
 			picked_up_at = COALESCE($23, picked_up_at),
 			delivered_at = COALESCE($24, delivered_at),
+			quote_expires_at = COALESCE($25, quote_expires_at),
+			safety_status = COALESCE($26, safety_status),
+			moderation_note = COALESCE($27, moderation_note),
+			is_unsafe_content = COALESCE($28, is_unsafe_content),
 			version = version + 1,
 			updated_at = now(),
 			completed_at = CASE WHEN $10 THEN now() ELSE completed_at END,

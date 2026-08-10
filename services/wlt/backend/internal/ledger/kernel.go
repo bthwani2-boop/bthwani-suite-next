@@ -238,6 +238,11 @@ func ledgerLineKey(line LedgerLine) string {
 func getOrCreateAccountTx(ctx context.Context, tx *sql.Tx, operatorContextID, accountType, actorType, actorID, currency string) (string, error) {
 	var id string
 	var err error
+	taxonomy, err := resolveAccountTaxonomy(accountType)
+	if err != nil {
+		return "", err
+	}
+	classification := taxonomy.Classification
 	if accountType == "wallet" {
 		err = tx.QueryRowContext(ctx, `
 			SELECT id FROM wlt_ledger_accounts
@@ -260,21 +265,21 @@ func getOrCreateAccountTx(ctx context.Context, tx *sql.Tx, operatorContextID, ac
 
 	if accountType == "wallet" {
 		err = tx.QueryRowContext(ctx, `
-			INSERT INTO wlt_ledger_accounts (operator_context_id, account_type, actor_type, actor_id, currency)
-			VALUES ($1, 'wallet', $2, $3, $4)
+			INSERT INTO wlt_ledger_accounts (operator_context_id, account_type, actor_type, actor_id, currency, classification)
+			VALUES ($1, 'wallet', $2, $3, $4, $5)
 			ON CONFLICT (operator_context_id, account_type, actor_type, actor_id, currency) WHERE account_type = 'wallet'
 			DO UPDATE SET updated_at = wlt_ledger_accounts.updated_at
 			RETURNING id`,
-			operatorContextID, actorType, actorID, currency,
+			operatorContextID, actorType, actorID, currency, classification,
 		).Scan(&id)
 	} else {
 		err = tx.QueryRowContext(ctx, `
-			INSERT INTO wlt_ledger_accounts (operator_context_id, account_type, currency)
-			VALUES ($1, $2, $3)
+			INSERT INTO wlt_ledger_accounts (operator_context_id, account_type, currency, classification)
+			VALUES ($1, $2, $3, $4)
 			ON CONFLICT (operator_context_id, account_type, currency) WHERE account_type <> 'wallet'
 			DO UPDATE SET updated_at = wlt_ledger_accounts.updated_at
 			RETURNING id`,
-			operatorContextID, accountType, currency,
+			operatorContextID, accountType, currency, classification,
 		).Scan(&id)
 	}
 	if err != nil {

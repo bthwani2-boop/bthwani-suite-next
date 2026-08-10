@@ -22,12 +22,14 @@ import type {
   DshCart,
   DshCartItemValidation,
   DshFulfillmentMode,
+  DshPricingQuote,
   DshServiceabilityState,
 } from "../../shared/cart";
 import type { DshPaymentMethod } from "../../shared/checkout";
 import type { DshClientAddress } from "../../shared/client-address";
-import { useDshPaymentController } from "../../shared/finance-wlt-link";
+import { formatWltMoney, useWltPaymentController } from "@bthwani/wlt/dsh";
 import { PaymentDecisionSection } from "./PaymentDecisionSection";
+import { CartConflictSheet } from "./CartConflictSheet";
 
 type Props = {
   readonly storeId: string;
@@ -56,10 +58,73 @@ function fulfillmentLabel(mode: DshFulfillmentMode): string {
   }
 }
 
+// WltQuoteSummary renders the authoritative financial quote from WLT verbatim.
+// DSH must never recompute, override, or locally sum these values.
+function WltQuoteSummary({ quote }: { readonly quote: DshPricingQuote | null }) {
+  if (!quote) return null;
+  const { currency } = quote;
+  const showDelivery = quote.deliveryFeeMinorUnits > 0;
+  const showService = quote.serviceFeeMinorUnits > 0;
+  const showTax = quote.taxMinorUnits > 0;
+  const showDiscount = quote.discountMinorUnits > 0;
+  const showRounding = quote.roundingMinorUnits !== 0;
+  return (
+    <Surface tone="default" style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text role="bodyStrong" style={styles.sectionTitle}>ملخص السعر</Text>
+        <Badge label="حُسب بواسطة WLT" tone="info" />
+      </View>
+      <View style={styles.quoteLine}>
+        <Text role="bodySm" style={styles.mutedText}>المجموع الجزئي</Text>
+        <Text role="bodySm" style={styles.quoteValue}>{formatWltMoney(quote.subtotalMinorUnits, currency)}</Text>
+      </View>
+      {showDelivery && (
+        <View style={styles.quoteLine}>
+          <Text role="bodySm" style={styles.mutedText}>رسوم التوصيل</Text>
+          <Text role="bodySm" style={styles.quoteValue}>{formatWltMoney(quote.deliveryFeeMinorUnits, currency)}</Text>
+        </View>
+      )}
+      {showService && (
+        <View style={styles.quoteLine}>
+          <Text role="bodySm" style={styles.mutedText}>رسوم الخدمة</Text>
+          <Text role="bodySm" style={styles.quoteValue}>{formatWltMoney(quote.serviceFeeMinorUnits, currency)}</Text>
+        </View>
+      )}
+      {showTax && (
+        <View style={styles.quoteLine}>
+          <Text role="bodySm" style={styles.mutedText}>الضريبة</Text>
+          <Text role="bodySm" style={styles.quoteValue}>{formatWltMoney(quote.taxMinorUnits, currency)}</Text>
+        </View>
+      )}
+      {showDiscount && (
+        <View style={styles.quoteLine}>
+          <Text role="bodySm" style={styles.mutedText}>الخصم</Text>
+          <Text role="bodySm" style={[styles.quoteValue, styles.discountText]}>− {formatWltMoney(quote.discountMinorUnits, currency)}</Text>
+        </View>
+      )}
+      {showRounding && (
+        <View style={styles.quoteLine}>
+          <Text role="bodySm" style={styles.mutedText}>تعديل التقريب</Text>
+          <Text role="bodySm" style={styles.quoteValue}>{formatWltMoney(quote.roundingMinorUnits, currency)}</Text>
+        </View>
+      )}
+      <View style={[styles.quoteLine, styles.quoteTotalLine]}>
+        <Text role="bodyStrong" style={styles.sectionTitle}>الإجمالي</Text>
+        <Text role="bodyStrong" style={styles.quoteTotalValue}>{formatWltMoney(quote.totalMinorUnits, currency)}</Text>
+      </View>
+      {quote.expiresAt ? (
+        <Text role="caption" style={styles.mutedText}>
+          صالح حتى: {new Date(quote.expiresAt).toLocaleTimeString("ar-SA")}
+        </Text>
+      ) : null}
+    </Surface>
+  );
+}
+
 function ServerPrice({ value, currency }: { readonly value: number; readonly currency: string }) {
   return (
     <Text role="caption" style={styles.priceText}>
-      سعر الوحدة المثبت: {new Intl.NumberFormat("ar").format(value)} {currency}
+      سعر الوحدة المثبت: {formatWltMoney(value, currency)}
     </Text>
   );
 }
@@ -125,10 +190,10 @@ function CartItemValidationNotice({
   return (
     <View style={styles.validationBox}>
       <Text role="caption" style={styles.errorText}>{validationMessage(validation)}</Text>
-      {validation.status === "price_changed" && validation.currentUnitPrice !== undefined ? (
+      {validation.status === "price_changed" && validation.currentUnitPriceMinorUnits !== undefined ? (
         <>
           <Text role="caption" style={styles.mutedText}>
-            الحقيقة الحالية: {new Intl.NumberFormat("ar").format(validation.currentUnitPrice)} {validation.currentCurrency ?? validation.snapshotCurrency}
+            الحقيقة الحالية: {formatWltMoney(validation.currentUnitPriceMinorUnits, validation.currentCurrency ?? validation.snapshotCurrency)}
           </Text>
           <Button
             label="اعتماد السعر والعملة الحاليين"
@@ -154,7 +219,7 @@ export function CartScreen({
 }: Props) {
   const controller = useCartController(storeId, authKind);
   const serviceabilityController = useServiceabilityController();
-  const wltPayment = useDshPaymentController();
+  const wltPayment = useWltPaymentController();
   const [note, setNote] = useState("");
   const [couponCode, setCouponCode] = useState("");
   const [validationMessageText, setValidationMessageText] = useState<string | null>(null);
@@ -211,6 +276,13 @@ export function CartScreen({
     if (requiresDeliveryAddress && serviceabilityController.serviceability.kind !== "serviceable") {
       setValidationMessageText("يجب نجاح فحص DSH للعنوان والسعة وSLA قبل checkout.");
       return;
+    }
+    if (requiresDeliveryAddress && serviceabilityController.serviceability.kind === "serviceable") {
+      const expiresAt = serviceabilityController.serviceability.result.expiresAt;
+      if (expiresAt && new Date(expiresAt) < new Date()) {
+        setValidationMessageText("انتهت صلاحية وقت التوصيل (ETA). يرجى تحديث الصفحة لإعادة حسابه.");
+        return;
+      }
     }
     onProceedToCheckout(
       cart,
@@ -315,7 +387,17 @@ export function CartScreen({
               <View key={item.id} style={styles.itemCard}>
                 <View style={styles.itemText}>
                   <Text role="bodyStrong" style={styles.itemTitle}>{item.productName}</Text>
-                  <ServerPrice value={item.unitPrice} currency={item.currency} />
+                  <ServerPrice value={item.unitPriceMinorUnits} currency={item.currency} />
+                  {item.options && item.options.length > 0 ? (
+                    <Text role="caption" style={styles.mutedText}>
+                      الخيارات: {item.options.join("، ")}
+                    </Text>
+                  ) : null}
+                  {item.note ? (
+                    <Text role="caption" style={styles.mutedText}>
+                      ملاحظة: {item.note}
+                    </Text>
+                  ) : null}
                   <Text role="caption" style={styles.mutedText}>الكمية الحالية: {item.quantity}</Text>
                   <Text role="caption" style={styles.mutedText}>
                     مرجع التشكيلة: {item.storeAssortmentId ?? "غير مرتبط"}
@@ -329,6 +411,8 @@ export function CartScreen({
                     item.productName,
                     item.quantity,
                     item.priceReference,
+                    item.options,
+                    item.note,
                   )}
                 />
                 <View style={styles.itemActions}>
@@ -342,6 +426,8 @@ export function CartScreen({
                       item.productName,
                       item.quantity + 1,
                       item.priceReference,
+                      item.options,
+                      item.note,
                     )}
                   >
                     <Text style={styles.quantityButtonText}>+</Text>
@@ -356,6 +442,8 @@ export function CartScreen({
                       item.productName,
                       item.quantity - 1,
                       item.priceReference,
+                      item.options,
+                      item.note,
                     )}
                   >
                     <Text style={styles.quantityButtonText}>−</Text>
@@ -457,6 +545,8 @@ export function CartScreen({
 
         {validationMessageText ? <Text role="caption" style={styles.errorText}>{validationMessageText}</Text> : null}
 
+        <WltQuoteSummary quote={cart?.quote ?? null} />
+
         <Button
           label="متابعة إلى مراجعة checkout"
           tone="primary"
@@ -464,6 +554,19 @@ export function CartScreen({
           onPress={proceed}
         />
       </ScrollScreen>
+
+      {controller.action === "conflict" && (
+        <CartConflictSheet
+          onKeepServer={() => {
+            controller.clearOfflineQueue();
+            controller.retry();
+          }}
+          onReviewOffline={() => {
+            controller.clearOfflineQueue();
+            controller.retry();
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -534,22 +637,16 @@ function OperationalPolicyDetails({
 }) {
   return (
     <View style={styles.policyDetails}>
-      <Text role="caption" style={styles.mutedText}>
-        حالة السعة: {result.capacityState} · الطلبات النشطة: {result.activeOrders}
-        {result.maxConcurrentOrders !== undefined ? ` / ${result.maxConcurrentOrders}` : ""}
-      </Text>
-      {result.capacityLoadRatio !== undefined ? (
+      {result.etaWindow ? (
         <Text role="caption" style={styles.mutedText}>
-          نسبة الحمل: {Math.round(result.capacityLoadRatio * 100)}%
+          الوقت التقديري للتوصيل: {result.etaWindow.minMinutes} إلى {result.etaWindow.maxMinutes} دقيقة
         </Text>
       ) : null}
-      {result.slaConfigured ? (
+      {result.quoteVersion ? (
         <Text role="caption" style={styles.mutedText}>
-          SLA: تجهيز {result.slaPrepMinutes ?? "—"} دقيقة · توصيل {result.slaDeliveryMinutes ?? "—"} دقيقة
+          رقم التسعيرة: {result.quoteVersion.split("-")[0]} · صالح حتى: {result.expiresAt ? new Date(result.expiresAt).toLocaleTimeString("ar-SA") : "—"}
         </Text>
-      ) : (
-        <Text role="caption" style={styles.mutedText}>لا توجد قاعدة SLA مطابقة؛ الحالة معلنة وليست قيمة وهمية.</Text>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -573,6 +670,20 @@ const styles = StyleSheet.create({
     backgroundColor: alpha(colorRoles.danger, 0.06),
     gap: spacing[2],
   },
+  quoteLine: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  quoteValue: { color: colorRoles.textPrimary, textAlign: "left" },
+  discountText: { color: colorRoles.success },
+  quoteTotalLine: {
+    borderTopWidth: 1,
+    borderTopColor: colorRoles.borderSubtle,
+    paddingTop: spacing[2],
+    marginTop: spacing[1],
+  },
+  quoteTotalValue: { color: colorRoles.brandAction, fontSize: 17 },
   sectionHeader: {
     flexDirection: "row-reverse",
     alignItems: "center",

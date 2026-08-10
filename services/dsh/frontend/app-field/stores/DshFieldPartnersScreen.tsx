@@ -16,6 +16,7 @@ import {
   Icon,
 } from '@bthwani/ui-kit';
 import { useFieldPartnerDraftsController } from '../../shared/field-onboarding';
+import { DshFieldProblemState } from '../components/DshFieldProblemNotice';
 import { ActorNotificationsPanel, useNotificationsController } from '../../shared/notifications';
 import { DshFieldPartnerCard } from '../components/DshFieldPartnerCard';
 
@@ -336,12 +337,10 @@ export function DshFieldPartnersScreen({
         unreadCount={unreadCount}
         onWorkQueuePress={onOpenWorkQueue}
         />
-        <StateView
-          tone="danger"
-          title="تعذر تحميل القائمة"
-          description={controller.listState.message}
-          actionLabel="إعادة المحاولة"
-          onActionPress={controller.retry}
+        <DshFieldProblemState
+          problem={controller.listState.problem}
+          handlers={{ refresh_record: controller.retry, refresh_scope: controller.retry }}
+          onRetry={controller.retry}
         />
       </View>
     );

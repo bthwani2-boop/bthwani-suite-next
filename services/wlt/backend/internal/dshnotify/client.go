@@ -28,6 +28,7 @@ type Event struct {
 	CheckoutIntentID *string
 	SpecialRequestID *string
 	PaymentSessionID string
+	PaymentMethod    string
 	Status           string
 	OrderID          string
 	RefundReference  string
@@ -64,6 +65,9 @@ func (c *Client) NotifyEvent(ctx context.Context, event Event) error {
 	payload := map[string]string{
 		"paymentSessionId": event.PaymentSessionID,
 		"status":           event.Status,
+	}
+	if event.PaymentMethod != "" {
+		payload["paymentMethod"] = event.PaymentMethod
 	}
 	if event.EventID != "" {
 		payload["eventId"] = event.EventID

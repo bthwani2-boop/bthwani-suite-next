@@ -140,6 +140,7 @@ type Visit struct {
 	CompletionDistanceFromStoreMeters *float64
 	StartGeofenceStatus               *string
 	CompletionGeofenceStatus          *string
+	IsStale                           bool
 }
 
 type ReadinessCheck struct {
@@ -169,6 +170,7 @@ type Escalation struct {
 	ResolutionNote string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	IsStale        bool
 }
 
 type CreateVisitInput struct {
@@ -241,14 +243,14 @@ type UpdateEscalationInput struct {
 	ResolutionNote string
 }
 
-func CreateVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, input CreateVisitInput) (Visit, error) {
+func CreateVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, input CreateVisitInput) (Visit, error) {
 	if input.StoreID == "" || input.FieldAgentID == "" {
 		return Visit{}, ErrInvalid
 	}
 	if err := validateStartLocation(input.StartLocation); err != nil {
 		return Visit{}, err
 	}
-	if err := AuthorizeStore(ctx, db, actor, input.StoreID); err != nil {
+	if err := AuthorizeStore(ctx, db, wf, actor, input.StoreID); err != nil {
 		return Visit{}, err
 	}
 	vt := input.VisitType
@@ -312,8 +314,8 @@ func GetVisit(ctx context.Context, db *sql.DB, visitID string) (Visit, error) {
 	return v, err
 }
 
-func ListStoreVisits(ctx context.Context, db *sql.DB, actor store.StoreActor, storeID string, limit int) ([]Visit, error) {
-	if err := AuthorizeStore(ctx, db, actor, storeID); err != nil {
+func ListStoreVisits(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, storeID string, limit int) ([]Visit, error) {
+	if err := AuthorizeStore(ctx, db, wf, actor, storeID); err != nil {
 		return nil, err
 	}
 	query := `SELECT ` + visitSelectCols + ` FROM dsh_field_visits WHERE store_id = $1`
@@ -341,20 +343,49 @@ func ListStoreVisits(ctx context.Context, db *sql.DB, actor store.StoreActor, st
 }
 
 func ListAgentVisits(ctx context.Context, db *sql.DB, agentID string, limit int) ([]Visit, error) {
-	rows, err := db.QueryContext(ctx, `SELECT `+visitSelectCols+` FROM dsh_field_visits WHERE field_agent_id = $1 AND status != 'complete' ORDER BY created_at DESC LIMIT $2`, agentID, limit)
+	query := `SELECT ` + visitSelectCols + `,
+		NOT EXISTS (
+			SELECT 1 FROM dsh_store_actor_scopes
+			WHERE actor_id = $1 AND store_id = v.store_id AND active = true
+		) AS is_stale
+	FROM dsh_field_visits v
+	WHERE v.field_agent_id = $1 AND v.status != 'complete'
+	ORDER BY v.created_at DESC LIMIT $2`
+
+	rows, err := db.QueryContext(ctx, query, agentID, limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	var list []Visit
 	for rows.Next() {
-		v, err := scanVisitRow(rows)
+		v, err := scanAgentVisitRow(rows)
 		if err != nil {
 			return nil, err
 		}
 		list = append(list, v)
 	}
 	return list, rows.Err()
+}
+
+func scanAgentVisitRow(rows *sql.Rows) (Visit, error) {
+	var v Visit
+	var gfRadius sql.NullFloat64
+	err := rows.Scan(
+		&v.ID, &v.StoreID, &v.FieldAgentID, &v.VisitType, &v.Status, &v.Notes, &v.StartedAt, &v.CompletedAt, &v.CreatedAt, &v.UpdatedAt,
+		&v.StartLatitude, &v.StartLongitude, &v.StartAccuracyMeters, &v.StartCapturedAt, &v.StartProvider, &v.StartDeviceReference, &v.StartIsMocked,
+		&v.CompletionLatitude, &v.CompletionLongitude, &v.CompletionAccuracyMeters, &v.CompletionCapturedAt, &v.CompletionProvider, &v.CompletionIsMocked,
+		&v.StoreLatitude, &v.StoreLongitude, &gfRadius,
+		&v.StartDistanceFromStoreMeters, &v.CompletionDistanceFromStoreMeters,
+		&v.StartGeofenceStatus, &v.CompletionGeofenceStatus,
+		&v.IsStale,
+	)
+	if gfRadius.Valid {
+		v.GeofenceRadiusMeters = gfRadius.Float64
+	} else {
+		v.GeofenceRadiusMeters = DefaultGeofenceRadiusMeters
+	}
+	return v, err
 }
 
 // CompleteVisitInput carries GPS evidence captured at the moment of completion.
@@ -365,7 +396,7 @@ type CompleteVisitInput struct {
 // CompleteVisit marks a visit complete inside a transaction after verifying
 // ownership, that every required readiness check has passed, no blocking
 // escalation is open, and that the completion GPS location is valid.
-func CompleteVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, visitID string, input CompleteVisitInput) (Visit, error) {
+func CompleteVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, visitID string, input CompleteVisitInput) (Visit, error) {
 	if err := validateStartLocation(input.CompletionLocation); err != nil {
 		return Visit{}, err
 	}
@@ -388,7 +419,7 @@ func CompleteVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, visi
 	if v.FieldAgentID != actor.ID && actor.Role != "operator" {
 		return Visit{}, ErrForbidden
 	}
-	allowed, err := store.ActorCanAccessStore(ctx, db, actor, v.StoreID)
+	allowed, err := store.ActorCanAccessStore(ctx, db, wf, actor, v.StoreID)
 	if err != nil {
 		return Visit{}, err
 	}
@@ -503,8 +534,8 @@ func CompleteVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, visi
 	return updated, nil
 }
 
-func UpsertReadinessCheck(ctx context.Context, db *sql.DB, actor store.StoreActor, visitID string, input UpdateCheckInput) (ReadinessCheck, error) {
-	v, err := GetOwnedVisit(ctx, db, actor, visitID)
+func UpsertReadinessCheck(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, visitID string, input UpdateCheckInput) (ReadinessCheck, error) {
+	v, err := GetOwnedVisit(ctx, db, wf, actor, visitID)
 	if err != nil {
 		return ReadinessCheck{}, err
 	}
@@ -512,7 +543,7 @@ func UpsertReadinessCheck(ctx context.Context, db *sql.DB, actor store.StoreActo
 		return ReadinessCheck{}, ErrVisitAlreadyComplete
 	}
 	if input.Status == CheckPassed {
-		if err := validateCheckEvidence(ctx, db, actor, input.EvidenceURL); err != nil {
+		if err := validateCheckEvidence(ctx, db, wf, actor, input.EvidenceURL); err != nil {
 			return ReadinessCheck{}, err
 		}
 	}
@@ -534,8 +565,8 @@ func UpsertReadinessCheck(ctx context.Context, db *sql.DB, actor store.StoreActo
 	return c, err
 }
 
-func ListVisitChecks(ctx context.Context, db *sql.DB, actor store.StoreActor, visitID string) ([]ReadinessCheck, error) {
-	if _, err := GetOwnedVisit(ctx, db, actor, visitID); err != nil {
+func ListVisitChecks(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, visitID string) ([]ReadinessCheck, error) {
+	if _, err := GetOwnedVisit(ctx, db, wf, actor, visitID); err != nil {
 		return nil, err
 	}
 	rows, err := db.QueryContext(ctx, `
@@ -556,11 +587,11 @@ func ListVisitChecks(ctx context.Context, db *sql.DB, actor store.StoreActor, vi
 	return list, rows.Err()
 }
 
-func CreateEscalation(ctx context.Context, db *sql.DB, actor store.StoreActor, input CreateEscalationInput) (Escalation, error) {
+func CreateEscalation(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, input CreateEscalationInput) (Escalation, error) {
 	if input.StoreID == "" || input.RaisedBy == "" || input.Description == "" {
 		return Escalation{}, ErrInvalid
 	}
-	if err := AuthorizeStore(ctx, db, actor, input.StoreID); err != nil {
+	if err := AuthorizeStore(ctx, db, wf, actor, input.StoreID); err != nil {
 		return Escalation{}, err
 	}
 	var visitIDSQL sql.NullString
@@ -617,24 +648,35 @@ func ListOperatorEscalations(ctx context.Context, db *sql.DB, statusFilter strin
 
 func ListAgentEscalations(ctx context.Context, db *sql.DB, agentID string, limit int) ([]Escalation, error) {
 	rows, err := db.QueryContext(ctx, `
-		SELECT id, COALESCE(visit_id::text,''), store_id, raised_by, severity, category, description,
-		          status, COALESCE(resolved_by,''), resolved_at, COALESCE(resolution_note,''), created_at, updated_at
-		FROM dsh_readiness_escalations
-		WHERE raised_by = $1 AND status IN ('open', 'acknowledged')
-		ORDER BY created_at DESC LIMIT $2`, agentID, limit)
+		SELECT e.id, COALESCE(e.visit_id::text,''), e.store_id, e.raised_by, e.severity, e.category, e.description,
+		          e.status, COALESCE(e.resolved_by,''), e.resolved_at, COALESCE(e.resolution_note,''), e.created_at, e.updated_at,
+		          NOT EXISTS (
+		              SELECT 1 FROM dsh_store_actor_scopes
+		              WHERE actor_id = $1 AND store_id = e.store_id AND active = true
+		          ) AS is_stale
+		FROM dsh_readiness_escalations e
+		WHERE e.raised_by = $1 AND e.status IN ('open', 'acknowledged')
+		ORDER BY e.created_at DESC LIMIT $2`, agentID, limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	var list []Escalation
 	for rows.Next() {
-		e, err := scanEscalationRow(rows)
+		e, err := scanAgentEscalationRow(rows)
 		if err != nil {
 			return nil, err
 		}
 		list = append(list, e)
 	}
 	return list, rows.Err()
+}
+
+func scanAgentEscalationRow(rows *sql.Rows) (Escalation, error) {
+	var e Escalation
+	err := rows.Scan(&e.ID, &e.VisitID, &e.StoreID, &e.RaisedBy, &e.Severity, &e.Category, &e.Description,
+		&e.Status, &e.ResolvedBy, &e.ResolvedAt, &e.ResolutionNote, &e.CreatedAt, &e.UpdatedAt, &e.IsStale)
+	return e, err
 }
 
 func UpdateEscalation(ctx context.Context, db *sql.DB, escalationID string, input UpdateEscalationInput) (Escalation, error) {
@@ -677,7 +719,7 @@ func GetStoreOnboardingStatus(ctx context.Context, db *sql.DB, storeID string) (
 	}, nil
 }
 
-func validateCheckEvidence(ctx context.Context, db *sql.DB, actor store.StoreActor, mediaRef string) error {
+func validateCheckEvidence(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, mediaRef string) error {
 	ref := strings.TrimSpace(mediaRef)
 	if ref == "" {
 		return ErrEvidenceRequired

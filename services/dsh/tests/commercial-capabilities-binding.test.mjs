@@ -39,7 +39,7 @@ describe("subscriptions and commercial benefits", () => {
   it("reads client benefits from the governed DSH projection", () => {
     assert.match(api, /fetchClientBenefits[\s\S]*\/dsh\/client\/benefits/);
     assert.match(server, /POST \/dsh\/client\/marketing\/subscriptions\/purchase/);
-    assert.match(server, /POST \/dsh\/client\/marketing\/subscriptions\/\{purchaseId\}\/activate/);
+    assert.match(server, /POST \/dsh\/client\/marketing\/subscriptions\/purchases\/\{purchaseId\}\/activate/);
     assert.match(server, /GET \/dsh\/client\/benefits/);
   });
 });
@@ -92,7 +92,7 @@ describe("partner fleet connection lifecycle", () => {
 
   it("disconnects optimistically, revokes the redeemed code, and audits the action", () => {
     assert.match(domain, /expectedVersion/);
-    assert.match(domain, /identity_actor_id = ''/);
+    assert.match(domain, /captain_actor_id = \$3/);
     assert.match(domain, /status = 'revoked'/);
     assert.match(domain, /captain_disconnect/);
   });

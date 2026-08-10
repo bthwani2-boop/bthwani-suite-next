@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"wlt-api/internal/provider"
 )
 
 func TestGovernedRefundRuntimeDurableCompletionSurfacesOutcomePersistenceFailure(t *testing.T) {
@@ -69,5 +71,49 @@ func TestGovernedRefundRuntimeDurableCompletionSurfacesOutcomePersistenceFailure
 	}
 	if current == nil || current.Status != "processing" {
 		t.Fatalf("expected visibly unresolved processing state after forced database failure, got %#v", current)
+	}
+}
+
+// TestCompleteGovernedRefundWithProvider_CodCollectedSourceBlockedFromRail
+// proves the U002-T003 source-aware guard: a refund whose original payment
+// session was funded via cod_collected (cash collected in person, no card
+// provider ever engaged) must never be routed through CashInRail.Refund --
+// there is no provider-side charge to reverse. It must fail closed with
+// ErrRefundSourceNotProviderBacked and the provider must never be called.
+func TestCompleteGovernedRefundWithProvider_CodCollectedSourceBlockedFromRail(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	sessionID := insertTestSession(t, db, "cod_collected", 1200, "YER")
+	orderID := fmt.Sprintf("cod-source-order-%d", time.Now().UnixNano())
+	approved := createGovernedRuntimeRefund(t, db, sessionID, orderID, 1200, "cod-source")
+
+	stub := &governedRuntimeProvider{result: provider.ProviderResult{Status: "refunded", ProviderReference: "should-not-be-used-" + approved.ID}}
+
+	_, err := CompleteGovernedRefundWithProvider(context.Background(), db, stub, approved.ID, "executor-cod-source", "corr-cod-source")
+	if !errors.Is(err, ErrRefundSourceNotProviderBacked) {
+		t.Fatalf("expected ErrRefundSourceNotProviderBacked, got %v", err)
+	}
+	if stub.calls != 0 {
+		t.Fatalf("provider must never be called for a non-provider-backed source, got %d calls", stub.calls)
+	}
+
+	current, readErr := GetGovernedRefund(db, approved.ID)
+	if readErr != nil {
+		t.Fatalf("read blocked refund: %v", readErr)
+	}
+	if current.Status != "rejected" {
+		t.Fatalf("expected refund status rejected for a blocked non-provider-backed source, got %q", current.Status)
+	}
+
+	var ledgerCount int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM wlt_ledger_transactions WHERE reference_type='refund' AND reference_id=$1`, approved.ID).Scan(&ledgerCount); err != nil {
+		t.Fatalf("count ledger transactions: %v", err)
+	}
+	if ledgerCount != 0 {
+		t.Fatalf("expected no ledger transaction (no implicit internal-wallet credit), got %d", ledgerCount)
 	}
 }

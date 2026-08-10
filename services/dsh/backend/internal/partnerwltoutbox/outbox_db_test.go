@@ -148,18 +148,17 @@ func TestPartnerWltReconciliationCreatesAndResolvesMaskedReadbackCaseDBIntegrati
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"payoutDestination": map[string]any{
-				"id":                   "wpd-reconciliation-ref",
-				"ownerActorId":         partnerID,
-				"ownerActorType":       "partner",
-				"settlementPreference": "bank",
-				"maskedAccountNumber":  "*****1234",
-				"maskedIban":           "********5678",
-				"maskedMobileNumber":   "",
-				"beneficiaryName":      "Partner Owner",
-				"bankName":             "Test Bank",
-				"bankBranch":           "Main",
-				"active":               active,
-				"updatedAt":            time.Now().UTC().Format(time.RFC3339Nano),
+				"id":                            "wpd-reconciliation-ref",
+				"ownerActorId":                  partnerID,
+				"ownerActorType":                "partner",
+				"destinationMethod":             "bank",
+				"maskedDestinationReference":    "********5678",
+				"destinationVerificationStatus": "unverified",
+				"beneficiaryName":               "Partner Owner",
+				"bankName":                      "Test Bank",
+				"bankBranch":                    "Main",
+				"active":                        active,
+				"updatedAt":                     time.Now().UTC().Format(time.RFC3339Nano),
 			},
 		})
 	}))
@@ -184,10 +183,9 @@ func TestPartnerWltReconciliationCreatesAndResolvesMaskedReadbackCaseDBIntegrati
 	if _, err := db.Exec(`
 		UPDATE dsh_partners SET
 			payout_destination_id = 'wpd-reconciliation-ref',
-			masked_account_number = '*****1234',
-			masked_iban = '********5678',
-			masked_mobile_number = '',
-			bank_account_number = '', bank_iban = '', payout_mobile_number = ''
+			destination_method = 'bank',
+			masked_destination_reference = '********5678',
+			destination_verification_status = 'unverified'
 		WHERE id = $1`, partnerID); err != nil {
 		t.Fatal(err)
 	}

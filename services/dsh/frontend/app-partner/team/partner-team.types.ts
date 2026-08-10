@@ -4,6 +4,7 @@
 export {
   toPartnerTeamMember,
   type PartnerTeamRole,
+  type PartnerTeamInviteRole,
   type PartnerTeamStatus,
   type PartnerTeamMember,
 } from '../../shared/partner/partner-team.types';

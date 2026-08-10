@@ -79,3 +79,26 @@ func ListAssignmentGovernance(db *sql.DB, assignmentIDs []string) (map[string]As
 	}
 	return items, rows.Err()
 }
+
+// AssignmentAllowedActions computes the list of allowed actions for a captain
+// based on the current assignment and delivery state.
+func AssignmentAllowedActions(assignmentStatus AssignmentStatus, deliveryStatus DeliveryStatus) []string {
+	actions := []string{"view"}
+	if assignmentStatus == AssignmentOffered {
+		actions = append(actions, "accept", "decline")
+		return actions
+	}
+	if assignmentStatus == AssignmentAccepted {
+		switch deliveryStatus {
+		case DeliveryAssigned, DeliveryDriverAssigned:
+			actions = append(actions, "arrive_store", "report_issue")
+		case DeliveryArrivedStore:
+			actions = append(actions, "pickup", "report_issue")
+		case DeliveryPickedUp:
+			actions = append(actions, "arrive_customer", "contact_customer", "report_issue")
+		case DeliveryArrivedCustomer:
+			actions = append(actions, "attempt_delivery", "submit_proof", "contact_customer", "report_issue")
+		}
+	}
+	return actions
+}

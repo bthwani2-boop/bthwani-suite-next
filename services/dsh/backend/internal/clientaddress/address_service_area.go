@@ -27,7 +27,7 @@ func FindCreateReplay(
 	}
 	address, err := scanAddress(db.QueryRowContext(ctx, `SELECT `+addressColumns+`
 		FROM dsh_client_addresses
-		WHERE client_id = $1 AND create_idempotency_key = $2 AND deleted_at IS NULL`,
+		WHERE client_id = $1 AND create_idempotency_key = $2 AND status != 'DELETED'`,
 		clientID, idempotencyKey))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil

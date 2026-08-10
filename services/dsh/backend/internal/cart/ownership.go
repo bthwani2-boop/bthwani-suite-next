@@ -14,11 +14,30 @@ func RemoveOwnedItem(
 	clientID string,
 	cartID string,
 	itemID string,
+	expectedVersion *int,
 ) error {
 	if clientID == "" || cartID == "" || itemID == "" {
 		return ErrInvalid
 	}
-	res, err := db.ExecContext(ctx, `
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if expectedVersion != nil {
+		var currentVersion int
+		err := tx.QueryRowContext(ctx, `SELECT version FROM dsh_carts WHERE id = $1 AND client_id = $2`, cartID, clientID).Scan(&currentVersion)
+		if err != nil {
+			return err
+		}
+		if currentVersion != *expectedVersion {
+			return ErrConflict
+		}
+	}
+
+	res, err := tx.ExecContext(ctx, `
 		DELETE FROM dsh_cart_items item
 		USING dsh_carts cart
 		WHERE item.id = $1
@@ -34,7 +53,13 @@ func RemoveOwnedItem(
 	if affected, _ := res.RowsAffected(); affected == 0 {
 		return ErrNotFound
 	}
-	return nil
+
+	_, err = tx.ExecContext(ctx, `UPDATE dsh_carts SET version = version + 1, updated_at = NOW() WHERE id = $1`, cartID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 // ClearOwnedCart is the explicit store-switch boundary. It removes the lines
@@ -45,6 +70,7 @@ func ClearOwnedCart(
 	db *sql.DB,
 	clientID string,
 	cartID string,
+	expectedVersion *int,
 ) error {
 	if clientID == "" || cartID == "" {
 		return ErrInvalid
@@ -56,15 +82,20 @@ func ClearOwnedCart(
 	defer tx.Rollback()
 
 	var lockedCartID string
+	var currentVersion int
 	if err := tx.QueryRowContext(ctx, `
-		SELECT id::text
+		SELECT id::text, version
 		FROM dsh_carts
 		WHERE id = $1 AND client_id = $2 AND state = 'active'
 		FOR UPDATE`, cartID, clientID,
-	).Scan(&lockedCartID); errors.Is(err, sql.ErrNoRows) {
+	).Scan(&lockedCartID, &currentVersion); errors.Is(err, sql.ErrNoRows) {
 		return ErrNotFound
 	} else if err != nil {
 		return err
+	}
+
+	if expectedVersion != nil && currentVersion != *expectedVersion {
+		return ErrConflict
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM dsh_cart_items WHERE cart_id = $1`, lockedCartID); err != nil {
 		return err

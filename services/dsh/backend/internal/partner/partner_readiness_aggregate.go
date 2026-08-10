@@ -46,13 +46,13 @@ func storeBlockedReasonMessage(codes []string) string {
 		return ""
 	}
 	labels := map[string]string{
-		"STORE_INACTIVE":            "حالة الفرع غير نشطة",
-		"STORE_HIDDEN":              "الفرع مخفي من لوحة التحكم",
-		"STORE_NOT_SERVICEABLE":     "الفرع غير مغطى بالخدمة",
-		"PARTNER_READINESS_PENDING": "جاهزية الشريك للفرع غير مكتملة",
-		"CATALOG_NOT_APPROVED":      "كتالوج الفرع غير معتمد",
-		"MARKETING_NOT_VISIBLE":     "الظهور التسويقي غير مفعل",
-		"PARTNER_NOT_ACTIVE":        "الشريك غير نشط",
+		"STORE_INACTIVE":            "Ø­Ø§Ù„Ø© Ø§Ù„ÙØ±Ø¹ ØºÙŠØ± Ù†Ø´Ø·Ø©",
+		"STORE_HIDDEN":              "Ø§Ù„ÙØ±Ø¹ Ù…Ø®ÙÙŠ Ù…Ù† Ù„ÙˆØ­Ø© Ø§Ù„ØªØ­ÙƒÙ…",
+		"STORE_NOT_SERVICEABLE":     "Ø§Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…ØºØ·Ù‰ Ø¨Ø§Ù„Ø®Ø¯Ù…Ø©",
+		"PARTNER_READINESS_PENDING": "Ø¬Ø§Ù‡Ø²ÙŠØ© Ø§Ù„Ø´Ø±ÙŠÙƒ Ù„Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø©",
+		"CATALOG_NOT_APPROVED":      "ÙƒØªØ§Ù„ÙˆØ¬ Ø§Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…Ø¹ØªÙ…Ø¯",
+		"MARKETING_NOT_VISIBLE":     "Ø§Ù„Ø¸Ù‡ÙˆØ± Ø§Ù„ØªØ³ÙˆÙŠÙ‚ÙŠ ØºÙŠØ± Ù…ÙØ¹Ù„",
+		"PARTNER_NOT_ACTIVE":        "Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù†Ø´Ø·",
 	}
 	messages := make([]string, 0, len(codes))
 	for _, code := range codes {
@@ -62,7 +62,7 @@ func storeBlockedReasonMessage(codes []string) string {
 			messages = append(messages, code)
 		}
 	}
-	return strings.Join(messages, "، ")
+	return strings.Join(messages, "ØŒ ")
 }
 
 // LoadAggregatedPartnerReadiness computes partner activation separately from
@@ -142,10 +142,10 @@ func LoadAggregatedPartnerReadiness(db *sql.DB, partnerID string) (AggregatedPar
 	)
 	base.CanPublishStoreToClient = allStoreGatesPassed
 	if !hasStore {
-		base.StorePublicationBlockedReason = "لا يوجد فرع مربوط بالشريك"
+		base.StorePublicationBlockedReason = "Ù„Ø§ ÙŠÙˆØ¬Ø¯ ÙØ±Ø¹ Ù…Ø±Ø¨ÙˆØ· Ø¨Ø§Ù„Ø´Ø±ÙŠÙƒ"
 	} else if readyCount < len(stores) {
 		base.StorePublicationBlockedReason = fmt.Sprintf(
-			"%d من %d فروع غير مستوفية لبوابات النشر",
+			"%d Ù…Ù† %d ÙØ±ÙˆØ¹ ØºÙŠØ± Ù…Ø³ØªÙˆÙÙŠØ© Ù„Ø¨ÙˆØ§Ø¨Ø§Øª Ø§Ù„Ù†Ø´Ø±",
 			len(stores)-readyCount,
 			len(stores),
 		)

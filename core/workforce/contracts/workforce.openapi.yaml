@@ -30,8 +30,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeStatus"
-      security:
-        - bearerAuth: []
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+      security: []
   /workforce/readiness:
     get:
       tags: [ "workforce-readiness" ]
@@ -45,8 +46,37 @@ paths:
                 $ref: "#/components/schemas/RuntimeStatus"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+      security: []
+  /workforce/readiness/{actorId}:
+    get:
+      tags: [ "workforce-readiness" ]
+      operationId: getWorkforceActorReadiness
+      description: >-
+        Evaluates the Workforce-owned readiness gate for the authenticated actor.
+        Reading another actor requires the bounded provider:read:all permission.
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+      responses:
+        "200":
+          description: Canonical Workforce readiness gate for the requested actor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessGate"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
   /workforce/field-agents:
     post:
       tags: [ "workforce-field-agents" ]
@@ -1115,6 +1145,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ApiError"
+    InternalError:
+      description: Workforce could not evaluate the requested operation.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
   schemas:
     RuntimeStatus:
       type: object
@@ -1124,6 +1160,41 @@ components:
           type: string
         service:
           type: string
+    ReadinessStatus:
+      type: string
+      enum: [ ALLOWED, BLOCKED ]
+    ReadinessBlockerReason:
+      type: string
+      enum:
+        - IDENTITY_SUSPENDED
+        - PROFILE_INCOMPLETE
+        - DOCUMENTS_EXPIRED
+        - EMPLOYMENT_TERMINATED
+        - NO_ACTIVE_ASSIGNMENT
+        - SHIFT_INACTIVE
+        - OUTSIDE_ACTIVE_AREA
+        - FINANCIAL_ELIGIBILITY_BLOCKED
+        - ELIGIBILITY_UNAVAILABLE
+    ReadinessGate:
+      type: object
+      additionalProperties: false
+      required: [ actorId, workforceKind, status, blockerReasons, checkedAt ]
+      properties:
+        actorId:
+          type: string
+          minLength: 1
+        workforceKind:
+          type: string
+          minLength: 1
+        status:
+          $ref: "#/components/schemas/ReadinessStatus"
+        blockerReasons:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReadinessBlockerReason"
+        checkedAt:
+          type: string
+          format: date-time
     EngagementStatus:
       type: string
       enum: [ pending_activation, active, suspended, terminated ]
@@ -1133,17 +1204,16 @@ components:
     CreateFieldAgentRequest:
       type: object
       additionalProperties: false
-      required: [ fullNameAr, phoneE164, serviceZoneId, shiftCode ]
+      required: [ actorId, fullNameAr, serviceZoneId ]
       properties:
+        actorId:
+          type: string
+          minLength: 1
         fullNameAr:
           type: string
           minLength: 1
         fullNameEn:
           type: string
-        phoneE164:
-          type: string
-          minLength: 8
-          maxLength: 20
         engagementType:
           $ref: "#/components/schemas/EngagementType"
         engagementStartDate:
@@ -1189,17 +1259,16 @@ components:
     CreateCaptainRequest:
       type: object
       additionalProperties: false
-      required: [ fullNameAr, phoneE164, serviceZoneId, vehicleType, vehicleIdentifier ]
+      required: [ actorId, fullNameAr, serviceZoneId, vehicleType, vehicleIdentifier ]
       properties:
+        actorId:
+          type: string
+          minLength: 1
         fullNameAr:
           type: string
           minLength: 1
         fullNameEn:
           type: string
-        phoneE164:
-          type: string
-          minLength: 8
-          maxLength: 20
         engagementType:
           $ref: "#/components/schemas/EngagementType"
         engagementStartDate:
@@ -1265,17 +1334,16 @@ components:
     CreateEmployeeRequest:
       type: object
       additionalProperties: false
-      required: [ fullNameAr, phoneE164, department, role, officeLocation ]
+      required: [ actorId, fullNameAr, department, role ]
       properties:
+        actorId:
+          type: string
+          minLength: 1
         fullNameAr:
           type: string
           minLength: 1
         fullNameEn:
           type: string
-        phoneE164:
-          type: string
-          minLength: 8
-          maxLength: 20
         engagementType:
           $ref: "#/components/schemas/EngagementType"
         engagementStartDate:

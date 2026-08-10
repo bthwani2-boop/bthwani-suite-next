@@ -2,6 +2,7 @@ import type { IdentitySessionState } from "./identity-session-store.ts";
 
 export type IdentitySessionAction =
   | "configure"
+  | "retry_bootstrap"
   | "login"
   | "request_activation"
   | "consume_activation"
@@ -25,6 +26,8 @@ export function identitySessionAllowedActions(state: IdentitySessionState): read
     case "restoring":
     case "authenticating":
       return [];
+    case "service_unavailable":
+      return ["retry_bootstrap"];
     case "signed_out":
     case "error":
       return ["login", "request_activation", "consume_activation"];
@@ -53,6 +56,12 @@ export function identityErrorPresentation(code: string): IdentityErrorPresentati
         description: "لا يملك هذا الحساب أو السطح صلاحية تنفيذ العملية.",
         retryable: false,
       };
+    case "ACTOR_DEACTIVATED":
+      return {
+        title: "الحساب معطل",
+        description: "تم حظر هذا الحساب. يرجى التواصل مع الدعم.",
+        retryable: false,
+      };
     case "PHONE_ALREADY_BOUND":
     case "USERNAME_TAKEN":
     case "SESSION_NOT_FOUND":
@@ -78,16 +87,18 @@ export function identityErrorPresentation(code: string): IdentityErrorPresentati
       };
     case "IDENTITY_UNAVAILABLE":
     case "IDENTITY_NOT_READY":
+    case "BFF_UPSTREAM_UNAVAILABLE":
+    case "BFF_UPSTREAM_NOT_CONFIGURED":
     case "INTERNAL_API_UNAVAILABLE":
       return {
-        title: "الخدمة غير متاحة",
-        description: "تحقق من الاتصال ثم أعد المحاولة دون فقد البيانات المدخلة.",
+        title: "خدمة الهوية غير متاحة",
+        description: "تعذر الوصول إلى الخادم. تحقق من اتصالك بالإنترنت أو أعد المحاولة لاحقاً.",
         retryable: true,
       };
     default:
       return {
         title: "تعذر إكمال العملية",
-        description: "أعد المحاولة. إذا استمرت المشكلة تواصل مع الدعم واذكر رمز الخطأ.",
+        description: `أعد المحاولة. إذا استمرت المشكلة تواصل مع الدعم واذكر رمز الخطأ: ${code}`,
         retryable: true,
       };
   }

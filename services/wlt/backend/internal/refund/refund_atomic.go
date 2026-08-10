@@ -3,10 +3,8 @@ package refund
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"wlt-api/internal/shared"
@@ -80,34 +78,4 @@ func CreateRefundAtomicForOperatorContext(ctx context.Context, db *sql.DB, input
 // invents a OperatorContext; it resolves ownership from the referenced WLT session.
 func CreateRefundAtomic(db *sql.DB, input CreateRefundInput) (*Refund, bool, error) {
 	return CreateRefundAtomicForOperatorContext(context.Background(), db, input)
-}
-
-func HandleCreateRefundAtomic(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var input CreateRefundInput
-		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
-		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&input); err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-			return
-		}
-		created, wasCreated, err := CreateRefundAtomicForOperatorContext(r.Context(), db, input)
-		if errors.Is(err, ErrRefundReferenceConflict) {
-			shared.SendError(w, http.StatusConflict, "REFUND_REFERENCE_CONFLICT", err.Error())
-			return
-		}
-		if errors.Is(err, ErrSessionNotRefundable) || errors.Is(err, ErrRefundAmountUnavailable) {
-			shared.SendError(w, http.StatusConflict, "PAYMENT_SESSION_NOT_REFUNDABLE", err.Error())
-			return
-		}
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		status := http.StatusOK
-		if wasCreated {
-			status = http.StatusCreated
-		}
-		shared.SendJSON(w, status, map[string]any{"refund": created, "replayed": !wasCreated})
-	}
 }

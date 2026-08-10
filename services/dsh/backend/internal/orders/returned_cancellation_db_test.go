@@ -15,7 +15,7 @@ func TestReturnedOrderCancellationCreatesOneGovernedFinancialHandoffDBIntegratio
 		_, _ = db.Exec(`DELETE FROM dsh_checkout_financial_closure_outbox WHERE payment_session_id=$1`, paymentSessionID)
 	})
 
-	input := CancellationInput{
+	input := CreateCancellationCaseInput{
 		OrderID:       order.ID,
 		ActorID:       "operator-return-closure-test",
 		ActorRole:     "operator",
@@ -23,11 +23,11 @@ func TestReturnedOrderCancellationCreatesOneGovernedFinancialHandoffDBIntegratio
 		ReasonNote:    "returned order inspected and cannot be redelivered",
 		CorrelationID: correlationID,
 	}
-	first, err := CancelOrder(db, input)
+	first, err := CancelOrderSync(db, input)
 	if err != nil {
-		t.Fatalf("returned-order CancelOrder failed: %v", err)
+		t.Fatalf("returned-order CancelOrderSync failed: %v", err)
 	}
-	second, err := CancelOrder(db, input)
+	second, err := CancelOrderSync(db, input)
 	if err != nil {
 		t.Fatalf("returned-order idempotent replay failed: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestReturnedOrderCancellationRemainsForbiddenForClientAndPartnerDBIntegrati
 	for _, tc := range cases {
 		t.Run(tc.role, func(t *testing.T) {
 			order, _ := seedOrderFixture(t, db, string(StatusReturnedStore))
-			_, err := CancelOrder(db, CancellationInput{
+			_, err := CancelOrderSync(db, CreateCancellationCaseInput{
 				OrderID:       order.ID,
 				ActorID:       tc.role + "-returned-order-test",
 				ActorRole:     tc.role,

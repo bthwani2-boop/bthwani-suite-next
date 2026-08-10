@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "openapi:compose": "node ../../tools/scripts/compose-openapi-context.mjs dsh",
-    "openapi:generate": "pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/dsh.bundle.openapi.yaml -o clients/generated/dsh-api.ts",
+    "openapi:generate": "node -e \"require('node:fs').mkdirSync('clients/generated',{recursive:true})\" && pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/dsh.bundle.openapi.yaml -o clients/generated/dsh-api.ts",
     "openapi:test": "node --test tests/dsh-openapi-modular.test.mjs",
     "openapi:verify": "node ../../tools/guards/dsh-openapi-modular-gate.mjs",
     "database:migrate": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action migrate -Transport auto",
@@ -13,8 +13,10 @@
     "database:test": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite schema",
     "database:test:seed": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite seed",
     "database:contract": "node ../../tools/scripts/check-dsh-database-contract.mjs",
+    "pretypecheck": "pnpm run openapi:generate",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build": "tsc -p tsconfig.json",
+    "prebuild": "pnpm run openapi:generate",
+    "build": "tsc -p tsconfig.json && node ../../tools/scripts/verify-go-build.mjs backend",
     "test": "pnpm run build && pnpm --dir ../.. exec node --test services/dsh/tests/*.test.mjs",
     "lint": "pnpm --dir ../.. run guard:fullstack-boundary"
   },
@@ -35,7 +37,20 @@
     "@bthwani/control-panel": "workspace:*",
     "@bthwani/core-identity": "workspace:*",
     "@bthwani/core-platform-control": "workspace:*",
+    "@bthwani/core-providers": "workspace:*",
+    "@bthwani/data-runtime": "workspace:*",
     "@bthwani/ui-kit": "workspace:*",
+    "@bthwani/wlt": "workspace:*",
+    "@react-native-async-storage/async-storage": "1.24.0",
+    "@react-native-community/netinfo": "11.4.1",
+    "expo-constants": "~56.0.22",
+    "expo-crypto": "~56.0.4",
+    "expo-image-picker": "~56.0.22",
+    "expo-location": "~56.0.22",
+    "expo-notifications": "~56.0.22",
+    "expo-secure-store": "~56.0.4",
+    "react-native": "0.85.3",
+    "react-native-maps": "1.27.2",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "15.15.4"
   },
@@ -43,6 +58,24 @@
     "@types/node": "24.10.1",
     "@types/react": "19.2.17",
     "next": "^16.2.11",
-    "react": "19.2.3"
+    "react": "19.2.3",
+    "typescript": "7.0.2"
+  },
+  "exports": {
+    "./control-panel": "./frontend/control-panel/index.ts",
+    "./control-panel/finance": "./frontend/control-panel/finance/index.ts",
+    "./control-panel/navigation": "./frontend/control-panel/navigation.ts",
+    "./control-panel/session": "./frontend/control-panel/session.ts",
+    "./control-panel/administration": "./frontend/control-panel/administration/index.ts",
+    "./control-panel/analytics": "./frontend/control-panel/analytics/index.ts",
+    "./control-panel/catalogs": "./frontend/control-panel/catalogs/index.ts",
+    "./control-panel/dashboard": "./frontend/control-panel/dashboard/index.ts",
+    "./control-panel/hr": "./frontend/control-panel/hr/index.ts",
+    "./control-panel/marketing": "./frontend/control-panel/marketing/index.ts",
+    "./control-panel/operations": "./frontend/control-panel/operations/index.ts",
+    "./control-panel/partners": "./frontend/control-panel/partners/index.ts",
+    "./control-panel/partners/stores": "./frontend/control-panel/partners/stores/index.ts",
+    "./control-panel/platform": "./frontend/control-panel/platform/index.ts",
+    "./control-panel/support": "./frontend/control-panel/support/index.ts"
   }
 }

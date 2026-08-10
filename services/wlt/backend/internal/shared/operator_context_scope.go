@@ -52,7 +52,7 @@ func RequireOperatorContextScope(db *sql.DB, cfg OperatorContextScopeConfig, nex
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 		if operatorContextID == "" {
-			SendError(w, http.StatusBadRequest, "OperatorContext_REQUIRED", "trusted OperatorContext is required")
+			SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext is required")
 			return
 		}
 
@@ -66,7 +66,7 @@ func RequireOperatorContextScope(db *sql.DB, cfg OperatorContextScopeConfig, nex
 						SendError(w, http.StatusNotFound, "NOT_FOUND", "resource not found")
 						return
 					}
-					SendError(w, http.StatusInternalServerError, "OperatorContext_LOOKUP_FAILED", "resource OperatorContext could not be verified")
+					SendError(w, http.StatusInternalServerError, "OPERATOR_CONTEXT_LOOKUP_FAILED", "resource OperatorContext could not be verified")
 					return
 				}
 				if storedOperatorContext != operatorContextID {
@@ -81,7 +81,7 @@ func RequireOperatorContextScope(db *sql.DB, cfg OperatorContextScopeConfig, nex
 		if cfg.ListPath != "" && r.Method == http.MethodGet && r.URL.Path == cfg.ListPath {
 			query := r.URL.Query()
 			if requestedOperatorContext := strings.TrimSpace(query.Get("operatorContextId")); requestedOperatorContext != "" && requestedOperatorContext != operatorContextID {
-				SendError(w, http.StatusForbidden, "OperatorContext_MISMATCH", "OperatorContext filter does not match trusted DSH OperatorContext")
+				SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_MISMATCH", "OperatorContext filter does not match trusted DSH OperatorContext")
 				return
 			}
 			query.Set("operatorContextId", operatorContextID)

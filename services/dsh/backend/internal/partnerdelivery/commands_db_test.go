@@ -10,7 +10,7 @@ func TestPartnerDeliveryCommandReplayDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	fixture := seedFixture(t, db, "ready_for_pickup")
 	ctx := context.Background()
-	svc := NewService(db)
+	svc := NewService(db, mockWFServer(t))
 	actorID := "partner-command-test"
 	commandID := "assign-command-1"
 	t.Cleanup(func() {
@@ -33,14 +33,7 @@ func TestPartnerDeliveryCommandReplayDBIntegration(t *testing.T) {
 		t.Fatalf("expected replayed task %s, got %s", first.ID, second.ID)
 	}
 
-	var anotherCourierID string
-	if err := db.QueryRow(`
-		INSERT INTO dsh_store_team_members (store_id, name, role, status)
-		VALUES ($1, 'Second Courier', 'courier', 'active')
-		RETURNING id`, fixture.storeID).Scan(&anotherCourierID); err != nil {
-		t.Fatalf("failed to create second courier: %v", err)
-	}
-	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_store_team_members WHERE id = $1`, anotherCourierID) })
+	anotherCourierID := "courier-2"
 
 	_, err = svc.AssignCourierCommand(
 		ctx, fixture.orderID, anotherCourierID, actorID, "partner", "corr-command-3", commandID,
@@ -54,7 +47,7 @@ func TestPartnerDeliveryExceptionEvidenceDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	fixture := seedFixture(t, db, "ready_for_pickup")
 	ctx := context.Background()
-	svc := NewService(db)
+	svc := NewService(db, mockWFServer(t))
 	actorID := "operator-exception-test"
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM dsh_partner_delivery_command_receipts WHERE actor_id = $1`, actorID)

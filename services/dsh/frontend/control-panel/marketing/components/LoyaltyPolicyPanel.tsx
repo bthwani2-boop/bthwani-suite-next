@@ -2,6 +2,11 @@
 
 import React from "react";
 import { colorRoles } from "@bthwani/ui-kit";
+import {
+  formatWltMoney,
+  minorUnitsToWltMajorInput,
+  parseWltMajorInputToMinorUnits,
+} from "@bthwani/wlt/dsh";
 import { CpButton } from "@bthwani/control-panel/components";
 import {
   useLoyaltyPolicyController,
@@ -30,17 +35,17 @@ export function LoyaltyPolicyPanel() {
 
   const parseTerms = (draft: Omit<PolicyTermsDraft, "policyId">) => {
     const numerator = Number(draft.points);
-    const denominator = Number(draft.denominatorYer);
+    const denominator = parseWltMajorInputToMinorUnits(draft.denominatorYer, "YER");
     const minimum = Number(draft.minimumPoints);
     const maximum = Number(draft.maximumPoints);
     if (!draft.nameAr.trim() || !Number.isInteger(numerator) || numerator <= 0 ||
-        !Number.isFinite(denominator) || denominator <= 0 ||
+        !denominator.ok || denominator.minorUnits <= 0 ||
         !Number.isInteger(minimum) || minimum < 0 ||
         !Number.isInteger(maximum) || maximum < 0) return null;
     return {
       nameAr: draft.nameAr.trim(),
       pointsNumerator: numerator,
-      eligibleMinorUnitsDenominator: Math.round(denominator * 100),
+      eligibleMinorUnitsDenominator: denominator.minorUnits,
       minimumPoints: minimum,
       maximumPointsPerOrder: maximum,
     };
@@ -58,7 +63,7 @@ export function LoyaltyPolicyPanel() {
       policyId: policy.id,
       nameAr: policy.nameAr,
       points: String(policy.pointsNumerator),
-      denominatorYer: String(policy.eligibleMinorUnitsDenominator / 100),
+      denominatorYer: minorUnitsToWltMajorInput(policy.eligibleMinorUnitsDenominator, "YER"),
       minimumPoints: String(policy.minimumPoints),
       maximumPoints: String(policy.maximumPointsPerOrder),
     });
@@ -77,8 +82,7 @@ export function LoyaltyPolicyPanel() {
   };
 
   const formatPolicy = (policy: LoyaltyEarningPolicy): string => {
-    const denominator = policy.eligibleMinorUnitsDenominator / 100;
-    return `${policy.pointsNumerator} نقطة لكل ${denominator.toLocaleString("ar")} ر.ي مؤهلة`;
+    return `${policy.pointsNumerator} نقطة لكل ${formatWltMoney(policy.eligibleMinorUnitsDenominator, "YER")} مؤهلة`;
   };
 
   return (

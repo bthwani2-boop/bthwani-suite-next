@@ -25,7 +25,7 @@ func (s *protectedStoreServer) handleCompleteAssetUploadSafe(w http.ResponseWrit
 }
 
 func (s *protectedStoreServer) handleDeleteCatalogAssetSafe(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
 		return
 	}
 	if err := centralcatalog.DeleteUnlinkedAsset(r.Context(), s.db, s.mediaClient(), r.PathValue("assetId")); err != nil {
@@ -45,14 +45,28 @@ func (s *protectedStoreServer) handleLinkCatalogAssetSafe(w http.ResponseWriter,
 		return
 	}
 	input.AssetID = r.PathValue("assetId")
-	input.IsPrimary = false
 	if !s.authorizeAssetAccess(w, r, actor, input.AssetID) {
 		return
 	}
 	if !s.authorizeAssetLinkEntity(w, r, actor, input.EntityType, input.EntityID) {
 		return
 	}
-	link, err := centralcatalog.LinkAsset(r.Context(), s.db, input)
+	var link centralcatalog.CatalogAssetLink
+	var err error
+	if input.IsPrimary {
+		tx, beginErr := s.db.BeginTx(r.Context(), nil)
+		if beginErr != nil {
+			s.writeCatalogMutationError(w, beginErr)
+			return
+		}
+		defer tx.Rollback()
+		link, err = centralcatalog.ReplacePrimaryAssetLink(r.Context(), tx, input)
+		if err == nil {
+			err = tx.Commit()
+		}
+	} else {
+		link, err = centralcatalog.LinkAsset(r.Context(), s.db, input)
+	}
 	if err != nil {
 		s.writeCatalogMutationError(w, err)
 		return
@@ -121,54 +135,35 @@ func (s *protectedStoreServer) putEntityImageSafe(
 }
 
 func (s *protectedStoreServer) handlePutDomainImageSafe(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
 		return
 	}
 	s.putEntityImageSafe(w, r, "domain", r.PathValue("domainId"), r.PathValue("role"))
 }
 
 func (s *protectedStoreServer) handlePutNodeImageSafe(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
 		return
 	}
 	s.putEntityImageSafe(w, r, "node", r.PathValue("nodeId"), r.PathValue("role"))
 }
 
 func (s *protectedStoreServer) handlePutMasterProductImageSafe(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
 		return
 	}
 	s.putEntityImageSafe(w, r, "master_product", r.PathValue("productId"), r.PathValue("role"))
 }
 
 func (s *protectedStoreServer) handlePutProductProposalImageSafe(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
 		return
 	}
 	s.putEntityImageSafe(w, r, "product_proposal", r.PathValue("proposalId"), r.PathValue("role"))
 }
 
-func (s *protectedStoreServer) handlePutStoreImageSafe(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
-	if !ok {
-		return
-	}
-	storeID := r.PathValue("storeId")
-	if actor.Role != "operator" {
-		if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, storeID); err != nil {
-			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store does not belong to you")
-			return
-		}
-	}
-	if !centralcatalog.IsValidStoreImageRole(r.PathValue("role")) {
-		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid store image role")
-		return
-	}
-	s.putEntityImageSafe(w, r, "store", storeID, r.PathValue("role"))
-}
-
 func (s *protectedStoreServer) handleSubmitReelSafe(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner", "operator")
+	actor, ok := s.requireActor(w, r, "partner")
 	if !ok {
 		return
 	}
@@ -185,7 +180,7 @@ func (s *protectedStoreServer) handleSubmitReelSafe(w http.ResponseWriter, r *ht
 }
 
 func (s *protectedStoreServer) handleReviewReelSafe(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaReview, "operator")
+	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaReview)
 	if !ok {
 		return
 	}
@@ -199,4 +194,36 @@ func (s *protectedStoreServer) handleReviewReelSafe(w http.ResponseWriter, r *ht
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"reel": reel})
+}
+
+func (s *protectedStoreServer) handleCleanupOrphanCatalogAssets(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
+		return
+	}
+	deletedCount, err := centralcatalog.CleanupOrphanCatalogAssets(r.Context(), s.db, s.mediaClient())
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"deletedCount": deletedCount})
+}
+
+func (s *protectedStoreServer) handleSimulateAssetScan(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
+		return
+	}
+
+	var input struct {
+		TargetStatus string `json:"targetStatus"`
+	}
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+
+	asset, err := centralcatalog.SimulateAssetScan(r.Context(), s.db, r.PathValue("assetId"), input.TargetStatus)
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"asset": asset})
 }

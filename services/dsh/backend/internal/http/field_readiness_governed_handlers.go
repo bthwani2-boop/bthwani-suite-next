@@ -62,7 +62,7 @@ func (s *protectedStoreServer) handleCreateGovernedFieldVisit(w http.ResponseWri
 	if strings.TrimSpace(body.VisitType) != "" {
 		visitType = fieldreadiness.VisitType(body.VisitType)
 	}
-	visit, err := fieldreadiness.CreateGovernedVisitIdempotent(r.Context(), s.db, actor, fieldreadiness.CreateVisitInput{
+	visit, err := fieldreadiness.CreateGovernedVisitIdempotent(r.Context(), s.db, s.workforce, actor, fieldreadiness.CreateVisitInput{
 		StoreID:       storeID,
 		FieldAgentID:  actor.ID,
 		VisitType:     visitType,
@@ -96,7 +96,7 @@ func (s *protectedStoreServer) handleCompleteGovernedFieldVisit(w http.ResponseW
 		s.writeGovernedFieldReadinessError(w, err)
 		return
 	}
-	visit, err := fieldreadiness.CompleteGovernedVisitIdempotent(r.Context(), s.db, actor, visitID, fieldreadiness.CompleteVisitInput{
+	visit, err := fieldreadiness.CompleteGovernedVisitIdempotent(r.Context(), s.db, s.workforce, actor, visitID, fieldreadiness.CompleteVisitInput{
 		CompletionLocation: body.CompletionLocation,
 	}, mutation)
 	if err != nil {
@@ -130,7 +130,7 @@ func (s *protectedStoreServer) handleUpsertGovernedReadinessCheck(w http.Respons
 		s.writeGovernedFieldReadinessError(w, err)
 		return
 	}
-	check, err := fieldreadiness.UpsertGovernedReadinessCheckIdempotent(r.Context(), s.db, actor, visitID, fieldreadiness.UpdateCheckInput{
+	check, err := fieldreadiness.UpsertGovernedReadinessCheckIdempotent(r.Context(), s.db, s.workforce, actor, visitID, fieldreadiness.UpdateCheckInput{
 		CheckType:   body.CheckType,
 		Status:      fieldreadiness.CheckStatus(body.Status),
 		EvidenceURL: body.EvidenceURL,
@@ -167,7 +167,7 @@ func (s *protectedStoreServer) handleCreateGovernedReadinessEscalation(w http.Re
 		s.writeGovernedFieldReadinessError(w, err)
 		return
 	}
-	escalation, err := fieldreadiness.CreateGovernedEscalationIdempotent(r.Context(), s.db, actor, fieldreadiness.CreateEscalationInput{
+	escalation, err := fieldreadiness.CreateGovernedEscalationIdempotent(r.Context(), s.db, s.workforce, actor, fieldreadiness.CreateEscalationInput{
 		VisitID:     body.VisitID,
 		StoreID:     storeID,
 		RaisedBy:    actor.ID,
@@ -184,7 +184,7 @@ func (s *protectedStoreServer) handleCreateGovernedReadinessEscalation(w http.Re
 
 // PATCH /dsh/operator/field-readiness/escalations/{escalationId}
 func (s *protectedStoreServer) handleUpdateGovernedEscalation(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -214,7 +214,7 @@ func (s *protectedStoreServer) handleGovernedPartnerOnboardingStatus(w http.Resp
 		return
 	}
 	storeID := r.PathValue("storeId")
-	if err := fieldreadiness.AuthorizeStore(r.Context(), s.db, actor, storeID); err != nil {
+	if err := fieldreadiness.AuthorizeStore(r.Context(), s.db, s.workforce, actor, storeID); err != nil {
 		s.writeGovernedFieldReadinessError(w, err)
 		return
 	}

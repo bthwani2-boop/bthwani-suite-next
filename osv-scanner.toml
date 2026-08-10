@@ -1,0 +1,9 @@
+[[IgnoredVulns]]
+id = "GHSA-5p2g-fcmc-qvqq"
+ignoreUntil = 2026-09-30
+reason = "No safe image-size release exists as of 2026-08-09. The affected ISO-BMFF loop is patched in patches/image-size@1.2.1.patch and enforced by guard:image-size-security. Remove this exception when upstream publishes a fixed release."
+
+[[IgnoredVulns]]
+id = "GHSA-w3rx-r6r6-pgpr"
+ignoreUntil = 2026-09-30
+reason = "No safe image-size release exists as of 2026-08-09. The affected ICNS loop is patched in patches/image-size@1.2.1.patch and enforced by guard:image-size-security. Remove this exception when upstream publishes a fixed release."
