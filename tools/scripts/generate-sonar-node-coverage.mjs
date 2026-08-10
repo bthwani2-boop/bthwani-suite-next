@@ -186,6 +186,24 @@ export function validateLcovLineMappings(lines, absolute, source) {
   }
 }
 
+function sourcePathFromRecord(record) {
+  const match = /^SF:(.+)$/m.exec(String(record ?? ""));
+  return match ? normalizePath(match[1]) : "";
+}
+
+export function findDuplicateLcovSources(records) {
+  const counts = new Map();
+  for (const record of records) {
+    const source = sourcePathFromRecord(record);
+    if (!source) continue;
+    counts.set(source, (counts.get(source) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([source, count]) => `${source} (${count})`)
+    .sort();
+}
+
 export function filterLcov(rawLcov, suiteName, suiteCwd = repoRoot) {
   const definition = suiteDefinitions[suiteName];
   if (!definition) throw new Error(`Unknown Sonar coverage suite '${suiteName}'`);
@@ -300,6 +318,11 @@ function generate() {
   }
 
   if (records.length === 0) throw new Error("Sonar Node coverage produced no real source records");
+  const duplicateSources = findDuplicateLcovSources(records);
+  if (duplicateSources.length > 0) {
+    throw new Error(`Duplicate normalized LCOV source records: ${duplicateSources.join(", ")}`);
+  }
+
   const finalReport = path.resolve(repoRoot, FINAL_REPORT);
   writeFileSync(finalReport, records.join(""), "utf8");
 
