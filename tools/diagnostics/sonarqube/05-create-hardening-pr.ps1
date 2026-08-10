@@ -16,11 +16,7 @@ function Invoke-Native {
     if ($LASTEXITCODE -ne 0) { throw $Failure }
 }
 function Get-NativeText {
-    param(
-        [scriptblock]$Command,
-        [string]$Failure,
-        [switch]$AllowEmpty
-    )
+    param([scriptblock]$Command,[string]$Failure,[switch]$AllowEmpty)
     $lines = @(& $Command)
     $exitCode = $LASTEXITCODE
     if ($exitCode -ne 0) { throw $Failure }
@@ -29,12 +25,12 @@ function Get-NativeText {
     return $text
 }
 function Get-RepoRoot {
-    return Get-NativeText -Command { git rev-parse --show-toplevel 2>$null } -Failure "Run from inside the repository."
+    Get-NativeText -Command { git rev-parse --show-toplevel 2>$null } -Failure "Run from inside the repository."
 }
 function Get-Checks([string]$Sha) {
     $json = gh api -H "Accept: application/vnd.github+json" "repos/$Repository/commits/$Sha/check-runs?per_page=100"
     if ($LASTEXITCODE -ne 0) { throw "Unable to read GitHub check runs for $Sha." }
-    return @(($json | ConvertFrom-Json).check_runs)
+    @((($json | ConvertFrom-Json).check_runs))
 }
 function Wait-Checks([string]$Sha,[string[]]$Names,[int]$Minutes) {
     $deadline = (Get-Date).AddMinutes($Minutes)
@@ -56,49 +52,102 @@ $repoRoot = Get-RepoRoot
 Set-Location $repoRoot
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "gh CLI is required." }
 Invoke-Native { gh auth status } "GitHub CLI authentication is not ready."
+
 $current = Get-NativeText -Command { git branch --show-current } -Failure "Unable to resolve current branch."
-if ($current -ne $BaseBranch) { throw "Expected '$BaseBranch', found '$current'." }
-if (git status --porcelain) { throw "Working tree must be clean." }
-Invoke-Native { git fetch origin $BaseBranch } "git fetch failed."
+if ($current -ne $BaseBranch) { throw "Expected '$BaseBranch', found '$current'. Stop the previous run, switch to $BaseBranch, and rerun." }
+if (git status --porcelain) { throw "Working tree must be clean before hardening." }
+
+Invoke-Native { git fetch origin $BaseBranch $WorkBranch 2>$null } "Unable to fetch current branch truth."
 Invoke-Native { git pull --ff-only origin $BaseBranch } "Local base is not safely fast-forwardable."
-$localHead = Get-NativeText -Command { git rev-parse HEAD } -Failure "Unable to resolve local HEAD."
-$remoteBase = Get-NativeText -Command { git rev-parse "origin/$BaseBranch" } -Failure "Unable to resolve origin/$BaseBranch."
-if ($localHead -ne $remoteBase) { throw "Local/remote base mismatch." }
+$baseSha = Get-NativeText -Command { git rev-parse "origin/$BaseBranch" } -Failure "Unable to resolve origin/$BaseBranch."
+$localBase = Get-NativeText -Command { git rev-parse HEAD } -Failure "Unable to resolve local base HEAD."
+if ($localBase -ne $baseSha) { throw "Local and remote $BaseBranch differ." }
 
-$existing = gh pr list --repo $Repository --state open --head $WorkBranch --json number,url,baseRefName | ConvertFrom-Json
+$existing = gh pr list --repo $Repository --state open --head $WorkBranch --base $BaseBranch --json number,url,baseRefName,headRefOid | ConvertFrom-Json
 if ($LASTEXITCODE -ne 0) { throw "Unable to inspect existing readiness PRs." }
-if ($existing -and @($existing).Count -gt 0) { Write-Host "Existing readiness PR: $($existing[0].url)"; exit 0 }
+if ($existing -and @($existing).Count -gt 0) {
+    $pr = @($existing)[0]
+    Write-Host "Existing readiness PR: $($pr.url)"
+    $required = @('BThwani CI result','SonarQube Cloud scan','SonarCloud Code Analysis','Analyze go (dsh)','Analyze go (identity)','Analyze go (platform-control)','Analyze go (providers)','Analyze go (wlt)','Analyze go (workforce)','Analyze javascript-typescript')
+    Wait-Checks -Sha $pr.headRefOid -Names $required -Minutes $WaitMinutes
+    Write-Host "PROTECTION READINESS: PASS"
+    return
+}
 
-# A missing remote branch is expected here. Never call .Trim() directly on
-# native output because PowerShell returns $null when the command emits no rows.
-$remoteBranch = Get-NativeText -Command { git ls-remote --heads origin $WorkBranch } -Failure "Unable to inspect remote hardening branch." -AllowEmpty
-if ($remoteBranch) { throw "Remote hardening branch exists without an open PR." }
-Invoke-Native { git switch -c $WorkBranch } "Unable to create hardening branch."
+# The interrupted first run may already have published the work branch at the
+# exact base SHA. That state is safe and resumable. Any divergent remote branch
+# is rejected to avoid overwriting concurrent work.
+$remoteLine = Get-NativeText -Command { git ls-remote --heads origin $WorkBranch } -Failure "Unable to inspect remote hardening branch." -AllowEmpty
+if ($remoteLine) {
+    $remoteWorkSha = ($remoteLine -split '\s+')[0]
+    if ($remoteWorkSha -ne $baseSha) {
+        throw "Remote '$WorkBranch' exists at $remoteWorkSha, not current base $baseSha. Refusing to overwrite it."
+    }
+    Write-Host "Reusing safe remote hardening branch at base SHA $remoteWorkSha"
+}
 
-# Required checks must be created for every PR. GitHub documents that a
-# required workflow skipped by path filtering can remain Pending forever.
+$localLine = Get-NativeText -Command { git branch --list $WorkBranch } -Failure "Unable to inspect local hardening branch." -AllowEmpty
+if ($localLine) {
+    $localWorkSha = Get-NativeText -Command { git rev-parse $WorkBranch } -Failure "Unable to resolve local hardening branch."
+    if ($localWorkSha -ne $baseSha) {
+        throw "Local '$WorkBranch' exists at $localWorkSha, not current base $baseSha. Refusing to overwrite it."
+    }
+    Invoke-Native { git switch $WorkBranch } "Unable to switch to existing local hardening branch."
+} else {
+    Invoke-Native { git switch -c $WorkBranch } "Unable to create hardening branch."
+}
+
 $ciPath = Join-Path $repoRoot ".github\workflows\ci.yml"
 if (-not (Test-Path $ciPath)) { throw ".github/workflows/ci.yml is missing." }
-$ci = Get-Content $ciPath -Raw
-$pattern = '(?ms)(  pull_request:\r?\n    types: \[opened, synchronize, reopened, ready_for_review\]\r?\n    branches: \["\*\*"\]\r?\n)    paths:\r?\n(?:      - .*\r?\n)+(?=  push:)'
-$updated = [regex]::Replace($ci, $pattern, '$1')
-if ($updated -eq $ci) { throw "Expected PR path filter not found; refusing an unreviewed workflow rewrite." }
-Set-Content -LiteralPath $ciPath -Value $updated -Encoding utf8
+Write-Host "Preparing CI pull_request trigger..."
+$inputLines = @(Get-Content -LiteralPath $ciPath)
+$outputLines = New-Object System.Collections.Generic.List[string]
+$insidePr = $false
+$skipPaths = $false
+$pathsBlocks = 0
+foreach ($line in $inputLines) {
+    if ($line -match '^  pull_request:\s*$') {
+        $insidePr = $true
+        $skipPaths = $false
+        $outputLines.Add($line)
+        continue
+    }
+    if ($insidePr -and $line -match '^  push:\s*$') {
+        $insidePr = $false
+        $skipPaths = $false
+        $outputLines.Add($line)
+        continue
+    }
+    if ($insidePr -and $line -match '^    paths:\s*$') {
+        $pathsBlocks++
+        $skipPaths = $true
+        continue
+    }
+    if ($insidePr -and $skipPaths) {
+        if ($line -match '^      - ') { continue }
+        $skipPaths = $false
+    }
+    $outputLines.Add($line)
+}
+if ($pathsBlocks -ne 1) { throw "Expected exactly one pull_request paths block; found $pathsBlocks." }
+Set-Content -LiteralPath $ciPath -Value $outputLines -Encoding utf8
+Write-Host "CI trigger transformation complete."
 
-$diff = git diff -- .github/workflows/ci.yml
-if (-not $diff) { throw "No readiness diff produced." }
-Write-Host $diff
+$diff = @(git diff -- .github/workflows/ci.yml)
+if ($LASTEXITCODE -ne 0 -or $diff.Count -eq 0) { throw "No valid readiness diff produced." }
+$diff | ForEach-Object { Write-Host $_ }
 Invoke-Native { git add -- .github/workflows/ci.yml } "Unable to stage ci.yml."
 $staged = @(git diff --cached --name-only)
 if ($staged.Count -ne 1 -or $staged[0] -ne '.github/workflows/ci.yml') { throw "Unexpected staged paths: $($staged -join ', ')" }
 Invoke-Native { git commit -m "fix(ci): always publish the required PR aggregate check" } "Commit failed."
+Write-Host "Publishing hardening commit..."
 Invoke-Native { git push -u origin $WorkBranch } "Push failed."
 
 $body = @"
 ## Purpose
 Prepare fail-closed master protection without changing application code or Sonar coverage policy.
 
-- make `BThwani CI result` appear on every pull request
+- make BThwani CI result appear on every pull request
 - prove the exact future required checks on a real Draft PR
 - do not activate master protection until every check is observed and successful
 
@@ -113,4 +162,4 @@ Write-Host "Head SHA: $($pr.headRefOid)"
 $required = @('BThwani CI result','SonarQube Cloud scan','SonarCloud Code Analysis','Analyze go (dsh)','Analyze go (identity)','Analyze go (platform-control)','Analyze go (providers)','Analyze go (wlt)','Analyze go (workforce)','Analyze javascript-typescript')
 Wait-Checks -Sha $pr.headRefOid -Names $required -Minutes $WaitMinutes
 Write-Host "PROTECTION READINESS: PASS"
-Write-Host "Next command: 06-finalize-and-protect-master.ps1 -PrNumber $($pr.number)"
+Write-Host "Next: 06-finalize-and-protect-master.ps1 -PrNumber $($pr.number)"
