@@ -1,3 +1,5 @@
+import { rewriteMobileDevPresignedMediaUrl } from "../_kernel/mobile-dev-gateway";
+
 export type PresignedUploadResult = {
   readonly ok: boolean;
   readonly status: number;
@@ -8,10 +10,11 @@ export async function uploadBinaryToPresignedUrl(
   body: Blob,
   contentType: string,
 ): Promise<PresignedUploadResult> {
-  // We use raw fetch instead of createDshHttpClient because we are uploading directly
-  // to an S3 presigned URL, which will reject the request if BThwani custom headers
-  // (added by the approved client) are present.
-  const response = await fetch(uploadUrl, {
+  // Production and normal remote URLs pass through unchanged. Local development
+  // presigned MinIO URLs are translated to the governed LAN gateway so a physical
+  // device never needs direct access to the host-only MinIO listener.
+  const targetUrl = rewriteMobileDevPresignedMediaUrl(uploadUrl);
+  const response = await fetch(targetUrl, {
     method: "PUT",
     body,
     headers: { "Content-Type": contentType },
