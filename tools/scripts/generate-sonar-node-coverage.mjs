@@ -183,11 +183,6 @@ export function validateLcovLineMappings(lines, absolute, source) {
   }
 }
 
-function sourcePathFromRecord(record) {
-  const match = /^SF:(.+)$/m.exec(String(record ?? ""));
-  return match ? normalizePath(match[1]) : "";
-}
-
 function parseNonNegativeInteger(value, label) {
   if (!/^\d+$/.test(String(value ?? ""))) throw new Error(`Invalid LCOV ${label}: ${value}`);
   const parsed = Number.parseInt(value, 10);
@@ -212,7 +207,7 @@ function parseLcovRecord(record) {
 
   for (const rawLine of String(record ?? "").split(/\r?\n/)) {
     const line = rawLine.trim();
-    if (!line || line.startsWith("TN:")) continue;
+    if (!line || line === "end_of_record" || line.startsWith("TN:")) continue;
     if (line.startsWith("SF:")) {
       const source = normalizePath(line.slice(3));
       if (!source) throw new Error("LCOV record has an empty SF field");
