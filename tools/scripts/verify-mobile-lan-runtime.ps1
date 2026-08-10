@@ -42,14 +42,14 @@ function Invoke-DirectJsonRequest {
 
 function Test-TcpReachable {
     param(
-        [Parameter(Mandatory)][string] $Host,
+        [Parameter(Mandatory)][string] $TargetHost,
         [Parameter(Mandatory)][int] $Port,
         [int] $TimeoutMs = 750
     )
 
     $client = [Net.Sockets.TcpClient]::new()
     try {
-        $task = $client.ConnectAsync($Host, $Port)
+        $task = $client.ConnectAsync($TargetHost, $Port)
         return $task.Wait($TimeoutMs) -and $client.Connected
     } catch {
         return $false
@@ -85,12 +85,12 @@ Invoke-DirectJsonRequest -Uri "$gatewayBase/workforce/health" -ExpectedStatus "h
 # through the machine's LAN address even while the runtime is healthy.
 $forbiddenDirectPorts = @(58080, 58082, 58083, 58086, 59000, 59001)
 foreach ($port in $forbiddenDirectPorts) {
-    if (Test-TcpReachable -Host $lan.Host -Port $port) {
+    if (Test-TcpReachable -TargetHost $lan.Host -Port $port) {
         throw "Private runtime port $port is reachable directly on LAN host $($lan.Host); only gateway port 58110 may be LAN-visible."
     }
 }
 
-if (-not (Test-TcpReachable -Host $lan.Host -Port 58110)) {
+if (-not (Test-TcpReachable -TargetHost $lan.Host -Port 58110)) {
     throw "Mobile development gateway is not reachable on LAN host $($lan.Host):58110."
 }
 
