@@ -1,5 +1,5 @@
 import React, { useState, type ReactNode } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { StyleSheet, View, Platform } from "react-native";
 import {
   Button,
   Card,
@@ -17,8 +17,8 @@ import {
   useIdentitySession,
   type ActivationActorType,
   type ActorIdentity,
-  type TokenResponse,
 } from "@bthwani/core-identity";
+import { requestDevelopmentSession } from "./dev-session-broker.adapter";
 
 export type DshSurfaceRole = ActorIdentity["roles"][number];
 
@@ -29,8 +29,6 @@ export type IdentitySessionGateProps = {
 };
 
 declare const __DEV__: boolean;
-
-const DEV_SESSION_BROKER_BASE_URL = "http://127.0.0.1:58100";
 
 function isPlatformAccessActorType(role: DshSurfaceRole): role is ActivationActorType {
   return role === "partner" || role === "captain" || role === "field";
@@ -58,6 +56,8 @@ function quickDeveloperLoginLabel(
   surface?: string,
 ): string | null {
   switch (role) {
+    case "operator":
+      return surface === "control-panel" ? "دخول سريع كمشغل التطوير المحلي" : null;
     case "client":
       return surface === "app-client" ? "دخول سريع كعميل التطوير المحلي" : null;
     case "partner":
@@ -69,18 +69,6 @@ function quickDeveloperLoginLabel(
     default:
       return null;
   }
-}
-
-function brokerErrorCode(body: unknown): string {
-  if (
-    typeof body === "object"
-    && body !== null
-    && "code" in body
-    && typeof (body as { code?: unknown }).code === "string"
-  ) {
-    return (body as { code: string }).code;
-  }
-  return "DEV_SESSION_BROKER_UNAVAILABLE";
 }
 
 function IdentityAccessPanel({
@@ -103,9 +91,9 @@ function IdentityAccessPanel({
   const errorPresentation = errorMessage ? identityErrorPresentation(errorMessage) : null;
   const quickLoginLabel = quickDeveloperLoginLabel(requiredRole, requiredSurface);
   const quickLoginEnabled =
-    Platform.OS !== "web"
-    && typeof __DEV__ !== "undefined"
+    typeof __DEV__ !== "undefined"
     && __DEV__
+    && Platform.OS !== "web"
     && quickLoginLabel !== null;
 
   const submitLogin = async () => {
@@ -147,22 +135,11 @@ function IdentityAccessPanel({
     setFeedback("");
     try {
       const deviceFingerprint = await getIdentityDeviceFingerprint();
-      const response = await fetch(`${DEV_SESSION_BROKER_BASE_URL}/session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          role: requiredRole,
-          surface: requiredSurface,
-          deviceFingerprint,
-        }),
-      });
-
-      const body: unknown = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(brokerErrorCode(body));
-      }
-
-      await adoptSession(body as TokenResponse);
+      await adoptSession(await requestDevelopmentSession({
+        role: requiredRole,
+        surface: requiredSurface,
+        deviceFingerprint,
+      }));
     } catch (error) {
       setFeedback(identityErrorPresentation(errorCode(error)).description);
     } finally {

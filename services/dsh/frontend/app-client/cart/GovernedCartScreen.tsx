@@ -55,7 +55,7 @@ export function GovernedCartScreen({
     queryKey: ["cart", "fulfillment-modes", storeId, serviceAreaCode],
     queryFn: () => fetchFulfillmentModes(storeId, serviceAreaCode),
   });
-  
+
   const [fulfillmentMode, setFulfillmentMode] = React.useState<DshFulfillmentMode>("bthwani_delivery");
   const [couponCode, setCouponCode] = React.useState("");
   const [deliveryAddress, setDeliveryAddress] = React.useState("");

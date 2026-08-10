@@ -1189,12 +1189,12 @@ func hasAnyRole(roles []string, allowed ...string) bool {
 // outer service authorization still owns action-level permission checks; this
 // repository boundary owns durable actor existence, activity, and isolation.
 func requireLifecycleRequester(ctx context.Context, tx *sql.Tx, requestedByActorID, operatorContextID string) error {
-	var active bool
+	var status ActorLifecycleStatus
 	err := tx.QueryRowContext(ctx, `
-		SELECT active
+		SELECT status
 		FROM identity_actors
-		WHERE id = $1 AND operator_context_id = $2`, requestedByActorID, operatorContextID).Scan(&active)
-	if errors.Is(err, sql.ErrNoRows) || (err == nil && !active) {
+		WHERE id = $1 AND operator_context_id = $2`, requestedByActorID, operatorContextID).Scan(&status)
+	if errors.Is(err, sql.ErrNoRows) || (err == nil && status != ActorStatusActive) {
 		return ErrForbidden
 	}
 	return err

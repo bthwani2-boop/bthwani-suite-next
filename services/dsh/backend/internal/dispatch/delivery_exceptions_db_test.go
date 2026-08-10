@@ -26,7 +26,7 @@ func TestDeliveryExceptionBlocksProgressButAllowsLocationDBIntegration(t *testin
 
 	if _, err := db.Exec(`
 		INSERT INTO dsh_stores(id,slug,display_name,status,city_code,service_area_code,serviceability_status,is_visible,partner_id)
-		VALUES($1,$1,'Delivery Exception Store','active','SAN','SAN-1','serviceable',true,$2)`, storeID, partnerID); err != nil {
+		VALUES($1,$1,'Delivery Exception Store','published','SAN','SAN-1','serviceable',true,$2)`, storeID, partnerID); err != nil {
 		t.Fatalf("insert store: %v", err)
 	}
 

@@ -112,7 +112,7 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 	}
 
 	statusFilter := strings.TrimSpace(r.URL.Query().Get("status"))
-	
+
 	cursorStr := r.URL.Query().Get("cursor")
 	var cursor int64
 	if cursorStr != "" {

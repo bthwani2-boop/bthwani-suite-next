@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useControlPanelSession } from "@bthwani/dsh/control-panel/session";
 import { identityErrorPresentation } from "@bthwani/core-identity";
 import { colorRoles, alpha } from "@bthwani/ui-kit";
+import { requestControlPanelDevSession } from "./dev-session.adapter";
+import { controlPanelDevelopmentMode } from "./runtime-config";
 
 function resolveSafeReturnTo(raw: string | null): string {
   if (!raw) return "/dsh/dashboard";
@@ -23,11 +25,13 @@ export default function DshLoginPage() {
 }
 
 function DshLoginForm() {
-  const { state, login, retryBootstrap } = useControlPanelSession();
+  const { state, login, retryBootstrap, adoptSession } = useControlPanelSession() as any;
   const router = useRouter();
   const searchParams = useSearchParams();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [quickLoginPending, setQuickLoginPending] = useState(false);
+  const [quickLoginError, setQuickLoginError] = useState<string | null>(null);
 
   const returnTo = resolveSafeReturnTo(searchParams.get("returnTo"));
 
@@ -36,6 +40,25 @@ function DshLoginForm() {
       router.replace(returnTo);
     }
   }, [state.kind, returnTo, router]);
+
+  async function handleQuickLogin() {
+    if (quickLoginPending) return;
+    setQuickLoginPending(true);
+    setQuickLoginError(null);
+    try {
+      await adoptSession(await requestControlPanelDevSession());
+    } catch (error) {
+      setQuickLoginError(
+        error instanceof Error && error.name === "TimeoutError"
+          ? "DEV_SESSION_BROKER_UNAVAILABLE"
+          : error instanceof Error
+            ? error.message
+            : "DEV_SESSION_BROKER_UNAVAILABLE",
+      );
+    } finally {
+      setQuickLoginPending(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -174,9 +197,15 @@ function DshLoginForm() {
           </p>
         ) : null}
 
+        {quickLoginError ? (
+          <p role="alert" style={{ margin: 0, color: colorRoles.danger, fontSize: "0.875rem" }}>
+            {identityErrorPresentation(quickLoginError).title}: {identityErrorPresentation(quickLoginError).description}
+          </p>
+        ) : null}
+
         <button
           type="submit"
-          disabled={submitDisabled}
+          disabled={submitDisabled || quickLoginPending}
           style={{
             padding: "0.75rem",
             borderRadius: "0.5rem",
@@ -185,11 +214,32 @@ function DshLoginForm() {
             color: "white",
             fontWeight: 700,
             cursor: isSubmitting ? "wait" : submitDisabled ? "not-allowed" : "pointer",
-            opacity: submitDisabled ? 0.65 : 1,
+            opacity: submitDisabled || quickLoginPending ? 0.65 : 1,
           }}
         >
           {isSubmitting ? "جاري التحقق..." : "تسجيل الدخول"}
         </button>
+
+        {controlPanelDevelopmentMode ? (
+          <button
+            type="button"
+            onClick={handleQuickLogin}
+            disabled={isSubmitting || quickLoginPending}
+            style={{
+              padding: "0.75rem",
+              borderRadius: "0.5rem",
+              border: "1px solid var(--card-border)",
+              background: "transparent",
+              color: "var(--text-primary)",
+              fontWeight: 700,
+              cursor: isSubmitting || quickLoginPending ? "wait" : "pointer",
+              opacity: isSubmitting || quickLoginPending ? 0.65 : 1,
+              marginTop: "0.5rem",
+            }}
+          >
+            {quickLoginPending ? "جاري الدخول السريع..." : "دخول سريع كمشغل التطوير المحلي"}
+          </button>
+        ) : null}
       </form>
     </div>
   );

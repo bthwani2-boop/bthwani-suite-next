@@ -104,8 +104,8 @@ func CreateReturnCase(db *sql.DB, input CreateReturnCaseInput) (*OrderReturn, er
 	var order Order
 	var operatorContextID string
 	err = tx.QueryRow(`
-		SELECT id, store_id, client_id, status, operator_context_id 
-		FROM dsh_orders 
+		SELECT id, store_id, client_id, status, operator_context_id
+		FROM dsh_orders
 		WHERE id = $1 FOR UPDATE
 	`, input.OrderID).Scan(&order.ID, &order.StoreID, &order.ClientID, &order.Status, &operatorContextID)
 	if err != nil {
@@ -138,7 +138,7 @@ func CreateReturnCase(db *sql.DB, input CreateReturnCaseInput) (*OrderReturn, er
 		RETURNING id, order_id, status, actor_id, actor_role, reason_code, reason_note, ticket_reference, correlation_id, version, created_at, updated_at
 	`, id, order.ID, string(status), input.ActorID, input.ActorRole, input.ReasonCode, input.ReasonNote, input.TicketReference, input.CorrelationID).
 		Scan(&ret.ID, &ret.OrderID, (*string)(&ret.Status), &ret.ActorID, &ret.ActorRole, &ret.ReasonCode, &ret.ReasonNote, &ret.TicketReference, &ret.CorrelationID, &ret.Version, &ret.CreatedAt, &ret.UpdatedAt)
-	
+
 	if err != nil {
 		if strings.Contains(err.Error(), "idx_dsh_order_returns_order_id") {
 			return nil, fmt.Errorf("%w: return already exists for this order", ErrConflict)

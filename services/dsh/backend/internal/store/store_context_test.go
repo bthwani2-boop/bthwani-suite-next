@@ -62,6 +62,7 @@ func TestPublicationEligibilityFailsClosedForEveryGovernanceGate(t *testing.T) {
 		name   string
 		mutate func(*DshStoreRow)
 	}{
+		{name: "not published", mutate: func(row *DshStoreRow) { row.Status = StatusReady }},
 		{name: "inactive", mutate: func(row *DshStoreRow) { row.Status = StatusSuspended }},
 		{name: "hidden", mutate: func(row *DshStoreRow) { row.IsVisible = false }},
 		{name: "out of area", mutate: func(row *DshStoreRow) { row.ServiceabilityStatus = ServiceabilityOutOfArea }},

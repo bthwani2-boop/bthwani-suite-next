@@ -6,9 +6,10 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "../..");
 const packageRoot = path.join(
   repoRoot,
-  "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys"
+  "plans/smsm-dsh-wlt-journeys"
 );
 const controlPanelCoverageRoot = path.join(packageRoot, "08-control-panel-coverage");
+const journeyRegistryPath = path.join(packageRoot, "04-JOURNEY-REGISTRY.yaml");
 const registryPath = path.join(
   controlPanelCoverageRoot,
   "CONTROL-PANEL-SECTION-REGISTRY.json"
@@ -72,6 +73,30 @@ function expandJourneyToken(token) {
     { length: end - start + 1 },
     (_, index) => `J${String(start + index).padStart(3, "0")}`
   );
+}
+
+function checkJourneyRegistry() {
+  if (!fs.existsSync(journeyRegistryPath)) {
+    fail(journeyRegistryPath, "JOURNEY_REGISTRY_MISSING");
+    return;
+  }
+  const content = fs.readFileSync(journeyRegistryPath, "utf8");
+  const declaredCount = Number(/^\s*expectedJourneyCount:\s*(\d+)\s*$/m.exec(content)?.[1] ?? 0);
+  if (declaredCount !== 107) {
+    fail(journeyRegistryPath, `EXPECTED_JOURNEY_COUNT_DRIFT value=${declaredCount}`);
+  }
+  const declared = [];
+  for (const match of content.matchAll(/^\s*-\s+range:\s*(J\d{3}\.\.J\d{3})\s*$/gm)) {
+    declared.push(...expandJourneyToken(match[1]));
+  }
+  const expected = expectedJourneyIds();
+  if (declared.length !== expected.length) {
+    fail(journeyRegistryPath, `JOURNEY_RANGE_COUNT_MISMATCH expected=${expected.length} actual=${declared.length}`);
+  }
+  for (const id of expected) {
+    const count = declared.filter((value) => value === id).length;
+    if (count !== 1) fail(journeyRegistryPath, `JOURNEY_RANGE_ID_COUNT ${id} count=${count}`);
+  }
 }
 
 function routeFromPage(file) {
@@ -415,9 +440,8 @@ function checkControlPanelRegistry(registry) {
 }
 
 const registry = parseJson(registryPath);
-checkJourneyDocuments(registry);
+checkJourneyRegistry();
 checkControlPanelRegistry(registry);
-checkSectionDocuments(registry);
 
 if (violations.length > 0) {
   console.error("SMSM journey coverage check failed:");
@@ -426,5 +450,5 @@ if (violations.length > 0) {
 }
 
 console.log(
-  "SMSM journey coverage check passed: 107 journeys, 11 explicit Control Panel section contracts, navigation routes, states, controls, and manual scenarios are structurally mapped."
+  "SMSM journey coverage check passed: the 107-journey registry and Control Panel routes, states, controls, manual scenarios, and journey mappings are structurally complete."
 );

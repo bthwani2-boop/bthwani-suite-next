@@ -38,9 +38,9 @@ func TestGovernedSubmissionRequiresWltPayoutReferenceDBIntegration(t *testing.T)
 	}
 
 	_, _, err := TransitionStatusGoverned(context.Background(), db, partner.ID, TransitionInput{
-		ToStatus: StatusSubmitted,
-		ActorID: "field-local-001",
-		ActorSurface: "app-field",
+		ToStatus:       StatusSubmitted,
+		ActorID:        "field-local-001",
+		ActorSurface:   "app-field",
 		IdempotencyKey: "submit-payout-required",
 	}, partner.Version)
 	if !errors.Is(err, ErrReadinessGate) {
@@ -55,7 +55,9 @@ func TestGovernedTransitionReplaysSameEventDBIntegration(t *testing.T) {
 	if _, err := db.Exec(`
 		UPDATE dsh_partners
 		SET payout_destination_id = 'wpd-test-replay',
-		    masked_account_number = '*****1234'
+		    destination_method = 'bank',
+		    masked_destination_reference = '*****1234',
+		    destination_verification_status = 'unverified'
 		WHERE id = $1`, partner.ID); err != nil {
 		t.Fatal(err)
 	}
@@ -67,12 +69,12 @@ func TestGovernedTransitionReplaysSameEventDBIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	input := TransitionInput{
-		ToStatus: StatusSubmitted,
-		Reason: "governed replay",
-		ActorID: "field-local-001",
-		ActorSurface: "app-field",
+		ToStatus:       StatusSubmitted,
+		Reason:         "governed replay",
+		ActorID:        "field-local-001",
+		ActorSurface:   "app-field",
 		IdempotencyKey: "partner-submit-replay-key",
-		CorrelationID: "partner-submit-replay-correlation",
+		CorrelationID:  "partner-submit-replay-correlation",
 	}
 	firstPartner, firstEvent, err := TransitionStatusGoverned(context.Background(), db, partner.ID, input, partner.Version)
 	if err != nil {
@@ -87,18 +89,16 @@ func TestGovernedTransitionReplaysSameEventDBIntegration(t *testing.T) {
 	}
 }
 
-
-
 func TestUpdatePartnerGovernedPersistsOnlyWltReferenceDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	partner := createPartnerFixture(t, db, "PAYOUT-CACHE")
 	updated, err := UpdatePartnerGoverned(db, partner.ID, UpdatePartnerInput{
-		DisplayName: partner.DisplayName,
-		PayoutDestinationID: "wpd-governed-cache",
-		DestinationMethod: "bank",
-		MaskedDestinationReference: "*****4321",
+		DisplayName:                   partner.DisplayName,
+		PayoutDestinationID:           "wpd-governed-cache",
+		DestinationMethod:             "bank",
+		MaskedDestinationReference:    "*****4321",
 		DestinationVerificationStatus: "verified",
-		BeneficiaryName: "Masked Owner",
+		BeneficiaryName:               "Masked Owner",
 	}, partner.Version)
 	if err != nil {
 		t.Fatal(err)
@@ -127,9 +127,9 @@ func TestCreateFieldVisitGovernedBindsFirstStoreDBIntegration(t *testing.T) {
 	partner := createPartnerFixture(t, db, "VISIT-STORE")
 	wantStoreID := partnerStoreID(t, db, partner.ID)
 	visit, err := CreateFieldVisitGoverned(db, CreateFieldVisitInput{
-		PartnerID: partner.ID,
+		PartnerID:    partner.ID,
 		FieldActorID: "field-local-001",
-		VisitNotes: "evidence-bearing visit",
+		VisitNotes:   "evidence-bearing visit",
 	})
 	if err != nil {
 		t.Fatal(err)

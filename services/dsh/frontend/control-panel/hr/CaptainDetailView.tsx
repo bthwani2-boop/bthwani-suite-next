@@ -46,7 +46,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
   const [supervisor, setSupervisor] = useState<SupervisorCandidate | null>(null);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  
+
   const { state: identityState } = useIdentitySession();
   const operatorContextId = identityState.kind === "authenticated"
     ? identityState.identity.operatorContextId

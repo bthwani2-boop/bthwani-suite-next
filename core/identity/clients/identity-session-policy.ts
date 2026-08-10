@@ -92,13 +92,13 @@ export function identityErrorPresentation(code: string): IdentityErrorPresentati
     case "INTERNAL_API_UNAVAILABLE":
       return {
         title: "خدمة الهوية غير متاحة",
-        description: "الجلسة المحفوظة لم تُحذف. أعد الفحص بعد عودة الخدمة.",
+        description: "تعذر الوصول إلى الخادم. تحقق من اتصالك بالإنترنت أو أعد المحاولة لاحقاً.",
         retryable: true,
       };
     default:
       return {
         title: "تعذر إكمال العملية",
-        description: "أعد المحاولة. إذا استمرت المشكلة تواصل مع الدعم واذكر رمز الخطأ.",
+        description: `أعد المحاولة. إذا استمرت المشكلة تواصل مع الدعم واذكر رمز الخطأ: ${code}`,
         retryable: true,
       };
   }

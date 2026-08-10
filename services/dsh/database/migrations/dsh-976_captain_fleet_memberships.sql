@@ -43,10 +43,10 @@ CREATE TABLE IF NOT EXISTS dsh_captain_membership_history (
 
 -- Migrate any existing couriers from dsh_store_team_members
 INSERT INTO dsh_captain_memberships (
-    id, captain_actor_id, affiliation, partner_id, store_id, status, 
+    id, captain_actor_id, affiliation, partner_id, store_id, status,
     branch_assignment, delivery_assignment, version, created_at, updated_at
 )
-SELECT 
+SELECT
     stm.id,
     COALESCE(stm.identity_actor_id, stm.invited_identity, ''),
     'PARTNER',
@@ -65,7 +65,7 @@ ON CONFLICT DO NOTHING;
 
 -- Repoint connection codes to the new table
 ALTER TABLE dsh_partner_courier_connection_codes DROP CONSTRAINT IF EXISTS dsh_partner_courier_connection_codes_team_member_id_fkey;
-ALTER TABLE dsh_partner_courier_connection_codes ADD CONSTRAINT dsh_partner_courier_connection_codes_team_member_id_fkey 
+ALTER TABLE dsh_partner_courier_connection_codes ADD CONSTRAINT dsh_partner_courier_connection_codes_team_member_id_fkey
     FOREIGN KEY (team_member_id) REFERENCES dsh_captain_memberships(id) ON DELETE CASCADE;
 
 -- Repoint actions audit
@@ -76,12 +76,12 @@ SELECT member_id, action_label, actor_id, from_status, to_status, created_at
 FROM dsh_store_team_member_actions
 WHERE member_id IN (SELECT id FROM dsh_captain_memberships);
 DELETE FROM dsh_store_team_member_actions WHERE member_id IN (SELECT id FROM dsh_captain_memberships);
-ALTER TABLE dsh_store_team_member_actions ADD CONSTRAINT dsh_store_team_member_actions_member_id_fkey 
+ALTER TABLE dsh_store_team_member_actions ADD CONSTRAINT dsh_store_team_member_actions_member_id_fkey
     FOREIGN KEY (member_id) REFERENCES dsh_store_team_members(id) ON DELETE CASCADE;
 
 -- Remove the 'courier' role check constraint from dsh_store_team_members and restrict it
 ALTER TABLE dsh_store_team_members DROP CONSTRAINT IF EXISTS dsh_store_team_members_role_check;
-ALTER TABLE dsh_store_team_members ADD CONSTRAINT dsh_store_team_members_role_check 
+ALTER TABLE dsh_store_team_members ADD CONSTRAINT dsh_store_team_members_role_check
     CHECK (role IN ('owner','supervisor','staff'));
 
 -- Clean up remaining courier rows

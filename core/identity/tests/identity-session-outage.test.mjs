@@ -10,6 +10,7 @@ const validIdentity = {
   authState: "authenticated",
   surfaceAccess: { "app-client": true },
   serviceAccess: { dsh: true },
+  sessionSurface: "app-client",
   sessionId: "session-test-001",
   expiresAt: new Date(Date.now() + 60_000).toISOString(),
 };

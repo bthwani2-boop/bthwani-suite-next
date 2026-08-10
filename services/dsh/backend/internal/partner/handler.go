@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"dsh-api/internal/auth"
 	"dsh-api/internal/store"
@@ -103,7 +104,7 @@ func readinessHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		var hasStore bool
-		var storeActive bool
+		var storePublished bool
 		var storeServiceable bool
 		var storePartnerReadinessReady bool
 		var storeCatalogApproved bool
@@ -113,7 +114,7 @@ func readinessHandler(db *sql.DB) http.HandlerFunc {
 		linkedStore, err := store.GetStoreByPartnerID(db, pid)
 		if err == nil && linkedStore != nil {
 			hasStore = true
-			storeActive = (string(linkedStore.Status) == "active")
+			storePublished = linkedStore.Status == store.StatusPublished
 			storeServiceable = (linkedStore.ServiceabilityStatus == store.ServiceabilityServiceable || linkedStore.ServiceabilityStatus == store.ServiceabilityLimited)
 			storePartnerReadinessReady = (linkedStore.PartnerReadiness == "ready")
 			storeCatalogApproved = (linkedStore.CatalogApprovalStatus == "approved")
@@ -121,12 +122,22 @@ func readinessHandler(db *sql.DB) http.HandlerFunc {
 			storeIsVisible = linkedStore.IsVisible
 		}
 
-		sendJSON(w, http.StatusOK, ComputeReadiness(
+		readiness := ComputeReadiness(
 			p, total, approved,
-			hasStore, storeActive, storeServiceable,
+			hasStore, storePublished, storeServiceable,
 			storePartnerReadinessReady, storeCatalogApproved,
 			storeMarketingVisible, storeIsVisible,
-		))
+		)
+		if linkedStore != nil {
+			diagnostics := store.DiagnoseStorePublicationReadiness(*linkedStore)
+			readiness.CanPublishStoreToClient = diagnostics.IsReady
+			if diagnostics.IsReady {
+				readiness.StorePublicationBlockedReason = ""
+			} else {
+				readiness.StorePublicationBlockedReason = strings.Join(diagnostics.Blockers, "; ")
+			}
+		}
+		sendJSON(w, http.StatusOK, readiness)
 	}
 }
 
@@ -320,8 +331,6 @@ func HandlePartnerMe(db *sql.DB) http.HandlerFunc {
 }
 
 // â”€â”€â”€ Store team, courier settings, coverage zones â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-
 
 // GET /dsh/partner/stores/{storeId}/courier-settings
 func HandleGetStoreCourierSettings(db *sql.DB) http.HandlerFunc {

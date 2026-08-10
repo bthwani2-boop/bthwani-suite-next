@@ -193,7 +193,7 @@ func enqueueWLTAdjustmentForDecisionTx(tx *sql.Tx, issueID, orderID, storeID str
 		JOIN dsh_order_preparation_replacements r ON r.issue_id = p.id
 		WHERE p.id = $1::uuid
 	`, issueID).Scan(&originalUnitPrice, &affectedQuantity, &proposedUnitPrice, &proposedQuantity)
-	
+
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil // Not a replacement issue
 	} else if err != nil {
@@ -202,7 +202,7 @@ func enqueueWLTAdjustmentForDecisionTx(tx *sql.Tx, issueID, orderID, storeID str
 
 	originalTotal := originalUnitPrice * float64(affectedQuantity)
 	proposedTotal := proposedUnitPrice * float64(proposedQuantity)
-	
+
 	if proposedTotal == originalTotal {
 		return nil
 	}

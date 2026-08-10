@@ -54,22 +54,24 @@ jobs:
             local go_mod="$3"
             local migrations="$4"
             local workdir="$5"
+            local postgres_image="$6"
             if [[ "${enabled}" != "true" ]]; then return; fi
             entries="$(jq -c \
               --arg key "${key}" \
               --arg go_mod "${go_mod}" \
               --arg migrations "${migrations}" \
               --arg workdir "${workdir}" \
-              '. + [{key:$key,go_mod:$go_mod,migrations:$migrations,workdir:$workdir}]' \
+              --arg postgres_image "${postgres_image}" \
+              '. + [{key:$key,go_mod:$go_mod,migrations:$migrations,workdir:$workdir,postgres_image:$postgres_image}]' \
               <<< "${entries}")"
           }
 
-          add_backend "${DSH}" dsh services/dsh/backend/go.mod services/dsh/database/migrations services/dsh/backend
-          add_backend "${WLT}" wlt services/wlt/backend/go.mod services/wlt/database/migrations services/wlt/backend
-          add_backend "${IDENTITY}" identity core/identity/backend/go.mod core/identity/database/migrations core/identity/backend
-          add_backend "${WORKFORCE}" workforce core/workforce/backend/go.mod core/workforce/database/migrations core/workforce/backend
-          add_backend "${PLATFORM}" platform-control core/platform-control/backend/go.mod core/platform-control/database/migrations core/platform-control/backend
-          add_backend "${PROVIDERS}" providers core/providers/backend/go.mod core/providers/database/migrations core/providers/backend
+          add_backend "${DSH}" dsh services/dsh/backend/go.mod services/dsh/database/migrations services/dsh/backend postgis/postgis:16-3.4-alpine
+          add_backend "${WLT}" wlt services/wlt/backend/go.mod services/wlt/database/migrations services/wlt/backend postgres:16-alpine
+          add_backend "${IDENTITY}" identity core/identity/backend/go.mod core/identity/database/migrations core/identity/backend postgres:16-alpine
+          add_backend "${WORKFORCE}" workforce core/workforce/backend/go.mod core/workforce/database/migrations core/workforce/backend postgres:16-alpine
+          add_backend "${PLATFORM}" platform-control core/platform-control/backend/go.mod core/platform-control/database/migrations core/platform-control/backend postgres:16-alpine
+          add_backend "${PROVIDERS}" providers core/providers/backend/go.mod core/providers/database/migrations core/providers/backend postgres:16-alpine
 
           count="$(jq 'length' <<< "${entries}")"
           echo "count=${count}" >> "${GITHUB_OUTPUT}"
@@ -86,14 +88,14 @@ jobs:
     timeout-minutes: 60
     services:
       postgres:
-        image: postgres:16-alpine
+        image: ${{ matrix.postgres_image }}
         env:
           POSTGRES_USER: ci_runtime
           POSTGRES_PASSWORD: ci_runtime_password
           POSTGRES_DB: ci_runtime
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U ci_runtime -d ci_runtime"
+          --health-cmd "pg_isready -h 127.0.0.1 -U ci_runtime -d ci_runtime"
           --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       DATABASE_URL: postgres://ci_runtime:ci_runtime_password@localhost:5432/ci_runtime?sslmode=disable

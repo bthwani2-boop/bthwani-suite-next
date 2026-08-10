@@ -67,7 +67,7 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 	// We'll compute total payouts from wlt_ledger_entries (debits from wallet accounts might not equal cashin/payout)
 	// A simpler aggregate is to sum completed wlt_payout_requests for the date, but we use the ledger for true financial close.
 	if err := tx.QueryRowContext(ctx, `
-		SELECT 
+		SELECT
 			COALESCE(SUM(amount_minor_units) FILTER (WHERE entry_type = 'payout_completed' AND debit_credit = 'debit' AND account_type = 'wallet'), 0),
 			COALESCE(SUM(amount_minor_units) FILTER (WHERE entry_type = 'cashin_completed' AND debit_credit = 'credit' AND account_type = 'wallet'), 0)
 		FROM wlt_ledger_entries
@@ -79,7 +79,7 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 	// Calculate overall closing balance for the operator context
 	if err := tx.QueryRowContext(ctx, `
 		SELECT COALESCE(SUM(balance_minor_units), 0)
-		FROM wlt_ledger_accounts 
+		FROM wlt_ledger_accounts
 		WHERE operator_context_id = $1 AND account_type = 'wallet'
 	`, operatorContextID).Scan(&closingBalance); err != nil {
 		return nil, err

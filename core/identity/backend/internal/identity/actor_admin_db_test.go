@@ -95,6 +95,46 @@ func TestActorProvisionSearchReadbackDBIntegration(t *testing.T) {
 	}
 }
 
+func TestActorProvisionRestoresRequestedActorIDDBIntegration(t *testing.T) {
+	const (
+		phone             = "+967700009204"
+		username          = "j002.field.recovery.9204"
+		actorID           = "field-recovery-9204"
+		operatorContextID = "local-dsh"
+	)
+	db := openIdentityTestDB(t)
+	cleanupJ002Actors(t, db, phone)
+	repository := NewRepository(db)
+	input := ProvisionActorInput{
+		ActorID: actorID, Username: username, PhoneE164: phone, Role: "field", OperatorContextID: operatorContextID,
+	}
+
+	created, err := repository.ProvisionActorGoverned(context.Background(), input)
+	if err != nil {
+		t.Fatalf("restore requested actor id: %v", err)
+	}
+	if created.ActorID != actorID || created.Status != ActorStatusProvisioned {
+		t.Fatalf("requested actor id was not preserved: %#v", created)
+	}
+
+	replayed, err := repository.ProvisionActorGoverned(context.Background(), input)
+	if err != nil || replayed.ActorID != actorID {
+		t.Fatalf("requested actor id replay diverged: %#v err=%v", replayed, err)
+	}
+
+	mismatchedID := input
+	mismatchedID.ActorID = "field-recovery-9204-other"
+	if _, err := repository.ProvisionActorGoverned(context.Background(), mismatchedID); !errors.Is(err, ErrProvisionConflict) {
+		t.Fatalf("same provisioning fingerprint with another actor id must conflict, got %v", err)
+	}
+
+	invalidRoleScopedID := input
+	invalidRoleScopedID.ActorID = "captain-recovery-9204"
+	if _, err := repository.ProvisionActorGoverned(context.Background(), invalidRoleScopedID); !errors.Is(err, ErrInvalidActivation) {
+		t.Fatalf("cross-role requested actor id must be rejected, got %v", err)
+	}
+}
+
 func TestActorProvisionConcurrentReplayDBIntegration(t *testing.T) {
 	const phone = "+967700009203"
 	db := openIdentityTestDB(t)

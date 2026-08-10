@@ -7,9 +7,9 @@ func TestPayoutProviderDestinationValidation(t *testing.T) {
 
 	validBank := payoutProviderDestination{
 		ID:                   "destination-bank",
-		SettlementPreference: "bank",
+		DestinationMethod:    "bank",
 		BeneficiaryName:      "Partner One",
-		AccountNumber:        "1234567890",
+		DestinationReference: "1234567890",
 	}
 	if err := validBank.validateForProvider(); err != nil {
 		t.Fatalf("valid bank destination rejected: %v", err)
@@ -17,9 +17,9 @@ func TestPayoutProviderDestinationValidation(t *testing.T) {
 
 	validMobile := payoutProviderDestination{
 		ID:                   "destination-mobile",
-		SettlementPreference: "mobile_money",
+		DestinationMethod:    "mobile_money",
 		BeneficiaryName:      "Captain One",
-		MobileNumber:         "+967700000000",
+		DestinationReference: "+967700000000",
 	}
 	if err := validMobile.validateForProvider(); err != nil {
 		t.Fatalf("valid mobile-money destination rejected: %v", err)
@@ -27,19 +27,19 @@ func TestPayoutProviderDestinationValidation(t *testing.T) {
 
 	cases := map[string]payoutProviderDestination{
 		"bank without account or iban": {
-			ID: "destination-bank-empty", SettlementPreference: "bank", BeneficiaryName: "Partner One",
+			ID: "destination-bank-empty", DestinationMethod: "bank", BeneficiaryName: "Partner One",
 		},
 		"mobile money without number": {
-			ID: "destination-mobile-empty", SettlementPreference: "mobile_money", BeneficiaryName: "Captain One",
+			ID: "destination-mobile-empty", DestinationMethod: "mobile_money", BeneficiaryName: "Captain One",
 		},
 		"manual cannot use provider": {
-			ID: "destination-manual", SettlementPreference: "manual", BeneficiaryName: "Field One",
+			ID: "destination-manual", DestinationMethod: "manual", BeneficiaryName: "Field One",
 		},
 		"missing beneficiary": {
-			ID: "destination-no-beneficiary", SettlementPreference: "bank", AccountNumber: "1234567890",
+			ID: "destination-no-beneficiary", DestinationMethod: "bank", DestinationReference: "1234567890",
 		},
 		"unsupported destination": {
-			ID: "destination-unsupported", SettlementPreference: "crypto", BeneficiaryName: "Partner One",
+			ID: "destination-unsupported", DestinationMethod: "crypto", BeneficiaryName: "Partner One",
 		},
 	}
 
@@ -59,25 +59,17 @@ func TestDestinationProviderPayloadBindsRawProviderFields(t *testing.T) {
 
 	destination := payoutProviderDestination{
 		ID:                   "destination-1",
-		SettlementPreference: "bank",
+		DestinationMethod:    "bank",
 		BeneficiaryName:      "Partner One",
-		BankName:             "Bank",
-		BankBranch:           "Branch",
-		AccountNumber:        "1234567890",
-		IBAN:                 "YE001234567890",
-		MobileNumber:         "+967700000000",
+		DestinationReference: "YE001234567890",
 	}
 	payload := destinationProviderPayload(destination)
 
 	checks := map[string]string{
-		"id":                 destination.ID,
-		"type":               destination.SettlementPreference,
-		"beneficiaryName":    destination.BeneficiaryName,
-		"bankName":           destination.BankName,
-		"bankBranch":         destination.BankBranch,
-		"accountNumber":      destination.AccountNumber,
-		"iban":               destination.IBAN,
-		"payoutMobileNumber": destination.MobileNumber,
+		"id":                   destination.ID,
+		"type":                 destination.DestinationMethod,
+		"beneficiaryName":      destination.BeneficiaryName,
+		"destinationReference": destination.DestinationReference,
 	}
 	for key, expected := range checks {
 		if got, ok := payload[key].(string); !ok || got != expected {

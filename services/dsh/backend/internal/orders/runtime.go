@@ -86,4 +86,3 @@ func cancellableStatuses(role string) []OrderStatus {
 		return nil
 	}
 }
-

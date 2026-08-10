@@ -3,7 +3,7 @@
   "surface": "control-panel",
   "navigationSource": "services/dsh/frontend/control-panel/navigation.ts",
   "nextAppRoot": "apps/control-panel/runtime/src/app",
-  "canonicalVision": "governance/operational_journey_protocol_package/smsm-dsh-wlt-journeys/07-final-surface-vision/CONTROL-PANEL-FINAL-VISION.md",
+  "canonicalVision": "plans/smsm-dsh-wlt-journeys/07-final-surface-vision/CONTROL-PANEL-FINAL-VISION.md",
   "requiredStates": [
     "loading",
     "ready",

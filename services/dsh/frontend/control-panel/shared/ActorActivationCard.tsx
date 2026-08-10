@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { Box, Card, Text } from "@bthwani/ui-kit";
 import { CpButton, CpMutedInline } from "@bthwani/control-panel/components";
-import { 
-  getLatestActivation, 
-  issueActivation, 
-  reissueActivation, 
+import {
+  getLatestActivation,
+  issueActivation,
+  reissueActivation,
   revokeActivation,
   type ActivationChallenge
 } from "../../shared/identity";
@@ -47,17 +47,17 @@ export function ActorActivationCard({ actorId, expectedActorType, expectedSurfac
     try {
       setLoading(true);
       setError(null);
-      
+
       const input = {
         issuedByActorId,
         expectedActorType,
         expectedSurface
       };
-      
-      const res = isReissue 
+
+      const res = isReissue
         ? await reissueActivation(actorId, input)
         : await issueActivation(actorId, input);
-        
+
       setActivation(res);
       if (res.code) {
         setRawCode(res.code);
@@ -86,16 +86,16 @@ export function ActorActivationCard({ actorId, expectedActorType, expectedSurfac
     <Card>
       <Box gap={3} padding={4}>
         <Text role="titleSm">التفعيل والدخول</Text>
-        
+
         {loading && <CpMutedInline>جارٍ التحميل...</CpMutedInline>}
-        
+
         {error && <Text style={{ color: "var(--bthwani-ui-danger)" }}>{error}</Text>}
 
         {!loading && activation && (
           <Box gap={2}>
             <Text>رقم الهاتف المشفر: {activation.maskedPhone}</Text>
             <Text>تاريخ الانتهاء: {new Date(activation.expiresAt).toLocaleString("ar-SA")}</Text>
-            
+
             <Box style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
               <CpButton variant="danger" onClick={handleRevoke}>إلغاء الرمز (Revoke)</CpButton>
               <CpButton variant="secondary" disabled={disabled ?? false} onClick={() => handleIssue(true)}>
@@ -130,8 +130,8 @@ export function ActorActivationCard({ actorId, expectedActorType, expectedSurfac
               <Text role="titleLg" style={{ letterSpacing: "4px", background: "var(--bthwani-control-panel-surface)", padding: "16px", borderRadius: "8px" }}>
                 {rawCode}
               </Text>
-              <CpButton 
-                style={{ marginTop: "24px", width: "100%" }} 
+              <CpButton
+                style={{ marginTop: "24px", width: "100%" }}
                 onClick={() => {
                   navigator.clipboard.writeText(rawCode);
                   setRawCode(null);

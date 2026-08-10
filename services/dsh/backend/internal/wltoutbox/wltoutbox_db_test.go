@@ -55,7 +55,7 @@ func seedOrderFixture(t *testing.T, db *sql.DB) (orderID, checkoutIntentID strin
 	var cartID string
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_carts (client_id, store_id, fulfillment_mode, state)
-		VALUES ($1, $2, 'bthwani_delivery', 'published')
+		VALUES ($1, $2, 'bthwani_delivery', 'active')
 		RETURNING id::text`,
 		clientID, storeID,
 	).Scan(&cartID); err != nil {
@@ -69,7 +69,7 @@ func seedOrderFixture(t *testing.T, db *sql.DB) (orderID, checkoutIntentID strin
 			subtotal_minor_units, delivery_fee_minor_units, discount_minor_units,
 			total_minor_units, currency, pricing_snapshot_hash
 		)
-		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'bthwani_delivery', 'cod', $5,
+		VALUES ($1, $2, $3::uuid, $4, 'confirmed', 'bthwani_delivery', 'cod', $5,
 		        1000, 0, 0, 1000, 'YER', repeat('f', 64))
 		RETURNING id::text`,
 		operatorContextID, clientID, cartID, storeID, "wlt-ps-"+suffix,

@@ -48,7 +48,6 @@ type SlaRule struct {
 	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
-
 type CapacityConfig struct {
 	ID                  string    `json:"id"`
 	ZoneID              string    `json:"zoneId"`
@@ -190,7 +189,10 @@ func GetZoneServiceability(
 				SELECT COUNT(*)::int
 				FROM dsh_stores s
 				WHERE s.service_area_code = z.city_code
-				  AND s.visibility_status = 'visible'
+				  AND s.status = 'published'
+				  AND s.is_visible = TRUE
+				  AND s.serviceability_status = 'serviceable'
+				  AND s.marketing_visibility = 'visible'
 			),
 			EXISTS (
 				SELECT 1

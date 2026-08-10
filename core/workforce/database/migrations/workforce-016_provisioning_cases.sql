@@ -1,4 +1,4 @@
-﻿CREATE TABLE workforce_provisioning_cases (
+CREATE TABLE workforce_provisioning_cases (
     id UUID PRIMARY KEY,
     idempotency_key VARCHAR(128) NOT NULL,
     status VARCHAR(64) NOT NULL,
@@ -11,5 +11,5 @@
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE UNIQUE INDEX idx_workforce_provisioning_cases_idempotency 
+CREATE UNIQUE INDEX idx_workforce_provisioning_cases_idempotency
 ON workforce_provisioning_cases(idempotency_key);

@@ -284,6 +284,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SettlementBatchEnvelope' }
+        '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
+        '409': { $ref: '#/components/responses/PayoutConflict' }
       security:
         - serviceBearer: []
   /wlt/settlement-batches/{batchId}/export:
@@ -301,6 +303,7 @@ paths:
           content:
             application/json:
               schema: { type: object, additionalProperties: true }
+        '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
       security:
         - serviceBearer: []
   /wlt/settlement-batches/{batchId}/evidence:

@@ -288,13 +288,13 @@ func TransitionProposalAtomicExpected(
 		if !nodeActive || !nodeVisible {
 			return ProductProposal{}, fmt.Errorf("%w: category node must be active and client visible", ErrForbidden)
 		}
-		var storeActive, storeVisible bool
-		storeErr := tx.QueryRowContext(ctx, `SELECT (status IN ('published','active')), is_visible
-			FROM dsh_stores WHERE id=$1`, *proposal.SourceStoreID).Scan(&storeActive, &storeVisible)
+		var storePublished, storeVisible bool
+		storeErr := tx.QueryRowContext(ctx, `SELECT (status = 'published'), is_visible
+			FROM dsh_stores WHERE id=$1`, *proposal.SourceStoreID).Scan(&storePublished, &storeVisible)
 		if storeErr != nil {
 			return ProductProposal{}, storeErr
 		}
-		if !storeActive || !storeVisible {
+		if !storePublished || !storeVisible {
 			return ProductProposal{}, fmt.Errorf("%w: store must be active and visible", ErrForbidden)
 		}
 		var available bool

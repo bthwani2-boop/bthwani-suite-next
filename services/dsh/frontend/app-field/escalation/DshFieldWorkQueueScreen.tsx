@@ -107,8 +107,8 @@ export function DshFieldWorkQueueScreen({ onBack, onOpenVisit, onOpenEscalation 
               const viewModel = buildVisitViewModel(visit);
               const isStale = visit.isStale;
               return (
-                <Pressable 
-                  key={viewModel.id} 
+                <Pressable
+                  key={viewModel.id}
                   onPress={() => !isStale && onOpenVisit(viewModel.storeId)}
                   disabled={isStale}
                 >

@@ -251,7 +251,7 @@ func partnerReadinessForActivationStatus(status ActivationStatus) (string, bool)
 	switch status {
 	case StatusClientVisible:
 		return "ready", true
-	case StatusClientHidden, StatusPartnerDeactivated:
+	case StatusClientHidden, StatusPartnerDeactivated, StatusPartnerSuspended, StatusPartnerTerminated:
 		return "blocked", true
 	default:
 		return "", false
@@ -295,7 +295,7 @@ func UploadDocument(db *sql.DB, partnerID string, input UploadDocumentInput) (Do
 	if err := recordActivationEvent(tx, partnerID, "document_uploaded:"+d.DocumentType, input.UploadedByActorID, "app-field", input.Notes); err != nil {
 		return Document{}, err
 	}
-	
+
 	if err := EvaluateOnboardingCaseStatus(context.Background(), tx, partnerID); err != nil {
 		return Document{}, err
 	}
@@ -655,7 +655,6 @@ func ListActivationEvents(db *sql.DB, partnerID string) ([]ActivationEvent, erro
 	}
 	return list, rows.Err()
 }
-
 
 // â”€â”€â”€ Store courier settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 

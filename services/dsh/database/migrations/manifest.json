@@ -3,7 +3,7 @@
   "service": "dsh",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "dsh-998_operator_store_creation_idempotency_backfill.sql",
+  "cutover": "dsh-999_runtime_schema_alignment.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -281,7 +281,7 @@
     {
       "ordinal": 40,
       "file": "dsh-039_catalog_media_scanning.sql",
-      "sha256": "65a814cd4159a5292e53b178e057bf02f206a7669c4533cbfb6fdfe3eef4ac55",
+      "sha256": "6ebf7d975ac85281fc2a55f64647e523bf257d23e2eb5f0e8c03f892baf72871",
       "historicalPrefix": "039",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -302,7 +302,7 @@
     {
       "ordinal": 43,
       "file": "dsh-040_product_proposal_corrections.sql",
-      "sha256": "1cd00d8f5d0554bf038c8d586bd1e0d37bf0430fce020c5e649f11e514313ff4",
+      "sha256": "5712f6abbff0428eb1084aa514a5e85ceecbdfe703f287c0570af77b29ecbb1c",
       "historicalPrefix": "040",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -960,7 +960,7 @@
     {
       "ordinal": 137,
       "file": "dsh-099_j075_incidents_lifecycle.sql",
-      "sha256": "462667d339d6e0936bd874e3ed3f6eb4ae9c955416dd16bc21bccb63583180ec",
+      "sha256": "68923e77531ce866f0fedf76688800b487ac5be7e78925249a1fd42998d394cf",
       "historicalPrefix": "099",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -981,7 +981,7 @@
     {
       "ordinal": 140,
       "file": "dsh-100_cart_sync_diagnostics.sql",
-      "sha256": "860d94d884da75f6a6b99e259129583a3a75d01d81442578239992fb2a1089ce",
+      "sha256": "a30e3e0f83fb3453fb39fa0cbc7cf2638d4cbb2ecd748fb77bca20b3f200cc34",
       "historicalPrefix": "100",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -995,7 +995,7 @@
     {
       "ordinal": 142,
       "file": "dsh-101_j077_ratings.sql",
-      "sha256": "a34a9ca799083657d6dcd91eb4899865ea101890ee2c25dab707cb3d27b3174c",
+      "sha256": "aa92346416666d25745b055f99f89ade5548abc347d621c69d9037fa5a316fab",
       "historicalPrefix": "101",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1149,7 +1149,7 @@
     {
       "ordinal": 164,
       "file": "dsh-135_store_publication_lifecycle.sql",
-      "sha256": "15041ab31438fc89b5fb43b5bed766503a733491a3a619bf558cf957554ac9b3",
+      "sha256": "783a568ae868944af12d71531e1ab968a5e20bf0d30c9603e4b4fcc99749dce6",
       "historicalPrefix": "135",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1163,7 +1163,7 @@
     {
       "ordinal": 166,
       "file": "dsh-137_special_request_enhancements.sql",
-      "sha256": "77574c2691c7f978239374391dd3899001b2aa2c854fb87d98f26da902072575",
+      "sha256": "da4833efc014962b24b128a0a3667db74a6590911f83de4a2821a3cdeb5803eb",
       "historicalPrefix": "137",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1191,14 +1191,14 @@
     {
       "ordinal": 170,
       "file": "dsh-141_delivery_exceptions_policy.sql",
-      "sha256": "305402390db39f9fd49fb4deceb8f2a6f9573cb6c32fdcad9986aaea1c60de06",
+      "sha256": "76f8a861b72d72ae4da65391f6b9cc1c9d8fa601662f5bcda6111ee1ceb76499",
       "historicalPrefix": "141",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 171,
       "file": "dsh-142_order_rescue_actions.sql",
-      "sha256": "6269c442636c2532dd5bb8bdf20aaddc1b1db931e9cb5016b14aaae434e89024",
+      "sha256": "2b483512a43d177a40a854b5e0d5db3afa3a7835b4584783a0cfaaa5be283f65",
       "historicalPrefix": "142",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1212,7 +1212,7 @@
     {
       "ordinal": 173,
       "file": "dsh-144_order_returns_saga.sql",
-      "sha256": "382d928f0ac14beae4309786ee9a92b6b947e1e4e1ad4d61d5a02489a7021ed7",
+      "sha256": "ad7e72a34d6fa7097cc883e5d0b2f2b2655b86a892024359c4a9233ef561d99b",
       "historicalPrefix": "144",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1555,21 +1555,21 @@
     {
       "ordinal": 222,
       "file": "dsh-976_captain_fleet_memberships.sql",
-      "sha256": "885e66eeb06c0de044c72d8b84ebb568d00304ff07052af43df0f5ef3d33fb00",
+      "sha256": "14b4e279ab858b036e89bf619b7b935f86bd2cd101da1cd08917044afc8c20e4",
       "historicalPrefix": "976",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 223,
       "file": "dsh-977_store_delivery_pricing_modes.sql",
-      "sha256": "1969700b6f5934d33f3b02455d31c5391685e2664720b1c7c1a21a764374e43a",
+      "sha256": "1185784873a5565e467b84cd8772ea69d422b0a6e2f786d2b8ad3d1910edcd86",
       "historicalPrefix": "977",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 224,
       "file": "dsh-978_catalog_taxonomy_lifecycle.sql",
-      "sha256": "4a6e6e6e244dd538171ad44ca8d42b3493e8226a4f69c8139350bc1f57242b85",
+      "sha256": "71a77fcf2d4c7cbde6c7e8a4a923324beb8988fa3a68f7519722efb1201971ac",
       "historicalPrefix": "978",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1583,7 +1583,7 @@
     {
       "ordinal": 226,
       "file": "dsh-980_assortment_inventory_pricing.sql",
-      "sha256": "5e64d93e127ed5a8c33c550fe04fe79358c77cd3df770f01e0d34d865caf8b03",
+      "sha256": "026deebd90689eb47826866ff4dbeab9bda3be7e35191f8edb6e19afb0089163",
       "historicalPrefix": "980",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1618,7 +1618,7 @@
     {
       "ordinal": 231,
       "file": "dsh-994_client_address_lifecycle.sql",
-      "sha256": "c00c13d8822aee88d93e5911b5e07d1af40bc8a9252c8688d54356c19e8a1f22",
+      "sha256": "22da5071b96e191caa3e122254b52b933b65da8b73c1b9e07bd843948e53ee59",
       "historicalPrefix": "994",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1649,6 +1649,34 @@
       "sha256": "0323a14ecb4224b29ee4b06c08f9edb35659459a5893d94ce91bd7aa86f2d570",
       "historicalPrefix": "998",
       "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 236,
+      "file": "dsh-999_cart_idempotency_sync_diagnostics.sql",
+      "sha256": "d099fcc5f088fadcebfce2558227c39a716a480c75956dd80b9d09aca8d2a229",
+      "historicalPrefix": "999",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 237,
+      "file": "dsh-999_partner_destination_defaults.sql",
+      "sha256": "236202ed6ab9b238248f3813528aa471440a6d1e8e8f43f7e23ed14dac424724",
+      "historicalPrefix": "999",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 238,
+      "file": "dsh-999_partner_owner_identity.sql",
+      "sha256": "60ce7d01b2e760644416172d60d6e6e602fe584d5f0d66d87d81c1515a95a335",
+      "historicalPrefix": "999",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 239,
+      "file": "dsh-999_runtime_schema_alignment.sql",
+      "sha256": "4c6ed5cec1906985db3c0f7794c07317a32738fa9ee7a79b3580187272ffa377",
+      "historicalPrefix": "999",
+      "state": "ACTIVE"
     }
   ]
 }

@@ -2,7 +2,7 @@
 
 Status: OPERATIONAL_RUNBOOK
 Owner: DSH order projection recovery + WLT financial truth
-Canonical domain decision: `governance/domains/dsh-wlt/order-truth-boundary.md`
+Canonical Product Truth: `governance/product/contracts/order-creation-truth.product-truth.json` (DSH order projection) and `governance/product/contracts/wlt-money-movement-settlement.product-truth.json` (WLT financial truth)
 
 Current DSH/WLT contracts, worker implementation, schema and service-auth configuration override stale identifiers in this runbook.
 

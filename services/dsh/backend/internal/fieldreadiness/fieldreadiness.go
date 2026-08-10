@@ -343,15 +343,15 @@ func ListStoreVisits(ctx context.Context, db *sql.DB, wf store.WorkforceScopeRes
 }
 
 func ListAgentVisits(ctx context.Context, db *sql.DB, agentID string, limit int) ([]Visit, error) {
-	query := `SELECT ` + visitSelectCols + `, 
+	query := `SELECT ` + visitSelectCols + `,
 		NOT EXISTS (
-			SELECT 1 FROM dsh_store_actor_scopes 
+			SELECT 1 FROM dsh_store_actor_scopes
 			WHERE actor_id = $1 AND store_id = v.store_id AND active = true
 		) AS is_stale
 	FROM dsh_field_visits v
-	WHERE v.field_agent_id = $1 AND v.status != 'complete' 
+	WHERE v.field_agent_id = $1 AND v.status != 'complete'
 	ORDER BY v.created_at DESC LIMIT $2`
-	
+
 	rows, err := db.QueryContext(ctx, query, agentID, limit)
 	if err != nil {
 		return nil, err
@@ -651,7 +651,7 @@ func ListAgentEscalations(ctx context.Context, db *sql.DB, agentID string, limit
 		SELECT e.id, COALESCE(e.visit_id::text,''), e.store_id, e.raised_by, e.severity, e.category, e.description,
 		          e.status, COALESCE(e.resolved_by,''), e.resolved_at, COALESCE(e.resolution_note,''), e.created_at, e.updated_at,
 		          NOT EXISTS (
-		              SELECT 1 FROM dsh_store_actor_scopes 
+		              SELECT 1 FROM dsh_store_actor_scopes
 		              WHERE actor_id = $1 AND store_id = e.store_id AND active = true
 		          ) AS is_stale
 		FROM dsh_readiness_escalations e

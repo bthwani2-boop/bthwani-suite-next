@@ -561,6 +561,45 @@ SELECT pg_advisory_unlock(hashtextextended($lockNameLiteral, 0));
   return $builder.ToString()
 }
 
+# Asserts the governed ledger records every manifest migration once the batch has
+# run.
+#
+# The batch guards each migration individually and raises on dirty state, but a
+# run that stops partway without leaving a dirty row — a cancelled shell, a lost
+# psql connection, a transaction that rolled its own ledger insert back — leaves
+# no evidence at all: the remaining migrations are simply never attempted. A DSH
+# database sat at 139 of 235 migrations in exactly that shape, its ledger clean,
+# while the API queried tables that did not exist. Completion is therefore
+# verified explicitly rather than inferred from the absence of an error.
+#
+# The batch already rejects ledger rows outside the manifest, so a matching count
+# is equivalent to a matching set.
+function Assert-BthwaniGovernedMigrationsComplete {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][ValidatePattern('^[a-z0-9-]+$')][string]$ServiceName,
+    [Parameter(Mandatory = $true)][ValidateRange(1, [int]::MaxValue)][int]$ExpectedCount,
+    [Parameter(Mandatory = $true)][scriptblock]$ExecuteStatement
+  )
+
+  $serviceLiteral = ConvertTo-BthwaniSqlLiteral $ServiceName
+  & $ExecuteStatement @"
+DO `$bthwani`$
+DECLARE
+  recorded INTEGER;
+BEGIN
+  SELECT count(*) INTO recorded
+  FROM schema_migrations
+  WHERE service_name = $serviceLiteral AND success AND NOT dirty;
+
+  IF recorded <> $ExpectedCount THEN
+    RAISE EXCEPTION 'INCOMPLETE_MIGRATION_RUN: service % recorded % of % governed migrations', $serviceLiteral, recorded, $ExpectedCount;
+  END IF;
+END
+`$bthwani`$;
+"@
+}
+
 function Invoke-BthwaniGovernedMigrations {
   [CmdletBinding()]
   param(
@@ -578,6 +617,10 @@ function Invoke-BthwaniGovernedMigrations {
 
   try {
     & $ExecuteBatch $batch
+    Assert-BthwaniGovernedMigrationsComplete `
+      -ServiceName $ServiceName `
+      -ExpectedCount $MigrationFiles.Count `
+      -ExecuteStatement $ExecuteStatement
   } catch {
     $serviceLiteral = ConvertTo-BthwaniSqlLiteral $ServiceName
     try {

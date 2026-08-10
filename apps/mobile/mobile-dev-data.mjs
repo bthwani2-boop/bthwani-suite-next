@@ -101,7 +101,7 @@ async function collectReadOnlyReadinessFailures() {
  * the session is obtained the way the real apps obtain it: by redeeming an
  * operator-issued activation code.
  */
-async function collectProviderFailures(operatorToken) {
+async function collectProviderFailures(operatorToken, providerTokens = {}) {
   const failures = [];
   const registry = readGeneratedRegistry();
   if (!registry?.actors) {
@@ -115,12 +115,12 @@ async function collectProviderFailures(operatorToken) {
     const provisioned = registry.actors[role];
     try {
       if (!provisioned?.actorId) throw new Error('missing from the generated actor registry');
-      const token = await issueProviderToken(
-        operatorToken,
-        role,
-        provisioned.actorId,
-        LOCAL_WORKFORCE_PROVIDERS[role].phoneE164,
-      );
+      const token = providerTokens[role] ?? await issueProviderToken(
+          operatorToken,
+          role,
+          provisioned.actorId,
+          LOCAL_WORKFORCE_PROVIDERS[role].phoneE164,
+        );
       const me = await requestJson(`workforce:${role}:me`, `${WORKFORCE_API_BASE}/workforce/me`, {
         headers: authorization(token),
       });
@@ -135,7 +135,7 @@ async function collectProviderFailures(operatorToken) {
   return failures;
 }
 
-async function collectReadinessFailures(operatorToken) {
+async function collectReadinessFailures(operatorToken, providerTokens = {}) {
   const failures = await collectClientStorefrontFailures();
 
   try {
@@ -148,7 +148,7 @@ async function collectReadinessFailures(operatorToken) {
     failures.push(`app-partner: ${error.message}`);
   }
 
-  failures.push(...(await collectProviderFailures(operatorToken)));
+  failures.push(...(await collectProviderFailures(operatorToken, providerTokens)));
   return failures;
 }
 
@@ -181,6 +181,7 @@ async function repairFieldSelfProfile(operatorToken, actorId) {
     });
   }
   if (me?.profileComplete !== true) throw new Error('field Workforce profile remained incomplete after repair');
+  return token;
 }
 
 async function main() {
@@ -192,8 +193,8 @@ async function main() {
   if (MODE === 'repair') {
     const operatorToken = await getPasswordToken(LOCAL_ACTORS.operator.username);
     const { actors } = await provisionLocalWorkforceActors(operatorToken);
-    await repairFieldSelfProfile(operatorToken, actors.field.actorId);
-    failures = await collectReadinessFailures(operatorToken);
+    const fieldToken = await repairFieldSelfProfile(operatorToken, actors.field.actorId);
+    failures = await collectReadinessFailures(operatorToken, { field: fieldToken });
   } else {
     failures = await collectReadOnlyReadinessFailures();
   }

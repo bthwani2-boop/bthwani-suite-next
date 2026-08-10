@@ -644,7 +644,7 @@
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshNotificationsListResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
-/dsh/notifications/{notificationId}/read:
+/dsh/notifications/items/{notificationId}/read:
   post:
     operationId: markDshNotificationRead
     summary: Mark a single notification as read.

@@ -68,7 +68,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	var cartID string
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_carts (client_id, store_id, fulfillment_mode, state)
-		VALUES ($1, $2, 'pickup', 'published')
+		VALUES ($1, $2, 'pickup', 'active')
 		RETURNING id::text`,
 		f.clientID, f.storeID,
 	).Scan(&cartID); err != nil {
@@ -78,7 +78,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	var checkoutIntentID string
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_checkout_intents (operator_context_id, client_id, cart_id, store_id, state, fulfillment_mode, payment_method, subtotal_minor_units, delivery_fee_minor_units, discount_minor_units, total_minor_units, currency, pricing_snapshot_hash)
-		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'pickup', 'wallet',
+		VALUES ($1, $2, $3::uuid, $4, 'confirmed', 'pickup', 'wallet',
 		        1000, 0, 0, 1000, 'YER', repeat('d', 64))
 		RETURNING id::text`,
 		operatorContextID, f.clientID, cartID, f.storeID,

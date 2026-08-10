@@ -112,7 +112,7 @@ export function StoreGovernanceActions({ store, actionState, diagnosticsState, o
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
         <CpButton
           disabled={
-            reason.trim().length < 3 || 
+            reason.trim().length < 3 ||
             actionState.kind === "submitting" ||
             (action === "lifecycle" && value === "published" && diagnosticsState?.kind === "success" && !diagnosticsState.isReady)
           }

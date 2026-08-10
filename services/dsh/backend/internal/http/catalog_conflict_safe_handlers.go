@@ -45,14 +45,28 @@ func (s *protectedStoreServer) handleLinkCatalogAssetSafe(w http.ResponseWriter,
 		return
 	}
 	input.AssetID = r.PathValue("assetId")
-	input.IsPrimary = false
 	if !s.authorizeAssetAccess(w, r, actor, input.AssetID) {
 		return
 	}
 	if !s.authorizeAssetLinkEntity(w, r, actor, input.EntityType, input.EntityID) {
 		return
 	}
-	link, err := centralcatalog.LinkAsset(r.Context(), s.db, input)
+	var link centralcatalog.CatalogAssetLink
+	var err error
+	if input.IsPrimary {
+		tx, beginErr := s.db.BeginTx(r.Context(), nil)
+		if beginErr != nil {
+			s.writeCatalogMutationError(w, beginErr)
+			return
+		}
+		defer tx.Rollback()
+		link, err = centralcatalog.ReplacePrimaryAssetLink(r.Context(), tx, input)
+		if err == nil {
+			err = tx.Commit()
+		}
+	} else {
+		link, err = centralcatalog.LinkAsset(r.Context(), s.db, input)
+	}
 	if err != nil {
 		s.writeCatalogMutationError(w, err)
 		return
@@ -148,7 +162,6 @@ func (s *protectedStoreServer) handlePutProductProposalImageSafe(w http.Response
 	s.putEntityImageSafe(w, r, "product_proposal", r.PathValue("proposalId"), r.PathValue("role"))
 }
 
-
 func (s *protectedStoreServer) handleSubmitReelSafe(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "partner")
 	if !ok {
@@ -199,7 +212,7 @@ func (s *protectedStoreServer) handleSimulateAssetScan(w http.ResponseWriter, r 
 	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
 		return
 	}
-	
+
 	var input struct {
 		TargetStatus string `json:"targetStatus"`
 	}

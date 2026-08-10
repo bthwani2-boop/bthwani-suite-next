@@ -24,4 +24,3 @@ func TestOrderTruthJSONUsesEmptyArraysInsteadOfNull(t *testing.T) {
 		}
 	}
 }
-

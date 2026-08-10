@@ -89,16 +89,16 @@ export function useCartController(
   const syncQueue = useCallback(async () => {
     const queue = getCartSyncQueue();
     if (queue.length === 0) return;
-    
+
     setAction("submitting");
     let hasConflict = false;
     let anySuccess = false;
-    
+
     for (const q of queue) {
       try {
         const deviceId = getDeviceId();
         const sessionId = getSessionId();
-        
+
         if (q.command.kind === "add") {
           await upsertCartItem({
             storeId: q.command.storeId,
@@ -116,7 +116,7 @@ export function useCartController(
         } else if (q.command.kind === "clear") {
           await clearCart(q.id, q.command.cartId, q.command.storeId, q.expectedVersion, deviceId, sessionId);
         }
-        
+
         removeCartSyncCommand(q.id);
         anySuccess = true;
       } catch (error) {
@@ -135,7 +135,7 @@ export function useCartController(
         removeCartSyncCommand(q.id);
       }
     }
-    
+
     if (anySuccess && !hasConflict) {
       await load();
       setAction("success");
@@ -175,7 +175,7 @@ export function useCartController(
       const expectedVersion = state.kind === "success" ? state.cart.version : undefined;
       const deviceId = getDeviceId();
       const sessionId = getSessionId();
-      
+
       try {
         await upsertCartItem({
           storeId,

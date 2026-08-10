@@ -97,7 +97,7 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function isBooleanRecord(value: unknown): boolean {
+function isBooleanRecord(value: unknown): value is Record<string, boolean> {
   return isRecord(value) && Object.values(value).every((entry) => typeof entry === "boolean");
 }
 
@@ -116,6 +116,7 @@ export function isStructurallyValidActorIdentity(value: unknown): value is Actor
     || !isNonEmptyString(value.operatorContextId)
     || !isNonEmptyString(value.phoneE164)
     || value.authState !== "authenticated"
+    || !isNonEmptyString(value.sessionSurface)
     || !isNonEmptyString(value.sessionId)
     || !isNonEmptyString(value.expiresAt)
   ) {
@@ -136,6 +137,7 @@ export function isStructurallyValidActorIdentity(value: unknown): value is Actor
   return Array.isArray(value.permissions)
     && value.permissions.every(isValidPermission)
     && isBooleanRecord(value.surfaceAccess)
+    && value.surfaceAccess[value.sessionSurface] === true
     && isBooleanRecord(value.serviceAccess);
 }
 
@@ -299,6 +301,10 @@ async function restoreStoredSession(identityClient: IdentityClient, session: Sto
 
 async function performIdentityBootstrap(identityClient: IdentityClient): Promise<void> {
   setState({ kind: "restoring" });
+
+  const saved = stored ?? await loadStoredSession();
+  stored = saved;
+
   try {
     const readiness = await identityClient.readiness();
     if (readiness.status !== "HEALTHY") {
@@ -310,13 +316,51 @@ async function performIdentityBootstrap(identityClient: IdentityClient): Promise
     return;
   }
 
-  const saved = stored ?? await loadStoredSession();
-  stored = saved;
   if (!saved) {
     resetBootstrapBackoff();
     setState({ kind: "signed_out" });
     return;
   }
+
+  if (isFreshActorIdentity(saved.identity)) {
+    commitAuthenticatedSession(saved, false);
+
+    void (async () => {
+      try {
+        const identity = await identityClient.session(saved.accessToken);
+        commitAuthenticatedSession({ ...saved, identity }, true);
+      } catch (error) {
+        if (isIdentityInvalidSessionError(error)) {
+          try {
+            const refreshed = await identityClient.refresh(saved.refreshToken);
+            commitAuthenticatedSession({
+              accessToken: refreshed.accessToken,
+              refreshToken: refreshed.refreshToken,
+              identity: refreshed.identity,
+            }, true);
+          } catch (refreshError) {
+            if (isIdentityInvalidSessionError(refreshError)) {
+              clearSession("IDENTITY_SESSION_INVALID");
+            } else {
+              setServiceUnavailable(
+                isIdentityAvailabilityError(refreshError)
+                  ? identityErrorCode(refreshError)
+                  : "IDENTITY_UNAVAILABLE",
+              );
+            }
+          }
+        } else {
+          setServiceUnavailable(
+            isIdentityAvailabilityError(error)
+              ? identityErrorCode(error)
+              : "IDENTITY_UNAVAILABLE",
+          );
+        }
+      }
+    })();
+    return;
+  }
+
   await restoreStoredSession(identityClient, saved);
 }
 
@@ -428,10 +472,6 @@ export async function loginIdentity(username: string, password: string): Promise
       identity: response.identity,
     }, true);
   } catch (error) {
-    if (isIdentityAvailabilityError(error)) {
-      setServiceUnavailable(identityErrorCode(error));
-      return;
-    }
     setState({ kind: "error", message: identityErrorCode(error) });
   }
 }
@@ -467,10 +507,6 @@ export async function activateIdentity(
       identity: response.identity,
     }, true);
   } catch (error) {
-    if (isIdentityAvailabilityError(error)) {
-      setServiceUnavailable(identityErrorCode(error));
-      return;
-    }
     setState({ kind: "error", message: identityErrorCode(error) });
   }
 }

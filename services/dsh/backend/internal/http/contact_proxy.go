@@ -21,7 +21,7 @@ func (s *protectedStoreServer) handleCaptainContactProxy(w http.ResponseWriter, 
 	}
 
 	assignmentID := r.PathValue("assignmentId")
-	
+
 	assignment, err := dispatch.GetCaptainAssignment(s.db, assignmentID, actor.ID)
 	if err != nil {
 		if errors.Is(err, dispatch.ErrNotFound) {
@@ -47,9 +47,9 @@ func (s *protectedStoreServer) handleCaptainContactProxy(w http.ResponseWriter, 
 	// For DSH headless execution, we return a simulated proxy session.
 
 	proxySession := map[string]any{
-		"proxyNumber": "+966500000000",      // Simulated masked number
-		"pinCode":     assignmentID[:4],     // Simple relay PIN
-		"expiresIn":   1800,                 // Expires in 30 minutes
+		"proxyNumber": "+966500000000",  // Simulated masked number
+		"pinCode":     assignmentID[:4], // Simple relay PIN
+		"expiresIn":   1800,             // Expires in 30 minutes
 	}
 
 	store.SendJSON(w, http.StatusOK, map[string]any{"contactSession": proxySession})

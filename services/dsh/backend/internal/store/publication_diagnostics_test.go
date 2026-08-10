@@ -50,7 +50,7 @@ func TestDiagnoseStorePublicationReportsEveryRequiredGate(t *testing.T) {
 	}
 
 	expectedCodes := []string{
-		"STORE_SUSPENDED_OR_CLOSED",
+		"STORE_NOT_PUBLISHED",
 		"STORE_HIDDEN",
 		"STORE_NOT_SERVICEABLE",
 		"PARTNER_NOT_READY",
@@ -71,5 +71,27 @@ func TestDiagnoseStorePublicationReportsEveryRequiredGate(t *testing.T) {
 		if !strings.Contains(joined, code+":") {
 			t.Fatalf("expected blocker %s in %v", code, diagnostics.Blockers)
 		}
+	}
+}
+
+func TestDiagnoseStorePublicationReadinessBreaksLifecyclePartnerCycleWithoutOpeningPublicReads(t *testing.T) {
+	row := diagnosticReadyStoreRow()
+	row.Status = StatusReady
+	row.PartnerActivationStatus = "partner_active"
+
+	if public := DiagnoseStorePublication(row); public.IsReady {
+		t.Fatal("a ready store owned by a merely active partner must remain hidden from app-client")
+	}
+	if readiness := DiagnoseStorePublicationReadiness(row); !readiness.IsReady {
+		t.Fatalf("operator should be able to publish a fully prepared active partner store: %v", readiness.Blockers)
+	}
+
+	row.Status = StatusPublished
+	if public := DiagnoseStorePublication(row); public.IsReady {
+		t.Fatal("published lifecycle alone must not bypass the audited client_visible partner transition")
+	}
+	row.PartnerActivationStatus = "client_visible"
+	if public := DiagnoseStorePublication(row); !public.IsReady {
+		t.Fatalf("all final publication gates should pass after client_visible commits: %v", public.Blockers)
 	}
 }

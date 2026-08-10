@@ -3,6 +3,19 @@ $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 $GoogleEnvironmentPath = Join-Path $RepoRoot "infra\local\control-panel.google.env"
+$SourceIntegrityGuard = Join-Path $RepoRoot "tools\guards\source-integrity-gate.mjs"
+
+if (-not (Test-Path -LiteralPath $SourceIntegrityGuard -PathType Leaf)) {
+    throw "Source-integrity guard not found: $SourceIntegrityGuard"
+}
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+    throw "Node.js is required to verify repository source integrity before Control Panel startup."
+}
+
+& node $SourceIntegrityGuard
+if ($LASTEXITCODE -ne 0) {
+    throw "Repository source integrity failed. Resolve the reported merge state before running the Control Panel."
+}
 
 function Import-EnvironmentFile {
     param([Parameter(Mandatory)][string] $Path)
@@ -109,8 +122,114 @@ function Ensure-ControlPanelDependencies {
     Ensure-ControlPanelTypeScriptCompiler
 }
 
+$DevSessionBrokerScript = Join-Path $RepoRoot "tools\dev\local-dev-session-broker.mjs"
+$DevSessionBrokerPort = 58100
+$DevSessionBrokerContractVersion = 2
+
+function Test-BthwaniDevSessionBroker {
+    try {
+        $response = Invoke-RestMethod `
+            -Uri "http://127.0.0.1:$DevSessionBrokerPort/health" `
+            -TimeoutSec 1 `
+            -ErrorAction Stop
+        return [string] $response.status -eq "healthy" `
+            -and [string] $response.service -eq "local-dev-session-broker" `
+            -and [int] $response.contractVersion -eq $DevSessionBrokerContractVersion
+    } catch {
+        return $false
+    }
+}
+
+function Get-BthwaniDevSessionBrokerListener {
+    return Get-NetTCPConnection `
+        -State Listen `
+        -LocalPort $DevSessionBrokerPort `
+        -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+}
+
+function Stop-BthwaniStaleDevSessionBroker {
+    param([Parameter(Mandatory)] $Listener)
+
+    $owner = Get-CimInstance `
+        -ClassName Win32_Process `
+        -Filter "ProcessId = $($Listener.OwningProcess)" `
+        -ErrorAction SilentlyContinue
+    $ownerName = if ($owner) { [string] $owner.Name } else { "" }
+    $ownerCommandLine = if ($owner) { [string] $owner.CommandLine } else { "" }
+    $isBrokerProcess = $owner `
+        -and $ownerName -match '^node(?:\.exe)?$' `
+        -and $ownerCommandLine -like '*local-dev-session-broker.mjs*'
+
+    if (-not $isBrokerProcess) {
+        throw "Port $DevSessionBrokerPort is occupied by a process that is not the BThwani local dev session broker."
+    }
+
+    Write-Host "Replacing stale local dev session broker contract on port $DevSessionBrokerPort..." -ForegroundColor DarkGray
+    Stop-Process -Id $Listener.OwningProcess -Force -ErrorAction Stop
+
+    for ($attempt = 1; $attempt -le 30; $attempt++) {
+        if (-not (Get-BthwaniDevSessionBrokerListener)) {
+            return
+        }
+        Start-Sleep -Milliseconds 100
+    }
+
+    throw "Stale local dev session broker did not release port $DevSessionBrokerPort."
+}
+
+function Ensure-BthwaniDevSessionBroker {
+    if (Test-BthwaniDevSessionBroker) {
+        return "ready"
+    }
+
+    $listener = Get-BthwaniDevSessionBrokerListener
+    if ($listener) {
+        Stop-BthwaniStaleDevSessionBroker -Listener $listener
+    }
+    if (-not (Test-Path -LiteralPath $DevSessionBrokerScript -PathType Leaf)) {
+        throw "Local development session broker not found: $DevSessionBrokerScript"
+    }
+
+    $node = Get-Command node.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $node) {
+        $node = Get-Command node -ErrorAction SilentlyContinue | Select-Object -First 1
+    }
+    if (-not $node) {
+        throw "Node.js was not found; the local development session broker cannot start."
+    }
+
+    $runtimeMode = ([string] $env:BTHWANI_RUNTIME_MODE).Trim().ToLowerInvariant()
+    $nodeMode = ([string] $env:NODE_ENV).Trim().ToLowerInvariant()
+    if ($runtimeMode -in @("production", "prod") -or $nodeMode -in @("production", "prod")) {
+        throw "Quick developer login is forbidden in production mode."
+    }
+
+    $env:BTHWANI_DEV_SESSION_BROKER_PORT = [string] $DevSessionBrokerPort
+
+    $process = Start-Process `
+        -FilePath $node.Source `
+        -ArgumentList @($DevSessionBrokerScript) `
+        -WorkingDirectory $RepoRoot `
+        -PassThru `
+        -WindowStyle Hidden
+
+    for ($attempt = 1; $attempt -le 50; $attempt++) {
+        if ($process.HasExited) {
+            throw "Local development session broker exited during startup with code $($process.ExitCode)."
+        }
+        if (Test-BthwaniDevSessionBroker) {
+            return "started"
+        }
+        Start-Sleep -Milliseconds 100
+    }
+
+    throw "Local development session broker contract v$DevSessionBrokerContractVersion did not become healthy on port $DevSessionBrokerPort."
+}
+
 Import-EnvironmentFile -Path $GoogleEnvironmentPath
 Ensure-ControlPanelDependencies
+$DevSessionBrokerState = Ensure-BthwaniDevSessionBroker
 Set-Location -LiteralPath $PSScriptRoot
 
 # The browser must use the authenticated same-origin BFF. Direct service URLs

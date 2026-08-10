@@ -43,11 +43,13 @@
   ],
   "ignoreBinaries": [
     "dev",
+    "gh",
     "go",
     "pwsh",
     "graphify",
     "k6",
-    "gitleaks"
+    "gitleaks",
+    "lean-ctx"
   ],
   "ignoreExportsUsedInFile": true,
   "rules": {
@@ -64,7 +66,10 @@
         "tools/scripts/*.mjs",
         "tools/scripts/**/*.mjs",
         "tools/verification/**/*.mjs",
-        "tools/diagnose-implementing/*.mjs"
+        "tools/dev/get-code.mjs",
+        "tools/dev/local-dev-session-broker.mjs",
+        "tools/dev/verify-local-identity-bootstrap.mjs",
+        "plans/diagnose-implementing/*.mjs"
       ],
       "ignoreFiles": [
         "tools/contracts/**/*.mjs",

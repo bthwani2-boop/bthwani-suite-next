@@ -172,6 +172,16 @@ for (const file of scannedRoots.flatMap((dir) => walk(dir))) {
       message: `HARDCODED_LOCAL_USERNAME:${match[1]} — use the accessor from ${registryFile} instead`,
     });
   }
+
+  const passwordProviderLookup = /Get-LocalUsername\s+["'](?:field|captain)["']/g;
+  while ((match = passwordProviderLookup.exec(content))) {
+    violations.push({
+      file,
+      line: lineNumber(content, match.index),
+      message:
+        "WORKFORCE_PROVIDER_PASSWORD_LOGIN — field/captain must use the generated Workforce registry and activation flow",
+    });
+  }
 }
 
 fail(guardId, violations);

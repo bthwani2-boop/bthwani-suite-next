@@ -65,7 +65,7 @@ func (s *protectedStoreServer) handleClientReturnOrder(w http.ResponseWriter, r 
 	if !ok {
 		return
 	}
-	
+
 	correlationID := body.CorrelationID
 	if correlationID == "" {
 		correlationID = body.CommandID
@@ -85,7 +85,7 @@ func (s *protectedStoreServer) handleClientReturnOrder(w http.ResponseWriter, r 
 		writeOrderReturnError(w, err)
 		return
 	}
-	
+
 	store.SendJSON(w, http.StatusCreated, map[string]any{"returnCase": ret})
 }
 
@@ -99,13 +99,13 @@ func (s *protectedStoreServer) handleClientGetReturnOrder(w http.ResponseWriter,
 		writeOrderReturnError(w, err)
 		return
 	}
-	
+
 	ret, err := orders.GetReturn(s.db, orderID)
 	if err != nil {
 		writeOrderReturnError(w, err)
 		return
 	}
-	
+
 	store.SendJSON(w, http.StatusOK, map[string]any{"returnCase": ret})
 }
 
@@ -119,7 +119,7 @@ func (s *protectedStoreServer) handleOperatorReturnOrderGoverned(w http.Response
 	if !ok {
 		return
 	}
-	
+
 	correlationID := body.CorrelationID
 	if correlationID == "" {
 		correlationID = body.CommandID
@@ -140,8 +140,6 @@ func (s *protectedStoreServer) handleOperatorReturnOrderGoverned(w http.Response
 		writeOrderReturnError(w, err)
 		return
 	}
-	
+
 	store.SendJSON(w, http.StatusCreated, map[string]any{"returnCase": ret})
 }
-
-

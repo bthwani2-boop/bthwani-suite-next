@@ -182,7 +182,7 @@ func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, operator_context_id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, partner_id)
-		VALUES ($1, $3, $1, 'Test Store for Media', 'active', 'SAN', 'SAN-1', 'serviceable', true, $2)`,
+		VALUES ($1, $3, $1, 'Test Store for Media', 'published', 'SAN', 'SAN-1', 'serviceable', true, $2)`,
 		storeID, partnerID, operatorContextID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}

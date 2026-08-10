@@ -17,7 +17,7 @@ SET status = CASE
 END;
 
 -- 3. Add the new strict constraint
-ALTER TABLE dsh_stores ADD CONSTRAINT dsh_stores_status_chk 
+ALTER TABLE dsh_stores ADD CONSTRAINT dsh_stores_status_chk
     CHECK (status IN ('draft', 'ready', 'published', 'paused', 'suspended', 'closed'));
 
 COMMIT;

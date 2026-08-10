@@ -93,7 +93,8 @@ func scanOrderCancellationCase(row *sql.Row) (OrderCancellationCase, error) {
 }
 
 const orderCancellationActionSelect = `
-	SELECT id, cancellation_id, action_type, status, payload, idempotency_key, correlation_id, created_by, executed_by, created_at, updated_at
+	SELECT id, cancellation_id, action_type, status, COALESCE(payload, '{}'::jsonb)::text,
+		idempotency_key, correlation_id, created_by, executed_by, created_at, updated_at
 	FROM dsh_order_cancellation_actions
 `
 
@@ -163,7 +164,42 @@ func CreateCancellationCase(db *sql.DB, input CreateCancellationCaseInput) (*Ord
 		return nil, ErrNotFound
 	}
 
-	// Determine eligibility
+	// Replay is resolved before current-state eligibility because the first
+	// successful execution has already moved the order into a terminal state.
+	// The order-level uniqueness invariant also means a different command must
+	// conflict instead of inheriting the first command's result.
+	existing, existingErr := scanOrderCancellationCase(tx.QueryRow(
+		orderCancellationSelect+` WHERE order_id = $1::uuid FOR UPDATE`,
+		input.OrderID,
+	))
+	if existingErr == nil {
+		sameCommand := existing.OperatorContextID == opCtxID &&
+			existing.ActorID == input.ActorID &&
+			existing.ActorRole == input.ActorRole &&
+			existing.ReasonCode == input.ReasonCode &&
+			existing.CorrelationID == input.CorrelationID &&
+			strings.TrimSpace(valueOrEmpty(existing.ReasonNote)) == input.ReasonNote
+		if !sameCommand {
+			return nil, ErrConflict
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return &existing, nil
+	}
+	if !errors.Is(existingErr, sql.ErrNoRows) {
+		return nil, existingErr
+	}
+
+	// Client cancellation is direct only before preparation. Once preparation
+	// starts, the client surface must fail closed into the operator-review path
+	// without creating a misleading cancellation case that has not been
+	// accepted for review by an operator.
+	if input.ActorRole == "client" && (current == StatusPreparing || current == StatusReadyForPickup || current == StatusDriverAssigned || current == StatusArrivedStore) {
+		return nil, ErrCancellationRequiresReview
+	}
+
+	// Determine eligibility.
 	allowed := false
 	for _, status := range cancellableStatuses(input.ActorRole) {
 		if current == status {
@@ -181,17 +217,9 @@ func CreateCancellationCase(db *sql.DB, input CreateCancellationCaseInput) (*Ord
 		financialStatus = "pending"
 	}
 
-	// Eligibility Matrix for Approval:
-	// If a client requests cancellation AFTER preparation starts, they must go into 'review'.
-	// Operators bypass review. Partners bypass review for their own cancellations.
-	status := CancellationRequested
-	if input.ActorRole == "client" && (current == StatusPreparing || current == StatusReadyForPickup || current == StatusDriverAssigned || current == StatusArrivedStore) {
-		status = CancellationReview
-	} else if input.ActorRole == "operator" {
-		status = CancellationApproved
-	} else {
-		status = CancellationApproved // Pre-approved for early cancellations or partners
-	}
+	// The command has already passed the actor/state eligibility matrix above;
+	// accepted cancellation commands enter the single approved execution state.
+	status := CancellationApproved
 
 	var caseID string
 	err = tx.QueryRow(`
@@ -224,6 +252,13 @@ func CreateCancellationCase(db *sql.DB, input CreateCancellationCaseInput) (*Ord
 	return &c, err
 }
 
+func valueOrEmpty(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
 type CreateCancellationActionInput struct {
 	ActorID        string
 	CaseID         string
@@ -247,11 +282,11 @@ func CreateCancellationAction(db *sql.DB, input CreateCancellationActionInput) (
 	var actionID string
 	err := db.QueryRow(`
 		INSERT INTO dsh_order_cancellation_actions (cancellation_id, action_type, payload, idempotency_key, correlation_id, created_by)
-		VALUES ($1::uuid, $2, NULLIF($3,''), $4, $5, $6)
+		VALUES ($1::uuid, $2, NULLIF($3,'')::jsonb, $4, $5, $6)
 		RETURNING id`,
 		input.CaseID, string(input.ActionType), input.Payload, input.IdempotencyKey, input.CorrelationID, input.ActorID,
 	).Scan(&actionID)
-	
+
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value") {
 			// Idempotent return
@@ -341,7 +376,7 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 		// Perform Custody Transfer Check
 		var deliveryStatus string
 		err = tx.QueryRow(`
-			SELECT d.status FROM dsh_assignments a 
+			SELECT d.status FROM dsh_assignments a
 			JOIN dsh_deliveries d ON d.assignment_id = a.id
 			WHERE a.order_id = $1::uuid AND a.status IN ('offered', 'accepted')
 			LIMIT 1`, caseItem.OrderID).Scan(&deliveryStatus)
@@ -361,7 +396,7 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 			WHERE id = $1::uuid AND status = $7
 			RETURNING wlt_payment_ref_id, checkout_intent_id::text, client_id
 		`, caseItem.OrderID, caseItem.ToStatus, caseItem.ActorID, caseItem.ActorRole, caseItem.ReasonCode, caseItem.ReasonNote, caseItem.FromStatus).Scan(&paymentSessionID, &checkoutIntentID, &clientID)
-		
+
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return OrderCancellationAction{}, fmt.Errorf("%w: order not in expected state", ErrConflict)
@@ -413,12 +448,11 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 	if err := tx.Commit(); err != nil {
 		return OrderCancellationAction{}, err
 	}
-	
+
 	action.Status = ActionCompleted
 	action.ExecutedBy = &input.ActorID
 	return action, nil
 }
-
 
 // CancelOrderSync is a convenience wrapper for immediate cancellations.
 func CancelOrderSync(db *sql.DB, input CreateCancellationCaseInput) (*Order, error) {

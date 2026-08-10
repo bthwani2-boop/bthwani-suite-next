@@ -310,7 +310,7 @@ paths:
       required: true
       schema:
         type: string
-  /dsh/client/marketing/subscriptions/{subscriptionId}/renew:
+  /dsh/client/marketing/subscriptions/instances/{subscriptionId}/renew:
     post:
       operationId: renewDshClientSubscription
       tags:
@@ -373,7 +373,7 @@ paths:
       required: true
       schema:
         type: string
-  /dsh/client/marketing/subscriptions/{subscriptionId}/cancel:
+  /dsh/client/marketing/subscriptions/instances/{subscriptionId}/cancel:
     post:
       operationId: cancelDshClientSubscription
       tags:
@@ -449,7 +449,7 @@ paths:
           $ref: '#/components/responses/ErrorResponse'
         '503':
           $ref: '#/components/responses/ErrorResponse'
-  /dsh/client/marketing/subscriptions/{purchaseId}/activate:
+  /dsh/client/marketing/subscriptions/purchases/{purchaseId}/activate:
     post:
       operationId: activateDshClientSubscriptionPurchase
       tags:
@@ -492,12 +492,6 @@ paths:
           $ref: '#/components/responses/ErrorResponse'
         '503':
           $ref: '#/components/responses/ErrorResponse'
-    parameters:
-    - name: subscriptionId
-      in: path
-      required: true
-      schema:
-        type: string
 components:
   securitySchemes:
     bearerAuth:

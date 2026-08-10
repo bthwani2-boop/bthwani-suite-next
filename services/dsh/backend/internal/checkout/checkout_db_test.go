@@ -41,7 +41,7 @@ func seedStore(t *testing.T, db *sql.DB) string {
 	storeID := uniqueID("checkout-cancel-test-store")
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
-		VALUES ($1, $1, 'Checkout Cancel Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true)`,
+		VALUES ($1, $1, 'Checkout Cancel Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true)`,
 		storeID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
@@ -57,12 +57,12 @@ func TestCancelIntentEnqueuesExpireSessionWhenPaymentSessionExistsDBIntegration(
 	paymentSessionID := uniqueID("ps")
 
 	intent, err := CreateIntent(db, CreateIntentInput{
-		ID:            mustNewIntentID(t, db),
-		OperatorContextID:      operatorContextID,
-		ClientID:      clientID,
-		CartID:        mustNewCartID(t, db),
-		StoreID:       storeID,
-		PaymentMethod: MethodWallet,
+		ID:                mustNewIntentID(t, db),
+		OperatorContextID: operatorContextID,
+		ClientID:          clientID,
+		CartID:            mustNewCartID(t, db),
+		StoreID:           storeID,
+		PaymentMethod:     MethodWallet,
 	})
 	if err != nil {
 		t.Fatalf("CreateIntent failed: %v", err)
@@ -71,6 +71,9 @@ func TestCancelIntentEnqueuesExpireSessionWhenPaymentSessionExistsDBIntegration(
 		_, _ = db.Exec(`DELETE FROM dsh_checkout_financial_closure_outbox WHERE checkout_intent_id = $1::uuid`, intent.ID)
 		_, _ = db.Exec(`DELETE FROM dsh_checkout_intents WHERE id = $1::uuid`, intent.ID)
 	})
+	if _, err := db.Exec(`UPDATE dsh_checkout_intents SET state='ready' WHERE id=$1::uuid`, intent.ID); err != nil {
+		t.Fatalf("failed to make checkout intent handoff-ready: %v", err)
+	}
 
 	if _, err := AttachWltPaymentSession(db, intent.ID, operatorContextID, clientID, paymentSessionID); err != nil {
 		t.Fatalf("AttachWltPaymentSession failed: %v", err)
@@ -108,12 +111,12 @@ func TestCancelIntentEnqueuesNothingWithoutPaymentSessionDBIntegration(t *testin
 	clientID := uniqueID("checkout-cancel-test-client")
 
 	intent, err := CreateIntent(db, CreateIntentInput{
-		ID:            mustNewIntentID(t, db),
-		OperatorContextID:      operatorContextID,
-		ClientID:      clientID,
-		CartID:        mustNewCartID(t, db),
-		StoreID:       storeID,
-		PaymentMethod: MethodCOD,
+		ID:                mustNewIntentID(t, db),
+		OperatorContextID: operatorContextID,
+		ClientID:          clientID,
+		CartID:            mustNewCartID(t, db),
+		StoreID:           storeID,
+		PaymentMethod:     MethodCOD,
 	})
 	if err != nil {
 		t.Fatalf("CreateIntent failed: %v", err)

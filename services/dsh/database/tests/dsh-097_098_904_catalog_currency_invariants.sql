@@ -39,7 +39,7 @@ BEGIN
     id, slug, display_name, status, city_code, service_area_code,
     serviceability_status, is_visible
   ) VALUES (
-    v_store_id, v_store_id, 'Currency Invariant Store', 'active',
+    v_store_id, v_store_id, 'Currency Invariant Store', 'published',
     'SAN', 'SAN-1', 'serviceable', TRUE
   );
 

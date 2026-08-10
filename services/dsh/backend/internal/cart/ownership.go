@@ -19,7 +19,7 @@ func RemoveOwnedItem(
 	if clientID == "" || cartID == "" || itemID == "" {
 		return ErrInvalid
 	}
-	
+
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func RemoveOwnedItem(
 	if affected, _ := res.RowsAffected(); affected == 0 {
 		return ErrNotFound
 	}
-	
+
 	_, err = tx.ExecContext(ctx, `UPDATE dsh_carts SET version = version + 1, updated_at = NOW() WHERE id = $1`, cartID)
 	if err != nil {
 		return err

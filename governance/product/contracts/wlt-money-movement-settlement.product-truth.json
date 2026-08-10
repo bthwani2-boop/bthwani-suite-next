@@ -108,7 +108,7 @@
       "required": true,
       "actors": ["client", "captain", "partner", "field", "finance-operator", "system"],
       "routesOrScreens": ["DSH governed financial facade", "WLT wallet ledger payment COD payout settlement provider and reconciliation owners"],
-      "operationIds": [],
+      "operationIds": ["createWltDestinationBoundPayoutRequest", "approveWltPayoutRequest", "completeWltPayoutRequest", "createWltSettlementBatch", "reserveWltCodCapacity", "createWltEvidenceBackedSettlement"],
       "states": ["authenticated", "authorized", "idempotent", "reserved", "held", "approved", "frozen", "executed", "evidenced", "verified", "reconciled", "completed", "unknown_external_result", "blocked", "exception"],
       "actions": ["derive trusted financial purpose", "enforce policy", "lock or reserve atomically", "post ledger", "normalize provider evidence", "hold payout", "freeze immutable batch", "record external execution", "reconcile", "audit", "fail closed"]
     },

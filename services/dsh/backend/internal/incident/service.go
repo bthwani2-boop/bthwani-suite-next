@@ -15,16 +15,16 @@ import (
 // dispatched consequence needs to execute. Only the fields relevant to
 // IncidentType/TargetEntityType are read by dispatch.
 type ReportInput struct {
-	OrderID          string
-	OperatorContextID         string
-	TargetEntityType TargetEntityType
-	TargetEntityID   string
-	IncidentType     IncidentType
-	Reason           string
-	TicketReference  string
-	ActorID          string
-	ActorRole        string
-	CorrelationID    string
+	OrderID           string
+	OperatorContextID string
+	TargetEntityType  TargetEntityType
+	TargetEntityID    string
+	IncidentType      IncidentType
+	Reason            string
+	TicketReference   string
+	ActorID           string
+	ActorRole         string
+	CorrelationID     string
 
 	// raise_exception consequence.
 	ExpectedVersion    int
@@ -152,13 +152,13 @@ func (s *Service) dispatch(ctx context.Context, input ReportInput) ([]byte, erro
 		return json.Marshal(task)
 	case TypeCancel:
 		order, err := orders.CancelOrderSync(s.db, orders.CreateCancellationCaseInput{
-			OrderID:       input.OrderID,
-			OperatorContextID:      input.OperatorContextID,
-			ActorID:       input.ActorID,
-			ActorRole:     input.ActorRole,
-			ReasonCode:    input.ReasonCode,
-			ReasonNote:    input.ReasonNote,
-			CorrelationID: input.CorrelationID,
+			OrderID:           input.OrderID,
+			OperatorContextID: input.OperatorContextID,
+			ActorID:           input.ActorID,
+			ActorRole:         input.ActorRole,
+			ReasonCode:        input.ReasonCode,
+			ReasonNote:        input.ReasonNote,
+			CorrelationID:     input.CorrelationID,
 		})
 		if err != nil {
 			return nil, err
@@ -182,4 +182,3 @@ func nullableString(value string) any {
 	}
 	return value
 }
-

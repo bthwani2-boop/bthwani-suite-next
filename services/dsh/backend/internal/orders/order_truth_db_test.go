@@ -12,12 +12,12 @@ import (
 )
 
 type orderTruthDBFixture struct {
-	OperatorContextID        string
-	ClientID        string
-	OtherClientID   string
-	StoreID         string
-	CheckoutID      string
-	OtherCheckoutID string
+	OperatorContextID string
+	ClientID          string
+	OtherClientID     string
+	StoreID           string
+	CheckoutID        string
+	OtherCheckoutID   string
 }
 
 func seedOrderTruthCheckout(t *testing.T, db *sql.DB, operatorContextID, clientID, storeID, cartState, suffix string) string {
@@ -36,9 +36,9 @@ func seedOrderTruthCheckout(t *testing.T, db *sql.DB, operatorContextID, clientI
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_cart_items
-			(cart_id, product_id, product_name, price_reference, unit_price, currency, quantity)
+			(cart_id, product_id, master_product_id, product_name, price_reference, unit_price, unit_price_minor, currency, quantity)
 		VALUES
-			($1::uuid, $2, ' governed item', '1250.00 YER', 1250.00, 'YER', 2)`,
+			($1::uuid, $2, $2, ' governed item', '1250.00 YER', 1250.00, 125000, 'YER', 2)`,
 		cartID, "product-"+suffix,
 	); err != nil {
 		t.Fatalf("seed cart item: %v", err)
@@ -53,7 +53,7 @@ func seedOrderTruthCheckout(t *testing.T, db *sql.DB, operatorContextID, clientI
 			total_minor_units, currency, pricing_snapshot_hash
 		)
 		VALUES (
-			$1, $2, $3::uuid, $4, 'payment_pending', 'bthwani_delivery',
+			$1, $2, $3::uuid, $4, 'confirming', 'bthwani_delivery',
 			'cod', $5, 'صنعاء - عنوان اختبار محكوم',
 			250000, 5000, 0, 255000, 'YER', repeat('c', 64)
 		)
@@ -74,10 +74,10 @@ func seedOrderTruthDBFixture(t *testing.T, db *sql.DB) orderTruthDBFixture {
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 	fixture := orderTruthDBFixture{
-		OperatorContextID:      "OperatorContext-" + suffix,
-		ClientID:      "client-" + suffix,
-		OtherClientID: "client-other-" + suffix,
-		StoreID:       "store-" + suffix,
+		OperatorContextID: "OperatorContext-" + suffix,
+		ClientID:          "client-" + suffix,
+		OtherClientID:     "client-other-" + suffix,
+		StoreID:           "store-" + suffix,
 	}
 
 	if _, err := db.ExecContext(ctx, `
@@ -121,11 +121,11 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 	correlationID := "correlation-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 
 	created, replay, err := CreateOrderTruth(db, CreateOrderTruthInput{
-		CheckoutIntentID: fixture.CheckoutID,
-		ClientID:         fixture.ClientID,
-		OperatorContextID:         fixture.OperatorContextID,
-		IdempotencyKey:   idempotencyKey,
-		CorrelationID:    correlationID,
+		CheckoutIntentID:  fixture.CheckoutID,
+		ClientID:          fixture.ClientID,
+		OperatorContextID: fixture.OperatorContextID,
+		IdempotencyKey:    idempotencyKey,
+		CorrelationID:     correlationID,
 	})
 	if err != nil {
 		t.Fatalf("first CreateOrderTruth: %v", err)
@@ -150,22 +150,22 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 	}
 
 	replayed, replay, err := CreateOrderTruth(db, CreateOrderTruthInput{
-		CheckoutIntentID: fixture.CheckoutID,
-		ClientID:         fixture.ClientID,
-		OperatorContextID:         fixture.OperatorContextID,
-		IdempotencyKey:   idempotencyKey,
-		CorrelationID:    correlationID,
+		CheckoutIntentID:  fixture.CheckoutID,
+		ClientID:          fixture.ClientID,
+		OperatorContextID: fixture.OperatorContextID,
+		IdempotencyKey:    idempotencyKey,
+		CorrelationID:     correlationID,
 	})
 	if err != nil || !replay || replayed.ID != created.ID {
 		t.Fatalf("identical retry must replay same order: order=%+v replay=%v err=%v", replayed, replay, err)
 	}
 
 	_, _, err = CreateOrderTruth(db, CreateOrderTruthInput{
-		CheckoutIntentID: fixture.OtherCheckoutID,
-		ClientID:         fixture.ClientID,
-		OperatorContextID:         fixture.OperatorContextID,
-		IdempotencyKey:   idempotencyKey,
-		CorrelationID:    correlationID + "-other",
+		CheckoutIntentID:  fixture.OtherCheckoutID,
+		ClientID:          fixture.ClientID,
+		OperatorContextID: fixture.OperatorContextID,
+		IdempotencyKey:    idempotencyKey,
+		CorrelationID:     correlationID + "-other",
 	})
 	if !errors.Is(err, ErrIdempotencyConflict) {
 		t.Fatalf("same key with different checkout must conflict, got %v", err)
@@ -324,13 +324,12 @@ func containsJSONField(raw []byte, field string) bool {
 
 func ExampleCreateOrderTruthInput() {
 	input := CreateOrderTruthInput{
-		CheckoutIntentID: "8ba4e0d1-2f80-42b5-a88a-f8600cf2c4f5",
-		ClientID:         "client-1001",
-		OperatorContextID:         "OperatorContext-yemen",
-		IdempotencyKey:   "order-create-key-1001",
-		CorrelationID:    "order-create-trace-1001",
+		CheckoutIntentID:  "8ba4e0d1-2f80-42b5-a88a-f8600cf2c4f5",
+		ClientID:          "client-1001",
+		OperatorContextID: "OperatorContext-yemen",
+		IdempotencyKey:    "order-create-key-1001",
+		CorrelationID:     "order-create-trace-1001",
 	}
 	fmt.Println(input.OperatorContextID, input.ClientID)
 	// Output: OperatorContext-yemen client-1001
 }
-

@@ -88,7 +88,7 @@ export function StoreServiceAreaPanel({ serviceAreaCode }: Props) {
       setErrorMsg("يجب أن يحتوي المضلع على 3 نقاط على الأقل.");
       return;
     }
-    
+
     // Close the polygon if it's not closed
     let finalPolygon = [...state.draftPolygon];
     if (finalPolygon.length >= 3) {

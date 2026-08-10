@@ -215,8 +215,10 @@ requireMarkers("services/dsh/frontend/app-captain/account/PartnerFleetConnection
   "connectCaptainToPartnerFleet",
   "onMembershipStateChange",
 ]);
-requireMarkers("services/dsh/contracts/dsh.partner-fleet.openapi.yaml", [
+requireMarkers("services/dsh/contracts/dsh.partner-onboarding.openapi.yaml", [
   "/dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code:",
+]);
+requireMarkers("services/dsh/contracts/dsh.partner-fleet.openapi.yaml", [
   "/dsh/captain/partner-fleet/connect:",
   "/dsh/captain/partner-fleet/memberships:",
 ]);

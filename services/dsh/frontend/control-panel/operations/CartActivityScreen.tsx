@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { CpPageHeader, CpStatePanel, CpStateView, CpTable, CpTableCell, CpTableHeaderCell } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
+import { Button } from "@bthwani/ui-kit";
 import { useOperatorCartsController } from "../../shared/cart";
 import type { DshCart, DshFulfillmentMode } from "../../shared/cart";
+import { CartSyncDiagnostics } from "../carts/CartSyncDiagnostics";
 
 const FULFILLMENT_LABELS: Record<DshFulfillmentMode, string> = {
   bthwani_delivery: "توصيل بثواني",
@@ -31,6 +34,16 @@ function validationLabel(cart: DshCart): string {
 
 export function CartActivityScreen() {
   const controller = useOperatorCartsController("authenticated");
+  const [diagnosticsCartId, setDiagnosticsCartId] = useState<string | null>(null);
+
+  if (diagnosticsCartId) {
+    return (
+      <CartSyncDiagnostics
+        cartId={diagnosticsCartId}
+        onBack={() => setDiagnosticsCartId(null)}
+      />
+    );
+  }
 
   return (
     <DataTablePageFrame
@@ -59,6 +72,7 @@ export function CartActivityScreen() {
               <CpTableHeaderCell>سلامة التشكيلة</CpTableHeaderCell>
               <CpTableHeaderCell>نسخة السلة</CpTableHeaderCell>
               <CpTableHeaderCell>آخر تحديث</CpTableHeaderCell>
+              <CpTableHeaderCell>تشخيص المزامنة</CpTableHeaderCell>
             </tr>
           </thead>
           <tbody>
@@ -72,6 +86,14 @@ export function CartActivityScreen() {
                 <CpTableCell>{validationLabel(cart)}</CpTableCell>
                 <CpTableCell>{String(cart.version)}</CpTableCell>
                 <CpTableCell>{new Date(cart.updatedAt).toLocaleString("ar-SA")}</CpTableCell>
+                <CpTableCell>
+                  <Button
+                    label="فتح السجل"
+                    tone="secondary"
+                    size="sm"
+                    onPress={() => setDiagnosticsCartId(cart.id)}
+                  />
+                </CpTableCell>
               </tr>
             ))}
           </tbody>

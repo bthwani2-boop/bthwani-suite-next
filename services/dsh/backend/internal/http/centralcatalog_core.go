@@ -11,9 +11,9 @@ import (
 // Central-catalog permission actions: granular, additive capabilities that a
 // non-operator actor can be granted via Identity.Permissions
 // -- Permission{Service:"dsh", Surface:"control-panel", Action:...} --
-// without needing full operator role. Operator role continues to satisfy
-// every one of these checks via the fallbackRoles argument to
-// requireCatalogPermission -- existing operator access is unchanged.
+// without needing the operator role. Operators resolve the same exact actions
+// from Identity's durable RBAC registry; role membership alone is never a
+// fallback authorization path.
 const (
 	CatalogPermissionTaxonomyManage          = "catalog.taxonomy.manage"
 	CatalogPermissionProductManage           = "catalog.product.manage"

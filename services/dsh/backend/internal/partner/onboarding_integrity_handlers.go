@@ -44,12 +44,12 @@ func HandleGovernedFieldUpdatePartner(db *sql.DB, wltClient *wlt.Client) http.Ha
 		rawIBAN := unmaskedPayoutValue(input.BankIBAN)
 		rawMobile := unmaskedPayoutValue(input.PayoutMobileNumber)
 		preference, preferenceOK := normalizeDshPayoutPreference(input.SettlementPreference)
-		
+
 		metadataChanged := false
 		if preference != "" && preference != current.DestinationMethod {
 			metadataChanged = true
 		}
-		
+
 		payoutMutation := rawAccount != "" || rawIBAN != "" || rawMobile != "" || metadataChanged
 
 		if payoutMutation {

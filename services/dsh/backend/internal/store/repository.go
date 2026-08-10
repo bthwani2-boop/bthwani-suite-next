@@ -128,7 +128,7 @@ func listStores(db *sql.DB, q DshStoreListQuery, publicOnly bool) (DshStoreListR
 		normalizedSearch := normalizeArabic(q.Search)
 		searchTerm := "%" + normalizedSearch + "%"
 		normSQL := func(col string) string {
-			return `REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(`+col+`), 'أ', 'ا'), 'إ', 'ا'), 'آ', 'ا'), 'ة', 'ه'), 'ى', 'ي')`
+			return `REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(` + col + `), 'أ', 'ا'), 'إ', 'ا'), 'آ', 'ا'), 'ة', 'ه'), 'ى', 'ي')`
 		}
 		conditions = append(conditions, fmt.Sprintf("(%s LIKE $%d OR %s LIKE $%d)", normSQL("display_name"), idx, normSQL("slug"), idx))
 		params = append(params, searchTerm)
@@ -198,7 +198,18 @@ func GetStoreByID(db *sql.DB, storeID string) (*DshStoreRow, error) {
 // public visibility gate (used by internal/field/operator surfaces, never by
 // app-client). Returns nil if the partner has no linked store.
 func GetStoreByPartnerID(db *sql.DB, partnerID string) (*DshStoreRow, error) {
-	row, err := scanStore(db.QueryRow(
+	return GetStoreByPartnerIDContext(context.Background(), db, partnerID)
+}
+
+type storeContextQueryRower interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+// GetStoreByPartnerIDContext resolves canonical store publication facts through
+// either a database handle or the caller's transaction. Partner transitions use
+// the transaction form so all gates are evaluated from one consistent snapshot.
+func GetStoreByPartnerIDContext(ctx context.Context, db storeContextQueryRower, partnerID string) (*DshStoreRow, error) {
+	row, err := scanStore(db.QueryRowContext(ctx,
 		"SELECT "+storeColumns+" FROM dsh_stores WHERE partner_id = $1 ORDER BY created_at ASC LIMIT 1",
 		partnerID,
 	))
@@ -227,7 +238,7 @@ type execQueryRower interface {
 }
 
 // CreateDraftStore inserts a new, unpublished store linked to a partner.
-// Never visible to app-client: is_visible=false, status=inactive,
+// Never visible to app-client: is_visible=false, status=draft,
 // serviceability=unavailable, and partner_readiness/catalog_approval_status/
 // marketing_visibility keep their safe column defaults (pending/draft/hidden).
 func CreateDraftStore(db execQueryRower, input CreateDraftStoreInput) (DshStoreRow, error) {
@@ -249,12 +260,18 @@ func CreateDraftStore(db execQueryRower, input CreateDraftStoreInput) (DshStoreR
 			id, slug, display_name, status, city_code, service_area_code,
 			serviceability_status, is_visible, catalog_domain_id, partner_id,
 			address_line, operating_hours
-		) VALUES ($1,$1,$2,'inactive',$3,$3,'unavailable',false,$4,$5,$6,$7)`,
+		) VALUES ($1,$1,$2,'draft',$3,$3,'unavailable',false,$4,$5,$6,$7)`,
 		id, input.DisplayName, cityCode, catalogDomainID, input.PartnerID,
 		input.AddressLine, input.OperatingHours,
 	)
 	if err != nil {
 		return DshStoreRow{}, fmt.Errorf("failed to create draft store: %w", err)
+	}
+	if _, err := db.Exec(`
+		INSERT INTO dsh_store_catalog_domains (store_id, domain_id, status)
+		VALUES ($1, $2, 'pending')
+		ON CONFLICT (store_id, domain_id) DO NOTHING`, id, catalogDomainID); err != nil {
+		return DshStoreRow{}, fmt.Errorf("failed to create draft store catalog-domain link: %w", err)
 	}
 
 	row, err := scanStore(db.QueryRow("SELECT "+storeColumns+" FROM dsh_stores WHERE id = $1", id))

@@ -25,7 +25,7 @@ interface Props {
 
 export function ReadinessGateScreen({ readiness, onRefresh }: Props) {
   const { tokens } = useBThwaniAppearance();
-  
+
   if (readiness.status === 'ALLOWED') {
     return null; // Should not render if allowed
   }
@@ -34,7 +34,7 @@ export function ReadinessGateScreen({ readiness, onRefresh }: Props) {
     <View style={[styles.container, { backgroundColor: tokens.appBackground }]}>
       <Text role="titleLg" tone="danger" align="center" style={styles.title}>لا يمكن بدء العمل حالياً</Text>
       <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>الرجاء معالجة الملاحظات التالية قبل المتابعة:</Text>
-      
+
       <View style={styles.reasonsContainer}>
         {readiness.blockerReasons.map(reason => (
           <View key={reason} style={[styles.reasonCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>

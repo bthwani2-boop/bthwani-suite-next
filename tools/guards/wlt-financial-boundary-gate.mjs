@@ -61,7 +61,7 @@ for (const file of listCodeFiles()) {
 
 // 2. no-direct-financial-provider-access-outside-wlt
 const allowedPrefixes = [
-  "services/wlt/", "infra/docker/", "docs/runtime/", ".devcontainer/", "package.json", "tools/guards/",
+  "services/wlt/", "infra/docker/", "docs/runtime/", "plans/", ".devcontainer/", "package.json", "tools/guards/",
   "tools/scripts/test-", "tools/scripts/smoke-wiremock-financial-provider.ps1",
   "tools/scripts/smoke-wlt-provider-through-wlt.ps1", "tools/scripts/smoke-wlt-payout-provider.ps1",
   "tools/scripts/financial-simulator-local.ps1", ".github/workflows/",

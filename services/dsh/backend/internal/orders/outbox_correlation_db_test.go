@@ -35,5 +35,3 @@ func TestCancellationOutboxPersistsCommandCorrelationDBIntegration(t *testing.T)
 		t.Fatalf("stored correlation=%q want %q", storedCorrelation, correlationID)
 	}
 }
-
-

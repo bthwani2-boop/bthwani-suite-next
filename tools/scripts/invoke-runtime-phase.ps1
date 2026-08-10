@@ -157,9 +157,9 @@ try {
         throw "Central catalog readback script not found: $CatalogReadbackScript"
       }
       Write-Host "`n=== runtime:catalog-readback ==="
-      & $CatalogReadbackScript 2>&1 | Tee-Object -FilePath $LogPath | Out-Host
-      if ($LASTEXITCODE -ne 0) {
-        throw "Central catalog readback failed with exit code $LASTEXITCODE"
+      $catalogExitCode = Invoke-RuntimeBasePhase -ScriptPath $CatalogReadbackScript -Parameters @{}
+      if ($catalogExitCode -ne 0) {
+        throw "Central catalog readback failed with exit code $catalogExitCode"
       }
     }
   } elseif (-not [string]::IsNullOrWhiteSpace($runtimeProfiles)) {
@@ -182,9 +182,9 @@ try {
       throw "Authenticated WLT smoke script not found: $AuthenticatedWltSmokeScript"
     }
     Write-Host "`n=== runtime:wlt-authenticated-smoke ==="
-    & $AuthenticatedWltSmokeScript 2>&1 | Tee-Object -FilePath $LogPath -Append | Out-Host
-    if ($LASTEXITCODE -ne 0) {
-      throw "Authenticated WLT runtime smoke failed with exit code $LASTEXITCODE"
+    $wltSmokeExitCode = Invoke-RuntimeBasePhase -ScriptPath $AuthenticatedWltSmokeScript -Parameters @{} -Append
+    if ($wltSmokeExitCode -ne 0) {
+      throw "Authenticated WLT runtime smoke failed with exit code $wltSmokeExitCode"
     }
   }
 

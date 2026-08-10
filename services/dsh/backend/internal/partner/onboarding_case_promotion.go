@@ -31,7 +31,7 @@ func EvaluateOnboardingCaseStatus(ctx context.Context, tx *sql.Tx, partnerID str
 	}
 
 	required := requiredDocumentsForCategory(category)
-	
+
 	// Query uploaded documents for this partner
 	rows, err := tx.QueryContext(ctx, `SELECT document_type FROM dsh_partner_documents WHERE partner_id = $1`, partnerID)
 	if err != nil {

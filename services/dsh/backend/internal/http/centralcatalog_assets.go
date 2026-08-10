@@ -150,31 +150,6 @@ func (s *protectedStoreServer) authorizeAssetLinkEntity(w http.ResponseWriter, r
 	}
 }
 
-func (s *protectedStoreServer) handleLinkCatalogAsset(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
-	if !ok {
-		return
-	}
-	var input centralcatalog.AssetLinkInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	input.AssetID = r.PathValue("assetId")
-	input.IsPrimary = false
-	if !s.authorizeAssetAccess(w, r, actor, input.AssetID) {
-		return
-	}
-	if !s.authorizeAssetLinkEntity(w, r, actor, input.EntityType, input.EntityID) {
-		return
-	}
-	link, err := centralcatalog.LinkAsset(r.Context(), s.db, input)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"link": link})
-}
-
 func (s *protectedStoreServer) handleUnlinkCatalogAsset(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
 	if !ok {
@@ -326,26 +301,6 @@ func (s *protectedStoreServer) handlePutProductProposalImage(w http.ResponseWrit
 		return
 	}
 	s.putEntityImage(w, r, "product_proposal", r.PathValue("proposalId"), r.PathValue("role"))
-}
-
-func (s *protectedStoreServer) handlePutStoreImage(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
-	if !ok {
-		return
-	}
-	storeID := r.PathValue("storeId")
-	role := r.PathValue("role")
-	if !centralcatalog.IsValidStoreImageRole(role) {
-		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid store image role")
-		return
-	}
-	if actor.Role != "operator" {
-		if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, s.workforce, actor, storeID); err != nil {
-			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store does not belong to you")
-			return
-		}
-	}
-	s.putEntityImage(w, r, "store", storeID, role)
 }
 
 type EntityImageInput struct {

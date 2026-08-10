@@ -136,6 +136,21 @@ function Get-SelectedMigrationServices {
   return @($services | Select-Object -Unique)
 }
 
+# Compose service names for the APIs owned by the selected migration services.
+# Kept next to Get-SelectedMigrationServices because the two must stay in step:
+# every service whose schema this run converges also has an API to recycle.
+function Get-SelectedMigratedApiServices {
+  $apiByMigrationService = @{
+    "identity"         = "identity-api"
+    "workforce"        = "workforce-api"
+    "wlt"              = "wlt-api"
+    "dsh"              = "dsh-api"
+    "providers"        = "providers-api"
+    "platform-control" = "platform-control-api"
+  }
+  return @(Get-SelectedMigrationServices | ForEach-Object { $apiByMigrationService[$_] })
+}
+
 function Get-SelectedSeedServices {
   $services = @()
   if ($script:ProfileList -contains "dsh") { $services += "dsh" }
@@ -293,6 +308,42 @@ function Invoke-GovernedMigrations {
     if ($LASTEXITCODE -ne 0) {
       throw "Governed runtime migrations failed for $serviceName (exit $LASTEXITCODE)"
     }
+  }
+}
+
+# Restarts every API whose schema this run just converged.
+#
+# `up -d --build` only recreates a container when its image content changed, so an
+# API that booted against an empty or half-migrated database keeps running against
+# it indefinitely: DSH retried a missing dsh_order_event_outbox every five seconds
+# for twenty-eight hours, and Identity served an identity_actors table with no rows
+# because its start-only local bootstrap had no reason to run again. Restarting
+# after migrations makes "the API booted against the schema this run applied" an
+# invariant instead of a coincidence of image digests.
+function Restart-MigratedApis {
+  $apiServices = @(Get-SelectedMigratedApiServices)
+  if ($apiServices.Count -eq 0) { return }
+
+  Write-Host "`n--- Restarting APIs against the converged schema ---"
+  Invoke-Compose restart @apiServices
+}
+
+# Proves the Identity local bootstrap converged before anything downstream
+# assumes an authenticated operator.
+#
+# Readiness only reports that Identity can reach its database, not that the
+# canonical local actors exist in it. Without this gate, a runtime serving an
+# empty identity_actors table passed every phase and failed several layers later
+# inside mobile-dev-data with a bare INVALID_CREDENTIALS that named neither the
+# authority nor the state at fault.
+function Assert-LocalIdentityBootstrapConverged {
+  if ($env:NODE_ENV -eq "production") { return }
+  if (-not ($ProfileList -contains "identity")) { return }
+
+  Write-Host "`n--- Verifying governed Identity local bootstrap ---"
+  & node (Join-Path $RepoRoot "tools/dev/verify-local-identity-bootstrap.mjs")
+  if ($LASTEXITCODE -ne 0) {
+    throw "Identity local bootstrap has not converged (exit $LASTEXITCODE)"
   }
 }
 
@@ -454,6 +505,7 @@ switch ($Action) {
     Invoke-GovernedMigrations
     Invoke-Compose up -d --build
     Wait-ForSelectedApis
+    Assert-LocalIdentityBootstrapConverged
     Invoke-LocalWorkforceProvisioning
     Invoke-GovernedSeeds
     Invoke-SelectedSmoke
@@ -477,7 +529,9 @@ switch ($Action) {
     # Services come up before seeding: provider actor ids are minted through the
     # live Workforce API and substituted into the SQL fixtures.
     Invoke-Compose up -d --build
+    Restart-MigratedApis
     Wait-ForSelectedApis
+    Assert-LocalIdentityBootstrapConverged
     Invoke-LocalWorkforceProvisioning
     Invoke-GovernedSeeds
     if ($ProfileList -contains "dsh") {
@@ -572,4 +626,3 @@ switch ($Action) {
     Write-Host "`nruntime:all: PASS"
   }
 }
-

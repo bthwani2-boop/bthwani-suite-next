@@ -12,6 +12,11 @@ import {
 
 const contractsDirectory = path.join(repositoryRoot, "services/dsh/contracts");
 const entryContractPath = path.join(contractsDirectory, "dsh.openapi.yaml");
+const partnerSchemasPath = path.join(
+  contractsDirectory,
+  "components/schemas/partner.schemas.yaml",
+);
+const catalogPathsPath = path.join(contractsDirectory, "paths/catalog.paths.yaml");
 
 function read(filePath) {
   return fs.readFileSync(filePath, "utf8").replace(/\r\n/g, "\n");
@@ -43,6 +48,41 @@ test("generated bundle composition is deterministic and self-contained", async (
     assertNoUnresolvedLocalOpenApiReferences(first.bundle, first));
   assert.match(first.bundle, /operationId:\s*getDshHealth/);
   assert.match(first.bundle, /operationId:\s*getDshPartnerOrderWorkboard/);
+});
+
+test("partner draft request matches domain identity and server-owned metadata", () => {
+  const schemas = read(partnerSchemasPath);
+  const createRequest = schemas.match(
+    /DshCreatePartnerRequest:[\s\S]*?\nDshPartnerTransitionRequest:/,
+  );
+  assert.ok(createRequest, "DshCreatePartnerRequest schema is missing");
+  const identityTypeLine = createRequest[0].match(
+    /legalIdentityType:\s*\{[^\n]+\}/,
+  );
+  assert.ok(identityTypeLine, "legalIdentityType schema is missing");
+  assert.match(
+    identityTypeLine[0],
+    /enum: \[commercial_register, national_id, freelancer_certificate\]/,
+  );
+  assert.doesNotMatch(identityTypeLine[0], /commercial_registration|\bother\b/);
+  assert.match(createRequest[0], /ownerActorId:\s*\{/);
+  assert.match(createRequest[0], /notes:\s*\{/);
+  assert.doesNotMatch(
+    createRequest[0],
+    /\n\s+(?:createdBy|assignedFieldAgent|idempotencyKey):/,
+  );
+});
+
+test("catalog asset link contract exposes atomic primary store media binding", () => {
+  const catalogPaths = read(catalogPathsPath);
+  const linkPath = catalogPaths.match(
+    /\/dsh\/operator\/catalog\/assets\/\{assetId\}\/link:[\s\S]*?\n\/dsh\/operator\/catalog\/assets\/\{assetId\}\/links\/\{linkId\}:/,
+  );
+  assert.ok(linkPath, "catalog asset link path is missing");
+  assert.match(linkPath[0], /required: \[entityType, entityId, role\]/);
+  assert.match(linkPath[0], /isPrimary:[\s\S]*type: boolean/);
+  assert.match(linkPath[0], /Replaces the current primary link atomically/);
+  assert.match(linkPath[0], /additionalProperties: false/);
 });
 
 test("composition integrity fails closed on unresolved local references", () => {

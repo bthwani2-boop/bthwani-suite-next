@@ -318,7 +318,8 @@ func TestPartnerReadinessForActivationStatus(t *testing.T) {
 	}{
 		{StatusClientVisible, "ready", true},
 		{StatusClientHidden, "blocked", true},
-		{StatusPartnerTerminated, "", false},
+		{StatusPartnerSuspended, "blocked", true},
+		{StatusPartnerTerminated, "blocked", true},
 		{StatusPartnerActive, "", false},
 	}
 
@@ -364,7 +365,7 @@ func TestComputeReadiness_storePublicationGates(t *testing.T) {
 		name                  string
 		status                ActivationStatus
 		hasStore              bool
-		storeActive           bool
+		storePublished        bool
 		storeServiceable      bool
 		storePartnerReadiness bool
 		storeCatalog          bool
@@ -373,21 +374,21 @@ func TestComputeReadiness_storePublicationGates(t *testing.T) {
 		wantPublish           bool
 	}
 	cases := []gateCase{
-		{name: "all gates pass", status: StatusPartnerActive, hasStore: true, storeActive: true, storeServiceable: true, storePartnerReadiness: true, storeCatalog: true, storeMarketing: true, storeVisible: true, wantPublish: true},
-		{name: "cannot publish without store", status: StatusPartnerActive, hasStore: false, storeActive: true, storeServiceable: true, storePartnerReadiness: true, storeCatalog: true, storeMarketing: true, storeVisible: true, wantPublish: false},
-		{name: "cannot publish inactive store", status: StatusPartnerActive, hasStore: true, storeActive: false, storeServiceable: true, storePartnerReadiness: true, storeCatalog: true, storeMarketing: true, storeVisible: true, wantPublish: false},
-		{name: "cannot publish hidden store", status: StatusPartnerActive, hasStore: true, storeActive: true, storeServiceable: true, storePartnerReadiness: true, storeCatalog: true, storeMarketing: true, storeVisible: false, wantPublish: false},
-		{name: "cannot publish unserviceable store", status: StatusPartnerActive, hasStore: true, storeActive: true, storeServiceable: false, storePartnerReadiness: true, storeCatalog: true, storeMarketing: true, storeVisible: true, wantPublish: false},
-		{name: "cannot publish unapproved catalog", status: StatusPartnerActive, hasStore: true, storeActive: true, storeServiceable: true, storePartnerReadiness: true, storeCatalog: false, storeMarketing: true, storeVisible: true, wantPublish: false},
-		{name: "cannot publish hidden marketing", status: StatusPartnerActive, hasStore: true, storeActive: true, storeServiceable: true, storePartnerReadiness: true, storeCatalog: true, storeMarketing: false, storeVisible: true, wantPublish: false},
-		{name: "cannot publish before partner is active", status: StatusOpsApproved, hasStore: true, storeActive: true, storeServiceable: true, storePartnerReadiness: true, storeCatalog: true, storeMarketing: true, storeVisible: true, wantPublish: false},
-		{name: "cannot publish when partner readiness not ready", status: StatusPartnerActive, hasStore: true, storeActive: true, storeServiceable: true, storePartnerReadiness: false, storeCatalog: true, storeMarketing: true, storeVisible: true, wantPublish: false},
+		{name: "all gates pass", status: StatusPartnerActive, hasStore: true, storePublished: true, storeServiceable: true, storePartnerReadiness: true, storeCatalog: true, storeMarketing: true, storeVisible: true, wantPublish: true},
+		{name: "cannot publish without store", status: StatusPartnerActive, hasStore: false, storePublished: true, storeServiceable: true, storePartnerReadiness: true, storeCatalog: true, storeMarketing: true, storeVisible: true, wantPublish: false},
+		{name: "cannot publish unpublished store", status: StatusPartnerActive, hasStore: true, storePublished: false, storeServiceable: true, storePartnerReadiness: true, storeCatalog: true, storeMarketing: true, storeVisible: true, wantPublish: false},
+		{name: "cannot publish hidden store", status: StatusPartnerActive, hasStore: true, storePublished: true, storeServiceable: true, storePartnerReadiness: true, storeCatalog: true, storeMarketing: true, storeVisible: false, wantPublish: false},
+		{name: "cannot publish unserviceable store", status: StatusPartnerActive, hasStore: true, storePublished: true, storeServiceable: false, storePartnerReadiness: true, storeCatalog: true, storeMarketing: true, storeVisible: true, wantPublish: false},
+		{name: "cannot publish unapproved catalog", status: StatusPartnerActive, hasStore: true, storePublished: true, storeServiceable: true, storePartnerReadiness: true, storeCatalog: false, storeMarketing: true, storeVisible: true, wantPublish: false},
+		{name: "cannot publish hidden marketing", status: StatusPartnerActive, hasStore: true, storePublished: true, storeServiceable: true, storePartnerReadiness: true, storeCatalog: true, storeMarketing: false, storeVisible: true, wantPublish: false},
+		{name: "cannot publish before partner is active", status: StatusOpsApproved, hasStore: true, storePublished: true, storeServiceable: true, storePartnerReadiness: true, storeCatalog: true, storeMarketing: true, storeVisible: true, wantPublish: false},
+		{name: "cannot publish when partner readiness not ready", status: StatusPartnerActive, hasStore: true, storePublished: true, storeServiceable: true, storePartnerReadiness: false, storeCatalog: true, storeMarketing: true, storeVisible: true, wantPublish: false},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			p := Partner{ID: "prt_gate", ActivationStatus: tc.status}
-			r := ComputeReadiness(p, 2, 1, tc.hasStore, tc.storeActive, tc.storeServiceable, tc.storePartnerReadiness, tc.storeCatalog, tc.storeMarketing, tc.storeVisible)
+			r := ComputeReadiness(p, 2, 1, tc.hasStore, tc.storePublished, tc.storeServiceable, tc.storePartnerReadiness, tc.storeCatalog, tc.storeMarketing, tc.storeVisible)
 			if r.CanPublishStoreToClient != tc.wantPublish {
 				t.Fatalf("CanPublishStoreToClient=%v, want %v (blocked: %q)", r.CanPublishStoreToClient, tc.wantPublish, r.StorePublicationBlockedReason)
 			}

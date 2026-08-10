@@ -20,7 +20,7 @@ for ($i = 1; $i -le 10; $i++) {
   try {
     $readiness = Invoke-RestMethod "http://localhost:58080/dsh/readiness" -TimeoutSec 10 -ErrorAction Stop
     Write-Host "  /dsh/readiness attempt $i/10: $($readiness | ConvertTo-Json -Compress)"
-    if ($readiness.status -eq "ready") {
+    if ($readiness.status -eq "HEALTHY") {
       $readinessReady = $true
       break
     }

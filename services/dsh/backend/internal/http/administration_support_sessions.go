@@ -227,6 +227,6 @@ func (s *administrationSupportServer) requirePartnerSupportSession(w http.Respon
 		INSERT INTO dsh_admin_audit (id, actor_id, target_id, action, detail)
 		VALUES (gen_random_uuid(), $1, $2, 'partner_support_access', $3)`,
 		identity.InitiatorActorID, targetPartnerID, "accessed partner support center via session")
-	
+
 	return identity, true
 }

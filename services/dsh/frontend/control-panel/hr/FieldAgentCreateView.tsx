@@ -24,7 +24,7 @@ export function FieldAgentCreateView(props: {
   const identityReason = identityRuntime.state.kind === "unavailable"
     ? identityRuntime.state.code
     : (runtimeValue?.reasonCodes ?? ["IDENTITY_READINESS_UNPROVEN"]).join("، ");
-  
+
   const [fullNameAr, setFullNameAr] = useState("");
   const [fullNameEn, setFullNameEn] = useState("");
   const [username, setUsername] = useState("");

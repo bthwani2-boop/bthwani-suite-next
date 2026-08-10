@@ -58,7 +58,7 @@ func (s *protectedStoreServer) upsertAssortmentInventory(w http.ResponseWriter, 
 		s.writeCatalogMutationError(w, centralcatalog.ErrInvalid)
 		return
 	}
-	
+
 	inv, err := centralcatalog.UpsertAssortmentInventoryAtomic(r.Context(), s.db, storeID, masterProductID, actorID, input)
 	if err != nil {
 		s.writeCatalogMutationError(w, err)
@@ -77,7 +77,7 @@ func (s *protectedStoreServer) scheduleAssortmentPrice(w http.ResponseWriter, r 
 		s.writeCatalogMutationError(w, centralcatalog.ErrInvalid)
 		return
 	}
-	
+
 	price, err := centralcatalog.ScheduleAssortmentPriceAtomic(r.Context(), s.db, storeID, masterProductID, actorID, input)
 	if err != nil {
 		s.writeCatalogMutationError(w, err)

@@ -156,5 +156,3 @@ func TestPartnerCannotCancelAfterReadyForPickupDBIntegration(t *testing.T) {
 		t.Fatalf("expected conflict for late partner cancellation, got %v", err)
 	}
 }
-
-

@@ -53,7 +53,7 @@ export async function upsertCartItem(input: {
 export async function removeCartItem(cartId: string, itemId: string, idempotencyKey: string, expectedVersion: number, deviceId: string, sessionId: string): Promise<void> {
   await request(
     `/dsh/client/cart/items/${encodeURIComponent(itemId)}?cartId=${encodeURIComponent(cartId)}`,
-    { 
+    {
       method: "DELETE",
       idempotencyKey,
       expectedVersion,
@@ -67,8 +67,8 @@ export async function clearCart(idempotencyKey: string, cartId: string | undefin
   const params = new URLSearchParams();
   if (cartId) params.set("cartId", cartId);
   if (storeId) params.set("storeId", storeId);
-  
-  await request(`/dsh/client/cart?${params.toString()}`, { 
+
+  await request(`/dsh/client/cart?${params.toString()}`, {
     method: "DELETE",
     idempotencyKey,
     deviceId,

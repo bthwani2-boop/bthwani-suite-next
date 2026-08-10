@@ -37,6 +37,8 @@ function Invoke-Step {
   }
 }
 
+Invoke-Step "source-integrity-tests" { node --test tools/guards/source-integrity-gate.test.mjs }
+Invoke-Step "source-integrity" { node tools/guards/source-integrity-gate.mjs }
 Invoke-Step "git-diff-check" { git --no-pager diff --check }
 
 if ($Full) {

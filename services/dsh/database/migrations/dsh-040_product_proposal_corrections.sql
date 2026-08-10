@@ -16,7 +16,7 @@ BEGIN
     WHERE tc.table_name = 'dsh_product_proposals'
       AND tc.constraint_type = 'CHECK'
       AND ccu.column_name = 'status';
-      
+
     IF cn IS NOT NULL THEN
         EXECUTE 'ALTER TABLE dsh_product_proposals DROP CONSTRAINT ' || quote_ident(cn);
     END IF;

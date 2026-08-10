@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"dsh-api/internal/store"
 )
 
 var (
@@ -380,43 +382,15 @@ func loadPartnerTx(ctx context.Context, tx *sql.Tx, partnerID string, forUpdate 
 	return p, err
 }
 
-type onboardingStoreGate struct {
-	ID                  string
-	DisplayName         string
-	CityCode            string
-	ServiceAreaCode     string
-	AddressLine         string
-	OperatingHours      string
-	DeliveryReadiness   string
-	Status              string
-	IsVisible           bool
-	Serviceability      string
-	PartnerReadiness    string
-	CatalogApproval     string
-	MarketingVisibility string
-}
-
-func loadOnboardingStoreGateTx(ctx context.Context, tx *sql.Tx, partnerID string) (onboardingStoreGate, error) {
-	var gate onboardingStoreGate
-	err := tx.QueryRowContext(ctx, `
-		SELECT id, display_name, city_code, service_area_code, address_line,
-		       operating_hours, delivery_readiness, status, is_visible,
-		       serviceability_status, partner_readiness, catalog_approval_status,
-		       marketing_visibility
-		FROM dsh_stores
-		WHERE partner_id = $1
-		ORDER BY created_at ASC
-		LIMIT 1`, partnerID,
-	).Scan(
-		&gate.ID, &gate.DisplayName, &gate.CityCode, &gate.ServiceAreaCode,
-		&gate.AddressLine, &gate.OperatingHours, &gate.DeliveryReadiness,
-		&gate.Status, &gate.IsVisible, &gate.Serviceability,
-		&gate.PartnerReadiness, &gate.CatalogApproval, &gate.MarketingVisibility,
-	)
-	if errors.Is(err, sql.ErrNoRows) {
-		return onboardingStoreGate{}, fmt.Errorf("%w: no store is linked to the partner", ErrReadinessGate)
+func loadOnboardingStoreGateTx(ctx context.Context, tx *sql.Tx, partnerID string) (store.DshStoreRow, error) {
+	row, err := store.GetStoreByPartnerIDContext(ctx, tx, partnerID)
+	if err != nil {
+		return store.DshStoreRow{}, err
 	}
-	return gate, err
+	if row == nil {
+		return store.DshStoreRow{}, fmt.Errorf("%w: no store is linked to the partner", ErrReadinessGate)
+	}
+	return *row, nil
 }
 
 func validateTransitionReadinessTx(ctx context.Context, tx *sql.Tx, p Partner, target ActivationStatus) error {
@@ -425,7 +399,7 @@ func validateTransitionReadinessTx(ctx context.Context, tx *sql.Tx, p Partner, t
 	requiresVisit := target == StatusPartnerActive
 	requiresPublication := target == StatusClientVisible
 
-	var gate onboardingStoreGate
+	var gate store.DshStoreRow
 	var err error
 	if requiresProfile || requiresVisit || requiresPublication {
 		gate, err = loadOnboardingStoreGateTx(ctx, tx, p.ID)
@@ -488,12 +462,9 @@ func validateTransitionReadinessTx(ctx context.Context, tx *sql.Tx, p Partner, t
 	}
 
 	if requiresPublication {
-		if gate.Status != "active" ||
-			!gate.IsVisible ||
-			(gate.Serviceability != "serviceable" && gate.Serviceability != "limited") ||
-			gate.PartnerReadiness != "ready" ||
-			gate.CatalogApproval != "approved" ||
-			gate.MarketingVisibility != "visible" {
+		candidate := gate
+		candidate.PartnerActivationStatus = string(StatusClientVisible)
+		if diagnostics := store.DiagnoseStorePublication(candidate); !diagnostics.IsReady {
 			return ErrStorePublicationGatesFailed
 		}
 	}

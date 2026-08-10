@@ -39,10 +39,10 @@ func j026Polygon() [][]float64 {
 	}
 }
 
-func j026UpsertInput(actorID, key, displayName string, active bool, expectedVersion int) UpsertInput {
+func j026UpsertInput(actorID, key, displayName string, polygon [][]float64, active bool, expectedVersion int) UpsertInput {
 	return UpsertInput{
 		DisplayName:     displayName,
-		Polygon:         j026Polygon(),
+		Polygon:         polygon,
 		Active:          active,
 		Priority:        100000,
 		SRID:            serviceAreaSRID,
@@ -58,16 +58,33 @@ func j026UpsertInput(actorID, key, displayName string, active bool, expectedVers
 
 func TestServiceAreaResolutionUsesEffectiveHistoryAndDeterministicOverlapDBIntegration(t *testing.T) {
 	db := openServiceAreaDBIntegration(t)
-	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+	seed := time.Now().UnixNano()
+	suffix := fmt.Sprintf("%d", seed)
 	alphaCode := "000-j026-alpha-" + suffix
 	betaCode := "000-j026-beta-" + suffix
 	actorID := "operator-j026-" + suffix
 
-	alpha, err := Upsert(context.Background(), db, alphaCode, j026UpsertInput(actorID, "j026-alpha-create-"+suffix, "J026 Alpha", true, 0))
+	// Version history is intentionally immutable, so a database reused across
+	// test runs retains prior J026 areas. Allocate this run a small deterministic
+	// grid cell instead of relying on cleanup or lexicographic luck.
+	lonIndex := seed % 35000
+	latIndex := (seed / 35000) % 17000
+	baseLon := -175.0 + float64(lonIndex)/100
+	baseLat := -85.0 + float64(latIndex)/100
+	polygon := [][]float64{
+		{baseLon, baseLat},
+		{baseLon + 0.001, baseLat},
+		{baseLon + 0.001, baseLat + 0.001},
+		{baseLon, baseLat + 0.001},
+	}
+	resolveLatitude := baseLat + 0.0005
+	resolveLongitude := baseLon + 0.0005
+
+	alpha, err := Upsert(context.Background(), db, alphaCode, j026UpsertInput(actorID, "j026-alpha-create-"+suffix, "J026 Alpha", polygon, true, 0))
 	if err != nil {
 		t.Fatal(err)
 	}
-	beta, err := Upsert(context.Background(), db, betaCode, j026UpsertInput(actorID, "j026-beta-create-"+suffix, "J026 Beta", true, 0))
+	beta, err := Upsert(context.Background(), db, betaCode, j026UpsertInput(actorID, "j026-beta-create-"+suffix, "J026 Beta", polygon, true, 0))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +92,7 @@ func TestServiceAreaResolutionUsesEffectiveHistoryAndDeterministicOverlapDBInteg
 		t.Fatalf("unexpected governed geometry metadata: alpha=%+v beta=%+v", alpha, beta)
 	}
 
-	resolved, err := Resolve(context.Background(), db, -79.5, -169.5)
+	resolved, err := Resolve(context.Background(), db, resolveLatitude, resolveLongitude)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +100,7 @@ func TestServiceAreaResolutionUsesEffectiveHistoryAndDeterministicOverlapDBInteg
 		t.Fatalf("equal-priority overlap resolved to %+v, want lexicographically first %s", resolved, alphaCode)
 	}
 
-	alphaDisabledInput := j026UpsertInput(actorID, "j026-alpha-disable-"+suffix, "J026 Alpha", false, alpha.Version)
+	alphaDisabledInput := j026UpsertInput(actorID, "j026-alpha-disable-"+suffix, "J026 Alpha", polygon, false, alpha.Version)
 	alphaDisabled, err := Upsert(context.Background(), db, alphaCode, alphaDisabledInput)
 	if err != nil {
 		t.Fatal(err)
@@ -92,7 +109,7 @@ func TestServiceAreaResolutionUsesEffectiveHistoryAndDeterministicOverlapDBInteg
 		t.Fatalf("alpha version=%d, want %d", alphaDisabled.Version, alpha.Version+1)
 	}
 
-	resolved, err = Resolve(context.Background(), db, -79.5, -169.5)
+	resolved, err = Resolve(context.Background(), db, resolveLatitude, resolveLongitude)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +139,7 @@ func TestServiceAreaResolutionUsesEffectiveHistoryAndDeterministicOverlapDBInteg
 }
 
 func TestServiceAreaEffectivityValidationFailsBeforePersistence(t *testing.T) {
-	base := j026UpsertInput("operator-j026-validation", "j026-validation-key", "Validation Area", true, 0)
+	base := j026UpsertInput("operator-j026-validation", "j026-validation-key", "Validation Area", j026Polygon(), true, 0)
 
 	invalidSRID := base
 	invalidSRID.SRID = 3857

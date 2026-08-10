@@ -192,7 +192,7 @@ func RegisterGovernedIncidentRoutes(
 	mux.HandleFunc("PATCH /dsh/operator/support/incidents/{incidentId}", protected.withPermission("control-panel", SupportPermissionManage, protected.handleUpdateGovernedIncident))
 	mux.HandleFunc("GET /dsh/operator/support/incidents/{incidentId}/events", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListGovernedIncidentEvents))
 	mux.HandleFunc("POST /dsh/operator/support/incidents/{incidentId}/tasks", protected.withPermission("control-panel", SupportPermissionManage, protected.handleCreateIncidentTask))
-	mux.HandleFunc("PATCH /dsh/operator/support/incidents/tasks/{taskId}", protected.withPermission("control-panel", SupportPermissionManage, protected.handleUpdateIncidentTask))
+	mux.HandleFunc("PATCH /dsh/operator/support/incident-tasks/{taskId}", protected.withPermission("control-panel", SupportPermissionManage, protected.handleUpdateIncidentTask))
 	mux.HandleFunc("POST /dsh/operator/support/incidents/{incidentId}/communications", protected.withPermission("control-panel", SupportPermissionManage, protected.handleCreateIncidentCommunication))
 	mux.HandleFunc("POST /dsh/operator/support/incidents/{incidentId}/entities", protected.withPermission("control-panel", SupportPermissionManage, protected.handleCreateIncidentEntity))
 }

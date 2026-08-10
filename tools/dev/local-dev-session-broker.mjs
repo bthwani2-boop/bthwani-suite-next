@@ -8,12 +8,16 @@ import {
   getPasswordToken,
   issueProviderSession,
   readGeneratedRegistry,
+  provisionLocalWorkforceActors,
+  HttpError,
 } from './local-workforce-provisioning.mjs';
 
 const PORT = Number(process.env.BTHWANI_DEV_SESSION_BROKER_PORT || 58100);
 const HOST = '127.0.0.1';
+const BROKER_CONTRACT_VERSION = 2;
 const MAX_BODY_BYTES = 16 * 1024;
 const ROLE_SURFACE = Object.freeze({
+  operator: 'control-panel',
   client: 'app-client',
   partner: 'app-partner',
   field: 'app-field',
@@ -82,26 +86,49 @@ async function createSessionForRole(role, surface, deviceFingerprint) {
   }
 
   let pair;
-  if (role === 'client' || role === 'partner') {
+  if (role === 'operator' || role === 'client' || role === 'partner') {
     pair = await getPasswordSession(
       LOCAL_ACTORS[role].username,
       deviceFingerprint.trim(),
     );
   } else {
-    const registry = readGeneratedRegistry();
-    const provisioned = registry?.actors?.[role];
-    if (!provisioned?.actorId) {
-      throw new Error(`DEV_SESSION_${role.toUpperCase()}_NOT_PROVISIONED`);
+    let registry = readGeneratedRegistry();
+    let provisioned = registry?.actors?.[role];
+    const operatorToken = await getPasswordToken(LOCAL_ACTORS.operator.username);
+
+    if (provisioned?.actorId) {
+      try {
+        pair = await issueProviderSession(
+          operatorToken,
+          role,
+          provisioned.actorId,
+          LOCAL_WORKFORCE_PROVIDERS[role].phoneE164,
+          deviceFingerprint.trim(),
+        );
+      } catch (error) {
+        if (error instanceof HttpError && error.status === 404 && error.message.includes('ACTOR_NOT_FOUND')) {
+          provisioned = null;
+        } else {
+          throw error;
+        }
+      }
     }
 
-    const operatorToken = await getPasswordToken(LOCAL_ACTORS.operator.username);
-    pair = await issueProviderSession(
-      operatorToken,
-      role,
-      provisioned.actorId,
-      LOCAL_WORKFORCE_PROVIDERS[role].phoneE164,
-      deviceFingerprint.trim(),
-    );
+    if (!provisioned?.actorId) {
+      console.log(`[local-dev-session-broker] Auto-provisioning workforce actors for wiped database...`);
+      const { actors } = await provisionLocalWorkforceActors(operatorToken);
+      provisioned = actors[role];
+      if (!provisioned?.actorId) {
+        throw new Error(`DEV_SESSION_${role.toUpperCase()}_NOT_PROVISIONED`);
+      }
+      pair = await issueProviderSession(
+        operatorToken,
+        role,
+        provisioned.actorId,
+        LOCAL_WORKFORCE_PROVIDERS[role].phoneE164,
+        deviceFingerprint.trim(),
+      );
+    }
   }
 
   if (!pair?.identity?.roles?.includes(role)) {
@@ -129,6 +156,8 @@ const server = http.createServer(async (req, res) => {
     sendJson(res, 200, {
       status: 'healthy',
       service: 'local-dev-session-broker',
+      contractVersion: BROKER_CONTRACT_VERSION,
+      pid: process.pid,
     });
     return;
   }
@@ -155,5 +184,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Local development session broker listening on http://${HOST}:${PORT}`);
+  console.log(`Local development session broker v${BROKER_CONTRACT_VERSION} listening on http://${HOST}:${PORT}`);
 });

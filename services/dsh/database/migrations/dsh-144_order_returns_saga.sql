@@ -56,11 +56,11 @@ CREATE TABLE IF NOT EXISTS dsh_order_return_actions (
 );
 
 -- Partial unique index to guarantee single-active-action concurrency.
-CREATE UNIQUE INDEX IF NOT EXISTS idx_dsh_order_return_actions_active 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_dsh_order_return_actions_active
     ON dsh_order_return_actions(return_id) WHERE status = 'pending';
 
 -- Idempotency key uniqueness per return case.
-CREATE UNIQUE INDEX IF NOT EXISTS idx_dsh_order_return_actions_idempotency 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_dsh_order_return_actions_idempotency
     ON dsh_order_return_actions(return_id, idempotency_key);
 
 COMMIT;

@@ -1,6 +1,12 @@
+param(
+  [Parameter(Mandatory = $true)]
+  [string]$StatePath
+)
+
 Set-StrictMode -Version Latest
 
 . (Join-Path $PSScriptRoot "../../../../tools/dev/local-actors.ps1")
+. (Join-Path $PSScriptRoot "../../../../tools/dev/local-workforce-actors.ps1")
 $ErrorActionPreference = "Stop"
 
 $identityPassword = Get-LocalPassword
@@ -20,13 +26,26 @@ $operatorHeaders = @{
   "X-Correlation-ID" = "smoke-operator-$([guid]::NewGuid())"
 }
 $partnerToken = Get-LocalActorToken (Get-LocalUsername "partner")
+$partnerActor = Get-LocalActor "partner"
 $partnerHeaders = @{
   Authorization = "Bearer $partnerToken"
   "X-Correlation-ID" = "smoke-partner-$([guid]::NewGuid())"
 }
 
+if (-not (Test-Path -LiteralPath $StatePath -PathType Leaf)) {
+  throw "Partner Onboarding & Store Publication requires catalog smoke state: $StatePath"
+}
+$catalogState = Get-Content -LiteralPath $StatePath -Raw | ConvertFrom-Json
+$smokeCatalogProductId = [string]$catalogState.masterProductId
+if ([string]::IsNullOrWhiteSpace($smokeCatalogProductId)) {
+  throw "Partner Onboarding & Store Publication catalog state has no masterProductId"
+}
+
 # Partner Onboarding & Store Publication: partner lifecycle from field draft to client-visible store readiness.
-$fieldToken = Get-LocalActorToken (Get-LocalUsername "field")
+$fieldToken = Get-ProvisionedWorkforceActorToken `
+  -Kind "field" `
+  -OperatorToken $operatorToken `
+  -DeviceFingerprint "dsh-partner-onboarding"
 $fieldHeaders = @{
   Authorization = "Bearer $fieldToken"
   "X-Correlation-ID" = "smoke-partner-field-$([guid]::NewGuid())"
@@ -38,12 +57,18 @@ $partnerDraftBody = @{
   displayName = "شريك فحص $partnerSuffix"
   legalIdentityType = "commercial_register"
   legalIdentityNumber = "YE-SMOKE-$partnerSuffix"
-  ownerName = "مالك فحص الشركاء"
+  ownerActorId = [string]$partnerActor.actorId
   primaryPhone = "+96777$($partnerSuffix.ToString().Substring($partnerSuffix.ToString().Length - 7))"
   category = "grocery"
   notes = "Partner Onboarding & Store Publication runtime smoke"
 } | ConvertTo-Json
-$partnerDraft = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/drafts" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $partnerDraftBody -TimeoutSec 10
+$partnerDraftHeaders = @{}
+foreach ($key in $fieldHeaders.Keys) {
+  $partnerDraftHeaders[$key] = $fieldHeaders[$key]
+}
+$partnerDraftHeaders["X-Correlation-ID"] = "smoke-partner-draft-$([guid]::NewGuid())"
+$partnerDraftHeaders["Idempotency-Key"] = "smoke-partner-draft-$partnerSuffix-$([guid]::NewGuid())"
+$partnerDraft = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/drafts" -Method Post -Headers $partnerDraftHeaders -ContentType "application/json" -Body $partnerDraftBody -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($partnerDraft.id)) { throw "Partner Onboarding & Store Publication draft create did not return partner id" }
 if (-not $partnerDraft.version) { throw "Partner Onboarding & Store Publication draft create did not return partner version" }
 
@@ -78,6 +103,25 @@ if ([string]::IsNullOrWhiteSpace($updatedStore.store.addressLine)) { throw "Part
 if ([string]::IsNullOrWhiteSpace($updatedStore.store.operatingHours)) { throw "Partner Onboarding & Store Publication store operating profile was not persisted" }
 if ([string]::IsNullOrWhiteSpace($updatedStore.store.deliveryReadiness)) { throw "Partner Onboarding & Store Publication store delivery readiness was not persisted" }
 
+# The authenticated owner configures bounded operating settings. This proves
+# that the partner/store actor binding created by onboarding is usable and gives
+# publication a real delivery mode instead of relying on seed defaults.
+$settingsHeaders = @{}
+foreach ($key in $partnerHeaders.Keys) {
+  $settingsHeaders[$key] = $partnerHeaders[$key]
+}
+$settingsHeaders["X-Correlation-ID"] = "smoke-partner-store-settings-$([guid]::NewGuid())"
+$settingsHeaders["Idempotency-Key"] = "smoke-partner-store-settings-$smokeStoreId-$([guid]::NewGuid())"
+$settingsBody = @{
+  expectedVersion = [int]$updatedStore.store.version
+  status = "ready"
+  deliveryModes = @("delivery", "pickup")
+  reason = "Partner Onboarding & Store Publication operating settings complete"
+} | ConvertTo-Json
+$settings = Invoke-RestMethod "http://localhost:58080/dsh/partner/stores/$smokeStoreId/settings" -Method Patch -Headers $settingsHeaders -ContentType "application/json" -Body $settingsBody -TimeoutSec 10
+if ($settings.store.status -ne "ready") { throw "Partner Onboarding & Store Publication store settings did not reach ready" }
+if (@($settings.store.deliveryModes).Count -lt 1) { throw "Partner Onboarding & Store Publication store settings did not persist delivery modes" }
+
 # Submission readiness also requires an active WLT-owned payout destination.
 # DSH receives only the durable WLT reference and masked display fields.
 $payoutHeaders = @{}
@@ -89,7 +133,6 @@ $payoutHeaders["Idempotency-Key"] = "smoke-partner-payout-$($partnerDraft.id)-$(
 $payoutHeaders["If-Match-Version"] = [string]$partnerDraft.version
 $payoutBody = @{
   displayName = "شريك فحص $partnerSuffix"
-  ownerName = "مالك فحص الشركاء"
   primaryPhone = "+96777$($partnerSuffix.ToString().Substring($partnerSuffix.ToString().Length - 7))"
   beneficiaryName = "مالك فحص الشركاء"
   bankName = "بنك فحص بثواني"
@@ -196,12 +239,51 @@ function Invoke-SmokeStoreGovernance([string] $StoreId, [string] $Action, [strin
   return $result.store
 }
 
-Invoke-SmokeStoreGovernance $smokeStoreId "lifecycle" "active" | Out-Null
 Invoke-SmokeStoreGovernance $smokeStoreId "visibility" "visible" | Out-Null
 Invoke-SmokeStoreGovernance $smokeStoreId "serviceability" "serviceable" | Out-Null
 Invoke-SmokeStoreGovernance $smokeStoreId "partner-readiness" "ready" | Out-Null
 Invoke-SmokeStoreGovernance $smokeStoreId "catalog-approval" "approved" | Out-Null
 Invoke-SmokeStoreGovernance $smokeStoreId "marketing-visibility" "visible" | Out-Null
+
+# Reuse approved local DAM assets but bind them to this newly created store as
+# its own primary logo/cover. The API performs atomic primary replacement and
+# updates the transitional store projection from canonical DAM truth.
+foreach ($storeImage in @(
+  @{ assetId = "asset-local-store-test-grocery-logo"; role = "store_logo" },
+  @{ assetId = "asset-local-store-test-grocery-cover"; role = "store_cover" }
+)) {
+  $imageLinkBody = @{
+    entityType = "store"
+    entityId = $smokeStoreId
+    role = $storeImage.role
+    sortOrder = 0
+    isPrimary = $true
+  } | ConvertTo-Json
+  $imageLink = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/assets/$($storeImage.assetId)/link" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $imageLinkBody -TimeoutSec 10
+  if (-not $imageLink.link.isPrimary -or $imageLink.link.status -ne "approved") {
+    throw "Partner Onboarding & Store Publication primary $($storeImage.role) DAM link was not approved"
+  }
+}
+
+# Attach a real approved central-catalog product to the new store. The preceding
+# catalog-approval action owns and approves the store/domain association in the
+# same transaction, so this assortment can satisfy the sovereign public gate.
+$assortmentBody = @{
+  unitPrice = 25.00
+  currency = "YER"
+  available = $true
+  stockStatus = "in_stock"
+  publicationStatus = "client_visible"
+} | ConvertTo-Json
+$assortment = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/$smokeStoreId/assortment/$smokeCatalogProductId" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $assortmentBody -TimeoutSec 10
+if ($assortment.assortment.publicationStatus -ne "client_visible" -or -not $assortment.assortment.available) {
+  throw "Partner Onboarding & Store Publication approved assortment was not persisted"
+}
+
+# published is the canonical store lifecycle. It is allowed only after every
+# store-owned gate is complete, while public reads remain closed until the
+# following audited partner client_visible transition commits.
+Invoke-SmokeStoreGovernance $smokeStoreId "lifecycle" "published" | Out-Null
 
 Invoke-PartnerTransition $partnerDraft.id "client_visible" | Out-Null
 $readiness = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/readiness" -Headers $operatorHeaders -TimeoutSec 10
@@ -211,6 +293,14 @@ if ($audit.events.Count -lt 7) { throw "Partner Onboarding & Store Publication a
 if ($audit.events[$audit.events.Count - 1].toStatus -ne "client_visible") { throw "Partner Onboarding & Store Publication audit final status is not client_visible" }
 $linkedStore = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/$smokeStoreId" -Headers $operatorHeaders -TimeoutSec 10
 if ($linkedStore.store.partnerReadiness -ne "ready") { throw "Partner Onboarding & Store Publication linked store partner_readiness is not ready" }
+if (-not $linkedStore.store.publicationEligible) { throw "Partner Onboarding & Store Publication operator readback is not publication eligible" }
+
+$publicStore = Invoke-RestMethod "http://localhost:58080/dsh/stores/$smokeStoreId" -TimeoutSec 10
+if ($publicStore.store.id -ne $smokeStoreId -or -not $publicStore.store.publicationEligible) {
+  throw "Partner Onboarding & Store Publication app-client store readback is not eligible"
+}
+$publicCatalog = Invoke-RestMethod "http://localhost:58080/dsh/stores/$smokeStoreId/catalog" -TimeoutSec 10
+if (@($publicCatalog.products).Count -lt 1) { throw "Partner Onboarding & Store Publication app-client catalog is empty" }
 
 $partnerSelfStatus = Invoke-RestMethod "http://localhost:58080/dsh/partner/activation/status" -Headers $partnerHeaders -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($partnerSelfStatus.activationStatus)) { throw "Partner Onboarding & Store Publication partner self status missing activationStatus" }

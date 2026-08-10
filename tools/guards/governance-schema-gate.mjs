@@ -115,7 +115,7 @@ requireExactDirectory("governance/product", ["PRD.md", "platform-model.yaml", "p
 requireExactDirectory("governance/tools", ["agent-tool-registry.json"]);
 requireExactDirectory(".agents", ["INDEX.md"], ["skills", "tools"]);
 requireExactDirectory(".agents/tools", ["README.md", "graphify.md", "leanctx.md", "open-code-review.md"]);
-requireExactDirectory("tools/prompting", ["01-diagnose-plan-package.md", "02-execute-to-evidence.md", "03-independent-review-and-close.md"]);
+requireExactDirectory("tools/prompting", ["01-diagnose-plan-package.md", "02-execute-verify-close.md"]);
 requireExactDirectory("plans", [], ["diagnose-implementing", "smsm-dsh-wlt-journeys"]);
 
 for (const required of [

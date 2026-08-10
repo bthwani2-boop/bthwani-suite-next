@@ -14,6 +14,10 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
+import {
+  loadExistingMigrationStates,
+  resolveMigrationState,
+} from "./lib/migration-manifest-state.mjs";
 
 const repositoryRoot = path.resolve(new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"), "../..");
 
@@ -45,6 +49,12 @@ if (!fs.existsSync(migrationsDir)) {
   console.error(`Migrations directory not found: ${relativeDir}`);
   process.exit(1);
 }
+
+const manifestPath = path.join(migrationsDir, "manifest.json");
+const existingManifest = fs.existsSync(manifestPath)
+  ? JSON.parse(fs.readFileSync(manifestPath, "utf8"))
+  : null;
+const existingStates = loadExistingMigrationStates(existingManifest, service);
 
 function canonicalSqlBuffer(buffer) {
   const text = buffer.toString("utf8");
@@ -87,7 +97,7 @@ const migrations = files.map((file, index) => {
     file,
     sha256,
     historicalPrefix: prefixMatch ? prefixMatch[1] : null,
-    state: "HISTORICAL_IMMUTABLE",
+    state: resolveMigrationState(file, existingStates, existingManifest !== null),
   };
 });
 
@@ -100,6 +110,5 @@ const manifest = {
   migrations,
 };
 
-const manifestPath = path.join(migrationsDir, "manifest.json");
 fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
 console.log(`Wrote ${path.relative(repositoryRoot, manifestPath)} (${migrations.length} migrations)`);

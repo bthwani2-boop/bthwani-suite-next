@@ -32,7 +32,7 @@ export function ActorSessionsTab(props: { readonly actorId: string }) {
 
   const handleRevokeSession = async (sessionId: string) => {
     if (!window.confirm("هل أنت متأكد من إبطال هذه الجلسة؟")) return;
-    
+
     setRevoking(sessionId);
     try {
       await revokeSession(props.actorId, sessionId);
@@ -83,9 +83,9 @@ export function ActorSessionsTab(props: { readonly actorId: string }) {
               </Text>
             </div>
             <div>
-              <CpButton 
+              <CpButton
                 variant="danger"
-                onClick={() => handleRevokeSession(s.sessionId)} 
+                onClick={() => handleRevokeSession(s.sessionId)}
                 disabled={revoking === s.sessionId}
               >
                 {revoking === s.sessionId ? "جاري الإبطال..." : "إبطال الجلسة"}

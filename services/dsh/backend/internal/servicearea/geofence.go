@@ -143,6 +143,11 @@ func Upsert(ctx context.Context, db *sql.DB, serviceAreaCode string, input Upser
 		expiresAt := input.ExpiresAt.UTC()
 		input.ExpiresAt = &expiresAt
 	}
+	normalizedPolygon, polygonValid := normalizePolygonRing(input.Polygon)
+	if !polygonValid || !validPolygonTopology(normalizedPolygon) {
+		return Geofence{}, ErrInvalid
+	}
+	input.Polygon = normalizedPolygon
 	if !serviceAreaCodePattern.MatchString(serviceAreaCode) || input.DisplayName == "" || len(input.DisplayName) > 160 || len(input.Reason) < 3 || len(input.Reason) > 500 || input.ActorID == "" || input.ActorSurface == "" || len(input.IdempotencyKey) < 8 || input.Priority < 0 || input.Priority > 100000 || input.SRID != serviceAreaSRID || input.OverlapPolicy != serviceAreaOverlapPolicy || (!input.EffectiveFrom.IsZero() && input.EffectiveFrom.Before(time.Now().UTC().Add(-time.Second))) || (input.ExpiresAt != nil && !input.EffectiveFrom.IsZero() && !input.ExpiresAt.After(input.EffectiveFrom)) || input.ExpectedVersion < 0 {
 		return Geofence{}, ErrInvalid
 	}
@@ -212,18 +217,18 @@ func Upsert(ctx context.Context, db *sql.DB, serviceAreaCode string, input Upser
 	var action string
 	var fromVersion any
 	var polygonJSON []byte
-		// Convert [][]float64 to a GeoJSON Polygon representation for PostGIS
-		geoJSONBytes, _ := json.Marshal(map[string]interface{}{
-			"type":        "Polygon",
-			"coordinates": [][][]float64{input.Polygon},
-		})
-		geoJSONStr := string(geoJSONBytes)
+	// Convert [][]float64 to a GeoJSON Polygon representation for PostGIS
+	geoJSONBytes, _ := json.Marshal(map[string]interface{}{
+		"type":        "Polygon",
+		"coordinates": [][][]float64{closePolygonRing(input.Polygon)},
+	})
+	geoJSONStr := string(geoJSONBytes)
 
-		if !found {
-			if input.ExpectedVersion != 0 {
-				return Geofence{}, ErrVersionConflict
-			}
-			err = tx.QueryRowContext(ctx, `
+	if !found {
+		if input.ExpectedVersion != 0 {
+			return Geofence{}, ErrVersionConflict
+		}
+		err = tx.QueryRowContext(ctx, `
 				INSERT INTO dsh_service_area_geofences
 					(service_area_code, display_name, polygon, active, priority,
 					 srid, overlap_policy, effective_from, expires_at)
@@ -231,24 +236,28 @@ func Upsert(ctx context.Context, db *sql.DB, serviceAreaCode string, input Upser
 				RETURNING service_area_code, display_name, ST_AsGeoJSON(polygon)::jsonb->'coordinates'->0, active, priority,
 				          srid, overlap_policy, effective_from, expires_at,
 				          version, created_at, updated_at`,
-				serviceAreaCode, input.DisplayName, geoJSONStr, input.Active, input.Priority,
-				input.SRID, input.OverlapPolicy, effectiveFrom, input.ExpiresAt,
-			).Scan(&result.ServiceAreaCode, &result.DisplayName, &polygonJSON, &result.Active, &result.Priority,
-				&result.SRID, &result.OverlapPolicy, &result.EffectiveFrom, &result.ExpiresAt,
-				&result.Version, &result.CreatedAt, &result.UpdatedAt)
-			if err != nil {
-				return Geofence{}, err
-			}
-			if err := json.Unmarshal(polygonJSON, &result.Polygon); err != nil {
-				return Geofence{}, err
-			}
-			action = "created"
-			fromVersion = nil
-		} else {
-			if input.ExpectedVersion != before.Version {
-				return Geofence{}, ErrVersionConflict
-			}
-			err = tx.QueryRowContext(ctx, `
+			serviceAreaCode, input.DisplayName, geoJSONStr, input.Active, input.Priority,
+			input.SRID, input.OverlapPolicy, effectiveFrom, input.ExpiresAt,
+		).Scan(&result.ServiceAreaCode, &result.DisplayName, &polygonJSON, &result.Active, &result.Priority,
+			&result.SRID, &result.OverlapPolicy, &result.EffectiveFrom, &result.ExpiresAt,
+			&result.Version, &result.CreatedAt, &result.UpdatedAt)
+		if err != nil {
+			return Geofence{}, err
+		}
+		if err := json.Unmarshal(polygonJSON, &result.Polygon); err != nil {
+			return Geofence{}, err
+		}
+		result.Polygon, polygonValid = normalizePolygonRing(result.Polygon)
+		if !polygonValid {
+			return Geofence{}, ErrInvalid
+		}
+		action = "created"
+		fromVersion = nil
+	} else {
+		if input.ExpectedVersion != before.Version {
+			return Geofence{}, ErrVersionConflict
+		}
+		err = tx.QueryRowContext(ctx, `
 				UPDATE dsh_service_area_geofences
 				SET display_name = $2, polygon = ST_GeomFromGeoJSON($3), active = $4, priority = $5,
 					srid = $6, overlap_policy = $7, effective_from = $8, expires_at = $9,
@@ -257,17 +266,21 @@ func Upsert(ctx context.Context, db *sql.DB, serviceAreaCode string, input Upser
 				RETURNING service_area_code, display_name, ST_AsGeoJSON(polygon)::jsonb->'coordinates'->0, active, priority,
 				          srid, overlap_policy, effective_from, expires_at,
 				          version, created_at, updated_at`,
-				serviceAreaCode, input.DisplayName, geoJSONStr, input.Active, input.Priority,
-				input.SRID, input.OverlapPolicy, effectiveFrom, input.ExpiresAt,
-			).Scan(&result.ServiceAreaCode, &result.DisplayName, &polygonJSON, &result.Active, &result.Priority,
-				&result.SRID, &result.OverlapPolicy, &result.EffectiveFrom, &result.ExpiresAt,
-				&result.Version, &result.CreatedAt, &result.UpdatedAt)
-			if err != nil {
-				return Geofence{}, err
-			}
-			if err := json.Unmarshal(polygonJSON, &result.Polygon); err != nil {
-				return Geofence{}, err
-			}
+			serviceAreaCode, input.DisplayName, geoJSONStr, input.Active, input.Priority,
+			input.SRID, input.OverlapPolicy, effectiveFrom, input.ExpiresAt,
+		).Scan(&result.ServiceAreaCode, &result.DisplayName, &polygonJSON, &result.Active, &result.Priority,
+			&result.SRID, &result.OverlapPolicy, &result.EffectiveFrom, &result.ExpiresAt,
+			&result.Version, &result.CreatedAt, &result.UpdatedAt)
+		if err != nil {
+			return Geofence{}, err
+		}
+		if err := json.Unmarshal(polygonJSON, &result.Polygon); err != nil {
+			return Geofence{}, err
+		}
+		result.Polygon, polygonValid = normalizePolygonRing(result.Polygon)
+		if !polygonValid {
+			return Geofence{}, ErrInvalid
+		}
 		action = "updated"
 		if before.Active != result.Active {
 			if result.Active {
@@ -288,7 +301,7 @@ func Upsert(ctx context.Context, db *sql.DB, serviceAreaCode string, input Upser
 	}
 	versionGeoJSONBytes, _ := json.Marshal(map[string]interface{}{
 		"type":        "Polygon",
-		"coordinates": [][][]float64{result.Polygon},
+		"coordinates": [][][]float64{closePolygonRing(result.Polygon)},
 	})
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_service_area_versions (
@@ -333,6 +346,11 @@ func scanGeofence(row rowScanner) (Geofence, error) {
 	if err := json.Unmarshal(polygon, &item.Polygon); err != nil {
 		return Geofence{}, err
 	}
+	normalizedPolygon, valid := normalizePolygonRing(item.Polygon)
+	if !valid {
+		return Geofence{}, ErrInvalid
+	}
+	item.Polygon = normalizedPolygon
 	return item, nil
 }
 

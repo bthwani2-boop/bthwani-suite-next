@@ -52,7 +52,7 @@ func seedCheckoutIntentFixture(t *testing.T, db *sql.DB, paymentSessionID string
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
-		VALUES ($1, $1, 'Checkout Finance Outbox Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true)`,
+		VALUES ($1, $1, 'Checkout Finance Outbox Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true)`,
 		storeID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
@@ -60,7 +60,7 @@ func seedCheckoutIntentFixture(t *testing.T, db *sql.DB, paymentSessionID string
 
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_checkout_intents (operator_context_id, client_id, cart_id, store_id, state, payment_method, wlt_payment_session_id, subtotal_minor_units, delivery_fee_minor_units, discount_minor_units, total_minor_units, currency, pricing_snapshot_hash)
-		VALUES ($1, $2, gen_random_uuid(), $3, 'payment_pending', 'cod', $4,
+		VALUES ($1, $2, gen_random_uuid(), $3, 'confirming', 'cod', $4,
 		        1000, 0, 0, 1000, 'YER', repeat('e', 64))
 		RETURNING id::text`,
 		operatorContextID, clientID, storeID, paymentSessionID,
@@ -157,7 +157,7 @@ func TestProcessOnceDispatchesCancelForOrderDBIntegration(t *testing.T) {
 	storeID := uniqueID("checkout-finance-outbox-order-store")
 	if _, err := db.Exec(`
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
-		VALUES ($1, $1, 'Checkout Finance Outbox Order Store', 'active', 'SAN', 'SAN-1', 'serviceable', true)`,
+		VALUES ($1, $1, 'Checkout Finance Outbox Order Store', 'published', 'SAN', 'SAN-1', 'serviceable', true)`,
 		storeID); err != nil {
 		t.Fatalf("failed to insert order store: %v", err)
 	}
@@ -209,12 +209,9 @@ func TestProcessOnceDispatchesCancelForOrderDBIntegration(t *testing.T) {
 		t.Fatalf("ProcessOnce failed: %v", err)
 	}
 
-	expectedPath := "/wlt/order-cancellations"
+	expectedPath := "/wlt/payment-sessions/" + paymentSessionID + "/cancel-for-order"
 	if gotPath != expectedPath {
 		t.Fatalf("expected path %q, got %q", expectedPath, gotPath)
-	}
-	if gotBody["paymentSessionId"] != paymentSessionID {
-		t.Fatalf("expected paymentSessionId=%q, got %v", paymentSessionID, gotBody["paymentSessionId"])
 	}
 	if gotBody["orderId"] != orderID {
 		t.Fatalf("expected orderId=%q, got %v", orderID, gotBody["orderId"])

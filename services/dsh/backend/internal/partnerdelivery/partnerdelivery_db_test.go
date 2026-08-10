@@ -50,13 +50,13 @@ func openRequiredDB(t *testing.T) *sql.DB {
 }
 
 type fixture struct {
-	operatorContextID  string
-	partnerID string
-	storeID   string
-	clientID  string
-	orderID   string
-	courierID string
-	proofRef  string
+	operatorContextID string
+	partnerID         string
+	storeID           string
+	clientID          string
+	orderID           string
+	courierID         string
+	proofRef          string
 }
 
 func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
@@ -64,11 +64,11 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 	f := fixture{
-		operatorContextID:  "pd-test-OperatorContext-" + suffix,
-		partnerID: "pd-test-partner-" + suffix,
-		storeID:   "pd-test-store-" + suffix,
-		clientID:  "pd-test-client-" + suffix,
-		proofRef:  "proof://partner-delivery/" + suffix,
+		operatorContextID: "pd-test-OperatorContext-" + suffix,
+		partnerID:         "pd-test-partner-" + suffix,
+		storeID:           "pd-test-store-" + suffix,
+		clientID:          "pd-test-client-" + suffix,
+		proofRef:          "proof://partner-delivery/" + suffix,
 	}
 
 	if _, err := db.ExecContext(ctx, `
@@ -88,7 +88,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	var cartID string
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_carts (client_id, store_id, fulfillment_mode, state)
-		VALUES ($1, $2, 'partner_delivery', 'published')
+		VALUES ($1, $2, 'partner_delivery', 'active')
 		RETURNING id::text`,
 		f.clientID, f.storeID,
 	).Scan(&cartID); err != nil {
@@ -102,7 +102,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 			subtotal_minor_units, delivery_fee_minor_units, discount_minor_units,
 			total_minor_units, currency, pricing_snapshot_hash
 		)
-		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'partner_delivery', 'wallet',
+		VALUES ($1, $2, $3::uuid, $4, 'confirmed', 'partner_delivery', 'wallet',
 		        1000, 0, 0, 1000, 'YER', repeat('d', 64))
 		RETURNING id::text`,
 		f.operatorContextID, f.clientID, cartID, f.storeID,

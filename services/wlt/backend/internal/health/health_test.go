@@ -62,6 +62,7 @@ func TestReadinessSucceedsOnlyWithGovernedFinancialSchema(t *testing.T) {
 }
 
 type migrationManifestDocument struct {
+	Cutover    string `json:"cutover"`
 	Migrations []struct {
 		Ordinal int    `json:"ordinal"`
 		File    string `json:"file"`
@@ -75,33 +76,24 @@ func TestReadinessMigrationMatchesGovernedManifestSet(t *testing.T) {
 		t.Fatal("cannot resolve test source path")
 	}
 	migrationDirectory := filepath.Clean(filepath.Join(filepath.Dir(testFile), "../../../database/migrations"))
-	manifestPaths := []string{
-		filepath.Join(migrationDirectory, "manifest.json"),
-		filepath.Join(migrationDirectory, "manifest.extensions.json"),
+	manifestPath := filepath.Join(migrationDirectory, "manifest.json")
+	content, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
 	}
-
+	var manifest migrationManifestDocument
+	if err := json.Unmarshal(content, &manifest); err != nil {
+		t.Fatal(err)
+	}
 	latestOrdinal := -1
-	latestActive := ""
-	for _, manifestPath := range manifestPaths {
-		content, err := os.ReadFile(manifestPath)
-		if err != nil {
-			if errors.Is(err, os.ErrNotExist) && filepath.Base(manifestPath) == "manifest.extensions.json" {
-				continue
-			}
-			t.Fatal(err)
-		}
-		var manifest migrationManifestDocument
-		if err := json.Unmarshal(content, &manifest); err != nil {
-			t.Fatal(err)
-		}
-		for _, migration := range manifest.Migrations {
-			if migration.State == "ACTIVE" && migration.Ordinal > latestOrdinal {
-				latestOrdinal = migration.Ordinal
-				latestActive = migration.File
-			}
+	latestRequired := manifest.Cutover
+	for _, migration := range manifest.Migrations {
+		if migration.State == "ACTIVE" && migration.Ordinal > latestOrdinal {
+			latestOrdinal = migration.Ordinal
+			latestRequired = migration.File
 		}
 	}
-	if latestActive != wltLatestMigration {
-		t.Fatalf("WLT readiness migration drift: latest_active=%s runtime=%s", latestActive, wltLatestMigration)
+	if latestRequired != wltLatestMigration {
+		t.Fatalf("WLT readiness migration drift: latest_required=%s runtime=%s", latestRequired, wltLatestMigration)
 	}
 }

@@ -73,18 +73,18 @@ func ExportSettlementBatch(ctx context.Context, db *sql.DB, batchID string) (*Se
 	}
 
 	rows, err := db.QueryContext(ctx, `
-		SELECT 
-			s.id, 
-			s.payout_request_id, 
-			d.beneficiary_name, 
-			s.beneficiary_actor_id, 
-			s.beneficiary_actor_type, 
-			d.destination_method, 
-			d.masked_destination_reference, 
-			s.amount_minor_units, 
-			s.currency, 
-			s.snapshot_hash, 
-			s.approved_by_operator_id, 
+		SELECT
+			s.id,
+			s.payout_request_id,
+			d.beneficiary_name,
+			s.beneficiary_actor_id,
+			s.beneficiary_actor_type,
+			d.destination_method,
+			d.masked_destination_reference,
+			s.amount_minor_units,
+			s.currency,
+			s.snapshot_hash,
+			s.approved_by_operator_id,
 			s.created_at::text
 		FROM wlt_settlement_batch_rows br
 		JOIN wlt_approved_payout_snapshots s ON s.id = br.approved_snapshot_id

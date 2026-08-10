@@ -104,6 +104,9 @@ if (rootPkg.pnpm) fail("root package.json must not contain pnpm config; use pnpm
 if (!/^\d+\.\d+\.\d+$/.test(manifest.global.version) || manifest.global.version === "0.1.0") {
   fail("mobile release version must be an intentional semver newer than the bootstrap 0.1.0");
 }
+if (!/^npm:@typescript\/typescript6@\d+\.\d+\.\d+$/.test(manifest.global.runtimeTypeScript ?? "")) {
+  fail("mobile runtime TypeScript must be a pinned @typescript/typescript6 compatibility alias");
+}
 
 const expectedChannels = {
   development: "development",
@@ -118,7 +121,9 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   const eas = readJson(path.join("apps", key, "runtime", "eas.json"));
   const features = app.features ?? [];
 
-  if (pkg.devDependencies?.typescript !== "7.0.2") fail(`${key}: TypeScript must be 7.0.2`);
+  if (pkg.devDependencies?.typescript !== manifest.global.runtimeTypeScript) {
+    fail(`${key}: runtime TypeScript must be ${manifest.global.runtimeTypeScript}`);
+  }
   if (pkg.scripts?.typecheck !== "tsc --noEmit -p tsconfig.json") fail(`${key}: strict typecheck script is required`);
   if (!pkg.dependencies?.["@sentry/react-native"]) fail(`${key}: @sentry/react-native is required`);
   if (!pkg.dependencies?.["@bthwani/data-runtime"]) fail(`${key}: @bthwani/data-runtime is required`);

@@ -1,6 +1,10 @@
 # trivy.yaml
 # BThwani Trivy vulnerability scanner configuration
 
+exit-code: 1
+ignorefile: .trivyignore.yaml
+skip-version-check: true
+
 scan:
   file-systems: true
   secrets: true

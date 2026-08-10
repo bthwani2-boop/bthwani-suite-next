@@ -984,6 +984,7 @@ components:
         - authState
         - surfaceAccess
         - serviceAccess
+        - sessionSurface
         - sessionId
         - expiresAt
       properties:
@@ -1015,6 +1016,19 @@ components:
           type: object
           additionalProperties:
             type: boolean
+        sessionSurface:
+          type: string
+          enum:
+            [
+              app-client,
+              app-partner,
+              app-captain,
+              app-field,
+              control-panel,
+              webapp,
+              website,
+              system
+            ]
         sessionId:
           type: string
         expiresAt:

@@ -5,7 +5,8 @@
     "sourceRepo": "bthwani-suite-next",
     "version": "0.2.0",
     "node": "24.17.0",
-    "pnpm": "10.34.0"
+    "pnpm": "10.34.0",
+    "runtimeTypeScript": "npm:@typescript/typescript6@6.0.2"
   },
   "apps": {
     "app-client": {

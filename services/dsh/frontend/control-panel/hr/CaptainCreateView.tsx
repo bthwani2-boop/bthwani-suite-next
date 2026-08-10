@@ -30,7 +30,7 @@ export function CaptainCreateView(props: {
   const identityReason = identityRuntime.state.kind === "unavailable"
     ? identityRuntime.state.code
     : (runtimeValue?.reasonCodes ?? ["IDENTITY_READINESS_UNPROVEN"]).join("، ");
-  
+
   const [fullNameAr, setFullNameAr] = useState("");
   const [username, setUsername] = useState("");
   const [phoneE164, setPhoneE164] = useState("");
@@ -132,7 +132,7 @@ export function CaptainCreateView(props: {
 
       <div style={{ padding: "24px", backgroundColor: "var(--bthwani-control-panel-surface)", border: "1px solid var(--bthwani-control-panel-border)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px", boxShadow: "0 2px 8px var(--bthwani-overlay-soft)" }}>
         <Text role="titleMd" style={{ fontWeight: "800", color: "var(--bthwani-control-panel-text)", borderBottom: "1px solid var(--bthwani-control-panel-border)", paddingBottom: "12px", marginBottom: "4px" }}>الخدمة والعمليات</Text>
-        
+
         <div>
           <Text role="bodySm" style={{ marginBottom: "6px", display: "block", fontWeight: "600", color: "var(--bthwani-control-panel-text-muted)" }}>منطقة الخدمة الأساسية *</Text>
           <ZonePicker

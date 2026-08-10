@@ -12,7 +12,7 @@ export function ActorActivationTab({ actorId, role }: Props) {
   // Map internal identity roles to expected surfaces
   let expectedSurface = "app-admin";
   let expectedActorType = role.toLowerCase();
-  
+
   if (role === "FIELD") {
     expectedSurface = "app-field";
     expectedActorType = "field";

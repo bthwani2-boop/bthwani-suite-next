@@ -161,4 +161,3 @@ export function useEmployeeCreateController() {
   const reset = useCallback(() => setState({ kind: "idle" }), []);
   return { state, submit, resume, reset };
 }
-

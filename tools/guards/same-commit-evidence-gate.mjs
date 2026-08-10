@@ -52,7 +52,7 @@ if (!head) {
     ...findManifests(path.join(repoRoot, ".diagnostics")),
     ...findManifests(path.join(repoRoot, ".artifacts", "diagnostics"))
   ];
-  
+
   if (manifests.length === 0) {
     violations.push({ file: "evidence", line: 0, message: "NO_EVIDENCE_FOUND_FOR_COMMIT" });
   }

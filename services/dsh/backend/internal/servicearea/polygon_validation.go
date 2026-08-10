@@ -1,18 +1,42 @@
 package servicearea
 
-// validPolygon checks that the polygon ring has the minimum number of
-// vertices (≥3 points, plus the closing repeat) required to form a ring.
-// Detailed self-intersection checks are delegated to validPolygonTopology.
-func validPolygon(ring [][]float64) bool {
-	// A polygon ring must have at least 4 points (3 unique + 1 closing).
-	if len(ring) < 4 {
-		return false
+const maxServiceAreaPolygonPoints = 10000
+
+// normalizePolygonRing owns the boundary between the API representation and
+// PostGIS. The API accepts three or more unique longitude/latitude vertices
+// and may replay a PostGIS response whose final vertex closes the ring. The
+// domain representation is always unclosed so both forms hash identically.
+func normalizePolygonRing(ring [][]float64) ([][]float64, bool) {
+	if len(ring) < 3 || len(ring) > maxServiceAreaPolygonPoints+1 {
+		return nil, false
 	}
-	// Each point must have at least 2 coordinates (lon, lat).
-	for _, point := range ring {
-		if len(point) < 2 {
-			return false
+
+	normalized := make([][]float64, len(ring))
+	for index, point := range ring {
+		if len(point) != 2 || !validCoordinate(point[1], point[0]) {
+			return nil, false
 		}
+		normalized[index] = []float64{point[0], point[1]}
 	}
-	return true
+	if len(normalized) > 3 && samePoint(normalized[0], normalized[len(normalized)-1]) {
+		normalized = normalized[:len(normalized)-1]
+	}
+	if len(normalized) < 3 || len(normalized) > maxServiceAreaPolygonPoints {
+		return nil, false
+	}
+	return normalized, true
+}
+
+func closePolygonRing(ring [][]float64) [][]float64 {
+	closed := make([][]float64, 0, len(ring)+1)
+	for _, point := range ring {
+		closed = append(closed, []float64{point[0], point[1]})
+	}
+	closed = append(closed, []float64{ring[0][0], ring[0][1]})
+	return closed
+}
+
+func validPolygon(ring [][]float64) bool {
+	_, valid := normalizePolygonRing(ring)
+	return valid
 }

@@ -1,0 +1,19 @@
+vulnerabilities:
+  - id: CVE-2025-71329
+    paths:
+      - pnpm-lock.yaml
+    expired_at: 2026-09-30
+    statement: >-
+      No safe image-size release exists as of 2026-08-09. The affected
+      ISO-BMFF loop is patched in patches/image-size@1.2.1.patch and enforced
+      by guard:image-size-security. Remove this exception when upstream
+      publishes a fixed release.
+  - id: CVE-2025-71330
+    paths:
+      - pnpm-lock.yaml
+    expired_at: 2026-09-30
+    statement: >-
+      No safe image-size release exists as of 2026-08-09. The affected ICNS
+      loop is patched in patches/image-size@1.2.1.patch and enforced by
+      guard:image-size-security. Remove this exception when upstream publishes
+      a fixed release.

@@ -71,6 +71,7 @@ export function HomeDiscoveryShell({
   const [activeCategoryId, setActiveCategoryId] = React.useState<string | null>(null);
   const [showDropdown, setShowDropdown] = React.useState(false);
   const [searchText, setSearchText] = React.useState("");
+  const normalizedQuery = searchText.trim();
   const [reels, setReels] = React.useState<readonly HomePublicReel[]>([]);
   const [reelsLoadState, setReelsLoadState] = React.useState<HomeReelsLoadState>("idle");
   const [videoOpenRequest, setVideoOpenRequest] = React.useState(0);
@@ -209,8 +210,8 @@ export function HomeDiscoveryShell({
 
   React.useEffect(() => {
     if (state.kind !== "success") return;
-    
-    if (!searchText && activeFilter === 'all' && activeCategoryId === null) {
+
+    if (!normalizedQuery && activeFilter === 'all' && activeCategoryId === null) {
       setQueriedStores(null);
       return;
     }
@@ -220,7 +221,7 @@ export function HomeDiscoveryShell({
       fetchDiscoveryStores({
         ...(state.data.context.cityCode ? { cityCode: state.data.context.cityCode } : {}),
         ...(state.data.context.serviceAreaCode ? { serviceAreaCode: state.data.context.serviceAreaCode } : {}),
-        ...(searchText ? { search: searchText } : {}),
+        ...(normalizedQuery ? { search: normalizedQuery } : {}),
         ...(activeCategoryId ? { category: activeCategoryId } : {}),
         sort: activeFilter === 'nearest' ? 'distance' : 'rating',
         ...(activeFilter === 'offers' ? { isFreeDelivery: true } : {}),
@@ -234,7 +235,7 @@ export function HomeDiscoveryShell({
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [searchText, activeFilter, activeCategoryId, state.kind, state.kind === "success" ? state.data.context : null]);
+  }, [normalizedQuery, activeFilter, activeCategoryId, state.kind, state.kind === "success" ? state.data.context : null]);
 
   if (state.kind === "loading") {
     return <Screen padded={false}><LoadingState title="جاري التحميل..." /></Screen>;

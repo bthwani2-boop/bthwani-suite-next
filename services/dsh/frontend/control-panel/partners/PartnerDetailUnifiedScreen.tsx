@@ -248,7 +248,7 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                 {detail.mutationState.kind === "error" ? <CpStateView kind="error" title="تعذر تطبيق القرار" code={detail.mutationState.message} /> : null}
               </div>
             ))}
-            
+
             {section("روابط النطاقات التشغيلية (Cross-Domain)", (
               <CpDescriptionList>
                 <CpDescriptionRow label="الهوية والصلاحيات">

@@ -10,7 +10,7 @@ import (
 // GET /dsh/operator/support/partners/{partnerId}/aggregate
 func (s *administrationSupportServer) handleGetPartnerSupportAggregate(w http.ResponseWriter, r *http.Request) {
 	partnerID := r.PathValue("partnerId")
-	
+
 	// Ensure the operator has a valid support session for THIS partner
 	_, ok := s.requirePartnerSupportSession(w, r, partnerID)
 	if !ok {
@@ -29,7 +29,7 @@ func (s *administrationSupportServer) handleGetPartnerSupportAggregate(w http.Re
 // GET /dsh/operator/support/partners/{partnerId}/finance
 func (s *administrationSupportServer) handleGetPartnerSupportFinance(w http.ResponseWriter, r *http.Request) {
 	partnerID := r.PathValue("partnerId")
-	
+
 	// Ensure the operator has a valid support session for THIS partner
 	_, ok := s.requirePartnerSupportSession(w, r, partnerID)
 	if !ok {
@@ -55,7 +55,7 @@ func (s *administrationSupportServer) handleGetPartnerSupportFinance(w http.Resp
 // GET /dsh/operator/support/partners/{partnerId}/operations
 func (s *administrationSupportServer) handleGetPartnerSupportOperations(w http.ResponseWriter, r *http.Request) {
 	partnerID := r.PathValue("partnerId")
-	
+
 	// Ensure the operator has a valid support session for THIS partner
 	_, ok := s.requirePartnerSupportSession(w, r, partnerID)
 	if !ok {
