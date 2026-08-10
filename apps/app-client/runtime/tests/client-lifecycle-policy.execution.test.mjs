@@ -8,12 +8,23 @@ const stateMachineUrl = new URL(
 
 const { getDshLifecycleStateMetadata } = await import(stateMachineUrl.href);
 
-test("client-owned lifecycle states remain visible to app-client", () => {
-  for (const stateId of ["checkout_intent", "serviceability_quote", "order_draft"]) {
+test("client checkout lifecycle preserves actor ownership and app-client visibility", () => {
+  const expectedOwners = new Map([
+    ["checkout_intent", "client"],
+    ["serviceability_quote", "system"],
+    ["order_draft", "system"],
+  ]);
+
+  for (const [stateId, actorOwner] of expectedOwners) {
     const metadata = getDshLifecycleStateMetadata(stateId);
     assert.ok(metadata, `missing lifecycle metadata for ${stateId}`);
-    assert.equal(metadata.actorOwner, "client");
-    assert.equal(metadata.visibleToSurfaces.includes("app-client"), true);
+    assert.equal(metadata.actorOwner, actorOwner, `${stateId} actor ownership drifted`);
+    assert.equal(
+      metadata.visibleToSurfaces.includes("app-client"),
+      true,
+      `${stateId} must remain visible to app-client`,
+    );
+    assert.equal(metadata.wltImplication, "none", `${stateId} must not mutate WLT-owned truth`);
   }
 });
 
