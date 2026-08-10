@@ -12,18 +12,6 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ApiVersion = "2026-03-10"
-$RequiredNames = @(
-    'BThwani CI result',
-    'SonarQube Cloud scan',
-    'SonarCloud Code Analysis',
-    'Analyze go (dsh)',
-    'Analyze go (identity)',
-    'Analyze go (platform-control)',
-    'Analyze go (providers)',
-    'Analyze go (wlt)',
-    'Analyze go (workforce)',
-    'Analyze javascript-typescript'
-)
 
 function Invoke-Native {
     param([scriptblock]$Command,[string]$Failure)
@@ -49,14 +37,16 @@ function Get-RequiredRows([string]$Sha) {
     foreach ($name in $RequiredNames) {
         $r = @($runs | Where-Object name -eq $name | Sort-Object started_at -Descending | Select-Object -First 1)
         if ($r.Count -eq 0) {
-            [pscustomobject]@{Name=$name;Status='missing';Conclusion='';App='';IntegrationId=$null}
+            [pscustomobject]@{Name=$name;Status='missing';Conclusion='';App='';IntegrationId=$null;ProducerMatch=$false}
         } else {
+            $app = [string]$r[0].app.slug
             [pscustomobject]@{
                 Name=$name
                 Status=$r[0].status
                 Conclusion=$r[0].conclusion
-                App=$r[0].app.slug
+                App=$app
                 IntegrationId=$r[0].app.id
+                ProducerMatch=($app -eq $ExpectedProducer[$name])
             }
         }
     }
@@ -65,20 +55,18 @@ function Wait-Required([string]$Sha,[int]$Minutes) {
     $deadline = (Get-Date).AddMinutes($Minutes)
     do {
         $rows = @(Get-RequiredRows $Sha)
-        # Out-Host is deliberate: Format-Table emits formatting objects to the
-        # success pipeline. If captured by the caller those objects corrupt the
-        # required-status-check JSON payload.
         $rows | Format-Table -AutoSize | Out-Host
         $bad = @($rows | Where-Object {
             $_.Status -ne 'completed' -or
             $_.Conclusion -ne 'success' -or
+            -not $_.ProducerMatch -or
             -not $_.IntegrationId -or
             [int64]$_.IntegrationId -le 0
         })
         if ($bad.Count -eq 0) { return $rows }
         Start-Sleep -Seconds 15
     } while ((Get-Date) -lt $deadline)
-    throw "Required checks did not all become successful. No ruleset changes were made."
+    throw "Required checks did not all become successful from their expected producers. No ruleset changes were made."
 }
 function Assert-RequiredRows([object[]]$Rows) {
     if ($Rows.Count -ne $RequiredNames.Count) {
@@ -89,7 +77,7 @@ function Assert-RequiredRows([object[]]$Rows) {
     $unexpected = @($names | Where-Object { $_ -notin $RequiredNames })
     $duplicates = @($names | Group-Object | Where-Object Count -ne 1 | ForEach-Object Name)
     $invalid = @($Rows | Where-Object {
-        -not $_.Name -or -not $_.IntegrationId -or [int64]$_.IntegrationId -le 0
+        -not $_.Name -or -not $_.ProducerMatch -or -not $_.IntegrationId -or [int64]$_.IntegrationId -le 0
     })
     if ($missing.Count -gt 0 -or $unexpected.Count -gt 0 -or $duplicates.Count -gt 0 -or $invalid.Count -gt 0) {
         throw "Invalid required-check inventory. missing=[$($missing -join ', ')] unexpected=[$($unexpected -join ', ')] duplicates=[$($duplicates -join ', ')] invalid=$($invalid.Count)"
@@ -172,8 +160,29 @@ function Assert-RulesetContexts([object]$Ruleset,[bool]$RequireBindings) {
     }
 }
 
+$repoRoot = Get-NativeText -Command { git rev-parse --show-toplevel 2>$null } -Failure "Run from inside the repository."
+$common = Join-Path $PSScriptRoot 'quality-gate-common.ps1'
+if (-not (Test-Path -LiteralPath $common)) { throw "Missing shared quality-gate helper: $common" }
+. $common
+$registry = Get-BThwaniQualityGateRegistry -RepoRoot $repoRoot
+$RequiredNames = @($registry.requiredChecks | ForEach-Object { [string]$_.context })
+$ExpectedProducer = @{}
+foreach ($entry in @($registry.requiredChecks)) { $ExpectedProducer[[string]$entry.context] = [string]$entry.producer }
+if ([string]$registry.baseBranch -ne $BaseBranch) { throw "Registry base branch '$($registry.baseBranch)' does not match '$BaseBranch'." }
+if ([string]$registry.rulesetName -ne $RulesetName) { throw "Registry ruleset '$($registry.rulesetName)' does not match '$RulesetName'." }
+
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "gh CLI is required." }
 Invoke-Native { gh auth status } "GitHub CLI authentication is not ready."
+
+# This script is bootstrap-only. Once protection is active, preserving every
+# live rule is more important than rebuilding a ruleset from a template; use
+# 11-sync-master-quality-gates.ps1 for all later required-check changes.
+$existingRulesets = gh api -H "X-GitHub-Api-Version: $ApiVersion" "repos/$Repository/rulesets" | ConvertFrom-Json
+if ($LASTEXITCODE -ne 0) { throw "Unable to inspect repository rulesets." }
+$existingMatch = @($existingRulesets | Where-Object name -eq $RulesetName)
+if ($existingMatch.Count -eq 1 -and $existingMatch[0].enforcement -eq 'active') {
+    throw "Ruleset '$RulesetName' is already active. Refusing bootstrap rebuild; use 11-sync-master-quality-gates.ps1 instead."
+}
 
 $pr = $null
 if ($PrNumber -le 0) {
@@ -217,10 +226,6 @@ $matches = @($rulesets | Where-Object name -eq $RulesetName)
 if ($matches.Count -ne 1) { throw "Expected exactly one ruleset named '$RulesetName'; found $($matches.Count)." }
 $rulesetId = [int64]$matches[0].id
 
-# GitHub requires an app selected as the expected source of a required check to
-# be associated with a pre-existing required context. Register the exact live
-# contexts first while enforcement remains disabled, then bind each context to
-# the GitHub App that actually produced the successful check and activate.
 Write-Host "Staging exact required contexts on disabled ruleset $RulesetName ($rulesetId)..."
 $stageBody = New-RulesetBody -Rows $masterRows -Enforcement 'disabled' -BindApps $false
 Put-Ruleset -RulesetId $rulesetId -Body $stageBody -Failure "Ruleset context staging failed."
