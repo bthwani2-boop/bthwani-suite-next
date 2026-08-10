@@ -67,6 +67,27 @@ jobs:
           CI_MODE="${MODE}" \
           node tools/scripts/detect-ci-context.mjs
 
+      - name: Plan affected Node coverage
+        id: node_coverage_plan
+        shell: bash
+        env:
+          CI_BASE_SHA: ${{ steps.scope.outputs.base_sha }}
+          CI_HEAD_SHA: ${{ steps.scope.outputs.head_sha }}
+          CI_MODE: ${{ steps.scope.outputs.mode }}
+        run: node tools/scripts/generate-sonar-node-coverage.mjs --plan
+
+      - name: Set up immutable Node workspace for affected coverage
+        if: ${{ steps.node_coverage_plan.outputs.required == 'true' }}
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Generate affected Node LCOV
+        id: node_coverage
+        if: ${{ steps.node_coverage_plan.outputs.required == 'true' }}
+        shell: bash
+        env:
+          SONAR_NODE_COVERAGE_SUITES: ${{ steps.node_coverage_plan.outputs.suites }}
+        run: node tools/scripts/generate-sonar-node-coverage.mjs
+
       - name: Set up Go for affected coverage
         if: ${{ steps.scope.outputs.dsh == 'true' || steps.scope.outputs.wlt == 'true' || steps.scope.outputs.identity == 'true' || steps.scope.outputs.workforce == 'true' || steps.scope.outputs.platform == 'true' || steps.scope.outputs.providers == 'true' }}
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
@@ -109,5 +130,7 @@ jobs:
 
       - name: SonarQube Cloud scan
         uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
+        with:
+          args: ${{ steps.node_coverage.outputs.scan_args }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
