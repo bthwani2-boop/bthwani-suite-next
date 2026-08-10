@@ -12,6 +12,7 @@ func localOperatorDevelopmentPermissions() []Permission {
 		{Service: "dsh", Surface: "control-panel", Action: "partners.read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "partners.manage", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "partners.activate", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "finance.read", Scope: "all"},
 
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.service_zones.read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.service_zones.manage", Scope: "all"},

@@ -51,6 +51,7 @@ func TestLocalOperatorDevelopmentPermissionsAreCanonical(t *testing.T) {
 
 	required := []Permission{
 		{Service: "dsh", Surface: "control-panel", Action: "partners.read", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "finance.read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.service_zones.read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.service_zones.manage", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.catalog.stores.read", Scope: "all"},
