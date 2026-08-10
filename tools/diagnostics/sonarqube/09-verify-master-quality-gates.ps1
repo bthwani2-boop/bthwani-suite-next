@@ -25,11 +25,11 @@ function Get-NativeText {
 $root = Get-NativeText -Command { git rev-parse --show-toplevel 2>$null } -Failure "Run from inside the repository."
 Set-Location $root
 $registry = Get-BThwaniQualityGateRegistry -RepoRoot $root
-if ([string]$registry.baseBranch -ne $BaseBranch) { Fail "Registry baseBranch does not match '$BaseBranch'." }
-if ([string]$registry.rulesetName -ne $RulesetName) { Fail "Registry rulesetName does not match '$RulesetName'." }
+if ([string]$registry.baseBranch -ne $BaseBranch) { Fail "Desired ruleset baseBranch does not match '$BaseBranch'." }
+if ([string]$registry.rulesetName -ne $RulesetName) { Fail "Desired ruleset name does not match '$RulesetName'." }
 $RequiredNames = @($registry.requiredChecks | ForEach-Object { [string]$_.context })
-$ExpectedProducer = @{}
-foreach ($entry in @($registry.requiredChecks)) { $ExpectedProducer[[string]$entry.context] = [string]$entry.producer }
+$ExpectedIntegrationId = @{}
+foreach ($entry in @($registry.requiredChecks)) { $ExpectedIntegrationId[[string]$entry.context] = [int64]$entry.integrationId }
 
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { Fail "gh CLI is required." }
 & gh auth status
@@ -55,9 +55,14 @@ $configuredNames = @($configured | ForEach-Object context)
 $missingConfigured = @($RequiredNames | Where-Object { $_ -notin $configuredNames })
 $unexpectedConfigured = @($configuredNames | Where-Object { $_ -notin $RequiredNames })
 if ($missingConfigured.Count -gt 0) { Fail "Missing required contexts: $($missingConfigured -join ', ')" }
-if ($unexpectedConfigured.Count -gt 0) { Fail "Unexpected required contexts not present in registry: $($unexpectedConfigured -join ', ')" }
+if ($unexpectedConfigured.Count -gt 0) { Fail "Unexpected required contexts not present in desired ruleset: $($unexpectedConfigured -join ', ')" }
 $unbound = @($configured | Where-Object { -not $_.integration_id -or [int64]$_.integration_id -le 0 })
 if ($unbound.Count -gt 0) { Fail "One or more required checks are not bound to a GitHub App integration." }
+foreach ($item in $configured) {
+    if ([int64]$item.integration_id -ne [int64]$ExpectedIntegrationId[[string]$item.context]) {
+        Fail "Live ruleset integration binding drift for '$($item.context)': live=$($item.integration_id) desired=$($ExpectedIntegrationId[[string]$item.context])."
+    }
+}
 
 $checksResponse = gh api -H "Accept: application/vnd.github+json" "repos/$Repository/commits/$sha/check-runs?per_page=100" | ConvertFrom-Json
 if ($LASTEXITCODE -ne 0 -or -not $checksResponse) { Fail "Cannot read current master checks." }
@@ -65,32 +70,24 @@ $checks = @($checksResponse.check_runs)
 $rows = foreach ($name in $RequiredNames) {
     $r = @($checks | Where-Object name -eq $name | Sort-Object started_at -Descending | Select-Object -First 1)
     if ($r.Count -eq 0) {
-        [pscustomobject]@{Name=$name;Status='missing';Conclusion='';App='';IntegrationId=$null;ProducerMatch=$false}
+        [pscustomobject]@{Name=$name;Status='missing';Conclusion='';App='';IntegrationId=$null;IntegrationMatch=$false}
     } else {
-        $app = [string]$r[0].app.slug
+        $integrationId = [int64]$r[0].app.id
         [pscustomobject]@{
             Name=$name
             Status=$r[0].status
             Conclusion=$r[0].conclusion
-            App=$app
-            IntegrationId=$r[0].app.id
-            ProducerMatch=($app -eq $ExpectedProducer[$name])
+            App=[string]$r[0].app.slug
+            IntegrationId=$integrationId
+            IntegrationMatch=($integrationId -eq [int64]$ExpectedIntegrationId[$name])
         }
     }
 }
 $rows | Format-Table -AutoSize | Out-Host
 $bad = @($rows | Where-Object {
-    $_.Status -ne 'completed' -or $_.Conclusion -ne 'success' -or -not $_.ProducerMatch -or -not $_.IntegrationId -or [int64]$_.IntegrationId -le 0
+    $_.Status -ne 'completed' -or $_.Conclusion -ne 'success' -or -not $_.IntegrationMatch -or -not $_.IntegrationId -or [int64]$_.IntegrationId -le 0
 })
-if ($bad.Count -gt 0) { Fail "Current master does not have a successful registry-defined check from the expected producer for every mandatory context." }
-
-foreach ($configuredCheck in $configured) {
-    $row = @($rows | Where-Object Name -eq $configuredCheck.context)
-    if ($row.Count -ne 1) { Fail "Cannot bind configured context '$($configuredCheck.context)' to exactly one live proof row." }
-    if ([int64]$configuredCheck.integration_id -ne [int64]$row[0].IntegrationId) {
-        Fail "Ruleset integration binding drift for '$($configuredCheck.context)': configured=$($configuredCheck.integration_id) live=$($row[0].IntegrationId)."
-    }
-}
+if ($bad.Count -gt 0) { Fail "Current master does not have a successful desired check from the expected GitHub App integration for every mandatory context." }
 
 $ci = Get-Content (Join-Path $root '.github\workflows\ci.yml') -Raw
 $prBlock = [regex]::Match($ci, '(?ms)^  pull_request:\r?\n(?<body>.*?)(?=^  push:)')
@@ -102,8 +99,9 @@ if ($sonar -notmatch '(?ms)pull_request:.*?branches:\s*\[master\]') { Fail "Sona
 if ($sonar -notmatch '(?ms)push:.*?branches:\s*\[master\]') { Fail "Sonar workflow is not configured for master pushes." }
 
 $codeql = Get-Content (Join-Path $root '.github\workflows\codeql.yml') -Raw
-if ($RequiredNames -contains 'Analyze actions') {
-    if ($codeql -notmatch '(?m)^\s*name:\s*Analyze actions\s*$') { Fail "Required Analyze actions context has no matching CodeQL job." }
+if ($RequiredNames -contains 'CodeQL result') {
+    if ($codeql -notmatch '(?m)^\s*name:\s*CodeQL result\s*$') { Fail "Required CodeQL result context has no matching aggregate job." }
+    if ($codeql -notmatch '(?m)^\s*name:\s*Analyze actions\s*$') { Fail "CodeQL does not define GitHub Actions analysis." }
     if ($codeql -notmatch '(?m)^\s*languages:\s*actions\s*$') { Fail "CodeQL is not configured to analyze GitHub Actions." }
 }
 if ($codeql -notmatch '(?m)^\s*queries:\s*security-extended\s*$') { Fail "CodeQL security-extended query suite is not configured." }
@@ -121,7 +119,7 @@ $cpdGlobalOff = $props -match '(?m)^sonar\.cpd\.exclusions=\*\*/\*$'
 
 Write-Host ""
 Write-Host "MASTER QUALITY-GATE PROTECTION: PASS"
-Write-Host "Ruleset is active, strict, registry-driven, integration-bound, producer-verified, and all mandatory checks are green on master."
+Write-Host "Live ruleset matches the desired tracked contract, is strict and integration-bound, and every mandatory check is green on master."
 if ($coverageGlobalOff -or $cpdGlobalOff) {
     Write-Warning "Master merge protection is correct, but Sonar metric hardening remains pending: coverageGlobalOff=$coverageGlobalOff cpdGlobalOff=$cpdGlobalOff"
     Write-Host "Next stage: prepare credible JS/TS LCOV + remove global coverage/CPD exclusions in a separate protected PR."
