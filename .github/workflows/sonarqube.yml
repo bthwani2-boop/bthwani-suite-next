@@ -48,7 +48,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p .sonar/coverage
           modules=(
             core/workforce/backend
             core/providers/backend
@@ -58,13 +57,15 @@ jobs:
             services/wlt/backend
           )
           for module in "${modules[@]}"; do
-            report="$GITHUB_WORKSPACE/.sonar/coverage/${module//\//-}.out"
-            module_name="$(cd "$module" && go list -m)"
+            report="$GITHUB_WORKSPACE/$module/.sonar/coverage.out"
+            raw_report="$GITHUB_WORKSPACE/$module/.sonar/coverage.raw.out"
+            mkdir -p "$(dirname "$report")"
             (
               cd "$module"
-              go test ./... -coverprofile="$report"
+              go test ./... -coverprofile="$raw_report"
             )
-            sed -i "s#^${module_name}/#${module}/#" "$report"
+            module_name="$(cd "$module" && go list -m)"
+            sed "s#^${module_name}/#${module}/#" "$raw_report" > "$report"
           done
 
       - name: SonarQube Cloud scan

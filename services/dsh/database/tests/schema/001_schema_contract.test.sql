@@ -56,6 +56,14 @@ BEGIN
     RAISE EXCEPTION 'dsh_partner_offers.store_id must match dsh_stores.id as TEXT, found %', COALESCE(actual_type, '<missing>');
   END IF;
 
+  -- Compile the exact aggregate used by partner readiness. This guards the
+  -- runtime owner from drifting back to the non-existent review_status name.
+  PERFORM
+    COUNT(*),
+    COUNT(*) FILTER (WHERE document_status = 'approved')
+  FROM dsh_partner_documents
+  WHERE partner_id = '__schema_contract_probe__';
+
   IF NOT EXISTS (
     SELECT 1
     FROM pg_class index_class
