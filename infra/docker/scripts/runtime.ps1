@@ -81,13 +81,14 @@ if (($ProfileList -contains "dsh" -or $ProfileList -contains "workforce" -or
 }
 $ProfileList = @($ProfileList | Select-Object -Unique)
 
+# Reset destroys runtime state, so intent must be explicit. This previously fell
+# back to the pnpm lifecycle-event environment variable, which is a package
+# manager side effect that any process hop drops -- the same ambient-state
+# authorization that made local ledger recovery unreachable. The reset scripts
+# now pass -Force, so intent travels as an argument instead of as inherited
+# environment.
 function Test-ExplicitResetInvocation {
-  if ($Force) { return $true }
-  return $env:npm_lifecycle_event -in @(
-    "docker:runtime:reset",
-    "runtime:reset",
-    "runtime:full:reset"
-  )
+  return [bool]$Force
 }
 
 function Get-ComposeProfileArgs {
@@ -301,10 +302,19 @@ function Get-SourceCommitSha {
 }
 
 function Invoke-GovernedMigrations {
+  # bootstrap-dev is the only action permitted to repair a drifted local ledger,
+  # and it says so explicitly rather than the migration runner inferring it from
+  # ambient state. 'up' and 'smoke' pass nothing, so a conflict surfaces there
+  # instead of being silently repaired.
+  $allowLocalLedgerRecovery = ($Action -eq "bootstrap-dev")
   $sourceCommitSha = Get-SourceCommitSha
   foreach ($serviceName in Get-SelectedMigrationServices) {
     Write-Host "`n--- Applying governed $serviceName migrations ---"
-    & $script:GovernedMigrationScript -Service $serviceName -SourceCommitSha $sourceCommitSha
+    if ($allowLocalLedgerRecovery) {
+      & $script:GovernedMigrationScript -Service $serviceName -SourceCommitSha $sourceCommitSha -AllowLocalLedgerRecovery
+    } else {
+      & $script:GovernedMigrationScript -Service $serviceName -SourceCommitSha $sourceCommitSha
+    }
     if ($LASTEXITCODE -ne 0) {
       throw "Governed runtime migrations failed for $serviceName (exit $LASTEXITCODE)"
     }
