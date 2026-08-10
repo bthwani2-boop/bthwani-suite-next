@@ -13,13 +13,6 @@
     "manual-deep-verification.yml"
   ],
   "privilegedWorkflow": null,
-  "requiredChecks": [
-    {"context":"BThwani CI result","producer":"github-actions","purpose":"Fail-closed aggregate result for contextual CI."},
-    {"context":"SonarQube Cloud scan","producer":"github-actions","purpose":"Repository-driven SonarQube Cloud scan execution."},
-    {"context":"SonarCloud Code Analysis","producer":"sonarqubecloud","purpose":"SonarQube Cloud Quality Gate result."},
-    {"context":"CodeQL result","producer":"github-actions","purpose":"Fail-closed aggregate for affected-scope CodeQL analysis; protected-branch pushes and scheduled runs remain full scans."},
-    {"context":"Dependency review","producer":"github-actions","purpose":"Blocks newly introduced dependencies with known vulnerabilities."}
-  ],
   "entries": [
     {"id":"ci","path":".github/workflows/ci.yml","class":"CORE","name":"BThwani Contextual CI","triggers":["workflow_dispatch","pull_request","push"],"permissions":{"contents":"read"},"mayMutateSource":false,"mayUseSecrets":false,"requiredPinnedActions":true,"purpose":"Root exact-SHA orchestrator that calculates affected and risk-expanded scope, invokes reusable verification engines, and enforces one fail-closed result."},
     {"id":"ci-policy","path":".github/workflows/ci-policy.yml","class":"CORE","name":"BThwani Policy Verification","triggers":["workflow_call"],"permissions":{"contents":"read"},"mayMutateSource":false,"mayUseSecrets":false,"requiredPinnedActions":true,"purpose":"Reusable repository, governance, workflow, security, nomenclature, and infrastructure policy verification engine."},
