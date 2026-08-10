@@ -153,12 +153,14 @@ function Ensure-BthwaniDevSessionBroker {
     }
 
     $env:BTHWANI_DEV_SESSION_BROKER_PORT = [string] $DevSessionBrokerPort
-    $process = Start-Process `
-        -FilePath $node.Source `
-        -ArgumentList @($DevSessionBrokerScript) `
-        -WorkingDirectory $RepoRoot `
-        -PassThru `
-        -WindowStyle Hidden
+    $startParameters = @{
+        FilePath = $node.Source
+        ArgumentList = @($DevSessionBrokerScript)
+        WorkingDirectory = $RepoRoot
+        PassThru = $true
+    }
+    if ($IsWindows) { $startParameters.WindowStyle = "Hidden" }
+    $process = Start-Process @startParameters
 
     for ($attempt = 1; $attempt -le 50; $attempt++) {
         if ($process.HasExited) {
@@ -253,19 +255,24 @@ $selectedSerial = ""
 $ports = @()
 $watchdogEligible = $false
 
+# Gateway values are generated per LAN gateway instance and must never leak from
+# a previous invocation. ADB preferences are intentionally preserved until the
+# ADB branch consumes them.
 Clear-BthwaniProcessEnvironment -Names @(
     "EXPO_PUBLIC_BTHWANI_DEV_GATEWAY_BASE_URL",
-    "EXPO_PUBLIC_BTHWANI_DEV_GATEWAY_TOKEN",
-    "ANDROID_SERIAL",
-    "BTHWANI_ANDROID_SERIAL",
-    "ADB"
+    "EXPO_PUBLIC_BTHWANI_DEV_GATEWAY_TOKEN"
 )
 
-$env:NODE_OPTIONS = "--dns-result-order=ipv4first"
+$currentNodeOptions = ([string] $env:NODE_OPTIONS).Trim()
+if ($currentNodeOptions -notmatch '(?:^|\s)--dns-result-order=') {
+    $env:NODE_OPTIONS = (($currentNodeOptions + " --dns-result-order=ipv4first").Trim())
+}
 $env:BTHWANI_MOBILE_TRANSPORT_RESOLVED = $resolvedTransport
 $env:EXPO_PUBLIC_BTHWANI_MOBILE_TRANSPORT = $resolvedTransport
 
 if ($resolvedTransport -eq "lan") {
+    Clear-BthwaniProcessEnvironment -Names @("ANDROID_SERIAL", "BTHWANI_ANDROID_SERIAL", "ADB")
+
     $gateway = Ensure-BthwaniMobileDevGateway `
         -RepoRoot $RepoRoot `
         -LanHost $lanContext.Host `
