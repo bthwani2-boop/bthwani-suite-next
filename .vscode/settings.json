@@ -57,5 +57,6 @@
   "sonarlint.connectedMode.project": {
     "connectionId": "bthwani2-boop",
     "projectKey": "bthwani2-boop_bthwani-suite-next"
-  }
+  },
+  "codeQL.githubDatabase.update": "never"
 }
