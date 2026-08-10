@@ -364,7 +364,7 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
           })
         )}
       </Card>
-      
+
       {inventoryModalProductId && (
         <InventoryConfigurationModal
           visible={true}

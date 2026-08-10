@@ -131,7 +131,7 @@ func CreateSettlementBatch(ctx context.Context, db *sql.DB, input CreateSettleme
 	batchHash := hex.EncodeToString(h.Sum(nil))
 
 	row := tx.QueryRowContext(ctx, `
-		INSERT INTO wlt_settlement_batches 
+		INSERT INTO wlt_settlement_batches
 		(operator_context_id, provider_id, currency, batch_hash, control_total_minor_units, row_count, created_by_operator_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, provider_id, currency, batch_hash, control_total_minor_units, row_count, status, created_at, frozen_at, created_by_operator_id

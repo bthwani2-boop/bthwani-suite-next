@@ -48,8 +48,8 @@ func CreateRollbackRequest(ctx context.Context, db *sql.DB, actorID string, appr
 	// Verify source approval
 	var actionType, targetActor, roleID, status string
 	err = tx.QueryRowContext(ctx, `
-		SELECT action_type, target_actor_id, role_id, status 
-		FROM dsh_admin_approval_requests 
+		SELECT action_type, target_actor_id, role_id, status
+		FROM dsh_admin_approval_requests
 		WHERE id = $1
 	`, approvalID).Scan(&actionType, &targetActor, &roleID, &status)
 	if err != nil {
@@ -73,7 +73,7 @@ func CreateRollbackRequest(ctx context.Context, db *sql.DB, actorID string, appr
 
 	var req RollbackRequest
 	err = tx.QueryRowContext(ctx, `
-		INSERT INTO dsh_admin_rollback_requests 
+		INSERT INTO dsh_admin_rollback_requests
 			(source_approval_id, inverse_action_type, target_actor_id, role_id, requested_by, reason, status)
 		VALUES ($1, $2, $3, $4, $5, $6, 'pending')
 		RETURNING id, source_approval_id, inverse_action_type, target_actor_id, role_id, requested_by, reason, status, version, created_at, updated_at
@@ -103,7 +103,7 @@ func ListRollbackRequests(ctx context.Context, db *sql.DB, status string) ([]Rol
 	}
 
 	query := `
-		SELECT id, source_approval_id, inverse_action_type, target_actor_id, role_id, requested_by, reason, status, 
+		SELECT id, source_approval_id, inverse_action_type, target_actor_id, role_id, requested_by, reason, status,
 		       reviewed_by, review_note, version, created_at, updated_at, reviewed_at
 		FROM dsh_admin_rollback_requests
 	`

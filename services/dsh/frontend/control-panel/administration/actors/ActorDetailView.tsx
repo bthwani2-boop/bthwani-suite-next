@@ -80,7 +80,7 @@ export function ActorDetailView(props: {
       <CpPageHeader title={`تفاصيل الهوية: ${actor.username}`}>
         {props.onBack ? <CpButton variant="ghost" onClick={props.onBack}>العودة إلى المعرفات</CpButton> : null}
       </CpPageHeader>
-      
+
       <div style={{ background: "var(--bthwani-control-panel-surface)", padding: "1.5rem", borderRadius: "8px", border: "1px solid var(--bthwani-control-panel-border)" }}>
         <Text role="headingSm" style={{ marginBottom: "1rem", display: "block" }}>معلومات المعرف</Text>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
@@ -120,20 +120,20 @@ export function ActorDetailView(props: {
             <Text role="bodySm" style={{ marginBottom: "6px", display: "block", color: "var(--bthwani-control-panel-text-muted)" }}>سبب الإجراء (مطلوب)</Text>
             <CpTextInput value={reason} onChange={setReason} placeholder="أدخل سبب الإجراء الأمني..." />
           </div>
-          
+
           <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
             {isActive && (
               <CpButton variant="danger" onClick={() => handleAction("suspend")} disabled={actionLoading || !reason.trim()}>
                 تعليق المعرف (Suspend)
               </CpButton>
             )}
-            
+
             {isSuspended && (
               <CpButton variant="primary" onClick={() => handleAction("reactivate")} disabled={actionLoading || !reason.trim()}>
                 إعادة تفعيل (Reactivate)
               </CpButton>
             )}
-            
+
             <CpButton variant="secondary" onClick={() => handleAction("revoke")} disabled={actionLoading || !reason.trim()}>
               إبطال جميع الجلسات فقط (Revoke Sessions)
             </CpButton>

@@ -70,7 +70,7 @@ func SubmitManualTransferEvidence(ctx context.Context, db *sql.DB, batchID strin
 	}
 
 	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO wlt_manual_transfer_evidence 
+		INSERT INTO wlt_manual_transfer_evidence
 		(batch_id, approved_snapshot_id, external_transfer_reference, amount_minor_units, currency, verified_by_operator_id)
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`, batchID, input.ApprovedSnapshotID, input.ExternalTransferReference, input.AmountMinorUnits, input.Currency, input.OperatorID); err != nil {

@@ -33,4 +33,3 @@ func TestRequireActorRejectsWrongSurface(t *testing.T) {
 		t.Fatalf("expected HTTP 403 Forbidden, got %d", response.Code)
 	}
 }
-

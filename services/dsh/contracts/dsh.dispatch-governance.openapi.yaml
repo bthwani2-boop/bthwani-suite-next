@@ -495,7 +495,7 @@ paths:
     post:
       tags:
       - captain
-      operationId: post_dsh_captain_dispatch_assignments__assignmentId__delivery_proof
+      operationId: submitCaptainDeliveryProof
       responses:
         '200':
           description: Auto-generated
@@ -588,7 +588,7 @@ paths:
     post:
       tags:
       - captain
-      operationId: post_dsh_captain_dispatch_assignments__assignmentId__handoff_exceptions
+      operationId: reportCaptainHandoffException
       responses:
         '200':
           description: Auto-generated

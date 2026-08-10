@@ -720,7 +720,7 @@ export function CatalogDashboardScreen() {
 
             {mediaDrawerProductId && (
               <div style={{
-                position: "fixed", top: 0, left: 0, right: 0, bottom: 0, 
+                position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
                 backgroundColor: "var(--bthwani-media-scrim-strong)", display: "flex",
                 justifyContent: "center", alignItems: "center", zIndex: 1000
               }}>
@@ -928,7 +928,7 @@ export function CatalogDashboardScreen() {
                                   )}
                                 </div>
                               </div>
-                              
+
                               {p.duplicateCandidates && p.duplicateCandidates.length > 0 && (
                                 <div style={{ backgroundColor: "var(--bthwani-control-panel-surface)", padding: "16px", borderRadius: "8px", border: "1px solid var(--bthwani-control-panel-danger)" }}>
                                   <h4 style={{ margin: "0 0 12px 0", color: "var(--bthwani-control-panel-danger)" }}>تعارض وتكرار محتمل (Duplicate Candidates)</h4>
@@ -1022,7 +1022,7 @@ export function CatalogDashboardScreen() {
                 <tbody dir="rtl">
                   {assets.map((asset) => {
                     const note = reasonByProposal[asset.id] ?? "";
-                    const badgeTone = asset.status === "approved" ? "success" 
+                    const badgeTone = asset.status === "approved" ? "success"
                                     : asset.status === "rejected" ? "danger"
                                     : asset.status === "quarantined" ? "danger"
                                     : asset.status === "scanning" ? "info"

@@ -76,11 +76,11 @@ type Delivery struct {
 }
 
 type CreateAssignmentInput struct {
-	OrderID          string
-	SpecialRequestID string
-	OperatorContextID         string
-	CaptainID        string
-	ActorID          string
+	OrderID           string
+	SpecialRequestID  string
+	OperatorContextID string
+	CaptainID         string
+	ActorID           string
 }
 
 type PoDInput struct {
@@ -228,9 +228,15 @@ func ListCaptainAssignments(db *sql.DB, captainID string, limit int) ([]Assignme
 		limit = 50
 	}
 	rows, err := db.Query(assignmentSelectSQL()+`
+		LEFT JOIN dsh_orders o ON o.id = a.order_id
 		WHERE a.captain_id = $1
 		  AND a.status IN ('offered','accepted')
 		  AND d.status NOT IN ('delivered','cancelled')
+		  AND (a.order_id IS NULL OR o.status NOT IN (
+		    'cancelled_by_client', 'cancelled_by_store', 'cancelled_by_operator',
+		    'cancelled_no_driver', 'failed_payment', 'failed_dispatch',
+		    'delivered', 'returned_to_store'
+		  ))
 		ORDER BY a.created_at DESC
 		LIMIT $2`, captainID, limit)
 	if err != nil {

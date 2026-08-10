@@ -49,7 +49,7 @@ export function DshFieldStoresHistoryScreen({ onBack }: DshFieldStoresHistoryScr
           {partners.map((partner) => {
             const statusInfo = getStatusPresentation(partner.activationStatus);
             return (
-              <View 
+              <View
                 key={partner.id}
                 style={{
                   backgroundColor: colorRoles.surfaceBase,
@@ -83,9 +83,9 @@ export function DshFieldStoresHistoryScreen({ onBack }: DshFieldStoresHistoryScr
                   </View>
                   <Badge label={statusInfo.label} tone={statusInfo.tone} />
                 </View>
-                
+
                 <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle, marginVertical: spacing[3] }} />
-                
+
                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: spacing[2] }}>
                   <Icon name="calendar-outline" size={14} color={colorRoles.textMuted} />
                   <Text role="caption" tone="muted">

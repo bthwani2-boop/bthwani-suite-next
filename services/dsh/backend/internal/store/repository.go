@@ -128,7 +128,7 @@ func listStores(db *sql.DB, q DshStoreListQuery, publicOnly bool) (DshStoreListR
 		normalizedSearch := normalizeArabic(q.Search)
 		searchTerm := "%" + normalizedSearch + "%"
 		normSQL := func(col string) string {
-			return `REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(`+col+`), 'أ', 'ا'), 'إ', 'ا'), 'آ', 'ا'), 'ة', 'ه'), 'ى', 'ي')`
+			return `REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(` + col + `), 'أ', 'ا'), 'إ', 'ا'), 'آ', 'ا'), 'ة', 'ه'), 'ى', 'ي')`
 		}
 		conditions = append(conditions, fmt.Sprintf("(%s LIKE $%d OR %s LIKE $%d)", normSQL("display_name"), idx, normSQL("slug"), idx))
 		params = append(params, searchTerm)
@@ -227,7 +227,7 @@ type execQueryRower interface {
 }
 
 // CreateDraftStore inserts a new, unpublished store linked to a partner.
-// Never visible to app-client: is_visible=false, status=inactive,
+// Never visible to app-client: is_visible=false, status=draft,
 // serviceability=unavailable, and partner_readiness/catalog_approval_status/
 // marketing_visibility keep their safe column defaults (pending/draft/hidden).
 func CreateDraftStore(db execQueryRower, input CreateDraftStoreInput) (DshStoreRow, error) {
@@ -249,7 +249,7 @@ func CreateDraftStore(db execQueryRower, input CreateDraftStoreInput) (DshStoreR
 			id, slug, display_name, status, city_code, service_area_code,
 			serviceability_status, is_visible, catalog_domain_id, partner_id,
 			address_line, operating_hours
-		) VALUES ($1,$1,$2,'inactive',$3,$3,'unavailable',false,$4,$5,$6,$7)`,
+		) VALUES ($1,$1,$2,'draft',$3,$3,'unavailable',false,$4,$5,$6,$7)`,
 		id, input.DisplayName, cityCode, catalogDomainID, input.PartnerID,
 		input.AddressLine, input.OperatingHours,
 	)

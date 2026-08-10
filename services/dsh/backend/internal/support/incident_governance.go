@@ -458,4 +458,3 @@ func AddIncidentEntity(db *sql.DB, incidentID string, entityType string, entityI
 	}
 	return IncidentEntity{IncidentID: incidentID, EntityType: entityType, EntityID: entityID}, nil
 }
-

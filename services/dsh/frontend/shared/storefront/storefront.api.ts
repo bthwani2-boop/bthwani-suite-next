@@ -25,11 +25,11 @@ export async function fetchStorefront(storeId: string): Promise<ClientStorefront
 function toClientStorefront(storeId: string, response: DshStorefrontResponse): ClientStorefront {
   const storeRaw = response.store as any;
   const store = toDetailViewModel(storeRaw);
-  
+
   const rawCatalog = response.catalog as any;
   const usedNodeIds = new Set(rawCatalog.products.flatMap((p: any) => p.categoryNodeId ? [p.categoryNodeId] : []));
   const usedDomainIds = new Set(rawCatalog.products.flatMap((p: any) => p.categoryNodeId ? [] : [p.domainId]));
-  
+
   const nodeCategories: CatalogCategory[] = rawCatalog.nodes
     ?.filter((node: any) => usedNodeIds.has(node.id))
     .map((node: any) => ({
@@ -41,7 +41,7 @@ function toClientStorefront(storeId: string, response: DshStorefrontResponse): C
       isActive: node.isActive,
       version: node.version,
     })) || [];
-    
+
   const domainCategories: CatalogCategory[] = rawCatalog.domains
     ?.filter((domain: any) => usedDomainIds.has(domain.id))
     .map((domain: any) => ({
@@ -53,9 +53,9 @@ function toClientStorefront(storeId: string, response: DshStorefrontResponse): C
       isActive: domain.isActive,
       version: domain.version,
     })) || [];
-    
+
   const categories = [...nodeCategories, ...domainCategories].sort((a, b) => a.sortOrder - b.sortOrder);
-  
+
   const products: CatalogProduct[] = rawCatalog.products?.map((product: any) => {
     const effectiveMediaLink = product.effectiveImage
       ? rawCatalog.media?.find((link: any) => link.publicUrl === product.effectiveImage?.url)
@@ -73,7 +73,7 @@ function toClientStorefront(storeId: string, response: DshStorefrontResponse): C
           version: effectiveMediaLink?.version ?? product.version,
         }]
       : [];
-      
+
     return {
       id: product.id,
       storeId,

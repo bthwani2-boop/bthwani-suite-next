@@ -17,8 +17,8 @@ import {
   useIdentitySession,
   type ActivationActorType,
   type ActorIdentity,
-  type TokenResponse,
 } from "@bthwani/core-identity";
+import { requestDevelopmentSession } from "./dev-session-broker.adapter";
 
 export type DshSurfaceRole = ActorIdentity["roles"][number];
 
@@ -28,14 +28,7 @@ export type IdentitySessionGateProps = {
   readonly children: ReactNode;
 };
 
-import { isDshDeviceLoopbackBridgeEnabled } from "../_kernel/dsh-api-base-url";
-
 declare const __DEV__: boolean;
-
-const DEV_SESSION_BROKER_BASE_URL =
-  Platform.OS === "web" || isDshDeviceLoopbackBridgeEnabled()
-    ? "http://127.0.0.1:58100"
-    : "http://10.0.2.2:58100";
 
 function isPlatformAccessActorType(role: DshSurfaceRole): role is ActivationActorType {
   return role === "partner" || role === "captain" || role === "field";
@@ -78,18 +71,6 @@ function quickDeveloperLoginLabel(
   }
 }
 
-function brokerErrorCode(body: unknown): string {
-  if (
-    typeof body === "object"
-    && body !== null
-    && "code" in body
-    && typeof (body as { code?: unknown }).code === "string"
-  ) {
-    return (body as { code: string }).code;
-  }
-  return "DEV_SESSION_BROKER_UNAVAILABLE";
-}
-
 function IdentityAccessPanel({
   requiredRole,
   requiredSurface,
@@ -112,6 +93,7 @@ function IdentityAccessPanel({
   const quickLoginEnabled =
     typeof __DEV__ !== "undefined"
     && __DEV__
+    && Platform.OS !== "web"
     && quickLoginLabel !== null;
 
   const submitLogin = async () => {
@@ -153,22 +135,11 @@ function IdentityAccessPanel({
     setFeedback("");
     try {
       const deviceFingerprint = await getIdentityDeviceFingerprint();
-      const response = await fetch(`${DEV_SESSION_BROKER_BASE_URL}/session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          role: requiredRole,
-          surface: requiredSurface,
-          deviceFingerprint,
-        }),
-      });
-
-      const body: unknown = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(brokerErrorCode(body));
-      }
-
-      await adoptSession(body as TokenResponse);
+      await adoptSession(await requestDevelopmentSession({
+        role: requiredRole,
+        surface: requiredSurface,
+        deviceFingerprint,
+      }));
     } catch (error) {
       setFeedback(identityErrorPresentation(errorCode(error)).description);
     } finally {

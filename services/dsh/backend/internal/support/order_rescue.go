@@ -30,14 +30,14 @@ const (
 	RescueOwnerCaptain          OrderRescueOwner = "captain"
 	RescueOwnerWLTReferenceOnly OrderRescueOwner = "wlt_reference_only"
 
-	RescueActionReplaceItem              OrderRescueNextAction = "replace_item"
-	RescueActionRemoveItem               OrderRescueNextAction = "remove_item"
-	RescueActionWaitCustomer             OrderRescueNextAction = "wait_customer"
-	RescueActionChangeDeliveryMode       OrderRescueNextAction = "change_delivery_mode"
-	RescueActionReassignCaptain          OrderRescueNextAction = "reassign_captain"
-	RescueActionConvertSupportException  OrderRescueNextAction = "convert_to_support_exception"
-	RescueActionCreateFollowUpTask       OrderRescueNextAction = "create_follow_up_task"
-	RescueActionOpenWLTVisibility        OrderRescueNextAction = "open_wlt_visibility"
+	RescueActionReplaceItem             OrderRescueNextAction = "replace_item"
+	RescueActionRemoveItem              OrderRescueNextAction = "remove_item"
+	RescueActionWaitCustomer            OrderRescueNextAction = "wait_customer"
+	RescueActionChangeDeliveryMode      OrderRescueNextAction = "change_delivery_mode"
+	RescueActionReassignCaptain         OrderRescueNextAction = "reassign_captain"
+	RescueActionConvertSupportException OrderRescueNextAction = "convert_to_support_exception"
+	RescueActionCreateFollowUpTask      OrderRescueNextAction = "create_follow_up_task"
+	RescueActionOpenWLTVisibility       OrderRescueNextAction = "open_wlt_visibility"
 )
 
 type OrderRescueCase struct {
@@ -114,20 +114,20 @@ const (
 )
 
 type OrderRescueAction struct {
-	ID              string                `json:"id"`
-	RescueCaseID    string                `json:"rescueCaseId"`
-	ActionType      OrderRescueNextAction `json:"actionType"`
+	ID              string                  `json:"id"`
+	RescueCaseID    string                  `json:"rescueCaseId"`
+	ActionType      OrderRescueNextAction   `json:"actionType"`
 	Status          OrderRescueActionStatus `json:"status"`
-	Payload         string                `json:"payload"`
-	RequestedBy     string                `json:"requestedBy"`
-	ApprovedBy      *string               `json:"approvedBy,omitempty"`
-	ExecutedBy      *string               `json:"executedBy,omitempty"`
-	ExecutionResult string                `json:"executionResult,omitempty"`
-	CorrelationID   string                `json:"correlationId"`
-	IdempotencyKey  string                `json:"idempotencyKey"`
-	Version         int64                 `json:"version"`
-	CreatedAt       time.Time             `json:"createdAt"`
-	UpdatedAt       time.Time             `json:"updatedAt"`
+	Payload         string                  `json:"payload"`
+	RequestedBy     string                  `json:"requestedBy"`
+	ApprovedBy      *string                 `json:"approvedBy,omitempty"`
+	ExecutedBy      *string                 `json:"executedBy,omitempty"`
+	ExecutionResult string                  `json:"executionResult,omitempty"`
+	CorrelationID   string                  `json:"correlationId"`
+	IdempotencyKey  string                  `json:"idempotencyKey"`
+	Version         int64                   `json:"version"`
+	CreatedAt       time.Time               `json:"createdAt"`
+	UpdatedAt       time.Time               `json:"updatedAt"`
 }
 
 type CreateOrderRescueActionInput struct {
@@ -691,7 +691,7 @@ func ExecuteOrderRescueAction(db *sql.DB, input ExecuteOrderRescueActionInput) (
 		// Check if custody transfer is required
 		var deliveryStatus string
 		err = tx.QueryRow(`
-			SELECT d.status FROM dsh_assignments a 
+			SELECT d.status FROM dsh_assignments a
 			JOIN dsh_deliveries d ON d.assignment_id = a.id
 			WHERE a.order_id = $1::uuid AND a.status IN ('offered', 'accepted')
 			LIMIT 1`, caseItem.OrderID).Scan(&deliveryStatus)
@@ -722,7 +722,7 @@ func ExecuteOrderRescueAction(db *sql.DB, input ExecuteOrderRescueActionInput) (
 	if err := tx.Commit(); err != nil {
 		return OrderRescueAction{}, err
 	}
-	
+
 	action.Status = ActionCompleted
 	action.ExecutedBy = &input.ActorID
 	return action, nil

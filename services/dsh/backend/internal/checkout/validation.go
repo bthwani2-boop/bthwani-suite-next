@@ -93,7 +93,7 @@ func RefreshIntent(db *sql.DB, intentID, operatorContextID, clientID, addressID 
 func ValidateIntent(db *sql.DB, intentID, operatorContextID, clientID string) (*Intent, error) {
 	// This would re-run the validation rules and update state to blocked/ready
 	operatorContextID = normalizeOperatorContext(operatorContextID)
-	
+
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func ValidateIntent(db *sql.DB, intentID, operatorContextID, clientID string) (*
 		FROM dsh_checkout_intents
 		WHERE id = $1::uuid AND operator_context_id = $2 AND client_id = $3
 		FOR UPDATE`, intentID, operatorContextID, clientID)
-		
+
 	intent, err := scanIntent(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -120,7 +120,7 @@ func ValidateIntent(db *sql.DB, intentID, operatorContextID, clientID string) (*
 		return intent, nil // no-op if in confirming/confirmed/etc
 	}
 
-	// 2. Perform dummy validation 
+	// 2. Perform dummy validation
 	issues := []ValidationIssue{}
 	if intent.DeliveryAddress == "" && intent.FulfillmentMode != ModePickup {
 		issues = append(issues, ValidationIssue{
@@ -134,7 +134,7 @@ func ValidateIntent(db *sql.DB, intentID, operatorContextID, clientID string) (*
 	if len(issues) > 0 {
 		newState = StateBlocked
 	}
-	
+
 	if intent.State != newState || len(issues) != len(intent.ValidationIssues) {
 		issuesJSON, _ := json.Marshal(issues)
 		row = tx.QueryRow(`

@@ -12,8 +12,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/lib/pq"
 	"dsh-api/internal/wlt"
+	"github.com/lib/pq"
 )
 
 var (
@@ -42,29 +42,29 @@ type CartItem struct {
 	PriceReference    string  `json:"priceReference"`
 	// UnitPriceMinorUnits and Currency are snapshotted together from the sovereign store
 	// assortment at add-to-cart time. Neither value is accepted from the client.
-	UnitPriceMinorUnits int64 `json:"unitPriceMinorUnits"`
-	Currency  string  `json:"currency"`
-	Quantity  int     `json:"quantity"`
-	Options   []string `json:"options"`
-	Note      string  `json:"note"`
-	Version   int     `json:"version"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	UnitPriceMinorUnits int64     `json:"unitPriceMinorUnits"`
+	Currency            string    `json:"currency"`
+	Quantity            int       `json:"quantity"`
+	Options             []string  `json:"options"`
+	Note                string    `json:"note"`
+	Version             int       `json:"version"`
+	CreatedAt           time.Time `json:"createdAt"`
+	UpdatedAt           time.Time `json:"updatedAt"`
 }
 
 type Cart struct {
-	ID              string           `json:"id"`
-	ClientID        string           `json:"clientId"`
-	StoreID         string           `json:"storeId"`
-	FulfillmentMode FulfillmentMode  `json:"fulfillmentMode"`
-	State           string           `json:"state"`
-	Note            string           `json:"note"`
-	Items           []CartItem       `json:"items"`
+	ID              string          `json:"id"`
+	ClientID        string          `json:"clientId"`
+	StoreID         string          `json:"storeId"`
+	FulfillmentMode FulfillmentMode `json:"fulfillmentMode"`
+	State           string          `json:"state"`
+	Note            string          `json:"note"`
+	Items           []CartItem      `json:"items"`
 	// Quote is the authoritative financial quote from WLT. DSH never mutates it.
-	Quote           *wlt.WltPricingQuote `json:"quote"`
-	Version         int              `json:"version"`
-	CreatedAt       time.Time        `json:"createdAt"`
-	UpdatedAt       time.Time        `json:"updatedAt"`
+	Quote     *wlt.WltPricingQuote `json:"quote"`
+	Version   int                  `json:"version"`
+	CreatedAt time.Time            `json:"createdAt"`
+	UpdatedAt time.Time            `json:"updatedAt"`
 }
 
 // FetchDeliveryFeeMinorUnits reads the store's persisted delivery fee from the
@@ -82,7 +82,9 @@ func FetchDeliveryFeeMinorUnits(ctx context.Context, db *sql.DB, storeID string)
 // FetchWltQuote calls WLT's sovereign pricing engine. DSH passes operational
 // inputs; WLT owns all arithmetic, rounding, tax, and discount logic.
 // If wltClient is nil (unconfigured) it returns nil so callers can handle gracefully.
-func FetchWltQuote(ctx context.Context, db *sql.DB, wltClient interface{ CalculateQuote(context.Context, wlt.CalculatePricingQuoteRequest) (*wlt.WltPricingQuote, error) }, c *Cart) (*wlt.WltPricingQuote, error) {
+func FetchWltQuote(ctx context.Context, db *sql.DB, wltClient interface {
+	CalculateQuote(context.Context, wlt.CalculatePricingQuoteRequest) (*wlt.WltPricingQuote, error)
+}, c *Cart) (*wlt.WltPricingQuote, error) {
 	if wltClient == nil {
 		return nil, nil
 	}
@@ -162,11 +164,11 @@ type UpsertItemInput struct {
 	// MasterProductID is the only product identity taken from the caller: name,
 	// priceReference (display label), unitPrice, and currency are always looked
 	// up server-side from the store assortment row, never trusted from the client.
-	MasterProductID string `json:"masterProductId"`
-	Quantity        int    `json:"quantity"`
+	MasterProductID string   `json:"masterProductId"`
+	Quantity        int      `json:"quantity"`
 	Options         []string `json:"options"`
-	Note            string `json:"note"`
-	ExpectedVersion *int   `json:"expectedVersion,omitempty"`
+	Note            string   `json:"note"`
+	ExpectedVersion *int     `json:"expectedVersion,omitempty"`
 }
 
 func hashOptions(options []string) string {
@@ -245,7 +247,7 @@ func UpsertItem(ctx context.Context, db *sql.DB, storeID, cartID string, input U
 	if len(input.Note) > 500 {
 		return nil, ErrInvalid
 	}
-	
+
 	// ETag/If-Match version check
 	if input.ExpectedVersion != nil {
 		var currentVersion int
@@ -262,13 +264,13 @@ func UpsertItem(ctx context.Context, db *sql.DB, storeID, cartID string, input U
 	var unitPriceMinorUnits int64
 	var available bool
 	err := db.QueryRowContext(ctx,
-		`SELECT a.id, mp.canonical_name_ar, COALESCE(p.amount_minor, 0), COALESCE(p.currency, ''), 
-			CASE 
+		`SELECT a.id, mp.canonical_name_ar, COALESCE(p.amount_minor, 0), COALESCE(p.currency, ''),
+			CASE
 				WHEN p.amount_minor IS NULL THEN false
-				WHEN i.policy_type = 'signal' AND i.quantity > 0 THEN true 
-				WHEN i.policy_type = 'quantity' AND (i.quantity - i.reserved_quantity) >= $3 THEN true 
-				WHEN i.policy_type = 'infinite' THEN true 
-				ELSE false 
+				WHEN i.policy_type = 'signal' AND i.quantity > 0 THEN true
+				WHEN i.policy_type = 'quantity' AND (i.quantity - i.reserved_quantity) >= $3 THEN true
+				WHEN i.policy_type = 'infinite' THEN true
+				ELSE false
 			END AS available
 		 FROM dsh_store_assortments a
 		 JOIN dsh_master_products mp ON mp.id = a.master_product_id
@@ -366,7 +368,7 @@ func RemoveItem(ctx context.Context, db *sql.DB, cartID, itemID string, expected
 	if n == 0 {
 		return ErrNotFound
 	}
-	
+
 	_, err = tx.ExecContext(ctx, `UPDATE dsh_carts SET version = version + 1, updated_at = NOW() WHERE id = $1`, cartID)
 	if err != nil {
 		return err
@@ -506,7 +508,7 @@ func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCo
 func GetFulfillmentModes(ctx context.Context, db *sql.DB, storeID, serviceAreaCode string, clientLat, clientLng *float64) FulfillmentModesResponse {
 	// Call CheckServiceability to run the identical store and zone constraints
 	res := CheckServiceability(ctx, db, storeID, serviceAreaCode, clientLat, clientLng)
-	
+
 	// If check failed early without computing modes, fallback to all unavailable
 	modes := res.AvailableModes
 	if len(modes) == 0 {

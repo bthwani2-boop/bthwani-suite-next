@@ -10,7 +10,7 @@ const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath)
 test('Control Panel startup restores only the governed frozen lockfile', () => {
   const source = read('apps/control-panel/runtime/start.ps1');
   assert.match(source, /pnpm install --frozen-lockfile/);
-  assert.match(source, /Test-ControlPanelPackageResolution/);
+  assert.match(source, /Test-ControlPanelModuleResolution/);
   assert.doesNotMatch(source, /pnpm\s+(add|install)\s+typescript/i);
 });
 
@@ -18,6 +18,8 @@ test('mobile development bootstrap reports failures without immediate process te
   const source = read('apps/mobile/mobile-dev-data.mjs');
   assert.doesNotMatch(source, /process\.exit\s*\(/);
   assert.match(source, /process\.exitCode = 1/);
+  assert.match(source, /return token/);
+  assert.match(source, /\{ field: fieldToken \}/);
 });
 
 test('canonical runtime builds service images before readiness', () => {
@@ -46,9 +48,9 @@ test('Workforce migration reconciles persisted generated-code sequences', () => 
 
 test('DSH remains the sovereign owner of store access scopes', () => {
   const source = read('services/dsh/backend/internal/store/governance.go');
-  const resolverStart = source.indexOf('func ResolveActorStore(');
-  const nextFunction = source.indexOf('func ResolveActorStoreForID(', resolverStart);
-  assert.ok(resolverStart >= 0 && nextFunction > resolverStart, 'ResolveActorStore is missing');
+  const resolverStart = source.indexOf('func resolveStoreIDsForActor(');
+  const nextFunction = source.indexOf('func ResolveActorStore(', resolverStart);
+  assert.ok(resolverStart >= 0 && nextFunction > resolverStart, 'resolveStoreIDsForActor is missing');
   const resolver = source.slice(resolverStart, nextFunction);
   assert.match(resolver, /FROM dsh_store_actor_scopes/);
   assert.match(resolver, /operator_context_id/);
@@ -58,6 +60,6 @@ test('DSH remains the sovereign owner of store access scopes', () => {
   const updateStart = source.indexOf('func UpdatePartnerSettings(', accessStart);
   assert.ok(accessStart >= 0 && updateStart > accessStart, 'ActorCanAccessStore is missing');
   const access = source.slice(accessStart, updateStart);
-  assert.match(access, /FROM dsh_store_actor_scopes/);
+  assert.match(access, /resolveStoreIDsForActor/);
   assert.doesNotMatch(access, /GetActorScopes/);
 });

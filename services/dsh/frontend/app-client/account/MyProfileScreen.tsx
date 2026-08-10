@@ -24,7 +24,7 @@ export type MyProfileScreenProps = {
   onRequestAccountDeletion?: () => void;
 };
 
-type ProfileState = 
+type ProfileState =
   | { kind: "loading" }
   | { kind: "ready"; profile: ClientProfile }
   | { kind: "error"; message: string }
@@ -87,9 +87,9 @@ export function MyProfileScreen({ onBack, onRequestDataCopy, onRequestAccountDel
   }
 
   const identity = sessionState.identity;
-  
-  const hasChanges = 
-    profileState.kind === "ready" && 
+
+  const hasChanges =
+    profileState.kind === "ready" &&
     (locale !== profileState.profile.locale ||
     currency !== profileState.profile.currencyPreference ||
     consentEmail !== profileState.profile.marketingConsentEmail ||
@@ -102,7 +102,7 @@ export function MyProfileScreen({ onBack, onRequestDataCopy, onRequestAccountDel
     try {
       const isPreferencesChanged = locale !== profileState.profile.locale || currency !== profileState.profile.currencyPreference;
       const isConsentsChanged = consentEmail !== profileState.profile.marketingConsentEmail || consentSms !== profileState.profile.marketingConsentSms || consentPush !== profileState.profile.marketingConsentPush;
-      
+
       let updatedProfile = profileState.profile;
 
       if (isPreferencesChanged) {
@@ -159,7 +159,7 @@ export function MyProfileScreen({ onBack, onRequestDataCopy, onRequestAccountDel
 
   const confirmWithdrawConsent = (type: "email" | "sms" | "push") => {
     // Ideally this would show a dialog, but for now we immediately toggle.
-    // DSH specifies: "Withdraw consent shows confirmation then updates." 
+    // DSH specifies: "Withdraw consent shows confirmation then updates."
     // In a real app we'd use React Native Alert.alert.
     if (type === "email") setConsentEmail(false);
     if (type === "sms") setConsentSms(false);
@@ -198,8 +198,8 @@ export function MyProfileScreen({ onBack, onRequestDataCopy, onRequestAccountDel
               <Text role="headingSm">الخيارات العامة</Text>
               <View style={styles.row}>
                 <Text role="body">اللغة (Locale)</Text>
-                <Switch 
-                  value={locale === "ar"} 
+                <Switch
+                  value={locale === "ar"}
                   onValueChange={(v) => setLocale(v ? "ar" : "en")}
                   disabled={saving}
                 />
@@ -210,24 +210,24 @@ export function MyProfileScreen({ onBack, onRequestDataCopy, onRequestAccountDel
               <Text role="headingSm">خيارات التواصل (التسويق)</Text>
               <View style={styles.row}>
                 <Text role="body">البريد الإلكتروني</Text>
-                <Switch 
-                  value={consentEmail} 
+                <Switch
+                  value={consentEmail}
                   onValueChange={(v) => v ? setConsentEmail(true) : confirmWithdrawConsent("email")}
                   disabled={saving}
                 />
               </View>
               <View style={styles.row}>
                 <Text role="body">الرسائل النصية SMS</Text>
-                <Switch 
-                  value={consentSms} 
+                <Switch
+                  value={consentSms}
                   onValueChange={(v) => v ? setConsentSms(true) : confirmWithdrawConsent("sms")}
                   disabled={saving}
                 />
               </View>
               <View style={styles.row}>
                 <Text role="body">إشعارات الهاتف Push</Text>
-                <Switch 
-                  value={consentPush} 
+                <Switch
+                  value={consentPush}
                   onValueChange={(v) => v ? setConsentPush(true) : confirmWithdrawConsent("push")}
                   disabled={saving}
                 />
@@ -235,10 +235,10 @@ export function MyProfileScreen({ onBack, onRequestDataCopy, onRequestAccountDel
             </View>
 
             <View style={styles.actions}>
-              <Button 
-                label={saving ? "جاري الحفظ..." : "حفظ التفضيلات"} 
-                onPress={handleSave} 
-                disabled={!hasChanges || saving} 
+              <Button
+                label={saving ? "جاري الحفظ..." : "حفظ التفضيلات"}
+                onPress={handleSave}
+                disabled={!hasChanges || saving}
               />
               {hasChanges && !saving && (
                 <Button label="إلغاء" tone="secondary" onPress={handleCancel} />

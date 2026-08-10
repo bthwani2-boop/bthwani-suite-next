@@ -14,13 +14,9 @@ import (
 
 type payoutProviderDestination struct {
 	ID                   string
-	SettlementPreference string
+	DestinationMethod    string
 	BeneficiaryName      string
-	BankName             string
-	BankBranch           string
-	AccountNumber        string
-	IBAN                 string
-	MobileNumber         string
+	DestinationReference string
 }
 
 func loadPayoutProviderDestination(
@@ -32,13 +28,9 @@ func loadPayoutProviderDestination(
 	var destination payoutProviderDestination
 	err := tx.QueryRowContext(ctx, `
 		SELECT d.id,
-		       d.settlement_preference,
+		       d.destination_method,
 		       d.beneficiary_name,
-		       d.bank_name,
-		       d.bank_branch,
-		       COALESCE(pgp_sym_decrypt(d.account_number_encrypted, $2), ''),
-		       COALESCE(pgp_sym_decrypt(d.iban_encrypted, $2), ''),
-		       COALESCE(pgp_sym_decrypt(d.payout_mobile_number_encrypted, $2), '')
+		       COALESCE(pgp_sym_decrypt(d.destination_reference_encrypted, $2), '')
 		FROM wlt_payout_requests p
 		JOIN wlt_payout_destinations d
 		  ON d.id = p.payout_destination_id
@@ -47,26 +39,18 @@ func loadPayoutProviderDestination(
 		WHERE p.id = $1
 		FOR SHARE OF d`, payoutID, encryptionKey).Scan(
 		&destination.ID,
-		&destination.SettlementPreference,
+		&destination.DestinationMethod,
 		&destination.BeneficiaryName,
-		&destination.BankName,
-		&destination.BankBranch,
-		&destination.AccountNumber,
-		&destination.IBAN,
-		&destination.MobileNumber,
+		&destination.DestinationReference,
 	)
 	return destination, err
 }
 
 func (destination payoutProviderDestination) validateForProvider() error {
-	switch destination.SettlementPreference {
-	case "bank":
-		if strings.TrimSpace(destination.AccountNumber) == "" && strings.TrimSpace(destination.IBAN) == "" {
-			return errors.New("bank payout destination has no account number or IBAN")
-		}
-	case "mobile_money":
-		if strings.TrimSpace(destination.MobileNumber) == "" {
-			return errors.New("mobile-money payout destination has no mobile number")
+	switch destination.DestinationMethod {
+	case "bank", "mobile_money":
+		if strings.TrimSpace(destination.DestinationReference) == "" {
+			return errors.New("provider payout destination has no reference")
 		}
 	case "manual":
 		return errors.New("manual payout destinations cannot be submitted to a provider")
@@ -81,14 +65,10 @@ func (destination payoutProviderDestination) validateForProvider() error {
 
 func destinationProviderPayload(destination payoutProviderDestination) map[string]any {
 	return map[string]any{
-		"id":                 destination.ID,
-		"type":               destination.SettlementPreference,
-		"beneficiaryName":    destination.BeneficiaryName,
-		"bankName":           destination.BankName,
-		"bankBranch":         destination.BankBranch,
-		"accountNumber":      destination.AccountNumber,
-		"iban":               destination.IBAN,
-		"payoutMobileNumber": destination.MobileNumber,
+		"id":                   destination.ID,
+		"type":                 destination.DestinationMethod,
+		"beneficiaryName":      destination.BeneficiaryName,
+		"destinationReference": destination.DestinationReference,
 	}
 }
 

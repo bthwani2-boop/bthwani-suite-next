@@ -17,4 +17,3 @@ test("runtime proof uses live central-catalog readback", () => {
   assert.match(runtimePhase, /tools\/scripts\/verify-catalog\.ps1/);
   assert.match(runtimePhase, /Central catalog readback failed/);
 });
-

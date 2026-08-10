@@ -18,7 +18,7 @@ func TestDeliveryExceptionReassignsBeforePickupAtomicallyDBIntegration(t *testin
 	newCaptainID := "reassign-new-captain-" + suffix
 	clientID := uuid.NewString()
 
-	if _, err := db.Exec(`INSERT INTO dsh_stores(id,slug,display_name,status,city_code,service_area_code,serviceability_status,is_visible) VALUES($1,$1,'Reassign Store','active','SAN','SAN-1','serviceable',true)`, storeID); err != nil {
+	if _, err := db.Exec(`INSERT INTO dsh_stores(id,slug,display_name,status,city_code,service_area_code,serviceability_status,is_visible) VALUES($1,$1,'Reassign Store','published','SAN','SAN-1','serviceable',true)`, storeID); err != nil {
 		t.Fatalf("insert store: %v", err)
 	}
 	var checkoutIntentID string
@@ -52,6 +52,7 @@ func TestDeliveryExceptionReassignsBeforePickupAtomicallyDBIntegration(t *testin
 		ReasonCode:    ExceptionVehicleBreakdown,
 		Note:          "تعطلت المركبة قبل استلام الطلب",
 		CorrelationID: "reassign-command-" + suffix,
+		ProofMediaRef: "media://vehicle-breakdown/" + suffix,
 	})
 	if err != nil {
 		t.Fatalf("report exception: %v", err)
@@ -111,7 +112,7 @@ func TestDeliveryExceptionRejectsReassignmentAfterPickupDBIntegration(t *testing
 	storeID := "reassign-blocked-store-" + suffix
 	captainID := "reassign-blocked-captain-" + suffix
 	clientID := uuid.NewString()
-	if _, err := db.Exec(`INSERT INTO dsh_stores(id,slug,display_name,status,city_code,service_area_code,serviceability_status,is_visible) VALUES($1,$1,'Blocked Reassign Store','active','SAN','SAN-1','serviceable',true)`, storeID); err != nil {
+	if _, err := db.Exec(`INSERT INTO dsh_stores(id,slug,display_name,status,city_code,service_area_code,serviceability_status,is_visible) VALUES($1,$1,'Blocked Reassign Store','published','SAN','SAN-1','serviceable',true)`, storeID); err != nil {
 		t.Fatal(err)
 	}
 	var checkoutIntentID string
@@ -134,7 +135,12 @@ func TestDeliveryExceptionRejectsReassignmentAfterPickupDBIntegration(t *testing
 		_, _ = db.Exec(`DELETE FROM dsh_checkout_intents WHERE id=$1::uuid`, checkoutIntentID)
 		_, _ = db.Exec(`DELETE FROM dsh_stores WHERE id=$1`, storeID)
 	})
-	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{ReasonCode: ExceptionVehicleBreakdown, Note: "تعطل بعد استلام الطلب", CorrelationID: "blocked-reassign-" + suffix})
+	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{
+		ReasonCode:    ExceptionVehicleBreakdown,
+		Note:          "تعطل بعد استلام الطلب",
+		CorrelationID: "blocked-reassign-" + suffix,
+		ProofMediaRef: "media://vehicle-breakdown/" + suffix,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

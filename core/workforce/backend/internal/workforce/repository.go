@@ -832,7 +832,7 @@ func (r *Repository) CreateProvisioningCase(ctx context.Context, c ProvisioningC
 func (r *Repository) UpdateProvisioningCase(ctx context.Context, c ProvisioningCase) error {
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE workforce_provisioning_cases
-		SET status = $2, actor_id = NULLIF($3, ''), workforce_code = NULLIF($4, ''), 
+		SET status = $2, actor_id = NULLIF($3, ''), workforce_code = NULLIF($4, ''),
 		    failure_reason = NULLIF($5, ''), updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1`,
 		c.ID, c.Status, c.ActorID, c.WorkforceCode, c.FailureReason)

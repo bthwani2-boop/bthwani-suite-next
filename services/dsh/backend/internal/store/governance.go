@@ -102,14 +102,9 @@ type WorkforceScopeResolver interface {
 // temporarily for call-site compatibility and must not become a parallel
 // authorization source.
 func resolveStoreIDsForActor(ctx context.Context, db queryer, wf WorkforceScopeResolver, actorID, operatorContextID, role string) []string {
+	_ = wf // Retained only for call-site compatibility; Workforce is not a store-authorization source.
 	var storeIDs []string
-	if wf != nil {
-		actorScopes, err := wf.GetActorScopes(ctx, actorID, operatorContextID, role)
-		if err == nil && actorScopes != nil && len(actorScopes.StoreIDs) > 0 {
-			storeIDs = actorScopes.StoreIDs
-		}
-	}
-	if len(storeIDs) == 0 && db != nil {
+	if db != nil {
 		rows, err := db.QueryContext(ctx, `
 			SELECT store_id
 			FROM dsh_store_actor_scopes

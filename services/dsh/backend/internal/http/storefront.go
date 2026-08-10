@@ -34,7 +34,7 @@ func handlePublicStorefront(db *sql.DB) http.HandlerFunc {
 		}
 
 		storeDetail := store.RowToDetail(*storeRow)
-		
+
 		// 2. Fetch Catalog (returns only published items)
 		domains, nodes, products, media, policySnapshot, err := centralcatalog.GetClientCatalog(r.Context(), db, storeID)
 		if errors.Is(err, centralcatalog.ErrNotFound) {

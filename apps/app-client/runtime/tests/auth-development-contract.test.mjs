@@ -32,6 +32,7 @@ test("password login binds sessions to server-owned canonical surfaces", async (
 test("quick developer login is local-only and does not bundle privileged secrets", async () => {
   const [
     gate,
+    sessionAdapter,
     broker,
     devData,
     runtime,
@@ -42,6 +43,7 @@ test("quick developer login is local-only and does not bundle privileged secrets
     captain,
   ] = await Promise.all([
     read("services/dsh/frontend/shared/session/IdentitySessionGate.tsx"),
+    read("services/dsh/frontend/shared/session/dev-session-broker.adapter.ts"),
     read("tools/dev/local-dev-session-broker.mjs"),
     read("apps/mobile/mobile-dev-data.mjs"),
     read("apps/mobile/start-mobile-runtime.ps1"),
@@ -56,7 +58,12 @@ test("quick developer login is local-only and does not bundle privileged secrets
   assert.match(gate, /typeof __DEV__ !== "undefined"/);
   assert.match(gate, /getIdentityDeviceFingerprint/);
   assert.match(gate, /adoptSession/);
-  assert.match(gate, /127\.0\.0\.1:58100/);
+  assert.match(gate, /requestDevelopmentSession/);
+  assert.doesNotMatch(gate, /127\.0\.0\.1:58100/);
+
+  assert.match(sessionAdapter, /127\.0\.0\.1:58100/);
+  assert.match(sessionAdapter, /10\.0\.2\.2:58100/);
+  assert.match(sessionAdapter, /isDshDeviceLoopbackBridgeEnabled/);
 
   assert.match(broker, /HOST = '127\.0\.0\.1'/);
   assert.match(broker, /LOCAL_DEV_SESSION_BROKER_FORBIDDEN_IN_PRODUCTION/);

@@ -54,10 +54,10 @@ export function clearCartSyncQueue(): void {
 
 // Generate an idempotency key if not available
 export function generateIdempotencyKey(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
   }
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  throw new Error("SECURE_RANDOM_UNAVAILABLE");
 }
 
 export function getDeviceId(): string {

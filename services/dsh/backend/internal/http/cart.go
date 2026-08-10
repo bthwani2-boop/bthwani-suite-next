@@ -29,8 +29,8 @@ func (s *protectedStoreServer) handleGetFulfillmentModes(w http.ResponseWriter, 
 	}
 	serviceAreaCode := r.URL.Query().Get("serviceAreaCode")
 
-	// GetFulfillmentModes doesn't rely on full physical coordinates in the simple case, 
-	// but if we have an active address, we should technically use it. 
+	// GetFulfillmentModes doesn't rely on full physical coordinates in the simple case,
+	// but if we have an active address, we should technically use it.
 	// For J051 lightweight capability fetch, we just rely on the zone/serviceAreaCode.
 	resp := cart.GetFulfillmentModes(r.Context(), s.db, storeID, serviceAreaCode, nil, nil)
 	store.SendJSON(w, http.StatusOK, resp)
@@ -271,7 +271,7 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not update cart item")
 		return
 	}
-	
+
 	// Add idempotency tracking if provided
 	if idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key")); idempotencyKey != "" {
 		deviceId := strings.TrimSpace(r.Header.Get("X-Dsh-Device-Id"))

@@ -52,6 +52,7 @@ func TestDeliveryExceptionCancelsOrderBeforePickupDBIntegration(t *testing.T) {
 		ReasonCode:    ExceptionVehicleBreakdown,
 		Note:          "تعطلت المركبة قبل استلام الطلب من المتجر",
 		CorrelationID: "cancel-command-" + suffix,
+		ProofMediaRef: "media://vehicle-breakdown/" + suffix,
 	})
 	if err != nil {
 		t.Fatalf("report exception: %v", err)
@@ -129,7 +130,12 @@ func TestDeliveryExceptionRejectsDirectCancelAfterPickupDBIntegration(t *testing
 		_, _ = db.Exec(`DELETE FROM dsh_stores WHERE id=$1`, storeID)
 	})
 
-	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{ReasonCode: ExceptionDamagedOrder, Note: "تضرر الطلب بعد الاستلام", CorrelationID: "cancel-blocked-" + suffix})
+	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{
+		ReasonCode:    ExceptionDamagedOrder,
+		Note:          "تضرر الطلب بعد الاستلام",
+		CorrelationID: "cancel-blocked-" + suffix,
+		ProofMediaRef: "media://damaged-order/" + suffix,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

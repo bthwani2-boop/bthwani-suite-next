@@ -29,7 +29,7 @@ func (s *protectedStoreServer) handleListNotifications(w http.ResponseWriter, r 
 	})
 }
 
-// POST /dsh/notifications/{notificationId}/read
+// POST /dsh/notifications/items/{notificationId}/read
 func (s *protectedStoreServer) handleMarkNotificationRead(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "field")
 	if !ok {

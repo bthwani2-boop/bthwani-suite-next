@@ -56,7 +56,7 @@ func CreateRoleDefinitionRequest(ctx context.Context, db *sql.DB, actorID string
 
 	var req RoleDefinitionRequest
 	err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_admin_role_definition_requests 
+		INSERT INTO dsh_admin_role_definition_requests
 			(role_name, description, permissions, surfaces, requested_by, reason, status)
 		VALUES ($1, $2, $3, $4, $5, $6, 'pending')
 		RETURNING id, role_name, description, permissions, surfaces, requested_by, reason, status, version, created_at, updated_at
@@ -85,7 +85,7 @@ func ListRoleDefinitionRequests(ctx context.Context, db *sql.DB, status string) 
 	}
 
 	query := `
-		SELECT id, role_name, description, permissions, surfaces, requested_by, reason, status, 
+		SELECT id, role_name, description, permissions, surfaces, requested_by, reason, status,
 		       reviewed_by, review_note, version, created_at, updated_at, reviewed_at
 		FROM dsh_admin_role_definition_requests
 	`

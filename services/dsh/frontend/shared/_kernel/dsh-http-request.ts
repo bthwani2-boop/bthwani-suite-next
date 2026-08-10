@@ -152,7 +152,7 @@ export function createDshHttpClient(
     const execute = () => {
       const token = options.token ?? (cookieMode ? undefined : getIdentityAccessToken());
       if (!cookieMode && !token) return Promise.resolve(new Response(null, { status: 401 }));
-      
+
       return fetch(requestUrl, {
         method: options.method ?? "GET",
         headers: {

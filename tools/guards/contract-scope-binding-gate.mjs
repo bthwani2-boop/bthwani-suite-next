@@ -88,6 +88,7 @@ const scanTargets = [
     root: "services/dsh/backend",
     patterns: [
       /requirePermission\(\s*w,\s*r,\s*"[^"]*",\s*"([a-zA-Z][a-zA-Z0-9_.:-]*)"/g,
+      /require(?!Permission\()[A-Za-z]*Permission\(\s*w,\s*r,\s*(?:"[^"]*",\s*)?"([a-zA-Z][a-zA-Z0-9_.:-]*)"/g,
       /require[A-Za-z]*Permission\(\s*w,\s*r,\s*(?:"[^"]*",\s*)?([A-Za-z][A-Za-z0-9]*Permission[A-Za-z0-9]*)\s*[,)]/g,
       /serve[A-Za-z]*PermissionHandler\(\s*w,\s*r,[\s\S]*?,\s*([A-Za-z][A-Za-z0-9]*Permission[A-Za-z0-9]*)\s*[,)]/g,
     ],

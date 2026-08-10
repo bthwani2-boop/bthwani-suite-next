@@ -22,13 +22,19 @@ func RebuildProjections(ctx context.Context, db *sql.DB, periodStart time.Time) 
 	// Platform KPIs
 	var totalOrders, deliveredOrders, cancelledOrders int
 	err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_orders WHERE created_at >= $1 AND created_at < $2`, periodStart, periodEnd).Scan(&totalOrders)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_orders WHERE status = 'delivered' AND created_at >= $1 AND created_at < $2`, periodStart, periodEnd).Scan(&deliveredOrders)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_orders WHERE (status = 'cancelled' OR status LIKE 'cancelled_%') AND created_at >= $1 AND created_at < $2`, periodStart, periodEnd).Scan(&cancelledOrders)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	// Upsert Platform KPIs Projections
 	upsertQuery := `
@@ -53,37 +59,65 @@ func RebuildProjections(ctx context.Context, db *sql.DB, periodStart time.Time) 
 	// Delivery Analytics
 	var totalAssignments, acceptedAssignments, completedAssignments, declinedAssignments int
 	err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_assignments WHERE created_at >= $1 AND created_at < $2`, periodStart, periodEnd).Scan(&totalAssignments)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_assignments WHERE status IN ('accepted','completed') AND created_at >= $1 AND created_at < $2`, periodStart, periodEnd).Scan(&acceptedAssignments)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_assignments WHERE status = 'completed' AND created_at >= $1 AND created_at < $2`, periodStart, periodEnd).Scan(&completedAssignments)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_assignments WHERE status = 'declined' AND created_at >= $1 AND created_at < $2`, periodStart, periodEnd).Scan(&declinedAssignments)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	// Support Analytics
 	var totalTickets, openTickets, resolvedTickets int
 	err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_support_tickets WHERE created_at >= $1 AND created_at < $2`, periodStart, periodEnd).Scan(&totalTickets)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_support_tickets WHERE status NOT IN ('resolved','closed') AND created_at >= $1 AND created_at < $2`, periodStart, periodEnd).Scan(&openTickets)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_support_tickets WHERE status IN ('resolved','closed') AND created_at >= $1 AND created_at < $2`, periodStart, periodEnd).Scan(&resolvedTickets)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	// Upsert Projections
-	if _, err := tx.ExecContext(ctx, upsertQuery, "platform.assignments.total", periodStart, periodEnd, totalAssignments, totalAssignments); err != nil { return err }
-	if _, err := tx.ExecContext(ctx, upsertQuery, "platform.assignments.accepted", periodStart, periodEnd, acceptedAssignments, totalAssignments); err != nil { return err }
-	if _, err := tx.ExecContext(ctx, upsertQuery, "platform.assignments.completed", periodStart, periodEnd, completedAssignments, totalAssignments); err != nil { return err }
-	if _, err := tx.ExecContext(ctx, upsertQuery, "platform.assignments.declined", periodStart, periodEnd, declinedAssignments, totalAssignments); err != nil { return err }
+	if _, err := tx.ExecContext(ctx, upsertQuery, "platform.assignments.total", periodStart, periodEnd, totalAssignments, totalAssignments); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, upsertQuery, "platform.assignments.accepted", periodStart, periodEnd, acceptedAssignments, totalAssignments); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, upsertQuery, "platform.assignments.completed", periodStart, periodEnd, completedAssignments, totalAssignments); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, upsertQuery, "platform.assignments.declined", periodStart, periodEnd, declinedAssignments, totalAssignments); err != nil {
+		return err
+	}
 
-	if _, err := tx.ExecContext(ctx, upsertQuery, "platform.support.total_tickets", periodStart, periodEnd, totalTickets, totalTickets); err != nil { return err }
-	if _, err := tx.ExecContext(ctx, upsertQuery, "platform.support.open_tickets", periodStart, periodEnd, openTickets, totalTickets); err != nil { return err }
-	if _, err := tx.ExecContext(ctx, upsertQuery, "platform.support.resolved_tickets", periodStart, periodEnd, resolvedTickets, totalTickets); err != nil { return err }
+	if _, err := tx.ExecContext(ctx, upsertQuery, "platform.support.total_tickets", periodStart, periodEnd, totalTickets, totalTickets); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, upsertQuery, "platform.support.open_tickets", periodStart, periodEnd, openTickets, totalTickets); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, upsertQuery, "platform.support.resolved_tickets", periodStart, periodEnd, resolvedTickets, totalTickets); err != nil {
+		return err
+	}
 
 	// Update Checkpoint
 	checkpointQuery := `
@@ -93,9 +127,15 @@ func RebuildProjections(ctx context.Context, db *sql.DB, periodStart time.Time) 
 			last_processed_timestamp = EXCLUDED.last_processed_timestamp,
 			updated_at = NOW()
 	`
-	if _, err := tx.ExecContext(ctx, checkpointQuery, "platform.orders", time.Now()); err != nil { return err }
-	if _, err := tx.ExecContext(ctx, checkpointQuery, "platform.assignments", time.Now()); err != nil { return err }
-	if _, err := tx.ExecContext(ctx, checkpointQuery, "platform.support", time.Now()); err != nil { return err }
+	if _, err := tx.ExecContext(ctx, checkpointQuery, "platform.orders", time.Now()); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, checkpointQuery, "platform.assignments", time.Now()); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, checkpointQuery, "platform.support", time.Now()); err != nil {
+		return err
+	}
 
 	return tx.Commit()
 }
@@ -104,9 +144,9 @@ func RebuildProjections(ctx context.Context, db *sql.DB, periodStart time.Time) 
 func GetFreshness(db *sql.DB, metricPrefix string) (time.Time, error) {
 	var freshness time.Time
 	err := db.QueryRow(`
-		SELECT COALESCE(MAX(generated_at), NOW()) 
-		FROM dsh_analytics_projections 
-		WHERE metric_id LIKE $1`, 
+		SELECT COALESCE(MAX(generated_at), NOW())
+		FROM dsh_analytics_projections
+		WHERE metric_id LIKE $1`,
 		fmt.Sprintf("%s%%", metricPrefix)).Scan(&freshness)
 	return freshness, err
 }

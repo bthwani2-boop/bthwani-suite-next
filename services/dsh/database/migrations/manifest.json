@@ -3,7 +3,7 @@
   "service": "dsh",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "dsh-998_operator_store_creation_idempotency_backfill.sql",
+  "cutover": "dsh-999_runtime_schema_alignment.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -981,7 +981,7 @@
     {
       "ordinal": 140,
       "file": "dsh-100_cart_sync_diagnostics.sql",
-      "sha256": "860d94d884da75f6a6b99e259129583a3a75d01d81442578239992fb2a1089ce",
+      "sha256": "a30e3e0f83fb3453fb39fa0cbc7cf2638d4cbb2ecd748fb77bca20b3f200cc34",
       "historicalPrefix": "100",
       "state": "HISTORICAL_IMMUTABLE"
     },
@@ -1661,6 +1661,20 @@
       "ordinal": 237,
       "file": "dsh-999_partner_destination_defaults.sql",
       "sha256": "236202ed6ab9b238248f3813528aa471440a6d1e8e8f43f7e23ed14dac424724",
+      "historicalPrefix": "999",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 238,
+      "file": "dsh-999_partner_owner_identity.sql",
+      "sha256": "60ce7d01b2e760644416172d60d6e6e602fe584d5f0d66d87d81c1515a95a335",
+      "historicalPrefix": "999",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 239,
+      "file": "dsh-999_runtime_schema_alignment.sql",
+      "sha256": "066c55b82200f81940d13905e3b3624d3ec4a8023cf8f26ca568d63972f0946a",
       "historicalPrefix": "999",
       "state": "ACTIVE"
     }

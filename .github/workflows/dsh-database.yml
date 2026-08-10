@@ -39,7 +39,7 @@ jobs:
     timeout-minutes: 60
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgis/postgis:16-3.4-alpine
         env:
           POSTGRES_USER: dsh_runtime
           POSTGRES_PASSWORD: dsh_runtime_password
@@ -47,7 +47,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U dsh_runtime -d dsh_runtime"
+          --health-cmd "pg_isready -h 127.0.0.1 -U dsh_runtime -d dsh_runtime"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20

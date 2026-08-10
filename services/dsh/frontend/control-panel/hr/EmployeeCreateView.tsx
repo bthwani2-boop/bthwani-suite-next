@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useIdentityRuntimeStatus, useIdentitySession } from "@bthwani/core-identity";
@@ -32,7 +32,7 @@ export function EmployeeCreateView(props: {
   const identityReason = identityRuntime.state.kind === "unavailable"
     ? identityRuntime.state.code
     : (runtimeValue?.reasonCodes ?? ["IDENTITY_READINESS_UNPROVEN"]).join("، ");
-  
+
   const [fullNameAr, setFullNameAr] = useState("");
   const [fullNameEn, setFullNameEn] = useState("");
   const [username, setUsername] = useState("");
@@ -45,7 +45,7 @@ export function EmployeeCreateView(props: {
 
   const createdCaseId = controller.state.kind === "created" ? controller.state.caseId : null;
   const isProvisioning = controller.state.kind === "provisioning";
-  
+
   const canSubmit =
     identityReady &&
     fullNameAr.trim().length > 0 &&

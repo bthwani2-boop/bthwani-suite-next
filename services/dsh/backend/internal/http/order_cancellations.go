@@ -96,19 +96,19 @@ func (s *protectedStoreServer) handleClientCancelOrder(w http.ResponseWriter, r 
 		return
 	}
 	_, err := orders.CancelOrderSync(s.db, orders.CreateCancellationCaseInput{
-		OrderID:       orderID,
-		OperatorContextID:      actor.OperatorContextID,
-		ActorID:       actor.ID,
-		ActorRole:     "client",
-		ReasonCode:    body.ReasonCode,
-		ReasonNote:    body.ReasonNote,
-		CorrelationID: cancellationCorrelation(r, body),
+		OrderID:           orderID,
+		OperatorContextID: actor.OperatorContextID,
+		ActorID:           actor.ID,
+		ActorRole:         "client",
+		ReasonCode:        body.ReasonCode,
+		ReasonNote:        body.ReasonNote,
+		CorrelationID:     cancellationCorrelation(r, body),
 	})
 	if err != nil {
 		writeOrderCancellationError(w, err)
 		return
 	}
-	
+
 	order, _ := orders.GetOrder(s.db, orderID)
 	cancellation, _ := orders.GetCancellation(s.db, orderID)
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order), "cancellation": cancellation})
@@ -124,19 +124,19 @@ func (s *protectedStoreServer) handlePartnerCancelOrder(w http.ResponseWriter, r
 		return
 	}
 	_, err := orders.CancelOrderSync(s.db, orders.CreateCancellationCaseInput{
-		OrderID:       ownedOrder.ID,
-		OperatorContextID:      actor.OperatorContextID,
-		ActorID:       actor.ID,
-		ActorRole:     "partner",
-		ReasonCode:    body.ReasonCode,
-		ReasonNote:    body.ReasonNote,
-		CorrelationID: cancellationCorrelation(r, body),
+		OrderID:           ownedOrder.ID,
+		OperatorContextID: actor.OperatorContextID,
+		ActorID:           actor.ID,
+		ActorRole:         "partner",
+		ReasonCode:        body.ReasonCode,
+		ReasonNote:        body.ReasonNote,
+		CorrelationID:     cancellationCorrelation(r, body),
 	})
 	if err != nil {
 		writeOrderCancellationError(w, err)
 		return
 	}
-	
+
 	order, _ := orders.GetOrder(s.db, ownedOrder.ID)
 	cancellation, _ := orders.GetCancellation(s.db, ownedOrder.ID)
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order), "cancellation": cancellation})
@@ -167,37 +167,37 @@ func (s *protectedStoreServer) handleOperatorCancelOrderGoverned(w http.Response
 		reason = body.ReasonCode
 	}
 	reported, err := incident.NewService(s.db).Report(r.Context(), incident.ReportInput{
-		OrderID:          orderID,
-		OperatorContextID:         actor.OperatorContextID,
-		TargetEntityType: incident.TargetOrder,
-		TargetEntityID:   orderID,
-		IncidentType:     incident.TypeCancel,
-		Reason:           reason,
-		TicketReference:  body.TicketReference,
-		ActorID:          actor.ID,
-		ActorRole:        "operator",
-		CorrelationID:    cancellationCorrelation(r, body),
-		ReasonCode:       body.ReasonCode,
-		ReasonNote:       body.ReasonNote,
+		OrderID:           orderID,
+		OperatorContextID: actor.OperatorContextID,
+		TargetEntityType:  incident.TargetOrder,
+		TargetEntityID:    orderID,
+		IncidentType:      incident.TypeCancel,
+		Reason:            reason,
+		TicketReference:   body.TicketReference,
+		ActorID:           actor.ID,
+		ActorRole:         "operator",
+		CorrelationID:     cancellationCorrelation(r, body),
+		ReasonCode:        body.ReasonCode,
+		ReasonNote:        body.ReasonNote,
 	})
 	if err != nil {
 		writeOrderCancellationError(w, err)
 		return
 	}
 	_, err = orders.CancelOrderSync(s.db, orders.CreateCancellationCaseInput{
-		OrderID:       orderID,
-		OperatorContextID:      actor.OperatorContextID,
-		ActorID:       actor.ID,
-		ActorRole:     "operator",
-		ReasonCode:    body.ReasonCode,
-		ReasonNote:    body.ReasonNote,
-		CorrelationID: cancellationCorrelation(r, body),
+		OrderID:           orderID,
+		OperatorContextID: actor.OperatorContextID,
+		ActorID:           actor.ID,
+		ActorRole:         "operator",
+		ReasonCode:        body.ReasonCode,
+		ReasonNote:        body.ReasonNote,
+		CorrelationID:     cancellationCorrelation(r, body),
 	})
 	if err != nil {
 		writeOrderCancellationError(w, err)
 		return
 	}
-	
+
 	order, _ := orders.GetOrder(s.db, orderID)
 	cancellation, _ := orders.GetCancellation(s.db, orderID)
 	store.SendJSON(w, http.StatusOK, map[string]any{
@@ -323,7 +323,7 @@ func RegisterOrderCancellationRoutes(
 	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/cancellation", protected.handlePartnerOrderCancellation)
 	mux.HandleFunc("POST /dsh/operator/orders/{orderId}/cancellation", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleOperatorCancelOrderGoverned))
 	mux.HandleFunc("GET /dsh/operator/orders/{orderId}/cancellation", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleOperatorOrderCancellation))
-	
+
 	mux.HandleFunc("POST /dsh/operator/orders/{orderId}/cancellation/actions", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleCreateOrderCancellationAction))
 	mux.HandleFunc("POST /dsh/operator/orders/{orderId}/cancellation/actions/{actionId}/execute", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleExecuteOrderCancellationAction))
 }

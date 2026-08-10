@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useControlPanelSession } from "@bthwani/dsh/control-panel/session";
 import { identityErrorPresentation } from "@bthwani/core-identity";
 import { colorRoles, alpha } from "@bthwani/ui-kit";
+import { requestControlPanelDevSession } from "./dev-session.adapter";
+import { controlPanelDevelopmentMode } from "./runtime-config";
 
 function resolveSafeReturnTo(raw: string | null): string {
   if (!raw) return "/dsh/dashboard";
@@ -44,21 +46,7 @@ function DshLoginForm() {
     setQuickLoginPending(true);
     setQuickLoginError(null);
     try {
-      const response = await fetch("/api/auth/dev-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        signal: AbortSignal.timeout(8_000),
-      });
-      const body = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(body?.code || "DEV_SESSION_BROKER_UNAVAILABLE");
-      }
-      if (body?.accessToken && body?.refreshToken && body?.identity) {
-        await adoptSession(body);
-      } else {
-        throw new Error("DEV_SESSION_BINDING_INVALID");
-      }
+      await adoptSession(await requestControlPanelDevSession());
     } catch (error) {
       setQuickLoginError(
         error instanceof Error && error.name === "TimeoutError"
@@ -232,7 +220,7 @@ function DshLoginForm() {
           {isSubmitting ? "جاري التحقق..." : "تسجيل الدخول"}
         </button>
 
-        {process.env.NODE_ENV === "development" ? (
+        {controlPanelDevelopmentMode ? (
           <button
             type="button"
             onClick={handleQuickLogin}

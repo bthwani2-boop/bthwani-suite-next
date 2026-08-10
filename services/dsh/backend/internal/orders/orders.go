@@ -55,8 +55,6 @@ type Order struct {
 	UpdatedAt        time.Time
 }
 
-
-
 func GetOrder(db *sql.DB, orderID string) (*Order, error) {
 	order, err := scanOrderRow(db.QueryRow(`
 		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
@@ -96,5 +94,3 @@ func GetClientOrder(db *sql.DB, orderID, operatorContextID, clientID string) (*O
 	order.Items = items
 	return order, nil
 }
-
-

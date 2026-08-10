@@ -97,7 +97,7 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function isBooleanRecord(value: unknown): boolean {
+function isBooleanRecord(value: unknown): value is Record<string, boolean> {
   return isRecord(value) && Object.values(value).every((entry) => typeof entry === "boolean");
 }
 
@@ -116,6 +116,7 @@ export function isStructurallyValidActorIdentity(value: unknown): value is Actor
     || !isNonEmptyString(value.operatorContextId)
     || !isNonEmptyString(value.phoneE164)
     || value.authState !== "authenticated"
+    || !isNonEmptyString(value.sessionSurface)
     || !isNonEmptyString(value.sessionId)
     || !isNonEmptyString(value.expiresAt)
   ) {
@@ -136,6 +137,7 @@ export function isStructurallyValidActorIdentity(value: unknown): value is Actor
   return Array.isArray(value.permissions)
     && value.permissions.every(isValidPermission)
     && isBooleanRecord(value.surfaceAccess)
+    && value.surfaceAccess[value.sessionSurface] === true
     && isBooleanRecord(value.serviceAccess);
 }
 
@@ -302,18 +304,19 @@ async function performIdentityBootstrap(identityClient: IdentityClient): Promise
 
   const saved = stored ?? await loadStoredSession();
   stored = saved;
-  
-  if (!saved) {
-    try {
-      const readiness = await identityClient.readiness();
-      if (readiness.status !== "HEALTHY") {
-        setServiceUnavailable("IDENTITY_NOT_READY");
-        return;
-      }
-    } catch (error) {
-      setServiceUnavailable(identityErrorCode(error));
+
+  try {
+    const readiness = await identityClient.readiness();
+    if (readiness.status !== "HEALTHY") {
+      setServiceUnavailable("IDENTITY_NOT_READY");
       return;
     }
+  } catch (error) {
+    setServiceUnavailable(identityErrorCode(error));
+    return;
+  }
+
+  if (!saved) {
     resetBootstrapBackoff();
     setState({ kind: "signed_out" });
     return;
@@ -321,7 +324,7 @@ async function performIdentityBootstrap(identityClient: IdentityClient): Promise
 
   if (isFreshActorIdentity(saved.identity)) {
     commitAuthenticatedSession(saved, false);
-    
+
     void (async () => {
       try {
         const identity = await identityClient.session(saved.accessToken);
@@ -336,10 +339,22 @@ async function performIdentityBootstrap(identityClient: IdentityClient): Promise
               identity: refreshed.identity,
             }, true);
           } catch (refreshError) {
-             if (isIdentityInvalidSessionError(refreshError)) {
-               clearSession("IDENTITY_SESSION_INVALID");
-             }
+            if (isIdentityInvalidSessionError(refreshError)) {
+              clearSession("IDENTITY_SESSION_INVALID");
+            } else {
+              setServiceUnavailable(
+                isIdentityAvailabilityError(refreshError)
+                  ? identityErrorCode(refreshError)
+                  : "IDENTITY_UNAVAILABLE",
+              );
+            }
           }
+        } else {
+          setServiceUnavailable(
+            isIdentityAvailabilityError(error)
+              ? identityErrorCode(error)
+              : "IDENTITY_UNAVAILABLE",
+          );
         }
       }
     })();

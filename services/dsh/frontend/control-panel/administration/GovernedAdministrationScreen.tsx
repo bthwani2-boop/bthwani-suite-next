@@ -32,7 +32,7 @@ export function GovernedAdministrationScreen() {
       </div>
       <AdministrationDashboardScreen />
       <AdministrationDiagnosticsPanel />
-      
+
       {/* Identity Mutation Gate */}
       <div style={identityReady ? {} : { pointerEvents: "none", opacity: 0.6 }}>
         <RoleDefinitionApprovalQueue />

@@ -98,12 +98,12 @@ export function CodInspectorScreen() {
             هذه الشاشة توفر وصولاً للقراءة فقط إلى سجلات العهد المحصلة في الميدان. يتم إنشاء وتحديث هذه السجلات بواسطة WLT حصرياً لضمان Idempotency و Immutability.
           </Text>
           <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", maxWidth: "600px" }}>
-            <CpTextInput 
+            <CpTextInput
               placeholder="بحث برقم الطلب (Order ID)..."
               value={orderId}
               onChange={setOrderId}
             />
-            <CpTextInput 
+            <CpTextInput
               placeholder="بحث برقم الكابتن (Captain ID)..."
               value={captainId}
               onChange={setCaptainId}

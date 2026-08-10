@@ -38,7 +38,7 @@ const (
 
 type DeliveryException struct {
 	ID                      string
-	OperatorContextID                string
+	OperatorContextID       string
 	AssignmentID            string
 	OrderID                 string
 	SpecialRequestID        string
@@ -915,4 +915,3 @@ func getDeliveryExceptionByCorrelationTx(tx *sql.Tx, operatorContextID, correlat
 	row := tx.QueryRow(`SELECT `+deliveryExceptionColumns+` FROM dsh_delivery_exceptions e WHERE e.operator_context_id=$1 AND e.correlation_id=$2`, operatorContextID, correlationID)
 	return scanDeliveryException(row.Scan)
 }
-

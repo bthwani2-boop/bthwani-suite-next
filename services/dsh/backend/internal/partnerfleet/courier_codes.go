@@ -193,7 +193,7 @@ func RevokeCode(ctx context.Context, db *sql.DB, storeID, codeID, actorID string
 		WHERE id = $1 AND store_id = $2 AND status = 'pending' AND version = $3
 		RETURNING `+connectionSelectCols,
 		codeID, storeID, expectedVersion)
-	
+
 	connection, err := scanConnection(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ConnectionCode{}, ErrNotFound

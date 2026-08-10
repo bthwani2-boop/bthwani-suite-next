@@ -73,7 +73,7 @@ if (!mainDoc.get('paths')) {
 
 for (const [contractFile, routesMap] of Object.entries(routesByContract)) {
   const targetPath = path.join(contractsDir, contractFile);
-  
+
   let targetDoc;
   if (fs.existsSync(targetPath)) {
     targetDoc = yaml.parseDocument(fs.readFileSync(targetPath, 'utf8'));
@@ -85,13 +85,13 @@ for (const [contractFile, routesMap] of Object.entries(routesByContract)) {
         paths: {}
     });
   }
-  
+
   if (!targetDoc.has('paths')) targetDoc.set('paths', {});
 
   for (const [routePath, methods] of Object.entries(routesMap)) {
     const ptr = routePath.replace(/\//g, '~1');
     const refStr = `./${contractFile}#/paths/${ptr}`;
-    
+
     // Add to main openapi
     if (!mainDoc.get('paths').has(routePath)) {
         mainDoc.get('paths').set(routePath, { $ref: refStr });
@@ -105,13 +105,13 @@ for (const [contractFile, routesMap] of Object.entries(routesByContract)) {
         params.push(part.slice(1, -1));
       }
     }
-    
+
     let pathItem = targetDoc.get('paths').get(routePath);
     if (!pathItem) {
         pathItem = new yaml.YAMLMap();
         targetDoc.get('paths').set(routePath, pathItem);
     }
-    
+
     if (params.length > 0 && !pathItem.has('parameters')) {
         const paramsSeq = new yaml.YAMLSeq();
         for (const p of params) {
@@ -124,7 +124,7 @@ for (const [contractFile, routesMap] of Object.entries(routesByContract)) {
         }
         pathItem.set('parameters', paramsSeq);
     }
-    
+
     for (const method of methods) {
         if (!pathItem.has(method)) {
             const tag = routePath.split('/')[2] || 'misc';
@@ -147,7 +147,7 @@ for (const [contractFile, routesMap] of Object.entries(routesByContract)) {
         }
     }
   }
-  
+
   fs.writeFileSync(targetPath, String(targetDoc));
 }
 

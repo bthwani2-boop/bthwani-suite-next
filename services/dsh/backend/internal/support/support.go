@@ -67,34 +67,34 @@ const (
 )
 
 type Ticket struct {
-	ID           string
-	StoreID      string
-	ReporterID   string
-	ReporterRole ReporterRole
-	Subject      string
-	Description  string
-	Category     TicketCategory
-	Priority     TicketPriority
-	Status       TicketStatus
-	AssignedTo   string
-	OrderID      string
-	ResolvedAt   *time.Time
-	ClosedAt     *time.Time
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	Version      int
-	ClaimedBy    string
-	ClaimedAt    *time.Time
-	SlaBreachAt  *time.Time
-	EscalatedAt  *time.Time
+	ID               string
+	StoreID          string
+	ReporterID       string
+	ReporterRole     ReporterRole
+	Subject          string
+	Description      string
+	Category         TicketCategory
+	Priority         TicketPriority
+	Status           TicketStatus
+	AssignedTo       string
+	OrderID          string
+	ResolvedAt       *time.Time
+	ClosedAt         *time.Time
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	Version          int
+	ClaimedBy        string
+	ClaimedAt        *time.Time
+	SlaBreachAt      *time.Time
+	EscalatedAt      *time.Time
 	EscalationReason string
 }
 
 type Message struct {
-	ID         string
-	TicketID   string
-	SenderID   string
-	SenderRole string
+	ID              string
+	TicketID        string
+	SenderID        string
+	SenderRole      string
 	Body            string
 	IsInternal      bool
 	ClientMessageID string
@@ -536,4 +536,3 @@ type CreateIncidentCommunicationInput struct {
 	Body         string
 	IsPublicSafe bool
 }
-

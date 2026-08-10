@@ -305,9 +305,9 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("PATCH /dsh/operator/marketing/subscription-plans/{planId}", protected.withPermission("control-panel", MarketingPermissionManage, protected.handleUpdateMarketingSubscriptionPlan))
 	mux.HandleFunc("POST /dsh/client/marketing/subscriptions/purchase", protected.handleCreateSubscriptionPurchase)
 	mux.HandleFunc("GET /dsh/client/marketing/subscriptions/purchases/{purchaseId}", protected.handleGetSubscriptionPurchase)
-	mux.HandleFunc("POST /dsh/client/marketing/subscriptions/{purchaseId}/activate", protected.handleActivateSubscriptionPurchase)
-	mux.HandleFunc("POST /dsh/client/marketing/subscriptions/{subscriptionId}/renew", protected.handleRenewSubscriptionPurchase)
-	mux.HandleFunc("POST /dsh/client/marketing/subscriptions/{subscriptionId}/cancel", protected.handleCancelSubscriptionPurchase)
+	mux.HandleFunc("POST /dsh/client/marketing/subscriptions/purchases/{purchaseId}/activate", protected.handleActivateSubscriptionPurchase)
+	mux.HandleFunc("POST /dsh/client/marketing/subscriptions/instances/{subscriptionId}/renew", protected.handleRenewSubscriptionPurchase)
+	mux.HandleFunc("POST /dsh/client/marketing/subscriptions/instances/{subscriptionId}/cancel", protected.handleCancelSubscriptionPurchase)
 	mux.HandleFunc("GET /dsh/client/benefits", protected.handleClientBenefits)
 
 	// Central Catalog compatibility surface.

@@ -40,7 +40,7 @@ func ResolveDeliveryPricingTx(
 		FROM dsh_store_delivery_pricing p
 		JOIN dsh_stores s ON s.id = p.store_id
 		WHERE p.store_id=$1 AND p.fulfillment_mode=$2 AND p.status='active'
-		  AND s.status IN ('published','active')
+		  AND s.status = 'published'
 		  AND (
 		    ($2='bthwani_delivery' AND 'express'=ANY(s.delivery_modes)) OR
 		    ($2='partner_delivery' AND 'delivery'=ANY(s.delivery_modes)) OR

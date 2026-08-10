@@ -113,7 +113,7 @@ func EvaluateSLA(session *PickupSession, alert *SLAAlert, thresholds SLAThreshol
 		IsPaused:         isPaused,
 		PausedUntil:      pausedUntil,
 	}
-	
+
 	if isPaused {
 		sla.State = SLAOnTrack // Avoid alerting while paused
 		return sla

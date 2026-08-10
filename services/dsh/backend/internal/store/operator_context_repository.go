@@ -168,12 +168,12 @@ func CreateStoreForOperatorContextIdempotent(
 	// Verify partner ownership and active state
 	var partnerStatus string
 	err = tx.QueryRowContext(ctx, `
-		SELECT activation_status 
-		FROM dsh_partners 
-		WHERE id = $1 AND operator_context_id = $2`, 
+		SELECT activation_status
+		FROM dsh_partners
+		WHERE id = $1 AND operator_context_id = $2`,
 		input.PartnerID, operatorContextID,
 	).Scan(&partnerStatus)
-	
+
 	if errors.Is(err, sql.ErrNoRows) {
 		return DshStoreRow{}, false, errors.New("partner not found or does not belong to operator context")
 	}

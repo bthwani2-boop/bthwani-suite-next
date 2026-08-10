@@ -39,7 +39,7 @@ func seedOutboundHandoffFixture(t *testing.T, db *sql.DB) outboundHandoffFixture
 	}
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, partner_id)
-		VALUES ($1, $1, 'Outbound Handoff Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true, $2)`,
+		VALUES ($1, $1, 'Outbound Handoff Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true, $2)`,
 		fixture.StoreID, fixture.PartnerID); err != nil {
 		t.Fatalf("insert store: %v", err)
 	}
@@ -56,7 +56,7 @@ func seedOutboundHandoffFixture(t *testing.T, db *sql.DB) outboundHandoffFixture
 			subtotal_minor_units, delivery_fee_minor_units, discount_minor_units,
 			total_minor_units, currency, pricing_snapshot_hash
 		) VALUES (
-			$1, $2, $3::uuid, $4, 'payment_pending', 'bthwani_delivery',
+			$1, $2, $3::uuid, $4, 'confirmed', 'bthwani_delivery',
 			'wallet', $5, 1000, 0, 0, 1000, 'YER', repeat('a', 64)
 		) RETURNING id::text`,
 		operatorContextID, clientID, fixture.CartID, fixture.StoreID, "wlt-handoff-"+suffix,

@@ -48,7 +48,7 @@ func CreateRoleAssignmentApproval(ctx context.Context, db *sql.DB, actorID, targ
 
 	var req RoleAssignmentApproval
 	err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_admin_approval_requests 
+		INSERT INTO dsh_admin_approval_requests
 			(action_type, target_actor_id, role_id, requested_by, reason, status)
 		VALUES ($1, $2, $3, $4, $5, 'pending')
 		RETURNING id, action_type, target_actor_id, role_id, requested_by, reason, status, version, created_at, updated_at
@@ -74,7 +74,7 @@ func ListRoleAssignmentApprovals(ctx context.Context, db *sql.DB, status string)
 	}
 
 	query := `
-		SELECT id, action_type, target_actor_id, role_id, requested_by, reason, status, 
+		SELECT id, action_type, target_actor_id, role_id, requested_by, reason, status,
 		       reviewed_by, review_note, version, created_at, updated_at, reviewed_at
 		FROM dsh_admin_approval_requests
 	`

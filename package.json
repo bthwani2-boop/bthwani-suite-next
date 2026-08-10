@@ -176,6 +176,7 @@
     "guard:sdlc": "node tools/guards/sdlc/invoke-sdlc-gate.mjs",
     "guard:markdown-governance": "pnpm exec markdownlint-cli2 \"governance/**/*.md\" \"AGENTS.md\" \".github/**/*.md\"",
     "guard:secrets": "gitleaks detect --log-opts=\"HEAD\" --source . --no-banner --redact --verbose",
+    "guard:image-size-security": "node --test tools/guards/image-size-security-regression.test.mjs",
     "guard:governance-all": "pnpm run guard:agent-system-all && pnpm run guard:authority-separation && pnpm run guard:guard-registry && pnpm run guard:sdlc && pnpm run guard:cleanup-policy && pnpm run guard:required-command-integrity && pnpm run guard:markdown-governance",
     "diagnostics:tools:v5": "node tools/scripts/generate-deep-tools-diagnostics-v5.mjs && node tools/scripts/generate-toolchain-execution-plan.mjs",
     "diagnostics:operational:toolchain": "node tools/scripts/generate-operational-toolchain-inventory.mjs",
@@ -295,13 +296,13 @@
     "knip": "6.17.1",
     "madge": "8.0.0",
     "markdownlint-cli2": "0.23.0",
-    "nx": "22.3.3",
+    "nx": "22.7.8",
     "openapi-typescript": "7.13.0",
     "sherif": "1.11.1",
     "size-limit": "^11.1.6",
     "typescript": "7.0.2",
     "@typescript/typescript6": "6.0.2",
-    "yaml": "2.8.1"
+    "yaml": "2.8.3"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

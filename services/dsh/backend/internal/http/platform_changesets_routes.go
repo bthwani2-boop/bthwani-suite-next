@@ -69,9 +69,9 @@ func (s *protectedStoreServer) handleApplyChangeSet(w http.ResponseWriter, r *ht
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
-	
+
 	// TODO: Actually emit event or apply the payload depending on targetType.
-	
+
 	store.SendJSON(w, http.StatusOK, map[string]string{"status": "APPLIED"})
 }
 

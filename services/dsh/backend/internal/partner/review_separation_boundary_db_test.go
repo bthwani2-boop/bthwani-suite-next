@@ -37,8 +37,7 @@ func createJ021Partner(t *testing.T, createdByActorID string) Partner {
 func requestWithPartnerActor(body string, partnerID, actorID string) *http.Request {
 	req := httptest.NewRequest(http.MethodPost, "/dsh/operator/partners/"+partnerID+"/transition", bytes.NewBufferString(body))
 	req.SetPathValue("partnerId", partnerID)
-	ctx := context.WithValue(req.Context(), "actor_id", actorID)
-	ctx = context.WithValue(ctx, "actor_surface", "control-panel")
+	ctx := WithActorContext(req.Context(), actorID, "control-panel")
 	return req.WithContext(ctx)
 }
 
@@ -117,7 +116,7 @@ func TestEvidenceUploaderCannotReviewOwnDocumentDBIntegration(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/review", strings.NewReader(`{"decision":"approved","reason":"evidence verified"}`))
 	req.SetPathValue("partnerId", p.ID)
 	req.SetPathValue("docId", doc.ID)
-	req = req.WithContext(context.WithValue(req.Context(), "actor_id", uploader))
+	req = req.WithContext(WithActorContext(req.Context(), uploader, "control-panel"))
 	recorder := httptest.NewRecorder()
 	handler(recorder, req)
 	if recorder.Code != http.StatusForbidden || responseCode(t, recorder) != "SELF_APPROVAL_FORBIDDEN" {
@@ -161,7 +160,7 @@ func TestConcurrentPartnerDecisionsRejectStaleVersionDBIntegration(t *testing.T)
 	}
 }
 
-func TestPartnerDeactivationBlocksActiveStoresAndAuditsReasonDBIntegration(t *testing.T) {
+func TestPartnerSuspensionBlocksActiveStoresAndAuditsReasonDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	p := createJ021Partner(t, "field-j021-suspension-owner")
 	if _, err := db.Exec(`UPDATE dsh_partners SET activation_status = 'partner_active', version = 17 WHERE id = $1`, p.ID); err != nil {
@@ -175,7 +174,7 @@ func TestPartnerDeactivationBlocksActiveStoresAndAuditsReasonDBIntegration(t *te
 	}
 
 	updated, event, err := TransitionStatusGoverned(context.Background(), db, p.ID, TransitionInput{
-		ToStatus:       StatusPartnerDeactivated,
+		ToStatus:       StatusPartnerSuspended,
 		Reason:         "compliance suspension pending remediation",
 		ActorID:        "operator-j021-suspension",
 		ActorSurface:   "control-panel",
@@ -184,8 +183,8 @@ func TestPartnerDeactivationBlocksActiveStoresAndAuditsReasonDBIntegration(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	if updated.ActivationStatus != StatusPartnerDeactivated || event.Reason != "compliance suspension pending remediation" {
-		t.Fatalf("deactivation/audit mismatch: status=%s reason=%q", updated.ActivationStatus, event.Reason)
+	if updated.ActivationStatus != StatusPartnerSuspended || event.Reason != "compliance suspension pending remediation" {
+		t.Fatalf("suspension/audit mismatch: status=%s reason=%q", updated.ActivationStatus, event.Reason)
 	}
 	var readiness string
 	if err := db.QueryRow(`SELECT partner_readiness FROM dsh_stores WHERE partner_id = $1 ORDER BY created_at LIMIT 1`, p.ID).Scan(&readiness); err != nil {

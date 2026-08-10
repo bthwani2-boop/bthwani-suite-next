@@ -148,7 +148,6 @@ func (s *protectedStoreServer) handlePutProductProposalImageSafe(w http.Response
 	s.putEntityImageSafe(w, r, "product_proposal", r.PathValue("proposalId"), r.PathValue("role"))
 }
 
-
 func (s *protectedStoreServer) handleSubmitReelSafe(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "partner")
 	if !ok {
@@ -199,7 +198,7 @@ func (s *protectedStoreServer) handleSimulateAssetScan(w http.ResponseWriter, r 
 	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
 		return
 	}
-	
+
 	var input struct {
 		TargetStatus string `json:"targetStatus"`
 	}

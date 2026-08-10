@@ -31,7 +31,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
   const [supervisor, setSupervisor] = useState<SupervisorCandidate | null>(null);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  
+
   const { state: identityState } = useIdentitySession();
   const operatorContextId = identityState.kind === "authenticated"
     ? identityState.identity.operatorContextId
@@ -142,7 +142,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
             gap: "16px",
           }}>
             <Text role="titleMd">البيانات الأساسية</Text>
-            
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <div>
                 <Text role="bodySm" style={{ marginBottom: "8px", display: "block" }}>الاسم بالعربية *</Text>

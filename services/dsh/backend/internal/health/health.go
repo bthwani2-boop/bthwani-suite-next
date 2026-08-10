@@ -14,7 +14,7 @@ import (
 
 const (
 	dshMigrationServiceName = "dsh"
-	dshLatestMigration      = "dsh-998_operator_store_creation_idempotency_backfill.sql"
+	dshLatestMigration      = "dsh-999_runtime_schema_alignment.sql"
 	dshReadinessTimeout     = 2 * time.Second
 )
 

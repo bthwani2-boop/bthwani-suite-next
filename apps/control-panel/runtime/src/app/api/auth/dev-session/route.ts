@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import type { TokenResponse } from "@bthwani/core-identity";
 import { BFF_OPAQUE_TOKEN } from "../../../../server/bff-proxy";
 import { isSameOriginRequest, setSessionCookies } from "../_lib/cookies";
+import { postIdentityServerJson } from "../_lib/identity-server-http.adapter";
+import { isDevelopmentRuntime } from "../_lib/server-config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DEV_SESSION_BROKER_URL = "http://127.0.0.1:58100/session";
+const DEV_SESSION_BROKER_BASE_URL = "http://127.0.0.1:58100";
 const CONTROL_PANEL_DEV_FINGERPRINT = "control-panel-bff-dev";
 
 function unavailable(status: number, code: string): NextResponse {
@@ -34,34 +36,28 @@ function isValidOperatorSession(value: unknown): value is TokenResponse {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
-  if (process.env.NODE_ENV !== "development") {
+  if (!isDevelopmentRuntime()) {
     return unavailable(404, "NOT_FOUND");
   }
   if (!isSameOriginRequest(request)) {
     return unavailable(403, "CROSS_ORIGIN_REJECTED");
   }
 
-  let upstream: Response;
-  try {
-    upstream = await fetch(DEV_SESSION_BROKER_URL, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+  const upstream = await postIdentityServerJson<TokenResponse>({
+    baseUrl: DEV_SESSION_BROKER_BASE_URL,
+    path: "/session",
+    body: {
         role: "operator",
         surface: "control-panel",
         deviceFingerprint: CONTROL_PANEL_DEV_FINGERPRINT,
-      }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(5_000),
-    });
-  } catch {
+    },
+    timeoutMs: 5_000,
+  });
+  if (!upstream.ok && upstream.error === "network") {
     return unavailable(503, "DEV_SESSION_BROKER_UNAVAILABLE");
   }
 
-  const body: unknown = await upstream.json().catch(() => null);
+  const body: unknown = upstream.body;
   if (!upstream.ok) {
     const code =
       typeof body === "object"

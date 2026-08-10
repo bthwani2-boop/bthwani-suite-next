@@ -318,7 +318,8 @@ func TestPartnerReadinessForActivationStatus(t *testing.T) {
 	}{
 		{StatusClientVisible, "ready", true},
 		{StatusClientHidden, "blocked", true},
-		{StatusPartnerTerminated, "", false},
+		{StatusPartnerSuspended, "blocked", true},
+		{StatusPartnerTerminated, "blocked", true},
 		{StatusPartnerActive, "", false},
 	}
 

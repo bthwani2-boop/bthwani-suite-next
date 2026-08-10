@@ -185,7 +185,7 @@ async function findExistingProvider(operatorToken, kind) {
         continue;
       }
       // If it's something else like version conflict, just return it because it exists.
-      return person; 
+      return person;
     }
   }
   return null;

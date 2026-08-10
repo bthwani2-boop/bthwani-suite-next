@@ -202,4 +202,3 @@ func (s *protectedStoreServer) handleExecuteOrderRescueAction(w http.ResponseWri
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"action": item})
 }
-

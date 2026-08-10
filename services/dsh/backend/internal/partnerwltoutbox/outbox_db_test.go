@@ -148,18 +148,17 @@ func TestPartnerWltReconciliationCreatesAndResolvesMaskedReadbackCaseDBIntegrati
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"payoutDestination": map[string]any{
-				"id":                   "wpd-reconciliation-ref",
-				"ownerActorId":         partnerID,
-				"ownerActorType":       "partner",
-				"settlementPreference": "bank",
-				"maskedAccountNumber":  "*****1234",
-				"maskedIban":           "********5678",
-				"maskedMobileNumber":   "",
-				"beneficiaryName":      "Partner Owner",
-				"bankName":             "Test Bank",
-				"bankBranch":           "Main",
-				"active":               active,
-				"updatedAt":            time.Now().UTC().Format(time.RFC3339Nano),
+				"id":                            "wpd-reconciliation-ref",
+				"ownerActorId":                  partnerID,
+				"ownerActorType":                "partner",
+				"destinationMethod":             "bank",
+				"maskedDestinationReference":    "********5678",
+				"destinationVerificationStatus": "unverified",
+				"beneficiaryName":               "Partner Owner",
+				"bankName":                      "Test Bank",
+				"bankBranch":                    "Main",
+				"active":                        active,
+				"updatedAt":                     time.Now().UTC().Format(time.RFC3339Nano),
 			},
 		})
 	}))

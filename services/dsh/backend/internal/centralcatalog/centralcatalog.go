@@ -368,7 +368,7 @@ func checkCycle(ctx context.Context, db dbtx, sourceID string, targetParentID *s
 	if sourceID == *targetParentID {
 		return errors.New("cycle detected: node cannot be its own parent")
 	}
-	
+
 	// Traverse up from targetParentID to see if sourceID is an ancestor
 	current := *targetParentID
 	for current != "" {
@@ -571,7 +571,7 @@ const masterProductFilterWhere = `WHERE ($1='' OR domain_id=$1) AND ($2='' OR ca
 
 func ListMasterProducts(ctx context.Context, db *sql.DB, filter MasterProductFilter) ([]MasterProduct, int, error) {
 	limit, offset := ClampListParams(filter.Limit, filter.Offset)
-	
+
 	var parentIDFilter *string
 	if filter.ParentID != nil {
 		if *filter.ParentID == "" {
@@ -581,7 +581,7 @@ func ListMasterProducts(ctx context.Context, db *sql.DB, filter MasterProductFil
 			parentIDFilter = filter.ParentID
 		}
 	}
-	
+
 	filterArgs := []any{filter.DomainID, filter.CategoryNodeID, filter.ApprovalStatus, filter.ActiveOnly, filter.Search, parentIDFilter, filter.IsStandalone}
 
 	var total int
@@ -696,7 +696,7 @@ func UpdateMasterProduct(ctx context.Context, db *sql.DB, id string, input Maste
 		canonical_name_en=COALESCE($3, canonical_name_en), brand=COALESCE($4, brand),
 		barcode=COALESCE($5, barcode), gtin=COALESCE($6, gtin), sku=COALESCE($7, sku),
 		unit=COALESCE(NULLIF($8::text,''), unit), measurement_type=COALESCE(NULLIF($9::text,''), measurement_type),
-		approval_status=COALESCE($10, approval_status), is_active=COALESCE($11, is_active), 
+		approval_status=COALESCE($10, approval_status), is_active=COALESCE($11, is_active),
 		parent_id=COALESCE($12, parent_id), is_standalone=COALESCE($13, is_standalone),
 		updated_at=now(), version = version + 1
 		WHERE id=$14 AND ($15::int IS NULL OR version=$15)`,
@@ -792,18 +792,18 @@ func UpdateProposal(ctx context.Context, db *sql.DB, id string, actorID string, 
 }
 
 type ProductProposalInput struct {
-	ProposedNameAr         string  `json:"proposedNameAr"`
-	ProposedNameEn         string  `json:"proposedNameEn"`
-	DomainID               string  `json:"domainId"`
-	CategoryNodeID         *string `json:"categoryNodeId"`
-	Brand                  string  `json:"brand"`
-	Barcode                *string `json:"barcode"`
-	ImageObjectKey         *string `json:"imageObjectKey"`
-	SourceSurface          string  `json:"sourceSurface"`
-	SourceStoreID          *string `json:"sourceStoreId"`
-	TargetMasterProductID  *string `json:"targetMasterProductId"`
-	BaseVersion            *int    `json:"baseVersion"`
-	DuplicateCandidates    []byte  `json:"duplicateCandidates"`
+	ProposedNameAr        string  `json:"proposedNameAr"`
+	ProposedNameEn        string  `json:"proposedNameEn"`
+	DomainID              string  `json:"domainId"`
+	CategoryNodeID        *string `json:"categoryNodeId"`
+	Brand                 string  `json:"brand"`
+	Barcode               *string `json:"barcode"`
+	ImageObjectKey        *string `json:"imageObjectKey"`
+	SourceSurface         string  `json:"sourceSurface"`
+	SourceStoreID         *string `json:"sourceStoreId"`
+	TargetMasterProductID *string `json:"targetMasterProductId"`
+	BaseVersion           *int    `json:"baseVersion"`
+	DuplicateCandidates   []byte  `json:"duplicateCandidates"`
 }
 
 const proposalColumns = `id, proposed_name_ar, proposed_name_en, domain_id, category_node_id, brand, barcode,
@@ -1388,7 +1388,7 @@ type EffectiveImage struct {
 func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain, []Node, []ClientCatalogEntry, []CatalogAssetLinkWithAsset, []CatalogPolicy, error) {
 	var storePublished bool
 	err := db.QueryRowContext(ctx, `SELECT EXISTS (
-		SELECT 1 FROM dsh_stores WHERE id=$1 AND status IN ('published','active') AND is_visible=true
+		SELECT 1 FROM dsh_stores WHERE id=$1 AND status = 'published' AND is_visible=true
 		  AND serviceability_status IN ('serviceable','limited')
 	)`, storeID).Scan(&storePublished)
 	if err != nil {
@@ -1826,9 +1826,9 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id 
 		if proposal.AdoptedMasterProductID != nil {
 			if proposal.TargetMasterProductID != nil {
 				// This is a correction, update the existing product canonical fields
-				_, err = tx.ExecContext(ctx, `UPDATE dsh_master_products SET 
-					canonical_name_ar=$1, canonical_name_en=$2, brand=$3, barcode=$4, 
-					approval_status='approved', is_active=true, updated_at=now(), version = version + 1 
+				_, err = tx.ExecContext(ctx, `UPDATE dsh_master_products SET
+					canonical_name_ar=$1, canonical_name_en=$2, brand=$3, barcode=$4,
+					approval_status='approved', is_active=true, updated_at=now(), version = version + 1
 					WHERE id=$5`,
 					proposal.ProposedNameAr, proposal.ProposedNameEn, proposal.Brand, proposal.Barcode, *proposal.AdoptedMasterProductID)
 				if err != nil {
@@ -1889,7 +1889,7 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id 
 		// Verify store is active and visible
 		var storeActive bool
 		var storeVisible bool
-		err = tx.QueryRowContext(ctx, `SELECT (status IN ('published','active')), is_visible FROM dsh_stores WHERE id=$1`, *proposal.SourceStoreID).Scan(&storeActive, &storeVisible)
+		err = tx.QueryRowContext(ctx, `SELECT (status = 'published'), is_visible FROM dsh_stores WHERE id=$1`, *proposal.SourceStoreID).Scan(&storeActive, &storeVisible)
 		if err != nil || !storeActive || !storeVisible {
 			return ProductProposal{}, fmt.Errorf("%w: store must be active and visible", ErrForbidden)
 		}
@@ -2048,19 +2048,6 @@ func assertEntityExists(ctx context.Context, db dbtx, entityType, entityID strin
 		return ErrNotFound
 	}
 	return nil
-}
-
-// validStoreImageRole is the subset of validAssetRole that entityType=store
-// may use -- keeps a partner/field actor from e.g. linking a
-// canonical_product_image role against their store.
-var validStoreImageRole = map[string]bool{
-	"store_logo": true, "store_cover": true, "storefront_photo": true, "interior_photo": true, "signage_photo": true,
-}
-
-// IsValidStoreImageRole reports whether role is one of the roles a store
-// entity (logo/cover/branch photos) may be linked under.
-func IsValidStoreImageRole(role string) bool {
-	return validStoreImageRole[role]
 }
 
 const assetColumns = `id, object_key, public_url, original_file_name, mime_type, size_bytes, width, height,
@@ -2882,18 +2869,18 @@ func GetSeedStatus(ctx context.Context, db *sql.DB) (SeedStatus, error) {
 	return s, nil
 }
 
-// CleanupOrphanCatalogAssets physically removes assets from MinIO and deletes rows 
+// CleanupOrphanCatalogAssets physically removes assets from MinIO and deletes rows
 // from dsh_catalog_assets if they are unlinked and older than 24 hours.
 func CleanupOrphanCatalogAssets(ctx context.Context, db *sql.DB, mediaClient *media.Client) (int, error) {
 	if mediaClient == nil {
 		return 0, fmt.Errorf("%w: media storage is not configured", ErrInvalid)
 	}
-	
+
 	rows, err := db.QueryContext(ctx, `
 		SELECT id, object_key FROM dsh_catalog_assets
 		WHERE created_at < NOW() - INTERVAL '24 hours'
 		  AND NOT EXISTS (
-			SELECT 1 FROM dsh_catalog_asset_links 
+			SELECT 1 FROM dsh_catalog_asset_links
 			WHERE asset_id = dsh_catalog_assets.id
 		  )
 	`)
@@ -2908,10 +2895,10 @@ func CleanupOrphanCatalogAssets(ctx context.Context, db *sql.DB, mediaClient *me
 		if err := rows.Scan(&id, &objectKey); err != nil {
 			continue
 		}
-		
+
 		// Attempt to delete from media provider first
 		_ = mediaClient.Remove(ctx, objectKey)
-		
+
 		// Delete from database
 		res, err := db.ExecContext(ctx, `DELETE FROM dsh_catalog_assets WHERE id = $1`, id)
 		if err == nil {
@@ -2929,9 +2916,9 @@ func SimulateAssetScan(ctx context.Context, db *sql.DB, id string, targetStatus 
 	if targetStatus != "approved" && targetStatus != "quarantined" && targetStatus != "rejected" {
 		return CatalogAsset{}, fmt.Errorf("%w: invalid target status %s", ErrInvalid, targetStatus)
 	}
-	
+
 	result, err := db.ExecContext(ctx, `
-		UPDATE dsh_catalog_assets 
+		UPDATE dsh_catalog_assets
 		SET status=$1, updated_at=now(), version = version + 1
 		WHERE id=$2 AND status='scanning'`, targetStatus, id)
 	if err != nil {
@@ -2994,7 +2981,7 @@ func UpsertAssortmentInventoryAtomic(ctx context.Context, db *sql.DB, storeID, m
 		`, assortmentID, input.PolicyType, input.Quantity, input.MinOrderQuantity, input.MaxOrderQuantity, input.StepQuantity).
 			Scan(&inv.StoreAssortmentID, &inv.PolicyType, &inv.Quantity, &inv.ReservedQuantity, &inv.MinOrderQuantity, &inv.MaxOrderQuantity, &inv.StepQuantity, &inv.Version, &inv.UpdatedAt)
 	}
-	
+
 	if err != nil {
 		return StoreAssortmentInventory{}, err
 	}
@@ -3029,8 +3016,8 @@ func ScheduleAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, mas
 	// Ensure no overlap
 	var overlapCount int
 	overlapQuery := `
-		SELECT COUNT(*) FROM dsh_store_assortment_prices 
-		WHERE store_assortment_id = $1 
+		SELECT COUNT(*) FROM dsh_store_assortment_prices
+		WHERE store_assortment_id = $1
 		AND (effective_until IS NULL OR effective_until > $2)
 	`
 	if input.EffectiveUntil != nil {
@@ -3055,7 +3042,7 @@ func ScheduleAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, mas
 		RETURNING id, store_assortment_id, amount_minor, currency, prep_time_min, prep_time_max, effective_from, effective_until, version
 	`, id, assortmentID, input.AmountMinor, input.Currency, input.PrepTimeMin, input.PrepTimeMax, input.EffectiveFrom, input.EffectiveUntil).
 		Scan(&price.ID, &price.StoreAssortmentID, &price.AmountMinor, &price.Currency, &price.PrepTimeMin, &price.PrepTimeMax, &price.EffectiveFrom, &price.EffectiveUntil, &price.Version)
-	
+
 	if err != nil {
 		return StoreAssortmentPrice{}, err
 	}

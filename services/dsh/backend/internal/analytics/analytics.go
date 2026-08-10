@@ -34,7 +34,7 @@ type PlatformKpis struct {
 func GetPlatformKpis(db *sql.DB, period string) (PlatformKpis, error) {
 	since := periodFilter(period)
 	kpis := PlatformKpis{Period: period, GeneratedAt: time.Now().UTC()}
-	
+
 	// Ensure we get actual freshness from projections
 	if freshness, err := GetFreshness(db, "platform.orders"); err == nil {
 		kpis.GeneratedAt = freshness

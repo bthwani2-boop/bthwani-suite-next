@@ -14,11 +14,11 @@ import (
 var ErrIdempotencyConflict = errors.New("order idempotency conflict")
 
 type CreateOrderTruthInput struct {
-	CheckoutIntentID string
-	ClientID         string
-	OperatorContextID         string
-	IdempotencyKey   string
-	CorrelationID    string
+	CheckoutIntentID  string
+	ClientID          string
+	OperatorContextID string
+	IdempotencyKey    string
+	CorrelationID     string
 }
 
 type OrderTruthItem struct {
@@ -240,24 +240,24 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 	}
 
 	rows, err := tx.Query(`
-		SELECT product_id, product_name, unit_price, quantity
+		SELECT product_id, product_name, unit_price_minor, quantity
 		FROM dsh_cart_items WHERE cart_id=$1::uuid ORDER BY created_at, id`, cartID)
 	if err != nil {
 		return nil, false, err
 	}
 	type sourceItem struct {
 		productID, productName string
-		unitPrice              float64
+		unitPriceMinor         int64
 		quantity               int
 	}
 	items := make([]sourceItem, 0)
 	for rows.Next() {
 		var item sourceItem
-		if scanErr := rows.Scan(&item.productID, &item.productName, &item.unitPrice, &item.quantity); scanErr != nil {
+		if scanErr := rows.Scan(&item.productID, &item.productName, &item.unitPriceMinor, &item.quantity); scanErr != nil {
 			rows.Close()
 			return nil, false, scanErr
 		}
-		if item.quantity <= 0 || item.unitPrice <= 0 {
+		if item.quantity <= 0 || item.unitPriceMinor <= 0 {
 			rows.Close()
 			return nil, false, fmt.Errorf("%w: invalid cart item snapshot", ErrInvalid)
 		}
@@ -286,20 +286,21 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 
 	for _, item := range items {
 		snapshot, marshalErr := json.Marshal(map[string]any{
-			"productId":   item.productID,
-			"productName": item.productName,
-			"quantity":    item.quantity,
-			"unitPrice":   item.unitPrice,
+			"productId":           item.productID,
+			"productName":         item.productName,
+			"quantity":            item.quantity,
+			"unitPriceMinorUnits": item.unitPriceMinor,
 		})
 		if marshalErr != nil {
 			return nil, false, marshalErr
 		}
-		lineMinor := int64(item.unitPrice*100+0.5) * int64(item.quantity)
+		lineMinor := item.unitPriceMinor * int64(item.quantity)
+		unitPrice := float64(item.unitPriceMinor) / 100
 		if _, err = tx.Exec(`
 			INSERT INTO dsh_order_items
 			(order_id, product_id, product_name, quantity, unit_price, item_snapshot, line_total_minor_units)
 			VALUES ($1::uuid,$2,$3,$4,$5,$6::jsonb,$7)`,
-			orderID, item.productID, item.productName, item.quantity, item.unitPrice, string(snapshot), lineMinor,
+			orderID, item.productID, item.productName, item.quantity, unitPrice, string(snapshot), lineMinor,
 		); err != nil {
 			return nil, false, err
 		}

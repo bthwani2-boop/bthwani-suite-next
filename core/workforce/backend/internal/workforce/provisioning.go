@@ -122,7 +122,7 @@ func (o *ProvisioningOrchestrator) Advance(ctx context.Context, operator Operato
 			pc.Status = "FAILED_COMPENSATION_REQUIRED"
 			pc.FailureReason = err.Error()
 			_ = o.repo.UpdateProvisioningCase(ctx, pc)
-			
+
 			// Compensation trigger:
 			deprovisionErr := o.identity.Deprovision(ctx, pc.ActorID)
 			if deprovisionErr == nil {

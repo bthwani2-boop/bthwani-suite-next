@@ -328,26 +328,6 @@ func (s *protectedStoreServer) handlePutProductProposalImage(w http.ResponseWrit
 	s.putEntityImage(w, r, "product_proposal", r.PathValue("proposalId"), r.PathValue("role"))
 }
 
-func (s *protectedStoreServer) handlePutStoreImage(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
-	if !ok {
-		return
-	}
-	storeID := r.PathValue("storeId")
-	role := r.PathValue("role")
-	if !centralcatalog.IsValidStoreImageRole(role) {
-		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid store image role")
-		return
-	}
-	if actor.Role != "operator" {
-		if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, s.workforce, actor, storeID); err != nil {
-			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store does not belong to you")
-			return
-		}
-	}
-	s.putEntityImage(w, r, "store", storeID, role)
-}
-
 type EntityImageInput struct {
 	AssetID string `json:"assetId"`
 }

@@ -124,6 +124,6 @@ requireMarkers(`${workflowsRoot}/ci-node-diagnostics.yml`, ["pnpm exec knip", "g
 requireMarkers(`${workflowsRoot}/ci-node-verification.yml`, ["pnpm exec nx run-many -t test --all --outputStyle=stream", "pnpm exec nx affected -t test --outputStyle=stream", "pnpm run nx:typecheck", "pnpm run nx:lint", "pnpm run nx:build"]);
 requireMarkers(`${workflowsRoot}/ci-backends.yml`, ["Select affected backends", "Apply migrations", "go test ./...", "go build ./..."]);
 requireMarkers(`${workflowsRoot}/ci-runtime.yml`, ["runtime:full:smoke", "Stop runtime"]);
-requireMarkers(`${workflowsRoot}/dsh-database.yml`, ["contents: read", "postgres:16-alpine", "invoke-dsh-database.ps1"]);
+requireMarkers(`${workflowsRoot}/dsh-database.yml`, ["contents: read", "postgis/postgis:16-3.4-alpine", "invoke-dsh-database.ps1"]);
 
 fail(guardId, violations);

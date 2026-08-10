@@ -17,13 +17,13 @@ var (
 )
 
 type PartnerFieldPrompt struct {
-	Eligible          bool   `json:"eligible"`
-	Completed         bool   `json:"completed"`
-	PartnerID         string `json:"partnerId,omitempty"`
-	PartnerName       string `json:"partnerName,omitempty"`
-	FieldActorID      string `json:"fieldActorId,omitempty"`
+	Eligible         bool   `json:"eligible"`
+	Completed        bool   `json:"completed"`
+	PartnerID        string `json:"partnerId,omitempty"`
+	PartnerName      string `json:"partnerName,omitempty"`
+	FieldActorID     string `json:"fieldActorId,omitempty"`
 	ActivationStatus string `json:"activationStatus,omitempty"`
-	Reason            string `json:"reason,omitempty"`
+	Reason           string `json:"reason,omitempty"`
 }
 
 type ClientOrderPrompt struct {
@@ -139,7 +139,9 @@ func SubmitPartnerFieldRating(ctx context.Context, db *sql.DB, operatorContextID
 	if !prompt.Eligible {
 		return Rating{}, ErrNotEligible
 	}
-	if dimensions == "" { dimensions = "{}" }
+	if dimensions == "" {
+		dimensions = "{}"
+	}
 	return upsertRating(ctx, db, ratingInput{
 		OperatorContextID: operatorContextID, RaterKind: "partner", RaterActorID: partnerActorID,
 		TargetKind: "field", TargetActorID: prompt.FieldActorID,
@@ -196,11 +198,19 @@ func ClientOrderRatingPrompt(ctx context.Context, db *sql.DB, operatorContextID,
 	defer rows.Close()
 	for rows.Next() {
 		var kind string
-		if err := rows.Scan(&kind); err != nil { return ClientOrderPrompt{}, err }
-		if kind == "captain" { prompt.CaptainRated = true }
-		if kind == "order" { prompt.OrderRated = true }
+		if err := rows.Scan(&kind); err != nil {
+			return ClientOrderPrompt{}, err
+		}
+		if kind == "captain" {
+			prompt.CaptainRated = true
+		}
+		if kind == "order" {
+			prompt.OrderRated = true
+		}
 	}
-	if err := rows.Err(); err != nil { return ClientOrderPrompt{}, err }
+	if err := rows.Err(); err != nil {
+		return ClientOrderPrompt{}, err
+	}
 	prompt.Completed = prompt.CaptainRated && prompt.OrderRated
 	return prompt, nil
 }
@@ -211,35 +221,51 @@ func SubmitClientOrderRatings(ctx context.Context, db *sql.DB, operatorContextID
 		return nil, ErrInvalid
 	}
 	prompt, err := ClientOrderRatingPrompt(ctx, db, operatorContextID, clientActorID, orderID)
-	if err != nil { return nil, err }
-	if !prompt.Eligible { return nil, ErrNotEligible }
+	if err != nil {
+		return nil, err
+	}
+	if !prompt.Eligible {
+		return nil, ErrNotEligible
+	}
 	tx, err := db.BeginTx(ctx, nil)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	defer tx.Rollback()
-	if input.CaptainDimensions == "" { input.CaptainDimensions = "{}" }
-	if input.OrderDimensions == "" { input.OrderDimensions = "{}" }
+	if input.CaptainDimensions == "" {
+		input.CaptainDimensions = "{}"
+	}
+	if input.OrderDimensions == "" {
+		input.OrderDimensions = "{}"
+	}
 	captain, err := upsertRatingTx(ctx, tx, ratingInput{
 		OperatorContextID: operatorContextID, RaterKind: "client", RaterActorID: clientActorID,
 		TargetKind: "captain", TargetActorID: prompt.CaptainActorID,
 		SourceKind: "order_delivery", SourceID: orderID,
 		Score: input.CaptainScore, Comment: input.CaptainComment, Dimensions: input.CaptainDimensions, CorrelationID: correlationID,
 	})
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	order, err := upsertRatingTx(ctx, tx, ratingInput{
 		OperatorContextID: operatorContextID, RaterKind: "client", RaterActorID: clientActorID,
 		TargetKind: "order", TargetActorID: "",
 		SourceKind: "order_delivery", SourceID: orderID,
 		Score: input.OrderScore, Comment: input.OrderComment, Dimensions: input.OrderDimensions, CorrelationID: correlationID,
 	})
-	if err != nil { return nil, err }
-	if err := tx.Commit(); err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
 	return []Rating{captain, order}, nil
 }
 
 type ratingInput struct {
-	OperatorContextID, RaterKind, RaterActorID, TargetKind, TargetActorID string
+	OperatorContextID, RaterKind, RaterActorID, TargetKind, TargetActorID  string
 	SourceKind, SourceID, Comment, Dimensions, FraudSignals, CorrelationID string
-	Score                                                                 int
+	Score                                                                  int
 }
 
 type queryRowExecutor interface {
@@ -249,21 +275,31 @@ type queryRowExecutor interface {
 
 func upsertRating(ctx context.Context, db *sql.DB, input ratingInput) (Rating, error) {
 	tx, err := db.BeginTx(ctx, nil)
-	if err != nil { return Rating{}, err }
+	if err != nil {
+		return Rating{}, err
+	}
 	defer tx.Rollback()
 	rating, err := upsertRatingTx(ctx, tx, input)
-	if err != nil { return Rating{}, err }
-	if err := tx.Commit(); err != nil { return Rating{}, err }
+	if err != nil {
+		return Rating{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Rating{}, err
+	}
 	return rating, nil
 }
 
 func upsertRatingTx(ctx context.Context, tx *sql.Tx, input ratingInput) (Rating, error) {
 	input.Comment = strings.TrimSpace(input.Comment)
-	if input.Dimensions == "" { input.Dimensions = "{}" }
-	if input.FraudSignals == "" { input.FraudSignals = "{}" }
-	
+	if input.Dimensions == "" {
+		input.Dimensions = "{}"
+	}
+	if input.FraudSignals == "" {
+		input.FraudSignals = "{}"
+	}
+
 	var prevCreatedAt time.Time
-	err := tx.QueryRowContext(ctx, `SELECT created_at FROM dsh_provider_ratings WHERE operator_context_id=$1 AND rater_actor_id=$2 AND source_kind=$3 AND source_id=$4 AND target_kind=$5`, 
+	err := tx.QueryRowContext(ctx, `SELECT created_at FROM dsh_provider_ratings WHERE operator_context_id=$1 AND rater_actor_id=$2 AND source_kind=$3 AND source_id=$4 AND target_kind=$5`,
 		input.OperatorContextID, input.RaterActorID, input.SourceKind, input.SourceID, input.TargetKind).Scan(&prevCreatedAt)
 	if err == nil {
 		if time.Since(prevCreatedAt) > 48*time.Hour {
@@ -290,32 +326,41 @@ func upsertRatingTx(ctx context.Context, tx *sql.Tx, input ratingInput) (Rating,
 		            score,comment,dimensions,moderation_status,fraud_signals,partner_response,dispute_reason,status,created_at,updated_at
 		)
 		SELECT u.*, NOT EXISTS(SELECT 1 FROM previous) FROM upserted u`,
-		input.OperatorContextID,input.RaterActorID,input.SourceKind,input.SourceID,input.TargetKind,input.RaterKind,
-		input.TargetActorID,input.Score,input.Comment,input.Dimensions,input.FraudSignals).Scan(
-		&rating.ID,&rating.OperatorContextID,&rating.RaterKind,&rating.RaterActorID,&rating.TargetKind,&rating.TargetActorID,
-		&rating.SourceKind,&rating.SourceID,&rating.Score,&rating.Comment,&rating.Dimensions,&rating.ModerationStatus,&rating.FraudSignals,
-		&rating.PartnerResponse,&rating.DisputeReason,&rating.Status,&rating.CreatedAt,&rating.UpdatedAt,&created)
-	if err != nil { return Rating{}, err }
-	action := "updated"; if created { action = "created" }
+		input.OperatorContextID, input.RaterActorID, input.SourceKind, input.SourceID, input.TargetKind, input.RaterKind,
+		input.TargetActorID, input.Score, input.Comment, input.Dimensions, input.FraudSignals).Scan(
+		&rating.ID, &rating.OperatorContextID, &rating.RaterKind, &rating.RaterActorID, &rating.TargetKind, &rating.TargetActorID,
+		&rating.SourceKind, &rating.SourceID, &rating.Score, &rating.Comment, &rating.Dimensions, &rating.ModerationStatus, &rating.FraudSignals,
+		&rating.PartnerResponse, &rating.DisputeReason, &rating.Status, &rating.CreatedAt, &rating.UpdatedAt, &created)
+	if err != nil {
+		return Rating{}, err
+	}
+	action := "updated"
+	if created {
+		action = "created"
+	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_provider_rating_events(rating_id,operator_context_id,action,actor_id,score,comment,dimensions,fraud_signals,moderation_status,correlation_id)
-		VALUES ($1::uuid,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, rating.ID,rating.OperatorContextID,action,rating.RaterActorID,rating.Score,rating.Comment,rating.Dimensions,rating.FraudSignals,rating.ModerationStatus,strings.TrimSpace(input.CorrelationID)); err != nil {
+		VALUES ($1::uuid,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, rating.ID, rating.OperatorContextID, action, rating.RaterActorID, rating.Score, rating.Comment, rating.Dimensions, rating.FraudSignals, rating.ModerationStatus, strings.TrimSpace(input.CorrelationID)); err != nil {
 		return Rating{}, err
 	}
 	return rating, nil
 }
 
 func Summary(ctx context.Context, db *sql.DB, operatorContextID, targetKind, targetActorID string) (RatingSummary, error) {
-	if !oneOf(targetKind,"field","captain") || strings.TrimSpace(operatorContextID)=="" || strings.TrimSpace(targetActorID)=="" {
-		return RatingSummary{},ErrInvalid
+	if !oneOf(targetKind, "field", "captain") || strings.TrimSpace(operatorContextID) == "" || strings.TrimSpace(targetActorID) == "" {
+		return RatingSummary{}, ErrInvalid
 	}
-	summary:=RatingSummary{TargetKind:targetKind,TargetActorID:targetActorID,Distribution:map[string]int{"1":0,"2":0,"3":0,"4":0,"5":0}}
+	summary := RatingSummary{TargetKind: targetKind, TargetActorID: targetActorID, Distribution: map[string]int{"1": 0, "2": 0, "3": 0, "4": 0, "5": 0}}
 	var last sql.NullTime
-	if err:=db.QueryRowContext(ctx,`
+	if err := db.QueryRowContext(ctx, `
 		SELECT COALESCE(AVG(score),0)::float8,COUNT(*)::int,MAX(updated_at)
-		FROM dsh_provider_ratings WHERE operator_context_id=$1 AND target_kind=$2 AND target_actor_id=$3 AND status='active'`,operatorContextID,targetKind,targetActorID).Scan(&summary.AverageScore,&summary.RatingCount,&last);err!=nil{return RatingSummary{},err}
-	if last.Valid { summary.LastRatedAt=last.Time.UTC().Format(time.RFC3339) }
-	
+		FROM dsh_provider_ratings WHERE operator_context_id=$1 AND target_kind=$2 AND target_actor_id=$3 AND status='active'`, operatorContextID, targetKind, targetActorID).Scan(&summary.AverageScore, &summary.RatingCount, &last); err != nil {
+		return RatingSummary{}, err
+	}
+	if last.Valid {
+		summary.LastRatedAt = last.Time.UTC().Format(time.RFC3339)
+	}
+
 	// Minimum Sample Size Check (e.g. 5)
 	if summary.RatingCount >= 5 {
 		summary.IsStatisticallySignificant = true
@@ -323,39 +368,57 @@ func Summary(ctx context.Context, db *sql.DB, operatorContextID, targetKind, tar
 		// Suppress summary fields for privacy when sample size is too small
 		summary.IsStatisticallySignificant = false
 		summary.AverageScore = 0
-		summary.Distribution = map[string]int{"1":0,"2":0,"3":0,"4":0,"5":0}
+		summary.Distribution = map[string]int{"1": 0, "2": 0, "3": 0, "4": 0, "5": 0}
 	}
-	
-	rows,err:=db.QueryContext(ctx,`SELECT score,COUNT(*)::int FROM dsh_provider_ratings WHERE operator_context_id=$1 AND target_kind=$2 AND target_actor_id=$3 AND status='active' GROUP BY score`,operatorContextID,targetKind,targetActorID)
-	if err!=nil{return RatingSummary{},err};defer rows.Close()
-	for rows.Next(){
-		var score,count int
-		if err:=rows.Scan(&score,&count);err!=nil{return RatingSummary{},err}
+
+	rows, err := db.QueryContext(ctx, `SELECT score,COUNT(*)::int FROM dsh_provider_ratings WHERE operator_context_id=$1 AND target_kind=$2 AND target_actor_id=$3 AND status='active' GROUP BY score`, operatorContextID, targetKind, targetActorID)
+	if err != nil {
+		return RatingSummary{}, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var score, count int
+		if err := rows.Scan(&score, &count); err != nil {
+			return RatingSummary{}, err
+		}
 		if summary.IsStatisticallySignificant {
-			summary.Distribution[fmt.Sprint(score)]=count
+			summary.Distribution[fmt.Sprint(score)] = count
 		}
 	}
-	return summary,rows.Err()
+	return summary, rows.Err()
 }
 
-func oneOf(value string, allowed ...string) bool { for _, current := range allowed { if value==current{return true} }; return false }
+func oneOf(value string, allowed ...string) bool {
+	for _, current := range allowed {
+		if value == current {
+			return true
+		}
+	}
+	return false
+}
 
 func UpdateModerationStatus(ctx context.Context, db *sql.DB, operatorContextID, ratingID, status, reason, actorID string) error {
 	if !oneOf(status, "approved", "rejected", "disputed", "pending") || strings.TrimSpace(ratingID) == "" {
 		return ErrInvalid
 	}
 	tx, err := db.BeginTx(ctx, nil)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	defer tx.Rollback()
-	
+
 	res, err := tx.ExecContext(ctx, `
-		UPDATE dsh_provider_ratings 
+		UPDATE dsh_provider_ratings
 		SET moderation_status=$1, dispute_reason=$2, updated_at=now()
 		WHERE id=$3::uuid AND operator_context_id=$4`, status, reason, ratingID, operatorContextID)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	count, _ := res.RowsAffected()
-	if count == 0 { return ErrNotFound }
-	
+	if count == 0 {
+		return ErrNotFound
+	}
+
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_provider_rating_events(rating_id,operator_context_id,action,actor_id,moderation_status,dispute_reason,score,comment)
 		SELECT id, operator_context_id, 'moderated', $1, moderation_status, dispute_reason, score, comment
@@ -366,20 +429,28 @@ func UpdateModerationStatus(ctx context.Context, db *sql.DB, operatorContextID, 
 }
 
 func SubmitPartnerResponse(ctx context.Context, db *sql.DB, operatorContextID, partnerActorID, ratingID, response string) error {
-	if strings.TrimSpace(ratingID) == "" { return ErrInvalid }
+	if strings.TrimSpace(ratingID) == "" {
+		return ErrInvalid
+	}
 	tx, err := db.BeginTx(ctx, nil)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	defer tx.Rollback()
-	
+
 	res, err := tx.ExecContext(ctx, `
-		UPDATE dsh_provider_ratings 
+		UPDATE dsh_provider_ratings
 		SET partner_response=$1, updated_at=now()
-		WHERE id=$2::uuid AND operator_context_id=$3 AND target_kind='field' AND target_actor_id=$4`, 
+		WHERE id=$2::uuid AND operator_context_id=$3 AND target_kind='field' AND target_actor_id=$4`,
 		response, ratingID, operatorContextID, partnerActorID)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	count, _ := res.RowsAffected()
-	if count == 0 { return ErrNotFound }
-	
+	if count == 0 {
+		return ErrNotFound
+	}
+
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_provider_rating_events(rating_id,operator_context_id,action,actor_id,partner_response,score,comment)
 		SELECT id, operator_context_id, 'partner_responded', $1, partner_response, score, comment

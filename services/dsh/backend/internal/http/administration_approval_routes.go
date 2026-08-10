@@ -30,4 +30,3 @@ func RegisterAdministrationRoutes(
 	router.HandleFunc("GET /dsh/operator/admin/captains", server.handleListCaptainCredentials)
 	router.HandleFunc("GET /dsh/operator/admin/audit", server.handleListAdminAudit)
 }
-

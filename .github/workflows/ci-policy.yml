@@ -262,6 +262,10 @@ jobs:
         if: ${{ inputs.security_policy == 'true' }}
         run: bash tools/scripts/install-oss-toolchain-binaries.sh security
 
+      - name: Verify patched dependency security regressions
+        if: ${{ inputs.security_policy == 'true' }}
+        run: pnpm run guard:image-size-security
+
       - name: Scan for committed secrets
         id: gitleaks
         if: ${{ inputs.security_policy == 'true' }}
