@@ -2,7 +2,7 @@
 param(
     [Parameter(Mandatory)][string[]]$Paths,
     [Parameter(Mandatory)][string]$Message,
-    [string]$RepoRoot = 'C:\bthwani-suite-next'
+    [string]$RepoRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 )
 . "$PSScriptRoot\Closure.Common.ps1"
 $RepoRoot = Resolve-BthwaniRepoRoot $RepoRoot

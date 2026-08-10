@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$RepoRoot = 'C:\bthwani-suite-next')
+param([string]$RepoRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)))
 . "$PSScriptRoot\Closure.Common.ps1"
 $RepoRoot = Resolve-BthwaniRepoRoot $RepoRoot
 Set-Location $RepoRoot

@@ -2,7 +2,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 function Resolve-BthwaniRepoRoot {
-    param([string]$RepoRoot = 'C:\bthwani-suite-next')
+    param([string]$RepoRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)))
     $resolved = (Resolve-Path -LiteralPath $RepoRoot).Path
     if (-not (Test-Path -LiteralPath (Join-Path $resolved '.git'))) {
         throw "Not a git repository: $resolved"
