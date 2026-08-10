@@ -42,14 +42,16 @@ test("Nx verification targets materialize contracts before parallel work", () =>
   );
 });
 
-test("materialization is freshness-aware and postinstall delegates to it", () => {
+test("materialization freshness binds sources, composed output, toolchain and actual artifact hashes", () => {
   const materializer = read("tools/scripts/materialize-openapi-artifacts.mjs");
   for (const marker of [
     "sourceDigests",
+    "bundleDigests",
     "pnpm-lock.yaml",
     "generated-client-registry.json",
     "materializationKey",
     "currentArtifactHashes",
+    "sameHashes",
     "openapi:generate:all",
     ".artifacts/openapi/materialization.json",
   ]) {
