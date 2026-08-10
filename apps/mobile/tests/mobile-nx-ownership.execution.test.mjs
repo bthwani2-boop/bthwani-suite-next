@@ -38,14 +38,15 @@ function affectedProjects(file) {
   );
 }
 
-const appCases = [
+const surfaceCases = [
   ["app-client", "apps/app-client/runtime/src/App.tsx"],
   ["app-partner", "apps/app-partner/runtime/src/App.tsx"],
   ["app-captain", "apps/app-captain/runtime/src/App.tsx"],
   ["app-field", "apps/app-field/runtime/src/App.tsx"],
+  ["control-panel", "apps/control-panel/runtime/src/app/page.tsx"],
 ];
 
-for (const [project, file] of appCases) {
+for (const [project, file] of surfaceCases) {
   test(`Nx maps ${project} source changes to the owning test project`, () => {
     const affected = affectedProjects(file);
     assert.equal(
@@ -56,9 +57,9 @@ for (const [project, file] of appCases) {
   });
 }
 
-test("Nx propagates a sovereign DSH shared-kernel change to all four mobile dependents", () => {
+test("Nx propagates a sovereign DSH shared-kernel change to all dependent application surfaces", () => {
   const affected = affectedProjects("services/dsh/frontend/shared/_kernel/dsh-api-base-url.ts");
-  for (const project of appCases.map(([name]) => name)) {
+  for (const project of surfaceCases.map(([name]) => name)) {
     assert.equal(
       affected.has(project),
       true,
