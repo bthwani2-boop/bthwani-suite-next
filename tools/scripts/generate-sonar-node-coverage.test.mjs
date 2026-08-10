@@ -81,13 +81,13 @@ test("LCOV filtering fails before Sonar when a mapped line is outside the source
   );
 });
 
-test("canonical LCOV merge sums duplicate source evidence without losing counters", () => {
+test("canonical LCOV merge sums duplicate line and branch evidence exactly", () => {
   const source = "shared/data-runtime/src/create-query-client.ts";
   const first = [
     "TN:",
     `SF:${source}`,
-    "FN:1,retryPolicy",
-    "FNDA:1,retryPolicy",
+    "FN:undefined,get",
+    "FNDA:1,get",
     "FNF:1",
     "FNH:1",
     "BRDA:1,0,0,1",
@@ -121,9 +121,7 @@ test("canonical LCOV merge sums duplicate source evidence without losing counter
   const merged = mergeLcovRecords([first, second]);
   assert.equal(merged.length, 1);
   assert.equal((merged[0].match(/^SF:/gm) ?? []).length, 1);
-  assert.match(merged[0], /^FNDA:3,retryPolicy$/m);
-  assert.match(merged[0], /^FNF:1$/m);
-  assert.match(merged[0], /^FNH:1$/m);
+  assert.doesNotMatch(merged[0], /^(?:FN|FNDA|FNF|FNH):/m);
   assert.match(merged[0], /^BRDA:1,0,0,3$/m);
   assert.match(merged[0], /^BRDA:1,0,1,1$/m);
   assert.match(merged[0], /^BRF:2$/m);
@@ -134,12 +132,8 @@ test("canonical LCOV merge sums duplicate source evidence without losing counter
   assert.match(merged[0], /^LH:2$/m);
 });
 
-test("canonical LCOV merge fails closed on conflicting function locations", () => {
+test("canonical LCOV merge fails closed on unsupported fields", () => {
   const source = "shared/data-runtime/src/create-query-client.ts";
-  const first = `TN:\nSF:${source}\nFN:1,retryPolicy\nFNDA:1,retryPolicy\nFNF:1\nFNH:1\nLF:0\nLH:0\nend_of_record\n`;
-  const second = `TN:\nSF:${source}\nFN:2,retryPolicy\nFNDA:1,retryPolicy\nFNF:1\nFNH:1\nLF:0\nLH:0\nend_of_record\n`;
-  assert.throws(
-    () => mergeLcovRecords([first, second]),
-    /function 'retryPolicy' maps to conflicting lines 1 and 2/,
-  );
+  const raw = `TN:\nSF:${source}\nUNKNOWN:1\nDA:1,1\nLF:1\nLH:1\nend_of_record\n`;
+  assert.throws(() => mergeLcovRecords([raw]), /Unsupported LCOV field: UNKNOWN:1/);
 });
