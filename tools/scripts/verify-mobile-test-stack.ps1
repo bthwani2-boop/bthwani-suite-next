@@ -29,6 +29,10 @@ Invoke-VerifiedStep "Canonical command and mobile-test policy" {
   node tools/guards/required-command-integrity-gate.mjs
 }
 
+Invoke-VerifiedStep "Deterministic OpenAPI contract and client materialization" {
+  node tools/scripts/materialize-openapi-artifacts.mjs
+}
+
 Invoke-VerifiedStep "Shared mobile contracts and application-surface ownership" {
   node --test apps/mobile/tests/*.test.mjs
 }
