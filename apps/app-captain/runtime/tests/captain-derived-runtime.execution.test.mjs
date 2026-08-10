@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 
 const policyUrl = new URL(
   "../../../../services/dsh/frontend/shared/delivery/captain.derived.policy.ts",
+  import.meta.url,
+);
+const adapterUrl = new URL(
+  "../../../../services/dsh/frontend/shared/delivery/captain.derived.ts",
   import.meta.url,
 );
 
@@ -40,6 +45,19 @@ function state(overrides = {}) {
     ...overrides,
   };
 }
+
+test("captain runtime adapter is bound to the canonical pure derived policy", () => {
+  const adapter = fs.readFileSync(adapterUrl, "utf8");
+  assert.match(adapter, /from '\.\/captain\.derived\.policy'/);
+  for (const functionName of [
+    "buildCaptainBottomActiveIdPolicy",
+    "buildCaptainHomeTickerPolicy",
+    "buildCaptainOrderSummaryPolicy",
+    "buildCaptainPresentationPolicy",
+  ]) {
+    assert.ok(adapter.includes(functionName), `captain runtime adapter is not bound to ${functionName}`);
+  }
+});
 
 test("captain active assignment switches the next action from pickup to delivery", () => {
   const beforePickup = buildCaptainOrderSummaryPolicy(
