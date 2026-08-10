@@ -8,6 +8,7 @@ param(
 Set-StrictMode -Version Latest
 
 . (Join-Path $PSScriptRoot "../../../../tools/dev/local-actors.ps1")
+. (Join-Path $PSScriptRoot "../../../../tools/dev/local-workforce-actors.ps1")
 $ErrorActionPreference = "Stop"
 
 $state = Get-Content -LiteralPath $StatePath -Raw | ConvertFrom-Json
@@ -61,16 +62,29 @@ if ($WltEnabled) {
   Write-Host "  Checkout & WLT Handoff checkout handoff smoke skipped because wlt profile is not active."
 }
 
-foreach ($actor in @(
-  @{ username = (Get-LocalUsername "partner"); expectedRole = "partner" },
-  @{ username = (Get-LocalUsername "field"); expectedRole = "field" },
-  @{ username = (Get-LocalUsername "captain"); expectedRole = "captain" }
-)) {
-  $token = Get-LocalActorToken $actor.username
+$scopedActors = @(
+  @{
+    label = (Get-LocalUsername "partner")
+    token = (Get-LocalActorToken (Get-LocalUsername "partner"))
+    expectedRole = "partner"
+  },
+  @{
+    label = "provisioned-field"
+    token = (Get-ProvisionedWorkforceActorToken -Kind "field" -OperatorToken $operatorToken -DeviceFingerprint "dsh-client-home")
+    expectedRole = "field"
+  },
+  @{
+    label = "provisioned-captain"
+    token = (Get-ProvisionedWorkforceActorToken -Kind "captain" -OperatorToken $operatorToken -DeviceFingerprint "dsh-client-home")
+    expectedRole = "captain"
+  }
+)
+foreach ($actor in $scopedActors) {
+  $token = [string]$actor.token
   $headers = @{ Authorization = "Bearer $token" }
   $context = Invoke-RestMethod "http://localhost:58080/dsh/store-context" -Headers $headers -TimeoutSec 10
-  if ($context.actorRole -ne $actor.expectedRole) { throw "wrong actor role for $($actor.username)" }
-  if ([string]::IsNullOrWhiteSpace($context.store.id)) { throw "missing scoped store for $($actor.username)" }
+  if ($context.actorRole -ne $actor.expectedRole) { throw "wrong actor role for $($actor.label)" }
+  if ([string]::IsNullOrWhiteSpace($context.store.id)) { throw "missing scoped store for $($actor.label)" }
 }
 
 # Home Discovery: every visible card must resolve to an openable storefront and

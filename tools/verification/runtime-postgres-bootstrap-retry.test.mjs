@@ -14,6 +14,10 @@ const dshRuntimeSmoke = await readFile(
   new URL("../../infra/docker/scripts/smoke-dsh-runtime.ps1", import.meta.url),
   "utf8",
 );
+const workforceActorHelper = await readFile(
+  new URL("../dev/local-workforce-actors.ps1", import.meta.url),
+  "utf8",
+);
 
 test("runtime retries only the transient PostgreSQL bootstrap restart", () => {
   assert.match(phaseScript, /function Test-TransientPostgresBootstrapRestart/);
@@ -69,4 +73,11 @@ test("DSH runtime smoke enforces the canonical HEALTHY readiness state", () => {
   assert.doesNotMatch(dshCatalogSmoke, /\$readiness\.status -eq "ready"/);
   assert.doesNotMatch(dshRuntimeSmoke, /\$readiness\.status -ne "ready"/);
   assert.doesNotMatch(dshRuntimeSmoke, /\$storeId:/);
+});
+
+test("PowerShell runtime consumers authenticate Workforce providers by activation", () => {
+  assert.match(workforceActorHelper, /workforce\/\$endpoint\/\$encodedActorId\/activation-codes/);
+  assert.match(workforceActorHelper, /\$IdentityBaseUrl\/auth\/activate/);
+  assert.match(workforceActorHelper, /activated\.identity\.subject/);
+  assert.doesNotMatch(workforceActorHelper, /\/auth\/login/);
 });

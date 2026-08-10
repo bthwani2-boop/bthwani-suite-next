@@ -1,6 +1,7 @@
 Set-StrictMode -Version Latest
 
 . (Join-Path $PSScriptRoot "../../../../tools/dev/local-actors.ps1")
+. (Join-Path $PSScriptRoot "../../../../tools/dev/local-workforce-actors.ps1")
 $ErrorActionPreference = "Stop"
 
 $identityPassword = Get-LocalPassword
@@ -26,7 +27,10 @@ $partnerHeaders = @{
 }
 
 # Partner Onboarding & Store Publication: partner lifecycle from field draft to client-visible store readiness.
-$fieldToken = Get-LocalActorToken (Get-LocalUsername "field")
+$fieldToken = Get-ProvisionedWorkforceActorToken `
+  -Kind "field" `
+  -OperatorToken $operatorToken `
+  -DeviceFingerprint "dsh-partner-onboarding"
 $fieldHeaders = @{
   Authorization = "Bearer $fieldToken"
   "X-Correlation-ID" = "smoke-partner-field-$([guid]::NewGuid())"

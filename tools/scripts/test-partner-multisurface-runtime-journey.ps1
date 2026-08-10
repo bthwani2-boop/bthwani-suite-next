@@ -2,6 +2,7 @@
 param(
   [string]$DshBaseUrl = "http://127.0.0.1:58080",
   [string]$IdentityBaseUrl = "http://127.0.0.1:58082",
+  [string]$WorkforceBaseUrl = "http://127.0.0.1:58086",
   [string]$IdentityPassword = "",
   [string]$StoreId = "store-test-grocery"
 )
@@ -10,6 +11,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 . (Join-Path $PSScriptRoot "../dev/local-actors.ps1")
+. (Join-Path $PSScriptRoot "../dev/local-workforce-actors.ps1")
 if ([string]::IsNullOrWhiteSpace($IdentityPassword)) {
   $IdentityPassword = Get-LocalPassword
 }
@@ -90,8 +92,17 @@ function Headers([object]$Actor, [string]$Operation, [switch]$ReadOnly, [string]
 }
 
 $Partner = Login-Actor (Get-LocalUsername "partner")
-$Field = Login-Actor (Get-LocalUsername "field")
 $Operator = Login-Actor (Get-LocalUsername "operator")
+$FieldProvider = Get-ProvisionedWorkforceActor -Kind "field"
+$Field = [pscustomobject]@{
+  Username = [string]$FieldProvider.workforceCode
+  Token = Get-ProvisionedWorkforceActorToken `
+    -Kind "field" `
+    -OperatorToken $Operator.Token `
+    -WorkforceBaseUrl $WorkforceBaseUrl `
+    -IdentityBaseUrl $IdentityBaseUrl `
+    -DeviceFingerprint "partner-multisurface"
+}
 
 $PartnerStatus = Invoke-Api GET "$DshBaseUrl/dsh/partner/activation/status" (Headers $Partner "activation-status" -ReadOnly)
 Require-Status $PartnerStatus @(200) "partner activation status"

@@ -2,6 +2,7 @@
 param(
   [string]$DshBaseUrl = "http://127.0.0.1:58080",
   [string]$IdentityBaseUrl = "http://127.0.0.1:58082",
+  [string]$WorkforceBaseUrl = "http://127.0.0.1:58086",
   [string]$IdentityPassword = ""
 )
 
@@ -9,6 +10,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 . (Join-Path $PSScriptRoot "../dev/local-actors.ps1")
+. (Join-Path $PSScriptRoot "../dev/local-workforce-actors.ps1")
 if ([string]::IsNullOrWhiteSpace($IdentityPassword)) {
   $IdentityPassword = Get-LocalPassword
 }
@@ -122,9 +124,31 @@ function Ensure-ClientAddress([object]$Client) {
 
 $Client = Login-Actor (Get-LocalUsername "client") "client"
 $Partner = Login-Actor (Get-LocalUsername "partner") "partner"
-$Captain = Login-Actor (Get-LocalUsername "captain") "captain"
-$Field = Login-Actor (Get-LocalUsername "field") "field"
 $Operator = Login-Actor (Get-LocalUsername "operator") "operator"
+$CaptainProvider = Get-ProvisionedWorkforceActor -Kind "captain"
+$Captain = [pscustomobject]@{
+  Username = [string]$CaptainProvider.workforceCode
+  Role = "captain"
+  Token = Get-ProvisionedWorkforceActorToken `
+    -Kind "captain" `
+    -OperatorToken $Operator.Token `
+    -WorkforceBaseUrl $WorkforceBaseUrl `
+    -IdentityBaseUrl $IdentityBaseUrl `
+    -DeviceFingerprint "dsh-multisurface"
+  Subject = [string]$CaptainProvider.actorId
+}
+$FieldProvider = Get-ProvisionedWorkforceActor -Kind "field"
+$Field = [pscustomobject]@{
+  Username = [string]$FieldProvider.workforceCode
+  Role = "field"
+  Token = Get-ProvisionedWorkforceActorToken `
+    -Kind "field" `
+    -OperatorToken $Operator.Token `
+    -WorkforceBaseUrl $WorkforceBaseUrl `
+    -IdentityBaseUrl $IdentityBaseUrl `
+    -DeviceFingerprint "dsh-multisurface"
+  Subject = [string]$FieldProvider.actorId
+}
 
 $Anonymous = Invoke-Api GET "$DshBaseUrl/dsh/client/orders"
 Require-Status $Anonymous @(401) "anonymous client orders"
