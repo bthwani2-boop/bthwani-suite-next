@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const controllerUrl = new URL(
-  "../../../../services/dsh/frontend/shared/cart/cart.controller-core.ts",
+const policyUrl = new URL(
+  "../../../../services/dsh/frontend/shared/cart/cart.policy.ts",
   import.meta.url,
 );
 const queueUrl = new URL(
@@ -12,12 +12,11 @@ const queueUrl = new URL(
 
 const {
   shouldLoadCart,
-  resolveCartLoadState,
-  resolveCartLoadError,
-  resolveServiceabilityState,
-  resolveServiceabilityError,
+  classifyCartLoad,
+  classifyCartLoadError,
+  classifyServiceability,
   resolveQuantityRemoval,
-} = await import(controllerUrl.href);
+} = await import(policyUrl.href);
 const {
   getCartSyncQueue,
   pushToCartSyncQueue,
@@ -53,31 +52,21 @@ test("client cart loads only for an authenticated actor with a store scope", () 
   assert.equal(shouldLoadCart("anonymous", "store-1"), false);
 });
 
-test("client cart maps empty, offline, permission and generic failure without false success", () => {
-  assert.equal(resolveCartLoadState(null).kind, "empty");
-  assert.equal(resolveCartLoadState({ id: "cart-1", items: [] }).kind, "empty");
+test("client cart classifies empty, offline, permission and generic failure without false success", () => {
+  assert.equal(classifyCartLoad(null), "empty");
+  assert.equal(classifyCartLoad({ items: [] }), "empty");
+  assert.equal(classifyCartLoad({ items: [{ id: "item-1" }] }), "success");
 
-  const populated = resolveCartLoadState({ id: "cart-1", items: [{ id: "item-1" }] });
-  assert.equal(populated.kind, "success");
-
-  assert.equal(resolveCartLoadError({ kind: "network" }).kind, "offline");
-  assert.equal(resolveCartLoadError({ kind: "http", status: 401 }).kind, "permission_denied");
-  assert.equal(resolveCartLoadError({ kind: "http", status: 403 }).kind, "permission_denied");
-  assert.equal(resolveCartLoadError({ kind: "http", status: 500 }).kind, "error");
+  assert.equal(classifyCartLoadError({ kind: "network" }), "offline");
+  assert.equal(classifyCartLoadError({ kind: "http", status: 401 }), "permission_denied");
+  assert.equal(classifyCartLoadError({ kind: "http", status: 403 }), "permission_denied");
+  assert.equal(classifyCartLoadError({ kind: "http", status: 500 }), "error");
 });
 
 test("client serviceability and quantity policy are explicit and fail closed", () => {
-  const serviceable = resolveServiceabilityState({ serviceable: true, availableModes: ["delivery"] });
-  assert.equal(serviceable.kind, "serviceable");
-
-  const blocked = resolveServiceabilityState({
-    serviceable: false,
-    code: "OUT_OF_ZONE",
-    reason: "outside delivery zone",
-    availableModes: [],
-  });
-  assert.equal(blocked.kind, "blocked");
-  assert.equal(resolveServiceabilityError().kind, "error");
+  assert.equal(classifyServiceability({ serviceable: true }), "serviceable");
+  assert.equal(classifyServiceability({ serviceable: false }), "blocked");
+  assert.equal(classifyServiceability({}), "blocked");
 
   assert.equal(resolveQuantityRemoval(1, 0), "remove");
   assert.equal(resolveQuantityRemoval(2, 1), "update");
