@@ -8,12 +8,22 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$root = (& git rev-parse --show-toplevel 2>$null).Trim()
-if ($LASTEXITCODE -ne 0 -or -not $root) { throw "Run from inside the repository." }
+
+function Get-NativeText {
+    param([scriptblock]$Command,[string]$Failure)
+    $lines = @(& $Command)
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) { throw $Failure }
+    $text = ($lines -join "`n").Trim()
+    if (-not $text) { throw $Failure }
+    return $text
+}
+
+$root = Get-NativeText -Command { git rev-parse --show-toplevel 2>$null } -Failure "Run from inside the repository."
 Set-Location $root
 
 if (git status --porcelain) { throw "Working tree must be clean before protection orchestration." }
-$current = (& git branch --show-current).Trim()
+$current = Get-NativeText -Command { git branch --show-current } -Failure "Unable to resolve current branch."
 if ($current -ne $BaseBranch) { throw "Start this orchestration from '$BaseBranch'. Current branch: '$current'." }
 
 $dir = $PSScriptRoot
