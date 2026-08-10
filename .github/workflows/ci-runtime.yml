@@ -107,6 +107,11 @@ jobs:
                   & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action smoke -Profiles $profiles
                 }
               }
+              if ($profile -in @("identity-security", "full")) {
+                Invoke-Phase "mobile:lan-runtime" {
+                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/verify-mobile-lan-runtime.ps1
+                }
+              }
               if ($profile -in @("wlt-finance", "full")) {
                 Invoke-Phase "representative-financial-readback" {
                   & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/finance/smoke-dsh-wlt-representative-readback.ps1
