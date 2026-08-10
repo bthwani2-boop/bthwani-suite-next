@@ -347,7 +347,7 @@ func (r *Repository) issueChallengeTx(ctx context.Context, tx *sql.Tx, actor Act
 			`, strings.TrimSpace(idempotencyKey)).Scan(&existingID, &existingPhone, &existingExpiresAt); selErr == nil {
 				return IssueActivationResult{
 					ActivationID: existingID,
-					Code:         "",
+					Code:         "", // Do not expose code on idempotent retry
 					MaskedPhone:  maskPhone(existingPhone),
 					ExpiresAt:    existingExpiresAt,
 				}, nil
@@ -502,6 +502,8 @@ func resolvePasswordLoginSurface(actor Actor) (string, error) {
 	return "", ErrForbidden
 }
 
+// Login authenticates a username/password pair. Every attempt is recorded
+// in identity_login_attempts for audit and lockout purposes.
 func (r *Repository) Login(ctx context.Context, username, password, fingerprint, ipAddress string) (TokenPair, error) {
 	normalizedUsername := strings.TrimSpace(username)
 
@@ -554,6 +556,8 @@ func (r *Repository) isLoginLocked(ctx context.Context, username string) (bool, 
 	return failureCount >= loginLockoutThreshold, nil
 }
 
+// recordLoginAttempt is best-effort: a logging failure must never block or
+// fail the login flow itself, so errors are swallowed here.
 func (r *Repository) recordLoginAttempt(ctx context.Context, username string, succeeded bool, ipAddress string) {
 	_, _ = r.db.ExecContext(ctx, `
 		INSERT INTO identity_login_attempts (username, succeeded, ip_address, created_at)
@@ -618,6 +622,7 @@ func (r *Repository) Refresh(ctx context.Context, refreshToken string) (TokenPai
 	}
 
 	if currentHash != tokenHash(presentedRandomToken) {
+		// REUSE DETECTED!
 		_, _ = tx.ExecContext(ctx, `
 			UPDATE identity_sessions
 			SET revoked_at = now(), compromised_at = now()
@@ -788,6 +793,8 @@ func randomToken(byteCount int) (string, error) {
 }
 
 func randomActivationCode() (string, error) {
+	// 000000 is permanently retired and is never generated as a legitimate
+	// challenge. Generate the inclusive range 000001..999999 instead.
 	value, err := rand.Int(rand.Reader, big.NewInt(999999))
 	if err != nil {
 		return "", fmt.Errorf("random activation code: %w", err)
@@ -826,6 +833,9 @@ func maskPhone(phone string) string {
 	return phone[:4] + strings.Repeat("*", len(phone)-6) + phone[len(phone)-2:]
 }
 
+// ProvisionActor creates an inactive actor for a Workforce-managed provider.
+// It is intentionally limited to field and captain roles and requires the
+// trusted scope supplied by the authenticated Workforce service boundary.
 func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInput) (ActorAdminView, error) {
 	role := strings.TrimSpace(input.Role)
 	surface, ok := workforceActivationSurfaceFor(role)
@@ -920,6 +930,8 @@ func providerPermissions(surface string) ([]byte, error) {
 	})
 }
 
+// ActorAdminByID returns the internal projection of an actor, including the
+// sovereign phone number, for service-to-service consumers.
 func (r *Repository) SearchActors(ctx context.Context, role, q string, limit int) ([]ActorAdminView, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 25
@@ -977,6 +989,7 @@ func (r *Repository) ActorAdminByID(ctx context.Context, actorID string) (ActorA
 	return toAdminView(actor), nil
 }
 
+// SuspendActor suspends authentication for an actor in one transaction.
 func (r *Repository) SuspendActor(ctx context.Context, actorID, requestedByActorID, reason, correlationID string) error {
 	actorID = strings.TrimSpace(actorID)
 	requestedByActorID = strings.TrimSpace(requestedByActorID)
@@ -1059,6 +1072,7 @@ func (r *Repository) SuspendActor(ctx context.Context, actorID, requestedByActor
 	return tx.Commit()
 }
 
+// ReactivateActor restores authentication for a previously activated actor.
 func (r *Repository) ReactivateActor(ctx context.Context, actorID, requestedByActorID, reason, correlationID string) error {
 	actorID = strings.TrimSpace(actorID)
 	requestedByActorID = strings.TrimSpace(requestedByActorID)
@@ -1145,6 +1159,10 @@ func hasAnyRole(roles []string, allowed ...string) bool {
 	return false
 }
 
+// requireLifecycleRequester prevents a trusted service caller from recording a
+// forged or cross-context human principal in the lifecycle audit trail. The
+// outer service authorization still owns action-level permission checks; this
+// repository boundary owns durable actor existence, activity, and isolation.
 func requireLifecycleRequester(ctx context.Context, tx *sql.Tx, requestedByActorID, operatorContextID string) error {
 	var status ActorLifecycleStatus
 	err := tx.QueryRowContext(ctx, `
