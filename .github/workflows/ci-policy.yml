@@ -204,6 +204,47 @@ jobs:
         if: ${{ steps.required_command_integrity.outcome == 'failure' }}
         run: exit 1
 
+      - name: Verify immutable commit diff
+        id: immutable_diff
+        continue-on-error: true
+        shell: bash
+        env:
+          BASE_SHA: ${{ inputs.base_sha }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          set +e
+          log="${RUNNER_TEMP}/immutable-policy-diff.log"
+          git diff --check "${BASE_SHA}" "${HEAD_SHA}" 2>&1 | tee "${log}"
+          status=${PIPESTATUS[0]}
+          exit "${status}"
+
+      - name: Upload immutable policy diff diagnostics
+        if: ${{ steps.immutable_diff.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: immutable-policy-diff-${{ github.run_id }}
+          path: ${{ runner.temp }}/immutable-policy-diff.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce immutable policy diff result
+        if: ${{ steps.immutable_diff.outcome == 'failure' }}
+        run: exit 1
+
+  security:
+    name: Verify affected security and infrastructure policy
+    if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' || inputs.infrastructure_policy == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
       - name: Verify workflow security preflight
         id: workflow_security
         if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' }}
@@ -348,30 +389,3 @@ jobs:
       - name: Verify infrastructure policy
         if: ${{ inputs.infrastructure_policy == 'true' }}
         run: pnpm run guard:opa-policies
-
-      - name: Verify immutable commit diff
-        id: immutable_diff
-        continue-on-error: true
-        shell: bash
-        env:
-          BASE_SHA: ${{ inputs.base_sha }}
-          HEAD_SHA: ${{ inputs.head_sha }}
-        run: |
-          set +e
-          log="${RUNNER_TEMP}/immutable-policy-diff.log"
-          git diff --check "${BASE_SHA}" "${HEAD_SHA}" 2>&1 | tee "${log}"
-          status=${PIPESTATUS[0]}
-          exit "${status}"
-
-      - name: Upload immutable policy diff diagnostics
-        if: ${{ steps.immutable_diff.outcome == 'failure' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: immutable-policy-diff-${{ github.run_id }}
-          path: ${{ runner.temp }}/immutable-policy-diff.log
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Enforce immutable policy diff result
-        if: ${{ steps.immutable_diff.outcome == 'failure' }}
-        run: exit 1

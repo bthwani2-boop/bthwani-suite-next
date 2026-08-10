@@ -44,6 +44,7 @@ on:
 permissions:
   actions: read
   contents: read
+  pull-requests: read
 
 concurrency:
   group: contextual-ci-${{ github.event.pull_request.number || github.ref }}
@@ -94,6 +95,8 @@ jobs:
       verification_tier: ${{ steps.scope.outputs.verification_tier }}
       diagnostics: ${{ steps.scope.outputs.diagnostics }}
       platform_change_sets: ${{ steps.scope.outputs.platform_change_sets }}
+      skip_duplicate_push: ${{ steps.scope.outputs.skip_duplicate_push }}
+      execution_phase: ${{ steps.scope.outputs.execution_phase }}
     steps:
       - name: Checkout immutable source history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -122,11 +125,17 @@ jobs:
           HEAD_SHA="$(git rev-parse HEAD)"
           BASE_SHA="${PR_BASE_SHA:-${EVENT_BEFORE:-}}"
           VERIFIED_PUSH_BASE=false
+          SKIP_DUPLICATE_PUSH=false
+          EXECUTION_PHASE="pr"
 
-          # Push runs carry forward every change since the most recent successful
-          # CI ancestor. A cancelled or failed run therefore remains verification
-          # debt and is automatically included in the next affected calculation.
-          if [[ "${EVENT_NAME}" == "push" ]]; then
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            EXECUTION_PHASE="closure"
+          elif [[ "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "master" ]]; then
+            EXECUTION_PHASE="master"
+
+            # Master remains fail-closed: carry verification debt from the most
+            # recent successful contextual CI ancestor. Failed/cancelled master
+            # runs are not accepted as evidence.
             if ! SUCCESSFUL_RUN_SHAS="$(
               gh api --method GET \
                 -H "X-GitHub-Api-Version: 2022-11-28" \
@@ -151,14 +160,41 @@ jobs:
                 break
               fi
             done <<< "${SUCCESSFUL_RUN_SHAS}"
+          elif [[ "${EVENT_NAME}" == "push" ]]; then
+            EXECUTION_PHASE="development"
+
+            # Development feedback is intentionally commit-local. Closure/PR
+            # verification is responsible for the complete base..HEAD delta.
+            BASE_SHA="${EVENT_BEFORE:-}"
+
+            # A branch with an open PR already receives pull_request verification.
+            # Keep this push run as a tiny routing receipt and suppress duplicated
+            # heavy work for the same source branch.
+            if ! OPEN_PR_COUNT="$(
+              gh api --method GET \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "/repos/${GITHUB_REPOSITORY}/pulls" \
+                -f state=open \
+                -f head="${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}" \
+                -f per_page=1 \
+                --jq 'length'
+            )"; then
+              echo "::error title=PR deduplication lookup failed::unable to query open pull requests for ${GITHUB_REF_NAME}"
+              exit 1
+            fi
+            if [[ "${OPEN_PR_COUNT}" != "0" ]]; then
+              SKIP_DUPLICATE_PUSH=true
+            fi
           fi
 
+          echo "skip_duplicate_push=${SKIP_DUPLICATE_PUSH}" >> "${GITHUB_OUTPUT}"
+          echo "execution_phase=${EXECUTION_PHASE}" >> "${GITHUB_OUTPUT}"
           if [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
             BASE_SHA="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${HEAD_SHA}")"
           fi
 
           FULL_VERIFICATION=false
-          if [[ "${EVENT_NAME}" == "push" && "${VERIFIED_PUSH_BASE}" != "true" ]]; then
+          if [[ "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "master" && "${VERIFIED_PUSH_BASE}" != "true" ]]; then
             # No trusted successful ancestor means there is no safe affected-only
             # baseline. Establish one by running the full verification contract.
             FULL_VERIFICATION=true
@@ -191,11 +227,15 @@ jobs:
           RUNTIME_PROFILE: ${{ steps.scope.outputs.runtime_profile }}
           DIAGNOSTICS_REQUIRED: ${{ steps.scope.outputs.diagnostics }}
           FULL_VERIFICATION: ${{ steps.scope.outputs.full_verification }}
+          EXECUTION_PHASE: ${{ steps.scope.outputs.execution_phase }}
+          SKIP_DUPLICATE_PUSH: ${{ steps.scope.outputs.skip_duplicate_push }}
         run: |
           {
             echo "### Contextual CI routing"
             echo "- Base: ${BASE_SHA}"
             echo "- Head: ${HEAD_SHA}"
+            echo "- Execution phase: ${EXECUTION_PHASE}"
+            echo "- Duplicate push suppressed: ${SKIP_DUPLICATE_PUSH}"
             echo "- Full verification: ${FULL_VERIFICATION}"
             echo "- Verification tier: ${VERIFICATION_TIER}"
             echo "- Runtime profile: ${RUNTIME_PROFILE}"
@@ -207,7 +247,7 @@ jobs:
   policy:
     name: Policy and governance
     needs: [context]
-    if: ${{ needs.context.outputs.policy == 'true' }}
+    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.policy == 'true' }}
     uses: ./.github/workflows/ci-policy.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
@@ -221,7 +261,7 @@ jobs:
   diagnostics:
     name: Static diagnostics
     needs: [context]
-    if: ${{ needs.context.outputs.diagnostics == 'true' }}
+    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.diagnostics == 'true' }}
     uses: ./.github/workflows/ci-node-diagnostics.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
@@ -235,7 +275,7 @@ jobs:
   verification:
     name: Node verification
     needs: [context]
-    if: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' || needs.context.outputs.node == 'true' || needs.context.outputs.journey == 'true' || needs.context.outputs.platform_change_sets == 'true' }}
+    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && (needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' || needs.context.outputs.node == 'true' || needs.context.outputs.journey == 'true' || needs.context.outputs.platform_change_sets == 'true') }}
     uses: ./.github/workflows/ci-node-verification.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
@@ -251,7 +291,7 @@ jobs:
   backends:
     name: Backend verification
     needs: [context]
-    if: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.dsh == 'true' || needs.context.outputs.wlt == 'true' || needs.context.outputs.identity == 'true' || needs.context.outputs.workforce == 'true' || needs.context.outputs.platform == 'true' || needs.context.outputs.providers == 'true' }}
+    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && (needs.context.outputs.full_verification == 'true' || needs.context.outputs.dsh == 'true' || needs.context.outputs.wlt == 'true' || needs.context.outputs.identity == 'true' || needs.context.outputs.workforce == 'true' || needs.context.outputs.platform == 'true' || needs.context.outputs.providers == 'true') }}
     uses: ./.github/workflows/ci-backends.yml
     with:
       dsh: ${{ needs.context.outputs.dsh }}
@@ -264,7 +304,7 @@ jobs:
   runtime:
     name: Runtime proof
     needs: [context]
-    if: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.runtime == 'true' || (github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true) }}
+    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && (needs.context.outputs.full_verification == 'true' || needs.context.outputs.runtime == 'true' || (github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true)) }}
     uses: ./.github/workflows/ci-runtime.yml
     with:
       full_verification: ${{ needs.context.outputs.full_verification }}
@@ -298,8 +338,17 @@ jobs:
           BACKEND_REQUIRED: ${{ needs.context.outputs.dsh == 'true' || needs.context.outputs.wlt == 'true' || needs.context.outputs.identity == 'true' || needs.context.outputs.workforce == 'true' || needs.context.outputs.platform == 'true' || needs.context.outputs.providers == 'true' }}
           RUNTIME_REQUIRED: ${{ needs.context.outputs.runtime }}
           EXPLICIT_RUNTIME_PROOF: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
+          SKIP_DUPLICATE_PUSH: ${{ needs.context.outputs.skip_duplicate_push }}
+          EXECUTION_PHASE: ${{ needs.context.outputs.execution_phase }}
         run: |
           set -euo pipefail
+
+          if [[ "${SKIP_DUPLICATE_PUSH}" == "true" ]]; then
+            printf '%s\n' "duplicate development push suppressed because an open PR owns verification for this branch"
+            exit 0
+          fi
+
+          printf '%s\n' "execution phase=${EXECUTION_PHASE}"
           failed=0
           failures=()
 
