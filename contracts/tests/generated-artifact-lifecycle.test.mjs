@@ -69,6 +69,15 @@ test("contract verification composes from sovereign sources instead of requiring
   assert.doesNotMatch(typecheck, /committed bundle|readFileSync\(new URL\(result\.bundlePath/);
 });
 
+test("Redocly contract lint stays hermetic while preserving real lint enforcement", () => {
+  const typecheck = read("tools/scripts/contracts/typecheck.mjs");
+  assert.match(typecheck, /REDOCLY_SUPPRESS_UPDATE_NOTICE:\s*"true"/);
+  assert.match(typecheck, /REDOCLY_TELEMETRY:\s*"off"/);
+  assert.match(typecheck, /env:\s*redoclyEnvironment/);
+  assert.match(typecheck, /"redocly",\s*"lint"/s);
+  assert.match(typecheck, /rejectWarnings:\s*true/);
+});
+
 test("central Node command runners stay shell-free", () => {
   for (const relativePath of [
     "tools/scripts/run-command-check.mjs",
