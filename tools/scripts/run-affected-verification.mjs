@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolvePackageManagerInvocation } from "./lib/package-manager-invocation.mjs";
 
 const ALLOWED_TARGETS = new Set(["typecheck", "lint", "test", "build"]);
 
@@ -36,8 +37,8 @@ export function resolveAffectedPlan(targets, environment = process.env) {
 }
 
 export function executeAffectedPlan(plan, environment = process.env) {
-  const executable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-  const result = spawnSync(executable, plan.args, {
+  const invocation = resolvePackageManagerInvocation("pnpm", plan.args, environment);
+  const result = spawnSync(invocation.executable, invocation.args, {
     cwd: process.cwd(),
     env: environment,
     stdio: "inherit",
@@ -45,6 +46,7 @@ export function executeAffectedPlan(plan, environment = process.env) {
     windowsHide: true,
   });
   if (result.error) throw new Error(`Affected verification could not start: ${result.error.message}`);
+  if (result.signal) throw new Error(`Affected verification terminated by signal ${result.signal}`);
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
