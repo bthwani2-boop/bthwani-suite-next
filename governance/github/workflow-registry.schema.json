@@ -3,7 +3,7 @@
   "title": "Workflow registry",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "decision", "coreWorkflows", "privilegedWorkflow", "requiredChecks", "entries"],
+  "required": ["schemaVersion", "decision", "coreWorkflows", "privilegedWorkflow", "entries"],
   "properties": {
     "schemaVersion": { "const": 1 },
     "decision": { "type": "string", "minLength": 1 },
@@ -16,20 +16,6 @@
     "privilegedWorkflow": {
       "type": ["string", "null"],
       "pattern": "^[a-z0-9._-]+\\.ya?ml$"
-    },
-    "requiredChecks": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["context", "producer", "purpose"],
-        "properties": {
-          "context": { "type": "string", "minLength": 1 },
-          "producer": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-          "purpose": { "type": "string", "minLength": 10 }
-        }
-      }
     },
     "entries": {
       "type": "array",
