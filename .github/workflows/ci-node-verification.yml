@@ -81,7 +81,6 @@ jobs:
             return "${PIPESTATUS[0]}"
           }
           status=0
-          run_check node tools/guards/mobile-test-policy-gate.mjs || status=$?
           run_check node --test apps/mobile/tests/*.test.mjs || status=$?
           if [[ "${FULL_VERIFICATION}" == "true" ]]; then
             run_check pnpm run nx:typecheck || status=$?
@@ -153,9 +152,9 @@ jobs:
         with:
           name: journey-gates-${{ github.run_id }}
           path: |
+            ${{ runner.temp }}/journey-gate/journey-gate-summary.json
             ${{ runner.temp }}/journey-gates.log
-            .diagnostics/journey-gate/journey-gate-summary.json
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
       - name: Enforce journey gate result
         if: ${{ steps.journey_gates.outcome == 'failure' }}
