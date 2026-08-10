@@ -50,18 +50,15 @@ ON CONFLICT (id) DO UPDATE SET
   last_ledger_entry_at = EXCLUDED.last_ledger_entry_at,
   updated_at = EXCLUDED.updated_at;
 
-DELETE FROM wlt_ledger_entries
-WHERE source_type = 'runtime_seed'
-  AND reference_type = 'runtime_evidence'
-  AND actor_id IN (
-    'client-local-001',
-    'partner-local-001',
-    '@@CAPTAIN_ACTOR_ID@@',
-    '@@FIELD_ACTOR_ID@@',
-    'client-other-OperatorContext-001',
-    'client-isolated-context-001'
-  );
-
+-- wlt-115_ledger_immutability.sql makes wlt_ledger_entries append-only for J082
+-- compliance: UPDATE and DELETE both raise. This fixture therefore posts entries
+-- and never rewrites them. Re-seeding is a no-op for entries that already exist.
+--
+-- The captain and field actors are provisioned at runtime, so their ids can
+-- change between bootstraps. Their entry ids are derived from the actor id, so a
+-- re-provisioned actor posts a NEW entry instead of mutating the previous one --
+-- which is what an append-only ledger requires. Entries belonging to retired
+-- actors remain as history, exactly as a real ledger would keep them.
 INSERT INTO wlt_ledger_entries (
   id,
   operator_context_id,
@@ -83,16 +80,11 @@ INSERT INTO wlt_ledger_entries (
 VALUES
   ('wled-wallet-client-local-001',  'local-dsh', 'wallet_credit', 'client-local-001',  'client',  'runtime_seed', 'representative-wallet-client',  'representative-wallet-client-credit',  'runtime_evidence', 125000, 'YER', 'credit', 125000, 'رصيد محفظة العميل المحلي',  'representative-wallet-seed-client-local-001',  '2026-07-22T08:00:00Z'),
   ('wled-wallet-partner-local-001', 'local-dsh', 'wallet_credit', 'partner-local-001', 'partner', 'runtime_seed', 'representative-wallet-partner', 'representative-wallet-partner-credit', 'runtime_evidence', 875000, 'YER', 'credit', 875000, 'رصيد محفظة الشريك المحلي', 'representative-wallet-seed-partner-local-001', '2026-07-22T08:01:00Z'),
-  ('wled-wallet-captain-local-001', 'local-dsh', 'earning',       '@@CAPTAIN_ACTOR_ID@@', 'captain', 'runtime_seed', 'representative-wallet-captain', 'representative-wallet-captain-credit', 'runtime_evidence', 215000, 'YER', 'credit', 215000, 'أرباح الكابتن المحلية', 'representative-wallet-seed-captain-local-001', '2026-07-22T08:02:00Z'),
-  ('wled-wallet-field-local-001',   'local-dsh', 'commission',    '@@FIELD_ACTOR_ID@@',   'field',   'runtime_seed', 'representative-wallet-field',   'representative-wallet-field-credit',   'runtime_evidence', 165000, 'YER', 'credit', 165000, 'عمولة الميداني المحلية', 'representative-wallet-seed-field-local-001',   '2026-07-22T08:03:00Z'),
+  ('wled-wallet-captain-' || '@@CAPTAIN_ACTOR_ID@@', 'local-dsh', 'earning',       '@@CAPTAIN_ACTOR_ID@@', 'captain', 'runtime_seed', 'representative-wallet-captain', 'representative-wallet-captain-credit', 'runtime_evidence', 215000, 'YER', 'credit', 215000, 'أرباح الكابتن المحلية', 'representative-wallet-seed-captain-' || '@@CAPTAIN_ACTOR_ID@@', '2026-07-22T08:02:00Z'),
+  ('wled-wallet-field-' || '@@FIELD_ACTOR_ID@@',     'local-dsh', 'commission',    '@@FIELD_ACTOR_ID@@',   'field',   'runtime_seed', 'representative-wallet-field',   'representative-wallet-field-credit',   'runtime_evidence', 165000, 'YER', 'credit', 165000, 'عمولة الميداني المحلية', 'representative-wallet-seed-field-' || '@@FIELD_ACTOR_ID@@',   '2026-07-22T08:03:00Z'),
   ('wled-wallet-client-isolated-context-001', 'isolated-platform-context', 'wallet_credit', 'client-isolated-context-001', 'client', 'runtime_seed', 'representative-wallet-isolated-context', 'representative-wallet-isolated-context-credit', 'runtime_evidence', 999999, 'YER', 'credit', 999999, 'قيد سلبي لإثبات منع القراءة عبر سياقات المنصة', 'representative-wallet-seed-client-isolated-context-001', '2026-07-22T08:04:00Z')
-ON CONFLICT (id) DO UPDATE SET
-  operator_context_id = EXCLUDED.operator_context_id,
-  -- Provider actor ids are provisioned at runtime, so a re-seed must re-point
-  -- these fixtures rather than keep the previously substituted actor.
-  actor_id = EXCLUDED.actor_id,
-  actor_type = EXCLUDED.actor_type,
-  amount_minor_units = EXCLUDED.amount_minor_units,
-  balance_after = EXCLUDED.balance_after,
-  description = EXCLUDED.description,
-  created_at = EXCLUDED.created_at;
+-- Dedup on the natural posting key rather than the surrogate id: a ledger entry
+-- is identified by its idempotency key within an operator context, and that is
+-- the unique index the table actually carries. A posted entry is never
+-- rewritten, so re-seeding is a no-op instead of an immutability violation.
+ON CONFLICT (operator_context_id, idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING;
