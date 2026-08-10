@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "authority": "BThwani repository verification ownership",
+  "projects": {
+    "identity": {
+      "kind": "shared-service-client",
+      "root": "core/identity",
+      "platforms": ["shared"],
+      "sourcePrefixes": ["core/identity/clients/"],
+      "coverage": { "strategy": "node-lcov", "cwd": "core/identity", "testRoots": ["core/identity/tests"] }
+    },
+    "data-runtime": {
+      "kind": "shared-runtime",
+      "root": "shared/data-runtime",
+      "platforms": ["shared"],
+      "sourcePrefixes": ["shared/data-runtime/src/"],
+      "coverage": { "strategy": "node-lcov", "cwd": "shared/data-runtime", "testRoots": ["shared/data-runtime/tests"] }
+    },
+    "dsh": {
+      "kind": "domain",
+      "root": "services/dsh",
+      "platforms": ["shared", "android", "ios", "web"],
+      "sourcePrefixes": ["services/dsh/frontend/"],
+      "coverage": {
+        "strategy": "node-lcov",
+        "cwd": ".",
+        "testRoots": [
+          "services/dsh/tests",
+          "apps/app-client/runtime/tests",
+          "apps/app-partner/runtime/tests",
+          "apps/app-captain/runtime/tests",
+          "apps/app-field/runtime/tests",
+          "apps/mobile/tests"
+        ]
+      }
+    },
+    "wlt": {
+      "kind": "domain",
+      "root": "services/wlt",
+      "platforms": ["shared", "android", "ios", "web"],
+      "sourcePrefixes": ["services/wlt/frontend/"],
+      "coverage": { "strategy": "node-lcov", "cwd": "services/wlt", "testRoots": ["services/wlt/tests"] }
+    },
+    "app-field": {
+      "kind": "mobile-surface",
+      "root": "apps/app-field/runtime",
+      "platforms": ["android", "ios"],
+      "sourcePrefixes": ["apps/app-field/runtime/src/"],
+      "coverage": { "strategy": "node-lcov", "cwd": "apps/app-field/runtime", "testRoots": ["apps/app-field/runtime/tests"] }
+    },
+    "app-client": {
+      "kind": "mobile-surface",
+      "root": "apps/app-client/runtime",
+      "platforms": ["android", "ios"],
+      "sourcePrefixes": ["apps/app-client/runtime/src/"],
+      "coverage": { "strategy": "required", "reason": "No app-client-owned executable LCOV suite exists yet; source changes must not pass as uncovered ownership." }
+    },
+    "app-partner": {
+      "kind": "mobile-surface",
+      "root": "apps/app-partner/runtime",
+      "platforms": ["android", "ios"],
+      "sourcePrefixes": ["apps/app-partner/runtime/src/"],
+      "coverage": { "strategy": "required", "reason": "No app-partner-owned executable LCOV suite exists yet; source changes must not pass as uncovered ownership." }
+    },
+    "app-captain": {
+      "kind": "mobile-surface",
+      "root": "apps/app-captain/runtime",
+      "platforms": ["android", "ios"],
+      "sourcePrefixes": ["apps/app-captain/runtime/src/"],
+      "coverage": { "strategy": "required", "reason": "Current captain App.tsx checks are structural source assertions, not executed application coverage." }
+    },
+    "control-panel": {
+      "kind": "web-surface",
+      "root": "apps/control-panel/runtime",
+      "platforms": ["web"],
+      "sourcePrefixes": ["apps/control-panel/runtime/src/", "shared/control-panel/src/"],
+      "coverage": { "strategy": "required", "reason": "Control Panel Node contracts do not yet execute the browser application source as LCOV evidence." }
+    },
+    "ui-kit": {
+      "kind": "shared-ui",
+      "root": "shared/ui-kit",
+      "platforms": ["android", "ios", "web"],
+      "sourcePrefixes": ["shared/ui-kit/src/"],
+      "coverage": { "strategy": "required", "reason": "UI kit has typecheck/boundary evidence but no executable LCOV owner yet." }
+    }
+  },
+  "sonar": {
+    "governedJavaScriptTypeScriptRoots": ["apps/", "core/", "services/", "shared/"],
+    "verificationPrefixes": [
+      "apps/mobile/",
+      "apps/app-client/runtime/tests/",
+      "apps/app-partner/runtime/tests/",
+      "apps/app-captain/runtime/tests/",
+      "apps/app-field/runtime/tests/",
+      "apps/control-panel/runtime/tests/",
+      "core/identity/tests/",
+      "services/dsh/tests/",
+      "services/wlt/tests/",
+      "shared/data-runtime/tests/"
+    ],
+    "generatedPrefixes": ["services/dsh/clients/generated/", "services/wlt/clients/generated/"]
+  },
+  "mobile": {
+    "surfaces": ["app-client", "app-partner", "app-captain", "app-field"],
+    "platforms": ["android", "ios"],
+    "evidenceTiers": ["mobile:shared", "mobile:android:launch", "mobile:android:integration", "mobile:ios:launch", "mobile:ios:integration", "mobile:cross-platform", "mobile:closure"]
+  }
+}

@@ -1,25 +1,62 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  assertChangedExecutableCoverageOwnership,
   filterLcov,
+  loadCoverageOwnershipModel,
   mergeLcovRecords,
   planCoverageSuites,
 } from "./generate-sonar-node-coverage.mjs";
 
-test("coverage planning stays contextual and forces self-verification", () => {
+test("coverage ownership is manifest-derived and covers every currently executable LCOV authority", () => {
+  const model = loadCoverageOwnershipModel();
+  assert.deepEqual(model.allSuites, ["app-field", "data-runtime", "dsh", "identity", "wlt"]);
+  assert.deepEqual(model.projects["app-client"].strategy, "required");
+  assert.deepEqual(model.projects["app-partner"].strategy, "required");
+  assert.deepEqual(model.projects["app-captain"].strategy, "required");
+  assert.deepEqual(model.projects["control-panel"].strategy, "required");
+  assert.deepEqual(model.projects["ui-kit"].strategy, "required");
+});
+
+test("coverage planning is source-authority based rather than app-name based", () => {
   assert.deepEqual(planCoverageSuites(["services/dsh/frontend/shared/catalog/a.ts"]), ["dsh"]);
   assert.deepEqual(planCoverageSuites(["shared/data-runtime/src/a.ts"]), ["data-runtime"]);
   assert.deepEqual(planCoverageSuites(["core/identity/clients/identity-session-store.ts"]), ["identity"]);
-  assert.deepEqual(planCoverageSuites(["apps/app-client/runtime/src/App.tsx"]), []);
-  assert.deepEqual(planCoverageSuites(["services/wlt/frontend/shared/dsh/finance/a.ts"]), []);
+  assert.deepEqual(planCoverageSuites(["services/wlt/frontend/shared/dsh/finance/a.ts"]), ["wlt"]);
+  assert.deepEqual(planCoverageSuites(["apps/app-field/runtime/src/navigation/field-deep-link.ts"]), ["app-field"]);
   assert.deepEqual(
-    planCoverageSuites([".github/workflows/sonarqube.yml"]),
-    ["identity", "data-runtime", "dsh"],
+    planCoverageSuites(["apps/app-partner/runtime/tests/partner-order-runtime.execution.test.mjs"]),
+    ["dsh"],
   );
   assert.deepEqual(
-    planCoverageSuites([], { mode: "full" }),
-    ["identity", "data-runtime", "dsh"],
+    planCoverageSuites(["apps/app-field/runtime/tests/field-deep-link.execution.test.mjs"]),
+    ["app-field", "dsh"],
   );
+});
+
+test("changed executable product source without executable LCOV authority fails before Sonar", () => {
+  assert.throws(
+    () => planCoverageSuites(["apps/app-captain/runtime/src/App.tsx"]),
+    /app-captain has no executable LCOV suite/,
+  );
+  assert.throws(
+    () => assertChangedExecutableCoverageOwnership(["apps/unknown-surface/src/a.ts"]),
+    /no project owns this executable JS\/TS source/,
+  );
+});
+
+test("verification tooling is not misclassified as uncovered product source", () => {
+  assert.doesNotThrow(() => assertChangedExecutableCoverageOwnership([
+    "apps/mobile/test-mobile-runtime-contract.mjs",
+    "apps/mobile/tests/mobile-runtime-transport.contract.test.mjs",
+  ]));
+  assert.deepEqual(planCoverageSuites(["apps/mobile/test-mobile-runtime-contract.mjs"]), []);
+});
+
+test("coverage self-verification and full mode derive suites from the manifest", () => {
+  const expected = ["app-field", "data-runtime", "dsh", "identity", "wlt"];
+  assert.deepEqual(planCoverageSuites(["tools/verification/ownership.manifest.json"]), expected);
+  assert.deepEqual(planCoverageSuites([], { mode: "full" }), expected);
 });
 
 test("LCOV filtering retains only real source records owned by the selected suite", () => {
