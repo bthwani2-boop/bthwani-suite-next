@@ -29,6 +29,15 @@ function Invoke-Native {
     & $Command
     if ($LASTEXITCODE -ne 0) { throw $Failure }
 }
+function Get-NativeText {
+    param([scriptblock]$Command,[string]$Failure,[switch]$AllowEmpty)
+    $lines = @(& $Command)
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) { throw $Failure }
+    $text = ($lines -join "`n").Trim()
+    if (-not $AllowEmpty -and -not $text) { throw $Failure }
+    return $text
+}
 function Get-Checks([string]$Sha) {
     $json = gh api -H "Accept: application/vnd.github+json" "repos/$Repository/commits/$Sha/check-runs?per_page=100"
     if ($LASTEXITCODE -ne 0) { throw "Unable to read check runs for $Sha." }
@@ -64,7 +73,7 @@ if ($PrNumber -le 0) {
 }
 
 $pr = gh pr view --repo $Repository $PrNumber --json number,url,state,isDraft,baseRefName,headRefName,headRefOid,mergeStateStatus | ConvertFrom-Json
-if ($LASTEXITCODE -ne 0) { throw "Unable to read PR #$PrNumber." }
+if ($LASTEXITCODE -ne 0 -or -not $pr) { throw "Unable to read PR #$PrNumber." }
 if ($pr.state -ne 'OPEN') { throw "PR #$PrNumber is not open." }
 if ($pr.baseRefName -ne $BaseBranch) { throw "PR #$PrNumber does not target $BaseBranch." }
 Write-Host "Readiness PR: $($pr.url)"
@@ -76,14 +85,16 @@ Write-Host "Merging the proven readiness PR while master is still unprotected...
 Invoke-Native { gh pr merge --repo $Repository $PrNumber --merge --delete-branch } "Readiness PR merge failed."
 
 $deadline = (Get-Date).AddMinutes(5)
+$masterSha = $null
+$prState = $null
 do {
     Start-Sleep -Seconds 3
-    $masterSha = (gh api "repos/$Repository/commits/$BaseBranch" --jq .sha).Trim()
-    if ($LASTEXITCODE -ne 0) { throw "Unable to resolve $BaseBranch after merge." }
+    $masterSha = Get-NativeText -Command { gh api "repos/$Repository/commits/$BaseBranch" --jq .sha } -Failure "Unable to resolve $BaseBranch after merge."
     $prState = gh pr view --repo $Repository $PrNumber --json state,mergeCommit | ConvertFrom-Json
+    if ($LASTEXITCODE -ne 0 -or -not $prState) { throw "Unable to verify PR state after merge." }
     if ($prState.state -eq 'MERGED') { break }
 } while ((Get-Date) -lt $deadline)
-if ($prState.state -ne 'MERGED') { throw "PR did not reach MERGED state." }
+if (-not $prState -or $prState.state -ne 'MERGED') { throw "PR did not reach MERGED state." }
 
 Write-Host "Merged $BaseBranch SHA: $masterSha"
 Write-Host "Waiting for the same check set on the resulting master SHA..."
@@ -137,7 +148,7 @@ try {
 } finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
 
 $active = gh api "repos/$Repository/rulesets/$rulesetId" | ConvertFrom-Json
-if ($LASTEXITCODE -ne 0) { throw "Unable to verify the updated ruleset." }
+if ($LASTEXITCODE -ne 0 -or -not $active) { throw "Unable to verify the updated ruleset." }
 if ($active.enforcement -ne 'active') { throw "Ruleset is not active after update." }
 $rule = @($active.rules | Where-Object type -eq 'required_status_checks')
 $configured = @($rule.parameters.required_status_checks | ForEach-Object context)
