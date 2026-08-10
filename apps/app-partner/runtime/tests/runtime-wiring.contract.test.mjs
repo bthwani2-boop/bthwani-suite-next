@@ -1,0 +1,38 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const root = new URL("../../../../", import.meta.url);
+const read = (relative) => readFile(new URL(relative, root), "utf8");
+
+test("partner app composes canonical identity, rating, catalog media, and push boundaries", async () => {
+  const source = await read("apps/app-partner/runtime/src/App.tsx");
+
+  assert.match(source, /requiredRole="partner"/);
+  assert.match(source, /requiredSurface="app-partner"/);
+  assert.match(source, /<PartnerFieldRatingGate>/);
+  assert.match(source, /<DshPartnerSurface \/>/);
+  assert.match(source, /configureCatalogMobileFilePicker\(pickCatalogFile\)/);
+  assert.match(source, /DocumentPicker\.getDocumentAsync/);
+  assert.match(source, /copyToCacheDirectory: true/);
+  assert.match(source, /configureIdentityDeviceFingerprintProvider/);
+  assert.match(source, /SecureStore/);
+  assert.match(source, /randomUUID/);
+  assert.match(source, /useDshMobilePushRegistration\(identity\.state\.kind, "app-partner", "bthwani-partner-next"\)/);
+});
+
+test("partner surface exposes explicit store-scope loading, empty, error, and operational navigation", async () => {
+  const source = await read("services/dsh/frontend/app-partner/DshPartnerSurface.tsx");
+
+  assert.match(source, /if \(!selectedStoreScope\)/);
+  assert.match(source, /if \(isLoadingScopes\)/);
+  assert.match(source, /<ActivityIndicator/);
+  assert.match(source, /scopesError \? 'حدث خطأ أثناء تحميل الفروع' : 'لا يوجد فروع مسجلة'/);
+  assert.match(source, /refreshOrders=\{actions\.refreshOrders\}/);
+  assert.match(source, /openInventoryManagement/);
+  assert.match(source, /openOrdersBoard/);
+  assert.match(source, /openStoreScope/);
+  assert.match(source, /id: 'wallet'/);
+  assert.match(source, /id: 'orders'/);
+  assert.match(source, /id: 'inventory'/);
+});
