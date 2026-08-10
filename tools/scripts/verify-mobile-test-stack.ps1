@@ -1,5 +1,6 @@
 param(
   [switch]$Full,
+  [switch]$Integration,
   [switch]$LanRuntime
 )
 
@@ -39,10 +40,20 @@ foreach ($App in $Apps) {
   }
 }
 
-if ($LanRuntime) {
+$requiresRuntime = $Integration -or $LanRuntime -or $Full
+if ($requiresRuntime) {
   Invoke-VerifiedStep "Governed mobile backend/data readiness" {
     & pwsh -NoProfile -ExecutionPolicy Bypass -File apps/mobile/ensure-mobile-dev-runtime.ps1
   }
+}
+
+if ($Integration -or $Full) {
+  Invoke-VerifiedStep "Four-app multisurface integration matrix" {
+    & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/test-dsh-multisurface-runtime-matrix-v2.ps1
+  }
+}
+
+if ($LanRuntime -or $Full) {
   Invoke-VerifiedStep "Live LAN gateway runtime proof (no ADB)" {
     & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/verify-mobile-lan-runtime.ps1
   }
