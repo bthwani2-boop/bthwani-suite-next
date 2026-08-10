@@ -26,8 +26,13 @@ function Invoke-VerifiedStep {
 
 $passed = $false
 try {
+  # Closure must converge governed migrations and seeds, not merely observe that
+  # currently running APIs are healthy. runtime:full:bootstrap-dev is the sole
+  # local authority allowed to rebuild one service database when its immutable
+  # migration ledger has drifted, then restart APIs and re-provision canonical
+  # Identity/Workforce/DSH/WLT development state before smoke begins.
   Invoke-VerifiedStep "Governed runtime bootstrap and development data" {
-    & pwsh -NoProfile -ExecutionPolicy Bypass -File apps/mobile/ensure-mobile-dev-runtime.ps1
+    pnpm run runtime:full:bootstrap-dev
   }
 
   Invoke-VerifiedStep "Full runtime smoke" {
