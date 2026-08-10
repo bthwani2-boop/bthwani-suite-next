@@ -15,10 +15,21 @@ function Invoke-Native {
     & $Command
     if ($LASTEXITCODE -ne 0) { throw $Failure }
 }
+function Get-NativeText {
+    param(
+        [scriptblock]$Command,
+        [string]$Failure,
+        [switch]$AllowEmpty
+    )
+    $lines = @(& $Command)
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) { throw $Failure }
+    $text = ($lines -join "`n").Trim()
+    if (-not $AllowEmpty -and -not $text) { throw $Failure }
+    return $text
+}
 function Get-RepoRoot {
-    $root = (& git rev-parse --show-toplevel 2>$null).Trim()
-    if ($LASTEXITCODE -ne 0 -or -not $root) { throw "Run from inside the repository." }
-    return $root
+    return Get-NativeText -Command { git rev-parse --show-toplevel 2>$null } -Failure "Run from inside the repository."
 }
 function Get-Checks([string]$Sha) {
     $json = gh api -H "Accept: application/vnd.github+json" "repos/$Repository/commits/$Sha/check-runs?per_page=100"
@@ -45,16 +56,23 @@ $repoRoot = Get-RepoRoot
 Set-Location $repoRoot
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "gh CLI is required." }
 Invoke-Native { gh auth status } "GitHub CLI authentication is not ready."
-$current = (& git branch --show-current).Trim()
+$current = Get-NativeText -Command { git branch --show-current } -Failure "Unable to resolve current branch."
 if ($current -ne $BaseBranch) { throw "Expected '$BaseBranch', found '$current'." }
 if (git status --porcelain) { throw "Working tree must be clean." }
 Invoke-Native { git fetch origin $BaseBranch } "git fetch failed."
 Invoke-Native { git pull --ff-only origin $BaseBranch } "Local base is not safely fast-forwardable."
-if ((& git rev-parse HEAD).Trim() -ne (& git rev-parse "origin/$BaseBranch").Trim()) { throw "Local/remote base mismatch." }
+$localHead = Get-NativeText -Command { git rev-parse HEAD } -Failure "Unable to resolve local HEAD."
+$remoteBase = Get-NativeText -Command { git rev-parse "origin/$BaseBranch" } -Failure "Unable to resolve origin/$BaseBranch."
+if ($localHead -ne $remoteBase) { throw "Local/remote base mismatch." }
 
 $existing = gh pr list --repo $Repository --state open --head $WorkBranch --json number,url,baseRefName | ConvertFrom-Json
+if ($LASTEXITCODE -ne 0) { throw "Unable to inspect existing readiness PRs." }
 if ($existing -and @($existing).Count -gt 0) { Write-Host "Existing readiness PR: $($existing[0].url)"; exit 0 }
-if ((& git ls-remote --heads origin $WorkBranch).Trim()) { throw "Remote hardening branch exists without an open PR." }
+
+# A missing remote branch is expected here. Never call .Trim() directly on
+# native output because PowerShell returns $null when the command emits no rows.
+$remoteBranch = Get-NativeText -Command { git ls-remote --heads origin $WorkBranch } -Failure "Unable to inspect remote hardening branch." -AllowEmpty
+if ($remoteBranch) { throw "Remote hardening branch exists without an open PR." }
 Invoke-Native { git switch -c $WorkBranch } "Unable to create hardening branch."
 
 # Required checks must be created for every PR. GitHub documents that a
@@ -88,6 +106,7 @@ Coverage/CPD hardening is deliberately a separate PR after master is protected.
 "@
 Invoke-Native { gh pr create --repo $Repository --draft --base $BaseBranch --head $WorkBranch --title $Title --body $body } "Unable to create readiness Draft PR."
 $pr = gh pr view --repo $Repository $WorkBranch --json number,url,headRefOid | ConvertFrom-Json
+if ($LASTEXITCODE -ne 0 -or -not $pr) { throw "Draft PR was created but could not be re-read." }
 Write-Host "Draft PR: $($pr.url)"
 Write-Host "Head SHA: $($pr.headRefOid)"
 
