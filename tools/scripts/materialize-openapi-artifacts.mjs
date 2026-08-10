@@ -12,12 +12,12 @@ const registryPath = path.join(repositoryRoot, "governance/contracts/generated-c
 const lockfilePath = path.join(repositoryRoot, "pnpm-lock.yaml");
 const stampPath = path.join(repositoryRoot, ".artifacts/openapi/materialization.json");
 
-function sha256Text(value) {
+function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
 function sha256File(filePath) {
-  return sha256Text(fs.readFileSync(filePath));
+  return sha256(fs.readFileSync(filePath));
 }
 
 function normalizeText(value) {
@@ -70,11 +70,15 @@ const composition = await composeAllContexts({ write: false });
 const sourceDigests = Object.fromEntries(
   composition.map((result) => [result.context, result.sourceDigest]),
 );
-const materializationKey = sha256Text(JSON.stringify({
+const bundleDigests = Object.fromEntries(
+  composition.map((result) => [result.context, sha256(normalizeText(result.bundle))]),
+);
+const materializationKey = sha256(JSON.stringify({
   schemaVersion: MATERIALIZATION_SCHEMA_VERSION,
   registrySha256: sha256File(registryPath),
   lockfileSha256: sha256File(lockfilePath),
   sourceDigests,
+  bundleDigests,
 }));
 const relativeArtifacts = artifactInventory(registry);
 const currentHashes = currentArtifactHashes(relativeArtifacts);
@@ -126,6 +130,7 @@ fs.writeFileSync(stampPath, `${JSON.stringify({
   schemaVersion: MATERIALIZATION_SCHEMA_VERSION,
   materializationKey,
   sourceDigests,
+  bundleDigests,
   artifacts: generatedHashes,
 }, null, 2)}\n`, "utf8");
 
