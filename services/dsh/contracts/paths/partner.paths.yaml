@@ -406,6 +406,8 @@
     tags: [DshPartnerActivation]
     security:
       - bearerAuth: []
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
     requestBody:
       required: true
       content:
@@ -454,6 +456,7 @@
         in: path
         required: true
         schema: { type: string }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/ExpectedVersion"
     requestBody:
       required: true
       content:

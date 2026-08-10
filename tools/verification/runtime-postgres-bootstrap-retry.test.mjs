@@ -18,6 +18,10 @@ const workforceActorHelper = await readFile(
   new URL("../dev/local-workforce-actors.ps1", import.meta.url),
   "utf8",
 );
+const dshPartnerOnboardingSmoke = await readFile(
+  new URL("../../infra/docker/scripts/runtime/smoke-dsh-partner-onboarding.ps1", import.meta.url),
+  "utf8",
+);
 
 test("runtime retries only the transient PostgreSQL bootstrap restart", () => {
   assert.match(phaseScript, /function Test-TransientPostgresBootstrapRestart/);
@@ -80,4 +84,13 @@ test("PowerShell runtime consumers authenticate Workforce providers by activatio
   assert.match(workforceActorHelper, /\$IdentityBaseUrl\/auth\/activate/);
   assert.match(workforceActorHelper, /activated\.identity\.subject/);
   assert.doesNotMatch(workforceActorHelper, /\/auth\/login/);
+});
+
+test("partner onboarding uses the governed owner and idempotent creation contract", () => {
+  assert.match(dshPartnerOnboardingSmoke, /ownerActorId = \[string\]\$partnerActor\.actorId/);
+  assert.match(
+    dshPartnerOnboardingSmoke,
+    /\$partnerDraftHeaders\["Idempotency-Key"\]/,
+  );
+  assert.doesNotMatch(dshPartnerOnboardingSmoke, /\n\s*ownerName\s*=/);
 });

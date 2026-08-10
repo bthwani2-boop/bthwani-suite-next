@@ -1171,6 +1171,8 @@ components:
       $ref: "./components/parameters.yaml#/IdempotencyKey"
     CorrelationId:
       $ref: "./components/parameters.yaml#/CorrelationId"
+    ExpectedVersion:
+      $ref: "./components/parameters.yaml#/ExpectedVersion"
   responses:
     InvalidRequest:
       $ref: "./components/responses.yaml#/InvalidRequest"

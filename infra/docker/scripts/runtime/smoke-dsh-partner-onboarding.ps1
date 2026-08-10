@@ -21,6 +21,7 @@ $operatorHeaders = @{
   "X-Correlation-ID" = "smoke-operator-$([guid]::NewGuid())"
 }
 $partnerToken = Get-LocalActorToken (Get-LocalUsername "partner")
+$partnerActor = Get-LocalActor "partner"
 $partnerHeaders = @{
   Authorization = "Bearer $partnerToken"
   "X-Correlation-ID" = "smoke-partner-$([guid]::NewGuid())"
@@ -42,12 +43,18 @@ $partnerDraftBody = @{
   displayName = "شريك فحص $partnerSuffix"
   legalIdentityType = "commercial_register"
   legalIdentityNumber = "YE-SMOKE-$partnerSuffix"
-  ownerName = "مالك فحص الشركاء"
+  ownerActorId = [string]$partnerActor.actorId
   primaryPhone = "+96777$($partnerSuffix.ToString().Substring($partnerSuffix.ToString().Length - 7))"
   category = "grocery"
   notes = "Partner Onboarding & Store Publication runtime smoke"
 } | ConvertTo-Json
-$partnerDraft = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/drafts" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $partnerDraftBody -TimeoutSec 10
+$partnerDraftHeaders = @{}
+foreach ($key in $fieldHeaders.Keys) {
+  $partnerDraftHeaders[$key] = $fieldHeaders[$key]
+}
+$partnerDraftHeaders["X-Correlation-ID"] = "smoke-partner-draft-$([guid]::NewGuid())"
+$partnerDraftHeaders["Idempotency-Key"] = "smoke-partner-draft-$partnerSuffix-$([guid]::NewGuid())"
+$partnerDraft = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/drafts" -Method Post -Headers $partnerDraftHeaders -ContentType "application/json" -Body $partnerDraftBody -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($partnerDraft.id)) { throw "Partner Onboarding & Store Publication draft create did not return partner id" }
 if (-not $partnerDraft.version) { throw "Partner Onboarding & Store Publication draft create did not return partner version" }
 
@@ -93,7 +100,6 @@ $payoutHeaders["Idempotency-Key"] = "smoke-partner-payout-$($partnerDraft.id)-$(
 $payoutHeaders["If-Match-Version"] = [string]$partnerDraft.version
 $payoutBody = @{
   displayName = "شريك فحص $partnerSuffix"
-  ownerName = "مالك فحص الشركاء"
   primaryPhone = "+96777$($partnerSuffix.ToString().Substring($partnerSuffix.ToString().Length - 7))"
   beneficiaryName = "مالك فحص الشركاء"
   bankName = "بنك فحص بثواني"

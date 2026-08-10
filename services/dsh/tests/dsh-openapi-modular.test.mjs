@@ -49,7 +49,7 @@ test("generated bundle composition is deterministic and self-contained", async (
   assert.match(first.bundle, /operationId:\s*getDshPartnerOrderWorkboard/);
 });
 
-test("partner draft identity types match domain, database, and field surfaces", () => {
+test("partner draft request matches domain identity and server-owned metadata", () => {
   const schemas = read(partnerSchemasPath);
   const createRequest = schemas.match(
     /DshCreatePartnerRequest:[\s\S]*?\nDshPartnerTransitionRequest:/,
@@ -64,6 +64,12 @@ test("partner draft identity types match domain, database, and field surfaces", 
     /enum: \[commercial_register, national_id, freelancer_certificate\]/,
   );
   assert.doesNotMatch(identityTypeLine[0], /commercial_registration|\bother\b/);
+  assert.match(createRequest[0], /ownerActorId:\s*\{/);
+  assert.match(createRequest[0], /notes:\s*\{/);
+  assert.doesNotMatch(
+    createRequest[0],
+    /\n\s+(?:createdBy|assignedFieldAgent|idempotencyKey):/,
+  );
 });
 
 test("composition integrity fails closed on unresolved local references", () => {

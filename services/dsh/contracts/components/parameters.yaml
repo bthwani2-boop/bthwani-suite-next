@@ -34,3 +34,11 @@ CorrelationId:
     type: string
     minLength: 8
     maxLength: 200
+
+ExpectedVersion:
+  name: If-Match-Version
+  in: header
+  required: true
+  schema:
+    type: integer
+    minimum: 1

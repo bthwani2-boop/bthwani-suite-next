@@ -138,6 +138,7 @@ DshPartnerListResponse:
 
 DshCreatePartnerRequest:
   type: object
+  additionalProperties: false
   required: [legalNameAr, displayName, legalIdentityType, legalIdentityNumber, primaryPhone, category]
   properties:
     legalNameAr: { type: string, minLength: 1 }
@@ -151,9 +152,7 @@ DshCreatePartnerRequest:
     secondaryPhone: { type: string }
     email: { type: string }
     category: { type: string, enum: [restaurant, grocery, pharmacy, bakery, other] }
-    createdBy: { type: string }
-    assignedFieldAgent: { type: string }
-    idempotencyKey: { type: string }
+    notes: { type: string }
 
 DshPartnerTransitionRequest:
   type: object
@@ -366,7 +365,7 @@ DshUpdatePartnerRequest:
     secondaryPhone: { type: string }
     email: { type: string }
     notes: { type: string }
-    # Bank account metadata (readiness/metadata only — never a WLT mutation).
+    # Forwarded to WLT for payout-destination mutation; raw values are never persisted in DSH.
     beneficiaryName: { type: string }
     bankName: { type: string }
     bankBranch: { type: string }
