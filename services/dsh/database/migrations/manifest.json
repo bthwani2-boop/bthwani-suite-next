@@ -1655,28 +1655,28 @@
       "file": "dsh-999_cart_idempotency_sync_diagnostics.sql",
       "sha256": "d099fcc5f088fadcebfce2558227c39a716a480c75956dd80b9d09aca8d2a229",
       "historicalPrefix": "999",
-      "state": "HISTORICAL_IMMUTABLE"
+      "state": "ACTIVE"
     },
     {
       "ordinal": 237,
       "file": "dsh-999_partner_destination_defaults.sql",
       "sha256": "236202ed6ab9b238248f3813528aa471440a6d1e8e8f43f7e23ed14dac424724",
       "historicalPrefix": "999",
-      "state": "HISTORICAL_IMMUTABLE"
+      "state": "ACTIVE"
     },
     {
       "ordinal": 238,
       "file": "dsh-999_partner_owner_identity.sql",
       "sha256": "60ce7d01b2e760644416172d60d6e6e602fe584d5f0d66d87d81c1515a95a335",
       "historicalPrefix": "999",
-      "state": "HISTORICAL_IMMUTABLE"
+      "state": "ACTIVE"
     },
     {
       "ordinal": 239,
       "file": "dsh-999_runtime_schema_alignment.sql",
       "sha256": "066c55b82200f81940d13905e3b3624d3ec4a8023cf8f26ca568d63972f0946a",
       "historicalPrefix": "999",
-      "state": "HISTORICAL_IMMUTABLE"
+      "state": "ACTIVE"
     }
   ]
 }

@@ -42,3 +42,15 @@ test("runtime accepts a single non-WLT profile under StrictMode", () => {
   );
   assert.doesNotMatch(phaseScript, /\$runtimeProfileList\.Count/);
 });
+
+test("PowerShell-only runtime phases use the initialized exit-code boundary", () => {
+  assert.match(
+    phaseScript,
+    /\$catalogExitCode = Invoke-RuntimeBasePhase -ScriptPath \$CatalogReadbackScript -Parameters @\{\}/,
+  );
+  assert.match(
+    phaseScript,
+    /\$wltSmokeExitCode = Invoke-RuntimeBasePhase -ScriptPath \$AuthenticatedWltSmokeScript -Parameters @\{\} -Append/,
+  );
+  assert.doesNotMatch(phaseScript, /if \(\$LASTEXITCODE -ne 0\)/);
+});

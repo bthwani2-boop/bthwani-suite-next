@@ -150,7 +150,7 @@
       "file": "identity-021_actor_lifecycle_status.sql",
       "sha256": "c9b2c315845623d1874e5d07c319361ee13403b826769a94f2f03d4db70cea10",
       "historicalPrefix": "021",
-      "state": "HISTORICAL_IMMUTABLE"
+      "state": "ACTIVE"
     }
   ]
 }
