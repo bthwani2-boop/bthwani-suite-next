@@ -217,15 +217,9 @@ func CreateCancellationCase(db *sql.DB, input CreateCancellationCaseInput) (*Ord
 		financialStatus = "pending"
 	}
 
-	// Eligibility Matrix for Approval:
-	// If a client requests cancellation AFTER preparation starts, they must go into 'review'.
-	// Operators bypass review. Partners bypass review for their own cancellations.
-	status := CancellationRequested
-	if input.ActorRole == "operator" {
-		status = CancellationApproved
-	} else {
-		status = CancellationApproved // Pre-approved for early cancellations or partners
-	}
+	// The command has already passed the actor/state eligibility matrix above;
+	// accepted cancellation commands enter the single approved execution state.
+	status := CancellationApproved
 
 	var caseID string
 	err = tx.QueryRow(`

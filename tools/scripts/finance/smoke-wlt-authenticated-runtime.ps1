@@ -15,11 +15,17 @@ $runIdentity = if (-not [string]::IsNullOrWhiteSpace([string]$env:GITHUB_RUN_ID)
 } else {
   "local-$([Guid]::NewGuid().ToString('N'))"
 }
+$operatorContextId = if (-not [string]::IsNullOrWhiteSpace([string]$env:BTHWANI_OPERATOR_CONTEXT_ID)) {
+  [string]$env:BTHWANI_OPERATOR_CONTEXT_ID
+} else {
+  "local-dsh"
+}
 
 $serviceHeaders = @{
   Authorization = "Bearer $serviceToken"
   "X-Service-Caller" = "dsh"
   "X-Correlation-ID" = "wlt-runtime-$runIdentity"
+  "X-Operator-Context-ID" = $operatorContextId
 }
 
 function Invoke-WltRead {
@@ -61,6 +67,7 @@ $mutationHeaders = @{
   "X-Service-Caller" = "dsh"
   "X-Correlation-ID" = "wlt-session-$runIdentity"
   "Idempotency-Key" = "wlt-session-$runIdentity"
+  "X-Operator-Context-ID" = $operatorContextId
 }
 $sessionBody = @{
   checkoutIntentId = "checkout-$runIdentity"
