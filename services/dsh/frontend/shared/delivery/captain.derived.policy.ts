@@ -1,52 +1,11 @@
-export type CaptainPolicyRoute =
-  | 'home'
-  | 'account'
-  | 'account-profile'
-  | 'account-finance'
-  | 'account-orders'
-  | 'account-docs'
-  | 'account-shifts'
-  | 'account-support'
-  | 'entry'
-  | 'inbox'
-  | 'detail'
-  | 'orderchat'
-  | 'bell'
-  | 'support-directory'
-  | 'support-screen'
-  | 'store-pickup-context'
-  | 'pickup-dropoff'
-  | 'pod-submission'
-  | 'map';
-
-export type CaptainPolicyInboxState =
-  | 'ready'
-  | 'loading'
-  | 'error'
-  | 'empty'
-  | 'delivered'
-  | 'offer-accepting'
-  | 'offer-accepted';
-
-export type CaptainPolicyAssignment = {
-  readonly orderId: string;
-  readonly status: string;
-  readonly delivery: { readonly status: string };
-};
-
-export type CaptainPolicyOrderSummary = {
-  readonly orderId: string;
-  readonly pickupLabel: string;
-  readonly dropoffLabel: string;
-  readonly etaLabel: string;
-  readonly currentStageLabel: string;
-  readonly nextActionLabel: string;
-};
-
-export type CaptainPolicyAvailabilityMeta = {
-  readonly label: string;
-  readonly description: string;
-};
+import type { CaptainAvailabilityMeta, DshCaptainRoute } from './captain.contract';
+import type { DshCaptainSurfaceState } from './captain.surface.types';
+import type {
+  DshAssignmentStatus,
+  DshDeliveryStatus,
+  DshDispatchAssignment,
+} from '../dispatch/dispatch.types';
+import type { DshCaptainOrderDetailSummary } from '../orders';
 
 export type CaptainHomeTickerAction =
   | 'toggle-availability'
@@ -61,7 +20,7 @@ export type CaptainHomeTickerPolicy = {
   readonly marquee: false;
 };
 
-const EMPTY_CAPTAIN_ORDER_SUMMARY: CaptainPolicyOrderSummary = {
+const EMPTY_CAPTAIN_ORDER_SUMMARY: DshCaptainOrderDetailSummary = {
   orderId: '',
   pickupLabel: '',
   dropoffLabel: '',
@@ -70,7 +29,7 @@ const EMPTY_CAPTAIN_ORDER_SUMMARY: CaptainPolicyOrderSummary = {
   nextActionLabel: '',
 };
 
-const CAPTAIN_BOTTOM_NAV_ROUTES = new Set<CaptainPolicyRoute>([
+const CAPTAIN_BOTTOM_NAV_ROUTES = new Set<DshCaptainRoute>([
   'home',
   'entry',
   'map',
@@ -91,10 +50,10 @@ export function normalizeCaptainOrderId(orderId: string): string {
 }
 
 export function buildCaptainOrderSummaryPolicy(
-  assignment: CaptainPolicyAssignment | undefined,
-  assignmentStatusLabels: Readonly<Record<string, string>>,
-  deliveryStatusLabels: Readonly<Record<string, string>>,
-): CaptainPolicyOrderSummary {
+  assignment: DshDispatchAssignment | undefined,
+  assignmentStatusLabels: Readonly<Record<DshAssignmentStatus, string>>,
+  deliveryStatusLabels: Readonly<Record<DshDeliveryStatus, string>>,
+): DshCaptainOrderDetailSummary {
   if (!assignment) return EMPTY_CAPTAIN_ORDER_SUMMARY;
 
   const deliveryStatus = assignment.delivery.status;
@@ -109,7 +68,7 @@ export function buildCaptainOrderSummaryPolicy(
 }
 
 export function buildCaptainBottomActiveIdPolicy(
-  route: CaptainPolicyRoute,
+  route: DshCaptainRoute,
   isStoreCourierMode: boolean,
 ): string {
   if (isStoreCourierMode) {
@@ -127,13 +86,9 @@ export function buildCaptainBottomActiveIdPolicy(
 }
 
 export function buildCaptainHomeTickerPolicy(
-  state: {
-    readonly captainAvailabilityStatus: string;
-    readonly inboxState: CaptainPolicyInboxState;
-    readonly activeOrderId: string;
-  },
-  availabilityMeta: CaptainPolicyAvailabilityMeta,
-  activeSummary: CaptainPolicyOrderSummary,
+  state: Pick<DshCaptainSurfaceState, 'captainAvailabilityStatus' | 'inboxState' | 'activeOrderId'>,
+  availabilityMeta: Pick<CaptainAvailabilityMeta, 'label' | 'description'>,
+  activeSummary: DshCaptainOrderDetailSummary,
 ): CaptainHomeTickerPolicy {
   const isCaptainAvailable = state.captainAvailabilityStatus === 'available';
   if (!isCaptainAvailable) {
@@ -168,13 +123,10 @@ export function buildCaptainHomeTickerPolicy(
 }
 
 export function buildCaptainPresentationPolicy(
-  state: {
-    readonly route: CaptainPolicyRoute;
-    readonly captainAvailabilityStatus: string;
-    readonly gpsStatus: string;
-    readonly captainAppMode: string;
-    readonly activeOrderId: string;
-  },
+  state: Pick<
+    DshCaptainSurfaceState,
+    'route' | 'captainAvailabilityStatus' | 'gpsStatus' | 'captainAppMode' | 'activeOrderId'
+  >,
   hasActiveAssignment: boolean,
 ) {
   const isStoreCourierMode = state.captainAppMode === 'store_courier_mode';
