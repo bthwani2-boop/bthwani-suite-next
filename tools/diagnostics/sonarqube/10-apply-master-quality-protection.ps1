@@ -4,6 +4,7 @@ param(
     [string]$Repository = "bthwani2-boop/bthwani-suite-next",
     [string]$BaseBranch = "master",
     [int]$WaitMinutes = 30,
+    [int]$PrNumber = 0,
     [switch]$RequireHumanApproval
 )
 
@@ -32,15 +33,23 @@ $protect = Join-Path $dir '06-finalize-and-protect-master.ps1'
 $verify = Join-Path $dir '09-verify-master-quality-gates.ps1'
 foreach ($p in @($prepare,$protect,$verify)) { if (-not (Test-Path $p)) { throw "Missing orchestrator dependency: $p" } }
 
-Write-Host "=== PHASE 1/3: prove future required checks on a real Draft PR ==="
-& $prepare -Repository $Repository -BaseBranch $BaseBranch -WaitMinutes $WaitMinutes
-
-Write-Host "=== PHASE 2/3: merge proven readiness change and activate master ruleset ==="
-if ($RequireHumanApproval) {
-    & $protect -Repository $Repository -BaseBranch $BaseBranch -WaitMinutes $WaitMinutes -RequireHumanApproval
+if ($PrNumber -gt 0) {
+    Write-Host "=== PHASE 1/3: reuse previously proven readiness PR #$PrNumber ==="
+    Write-Host "Skipping new Draft PR creation; 06 will verify the current master checks before mutating the ruleset."
 } else {
-    & $protect -Repository $Repository -BaseBranch $BaseBranch -WaitMinutes $WaitMinutes
+    Write-Host "=== PHASE 1/3: prove future required checks on a real Draft PR ==="
+    & $prepare -Repository $Repository -BaseBranch $BaseBranch -WaitMinutes $WaitMinutes
 }
+
+Write-Host "=== PHASE 2/3: activate master ruleset from proven check inventory ==="
+$protectArgs = @{
+    Repository = $Repository
+    BaseBranch = $BaseBranch
+    WaitMinutes = $WaitMinutes
+}
+if ($PrNumber -gt 0) { $protectArgs.PrNumber = $PrNumber }
+if ($RequireHumanApproval) { $protectArgs.RequireHumanApproval = $true }
+& $protect @protectArgs
 
 Write-Host "=== PHASE 3/3: update local master and independently verify protection ==="
 & git switch $BaseBranch
