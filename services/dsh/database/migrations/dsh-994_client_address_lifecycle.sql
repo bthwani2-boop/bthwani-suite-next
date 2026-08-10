@@ -4,12 +4,12 @@
 BEGIN;
 
 ALTER TABLE dsh_client_addresses
-ADD COLUMN status TEXT NOT NULL DEFAULT 'ACTIVE' 
+ADD COLUMN status TEXT NOT NULL DEFAULT 'ACTIVE'
 CHECK (status IN ('DRAFT', 'VERIFIED', 'ACTIVE', 'ARCHIVED', 'DELETED'));
 
 -- Migrate existing soft-deleted records to the explicit DELETED state
-UPDATE dsh_client_addresses 
-SET status = 'DELETED' 
+UPDATE dsh_client_addresses
+SET status = 'DELETED'
 WHERE deleted_at IS NOT NULL;
 
 -- Recreate indices with status-aware predicates

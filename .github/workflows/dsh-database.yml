@@ -98,8 +98,13 @@ jobs:
       - name: Apply DSH local seeds twice
         shell: pwsh
         run: |
-          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl $env:DATABASE_URL -AllowLocalSeeds
-          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl $env:DATABASE_URL -AllowLocalSeeds
+          $placeholderFile = Join-Path $env:RUNNER_TEMP "dsh-seed-placeholders.json"
+          @{
+            FIELD_ACTOR_ID = "ci-field-actor-001"
+            CAPTAIN_ACTOR_ID = "ci-captain-actor-001"
+          } | ConvertTo-Json | Set-Content -LiteralPath $placeholderFile -Encoding utf8NoBOM
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl $env:DATABASE_URL -AllowLocalSeeds -PlaceholderFile $placeholderFile
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl $env:DATABASE_URL -AllowLocalSeeds -PlaceholderFile $placeholderFile
 
       - name: Run DSH seed database contracts
         shell: pwsh

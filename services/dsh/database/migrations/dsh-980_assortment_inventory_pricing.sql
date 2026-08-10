@@ -17,9 +17,9 @@ CREATE TABLE IF NOT EXISTS dsh_store_assortment_inventory (
 
 -- Seed initial inventory data based on current dsh_store_assortments state
 INSERT INTO dsh_store_assortment_inventory (store_assortment_id, policy_type, quantity, version)
-SELECT 
-  id, 
-  'signal', 
+SELECT
+  id,
+  'signal',
   CASE WHEN stock_status = 'in_stock' THEN 100 WHEN stock_status = 'low_stock' THEN 5 ELSE 0 END,
   1
 FROM dsh_store_assortments
@@ -48,14 +48,14 @@ CREATE INDEX IF NOT EXISTS idx_dsh_store_assortment_prices_lookup
 INSERT INTO dsh_store_assortment_prices (
   id, store_assortment_id, amount_minor, currency, prep_time_min, prep_time_max, effective_from, effective_until
 )
-SELECT 
-  'price-' || id, 
-  id, 
-  CAST(unit_price * 100 AS INTEGER), 
-  currency, 
-  15, -- default prep time 15m 
-  30, 
-  created_at, 
+SELECT
+  'price-' || id,
+  id,
+  CAST(unit_price * 100 AS INTEGER),
+  currency,
+  15, -- default prep time 15m
+  30,
+  created_at,
   NULL
 FROM dsh_store_assortments
 ON CONFLICT (id) DO NOTHING;

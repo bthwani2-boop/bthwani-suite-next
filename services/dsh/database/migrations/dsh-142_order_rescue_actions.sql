@@ -15,11 +15,11 @@ CREATE TABLE IF NOT EXISTS dsh_order_rescue_actions (
                                         'open_wlt_visibility'
                                     )),
     status                  TEXT        NOT NULL DEFAULT 'pending_approval' CHECK (status IN (
-                                        'pending_approval', 
-                                        'approved', 
-                                        'executing', 
-                                        'completed', 
-                                        'failed', 
+                                        'pending_approval',
+                                        'approved',
+                                        'executing',
+                                        'completed',
+                                        'failed',
                                         'rejected'
                                     )),
     payload                 JSONB       NOT NULL DEFAULT '{}',
@@ -36,6 +36,6 @@ CREATE TABLE IF NOT EXISTS dsh_order_rescue_actions (
 );
 
 -- Ensure only ONE action is active per case at a time (single-active constraint)
-CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_order_rescue_active_action 
-    ON dsh_order_rescue_actions(rescue_case_id) 
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_order_rescue_active_action
+    ON dsh_order_rescue_actions(rescue_case_id)
     WHERE status IN ('pending_approval', 'approved', 'executing');

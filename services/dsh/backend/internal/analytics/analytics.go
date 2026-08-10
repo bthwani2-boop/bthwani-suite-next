@@ -248,7 +248,7 @@ func GetStoreAnalytics(db *sql.DB) (StoreAnalytics, error) {
 		q    string
 	}{
 		{&out.TotalStores, `SELECT COUNT(*) FROM dsh_stores`},
-		{&out.ActiveStores, `SELECT COUNT(*) FROM dsh_stores WHERE status = 'active' AND is_visible = TRUE`},
+		{&out.ActiveStores, `SELECT COUNT(*) FROM dsh_stores WHERE status = 'published' AND is_visible = TRUE`},
 		{&out.SuspendedStores, `SELECT COUNT(*) FROM dsh_stores WHERE status IN ('inactive','unavailable') OR is_visible = FALSE`},
 		{&out.PendingReadiness, `SELECT COUNT(*) FROM dsh_stores s WHERE NOT EXISTS (
 			SELECT 1 FROM dsh_field_visits fv WHERE fv.store_id = s.id AND fv.status = 'complete'

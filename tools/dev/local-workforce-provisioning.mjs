@@ -162,31 +162,13 @@ async function findExistingProvider(operatorToken, kind) {
   const peopleToCheck = preferredPerson ? [preferredPerson, ...exact.filter(p => p.actorId !== preferredActorId)] : exact;
 
   for (const person of peopleToCheck) {
-    try {
-      const attempt = randomUUID();
-      await requestJson(
-        `workforce:${kind}:issue-activation-check`,
-        `${WORKFORCE_API_BASE}/workforce/${endpointFor(kind)}/${encodeURIComponent(person.actorId)}/activation-codes`,
-        {
-          method: 'POST',
-          headers: {
-            ...authorization(operatorToken),
-            'Content-Type': 'application/json',
-            'Idempotency-Key': `mobile-dev-check-${kind}-${attempt}`,
-            'X-Correlation-ID': `mobile-dev-check-${kind}-${attempt}`,
-          },
-          body: JSON.stringify({ expectedVersion: person.version }),
-        },
-      );
-      return person;
-    } catch (error) {
-      if (error instanceof HttpError && error.status === 404 && error.message.includes('ACTOR_NOT_FOUND')) {
-        console.warn(`[dev-provision] Ignoring orphaned Workforce profile ${person.actorId}`);
-        continue;
-      }
-      // If it's something else like version conflict, just return it because it exists.
-      return person;
+    const identityActor = await getIdentityActor(person.actorId);
+    if (!identityActor) {
+      console.warn(`[dev-provision] Ignoring orphaned Workforce profile ${person.actorId}`);
+      continue;
     }
+    assertIdentityBinding(kind, person.actorId, identityActor);
+    return person;
   }
   return null;
 }

@@ -40,8 +40,8 @@ pnpmfileChecksum: sha256-7n9QWXusPLTjcN2JGzbS4BWFm6UZiVe/MqR0W6EbhBI=
 
 patchedDependencies:
   image-size@1.2.1:
-    hash: 8dc7982013caea29cdae81766279f63f7f479aaac97025247e48e456df074d0f
-    path: patches/image-size@1.2.1.patch
+      hash: 8dc7982013caea29cdae81766279f63f7f479aaac97025247e48e456df074d0f
+      path: tools/patches/image-size-1.2.1.patch
 
 importers:
 

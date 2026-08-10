@@ -297,12 +297,13 @@
     {
       "service": "dsh",
       "migrationId": "dsh-144_order_returns_saga.sql",
-      "replacementSha256": "382d928f0ac14beae4309786ee9a92b6b947e1e4e1ad4d61d5a02489a7021ed7",
+      "replacementSha256": "ad7e72a34d6fa7097cc883e5d0b2f2b2655b86a892024359c4a9233ef561d99b",
       "acceptedHistoricalSha256": [
-        "13947a2eb899a58c72b6875ab8425c6271249127018aa73834e2930d0e26961b"
+        "13947a2eb899a58c72b6875ab8425c6271249127018aa73834e2930d0e26961b",
+        "382d928f0ac14beae4309786ee9a92b6b947e1e4e1ad4d61d5a02489a7021ed7"
       ],
       "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
-      "reason": "The DSH-144 order returns saga migration was amended to fix a foreign key type mismatch: order_id and order_item_id must be UUID to match dsh_orders.id and dsh_order_items.id respectively.",
+      "reason": "The DSH-144 order returns saga migration was amended to fix a foreign key type mismatch: order_id and order_item_id must be UUID to match dsh_orders.id and dsh_order_items.id respectively. The replacement also removes trailing whitespace required by the immutable diff contract without changing SQL semantics.",
       "evidence": {
         "cleanInstallCommitSha": "76172f83ada5434d5f10e201d406b47a3d153948",
         "cleanInstallResult": "CURRENT_BASELINE_REACHED_MIGRATION_VERIFICATION",

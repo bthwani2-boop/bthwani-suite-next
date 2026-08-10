@@ -22,6 +22,17 @@ test('mobile development bootstrap reports failures without immediate process te
   assert.match(source, /\{ field: fieldToken \}/);
 });
 
+test('existing Workforce discovery never issues an activation challenge', () => {
+  const source = read('tools/dev/local-workforce-provisioning.mjs');
+  const discoveryStart = source.indexOf('async function findExistingProvider(');
+  const createStart = source.indexOf('async function createProvider(', discoveryStart);
+  assert.ok(discoveryStart >= 0 && createStart > discoveryStart, 'provider discovery function is missing');
+  const discovery = source.slice(discoveryStart, createStart);
+  assert.match(discovery, /getIdentityActor\(person\.actorId\)/);
+  assert.match(discovery, /assertIdentityBinding\(kind, person\.actorId, identityActor\)/);
+  assert.doesNotMatch(discovery, /activation-codes|issue-activation-check/);
+});
+
 test('canonical runtime builds service images before readiness', () => {
   const source = read('infra/docker/scripts/runtime.ps1');
   const bootstrapStart = source.indexOf('"bootstrap-dev" {');

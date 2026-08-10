@@ -7,16 +7,16 @@ ALTER TABLE dsh_incident_events DROP CONSTRAINT IF EXISTS dsh_incident_events_ev
 
 -- 2. Add expanded constraints
 -- J075 Lifecycle: open, triaged, containing, mitigating, monitoring, resolved, closed
-ALTER TABLE dsh_incidents 
-    ADD CONSTRAINT dsh_incidents_status_check 
+ALTER TABLE dsh_incidents
+    ADD CONSTRAINT dsh_incidents_status_check
     CHECK (status IN ('open', 'triaged', 'containing', 'mitigating', 'monitoring', 'resolved', 'closed'));
 
-ALTER TABLE dsh_incident_events 
-    ADD CONSTRAINT dsh_incident_events_to_status_check 
+ALTER TABLE dsh_incident_events
+    ADD CONSTRAINT dsh_incident_events_to_status_check
     CHECK (to_status IN ('open', 'triaged', 'containing', 'mitigating', 'monitoring', 'resolved', 'closed'));
 
-ALTER TABLE dsh_incident_events 
-    ADD CONSTRAINT dsh_incident_events_event_type_check 
+ALTER TABLE dsh_incident_events
+    ADD CONSTRAINT dsh_incident_events_event_type_check
     CHECK (event_type IN (
         'created',
         'status_changed',

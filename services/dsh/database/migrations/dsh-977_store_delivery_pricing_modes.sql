@@ -12,7 +12,7 @@ ALTER TABLE dsh_store_delivery_pricing
 
 -- Populate pricing_mode for existing data
 UPDATE dsh_store_delivery_pricing
-SET pricing_mode = CASE 
+SET pricing_mode = CASE
     WHEN fee_minor_units = 0 THEN 'free_delivery'
     WHEN fulfillment_mode = 'bthwani_delivery' THEN 'bthwani_pricing'
     ELSE 'partner_fixed_pricing'

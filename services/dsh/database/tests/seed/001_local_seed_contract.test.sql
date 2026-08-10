@@ -77,7 +77,7 @@ BEGIN
       'store-test-electronics'
     )
     AND s.is_visible = true
-    AND s.status = 'active'
+    AND s.status = 'published'
     AND s.serviceability_status IN ('serviceable', 'limited')
     AND s.partner_readiness = 'ready'
     AND s.catalog_approval_status = 'approved'

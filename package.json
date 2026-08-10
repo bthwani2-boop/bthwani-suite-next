@@ -176,7 +176,7 @@
     "guard:sdlc": "node tools/guards/sdlc/invoke-sdlc-gate.mjs",
     "guard:markdown-governance": "pnpm exec markdownlint-cli2 \"governance/**/*.md\" \"AGENTS.md\" \".github/**/*.md\"",
     "guard:secrets": "gitleaks detect --log-opts=\"HEAD\" --source . --no-banner --redact --verbose",
-    "guard:image-size-security": "node --test tools/guards/image-size-security-regression.test.mjs",
+    "guard:image-size-security": "node --test tools/guards/image-size-security-regression-gate.mjs",
     "guard:governance-all": "pnpm run guard:agent-system-all && pnpm run guard:authority-separation && pnpm run guard:guard-registry && pnpm run guard:sdlc && pnpm run guard:cleanup-policy && pnpm run guard:required-command-integrity && pnpm run guard:markdown-governance",
     "diagnostics:tools:v5": "node tools/scripts/generate-deep-tools-diagnostics-v5.mjs && node tools/scripts/generate-toolchain-execution-plan.mjs",
     "diagnostics:operational:toolchain": "node tools/scripts/generate-operational-toolchain-inventory.mjs",

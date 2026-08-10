@@ -25,6 +25,10 @@ param(
 
   [switch]$AllowLocalSeeds,
 
+  # Runtime-generated actor identifiers used by governed local seed templates.
+  # The canonical seed runner validates and substitutes this JSON map.
+  [string]$PlaceholderFile = "",
+
   [string]$ComposeFile = "infra/docker/compose.runtime.yml",
   [string]$EnvFile = "infra/docker/env/runtime.env.example",
   [string]$SourceCommitSha = ""
@@ -174,6 +178,9 @@ function Invoke-GovernedDshSeeds {
     Transport = $Transport
     SourceCommitSha = $SourceCommitSha
     AllowLocalSeeds = $true
+  }
+  if (-not [string]::IsNullOrWhiteSpace($PlaceholderFile)) {
+    $seedParameters.PlaceholderFile = $PlaceholderFile
   }
   if ($Transport -eq "url") {
     $seedParameters.DatabaseUrl = $DatabaseUrl

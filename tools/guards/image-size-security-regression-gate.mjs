@@ -1,3 +1,4 @@
+// Executable regression gate for the governed image-size parser patch.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -7,10 +8,18 @@ import test from "node:test";
 
 const require = createRequire(import.meta.url);
 const virtualStore = path.resolve(import.meta.dirname, "../../node_modules/.pnpm");
-const packageEntry = fs.readdirSync(virtualStore)
-  .find((entry) => entry.startsWith("image-size@1.2.1_patch_hash_"));
-assert.ok(packageEntry, "patched image-size package is installed in pnpm virtual store");
-const packageRoot = path.join(virtualStore, packageEntry, "node_modules/image-size");
+const packageRoots = fs.readdirSync(virtualStore)
+  .filter((entry) => entry.startsWith("image-size@1.2.1"))
+  .map((entry) => path.join(virtualStore, entry, "node_modules/image-size"))
+  .filter((entry) => fs.existsSync(path.join(entry, "dist/types/utils.js")));
+
+const packageRoot = packageRoots.find((root) => {
+  const { findBox } = require(path.join(root, "dist/types/utils.js"));
+  const input = new Uint8Array(8);
+  input.set(Buffer.from("jxlp"), 4);
+  return findBox(input, "jxlp", 0) === undefined;
+});
+assert.ok(packageRoot, "installed image-size 1.2.1 includes the governed parser hardening patch");
 
 test("image-size rejects zero-sized ISO BMFF boxes", () => {
   const { findBox } = require(path.join(packageRoot, "dist/types/utils.js"));
