@@ -79,6 +79,24 @@ $sessionBody = @{
   cartSnapshotHash = "runtime-smoke-$runIdentity"
 } | ConvertTo-Json
 
+if ([string]$env:WLT_MUTATIONS_ENABLED -ne "true") {
+  $disabledResponse = Invoke-WebRequest `
+    -Method Post `
+    -Uri "$BaseUrl/wlt/payment-sessions" `
+    -Headers $mutationHeaders `
+    -ContentType "application/json" `
+    -Body $sessionBody `
+    -TimeoutSec 20 `
+    -SkipHttpErrorCheck
+  $disabledBody = $disabledResponse.Content | ConvertFrom-Json
+  if ([int]$disabledResponse.StatusCode -ne 403 -or [string]$disabledBody.code -ne "MUTATIONS_DISABLED") {
+    throw "disabled WLT mutation gate returned status=$([int]$disabledResponse.StatusCode) code=$([string]$disabledBody.code)"
+  }
+  Write-Host "  authenticated mutation gate: disabled fail-closed"
+  Write-Host "WLT authenticated runtime smoke: PASS"
+  return
+}
+
 $sessionEnvelope = Invoke-RestMethod `
   -Method Post `
   -Uri "$BaseUrl/wlt/payment-sessions" `
