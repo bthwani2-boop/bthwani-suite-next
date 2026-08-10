@@ -31,9 +31,11 @@ Write-Host "Repository: $Repository"
 Write-Host "Branch:     $Branch"
 Write-Host "Output:     $OutputRoot"
 
+# Child PowerShell scripts use terminating errors for real failures. Do not use
+# $LASTEXITCODE here because it reflects the last native executable invoked by
+# a child script (gh/go/git), not the success/failure of the PowerShell script.
 & (Join-Path $SelfDir "01-sonarqube-repository-diagnosis.ps1") `
     -Repository $Repository -Branch $Branch -OutputRoot (Join-Path $OutputRoot "01-repository")
-if ($LASTEXITCODE -ne 0) { throw "Repository/Sonar diagnosis failed." }
 
 if ($RunCoverage) {
     & (Join-Path $SelfDir "02-sonarqube-coverage-cpd-diagnosis.ps1") `
@@ -42,11 +44,9 @@ if ($RunCoverage) {
     & (Join-Path $SelfDir "02-sonarqube-coverage-cpd-diagnosis.ps1") `
         -Repository $Repository -Branch $Branch -OutputRoot (Join-Path $OutputRoot "02-coverage-cpd")
 }
-if ($LASTEXITCODE -ne 0) { throw "Coverage/CPD diagnosis failed." }
 
 & (Join-Path $SelfDir "03-github-master-protection-diagnosis.ps1") `
     -Repository $Repository -Branch $Branch -OutputRoot (Join-Path $OutputRoot "03-master-protection")
-if ($LASTEXITCODE -ne 0) { throw "GitHub protection diagnosis failed." }
 
 $summaryPath = Join-Path $OutputRoot "FINAL-SUMMARY.txt"
 @(
