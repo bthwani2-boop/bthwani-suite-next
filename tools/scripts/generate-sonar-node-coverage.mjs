@@ -220,8 +220,12 @@ function parseLcovRecord(record) {
     }
 
     if (line.startsWith("BRDA:")) {
-      const match = /^BRDA:(\d+),([^,]+),([^,]+),(-|\d+)$/.exec(line);
+      const match = /^BRDA:(undefined|\d+),([^,]+),([^,]+),(-|\d+)$/.exec(line);
       if (!match) throw new Error(`Invalid LCOV BRDA field: ${line}`);
+      // A V8/source-map branch without a source line cannot be attributed to
+      // repository code. Preserve every resolvable condition record and omit
+      // only this unmappable artifact instead of inventing a line number.
+      if (match[1] === "undefined") continue;
       const lineNumber = parseNonNegativeInteger(match[1], "BRDA line");
       const key = `${lineNumber},${match[2]},${match[3]}`;
       const existing = state.branches.get(key);
