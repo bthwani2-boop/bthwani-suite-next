@@ -1,25 +1,9 @@
-# U001 — client-runtime-identity-account-address
+# U001 — client runtime, Identity, account and address foundation
 
-## Scope and owner
+The current client boot path is broader than the old unit described. `App.tsx` configures native SecureStore session persistence, a device fingerprint provider, Identity API/session state, push registration, an Identity role/surface gate and the DSH client surface. Since the previous package pin, shared mobile transport/bootstrap and Identity code changed materially. The first diagnosis step is therefore to distinguish **transport/runtime configuration** from **Identity trust**: LAN/ADB/dev-client routing may decide how the device reaches a service, but it may never grant actor, role, surface or object authority.
 
-**Execution concern:** client runtime identity, session isolation, account and address ownership
+Identity Product Truth remains in `DISCOVERY` and requires surface-bound activation/session behavior, rotation/revocation, fail-closed trusted context and explicit recovery states. The client must invalidate cached actor-scoped DSH/WLT state when the Identity subject/session changes; preserving a previous actor's account/address/order/wallet data across logout/relogin is a critical isolation defect even when the new token is correct.
 
-**Objective:** Make app-client boot, authentication, session/device/push lifecycle, account identity and address/privacy behavior fail closed and derive only from Identity plus canonical DSH address truth.
+Address/map/privacy is a second canonical owner within this foundation. Current Product Truth assigns provider mediation, service-area/geofence resolution, address persistence and privacy enforcement to DSH and reports prior code closure pending independent review. That historical result cannot be copied to the current candidate. The unit must re-prove that app-client never calls a provider directly, address writes are owned and active-geofence-bound, cross-actor PII is hidden, privacy/audit projections are redacted, and mutation success is committed readback rather than local optimistic state.
 
-**Canonical owner:** Identity owns authentication/session; DSH owns client address/service-area/privacy operational truth.
-
-This unit is intentionally bounded to the client consequence. It does not authorize a broad rewrite of adjacent Partner, Captain, Field or control-panel behavior. A shared surface enters implementation only when its current command, policy or committed readback changes one of the customer journeys listed in `EXECUTION.json`.
-
-## Evidence-led diagnosis
-
-The pinned source shows this capability is already represented in the app-client composition, but file or screen presence is not closure evidence. The implementation must trace each customer-visible query or command through the shared contract/client, server authorization, canonical owner, persistence or provider effect, and post-mutation readback. Where Product Truth defines idempotency, version, actor/object scope, privacy, serviceability or financial ownership, those invariants outrank UI convenience.
-
-The primary risk is a partial vertical slice: UI may expose a state while backend/database authorization, retry behavior, stale-state conflict, cross-surface convergence or offline recovery remains unproven. The correction order is owner-first. Fix the first authoritative divergence, migrate only directly affected consumers, then remove obsolete fallback after compatibility and rollback evidence exists.
-
-## Boundaries
-
-Do not create a second source of truth, trust actor/platform/operator context supplied by the mobile client, convert optimistic UI state into final business truth, weaken authorization for development convenience, or claim runtime/database/financial closure from static checks. Preserve DSH/WLT/Identity ownership and privacy boundaries. Cross-surface changes must be the minimum needed for the same customer-visible canonical state.
-
-## Completion evidence
-
-Closure requires all checks in `VERIFICATION.json` on the exact resulting SHA plus negative evidence appropriate to the mutation: unauthorized actor/object, duplicate/retry, stale version/conflict, dependency unavailable and offline/recovery where applicable. Any blocker keeps the unit open; package existence alone is not evidence of implementation.
+The unit deliberately excludes operator login, Workforce/HR identity, partner/captain activation and unrelated mobile surfaces. Control-panel platform code enters only for map/service-area/privacy configuration consumed by the client. Completion requires native/runtime, Identity backend/session, DSH address/database and physical-device/offline evidence on the exact candidate; one passing frontend test suite is insufficient.

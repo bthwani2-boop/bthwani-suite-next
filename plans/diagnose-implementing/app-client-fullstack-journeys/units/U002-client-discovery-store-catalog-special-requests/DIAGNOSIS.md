@@ -1,25 +1,9 @@
-# U002 — client-discovery-store-catalog-special-requests
+# U002 — discovery, publication, catalog, marketing and special requests
 
-## Scope and owner
+This unit is not a request to rewrite partner, field or control-panel applications. The client outcome is **published, eligible content**. Current Product Truth for partner onboarding/store publication explicitly includes the client as a required consumer and states that client visibility requires every applicable partner/store/catalog/marketing/serviceability gate. That makes some upstream field, partner and operator mutations relevant, but only as writers of the canonical gate the client reads. Workforce/HR, partner team, payouts and unrelated onboarding UX remain outside this unit.
 
-**Execution concern:** customer discovery, store/catalog publication and sovereign special-request intake
+The central risk is split publication truth. A client-local category/product list, a store status label on another surface, cached discovery data or a successful UI toast cannot override central catalog and DSH publication rules. The trace starts at HomeDiscovery/Store routes, follows shared/generated contracts to DSH `homediscovery`, `store`, `centralcatalog` and database/publication state, then walks backward only to a writer that can explain an incorrect canonical gate. Serviceability is read here for visibility but its authoritative decision closure is U003.
 
-**Objective:** Make home discovery, store/product browsing, marketing actions, reels and special requests consume only published DSH truth with deterministic destinations and no local catalog or fake operational state.
+Marketing and reels add destination/media failure modes: a published campaign can reference a missing media object, removed store or invalid external destination. The client must render truthful empty/error states and route only to authorized current targets. Special requests are a separate command path within the same customer-discovery experience and must preserve actor ownership, request-type rules, one idempotency identity per logical intent, attachment references and canonical readback across timeout/restart.
 
-**Canonical owner:** DSH owns store/catalog/discovery/special-request operational truth; Media owns governed media objects where applicable.
-
-This unit is intentionally bounded to the client consequence. It does not authorize a broad rewrite of adjacent Partner, Captain, Field or control-panel behavior. A shared surface enters implementation only when its current command, policy or committed readback changes one of the customer journeys listed in `EXECUTION.json`.
-
-## Evidence-led diagnosis
-
-The pinned source shows this capability is already represented in the app-client composition, but file or screen presence is not closure evidence. The implementation must trace each customer-visible query or command through the shared contract/client, server authorization, canonical owner, persistence or provider effect, and post-mutation readback. Where Product Truth defines idempotency, version, actor/object scope, privacy, serviceability or financial ownership, those invariants outrank UI convenience.
-
-The primary risk is a partial vertical slice: UI may expose a state while backend/database authorization, retry behavior, stale-state conflict, cross-surface convergence or offline recovery remains unproven. The correction order is owner-first. Fix the first authoritative divergence, migrate only directly affected consumers, then remove obsolete fallback after compatibility and rollback evidence exists.
-
-## Boundaries
-
-Do not create a second source of truth, trust actor/platform/operator context supplied by the mobile client, convert optimistic UI state into final business truth, weaken authorization for development convenience, or claim runtime/database/financial closure from static checks. Preserve DSH/WLT/Identity ownership and privacy boundaries. Cross-surface changes must be the minimum needed for the same customer-visible canonical state.
-
-## Completion evidence
-
-Closure requires all checks in `VERIFICATION.json` on the exact resulting SHA plus negative evidence appropriate to the mutation: unauthorized actor/object, duplicate/retry, stale version/conflict, dependency unavailable and offline/recovery where applicable. Any blocker keeps the unit open; package existence alone is not evidence of implementation.
+Closure requires client tests plus DSH contract/backend/database/runtime catalog/client-home evidence and a real-device visual/navigation pass. Static route existence is not evidence that publication, media, special-request idempotency or cross-scope privacy is correct.

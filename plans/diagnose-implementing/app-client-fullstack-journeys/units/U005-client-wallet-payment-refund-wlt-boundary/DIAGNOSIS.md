@@ -1,25 +1,11 @@
-# U005 — client-wallet-payment-refund-wlt-boundary
+# U005 — client wallet, payment, Cash-In, refund and WLT boundary
 
-## Scope and owner
+The client financial journey must be planned from ownership, not from whichever screen displays an amount. Current Product Truth makes WLT the sole owner of wallet balances, ledger entries, payment allocation, Cash-In, refunds and reconciliation evidence. DSH may authenticate, authorize, orchestrate or proxy bounded references for a client journey, but neither DSH nor app-client may derive a second balance, append ledger truth or turn an operational status into financial success.
 
-**Execution concern:** client wallet, ledger, payment and refund financial boundary
+The first slice is read isolation. `MySpace`/client finance must resolve the authenticated actor and trusted operator context on the server side, read only that actor's WLT wallet/ledger through the governed DSH boundary, and fail closed when WLT is unavailable. No arbitrary client actor/context selector or settlement-derived balance is acceptable.
 
-**Objective:** Keep every customer-visible balance, ledger, payment eligibility/status and refund consequence WLT-owned, actor/context isolated and consumed through governed DSH/WLT boundaries without parallel financial truth.
+The second slice is money entering or funding an order. Cash-In/provider evidence and PaymentAllocation are WLT-owned. A client assertion, screenshot, callback-shaped payload or optimistic UI cannot credit funds. Duplicate provider events and client retries must converge to one financial effect; an ambiguous external result stays `unknown`/reconcilable until authoritative evidence exists. Order payment composition must conserve the governed total and not duplicate delivery fees or other components.
 
-**Canonical owner:** WLT is sole financial truth owner; DSH may proxy/hold operational references but cannot mutate wallet or ledger truth.
+The third slice is refund/reversal. Refund routing follows the authoritative original source and idempotent WLT state machine. A timeout cannot trigger a second provider route for the same money, and an external-source refund cannot silently become internal wallet balance unless current approved Product Truth explicitly allows it. The WLT control-panel finance section is in scope only for investigation/reconciliation that changes this client's canonical financial readback; unrelated payout/treasury administration is excluded.
 
-This unit is intentionally bounded to the client consequence. It does not authorize a broad rewrite of adjacent Partner, Captain, Field or control-panel behavior. A shared surface enters implementation only when its current command, policy or committed readback changes one of the customer journeys listed in `EXECUTION.json`.
-
-## Evidence-led diagnosis
-
-The pinned source shows this capability is already represented in the app-client composition, but file or screen presence is not closure evidence. The implementation must trace each customer-visible query or command through the shared contract/client, server authorization, canonical owner, persistence or provider effect, and post-mutation readback. Where Product Truth defines idempotency, version, actor/object scope, privacy, serviceability or financial ownership, those invariants outrank UI convenience.
-
-The primary risk is a partial vertical slice: UI may expose a state while backend/database authorization, retry behavior, stale-state conflict, cross-surface convergence or offline recovery remains unproven. The correction order is owner-first. Fix the first authoritative divergence, migrate only directly affected consumers, then remove obsolete fallback after compatibility and rollback evidence exists.
-
-## Boundaries
-
-Do not create a second source of truth, trust actor/platform/operator context supplied by the mobile client, convert optimistic UI state into final business truth, weaken authorization for development convenience, or claim runtime/database/financial closure from static checks. Preserve DSH/WLT/Identity ownership and privacy boundaries. Cross-surface changes must be the minimum needed for the same customer-visible canonical state.
-
-## Completion evidence
-
-Closure requires all checks in `VERIFICATION.json` on the exact resulting SHA plus negative evidence appropriate to the mutation: unauthorized actor/object, duplicate/retry, stale version/conflict, dependency unavailable and offline/recovery where applicable. Any blocker keeps the unit open; package existence alone is not evidence of implementation.
+Closure requires WLT tests and financial-boundary guards, targeted DSH facade/outbox/order tests, WLT/provider runtime smokes and a negative/replay/unknown/refund exact-candidate scenario. UI equality with a number is not evidence of financial correctness.

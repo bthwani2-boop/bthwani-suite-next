@@ -2,6 +2,8 @@
 
 Current decision: `NOT_STARTED`.
 
-This file is intentionally non-claiming. The diagnosis and implementation plan are ready, but implementation, verification and evidence closure have not run. A future closure may state `CLOSED_WITH_EVIDENCE` only after every registered unit is DONE, every required check passes on the exact resulting candidate SHA, blockers/deviations are empty, and protected product/finance/security approvals are recorded by their authorized owners where required.
+The existing package was rebaselined in place to final pre-write source `BB@efbe5fae065dcc66b9bdcf0872deeed2bca61cf1` and is ready for root-cause implementation. This rewrite is **planning closure only**: it does not claim the app-client implementation, runtime, database, finance, QA, security, visual or production state is closed.
 
-Do not infer product readiness, production readiness or runtime correctness from the existence of this package.
+A future package decision may become `CLOSED_WITH_EVIDENCE` only when every registered unit is `DONE`, every required check in the unit `VERIFICATION.json` passes on the exact resulting candidate SHA, branch movement has been reconciled after the last write, blockers/deviations are empty, canonical readback is proven, and any independent product/finance/security/QA/release approval required by current Product Truth is recorded by the authorized owner.
+
+Never convert `READY_FOR_IMPLEMENTATION`, a static scan, a CI green check, or package existence into a product-readiness claim.

@@ -1,25 +1,9 @@
-# U004 — client-order-lifecycle-tracking-fulfillment
+# U004 — owned order lifecycle, fulfillment, tracking, pickup and delivery convergence
 
-## Scope and owner
+Once an order exists, the client is mostly a reader of a state machine written by other authorized actors. That makes this unit cross-surface by necessity but not broad by permission. Partner, Captain and control-panel code enters only where it writes the exact DSH order/dispatch/pickup/custody/exception state that the authenticated customer reads. Independent partner operations, captain workforce/earnings and operator administration remain outside scope.
 
-**Execution concern:** customer order lifecycle, preparation decisions, pickup, live tracking, delivery proof and cross-surface convergence
+The first invariant is one DSH-owned order version and legal transition model. Client order list/detail must be actor/object scoped and deep links must re-authorize the target rather than trusting an order ID carried by a notification. Every partner preparation decision, dispatch/assignment, store-captain handoff, live-location projection, client pickup step, proof and completion must move the same canonical order/custody truth through allowed transitions with idempotency/version guards. A local surface cannot mark completion before committed readback.
 
-**Objective:** Make every client order list/detail/tracking/pickup/delivery state a projection of the same legal DSH state machine changed by authorized partner, captain or operator actions.
+Location and proof are privacy-sensitive. The client may see only the location/proof allowed for its owned order and current lifecycle state; another customer must not obtain captain location, pickup tokens or delivery evidence by guessing identifiers. Cancellation, return, delivery exception and reassignment introduce saga/outbox/WLT consequences and must remain retry-safe: stale/duplicate actions cannot double-cancel, double-refund, double-release or leave contradictory fulfillment state.
 
-**Canonical owner:** DSH owns order/fulfillment/custody operational truth; other surfaces are authorized actors or readbacks, not parallel owners.
-
-This unit is intentionally bounded to the client consequence. It does not authorize a broad rewrite of adjacent Partner, Captain, Field or control-panel behavior. A shared surface enters implementation only when its current command, policy or committed readback changes one of the customer journeys listed in `EXECUTION.json`.
-
-## Evidence-led diagnosis
-
-The pinned source shows this capability is already represented in the app-client composition, but file or screen presence is not closure evidence. The implementation must trace each customer-visible query or command through the shared contract/client, server authorization, canonical owner, persistence or provider effect, and post-mutation readback. Where Product Truth defines idempotency, version, actor/object scope, privacy, serviceability or financial ownership, those invariants outrank UI convenience.
-
-The primary risk is a partial vertical slice: UI may expose a state while backend/database authorization, retry behavior, stale-state conflict, cross-surface convergence or offline recovery remains unproven. The correction order is owner-first. Fix the first authoritative divergence, migrate only directly affected consumers, then remove obsolete fallback after compatibility and rollback evidence exists.
-
-## Boundaries
-
-Do not create a second source of truth, trust actor/platform/operator context supplied by the mobile client, convert optimistic UI state into final business truth, weaken authorization for development convenience, or claim runtime/database/financial closure from static checks. Preserve DSH/WLT/Identity ownership and privacy boundaries. Cross-surface changes must be the minimum needed for the same customer-visible canonical state.
-
-## Completion evidence
-
-Closure requires all checks in `VERIFICATION.json` on the exact resulting SHA plus negative evidence appropriate to the mutation: unauthorized actor/object, duplicate/retry, stale version/conflict, dependency unavailable and offline/recovery where applicable. Any blocker keeps the unit open; package existence alone is not evidence of implementation.
+Closure therefore requires owned-read tests, targeted DSH order/dispatch/pickup/partner-delivery tests, database invariants, full runtime smoke and an exact-candidate cross-surface scenario that proves preparation through delivery plus negative, stale, duplicate, restart and deep-link cases.
