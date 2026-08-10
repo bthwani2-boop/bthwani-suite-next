@@ -1,22 +1,23 @@
 # U001 — authority-scope-inventory
 
 ## Objective
-Freeze a Captain-only full-stack impact map, explicit exclusions and authoritative truth ownership before any implementation change.
 
-## Truth owner
-Current task + governance/Product Truth; DSH owns operational Captain truth, WLT owns financial truth, Identity/Workforce own authentication/profile gates.
+Freeze the **current BB Captain-only** full-stack impact map, truth ownership and explicit exclusions before implementation writes.
 
-## Diagnosis
-This unit exists because the Captain path cannot be closed from a single screen. It must trace the authoritative write/read owner through shared adapters, contracts, backend state, persistence and only the downstream surfaces that are directly affected. The package deliberately distinguishes **absence of candidate-bound proof** from a proven code defect: where current source already implements a behavior, execution first verifies it against the applicable Product Truth and changes code only when the evidence reveals a mismatch. Where a concrete mismatch is already visible—most notably Captain commission readback—the task names that gap directly.
+## Current diagnosis
 
-The unit must preserve trusted actor context, idempotency/correlation, legal state transitions, refresh/restart readback and strict tenant/actor isolation. UI state, local storage, derived planning files and historical evidence cannot become authoritative operational or financial truth. Any implementation that changes a canonical contract must migrate every Captain-specific consumer and rerun invalidated evidence on the same final candidate.
+This package was originally built for a different branch and old SHA. On current `BB`, both the implementation and the package framework changed materially: app-captain gained explicit readiness policy/tests, Identity/Workforce and DSH changed, mobile runtime/transport changed, finance gained Captain representative readback, `docs/architecture.drawio` became a non-empty ArchPulse artifact, and the package validator now requires different manifest disposability keys. The old baseline and old “missing Captain commission readback” finding are therefore stale.
 
-## Planned work
-- Build the authoritative Captain impact graph: Relevant Captain behavior is distributed across runtime, DSH shared/frontend/backend/contracts/data, Workforce/Identity, WLT and cross-surface readers; the requested architecture.drawio is empty. Target: One bounded graph exists from app-captain through shared adapters/contracts/backend/persistence to only the surfaces affected by Captain state.
-- Lock non-Captain exclusions: The repository contains broad DSH/WLT capabilities that share infrastructure but are not part of Captain journeys. Target: Future implementation cannot expand from Captain into unrelated product areas by proximity or shared folder membership.
+The current pre-write diagnosis baseline is `0916eb2500a0f6d83c47ed44124c02665f9cd0f9`. Concurrent movement was reconciled rather than overwritten: Identity migration compatibility at `de34ec33ff9ee52d0228a340453272d4e03ba7b1` is directly relevant to U002; the shared mobile LAN gateway repair at `086e48f8f8ed9deaa9d1525f379505af056df355` is relevant only as runtime/development transport; closure tooling at `629b86b9a3ca8fadc16158b6c9a078217ebe4af4` and the app-partner package rebaseline at `0916eb2500a0f6d83c47ed44124c02665f9cd0f9` are disjoint and remain outside Captain scope.
 
-## Boundaries
-Affected surfaces: app-captain, control-panel, app-client, app-partner. Dependencies: none. Journeys/capabilities: Captain scope foundation, J102 captain dispatch, J105 store-captain handoff, PARTNER_FLEET_CONNECTION, SUPPORT_INCIDENTS_ORDER_RESCUE, SETTLEMENTS_COMMISSIONS. Unrelated sections remain out of scope unless a new direct dependency is proven and `COVERAGE.json` is updated before implementation.
+`docs/architecture.drawio` is useful only as a dependency-discovery aid. The actual authority chain remains current instruction → governance → Product Truth → exact pinned source/contracts/migrations/tests → runtime evidence.
+
+The Captain boundary remains deliberately narrow. `app-captain` is primary. `control-panel`, `app-client` and `app-partner` enter only for the exact Captain journeys named in `COVERAGE.json`; `app-field` and generic analytics/dashboard/catalog/marketing/login remain excluded absent a newly proven shared effect.
+
+## Root-cause rule
+
+A current implementation that already satisfies Product Truth is not rewritten to make the plan look active. Execution must first reproduce or prove a mismatch. Any fix is made at the authoritative owner and only affected consumers/readbacks are migrated. No local surface truth, duplicate state machine, financial calculation, or parallel support route may be introduced as a shortcut.
 
 ## Closure rule
-Do not mark this unit done from static inspection alone when persisted, cross-surface, security, runtime or financial behavior is involved. Execute the linked verification checks after the final relevant write and record exact resulting SHA/evidence in `RESULT.json`.
+
+U001 closes only after the package passes the current strict validator and the targeted Captain inventory has no unclassified material dependency. The result records the exact candidate SHA and does not imply product/runtime closure.

@@ -1,26 +1,31 @@
 # U006 — captain-finance-wlt
 
 ## Objective
-Close Captain financial readback so COD custody and personal commission lifecycle come only from WLT-backed canonical truth, with no Captain-side financial mutation.
 
-## Truth owner
-WLT exclusively owns COD financial liability, commission policy/calculation/lifecycle, wallet/ledger/adjustments; DSH may proxy bounded authorized references only.
+Prove and close only remaining Captain financial gaps on current `BB` while keeping WLT the sole financial truth owner and preventing cross-Captain exposure or frontend/DSH financial calculation.
 
-## Diagnosis
-This unit exists because the Captain path cannot be closed from a single screen. It must trace the authoritative write/read owner through shared adapters, contracts, backend state, persistence and only the downstream surfaces that are directly affected. The package deliberately distinguishes **absence of candidate-bound proof** from a proven code defect: where current source already implements a behavior, execution first verifies it against the applicable Product Truth and changes code only when the evidence reveals a mismatch. Where a concrete mismatch is already visible—most notably Captain commission readback—the task names that gap directly.
+## Current diagnosis
 
-The unit must preserve trusted actor context, idempotency/correlation, legal state transitions, refresh/restart readback and strict tenant/actor isolation. UI state, local storage, derived planning files and historical evidence cannot become authoritative operational or financial truth. Any implementation that changes a canonical contract must migrate every Captain-specific consumer and rerun invalidated evidence on the same final candidate.
+The previous package contains a stale concrete gap: it says Captain commission lifecycle readback is missing. That is no longer true on `BB`.
 
-## Reconciled branch movement
+Current `WltCaptainFinanceScreen` includes `ActorWalletPanel actorType="captain"`, `WltCaptainCodCustodyScreen`, `RepresentativeCommissionPanel actorType="captain"` and `PayoutDestinationPanel actorType="captain"`. `RepresentativeCommissionPanel` calls the generic own-commission API and renders the required lifecycle states (`pending`, `confirmed`, `settled`, `rejected`, `reversed`), source/policy information and `resolutionNote`. `commission.api.ts` resolves own commissions through `/dsh/captain/me/finance/commissions`.
 
-Before finalization, `abbas` advanced to `519577aae52e9e565aaa3d955726f89dc3982659` with WLT daily finance close, settlement batch/export and manual transfer evidence changes. These changes do not implement Captain commission readback and must be preserved as current WLT operator-owned settlement infrastructure. Captain work must integrate without bypassing its freeze/evidence/reconciliation controls.
+On the backend, `representative_finance_routes.go` registers Captain self-service wallet, ledger, commissions, payout-request/destination and COD collect/remit routes. Self-service handlers derive actor identity from authenticated context before WLT reads; control-panel mutation routes are separate and permission protected.
 
-## Planned work
-- Preserve and prove Captain COD custody truth: Current Captain finance bridge reads WLT-owned COD through a governed DSH Captain proxy; this needs actor isolation, state/idempotency and reconciliation evidence. Target: Captain sees only own canonical COD liability and status; retries/readbacks are consistent and finance operator can reconcile authoritative WLT records.
-- Implement missing Captain commission lifecycle readback: Product Truth requires app-captain to list own pending/confirmed/settled/rejected/reversed commissions and adjustment reasons, but WltDshCaptainBridge explicitly reports aggregate Captain earnings unavailable and current settlement reference is partner-oriented. Target: Captain finance renders own commission lifecycle and adjustment reasons from WLT; 'settled' is a commission state, not a frontend-calculated payout or unauthorized Captain settlement action.
+Therefore the root task is **not** to implement another Captain commission list. U006 must prove that the current route/controller/backend/WLT chain is actor-scoped, contract-compatible, idempotent where it mutates COD/payout state, financially reconciled, and robust to errors/unknown results. It must also prove that no shared generic change accidentally leaks or changes field/partner semantics.
 
-## Boundaries
-Affected surfaces: app-captain, control-panel. Dependencies: U004. Journeys/capabilities: SETTLEMENTS_COMMISSIONS, Captain COD custody. Unrelated sections remain out of scope unless a new direct dependency is proven and `COVERAGE.json` is updated before implementation.
+## Financial boundaries
+
+- WLT owns wallet, ledger, COD financial liability, commission policy/calculation/lifecycle, payout financial state and adjustments.
+- DSH may provide operational evidence and bounded authenticated proxy/readback; it cannot become a second financial ledger.
+- Captain self-service is scoped to the authenticated Captain. Captain may request only currently authorized self-service payout/COD actions; commission state mutation remains operator/service controlled according to Product Truth.
+- No caller-supplied authoritative commission amount, local aggregate earnings calculation or cross-Captain query is allowed.
+- Error/offline/partial/unknown-result UI must not fabricate zero balance, settled commission, completed payout or remitted COD.
+
+## Shared-code boundary
+
+`RepresentativeCommissionPanel` and representative finance APIs are generic. They remain in Captain scope only as consumed by app-captain. If fixing a Captain-proven defect requires changing a generic contract/component/route, verification must cover every actual affected consumer. That does not authorize importing app-field or partner-only product work into this package.
 
 ## Closure rule
-Do not mark this unit done from static inspection alone when persisted, cross-surface, security, runtime or financial behavior is involved. Execute the linked verification checks after the final relevant write and record exact resulting SHA/evidence in `RESULT.json`.
+
+U006 requires candidate-bound DSH/WLT backend evidence, current Captain runtime/type evidence, actor-isolation negatives and finance reconciliation. Static existence of routes/panels is not financial closure and protected finance/product/release approval cannot be self-issued.

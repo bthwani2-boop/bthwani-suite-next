@@ -1,22 +1,21 @@
 # U002 — identity-workforce-access
 
 ## Objective
-Make Captain authentication, role/surface authorization, Workforce readiness and operator Captain lifecycle one consistent fail-closed access path.
 
-## Truth owner
-Identity authenticates; Workforce owns Captain profile/readiness; DSH consumes authorized actor context but does not replace those truths.
+Prove and, only where evidence fails, repair the single Captain authentication → Workforce → readiness → runtime-entry path on current `BB`.
 
-## Diagnosis
-This unit exists because the Captain path cannot be closed from a single screen. It must trace the authoritative write/read owner through shared adapters, contracts, backend state, persistence and only the downstream surfaces that are directly affected. The package deliberately distinguishes **absence of candidate-bound proof** from a proven code defect: where current source already implements a behavior, execution first verifies it against the applicable Product Truth and changes code only when the evidence reveals a mismatch. Where a concrete mismatch is already visible—most notably Captain commission readback—the task names that gap directly.
+## Current diagnosis
 
-The unit must preserve trusted actor context, idempotency/correlation, legal state transitions, refresh/restart readback and strict tenant/actor isolation. UI state, local storage, derived planning files and historical evidence cannot become authoritative operational or financial truth. Any implementation that changes a canonical contract must migrate every Captain-specific consumer and rerun invalidated evidence on the same final candidate.
+The old package correctly identified Identity/Workforce as authoritative owners, but its implementation assumptions predate current `BB`. `apps/app-captain/runtime/src/App.tsx` now configures SecureStore session storage and a stable device fingerprint, requires role `captain` and surface `app-captain`, requires Workforce kind `captain`, fetches authoritative readiness, and blocks when eligibility is unavailable. `captain-readiness.policy.ts` explicitly classifies `loading`, `blocked`, `allowed`, and `unknown`.
 
-## Planned work
-- Close Captain access/readiness gaps: App.tsx already composes IdentitySessionGate and WorkforceAccessGate, but static composition does not prove backend profile provisioning, status transitions, role/surface enforcement, refresh/restart behavior or isolation. Target: A Captain can enter only with a valid captain role, app-captain surface authorization and allowed Workforce state; denied states remain explicit after refresh/restart.
-- Verify session/device/push trust boundaries: SecureStore session, device fingerprint and push registration are composed in runtime but need negative evidence around logout/restart/actor changes. Target: No stale actor token, device binding or push registration can authorize or address another Captain.
+Current app-captain package scripts also run real Node tests plus the mobile runtime contract. Therefore the root task is not to add another readiness gate. It is to prove the full backend lifecycle: Captain provisioning/activation identity linkage, suspended/missing/wrong-role denial, readiness reasons, restart/refresh behavior, session logout/relogin isolation, device/push rebinding, and failure behavior when Identity/Workforce is unavailable.
 
-## Boundaries
-Affected surfaces: app-captain, control-panel. Dependencies: U001. Journeys/capabilities: Captain identity/workforce readiness, J102 dispatch eligibility precondition. Unrelated sections remain out of scope unless a new direct dependency is proven and `COVERAGE.json` is updated before implementation.
+The current branch baseline `0916eb2500a0f6d83c47ed44124c02665f9cd0f9` includes the forward-compatible Identity historical migration digest amendment from `de34ec33ff9ee52d0228a340453272d4e03ba7b1`. It also includes the shared mobile LAN gateway root-cause repair at `086e48f8f8ed9deaa9d1525f379505af056df355`, which removed a PowerShell `$Pid` collision that prevented the development gateway from starting and added executable regression coverage. U002 must preserve both as current infrastructure; neither may be replaced with a local authorization/readiness shortcut.
+
+## Failure model
+
+A valid Captain must not be blocked by stale or mismatched actor/profile identity. An invalid, suspended, missing, wrong-role, wrong-surface, or unreadable eligibility state must not reach `DshCaptainSurface`. Device fingerprint and push registration are context/binding aids, not authorization sources. No stale session or push binding may cross Captains. Development transport health must not be confused with authorization success.
 
 ## Closure rule
-Do not mark this unit done from static inspection alone when persisted, cross-surface, security, runtime or financial behavior is involved. Execute the linked verification checks after the final relevant write and record exact resulting SHA/evidence in `RESULT.json`.
+
+U002 requires current app-captain tests/typecheck plus affected Identity/Workforce backend evidence. Runtime/device claims require the corresponding runtime evidence; static composition alone is insufficient.

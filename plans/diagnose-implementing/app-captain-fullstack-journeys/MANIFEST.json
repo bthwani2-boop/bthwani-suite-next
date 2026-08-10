@@ -4,15 +4,15 @@
   "task": {
     "id": "APP-CAPTAIN-FULLSTACK-JOURNEYS",
     "name": "app-captain-fullstack-journeys",
-    "objective": "Diagnose and prepare a strictly Captain-bounded implementation package covering every directly affected full-stack and cross-surface dependency, while excluding unrelated product areas with evidence.",
+    "objective": "Rebaseline and prepare root-cause execution for app-captain on BB, covering only directly proven full-stack and cross-surface dependencies, preserving current correct implementations, and closing only evidence-backed gaps without patches or unrelated scope.",
     "primarySurface": "app-captain",
     "createdAt": "2026-08-08T20:31:00Z"
   },
   "repository": {
-    "name": "bthwani-suite-next",
-    "targetBranch": "abbas",
-    "pinnedStartSha": "319f47ce41aaca136fa9f25fa0db4e3587681886",
-    "latestObservedRemoteSha": "319f47ce41aaca136fa9f25fa0db4e3587681886"
+    "name": "bthwani2-boop/bthwani-suite-next",
+    "targetBranch": "BB",
+    "pinnedStartSha": "0916eb2500a0f6d83c47ed44124c02665f9cd0f9",
+    "latestObservedRemoteSha": "0916eb2500a0f6d83c47ed44124c02665f9cd0f9"
   },
   "authority": {
     "root": "governance/authority/authority-precedence.json",
@@ -25,15 +25,15 @@
     "plan": "READY",
     "implementation": "NOT_STARTED",
     "verification": "NOT_STARTED",
-    "closure": "NOT_STARTED",
     "decision": "READY_FOR_IMPLEMENTATION"
   },
   "disposability": {
-    "runtimeDependency": false,
-    "buildDependency": false,
-    "ciDependency": false,
-    "migrationDependency": false,
-    "governanceDependency": false,
-    "operationsDependency": false
+    "runtimeDependsOnPackage": false,
+    "buildDependsOnPackage": false,
+    "ciDependsOnPackage": false,
+    "migrationDependsOnPackage": false,
+    "governanceDependsOnPackage": false,
+    "operationsDependOnPackage": false,
+    "containsSecretsOrProductionData": false
   }
 }

@@ -1,36 +1,79 @@
-# Global diagnosis — App Captain
+# Global diagnosis — App Captain on BB
 
-## Pinned evidence
+## Pinned repository evidence
 
-Repository `bthwani-suite-next`, target branch `abbas`, final reconciled pinned SHA `319f47ce41aaca136fa9f25fa0db4e3587681886`. Diagnosis began at `e93bf885963b2caa0f39c587436ecc2dc57a41ed`. During construction, `abbas` first advanced to `519577aae52e9e565aaa3d955726f89dc3982659` with `feat(wlt): implement daily finance close and settlement batch`; that movement changed WLT finance-close/batch/operator paths and skipped two Identity tests but did not change the applicable Captain Product Truth or `WltDshCaptainBridge.tsx`. It then advanced to `319f47ce41aaca136fa9f25fa0db4e3587681886` with only `apps/app-field/runtime/package.json` changed. The second movement is outside this Captain-bounded scope and does not alter any Captain dependency. Both movements were compared before finalization. The requested `docs/architecture.drawio` is zero bytes on this lineage, so the package derives architecture from `AGENTS.md`, applicable Product Truth records and exact implementation paths. `plans/smsm-dsh-wlt-journeys/04-JOURNEY-REGISTRY.yaml` is used only as a discovery/closure checklist.
+Target repository: `bthwani2-boop/bthwani-suite-next`.
+Target branch: `BB`.
+Rebaseline start SHA: `0916eb2500a0f6d83c47ed44124c02665f9cd0f9`.
 
-## Current architecture
+The package previously described `abbas@319f47ce41aaca136fa9f25fa0db4e3587681886`. Comparing that lineage to current `BB` showed material drift across app-captain runtime/tests, Identity, Workforce, DSH dispatch/database tests, mobile runtime/transport, WLT-facing finance, contracts and CI. The old PASS/DONE assumptions and old “missing feature” statements are therefore not inherited.
 
-`apps/app-captain/runtime/src/App.tsx` composes secure session/device state, Identity role/surface gating, Workforce readiness and mobile push registration before mounting `DshCaptainSurface`. The sovereign Captain surface is under `services/dsh/frontend/app-captain`; its model delegates to `services/dsh/frontend/shared/delivery/captain-surface.binding.ts`, which composes shared lifecycle, dispatch, PoD, chat, availability, GPS/navigation, profile/service mode and active-order runtime. This is the intended frontend brain and no surface-local operational truth should replace it.
+Concurrent movement during diagnosis was explicitly reconciled rather than overwritten. `de34ec33ff9ee52d0228a340453272d4e03ba7b1` repaired the governed Identity historical migration digest ledger and added a guard against silent immutable-migration digest drift; this is relevant to U002. `629b86b9a3ca8fadc16158b6c9a078217ebe4af4` changed closure-tool repository-root derivation and is disjoint. `086e48f8f8ed9deaa9d1525f379505af056df355` fixed the shared mobile LAN gateway `$Pid`/`$PID` PowerShell collision and added executable regression coverage; this is relevant only to current development/runtime transport. `0916eb2500a0f6d83c47ed44124c02665f9cd0f9` rebaselined the app-partner package and does not overlap this Captain package.
 
-Dispatch calls are centralized in `services/dsh/frontend/shared/dispatch/dispatch.api.ts`. Product Truth `captain-dispatch` (journey 102) requires one governed assignment, server-owned eligibility/capacity, expiry, authenticated Captain accept/decline, atomic reassignment, operator readback and client tracking. Its current Product Truth decision is implemented-pending-verification, so this package treats missing same-candidate runtime/database/isolation evidence as open verification work rather than claiming closure.
+## Authority and architecture
 
-Store↔Captain custody Product Truth (journey 105) requires app-partner, app-captain and control-panel with app-client readback, and explicitly excludes app-field. Pickup must not precede bilateral custody completion; handoff shortage/mismatch must persist as a governed DSH exception, survive restart and be released only by legal resolution. Partner-fleet Product Truth separately requires one-time code redemption, Captain-owned membership list/disconnect, partner lifecycle visibility and redacted operator readback from one versioned DSH fleet truth.
+`AGENTS.md` and current governance remain authoritative for execution order and truth boundaries. Product semantics come from current Product Truth; implementation truth comes from the exact pinned source/contracts/migrations/tests; runtime truth requires candidate-bound execution evidence.
 
-Captain support/order-rescue Product Truth is still in discovery. Captain support must be limited to assigned orders, internal notes must remain operator-only, incident/rescue transitions must be idempotent/conflict-aware/audited and DSH rescue must never mutate WLT financial truth.
+`docs/architecture.drawio` is currently non-empty ArchPulse-generated XML. It is useful only as a topology/discovery aid. It is not Product Truth and must never justify unrelated expansion.
 
-## Financial diagnosis
+The current Captain runtime composition is:
 
-At the reconciled SHA, the WLT daily finance close/settlement-batch implementation must be preserved and verified as an operator-owned financial workflow. `WltDshCaptainBridge.tsx` remains unchanged and correctly describes COD liability as WLT-owned and reads it through a governed Captain-scoped DSH proxy. However the same screen explicitly says aggregate Captain earnings are unavailable and that settlement is partnerId-oriented. This conflicts with `SETTLEMENTS_COMMISSIONS` Product Truth to the extent that Product Truth requires app-captain to read the Captain's own commission lifecycle (`pending`, `confirmed`, `settled`, `rejected`, `reversed`) and adjustment reasons from canonical WLT truth.
+`Identity session/device → captain role + app-captain surface gate → Workforce captain profile → server readiness gate → DshCaptainSurface → shared DSH adapters → DSH backend/persistence → governed cross-surface readback`
 
-The target is **not** a new Captain settlement mutation. Captain remains read-only. WLT must own policy, calculation, commission lifecycle, wallet/ledger and adjustments; DSH may expose only bounded authorized references/proxies. The implementation unit must provide the missing Captain-scoped commission readback required by Product Truth and preserve COD reconciliation/isolation plus the newly added daily-close/batch controls.
+WLT remains the exclusive owner of financial truth.
+
+## Current implementation facts that must be preserved
+
+### Identity / Workforce / readiness
+
+`apps/app-captain/runtime/src/App.tsx` configures SecureStore-backed Identity session storage and device fingerprinting, requires `captain` + `app-captain`, requires Workforce kind `captain`, fetches authoritative readiness, and blocks with `ELIGIBILITY_UNAVAILABLE` when eligibility cannot be retrieved. `captain-readiness.policy.ts` makes allowed/blocked/unknown explicit. Current app-captain tests include readiness composition/transport and lifecycle policy checks.
+
+Therefore U002 is **verification-first**. It must not recreate a readiness model. It must prove provisioning, role/surface enforcement, suspended/missing/wrong-actor denial, restart/logout isolation, push/device rebinding, shared mobile transport health, and migration/runtime integrity; only a reproduced mismatch authorizes code changes.
+
+### Dispatch / fleet / custody
+
+Captain dispatch Product Truth remains DSH-owned and currently records `IMPLEMENTED_PENDING_VERIFICATION`; it requires idempotent assignment/reassignment, server-owned eligibility/capacity, expiry, authenticated accept/decline, isolation and role-appropriate operator/client readback. U004 must not rewrite this path speculatively.
+
+Store↔Captain custody still requires app-partner + app-captain + control-panel, with app-client as readback and app-field explicitly excluded. Pickup cannot outrun bilateral custody or a blocking handoff exception.
+
+Partner fleet Product Truth remains approved and requires one DSH versioned/audited fleet truth, digest-only one-time codes, own-membership actions for Captain, partner lifecycle visibility and redacted operator readback.
+
+### Tracking / proof / support
+
+Location, delivery status and PoD require assignment-scoped retry/readback and device/runtime evidence. Foreground-only behavior is not, by itself, authorization to add background tracking.
+
+Support/rescue Product Truth remains in discovery. Captain support is allowed only for assigned orders, internal notes remain operator-only, rescue transitions remain operator-owned, and DSH rescue must not mutate WLT truth.
+
+A concrete route-convergence finding exists in current code: `DshCaptainRouteRenderer` has an `orderchat` route that renders messaging as disabled, while `CaptainSupportScreenRouter` maps `chat-read-ack` and `chat-send` to `CaptainOrderSupportConversationScreen`. U005 must decide from current route ownership/Product Truth which route is canonical, route all live Captain support entry points through it, and remove/delegate obsolete parallel behavior only if proven safe. This is a root-cause convergence task, not a cosmetic copy patch.
+
+### Captain finance
+
+The old package's “missing Captain commission readback” finding is stale. Current `WltCaptainFinanceScreen` renders `ActorWalletPanel actorType="captain"`, `WltCaptainCodCustodyScreen`, `RepresentativeCommissionPanel actorType="captain"`, and `PayoutDestinationPanel actorType="captain"`.
+
+`RepresentativeCommissionPanel` reads `fetchOwnCommissions("captain")` and displays `pending`, `confirmed`, `settled`, `rejected`, `reversed`, policy/source information and resolution notes. The DSH representative-finance backend registers authenticated self-service Captain wallet/ledger/commission/payout routes and separate COD collect/remit actions, and resolves self-service identity server-side before calling WLT.
+
+U006 therefore does **not** implement a second commission feature. It verifies actor isolation, contract/generated-consumer parity, WLT ownership, COD idempotency/reconciliation, payout destination/request lifecycle, error/unknown-result behavior and control-panel mutation separation. Shared representative components must not be changed unless a Captain-proven gap requires it; if a shared contract/component changes, every actual consumer must be verified without importing unrelated field/partner product work.
 
 ## Bounded cross-surface scope
 
-Directly related control-panel areas are: HR for Captain create/detail/readiness/fleet state; Operations for dispatch, proof, exceptions and rescue; Partners for partner-fleet operator readback; Support for Captain support queue; Administration only for Captain role/access approvals; Platform only where service-area/capacity configuration directly gates Captain dispatch; WLT Finance for Captain COD/commission lifecycle. Generic analytics, dashboard, catalogs, login and marketing are excluded until a direct Captain dependency is proven.
+In scope only where directly tied to Captain truth:
 
-`app-client` is included only for tracking/order-state readback affected by Captain execution. `app-partner` is included only for partner-fleet, store↔Captain custody/return and related readback. `app-field` is explicitly assessed and excluded: shared commission infrastructure does not make the field actor's independent commission lifecycle a Captain change.
+- control-panel `administration`: Captain role/access only.
+- control-panel `hr`: Captain create/detail/readiness/fleet only.
+- control-panel `partners`: partner-fleet operator readback only.
+- control-panel `platform`: service-area/capacity configuration that gates Captain dispatch only.
+- control-panel `operations`: dispatch, custody, proof, exceptions and rescue only.
+- control-panel `support`: Captain assigned-order support only.
+- WLT control-panel `finance`: Captain wallet/COD/commission/payout controls/readback only.
+- app-client: Captain-caused tracking/order-state readback only.
+- app-partner: fleet and store↔Captain handoff only.
 
-## Main implementation risks
+Explicitly out of scope absent new proof: app-field implementation, catalogs, marketing, generic analytics/dashboard, generic control-panel login, client address/privacy ownership, unrelated finance/settlement capabilities, and planning work for other applications.
 
-1. Static wiring may conceal backend/data/contract drift; generated-consumer and route registration parity must be checked before edits.
-2. Assignment/custody transitions are concurrency- and idempotency-sensitive; frontend success cannot prove legal state.
-3. Foreground-only Captain location is visible in current code. Do not add background tracking without explicit Product Truth; instead verify OS lifecycle, privacy, retry queue and tracking freshness.
-4. Support/rescue is discovery state and therefore requires stronger ownership/conflict/audit tests.
-5. Finance changes are high risk: preserve the current daily-close/settlement-batch/manual-evidence lifecycle; no caller-supplied amount, frontend calculation, DSH ledger mutation or cross-Captain read is allowed.
-6. Closure requires candidate-bound runtime, cross-surface, PostgreSQL, isolation, QA/security/finance and CI evidence as applicable; this planning package alone proves none of them.
+## Execution risks and closure standard
+
+The high-risk areas are trusted actor isolation, session/device recovery, historical migration compatibility, shared mobile dev/runtime transport, assignment/custody concurrency, idempotency/replay, stale/unknown-result handling, PoD/media binding, location privacy, support ownership/internal-note isolation, WLT financial boundaries, and shared-contract compatibility.
+
+No unit closes from static inspection alone when its acceptance depends on runtime, PostgreSQL, cross-surface, finance, security, physical-device or CI behavior. `RESULT.json` must record actual checks on the exact unit candidate. Final package closure requires all units DONE, required checks PASS on the final relevant candidate, canonical readback evidence, and protected independent approvals where Product Truth requires them.
+
+This diagnosis was performed through GitHub Remote/API, not a shell. The package has been projected onto the current validator schema, but strict-validator PASS must be obtained by actually running the repository validator.

@@ -1,46 +1,12 @@
 {
-  "schemaVersion": 3,
-  "unitId": "U006",
-  "checks": [
-    {
-      "verificationId": "V501",
-      "type": "static",
-      "command": "rg -n \"captain/finance/cod-records|CaptainCod|cod.*captain|fetchDshCaptainOwnCodRecords\" services/dsh services/wlt apps/control-panel",
-      "proves": "Captain COD proxy/readback path is fully mapped.",
-      "doesNotProve": "Does not prove ledger reconciliation.",
-      "passCriteria": "Every Captain COD read is WLT-backed and actor-scoped.",
-      "failCriteria": "A DSH/frontend-owned financial truth or cross-Captain read is found.",
-      "required": true
-    },
-    {
-      "verificationId": "V502",
-      "type": "backend",
-      "command": "cd services/wlt/backend && go test ./internal/cod/...",
-      "proves": "WLT COD backend tests pass.",
-      "doesNotProve": "Does not prove DSH proxy or mobile UI.",
-      "passCriteria": "Targeted tests pass.",
-      "failCriteria": "Any COD test fails.",
-      "required": true
-    },
-    {
-      "verificationId": "V503",
-      "type": "static",
-      "command": "rg -n \"listDshWltCommissions|commission|captainId|WltDshCaptainBridge\" services/wlt services/dsh apps/control-panel",
-      "proves": "Captain commission lifecycle implementation is mapped from WLT truth to read-only surfaces.",
-      "doesNotProve": "Does not prove financial calculation correctness alone.",
-      "passCriteria": "Captain-scoped canonical commission readback exists and no caller-supplied amount becomes truth.",
-      "failCriteria": "Missing Captain readback, frontend calculation or cross-actor exposure is found.",
-      "required": true
-    },
-    {
-      "verificationId": "V504",
-      "type": "backend",
-      "command": "cd services/wlt/backend && go test ./internal/settlement/...",
-      "proves": "WLT settlement/commission lifecycle package tests pass where colocated.",
-      "doesNotProve": "Does not grant finance/product/release approval.",
-      "passCriteria": "Targeted tests pass.",
-      "failCriteria": "Any target test fails.",
-      "required": true
-    }
+  "schemaVersion":3,
+  "unitId":"U006",
+  "checks":[
+    {"verificationId":"V501","type":"static-contract","command":"rg -n \"WltCaptainFinanceScreen|ActorWalletPanel|RepresentativeCommissionPanel|fetchOwnCommissions|captain/me/finance|PayoutDestinationPanel\" services/dsh/frontend/app-captain services/wlt/frontend/shared/dsh services/dsh/backend/internal/http services/dsh/contracts","proves":"Maps the current existing Captain own-finance surface/API/backend/contract chain and prevents re-implementing a stale missing-feature assumption.","doesNotProve":"Does not prove actor isolation, WLT calculation, ledger reconciliation or runtime behavior.","passCriteria":"One canonical Captain own-finance chain exists for wallet/ledger/commission/payout/COD and no parallel Captain commission source is found.","failCriteria":"A second Captain financial truth, missing canonical route, frontend authoritative calculation or contradictory live adapter is found.","required":true},
+    {"verificationId":"V502","type":"backend-finance","command":"cd services/wlt/backend && go test ./internal/cod/... ./internal/payout/...","proves":"Affected WLT COD and payout backend tests pass after U006 mutation-path changes.","doesNotProve":"Does not prove DSH proxy, app UI, cross-Captain isolation or production provider behavior.","passCriteria":"All targeted WLT COD/payout tests pass.","failCriteria":"Any targeted WLT COD/payout test fails.","required":true},
+    {"verificationId":"V503","type":"runtime-contract","command":"pnpm --filter @bthwani/app-captain-runtime test","proves":"Current Captain app/runtime tests pass with finance surface changes and shared bindings.","doesNotProve":"Does not prove financial ledger correctness or physical-device/provider runtime.","passCriteria":"Command exits zero.","failCriteria":"Any app-captain or mobile runtime contract test fails.","required":true},
+    {"verificationId":"V504","type":"backend","command":"cd services/dsh/backend && go test ./internal/http/...","proves":"DSH representative-finance and related HTTP routes compile and pass current route/authorization tests.","doesNotProve":"Does not prove every WLT financial invariant unless exercised through those tests.","passCriteria":"All targeted DSH HTTP tests pass.","failCriteria":"Any target test fails.","required":true},
+    {"verificationId":"V505","type":"finance","command":"cd services/wlt/backend && go test ./internal/settlement/...","proves":"Current WLT settlement/commission lifecycle package tests pass after shared financial changes.","doesNotProve":"Does not grant finance/product/release approval and does not alone prove Captain UI isolation.","passCriteria":"All targeted WLT settlement/commission tests pass.","failCriteria":"Any targeted test fails.","required":true},
+    {"verificationId":"V506","type":"security-finance","command":"rg -n \"requireActor|beneficiaryActorId|actorType|idempot|correlation|captain/finance/cod-records|payout-requests\" services/dsh/backend/internal/http services/wlt/backend/internal/cod services/wlt/backend/internal/payout services/wlt/backend/internal/settlement","proves":"Makes authenticated actor derivation, financial scoping and idempotency/correlation boundaries explicitly reviewable for negative-case test coverage.","doesNotProve":"Static search is not actor-isolation or ledger-reconciliation runtime evidence.","passCriteria":"Every Captain self-service read/mutation derives trusted actor scope server-side and mutation paths have the required idempotency/correlation/reconciliation coverage.","failCriteria":"Caller-controlled beneficiary identity becomes authoritative, cross-Captain access is possible, or a financial mutation lacks required duplicate/recovery controls.","required":true}
   ]
 }

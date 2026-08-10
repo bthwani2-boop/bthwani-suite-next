@@ -1,131 +1,20 @@
 {
-  "schemaVersion": 3,
-  "unitId": "U006",
-  "name": "captain-finance-wlt",
-  "kind": "JOURNEY",
-  "status": "READY",
-  "executionConcern": "captain-wlt-cod-commission-readback",
-  "objective": "Close Captain financial readback so COD custody and personal commission lifecycle come only from WLT-backed canonical truth, with no Captain-side financial mutation.",
-  "truthOwner": "WLT exclusively owns COD financial liability, commission policy/calculation/lifecycle, wallet/ledger/adjustments; DSH may proxy bounded authorized references only.",
-  "coverageIds": [
-    "COV-BACKEND",
-    "COV-CONTRACT",
-    "COV-CP-finance",
-    "COV-DATA",
-    "COV-GOV",
-    "COV-SECURITY",
-    "COV-SHARED",
-    "COV-SURFACE-APP_CAPTAIN",
-    "COV-SURFACE-CONTROL_PANEL",
-    "COV-TESTS"
-  ],
-  "topics": [
-    "app-captain",
-    "full-stack",
-    "cross-surface",
-    "root-cause"
-  ],
-  "contexts": [
-    "captain",
-    "trusted-actor",
-    "canonical-readback"
-  ],
-  "journeys": [
-    "SETTLEMENTS_COMMISSIONS",
-    "Captain COD custody"
-  ],
-  "affectedSurfaces": [
-    "app-captain",
-    "control-panel"
-  ],
-  "dependsOn": [
-    "U004"
-  ],
-  "tasks": [
-    {
-      "taskId": "U006-T001",
-      "order": 1,
-      "objective": "Preserve and prove Captain COD custody truth",
-      "currentProblem": "Current Captain finance bridge reads WLT-owned COD through a governed DSH Captain proxy; this needs actor isolation, state/idempotency and reconciliation evidence.",
-      "requiredChange": "Trace COD record creation/collection/remittance readback from DSH operational evidence to WLT persistence and Captain-scoped proxy; fix drift without moving financial truth into DSH.",
-      "targetState": "Captain sees only own canonical COD liability and status; retries/readbacks are consistent and finance operator can reconcile authoritative WLT records.",
-      "action": "Inspect the pinned authoritative path first; implement at the truth owner, migrate only proven Captain-specific consumers/readbacks, remove obsolete parallel behavior when safe, then rerun linked checks on the final candidate.",
-      "paths": [
-        "services/wlt/frontend/shared/dsh/wlt-cod",
-        "services/wlt/frontend/shared/dsh/presentation/WltDshCaptainBridge.tsx",
-        "services/dsh/backend",
-        "services/wlt/backend/internal/cod",
-        "services/wlt/database",
-        "apps/control-panel/runtime/src/app/(shell)/wlt/finance",
-        "services/wlt/backend/internal/settlement/daily_close.go",
-        "services/wlt/backend/internal/settlement/manual_batch.go",
-        "services/wlt/backend/internal/settlement/batch_export.go",
-        "services/wlt/backend/internal/payout/manual_evidence.go"
-      ],
-      "symbols": [
-        "fetchDshCaptainOwnCodRecords",
-        "useWltCaptainCodCustodyController",
-        "captain COD liability"
-      ],
-      "mustNotChange": [
-        "Do not calculate authoritative COD balance in DSH/frontend.",
-        "Do not allow cross-Captain COD reads.",
-        "Do not treat a DSH operational status as settled financial truth without WLT readback.",
-        "Do not bypass or regress the reconciled WLT daily finance close, settlement-batch freeze/export, or manual-evidence controls."
-      ],
-      "acceptanceCriteria": [
-        "Captain COD list/outstanding amount derives from scoped WLT records.",
-        "Collection/remittance transitions are idempotent/auditable and reconcile to ledger rules where applicable.",
-        "Error/offline/empty states never fabricate zero liability."
-      ],
-      "verificationIds": [
-        "V501",
-        "V502"
-      ],
-      "rollback": "Revert the focused unit commit or disable its governed rollout while preserving forward-compatible data/evidence; never restore a parallel source of truth.",
-      "commitBoundary": "One focused U006 implementation commit after authoritative-owner changes, affected consumer migration, cleanup and required checks pass."
-    },
-    {
-      "taskId": "U006-T002",
-      "order": 2,
-      "objective": "Implement missing Captain commission lifecycle readback",
-      "currentProblem": "Product Truth requires app-captain to list own pending/confirmed/settled/rejected/reversed commissions and adjustment reasons, but WltDshCaptainBridge explicitly reports aggregate Captain earnings unavailable and current settlement reference is partner-oriented.",
-      "requiredChange": "Implement the WLT-owned Captain-scoped commission list/read model and bounded DSH/application adapter required by Product Truth; replace unavailable earnings copy with canonical lifecycle readback. Do not create a Captain settlement request/mutation unless a separate Product Truth authorizes it.",
-      "targetState": "Captain finance renders own commission lifecycle and adjustment reasons from WLT; 'settled' is a commission state, not a frontend-calculated payout or unauthorized Captain settlement action.",
-      "action": "Inspect the pinned authoritative path first; implement at the truth owner, migrate only proven Captain-specific consumers/readbacks, remove obsolete parallel behavior when safe, then rerun linked checks on the final candidate.",
-      "paths": [
-        "governance/product/contracts/settlements-commissions.product-truth.json",
-        "services/wlt/frontend/shared/dsh/presentation/WltDshCaptainBridge.tsx",
-        "services/wlt/frontend/shared/dsh/finance",
-        "services/wlt/backend/internal/settlement",
-        "services/wlt/backend",
-        "services/wlt/database",
-        "services/dsh/backend/internal/http",
-        "apps/control-panel/runtime/src/app/(shell)/wlt/finance"
-      ],
-      "symbols": [
-        "listDshWltCommissions",
-        "WltDshCaptainBridge",
-        "Captain commission lifecycle",
-        "commission adjustments"
-      ],
-      "mustNotChange": [
-        "Do not accept commission amounts from Captain or DSH as truth.",
-        "Do not add Captain confirm/settle/reject/reverse controls.",
-        "Do not reuse partnerId settlement APIs as a Captain settlement source of truth.",
-        "Do not route Captain commission readback through the operator daily-close/batch mutation endpoints."
-      ],
-      "acceptanceCriteria": [
-        "Captain sees own commission states required by Product Truth with canonical WLT amounts/policy/adjustment reasons.",
-        "Another Captain's commission data is inaccessible.",
-        "Finance mutations remain operator/service-authenticated, idempotent, audited and WLT-owned."
-      ],
-      "verificationIds": [
-        "V503",
-        "V504"
-      ],
-      "rollback": "Revert the focused unit commit or disable its governed rollout while preserving forward-compatible data/evidence; never restore a parallel source of truth.",
-      "commitBoundary": "One focused U006 implementation commit after authoritative-owner changes, affected consumer migration, cleanup and required checks pass."
-    }
+  "schemaVersion":3,
+  "unitId":"U006",
+  "name":"captain-finance-wlt",
+  "kind":"JOURNEY",
+  "status":"READY",
+  "executionConcern":"captain-wlt-wallet-cod-commission-payout-isolation-reconciliation",
+  "objective":"Verify and close Captain wallet/COD/commission/payout readback and permitted self-service actions from canonical WLT truth, without duplicating existing commission functionality.",
+  "truthOwner":"WLT exclusively owns wallet/ledger, COD financial liability, commission policy/calculation/lifecycle, payout financial state and adjustments; DSH may proxy bounded authenticated operations/references only.",
+  "coverageIds":["COV-BACKEND","COV-CONTRACT","COV-CP-finance","COV-DATA","COV-GOV","COV-SECURITY","COV-SHARED","COV-SURFACE-APP_CAPTAIN","COV-SURFACE-CONTROL_PANEL","COV-TESTS"],
+  "topics":["app-captain","finance","WLT","COD","commission","payout","root-cause"],
+  "contexts":["captain","trusted-actor","canonical-readback","financial-isolation","BB"],
+  "journeys":["SETTLEMENTS_COMMISSIONS","Captain COD custody","Captain wallet and payout self-service"],
+  "affectedSurfaces":["app-captain","control-panel"],
+  "dependsOn":["U004"],
+  "tasks":[
+    {"taskId":"U006-T001","order":1,"objective":"Prove existing Captain own-finance readback and actor isolation","currentProblem":"Current BB already exposes Captain wallet/ledger/commission/payout readback, but the old package incorrectly treats commission readback as missing and lacks same-candidate proof of route/contract isolation and error behavior.","requiredChange":"Verify the current WltCaptainFinanceScreen → generic representative components/API → authenticated DSH representative-finance routes → WLT chain. Repair only reproduced contract, actor-scope, state mapping, error/partial handling or canonical-readback defects; do not add a parallel commission implementation.","targetState":"Captain sees only own canonical wallet/ledger/commission/payout state including required commission lifecycle/reasons; another Captain cannot influence or read it, and failures never fabricate financial success/zero.","action":"Execute current app-captain and DSH/WLT checks, inspect generated/schema parity and negative actor cases, trace authenticated actor derivation into WLT query, fix the truth owner/adapter only if evidence fails, then rerun all affected generic consumers when shared code changes.","paths":["services/dsh/frontend/app-captain/finance/WltCaptainFinanceScreen.tsx","services/wlt/frontend/shared/dsh/actor-wallet","services/wlt/frontend/shared/dsh/commissions","services/wlt/frontend/shared/dsh/payout","services/dsh/backend/internal/http/representative_finance_routes.go","services/dsh/contracts/dsh.representative-finance.openapi.yaml","services/wlt/backend","services/wlt/database","apps/control-panel/runtime/src/app/(shell)/wlt/finance"],"symbols":["ActorWalletPanel","RepresentativeCommissionPanel","fetchOwnCommissions","/dsh/captain/me/finance/commissions","PayoutDestinationPanel","handleOwnRepresentativeCommissions"],"mustNotChange":["Do not implement a second Captain commission source/read model.","Do not accept authoritative commission/earnings amounts from frontend or DSH callers.","Do not expose another Captain's financial records.","Do not turn generic shared-component proximity into app-field/partner product scope."],"acceptanceCriteria":["Captain own-finance routes derive actor identity server-side and reject cross-Captain access.","Commission states/reasons/policy/source displayed by Captain come from WLT-backed canonical readback with no local aggregate calculation.","Wallet/ledger/commission/payout error/empty/partial states do not fabricate zero or completed financial state."],"verificationIds":["V501","V503","V504","V505"],"rollback":"Revert the focused finance adapter/backend fix while preserving WLT ownership and current working self-service routes; never restore a parallel financial truth.","commitBoundary":"One focused U006 readback/isolation change set only after a reproduced failure."},
+    {"taskId":"U006-T002","order":2,"objective":"Prove Captain COD and payout mutation idempotency reconciliation and recovery","currentProblem":"Captain COD collect/remit and payout request/destination self-service routes exist, but package closure still requires proof of idempotency/legal states, WLT reconciliation, retry/unknown-result recovery, audit and operator readback.","requiredChange":"Trace each Captain-permitted COD/payout mutation through DSH proxy, WLT owner/persistence/ledger/audit and canonical readback; fix only proven duplicate, stale-state, cross-actor, reconciliation or recovery defects.","targetState":"Retries cannot double-collect/remit/pay; every success is confirmed by WLT-backed readback/audit; operator controls stay permission protected and DSH/frontend never become financial truth.","action":"Run targeted WLT COD/payout/settlement tests and DSH representative-finance route tests; add negative actor/idempotency cases where missing; exercise failure/unknown-result paths; reconcile ledger/audit before marking DONE.","paths":["services/dsh/backend/internal/http/representative_finance_routes.go","services/wlt/backend/internal/cod","services/wlt/backend/internal/payout","services/wlt/backend/internal/settlement","services/wlt/database","services/wlt/frontend/shared/dsh/payout","services/dsh/frontend/app-captain/finance"],"symbols":["captain COD collect","captain COD remit","payout requests","payout destination","idempotency","WLT ledger","finance audit"],"mustNotChange":["Do not calculate COD/commission/payout financial truth in DSH or frontend.","Do not bypass service/operator permissions or maker-checker controls.","Do not report success from an unknown client-side result without canonical WLT readback."],"acceptanceCriteria":["COD/payout retries are duplicate-safe and actor scoped.","Ledger/audit/reconciliation agrees with canonical WLT state after legal transitions.","Unknown/offline failures recover by canonical readback and never fabricate completion."],"verificationIds":["V502","V504","V505","V506"],"rollback":"Revert the focused mutation fix while preserving audit/ledger history and forward-compatible data; never delete financial evidence to make tests green.","commitBoundary":"Keep COD/payout mutation fixes separate from read-only presentation cleanup and rerun all finance checks on the final U006 candidate."}
   ]
 }
