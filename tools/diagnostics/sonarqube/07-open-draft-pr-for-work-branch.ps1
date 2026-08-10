@@ -14,16 +14,23 @@ function Invoke-Native {
     & $Command
     if ($LASTEXITCODE -ne 0) { throw $Failure }
 }
+function Get-NativeText {
+    param([scriptblock]$Command,[string]$Failure,[switch]$AllowEmpty)
+    $lines = @(& $Command)
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) { throw $Failure }
+    $text = ($lines -join "`n").Trim()
+    if (-not $AllowEmpty -and -not $text) { throw $Failure }
+    return $text
+}
 
-$root = (& git rev-parse --show-toplevel 2>$null).Trim()
-if ($LASTEXITCODE -ne 0 -or -not $root) { throw "Run from inside the repository." }
+$root = Get-NativeText -Command { git rev-parse --show-toplevel 2>$null } -Failure "Run from inside the repository."
 Set-Location $root
 
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "gh CLI is required." }
 Invoke-Native { gh auth status } "GitHub CLI authentication is not ready."
 
-$branch = (& git branch --show-current).Trim()
-if (-not $branch) { throw "Detached HEAD is not supported." }
+$branch = Get-NativeText -Command { git branch --show-current } -Failure "Detached HEAD is not supported."
 if ($branch -eq $BaseBranch) { throw "Create or switch to a work branch first; master cannot PR to itself." }
 
 $existing = gh pr list --repo $Repository --state open --head $branch --json number,url,isDraft,baseRefName | ConvertFrom-Json
@@ -35,7 +42,7 @@ if ($existing -and @($existing).Count -gt 0) {
     exit 0
 }
 
-$remote = (& git ls-remote --heads origin $branch).Trim()
+$remote = Get-NativeText -Command { git ls-remote --heads origin $branch } -Failure "Unable to inspect remote work branch." -AllowEmpty
 if (-not $remote) {
     Invoke-Native { git push -u origin $branch } "Unable to publish work branch '$branch'."
 } else {
@@ -46,7 +53,7 @@ if (-not $Title) { $Title = "WIP: $branch" }
 Invoke-Native { gh pr create --repo $Repository --draft --base $BaseBranch --head $branch --title $Title --body $Body } "Unable to create Draft PR."
 
 $pr = gh pr view --repo $Repository $branch --json number,url,isDraft,headRefOid,baseRefName | ConvertFrom-Json
-if ($LASTEXITCODE -ne 0) { throw "Draft PR was created but could not be re-read." }
+if ($LASTEXITCODE -ne 0 -or -not $pr) { throw "Draft PR was created but could not be re-read." }
 Write-Host "Draft PR ready: $($pr.url)"
 Write-Host "Every later push to '$branch' will trigger PR analysis workflows targeting '$BaseBranch'."
 Write-Host "Head SHA: $($pr.headRefOid)"
