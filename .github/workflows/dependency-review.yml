@@ -1,0 +1,37 @@
+name: Dependency Review
+
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-review-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Reject newly introduced vulnerable dependencies
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: low
+          show-patched-versions: true
+
+      - name: Record protected-branch applicability
+        if: ${{ github.event_name == 'push' }}
+        shell: bash
+        run: |
+          echo "Dependency Review is enforced on pull requests before merge."
+          echo "This push check exists so the protected master SHA has the same required context inventory."
