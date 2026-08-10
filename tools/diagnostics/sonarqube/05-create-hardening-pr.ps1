@@ -3,8 +3,8 @@
 param(
     [string]$Repository = "bthwani2-boop/bthwani-suite-next",
     [string]$BaseBranch = "master",
-    [string]$WorkBranch = "chore/sonarqube-github-hardening-20260810",
-    [string]$Title = "chore: harden SonarQube and GitHub quality gates",
+    [string]$WorkBranch = "chore/github-quality-gate-hardening-20260810",
+    [string]$Title = "chore: make GitHub quality gates merge-safe",
     [int]$WaitMinutes = 30
 )
 
@@ -15,144 +15,83 @@ function Invoke-Native {
     & $Command
     if ($LASTEXITCODE -ne 0) { throw $Failure }
 }
-
 function Get-RepoRoot {
     $root = (& git rev-parse --show-toplevel 2>$null).Trim()
     if ($LASTEXITCODE -ne 0 -or -not $root) { throw "Run from inside the repository." }
     return $root
 }
-
 function Get-Checks([string]$Sha) {
     $json = gh api -H "Accept: application/vnd.github+json" "repos/$Repository/commits/$Sha/check-runs?per_page=100"
     if ($LASTEXITCODE -ne 0) { throw "Unable to read GitHub check runs for $Sha." }
     return @(($json | ConvertFrom-Json).check_runs)
 }
-
 function Wait-Checks([string]$Sha,[string[]]$Names,[int]$Minutes) {
     $deadline = (Get-Date).AddMinutes($Minutes)
     do {
         $runs = @(Get-Checks $Sha)
         $rows = foreach ($name in $Names) {
             $r = @($runs | Where-Object name -eq $name | Sort-Object started_at -Descending | Select-Object -First 1)
-            if ($r.Count -eq 0) {
-                [pscustomobject]@{ Name=$name; Status='missing'; Conclusion='' }
-            } else {
-                [pscustomobject]@{ Name=$name; Status=$r[0].status; Conclusion=$r[0].conclusion }
-            }
+            if ($r.Count -eq 0) { [pscustomobject]@{Name=$name;Status='missing';Conclusion=''} }
+            else { [pscustomobject]@{Name=$name;Status=$r[0].status;Conclusion=$r[0].conclusion} }
         }
         $rows | Format-Table -AutoSize
-        $bad = @($rows | Where-Object { $_.Status -ne 'completed' -or $_.Conclusion -ne 'success' })
-        if ($bad.Count -eq 0) { return }
+        if (@($rows | Where-Object { $_.Status -ne 'completed' -or $_.Conclusion -ne 'success' }).Count -eq 0) { return }
         Start-Sleep -Seconds 15
     } while ((Get-Date) -lt $deadline)
-    throw "Timed out waiting for required PR checks. The hardening PR was left open and master protection was NOT changed."
+    throw "Timed out waiting for the future required checks. PR remains open and master protection was NOT changed."
 }
 
 $repoRoot = Get-RepoRoot
 Set-Location $repoRoot
-
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "gh CLI is required." }
 Invoke-Native { gh auth status } "GitHub CLI authentication is not ready."
-
 $current = (& git branch --show-current).Trim()
-if ($current -ne $BaseBranch) { throw "Expected current branch '$BaseBranch', found '$current'." }
-if (git status --porcelain) { throw "Working tree must be clean before hardening." }
-
+if ($current -ne $BaseBranch) { throw "Expected '$BaseBranch', found '$current'." }
+if (git status --porcelain) { throw "Working tree must be clean." }
 Invoke-Native { git fetch origin $BaseBranch } "git fetch failed."
-Invoke-Native { git pull --ff-only origin $BaseBranch } "Local $BaseBranch is not safely fast-forwardable."
+Invoke-Native { git pull --ff-only origin $BaseBranch } "Local base is not safely fast-forwardable."
+if ((& git rev-parse HEAD).Trim() -ne (& git rev-parse "origin/$BaseBranch").Trim()) { throw "Local/remote base mismatch." }
 
-$remoteBase = (& git rev-parse "origin/$BaseBranch").Trim()
-$localBase = (& git rev-parse HEAD).Trim()
-if ($remoteBase -ne $localBase) { throw "Local and remote $BaseBranch differ." }
-
-$existing = gh pr list --repo $Repository --state open --head $WorkBranch --json number,url,headRefName,baseRefName,isDraft 2>$null | ConvertFrom-Json
-if ($existing -and @($existing).Count -gt 0) {
-    Write-Host "Existing hardening PR found: $($existing[0].url)"
-    exit 0
-}
-
-$remoteBranch = (& git ls-remote --heads origin $WorkBranch).Trim()
-if ($remoteBranch) { throw "Remote branch '$WorkBranch' already exists without an open PR. Resolve it manually before continuing." }
-
+$existing = gh pr list --repo $Repository --state open --head $WorkBranch --json number,url,baseRefName | ConvertFrom-Json
+if ($existing -and @($existing).Count -gt 0) { Write-Host "Existing readiness PR: $($existing[0].url)"; exit 0 }
+if ((& git ls-remote --heads origin $WorkBranch).Trim()) { throw "Remote hardening branch exists without an open PR." }
 Invoke-Native { git switch -c $WorkBranch } "Unable to create hardening branch."
 
-$propsPath = Join-Path $repoRoot "sonar-project.properties"
+# Required checks must be created for every PR. GitHub documents that a
+# required workflow skipped by path filtering can remain Pending forever.
 $ciPath = Join-Path $repoRoot ".github\workflows\ci.yml"
-if (-not (Test-Path $propsPath)) { throw "sonar-project.properties is missing." }
 if (-not (Test-Path $ciPath)) { throw ".github/workflows/ci.yml is missing." }
-
-# 1) Enable real Sonar coverage and duplication metrics.
-$raw = Get-Content $propsPath -Raw
-if ($raw -notmatch '(?m)^sonar\.coverage\.exclusions=\*\*/\*$') { throw "Expected global coverage exclusion was not found; refusing an unreviewed rewrite." }
-if ($raw -notmatch '(?m)^sonar\.cpd\.exclusions=\*\*/\*$') { throw "Expected global CPD exclusion was not found; refusing an unreviewed rewrite." }
-$raw = [regex]::Replace($raw, '(?ms)# The repository''s executable verification is heterogeneous.*?sonar\.coverage\.exclusions=\*\*/\*\r?\n', '')
-$raw = [regex]::Replace($raw, '(?ms)# Duplicate detection is not meaningful.*?sonar\.cpd\.exclusions=\*\*/\*\r?\n', '')
-$anchor = 'sonar.go.coverage.reportPaths=**/.sonar/coverage.out'
-if (-not $raw.Contains($anchor)) { throw "Go coverage report configuration is missing." }
-$replacement = @"
-$anchor
-# Coverage and duplication are intentionally measured. Do not globally exclude
-# source files from these metrics; use only narrow, justified exclusions when
-# a generated or non-executable artifact genuinely requires one.
-"@.TrimEnd()
-$raw = $raw.Replace($anchor, $replacement)
-Set-Content -LiteralPath $propsPath -Value $raw -Encoding utf8
-
-# 2) A required PR check must always be created. Remove the pull_request path
-# filter only; the workflow's internal contextual router still decides depth.
 $ci = Get-Content $ciPath -Raw
-$prPattern = '(?ms)(  pull_request:\r?\n    types: \[opened, synchronize, reopened, ready_for_review\]\r?\n    branches: \["\*\*"\]\r?\n)    paths:\r?\n(?:      - .*\r?\n)+(?=  push:)'
-$updatedCi = [regex]::Replace($ci, $prPattern, '$1')
-if ($updatedCi -eq $ci) { throw "Expected pull_request paths block was not found in ci.yml; refusing an unreviewed workflow rewrite." }
-Set-Content -LiteralPath $ciPath -Value $updatedCi -Encoding utf8
+$pattern = '(?ms)(  pull_request:\r?\n    types: \[opened, synchronize, reopened, ready_for_review\]\r?\n    branches: \["\*\*"\]\r?\n)    paths:\r?\n(?:      - .*\r?\n)+(?=  push:)'
+$updated = [regex]::Replace($ci, $pattern, '$1')
+if ($updated -eq $ci) { throw "Expected PR path filter not found; refusing an unreviewed workflow rewrite." }
+Set-Content -LiteralPath $ciPath -Value $updated -Encoding utf8
 
-Invoke-Native { pnpm run diagnostics:sonarqube:config } "Repository Sonar configuration diagnostic failed after the edit."
-
-$diff = git diff -- sonar-project.properties .github/workflows/ci.yml
-if (-not $diff) { throw "No hardening diff was produced." }
+$diff = git diff -- .github/workflows/ci.yml
+if (-not $diff) { throw "No readiness diff produced." }
 Write-Host $diff
-
-Invoke-Native { git add -- sonar-project.properties .github/workflows/ci.yml } "Unable to stage hardening files."
+Invoke-Native { git add -- .github/workflows/ci.yml } "Unable to stage ci.yml."
 $staged = @(git diff --cached --name-only)
-$expected = @('.github/workflows/ci.yml','sonar-project.properties')
-if (@($staged | Sort-Object) -join '|' -ne @($expected | Sort-Object) -join '|') { throw "Unexpected staged paths detected: $($staged -join ', ')" }
-Invoke-Native { git commit -m "fix(quality): enable real Sonar metrics and always-on PR gate" } "Commit failed."
+if ($staged.Count -ne 1 -or $staged[0] -ne '.github/workflows/ci.yml') { throw "Unexpected staged paths: $($staged -join ', ')" }
+Invoke-Native { git commit -m "fix(ci): always publish the required PR aggregate check" } "Commit failed."
 Invoke-Native { git push -u origin $WorkBranch } "Push failed."
 
 $body = @"
 ## Purpose
+Prepare fail-closed master protection without changing application code or Sonar coverage policy.
 
-Harden SonarQube Cloud and GitHub merge gates without changing application behavior.
+- make `BThwani CI result` appear on every pull request
+- prove the exact future required checks on a real Draft PR
+- do not activate master protection until every check is observed and successful
 
-- remove repository-wide Sonar coverage suppression
-- remove repository-wide Sonar duplication suppression
-- keep Go coverage report import enabled
-- make BThwani CI create its aggregate PR check for every PR (no PR path filter)
-- prove SonarQube Cloud, CodeQL and BThwani CI on a real Draft PR before master protection is activated
-
-This PR must not be merged unless all future required automated checks are present and successful.
+Coverage/CPD hardening is deliberately a separate PR after master is protected.
 "@
-
-Invoke-Native { gh pr create --repo $Repository --draft --base $BaseBranch --head $WorkBranch --title $Title --body $body } "Unable to create hardening Draft PR."
-$pr = gh pr view --repo $Repository $WorkBranch --json number,url,headRefOid,isDraft,baseRefName | ConvertFrom-Json
+Invoke-Native { gh pr create --repo $Repository --draft --base $BaseBranch --head $WorkBranch --title $Title --body $body } "Unable to create readiness Draft PR."
+$pr = gh pr view --repo $Repository $WorkBranch --json number,url,headRefOid | ConvertFrom-Json
 Write-Host "Draft PR: $($pr.url)"
 Write-Host "Head SHA: $($pr.headRefOid)"
 
-$required = @(
-    'BThwani CI result',
-    'SonarQube Cloud scan',
-    'SonarCloud Code Analysis',
-    'Analyze go (dsh)',
-    'Analyze go (identity)',
-    'Analyze go (platform-control)',
-    'Analyze go (providers)',
-    'Analyze go (wlt)',
-    'Analyze go (workforce)',
-    'Analyze javascript-typescript'
-)
-Write-Host "Waiting for live PR proof of every future required check..."
+$required = @('BThwani CI result','SonarQube Cloud scan','SonarCloud Code Analysis','Analyze go (dsh)','Analyze go (identity)','Analyze go (platform-control)','Analyze go (providers)','Analyze go (wlt)','Analyze go (workforce)','Analyze javascript-typescript')
 Wait-Checks -Sha $pr.headRefOid -Names $required -Minutes $WaitMinutes
-Write-Host ""
-Write-Host "HARDENING PR PROOF: PASS"
-Write-Host "All future required checks are present and successful on the Draft PR."
-Write-Host "Next: run 06-finalize-and-protect-master.ps1 -PrNumber $($pr.number)"
+Write-Host "PROTECTION READINESS: PASS"
+Write-Host "Next command: 06-finalize-and-protect-master.ps1 -PrNumber $($pr.number)"
