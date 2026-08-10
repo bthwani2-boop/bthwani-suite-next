@@ -284,7 +284,7 @@
     "@opentelemetry/semantic-conventions": "^1.28.0",
     "@playwright/test": "^1.61.1",
     "@redocly/cli": "2.43.2",
-    "@types/react": "19.2.17",
+    "@types/react": "19.2.18",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
     "autocannon": "^8.0.0",
@@ -305,8 +305,8 @@
     "yaml": "2.8.3"
   },
   "dependencies": {
-    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-async-storage/async-storage": "3.1.1",
     "@react-native-community/netinfo": "12.0.1",
-    "expo-linking": "57.0.3"
+    "expo-linking": "57.0.5"
   }
 }
