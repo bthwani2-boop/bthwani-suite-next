@@ -33,8 +33,8 @@ $root = Get-NativeText -Command { git rev-parse --show-toplevel 2>$null } -Failu
 Set-Location $root
 $registry = Get-BThwaniQualityGateRegistry -RepoRoot $root
 $RequiredNames = @($registry.requiredChecks | ForEach-Object { [string]$_.context })
-$ExpectedProducer = @{}
-foreach ($item in @($registry.requiredChecks)) { $ExpectedProducer[[string]$item.context] = [string]$item.producer }
+$ExpectedIntegrationId = @{}
+foreach ($item in @($registry.requiredChecks)) { $ExpectedIntegrationId[[string]$item.context] = [int64]$item.integrationId }
 
 function Get-Checks([string]$Sha) {
     $json = gh api -H "Accept: application/vnd.github+json" "repos/$Repository/commits/$Sha/check-runs?per_page=100"
@@ -49,16 +49,16 @@ function Wait-Required([string]$Sha,[int]$Minutes) {
         $rows = foreach ($name in $RequiredNames) {
             $r = @($runs | Where-Object name -eq $name | Sort-Object started_at -Descending | Select-Object -First 1)
             if ($r.Count -eq 0) {
-                [pscustomobject]@{ Name=$name; Status='missing'; Conclusion=''; App=''; IntegrationId=$null; ProducerMatch=$false }
+                [pscustomobject]@{ Name=$name; Status='missing'; Conclusion=''; App=''; IntegrationId=$null; IntegrationMatch=$false }
             } else {
-                $app = [string]$r[0].app.slug
+                $integrationId = [int64]$r[0].app.id
                 [pscustomobject]@{
                     Name=$name
                     Status=$r[0].status
                     Conclusion=$r[0].conclusion
-                    App=$app
-                    IntegrationId=$r[0].app.id
-                    ProducerMatch=($app -eq $ExpectedProducer[$name])
+                    App=[string]$r[0].app.slug
+                    IntegrationId=$integrationId
+                    IntegrationMatch=($integrationId -eq [int64]$ExpectedIntegrationId[$name])
                 }
             }
         }
@@ -66,14 +66,14 @@ function Wait-Required([string]$Sha,[int]$Minutes) {
         $bad = @($rows | Where-Object {
             $_.Status -ne 'completed' -or
             $_.Conclusion -ne 'success' -or
-            -not $_.ProducerMatch -or
+            -not $_.IntegrationMatch -or
             -not $_.IntegrationId -or
             [int64]$_.IntegrationId -le 0
         })
         if ($bad.Count -eq 0) { return $rows }
         Start-Sleep -Seconds 15
     } while ((Get-Date) -lt $deadline)
-    throw "Work-branch proof did not reach green with the expected check producers. Fix failing, missing, or spoofed checks before continuing toward merge."
+    throw "Work-branch proof did not reach green with the expected GitHub App bindings. Fix failing, missing, or spoofed checks before continuing toward merge."
 }
 
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "gh CLI is required." }
@@ -133,9 +133,9 @@ if (-not $SkipFullDispatch) {
     Invoke-Native { gh run watch --repo $Repository $run[0].databaseId --exit-status } "Explicit full CI failed."
 }
 
-Write-Host "Waiting for every registry-defined quality/security check on the exact PR HEAD..."
+Write-Host "Waiting for every desired ruleset check on the exact PR HEAD..."
 $rows = @(Wait-Required -Sha $headSha -Minutes $WaitMinutes)
 Write-Host ""
 Write-Host "WORK BRANCH CONTINUOUS PROOF: PASS"
-Write-Host "The exact pushed HEAD is current with master and every registry-defined mandatory check is green from its expected producer."
+Write-Host "The exact pushed HEAD is current with master and every mandatory check is green from its expected GitHub App integration."
 $rows | Format-Table -AutoSize | Out-Host
