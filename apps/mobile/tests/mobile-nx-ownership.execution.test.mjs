@@ -1,16 +1,35 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
+const requireFromRepo = createRequire(new URL("../../../package.json", import.meta.url));
+const nxCli = requireFromRepo.resolve("nx/bin/nx.js");
 
 function affectedProjects(file) {
   const result = spawnSync(
-    pnpm,
-    ["exec", "nx", "show", "projects", "--affected", `--files=${file}`, "--sep=,"],
-    { encoding: "utf8", windowsHide: true },
+    process.execPath,
+    [nxCli, "show", "projects", "--affected", `--files=${file}`, "--sep=,"],
+    {
+      cwd: repoRoot,
+      encoding: "utf8",
+      windowsHide: true,
+      env: process.env,
+    },
   );
-  assert.equal(result.status, 0, result.stderr || result.stdout || `nx affected failed for ${file}`);
+
+  const failure = [
+    result.error?.stack ?? result.error?.message ?? "",
+    result.stderr ?? "",
+    result.stdout ?? "",
+  ]
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+
+  assert.equal(result.status, 0, failure || `nx affected failed for ${file}`);
   return new Set(
     result.stdout
       .split(/[\s,]+/)
