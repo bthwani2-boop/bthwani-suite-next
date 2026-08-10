@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   proof:
-    name: Execute scoped runtime proof
+    name: Execute scoped Ubuntu runtime proof
     if: ${{ inputs.runtime_proof || inputs.full_verification == 'true' || inputs.runtime == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
@@ -51,7 +51,7 @@ jobs:
           }
           $logPath = Join-Path $PWD "runtime-smoke.log"
           $resultPath = Join-Path $PWD "runtime-proof.json"
-          "Runtime proof started for $sourceSha profile=$profile" | Set-Content -LiteralPath $logPath
+          "Runtime proof started for $sourceSha profile=$profile os=ubuntu" | Set-Content -LiteralPath $logPath
 
           function Invoke-Phase {
             param([string] $Name, [scriptblock] $Command)
@@ -82,7 +82,7 @@ jobs:
             } elseif ($profile -eq "mobile-native") {
               Invoke-Phase "mobile:apps:check" { pnpm run mobile:apps:check }
               Invoke-Phase "mobile:expo:verify" { pnpm run mobile:expo:verify }
-              Invoke-Phase "mobile:native:prebuild" { node apps/mobile/verify-mobile-native.mjs }
+              Invoke-Phase "mobile:android:native-build" { node apps/mobile/verify-mobile-native.mjs --platform android --build }
             } else {
               $requiresDshBootstrap = @($profiles.Split(",") | ForEach-Object { $_.Trim() }) -contains "dsh"
               if ($requiresDshBootstrap) {
@@ -122,18 +122,23 @@ jobs:
               }
             }
 
+            $evidenceScope = if ($profile -eq "mobile-native") { "android-native" } elseif ($profile -eq "mobile-config") { "mobile-config" } else { "ubuntu-runtime" }
             @{
-              schemaVersion = 1
+              schemaVersion = 2
               sourceSha = $sourceSha
               profile = $profile
+              evidenceScope = $evidenceScope
+              operatingSystem = "ubuntu"
               result = "PASS"
             } | ConvertTo-Json | Set-Content -LiteralPath $resultPath
-            "RUNTIME_PROOF_RESULT=PASS" | Tee-Object -FilePath $logPath -Append
+            "RUNTIME_PROOF_RESULT=PASS scope=$evidenceScope" | Tee-Object -FilePath $logPath -Append
           } catch {
             @{
-              schemaVersion = 1
+              schemaVersion = 2
               sourceSha = $sourceSha
               profile = $profile
+              evidenceScope = "ubuntu-runtime"
+              operatingSystem = "ubuntu"
               result = "FAIL"
               error = $_.Exception.Message
             } | ConvertTo-Json | Set-Content -LiteralPath $resultPath
@@ -161,16 +166,80 @@ jobs:
             & pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles $profiles
           }
 
-      - name: Upload runtime proof
+      - name: Upload Ubuntu runtime proof
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: runtime-proof-${{ github.run_id }}
+          name: runtime-proof-ubuntu-${{ github.run_id }}
           path: |
             runtime-smoke.log
             runtime-proof.json
           if-no-files-found: error
           retention-days: 7
+
+  windows-mobile-contracts:
+    name: Windows mobile contract proof
+    if: ${{ inputs.full_verification == 'true' || inputs.runtime_profile == 'mobile-config' || inputs.runtime_profile == 'mobile-native' }}
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify immutable Windows checkout
+        shell: pwsh
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          $actual = (git rev-parse HEAD).Trim()
+          if ($actual -ne $env:SOURCE_SHA) { throw "Windows checkout SHA mismatch: expected $env:SOURCE_SHA, got $actual" }
+      - name: Execute Windows-native mobile contracts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          node --test apps/mobile/tests/mobile-runtime-transport.contract.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw "Windows mobile transport contracts failed" }
+          & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/verify-mobile-test-stack.ps1 -NoAndroidSmoke
+          if ($LASTEXITCODE -ne 0) { throw "Windows mobile verification stack failed" }
+
+  ios-native:
+    name: iOS Xcode and Simulator proof
+    if: ${{ inputs.full_verification == 'true' || inputs.runtime_profile == 'mobile-native' }}
+    runs-on: macos-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify immutable macOS checkout
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          xcodebuild -version
+          xcrun simctl help >/dev/null
+          pod --version
+      - name: Verify canonical mobile configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run mobile:apps:check
+          pnpm run mobile:expo:verify
+      - name: Build and launch all iOS Dev Clients in Simulator
+        shell: bash
+        run: node apps/mobile/verify-mobile-native.mjs --platform ios --build --simulator
 
   not-required:
     name: Runtime proof not required
