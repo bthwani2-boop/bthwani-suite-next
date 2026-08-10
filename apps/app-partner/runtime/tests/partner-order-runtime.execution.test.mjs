@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const orderCommandsUrl = new URL(
-  "../../../../services/dsh/frontend/shared/orders/use-partner-order-commands.ts",
+const orderPolicyUrl = new URL(
+  "../../../../services/dsh/frontend/shared/orders/partner-order-mutation.policy.ts",
   import.meta.url,
 );
 const bindingContractsUrl = new URL(
@@ -10,7 +10,7 @@ const bindingContractsUrl = new URL(
   import.meta.url,
 );
 
-const { resolvePartnerOrderMutation } = await import(orderCommandsUrl.href);
+const { resolvePartnerOrderMutation } = await import(orderPolicyUrl.href);
 const { DSH_PARTNER_BINDING_CONTRACTS, hasDshPartnerBindingContract } = await import(bindingContractsUrl.href);
 
 test("partner order actions fail closed unless DSH explicitly allows the mutation", () => {
