@@ -22,6 +22,10 @@ import {
 import { fetchWorkforceReadiness } from "../../../../services/dsh/frontend/shared/workforce/workforce-me.api";
 import type { ReadinessGate } from "../../../../services/dsh/frontend/shared/workforce/workforce.types";
 import { ReadinessGateScreen } from "./features/readiness/ReadinessGateScreen";
+import {
+  classifyCaptainReadiness,
+  createCaptainEligibilityUnavailableGate,
+} from "./features/readiness/captain-readiness.policy";
 
 const CAPTAIN_DEVICE_FINGERPRINT_KEY = "bthwani.captain.device-fingerprint.v1";
 
@@ -48,27 +52,24 @@ function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
   const [readiness, setReadiness] = useState<ReadinessGate | null>(null);
 
   const fetchReadiness = async () => {
-    if (workforce.state.kind === "ready") {
-      try {
-        const gate = await fetchWorkforceReadiness(workforce.state.me.actorId);
-        setReadiness(gate);
-      } catch (err) {
-        setReadiness({
-          actorId: workforce.state.me.actorId,
-          workforceKind: workforce.state.me.workforceKind,
-          status: "BLOCKED",
-          blockerReasons: ["ELIGIBILITY_UNAVAILABLE"],
-          checkedAt: new Date().toISOString(),
-        });
-      }
+    if (workforce.state.kind !== "ready") return;
+    try {
+      const gate = await fetchWorkforceReadiness(workforce.state.me.actorId);
+      setReadiness(gate);
+    } catch {
+      setReadiness(createCaptainEligibilityUnavailableGate({
+        actorId: workforce.state.me.actorId,
+        workforceKind: workforce.state.me.workforceKind,
+      }));
     }
   };
 
   useEffect(() => {
-    fetchReadiness();
+    void fetchReadiness();
   }, [workforce.state]);
 
-  if (!readiness) {
+  const presentation = classifyCaptainReadiness(readiness);
+  if (presentation === "loading") {
     return (
       <View style={styles.readinessState}>
         <ActivityIndicator accessibilityLabel="جارٍ التحقق من جاهزية الكابتن..." />
@@ -76,11 +77,11 @@ function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (readiness.status === "BLOCKED") {
+  if (presentation === "blocked" && readiness) {
     return <ReadinessGateScreen readiness={readiness} onRefresh={fetchReadiness} />;
   }
 
-  if (readiness.status === "ALLOWED") {
+  if (presentation === "allowed") {
     return <>{children}</>;
   }
 

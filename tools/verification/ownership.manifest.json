@@ -48,6 +48,13 @@
       "sourcePrefixes": ["apps/app-field/runtime/src/"],
       "coverage": { "strategy": "node-lcov", "cwd": "apps/app-field/runtime", "testRoots": ["apps/app-field/runtime/tests"] }
     },
+    "app-captain": {
+      "kind": "mobile-surface",
+      "root": "apps/app-captain/runtime",
+      "platforms": ["android", "ios"],
+      "sourcePrefixes": ["apps/app-captain/runtime/src/"],
+      "coverage": { "strategy": "node-lcov", "cwd": "apps/app-captain/runtime", "testRoots": ["apps/app-captain/runtime/tests"] }
+    },
     "app-client": {
       "kind": "mobile-surface",
       "root": "apps/app-client/runtime",
@@ -61,13 +68,6 @@
       "platforms": ["android", "ios"],
       "sourcePrefixes": ["apps/app-partner/runtime/src/"],
       "coverage": { "strategy": "required", "reason": "No app-partner-owned executable LCOV suite exists yet; source changes must not pass as uncovered ownership." }
-    },
-    "app-captain": {
-      "kind": "mobile-surface",
-      "root": "apps/app-captain/runtime",
-      "platforms": ["android", "ios"],
-      "sourcePrefixes": ["apps/app-captain/runtime/src/"],
-      "coverage": { "strategy": "required", "reason": "Current captain App.tsx checks are structural source assertions, not executed application coverage." }
     },
     "control-panel": {
       "kind": "web-surface",
