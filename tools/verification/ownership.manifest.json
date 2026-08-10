@@ -40,7 +40,10 @@
       "root": "services/wlt",
       "platforms": ["shared", "android", "ios", "web"],
       "sourcePrefixes": ["services/wlt/frontend/"],
-      "coverage": { "strategy": "node-lcov", "cwd": "services/wlt", "testRoots": ["services/wlt/tests"] }
+      "coverage": {
+        "strategy": "required",
+        "reason": "Current WLT tests validate boundaries and contracts but do not execute services/wlt/frontend source as LCOV evidence."
+      }
     },
     "app-field": {
       "kind": "mobile-surface",
