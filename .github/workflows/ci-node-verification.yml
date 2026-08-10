@@ -152,9 +152,9 @@ jobs:
         with:
           name: journey-gates-${{ github.run_id }}
           path: |
-            ${{ runner.temp }}/journey-gate/journey-gate-summary.json
             ${{ runner.temp }}/journey-gates.log
-          if-no-files-found: warn
+            .diagnostics/journey-gate/journey-gate-summary.json
+          if-no-files-found: error
           retention-days: 7
       - name: Enforce journey gate result
         if: ${{ steps.journey_gates.outcome == 'failure' }}
