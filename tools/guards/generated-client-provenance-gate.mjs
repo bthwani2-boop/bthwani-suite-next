@@ -18,6 +18,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { resolvePackageManagerInvocation } from "../scripts/lib/package-manager-invocation.mjs";
 
 const repositoryRoot = path.resolve(new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"), "..", "..");
 const registryRelative = "governance/contracts/generated-client-registry.json";
@@ -104,11 +105,16 @@ for (const [relativeClient, entry] of registered) {
   }
 
   const outFile = path.join(tmpDir, relativeClient.replaceAll("/", "__"));
-  const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-  const result = spawnSync(pnpm, ["exec", "openapi-typescript", contractPath, "--output", outFile], {
+  const invocation = resolvePackageManagerInvocation(
+    "pnpm",
+    ["exec", "openapi-typescript", contractPath, "--output", outFile],
+    process.env,
+  );
+  const result = spawnSync(invocation.executable, invocation.args, {
     cwd: repositoryRoot,
     encoding: "utf8",
-    shell: process.platform === "win32",
+    shell: false,
+    windowsHide: true,
   });
   if (result.error || result.status !== 0) {
     failures.push(`openapi-typescript failed for ${entry.contract}: ${result.error?.message ?? result.stderr ?? result.stdout ?? "unknown spawn failure"}`);
