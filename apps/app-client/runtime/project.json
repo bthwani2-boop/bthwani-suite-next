@@ -3,6 +3,10 @@
   "root": "apps/app-client/runtime",
   "sourceRoot": "apps/app-client/runtime",
   "projectType": "application",
+  "implicitDependencies": [
+    "dsh",
+    "wlt"
+  ],
   "targets": {
     "typecheck": {
       "executor": "nx:run-commands",
@@ -13,11 +17,7 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "commands": [
-          "node tools/scripts/run-command-check.mjs --label app-client-contracts -- node --test apps/app-client/runtime/tests/*.test.mjs",
-          "node tools/scripts/run-command-check.mjs --label mobile-config -- node tools/scripts/guard-mobile-apps.mjs"
-        ],
-        "parallel": false
+        "command": "node tools/scripts/run-command-check.mjs --label app-client-tests -- pnpm --dir apps/app-client/runtime test"
       }
     },
     "build": {
