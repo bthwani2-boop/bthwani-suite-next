@@ -67,14 +67,17 @@ jobs:
           CI_MODE="${MODE}" \
           node tools/scripts/detect-ci-context.mjs
 
-      - name: Plan affected Node coverage
+      - name: Test and plan affected Node coverage
         id: node_coverage_plan
         shell: bash
         env:
           CI_BASE_SHA: ${{ steps.scope.outputs.base_sha }}
           CI_HEAD_SHA: ${{ steps.scope.outputs.head_sha }}
           CI_MODE: ${{ steps.scope.outputs.mode }}
-        run: node tools/scripts/generate-sonar-node-coverage.mjs --plan
+        run: |
+          set -euo pipefail
+          node --test tools/scripts/generate-sonar-node-coverage.test.mjs
+          node tools/scripts/generate-sonar-node-coverage.mjs --plan
 
       - name: Set up immutable Node workspace for affected coverage
         if: ${{ steps.node_coverage_plan.outputs.required == 'true' }}
