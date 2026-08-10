@@ -66,6 +66,16 @@ describe("partner unified multi-surface platform closure", () => {
     assert.match(selfRoutes, /handlePartnerAggregatedActivationReadiness/);
   });
 
+  test("keeps lifecycle mutation and audit atomic without unbound shadow events", () => {
+    const governance = read("services/dsh/backend/internal/store/governance.go");
+
+    assert.match(governance, /UPDATE dsh_stores SET status = \$1, version = version \+ 1/);
+    assert.match(governance, /INSERT INTO dsh_store_action_audit/);
+    assert.doesNotMatch(governance, /dsh_platform_outbox_events/);
+    assert.doesNotMatch(governance, /store_lifecycle_changed/);
+    assert.doesNotMatch(governance, /store\.lifecycle\.changed/);
+  });
+
   test("restores every partner workspace and connects real operational surfaces", () => {
     const registry = read("services/dsh/frontend/shared/partner/partner-registry.ts");
     const queue = read("services/dsh/frontend/control-panel/partners/PartnersReviewQueueScreen.tsx");

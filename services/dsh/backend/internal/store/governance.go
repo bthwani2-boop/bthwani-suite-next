@@ -522,26 +522,6 @@ func GovernStore(
 				}
 			}
 
-			// If lifecycle changed, write to outbox for cache invalidation & order race prevention
-			if input.Action == "lifecycle" {
-				payload := map[string]interface{}{
-					"storeId": storeID,
-					"status":  input.Value,
-				}
-				payloadJSON, _ := json.Marshal(payload)
-				_, err = tx.ExecContext(ctx, `
-					INSERT INTO dsh_platform_outbox_events (id, topic, payload, created_at)
-					VALUES ($1, $2, $3::jsonb, now())`,
-					eventID("outbox"), "store.lifecycle.changed", string(payloadJSON))
-
-				// We don't hard fail if outbox table doesn't exist yet in the schema since it's a new addition,
-				// but we log/ignore or assume it exists. If it fails, the transaction rolls back.
-				if err != nil {
-					// Fallback to pg_notify just in case
-					_, _ = tx.ExecContext(ctx, `NOTIFY store_lifecycle_changed, $1`, string(payloadJSON))
-				}
-			}
-
 			return nil
 		})
 }
