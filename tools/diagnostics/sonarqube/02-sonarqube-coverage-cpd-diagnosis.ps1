@@ -4,7 +4,9 @@ param(
     [string]$Repository = "bthwani2-boop/bthwani-suite-next",
     [string]$Branch = "master",
     [string]$OutputRoot = "",
-    [switch]$RunCoverage
+    [switch]$RunCoverage,
+    [ValidateRange(1, 60)]
+    [int]$GoTestTimeoutMinutes = 8
 )
 
 $ErrorActionPreference = "Stop"
@@ -94,24 +96,48 @@ try {
     Write-Section "5. Execute Go coverage"
     if ($RunCoverage) {
         if (-not (Get-Command go -ErrorAction SilentlyContinue)) { throw "go command not found" }
+        $moduleIndex = 0
         foreach ($m in $goMods) {
+            $moduleIndex++
             $moduleDir = Join-Path $RepoRoot ($m.ModulePath -replace '/', [IO.Path]::DirectorySeparatorChar)
             $safe = $m.ModulePath -replace '[^A-Za-z0-9_.-]', '_'
             $cover = Join-Path $DiagDir "$safe.coverage.out"
             $log = Join-Path $DiagDir "$safe.go-test.txt"
+            $timeoutArg = "${GoTestTimeoutMinutes}m"
+            $started = Get-Date
+
+            Write-Host ""
+            Write-Host "[$moduleIndex/$($goMods.Count)] START $($m.ModulePath)"
+            Write-Host "Command: go test -count=1 -timeout $timeoutArg ./... -coverprofile=$cover"
+            Write-Host "Log: $log"
+
             Push-Location $moduleDir
             try {
-                $output = & go test ./... -coverprofile="$cover" 2>&1
+                & go test -count=1 -timeout $timeoutArg ./... -coverprofile="$cover" 2>&1 |
+                    Tee-Object -FilePath $log
                 $exit = $LASTEXITCODE
-                $output | Set-Content -LiteralPath $log -Encoding utf8
-                $total = $null
-                if ($exit -eq 0 -and (Test-Path $cover)) {
-                    $coverText = & go tool cover -func="$cover" 2>&1
-                    $line = $coverText | Select-String '^total:\s+\(statements\)\s+([0-9.]+)%' | Select-Object -Last 1
-                    if ($line) { $total = [double]$line.Matches[0].Groups[1].Value }
-                }
-                $coverageResults += [pscustomobject]@{ ModulePath=$m.ModulePath; ExitCode=$exit; CoveragePercent=$total; InSonarWorkflow=$workflowModules -contains $m.ModulePath }
-            } finally { Pop-Location }
+            } finally {
+                Pop-Location
+            }
+
+            $elapsed = (Get-Date) - $started
+            $total = $null
+            if ($exit -eq 0 -and (Test-Path $cover)) {
+                $coverText = & go tool cover -func="$cover" 2>&1
+                $line = $coverText | Select-String '^total:\s+\(statements\)\s+([0-9.]+)%' | Select-Object -Last 1
+                if ($line) { $total = [double]$line.Matches[0].Groups[1].Value }
+            }
+
+            $coverageResults += [pscustomobject]@{
+                ModulePath = $m.ModulePath
+                ExitCode = $exit
+                CoveragePercent = $total
+                DurationSeconds = [math]::Round($elapsed.TotalSeconds, 1)
+                InSonarWorkflow = $workflowModules -contains $m.ModulePath
+                Log = $log
+            }
+
+            Write-Host "[$moduleIndex/$($goMods.Count)] END $($m.ModulePath) exit=$exit duration=$([math]::Round($elapsed.TotalSeconds,1))s coverage=$total%"
         }
         $coverageResults | Format-Table -AutoSize
         $coverageResults | Export-Csv -NoTypeInformation -Encoding utf8 (Join-Path $DiagDir "go-coverage-results.csv")
