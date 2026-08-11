@@ -1,56 +1,29 @@
-# Global Diagnosis — WLT Finance & Wallet
+# Global Diagnosis — WLT Finance / Wallet Multi-Surface
 
-## Pinned evidence state
+## Candidate
+Re-diagnosed against `BB@4e9f92436046fa1cded26e71250d5bd2db9f598f`. The old package evidence was pinned to `abbas@4445b3e8...`; it is stale for the requested branch. Historical U001-U003 results remain provenance only, not current closure evidence. A concurrent DSH checkout change on this candidate now consumes canonical minor-unit snapshots; it is preserved and treated as relevant input to pricing/PaymentAllocation verification, not as proof that WLT pricing authority is closed.
 
-Diagnosis was performed against `bthwani2-boop/bthwani-suite-next@abbas` SHA `4445b3e8a9d25d0e19d4ee92c6f6a6f5f7e52133`. The current capability Product Truth is `WLT_MONEY_MOVEMENT_SETTLEMENT`; it requires one WLT-owned wallet/ledger truth, authoritative external evidence, atomic captain COD, verified official-wallet destinations, governed manual external settlement, reconciliation and finance-close gates across all five product surfaces.
+## Authority and boundary
+Canonical authority is `wlt-money-movement-settlement.product-truth.json`, `representative-wallets.product-truth.json`, `settlements-commissions.product-truth.json`, then current WLT/DSH contracts, code, migrations and runtime wiring. In scope is only proven finance/wallet ownership, money movement, accounting, financial readback, financial policy/evidence and the runtime/integration wiring required to prove it. Unrelated catalog/HR/maps/media/marketing/identity feature work is excluded unless a direct finance dependency is proven.
 
-## Root-cause findings
+## Confirmed root-cause gaps
+1. Package baseline/evidence was stale and U004/U005 were never executed. U003 also recorded a required failed check while declaring PASS, so prior closure posture was not fail-closed.
+2. Canonical double-entry writes (`wlt_ledger_transactions/lines/accounts`) coexist with legacy `wlt_ledger_entries` and direct `wlt_wallets` balance mutation. Current read/control paths can therefore diverge from canonical accounting.
+3. `settlement/daily_close.go` totals legacy ledger entries and computes unverified manual evidence but proceeds instead of blocking. Close is neither canonical nor fail-closed.
+4. `payout/canonical_payout_destination.go` still defaults to bank and permits bank/mobile-money/manual semantics, conflicting with verified official-wallet destination truth. Manual is execution method, not beneficiary destination type.
+5. Historical U002 evidence found the WLT API runtime wiring a nil wallet DecisionService, causing mutation kill-switch failure before provider flows. This is a package-level runtime blocker, not an acceptable environment waiver.
+6. `penalty/penalty.go` posts canonical ledger transactions and also directly mutates `wlt_wallets`; its HTTP boundary accepts operator-context header input. Penalty was previously unassigned in the package.
+7. `commercial/onboarding_fee.go` uses `float64`, a singleton `id=1` policy without visible operator-context scoping, and lacks durable audit. Subscription lifecycle/payment/compensation is financially material and was omitted.
+8. `promotionfunding` accepts operatorContextId through payload/header and records monetary funding transitions without proving one canonical ledger effect. `pricing/quote.go` accepts price/fee monetary inputs; each must be governed by trusted source ownership, exact minor units, bounds and PaymentAllocation binding.
+9. `dispatchfinancialeligibility` is a material WLT financial decision based on captain wallet/policy; it must consume the same canonical wallet truth and DSH must honor context/policy/TTL without recalculating finance.
+10. Product Truth requires current-candidate readback on app-client, app-partner, app-captain, app-field and control-panel. Static module/screen presence is not runtime, authorization, offline or visual evidence.
 
-### F1 — Strong ledger kernel, incomplete accounting vocabulary
+## Corrected execution ownership
+- U004: official-wallet destination, payout holds/approval, immutable manual settlement, evidence, reconciliation and canonical daily close.
+- U006: canonical ledger/wallet convergence, direct writer retirement, penalty and canonical representative ledger/wallet read model.
+- U007: commercial/subscription/onboarding fee, promotion funding and pricing/PaymentAllocation controls.
+- U008: runtime financial DecisionService/kill-switch, provider-mode/unknown-result readiness, dispatch financial eligibility and DSH retry/outbox integration.
+- U005: final cross-surface finance control/readback and same-SHA end-to-end closure after U004/U006/U007/U008.
 
-`services/wlt/backend/internal/ledger/kernel.go` is already the canonical double-entry writer, has operator-context isolation and rejects idempotency payload conflicts. This should be preserved. The root gap is that account classification recognizes a narrow asset/income set and defaults other non-wallet accounts to liability. The target Cash-In/settlement model needs explicit asset/liability/income/expense classifications and purpose-driven postings. Opening balances and corrections must enter through ledger transactions, never direct balance updates.
-
-### F2 — Payment/provider edge is transport-centric and card-shaped
-
-The payment session implementation has valuable concurrency claims and `provider_result_unknown` handling, but `AuthorizeSessionWithProvider`/`CaptureSessionWithProvider` still call `/financial/card/authorize` and `/financial/card/capture` through a generic POST transport. That shape cannot safely represent official-wallet Cash-In across customer and captain funding. The root correction is a domain rail/registry/router with server-owned financial purpose, while reusing the existing idempotency, unknown-result and authoritative-finalization mechanisms.
-
-### F3 — Captain COD has two incompatible economic models
-
-Current `wlt_cod_records` uses `pending_collection -> collected -> remitted`, including captain collectors. Canonical Product Truth now says the captain-funded path uses one captain wallet, order-specific atomic financial authorization/reserve, cancellation release once, and finalization debit once; it explicitly forbids a second remittance liability for the same order value. The legacy custody/remit path therefore cannot remain active for the same captain effect. Historical rows must remain readable and any genuinely different non-captain custody model must be separately proven before retention as active behavior.
-
-### F4 — Payout destination and execution semantics are obsolete
-
-Current payout governance accepts `bank`, `mobile_money` and `manual`, persists bank/IBAN-oriented fields and has provider submission behavior. The current product decision is official-wallet destinations only for partner/captain/field settlement, with destination verification/versioning and manual external execution performed outside BThwani after approval. `manual` is an execution method, not a destination type. This requires a forward-compatible schema/state migration, not a UI label change.
-
-### F5 — Settlement primitives exist but the complete control chain is not yet proven
-
-The settlement package already contains governed-source, evidence and idempotent-policy primitives plus isolation tests. Reuse them. The missing target is one coherent chain: payout hold -> immutable approval snapshot -> frozen batch/control totals/hash -> controlled XLSX artifact -> manual execution reference/evidence -> independent verification -> authoritative statement matching -> reconciliation exception or completion -> SettlementAuditPack -> DailyFinanceClose. Treasury external-account reconciliation must be a control projection, not a second ledger.
-
-### F6 — Finance control panel reflects the legacy provider-payout model and is fragmented
-
-`PayoutRequestsPanel.tsx` exposes provider-pending/processing states and actions such as “send to provider” and provider inquiry. The WLT route tree separately exposes ledger, payment-session and COD inspectors, while shared finance modules already exist under `services/wlt/frontend/shared/dsh`. The correct change is to consolidate these into one permission-aware Finance Control Center without moving financial authority into the browser.
-
-### F7 — All five surfaces are financially relevant, but with different write rights
-
-The Product Truth explicitly requires app-client, app-captain, app-partner, app-field and control-panel. Customer surfaces create intents/read results; captain additionally sees Cash-In, COD and payout eligibility; partner/field manage verified destinations and settlement requests; control-panel operates finance workflows under server-enforced SoD. Shared WLT/DSH adapters should be extended before adding surface-local logic.
-
-## Competing hypotheses rejected
-
-- “Only the control panel needs change” is false: provider/payment, COD, payout and settlement backend semantics are inconsistent with the target.
-- “Only WLT needs change” is incomplete: DSH operational read/write facades and every required surface consume the financial state.
-- “Reuse the provider payout flow and call it manual” is unsafe because destination identity, execution method, evidence and completion semantics are materially different.
-- “Create a new finance ledger/subledger” is rejected because WLT already owns the canonical double-entry ledger.
-- “Delete the simulator before production” is rejected; mock/sandbox remain test implementations, while production must fail closed without a real adapter.
-- “Copy old finance UX wholesale” is rejected; existing inspectors and components are reusable only where they display canonical WLT state.
-
-## Data and compatibility strategy
-
-All PostgreSQL changes are forward migrations. Use expand -> compatible backfill -> switch writers/readers -> verify -> contract obsolete columns only after compatibility expiry. Never rewrite applied migration history. Preserve historical bank/provider-payout/COD records for audit even when active behavior moves to official-wallet/manual-settlement and funded-wallet COD semantics. Mixed-version mobile/backends must fail safely rather than reinterpret old enum values.
-
-## Security and concurrency risks
-
-Financial object authorization is server-side and operator-context scoped. Sensitive destination identifiers are encrypted at rest and masked by default. Approval/execution/reconciliation identities must be auditable. Duplicate external references, replayed webhooks, batch mutation, destination changes, cross-context reads, double COD reservation, concurrent payout requests, timeout/unknown provider results and restart/retry paths all require explicit tests. No browser-only permission gate is sufficient.
-
-## Verification limitations of this package creation
-
-GitHub Remote provided static repository evidence and write capability only. Shell, database, CI, runtime simulator, provider sandbox/production, E2E and visual capabilities were unavailable, so no test PASS is claimed. Each unit binds implementation acceptance to commands discovered in current manifests/scripts and states what those checks do not prove.
+## Fail-closed rule
+Remain OPEN until one latest candidate proves: single-source accounting, zero unauthorized direct balance writers, trusted operator-context isolation, idempotent/correlation-bound mutations, official-wallet/manual-settlement evidence, ambiguous-result reconciliation, blocking DailyFinanceClose, exact commercial/promotion/pricing money policy, current contracts/generated clients, executable governed runtime financial mutations, dispatch eligibility freshness, DSH retry exactly-once behavior, cross-actor/context negatives, and all five required surfaces. Historical PASS, cached tests, partial pass or environment excuses do not close finance.

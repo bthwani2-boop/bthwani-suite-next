@@ -4,15 +4,16 @@
   "task": {
     "id": "PKG-WLT_FINANCE_WALLET_MULTISURFACE",
     "name": "wlt-finance-wallet-multisurface",
-    "objective": "Diagnose and prepare complete, finance-only implementation for WLT money movement, wallets, payments, Cash-In, COD, commissions, payouts, settlements, reconciliation, treasury and finance control across every materially affected BThwani surface without adding unrelated product scope.",
+    "objective": "Diagnose and prepare root-cause implementation for every finance/wallet concern materially connected to WLT money movement across required BThwani surfaces, while excluding unrelated product scope.",
     "primarySurface": "finance-wallet-domain",
-    "createdAt": "2026-08-08T14:20:00Z"
+    "createdAt": "2026-08-08T14:20:00Z",
+    "rebaselinedAt": "2026-08-11T03:52:19Z"
   },
   "repository": {
     "name": "bthwani2-boop/bthwani-suite-next",
-    "targetBranch": "abbas",
-    "pinnedStartSha": "4445b3e8a9d25d0e19d4ee92c6f6a6f5f7e52133",
-    "latestObservedRemoteSha": "4445b3e8a9d25d0e19d4ee92c6f6a6f5f7e52133"
+    "targetBranch": "BB",
+    "pinnedStartSha": "4e9f92436046fa1cded26e71250d5bd2db9f598f",
+    "latestObservedRemoteSha": "4e9f92436046fa1cded26e71250d5bd2db9f598f"
   },
   "authority": {
     "root": "governance/authority/authority-precedence.json",
@@ -24,8 +25,8 @@
     "diagnosis": "COMPLETE",
     "plan": "READY",
     "implementation": "IN_PROGRESS",
-    "verification": "IN_PROGRESS",
-    "decision": "NEEDS_EVIDENCE"
+    "verification": "NOT_CURRENT",
+    "decision": "OPEN_REQUIRES_IMPLEMENTATION_AND_FRESH_EVIDENCE"
   },
   "disposability": {
     "runtimeDependsOnPackage": false,

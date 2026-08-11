@@ -1,11 +1,9 @@
-# Closure
+# Closure Status — OPEN
 
-This package is **not closed**. It contains a completed diagnosis and a ready execution plan only.
+Baseline: `BB@4e9f92436046fa1cded26e71250d5bd2db9f598f`.
 
-Implementation status: `NOT_STARTED`
-Verification status: `NOT_STARTED`
-Decision: `NEEDS_EVIDENCE`
+The former closure posture is invalid: evidence targeted another branch/SHA; U004/U005 were not executed; U003 contained a failed required check; and current BB code exposes finance gaps omitted by the old map.
 
-Closure may be claimed only after every registered unit is `DONE`, required checks are recorded against the resulting candidate SHA, financial reconciliation/negative-path evidence is attached, no blocker or deviation remains, and `validate-package.mjs --strict --closure` passes in an environment with shell capability.
+Blocking classes: canonical ledger versus legacy wallet/ledger divergence; official-wallet/manual-settlement mismatch; non-canonical/non-blocking DailyFinanceClose; runtime financial decision wiring; penalty direct balance mutation/trusted-scope gap; omitted commercial/subscription/onboarding finance; omitted promotion-funding/pricing controls; dispatch-financial-eligibility integration; and same-candidate five-surface/runtime/security evidence.
 
-The package is derived support and may be removed when safely superseded or no longer consumed; Git history remains the archive.
+Do not mark DONE until U004, U006, U007, U008 and U005 are complete on one newest candidate and all required checks pass. Historical results are provenance only.
