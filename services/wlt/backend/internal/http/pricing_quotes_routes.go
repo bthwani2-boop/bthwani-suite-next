@@ -8,16 +8,18 @@ import (
 	"wlt-api/internal/shared"
 )
 
+// HandleCalculateQuote serves POST /wlt/internal/quotes/calculate. DSH supplies
+// operational inputs and consumes the returned quote as-is; every bound and
+// every money figure is decided by pricing.CalculateQuote, which is the only
+// authority for cart money. The handler therefore validates shape, not amounts:
+// duplicating the amount rules here would create a second, drifting authority.
 func HandleCalculateQuote() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req pricing.CalculateQuoteRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid JSON payload")
-			return
-		}
-
-		if req.ClientID == "" || req.StoreID == "" || req.Currency == "" || len(req.Lines) == 0 {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "clientId, storeId, currency, and lines are required")
+		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1024*1024))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&req); err != nil {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid quote request payload")
 			return
 		}
 
@@ -27,10 +29,6 @@ func HandleCalculateQuote() http.HandlerFunc {
 			return
 		}
 
-		resp := pricing.PricingQuoteResponse{
-			Quote: *quote,
-		}
-
-		shared.SendJSON(w, http.StatusOK, resp)
+		shared.SendJSON(w, http.StatusOK, pricing.PricingQuoteResponse{Quote: *quote})
 	}
 }

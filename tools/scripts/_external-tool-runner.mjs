@@ -84,7 +84,7 @@ export function walkFiles(rootDirs, predicate) {
   return out;
 }
 
-function handleMissingBinary(toolId, binary, required) {
+export function handleMissingBinary(toolId, binary, required) {
   const activation = readActivation(toolId);
   const diagnostic = isDiagnosticMode();
   const enforce = required && !diagnostic;
@@ -109,7 +109,7 @@ function handleMissingBinary(toolId, binary, required) {
   process.exit(1);
 }
 
-function handleCommandFailure(toolId, required) {
+export function handleCommandFailure(toolId, required) {
   const activation = readActivation(toolId);
   const diagnostic = isDiagnosticMode();
   const enforce = required && !diagnostic;

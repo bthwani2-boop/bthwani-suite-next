@@ -21,6 +21,7 @@ paths:
       tags: [ WltPricing ]
       security: [ { serviceBearer: [] } ]
       parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
       requestBody:

@@ -11,6 +11,7 @@ modules:
   - wlt.payments.openapi.yaml
   - wlt.payout-failure-boundary.openapi.yaml
   - wlt.payouts-destinations.openapi.yaml
+  - wlt.pricing-quotes.openapi.yaml
   - wlt.promotion-funding.openapi.yaml
   - wlt.refunds.openapi.yaml
   - wlt.settlement-operations.openapi.yaml

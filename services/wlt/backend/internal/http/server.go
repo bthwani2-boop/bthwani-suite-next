@@ -188,6 +188,14 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	mutation("POST /wlt/payout-requests/{payoutId}/complete", payout.HandleCompletePayoutRequestSovereign(db))
 	mutation("POST /wlt/payout-requests/{payoutId}/fail", payout.HandleFailPayoutRequestClosed())
 
+	// WLT owns every money figure in a cart, so DSH sends operational inputs
+	// here and consumes the returned quote as-is. The handler existed and DSH
+	// already called this exact path, but nothing registered it: pricing
+	// answered 404 and DSH silently lost the sovereign quote. It is classified
+	// as a mutation because it is a POST on the financial surface, which keeps
+	// it behind service authentication and the finance kill switch.
+	mutation("POST /wlt/internal/quotes/calculate", HandleCalculateQuote())
+
 	read("GET /wlt/commercial/store-onboarding-fee", commercial.HandleGetStoreOnboardingFeePolicy(db))
 	mutation("PUT /wlt/commercial/store-onboarding-fee", commercial.HandleUpsertStoreOnboardingFeePolicy(db))
 	read("GET /wlt/commercial/summary", commercial.HandleGetSummary(db))
