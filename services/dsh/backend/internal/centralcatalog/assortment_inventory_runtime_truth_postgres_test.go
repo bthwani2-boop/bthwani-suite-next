@@ -39,13 +39,14 @@ func TestInventoryMutationSynchronizesAssortmentProjectionDBIntegration(t *testi
 	domainID := "inventory-truth-domain-" + suffix
 	productID := "inventory-truth-product-" + suffix
 	assortmentID := "inventory-truth-assortment-" + suffix
+	operatorContextID := "inventory-truth-context-" + suffix
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (
 			id, slug, display_name, status, city_code, service_area_code,
-			serviceability_status, is_visible
-		) VALUES ($1,$1,'Inventory Truth Store','published','SAN','SAN-1','serviceable',true)`, storeID); err != nil {
-		t.Fatalf("insert store: %v", err)
+			serviceability_status, is_visible, operator_context_id
+		) VALUES ($1,$1,'Inventory Truth Store','published','SAN','SAN-1','serviceable',true,$2)`, storeID, operatorContextID); err != nil {
+		t.Fatalf("insert governed store: %v", err)
 	}
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_catalog_domains (id, slug, name_ar)
@@ -59,6 +60,11 @@ func TestInventoryMutationSynchronizesAssortmentProjectionDBIntegration(t *testi
 		t.Fatalf("insert product: %v", err)
 	}
 	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_store_catalog_domains (store_id, domain_id, status, approved_at)
+		VALUES ($1,$2,'approved',NOW())`, storeID, domainID); err != nil {
+		t.Fatalf("approve governed store domain: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_store_assortments (
 			id, store_id, master_product_id, unit_price, currency,
 			available, stock_status, publication_status
@@ -70,6 +76,7 @@ func TestInventoryMutationSynchronizesAssortmentProjectionDBIntegration(t *testi
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_assortment_inventory WHERE store_assortment_id=$1`, assortmentID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_assortments WHERE id=$1`, assortmentID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_master_products WHERE id=$1`, productID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_catalog_domains WHERE store_id=$1`, storeID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_catalog_domains WHERE id=$1`, domainID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id=$1`, storeID)
 	})
@@ -92,10 +99,7 @@ func TestInventoryMutationSynchronizesAssortmentProjectionDBIntegration(t *testi
 		t.Helper()
 		var available bool
 		var stockStatus string
-		if err := db.QueryRowContext(ctx, `
-			SELECT available, stock_status
-			FROM dsh_store_assortments
-			WHERE id=$1`, assortmentID).Scan(&available, &stockStatus); err != nil {
+		if err := db.QueryRowContext(ctx, `SELECT available, stock_status FROM dsh_store_assortments WHERE id=$1`, assortmentID).Scan(&available, &stockStatus); err != nil {
 			t.Fatalf("read projection: %v", err)
 		}
 		if available != wantAvailable || stockStatus != wantStockStatus {
@@ -104,7 +108,6 @@ func TestInventoryMutationSynchronizesAssortmentProjectionDBIntegration(t *testi
 	}
 
 	assertProjection(true, "in_stock")
-
 	updated, err := UpsertAssortmentInventoryWithRuntimeTruthAtomic(ctx, db, storeID, productID, "operator-test", StoreAssortmentInventoryInput{
 		PolicyType:       "signal",
 		Quantity:         0,
