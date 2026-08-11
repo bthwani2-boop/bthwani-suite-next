@@ -7,6 +7,7 @@ const validationMigrationFile = "core/platform-control/database/migrations/platf
 const sensitiveBoundaryMigrationFile = "core/platform-control/database/migrations/platform-006_sensitive_change_boundary.sql";
 const contractFile = "core/platform-control/contracts/platform-change-sets.openapi.yaml";
 const generatedClientFile = "core/platform-control/clients/generated/platform-control-api.ts";
+const generatedBundleFile = "core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml";
 const typecheckFile = "services/dsh/tsconfig.platform-change-sets.json";
 const visualizationProofFile = "services/dsh/tests/platform-governance-visualization.test.mjs";
 const strictBoundaryProofFile = "core/platform-control/backend/internal/platformcontrol/change_set_strict_boundary_test.go";
@@ -28,6 +29,7 @@ const requiredFiles = [
   "core/platform-control/backend/internal/http/workflow_handlers.go",
   httpProofFile,
   contractFile,
+  generatedBundleFile,
   generatedClientFile,
   typecheckFile,
   "services/dsh/frontend/shared/platform/platform-control.api.ts",
@@ -47,6 +49,13 @@ function requireText(file, tokens) {
   const content = fs.readFileSync(file, "utf8");
   for (const token of tokens) {
     if (!content.includes(token)) failures.push(`missing-token:${file}:${token}`);
+  }
+}
+
+function forbidText(file, tokens) {
+  const content = fs.readFileSync(file, "utf8");
+  for (const token of tokens) {
+    if (content.includes(token)) failures.push(`forbidden-token:${file}:${token}`);
   }
 }
 
@@ -187,8 +196,13 @@ if (failures.length === 0) {
     "platform_change_sets:",
     "name: Verify platform change-set binding",
     "pnpm --dir services/dsh exec tsc -p tsconfig.platform-change-sets.json --noEmit --pretty false",
-    "openapi-typescript ../../core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml",
+    "git diff --exit-code --",
+    generatedBundleFile,
+    generatedClientFile,
     "node tools/guards/platform-change-sets-gate.mjs",
+  ]);
+  forbidText(verificationWorkflowFile, [
+    "openapi-typescript ../../core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml",
   ]);
 }
 
