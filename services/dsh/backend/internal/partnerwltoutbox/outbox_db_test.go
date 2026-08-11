@@ -151,12 +151,12 @@ func TestPartnerWltReconciliationCreatesAndResolvesMaskedReadbackCaseDBIntegrati
 				"id":                            "wpd-reconciliation-ref",
 				"ownerActorId":                  partnerID,
 				"ownerActorType":                "partner",
-				"destinationMethod":             "bank",
+				"officialWalletProviderKey":     "test_official_wallet",
+				"destinationVersion":            1,
+				"destinationMethod":             "official_wallet",
 				"maskedDestinationReference":    "********5678",
 				"destinationVerificationStatus": "unverified",
 				"beneficiaryName":               "Partner Owner",
-				"bankName":                      "Test Bank",
-				"bankBranch":                    "Main",
 				"active":                        active,
 				"updatedAt":                     time.Now().UTC().Format(time.RFC3339Nano),
 			},
@@ -183,7 +183,7 @@ func TestPartnerWltReconciliationCreatesAndResolvesMaskedReadbackCaseDBIntegrati
 	if _, err := db.Exec(`
 		UPDATE dsh_partners SET
 			payout_destination_id = 'wpd-reconciliation-ref',
-			destination_method = 'bank',
+			destination_method = 'official_wallet',
 			masked_destination_reference = '********5678',
 			destination_verification_status = 'unverified'
 		WHERE id = $1`, partnerID); err != nil {

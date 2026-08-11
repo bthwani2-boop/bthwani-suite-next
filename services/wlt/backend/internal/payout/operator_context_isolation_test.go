@@ -9,8 +9,10 @@ package payout
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -18,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"wlt-api/internal/ledger"
 	"wlt-api/internal/shared"
 )
 
@@ -34,6 +37,50 @@ func seedOfficialWalletProvider(t *testing.T, db *sql.DB, operatorContextID stri
 		ON CONFLICT (operator_context_id, provider_key) DO UPDATE SET active=true`,
 		operatorContextID, testOfficialWalletProviderKey); err != nil {
 		t.Fatalf("seed official wallet provider for %s: %v", operatorContextID, err)
+	}
+}
+
+// canonicalizePayoutTestWallet upgrades an old test fixture that populated
+// wlt_wallets directly into the same canonical opening-balance model used by
+// production. It is deliberately test-only: current financial code must never
+// infer ledger truth from the materialized projection. The historical payout
+// tests already set settled_total_minor_units to their intended fixture balance,
+// which provides a deterministic amount for this one-time test conversion.
+func canonicalizePayoutTestWallet(t *testing.T, db *sql.DB, operatorContextID, actorID string) {
+	t.Helper()
+	var settled int64
+	var currency string
+	err := db.QueryRow(`SELECT settled_total_minor_units,currency
+		FROM wlt_wallets
+		WHERE operator_context_id=$1 AND actor_type='field' AND actor_id=$2`, operatorContextID, actorID).Scan(&settled, &currency)
+	if errors.Is(err, sql.ErrNoRows) {
+		return
+	}
+	if err != nil {
+		t.Fatalf("read payout test wallet fixture: %v", err)
+	}
+	if settled <= 0 {
+		return
+	}
+	ctx := shared.WithOperatorContext(context.Background(), operatorContextID)
+	projection, err := ledger.GetWalletLedgerProjection(ctx, db, "field", actorID, currency)
+	if err != nil {
+		t.Fatalf("read canonical payout test wallet projection: %v", err)
+	}
+	if projection != nil {
+		return
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("begin canonical payout test wallet seed: %v", err)
+	}
+	defer tx.Rollback() //nolint:errcheck
+	if _, err := ledger.PostOpeningBalance(ctx, tx, "field", actorID, currency, settled,
+		"payout-test-opening:"+actorID, ledger.Actor{ID: "payout-test", Type: "test"}); err != nil {
+		t.Fatalf("post canonical payout test opening balance: %v", err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("commit canonical payout test opening balance: %v", err)
 	}
 }
 
@@ -88,6 +135,7 @@ func verifyOfficialWalletDestination(t *testing.T, db *sql.DB, operatorContextID
 // active, verified official-wallet destination owned by the beneficiary.
 func executeDestinationUpsert(t *testing.T, db *sql.DB, operatorContextID, actorID, correlationID string) governedDestinationRef {
 	t.Helper()
+	canonicalizePayoutTestWallet(t, db, operatorContextID, actorID)
 	seedOfficialWalletProvider(t, db, operatorContextID)
 	destination, code := upsertOfficialWalletDestination(t, db, operatorContextID, actorID, "1234567890", "dest-"+correlationID, correlationID)
 	if code != http.StatusCreated {
@@ -108,6 +156,7 @@ func executeDestinationUpsert(t *testing.T, db *sql.DB, operatorContextID, actor
 
 func executePayoutCreate(t *testing.T, db *sql.DB, operatorContextID, actorID, destinationID, idempotencyKey string, amount int64) *httptest.ResponseRecorder {
 	t.Helper()
+	canonicalizePayoutTestWallet(t, db, operatorContextID, actorID)
 	body, err := json.Marshal(map[string]any{
 		"beneficiaryActorId": actorID,
 		"beneficiaryActorType": "field",
