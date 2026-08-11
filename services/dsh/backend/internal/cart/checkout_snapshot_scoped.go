@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math"
 )
 
 var ErrVersionConflict = errors.New("cart version conflict")
@@ -24,8 +23,9 @@ type GovernedCheckoutSnapshot struct {
 }
 
 // ComputeCheckoutSnapshotTx locks the authenticated active cart, verifies the
-// caller's expected version, then prices every item from the persisted cart
-// snapshot. It fails before checkout creation if the cart changed concurrently.
+// caller's expected version, then prices every item from the canonical integer
+// minor-unit snapshot written at add-to-cart time. It fails before checkout
+// creation if the cart changed concurrently or contains an unpriced item.
 func ComputeCheckoutSnapshotTx(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -54,7 +54,7 @@ func ComputeCheckoutSnapshotTx(
 	}
 
 	rows, err := tx.QueryContext(ctx, `
-		SELECT product_id,quantity,unit_price,currency
+		SELECT product_id,quantity,unit_price_minor,currency
 		FROM dsh_cart_items
 		WHERE cart_id=$1::uuid
 		ORDER BY created_at,id`, cartID)
@@ -72,12 +72,12 @@ func ComputeCheckoutSnapshotTx(
 	for rows.Next() {
 		var productID string
 		var quantity int
-		var unitPrice float64
+		var unitMinorUnits int64
 		var itemCurrency string
-		if err := rows.Scan(&productID, &quantity, &unitPrice, &itemCurrency); err != nil {
+		if err := rows.Scan(&productID, &quantity, &unitMinorUnits, &itemCurrency); err != nil {
 			return nil, err
 		}
-		if quantity <= 0 || unitPrice <= 0 || math.IsNaN(unitPrice) || math.IsInf(unitPrice, 0) {
+		if quantity <= 0 || unitMinorUnits <= 0 {
 			return nil, ErrCartItemMissingPrice
 		}
 		if itemCurrency == "" {
@@ -88,9 +88,8 @@ func ComputeCheckoutSnapshotTx(
 		} else if currency != itemCurrency {
 			return nil, ErrCartItemCurrency
 		}
-		unitMinorUnits := int64(math.Round(unitPrice * 100))
-		if unitMinorUnits <= 0 || int64(quantity) > maxInt64/unitMinorUnits {
-			return nil, ErrCartItemMissingPrice
+		if int64(quantity) > maxInt64/unitMinorUnits {
+			return nil, fmt.Errorf("%w: cart line total exceeds supported range", ErrInvalid)
 		}
 		lineTotal := unitMinorUnits * int64(quantity)
 		if lineTotal > maxInt64-subtotal {
