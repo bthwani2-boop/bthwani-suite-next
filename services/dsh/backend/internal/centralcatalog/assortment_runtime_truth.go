@@ -77,20 +77,36 @@ func assortmentTruthPurchasable(truth assortmentRuntimeTruth) bool {
 	}
 }
 
+func assortmentTruthStockStatus(truth assortmentRuntimeTruth) string {
+	if !assortmentTruthPurchasable(truth) {
+		return "out_of_stock"
+	}
+	if truth.PolicyType == "infinite" {
+		return "in_stock"
+	}
+	available := truth.Quantity
+	if truth.PolicyType == "quantity" {
+		available = truth.Quantity - truth.ReservedQuantity
+	}
+	if available <= 5 {
+		return "low_stock"
+	}
+	return "in_stock"
+}
+
 func projectAssortmentRuntimeTruth(a StoreAssortment, truth assortmentRuntimeTruth) StoreAssortment {
 	a.UnitPrice = float64(truth.AmountMinor) / 100
 	a.Currency = truth.Currency
-	if !assortmentTruthPurchasable(truth) {
-		a.Available = false
-		a.StockStatus = "out_of_stock"
-	}
+	a.Available = assortmentTruthPurchasable(truth)
+	a.StockStatus = assortmentTruthStockStatus(truth)
 	return a
 }
 
 // ListStoreAssortmentRuntimeTruth keeps operator/partner/field reads on the
 // same effective price and inventory authority used by cart. The legacy
-// unit_price/currency columns remain a compatibility bootstrap only; they are
-// never returned as current pricing once normalized truth exists.
+// unit_price/currency/available/stock_status columns remain compatibility
+// bootstrap projections only; they are never returned as current commercial
+// truth once normalized price/inventory exists.
 func ListStoreAssortmentRuntimeTruth(ctx context.Context, db *sql.DB, storeID string) ([]StoreAssortment, error) {
 	items, err := ListStoreAssortment(ctx, db, storeID)
 	if err != nil {
@@ -199,9 +215,10 @@ func validateAssortmentImageForClientVisibility(ctx context.Context, tx *sql.Tx,
 // edits require the exact current expectedVersion. A transaction-scoped
 // advisory lock serializes both absent-row creation and existing-row updates
 // for the same store/product key, then the row is locked before an edit.
-// Normalized price/inventory bootstrap happens inside the same transaction,
-// and a metadata edit can never overwrite an existing normalized price with a
-// stale legacy unitPrice. Dedicated inventory/price endpoints own subsequent
+// Normalized price/inventory bootstrap happens inside the same transaction.
+// Once normalized commercial truth exists, price, currency, availability and
+// stock status are projections of that truth and cannot be overwritten by a
+// stale metadata payload. Dedicated inventory/price endpoints own subsequent
 // commercial changes.
 func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID string, input StoreAssortmentInput, allowCustomImage bool) (StoreAssortment, error) {
 	storeID = strings.TrimSpace(storeID)
@@ -300,14 +317,20 @@ func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, stor
 		}
 		a = created
 	} else {
-		// Preserve normalized current price/currency. The metadata endpoint owns
-		// neither once a normalized schedule exists.
-		truth, truthErr := readAssortmentRuntimeTruth(ctx, tx, existing.ID)
 		legacyUnitPrice := input.UnitPrice
 		legacyCurrency := currency
+		legacyAvailable := input.Available
+		legacyStockStatus := stockStatus
+
+		// Preserve every normalized commercial field once the normalized records
+		// exist. Metadata writes may change notes/images/publication, but only the
+		// dedicated price/inventory endpoints may change commercial truth.
+		truth, truthErr := readAssortmentRuntimeTruth(ctx, tx, existing.ID)
 		if truthErr == nil {
 			legacyUnitPrice = float64(truth.AmountMinor) / 100
 			legacyCurrency = truth.Currency
+			legacyAvailable = assortmentTruthPurchasable(truth)
+			legacyStockStatus = assortmentTruthStockStatus(truth)
 		} else if !errors.Is(truthErr, ErrNotFound) {
 			return StoreAssortment{}, truthErr
 		}
@@ -326,7 +349,7 @@ func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, stor
 				version=version+1
 			WHERE id=$9 AND version=$10
 			RETURNING `+assortmentColumns,
-			legacyUnitPrice, legacyCurrency, input.Available, stockStatus, input.LocalNote,
+			legacyUnitPrice, legacyCurrency, legacyAvailable, legacyStockStatus, input.LocalNote,
 			input.CustomImageObjectKey, publicationStatus, actorID, existing.ID, *input.ExpectedVersion)
 		updated, updateErr := scanAssortment(row)
 		if errors.Is(updateErr, ErrNotFound) {
