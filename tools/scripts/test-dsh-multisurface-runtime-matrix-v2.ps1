@@ -49,7 +49,11 @@ function Invoke-Api {
   $Response = Invoke-WebRequest @Request
   $Json = $null
   if (-not [string]::IsNullOrWhiteSpace($Response.Content)) {
-    try { $Json = $Response.Content | ConvertFrom-Json } catch { }
+    try {
+      $Json = $Response.Content | ConvertFrom-Json
+    } catch {
+      $Json = $null
+    }
   }
   return [pscustomobject]@{
     Status = [int]$Response.StatusCode
@@ -333,6 +337,7 @@ Require ((Find-Id @((Get-Value $OperatorOrders.Json 'orders')) $OrderId).Count -
 $AssignmentCreate = Invoke-Api POST "$DshBaseUrl/dsh/operator/dispatch/assignments" (Headers $Operator "assignment-create") @{
   orderId = $OrderId
   captainId = $Captain.Subject
+  serviceAreaCode = $StorePoint.ServiceAreaCode
 }
 Require-Status $AssignmentCreate @(201) "operator assignment"
 $AssignmentId = "$(Get-Value (Get-Value $AssignmentCreate.Json 'assignment') 'id')"
@@ -341,6 +346,7 @@ Require (-not [string]::IsNullOrWhiteSpace($AssignmentId)) "assignment returned 
 $DuplicateAssignment = Invoke-Api POST "$DshBaseUrl/dsh/operator/dispatch/assignments" (Headers $Operator "assignment-duplicate") @{
   orderId = $OrderId
   captainId = $Captain.Subject
+  serviceAreaCode = $StorePoint.ServiceAreaCode
 }
 Require-Status $DuplicateAssignment @(409) "duplicate assignment"
 
@@ -440,14 +446,20 @@ $RepeatedProof = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$
 }
 Require-Status $RepeatedProof @(409) "new delivery proof after completion"
 
-$CaptainFinalAssignments = Invoke-Api GET "$DshBaseUrl/dsh/captain/dispatch/assignments" (Headers $Captain "captain-final" -ReadOnly)
-Require-Status $CaptainFinalAssignments @(200) "captain final assignments"
-$DeliveredMatches = Find-Id @((Get-Value $CaptainFinalAssignments.Json 'assignments')) $AssignmentId
-Require ($DeliveredMatches.Count -eq 1) "completed assignment disappeared from captain readback"
+$CaptainActiveAfterCompletion = Invoke-Api GET "$DshBaseUrl/dsh/captain/dispatch/assignments" (Headers $Captain "captain-after-completion" -ReadOnly)
+Require-Status $CaptainActiveAfterCompletion @(200) "captain active assignments after completion"
+Require ((Find-Id @((Get-Value $CaptainActiveAfterCompletion.Json 'assignments')) $AssignmentId).Count -eq 0) "completed assignment remained in captain active inbox"
+
+$OperatorFinalAssignments = Invoke-Api GET "$DshBaseUrl/dsh/operator/dispatch/assignments" (Headers $Operator "operator-final-assignments" -ReadOnly)
+Require-Status $OperatorFinalAssignments @(200) "operator final assignments"
+$DeliveredMatches = Find-Id @((Get-Value $OperatorFinalAssignments.Json 'assignments')) $AssignmentId
+Require ($DeliveredMatches.Count -eq 1) "completed assignment disappeared from operator history"
 $DeliveredAssignment = $DeliveredMatches[0]
 Require ("$(Get-Value $DeliveredAssignment 'status')" -eq "completed") "assignment did not complete"
 Require ("$(Get-Value (Get-Value $DeliveredAssignment 'delivery') 'status')" -eq "delivered") "delivery did not complete"
 Require ($null -eq (Get-Value $DeliveredAssignment 'lastLatitude')) "captain location was not purged"
+Require ($null -eq (Get-Value $DeliveredAssignment 'lastLongitude')) "captain longitude was not purged"
+Require ($null -eq (Get-Value $DeliveredAssignment 'locationRecordedAt')) "captain location timestamp was not purged"
 
 $FinalClient = Invoke-Api GET "$DshBaseUrl/dsh/client/orders/$OrderId" (Headers $Client "client-final" -ReadOnly)
 Require-Status $FinalClient @(200) "client delivered readback"
@@ -557,11 +569,13 @@ Require ("$(Get-Value $PrematureCompletion.Json 'code')" -eq "CHECKLIST_INCOMPLE
     "order replay idempotency and assignment duplicate rejection",
     "versioned idempotent partner order decision",
     "partner preparation lifecycle",
-    "operator dispatch",
-    "captain state ordering and live tracking",
+    "operator dispatch with explicit service-area authority",
+    "captain active-inbox ownership and live tracking",
     "arrival geofence coordinates",
     "fail-closed store-captain handoff",
     "governed delivery PIN and idempotent proof acceptance",
+    "completed assignment removal from captain active inbox",
+    "operator historical completion readback",
     "location purge on terminal delivery",
     "exactly one durable DSH-to-WLT delivery event",
     "field mocked-GPS rejection and work queue",
