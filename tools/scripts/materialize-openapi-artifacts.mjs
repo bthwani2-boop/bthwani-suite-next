@@ -3,9 +3,9 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
+import openapiTS, { astToString } from "openapi-typescript";
 import { composeAllContexts, repositoryRoot } from "./openapi-context-composer.mjs";
-import { resolvePackageManagerInvocation } from "./lib/package-manager-invocation.mjs";
 
 const MATERIALIZATION_SCHEMA_VERSION = 1;
 const registryPath = path.join(repositoryRoot, "governance/contracts/generated-client-registry.json");
@@ -58,11 +58,55 @@ function sameHashes(expected, actual, relativePaths) {
   return relativePaths.every((relativePath) => expected[relativePath] === actual[relativePath]);
 }
 
-function fail(message, result) {
-  if (result?.stdout) process.stdout.write(result.stdout);
-  if (result?.stderr) process.stderr.write(result.stderr);
+function fail(message) {
   console.error(`openapi-materialization: FAIL ${message}`);
   process.exit(1);
+}
+
+function writeComposedBundles(composition) {
+  for (const composed of composition) {
+    const bundlePath = path.join(repositoryRoot, composed.bundlePath);
+    fs.mkdirSync(path.dirname(bundlePath), { recursive: true });
+    const bundle = normalizeText(
+      composed.bundle.endsWith("\n") ? composed.bundle : `${composed.bundle}\n`,
+    );
+    fs.writeFileSync(bundlePath, bundle, "utf8");
+  }
+}
+
+async function generateRegisteredClients(registry, composition) {
+  const composedByContext = new Map(composition.map((entry) => [entry.context, entry]));
+
+  for (const entry of registry.entries) {
+    if (entry.mode !== "OPENAPI_TYPESCRIPT") {
+      fail(`unsupported generated-client mode ${String(entry.mode)} for ${entry.context}`);
+    }
+
+    const composed = composedByContext.get(entry.context);
+    if (!composed) {
+      fail(`registry context ${entry.context} has no composed OpenAPI bundle`);
+    }
+    if (composed.bundlePath !== entry.contract) {
+      fail(
+        `registry contract mismatch for ${entry.context}: expected ${composed.bundlePath}, got ${entry.contract}`,
+      );
+    }
+
+    const contractPath = path.join(repositoryRoot, entry.contract);
+    const clientPath = path.join(repositoryRoot, entry.client);
+    if (!fs.existsSync(contractPath)) {
+      fail(`missing materialized contract ${entry.contract}`);
+    }
+
+    const ast = await openapiTS(pathToFileURL(contractPath));
+    const generated = normalizeText(astToString(ast));
+    fs.mkdirSync(path.dirname(clientPath), { recursive: true });
+    fs.writeFileSync(
+      clientPath,
+      generated.endsWith("\n") ? generated : `${generated}\n`,
+      "utf8",
+    );
+  }
 }
 
 const registry = readJson(registryPath);
@@ -93,22 +137,8 @@ if (
   process.exit(0);
 }
 
-const invocation = resolvePackageManagerInvocation(
-  "pnpm",
-  ["run", "openapi:generate:all"],
-  process.env,
-);
-const result = spawnSync(invocation.executable, invocation.args, {
-  cwd: repositoryRoot,
-  env: { ...process.env, BTHWANI_OPENAPI_MATERIALIZING: "1" },
-  encoding: "utf8",
-  shell: false,
-  windowsHide: true,
-});
-
-if (result.error) fail(`generation could not start: ${result.error.message}`, result);
-if (result.signal) fail(`generation terminated by signal ${result.signal}`, result);
-if (result.status !== 0) fail(`generation exited with code ${result.status ?? 1}`, result);
+writeComposedBundles(composition);
+await generateRegisteredClients(registry, composition);
 
 for (const composed of composition) {
   const bundlePath = path.join(repositoryRoot, composed.bundlePath);
@@ -134,6 +164,4 @@ fs.writeFileSync(stampPath, `${JSON.stringify({
   artifacts: generatedHashes,
 }, null, 2)}\n`, "utf8");
 
-if (result.stdout) process.stdout.write(result.stdout);
-if (result.stderr) process.stderr.write(result.stderr);
 console.log(`openapi-materialization: PASS mode=regenerate contexts=${composition.length} artifacts=${relativeArtifacts.length}`);
