@@ -18,10 +18,12 @@ import (
 // governance/catalog/CENTRAL_CATALOG_SOVEREIGNTY_DECISION.md rule 4, it reads
 // only from the master catalog + store assortment, then applies the same
 // normalized price/inventory authority used by cart. A product cannot be
-// advertised to app-client unless it is actually purchasable now.
+// advertised to app-client unless it is actually purchasable now, and every
+// returned taxonomy/media/policy projection is pruned to that exact final
+// product set.
 func handlePublicCatalog(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		domains, nodes, products, media, policySnapshot, err := centralcatalog.GetClientCatalog(r.Context(), db, r.PathValue("storeId"))
+		domains, nodes, products, catalogMedia, policySnapshot, err := centralcatalog.GetClientCatalog(r.Context(), db, r.PathValue("storeId"))
 		if errors.Is(err, centralcatalog.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "approved catalog not found")
 			return
@@ -36,11 +38,12 @@ func handlePublicCatalog(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		domains, nodes = centralcatalog.FilterClientCatalogDimensions(domains, nodes, products)
+		catalogMedia, policySnapshot = centralcatalog.FilterClientCatalogAuxiliaryProjection(catalogMedia, policySnapshot, products)
 		store.SendJSON(w, http.StatusOK, map[string]any{
 			"domains":        domains,
 			"nodes":          nodes,
 			"products":       products,
-			"media":          media,
+			"media":          catalogMedia,
 			"policySnapshot": policySnapshot,
 		})
 	}
