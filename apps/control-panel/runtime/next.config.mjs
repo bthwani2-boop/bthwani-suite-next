@@ -41,6 +41,7 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactCompiler: true,
+  allowedDevOrigins: ["192.168.0.100"],
   env: {
     // Compile-time transport switch consumed only by shared frontend resolvers.
     // Upstream service URLs remain server-only inside src/server/bff-proxy.ts.
