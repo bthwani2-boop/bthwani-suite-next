@@ -15,32 +15,31 @@ var ErrPayoutDestinationNotFound = errors.New("WLT payout destination not found"
 
 // partnerPayoutDestinationPath addresses the canonical WLT typed payout
 // destination resource for a partner. WLT retired the partner-only
-// /wlt/payout-destinations/{partnerId} shape (see
-// services/wlt/backend/internal/http/retired_financial_routes_test.go); the
-// governed contract is wlt.payouts-destinations.openapi.yaml, keyed by
+// /wlt/payout-destinations/{partnerId} shape; the governed contract is keyed by
 // {actorType}/{actorId}, and "partner" is one actor type among several.
 func partnerPayoutDestinationPath(partnerID string) string {
 	return "/wlt/payout-destinations/partner/" + url.PathEscape(partnerID)
 }
 
-// PayoutDestinationUpsertInput contains raw payout details only while the
-// request is in flight to WLT. DSH must never persist these raw values.
+// PayoutDestinationUpsertInput is intentionally official-wallet-only. DSH may
+// relay the unmasked reference to WLT for this request, but must never persist
+// or return it. DestinationMethod is WLT-owned and therefore is not caller input.
 type PayoutDestinationUpsertInput struct {
-	BeneficiaryName      string `json:"beneficiaryName"`
-	DestinationMethod    string `json:"destinationMethod"`
-	DestinationReference string `json:"destinationReference"`
-	CreatedByActorID     string `json:"operatorId"`
-	CorrelationID        string `json:"-"`
-	IdempotencyKey       string `json:"-"`
+	BeneficiaryName           string `json:"beneficiaryName"`
+	OfficialWalletProviderKey string `json:"officialWalletProviderKey"`
+	DestinationReference      string `json:"destinationReference"`
+	CreatedByActorID          string `json:"operatorId"`
+	CorrelationID             string `json:"-"`
+	IdempotencyKey            string `json:"-"`
 }
 
-// PayoutDestinationRef mirrors PayoutDestination in
-// services/wlt/contracts/wlt.payouts-destinations.openapi.yaml. Ownership is
-// expressed as an actor pair, not as a bare partner id.
+// PayoutDestinationRef mirrors the canonical WLT PayoutDestination response.
 type PayoutDestinationRef struct {
 	ID                            string `json:"id"`
 	OwnerActorID                  string `json:"ownerActorId"`
 	OwnerActorType                string `json:"ownerActorType"`
+	OfficialWalletProviderKey     string `json:"officialWalletProviderKey"`
+	DestinationVersion            int    `json:"destinationVersion"`
 	DestinationMethod             string `json:"destinationMethod"`
 	MaskedDestinationReference    string `json:"maskedDestinationReference"`
 	DestinationVerificationStatus string `json:"destinationVerificationStatus"`
@@ -49,8 +48,6 @@ type PayoutDestinationRef struct {
 	UpdatedAt                     string `json:"updatedAt"`
 }
 
-// payoutDestinationEnvelope mirrors PayoutDestinationEnvelope; WLT wraps every
-// destination response in a single named member.
 type payoutDestinationEnvelope struct {
 	PayoutDestination PayoutDestinationRef `json:"payoutDestination"`
 }
@@ -61,11 +58,11 @@ func (c *Client) UpsertPayoutDestination(ctx context.Context, partnerID string, 
 	}
 	partnerID = strings.TrimSpace(partnerID)
 	input.BeneficiaryName = strings.TrimSpace(input.BeneficiaryName)
-	input.DestinationMethod = strings.TrimSpace(input.DestinationMethod)
+	input.OfficialWalletProviderKey = strings.ToLower(strings.TrimSpace(input.OfficialWalletProviderKey))
 	input.DestinationReference = strings.TrimSpace(input.DestinationReference)
 	input.CreatedByActorID = strings.TrimSpace(input.CreatedByActorID)
-	if partnerID == "" || input.BeneficiaryName == "" || input.CreatedByActorID == "" {
-		return nil, fmt.Errorf("partner, beneficiary, and creating actor are required")
+	if partnerID == "" || input.BeneficiaryName == "" || input.OfficialWalletProviderKey == "" || input.DestinationReference == "" || input.CreatedByActorID == "" {
+		return nil, fmt.Errorf("partner, beneficiary, official wallet provider, destination reference, and creating actor are required")
 	}
 
 	body, err := json.Marshal(input)
@@ -91,7 +88,7 @@ func (c *Client) UpsertPayoutDestination(ctx context.Context, partnerID string, 
 			"partner-payout-destination",
 			partnerID,
 			input.CreatedByActorID,
-			input.DestinationMethod,
+			input.OfficialWalletProviderKey,
 			input.DestinationReference,
 		)
 	}
@@ -107,11 +104,7 @@ func (c *Client) UpsertPayoutDestination(ctx context.Context, partnerID string, 
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return nil, fmt.Errorf("WLT payout destination returned HTTP %d", response.StatusCode)
 	}
-	ref, err := decodePayoutDestinationRef(response, partnerID)
-	if err != nil {
-		return nil, err
-	}
-	return ref, nil
+	return decodePayoutDestinationRef(response, partnerID)
 }
 
 func (c *Client) GetPayoutDestination(ctx context.Context, partnerID string) (*PayoutDestinationRef, error) {
@@ -150,8 +143,15 @@ func decodePayoutDestinationRef(response *http.Response, partnerID string) (*Pay
 		return nil, fmt.Errorf("decode WLT payout destination response: %w", err)
 	}
 	ref := envelope.PayoutDestination
-	if ref.ID == "" || ref.OwnerActorType != "partner" || ref.OwnerActorID != partnerID || !ref.Active {
-		return nil, fmt.Errorf("WLT payout destination response is incomplete")
+	if ref.ID == "" ||
+		ref.OwnerActorType != "partner" ||
+		ref.OwnerActorID != partnerID ||
+		ref.OfficialWalletProviderKey == "" ||
+		ref.DestinationVersion < 1 ||
+		ref.DestinationMethod != "official_wallet" ||
+		ref.MaskedDestinationReference == "" ||
+		!ref.Active {
+		return nil, fmt.Errorf("WLT payout destination response is incomplete or violates the official-wallet contract")
 	}
 	return &ref, nil
 }
