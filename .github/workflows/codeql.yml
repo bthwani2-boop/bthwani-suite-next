@@ -67,6 +67,14 @@ jobs:
       - name: Build all Go backends for one governed analysis database
         if: ${{ matrix.language == 'go' }}
         shell: bash
+        env:
+          # Each backend is a standalone module, but the repository's go.work
+          # enumerates only two of them for local development. With that
+          # workspace active, `go build ./...` inside any other module fails
+          # with "directory prefix . does not contain modules listed in
+          # go.work", so the Go database was never built and CodeQL analyzed
+          # nothing. Backend verification already isolates modules this way.
+          GOWORK: off
         run: |
           set -euo pipefail
           for workdir in \

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -71,9 +72,24 @@ export function writeMobileEvidenceReceipt({ outputPath, ...input }) {
   const output = resolveEvidenceOutputPath(outputPath);
   const receipt = createMobileEvidenceReceipt(input);
   fs.mkdirSync(path.dirname(output), { recursive: true });
-  const temporary = `${output}.tmp-${process.pid}`;
-  fs.writeFileSync(temporary, `${JSON.stringify(receipt, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
-  fs.renameSync(temporary, output);
+  // "wx" is what makes the staging write exclusive: the file is created by this
+  // call or the call fails, with no separate existence check that another writer
+  // could win between. The name must still be unique per attempt -- keyed to the
+  // process id it collided with any leftover file from an earlier crashed run
+  // with the same id, and that stale file would have failed every later write
+  // for good.
+  const temporary = `${output}.tmp-${randomUUID()}`;
+  try {
+    fs.writeFileSync(temporary, `${JSON.stringify(receipt, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
+    fs.renameSync(temporary, output);
+  } catch (error) {
+    try {
+      fs.rmSync(temporary, { force: true });
+    } catch {
+      // The staging file is disposable; the original failure is what matters.
+    }
+    throw error;
+  }
   return { output, receipt };
 }
 
