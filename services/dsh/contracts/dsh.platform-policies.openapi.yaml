@@ -1,9 +1,10 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Platform Operational Policies API
-  version: 0.2.0
+  version: 0.3.0
   description: Governed DSH zones, SLA, capacity, serviceability, and store-onboarding
-    fee policy. WLT remains the sole financial truth owner.
+    fee policy. WLT remains the sole financial truth owner; DSH exposes an authenticated
+    proxy projection and never owns or recomputes monetary state.
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED
@@ -288,7 +289,7 @@ paths:
       - bearerAuth: []
       responses:
         '200':
-          description: Policy returned.
+          description: Current canonical WLT-owned policy or explicit unconfigured sentinel.
           content:
             application/json:
               schema:
@@ -319,7 +320,7 @@ paths:
               $ref: '#/components/schemas/DshStoreOnboardingFeePolicyInput'
       responses:
         '200':
-          description: Policy version-updated or replayed idempotently.
+          description: Canonical immutable policy version created or replayed idempotently.
           content:
             application/json:
               schema:
@@ -346,7 +347,7 @@ paths:
       - bearerAuth: []
       responses:
         '200':
-          description: Read-only policy reference for field and partner actors.
+          description: Read-only WLT-owned policy reference for field and partner actors in their authenticated OperatorContext.
           content:
             application/json:
               schema:
@@ -1032,9 +1033,10 @@ components:
           type: boolean
     DshStoreOnboardingFeePolicy:
       type: object
+      additionalProperties: false
       required:
       - enabled
-      - amount
+      - amountMinorUnits
       - currency
       - appliesTo
       - chargeTiming
@@ -1047,13 +1049,13 @@ components:
       properties:
         enabled:
           type: boolean
-        amount:
-          type: number
+        amountMinorUnits:
+          type: integer
+          format: int64
           minimum: 0
         currency:
           type: string
-          minLength: 3
-          maxLength: 3
+          pattern: '^[A-Z]{3}$'
         appliesTo:
           type: string
           enum:
@@ -1078,24 +1080,28 @@ components:
           format: date-time
         notes:
           type: string
+          maxLength: 1000
         updatedBy:
           type: string
+          maxLength: 200
         updatedAt:
           type: string
           format: date-time
         version:
           type: integer
-          minimum: 1
+          minimum: 0
         isConfigured:
           type: boolean
         blockedReason:
           type: string
+          enum:
+          - POLICY_NOT_CONFIGURED
     DshStoreOnboardingFeePolicyInput:
       type: object
       additionalProperties: false
       required:
       - enabled
-      - amount
+      - amountMinorUnits
       - currency
       - appliesTo
       - chargeTiming
@@ -1104,13 +1110,13 @@ components:
       properties:
         enabled:
           type: boolean
-        amount:
-          type: number
+        amountMinorUnits:
+          type: integer
+          format: int64
           minimum: 0
         currency:
           type: string
-          minLength: 3
-          maxLength: 3
+          pattern: '^[A-Z]{3}$'
         appliesTo:
           type: string
           enum:
@@ -1134,11 +1140,11 @@ components:
           maxLength: 1000
         expectedVersion:
           type: integer
-          minimum: 1
+          minimum: 0
         reason:
           type: string
           minLength: 3
-          maxLength: 500
+          maxLength: 1000
     DshError:
       type: object
       required:
