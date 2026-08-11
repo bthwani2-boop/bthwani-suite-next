@@ -68,6 +68,16 @@
       "sourcePrefixes": ["apps/app-partner/runtime/src/"],
       "coverage": { "strategy": "required", "reason": "No app-partner-owned executable LCOV suite exists yet; source changes must not pass as uncovered ownership." }
     },
+    "control-panel-config": {
+      "kind": "web-runtime-config",
+      "root": "apps/control-panel/runtime",
+      "sourcePrefixes": ["apps/control-panel/runtime/next.config.mjs"],
+      "coverage": {
+        "strategy": "node-lcov",
+        "cwd": ".",
+        "testRoots": ["apps/control-panel/runtime/tests"]
+      }
+    },
     "control-panel": {
       "kind": "web-surface",
       "root": "apps/control-panel/runtime",
