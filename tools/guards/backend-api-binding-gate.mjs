@@ -283,6 +283,7 @@ const gatedWltMutationRoutes = new Set([
   "PATCH /wlt/commercial/products/{productReference}",
   "POST /wlt/commercial/loyalty-entries",
   "POST /wlt/commercial/subscriptions",
+  "PUT /wlt/commercial/store-onboarding-fee",
 ]);
 const approvedWltMutationScopes = new Set(["POST /wlt/settlements"]);
 const wltFinancialReadRoutes = new Set([
@@ -301,6 +302,7 @@ const wltFinancialReadRoutes = new Set([
   "GET /wlt/commercial/summary",
   "GET /wlt/commercial/products/{productReference}",
   "GET /wlt/commercial/clients/{clientId}/benefits",
+  "GET /wlt/commercial/store-onboarding-fee",
 ]);
 
 function contractFiles(service) {
