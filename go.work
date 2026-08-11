@@ -1,0 +1,6 @@
+go 1.26.5
+
+use (
+	./services/dsh/backend
+	./services/wlt/backend
+)

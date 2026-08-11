@@ -112,8 +112,9 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 	`, operatorContextID).Scan(&unverifiedEvidence); err != nil {
 		return nil, err
 	}
-	// In our simplified U004 model, verification happens at submission.
-	// We proceed.
+	if unverifiedEvidence > 0 {
+		return nil, fmt.Errorf("cannot close day: %d settlement batches have unverified manual transfer evidence", unverifiedEvidence)
+	}
 
 	row := tx.QueryRowContext(ctx, `
 		INSERT INTO wlt_daily_finance_close

@@ -14,12 +14,12 @@ export type PayoutDestination = {
   readonly id: string;
   readonly ownerActorId: string;
   readonly ownerActorType: PayoutActorType;
-  readonly officialWalletProviderKey: string;
-  readonly destinationVersion: number;
-  readonly destinationMethod: "official_wallet" | string;
-  readonly maskedDestinationReference: string;
-  readonly destinationVerificationStatus: PayoutDestinationVerificationStatus;
   readonly beneficiaryName: string;
+  readonly officialWalletProviderKey: string;
+  readonly destinationMethod: string;
+  readonly maskedDestinationReference: string;
+  readonly destinationVerificationStatus: string;
+  readonly destinationVersion: number;
   readonly active: boolean;
   readonly updatedAt: string;
 };
@@ -73,12 +73,6 @@ function errorStatus(error: unknown): number | undefined {
   return (error as { readonly status?: number }).status;
 }
 
-function newDestinationAttemptKey(actorType: PayoutActorType): string {
-  const uuid = globalThis.crypto?.randomUUID?.();
-  if (uuid) return `destination:${actorType}:${uuid}`;
-  return `destination:${actorType}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
-}
-
 export function isVerifiedPayoutDestination(
   destination: PayoutDestination | null | undefined,
 ): destination is PayoutDestination {
@@ -110,7 +104,7 @@ export async function saveOwnPayoutDestination(
     {
       method: "PUT",
       body: input,
-      idempotencyKey: newDestinationAttemptKey(actorType),
+      idempotencyKey: `destination:${actorType}:${input.officialWalletProviderKey}:${input.destinationReference.trim()}`,
     },
   );
   return response.payoutDestination;
