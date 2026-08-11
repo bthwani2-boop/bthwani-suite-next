@@ -2,15 +2,19 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import nextConfig from "../next.config.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "../../../..");
 const read = (relative) => fs.readFileSync(path.join(repoRoot, relative), "utf8");
 const stripComments = (source) => source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 const bffProxyPath = "apps/control-panel/runtime/src/server/bff-proxy.adapter.ts";
-const nextConfigPath = "apps/control-panel/runtime/next.config.mjs";
 
-test("control-panel emits governed browser security headers", () => {
-  const config = read(nextConfigPath);
+test("control-panel emits governed browser security headers", async () => {
+  assert.equal(nextConfig.env?.NEXT_PUBLIC_CONTROL_PANEL_BFF_ENABLED, "true");
+  const routes = await nextConfig.headers();
+  const governedRoute = routes.find((entry) => entry.source === "/:path*");
+  assert.ok(governedRoute, "global security-header route must exist");
+  const headers = new Map(governedRoute.headers.map(({ key, value }) => [key, value]));
   for (const header of [
     "Content-Security-Policy",
     "Referrer-Policy",
@@ -18,12 +22,12 @@ test("control-panel emits governed browser security headers", () => {
     "X-Frame-Options",
     "Permissions-Policy",
   ]) {
-    assert.match(config, new RegExp(header.replaceAll("-", "\\-")));
+    assert.ok(headers.has(header), `${header} must be emitted by Next.js config`);
   }
-  assert.match(config, /frame-ancestors 'none'/);
-  assert.match(config, /object-src 'none'/);
-  assert.match(config, /connect-src 'self'/);
-  assert.match(config, /NEXT_PUBLIC_CONTROL_PANEL_BFF_ENABLED:\s*"true"/);
+  const csp = headers.get("Content-Security-Policy") ?? "";
+  assert.match(csp, /frame-ancestors 'none'/);
+  assert.match(csp, /object-src 'none'/);
+  assert.match(csp, /connect-src 'self'/);
 });
 
 test("browser identity storage contains no durable real token store", () => {
