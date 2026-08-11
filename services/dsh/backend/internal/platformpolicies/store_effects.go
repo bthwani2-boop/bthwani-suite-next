@@ -83,32 +83,32 @@ func resolveOperationalZoneForStore(
 	return zoneIDs[0], serviceAreaCode, nil
 }
 
-// EvaluateOperationalPolicyForStore resolves the store's canonical service-area
-// zone and live non-terminal order pressure before invoking the canonical
-// decision. It deliberately does not infer a second serviceability truth.
-func EvaluateOperationalPolicyForStore(
+// EvaluateOperationalPolicyForStoreSnapshot is the single store-level policy
+// resolver used by mutation guards and serviceability reads. It returns both
+// the canonical decision and the exact active-order pressure used to derive it
+// so callers never have to reimplement zone selection or terminal-order rules.
+func EvaluateOperationalPolicyForStoreSnapshot(
 	ctx context.Context,
 	db *sql.DB,
 	storeID string,
 	fulfillmentMode string,
-) (OperationalDecision, error) {
+) (OperationalDecision, int, error) {
 	storeID = strings.TrimSpace(storeID)
 	mode, err := NormalizeFulfillmentMode(fulfillmentMode)
 	if err != nil || storeID == "" {
-		return OperationalDecision{}, ErrInvalid
+		return OperationalDecision{}, 0, ErrInvalid
 	}
 
 	zoneID, serviceAreaCode, err := resolveOperationalZoneForStore(ctx, db, storeID)
 	if err != nil {
-		return OperationalDecision{}, err
+		return OperationalDecision{}, 0, err
 	}
 
 	// Capacity is governed at operational-zone/service-area scope. Counting only
 	// the target store would let each store independently consume the same zone
-	// capacity and would disagree with the serviceability read path. The DSH
-	// order state machine has exactly three terminal states: delivered,
-	// cancelled and returned_to_store; every other canonical state consumes
-	// operational capacity.
+	// capacity. The DSH order state machine has exactly three terminal states:
+	// delivered, cancelled and returned_to_store; every other canonical state
+	// consumes operational capacity.
 	activeOrders := 0
 	err = db.QueryRowContext(ctx, `
 		SELECT COUNT(*)
@@ -117,10 +117,10 @@ func EvaluateOperationalPolicyForStore(
 		WHERE LOWER(s.service_area_code) = LOWER($1)
 		  AND o.status NOT IN ('delivered', 'cancelled', 'returned_to_store')`, serviceAreaCode).Scan(&activeOrders)
 	if err != nil {
-		return OperationalDecision{}, err
+		return OperationalDecision{}, 0, err
 	}
 
-	return EvaluateOperationalPolicy(ctx, db, OperationalEvaluationInput{
+	decision, err := EvaluateOperationalPolicy(ctx, db, OperationalEvaluationInput{
 		ZoneID:          zoneID,
 		ServiceAreaCode: serviceAreaCode,
 		FulfillmentMode: mode,
@@ -128,4 +128,20 @@ func EvaluateOperationalPolicyForStore(
 		ActiveOrders:    activeOrders,
 		CaptainsOnline:  0,
 	})
+	if err != nil {
+		return OperationalDecision{}, 0, err
+	}
+	return decision, activeOrders, nil
+}
+
+// EvaluateOperationalPolicyForStore preserves the mutation-facing API while
+// delegating to the same canonical snapshot used by serviceability reads.
+func EvaluateOperationalPolicyForStore(
+	ctx context.Context,
+	db *sql.DB,
+	storeID string,
+	fulfillmentMode string,
+) (OperationalDecision, error) {
+	decision, _, err := EvaluateOperationalPolicyForStoreSnapshot(ctx, db, storeID, fulfillmentMode)
+	return decision, err
 }
