@@ -46,4 +46,13 @@ describe("authenticated WLT runtime smoke", () => {
     assert.match(smoke, /status -ne "reference_created"/);
     assert.match(smoke, /WLT authenticated runtime smoke: PASS/);
   });
+
+  it("handles success and error envelopes without StrictMode property faults", () => {
+    assert.match(smoke, /\$createStatus = \[int\]\$createResponse\.StatusCode/);
+    assert.match(smoke, /\$codeProperty = \$createBody\.PSObject\.Properties\["code"\]/);
+    assert.doesNotMatch(smoke, /\$createCode\s*=\s*\[string\]\$createBody\.code/);
+    assert.match(smoke, /if \(\$createStatus -ne 201\)/);
+    assert.match(smoke, /\$paymentSessionProperty = \$createBody\.PSObject\.Properties\["paymentSession"\]/);
+    assert.match(smoke, /returned HTTP 201 without paymentSession\.id/);
+  });
 });
