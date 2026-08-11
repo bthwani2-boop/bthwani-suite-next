@@ -33,8 +33,9 @@ func openRequiredDB(t *testing.T) *sql.DB {
 }
 
 // TestComputeCheckoutSnapshotDBIntegration proves DSH derives amount and
-// currency from the same sovereign assortment snapshot instead of handing WLT
-// a zero amount or a locally hardcoded currency.
+// currency from the same sovereign normalized assortment snapshot instead of
+// handing WLT a zero amount or a locally hardcoded currency. It also proves
+// ValidateCart reads that same DSH price authority.
 func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
@@ -71,8 +72,8 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	}
 
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_master_products (id, domain_id, canonical_name_ar, sku)
-		VALUES ($1, $2, 'Test Widget', $3)
+		INSERT INTO dsh_master_products (id, domain_id, canonical_name_ar, sku, approval_status, is_active)
+		VALUES ($1, $2, 'Test Widget', $3, 'approved', true)
 		RETURNING id`,
 		productID, domainID, "sku-"+suffix,
 	).Scan(&productID); err != nil {
@@ -88,8 +89,11 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	}
 
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_store_assortments (id, store_id, master_product_id, unit_price, currency, available)
-		VALUES ($1, $2, $3, 25.50, 'USD', true)`,
+		INSERT INTO dsh_store_assortments (
+			id, store_id, master_product_id, unit_price, currency, available,
+			stock_status, publication_status
+		)
+		VALUES ($1, $2, $3, 25.50, 'USD', true, 'in_stock', 'client_visible')`,
 		assortmentID, storeID, productID,
 	); err != nil {
 		t.Fatalf("failed to insert test store assortment: %v", err)
@@ -104,8 +108,8 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	}
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_store_assortment_inventory
-			(store_assortment_id, policy_type, quantity, reserved_quantity)
-		VALUES ($1, 'quantity', 100, 0)`, assortmentID); err != nil {
+			(store_assortment_id, policy_type, quantity, reserved_quantity, min_order_quantity, max_order_quantity, step_quantity)
+		VALUES ($1, 'quantity', 100, 0, 1, 100, 1)`, assortmentID); err != nil {
 		t.Fatalf("failed to insert test assortment inventory: %v", err)
 	}
 
@@ -133,6 +137,14 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 		t.Fatalf("expected cart item productName derived from catalog, got %q", item.ProductName)
 	}
 
+	validation, err := ValidateCart(ctx, db, cartID)
+	if err != nil {
+		t.Fatalf("ValidateCart failed: %v", err)
+	}
+	if !validation.Ready || validation.PriceChanged || len(validation.Items) != 1 || validation.Items[0].Status != "ready" {
+		t.Fatalf("expected normalized DSH price/inventory to validate ready, got %#v", validation)
+	}
+
 	snapshot, err := ComputeCheckoutSnapshot(ctx, db, cartID)
 	if err != nil {
 		t.Fatalf("ComputeCheckoutSnapshot failed: %v", err)
@@ -150,6 +162,110 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	if snapshot.SnapshotHash == "" {
 		t.Fatalf("expected non-empty snapshot hash")
 	}
+
+	if _, err := db.ExecContext(ctx, `
+		UPDATE dsh_store_assortment_prices
+		SET amount_minor = 2600, version = version + 1, updated_at = NOW()
+		WHERE store_assortment_id = $1`, assortmentID); err != nil {
+		t.Fatalf("failed to change current normalized price: %v", err)
+	}
+	validation, err = ValidateCart(ctx, db, cartID)
+	if err != nil {
+		t.Fatalf("ValidateCart after price change failed: %v", err)
+	}
+	if validation.Ready || !validation.PriceChanged || validation.Items[0].ReasonCode != "PRICE_CHANGED" {
+		t.Fatalf("expected DSH normalized price change to invalidate cart, got %#v", validation)
+	}
+}
+
+func TestUpsertItemRejectsPublicationApprovalAndInventoryPolicyViolationsDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	ctx := context.Background()
+	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+	storeID := "cart-policy-store-" + suffix
+	clientID := "cart-policy-client-" + suffix
+	domainID := "cart-policy-domain-" + suffix
+	productID := "cart-policy-product-" + suffix
+	assortmentID := "cart-policy-assortment-" + suffix
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
+		VALUES ($1, $1, 'Cart Policy Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true)`, storeID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO dsh_catalog_domains (id, slug, name_ar) VALUES ($1, $1, 'Policy Domain')`, domainID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_master_products (id, domain_id, canonical_name_ar, approval_status, is_active)
+		VALUES ($1, $2, 'Policy Product', 'approved', true)`, productID, domainID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_store_assortments (
+			id, store_id, master_product_id, unit_price, currency, available, stock_status, publication_status
+		) VALUES ($1, $2, $3, 10, 'YER', true, 'in_stock', 'hidden')`, assortmentID, storeID, productID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_store_assortment_prices (id, store_assortment_id, amount_minor, currency, effective_from)
+		VALUES ($1, $2, 1000, 'YER', NOW())`, "policy-price-"+suffix, assortmentID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_store_assortment_inventory (
+			store_assortment_id, policy_type, quantity, reserved_quantity,
+			min_order_quantity, max_order_quantity, step_quantity
+		) VALUES ($1, 'quantity', 10, 0, 2, 6, 2)`, assortmentID); err != nil {
+		t.Fatal(err)
+	}
+	var cartID string
+	if err := db.QueryRowContext(ctx, `
+		INSERT INTO dsh_carts (client_id, store_id, fulfillment_mode, state)
+		VALUES ($1, $2, 'bthwani_delivery', 'active') RETURNING id::text`, clientID, storeID).Scan(&cartID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_cart_items WHERE cart_id = $1::uuid`, cartID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_carts WHERE id = $1::uuid`, cartID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_assortments WHERE id = $1`, assortmentID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_master_products WHERE id = $1`, productID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_catalog_domains WHERE id = $1`, domainID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID)
+	})
+
+	assertInvalid := func(quantity int, label string) {
+		t.Helper()
+		_, err := UpsertItem(ctx, db, storeID, cartID, UpsertItemInput{MasterProductID: productID, Quantity: quantity})
+		if !errors.Is(err, ErrInvalid) {
+			t.Fatalf("%s: expected ErrInvalid, got %v", label, err)
+		}
+	}
+
+	assertInvalid(2, "hidden assortment")
+	if _, err := db.ExecContext(ctx, `UPDATE dsh_store_assortments SET publication_status='client_visible' WHERE id=$1`, assortmentID); err != nil {
+		t.Fatal(err)
+	}
+	assertInvalid(1, "below minimum quantity")
+	assertInvalid(3, "off-step quantity")
+	assertInvalid(8, "above maximum quantity")
+
+	item, err := UpsertItem(ctx, db, storeID, cartID, UpsertItemInput{MasterProductID: productID, Quantity: 6})
+	if err != nil || item == nil || item.Quantity != 6 {
+		t.Fatalf("valid policy quantity should succeed, item=%#v err=%v", item, err)
+	}
+
+	if _, err := db.ExecContext(ctx, `UPDATE dsh_store_assortments SET available=false WHERE id=$1`, assortmentID); err != nil {
+		t.Fatal(err)
+	}
+	assertInvalid(2, "assortment unavailable")
+	if _, err := db.ExecContext(ctx, `UPDATE dsh_store_assortments SET available=true WHERE id=$1`, assortmentID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE dsh_master_products SET approval_status='rejected' WHERE id=$1`, productID); err != nil {
+		t.Fatal(err)
+	}
+	assertInvalid(2, "master product rejected")
 }
 
 // TestComputeCheckoutSnapshotRejectsUnpricedItemDBIntegration proves a cart
