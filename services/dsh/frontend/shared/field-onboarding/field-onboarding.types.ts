@@ -30,20 +30,6 @@ export type FieldPartnerDraftForm = {
   // ── Operational readiness ──────────────────────────────────────────
   operatingHours: string;
   deliveryReadiness: string;
-
-  // ── Optional settlement metadata ───────────────────────────────────
-  // These fields remain readable for backward compatibility, but app-field
-  // no longer blocks partner intake on sensitive payout data. The partner or
-  // an authorized operator completes and verifies it after intake.
-  beneficiaryName: string;
-  bankName: string;
-  bankBranch: string;
-  accountNumber: string;
-  iban: string;
-  payoutMobileNumber: string;
-  settlementPreference: "" | "bank_transfer" | "mobile_wallet";
-  bankAccountHolderMatchesOwner: boolean;
-  bankNotes: string;
 };
 
 export type FieldPartnerDraftStep =
@@ -192,11 +178,6 @@ export function getDocumentsMissingCount(
   return getRequiredPartnerDocuments(form).filter(
     (item) => !uploadedDocumentTypes.includes(item.documentType),
   ).length;
-}
-
-/** Settlement data is intentionally optional during field intake. */
-export function getBankAccountMissingCount(_form: Partial<FieldPartnerDraftForm>): number {
-  return 0;
 }
 
 /** Catalog setup is accelerated in the same visit but does not block intake. */
