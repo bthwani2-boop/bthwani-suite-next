@@ -85,6 +85,28 @@ function requireExactDirectory(relative, allowedFiles = [], allowedDirs = []) {
   }
 }
 
+function registeredToolPolicyFiles(registryPath, registry) {
+  const allowed = new Set(["README.md"]);
+  if (registry && !Array.isArray(registry.entries)) {
+    violations.push({ file: registryPath, line: 0, message: "AGENT_TOOL_REGISTRY_ENTRIES_REQUIRED" });
+    return [...allowed];
+  }
+  for (const tool of registry?.entries ?? []) {
+    const id = String(tool?.id ?? "<unknown>");
+    const policyPath = String(tool?.policy_path ?? "").replaceAll("\\", "/");
+    if (path.posix.dirname(policyPath) !== ".agents/tools" || path.posix.extname(policyPath) !== ".md") {
+      violations.push({ file: registryPath, line: 0, message: `TOOL_POLICY_PATH_INVALID ${id}:${policyPath || "<missing>"}` });
+      continue;
+    }
+    if (!exists(policyPath)) {
+      violations.push({ file: registryPath, line: 0, message: `REGISTERED_TOOL_POLICY_MISSING ${id}:${policyPath}` });
+      continue;
+    }
+    allowed.add(path.posix.basename(policyPath));
+  }
+  return [...allowed].sort();
+}
+
 const authorityPath = "governance/authority/authority-precedence.json";
 const decisionPath = "governance/contracts/decision-vocabulary.json";
 const agentPath = "governance/agents/agent-registry.json";
@@ -95,6 +117,7 @@ const guardSetsPath = "governance/guards/guard-sets.json";
 const bindingPath = "governance/guards/frontend-binding-registry.json";
 const workflowPath = "governance/github/workflow-registry.json";
 const singleOwnerPath = "governance/authority/single-owner-mode.json";
+const agentToolRegistryPath = "governance/tools/agent-tool-registry.json";
 const sdlcRoot = "governance/contracts/sdlc";
 
 const authority = validateDocument(authorityPath, "governance/authority/authority-precedence.schema.json", "AUTHORITY");
@@ -107,14 +130,15 @@ const guardSets = validateDocument(guardSetsPath, "governance/guards/guard-sets.
 const bindings = validateDocument(bindingPath, "governance/guards/frontend-binding-registry.schema.json", "FRONTEND_BINDING");
 validateDocument(workflowPath, "governance/github/workflow-registry.schema.json", "WORKFLOW_REGISTRY");
 const singleOwner = validateDocument(singleOwnerPath, "governance/authority/single-owner-mode.schema.json", "SINGLE_OWNER_MODE");
+const agentTools = readJson(agentToolRegistryPath, "AGENT_TOOL_REGISTRY");
 
 requireExactDirectory("governance", ["GOVERNANCE.md"], ["agents", "authority", "contracts", "github", "guards", "policies", "product", "skills", "tools"]);
 requireExactDirectory("governance/policies", ["engineering.md", "security.md", "delivery.md", "repository-retention-policy.json"]);
 requireExactDirectory("governance/github", ["master-protection.ruleset.json", "workflow-registry.json", "workflow-registry.schema.json"]);
 requireExactDirectory("governance/product", ["PRD.md", "platform-model.yaml", "product-truth.schema.json", "product-truth.compatibility.schema.json"], ["contracts"]);
-requireExactDirectory("governance/tools", ["agent-tool-registry.json"]);
+requireExactDirectory("governance/tools", [path.posix.basename(agentToolRegistryPath)]);
 requireExactDirectory(".agents", ["INDEX.md"], ["skills", "tools"]);
-requireExactDirectory(".agents/tools", ["README.md", "gemini-implementer.md", "graphify.md", "leanctx.md", "open-code-review.md"]);
+requireExactDirectory(".agents/tools", registeredToolPolicyFiles(agentToolRegistryPath, agentTools));
 requireExactDirectory("tools/prompting", [
   "01-diagnose-plan-package.md",
   "02-execute-verify-close.md",
