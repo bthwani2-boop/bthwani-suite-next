@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "service": "dsh",
+  "extends": "manifest.json",
+  "migrations": [
+    {
+      "ordinal": 240,
+      "file": "dsh-1000_client_address_postgis_geofence_binding.sql",
+      "sha256": "fe20623e1a1d45bf20e51e07aee6771647d8ed4fbad7bc3c1ff2bc39ca333490",
+      "historicalPrefix": "1000",
+      "state": "ACTIVE"
+    }
+  ]
+}
