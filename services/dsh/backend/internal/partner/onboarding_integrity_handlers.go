@@ -43,6 +43,13 @@ func HandleGovernedFieldUpdatePartner(db *sql.DB, wltClient *wlt.Client) http.Ha
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load partner")
 			return
 		}
+		// Refuse stale callers before any cross-service financial mutation. The
+		// repository repeats the same OCC check at persistence time, but this
+		// preflight prevents a known-stale request from changing WLT first.
+		if current.Version != expectedVersion {
+			sendError(w, http.StatusConflict, "VERSION_CONFLICT", "partner was modified concurrently")
+			return
+		}
 
 		legacyPayoutInput := strings.TrimSpace(input.BankName) != "" ||
 			strings.TrimSpace(input.BankBranch) != "" ||
