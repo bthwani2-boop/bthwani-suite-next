@@ -13,21 +13,22 @@ import (
 const maxFinanceProxyResponseBytes = 4 << 20
 
 var financeReadAllowlist = map[string]struct{}{
-	"/wlt/settlements":                  {},
-	"/wlt/settlements/summary":          {},
-	"/wlt/refunds":                      {},
-	"/wlt/ledger/entries":               {},
-	"/wlt/ledger/financial-summary":     {},
-	"/wlt/cod-records":                  {},
-	"/wlt/cod-reconciliation-cases":     {},
-	"/wlt/commissions":                  {},
-	"/wlt/references/wallet-status":     {},
-	"/wlt/references/payment-status":    {},
-	"/wlt/references/settlement-status": {},
-	"/wlt/references/refund-status":     {},
-	"/wlt/references/field-commission":  {},
-	"/wlt/payout-requests":              {},
-	"/wlt/reconciliation-cases":         {},
+	"/wlt/settlements":                     {},
+	"/wlt/settlements/summary":             {},
+	"/wlt/refunds":                         {},
+	"/wlt/ledger/entries":                  {},
+	"/wlt/ledger/financial-summary":        {},
+	"/wlt/cod-records":                     {},
+	"/wlt/cod-reconciliation-cases":        {},
+	"/wlt/commissions":                     {},
+	"/wlt/references/wallet-status":        {},
+	"/wlt/references/payment-status":       {},
+	"/wlt/references/settlement-status":    {},
+	"/wlt/references/refund-status":        {},
+	"/wlt/references/field-commission":     {},
+	"/wlt/payout-requests":                 {},
+	"/wlt/reconciliation-cases":            {},
+	"/wlt/commercial/store-onboarding-fee": {},
 }
 
 func financeReadPathAllowed(path string) bool {
@@ -178,7 +179,7 @@ func (c *Client) FinanceWriteWithOperatorContext(ctx context.Context, method, pa
 }
 
 func financeWritePathAllowed(path string) bool {
-	if path == "/wlt/payout-requests" || path == "/wlt/refunds" {
+	if path == "/wlt/payout-requests" || path == "/wlt/refunds" || path == "/wlt/commercial/store-onboarding-fee" {
 		return true
 	}
 	for prefix, actions := range map[string]map[string]struct{}{
