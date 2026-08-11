@@ -6,8 +6,8 @@ import (
 )
 
 // ErrTargetGateFailed is returned when a marketing target does not pass the
-// client-visibility gate: inactive store, unapproved catalog target, expired
-// campaign, or unpublished partner offer.
+// client-visibility gate: inactive store, unapproved/unpurchasable catalog
+// target, expired campaign, or unpublished partner offer.
 var ErrTargetGateFailed = errors.New("marketing target failed visibility gate")
 
 var validTargetTypes = map[string]bool{
@@ -102,16 +102,39 @@ func validateProductTarget(db *sql.DB, productID string) (bool, string, error) {
 	var eligible bool
 	err := db.QueryRow(`
 		SELECT EXISTS (
-		  SELECT 1 FROM dsh_master_products p
+		  SELECT 1
+		  FROM dsh_master_products p
 		  JOIN dsh_catalog_domains d ON d.id = p.domain_id
 		  LEFT JOIN dsh_catalog_nodes n ON n.id = p.category_node_id
 		  JOIN dsh_store_assortments a ON a.master_product_id = p.id
 		  JOIN dsh_stores s ON s.id = a.store_id
+		  JOIN dsh_store_assortment_inventory i ON i.store_assortment_id = a.id
+		  JOIN LATERAL (
+		    SELECT price.amount_minor, price.currency
+		    FROM dsh_store_assortment_prices price
+		    WHERE price.store_assortment_id = a.id
+		      AND price.effective_from <= NOW()
+		      AND (price.effective_until IS NULL OR price.effective_until > NOW())
+		    ORDER BY price.effective_from DESC, price.version DESC, price.id DESC
+		    LIMIT 1
+		  ) current_price ON TRUE
 		  WHERE p.id=$1 AND p.is_active=true AND p.approval_status='approved'
 		    AND d.is_active=true AND d.is_client_visible=true
 		    AND d.is_manual_request=false
 		    AND (n.id IS NULL OR (n.is_active=true AND n.is_client_visible=true))
 		    AND a.publication_status='client_visible' AND a.available=true
+		    AND current_price.amount_minor > 0
+		    AND length(trim(current_price.currency)) = 3
+		    AND (
+		      i.policy_type = 'infinite'
+		      OR (i.policy_type = 'signal' AND i.quantity > 0)
+		      OR (
+		        i.policy_type = 'quantity'
+		        AND (i.quantity - i.reserved_quantity) >= GREATEST(i.min_order_quantity, 1)
+		        AND i.max_order_quantity >= GREATEST(i.min_order_quantity, 1)
+		        AND i.step_quantity >= 1
+		      )
+		    )
 		    AND s.status='published' AND s.is_visible=true
 		    AND s.serviceability_status IN ('serviceable','limited')
 		    AND s.partner_readiness='ready'
@@ -122,7 +145,7 @@ func validateProductTarget(db *sql.DB, productID string) (bool, string, error) {
 		return false, "", err
 	}
 	if !eligible {
-		return false, "master product or its client-visible assortment/store is not publishable", nil
+		return false, "master product has no client-visible purchasable assortment on a publishable store", nil
 	}
 	return true, "", nil
 }
