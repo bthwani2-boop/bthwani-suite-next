@@ -3,31 +3,31 @@ import { createDshHttpClient } from "../dsh-link/dsh-http-request";
 
 export type PayoutActorType = "partner" | "captain" | "field";
 
+export type PayoutDestinationVerificationStatus =
+  | "unverified"
+  | "verified"
+  | "requires_reverification"
+  | "rejected"
+  | string;
+
 export type PayoutDestination = {
   readonly id: string;
   readonly ownerActorId: string;
   readonly ownerActorType: PayoutActorType;
-  readonly settlementPreference: "bank" | "mobile_money" | "manual" | string;
-  readonly maskedAccountNumber: string;
-  readonly maskedIban: string;
-  readonly maskedMobileNumber: string;
+  readonly officialWalletProviderKey: string;
+  readonly destinationVersion: number;
+  readonly destinationMethod: "official_wallet" | string;
+  readonly maskedDestinationReference: string;
+  readonly destinationVerificationStatus: PayoutDestinationVerificationStatus;
   readonly beneficiaryName: string;
-  readonly bankName: string;
-  readonly bankBranch: string;
   readonly active: boolean;
   readonly updatedAt: string;
 };
 
 export type PayoutDestinationInput = {
   readonly beneficiaryName: string;
-  readonly bankName: string;
-  readonly bankBranch: string;
-  readonly accountNumber: string;
-  readonly iban: string;
-  readonly payoutMobileNumber: string;
-  readonly settlementPreference: "bank" | "mobile_money" | "manual";
-  readonly bankAccountHolderMatchesOwner: boolean;
-  readonly bankNotes: string;
+  readonly officialWalletProviderKey: string;
+  readonly destinationReference: string;
 };
 
 export type ActorPayoutRequest = {
@@ -73,6 +73,22 @@ function errorStatus(error: unknown): number | undefined {
   return (error as { readonly status?: number }).status;
 }
 
+function newDestinationAttemptKey(actorType: PayoutActorType): string {
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return `destination:${actorType}:${uuid}`;
+  return `destination:${actorType}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+}
+
+export function isVerifiedPayoutDestination(
+  destination: PayoutDestination | null | undefined,
+): destination is PayoutDestination {
+  return Boolean(
+    destination?.active &&
+      destination.destinationMethod === "official_wallet" &&
+      destination.destinationVerificationStatus === "verified",
+  );
+}
+
 export async function fetchOwnPayoutDestination(actorType: PayoutActorType): Promise<PayoutDestination | null> {
   try {
     const response = await request<{ readonly payoutDestination: PayoutDestination }>(
@@ -94,7 +110,7 @@ export async function saveOwnPayoutDestination(
     {
       method: "PUT",
       body: input,
-      idempotencyKey: `destination:${actorType}:${input.settlementPreference}:${input.beneficiaryName.trim()}`,
+      idempotencyKey: newDestinationAttemptKey(actorType),
     },
   );
   return response.payoutDestination;
@@ -104,7 +120,7 @@ export async function deactivateOwnPayoutDestination(actorType: PayoutActorType)
   await request<void>(payoutDestinationDeactivatePathByActor[actorType], {
     method: "POST",
     body: {},
-    idempotencyKey: `destination-deactivate:${actorType}`,
+    idempotencyKey: `destination-deactivate:${actorType}:${Date.now()}`,
   });
 }
 
