@@ -10,6 +10,17 @@ if ([string]::IsNullOrWhiteSpace($serviceToken)) {
   throw "WLT_DSH_SERVICE_TOKEN is required for authenticated WLT runtime smoke."
 }
 
+$mutationsEnabledRaw = ([string]$env:WLT_MUTATIONS_ENABLED).Trim().ToLowerInvariant()
+if ($mutationsEnabledRaw -notin @("true", "false")) {
+  throw "WLT_MUTATIONS_ENABLED must be explicitly true or false for authenticated WLT runtime smoke."
+}
+$killSwitchRaw = ([string]$env:WLT_FINANCE_MUTATION_KILL_SWITCH).Trim().ToLowerInvariant()
+if ($killSwitchRaw -notin @("true", "false")) {
+  throw "WLT_FINANCE_MUTATION_KILL_SWITCH must be explicitly true or false for authenticated WLT runtime smoke."
+}
+$mutationsEnabled = $mutationsEnabledRaw -eq "true"
+$killSwitchActive = $killSwitchRaw -eq "true"
+
 $runIdentity = if (-not [string]::IsNullOrWhiteSpace([string]$env:GITHUB_RUN_ID)) {
   "github-$($env:GITHUB_RUN_ID)"
 } else {
@@ -89,14 +100,27 @@ $createResponse = Invoke-WebRequest `
   -SkipHttpErrorCheck
 $createBody = $createResponse.Content | ConvertFrom-Json
 $createStatus = [int]$createResponse.StatusCode
+$createCode = [string]$createBody.code
 
-if ($createStatus -eq 403 -and [string]$createBody.code -in @("MUTATIONS_DISABLED", "KILL_SWITCH_ACTIVE")) {
-  Write-Host "  authenticated mutation gate: $([string]$createBody.code) fail-closed"
+$expectedGateCode = if (-not $mutationsEnabled) {
+  "MUTATIONS_DISABLED"
+} elseif ($killSwitchActive) {
+  "KILL_SWITCH_ACTIVE"
+} else {
+  ""
+}
+
+if (-not [string]::IsNullOrWhiteSpace($expectedGateCode)) {
+  if ($createStatus -ne 403 -or $createCode -ne $expectedGateCode) {
+    throw "WLT mutation gate contract mismatch: expected HTTP 403 code=$expectedGateCode but received status=$createStatus code=$createCode"
+  }
+  Write-Host "  authenticated mutation gate: $expectedGateCode fail-closed as configured"
   Write-Host "WLT authenticated runtime smoke: PASS"
   return
 }
+
 if ($createStatus -ne 201) {
-  throw "WLT payment-session create returned status=$createStatus code=$([string]$createBody.code)"
+  throw "WLT payment-session create expected enabled mutation path but returned status=$createStatus code=$createCode"
 }
 $sessionEnvelope = $createBody
 
