@@ -12,27 +12,17 @@ type ProposalTransitionOCCInput struct {
 	ExpectedVersion *int `json:"expectedVersion"`
 }
 
+// TransitionProposalExpected is retained as the compatibility entry point for
+// older callers, but it has no independent version precheck or state machine.
+// The expected version is verified only after SELECT ... FOR UPDATE inside the
+// canonical atomic transition, eliminating the previous TOCTOU window.
 func TransitionProposalExpected(
 	ctx context.Context,
 	db *sql.DB,
 	actorID, actorRole, id string,
 	input ProposalTransitionOCCInput,
 ) (ProductProposal, error) {
-	if err := validateExpectedVersion(input.ExpectedVersion); err != nil {
-		return ProductProposal{}, err
-	}
-	current, err := GetProposal(ctx, db, id)
-	if err != nil {
-		return ProductProposal{}, err
-	}
-	if current.Version != *input.ExpectedVersion {
-		return ProductProposal{}, &ConflictError{
-			EntityID: id, ExpectedVersion: input.ExpectedVersion, CurrentVersion: current.Version, Message: "version mismatch",
-		}
-	}
-	// TransitionProposal serializes the actual state mutation with SELECT FOR
-	// UPDATE and commits the proposal audit event in the same transaction.
-	return TransitionProposal(ctx, db, actorID, actorRole, id, input.ProposalTransitionInput)
+	return TransitionProposalAtomicExpected(ctx, db, actorID, actorRole, id, input)
 }
 
 // ProposalDecisionOCCInput keeps the deprecated decision vocabulary safe for
@@ -42,23 +32,14 @@ type ProposalDecisionOCCInput struct {
 	ExpectedVersion *int `json:"expectedVersion"`
 }
 
+// DecideProposalExpected is likewise a compatibility alias for the canonical
+// atomic decision path. No legacy state-machine implementation is reachable
+// through this OCC surface.
 func DecideProposalExpected(
 	ctx context.Context,
 	db *sql.DB,
 	actorID, actorRole, id string,
 	input ProposalDecisionOCCInput,
 ) (ProductProposal, error) {
-	if err := validateExpectedVersion(input.ExpectedVersion); err != nil {
-		return ProductProposal{}, err
-	}
-	current, err := GetProposal(ctx, db, id)
-	if err != nil {
-		return ProductProposal{}, err
-	}
-	if current.Version != *input.ExpectedVersion {
-		return ProductProposal{}, &ConflictError{
-			EntityID: id, ExpectedVersion: input.ExpectedVersion, CurrentVersion: current.Version, Message: "version mismatch",
-		}
-	}
-	return DecideProposal(ctx, db, actorID, actorRole, id, input.ProposalDecisionInput)
+	return DecideProposalAtomicExpected(ctx, db, actorID, actorRole, id, input)
 }
