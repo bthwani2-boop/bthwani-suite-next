@@ -42,7 +42,7 @@ Load only when the trigger matches:
 
 Tool policies live under `.agents/tools/` and are loaded only after the tool is selected:
 
-- `gemini-implementer` — serial bounded Gemini CLI implementation under a Codex orchestrator.
+- `gemini-implementer` — serial bounded Gemini CLI implementation under exactly one selected Codex or Claude orchestrator.
 - `graphify` — unresolved application-code relationships.
 - `leanctx` — repeated reads or noisy output.
 - `open-code-review` — bounded advisory diff, commit, or range review.
@@ -50,7 +50,8 @@ Tool policies live under `.agents/tools/` and are loaded only after the tool is 
 ## Constraints
 
 - Load the smallest sufficient skill set.
-- The registered delegated implementation route is `Codex → Gemini → Codex verification`, one active work unit at a time.
+- Registered delegated routes are `Codex → Gemini → Codex verification` and `Claude → Gemini → Claude verification`.
+- Exactly one route owns a work unit, and only one Gemini delegation may be active at a time; no shared work unit or parallel delegation between Codex and Claude.
 - Tools and adapters own no approval.
 - Retired skills are never routed and have no live `SKILL.md`.
 - The independent reviewer must not author, execute, or coordinate the reviewed change.

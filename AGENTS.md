@@ -74,17 +74,22 @@ Logical approval authorities remain separated by the agent registry. An executio
 
 ## Delegated implementation
 
-The default and only registered external implementation route is:
+Two mutually exclusive external implementation routes are registered:
 
-`Codex orchestrator → Gemini CLI implementer → Codex verification`
+- `Codex orchestrator → Gemini CLI implementer → Codex verification`.
+- `Claude orchestrator → Gemini CLI implementer → Claude verification`.
 
-- Use the registered `gemini-implementer` tool only for one bounded work unit with a clean working tree, explicit allowed and forbidden paths, acceptance criteria, and Codex verification commands.
-- Only one delegated implementation may be active in a working tree. Parallel delegated implementation is forbidden on this route.
+The current authorized task selects exactly one route for each work unit.
+
+- Use `gemini-implementer` only for one bounded work unit with a clean working tree, explicit allowed and forbidden paths, acceptance criteria, and orchestrator-owned verification commands.
+- Codex uses `tools/scripts/invoke-gemini-implementer.mjs`; Claude uses `tools/scripts/invoke-claude-gemini-implementer.mjs`, which reuses the same hardened Gemini relay and lock.
+- Exactly one delegated Gemini implementation may be active at a time. Codex and Claude must not run Gemini delegation concurrently, must not share the same work unit, and must not jointly coordinate or verify one delegated work unit.
 - Gemini owns bounded file edits only. It must not commit, push, merge, release, approve, expand scope, or mutate the agent/governance control plane.
-- Codex owns diagnosis, scope, the implementation brief, complete diff review, branch/head re-pinning, and developer verification after Gemini exits.
+- The selected orchestrator owns diagnosis, scope, the implementation brief, complete diff review, branch/head re-pinning, developer verification, and the rework decision after Gemini exits.
 - Gemini's report and token statistics are telemetry, not proof that tests, runtime behavior, or acceptance passed.
+- Reassigning an active or previously dispatched work unit from Codex to Claude or from Claude to Codex requires an explicit current-task reassignment and a fresh clean-tree dispatch; implicit handoff is forbidden.
 - Protected independent review and formal product, finance, governance, CI, QA, security, release, risk, production, and closure authorities remain separate.
-- Do not route delegated implementation through Claude, Antigravity, OpenCode, or another implementer unless a later current authorized task instruction explicitly changes this route.
+- Do not route delegated implementation through Antigravity, OpenCode, or another implementer unless a later current authorized task instruction explicitly changes these routes.
 
 ## Plans, skills, and tools
 
@@ -99,7 +104,7 @@ Tool ladder:
 5. Nx affected when workspace impact must be computed;
 6. LeanCTX only when it materially reduces repeated reads/noise;
 7. Graphify only when ownership/dependency/duplication remains unresolved;
-8. OpenCodeReview for a bounded diff/commit/range;
+8. OpenCodeReview for a bounded diff, commit, or range;
 9. runtime tooling only for runtime-changing or runtime-claimed work.
 
 Tools and adapters own no Product Truth or approval.
