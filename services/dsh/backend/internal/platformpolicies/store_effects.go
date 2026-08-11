@@ -105,16 +105,17 @@ func EvaluateOperationalPolicyForStore(
 
 	// Capacity is governed at operational-zone/service-area scope. Counting only
 	// the target store would let each store independently consume the same zone
-	// capacity and would disagree with the serviceability read path.
+	// capacity and would disagree with the serviceability read path. The DSH
+	// order state machine has exactly three terminal states: delivered,
+	// cancelled and returned_to_store; every other canonical state consumes
+	// operational capacity.
 	activeOrders := 0
 	err = db.QueryRowContext(ctx, `
 		SELECT COUNT(*)
 		FROM dsh_orders o
 		JOIN dsh_stores s ON s.id = o.store_id
 		WHERE LOWER(s.service_area_code) = LOWER($1)
-		  AND o.status NOT IN (
-		    'delivered', 'cancelled', 'rejected', 'refunded', 'failed'
-		  )`, serviceAreaCode).Scan(&activeOrders)
+		  AND o.status NOT IN ('delivered', 'cancelled', 'returned_to_store')`, serviceAreaCode).Scan(&activeOrders)
 	if err != nil {
 		return OperationalDecision{}, err
 	}
