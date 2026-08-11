@@ -2,11 +2,13 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 
+	"dsh-api/internal/partner"
 	"dsh-api/internal/store"
 )
 
@@ -17,6 +19,19 @@ type payoutRequestBody struct {
 	IdempotencyKey       string `json:"idempotencyKey"`
 }
 
+type payoutDestinationProjectionEnvelope struct {
+	PayoutDestination struct {
+		ID                            string `json:"id"`
+		OwnerActorID                  string `json:"ownerActorId"`
+		OwnerActorType                string `json:"ownerActorType"`
+		OfficialWalletProviderKey     string `json:"officialWalletProviderKey"`
+		DestinationVersion            int    `json:"destinationVersion"`
+		DestinationMethod             string `json:"destinationMethod"`
+		MaskedDestinationReference    string `json:"maskedDestinationReference"`
+		DestinationVerificationStatus string `json:"destinationVerificationStatus"`
+	} `json:"payoutDestination"`
+}
+
 func correlationForActorMutation(r *http.Request, fallback string) string {
 	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
 	if correlationID == "" {
@@ -25,13 +40,91 @@ func correlationForActorMutation(r *http.Request, fallback string) string {
 	return correlationID
 }
 
+func decodePayoutDestinationProjection(body []byte, actorType, actorID string) (partner.PayoutDestinationProjection, error) {
+	var envelope payoutDestinationProjectionEnvelope
+	if len(body) == 0 || json.Unmarshal(body, &envelope) != nil {
+		return partner.PayoutDestinationProjection{}, fmt.Errorf("WLT payout destination response is not valid JSON")
+	}
+	item := envelope.PayoutDestination
+	if strings.TrimSpace(item.ID) == "" ||
+		strings.TrimSpace(item.OwnerActorID) != strings.TrimSpace(actorID) ||
+		strings.TrimSpace(item.OwnerActorType) != strings.TrimSpace(actorType) ||
+		strings.TrimSpace(item.OfficialWalletProviderKey) == "" ||
+		item.DestinationVersion < 1 ||
+		strings.TrimSpace(item.DestinationMethod) != "official_wallet" {
+		return partner.PayoutDestinationProjection{}, fmt.Errorf("WLT payout destination response violates the official-wallet contract")
+	}
+	return partner.PayoutDestinationProjection{
+		ID:                            item.ID,
+		DestinationMethod:             item.DestinationMethod,
+		MaskedDestinationReference:    item.MaskedDestinationReference,
+		DestinationVerificationStatus: item.DestinationVerificationStatus,
+	}, nil
+}
+
+func (s *protectedStoreServer) partnerIDForPayoutProjection(r *http.Request, actor store.StoreActor) (string, error) {
+	row, _, err := store.ResolveActorStore(r.Context(), s.db, s.workforce, actor)
+	if err != nil {
+		return "", err
+	}
+	partnerID := strings.TrimSpace(row.PartnerID)
+	if partnerID == "" {
+		return "", fmt.Errorf("partner actor store has no partner owner")
+	}
+	return partnerID, nil
+}
+
+func (s *protectedStoreServer) syncPartnerPayoutProjection(r *http.Request, actor store.StoreActor, body []byte) error {
+	projection, err := decodePayoutDestinationProjection(body, "partner", actor.ID)
+	if err != nil {
+		return err
+	}
+	partnerID, err := s.partnerIDForPayoutProjection(r, actor)
+	if err != nil {
+		return err
+	}
+	_, err = partner.SyncPayoutDestinationProjection(r.Context(), s.db, partnerID, projection)
+	return err
+}
+
+func (s *protectedStoreServer) clearPartnerPayoutProjection(r *http.Request, actor store.StoreActor) error {
+	partnerID, err := s.partnerIDForPayoutProjection(r, actor)
+	if err != nil {
+		return err
+	}
+	_, err = partner.ClearPayoutDestinationProjection(r.Context(), s.db, partnerID)
+	return err
+}
+
+func writePayoutProjectionSyncError(w http.ResponseWriter) {
+	store.SendError(w, http.StatusBadGateway, "PAYOUT_PROJECTION_SYNC_FAILED", "WLT payout state changed but the DSH partner readiness projection did not converge; retry with the same Idempotency-Key")
+}
+
 func (s *protectedStoreServer) handleActorPayoutDestinationRead(w http.ResponseWriter, r *http.Request, actorType string) {
 	actor, ok := s.requireActor(w, r, actorType)
 	if !ok {
 		return
 	}
 	status, body, err := s.wlt.FinanceReadPayoutDestinationWithOperatorContext(r.Context(), actorType, actor.ID, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
-	writeWltActorFinanceResponse(w, status, body, err)
+	if err != nil {
+		writeWltActorFinanceResponse(w, status, body, err)
+		return
+	}
+	if actorType == "partner" {
+		switch status {
+		case http.StatusOK:
+			if err := s.syncPartnerPayoutProjection(r, actor, body); err != nil {
+				writePayoutProjectionSyncError(w)
+				return
+			}
+		case http.StatusNotFound:
+			if err := s.clearPartnerPayoutProjection(r, actor); err != nil {
+				writePayoutProjectionSyncError(w)
+				return
+			}
+		}
+	}
+	writeWltActorFinanceResponse(w, status, body, nil)
 }
 
 func (s *protectedStoreServer) handleActorPayoutDestinationUpsert(w http.ResponseWriter, r *http.Request, actorType string) {
@@ -54,6 +147,7 @@ func (s *protectedStoreServer) handleActorPayoutDestinationUpsert(w http.Respons
 	delete(object, "partnerId")
 	delete(object, "actorId")
 	delete(object, "actorType")
+	delete(object, "destinationMethod")
 	object["operatorId"] = actor.ID
 	body, err = json.Marshal(object)
 	if err != nil {
@@ -61,8 +155,26 @@ func (s *protectedStoreServer) handleActorPayoutDestinationUpsert(w http.Respons
 		return
 	}
 	correlationID := correlationForActorMutation(r, "payout-destination-"+actorType+"-"+actor.ID)
-	status, responseBody, err := s.wlt.FinanceUpsertPayoutDestinationWithOperatorContext(r.Context(), actorType, actor.ID, body, correlationID, actor.OperatorContextID)
-	writeWltActorFinanceResponse(w, status, responseBody, err)
+	status, responseBody, err := s.wlt.FinanceUpsertPayoutDestinationGoverned(
+		r.Context(),
+		actorType,
+		actor.ID,
+		body,
+		correlationID,
+		r.Header.Get("Idempotency-Key"),
+		actor.OperatorContextID,
+	)
+	if err != nil {
+		writeWltActorFinanceResponse(w, status, responseBody, err)
+		return
+	}
+	if actorType == "partner" && (status == http.StatusOK || status == http.StatusCreated) {
+		if err := s.syncPartnerPayoutProjection(r, actor, responseBody); err != nil {
+			writePayoutProjectionSyncError(w)
+			return
+		}
+	}
+	writeWltActorFinanceResponse(w, status, responseBody, nil)
 }
 
 func (s *protectedStoreServer) handleActorPayoutDestinationDeactivate(w http.ResponseWriter, r *http.Request, actorType string) {
@@ -71,8 +183,25 @@ func (s *protectedStoreServer) handleActorPayoutDestinationDeactivate(w http.Res
 		return
 	}
 	correlationID := correlationForActorMutation(r, "payout-destination-deactivate-"+actorType+"-"+actor.ID)
-	status, body, err := s.wlt.FinanceDeactivatePayoutDestinationWithOperatorContext(r.Context(), actorType, actor.ID, correlationID, actor.OperatorContextID)
-	writeWltActorFinanceResponse(w, status, body, err)
+	status, body, err := s.wlt.FinanceDeactivatePayoutDestinationGoverned(
+		r.Context(),
+		actorType,
+		actor.ID,
+		correlationID,
+		r.Header.Get("Idempotency-Key"),
+		actor.OperatorContextID,
+	)
+	if err != nil {
+		writeWltActorFinanceResponse(w, status, body, err)
+		return
+	}
+	if actorType == "partner" && (status == http.StatusNoContent || status == http.StatusNotFound) {
+		if err := s.clearPartnerPayoutProjection(r, actor); err != nil {
+			writePayoutProjectionSyncError(w)
+			return
+		}
+	}
+	writeWltActorFinanceResponse(w, status, body, nil)
 }
 
 func (s *protectedStoreServer) handleActorPayoutList(w http.ResponseWriter, r *http.Request, actorType string) {
