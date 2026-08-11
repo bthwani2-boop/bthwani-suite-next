@@ -28,10 +28,6 @@ export type DshPartnerAllowedAction =
   | string;
 
 export type DshGovernedPartner = DshPartner & {
-  readonly payoutDestinationId?: string;
-  readonly maskedAccountNumber?: string;
-  readonly maskedIban?: string;
-  readonly maskedMobileNumber?: string;
   readonly allowedActions?: readonly DshPartnerAllowedAction[];
   readonly allowedTransitions?: readonly DshPartnerActivationStatus[];
 };
@@ -110,11 +106,12 @@ export function derivePartnerOnboardingViewModel(
   const allowedActions = partner.allowedActions ?? [];
   const allowedTransitions = partner.allowedTransitions ?? [];
   const has = (action: DshPartnerAllowedAction) => allowedActions.includes(action);
-  const payoutDisplay =
-  partner.maskedAccountNumber ||
-  partner.maskedIban ||
-  partner.maskedMobileNumber ||
-  "";
+  const payoutConfigured = Boolean(
+    partner.payoutDestinationId &&
+    partner.destinationMethod === "official_wallet" &&
+    partner.maskedDestinationReference,
+  );
+  const payoutDisplay = payoutConfigured ? partner.maskedDestinationReference : "";
   const readinessBlockers = readiness?.checklist
     .filter((item) => !item.satisfied)
     .map((item) => item.blockedReason || item.label) ?? [];
@@ -129,7 +126,7 @@ export function derivePartnerOnboardingViewModel(
     canSubmit: has("submit_for_review") && readinessBlockers.length === 0,
     canApprove: has("approve_partner"),
     canPublish: has("publish_store"),
-    payoutConfigured: Boolean(partner.payoutDestinationId || payoutDisplay),
+    payoutConfigured,
     payoutDisplay,
     readinessBlockers,
   };
