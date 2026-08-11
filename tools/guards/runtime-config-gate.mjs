@@ -149,6 +149,7 @@ if (!fs.existsSync(path.join(repoRoot, envExample))) {
   const mutationsConfig = env.get("WLT_MUTATIONS_ENABLED");
   const financeKillSwitch = env.get("WLT_FINANCE_MUTATION_KILL_SWITCH");
   const providerMode = env.get("WLT_FINANCIAL_PROVIDER_MODE");
+  const mockProviderAllowed = env.get("WLT_ALLOW_MOCK_PROVIDER") === "true";
   const productionProviderAllowed = env.get("WLT_ALLOW_PRODUCTION_PROVIDER") === "true";
   if (!new Set(["true", "false"]).has(mutationsConfig)) {
     violations.push({ file: envExample, message: "WLT_MUTATIONS_ENABLED_MUST_BE_EXPLICIT_BOOLEAN" });
@@ -157,6 +158,9 @@ if (!fs.existsSync(path.join(repoRoot, envExample))) {
     violations.push({ file: envExample, message: "WLT_FINANCE_MUTATION_KILL_SWITCH_MUST_BE_EXPLICIT_BOOLEAN" });
   }
   const mutationsEnabled = mutationsConfig === "true";
+  if (providerMode === "mock" && !mockProviderAllowed) {
+    violations.push({ file: envExample, message: "MOCK_PROVIDER_REQUIRES_EXPLICIT_LOCAL_OPT_IN" });
+  }
   if (mutationsEnabled && mode === "development" && providerMode !== "mock") {
     violations.push({ file: envExample, message: "DEVELOPMENT_MUTATIONS_REQUIRE_MOCK_PROVIDER" });
   }
@@ -178,6 +182,15 @@ const localProductionEnvExample = "infra/docker/env/runtime.local-production.env
 if (fs.existsSync(path.join(repoRoot, localProductionEnvExample))) {
   const localProductionEnv = parseEnv(localProductionEnvExample);
   if (
+    localProductionEnv.get("WLT_FINANCIAL_PROVIDER_MODE") === "mock" &&
+    localProductionEnv.get("WLT_ALLOW_MOCK_PROVIDER") !== "true"
+  ) {
+    violations.push({
+      file: localProductionEnvExample,
+      message: "LOCAL_PRODUCTION_MOCK_PROVIDER_REQUIRES_EXPLICIT_OPT_IN",
+    });
+  }
+  if (
     localProductionEnv.get("WLT_MUTATIONS_ENABLED") === "true" &&
     localProductionEnv.get("WLT_FINANCE_MUTATION_KILL_SWITCH") !== "false"
   ) {
@@ -193,6 +206,9 @@ if (fs.existsSync(path.join(repoRoot, composePath))) {
   const compose = read(composePath);
   if (!compose.includes('"127.0.0.1:${BTHWANI_POSTGRES_PORT:-55432}:5432"')) {
     violations.push({ file: composePath, message: "POSTGRES_MUST_BIND_LOOPBACK_ONLY" });
+  }
+  if (!compose.includes('WLT_ALLOW_MOCK_PROVIDER: "${WLT_ALLOW_MOCK_PROVIDER:-false}"')) {
+    violations.push({ file: composePath, message: "WLT_MOCK_PROVIDER_OPT_IN_MUST_DEFAULT_FAIL_CLOSED_IN_COMPOSE" });
   }
   if (!compose.includes('WLT_FINANCE_MUTATION_KILL_SWITCH: "${WLT_FINANCE_MUTATION_KILL_SWITCH:-true}"')) {
     violations.push({ file: composePath, message: "WLT_FINANCE_KILL_SWITCH_MUST_DEFAULT_FAIL_CLOSED_IN_COMPOSE" });
