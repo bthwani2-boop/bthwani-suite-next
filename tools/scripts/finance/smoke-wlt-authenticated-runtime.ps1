@@ -98,9 +98,22 @@ $createResponse = Invoke-WebRequest `
   -Body $sessionBody `
   -TimeoutSec 20 `
   -SkipHttpErrorCheck
-$createBody = $createResponse.Content | ConvertFrom-Json
 $createStatus = [int]$createResponse.StatusCode
-$createCode = [string]$createBody.code
+$createBody = $null
+if (-not [string]::IsNullOrWhiteSpace([string]$createResponse.Content)) {
+  try {
+    $createBody = $createResponse.Content | ConvertFrom-Json -ErrorAction Stop
+  } catch {
+    throw "WLT payment-session create returned invalid JSON: status=$createStatus body=$($createResponse.Content)"
+  }
+}
+$createCode = ""
+if ($null -ne $createBody) {
+  $codeProperty = $createBody.PSObject.Properties["code"]
+  if ($null -ne $codeProperty) {
+    $createCode = [string]$codeProperty.Value
+  }
+}
 
 $expectedGateCode = if (-not $mutationsEnabled) {
   "MUTATIONS_DISABLED"
@@ -112,7 +125,7 @@ $expectedGateCode = if (-not $mutationsEnabled) {
 
 if (-not [string]::IsNullOrWhiteSpace($expectedGateCode)) {
   if ($createStatus -ne 403 -or $createCode -ne $expectedGateCode) {
-    throw "WLT mutation gate contract mismatch: expected HTTP 403 code=$expectedGateCode but received status=$createStatus code=$createCode"
+    throw "WLT mutation gate contract mismatch: expected HTTP 403 code=$expectedGateCode but received status=$createStatus code=$createCode body=$($createResponse.Content)"
   }
   Write-Host "  authenticated mutation gate: $expectedGateCode fail-closed as configured"
   Write-Host "WLT authenticated runtime smoke: PASS"
@@ -120,13 +133,19 @@ if (-not [string]::IsNullOrWhiteSpace($expectedGateCode)) {
 }
 
 if ($createStatus -ne 201) {
-  throw "WLT payment-session create expected enabled mutation path but returned status=$createStatus code=$createCode"
+  throw "WLT payment-session create expected enabled mutation path but returned status=$createStatus code=$createCode body=$($createResponse.Content)"
 }
-$sessionEnvelope = $createBody
-
-$sessionId = [string]$sessionEnvelope.paymentSession.id
+if ($null -eq $createBody) {
+  throw "WLT payment-session create returned HTTP 201 with an empty response body."
+}
+$paymentSessionProperty = $createBody.PSObject.Properties["paymentSession"]
+if ($null -eq $paymentSessionProperty -or $null -eq $paymentSessionProperty.Value) {
+  throw "WLT payment-session create returned HTTP 201 without paymentSession: body=$($createResponse.Content)"
+}
+$idProperty = $paymentSessionProperty.Value.PSObject.Properties["id"]
+$sessionId = if ($null -ne $idProperty) { [string]$idProperty.Value } else { "" }
 if ([string]::IsNullOrWhiteSpace($sessionId)) {
-  throw "/wlt/payment-sessions did not return an id."
+  throw "/wlt/payment-sessions returned HTTP 201 without paymentSession.id."
 }
 
 $sessionRead = Invoke-WltRead -Path "/wlt/payment-sessions/$([Uri]::EscapeDataString($sessionId))"
