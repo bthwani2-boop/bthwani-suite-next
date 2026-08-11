@@ -260,25 +260,53 @@ func UpsertItem(ctx context.Context, db *sql.DB, storeID, cartID string, input U
 		}
 	}
 
+	// Resolve one deterministic current assortment snapshot. The primitive is
+	// fail-closed itself: it verifies the active cart belongs to the store,
+	// storefront publication/approval, effective price, and the full inventory
+	// quantity policy. Callers cannot bypass these rules by skipping an HTTP
+	// handler-level precheck.
 	var assortmentID, name, currency string
 	var unitPriceMinorUnits int64
 	var available bool
-	err := db.QueryRowContext(ctx,
-		`SELECT a.id, mp.canonical_name_ar, COALESCE(p.amount_minor, 0), COALESCE(p.currency, ''),
+	err := db.QueryRowContext(ctx, `
+		SELECT
+			a.id,
+			mp.canonical_name_ar,
+			COALESCE(p.amount_minor, 0),
+			COALESCE(p.currency, ''),
 			CASE
-				WHEN p.amount_minor IS NULL THEN false
-				WHEN i.policy_type = 'signal' AND i.quantity > 0 THEN true
-				WHEN i.policy_type = 'quantity' AND (i.quantity - i.reserved_quantity) >= $3 THEN true
-				WHEN i.policy_type = 'infinite' THEN true
-				ELSE false
+				WHEN c.id IS NULL THEN FALSE
+				WHEN a.publication_status <> 'client_visible' OR a.available IS NOT TRUE THEN FALSE
+				WHEN mp.approval_status <> 'approved' OR mp.is_active IS NOT TRUE THEN FALSE
+				WHEN p.amount_minor IS NULL OR p.amount_minor <= 0 OR length(trim(p.currency)) <> 3 THEN FALSE
+				WHEN i.store_assortment_id IS NULL OR i.step_quantity < 1 THEN FALSE
+				WHEN $3 < i.min_order_quantity OR $3 > i.max_order_quantity THEN FALSE
+				WHEN MOD($3 - i.min_order_quantity, i.step_quantity) <> 0 THEN FALSE
+				WHEN i.policy_type = 'signal' AND i.quantity > 0 THEN TRUE
+				WHEN i.policy_type = 'quantity' AND (i.quantity - i.reserved_quantity) >= $3 THEN TRUE
+				WHEN i.policy_type = 'infinite' THEN TRUE
+				ELSE FALSE
 			END AS available
-		 FROM dsh_store_assortments a
-		 JOIN dsh_master_products mp ON mp.id = a.master_product_id
-		 LEFT JOIN dsh_store_assortment_prices p ON p.store_assortment_id = a.id AND p.effective_from <= NOW() AND (p.effective_until IS NULL OR p.effective_until > NOW())
-		 LEFT JOIN dsh_store_assortment_inventory i ON i.store_assortment_id = a.id
-		 WHERE a.store_id = $1 AND a.master_product_id = $2
-		 ORDER BY p.effective_from DESC LIMIT 1`,
-		storeID, input.MasterProductID, input.Quantity,
+		FROM dsh_store_assortments a
+		JOIN dsh_master_products mp ON mp.id = a.master_product_id
+		LEFT JOIN dsh_carts c
+		  ON c.id = $4::uuid
+		 AND c.store_id = a.store_id
+		 AND c.state = 'active'
+		LEFT JOIN LATERAL (
+			SELECT price.amount_minor, price.currency
+			FROM dsh_store_assortment_prices price
+			WHERE price.store_assortment_id = a.id
+			  AND price.effective_from <= NOW()
+			  AND (price.effective_until IS NULL OR price.effective_until > NOW())
+			ORDER BY price.effective_from DESC, price.version DESC, price.id DESC
+			LIMIT 1
+		) p ON TRUE
+		LEFT JOIN dsh_store_assortment_inventory i ON i.store_assortment_id = a.id
+		WHERE a.store_id = $1
+		  AND a.master_product_id = $2
+		LIMIT 1`,
+		storeID, input.MasterProductID, input.Quantity, cartID,
 	).Scan(&assortmentID, &name, &unitPriceMinorUnits, &currency, &available)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrInvalid
