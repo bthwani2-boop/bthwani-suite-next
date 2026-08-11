@@ -196,11 +196,13 @@ func validateAssortmentImageForClientVisibility(ctx context.Context, tx *sql.Tx,
 
 // UpsertStoreAssortmentWithRuntimeTruth is the sole authoritative assortment
 // metadata writer. Creation is allowed only when expectedVersion is omitted;
-// edits require the exact current expectedVersion. The row is locked before an
-// edit, normalized price/inventory bootstrap happens inside the same
-// transaction, and a metadata edit can never overwrite an existing normalized
-// price with a stale legacy unitPrice. Dedicated inventory/price endpoints own
-// subsequent commercial changes.
+// edits require the exact current expectedVersion. A transaction-scoped
+// advisory lock serializes both absent-row creation and existing-row updates
+// for the same store/product key, then the row is locked before an edit.
+// Normalized price/inventory bootstrap happens inside the same transaction,
+// and a metadata edit can never overwrite an existing normalized price with a
+// stale legacy unitPrice. Dedicated inventory/price endpoints own subsequent
+// commercial changes.
 func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID string, input StoreAssortmentInput, allowCustomImage bool) (StoreAssortment, error) {
 	storeID = strings.TrimSpace(storeID)
 	masterProductID = strings.TrimSpace(masterProductID)
@@ -240,6 +242,13 @@ func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, stor
 		return StoreAssortment{}, err
 	}
 	defer tx.Rollback()
+	if _, err := tx.ExecContext(
+		ctx,
+		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+		"dsh-assortment:"+storeID+":"+masterProductID,
+	); err != nil {
+		return StoreAssortment{}, err
+	}
 
 	var existing StoreAssortment
 	existing, existingErr := scanAssortment(tx.QueryRowContext(ctx, `
