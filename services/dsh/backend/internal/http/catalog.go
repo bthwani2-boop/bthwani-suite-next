@@ -16,9 +16,9 @@ import (
 
 // handlePublicCatalog is the sole client-facing catalog read. Per
 // governance/catalog/CENTRAL_CATALOG_SOVEREIGNTY_DECISION.md rule 4, it reads
-// only from the master catalog + store assortment, so a
-// product is visible to app-client only when domain, master product, and
-// assortment row are all independently approved/active/visible.
+// only from the master catalog + store assortment, then applies the same
+// normalized price/inventory authority used by cart. A product cannot be
+// advertised to app-client unless it is actually purchasable now.
 func handlePublicCatalog(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		domains, nodes, products, media, policySnapshot, err := centralcatalog.GetClientCatalog(r.Context(), db, r.PathValue("storeId"))
@@ -28,6 +28,11 @@ func handlePublicCatalog(db *sql.DB) http.HandlerFunc {
 		}
 		if err != nil {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "catalog unavailable")
+			return
+		}
+		products, err = centralcatalog.FilterPurchasableClientCatalogEntries(r.Context(), db, products)
+		if err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "catalog purchasability unavailable")
 			return
 		}
 		store.SendJSON(w, http.StatusOK, map[string]any{
