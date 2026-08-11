@@ -10,7 +10,20 @@ const READ_TOOLS = new Set([
   "grep_search",
 ]);
 const WRITE_TOOLS = new Set(["write_file", "replace"]);
-const METADATA_TOOLS = new Set(["write_todos", "update_topic"]);
+const STATIC_FORBIDDEN_WRITE = [
+  "AGENTS.md",
+  "GEMINI.md",
+  "CLAUDE.md",
+  "LEAN-CTX.md",
+  "opencode.json",
+  ".agents",
+  ".gemini",
+  ".claude",
+  "governance",
+  "tools/scripts/invoke-gemini-implementer.mjs",
+  "tools/scripts/gemini-implementer-hook.mjs",
+  "tools/scripts/gemini-implementer-hook.test.mjs",
+];
 
 function realCase(value) {
   return process.platform === "win32" ? value.toLowerCase() : value;
@@ -70,14 +83,15 @@ export function evaluateToolCall(input, options) {
   const toolName = String(input?.tool_name || "");
   const toolInput = input?.tool_input && typeof input.tool_input === "object" ? input.tool_input : {};
   const allowedWrite = (options.allowedWrite || []).map((value) => path.resolve(value));
-  const forbiddenWrite = (options.forbiddenWrite || []).map((value) => path.resolve(value));
+  const forbiddenWrite = [
+    ...(options.forbiddenWrite || []).map((value) => path.resolve(value)),
+    ...STATIC_FORBIDDEN_WRITE.map((value) => path.resolve(repoRoot, value)),
+  ];
 
   const allow = () => ({ decision: "allow", suppressOutput: true });
   const deny = (reason) => ({ decision: "deny", reason, suppressOutput: true });
 
   if (!toolName) return deny("Missing tool name.");
-
-  if (METADATA_TOOLS.has(toolName)) return allow();
 
   if (READ_TOOLS.has(toolName)) {
     const targets = collectReadTargets(toolName, toolInput, cwd, repoRoot);
@@ -149,6 +163,5 @@ if (isMain) {
       reason: `Gemini implementer hook failure: ${error.message}`,
       suppressOutput: true,
     })}\n`);
-    process.exitCode = 1;
   });
 }

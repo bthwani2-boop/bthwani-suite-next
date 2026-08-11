@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { evaluateToolCall } from "./gemini-implementer-hook.mjs";
+
+const hookPath = fileURLToPath(new URL("./gemini-implementer-hook.mjs", import.meta.url));
 
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "bthwani-gemini-hook-"));
@@ -40,6 +44,15 @@ test("denies shell execution", () => {
   assert.equal(result.decision, "deny");
 });
 
+test("denies metadata tools that can mutate agent state", () => {
+  const root = fixture();
+  const result = evaluateToolCall(
+    { tool_name: "write_todos", tool_input: { todos: [] }, cwd: root },
+    options(root),
+  );
+  assert.equal(result.decision, "deny");
+});
+
 test("allows write inside declared prefix", () => {
   const root = fixture();
   const result = evaluateToolCall(
@@ -67,6 +80,16 @@ test("denies explicitly forbidden descendant", () => {
   assert.equal(result.decision, "deny");
 });
 
+test("denies governance writes even when an allow prefix is broad", () => {
+  const root = fixture();
+  fs.mkdirSync(path.join(root, "governance", "product"), { recursive: true });
+  const result = evaluateToolCall(
+    { tool_name: "write_file", tool_input: { file_path: "governance/product/a.json" }, cwd: root },
+    { repoRoot: root, allowedWrite: [path.join(root, "governance")], forbiddenWrite: [] },
+  );
+  assert.equal(result.decision, "deny");
+});
+
 test("denies .git writes", () => {
   const root = fixture();
   const result = evaluateToolCall(
@@ -84,4 +107,20 @@ test("denies repository escape", () => {
     options(root),
   );
   assert.equal(result.decision, "deny");
+});
+
+test("hook failures return structured denial with exit code zero", () => {
+  const env = { ...process.env };
+  delete env.BTHWANI_GEMINI_REPO_ROOT;
+  delete env.BTHWANI_GEMINI_ALLOWED_WRITE;
+  delete env.BTHWANI_GEMINI_FORBIDDEN_WRITE;
+  const result = spawnSync(process.execPath, [hookPath], {
+    input: "{}",
+    encoding: "utf8",
+    env,
+  });
+  assert.equal(result.status, 0);
+  const parsed = JSON.parse(result.stdout.trim());
+  assert.equal(parsed.decision, "deny");
+  assert.match(parsed.reason, /hook failure/i);
 });
