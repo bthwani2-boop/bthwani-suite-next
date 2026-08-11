@@ -12,11 +12,16 @@ CREATE TABLE IF NOT EXISTS wlt_store_onboarding_fee_policy_versions (
     actor_charged VARCHAR(64) NOT NULL DEFAULT 'partner',
     effective_from TIMESTAMP WITH TIME ZONE,
     notes VARCHAR(1000) NOT NULL DEFAULT '',
+    reason VARCHAR(1000) NOT NULL,
+    correlation_id VARCHAR(200) NOT NULL,
+    idempotency_key VARCHAR(200) NOT NULL,
     created_by_actor_id VARCHAR(200) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     superseded_at TIMESTAMP WITH TIME ZONE,
     CONSTRAINT wlt_store_onboarding_fee_policy_versions_scope_version_uq
-        UNIQUE (operator_context_id, version)
+        UNIQUE (operator_context_id, version),
+    CONSTRAINT wlt_store_onboarding_fee_policy_versions_scope_idempotency_uq
+        UNIQUE (operator_context_id, idempotency_key)
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS wlt_store_onboarding_fee_policy_versions_current_uq
@@ -63,7 +68,7 @@ FROM wlt_financial_store_onboarding_fee_policy
 ON CONFLICT (legacy_policy_id) DO NOTHING;
 
 COMMENT ON TABLE wlt_store_onboarding_fee_policy_versions IS
-    'Canonical append-only OperatorContext-scoped onboarding fee policy. Monetary values are exact integer minor units.';
+    'Canonical append-only OperatorContext-scoped onboarding fee policy. Monetary values are exact integer minor units and every version carries immutable audit/idempotency metadata.';
 
 COMMENT ON TABLE wlt_store_onboarding_fee_policy_legacy_reviews IS
     'Legacy singleton onboarding fee rows retained for finance review only. They are never canonical financial authority.';
