@@ -87,6 +87,7 @@ func TestFilterClientCatalogDimensionsRemovesPhantoms(t *testing.T) {
 	nodes := []Node{{ID: nodeA, DomainID: "domain-a"}, {ID: nodeB, DomainID: "domain-b"}}
 	products := []ClientCatalogEntry{{
 		MasterProduct: MasterProduct{ID: "product-a", DomainID: "domain-a", CategoryNodeID: &nodeA},
+		assortmentID:  "assortment-a",
 	}}
 
 	gotDomains, gotNodes := FilterClientCatalogDimensions(domains, nodes, products)
@@ -95,5 +96,52 @@ func TestFilterClientCatalogDimensionsRemovesPhantoms(t *testing.T) {
 	}
 	if len(gotNodes) != 1 || gotNodes[0].ID != nodeA {
 		t.Fatalf("unexpected nodes after purchasability pruning: %#v", gotNodes)
+	}
+}
+
+func TestFilterClientCatalogAuxiliaryProjectionRemovesOrphans(t *testing.T) {
+	nodeA := "node-a"
+	nodeB := "node-b"
+	domainA := "domain-a"
+	domainB := "domain-b"
+	products := []ClientCatalogEntry{{
+		MasterProduct: MasterProduct{ID: "product-a", DomainID: domainA, CategoryNodeID: &nodeA},
+		assortmentID:  "assortment-a",
+	}}
+	media := []CatalogAssetLinkWithAsset{
+		{CatalogAssetLink: CatalogAssetLink{ID: "m-domain-a", EntityType: "domain", EntityID: domainA}},
+		{CatalogAssetLink: CatalogAssetLink{ID: "m-domain-b", EntityType: "domain", EntityID: domainB}},
+		{CatalogAssetLink: CatalogAssetLink{ID: "m-node-a", EntityType: "node", EntityID: nodeA}},
+		{CatalogAssetLink: CatalogAssetLink{ID: "m-node-b", EntityType: "node", EntityID: nodeB}},
+		{CatalogAssetLink: CatalogAssetLink{ID: "m-product-a", EntityType: "master_product", EntityID: "product-a"}},
+		{CatalogAssetLink: CatalogAssetLink{ID: "m-product-b", EntityType: "master_product", EntityID: "product-b"}},
+		{CatalogAssetLink: CatalogAssetLink{ID: "m-assortment-a", EntityType: "store_assortment", EntityID: "assortment-a"}},
+		{CatalogAssetLink: CatalogAssetLink{ID: "m-assortment-b", EntityType: "store_assortment", EntityID: "assortment-b"}},
+	}
+	policies := []CatalogPolicy{
+		{ID: "default", PolicyScope: "default", IsActive: true},
+		{ID: "domain-a", PolicyScope: "domain", DomainID: &domainA, IsActive: true},
+		{ID: "domain-b", PolicyScope: "domain", DomainID: &domainB, IsActive: true},
+		{ID: "node-a", PolicyScope: "node", NodeID: &nodeA, IsActive: true},
+		{ID: "node-b", PolicyScope: "node", NodeID: &nodeB, IsActive: true},
+		{ID: "inactive", PolicyScope: "default", IsActive: false},
+	}
+
+	gotMedia, gotPolicies := FilterClientCatalogAuxiliaryProjection(media, policies, products)
+	if len(gotMedia) != 4 {
+		t.Fatalf("expected exactly 4 media links for the surviving catalog graph, got %#v", gotMedia)
+	}
+	for _, link := range gotMedia {
+		if link.EntityID == domainB || link.EntityID == nodeB || link.EntityID == "product-b" || link.EntityID == "assortment-b" {
+			t.Fatalf("orphan media survived final catalog projection: %#v", link)
+		}
+	}
+	if len(gotPolicies) != 3 {
+		t.Fatalf("expected default + surviving domain/node policies, got %#v", gotPolicies)
+	}
+	for _, policy := range gotPolicies {
+		if policy.ID == "domain-b" || policy.ID == "node-b" || policy.ID == "inactive" {
+			t.Fatalf("orphan/inactive policy survived final catalog projection: %#v", policy)
+		}
 	}
 }
