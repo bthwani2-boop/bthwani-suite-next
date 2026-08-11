@@ -2,6 +2,21 @@ package centralcatalog
 
 import "testing"
 
+func runtimeTruth(amountMinor int64, currency, policyType string, quantity, reserved, minimum, maximum, step int) assortmentRuntimeTruth {
+	return assortmentRuntimeTruth{
+		AmountMinor: amountMinor,
+		Currency:    currency,
+		assortmentInventoryTruth: assortmentInventoryTruth{
+			PolicyType:       policyType,
+			Quantity:         quantity,
+			ReservedQuantity: reserved,
+			MinOrderQuantity: minimum,
+			MaxOrderQuantity: maximum,
+			StepQuantity:     step,
+		},
+	}
+}
+
 func TestAssortmentTruthPurchasable(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -9,29 +24,29 @@ func TestAssortmentTruthPurchasable(t *testing.T) {
 		want  bool
 	}{
 		{
-			name: "signal with effective price and stock",
-			truth: assortmentRuntimeTruth{AmountMinor: 1250, Currency: "YER", PolicyType: "signal", Quantity: 5, MinOrderQuantity: 1, MaxOrderQuantity: 100, StepQuantity: 1},
-			want: true,
+			name:  "signal with effective price and stock",
+			truth: runtimeTruth(1250, "YER", "signal", 5, 0, 1, 100, 1),
+			want:  true,
 		},
 		{
-			name: "missing price fails closed",
-			truth: assortmentRuntimeTruth{Currency: "YER", PolicyType: "signal", Quantity: 5, MinOrderQuantity: 1, MaxOrderQuantity: 100, StepQuantity: 1},
-			want: false,
+			name:  "missing price fails closed",
+			truth: runtimeTruth(0, "YER", "signal", 5, 0, 1, 100, 1),
+			want:  false,
 		},
 		{
-			name: "depleted quantity policy fails closed",
-			truth: assortmentRuntimeTruth{AmountMinor: 1250, Currency: "YER", PolicyType: "quantity", Quantity: 4, ReservedQuantity: 4, MinOrderQuantity: 1, MaxOrderQuantity: 10, StepQuantity: 1},
-			want: false,
+			name:  "depleted quantity policy fails closed",
+			truth: runtimeTruth(1250, "YER", "quantity", 4, 4, 1, 10, 1),
+			want:  false,
 		},
 		{
-			name: "quantity policy must satisfy minimum order",
-			truth: assortmentRuntimeTruth{AmountMinor: 1250, Currency: "YER", PolicyType: "quantity", Quantity: 2, MinOrderQuantity: 3, MaxOrderQuantity: 10, StepQuantity: 1},
-			want: false,
+			name:  "quantity policy must satisfy minimum order",
+			truth: runtimeTruth(1250, "YER", "quantity", 2, 0, 3, 10, 1),
+			want:  false,
 		},
 		{
-			name: "infinite policy is purchasable without signal quantity",
-			truth: assortmentRuntimeTruth{AmountMinor: 1250, Currency: "YER", PolicyType: "infinite", MinOrderQuantity: 1, MaxOrderQuantity: 100, StepQuantity: 1},
-			want: true,
+			name:  "infinite policy is purchasable without signal quantity",
+			truth: runtimeTruth(1250, "YER", "infinite", 0, 0, 1, 100, 1),
+			want:  true,
 		},
 	}
 
@@ -41,6 +56,27 @@ func TestAssortmentTruthPurchasable(t *testing.T) {
 				t.Fatalf("assortmentTruthPurchasable()=%v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestInventoryAvailabilityDoesNotDependOnPrice(t *testing.T) {
+	inventory := assortmentInventoryTruth{
+		PolicyType:       "quantity",
+		Quantity:         10,
+		ReservedQuantity: 2,
+		MinOrderQuantity: 2,
+		MaxOrderQuantity: 20,
+		StepQuantity:     2,
+	}
+	if !assortmentInventoryAvailable(inventory) {
+		t.Fatal("inventory availability must remain true independent of timed price presence")
+	}
+	if got := assortmentInventoryStockStatus(inventory); got != "in_stock" {
+		t.Fatalf("unexpected stock status: %s", got)
+	}
+	withoutPrice := assortmentRuntimeTruth{assortmentInventoryTruth: inventory}
+	if assortmentTruthPurchasable(withoutPrice) {
+		t.Fatal("purchasability must still fail closed without an effective price")
 	}
 }
 
