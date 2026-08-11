@@ -8,9 +8,9 @@ import (
 )
 
 // validateProposalClientVisibilityTruth is the canonical publication gate for
-// proposal-driven client visibility. The legacy assortment unit_price column is
-// not authoritative: visibility requires the same normalized effective price
-// and inventory truth consumed by storefront and cart.
+// proposal-driven client visibility. Legacy assortment commercial projections
+// are not authoritative: visibility requires the same normalized effective
+// price and inventory truth consumed by storefront and cart.
 func validateProposalClientVisibilityTruth(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -18,20 +18,16 @@ func validateProposalClientVisibilityTruth(
 	masterProductID string,
 ) (string, error) {
 	var assortmentID string
-	var available bool
 	err := tx.QueryRowContext(ctx, `
-		SELECT id, available
+		SELECT id
 		FROM dsh_store_assortments
 		WHERE store_id = $1 AND master_product_id = $2
-		FOR UPDATE`, storeID, masterProductID).Scan(&assortmentID, &available)
+		FOR UPDATE`, storeID, masterProductID).Scan(&assortmentID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", fmt.Errorf("%w: store assortment not found", ErrNotFound)
 	}
 	if err != nil {
 		return "", err
-	}
-	if !available {
-		return "", fmt.Errorf("%w: store assortment must be available", ErrInvalid)
 	}
 
 	truth, err := readAssortmentRuntimeTruth(ctx, tx, assortmentID)
