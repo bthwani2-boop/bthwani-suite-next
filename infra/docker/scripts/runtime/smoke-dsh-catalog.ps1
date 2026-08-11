@@ -184,24 +184,74 @@ $transBody4 = @{
 } | ConvertTo-Json
 $proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody4 -TimeoutSec 10
 
-# Configure the store assortment price and availability with optimistic concurrency
-# when an existing store-product link is being updated.
+# Assortment metadata and commercial truth have separate authorities. Adoption
+# may already have created the store-product link, so never try to repair an
+# existing assortment by writing legacy unitPrice/available projections. Ensure
+# the metadata row exists, then configure normalized price and inventory through
+# their dedicated endpoints before attempting client-visible publication.
+$assortmentUrl = "http://localhost:58080/dsh/operator/stores/store-test-grocery/assortment/$($proposal.proposal.adoptedMasterProductId)"
 $assortmentList = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery/assortment" -Headers $operatorHeaders -TimeoutSec 10
 $currentAssortment = @($assortmentList.assortment) |
   Where-Object { $_.masterProductId -eq $proposal.proposal.adoptedMasterProductId } |
   Select-Object -First 1
-$assortmentPayload = @{
-  unitPrice = 10.00
+
+if ($null -eq $currentAssortment) {
+  $draftAssortmentBody = @{
+    unitPrice = 0.00
+    currency = "YER"
+    available = $false
+    stockStatus = "out_of_stock"
+    publicationStatus = "draft"
+  } | ConvertTo-Json
+  $createdAssortment = Invoke-RestMethod $assortmentUrl -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $draftAssortmentBody -TimeoutSec 10
+  $currentAssortment = $createdAssortment.assortment
+}
+
+$priceBody = @{
+  amountMinor = 1000
   currency = "YER"
-  available = $true
-  stockStatus = "in_stock"
+  prepTimeMin = 15
+  prepTimeMax = 30
+  effectiveFrom = [DateTimeOffset]::UtcNow.AddMinutes(-1).ToString("o")
+} | ConvertTo-Json
+Invoke-RestMethod "$assortmentUrl/prices/schedule" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $priceBody -TimeoutSec 10 | Out-Null
+
+$inventoryBody = @{
+  policyType = "quantity"
+  quantity = 100
+  minOrderQuantity = 1
+  maxOrderQuantity = 100
+  stepQuantity = 1
+  expectedVersion = 0
+} | ConvertTo-Json
+Invoke-RestMethod "$assortmentUrl/inventory" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $inventoryBody -TimeoutSec 10 | Out-Null
+
+# Read back the authoritative normalized commercial projection and use its
+# current metadata version for the publication transition.
+$assortmentList = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery/assortment" -Headers $operatorHeaders -TimeoutSec 10
+$currentAssortment = @($assortmentList.assortment) |
+  Where-Object { $_.masterProductId -eq $proposal.proposal.adoptedMasterProductId } |
+  Select-Object -First 1
+if ($null -eq $currentAssortment) { throw "normalized assortment readback is missing" }
+if (-not $currentAssortment.available -or $currentAssortment.stockStatus -eq "out_of_stock") {
+  throw "normalized assortment inventory is not purchasable"
+}
+if ([math]::Abs(([double]$currentAssortment.unitPrice) - 10.00) -gt 0.000001 -or $currentAssortment.currency -ne "YER") {
+  throw "normalized assortment effective price was not persisted"
+}
+
+$publishAssortmentBody = @{
+  unitPrice = [double]$currentAssortment.unitPrice
+  currency = [string]$currentAssortment.currency
+  available = [bool]$currentAssortment.available
+  stockStatus = [string]$currentAssortment.stockStatus
   publicationStatus = "client_visible"
+  expectedVersion = [int]$currentAssortment.version
+} | ConvertTo-Json
+$assortment = Invoke-RestMethod $assortmentUrl -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $publishAssortmentBody -TimeoutSec 10
+if ($assortment.assortment.publicationStatus -ne "client_visible" -or -not $assortment.assortment.available) {
+  throw "normalized assortment publication was not persisted"
 }
-if ($null -ne $currentAssortment) {
-  $assortmentPayload.expectedVersion = [int]$currentAssortment.version
-}
-$assortmentBody = $assortmentPayload | ConvertTo-Json
-$assortment = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery/assortment/$($proposal.proposal.adoptedMasterProductId)" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $assortmentBody -TimeoutSec 10
 
 # Transition to client-visible using the version returned by catalog approval.
 $transBody5 = @{
