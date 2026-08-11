@@ -14,6 +14,7 @@ Set-StrictMode -Version Latest
 if ([string]::IsNullOrWhiteSpace($IdentityPassword)) {
   $IdentityPassword = Get-LocalPassword
 }
+
 $RunId = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $RuntimeComposeFile = Join-Path $RepoRoot "infra/docker/compose.runtime.yml"
@@ -33,7 +34,14 @@ function Invoke-Api {
     [hashtable]$Headers = @{},
     [object]$Body = $null
   )
-  $Request = @{ Method = $Method; Uri = $Url; Headers = $Headers; TimeoutSec = 30; SkipHttpErrorCheck = $true }
+
+  $Request = @{
+    Method = $Method
+    Uri = $Url
+    Headers = $Headers
+    TimeoutSec = 30
+    SkipHttpErrorCheck = $true
+  }
   if ($null -ne $Body) {
     $Request.ContentType = "application/json"
     $Request.Body = $Body | ConvertTo-Json -Depth 15
@@ -43,7 +51,11 @@ function Invoke-Api {
   if (-not [string]::IsNullOrWhiteSpace($Response.Content)) {
     try { $Json = $Response.Content | ConvertFrom-Json } catch { }
   }
-  return [pscustomobject]@{ Status = [int]$Response.StatusCode; Json = $Json; Content = $Response.Content }
+  return [pscustomobject]@{
+    Status = [int]$Response.StatusCode
+    Json = $Json
+    Content = $Response.Content
+  }
 }
 
 function Require-Status([object]$Response, [int[]]$Expected, [string]$Name) {
@@ -59,9 +71,9 @@ function Require([bool]$Condition, [string]$Message) {
 function Invoke-DshRuntimeScalar {
   param([Parameter(Mandatory = $true)][string]$Statement)
 
-  foreach ($required in @($RuntimeComposeFile, $RuntimeEnvFile)) {
-    if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
-      throw "governed runtime authority is missing: $required"
+  foreach ($RequiredPath in @($RuntimeComposeFile, $RuntimeEnvFile)) {
+    if (-not (Test-Path -LiteralPath $RequiredPath -PathType Leaf)) {
+      throw "governed runtime authority is missing: $RequiredPath"
     }
   }
 
@@ -122,24 +134,32 @@ function Login-Actor([string]$Username, [string]$ExpectedRole) {
   $Login = Invoke-Api POST "$IdentityBaseUrl/auth/login" @{} @{
     username = $Username
     password = $IdentityPassword
-    deviceFingerprint = "lian-multisurface-$RunId-$Username"
+    deviceFingerprint = "runtime-multisurface-$RunId-$Username"
   }
   Require-Status $Login @(200) "login $Username"
   $Token = "$(Get-Value $Login.Json 'accessToken')"
   Require (-not [string]::IsNullOrWhiteSpace($Token)) "login returned no token for $Username"
+
   $Session = Invoke-Api GET "$IdentityBaseUrl/auth/session" @{ Authorization = "Bearer $Token" }
   Require-Status $Session @(200) "session $Username"
   $Subject = "$(Get-Value $Session.Json 'subject')"
   Require (-not [string]::IsNullOrWhiteSpace($Subject)) "session returned no subject for $Username"
-  return [pscustomobject]@{ Username = $Username; Role = $ExpectedRole; Token = $Token; Subject = $Subject }
+  return [pscustomobject]@{
+    Username = $Username
+    Role = $ExpectedRole
+    Token = $Token
+    Subject = $Subject
+  }
 }
 
 function Headers([object]$Actor, [string]$Operation, [switch]$ReadOnly) {
   $Result = @{
     Authorization = "Bearer $($Actor.Token)"
-    "X-Correlation-ID" = "lian-$Operation-$RunId-$([guid]::NewGuid().ToString('N'))"
+    "X-Correlation-ID" = "runtime-$Operation-$RunId-$([guid]::NewGuid().ToString('N'))"
   }
-  if (-not $ReadOnly) { $Result["Idempotency-Key"] = "lian-$Operation-$RunId-$([guid]::NewGuid().ToString('N'))" }
+  if (-not $ReadOnly) {
+    $Result["Idempotency-Key"] = "runtime-$Operation-$RunId-$([guid]::NewGuid().ToString('N'))"
+  }
   return $Result
 }
 
@@ -156,7 +176,9 @@ function Ensure-ClientAddress([object]$Client, [object]$ServicePoint) {
     [math]::Abs([double](Get-Value $_ 'latitude') - $ServicePoint.Latitude) -lt 0.000001 -and
     [math]::Abs([double](Get-Value $_ 'longitude') - $ServicePoint.Longitude) -lt 0.000001
   })
-  if ($Matching.Count -gt 0) { return "$(Get-Value $Matching[0] 'id')" }
+  if ($Matching.Count -gt 0) {
+    return "$(Get-Value $Matching[0] 'id')"
+  }
 
   $Create = Invoke-Api POST "$DshBaseUrl/dsh/client/addresses" (Headers $Client "address-create") @{
     label = "runtime-$RunId"
@@ -173,7 +195,7 @@ function Ensure-ClientAddress([object]$Client, [object]$ServicePoint) {
   Require (-not [string]::IsNullOrWhiteSpace($AddressId)) "client address returned no id"
 
   $ReplayHeaders = Headers $Client "address-create-replay"
-  $ReplayHeaders["Idempotency-Key"] = "lian-address-replay-$RunId"
+  $ReplayHeaders["Idempotency-Key"] = "runtime-address-replay-$RunId"
   $ReplayBody = @{
     label = "runtime-replay-$RunId"
     recipientName = "Runtime Client"
@@ -195,6 +217,7 @@ function Ensure-ClientAddress([object]$Client, [object]$ServicePoint) {
 $Client = Login-Actor (Get-LocalUsername "client") "client"
 $Partner = Login-Actor (Get-LocalUsername "partner") "partner"
 $Operator = Login-Actor (Get-LocalUsername "operator") "operator"
+
 $CaptainProvider = Get-ProvisionedWorkforceActor -Kind "captain"
 $Captain = [pscustomobject]@{
   Username = [string]$CaptainProvider.workforceCode
@@ -207,6 +230,7 @@ $Captain = [pscustomobject]@{
     -DeviceFingerprint "dsh-multisurface"
   Subject = [string]$CaptainProvider.actorId
 }
+
 $FieldProvider = Get-ProvisionedWorkforceActor -Kind "field"
 $Field = [pscustomobject]@{
   Username = [string]$FieldProvider.workforceCode
@@ -219,6 +243,7 @@ $Field = [pscustomobject]@{
     -DeviceFingerprint "dsh-multisurface"
   Subject = [string]$FieldProvider.actorId
 }
+
 $StorePoint = Resolve-GovernedStoreServicePoint -StoreId "store-test-grocery"
 
 $Anonymous = Invoke-Api GET "$DshBaseUrl/dsh/client/orders"
@@ -239,7 +264,9 @@ Require-Status $Catalog @(200) "published catalog"
 $Products = @((Get-Value $Catalog.Json 'products'))
 Require ($Products.Count -gt 0) "published catalog has no products"
 $ProductId = "$(Get-Value $Products[0] 'masterProductId')"
-if ([string]::IsNullOrWhiteSpace($ProductId)) { $ProductId = "$(Get-Value $Products[0] 'id')" }
+if ([string]::IsNullOrWhiteSpace($ProductId)) {
+  $ProductId = "$(Get-Value $Products[0] 'id')"
+}
 Require (-not [string]::IsNullOrWhiteSpace($ProductId)) "catalog product has no governed id"
 
 $Cart = Invoke-Api POST "$DshBaseUrl/dsh/client/cart/items" (Headers $Client "cart-upsert") @{
@@ -258,7 +285,7 @@ $Checkout = Invoke-Api POST "$DshBaseUrl/dsh/client/checkout-intents" (Headers $
   fulfillmentMode = "bthwani_delivery"
   paymentMethod = "cod"
   deliveryAddressId = $AddressId
-  note = "lian multi-surface closure $RunId"
+  note = "governed multi-surface closure $RunId"
 }
 Require-Status $Checkout @(200, 201) "client checkout"
 $Intent = Get-Value $Checkout.Json 'intent'
@@ -273,19 +300,26 @@ $OrderId = "$(Get-Value (Get-Value $OrderCreate.Json 'order') 'id')"
 Require (-not [string]::IsNullOrWhiteSpace($OrderId)) "order returned no id"
 $OrderReplay = Invoke-Api POST "$DshBaseUrl/dsh/client/orders" (Headers $Client "order-replay") @{ checkoutIntentId = $CheckoutId }
 Require-Status $OrderReplay @(200) "order replay from checkout"
-$ReplayOrderId = "$(Get-Value (Get-Value $OrderReplay.Json 'order') 'id')"
-Require ($ReplayOrderId -eq $OrderId) "order replay created a duplicate order"
+Require ("$(Get-Value (Get-Value $OrderReplay.Json 'order') 'id')" -eq $OrderId) "order replay created a duplicate order"
 
 $ClientOrders = Invoke-Api GET "$DshBaseUrl/dsh/client/orders" (Headers $Client "client-orders" -ReadOnly)
 Require-Status $ClientOrders @(200) "client orders"
 Require ((Find-Id @((Get-Value $ClientOrders.Json 'orders')) $OrderId).Count -eq 1) "client order list missed created order"
-$PartnerOrders = Invoke-Api GET "$DshBaseUrl/dsh/partner/orders" (Headers $Partner "partner-orders" -ReadOnly)
-Require-Status $PartnerOrders @(200) "partner orders"
-Require ((Find-Id @((Get-Value $PartnerOrders.Json 'orders')) $OrderId).Count -eq 1) "partner did not receive order"
 
-$Accepted = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/accept" (Headers $Partner "partner-accept")
-Require-Status $Accepted @(200) "partner accept"
+$PartnerWorkboard = Invoke-Api GET "$DshBaseUrl/dsh/partner/order-workboard" (Headers $Partner "partner-workboard" -ReadOnly)
+Require-Status $PartnerWorkboard @(200) "partner order workboard"
+$PartnerOrder = Find-Id @((Get-Value $PartnerWorkboard.Json 'orders')) $OrderId
+Require ($PartnerOrder.Count -eq 1) "partner workboard did not receive order"
+$OrderVersion = [int](Get-Value $PartnerOrder[0] 'version')
+Require ($OrderVersion -gt 0) "partner workboard returned no governed order version"
+Require (@((Get-Value $PartnerOrder[0] 'allowedActions')) -contains "accept") "partner workboard did not authorize accept"
+
+$DecisionHeaders = Headers $Partner "partner-accept"
+$DecisionHeaders["If-Match-Version"] = "$OrderVersion"
+$Accepted = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/decision" $DecisionHeaders @{ decision = "accept" }
+Require-Status $Accepted @(200) "partner governed accept"
 Require ("$(Get-Value (Get-Value $Accepted.Json 'order') 'status')" -eq "store_accepted") "partner accept status mismatch"
+
 $Preparing = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/preparing" (Headers $Partner "partner-preparing")
 Require-Status $Preparing @(200) "partner preparing"
 $Ready = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/ready" (Headers $Partner "partner-ready")
@@ -303,6 +337,7 @@ $AssignmentCreate = Invoke-Api POST "$DshBaseUrl/dsh/operator/dispatch/assignmen
 Require-Status $AssignmentCreate @(201) "operator assignment"
 $AssignmentId = "$(Get-Value (Get-Value $AssignmentCreate.Json 'assignment') 'id')"
 Require (-not [string]::IsNullOrWhiteSpace($AssignmentId)) "assignment returned no id"
+
 $DuplicateAssignment = Invoke-Api POST "$DshBaseUrl/dsh/operator/dispatch/assignments" (Headers $Operator "assignment-duplicate") @{
   orderId = $OrderId
   captainId = $Captain.Subject
@@ -314,82 +349,154 @@ Require-Status $CaptainAssignments @(200) "captain assignments"
 Require ((Find-Id @((Get-Value $CaptainAssignments.Json 'assignments')) $AssignmentId).Count -eq 1) "captain did not receive assignment"
 
 $BeforeAcceptLocation = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/location" (Headers $Captain "location-before-accept") @{
-  latitude = $StorePoint.Latitude; longitude = $StorePoint.Longitude; recordedAt = [DateTimeOffset]::UtcNow.ToString("o")
+  latitude = $StorePoint.Latitude
+  longitude = $StorePoint.Longitude
+  recordedAt = [DateTimeOffset]::UtcNow.ToString("o")
 }
 Require-Status $BeforeAcceptLocation @(409) "location before accept"
+
 $Accept = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/accept" (Headers $Captain "captain-accept")
 Require-Status $Accept @(200) "captain accept"
+
 $InvalidLocation = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/location" (Headers $Captain "location-invalid") @{
-  latitude = 95; longitude = $StorePoint.Longitude; recordedAt = [DateTimeOffset]::UtcNow.ToString("o")
+  latitude = 95
+  longitude = $StorePoint.Longitude
+  recordedAt = [DateTimeOffset]::UtcNow.ToString("o")
 }
 Require-Status $InvalidLocation @(400) "invalid captain latitude"
-$OutOfOrder = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" (Headers $Captain "pickup-out-of-order") @{ status = "picked_up" }
+
+$OutOfOrder = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" (Headers $Captain "pickup-before-arrival") @{ status = "picked_up" }
 Require-Status $OutOfOrder @(409) "pickup before store arrival"
+
 $Location = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/location" (Headers $Captain "location-valid") @{
-  latitude = $StorePoint.Latitude; longitude = $StorePoint.Longitude; recordedAt = [DateTimeOffset]::UtcNow.ToString("o")
+  latitude = $StorePoint.Latitude
+  longitude = $StorePoint.Longitude
+  recordedAt = [DateTimeOffset]::UtcNow.ToString("o")
 }
 Require-Status $Location @(200) "valid captain location"
+
 $Tracking = Invoke-Api GET "$DshBaseUrl/dsh/client/orders/$OrderId/tracking" (Headers $Client "tracking" -ReadOnly)
 Require-Status $Tracking @(200) "client tracking"
 $TrackingAssignment = Get-Value $Tracking.Json 'assignment'
 Require ([math]::Abs([double](Get-Value $TrackingAssignment 'lastLatitude') - $StorePoint.Latitude) -lt 0.000001) "tracking latitude mismatch"
 
-foreach ($Status in @("driver_arrived_store", "picked_up", "arrived_customer")) {
-  $Progress = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" (Headers $Captain "delivery-$Status") @{ status = $Status }
-  Require-Status $Progress @(200) "delivery status $Status"
-  Require ("$(Get-Value (Get-Value (Get-Value $Progress.Json 'assignment') 'delivery') 'status')" -eq $Status) "delivery did not reach $Status"
+$ArrivedStore = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" (Headers $Captain "arrived-store") @{
+  status = "driver_arrived_store"
+  latitude = $StorePoint.Latitude
+  longitude = $StorePoint.Longitude
 }
+Require-Status $ArrivedStore @(200) "captain store arrival"
 
-$PoDReference = "runtime://pod/$AssignmentId/$RunId"
-$Delivered = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/pod" (Headers $Captain "pod") @{
-  method = "photo"; reference = $PoDReference; note = "lian governed delivery proof"
+$PickupWithoutHandoff = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" (Headers $Captain "pickup-without-handoff") @{ status = "picked_up" }
+Require-Status $PickupWithoutHandoff @(409) "pickup without partner handoff"
+Require ("$(Get-Value $PickupWithoutHandoff.Json 'code')" -eq "STORE_HANDOFF_REQUIRED") "pickup without handoff did not fail closed"
+
+$Handoff = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/captain-handoff/confirm" (Headers $Partner "partner-handoff")
+Require-Status $Handoff @(200) "partner captain handoff"
+$HandoffBody = Get-Value $Handoff.Json 'handoff'
+Require ("$(Get-Value $HandoffBody 'assignmentId')" -eq $AssignmentId) "handoff assignment mismatch"
+Require ("$(Get-Value $HandoffBody 'status')" -eq "partner_confirmed") "handoff status mismatch"
+
+$PickedUp = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" (Headers $Captain "picked-up") @{ status = "picked_up" }
+Require-Status $PickedUp @(200) "captain pickup after handoff"
+
+$ArrivedCustomer = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" (Headers $Captain "arrived-customer") @{
+  status = "arrived_customer"
+  latitude = $StorePoint.Latitude
+  longitude = $StorePoint.Longitude
 }
-Require-Status $Delivered @(200) "proof of delivery"
-$DeliveredAssignment = Get-Value $Delivered.Json 'assignment'
+Require-Status $ArrivedCustomer @(200) "captain customer arrival"
+
+$PinIssue = Invoke-Api POST "$DshBaseUrl/dsh/client/orders/$OrderId/delivery-pin" (Headers $Client "delivery-pin")
+Require-Status $PinIssue @(201) "client delivery PIN issue"
+$DeliveryPin = "$(Get-Value $PinIssue.Json 'pin')"
+Require ($DeliveryPin -match '^\d{6}$') "delivery PIN was not issued in governed six-digit format"
+
+$ProofHeaders = Headers $Captain "delivery-proof"
+$Proof = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/delivery-proof" $ProofHeaders @{
+  method = "otp_pin"
+  pin = $DeliveryPin
+  recipientRelationship = "customer"
+}
+Require-Status $Proof @(200) "governed delivery proof"
+$ProofBody = Get-Value $Proof.Json 'proof'
+$ProofId = "$(Get-Value $ProofBody 'id')"
+Require (-not [string]::IsNullOrWhiteSpace($ProofId)) "delivery proof returned no id"
+Require ("$(Get-Value $ProofBody 'status')" -eq "accepted") "delivery proof was not accepted"
+Require ("$(Get-Value $ProofBody 'method')" -eq "otp_pin") "delivery proof method mismatch"
+
+$ProofReplay = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/delivery-proof" $ProofHeaders @{
+  method = "otp_pin"
+  pin = $DeliveryPin
+  recipientRelationship = "customer"
+}
+Require-Status $ProofReplay @(200) "delivery proof idempotent replay"
+Require ("$(Get-Value (Get-Value $ProofReplay.Json 'proof') 'id')" -eq $ProofId) "delivery proof replay created a duplicate"
+
+$RepeatedProof = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/delivery-proof" (Headers $Captain "delivery-proof-repeat") @{
+  method = "otp_pin"
+  pin = $DeliveryPin
+  recipientRelationship = "customer"
+}
+Require-Status $RepeatedProof @(409) "new delivery proof after completion"
+
+$CaptainFinalAssignments = Invoke-Api GET "$DshBaseUrl/dsh/captain/dispatch/assignments" (Headers $Captain "captain-final" -ReadOnly)
+Require-Status $CaptainFinalAssignments @(200) "captain final assignments"
+$DeliveredMatches = Find-Id @((Get-Value $CaptainFinalAssignments.Json 'assignments')) $AssignmentId
+Require ($DeliveredMatches.Count -eq 1) "completed assignment disappeared from captain readback"
+$DeliveredAssignment = $DeliveredMatches[0]
 Require ("$(Get-Value $DeliveredAssignment 'status')" -eq "completed") "assignment did not complete"
-$Delivery = Get-Value $DeliveredAssignment 'delivery'
-Require ("$(Get-Value $Delivery 'status')" -eq "delivered") "delivery did not complete"
+Require ("$(Get-Value (Get-Value $DeliveredAssignment 'delivery') 'status')" -eq "delivered") "delivery did not complete"
 Require ($null -eq (Get-Value $DeliveredAssignment 'lastLatitude')) "captain location was not purged"
-Require ("$(Get-Value $Delivery 'podReference')" -eq $PoDReference) "PoD reference mismatch"
-$RepeatedPoD = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/pod" (Headers $Captain "pod-repeat") @{
-  method = "photo"; reference = $PoDReference
-}
-Require-Status $RepeatedPoD @(409) "repeated PoD"
 
 $FinalClient = Invoke-Api GET "$DshBaseUrl/dsh/client/orders/$OrderId" (Headers $Client "client-final" -ReadOnly)
 Require-Status $FinalClient @(200) "client delivered readback"
 Require ("$(Get-Value (Get-Value $FinalClient.Json 'order') 'status')" -eq "delivered") "client did not read delivered status"
-$FinalPartner = Invoke-Api GET "$DshBaseUrl/dsh/partner/orders" (Headers $Partner "partner-final" -ReadOnly)
+
+$FinalPartner = Invoke-Api GET "$DshBaseUrl/dsh/partner/order-workboard" (Headers $Partner "partner-final" -ReadOnly)
 Require-Status $FinalPartner @(200) "partner delivered readback"
-$PartnerMatch = Find-Id @((Get-Value $FinalPartner.Json 'orders')) $OrderId
-Require ($PartnerMatch.Count -eq 1 -and "$(Get-Value $PartnerMatch[0] 'status')" -eq "delivered") "partner did not read delivered status"
+$PartnerFinalMatch = Find-Id @((Get-Value $FinalPartner.Json 'orders')) $OrderId
+Require ($PartnerFinalMatch.Count -eq 1 -and "$(Get-Value $PartnerFinalMatch[0] 'status')" -eq "delivered") "partner did not read delivered status"
 
 $OutboxSql = "SELECT COUNT(*) FROM dsh_wlt_outbox_events WHERE event_type='delivery_completed' AND order_id='$OrderId'::uuid AND status IN ('pending','processing','sent');"
 $OutboxCount = Invoke-DshRuntimeScalar -Statement $OutboxSql
 Require ([int]$OutboxCount -eq 1) "delivery did not create exactly one WLT outbox event"
 
 $MockedVisit = Invoke-Api POST "$DshBaseUrl/dsh/field/stores/store-test-grocery/visits" (Headers $Field "field-mocked") @{
-  visitType = "periodic"; storeLatitude = $StorePoint.Latitude; storeLongitude = $StorePoint.Longitude
+  visitType = "periodic"
+  storeLatitude = $StorePoint.Latitude
+  storeLongitude = $StorePoint.Longitude
   startLocation = @{
-    latitude = $StorePoint.Latitude; longitude = $StorePoint.Longitude; accuracyMeters = 5
+    latitude = $StorePoint.Latitude
+    longitude = $StorePoint.Longitude
+    accuracyMeters = 5
     capturedAt = [DateTimeOffset]::UtcNow.ToString("o")
-    provider = "android-fused"; deviceReference = "lian-field-$RunId"; isMocked = $true
+    provider = "android-fused"
+    deviceReference = "runtime-field-$RunId"
+    isMocked = $true
   }
 }
 Require-Status $MockedVisit @(400) "mocked field GPS"
 Require ("$(Get-Value $MockedVisit.Json 'code')" -eq "LOCATION_MOCKED") "mocked GPS code mismatch"
 
 $ValidVisit = Invoke-Api POST "$DshBaseUrl/dsh/field/stores/store-test-grocery/visits" (Headers $Field "field-visit") @{
-  visitType = "periodic"; storeLatitude = $StorePoint.Latitude; storeLongitude = $StorePoint.Longitude
+  visitType = "periodic"
+  storeLatitude = $StorePoint.Latitude
+  storeLongitude = $StorePoint.Longitude
   startLocation = @{
-    latitude = $StorePoint.Latitude; longitude = $StorePoint.Longitude; accuracyMeters = 5
+    latitude = $StorePoint.Latitude
+    longitude = $StorePoint.Longitude
+    accuracyMeters = 5
     capturedAt = [DateTimeOffset]::UtcNow.ToString("o")
-    provider = "android-fused"; deviceReference = "lian-field-$RunId"; isMocked = $false
+    provider = "android-fused"
+    deviceReference = "runtime-field-$RunId"
+    isMocked = $false
   }
 }
 Require-Status $ValidVisit @(201) "field visit create"
 $VisitId = "$(Get-Value (Get-Value $ValidVisit.Json 'visit') 'id')"
 Require (-not [string]::IsNullOrWhiteSpace($VisitId)) "field visit returned no id"
+
 $Queue = Invoke-Api GET "$DshBaseUrl/dsh/field/work-queue" (Headers $Field "field-queue" -ReadOnly)
 Require-Status $Queue @(200) "field work queue"
 Require ((Find-Id @((Get-Value $Queue.Json 'visits')) $VisitId).Count -eq 1) "field work queue missed visit"
@@ -398,26 +505,32 @@ $EscalationCreate = Invoke-Api POST "$DshBaseUrl/dsh/field/stores/store-test-gro
   visitId = $VisitId
   severity = "medium"
   category = "other"
-  description = "lian multi-surface governed escalation $RunId"
+  description = "governed multi-surface escalation $RunId"
 }
 Require-Status $EscalationCreate @(201) "field escalation create"
 $EscalationId = "$(Get-Value (Get-Value $EscalationCreate.Json 'escalation') 'id')"
 Require (-not [string]::IsNullOrWhiteSpace($EscalationId)) "field escalation returned no id"
+
 $OperatorEscalations = Invoke-Api GET "$DshBaseUrl/dsh/operator/field-readiness/escalations" (Headers $Operator "operator-escalations" -ReadOnly)
 Require-Status $OperatorEscalations @(200) "operator escalation list"
 Require ((Find-Id @((Get-Value $OperatorEscalations.Json 'escalations')) $EscalationId).Count -eq 1) "operator did not read field escalation"
+
 $Resolve = Invoke-Api PATCH "$DshBaseUrl/dsh/operator/field-readiness/escalations/$EscalationId" (Headers $Operator "operator-resolve") @{
   status = "resolved"
-  resolutionNote = "resolved by lian runtime closure"
+  resolutionNote = "resolved by governed runtime closure"
 }
 Require-Status $Resolve @(200) "operator escalation resolution"
 Require ("$(Get-Value (Get-Value $Resolve.Json 'escalation') 'status')" -eq "resolved") "escalation did not resolve"
 
 $PrematureCompletion = Invoke-Api POST "$DshBaseUrl/dsh/field/visits/$VisitId/complete" (Headers $Field "field-complete-early") @{
   completionLocation = @{
-    latitude = $StorePoint.Latitude; longitude = $StorePoint.Longitude; accuracyMeters = 5
+    latitude = $StorePoint.Latitude
+    longitude = $StorePoint.Longitude
+    accuracyMeters = 5
     capturedAt = [DateTimeOffset]::UtcNow.ToString("o")
-    provider = "android-fused"; deviceReference = "lian-field-$RunId"; isMocked = $false
+    provider = "android-fused"
+    deviceReference = "runtime-field-$RunId"
+    isMocked = $false
   }
 }
 Require-Status $PrematureCompletion @(409) "premature field completion"
@@ -433,6 +546,7 @@ Require ("$(Get-Value $PrematureCompletion.Json 'code')" -eq "CHECKLIST_INCOMPLE
   wltPaymentSessionId = $WltPaymentSessionId
   orderId = $OrderId
   assignmentId = $AssignmentId
+  deliveryProofId = $ProofId
   fieldVisitId = $VisitId
   escalationId = $EscalationId
   proven = @(
@@ -441,9 +555,13 @@ Require ("$(Get-Value $PrematureCompletion.Json 'code')" -eq "CHECKLIST_INCOMPLE
     "address idempotency and ownership",
     "central catalog cart checkout and WLT handoff",
     "order replay idempotency and assignment duplicate rejection",
-    "partner order lifecycle",
+    "versioned idempotent partner order decision",
+    "partner preparation lifecycle",
     "operator dispatch",
-    "captain state order location tracking and PoD",
+    "captain state ordering and live tracking",
+    "arrival geofence coordinates",
+    "fail-closed store-captain handoff",
+    "governed delivery PIN and idempotent proof acceptance",
     "location purge on terminal delivery",
     "exactly one durable DSH-to-WLT delivery event",
     "field mocked-GPS rejection and work queue",
