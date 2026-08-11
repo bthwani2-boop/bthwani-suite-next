@@ -15,6 +15,7 @@ import {
   deactivateOwnPayoutDestination,
   fetchOwnPayoutDestination,
   fetchOwnPayoutRequests,
+  isVerifiedPayoutDestination,
   saveOwnPayoutDestination,
   type ActorPayoutRequest,
   type PayoutActorType,
@@ -39,21 +40,12 @@ type PanelState =
       readonly requests: readonly ActorPayoutRequest[];
     };
 
-type DestinationTextField = Exclude<
-  keyof PayoutDestinationInput,
-  "settlementPreference" | "bankAccountHolderMatchesOwner"
->;
+type DestinationTextField = keyof PayoutDestinationInput;
 
 const EMPTY_INPUT: PayoutDestinationInput = {
   beneficiaryName: "",
-  bankName: "",
-  bankBranch: "",
-  accountNumber: "",
-  iban: "",
-  payoutMobileNumber: "",
-  settlementPreference: "bank",
-  bankAccountHolderMatchesOwner: true,
-  bankNotes: "",
+  officialWalletProviderKey: "",
+  destinationReference: "",
 };
 
 function errorMessage(error: unknown): string {
@@ -61,6 +53,8 @@ function errorMessage(error: unknown): string {
 }
 
 function newAttemptKey(actorType: PayoutActorType): string {
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return `payout:${actorType}:${uuid}`;
   return `payout:${actorType}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
 }
 
@@ -68,7 +62,7 @@ function statusMeta(status: string): { readonly label: string; readonly tone: "n
   const map: Record<string, { readonly label: string; readonly tone: "neutral" | "success" | "warning" | "danger" }> = {
     pending: { label: "بانتظار المراجعة", tone: "warning" },
     approved: { label: "معتمد", tone: "warning" },
-    provider_pending: { label: "قيد الإرسال", tone: "warning" },
+    provider_pending: { label: "قيد التنفيذ الخارجي", tone: "warning" },
     processing: { label: "قيد المعالجة", tone: "warning" },
     provider_result_unknown: { label: "تحتاج مطابقة", tone: "danger" },
     completed: { label: "مكتمل", tone: "success" },
@@ -78,22 +72,38 @@ function statusMeta(status: string): { readonly label: string; readonly tone: "n
   return map[status] ?? { label: status, tone: "neutral" };
 }
 
+function verificationMeta(status: string): { readonly label: string; readonly tone: "neutral" | "success" | "warning" | "danger" } {
+  const map: Record<string, { readonly label: string; readonly tone: "neutral" | "success" | "warning" | "danger" }> = {
+    unverified: { label: "بانتظار التحقق", tone: "warning" },
+    verified: { label: "موثقة", tone: "success" },
+    requires_reverification: { label: "تتطلب إعادة تحقق", tone: "warning" },
+    rejected: { label: "مرفوضة", tone: "danger" },
+  };
+  return map[status] ?? { label: status || "غير معروفة", tone: "neutral" };
+}
+
 function amountLabel(minorUnits: number, currency: string): string {
   return formatWltMoney(minorUnits, currency);
 }
 
 function DestinationSummary({ destination }: { readonly destination: PayoutDestination }) {
+  const verification = verificationMeta(destination.destinationVerificationStatus);
   return (
     <View style={{ gap: spacing[1], alignItems: "flex-end" }}>
-      <Text role="bodyStrong" style={{ textAlign: "right" }}>{destination.beneficiaryName}</Text>
+      <View style={{ flexDirection: "row-reverse", gap: spacing[2], alignItems: "center" }}>
+        <Text role="bodyStrong" style={{ textAlign: "right" }}>{destination.beneficiaryName}</Text>
+        <Badge label={verification.label} tone={verification.tone} />
+      </View>
+      <Text role="caption" tone="muted" style={{ textAlign: "right" }}>محفظة إلكترونية رسمية</Text>
       <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
-        {destination.settlementPreference === "mobile_money" ? "محفظة هاتف" : destination.settlementPreference === "manual" ? "صرف يدوي" : "حساب بنكي"}
+        مزود المحفظة: {destination.officialWalletProviderKey}
       </Text>
-      {destination.bankName ? <Text role="caption" tone="muted">{destination.bankName} · {destination.bankBranch || "بدون فرع"}</Text> : null}
-      {destination.maskedAccountNumber ? <Text role="caption">الحساب: {destination.maskedAccountNumber}</Text> : null}
-      {destination.maskedIban ? <Text role="caption">IBAN: {destination.maskedIban}</Text> : null}
-      {destination.maskedMobileNumber ? <Text role="caption">الهاتف: {destination.maskedMobileNumber}</Text> : null}
-      <Text role="caption" tone="muted">آخر تحديث: {destination.updatedAt}</Text>
+      <Text role="caption" style={{ textAlign: "right" }}>
+        المعرّف: {destination.maskedDestinationReference}
+      </Text>
+      <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
+        الإصدار: {destination.destinationVersion} · آخر تحديث: {destination.updatedAt}
+      </Text>
     </View>
   );
 }
@@ -110,7 +120,7 @@ function DestinationEditor({
   const theme = useTheme() as any;
   const field = (key: DestinationTextField, placeholder: string, secure = false) => (
     <TextInput
-      value={String(value[key] ?? "")}
+      value={value[key]}
       onChangeText={(text) => onChange({ ...value, [key]: text })}
       placeholder={placeholder}
       placeholderTextColor={theme.textMuted}
@@ -132,40 +142,11 @@ function DestinationEditor({
   return (
     <View style={{ gap: spacing[2] }}>
       {field("beneficiaryName", "اسم المستفيد")}
-      <View style={{ flexDirection: "row-reverse", gap: spacing[2] }}>
-        <Button
-          label="حساب بنكي"
-          tone={value.settlementPreference === "bank" ? "brand" : "secondary"}
-          size="sm"
-          disabled={disabled}
-          onPress={() => onChange({ ...value, settlementPreference: "bank" })}
-        />
-        <Button
-          label="محفظة هاتف"
-          tone={value.settlementPreference === "mobile_money" ? "brand" : "secondary"}
-          size="sm"
-          disabled={disabled}
-          onPress={() => onChange({ ...value, settlementPreference: "mobile_money" })}
-        />
-      </View>
-      {value.settlementPreference === "bank" ? (
-        <>
-          {field("bankName", "اسم البنك")}
-          {field("bankBranch", "الفرع")}
-          {field("accountNumber", "رقم الحساب", true)}
-          {field("iban", "IBAN", true)}
-        </>
-      ) : (
-        field("payoutMobileNumber", "رقم محفظة الهاتف", true)
-      )}
-      <Button
-        label={value.bankAccountHolderMatchesOwner ? "تم تأكيد تطابق صاحب الحساب" : "أكد تطابق صاحب الحساب"}
-        tone={value.bankAccountHolderMatchesOwner ? "success" : "secondary"}
-        size="sm"
-        disabled={disabled}
-        onPress={() => onChange({ ...value, bankAccountHolderMatchesOwner: !value.bankAccountHolderMatchesOwner })}
-      />
-      {field("bankNotes", "ملاحظات اختيارية")}
+      {field("officialWalletProviderKey", "رمز مزود المحفظة الرسمية")}
+      {field("destinationReference", "رقم / معرّف المحفظة الرسمية", true)}
+      <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
+        تغيير المزود أو المعرّف ينشئ إصدارًا جديدًا غير موثق، ويظل الصرف محظورًا حتى التحقق منه.
+      </Text>
     </View>
   );
 }
@@ -193,14 +174,13 @@ export function PayoutDestinationPanel({
       ]);
       setState({ kind: "ready", destination, requests });
       if (destination) {
-        setEditor((current) => ({
-          ...current,
+        setEditor({
           beneficiaryName: destination.beneficiaryName,
-          bankName: destination.bankName,
-          bankBranch: destination.bankBranch,
-          settlementPreference: destination.settlementPreference === "mobile_money" ? "mobile_money" : destination.settlementPreference === "manual" ? "manual" : "bank",
-          bankAccountHolderMatchesOwner: true,
-        }));
+          officialWalletProviderKey: destination.officialWalletProviderKey,
+          destinationReference: "",
+        });
+      } else {
+        setEditor(EMPTY_INPUT);
       }
     } catch (error) {
       setState({ kind: "error", message: errorMessage(error) });
@@ -211,26 +191,29 @@ export function PayoutDestinationPanel({
 
   const saveDestination = useCallback(async () => {
     setActionError(null);
-    if (!editor.beneficiaryName.trim()) {
+    const beneficiaryName = editor.beneficiaryName.trim();
+    const officialWalletProviderKey = editor.officialWalletProviderKey.trim().toLowerCase();
+    const destinationReference = editor.destinationReference.trim();
+    if (!beneficiaryName) {
       setActionError("اسم المستفيد مطلوب.");
       return;
     }
-    if (!editor.bankAccountHolderMatchesOwner) {
-      setActionError("يجب تأكيد تطابق صاحب الحساب مع صاحب الملف.");
+    if (!officialWalletProviderKey) {
+      setActionError("مزود المحفظة الرسمية مطلوب.");
       return;
     }
-    if (editor.settlementPreference === "bank" && !editor.accountNumber.trim() && !editor.iban.trim()) {
-      setActionError("أدخل رقم الحساب أو IBAN.");
-      return;
-    }
-    if (editor.settlementPreference === "mobile_money" && !editor.payoutMobileNumber.trim()) {
-      setActionError("رقم محفظة الهاتف مطلوب.");
+    if (!destinationReference) {
+      setActionError("رقم أو معرّف المحفظة الرسمية مطلوب.");
       return;
     }
     setBusy("save");
     try {
-      await saveOwnPayoutDestination(actorType, editor);
-      setEditor((current) => ({ ...current, accountNumber: "", iban: "", payoutMobileNumber: "" }));
+      await saveOwnPayoutDestination(actorType, {
+        beneficiaryName,
+        officialWalletProviderKey,
+        destinationReference,
+      });
+      setEditor((current) => ({ ...current, destinationReference: "" }));
       await load();
     } catch (error) {
       setActionError(errorMessage(error));
@@ -244,6 +227,8 @@ export function PayoutDestinationPanel({
     setBusy("deactivate");
     try {
       await deactivateOwnPayoutDestination(actorType);
+      attemptKeyRef.current = null;
+      setAmount("");
       await load();
     } catch (error) {
       setActionError(errorMessage(error));
@@ -253,7 +238,10 @@ export function PayoutDestinationPanel({
   }, [actorType, load]);
 
   const submit = useCallback(async () => {
-    if (state.kind !== "ready" || !state.destination) return;
+    if (state.kind !== "ready" || !isVerifiedPayoutDestination(state.destination)) {
+      setActionError("لا يمكن طلب الصرف قبل التحقق من وجهة المحفظة الرسمية.");
+      return;
+    }
     const parsedAmount = parseWltMajorInputToMinorUnits(amount, currency);
     if (!parsedAmount.ok || parsedAmount.minorUnits <= 0) {
       setActionError("مبلغ طلب الصرف غير صالح.");
@@ -281,14 +269,21 @@ export function PayoutDestinationPanel({
     return <StateView tone="danger" title="تعذر تحميل الصرف" description={state.message} actionLabel="إعادة المحاولة" onActionPress={load} />;
   }
 
+  const destinationVerified = isVerifiedPayoutDestination(state.destination);
+
   return (
     <Box padding={embedded ? 3 : 4} gap={4} style={{ backgroundColor: theme.surfaceInset, borderRadius: 16 }}>
       <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", gap: spacing[3] }}>
         <View style={{ alignItems: "flex-end", flex: 1 }}>
           <Text role="titleMd" style={{ textAlign: "right" }}>{title}</Text>
-          <Text role="caption" tone="muted" style={{ textAlign: "right" }}>البيانات الحساسة مشفرة في WLT ولا تظهر هنا إلا مقنّعة.</Text>
+          <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
+            WLT يحفظ معرّف المحفظة مشفرًا، ولا يعيد إلى السطح إلا النسخة المقنّعة وحالة التحقق.
+          </Text>
         </View>
-        <Badge label={state.destination ? "وجهة فعالة" : "الوجهة ناقصة"} tone={state.destination ? "success" : "warning"} />
+        <Badge
+          label={destinationVerified ? "وجهة موثقة" : state.destination ? "التحقق مطلوب" : "الوجهة ناقصة"}
+          tone={destinationVerified ? "success" : "warning"}
+        />
       </View>
 
       {actionError ? <StateView tone="danger" title="تعذر تنفيذ الإجراء" description={actionError} /> : null}
@@ -296,10 +291,17 @@ export function PayoutDestinationPanel({
       {state.destination ? (
         <>
           <DestinationSummary destination={state.destination} />
+          {!destinationVerified ? (
+            <StateView
+              tone="warning"
+              title="الصرف محظور حتى التحقق"
+              description="وجود الوجهة وحده لا يكفي. لا ينشئ WLT طلب صرف إلا بعد توثيق الإصدار الحالي من المحفظة الرسمية."
+            />
+          ) : null}
           <Button label={busy === "deactivate" ? "جارٍ التعطيل…" : "تعطيل الوجهة"} tone="danger" size="sm" disabled={busy !== null} onPress={deactivate} />
         </>
       ) : (
-        <StateView tone="warning" title="أضف وجهة صرف أولاً" description="لن يقبل WLT أي طلب صرف غير مرتبط بوجهة فعالة مملوكة لنفس الحساب." />
+        <StateView tone="warning" title="أضف وجهة صرف أولاً" description="أضف محفظة إلكترونية رسمية ثم أكمل التحقق منها قبل إنشاء أي طلب صرف." />
       )}
 
       <Divider />
@@ -314,7 +316,7 @@ export function PayoutDestinationPanel({
         onChangeText={setAmount}
         placeholder={`المبلغ بـ ${currency}`}
         placeholderTextColor={theme.textMuted}
-        editable={busy === null && Boolean(state.destination)}
+        editable={busy === null && destinationVerified}
         keyboardType="decimal-pad"
         style={{
           minHeight: 46,
@@ -330,7 +332,7 @@ export function PayoutDestinationPanel({
       <Button
         label={busy === "submit" ? "جارٍ إرسال الطلب…" : "إرسال طلب الصرف"}
         tone="brand"
-        disabled={busy !== null || !state.destination}
+        disabled={busy !== null || !destinationVerified}
         onPress={submit}
       />
 
@@ -353,9 +355,9 @@ export function PayoutDestinationPanel({
                 </View>
                 <Text role="caption" tone="muted" style={{ textAlign: "right" }}>{request.requestedAt}</Text>
                 {request.status === "provider_result_unknown" ? (
-                  <Text role="caption" tone="danger" style={{ textAlign: "right" }}>الأموال ما زالت محجوزة حتى تنهي المالية مطابقة المزود.</Text>
+                  <Text role="caption" tone="danger" style={{ textAlign: "right" }}>الأموال ما زالت محجوزة حتى تنهي المالية مطابقة نتيجة التنفيذ الخارجي.</Text>
                 ) : null}
-                {request.providerReference ? <Text role="caption" style={{ textAlign: "right" }}>مرجع المزود: {request.providerReference}</Text> : null}
+                {request.providerReference ? <Text role="caption" style={{ textAlign: "right" }}>مرجع التنفيذ الخارجي: {request.providerReference}</Text> : null}
                 {request.failureReason ? <Text role="caption" tone="danger" style={{ textAlign: "right" }}>{request.failureReason}</Text> : null}
               </View>
             );
