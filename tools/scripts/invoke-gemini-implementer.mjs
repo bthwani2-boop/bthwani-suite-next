@@ -1,7 +1,6 @@
 import { spawn, spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { repoRoot } from "../guards/_guard-utils.mjs";
 
@@ -24,10 +23,16 @@ const SELF_PROTECTED = [
   "tools/scripts/gemini-implementer-hook.test.mjs",
 ];
 
+class ToolFailure extends Error {
+  constructor(message, detail) {
+    super(message);
+    this.name = "ToolFailure";
+    this.detail = detail;
+  }
+}
+
 function fail(message, detail) {
-  if (detail !== undefined) console.error(detail);
-  console.error(`[${TOOL_ID.toUpperCase()} FAIL] ${message} decision=FIX_REQUIRED`);
-  process.exit(1);
+  throw new ToolFailure(message, detail);
 }
 
 function usage() {
@@ -75,7 +80,9 @@ function parseArgs(argv) {
 
 function durationMs(value) {
   const match = DURATION_RE.exec(value || "");
-  if (!match || !match[0] || !match.slice(1).some(Boolean)) fail(`Invalid timeout '${value}'. Use values such as 30m, 1h, or 1h15m.`);
+  if (!match || !match[0] || !match.slice(1).some(Boolean)) {
+    fail(`Invalid timeout '${value}'. Use values such as 30m, 1h, or 1h15m.`);
+  }
   return ((Number(match[1] || 0) * 3600) + (Number(match[2] || 0) * 60) + Number(match[3] || 0)) * 1000;
 }
 
@@ -92,35 +99,55 @@ function run(command, args, options = {}) {
   return String(result.stdout || "").trim();
 }
 
+function regularFile(pathname) {
+  let fd;
+  try {
+    fd = fs.openSync(pathname, fs.constants.O_RDONLY);
+    return fs.fstatSync(fd).isFile();
+  } catch {
+    return false;
+  } finally {
+    if (fd !== undefined) {
+      try { fs.closeSync(fd); } catch {}
+    }
+  }
+}
+
 function resolveGemini() {
   const locator = process.platform === "win32" ? "where.exe" : "which";
   const result = spawnSync(locator, ["gemini"], { encoding: "utf8", windowsHide: true });
   if (result.error || result.status !== 0) return null;
   const candidates = String(result.stdout || "").split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
-  if (process.platform === "win32") {
-    return candidates.find((value) => /\.exe$/i.test(value))
-      || candidates.find((value) => /\.cmd$/i.test(value))
-      || candidates.find((value) => /\.bat$/i.test(value))
-      || candidates[0]
-      || null;
+
+  if (process.platform !== "win32") {
+    const executable = candidates[0];
+    return executable ? { command: executable, prefixArgs: [], displayExecutable: executable } : null;
   }
-  return candidates[0] || null;
+
+  const nativeExecutable = candidates.find((value) => /\.exe$/i.test(value));
+  if (nativeExecutable) {
+    return { command: nativeExecutable, prefixArgs: [], displayExecutable: nativeExecutable };
+  }
+
+  // npm's Windows Gemini shim is a .cmd/.bat file. Executing that shim through
+  // cmd.exe would turn model/CLI arguments into shell text. Resolve the package
+  // entrypoint instead and pass every value as an argv element to Node.
+  for (const shim of candidates.filter((value) => /\.(cmd|bat)$/i.test(value))) {
+    const entrypoint = path.join(path.dirname(shim), "node_modules", "@google", "gemini-cli", "dist", "index.js");
+    if (regularFile(entrypoint)) {
+      return {
+        command: process.execPath,
+        prefixArgs: [entrypoint],
+        displayExecutable: shim,
+      };
+    }
+  }
+  return null;
 }
 
-function versionProbe(executable) {
-  if (!executable) return null;
-  if (process.platform === "win32" && /\.(cmd|bat)$/i.test(executable)) {
-    const comspec = process.env.ComSpec || process.env.COMSPEC || "cmd.exe";
-    const result = spawnSync(comspec, ["/d", "/s", "/c", "gemini --version"], {
-      cwd: repoRoot,
-      encoding: "utf8",
-      timeout: 10_000,
-      windowsHide: true,
-    });
-    if (result.error || result.status !== 0) return null;
-    return String(result.stdout || result.stderr || "").trim().split(/\r?\n/)[0] || "unknown";
-  }
-  const result = spawnSync(executable, ["--version"], {
+function versionProbe(launcher) {
+  if (!launcher) return null;
+  const result = spawnSync(launcher.command, [...launcher.prefixArgs, "--version"], {
     cwd: repoRoot,
     encoding: "utf8",
     timeout: 10_000,
@@ -152,8 +179,14 @@ function ensureNoSymlinkPrefix(absolute, label) {
   let cursor = repoRoot;
   for (const segment of rel.split(path.sep).filter(Boolean)) {
     cursor = path.join(cursor, segment);
-    if (!fs.existsSync(cursor)) continue;
-    if (fs.lstatSync(cursor).isSymbolicLink()) fail(`${label} traverses a symbolic link: ${rel}`);
+    let stat;
+    try {
+      stat = fs.lstatSync(cursor);
+    } catch (error) {
+      if (error?.code === "ENOENT") continue;
+      throw error;
+    }
+    if (stat.isSymbolicLink()) fail(`${label} traverses a symbolic link: ${rel}`);
   }
 }
 
@@ -173,35 +206,75 @@ function statusPaths() {
   return [...new Set(paths.map((value) => value.split("\\").join("/")))].sort();
 }
 
-function acquireLock() {
-  const key = crypto.createHash("sha256").update(path.resolve(repoRoot)).digest("hex").slice(0, 20);
-  const lockPath = path.join(os.tmpdir(), `bthwani-gemini-implementer-${key}.lock`);
-  const tryCreate = () => {
-    const fd = fs.openSync(lockPath, "wx");
-    fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, repoRoot, createdAt: new Date().toISOString() }));
-    fs.closeSync(fd);
-    return lockPath;
-  };
-  try {
-    return tryCreate();
-  } catch (error) {
-    if (error.code !== "EEXIST") throw error;
+function gitPrivateRoot() {
+  const commonDir = run("git", ["rev-parse", "--git-common-dir"]);
+  const absoluteCommonDir = path.resolve(repoRoot, commonDir);
+  const privateRoot = path.join(absoluteCommonDir, "bthwani", TOOL_ID);
+  fs.mkdirSync(privateRoot, { recursive: true, mode: 0o700 });
+  if (process.platform !== "win32") {
+    try { fs.chmodSync(privateRoot, 0o700); } catch {}
   }
+  return privateRoot;
+}
+
+function acquireLock(privateRoot) {
+  const lockPath = path.join(privateRoot, "delegation.lock");
+  let fd;
   try {
-    const current = JSON.parse(fs.readFileSync(lockPath, "utf8"));
-    if (Number.isInteger(current.pid) && current.pid > 0) {
-      try {
-        process.kill(current.pid, 0);
-        fail(`Another Gemini implementation delegation is active (pid=${current.pid}).`);
-      } catch (error) {
-        if (error?.code !== "ESRCH") throw error;
-      }
-    }
-    fs.unlinkSync(lockPath);
-    return tryCreate();
+    fd = fs.openSync(lockPath, "wx", 0o600);
+    fs.writeFileSync(fd, JSON.stringify({
+      pid: process.pid,
+      repoRoot,
+      createdAt: new Date().toISOString(),
+    }));
+    return lockPath;
   } catch (error) {
-    if (error?.message?.includes("Another Gemini")) throw error;
-    fail(`Cannot safely acquire delegation lock: ${error.message}`);
+    if (error?.code === "EEXIST") {
+      fail(`Delegation lock already exists at ${lockPath}. Treat it as active or stale and clear it only after confirming no Gemini delegation is running.`);
+    }
+    throw error;
+  } finally {
+    if (fd !== undefined) {
+      try { fs.closeSync(fd); } catch {}
+    }
+  }
+}
+
+function releaseLock(lockPath) {
+  try {
+    fs.unlinkSync(lockPath);
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+}
+
+function createRunDirectory(privateRoot, workUnit) {
+  const runDir = fs.mkdtempSync(path.join(privateRoot, `run-${workUnit}-`));
+  if (process.platform !== "win32") {
+    try { fs.chmodSync(runDir, 0o700); } catch {}
+  }
+  return runDir;
+}
+
+function readBrief(briefPath, displayPath) {
+  let fd;
+  try {
+    const noFollow = process.platform === "win32" ? 0 : (fs.constants.O_NOFOLLOW || 0);
+    fd = fs.openSync(briefPath, fs.constants.O_RDONLY | noFollow);
+    const stat = fs.fstatSync(fd);
+    if (!stat.isFile()) fail(`Brief is not a regular file: ${displayPath}`);
+    if (stat.size > MAX_BRIEF_BYTES) fail(`Brief exceeds ${MAX_BRIEF_BYTES} bytes.`);
+    const brief = fs.readFileSync(fd, "utf8").trim();
+    if (!brief) fail("Brief is empty.");
+    return brief;
+  } catch (error) {
+    if (error instanceof ToolFailure) throw error;
+    if (["ENOENT", "ENOTDIR", "ELOOP"].includes(error?.code)) fail(`Brief file not found or not safely readable: ${displayPath}`);
+    throw error;
+  } finally {
+    if (fd !== undefined) {
+      try { fs.closeSync(fd); } catch {}
+    }
   }
 }
 
@@ -238,11 +311,8 @@ function scopeViolations(changedPaths, allowed, forbidden) {
   return violations;
 }
 
-async function spawnGemini(executable, args, env, prompt, timeoutMsValue) {
-  const windowsShim = process.platform === "win32" && /\.(cmd|bat)$/i.test(executable);
-  const command = windowsShim ? (process.env.ComSpec || process.env.COMSPEC || "cmd.exe") : executable;
-  const commandArgs = windowsShim ? ["/d", "/s", "/c", `gemini ${args.join(" ")}`] : args;
-  const child = spawn(command, commandArgs, {
+async function spawnGemini(launcher, args, env, prompt, timeoutMsValue) {
+  const child = spawn(launcher.command, [...launcher.prefixArgs, ...args], {
     cwd: repoRoot,
     env,
     stdio: ["pipe", "pipe", "pipe"],
@@ -290,11 +360,16 @@ async function main() {
     return;
   }
 
-  const executable = resolveGemini();
-  const geminiVersion = versionProbe(executable);
-  if (!executable || !geminiVersion) fail("Gemini CLI is not installed, not on PATH, or failed its version probe.");
+  const launcher = resolveGemini();
+  const geminiVersion = versionProbe(launcher);
+  if (!launcher || !geminiVersion) fail("Gemini CLI is not installed, not on PATH, or failed its direct version probe.");
   if (args.diagnosticOnly) {
-    console.log(JSON.stringify({ tool: TOOL_ID, state: "VERIFIED_AVAILABLE", executable, version: geminiVersion }, null, 2));
+    console.log(JSON.stringify({
+      tool: TOOL_ID,
+      state: "VERIFIED_AVAILABLE",
+      executable: launcher.displayExecutable,
+      version: geminiVersion,
+    }, null, 2));
     return;
   }
 
@@ -306,12 +381,7 @@ async function main() {
   const timeoutMsValue = durationMs(args.timeout);
 
   const briefPath = path.resolve(process.cwd(), args.brief);
-  if (!fs.existsSync(briefPath) || !fs.statSync(briefPath).isFile()) fail(`Brief file not found: ${args.brief}`);
-  const briefStat = fs.statSync(briefPath);
-  if (briefStat.size > MAX_BRIEF_BYTES) fail(`Brief exceeds ${MAX_BRIEF_BYTES} bytes.`);
-  const brief = fs.readFileSync(briefPath, "utf8").trim();
-  if (!brief) fail("Brief is empty.");
-
+  const brief = readBrief(briefPath, args.brief);
   const allowed = args.allowWrite.map((value) => normalizeRelativePrefix(value, "--allow-write"));
   const explicitForbidden = args.forbidWrite.map((value) => normalizeRelativePrefix(value, "--forbid-write"));
   const protectedForbidden = SELF_PROTECTED.map((value) => normalizeRelativePrefix(value, "protected path"));
@@ -332,133 +402,136 @@ async function main() {
   const dirtyBefore = statusPaths();
   if (dirtyBefore.length) fail("Working tree must be clean before delegation.", JSON.stringify(dirtyBefore, null, 2));
 
-  const lockPath = acquireLock();
-  const runDir = fs.mkdtempSync(path.join(os.tmpdir(), `bthwani-${TOOL_ID}-${args.workUnit}-`));
-  const resultPath = path.join(runDir, "result.json");
-  const settingsPath = path.join(runDir, "system-settings.json");
-  const hookPath = path.join(repoRoot, "tools", "scripts", "gemini-implementer-hook.mjs");
-  const hookCommand = `${quoteHookCommand(process.execPath)} ${quoteHookCommand(hookPath)}`;
-
-  const settings = {
-    hooksConfig: {
-      enabled: true,
-      notifications: false,
-    },
-    skills: {
-      enabled: false,
-    },
-    hooks: {
-      BeforeTool: [
-        {
-          matcher: ".*",
-          hooks: [
-            {
-              name: "bthwani-gemini-implementer-scope",
-              type: "command",
-              command: hookCommand,
-              timeout: 5000,
-            },
-          ],
-        },
-      ],
-    },
-  };
-  fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
-
-  const prompt = [
-    "You are the Gemini Implementer for one bounded BThwani work unit.",
-    "Implement the brief below in the current repository.",
-    "Do not commit, push, merge, release, approve, or expand scope.",
-    "Do not attempt shell, web, MCP, skill activation, or interactive-user tools; the system hook denies them.",
-    "If the required implementation cannot be completed within the declared write scope, stop and report the exact missing scope instead of changing other paths.",
-    "Do not claim verification that you did not execute. Codex will run repository gates after your implementation.",
-    "",
-    "DECLARED ALLOWED WRITE PREFIXES:",
-    ...allowed.map((entry) => `- ${entry.relative}`),
-    "",
-    "DECLARED FORBIDDEN WRITE PREFIXES:",
-    ...forbidden.map((entry) => `- ${entry.relative}`),
-    "",
-    "IMPLEMENTATION BRIEF:",
-    brief,
-    "",
-    "FINAL REPORT:",
-    "Return a concise implementation report: summary, changed paths, unresolved blockers, assumptions, and checks actually performed.",
-  ].join("\n");
-
-  const geminiArgs = [
-    "--output-format", "json",
-    "--approval-mode", "auto_edit",
-    "-e", "none",
-    "--allowed-mcp-server-names", "__bthwani_none__",
-  ];
-  if (args.model) geminiArgs.push("--model", args.model);
-
-  const childEnv = {
-    ...process.env,
-    GEMINI_CLI_SYSTEM_SETTINGS_PATH: settingsPath,
-    BTHWANI_GEMINI_REPO_ROOT: repoRoot,
-    BTHWANI_GEMINI_ALLOWED_WRITE: JSON.stringify(allowed.map((entry) => entry.absolute)),
-    BTHWANI_GEMINI_FORBIDDEN_WRITE: JSON.stringify(forbidden.map((entry) => entry.absolute)),
-  };
-
-  let execution;
+  const privateRoot = gitPrivateRoot();
+  const lockPath = acquireLock(privateRoot);
   try {
-    execution = await spawnGemini(executable, geminiArgs, childEnv, prompt, timeoutMsValue);
+    const runDir = createRunDirectory(privateRoot, args.workUnit);
+    const resultPath = path.join(runDir, "result.json");
+    const settingsPath = path.join(runDir, "system-settings.json");
+    const hookPath = path.join(repoRoot, "tools", "scripts", "gemini-implementer-hook.mjs");
+    const hookCommand = `${quoteHookCommand(process.execPath)} ${quoteHookCommand(hookPath)}`;
+
+    const settings = {
+      hooksConfig: {
+        enabled: true,
+        notifications: false,
+      },
+      skills: {
+        enabled: false,
+      },
+      hooks: {
+        BeforeTool: [
+          {
+            matcher: ".*",
+            hooks: [
+              {
+                name: "bthwani-gemini-implementer-scope",
+                type: "command",
+                command: hookCommand,
+                timeout: 5000,
+              },
+            ],
+          },
+        ],
+      },
+    };
+    fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+
+    const prompt = [
+      "You are the Gemini Implementer for one bounded BThwani work unit.",
+      "Implement the brief below in the current repository.",
+      "Do not commit, push, merge, release, approve, or expand scope.",
+      "Do not attempt shell, web, MCP, skill activation, or interactive-user tools; the system hook denies them.",
+      "If the required implementation cannot be completed within the declared write scope, stop and report the exact missing scope instead of changing other paths.",
+      "Do not claim verification that you did not execute. Codex will run repository gates after your implementation.",
+      "",
+      "DECLARED ALLOWED WRITE PREFIXES:",
+      ...allowed.map((entry) => `- ${entry.relative}`),
+      "",
+      "DECLARED FORBIDDEN WRITE PREFIXES:",
+      ...forbidden.map((entry) => `- ${entry.relative}`),
+      "",
+      "IMPLEMENTATION BRIEF:",
+      brief,
+      "",
+      "FINAL REPORT:",
+      "Return a concise implementation report: summary, changed paths, unresolved blockers, assumptions, and checks actually performed.",
+    ].join("\n");
+
+    const geminiArgs = [
+      "--output-format", "json",
+      "--approval-mode", "auto_edit",
+      "-e", "none",
+      "--allowed-mcp-server-names", "__bthwani_none__",
+    ];
+    if (args.model) geminiArgs.push("--model", args.model);
+
+    const childEnv = {
+      ...process.env,
+      GEMINI_CLI_SYSTEM_SETTINGS_PATH: settingsPath,
+      BTHWANI_GEMINI_REPO_ROOT: repoRoot,
+      BTHWANI_GEMINI_ALLOWED_WRITE: JSON.stringify(allowed.map((entry) => entry.absolute)),
+      BTHWANI_GEMINI_FORBIDDEN_WRITE: JSON.stringify(forbidden.map((entry) => entry.absolute)),
+    };
+
+    const execution = await spawnGemini(launcher, geminiArgs, childEnv, prompt, timeoutMsValue);
+    const branchAfter = run("git", ["branch", "--show-current"]);
+    const headAfter = run("git", ["rev-parse", "HEAD"]);
+    const changedPaths = statusPaths();
+    const violations = scopeViolations(changedPaths, allowed, forbidden);
+    const diffCheck = spawnSync("git", ["diff", "--check"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    const diffCheckPassed = !diffCheck.error && diffCheck.status === 0;
+    const parsed = parseGeminiJson(execution.stdout);
+
+    const invariantFailures = [];
+    if (branchAfter !== branchBefore) invariantFailures.push("BRANCH_CHANGED");
+    if (headAfter !== headBefore) invariantFailures.push("HEAD_CHANGED");
+    if (violations.length) invariantFailures.push("WRITE_SCOPE_VIOLATION");
+    if (!diffCheckPassed) invariantFailures.push("GIT_DIFF_CHECK_FAILED");
+    if (execution.overflow) invariantFailures.push("OUTPUT_CAPTURE_LIMIT_EXCEEDED");
+    if (execution.timedOut) invariantFailures.push("TIMEOUT");
+    if (execution.error) invariantFailures.push("PROCESS_ERROR");
+    if (execution.exitCode !== 0) invariantFailures.push("GEMINI_NONZERO_EXIT");
+    if (!parsed || typeof parsed !== "object") invariantFailures.push("INVALID_GEMINI_JSON");
+
+    const result = {
+      schemaVersion: 1,
+      tool: TOOL_ID,
+      workUnitId: args.workUnit,
+      status: invariantFailures.length ? "failed" : "success",
+      geminiVersion,
+      modelRequested: args.model || null,
+      branchBefore,
+      branchAfter,
+      headBefore,
+      headAfter,
+      exitCode: execution.exitCode,
+      signal: execution.signal,
+      timedOut: execution.timedOut,
+      changedPaths,
+      scopeViolations: violations,
+      diffCheckPassed,
+      invariantFailures,
+      response: parsed?.response ?? null,
+      stats: parsed?.stats ?? null,
+      stderr: execution.stderr.slice(0, 64 * 1024),
+      rawOutputCaptured: Boolean(execution.stdout),
+      runDir,
+    };
+    fs.writeFileSync(resultPath, `${JSON.stringify(result, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+    console.log(JSON.stringify({ resultPath, status: result.status, changedPaths, invariantFailures }, null, 2));
+    if (result.status !== "success") process.exitCode = 1;
   } finally {
-    try { fs.unlinkSync(lockPath); } catch {}
+    releaseLock(lockPath);
   }
-
-  const branchAfter = run("git", ["branch", "--show-current"]);
-  const headAfter = run("git", ["rev-parse", "HEAD"]);
-  const changedPaths = statusPaths();
-  const violations = scopeViolations(changedPaths, allowed, forbidden);
-  const diffCheck = spawnSync("git", ["diff", "--check"], {
-    cwd: repoRoot,
-    encoding: "utf8",
-    windowsHide: true,
-  });
-  const diffCheckPassed = !diffCheck.error && diffCheck.status === 0;
-  const parsed = parseGeminiJson(execution.stdout);
-
-  const invariantFailures = [];
-  if (branchAfter !== branchBefore) invariantFailures.push("BRANCH_CHANGED");
-  if (headAfter !== headBefore) invariantFailures.push("HEAD_CHANGED");
-  if (violations.length) invariantFailures.push("WRITE_SCOPE_VIOLATION");
-  if (!diffCheckPassed) invariantFailures.push("GIT_DIFF_CHECK_FAILED");
-  if (execution.overflow) invariantFailures.push("OUTPUT_CAPTURE_LIMIT_EXCEEDED");
-  if (execution.timedOut) invariantFailures.push("TIMEOUT");
-  if (execution.error) invariantFailures.push("PROCESS_ERROR");
-  if (execution.exitCode !== 0) invariantFailures.push("GEMINI_NONZERO_EXIT");
-  if (!parsed || typeof parsed !== "object") invariantFailures.push("INVALID_GEMINI_JSON");
-
-  const result = {
-    schemaVersion: 1,
-    tool: TOOL_ID,
-    workUnitId: args.workUnit,
-    status: invariantFailures.length ? "failed" : "success",
-    geminiVersion,
-    modelRequested: args.model || null,
-    branchBefore,
-    branchAfter,
-    headBefore,
-    headAfter,
-    exitCode: execution.exitCode,
-    signal: execution.signal,
-    timedOut: execution.timedOut,
-    changedPaths,
-    scopeViolations: violations,
-    diffCheckPassed,
-    invariantFailures,
-    response: parsed?.response ?? null,
-    stats: parsed?.stats ?? null,
-    stderr: execution.stderr.slice(0, 64 * 1024),
-    rawOutputCaptured: Boolean(execution.stdout),
-    runDir,
-  };
-  fs.writeFileSync(resultPath, `${JSON.stringify(result, null, 2)}\n`, "utf8");
-  console.log(JSON.stringify({ resultPath, status: result.status, changedPaths, invariantFailures }, null, 2));
-  if (result.status !== "success") process.exitCode = 1;
 }
 
-main().catch((error) => fail(error.message, error.stack));
+main().catch((error) => {
+  if (error?.detail !== undefined) console.error(error.detail);
+  console.error(`[${TOOL_ID.toUpperCase()} FAIL] ${error?.message || String(error)} decision=FIX_REQUIRED`);
+  process.exitCode = 1;
+});
