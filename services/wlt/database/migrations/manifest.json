@@ -3,7 +3,7 @@
   "service": "wlt",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "wlt-915_wallet_projection_transaction_boundary.sql",
+  "cutover": "wlt-916_wallet_projection_restricted_balance_guard.sql",
   "migrations": [
     {"ordinal":1,"file":"wlt-000_financial_references.sql","sha256":"64a1bec63acf81e53521bb683ddc1fb1f46cc1d5cccc61af4aa95696159ce6fe","historicalPrefix":"000","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":2,"file":"wlt-001_payment_sessions.sql","sha256":"aa350f36c803d912b0e51874f9f4c0f93d3ccfb4c56f2db819f65b32c82bb07d","historicalPrefix":"001","state":"HISTORICAL_IMMUTABLE"},
@@ -89,6 +89,7 @@
     {"ordinal":82,"file":"wlt-912_cod_captain_reservation.sql","sha256":"21dd85de5c689d7d8031d0aa47a9d5b18b63ff77c373a656d54c0f2303feda08","historicalPrefix":"912","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":83,"file":"wlt-913_official_wallet_destination_versioning.sql","sha256":"a963164ababbccb110416408003577740094fc96aa0fd3cc77f6b148bfe852c6","historicalPrefix":"913","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":84,"file":"wlt-914_canonical_wallet_projection.sql","sha256":"95761a9f6326eed2296b423f08e5f61245d149f90a259caa31260d668475e5cd","historicalPrefix":"914","state":"HISTORICAL_IMMUTABLE"},
-    {"ordinal":85,"file":"wlt-915_wallet_projection_transaction_boundary.sql","sha256":"fac7da4423bd0b6b7cae78b37458ed1657ed4d8b2af6fb4bdb57d566e07970e2","historicalPrefix":"915","state":"ACTIVE"}
+    {"ordinal":85,"file":"wlt-915_wallet_projection_transaction_boundary.sql","sha256":"fac7da4423bd0b6b7cae78b37458ed1657ed4d8b2af6fb4bdb57d566e07970e2","historicalPrefix":"915","state":"HISTORICAL_IMMUTABLE"},
+    {"ordinal":86,"file":"wlt-916_wallet_projection_restricted_balance_guard.sql","sha256":"0dcc2c5364fa3db6a02ec0bc49dcbaec5a4828c5ecee8f4584de71f3dd9784c8","historicalPrefix":"916","state":"ACTIVE"}
   ]
 }

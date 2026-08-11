@@ -13,7 +13,7 @@ import (
 
 const (
 	wltMigrationServiceName = "wlt"
-	wltLatestMigration      = "wlt-915_wallet_projection_transaction_boundary.sql"
+	wltLatestMigration      = "wlt-916_wallet_projection_restricted_balance_guard.sql"
 	wltReadinessTimeout     = 2 * time.Second
 )
 
