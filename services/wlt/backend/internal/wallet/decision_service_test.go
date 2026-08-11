@@ -15,10 +15,14 @@ func TestConfiguredDecisionServiceRequiresExplicitConfiguration(t *testing.T) {
 }
 
 func TestConfiguredDecisionServiceRejectsInvalidConfiguration(t *testing.T) {
-	t.Setenv(FinanceMutationKillSwitchEnv, "not-a-boolean")
-	_, err := NewConfiguredDecisionServiceFromEnv()
-	if !errors.Is(err, ErrDecisionConfigInvalid) {
-		t.Fatalf("expected ErrDecisionConfigInvalid, got %v", err)
+	for _, raw := range []string{"not-a-boolean", "1", "0", "t", "f"} {
+		t.Run(raw, func(t *testing.T) {
+			t.Setenv(FinanceMutationKillSwitchEnv, raw)
+			_, err := NewConfiguredDecisionServiceFromEnv()
+			if !errors.Is(err, ErrDecisionConfigInvalid) {
+				t.Fatalf("value %q: expected ErrDecisionConfigInvalid, got %v", raw, err)
+			}
+		})
 	}
 }
 
@@ -61,7 +65,9 @@ func TestConfiguredDecisionServiceFailsClosedForUnknownCapabilityOrActor(t *test
 	if killed, err := service.IsCapabilityKilled(context.Background(), "unknown", "service"); !killed || !errors.Is(err, ErrUnsupportedCapability) {
 		t.Fatalf("unknown capability must fail closed, killed=%t err=%v", killed, err)
 	}
-	if killed, err := service.IsCapabilityKilled(context.Background(), "finance_mutation", ""); !killed || !errors.Is(err, ErrDecisionActorRequired) {
-		t.Fatalf("missing actor must fail closed, killed=%t err=%v", killed, err)
+	for _, actorID := range []string{"", "operator", "partner"} {
+		if killed, err := service.IsCapabilityKilled(context.Background(), "finance_mutation", actorID); !killed || !errors.Is(err, ErrUnsupportedDecisionActor) {
+			t.Fatalf("actor %q must fail closed, killed=%t err=%v", actorID, killed, err)
+		}
 	}
 }
