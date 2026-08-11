@@ -7,13 +7,13 @@
     "objective": "Diagnose and prepare root-cause implementation for every finance/wallet concern materially connected to WLT money movement across required BThwani surfaces, while excluding unrelated product scope.",
     "primarySurface": "finance-wallet-domain",
     "createdAt": "2026-08-08T14:20:00Z",
-    "rebaselinedAt": "2026-08-11T03:52:19Z"
+    "rebaselinedAt": "2026-08-11T05:40:00Z"
   },
   "repository": {
     "name": "bthwani2-boop/bthwani-suite-next",
     "targetBranch": "BB",
-    "pinnedStartSha": "4e9f92436046fa1cded26e71250d5bd2db9f598f",
-    "latestObservedRemoteSha": "4e9f92436046fa1cded26e71250d5bd2db9f598f"
+    "pinnedStartSha": "af15f6c8a2449953dd82c62be5cb227ec08be08d",
+    "latestObservedRemoteSha": "af15f6c8a2449953dd82c62be5cb227ec08be08d"
   },
   "authority": {
     "root": "governance/authority/authority-precedence.json",
