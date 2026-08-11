@@ -11,7 +11,23 @@ import (
 	"dsh-api/internal/wlt"
 )
 
-func HandleGovernedFieldUpdatePartner(db *sql.DB, wltClient *wlt.Client) http.HandlerFunc {
+type governedFieldPartnerUpdateRequest struct {
+	DisplayName       string `json:"displayName"`
+	OwnerActorID      string `json:"ownerActorId"`
+	WorkforcePersonID string `json:"workforcePersonId"`
+	PrimaryPhone      string `json:"primaryPhone"`
+	SecondaryPhone    string `json:"secondaryPhone"`
+	Email             string `json:"email"`
+	Notes             string `json:"notes"`
+}
+
+// HandleGovernedFieldUpdatePartner owns operational onboarding edits only.
+// Payout destinations are WLT-owned and are mutated exclusively through the
+// governed actor finance payout-destination route, which then synchronizes the
+// masked DSH readiness projection. Keeping finance out of this handler prevents
+// a second write authority and makes legacy bank/IBAN/mobile fields fail closed
+// as unknown request properties.
+func HandleGovernedFieldUpdatePartner(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		actorID, _ := actorFromContext(r)
 		partnerID := partnerIDFromPath(r)
@@ -24,16 +40,14 @@ func HandleGovernedFieldUpdatePartner(db *sql.DB, wltClient *wlt.Client) http.Ha
 			return
 		}
 
-		var request struct {
-			UpdatePartnerInput
-			OfficialWalletProviderKey string `json:"officialWalletProviderKey"`
-			DestinationReference      string `json:"destinationReference"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		var request governedFieldPartnerUpdateRequest
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&request); err != nil {
+			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "partner draft accepts operational fields only; configure payout destinations through the governed finance surface")
 			return
 		}
-		input := request.UpdatePartnerInput
+
 		current, err := GetPartner(db, partnerID)
 		if errors.Is(err, ErrNotFound) {
 			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
@@ -43,73 +57,21 @@ func HandleGovernedFieldUpdatePartner(db *sql.DB, wltClient *wlt.Client) http.Ha
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load partner")
 			return
 		}
-		// Refuse stale callers before any cross-service financial mutation. The
-		// repository repeats the same OCC check at persistence time, but this
-		// preflight prevents a known-stale request from changing WLT first.
 		if current.Version != expectedVersion {
 			sendError(w, http.StatusConflict, "VERSION_CONFLICT", "partner was modified concurrently")
 			return
 		}
 
-		legacyPayoutInput := strings.TrimSpace(input.BankName) != "" ||
-			strings.TrimSpace(input.BankBranch) != "" ||
-			strings.TrimSpace(input.BankAccountNumber) != "" ||
-			strings.TrimSpace(input.BankIBAN) != "" ||
-			strings.TrimSpace(input.PayoutMobileNumber) != "" ||
-			strings.TrimSpace(input.SettlementPreference) != "" ||
-			input.BankAccountHolderMatchesOwner != nil ||
-			strings.TrimSpace(input.BankNotes) != ""
-		if legacyPayoutInput {
-			sendError(w, http.StatusUnprocessableEntity, "PAYOUT_DESTINATION_LEGACY_FIELDS_RETIRED", "bank, IBAN, mobile-money and manual settlement destination fields are retired; submit an official wallet provider and destination reference")
-			return
+		input := UpdatePartnerInput{
+			DisplayName:       request.DisplayName,
+			OwnerActorID:      request.OwnerActorID,
+			WorkforcePersonID: request.WorkforcePersonID,
+			PrimaryPhone:      request.PrimaryPhone,
+			SecondaryPhone:    request.SecondaryPhone,
+			Email:             request.Email,
+			Notes:             request.Notes,
+			UpdatedByActorID:  actorID,
 		}
-
-		providerKey := strings.ToLower(strings.TrimSpace(request.OfficialWalletProviderKey))
-		destinationReference := strings.TrimSpace(request.DestinationReference)
-		beneficiaryName := strings.TrimSpace(input.BeneficiaryName)
-		payoutMutation := providerKey != "" || destinationReference != "" || beneficiaryName != ""
-
-		if payoutMutation {
-			if providerKey == "" || destinationReference == "" || beneficiaryName == "" {
-				sendError(w, http.StatusUnprocessableEntity, "PAYOUT_DESTINATION_INVALID", "beneficiaryName, officialWalletProviderKey and destinationReference are required together")
-				return
-			}
-			if wltClient == nil || !wltClient.Configured() {
-				sendError(w, http.StatusServiceUnavailable, "WLT_UNAVAILABLE", "WLT payout destination service is not configured")
-				return
-			}
-			idempotency := strings.TrimSpace(idempotencyKey(r))
-			if idempotency == "" {
-				idempotency = governedMutationKey(
-					"partner-official-wallet", partnerID, strconv.Itoa(expectedVersion),
-					providerKey, destinationReference, beneficiaryName,
-				)
-			}
-			correlation := strings.TrimSpace(correlationID(r))
-			if correlation == "" {
-				correlation = governedMutationKey("partner-payout-correlation", partnerID, idempotency)
-			}
-
-			ref, handoffErr := wltClient.UpsertPayoutDestination(r.Context(), partnerID, wlt.PayoutDestinationUpsertInput{
-				BeneficiaryName:           beneficiaryName,
-				OfficialWalletProviderKey: providerKey,
-				DestinationReference:      destinationReference,
-				CreatedByActorID:          actorID,
-				CorrelationID:             correlation,
-				IdempotencyKey:            idempotency,
-			})
-			if handoffErr != nil {
-				sendError(w, http.StatusBadGateway, "WLT_PAYOUT_HANDOFF_FAILED", handoffErr.Error())
-				return
-			}
-			input.PayoutDestinationID = ref.ID
-			input.DestinationMethod = ref.DestinationMethod
-			input.MaskedDestinationReference = ref.MaskedDestinationReference
-			input.DestinationVerificationStatus = ref.DestinationVerificationStatus
-			input.BeneficiaryName = ref.BeneficiaryName
-		}
-		input.UpdatedByActorID = actorID
-
 		updated, err := UpdatePartnerGoverned(db, partnerID, input, expectedVersion)
 		if errors.Is(err, ErrExpectedVersionRequired) {
 			sendError(w, http.StatusPreconditionRequired, "EXPECTED_VERSION_REQUIRED", err.Error())
