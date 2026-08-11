@@ -226,7 +226,10 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("GET /dsh/field/finance/payouts", protected.enforceFieldReadinessGate(protected.handleFieldFinancePayouts))
 	mux.HandleFunc("GET /dsh/field/finance/payout-destinations", protected.enforceFieldReadinessGate(protected.handleFieldListPayoutDestinations))
 
-	registerRepresentativeFinanceRoutes(mux, protected)
+	// Representative self-service finance routes are composed once, from
+	// registerUnifiedCatalogRoutes below. A second call here registered the
+	// same patterns twice and made net/http panic while building the router,
+	// which took down every DSH HTTP test rather than one route.
 
 	mux.HandleFunc("POST /dsh/support/tickets", protected.handleCreateActorSupportTicket)
 	mux.HandleFunc("GET /dsh/support/tickets", protected.handleListActorSupportTickets)
