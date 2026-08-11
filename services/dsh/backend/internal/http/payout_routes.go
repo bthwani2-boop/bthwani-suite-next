@@ -62,38 +62,27 @@ func decodePayoutDestinationProjection(body []byte, actorType, actorID string) (
 	}, nil
 }
 
-func (s *protectedStoreServer) partnerIDForPayoutProjection(r *http.Request, actor store.StoreActor) (string, error) {
-	row, _, err := store.ResolveActorStore(r.Context(), s.db, s.workforce, actor)
-	if err != nil {
-		return "", err
-	}
-	partnerID := strings.TrimSpace(row.PartnerID)
-	if partnerID == "" {
-		return "", fmt.Errorf("partner actor store has no partner owner")
-	}
-	return partnerID, nil
-}
-
 func (s *protectedStoreServer) syncPartnerPayoutProjection(r *http.Request, actor store.StoreActor, body []byte) error {
 	projection, err := decodePayoutDestinationProjection(body, "partner", actor.ID)
 	if err != nil {
 		return err
 	}
-	partnerID, err := s.partnerIDForPayoutProjection(r, actor)
-	if err != nil {
-		return err
-	}
-	_, err = partner.SyncPayoutDestinationProjection(r.Context(), s.db, partnerID, projection)
-	return err
+	return partner.SyncOwnerPayoutDestinationProjection(
+		r.Context(),
+		s.db,
+		actor.OperatorContextID,
+		actor.ID,
+		projection,
+	)
 }
 
 func (s *protectedStoreServer) clearPartnerPayoutProjection(r *http.Request, actor store.StoreActor) error {
-	partnerID, err := s.partnerIDForPayoutProjection(r, actor)
-	if err != nil {
-		return err
-	}
-	_, err = partner.ClearPayoutDestinationProjection(r.Context(), s.db, partnerID)
-	return err
+	return partner.ClearOwnerPayoutDestinationProjection(
+		r.Context(),
+		s.db,
+		actor.OperatorContextID,
+		actor.ID,
+	)
 }
 
 func writePayoutProjectionSyncError(w http.ResponseWriter) {
