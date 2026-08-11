@@ -49,7 +49,8 @@
     "graphify",
     "k6",
     "gitleaks",
-    "lean-ctx"
+    "lean-ctx",
+    "taskkill"
   ],
   "ignoreExportsUsedInFile": true,
   "rules": {
