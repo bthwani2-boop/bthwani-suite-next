@@ -122,8 +122,9 @@ $settings = Invoke-RestMethod "http://localhost:58080/dsh/partner/stores/$smokeS
 if ($settings.store.status -ne "ready") { throw "Partner Onboarding & Store Publication store settings did not reach ready" }
 if (@($settings.store.deliveryModes).Count -lt 1) { throw "Partner Onboarding & Store Publication store settings did not persist delivery modes" }
 
-# Submission readiness also requires an active WLT-owned payout destination.
-# DSH receives only the durable WLT reference and masked display fields.
+# Submission readiness requires a WLT-owned official-wallet destination. The
+# local runtime seeds one provider allowed for OperatorContext=local-dsh. WLT
+# encrypts the reference and returns only the durable id and masked projection.
 $payoutHeaders = @{}
 foreach ($key in $fieldHeaders.Keys) {
   $payoutHeaders[$key] = $fieldHeaders[$key]
@@ -135,15 +136,13 @@ $payoutBody = @{
   displayName = "شريك فحص $partnerSuffix"
   primaryPhone = "+96777$($partnerSuffix.ToString().Substring($partnerSuffix.ToString().Length - 7))"
   beneficiaryName = "مالك فحص الشركاء"
-  bankName = "بنك فحص بثواني"
-  bankBranch = "صنعاء"
-  accountNumber = "700$partnerSuffix"
-  settlementPreference = "bank_transfer"
-  bankAccountHolderMatchesOwner = $true
-  bankNotes = "Partner Onboarding & Store Publication runtime smoke payout destination"
+  officialWalletProviderKey = "bthwani_local_wallet"
+  destinationReference = "777$partnerSuffix"
 } | ConvertTo-Json
 $payoutPartner = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)" -Method Patch -Headers $payoutHeaders -ContentType "application/json" -Body $payoutBody -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($payoutPartner.payoutDestinationId)) { throw "Partner Onboarding & Store Publication WLT payout destination was not bound" }
+if ($payoutPartner.destinationMethod -ne "official_wallet") { throw "Partner Onboarding & Store Publication payout destination is not official_wallet" }
+if ([string]::IsNullOrWhiteSpace($payoutPartner.maskedDestinationReference)) { throw "Partner Onboarding & Store Publication payout destination was not masked" }
 if ($payoutPartner.version -le $partnerDraft.version) { throw "Partner Onboarding & Store Publication payout binding did not advance partner version" }
 
 $visitBody = @{
