@@ -76,20 +76,21 @@ Logical approval authorities remain separated by the agent registry. An executio
 
 Two mutually exclusive external implementation routes are registered:
 
-- `Codex orchestrator → Gemini CLI implementer → Codex verification`.
-- `Claude orchestrator → Gemini CLI implementer → Claude verification`.
+- `Codex orchestrator → Antigravity CLI (agy) implementer using a Gemini model → Codex verification`.
+- `Claude orchestrator → Antigravity CLI (agy) implementer using a Gemini model → Claude verification`.
 
 The current authorized task selects exactly one route for each work unit.
 
-- Use `gemini-implementer` only for one bounded work unit with a clean working tree, explicit allowed and forbidden paths, acceptance criteria, and orchestrator-owned verification commands.
-- Codex uses `tools/scripts/invoke-gemini-implementer.mjs`; Claude uses `tools/scripts/invoke-claude-gemini-implementer.mjs`, which reuses the same hardened Gemini relay and lock.
-- Exactly one delegated Gemini implementation may be active at a time. Codex and Claude must not run Gemini delegation concurrently, must not share the same work unit, and must not jointly coordinate or verify one delegated work unit.
-- Gemini owns bounded file edits only. It must not commit, push, merge, release, approve, expand scope, or mutate the agent/governance control plane.
-- The selected orchestrator owns diagnosis, scope, the implementation brief, complete diff review, branch/head re-pinning, developer verification, and the rework decision after Gemini exits.
-- Gemini's report and token statistics are telemetry, not proof that tests, runtime behavior, or acceptance passed.
-- Reassigning an active or previously dispatched work unit from Codex to Claude or from Claude to Codex requires an explicit current-task reassignment and a fresh clean-tree dispatch; implicit handoff is forbidden.
+- Use `antigravity-implementer` only for one bounded work unit with a clean working tree, explicit allowed and forbidden paths, acceptance criteria, and orchestrator-owned verification commands.
+- Codex uses `tools/scripts/invoke-antigravity-implementer.mjs --orchestrator codex`; Claude uses `tools/scripts/invoke-claude-antigravity-implementer.mjs`, which binds the same hardened relay to Claude.
+- The relay requires an explicit Gemini `--model` value returned by `agy models`; it never accepts or requires an API key and relies on the locally authenticated Antigravity subscription session.
+- Exactly one delegated Antigravity implementation may be active at a time. Codex and Claude must not delegate concurrently, share the same work unit, or jointly coordinate or verify one delegated work unit.
+- Antigravity owns bounded file edits only. It must not commit, push, merge, release, approve, expand scope, or mutate the agent/governance control plane.
+- The selected orchestrator owns diagnosis, scope, the implementation brief, complete diff review, branch/head re-pinning, developer verification, and the rework decision after Antigravity exits.
+- Antigravity's structured result is execution telemetry, not proof that tests, runtime behavior, or acceptance passed.
+- Reassigning a dispatched work unit from Codex to Claude or from Claude to Codex requires an explicit current-task reassignment and a fresh clean-tree dispatch; implicit handoff is forbidden.
 - Protected independent review and formal product, finance, governance, CI, QA, security, release, risk, production, and closure authorities remain separate.
-- Do not route delegated implementation through Antigravity, OpenCode, or another implementer unless a later current authorized task instruction explicitly changes these routes.
+- Do not route delegated implementation through the retired consumer Gemini CLI, OpenCode, or another implementer unless a later current authorized task instruction explicitly changes these routes.
 
 ## Plans, skills, and tools
 
