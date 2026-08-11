@@ -1,25 +1,11 @@
-# Closure — App Field Final Closure
+# Closure status — App Field final closure
 
-## State
-`NEEDS_EVIDENCE` — open.
+Decision: **NOT_CLOSED — READY_FOR_ROOT_CAUSE_EXECUTION_AND_REVERIFICATION**
 
-Pinned diagnosis SHA: `ba3393c39b0d0b265a4caf110b3bca685e43b0e3`. Diagnosis was reconciled through observed remote head `a2373ded31dc04f807d182997d0f07f56cd1f3fb`, including the intervening DSH store-mutation idempotency hardening. No implementation SHA, final verification SHA or release evidence has been produced by this package.
+Reconciled branch/SHA: `BB@397dcae545d723d88e96828535973533f4f6ad68`.
 
-## Scope rule
-Closure is limited to `app-field` and causally required effects. The validator's five-surface envelope is structural. `app-captain` is not a closure dependency under current Product Truth; unrelated checkout, dispatch/delivery, captain COD/custody, partner-only management, marketing and generic control-panel journeys are excluded.
+The repository already contains substantial field implementation and historical U004-U006 results are useful provenance, but they do not establish final closure of current `BB`. The package itself was stale/not strict-validator ready, and current source exposes a concrete verification blocker: the app-field `test` command targets a nonexistent `src/__tests__` directory.
 
-## Required closure conditions
-- U001 through U009 are COMPLETE in dependency order with retained verification results on one final SHA.
-- Field actor/session/profile/assignment/readiness states fail closed and never render ambiguous blank or stale authorization states.
-- Partner onboarding, first-store evidence/verification, central catalog setup and publication converge on the exact required operator/partner/client readers.
-- Applicable field store mutations reuse canonical DSH request fingerprinting/advisory-lock idempotency; no surface-local parallel mechanism is created.
-- Visit/checklist/location/evidence/escalation transitions are authoritative, concurrency-safe and recoverable.
-- Offline work has deterministic version/expiry/retry/permanent/cancel/unknown-result behavior as applicable, survives restart and rejects replay after assignment revocation.
-- Field wallet/ledger/commission/payout behavior remains DSH-fronted and WLT-owned, actor/context isolated and finance-reviewable.
-- App-field test entry points actually execute field-specific behavioral tests, not only configuration contracts.
-- Physical Android and iOS evidence covers push/deep links, permissions, lifecycle, secure storage/offline recovery, media, location, accessibility and release behavior.
-- Same-SHA readback is retained for every surface explicitly marked RELATED; NOT_RELATED_WITH_EVIDENCE surfaces are not invented as gates.
-- No package file becomes runtime/build/CI/migration/governance/operations truth.
+Remaining closure work is bounded: make the field test gate real; re-prove Identity/Workforce and work-center behavior; re-prove existing onboarding/visit/catalog work on current candidate; close only demonstrated offline migration/ambiguous-result defects without replacing the working queue; re-prove field finance boundaries; then execute final Android-device and same-store cross-surface evidence.
 
-## Decision rule
-Do not mark CLOSED/PASS merely because code was written or a generic CI job succeeded. Closure requires per-unit automated/runtime evidence plus any independent approval demanded by current Product Truth.
+Historical `RESULT.json` files are intentionally not rewritten by diagnosis. Final closure requires candidate-bound results, zero unresolved blockers/deviations, all required checks PASS, strict validator PASS, and the manifest decision changed to `CLOSED_WITH_EVIDENCE`. Until then no final-closure claim is valid.

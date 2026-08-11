@@ -1,18 +1,7 @@
 # U001 — field-closure-foundation
 
-## Boundary
-This is the field-specific foundation. Functional surfaces are `app-field` and the control-panel only where it supplies field operator readback. It must not turn generic client, partner or captain work into prerequisites. The old broad package is historical discovery only.
+## Current-BB diagnosis
 
-## Current diagnosis
-The repository now has better Product Truth than the old package: onboarding/publication explicitly names the field agent and excludes the captain; representative finance names the field actor's own wallet/ledger/commission/payout scope; store-to-captain handoff explicitly excludes app-field. The current package framework, however, mechanically expects all five surfaces in its envelope. That structural requirement was previously mistaken for product scope. The new baseline must keep the macro envelope while using affectedSurfaces and NOT_RELATED_WITH_EVIDENCE to prevent unrelated execution.
+The previous foundation result is historical and cannot close current BB. Current inspection confirms one concrete blocker: `apps/app-field/runtime/package.json` points Vitest at `src/__tests__`, while the complete current `apps/app-field/runtime/src` tree has no `__tests__` directory or test files. The package itself also drifted from the strict validator; root structural defects are repaired by this reconciliation, but the product test-gate defect remains execution work. The correct root fix is not `passWithNoTests`, skipping Vitest or deleting the gate. Establish a real app-field behavioral suite covering readiness failure/composition plus navigation/session boundaries, bind the canonical `test` command to those tests and the generic runtime contract, and prove failure propagation. Preserve existing generic runtime checks.
 
-A second foundation defect is verification credibility. `apps/app-field/runtime/package.json` defines `test` as the generic mobile runtime contract check. `apps/app-field/runtime/tests/readiness-transport-contract.test.mjs` exists but is not invoked by that script. Therefore a green app-field `test` command cannot by itself prove readiness behavior. Before later units can close, field-specific tests must be wired into trustworthy entry points and current contracts/generated clients/backends must be checked only along field paths.
-
-## Remaining changes
-- Correct the app-field verification entry point so all required field-specific tests actually run, while preserving the general mobile configuration contract.
-- Establish a field-only scope matrix from Product Truth/current code and remove stale broad-surface assumptions from closure evidence.
-- Verify generated/canonical clients and DSH/Identity/Workforce/WLT boundaries used by field journeys without rewriting unrelated services.
-- Ensure package/CI evidence identifies the exact implementation SHA.
-
-## Exit condition
-U001 closes only when strict package validation, field type/lint/test gates and the scope matrix pass on the same SHA. No runtime/business unit may be called complete based on this planning artifact alone.
+Execution starts by reproducing current behavior on the exact candidate. Historical `RESULT.json` is provenance only. If the acceptance state already holds due to concurrent work, record verification and do not touch product code. Otherwise change the narrowest authoritative test/runtime owner; do not broaden into unrelated applications.
