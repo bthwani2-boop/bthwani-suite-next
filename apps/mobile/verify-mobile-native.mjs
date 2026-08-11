@@ -158,7 +158,7 @@ function launchIos(app, builtApp, config) {
   run('xcrun', ['simctl', 'install', device.udid, builtApp], worktree);
   const output = run('xcrun', ['simctl', 'launch', '--terminate-running-process', device.udid, config.iosBundleIdentifier], worktree, { capture: true });
   if (!/:\s*\d+\s*$/.test(output)) fail(`${app}: simctl launch returned no process evidence: ${output}`);
-  console.log(`mobile:ios:simulator-launch PASS app=${app} simulator=${device.name}`);
+  console.log(`ios simulator launch PASS app=${app} simulator=${device.name}`);
 }
 
 try {

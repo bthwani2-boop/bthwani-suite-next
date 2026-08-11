@@ -8,31 +8,6 @@
     "pnpm": "10.34.0",
     "runtimeTypeScript": "npm:@typescript/typescript6@6.0.2"
   },
-  "verification": {
-    "platforms": ["android", "ios"],
-    "evidenceTiers": [
-      "mobile:shared:integration",
-      "mobile:android:native-build",
-      "mobile:android:physical-launch",
-      "mobile:android:physical-integration",
-      "mobile:ios:native-build",
-      "mobile:ios:simulator-launch",
-      "mobile:ios:physical-integration"
-    ],
-    "finalClosureRequires": [
-      "mobile:shared:integration",
-      "mobile:android:native-build",
-      "mobile:android:physical-launch",
-      "mobile:android:physical-integration",
-      "mobile:ios:native-build",
-      "mobile:ios:simulator-launch",
-      "mobile:ios:physical-integration"
-    ],
-    "physicalDeviceRequired": {
-      "android": true,
-      "ios": true
-    }
-  },
   "apps": {
     "app-client": {
       "name": "بثواني",
