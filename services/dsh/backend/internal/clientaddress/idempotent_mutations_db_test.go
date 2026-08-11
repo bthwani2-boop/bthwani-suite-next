@@ -34,18 +34,71 @@ func openAddressIntegrationDB(t *testing.T) *sql.DB {
 
 func ensureIntegrationServiceArea(t *testing.T, db *sql.DB) {
 	t.Helper()
-	_, err := db.Exec(`INSERT INTO dsh_service_area_geofences
-		(service_area_code, display_name, polygon, active, priority)
-		VALUES ($1, ' integration area', '[[44,15],[45,15],[45,16],[44,16]]'::jsonb, TRUE, 1000)
-		ON CONFLICT (service_area_code) DO UPDATE SET
-			display_name = EXCLUDED.display_name,
-			polygon = EXCLUDED.polygon,
-			active = TRUE,
-			priority = EXCLUDED.priority,
-			version = dsh_service_area_geofences.version + 1,
-			updated_at = NOW()`, integrationServiceAreaCode)
+	tx, err := db.Begin()
 	if err != nil {
-		t.Fatalf("ensure integration service area: %v", err)
+		t.Fatalf("begin integration service-area fixture: %v", err)
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec(`INSERT INTO dsh_service_area_geofences
+		(service_area_code, display_name, polygon, active, priority, srid, overlap_policy, effective_from)
+		VALUES (
+			$1,
+			' integration area',
+			ST_GeomFromText('POLYGON((44 15,45 15,45 16,44 16,44 15))', 4326),
+			TRUE,
+			1000,
+			4326,
+			'priority_then_code',
+			NOW()
+		)
+		ON CONFLICT (service_area_code) DO NOTHING`, integrationServiceAreaCode)
+	if err != nil {
+		t.Fatalf("ensure integration service-area command state: %v", err)
+	}
+
+	_, err = tx.Exec(`INSERT INTO dsh_service_area_versions (
+		service_area_code,
+		version,
+		display_name,
+		polygon,
+		active,
+		priority,
+		srid,
+		overlap_policy,
+		effective_from,
+		expires_at,
+		actor_id,
+		actor_surface,
+		reason,
+		correlation_id,
+		created_at
+	)
+	SELECT
+		service_area_code,
+		version,
+		display_name,
+		polygon,
+		active,
+		priority,
+		srid,
+		overlap_policy,
+		effective_from,
+		expires_at,
+		'clientaddress-db-test',
+		'system',
+		'provide governed PostGIS client-address integration fixture',
+		'clientaddress-db-test',
+		updated_at
+	FROM dsh_service_area_geofences
+	WHERE service_area_code = $1
+	ON CONFLICT (service_area_code, version) DO NOTHING`, integrationServiceAreaCode)
+	if err != nil {
+		t.Fatalf("ensure integration service-area version history: %v", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("commit integration service-area fixture: %v", err)
 	}
 }
 
