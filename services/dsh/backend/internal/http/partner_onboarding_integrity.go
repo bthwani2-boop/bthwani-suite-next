@@ -23,7 +23,7 @@ func (s *protectedStoreServer) handleGovernedFieldGetPartnerDraft(w http.Respons
 }
 
 func (s *protectedStoreServer) handleGovernedFieldUpdatePartnerDraft(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleGovernedFieldUpdatePartner(s.db, s.wlt), "field")
+	s.servePartnerHandler(w, r, partner.HandleGovernedFieldUpdatePartner(s.db), "field")
 }
 
 func (s *protectedStoreServer) handleGovernedFieldCreatePartnerVisit(w http.ResponseWriter, r *http.Request) {
