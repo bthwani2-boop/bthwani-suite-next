@@ -18,6 +18,7 @@ import {
   assertPartnerReadback,
   mapPartnerOnboardingFailure,
   type DshPartnerDocumentType,
+  type DshUpdatePartnerRequest,
 } from "../partner";
 import {
   initialDraftState,
@@ -70,23 +71,13 @@ function buildStoreDraftInput(form: Partial<FieldPartnerDraftForm>) {
   };
 }
 
-function buildUpdatePartnerInput(form: Partial<FieldPartnerDraftForm>) {
+function buildUpdatePartnerInput(form: Partial<FieldPartnerDraftForm>): DshUpdatePartnerRequest {
   return {
     displayName: form.displayName ?? "",
-    legalNameAr: form.legalNameAr ?? "",
     primaryPhone: form.primaryPhone ?? "",
     secondaryPhone: form.secondaryPhone ?? "",
     email: form.email ?? "",
     notes: form.notes ?? "",
-    beneficiaryName: form.beneficiaryName ?? "",
-    bankName: form.bankName ?? "",
-    bankBranch: form.bankBranch ?? "",
-    accountNumber: form.accountNumber ?? "",
-    iban: form.iban ?? "",
-    payoutMobileNumber: form.payoutMobileNumber ?? "",
-    settlementPreference: form.settlementPreference ?? "",
-    bankAccountHolderMatchesOwner: form.bankAccountHolderMatchesOwner ?? false,
-    bankNotes: form.bankNotes ?? "",
   };
 }
 
@@ -220,15 +211,6 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
           signagePhotoRef: storeRes.store.signagePhotoRef,
           operatingHours: storeRes.store.operatingHours,
           deliveryReadiness: storeRes.store.deliveryReadiness,
-          beneficiaryName: partner.beneficiaryName,
-          bankName: partner.bankName,
-          bankBranch: partner.bankBranch,
-          accountNumber: "",
-          iban: "",
-          payoutMobileNumber: "",
-          settlementPreference: partner.settlementPreference as FieldPartnerDraftForm["settlementPreference"],
-          bankAccountHolderMatchesOwner: partner.bankAccountHolderMatchesOwner,
-          bankNotes: partner.bankNotes,
         },
         uploadedDocumentIds: documentsRes.documents.map((d) => d.id),
         uploadedDocumentTypes: documentsRes.documents.map((d) => d.documentType) as DshPartnerDocumentType[],
