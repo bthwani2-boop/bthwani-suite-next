@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
-	"dsh-api/internal/wlt"
 )
 
 type governedFieldPartnerUpdateRequest struct {
@@ -93,7 +91,7 @@ func HandleGovernedFieldUpdatePartner(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func HandleGovernedActivationTransition(db *sql.DB, wltClient *wlt.Client) http.HandlerFunc {
+func HandleGovernedActivationTransition(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		actorID, surface := actorFromContext(r)
 		partnerID := partnerIDFromPath(r)
@@ -103,7 +101,9 @@ func HandleGovernedActivationTransition(db *sql.DB, wltClient *wlt.Client) http.
 			return
 		}
 		var input TransitionInput
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&input); err != nil {
 			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
 			return
 		}
@@ -115,33 +115,15 @@ func HandleGovernedActivationTransition(db *sql.DB, wltClient *wlt.Client) http.
 			input.IdempotencyKey = governedMutationKey("partner-transition", partnerID, strconv.Itoa(expectedVersion), string(input.ToStatus), input.Reason)
 		}
 
-		current, err := GetPartner(db, partnerID)
-		if errors.Is(err, ErrNotFound) {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
-			return
-		}
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load partner")
-			return
-		}
-		if (input.ToStatus == StatusPartnerSuspended || input.ToStatus == StatusPartnerTerminated) && current.PayoutDestinationID != "" && (wltClient == nil || !wltClient.Configured()) {
-			sendError(w, http.StatusServiceUnavailable, "WLT_UNAVAILABLE", "WLT is required before suspending or terminating a partner with an active payout destination")
-			return
-		}
-
+		// Partner lifecycle is business-Partner state. The canonical payout
+		// destination belongs to the authenticated partner actor in WLT and can be
+		// shared by multiple Partner businesses inside the same OperatorContext.
+		// Suspending or terminating one business must therefore never deactivate
+		// the actor-level destination. Destination lifecycle stays on the explicit
+		// partner finance endpoint; this transition mutates DSH business state only.
 		updated, event, err := TransitionStatusGoverned(r.Context(), db, partnerID, input, expectedVersion)
 		if writeGovernedTransitionError(w, err) {
 			return
-		}
-
-		if (input.ToStatus == StatusPartnerSuspended || input.ToStatus == StatusPartnerTerminated) && updated.PayoutDestinationID != "" {
-			if err := wltClient.DeactivatePayoutDestination(
-				r.Context(), partnerID, actorID, input.CorrelationID,
-				governedMutationKey("partner-payout-deactivate", partnerID, event.ID),
-			); err != nil {
-				sendError(w, http.StatusBadGateway, "PAYOUT_DEACTIVATION_PENDING", "partner is deactivated in DSH; retry to complete WLT payout deactivation")
-				return
-			}
 		}
 		sendJSON(w, http.StatusOK, map[string]any{"partner": updated, "event": event})
 	}
