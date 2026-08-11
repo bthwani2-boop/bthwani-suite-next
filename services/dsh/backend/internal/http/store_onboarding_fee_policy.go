@@ -27,8 +27,16 @@ type storeOnboardingFeePolicyWriteInput struct {
 }
 
 type trustedStoreOnboardingFeePolicyWriteInput struct {
-	storeOnboardingFeePolicyWriteInput
-	CreatedByActorID string `json:"createdByActorId"`
+	Enabled          bool       `json:"enabled"`
+	AmountMinorUnits int64      `json:"amountMinorUnits"`
+	Currency         string     `json:"currency"`
+	AppliesTo        string     `json:"appliesTo"`
+	ChargeTiming     string     `json:"chargeTiming"`
+	EffectiveFrom    *time.Time `json:"effectiveFrom,omitempty"`
+	Notes            string     `json:"notes,omitempty"`
+	ExpectedVersion  int        `json:"expectedVersion"`
+	Reason           string     `json:"reason"`
+	CreatedByActorID string     `json:"createdByActorId"`
 }
 
 func writeStoreOnboardingFeeProxyResponse(w http.ResponseWriter, status int, body []byte, err error) {
@@ -89,18 +97,24 @@ func (s *protectedStoreServer) handleUpsertStoreOnboardingFeePolicy(w http.Respo
 	if !ok {
 		return
 	}
-	if strings.TrimSpace(actor.OperatorContextID) == "" {
+	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
+	actorID := strings.TrimSpace(actor.ID)
+	if operatorContextID == "" {
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+		return
+	}
+	if actorID == "" || len(actorID) > 200 {
+		store.SendError(w, http.StatusForbidden, "ACTOR_ID_REQUIRED", "trusted operator identity is required")
 		return
 	}
 	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
-	if correlationID == "" {
-		store.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", "X-Correlation-ID is required")
+	if correlationID == "" || len(correlationID) > 200 {
+		store.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", "X-Correlation-ID is required and must not exceed 200 characters")
 		return
 	}
-	if idempotencyKey == "" {
-		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key is required")
+	if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain 8 to 200 characters")
 		return
 	}
 	input, ok := decodeStoreOnboardingFeePolicyWrite(w, r)
@@ -108,14 +122,22 @@ func (s *protectedStoreServer) handleUpsertStoreOnboardingFeePolicy(w http.Respo
 		return
 	}
 	payload, err := json.Marshal(trustedStoreOnboardingFeePolicyWriteInput{
-		storeOnboardingFeePolicyWriteInput: input,
-		CreatedByActorID:                   actor.ID,
+		Enabled:          input.Enabled,
+		AmountMinorUnits: input.AmountMinorUnits,
+		Currency:         input.Currency,
+		AppliesTo:        input.AppliesTo,
+		ChargeTiming:     input.ChargeTiming,
+		EffectiveFrom:    input.EffectiveFrom,
+		Notes:            input.Notes,
+		ExpectedVersion:  input.ExpectedVersion,
+		Reason:           input.Reason,
+		CreatedByActorID: actorID,
 	})
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode store onboarding fee policy")
 		return
 	}
-	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	trustedContext := wlt.WithOperatorContext(r.Context(), operatorContextID)
 	status, body, err := s.wlt.FinanceWriteWithOperatorContext(
 		trustedContext,
 		http.MethodPut,
@@ -123,7 +145,7 @@ func (s *protectedStoreServer) handleUpsertStoreOnboardingFeePolicy(w http.Respo
 		payload,
 		correlationID,
 		idempotencyKey,
-		actor.OperatorContextID,
+		operatorContextID,
 	)
 	writeStoreOnboardingFeeProxyResponse(w, status, body, err)
 }
