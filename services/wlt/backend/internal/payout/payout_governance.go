@@ -26,19 +26,14 @@ type governedDestinationRef struct {
 	ID                            string `json:"id"`
 	OwnerActorID                  string `json:"ownerActorId"`
 	OwnerActorType                string `json:"ownerActorType"`
+	OfficialWalletProviderKey     string `json:"officialWalletProviderKey"`
+	DestinationVersion            int    `json:"destinationVersion"`
 	DestinationMethod             string `json:"destinationMethod"`
 	MaskedDestinationReference    string `json:"maskedDestinationReference"`
 	DestinationVerificationStatus string `json:"destinationVerificationStatus"`
 	BeneficiaryName               string `json:"beneficiaryName"`
 	Active                        bool   `json:"active"`
 	UpdatedAt                     string `json:"updatedAt"`
-}
-
-type governedDestinationInput struct {
-	BeneficiaryName      string `json:"beneficiaryName"`
-	DestinationMethod    string `json:"destinationMethod"`
-	DestinationReference string `json:"destinationReference"`
-	OperatorID           string `json:"operatorId"`
 }
 
 type governedCreatePayoutInput struct {
@@ -104,25 +99,41 @@ func appendPayoutAudit(ctx context.Context, tx *sql.Tx, aggregateType, aggregate
 	return err
 }
 
-func scanGovernedDestination(row *sql.Row) (*governedDestinationRef, error) {
-	var destination governedDestinationRef
+// scanGovernedDestinationInto reads a destination projection plus its material
+// identity hash. The hash never leaves the server: it decides whether an
+// incoming upsert is the same destination or a new version, and exposing it
+// would leak a checksum over the plaintext reference.
+func scanGovernedDestinationInto(row *sql.Row, destination *governedDestinationRef, materialHash *string) error {
+	var providerKey sql.NullString
 	var updatedAt string
 	err := row.Scan(
 		&destination.ID,
 		&destination.OwnerActorID,
 		&destination.OwnerActorType,
+		&providerKey,
+		&destination.DestinationVersion,
 		&destination.DestinationMethod,
 		&destination.MaskedDestinationReference,
 		&destination.DestinationVerificationStatus,
 		&destination.BeneficiaryName,
 		&destination.Active,
 		&updatedAt,
+		materialHash,
 	)
+	destination.OfficialWalletProviderKey = providerKey.String
 	destination.UpdatedAt = updatedAt
+	return err
+}
+
+func scanGovernedDestination(row *sql.Row) (*governedDestinationRef, error) {
+	var destination governedDestinationRef
+	var materialHash string
+	err := scanGovernedDestinationInto(row, &destination, &materialHash)
 	return &destination, err
 }
 
-const governedDestinationReturning = `id, owner_actor_id, owner_actor_type, destination_method,
+const governedDestinationReturning = `id, owner_actor_id, owner_actor_type, official_wallet_provider_key,
+	destination_version, destination_method,
 	masked_destination_reference, destination_verification_status, beneficiary_name, active, updated_at::text`
 
 func requirePayoutOperatorContext(w http.ResponseWriter, r *http.Request) (string, bool) {
@@ -132,98 +143,6 @@ func requirePayoutOperatorContext(w http.ResponseWriter, r *http.Request) (strin
 		return "", false
 	}
 	return operatorContextID, true
-}
-
-func HandleUpsertTypedPayoutDestination(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID, ok := requirePayoutOperatorContext(w, r)
-		if !ok {
-			return
-		}
-		actorType, actorID, err := normalizeGovernedOwner(r.PathValue("actorType"), r.PathValue("actorId"))
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		correlationID, err := governedCorrelationID(r)
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", err.Error())
-			return
-		}
-		var input governedDestinationInput
-		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
-		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&input); err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payout destination body is invalid")
-			return
-		}
-		input.DestinationMethod = strings.TrimSpace(input.DestinationMethod)
-		if input.DestinationMethod == "" {
-			input.DestinationMethod = "bank"
-		}
-		if input.DestinationMethod != "bank" && input.DestinationMethod != "mobile_money" && input.DestinationMethod != "manual" {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "unsupported destinationMethod")
-			return
-		}
-		if strings.TrimSpace(input.BeneficiaryName) == "" {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "beneficiaryName is required")
-			return
-		}
-		if input.DestinationMethod != "manual" && strings.TrimSpace(input.DestinationReference) == "" {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "destinationReference is required for non-manual payout methods")
-			return
-		}
-		key, err := payoutEncryptionKey()
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "WLT_INTERNAL_ERROR", "payout encryption is not configured")
-			return
-		}
-		tx, err := db.BeginTx(r.Context(), nil)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to start destination transaction")
-			return
-		}
-		defer tx.Rollback() //nolint:errcheck
-		if _, err := tx.ExecContext(r.Context(), `
-			UPDATE wlt_payout_destinations
-			SET active=false, updated_at=now()
-			WHERE operator_context_id=$1 AND owner_actor_type=$2 AND owner_actor_id=$3 AND active=true`, operatorContextID, actorType, actorID); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to retire current payout destination")
-			return
-		}
-		operatorID := strings.TrimSpace(input.OperatorID)
-		if operatorID == "" {
-			operatorID = actorID
-		}
-		row := tx.QueryRowContext(r.Context(), `
-			INSERT INTO wlt_payout_destinations
-				(operator_context_id, partner_id, owner_actor_id, owner_actor_type, beneficiary_name,
-				 destination_reference_encrypted,
-				 destination_method, masked_destination_reference, destination_verification_status, active, created_by_actor_id)
-			VALUES ($1,$2,$2,$3,$4,
-				pgp_sym_encrypt($5,$6),
-				$7,$8,'unverified',true,$9)
-			RETURNING `+governedDestinationReturning,
-			operatorContextID, actorID, actorType, strings.TrimSpace(input.BeneficiaryName),
-			strings.TrimSpace(input.DestinationReference), key,
-			input.DestinationMethod, maskLast4(input.DestinationReference), operatorID)
-		destination, err := scanGovernedDestination(row)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to persist payout destination")
-			return
-		}
-		if err := appendPayoutAudit(r.Context(), tx, "payout_destination", destination.ID, "destination.upserted", operatorID, actorType, "", correlationID, map[string]any{
-			"ownerActorId": actorID, "ownerActorType": actorType, "destinationMethod": destination.DestinationMethod,
-		}); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout destination")
-			return
-		}
-		if err := tx.Commit(); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to commit payout destination")
-			return
-		}
-		shared.SendJSON(w, http.StatusCreated, map[string]any{"payoutDestination": destination})
-	}
 }
 
 func HandleGetCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
@@ -278,7 +197,7 @@ func HandleDeactivateCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 		defer tx.Rollback() //nolint:errcheck
 		var destinationID string
 		err = tx.QueryRowContext(r.Context(), `
-			UPDATE wlt_payout_destinations SET active=false,updated_at=now()
+			UPDATE wlt_payout_destinations SET active=false,superseded_at=now(),updated_at=now()
 			WHERE operator_context_id=$1 AND owner_actor_type=$2 AND owner_actor_id=$3 AND active=true
 			RETURNING id`, operatorContextID, actorType, actorID).Scan(&destinationID)
 		if errors.Is(err, sql.ErrNoRows) {
@@ -371,10 +290,15 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		// A payout may only be requested against the beneficiary's active,
+		// verified official-wallet destination. Approval re-checks this, but
+		// holding a beneficiary's funds against a destination that can never
+		// be approved is itself a defect, so the request fails here first.
 		var active bool
-		err = tx.QueryRowContext(r.Context(), `SELECT active FROM wlt_payout_destinations
+		var verificationStatus string
+		err = tx.QueryRowContext(r.Context(), `SELECT active, destination_verification_status FROM wlt_payout_destinations
 			WHERE operator_context_id=$1 AND id=$2 AND owner_actor_type=$3 AND owner_actor_id=$4 FOR UPDATE`,
-			operatorContextID, input.PayoutDestinationID, input.BeneficiaryActorType, input.BeneficiaryActorID).Scan(&active)
+			operatorContextID, input.PayoutDestinationID, input.BeneficiaryActorType, input.BeneficiaryActorID).Scan(&active, &verificationStatus)
 		if errors.Is(err, sql.ErrNoRows) {
 			shared.SendError(w, http.StatusForbidden, "PAYOUT_DESTINATION_FORBIDDEN", "payout destination is not owned by the beneficiary in the trusted OperatorContext")
 			return
@@ -385,6 +309,10 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 		}
 		if !active {
 			shared.SendError(w, http.StatusConflict, "PAYOUT_DESTINATION_INACTIVE", "payout destination is inactive")
+			return
+		}
+		if verificationStatus != verificationVerified {
+			shared.SendError(w, http.StatusConflict, "PAYOUT_DESTINATION_UNVERIFIED", "payout destination must be a verified official wallet before funds can be requested")
 			return
 		}
 		var available, settled, paid, held int64

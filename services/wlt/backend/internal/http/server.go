@@ -116,6 +116,7 @@ func NewRouter(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionService) *ht
 
 	mux.HandleFunc("PUT /wlt/payout-destinations/{actorType}/{actorId}", gate(serviceAuth(payout.HandleUpsertCanonicalPayoutDestination(db))))
 	mux.HandleFunc("GET /wlt/payout-destinations/{actorType}/{actorId}", readGate(payout.HandleGetCanonicalPayoutDestination(db)))
+	mux.HandleFunc("POST /wlt/payout-destinations/{actorType}/{actorId}/verify", gate(serviceAuth(payout.HandleVerifyCanonicalPayoutDestination(db))))
 	mux.HandleFunc("POST /wlt/payout-destinations/{actorType}/{actorId}/deactivate", gate(serviceAuth(payout.HandleDeactivateCanonicalPayoutDestination(db))))
 
 	mux.HandleFunc("GET /wlt/reconciliation-cases", readGate(reconciliation.HandleListCases(db)))

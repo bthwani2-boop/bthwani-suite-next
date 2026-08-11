@@ -51,6 +51,37 @@ paths:
         '403': { $ref: '#/components/responses/PayoutForbidden' }
       security:
         - serviceBearer: []
+  /wlt/payout-destinations/{actorType}/{actorId}/verify:
+    parameters:
+      - $ref: '#/components/parameters/ActorType'
+      - $ref: '#/components/parameters/ActorId'
+      - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+    post:
+      tags: [ "wlt-payout-destinations" ]
+      operationId: verifyWltOfficialWalletDestination
+      description: >-
+        Record a finance-operator verification decision against the exact
+        destination version reviewed. A beneficiary cannot verify its own
+        destination, and a superseded version is refused.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayoutDestinationVerificationInput'
+      responses:
+        '200':
+          description: Verification decision recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutDestinationEnvelope'
+        '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
+        '404': { $ref: '#/components/responses/PayoutNotFound' }
+        '409': { $ref: '#/components/responses/PayoutConflict' }
+      security:
+        - serviceBearer: []
   /wlt/payout-destinations/{actorType}/{actorId}/deactivate:
     parameters:
       - $ref: '#/components/parameters/ActorType'
@@ -456,12 +487,29 @@ components:
     PayoutDestinationInput:
       type: object
       additionalProperties: false
-      required: [ beneficiaryName, destinationMethod, destinationReference ]
+      description: >-
+        A payout destination is a verified official wallet held at a governed
+        provider. The destination method is not a caller input: a manual bank
+        transfer is how a settlement batch is executed, not a place money can
+        be sent.
+      required: [ beneficiaryName, officialWalletProviderKey, destinationReference ]
       properties:
-        beneficiaryName: { type: string, minLength: 1 }
-        destinationMethod: { type: string, enum: [ bank, mobile_money, manual ] }
-        destinationReference: { type: string, minLength: 1 }
+        beneficiaryName: { type: string, minLength: 1, maxLength: 200 }
+        officialWalletProviderKey: { type: string, minLength: 1, maxLength: 64 }
+        destinationReference: { type: string, minLength: 1, maxLength: 200 }
         operatorId: { type: string, minLength: 1 }
+    PayoutDestinationVerificationInput:
+      type: object
+      additionalProperties: false
+      description: >-
+        Finance-operator decision on the exact destination version reviewed.
+        A decision aimed at a superseded version is refused.
+      required: [ destinationVersion, decision, operatorId ]
+      properties:
+        destinationVersion: { type: integer, minimum: 1 }
+        decision: { type: string, enum: [ verified, rejected ] }
+        operatorId: { type: string, minLength: 1 }
+        reason: { type: string }
     PayoutDestination:
       type: object
       required:
@@ -469,6 +517,8 @@ components:
           id,
           ownerActorId,
           ownerActorType,
+          officialWalletProviderKey,
+          destinationVersion,
           destinationMethod,
           maskedDestinationReference,
           destinationVerificationStatus,
@@ -480,9 +530,19 @@ components:
         id: { type: string }
         ownerActorId: { type: string }
         ownerActorType: { $ref: '#/components/schemas/PayoutActorType' }
-        destinationMethod: { type: string, enum: [ bank, mobile_money, manual ] }
+        officialWalletProviderKey: { type: string }
+        destinationVersion: { type: integer, minimum: 1 }
+        destinationMethod:
+          type: string
+          description: >-
+            Always official_wallet for destinations written by the current
+            model. The legacy bank, mobile_money and manual values remain only
+            on historical rows.
+          enum: [ official_wallet, bank, mobile_money, manual ]
         maskedDestinationReference: { type: string }
-        destinationVerificationStatus: { type: string, enum: [ unverified, verified, rejected ] }
+        destinationVerificationStatus:
+          type: string
+          enum: [ unverified, verified, requires_reverification, rejected ]
         beneficiaryName: { type: string }
         active: { type: boolean }
         updatedAt: { type: string, format: date-time }

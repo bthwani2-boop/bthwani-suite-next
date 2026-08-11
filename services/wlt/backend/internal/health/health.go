@@ -13,7 +13,7 @@ import (
 
 const (
 	wltMigrationServiceName = "wlt"
-	wltLatestMigration      = "wlt-912_cod_captain_reservation.sql"
+	wltLatestMigration      = "wlt-913_official_wallet_destination_versioning.sql"
 	wltReadinessTimeout     = 2 * time.Second
 )
 

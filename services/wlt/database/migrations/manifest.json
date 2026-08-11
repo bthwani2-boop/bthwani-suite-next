@@ -3,7 +3,7 @@
   "service": "wlt",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "wlt-912_cod_captain_reservation.sql",
+  "cutover": "wlt-913_official_wallet_destination_versioning.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -578,6 +578,13 @@
       "sha256": "21dd85de5c689d7d8031d0aa47a9d5b18b63ff77c373a656d54c0f2303feda08",
       "historicalPrefix": "912",
       "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 83,
+      "file": "wlt-913_official_wallet_destination_versioning.sql",
+      "sha256": "a963164ababbccb110416408003577740094fc96aa0fd3cc77f6b148bfe852c6",
+      "historicalPrefix": "913",
+      "state": "ACTIVE"
     }
   ]
 }
