@@ -1,8 +1,8 @@
 # App Field final closure — START HERE
 
-Repository: `bthwani2-boop/bthwani-suite-next`  
-Target branch: `BB`  
-Diagnosis pin: `397dcae545d723d88e96828535973533f4f6ad68`  
+Repository: `bthwani2-boop/bthwani-suite-next`
+Target branch: `BB`
+Diagnosis pin: `397dcae545d723d88e96828535973533f4f6ad68`
 Mode: `RESUME_AND_RECONCILE`
 
 This is the existing `app-field-final-closure` package re-diagnosed against current `BB`; it is not a new package. Functional scope is restricted to app-field and only the exact Identity, Workforce, DSH, WLT, Media, control-panel, partner and client seams causally required by field-originated or field-required journeys. `app-captain` remains structurally represented for validator coverage but is functionally excluded under current Product Truth.
