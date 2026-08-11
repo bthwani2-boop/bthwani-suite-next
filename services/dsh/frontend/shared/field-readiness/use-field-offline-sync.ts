@@ -15,6 +15,7 @@ import {
   markOperationSynced,
   markOperationFailed,
   purgeSyncedOperations,
+  evacuateTerminalOperations,
   recoverCorruptFieldOfflineQueue,
   type FieldOfflineQueueScope,
   type FieldOfflineOperationType,
@@ -44,6 +45,13 @@ export type FieldOfflineSyncController = {
   readonly state: FieldOfflineSyncState;
   readonly retry: () => void;
   readonly recover: () => void;
+  /**
+   * Work carried over from a retired queue generation that this build cannot
+   * execute (unscoped v1, another actor, or a retired operation). It is
+   * preserved for recovery, so the surface must report it rather than let the
+   * worker believe the capture succeeded.
+   */
+  readonly quarantinedCount: number;
 };
 
 function queueErrorState(error: unknown): FieldOfflineSyncState {
@@ -61,6 +69,7 @@ export function useFieldOfflineSync(
   scopeRef.current = scope;
   const syncRef = useRef(false);
   const [state, setState] = useState<FieldOfflineSyncState>({ kind: "idle" });
+  const [quarantinedCount, setQuarantinedCount] = useState(0);
 
   const drainQueue = useCallback(async () => {
     const currentScope = scopeRef.current;
@@ -69,7 +78,8 @@ export function useFieldOfflineSync(
     syncRef.current = true;
     setState({ kind: "syncing" });
     try {
-      await prepareFieldOfflineQueue();
+      const migration = await prepareFieldOfflineQueue();
+      if (migration.quarantined > 0) setQuarantinedCount(migration.quarantined);
       const due = await getDueOperations();
       for (const operation of due) {
         const executor = executorsRef.current?.[operation.operationType];
@@ -89,6 +99,10 @@ export function useFieldOfflineSync(
         }
       }
       await purgeSyncedOperations();
+      // Refusals that can never drain are evacuated so they neither consume
+      // queue capacity nor disappear without the employee being told.
+      const evacuated = await evacuateTerminalOperations();
+      if (evacuated > 0) setQuarantinedCount((current) => current + evacuated);
       setState({ kind: "ready" });
     } catch (error) {
       setState(queueErrorState(error));
@@ -130,5 +144,5 @@ export function useFieldOfflineSync(
     return () => unsubscribe();
   }, [drainQueue, scopeKey]);
 
-  return { state, retry, recover };
+  return { state, retry, recover, quarantinedCount };
 }

@@ -1,43 +1,44 @@
 {
   "schemaVersion": 3,
   "unitId": "U005",
-  "status": "PASS",
-  "baselineSha": "ba3393c39b0d0b265a4caf110b3bca685e43b0e3",
-  "resultingSha": "c0801f6668879f1d0e03fe9e017fcea71c108108",
-  "completedTaskIds": [
-    "U005-T001-visit-state-machine-verified",
-    "U005-T002-location-checklist-evidence-verified"
-  ],
+  "status": "IN_PROGRESS",
+  "baselineSha": "34f94569e854aef65399aeb989398790e3cff102",
+  "resultingSha": null,
+  "completedTaskIds": [],
   "modifiedPaths": [],
   "checkResults": [
     {
-      "check": "go build ./internal/fieldreadiness ./internal/http",
-      "result": "PASS"
+      "verificationId": "V0051",
+      "status": "PASS",
+      "command": "cd services/dsh/backend && go test ./...",
+      "candidateSha": "34f94569e854aef65399aeb989398790e3cff102",
+      "proofLimit": "Suite exits zero. The fieldreadiness package's database integration tests self-skip without DSH_REQUIRE_DB_TESTS=true, so FOR UPDATE row locking, concurrent completion and the advisory-lock replay receipts are not exercised against PostgreSQL on this candidate."
     },
     {
-      "check": "go test ./internal/fieldreadiness -run ^Test",
-      "result": "PASS — 11 unit tests PASS (DB integration tests skipped: require DSH_REQUIRE_DB_TESTS=true)"
+      "verificationId": "V0052",
+      "status": "BLOCKED",
+      "command": "RUNTIME: on an assigned store execute visit start, checklist updates, invalid premature complete, valid complete, retry, refresh/restart and operator/partner readback.",
+      "candidateSha": "34f94569e854aef65399aeb989398790e3cff102",
+      "proofLimit": "Requires a running DSH runtime with an assigned field actor and device location capture. Not executed. Ordered lifecycle enforcement and geofence/mocked-GPS rejection are unproven on this candidate."
     }
   ],
-  "blockers": [],
-  "deviations": [
-    "No code changes required — all U005 requirements already fully implemented in fieldreadiness package"
+  "blockers": [
+    "V0052 native visit/checklist lifecycle is unexecuted on this candidate."
   ],
-  "decision": "PASS",
+  "deviations": [],
+  "decision": "NEEDS_EVIDENCE",
   "multiSurfaceScope": {
     "mode": "FULLSTACK_UNIFIED_MULTI_SURFACE",
     "surfaces": ["control-panel", "app-client", "app-partner", "app-captain", "app-field"],
     "journeyPolicy": "FIELD_ONLY",
-    "sliceContract": "affectedSurfaces define scope"
+    "sliceContract": "affectedSurfaces define executable scope"
   },
+  "closureRule": "Invalid transitions must be rejected by the server, not by screen gating, and committed state must read back consistently for operator and partner.",
   "evidenceSummary": {
-    "visitStateMachine": "VisitInProgress/VisitComplete/VisitEscalated states with exact transitions in visit_governance.go. Illegal/stale/concurrent blocked via FOR UPDATE + ErrVisitAlreadyComplete + ErrConflict",
-    "idempotency": "All mutations (CreateGovernedVisitIdempotent, CompleteGovernedVisitIdempotent, UpsertGovernedReadinessCheckIdempotent, CreateGovernedEscalationIdempotent) use MutationContext with pg_advisory_xact_lock + receipt table replay",
-    "locationValidation": "ValidateGovernedLocation server-side: mocked, stale (>120s), future skew (>30s), accuracy, coordinate range, provider required — all centralized not client-trusted",
-    "geofencePolicy": "DefaultGeofenceRadiusMeters=200 loaded from server store coordinates. Client coordinates overwritten for geofence decision (CreateGovernedVisit)",
-    "checklistGate": "CompleteGovernedVisit verifies every RequiredCheckType is passed AND has valid owned media_ref before commit",
-    "escalationBlocker": "hasBlockingEscalation checks open/acknowledged/escalated_further — presence blocks completion",
-    "readback": "GetGovernedStoreOnboardingStatus returns committed visit/escalation counts for operator/partner readers",
-    "fieldScreens": "DshFieldVisitScreen: device location captured via captureGovernedLocation, mocked/accuracy/services checked device-side (UX), then server revalidates. Idempotency-Key/X-Correlation-ID sent in all governed mutations via field_readiness_governed_handlers.go"
+    "serverAuthoritative": "Every governed field mutation in services/dsh/backend/internal/http/field_readiness_governed_handlers.go resolves its actor through requireActor(w, r, \"field\") and builds a MutationContext from Idempotency-Key and X-Correlation-ID before touching state; a missing key is rejected with IDEMPOTENCY_REQUIRED rather than defaulted.",
+    "locationNotClientTrusted": "Visit creation revalidates location server-side, so a device-supplied coordinate cannot bypass the geofence decision."
+  },
+  "provenance": {
+    "note": "A prior result recorded status PASS against baseline ba3393c39b0d0b265a4caf110b3bca685e43b0e3 and resulting SHA c0801f6668879f1d0e03fe9e017fcea71c108108, explicitly noting that database integration tests were skipped. That skip is still true on this candidate and is recorded above as a proof limit rather than a pass."
   }
 }

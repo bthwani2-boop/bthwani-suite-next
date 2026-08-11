@@ -1,1 +1,44 @@
-{"schemaVersion":3,"unitId":"U003","status":"PASS","baselineSha":"ba3393c39b0d0b265a4caf110b3bca685e43b0e3","resultingSha":null,"completedTaskIds":[],"modifiedPaths":[],"checkResults":[],"blockers":[],"deviations":[],"decision":"NOT_RUN","multiSurfaceScope":{"mode":"FULLSTACK_UNIFIED_MULTI_SURFACE","surfaces":["control-panel","app-client","app-partner","app-captain","app-field"],"journeyPolicy":"FIELD_ONLY","sliceContract":"structural envelope"},"closureRule":"Work-center/navigation closes only when current assignment truth and device navigation converge without unrelated surface dependencies."}
+{
+  "schemaVersion": 3,
+  "unitId": "U003",
+  "status": "IN_PROGRESS",
+  "baselineSha": "34f94569e854aef65399aeb989398790e3cff102",
+  "resultingSha": null,
+  "completedTaskIds": [],
+  "modifiedPaths": [],
+  "checkResults": [
+    {
+      "verificationId": "V0031",
+      "status": "PASS",
+      "command": "pnpm --dir apps/app-field/runtime run test && pnpm --dir apps/app-field/runtime run typecheck",
+      "candidateSha": "34f94569e854aef65399aeb989398790e3cff102",
+      "proofLimit": "Deep-link behaviour is genuinely covered: three tests prove canonical route resolution, rejection of foreign/malformed/unknown routes, and fragment/plus-encoding handling. parseFieldDeepLink is typed against DshFieldNavigationCommand, so the client route map cannot drift from the surface contract without a type error. This proves client-side fail-closed parsing only; server-side scope enforcement for a valid-looking deep link is not exercised."
+    },
+    {
+      "verificationId": "V0032",
+      "status": "BLOCKED",
+      "command": "RUNTIME: open field home/queue, deep-link to valid and invalid work, revoke/change assignment, refresh and restart; confirm stale/revoked state is non-actionable.",
+      "candidateSha": "34f94569e854aef65399aeb989398790e3cff102",
+      "proofLimit": "Requires a running DSH runtime with an assigned field actor. Not executed. Whether a revoked assignment is non-actionable at the server remains unproven on this candidate."
+    }
+  ],
+  "blockers": [
+    "V0032 assignment revocation and stale-work behaviour is unexecuted on this candidate."
+  ],
+  "deviations": [],
+  "decision": "NEEDS_EVIDENCE",
+  "multiSurfaceScope": {
+    "mode": "FULLSTACK_UNIFIED_MULTI_SURFACE",
+    "surfaces": ["control-panel", "app-client", "app-partner", "app-captain", "app-field"],
+    "journeyPolicy": "FIELD_ONLY",
+    "sliceContract": "affectedSurfaces define executable scope"
+  },
+  "closureRule": "Work-center/navigation closes only when current assignment truth and device navigation converge without unrelated surface dependencies.",
+  "evidenceSummary": {
+    "singleWorkCenter": "Static review found one work-queue entry path: DshFieldWorkQueueScreen reached through DshFieldRouteRenderer's 'work-queue' route, with no second local queue owner.",
+    "deepLinkNarrowing": "ROUTE_MAP in apps/app-field/runtime/src/navigation/field-deep-link.ts admits only work-oriented targets and returns null for anything else, so account/profile/history cannot be entered by deep link."
+  },
+  "provenance": {
+    "note": "The prior result recorded decision NOT_RUN with no completed tasks. This round supplies the first candidate-bound automated evidence for the unit; the runtime half remains unexecuted."
+  }
+}

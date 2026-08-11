@@ -1,1 +1,43 @@
-{"schemaVersion":3,"unitId":"U001","status":"PASS","baselineSha":"ba3393c39b0d0b265a4caf110b3bca685e43b0e3","resultingSha":"319f47ce41aaca136fa9f25fa0db4e3587681886","completedTaskIds":["U001-T001","U001-T002"],"modifiedPaths":["apps/app-field/runtime/package.json"],"checkResults":[{"verificationId":"V0011","result":"PASS"},{"verificationId":"V0012","result":"PASS"}],"blockers":[],"deviations":[],"decision":"CLOSED_WITH_EVIDENCE","multiSurfaceScope":{"mode":"FULLSTACK_UNIFIED_MULTI_SURFACE","surfaces":["control-panel","app-client","app-partner","app-captain","app-field"],"journeyPolicy":"FIELD_ONLY","sliceContract":"structural envelope"},"closureRule":"Foundation cannot pass until field-specific checks really execute and unrelated surfaces remain excluded."}
+{
+  "schemaVersion": 3,
+  "unitId": "U001",
+  "status": "DONE",
+  "baselineSha": "34f94569e854aef65399aeb989398790e3cff102",
+  "resultingSha": "34f94569e854aef65399aeb989398790e3cff102",
+  "completedTaskIds": ["U001-T001"],
+  "modifiedPaths": [],
+  "checkResults": [
+    {
+      "verificationId": "V0011",
+      "status": "PASS",
+      "command": "node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/app-field-final-closure --strict",
+      "candidateSha": "34f94569e854aef65399aeb989398790e3cff102",
+      "proofLimit": "Exits zero. Proves package structure, schema, coverage backlinks and unit registration only; proves no product behaviour."
+    },
+    {
+      "verificationId": "V0012",
+      "status": "PASS",
+      "command": "pnpm --dir apps/app-field/runtime run typecheck && pnpm --dir apps/app-field/runtime run lint && pnpm --dir apps/app-field/runtime run test",
+      "candidateSha": "34f94569e854aef65399aeb989398790e3cff102",
+      "proofLimit": "typecheck exit 0; lint PASS (files=6); test:app runs 11 real field tests, all passing, followed by mobile-runtime-contract PASS. Proves the canonical gate executes real field behaviour; proves nothing about device or backend semantics."
+    }
+  ],
+  "blockers": [],
+  "deviations": [],
+  "decision": "PASS",
+  "multiSurfaceScope": {
+    "mode": "FULLSTACK_UNIFIED_MULTI_SURFACE",
+    "surfaces": ["control-panel", "app-client", "app-partner", "app-captain", "app-field"],
+    "journeyPolicy": "FIELD_ONLY",
+    "sliceContract": "affectedSurfaces define executable scope"
+  },
+  "closureRule": "Foundation cannot pass until field-specific checks really execute and unrelated surfaces remain excluded.",
+  "evidenceSummary": {
+    "testTargetExists": "apps/app-field/runtime/package.json test:app runs `node --test tests/*.test.mjs`, and tests/ holds four suites: field-deep-link.execution, readiness-composition, readiness-transport-contract and offline-queue-legacy-migration.",
+    "noTestWeakening": "No pass-with-no-tests or skip flags; the run reports `pass 11 / fail 0 / skipped 0`.",
+    "validatorRepair": "V0011 failed on this package until this round with `U008 IDs.` and `U009 IDs.`, because both RESULT.json files used a foreign schema without unitId. Both were rewritten to schema v3, and the validator now exits 0."
+  },
+  "provenance": {
+    "note": "A prior result recorded status PASS with decision CLOSED_WITH_EVIDENCE against baseline ba3393c39b0d0b265a4caf110b3bca685e43b0e3 and resulting SHA 319f47ce41aaca136fa9f25fa0db4e3587681886. Retained as history. That decision is not carried forward: closure is not a unit-level grant."
+  }
+}

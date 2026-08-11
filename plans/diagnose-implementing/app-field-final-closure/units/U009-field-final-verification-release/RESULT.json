@@ -1,16 +1,54 @@
 {
-  "repository": "bthwani2-boop/bthwani-suite-next",
-  "target_branch": "diagnose-implementing",
-  "resolved_commit_sha": "87154fc3f922d29c88d903be764cfa8274199276",
-  "changed_paths": [
-    "plans/diagnose-implementing/app-field-final-closure/units/U009-field-final-verification-release/RESULT.json"
+  "schemaVersion": 3,
+  "unitId": "U009",
+  "status": "IN_PROGRESS",
+  "baselineSha": "34f94569e854aef65399aeb989398790e3cff102",
+  "resultingSha": null,
+  "completedTaskIds": [],
+  "modifiedPaths": [],
+  "checkResults": [
+    {
+      "verificationId": "V0091",
+      "status": "PASS",
+      "command": "node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/app-field-final-closure --strict && pnpm --dir apps/app-field/runtime run typecheck && pnpm --dir apps/app-field/runtime run lint && pnpm --dir apps/app-field/runtime run test",
+      "candidateSha": "34f94569e854aef65399aeb989398790e3cff102",
+      "proofLimit": "Proves package structure and the canonical app-field static/test gate only. Eleven field tests execute, including six that falsify the legacy offline-recovery defect. Proves nothing about backend, database or device behaviour."
+    },
+    {
+      "verificationId": "V0092",
+      "status": "PASS",
+      "command": "cd services/dsh/backend && go test ./... && cd ../../wlt/backend && go test ./...",
+      "candidateSha": "34f94569e854aef65399aeb989398790e3cff102",
+      "proofLimit": "Both suites exit zero with database-backed tests self-skipped (DSH_REQUIRE_DB_TESTS unset), so persistence, concurrency and isolation behaviour is not covered."
+    },
+    {
+      "verificationId": "V0093",
+      "status": "BLOCKED",
+      "command": "FINAL QA: field activation/readiness, work queue/deep links, onboarding, visit/checklist, catalog/product, escalation/offline recovery, field finance, restart/logout, failure states, same-store control-panel/partner/client readback on Android.",
+      "candidateSha": "34f94569e854aef65399aeb989398790e3cff102",
+      "proofLimit": "No Android device or emulator is reachable from this execution environment, and no cross-surface runtime was executed against this candidate. Explicitly not claimed."
+    }
   ],
-  "checks_and_evidence": [
-    "Executed strict package validation (pnpm nx test app-field, pnpm nx lint app-field, pnpm nx typecheck app-field). Typecheck and UI policy test failures in prior units were fixed and committed to the final SHA.",
-    "Verified all required backend, database, and boundary checks for field scopes across dsh and wlt services.",
-    "Native physical-device evidence for push, deep links, permissions, lifecycle, and offline transitions (TalkBack/VoiceOver/RTL) remains pending manual human QA according to V0091-V0093 requirements.",
-    "Cross-surface convergence (partner, client, control-panel) is logically closed but awaits physical execution evidence on the actual physical build."
+  "blockers": [
+    "V0093 native and cross-surface closure evidence is unexecuted on this candidate.",
+    "The ci evidence scope is unavailable: delivery is LOCAL_ONLY, so no workflow run is bound to this candidate.",
+    "Protected approval domains (final_closure, security_approval, financial_control, operator_context_isolation, release_approval) cannot be self-granted under governance/authority/single-owner-mode.json."
   ],
-  "decision": "U009 Field Final Verification Release is partially completed: all automated, static, backend, and build artifacts pass against the unified repository SHA. Full closure awaits external native, security, and accessibility sign-offs using physical devices per Product Truth.",
-  "remaining_risks_or_missing_evidence": "Physical iOS and Android manual QA is required for final verification. Push/Notification registration, deep link transitions, TalkBack/VoiceOver compatibility, and strict cross-surface physical readback must be performed and attached externally before final release."
+  "deviations": [
+    "Executed in an isolated git worktree pinned to 34f94569e because a concurrent agent was pushing to BB from the shared working directory; a frozen candidate was otherwise unobtainable."
+  ],
+  "decision": "NEEDS_EVIDENCE",
+  "multiSurfaceScope": {
+    "mode": "FULLSTACK_UNIFIED_MULTI_SURFACE",
+    "surfaces": ["control-panel", "app-client", "app-partner", "app-captain", "app-field"],
+    "journeyPolicy": "FIELD_ONLY",
+    "sliceContract": "affectedSurfaces define executable scope"
+  },
+  "closureRule": "Closure is an evidence decision on one exact candidate. CLOSED_WITH_EVIDENCE requires every applicable scope to pass on the same immutable commit with the protected approvals recorded; that condition is not met here.",
+  "provenance": {
+    "note": "A prior result for this unit was recorded in a non-schema shape against branch 'diagnose-implementing' at 87154fc3f922d29c88d903be764cfa8274199276. It is retained here as history only and is not current closure evidence.",
+    "historicalResolvedSha": "87154fc3f922d29c88d903be764cfa8274199276",
+    "historicalClaim": "Automated, static, backend and build artifacts were reported as passing, with native and cross-surface evidence acknowledged as pending.",
+    "historicalLimitation": "The commands quoted in that record (pnpm nx test/lint/typecheck app-field) are not the canonical commands this package declares, and no candidate binding was recorded."
+  }
 }
