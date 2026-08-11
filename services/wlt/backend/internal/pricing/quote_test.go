@@ -64,19 +64,19 @@ func TestCalculateQuoteHashIsStableForEqualInputs(t *testing.T) {
 
 func TestCalculateQuoteRejectsUnpriceableInput(t *testing.T) {
 	cases := map[string]func(*CalculateQuoteRequest){
-		"no client":         func(r *CalculateQuoteRequest) { r.ClientID = "  " },
-		"no store":          func(r *CalculateQuoteRequest) { r.StoreID = "" },
-		"short currency":    func(r *CalculateQuoteRequest) { r.Currency = "YE" },
+		"no client":          func(r *CalculateQuoteRequest) { r.ClientID = "  " },
+		"no store":           func(r *CalculateQuoteRequest) { r.StoreID = "" },
+		"short currency":     func(r *CalculateQuoteRequest) { r.Currency = "YE" },
 		"lowercase currency": func(r *CalculateQuoteRequest) { r.Currency = "yer" },
-		"no lines":          func(r *CalculateQuoteRequest) { r.Lines = nil },
-		"zero quantity":     func(r *CalculateQuoteRequest) { r.Lines[0].Quantity = 0 },
-		"negative quantity": func(r *CalculateQuoteRequest) { r.Lines[0].Quantity = -2 },
-		"huge quantity":     func(r *CalculateQuoteRequest) { r.Lines[0].Quantity = MaxQuoteLineQuantity + 1 },
-		"negative price":    func(r *CalculateQuoteRequest) { r.Lines[0].UnitPriceMinorUnits = -1 },
-		"negative delivery": func(r *CalculateQuoteRequest) { r.DeliveryFeeInputMinorUnits = -1 },
-		"negative service":  func(r *CalculateQuoteRequest) { r.ServiceFeeInputMinorUnits = -1 },
-		"negative version":  func(r *CalculateQuoteRequest) { r.CartVersion = -1 },
-		"no product id":     func(r *CalculateQuoteRequest) { r.Lines[0].MasterProductID = " " },
+		"no lines":           func(r *CalculateQuoteRequest) { r.Lines = nil },
+		"zero quantity":      func(r *CalculateQuoteRequest) { r.Lines[0].Quantity = 0 },
+		"negative quantity":  func(r *CalculateQuoteRequest) { r.Lines[0].Quantity = -2 },
+		"huge quantity":      func(r *CalculateQuoteRequest) { r.Lines[0].Quantity = MaxQuoteLineQuantity + 1 },
+		"negative price":     func(r *CalculateQuoteRequest) { r.Lines[0].UnitPriceMinorUnits = -1 },
+		"negative delivery":  func(r *CalculateQuoteRequest) { r.DeliveryFeeInputMinorUnits = -1 },
+		"negative service":   func(r *CalculateQuoteRequest) { r.ServiceFeeInputMinorUnits = -1 },
+		"negative version":   func(r *CalculateQuoteRequest) { r.CartVersion = -1 },
+		"no product id":      func(r *CalculateQuoteRequest) { r.Lines[0].MasterProductID = " " },
 		"unbounded price": func(r *CalculateQuoteRequest) {
 			r.Lines[0].UnitPriceMinorUnits = MaxQuoteAmountMinorUnits + 1
 		},

@@ -10,6 +10,7 @@ import {
   repoRoot,
   walkFiles
 } from "./_external-tool-runner.mjs";
+import { adjudicateOsvReport, scopedGoImports } from "./lib/osv-go-reachability.mjs";
 
 const toolId = "osv-scanner";
 const rootLockfile = path.join(repoRoot, "pnpm-lock.yaml");
@@ -63,19 +64,10 @@ try {
   handleCommandFailure(toolId, true);
 }
 
-// Go advisories match a module version, not the packages a build imports.
-// golang.org/x/crypto is the standing case: its openpgp advisory covers every
-// version of the module and will never have a fixed release, while this
-// repository only imports bcrypt from it. No dependency bump can satisfy a
-// module-level verdict there, and ignoring the advisory by id would also hide
-// the day one of those packages is imported for real.
-//
-// Each Go finding is therefore adjudicated against the module's own import
-// graph, resolved module-locally with GOWORK off so a developer's partial
-// workspace cannot change which module is analyzed. A finding is dismissed only
-// when the advisory names the vulnerable import paths and the graph contains
-// none of them. Unknown scope, an unresolvable graph, and every other ecosystem
-// stay blocking.
+// The adjudication rule lives in lib/osv-go-reachability.mjs; this file supplies
+// the two real inputs it needs: the module import graph and the advisory scope.
+// The graph is resolved module-locally with GOWORK off, so a developer's partial
+// workspace cannot change which module is analyzed.
 const importGraphs = new Map();
 
 function moduleImportGraph(goModAbsolutePath) {
@@ -97,73 +89,30 @@ function moduleImportGraph(goModAbsolutePath) {
   return graph;
 }
 
-function scopedImports(vulnerability, packageName) {
-  const imports = new Set();
-  for (const affected of vulnerability.affected ?? []) {
-    if (affected.package?.ecosystem !== "Go") continue;
-    if (affected.package?.name !== packageName) continue;
-    for (const entry of affected.ecosystem_specific?.imports ?? []) {
-      if (entry.path) imports.add(entry.path);
-    }
-  }
-  return [...imports];
-}
-
 // The report embeds the OSV record, but a truncated or reshaped record must not
 // silently become either a pass or a false blocker, so the advisory is
 // re-resolved from OSV itself when the embedded copy carries no scope.
 async function resolveScopedImports(vulnerability, packageName) {
-  const embedded = scopedImports(vulnerability, packageName);
+  const embedded = scopedGoImports(vulnerability, packageName);
   if (embedded.length > 0) return embedded;
   try {
     const response = await fetch(`https://api.osv.dev/v1/vulns/${encodeURIComponent(vulnerability.id)}`, {
       signal: AbortSignal.timeout(20000)
     });
     if (!response.ok) return [];
-    return scopedImports(await response.json(), packageName);
+    return scopedGoImports(await response.json(), packageName);
   } catch (error) {
     console.error(`[OSV-SCANNER] could not resolve advisory scope for ${vulnerability.id}: ${error.message}`);
     return [];
   }
 }
 
-const blocking = [];
-const unreachable = [];
-
-for (const result of report.results ?? []) {
-  const rawSource = result.source?.path ?? "";
-  const absoluteSource = path.isAbsolute(rawSource) ? rawSource : path.join(repoRoot, rawSource);
-  const source = path.relative(repoRoot, absoluteSource).split(path.sep).join("/");
-  const isGoModule = source.endsWith("go.mod");
-  for (const entry of result.packages ?? []) {
-    const ecosystem = entry.package?.ecosystem;
-    const name = entry.package?.name;
-    const version = entry.package?.version;
-    for (const vulnerability of entry.vulnerabilities ?? []) {
-      const finding = { id: vulnerability.id, source, name, version };
-      if (!isGoModule || ecosystem !== "Go") {
-        blocking.push({ ...finding, reason: "no import-level reachability evidence exists for this ecosystem" });
-        continue;
-      }
-      const vulnerableImports = await resolveScopedImports(vulnerability, name);
-      if (vulnerableImports.length === 0) {
-        blocking.push({ ...finding, reason: "the advisory does not scope the vulnerability to import paths" });
-        continue;
-      }
-      const graph = moduleImportGraph(absoluteSource);
-      if (!graph) {
-        blocking.push({ ...finding, reason: "the module import graph could not be resolved" });
-        continue;
-      }
-      const reached = vulnerableImports.filter((importPath) => graph.has(importPath));
-      if (reached.length > 0) {
-        blocking.push({ ...finding, reason: `the build imports ${reached.join(", ")}` });
-        continue;
-      }
-      unreachable.push({ ...finding, vulnerableImports });
-    }
-  }
-}
+const { blocking, unreachable } = await adjudicateOsvReport({
+  report,
+  repoRoot,
+  resolveScopedImports,
+  importGraph: moduleImportGraph
+});
 
 for (const finding of unreachable) {
   console.log(

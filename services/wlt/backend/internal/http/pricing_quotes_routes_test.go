@@ -56,12 +56,12 @@ func TestPricingQuoteRouteIsRegisteredAndPrices(t *testing.T) {
 func TestPricingQuoteRouteRejectsUnpriceableRequests(t *testing.T) {
 	router := NewRouter(nil, true, openDecisionService{})
 	for name, body := range map[string]string{
-		"malformed json":  `{`,
-		"unknown field":   strings.Replace(pricingQuoteBody, `"cartVersion":1`, `"totalMinorUnits":1`, 1),
-		"negative price":  strings.Replace(pricingQuoteBody, `"unitPriceMinorUnits":125000`, `"unitPriceMinorUnits":-125000`, 1),
-		"zero quantity":   strings.Replace(pricingQuoteBody, `"quantity":2`, `"quantity":0`, 1),
-		"missing lines":   `{"clientId":"client-1","storeId":"store-1","currency":"YER","lines":[]}`,
-		"bad currency":    strings.Replace(pricingQuoteBody, `"currency":"YER"`, `"currency":"yer"`, 1),
+		"malformed json": `{`,
+		"unknown field":  strings.Replace(pricingQuoteBody, `"cartVersion":1`, `"totalMinorUnits":1`, 1),
+		"negative price": strings.Replace(pricingQuoteBody, `"unitPriceMinorUnits":125000`, `"unitPriceMinorUnits":-125000`, 1),
+		"zero quantity":  strings.Replace(pricingQuoteBody, `"quantity":2`, `"quantity":0`, 1),
+		"missing lines":  `{"clientId":"client-1","storeId":"store-1","currency":"YER","lines":[]}`,
+		"bad currency":   strings.Replace(pricingQuoteBody, `"currency":"YER"`, `"currency":"yer"`, 1),
 	} {
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, pricingQuoteRequest(t, body))
