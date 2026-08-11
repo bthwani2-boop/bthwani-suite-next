@@ -9,8 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"dsh-api/internal/mapproviders"
+	"dsh-api/internal/platformpolicies"
+	"github.com/google/uuid"
 )
 
 var ErrStoreConflict = errors.New("client already has an active cart for another store")
@@ -133,16 +134,16 @@ func GetOrCreateSingleStoreCart(
 }
 
 type CartItemValidation struct {
-	ItemID               string   `json:"itemId"`
-	MasterProductID      string   `json:"masterProductId"`
-	Status               string   `json:"status"`
-	ReasonCode           string   `json:"reasonCode,omitempty"`
-	SnapshotUnitPriceMinorUnits    int64  `json:"snapshotUnitPriceMinorUnits"`
-	CurrentUnitPriceMinorUnits     *int64 `json:"currentUnitPriceMinorUnits,omitempty"`
-	SnapshotCurrency     string   `json:"snapshotCurrency"`
-	CurrentCurrency      *string  `json:"currentCurrency,omitempty"`
-	SnapshotAssortmentID *string  `json:"snapshotAssortmentId,omitempty"`
-	CurrentAssortmentID  *string  `json:"currentAssortmentId,omitempty"`
+	ItemID                         string  `json:"itemId"`
+	MasterProductID                string  `json:"masterProductId"`
+	Status                         string  `json:"status"`
+	ReasonCode                     string  `json:"reasonCode,omitempty"`
+	SnapshotUnitPriceMinorUnits    int64   `json:"snapshotUnitPriceMinorUnits"`
+	CurrentUnitPriceMinorUnits     *int64  `json:"currentUnitPriceMinorUnits,omitempty"`
+	SnapshotCurrency               string  `json:"snapshotCurrency"`
+	CurrentCurrency                *string `json:"currentCurrency,omitempty"`
+	SnapshotAssortmentID           *string `json:"snapshotAssortmentId,omitempty"`
+	CurrentAssortmentID            *string `json:"currentAssortmentId,omitempty"`
 }
 
 type CartValidation struct {
@@ -159,10 +160,10 @@ type ClientCartView struct {
 	Validation CartValidation `json:"validation"`
 }
 
-// ValidateCart reconciles persisted price/currency snapshots with current
-// assortment truth. Snapshot values remain immutable; changed commercial
-// value, availability, product link, or assortment identity blocks checkout
-// until the client explicitly refreshes or removes the affected line.
+// ValidateCart reconciles persisted snapshots against the same normalized DSH
+// assortment price/inventory authority used by UpsertItem. Snapshot values are
+// immutable; a hidden/unapproved assortment, missing current price, inventory
+// policy violation, identity drift, or commercial change blocks readiness.
 func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidation, error) {
 	result := CartValidation{
 		Ready:       true,
@@ -178,13 +179,37 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 			ci.unit_price_minor,
 			ci.currency,
 			a.id,
-			a.currency,
-			a.available
+			p.amount_minor,
+			p.currency,
+			CASE
+				WHEN a.id IS NULL THEN FALSE
+				WHEN a.publication_status <> 'client_visible' OR a.available IS NOT TRUE THEN FALSE
+				WHEN mp.approval_status <> 'approved' OR mp.is_active IS NOT TRUE THEN FALSE
+				WHEN p.amount_minor IS NULL OR p.amount_minor <= 0 OR length(trim(p.currency)) <> 3 THEN FALSE
+				WHEN i.store_assortment_id IS NULL OR i.step_quantity < 1 THEN FALSE
+				WHEN ci.quantity < i.min_order_quantity OR ci.quantity > i.max_order_quantity THEN FALSE
+				WHEN MOD(ci.quantity - i.min_order_quantity, i.step_quantity) <> 0 THEN FALSE
+				WHEN i.policy_type = 'signal' AND i.quantity > 0 THEN TRUE
+				WHEN i.policy_type = 'quantity' AND (i.quantity - i.reserved_quantity) >= ci.quantity THEN TRUE
+				WHEN i.policy_type = 'infinite' THEN TRUE
+				ELSE FALSE
+			END AS purchasable
 		FROM dsh_cart_items ci
 		JOIN dsh_carts c ON c.id = ci.cart_id
 		LEFT JOIN dsh_store_assortments a
 		  ON a.store_id = c.store_id
 		 AND a.master_product_id = ci.master_product_id
+		LEFT JOIN dsh_master_products mp ON mp.id = a.master_product_id
+		LEFT JOIN dsh_store_assortment_inventory i ON i.store_assortment_id = a.id
+		LEFT JOIN LATERAL (
+			SELECT price.amount_minor, price.currency
+			FROM dsh_store_assortment_prices price
+			WHERE price.store_assortment_id = a.id
+			  AND price.effective_from <= NOW()
+			  AND (price.effective_until IS NULL OR price.effective_until > NOW())
+			ORDER BY price.effective_from DESC, price.version DESC, price.id DESC
+			LIMIT 1
+		) p ON TRUE
 		WHERE ci.cart_id = $1::uuid
 		ORDER BY ci.created_at, ci.id`, cartID)
 	if err != nil {
@@ -196,6 +221,7 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 		var item CartItemValidation
 		var snapshotAssortment sql.NullString
 		var currentAssortment sql.NullString
+		var currentPrice sql.NullInt64
 		var currentCurrency sql.NullString
 		var currentAvailable sql.NullBool
 		if err := rows.Scan(
@@ -205,17 +231,11 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 			&item.SnapshotUnitPriceMinorUnits,
 			&item.SnapshotCurrency,
 			&currentAssortment,
+			&currentPrice,
 			&currentCurrency,
 			&currentAvailable,
 		); err != nil {
 			return result, err
-		}
-
-		var currentPrice sql.NullInt64
-		err = db.QueryRowContext(ctx, "SELECT amount_minor FROM wlt_master_product_pricing WHERE master_product_id = $1 AND store_id = (SELECT store_id FROM dsh_carts WHERE id = $2::uuid) AND effective_from <= NOW() ORDER BY effective_from DESC LIMIT 1", item.MasterProductID, cartID).Scan(&currentPrice)
-		if err == nil && currentPrice.Valid {
-			value := currentPrice.Int64
-			item.CurrentUnitPriceMinorUnits = &value
 		}
 
 		if snapshotAssortment.Valid {
@@ -225,6 +245,10 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 		if currentAssortment.Valid {
 			value := currentAssortment.String
 			item.CurrentAssortmentID = &value
+		}
+		if currentPrice.Valid {
+			value := currentPrice.Int64
+			item.CurrentUnitPriceMinorUnits = &value
 		}
 		if currentCurrency.Valid {
 			value := currentCurrency.String
@@ -238,10 +262,10 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 		case !currentAssortment.Valid:
 			item.Status = "assortment_unavailable"
 			item.ReasonCode = "ASSORTMENT_UNAVAILABLE"
-		case !currentAvailable.Valid || !currentAvailable.Bool:
-			item.Status = "unavailable"
-			item.ReasonCode = "PRODUCT_UNAVAILABLE"
-		case snapshotAssortment.Valid && snapshotAssortment.String != currentAssortment.String:
+		case !snapshotAssortment.Valid:
+			item.Status = "assortment_changed"
+			item.ReasonCode = "ASSORTMENT_SNAPSHOT_MISSING"
+		case snapshotAssortment.String != currentAssortment.String:
 			item.Status = "assortment_changed"
 			item.ReasonCode = "ASSORTMENT_CHANGED"
 		case !currentPrice.Valid:
@@ -261,6 +285,9 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 			item.Status = "price_changed"
 			item.ReasonCode = "PRICE_CHANGED"
 			result.PriceChanged = true
+		case !currentAvailable.Valid || !currentAvailable.Bool:
+			item.Status = "unavailable"
+			item.ReasonCode = "PRODUCT_UNAVAILABLE"
 		default:
 			item.Status = "ready"
 		}
@@ -301,9 +328,32 @@ type GovernedServiceabilityResult struct {
 	ExpiresAt     *time.Time `json:"expiresAt,omitempty"`
 }
 
-// CheckGovernedServiceability extends geographic/store readiness with the
-// governed zone capacity and SLA policies already owned by DSH. Missing policy
-// is explicit in the response; exhausted or throttled capacity blocks delivery.
+func operationalPolicyServiceabilityFailure(decision platformpolicies.OperationalDecision) (string, string) {
+	if len(decision.ReasonCodes) == 0 {
+		return "policy_unavailable", "operational policy denied serviceability"
+	}
+	switch decision.ReasonCodes[0] {
+	case "CAPACITY_EXHAUSTED":
+		return "capacity_exhausted", "service area capacity is exhausted"
+	case "CAPACITY_THROTTLED":
+		return "capacity_throttled", "service area is temporarily throttled"
+	case "ZONE_CAPACITY_PAUSED":
+		return "capacity_paused", "service area is temporarily paused"
+	case "FULFILLMENT_MODE_DISABLED", "FULFILLMENT_MODE_NOT_CONFIGURED":
+		return "mode_unavailable", "requested fulfillment mode is unavailable"
+	case "ZONE_INACTIVE", "SERVICE_AREA_MISMATCH", "NO_ACTIVE_STORES":
+		return "out_of_area", "operational zone is not serviceable"
+	case "SLA_NOT_CONFIGURED", "CAPACITY_NOT_CONFIGURED":
+		return "policy_unavailable", "operational service policy is incomplete"
+	default:
+		return "policy_unavailable", "operational policy denied serviceability"
+	}
+}
+
+// CheckGovernedServiceability combines geographic/store readiness with the
+// exact same canonical operational-policy snapshot used by cart/checkout/order
+// mutation guards. There is no second zone resolver, terminal-order list, SLA
+// fallback or capacity calculation in this read path.
 func CheckGovernedServiceability(
 	ctx context.Context,
 	db *sql.DB,
@@ -337,95 +387,55 @@ func CheckGovernedServiceability(
 		}
 	}
 
-	var zoneID sql.NullString
-	var maxConcurrent sql.NullInt64
-	var throttleThreshold sql.NullFloat64
-	var activeOrders int
-	var maxPrep sql.NullInt64
-	var maxDelivery sql.NullInt64
-	err := db.QueryRowContext(ctx, `
-		SELECT
-			z.id,
-			capacity.max_concurrent_orders,
-			capacity.throttle_threshold,
-			COALESCE((
-				SELECT COUNT(*)::int
-				FROM dsh_orders orders
-				JOIN dsh_stores order_store ON order_store.id = orders.store_id
-				WHERE z.id IS NOT NULL
-				  AND (lower(order_store.service_area_code) = lower(z.city_code)
-				       OR lower(order_store.city_code) = lower(z.city_code))
-				  AND orders.status NOT IN ('cancelled', 'completed', 'delivered', 'returned_to_store')
-			), 0),
-			sla.max_prep_mins,
-			sla.max_delivery_mins
-		FROM dsh_stores store_row
-		LEFT JOIN LATERAL (
-			SELECT candidate.id, candidate.city_code
-			FROM dsh_platform_zones candidate
-			WHERE candidate.is_active = TRUE
-			  AND (
-				lower(candidate.city_code) = lower(store_row.service_area_code)
-				OR lower(candidate.city_code) = lower(store_row.city_code)
-			  )
-			ORDER BY
-				CASE WHEN lower(candidate.city_code) = lower(store_row.service_area_code) THEN 0 ELSE 1 END,
-				candidate.id
-			LIMIT 1
-		) zone_match ON TRUE
-		LEFT JOIN dsh_platform_zones z ON z.id = zone_match.id
-		LEFT JOIN dsh_platform_capacity_configs capacity ON capacity.zone_id = z.id
-		LEFT JOIN LATERAL (
-			SELECT rule.max_prep_mins, rule.max_delivery_mins
-			FROM dsh_platform_sla_rules rule
-			WHERE rule.zone_id = z.id
-			ORDER BY CASE WHEN rule.category IN ('default', 'all', '*') THEN 0 ELSE 1 END, rule.category
-			LIMIT 1
-		) sla ON TRUE
-		WHERE store_row.id = $1`, storeID).Scan(
-		&zoneID,
-		&maxConcurrent,
-		&throttleThreshold,
-		&activeOrders,
-		&maxPrep,
-		&maxDelivery,
+	decision, activeOrders, err := platformpolicies.EvaluateOperationalPolicyForStoreSnapshot(
+		ctx,
+		db,
+		storeID,
+		string(requestedMode),
 	)
 	if err != nil {
 		result.CapacityState = "policy_unavailable"
 		if result.Serviceable {
 			result.Serviceable = false
 			result.Code = "policy_unavailable"
-			result.Reason = "operational capacity policy could not be evaluated"
+			result.Reason = "operational policy could not be evaluated"
 		}
 		return result
 	}
 
 	result.ActiveOrders = activeOrders
-	if maxPrep.Valid && maxDelivery.Valid {
-		prep := int(maxPrep.Int64)
-		delivery := int(maxDelivery.Int64)
+	if decision.SLA.Configured {
+		prep := decision.SLA.MaxPrepMins
+		delivery := decision.SLA.MaxDeliveryMins
 		result.SlaConfigured = true
 		result.SlaPrepMinutes = &prep
 		result.SlaDeliveryMinutes = &delivery
 	}
-	if maxConcurrent.Valid && maxConcurrent.Int64 > 0 && throttleThreshold.Valid {
-		maxValue := int(maxConcurrent.Int64)
-		ratio := float64(activeOrders) / float64(maxValue)
+	if decision.Capacity.Configured && decision.Capacity.MaxConcurrentOrders > 0 {
+		maxValue := decision.Capacity.MaxConcurrentOrders
+		ratio := decision.PressureRatio
 		result.CapacityConfigured = true
 		result.MaxConcurrentOrders = &maxValue
 		result.CapacityLoadRatio = &ratio
 		result.CapacityState = "available"
-		if ratio >= 1 {
+		switch decision.Decision {
+		case "capacity_exhausted":
 			result.CapacityState = "exhausted"
-			result.Serviceable = false
-			result.Code = "capacity_exhausted"
-			result.Reason = "service area capacity is exhausted"
-		} else if ratio >= throttleThreshold.Float64 {
+		case "throttled":
 			result.CapacityState = "throttled"
-			result.Serviceable = false
-			result.Code = "capacity_throttled"
-			result.Reason = "service area is temporarily throttled"
+		case "paused":
+			result.CapacityState = "paused"
+		case "policy_incomplete":
+			result.CapacityState = "policy_incomplete"
+		case "mode_disabled":
+			result.CapacityState = "mode_disabled"
+		case "unserviceable":
+			result.CapacityState = "unserviceable"
 		}
+	}
+	if !decision.Serviceable && result.Serviceable {
+		result.Serviceable = false
+		result.Code, result.Reason = operationalPolicyServiceabilityFailure(decision)
 	}
 
 	result.QuoteVersion = uuid.NewString()
@@ -448,9 +458,9 @@ func CheckGovernedServiceability(
 				result.Reason = "routing provider could not estimate ETA"
 			} else {
 				routeMinutes := int(math.Ceil(routeResponse.DurationSeconds / 60.0))
-				prepMinutes := 15 // Default prep
-				if maxPrep.Valid {
-					prepMinutes = int(maxPrep.Int64)
+				prepMinutes := 15
+				if decision.SLA.Configured {
+					prepMinutes = decision.SLA.MaxPrepMins
 				}
 				minETA := prepMinutes + routeMinutes
 				maxETA := minETA + 15
