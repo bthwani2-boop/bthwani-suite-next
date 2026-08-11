@@ -14,14 +14,14 @@ type assortmentRuntimeTruthQuerier interface {
 }
 
 type assortmentRuntimeTruth struct {
-	AmountMinor       int64
-	Currency          string
-	PolicyType        string
-	Quantity          int
-	ReservedQuantity  int
-	MinOrderQuantity  int
-	MaxOrderQuantity  int
-	StepQuantity      int
+	AmountMinor      int64
+	Currency         string
+	PolicyType       string
+	Quantity         int
+	ReservedQuantity int
+	MinOrderQuantity int
+	MaxOrderQuantity int
+	StepQuantity     int
 }
 
 func readAssortmentRuntimeTruth(ctx context.Context, q assortmentRuntimeTruthQuerier, assortmentID string) (assortmentRuntimeTruth, error) {
@@ -57,7 +57,7 @@ func readAssortmentRuntimeTruth(ctx context.Context, q assortmentRuntimeTruthQue
 }
 
 func assortmentTruthPurchasable(truth assortmentRuntimeTruth) bool {
-	if truth.AmountMinor <= 0 || strings.TrimSpace(truth.Currency) == "" {
+	if truth.AmountMinor <= 0 || len(strings.TrimSpace(truth.Currency)) != 3 {
 		return false
 	}
 	switch truth.PolicyType {
@@ -178,12 +178,29 @@ func bootstrapAssortmentRuntimeTruth(ctx context.Context, tx *sql.Tx, a StoreAss
 	return nil
 }
 
-// UpsertStoreAssortmentWithRuntimeTruth is the authoritative write path for
-// assortment metadata. It performs the legacy-link write and the first
-// normalized inventory/price bootstrap in one transaction. Once normalized
-// pricing exists, the assortment endpoint no longer owns price changes; the
-// dedicated price-schedule endpoint does. client_visible is fail-closed unless
-// normalized truth is currently purchasable.
+func validateAssortmentImageForClientVisibility(ctx context.Context, tx *sql.Tx, masterProductID string, customImageObjectKey *string) error {
+	var masterImage *string
+	if err := tx.QueryRowContext(ctx, `SELECT canonical_image_object_key FROM dsh_master_products WHERE id=$1`, masterProductID).Scan(&masterImage); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	hasCustomImage := customImageObjectKey != nil && strings.TrimSpace(*customImageObjectKey) != ""
+	hasMasterImage := masterImage != nil && strings.TrimSpace(*masterImage) != ""
+	if !hasCustomImage && !hasMasterImage {
+		return fmt.Errorf("%w: cannot set publication_status to client_visible without an approved image", ErrInvalid)
+	}
+	return nil
+}
+
+// UpsertStoreAssortmentWithRuntimeTruth is the sole authoritative assortment
+// metadata writer. Creation is allowed only when expectedVersion is omitted;
+// edits require the exact current expectedVersion. The row is locked before an
+// edit, normalized price/inventory bootstrap happens inside the same
+// transaction, and a metadata edit can never overwrite an existing normalized
+// price with a stale legacy unitPrice. Dedicated inventory/price endpoints own
+// subsequent commercial changes.
 func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID string, input StoreAssortmentInput, allowCustomImage bool) (StoreAssortment, error) {
 	storeID = strings.TrimSpace(storeID)
 	masterProductID = strings.TrimSpace(masterProductID)
@@ -214,6 +231,9 @@ func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, stor
 	if input.CustomImageObjectKey != nil && strings.TrimSpace(*input.CustomImageObjectKey) != "" && !allowCustomImage {
 		return StoreAssortment{}, ErrForbidden
 	}
+	if input.ExpectedVersion != nil && *input.ExpectedVersion < 1 {
+		return StoreAssortment{}, ErrInvalid
+	}
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -221,62 +241,92 @@ func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, stor
 	}
 	defer tx.Rollback()
 
-	if publicationStatus == "client_visible" {
-		var masterImage *string
-		if err := tx.QueryRowContext(ctx, `SELECT canonical_image_object_key FROM dsh_master_products WHERE id=$1`, masterProductID).Scan(&masterImage); err != nil {
-			return StoreAssortment{}, err
+	var existing StoreAssortment
+	existing, existingErr := scanAssortment(tx.QueryRowContext(ctx, `
+		SELECT `+assortmentColumns+`
+		FROM dsh_store_assortments
+		WHERE store_id=$1 AND master_product_id=$2
+		FOR UPDATE`, storeID, masterProductID))
+	exists := existingErr == nil
+	if existingErr != nil && !errors.Is(existingErr, ErrNotFound) {
+		return StoreAssortment{}, existingErr
+	}
+
+	if exists && input.ExpectedVersion == nil {
+		return StoreAssortment{}, &ConflictError{
+			EntityID: existing.ID, ExpectedVersion: nil, CurrentVersion: existing.Version,
+			Message: "assortment already exists; expectedVersion is required",
 		}
-		hasCustomImage := input.CustomImageObjectKey != nil && strings.TrimSpace(*input.CustomImageObjectKey) != ""
-		hasMasterImage := masterImage != nil && strings.TrimSpace(*masterImage) != ""
-		if !hasCustomImage && !hasMasterImage {
-			return StoreAssortment{}, fmt.Errorf("%w: cannot set publication_status to client_visible without an approved image", ErrInvalid)
+	}
+	if !exists && input.ExpectedVersion != nil {
+		return StoreAssortment{}, ErrNotFound
+	}
+	if exists && existing.Version != *input.ExpectedVersion {
+		return StoreAssortment{}, &ConflictError{
+			EntityID: existing.ID, ExpectedVersion: input.ExpectedVersion, CurrentVersion: existing.Version,
+			Message: "version mismatch",
 		}
 	}
 
-	// If an effective normalized price already exists, preserve it. Price
-	// changes belong to ScheduleAssortmentPriceAtomic and must not be silently
-	// overwritten by a metadata edit carrying a stale legacy unitPrice.
-	var existingAssortmentID string
-	_ = tx.QueryRowContext(ctx, `
-		SELECT id FROM dsh_store_assortments
-		WHERE store_id=$1 AND master_product_id=$2`, storeID, masterProductID).Scan(&existingAssortmentID)
-	if existingAssortmentID != "" {
-		truth, truthErr := readAssortmentRuntimeTruth(ctx, tx, existingAssortmentID)
+	if publicationStatus == "client_visible" {
+		if err := validateAssortmentImageForClientVisibility(ctx, tx, masterProductID, input.CustomImageObjectKey); err != nil {
+			return StoreAssortment{}, err
+		}
+	}
+
+	var a StoreAssortment
+	if !exists {
+		id := entityID("assortment")
+		row := tx.QueryRowContext(ctx, `
+			INSERT INTO dsh_store_assortments (
+				id, store_id, master_product_id, unit_price, currency, available,
+				stock_status, local_note, custom_image_object_key, publication_status, submitted_by
+			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+			RETURNING `+assortmentColumns,
+			id, storeID, masterProductID, input.UnitPrice, currency, input.Available,
+			stockStatus, input.LocalNote, input.CustomImageObjectKey, publicationStatus, actorID)
+		created, insertErr := scanAssortment(row)
+		if insertErr != nil {
+			return StoreAssortment{}, insertErr
+		}
+		a = created
+	} else {
+		// Preserve normalized current price/currency. The metadata endpoint owns
+		// neither once a normalized schedule exists.
+		truth, truthErr := readAssortmentRuntimeTruth(ctx, tx, existing.ID)
+		legacyUnitPrice := input.UnitPrice
+		legacyCurrency := currency
 		if truthErr == nil {
-			input.UnitPrice = float64(truth.AmountMinor) / 100
-			currency = truth.Currency
+			legacyUnitPrice = float64(truth.AmountMinor) / 100
+			legacyCurrency = truth.Currency
 		} else if !errors.Is(truthErr, ErrNotFound) {
 			return StoreAssortment{}, truthErr
 		}
-	}
 
-	id := entityID("assortment")
-	row := tx.QueryRowContext(ctx, `
-		INSERT INTO dsh_store_assortments (
-			id, store_id, master_product_id, unit_price, currency, available,
-			stock_status, local_note, custom_image_object_key, publication_status, submitted_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-		ON CONFLICT (store_id, master_product_id) DO UPDATE SET
-			unit_price=EXCLUDED.unit_price,
-			currency=EXCLUDED.currency,
-			available=EXCLUDED.available,
-			stock_status=EXCLUDED.stock_status,
-			local_note=EXCLUDED.local_note,
-			custom_image_object_key=EXCLUDED.custom_image_object_key,
-			publication_status=EXCLUDED.publication_status,
-			updated_at=NOW(),
-			version=dsh_store_assortments.version + 1
-		WHERE ($12::int IS NULL OR dsh_store_assortments.version=$12)
-		RETURNING `+assortmentColumns,
-		id, storeID, masterProductID, input.UnitPrice, currency, input.Available,
-		stockStatus, input.LocalNote, input.CustomImageObjectKey, publicationStatus,
-		actorID, input.ExpectedVersion)
-	a, err := scanAssortment(row)
-	if errors.Is(err, sql.ErrNoRows) || errors.Is(err, ErrNotFound) {
-		return StoreAssortment{}, ErrConflict
-	}
-	if err != nil {
-		return StoreAssortment{}, err
+		row := tx.QueryRowContext(ctx, `
+			UPDATE dsh_store_assortments SET
+				unit_price=$1,
+				currency=$2,
+				available=$3,
+				stock_status=$4,
+				local_note=$5,
+				custom_image_object_key=$6,
+				publication_status=$7,
+				submitted_by=$8,
+				updated_at=NOW(),
+				version=version+1
+			WHERE id=$9 AND version=$10
+			RETURNING `+assortmentColumns,
+			legacyUnitPrice, legacyCurrency, input.Available, stockStatus, input.LocalNote,
+			input.CustomImageObjectKey, publicationStatus, actorID, existing.ID, *input.ExpectedVersion)
+		updated, updateErr := scanAssortment(row)
+		if errors.Is(updateErr, ErrNotFound) {
+			return StoreAssortment{}, NewConflictError(tx, ctx, "dsh_store_assortments", existing.ID, input.ExpectedVersion)
+		}
+		if updateErr != nil {
+			return StoreAssortment{}, updateErr
+		}
+		a = updated
 	}
 
 	if err := bootstrapAssortmentRuntimeTruth(ctx, tx, a); err != nil {
