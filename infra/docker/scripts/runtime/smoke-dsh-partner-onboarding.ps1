@@ -123,27 +123,43 @@ if ($settings.store.status -ne "ready") { throw "Partner Onboarding & Store Publ
 if (@($settings.store.deliveryModes).Count -lt 1) { throw "Partner Onboarding & Store Publication store settings did not persist delivery modes" }
 
 # Submission readiness requires a WLT-owned official-wallet destination. The
-# local runtime seeds one provider allowed for OperatorContext=local-dsh. WLT
-# encrypts the reference and returns only the durable id and masked projection.
+# partner-owned finance route is the only governed write boundary: WLT owns the
+# provider, encrypted reference and destination version; DSH stores only the
+# durable reference and masked readiness projection.
 $payoutHeaders = @{}
-foreach ($key in $fieldHeaders.Keys) {
-  $payoutHeaders[$key] = $fieldHeaders[$key]
+foreach ($key in $partnerHeaders.Keys) {
+  $payoutHeaders[$key] = $partnerHeaders[$key]
 }
 $payoutHeaders["X-Correlation-ID"] = "smoke-partner-payout-$([guid]::NewGuid())"
 $payoutHeaders["Idempotency-Key"] = "smoke-partner-payout-$($partnerDraft.id)-$([guid]::NewGuid())"
-$payoutHeaders["If-Match-Version"] = [string]$partnerDraft.version
 $payoutBody = @{
-  displayName = "شريك فحص $partnerSuffix"
-  primaryPhone = "+96777$($partnerSuffix.ToString().Substring($partnerSuffix.ToString().Length - 7))"
   beneficiaryName = "مالك فحص الشركاء"
   officialWalletProviderKey = "bthwani_local_wallet"
   destinationReference = "777$partnerSuffix"
 } | ConvertTo-Json
-$payoutPartner = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)" -Method Patch -Headers $payoutHeaders -ContentType "application/json" -Body $payoutBody -TimeoutSec 10
-if ([string]::IsNullOrWhiteSpace($payoutPartner.payoutDestinationId)) { throw "Partner Onboarding & Store Publication WLT payout destination was not bound" }
-if ($payoutPartner.destinationMethod -ne "official_wallet") { throw "Partner Onboarding & Store Publication payout destination is not official_wallet" }
-if ([string]::IsNullOrWhiteSpace($payoutPartner.maskedDestinationReference)) { throw "Partner Onboarding & Store Publication payout destination was not masked" }
+$payoutResult = Invoke-RestMethod "http://localhost:58080/dsh/partner/me/finance/payout-destination" -Method Put -Headers $payoutHeaders -ContentType "application/json" -Body $payoutBody -TimeoutSec 10
+$payoutDestination = $payoutResult.payoutDestination
+if ([string]::IsNullOrWhiteSpace($payoutDestination.id)) { throw "Partner Onboarding & Store Publication WLT payout destination returned no id" }
+if ([string]$payoutDestination.ownerActorId -ne [string]$partnerActor.actorId -or $payoutDestination.ownerActorType -ne "partner") { throw "Partner Onboarding & Store Publication WLT payout destination ownership mismatch" }
+if ($payoutDestination.officialWalletProviderKey -ne "bthwani_local_wallet") { throw "Partner Onboarding & Store Publication WLT provider key mismatch" }
+if ($payoutDestination.destinationMethod -ne "official_wallet") { throw "Partner Onboarding & Store Publication payout destination is not official_wallet" }
+if ([int]$payoutDestination.destinationVersion -lt 1) { throw "Partner Onboarding & Store Publication payout destination has no governed version" }
+if ($payoutDestination.destinationVerificationStatus -ne "unverified") { throw "Partner Onboarding & Store Publication new payout destination did not start unverified" }
+if ([string]::IsNullOrWhiteSpace($payoutDestination.maskedDestinationReference)) { throw "Partner Onboarding & Store Publication payout destination was not masked" }
+
+$payoutPartner = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)" -Headers $fieldHeaders -TimeoutSec 10
+if ([string]$payoutPartner.payoutDestinationId -ne [string]$payoutDestination.id) { throw "Partner Onboarding & Store Publication DSH payout projection did not bind the WLT destination" }
+if ($payoutPartner.destinationMethod -ne "official_wallet") { throw "Partner Onboarding & Store Publication DSH payout projection is not official_wallet" }
+if ([string]$payoutPartner.maskedDestinationReference -ne [string]$payoutDestination.maskedDestinationReference) { throw "Partner Onboarding & Store Publication DSH payout mask diverged from WLT" }
 if ($payoutPartner.version -le $partnerDraft.version) { throw "Partner Onboarding & Store Publication payout binding did not advance partner version" }
+$payoutProjectionVersion = [int]$payoutPartner.version
+
+# Exact retry must replay the same WLT destination and must not cause a second
+# DSH partner-version increment.
+$payoutReplay = Invoke-RestMethod "http://localhost:58080/dsh/partner/me/finance/payout-destination" -Method Put -Headers $payoutHeaders -ContentType "application/json" -Body $payoutBody -TimeoutSec 10
+if ([string]$payoutReplay.payoutDestination.id -ne [string]$payoutDestination.id) { throw "Partner Onboarding & Store Publication payout idempotent replay created another destination" }
+$payoutPartnerReplay = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)" -Headers $fieldHeaders -TimeoutSec 10
+if ([int]$payoutPartnerReplay.version -ne $payoutProjectionVersion) { throw "Partner Onboarding & Store Publication payout replay caused DSH version churn" }
 
 $visitBody = @{
   storeId = $smokeStoreId
