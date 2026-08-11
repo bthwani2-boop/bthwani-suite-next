@@ -5,7 +5,6 @@ const {
   FIELD_ONBOARDING_STEPS,
   getRequiredPartnerDocuments,
   getDocumentsMissingCount,
-  getBankAccountMissingCount,
   getFieldRequiredMissingItems,
 } = await import("../dist/services/dsh/frontend/shared/field-onboarding/field-onboarding.types.js");
 
@@ -22,7 +21,7 @@ const completeForm = {
   deliveryReadiness: "bthwani_couriers",
 };
 
-const canSubmit = (form, uploadedDocumentTypes, partnerId = "prt_test") =>
+const canCompleteOperationalForm = (form, uploadedDocumentTypes, partnerId = "prt_test") =>
   Boolean(partnerId) && getFieldRequiredMissingItems(form, uploadedDocumentTypes).length === 0;
 
 describe("field onboarding validation", () => {
@@ -41,7 +40,7 @@ describe("field onboarding validation", () => {
       getRequiredPartnerDocuments(form).map((item) => item.documentType),
       ["national_id"],
     );
-    assert.equal(canSubmit(form, ["national_id"]), true);
+    assert.equal(canCompleteOperationalForm(form, ["national_id"]), true);
   });
 
   test("freelancer intake requires identity plus the current governed other-document slot", () => {
@@ -50,23 +49,25 @@ describe("field onboarding validation", () => {
       getRequiredPartnerDocuments(form).map((item) => item.documentType),
       ["national_id", "other"],
     );
-    assert.equal(canSubmit(form, ["national_id", "other"]), true);
+    assert.equal(canCompleteOperationalForm(form, ["national_id", "other"]), true);
   });
 
-  test("sensitive bank details do not block field intake", () => {
-    assert.equal(getBankAccountMissingCount({}), 0);
-    assert.equal(canSubmit(completeForm, ["commercial_register", "national_id"]), true);
+  test("field form validates operational onboarding only", () => {
+    assert.equal(canCompleteOperationalForm(completeForm, ["commercial_register", "national_id"]), true);
+    assert.equal("bankName" in completeForm, false);
+    assert.equal("accountNumber" in completeForm, false);
+    assert.equal("settlementPreference" in completeForm, false);
   });
 
-  test("missing governed evidence still blocks submission", () => {
-    assert.equal(canSubmit(completeForm, []), false);
+  test("missing governed evidence still blocks operational form completion", () => {
+    assert.equal(canCompleteOperationalForm(completeForm, []), false);
     assert.deepEqual(
       getFieldRequiredMissingItems(completeForm, []),
       ["السجل التجاري", "الهوية الوطنية للمالك"],
     );
   });
 
-  test("wizard includes fast catalog setup without a bank-account gate", () => {
+  test("wizard includes catalog setup without embedding a payout-destination form", () => {
     assert.deepEqual([...FIELD_ONBOARDING_STEPS], [
       "basics_profile",
       "location_media",
