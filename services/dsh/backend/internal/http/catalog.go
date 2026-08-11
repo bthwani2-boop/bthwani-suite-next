@@ -35,6 +35,7 @@ func handlePublicCatalog(db *sql.DB) http.HandlerFunc {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "catalog purchasability unavailable")
 			return
 		}
+		domains, nodes = centralcatalog.FilterClientCatalogDimensions(domains, nodes, products)
 		store.SendJSON(w, http.StatusOK, map[string]any{
 			"domains":        domains,
 			"nodes":          nodes,
