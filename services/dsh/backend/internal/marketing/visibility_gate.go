@@ -122,17 +122,18 @@ func validateProductTarget(db *sql.DB, productID string) (bool, string, error) {
 		    AND d.is_active=true AND d.is_client_visible=true
 		    AND d.is_manual_request=false
 		    AND (n.id IS NULL OR (n.is_active=true AND n.is_client_visible=true))
-		    AND a.publication_status='client_visible' AND a.available=true
+		    AND a.publication_status='client_visible'
 		    AND current_price.amount_minor > 0
 		    AND length(trim(current_price.currency)) = 3
+		    AND i.min_order_quantity >= 1
+		    AND i.max_order_quantity >= i.min_order_quantity
+		    AND i.step_quantity >= 1
 		    AND (
 		      i.policy_type = 'infinite'
-		      OR (i.policy_type = 'signal' AND i.quantity > 0)
+		      OR (i.policy_type = 'signal' AND i.quantity >= i.min_order_quantity)
 		      OR (
 		        i.policy_type = 'quantity'
-		        AND (i.quantity - i.reserved_quantity) >= GREATEST(i.min_order_quantity, 1)
-		        AND i.max_order_quantity >= GREATEST(i.min_order_quantity, 1)
-		        AND i.step_quantity >= 1
+		        AND (i.quantity - i.reserved_quantity) >= i.min_order_quantity
 		      )
 		    )
 		    AND s.status='published' AND s.is_visible=true
