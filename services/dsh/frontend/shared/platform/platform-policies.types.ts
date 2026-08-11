@@ -78,13 +78,14 @@ export type DshUpsertCapacityInput = {
   readonly reason: string;
 };
 
-// DSH owns the onboarding-fee policy definition only, never a WLT ledger row.
+// WLT owns onboarding-fee financial truth. DSH transports only the typed,
+// authenticated policy projection and never stores or recomputes the money.
 export type DshStoreOnboardingFeeAppliesTo = "first_store" | "additional_store" | "all_stores";
 export type DshStoreOnboardingFeeChargeTiming = "on_approval" | "on_publication" | "on_first_order" | "manual";
 
 export type DshStoreOnboardingFeePolicy = {
   readonly enabled: boolean;
-  readonly amount: number;
+  readonly amountMinorUnits: number;
   readonly currency: string;
   readonly appliesTo: DshStoreOnboardingFeeAppliesTo;
   readonly chargeTiming: DshStoreOnboardingFeeChargeTiming;
@@ -95,12 +96,12 @@ export type DshStoreOnboardingFeePolicy = {
   readonly updatedAt: string;
   readonly version: number;
   readonly isConfigured: boolean;
-  readonly blockedReason?: string;
+  readonly blockedReason?: "POLICY_NOT_CONFIGURED";
 };
 
 export type DshStoreOnboardingFeePolicyInput = {
   readonly enabled: boolean;
-  readonly amount: number;
+  readonly amountMinorUnits: number;
   readonly currency: string;
   readonly appliesTo: DshStoreOnboardingFeeAppliesTo;
   readonly chargeTiming: DshStoreOnboardingFeeChargeTiming;
