@@ -13,7 +13,7 @@ import (
 
 const (
 	wltMigrationServiceName = "wlt"
-	wltLatestMigration      = "wlt-913_official_wallet_destination_versioning.sql"
+	wltLatestMigration      = "wlt-914_canonical_wallet_projection.sql"
 	wltReadinessTimeout     = 2 * time.Second
 )
 
@@ -46,7 +46,9 @@ func (s sqlRuntimeReadinessStore) Ready(ctx context.Context) (bool, error) {
 			AND to_regclass('public.wlt_payout_requests') IS NOT NULL
 			AND to_regclass('public.wlt_dispatch_financial_eligibility_policies') IS NOT NULL
 			AND to_regclass('public.wlt_dispatch_financial_eligibility_decisions') IS NOT NULL
-			AND to_regclass('public.wlt_approved_payout_snapshots') IS NOT NULL`,
+			AND to_regclass('public.wlt_approved_payout_snapshots') IS NOT NULL
+			AND to_regclass('public.wlt_wallet_projection_reconciliation_exceptions') IS NOT NULL
+			AND to_regclass('public.wlt_wallet_projection_consistency') IS NOT NULL`,
 		wltMigrationServiceName,
 		wltLatestMigration,
 	).Scan(&ready)
@@ -97,10 +99,14 @@ func handleReadiness(readinessStore runtimeReadinessStore) http.HandlerFunc {
 		}
 		dshCallbackBaseURLStatus := configuredStatus(os.Getenv("WLT_DSH_BASE_URL"))
 		dshCallbackTokenStatus := configuredStatus(os.Getenv("DSH_WLT_SERVICE_TOKEN"))
+		decisionConfigStatus := booleanConfigStatus(os.Getenv("WLT_FINANCE_MUTATION_KILL_SWITCH"))
 
 		overallStatus := "ready"
 		httpStatus := http.StatusOK
-		if dbStatus != "ready" || dshCallbackBaseURLStatus != "configured" || dshCallbackTokenStatus != "configured" {
+		if dbStatus != "ready" ||
+			dshCallbackBaseURLStatus != "configured" ||
+			dshCallbackTokenStatus != "configured" ||
+			decisionConfigStatus != "configured" {
 			overallStatus = "not_ready"
 			httpStatus = http.StatusServiceUnavailable
 		}
@@ -109,9 +115,10 @@ func handleReadiness(readinessStore runtimeReadinessStore) http.HandlerFunc {
 			Service: "wlt",
 			Status:  overallStatus,
 			Dependencies: map[string]string{
-				"postgres":                   dbStatus,
-				"dsh_callback_base_url":      dshCallbackBaseURLStatus,
-				"dsh_callback_service_token": dshCallbackTokenStatus,
+				"postgres":                       dbStatus,
+				"dsh_callback_base_url":          dshCallbackBaseURLStatus,
+				"dsh_callback_service_token":     dshCallbackTokenStatus,
+				"financial_mutation_kill_switch": decisionConfigStatus,
 			},
 			CheckedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		}
@@ -125,4 +132,15 @@ func configuredStatus(value string) string {
 		return "missing"
 	}
 	return "configured"
+}
+
+func booleanConfigStatus(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "true", "false":
+		return "configured"
+	case "":
+		return "missing"
+	default:
+		return "invalid"
+	}
 }

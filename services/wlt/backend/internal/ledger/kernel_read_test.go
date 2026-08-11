@@ -1,7 +1,10 @@
 package ledger
 
 import (
+	"context"
 	"testing"
+
+	"wlt-api/internal/shared"
 )
 
 func findCurrencySummary(summary *FinancialSummary, currency string) *CurrencySummary {
@@ -25,16 +28,6 @@ func findAccountBalance(cs *CurrencySummary, accountType string) *AccountBalance
 	return nil
 }
 
-// TestBuildFinancialSummary_NormalBalanceSideMatchesRealWalletDirection posts
-// the exact same line shape internal/cod uses for commission_earned (debit
-// platform_commission_receivable, credit wallet) and commission_reversed
-// (debit wallet, credit platform_commission_receivable), then asserts the
-// summary's signed balances move in the direction a human accountant (and a
-// wallet-balance reader) would expect: a wallet credit from an earned
-// commission increases the wallet's liability balance, not decreases it.
-// This is the regression test that would fail if BuildFinancialSummary ever
-// started reading the blanket-rule balance_minor_units column instead of
-// deriving signs from each account type's normal balance side.
 func TestBuildFinancialSummary_NormalBalanceSideMatchesRealWalletDirection(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
@@ -76,9 +69,7 @@ func TestBuildFinancialSummary_NormalBalanceSideMatchesRealWalletDirection(t *te
 		}
 	}
 
-	// commission_earned: debit receivable, credit wallet (matches internal/cod.go).
 	postCommissionLine("commission_earned", "credit", "debit", 5000)
-	// commission_reversed: debit wallet, credit receivable (matches internal/cod.go).
 	postCommissionLine("commission_reversed", "debit", "credit", 2000)
 
 	after, err := BuildFinancialSummary(ctx, db)
@@ -96,22 +87,63 @@ func TestBuildFinancialSummary_NormalBalanceSideMatchesRealWalletDirection(t *te
 
 	walletDelta := walletAfter.BalanceMinorUnits - walletBeforeBalance
 	receivableDelta := receivableAfter.BalanceMinorUnits - receivableBeforeBalance
-
-	// Net effect: wallet credited 5000 then debited 2000 -> +3000 (credit is
-	// wallet's normal/increasing side, since wallet is a liability account).
 	if walletDelta != 3000 {
-		t.Fatalf("expected wallet balance to move by +3000 (commission earned net of reversal), got %+d", walletDelta)
+		t.Fatalf("expected wallet balance to move by +3000, got %+d", walletDelta)
 	}
-	// Net effect: receivable debited 5000 then credited 2000 -> +3000 (debit
-	// is the asset account's normal/increasing side).
 	if receivableDelta != 3000 {
 		t.Fatalf("expected platform_commission_receivable balance to move by +3000, got %+d", receivableDelta)
 	}
-
 	if walletAfter.Category != "liability" || walletAfter.NormalBalanceSide != "credit" {
 		t.Fatalf("expected wallet account metadata {liability, credit}, got {%s, %s}", walletAfter.Category, walletAfter.NormalBalanceSide)
 	}
 	if receivableAfter.Category != "asset" || receivableAfter.NormalBalanceSide != "debit" {
 		t.Fatalf("expected platform_commission_receivable account metadata {asset, debit}, got {%s, %s}", receivableAfter.Category, receivableAfter.NormalBalanceSide)
+	}
+}
+
+func TestBuildFinancialSummary_IsolatesOperatorContexts(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	contextAID := uniqueActorID("summary-context-a")
+	contextBID := uniqueActorID("summary-context-b")
+	ctxA := shared.WithOperatorContext(context.Background(), contextAID)
+	ctxB := shared.WithOperatorContext(context.Background(), contextBID)
+	currency := "ISO"
+	actorID := uniqueActorID("captain")
+
+	post := func(ctx context.Context, reference string, amount int64) {
+		tx, err := db.BeginTx(ctx, nil)
+		if err != nil {
+			t.Fatalf("begin tx: %v", err)
+		}
+		defer tx.Rollback()
+		if _, err := PostOpeningBalance(ctx, tx, "captain", actorID, currency, amount, reference, Actor{ID: "system", Type: "system"}); err != nil {
+			t.Fatalf("post opening balance: %v", err)
+		}
+		if err := tx.Commit(); err != nil {
+			t.Fatalf("commit opening balance: %v", err)
+		}
+	}
+	post(ctxA, uniqueActorID("summary-a"), 1100)
+	post(ctxB, uniqueActorID("summary-b"), 9900)
+
+	summaryA, err := BuildFinancialSummary(ctxA, db)
+	if err != nil {
+		t.Fatalf("BuildFinancialSummary A: %v", err)
+	}
+	walletA := findAccountBalance(findCurrencySummary(summaryA, currency), "wallet")
+	if walletA == nil || walletA.BalanceMinorUnits != 1100 {
+		t.Fatalf("expected context A wallet balance 1100 without context B contamination, got %+v", walletA)
+	}
+
+	summaryB, err := BuildFinancialSummary(ctxB, db)
+	if err != nil {
+		t.Fatalf("BuildFinancialSummary B: %v", err)
+	}
+	walletB := findAccountBalance(findCurrencySummary(summaryB, currency), "wallet")
+	if walletB == nil || walletB.BalanceMinorUnits != 9900 {
+		t.Fatalf("expected context B wallet balance 9900 without context A contamination, got %+v", walletB)
 	}
 }

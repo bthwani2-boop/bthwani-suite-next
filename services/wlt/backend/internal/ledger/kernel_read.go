@@ -38,20 +38,32 @@ type FinancialSummary struct {
 	DataCompleteness []string          `json:"dataCompleteness"`
 }
 
-// BuildFinancialSummary aggregates immutable ledger lines per account type and
-// currency, applies each account's normal side and never mixes currencies.
+// BuildFinancialSummary aggregates immutable canonical ledger lines only
+// inside the authenticated OperatorContext. Cross-context aggregation is
+// forbidden even for internal callers because finance isolation is a data
+// invariant, not merely an HTTP authorization concern.
 func BuildFinancialSummary(ctx context.Context, db *sql.DB) (*FinancialSummary, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if db == nil {
+		return nil, fmt.Errorf("ledger database is required")
+	}
 	const q = `
 		SELECT a.account_type, a.currency,
 			COALESCE(SUM(l.amount_minor_units) FILTER (WHERE l.debit_credit = 'debit'), 0) AS debit_total,
 			COALESCE(SUM(l.amount_minor_units) FILTER (WHERE l.debit_credit = 'credit'), 0) AS credit_total
 		FROM wlt_ledger_accounts a
-		LEFT JOIN wlt_ledger_lines l ON l.account_id = a.id
+		LEFT JOIN wlt_ledger_lines l
+		  ON l.account_id = a.id
+		 AND l.operator_context_id = a.operator_context_id
+		WHERE a.operator_context_id = $1
 		GROUP BY a.account_type, a.currency`
 
-	rows, err := db.QueryContext(ctx, q)
+	rows, err := db.QueryContext(ctx, q, operatorContextID)
 	if err != nil {
-		return nil, fmt.Errorf("query account balances: %w", err)
+		return nil, fmt.Errorf("query OperatorContext account balances: %w", err)
 	}
 	defer rows.Close()
 
