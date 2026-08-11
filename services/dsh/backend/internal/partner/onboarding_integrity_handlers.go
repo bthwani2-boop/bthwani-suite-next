@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -25,11 +24,16 @@ func HandleGovernedFieldUpdatePartner(db *sql.DB, wltClient *wlt.Client) http.Ha
 			return
 		}
 
-		var input UpdatePartnerInput
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		var request struct {
+			UpdatePartnerInput
+			OfficialWalletProviderKey string `json:"officialWalletProviderKey"`
+			DestinationReference      string `json:"destinationReference"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
 			return
 		}
+		input := request.UpdatePartnerInput
 		current, err := GetPartner(db, partnerID)
 		if errors.Is(err, ErrNotFound) {
 			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
@@ -40,25 +44,27 @@ func HandleGovernedFieldUpdatePartner(db *sql.DB, wltClient *wlt.Client) http.Ha
 			return
 		}
 
-		rawAccount := unmaskedPayoutValue(input.BankAccountNumber)
-		rawIBAN := unmaskedPayoutValue(input.BankIBAN)
-		rawMobile := unmaskedPayoutValue(input.PayoutMobileNumber)
-		preference, preferenceOK := normalizeDshPayoutPreference(input.SettlementPreference)
-
-		metadataChanged := false
-		if preference != "" && preference != current.DestinationMethod {
-			metadataChanged = true
+		legacyPayoutInput := strings.TrimSpace(input.BankName) != "" ||
+			strings.TrimSpace(input.BankBranch) != "" ||
+			strings.TrimSpace(input.BankAccountNumber) != "" ||
+			strings.TrimSpace(input.BankIBAN) != "" ||
+			strings.TrimSpace(input.PayoutMobileNumber) != "" ||
+			strings.TrimSpace(input.SettlementPreference) != "" ||
+			input.BankAccountHolderMatchesOwner != nil ||
+			strings.TrimSpace(input.BankNotes) != ""
+		if legacyPayoutInput {
+			sendError(w, http.StatusUnprocessableEntity, "PAYOUT_DESTINATION_LEGACY_FIELDS_RETIRED", "bank, IBAN, mobile-money and manual settlement destination fields are retired; submit an official wallet provider and destination reference")
+			return
 		}
 
-		payoutMutation := rawAccount != "" || rawIBAN != "" || rawMobile != "" || metadataChanged
+		providerKey := strings.ToLower(strings.TrimSpace(request.OfficialWalletProviderKey))
+		destinationReference := strings.TrimSpace(request.DestinationReference)
+		beneficiaryName := strings.TrimSpace(input.BeneficiaryName)
+		payoutMutation := providerKey != "" || destinationReference != "" || beneficiaryName != ""
 
 		if payoutMutation {
-			if !preferenceOK {
-				sendError(w, http.StatusUnprocessableEntity, "PAYOUT_DESTINATION_INVALID", "select a supported settlement preference")
-				return
-			}
-			if rawAccount == "" && rawMobile == "" {
-				sendError(w, http.StatusUnprocessableEntity, "PAYOUT_DETAILS_REENTRY_REQUIRED", "re-enter the payout account or mobile number before changing payout metadata")
+			if providerKey == "" || destinationReference == "" || beneficiaryName == "" {
+				sendError(w, http.StatusUnprocessableEntity, "PAYOUT_DESTINATION_INVALID", "beneficiaryName, officialWalletProviderKey and destinationReference are required together")
 				return
 			}
 			if wltClient == nil || !wltClient.Configured() {
@@ -68,34 +74,22 @@ func HandleGovernedFieldUpdatePartner(db *sql.DB, wltClient *wlt.Client) http.Ha
 			idempotency := strings.TrimSpace(idempotencyKey(r))
 			if idempotency == "" {
 				idempotency = governedMutationKey(
-					"partner-payout", partnerID, strconv.Itoa(expectedVersion),
-					rawAccount, rawIBAN, rawMobile, preference,
+					"partner-official-wallet", partnerID, strconv.Itoa(expectedVersion),
+					providerKey, destinationReference, beneficiaryName,
 				)
 			}
 			correlation := strings.TrimSpace(correlationID(r))
 			if correlation == "" {
 				correlation = governedMutationKey("partner-payout-correlation", partnerID, idempotency)
 			}
-			var destinationReference string
-			var destinationMethod string = preference
-
-			if destinationMethod == "bank" {
-				if rawIBAN != "" {
-					destinationReference = rawIBAN
-				} else {
-					destinationReference = rawAccount
-				}
-			} else if destinationMethod == "mobile_money" {
-				destinationReference = rawMobile
-			}
 
 			ref, handoffErr := wltClient.UpsertPayoutDestination(r.Context(), partnerID, wlt.PayoutDestinationUpsertInput{
-				BeneficiaryName:      input.BeneficiaryName,
-				DestinationMethod:    destinationMethod,
-				DestinationReference: destinationReference,
-				CreatedByActorID:     actorID,
-				CorrelationID:        correlation,
-				IdempotencyKey:       idempotency,
+				BeneficiaryName:           beneficiaryName,
+				OfficialWalletProviderKey: providerKey,
+				DestinationReference:      destinationReference,
+				CreatedByActorID:          actorID,
+				CorrelationID:             correlation,
+				IdempotencyKey:            idempotency,
 			})
 			if handoffErr != nil {
 				sendError(w, http.StatusBadGateway, "WLT_PAYOUT_HANDOFF_FAILED", handoffErr.Error())
@@ -295,43 +289,3 @@ func expectedPartnerVersion(r *http.Request) int {
 	version, _ := strconv.Atoi(strings.TrimSpace(r.Header.Get("If-Match-Version")))
 	return version
 }
-
-func unmaskedPayoutValue(value string) string {
-	value = strings.TrimSpace(value)
-	if strings.Contains(value, "*") || strings.Contains(value, "â€¢") {
-		return ""
-	}
-	return value
-}
-
-func normalizeDshPayoutPreference(value string) (string, bool) {
-	switch strings.TrimSpace(value) {
-	case "bank_transfer", "bank":
-		return "bank", true
-	case "mobile_wallet", "mobile_money":
-		return "mobile_money", true
-	case "manual":
-		return "manual", true
-	default:
-		return "", false
-	}
-}
-
-func dshPayoutPreference(value string) string {
-	switch value {
-	case "bank":
-		return "bank_transfer"
-	case "mobile_money":
-		return "mobile_wallet"
-	case "manual":
-		return ""
-	default:
-		return ""
-	}
-}
-
-func boolValue(value *bool) bool {
-	return value != nil && *value
-}
-
-var _ = fmt.Sprintf
