@@ -23,7 +23,7 @@ var (
 
 type ProviderPenalty struct {
 	ID                          string     `json:"id"`
-	OperatorContextID                    string     `json:"operatorContextId"`
+	OperatorContextID           string     `json:"operatorContextId"`
 	IncidentID                  string     `json:"incidentId"`
 	ProviderActorID             string     `json:"providerActorId"`
 	ProviderActorType           string     `json:"providerActorType"`
@@ -103,11 +103,18 @@ func existingForIncidentTx(ctx context.Context, tx *sql.Tx, operatorContextID, i
 	return &item, err
 }
 
-func Post(ctx context.Context, db *sql.DB, operatorContextID, idempotencyKey string, input PostInput) (ProviderPenalty, error) {
-	operatorContextID = strings.TrimSpace(operatorContextID)
+// Post records one penalty accounting fact. OperatorContext is resolved only
+// from authenticated request context; a raw caller header is never financial
+// authority. The canonical ledger posting is the sole economic balance write.
+// wlt_wallets is refreshed by the governed ledger projection trigger.
+func Post(ctx context.Context, db *sql.DB, idempotencyKey string, input PostInput) (ProviderPenalty, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return ProviderPenalty{}, err
+	}
 	idempotencyKey = strings.TrimSpace(idempotencyKey)
-	if operatorContextID == "" || idempotencyKey == "" {
-		return ProviderPenalty{}, fmt.Errorf("OperatorContext and idempotency key are required")
+	if idempotencyKey == "" {
+		return ProviderPenalty{}, fmt.Errorf("idempotency key is required")
 	}
 	if err := normalizePost(&input); err != nil {
 		return ProviderPenalty{}, err
@@ -126,7 +133,7 @@ func Post(ctx context.Context, db *sql.DB, operatorContextID, idempotencyKey str
 		return ProviderPenalty{}, err
 	}
 	if existing != nil {
-		if existing.ProviderActorID != input.ProviderActorID || existing.ProviderActorType != input.ProviderActorType || existing.AmountMinorUnits != input.AmountMinorUnits || existing.Currency != input.Currency {
+		if existing.ProviderActorID != input.ProviderActorID || existing.ProviderActorType != input.ProviderActorType || existing.AmountMinorUnits != input.AmountMinorUnits || existing.Currency != input.Currency || existing.IdempotencyKey != idempotencyKey {
 			return ProviderPenalty{}, ErrConflict
 		}
 		if err := tx.Commit(); err != nil {
@@ -160,13 +167,7 @@ func Post(ctx context.Context, db *sql.DB, operatorContextID, idempotencyKey str
 	if err != nil {
 		return ProviderPenalty{}, err
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE wlt_wallets SET
-		available_balance_minor_units=available_balance_minor_units-$1,
-		last_ledger_entry_at=now(),updated_at=now()
-		WHERE operator_context_id=$2 AND actor_type=$3 AND actor_id=$4`,
-		input.AmountMinorUnits, operatorContextID, input.ProviderActorType, input.ProviderActorID); err != nil {
-		return ProviderPenalty{}, err
-	}
+
 	item, err := scan(tx.QueryRowContext(ctx, `INSERT INTO wlt_provider_penalties(
 		operator_context_id,incident_id,provider_actor_id,provider_actor_type,amount_minor_units,
 		currency,reason,ledger_transaction_id,posted_by_actor_id,idempotency_key)
@@ -182,13 +183,18 @@ func Post(ctx context.Context, db *sql.DB, operatorContextID, idempotencyKey str
 	return item, nil
 }
 
-func Reverse(ctx context.Context, db *sql.DB, operatorContextID, penaltyID string, input ReverseInput) (ProviderPenalty, error) {
-	operatorContextID = strings.TrimSpace(operatorContextID)
+// Reverse posts a compensating ledger transaction; it never rewrites the
+// original penalty or writes an economic balance directly to wlt_wallets.
+func Reverse(ctx context.Context, db *sql.DB, penaltyID string, input ReverseInput) (ProviderPenalty, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return ProviderPenalty{}, err
+	}
 	penaltyID = strings.TrimSpace(penaltyID)
 	input.Reason = strings.TrimSpace(input.Reason)
 	input.ReversedByActorID = strings.TrimSpace(input.ReversedByActorID)
-	if operatorContextID == "" || penaltyID == "" || len(input.Reason) < 3 || input.ReversedByActorID == "" {
-		return ProviderPenalty{}, fmt.Errorf("OperatorContext, penaltyId, reason and reversedByActorId are required")
+	if penaltyID == "" || len(input.Reason) < 3 || input.ReversedByActorID == "" {
+		return ProviderPenalty{}, fmt.Errorf("penaltyId, reason and reversedByActorId are required")
 	}
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -224,13 +230,6 @@ func Reverse(ctx context.Context, db *sql.DB, operatorContextID, penaltyID strin
 	if err != nil {
 		return ProviderPenalty{}, err
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE wlt_wallets SET
-		available_balance_minor_units=available_balance_minor_units+$1,
-		last_ledger_entry_at=now(),updated_at=now()
-		WHERE operator_context_id=$2 AND actor_type=$3 AND actor_id=$4`,
-		item.AmountMinorUnits, operatorContextID, item.ProviderActorType, item.ProviderActorID); err != nil {
-		return ProviderPenalty{}, err
-	}
 	item, err = scan(tx.QueryRowContext(ctx, `UPDATE wlt_provider_penalties SET status='reversed',
 		reversal_ledger_transaction_id=$3,reversed_by_actor_id=$4,reversed_reason=$5,
 		reversed_at=now(),updated_at=now() WHERE operator_context_id=$1 AND id=$2 RETURNING `+columns,
@@ -262,11 +261,13 @@ func writeError(w http.ResponseWriter, err error) {
 func HandlePost(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var input PostInput
-		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024)).Decode(&input); err != nil {
+		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&input); err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
-		item, err := Post(r.Context(), db, r.Header.Get("X-Operator-Context-ID"), r.Header.Get("Idempotency-Key"), input)
+		item, err := Post(r.Context(), db, r.Header.Get("Idempotency-Key"), input)
 		if err != nil {
 			writeError(w, err)
 			return
@@ -278,11 +279,13 @@ func HandlePost(db *sql.DB) http.HandlerFunc {
 func HandleReverse(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var input ReverseInput
-		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024)).Decode(&input); err != nil {
+		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&input); err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
-		item, err := Reverse(r.Context(), db, r.Header.Get("X-Operator-Context-ID"), r.PathValue("penaltyId"), input)
+		item, err := Reverse(r.Context(), db, r.PathValue("penaltyId"), input)
 		if err != nil {
 			writeError(w, err)
 			return

@@ -21,13 +21,13 @@ import (
 var ErrNotATopUpSession = errors.New("payment session is not a wallet topup session")
 
 // topUpActorType maps a session's server-derived FinancialPurpose to the
-// actor type its wallet credit belongs to. It is the single place that
-// translates the purpose vocabulary into a ledger actor type, so the mapping
-// cannot drift between the authorize and capture paths.
+// canonical wallet actor vocabulary. Product wording says "customer top-up",
+// but the governed WLT actor type is client; writing "customer" would create a
+// second ledger identity for the same user and break idempotent readback.
 func topUpActorType(financialPurpose string) (string, error) {
 	switch FinancialPurpose(financialPurpose) {
 	case PurposeCustomerTopUp:
-		return "customer", nil
+		return "client", nil
 	case PurposeCaptainTopUp:
 		return "captain", nil
 	default:

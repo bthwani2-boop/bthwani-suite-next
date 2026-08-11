@@ -25,6 +25,7 @@ func serveReadiness(t *testing.T, store runtimeReadinessStore) *httptest.Respons
 	t.Helper()
 	t.Setenv("WLT_DSH_BASE_URL", "http://dsh-api:8080")
 	t.Setenv("DSH_WLT_SERVICE_TOKEN", "configured-test-service-token")
+	t.Setenv("WLT_FINANCE_MUTATION_KILL_SWITCH", "false")
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/wlt/readiness", nil)
 	handleReadiness(store, permittingDecisions{}).ServeHTTP(response, request)
@@ -58,6 +59,29 @@ func TestReadinessSucceedsOnlyWithGovernedFinancialSchema(t *testing.T) {
 	}
 	if payload.Dependencies["postgres"] != "ready" {
 		t.Fatalf("unexpected dependency state: %v", payload.Dependencies)
+	}
+	if payload.Dependencies["financial_mutation_kill_switch"] != "configured" {
+		t.Fatalf("kill-switch readiness is not visible: %v", payload.Dependencies)
+	}
+}
+
+func TestReadinessFailsClosedOnInvalidFinancialKillSwitch(t *testing.T) {
+	t.Setenv("WLT_DSH_BASE_URL", "http://dsh-api:8080")
+	t.Setenv("DSH_WLT_SERVICE_TOKEN", "configured-test-service-token")
+	t.Setenv("WLT_FINANCE_MUTATION_KILL_SWITCH", "sometimes")
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/wlt/readiness", nil)
+	handleReadiness(fakeRuntimeReadinessStore{ready: true}).ServeHTTP(response, request)
+	if response.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 for invalid kill-switch configuration, got %d body=%s", response.Code, response.Body.String())
+	}
+	var payload ReadinessResponse
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.Dependencies["financial_mutation_kill_switch"] != "invalid" {
+		t.Fatalf("expected invalid kill-switch state, got %v", payload.Dependencies)
 	}
 }
 
