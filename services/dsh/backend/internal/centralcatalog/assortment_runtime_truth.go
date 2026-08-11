@@ -13,15 +13,39 @@ type assortmentRuntimeTruthQuerier interface {
 	QueryRowContext(context.Context, string, ...any) *sql.Row
 }
 
-type assortmentRuntimeTruth struct {
-	AmountMinor      int64
-	Currency         string
+type assortmentInventoryTruth struct {
 	PolicyType       string
 	Quantity         int
 	ReservedQuantity int
 	MinOrderQuantity int
 	MaxOrderQuantity int
 	StepQuantity     int
+}
+
+type assortmentRuntimeTruth struct {
+	AmountMinor int64
+	Currency    string
+	assortmentInventoryTruth
+}
+
+func readAssortmentInventoryTruth(ctx context.Context, q assortmentRuntimeTruthQuerier, assortmentID string) (assortmentInventoryTruth, error) {
+	var out assortmentInventoryTruth
+	err := q.QueryRowContext(ctx, `
+		SELECT policy_type, quantity, reserved_quantity,
+		       min_order_quantity, max_order_quantity, step_quantity
+		FROM dsh_store_assortment_inventory
+		WHERE store_assortment_id = $1`, assortmentID).Scan(
+		&out.PolicyType,
+		&out.Quantity,
+		&out.ReservedQuantity,
+		&out.MinOrderQuantity,
+		&out.MaxOrderQuantity,
+		&out.StepQuantity,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return assortmentInventoryTruth{}, ErrNotFound
+	}
+	return out, err
 }
 
 func readAssortmentRuntimeTruth(ctx context.Context, q assortmentRuntimeTruthQuerier, assortmentID string) (assortmentRuntimeTruth, error) {
@@ -56,8 +80,8 @@ func readAssortmentRuntimeTruth(ctx context.Context, q assortmentRuntimeTruthQue
 	return out, err
 }
 
-func assortmentTruthPurchasable(truth assortmentRuntimeTruth) bool {
-	if truth.AmountMinor <= 0 || len(strings.TrimSpace(truth.Currency)) != 3 {
+func assortmentInventoryAvailable(truth assortmentInventoryTruth) bool {
+	if truth.MinOrderQuantity < 1 || truth.MaxOrderQuantity < truth.MinOrderQuantity || truth.StepQuantity < 1 {
 		return false
 	}
 	switch truth.PolicyType {
@@ -66,19 +90,14 @@ func assortmentTruthPurchasable(truth assortmentRuntimeTruth) bool {
 	case "signal":
 		return truth.Quantity > 0
 	case "quantity":
-		available := truth.Quantity - truth.ReservedQuantity
-		minimum := truth.MinOrderQuantity
-		if minimum < 1 {
-			minimum = 1
-		}
-		return available >= minimum && truth.MaxOrderQuantity >= minimum && truth.StepQuantity >= 1
+		return truth.Quantity-truth.ReservedQuantity >= truth.MinOrderQuantity
 	default:
 		return false
 	}
 }
 
-func assortmentTruthStockStatus(truth assortmentRuntimeTruth) string {
-	if !assortmentTruthPurchasable(truth) {
+func assortmentInventoryStockStatus(truth assortmentInventoryTruth) string {
+	if !assortmentInventoryAvailable(truth) {
 		return "out_of_stock"
 	}
 	if truth.PolicyType == "infinite" {
@@ -94,19 +113,25 @@ func assortmentTruthStockStatus(truth assortmentRuntimeTruth) string {
 	return "in_stock"
 }
 
+func assortmentTruthPurchasable(truth assortmentRuntimeTruth) bool {
+	return truth.AmountMinor > 0 &&
+		len(strings.TrimSpace(truth.Currency)) == 3 &&
+		assortmentInventoryAvailable(truth.assortmentInventoryTruth)
+}
+
 func projectAssortmentRuntimeTruth(a StoreAssortment, truth assortmentRuntimeTruth) StoreAssortment {
 	a.UnitPrice = float64(truth.AmountMinor) / 100
 	a.Currency = truth.Currency
 	a.Available = assortmentTruthPurchasable(truth)
-	a.StockStatus = assortmentTruthStockStatus(truth)
+	a.StockStatus = assortmentInventoryStockStatus(truth.assortmentInventoryTruth)
 	return a
 }
 
 // ListStoreAssortmentRuntimeTruth keeps operator/partner/field reads on the
 // same effective price and inventory authority used by cart. The legacy
-// unit_price/currency/available/stock_status columns remain compatibility
-// bootstrap projections only; they are never returned as current commercial
-// truth once normalized price/inventory exists.
+// unit_price/currency/available/stock_status columns are compatibility
+// projections only; they are never returned as current commercial truth once
+// normalized price/inventory exists.
 func ListStoreAssortmentRuntimeTruth(ctx context.Context, db *sql.DB, storeID string) ([]StoreAssortment, error) {
 	items, err := ListStoreAssortment(ctx, db, storeID)
 	if err != nil {
@@ -130,8 +155,8 @@ func ListStoreAssortmentRuntimeTruth(ctx context.Context, db *sql.DB, storeID st
 // FilterPurchasableClientCatalogEntries is the final storefront gate. A
 // client-visible legacy assortment is not sufficient: the product must have
 // an effective positive normalized price and an inventory policy that can
-// satisfy at least its minimum purchase. The price projected to the client is
-// therefore exactly the price cart will snapshot.
+// satisfy its minimum purchase. The commercial fields projected to the client
+// therefore come from exactly the same truth cart snapshots.
 func FilterPurchasableClientCatalogEntries(ctx context.Context, db *sql.DB, entries []ClientCatalogEntry) ([]ClientCatalogEntry, error) {
 	out := make([]ClientCatalogEntry, 0, len(entries))
 	for _, entry := range entries {
@@ -147,6 +172,7 @@ func FilterPurchasableClientCatalogEntries(ctx context.Context, db *sql.DB, entr
 		}
 		entry.UnitPrice = float64(truth.AmountMinor) / 100
 		entry.Currency = truth.Currency
+		entry.StockStatus = assortmentInventoryStockStatus(truth.assortmentInventoryTruth)
 		out = append(out, entry)
 	}
 	return out, nil
@@ -216,10 +242,9 @@ func validateAssortmentImageForClientVisibility(ctx context.Context, tx *sql.Tx,
 // advisory lock serializes both absent-row creation and existing-row updates
 // for the same store/product key, then the row is locked before an edit.
 // Normalized price/inventory bootstrap happens inside the same transaction.
-// Once normalized commercial truth exists, price, currency, availability and
-// stock status are projections of that truth and cannot be overwritten by a
-// stale metadata payload. Dedicated inventory/price endpoints own subsequent
-// commercial changes.
+// Once normalized commercial records exist, metadata writes cannot overwrite
+// them with stale unitPrice/currency/availability/stockStatus values. Dedicated
+// inventory and price endpoints own subsequent commercial changes.
 func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID string, input StoreAssortmentInput, allowCustomImage bool) (StoreAssortment, error) {
 	storeID = strings.TrimSpace(storeID)
 	masterProductID = strings.TrimSpace(masterProductID)
@@ -267,7 +292,6 @@ func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, stor
 		return StoreAssortment{}, err
 	}
 
-	var existing StoreAssortment
 	existing, existingErr := scanAssortment(tx.QueryRowContext(ctx, `
 		SELECT `+assortmentColumns+`
 		FROM dsh_store_assortments
@@ -303,39 +327,44 @@ func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, stor
 	var a StoreAssortment
 	if !exists {
 		id := entityID("assortment")
-		row := tx.QueryRowContext(ctx, `
+		created, insertErr := scanAssortment(tx.QueryRowContext(ctx, `
 			INSERT INTO dsh_store_assortments (
 				id, store_id, master_product_id, unit_price, currency, available,
 				stock_status, local_note, custom_image_object_key, publication_status, submitted_by
 			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 			RETURNING `+assortmentColumns,
 			id, storeID, masterProductID, input.UnitPrice, currency, input.Available,
-			stockStatus, input.LocalNote, input.CustomImageObjectKey, publicationStatus, actorID)
-		created, insertErr := scanAssortment(row)
+			stockStatus, input.LocalNote, input.CustomImageObjectKey, publicationStatus, actorID))
 		if insertErr != nil {
 			return StoreAssortment{}, insertErr
 		}
 		a = created
 	} else {
-		legacyUnitPrice := input.UnitPrice
-		legacyCurrency := currency
-		legacyAvailable := input.Available
-		legacyStockStatus := stockStatus
+		// Metadata edits preserve all commercial projections by default. Current
+		// normalized values may refresh those projections, but the payload can no
+		// longer mutate commercial truth after creation.
+		legacyUnitPrice := existing.UnitPrice
+		legacyCurrency := existing.Currency
+		legacyAvailable := existing.Available
+		legacyStockStatus := existing.StockStatus
 
-		// Preserve every normalized commercial field once the normalized records
-		// exist. Metadata writes may change notes/images/publication, but only the
-		// dedicated price/inventory endpoints may change commercial truth.
-		truth, truthErr := readAssortmentRuntimeTruth(ctx, tx, existing.ID)
-		if truthErr == nil {
-			legacyUnitPrice = float64(truth.AmountMinor) / 100
-			legacyCurrency = truth.Currency
-			legacyAvailable = assortmentTruthPurchasable(truth)
-			legacyStockStatus = assortmentTruthStockStatus(truth)
-		} else if !errors.Is(truthErr, ErrNotFound) {
-			return StoreAssortment{}, truthErr
+		inventoryTruth, inventoryErr := readAssortmentInventoryTruth(ctx, tx, existing.ID)
+		if inventoryErr == nil {
+			legacyAvailable = assortmentInventoryAvailable(inventoryTruth)
+			legacyStockStatus = assortmentInventoryStockStatus(inventoryTruth)
+		} else if !errors.Is(inventoryErr, ErrNotFound) {
+			return StoreAssortment{}, inventoryErr
 		}
 
-		row := tx.QueryRowContext(ctx, `
+		runtimeTruth, runtimeErr := readAssortmentRuntimeTruth(ctx, tx, existing.ID)
+		if runtimeErr == nil {
+			legacyUnitPrice = float64(runtimeTruth.AmountMinor) / 100
+			legacyCurrency = runtimeTruth.Currency
+		} else if !errors.Is(runtimeErr, ErrNotFound) {
+			return StoreAssortment{}, runtimeErr
+		}
+
+		updated, updateErr := scanAssortment(tx.QueryRowContext(ctx, `
 			UPDATE dsh_store_assortments SET
 				unit_price=$1,
 				currency=$2,
@@ -350,8 +379,7 @@ func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, stor
 			WHERE id=$9 AND version=$10
 			RETURNING `+assortmentColumns,
 			legacyUnitPrice, legacyCurrency, legacyAvailable, legacyStockStatus, input.LocalNote,
-			input.CustomImageObjectKey, publicationStatus, actorID, existing.ID, *input.ExpectedVersion)
-		updated, updateErr := scanAssortment(row)
+			input.CustomImageObjectKey, publicationStatus, actorID, existing.ID, *input.ExpectedVersion))
 		if errors.Is(updateErr, ErrNotFound) {
 			return StoreAssortment{}, NewConflictError(tx, ctx, "dsh_store_assortments", existing.ID, input.ExpectedVersion)
 		}
@@ -364,8 +392,9 @@ func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, stor
 	if err := bootstrapAssortmentRuntimeTruth(ctx, tx, a); err != nil {
 		return StoreAssortment{}, err
 	}
+
 	truth, truthErr := readAssortmentRuntimeTruth(ctx, tx, a.ID)
-	if publicationStatus == "client_visible" && input.Available {
+	if publicationStatus == "client_visible" {
 		if truthErr != nil || !assortmentTruthPurchasable(truth) {
 			return StoreAssortment{}, fmt.Errorf("%w: client_visible assortment requires an effective price and purchasable inventory", ErrInvalid)
 		}
