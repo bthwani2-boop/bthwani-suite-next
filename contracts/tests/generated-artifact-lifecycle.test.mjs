@@ -47,16 +47,22 @@ test("materialization freshness binds sources, composed output, toolchain and ac
   for (const marker of [
     "sourceDigests",
     "bundleDigests",
+    "toolchainDigests",
+    "materializerPath",
+    "composerPath",
     "pnpm-lock.yaml",
     "generated-client-registry.json",
     "materializationKey",
     "currentArtifactHashes",
     "sameHashes",
-    "openapi:generate:all",
     ".artifacts/openapi/materialization.json",
   ]) {
     assert.match(materializer, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+
+  assert.match(materializer, /openapiTS\(pathToFileURL\(contractPath\)\)/);
+  assert.match(materializer, /toolchainDigests,\s*\n\}\)\);/);
+  assert.doesNotMatch(materializer, /spawnSync|openapi:generate:all|shell\s*:/);
 
   const postinstall = read("tools/scripts/postinstall-generate-clients.mjs");
   assert.match(postinstall, /materialize-openapi-artifacts\.mjs/);
