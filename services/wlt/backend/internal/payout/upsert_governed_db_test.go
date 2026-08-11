@@ -47,11 +47,11 @@ func executeCanonicalPayoutDestinationRequest(
 	operatorContextID, actorType, actorID, idempotencyKey, account string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	payload := governedDestinationInput{
-		BeneficiaryName:      "DB Partner Owner",
-		DestinationMethod:    "bank",
-		DestinationReference: account,
-		OperatorID:           "field-db-001",
+	payload := officialWalletDestinationInput{
+		BeneficiaryName:           "DB Partner Owner",
+		OfficialWalletProviderKey: testOfficialWalletProviderKey,
+		DestinationReference:      account,
+		OperatorID:                "field-db-001",
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -91,7 +91,10 @@ func TestCanonicalPayoutDestinationIdempotencyAndSingleActiveAreOperatorContextL
 		_, _ = db.Exec(`DELETE FROM wlt_payout_destination_requests WHERE operator_context_id IN ($1,$2)`, OperatorContextA, OperatorContextB)
 		_, _ = db.Exec(`DELETE FROM wlt_payout_audit_events WHERE operator_context_id IN ($1,$2) AND aggregate_type='payout_destination'`, OperatorContextA, OperatorContextB)
 		_, _ = db.Exec(`DELETE FROM wlt_payout_destinations WHERE operator_context_id IN ($1,$2) AND owner_actor_id=$3`, OperatorContextA, OperatorContextB, actorID)
+		_, _ = db.Exec(`DELETE FROM wlt_official_wallet_providers WHERE operator_context_id IN ($1,$2)`, OperatorContextA, OperatorContextB)
 	})
+	seedOfficialWalletProvider(t, db, OperatorContextA)
+	seedOfficialWalletProvider(t, db, OperatorContextB)
 
 	first := executeCanonicalPayoutDestinationRequest(t, db, OperatorContextA, "partner", actorID, "payout-key-0001", "123456789")
 	if first.Code != http.StatusCreated {

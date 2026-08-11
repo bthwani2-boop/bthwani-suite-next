@@ -110,8 +110,16 @@ func HandleApprovePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		// The destination must still be the owner's active version at approval
+		// time. A superseded row keeps whatever verification it earned, so
+		// checking the status alone would let money be approved to a
+		// destination the beneficiary has since replaced.
 		var destVerificationStatus string
-		if err := tx.QueryRowContext(r.Context(), "SELECT destination_verification_status FROM wlt_payout_destinations WHERE id = $1 AND operator_context_id = $2", req.PayoutDestinationID, operatorContextID).Scan(&destVerificationStatus); err != nil {
+		var destVersion int
+		var destActive bool
+		if err := tx.QueryRowContext(r.Context(),
+			"SELECT destination_verification_status, destination_version, active FROM wlt_payout_destinations WHERE id = $1 AND operator_context_id = $2",
+			req.PayoutDestinationID, operatorContextID).Scan(&destVerificationStatus, &destVersion, &destActive); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payout destination not found")
 			} else {
@@ -123,15 +131,19 @@ func HandleApprovePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusConflict, "DESTINATION_UNVERIFIED", "cannot approve payout to an unverified destination")
 			return
 		}
+		if !destActive {
+			shared.SendError(w, http.StatusConflict, "DESTINATION_SUPERSEDED", "cannot approve payout to a superseded destination version")
+			return
+		}
 
-		snapshotHash := sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%s|%d|%s", req.BeneficiaryActorID, req.BeneficiaryActorType, req.PayoutDestinationID, req.AmountMinorUnits, req.Currency)))
+		snapshotHash := sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%s|%d|%d|%s", req.BeneficiaryActorID, req.BeneficiaryActorType, req.PayoutDestinationID, destVersion, req.AmountMinorUnits, req.Currency)))
 		snapshotHashHex := hex.EncodeToString(snapshotHash[:])
 
 		_, err = tx.ExecContext(r.Context(), `
 			INSERT INTO wlt_approved_payout_snapshots
-			(operator_context_id, payout_request_id, payout_destination_id, amount_minor_units, currency, beneficiary_actor_id, beneficiary_actor_type, snapshot_hash, approved_by_operator_id)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-			operatorContextID, req.ID, req.PayoutDestinationID, req.AmountMinorUnits, req.Currency, req.BeneficiaryActorID, req.BeneficiaryActorType, snapshotHashHex, operatorID)
+			(operator_context_id, payout_request_id, payout_destination_id, destination_version, amount_minor_units, currency, beneficiary_actor_id, beneficiary_actor_type, snapshot_hash, approved_by_operator_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+			operatorContextID, req.ID, req.PayoutDestinationID, destVersion, req.AmountMinorUnits, req.Currency, req.BeneficiaryActorID, req.BeneficiaryActorType, snapshotHashHex, operatorID)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to snapshot approved payout")
 			return
