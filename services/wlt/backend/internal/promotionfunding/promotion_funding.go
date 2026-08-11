@@ -394,18 +394,25 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 	return true
 }
 
-func OperatorContextAssertion(w http.ResponseWriter, r *http.Request, payloadOperatorContextID string) (string, bool) {
-	payloadOperatorContextID = strings.TrimSpace(payloadOperatorContextID)
-	assertedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
-	if payloadOperatorContextID == "" {
-		shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "operatorContextId is required")
+// resolveTrustedOperatorContext returns the financial scope from the
+// authenticated service boundary, never from the request body.
+//
+// This previously returned the payload value as authoritative and only
+// cross-checked the X-Operator-Context-ID header when that header happened to
+// be present, so any caller who could reach the route could name the operator
+// context whose promotion budget it spent. A payload value is now accepted
+// only as a redundant assertion that must match the trusted scope.
+func resolveTrustedOperatorContext(w http.ResponseWriter, r *http.Request, payloadOperatorContextID string) (string, bool) {
+	trustedOperatorContextID, err := shared.RequireOperatorContext(r.Context())
+	if err != nil {
+		shared.SendError(w, http.StatusForbidden, "FINANCIAL_SCOPE_REQUIRED", err.Error())
 		return "", false
 	}
-	if assertedOperatorContextID != "" && assertedOperatorContextID != payloadOperatorContextID {
-		shared.SendError(w, http.StatusForbidden, "OperatorContext_MISMATCH", ErrOperatorContextMismatch.Error())
+	if asserted := strings.TrimSpace(payloadOperatorContextID); asserted != "" && asserted != trustedOperatorContextID {
+		shared.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_MISMATCH", ErrOperatorContextMismatch.Error())
 		return "", false
 	}
-	return payloadOperatorContextID, true
+	return trustedOperatorContextID, true
 }
 
 func writeError(w http.ResponseWriter, err error) {
@@ -429,9 +436,11 @@ func HandleReserve(db *sql.DB) http.HandlerFunc {
 		if !decodeJSON(w, r, &input) {
 			return
 		}
-		if _, ok := OperatorContextAssertion(w, r, input.OperatorContextID); !ok {
+		trustedOperatorContextID, ok := resolveTrustedOperatorContext(w, r, input.OperatorContextID)
+		if !ok {
 			return
 		}
+		input.OperatorContextID = trustedOperatorContextID
 		input.IdempotencyKey = r.Header.Get("Idempotency-Key")
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
 		reservation, err := Reserve(r.Context(), db, input)
@@ -445,7 +454,10 @@ func HandleReserve(db *sql.DB) http.HandlerFunc {
 
 func HandleGet(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		operatorContextID, ok := resolveTrustedOperatorContext(w, r, "")
+		if !ok {
+			return
+		}
 		reservation, err := Get(r.Context(), db, operatorContextID, r.PathValue("reservationId"))
 		if err != nil {
 			writeError(w, err)
@@ -461,9 +473,11 @@ func transitionHandler(db *sql.DB, target string) http.HandlerFunc {
 		if !decodeJSON(w, r, &input) {
 			return
 		}
-		if _, ok := OperatorContextAssertion(w, r, input.OperatorContextID); !ok {
+		trustedOperatorContextID, ok := resolveTrustedOperatorContext(w, r, input.OperatorContextID)
+		if !ok {
 			return
 		}
+		input.OperatorContextID = trustedOperatorContextID
 		input.IdempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 		input.CorrelationID = strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
 		var reservation *Reservation

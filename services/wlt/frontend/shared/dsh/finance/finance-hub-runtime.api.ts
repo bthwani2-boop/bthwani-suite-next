@@ -157,16 +157,8 @@ export function rejectPayoutRequest(payoutId: string): Promise<FinanceActionResu
   return transitionPayoutRequest(payoutId, "reject");
 }
 
-export function processPayoutRequest(payoutId: string): Promise<FinanceActionResult> {
-  return transitionPayoutRequest(payoutId, "process");
-}
-
 export function completePayoutRequest(payoutId: string): Promise<FinanceActionResult> {
   return transitionPayoutRequest(payoutId, "complete");
-}
-
-export function failPayoutRequest(payoutId: string): Promise<FinanceActionResult> {
-  return transitionPayoutRequest(payoutId, "fail");
 }
 
 export async function upsertSettlementPolicy(input: SettlementPolicyInput): Promise<SettlementActionResult> {

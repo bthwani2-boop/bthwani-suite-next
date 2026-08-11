@@ -27,7 +27,7 @@ func serveReadiness(t *testing.T, store runtimeReadinessStore) *httptest.Respons
 	t.Setenv("DSH_WLT_SERVICE_TOKEN", "configured-test-service-token")
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/wlt/readiness", nil)
-	handleReadiness(store).ServeHTTP(response, request)
+	handleReadiness(store, permittingDecisions{}).ServeHTTP(response, request)
 	return response
 }
 
@@ -96,4 +96,59 @@ func TestReadinessMigrationMatchesGovernedManifestSet(t *testing.T) {
 	if latestRequired != wltLatestMigration {
 		t.Fatalf("WLT readiness migration drift: latest_required=%s runtime=%s", latestRequired, wltLatestMigration)
 	}
+}
+
+// permittingDecisions stands in for a configured, answering finance kill
+// switch so the readiness tests above isolate the schema dependency.
+type permittingDecisions struct{}
+
+func (permittingDecisions) IsCapabilityKilled(context.Context, string, string) (bool, error) {
+	return false, nil
+}
+
+func TestReadinessReportsFinanceMutationDecisionDependency(t *testing.T) {
+	t.Setenv("WLT_DSH_BASE_URL", "http://dsh-api:8080")
+	t.Setenv("DSH_WLT_SERVICE_TOKEN", "configured-test-service-token")
+	ready := fakeRuntimeReadinessStore{ready: true}
+
+	for _, testCase := range []struct {
+		name           string
+		decisions      financeMutationDecisionProbe
+		wantDependency string
+		wantStatus     int
+	}{
+		{"absent dependency is not ready", nil, "missing", http.StatusServiceUnavailable},
+		{"unanswerable dependency is not ready", erroringDecisions{}, "unavailable", http.StatusServiceUnavailable},
+		{"killed switch is a healthy refusal", killedDecisions{}, "killed", http.StatusOK},
+		{"permitting switch is ready", permittingDecisions{}, "permitting", http.StatusOK},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			response := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodGet, "/wlt/readiness", nil)
+			handleReadiness(ready, testCase.decisions).ServeHTTP(response, request)
+
+			if response.Code != testCase.wantStatus {
+				t.Fatalf("status = %d, want %d (%s)", response.Code, testCase.wantStatus, response.Body.String())
+			}
+			var decoded ReadinessResponse
+			if err := json.Unmarshal(response.Body.Bytes(), &decoded); err != nil {
+				t.Fatalf("decode readiness: %v", err)
+			}
+			if got := decoded.Dependencies["finance_mutation_decision"]; got != testCase.wantDependency {
+				t.Fatalf("finance_mutation_decision = %q, want %q", got, testCase.wantDependency)
+			}
+		})
+	}
+}
+
+type erroringDecisions struct{}
+
+func (erroringDecisions) IsCapabilityKilled(context.Context, string, string) (bool, error) {
+	return true, errors.New("decision authority unreachable")
+}
+
+type killedDecisions struct{}
+
+func (killedDecisions) IsCapabilityKilled(context.Context, string, string) (bool, error) {
+	return true, nil
 }

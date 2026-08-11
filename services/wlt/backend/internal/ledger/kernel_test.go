@@ -13,6 +13,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"wlt-api/internal/shared"
+	"wlt-api/internal/testsupport"
 )
 
 func getTestDB(t *testing.T) *sql.DB {
@@ -40,7 +41,7 @@ func getTestDB(t *testing.T) *sql.DB {
 }
 
 func uniqueActorID(prefix string) string {
-	return fmt.Sprintf("%s-%d", prefix, time.Now().UnixNano())
+	return testsupport.UniqueID(prefix)
 }
 
 func trustedLedgerTestContext() context.Context {

@@ -142,7 +142,10 @@ if (!/method == http\.MethodPost && path == "\/wlt\/settlements"/.test(read(dshC
 
 const wltServerFile = "services/wlt/backend/internal/http/server.go";
 const wltServer = read(wltServerFile);
-if (!/POST \/wlt\/settlements["`],\s*gate\(serviceAuth\(settlement\.HandleCreateEvidenceBackedSettlement\(db\)\)\)/.test(wltServer)) violations.push({ file: wltServerFile, line: 0, message: "WLT_EVIDENCE_BACKED_SETTLEMENT_ROUTE_BINDING_DRIFT" });
+// mutation() applies the configuration gate, the DSH service-caller gate and
+// the finance kill switch. Registering this route any other way (including the
+// former gate(serviceAuth(...)) spelling, which had no kill switch) is drift.
+if (!/mutation\(\s*["`]POST \/wlt\/settlements["`],\s*settlement\.HandleCreateEvidenceBackedSettlement\(db\)\)/.test(wltServer)) violations.push({ file: wltServerFile, line: 0, message: "WLT_EVIDENCE_BACKED_SETTLEMENT_ROUTE_BINDING_DRIFT" });
 if (!/PUT \/wlt\/settlement-policies\/\{partnerId\}/.test(wltServer)) violations.push({ file: wltServerFile, line: 0, message: "WLT_SETTLEMENT_POLICY_ROUTE_MISSING" });
 
 const dshServerFile = "services/dsh/backend/internal/http/server.go";

@@ -200,5 +200,4 @@ func registerRepresentativeFinanceRoutes(mux *http.ServeMux, s *protectedStoreSe
 	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/reject", s.withPermission("control-panel", FinancePermissionManage, s.handleRejectFinanceCommission))
 	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/reverse", s.withPermission("control-panel", FinancePermissionManage, s.handleReverseFinanceCommission))
 	mux.HandleFunc("GET /dsh/control-panel/finance/payout-requests/{payoutId}/audit", s.withPermission("control-panel", FinancePermissionRead, s.handleFinancePayoutAudit))
-	mux.HandleFunc("POST /dsh/control-panel/finance/payout-requests/{payoutId}/reconcile", s.withPermission("control-panel", FinancePermissionManage, s.handleReconcileFinancePayoutRequest))
 }

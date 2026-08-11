@@ -44,20 +44,13 @@ func (s *protectedStoreServer) proxyFinancePayoutTransition(w http.ResponseWrite
 	_, _ = w.Write(body)
 }
 
-// POST /dsh/control-panel/finance/payout-requests/{payoutId}/process
-func (s *protectedStoreServer) handleProcessFinancePayoutRequest(w http.ResponseWriter, r *http.Request) {
-	s.proxyFinancePayoutTransition(w, r, "process")
-}
-
 // POST /dsh/control-panel/finance/payout-requests/{payoutId}/complete
+//
+// The provider-managed process/fail transitions are gone: the current Cash-Out
+// model executes and independently verifies an external official-wallet
+// transfer against a frozen settlement batch, and completion reads that
+// verified evidence. DSH proxies the governed transitions only; it never
+// invents a financial outcome.
 func (s *protectedStoreServer) handleCompleteFinancePayoutRequest(w http.ResponseWriter, r *http.Request) {
 	s.proxyFinancePayoutTransition(w, r, "complete")
-}
-
-// POST /dsh/control-panel/finance/payout-requests/{payoutId}/fail
-// WLT intentionally returns RECONCILIATION_REQUIRED for provider-result
-// journeys; exposing this route keeps the contract explicit without letting
-// DSH invent a financial outcome.
-func (s *protectedStoreServer) handleFailFinancePayoutRequest(w http.ResponseWriter, r *http.Request) {
-	s.proxyFinancePayoutTransition(w, r, "fail")
 }

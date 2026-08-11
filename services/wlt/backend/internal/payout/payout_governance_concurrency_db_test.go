@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -129,9 +130,41 @@ func TestApprovedPayoutSnapshotIsImmutable(t *testing.T) {
 		t.Fatalf("snapshot amount mismatch: %d", amount)
 	}
 
-	// The approver cannot also process (maker/checker: process differs from approver).
-	sameOperatorProcess := processPayout(t, db, operatorContextID, snapshotID, "finance-approver-1")
-	_ = sameOperatorProcess // processPayout resolves the payout id internally; see helper.
+	// The approver cannot also execute the external transfer they approved.
+	batchID := freezeBatchForSnapshot(t, db, operatorContextID, snapshotID)
+	ctx := shared.WithOperatorContext(t.Context(), operatorContextID)
+	_, err := RecordManualTransferExecution(ctx, db, batchID, RecordManualExecutionInput{
+		ApprovedSnapshotID:        snapshotID,
+		ExternalTransferReference: "sod-ref-" + snapshotID,
+		AmountMinorUnits:          amount,
+		Currency:                  "YER",
+		OperatorID:                "finance-approver-1",
+	}, "sod-corr")
+	if !errors.Is(err, ErrSeparationOfDuties) {
+		t.Fatalf("expected the approver to be barred from executing their own approval, got %v", err)
+	}
+}
+
+// freezeBatchForSnapshot puts one approved snapshot into a frozen batch, which
+// is the only state external execution may be recorded against.
+func freezeBatchForSnapshot(t *testing.T, db *sql.DB, operatorContextID, snapshotID string) string {
+	t.Helper()
+	var batchID string
+	if err := db.QueryRow(`INSERT INTO wlt_settlement_batches
+		(operator_context_id, provider_id, currency, batch_hash, control_total_minor_units, row_count, created_by_operator_id, status, frozen_at)
+		VALUES ($1, 'test-provider', 'YER', 'test-hash-'||$2, 10000, 1, 'finance-maker-1', 'frozen', now())
+		RETURNING id`, operatorContextID, snapshotID).Scan(&batchID); err != nil {
+		t.Fatalf("seed frozen batch: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO wlt_settlement_batch_rows (batch_id, approved_snapshot_id) VALUES ($1, $2)`, batchID, snapshotID); err != nil {
+		t.Fatalf("seed batch row: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM wlt_manual_transfer_evidence WHERE batch_id = $1`, batchID)
+		_, _ = db.Exec(`DELETE FROM wlt_settlement_batch_rows WHERE batch_id = $1`, batchID)
+		_, _ = db.Exec(`DELETE FROM wlt_settlement_batches WHERE id = $1`, batchID)
+	})
+	return batchID
 }
 
 func payoutIDFromResponse(t *testing.T, res *httptest.ResponseRecorder) string {
@@ -165,22 +198,5 @@ func approvePayout(t *testing.T, db *sql.DB, operatorContextID, payoutID, operat
 	req.Header.Set("x-correlation-id", "test-approve-corr")
 	res := httptest.NewRecorder()
 	HandleApprovePayoutRequestSovereign(db)(res, req)
-	return res
-}
-
-func processPayout(t *testing.T, db *sql.DB, operatorContextID, snapshotID, operatorID string) *httptest.ResponseRecorder {
-	t.Helper()
-	var payoutID string
-	if err := db.QueryRow("SELECT payout_request_id FROM wlt_approved_payout_snapshots WHERE id = $1 AND operator_context_id = $2", snapshotID, operatorContextID).Scan(&payoutID); err != nil {
-		t.Fatalf("failed to resolve payout ID from snapshot: %v", err)
-	}
-	body, _ := json.Marshal(map[string]any{"operatorId": operatorID})
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/wlt/payouts/%s/process", payoutID), bytes.NewReader(body))
-	req = req.WithContext(shared.WithOperatorContext(req.Context(), operatorContextID))
-	req.SetPathValue("payoutId", payoutID)
-	req.Header.Set("x-operator-context-id", operatorContextID)
-	req.Header.Set("x-correlation-id", "test-process-corr")
-	res := httptest.NewRecorder()
-	HandleProcessGovernedPayoutRequest(db)(res, req)
 	return res
 }

@@ -287,32 +287,6 @@ func (s *protectedStoreServer) handleFieldCreatePayoutRequest(w http.ResponseWri
 	s.handleActorPayoutCreate(w, r, "field")
 }
 
-func (s *protectedStoreServer) handleReconcileFinancePayoutRequest(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.ActorFromContext(r.Context())
-	if !ok {
-		return
-	}
-	operatorContextID, ok := requiredPaymentPlatformContext(w, actor.OperatorContextID)
-	if !ok {
-		return
-	}
-	payoutID := strings.TrimSpace(r.PathValue("payoutId"))
-	if payoutID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId is required")
-		return
-	}
-	status, responseBody, err := s.wlt.FinanceWriteWithOperatorContext(
-		r.Context(),
-		http.MethodPost,
-		"/wlt/payout-requests/"+url.PathEscape(payoutID)+"/reconcile",
-		operatorWriteBody(actor.ID),
-		correlationForActorMutation(r, "payout-reconcile-"+payoutID),
-		r.Header.Get("Idempotency-Key"),
-		operatorContextID,
-	)
-	writeWltActorFinanceResponse(w, status, responseBody, err)
-}
-
 func (s *protectedStoreServer) handleFinancePayoutAudit(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {

@@ -354,8 +354,6 @@ paths:
     $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1payout-destination~1deactivate"
   /dsh/control-panel/finance/payout-requests/{payoutId}/audit:
     $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1audit"
-  /dsh/control-panel/finance/payout-requests/{payoutId}/reconcile:
-    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1reconcile"
   /dsh/control-panel/finance/cod-reconciliation-cases:
     $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases"
   /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign:
@@ -416,12 +414,8 @@ paths:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1approve"
   /dsh/control-panel/finance/payout-requests/{payoutId}/reject:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1reject"
-  /dsh/control-panel/finance/payout-requests/{payoutId}/process:
-    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1process"
   /dsh/control-panel/finance/payout-requests/{payoutId}/complete:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1complete"
-  /dsh/control-panel/finance/payout-requests/{payoutId}/fail:
-    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1fail"
   /dsh/control-panel/finance/settlements/from-delivered-orders:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1settlements~1from-delivered-orders"
   /dsh/control-panel/finance/settlement-policies/{partnerId}:

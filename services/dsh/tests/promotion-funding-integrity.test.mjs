@@ -28,8 +28,10 @@ const cases = [
     assert.match(dshReadback, /GetPromotionFundingReservation/);
     assert.match(wltFundingContract, /x-bthwani-owner: services\/wlt/);
     assert.match(dshMarketingContract, /x-bthwani-owner: services\/dsh/);
-    assert.match(wltServer, /POST \/wlt\/promotion-funding\/reservations"[\s\S]*gate\(serviceAuth\(promotionfunding\.HandleReserve/);
-    assert.match(wltServer, /GET \/wlt\/promotion-funding\/reservations\/\{reservationId\}"[\s\S]*readGate\(promotionfunding\.HandleGet/);
+    // mutation()/read() are the gated registration helpers: mutation() adds the
+    // configuration gate, service-caller auth and the finance kill switch.
+    assert.match(wltServer, /mutation\("POST \/wlt\/promotion-funding\/reservations", promotionfunding\.HandleReserve/);
+    assert.match(wltServer, /read\("GET \/wlt\/promotion-funding\/reservations\/\{reservationId\}", promotionfunding\.HandleGet/);
     assert.match(wltServer, /\/commit"[\s\S]*HandleCommit/);
     assert.match(wltServer, /\/release"[\s\S]*HandleRelease/);
     assert.match(wltServer, /\/reverse"[\s\S]*HandleReverse/);

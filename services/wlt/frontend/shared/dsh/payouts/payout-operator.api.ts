@@ -24,27 +24,6 @@ function classify(error: ErrorShape): string {
   return error.code ?? `HTTP_${error.status ?? "ERROR"}`;
 }
 
-export async function reconcilePayoutRequest(payoutId: string): Promise<PayoutOperatorActionResult> {
-  try {
-    await request<unknown>(
-      `/dsh/control-panel/finance/payout-requests/${encodeURIComponent(payoutId)}/reconcile`,
-      {
-        method: "POST",
-        body: {},
-        idempotencyKey: `payout-reconcile:${payoutId}`,
-      },
-    );
-    return { ok: true };
-  } catch (error) {
-    const err = error as ErrorShape;
-    return {
-      ok: false,
-      code: classify(err),
-      message: err.message ?? "تعذر الاستعلام عن نتيجة الصرف ومطابقتها.",
-    };
-  }
-}
-
 export type PayoutAuditEvent = {
   readonly id: string;
   readonly aggregateType: string;

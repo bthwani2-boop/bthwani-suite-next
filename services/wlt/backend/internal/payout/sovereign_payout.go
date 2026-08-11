@@ -200,13 +200,18 @@ func HandleRejectPayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusConflict, "INVALID_STATUS", "only pending or approved payouts can be rejected")
 			return
 		}
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "OperatorContext_REQUIRED", err.Error())
+			return
+		}
 		result, err := tx.ExecContext(r.Context(), `
 			UPDATE wlt_wallets
 			SET available_balance_minor_units = available_balance_minor_units + $1,
 			    held_balance_minor_units = held_balance_minor_units - $1,
 			    updated_at = now()
-			WHERE actor_id = $2 AND actor_type = $3 AND held_balance_minor_units >= $1`,
-			req.AmountMinorUnits, req.BeneficiaryActorID, req.BeneficiaryActorType)
+			WHERE operator_context_id = $4 AND actor_id = $2 AND actor_type = $3 AND held_balance_minor_units >= $1`,
+			req.AmountMinorUnits, req.BeneficiaryActorID, req.BeneficiaryActorType, operatorContextID)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to release held payout funds")
 			return
@@ -236,68 +241,6 @@ func HandleRejectPayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func markProviderResultUnknown(ctx context.Context, db *sql.DB, payoutID string, cause error, correlationID string, operatorID string) {
-	reason := "provider result unknown"
-	if cause != nil {
-		reason = cause.Error()
-	}
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return
-	}
-	defer tx.Rollback() //nolint:errcheck
-	_, _ = tx.ExecContext(ctx, `
-		UPDATE wlt_payout_requests
-		SET status = 'provider_result_unknown', provider_status = 'unknown', failure_reason = $2
-		WHERE id = $1 AND status = 'provider_pending'`, payoutID, reason)
-	_ = appendPayoutAudit(ctx, tx, "payout_request", payoutID, "payout.provider_unknown", operatorID, "operator", reason, correlationID, map[string]any{
-		"status": "provider_result_unknown",
-	})
-	_ = tx.Commit()
-}
-
-func failProviderDecline(ctx context.Context, db *sql.DB, payoutID string, cause error, correlationID string, operatorID string) error {
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	req, err := lockedPayout(ctx, tx, payoutID)
-	if err != nil {
-		return err
-	}
-	if req.Status != "provider_pending" {
-		return fmt.Errorf("payout is no longer provider_pending")
-	}
-	result, err := tx.ExecContext(ctx, `
-		UPDATE wlt_wallets
-		SET available_balance_minor_units = available_balance_minor_units + $1,
-		    held_balance_minor_units = held_balance_minor_units - $1,
-		    updated_at = now()
-		WHERE actor_id = $2 AND actor_type = $3 AND held_balance_minor_units >= $1`,
-		req.AmountMinorUnits, req.BeneficiaryActorID, req.BeneficiaryActorType)
-	if err != nil {
-		return err
-	}
-	if affected, _ := result.RowsAffected(); affected != 1 {
-		return fmt.Errorf("held wallet balance mismatch while failing provider payout")
-	}
-	reason := cause.Error()
-	if _, err := tx.ExecContext(ctx, `
-		UPDATE wlt_payout_requests
-		SET status = 'failed', failed_at = now(), provider_status = 'declined', failure_reason = $2
-		WHERE id = $1 AND status = 'provider_pending'`, payoutID, reason); err != nil {
-		return err
-	}
-	if err := appendPayoutAudit(ctx, tx, "payout_request", payoutID, "payout.failed", operatorID, "operator", reason, correlationID, map[string]any{
-		"status":         "failed",
-		"providerStatus": "declined",
-	}); err != nil {
-		return err
-	}
-	return tx.Commit()
-}
-
 func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorID, ok := decodeRequiredOperator(w, r)
@@ -324,31 +267,40 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read payout request")
 			return
 		}
-		var providerReference, providerStatus string
-		if err := tx.QueryRowContext(r.Context(), `SELECT provider_reference, provider_status FROM wlt_payout_requests WHERE id = $1`, req.ID).Scan(&providerReference, &providerStatus); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read payout provider proof")
-			return
-		}
 		operatorContextID, err := shared.RequireOperatorContext(r.Context())
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "OperatorContext_REQUIRED", err.Error())
 			return
 		}
-		var destinationMethod string
-		if err := tx.QueryRowContext(r.Context(), `SELECT destination_method FROM wlt_payout_destinations WHERE id = $1 AND operator_context_id = $2`, req.PayoutDestinationID, operatorContextID).Scan(&destinationMethod); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read payout destination method")
+		if req.Status != "verified" {
+			shared.SendError(w, http.StatusConflict, "VERIFIED_EXECUTION_REQUIRED", "payout cannot complete before its external transfer is executed and independently verified")
 			return
 		}
-		if destinationMethod == "manual" {
-			shared.SendError(w, http.StatusConflict, "MANUAL_COMPLETION_PROHIBITED", "manual payouts must be completed through daily finance close reconciliation")
+		// The executed amount is re-read from the evidence rather than trusted
+		// from the request, so a completion cannot settle a different sum than
+		// the one that actually left the official wallet.
+		var evidenceAmount int64
+		var evidenceCurrency, executedBy, verifiedBy string
+		if err := tx.QueryRowContext(r.Context(), `
+			SELECT e.amount_minor_units, e.currency, e.executed_by_operator_id, e.verified_by_operator_id
+			FROM wlt_manual_transfer_evidence e
+			JOIN wlt_approved_payout_snapshots s ON s.id = e.approved_snapshot_id
+			WHERE s.payout_request_id = $1 AND e.operator_context_id = $2 AND e.verified_at IS NOT NULL
+			FOR UPDATE OF e`, req.ID, operatorContextID,
+		).Scan(&evidenceAmount, &evidenceCurrency, &executedBy, &verifiedBy); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				shared.SendError(w, http.StatusConflict, "VERIFIED_EXECUTION_REQUIRED", "no verified manual transfer evidence exists for this payout")
+				return
+			}
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read manual transfer evidence")
 			return
 		}
-		if req.Status != "processing" || providerReference == "" || (providerStatus != "processed" && providerStatus != "succeeded") {
-			shared.SendError(w, http.StatusConflict, "PROVIDER_PROOF_REQUIRED", "payout cannot complete without successful provider proof")
+		if evidenceAmount != req.AmountMinorUnits || evidenceCurrency != req.Currency {
+			shared.SendError(w, http.StatusConflict, "EVIDENCE_SNAPSHOT_MISMATCH", "verified execution evidence does not match the approved payout amount")
 			return
 		}
-		if req.ApprovedByOperatorID == "" || req.ProcessedByOperatorID == "" || operatorID == req.ApprovedByOperatorID || operatorID == req.ProcessedByOperatorID {
-			shared.SendError(w, http.StatusForbidden, "MAKER_CHECKER_VIOLATION", "completion operator must differ from payout approver and processor")
+		if req.ApprovedByOperatorID == "" || operatorID == req.ApprovedByOperatorID || operatorID == executedBy || operatorID == verifiedBy {
+			shared.SendError(w, http.StatusForbidden, "MAKER_CHECKER_VIOLATION", "completion operator must differ from the payout approver, executor and verifier")
 			return
 		}
 		result, err := tx.ExecContext(r.Context(), `
@@ -356,8 +308,8 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			SET held_balance_minor_units = held_balance_minor_units - $1,
 			    paid_total_minor_units = paid_total_minor_units + $1,
 			    updated_at = now()
-			WHERE actor_id = $2 AND actor_type = $3 AND held_balance_minor_units >= $1`,
-			req.AmountMinorUnits, req.BeneficiaryActorID, req.BeneficiaryActorType)
+			WHERE operator_context_id = $4 AND actor_id = $2 AND actor_type = $3 AND held_balance_minor_units >= $1`,
+			req.AmountMinorUnits, req.BeneficiaryActorID, req.BeneficiaryActorType, operatorContextID)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to settle held payout funds")
 			return
@@ -368,14 +320,14 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 		}
 		lines := []ledger.LedgerLine{
 			{AccountType: "wallet", ActorType: req.BeneficiaryActorType, ActorID: req.BeneficiaryActorID, DebitCredit: "debit", AmountMinorUnits: req.AmountMinorUnits, Currency: req.Currency},
-			{AccountType: "provider_clearing", DebitCredit: "credit", AmountMinorUnits: req.AmountMinorUnits, Currency: req.Currency},
+			{AccountType: "external_settlement_cash", DebitCredit: "credit", AmountMinorUnits: req.AmountMinorUnits, Currency: req.Currency},
 		}
 		if _, err := ledger.PostLedgerTransaction(r.Context(), tx, "payout_completed", "payout_request", req.ID, lines, ledger.Actor{ID: operatorID, Type: "operator"}); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to post payout journal")
 			return
 		}
 		updated, err := payoutAfterUpdate(r.Context(), tx,
-			"UPDATE wlt_payout_requests SET status = 'completed', completed_at = now(), completed_by_operator_id = $2, operator_id = $2 WHERE id = $1 AND status = 'processing' RETURNING "+requestCols,
+			"UPDATE wlt_payout_requests SET status = 'completed', completed_at = now(), completed_by_operator_id = $2, operator_id = $2 WHERE id = $1 AND status = 'verified' RETURNING "+requestCols,
 			req.ID, operatorID)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to complete payout request")
@@ -395,12 +347,3 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func HandleFailPayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		_ = db
-		if _, ok := decodeRequiredOperator(w, r); !ok {
-			return
-		}
-		shared.SendError(w, http.StatusConflict, "RECONCILIATION_REQUIRED", "provider-result payouts must be resolved through reconciliation or inquiry; manual fail cannot release held funds")
-	}
-}

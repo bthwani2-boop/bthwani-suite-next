@@ -197,22 +197,6 @@ paths:
         '409': { $ref: '#/components/responses/PayoutConflict' }
       security:
         - serviceBearer: []
-  /wlt/payout-requests/{payoutId}/process:
-    post:
-      tags: [ "wlt-payout-requests" ]
-      operationId: processWltPayoutRequest
-      parameters:
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/PayoutId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
-      requestBody: { $ref: '#/components/requestBodies/OperatorBody' }
-      responses:
-        '200': { $ref: '#/components/responses/PayoutResponse' }
-        '403': { $ref: '#/components/responses/PayoutForbidden' }
-        '409': { $ref: '#/components/responses/PayoutConflict' }
-        '502': { $ref: '#/components/responses/ProviderError' }
-      security:
-        - serviceBearer: []
   /wlt/payout-requests/{payoutId}/complete:
     post:
       tags: [ "wlt-payout-requests" ]
@@ -226,26 +210,6 @@ paths:
         '200': { $ref: '#/components/responses/PayoutResponse' }
         '403': { $ref: '#/components/responses/PayoutForbidden' }
         '409': { $ref: '#/components/responses/PayoutConflict' }
-      security:
-        - serviceBearer: []
-  /wlt/payout-requests/{payoutId}/reconcile:
-    post:
-      tags: [ "wlt-payout-requests" ]
-      operationId: reconcileWltPayoutRequest
-      parameters:
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/PayoutId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
-      requestBody: { $ref: '#/components/requestBodies/OperatorBody' }
-      responses:
-        '200':
-          description: Inquiry resolved to a provider-proven success or confirmed failure.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/PayoutRequestEnvelope' }
-        '403': { $ref: '#/components/responses/PayoutForbidden' }
-        '409': { $ref: '#/components/responses/PayoutConflict' }
-        '502': { $ref: '#/components/responses/ProviderError' }
       security:
         - serviceBearer: []
   /wlt/payout-requests/{payoutId}/audit:
@@ -340,7 +304,12 @@ paths:
   /wlt/settlement-batches/{batchId}/evidence:
     post:
       tags: [ "wlt-settlement-batches" ]
-      operationId: submitWltManualTransferEvidence
+      operationId: recordWltManualTransferExecution
+      description: >-
+        Records that a finance executor moved money out of a BThwani
+        official-wallet account for one approved payout, advancing that payout
+        to executed. It does not complete the payout: completion requires
+        independent verification by a different operator.
       parameters:
         - name: batchId
           in: path
@@ -358,15 +327,45 @@ paths:
               properties:
                 approvedSnapshotId: { type: string, minLength: 1 }
                 externalTransferReference: { type: string, minLength: 1 }
+                evidenceReference: { type: string }
                 amountMinorUnits: { type: integer, minimum: 1 }
                 currency: { type: string, minLength: 3, maxLength: 3 }
                 operatorId: { type: string, minLength: 1 }
       responses:
         '201':
-          description: Manual transfer evidence accepted.
+          description: Manual transfer execution recorded, awaiting independent verification.
           content:
             application/json:
-              schema: { type: object, additionalProperties: true }
+              schema: { $ref: '#/components/schemas/ManualTransferEvidenceEnvelope' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
+        '409': { $ref: '#/components/responses/PayoutConflict' }
+      security:
+        - serviceBearer: []
+  /wlt/settlement-batches/{batchId}/evidence/{evidenceId}/verify:
+    post:
+      tags: [ "wlt-settlement-batches" ]
+      operationId: verifyWltManualTransferExecution
+      description: >-
+        Independent verification of a recorded external transfer. The verifier
+        must differ from both the approver and the executor.
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: evidenceId
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+      requestBody: { $ref: '#/components/requestBodies/OperatorBody' }
+      responses:
+        '200':
+          description: External transfer independently verified.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ManualTransferEvidenceEnvelope' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
         '409': { $ref: '#/components/responses/PayoutConflict' }
       security:
         - serviceBearer: []
@@ -463,16 +462,24 @@ components:
       enum: [ partner, captain, field ]
     PayoutStatus:
       type: string
+      description: >-
+        The governed manual external settlement lifecycle is
+        pending -> approved -> executed -> verified -> completed, with a
+        different operator owning each transition. provider_pending,
+        provider_result_unknown and processing remain only on historical rows
+        from the retired provider-managed Cash-Out model.
       enum:
         [
           pending,
           approved,
-          provider_pending,
-          provider_result_unknown,
-          processing,
+          executed,
+          verified,
           completed,
           rejected,
-          failed
+          failed,
+          provider_pending,
+          provider_result_unknown,
+          processing
         ]
     ReconciliationStatus:
       type: string
@@ -596,22 +603,56 @@ components:
         requestedAt: { type: string, format: date-time }
         approvedAt: { type: [ string, 'null' ], format: date-time }
         rejectedAt: { type: [ string, 'null' ], format: date-time }
-        processedAt: { type: [ string, 'null' ], format: date-time }
+        executedAt: { type: [ string, 'null' ], format: date-time }
+        verifiedAt: { type: [ string, 'null' ], format: date-time }
         completedAt: { type: [ string, 'null' ], format: date-time }
         failedAt: { type: [ string, 'null' ], format: date-time }
-        reconciledAt: { type: [ string, 'null' ], format: date-time }
         failureReason: { type: string }
-        providerReference: { type: string }
-        providerStatus: { type: string }
         approvedByOperatorId: { type: string }
-        processedByOperatorId: { type: string }
+        rejectedByOperatorId: { type: string }
+        executedByOperatorId: { type: string }
+        verifiedByOperatorId: { type: string }
         completedByOperatorId: { type: string }
-        reconciledByOperatorId: { type: string }
+        failedByOperatorId: { type: string }
     PayoutRequestEnvelope:
       type: object
       required: [ payoutRequest ]
       properties:
         payoutRequest: { $ref: '#/components/schemas/PayoutRequest' }
+    ManualTransferEvidence:
+      type: object
+      description: >-
+        Evidence of one external official-wallet transfer. verifiedAt is null
+        until a different operator independently verifies it; an unverified row
+        blocks the business date from closing.
+      required:
+        [
+          id,
+          batchId,
+          approvedSnapshotId,
+          externalTransferReference,
+          amountMinorUnits,
+          currency,
+          executedByOperatorId,
+          executedAt
+        ]
+      properties:
+        id: { type: string }
+        batchId: { type: string }
+        approvedSnapshotId: { type: string }
+        externalTransferReference: { type: string }
+        evidenceReference: { type: string }
+        amountMinorUnits: { type: integer }
+        currency: { type: string }
+        executedByOperatorId: { type: string }
+        executedAt: { type: string, format: date-time }
+        verifiedByOperatorId: { type: string }
+        verifiedAt: { type: [ string, 'null' ], format: date-time }
+    ManualTransferEvidenceEnvelope:
+      type: object
+      required: [ manualTransferEvidence ]
+      properties:
+        manualTransferEvidence: { $ref: '#/components/schemas/ManualTransferEvidence' }
     PayoutAuditEvent:
       type: object
       required:

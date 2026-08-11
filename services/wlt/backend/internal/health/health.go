@@ -13,7 +13,7 @@ import (
 
 const (
 	wltMigrationServiceName = "wlt"
-	wltLatestMigration      = "wlt-913_official_wallet_destination_versioning.sql"
+	wltLatestMigration      = "wlt-916_daily_finance_close_operator_context_key.sql"
 	wltReadinessTimeout     = 2 * time.Second
 )
 
@@ -75,15 +75,39 @@ func HandleHealth(w http.ResponseWriter, r *http.Request) {
 	shared.SendJSON(w, http.StatusOK, resp)
 }
 
-func HandleReadiness(db *sql.DB) http.HandlerFunc {
+// financeMutationDecisionProbe is the readiness view of the finance kill
+// switch. Readiness reports it honestly instead of hiding it: an absent or
+// unanswerable decision dependency blocks every financial mutation, so
+// reporting "ready" while it is missing would misrepresent the instance.
+// Declared here rather than importing the wallet package so health stays a
+// leaf dependency.
+type financeMutationDecisionProbe interface {
+	IsCapabilityKilled(ctx context.Context, capability string, actorID string) (bool, error)
+}
+
+func HandleReadiness(db *sql.DB, decisions financeMutationDecisionProbe) http.HandlerFunc {
 	var readinessStore runtimeReadinessStore
 	if db != nil {
 		readinessStore = sqlRuntimeReadinessStore{db: db}
 	}
-	return handleReadiness(readinessStore)
+	return handleReadiness(readinessStore, decisions)
 }
 
-func handleReadiness(readinessStore runtimeReadinessStore) http.HandlerFunc {
+func financeMutationDecisionStatus(ctx context.Context, decisions financeMutationDecisionProbe) string {
+	if decisions == nil {
+		return "missing"
+	}
+	killed, err := decisions.IsCapabilityKilled(ctx, "finance_mutation", "service")
+	if err != nil {
+		return "unavailable"
+	}
+	if killed {
+		return "killed"
+	}
+	return "permitting"
+}
+
+func handleReadiness(readinessStore runtimeReadinessStore, decisions financeMutationDecisionProbe) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		dbStatus := "not_ready"
@@ -97,10 +121,16 @@ func handleReadiness(readinessStore runtimeReadinessStore) http.HandlerFunc {
 		}
 		dshCallbackBaseURLStatus := configuredStatus(os.Getenv("WLT_DSH_BASE_URL"))
 		dshCallbackTokenStatus := configuredStatus(os.Getenv("DSH_WLT_SERVICE_TOKEN"))
+		decisionStatus := financeMutationDecisionStatus(r.Context(), decisions)
 
 		overallStatus := "ready"
 		httpStatus := http.StatusOK
-		if dbStatus != "ready" || dshCallbackBaseURLStatus != "configured" || dshCallbackTokenStatus != "configured" {
+		// "killed" is a deliberate operational state, not an unhealthy one:
+		// the instance is correctly configured and correctly refusing
+		// mutations. "missing" and "unavailable" are genuine dependency
+		// failures.
+		if dbStatus != "ready" || dshCallbackBaseURLStatus != "configured" || dshCallbackTokenStatus != "configured" ||
+			decisionStatus == "missing" || decisionStatus == "unavailable" {
 			overallStatus = "not_ready"
 			httpStatus = http.StatusServiceUnavailable
 		}
@@ -112,6 +142,7 @@ func handleReadiness(readinessStore runtimeReadinessStore) http.HandlerFunc {
 				"postgres":                   dbStatus,
 				"dsh_callback_base_url":      dshCallbackBaseURLStatus,
 				"dsh_callback_service_token": dshCallbackTokenStatus,
+				"finance_mutation_decision":  decisionStatus,
 			},
 			CheckedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		}

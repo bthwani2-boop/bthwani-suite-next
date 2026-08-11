@@ -2,15 +2,15 @@ package http
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	_ "github.com/lib/pq"
+
+	"wlt-api/internal/testsupport"
 )
 
 func getTestDB(t *testing.T) *sql.DB {
@@ -40,7 +40,7 @@ func getTestDB(t *testing.T) *sql.DB {
 }
 
 func uniqueSuffix() string {
-	return fmt.Sprintf("%d", time.Now().UnixNano())
+	return testsupport.UniqueSuffix()
 }
 
 func requireTestTable(t *testing.T, db *sql.DB, table string) {

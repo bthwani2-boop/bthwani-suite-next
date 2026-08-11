@@ -64,21 +64,31 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 	var totalCashin int64
 	var closingBalance int64
 
-	// We'll compute total payouts from wlt_ledger_entries (debits from wallet accounts might not equal cashin/payout)
-	// A simpler aggregate is to sum completed wlt_payout_requests for the date, but we use the ledger for true financial close.
+	// Day totals come from the canonical double-entry kernel
+	// (wlt_ledger_transactions/wlt_ledger_lines/wlt_ledger_accounts). They
+	// previously came from wlt_ledger_entries, a retired compatibility table
+	// that no current write path fills, so both totals were persisted as zero
+	// into a signed financial close record.
 	if err := tx.QueryRowContext(ctx, `
 		SELECT
-			COALESCE(SUM(amount_minor_units) FILTER (WHERE entry_type = 'payout_completed' AND debit_credit = 'debit' AND account_type = 'wallet'), 0),
-			COALESCE(SUM(amount_minor_units) FILTER (WHERE entry_type = 'cashin_completed' AND debit_credit = 'credit' AND account_type = 'wallet'), 0)
-		FROM wlt_ledger_entries
-		WHERE operator_context_id = $1 AND DATE(created_at AT TIME ZONE 'UTC') = $2
+			COALESCE(SUM(l.amount_minor_units) FILTER (WHERE t.transaction_type = 'payout_completed' AND l.debit_credit = 'debit' AND a.account_type = 'wallet'), 0),
+			COALESCE(SUM(l.amount_minor_units) FILTER (WHERE t.transaction_type = 'cash_in_topup' AND l.debit_credit = 'credit' AND a.account_type = 'wallet'), 0)
+		FROM wlt_ledger_transactions t
+		JOIN wlt_ledger_lines l ON l.ledger_transaction_id = t.id
+		JOIN wlt_ledger_accounts a ON a.id = l.account_id
+		WHERE t.operator_context_id = $1 AND DATE(t.created_at AT TIME ZONE 'UTC') = $2
 	`, operatorContextID, date.Format("2006-01-02")).Scan(&totalPayouts, &totalCashin); err != nil {
 		return nil, err
 	}
 
 	// Calculate overall closing balance for the operator context
+	// wlt_ledger_accounts.balance_minor_units is stored debit-positive /
+	// credit-negative (see ledger.PostLedgerTransaction). A wallet is a
+	// credit-normal liability, so the raw sum is the negation of what BThwani
+	// still owes its actors; negating it reports the closing liability in the
+	// same positive orientation as the payout and cash-in totals.
 	if err := tx.QueryRowContext(ctx, `
-		SELECT COALESCE(SUM(balance_minor_units), 0)
+		SELECT COALESCE(-SUM(balance_minor_units), 0)
 		FROM wlt_ledger_accounts
 		WHERE operator_context_id = $1 AND account_type = 'wallet'
 	`, operatorContextID).Scan(&closingBalance); err != nil {
@@ -90,7 +100,8 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 	if err := tx.QueryRowContext(ctx, `
 		SELECT COUNT(*)
 		FROM wlt_settlement_batches b
-		WHERE b.operator_context_id = $1 AND b.status = 'frozen'
+		WHERE b.operator_context_id = $1
+		  AND b.status IN ('frozen', 'execution_in_progress', 'awaiting_verification')
 		  AND b.row_count > (
 			  SELECT COUNT(*) FROM wlt_manual_transfer_evidence e WHERE e.batch_id = b.id
 		  )
@@ -101,19 +112,42 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 		return nil, fmt.Errorf("cannot close day: %d settlement batches have incomplete manual transfer evidence", incompleteBatches)
 	}
 
-	// Check for unverified manual payouts (blocking gate)
+	// Check for externally executed transfers that no independent operator has
+	// verified yet (blocking gate). This predicate is verified_at IS NULL, not
+	// an operator-id emptiness test: evidence used to be stamped with its own
+	// submitter at insert time, which made the previous version of this gate
+	// unable to fire at all.
 	var unverifiedEvidence int
 	if err := tx.QueryRowContext(ctx, `
 		SELECT COUNT(*)
 		FROM wlt_manual_transfer_evidence e
 		JOIN wlt_settlement_batches b ON b.id = e.batch_id
-		WHERE b.operator_context_id = $1 AND b.status = 'frozen'
-		  AND e.verified_by_operator_id = ''
+		WHERE b.operator_context_id = $1
+		  AND b.status IN ('frozen', 'execution_in_progress', 'awaiting_verification')
+		  AND e.verified_at IS NULL
 	`, operatorContextID).Scan(&unverifiedEvidence); err != nil {
 		return nil, err
 	}
 	if unverifiedEvidence > 0 {
-		return nil, fmt.Errorf("cannot close day: %d settlement batches have unverified manual transfer evidence", unverifiedEvidence)
+		return nil, fmt.Errorf("cannot close day: %d manual transfers are executed but not independently verified", unverifiedEvidence)
+	}
+
+	// Verified execution that has not been carried into the ledger is money
+	// that left an official wallet without a completed payout behind it.
+	var verifiedButIncomplete int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM wlt_manual_transfer_evidence e
+		JOIN wlt_approved_payout_snapshots s ON s.id = e.approved_snapshot_id
+		JOIN wlt_payout_requests p ON p.id = s.payout_request_id AND p.operator_context_id = s.operator_context_id
+		WHERE e.operator_context_id = $1
+		  AND e.verified_at IS NOT NULL
+		  AND p.status <> 'completed'
+	`, operatorContextID).Scan(&verifiedButIncomplete); err != nil {
+		return nil, err
+	}
+	if verifiedButIncomplete > 0 {
+		return nil, fmt.Errorf("cannot close day: %d verified external transfers have no completed payout", verifiedButIncomplete)
 	}
 
 	row := tx.QueryRowContext(ctx, `
@@ -142,8 +176,8 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 		INSERT INTO wlt_finance_audit_events
 		(operator_context_id, aggregate_type, aggregate_id, action, actor_id, actor_type, correlation_id, metadata)
 		VALUES ($1, 'daily_close', $2, 'finance_day_closed', $3, 'operator', $4,
-		jsonb_build_object('totalPayouts', $5, 'closingBalance', $6))
-	`, operatorContextID, closeRecord.BusinessDate, input.OperatorID, correlationID, totalPayouts, closingBalance); err != nil {
+		jsonb_build_object('totalPayouts', $5::bigint, 'totalCashin', $6::bigint, 'closingBalance', $7::bigint))
+	`, operatorContextID, closeRecord.BusinessDate, input.OperatorID, correlationID, totalPayouts, totalCashin, closingBalance); err != nil {
 		return nil, err
 	}
 
