@@ -18,16 +18,12 @@ export type DshPartnerListRowViewModel = {
   readonly isRejected: boolean;
 };
 
-export type DshPartnerBankAccountViewModel = {
-  readonly hasBankAccount: boolean;
-  readonly beneficiaryName: string;
-  readonly bankName: string;
-  readonly bankBranch: string;
-  readonly maskedAccountNumber: string;
-  readonly maskedIban: string;
-  readonly settlementPreferenceLabel: string;
-  readonly bankAccountHolderMatchesOwner: boolean;
-  readonly bankNotes: string;
+export type DshPartnerPayoutDestinationViewModel = {
+  readonly configured: boolean;
+  readonly destinationId: string;
+  readonly method: string;
+  readonly maskedReference: string;
+  readonly verificationStatus: string;
 };
 
 export type DshPartnerDetailViewModel = {
@@ -42,7 +38,7 @@ export type DshPartnerDetailViewModel = {
   readonly primaryPhone: string;
   readonly email: string;
   readonly category: string;
-  readonly bankAccount: DshPartnerBankAccountViewModel;
+  readonly payoutDestination: DshPartnerPayoutDestinationViewModel;
   readonly activationStatus: DshPartnerActivationStatus;
   readonly statusLabel: string;
   readonly statusTone: "success" | "warning" | "danger" | "info" | "muted";
@@ -68,35 +64,18 @@ export type DshPartnerReadinessViewModel = {
   readonly items: readonly { id: string; label: string; satisfied: boolean; blockedReason?: string | undefined }[];
 };
 
-const SETTLEMENT_PREFERENCE_LABELS: Record<string, string> = {
-  bank_transfer: "تحويل بنكي",
-  mobile_wallet: "محفظة جوال",
-  "": "غير محدد",
-};
-
-// Control-panel display masking: reveal only the last 4 characters of
-// sensitive bank identifiers (accountNumber/iban).
-function maskBankIdentifier(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "—";
-  if (trimmed.length <= 4) return "•".repeat(trimmed.length);
-  return `${"•".repeat(trimmed.length - 4)}${trimmed.slice(-4)}`;
-}
-
-function buildBankAccountViewModel(p: DshPartner): DshPartnerBankAccountViewModel {
-  const hasBankAccount = Boolean(
-    p.beneficiaryName || p.bankName || p.accountNumber || p.iban
+function buildPayoutDestinationViewModel(p: DshPartner): DshPartnerPayoutDestinationViewModel {
+  const configured = Boolean(
+    p.payoutDestinationId &&
+    p.destinationMethod === "official_wallet" &&
+    p.maskedDestinationReference,
   );
   return {
-    hasBankAccount,
-    beneficiaryName: p.beneficiaryName || "—",
-    bankName: p.bankName || "—",
-    bankBranch: p.bankBranch || "—",
-    maskedAccountNumber: maskBankIdentifier(p.accountNumber),
-    maskedIban: maskBankIdentifier(p.iban),
-    settlementPreferenceLabel: SETTLEMENT_PREFERENCE_LABELS[p.settlementPreference] ?? p.settlementPreference,
-    bankAccountHolderMatchesOwner: p.bankAccountHolderMatchesOwner,
-    bankNotes: p.bankNotes || "—",
+    configured,
+    destinationId: p.payoutDestinationId || "",
+    method: p.destinationMethod || "",
+    maskedReference: p.maskedDestinationReference || "",
+    verificationStatus: p.destinationVerificationStatus || "",
   };
 }
 
@@ -144,7 +123,7 @@ export function buildPartnerDetailViewModel(p: DshPartner): DshPartnerDetailView
     primaryPhone: p.primaryPhone,
     email: p.email,
     category: p.category,
-    bankAccount: buildBankAccountViewModel(p),
+    payoutDestination: buildPayoutDestinationViewModel(p),
     activationStatus: status,
     statusLabel: getDshPartnerActivationStatusLabel(status),
     statusTone: resolveStatusTone(status),
