@@ -1,55 +1,44 @@
 {
   "schemaVersion": 3,
   "unitId": "U004",
-  "status": "PASS",
-  "baselineSha": "ba3393c39b0d0b265a4caf110b3bca685e43b0e3",
-  "resultingSha": "18c82d669789ac76004b4d8cb2de1b022187f5bb",
-  "completedTaskIds": [
-    "U004-T001-field-store-draft-idempotency",
-    "U004-T002-operator-review-wlt-boundary-verified",
-    "U004-T003-publication-gate-verified",
-    "U004-T004-build-clean",
-    "U004-T005-unit-tests-pass"
-  ],
-  "modifiedPaths": [
-    "services/dsh/backend/internal/store/repository.go",
-    "services/dsh/backend/internal/http/catalog.go"
-  ],
+  "status": "IN_PROGRESS",
+  "baselineSha": "34f94569e854aef65399aeb989398790e3cff102",
+  "resultingSha": null,
+  "completedTaskIds": [],
+  "modifiedPaths": [],
   "checkResults": [
     {
-      "check": "go build ./internal/store ./internal/http",
-      "result": "PASS"
+      "verificationId": "V0041",
+      "status": "PASS",
+      "command": "cd services/dsh/backend && go test ./...",
+      "candidateSha": "34f94569e854aef65399aeb989398790e3cff102",
+      "proofLimit": "Suite exits zero. Database-backed tests self-skip unless DSH_REQUIRE_DB_TESTS=true, so the advisory-lock idempotency replay path and the publication readiness gate are compiled and unit-covered but not proven against PostgreSQL on this candidate."
     },
     {
-      "check": "go test ./internal/store -run TestStoreMutation",
-      "result": "PASS"
-    },
-    {
-      "check": "go test ./internal/http -run TestTrusted",
-      "result": "PASS"
-    },
-    {
-      "check": "go test ./internal/partner -run TestPartner",
-      "result": "PASS"
+      "verificationId": "V0042",
+      "status": "BLOCKED",
+      "command": "RUNTIME: one same-store field onboarding/review/partner/client publication journey including rejection or retry, verifying IDs/states across surfaces.",
+      "candidateSha": "34f94569e854aef65399aeb989398790e3cff102",
+      "proofLimit": "Requires a running multi-service runtime. Not executed. Same-store cross-surface convergence and the no-premature-visibility guarantee are unproven on this candidate."
     }
   ],
-  "blockers": [],
-  "deviations": [
-    "UpdateFieldStoreDraft signature extended with idempotencyKey param (breaking addition — callers updated in same PR scope)"
+  "blockers": [
+    "V0042 same-store cross-surface onboarding journey is unexecuted on this candidate."
   ],
-  "decision": "PASS",
+  "deviations": [],
+  "decision": "NEEDS_EVIDENCE",
   "multiSurfaceScope": {
     "mode": "FULLSTACK_UNIFIED_MULTI_SURFACE",
     "surfaces": ["control-panel", "app-client", "app-partner", "app-captain", "app-field"],
     "journeyPolicy": "FIELD_ONLY",
-    "sliceContract": "structural envelope"
+    "sliceContract": "affectedSurfaces define executable scope"
   },
   "closureRule": "Onboarding closes only when field capture, operator decision, partner readback and applicable client publication converge; captain remains excluded.",
   "evidenceSummary": {
-    "idempotencyGate": "UpdateFieldStoreDraft now requires non-empty Idempotency-Key; pg_advisory_xact_lock + dsh_store_idempotency replay table used canonically",
-    "conflictResponse": "IDEMPOTENCY_CONFLICT → HTTP 409 in handleFieldUpdatePartnerStore",
-    "reviewSeparation": "TransitionStatusGoverned enforces field cannot approve own evidence via actor_surface checks + review_separation_boundary_db_test.go",
-    "wltBoundary": "HandleGovernedActivationTransition blocks suspend/terminate if WLT unavailable; no raw payout ref exposed in DSH surface",
-    "publicationGate": "validateTransitionReadinessTx: StatusClientVisible requires store.status=active, is_visible, serviceability, partner_readiness=ready, catalog_approval=approved, marketing_visibility=visible"
+    "idempotencyPresent": "services/dsh/backend/internal/store/repository.go requires a non-empty idempotency key for UpdateFieldStoreDraft and serialises the mutation with lockStoreMutationIdempotency plus a replay-hash lookup.",
+    "contractBinding": "The field surface calls /dsh/field/partners/{partnerId}/store through the generated DSH client, so the request contract cannot drift from the backend without a type error."
+  },
+  "provenance": {
+    "note": "A prior result recorded status PASS against baseline ba3393c39b0d0b265a4caf110b3bca685e43b0e3 and resulting SHA 18c82d669789ac76004b4d8cb2de1b022187f5bb, with checkResults naming ad-hoc go test invocations rather than the declared V0041/V0042 checks, and one open deviation about a breaking signature change. Retained as history; it is not candidate-bound evidence."
   }
 }

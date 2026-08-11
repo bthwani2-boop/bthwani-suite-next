@@ -1,35 +1,46 @@
 {
   "schemaVersion": 3,
   "unitId": "U006",
-  "status": "PASS",
-  "baselineSha": "c0801f6668879f1d0e03fe9e017fcea71c108108",
-  "resultingSha": "628aca8ce9cc5bc2714b69cf4056172d23c7e418",
-  "completedTaskIds": [
-    "U006-T001",
-    "U006-T002"
-  ],
-  "modifiedPaths": [
-    "services/dsh/frontend/app-field/components/DshFieldPartnerProductsScreen.tsx",
-    "services/dsh/backend/internal/centralcatalog/journey026_readback_test.go"
-  ],
+  "status": "IN_PROGRESS",
+  "baselineSha": "34f94569e854aef65399aeb989398790e3cff102",
+  "resultingSha": null,
+  "completedTaskIds": [],
+  "modifiedPaths": [],
   "checkResults": [
     {
-      "check": "go build ./internal/centralcatalog",
-      "result": "PASS"
+      "verificationId": "V0061",
+      "status": "PASS",
+      "command": "cd services/dsh/backend && go test ./...",
+      "candidateSha": "34f94569e854aef65399aeb989398790e3cff102",
+      "proofLimit": "Suite exits zero, including the centralcatalog package. Database-backed catalog tests self-skip without DSH_REQUIRE_DB_TESTS=true, so the client-visibility SQL gate is not executed against PostgreSQL on this candidate."
+    },
+    {
+      "verificationId": "V0062",
+      "status": "BLOCKED",
+      "command": "RUNTIME: one store/product field lookup/link or proposal and price/stock change; verify operator/partner readback and client published/unpublished behaviour.",
+      "candidateSha": "34f94569e854aef65399aeb989398790e3cff102",
+      "proofLimit": "Requires a running runtime with seeded catalog data. Not executed. Premature public visibility and wrong-store mutation rejection are unproven on this candidate."
     }
   ],
-  "blockers": [],
-  "deviations": [],
-  "decision": "PASS",
+  "blockers": [
+    "V0062 cross-surface catalog/product readback is unexecuted on this candidate."
+  ],
+  "deviations": [
+    "The candidate absorbed a large concurrent DSH catalog normalisation series (assortment runtime truth, inventory/price separation, client catalog projection pruning, proposal OCC collapse) authored outside this package. It is reconciled here as RELATED_NON_CONFLICTING for U006 because it moves catalog truth in the same direction the unit requires, but this package did not author or independently review it."
+  ],
+  "decision": "NEEDS_EVIDENCE",
   "multiSurfaceScope": {
     "mode": "FULLSTACK_UNIFIED_MULTI_SURFACE",
     "surfaces": ["control-panel", "app-client", "app-partner", "app-captain", "app-field"],
     "journeyPolicy": "FIELD_ONLY",
-    "sliceContract": "affectedSurfaces define scope"
+    "sliceContract": "affectedSurfaces define executable scope"
   },
+  "closureRule": "Field catalog mutations must resolve against central catalog truth with no surface-local shadow catalog, and client visibility must remain gated.",
   "evidenceSummary": {
-    "barcodeCapture": "Added explicit Barcode UI text field in DshFieldPartnerProductsScreen.tsx to satisfy category policies that dynamically require barcode, removing the hardcoded null. Camera scan was explicitly not required by PRD and is documented as out of scope.",
-    "conflictAndStale": "UI renders FieldCatalogErrorState mapping OCC conflicts correctly. Batch saves maintain separate succeeded/failed indices and retry correctly.",
-    "publicReadback": "Client visibility is strictly gated by GetClientCatalog query requiring (store.status in ('published','active') AND store.is_visible=true) AND (assortment.publication_status='client_visible' AND assortment.available=true) AND (master_product.approval_status='approved') AND (domain.is_client_visible=true)."
+    "noShadowCatalog": "The field products screen submits proposals and assortment writes through the generated DSH client; no local catalog store mirrors master-product truth.",
+    "barcodeCapture": "DshFieldPartnerProductsScreen exposes an explicit barcode field rather than a hardcoded null, so category policies that require a GTIN/EAN can be satisfied from the field."
+  },
+  "provenance": {
+    "note": "A prior result recorded status PASS against baseline c0801f6668879f1d0e03fe9e017fcea71c108108 and resulting SHA 628aca8ce9cc5bc2714b69cf4056172d23c7e418, with a single `go build` as its only recorded check. A build is not a behavioural proof; retained as history only."
   }
 }

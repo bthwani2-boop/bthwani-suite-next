@@ -30,6 +30,43 @@ export type FieldOfflineQueueStorageAdapter = {
   readonly removeItem: (key: string) => Promise<void>;
 };
 
+/**
+ * The v1 queue predates the injectable adapter and was written straight to
+ * AsyncStorage, while the current queue lives in the encrypted store. Legacy
+ * recovery must therefore read from where v1 actually wrote.
+ */
+export type FieldOfflineLegacyStorageAdapter = {
+  readonly getItem: (key: string) => Promise<string | null>;
+  readonly removeItem: (key: string) => Promise<void>;
+};
+
+/**
+ * Why a legacy entry could not be carried forward into the current queue.
+ * Quarantined work is preserved for recovery, never silently discarded.
+ */
+export type FieldOfflineQuarantineReason =
+  | "LEGACY_V1_UNSCOPED"
+  /**
+   * The server refused the operation permanently (401/403/409/422) or it
+   * exhausted its retries. It can never drain, so leaving it in the live queue
+   * would consume capacity forever while staying invisible to the employee.
+   */
+  | "TERMINAL_SYNC_FAILURE";
+
+export type FieldOfflineQuarantineRecord = {
+  readonly sourceKey: string;
+  readonly reason: FieldOfflineQuarantineReason;
+  readonly capturedAt: string;
+  readonly raw: string;
+};
+
+export type FieldOfflineLegacyMigrationSummary = {
+  /** Legacy operations carried forward into the current scoped queue. */
+  readonly adopted: number;
+  /** Legacy operations preserved for recovery instead of being executed. */
+  readonly quarantined: number;
+};
+
 export type FieldOfflineOperation<P = unknown> = {
   readonly operationId: string;
   readonly operationType: FieldOfflineOperationType;
@@ -45,8 +82,16 @@ export type FieldOfflineOperation<P = unknown> = {
   readonly lastError?: string;
 };
 
-const LEGACY_STORAGE_KEY = "@bthwani/field-offline-queue:v1";
-const LEGACY_CORRUPT_STORAGE_KEY = "@bthwani/field-offline-queue:corrupt:v1";
+/**
+ * v1 wrote a single unscoped key through AsyncStorage. A v2 generation existed
+ * on trunk for roughly ninety minutes but never had its scope configured by any
+ * call site, so `requireScope()` rejected every read and write and no device
+ * could persist v2 work. v1 is therefore the only recoverable legacy state.
+ */
+const LEGACY_V1_STORAGE_KEYS = [
+  "@bthwani/field-offline-queue:v1",
+  "@bthwani/field-offline-queue:corrupt:v1",
+] as const;
 const STORAGE_PREFIX = "bthwani.field-offline-queue.v3";
 const MAX_ATTEMPTS = 10;
 const MAX_QUEUE_OPERATIONS = 100;
@@ -55,6 +100,14 @@ const MAX_SERIALIZED_CHARACTERS = 48_000;
 let storageAdapter: FieldOfflineQueueStorageAdapter = {
   getItem: (key) => AsyncStorage.getItem(key),
   setItem: (key, value) => AsyncStorage.setItem(key, value),
+  removeItem: (key) => AsyncStorage.removeItem(key),
+};
+/**
+ * Deliberately not the injectable queue adapter: the current queue lives in the
+ * encrypted store, but v1 wrote to AsyncStorage, so recovery must read there.
+ */
+let legacyStorageAdapter: FieldOfflineLegacyStorageAdapter = {
+  getItem: (key) => AsyncStorage.getItem(key),
   removeItem: (key) => AsyncStorage.removeItem(key),
 };
 let activeScope: FieldOfflineQueueScope | null = null;
@@ -101,8 +154,17 @@ function corruptStorageKey(scope: FieldOfflineQueueScope): string {
   return `${STORAGE_PREFIX}.corrupt.${scopeFingerprint(scope)}`;
 }
 
+function legacyQuarantineStorageKey(scope: FieldOfflineQueueScope): string {
+  return `${STORAGE_PREFIX}.legacy-quarantine.${scopeFingerprint(scope)}`;
+}
+
+
 export function configureFieldOfflineQueueStorage(adapter: FieldOfflineQueueStorageAdapter): void {
   storageAdapter = adapter;
+}
+
+export function configureFieldOfflineLegacyStorage(adapter: FieldOfflineLegacyStorageAdapter): void {
+  legacyStorageAdapter = adapter;
 }
 
 export function configureFieldOfflineQueueScope(scope: FieldOfflineQueueScope | null): void {
@@ -128,11 +190,56 @@ function isOperation(value: unknown, scope: FieldOfflineQueueScope): value is Fi
   );
 }
 
-async function removeLegacyQueue(): Promise<void> {
-  await Promise.all([
-    AsyncStorage.removeItem(LEGACY_STORAGE_KEY),
-    AsyncStorage.removeItem(LEGACY_CORRUPT_STORAGE_KEY),
-  ]);
+async function readQuarantine(scope: FieldOfflineQueueScope): Promise<FieldOfflineQuarantineRecord[]> {
+  const raw = await storageAdapter.getItem(legacyQuarantineStorageKey(scope));
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as FieldOfflineQuarantineRecord[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Recovers work left by the v1 queue.
+ *
+ * v1 operations carry no actor or installation identity, so adopting them would
+ * replay one worker's governed mutations under whichever session happens to
+ * open the upgraded build first. They are preserved under the current scope for
+ * recovery and reported to the surface, never executed and never dropped. The
+ * legacy keys are released only once that copy is durably written.
+ */
+async function migrateLegacyQueues(
+  scope: FieldOfflineQueueScope,
+): Promise<FieldOfflineLegacyMigrationSummary> {
+  const found: { key: string; raw: string }[] = [];
+  for (const key of LEGACY_V1_STORAGE_KEYS) {
+    const raw = await legacyStorageAdapter.getItem(key);
+    if (raw) found.push({ key, raw });
+  }
+  if (found.length === 0) return { adopted: 0, quarantined: 0 };
+
+  const capturedAt = new Date().toISOString();
+  const quarantined = [
+    ...(await readQuarantine(scope)),
+    ...found.map(({ key, raw }) => ({
+      sourceKey: key,
+      reason: "LEGACY_V1_UNSCOPED" as const,
+      capturedAt,
+      raw,
+    })),
+  ];
+
+  await storageAdapter.setItem(legacyQuarantineStorageKey(scope), JSON.stringify(quarantined));
+  for (const { key } of found) {
+    await legacyStorageAdapter.removeItem(key);
+  }
+  return { adopted: 0, quarantined: quarantined.length };
+}
+
+export async function readLegacyQuarantine(): Promise<FieldOfflineQuarantineRecord[]> {
+  return readQuarantine(requireScope());
 }
 
 /**
@@ -179,18 +286,22 @@ async function writeQueue(queue: FieldOfflineOperation[]): Promise<void> {
   await storageAdapter.setItem(storageKey(scope), serialized);
 }
 
-export async function prepareFieldOfflineQueue(): Promise<void> {
-  requireScope();
-  await removeLegacyQueue();
+export async function prepareFieldOfflineQueue(): Promise<FieldOfflineLegacyMigrationSummary> {
+  return migrateLegacyQueues(requireScope());
 }
 
 export async function clearFieldOfflineQueue(): Promise<void> {
   const scope = activeScope;
-  await removeLegacyQueue();
+  // Session end clears legacy work too; it is being discarded deliberately
+  // here, not lost to an unnoticed upgrade.
+  for (const key of LEGACY_V1_STORAGE_KEYS) {
+    await legacyStorageAdapter.removeItem(key);
+  }
   if (!scope) return;
   await Promise.all([
     storageAdapter.removeItem(storageKey(scope)),
     storageAdapter.removeItem(corruptStorageKey(scope)),
+    storageAdapter.removeItem(legacyQuarantineStorageKey(scope)),
   ]);
 }
 
@@ -279,16 +390,44 @@ export async function getDueOperations(): Promise<FieldOfflineOperation[]> {
   );
 }
 
-export async function getPendingCount(): Promise<number> {
-  const queue = await readQueue();
-  return queue.filter(
-    (operation) => operation.status === "pending" || operation.status === "retrying",
-  ).length;
-}
-
 export async function purgeSyncedOperations(): Promise<void> {
   const queue = await readQueue();
   await writeQueue(queue.filter((operation) => operation.status !== "synced"));
+}
+
+/**
+ * Moves permanently failed operations out of the live queue and into the
+ * recovery store.
+ *
+ * A `failed_permanent` operation can never drain: `getDueOperations` ignores it
+ * and no retry will revisit it. Left in place it occupies queue capacity
+ * forever, so a worker who accumulates enough refusals eventually cannot
+ * capture any offline work at all — `writeQueue` rejects every new enqueue once
+ * the queue hits its capacity or serialized-size limit. Evacuating it here
+ * keeps capacity available and routes the loss through the same recovery
+ * channel the surface already reports.
+ *
+ * @returns how many operations were evacuated.
+ */
+export async function evacuateTerminalOperations(): Promise<number> {
+  const scope = requireScope();
+  const queue = await readQueue();
+  const terminal = queue.filter((operation) => operation.status === "failed_permanent");
+  if (terminal.length === 0) return 0;
+
+  const capturedAt = new Date().toISOString();
+  const quarantined = [
+    ...(await readQuarantine(scope)),
+    ...terminal.map((operation) => ({
+      sourceKey: storageKey(scope),
+      reason: "TERMINAL_SYNC_FAILURE" as const,
+      capturedAt,
+      raw: JSON.stringify(operation),
+    })),
+  ];
+  await storageAdapter.setItem(legacyQuarantineStorageKey(scope), JSON.stringify(quarantined));
+  await writeQueue(queue.filter((operation) => operation.status !== "failed_permanent"));
+  return terminal.length;
 }
 
 export async function getAllOperations(): Promise<FieldOfflineOperation[]> {

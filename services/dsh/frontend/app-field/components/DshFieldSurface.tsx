@@ -3,7 +3,7 @@
 import React from 'react';
 import { BackHandler, Platform, View, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { spacing, colorRoles, StateView, TabBar, type TabBarItem } from '@bthwani/ui-kit';
+import { spacing, colorRoles, InlineNotice, StateView, TabBar, type TabBarItem } from '@bthwani/ui-kit';
 import { DshFieldProblemState } from './DshFieldProblemNotice';
 import { useDshFieldSurfaceModel } from '../field.surface-model';
 import type { DshFieldSurfaceProps } from '../dsh-field.routes';
@@ -136,6 +136,20 @@ export function DshFieldSurface({ command, onExit, installationId }: DshFieldSur
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
       <StatusBar backgroundColor={colorRoles.brandAction} barStyle="light-content" translucent={false} />
+
+      {/* Work captured on a retired build cannot be replayed under this
+          session, so the employee must be told to redo it rather than assume
+          it synced. */}
+      {offlineSync.quarantinedCount > 0 && (
+        <View style={{ padding: spacing[3] }}>
+          <InlineNotice
+            tone="warning"
+            title="عمل ميداني قديم يحتاج إعادة تنفيذ"
+            description="تم حفظ عمل غير مُرسَل من إصدار سابق للتطبيق ولا يمكن إرساله تلقائيًا. أعد تنفيذ الزيارات أو الفحوصات المتأثرة."
+            code="LEGACY_OFFLINE_WORK_RECOVERED"
+          />
+        </View>
+      )}
 
       <View
         style={{
