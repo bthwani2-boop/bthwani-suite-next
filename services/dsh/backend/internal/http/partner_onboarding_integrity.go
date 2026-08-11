@@ -13,7 +13,7 @@ func (s *protectedStoreServer) handleGovernedGetPartner(w http.ResponseWriter, r
 func (s *protectedStoreServer) handleGovernedActivationTransition(w http.ResponseWriter, r *http.Request) {
 	handler := partner.EnforcePartnerDecisionSeparation(
 		s.db,
-		partner.HandleGovernedActivationTransition(s.db, s.wlt),
+		partner.HandleGovernedActivationTransition(s.db),
 	)
 	s.servePartnerPermissionHandler(w, r, handler, PartnersPermissionActivate)
 }
