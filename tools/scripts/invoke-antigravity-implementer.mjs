@@ -128,8 +128,10 @@ function ensureNoSymlinkPrefix(absolute, label) {
   }
 }
 
-function statusPaths() {
-  const raw = run("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
+export function statusPaths({ includeIgnored = false } = {}) {
+  const args = ["status", "--porcelain=v1", "-z", "--untracked-files=all"];
+  if (includeIgnored) args.push("--ignored=matching");
+  const raw = run("git", args);
   if (!raw) return [];
   const fields = raw.split("\0");
   const paths = [];
@@ -142,6 +144,40 @@ function statusPaths() {
     if (/[RC]/.test(status) && fields[i + 1]) paths.push(fields[++i]);
   }
   return [...new Set(paths.map((value) => value.split("\\").join("/")))].sort();
+}
+
+// `git status --ignored=matching` collapses a wholly ignored directory into a single
+// `dir/` entry, so a write *inside* it never changes the listing. Fingerprinting each
+// entry lets the post-run comparison see ignored files that were created, modified, or
+// deleted; collapsed directories are only compared by their own mtime and are reported
+// separately as a declared blind spot rather than folded into scope enforcement.
+export function fingerprintPaths(paths, root) {
+  const fingerprints = new Map();
+  for (const rel of paths) {
+    const absolute = path.resolve(root, rel);
+    let mark;
+    try {
+      const stat = fs.lstatSync(absolute);
+      if (stat.isDirectory()) mark = `dir:${Math.round(stat.mtimeMs)}`;
+      else if (stat.isSymbolicLink()) mark = `link:${Math.round(stat.mtimeMs)}`;
+      else mark = `file:${stat.size}:${Math.round(stat.mtimeMs)}`;
+    } catch {
+      mark = "absent";
+    }
+    fingerprints.set(rel, mark);
+  }
+  return fingerprints;
+}
+
+export function fingerprintDelta(before, after) {
+  const changed = new Set();
+  for (const [rel, mark] of after) if (before.get(rel) !== mark) changed.add(rel);
+  for (const rel of before.keys()) if (!after.has(rel)) changed.add(rel);
+  return [...changed].sort();
+}
+
+function isCollapsedDirectory(rel) {
+  return rel.endsWith("/");
 }
 
 function gitPrivateRoot() {
@@ -274,6 +310,7 @@ export async function main(argv = process.argv.slice(2)) {
   if (branchBefore !== args.expectedBranch) fail(`Branch mismatch: expected '${args.expectedBranch}', found '${branchBefore}'.`);
   const dirtyBefore = statusPaths();
   if (dirtyBefore.length) fail("Working tree must be clean before delegation.", JSON.stringify(dirtyBefore, null, 2));
+  const trackedStateBefore = fingerprintPaths(statusPaths({ includeIgnored: true }), repoRoot);
 
   const hooksPath = path.join(repoRoot, ".agents", "hooks.json");
   fs.mkdirSync(path.dirname(hooksPath), { recursive: true });
@@ -337,7 +374,12 @@ export async function main(argv = process.argv.slice(2)) {
 
     const branchAfter = run("git", ["branch", "--show-current"]);
     const headAfter = run("git", ["rev-parse", "HEAD"]);
-    const changedPaths = statusPaths();
+    const trackedStateAfter = fingerprintPaths(statusPaths({ includeIgnored: true }), repoRoot);
+    const fullDelta = fingerprintDelta(trackedStateBefore, trackedStateAfter);
+    // Collapsed ignored directories (build caches and the like) churn for reasons unrelated
+    // to the delegation, so they are reported as activity rather than scope-enforced.
+    const changedPaths = fullDelta.filter((rel) => !isCollapsedDirectory(rel));
+    const ignoredDirectoryActivity = fullDelta.filter(isCollapsedDirectory);
     const violations = scopeViolations(changedPaths, allowed, forbidden);
     const diffCheck = spawnSync("git", ["diff", "--check"], { cwd: repoRoot, encoding: "utf8", windowsHide: true });
     const diffCheckPassed = !diffCheck.error && diffCheck.status === 0;
@@ -346,6 +388,9 @@ export async function main(argv = process.argv.slice(2)) {
     if (branchAfter !== branchBefore) invariantFailures.push("BRANCH_CHANGED");
     if (headAfter !== headBefore) invariantFailures.push("HEAD_CHANGED");
     if (violations.length) invariantFailures.push("WRITE_SCOPE_VIOLATION");
+    // An implementer that changed nothing did not implement the work unit; without this the
+    // relay reports success for a run whose tools were all denied.
+    if (!changedPaths.length) invariantFailures.push("NO_CHANGES_PRODUCED");
     if (!diffCheckPassed) invariantFailures.push("GIT_DIFF_CHECK_FAILED");
     if (hookTampered) invariantFailures.push("HOOK_CONFIG_TAMPERED");
     if (execution.overflow) invariantFailures.push("OUTPUT_CAPTURE_LIMIT_EXCEEDED");
@@ -354,7 +399,7 @@ export async function main(argv = process.argv.slice(2)) {
     if (execution.exitCode !== 0) invariantFailures.push("ANTIGRAVITY_NONZERO_EXIT");
     if (!parsed || typeof parsed !== "object") invariantFailures.push("INVALID_ANTIGRAVITY_JSON");
     const result = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       tool: TOOL_ID,
       orchestrator: args.orchestrator,
       workUnitId: args.workUnit,
@@ -369,6 +414,7 @@ export async function main(argv = process.argv.slice(2)) {
       signal: execution.signal,
       timedOut: execution.timedOut,
       changedPaths,
+      ignoredDirectoryActivity,
       scopeViolations: violations,
       diffCheckPassed,
       hookConfigTampered: hookTampered,

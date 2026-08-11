@@ -39,6 +39,7 @@ import {
 import { resolvePartnerOnboardingFailureState } from '../../shared/partner';
 import { uploadFieldMedia } from '../../shared/media';
 import { useStoreOnboardingFeeReferenceController } from '../../shared/platform';
+import { formatWltMoney } from '@bthwani/wlt/dsh';
 import { OnboardingBasicsSection } from '../components/OnboardingBasicsSection';
 import { OnboardingLocationSection } from '../components/OnboardingLocationSection';
 import {
@@ -449,7 +450,7 @@ export function DshFieldOnboardingScreen({
           <View style={{ padding: spacing[3], borderRadius: radius.md, borderWidth: borders.hairline, borderColor: colorRoles.borderSubtle, gap: spacing[1] }}>
             <Text role="bodyStrong" style={{ textAlign: 'right' }}>مرجع رسوم انضمام المتجر</Text>
             <Text role="bodySm" tone="secondary" style={{ textAlign: 'right' }}>
-              {feeRefState.data.amountMinorUnits / 100} {feeRefState.data.currency} — {CHARGE_TIMING_REFERENCE_LABELS[feeRefState.data.chargeTiming] ?? feeRefState.data.chargeTiming}
+              {formatWltMoney(feeRefState.data.amountMinorUnits, feeRefState.data.currency)} — {CHARGE_TIMING_REFERENCE_LABELS[feeRefState.data.chargeTiming] ?? feeRefState.data.chargeTiming}
             </Text>
           </View>
         ) : null}

@@ -1,6 +1,10 @@
 go 1.26.5
 
 use (
+	./core/identity/backend
+	./core/platform-control/backend
+	./core/providers/backend
+	./core/workforce/backend
 	./services/dsh/backend
 	./services/wlt/backend
 )
