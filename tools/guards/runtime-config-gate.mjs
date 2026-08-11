@@ -146,11 +146,22 @@ if (!fs.existsSync(path.join(repoRoot, envExample))) {
     }
   }
 
-  const mutationsEnabled = env.get("WLT_MUTATIONS_ENABLED") === "true";
+  const mutationsConfig = env.get("WLT_MUTATIONS_ENABLED");
+  const financeKillSwitch = env.get("WLT_FINANCE_MUTATION_KILL_SWITCH");
   const providerMode = env.get("WLT_FINANCIAL_PROVIDER_MODE");
   const productionProviderAllowed = env.get("WLT_ALLOW_PRODUCTION_PROVIDER") === "true";
+  if (!new Set(["true", "false"]).has(mutationsConfig)) {
+    violations.push({ file: envExample, message: "WLT_MUTATIONS_ENABLED_MUST_BE_EXPLICIT_BOOLEAN" });
+  }
+  if (!new Set(["true", "false"]).has(financeKillSwitch)) {
+    violations.push({ file: envExample, message: "WLT_FINANCE_MUTATION_KILL_SWITCH_MUST_BE_EXPLICIT_BOOLEAN" });
+  }
+  const mutationsEnabled = mutationsConfig === "true";
   if (mutationsEnabled && mode === "development" && providerMode !== "mock") {
     violations.push({ file: envExample, message: "DEVELOPMENT_MUTATIONS_REQUIRE_MOCK_PROVIDER" });
+  }
+  if (mutationsEnabled && mode === "development" && providerMode === "mock" && financeKillSwitch !== "false") {
+    violations.push({ file: envExample, message: "DEVELOPMENT_MUTATIONS_REQUIRE_OPEN_FINANCE_KILL_SWITCH" });
   }
   if (productionProviderAllowed && providerMode === "mock") {
     violations.push({ file: envExample, message: "MOCK_PROVIDER_CANNOT_BE_MARKED_PRODUCTION_ALLOWED" });
@@ -163,11 +174,28 @@ if (!fs.existsSync(path.join(repoRoot, envExample))) {
   }
 }
 
+const localProductionEnvExample = "infra/docker/env/runtime.local-production.env.example";
+if (fs.existsSync(path.join(repoRoot, localProductionEnvExample))) {
+  const localProductionEnv = parseEnv(localProductionEnvExample);
+  if (
+    localProductionEnv.get("WLT_MUTATIONS_ENABLED") === "true" &&
+    localProductionEnv.get("WLT_FINANCE_MUTATION_KILL_SWITCH") !== "false"
+  ) {
+    violations.push({
+      file: localProductionEnvExample,
+      message: "LOCAL_PRODUCTION_APPROVED_WLT_MUTATIONS_REQUIRE_OPEN_FINANCE_KILL_SWITCH",
+    });
+  }
+}
+
 const composePath = "infra/docker/compose.runtime.yml";
 if (fs.existsSync(path.join(repoRoot, composePath))) {
   const compose = read(composePath);
   if (!compose.includes('"127.0.0.1:${BTHWANI_POSTGRES_PORT:-55432}:5432"')) {
     violations.push({ file: composePath, message: "POSTGRES_MUST_BIND_LOOPBACK_ONLY" });
+  }
+  if (!compose.includes('WLT_FINANCE_MUTATION_KILL_SWITCH: "${WLT_FINANCE_MUTATION_KILL_SWITCH:-true}"')) {
+    violations.push({ file: composePath, message: "WLT_FINANCE_KILL_SWITCH_MUST_DEFAULT_FAIL_CLOSED_IN_COMPOSE" });
   }
   const containerNames = compose.match(/container_name:\s*([^\r\n#]+)/g) ?? [];
   for (const line of containerNames) {
