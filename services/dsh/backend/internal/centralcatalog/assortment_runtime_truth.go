@@ -1,0 +1,301 @@
+package centralcatalog
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+	"math"
+	"strings"
+)
+
+type assortmentRuntimeTruthQuerier interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+type assortmentRuntimeTruth struct {
+	AmountMinor       int64
+	Currency          string
+	PolicyType        string
+	Quantity          int
+	ReservedQuantity  int
+	MinOrderQuantity  int
+	MaxOrderQuantity  int
+	StepQuantity      int
+}
+
+func readAssortmentRuntimeTruth(ctx context.Context, q assortmentRuntimeTruthQuerier, assortmentID string) (assortmentRuntimeTruth, error) {
+	var out assortmentRuntimeTruth
+	err := q.QueryRowContext(ctx, `
+		SELECT p.amount_minor, p.currency,
+		       i.policy_type, i.quantity, i.reserved_quantity,
+		       i.min_order_quantity, i.max_order_quantity, i.step_quantity
+		FROM dsh_store_assortment_inventory i
+		JOIN LATERAL (
+			SELECT amount_minor, currency
+			FROM dsh_store_assortment_prices
+			WHERE store_assortment_id = i.store_assortment_id
+			  AND effective_from <= NOW()
+			  AND (effective_until IS NULL OR effective_until > NOW())
+			ORDER BY effective_from DESC, version DESC, id DESC
+			LIMIT 1
+		) p ON TRUE
+		WHERE i.store_assortment_id = $1`, assortmentID).Scan(
+		&out.AmountMinor,
+		&out.Currency,
+		&out.PolicyType,
+		&out.Quantity,
+		&out.ReservedQuantity,
+		&out.MinOrderQuantity,
+		&out.MaxOrderQuantity,
+		&out.StepQuantity,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return assortmentRuntimeTruth{}, ErrNotFound
+	}
+	return out, err
+}
+
+func assortmentTruthPurchasable(truth assortmentRuntimeTruth) bool {
+	if truth.AmountMinor <= 0 || strings.TrimSpace(truth.Currency) == "" {
+		return false
+	}
+	switch truth.PolicyType {
+	case "infinite":
+		return true
+	case "signal":
+		return truth.Quantity > 0
+	case "quantity":
+		available := truth.Quantity - truth.ReservedQuantity
+		minimum := truth.MinOrderQuantity
+		if minimum < 1 {
+			minimum = 1
+		}
+		return available >= minimum && truth.MaxOrderQuantity >= minimum && truth.StepQuantity >= 1
+	default:
+		return false
+	}
+}
+
+func projectAssortmentRuntimeTruth(a StoreAssortment, truth assortmentRuntimeTruth) StoreAssortment {
+	a.UnitPrice = float64(truth.AmountMinor) / 100
+	a.Currency = truth.Currency
+	if !assortmentTruthPurchasable(truth) {
+		a.Available = false
+		a.StockStatus = "out_of_stock"
+	}
+	return a
+}
+
+// ListStoreAssortmentRuntimeTruth keeps operator/partner/field reads on the
+// same effective price and inventory authority used by cart. The legacy
+// unit_price/currency columns remain a compatibility bootstrap only; they are
+// never returned as current pricing once normalized truth exists.
+func ListStoreAssortmentRuntimeTruth(ctx context.Context, db *sql.DB, storeID string) ([]StoreAssortment, error) {
+	items, err := ListStoreAssortment(ctx, db, storeID)
+	if err != nil {
+		return nil, err
+	}
+	for index := range items {
+		truth, truthErr := readAssortmentRuntimeTruth(ctx, db, items[index].ID)
+		if errors.Is(truthErr, ErrNotFound) {
+			items[index].Available = false
+			items[index].StockStatus = "out_of_stock"
+			continue
+		}
+		if truthErr != nil {
+			return nil, truthErr
+		}
+		items[index] = projectAssortmentRuntimeTruth(items[index], truth)
+	}
+	return items, nil
+}
+
+// FilterPurchasableClientCatalogEntries is the final storefront gate. A
+// client-visible legacy assortment is not sufficient: the product must have
+// an effective positive normalized price and an inventory policy that can
+// satisfy at least its minimum purchase. The price projected to the client is
+// therefore exactly the price cart will snapshot.
+func FilterPurchasableClientCatalogEntries(ctx context.Context, db *sql.DB, entries []ClientCatalogEntry) ([]ClientCatalogEntry, error) {
+	out := make([]ClientCatalogEntry, 0, len(entries))
+	for _, entry := range entries {
+		truth, err := readAssortmentRuntimeTruth(ctx, db, entry.assortmentID)
+		if errors.Is(err, ErrNotFound) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		if !assortmentTruthPurchasable(truth) {
+			continue
+		}
+		entry.UnitPrice = float64(truth.AmountMinor) / 100
+		entry.Currency = truth.Currency
+		out = append(out, entry)
+	}
+	return out, nil
+}
+
+func bootstrapAssortmentRuntimeTruth(ctx context.Context, tx *sql.Tx, a StoreAssortment) error {
+	quantity := 0
+	if a.Available {
+		switch a.StockStatus {
+		case "in_stock":
+			quantity = 100
+		case "low_stock":
+			quantity = 5
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO dsh_store_assortment_inventory (
+			store_assortment_id, policy_type, quantity, reserved_quantity,
+			min_order_quantity, max_order_quantity, step_quantity
+		) VALUES ($1, 'signal', $2, 0, 1, 100, 1)
+		ON CONFLICT (store_assortment_id) DO NOTHING`, a.ID, quantity); err != nil {
+		return err
+	}
+
+	var priceCount int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM dsh_store_assortment_prices
+		WHERE store_assortment_id = $1`, a.ID).Scan(&priceCount); err != nil {
+		return err
+	}
+	if priceCount == 0 && a.UnitPrice > 0 {
+		amountMinor := int64(math.Round(a.UnitPrice * 100))
+		if amountMinor <= 0 || amountMinor > math.MaxInt32 {
+			return ErrInvalid
+		}
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO dsh_store_assortment_prices (
+				id, store_assortment_id, amount_minor, currency,
+				prep_time_min, prep_time_max, effective_from, effective_until
+			) VALUES ($1, $2, $3, $4, 15, 30, NOW(), NULL)`,
+			entityID("price-bootstrap"), a.ID, amountMinor, a.Currency); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// UpsertStoreAssortmentWithRuntimeTruth is the authoritative write path for
+// assortment metadata. It performs the legacy-link write and the first
+// normalized inventory/price bootstrap in one transaction. Once normalized
+// pricing exists, the assortment endpoint no longer owns price changes; the
+// dedicated price-schedule endpoint does. client_visible is fail-closed unless
+// normalized truth is currently purchasable.
+func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID string, input StoreAssortmentInput, allowCustomImage bool) (StoreAssortment, error) {
+	storeID = strings.TrimSpace(storeID)
+	masterProductID = strings.TrimSpace(masterProductID)
+	if storeID == "" || masterProductID == "" || input.UnitPrice < 0 {
+		return StoreAssortment{}, ErrInvalid
+	}
+	stockStatus := input.StockStatus
+	if stockStatus == "" {
+		stockStatus = "in_stock"
+	}
+	if !validStockStatus[stockStatus] {
+		return StoreAssortment{}, ErrInvalid
+	}
+	publicationStatus := input.PublicationStatus
+	if publicationStatus == "" {
+		publicationStatus = "draft"
+	}
+	if !validPublicationStatus[publicationStatus] {
+		return StoreAssortment{}, ErrInvalid
+	}
+	currency := strings.ToUpper(strings.TrimSpace(input.Currency))
+	if currency == "" {
+		currency = "YER"
+	}
+	if len(currency) != 3 {
+		return StoreAssortment{}, ErrInvalid
+	}
+	if input.CustomImageObjectKey != nil && strings.TrimSpace(*input.CustomImageObjectKey) != "" && !allowCustomImage {
+		return StoreAssortment{}, ErrForbidden
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return StoreAssortment{}, err
+	}
+	defer tx.Rollback()
+
+	if publicationStatus == "client_visible" {
+		var masterImage *string
+		if err := tx.QueryRowContext(ctx, `SELECT canonical_image_object_key FROM dsh_master_products WHERE id=$1`, masterProductID).Scan(&masterImage); err != nil {
+			return StoreAssortment{}, err
+		}
+		hasCustomImage := input.CustomImageObjectKey != nil && strings.TrimSpace(*input.CustomImageObjectKey) != ""
+		hasMasterImage := masterImage != nil && strings.TrimSpace(*masterImage) != ""
+		if !hasCustomImage && !hasMasterImage {
+			return StoreAssortment{}, fmt.Errorf("%w: cannot set publication_status to client_visible without an approved image", ErrInvalid)
+		}
+	}
+
+	// If an effective normalized price already exists, preserve it. Price
+	// changes belong to ScheduleAssortmentPriceAtomic and must not be silently
+	// overwritten by a metadata edit carrying a stale legacy unitPrice.
+	var existingAssortmentID string
+	_ = tx.QueryRowContext(ctx, `
+		SELECT id FROM dsh_store_assortments
+		WHERE store_id=$1 AND master_product_id=$2`, storeID, masterProductID).Scan(&existingAssortmentID)
+	if existingAssortmentID != "" {
+		truth, truthErr := readAssortmentRuntimeTruth(ctx, tx, existingAssortmentID)
+		if truthErr == nil {
+			input.UnitPrice = float64(truth.AmountMinor) / 100
+			currency = truth.Currency
+		} else if !errors.Is(truthErr, ErrNotFound) {
+			return StoreAssortment{}, truthErr
+		}
+	}
+
+	id := entityID("assortment")
+	row := tx.QueryRowContext(ctx, `
+		INSERT INTO dsh_store_assortments (
+			id, store_id, master_product_id, unit_price, currency, available,
+			stock_status, local_note, custom_image_object_key, publication_status, submitted_by
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+		ON CONFLICT (store_id, master_product_id) DO UPDATE SET
+			unit_price=EXCLUDED.unit_price,
+			currency=EXCLUDED.currency,
+			available=EXCLUDED.available,
+			stock_status=EXCLUDED.stock_status,
+			local_note=EXCLUDED.local_note,
+			custom_image_object_key=EXCLUDED.custom_image_object_key,
+			publication_status=EXCLUDED.publication_status,
+			updated_at=NOW(),
+			version=dsh_store_assortments.version + 1
+		WHERE ($12::int IS NULL OR dsh_store_assortments.version=$12)
+		RETURNING `+assortmentColumns,
+		id, storeID, masterProductID, input.UnitPrice, currency, input.Available,
+		stockStatus, input.LocalNote, input.CustomImageObjectKey, publicationStatus,
+		actorID, input.ExpectedVersion)
+	a, err := scanAssortment(row)
+	if errors.Is(err, sql.ErrNoRows) || errors.Is(err, ErrNotFound) {
+		return StoreAssortment{}, ErrConflict
+	}
+	if err != nil {
+		return StoreAssortment{}, err
+	}
+
+	if err := bootstrapAssortmentRuntimeTruth(ctx, tx, a); err != nil {
+		return StoreAssortment{}, err
+	}
+	truth, truthErr := readAssortmentRuntimeTruth(ctx, tx, a.ID)
+	if publicationStatus == "client_visible" && input.Available {
+		if truthErr != nil || !assortmentTruthPurchasable(truth) {
+			return StoreAssortment{}, fmt.Errorf("%w: client_visible assortment requires an effective price and purchasable inventory", ErrInvalid)
+		}
+	}
+	if truthErr == nil {
+		a = projectAssortmentRuntimeTruth(a, truth)
+	} else if !errors.Is(truthErr, ErrNotFound) {
+		return StoreAssortment{}, truthErr
+	}
+
+	if err := tx.Commit(); err != nil {
+		return StoreAssortment{}, err
+	}
+	return a, nil
+}
