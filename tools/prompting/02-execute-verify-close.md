@@ -1,16 +1,60 @@
-# الأمر 2 — التنفيذ والتحقق والمراجعة والإغلاق حتى أعلى قرار مثبت
+# الأمر 2 — التنفيذ والتحقق والمراجعة والإغلاق الجذري FAIL-CLOSED
 
 Status: DERIVED_SUPPORT
 
-استخدم هذا الأمر بعد التشخيص/الخطة: تنفيذ حزمة، تنفيذ مهمة مباشرة محدودة، أو مراجعة Candidate مثبت read-only. الهدف هو إصلاح السبب الجذري على أحدث حقيقة ريموت، بناء Candidate واضح، إثبات النتيجة عليه، ثم إصدار أعلى قرار تسمح به السلطة والأدلة الفعلية.
+استخدم هذا الأمر بعد التشخيص/الخطة لتنفيذ الحزمة، أو تنفيذ مهمة مباشرة محدودة وآمنة، أو مراجعة Candidate مثبت read-only. الهدف هو إزالة السبب الجذري على أحدث حقيقة ريموت، بناء Candidate واضح، إثبات النتيجة عليه فعليًا End-to-End، ثم إصدار أعلى قرار تسمح به السلطة والأدلة الحالية فقط.
 
-> هذا Prompt مساعد مشتق. اقرأ دائمًا enums/flags/approval/evidence/schema من المصادر الحاكمة الحالية على الـSHA المثبت. لا تجعل Package أو Prompt أو Report سلطة أعلى من current governance/Product Truth/implementation/runtime/repository-platform truth.
+> هذا Prompt مساعد مشتق. كل enum/flag/status/approval/evidence/schema/path مذكور هنا يخضع للمصدر الحاكم الحالي على الـSHA المثبت. لا تجعل Prompt أو Package أو Report سلطة أعلى من Governance/Product Truth/Implementation Truth/Runtime Truth/Repository-Platform Truth.
+
+## 0. العقد الإلزامي غير القابل للتفاوض — FAIL-CLOSED
+
+```text
+DEFAULT_STATE = OPEN
+DONE/CLOSED is forbidden until proven on the latest valid immutable candidate.
+```
+
+وجود **أي خطأ، فجوة، تناقض، تكرار، ضجيج جوهري، كود ميت، اعتماد خاطئ، منطق ناقص، ربط أو تكامل ناقص، حالة غير معالجة، سلوك غير محسوم، Regression، خلل تشغيلي أو أثر جانبي معلوم داخل النطاق المثبت** يعني أن المهمة ما تزال OPEN.
+
+**ممنوع قطعًا:**
+
+```text
+ignore / defer / hide / patch-around / workaround / bypass
+silent fallback that masks a defect
+TODO/FIXME as a substitute for closure
+disable/skip/weaken tests or guards
+swallow errors or exit codes
+hard-code success
+silence scanners materially
+invent evidence or tool execution
+exclude a related defect merely to make the task look complete
+rerun deterministic failures blindly until green
+rewrite applied migration history
+force-push or overwrite concurrent newer work
+```
+
+لكل خلل:
+
+```text
+ROOT CAUSE
+→ BLAST RADIUS
+→ CANONICAL OWNER / SOURCE OF TRUTH
+→ ROOT FIX
+→ migrate every affected writer/reader/consumer
+→ remove obsolete/parallel path
+→ persisted/runtime readback
+→ affected verification
+→ adversarial regression search
+```
+
+المعيار ليس **أقل تغيير ممكن**، بل **أصح وأجذر وأنظف وأوضح تغيير كامل داخل النطاق المثبت**.
+
+إذا تعذر إثبات بند مطلوب فهو **غير مغلق**. إذا ظهر خلل جديد تعود المهمة فورًا إلى `OPEN`. إذا بقي شيء معلوم قابل للمعالجة داخل النطاق فالتوقف على أنه DONE ممنوع.
 
 ## المدخلات
 
 ```text
 REPOSITORY: <owner/repo>
-TARGET_REF: <branch-or-ref>
+TARGET_REF: <exact branch-or-ref>
 MODE: <EXECUTE_PACKAGE | EXECUTE_DIRECT | REVIEW_CANDIDATE>
 PACKAGE_PATH: <plans/diagnose-implementing/<task> | N/A>
 TASK: <direct task | N/A>
@@ -20,114 +64,100 @@ CLAIMED_OUTCOME: <AUTO_FROM_PACKAGE | explicit measurable outcome>
 DELIVERY: <LOCAL_ONLY | COMMIT | COMMIT_AND_PUSH>
 ```
 
-## 1. الأوضاع
+`DELIVERY` لا يمنح ضمنيًا صلاحية `MERGE`, `TAG`, `RELEASE`, `DEPLOY`, production mutation أو destructive data operation. هذه تحتاج سلطة صريحة مستقلة إن كانت مطلوبة.
+
+## 1. أوضاع التنفيذ
 
 ```text
 EXECUTE_PACKAGE
-= current package → drift/schema reconciliation → execute → final candidate → verify/review/decide.
+= current package → current-truth/schema reconciliation → execute → cleanup → final candidate → verify/review/decide.
 
 EXECUTE_DIRECT
-= small bounded low-risk task only.
+= bounded, single-root-cause, low-risk task only.
 
 REVIEW_CANDIDATE
 = immutable read-only candidate review; no source/package/commit/push mutation.
 ```
 
-`EXECUTE_DIRECT` يتحول إلى Package عند multiple owners/root causes، multi-domain/multi-surface foundation، contract/schema migration affecting multiple consumers، cross-domain transaction، أو protected/high-risk domains مثل auth/authz/sessions, privacy/secrets, isolation, finance, migrations/production data, CI/infrastructure/release/production.
+`EXECUTE_DIRECT` يتحول إلزاميًا إلى Package عند أي من:
+
+```text
+multiple owners/root causes
+multi-domain or multi-surface foundation
+shared contract/schema change affecting multiple consumers
+cross-domain transaction
+migration/backfill/data-shape change
+protected/high-risk domain:
+auth/authz/sessions, privacy/secrets, isolation, finance,
+CI/infrastructure/release/production, irreversible external side effect
+```
 
 ## 2. السلطة والحقيقة
 
+رتب الحقيقة ديناميكيًا من المصادر الحاكمة الحالية:
+
 ```text
 current authorized task/review
-→ authority-precedence
-→ GOVERNANCE + PRD + applicable policies
+→ authority precedence
+→ Governance + PRD + applicable policies
 → capability Product Truth
-→ current machine contracts/registries
+→ machine contracts/registries/schema
 → exact pinned implementation/runtime/repository-platform evidence
 ```
 
-استخدم `CODE_BASED_LEAN` و`AFFECTED_PLUS_RISK_EXPANSION` فقط.
-
-## 3. SHA/Candidate model
-
-لا تستخدم كلمة Candidate بمعانٍ متعددة:
+افصل دائمًا:
 
 ```text
-STARTING_REMOTE_SHA = TARGET_REF head عند بدء المهمة
-WORK_BASE_SHA       = latest reconciled head الذي بُني عليه delta الحالي
-IMPLEMENTATION_SHA  = logical implementation commit; قد يوجد أكثر من واحد
-BOOKKEEPING_SHA     = optional derived-package/document commit
-FINAL_CANDIDATE_SHA = آخر commit بعد انتهاء كل الكتابات المسموح بها
-LATEST_REMOTE_SHA   = آخر re-resolved TARGET_REF head
-HEAD_AT_DECISION    = TARGET_REF head مباشرة قبل القرار
+AUTHORITY TRUTH
+PRODUCT TRUTH
+IMPLEMENTATION TRUTH
+RUNTIME TRUTH
+REPOSITORY-PLATFORM TRUTH
 ```
 
-أي write بعد `FINAL_CANDIDATE_SHA` يولد Candidate جديدًا ويعيد الأدلة المتأثرة.
+Search/discovery ليس Truth نهائيًا. Package/Prompt/Historical status أضعف من الحقيقة الحالية.
 
-### Package bookkeeping paradox
-
-لا تدخل في حلقة:
+استخدم فقط:
 
 ```text
-verify → write result into package → new SHA → evidence stale → verify → write again
+CODE_BASED_LEAN
+AFFECTED_PLUS_RISK_EXPANSION
 ```
 
-القاعدة:
+لا full-repo sweep بلا علاقة مثبتة، ولا تضيق النطاق لإخفاء dependency أو blast radius مثبت.
 
-1. كل product/package bookkeeping المطلوب يكتمل **قبل Freeze**.
-2. بعد Freeze لا تكتب final evidence/result إلى repo مرة أخرى.
-3. Final Evidence Matrix/decision يمكن أن تكون read-only output مرتبطة بالـCandidate ولا يلزم commit جديد.
-4. `--strict --closure` يثبت فقط ما يفحصه Validator؛ لا يثبت Evidence Matrix أو approvals أو Final Closure.
-5. إذا كان تشغيل closure validator يتطلب package mutation، هذه mutation تسبق Freeze وتصبح جزءًا من Candidate ثم تعاد الأدلة؛ أو يبقى final decision خارج package mutation.
+## 3. تثبيت الريموت والهوية التنفيذية
 
-## 4. حل AUTO خوارزميًا
-
-### EXECUTE_PACKAGE
+قبل التشخيص أو الكتابة:
 
 ```text
-STARTING_REMOTE_SHA = current TARGET_REF head
-WORK_BASE_SHA = latest safe head after drift reconciliation
-BASE when AUTO = package pinnedStartSha .. FINAL_CANDIDATE_SHA for total task review
-CANDIDATE when AUTO = FINAL_CANDIDATE_SHA only after Freeze
+resolve exact REPOSITORY
+resolve exact TARGET_REF
+STARTING_REMOTE_SHA = exact full 40-SHA
+record TASK_IDENTITY / PACKAGE_IDENTITY
+record BASE intent
 ```
 
-`pinnedStartSha` ليس push baseline إذا تحرك الفرع؛ هو historical package baseline فقط.
-
-### EXECUTE_DIRECT
+ممنوع:
 
 ```text
-STARTING_REMOTE_SHA = head before first task write
-WORK_BASE_SHA = latest reconciled head
-BASE when AUTO = STARTING_REMOTE_SHA .. FINAL_CANDIDATE_SHA
-CANDIDATE when AUTO = FINAL_CANDIDATE_SHA after Freeze
+default branch substitution
+silent branch switch
+guessing a missing ref
+using local stale ref as remote truth
 ```
 
-### REVIEW_CANDIDATE
+إذا `PACKAGE_PATH` موجود:
 
 ```text
-CANDIDATE=AUTO → resolve TARGET_REF once to exact 40-SHA and freeze it for review
-BASE=AUTO → derive only from explicit package/task provenance or review intent
+same task identity → RESUME_AND_RECONCILE
+same path + different task identity → COLLISION; do not overwrite
+stale package → rebaseline against current truth before product writes
 ```
 
-لا تخمن default branch أو arbitrary parent. إذا Base غير قابل للإثبات، سجّل evidence gap وفق القاموس الحالي.
+`استمر` يعني تابع المهمة الحالية مع الحفاظ على evidence غير المبطل، لا تبدأ من الصفر بلا سبب.
 
-## 5. Candidate existence / reachability / head relation
-
-قبل الحكم أثبت:
-
-```text
-candidate exists in repository
-candidate full immutable SHA
-candidate relation to TARGET_REF
-HEAD_AT_REVIEW_START
-HEAD_AT_DECISION
-HEAD_AT_DECISION == FINAL_CANDIDATE_SHA ?
-candidate reachable from TARGET_REF ?
-```
-
-يمكن مراجعة commit أقدم مقصودًا، لكن لا تقل إن **الرأس الحالي للفرع** مغلق عليه عندما الرأس مختلف.
-
-## 6. Capability Preflight ديناميكي
+## 4. Capability Preflight + Pre-Execution Authority Gate
 
 سجّل ما ينطبق:
 
@@ -148,81 +178,186 @@ CAN_ACCESS_PROVIDER
 CAN_VERIFY_PRODUCTION
 CAN_COMMIT
 CAN_PUSH
+CAN_MERGE
+CAN_RELEASE
+CAN_DEPLOY
 ```
 
-لكل evidence scope: `required capability → available? → acquisition path → proof limit`.
+لكل evidence scope:
+
+```text
+required capability
+available?
+acquisition path
+proof limit
+```
 
 غياب القدرة المطلوبة لا يصبح PASS.
 
-## 7. EXECUTE_PACKAGE preflight — current-schema projection
+### بوابة قبل العمليات المحمية أو غير القابلة للعكس
 
-اقرأ package/framework/schema/generator/validator الحاليين.
-
-### لا تثق بالحقول القديمة
-
-أي field/metadata موجود في حزمة قديمة وغير معروف للـSchema/Validator الحالي:
+قبل أي من:
 
 ```text
-DERIVED_LEGACY_METADATA
+production DB/data mutation
+destructive migration/backfill
+secret/key rotation or revocation
+provider-side financial/external mutation
+merge/release/deploy/tag
+ruleset/protection/security-policy mutation
+irreversible infrastructure action
 ```
 
-وصف نصي فقط؛ لا يخلق scope/requirement/approval. لا تتبع fixed slices/journeys أو policies قديمة إذا لم تعد حاكمة.
-
-### No-shell structural preflight
-
-إذا لا يوجد Shell:
+أثبت **قبل التنفيذ**:
 
 ```text
-fetch current framework README + generator + validator
-→ fetch every required package root file
-→ enumerate registered unit paths
-→ fetch every required unit file
-→ check JSON/schema/class/status/coverage/order/dependencies/markers/secrets/verification links according to current validator logic as far as provable
+required authority/approval
+allowed actor identity/role
+scope of approval
+exact target/environment
+candidate/change binding when required
+rollback/compensation plan where possible
 ```
 
-إذا الحزمة ناقصة داخليًا: لا Product write؛ أصلح الحزمة أو استخدم القرار الحالي المناسب (`FIX_REQUIRED` عادة للعيب الداخلي). إذا المشكلة فقط أن proof المطلوب لا يمكن تنفيذه، لا تدّع strict PASS.
+لا تؤجل اكتشاف نقص السلطة إلى Final Review بعد تنفيذ الضرر.
 
-### Stale-package rebaseline
+## 5. Scope Contract وBlast Radius
 
-إذا drift محدود: reconcile affected paths/contracts/schema/owners/journeys/verifications فقط.
-
-إذا تغيرت authority/framework/schema ماديًا أو كان drift واسعًا/غير قابل للحد بأمان:
+ابدأ بـ:
 
 ```text
-DO NOT replay hundreds of commits mechanically
-→ treat affected package assumptions/evidence as stale
-→ re-diagnose target against latest head
-→ rewrite/rebaseline derived package as needed
-→ preserve old history in Git
+CLAIMED_OUTCOME
+→ canonical owner
+→ affected writers/readers/consumers
+→ contracts/schema/data/runtime
+→ surfaces/journeys
+→ required failure/recovery paths
 ```
 
-وجود status `IN_PROGRESS/DONE/PASS` قديم لا يسمح بالاستئناف قبل current-truth reconciliation.
-
-Seeded Coverage هو assessment ledger، لا deep scan mandate.
-
-## 8. Concurrent-Agent Isolation
+سجّل:
 
 ```text
-PARALLEL AGENTS ARE ALLOWED.
-PARALLEL PUSH ASSUMPTIONS ARE NOT.
+IN_SCOPE
+PROVEN_DEPENDENCIES
+MUST_NOT_CHANGE
+SUPPORTED_EXCLUSIONS + reason + reopen trigger
 ```
 
-محليًا الأفضل:
+اسم التطبيق/الصفحة/الملف نقطة بدء وليس حدًا إذا أثبتت العلاقات امتداد النطاق.
+
+أي Finding جديد:
 
 ```text
-ONE WRITING AGENT = ONE ISOLATED WORKSPACE/WORKTREE/CLONE
+related → يدخل النطاق ويُعالج
+proven unrelated → exclusion موثق + evidence + reopen trigger
+uncertain materially → remains OPEN until resolved
 ```
 
-إذا workspace مشترك/غير نظيف:
+## 6. SHA / Candidate lifecycle
+
+استخدم المصطلحات التالية بمعنى واحد فقط:
+
+```text
+STARTING_REMOTE_SHA = TARGET_REF head at task start
+WORK_BASE_SHA       = latest reconciled head used to build current delta
+IMPLEMENTATION_SHA  = logical implementation commit; may be multiple
+BOOKKEEPING_SHA     = optional derived package/document commit
+FINAL_CANDIDATE_SHA = final immutable commit after every allowed write
+LATEST_REMOTE_SHA   = latest re-resolved TARGET_REF head
+HEAD_AT_REVIEW_START
+HEAD_AT_DECISION
+MERGE_SHA           = only if an explicitly authorized merge actually occurs
+```
+
+أي write بعد `FINAL_CANDIDATE_SHA`:
+
+```text
+old candidate evidence becomes STALE where affected
+→ new candidate
+→ rerun invalidated evidence
+```
+
+### Package bookkeeping paradox
+
+ممنوع:
+
+```text
+verify → write final evidence into repo → new SHA → verify → write again forever
+```
+
+القاعدة:
+
+1. كل package/product bookkeeping المطلوب يكتمل **قبل Freeze**.
+2. بعد Freeze لا source/package/format/generation commit جديد.
+3. Final Evidence Matrix/decision يمكن أن تكون read-only output مرتبطة بالـCandidate.
+4. Validator PASS يثبت ما يفحصه Validator فقط.
+5. إذا closure validator يحتاج mutation، نفّذها قبل Freeze ثم أعد evidence المتأثر.
+
+## 7. حل AUTO حتميًا
+
+### EXECUTE_PACKAGE
+
+```text
+STARTING_REMOTE_SHA = current TARGET_REF head
+WORK_BASE_SHA = latest safe reconciled head
+BASE=AUTO = package pinnedStartSha .. FINAL_CANDIDATE_SHA for total task review
+CANDIDATE=AUTO = FINAL_CANDIDATE_SHA after Freeze only
+```
+
+`pinnedStartSha` historical baseline، وليس push baseline إذا تحرك الفرع.
+
+### EXECUTE_DIRECT
+
+```text
+STARTING_REMOTE_SHA = head before first task write
+WORK_BASE_SHA = latest reconciled head
+BASE=AUTO = STARTING_REMOTE_SHA .. FINAL_CANDIDATE_SHA
+CANDIDATE=AUTO = FINAL_CANDIDATE_SHA after Freeze
+```
+
+### REVIEW_CANDIDATE
+
+```text
+CANDIDATE=AUTO → resolve TARGET_REF once to exact 40-SHA and freeze it
+BASE=AUTO → derive only from explicit task/package/review provenance
+```
+
+لا arbitrary parent ولا guessed default branch. Base غير المثبت = evidence gap.
+
+## 8. Candidate existence / reachability / relation
+
+قبل الحكم أثبت:
+
+```text
+candidate exists
+candidate full immutable SHA
+candidate reachable relation to TARGET_REF
+HEAD_AT_REVIEW_START
+HEAD_AT_DECISION
+HEAD_AT_DECISION == FINAL_CANDIDATE_SHA ?
+candidate reachable from TARGET_REF ?
+```
+
+يمكن مراجعة commit أقدم مقصودًا، لكن لا تدّع إغلاق **الرأس الحالي** إذا كان الرأس مختلفًا.
+
+## 9. Workspace / staging hygiene
+
+قبل أول تعديل:
 
 ```text
 record LOCAL_WORKSPACE_ID
-record PRE_EXISTING_LOCAL_CHANGES
-record INTENDED_PATHS/SYMBOLS/CONCERNS
+record current branch/ref
+record PRE_EXISTING_LOCAL_CHANGES including untracked
+record intended paths/symbols/hunks
+```
+
+القاعدة:
+
+```text
 foreign/pre-existing change ≠ this agent's change
 ```
 
-ممنوع افتراضيًا عندما قد يلتقط تغييرات أجنبية:
+ممنوع افتراضيًا عندما قد يلتقط أو يمحو تغييرات أجنبية:
 
 ```text
 git add .
@@ -234,38 +369,42 @@ git reset --hard
 git clean -fd
 ```
 
-Stage explicit paths/hunks وافحص staged diff. حتى نفس الملف قد يحتوي hunk لوكيل آخر؛ افحص semantics لا path فقط.
-
-## 9. Atomic GitHub Remote/API writes
-
-مع تعدد الوكلاء، **Contents API file SHA ليس branch-head Compare-And-Swap**.
-
-لـlogical multi-file/final write فضّل:
+قبل كل commit:
 
 ```text
-resolve latest head
-→ create blobs/tree against that base
-→ create commit with exact expected parent
-→ re-resolve TARGET_REF
-→ non-force fast-forward update_ref
+inventory working tree
+→ allowlist exact owned paths/hunks
+→ stage explicit paths/hunks
+→ inspect staged diff
+→ inspect untracked/foreign delta again
+→ commit one coherent logical boundary
 ```
 
-إذا branch تحرك، update_ref يجب أن يفشل؛ لا Force. أعد reconciliation وابنِ commit جديدًا على latest head.
+حتى نفس الملف قد يحتوي hunk لوكيل آخر؛ path ownership وحده غير كافٍ.
 
-استخدم per-file Contents API فقط عندما لا يتوفر tree/commit path أو عندما التغيير محدود ومخاطره مقبولة؛ أعد حل الرأس قبل/بين/بعد الدفعات ولا تعتبر file-SHA check ضمانًا للرأس كله.
+## 10. Concurrent-Agent Isolation
 
-Partial multi-file API write ليس نجاحًا.
+```text
+PARALLEL AGENTS ARE ALLOWED.
+PARALLEL PUSH ASSUMPTIONS ARE NOT.
+```
 
-## 10. Latest-Head Semantic Reconciliation Gate
+الأفضل محليًا:
 
-قبل كل logical write، وخصوصًا final commit/push:
+```text
+ONE WRITING AGENT = ONE ISOLATED WORKSPACE/WORKTREE/CLONE
+```
+
+قبل كل logical write/final commit/push:
 
 ```text
 resolve LATEST_REMOTE_SHA
-→ compare WORK_BASE_SHA/STARTING_REMOTE_SHA → LATEST_REMOTE_SHA
-→ inspect changed paths/symbols/contracts/schema/migrations/generated clients/truth owners/journeys
+→ compare WORK_BASE_SHA → LATEST_REMOTE_SHA
+→ inspect paths/symbols/contracts/schema/migrations/generated clients/truth owners
 → classify concurrent delta
 ```
+
+التصنيف:
 
 ```text
 DISJOINT
@@ -278,72 +417,203 @@ AUTHORITY_OR_TRUTH_CHANGE
 المعالجة:
 
 ```text
-DISJOINT → carry forward on latest head; rerun only invalidated shared evidence.
-RELATED_NON_CONFLICTING → reconcile assumptions + affected checks.
-SEMANTIC_OVERLAP → re-diagnose owner/readers/writers/contracts/state; rebuild delta + reverify.
-DIRECT_CONFLICT → no push; intentional resolution on latest head → new candidate.
-AUTHORITY_OR_TRUTH_CHANGE → reread authority/Product Truth/contracts → re-diagnose before write.
+DISJOINT
+→ carry forward on latest head
+→ rerun only evidence invalidated by shared context
+
+RELATED_NON_CONFLICTING
+→ reconcile assumptions + affected checks
+
+SEMANTIC_OVERLAP
+→ re-diagnose owner/readers/writers/contracts/state
+→ rebuild delta on latest head
+→ reverify
+
+DIRECT_CONFLICT
+→ no push
+→ intentional resolution on latest head
+→ new candidate
+
+AUTHORITY_OR_TRUTH_CHANGE
+→ reread authority/Product Truth/contracts
+→ re-diagnose before write
 ```
 
-Sibling commits from the same base that touch the same path/hunk/symbol are at least `SEMANTIC_OVERLAP`; mutually exclusive edits are `DIRECT_CONFLICT`. لا textual auto-merge لمجرد أن Git يستطيع الدمج.
+Sibling commits من نفس base وتلمس نفس path/hunk/symbol هي على الأقل `SEMANTIC_OVERLAP`. لا textual auto-merge لمجرد أن Git يستطيع الدمج.
 
-## 11. Optimistic push serialization
+## 11. Atomic GitHub Remote/API writes
 
-لا تدّع distributed lock ما لم توجد آلية حقيقية:
+**Contents API file SHA ليس branch-head Compare-And-Swap.**
+
+لـlogical multi-file/final write فضّل عند توفره:
 
 ```text
-many agents prepare in parallel
-→ each final writer re-resolves latest head
-→ candidate parent = latest reconciled head
-→ re-resolve immediately before push/ref update
-→ fast-forward/expected-parent-safe update only
+resolve latest head
+→ create blobs/tree against exact base
+→ create commit with exact expected parent
+→ re-resolve TARGET_REF
+→ non-force fast-forward update_ref
 ```
 
-إذا تحرك الفرع بين final verification والدفع:
+إذا تحرك الفرع: لا Force. reconcile وابنِ commit جديدًا على latest head.
+
+استخدم per-file Contents API فقط عندما لا يتوفر atomic tree/commit path أو التغيير محدود ومخاطره مقبولة:
+
+```text
+re-resolve before batch
+→ write one owned file/logical unit
+→ re-resolve immediately after
+→ compare any movement before next write
+```
+
+Partial multi-file API write ليس نجاحًا؛ أكمل/rollback بأمان أو سجله كFinding مفتوح.
+
+## 12. Push serialization
+
+```text
+many agents may prepare in parallel
+→ one final writer at a time by optimistic reconciliation
+→ candidate parent = latest reconciled head
+→ re-resolve immediately before push/ref update
+→ fast-forward-safe update only
+→ re-resolve immediately after push
+```
+
+إذا تحرك الفرع بين verification والدفع:
 
 ```text
 DO NOT PUSH STALE CANDIDATE
-→ compare/reconcile latest movement
+→ compare/reconcile movement
 → rebuild candidate
-→ rerun invalidated final evidence
+→ rerun invalidated evidence
 ```
 
 ## PHASE A — EXECUTE_AND_VERIFY
 
-## 12. Root-cause execution loop
+## 13. Findings Ledger — لا Finding يضيع
+
+من أول تشخيص وحتى القرار احتفظ بسجل حي لكل Finding مادي:
+
+```text
+finding_id
+severity
+category
+first_seen_sha/run
+claim_affected
+exact path/symbol/evidence
+root cause or missing proof
+blast radius
+owner
+required fix/evidence
+status = OPEN | FIXED_PENDING_VERIFY | PROVEN_CLOSED | NOT_APPLICABLE
+reopen trigger
+```
+
+لا تحذف Finding لأنه اختفى من آخر log. لا `PROVEN_CLOSED` إلا بدليل حديث على Candidate صالح.
+
+Final decision ممنوع مع أي `OPEN` أو `FIXED_PENDING_VERIFY` داخل النطاق.
+
+## 14. Root-Cause Execution Loop
+
+لكل فشل:
 
 ```text
 FAILURE
 → classify evidence
-→ re-diagnose owner/root cause
-→ fix canonical owner
+→ correlate duplicates/symptoms
+→ identify first causal failure
+→ re-diagnose canonical owner/root cause
+→ challenge competing hypothesis
+→ fix owner/source
+→ migrate all affected consumers
+→ remove obsolete/parallel path
 → targeted verify
 → affected verify
-→ continue
+→ search deliberately for adjacent regressions
+→ update Findings Ledger
+→ continue until exhausted
 ```
 
 لا Patch loop بلا فرضية جديدة.
 
-الإصلاح:
+الإصلاح الجذري:
 
 ```text
 symptom
 → canonical truth/write owner
 → proven root cause
 → target state
-→ central fix
-→ migrate affected writers/readers/consumers
-→ regenerate derivatives when required
-→ remove obsolete/parallel path after migration
+→ central fix/refactor/redesign if needed
+→ writers/readers/consumers migration
+→ contracts/generated artifacts synchronization
+→ data/migration transition where needed
+→ remove dead/legacy/duplicate path
 → persisted canonical readback
-→ affected verification
+→ runtime proof
 ```
 
-ممنوع temporary patch/silent fallback/parallel truth/permanent dual-write/parallel handwritten client/business logic in surface/runtime fixture as truth/fake control/UI-only auth/test weakening/applied-migration rewrite/state bypass/new financial retry identity before unknown-result reconciliation/legacy path left reachable/acceptance weakening.
+ممنوع:
 
-نفّذ تنظيفًا شاملًا لكل ما تبقى عبر الـ Backend والـ Frontend والـ APIs وقواعد البيانات، واحذف فورًا كل كود أو مكوّن مكرر، مهجور، أو عديم الفائدة (Dead code/Orphans) لضمان عدم ترك أي ديون تقنية بعد الإصلاح الجذري.
+```text
+temporary patch
+silent fallback
+parallel truth
+permanent dual-write without migration contract
+surface-local business truth duplicating canonical owner
+fake control/UI-only auth
+test/guard weakening
+state bypass
+legacy route left reachable after migration
+new financial retry identity before unknown-result reconciliation
+```
 
-## 13. Full-Stack Multi-Surface closure
+## 15. CI / Runtime Failure Loop — لا Blind Rerun
+
+لكل Workflow/Runtime failure:
+
+```text
+run SHA
+→ workflow/profile
+→ job
+→ FIRST REAL FAILED STEP/phase
+→ exact log/artifact
+→ classify
+```
+
+التصنيف:
+
+```text
+DETERMINISTIC_PRODUCT
+DETERMINISTIC_TEST_OR_CONTRACT
+INFRA_OR_RUNNER
+EXTERNAL_PROVIDER
+FLAKY_OR_NONDETERMINISTIC
+CANCELLED_OR_SUPERSEDED
+STALE_RUN
+```
+
+القواعد:
+
+```text
+DETERMINISTIC → root-cause fix; rerun after NEW SHA
+INFRA/PROVIDER → prove external cause before targeted rerun
+FLAKY → flakiness itself is a defect until root cause/control is proven
+CANCELLED/SUPERSEDED → neither PASS nor product FAIL; cannot prove closure
+STALE_RUN → cannot prove current candidate
+```
+
+لا rerun متكرر لإجبار green. لا تشغيل Heavy CI مرتين لنفس Candidate إذا evidence نفسها ما تزال صالحة.
+
+إذا فشلت عدة jobs:
+
+```text
+correlate first
+→ one root cause may explain many failures
+→ fix root cause
+→ rerun minimum necessary invalidated checks
+```
+
+## 16. Full-Stack Multi-Surface Closure
 
 تتبع بقدر الانطباق:
 
@@ -351,9 +621,9 @@ symptom
 Product Truth
 → Actor/Service Identity
 → Session/Device
-→ Trusted Scope
+→ Trusted Platform/Operator/Partner/Store/Assignment Scope
 → Role/Permission/Object authorization
-→ Surface action
+→ Surface/Route/Screen/Control
 → shared controller/adapter
 → generated client/canonical contract
 → API/domain/state machine
@@ -361,118 +631,466 @@ Product Truth
 → cache/idempotency
 → events/jobs/providers/WLT
 → persisted canonical readback
-→ every required affected surface
+→ every affected consuming surface
 → audit/observability
+→ runtime/startup/networking
 ```
 
-غطِّ success/invalid/denied/wrong-scope/forbidden-state/duplicate/replay/race/concurrency/timeout/unknown-result/offline/reconnect/retry/partial-failure/restart/mixed-version/compensation/reconciliation حسب الخطر.
-
-## 14. Domain gates
-
-### Compatibility
-old-mobile+new-backend، new-mobile+old-backend عند الحاجة، current control-panel+backend، generated client/event/cache، mixed-version، feature flag safe default، rollback/roll-forward، owner/expiry/removal trigger.
-
-### Security
-auth/session/revocation/role/permission/trusted context/object auth/IDOR/cross-scope/service auth/PII/secrets/provider signature/replay/rate-limit. Client IDs ليست authority.
-
-### Finance
-WLT المالك المالي. لا parallel financial truth. أثبت idempotency/correlation/state constraints/readback/reconciliation/compensation/unknown provider outcome. Mock/local success لا يثبت finance/production.
-
-### PostgreSQL
-Forward deterministic migrations، constraints/indexes/FKs/checks، compatibility/backfill/writer-reader transition، fresh/non-empty، drift/orphans/duplicates، locks/concurrency/idempotency، restart/partial failure، rollback/roll-forward. لا applied-history rewrite.
-
-### Events/Jobs/Providers
-stable identity، duplicate/out-of-order/replay، outbox/inbox، retry/backoff/DLQ/lease، timeout/unknown result، provider auth، reconciliation/compensation/restart.
-
-### UI/Mobile/Control Panel
-loading/empty/partial/success/error/forbidden/conflict/stale/offline/retry/recovery + persisted readback، RTL/localization/accessibility/responsive. Mobile native/deep-links/permissions/push/maps/SecureStore/offline/build/OTA/EAS/env. Control Panel route/object auth/trusted scope/search isolation/bulk/audit/session/error/readback.
-
-## 15. Verification — affected first
-
-اقرأ commands الفعلية:
+غطِّ حسب الخطر:
 
 ```text
-nearest root-cause regression check
-→ unit/package test
-→ related integration
-→ affected typecheck/lint/test/build
-→ contract/generated client/db/security/isolation
-→ runtime/readiness/smoke/readback when claimed
-→ cross-surface E2E/manual visual when claimed
-→ full workspace/runtime only if impact/policy requires
+success
+invalid input
+unauthenticated/denied
+wrong scope / IDOR
+forbidden state
+not found
+conflict/stale version
+duplicate/replay/idempotency
+race/concurrency
+partial failure
+restart/recovery
+timeout/unknown result
+retry/backoff/DLQ where relevant
+offline/reconnect
+mixed-version compatibility
+rollback/roll-forward
+compensation/reconciliation
 ```
 
-كل Check له claim وproof limit. لا Scope يثبت آخر.
-يجب أن يشمل الاختبار جميع المسارات والتكاملات والسيناريوهات الفعلية (Actual Scenarios) من البداية للنهاية، ولا تكتفِ بالاختبارات المعزولة (Isolated/Mocked tests) حتى التحقق النهائي من سلامة النظام.
+## 17. Domain Gates
 
-أي related mutation أو concurrent change يبطل الأدلة المتأثرة ويعيدها على Candidate جديد.
+### Compatibility
 
-## 16. Package bookkeeping قبل Freeze
+```text
+old-mobile + new-backend
+new-mobile + old-backend when required
+current control-panel + backend
+generated client/event/cache compatibility
+mixed-version behavior
+feature-flag safe default
+rollback/roll-forward
+compatibility owner + expiry + removal trigger
+```
 
-في Package mode حدّث فقط الحقيقة المتاحة أثناء التنفيذ: results/checks/blockers/deviations/order/coverage/latest observed state وفق Schema الحالي.
+### Security
 
-لا تكتب `CLOSED_WITH_EVIDENCE` استباقيًا. Package state ليس final approval truth.
+auth/session/revocation/role/permission/trusted context/object auth/IDOR/cross-scope/service auth/input-output validation/injection/SSRF/path traversal/upload/PII/secrets/provider signature/replay/rate-limit/audit.
 
-## 17. Final latest-head integration
+أي secret/PII في logs/artifacts/evidence يجب redaction له دون إخفاء الدليل المطلوب. لا تعرض credential خام في التقرير.
 
-قبل تسمية أي SHA Final Candidate:
+### Finance
+
+WLT هو المالك المالي. لا parallel financial truth. أثبت:
+
+```text
+idempotency/correlation
+state constraints
+maker/checker/SoD where governed
+canonical readback
+provider outcome binding
+unknown-result reconciliation
+compensation
+restart/replay safety
+```
+
+Mock/local success لا يثبت production finance/provider outcome.
+
+### PostgreSQL / Data
+
+```text
+forward deterministic migrations only
+constraints/indexes/FKs/checks
+expand/backfill/switch/contract compatibility when needed
+fresh DB + representative non-empty DB
+drift/orphans/duplicates
+locks/concurrency/idempotency
+restart/partial failure
+rollback/roll-forward
+no applied-history rewrite
+```
+
+اختبارات البيانات لا تعتمد على بقايا run سابق لإعطاء PASS.
+
+### Events / Jobs / Providers
+
+```text
+stable identity
+duplicate/out-of-order/replay
+outbox/inbox
+retry/backoff/DLQ/lease
+timeout/unknown result
+provider auth/signature
+reconciliation/compensation/restart
+```
+
+### UI / Mobile / Control Panel
+
+غطِّ loading/empty/partial/success/error/forbidden/conflict/stale/offline/retry/recovery + persisted readback.
+
+Mobile عند الانطباق:
+
+```text
+native permissions
+deep links
+push
+maps/location
+SecureStore/session
+offline/reconnect
+build/OTA/EAS/env/runtime transport
+physical-device vs emulator proof limit
+```
+
+Control Panel عند الانطباق:
+
+```text
+route/object auth
+trusted scope
+server/client boundary
+search isolation
+bulk operations
+audit/session/error/readback
+responsive/RTL/localization/accessibility
+```
+
+### Dependencies / Supply Chain / CI
+
+عند تغير dependency/workflow/tooling:
+
+```text
+lockfile integrity
+unsupported/duplicate dependency
+license/policy if governed
+CVE/dependency review
+CodeQL where applicable
+Gitleaks/secrets
+workflow pinning/actionlint/zizmor/policy guards
+```
+
+لا تجعل scanner أخضر بإسكات finding دون معالجة السبب أو إثبات false positive وفق policy.
+
+## 18. Runtime Freshness وState Isolation
+
+Runtime proof لا يُقبل إذا كان من الممكن أن يكون شغّل كودًا أو بيانات stale.
+
+قبل runtime/E2E حسب الانطباق أثبت:
+
+```text
+source checkout SHA = candidate SHA
+built artifact/image/bundle provenance = candidate SHA or exact derived digest
+service/process/container version is current
+migrations/schema at required version
+required seeds/fixtures provenance known
+no stale dev server/container/process masking new code
+network endpoints/config/env correspond to intended profile
+```
+
+عند الحاجة:
+
+```text
+rebuild/restart exact affected services
+clear only safe derived caches
+use unique test run identifiers
+capture pre-state
+execute scenario
+read canonical persisted post-state
+clean test data safely or prove isolated disposable environment
+```
+
+ممنوع نجاح يعتمد على بيانات باقية من run سابق أو fixture لا يمر بالمسار الحقيقي المدعى.
+
+## 19. Verification Strategy — affected first, risk-proportional
+
+اقرأ commands الحقيقية من manifests/scripts/workflows/registries، ولا تخترع command.
+
+```text
+nearest root-cause regression
+→ unit/package
+→ related integration
+→ affected typecheck/lint/test/build
+→ contract/generated client
+→ DB/data/security/isolation
+→ runtime/readiness/smoke/canonical readback
+→ cross-surface E2E/manual visual when claimed
+→ full workspace/runtime only when impact/policy requires
+```
+
+لكل Check:
+
+```text
+exact command/source
+candidate_sha
+run/artifact id
+started/completed time when available
+environment/profile/runner
+exit/status
+claim it can falsify
+what it does NOT prove
+```
+
+Build/Lint/Typecheck/Unit/CI جزئي لا يثبت End-to-End تلقائيًا.
+
+الاختبار النهائي يجب أن يمر عبر **Actual Scenario** الحقيقي إذا كان الـClaim تشغيليًا؛ Mock/isolated proof يبقى محدودًا.
+
+إذا تغير test/guard نفسه ضمن الإصلاح، أثبت أنه:
+
+```text
+fails on the broken behavior or equivalent regression fixture
+passes after the root fix
+was not weakened to accept the bug
+```
+
+## 20. Evidence Invalidation Rules
+
+أي mutation أو concurrent movement قد يبطل evidence. سجّل لكل evidence:
+
+```text
+bound_candidate_sha
+inputs/environment
+covered scope
+invalidated by: paths/contracts/schema/runtime/data/config/authority changes
+```
+
+لا تعِد كل شيء بلا سبب، ولا تحتفظ بدليل صار stale.
+
+إذا تغير:
+
+```text
+contract/schema → rerun consumers + generation + integration
+migration/data owner → rerun DB/runtime/readback
+runtime/config/network → rerun runtime/E2E affected
+security/auth/permission → rerun negative isolation/security paths
+shared library → rerun all proven consumers
+only unrelated docs → retain unaffected evidence if provenance proves independence
+```
+
+## 21. EXECUTE_PACKAGE current-schema projection
+
+اقرأ package/framework/schema/generator/validator الحاليين.
+
+أي field قديم غير معروف حاليًا:
+
+```text
+DERIVED_LEGACY_METADATA
+```
+
+وصف فقط؛ لا يخلق scope/requirement/approval.
+
+### No-shell structural preflight
+
+إذا لا يوجد Shell:
+
+```text
+fetch current framework README + generator + validator
+→ fetch required package roots
+→ enumerate registered units
+→ fetch required unit files
+→ validate shape/markers/dependencies/verification links as far as provable
+```
+
+لا تدّع Validator PASS بلا تشغيله.
+
+### Stale package
+
+```text
+limited drift → reconcile affected assumptions only
+material authority/framework/schema drift → rebaseline/re-diagnose current target
+```
+
+لا replay ميكانيكي لمئات commits لمجرد الحفاظ على package قديم.
+
+Seeded Coverage assessment ledger، وليس mandate لمسح كامل المستودع.
+
+## 22. Package Bookkeeping قبل Freeze
+
+في Package mode حدّث الحقيقة التنفيذية فقط وفق Schema الحالي:
+
+```text
+results/checks/blockers/deviations/order/coverage/latest observed state
+```
+
+لا تكتب `CLOSED_WITH_EVIDENCE` أو أي final approval state استباقيًا.
+
+## 23. Cleanup / Refactor جزء من DONE
+
+بعد إزالة السبب وقبل Freeze:
+
+```text
+remove dead/obsolete/duplicate code
+remove retired routes/exports/imports/configs/dependencies
+remove unnecessary compatibility/fallback layers
+remove stale TODO/FIXME related to scope
+remove orphan generated artifacts
+unify source of truth
+simplify duplicated logic
+verify no legacy path remains reachable
+```
+
+Cleanup غير المرتبط بالنطاق لا يُسحب عشوائيًا إلى المهمة؛ لكنه يصبح in-scope إذا كان بقايا مباشرة من السبب/الإصلاح.
+
+## 24. Final Latest-Head Integration قبل Freeze
 
 ```text
 inventory exact owned delta
 → latest-head semantic reconciliation
-→ apply/rebuild on latest safe head
-→ inspect exact diff + foreign/out-of-scope changes
-→ complete package bookkeeping required before Freeze
+→ rebuild/apply on latest safe head
+→ inspect exact diff + foreign/out-of-scope delta
+→ complete package bookkeeping
+→ run targeted affected verification
 → create final logical commit(s)
 → re-resolve TARGET_REF
 ```
 
-إذا agent آخر دفع، أعد البوابة.
+إذا agent آخر دفع: أعد بوابة reconciliation قبل تسمية Candidate نهائي.
+
+## 25. Delivery Boundary
+
+`LOCAL_ONLY`:
+
+```text
+no commit/push
+final candidate may be local immutable commit only if explicitly created/allowed;
+otherwise decision must state the proof limit
+```
+
+`COMMIT`:
+
+```text
+commit exact owned delta only
+no push
+```
+
+`COMMIT_AND_PUSH`:
+
+```text
+commit exact owned delta
+→ latest-head reconcile
+→ fast-forward-safe push
+→ re-resolve remote head
+```
+
+لا `MERGE/RELEASE/DEPLOY` إلا إذا طلبت صراحةً وكان authority gate مستوفى.
 
 ## PHASE B — FREEZE_AND_FINAL_VERIFY
 
-## 18. Freeze
+## 26. Freeze
 
 ```text
 FREEZE WRITES
-→ FINAL_CANDIDATE_SHA = exact last candidate commit
+→ FINAL_CANDIDATE_SHA = exact last allowed commit
 → verify existence/reachability/head relation
 → no source/package/format/generation/commit/push mutation during final evidence
 ```
 
 أي write لاحق = Candidate جديد وعودة إلى Phase A.
 
-## 19. Adversarial closing pass
+## 27. Final Cleanup + Hardening + Red-Team Review
 
-ابحث عن root cause غير مغلق، parallel/stale truth، hidden writer/reader، missing migration/consumer، surface gap، security bypass، retry/unknown/recovery gap، runtime-only defect، stale evidence، audit gap، foreign/out-of-scope delta، أو أي فجوة أو تناقض (Contradiction) في العقود بين الـ APIs والـ Bindings.
+على Candidate المرشح ابحث عمدًا عن عيب، لا عن سبب لقبول النتيجة:
+
+```text
+unclosed root cause
+parallel/stale truth
+hidden writer/reader
+missing consumer/migration
+contract/binding mismatch
+security/authz bypass
+cross-scope/IDOR
+retry/replay/concurrency bug
+unknown-result/recovery gap
+partial failure/restart gap
+runtime-only defect
+stale process/container/data
+flaky test
+weak/modified guard
+missing audit/observability
+foreign/out-of-scope delta
+legacy/dead/reachable path
+PII/secret leakage
+regression on neighboring consumer
+```
 
 أي Finding يحتاج كتابة يعيد Phase A.
 
-## 20. Final read-only verification
+## 28. Final Read-Only Verification
 
 على `FINAL_CANDIDATE_SHA` فقط:
 
 ```text
-required read-only final checks
+required final checks
 → generated consistency without mutation
 → exact diff/scope/foreign-change review
-→ canonical readbacks
-→ candidate-bound evidence
-→ test effectiveness
+→ canonical persisted readbacks
+→ runtime/E2E evidence where claimed
+→ security/data/finance gates where applicable
+→ test-effectiveness review
+→ evidence/artifact provenance verification
 ```
 
-ممنوع `--fix`/formatter write/generation write/cleanup apply/lockfile or migration mutation/commit/push/merge/swallowed exit code.
+ممنوع أثناء هذه المرحلة:
 
-## 21. Branch-race gates
+```text
+--fix
+formatter write
+generation write
+cleanup apply
+lockfile/migration mutation
+source/package write
+commit/push/merge
+swallowed exit code
+```
+
+## 29. Evidence Provenance + Artifact Integrity
+
+كل دليل نهائي يجب أن يثبت ارتباطه بنفس Candidate:
+
+```text
+candidate SHA
+workflow/run/job or command id
+artifact/log source
+runner/environment/profile
+status/exit
+no cancellation/supersession
+no mixing artifacts from another SHA/run
+proof limit
+```
+
+إذا كانت evidence manual/visual فسجّل بقدر الانطباق:
+
+```text
+app/build version or commit
+platform/device/emulator/browser
+route/scenario
+runtime endpoint/profile
+observed result
+capture timestamp
+```
+
+لا Screenshot بلا provenance يثبت runtime claim عالي المخاطر.
+
+## 30. Branch-Race Gates
 
 ### Before push
 
 ```text
 re-resolve TARGET_REF immediately
 → if head != candidate parent/latest reconciled base: DO NOT PUSH
-→ reconcile → new candidate → reverify
-→ push fast-forward-safe only
+→ reconcile
+→ new candidate
+→ rerun invalidated evidence
+→ fast-forward-safe push only
 → re-resolve after push
+```
+
+### While CI is running
+
+إذا TARGET_REF تحرك:
+
+```text
+running evidence remains bound to its original SHA
+→ do not re-label it as evidence for the new head
+→ classify movement
+→ decide which checks must rerun on new candidate/head
 ```
 
 ### Before final decision
@@ -482,11 +1100,11 @@ HEAD_AT_DECISION = re-resolve TARGET_REF
 compare HEAD_AT_DECISION with FINAL_CANDIDATE_SHA
 ```
 
-إذا تغير الرأس، evidence قد تبقى صحيحة للCandidate القديم، لكن لا تدّع إغلاق الرأس الحالي. إذا المطلوب إغلاق branch head، ابنِ/تحقق Candidate جديدًا.
+إذا المطلوب إغلاق branch head وكان مختلفًا: لا تدّع closure حتى reconcile/verify الرأس المطلوب.
 
 ## PHASE C — REVIEW_AND_DECIDE
 
-## 22. Independence provenance
+## 31. Independence Provenance
 
 ```text
 SELF_REVIEW ≠ INDEPENDENT_REVIEW
@@ -494,21 +1112,43 @@ SELF_REVIEW ≠ INDEPENDENT_REVIEW
 
 Git author/account وحده لا يثبت independence.
 
+سجّل:
+
 ```text
 independent reviewer identity/provenance proven? YES/NO
+review bound to exact candidate SHA?
+reviewer changed candidate after review started?
 ```
 
-إذا لا، independence = `UNPROVEN` وصفيًا. لا self-grant للprotected approvals ولا impersonation للمالك. المراجع المستقل لا يصلح Candidate ثم يعتمد إصلاحه في نفس دورة المراجعة.
+إذا المراجع أصلح Candidate، لا يعتمد إصلاحه كمراجعة مستقلة في الدورة نفسها إلا وفق policy حاكمة تسمح بذلك صراحةً.
 
-## 23. Claim/Diff/Test review
+## 32. Claim / Diff / Test Review
 
-راجع `CLAIMED_OUTCOME` لا الملفات فقط: actors/surfaces/owners/states/scopes/permissions/contracts/persistence/providers/finance/readbacks/failure/compatibility/evidence/approvals.
+راجع `CLAIMED_OUTCOME` لا الملفات فقط:
 
-راجع range:
+```text
+actors
+surfaces
+owners
+states
+scopes
+permissions
+contracts
+persistence
+providers
+finance
+readbacks
+failure/recovery
+compatibility
+evidence
+approvals
+```
+
+راجع range كاملًا:
 
 ```text
 changed files/commits
-foreign/pre-existing delta accidentally included
+foreign/pre-existing delta
 unexpected generated/lockfile changes
 out-of-scope cleanup
 missing consumer migration
@@ -527,15 +1167,17 @@ weakened/mocked/skipped/redirected/non-blocking?
 root-cause regression when regressable?
 ```
 
-## 24. Evidence Matrix
+## 33. Evidence Matrix
 
-استخرج current scopes من decision vocabulary/delivery policy. لكل scope:
+استخرج scopes من current decision vocabulary/delivery policy. لكل scope:
 
 ```text
+scope
 applicable? + reason
 PASS | FAIL | MISSING | STALE | BLOCKED
 source/command/run/artifact
 candidate_sha
+environment/profile
 proof_limit
 required capability
 required approval domain/owner
@@ -543,7 +1185,7 @@ required approval domain/owner
 
 CI/Build/Test/Validator لا يثبت scope آخر تلقائيًا.
 
-## 25. Approval Matrix
+## 34. Approval Matrix
 
 حلها من authority contracts الحالية:
 
@@ -558,70 +1200,131 @@ evidence/audit source
 SATISFIED | MISSING | UNPROVEN | NOT_APPLICABLE
 ```
 
-Historical blanket authorization ليس outcome acceptance. إذا identity/provenance/candidate binding غير مثبتة، approval غير مثبت.
+Historical blanket authorization ليس outcome acceptance. Identity/provenance/candidate binding غير المثبتة = approval غير مثبت.
 
-## 26. GitHub/CI truth
+## 35. GitHub / CI / Repository-Platform Truth
 
-عند الاعتماد عليها تحقق حيًا من Candidate نفسه: workflow runs/required checks/cancelled/superseded runs/reviews/threads/live rulesets/protection/merge relation. Tracked config لا يثبت live enforcement.
-
-## 27. Package validation semantics
-
-- لا تعتمد DONE/PASS داخل package كدليل مستقل.
-- `--strict`/`--closure` فقط إذا أمكن تشغيلهما فعليًا.
-- نجاحهما يثبت ما يفحصه Validator فقط.
-- **ممنوع** استخدام `--closure PASS` كدليل Evidence Matrix/Protected approvals/Final Closure.
-- لا post-evidence package mutation داخل frozen candidate.
-
-## 28. Findings
+عند الاعتماد على GitHub تحقق حيًا من Candidate نفسه:
 
 ```text
-severity: BLOCKER | HIGH | MEDIUM | LOW
-category: PRODUCT | ARCHITECTURE | SECURITY | FINANCE | DATA | CONTRACT | RUNTIME | UI_UX | QA | CI | GOVERNANCE
-claim_affected
-exact_path_or_evidence
-why_wrong
-root_cause_or_missing_proof
-required_owner
-required_fix_or_evidence
+workflow runs
+required checks
+cancelled/superseded/stale runs
+reviews and unresolved threads
+live rulesets/branch protection
+mergeability/base relation
+required status context names
+Sonar Quality Gate when applicable
+CodeQL/security/dependency checks when applicable
 ```
 
-Style preference غير مؤثر ليس Blocker.
+Tracked workflow/config لا يثبت live enforcement.
 
-## 29. Retention
+`green` لا يعني مجرد عدم وجود red؛ pending/cancelled/missing required check لا يصبح PASS.
 
-Package = `DERIVED_SUPPORT`. بعد انتهاء الحاجة، طبق repository-retention policy. task-temporary/superseded/unconsumed/reproducible package يُحذف عندما يكون الحذف مفوضًا وآمنًا ولا يعتمد عليه runtime/build/ci/migration/governance/operations. Git history هو الأرشيف.
+## 36. Package Validation Semantics
 
-حذف الحزمة نفسه mutation؛ إذا كان جزءًا من final branch state، نفّذه **قبل** تثبيت final candidate النهائي ثم أعد الأدلة التي تتطلب exact final SHA.
+- لا تعتمد DONE/PASS داخل package كدليل مستقل.
+- شغّل current `--strict`/`--closure` فقط إذا أمكن فعليًا وبالصيغة الحالية.
+- نجاح Validator يثبت فقط checks التي ينفذها.
+- ممنوع استخدام Validator كبديل لـEvidence Matrix/Protected approvals/Runtime truth/Final closure.
+- لا post-evidence package mutation داخل frozen candidate.
 
-## 30. القرار والتقرير
+## 37. Retention
 
-استخدم decision vocabulary الحالي فقط.
+Package = `DERIVED_SUPPORT`.
 
-`CLOSED_WITH_EVIDENCE` فقط عندما كل evidence scopes والموافقات المنطبقة مثبتة على **نفس immutable FINAL_CANDIDATE_SHA** بلا fail/blocked/pending، مع وضوح علاقة Candidate بالرأس الحالي.
+بعد انتهاء الحاجة طبق repository retention policy:
+
+```text
+task-temporary
+superseded
+unconsumed
+reproducible
+```
+
+يحذف فقط عندما يكون الحذف مفوضًا وآمنًا ولا يعتمد عليه runtime/build/ci/migration/governance/operations. Git history هو الأرشيف.
+
+إذا حذف package جزء من final branch state، نفّذه قبل Final Freeze ثم أعد evidence المرتبط بالـSHA النهائي.
+
+## 38. بوابة الإغلاق النهائية
+
+قبل أي قرار إغلاق يجب أن تكون النتيجة:
+
+```text
+zero known fixable errors in scope
+zero known gaps in scope
+zero known contradictions in scope
+zero known unresolved findings
+zero known unverified fixes
+zero known unjustified duplicate truth
+zero known dead/legacy reachable path caused by the work
+zero known contract/integration gaps
+zero known unresolved runtime/data state
+zero known regressions
+zero required pending/missing/stale evidence
+zero required missing/unproven approvals
+```
+
+إذا تعذر إثبات بند: OPEN/BLOCKED وفق current vocabulary، لا DONE.
+
+`CLOSED_WITH_EVIDENCE` أو أي مرادف حاكم حاليًا لا يُستخدم إلا عندما تكون كل evidence scopes والموافقات المنطبقة مثبتة على **نفس immutable FINAL_CANDIDATE_SHA**، بلا fail/blocked/pending/missing/stale مطلوب، مع وضوح علاقة Candidate بالرأس الحالي.
+
+## 39. التقرير النهائي
+
+استخدم decision vocabulary الحالي فقط، وسجّل:
 
 ```text
 repository / target_ref / mode
 starting_remote_sha / work_base_sha / final_candidate_sha
-head_at_decision / candidate_head_relation
+head_at_review_start / head_at_decision / candidate-head relation
 base_or_reviewed_range
 package_or_task / claimed_outcome
+capability limits
+pre-execution approvals for protected/irreversible actions
+scope / dependencies / supported exclusions
 concurrent movements + classification + reconciliation
 pre-existing/foreign change handling
-root causes + owners
-changed/removed/moved paths + scope assessment
+root causes + canonical owners
+changed/removed/moved paths + logical commit boundaries
 contracts/clients/migrations/data changes
 surfaces/journeys/readbacks
-checks + proof limits + invalidated evidence rerun
-test-effectiveness
+runtime freshness/state isolation proof
+checks + proof limits + evidence invalidation/reruns
+CI failure classifications + first real failed steps
+test effectiveness / flakiness status
+Findings Ledger final state
 Evidence Matrix
 Approval Matrix
 same-candidate GitHub/CI evidence
 independence provenance
 package validation + proof limit
 commits/push result
-remaining blocker/missing evidence + resume point
+merge/release/deploy status if separately authorized
+remaining blocker/missing evidence + exact resume point
 retention action
 final decision
 ```
 
-لا تدفع Candidate مبنيًا على رأس قديم، لا تكتب بعد Freeze وتحتفظ بأدلة SHA السابق، ولا تعتبر نجاح Git merge أو Validator دليلًا على صحة دلالية أو إغلاق نهائي.
+## 40. القاعدة الذهبية
+
+```text
+SEARCH IS NOT TRUTH.
+OLD SHA IS NOT CURRENT TRUTH.
+ROOT CAUSE FIRST.
+ONE ROOT CAUSE MAY CREATE MANY FAILURES.
+FAIL ≠ BLIND RERUN.
+CANCELLED ≠ PASS.
+FLAKY ≠ SAFE.
+STATIC GREEN ≠ RUNTIME PROOF.
+MOCK GREEN ≠ END-TO-END PROOF.
+USE EVERYTHING APPLICABLE, NOT EVERYTHING EVERY TIME.
+NO DUPLICATE HEAVY CI FOR THE SAME VALID CANDIDATE.
+NO FAKE GREEN.
+NO SILENT BRANCH SWITCH.
+NO STALE RUNTIME.
+NO FOREIGN CHANGE CLAIMED AS OWN.
+NO MERGE/RELEASE/DEPLOY WITHOUT EXPLICIT AUTHORITY.
+EVIDENCE MUST MATCH THE EXACT FINAL CANDIDATE SHA.
+NO KNOWN FIXABLE IN-SCOPE DEFECT MAY REMAIN AT CLOSURE.
+```
