@@ -374,8 +374,8 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("POST /dsh/operator/admin/rollback-requests/{requestId}/review", protected.handleReviewRollbackRequest)
 	mux.HandleFunc("GET /dsh/operator/admin/diagnostics", protected.handleGetDiagnostics)
 
-	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/accept", protected.handleNotImplemented)
-	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/reject", protected.handleNotImplemented)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/accept", protected.handlePartnerAcceptOrder)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/reject", protected.handlePartnerRejectOrder)
 	return mux
 }
 
