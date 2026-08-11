@@ -106,7 +106,9 @@ components:
           items: { type: string }
         hash: { type: string }
         version: { type: integer }
-        expiresAt: { type: string, format: date-time, nullable: true }
+        # OpenAPI 3.1 expresses an absent expiry as a union with null; the 3.0
+        # `nullable` keyword is not valid here and failed contract validation.
+        expiresAt: { type: [ string, "null" ], format: date-time }
 
     QuoteOutputLine:
       type: object
