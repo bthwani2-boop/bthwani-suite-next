@@ -261,23 +261,12 @@ if (fs.existsSync(profilesPath)) {
 }
 
 async function publishFirstViolation() {
-  const first = violations[0];
+  if (violations.length === 0) return;
   const token = process.env.BTHWANI_STATUS_TOKEN;
   const repository = process.env.GITHUB_REPOSITORY;
   const sha = process.env.GITHUB_SHA;
-  if (!first || !token || !repository || !sha) return;
+  if (!token || !repository || !sha) return;
 
-  const file = String(first.file ?? "unknown")
-    .replaceAll("\\", "/")
-    .split("/")
-    .slice(-3)
-    .join("/");
-  const location = `${file}${first.line ? `:${first.line}` : ""}`;
-  const context = `bthwani/guard/runtime-config/${location}`.slice(0, 100);
-  const description = String(first.message ?? "runtime configuration violation")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 140);
   const apiUrl = process.env.GITHUB_API_URL || "https://api.github.com";
   const runUrl = process.env.GITHUB_RUN_ID
     ? `${process.env.GITHUB_SERVER_URL || "https://github.com"}/${repository}/actions/runs/${process.env.GITHUB_RUN_ID}`
@@ -293,8 +282,8 @@ async function publishFirstViolation() {
     },
     body: JSON.stringify({
       state: "failure",
-      context,
-      description,
+      context: "bthwani/guard/runtime-config",
+      description: "runtime configuration violation; inspect immutable workflow logs",
       ...(runUrl ? { target_url: runUrl } : {}),
     }),
   });
