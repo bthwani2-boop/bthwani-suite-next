@@ -14,6 +14,7 @@ function fixture() {
   fs.mkdirSync(path.join(root, "services", "orders"), { recursive: true });
   fs.mkdirSync(path.join(root, "services", "orders-internal"), { recursive: true });
   fs.mkdirSync(path.join(root, "services", "orders", "generated"), { recursive: true });
+  fs.mkdirSync(path.join(root, "tools", "scripts"), { recursive: true });
   fs.mkdirSync(path.join(root, ".git"), { recursive: true });
   return root;
 }
@@ -86,6 +87,15 @@ test("denies governance writes even when an allow prefix is broad", () => {
   const result = evaluateToolCall(
     { tool_name: "write_file", tool_input: { file_path: "governance/product/a.json" }, cwd: root },
     { repoRoot: root, allowedWrite: [path.join(root, "governance")], forbiddenWrite: [] },
+  );
+  assert.equal(result.decision, "deny");
+});
+
+test("denies Claude delegation wrapper even under broad tools/scripts allow", () => {
+  const root = fixture();
+  const result = evaluateToolCall(
+    { tool_name: "write_file", tool_input: { file_path: "tools/scripts/invoke-claude-gemini-implementer.mjs" }, cwd: root },
+    { repoRoot: root, allowedWrite: [path.join(root, "tools", "scripts")], forbiddenWrite: [] },
   );
   assert.equal(result.decision, "deny");
 });

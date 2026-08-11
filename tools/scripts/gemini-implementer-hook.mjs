@@ -21,6 +21,8 @@ const STATIC_FORBIDDEN_WRITE = [
   ".claude",
   "governance",
   "tools/scripts/invoke-gemini-implementer.mjs",
+  "tools/scripts/invoke-claude-gemini-implementer.mjs",
+  "tools/scripts/invoke-claude-gemini-implementer.test.mjs",
   "tools/scripts/gemini-implementer-hook.mjs",
   "tools/scripts/gemini-implementer-hook.test.mjs",
 ];

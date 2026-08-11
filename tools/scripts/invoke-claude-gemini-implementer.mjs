@@ -54,14 +54,28 @@ export function wrapBrief(original) {
   ].join("\n");
 }
 
-function readBrief(filename) {
+export function readBrief(filename) {
   const resolved = path.resolve(process.cwd(), filename);
-  const stat = fs.statSync(resolved);
-  if (!stat.isFile()) fail(`Brief is not a regular file: ${filename}`);
-  if (stat.size > MAX_BRIEF_BYTES) fail(`Brief exceeds ${MAX_BRIEF_BYTES} bytes before Claude binding.`);
-  const content = fs.readFileSync(resolved, "utf8");
-  if (!content.trim()) fail("Brief is empty.");
-  return content;
+  let fd;
+  try {
+    const noFollow = process.platform === "win32" ? 0 : (fs.constants.O_NOFOLLOW || 0);
+    fd = fs.openSync(resolved, fs.constants.O_RDONLY | noFollow);
+    const stat = fs.fstatSync(fd);
+    if (!stat.isFile()) fail(`Brief is not a regular file: ${filename}`);
+    if (stat.size > MAX_BRIEF_BYTES) fail(`Brief exceeds ${MAX_BRIEF_BYTES} bytes before Claude binding.`);
+    const content = fs.readFileSync(fd, "utf8");
+    if (!content.trim()) fail("Brief is empty.");
+    return content;
+  } catch (error) {
+    if (["ENOENT", "ENOTDIR", "ELOOP"].includes(error?.code)) {
+      fail(`Brief file not found or not safely readable: ${filename}`);
+    }
+    throw error;
+  } finally {
+    if (fd !== undefined) {
+      try { fs.closeSync(fd); } catch {}
+    }
+  }
 }
 
 function buildRelayArgs(parsed, wrappedBriefPath) {
