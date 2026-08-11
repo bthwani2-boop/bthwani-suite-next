@@ -3,7 +3,6 @@ package partner
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -41,74 +40,105 @@ func normalizePayoutDestinationProjection(input PayoutDestinationProjection) (Pa
 	return input, nil
 }
 
-// SyncPayoutDestinationProjection updates only WLT-owned masked projection
-// fields. Exact replays are no-ops so a WLT idempotent replay cannot create
-// artificial partner-version churn.
-func SyncPayoutDestinationProjection(ctx context.Context, db *sql.DB, partnerID string, input PayoutDestinationProjection) (Partner, error) {
-	partnerID = strings.TrimSpace(partnerID)
-	if partnerID == "" {
-		return Partner{}, ErrInvalid
+func normalizePayoutProjectionOwner(operatorContextID, ownerActorID string) (string, string, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	ownerActorID = strings.TrimSpace(ownerActorID)
+	if operatorContextID == "" || ownerActorID == "" {
+		return "", "", fmt.Errorf("operator context and partner owner actor are required")
+	}
+	return operatorContextID, ownerActorID, nil
+}
+
+// SyncOwnerPayoutDestinationProjection updates every DSH Partner business owned
+// by the same partner actor inside the trusted OperatorContext. WLT destinations
+// are actor-owned, while DSH onboarding/readiness is business-Partner-owned;
+// syncing the full owner scope avoids choosing an arbitrary Store when one
+// owner manages multiple Partner businesses. Exact replays are no-ops and do
+// not create artificial partner-version churn.
+func SyncOwnerPayoutDestinationProjection(
+	ctx context.Context,
+	db *sql.DB,
+	operatorContextID, ownerActorID string,
+	input PayoutDestinationProjection,
+) error {
+	operatorContextID, ownerActorID, err := normalizePayoutProjectionOwner(operatorContextID, ownerActorID)
+	if err != nil {
+		return err
 	}
 	projection, err := normalizePayoutDestinationProjection(input)
 	if err != nil {
-		return Partner{}, err
+		return err
 	}
 
-	row := db.QueryRowContext(ctx, `
+	if _, err = db.ExecContext(ctx, `
 		UPDATE dsh_partners
-		SET payout_destination_id = $2,
-		    destination_method = $3,
-		    masked_destination_reference = $4,
-		    destination_verification_status = $5,
+		SET payout_destination_id = $3,
+		    destination_method = $4,
+		    masked_destination_reference = $5,
+		    destination_verification_status = $6,
 		    version = version + 1,
 		    updated_at = NOW()
-		WHERE id = $1
+		WHERE operator_context_id = $1
+		  AND owner_actor_id = $2
 		  AND (
-		    COALESCE(payout_destination_id,'') IS DISTINCT FROM $2 OR
-		    COALESCE(destination_method,'') IS DISTINCT FROM $3 OR
-		    COALESCE(masked_destination_reference,'') IS DISTINCT FROM $4 OR
-		    COALESCE(destination_verification_status,'') IS DISTINCT FROM $5
-		  )
-		RETURNING `+governedPartnerColumns,
-		partnerID,
+		    COALESCE(payout_destination_id,'') IS DISTINCT FROM $3 OR
+		    COALESCE(destination_method,'') IS DISTINCT FROM $4 OR
+		    COALESCE(masked_destination_reference,'') IS DISTINCT FROM $5 OR
+		    COALESCE(destination_verification_status,'') IS DISTINCT FROM $6
+		  )`,
+		operatorContextID,
+		ownerActorID,
 		projection.ID,
 		projection.DestinationMethod,
 		projection.MaskedDestinationReference,
 		projection.DestinationVerificationStatus,
-	)
-	updated, err := scanGovernedPartner(row)
-	if err == nil {
-		return SanitizePartnerForSurface(updated), nil
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return Partner{}, err
+	); err != nil {
+		return err
 	}
 
-	// No row means either an exact replay or a missing partner. Read back the
-	// canonical DSH projection to distinguish those states without incrementing
-	// the optimistic partner version.
-	current, err := GetPartnerSanitized(db, partnerID)
-	if err != nil {
-		return Partner{}, err
+	var total, converged int
+	if err = db.QueryRowContext(ctx, `
+		SELECT COUNT(*),
+		       COUNT(*) FILTER (
+		         WHERE COALESCE(payout_destination_id,'') = $3
+		           AND COALESCE(destination_method,'') = $4
+		           AND COALESCE(masked_destination_reference,'') = $5
+		           AND COALESCE(destination_verification_status,'') = $6
+		       )
+		FROM dsh_partners
+		WHERE operator_context_id = $1 AND owner_actor_id = $2`,
+		operatorContextID,
+		ownerActorID,
+		projection.ID,
+		projection.DestinationMethod,
+		projection.MaskedDestinationReference,
+		projection.DestinationVerificationStatus,
+	).Scan(&total, &converged); err != nil {
+		return err
 	}
-	if current.PayoutDestinationID != projection.ID ||
-		current.DestinationMethod != projection.DestinationMethod ||
-		current.MaskedDestinationReference != projection.MaskedDestinationReference ||
-		current.DestinationVerificationStatus != projection.DestinationVerificationStatus {
-		return Partner{}, fmt.Errorf("payout destination projection did not converge")
+	if total == 0 {
+		return ErrNotFound
 	}
-	return current, nil
+	if converged != total {
+		return fmt.Errorf("payout destination projection did not converge for every owned Partner")
+	}
+	return nil
 }
 
-// ClearPayoutDestinationProjection removes stale DSH readiness state when WLT
-// reports that the partner has no active destination. Historical/raw financial
-// facts stay in WLT; DSH deliberately keeps no second payout truth.
-func ClearPayoutDestinationProjection(ctx context.Context, db *sql.DB, partnerID string) (Partner, error) {
-	partnerID = strings.TrimSpace(partnerID)
-	if partnerID == "" {
-		return Partner{}, ErrInvalid
+// ClearOwnerPayoutDestinationProjection removes stale DSH readiness state for
+// all Partner businesses owned by the actor when WLT reports no active
+// destination. Historical/raw financial facts remain exclusively in WLT.
+func ClearOwnerPayoutDestinationProjection(
+	ctx context.Context,
+	db *sql.DB,
+	operatorContextID, ownerActorID string,
+) error {
+	operatorContextID, ownerActorID, err := normalizePayoutProjectionOwner(operatorContextID, ownerActorID)
+	if err != nil {
+		return err
 	}
-	row := db.QueryRowContext(ctx, `
+
+	if _, err = db.ExecContext(ctx, `
 		UPDATE dsh_partners
 		SET payout_destination_id = '',
 		    destination_method = '',
@@ -116,22 +146,37 @@ func ClearPayoutDestinationProjection(ctx context.Context, db *sql.DB, partnerID
 		    destination_verification_status = '',
 		    version = version + 1,
 		    updated_at = NOW()
-		WHERE id = $1
+		WHERE operator_context_id = $1
+		  AND owner_actor_id = $2
 		  AND (
 		    COALESCE(payout_destination_id,'') <> '' OR
 		    COALESCE(destination_method,'') <> '' OR
 		    COALESCE(masked_destination_reference,'') <> '' OR
 		    COALESCE(destination_verification_status,'') <> ''
-		  )
-		RETURNING `+governedPartnerColumns,
-		partnerID,
-	)
-	updated, err := scanGovernedPartner(row)
-	if err == nil {
-		return SanitizePartnerForSurface(updated), nil
+		  )`, operatorContextID, ownerActorID); err != nil {
+		return err
 	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return Partner{}, err
+
+	var total, clear int
+	if err = db.QueryRowContext(ctx, `
+		SELECT COUNT(*),
+		       COUNT(*) FILTER (
+		         WHERE COALESCE(payout_destination_id,'') = ''
+		           AND COALESCE(destination_method,'') = ''
+		           AND COALESCE(masked_destination_reference,'') = ''
+		           AND COALESCE(destination_verification_status,'') = ''
+		       )
+		FROM dsh_partners
+		WHERE operator_context_id = $1 AND owner_actor_id = $2`,
+		operatorContextID, ownerActorID,
+	).Scan(&total, &clear); err != nil {
+		return err
 	}
-	return GetPartnerSanitized(db, partnerID)
+	if total == 0 {
+		return ErrNotFound
+	}
+	if clear != total {
+		return fmt.Errorf("payout destination projection did not clear for every owned Partner")
+	}
+	return nil
 }
