@@ -210,7 +210,7 @@ func UpsertStoreOnboardingFeePolicy(
 	}
 	meta.IdempotencyKey = strings.TrimSpace(meta.IdempotencyKey)
 	meta.CorrelationID = strings.TrimSpace(meta.CorrelationID)
-	if meta.IdempotencyKey == "" || len(meta.IdempotencyKey) > 200 ||
+	if len(meta.IdempotencyKey) < 8 || len(meta.IdempotencyKey) > 200 ||
 		meta.CorrelationID == "" || len(meta.CorrelationID) > 200 {
 		return StoreOnboardingFeePolicy{}, false, ErrInvalidFeePolicy
 	}
