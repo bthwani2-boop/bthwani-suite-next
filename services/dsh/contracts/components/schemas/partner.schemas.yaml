@@ -57,7 +57,7 @@ DshPartnerPerformanceResponse:
 
 DshPartner:
   type: object
-  required: [id, legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerActorId, workforcePersonId, primaryPhone, category, activationStatus, version, createdAt, updatedAt]
+  required: [id, legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerActorId, workforcePersonId, primaryPhone, category, activationStatus, payoutDestinationId, destinationMethod, maskedDestinationReference, destinationVerificationStatus, version, createdAt, updatedAt]
   properties:
     id: { type: string }
     legalNameAr: { type: string }
@@ -96,18 +96,14 @@ DshPartner:
     rejectionReason: { type: string }
     createdBy: { type: string }
     assignedFieldAgent: { type: string }
-    # Bank account metadata — Partner-level readiness/metadata captured by
-    # app-field onboarding. Never a WLT mutation; WLT stays the sole owner
-    # of financial truth. Control-panel masks these on display.
-    beneficiaryName: { type: string }
-    bankName: { type: string }
-    bankBranch: { type: string }
-    accountNumber: { type: string }
-    iban: { type: string }
-    payoutMobileNumber: { type: string }
-    settlementPreference: { type: string, enum: ["", bank_transfer, mobile_wallet] }
-    bankAccountHolderMatchesOwner: { type: boolean }
-    bankNotes: { type: string }
+    # WLT is the only payout-destination truth. DSH stores/returns only the
+    # durable WLT id and masked readiness projection needed by onboarding.
+    payoutDestinationId: { type: string }
+    destinationMethod: { type: string, enum: ["", official_wallet] }
+    maskedDestinationReference: { type: string }
+    destinationVerificationStatus:
+      type: string
+      enum: ["", unverified, verified, requires_reverification, rejected]
     version: { type: integer }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
@@ -357,6 +353,8 @@ DshPartnerAuditEventsListResponse:
 
 DshUpdatePartnerRequest:
   type: object
+  additionalProperties: false
+  description: Operational partner-draft fields only. Payout destinations are mutated through the governed WLT finance route and synchronized back as a masked DSH projection.
   properties:
     displayName: { type: string }
     ownerActorId: { type: string }
@@ -365,16 +363,6 @@ DshUpdatePartnerRequest:
     secondaryPhone: { type: string }
     email: { type: string }
     notes: { type: string }
-    # Forwarded to WLT for payout-destination mutation; raw values are never persisted in DSH.
-    beneficiaryName: { type: string }
-    bankName: { type: string }
-    bankBranch: { type: string }
-    accountNumber: { type: string }
-    iban: { type: string }
-    payoutMobileNumber: { type: string }
-    settlementPreference: { type: string, enum: ["", bank_transfer, mobile_wallet] }
-    bankAccountHolderMatchesOwner: { type: boolean }
-    bankNotes: { type: string }
 
 DshPartnerOffer:
   type: object
