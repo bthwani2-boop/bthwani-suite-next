@@ -17,6 +17,14 @@ type Route struct {
 	Path   string `json:"path"`
 }
 
+var governedRouteHelpers = map[string]struct{}{
+	"public":            {},
+	"read":              {},
+	"mutation":          {},
+	"workforceMutation": {},
+	"providerMutation":  {},
+}
+
 func main() {
 	entryPath := "services/dsh/backend/internal/http/server.go"
 	if len(os.Args) > 1 {
@@ -103,21 +111,17 @@ func parseRoutes(filePath string) ([]Route, error) {
 	routes := []Route{}
 	ast.Inspect(node, func(node ast.Node) bool {
 		call, ok := node.(*ast.CallExpr)
-		if !ok {
-			return true
-		}
-		selector, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok || (selector.Sel.Name != "HandleFunc" && selector.Sel.Name != "Handle") {
-			return true
-		}
-		if len(call.Args) < 1 {
+		if !ok || len(call.Args) < 1 || !isRouteRegistration(call.Fun) {
 			return true
 		}
 		literal, ok := call.Args[0].(*ast.BasicLit)
 		if !ok || literal.Kind != token.STRING {
 			return true
 		}
-		routeValue := strings.Trim(literal.Value, "`\"")
+		routeValue, err := strconvUnquote(literal.Value)
+		if err != nil {
+			return true
+		}
 		parts := strings.Fields(routeValue)
 		switch len(parts) {
 		case 2:
@@ -128,4 +132,38 @@ func parseRoutes(filePath string) ([]Route, error) {
 		return true
 	})
 	return routes, nil
+}
+
+func isRouteRegistration(fun ast.Expr) bool {
+	switch target := fun.(type) {
+	case *ast.SelectorExpr:
+		return target.Sel.Name == "HandleFunc" || target.Sel.Name == "Handle"
+	case *ast.Ident:
+		_, ok := governedRouteHelpers[target.Name]
+		return ok
+	default:
+		return false
+	}
+}
+
+// strconvUnquote handles both interpreted and raw Go string literals without
+// accepting dynamically-computed route patterns. Keeping extraction literal-
+// only is intentional: registered runtime routes must remain statically
+// auditable by the binding gate.
+func strconvUnquote(value string) (string, error) {
+	if len(value) < 2 {
+		return "", fmt.Errorf("invalid string literal")
+	}
+	if value[0] == '`' && value[len(value)-1] == '`' {
+		return value[1 : len(value)-1], nil
+	}
+	if value[0] != '"' || value[len(value)-1] != '"' {
+		return "", fmt.Errorf("unsupported string literal")
+	}
+
+	var decoded string
+	if err := json.Unmarshal([]byte(value), &decoded); err != nil {
+		return "", err
+	}
+	return decoded, nil
 }
