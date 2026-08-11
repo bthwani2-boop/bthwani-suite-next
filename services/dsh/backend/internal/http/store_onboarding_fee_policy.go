@@ -109,8 +109,8 @@ func (s *protectedStoreServer) handleUpsertStoreOnboardingFeePolicy(w http.Respo
 	}
 	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
-	if correlationID == "" || len(correlationID) > 200 {
-		store.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", "X-Correlation-ID is required and must not exceed 200 characters")
+	if len(correlationID) < 8 || len(correlationID) > 200 {
+		store.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", "X-Correlation-ID must contain 8 to 200 characters")
 		return
 	}
 	if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
