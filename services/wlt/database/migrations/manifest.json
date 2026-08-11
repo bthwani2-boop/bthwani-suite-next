@@ -94,6 +94,6 @@
     {"ordinal":87,"file":"wlt-917_manual_settlement_execution.sql","sha256":"0c7183e434b2d928a7751cd37b1218ea40d93e3ee2b515cca6d6dffa058ec882","historicalPrefix":"917","state":"ACTIVE"},
     {"ordinal":88,"file":"wlt-918_settlement_execution_audit_aggregates.sql","sha256":"c7c7957949251638bdad180954cc30a4cd600dd190d7c23f68c318d9608cff8e","historicalPrefix":"918","state":"ACTIVE"},
     {"ordinal":89,"file":"wlt-919_daily_finance_close_operator_context_key.sql","sha256":"5b99a9b05bdf466dad3e08ef23012a26188ce0d38ba6c996518b08483a8339eb","historicalPrefix":"919","state":"ACTIVE"},
-    {"ordinal":90,"file":"wlt-920_store_onboarding_fee_policy_v2.sql","sha256":"e3c5b96b88f21f0930149f0b092c01d016a347c0c0eedbc909a25de32db682d4","historicalPrefix":"920","state":"ACTIVE"}
+    {"ordinal":90,"file":"wlt-920_store_onboarding_fee_policy_v2.sql","sha256":"0ce73ff0a7a5f80a10ca9aef8123e88de25d44262c4e09055fd7f9cd07b08ed1","historicalPrefix":"920","state":"ACTIVE"}
   ]
 }
