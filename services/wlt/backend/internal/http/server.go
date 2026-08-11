@@ -186,6 +186,7 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	mutation("POST /wlt/payout-requests/{payoutId}/approve", payout.HandleApprovePayoutRequestSovereign(db))
 	mutation("POST /wlt/payout-requests/{payoutId}/reject", payout.HandleRejectPayoutRequestSovereign(db))
 	mutation("POST /wlt/payout-requests/{payoutId}/complete", payout.HandleCompletePayoutRequestSovereign(db))
+	mutation("POST /wlt/payout-requests/{payoutId}/fail", payout.HandleFailPayoutRequestClosed())
 
 	read("GET /wlt/commercial/store-onboarding-fee", commercial.HandleGetStoreOnboardingFeePolicy(db))
 	mutation("PUT /wlt/commercial/store-onboarding-fee", commercial.HandleUpsertStoreOnboardingFeePolicy(db))

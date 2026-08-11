@@ -346,4 +346,3 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 		shared.SendJSON(w, http.StatusOK, PayoutRequestResponse{PayoutRequest: updated})
 	}
 }
-
