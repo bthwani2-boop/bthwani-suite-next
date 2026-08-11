@@ -15,6 +15,7 @@ modules:
   - wlt.refunds.openapi.yaml
   - wlt.settlement-operations.openapi.yaml
   - wlt.settlements-commissions.openapi.yaml
+  - wlt.store-onboarding-fee.openapi.yaml
   - wlt.workforce-finance.openapi.yaml
 
 overlays:
