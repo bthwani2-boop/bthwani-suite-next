@@ -246,6 +246,7 @@ services:
       WLT_WORKFORCE_SERVICE_TOKEN: "${WORKFORCE_WLT_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_workforce_wlt_service_token}"
       WLT_DSH_BASE_URL: "${WLT_DSH_BASE_URL:-http://dsh-api:8080}"
       WLT_MUTATIONS_ENABLED: "${WLT_MUTATIONS_ENABLED:-false}"
+      WLT_FINANCE_MUTATION_KILL_SWITCH: "${WLT_FINANCE_MUTATION_KILL_SWITCH:-true}"
       WLT_PAYOUT_ENCRYPTION_KEY: "${WLT_PAYOUT_ENCRYPTION_KEY:-dev-only-payout-destination-encryption-key}"
     ports:
       - "127.0.0.1:${BTHWANI_WLT_API_HOST_PORT:-58083}:8083"
