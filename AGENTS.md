@@ -72,6 +72,20 @@ Use `governance/policies/delivery.md`, `governance/contracts/sdlc/`, and `govern
 
 Logical approval authorities remain separated by the agent registry. An execution agent cannot impersonate the owner or self-grant a protected approval.
 
+## Delegated implementation
+
+The default and only registered external implementation route is:
+
+`Codex orchestrator → Gemini CLI implementer → Codex verification`
+
+- Use the registered `gemini-implementer` tool only for one bounded work unit with a clean working tree, explicit allowed and forbidden paths, acceptance criteria, and Codex verification commands.
+- Only one delegated implementation may be active in a working tree. Parallel delegated implementation is forbidden on this route.
+- Gemini owns bounded file edits only. It must not commit, push, merge, release, approve, expand scope, or mutate the agent/governance control plane.
+- Codex owns diagnosis, scope, the implementation brief, complete diff review, branch/head re-pinning, and developer verification after Gemini exits.
+- Gemini's report and token statistics are telemetry, not proof that tests, runtime behavior, or acceptance passed.
+- Protected independent review and formal product, finance, governance, CI, QA, security, release, risk, production, and closure authorities remain separate.
+- Do not route delegated implementation through Claude, Antigravity, OpenCode, or another implementer unless a later current authorized task instruction explicitly changes this route.
+
 ## Plans, skills, and tools
 
 Planning artifacts live only under `plans/`. `.agents/INDEX.md` is the only derived routing index. Skills live under `.agents/skills/`; conditional tool policies live under `.agents/tools/`.

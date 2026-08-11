@@ -133,6 +133,7 @@ const required = new Set(
 );
 
 const commandCandidates = {
+  "gemini-implementer": ["gemini"],
   graphify: ["graphify"],
   leanctx: ["lean-ctx"],
   "open-code-review": ["ocr"],
