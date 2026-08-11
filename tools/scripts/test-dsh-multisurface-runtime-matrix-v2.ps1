@@ -271,8 +271,10 @@ $OrderCreate = Invoke-Api POST "$DshBaseUrl/dsh/client/orders" (Headers $Client 
 Require-Status $OrderCreate @(201) "client order create"
 $OrderId = "$(Get-Value (Get-Value $OrderCreate.Json 'order') 'id')"
 Require (-not [string]::IsNullOrWhiteSpace($OrderId)) "order returned no id"
-$DuplicateOrder = Invoke-Api POST "$DshBaseUrl/dsh/client/orders" (Headers $Client "order-duplicate") @{ checkoutIntentId = $CheckoutId }
-Require-Status $DuplicateOrder @(409) "duplicate order from checkout"
+$OrderReplay = Invoke-Api POST "$DshBaseUrl/dsh/client/orders" (Headers $Client "order-replay") @{ checkoutIntentId = $CheckoutId }
+Require-Status $OrderReplay @(200) "order replay from checkout"
+$ReplayOrderId = "$(Get-Value (Get-Value $OrderReplay.Json 'order') 'id')"
+Require ($ReplayOrderId -eq $OrderId) "order replay created a duplicate order"
 
 $ClientOrders = Invoke-Api GET "$DshBaseUrl/dsh/client/orders" (Headers $Client "client-orders" -ReadOnly)
 Require-Status $ClientOrders @(200) "client orders"
@@ -438,7 +440,7 @@ Require ("$(Get-Value $PrematureCompletion.Json 'code')" -eq "CHECKLIST_INCOMPLE
     "governed service-area resolution",
     "address idempotency and ownership",
     "central catalog cart checkout and WLT handoff",
-    "duplicate order and assignment rejection",
+    "order replay idempotency and assignment duplicate rejection",
     "partner order lifecycle",
     "operator dispatch",
     "captain state order location tracking and PoD",
