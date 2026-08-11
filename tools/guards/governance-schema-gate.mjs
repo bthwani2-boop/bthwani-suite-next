@@ -114,7 +114,7 @@ requireExactDirectory("governance/github", ["master-protection.ruleset.json", "w
 requireExactDirectory("governance/product", ["PRD.md", "platform-model.yaml", "product-truth.schema.json", "product-truth.compatibility.schema.json"], ["contracts"]);
 requireExactDirectory("governance/tools", ["agent-tool-registry.json"]);
 requireExactDirectory(".agents", ["INDEX.md"], ["skills", "tools"]);
-requireExactDirectory(".agents/tools", ["README.md", "graphify.md", "leanctx.md", "open-code-review.md"]);
+requireExactDirectory(".agents/tools", ["README.md", "gemini-implementer.md", "graphify.md", "leanctx.md", "open-code-review.md"]);
 requireExactDirectory("tools/prompting", [
   "01-diagnose-plan-package.md",
   "02-execute-verify-close.md",
