@@ -80,41 +80,6 @@ $mutationHeaders = @{
   "Idempotency-Key" = "wlt-session-$runIdentity"
   "X-Operator-Context-ID" = $operatorContextId
 }
-$sessionBody = @{
-  checkoutIntentId = "checkout-$runIdentity"
-  clientId = "client-local-001"
-  storeId = "store-test-grocery"
-  paymentMethod = "cod"
-  amountMinorUnits = 1000
-  currency = "YER"
-  cartSnapshotHash = "runtime-smoke-$runIdentity"
-} | ConvertTo-Json
-
-$createResponse = Invoke-WebRequest `
-  -Method Post `
-  -Uri "$BaseUrl/wlt/payment-sessions" `
-  -Headers $mutationHeaders `
-  -ContentType "application/json" `
-  -Body $sessionBody `
-  -TimeoutSec 20 `
-  -SkipHttpErrorCheck
-$createStatus = [int]$createResponse.StatusCode
-$createBody = $null
-if (-not [string]::IsNullOrWhiteSpace([string]$createResponse.Content)) {
-  try {
-    $createBody = $createResponse.Content | ConvertFrom-Json -ErrorAction Stop
-  } catch {
-    throw "WLT payment-session create returned invalid JSON: status=$createStatus body=$($createResponse.Content)"
-  }
-}
-$createCode = ""
-if ($null -ne $createBody) {
-  $codeProperty = $createBody.PSObject.Properties["code"]
-  if ($null -ne $codeProperty) {
-    $createCode = [string]$codeProperty.Value
-  }
-}
-
 $expectedGateCode = if (-not $mutationsEnabled) {
   "MUTATIONS_DISABLED"
 } elseif ($killSwitchActive) {
@@ -124,12 +89,112 @@ $expectedGateCode = if (-not $mutationsEnabled) {
 }
 
 if (-not [string]::IsNullOrWhiteSpace($expectedGateCode)) {
-  if ($createStatus -ne 403 -or $createCode -ne $expectedGateCode) {
-    throw "WLT mutation gate contract mismatch: expected HTTP 403 code=$expectedGateCode but received status=$createStatus code=$createCode body=$($createResponse.Content)"
-  }
+	$blockedResponse = Invoke-WebRequest `
+		-Method Post `
+		-Uri "$BaseUrl/wlt/payment-sessions" `
+		-Headers $mutationHeaders `
+		-ContentType "application/json" `
+		-Body (@{ checkoutIntentId = "checkout-$runIdentity" } | ConvertTo-Json -Compress) `
+		-TimeoutSec 20 `
+		-SkipHttpErrorCheck
+	$createStatus = [int]$blockedResponse.StatusCode
+	$createCode = ""
+	if (-not [string]::IsNullOrWhiteSpace([string]$blockedResponse.Content)) {
+		try {
+			$blockedBody = $blockedResponse.Content | ConvertFrom-Json -ErrorAction Stop
+			$codeProperty = $blockedBody.PSObject.Properties["code"]
+			if ($null -ne $codeProperty) { $createCode = [string]$codeProperty.Value }
+		} catch {
+			throw "WLT mutation gate returned invalid JSON: status=$createStatus body=$($blockedResponse.Content)"
+		}
+	}
+	if ($createStatus -ne 403 -or $createCode -ne $expectedGateCode) {
+		throw "WLT mutation gate contract mismatch: expected HTTP 403 code=$expectedGateCode but received status=$createStatus code=$createCode body=$($blockedResponse.Content)"
+	}
   Write-Host "  authenticated mutation gate: $expectedGateCode fail-closed as configured"
   Write-Host "WLT authenticated runtime smoke: PASS"
-  return
+	return
+}
+
+$checkoutIntentId = "checkout-$runIdentity"
+$cartSnapshotHash = "runtime-smoke-$runIdentity"
+$pricingEvidenceSecret = [string]$env:WLT_DSH_PRICING_EVIDENCE_SECRET
+if ([string]::IsNullOrWhiteSpace($pricingEvidenceSecret)) {
+	throw "WLT_DSH_PRICING_EVIDENCE_SECRET is required to create the canonical runtime quote."
+}
+$evidence = [ordered]@{
+	version = 1
+	lines = @([ordered]@{ masterProductId = "runtime-smoke-product"; unitPriceMinorUnits = 1000; currency = "YER" })
+	deliveryFeeMinorUnits = 0
+	serviceFeeMinorUnits = 0
+	discountMinorUnits = 0
+	signature = ""
+}
+$unsignedEvidence = $evidence | ConvertTo-Json -Compress -Depth 8
+$hmac = [System.Security.Cryptography.HMACSHA256]::new([Text.Encoding]::UTF8.GetBytes($pricingEvidenceSecret))
+try {
+	$evidence.signature = [Convert]::ToHexString($hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($unsignedEvidence))).ToLowerInvariant()
+} finally {
+	$hmac.Dispose()
+}
+$quoteRequest = [ordered]@{
+	checkoutIntentId = $checkoutIntentId
+	cartSnapshotHash = $cartSnapshotHash
+	clientId = "client-local-001"
+	storeId = "store-test-grocery"
+	currency = "YER"
+	cartVersion = 1
+	lines = @([ordered]@{ masterProductId = "runtime-smoke-product"; productName = "Runtime smoke product"; quantity = 1 })
+	pricingEvidence = $evidence
+} | ConvertTo-Json -Compress -Depth 8
+$quoteResponse = Invoke-WebRequest `
+	-Method Post `
+	-Uri "$BaseUrl/wlt/internal/quotes/calculate" `
+	-Headers $mutationHeaders `
+	-ContentType "application/json" `
+	-Body $quoteRequest `
+	-TimeoutSec 20 `
+	-SkipHttpErrorCheck
+if ([int]$quoteResponse.StatusCode -ne 200) {
+	throw "WLT canonical quote create expected HTTP 200 but returned status=$($quoteResponse.StatusCode) body=$($quoteResponse.Content)"
+}
+try {
+	$quote = ($quoteResponse.Content | ConvertFrom-Json -ErrorAction Stop).quote
+} catch {
+	throw "WLT canonical quote create returned invalid JSON: $($quoteResponse.Content)"
+}
+if ($null -eq $quote -or [string]::IsNullOrWhiteSpace([string]$quote.id)) {
+	throw "WLT canonical quote create returned no quote.id: $($quoteResponse.Content)"
+}
+$sessionBody = @{
+	checkoutIntentId = $checkoutIntentId
+	clientId = "client-local-001"
+	storeId = "store-test-grocery"
+	paymentMethod = "cod"
+	amountMinorUnits = [int64]$quote.totalMinorUnits
+	currency = [string]$quote.currency
+	cartSnapshotHash = $cartSnapshotHash
+	pricingQuoteId = [string]$quote.id
+} | ConvertTo-Json -Compress
+$createResponse = Invoke-WebRequest `
+	-Method Post `
+	-Uri "$BaseUrl/wlt/payment-sessions" `
+	-Headers $mutationHeaders `
+	-ContentType "application/json" `
+	-Body $sessionBody `
+	-TimeoutSec 20 `
+	-SkipHttpErrorCheck
+$createStatus = [int]$createResponse.StatusCode
+$createBody = $null
+if (-not [string]::IsNullOrWhiteSpace([string]$createResponse.Content)) {
+	try { $createBody = $createResponse.Content | ConvertFrom-Json -ErrorAction Stop } catch {
+		throw "WLT payment-session create returned invalid JSON: status=$createStatus body=$($createResponse.Content)"
+	}
+}
+$createCode = ""
+if ($null -ne $createBody) {
+	$codeProperty = $createBody.PSObject.Properties["code"]
+	if ($null -ne $codeProperty) { $createCode = [string]$codeProperty.Value }
 }
 
 if ($createStatus -ne 201) {
