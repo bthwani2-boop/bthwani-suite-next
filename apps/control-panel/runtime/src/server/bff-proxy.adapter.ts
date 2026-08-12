@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { identitySessionAuthorizesSurface } from "@bthwani/core-identity/session-policy";
+import { identitySessionIsBoundToSurface } from "@bthwani/core-identity/session-policy";
 import {
   ACCESS_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
@@ -24,26 +24,11 @@ const FORWARDED_REQUEST_HEADERS = [
 ] as const;
 
 const SERVICE_CONFIG = {
-  dsh: {
-    env: "DSH_API_BASE_URL",
-    fallback: "http://127.0.0.1:58080",
-  },
-  identity: {
-    env: "IDENTITY_API_BASE_URL",
-    fallback: "http://127.0.0.1:58082",
-  },
-  workforce: {
-    env: "WORKFORCE_API_BASE_URL",
-    fallback: "http://127.0.0.1:58086",
-  },
-  providers: {
-    env: "PROVIDERS_API_BASE_URL",
-    fallback: "http://127.0.0.1:58087",
-  },
-  "platform-control": {
-    env: "PLATFORM_CONTROL_API_BASE_URL",
-    fallback: "http://127.0.0.1:58088",
-  },
+  dsh: { env: "DSH_API_BASE_URL", fallback: "http://127.0.0.1:58080" },
+  identity: { env: "IDENTITY_API_BASE_URL", fallback: "http://127.0.0.1:58082" },
+  workforce: { env: "WORKFORCE_API_BASE_URL", fallback: "http://127.0.0.1:58086" },
+  providers: { env: "PROVIDERS_API_BASE_URL", fallback: "http://127.0.0.1:58087" },
+  "platform-control": { env: "PLATFORM_CONTROL_API_BASE_URL", fallback: "http://127.0.0.1:58088" },
 } as const;
 
 export type ControlPanelBffService = keyof typeof SERVICE_CONFIG;
@@ -70,10 +55,7 @@ function jsonError(status: number, code: string, message: string): NextResponse 
   );
 }
 
-function buildUpstreamHeaders(
-  request: NextRequest,
-  accessToken: string | undefined,
-): Headers {
+function buildUpstreamHeaders(request: NextRequest, accessToken: string | undefined): Headers {
   const headers = new Headers();
   for (const name of FORWARDED_REQUEST_HEADERS) {
     const value = request.headers.get(name);
@@ -100,18 +82,14 @@ function isTokenResponse(value: unknown): value is {
 } {
   if (!value || typeof value !== "object") return false;
   const candidate = value as { accessToken?: unknown; refreshToken?: unknown };
-  return (
-    typeof candidate.accessToken === "string" &&
-    candidate.accessToken.length > 0 &&
-    typeof candidate.refreshToken === "string" &&
-    candidate.refreshToken.length > 0
-  );
+  return typeof candidate.accessToken === "string"
+    && candidate.accessToken.length > 0
+    && typeof candidate.refreshToken === "string"
+    && candidate.refreshToken.length > 0;
 }
 
-function tokenResponseHasGovernedControlPanelIdentity(value: {
-  identity?: unknown;
-}): boolean {
-  return identitySessionAuthorizesSurface(value.identity, "operator", "control-panel");
+function tokenResponseHasGovernedControlPanelIdentity(value: { identity?: unknown }): boolean {
+  return identitySessionIsBoundToSurface(value.identity, "control-panel");
 }
 
 function logoutRevocationConfirmed(upstream: Response): boolean {
@@ -125,12 +103,10 @@ async function requestBody(
   refreshToken: string | undefined,
 ): Promise<BodyInit | undefined> {
   if (SAFE_METHODS.has(request.method)) return undefined;
-
   if (service === "identity" && upstreamPath === "/auth/refresh") {
     if (!refreshToken) return undefined;
     return JSON.stringify({ refreshToken });
   }
-
   const body = await request.arrayBuffer();
   return body.byteLength > 0 ? body : undefined;
 }
@@ -149,37 +125,19 @@ export async function proxyControlPanelRequest(
   const refreshToken = cookieStore.get(BFF_REFRESH_COOKIE)?.value;
   const upstreamPath = `/${pathSegments.map(encodeURIComponent).join("/")}`;
 
-  if (
-    service === "identity" &&
-    upstreamPath === "/auth/refresh" &&
-    !refreshToken
-  ) {
+  if (service === "identity" && upstreamPath === "/auth/refresh" && !refreshToken) {
     return jsonError(401, "IDENTITY_REFRESH_COOKIE_MISSING", "Refresh session is unavailable.");
   }
 
   const baseUrl = serviceBaseUrl(service);
   if (!baseUrl) {
-    return jsonError(
-      503,
-      "BFF_UPSTREAM_NOT_CONFIGURED",
-      "The requested upstream service is not configured.",
-    );
+    return jsonError(503, "BFF_UPSTREAM_NOT_CONFIGURED", "The requested upstream service is not configured.");
   }
 
-  const upstreamUrl = new URL(
-    `${upstreamPath}${request.nextUrl.search}`,
-    `${baseUrl}/`,
-  );
-  const body = await requestBody(
-    request,
-    service,
-    upstreamPath,
-    refreshToken,
-  );
+  const upstreamUrl = new URL(`${upstreamPath}${request.nextUrl.search}`, `${baseUrl}/`);
+  const body = await requestBody(request, service, upstreamPath, refreshToken);
   const headers = buildUpstreamHeaders(request, accessToken);
-  if (body !== undefined && !headers.has("content-type")) {
-    headers.set("content-type", "application/json");
-  }
+  if (body !== undefined && !headers.has("content-type")) headers.set("content-type", "application/json");
 
   let upstream: Response;
   try {
@@ -192,16 +150,11 @@ export async function proxyControlPanelRequest(
       signal: AbortSignal.timeout(15_000),
     });
   } catch {
-    return jsonError(
-      502,
-      "BFF_UPSTREAM_UNAVAILABLE",
-      "The requested upstream service is temporarily unavailable.",
-    );
+    return jsonError(502, "BFF_UPSTREAM_UNAVAILABLE", "The requested upstream service is temporarily unavailable.");
   }
 
   const contentType = upstream.headers.get("content-type") ?? "";
-  const shouldInspectIdentityResponse =
-    service === "identity" && contentType.includes("application/json");
+  const shouldInspectIdentityResponse = service === "identity" && contentType.includes("application/json");
   const isIdentityLogout = service === "identity" && upstreamPath === "/auth/logout";
 
   if (shouldInspectIdentityResponse) {
@@ -215,20 +168,12 @@ export async function proxyControlPanelRequest(
 
     if (upstream.ok && isTokenResponse(parsed)) {
       if (!tokenResponseHasGovernedControlPanelIdentity(parsed)) {
-        const response = jsonError(
-          403,
-          "CONTROL_PANEL_FORBIDDEN",
-          "Identity is not authorized for the control panel.",
-        );
+        const response = jsonError(403, "CONTROL_PANEL_FORBIDDEN", "Identity session is not bound to the control panel.");
         clearSessionCookies(response);
         return response;
       }
 
-      const publicBody = {
-        ...parsed,
-        accessToken: BFF_OPAQUE_TOKEN,
-        refreshToken: BFF_OPAQUE_TOKEN,
-      };
+      const publicBody = { ...parsed, accessToken: BFF_OPAQUE_TOKEN, refreshToken: BFF_OPAQUE_TOKEN };
       const response = NextResponse.json(publicBody, {
         status: upstream.status,
         headers: copyResponseHeaders(upstream),
@@ -241,21 +186,14 @@ export async function proxyControlPanelRequest(
       status: upstream.status,
       headers: copyResponseHeaders(upstream),
     });
-    if (isIdentityLogout && logoutRevocationConfirmed(upstream)) {
-      clearSessionCookies(response);
-    }
+    if (isIdentityLogout && logoutRevocationConfirmed(upstream)) clearSessionCookies(response);
     return response;
   }
 
-  const response = new NextResponse(
-    upstream.status === 204 ? null : await upstream.arrayBuffer(),
-    {
-      status: upstream.status,
-      headers: copyResponseHeaders(upstream),
-    },
-  );
-  if (isIdentityLogout && logoutRevocationConfirmed(upstream)) {
-    clearSessionCookies(response);
-  }
+  const response = new NextResponse(upstream.status === 204 ? null : await upstream.arrayBuffer(), {
+    status: upstream.status,
+    headers: copyResponseHeaders(upstream),
+  });
+  if (isIdentityLogout && logoutRevocationConfirmed(upstream)) clearSessionCookies(response);
   return response;
 }
