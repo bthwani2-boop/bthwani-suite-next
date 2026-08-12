@@ -145,13 +145,105 @@ function git(args, options = {}) {
   return String(result.stdout || "").trim();
 }
 
+function regularFile(filename) {
+  try {
+    return fs.statSync(filename).isFile();
+  } catch {
+    return false;
+  }
+}
+
+let cachedOpenCodeExecutable;
+
+export function resolveOpenCodeExecutable() {
+  if (cachedOpenCodeExecutable && regularFile(cachedOpenCodeExecutable)) {
+    return cachedOpenCodeExecutable;
+  }
+
+  const discovered = [];
+  const explicit = process.env.OPENCODE_BIN_PATH?.trim();
+  if (explicit) discovered.push(path.resolve(explicit));
+
+  const locator = process.platform === "win32" ? "where.exe" : "which";
+  const located = spawnSync(locator, ["opencode"], {
+    encoding: "utf8",
+    timeout: 10_000,
+    windowsHide: true,
+  });
+
+  if (!located.error && located.status === 0) {
+    discovered.push(
+      ...String(located.stdout || "")
+        .split(/\r?\n/)
+        .map((value) => value.trim())
+        .filter(Boolean),
+    );
+  }
+
+  const candidates = [];
+  if (process.platform === "win32") {
+    candidates.push(...discovered.filter((value) => /\.exe$/i.test(value)));
+
+    const packageNames =
+      process.arch === "arm64"
+        ? ["opencode-windows-arm64"]
+        : ["opencode-windows-x64", "opencode-windows-x64-baseline"];
+
+    for (const shim of discovered) {
+      const shimDir = path.dirname(shim);
+      candidates.push(
+        path.join(
+          shimDir,
+          "node_modules",
+          "opencode-ai",
+          "bin",
+          "opencode.exe",
+        ),
+      );
+      for (const packageName of packageNames) {
+        candidates.push(
+          path.join(
+            shimDir,
+            "node_modules",
+            "opencode-ai",
+            "node_modules",
+            packageName,
+            "bin",
+            "opencode.exe",
+          ),
+        );
+      }
+    }
+  } else {
+    candidates.push(...discovered);
+  }
+
+  for (const candidate of [...new Set(candidates)]) {
+    if (!regularFile(candidate)) continue;
+    const probe = spawnSync(candidate, ["--version"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      timeout: 10_000,
+      windowsHide: true,
+    });
+    if (!probe.error && probe.status === 0) {
+      cachedOpenCodeExecutable = candidate;
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
 function commandProbe(args, options = {}) {
-  const result = spawnSync("opencode", args, {
+  const executable = resolveOpenCodeExecutable();
+  if (!executable) return null;
+
+  const result = spawnSync(executable, args, {
     cwd: repoRoot,
     encoding: "utf8",
     timeout: 30_000,
     windowsHide: true,
-    shell: process.platform === "win32",
     ...options,
   });
   if (result.error || result.status !== 0) return null;
@@ -465,11 +557,15 @@ function assertResolvedConfig(configText, worker, model) {
 }
 
 async function spawnOpenCode(args, env, timeoutMsValue) {
-  const child = spawn("opencode", args, {
+  const executable = resolveOpenCodeExecutable();
+  if (!executable) {
+    fail("OpenCode native executable could not be resolved without a shell.");
+  }
+
+  const child = spawn(executable, args, {
     cwd: repoRoot,
     env,
     windowsHide: true,
-    shell: process.platform === "win32",
     stdio: ["ignore", "pipe", "pipe"],
   });
 

@@ -150,6 +150,18 @@ test("generated OpenCode config hard-denies shell, web, task, external access an
   assert.equal(config.share, "disabled");
 });
 
+test("OpenCode process launch never uses shell:true", () => {
+  const source = fs.readFileSync(
+    new URL("./invoke-opencode-implementer.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(source, /shell\s*:\s*true/);
+  assert.doesNotMatch(
+    source,
+    /shell\\s*:\\s*process\\.platform\\s*===\\s*["']win32["']/,
+  );
+});
+
 test("single delegation lock rejects a second active run", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "bthwani-opencode-lock-test-"));
   try {
