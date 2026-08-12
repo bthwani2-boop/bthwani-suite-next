@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 3,
+  "packageClass": "DERIVED_SUPPORT_ARTIFACT",
+  "multiSurfaceScope": {
+    "mode": "FULLSTACK_UNIFIED_MULTI_SURFACE",
+    "surfaces": [
+      "control-panel",
+      "app-client",
+      "app-partner",
+      "app-captain",
+      "app-field"
+    ],
+    "journeyPolicy": "ONLY_FIELD_CAUSAL_OR_FIELD_SHARED_CONTRACT_EFFECTS_ARE_FUNCTIONALLY_IN_SCOPE",
+    "sliceContract": "The five-surface envelope is structural. Execution is limited to field-originated behavior, required readback, shared contract regression boundaries, and proven prerequisites."
+  },
+  "task": {
+    "id": "PKG-FIELD_3",
+    "name": "Field 3 — App Field Root-Cause Final Closure",
+    "objective": "Execute root-cause, fail-closed end-to-end closure for app-field and every proven dependency, writer, reader, shared contract and required readback surface, while excluding unrelated repository work and deferring physical native dependency removal to one evidence-gated build window.",
+    "primarySurface": "app-field",
+    "createdAt": "2026-08-13T01:26:00+03:00"
+  },
+  "repository": {
+    "name": "bthwani2-boop/bthwani-suite-next",
+    "targetBranch": "BB",
+    "pinnedStartSha": "bee8e9cfe1762cef39690f0b254fdf0b6855e1a9",
+    "latestObservedRemoteSha": "bee8e9cfe1762cef39690f0b254fdf0b6855e1a9"
+  },
+  "authority": {
+    "root": "governance/authority/authority-precedence.json",
+    "entryPoint": "governance/GOVERNANCE.md",
+    "canCreatePolicy": false,
+    "canOverrideCanonicalSource": false
+  },
+  "derivedSupport": {
+    "prompting": "tools/prompting/01-diagnose-plan-package.md",
+    "executionCard": "tools/prompting/BTHWANI_CHATGPT_GITHUB_EXECUTION_CARD_ONE_PAGE.md",
+    "priorFieldPackage": "plans/diagnose-implementing/app-field-final-closure",
+    "creationMode": "NEW_DISTINCT_TASK_IDENTITY",
+    "nativePolicy": "DEPRECATE_FIRST_FREEZE_NATIVE_GRAPH_THEN_CONSOLIDATED_REMOVAL_AND_BUILD",
+    "failClosed": "OPEN_BY_DEFAULT_EXACT_SHA_EVIDENCE_REQUIRED"
+  },
+  "status": {
+    "diagnosis": "COMPLETE",
+    "plan": "READY",
+    "implementation": "NOT_STARTED",
+    "verification": "REQUIRED_ON_EXECUTION_CANDIDATE",
+    "decision": "OPEN"
+  },
+  "disposability": {
+    "runtimeDependsOnPackage": false,
+    "buildDependsOnPackage": false,
+    "ciDependsOnPackage": false,
+    "migrationDependsOnPackage": false,
+    "governanceDependsOnPackage": false,
+    "operationsDependOnPackage": false,
+    "containsSecretsOrProductionData": false
+  }
+}

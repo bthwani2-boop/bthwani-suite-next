@@ -1,0 +1,5 @@
+# U009 — catalog-publication-cross-surface-readback
+
+الكتالوج المركزي هو الحقيقة الوحيدة لهوية الفئات والمنتجات. الميداني أو لوحة التحكم قد يربطان master product بالمتجر ويحددان store-local price/stock/availability، لكن لا ينشئان product identity محلية تنافس Central Catalog. Business Vertical من U005 يحدد/يقيد catalog domains والسياسات، ولا يساوي category node. publication readiness يجب أن يكون server-authoritative ويجمع partner/store approval، legal documents verified، location، vertical، required catalog setup، operational readiness وأي visibility policy قبل إظهار المتجر للعميل.
+
+لوحة التحكم `dsh/catalogs` وكل tabs/components المرتبطة بمراجعة field proposals/store assortment تدخل في الجرد، وكذلك Partners pages التي تعرض publication state. بعد approval يجب إثبات نفس partnerId/storeId/productId من Field إلى Partner ثم public Client readback، مع disabled/unpublished product، store-local override، stock/price updates وعدم cross-store leakage. لا يعاد بناء catalog الموجود؛ أي defect يصلح عند owner. app-client داخل الوحدة readback فقط ولا تدخل ميزات العميل الأخرى.

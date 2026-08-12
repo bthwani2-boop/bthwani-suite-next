@@ -1,0 +1,5 @@
+# U006 — documents-media-review-taxonomy
+
+ملف الانضمام الميداني يحتاج نموذجين مختلفين: Media ميداني للواجهة/اللوحة/داخل المتجر وسياق الزيارة، وLegal Documents للسجل التجاري وهوية المالك وأي وثيقة نظامية. جمعهما في قائمة واحدة أو اعتبار `uploaded` مساويًا `verified` يخلق تضليلًا تشغيليًا وقانونيًا. الحالات المطلوبة للمستند هي upload lifecycle مستقل عن review lifecycle: NOT_UPLOADED/UPLOADING/UPLOADED ثم PENDING_REVIEW/VERIFIED/REJECTED/REUPLOAD_REQUIRED أو المكافئ canonical الحالي. التحقق لا يكتبه الهاتف؛ يأتي من reviewer/backend مع reviewer/time/reason/audit.
+
+يجب جرد كل tabs/panels داخل Partner Detail/Review Queue/Store Management التي تعرض صورًا أو مستندات ميدانية، وكل screen في app-field للالتقاط/الاختيار/الرفع. `freelancer_certificate` أو أي نوع معروف لا يبقى `other` إذا كان له معنى business policy؛ taxonomy المركزية يجب أن تسمح required-document rules وexpiry/compliance/reporting. الصور الميدانية تحفظ source/capturedBy/capturedAt/visit/location context عند الانطباق، ولا تعتمد EXIF وحده كحقيقة أمنية. upload failures، duplicate upload، replacement، reviewer rejection، reupload، deleted/expired media كلها حالات يجب حسمها.

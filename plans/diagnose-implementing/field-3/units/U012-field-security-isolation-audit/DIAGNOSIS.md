@@ -1,0 +1,5 @@
+# U012 — field-security-isolation-audit
+
+هذه ليست quality sweep عامة؛ هي مراجعة أمنية عدائية لكل boundary أدخلتها الوحدات الميدانية. يجب افتراض Actor A يحاول قراءة/تعديل draft أو assignment أو visit أو document أو thread أو payout يخص Actor B أو store آخر، عبر direct API، modified IDs، deep-link، stale cache، offline replay، attachment URL، list/search filters أو privileged Control Panel endpoint. كل authorization يجب أن يكون server-side/object-level، لا hide button أو client filter. operator scopes في Partners/Operations/Finance يجب أن تمنع PII/financial data الزائدة وتنتج audit قابلًا للمراجعة.
+
+يشمل الاختبار session/token/replay/rate-limit/input validation/upload content/path/metadata، IDOR، cross-tenant/store/actor، finance privilege separation، change approvals، message/document attachment isolation، and audit completeness. app-captain/app-partner يدخلان فقط عند shared payout security regression من U011، وapp-client عند public publication leakage من U009. يجب جرد كل صفحات وتبويبات Control Panel الميدانية التي أضيفت أو عدلت والتأكد أن route guard وbackend object authorization متطابقان؛ لا يكفي أن الصفحة غير ظاهرة في navigation.

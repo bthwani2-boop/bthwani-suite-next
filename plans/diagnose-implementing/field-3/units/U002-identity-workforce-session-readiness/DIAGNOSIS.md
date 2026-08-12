@@ -1,0 +1,5 @@
+# U002 — identity-workforce-session-readiness
+
+الميداني لا يملك حقيقة مستقلة للهوية أو الحالة الوظيفية. Identity هو مالك actor/session/device trust وWorkforce هو مالك profile/employment/readiness، بينما DSH يستهلك هذه الحقيقة لتحديد الأهلية التشغيلية. التنفيذ الحالي تغير عدة مرات في session/logout/revocation، لذلك نتائج قديمة لا تغلق رأس Field 3. يجب تتبع login/activation/session restore/logout/revocation ثم `/workforce/me` وحالات active/pending/incomplete/suspended/missing profile، والتأكد أن app-field لا يدخل work surface عند أي failure أو stale session.
+
+لوحة التحكم تدخل فقط عبر صفحة/قسم HR وكل المكونات/التبويبات التي تنشئ أو تعرض الميداني وحالته؛ قسم Partners يمكن أن يعرض مرآة read-only للحالة لكنه لا يملك employment status. إذا احتاج Partners إلى إيقاف إسناد مهام جديدة فهذا DSH onboarding eligibility مستقل، وليس تعديل Workforce. يجب اختبار restart، role/surface mismatch، device/session invalidation، deep-link قبل readiness، والـserver authorization بعد تعليق الموظف. لا يسمح بإخفاء failure بحالة محلية أو fallback يسمح بالدخول.

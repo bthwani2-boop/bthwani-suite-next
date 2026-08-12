@@ -1,0 +1,5 @@
+# U001 — field-verification-openapi-foundation
+
+هذه الوحدة هي بوابة الثقة لبقية Field 3. التشخيص الحالي يثبت أن app-field لم يعد يعاني عيب «لا توجد اختبارات»؛ `apps/app-field/runtime/package.json` يشغّل `tests/*.test.mjs` ثم mobile runtime contract، ومجلد الاختبارات موجود. blocker الأسبق الآن هو فشل root `pnpm install --frozen-lockfile` في postinstall أثناء OpenAPI materialization برسالة `Self-referencing circular pointer`. السبب الجذري يجب عزله إلى context/schema/$ref أو composer writer ثم إصلاح المصدر الحاكم؛ منع postinstall أو catch أو skip أو توليد artifact يدوي ليس مقبولًا لأنه سيترك generated clients غير موثوقة.
+
+بعد إزالة السبب يجب إثبات deterministic regeneration ثم تثبيت أن typecheck/lint/test/build الخاصة بـapp-field تصل فعلًا إلى التنفيذ وتفشل عند regression حقيقي. هذه الوحدة تشمل tooling/contracts فقط بقدر كونها prerequisite مثبتًا لتطبيق الميداني، ولا تسحب failures عامة غير سببية. أي write يجعل evidence القديمة stale ويستلزم re-pin. لا يتم أي Native dependency removal هنا؛ U013/U014 هما المالكان الوحيدتان لتصنيف/إزالة Native لاحقًا.

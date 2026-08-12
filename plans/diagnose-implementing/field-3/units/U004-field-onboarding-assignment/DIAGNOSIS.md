@@ -1,0 +1,5 @@
+# U004 — field-onboarding-assignment
+
+قسم الشركاء يحتاج أن يسند للميداني lead أوليًا باسم متجر وهاتف أو عنوان/موقع، وليس أن يطلب raw Actor ID أو أن يستخدم WorkforceScopeManager كبديل لعمل تجاري. قبل إنشاء entity جديدة يجب البحث عن assignment/lead/work-item موجود في DSH يمكن تمديده؛ إذا لم يوجد مكافئ يحفظ lifecycle/provenance/object authorization فتنشأ `FieldOnboardingAssignment` كعقد DSH مستقل. المهمة لا تنشئ Partner/Store canonical بمجرد الإسناد؛ عند فتحها يبدأ الميداني Draft مع prefill hints قابلة للتصحيح، بينما القيم الأصلية تبقى provenance.
+
+لوحة التحكم جزء أساسي من الوحدة: يجب جرد صفحة `dsh/partners` وكل tabs/workspaces/components داخل `@bthwani/dsh/control-panel/partners` المتعلقة بالميداني، وصفحة HR لاختيار الميداني من Workforce directory بدل Actor ID يدوي. يجب أن تظهر مهام كل ميداني وتقدمها دون تكرار employment truth. assignment يعطي صلاحية ضيقة لرحلة onboarding فقط ولا يمنح store/area operational scope واسعًا. إعادة الإسناد والتعطيل والإلغاء والموظف الموقوف يجب أن تحفظ التاريخ ولا تسقط draft أو تسمح بفعل قديم.

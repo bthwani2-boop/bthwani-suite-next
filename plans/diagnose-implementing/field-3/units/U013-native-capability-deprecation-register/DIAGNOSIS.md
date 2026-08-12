@@ -1,0 +1,5 @@
+# U013 — native-capability-deprecation-register
+
+الهدف هنا ليس حذف packages بل منع التخمين حولها. app-field يحمل مجموعة Expo/React Native واسعة؛ بعض العناصر مستخدمة مباشرة، بعضها peer/shared/autolinking/config-plugin، وبعضها قد يكون موروثًا من manifest capability. خلال تنفيذ U001–U012 يجب الحفاظ على Native graph لتجنب build churn. لكل dependency/capability نثبت: direct imports، shared/dynamic imports، peer requirement، Metro/autolinking، Expo plugin/config/permission، runtime consumer، وبديل فعلي إن وجد. Knip إشارة فقط وليس سلطة حذف.
+
+الحالات الوحيدة: KEEP، REQUIRED_NATIVE، DEPRECATED_CANDIDATE، DEPRECATED_CONFIRMED، REMOVE_ON_NEXT_NATIVE_REBUILD، REMOVED_AND_VERIFIED. هذه الوحدة لا تغير `package.json`/manifest/plugin/permission لعناصر deprecated؛ هي تسجل قرارًا evidence-bound وتمنع استعمالًا business جديدًا إذا ثبت deprecation. يمكن فحص التطبيقات الأخرى لفهم peer/shared contract فقط لأن بعض الحزم مشتركة، لكن لا تُحذف أو تعدّل dependencies لتطبيق غير الميداني داخل Field 3. أي قرار مثل expo-camera مقابل expo-image-picker أو router/reanimated/screens يجب أن يثبت graph الفعلي على candidate لا قائمة سابقة.

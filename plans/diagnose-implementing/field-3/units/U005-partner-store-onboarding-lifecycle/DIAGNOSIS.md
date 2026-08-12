@@ -1,0 +1,5 @@
+# U005 — partner-store-onboarding-lifecycle
+
+ملف الانضمام يجب أن يكون رحلة واحدة ذات state machine واضح، لا مجموعة شاشات تعلن اكتمالًا متضاربًا. الخطر الحالي هو local `category/default` مقابل Central Catalog taxonomy؛ المطلوب فصل Business Vertical عن catalog category وربط الـvertical بregistry/authority مركزية وسياسات المستندات والكتالوج والنشر. `default` يمكن أن يبقى draft-internal مؤقتًا إن احتاج التنفيذ compatibility، لكنه لا يصل إلى submitted/approved/publication-ready. كذلك يجب الفصل بين `ONBOARDING_INTAKE_COMPLETE` و`PUBLICATION_READY`: يمكن مراجعة الهوية والمستندات بالتوازي مع catalog، لكن النشر لا يحدث حتى تحقق كل متطلبات الـvertical.
+
+لوحة التحكم جزء من الحقيقة: `dsh/partners` review queue، صفحة `[partnerId]`، صفحة `partners/stores` وكل tabs/components داخل PartnerDetail/StoreManagement/ReviewQueue التي تعرض ملفات ميدانية يجب أن تكون ضمن الجرد والاختبار. قسم الشركاء يقرأ draft أثناء DRAFT ويعلّق، ولا يعدل بصمت؛ بعد SUBMITTED يصبح الميداني read-only حتى RETURNED_FOR_CHANGES. نفس partner/store IDs يجب أن تستمر لاحقًا إلى Partner app ولا تنشأ shadow identity.

@@ -1,0 +1,5 @@
+# U008 — visits-checklists-readiness-escalations
+
+الزيارات والقوائم والجاهزية والتصعيدات موجودة في DSH ولا يجب إعادة بنائها لمجرد أن Field 3 جديدة. هذه الوحدة verification-first: تتبع governed handlers الحالية، actor/store authorization، required checklist/evidence، completion transition، idempotency، concurrent/replayed requests، persistence وoperator readback. إذا ظهر defect يصلح في المالك الحقيقي ولا يوضع guard واجهة لتغطية backend mismatch.
+
+يجب الفصل الصريح بين `FieldOnboardingAssignment` في U004 وبين verification/operational visit هنا. قد تبدأ زيارة من assignment أو draft لكنهما ليسا نفس state machine ولا نفس authorization. لوحة التحكم `dsh/operations` وكل tabs/panels داخل `OperationsHubScreen` التي تعرض work/visits/readiness/escalations تدخل ضمن الجرد، وكذلك أي Partner Detail/Store surface يعكس readiness الناتجة. يجب إثبات wrong worker/wrong store/closed visit/missing evidence/duplicate complete/concurrent check updates/restart/offline replay، وألا تتحول stale/revoked work إلى mutation قابلة للتنفيذ.
