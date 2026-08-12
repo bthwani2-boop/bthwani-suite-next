@@ -38,31 +38,42 @@ export function governedIdentitySurfaceForRole(role: string): GovernedIdentitySu
 }
 
 /**
- * Canonical user-session boundary for governed product surfaces.
+ * Canonical authentication boundary for a concrete product surface.
  *
- * surfaceAccess answers whether an actor may use a surface in general;
- * sessionSurface answers whether this exact authenticated session was issued
- * for that surface. Both must agree with the requested role/surface pair.
+ * surfaceAccess says the actor is allowed to use the surface at all;
+ * sessionSurface says this exact live session was issued for that surface.
+ * Both must be true. This intentionally does not impose a business role:
+ * control-panel employees, for example, are authorized by their permissions
+ * after the session has passed this surface boundary.
+ */
+export function identitySessionIsBoundToSurface(
+  identity: unknown,
+  requiredSurface: string,
+): identity is ActorIdentity {
+  if (!identity || typeof identity !== "object") return false;
+  const candidate = identity as Partial<ActorIdentity>;
+  const surfaceAccess = candidate.surfaceAccess;
+  return candidate.authState === "authenticated"
+    && candidate.sessionSurface === requiredSurface
+    && typeof surfaceAccess === "object"
+    && surfaceAccess !== null
+    && surfaceAccess[requiredSurface] === true;
+}
+
+/**
+ * Canonical role + surface authorization used by role-owned application
+ * surfaces. The role-to-surface mapping and the exact active session binding
+ * must both agree.
  */
 export function identitySessionAuthorizesSurface(
   identity: unknown,
   requiredRole: string,
   requiredSurface: string,
 ): identity is ActorIdentity {
-  if (!identity || typeof identity !== "object") return false;
-  const candidate = identity as Partial<ActorIdentity>;
+  if (!identitySessionIsBoundToSurface(identity, requiredSurface)) return false;
   const expectedSurface = governedIdentitySurfaceForRole(requiredRole);
-  if (expectedSurface === null || expectedSurface !== requiredSurface) return false;
-
-  const roles = candidate.roles;
-  const surfaceAccess = candidate.surfaceAccess;
-  return candidate.authState === "authenticated"
-    && Array.isArray(roles)
-    && roles.some((role) => role === requiredRole)
-    && candidate.sessionSurface === requiredSurface
-    && typeof surfaceAccess === "object"
-    && surfaceAccess !== null
-    && surfaceAccess[requiredSurface] === true;
+  return expectedSurface === requiredSurface
+    && identity.roles.some((role) => role === requiredRole);
 }
 
 export function identitySessionAllowedActions(state: IdentitySessionState): readonly IdentitySessionAction[] {
