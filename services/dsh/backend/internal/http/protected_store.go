@@ -557,40 +557,21 @@ func (s *protectedStoreServer) requirePermission(
 		return store.StoreActor{}, false
 	}
 
-	// For operator actors the RBAC registry is the single source of truth.
-	// Inline session claims (identity.Permissions) are stale snapshots and
-	// cannot be used as the authority for operator permission decisions.
-	// Deny-by-default: if ResolvePermissions is unavailable, access is denied.
-	if identity.HasRole("operator") {
-		rbacPerms, rbacErr := s.identity.ResolvePermissions(r.Context(), identity.Subject)
-		if rbacErr != nil {
-			store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "RBAC registry is unavailable")
-			return store.StoreActor{}, false
-		}
-		for _, p := range rbacPerms {
-			if p.Service == "dsh" && p.Surface == surface && p.Action == action {
-				scope := strings.TrimSpace(p.Scope)
-				if scope == "" {
-					continue
-				}
-				return store.StoreActor{
-					ID:                 identity.Subject,
-					Role:               "operator",
-					OperatorContextID:  identity.OperatorContextID,
-					PhoneE164:          identity.PhoneE164,
-					AuthorizedAction:   action,
-					AuthorizationScope: scope,
-				}, true
-			}
-		}
-		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor lacks required permission")
+	// Governed fine-grained DSH permissions belong to operator sessions only.
+	// Role membership alone is insufficient: this exact live session must have
+	// been issued for the control-panel surface. Inline permission snapshots are
+	// never an authority for these decisions; live Identity RBAC is canonical.
+	if surface != dshActorSurface("operator") || !identity.HasRole("operator") || identity.SessionSurface != surface {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "operator control-panel session is required")
 		return store.StoreActor{}, false
 	}
 
-	// Non-operator roles (client, partner, captain, field) use inline session
-	// permission claims. These roles are authorised by role membership, not by
-	// fine-grained RBAC entries.
-	for _, p := range identity.Permissions {
+	rbacPerms, rbacErr := s.identity.ResolvePermissions(r.Context(), identity.Subject)
+	if rbacErr != nil {
+		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "RBAC registry is unavailable")
+		return store.StoreActor{}, false
+	}
+	for _, p := range rbacPerms {
 		if p.Service == "dsh" && p.Surface == surface && p.Action == action {
 			scope := strings.TrimSpace(p.Scope)
 			if scope == "" {
@@ -600,6 +581,8 @@ func (s *protectedStoreServer) requirePermission(
 				ID:                 identity.Subject,
 				Role:               "operator",
 				OperatorContextID:  identity.OperatorContextID,
+				SessionID:          identity.SessionID,
+				SessionSurface:     identity.SessionSurface,
 				PhoneE164:          identity.PhoneE164,
 				AuthorizedAction:   action,
 				AuthorizationScope: scope,
