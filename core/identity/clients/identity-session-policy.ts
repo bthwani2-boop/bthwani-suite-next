@@ -1,3 +1,4 @@
+import type { ActorIdentity } from "./identity-client.ts";
 import type { IdentitySessionState } from "./identity-session-store.ts";
 
 export type IdentitySessionAction =
@@ -18,6 +19,51 @@ export type IdentityErrorPresentation = {
   readonly description: string;
   readonly retryable: boolean;
 };
+
+const ROLE_SURFACE = Object.freeze({
+  operator: "control-panel",
+  client: "app-client",
+  partner: "app-partner",
+  field: "app-field",
+  captain: "app-captain",
+} as const);
+
+export type GovernedIdentityRole = keyof typeof ROLE_SURFACE;
+export type GovernedIdentitySurface = (typeof ROLE_SURFACE)[GovernedIdentityRole];
+
+export function governedIdentitySurfaceForRole(role: string): GovernedIdentitySurface | null {
+  return Object.hasOwn(ROLE_SURFACE, role)
+    ? ROLE_SURFACE[role as GovernedIdentityRole]
+    : null;
+}
+
+/**
+ * Canonical user-session boundary for governed product surfaces.
+ *
+ * surfaceAccess answers whether an actor may use a surface in general;
+ * sessionSurface answers whether this exact authenticated session was issued
+ * for that surface. Both must agree with the requested role/surface pair.
+ */
+export function identitySessionAuthorizesSurface(
+  identity: unknown,
+  requiredRole: string,
+  requiredSurface: string,
+): identity is ActorIdentity {
+  if (!identity || typeof identity !== "object") return false;
+  const candidate = identity as Partial<ActorIdentity>;
+  const expectedSurface = governedIdentitySurfaceForRole(requiredRole);
+  if (expectedSurface === null || expectedSurface !== requiredSurface) return false;
+
+  const roles = candidate.roles;
+  const surfaceAccess = candidate.surfaceAccess;
+  return candidate.authState === "authenticated"
+    && Array.isArray(roles)
+    && roles.some((role) => role === requiredRole)
+    && candidate.sessionSurface === requiredSurface
+    && typeof surfaceAccess === "object"
+    && surfaceAccess !== null
+    && surfaceAccess[requiredSurface] === true;
+}
 
 export function identitySessionAllowedActions(state: IdentitySessionState): readonly IdentitySessionAction[] {
   switch (state.kind) {
@@ -51,9 +97,11 @@ export function identityErrorPresentation(code: string): IdentityErrorPresentati
   switch (code) {
     case "FORBIDDEN":
     case "CORS_ORIGIN_FORBIDDEN":
+    case "SESSION_SURFACE_MISMATCH":
+    case "CONTROL_PANEL_FORBIDDEN":
       return {
         title: "الوصول غير مسموح",
-        description: "لا يملك هذا الحساب أو السطح صلاحية تنفيذ العملية.",
+        description: "لا يملك هذا الحساب أو هذه الجلسة صلاحية استخدام السطح المطلوب.",
         retryable: false,
       };
     case "ACTOR_DEACTIVATED":
