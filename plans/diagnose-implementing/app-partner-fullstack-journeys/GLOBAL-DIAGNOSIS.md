@@ -1,123 +1,153 @@
 # Global diagnosis — app-partner-fullstack-journeys
 
-Pinned diagnosis baseline: `bthwani2-boop/bthwani-suite-next@BB` at `629b86b9a3ca8fadc16158b6c9a078217ebe4af4`. Latest remote head observed and reconciled before write: `086e48f8f8ed9deaa9d1525f379505af056df355`.
+Pinned diagnosis baseline: `bthwani2-boop/bthwani-suite-next@BB` at `f48d27e09e17dffaa471f394a46cd2878d3c1d86`.
 
-## 1. Diagnosis decision
+## 1. Decision
 
-The existing package is retained and rebaselined; no replacement package is created. The prior package had become mixed-baseline: root metadata still named `abbas` and an old SHA while later coverage evidence referenced newer source, and it still classified `docs/architecture.drawio` as empty even though the current branch contains a populated ArchPulse draw.io document. That inconsistency is repaired here.
+Retain and update the existing package. Do not create a new package or new duplicate concerns. The eight existing units still form a coherent Partner closure DAG, but the package was materially stale: its root remained pinned to `629b86b.../086e48f...` while `BB` advanced another 314 commits through Partner runtime, Identity, WLT, migration, runtime and CI changes.
 
-The eight existing concerns remain a coherent Partner closure decomposition and do not need duplication: access/readiness/store scope; order intake/preparation; catalog/store publication; team/fleet connection; handoff/delivery exceptions; support/order rescue; WLT finance/COD; analytics/commercial readback. Their implementation plans remain useful because current source still exposes those exact Partner boundaries. This reconciliation changes the source baseline and evidence interpretation, not the product truth owner.
+The package is now diagnosis-complete and execution-ready, but product/runtime closure remains OPEN. This update plans durable fixes; it does not execute shell/database/device/CI evidence.
 
-## 2. Strict scope boundary
+## 2. Scope and truth ownership
 
-The package is app-partner bounded. The primary implementation surface is `apps/app-partner/runtime` plus `services/dsh/frontend/app-partner`. Shared code is in scope only when the Partner surface directly imports it or when it is the canonical controller/contract for a Partner operation.
+`app-partner` is the primary product scope. External surfaces are included only as bounded mandatory counterparts of the same Partner transition/readback.
 
-A non-Partner surface is included only as a narrow mandatory counterpart when current Product Truth proves that a Partner mutation cannot be considered correct without that readback or coordinated action. This permits, for example, Partner onboarding operator/field/client publication slices, Store-Captain fleet/handoff counterpart behavior, support/rescue operator compatibility, and WLT finance ownership. It does not permit unrelated Client commerce, Captain workforce/finance, Field workforce, generic control-panel pages, or generic platform/tooling cleanup.
+Authoritative ownership:
 
-The authoritative execution pattern is: Partner intent -> trusted Identity/session context -> Partner/shared adapter or generated contract -> DSH or WLT canonical owner -> PostgreSQL/ledger transaction and invariant -> event/reconciliation where applicable -> canonical readback -> only required counterpart consumers. Any shortcut that creates local final truth is a defect.
+- Identity owns authentication, session surface/role, refresh rotation and trusted identity context.
+- DSH owns Partner/Store lifecycle and scope, publication/serviceability, catalog/assortment, Partner orders, team/fleet, custody/handoff, support/rescue and operational analytics facts.
+- WLT owns wallet/ledger, payout destination master data, payout eligibility/request, COD financial custody/effects, settlement, commission and reconciliation truth.
+- app-partner and counterpart surfaces collect intent and render canonical readback only.
 
-## 3. Current Partner runtime and frontend architecture
+A selected Store ID, payout amount input, device fingerprint, local modal state or UI success is never authoritative security/operational/financial truth.
 
-`apps/app-partner/runtime/src/App.tsx` composes a real mobile Partner runtime. It configures SecureStore-backed Identity session storage, a stable device fingerprint, native catalog file picking, the Identity API base, Partner mobile push registration, and a role/surface gate requiring `partner` + `app-partner` before rendering `DshPartnerSurface`.
+## 3. Rebaseline delta
 
-`services/dsh/frontend/app-partner/dsh-partner-binding.contracts.ts` provides compile-time coverage for the routable Partner surface registry, including home/entry, order inbox/detail/rejection, notifications, support, inventory, store courier, product edit/category/media/overrides, team, wallet bridge, and commercial model. `useDshPartnerSurfaceModel.ts` composes profile, Store scope, orders, support, operational summary, and team models rather than owning duplicate business state.
+The previous package-observed head was `086e48f8f8ed9deaa9d1525f379505af056df355`. Current `BB` is `f48d27e09e17dffaa471f394a46cd2878d3c1d86`, 314 commits ahead.
 
-`services/dsh/frontend/shared/partner/store-scope.model.ts` loads Partner scopes from DSH, resolves the selected Store, and re-reads Store role context before exposing runtime Store profile data. This is materially stronger than the old package baseline. The remaining rule is unchanged: selection is user intent; server authorization is the security boundary.
+Material current changes include:
 
-`docs/architecture.drawio` is now a populated XML diagram generated by ArchPulse. It is supporting dependency evidence only. Governance, Product Truth, contracts, code, and persistence invariants remain stronger authorities.
+- app-partner runtime wrapper/startup changes;
+- Identity exact session-surface policy, refresh-rotation concurrency, migration and contract tests;
+- control-panel auth boundary hardening that affects Partner operator counterparts only where those counterparts are used;
+- migration runner/amendment governance changes;
+- WLT money-movement/settlement Product Truth changes;
+- runtime/CI/security gate changes;
+- current Partner package closure metadata without a matching full re-diagnosis.
 
-## 4. Current canonical ownership
+Because the drift is material, old exact-SHA evidence is invalid. The package cannot merely replace SHA strings while preserving old assumptions.
 
-- Identity owns authentication, sessions, roles/permissions, device/session identity and trusted identity context.
-- DSH owns Partner/Store lifecycle, Store scope, serviceability, catalog publication/overrides, order lifecycle, team/fleet operational state, custody/handoff, support/rescue and operational analytics facts/projections.
-- WLT owns wallet/ledger, COD financial custody, settlement, commission, payout destination and all authoritative financial mutation/readback.
-- Frontends collect intent and render canonical results. They must not calculate or persist authoritative Partner operational or financial state.
+## 4. Current Partner runtime and access
 
-The migration-governance changes observed during reconciliation reinforce rather than relax this boundary: migration checksum/amendment integrity is now an explicit repository concern. Partner implementation cannot claim persistence closure if a required Identity/DSH/WLT schema is not cleanly applicable and invariant-safe.
+`apps/app-partner/runtime/src/App.tsx` still configures SecureStore-backed Identity session storage, stable Partner device fingerprint, catalog document selection, Identity API, Partner push registration and `IdentitySessionGate requiredRole="partner" requiredSurface="app-partner"` before `DshPartnerSurface`.
 
-## 5. Current material findings
+The old U001 session wording is insufficient on current `BB`. Identity now has a dedicated refresh-concurrency boundary and migration. U001 must prove one governed successor under concurrent refresh, replay/conflict behavior, outage recovery, exact session surface, logout/relogin/restart and actor switching. Local Store/device/push state must never bridge actors or authorize a request.
 
-### PRT-BB-001 — P1 — selected-Store analytics contract remains ambiguous
+## 5. New Partner post-onboarding rating slice
 
-Evidence: `PartnerAnalyticsInsightsPanel` accepts `canonicalStoreId`, refetches when it changes, labels the result as Store-scoped, and prints the selected operational scope. `fetchPartnerPerformance(period)` sends only `/dsh/partner/analytics/performance?period=...`. `handlePartnerPerformance` obtains `storeID` independently through `partnerStore` before calling `GetPartnerPerformance`.
+Current Partner runtime also wraps `DshPartnerSurface` with `PartnerFieldRatingGate`. Despite its name, this component is not an access gate: it always renders children and conditionally overlays a dismissible modal. It fetches server prompt eligibility and submits a 1–5 rating/comment through shared provider-rating APIs.
 
-Consequence: for a Partner with more than one Store, the displayed Store selection and the Store chosen by the analytics endpoint cannot be proven to be the same operation scope. Refetching on `canonicalStoreId` change does not solve the mismatch because that value is not sent.
+This current Partner-specific flow was absent from the package. It belongs to the Partner onboarding/post-activation vertical slice because the copy ties eligibility to Store onboarding/activation and the field agent who assisted it. It does **not** authorize broad Field-app work.
 
-Root cause: the UI models selected-Store analytics while the API models implicit Partner Store resolution. `U008` must choose one canonical semantic: authorized selected-Store intent, or explicitly Partner-wide/default-Store analytics with matching UI semantics. Do not patch the label and do not trust an arbitrary client Store ID as authorization.
+U001 must verify:
 
-### PRT-BB-002 — P1 — capability lifecycle prevents false closure claims
+- prompt eligibility is server-derived from the authenticated Partner/onboarding relationship;
+- another Partner cannot rate or read an unrelated field relationship;
+- completion/retry is persisted and duplicate-safe according to current rating contract;
+- dismissing the modal is only presentation state and does not forge completion;
+- prompt fetch failure does not grant or revoke Partner access/readiness;
+- if current Product Truth/PRD defines the rating as optional feedback, it remains non-blocking; if product authority requires otherwise, change the authoritative contract rather than silently converting UI state into readiness truth.
 
-Current Partner onboarding/store publication Product Truth is `READY_FOR_IMPLEMENTATION`. Current support/incidents/order-rescue Product Truth is `DISCOVERY`. These states explicitly describe unresolved implementation/evidence work and protected acceptance. Existing source, tests, or screens cannot be treated as proof that the whole journey is closed.
+## 6. Onboarding/publication remains open by Product Truth
 
-Consequence: implementation must bind evidence to the exact Product Truth acceptance criteria and final candidate rather than declaring success because routes compile or UI smoke passes.
+`PARTNER_ONBOARDING_STORE_PUBLICATION` remains `READY_FOR_IMPLEMENTATION`. It requires trusted server-derived context, explicit Partner/Store business authorization, separation of field evidence and operator approval, WLT-owned payout destination references, and client visibility only after every applicable publication gate.
 
-Root cause: lifecycle/evidence state is intentionally ahead of final acceptance. This is not fixed by adding another local test or package assertion.
+Therefore U001/U003 may preserve current working pieces but cannot declare the journey closed from source presence. Exact candidate runtime/database/security/counterpart evidence remains required.
 
-### PRT-BB-003 — P0 — Partner finance requires WLT-owned vertical proof
+## 7. Partner team/fleet — concrete canonical evidence drift
 
-Partner finance is presented through WLT-facing wallet/COD/commission/settlement/payout bridges. Any actual COD remit or settlement-affecting operation is financial state, not a UI-only action.
+`PARTNER_FLEET_CONNECTION.product-truth.json` still names `services/dsh/database/migrations/dsh-933_jrn030_partner_fleet_action_audit.sql` as evidence. That file is no longer the live migration path. Current repository truth contains `services/dsh/database/migrations/dsh-933_partner_fleet_action_audit.sql`.
 
-Consequence: a frontend/DSH success response without WLT authorization, idempotency, legal state, ledger/reconciliation, audit, unknown-outcome handling and canonical readback can create financial divergence.
+This is a real canonical-evidence defect inside U004. The implementation unit must correct the Product Truth evidence pointer, preserve migration immutability/history, and verify the current migration manifest plus partner-fleet lifecycle. It must **not** rename or rewrite an applied migration to make stale metadata appear correct.
 
-Root cause: cross-service financial orchestration is safe only when WLT remains the sole truth owner and DSH is a bounded authenticated bridge. `U007` remains mandatory and must reject any DSH/frontend-owned final financial truth.
+The functional fleet requirements remain: Store-scoped Partner issue/list/revoke, Captain redeem/list/disconnect, redacted operator readback, digest-only code storage, expiry, optimistic versioning, audit, notifications and deterministic replay/concurrency behavior.
 
-### PRT-BB-004 — P1 — cross-surface counterpart evidence is required but must stay narrow
+## 8. Orders, catalog, handoff and support
 
-Onboarding/publication, fleet/handoff, support/rescue and some order readbacks have required actors outside app-partner. Those counterpart slices are directly related to Partner correctness, but their host applications contain much more functionality that is unrelated.
+U002, U003, U005 and U006 remain correctly bounded after re-diagnosis:
 
-Consequence: omitting required readback creates false Partner closure; broadening into the whole Client/Captain/Field/Control Panel creates scope contamination and unrelated risk.
+- U002 owns Partner order intake/preparation decisions, legal transitions, OCC/idempotency/audit and canonical readback; Client/operator appearances are only counterpart readbacks.
+- U003 owns central catalog/assortment/Store publication consequences used by Partner; unrelated catalogs/marketing remain excluded.
+- U005 owns Store↔Captain custody/handoff/exceptions only; no independent Captain redesign.
+- U006 owns Partner assigned-order support/rescue compatibility; operator owns rescue transitions and DSH must not mutate WLT from rescue.
 
-Root cause: multi-surface Product Truth requires vertical slices, not application-wide rewrites. Every external path in a unit must be justified by one concrete Partner transition/readback and `mustNotChange` boundaries.
+Their current tasks should first reproduce a mismatch on the then-current candidate before changing code. Already-correct source is verified, not rewritten for activity.
 
-### PRT-BB-005 — P1 — runtime/persistence evidence cannot be inherited from earlier SHAs
+## 9. Partner finance — U007 requires material rebaseline
 
-`BB` advanced by hundreds of commits beyond the former package source and moved again while this diagnosis was being prepared. Current changes include Partner runtime/Identity wiring, frontend bindings, backend behavior, tests, architecture output and migration-governance work.
+The former package framed U007 mainly around wallet/settlement/commission/payout/COD readback. Current financial Product Truth is `WLT_MONEY_MOVEMENT_SETTLEMENT`, state `DISCOVERY`, and it is more specific.
 
-Consequence: evidence from the old `abbas` SHA cannot close the current branch. Runtime, database, security, finance and CI evidence must be produced against the exact final implementation candidate after the last write.
+For Partner, current Product Truth requires:
 
-Root cause: the old package baseline was stale and internally inconsistent. This rewrite resolves the planning baseline only; implementation evidence still has to be regenerated.
+- one canonical WLT wallet/ledger truth;
+- masked read-only current official-wallet destination;
+- Partner cannot create/update/deactivate/select payout destination master data;
+- payout request intent is only `FULL_AVAILABLE` or `SPECIFIED` plus idempotency context;
+- for `FULL_AVAILABLE`, WLT resolves current eligible amount transactionally; the client sends no authoritative total;
+- for `SPECIFIED`, WLT validates the requested amount against current eligible funds inside the authoritative boundary;
+- ambiguous external execution remains `provider_result_unknown`/held for reconciliation and is not local success;
+- financial master-data changes belong to governed Finance workflows with versioning/evidence/approval;
+- DSH/frontend cannot calculate authoritative balances, settlements, commissions, payout totals or completion.
 
-### PRT-BB-006 — P1 — mobile development transport is shared infrastructure, not Partner truth
+Current `WltDshPartnerBridge` already composes WLT-backed wallet, commission, payout and Partner COD panels. Current `PayoutDestinationPanel` is substantially aligned: destination is masked/read-only, FULL_AVAILABLE/SPECIFIED are explicit, an attempt idempotency key is retained through failures, and `provider_result_unknown` is presented as reconciliation-required.
 
-The latest reconciled commit `086e48f8f8ed9deaa9d1525f379505af056df355` fixes `apps/mobile/mobile-lan.ps1`: a PowerShell parameter named `$Pid` collided case-insensitively with the read-only automatic `$PID`, causing the shared mobile gateway start to fail. The commit renames that parameter and adds executable PowerShell coverage.
+Therefore U007 is **verification-first** for those aligned pieces. Do not reimplement them. The remaining work is to prove server authorization/eligibility/idempotency/reconciliation and to census Partner COD/legacy finance routes against current Product Truth. A route that is no longer canonical must be removed/delegated after caller proof rather than preserved as parallel financial truth.
 
-Consequence: Partner runtime testing over the shared LAN gateway may have been blocked by tooling even when Partner product code was correct. Conversely, a working gateway does not prove Partner Identity/API/business behavior.
+## 10. Selected-Store analytics defect remains reproduced
 
-Root cause: shared runtime transport tooling had a PowerShell automatic-variable collision. This is already fixed on the latest observed head; Partner execution should consume and verify the fixed transport path when relevant, but must not reopen unrelated mobile application scope.
+The old U008 root cause remains present on `f48d27e...`:
 
-## 6. Resolved or superseded old findings
+- `PartnerAnalyticsInsightsPanel` accepts `canonicalStoreId`, reloads when it changes, labels performance as Store-specific and prints that operational scope.
+- `fetchPartnerPerformance(period)` sends only `period`.
+- `handlePartnerPerformance` resolves `storeID` independently through `partnerStore` and computes performance for that Store.
 
-The old finding that `docs/architecture.drawio` is zero bytes is resolved on current `BB`; the file is populated and must no longer be listed as a blocker.
+For a multi-Store Partner, the visible selected Store and backend analytics Store are not contractually tied. U008 must select one semantic:
 
-The current Partner runtime also contains stronger fail-closed building blocks than the old baseline: SecureStore Identity session integration, role/surface gate, Partner push binding, server-loaded Store scopes, compile-time route bindings, and targeted Partner smoke/guard work added in intervening commits. These improvements reduce earlier ambiguity but do not eliminate the remaining vertical verification requirements.
+1. selected-Store intent is part of the API contract and is re-authorized server-side; or
+2. analytics is Partner-wide/default-Store and UI/read-model semantics stop claiming selected-Store scope.
 
-No previously recorded issue is allowed to remain merely because it existed in the old package. During implementation, each unit must first reproduce its current problem on the then-current SHA; a task already fully solved by current code is removed or narrowed rather than reimplemented.
+Changing only copy, refetch dependencies or local Store state is a workaround and does not close the root cause.
 
-## 7. Unit reconciliation
+## 11. FAIL-CLOSED cleanup and adversarial verification
 
-- `U001`: keep. Reverify Identity/session, activation/readiness, Store scope, serviceability/publication prerequisites and stale actor/device recovery on current code. External Field/Client/operator paths are only mandatory onboarding/publication counterparts.
-- `U002`: keep. Verify Partner order commands, legal transitions, idempotency/OCC, audit and canonical read-after-write. Client/operator paths are readback compatibility only.
-- `U003`: keep. Verify central catalog, assortment, stock/price/media overrides, Store publication and only the marketing/serviceability gates that affect Partner Store publication.
-- `U004`: keep. Verify Partner team and fleet connection; Captain/operator paths are only the counterpart of the same fleet lifecycle.
-- `U005`: keep. Verify Store-to-Captain custody/handoff and exceptions; no unrelated dispatch/Captain redesign.
-- `U006`: keep. Verify Partner support and order rescue ownership/isolation; operator/Captain/client compatibility only where the same governed support contract requires it.
-- `U007`: keep at highest financial rigor. WLT is authoritative; DSH/app-partner are bounded consumers/orchestrators.
-- `U008`: keep and prioritize the reproduced selected-Store analytics mismatch above.
+For every unit, a fix is incomplete until all affected callers/contracts/migrations/readbacks are migrated and obsolete parallel remnants are removed. Final review must deliberately search for:
 
-The existing dependency DAG remains valid: access/scope precedes Store-scoped operations; order intake precedes handoff/support and contributes facts used by finance/analytics.
+- stale Store/Partner/actor state after restart/logout/refresh;
+- cross-Partner/Store IDOR and client-controlled trusted context;
+- payload-divergent idempotency replay;
+- partial/unknown mutation shown as success;
+- duplicate Partner/team/fleet/order/support/financial truth;
+- dead routes/types/imports/contracts/evidence references after convergence;
+- sensitive payout/code/token disclosure;
+- stale analytics/financial data rendered as authoritative zero/success;
+- migration manifest/amendment drift;
+- regressions in required counterpart surfaces.
 
-## 8. Head-movement reconciliation
+Any known executable finding reopens the owning unit.
 
-The main re-diagnosis was pinned at `629b86b9a3ca8fadc16158b6c9a078217ebe4af4`. Before package write, `BB` advanced to `086e48f8f8ed9deaa9d1525f379505af056df355` by exactly one commit. Comparison showed only `apps/mobile/mobile-lan.ps1` and `apps/mobile/tests/mobile-lan-powershell.execution.test.mjs` changed. The change repairs shared mobile development transport and adds tests; it does not alter Partner routes, Partner contracts, Identity authorization, DSH/WLT ownership or the eight-unit decomposition. The package therefore keeps `629b86b...` as the immutable diagnosis baseline, records `086e48f...` as latest observed remote head, and incorporates the delta as runtime-environment verification context.
+## 12. Unit reconciliation
 
-## 9. Verification and final closure policy
+- `U001`: materially update for Identity refresh/session concurrency and PartnerFieldRating post-onboarding feedback, while preserving Store-scope/onboarding scope.
+- `U002`: retain; current order/preparation boundary remains correct.
+- `U003`: retain; current catalog/publication boundary remains correct and Product Truth is still not final.
+- `U004`: materially update for stale Partner Fleet migration evidence plus existing lifecycle/security proof.
+- `U005`: retain; Store↔Captain handoff/exceptions boundary remains correct.
+- `U006`: retain; Partner support/rescue boundary remains correct.
+- `U007`: materially rebase to `WLT_MONEY_MOVEMENT_SETTLEMENT` Partner payout/destination/reconciliation semantics and current COD compatibility census.
+- `U008`: retain and strengthen; selected-Store mismatch is still reproduced on current source.
 
-Planning readiness is not implementation closure. For each unit, execute the registered verification checks plus any newly required test discovered from current code. At minimum, affected changes must cover type/contract checks, relevant Go tests, PostgreSQL/migration invariants, server-side authorization negative paths, idempotency/OCC where state changes, runtime smoke, and Partner RTL/accessibility/visual behavior when UI changes.
+The dependency DAG remains valid and is not changed.
 
-Financial paths require WLT-specific evidence and cannot be self-certified from DSH tests. Security isolation requires negative cross-Partner/Store tests. Migration changes require clean-install and governed checksum/amendment compatibility evidence. Shared mobile LAN/gateway tests prove only development transport behavior. A passing test from a different SHA is not transferable.
+## 13. Evidence limits
 
-Immediately before final decision: fetch latest `BB`, compare it with the candidate, reconcile any concurrent delta, rerun affected verification, and bind every PASS to the exact candidate SHA. Only then may `RESULT.json`, manifest closure state, and `CLOSURE.md` move beyond `NEEDS_EVIDENCE`.
-
-## 10. Residual uncertainty
-
-This GitHub-only diagnosis can inspect repository truth and update the planning package, but it cannot honestly assert device runtime, live PostgreSQL, financial reconciliation, visual behavior, or local command execution without those checks actually running. The package is therefore `COMPLETE/READY` for diagnosis/plan and deliberately remains `NOT_STARTED/NEEDS_EVIDENCE` for implementation/closure.
+This re-diagnosis is based on current GitHub repository truth. It does not execute Node/Go/PostgreSQL/WLT provider/device/visual/CI commands. `RESULT.json` remains the only location for actual candidate-bound outcomes. No PASS, DONE or CLOSED claim is created by this package update.

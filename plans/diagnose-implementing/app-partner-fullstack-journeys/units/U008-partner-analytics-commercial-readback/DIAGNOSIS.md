@@ -1,21 +1,56 @@
-# Diagnosis — U008 partner-analytics-commercial-readback
+# U008 — Partner analytics and commercial readback
 
-## Inclusion reason
+## Objective
 
-Partner analytics and commercial summary are Partner-facing read models over operational/financial owners and therefore belong in the Partner closure boundary. The control-panel Analytics section is included only as a compatible reader of the same DSH operational facts; analytics cannot become a second order, Store or financial truth. Financial figures, if shown, must be WLT-backed projections rather than frontend/DSH calculations.
+Eliminate the current selected-Store analytics ambiguity and close Partner operational/commercial read models as explicitly scoped, server-authorized, provenance/freshness-aware projections that never become operational or financial truth.
 
-## Concrete defect — selected Store is not bound to Partner performance request
+## Current diagnosis
 
-`PartnerAnalyticsInsightsPanel` receives `canonicalStoreId`, displays the selected Store name and states that the operational scope is that Store, but calls `fetchPartnerPerformance(period)` without passing the selected Store. The shared analytics API sends only `/dsh/partner/analytics/performance?period=...`. The backend `handlePartnerPerformance` independently resolves a `storeID` through `partnerStore` and passes that ID to `GetPartnerPerformance`; the selected UI Store ID is not an input to the operation. The platform model permits a Partner to manage multiple Stores, so the current request cannot be proven to describe the Store selected in the Partner UI. This is a real semantic/scoping defect, not merely a missing prop.
+The previously identified root cause is still present on `BB@f48d27e09e17dffaa471f394a46cd2878d3c1d86`.
 
-## Root cause and target architecture
+`PartnerAnalyticsInsightsPanel` accepts `storeName` and optional `canonicalStoreId`. Its effect reloads when `canonicalStoreId` changes, labels the view `ملخص الأداء — {storeName}`, describes the data as Store-scoped, and prints `النطاق التشغيلي: {canonicalStoreId ...}`.
 
-The root cause is a mismatch between surface semantics (“selected Store performance”) and the analytics contract (“Partner performance resolved to a Store by backend helper”). The fix must be made at the contract/authorization boundary: either accept selected Store intent and authorize it server-side against the Partner before computing analytics, or explicitly define the endpoint/read model as Partner-wide aggregation and change the UI/copy accordingly. Never trust an arbitrary Store ID as authorization. Operational metrics remain DSH-derived read models with source/freshness/window semantics; financial metrics remain WLT-backed.
+However `fetchPartnerPerformance(period)` sends only:
 
-## Exact affected paths and symbols
+`GET /dsh/partner/analytics/performance?period=...`
 
-`services/dsh/frontend/app-partner/account/PartnerAnalyticsInsightsPanel.tsx`, `PartnerCommercialSummaryScreen.tsx`, `services/dsh/frontend/shared/analytics/analytics.api.ts`, control-panel Analytics consumers, `services/dsh/backend/internal/http/analytics.go`, analytics domain/database queries and relevant OpenAPI contracts. Key symbols: `AnalyticsInsightsPanel`, `fetchPartnerPerformance`, `handlePartnerPerformance`, `GetPartnerPerformance`, `canonicalStoreId`, `partnerStore` and `PartnerCommercialSummaryScreen`.
+It does not send selected Store intent. Backend `handlePartnerPerformance` independently calls `partnerStore(w,r)` to obtain a Store and passes that `storeID` to `analytics.GetPartnerPerformance`.
 
-## Risks and evidence
+Therefore, for a Partner with multiple Stores, the Store shown by the Partner UI and the Store used by the backend are not bound by one explicit contract. Merely including `canonicalStoreId` in a React dependency causes refetch, but does not change the request or prove the returned metrics belong to that selected Store.
 
-Test Partner with multiple Stores, unauthorized Store intent, one-Store compatibility, period/window boundaries, empty vs stale/partial/error data, refresh/restart and any WLT-backed financial projection. Do not turn missing data into zero or allow analytics to mutate operational/financial truth. Evidence: `EV-003`, `EV-025`, `EV-029`, `EV-030`.
+This is a contract/semantic defect, not a copy defect.
+
+## Required root-cause decision
+
+Choose exactly one current Product/API semantic and make every layer agree:
+
+### Option A — selected-Store analytics
+
+- selected Store intent becomes an explicit request field/query parameter;
+- DSH re-authorizes it against the authenticated Partner before any analytics query;
+- cross-Store/unauthorized intent fails closed without leaking ownership/details;
+- OpenAPI/generated client/backend tests and Partner/operator consumers align.
+
+### Option B — Partner-wide/default canonical analytics
+
+- endpoint is explicitly Partner-wide or explicitly canonical-default-Store;
+- Partner UI stops claiming metrics belong to the currently selected Store;
+- `canonicalStoreId` presentation/dependency that falsely implies scope is removed;
+- multi-Store aggregation/default semantics are documented and tested.
+
+Do not solve this by changing only the label, adding a local filter, reloading more often or trusting client Store ID without server authorization.
+
+## Read-model integrity
+
+After scope correction, U008 must also prove:
+
+- metric period/window and generated/freshness timestamp are truthful;
+- loading/empty/partial/offline/error are distinct from numeric zero;
+- missing/stale operational data does not render as current success;
+- financial/commercial metrics use WLT-backed facts where financial truth is involved and preserve currency/unit/provenance;
+- analytics cannot mutate operational or financial state;
+- control-panel analytics compatibility changes only when the same contract/read model is actually affected.
+
+## Closure rule
+
+U008 requires API/contract/backend/client alignment, multi-Store authorization negatives, type/build tests, affected analytics backend tests, runtime Partner readback and cleanup of the abandoned semantic (unused parameter/route/schema/copy) after the chosen model is implemented. The mismatch remains OPEN until the backend result and displayed scope are provably the same semantic.

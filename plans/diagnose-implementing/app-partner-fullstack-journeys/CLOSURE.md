@@ -1,49 +1,68 @@
 # Closure — app-partner-fullstack-journeys
 
-## Final decision
+**Decision: OPEN — implementation and evidence required.**
 
-`NEEDS_EVIDENCE`
+The existing Partner package has been re-diagnosed against `BB@f48d27e09e17dffaa471f394a46cd2878d3c1d86`. This update makes the plan current; it does not execute product changes or manufacture PASS evidence.
 
-The existing Partner package has been re-diagnosed on current `BB`; implementation has not been executed by this planning update and no product journey is falsely declared closed.
+## Zero-known-defect gate
 
-## Baseline and observed SHAs
+`CLOSED_WITH_EVIDENCE` is forbidden until every in-scope known fixable error, gap, contradiction, stale canonical reference, unjustified duplicate, dead live path, incomplete integration, authorization/data/privacy weakness, financial inconsistency, unresolved state, hidden workaround, regression and executable remaining task has been eliminated and verified on the latest implementation SHA.
 
-- Re-diagnosed immutable baseline: `629b86b9a3ca8fadc16158b6c9a078217ebe4af4`
-- Latest observed/reconciled remote head before package write: `086e48f8f8ed9deaa9d1525f379505af056df355`
-- Target branch: `BB`
-- Final implementation SHA: not recorded because implementation has not started.
-- Final verification SHA: not recorded because verification has not started.
+Cleanup is mandatory. Proven dead/duplicate/stale routes, imports, types, contracts, evidence pointers, compatibility layers and misleading presentation must be removed after caller/blast-radius proof. A compiling obsolete path is still a closure blocker when it contradicts the canonical model.
 
-Head reconciliation was performed twice during diagnosis. The move to `629b86b...` affected migration-governance records/guards and root-closure tooling. The final move to `086e48f...` affected only shared mobile LAN gateway PowerShell and its executable tests; it repairs development transport and does not change Partner business contracts or the eight-unit decomposition.
+## Current known blockers
 
-## Re-diagnosis completed
+1. **U001 — Identity/session:** current Partner closure evidence must cover Identity refresh-rotation concurrency, replay/conflict, exact `partner` + `app-partner` session surface, outage, logout/relogin/restart and actor switch. The old generic session check is insufficient.
+2. **U001 — post-onboarding rating:** `PartnerFieldRatingGate` is a current app-partner interaction absent from the previous package. Its prompt eligibility, one-time completion, actor/onboarding isolation, duplicate/retry/readback and non-blocking semantics must be proven without broadening Field-app scope.
+3. **U004 — fleet evidence drift:** `PARTNER_FLEET_CONNECTION.product-truth.json` references removed `dsh-933_jrn030_partner_fleet_action_audit.sql`; canonical evidence must point to live `dsh-933_partner_fleet_action_audit.sql` without rewriting migration history.
+4. **U007 — finance contract drift:** Partner finance must be closed against current `WLT_MONEY_MOVEMENT_SETTLEMENT` semantics: read-only verified destination, beneficiary cannot mutate destination master data, FULL_AVAILABLE/SPECIFIED server validation, actor isolation, idempotency, held unknown external result, reconciliation and WLT-only financial truth. Partner COD/legacy finance routes require a current canonical-model census.
+5. **U008 — analytics:** selected-Store UI semantics remain disconnected from the Partner performance request/backend Store resolution and require a contract/root-cause correction.
+6. Partner onboarding/publication is still `READY_FOR_IMPLEMENTATION`; support/rescue and WLT money movement are still `DISCOVERY`. Protected product acceptance cannot be self-issued by engineering/package text.
+7. Exact-candidate runtime, PostgreSQL/migration, WLT reconciliation/provider, device, visual/RTL/accessibility and CI evidence has not been executed by this GitHub-only package update.
 
-- Removed the stale `abbas` baseline from package root truth.
-- Replaced the obsolete claim that `docs/architecture.drawio` is empty; current `BB` contains populated ArchPulse draw.io XML.
-- Reconfirmed the eight existing Partner concerns instead of creating duplicate units or a new package.
-- Tightened scope language so external applications are only narrow mandatory Partner counterparts, never independent implementation scope.
-- Reproduced the selected-Store Partner analytics contract mismatch on current code and retained it in `U008`.
-- Reconfirmed that current Product Truth lifecycle states prevent treating source presence as final product acceptance.
-- Reconfirmed WLT as sole Partner financial truth owner and retained vertical COD/settlement/commission/payout proof as a highest-rigor closure requirement.
-- Incorporated migration-integrity and shared mobile LAN/gateway changes only as verification dependencies where they directly affect Partner persistence/runtime evidence.
+## Mandatory final adversarial cycle
 
-## Completed implementation units
+After the last relevant implementation and cleanup write, repeat until exhaustion:
 
-None. Each `RESULT.json` remains the place for actual candidate-bound implementation evidence and must not be pre-populated by planning.
+`Root Cause review → blast-radius census → cleanup/refactor → positive paths → negative/authorization paths → concurrency/replay/idempotency → weak-network/unknown-result recovery → contract/generated binding → PostgreSQL/migration → cross-surface canonical readback → privacy/security → WLT ledger/reconciliation where applicable → regression → deliberate remaining-defect search`
 
-## Journey closure
+Any new finding returns the owning unit to OPEN.
 
-No Partner journey is closed by this package rewrite. Closure requires every required unit to reach `DONE`, every required verification to PASS against the same final candidate, and no unresolved blockers/deviations. Required counterpart evidence must stay limited to the exact Partner transition/readback that makes it relevant.
+## Required final package/repository gates
 
-## Remaining blockers before final closure
+At minimum, execute the unit-specific `VERIFICATION.json` checks plus affected repository gates from the exact final candidate, including where applicable:
 
-- `U008` selected-Store analytics semantics must be made unambiguous at contract/backend authorization level or the UI must be changed to the actual canonical aggregation semantic.
-- Partner onboarding/publication and support/rescue Product Truth are not final accepted capability states on the pinned source.
-- Partner finance/COD requires WLT-owned authorization, ledger/reconciliation, audit, idempotency, failure/unknown-outcome and readback proof.
-- Device runtime, PostgreSQL/migration invariants, cross-Partner/Store isolation, WLT reconciliation, visual/RTL/accessibility and exact-candidate CI have not been executed by this GitHub-only planning update.
-- Shared mobile LAN/gateway success can prove transport only and must not be used as evidence that Partner Identity/API/business flows are correct.
-- `BB` must be fetched and compared again immediately before implementation writes and final decision; evidence from an earlier SHA is not transferable.
+```text
+node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/app-partner-fullstack-journeys --strict
+pnpm --filter @bthwani/app-partner-runtime lint
+pnpm --filter @bthwani/app-partner-runtime typecheck
+pnpm --filter @bthwani/app-partner-runtime test
+pnpm --filter @bthwani/app-partner-runtime build
+pnpm guard:no-broken-imports
+pnpm guard:cleanup-policy
+pnpm guard:fullstack-boundary
+pnpm guard:wlt-financial-boundary
+pnpm guard:contract-registry-drift
+pnpm database:dsh:test
+pnpm database:dsh:contract
+pnpm runtime:full:smoke
+pnpm guard:journey:full
+```
 
-## Disposability proof
+Unit-specific Identity, DSH Partner/fleet/order/support/analytics and WLT payout/COD/ledger/database/provider checks remain mandatory even if global gates pass.
 
-The manifest keeps runtime/build/CI/migration/governance/operations dependency on this directory set to false. Durable fixes belong in canonical Identity/DSH/WLT/contracts/migrations/tests/runtime code. This package records diagnosis, execution intent and evidence only.
+## Required evidence characteristics
+
+- Every required check records PASS on the exact resulting SHA after the last relevant write.
+- Every `RESULT.json` is based on executed evidence, not inherited historical status.
+- Cross-Partner/Store and cross-actor negative cases are explicit.
+- State-changing retries prove identical replay and payload-divergent rejection where contracted.
+- Unknown network/provider results are reconciled from canonical state and never shown as local success.
+- Partner payout destination is read-only on beneficiary surfaces and sensitive identifiers remain masked.
+- Required counterpart surfaces prove only the same Partner journey; they do not expand into independent app scope.
+- Physical-device evidence is attached for native behavior that cannot be established statically when affected.
+- CI/security/quality/protected product or finance approvals required by current governance are satisfied without self-approval.
+
+## Proof limits of this package update
+
+No shell, Node, Go, PostgreSQL, WLT provider, Android runtime, visual QA or CI execution was performed by this planning edit. Therefore implementation remains `NOT_STARTED`, verification remains `NOT_STARTED`, and product closure remains OPEN even though the diagnosis/plan is READY.
