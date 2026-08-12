@@ -3,7 +3,6 @@ package payout
 import (
 	"bytes"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -17,9 +16,9 @@ import (
 // panel does.
 func completePayout(t *testing.T, db *sql.DB, operatorContextID, payoutID, operatorID string) *httptest.ResponseRecorder {
 	t.Helper()
-	body, _ := json.Marshal(map[string]any{"operatorId": operatorID})
-	req := httptest.NewRequest(http.MethodPost, "/wlt/payout-requests/"+payoutID+"/complete", bytes.NewReader(body))
-	req = req.WithContext(shared.WithOperatorContext(req.Context(), operatorContextID))
+	req := httptest.NewRequest(http.MethodPost, "/wlt/payout-requests/"+payoutID+"/complete", bytes.NewReader([]byte(`{}`)))
+	ctx := shared.WithOperatorContext(req.Context(), operatorContextID)
+	req = req.WithContext(shared.WithDelegatedFinancePrincipal(ctx, operatorID))
 	req.SetPathValue("payoutId", payoutID)
 	req.Header.Set("X-Correlation-ID", "complete-"+payoutID)
 	res := httptest.NewRecorder()

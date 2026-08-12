@@ -179,9 +179,9 @@ func decodePayoutID(t *testing.T, res *httptest.ResponseRecorder) string {
 
 func approvePayout(t *testing.T, db *sql.DB, operatorContextID, payoutID, operatorID string) *httptest.ResponseRecorder {
 	t.Helper()
-	body, _ := json.Marshal(map[string]any{"operatorId": operatorID})
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/wlt/payouts/%s/approve", payoutID), bytes.NewReader(body))
-	req = req.WithContext(shared.WithOperatorContext(req.Context(), operatorContextID))
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/wlt/payouts/%s/approve", payoutID), bytes.NewReader([]byte(`{}`)))
+	ctx := shared.WithOperatorContext(req.Context(), operatorContextID)
+	req = req.WithContext(shared.WithDelegatedFinancePrincipal(ctx, operatorID))
 	req.SetPathValue("payoutId", payoutID)
 	req.Header.Set("x-operator-context-id", operatorContextID)
 	req.Header.Set("x-correlation-id", "test-approve-corr")

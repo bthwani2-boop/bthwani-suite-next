@@ -135,6 +135,21 @@ func (c *Client) FinanceWrite(ctx context.Context, method, path string, body []b
 }
 
 func (c *Client) FinanceWriteWithOperatorContext(ctx context.Context, method, path string, body []byte, correlationID, idempotencyKey, operatorContextID string) (int, []byte, error) {
+	return c.financeWriteWithOperatorContext(ctx, method, path, body, correlationID, idempotencyKey, operatorContextID, "")
+}
+
+// FinanceWriteWithOperatorContextAndPrincipal is the bounded proxy used by
+// control-panel payout transitions. WLT authenticates the delegated principal
+// separately from the platform/operator context; it must never be smuggled in
+// the request body.
+func (c *Client) FinanceWriteWithOperatorContextAndPrincipal(ctx context.Context, method, path string, body []byte, correlationID, idempotencyKey, operatorContextID, delegatedPrincipalID string) (int, []byte, error) {
+	if strings.TrimSpace(delegatedPrincipalID) == "" {
+		return 0, nil, fmt.Errorf("Identity-authenticated delegated finance principal is required")
+	}
+	return c.financeWriteWithOperatorContext(ctx, method, path, body, correlationID, idempotencyKey, operatorContextID, delegatedPrincipalID)
+}
+
+func (c *Client) financeWriteWithOperatorContext(ctx context.Context, method, path string, body []byte, correlationID, idempotencyKey, operatorContextID, delegatedPrincipalID string) (int, []byte, error) {
 	if !c.Configured() {
 		return 0, nil, fmt.Errorf("WLT integration is not configured")
 	}
@@ -156,6 +171,9 @@ func (c *Client) FinanceWriteWithOperatorContext(ctx context.Context, method, pa
 	req.Header.Set("Content-Type", "application/json")
 	if operatorContextID = strings.TrimSpace(operatorContextID); operatorContextID != "" {
 		req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	}
+	if delegatedPrincipalID = strings.TrimSpace(delegatedPrincipalID); delegatedPrincipalID != "" {
+		req.Header.Set("X-Delegated-Principal-ID", delegatedPrincipalID)
 	}
 
 	idempotencyKey = strings.TrimSpace(idempotencyKey)

@@ -77,11 +77,11 @@ type RecordManualExecutionInput struct {
 	EvidenceReference         string `json:"evidenceReference"`
 	AmountMinorUnits          int64  `json:"amountMinorUnits"`
 	Currency                  string `json:"currency"`
-	OperatorID                string `json:"operatorId"`
+	OperatorID                string `json:"-"`
 }
 
 type VerifyManualExecutionInput struct {
-	OperatorID string `json:"operatorId"`
+	OperatorID string `json:"-"`
 }
 
 // batchSnapshotFacts are the approved facts an execution must agree with. They
@@ -155,12 +155,15 @@ func RecordManualTransferExecution(ctx context.Context, db *sql.DB, batchID stri
 	input.ExternalTransferReference = strings.TrimSpace(input.ExternalTransferReference)
 	input.EvidenceReference = strings.TrimSpace(input.EvidenceReference)
 	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
-	input.OperatorID = strings.TrimSpace(input.OperatorID)
+	input.OperatorID, err = shared.RequireDelegatedFinancePrincipal(ctx)
+	if err != nil {
+		return nil, err
+	}
 	correlationID = strings.TrimSpace(correlationID)
 
 	if batchID == "" || input.ApprovedSnapshotID == "" || input.ExternalTransferReference == "" ||
-		input.AmountMinorUnits <= 0 || input.Currency == "" || input.OperatorID == "" || correlationID == "" {
-		return nil, fmt.Errorf("batchId, approvedSnapshotId, externalTransferReference, amountMinorUnits, currency, operatorId and X-Correlation-ID are required")
+		input.AmountMinorUnits <= 0 || input.Currency == "" || correlationID == "" {
+		return nil, fmt.Errorf("batchId, approvedSnapshotId, externalTransferReference, amountMinorUnits, currency and X-Correlation-ID are required")
 	}
 
 	tx, err := db.BeginTx(ctx, nil)
@@ -263,11 +266,14 @@ func VerifyManualTransferExecution(ctx context.Context, db *sql.DB, batchID, evi
 	}
 	batchID = strings.TrimSpace(batchID)
 	evidenceID = strings.TrimSpace(evidenceID)
-	input.OperatorID = strings.TrimSpace(input.OperatorID)
+	input.OperatorID, err = shared.RequireDelegatedFinancePrincipal(ctx)
+	if err != nil {
+		return nil, err
+	}
 	correlationID = strings.TrimSpace(correlationID)
 
-	if batchID == "" || evidenceID == "" || input.OperatorID == "" || correlationID == "" {
-		return nil, fmt.Errorf("batchId, evidenceId, operatorId and X-Correlation-ID are required")
+	if batchID == "" || evidenceID == "" || correlationID == "" {
+		return nil, fmt.Errorf("batchId, evidenceId and X-Correlation-ID are required")
 	}
 
 	tx, err := db.BeginTx(ctx, nil)

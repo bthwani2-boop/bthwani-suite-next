@@ -13,7 +13,7 @@ import (
 
 const (
 	wltMigrationServiceName = "wlt"
-	wltLatestMigration      = "wlt-924_wallet_projection_deferred_ledger_trigger.sql"
+	wltLatestMigration      = "wlt-925_external_statement_four_way_reconciliation.sql"
 	wltReadinessTimeout     = 2 * time.Second
 )
 

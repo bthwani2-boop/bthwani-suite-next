@@ -9,10 +9,11 @@
     "pretypecheck": "pnpm run openapi:generate",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "pnpm run typecheck && node ../../tools/scripts/verify-go-build.mjs backend",
-    "test": "node --test tests/*.test.mjs ../../tools/scripts/wlt-openapi-bundle-lib.test.mjs && cd backend && go test ./...",
+    "test": "node --experimental-loader ./tests/ts-loader.mjs --test tests/*.test.mjs ../../tools/scripts/wlt-openapi-bundle-lib.test.mjs && cd backend && go test ./...",
     "lint": "pnpm --dir ../.. run guard:fullstack-boundary && pnpm --dir ../.. run guard:wlt-financial-boundary && pnpm --dir ../.. run guard:wlt-openapi-bundle"
   },
   "dependencies": {
+    "@bthwani/core-identity": "workspace:*",
     "@bthwani/ui-kit": "workspace:*",
     "@tanstack/react-query": "^5.64.0",
     "react": "19.2.3"

@@ -191,7 +191,10 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	read("GET /wlt/payout-requests/{payoutId}/audit", payout.HandleListPayoutAudit(db))
 	mutation("POST /wlt/payout-requests/{payoutId}/approve", payout.HandleApprovePayoutRequestSovereign(db))
 	mutation("POST /wlt/payout-requests/{payoutId}/reject", payout.HandleRejectPayoutRequestSovereign(db))
+	mutation("POST /wlt/payout-requests/{payoutId}/reconcile", payout.HandleReconcilePayoutFourWay(db))
 	mutation("POST /wlt/payout-requests/{payoutId}/complete", payout.HandleCompletePayoutRequestSovereign(db))
+	mutation("PUT /wlt/external-provider-accounts/{providerKey}/{accountReferenceHash}", payout.HandleRegisterExternalProviderAccount(db))
+	mutation("POST /wlt/external-provider-statements", payout.HandleImportAuthoritativeStatement(db))
 	mutation("POST /wlt/payout-requests/{payoutId}/fail", payout.HandleFailPayoutRequestClosed())
 
 	// WLT owns every money figure in a cart, so DSH sends operational inputs
@@ -263,9 +266,10 @@ func requireInternalFinancialRead(next http.HandlerFunc) http.HandlerFunc {
 		if !shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh") {
 			return
 		}
-		// Explicitly reassign the request context, in case pointer mutation fails to propagate
-		ctx := shared.WithOperatorContext(r.Context(), r.Header.Get("X-Operator-Context-ID"))
-		next(w, r.WithContext(ctx))
+		// RequireServiceCaller binds both the operator context and, when present,
+		// the Identity-authenticated delegated finance principal. Preserve that
+		// complete authenticated context for the handler.
+		next(w, r)
 	}
 }
 
@@ -274,8 +278,7 @@ func requireMutationServiceAuth(next http.HandlerFunc) http.HandlerFunc {
 		if !shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh") {
 			return
 		}
-		ctx := shared.WithOperatorContext(r.Context(), r.Header.Get("X-Operator-Context-ID"))
-		next(w, r.WithContext(ctx))
+		next(w, r)
 	}
 }
 
@@ -284,8 +287,7 @@ func requireWorkforceMutationServiceAuth(next http.HandlerFunc) http.HandlerFunc
 		if !shared.RequireServiceCaller(w, r, "WLT_WORKFORCE_SERVICE_TOKEN", "workforce") {
 			return
 		}
-		ctx := shared.WithOperatorContext(r.Context(), r.Header.Get("X-Operator-Context-ID"))
-		next(w, r.WithContext(ctx))
+		next(w, r)
 	}
 }
 

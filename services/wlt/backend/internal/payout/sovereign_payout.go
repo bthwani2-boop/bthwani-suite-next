@@ -9,25 +9,22 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"wlt-api/internal/ledger"
 	"wlt-api/internal/shared"
 )
 
 func decodeRequiredOperator(w http.ResponseWriter, r *http.Request) (string, bool) {
-	var body struct {
-		OperatorID string `json:"operatorId"`
-	}
+	var body struct{}
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 32*1024))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&body); err != nil {
-		shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorId body is required")
+		shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payout transition body is invalid")
 		return "", false
 	}
-	operatorID := strings.TrimSpace(body.OperatorID)
-	if operatorID == "" {
-		shared.SendError(w, http.StatusBadRequest, "OPERATOR_REQUIRED", "authenticated operatorId is required for payout transitions")
+	operatorID, ok := shared.DelegatedFinancePrincipalFromContext(r.Context())
+	if !ok {
+		shared.SendError(w, http.StatusForbidden, "FINANCE_OPERATOR_PRINCIPAL_REQUIRED", "an Identity-authenticated delegated finance operator is required for payout transitions")
 		return "", false
 	}
 	return operatorID, true
@@ -260,14 +257,15 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 		// from the request, so a completion cannot settle a different sum than
 		// the one that actually left the official wallet.
 		var evidenceAmount int64
-		var evidenceCurrency, executedBy, verifiedBy string
+		var evidenceCurrency, executedBy, verifiedBy, snapshotID, batchID, evidenceID string
 		if err := tx.QueryRowContext(r.Context(), `
-			SELECT e.amount_minor_units, e.currency, e.executed_by_operator_id, e.verified_by_operator_id
+			SELECT e.amount_minor_units, e.currency, e.executed_by_operator_id, e.verified_by_operator_id,
+			       s.id, e.batch_id, e.id
 			FROM wlt_manual_transfer_evidence e
 			JOIN wlt_approved_payout_snapshots s ON s.id = e.approved_snapshot_id
 			WHERE s.payout_request_id = $1 AND e.operator_context_id = $2 AND e.verified_at IS NOT NULL
 			FOR UPDATE OF e`, req.ID, operatorContextID,
-		).Scan(&evidenceAmount, &evidenceCurrency, &executedBy, &verifiedBy); err != nil {
+		).Scan(&evidenceAmount, &evidenceCurrency, &executedBy, &verifiedBy, &snapshotID, &batchID, &evidenceID); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				shared.SendError(w, http.StatusConflict, "VERIFIED_EXECUTION_REQUIRED", "no verified manual transfer evidence exists for this payout")
 				return
@@ -279,6 +277,27 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusConflict, "EVIDENCE_SNAPSHOT_MISMATCH", "verified execution evidence does not match the approved payout amount")
 			return
 		}
+		var fourWayReconciliationID string
+		if err := tx.QueryRowContext(r.Context(), `
+			SELECT r.id
+			FROM wlt_payout_four_way_reconciliations r
+			JOIN wlt_settlement_batch_rows br
+			  ON br.batch_id = r.settlement_batch_id AND br.approved_snapshot_id = r.approved_snapshot_id
+			WHERE r.operator_context_id = $1
+			  AND r.payout_request_id = $2
+			  AND r.approved_snapshot_id = $3
+			  AND r.settlement_batch_id = $4
+			  AND r.manual_transfer_evidence_id = $5
+			  AND r.result = 'MATCHED'
+			FOR UPDATE OF r`, operatorContextID, req.ID, snapshotID, batchID, evidenceID,
+		).Scan(&fourWayReconciliationID); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				shared.SendError(w, http.StatusConflict, "FOUR_WAY_RECONCILIATION_REQUIRED", "payout completion requires a matched approved snapshot, frozen batch row, verified evidence and authoritative statement")
+				return
+			}
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read payout four-way reconciliation")
+			return
+		}
 		if req.ApprovedByOperatorID == "" || operatorID == req.ApprovedByOperatorID || operatorID == executedBy || operatorID == verifiedBy {
 			shared.SendError(w, http.StatusForbidden, "MAKER_CHECKER_VIOLATION", "completion operator must differ from the payout approver, executor and verifier")
 			return
@@ -287,8 +306,17 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			{AccountType: "wallet", ActorType: req.BeneficiaryActorType, ActorID: req.BeneficiaryActorID, DebitCredit: "debit", AmountMinorUnits: req.AmountMinorUnits, Currency: req.Currency},
 			{AccountType: "external_settlement_cash", DebitCredit: "credit", AmountMinorUnits: req.AmountMinorUnits, Currency: req.Currency},
 		}
-		if _, err := ledger.PostLedgerTransaction(r.Context(), tx, "payout_completed", "payout_request", req.ID, lines, ledger.Actor{ID: operatorID, Type: "operator"}); err != nil {
+		ledgerTransactionID, err := ledger.PostLedgerTransaction(r.Context(), tx, "payout_completed", "payout_request", req.ID, lines, ledger.Actor{ID: operatorID, Type: "operator"})
+		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to post payout journal")
+			return
+		}
+		if _, err := tx.ExecContext(r.Context(), `
+			UPDATE wlt_payout_four_way_reconciliations
+			SET canonical_ledger_transaction_id = $3
+			WHERE operator_context_id = $1 AND id = $2
+			  AND canonical_ledger_transaction_id IS NULL`, operatorContextID, fourWayReconciliationID, ledgerTransactionID); err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to bind payout reconciliation to canonical ledger transaction")
 			return
 		}
 		updated, err := payoutAfterUpdate(r.Context(), tx,

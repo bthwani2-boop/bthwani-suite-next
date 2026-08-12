@@ -229,7 +229,7 @@ func (s *protectedStoreServer) handleResolveFinanceReconciliationCase(w http.Res
 		"resolutionNote":   input.ResolutionNote,
 	})
 
-	status, respBody, err := s.wlt.ExecuteFinanceWrite(r.Context(), "finance.reconciliation.resolve", http.MethodPost, "/wlt/reconciliation-cases/"+url.PathEscape(caseID)+"/resolve", body, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID)
+	status, respBody, err := s.wlt.ExecuteFinanceWrite(r.Context(), "finance.reconciliation.resolve", http.MethodPost, "/wlt/reconciliation-cases/"+url.PathEscape(caseID)+"/resolve", body, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID, actor.ID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance write failed")
 		return
@@ -271,9 +271,9 @@ func (s *protectedStoreServer) handleFacadeWrite(opID, wltPath string) http.Hand
 			return
 		}
 
-		body := operatorWriteBody(actor.ID)
+		body := operatorWriteBody()
 
-		status, respBody, err := s.wlt.ExecuteFinanceWrite(r.Context(), opID, http.MethodPost, wltPath, body, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID)
+		status, respBody, err := s.wlt.ExecuteFinanceWrite(r.Context(), opID, http.MethodPost, wltPath, body, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID, actor.ID)
 		if err != nil {
 			store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance operation failed")
 			return
@@ -284,8 +284,8 @@ func (s *protectedStoreServer) handleFacadeWrite(opID, wltPath string) http.Hand
 	}
 }
 
-func operatorWriteBody(operatorID string) []byte {
-	body, _ := json.Marshal(map[string]string{"operatorId": operatorID})
+func operatorWriteBody() []byte {
+	body, _ := json.Marshal(struct{}{})
 	return body
 }
 

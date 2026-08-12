@@ -47,6 +47,22 @@ func TestRequireServiceCallerBindsAuthenticatedDelegatedOperatorContext(t *testi
 	}
 }
 
+func TestRequireServiceCallerBindsIdentityDelegatedFinancePrincipal(t *testing.T) {
+	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
+
+	request := authorizedServiceRequest("/wlt/payout-requests/payout-1/approve")
+	request.Header.Set("X-Operator-Context-ID", "OperatorContext-a")
+	request.Header.Set("X-Delegated-Principal-ID", "identity-operator-1")
+	recorder := httptest.NewRecorder()
+
+	if !RequireServiceCaller(recorder, request, "TEST_WLT_SERVICE_TOKEN", "dsh") {
+		t.Fatalf("authenticated service request was rejected status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	if principalID, ok := DelegatedFinancePrincipalFromContext(request.Context()); !ok || principalID != "identity-operator-1" {
+		t.Fatalf("delegated finance principal was not propagated, principal=%q ok=%v", principalID, ok)
+	}
+}
+
 func TestRequireServiceCallerPreservesDistinctAuthenticatedContexts(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
 

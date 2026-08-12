@@ -935,6 +935,9 @@ importers:
 
   services/wlt:
     dependencies:
+      '@bthwani/core-identity':
+        specifier: workspace:*
+        version: link:../../core/identity
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../shared/ui-kit
