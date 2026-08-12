@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { identitySessionAuthorizesSurface } from "@bthwani/core-identity/session-policy";
+import { identitySessionIsBoundToSurface } from "@bthwani/core-identity/session-policy";
 import {
   REFRESH_TOKEN_COOKIE,
   clearSessionCookies,
@@ -11,11 +11,6 @@ import { identityServerClient } from "../_lib/identity-server";
 
 export const runtime = "nodejs";
 
-/**
- * Explicit refresh endpoint, distinct from GET /api/auth/session which also
- * refreshes opportunistically. Used by the client-side single-flight retry
- * path after a 401 from /api/dsh/*.
- */
 export async function POST(request: Request): Promise<NextResponse> {
   if (!isSameOriginRequest(request)) {
     return NextResponse.json({ code: "CROSS_ORIGIN_REJECTED" }, { status: 403 });
@@ -32,7 +27,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   try {
     const rotated = await identityServerClient().refresh(refreshToken);
-    if (!identitySessionAuthorizesSurface(rotated.identity, "operator", "control-panel")) {
+    if (!identitySessionIsBoundToSurface(rotated.identity, "control-panel")) {
       const response = NextResponse.json(
         { code: "CONTROL_PANEL_FORBIDDEN" },
         { status: 403, headers: { "Cache-Control": "no-store" } },
