@@ -1,11 +1,12 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Payout Destinations API
-  version: 1.0.0
+  version: 2.0.0
   description: >-
-    Actor-scoped payout destination and operator reconciliation proxy surface.
-    WLT remains the financial owner; DSH derives actor identity from the
-    session.
+    Beneficiary payout destination read/request surface plus finance-controlled
+    master-data governance. WLT remains the sole financial owner. Beneficiary
+    identity is derived from the session; beneficiary applications cannot create,
+    replace, verify or deactivate payout destinations.
 x-bthwani-owner: services/dsh
 x-bthwani-capability: payouts-destinations
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -24,38 +25,7 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
-      security:
-        - bearerAuth: []
-    put:
-      tags: [ "dsh-partner" ]
-      operationId: upsertDshPartnerOwnPayoutDestination
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        $ref: '#/components/requestBodies/ObjectBody'
-      responses:
-        '200': { $ref: '#/components/responses/ObjectResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
-        '502': { $ref: '#/components/responses/ErrorResponse' }
-      security:
-        - bearerAuth: []
-  /dsh/partner/me/finance/payout-destination/deactivate:
-    post:
-      tags: [ "dsh-partner" ]
-      operationId: deactivateDshPartnerOwnPayoutDestination
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      responses:
-        '200': { $ref: '#/components/responses/ObjectResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
-        '502': { $ref: '#/components/responses/ErrorResponse' }
-      security:
-        - bearerAuth: []
+      security: [ { bearerAuth: [] } ]
   /dsh/captain/me/finance/payout-destination:
     get:
       tags: [ "dsh-captain" ]
@@ -66,38 +36,7 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
-      security:
-        - bearerAuth: []
-    put:
-      tags: [ "dsh-captain" ]
-      operationId: upsertDshCaptainOwnPayoutDestination
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        $ref: '#/components/requestBodies/ObjectBody'
-      responses:
-        '200': { $ref: '#/components/responses/ObjectResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
-        '502': { $ref: '#/components/responses/ErrorResponse' }
-      security:
-        - bearerAuth: []
-  /dsh/captain/me/finance/payout-destination/deactivate:
-    post:
-      tags: [ "dsh-captain" ]
-      operationId: deactivateDshCaptainOwnPayoutDestination
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      responses:
-        '200': { $ref: '#/components/responses/ObjectResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
-        '502': { $ref: '#/components/responses/ErrorResponse' }
-      security:
-        - bearerAuth: []
+      security: [ { bearerAuth: [] } ]
   /dsh/field/me/finance/payout-destination:
     get:
       tags: [ "dsh-field" ]
@@ -108,38 +47,99 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
-      security:
-        - bearerAuth: []
+      security: [ { bearerAuth: [] } ]
+  /dsh/{actorType}/me/finance/payout-requests:
+    post:
+      tags: [ "dsh-beneficiary-finance" ]
+      operationId: createDshOwnPayoutRequest
+      description: >-
+        Request payout to the beneficiary's current active verified official-wallet
+        destination. The caller never supplies a destination id. FULL_AVAILABLE is
+        calculated by WLT at transaction time; SPECIFIED accepts a positive minor-unit amount.
+      parameters:
+        - $ref: '#/components/parameters/ActorType'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateOwnPayoutRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '201': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+      security: [ { bearerAuth: [] } ]
+  /dsh/control-panel/finance/payout-destinations/{actorType}/{actorId}:
+    parameters:
+      - $ref: '#/components/parameters/ActorType'
+      - $ref: '#/components/parameters/ActorId'
+    get:
+      tags: [ "dsh-control-panel" ]
+      operationId: getDshFinancePayoutDestination
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+      security: [ { bearerAuth: [ finance.read ] } ]
     put:
-      tags: [ "dsh-field" ]
-      operationId: upsertDshFieldOwnPayoutDestination
+      tags: [ "dsh-control-panel" ]
+      operationId: upsertDshFinancePayoutDestination
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
-        $ref: '#/components/requestBodies/ObjectBody'
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FinancePayoutDestinationInput' }
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '201': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+      security: [ { bearerAuth: [ finance.manage ] } ]
+  /dsh/control-panel/finance/payout-destinations/{actorType}/{actorId}/verify:
+    post:
+      tags: [ "dsh-control-panel" ]
+      operationId: verifyDshFinancePayoutDestination
+      parameters:
+        - $ref: '#/components/parameters/ActorType'
+        - $ref: '#/components/parameters/ActorId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FinancePayoutDestinationVerification' }
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
-        '502': { $ref: '#/components/responses/ErrorResponse' }
       security:
-        - bearerAuth: []
-  /dsh/field/me/finance/payout-destination/deactivate:
+        - bearerAuth: [ finance.manage, administration.approve ]
+  /dsh/control-panel/finance/payout-destinations/{actorType}/{actorId}/deactivate:
     post:
-      tags: [ "dsh-field" ]
-      operationId: deactivateDshFieldOwnPayoutDestination
+      tags: [ "dsh-control-panel" ]
+      operationId: deactivateDshFinancePayoutDestination
       parameters:
+        - $ref: '#/components/parameters/ActorType'
+        - $ref: '#/components/parameters/ActorId'
         - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FinancePayoutDestinationChangeReason' }
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '204': { description: Destination deactivated. }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
-        '502': { $ref: '#/components/responses/ErrorResponse' }
       security:
-        - bearerAuth: []
+        - bearerAuth: [ finance.manage, administration.approve ]
   /dsh/control-panel/finance/payout-requests/{payoutId}/audit:
     get:
       tags: [ "dsh-control-panel" ]
@@ -152,8 +152,7 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
-      security:
-        - bearerAuth: []
+      security: [ { bearerAuth: [ finance.read ] } ]
 components:
   securitySchemes:
     bearerAuth:
@@ -161,6 +160,16 @@ components:
       scheme: bearer
       bearerFormat: JWT
   parameters:
+    ActorType:
+      name: actorType
+      in: path
+      required: true
+      schema: { type: string, enum: [ partner, captain, field ] }
+    ActorId:
+      name: actorId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
     PayoutId:
       name: payoutId
       in: path
@@ -171,12 +180,42 @@ components:
       in: header
       required: true
       schema: { type: string, minLength: 8, maxLength: 200 }
-  requestBodies:
-    ObjectBody:
-      required: true
-      content:
-        application/json:
-          schema: { type: object, additionalProperties: true }
+  schemas:
+    CreateOwnPayoutRequest:
+      type: object
+      additionalProperties: false
+      required: [ amountMode, currency, idempotencyKey ]
+      properties:
+        amountMode: { type: string, enum: [ FULL_AVAILABLE, SPECIFIED ] }
+        amountMinorUnits: { type: integer, minimum: 1 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        idempotencyKey: { type: string, minLength: 8, maxLength: 200 }
+    FinancePayoutDestinationInput:
+      type: object
+      additionalProperties: false
+      required: [ beneficiaryName, officialWalletProviderKey, destinationReference, reason, evidenceReference ]
+      properties:
+        beneficiaryName: { type: string, minLength: 1, maxLength: 200 }
+        officialWalletProviderKey: { type: string, minLength: 1, maxLength: 64 }
+        destinationReference: { type: string, minLength: 1, maxLength: 200 }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+        evidenceReference: { type: string, minLength: 1, maxLength: 500 }
+    FinancePayoutDestinationVerification:
+      type: object
+      additionalProperties: false
+      required: [ destinationVersion, decision, reason, evidenceReference ]
+      properties:
+        destinationVersion: { type: integer, minimum: 1 }
+        decision: { type: string, enum: [ verified, rejected ] }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+        evidenceReference: { type: string, minLength: 1, maxLength: 500 }
+    FinancePayoutDestinationChangeReason:
+      type: object
+      additionalProperties: false
+      required: [ reason, evidenceReference ]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 500 }
+        evidenceReference: { type: string, minLength: 1, maxLength: 500 }
   responses:
     ObjectResponse:
       description: Governed WLT-owned payout response.

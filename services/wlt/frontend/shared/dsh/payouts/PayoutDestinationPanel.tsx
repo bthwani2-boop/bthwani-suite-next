@@ -12,15 +12,13 @@ import {
 } from "@bthwani/ui-kit";
 import {
   createOwnPayoutRequest,
-  deactivateOwnPayoutDestination,
   fetchOwnPayoutDestination,
   fetchOwnPayoutRequests,
   isVerifiedPayoutDestination,
-  saveOwnPayoutDestination,
   type ActorPayoutRequest,
   type PayoutActorType,
+  type PayoutAmountMode,
   type PayoutDestination,
-  type PayoutDestinationInput,
 } from "./payout.api";
 import { formatWltMoney, parseWltMajorInputToMinorUnits } from "../finance/wlt-money";
 
@@ -39,14 +37,6 @@ type PanelState =
       readonly destination: PayoutDestination | null;
       readonly requests: readonly ActorPayoutRequest[];
     };
-
-type DestinationTextField = keyof PayoutDestinationInput;
-
-const EMPTY_INPUT: PayoutDestinationInput = {
-  beneficiaryName: "",
-  officialWalletProviderKey: "",
-  destinationReference: "",
-};
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -108,49 +98,6 @@ function DestinationSummary({ destination }: { readonly destination: PayoutDesti
   );
 }
 
-function DestinationEditor({
-  value,
-  disabled,
-  onChange,
-}: {
-  readonly value: PayoutDestinationInput;
-  readonly disabled: boolean;
-  readonly onChange: (next: PayoutDestinationInput) => void;
-}) {
-  const theme = useTheme() as any;
-  const field = (key: DestinationTextField, placeholder: string, secure = false) => (
-    <TextInput
-      value={value[key]}
-      onChangeText={(text) => onChange({ ...value, [key]: text })}
-      placeholder={placeholder}
-      placeholderTextColor={theme.textMuted}
-      editable={!disabled}
-      secureTextEntry={secure}
-      autoCapitalize="none"
-      style={{
-        minHeight: 46,
-        borderWidth: 1,
-        borderColor: theme.line,
-        borderRadius: 10,
-        paddingHorizontal: spacing[3],
-        color: theme.text,
-        textAlign: "right",
-        backgroundColor: theme.surface,
-      }}
-    />
-  );
-  return (
-    <View style={{ gap: spacing[2] }}>
-      {field("beneficiaryName", "اسم المستفيد")}
-      {field("officialWalletProviderKey", "رمز مزود المحفظة الرسمية")}
-      {field("destinationReference", "رقم / معرّف المحفظة الرسمية", true)}
-      <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
-        تغيير المزود أو المعرّف ينشئ إصدارًا جديدًا غير موثق، ويظل الصرف محظورًا حتى التحقق منه.
-      </Text>
-    </View>
-  );
-}
-
 export function PayoutDestinationPanel({
   actorType,
   currency = "YER",
@@ -159,9 +106,9 @@ export function PayoutDestinationPanel({
 }: PayoutDestinationPanelProps) {
   const theme = useTheme() as any;
   const [state, setState] = useState<PanelState>({ kind: "loading" });
-  const [editor, setEditor] = useState<PayoutDestinationInput>(EMPTY_INPUT);
+  const [amountMode, setAmountMode] = useState<PayoutAmountMode>("FULL_AVAILABLE");
   const [amount, setAmount] = useState("");
-  const [busy, setBusy] = useState<"save" | "deactivate" | "submit" | null>(null);
+  const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const attemptKeyRef = useRef<string | null>(null);
 
@@ -173,15 +120,6 @@ export function PayoutDestinationPanel({
         fetchOwnPayoutRequests(actorType),
       ]);
       setState({ kind: "ready", destination, requests });
-      if (destination) {
-        setEditor({
-          beneficiaryName: destination.beneficiaryName,
-          officialWalletProviderKey: destination.officialWalletProviderKey,
-          destinationReference: "",
-        });
-      } else {
-        setEditor(EMPTY_INPUT);
-      }
     } catch (error) {
       setState({ kind: "error", message: errorMessage(error) });
     }
@@ -189,78 +127,36 @@ export function PayoutDestinationPanel({
 
   useEffect(() => { void load(); }, [load]);
 
-  const saveDestination = useCallback(async () => {
-    setActionError(null);
-    const beneficiaryName = editor.beneficiaryName.trim();
-    const officialWalletProviderKey = editor.officialWalletProviderKey.trim().toLowerCase();
-    const destinationReference = editor.destinationReference.trim();
-    if (!beneficiaryName) {
-      setActionError("اسم المستفيد مطلوب.");
-      return;
-    }
-    if (!officialWalletProviderKey) {
-      setActionError("مزود المحفظة الرسمية مطلوب.");
-      return;
-    }
-    if (!destinationReference) {
-      setActionError("رقم أو معرّف المحفظة الرسمية مطلوب.");
-      return;
-    }
-    setBusy("save");
-    try {
-      await saveOwnPayoutDestination(actorType, {
-        beneficiaryName,
-        officialWalletProviderKey,
-        destinationReference,
-      });
-      setEditor((current) => ({ ...current, destinationReference: "" }));
-      await load();
-    } catch (error) {
-      setActionError(errorMessage(error));
-    } finally {
-      setBusy(null);
-    }
-  }, [actorType, editor, load]);
-
-  const deactivate = useCallback(async () => {
-    setActionError(null);
-    setBusy("deactivate");
-    try {
-      await deactivateOwnPayoutDestination(actorType);
-      attemptKeyRef.current = null;
-      setAmount("");
-      await load();
-    } catch (error) {
-      setActionError(errorMessage(error));
-    } finally {
-      setBusy(null);
-    }
-  }, [actorType, load]);
-
   const submit = useCallback(async () => {
     if (state.kind !== "ready" || !isVerifiedPayoutDestination(state.destination)) {
-      setActionError("لا يمكن طلب الصرف قبل التحقق من وجهة المحفظة الرسمية.");
+      setActionError("لا يمكن طلب الصرف قبل أن تعتمد المالية وجهة المحفظة الرسمية.");
       return;
     }
-    const parsedAmount = parseWltMajorInputToMinorUnits(amount, currency);
-    if (!parsedAmount.ok || parsedAmount.minorUnits <= 0) {
-      setActionError("مبلغ طلب الصرف غير صالح.");
-      return;
+
+    let amountMinorUnits: number | undefined;
+    if (amountMode === "SPECIFIED") {
+      const parsedAmount = parseWltMajorInputToMinorUnits(amount, currency);
+      if (!parsedAmount.ok || parsedAmount.minorUnits <= 0) {
+        setActionError("مبلغ طلب الصرف غير صالح.");
+        return;
+      }
+      amountMinorUnits = parsedAmount.minorUnits;
     }
+
     setActionError(null);
-    setBusy("submit");
+    setBusy(true);
     if (!attemptKeyRef.current) attemptKeyRef.current = newAttemptKey(actorType);
     try {
-      await createOwnPayoutRequest(actorType, state.destination.id, parsedAmount.minorUnits, currency, attemptKeyRef.current);
+      await createOwnPayoutRequest(actorType, amountMode, amountMinorUnits, currency, attemptKeyRef.current);
       attemptKeyRef.current = null;
       setAmount("");
       await load();
     } catch (error) {
       setActionError(errorMessage(error));
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
-  }, [actorType, amount, currency, load, state]);
+  }, [actorType, amount, amountMode, currency, load, state]);
 
   if (state.kind === "loading") {
     return <StateView loading title="جارٍ تحميل الصرف" description="تُجلب الوجهة والطلبات من WLT عبر DSH." />;
@@ -277,11 +173,11 @@ export function PayoutDestinationPanel({
         <View style={{ alignItems: "flex-end", flex: 1 }}>
           <Text role="titleMd" style={{ textAlign: "right" }}>{title}</Text>
           <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
-            WLT يحفظ معرّف المحفظة مشفرًا، ولا يعيد إلى السطح إلا النسخة المقنّعة وحالة التحقق.
+            وجهة الصرف الرسمية بيانات مالية محكومة تديرها المالية فقط. يعرض التطبيق نسخة مقنّعة للقراءة ولا يسمح بتعديلها.
           </Text>
         </View>
         <Badge
-          label={destinationVerified ? "وجهة موثقة" : state.destination ? "التحقق مطلوب" : "الوجهة ناقصة"}
+          label={destinationVerified ? "وجهة موثقة" : state.destination ? "التحقق مطلوب" : "الوجهة غير جاهزة"}
           tone={destinationVerified ? "success" : "warning"}
         />
       </View>
@@ -294,52 +190,77 @@ export function PayoutDestinationPanel({
           {!destinationVerified ? (
             <StateView
               tone="warning"
-              title="الصرف محظور حتى التحقق"
-              description="وجود الوجهة وحده لا يكفي. لا ينشئ WLT طلب صرف إلا بعد توثيق الإصدار الحالي من المحفظة الرسمية."
+              title="الصرف محظور حتى اعتماد المالية"
+              description="لا يمكن إنشاء طلب صرف قبل توثيق الإصدار الحالي من المحفظة الرسمية. لا يمكن تغيير هذه البيانات من التطبيق."
             />
           ) : null}
-          <Button label={busy === "deactivate" ? "جارٍ التعطيل…" : "تعطيل الوجهة"} tone="danger" size="sm" disabled={busy !== null} onPress={deactivate} />
         </>
       ) : (
-        <StateView tone="warning" title="أضف وجهة صرف أولاً" description="أضف محفظة إلكترونية رسمية ثم أكمل التحقق منها قبل إنشاء أي طلب صرف." />
+        <StateView
+          tone="warning"
+          title="وجهة الصرف غير جاهزة"
+          description="تتم إضافة وتغيير والتحقق من وجهة الصرف الرسمية من قسم المالية وفق الصلاحيات والموافقات المعتمدة."
+        />
       )}
 
       <Divider />
-      <Text role="titleSm" style={{ textAlign: "right" }}>{state.destination ? "استبدال وجهة الصرف" : "إنشاء وجهة الصرف"}</Text>
-      <DestinationEditor value={editor} disabled={busy !== null} onChange={setEditor} />
-      <Button label={busy === "save" ? "جارٍ الحفظ…" : "حفظ الوجهة"} tone="brand" disabled={busy !== null} onPress={saveDestination} />
-
-      <Divider />
       <Text role="titleSm" style={{ textAlign: "right" }}>طلب صرف جديد</Text>
-      <TextInput
-        value={amount}
-        onChangeText={setAmount}
-        placeholder={`المبلغ بـ ${currency}`}
-        placeholderTextColor={theme.textMuted}
-        editable={busy === null && destinationVerified}
-        keyboardType="decimal-pad"
-        style={{
-          minHeight: 46,
-          borderWidth: 1,
-          borderColor: theme.line,
-          borderRadius: 10,
-          paddingHorizontal: spacing[3],
-          color: theme.text,
-          textAlign: "right",
-          backgroundColor: theme.surface,
-        }}
-      />
+      <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
+        يختار WLT تلقائيًا وجهة الصرف الرسمية الموثقة ويثبت إصدارها داخل الطلب. لا يرسل التطبيق أي معرف وجهة أو بيانات محفظة.
+      </Text>
+      <View style={{ flexDirection: "row-reverse", gap: spacing[2] }}>
+        <View style={{ flex: 1 }}>
+          <Button
+            label="صرف كامل الرصيد المتاح"
+            tone={amountMode === "FULL_AVAILABLE" ? "brand" : "secondary"}
+            disabled={busy || !destinationVerified}
+            onPress={() => { setAmountMode("FULL_AVAILABLE"); setAmount(""); attemptKeyRef.current = null; }}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button
+            label="صرف مبلغ محدد"
+            tone={amountMode === "SPECIFIED" ? "brand" : "secondary"}
+            disabled={busy || !destinationVerified}
+            onPress={() => { setAmountMode("SPECIFIED"); attemptKeyRef.current = null; }}
+          />
+        </View>
+      </View>
+      {amountMode === "SPECIFIED" ? (
+        <TextInput
+          value={amount}
+          onChangeText={(value) => { setAmount(value); attemptKeyRef.current = null; }}
+          placeholder={`المبلغ بـ ${currency}`}
+          placeholderTextColor={theme.textMuted}
+          editable={!busy && destinationVerified}
+          keyboardType="decimal-pad"
+          style={{
+            minHeight: 46,
+            borderWidth: 1,
+            borderColor: theme.line,
+            borderRadius: 10,
+            paddingHorizontal: spacing[3],
+            color: theme.text,
+            textAlign: "right",
+            backgroundColor: theme.surface,
+          }}
+        />
+      ) : (
+        <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
+          سيحسب WLT الرصيد المؤهل للصرف لحظة إنشاء الطلب بعد جميع الحجوزات والقيود والتسويات.
+        </Text>
+      )}
       <Button
-        label={busy === "submit" ? "جارٍ إرسال الطلب…" : "إرسال طلب الصرف"}
+        label={busy ? "جارٍ إرسال الطلب…" : "إرسال طلب الصرف"}
         tone="brand"
-        disabled={busy !== null || !destinationVerified}
+        disabled={busy || !destinationVerified}
         onPress={submit}
       />
 
       <Divider />
       <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
         <Text role="titleSm">سجل طلبات الصرف</Text>
-        <Button label="تحديث" tone="secondary" size="sm" disabled={busy !== null} onPress={load} />
+        <Button label="تحديث" tone="secondary" size="sm" disabled={busy} onPress={load} />
       </View>
       {state.requests.length === 0 ? (
         <StateView tone="neutral" title="لا توجد طلبات صرف" description="تظهر الطلبات هنا بعد قبولها من WLT." />

@@ -10,47 +10,31 @@ import (
 	"strings"
 )
 
-// officialWalletDestinationMethod is the only destination method WLT writes.
-//
-// Legacy rows still carry 'bank', 'mobile_money' or 'manual' in
-// destination_method. Those values are read-only history: a bank account is no
-// longer a payout destination, and a manual bank transfer is an execution
-// method for a settlement batch rather than a place money can be sent. Every
-// destination WLT accepts today identifies a verified official wallet held at
-// a governed provider.
 const officialWalletDestinationMethod = "official_wallet"
 
-// Destination verification lifecycle. A destination becomes usable only in
-// verificationVerified, and any change to its material identity moves it back
-// to a fresh unverified version rather than editing the verified row.
 const (
-	verificationUnverified            = "unverified"
-	verificationVerified              = "verified"
+	verificationUnverified             = "unverified"
+	verificationVerified               = "verified"
 	verificationRequiresReverification = "requires_reverification"
-	verificationRejected              = "rejected"
+	verificationRejected               = "rejected"
 )
 
-// errUnsupportedOfficialWalletProvider reports a provider key that is not an
-// active entry in the operator context's governed provider registry. An empty
-// registry therefore blocks every destination, which is the correct
-// fail-closed state for a context that has not declared its providers.
 var errUnsupportedOfficialWalletProvider = errors.New("officialWalletProviderKey is not an active provider for this OperatorContext")
 
 type officialWalletDestinationInput struct {
-	BeneficiaryName          string `json:"beneficiaryName"`
+	BeneficiaryName           string `json:"beneficiaryName"`
 	OfficialWalletProviderKey string `json:"officialWalletProviderKey"`
-	DestinationReference     string `json:"destinationReference"`
-	OperatorID               string `json:"operatorId"`
+	DestinationReference      string `json:"destinationReference"`
+	Reason                    string `json:"reason"`
+	EvidenceReference         string `json:"evidenceReference"`
 }
 
-// normalize trims and lower-cases the provider key, then rejects any input
-// that cannot identify an official wallet. It deliberately accepts no
-// destination method from the caller: the method is not the caller's choice.
 func (input *officialWalletDestinationInput) normalize() error {
 	input.BeneficiaryName = strings.TrimSpace(input.BeneficiaryName)
 	input.OfficialWalletProviderKey = strings.ToLower(strings.TrimSpace(input.OfficialWalletProviderKey))
 	input.DestinationReference = strings.TrimSpace(input.DestinationReference)
-	input.OperatorID = strings.TrimSpace(input.OperatorID)
+	input.Reason = strings.TrimSpace(input.Reason)
+	input.EvidenceReference = strings.TrimSpace(input.EvidenceReference)
 
 	if input.BeneficiaryName == "" {
 		return fmt.Errorf("beneficiaryName is required")
@@ -70,13 +54,21 @@ func (input *officialWalletDestinationInput) normalize() error {
 	if len(input.DestinationReference) > 200 {
 		return fmt.Errorf("destinationReference is too long")
 	}
+	if input.Reason == "" {
+		return fmt.Errorf("reason is required")
+	}
+	if len(input.Reason) > 500 {
+		return fmt.Errorf("reason is too long")
+	}
+	if input.EvidenceReference == "" {
+		return fmt.Errorf("evidenceReference is required")
+	}
+	if len(input.EvidenceReference) > 500 {
+		return fmt.Errorf("evidenceReference is too long")
+	}
 	return nil
 }
 
-// materialIdentityHash covers exactly the facts that decide where money lands.
-// Changing any of them produces a different destination, so the previous
-// verification cannot carry over. operatorId is excluded on purpose: who
-// recorded the destination does not change where the money goes.
 func (input officialWalletDestinationInput) materialIdentityHash(operatorContextID, actorType, actorID string) string {
 	sum := sha256.Sum256([]byte(strings.Join([]string{
 		operatorContextID,
@@ -89,8 +81,6 @@ func (input officialWalletDestinationInput) materialIdentityHash(operatorContext
 	return hex.EncodeToString(sum[:])
 }
 
-// assertActiveOfficialWalletProvider fails closed when the provider registry
-// does not carry an active entry for the key in this OperatorContext.
 func assertActiveOfficialWalletProvider(ctx context.Context, tx *sql.Tx, operatorContextID, providerKey string) error {
 	var active bool
 	err := tx.QueryRowContext(ctx, `SELECT active FROM wlt_official_wallet_providers
@@ -107,14 +97,11 @@ func assertActiveOfficialWalletProvider(ctx context.Context, tx *sql.Tx, operato
 	return nil
 }
 
-// currentOfficialWalletDestination locks and returns the active destination for
-// a governed owner scope, or nil when the owner has none.
 func currentOfficialWalletDestination(ctx context.Context, tx *sql.Tx, operatorContextID, actorType, actorID string) (*governedDestinationRef, string, error) {
 	row := tx.QueryRowContext(ctx, `SELECT `+governedDestinationReturning+`, material_identity_hash
 		FROM wlt_payout_destinations
 		WHERE operator_context_id=$1 AND owner_actor_type=$2 AND owner_actor_id=$3 AND active=true
 		FOR UPDATE`, operatorContextID, actorType, actorID)
-
 	var destination governedDestinationRef
 	var materialHash string
 	err := scanGovernedDestinationInto(row, &destination, &materialHash)
@@ -127,9 +114,6 @@ func currentOfficialWalletDestination(ctx context.Context, tx *sql.Tx, operatorC
 	return &destination, materialHash, nil
 }
 
-// nextDestinationVersion continues the owner's version chain. Versions are
-// never reused, so a superseded destination stays addressable in audit and
-// reconciliation evidence.
 func nextDestinationVersion(ctx context.Context, tx *sql.Tx, operatorContextID, actorType, actorID string) (int, error) {
 	var maxVersion sql.NullInt64
 	err := tx.QueryRowContext(ctx, `SELECT max(destination_version) FROM wlt_payout_destinations
@@ -141,8 +125,6 @@ func nextDestinationVersion(ctx context.Context, tx *sql.Tx, operatorContextID, 
 	return int(maxVersion.Int64) + 1, nil
 }
 
-// supersedeActiveDestination retires the owner's current active destination so
-// the partial unique index admits the new version.
 func supersedeActiveDestination(ctx context.Context, tx *sql.Tx, operatorContextID, actorType, actorID string) error {
 	_, err := tx.ExecContext(ctx, `UPDATE wlt_payout_destinations
 		SET active=false, superseded_at=now(), updated_at=now()
@@ -151,8 +133,6 @@ func supersedeActiveDestination(ctx context.Context, tx *sql.Tx, operatorContext
 	return err
 }
 
-// insertOfficialWalletDestinationVersion writes a new unverified version. The
-// reference is encrypted at rest and only its masked projection is returned.
 func insertOfficialWalletDestinationVersion(
 	ctx context.Context,
 	tx *sql.Tx,

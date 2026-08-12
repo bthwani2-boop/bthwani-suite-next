@@ -2,6 +2,7 @@ import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
 import { createDshHttpClient } from "../dsh-link/dsh-http-request";
 
 export type PayoutActorType = "partner" | "captain" | "field";
+export type PayoutAmountMode = "FULL_AVAILABLE" | "SPECIFIED";
 
 export type PayoutDestinationVerificationStatus =
   | "unverified"
@@ -22,12 +23,6 @@ export type PayoutDestination = {
   readonly destinationVersion: number;
   readonly active: boolean;
   readonly updatedAt: string;
-};
-
-export type PayoutDestinationInput = {
-  readonly beneficiaryName: string;
-  readonly officialWalletProviderKey: string;
-  readonly destinationReference: string;
 };
 
 export type ActorPayoutRequest = {
@@ -55,12 +50,6 @@ const payoutDestinationPathByActor: Record<PayoutActorType, string> = {
   partner: "/dsh/partner/me/finance/payout-destination",
   captain: "/dsh/captain/me/finance/payout-destination",
   field: "/dsh/field/me/finance/payout-destination",
-};
-
-const payoutDestinationDeactivatePathByActor: Record<PayoutActorType, string> = {
-  partner: "/dsh/partner/me/finance/payout-destination/deactivate",
-  captain: "/dsh/captain/me/finance/payout-destination/deactivate",
-  field: "/dsh/field/me/finance/payout-destination/deactivate",
 };
 
 const payoutRequestsPathByActor: Record<PayoutActorType, string> = {
@@ -95,29 +84,6 @@ export async function fetchOwnPayoutDestination(actorType: PayoutActorType): Pro
   }
 }
 
-export async function saveOwnPayoutDestination(
-  actorType: PayoutActorType,
-  input: PayoutDestinationInput,
-): Promise<PayoutDestination> {
-  const response = await request<{ readonly payoutDestination: PayoutDestination }>(
-    payoutDestinationPathByActor[actorType],
-    {
-      method: "PUT",
-      body: input,
-      idempotencyKey: `destination:${actorType}:${input.officialWalletProviderKey}:${input.destinationReference.trim()}`,
-    },
-  );
-  return response.payoutDestination;
-}
-
-export async function deactivateOwnPayoutDestination(actorType: PayoutActorType): Promise<void> {
-  await request<void>(payoutDestinationDeactivatePathByActor[actorType], {
-    method: "POST",
-    body: {},
-    idempotencyKey: `destination-deactivate:${actorType}:${Date.now()}`,
-  });
-}
-
 export async function fetchOwnPayoutRequests(actorType: PayoutActorType): Promise<readonly ActorPayoutRequest[]> {
   const response = await request<{ readonly payoutRequests: ActorPayoutRequest[] }>(
     payoutRequestsPathByActor[actorType],
@@ -127,16 +93,25 @@ export async function fetchOwnPayoutRequests(actorType: PayoutActorType): Promis
 
 export async function createOwnPayoutRequest(
   actorType: PayoutActorType,
-  payoutDestinationId: string,
-  amountMinorUnits: number,
+  amountMode: PayoutAmountMode,
+  amountMinorUnits: number | undefined,
   currency: string,
   idempotencyKey: string,
 ): Promise<ActorPayoutRequest> {
+  if (amountMode === "FULL_AVAILABLE" && amountMinorUnits !== undefined) {
+    throw new Error("FULL_AVAILABLE payout requests must not send an amount.");
+  }
+  if (amountMode === "SPECIFIED" && (!Number.isSafeInteger(amountMinorUnits) || (amountMinorUnits ?? 0) <= 0)) {
+    throw new Error("SPECIFIED payout requests require a positive minor-unit amount.");
+  }
+  const body = amountMode === "SPECIFIED"
+    ? { amountMode, amountMinorUnits, currency, idempotencyKey }
+    : { amountMode, currency, idempotencyKey };
   const response = await request<{ readonly payoutRequest: ActorPayoutRequest }>(
     payoutRequestsPathByActor[actorType],
     {
       method: "POST",
-      body: { payoutDestinationId, amountMinorUnits, currency, idempotencyKey },
+      body,
       idempotencyKey,
     },
   );

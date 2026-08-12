@@ -12,12 +12,7 @@ import (
 	"wlt-api/internal/shared"
 )
 
-// canonicalDestinationRequestHash binds an Idempotency-Key to the exact
-// request that first used it. It covers the caller-supplied operator id as
-// well, because replaying the same destination under a different recorded
-// operator is a different request even though it resolves to the same
-// material identity.
-func canonicalDestinationRequestHash(operatorContextID, actorType, actorID string, input officialWalletDestinationInput) string {
+func canonicalDestinationRequestHash(operatorContextID, actorType, actorID, operatorID string, input officialWalletDestinationInput) string {
 	canonical := struct {
 		OperatorContextID         string `json:"operatorContextId"`
 		ActorType                 string `json:"actorType"`
@@ -26,14 +21,18 @@ func canonicalDestinationRequestHash(operatorContextID, actorType, actorID strin
 		OfficialWalletProviderKey string `json:"officialWalletProviderKey"`
 		DestinationReference      string `json:"destinationReference"`
 		OperatorID                string `json:"operatorId"`
+		Reason                    string `json:"reason"`
+		EvidenceReference         string `json:"evidenceReference"`
 	}{
-		OperatorContextID:         operatorContextID,
-		ActorType:                 actorType,
-		ActorID:                   actorID,
-		BeneficiaryName:           input.BeneficiaryName,
+		OperatorContextID: operatorContextID,
+		ActorType: actorType,
+		ActorID: actorID,
+		BeneficiaryName: input.BeneficiaryName,
 		OfficialWalletProviderKey: input.OfficialWalletProviderKey,
-		DestinationReference:      input.DestinationReference,
-		OperatorID:                input.OperatorID,
+		DestinationReference: input.DestinationReference,
+		OperatorID: operatorID,
+		Reason: input.Reason,
+		EvidenceReference: input.EvidenceReference,
 	}
 	encoded, _ := json.Marshal(canonical)
 	sum := sha256.Sum256(encoded)
@@ -45,22 +44,16 @@ func scanCanonicalDestination(tx *sql.Tx, operatorContextID, destinationID strin
 		FROM wlt_payout_destinations WHERE operator_context_id=$1 AND id=$2`, operatorContextID, destinationID))
 }
 
-// HandleUpsertCanonicalPayoutDestination is the only write boundary for payout
-// destinations.
-//
-// It accepts an official-wallet provider key and reference, never a bank or
-// mobile-money method, and never a destination method chosen by the caller. A
-// request whose material identity matches the owner's current active
-// destination is returned unchanged, preserving that destination's
-// verification. Any change to the provider, the reference or the beneficiary
-// supersedes the active row and opens a new unverified version, so a verified
-// destination can never be edited into a different one.
+// HandleUpsertCanonicalPayoutDestination is finance-controlled master data.
+// Beneficiaries can never create or alter destinations: the authenticated
+// delegated finance principal is derived from the service-auth context, while
+// reason/evidence are mandatory and immutable audit metadata.
 func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID, ok := requirePayoutOperatorContext(w, r)
-		if !ok {
-			return
-		}
+		if !ok { return }
+		operatorID, ok := requireDelegatedFinancePrincipal(w, r)
+		if !ok { return }
 		actorType, actorID, err := normalizeGovernedOwner(r.PathValue("actorType"), r.PathValue("actorId"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
@@ -92,7 +85,7 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusInternalServerError, "WLT_INTERNAL_ERROR", "payout encryption is not configured")
 			return
 		}
-		requestHash := canonicalDestinationRequestHash(operatorContextID, actorType, actorID, input)
+		requestHash := canonicalDestinationRequestHash(operatorContextID, actorType, actorID, operatorID, input)
 		tx, err := db.BeginTx(r.Context(), nil)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to start destination transaction")
@@ -145,11 +138,6 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		operatorID := input.OperatorID
-		if operatorID == "" {
-			operatorID = actorID
-		}
-
 		destination := current
 		created := false
 		if current == nil || currentMaterialHash != materialHash {
@@ -162,8 +150,7 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 				shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to resolve destination version")
 				return
 			}
-			destination, err = insertOfficialWalletDestinationVersion(
-				r.Context(), tx, operatorContextID, actorType, actorID, input, key, version, materialHash, operatorID)
+			destination, err = insertOfficialWalletDestinationVersion(r.Context(), tx, operatorContextID, actorType, actorID, input, key, version, materialHash, operatorID)
 			if err != nil {
 				shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to persist payout destination")
 				return
@@ -178,15 +165,14 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		action := "destination.unchanged"
-		if created {
-			action = "destination.version_created"
-		}
-		if err := appendPayoutAudit(r.Context(), tx, "payout_destination", destination.ID, action, operatorID, actorType, "", correlationID, map[string]any{
-			"ownerActorId":              actorID,
-			"ownerActorType":            actorType,
+		if created { action = "destination.version_created" }
+		if err := appendPayoutAudit(r.Context(), tx, "payout_destination", destination.ID, action, operatorID, "operator", input.Reason, correlationID, map[string]any{
+			"ownerActorId": actorID,
+			"ownerActorType": actorType,
 			"officialWalletProviderKey": destination.OfficialWalletProviderKey,
-			"destinationVersion":        destination.DestinationVersion,
-			"verificationStatus":        destination.DestinationVerificationStatus,
+			"destinationVersion": destination.DestinationVersion,
+			"verificationStatus": destination.DestinationVerificationStatus,
+			"evidenceReference": input.EvidenceReference,
 		}); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout destination")
 			return
@@ -196,9 +182,7 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		status := http.StatusOK
-		if created {
-			status = http.StatusCreated
-		}
+		if created { status = http.StatusCreated }
 		shared.SendJSON(w, status, map[string]any{"payoutDestination": destination})
 	}
 }
@@ -206,24 +190,16 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 type destinationVerificationInput struct {
 	DestinationVersion int    `json:"destinationVersion"`
 	Decision           string `json:"decision"`
-	OperatorID         string `json:"operatorId"`
 	Reason             string `json:"reason"`
+	EvidenceReference  string `json:"evidenceReference"`
 }
 
-// HandleVerifyCanonicalPayoutDestination is the finance-operator decision that
-// moves a destination version into verified or rejected.
-//
-// The caller must name the exact version it reviewed. If a newer version has
-// superseded it in the meantime the decision is refused, so a verification can
-// never be applied to a destination the operator did not actually see. The
-// operator recording the decision must differ from the actor that created the
-// version, which keeps a beneficiary from verifying its own destination.
 func HandleVerifyCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID, ok := requirePayoutOperatorContext(w, r)
-		if !ok {
-			return
-		}
+		if !ok { return }
+		operatorID, ok := requireDelegatedFinancePrincipal(w, r)
+		if !ok { return }
 		actorType, actorID, err := normalizeGovernedOwner(r.PathValue("actorType"), r.PathValue("actorId"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
@@ -242,17 +218,14 @@ func HandleVerifyCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		input.Decision = strings.ToLower(strings.TrimSpace(input.Decision))
-		input.OperatorID = strings.TrimSpace(input.OperatorID)
+		input.Reason = strings.TrimSpace(input.Reason)
+		input.EvidenceReference = strings.TrimSpace(input.EvidenceReference)
 		if input.Decision != verificationVerified && input.Decision != verificationRejected {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "decision must be verified or rejected")
 			return
 		}
-		if input.OperatorID == "" {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorId is required to record a destination verification decision")
-			return
-		}
-		if input.DestinationVersion <= 0 {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "destinationVersion is required")
+		if input.DestinationVersion <= 0 || input.Reason == "" || input.EvidenceReference == "" {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "destinationVersion, reason and evidenceReference are required")
 			return
 		}
 
@@ -262,7 +235,6 @@ func HandleVerifyCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		defer tx.Rollback() //nolint:errcheck
-
 		current, _, err := currentOfficialWalletDestination(r.Context(), tx, operatorContextID, actorType, actorID)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read payout destination")
@@ -280,13 +252,16 @@ func HandleVerifyCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusConflict, "PAYOUT_DESTINATION_ALREADY_VERIFIED", "destination version is already verified")
 			return
 		}
-		if input.OperatorID == current.OwnerActorID {
-			shared.SendError(w, http.StatusForbidden, "SEPARATION_OF_DUTIES_VIOLATION", "a beneficiary cannot verify its own payout destination")
+		var createdBy string
+		if err := tx.QueryRowContext(r.Context(), `SELECT created_by_actor_id FROM wlt_payout_destinations WHERE operator_context_id=$1 AND id=$2`, operatorContextID, current.ID).Scan(&createdBy); err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to resolve destination maker")
+			return
+		}
+		if strings.TrimSpace(createdBy) == operatorID {
+			shared.SendError(w, http.StatusForbidden, "SEPARATION_OF_DUTIES_VIOLATION", "destination maker cannot verify the same destination version")
 			return
 		}
 
-		// Verification attribution is written only for a verified decision, so
-		// a rejection cannot leave a stale verifier on the row.
 		verified := input.Decision == verificationVerified
 		row := tx.QueryRowContext(r.Context(), `
 			UPDATE wlt_payout_destinations
@@ -296,7 +271,7 @@ func HandleVerifyCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			    updated_at=now()
 			WHERE operator_context_id=$1 AND id=$2 AND destination_version=$3 AND active=true
 			RETURNING `+governedDestinationReturning+`, material_identity_hash`,
-			operatorContextID, current.ID, input.DestinationVersion, input.Decision, input.OperatorID, verified)
+			operatorContextID, current.ID, input.DestinationVersion, input.Decision, operatorID, verified)
 		updated, err := scanGovernedDestination(row)
 		if errors.Is(err, sql.ErrNoRows) {
 			shared.SendError(w, http.StatusConflict, "PAYOUT_DESTINATION_SUPERSEDED", "destination version changed before the decision was applied")
@@ -306,12 +281,13 @@ func HandleVerifyCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to persist destination verification")
 			return
 		}
-		if err := appendPayoutAudit(r.Context(), tx, "payout_destination", updated.ID, "destination."+input.Decision, input.OperatorID, "operator", strings.TrimSpace(input.Reason), correlationID, map[string]any{
-			"ownerActorId":              actorID,
-			"ownerActorType":            actorType,
+		if err := appendPayoutAudit(r.Context(), tx, "payout_destination", updated.ID, "destination."+input.Decision, operatorID, "operator", input.Reason, correlationID, map[string]any{
+			"ownerActorId": actorID,
+			"ownerActorType": actorType,
 			"officialWalletProviderKey": updated.OfficialWalletProviderKey,
-			"destinationVersion":        updated.DestinationVersion,
-			"verificationStatus":        updated.DestinationVerificationStatus,
+			"destinationVersion": updated.DestinationVersion,
+			"verificationStatus": updated.DestinationVerificationStatus,
+			"evidenceReference": input.EvidenceReference,
 		}); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit destination verification")
 			return

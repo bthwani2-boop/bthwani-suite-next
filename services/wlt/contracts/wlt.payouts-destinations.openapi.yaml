@@ -4,10 +4,12 @@ x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-capability: payouts-destinations
 info:
   title: WLT Payout Destinations and Outbound Payments
-  version: 1.0.0
+  version: 2.0.0
   description: >-
-    WLT-owned typed payout destinations, destination-bound payout requests,
-    separated operator transitions, provider proof and governed reconciliation.
+    WLT-owned official-wallet payout destinations, automatically destination-bound
+    payout requests, separated finance-operator transitions, immutable provider
+    proof and governed reconciliation. Beneficiary surfaces never create, replace,
+    verify or deactivate payout master data and never choose a destination id.
 servers:
   - url: http://localhost:58083
 paths:
@@ -23,79 +25,90 @@ paths:
           description: Active masked payout destination.
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/PayoutDestinationEnvelope'
+              schema: { $ref: '#/components/schemas/PayoutDestinationEnvelope' }
         '404': { $ref: '#/components/responses/PayoutNotFound' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
     put:
       tags: [ "wlt-payout-destinations" ]
       operationId: upsertWltTypedPayoutDestination
+      description: >-
+        Finance-controlled master-data mutation. Caller identity comes only from
+        the delegated Identity principal. A material change creates a fresh
+        unverified version; verification never carries across versions.
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedFinancePrincipalId'
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/PayoutDestinationInput'
+            schema: { $ref: '#/components/schemas/PayoutDestinationInput' }
       responses:
-        '201':
-          description: Destination encrypted and activated; prior destination deactivated.
+        '200':
+          description: Exact idempotent replay or unchanged current destination.
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/PayoutDestinationEnvelope'
+              schema: { $ref: '#/components/schemas/PayoutDestinationEnvelope' }
+        '201':
+          description: New destination version encrypted and activated; prior destination superseded.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PayoutDestinationEnvelope' }
         '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
         '403': { $ref: '#/components/responses/PayoutForbidden' }
-      security:
-        - serviceBearer: []
+        '409': { $ref: '#/components/responses/PayoutConflict' }
+      security: [ { serviceBearer: [] } ]
   /wlt/payout-destinations/{actorType}/{actorId}/verify:
     parameters:
       - $ref: '#/components/parameters/ActorType'
       - $ref: '#/components/parameters/ActorId'
       - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+      - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+      - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedFinancePrincipalId'
     post:
       tags: [ "wlt-payout-destinations" ]
       operationId: verifyWltOfficialWalletDestination
       description: >-
-        Record a finance-operator verification decision against the exact
-        destination version reviewed. A beneficiary cannot verify its own
-        destination, and a superseded version is refused.
+        Records an independent finance verification decision against the exact
+        destination version reviewed. The maker of that version cannot verify it.
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/PayoutDestinationVerificationInput'
+            schema: { $ref: '#/components/schemas/PayoutDestinationVerificationInput' }
       responses:
         '200':
           description: Verification decision recorded.
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/PayoutDestinationEnvelope'
+              schema: { $ref: '#/components/schemas/PayoutDestinationEnvelope' }
         '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
         '403': { $ref: '#/components/responses/PayoutForbidden' }
         '404': { $ref: '#/components/responses/PayoutNotFound' }
         '409': { $ref: '#/components/responses/PayoutConflict' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
   /wlt/payout-destinations/{actorType}/{actorId}/deactivate:
     parameters:
       - $ref: '#/components/parameters/ActorType'
       - $ref: '#/components/parameters/ActorId'
       - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+      - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedFinancePrincipalId'
     post:
       tags: [ "wlt-payout-destinations" ]
       operationId: deactivateWltTypedPayoutDestination
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PayoutDestinationChangeReason' }
       responses:
-        '204': { description: Destination deactivated. }
+        '204': { description: Destination deactivated and audited. }
+        '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
         '404': { $ref: '#/components/responses/PayoutNotFound' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
   /wlt/payout-requests:
     get:
       tags: [ "wlt-payout-requests" ]
@@ -125,11 +138,16 @@ paths:
                   total: { type: integer, minimum: 0 }
         '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
         '403': { $ref: '#/components/responses/PayoutForbidden' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
     post:
       tags: [ "wlt-payout-requests" ]
       operationId: createWltDestinationBoundPayoutRequest
+      description: >-
+        Beneficiary intent only. WLT resolves the current active verified
+        official-wallet destination inside the transaction. FULL_AVAILABLE is
+        calculated from the locked canonical wallet/settlement projection;
+        SPECIFIED accepts a positive minor-unit amount not exceeding eligibility.
+        The resolved amount is atomically reserved in pending balance.
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
@@ -137,23 +155,22 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/CreatePayoutRequest'
+            schema: { $ref: '#/components/schemas/CreatePayoutRequest' }
       responses:
         '201':
-          description: Funds held and destination-bound request created atomically.
+          description: Eligible funds reserved and request bound to the current verified destination.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PayoutRequestEnvelope' }
         '200':
-          description: Exact idempotent replay.
+          description: Exact idempotent replay of the first resolved request.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PayoutRequestEnvelope' }
+        '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
         '403': { $ref: '#/components/responses/PayoutForbidden' }
         '409': { $ref: '#/components/responses/PayoutConflict' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
   /wlt/payout-requests/{payoutId}:
     parameters:
       - $ref: './wlt.common.openapi.yaml#/components/parameters/PayoutId'
@@ -167,8 +184,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/PayoutRequestEnvelope' }
         '404': { $ref: '#/components/responses/PayoutNotFound' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
   /wlt/payout-requests/{payoutId}/approve:
     post:
       tags: [ "wlt-payout-requests" ]
@@ -177,12 +193,13 @@ paths:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/PayoutId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedFinancePrincipalId'
       requestBody: { $ref: '#/components/requestBodies/OperatorBody' }
       responses:
         '200': { $ref: '#/components/responses/PayoutResponse' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
         '409': { $ref: '#/components/responses/PayoutConflict' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
   /wlt/payout-requests/{payoutId}/reject:
     post:
       tags: [ "wlt-payout-requests" ]
@@ -191,12 +208,13 @@ paths:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/PayoutId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedFinancePrincipalId'
       requestBody: { $ref: '#/components/requestBodies/OperatorBody' }
       responses:
         '200': { $ref: '#/components/responses/PayoutResponse' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
         '409': { $ref: '#/components/responses/PayoutConflict' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
   /wlt/payout-requests/{payoutId}/complete:
     post:
       tags: [ "wlt-payout-requests" ]
@@ -205,13 +223,13 @@ paths:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/PayoutId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedFinancePrincipalId'
       requestBody: { $ref: '#/components/requestBodies/OperatorBody' }
       responses:
         '200': { $ref: '#/components/responses/PayoutResponse' }
         '403': { $ref: '#/components/responses/PayoutForbidden' }
         '409': { $ref: '#/components/responses/PayoutConflict' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
   /wlt/payout-requests/{payoutId}/reconcile:
     post:
       tags: [ "wlt-payout-requests" ]
@@ -235,8 +253,7 @@ paths:
         '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
         '403': { $ref: '#/components/responses/PayoutForbidden' }
         '409': { $ref: '#/components/responses/PayoutConflict' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
   /wlt/external-provider-accounts/{providerKey}/{accountReferenceHash}:
     put:
       tags: [ "wlt-external-reconciliation" ]
@@ -264,8 +281,7 @@ paths:
               schema: { $ref: '#/components/schemas/ExternalProviderAccountEnvelope' }
         '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
         '403': { $ref: '#/components/responses/PayoutForbidden' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
   /wlt/external-provider-statements:
     post:
       tags: [ "wlt-external-reconciliation" ]
@@ -291,8 +307,7 @@ paths:
         '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
         '403': { $ref: '#/components/responses/PayoutForbidden' }
         '409': { $ref: '#/components/responses/PayoutConflict' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
   /wlt/payout-requests/{payoutId}/audit:
     get:
       tags: [ "wlt-payout-requests" ]
@@ -313,8 +328,7 @@ paths:
                     items: { $ref: '#/components/schemas/PayoutAuditEvent' }
         '403': { $ref: '#/components/responses/PayoutForbidden' }
         '404': { $ref: '#/components/responses/PayoutNotFound' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
   /wlt/settlement-batches:
     post:
       tags: [ "wlt-settlement-batches" ]
@@ -340,8 +354,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SettlementBatchEnvelope' }
         '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
   /wlt/settlement-batches/{batchId}/freeze:
     post:
       tags: [ "wlt-settlement-batches" ]
@@ -362,8 +375,7 @@ paths:
               schema: { $ref: '#/components/schemas/SettlementBatchEnvelope' }
         '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
         '409': { $ref: '#/components/responses/PayoutConflict' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
   /wlt/settlement-batches/{batchId}/export:
     get:
       tags: [ "wlt-settlement-batches" ]
@@ -380,17 +392,11 @@ paths:
             application/json:
               schema: { type: object, additionalProperties: true }
         '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
   /wlt/settlement-batches/{batchId}/evidence:
     post:
       tags: [ "wlt-settlement-batches" ]
       operationId: recordWltManualTransferExecution
-      description: >-
-        Records that a finance executor moved money out of a BThwani
-        official-wallet account for one approved payout, advancing that payout
-        to executed. It does not complete the payout: completion requires
-        independent verification by a different operator.
       parameters:
         - name: batchId
           in: path
@@ -414,21 +420,17 @@ paths:
                 operatorId: { type: string, minLength: 1 }
       responses:
         '201':
-          description: Manual transfer execution recorded, awaiting independent verification.
+          description: Transfer execution evidence recorded, awaiting independent verification.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ManualTransferEvidenceEnvelope' }
         '403': { $ref: '#/components/responses/PayoutForbidden' }
         '409': { $ref: '#/components/responses/PayoutConflict' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
   /wlt/settlement-batches/{batchId}/evidence/{evidenceId}/verify:
     post:
       tags: [ "wlt-settlement-batches" ]
       operationId: verifyWltManualTransferExecution
-      description: >-
-        Independent verification of a recorded external transfer. The verifier
-        must differ from both the approver and the executor.
       parameters:
         - name: batchId
           in: path
@@ -448,8 +450,7 @@ paths:
               schema: { $ref: '#/components/schemas/ManualTransferEvidenceEnvelope' }
         '403': { $ref: '#/components/responses/PayoutForbidden' }
         '409': { $ref: '#/components/responses/PayoutConflict' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
   /wlt/finance-close:
     post:
       tags: [ "wlt-finance-close" ]
@@ -473,8 +474,7 @@ paths:
             application/json:
               schema: { type: object, additionalProperties: true }
         '409': { $ref: '#/components/responses/PayoutConflict' }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
   /wlt/internal/outbox-readback/loyalty:
     get:
       tags: [ "wlt-internal-readback" ]
@@ -498,8 +498,7 @@ paths:
                 properties:
                   loyaltyEntry: { type: object }
         '404': { description: No canonical effect exists yet. }
-      security:
-        - serviceBearer: []
+      security: [ { serviceBearer: [] } ]
 components:
   securitySchemes: {}
   parameters:
@@ -532,34 +531,19 @@ components:
     PayoutInvalidRequest:
       description: Invalid request.
       content:
-        {
-          application/json: { schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' } }
-        }
+        { application/json: { schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' } } }
     PayoutForbidden:
       description: Actor scope or maker-checker rule failed.
       content:
-        {
-          application/json: { schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' } }
-        }
+        { application/json: { schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' } } }
     PayoutNotFound:
       description: Resource not found.
       content:
-        {
-          application/json: { schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' } }
-        }
+        { application/json: { schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' } } }
     PayoutConflict:
-      description: Invalid transition, inactive destination, balance mismatch, or
-        idempotency conflict.
+      description: Invalid transition, destination state, balance reservation drift, or idempotency conflict.
       content:
-        {
-          application/json: { schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' } }
-        }
-    ProviderError:
-      description: Provider unavailable, declined, invalid, or still ambiguous.
-      content:
-        {
-          application/json: { schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' } }
-        }
+        { application/json: { schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' } } }
   schemas:
     ReconcilePayoutFourWayInput:
       type: object
@@ -645,76 +629,45 @@ components:
     PayoutStatus:
       type: string
       description: >-
-        The governed manual external settlement lifecycle is
-        pending -> approved -> executed -> verified -> completed, with a
-        different operator owning each transition. provider_pending,
-        provider_result_unknown and processing remain only on historical rows
-        from the retired provider-managed Cash-Out model.
-      enum:
-        [
-          pending,
-          approved,
-          executed,
-          verified,
-          completed,
-          rejected,
-          failed,
-          provider_pending,
-          provider_result_unknown,
-          processing
-        ]
+        Governed manual external settlement lifecycle is pending -> approved ->
+        executed -> verified -> completed. provider_* values remain historical.
+      enum: [ pending, approved, executed, verified, completed, rejected, failed, provider_pending, provider_result_unknown, processing ]
     ReconciliationStatus:
       type: string
-      enum:
-        [
-          not_required,
-          required,
-          inquiry_pending,
-          resolved_success,
-          resolved_failed
-        ]
+      enum: [ not_required, required, inquiry_pending, resolved_success, resolved_failed ]
     PayoutDestinationInput:
       type: object
       additionalProperties: false
       description: >-
-        A payout destination is a verified official wallet held at a governed
-        provider. The destination method is not a caller input: a manual bank
-        transfer is how a settlement batch is executed, not a place money can
-        be sent.
-      required: [ beneficiaryName, officialWalletProviderKey, destinationReference ]
+        Finance master-data candidate for a governed official wallet. Reason and
+        evidenceReference are mandatory; operator identity never comes from the body.
+      required: [ beneficiaryName, officialWalletProviderKey, destinationReference, reason, evidenceReference ]
       properties:
         beneficiaryName: { type: string, minLength: 1, maxLength: 200 }
         officialWalletProviderKey: { type: string, minLength: 1, maxLength: 64 }
         destinationReference: { type: string, minLength: 1, maxLength: 200 }
-        operatorId: { type: string, minLength: 1 }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+        evidenceReference: { type: string, minLength: 1, maxLength: 500 }
     PayoutDestinationVerificationInput:
       type: object
       additionalProperties: false
-      description: >-
-        Finance-operator decision on the exact destination version reviewed.
-        A decision aimed at a superseded version is refused.
-      required: [ destinationVersion, decision, operatorId ]
+      description: Independent finance decision on the exact destination version reviewed.
+      required: [ destinationVersion, decision, reason, evidenceReference ]
       properties:
         destinationVersion: { type: integer, minimum: 1 }
         decision: { type: string, enum: [ verified, rejected ] }
-        operatorId: { type: string, minLength: 1 }
-        reason: { type: string }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+        evidenceReference: { type: string, minLength: 1, maxLength: 500 }
+    PayoutDestinationChangeReason:
+      type: object
+      additionalProperties: false
+      required: [ reason, evidenceReference ]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 500 }
+        evidenceReference: { type: string, minLength: 1, maxLength: 500 }
     PayoutDestination:
       type: object
-      required:
-        [
-          id,
-          ownerActorId,
-          ownerActorType,
-          officialWalletProviderKey,
-          destinationVersion,
-          destinationMethod,
-          maskedDestinationReference,
-          destinationVerificationStatus,
-          beneficiaryName,
-          active,
-          updatedAt
-        ]
+      required: [ id, ownerActorId, ownerActorType, officialWalletProviderKey, destinationVersion, destinationMethod, maskedDestinationReference, destinationVerificationStatus, beneficiaryName, active, updatedAt ]
       properties:
         id: { type: string }
         ownerActorId: { type: string }
@@ -723,10 +676,7 @@ components:
         destinationVersion: { type: integer, minimum: 1 }
         destinationMethod:
           type: string
-          description: >-
-            Always official_wallet for destinations written by the current
-            model. The legacy bank, mobile_money and manual values remain only
-            on historical rows.
+          description: Current writes are always official_wallet; other values are legacy history only.
           enum: [ official_wallet, bank, mobile_money, manual ]
         maskedDestinationReference: { type: string }
         destinationVerificationStatus:
@@ -743,36 +693,20 @@ components:
     CreatePayoutRequest:
       type: object
       additionalProperties: false
-      required:
-        [
-          beneficiaryActorId,
-          beneficiaryActorType,
-          payoutDestinationId,
-          amountMinorUnits,
-          currency,
-          idempotencyKey
-        ]
+      description: >-
+        Beneficiary intent. payoutDestinationId is forbidden. FULL_AVAILABLE must
+        omit amountMinorUnits; SPECIFIED requires a positive amountMinorUnits.
+      required: [ beneficiaryActorId, beneficiaryActorType, amountMode, currency, idempotencyKey ]
       properties:
         beneficiaryActorId: { type: string, minLength: 1 }
         beneficiaryActorType: { $ref: '#/components/schemas/PayoutActorType' }
-        payoutDestinationId: { type: string, minLength: 1 }
+        amountMode: { type: string, enum: [ FULL_AVAILABLE, SPECIFIED ] }
         amountMinorUnits: { type: integer, minimum: 1 }
         currency: { type: string, minLength: 3, maxLength: 3 }
-        idempotencyKey: { type: string, minLength: 1 }
+        idempotencyKey: { type: string, minLength: 8, maxLength: 200 }
     PayoutRequest:
       type: object
-      required:
-        [
-          id,
-          beneficiaryActorId,
-          beneficiaryActorType,
-          payoutDestinationId,
-          amountMinorUnits,
-          currency,
-          status,
-          reconciliationStatus,
-          requestedAt
-        ]
+      required: [ id, beneficiaryActorId, beneficiaryActorType, payoutDestinationId, amountMinorUnits, currency, status, reconciliationStatus, requestedAt ]
       properties:
         id: { type: string }
         beneficiaryActorId: { type: string }
@@ -803,21 +737,7 @@ components:
         payoutRequest: { $ref: '#/components/schemas/PayoutRequest' }
     ManualTransferEvidence:
       type: object
-      description: >-
-        Evidence of one external official-wallet transfer. verifiedAt is null
-        until a different operator independently verifies it; an unverified row
-        blocks the business date from closing.
-      required:
-        [
-          id,
-          batchId,
-          approvedSnapshotId,
-          externalTransferReference,
-          amountMinorUnits,
-          currency,
-          executedByOperatorId,
-          executedAt
-        ]
+      required: [ id, batchId, approvedSnapshotId, externalTransferReference, amountMinorUnits, currency, executedByOperatorId, executedAt ]
       properties:
         id: { type: string }
         batchId: { type: string }
@@ -837,18 +757,7 @@ components:
         manualTransferEvidence: { $ref: '#/components/schemas/ManualTransferEvidence' }
     PayoutAuditEvent:
       type: object
-      required:
-        [
-          id,
-          aggregateType,
-          aggregateId,
-          action,
-          actorId,
-          actorType,
-          correlationId,
-          metadata,
-          createdAt
-        ]
+      required: [ id, aggregateType, aggregateId, action, actorId, actorType, correlationId, metadata, createdAt ]
       properties:
         id: { type: string }
         aggregateType: { type: string }

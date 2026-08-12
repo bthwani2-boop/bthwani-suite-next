@@ -147,9 +147,8 @@ func (s *protectedStoreServer) handleControlPanelRepresentativeLedger(w http.Res
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
-// registerRepresentativeFinanceRoutes is composed from the final protected
-// route extension point in NewRouter. Self-service routes never accept an
-// actor id; they resolve identity through requireActor before WLT is called.
+// Self-service finance routes are intentionally read/request only. Master payout
+// destination data is managed exclusively through control-panel finance routes.
 func registerRepresentativeFinanceRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/client/me/finance/wallet", s.handleClientOwnWallet)
 	mux.HandleFunc("GET /dsh/client/me/finance/ledger-entries", s.handleClientOwnLedger)
@@ -160,8 +159,6 @@ func registerRepresentativeFinanceRoutes(mux *http.ServeMux, s *protectedStoreSe
 	mux.HandleFunc("GET /dsh/partner/me/finance/payout-requests", s.handlePartnerPayoutRequests)
 	mux.HandleFunc("POST /dsh/partner/me/finance/payout-requests", s.handlePartnerCreatePayoutRequest)
 	mux.HandleFunc("GET /dsh/partner/me/finance/payout-destination", s.handlePartnerPayoutDestinationRead)
-	mux.HandleFunc("PUT /dsh/partner/me/finance/payout-destination", s.handlePartnerPayoutDestinationUpsert)
-	mux.HandleFunc("POST /dsh/partner/me/finance/payout-destination/deactivate", s.handlePartnerPayoutDestinationDeactivate)
 
 	mux.HandleFunc("GET /dsh/captain/me/finance/wallet", s.handleCaptainOwnWallet)
 	mux.HandleFunc("GET /dsh/captain/me/finance/ledger-entries", s.handleCaptainOwnLedger)
@@ -169,8 +166,6 @@ func registerRepresentativeFinanceRoutes(mux *http.ServeMux, s *protectedStoreSe
 	mux.HandleFunc("GET /dsh/captain/me/finance/payout-requests", s.handleCaptainPayoutRequests)
 	mux.HandleFunc("POST /dsh/captain/me/finance/payout-requests", s.handleCaptainCreatePayoutRequest)
 	mux.HandleFunc("GET /dsh/captain/me/finance/payout-destination", s.handleCaptainPayoutDestinationRead)
-	mux.HandleFunc("PUT /dsh/captain/me/finance/payout-destination", s.handleCaptainPayoutDestinationUpsert)
-	mux.HandleFunc("POST /dsh/captain/me/finance/payout-destination/deactivate", s.handleCaptainPayoutDestinationDeactivate)
 	mux.HandleFunc("POST /dsh/captain/finance/cod-records/{recordId}/collect", s.handleCaptainCollectCod)
 	mux.HandleFunc("POST /dsh/captain/finance/cod-records/{recordId}/remit", s.handleCaptainRemitCod)
 
@@ -180,10 +175,6 @@ func registerRepresentativeFinanceRoutes(mux *http.ServeMux, s *protectedStoreSe
 	mux.HandleFunc("GET /dsh/field/me/finance/payout-requests", s.handleFieldPayoutRequests)
 	mux.HandleFunc("POST /dsh/field/me/finance/payout-requests", s.handleFieldCreatePayoutRequest)
 	mux.HandleFunc("GET /dsh/field/me/finance/payout-destination", s.handleFieldPayoutDestinationRead)
-	mux.HandleFunc("PUT /dsh/field/me/finance/payout-destination", s.handleFieldPayoutDestinationUpsert)
-	mux.HandleFunc("POST /dsh/field/me/finance/payout-destination/deactivate", s.handleFieldPayoutDestinationDeactivate)
-	mux.HandleFunc("GET /dsh/field/finance/payout-destinations/{destinationId}", s.handleFieldPayoutDestinationRead)
-	mux.HandleFunc("DELETE /dsh/field/finance/payout-destinations/{destinationId}", s.handleFieldPayoutDestinationDeactivate)
 
 	mux.HandleFunc("GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}", s.withPermission("control-panel", FinancePermissionRead, s.handleControlPanelRepresentativeWallet))
 	mux.HandleFunc("GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries", s.withPermission("control-panel", FinancePermissionRead, s.handleControlPanelRepresentativeLedger))
