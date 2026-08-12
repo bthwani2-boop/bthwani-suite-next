@@ -2,8 +2,8 @@
 
 Current decision: `NOT_STARTED`.
 
-The existing package was rebaselined in place to final pre-write source `BB@efbe5fae065dcc66b9bdcf0872deeed2bca61cf1` and is ready for root-cause implementation. This rewrite is **planning closure only**: it does not claim the app-client implementation, runtime, database, finance, QA, security, visual or production state is closed.
+This package is diagnosis/implementation planning only. It must not be interpreted as product readiness or runtime correctness.
 
-A future package decision may become `CLOSED_WITH_EVIDENCE` only when every registered unit is `DONE`, every required check in the unit `VERIFICATION.json` passes on the exact resulting candidate SHA, branch movement has been reconciled after the last write, blockers/deviations are empty, canonical readback is proven, and any independent product/finance/security/QA/release approval required by current Product Truth is recorded by the authorized owner.
+`CLOSED_WITH_EVIDENCE` is forbidden until U001-U007 are all DONE; every required verification is PASS on the exact final candidate SHA; cleanup and red-team are complete; client-relevant runtime/database/native/visual/security/finance evidence is recorded; blockers and deviations are empty; protected approvals required by active governance are recorded; and the final GitHub CI for that same candidate is green.
 
-Never convert `READY_FOR_IMPLEMENTATION`, a static scan, a CI green check, or package existence into a product-readiness claim.
+Any failed, skipped-without-authority, stale-SHA or unproven required check reopens the affected unit and keeps this file OPEN.

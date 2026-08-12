@@ -1,0 +1,7 @@
+# U007 diagnosis — final cleanup, red-team and exact-SHA closure
+
+The prior package had no independent terminal unit proving the fail-closed definition of DONE. U001-U006 can each pass targeted tests while the integrated candidate still contains obsolete compatibility code, stale generated contracts, cross-unit regressions, runtime failures or CI blockers. U007 is therefore mandatory and is part of this existing package, not a replacement package.
+
+Current CI demonstrates why: the Actions run associated with the diagnosis head has a shared Node workspace failure where root postinstall generated-client materialization crashes in Redocly with `Self-referencing circular pointer`. The artifact does not identify the registry context. U007 must isolate it deterministically. If a client-consumed Identity/DSH/WLT contract owns it, repair the canonical contract/composition source; if unrelated, do not import its implementation but keep closure blocked until the repository dependency is green. WLT payout compile errors are similarly outside client implementation scope unless Product Truth changes.
+
+After all writes, U007 repins exact HEAD, removes proven dead/duplicate compatibility residue, attacks actor/session/version/replay/race/offline/privacy/provider states, runs strict package validation and applicable build/database/runtime/native/visual/security/finance/CI gates, and reopens the responsible unit on any failure. It cannot waive protected approvals.
