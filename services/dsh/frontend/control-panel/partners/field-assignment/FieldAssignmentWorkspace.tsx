@@ -4,12 +4,10 @@ import React, { useState } from "react";
 import { CpButton, CpTextInput, CpStatePanel } from "@bthwani/control-panel/components";
 import { Text } from "@bthwani/ui-kit";
 import { WorkforceScopeManager } from "../../hr/WorkforceScopeManager";
-import type { WorkforceScopeActorRole } from "../../../shared/workforce";
 
 export function FieldAssignmentWorkspace() {
   const [actorIdInput, setActorIdInput] = useState("");
   const [activeActorId, setActiveActorId] = useState("");
-  const [activeRole, setActiveRole] = useState<WorkforceScopeActorRole>("field");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -24,20 +22,20 @@ export function FieldAssignmentWorkspace() {
           gap: "16px",
         }}
       >
-        <Text role="titleMd">تحديد الميداني أو الكابتن</Text>
+        <Text role="titleMd">تحديد الميداني</Text>
         <Text role="bodySm" style={{ color: "var(--bthwani-control-panel-text-muted)" }}>
-          يرجى إدخال معرف الميداني أو الكابتن (Actor ID) لعرض المتاجر المسندة إليه وتعديلها.
+          يرجى إدخال معرف الميداني (Actor ID) لعرض المتاجر المسندة إليه وتعديلها.
         </Text>
         <div style={{ display: "flex", gap: "12px", alignItems: "flex-end" }}>
           <div style={{ flex: 1, maxWidth: "400px" }}>
             <Text role="bodySm" style={{ fontWeight: 600, marginBottom: "8px", display: "block" }}>
-              معرف الميداني أو الكابتن (Actor ID)
+              معرف الميداني (Actor ID)
             </Text>
             <CpTextInput
               value={actorIdInput}
               onChange={setActorIdInput}
-              placeholder="مثال: field-12345 أو captain-12345"
-              aria-label="معرف الميداني أو الكابتن"
+              placeholder="مثال: field-12345"
+              aria-label="معرف الميداني"
             />
           </div>
           <CpButton
@@ -46,7 +44,6 @@ export function FieldAssignmentWorkspace() {
             onClick={() => {
               const actorId = actorIdInput.trim();
               setActiveActorId(actorId);
-              setActiveRole(actorId.startsWith("captain-") ? "captain" : "field");
             }}
           >
             بحث وعرض
@@ -63,13 +60,13 @@ export function FieldAssignmentWorkspace() {
             background: "var(--bthwani-control-panel-surface)",
           }}
         >
-          <WorkforceScopeManager actorId={activeActorId} actorRole={activeRole} />
+          <WorkforceScopeManager actorId={activeActorId} actorRole="field" />
         </div>
       ) : (
         <CpStatePanel
           role="status"
           title="لم يتم تحديد مقدم خدمة"
-          description="أدخل معرف الميداني أو الكابتن في الأعلى للبدء بإسناد المتاجر والمناطق."
+          description="أدخل معرف الميداني في الأعلى للبدء بإسناد المتاجر والمناطق."
         />
       )}
     </div>

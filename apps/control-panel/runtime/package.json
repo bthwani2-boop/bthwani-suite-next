@@ -2,6 +2,7 @@
   "dependencies": {
     "@bthwani/control-panel": "workspace:*",
     "@bthwani/core-identity": "workspace:*",
+    "@bthwani/data-runtime": "workspace:*",
     "@bthwani/dsh": "workspace:*",
     "@bthwani/ui-kit": "workspace:*",
     "next": "^16.2.11",
