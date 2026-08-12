@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { identitySessionAuthorizesSurface } from "@bthwani/core-identity/session-policy";
 import { isSameOriginRequest, setSessionCookies } from "../_lib/cookies";
 import { identityServerClient } from "../_lib/identity-server";
 
@@ -37,7 +38,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       password,
       deviceFingerprint: "control-panel-bff",
     });
-    if (!tokens.identity.roles.includes("operator")) {
+    if (!identitySessionAuthorizesSurface(tokens.identity, "operator", "control-panel")) {
       return NextResponse.json(
         { code: "CONTROL_PANEL_FORBIDDEN" },
         { status: 403, headers: { "Cache-Control": "no-store" } },
