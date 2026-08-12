@@ -1,5 +1,8 @@
 import type { ActorIdentity, TokenResponse } from "@bthwani/core-identity/server";
-import { identityServerClient } from "./identity-server";
+import {
+  identityServerClient,
+  isIdentityServerInvalidSessionError,
+} from "./identity-server";
 
 export type ResolvedSession = {
   readonly identity: ActorIdentity;
@@ -10,8 +13,9 @@ export type ResolvedSession = {
 /**
  * Resolves the caller's identity from cookie-held tokens: verifies the access
  * token first, then asks Identity's distributed refresh boundary to rotate the
- * refresh token if necessary. Cross-instance serialization belongs to Identity
- * and PostgreSQL, not to process-local Next.js memory.
+ * refresh token only when the access session is authoritatively invalid.
+ * Availability/infrastructure failures are propagated unchanged so callers
+ * preserve credentials instead of manufacturing a logout.
  */
 export async function resolveSession(
   accessToken: string | undefined,
@@ -21,8 +25,8 @@ export async function resolveSession(
     try {
       const identity = await identityServerClient().session(accessToken);
       return { identity, rotated: null };
-    } catch {
-      // The authoritative refresh path decides whether continuity is possible.
+    } catch (error) {
+      if (!isIdentityServerInvalidSessionError(error)) throw error;
     }
   }
 
