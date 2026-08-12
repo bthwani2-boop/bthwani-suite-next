@@ -9,14 +9,9 @@ import (
 	"dsh-api/internal/auth"
 )
 
-// fakeIdentityServer creates a test server that routes /auth/session and
-// /internal/permissions/resolve to their respective handlers. All other paths
-// receive a 404. This mirrors the actual Identity routing surface that
-// requirePermission now depends on.
 func fakeIdentityServer(t *testing.T, sessionHandler http.HandlerFunc) *protectedStoreServer {
 	t.Helper()
 	return fakeIdentityServerWithRBAC(t, sessionHandler, func(w http.ResponseWriter, _ *http.Request) {
-		// Default RBAC stub: empty permissions (deny by default).
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(map[string]any{"permissions": []any{}})
 	})
@@ -38,29 +33,32 @@ func fakeIdentityServerWithRBAC(
 
 func TestRequirePermissionAllowsExactIdentityPermission(t *testing.T) {
 	perm := auth.Permission{Service: "dsh", Surface: "control-panel", Action: FinancePermissionRead, Scope: "all"}
-
-	// For non-operator role the inline session permission is authoritative.
 	s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
-			Subject:           "operator-1",
+			Subject:           "employee-1",
 			OperatorContextID: "operator-context-1",
 			PhoneE164:         "+967700000001",
 			Roles:             []string{"employee"},
 			AuthState:         "authenticated",
+			SessionID:         "session-employee-1",
+			SessionSurface:    "control-panel",
 			Permissions:       []auth.Permission{perm},
 		})
 	})
 
 	request := httptest.NewRequest(http.MethodGet, "/dsh/operator/finance", nil)
-	request.Header.Set("Authorization", "Bearer operator-token")
+	request.Header.Set("Authorization", "Bearer employee-token")
 	response := httptest.NewRecorder()
 	actor, ok := s.requirePermission(response, request, "control-panel", FinancePermissionRead)
 	if !ok {
 		t.Fatalf("exact permission rejected with status %d body=%s", response.Code, response.Body.String())
 	}
-	if actor.ID != "operator-1" || actor.OperatorContextID != "operator-context-1" {
-		t.Fatalf("unexpected actor %#v", actor)
+	if actor.ID != "employee-1" || actor.OperatorContextID != "operator-context-1" || actor.Role != "employee" {
+		t.Fatalf("unexpected truthful actor %#v", actor)
+	}
+	if actor.SessionSurface != "control-panel" || actor.SessionID != "session-employee-1" {
+		t.Fatalf("session binding was not preserved: %#v", actor)
 	}
 }
 
@@ -78,13 +76,16 @@ func TestRequirePermissionRejectsWrongServiceSurfaceOrAction(t *testing.T) {
 			s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				_ = json.NewEncoder(w).Encode(auth.Identity{
-					Subject: "operator-1", OperatorContextID: "operator-context-1",
-					Roles: []string{"employee"}, AuthState: "authenticated",
-					Permissions: []auth.Permission{tc.permission},
+					Subject:           "employee-1",
+					OperatorContextID: "operator-context-1",
+					Roles:             []string{"employee"},
+					AuthState:         "authenticated",
+					SessionSurface:    "control-panel",
+					Permissions:       []auth.Permission{tc.permission},
 				})
 			})
 			request := httptest.NewRequest(http.MethodGet, "/dsh/operator/finance", nil)
-			request.Header.Set("Authorization", "Bearer operator-token")
+			request.Header.Set("Authorization", "Bearer employee-token")
 			response := httptest.NewRecorder()
 			if _, ok := s.requirePermission(response, request, "control-panel", FinancePermissionRead); ok {
 				t.Fatal("mismatched permission was accepted")
@@ -97,20 +98,18 @@ func TestRequirePermissionRejectsWrongServiceSurfaceOrAction(t *testing.T) {
 }
 
 func TestRequirePermissionRejectsRoleOnlyAuthority(t *testing.T) {
-	// The actor has the "operator" role with a pseudo-permission embedded in
-	// the role string, but the RBAC registry returns no permissions.
-	// deny-by-default: the RBAC check must produce 403, not 200.
 	s := fakeIdentityServerWithRBAC(t,
 		func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			_ = json.NewEncoder(w).Encode(auth.Identity{
-				Subject: "operator-1", OperatorContextID: "operator-context-1",
-				Roles:     []string{"operator", "employee", "permission:" + FinancePermissionRead},
-				AuthState: "authenticated",
+				Subject:           "operator-1",
+				OperatorContextID: "operator-context-1",
+				Roles:             []string{"operator", "employee", "permission:" + FinancePermissionRead},
+				AuthState:         "authenticated",
+				SessionSurface:    "control-panel",
 			})
 		},
 		func(w http.ResponseWriter, _ *http.Request) {
-			// RBAC registry: this actor has no grants.
 			w.WriteHeader(http.StatusOK)
 			_ = json.NewEncoder(w).Encode(map[string]any{"permissions": []any{}})
 		},
@@ -176,16 +175,16 @@ func TestKnownDshPermissionsAreGrantedExactly(t *testing.T) {
 		action := action
 		t.Run(action, func(t *testing.T) {
 			perm := auth.Permission{Service: "dsh", Surface: "control-panel", Action: action, Scope: "all"}
-			// The actor holds "operator" role → RBAC path is used.
-			// Both the session endpoint and the RBAC endpoint return the permission.
 			s := fakeIdentityServerWithRBAC(t,
 				func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusOK)
 					_ = json.NewEncoder(w).Encode(auth.Identity{
-						Subject: "operator-1", OperatorContextID: "operator-context-1",
-						AuthState:   "authenticated",
-						Roles:       []string{"operator"},
-						Permissions: []auth.Permission{perm},
+						Subject:           "operator-1",
+						OperatorContextID: "operator-context-1",
+						AuthState:         "authenticated",
+						Roles:             []string{"operator"},
+						SessionSurface:    "control-panel",
+						Permissions:       []auth.Permission{perm},
 					})
 				},
 				func(w http.ResponseWriter, _ *http.Request) {
