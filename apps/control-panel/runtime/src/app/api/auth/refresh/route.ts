@@ -7,7 +7,10 @@ import {
   isSameOriginRequest,
   setSessionCookies,
 } from "../_lib/cookies";
-import { identityServerClient } from "../_lib/identity-server";
+import {
+  identityServerClient,
+  isConcurrentRefreshError,
+} from "../_lib/identity-server";
 
 export const runtime = "nodejs";
 
@@ -42,7 +45,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
     setSessionCookies(response, rotated);
     return response;
-  } catch {
+  } catch (error) {
+    if (isConcurrentRefreshError(error)) {
+      return NextResponse.json(
+        { code: "REFRESH_ALREADY_ROTATED" },
+        { status: 409, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
     const response = NextResponse.json(
       { code: "SESSION_EXPIRED" },
       { status: 401, headers: { "Cache-Control": "no-store" } },
