@@ -82,6 +82,22 @@ func TestGovernedRefreshBoundaryKeepsInvalidRefreshUnauthenticated(t *testing.T)
 	}
 }
 
+func TestGovernedRefreshBoundaryKeepsInfrastructureFailureRetryable(t *testing.T) {
+	repository := &fakeGovernedRefreshRepository{err: errors.New("database unavailable")}
+	handler := GovernedRefreshBoundary(repository, http.NotFoundHandler())
+
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, refreshRequest("session.current"))
+
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusServiceUnavailable)
+	}
+	body := decodeRefreshError(t, recorder)
+	if body.Code != "IDENTITY_UNAVAILABLE" {
+		t.Fatalf("code = %q, want IDENTITY_UNAVAILABLE", body.Code)
+	}
+}
+
 func TestGovernedRefreshBoundaryReturnsTokenPairForWinner(t *testing.T) {
 	expiresAt := time.Now().UTC().Add(time.Minute)
 	repository := &fakeGovernedRefreshRepository{pair: identity.TokenPair{
