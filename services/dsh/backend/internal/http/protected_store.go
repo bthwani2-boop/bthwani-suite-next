@@ -148,7 +148,11 @@ func partnerRequestWithActor(r *http.Request, actor store.StoreActor) *http.Requ
 	if strings.TrimSpace(actor.OperatorContextID) != "" {
 		ctx = partner.WithOperatorContext(ctx, actor.OperatorContextID)
 	}
-	ctx = partner.WithActorContext(ctx, actor.ID, dshActorSurface(actor.Role))
+	surface := strings.TrimSpace(actor.SessionSurface)
+	if surface == "" {
+		surface = dshActorSurface(actor.Role)
+	}
+	ctx = partner.WithActorContext(ctx, actor.ID, surface)
 	ctx = context.WithValue(ctx, "actor_phone", actor.PhoneE164)
 	ctx = context.WithValue(ctx, storeActorContextKeyType{}, actor)
 	return r.WithContext(ctx)
@@ -556,22 +560,17 @@ func (s *protectedStoreServer) requirePermission(
 		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
 		return store.StoreActor{}, false
 	}
-
-	// Governed fine-grained DSH permissions belong to operator sessions only.
-	// Role membership alone is insufficient: this exact live session must have
-	// been issued for the control-panel surface. Inline permission snapshots are
-	// never an authority for these decisions; live Identity RBAC is canonical.
-	if surface != dshActorSurface("operator") || !identity.HasRole("operator") || identity.SessionSurface != surface {
-		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "operator control-panel session is required")
+	if surface != dshActorSurface("operator") || identity.SessionSurface != surface {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "control-panel session is required")
 		return store.StoreActor{}, false
 	}
 
-	rbacPerms, rbacErr := s.identity.ResolvePermissions(r.Context(), identity.Subject)
-	if rbacErr != nil {
-		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "RBAC registry is unavailable")
+	permissions, permissionErr := resolvedControlPanelPermissions(s, r, identity)
+	if permissionErr != nil {
+		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "permission authority is unavailable")
 		return store.StoreActor{}, false
 	}
-	for _, p := range rbacPerms {
+	for _, p := range permissions {
 		if p.Service == "dsh" && p.Surface == surface && p.Action == action {
 			scope := strings.TrimSpace(p.Scope)
 			if scope == "" {
@@ -579,7 +578,7 @@ func (s *protectedStoreServer) requirePermission(
 			}
 			return store.StoreActor{
 				ID:                 identity.Subject,
-				Role:               "operator",
+				Role:               controlPanelActorRole(identity),
 				OperatorContextID:  identity.OperatorContextID,
 				SessionID:          identity.SessionID,
 				SessionSurface:     identity.SessionSurface,
