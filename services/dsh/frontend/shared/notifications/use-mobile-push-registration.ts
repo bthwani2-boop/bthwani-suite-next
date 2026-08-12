@@ -134,6 +134,7 @@ export function useDshMobilePushRegistration(
 
     let active = true;
     let deviceId: string | undefined;
+    let endpointRegistered = false;
     let unregisterSessionEndHook: (() => void) | undefined;
     let tokenSubscription: RemovableSubscription | undefined;
     let responseSubscription: RemovableSubscription | undefined;
@@ -155,6 +156,17 @@ export function useDshMobilePushRegistration(
       }).catch((error) => console.warn(`[${appKey}] notification response handling failed`, error));
     }
 
+    const deactivateRegisteredEndpoint = async (): Promise<void> => {
+      if (!deviceId || !endpointRegistered) return;
+      endpointRegistered = false;
+      await deactivateNotificationPushEndpoint(deviceId);
+    };
+
+    unregisterSessionEndHook = registerIdentityBeforeSessionEndHook(async () => {
+      active = false;
+      await deactivateRegisteredEndpoint().catch(() => undefined);
+    });
+
     void (async () => {
       try {
         const permissionGranted = await ensureNotificationPermission();
@@ -167,6 +179,7 @@ export function useDshMobilePushRegistration(
 
         deviceId = await resolvePushDeviceId(appKey);
         if (!active) return;
+        endpointRegistered = true;
 
         const registerToken = async (endpointToken: string): Promise<void> => {
           if (!active || !deviceId) return;
@@ -179,7 +192,10 @@ export function useDshMobilePushRegistration(
         };
 
         await registerToken(await readExpoToken());
-        if (!active) return;
+        if (!active) {
+          await deactivateRegisteredEndpoint().catch(() => undefined);
+          return;
+        }
 
         const addPushTokenListener = notificationCompatibility.addPushTokenListener;
         if (typeof addPushTokenListener === "function") {
@@ -190,9 +206,6 @@ export function useDshMobilePushRegistration(
           });
         }
 
-        unregisterSessionEndHook = registerIdentityBeforeSessionEndHook(async () => {
-          if (deviceId) await deactivateNotificationPushEndpoint(deviceId).catch(() => undefined);
-        });
       } catch (error) {
         console.warn(
           `[${appKey}] push registration failed; rebuild the development client after configuring GOOGLE_SERVICES_JSON`,
@@ -206,6 +219,7 @@ export function useDshMobilePushRegistration(
       unregisterSessionEndHook?.();
       tokenSubscription?.remove();
       responseSubscription?.remove();
+      void deactivateRegisteredEndpoint().catch(() => undefined);
     };
   }, [appKey, appScheme, authKind]);
 }

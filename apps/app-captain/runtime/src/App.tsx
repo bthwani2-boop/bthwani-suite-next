@@ -50,25 +50,44 @@ configureIdentitySession(resolveIdentityApiBaseUrl());
 function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
   const workforce = useWorkforceProfile();
   const [readiness, setReadiness] = useState<ReadinessGate | null>(null);
-
-  const fetchReadiness = async () => {
-    if (workforce.state.kind !== "ready") return;
-    try {
-      const gate = await fetchWorkforceReadiness(workforce.state.me.actorId);
-      setReadiness(gate);
-    } catch {
-      setReadiness(createCaptainEligibilityUnavailableGate({
-        actorId: workforce.state.me.actorId,
-        workforceKind: workforce.state.me.workforceKind,
-      }));
-    }
-  };
+  const [readinessRefreshToken, setReadinessRefreshToken] = useState(0);
 
   useEffect(() => {
-    void fetchReadiness();
-  }, [workforce.state]);
+    let active = true;
+    setReadiness(null);
+    if (workforce.state.kind !== "ready") {
+      return () => {
+        active = false;
+      };
+    }
 
-  const presentation = classifyCaptainReadiness(readiness);
+    const { actorId, workforceKind } = workforce.state.me;
+    void fetchWorkforceReadiness(actorId)
+      .then((gate) => {
+        if (!active) return;
+        if (gate.actorId !== actorId || gate.workforceKind !== workforceKind) {
+          setReadiness(createCaptainEligibilityUnavailableGate({ actorId, workforceKind }));
+          return;
+        }
+        setReadiness(gate);
+      })
+      .catch(() => {
+        if (!active) return;
+        setReadiness(createCaptainEligibilityUnavailableGate({ actorId, workforceKind }));
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [readinessRefreshToken, workforce.state]);
+
+  const currentReadiness = workforce.state.kind === "ready"
+    && readiness?.actorId === workforce.state.me.actorId
+    && readiness.workforceKind === workforce.state.me.workforceKind
+    ? readiness
+    : null;
+
+  const presentation = classifyCaptainReadiness(currentReadiness);
   if (presentation === "loading") {
     return (
       <View style={styles.readinessState}>
@@ -77,8 +96,13 @@ function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (presentation === "blocked" && readiness) {
-    return <ReadinessGateScreen readiness={readiness} onRefresh={fetchReadiness} />;
+  if (presentation === "blocked" && currentReadiness) {
+    return (
+      <ReadinessGateScreen
+        readiness={currentReadiness}
+        onRefresh={() => setReadinessRefreshToken((value) => value + 1)}
+      />
+    );
   }
 
   if (presentation === "allowed") {

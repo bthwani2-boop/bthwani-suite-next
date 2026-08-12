@@ -13,10 +13,14 @@ test("captain readiness composition delegates decisions to executable policy", a
 
   assert.match(source, /classifyCaptainReadiness/);
   assert.match(source, /createCaptainEligibilityUnavailableGate/);
-  assert.match(wrapperCode, /const presentation = classifyCaptainReadiness\(readiness\)/);
+  assert.match(wrapperCode, /const presentation = classifyCaptainReadiness\(currentReadiness\)/);
+  assert.match(wrapperCode, /setReadiness\(null\)/);
+  assert.match(wrapperCode, /readiness\?\.actorId === workforce\.state\.me\.actorId/);
+  assert.match(wrapperCode, /readinessRefreshToken/);
+  assert.match(wrapperCode, /gate\.actorId !== actorId \|\| gate\.workforceKind !== workforceKind/);
   assert.match(wrapperCode, /presentation === "loading"/);
   assert.match(wrapperCode, /<ActivityIndicator/);
-  assert.match(wrapperCode, /presentation === "blocked" && readiness/);
+  assert.match(wrapperCode, /presentation === "blocked" && currentReadiness/);
   assert.match(wrapperCode, /ReadinessGateScreen/);
   assert.match(wrapperCode, /presentation === "allowed"/);
   assert.match(wrapperCode, /return <>{children}<\/>;/);
@@ -33,4 +37,18 @@ test("captain app keeps canonical identity, workforce, and notification boundari
   assert.match(source, /configureIdentityDeviceFingerprintProvider/);
   assert.match(source, /SecureStore/);
   assert.match(source, /randomUUID/);
+});
+
+test("captain identity changes invalidate stale Workforce and push state", async () => {
+  const workforce = await read("services/dsh/frontend/shared/workforce/use-workforce-profile.tsx");
+  const push = await read("services/dsh/frontend/shared/notifications/use-mobile-push-registration.ts");
+
+  assert.match(workforce, /useRef/);
+  assert.match(workforce, /identitySessionBinding/);
+  assert.match(workforce, /requestSequence/);
+  assert.match(workforce, /sequence === requestSequence\.current/);
+  assert.match(push, /registerIdentityBeforeSessionEndHook/);
+  assert.match(push, /endpointRegistered/);
+  assert.match(push, /deactivateRegisteredEndpoint/);
+  assert.match(push, /active = false/);
 });

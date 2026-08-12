@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useIdentitySession } from "@bthwani/core-identity";
 
 import { classifyGovernedError, type GovernedProblem } from "../_kernel/governed-problem";
@@ -41,15 +41,27 @@ function toState(result: WorkforceMeResult): WorkforceProfileState {
 export function WorkforceProfileProvider({ children }: { children: React.ReactNode }) {
   const identity = useIdentitySession();
   const [state, setState] = useState<WorkforceProfileState>({ kind: "loading" });
+  const requestSequence = useRef(0);
+
+  const identitySessionBinding = identity.state.kind === "authenticated"
+    ? [
+      identity.state.identity.subject,
+      identity.state.identity.sessionId,
+      identity.state.identity.sessionSurface,
+    ].join(":")
+    : null;
 
   const reload = useCallback(async () => {
+    const sequence = ++requestSequence.current;
     setState({ kind: "loading" });
-    setState(toState(await fetchWorkforceMe()));
+    const result = await fetchWorkforceMe();
+    if (sequence === requestSequence.current) setState(toState(result));
   }, []);
 
   const updateSelf = useCallback(async (input: UpdateSelfInput) => {
+    const sequence = ++requestSequence.current;
     const result = await updateWorkforceMeSelf(input);
-    setState(toState(result));
+    if (sequence === requestSequence.current) setState(toState(result));
     return result;
   }, []);
 
@@ -58,8 +70,9 @@ export function WorkforceProfileProvider({ children }: { children: React.ReactNo
       void reload();
       return;
     }
+    requestSequence.current += 1;
     setState({ kind: "loading" });
-  }, [identity.state.kind, reload]);
+  }, [identity.state.kind, identitySessionBinding, reload]);
 
   return (
     <WorkforceProfileContext.Provider value={{ state, reload, updateSelf }}>
