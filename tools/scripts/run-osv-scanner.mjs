@@ -1,4 +1,4 @@
-import { execFileSync, execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -6,7 +6,6 @@ import {
   handleCommandFailure,
   handleMissingBinary,
   hasBinary,
-  quoteRel,
   repoRoot,
   walkFiles
 } from "./_external-tool-runner.mjs";
@@ -25,30 +24,52 @@ if (lockfiles.length === 0) {
 }
 if (!hasBinary("osv-scanner")) handleMissingBinary(toolId, "osv-scanner", true);
 
-const lockfileArgs = lockfiles.map((file) => `-L ${quoteRel(file)}`).join(" ");
-const baseCommand = `osv-scanner scan source --config osv-scanner.toml ${lockfileArgs}`;
+const baseArgs = [
+  "scan",
+  "source",
+  "--config",
+  "osv-scanner.toml",
+  ...lockfiles.flatMap((file) => ["-L", path.relative(repoRoot, file)])
+];
 const reportRel = ".diagnostics/security/osv-report.json";
-fs.mkdirSync(path.join(repoRoot, ".diagnostics/security"), { recursive: true });
+const reportPath = path.join(repoRoot, reportRel);
+fs.mkdirSync(path.dirname(reportPath), { recursive: true });
 
 // One scan produces both the table a reviewer reads and the JSON this script
-// adjudicates, so the two can never disagree about what was found.
-console.log(`Running: ${baseCommand}`);
+// adjudicates, so the two can never disagree about what was found. The scanner
+// is invoked without a shell so repository-controlled filenames cannot become
+// executable command syntax.
+console.log(`Running: osv-scanner ${baseArgs.map((arg) => JSON.stringify(arg)).join(" ")}`);
 let reportedFindings = false;
 try {
-  execSync(`${baseCommand} --format table`, { cwd: repoRoot, stdio: "inherit", shell: true });
+  execFileSync("osv-scanner", [...baseArgs, "--format", "table"], {
+    cwd: repoRoot,
+    stdio: "inherit"
+  });
 } catch {
   reportedFindings = true;
 }
+
+let reportJson = "";
 try {
-  execSync(`${baseCommand} --format json > ${JSON.stringify(reportRel)}`, {
+  reportJson = execFileSync("osv-scanner", [...baseArgs, "--format", "json"], {
     cwd: repoRoot,
-    stdio: ["ignore", "ignore", "inherit"],
-    shell: true
+    encoding: "utf8",
+    maxBuffer: 128 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "inherit"]
   });
-} catch {
-  // osv-scanner exits non-zero whenever it reports anything, so a non-zero exit
-  // here is expected and the report is still written. An unreadable report is
-  // the real blocker and is handled below.
+} catch (error) {
+  // osv-scanner exits non-zero whenever it reports findings. execFileSync still
+  // exposes the scanner's stdout on that error, so persist the exact JSON body
+  // without using shell redirection.
+  reportJson = typeof error?.stdout === "string"
+    ? error.stdout
+    : Buffer.isBuffer(error?.stdout)
+      ? error.stdout.toString("utf8")
+      : "";
+}
+if (reportJson.trim()) {
+  fs.writeFileSync(reportPath, reportJson, { encoding: "utf8", mode: 0o600 });
 }
 
 if (!reportedFindings) {
@@ -58,7 +79,7 @@ if (!reportedFindings) {
 
 let report;
 try {
-  report = JSON.parse(fs.readFileSync(path.join(repoRoot, reportRel), "utf8"));
+  report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
 } catch (error) {
   console.error(`[OSV-SCANNER FAIL] findings were reported but the JSON report is unreadable: ${error.message}`);
   handleCommandFailure(toolId, true);
