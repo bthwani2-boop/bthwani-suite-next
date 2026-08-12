@@ -34,16 +34,12 @@ func (r *Repository) RefreshGoverned(ctx context.Context, refreshToken string) (
 	}
 	defer lockTx.Rollback()
 
-	var lockAcquired int
-	if err := lockTx.QueryRowContext(
+	if _, err := lockTx.ExecContext(
 		ctx,
-		`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended($1, 0))`,
+		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
 		sessionID,
-	).Scan(&lockAcquired); err != nil {
+	); err != nil {
 		return TokenPair{}, err
-	}
-	if lockAcquired != 1 {
-		return TokenPair{}, errors.New("refresh advisory lock was not acquired")
 	}
 
 	var currentHash string
