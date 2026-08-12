@@ -1,6 +1,7 @@
 package refund
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"wlt-api/internal/testsupport"
 )
 
 func getTestDB(t *testing.T) *sql.DB {
@@ -36,15 +38,28 @@ func getTestDB(t *testing.T) *sql.DB {
 }
 
 func insertTestSession(t *testing.T, db *sql.DB, status string, amount int64, currency string) string {
+	t.Helper()
 	checkoutIntentID := fmt.Sprintf("test-checkout-refund-%d", time.Now().UnixNano())
-	var sessionID string
-	err := db.QueryRow(`
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, captured_at, financial_purpose)
-		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', $2, 'card-ref-001', $3, $4,
-		        CASE WHEN $2 IN ('captured', 'cod_collected') THEN NOW() ELSE NULL END, 'order_payment')
-		RETURNING id`, checkoutIntentID, status, amount, currency).Scan(&sessionID)
+	var capturedAt *time.Time
+	if status == "captured" || status == "cod_collected" {
+		now := time.Now().UTC()
+		capturedAt = &now
+	}
+	sessionID, err := testsupport.SeedCanonicalCheckoutPaymentSession(context.Background(), db, testsupport.CheckoutPaymentSession{
+		OperatorContextID: "OperatorContext-test",
+		CheckoutIntentID:  checkoutIntentID,
+		ClientID:          "client-test",
+		StoreID:           "store-test",
+		PaymentMethod:     "official_wallet",
+		Status:            status,
+		ProviderReference: "card-ref-001",
+		AmountMinorUnits:  amount,
+		Currency:          currency,
+		FinancialPurpose:  "order_payment",
+		CapturedAt:        capturedAt,
+	})
 	if err != nil {
-		t.Fatalf("failed to insert test session: %v", err)
+		t.Fatalf("seed canonical payment session: %v", err)
 	}
 	return sessionID
 }

@@ -40,15 +40,7 @@ func TestCaptureSessionWithProvider_ConcurrentCalls_OnlyOneReachesProvider(t *te
 
 	ctx := context.Background()
 	checkoutIntentID := fmt.Sprintf("test-checkout-concurrent-cap-%d", time.Now().UnixNano())
-
-	var sessionID string
-	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, financial_purpose)
-		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'authorized', 'card-auth-concurrent', 1000, 'YER', 'order_payment')
-		RETURNING id`, checkoutIntentID).Scan(&sessionID)
-	if err != nil {
-		t.Fatalf("failed to insert test session: %v", err)
-	}
+	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "authorized", "card-auth-concurrent", 1000, false)
 
 	client := &slowCountingProvider{
 		res:   provider.ProviderResult{ProviderReference: "card-capture-concurrent", Status: "captured"},

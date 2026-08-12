@@ -59,16 +59,9 @@ func TestAuthorizeSessionWithProvider_DBFlow(t *testing.T) {
 	ctx := context.Background()
 	checkoutIntentID := fmt.Sprintf("test-checkout-auth-%d", time.Now().UnixNano())
 
-	// Insert initial session with its own amount/currency -- authorize now
-	// reads these from the session row, never from caller input.
-	var sessionID string
-	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
-		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'reference_created', 1000, 'YER', 'order_payment')
-		RETURNING id`, checkoutIntentID).Scan(&sessionID)
-	if err != nil {
-		t.Fatalf("failed to insert test session: %v", err)
-	}
+	// Authorize reads the immutable quote-bound amount/currency from the
+	// persisted session, never from caller input.
+	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "reference_created", "", 1000, false)
 
 	client := &fakeProvider{
 		res: provider.ProviderResult{
@@ -122,15 +115,7 @@ func TestCaptureSessionWithProvider_DBFlow(t *testing.T) {
 	ctx := context.Background()
 	checkoutIntentID := fmt.Sprintf("test-checkout-cap-%d", time.Now().UnixNano())
 
-	// Insert initial authorized session
-	var sessionID string
-	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, financial_purpose)
-		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'authorized', 'card-auth-001', 1000, 'YER', 'order_payment')
-		RETURNING id`, checkoutIntentID).Scan(&sessionID)
-	if err != nil {
-		t.Fatalf("failed to insert test session: %v", err)
-	}
+	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "authorized", "card-auth-001", 1000, false)
 
 	client := &fakeProvider{
 		res: provider.ProviderResult{
@@ -185,14 +170,7 @@ func TestAuthorizeSessionWithProvider_IgnoresCallerAmount(t *testing.T) {
 	ctx := context.Background()
 	checkoutIntentID := fmt.Sprintf("test-checkout-tamper-%d", time.Now().UnixNano())
 
-	var sessionID string
-	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
-		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'reference_created', 500, 'YER', 'order_payment')
-		RETURNING id`, checkoutIntentID).Scan(&sessionID)
-	if err != nil {
-		t.Fatalf("failed to insert test session: %v", err)
-	}
+	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "reference_created", "", 500, false)
 
 	client := &recordingProvider{
 		res: provider.ProviderResult{ProviderReference: "card-auth-002", Status: "authorized"},
@@ -223,18 +201,11 @@ func TestAuthorizeSessionWithProvider_NotAuthorizableState(t *testing.T) {
 	ctx := context.Background()
 	checkoutIntentID := fmt.Sprintf("test-checkout-notauth-%d", time.Now().UnixNano())
 
-	var sessionID string
-	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, financial_purpose)
-		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'captured', 'card-auth-003', 500, 'YER', 'order_payment')
-		RETURNING id`, checkoutIntentID).Scan(&sessionID)
-	if err != nil {
-		t.Fatalf("failed to insert test session: %v", err)
-	}
+	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "captured", "card-auth-003", 500, true)
 
 	client := &fakeProvider{res: provider.ProviderResult{ProviderReference: "card-auth-004", Status: "authorized"}}
 
-	_, err = AuthorizeSessionWithProvider(ctx, db, client, sessionID, provider.RequestMeta{})
+	_, err := AuthorizeSessionWithProvider(ctx, db, client, sessionID, provider.RequestMeta{})
 	if err != ErrNotAuthorizable {
 		t.Fatalf("expected ErrNotAuthorizable for an already-captured session, got %v", err)
 	}
@@ -255,20 +226,13 @@ func TestProviderDecline_DBFlow(t *testing.T) {
 	ctx := context.Background()
 	checkoutIntentID := fmt.Sprintf("test-checkout-decline-%d", time.Now().UnixNano())
 
-	var sessionID string
-	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
-		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'reference_created', 1000, 'YER', 'order_payment')
-		RETURNING id`, checkoutIntentID).Scan(&sessionID)
-	if err != nil {
-		t.Fatalf("failed to insert test session: %v", err)
-	}
+	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "reference_created", "", 1000, false)
 
 	client := &fakeProvider{
 		err: provider.Error{Code: "CARD_DECLINED", StatusCode: 402, Message: "declined"},
 	}
 
-	_, err = AuthorizeSessionWithProvider(ctx, db, client, sessionID, provider.RequestMeta{})
+	_, err := AuthorizeSessionWithProvider(ctx, db, client, sessionID, provider.RequestMeta{})
 	if err == nil {
 		t.Fatalf("expected error from AuthorizeSessionWithProvider, got nil")
 	}
@@ -311,20 +275,13 @@ func TestProviderAmbiguousError_Authorize_DBFlow(t *testing.T) {
 	ctx := context.Background()
 	checkoutIntentID := fmt.Sprintf("test-checkout-ambig-auth-%d", time.Now().UnixNano())
 
-	var sessionID string
-	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
-		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'reference_created', 1000, 'YER', 'order_payment')
-		RETURNING id`, checkoutIntentID).Scan(&sessionID)
-	if err != nil {
-		t.Fatalf("failed to insert test session: %v", err)
-	}
+	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "reference_created", "", 1000, false)
 
 	client := &fakeProvider{
 		err: context.DeadlineExceeded,
 	}
 
-	_, err = AuthorizeSessionWithProvider(ctx, db, client, sessionID, provider.RequestMeta{})
+	_, err := AuthorizeSessionWithProvider(ctx, db, client, sessionID, provider.RequestMeta{})
 	if err == nil {
 		t.Fatalf("expected error from AuthorizeSessionWithProvider, got nil")
 	}
@@ -375,20 +332,13 @@ func TestProviderAmbiguousError_Capture_DBFlow(t *testing.T) {
 	ctx := context.Background()
 	checkoutIntentID := fmt.Sprintf("test-checkout-ambig-cap-%d", time.Now().UnixNano())
 
-	var sessionID string
-	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, financial_purpose)
-		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'authorized', 'card-auth-ambig', 1000, 'YER', 'order_payment')
-		RETURNING id`, checkoutIntentID).Scan(&sessionID)
-	if err != nil {
-		t.Fatalf("failed to insert test session: %v", err)
-	}
+	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "authorized", "card-auth-ambig", 1000, false)
 
 	client := &fakeProvider{
 		err: errors.New("connection reset"),
 	}
 
-	_, err = CaptureSessionWithProvider(ctx, db, client, sessionID, provider.RequestMeta{})
+	_, err := CaptureSessionWithProvider(ctx, db, client, sessionID, provider.RequestMeta{})
 	if err == nil {
 		t.Fatalf("expected error from CaptureSessionWithProvider, got nil")
 	}

@@ -17,15 +17,7 @@ import (
 func seedPaymentSessionForAllocationTest(t *testing.T, db *sql.DB, amountMinorUnits int64) string {
 	t.Helper()
 	checkoutIntentID := fmt.Sprintf("test-checkout-alloc-%d", time.Now().UnixNano())
-	var sessionID string
-	err := db.QueryRow(`
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
-		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'reference_created', $2, 'YER', 'order_payment')
-		RETURNING id`, checkoutIntentID, amountMinorUnits).Scan(&sessionID)
-	if err != nil {
-		t.Fatalf("failed to seed payment session: %v", err)
-	}
-	return sessionID
+	return seedCheckoutSession(t, db, checkoutIntentID, "reference_created", "", amountMinorUnits, false)
 }
 
 func TestAllocationConservation_ConservingSetCommits(t *testing.T) {

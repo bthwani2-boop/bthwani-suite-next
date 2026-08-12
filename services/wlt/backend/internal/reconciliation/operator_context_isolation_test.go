@@ -18,8 +18,8 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"wlt-api/internal/reference"
 	"wlt-api/internal/shared"
+	"wlt-api/internal/testsupport"
 )
 
 func reconciliationTestDB(t *testing.T) *sql.DB {
@@ -45,26 +45,25 @@ func reconciliationTestDB(t *testing.T) *sql.DB {
 func seedOperatorContextReconciliationCase(t *testing.T, db *sql.DB, operatorContextID, suffix string) string {
 	t.Helper()
 	checkoutIntentID := "reconciliation-checkout-" + suffix
-	session, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
-		CheckoutIntentID: checkoutIntentID,
-		OperatorContextID:         operatorContextID,
-		ClientID:         "client-" + suffix,
-		StoreID:          "store-" + suffix,
-		PaymentMethod:    "wallet",
-		AmountMinorUnits: 1000,
-		Currency:         "YER",
-		CartSnapshotHash: "snapshot-" + suffix,
-		IdempotencyKey:   "session-idempotency-" + suffix,
-		CorrelationID:    "session-correlation-" + suffix,
+	sessionID, err := testsupport.SeedCanonicalCheckoutPaymentSession(context.Background(), db, testsupport.CheckoutPaymentSession{
+		OperatorContextID: operatorContextID,
+		CheckoutIntentID:  checkoutIntentID,
+		ClientID:          "client-" + suffix,
+		StoreID:           "store-" + suffix,
+		PaymentMethod:     "wallet",
+		Status:            "reference_created",
+		AmountMinorUnits:  1000,
+		Currency:          "YER",
+		FinancialPurpose:  "order_payment",
 	})
 	if err != nil {
-		t.Fatalf("create payment session for %s: %v", operatorContextID, err)
+		t.Fatalf("seed canonical payment session for %s: %v", operatorContextID, err)
 	}
 	var caseID string
 	if err := db.QueryRow(`INSERT INTO wlt_reconciliation_cases
 		(operator_context_id,payment_session_id,operation,trigger_reason,status)
 		VALUES ($1,$2,'capture','provider_result_unknown','open')
-		RETURNING id`, operatorContextID, session.ID).Scan(&caseID); err != nil {
+		RETURNING id`, operatorContextID, sessionID).Scan(&caseID); err != nil {
 		t.Fatalf("create reconciliation case for %s: %v", operatorContextID, err)
 	}
 	return caseID

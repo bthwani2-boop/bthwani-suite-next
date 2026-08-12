@@ -134,18 +134,11 @@ func TestCaptureTopUpSession_RejectsNonTopUpSession(t *testing.T) {
 	ctx := context.Background()
 
 	checkoutIntentID := fmt.Sprintf("test-checkout-nontopup-%d", time.Now().UnixNano())
-	var sessionID string
-	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, financial_purpose)
-		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'authorized', 'card-auth-x', 1000, 'YER', 'order_payment')
-		RETURNING id`, checkoutIntentID).Scan(&sessionID)
-	if err != nil {
-		t.Fatalf("failed to insert test session: %v", err)
-	}
+	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "authorized", "card-auth-x", 1000, false)
 
 	rail := &fakeCashInRail{captureRes: provider.ProviderResult{ProviderReference: "should-not-be-used", Status: "captured"}}
 
-	_, err = CaptureTopUpSession(ctx, db, rail, sessionID, provider.RequestMeta{})
+	_, err := CaptureTopUpSession(ctx, db, rail, sessionID, provider.RequestMeta{})
 	if !errors.Is(err, ErrNotATopUpSession) {
 		t.Fatalf("expected ErrNotATopUpSession, got %v", err)
 	}

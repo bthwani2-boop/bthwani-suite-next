@@ -20,16 +20,9 @@ func TestExpireSession_AlreadyCaptured_NotExpirable(t *testing.T) {
 	defer db.Close()
 
 	checkoutIntentID := fmt.Sprintf("test-checkout-expire-captured-%d", time.Now().UnixNano())
-	var sessionID string
-	err := db.QueryRow(`
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, captured_at, financial_purpose)
-		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'captured', 'card-cap-001', 1000, 'YER', NOW(), 'order_payment')
-		RETURNING id`, checkoutIntentID).Scan(&sessionID)
-	if err != nil {
-		t.Fatalf("failed to insert test session: %v", err)
-	}
+	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "captured", "card-cap-001", 1000, true)
 
-	_, err = ExpireSession(db, sessionID)
+	_, err := ExpireSession(db, sessionID)
 	if !errors.Is(err, ErrNotExpirable) {
 		t.Fatalf("expected ErrNotExpirable expiring an already-captured session, got %v", err)
 	}
@@ -53,14 +46,7 @@ func TestExpireSession_Expirable_Succeeds(t *testing.T) {
 	defer db.Close()
 
 	checkoutIntentID := fmt.Sprintf("test-checkout-expire-ok-%d", time.Now().UnixNano())
-	var sessionID string
-	err := db.QueryRow(`
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
-		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'reference_created', 1000, 'YER', 'order_payment')
-		RETURNING id`, checkoutIntentID).Scan(&sessionID)
-	if err != nil {
-		t.Fatalf("failed to insert test session: %v", err)
-	}
+	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "reference_created", "", 1000, false)
 
 	s, err := ExpireSession(db, sessionID)
 	if err != nil {

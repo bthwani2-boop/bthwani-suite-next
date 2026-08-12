@@ -18,14 +18,7 @@ func TestCancelSessionForOrder_PreCapture_Expires(t *testing.T) {
 
 	orderID := fmt.Sprintf("test-order-cfo-precap-%d", time.Now().UnixNano())
 	checkoutIntentID := "checkout-" + orderID
-	var sessionID string
-	err := db.QueryRow(`
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
-		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'authorized', 1000, 'YER', 'order_payment')
-		RETURNING id`, checkoutIntentID).Scan(&sessionID)
-	if err != nil {
-		t.Fatalf("failed to insert test session: %v", err)
-	}
+	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "authorized", "", 1000, false)
 
 	result, err := CancelSessionForOrder(db, sessionID, orderID, "client-test", "customer requested cancellation")
 	if err != nil {
@@ -60,14 +53,7 @@ func TestCancelSessionForOrder_Captured_CreatesRefund(t *testing.T) {
 
 	orderID := fmt.Sprintf("test-order-cfo-captured-%d", time.Now().UnixNano())
 	checkoutIntentID := "checkout-" + orderID
-	var sessionID string
-	err := db.QueryRow(`
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, captured_at, financial_purpose)
-		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'captured', 'card-cap-cfo', 2500, 'YER', NOW(), 'order_payment')
-		RETURNING id`, checkoutIntentID).Scan(&sessionID)
-	if err != nil {
-		t.Fatalf("failed to insert test session: %v", err)
-	}
+	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "captured", "card-cap-cfo", 2500, true)
 
 	result, err := CancelSessionForOrder(db, sessionID, orderID, "client-test", "customer requested cancellation")
 	if err != nil {
@@ -112,14 +98,7 @@ func TestCancelSessionForOrder_AlreadyTerminal_NoAction(t *testing.T) {
 
 	orderID := fmt.Sprintf("test-order-cfo-terminal-%d", time.Now().UnixNano())
 	checkoutIntentID := "checkout-" + orderID
-	var sessionID string
-	err := db.QueryRow(`
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
-		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'expired', 1000, 'YER', 'order_payment')
-		RETURNING id`, checkoutIntentID).Scan(&sessionID)
-	if err != nil {
-		t.Fatalf("failed to insert test session: %v", err)
-	}
+	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "expired", "", 1000, false)
 
 	result, err := CancelSessionForOrder(db, sessionID, orderID, "client-test", "customer requested cancellation")
 	if err != nil {
