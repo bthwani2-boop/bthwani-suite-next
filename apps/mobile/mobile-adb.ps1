@@ -59,17 +59,8 @@ function Resolve-BthwaniAdb {
     $DefaultSdk = Join-Path $env:LOCALAPPDATA "Android\Sdk"
     $Candidates = New-Object System.Collections.Generic.List[string]
 
-    # Keep scrcpy and the mobile runtimes on one ADB executable/server.
     if ($env:ADB) {
         $Candidates.Add($env:ADB)
-    }
-
-    $Scrcpy = Get-Command scrcpy.exe -ErrorAction SilentlyContinue |
-        Select-Object -First 1
-
-    if ($Scrcpy) {
-        $ScrcpyAdb = Join-Path (Split-Path $Scrcpy.Source) "adb.exe"
-        $Candidates.Add($ScrcpyAdb)
     }
 
     if ($env:ANDROID_HOME) {
@@ -108,7 +99,7 @@ function Resolve-BthwaniAdb {
         }
     }
 
-    throw "ADB was not found.`n`nExpected one of:`n- %ADB%`n- adb.exe next to scrcpy.exe`n- %ANDROID_HOME%\platform-tools\adb.exe`n- %ANDROID_SDK_ROOT%\platform-tools\adb.exe`n- %LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe`n- adb.exe in PATH"
+    throw "ADB was not found.`n`nExpected one of:`n- %ADB%`n- %ANDROID_HOME%\platform-tools\adb.exe`n- %ANDROID_SDK_ROOT%\platform-tools\adb.exe`n- %LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe`n- adb.exe in PATH"
 }
 
 function Get-BthwaniAndroidDevices {
