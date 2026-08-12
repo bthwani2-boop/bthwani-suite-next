@@ -99,6 +99,7 @@
     {"ordinal":92,"file":"wlt-922_wallet_projection_source_triggers.sql","sha256":"8f92d78c14f2e63a19e725fd7881d1d5816252af0b5b1d592494b94fdacc2c7f","historicalPrefix":"922","state":"ACTIVE"},
     {"ordinal":93,"file":"wlt-923_wallet_projection_deferred_source_triggers.sql","sha256":"c7ea03448f13cf70e9749f8982a5f424711c3a36cbb807b84a6eeb1f675456e5","historicalPrefix":"923","state":"ACTIVE"},
     {"ordinal":94,"file":"wlt-924_wallet_projection_deferred_ledger_trigger.sql","sha256":"3246e62484785cab9bd1f944702318ab9bc482eaf7e18caa2965af11d3207f86","historicalPrefix":"924","state":"ACTIVE"},
-    {"ordinal":95,"file":"wlt-925_external_statement_four_way_reconciliation.sql","sha256":"63fac3784ffe3decf0d2681fd0e5247334677f3fabe942988d4ec133ffd9c8a2","historicalPrefix":"925","state":"ACTIVE"}
+    {"ordinal":95,"file":"wlt-925_external_statement_four_way_reconciliation.sql","sha256":"63fac3784ffe3decf0d2681fd0e5247334677f3fabe942988d4ec133ffd9c8a2","historicalPrefix":"925","state":"ACTIVE"},
+    {"ordinal":96,"file":"wlt-926_promotion_funding_canonical_ledger.sql","sha256":"837c63d11f40536322b36ac757e94dd0294787f33f4e5558ab1406b26cac88a7","historicalPrefix":"926","state":"ACTIVE"}
   ]
 }

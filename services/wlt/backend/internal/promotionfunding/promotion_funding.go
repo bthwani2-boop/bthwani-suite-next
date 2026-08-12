@@ -10,53 +10,57 @@ import (
 	"strings"
 	"time"
 
+	"wlt-api/internal/ledger"
 	"wlt-api/internal/shared"
 )
 
 var (
-	ErrInvalid           = errors.New("invalid promotion funding input")
-	ErrNotFound          = errors.New("promotion funding reservation not found")
-	ErrConflict          = errors.New("promotion funding conflict")
-	ErrInvalidTransition = errors.New("invalid promotion funding transition")
-	ErrOperatorContextMismatch    = errors.New("promotion funding OperatorContext mismatch")
+	ErrInvalid                 = errors.New("invalid promotion funding input")
+	ErrNotFound                = errors.New("promotion funding reservation not found")
+	ErrConflict                = errors.New("promotion funding conflict")
+	ErrInvalidTransition       = errors.New("invalid promotion funding transition")
+	ErrOperatorContextMismatch = errors.New("promotion funding OperatorContext mismatch")
 )
 
 type Reservation struct {
-	ID                       string  `json:"id"`
-	OperatorContextID                 string  `json:"operatorContextId"`
-	ExternalReference        string  `json:"externalReference"`
-	CheckoutIntentID         string  `json:"checkoutIntentId"`
-	CouponRedemptionID       string  `json:"couponRedemptionId"`
-	CouponID                 string  `json:"couponId"`
-	ClientID                 string  `json:"clientId"`
-	PartnerID                *string `json:"partnerId,omitempty"`
-	PlatformFundedMinorUnits int64   `json:"platformFundedMinorUnits"`
-	PartnerFundedMinorUnits  int64   `json:"partnerFundedMinorUnits"`
-	TotalDiscountMinorUnits  int64   `json:"totalDiscountMinorUnits"`
-	Currency                 string  `json:"currency"`
-	Status                   string  `json:"status"`
-	OrderID                  *string `json:"orderId,omitempty"`
-	IdempotencyKey           string  `json:"idempotencyKey"`
-	CorrelationID            string  `json:"correlationId"`
-	CommittedAt              *string `json:"committedAt,omitempty"`
-	ReleasedAt               *string `json:"releasedAt,omitempty"`
-	ReversedAt               *string `json:"reversedAt,omitempty"`
-	ReleaseReason            string  `json:"releaseReason"`
-	ReversalReason           string  `json:"reversalReason"`
-	CreatedAt                string  `json:"createdAt"`
-	UpdatedAt                string  `json:"updatedAt"`
+	ID                          string  `json:"id"`
+	OperatorContextID           string  `json:"operatorContextId"`
+	ExternalReference           string  `json:"externalReference"`
+	CheckoutIntentID            string  `json:"checkoutIntentId"`
+	CouponRedemptionID          string  `json:"couponRedemptionId"`
+	CouponID                    string  `json:"couponId"`
+	ClientID                    string  `json:"clientId"`
+	PartnerID                   *string `json:"partnerId,omitempty"`
+	PlatformFundedMinorUnits    int64   `json:"platformFundedMinorUnits"`
+	PartnerFundedMinorUnits     int64   `json:"partnerFundedMinorUnits"`
+	TotalDiscountMinorUnits     int64   `json:"totalDiscountMinorUnits"`
+	Currency                    string  `json:"currency"`
+	Status                      string  `json:"status"`
+	OrderID                     *string `json:"orderId,omitempty"`
+	IdempotencyKey              string  `json:"idempotencyKey"`
+	CorrelationID               string  `json:"correlationId"`
+	CommitLedgerTransactionID   *string `json:"commitLedgerTransactionId,omitempty"`
+	ReversalLedgerTransactionID *string `json:"reversalLedgerTransactionId,omitempty"`
+	CommittedAt                 *string `json:"committedAt,omitempty"`
+	ReleasedAt                  *string `json:"releasedAt,omitempty"`
+	ReversedAt                  *string `json:"reversedAt,omitempty"`
+	ReleaseReason               string  `json:"releaseReason"`
+	ReversalReason              string  `json:"reversalReason"`
+	CreatedAt                   string  `json:"createdAt"`
+	UpdatedAt                   string  `json:"updatedAt"`
 }
 
 const reservationColumns = `id,operator_context_id,external_reference,checkout_intent_id,
 	coupon_redemption_id,coupon_id,client_id,partner_id,
 	platform_funded_minor_units,partner_funded_minor_units,total_discount_minor_units,
 	currency,status,order_id,idempotency_key,correlation_id,
+	commit_ledger_transaction_id,reversal_ledger_transaction_id,
 	committed_at::TEXT,released_at::TEXT,reversed_at::TEXT,
 	release_reason,reversal_reason,created_at::TEXT,updated_at::TEXT`
 
 func scanReservation(row interface{ Scan(dest ...any) error }) (*Reservation, error) {
 	var reservation Reservation
-	var partnerID, orderID, committedAt, releasedAt, reversedAt sql.NullString
+	var partnerID, orderID, commitLedgerTransactionID, reversalLedgerTransactionID, committedAt, releasedAt, reversedAt sql.NullString
 	err := row.Scan(
 		&reservation.ID,
 		&reservation.OperatorContextID,
@@ -74,6 +78,8 @@ func scanReservation(row interface{ Scan(dest ...any) error }) (*Reservation, er
 		&orderID,
 		&reservation.IdempotencyKey,
 		&reservation.CorrelationID,
+		&commitLedgerTransactionID,
+		&reversalLedgerTransactionID,
 		&committedAt,
 		&releasedAt,
 		&reversedAt,
@@ -94,6 +100,12 @@ func scanReservation(row interface{ Scan(dest ...any) error }) (*Reservation, er
 	if orderID.Valid {
 		reservation.OrderID = &orderID.String
 	}
+	if commitLedgerTransactionID.Valid {
+		reservation.CommitLedgerTransactionID = &commitLedgerTransactionID.String
+	}
+	if reversalLedgerTransactionID.Valid {
+		reservation.ReversalLedgerTransactionID = &reversalLedgerTransactionID.String
+	}
 	if committedAt.Valid {
 		reservation.CommittedAt = &committedAt.String
 	}
@@ -107,7 +119,7 @@ func scanReservation(row interface{ Scan(dest ...any) error }) (*Reservation, er
 }
 
 type ReserveInput struct {
-	OperatorContextID                 string `json:"operatorContextId"`
+	OperatorContextID        string `json:"operatorContextId"`
 	ExternalReference        string `json:"externalReference"`
 	CheckoutIntentID         string `json:"checkoutIntentId"`
 	CouponRedemptionID       string `json:"couponRedemptionId"`
@@ -259,11 +271,11 @@ func Get(ctx context.Context, db *sql.DB, operatorContextID, reservationID strin
 }
 
 type TransitionInput struct {
-	OperatorContextID       string `json:"operatorContextId"`
-	OrderID        string `json:"orderId"`
-	Reason         string `json:"reason"`
-	IdempotencyKey string `json:"-"`
-	CorrelationID  string `json:"-"`
+	OperatorContextID string `json:"operatorContextId"`
+	OrderID           string `json:"orderId"`
+	Reason            string `json:"reason"`
+	IdempotencyKey    string `json:"-"`
+	CorrelationID     string `json:"-"`
 }
 
 func completedTransitionMatches(current *Reservation, target string, input TransitionInput) bool {
@@ -272,14 +284,47 @@ func completedTransitionMatches(current *Reservation, target string, input Trans
 	}
 	switch target {
 	case "committed":
-		return current.OrderID != nil && *current.OrderID == input.OrderID
+		return current.OrderID != nil && *current.OrderID == input.OrderID && current.CommitLedgerTransactionID != nil
 	case "released":
 		return current.ReleaseReason == input.Reason
 	case "reversed":
-		return current.OrderID != nil && *current.OrderID == input.OrderID && current.ReversalReason == input.Reason
+		return current.OrderID != nil && *current.OrderID == input.OrderID && current.ReversalReason == input.Reason && current.CommitLedgerTransactionID != nil && current.ReversalLedgerTransactionID != nil
 	default:
 		return false
 	}
+}
+
+func promotionCommitLedgerLines(reservation *Reservation) ([]ledger.LedgerLine, error) {
+	if reservation == nil || reservation.TotalDiscountMinorUnits <= 0 || reservation.PlatformFundedMinorUnits < 0 || reservation.PartnerFundedMinorUnits < 0 || reservation.PlatformFundedMinorUnits+reservation.PartnerFundedMinorUnits != reservation.TotalDiscountMinorUnits {
+		return nil, ErrInvalid
+	}
+	lines := make([]ledger.LedgerLine, 0, 3)
+	if reservation.PlatformFundedMinorUnits > 0 {
+		lines = append(lines, ledger.LedgerLine{AccountType: "promotion_funding_expense", DebitCredit: "debit", AmountMinorUnits: reservation.PlatformFundedMinorUnits, Currency: reservation.Currency})
+	}
+	if reservation.PartnerFundedMinorUnits > 0 {
+		if reservation.PartnerID == nil || strings.TrimSpace(*reservation.PartnerID) == "" {
+			return nil, ErrInvalid
+		}
+		lines = append(lines, ledger.LedgerLine{AccountType: "partner_promotion_receivable", DebitCredit: "debit", AmountMinorUnits: reservation.PartnerFundedMinorUnits, Currency: reservation.Currency})
+	}
+	lines = append(lines, ledger.LedgerLine{AccountType: "platform_payable", DebitCredit: "credit", AmountMinorUnits: reservation.TotalDiscountMinorUnits, Currency: reservation.Currency})
+	return lines, nil
+}
+
+func promotionReversalLedgerLines(reservation *Reservation) ([]ledger.LedgerLine, error) {
+	commitLines, err := promotionCommitLedgerLines(reservation)
+	if err != nil {
+		return nil, err
+	}
+	for index := range commitLines {
+		if commitLines[index].DebitCredit == "debit" {
+			commitLines[index].DebitCredit = "credit"
+		} else {
+			commitLines[index].DebitCredit = "debit"
+		}
+	}
+	return commitLines, nil
 }
 
 func transition(ctx context.Context, db *sql.DB, reservationID, target string, input TransitionInput) (*Reservation, error) {
@@ -326,13 +371,23 @@ func transition(ctx context.Context, db *sql.DB, reservationID, target string, i
 		return nil, ErrInvalidTransition
 	}
 
+	postCtx := shared.WithOperatorContext(ctx, input.OperatorContextID)
 	var updated *Reservation
+	var ledgerTransactionID string
 	switch target {
 	case "committed":
+		lines, linesErr := promotionCommitLedgerLines(current)
+		if linesErr != nil {
+			return nil, linesErr
+		}
+		ledgerTransactionID, err = ledger.PostLedgerTransaction(postCtx, tx, "promotion_funding_committed", "promotion_funding_reservation", current.ID, lines, ledger.Actor{ID: "dsh", Type: "service"})
+		if err != nil {
+			return nil, fmt.Errorf("post promotion funding commitment: %w", err)
+		}
 		updated, err = scanReservation(tx.QueryRowContext(ctx, `UPDATE wlt_promotion_funding_reservations
-			SET status='committed',order_id=$3,committed_at=NOW(),updated_at=NOW()
+			SET status='committed',order_id=$3,commit_ledger_transaction_id=$4,committed_at=NOW(),updated_at=NOW()
 			WHERE id=$1 AND operator_context_id=$2 AND status='reserved'
-			RETURNING `+reservationColumns, reservationID, input.OperatorContextID, input.OrderID))
+			RETURNING `+reservationColumns, reservationID, input.OperatorContextID, input.OrderID, ledgerTransactionID))
 	case "released":
 		updated, err = scanReservation(tx.QueryRowContext(ctx, `UPDATE wlt_promotion_funding_reservations
 			SET status='released',released_at=NOW(),release_reason=$3,updated_at=NOW()
@@ -342,10 +397,21 @@ func transition(ctx context.Context, db *sql.DB, reservationID, target string, i
 		if current.OrderID == nil || *current.OrderID != input.OrderID {
 			return nil, ErrConflict
 		}
+		if current.CommitLedgerTransactionID == nil || strings.TrimSpace(*current.CommitLedgerTransactionID) == "" {
+			return nil, ErrConflict
+		}
+		lines, linesErr := promotionReversalLedgerLines(current)
+		if linesErr != nil {
+			return nil, linesErr
+		}
+		ledgerTransactionID, err = ledger.PostLedgerTransaction(postCtx, tx, "promotion_funding_reversed", "promotion_funding_commit", *current.CommitLedgerTransactionID, lines, ledger.Actor{ID: "dsh", Type: "service"})
+		if err != nil {
+			return nil, fmt.Errorf("post promotion funding reversal: %w", err)
+		}
 		updated, err = scanReservation(tx.QueryRowContext(ctx, `UPDATE wlt_promotion_funding_reservations
-			SET status='reversed',reversed_at=NOW(),reversal_reason=$3,updated_at=NOW()
+			SET status='reversed',reversed_at=NOW(),reversal_reason=$3,reversal_ledger_transaction_id=$4,updated_at=NOW()
 			WHERE id=$1 AND operator_context_id=$2 AND status='committed'
-			RETURNING `+reservationColumns, reservationID, input.OperatorContextID, input.Reason))
+			RETURNING `+reservationColumns, reservationID, input.OperatorContextID, input.Reason, ledgerTransactionID))
 	default:
 		return nil, ErrInvalid
 	}

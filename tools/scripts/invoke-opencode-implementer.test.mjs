@@ -10,6 +10,7 @@ import {
   buildInlineConfig,
   durationMs,
   findDirtyScopeConflicts,
+  fingerprintDelta,
   normalizeRelativePrefix,
   outputProvesWorkerModelBinding,
   parseArgs,
@@ -134,6 +135,21 @@ test("dirty declared scope conflicts while unrelated dirty paths are ignored", (
   assert.deepEqual(conflicts, [
     "services/dsh/backend/internal/cart/cart.go",
   ]);
+});
+
+test("post-delegation comparison observes mutations in pre-existing dirty paths", () => {
+  const before = new Map([["README.md", "file:10:before"]]);
+  const after = new Map([["README.md", "file:10:after"]]);
+  assert.deepEqual(fingerprintDelta(before, after), ["README.md"]);
+
+  const source = fs.readFileSync(
+    new URL("./invoke-opencode-implementer.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    source,
+    /const afterDirtyFingerprints = fingerprintPaths\(afterStatus\);/,
+  );
 });
 
 test("forbidden and out-of-scope writes are rejected", () => {

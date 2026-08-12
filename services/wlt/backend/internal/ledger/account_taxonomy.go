@@ -56,6 +56,11 @@ var accountTaxonomy = map[string]accountTaxonomyEntry{
 	// New in wlt-909, for U001-T002.
 	"external_settlement_cash":   {Classification: "asset", Category: "asset", NormalBalanceSide: "debit"},
 	"payment_processing_expense": {Classification: "expense", Category: "expense", NormalBalanceSide: "debit"},
+	// Promotion funding is an actual cost (or a recoverable partner-funded
+	// amount), not merely a lifecycle marker. Keeping these accounts separate
+	// prevents a discount from silently reducing an unrelated revenue balance.
+	"promotion_funding_expense":    {Classification: "expense", Category: "expense", NormalBalanceSide: "debit"},
+	"partner_promotion_receivable": {Classification: "asset", Category: "asset", NormalBalanceSide: "debit"},
 	// New in wlt-910, for U001-T003: the balancing counterpart for opening
 	// balances and financial corrections. See PostOpeningBalance and
 	// PostFinancialCorrection in opening_balance.go.
