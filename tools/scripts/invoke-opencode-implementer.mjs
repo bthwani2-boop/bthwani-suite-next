@@ -633,6 +633,31 @@ function diagnosticReport() {
   };
 }
 
+export function runtimeModelDisplayName(model) {
+  if (typeof model !== "string") {
+    fail("Runtime model binding must be a string.");
+  }
+
+  const separator = model.indexOf("/");
+  if (separator <= 0 || separator === model.length - 1) {
+    fail("Invalid provider-qualified model binding: " + String(model));
+  }
+
+  return model.slice(separator + 1);
+}
+
+export function outputProvesWorkerModelBinding(output, worker, model) {
+  const normalized = String(output || "")
+    .replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, "")
+    .replace(/\r\n/g, "\n");
+
+  const runtimeModel = runtimeModelDisplayName(model);
+  const bindingMarker = worker + " · " + runtimeModel;
+
+  return normalized
+    .split("\n")
+    .some((line) => line.includes(bindingMarker));
+}
 export async function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
   if (args.help) {
@@ -789,7 +814,7 @@ export async function main(argv = process.argv.slice(2)) {
     }
 
     const executionOutput = `${result.stdout}\n${result.stderr}`;
-    if (!executionOutput.includes(args.worker) || !executionOutput.includes(model)) {
+    if (!outputProvesWorkerModelBinding(executionOutput, args.worker, model)) {
       fail(
         "OpenCode output did not prove the selected worker/model binding; fallback or output drift is possible.",
         executionOutput.slice(0, 8000),

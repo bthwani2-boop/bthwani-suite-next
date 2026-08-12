@@ -11,8 +11,10 @@ import {
   durationMs,
   findDirtyScopeConflicts,
   normalizeRelativePrefix,
+  outputProvesWorkerModelBinding,
   parseArgs,
   pathsOverlap,
+  runtimeModelDisplayName,
   scopeViolations,
   validatePinnedState,
 } from "./invoke-opencode-implementer.mjs";
@@ -25,6 +27,53 @@ test("worker map is fixed to the three approved NVIDIA models", () => {
   });
 });
 
+test("runtime output proof accepts OpenCode provider-stripped display and rejects fallback", () => {
+  assert.equal(
+    runtimeModelDisplayName(WORKERS["bthwani-agent-6"]),
+    "nvidia/nemotron-3-ultra-550b-a55b",
+  );
+  assert.equal(
+    runtimeModelDisplayName(WORKERS["bthwani-agent-7"]),
+    "z-ai/glm-5.2",
+  );
+  assert.equal(
+    runtimeModelDisplayName(WORKERS["bthwani-agent-8"]),
+    "nvidia/nemotron-3-super-120b-a12b",
+  );
+
+  const expectedOutput = [
+    "Created bounded smoke edit.",
+    "> bthwani-agent-6 · nvidia/nemotron-3-ultra-550b-a55b",
+    "Wrote file successfully.",
+  ].join("\n");
+
+  assert.equal(
+    outputProvesWorkerModelBinding(
+      expectedOutput,
+      "bthwani-agent-6",
+      WORKERS["bthwani-agent-6"],
+    ),
+    true,
+  );
+
+  assert.equal(
+    outputProvesWorkerModelBinding(
+      "> bthwani-agent-6 · z-ai/glm-5.2",
+      "bthwani-agent-6",
+      WORKERS["bthwani-agent-6"],
+    ),
+    false,
+  );
+
+  assert.equal(
+    outputProvesWorkerModelBinding(
+      "worker: bthwani-agent-6\nmodel: nvidia/nvidia/nemotron-3-ultra-550b-a55b",
+      "bthwani-agent-6",
+      WORKERS["bthwani-agent-6"],
+    ),
+    false,
+  );
+});
 test("parseArgs accepts bounded contract and rejects model override", () => {
   const args = parseArgs([
     "--orchestrator", "codex",
