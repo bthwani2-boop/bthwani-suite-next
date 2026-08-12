@@ -30,18 +30,18 @@ var ErrCodReservationConflict = errors.New("existing COD reservation does not ma
 var ErrCodReservationNotReserved = errors.New("COD reservation is not in a releasable state")
 
 type CodReservation struct {
-	ID               string  `json:"id"`
-	OperatorContextID string `json:"operatorContextId"`
-	OrderID          string  `json:"orderId"`
-	CaptainID        string  `json:"captainId"`
-	AmountMinorUnits int64   `json:"amountMinorUnits"`
-	Currency         string  `json:"currency"`
-	Status           string  `json:"status"`
-	IdempotencyKey   string  `json:"idempotencyKey"`
-	ReleaseReason    string  `json:"releaseReason,omitempty"`
-	CreatedAt        string  `json:"createdAt"`
-	UpdatedAt        string  `json:"updatedAt"`
-	ResolvedAt       *string `json:"resolvedAt,omitempty"`
+	ID                string  `json:"id"`
+	OperatorContextID string  `json:"operatorContextId"`
+	OrderID           string  `json:"orderId"`
+	CaptainID         string  `json:"captainId"`
+	AmountMinorUnits  int64   `json:"amountMinorUnits"`
+	Currency          string  `json:"currency"`
+	Status            string  `json:"status"`
+	IdempotencyKey    string  `json:"idempotencyKey"`
+	ReleaseReason     string  `json:"releaseReason,omitempty"`
+	CreatedAt         string  `json:"createdAt"`
+	UpdatedAt         string  `json:"updatedAt"`
+	ResolvedAt        *string `json:"resolvedAt,omitempty"`
 }
 
 const codReservationCols = `id, operator_context_id, order_id, captain_id, amount_minor_units, currency,
@@ -120,8 +120,7 @@ func ReserveCodCapacity(ctx context.Context, db *sql.DB, orderID, captainID stri
 		// wallet now, in the same transaction, guarded against overcommitment.
 		result, execErr := tx.ExecContext(ctx, `
 			UPDATE wlt_wallets
-			SET available_balance_minor_units = available_balance_minor_units - $1,
-			    cod_reserved_balance_minor_units = cod_reserved_balance_minor_units + $1,
+			SET cod_reserved_balance_minor_units = cod_reserved_balance_minor_units + $1,
 			    updated_at = NOW()
 			WHERE operator_context_id = $2 AND actor_id = $3 AND actor_type = 'captain'
 			  AND available_balance_minor_units >= $1`,
@@ -217,8 +216,7 @@ func ReleaseCodReservation(ctx context.Context, db *sql.DB, orderID, reason stri
 
 	result, err := tx.ExecContext(ctx, `
 		UPDATE wlt_wallets
-		SET available_balance_minor_units = available_balance_minor_units + $1,
-		    cod_reserved_balance_minor_units = cod_reserved_balance_minor_units - $1,
+		SET cod_reserved_balance_minor_units = cod_reserved_balance_minor_units - $1,
 		    updated_at = NOW()
 		WHERE operator_context_id = $2 AND actor_id = $3 AND actor_type = 'captain'
 		  AND cod_reserved_balance_minor_units >= $1`,

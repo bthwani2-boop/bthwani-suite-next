@@ -39,8 +39,8 @@ func insertTestSession(t *testing.T, db *sql.DB, status string, amount int64, cu
 	checkoutIntentID := fmt.Sprintf("test-checkout-refund-%d", time.Now().UnixNano())
 	var sessionID string
 	err := db.QueryRow(`
-		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, captured_at, financial_purpose)
-		VALUES ($1, 'client-test', 'store-test', 'official_wallet', $2, 'card-ref-001', $3, $4,
+		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, captured_at, financial_purpose)
+		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', $2, 'card-ref-001', $3, $4,
 		        CASE WHEN $2 IN ('captured', 'cod_collected') THEN NOW() ELSE NULL END, 'order_payment')
 		RETURNING id`, checkoutIntentID, status, amount, currency).Scan(&sessionID)
 	if err != nil {

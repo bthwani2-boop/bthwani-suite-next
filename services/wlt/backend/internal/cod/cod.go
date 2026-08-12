@@ -622,7 +622,6 @@ func SettleCommission(db *sql.DB, commissionID string) (*Commission, error) {
 	if _, err := tx.Exec(`
 		UPDATE wlt_wallets
 		SET pending_balance_minor_units = pending_balance_minor_units - $1,
-		    available_balance_minor_units = available_balance_minor_units + $1,
 		    settled_total_minor_units = settled_total_minor_units + $1,
 		    updated_at = NOW()
 		WHERE actor_type = $2 AND actor_id = $3`,
@@ -726,8 +725,7 @@ func ReverseCommission(db *sql.DB, commissionID, note string) (*Commission, erro
 
 	if _, err := tx.Exec(`
 		UPDATE wlt_wallets
-		SET available_balance_minor_units = available_balance_minor_units - $1,
-		    settled_total_minor_units = settled_total_minor_units - $1,
+		SET settled_total_minor_units = settled_total_minor_units - $1,
 		    updated_at = NOW()
 		WHERE actor_type = $2 AND actor_id = $3`,
 		c.AmountMinorUnits, c.BeneficiaryActorType, c.BeneficiaryActorID,

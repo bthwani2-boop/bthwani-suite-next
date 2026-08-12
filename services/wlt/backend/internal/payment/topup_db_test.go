@@ -136,8 +136,8 @@ func TestCaptureTopUpSession_RejectsNonTopUpSession(t *testing.T) {
 	checkoutIntentID := fmt.Sprintf("test-checkout-nontopup-%d", time.Now().UnixNano())
 	var sessionID string
 	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, financial_purpose)
-		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'authorized', 'card-auth-x', 1000, 'YER', 'order_payment')
+		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, financial_purpose)
+		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'authorized', 'card-auth-x', 1000, 'YER', 'order_payment')
 		RETURNING id`, checkoutIntentID).Scan(&sessionID)
 	if err != nil {
 		t.Fatalf("failed to insert test session: %v", err)

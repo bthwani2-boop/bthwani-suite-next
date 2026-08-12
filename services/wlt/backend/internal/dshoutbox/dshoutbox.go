@@ -5,6 +5,7 @@ package dshoutbox
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -16,45 +17,33 @@ const (
 )
 
 type Event struct {
-	ID               string
-	EventType        string
-	PaymentSessionID string
-	OperatorContextID         string
-	CheckoutIntentID *string
-	SpecialRequestID *string
-	OrderID          string
-	RefundReference  string
-	Reason           string
-	CorrelationID    string
-	PaymentMethod    string
-	AttemptCount     int
+	ID                string
+	EventType         string
+	PaymentSessionID  string
+	OperatorContextID string
+	CheckoutIntentID  *string
+	SpecialRequestID  *string
+	OrderID           string
+	RefundReference   string
+	Reason            string
+	CorrelationID     string
+	PaymentMethod     string
+	AttemptCount      int
 }
 
 // Enqueue records a payment-session outcome. Re-enqueuing the same
 // (sessionID,eventType) pair is a no-op.
 func Enqueue(tx *sql.Tx, eventType, sessionID string, operatorContextID string, checkoutIntentID, specialRequestID *string) error {
-	hasOperatorContextColumn, err := hasOutboxOperatorContextColumn(tx)
-	if err != nil {
-		return fmt.Errorf("inspect dsh outbox tenancy column: %w", err)
+	if err := requireOperatorContextID(operatorContextID); err != nil {
+		return err
 	}
-	var execErr error
-	if hasOperatorContextColumn {
-		_, execErr = tx.Exec(`
-			INSERT INTO wlt_dsh_outbox_events (event_type, payment_session_id, operator_context_id, checkout_intent_id, special_request_id)
-			VALUES ($1, $2, $3, $4, $5)
-			ON CONFLICT (payment_session_id, event_type) WHERE refund_reference IS NULL DO NOTHING`,
-			eventType, sessionID, operatorContextID, checkoutIntentID, specialRequestID,
-		)
-	} else {
-		_, execErr = tx.Exec(`
-			INSERT INTO wlt_dsh_outbox_events (event_type, payment_session_id, checkout_intent_id, special_request_id)
-			VALUES ($1, $2, $3, $4)
-			ON CONFLICT (payment_session_id, event_type) DO NOTHING`,
-			eventType, sessionID, checkoutIntentID, specialRequestID,
-		)
-	}
-	if execErr != nil {
-		return fmt.Errorf("enqueue dsh outbox event: %w", execErr)
+	if _, err := tx.Exec(`
+		INSERT INTO wlt_dsh_outbox_events (event_type, payment_session_id, operator_context_id, checkout_intent_id, special_request_id)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (payment_session_id, event_type) WHERE refund_reference IS NULL DO NOTHING`,
+		eventType, sessionID, operatorContextID, checkoutIntentID, specialRequestID,
+	); err != nil {
+		return fmt.Errorf("enqueue dsh outbox event: %w", err)
 	}
 	return nil
 }
@@ -91,7 +80,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 
 	rows, err := tx.Query(`
 		SELECT o.id, o.event_type, o.payment_session_id,
-		       COALESCE(to_jsonb(o)->>'operator_context_id', 'OperatorContext-dev-001'),
+		       o.operator_context_id,
 		       o.checkout_intent_id, o.special_request_id,
 		       COALESCE(to_jsonb(o)->>'order_id',''),
 		       COALESCE(to_jsonb(o)->>'refund_reference',''),
@@ -118,6 +107,9 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 		); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan dsh outbox event: %w", err)
+		}
+		if err := requireOperatorContextID(e.OperatorContextID); err != nil {
+			return nil, fmt.Errorf("claim dsh outbox event %s: %w", e.ID, err)
 		}
 		events = append(events, e)
 	}
@@ -174,24 +166,25 @@ func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
 }
 
 func min(a, b int) int {
-	if a < b { return a }
+	if a < b {
+		return a
+	}
 	return b
 }
 
-func hasOutboxOperatorContextColumn(tx *sql.Tx) (bool, error) {
-	var exists bool
-	err := tx.QueryRow(`
-		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns
-			WHERE table_name = 'wlt_dsh_outbox_events' AND column_name = 'operator_context_id'
-		)`).Scan(&exists)
-	return exists, err
+func requireOperatorContextID(operatorContextID string) error {
+	if strings.TrimSpace(operatorContextID) == "" {
+		return fmt.Errorf("dsh outbox OperatorContextId is required")
+	}
+	return nil
 }
 
 func pqStringArray(values []string) string {
 	out := "{"
 	for i, v := range values {
-		if i > 0 { out += "," }
+		if i > 0 {
+			out += ","
+		}
 		out += `"` + v + `"`
 	}
 	return out + "}"

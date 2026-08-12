@@ -63,8 +63,8 @@ func TestAuthorizeSessionWithProvider_DBFlow(t *testing.T) {
 	// reads these from the session row, never from caller input.
 	var sessionID string
 	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
-		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'reference_created', 1000, 'YER', 'order_payment')
+		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
+		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'reference_created', 1000, 'YER', 'order_payment')
 		RETURNING id`, checkoutIntentID).Scan(&sessionID)
 	if err != nil {
 		t.Fatalf("failed to insert test session: %v", err)
@@ -125,8 +125,8 @@ func TestCaptureSessionWithProvider_DBFlow(t *testing.T) {
 	// Insert initial authorized session
 	var sessionID string
 	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, financial_purpose)
-		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'authorized', 'card-auth-001', 1000, 'YER', 'order_payment')
+		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, financial_purpose)
+		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'authorized', 'card-auth-001', 1000, 'YER', 'order_payment')
 		RETURNING id`, checkoutIntentID).Scan(&sessionID)
 	if err != nil {
 		t.Fatalf("failed to insert test session: %v", err)
@@ -187,8 +187,8 @@ func TestAuthorizeSessionWithProvider_IgnoresCallerAmount(t *testing.T) {
 
 	var sessionID string
 	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
-		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'reference_created', 500, 'YER', 'order_payment')
+		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
+		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'reference_created', 500, 'YER', 'order_payment')
 		RETURNING id`, checkoutIntentID).Scan(&sessionID)
 	if err != nil {
 		t.Fatalf("failed to insert test session: %v", err)
@@ -225,8 +225,8 @@ func TestAuthorizeSessionWithProvider_NotAuthorizableState(t *testing.T) {
 
 	var sessionID string
 	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, financial_purpose)
-		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'captured', 'card-auth-003', 500, 'YER', 'order_payment')
+		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, financial_purpose)
+		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'captured', 'card-auth-003', 500, 'YER', 'order_payment')
 		RETURNING id`, checkoutIntentID).Scan(&sessionID)
 	if err != nil {
 		t.Fatalf("failed to insert test session: %v", err)
@@ -257,8 +257,8 @@ func TestProviderDecline_DBFlow(t *testing.T) {
 
 	var sessionID string
 	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
-		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'reference_created', 1000, 'YER', 'order_payment')
+		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
+		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'reference_created', 1000, 'YER', 'order_payment')
 		RETURNING id`, checkoutIntentID).Scan(&sessionID)
 	if err != nil {
 		t.Fatalf("failed to insert test session: %v", err)
@@ -313,8 +313,8 @@ func TestProviderAmbiguousError_Authorize_DBFlow(t *testing.T) {
 
 	var sessionID string
 	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
-		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'reference_created', 1000, 'YER', 'order_payment')
+		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
+		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'reference_created', 1000, 'YER', 'order_payment')
 		RETURNING id`, checkoutIntentID).Scan(&sessionID)
 	if err != nil {
 		t.Fatalf("failed to insert test session: %v", err)
@@ -377,8 +377,8 @@ func TestProviderAmbiguousError_Capture_DBFlow(t *testing.T) {
 
 	var sessionID string
 	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, financial_purpose)
-		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'authorized', 'card-auth-ambig', 1000, 'YER', 'order_payment')
+		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, financial_purpose)
+		VALUES ('OperatorContext-test', $1, 'client-test', 'store-test', 'official_wallet', 'authorized', 'card-auth-ambig', 1000, 'YER', 'order_payment')
 		RETURNING id`, checkoutIntentID).Scan(&sessionID)
 	if err != nil {
 		t.Fatalf("failed to insert test session: %v", err)

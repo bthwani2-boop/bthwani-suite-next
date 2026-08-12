@@ -113,7 +113,6 @@ func applyGovernedCommissionLifecycleIdempotent(
 			result, updateErr := tx.ExecContext(ctx, `
 				UPDATE wlt_wallets
 				SET pending_balance_minor_units=pending_balance_minor_units-$1,
-				    available_balance_minor_units=available_balance_minor_units+$1,
 				    settled_total_minor_units=settled_total_minor_units+$1,
 				    updated_at=NOW()
 				WHERE operator_context_id=$2
@@ -218,8 +217,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 		if walletEffect {
 			result, updateErr := tx.ExecContext(ctx, `
 				UPDATE wlt_wallets
-				SET available_balance_minor_units=available_balance_minor_units-$1,
-				    settled_total_minor_units=settled_total_minor_units-$1,
+				SET settled_total_minor_units=settled_total_minor_units-$1,
 				    updated_at=NOW()
 				WHERE operator_context_id=$2
 				  AND actor_type=$3

@@ -269,7 +269,9 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			}
 			rows, queryErr := tx.QueryContext(r.Context(), "SELECT "+requestCols+" FROM wlt_payout_requests WHERE operator_context_id=$1 AND id=$2", operatorContextID, existingID)
 			if queryErr != nil || !rows.Next() {
-				if rows != nil { rows.Close() }
+				if rows != nil {
+					rows.Close()
+				}
 				shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read idempotent payout request")
 				return
 			}
@@ -330,8 +332,7 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		result, err := tx.ExecContext(r.Context(), `UPDATE wlt_wallets
-			SET available_balance_minor_units=available_balance_minor_units-$1,
-			    held_balance_minor_units=held_balance_minor_units+$1,
+			SET held_balance_minor_units=held_balance_minor_units+$1,
 			    updated_at=now()
 			WHERE operator_context_id=$2 AND actor_id=$3 AND actor_type=$4 AND available_balance_minor_units>=$1 AND (settled_total_minor_units - paid_total_minor_units - held_balance_minor_units) >= $1`,
 			input.AmountMinorUnits, operatorContextID, input.BeneficiaryActorID, input.BeneficiaryActorType)
@@ -351,7 +352,9 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			operatorContextID, input.BeneficiaryActorID, input.BeneficiaryActorType, input.AmountMinorUnits, input.Currency,
 			input.IdempotencyKey, requestHash, input.PayoutDestinationID, strings.TrimSpace(input.OperatorID))
 		if err != nil || !rows.Next() {
-			if rows != nil { rows.Close() }
+			if rows != nil {
+				rows.Close()
+			}
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to create payout request")
 			return
 		}

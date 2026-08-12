@@ -207,8 +207,7 @@ func HandleRejectPayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 		}
 		result, err := tx.ExecContext(r.Context(), `
 			UPDATE wlt_wallets
-			SET available_balance_minor_units = available_balance_minor_units + $1,
-			    held_balance_minor_units = held_balance_minor_units - $1,
+			SET held_balance_minor_units = held_balance_minor_units - $1,
 			    updated_at = now()
 			WHERE operator_context_id = $4 AND actor_id = $2 AND actor_type = $3 AND held_balance_minor_units >= $1`,
 			req.AmountMinorUnits, req.BeneficiaryActorID, req.BeneficiaryActorType, operatorContextID)
