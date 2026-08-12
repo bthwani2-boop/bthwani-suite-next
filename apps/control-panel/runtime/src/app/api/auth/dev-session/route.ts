@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { TokenResponse } from "@bthwani/core-identity";
+import { identitySessionAuthorizesSurface } from "@bthwani/core-identity/session-policy";
 import { BFF_OPAQUE_TOKEN } from "../../../../server/bff-proxy";
 import { isSameOriginRequest, setSessionCookies } from "../_lib/cookies";
 import { postIdentityServerJson } from "../_lib/identity-server-http.adapter";
@@ -21,18 +22,11 @@ function unavailable(status: number, code: string): NextResponse {
 function isValidOperatorSession(value: unknown): value is TokenResponse {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as Partial<TokenResponse>;
-  const identity = candidate.identity;
-  return Boolean(
-    typeof candidate.accessToken === "string"
-      && candidate.accessToken.length > 0
-      && typeof candidate.refreshToken === "string"
-      && candidate.refreshToken.length > 0
-      && identity
-      && Array.isArray(identity.roles)
-      && identity.roles.includes("operator")
-      && identity.surfaceAccess?.["control-panel"] === true
-      && identity.sessionSurface === "control-panel",
-  );
+  return typeof candidate.accessToken === "string"
+    && candidate.accessToken.length > 0
+    && typeof candidate.refreshToken === "string"
+    && candidate.refreshToken.length > 0
+    && identitySessionAuthorizesSurface(candidate.identity, "operator", "control-panel");
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -47,9 +41,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     baseUrl: DEV_SESSION_BROKER_BASE_URL,
     path: "/session",
     body: {
-        role: "operator",
-        surface: "control-panel",
-        deviceFingerprint: CONTROL_PANEL_DEV_FINGERPRINT,
+      role: "operator",
+      surface: "control-panel",
+      deviceFingerprint: CONTROL_PANEL_DEV_FINGERPRINT,
     },
     timeoutMs: 5_000,
   });
