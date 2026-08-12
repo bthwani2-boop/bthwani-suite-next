@@ -43,6 +43,12 @@ type registeredRoute struct {
 	ServiceAuth bool
 }
 
+// routeRegistrar is the only registration seam available to financial route
+// modules. It keeps route protection and the testable route inventory at the
+// router boundary rather than allowing modules to install independently gated
+// handlers on the mux.
+type routeRegistrar func(pattern string, handler http.HandlerFunc)
+
 // NewRouter builds the WLT HTTP router. Every broad financial read requires
 // an authenticated DSH service caller. Every mutation additionally requires
 // WLT_MUTATIONS_ENABLED and a permitting finance kill-switch decision, so
@@ -62,29 +68,29 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	gate := newMutationGate(mutationsEnabled)
 	killGate := newKillSwitchGate(ds)
 
-	public := func(pattern string, handler http.HandlerFunc) {
+	public := routeRegistrar(func(pattern string, handler http.HandlerFunc) {
 		routes = append(routes, registeredRoute{Pattern: pattern, Kind: routePublic})
 		mux.HandleFunc(pattern, handler)
-	}
-	read := func(pattern string, handler http.HandlerFunc) {
+	})
+	read := routeRegistrar(func(pattern string, handler http.HandlerFunc) {
 		routes = append(routes, registeredRoute{Pattern: pattern, Kind: routeRead, ServiceAuth: true})
 		mux.HandleFunc(pattern, requireInternalFinancialRead(handler))
-	}
-	mutation := func(pattern string, handler http.HandlerFunc) {
+	})
+	mutation := routeRegistrar(func(pattern string, handler http.HandlerFunc) {
 		routes = append(routes, registeredRoute{Pattern: pattern, Kind: routeMutation, ServiceAuth: true})
 		mux.HandleFunc(pattern, gate(requireMutationServiceAuth(killGate(handler))))
-	}
-	workforceMutation := func(pattern string, handler http.HandlerFunc) {
+	})
+	workforceMutation := routeRegistrar(func(pattern string, handler http.HandlerFunc) {
 		routes = append(routes, registeredRoute{Pattern: pattern, Kind: routeMutation, ServiceAuth: true})
 		mux.HandleFunc(pattern, gate(requireWorkforceMutationServiceAuth(killGate(handler))))
-	}
+	})
 	// providerMutation carries no service-token gate because the caller is the
 	// payment provider, authenticated by signature inside the handler. It is
 	// still a financial mutation, so configuration and kill switch apply.
-	providerMutation := func(pattern string, handler http.HandlerFunc) {
+	providerMutation := routeRegistrar(func(pattern string, handler http.HandlerFunc) {
 		routes = append(routes, registeredRoute{Pattern: pattern, Kind: routeMutation})
 		mux.HandleFunc(pattern, gate(killGate(handler)))
-	}
+	})
 
 	public("GET /wlt/health", health.HandleHealth)
 	public("GET /wlt/readiness", health.HandleReadiness(db, ds))
@@ -216,6 +222,13 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	mutation("POST /wlt/promotion-funding/reservations/{reservationId}/commit", promotionfunding.HandleCommit(db))
 	mutation("POST /wlt/promotion-funding/reservations/{reservationId}/release", promotionfunding.HandleRelease(db))
 	mutation("POST /wlt/promotion-funding/reservations/{reservationId}/reverse", promotionfunding.HandleReverse(db))
+
+	// These route modules share the same registry as every other financial
+	// mutation. They must not be added by main after this inventory is built,
+	// otherwise they could bypass the decision-service kill switch.
+	registerDeliveryCollectionRoutes(db, mutation, read)
+	registerOrderCancellationRoutes(db, mutation)
+	registerFieldCategoryCommissionRoutes(db, mutation)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "Route not found")

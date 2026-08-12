@@ -2,12 +2,11 @@ package http
 
 import (
 	"database/sql"
-	"net/http"
 
 	"wlt-api/internal/cod"
 )
 
-// RegisterDeliveryCollectionRoutes exposes the fulfillment-neutral collection
+// registerDeliveryCollectionRoutes exposes the fulfillment-neutral collection
 // surface. Legacy /wlt/cod-records remains available for captain-only clients,
 // but every live mutation and read is bound to the authenticated OperatorContext.
 //
@@ -18,12 +17,8 @@ import (
 // consumers of the delivery-collections variant (verified against DSH backend
 // and every frontend surface). /wlt/cod-records/{codRecordId}/collect|remit
 // remains the single canonical path for that mutation.
-func RegisterDeliveryCollectionRoutes(mux *http.ServeMux, db *sql.DB, mutationsEnabled bool) {
-	gate := newMutationGate(mutationsEnabled)
-	readGate := requireInternalFinancialRead
-	serviceAuth := requireMutationServiceAuth
-
-	mux.HandleFunc("POST /wlt/delivery-collections", gate(serviceAuth(cod.HandleCreateDeliveryCollectionHandoff(db))))
-	mux.HandleFunc("GET /wlt/delivery-collections/{codRecordId}", readGate(cod.HandleGetDeliveryCollectionOperatorContext(db)))
-	mux.HandleFunc("GET /wlt/delivery-collections", readGate(cod.HandleListDeliveryCollectionsOperatorContext(db)))
+func registerDeliveryCollectionRoutes(db *sql.DB, mutation, read routeRegistrar) {
+	mutation("POST /wlt/delivery-collections", cod.HandleCreateDeliveryCollectionHandoff(db))
+	read("GET /wlt/delivery-collections/{codRecordId}", cod.HandleGetDeliveryCollectionOperatorContext(db))
+	read("GET /wlt/delivery-collections", cod.HandleListDeliveryCollectionsOperatorContext(db))
 }

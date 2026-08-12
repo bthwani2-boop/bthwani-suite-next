@@ -55,9 +55,6 @@ func main() {
 	}
 	mutationsEnabled := os.Getenv("WLT_MUTATIONS_ENABLED") == "true"
 	router := wltHttp.NewRouter(db, mutationsEnabled, decisionService)
-	wltHttp.RegisterDeliveryCollectionRoutes(router, db, mutationsEnabled)
-	wltHttp.RegisterOrderCancellationRoutes(router, db, mutationsEnabled)
-	wltHttp.RegisterFieldCategoryCommissionRoutes(router, db, mutationsEnabled)
 	wltHttp.RegisterDispatchFinancialEligibilityRoutes(router, db)
 	referenceScopedRouter := wltHttp.ReferenceReadBoundary(router)
 	handler := wltHttp.CorsMiddleware(authMode, referenceScopedRouter)
