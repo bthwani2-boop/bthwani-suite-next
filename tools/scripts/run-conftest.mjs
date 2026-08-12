@@ -1,4 +1,5 @@
-import { execFileSync, execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -22,6 +23,48 @@ function execute(binary) {
   });
 }
 
+function downloadWithRetry(url, destination) {
+  execFileSync(
+    "curl",
+    [
+      "--fail",
+      "--silent",
+      "--show-error",
+      "--location",
+      "--retry",
+      "5",
+      "--retry-all-errors",
+      "--retry-delay",
+      "2",
+      "--connect-timeout",
+      "20",
+      "--max-time",
+      "180",
+      "--output",
+      destination,
+      url,
+    ],
+    { cwd: repoRoot, stdio: "inherit" },
+  );
+}
+
+function sha256(file) {
+  return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+}
+
+function expectedChecksum(checksumsPath, archive) {
+  const line = fs
+    .readFileSync(checksumsPath, "utf8")
+    .split(/\r?\n/u)
+    .find((entry) => entry.trim().endsWith(` ${archive}`));
+  if (!line) throw new Error(`locked Conftest checksum entry is missing for ${archive}`);
+  const expected = line.trim().split(/\s+/u)[0]?.toLowerCase();
+  if (!/^[0-9a-f]{64}$/u.test(expected ?? "")) {
+    throw new Error(`locked Conftest checksum entry is invalid for ${archive}`);
+  }
+  return expected;
+}
+
 function installLockedBinary() {
   const installDir = path.join(os.homedir(), ".cache", "bthwani-tools", `conftest-${version}`);
   const binary = path.join(installDir, "conftest");
@@ -30,18 +73,29 @@ function installLockedBinary() {
   fs.mkdirSync(installDir, { recursive: true });
   const archive = `conftest_${version.slice(1)}_Linux_x86_64.tar.gz`;
   const baseUrl = `https://github.com/open-policy-agent/conftest/releases/download/${version}`;
-  const script = [
-    "set -euo pipefail",
-    `tmp_dir=\"$(mktemp -d)\"`,
-    `trap 'rm -rf \"$tmp_dir\"' EXIT`,
-    `cd \"$tmp_dir\"`,
-    `curl -fsSLO \"${baseUrl}/${archive}\"`,
-    `curl -fsSLO \"${baseUrl}/checksums.txt\"`,
-    `grep \" ${archive}$\" checksums.txt | sha256sum --check -`,
-    `tar -xzf \"${archive}\" conftest`,
-    `install -m 0755 conftest \"${binary}\"`,
-  ].join("\n");
-  execSync(script, { cwd: repoRoot, stdio: "inherit", shell: "/bin/bash" });
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "bthwani-conftest-"));
+  try {
+    const archivePath = path.join(tempDir, archive);
+    const checksumsPath = path.join(tempDir, "checksums.txt");
+    downloadWithRetry(`${baseUrl}/${archive}`, archivePath);
+    downloadWithRetry(`${baseUrl}/checksums.txt`, checksumsPath);
+
+    const expected = expectedChecksum(checksumsPath, archive);
+    const actual = sha256(archivePath);
+    if (actual !== expected) {
+      throw new Error(`Conftest archive checksum mismatch: expected ${expected}, got ${actual}`);
+    }
+
+    execFileSync("tar", ["-xzf", archivePath, "-C", tempDir, "conftest"], {
+      cwd: repoRoot,
+      stdio: "inherit",
+    });
+    const extracted = path.join(tempDir, "conftest");
+    fs.copyFileSync(extracted, binary);
+    fs.chmodSync(binary, 0o755);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
   return binary;
 }
 
