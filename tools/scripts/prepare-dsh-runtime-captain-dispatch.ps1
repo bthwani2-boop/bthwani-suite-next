@@ -1,20 +1,70 @@
 [CmdletBinding()]
 param(
-  [string]$StoreId = "store-test-grocery"
+  [string]$DshBaseUrl = "http://127.0.0.1:58080",
+  [string]$IdentityBaseUrl = "http://127.0.0.1:58082",
+  [string]$IdentityPassword = ""
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
-$ComposeFile = Join-Path $RepoRoot "infra/docker/compose.runtime.yml"
-$EnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
+. (Join-Path $RepoRoot "tools/dev/local-actors.ps1")
 . (Join-Path $RepoRoot "tools/dev/local-workforce-actors.ps1")
+if ([string]::IsNullOrWhiteSpace($IdentityPassword)) {
+  $IdentityPassword = Get-LocalPassword
+}
 
-foreach ($RequiredPath in @($ComposeFile, $EnvFile)) {
-  if (-not (Test-Path -LiteralPath $RequiredPath -PathType Leaf)) {
-    throw "governed runtime authority is missing: $RequiredPath"
+function Get-Value([object]$Object, [string]$Name) {
+  if ($null -eq $Object) { return $null }
+  $Property = $Object.PSObject.Properties[$Name]
+  if ($null -eq $Property) { return $null }
+  return $Property.Value
+}
+
+function Invoke-JsonRequest {
+  param(
+    [Parameter(Mandatory = $true)][string]$Method,
+    [Parameter(Mandatory = $true)][string]$Uri,
+    [hashtable]$Headers = @{},
+    [object]$Body = $null
+  )
+
+  $Request = @{
+    Method = $Method
+    Uri = $Uri
+    Headers = $Headers
+    TimeoutSec = 30
+    SkipHttpErrorCheck = $true
   }
+  if ($null -ne $Body) {
+    $Request.ContentType = "application/json"
+    $Request.Body = $Body | ConvertTo-Json -Depth 10
+  }
+  $Response = Invoke-WebRequest @Request
+  $Json = $null
+  if (-not [string]::IsNullOrWhiteSpace($Response.Content)) {
+    $Json = $Response.Content | ConvertFrom-Json
+  }
+  return [pscustomobject]@{
+    Status = [int]$Response.StatusCode
+    Json = $Json
+    Content = $Response.Content
+  }
+}
+
+$OperatorUsername = Get-LocalUsername "operator"
+$Login = Invoke-JsonRequest POST "$IdentityBaseUrl/auth/login" @{} @{
+  username = $OperatorUsername
+  password = $IdentityPassword
+  deviceFingerprint = "runtime-dispatch-fixture-$([guid]::NewGuid().ToString('N'))"
+}
+if ($Login.Status -ne 200) {
+  throw "operator login for dispatch fixture failed with HTTP $($Login.Status): $($Login.Content)"
+}
+$OperatorToken = "$(Get-Value $Login.Json 'accessToken')"
+if ([string]::IsNullOrWhiteSpace($OperatorToken)) {
+  throw "operator login for dispatch fixture returned no access token"
 }
 
 $CaptainProvider = Get-ProvisionedWorkforceActor -Kind "captain"
@@ -23,59 +73,37 @@ if ([string]::IsNullOrWhiteSpace($CaptainId)) {
   throw "provisioned runtime captain has no actor id"
 }
 
-$SafeCaptainId = $CaptainId.Replace("'", "''")
-$SafeStoreId = $StoreId.Replace("'", "''")
-$FixtureActor = "runtime-multisurface-fixture"
-
-# This establishes only DSH-owned operational readiness for the seeded runtime
-# captain. Financial eligibility is deliberately NOT written here: assignment
-# creation must refresh and verify the short-lived decision from WLT itself.
-$Statement = @"
-INSERT INTO dsh_captain_dispatch_profiles (
-  operator_context_id,
-  captain_id,
-  accreditation_status,
-  availability_status,
-  max_active_assignments,
-  priority_score,
-  updated_by,
-  updated_at
-)
-SELECT
-  s.operator_context_id,
-  '$SafeCaptainId',
-  'approved',
-  'available',
-  1,
-  100,
-  '$FixtureActor',
-  NOW()
-FROM dsh_stores s
-WHERE s.id = '$SafeStoreId'
-ON CONFLICT (operator_context_id, captain_id) DO UPDATE SET
-  accreditation_status = EXCLUDED.accreditation_status,
-  availability_status = EXCLUDED.availability_status,
-  max_active_assignments = EXCLUDED.max_active_assignments,
-  priority_score = EXCLUDED.priority_score,
-  updated_by = EXCLUDED.updated_by,
-  version = dsh_captain_dispatch_profiles.version + 1,
-  updated_at = NOW()
-RETURNING operator_context_id || '|' || captain_id || '|' || accreditation_status || '|' || availability_status;
-"@
-
-$Output = docker compose --env-file $EnvFile -f $ComposeFile exec -T postgres `
-  psql -X -v ON_ERROR_STOP=1 -U dsh_runtime -d dsh_runtime -qAt -c $Statement
-if ($LASTEXITCODE -ne 0) {
-  throw "governed runtime captain dispatch fixture failed with exit code $LASTEXITCODE"
+$CorrelationId = "runtime-dispatch-fixture-$([guid]::NewGuid().ToString('N'))"
+$Profile = Invoke-JsonRequest PUT "$DshBaseUrl/dsh/operator/dispatch/captains/$CaptainId/profile" @{
+  Authorization = "Bearer $OperatorToken"
+  "X-Correlation-ID" = $CorrelationId
+  "Idempotency-Key" = $CorrelationId
+} @{
+  accreditationStatus = "approved"
+  availabilityStatus = "available"
+  maxActiveAssignments = 1
+  priorityScore = 100
+}
+if ($Profile.Status -ne 200) {
+  throw "DSH captain dispatch profile setup failed with HTTP $($Profile.Status): $($Profile.Content)"
 }
 
-$Row = (($Output -join "`n").Trim())
-if ([string]::IsNullOrWhiteSpace($Row)) {
-  throw "governed runtime captain dispatch fixture did not resolve store OperatorContext"
+$Candidate = Get-Value $Profile.Json 'candidate'
+if ($null -eq $Candidate) {
+  throw "DSH captain dispatch profile setup returned no candidate"
 }
-$Parts = $Row.Split("|", [StringSplitOptions]::None)
-if ($Parts.Count -ne 4 -or $Parts[1] -ne $CaptainId -or $Parts[2] -ne "approved" -or $Parts[3] -ne "available") {
-  throw "governed runtime captain dispatch fixture readback is invalid: $Row"
+$ReturnedCaptainId = "$(Get-Value $Candidate 'captainId')"
+$AccreditationStatus = "$(Get-Value $Candidate 'accreditationStatus')"
+$AvailabilityStatus = "$(Get-Value $Candidate 'availabilityStatus')"
+$MaxActiveAssignments = [int](Get-Value $Candidate 'maxActiveAssignments')
+if ($ReturnedCaptainId -ne $CaptainId -or
+    $AccreditationStatus -ne "approved" -or
+    $AvailabilityStatus -ne "available" -or
+    $MaxActiveAssignments -ne 1) {
+  throw "DSH captain dispatch profile setup returned invalid operational readiness: $($Profile.Content)"
 }
 
-Write-Host "DSH runtime captain dispatch fixture: PASS operatorContext=$($Parts[0]) captain=$CaptainId"
+# Financial eligibility is intentionally not seeded here. The assignment API
+# must refresh the short-lived WLT decision itself, preserving the real DSH/WLT
+# integration boundary and fail-closed financial gate.
+Write-Host "DSH runtime captain dispatch profile: PASS captain=$CaptainId accreditation=$AccreditationStatus availability=$AvailabilityStatus capacity=$MaxActiveAssignments"
