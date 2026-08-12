@@ -1,24 +1,55 @@
-# Closure
+# Closure — App Captain
 
-Status: **NOT STARTED**.
+**Decision: OPEN — implementation and evidence required.**
 
-The package has been rebaselined in place for `BB` from diagnosis baseline `0916eb2500a0f6d83c47ed44124c02665f9cd0f9`. This rebaseline corrects stale branch/SHA/schema assumptions and stale findings; it does **not** claim that Captain product/runtime work is closed.
+`CLOSED_WITH_EVIDENCE` is forbidden until every in-scope known fixable defect is eliminated and every required result is proved on the latest execution SHA after the final relevant write. The package update itself is not product closure.
 
-## What must be true before `CLOSED_WITH_EVIDENCE`
+## Zero-known-defect gate
 
-- every unit in `EXECUTION-ORDER.json` is `DONE`;
-- every required check in every unit is actually executed and recorded in `RESULT.json`;
-- result evidence is bound to the exact resulting candidate SHA after the last relevant product write;
-- app-captain typecheck/tests/runtime-contract/build checks pass where affected;
-- Identity/Workforce and DSH/WLT backend tests pass where affected;
-- PostgreSQL/migration compatibility, idempotency/concurrency and actor/store/order isolation are proven where applicable;
-- dispatch/fleet/handoff/support/finance contract and canonical readback are consistent across required surfaces;
-- physical-device evidence exists for native behavior that cannot be established statically, including permissions/location/camera/push/weak-network/restart where affected;
-- WLT reconciliation proves no DSH/frontend financial truth or cross-Captain read;
-- required CI and protected product/QA/security/finance/release reviews are satisfied without self-approval.
+Final closure requires zero known in-scope errors, gaps, contradictions, unjustified duplication, material technical noise, dead/obsolete live paths, incomplete logic, incomplete integration, unresolved states, hidden workarounds, regressions or executable remaining work. A newly discovered defect immediately reopens the owning unit.
 
-## Proof limits of this package update
+Cleanup is mandatory: remove proven dead/duplicate/stale routes, callers, imports, exports, types, configurations, dependencies and compatibility behavior when they no longer have a current justified consumer. Do not keep an incorrect architecture merely to minimize the diff.
 
-This diagnosis/update was performed through GitHub Remote/API. No shell, Node, Go, PostgreSQL, physical-device runtime, visual QA or CI job was executed by the package-edit operation itself. Therefore `validate-package.mjs --strict` and product/runtime checks must not be reported as PASS until they actually run.
+## Mandatory final adversarial cycle
 
-The correct decision at package level is **READY_FOR_IMPLEMENTATION**, not product closure.
+After the last product write, repeat: root-cause review → blast-radius census → cleanup/refactor → positive and negative execution → concurrency/retry/unknown-result cases → contracts/bindings → database/runtime → cross-surface readback → security/privacy → financial reconciliation where applicable → regression review → deliberate search for remaining defects. Repeat until no known fixable in-scope finding remains.
+
+## Required package and repository gates
+
+Run from the final candidate, not from an older evidence SHA:
+
+```text
+node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/app-captain-fullstack-journeys --strict
+pnpm --filter @bthwani/app-captain-runtime lint
+pnpm --filter @bthwani/app-captain-runtime typecheck
+pnpm --filter @bthwani/app-captain-runtime test
+pnpm --filter @bthwani/app-captain-runtime build
+pnpm guard:no-broken-imports
+pnpm guard:cleanup-policy
+pnpm guard:fullstack-boundary
+pnpm guard:wlt-financial-boundary
+pnpm guard:contract-registry-drift
+pnpm database:dsh:test
+pnpm database:dsh:contract
+pnpm runtime:full:smoke
+pnpm guard:journey:full
+```
+
+Also run every required unit-specific Identity, Workforce, DSH and WLT Go/contract/provider check in `VERIFICATION.json`. A global gate cannot replace a more specific negative/concurrency/finance check.
+
+## End-to-end evidence still required when applicable
+
+- exact role/surface/session and refresh-concurrency negative cases;
+- provider-direct and DSH-internal Workforce readiness convergence;
+- dispatch kill-switch absent/malformed/killed/open states;
+- PostgreSQL dispatch capacity/idempotency/reassignment/custody concurrency;
+- app-captain/app-partner/app-client role-appropriate cross-surface readback;
+- physical Android session restart/logout/relogin, camera/location/permission/weak-network evidence for touched native paths;
+- Captain support route reachability and single canonical conversation behavior;
+- Captain Cash-In reachable surface, provider unknown-result behavior and exactly-once wallet credit;
+- mutually exclusive COD financial effect per order, cancellation/finalization/retry and WLT ledger/audit/reconciliation;
+- payout destination beneficiary read-only behavior, FULL_AVAILABLE/SPECIFIED server validation, unknown-result hold/reconciliation and cross-Captain isolation;
+- current CI/security/quality checks required by the final diff;
+- protected product/QA/accessibility/security/release approvals where current governance requires them.
+
+Every unit `RESULT.json` must be `DONE`, have a 40-character `resultingSha`, `decision=PASS`, no blockers/deviations, and PASS for every required verification before final `--strict --closure` validation is allowed.

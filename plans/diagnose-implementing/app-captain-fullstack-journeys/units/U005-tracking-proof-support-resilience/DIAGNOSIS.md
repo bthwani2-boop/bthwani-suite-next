@@ -1,26 +1,11 @@
-# U005 — tracking-proof-support-resilience
+# U005 — tracking, proof, support and resilience
 
-## Objective
+Captain active-delivery tracking and proof are not closed by screen presence. Location/status/PoD mutations must be bound to the current assignment and actor, duplicate/retry safe, privacy bounded, and followed by canonical readback. A weak network or process restart cannot convert an unknown result into local success. Proof assets must remain bound through the governed media/DSH contract and protected data must not leak to client/operator readers beyond their role-appropriate view. Foreground-only location behavior is not permission to introduce background tracking unless current Product Truth explicitly requires it.
 
-Close Captain active-delivery tracking, PoD, support/rescue and recovery on current `BB` without creating local operational truth, leaking protected data, or adding speculative background behavior.
+Physical-device behavior matters here because camera, location permission, app lifecycle and weak-network transitions cannot be established by Node tests alone. If code in these paths changes, closure requires device evidence for denied/granted permission, restart, foreground transition, capture/upload retry and readback. Static/build tests remain supporting evidence only.
 
-## Current diagnosis
+The confirmed cleanup finding is Captain support route divergence. Current Support Product Truth names `CaptainOrderSupportConversationScreen` as the app-captain support surface and allows support only for the assigned order. Yet `DshCaptainRouteRenderer` still renders `orderchat` as messaging disabled while `CaptainSupportScreenRouter` routes `chat-read-ack` and `chat-send` to the governed conversation. This is a known contradiction that prevents DONE until reachability is established and every live entry is converged. If `orderchat` is dead, remove it and its unreachable callers/type members; if it is a compatibility alias, delegate it to the canonical model; if it is the true entry, migrate it. Keeping two divergent live behaviors is forbidden.
 
-The existing unit boundary remains correct, but current source reveals a sharper root-cause question than the old generic wording. `DshCaptainRouteRenderer` currently handles route `orderchat` by displaying that order messaging is not enabled. Separately, `CaptainSupportScreenRouter` handles `chat-read-ack` and `chat-send` using the real `CaptainOrderSupportConversationScreen`. That can represent an intentional legacy/dead route, or an actual parallel navigation path. The implementation unit must determine route ownership from current route registry/navigation/Product Truth and converge all live Captain support entry points on one governed support conversation path. It must not “fix” the warning text while leaving two behavioral paths.
+Support itself must prove assigned-order ownership, cross-actor denial, internal-note isolation, attachment/read-receipt contract where required, retry/idempotency, expected-state conflict handling, append-only audit and operator-owned incident/rescue transitions. Captain cannot mutate rescue state. DSH rescue may read WLT visibility only and cannot create financial mutations. Cleanup must also remove any local rescue/support truth or stale copy/fallback that contradicts canonical readback.
 
-Support/rescue Product Truth remains `DISCOVERY`: Captain may communicate only for an assigned order, internal notes are operator-only, rescue mutations are operator-owned, expected-state/idempotency/audit rules apply, and DSH rescue must not mutate WLT.
-
-Location and PoD also remain evidence-sensitive. Current code can be statically mapped, but legal status progression, pending-location recovery, assignment scope, media proof binding, weak-network unknown-result handling, refresh/restart and physical-device permission behavior need candidate-bound verification. Foreground-only tracking is not a defect merely because background tracking is absent; background behavior may be changed only if current Product Truth explicitly requires it.
-
-## Root-cause targets
-
-1. One canonical Captain support/chat route and state owner; obsolete route aliases are removed or delegated only after navigation/readback proof.
-2. No Captain can open/read another or unassigned order support conversation.
-3. No internal operator note leaks to Captain.
-4. No stale retry or unknown result fabricates status, PoD, exception, message, incident, rescue or delivery success.
-5. Location/PoD remain assignment-scoped and privacy bounded.
-6. Client/partner/operator readbacks consume canonical DSH state; WLT remains untouched by operational rescue.
-
-## Closure rule
-
-Typecheck/static mapping is insufficient for location/camera/push/weak-network/restart claims. U005 must execute current app-captain runtime tests, affected DSH backend tests and route/readback checks, then record any required physical-device evidence on the exact resulting SHA.
+FAIL-CLOSED adversarial review covers wrong/stale assignment, duplicate location/PoD, permission denial, unknown network result, unassigned support, internal-note leakage, stale conflict, duplicate active rescue and route reachability. Any known in-scope residue remains a blocker.

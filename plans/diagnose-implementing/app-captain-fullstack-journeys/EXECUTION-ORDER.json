@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "taskId": "APP-CAPTAIN-FULLSTACK-JOURNEYS",
   "status": "READY",
-  "executionPolicy": "STRICT_SEQUENTIAL_CAPTAIN_BOUNDED",
+  "executionPolicy": "STRICT_SEQUENTIAL_CAPTAIN_BOUNDED_FAIL_CLOSED_ZERO_KNOWN_DEFECT",
   "units": [
     {"unitId":"U001","name":"authority-scope-inventory","status":"READY","dependsOn":[],"path":"units/U001-authority-scope-inventory"},
     {"unitId":"U002","name":"identity-workforce-access","status":"READY","dependsOn":["U001"],"path":"units/U002-identity-workforce-access"},

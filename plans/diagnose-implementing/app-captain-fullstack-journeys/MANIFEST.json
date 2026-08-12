@@ -4,15 +4,15 @@
   "task": {
     "id": "APP-CAPTAIN-FULLSTACK-JOURNEYS",
     "name": "app-captain-fullstack-journeys",
-    "objective": "Rebaseline and prepare root-cause execution for app-captain on BB, covering only directly proven full-stack and cross-surface dependencies, preserving current correct implementations, and closing only evidence-backed gaps without patches or unrelated scope.",
+    "objective": "Diagnose and prepare root-cause fail-closed closure for app-captain on BB across only proven full-stack and cross-surface dependencies, preserving correct current behavior, eliminating parallel or stale paths, and requiring candidate-bound evidence before closure.",
     "primarySurface": "app-captain",
     "createdAt": "2026-08-08T20:31:00Z"
   },
   "repository": {
     "name": "bthwani2-boop/bthwani-suite-next",
     "targetBranch": "BB",
-    "pinnedStartSha": "0916eb2500a0f6d83c47ed44124c02665f9cd0f9",
-    "latestObservedRemoteSha": "0916eb2500a0f6d83c47ed44124c02665f9cd0f9"
+    "pinnedStartSha": "bee8e9cfe1762cef39690f0b254fdf0b6855e1a9",
+    "latestObservedRemoteSha": "0628bf1aa3fe39477197f9a9cb8cf04c8e8332ef"
   },
   "authority": {
     "root": "governance/authority/authority-precedence.json",

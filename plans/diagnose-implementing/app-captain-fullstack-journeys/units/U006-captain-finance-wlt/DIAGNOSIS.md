@@ -1,31 +1,13 @@
-# U006 — captain-finance-wlt
+# U006 — Captain finance and WLT
 
-## Objective
+The current financial scope must be derived from `wlt-money-movement-settlement.product-truth.json`, not the older package's commission-only framing. WLT is the only authoritative owner of Captain wallet/ledger, Cash-In, financial eligibility, COD monetary effects, earnings/commissions, payout eligibility/destination/request, settlement evidence and reconciliation. DSH may expose bounded authenticated facades/projections but cannot calculate or persist parallel money truth.
 
-Prove and close only remaining Captain financial gaps on current `BB` while keeping WLT the sole financial truth owner and preventing cross-Captain exposure or frontend/DSH financial calculation.
+The primary Captain finance screen already composes financial eligibility, wallet, COD custody, per-Captain commissions, payout destination/request and provider incidents. The current payout component is substantially aligned: official-wallet destination is masked/read-only, the beneficiary cannot create/update/select it, `FULL_AVAILABLE` sends no authoritative amount and lets WLT resolve eligible funds transactionally, `SPECIFIED` sends only a requested amount for server validation, and unknown external execution remains held for Finance reconciliation rather than appearing complete.
 
-## Current diagnosis
+Two gaps require deeper execution. First, WLT now has a governed Captain Cash-In engine: server-derived `captain_topup`, top-up sessions, CashInRail authorize/capture and atomic capture-finalize plus wallet credit, with ambiguous provider outcomes entering unknown/reconciliation state. The diagnosis did not establish a concrete reachable app-captain top-up entry/controller. Because Product Truth marks Captain top-up as required, U006 must perform a complete route/component/API consumer census. If no reachable Captain entry exists, that is an implementation gap and must be closed with the smallest WLT-backed surface/adapter; DSH/frontend must not implement a second payment engine.
 
-The previous package contains a stale concrete gap: it says Captain commission lifecycle readback is missing. That is no longer true on `BB`.
+Second, `WltDshCaptainBridge` still contains stale presentation stating aggregate earnings and Captain settlement are unavailable while the primary screen now exposes newer commission/payout components. Reachability must be proven. Any live contradictory route must migrate to current truth; a dead legacy bridge branch must be removed/delegated with callers/imports/types cleaned. Leaving contradictory financial presentation is a blocker even if the main screen works.
 
-Current `WltCaptainFinanceScreen` includes `ActorWalletPanel actorType="captain"`, `WltCaptainCodCustodyScreen`, `RepresentativeCommissionPanel actorType="captain"` and `PayoutDestinationPanel actorType="captain"`. `RepresentativeCommissionPanel` calls the generic own-commission API and renders the required lifecycle states (`pending`, `confirmed`, `settled`, `rejected`, `reversed`), source/policy information and `resolutionNote`. `commission.api.ts` resolves own commissions through `/dsh/captain/me/finance/commissions`.
+COD is the highest financial consistency risk. DSH still registers Captain COD collect/remit routes, while current Product Truth requires the target Captain-funded COD model to reserve/release/finalize order-specific exposure atomically and explicitly forbids simultaneously creating a second remittance liability for the same financial effect. The two semantics may only coexist if model selection is explicit and mutually exclusive per order/use case. U006 must prove one effect per order under concurrency, cancellation, retry and unknown outcomes, with WLT ledger/audit reconciliation. No frontend or DSH-entered amount may become authoritative.
 
-On the backend, `representative_finance_routes.go` registers Captain self-service wallet, ledger, commissions, payout-request/destination and COD collect/remit routes. Self-service handlers derive actor identity from authenticated context before WLT reads; control-panel mutation routes are separate and permission protected.
-
-Therefore the root task is **not** to implement another Captain commission list. U006 must prove that the current route/controller/backend/WLT chain is actor-scoped, contract-compatible, idempotent where it mutates COD/payout state, financially reconciled, and robust to errors/unknown results. It must also prove that no shared generic change accidentally leaks or changes field/partner semantics.
-
-## Financial boundaries
-
-- WLT owns wallet, ledger, COD financial liability, commission policy/calculation/lifecycle, payout financial state and adjustments.
-- DSH may provide operational evidence and bounded authenticated proxy/readback; it cannot become a second financial ledger.
-- Captain self-service is scoped to the authenticated Captain. Captain may request only currently authorized self-service payout/COD actions; commission state mutation remains operator/service controlled according to Product Truth.
-- No caller-supplied authoritative commission amount, local aggregate earnings calculation or cross-Captain query is allowed.
-- Error/offline/partial/unknown-result UI must not fabricate zero balance, settled commission, completed payout or remitted COD.
-
-## Shared-code boundary
-
-`RepresentativeCommissionPanel` and representative finance APIs are generic. They remain in Captain scope only as consumed by app-captain. If fixing a Captain-proven defect requires changing a generic contract/component/route, verification must cover every actual affected consumer. That does not authorize importing app-field or partner-only product work into this package.
-
-## Closure rule
-
-U006 requires candidate-bound DSH/WLT backend evidence, current Captain runtime/type evidence, actor-isolation negatives and finance reconciliation. Static existence of routes/panels is not financial closure and protected finance/product/release approval cannot be self-issued.
+FAIL-CLOSED closure requires cross-Captain isolation, double-entry/ledger consistency, duplicate-safe top-up/COD/payout, destination immutability from beneficiary surfaces, unknown-result recovery, provider simulation where applicable, contract parity, control-panel permission separation and cleanup of stale finance paths. A zero balance, successful UI toast, successful unit test or isolated route response is never sufficient financial proof.

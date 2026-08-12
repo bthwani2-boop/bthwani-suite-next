@@ -1,22 +1,11 @@
-# U004 — dispatch-handoff-execution
+# U004 — dispatch, assignment and bilateral handoff
 
-## Objective
-Close the governed order path from offer through accept/decline, store arrival and bilateral custody to legal pickup/reassignment with cross-surface readback.
+Captain dispatch Product Truth is still `IMPLEMENTED_PENDING_VERIFICATION`; that status is not runtime closure. The path must prove that a real eligible Captain receives one governed offer for a real ready order, only the assigned authenticated Captain can accept or decline, decline requires a reason, late/expired decisions are rejected, retries are idempotent, one order cannot hold competing active assignments, reassignment is atomic, and operator/client readbacks expose only role-appropriate state.
 
-## Truth owner
-DSH owns assignment, delivery lifecycle, store↔Captain custody and operational exceptions; surfaces render and issue authorized commands only.
+A current runtime boundary absent from the old plan is the dispatch assignment kill switch. `DSH_DISPATCH_ASSIGNMENT_KILL_SWITCH` is mandatory: missing or malformed configuration fails closed, a nil decision service fails closed, and unsupported capability evaluation is rejected. This is part of the mutation authority, not a development nuisance. U004 must prove local/integration runtime has an explicit intended value and that no code path bypasses this decision boundary to force assignment creation.
 
-## Diagnosis
-This unit exists because the Captain path cannot be closed from a single screen. It must trace the authoritative write/read owner through shared adapters, contracts, backend state, persistence and only the downstream surfaces that are directly affected. The package deliberately distinguishes **absence of candidate-bound proof** from a proven code defect: where current source already implements a behavior, execution first verifies it against the applicable Product Truth and changes code only when the evidence reveals a mismatch. Where a concrete mismatch is already visible—most notably Captain commission readback—the task names that gap directly.
+U003 proves the complete eligibility inputs; U004 consumes that result at offer/assignment time. For COD-capable orders, DSH may consume WLT financial eligibility but cannot invent or mutate the monetary model. Exact COD money semantics and model exclusivity are closed in U006. U004 must nevertheless prove that an ineligible financial projection cannot receive the governed assignment.
 
-The unit must preserve trusted actor context, idempotency/correlation, legal state transitions, refresh/restart readback and strict tenant/actor isolation. UI state, local storage, derived planning files and historical evidence cannot become authoritative operational or financial truth. Any implementation that changes a canonical contract must migrate every Captain-specific consumer and rerun invalidated evidence on the same final candidate.
+After assignment, store-to-Captain custody is a bilateral DSH state machine. Partner release confirmation and Captain completion must precede `picked_up`; replay with the same valid identity must be duplicate-safe; payload drift on a reused retry identity must fail; reassignment must supersede prior custody; shortage/mismatch exceptions can block legal progression; operator resolution removes the block only through the governed state; refresh/restart must read the same persisted truth; app-client sees unified order state rather than internal custody details. No handoff exception may mutate WLT.
 
-## Planned work
-- Verify dispatch offer/decision/reassignment invariants: Dispatch Product Truth is implemented-pending-verification and requires one active assignment, expiry, actor-scoped decision, idempotency, service area/capacity and atomic reassignment. Target: Every offer and decision is authoritative, retry-safe and isolated; client sees only tracking state while operator sees governed decisions.
-- Close bilateral store↔Captain custody before pickup: Handoff Product Truth requires partner confirmation and Captain completion before picked_up; open blocking exceptions and superseded assignments must prevent pickup. Target: Pickup can occur only after valid bilateral custody; exceptions persist across restart and resolution re-enables only legal continuation.
-
-## Boundaries
-Affected surfaces: app-captain, app-partner, app-client, control-panel. Dependencies: U003. Journeys/capabilities: J102 captain dispatch, J105 store-captain handoff. Unrelated sections remain out of scope unless a new direct dependency is proven and `COVERAGE.json` is updated before implementation.
-
-## Closure rule
-Do not mark this unit done from static inspection alone when persisted, cross-surface, security, runtime or financial behavior is involved. Execute the linked verification checks after the final relevant write and record exact resulting SHA/evidence in `RESULT.json`.
+FAIL-CLOSED means a happy-path assignment/pickup is insufficient. Kill-switch missing/malformed, stale version, expiry, duplicate/concurrent assignment, wrong Captain, wrong context, superseded custody, blocking exception, replay drift and cross-surface inconsistency are mandatory adversarial cases. Proven obsolete assignment/handoff code or bypass routes must be removed rather than left as silent compatibility debt.

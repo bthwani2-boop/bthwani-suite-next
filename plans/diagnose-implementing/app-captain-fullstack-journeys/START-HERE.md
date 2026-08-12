@@ -1,64 +1,61 @@
-# START HERE — App Captain full-stack journeys
+# App Captain full-stack journeys — START HERE
 
-This is the **existing** `APP-CAPTAIN-FULLSTACK-JOURNEYS` package resumed and rebaselined for `BB`, not a new package. The diagnosis baseline is `0916eb2500a0f6d83c47ed44124c02665f9cd0f9`. The package itself is derived planning support only; it is not Product Truth, runtime truth, approval, or closure evidence.
+## Current repository truth
 
-## Hard scope
+- Repository: `bthwani2-boop/bthwani-suite-next`
+- Branch: `BB`
+- Product/implementation rebaseline start: `bee8e9cfe1762cef39690f0b254fdf0b6855e1a9`
+- Latest remote observed before final package write: `0628bf1aa3fe39477197f9a9cb8cf04c8e8332ef`
+- Concurrent delta: one descendant commit adding only `plans/diagnose-implementing/field-3`; classified `DISJOINT_PLANNING_ONLY` and preserved unchanged.
+- Existing package mode: `RESUME_AND_RECONCILE`
+- Package decision: `READY_FOR_IMPLEMENTATION`
+- Product/runtime closure: **OPEN**
 
-Primary surface: `app-captain`.
+The previous Captain package commit `82f1743e6c8e4139a87ea1ac4c1cbb75fccd9986` is 310 product/implementation commits behind the rebaseline start and 311 branch commits behind the latest observed head. No old candidate-bound PASS/DONE claim is inherited.
 
-Include another surface, service, contract, database area, shared module, control-panel section, Identity/Workforce path, WLT path, mobile runtime path, or CI check **only** when current Product Truth or pinned implementation proves that it writes, authorizes, persists, transports, or reads Captain state required by the same Captain journey.
+## Fail-closed execution rule
 
-Current allowed cross-surface expansion is bounded to:
+Every unit starts OPEN. A unit becomes DONE only after root cause, blast radius, owner-level correction, affected-consumer migration, cleanup, adversarial negative cases, regression checks and required end-to-end evidence are complete on the exact resulting SHA. Any known fixable Captain-related defect, contradiction, duplicate live path, dead code, stale contract, missing required surface, unresolved state, authorization weakness, data inconsistency or regression keeps the unit OPEN.
 
-- `control-panel`: Captain Identity/Workforce lifecycle, partner-fleet readback, dispatch/handoff/proof/exceptions/support/rescue, and WLT finance controls/readback.
-- `app-client`: Captain-caused delivery/tracking/order-state readback only.
-- `app-partner`: partner-fleet membership and store↔Captain custody/handoff consequences only.
-- `app-field`: excluded from Captain implementation. Reopen only if a Captain fix must change a shared contract/component/state actually consumed by field; then verify that shared consumer without importing field-only product scope.
+Build, lint, typecheck, unit tests, partial CI, a successful screen or disappearance of one error are supporting evidence only. Workarounds, bypasses, silent fallbacks, weakened gates or tests, and knowingly retained obsolete behavior are forbidden as closure mechanisms.
 
-Generic dashboard, analytics, catalog, marketing, operator login, customer-address ownership, field-only workflows, partner-only commercial workflows, and unrelated WLT capabilities remain outside this package.
+## Bounded scope
 
-## Rebaseline facts
+`app-captain` is primary. Other surfaces enter only when Captain truth actually crosses them:
 
-The prior package was pinned to `abbas@319f47ce41aaca136fa9f25fa0db4e3587681886`. That baseline is stale. Current `BB` contains material Captain, Identity, Workforce, DSH, mobile-runtime, finance, test, and CI changes.
+- `control-panel`: Captain access/HR, fleet, dispatch/custody/proof/support and Captain-affecting WLT finance.
+- `app-partner`: partner-fleet and store↔Captain custody only.
+- `app-client`: Captain-caused tracking/order readback only.
+- `app-field`: excluded unless a Captain fix changes an actual shared consumer; then verify only that shared effect.
 
-Concurrent movement observed and reconciled during this diagnosis:
+Catalogs, marketing, generic analytics/dashboard/login, client-owned address/privacy flows and unrelated WLT work remain excluded unless a direct Captain dependency is proven before a write.
 
-- `de34ec33ff9ee52d0228a340453272d4e03ba7b1`: governed Identity historical-migration digest amendment and guard; relevant to U002 and preserved.
-- `629b86b9a3ca8fadc16158b6c9a078217ebe4af4`: repository-root derivation fix for closure tooling; disjoint from Captain product scope and preserved without importing it.
-- `086e48f8f8ed9deaa9d1525f379505af056df355`: shared mobile LAN gateway root-cause fix for the PowerShell read-only `$PID` collision plus executable regression tests; relevant only as current Captain development/runtime transport infrastructure.
-- `0916eb2500a0f6d83c47ed44124c02665f9cd0f9`: app-partner package rebaseline; no overlap with this Captain package and explicitly excluded from Captain scope.
+## Current end-to-end path
 
-Important current-state corrections:
+`Identity exact session-surface binding → Workforce Captain profile/readiness → DSH fleet/complete eligibility → dispatch policy/assignment → bilateral custody → tracking/PoD/support → canonical DSH readback → WLT financial eligibility/Cash-In/COD/earnings/payout where applicable`
 
-1. Captain runtime already composes Identity + Workforce + server readiness and fails closed with `ELIGIBILITY_UNAVAILABLE` when eligibility cannot be read.
-2. Captain finance already renders WLT-backed own wallet/COD/commissions/payout surfaces; the old claim that Captain commission lifecycle readback is missing is stale.
-3. `docs/architecture.drawio` is now a generated ArchPulse XML topology artifact. It may assist dependency discovery but cannot override authority, Product Truth, or exact source/contracts.
-4. A concrete route-convergence check remains: `DshCaptainRouteRenderer` renders `orderchat` as disabled while `CaptainSupportScreenRouter` exposes governed `chat-read-ack`/`chat-send`. U005 must establish one canonical support/chat route and remove or delegate any obsolete parallel route if proven.
-5. Dispatch Product Truth currently says `IMPLEMENTED_PENDING_VERIFICATION` with no declared open code gaps. U004 therefore verifies the current candidate first and changes code only on evidence-backed failure.
+Identity owns authentication/session. Workforce owns provider readiness. DSH owns operational Captain truth. WLT is the sole financial truth owner.
 
-## Execution discipline
+## Material findings to execute
 
-Execute units in `EXECUTION-ORDER.json`. Before every logical write batch re-resolve `BB`, classify concurrent movement, reconcile it, and use only fast-forward writes. For each unit:
+1. Identity authorization requires authenticated state, exact `sessionSurface`, matching `surfaceAccess`, role-to-surface mapping and `captain` role. Refresh rotation is database-governed and concurrent reuse has an explicit conflict state.
+2. Workforce has provider-direct and DSH-internal readiness transports that must converge on the same Workforce truth and fail closed independently.
+3. Dispatch eligibility includes accreditation, availability, WLT financial eligibility with expiry, profile freshness, provider absence, service-area context and transactional capacity locking.
+4. Dispatch assignment has a mandatory explicit kill-switch configuration; missing/malformed/nil states fail closed and must not be bypassed.
+5. Captain support has a known route contradiction: `orderchat` says disabled while `chat-read-ack`/`chat-send` use `CaptainOrderSupportConversationScreen`. Reachability and canonical convergence are mandatory cleanup.
+6. WLT Product Truth now requires Captain Cash-In top-up, order-specific governed COD financial effect, automatic earnings, read-only payout destination and `FULL_AVAILABLE`/`SPECIFIED` payout intent.
+7. WLT already implements server-derived `captain_topup` and atomic capture+wallet credit, but this diagnosis did not prove a reachable app-captain top-up entry. U006 must prove the consumer census and implement the missing bounded surface/adapter if absent.
+8. `WltDshCaptainBridge` contains stale finance presentation that can contradict the newer primary finance screen. Any live contradictory route must migrate; dead legacy behavior must be removed/delegated with callers/imports/types cleaned.
+9. DSH still exposes Captain COD collect/remit while current WLT Product Truth forbids a second remittance liability for the same Captain-funded COD effect. Model selection must be explicit and mutually exclusive per order/effect.
 
-`current truth → targeted verification → reproduce/prove gap → fix truth owner → migrate affected Captain-specific consumers → remove obsolete parallel behavior → rerun invalidated checks → canonical readback → RESULT.json bound to exact resulting SHA`
+## Execution order
 
-Do not rewrite working code merely because an older plan expected work there. Do not accept a local UI success as closure for persisted, cross-surface, security, financial, or runtime behavior.
+`U001 → U002 → U003 → U004 → U005`, with `U006` starting only after U004 and closing all Captain financial boundaries before package closure.
 
-## Read order
+## Mandatory package check
 
-1. `MANIFEST.json`
-2. `GLOBAL-DIAGNOSIS.md`
-3. `COVERAGE.json`
-4. `EXECUTION-ORDER.json`
-5. each unit's `DIAGNOSIS.md`, `EXECUTION.json`, `VERIFICATION.json`, `RESULT.json`
-6. `CLOSURE.md`
-
-## Package validation
-
-When a shell is available:
-
-```powershell
+```text
 node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/app-captain-fullstack-journeys --strict
 ```
 
-Do not claim strict-validator PASS unless that command actually exits zero on the package candidate.
+This re-diagnosis used GitHub Remote/API. The strict validator and product/runtime commands are not PASS until they are actually executed on the checked-out candidate.
