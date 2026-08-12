@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { identitySessionAuthorizesSurface } from "@bthwani/core-identity/session-policy";
 import {
   REFRESH_TOKEN_COOKIE,
   clearSessionCookies,
@@ -31,7 +32,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   try {
     const rotated = await identityServerClient().refresh(refreshToken);
-    if (!rotated.identity.roles.includes("operator")) {
+    if (!identitySessionAuthorizesSurface(rotated.identity, "operator", "control-panel")) {
       const response = NextResponse.json(
         { code: "CONTROL_PANEL_FORBIDDEN" },
         { status: 403, headers: { "Cache-Control": "no-store" } },
