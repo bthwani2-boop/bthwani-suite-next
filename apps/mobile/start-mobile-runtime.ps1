@@ -7,8 +7,7 @@ param(
     [ValidateRange(1024, 65535)]
     [int] $MetroPort,
 
-    [switch] $ClearCache,
-    [switch] $MirrorDevice
+    [switch] $ClearCache
 )
 
 Set-StrictMode -Version Latest
@@ -242,10 +241,6 @@ if (-not $resolvedTransport) {
     $resolvedTransport = "adb"
 }
 
-if ($resolvedTransport -eq "lan" -and ($MirrorDevice -or $env:BTHWANI_MIRROR_DEVICE -eq "1")) {
-    throw "Device mirroring is not part of the LAN runtime contract. Use AirDroid Cast independently; scrcpy requires the Android ADB transport."
-}
-
 $resolvedPlatform = if ($resolvedTransport -eq "adb") {
     "android"
 } elseif ($requestedPlatform -eq "auto") {
@@ -340,13 +335,6 @@ if ($resolvedTransport -eq "lan") {
 
     $ports = @(58080, 58082, 58086, 58100, 59000, $MetroPort)
     Invoke-BthwaniAdbReverse -AdbPath $adbPath -Serial $selectedSerial -Ports $ports
-
-    $shouldMirror = $MirrorDevice -or $env:BTHWANI_MIRROR_DEVICE -eq "1"
-    if ($shouldMirror) {
-        $scrcpy = Get-Command scrcpy.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-        if (-not $scrcpy) { throw "scrcpy.exe was requested but was not found in PATH." }
-        Start-Process -FilePath $scrcpy.Source -ArgumentList @("-s", $selectedSerial)
-    }
 
     $watchdogSetting = ([string] $env:BTHWANI_ADB_WATCHDOG).Trim().ToLowerInvariant()
     $watchdogEnabled = $watchdogSetting -in @("1", "true", "reverse")
