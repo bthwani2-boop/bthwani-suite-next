@@ -114,6 +114,10 @@ function tokenResponseHasGovernedControlPanelIdentity(value: {
   return identitySessionAuthorizesSurface(value.identity, "operator", "control-panel");
 }
 
+function logoutRevocationConfirmed(upstream: Response): boolean {
+  return upstream.ok || upstream.status === 401;
+}
+
 async function requestBody(
   request: NextRequest,
   service: ControlPanelBffService,
@@ -198,6 +202,7 @@ export async function proxyControlPanelRequest(
   const contentType = upstream.headers.get("content-type") ?? "";
   const shouldInspectIdentityResponse =
     service === "identity" && contentType.includes("application/json");
+  const isIdentityLogout = service === "identity" && upstreamPath === "/auth/logout";
 
   if (shouldInspectIdentityResponse) {
     const text = await upstream.text();
@@ -236,7 +241,9 @@ export async function proxyControlPanelRequest(
       status: upstream.status,
       headers: copyResponseHeaders(upstream),
     });
-    if (upstreamPath === "/auth/logout") clearSessionCookies(response);
+    if (isIdentityLogout && logoutRevocationConfirmed(upstream)) {
+      clearSessionCookies(response);
+    }
     return response;
   }
 
@@ -247,7 +254,7 @@ export async function proxyControlPanelRequest(
       headers: copyResponseHeaders(upstream),
     },
   );
-  if (service === "identity" && upstreamPath === "/auth/logout") {
+  if (isIdentityLogout && logoutRevocationConfirmed(upstream)) {
     clearSessionCookies(response);
   }
   return response;
