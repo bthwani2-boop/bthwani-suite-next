@@ -55,21 +55,26 @@ test("no WLT seed updates or deletes an immutable ledger table", () => {
   const offenders = [];
 
   for (const file of seedFiles(seedRoot)) {
-    const sql = statements(fs.readFileSync(file, "utf8"));
+    const sqlStatements = statements(fs.readFileSync(file, "utf8"))
+      .split(";")
+      .map((statement) => statement.trim())
+      .filter(Boolean);
     for (const table of IMMUTABLE_TABLES) {
-      if (new RegExp(`DELETE\\s+FROM\\s+${table}\\b`, "i").test(sql)) {
-        offenders.push(`${path.relative(repoRoot, file)}: DELETE FROM ${table}`);
-      }
-      if (new RegExp(`UPDATE\\s+${table}\\b`, "i").test(sql)) {
-        offenders.push(`${path.relative(repoRoot, file)}: UPDATE ${table}`);
-      }
-      // ON CONFLICT ... DO UPDATE against a ledger table is a disguised UPDATE.
-      const insertBlock = new RegExp(
-        `INSERT\\s+INTO\\s+${table}\\b[\\s\\S]*?ON\\s+CONFLICT[\\s\\S]*?DO\\s+UPDATE`,
-        "i",
-      );
-      if (insertBlock.test(sql)) {
-        offenders.push(`${path.relative(repoRoot, file)}: ON CONFLICT DO UPDATE on ${table}`);
+      for (const statement of sqlStatements) {
+        if (new RegExp(`DELETE\\s+FROM\\s+${table}\\b`, "i").test(statement)) {
+          offenders.push(`${path.relative(repoRoot, file)}: DELETE FROM ${table}`);
+        }
+        if (new RegExp(`UPDATE\\s+${table}\\b`, "i").test(statement)) {
+          offenders.push(`${path.relative(repoRoot, file)}: UPDATE ${table}`);
+        }
+        // ON CONFLICT ... DO UPDATE against a ledger table is a disguised UPDATE.
+        const insertBlock = new RegExp(
+          `INSERT\\s+INTO\\s+${table}\\b[\\s\\S]*?ON\\s+CONFLICT[\\s\\S]*?DO\\s+UPDATE`,
+          "i",
+        );
+        if (insertBlock.test(statement)) {
+          offenders.push(`${path.relative(repoRoot, file)}: ON CONFLICT DO UPDATE on ${table}`);
+        }
       }
     }
   }
@@ -87,7 +92,7 @@ test("the representative wallet fixture dedups on the natural posting key", () =
 
   assert.match(
     sql,
-    /ON CONFLICT \(operator_context_id, idempotency_key\)[\s\S]*?DO NOTHING/,
+    /ON CONFLICT \(\s*operator_context_id,\s*transaction_type,\s*reference_type,\s*reference_id\s*\)[\s\S]*?DO NOTHING/,
     "re-seeding must be a no-op on the ledger's unique posting key",
   );
 
@@ -95,9 +100,9 @@ test("the representative wallet fixture dedups on the natural posting key", () =
   // so their entry id and idempotency key both derive from the actor id.
   for (const token of ["@@CAPTAIN_ACTOR_ID@@", "@@FIELD_ACTOR_ID@@"]) {
     assert.ok(
-      sql.includes(`'wled-wallet-captain-' || '${token}'`) ||
-        sql.includes(`'wled-wallet-field-' || '${token}'`),
-      `${token} entry id must derive from the provisioned actor`,
+      sql.includes(`'wlt-wallet-captain-' || '${token}'`) ||
+        sql.includes(`'wlt-wallet-field-' || '${token}'`),
+      `${token} ledger reference must derive from the provisioned actor`,
     );
   }
 });

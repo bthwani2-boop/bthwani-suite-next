@@ -96,6 +96,8 @@
     {"ordinal":89,"file":"wlt-919_daily_finance_close_operator_context_key.sql","sha256":"5b99a9b05bdf466dad3e08ef23012a26188ce0d38ba6c996518b08483a8339eb","historicalPrefix":"919","state":"ACTIVE"},
     {"ordinal":90,"file":"wlt-920_store_onboarding_fee_policy_v2.sql","sha256":"0ce73ff0a7a5f80a10ca9aef8123e88de25d44262c4e09055fd7f9cd07b08ed1","historicalPrefix":"920","state":"ACTIVE"},
     {"ordinal":91,"file":"wlt-921_financial_scope_defaults_fail_closed.sql","sha256":"09f4b3c27d3a5383ca4e6a971820494afac6cf6dafe4d5c76f6dea17263c56a5","historicalPrefix":"921","state":"ACTIVE"},
-    {"ordinal":92,"file":"wlt-922_wallet_projection_source_triggers.sql","sha256":"8f92d78c14f2e63a19e725fd7881d1d5816252af0b5b1d592494b94fdacc2c7f","historicalPrefix":"922","state":"ACTIVE"}
+    {"ordinal":92,"file":"wlt-922_wallet_projection_source_triggers.sql","sha256":"8f92d78c14f2e63a19e725fd7881d1d5816252af0b5b1d592494b94fdacc2c7f","historicalPrefix":"922","state":"ACTIVE"},
+    {"ordinal":93,"file":"wlt-923_wallet_projection_deferred_source_triggers.sql","sha256":"c7ea03448f13cf70e9749f8982a5f424711c3a36cbb807b84a6eeb1f675456e5","historicalPrefix":"923","state":"ACTIVE"},
+    {"ordinal":94,"file":"wlt-924_wallet_projection_deferred_ledger_trigger.sql","sha256":"3246e62484785cab9bd1f944702318ab9bc482eaf7e18caa2965af11d3207f86","historicalPrefix":"924","state":"ACTIVE"}
   ]
 }

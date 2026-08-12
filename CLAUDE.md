@@ -2,8 +2,10 @@
 
 Use `governance/GOVERNANCE.md` as the unified repository governance entry point. `AGENTS.md` is the thin coding-agent adapter and `governance/authority/authority-precedence.json` resolves authority conflicts.
 
-Read `governance/product/PRD.md` and only the applicable general policy/Product Truth for the task. Read `.agents/INDEX.md` only when skill/tool routing is not obvious, then load only the selected `.agents/skills/.../SKILL.md` or `.agents/tools/<tool>.md`.
+Read only the applicable Product Truth/policy and smallest sufficient skill/tool context.
 
-When the current authorized task selects Claude + Google delegation, Claude is the orchestrator and verifier. Use `tools/scripts/invoke-claude-antigravity-implementer.mjs` with one bounded work unit, explicit allowed/forbidden paths, acceptance criteria, verification commands, and an explicit Gemini model from `agy models`. Antigravity CLI (`agy`) is implementation-only; it may not commit, push, merge, approve, release, expand scope, or modify the agent/governance control plane. Do not coordinate that work unit with Codex. The shared relay permits only one active delegated Antigravity implementation at a time and uses the local authenticated Antigravity subscription session rather than API keys.
+When the current authorized task selects Claude + OpenCode/NVIDIA delegation, Claude is the orchestrator and verifier. Use `tools/scripts/invoke-claude-opencode-implementer.mjs` with one bounded work unit, an approved worker, exact branch/HEAD, explicit read/write/forbidden paths, acceptance criteria, and Claude-owned verification commands. The OpenCode worker is implementation-only and may not use shell/git/web/subagents, commit, push, merge, approve, release, expand scope, or mutate the agent/governance control plane. Claude owns complete diff review, re-pinning, developer verification, rework, commit, and push.
 
-Planning artifacts live under `plans/`; do not treat them as policy or evidence. Do not preload the full governance, skill, tool, diagnostics, plans, or history trees. This adapter creates no policy, product truth, or approval.
+When the current authorized task explicitly selects Claude + Google delegation, use `tools/scripts/invoke-claude-antigravity-implementer.mjs` and the governed AGY/Gemini route instead. The two backends are mutually exclusive for a work unit.
+
+Do not coordinate a delegated Claude work unit with Codex. Planning artifacts under `plans/` are not policy or evidence. This adapter creates no policy, product truth, or approval.

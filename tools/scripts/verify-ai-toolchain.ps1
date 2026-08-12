@@ -3,7 +3,7 @@ param(
   [ValidateSet("Verify", "Full")]
   [string]$Mode = "Verify",
 
-  [ValidateSet("antigravity-implementer", "graphify", "leanctx", "open-code-review")]
+  [ValidateSet("antigravity-implementer", "opencode-implementer", "graphify", "leanctx", "open-code-review")]
   [string[]]$Require = @()
 )
 
@@ -31,6 +31,9 @@ try {
         switch ($Tool) {
           "antigravity-implementer" {
             & node tools/scripts/invoke-antigravity-implementer.mjs --diagnostic-only
+          }
+          "opencode-implementer" {
+            & node tools/scripts/invoke-opencode-implementer.mjs --diagnostic-only
           }
 
           "graphify" {

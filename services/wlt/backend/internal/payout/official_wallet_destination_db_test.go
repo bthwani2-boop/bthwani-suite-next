@@ -150,14 +150,7 @@ func TestPayoutRequestRejectsUnverifiedDestination(t *testing.T) {
 	seedOfficialWalletProvider(t, db, operatorContextID)
 
 	const initialBalance int64 = 100000
-	if _, err := db.Exec(`INSERT INTO wlt_wallets
-		(operator_context_id,actor_id,actor_type,status,currency,available_balance_minor_units,settled_total_minor_units)
-		VALUES ($1,$2,'field','active','YER',$3,$3)
-		ON CONFLICT (operator_context_id,actor_type,actor_id) DO UPDATE SET
-		  available_balance_minor_units=$3,settled_total_minor_units=$3,held_balance_minor_units=0`,
-		operatorContextID, actorID, initialBalance); err != nil {
-		t.Fatalf("seed wallet: %v", err)
-	}
+	seedPayoutTestSettledWallet(t, db, operatorContextID, actorID, initialBalance)
 
 	destination, code := upsertOfficialWalletDestination(t, db, operatorContextID, actorID, "3333333333", "unv-"+operatorContextID, "corr-unv")
 	if code != http.StatusCreated {

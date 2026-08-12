@@ -64,12 +64,11 @@ func scanCodReservation(row rowScanner) (*CodReservation, error) {
 }
 
 // ReserveCodCapacity atomically reserves amountMinorUnits of captainId's
-// wallet capacity against orderId. The reservation row and the wallet debit
-// (available_balance -= amount, cod_reserved_balance += amount, guarded by
-// WHERE available_balance_minor_units >= amount) are written in one
-// transaction: if the guard fails, both are rolled back together, so a
-// captain's outstanding COD exposure can never exceed their funded wallet
-// balance under concurrent assignment.
+// wallet capacity against orderId. A new reservation is inserted first so
+// replays can be identified without re-checking a later wallet balance. Only a
+// newly-created reservation then locks the captain wallet and checks available
+// capacity; the wallet buckets themselves are refreshed by the deferred source
+// projection trigger at transaction close.
 //
 // Idempotent by (operatorContextId, orderId): a replay with the same
 // captainId/amount/currency returns the existing reservation without
@@ -102,20 +101,6 @@ func ReserveCodCapacity(ctx context.Context, db *sql.DB, orderID, captainID stri
 		return nil, false, err
 	}
 	defer tx.Rollback() //nolint:errcheck
-	var availableBalance int64
-	if err := tx.QueryRowContext(ctx, `
-		SELECT available_balance_minor_units
-		FROM wlt_wallets
-		WHERE operator_context_id = $1 AND actor_id = $2 AND actor_type = 'captain'
-		FOR UPDATE`, operatorContextID, captainID).Scan(&availableBalance); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, false, ErrInsufficientCodCapacity
-		}
-		return nil, false, fmt.Errorf("load captain wallet for COD reservation: %w", err)
-	}
-	if availableBalance < amountMinorUnits {
-		return nil, false, ErrInsufficientCodCapacity
-	}
 
 	created, err := scanCodReservation(tx.QueryRowContext(ctx, `
 		INSERT INTO wlt_cod_reservations
@@ -130,6 +115,20 @@ func ReserveCodCapacity(ctx context.Context, db *sql.DB, orderID, captainID stri
 	}
 
 	if err == nil {
+		var availableBalance int64
+		if err := tx.QueryRowContext(ctx, `
+			SELECT available_balance_minor_units
+			FROM wlt_wallets
+			WHERE operator_context_id = $1 AND actor_id = $2 AND actor_type = 'captain'
+			FOR UPDATE`, operatorContextID, captainID).Scan(&availableBalance); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, false, ErrInsufficientCodCapacity
+			}
+			return nil, false, fmt.Errorf("load captain wallet for COD reservation: %w", err)
+		}
+		if availableBalance < amountMinorUnits {
+			return nil, false, ErrInsufficientCodCapacity
+		}
 		if err := tx.Commit(); err != nil {
 			return nil, false, err
 		}

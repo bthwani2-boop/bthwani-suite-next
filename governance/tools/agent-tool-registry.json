@@ -19,6 +19,23 @@
       "evidence_boundary": "Antigravity execution telemetry and measured Git-visible diff only; no verification or approval."
     },
     {
+      "id": "opencode-implementer",
+      "name": "OpenCode NVIDIA Implementer Relay",
+      "status": "conditional",
+      "kind": "delegated_implementation",
+      "policy_path": ".agents/tools/opencode-implementer.md",
+      "command_script": "tools/scripts/invoke-opencode-implementer.mjs",
+      "coverage": "bounded_declared_scope",
+      "authority": [],
+      "invoke_when": [
+        "Exactly one selected Codex or Claude orchestrator delegates one bounded implementation work unit to an approved OpenCode/NVIDIA worker."
+      ],
+      "do_not_invoke_when": [
+        "Delegation is not explicit, declared scope overlaps dirty work, another delegation is active, write scope is unbounded, or formal approval is requested."
+      ],
+      "evidence_boundary": "OpenCode execution telemetry and measured Git-visible diff only; no verification or approval."
+    },
+    {
       "id": "graphify",
       "name": "Graphify",
       "status": "conditional",
@@ -27,8 +44,12 @@
       "command_script": "tools/scripts/invoke-graphify-toolchain.ps1",
       "coverage": "application_code",
       "authority": [],
-      "invoke_when": ["Direct scoped inspection cannot resolve ownership, dependencies, duplication, dead code, or broad application-code relationships."],
-      "do_not_invoke_when": ["The dependency chain is already clear or the claim concerns governance, CI, infrastructure, runtime state, or complete repository coverage."],
+      "invoke_when": [
+        "Direct scoped inspection cannot resolve ownership, dependencies, duplication, dead code, or broad application-code relationships."
+      ],
+      "do_not_invoke_when": [
+        "The dependency chain is already clear or the claim concerns governance, CI, infrastructure, runtime state, or complete repository coverage."
+      ],
       "evidence_boundary": "Advisory navigation only."
     },
     {
@@ -40,8 +61,12 @@
       "command_script": "tools/scripts/invoke-leanctx-toolchain.ps1",
       "coverage": "tool_context",
       "authority": [],
-      "invoke_when": ["Repeated reads or noisy output materially increase context without improving evidence."],
-      "do_not_invoke_when": ["Exact raw output is required or compression may hide material evidence."],
+      "invoke_when": [
+        "Repeated reads or noisy output materially increase context without improving evidence."
+      ],
+      "do_not_invoke_when": [
+        "Exact raw output is required or compression may hide material evidence."
+      ],
       "evidence_boundary": "Compressed context is navigation, not proof."
     },
     {
@@ -53,8 +78,12 @@
       "command_script": "tools/scripts/invoke-open-code-review-toolchain.ps1",
       "coverage": "bounded_diff_commit_or_range",
       "authority": [],
-      "invoke_when": ["A bounded workspace, commit, or branch-range code review is requested."],
-      "do_not_invoke_when": ["No review is requested or formal approval is required."],
+      "invoke_when": [
+        "A bounded workspace, commit, or branch-range code review is requested."
+      ],
+      "do_not_invoke_when": [
+        "No review is requested or formal approval is required."
+      ],
       "evidence_boundary": "Advisory findings only; no independent or formal approval."
     }
   ]

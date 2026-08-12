@@ -24,14 +24,29 @@ func pricingQuoteRequest(t *testing.T, body string) *http.Request {
 }
 
 func pricingQuoteBody() string {
-	evidence := map[string]any{
-		"version": 1, "deliveryFeeMinorUnits": int64(50000), "serviceFeeMinorUnits": int64(0),
-		"lines": []map[string]any{{"masterProductId": "product-1", "unitPriceMinorUnits": int64(125000), "currency": "YER"}},
+	type evidenceLine struct {
+		MasterProductID     string `json:"masterProductId"`
+		UnitPriceMinorUnits int64  `json:"unitPriceMinorUnits"`
+		Currency            string `json:"currency"`
+	}
+	type pricingEvidence struct {
+		Version               int            `json:"version"`
+		Lines                 []evidenceLine `json:"lines"`
+		DeliveryFeeMinorUnits int64          `json:"deliveryFeeMinorUnits"`
+		ServiceFeeMinorUnits  int64          `json:"serviceFeeMinorUnits"`
+		Signature             string         `json:"signature"`
+	}
+	evidence := pricingEvidence{
+		Version:               1,
+		Lines:                 []evidenceLine{{MasterProductID: "product-1", UnitPriceMinorUnits: 125000, Currency: "YER"}},
+		DeliveryFeeMinorUnits: 50000,
+		ServiceFeeMinorUnits:  0,
+		Signature:             "",
 	}
 	unsigned, _ := json.Marshal(evidence)
 	mac := hmac.New(sha256.New, []byte("pricing-route-secret"))
 	_, _ = mac.Write(unsigned)
-	evidence["signature"] = hex.EncodeToString(mac.Sum(nil))
+	evidence.Signature = hex.EncodeToString(mac.Sum(nil))
 	body, _ := json.Marshal(map[string]any{
 		"clientId": "client-1", "storeId": "store-1", "currency": "YER", "cartVersion": 1,
 		"lines":           []map[string]any{{"masterProductId": "product-1", "productName": "Rice", "quantity": 2}},

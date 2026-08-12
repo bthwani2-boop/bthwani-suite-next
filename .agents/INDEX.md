@@ -42,17 +42,19 @@ Load only when the trigger matches:
 
 Tool policies live under `.agents/tools/` and are loaded only after the tool is selected:
 
-- `antigravity-implementer` — serial bounded Antigravity CLI (`agy`) implementation using an explicit Gemini model under exactly one selected Codex or Claude orchestrator.
+- `opencode-implementer` — serial bounded OpenCode/NVIDIA implementation under exactly one selected Codex or Claude orchestrator.
+- `antigravity-implementer` — serial bounded Antigravity CLI (`agy`) implementation using an explicit Gemini model when that backend is explicitly selected.
 - `graphify` — unresolved application-code relationships.
 - `leanctx` — repeated reads or noisy output.
 - `open-code-review` — bounded advisory diff, commit, or range review.
 
 ## Constraints
 
-- Load the smallest sufficient skill set.
-- Registered delegated routes are `Codex → Antigravity/Gemini → Codex verification` and `Claude → Antigravity/Gemini → Claude verification`.
-- Exactly one route owns a work unit, and only one Antigravity delegation may be active at a time; no shared work unit or parallel delegation between Codex and Claude.
-- The relay uses the local authenticated Antigravity subscription session; it accepts no API-key argument.
+- Default delegated routes are `Codex → OpenCode/NVIDIA → Codex verification` and `Claude → OpenCode/NVIDIA → Claude verification` when the current authorized task selects OpenCode/NVIDIA.
+- AGY/Gemini remains a conditional alternate backend only when a current authorized task explicitly selects it.
+- Exactly one orchestrator and one backend own a work unit; no shared work unit or parallel delegation between Codex and Claude.
+- The OpenCode relay uses the local OpenCode credential store, accepts no API-key argument, and fixes the approved NVIDIA worker/model mapping internally.
+- Implementers own bounded edits only; the selected orchestrator owns diff review, re-pinning, developer verification, rework, commit, and push.
 - Tools and adapters own no approval.
 - Retired skills are never routed and have no live `SKILL.md`.
 - The independent reviewer must not author, execute, or coordinate the reviewed change.

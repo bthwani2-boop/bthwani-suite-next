@@ -134,6 +134,7 @@ const required = new Set(
 
 const commandCandidates = {
   "antigravity-implementer": ["agy"],
+  "opencode-implementer": ["opencode"],
   graphify: ["graphify"],
   leanctx: ["lean-ctx"],
   "open-code-review": ["ocr"],

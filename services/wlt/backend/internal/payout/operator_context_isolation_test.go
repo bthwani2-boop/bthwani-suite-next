@@ -84,6 +84,38 @@ func canonicalizePayoutTestWallet(t *testing.T, db *sql.DB, operatorContextID, a
 	}
 }
 
+func seedPayoutTestSettledWallet(t *testing.T, db *sql.DB, operatorContextID, actorID string, amount int64) {
+	t.Helper()
+	if amount <= 0 {
+		t.Fatalf("payout test wallet amount must be positive, got %d", amount)
+	}
+	ctx := shared.WithOperatorContext(context.Background(), operatorContextID)
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("begin payout test settled wallet seed: %v", err)
+	}
+	defer tx.Rollback() //nolint:errcheck
+	if _, err := ledger.PostOpeningBalance(ctx, tx, "field", actorID, "YER", amount,
+		"payout-test-opening:"+actorID, ledger.Actor{ID: "payout-test", Type: "test"}); err != nil {
+		t.Fatalf("post payout test opening balance: %v", err)
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_commissions
+		(operator_context_id,beneficiary_actor_id,beneficiary_actor_type,source_type,source_id,
+		 commission_type,amount_minor_units,currency,status,settled_at,idempotency_key,created_by)
+		SELECT $1,$2,'field','payout_test_settlement',$3,
+		 'field_visit_fee',$4,'YER','settled',now(),$5,'payout-test'
+		WHERE NOT EXISTS (
+			SELECT 1 FROM wlt_commissions
+			WHERE operator_context_id=$1 AND idempotency_key=$5
+		)`,
+		operatorContextID, actorID, "payout-test-settled:"+actorID, amount, "payout-test-settled:"+actorID); err != nil {
+		t.Fatalf("seed payout test settled commission: %v", err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("commit payout test settled wallet seed: %v", err)
+	}
+}
+
 func upsertOfficialWalletDestination(t *testing.T, db *sql.DB, operatorContextID, actorID, reference, idempotencyKey, correlationID string) (governedDestinationRef, int) {
 	t.Helper()
 	body := fmt.Sprintf(`{
@@ -158,12 +190,12 @@ func executePayoutCreate(t *testing.T, db *sql.DB, operatorContextID, actorID, d
 	t.Helper()
 	canonicalizePayoutTestWallet(t, db, operatorContextID, actorID)
 	body, err := json.Marshal(map[string]any{
-		"beneficiaryActorId": actorID,
+		"beneficiaryActorId":   actorID,
 		"beneficiaryActorType": "field",
-		"payoutDestinationId": destinationID,
-		"amountMinorUnits": amount,
-		"currency": "YER",
-		"idempotencyKey": idempotencyKey,
+		"payoutDestinationId":  destinationID,
+		"amountMinorUnits":     amount,
+		"currency":             "YER",
+		"idempotencyKey":       idempotencyKey,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -213,14 +245,7 @@ func TestPayoutDestinationsRequestsAndWalletHoldsAreOperatorContextLocal(t *test
 
 	destinations := make(map[string]governedDestinationRef, len(OperatorContexts))
 	for _, operatorContextID := range OperatorContexts {
-		if _, err := db.Exec(`INSERT INTO wlt_wallets
-			(operator_context_id,actor_id,actor_type,status,currency,available_balance_minor_units,settled_total_minor_units)
-			VALUES ($1,$2,'field','active','YER',$3,$3)
-			ON CONFLICT (operator_context_id,actor_type,actor_id) DO UPDATE SET
-			  status='active',currency='YER',available_balance_minor_units=$3,settled_total_minor_units=$3,
-			  held_balance_minor_units=0,updated_at=now()`, operatorContextID, actorID, initialBalance); err != nil {
-			t.Fatalf("seed %s wallet: %v", operatorContextID, err)
-		}
+		seedPayoutTestSettledWallet(t, db, operatorContextID, actorID, initialBalance)
 		destinations[operatorContextID] = executeDestinationUpsert(t, db, operatorContextID, actorID, "destination-"+operatorContextID)
 		res := executePayoutCreate(t, db, operatorContextID, actorID, destinations[operatorContextID].ID, idempotencyKey, amount)
 		if res.Code != http.StatusCreated {

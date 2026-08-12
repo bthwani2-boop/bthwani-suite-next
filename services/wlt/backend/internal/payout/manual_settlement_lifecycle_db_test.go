@@ -61,11 +61,7 @@ func TestManualSettlementReachesCompletion(t *testing.T) {
 
 	const balance int64 = 100000
 	const payoutAmount int64 = 25000
-	if _, err := db.Exec(`INSERT INTO wlt_wallets
-		(operator_context_id,actor_id,actor_type,status,currency,available_balance_minor_units,settled_total_minor_units)
-		VALUES ($1,$2,'field','active','YER',$3,$3)`, operatorContextID, actorID, balance); err != nil {
-		t.Fatalf("seed wallet: %v", err)
-	}
+	seedPayoutTestSettledWallet(t, db, operatorContextID, actorID, balance)
 
 	destination := executeDestinationUpsert(t, db, operatorContextID, actorID, "lifecycle-corr")
 	createRes := executePayoutCreate(t, db, operatorContextID, actorID, destination.ID,
@@ -194,11 +190,7 @@ func TestDuplicateExternalReferenceIsRefused(t *testing.T) {
 	t.Cleanup(func() { cleanupDestinationContext(t, operatorContextID, actorID) })
 
 	const balance int64 = 100000
-	if _, err := db.Exec(`INSERT INTO wlt_wallets
-		(operator_context_id,actor_id,actor_type,status,currency,available_balance_minor_units,settled_total_minor_units)
-		VALUES ($1,$2,'field','active','YER',$3,$3)`, operatorContextID, actorID, balance); err != nil {
-		t.Fatalf("seed wallet: %v", err)
-	}
+	seedPayoutTestSettledWallet(t, db, operatorContextID, actorID, balance)
 
 	destination := executeDestinationUpsert(t, db, operatorContextID, actorID, "dup-corr")
 	sharedReference := testsupport.UniqueID("reused-external-ref")

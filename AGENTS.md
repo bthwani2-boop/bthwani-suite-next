@@ -74,23 +74,26 @@ Logical approval authorities remain separated by the agent registry. An executio
 
 ## Delegated implementation
 
-Two mutually exclusive external implementation routes are registered:
+Two mutually exclusive external implementation backends are registered. The current authorized task selects exactly one backend and one orchestrator route for each bounded work unit.
+
+OpenCode/NVIDIA routes:
+
+- `Codex orchestrator → OpenCode/NVIDIA implementer → Codex verification`.
+- `Claude orchestrator → OpenCode/NVIDIA implementer → Claude verification`.
+- Codex uses `tools/scripts/invoke-opencode-implementer.mjs --orchestrator codex`; Claude uses `tools/scripts/invoke-claude-opencode-implementer.mjs`.
+- Approved workers are fixed by the relay: `bthwani-agent-6` / Nemotron Ultra, `bthwani-agent-7` / GLM-5.2, and `bthwani-agent-8` / Nemotron Super.
+- The relay pins exact branch/HEAD, requires bounded read/write/forbidden paths, rejects dirty overlap with declared scope, preserves unrelated dirty work, enforces one active delegation, and validates post-run changed paths.
+- OpenCode runs with a default-deny runtime policy and `--pure`; the worker has path-scoped read/list/edit only. Shell, git, web, task, skill, LSP, external-directory, interactive, commit, push, merge, release, approval, and scope expansion are denied.
+- The selected orchestrator owns diagnosis, scope, the brief, complete diff review, branch/head re-pinning, developer verification, rework, commit, and push.
+
+Antigravity/Gemini routes remain available only when a current authorized task explicitly selects them:
 
 - `Codex orchestrator → Antigravity CLI (agy) implementer using a Gemini model → Codex verification`.
 - `Claude orchestrator → Antigravity CLI (agy) implementer using a Gemini model → Claude verification`.
+- Codex uses `tools/scripts/invoke-antigravity-implementer.mjs --orchestrator codex`; Claude uses `tools/scripts/invoke-claude-antigravity-implementer.mjs`.
+- Antigravity remains implementation-only and uses the locally authenticated Antigravity subscription session.
 
-The current authorized task selects exactly one route for each work unit.
-
-- Use `antigravity-implementer` only for one bounded work unit with a clean working tree, explicit allowed and forbidden paths, acceptance criteria, and orchestrator-owned verification commands.
-- Codex uses `tools/scripts/invoke-antigravity-implementer.mjs --orchestrator codex`; Claude uses `tools/scripts/invoke-claude-antigravity-implementer.mjs`, which binds the same hardened relay to Claude.
-- The relay requires an explicit Gemini `--model` value returned by `agy models`; it never accepts or requires an API key and relies on the locally authenticated Antigravity subscription session.
-- Exactly one delegated Antigravity implementation may be active at a time. Codex and Claude must not delegate concurrently, share the same work unit, or jointly coordinate or verify one delegated work unit.
-- Antigravity owns bounded file edits only. It must not commit, push, merge, release, approve, expand scope, or mutate the agent/governance control plane.
-- The selected orchestrator owns diagnosis, scope, the implementation brief, complete diff review, branch/head re-pinning, developer verification, and the rework decision after Antigravity exits.
-- Antigravity's structured result is execution telemetry, not proof that tests, runtime behavior, or acceptance passed.
-- Reassigning a dispatched work unit from Codex to Claude or from Claude to Codex requires an explicit current-task reassignment and a fresh clean-tree dispatch; implicit handoff is forbidden.
-- Protected independent review and formal product, finance, governance, CI, QA, security, release, risk, production, and closure authorities remain separate.
-- Do not route delegated implementation through the retired consumer Gemini CLI, OpenCode, or another implementer unless a later current authorized task instruction explicitly changes these routes.
+Exactly one delegated implementation route may own a work unit. Codex and Claude must not share or concurrently coordinate the same delegated work unit. Neither backend owns product truth, formal approval, protected independent review, release, production, or closure authority.
 
 ## Plans, skills, and tools
 

@@ -1,9 +1,8 @@
 -- Local representative-wallet runtime fixture.
 --
 -- Economic balance is seeded only through the canonical double-entry ledger.
--- wlt_wallets is a workflow/materialized projection: this file sets status and
--- restricted buckets after the canonical opening transaction exists, and the
--- WLT wallet-projection trigger derives available_balance_minor_units.
+-- Workflow buckets are seeded through their domain source rows; wlt_wallets is
+-- only the materialized read projection.
 --
 -- The fixture is local-only, deterministic and idempotent. It never writes new
 -- rows to legacy wlt_ledger_entries.
@@ -38,15 +37,16 @@ BEGIN
   FOR fixture IN
     SELECT *
     FROM (VALUES
-      ('wlt-wallet-client-local-001',  'local-dsh', 'client-local-001',  'client',  'active', 'YER', 125000::bigint, 10000::bigint,  5000::bigint, 140000::bigint, 10000::bigint,  5000::bigint, '2026-07-22T08:00:00Z'::timestamptz),
-      ('wlt-wallet-partner-local-001', 'local-dsh', 'partner-local-001', 'partner', 'active', 'YER', 875000::bigint, 75000::bigint, 25000::bigint, 975000::bigint, 75000::bigint, 25000::bigint, '2026-07-22T08:01:00Z'::timestamptz),
-      ('wlt-wallet-captain-local-001', 'local-dsh', '@@CAPTAIN_ACTOR_ID@@', 'captain', 'active', 'YER', 215000::bigint, 30000::bigint, 10000::bigint, 255000::bigint, 30000::bigint, 10000::bigint, '2026-07-22T08:02:00Z'::timestamptz),
-      ('wlt-wallet-field-local-001',   'local-dsh', '@@FIELD_ACTOR_ID@@',   'field',   'active', 'YER', 165000::bigint, 20000::bigint,  5000::bigint, 190000::bigint, 20000::bigint,  5000::bigint, '2026-07-22T08:03:00Z'::timestamptz),
-      ('wlt-wallet-client-isolated-context-001', 'isolated-platform-context', 'client-isolated-context-001', 'client', 'active', 'YER', 999999::bigint, 0::bigint, 0::bigint, 999999::bigint, 0::bigint, 0::bigint, '2026-07-22T08:04:00Z'::timestamptz)
+      ('wlt-wallet-client-local-001',  'local-dsh', 'client-local-001',  'client',  'active', 'YER', 125000::bigint, 10000::bigint,  5000::bigint, 140000::bigint, 10000::bigint,  5000::bigint, '2026-07-22T08:00:00Z'::timestamptz, 'wlt-wallet-client-local-001'),
+      ('wlt-wallet-partner-local-001', 'local-dsh', 'partner-local-001', 'partner', 'active', 'YER', 875000::bigint, 75000::bigint, 25000::bigint, 975000::bigint, 75000::bigint, 25000::bigint, '2026-07-22T08:01:00Z'::timestamptz, 'wlt-wallet-partner-local-001'),
+      ('wlt-wallet-captain-local-001', 'local-dsh', '@@CAPTAIN_ACTOR_ID@@', 'captain', 'active', 'YER', 215000::bigint, 30000::bigint, 10000::bigint, 255000::bigint, 30000::bigint, 10000::bigint, '2026-07-22T08:02:00Z'::timestamptz, 'wlt-wallet-captain-' || '@@CAPTAIN_ACTOR_ID@@'),
+      ('wlt-wallet-field-local-001',   'local-dsh', '@@FIELD_ACTOR_ID@@',   'field',   'active', 'YER', 165000::bigint, 20000::bigint,  5000::bigint, 190000::bigint, 20000::bigint,  5000::bigint, '2026-07-22T08:03:00Z'::timestamptz, 'wlt-wallet-field-' || '@@FIELD_ACTOR_ID@@'),
+      ('wlt-wallet-client-isolated-context-001', 'isolated-platform-context', 'client-isolated-context-001', 'client', 'active', 'YER', 999999::bigint, 0::bigint, 0::bigint, 999999::bigint, 0::bigint, 0::bigint, '2026-07-22T08:04:00Z'::timestamptz, 'wlt-wallet-client-isolated-context-001')
     ) AS f(
       wallet_id, operator_context_id, actor_id, actor_type, status, currency,
       available_minor, pending_minor, held_minor,
-      earned_total_minor, settled_total_minor, paid_total_minor, observed_at
+      earned_total_minor, settled_total_minor, paid_total_minor, observed_at,
+      ledger_reference_id
     )
   LOOP
     IF fixture.available_minor < 0
@@ -89,7 +89,7 @@ BEGIN
       fixture.operator_context_id,
       'runtime_seed_opening_balance',
       'representative_wallet',
-      fixture.wallet_id,
+      fixture.ledger_reference_id,
       'representative-wallets.local.sql',
       'runtime_seed',
       fixture.observed_at
@@ -144,7 +144,7 @@ BEGIN
       WHERE operator_context_id = fixture.operator_context_id
         AND transaction_type = 'runtime_seed_opening_balance'
         AND reference_type = 'representative_wallet'
-        AND reference_id = fixture.wallet_id;
+        AND reference_id = fixture.ledger_reference_id;
 
       SELECT l.amount_minor_units
       INTO existing_wallet_line_amount
@@ -171,8 +171,171 @@ BEGIN
       END IF;
     END IF;
 
-    -- WLT derives available from canonical balance minus restricted workflow
-    -- buckets. The explicit available value is intentionally omitted.
+    INSERT INTO wlt_commissions (
+      operator_context_id,
+      beneficiary_actor_id,
+      beneficiary_actor_type,
+      source_type,
+      source_id,
+      commission_type,
+      amount_minor_units,
+      currency,
+      status,
+      settled_at,
+      idempotency_key,
+      created_by
+    )
+    SELECT
+      fixture.operator_context_id,
+      fixture.actor_id,
+      fixture.actor_type,
+      'representative_wallet_seed',
+      fixture.ledger_reference_id || ':pending',
+      'platform_fee',
+      fixture.pending_minor,
+      fixture.currency,
+      'pending',
+      NULL,
+      fixture.ledger_reference_id || ':commission:pending',
+      'representative-wallets.local.sql'
+    WHERE fixture.pending_minor > 0
+      AND NOT EXISTS (
+        SELECT 1 FROM wlt_commissions
+        WHERE operator_context_id = fixture.operator_context_id
+          AND idempotency_key = fixture.ledger_reference_id || ':commission:pending'
+      );
+
+    INSERT INTO wlt_commissions (
+      operator_context_id,
+      beneficiary_actor_id,
+      beneficiary_actor_type,
+      source_type,
+      source_id,
+      commission_type,
+      amount_minor_units,
+      currency,
+      status,
+      settled_at,
+      idempotency_key,
+      created_by
+    )
+    SELECT
+      fixture.operator_context_id,
+      fixture.actor_id,
+      fixture.actor_type,
+      'representative_wallet_seed',
+      fixture.ledger_reference_id || ':settled',
+      'platform_fee',
+      fixture.settled_total_minor,
+      fixture.currency,
+      'settled',
+      fixture.observed_at,
+      fixture.ledger_reference_id || ':commission:settled',
+      'representative-wallets.local.sql'
+    WHERE fixture.settled_total_minor > 0
+      AND NOT EXISTS (
+        SELECT 1 FROM wlt_commissions
+        WHERE operator_context_id = fixture.operator_context_id
+          AND idempotency_key = fixture.ledger_reference_id || ':commission:settled'
+      );
+
+    INSERT INTO wlt_commissions (
+      operator_context_id,
+      beneficiary_actor_id,
+      beneficiary_actor_type,
+      source_type,
+      source_id,
+      commission_type,
+      amount_minor_units,
+      currency,
+      status,
+      settled_at,
+      idempotency_key,
+      created_by
+    )
+    SELECT
+      fixture.operator_context_id,
+      fixture.actor_id,
+      fixture.actor_type,
+      'representative_wallet_seed',
+      fixture.ledger_reference_id || ':paid-earned',
+      'platform_fee',
+      fixture.earned_total_minor - fixture.pending_minor - fixture.settled_total_minor,
+      fixture.currency,
+      'paid',
+      fixture.observed_at,
+      fixture.ledger_reference_id || ':commission:paid-earned',
+      'representative-wallets.local.sql'
+    WHERE fixture.earned_total_minor > fixture.pending_minor + fixture.settled_total_minor
+      AND NOT EXISTS (
+        SELECT 1 FROM wlt_commissions
+        WHERE operator_context_id = fixture.operator_context_id
+          AND idempotency_key = fixture.ledger_reference_id || ':commission:paid-earned'
+      );
+
+    INSERT INTO wlt_payout_requests (
+      operator_context_id,
+      beneficiary_actor_id,
+      beneficiary_actor_type,
+      amount_minor_units,
+      currency,
+      status,
+      idempotency_key,
+      payload_hash,
+      request_hash,
+      operator_id
+    )
+    SELECT
+      fixture.operator_context_id,
+      fixture.actor_id,
+      fixture.actor_type,
+      fixture.held_minor,
+      fixture.currency,
+      'pending',
+      fixture.ledger_reference_id || ':payout:held',
+      fixture.ledger_reference_id || ':payout:held',
+      fixture.ledger_reference_id || ':payout:held',
+      'representative-wallets.local.sql'
+    WHERE fixture.held_minor > 0
+      AND NOT EXISTS (
+        SELECT 1 FROM wlt_payout_requests
+        WHERE operator_context_id = fixture.operator_context_id
+          AND idempotency_key = fixture.ledger_reference_id || ':payout:held'
+      );
+
+    INSERT INTO wlt_payout_requests (
+      operator_context_id,
+      beneficiary_actor_id,
+      beneficiary_actor_type,
+      amount_minor_units,
+      currency,
+      status,
+      completed_at,
+      idempotency_key,
+      payload_hash,
+      request_hash,
+      operator_id
+    )
+    SELECT
+      fixture.operator_context_id,
+      fixture.actor_id,
+      fixture.actor_type,
+      fixture.paid_total_minor,
+      fixture.currency,
+      'completed',
+      fixture.observed_at,
+      fixture.ledger_reference_id || ':payout:paid',
+      fixture.ledger_reference_id || ':payout:paid',
+      fixture.ledger_reference_id || ':payout:paid',
+      'representative-wallets.local.sql'
+    WHERE fixture.paid_total_minor > 0
+      AND NOT EXISTS (
+        SELECT 1 FROM wlt_payout_requests
+        WHERE operator_context_id = fixture.operator_context_id
+          AND idempotency_key = fixture.ledger_reference_id || ':payout:paid'
+      );
+
+    -- WLT derives wallet buckets from canonical balance plus workflow sources.
     INSERT INTO wlt_wallets (
       id,
       operator_context_id,
@@ -180,11 +343,6 @@ BEGIN
       actor_type,
       status,
       currency,
-      pending_balance_minor_units,
-      held_balance_minor_units,
-      earned_total_minor_units,
-      settled_total_minor_units,
-      paid_total_minor_units,
       last_ledger_entry_at,
       updated_at
     )
@@ -195,11 +353,6 @@ BEGIN
       fixture.actor_type,
       fixture.status,
       fixture.currency,
-      fixture.pending_minor,
-      fixture.held_minor,
-      fixture.earned_total_minor,
-      fixture.settled_total_minor,
-      fixture.paid_total_minor,
       fixture.observed_at,
       fixture.observed_at
     )
@@ -208,13 +361,15 @@ BEGIN
       id = EXCLUDED.id,
       status = EXCLUDED.status,
       currency = EXCLUDED.currency,
-      pending_balance_minor_units = EXCLUDED.pending_balance_minor_units,
-      held_balance_minor_units = EXCLUDED.held_balance_minor_units,
-      earned_total_minor_units = EXCLUDED.earned_total_minor_units,
-      settled_total_minor_units = EXCLUDED.settled_total_minor_units,
-      paid_total_minor_units = EXCLUDED.paid_total_minor_units,
       last_ledger_entry_at = EXCLUDED.last_ledger_entry_at,
       updated_at = EXCLUDED.updated_at;
+
+    PERFORM wlt_refresh_wallet_projection(
+      fixture.operator_context_id,
+      fixture.actor_type,
+      fixture.actor_id,
+      fixture.currency
+    );
 
     IF NOT EXISTS (
       SELECT 1

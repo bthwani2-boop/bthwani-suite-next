@@ -33,14 +33,7 @@ func TestConcurrentPayoutRequestsCannotOverHoldWallet(t *testing.T) {
 	seedOfficialWalletProvider(t, db, operatorContextID)
 
 	const balance int64 = 100000
-	if _, err := db.Exec(`INSERT INTO wlt_wallets
-		(operator_context_id,actor_id,actor_type,status,currency,available_balance_minor_units,settled_total_minor_units)
-		VALUES ($1,$2,'field','active','YER',$3,$3)
-		ON CONFLICT (operator_context_id,actor_type,actor_id) DO UPDATE SET
-		  available_balance_minor_units=$3,settled_total_minor_units=$3,held_balance_minor_units=0,paid_total_minor_units=0`,
-		operatorContextID, actorID, balance); err != nil {
-		t.Fatalf("seed wallet: %v", err)
-	}
+	seedPayoutTestSettledWallet(t, db, operatorContextID, actorID, balance)
 
 	destination := executeDestinationUpsert(t, db, operatorContextID, actorID, "concurrency-corr")
 
@@ -103,11 +96,7 @@ func TestApprovedPayoutSnapshotIsImmutable(t *testing.T) {
 	seedOfficialWalletProvider(t, db, operatorContextID)
 
 	const balance int64 = 100000
-	if _, err := db.Exec(`INSERT INTO wlt_wallets
-		(operator_context_id,actor_id,actor_type,status,currency,available_balance_minor_units,settled_total_minor_units)
-		VALUES ($1,$2,'field','active','YER',$3,$3)`, operatorContextID, actorID, balance); err != nil {
-		t.Fatalf("seed wallet: %v", err)
-	}
+	seedPayoutTestSettledWallet(t, db, operatorContextID, actorID, balance)
 	destination := executeDestinationUpsert(t, db, operatorContextID, actorID, "immutable-corr")
 	res := executePayoutCreate(t, db, operatorContextID, actorID, destination.ID, "immutable-payout-"+operatorContextID, 10000)
 	if res.Code != http.StatusCreated {
