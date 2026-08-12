@@ -12,6 +12,8 @@ import {
 import {
   identityServerClient,
   isConcurrentRefreshError,
+  isIdentityServerAvailabilityError,
+  isIdentityServerInvalidSessionError,
 } from "../auth/_lib/identity-server";
 import { sendAuthenticatedUpstreamRequest } from "../_kernel/upstream-http-request";
 
@@ -70,14 +72,14 @@ function expiredSessionResponse(status = 401): NextResponse {
   return response;
 }
 
-function concurrentRefreshResponse(): NextResponse {
-  return noStoreJson({ code: "REFRESH_ALREADY_ROTATED" }, 409);
-}
-
 function refreshFailureResponse(error: unknown): NextResponse {
-  return isConcurrentRefreshError(error)
-    ? concurrentRefreshResponse()
-    : expiredSessionResponse();
+  if (isConcurrentRefreshError(error)) {
+    return noStoreJson({ code: "REFRESH_ALREADY_ROTATED" }, 409);
+  }
+  if (isIdentityServerAvailabilityError(error) || !isIdentityServerInvalidSessionError(error)) {
+    return noStoreJson({ code: "IDENTITY_UNAVAILABLE" }, 503);
+  }
+  return expiredSessionResponse();
 }
 
 export async function proxyAuthenticatedUpstream(
