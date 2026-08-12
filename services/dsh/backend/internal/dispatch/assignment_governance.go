@@ -328,11 +328,20 @@ func finalizeCandidate(item *CaptainDispatchCandidate) {
 }
 
 func validateCaptainForAssignmentTx(tx *sql.Tx, operatorContextID, captainID, serviceAreaCode string) error {
-	var maxActive, active int
+	serviceAreaCode = strings.TrimSpace(serviceAreaCode)
+	if serviceAreaCode == "" {
+		return fmt.Errorf("%w: serviceAreaCode is required", ErrInvalid)
+	}
+
+	// Lock the captain profile row before evaluating capacity. PostgreSQL cannot
+	// apply FOR UPDATE to a grouped aggregate query, and the profile-row lock is
+	// the serialization boundary we actually need: concurrent offers to the same
+	// captain queue here, then each transaction recomputes active capacity from
+	// committed assignment truth before it may create another offer.
+	var maxActive int
 	var financialEligible, hasAbsence, isFresh bool
 	err := tx.QueryRow(`
 		SELECT p.max_active_assignments,
-		       COUNT(a.id) FILTER (WHERE a.status='accepted' OR (a.status='offered' AND a.response_deadline_at>NOW()))::int,
 		       COALESCE(f.eligible,false) AND f.expires_at>NOW(),
 		       EXISTS (
 		         SELECT 1 FROM dsh_provider_availability_projections absence
@@ -344,13 +353,10 @@ func validateCaptainForAssignmentTx(tx *sql.Tx, operatorContextID, captainID, se
 		FROM dsh_captain_dispatch_profiles p
 		LEFT JOIN dsh_captain_financial_eligibility f
 		  ON f.operator_context_id=p.operator_context_id AND f.captain_id=p.captain_id
-		LEFT JOIN dsh_assignments a
-		  ON a.operator_context_id=p.operator_context_id AND a.captain_id=p.captain_id
 		WHERE p.operator_context_id=$1 AND p.captain_id=$2
 		  AND p.accreditation_status='approved' AND p.availability_status='available'
-		GROUP BY p.operator_context_id, p.captain_id, p.max_active_assignments, f.eligible, f.expires_at, p.updated_at
 		FOR UPDATE OF p`, operatorContextID, captainID,
-	).Scan(&maxActive, &active, &financialEligible, &hasAbsence, &isFresh)
+	).Scan(&maxActive, &financialEligible, &hasAbsence, &isFresh)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrCaptainNotEligible
 	}
@@ -359,6 +365,17 @@ func validateCaptainForAssignmentTx(tx *sql.Tx, operatorContextID, captainID, se
 	}
 	if !financialEligible || hasAbsence || !isFresh {
 		return ErrCaptainNotEligible
+	}
+
+	var active int
+	if err = tx.QueryRow(`
+		SELECT COUNT(*)::int
+		FROM dsh_assignments
+		WHERE operator_context_id=$1 AND captain_id=$2
+		  AND (status='accepted' OR (status='offered' AND response_deadline_at>NOW()))`,
+		operatorContextID, captainID,
+	).Scan(&active); err != nil {
+		return err
 	}
 	if active >= maxActive {
 		return ErrCaptainAtCapacity
