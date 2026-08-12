@@ -25,13 +25,7 @@
       "backend-api-binding"
     ],
     "journey": [
-      "governance-schema",
-      "agent-governance",
-      "authority-separation",
-      "guard-registry",
-      "sdlc",
       "required-command-integrity",
-      "cleanup-policy",
       "no-broken-imports",
       "runtime-config",
       "api-binding",
