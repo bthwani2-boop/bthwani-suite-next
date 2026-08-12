@@ -515,7 +515,7 @@ func (s *protectedStoreServer) requireActor(
 	for _, role := range allowedRoles {
 		if identity.HasRole(role) {
 			expectedSurface := dshActorSurface(role)
-			if identity.SessionSurface != expectedSurface && identity.SessionSurface != "system" {
+			if identity.SessionSurface != expectedSurface {
 				continue
 			}
 			return store.StoreActor{
