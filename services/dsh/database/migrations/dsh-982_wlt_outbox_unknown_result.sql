@@ -1,4 +1,4 @@
--- DSH-1000: an ambiguous DSH-to-WLT delivery is UNKNOWN until canonical WLT
+-- DSH-982: an ambiguous DSH-to-WLT delivery is UNKNOWN until canonical WLT
 -- readback proves sent or absent. It must never become a blind retry directly.
 
 BEGIN;
