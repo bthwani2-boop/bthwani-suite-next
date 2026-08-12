@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { composeContext } from "../../tools/scripts/openapi-context-composer.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
@@ -73,6 +74,17 @@ test("contract verification composes from sovereign sources instead of requiring
   const typecheck = read("tools/scripts/contracts/typecheck.mjs");
   assert.match(typecheck, /composeContext\(context, \{ write: false \}\)/);
   assert.doesNotMatch(typecheck, /committed bundle|readFileSync\(new URL\(result\.bundlePath/);
+});
+
+test("DSH modular composition does not materialize stale payout-destination self-references", async () => {
+  const result = await composeContext("dsh", { write: false });
+  for (const pathPointer of [
+    "~1dsh~1captain~1me~1finance~1payout-destination~1deactivate",
+    "~1dsh~1field~1me~1finance~1payout-destination~1deactivate",
+    "~1dsh~1partner~1me~1finance~1payout-destination~1deactivate",
+  ]) {
+    assert.doesNotMatch(result.bundle, new RegExp(`#/paths/${pathPointer}`));
+  }
 });
 
 test("Redocly contract lint stays hermetic while preserving real lint enforcement", () => {

@@ -342,16 +342,10 @@ paths:
     $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1wallets~1{actorType}~1{actorId}~1ledger-entries"
   /dsh/captain/me/finance/payout-destination:
     $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1payout-destination"
-  /dsh/captain/me/finance/payout-destination/deactivate:
-    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1payout-destination~1deactivate"
   /dsh/field/me/finance/payout-destination:
     $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1field~1me~1finance~1payout-destination"
-  /dsh/field/me/finance/payout-destination/deactivate:
-    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1field~1me~1finance~1payout-destination~1deactivate"
   /dsh/partner/me/finance/payout-destination:
     $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1payout-destination"
-  /dsh/partner/me/finance/payout-destination/deactivate:
-    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1payout-destination~1deactivate"
   /dsh/control-panel/finance/payout-requests/{payoutId}/audit:
     $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1audit"
   /dsh/control-panel/finance/cod-reconciliation-cases:

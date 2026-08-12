@@ -157,7 +157,7 @@
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
     parameters:
-      - $ref: "#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
 
 /dsh/field/stores/{storeId}/verifications:
   post:
