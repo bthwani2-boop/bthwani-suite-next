@@ -83,17 +83,19 @@ test("all control-panel BFF routes share one HttpOnly cookie owner", () => {
   assert.doesNotMatch(proxy, /bthwani_cp_access|bthwani_cp_refresh/);
 });
 
-test("all identity token rotation paths require the canonical operator control-panel session invariant", () => {
+test("control-panel token lifecycle authenticates exact surface without inventing a business role", () => {
   const proxy = read(bffProxyPath);
   const loginRoute = read("apps/control-panel/runtime/src/app/api/auth/login/route.ts");
   const refreshRoute = read("apps/control-panel/runtime/src/app/api/auth/refresh/route.ts");
   const sessionRoute = read("apps/control-panel/runtime/src/app/api/auth/session/route.ts");
+  const activateRoute = read("apps/control-panel/runtime/src/app/api/auth/activate/route.ts");
   const boundary = read("services/dsh/frontend/shared/session/ControlPanelAuthBoundary.tsx");
+  const upstreamProxy = read("apps/control-panel/runtime/src/app/api/adapters/upstream-proxy.adapter.ts");
 
-  for (const source of [proxy, loginRoute, refreshRoute, sessionRoute, boundary]) {
-    assert.match(source, /identitySessionAuthorizesSurface/);
-    assert.match(source, /"operator"/);
+  for (const source of [proxy, loginRoute, refreshRoute, sessionRoute, activateRoute, boundary, upstreamProxy]) {
+    assert.match(source, /identitySessionIsBoundToSurface/);
     assert.match(source, /"control-panel"/);
+    assert.doesNotMatch(source, /roles\.includes\("operator"\)/);
   }
 
   assert.match(proxy, /function tokenResponseHasGovernedControlPanelIdentity/);
@@ -101,9 +103,16 @@ test("all identity token rotation paths require the canonical operator control-p
   assert.match(proxy, /clearSessionCookies\(response\)/);
   assert.match(refreshRoute, /clearSessionCookies\(response\)/);
   assert.match(sessionRoute, /clearSessionCookies\(response\)/);
-  assert.doesNotMatch(loginRoute, /roles\.includes\("operator"\)/);
-  assert.doesNotMatch(refreshRoute, /roles\.includes\("operator"\)/);
-  assert.doesNotMatch(sessionRoute, /roles\.includes\("operator"\)/);
+});
+
+test("developer operator login uses the canonical role plus surface policy", () => {
+  const devSession = read("apps/control-panel/runtime/src/app/api/auth/dev-session/route.ts");
+  assert.match(devSession, /identitySessionAuthorizesSurface/);
+  assert.match(devSession, /"operator",\s*"control-panel"/);
+  assert.match(devSession, /role:\s*"operator"/);
+  assert.match(devSession, /surface:\s*"control-panel"/);
+  assert.match(devSession, /isDevelopmentRuntime\(\)/);
+  assert.match(devSession, /isSameOriginRequest\(request\)/);
 });
 
 test("logout clears cookies only after server revocation is confirmed or already invalid", () => {
