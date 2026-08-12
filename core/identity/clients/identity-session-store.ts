@@ -322,45 +322,9 @@ async function performIdentityBootstrap(identityClient: IdentityClient): Promise
     return;
   }
 
-  if (isFreshActorIdentity(saved.identity)) {
-    commitAuthenticatedSession(saved, false);
-
-    void (async () => {
-      try {
-        const identity = await identityClient.session(saved.accessToken);
-        commitAuthenticatedSession({ ...saved, identity }, true);
-      } catch (error) {
-        if (isIdentityInvalidSessionError(error)) {
-          try {
-            const refreshed = await identityClient.refresh(saved.refreshToken);
-            commitAuthenticatedSession({
-              accessToken: refreshed.accessToken,
-              refreshToken: refreshed.refreshToken,
-              identity: refreshed.identity,
-            }, true);
-          } catch (refreshError) {
-            if (isIdentityInvalidSessionError(refreshError)) {
-              clearSession("IDENTITY_SESSION_INVALID");
-            } else {
-              setServiceUnavailable(
-                isIdentityAvailabilityError(refreshError)
-                  ? identityErrorCode(refreshError)
-                  : "IDENTITY_UNAVAILABLE",
-              );
-            }
-          }
-        } else {
-          setServiceUnavailable(
-            isIdentityAvailabilityError(error)
-              ? identityErrorCode(error)
-              : "IDENTITY_UNAVAILABLE",
-          );
-        }
-      }
-    })();
-    return;
-  }
-
+  // Stored credentials are only continuity material. The UI must not become
+  // authenticated until Identity has authoritatively revalidated or refreshed
+  // this exact session after application startup.
   await restoreStoredSession(identityClient, saved);
 }
 
@@ -523,18 +487,51 @@ export async function revokeIdentitySession(sessionId: string): Promise<void> {
   if (!token) throw new Error("UNAUTHENTICATED");
   if (client === null) throw new Error("IDENTITY_NOT_CONFIGURED");
   const revokingCurrentSession = stored?.identity.sessionId === sessionId;
-  if (revokingCurrentSession) await runBeforeSessionEndHooks();
-  await client.revokeSession(token, sessionId);
-  if (revokingCurrentSession) clearSession();
+  try {
+    await client.revokeSession(token, sessionId);
+  } catch (error) {
+    if (revokingCurrentSession && isIdentityInvalidSessionError(error)) {
+      await runBeforeSessionEndHooks();
+      clearSession();
+      return;
+    }
+    throw error;
+  }
+  if (revokingCurrentSession) {
+    await runBeforeSessionEndHooks();
+    clearSession();
+  }
 }
 
 export async function logoutIdentity(): Promise<void> {
   const accessToken = stored?.accessToken;
-  if (accessToken !== undefined) await runBeforeSessionEndHooks();
-  clearSession();
-  if (client !== null && accessToken !== undefined) {
-    await client.logout(accessToken).catch(() => undefined);
+  if (accessToken === undefined) {
+    clearSession();
+    return;
   }
+  if (client === null) {
+    setState({ kind: "error", message: "IDENTITY_NOT_CONFIGURED" });
+    return;
+  }
+
+  try {
+    await client.logout(accessToken);
+  } catch (error) {
+    if (isIdentityInvalidSessionError(error)) {
+      await runBeforeSessionEndHooks();
+      clearSession();
+      return;
+    }
+    setServiceUnavailable(
+      isIdentityAvailabilityError(error)
+        ? identityErrorCode(error)
+        : "IDENTITY_UNAVAILABLE",
+    );
+    return;
+  }
+
+  await runBeforeSessionEndHooks();
+  clearSession();
 }
 
 export async function changePasswordIdentity(password: string): Promise<void> {
@@ -548,8 +545,8 @@ export async function deleteAccountIdentity(): Promise<void> {
   const token = getIdentityAccessToken();
   if (!token) throw new Error("UNAUTHENTICATED");
   if (client === null) throw new Error("IDENTITY_NOT_CONFIGURED");
-  await runBeforeSessionEndHooks();
   await client.deleteAccount(token);
+  await runBeforeSessionEndHooks();
   clearSession();
 }
 
