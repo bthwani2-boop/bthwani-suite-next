@@ -14,18 +14,18 @@ import (
 )
 
 var (
-	ErrStale                      = errors.New("dispatch mutation rejected due to stale version")
-	ErrPreconditionFailed         = errors.New("dispatch mutation rejected due to precondition failure")
-	ErrAssignmentNotFound         = errors.New("assignment not found")
-	ErrCaptainProfileNotFound     = errors.New("captain dispatch profile not found")
-	ErrCaptainNotEligible = errors.New("captain is not eligible for dispatch")
-	ErrCaptainAtCapacity  = errors.New("captain dispatch capacity reached")
-	ErrOfferExpired       = errors.New("dispatch offer expired")
+	ErrStale                  = errors.New("dispatch mutation rejected due to stale version")
+	ErrPreconditionFailed     = errors.New("dispatch mutation rejected due to precondition failure")
+	ErrAssignmentNotFound     = errors.New("assignment not found")
+	ErrCaptainProfileNotFound = errors.New("captain dispatch profile not found")
+	ErrCaptainNotEligible     = errors.New("captain is not eligible for dispatch")
+	ErrCaptainAtCapacity      = errors.New("captain dispatch capacity reached")
+	ErrOfferExpired           = errors.New("dispatch offer expired")
 )
 
 type GovernedCreateAssignmentInput struct {
 	OrderID                string
-	OperatorContextID               string
+	OperatorContextID      string
 	CaptainID              string
 	ActorID                string
 	ServiceAreaCode        string
@@ -38,50 +38,50 @@ type GovernedCreateAssignmentInput struct {
 }
 
 type CaptainDispatchProfileInput struct {
-	OperatorContextID             string
-	CaptainID            string
-	AccreditationStatus  string
-	AvailabilityStatus   string
-	MaxActiveAssignments int
-	PriorityScore        int
-	ExpectedVersion      int
-	ActorID              string
+	OperatorContextID     string
+	CaptainID             string
+	AccreditationStatus   string
+	AvailabilityStatus    string
+	MaxActiveAssignments  int
+	PriorityScore         int
+	ExpectedVersion       int
+	ActorID               string
 }
 
 type CaptainDispatchCandidate struct {
-	OperatorContextID             string    `json:"operatorContextId"`
-	CaptainID            string    `json:"captainId"`
-	ServiceAreaCode      string    `json:"serviceAreaCode"`
-	AccreditationStatus  string    `json:"accreditationStatus"`
-	AvailabilityStatus   string    `json:"availabilityStatus"`
-	MaxActiveAssignments int       `json:"maxActiveAssignments"`
-	ActiveAssignments    int       `json:"activeAssignments"`
-	RemainingCapacity    int       `json:"remainingCapacity"`
-	PriorityScore        int       `json:"priorityScore"`
-	Eligible             bool      `json:"eligible"`
-	IneligibilityReason  string    `json:"ineligibilityReason,omitempty"`
-	Version              int       `json:"version"`
-	UpdatedAt            time.Time `json:"updatedAt"`
+	OperatorContextID     string    `json:"operatorContextId"`
+	CaptainID             string    `json:"captainId"`
+	ServiceAreaCode       string    `json:"serviceAreaCode"`
+	AccreditationStatus   string    `json:"accreditationStatus"`
+	AvailabilityStatus    string    `json:"availabilityStatus"`
+	MaxActiveAssignments  int       `json:"maxActiveAssignments"`
+	ActiveAssignments     int       `json:"activeAssignments"`
+	RemainingCapacity     int       `json:"remainingCapacity"`
+	PriorityScore         int       `json:"priorityScore"`
+	Eligible              bool      `json:"eligible"`
+	IneligibilityReason   string    `json:"ineligibilityReason,omitempty"`
+	Version               int       `json:"version"`
+	UpdatedAt             time.Time `json:"updatedAt"`
 }
 
 type DispatchDecision struct {
-	ID           string          `json:"id"`
-	OperatorContextID     string          `json:"operatorContextId"`
-	AssignmentID string          `json:"assignmentId,omitempty"`
-	OrderID      string          `json:"orderId,omitempty"`
-	CaptainID    string          `json:"captainId,omitempty"`
-	Action       string          `json:"action"`
-	ReasonCode   string          `json:"reasonCode,omitempty"`
-	Reason       string          `json:"reason,omitempty"`
-	ActorID      string          `json:"actorId"`
-	ActorRole    string          `json:"actorRole"`
-	Metadata     json.RawMessage `json:"metadata"`
-	CreatedAt    time.Time       `json:"createdAt"`
+	ID                string          `json:"id"`
+	OperatorContextID string          `json:"operatorContextId"`
+	AssignmentID      string          `json:"assignmentId,omitempty"`
+	OrderID           string          `json:"orderId,omitempty"`
+	CaptainID         string          `json:"captainId,omitempty"`
+	Action            string          `json:"action"`
+	ReasonCode        string          `json:"reasonCode,omitempty"`
+	Reason            string          `json:"reason,omitempty"`
+	ActorID           string          `json:"actorId"`
+	ActorRole         string          `json:"actorRole"`
+	Metadata          json.RawMessage `json:"metadata"`
+	CreatedAt         time.Time       `json:"createdAt"`
 }
 
 type ReassignAssignmentInput struct {
 	AssignmentID          string
-	OperatorContextID              string
+	OperatorContextID     string
 	CaptainID             string
 	ActorID               string
 	ServiceAreaCode       string
@@ -146,12 +146,22 @@ func GetCaptainDispatchProfile(db *sql.DB, operatorContextID, captainID string) 
 
 	var candidate CaptainDispatchCandidate
 	err = db.QueryRow(`
-		SELECT accreditation_status, availability_status, max_active_assignments, priority_score, version
-		FROM dsh_captain_dispatch_profiles
-		WHERE operator_context_id = $1 AND captain_id = $2
+		SELECT p.operator_context_id, p.captain_id,
+		       p.accreditation_status, p.availability_status, p.max_active_assignments,
+		       (
+		         SELECT COUNT(*)::int
+		         FROM dsh_assignments a
+		         WHERE a.operator_context_id=p.operator_context_id AND a.captain_id=p.captain_id
+		           AND (a.status='accepted' OR (a.status='offered' AND a.response_deadline_at>NOW()))
+		       ) AS active_assignments,
+		       p.priority_score, p.version, p.updated_at
+		FROM dsh_captain_dispatch_profiles p
+		WHERE p.operator_context_id=$1 AND p.captain_id=$2
 	`, operatorContextID, captainID).Scan(
+		&candidate.OperatorContextID, &candidate.CaptainID,
 		&candidate.AccreditationStatus, &candidate.AvailabilityStatus,
-		&candidate.MaxActiveAssignments, &candidate.PriorityScore, &candidate.Version,
+		&candidate.MaxActiveAssignments, &candidate.ActiveAssignments,
+		&candidate.PriorityScore, &candidate.Version, &candidate.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -159,8 +169,7 @@ func GetCaptainDispatchProfile(db *sql.DB, operatorContextID, captainID string) 
 		}
 		return nil, err
 	}
-	candidate.CaptainID = captainID
-	candidate.Eligible = true
+	finalizeCandidate(&candidate)
 	return &candidate, nil
 }
 
@@ -189,8 +198,8 @@ func UpsertCaptainDispatchProfile(db *sql.DB, input CaptainDispatchProfileInput)
 	if input.MaxActiveAssignments < 1 || input.MaxActiveAssignments > 20 || input.PriorityScore < 0 || input.PriorityScore > 1000 {
 		return nil, fmt.Errorf("%w: invalid capacity or priority score", ErrInvalid)
 	}
-	var version int
-	err = db.QueryRow(`
+
+	result, err := db.Exec(`
 		INSERT INTO dsh_captain_dispatch_profiles (
 			operator_context_id, captain_id, accreditation_status, availability_status,
 			max_active_assignments, priority_score, updated_by
@@ -203,37 +212,27 @@ func UpsertCaptainDispatchProfile(db *sql.DB, input CaptainDispatchProfileInput)
 			updated_by=EXCLUDED.updated_by,
 			version=dsh_captain_dispatch_profiles.version+1,
 			updated_at=NOW()
-		WHERE $8=0 OR dsh_captain_dispatch_profiles.version=$8
-		RETURNING version`,
+		WHERE $8=0 OR dsh_captain_dispatch_profiles.version=$8`,
 		input.OperatorContextID, input.CaptainID, input.AccreditationStatus, input.AvailabilityStatus,
 		input.MaxActiveAssignments, input.PriorityScore, input.ActorID, input.ExpectedVersion,
-	).Scan(&version)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: captain profile version changed", ErrConflict)
-	}
+	)
 	if err != nil {
 		return nil, err
 	}
-	candidate, err := getCaptainCandidate(db, input.OperatorContextID, input.CaptainID, "")
-	if errors.Is(err, ErrCaptainNotEligible) {
-		candidate = &CaptainDispatchCandidate{
-			OperatorContextID:             input.OperatorContextID,
-			CaptainID:            input.CaptainID,
-			AccreditationStatus:  input.AccreditationStatus,
-			AvailabilityStatus:   input.AvailabilityStatus,
-			MaxActiveAssignments: input.MaxActiveAssignments,
-			RemainingCapacity:    input.MaxActiveAssignments,
-			PriorityScore:        input.PriorityScore,
-			IneligibilityReason:  "CAPTAIN_SERVICE_AREA_MISSING",
-			Version:              version,
-			UpdatedAt:            time.Now().UTC(),
-		}
-		return candidate, nil
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return nil, err
 	}
-	if candidate != nil {
-		candidate.Version = version
+	if affected != 1 {
+		return nil, fmt.Errorf("%w: captain profile version changed", ErrConflict)
 	}
-	return candidate, err
+
+	// Profile management is OperatorContext-scoped, not service-area-scoped.
+	// Service-area eligibility is evaluated later by candidate discovery and
+	// assignment creation. Returning the operational profile here avoids a
+	// write-then-error path and keeps the profile endpoint independent from a
+	// service-area locator it does not own.
+	return GetCaptainDispatchProfile(db, input.OperatorContextID, input.CaptainID)
 }
 
 func ListCaptainDispatchCandidates(db *sql.DB, operatorContextID, serviceAreaCode string, limit int) ([]CaptainDispatchCandidate, error) {
