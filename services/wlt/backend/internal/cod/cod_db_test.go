@@ -10,8 +10,8 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"wlt-api/internal/reference"
 	"wlt-api/internal/shared"
+	"wlt-api/internal/testsupport"
 )
 
 func getTestDB(t *testing.T) *sql.DB {
@@ -112,17 +112,16 @@ func TestCreateCodRecordUsesOperatorContextLocalWltSessionAndCollectorIdentity(t
 	ctx := shared.WithOperatorContext(context.Background(), operatorContextID)
 	checkoutIntentID := fmt.Sprintf("checkout-cod-%d", time.Now().UnixNano())
 	orderID := fmt.Sprintf("order-cod-%d", time.Now().UnixNano())
-	if _, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
-		CheckoutIntentID: checkoutIntentID,
-		OperatorContextID:         operatorContextID,
-		ClientID:         "client-cod-test",
-		StoreID:          "store-cod-test",
-		PaymentMethod:    "cod",
-		AmountMinorUnits: 432100,
-		Currency:         "YER",
-		CartSnapshotHash: "cod-custody-test-snapshot",
-		IdempotencyKey:   "cod-session-" + checkoutIntentID,
-		CorrelationID:    "cod-session-" + checkoutIntentID,
+	if _, err := testsupport.SeedCanonicalCheckoutPaymentSession(context.Background(), db, testsupport.CheckoutPaymentSession{
+		OperatorContextID: operatorContextID,
+		CheckoutIntentID:  checkoutIntentID,
+		ClientID:          "client-cod-test",
+		StoreID:           "store-cod-test",
+		PaymentMethod:     "cod",
+		Status:            "reference_created",
+		AmountMinorUnits:  432100,
+		Currency:          "YER",
+		FinancialPurpose:  "order_payment",
 	}); err != nil {
 		t.Fatalf("create governed COD payment session: %v", err)
 	}
@@ -159,22 +158,21 @@ func TestCreateCodRecordRejectsNonCodOperatorContextSession(t *testing.T) {
 	operatorContextID := fmt.Sprintf("OperatorContext-wallet-test-%d", time.Now().UnixNano())
 	ctx := shared.WithOperatorContext(context.Background(), operatorContextID)
 	checkoutIntentID := fmt.Sprintf("checkout-wallet-%d", time.Now().UnixNano())
-	if _, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
-		CheckoutIntentID: checkoutIntentID,
-		OperatorContextID:         operatorContextID,
-		ClientID:         "client-wallet-test",
-		StoreID:          "store-wallet-test",
-		PaymentMethod:    "wallet",
-		AmountMinorUnits: 1000,
-		Currency:         "YER",
-		CartSnapshotHash: "wallet-custody-test-snapshot",
-		IdempotencyKey:   "wallet-session-" + checkoutIntentID,
-		CorrelationID:    "wallet-session-" + checkoutIntentID,
+	if _, err := testsupport.SeedCanonicalCheckoutPaymentSession(context.Background(), db, testsupport.CheckoutPaymentSession{
+		OperatorContextID: operatorContextID,
+		CheckoutIntentID:  checkoutIntentID,
+		ClientID:          "client-wallet-test",
+		StoreID:           "store-wallet-test",
+		PaymentMethod:     "wallet",
+		Status:            "reference_created",
+		AmountMinorUnits:  1000,
+		Currency:          "YER",
+		FinancialPurpose:  "order_payment",
 	}); err != nil {
 		t.Fatalf("create governed wallet payment session: %v", err)
 	}
 	_, err := CreateCodRecordForOperatorContext(ctx, db, CreateCodRecordInput{
-		OrderID: fmt.Sprintf("order-wallet-%d", time.Now().UnixNano()),
+		OrderID:       fmt.Sprintf("order-wallet-%d", time.Now().UnixNano()),
 		CollectorType: "captain", CollectorID: "captain-wallet-test",
 		PartnerID: "partner-wallet-test", CheckoutIntentID: checkoutIntentID,
 	})

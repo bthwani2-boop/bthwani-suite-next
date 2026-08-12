@@ -22,6 +22,42 @@ WHERE actor_id IN (
 DELETE FROM wlt_wallets
 WHERE id = 'wlt-wallet-client-other-OperatorContext-001';
 
+-- The dispatch assignment journey must consume a real WLT eligibility
+-- decision. Keep the local policy explicit and bounded to the seeded YER
+-- captain wallet; an absent policy is intentionally a fail-closed state.
+INSERT INTO wlt_dispatch_financial_eligibility_policies (
+  operator_context_id,
+  enabled,
+  require_active_wallet,
+  minimum_dispatch_balance_minor_units,
+  minimum_cod_balance_minor_units,
+  currency,
+  decision_ttl_seconds,
+  policy_version,
+  updated_by
+)
+VALUES (
+  'local-dsh',
+  true,
+  true,
+  1000,
+  1000,
+  'YER',
+  120,
+  'dispatch-balance@runtime-local-1',
+  'representative-wallets.local.sql'
+)
+ON CONFLICT (operator_context_id) DO UPDATE SET
+  enabled = EXCLUDED.enabled,
+  require_active_wallet = EXCLUDED.require_active_wallet,
+  minimum_dispatch_balance_minor_units = EXCLUDED.minimum_dispatch_balance_minor_units,
+  minimum_cod_balance_minor_units = EXCLUDED.minimum_cod_balance_minor_units,
+  currency = EXCLUDED.currency,
+  decision_ttl_seconds = EXCLUDED.decision_ttl_seconds,
+  policy_version = EXCLUDED.policy_version,
+  updated_by = EXCLUDED.updated_by,
+  updated_at = now();
+
 DO $$
 DECLARE
   fixture record;

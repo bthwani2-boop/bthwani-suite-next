@@ -277,6 +277,7 @@ services:
       PORT: "8080"
       DATABASE_URL: "postgres://${BTHWANI_DSH_DB_USER:-dsh_runtime}:${BTHWANI_DSH_DB_PASSWORD:-dsh_runtime_password}@postgres:5432/${BTHWANI_DSH_DB_NAME:-dsh_runtime}?sslmode=disable"
       DSH_AUTH_MODE: "identity-required-for-protected-store-actions"
+      DSH_DISPATCH_ASSIGNMENT_KILL_SWITCH: "${DSH_DISPATCH_ASSIGNMENT_KILL_SWITCH:-true}"
       DSH_IDENTITY_BASE_URL: "http://identity-api:8082"
       DSH_IDENTITY_SERVICE_TOKEN: "${IDENTITY_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_dsh_identity_internal_service_token}"
       DSH_WLT_BASE_URL: "${DSH_WLT_BASE_URL:-http://wlt-api:8083}"

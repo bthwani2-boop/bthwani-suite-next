@@ -1,13 +1,14 @@
 package cod
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"testing"
 	"time"
 
-	"wlt-api/internal/reference"
+	"wlt-api/internal/testsupport"
 )
 
 func seedCommissionPaymentSession(t *testing.T, operatorContextID, status string, amount int64, currency string) (string, *sql.DB) {
@@ -18,27 +19,22 @@ func seedCommissionPaymentSession(t *testing.T, operatorContextID, status string
 	}
 	suffix := fmt.Sprint(time.Now().UnixNano())
 	checkoutIntentID := "commission-checkout-" + suffix
-	session, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
-		CheckoutIntentID: checkoutIntentID,
-		OperatorContextID:         operatorContextID,
-		ClientID:         "commission-client-" + suffix,
-		StoreID:          "commission-store-" + suffix,
-		PaymentMethod:    "wallet",
-		AmountMinorUnits: amount,
-		Currency:         currency,
-		CartSnapshotHash: "commission-cart-snapshot-" + suffix,
-		IdempotencyKey:   "commission-session-" + suffix,
-		CorrelationID:    "commission-session-" + suffix,
+	sessionID, err := testsupport.SeedCanonicalCheckoutPaymentSession(context.Background(), db, testsupport.CheckoutPaymentSession{
+		OperatorContextID: operatorContextID,
+		CheckoutIntentID:  checkoutIntentID,
+		ClientID:          "commission-client-" + suffix,
+		StoreID:           "commission-store-" + suffix,
+		PaymentMethod:     "wallet",
+		Status:            status,
+		AmountMinorUnits:  amount,
+		Currency:          currency,
+		FinancialPurpose:  "order_payment",
 	})
 	if err != nil {
 		db.Close()
 		t.Fatalf("create WLT payment session: %v", err)
 	}
-	if _, err := db.Exec(`UPDATE wlt_payment_sessions SET status=$2 WHERE operator_context_id=$1 AND id=$3`, operatorContextID, status, session.ID); err != nil {
-		db.Close()
-		t.Fatalf("set payment session status: %v", err)
-	}
-	return session.ID, db
+	return sessionID, db
 }
 
 func TestCanonicalOrderCommissionOverridesCallerFinancialFields(t *testing.T) {

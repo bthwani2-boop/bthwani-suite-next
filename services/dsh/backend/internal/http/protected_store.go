@@ -112,16 +112,25 @@ func (s *protectedStoreServer) writeHomeDiscoveryAdminResult(w http.ResponseWrit
 }
 
 func newProtectedStoreServer(db *sql.DB, identity *auth.Client, wltClient *wlt.Client, platformClient *platformclient.Client, mediaProvider *media.Provider) *protectedStoreServer {
+	decisionService, err := store.NewConfiguredDispatchDecisionServiceFromEnv()
+	if err != nil {
+		decisionService = nil
+	}
+	var configuredDecisionService store.DecisionService = decisionService
+	if configuredDecisionService == nil {
+		configuredDecisionService = store.FailClosedDecisionService(err)
+	}
 	return &protectedStoreServer{
-		db:             db,
-		identity:       identity,
-		wlt:            wltClient,
-		platformClient: platformClient,
-		media:          mediaProvider,
-		workforce:      workforceclient.NewClient(os.Getenv("DSH_WORKFORCE_BASE_URL"), os.Getenv("WORKFORCE_DSH_SERVICE_TOKEN")),
-		changeSets:     changeset.NewService(db),
-		providers:      provider.NewService(db),
-		maps:           mapproviders.NewClient(os.Getenv("DSH_MAPS_BASE_URL"), nil),
+		db:              db,
+		identity:        identity,
+		wlt:             wltClient,
+		platformClient:  platformClient,
+		media:           mediaProvider,
+		workforce:       workforceclient.NewClient(os.Getenv("DSH_WORKFORCE_BASE_URL"), os.Getenv("WORKFORCE_DSH_SERVICE_TOKEN")),
+		decisionService: configuredDecisionService,
+		changeSets:      changeset.NewService(db),
+		providers:       provider.NewService(db),
+		maps:            mapproviders.NewClient(os.Getenv("DSH_MAPS_BASE_URL"), nil),
 	}
 }
 
