@@ -2,11 +2,14 @@ package payout
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"wlt-api/internal/shared"
 	"wlt-api/internal/testsupport"
@@ -24,6 +27,55 @@ func completePayout(t *testing.T, db *sql.DB, operatorContextID, payoutID, opera
 	res := httptest.NewRecorder()
 	HandleCompletePayoutRequestSovereign(db)(res, req)
 	return res
+}
+
+func fixtureSHA256(value string) string {
+	sum := sha256.Sum256([]byte(value))
+	return fmt.Sprintf("%x", sum)
+}
+
+// reconcilePayoutWithAuthoritativeStatement supplies the fourth independent
+// fact required by payout completion, under a distinct finance principal.
+func reconcilePayoutWithAuthoritativeStatement(t *testing.T, db *sql.DB, operatorContextID, payoutID, destinationID, externalReference string, amount int64) {
+	t.Helper()
+	var destinationHash string
+	if err := db.QueryRow(`SELECT material_identity_hash FROM wlt_payout_destinations WHERE operator_context_id=$1 AND id=$2`, operatorContextID, destinationID).Scan(&destinationHash); err != nil {
+		t.Fatalf("read payout destination hash: %v", err)
+	}
+	reconcilerCtx := shared.WithDelegatedFinancePrincipal(shared.WithOperatorContext(t.Context(), operatorContextID), "finance-reconciler")
+	account, err := RegisterExternalProviderAccount(reconcilerCtx, db, "test-provider", fixtureSHA256("account:"+operatorContextID), ExternalProviderAccountInput{Currency: "YER"})
+	if err != nil {
+		t.Fatalf("register external provider account: %v", err)
+	}
+	statement, err := ImportAuthoritativeStatement(reconcilerCtx, db, ImportAuthoritativeStatementInput{
+		ExternalProviderAccountID: account.ID,
+		StatementReference:        "statement-" + payoutID,
+		ArtifactSHA256:            fixtureSHA256("artifact:" + payoutID),
+		BusinessDate:              time.Now().UTC().Format(time.DateOnly),
+		Currency:                  "YER",
+		Lines: []AuthoritativeStatementLineInput{{
+			ExternalTransferReference: externalReference,
+			Direction:                 "outgoing",
+			AmountMinorUnits:          amount,
+			Currency:                  "YER",
+			DestinationReferenceHash:  destinationHash,
+			SourceRecord:              map[string]any{"fixture": "authoritative"},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("import authoritative statement: %v", err)
+	}
+	var statementLineID string
+	if err := db.QueryRow(`SELECT id FROM wlt_external_provider_statement_lines WHERE operator_context_id=$1 AND statement_id=$2 AND external_transfer_reference=$3`, operatorContextID, statement.ID, externalReference).Scan(&statementLineID); err != nil {
+		t.Fatalf("read authoritative statement line: %v", err)
+	}
+	reconciliation, err := ReconcilePayoutFourWay(reconcilerCtx, db, payoutID, ReconcilePayoutFourWayInput{StatementLineID: statementLineID}, "reconcile-"+payoutID)
+	if err != nil {
+		t.Fatalf("reconcile payout four-way: %v", err)
+	}
+	if reconciliation.Result != "MATCHED" {
+		t.Fatalf("four-way reconciliation result=%s, want MATCHED", reconciliation.Result)
+	}
 }
 
 func payoutStatus(t *testing.T, db *sql.DB, operatorContextID, payoutID string) string {
@@ -94,7 +146,7 @@ func TestManualSettlementReachesCompletion(t *testing.T) {
 	}
 
 	batchID := freezeBatchForSnapshot(t, db, operatorContextID, snapshotID)
-	ctx := shared.WithOperatorContext(t.Context(), operatorContextID)
+	executorCtx := shared.WithDelegatedFinancePrincipal(shared.WithOperatorContext(t.Context(), operatorContextID), "finance-executor")
 	externalReference := testsupport.UniqueID("official-wallet-ref")
 
 	// Completion is refused while the transfer is only approved.
@@ -102,12 +154,11 @@ func TestManualSettlementReachesCompletion(t *testing.T) {
 		t.Fatalf("completion before execution returned %d, want 409: %s", res.Code, res.Body.String())
 	}
 
-	evidence, err := RecordManualTransferExecution(ctx, db, batchID, RecordManualExecutionInput{
+	evidence, err := RecordManualTransferExecution(executorCtx, db, batchID, RecordManualExecutionInput{
 		ApprovedSnapshotID:        snapshotID,
 		ExternalTransferReference: externalReference,
 		AmountMinorUnits:          payoutAmount,
 		Currency:                  "YER",
-		OperatorID:                "finance-executor",
 	}, "execute-corr")
 	if err != nil {
 		t.Fatalf("record manual execution: %v", err)
@@ -125,13 +176,14 @@ func TestManualSettlementReachesCompletion(t *testing.T) {
 	}
 
 	// The executor cannot verify their own transfer.
-	if _, err := VerifyManualTransferExecution(ctx, db, batchID, evidence.ID,
-		VerifyManualExecutionInput{OperatorID: "finance-executor"}, "verify-corr"); !errors.Is(err, ErrSeparationOfDuties) {
+	if _, err := VerifyManualTransferExecution(executorCtx, db, batchID, evidence.ID,
+		VerifyManualExecutionInput{}, "verify-corr"); !errors.Is(err, ErrSeparationOfDuties) {
 		t.Fatalf("expected self-verification to be refused, got %v", err)
 	}
 
-	verified, err := VerifyManualTransferExecution(ctx, db, batchID, evidence.ID,
-		VerifyManualExecutionInput{OperatorID: "finance-verifier"}, "verify-corr")
+	verifierCtx := shared.WithDelegatedFinancePrincipal(shared.WithOperatorContext(t.Context(), operatorContextID), "finance-verifier")
+	verified, err := VerifyManualTransferExecution(verifierCtx, db, batchID, evidence.ID,
+		VerifyManualExecutionInput{}, "verify-corr")
 	if err != nil {
 		t.Fatalf("verify manual execution: %v", err)
 	}
@@ -141,6 +193,7 @@ func TestManualSettlementReachesCompletion(t *testing.T) {
 	if got := payoutStatus(t, db, operatorContextID, payoutID); got != "verified" {
 		t.Fatalf("payout status after verification = %q, want verified", got)
 	}
+	reconcilePayoutWithAuthoritativeStatement(t, db, operatorContextID, payoutID, destination.ID, externalReference, payoutAmount)
 
 	completeRes := completePayout(t, db, operatorContextID, payoutID, "finance-closer")
 	if completeRes.Code != http.StatusOK {
@@ -193,7 +246,7 @@ func TestDuplicateExternalReferenceIsRefused(t *testing.T) {
 
 	destination := executeDestinationUpsert(t, db, operatorContextID, actorID, "dup-corr")
 	sharedReference := testsupport.UniqueID("reused-external-ref")
-	ctx := shared.WithOperatorContext(t.Context(), operatorContextID)
+	executorCtx := shared.WithDelegatedFinancePrincipal(shared.WithOperatorContext(t.Context(), operatorContextID), "finance-executor")
 
 	var firstErr error
 	for i, idempotencyKey := range []string{"dup-payout-a-" + operatorContextID, "dup-payout-b-" + operatorContextID} {
@@ -211,12 +264,11 @@ func TestDuplicateExternalReferenceIsRefused(t *testing.T) {
 			t.Fatalf("read snapshot %d: %v", i, err)
 		}
 		batchID := freezeBatchForSnapshot(t, db, operatorContextID, snapshotID)
-		_, firstErr = RecordManualTransferExecution(ctx, db, batchID, RecordManualExecutionInput{
+		_, firstErr = RecordManualTransferExecution(executorCtx, db, batchID, RecordManualExecutionInput{
 			ApprovedSnapshotID:        snapshotID,
 			ExternalTransferReference: sharedReference,
 			AmountMinorUnits:          10000,
 			Currency:                  "YER",
-			OperatorID:                "finance-executor",
 		}, "dup-exec-corr")
 		if i == 0 && firstErr != nil {
 			t.Fatalf("first execution should succeed: %v", firstErr)

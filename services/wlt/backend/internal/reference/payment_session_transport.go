@@ -22,6 +22,7 @@ func (input *CreatePaymentSessionInput) UnmarshalJSON(data []byte) error {
 		AmountMinorUnits           int64  `json:"amountMinorUnits"`
 		Currency                   string `json:"currency"`
 		CartSnapshotHash           string `json:"cartSnapshotHash"`
+		PricingQuoteID             string `json:"pricingQuoteId"`
 	}
 
 	var wire transportInput
@@ -48,6 +49,7 @@ func (input *CreatePaymentSessionInput) UnmarshalJSON(data []byte) error {
 		AmountMinorUnits:           wire.AmountMinorUnits,
 		Currency:                   wire.Currency,
 		CartSnapshotHash:           wire.CartSnapshotHash,
+		PricingQuoteID:             wire.PricingQuoteID,
 	}
 	return nil
 }

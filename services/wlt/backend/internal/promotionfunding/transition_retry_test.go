@@ -5,6 +5,8 @@ import "testing"
 func TestCompletedTransitionMatches(t *testing.T) {
 	t.Parallel()
 	orderID := "order-1"
+	commitLedgerTransactionID := "wltxn-commit-1"
+	reversalLedgerTransactionID := "wltxn-reversal-1"
 
 	tests := []struct {
 		name    string
@@ -15,12 +17,12 @@ func TestCompletedTransitionMatches(t *testing.T) {
 	}{
 		{
 			name: "commit retry matches original order",
-			current: Reservation{Status: "committed", OrderID: &orderID},
+			current: Reservation{Status: "committed", OrderID: &orderID, CommitLedgerTransactionID: &commitLedgerTransactionID},
 			target: "committed", input: TransitionInput{OrderID: "order-1"}, want: true,
 		},
 		{
 			name: "commit retry rejects different order",
-			current: Reservation{Status: "committed", OrderID: &orderID},
+			current: Reservation{Status: "committed", OrderID: &orderID, CommitLedgerTransactionID: &commitLedgerTransactionID},
 			target: "committed", input: TransitionInput{OrderID: "order-2"}, want: false,
 		},
 		{
@@ -35,12 +37,12 @@ func TestCompletedTransitionMatches(t *testing.T) {
 		},
 		{
 			name: "reverse retry matches order and reason",
-			current: Reservation{Status: "reversed", OrderID: &orderID, ReversalReason: "refund_completed"},
+			current: Reservation{Status: "reversed", OrderID: &orderID, ReversalReason: "refund_completed", CommitLedgerTransactionID: &commitLedgerTransactionID, ReversalLedgerTransactionID: &reversalLedgerTransactionID},
 			target: "reversed", input: TransitionInput{OrderID: "order-1", Reason: "refund_completed"}, want: true,
 		},
 		{
 			name: "reverse retry rejects changed reason",
-			current: Reservation{Status: "reversed", OrderID: &orderID, ReversalReason: "refund_completed"},
+			current: Reservation{Status: "reversed", OrderID: &orderID, ReversalReason: "refund_completed", CommitLedgerTransactionID: &commitLedgerTransactionID, ReversalLedgerTransactionID: &reversalLedgerTransactionID},
 			target: "reversed", input: TransitionInput{OrderID: "order-1", Reason: "manual_override"}, want: false,
 		},
 	}

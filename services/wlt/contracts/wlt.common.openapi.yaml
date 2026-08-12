@@ -41,6 +41,15 @@ components:
         Trusted platform-isolation context delegated by an authenticated server
         caller. This parameter is not valid as an end-user authorization claim.
       schema: { type: string, minLength: 1, maxLength: 120 }
+    DelegatedFinancePrincipalId:
+      name: X-Delegated-Principal-ID
+      in: header
+      required: true
+      description: >-
+        Identity-authenticated finance operator delegated by the authenticated
+        DSH service. It is the sole actor authority for sensitive finance
+        transitions and must never be supplied in a request body.
+      schema: { type: string, minLength: 1, maxLength: 200 }
     CorrelationId:
       name: X-Correlation-ID
       in: header

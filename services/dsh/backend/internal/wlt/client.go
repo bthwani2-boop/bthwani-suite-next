@@ -44,24 +44,29 @@ type CreatePaymentSessionInput struct {
 	AmountMinorUnits  int64  `json:"amountMinorUnits"`
 	Currency          string `json:"currency"`
 	CartSnapshotHash  string `json:"cartSnapshotHash"`
+	PricingQuoteID    string `json:"pricingQuoteId"`
 	CorrelationID     string `json:"-"`
 	IdempotencyKey    string `json:"-"`
 }
 
 type PaymentSession struct {
-	ID                string `json:"id"`
-	CheckoutIntentID  string `json:"checkoutIntentId"`
-	SpecialRequestID  string `json:"specialRequestId"`
-	OperatorContextID string `json:"operatorContextId"`
-	ClientID          string `json:"clientId"`
-	StoreID           string `json:"storeId"`
-	PaymentMethod     string `json:"paymentMethod"`
-	Status            string `json:"status"`
-	ProviderReference string `json:"providerReference"`
-	AmountMinorUnits  int64  `json:"amountMinorUnits"`
-	Currency          string `json:"currency"`
-	CreatedAt         string `json:"createdAt"`
-	UpdatedAt         string `json:"updatedAt"`
+	ID                    string `json:"id"`
+	CheckoutIntentID      string `json:"checkoutIntentId"`
+	SpecialRequestID      string `json:"specialRequestId"`
+	OperatorContextID     string `json:"operatorContextId"`
+	ClientID              string `json:"clientId"`
+	StoreID               string `json:"storeId"`
+	PaymentMethod         string `json:"paymentMethod"`
+	Status                string `json:"status"`
+	ProviderReference     string `json:"providerReference"`
+	AmountMinorUnits      int64  `json:"amountMinorUnits"`
+	Currency              string `json:"currency"`
+	CreatedAt             string `json:"createdAt"`
+	UpdatedAt             string `json:"updatedAt"`
+	PricingQuoteID        string `json:"pricingQuoteId,omitempty"`
+	PricingQuoteHash      string `json:"pricingQuoteHash,omitempty"`
+	PricingQuoteVersion   int    `json:"pricingQuoteVersion,omitempty"`
+	PricingQuoteExpiresAt string `json:"pricingQuoteExpiresAt,omitempty"`
 }
 
 // NewClient builds the authenticated DSH-to-WLT service client. Financial

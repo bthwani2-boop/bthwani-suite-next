@@ -212,6 +212,87 @@ paths:
         '409': { $ref: '#/components/responses/PayoutConflict' }
       security:
         - serviceBearer: []
+  /wlt/payout-requests/{payoutId}/reconcile:
+    post:
+      tags: [ "wlt-payout-requests" ]
+      operationId: reconcileWltPayoutFourWay
+      description: Records an immutable four-way match of approved payout, frozen batch, verified execution evidence and authoritative provider statement.
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/PayoutId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedFinancePrincipalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReconcilePayoutFourWayInput' }
+      responses:
+        '200':
+          description: Immutable reconciliation fact.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FourWayReconciliationEnvelope' }
+        '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
+        '409': { $ref: '#/components/responses/PayoutConflict' }
+      security:
+        - serviceBearer: []
+  /wlt/external-provider-accounts/{providerKey}/{accountReferenceHash}:
+    put:
+      tags: [ "wlt-external-reconciliation" ]
+      operationId: registerWltExternalProviderAccount
+      parameters:
+        - name: providerKey
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 120 }
+        - name: accountReferenceHash
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[a-f0-9]{64}$' }
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedFinancePrincipalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExternalProviderAccountInput' }
+      responses:
+        '200':
+          description: Canonical external provider account, idempotently registered.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExternalProviderAccountEnvelope' }
+        '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
+      security:
+        - serviceBearer: []
+  /wlt/external-provider-statements:
+    post:
+      tags: [ "wlt-external-reconciliation" ]
+      operationId: importWltAuthoritativeExternalStatement
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedFinancePrincipalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ImportAuthoritativeStatementInput' }
+      responses:
+        '201':
+          description: Immutable authoritative external statement and its normalized lines.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthoritativeStatementEnvelope' }
+        '200':
+          description: Exact idempotent statement import.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthoritativeStatementEnvelope' }
+        '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
+        '409': { $ref: '#/components/responses/PayoutConflict' }
+      security:
+        - serviceBearer: []
   /wlt/payout-requests/{payoutId}/audit:
     get:
       tags: [ "wlt-payout-requests" ]
@@ -382,10 +463,9 @@ paths:
           application/json:
             schema:
               type: object
-              required: [ businessDate, operatorId ]
+              required: [ businessDate ]
               properties:
                 businessDate: { type: string, format: date }
-                operatorId: { type: string, minLength: 1 }
       responses:
         '201':
           description: Daily finance closed and audit pack compiled.
@@ -393,6 +473,31 @@ paths:
             application/json:
               schema: { type: object, additionalProperties: true }
         '409': { $ref: '#/components/responses/PayoutConflict' }
+      security:
+        - serviceBearer: []
+  /wlt/internal/outbox-readback/loyalty:
+    get:
+      tags: [ "wlt-internal-readback" ]
+      operationId: readWltLoyaltyOutboxEffect
+      parameters:
+        - name: idempotencyKey
+          in: query
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 300 }
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+      responses:
+        '200':
+          description: Canonical loyalty entry identified by its idempotency key.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ loyaltyEntry ]
+                properties:
+                  loyaltyEntry: { type: object }
+        '404': { description: No canonical effect exists yet. }
       security:
         - serviceBearer: []
 components:
@@ -416,9 +521,8 @@ components:
           schema:
             type: object
             additionalProperties: false
-            required: [ operatorId ]
-            properties:
-              operatorId: { type: string, minLength: 1 }
+            maxProperties: 0
+            description: Finance actor identity is supplied only by X-Delegated-Principal-ID.
   responses:
     PayoutResponse:
       description: Updated canonical payout state.
@@ -457,6 +561,84 @@ components:
           application/json: { schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' } }
         }
   schemas:
+    ReconcilePayoutFourWayInput:
+      type: object
+      additionalProperties: false
+      required: [ statementLineId ]
+      properties:
+        statementLineId: { type: string, minLength: 1 }
+    FourWayReconciliationEnvelope:
+      type: object
+      required: [ reconciliation ]
+      properties:
+        reconciliation:
+          type: object
+          required: [ id, payoutRequestId, approvedSnapshotId, settlementBatchId, manualTransferEvidenceId, statementLineId, result ]
+          properties:
+            id: { type: string }
+            payoutRequestId: { type: string }
+            approvedSnapshotId: { type: string }
+            settlementBatchId: { type: string }
+            manualTransferEvidenceId: { type: string }
+            statementLineId: { type: string }
+            result: { type: string, enum: [ MATCHED, UNMATCHED, AMOUNT_MISMATCH, DESTINATION_MISMATCH, DUPLICATE_REFERENCE, MISSING_TRANSFER, UNKNOWN_EXTERNAL_TRANSACTION, NEEDS_REVIEW ] }
+    ExternalProviderAccountInput:
+      type: object
+      additionalProperties: false
+      required: [ currency ]
+      properties:
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        openingBalanceMinorUnits: { type: integer, format: int64, minimum: 0 }
+    ExternalProviderAccountEnvelope:
+      type: object
+      required: [ account ]
+      properties:
+        account:
+          type: object
+          required: [ id, providerKey, accountReferenceHash, currency ]
+          properties:
+            id: { type: string }
+            providerKey: { type: string }
+            accountReferenceHash: { type: string, pattern: '^[a-f0-9]{64}$' }
+            currency: { type: string }
+    AuthoritativeStatementLineInput:
+      type: object
+      additionalProperties: false
+      required: [ externalTransferReference, direction, amountMinorUnits, currency, destinationReferenceHash ]
+      properties:
+        externalTransferReference: { type: string, minLength: 1 }
+        direction: { type: string, enum: [ incoming, outgoing ] }
+        amountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        destinationReferenceHash: { type: string, pattern: '^[a-f0-9]{64}$' }
+        occurredAt: { type: string, format: date-time }
+        sourceRecord: { type: object, additionalProperties: true }
+    ImportAuthoritativeStatementInput:
+      type: object
+      additionalProperties: false
+      required: [ externalProviderAccountId, statementReference, artifactSha256, businessDate, closingBalanceMinorUnits, currency, lines ]
+      properties:
+        externalProviderAccountId: { type: string, minLength: 1 }
+        statementReference: { type: string, minLength: 1 }
+        artifactSha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+        businessDate: { type: string, format: date }
+        closingBalanceMinorUnits: { type: integer, format: int64, minimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        lines:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/AuthoritativeStatementLineInput' }
+    AuthoritativeStatementEnvelope:
+      type: object
+      required: [ statement ]
+      properties:
+        statement:
+          type: object
+          required: [ id, statementReference, artifactSha256 ]
+          properties:
+            id: { type: string }
+            statementReference: { type: string }
+            artifactSha256: { type: string, pattern: '^[a-f0-9]{64}$' }
     PayoutActorType:
       type: string
       enum: [ partner, captain, field ]

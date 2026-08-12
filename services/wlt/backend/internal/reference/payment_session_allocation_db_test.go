@@ -1,7 +1,12 @@
 package reference
 
 import (
+	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
@@ -9,6 +14,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"wlt-api/internal/payment"
+	"wlt-api/internal/pricing"
 )
 
 func getAllocationTestDB(t *testing.T) *sql.DB {
@@ -35,6 +41,40 @@ func getAllocationTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
+func issueCheckoutQuoteForSession(t *testing.T, db *sql.DB, checkoutIntentID string, amountMinorUnits int64) *pricing.CheckoutQuote {
+	t.Helper()
+	if amountMinorUnits <= 1000 {
+		t.Fatalf("fixture amount must exceed delivery fee: %d", amountMinorUnits)
+	}
+	t.Setenv("WLT_DSH_PRICING_EVIDENCE_SECRET", "payment-session-quote-test-secret")
+	evidence := pricing.PricingEvidence{
+		Version:               1,
+		Lines:                 []pricing.QuoteEvidenceLine{{MasterProductID: "product-quote", UnitPriceMinorUnits: amountMinorUnits - 1000, Currency: "YER"}},
+		DeliveryFeeMinorUnits: 1000,
+	}
+	encoded, err := json.Marshal(evidence)
+	if err != nil {
+		t.Fatalf("encode pricing evidence: %v", err)
+	}
+	mac := hmac.New(sha256.New, []byte("payment-session-quote-test-secret"))
+	_, _ = mac.Write(encoded)
+	evidence.Signature = hex.EncodeToString(mac.Sum(nil))
+	quote, err := pricing.IssueCheckoutQuote(context.Background(), db, "OperatorContext-dev-001", pricing.CalculateQuoteRequest{
+		CheckoutIntentID: checkoutIntentID,
+		CartSnapshotHash: "cart-" + checkoutIntentID,
+		ClientID:         "client-alloc-e2e",
+		StoreID:          "store-alloc-e2e",
+		Currency:         "YER",
+		CartVersion:      1,
+		Lines:            []pricing.QuoteInputLine{{MasterProductID: "product-quote", Quantity: 1}},
+		PricingEvidence:  evidence,
+	})
+	if err != nil {
+		t.Fatalf("issue canonical checkout quote: %v", err)
+	}
+	return quote
+}
+
 // TestCreatePaymentSession_DerivesPurposeAndPersistsConservingAllocation
 // proves the whole edge end to end: a caller that only supplies a checkout
 // intent and a breakdown gets back a session whose purpose it never set and
@@ -44,6 +84,7 @@ func TestCreatePaymentSession_DerivesPurposeAndPersistsConservingAllocation(t *t
 	defer db.Close()
 
 	checkoutIntentID := fmt.Sprintf("test-checkout-e2e-alloc-%d", time.Now().UnixNano())
+	quote := issueCheckoutQuoteForSession(t, db, checkoutIntentID, 5500)
 	session, err := CreatePaymentSession(db, CreatePaymentSessionInput{
 		CheckoutIntentID:  checkoutIntentID,
 		OperatorContextID: "OperatorContext-dev-001",
@@ -52,12 +93,10 @@ func TestCreatePaymentSession_DerivesPurposeAndPersistsConservingAllocation(t *t
 		PaymentMethod:     "official_wallet",
 		AmountMinorUnits:  5500,
 		Currency:          "YER",
+		CartSnapshotHash:  "cart-" + checkoutIntentID,
+		PricingQuoteID:    quote.ID,
 		IdempotencyKey:    "idem-alloc-e2e-1",
 		CorrelationID:     "corr-alloc-e2e-1",
-		Allocation: []payment.AllocationLine{
-			{Component: payment.AllocationGoodsSubtotal, AmountMinorUnits: 4500},
-			{Component: payment.AllocationDeliveryFee, AmountMinorUnits: 1000},
-		},
 	})
 	if err != nil {
 		t.Fatalf("CreatePaymentSession: %v", err)
@@ -96,6 +135,7 @@ func TestCreatePaymentSession_RejectsNonConservingAllocation(t *testing.T) {
 	defer db.Close()
 
 	checkoutIntentID := fmt.Sprintf("test-checkout-e2e-badalloc-%d", time.Now().UnixNano())
+	quote := issueCheckoutQuoteForSession(t, db, checkoutIntentID, 5000)
 	_, err := CreatePaymentSession(db, CreatePaymentSessionInput{
 		CheckoutIntentID:  checkoutIntentID,
 		OperatorContextID: "OperatorContext-dev-001",
@@ -104,6 +144,8 @@ func TestCreatePaymentSession_RejectsNonConservingAllocation(t *testing.T) {
 		PaymentMethod:     "official_wallet",
 		AmountMinorUnits:  5000,
 		Currency:          "YER",
+		CartSnapshotHash:  "cart-" + checkoutIntentID,
+		PricingQuoteID:    quote.ID,
 		IdempotencyKey:    "idem-alloc-e2e-bad",
 		CorrelationID:     "corr-alloc-e2e-bad",
 		Allocation: []payment.AllocationLine{
@@ -126,11 +168,12 @@ func TestCreatePaymentSession_RejectsNonConservingAllocation(t *testing.T) {
 // TestCreatePaymentSession_ReplayWithDifferentAllocationConflicts proves the
 // allocation is part of the idempotency identity: replaying the same source
 // with a different breakdown is a different financial claim, not a retry.
-func TestCreatePaymentSession_ReplayWithDifferentAllocationConflicts(t *testing.T) {
+func TestCreatePaymentSession_CheckoutReplayUsesTheOriginalQuoteAllocation(t *testing.T) {
 	db := getAllocationTestDB(t)
 	defer db.Close()
 
 	checkoutIntentID := fmt.Sprintf("test-checkout-e2e-replay-%d", time.Now().UnixNano())
+	quote := issueCheckoutQuoteForSession(t, db, checkoutIntentID, 3000)
 	base := CreatePaymentSessionInput{
 		CheckoutIntentID:  checkoutIntentID,
 		OperatorContextID: "OperatorContext-dev-001",
@@ -139,28 +182,53 @@ func TestCreatePaymentSession_ReplayWithDifferentAllocationConflicts(t *testing.
 		PaymentMethod:     "official_wallet",
 		AmountMinorUnits:  3000,
 		Currency:          "YER",
+		CartSnapshotHash:  "cart-" + checkoutIntentID,
+		PricingQuoteID:    quote.ID,
 		IdempotencyKey:    "idem-alloc-e2e-replay",
 		CorrelationID:     "corr-alloc-e2e-replay",
-		Allocation: []payment.AllocationLine{
-			{Component: payment.AllocationGoodsSubtotal, AmountMinorUnits: 3000},
-		},
 	}
-	if _, err := CreatePaymentSession(db, base); err != nil {
+	original, err := CreatePaymentSession(db, base)
+	if err != nil {
 		t.Fatalf("initial create: %v", err)
 	}
 
-	replay := base
-	replay.Allocation = []payment.AllocationLine{
-		{Component: payment.AllocationGoodsSubtotal, AmountMinorUnits: 2000},
-		{Component: payment.AllocationDeliveryFee, AmountMinorUnits: 1000},
-	}
-	_, err := CreatePaymentSession(db, replay)
-	if err != ErrIdempotencyConflict {
-		t.Fatalf("expected ErrIdempotencyConflict for a differing allocation replay, got: %v", err)
-	}
-
 	sameAgain := base
-	if _, err := CreatePaymentSession(db, sameAgain); err != nil {
+	replayed, err := CreatePaymentSession(db, sameAgain)
+	if err != nil {
 		t.Fatalf("expected an identical replay to succeed as a no-op, got: %v", err)
+	}
+	if replayed.ID == "" || replayed.ID != original.ID {
+		t.Fatal("identical retry must return the original payment session")
+	}
+}
+
+// TestCheckoutPaymentSessionDatabaseRejectsQuoteMismatch proves the WLT-930
+// trigger rejects a direct database bypass after the application has created a
+// valid session. This is deliberately SQL-level: it protects against a future
+// caller or manual repair path that never executes CreatePaymentSession.
+func TestCheckoutPaymentSessionDatabaseRejectsQuoteMismatch(t *testing.T) {
+	db := getAllocationTestDB(t)
+	defer db.Close()
+
+	checkoutIntentID := fmt.Sprintf("test-checkout-e2e-guard-%d", time.Now().UnixNano())
+	quote := issueCheckoutQuoteForSession(t, db, checkoutIntentID, 4200)
+	session, err := CreatePaymentSession(db, CreatePaymentSessionInput{
+		CheckoutIntentID:  checkoutIntentID,
+		OperatorContextID: "OperatorContext-dev-001",
+		ClientID:          "client-alloc-e2e",
+		StoreID:           "store-alloc-e2e",
+		PaymentMethod:     "official_wallet",
+		AmountMinorUnits:  4200,
+		Currency:          "YER",
+		CartSnapshotHash:  "cart-" + checkoutIntentID,
+		PricingQuoteID:    quote.ID,
+		IdempotencyKey:    "idem-alloc-e2e-guard",
+		CorrelationID:     "corr-alloc-e2e-guard",
+	})
+	if err != nil {
+		t.Fatalf("create canonical session: %v", err)
+	}
+	if _, err := db.Exec(`UPDATE wlt_payment_sessions SET amount_minor_units=amount_minor_units+1 WHERE id=$1`, session.ID); err == nil {
+		t.Fatal("direct SQL mutation with an amount different from the canonical quote must be rejected")
 	}
 }

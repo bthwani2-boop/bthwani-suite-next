@@ -160,10 +160,11 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	}
 
 	var (
-		intent           *checkout.Intent
-		pricing          checkout.PricingSnapshot
-		hasCouponFunding bool
-		responseStatus   = http.StatusCreated
+		intent             *checkout.Intent
+		pricing            checkout.PricingSnapshot
+		checkoutQuoteInput *wlt.CalculatePricingQuoteRequest
+		hasCouponFunding   bool
+		responseStatus     = http.StatusCreated
 	)
 
 	if record != nil {
@@ -272,6 +273,28 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			snapshot.SnapshotHash, pricing.CouponID, pricing.SubtotalMinorUnits,
 			pricing.DeliveryFeeMinorUnits, pricing.DiscountMinorUnits, pricing.TotalMinorUnits,
 		)
+		quoteLines := make([]wlt.QuotePricingInputLine, 0, len(snapshot.Lines))
+		for _, line := range snapshot.Lines {
+			quoteLines = append(quoteLines, wlt.QuotePricingInputLine{
+				MasterProductID:     line.MasterProductID,
+				Quantity:            line.Quantity,
+				UnitPriceMinorUnits: line.UnitPriceMinorUnits,
+			})
+		}
+		checkoutQuoteInput = &wlt.CalculatePricingQuoteRequest{
+			CheckoutIntentID: intentID,
+			CartSnapshotHash: snapshot.SnapshotHash,
+			ClientID:         actor.ID,
+			StoreID:          storeID,
+			Currency:         snapshot.Currency,
+			CartVersion:      snapshot.CartVersion,
+			Lines:            quoteLines,
+			PricingEvidence: wlt.PricingEvidence{
+				Version:               snapshot.CartVersion,
+				DeliveryFeeMinorUnits: pricing.DeliveryFeeMinorUnits,
+				DiscountMinorUnits:    pricing.DiscountMinorUnits,
+			},
+		}
 
 		intent, err = checkout.CreatePricedIntentWithAddressTx(r.Context(), tx, checkout.CreateIntentInput{
 			ID: intentID, OperatorContextID: actor.OperatorContextID, ClientID: actor.ID, CartID: cartID, StoreID: storeID,
@@ -322,11 +345,43 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		}
 	}
 
+	var canonicalQuote *wlt.WltPricingQuote
+	if checkoutQuoteInput != nil {
+		canonicalQuote, err = s.wlt.CalculateQuote(r.Context(), *checkoutQuoteInput)
+		if err != nil {
+			// Issuance is exactly once per checkout intent in WLT. A transport
+			// failure is ambiguous, so read its canonical state before declaring
+			// the handoff failed or compensating the coupon reservation.
+			canonicalQuote, err = s.wlt.GetCheckoutQuote(r.Context(), intent.ID)
+		}
+	} else {
+		canonicalQuote, err = s.wlt.GetCheckoutQuote(r.Context(), intent.ID)
+	}
+	if err != nil || !checkoutQuoteMatchesPricing(canonicalQuote, intent, pricing) {
+		if fundingProjection != nil {
+			if releaseErr := s.releaseCouponFunding(r.Context(), actor.OperatorContextID, intent.ID, "pricing_quote_unavailable", correlationID); releaseErr != nil {
+				_ = coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_pricing_quote_failure")
+			}
+		}
+		_ = coupons.ReleaseByIntent(s.db, intent.ID, "wlt_pricing_quote_unavailable")
+		failedIntent, markErr := checkout.MarkHandoffBlocked(s.db, intent.ID, actor.OperatorContextID, actor.ID)
+		if markErr == nil {
+			store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
+				"intent": marshalIntentWithPricing(failedIntent, pricing),
+				"error":  map[string]any{"code": "WLT_PRICING_QUOTE_UNAVAILABLE", "message": "canonical WLT pricing quote is unavailable or does not match the frozen checkout"},
+			})
+			return
+		}
+		store.SendError(w, http.StatusServiceUnavailable, "WLT_PRICING_QUOTE_UNAVAILABLE", "canonical WLT pricing quote is unavailable")
+		return
+	}
+
 	paymentSession, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
 		CheckoutIntentID: intent.ID, OperatorContextID: actor.OperatorContextID, ClientID: actor.ID,
 		StoreID: intent.StoreID, PaymentMethod: string(intent.PaymentMethod),
 		AmountMinorUnits: pricing.TotalMinorUnits, Currency: pricing.Currency,
-		CartSnapshotHash: pricing.SnapshotHash,
+		CartSnapshotHash: canonicalQuote.CartSnapshotHash,
+		PricingQuoteID:   canonicalQuote.ID,
 		CorrelationID:    correlationID,
 		IdempotencyKey:   "dsh-checkout-intent:" + intent.ID,
 	})
@@ -524,6 +579,17 @@ func checkoutCreateFingerprint(parts ...string) string {
 	return hex.EncodeToString(digest[:])
 }
 
+func checkoutQuoteMatchesPricing(quote *wlt.WltPricingQuote, intent *checkout.Intent, pricing checkout.PricingSnapshot) bool {
+	if quote == nil || intent == nil || strings.TrimSpace(quote.ID) == "" || quote.ExpiresAt == nil || !quote.ExpiresAt.After(time.Now().UTC()) {
+		return false
+	}
+	return quote.SubtotalMinorUnits == pricing.SubtotalMinorUnits &&
+		quote.DeliveryFeeMinorUnits == pricing.DeliveryFeeMinorUnits &&
+		quote.ServiceFeeMinorUnits == 0 && quote.TaxMinorUnits == 0 && quote.RoundingMinorUnits == 0 &&
+		quote.DiscountMinorUnits == pricing.DiscountMinorUnits && quote.TotalMinorUnits == pricing.TotalMinorUnits &&
+		quote.Currency == pricing.Currency
+}
+
 func (s *protectedStoreServer) handleReconcileCheckoutIntent(w http.ResponseWriter, r *http.Request) {
 	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
@@ -547,17 +613,23 @@ func (s *protectedStoreServer) handleReconcileCheckoutIntent(w http.ResponseWrit
 		return
 	}
 	correlationID := fundingCorrelation(r.Header.Get("X-Correlation-ID"), intent.ID)
+	canonicalQuote, err := s.wlt.GetCheckoutQuote(r.Context(), intent.ID)
+	if err != nil || !checkoutQuoteMatchesPricing(canonicalQuote, intent, pricing) {
+		store.SendError(w, http.StatusServiceUnavailable, "WLT_PRICING_QUOTE_UNAVAILABLE", "canonical WLT pricing quote is unavailable or does not match the frozen checkout")
+		return
+	}
 	session, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
-		CheckoutIntentID: intent.ID,
-		OperatorContextID:         intent.OperatorContextID,
-		ClientID:         intent.ClientID,
-		StoreID:          intent.StoreID,
-		PaymentMethod:    string(intent.PaymentMethod),
-		AmountMinorUnits: pricing.TotalMinorUnits,
-		Currency:         pricing.Currency,
-		CartSnapshotHash: pricing.SnapshotHash,
-		CorrelationID:    correlationID,
-		IdempotencyKey:   "dsh-checkout-intent:" + intent.ID,
+		CheckoutIntentID:  intent.ID,
+		OperatorContextID: intent.OperatorContextID,
+		ClientID:          intent.ClientID,
+		StoreID:           intent.StoreID,
+		PaymentMethod:     string(intent.PaymentMethod),
+		AmountMinorUnits:  pricing.TotalMinorUnits,
+		Currency:          pricing.Currency,
+		CartSnapshotHash:  canonicalQuote.CartSnapshotHash,
+		PricingQuoteID:    canonicalQuote.ID,
+		CorrelationID:     correlationID,
+		IdempotencyKey:    "dsh-checkout-intent:" + intent.ID,
 	})
 	if err != nil {
 		if wlt.IsPaymentSessionOutcomeUnknown(err) {

@@ -121,13 +121,12 @@ func TestApprovedPayoutSnapshotIsImmutable(t *testing.T) {
 
 	// The approver cannot also execute the external transfer they approved.
 	batchID := freezeBatchForSnapshot(t, db, operatorContextID, snapshotID)
-	ctx := shared.WithOperatorContext(t.Context(), operatorContextID)
+	ctx := shared.WithDelegatedFinancePrincipal(shared.WithOperatorContext(t.Context(), operatorContextID), "finance-approver-1")
 	_, err := RecordManualTransferExecution(ctx, db, batchID, RecordManualExecutionInput{
 		ApprovedSnapshotID:        snapshotID,
 		ExternalTransferReference: "sod-ref-" + snapshotID,
 		AmountMinorUnits:          amount,
 		Currency:                  "YER",
-		OperatorID:                "finance-approver-1",
 	}, "sod-corr")
 	if !errors.Is(err, ErrSeparationOfDuties) {
 		t.Fatalf("expected the approver to be barred from executing their own approval, got %v", err)

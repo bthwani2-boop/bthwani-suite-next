@@ -491,6 +491,10 @@ components:
         amountMinorUnits: { type: integer, format: int64, minimum: 1 }
         currency: { type: string, minLength: 3, maxLength: 3 }
         financialPurpose: { $ref: '#/components/schemas/FinancialPurpose' }
+        pricingQuoteId: { type: string, description: Immutable WLT-owned quote identity bound to a checkout session. }
+        pricingQuoteHash: { type: string, description: Hash of the exact canonical quote used for payment allocation. }
+        pricingQuoteVersion: { type: integer, minimum: 1 }
+        pricingQuoteExpiresAt: { type: [ string, 'null' ], format: date-time }
         allocation:
           type: array
           description: Conserved breakdown of amountMinorUnits. Empty when the caller did not itemise the session.
@@ -520,15 +524,11 @@ components:
         amountMinorUnits: { type: integer, format: int64, minimum: 1 }
         currency: { type: string, default: YER }
         cartSnapshotHash: { type: string }
-        allocation:
-          type: array
-          description: >-
-            Optional price breakdown of amountMinorUnits. Rejected outright if
-            the components do not conserve the total; omitting it records no
-            breakdown rather than defaulting one.
-          items: { $ref: '#/components/schemas/AllocationLine' }
+        pricingQuoteId:
+          type: string
+          description: Opaque WLT-issued checkout quote identity. WLT derives its hash, version, expiry and allocation server-side.
       oneOf:
-        - required: [ checkoutIntentId ]
+        - required: [ checkoutIntentId, pricingQuoteId, cartSnapshotHash ]
         - required: [ specialRequestId ]
         - required: [ subscriptionPurchaseId, commercialProductReference ]
     CreateTopUpSessionRequest:

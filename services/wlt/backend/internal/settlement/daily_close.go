@@ -14,17 +14,24 @@ import (
 
 type ExecuteDailyCloseInput struct {
 	BusinessDate string `json:"businessDate"`
-	OperatorID   string `json:"operatorId"`
+	// OperatorID is retained only for in-process compatibility. HTTP JSON cannot
+	// select the actor; ExecuteDailyFinanceClose always uses the authenticated
+	// delegated finance principal from context.
+	OperatorID string `json:"-"`
 }
 
 type DailyFinanceClose struct {
-	BusinessDate             string    `json:"businessDate"`
-	OperatorContextID        string    `json:"operatorContextId"`
-	TotalPayoutsMinorUnits   int64     `json:"totalPayoutsMinorUnits"`
-	TotalCashinMinorUnits    int64     `json:"totalCashinMinorUnits"`
-	ClosingBalanceMinorUnits int64     `json:"closingBalanceMinorUnits"`
-	ClosedByOperatorID       string    `json:"closedByOperatorId"`
-	ClosedAt                 time.Time `json:"closedAt"`
+	BusinessDate                       string    `json:"businessDate"`
+	OperatorContextID                  string    `json:"operatorContextId"`
+	TotalPayoutsMinorUnits             int64     `json:"totalPayoutsMinorUnits"`
+	TotalCashinMinorUnits              int64     `json:"totalCashinMinorUnits"`
+	ClosingBalanceMinorUnits           int64     `json:"closingBalanceMinorUnits"`
+	TreasuryExpectedBalanceMinorUnits  int64     `json:"treasuryExpectedBalanceMinorUnits"`
+	TreasuryStatementBalanceMinorUnits int64     `json:"treasuryStatementBalanceMinorUnits"`
+	TreasuryLedgerBalanceMinorUnits    int64     `json:"treasuryLedgerBalanceMinorUnits"`
+	SettlementAuditPackCount           int       `json:"settlementAuditPackCount"`
+	ClosedByOperatorID                 string    `json:"closedByOperatorId"`
+	ClosedAt                           time.Time `json:"closedAt"`
 }
 
 func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDailyCloseInput, correlationID string) (*DailyFinanceClose, error) {
@@ -33,11 +40,14 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 		return nil, err
 	}
 	input.BusinessDate = strings.TrimSpace(input.BusinessDate)
-	input.OperatorID = strings.TrimSpace(input.OperatorID)
+	operatorID, err := shared.RequireDelegatedFinancePrincipal(ctx)
+	if err != nil {
+		return nil, err
+	}
 	correlationID = strings.TrimSpace(correlationID)
 
-	if input.BusinessDate == "" || input.OperatorID == "" || correlationID == "" {
-		return nil, fmt.Errorf("businessDate, operatorId, and correlationId are required")
+	if input.BusinessDate == "" || correlationID == "" {
+		return nil, fmt.Errorf("businessDate, authenticated finance principal, and correlationId are required")
 	}
 
 	date, err := time.Parse("2006-01-02", input.BusinessDate)
@@ -150,12 +160,102 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 		return nil, fmt.Errorf("cannot close day: %d verified external transfers have no completed payout", verifiedButIncomplete)
 	}
 
+	// Treasury close is a four-way balance gate. The expected provider balance
+	// is derived from the provider account opening balance and immutable
+	// statement movements; the statement side is the latest authoritative
+	// closing balance for each active provider account; the ledger side is the
+	// canonical external_settlement_cash balance. A close with external money
+	// but no authoritative account/statement is therefore impossible.
+	var activeExternalAccounts, missingStatements int
+	var treasuryExpected, treasuryStatement, treasuryLedger int64
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM wlt_external_provider_accounts
+		WHERE operator_context_id=$1 AND active=true`, operatorContextID).Scan(&activeExternalAccounts); err != nil {
+		return nil, err
+	}
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM wlt_external_provider_accounts a
+		WHERE a.operator_context_id=$1 AND a.active=true
+		  AND NOT EXISTS (
+			SELECT 1 FROM wlt_external_provider_statements s
+			WHERE s.operator_context_id=a.operator_context_id
+			  AND s.external_provider_account_id=a.id
+			  AND s.business_date=$2
+		  )`, operatorContextID, date.Format("2006-01-02")).Scan(&missingStatements); err != nil {
+		return nil, err
+	}
+	if activeExternalAccounts > 0 && missingStatements > 0 {
+		return nil, fmt.Errorf("cannot close day: %d active external provider accounts have no authoritative statement for %s", missingStatements, input.BusinessDate)
+	}
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COALESCE(SUM(a.opening_balance_minor_units + COALESCE(m.net_movement,0)),0)
+		FROM wlt_external_provider_accounts a
+		LEFT JOIN LATERAL (
+			SELECT COALESCE(SUM(CASE WHEN l.direction='incoming' THEN l.amount_minor_units ELSE -l.amount_minor_units END),0) AS net_movement
+			FROM wlt_external_provider_statement_lines l
+			JOIN wlt_external_provider_statements s ON s.id=l.statement_id
+			WHERE s.operator_context_id=a.operator_context_id
+			  AND s.external_provider_account_id=a.id
+			  AND s.business_date <= $2
+		) m ON TRUE
+		WHERE a.operator_context_id=$1 AND a.active=true`, operatorContextID, date.Format("2006-01-02")).Scan(&treasuryExpected); err != nil {
+		return nil, err
+	}
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COALESCE(SUM(s.closing_balance_minor_units),0)
+		FROM wlt_external_provider_statements s
+		JOIN (
+			SELECT external_provider_account_id, MAX(imported_at) AS imported_at
+			FROM wlt_external_provider_statements
+			WHERE operator_context_id=$1 AND business_date=$2
+			GROUP BY external_provider_account_id
+		) latest ON latest.external_provider_account_id=s.external_provider_account_id
+		       AND latest.imported_at=s.imported_at
+		WHERE s.operator_context_id=$1 AND s.business_date=$2`, operatorContextID, date.Format("2006-01-02")).Scan(&treasuryStatement); err != nil {
+		return nil, err
+	}
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COALESCE(SUM(balance_minor_units),0)
+		FROM wlt_ledger_accounts
+		WHERE operator_context_id=$1 AND account_type='external_settlement_cash'`, operatorContextID).Scan(&treasuryLedger); err != nil {
+		return nil, err
+	}
+	if activeExternalAccounts > 0 || treasuryLedger != 0 {
+		if activeExternalAccounts == 0 || treasuryExpected != treasuryStatement || treasuryStatement != treasuryLedger {
+			return nil, fmt.Errorf("cannot close day: treasury balances do not reconcile (expected=%d statement=%d ledger=%d)", treasuryExpected, treasuryStatement, treasuryLedger)
+		}
+	}
+
+	var missingAuditPacks, auditPackCount int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM wlt_settlement_batches b
+		WHERE b.operator_context_id=$1 AND b.status='completed'
+		  AND DATE(b.created_at AT TIME ZONE 'UTC')=$2
+		  AND NOT EXISTS (SELECT 1 FROM wlt_settlement_audit_packs p WHERE p.batch_id=b.id AND p.operator_context_id=$1)`, operatorContextID, date.Format("2006-01-02")).Scan(&missingAuditPacks); err != nil {
+		return nil, err
+	}
+	if missingAuditPacks > 0 {
+		return nil, fmt.Errorf("cannot close day: %d completed settlement batches have no SettlementAuditPack", missingAuditPacks)
+	}
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM wlt_settlement_audit_packs p
+		JOIN wlt_settlement_batches b ON b.id=p.batch_id
+		WHERE p.operator_context_id=$1 AND DATE(b.created_at AT TIME ZONE 'UTC')=$2`, operatorContextID, date.Format("2006-01-02")).Scan(&auditPackCount); err != nil {
+		return nil, err
+	}
+
 	row := tx.QueryRowContext(ctx, `
 		INSERT INTO wlt_daily_finance_close
-		(business_date, operator_context_id, total_payouts_minor_units, total_cashin_minor_units, closing_balance_minor_units, closed_by_operator_id)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING business_date, operator_context_id, total_payouts_minor_units, total_cashin_minor_units, closing_balance_minor_units, closed_by_operator_id, closed_at
-	`, date.Format("2006-01-02"), operatorContextID, totalPayouts, totalCashin, closingBalance, input.OperatorID)
+		(business_date, operator_context_id, total_payouts_minor_units, total_cashin_minor_units, closing_balance_minor_units,
+		 treasury_expected_balance_minor_units, treasury_statement_balance_minor_units, treasury_ledger_balance_minor_units,
+		 settlement_audit_pack_count, closed_by_operator_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		RETURNING business_date, operator_context_id, total_payouts_minor_units, total_cashin_minor_units, closing_balance_minor_units,
+		 treasury_expected_balance_minor_units, treasury_statement_balance_minor_units, treasury_ledger_balance_minor_units,
+		 settlement_audit_pack_count, closed_by_operator_id, closed_at
+	`, date.Format("2006-01-02"), operatorContextID, totalPayouts, totalCashin, closingBalance, treasuryExpected, treasuryStatement, treasuryLedger, auditPackCount, operatorID)
 
 	var closeRecord DailyFinanceClose
 	var bDate time.Time
@@ -165,6 +265,10 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 		&closeRecord.TotalPayoutsMinorUnits,
 		&closeRecord.TotalCashinMinorUnits,
 		&closeRecord.ClosingBalanceMinorUnits,
+		&closeRecord.TreasuryExpectedBalanceMinorUnits,
+		&closeRecord.TreasuryStatementBalanceMinorUnits,
+		&closeRecord.TreasuryLedgerBalanceMinorUnits,
+		&closeRecord.SettlementAuditPackCount,
 		&closeRecord.ClosedByOperatorID,
 		&closeRecord.ClosedAt,
 	); err != nil {
@@ -177,7 +281,7 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 		(operator_context_id, aggregate_type, aggregate_id, action, actor_id, actor_type, correlation_id, metadata)
 		VALUES ($1, 'daily_close', $2, 'finance_day_closed', $3, 'operator', $4,
 		jsonb_build_object('totalPayouts', $5::bigint, 'totalCashin', $6::bigint, 'closingBalance', $7::bigint))
-	`, operatorContextID, closeRecord.BusinessDate, input.OperatorID, correlationID, totalPayouts, totalCashin, closingBalance); err != nil {
+	`, operatorContextID, closeRecord.BusinessDate, operatorID, correlationID, totalPayouts, totalCashin, closingBalance); err != nil {
 		return nil, err
 	}
 

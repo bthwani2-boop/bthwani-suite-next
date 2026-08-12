@@ -119,6 +119,14 @@ type migrationManifestDocument struct {
 	} `json:"migrations"`
 }
 
+type migrationManifestExtensionDocument struct {
+	Migrations []struct {
+		Ordinal int    `json:"ordinal"`
+		File    string `json:"file"`
+		State   string `json:"state"`
+	} `json:"migrations"`
+}
+
 func TestReadinessMigrationMatchesGovernedManifestSet(t *testing.T) {
 	_, testFile, _, ok := runtime.Caller(0)
 	if !ok {
@@ -134,9 +142,23 @@ func TestReadinessMigrationMatchesGovernedManifestSet(t *testing.T) {
 	if err := json.Unmarshal(content, &manifest); err != nil {
 		t.Fatal(err)
 	}
+	extensionContent, err := os.ReadFile(filepath.Join(migrationDirectory, "manifest.extensions.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var extension migrationManifestExtensionDocument
+	if err := json.Unmarshal(extensionContent, &extension); err != nil {
+		t.Fatal(err)
+	}
 	latestOrdinal := -1
 	latestRequired := manifest.Cutover
 	for _, migration := range manifest.Migrations {
+		if migration.State == "ACTIVE" && migration.Ordinal > latestOrdinal {
+			latestOrdinal = migration.Ordinal
+			latestRequired = migration.File
+		}
+	}
+	for _, migration := range extension.Migrations {
 		if migration.State == "ACTIVE" && migration.Ordinal > latestOrdinal {
 			latestOrdinal = migration.Ordinal
 			latestRequired = migration.File

@@ -9,6 +9,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"wlt-api/internal/payment"
 )
 
 type QuoteInputLine struct {
@@ -28,16 +30,19 @@ type PricingEvidence struct {
 	Lines                 []QuoteEvidenceLine `json:"lines"`
 	DeliveryFeeMinorUnits int64               `json:"deliveryFeeMinorUnits"`
 	ServiceFeeMinorUnits  int64               `json:"serviceFeeMinorUnits"`
+	DiscountMinorUnits    int64               `json:"discountMinorUnits"`
 	Signature             string              `json:"signature"`
 }
 
 type CalculateQuoteRequest struct {
-	ClientID        string           `json:"clientId"`
-	StoreID         string           `json:"storeId"`
-	Currency        string           `json:"currency"`
-	CartVersion     int              `json:"cartVersion"`
-	Lines           []QuoteInputLine `json:"lines"`
-	PricingEvidence PricingEvidence  `json:"pricingEvidence"`
+	CheckoutIntentID string           `json:"checkoutIntentId,omitempty"`
+	CartSnapshotHash string           `json:"cartSnapshotHash,omitempty"`
+	ClientID         string           `json:"clientId"`
+	StoreID          string           `json:"storeId"`
+	Currency         string           `json:"currency"`
+	CartVersion      int              `json:"cartVersion"`
+	Lines            []QuoteInputLine `json:"lines"`
+	PricingEvidence  PricingEvidence  `json:"pricingEvidence"`
 }
 
 type QuoteOutputLine struct {
@@ -49,19 +54,22 @@ type QuoteOutputLine struct {
 }
 
 type WltPricingQuote struct {
-	Lines                 []QuoteOutputLine `json:"lines"`
-	SubtotalMinorUnits    int64             `json:"subtotalMinorUnits"`
-	DeliveryFeeMinorUnits int64             `json:"deliveryFeeMinorUnits"`
-	ServiceFeeMinorUnits  int64             `json:"serviceFeeMinorUnits"`
-	TaxMinorUnits         int64             `json:"taxMinorUnits"`
-	DiscountMinorUnits    int64             `json:"discountMinorUnits"`
-	RoundingMinorUnits    int64             `json:"roundingMinorUnits"`
-	TotalMinorUnits       int64             `json:"totalMinorUnits"`
-	Currency              string            `json:"currency"`
-	FundingRefs           []string          `json:"fundingRefs"`
-	Hash                  string            `json:"hash"`
-	Version               int               `json:"version"`
-	ExpiresAt             *time.Time        `json:"expiresAt"`
+	ID                    string                   `json:"id,omitempty"`
+	CartSnapshotHash      string                   `json:"cartSnapshotHash,omitempty"`
+	Lines                 []QuoteOutputLine        `json:"lines"`
+	SubtotalMinorUnits    int64                    `json:"subtotalMinorUnits"`
+	DeliveryFeeMinorUnits int64                    `json:"deliveryFeeMinorUnits"`
+	ServiceFeeMinorUnits  int64                    `json:"serviceFeeMinorUnits"`
+	TaxMinorUnits         int64                    `json:"taxMinorUnits"`
+	DiscountMinorUnits    int64                    `json:"discountMinorUnits"`
+	RoundingMinorUnits    int64                    `json:"roundingMinorUnits"`
+	TotalMinorUnits       int64                    `json:"totalMinorUnits"`
+	Currency              string                   `json:"currency"`
+	FundingRefs           []string                 `json:"fundingRefs"`
+	Hash                  string                   `json:"hash"`
+	Version               int                      `json:"version"`
+	ExpiresAt             *time.Time               `json:"expiresAt"`
+	Allocation            []payment.AllocationLine `json:"allocation,omitempty"`
 }
 
 type PricingQuoteResponse struct {
@@ -115,6 +123,7 @@ func validateQuoteRequest(req CalculateQuoteRequest) error {
 	}{
 		{"deliveryFeeMinorUnits", req.PricingEvidence.DeliveryFeeMinorUnits},
 		{"serviceFeeMinorUnits", req.PricingEvidence.ServiceFeeMinorUnits},
+		{"discountMinorUnits", req.PricingEvidence.DiscountMinorUnits},
 	} {
 		if fee.value < 0 {
 			return fmt.Errorf("%s cannot be negative", fee.name)
@@ -196,8 +205,11 @@ func CalculateQuote(req CalculateQuoteRequest) (*WltPricingQuote, error) {
 	}
 
 	quote.TaxMinorUnits = 0
-	quote.DiscountMinorUnits = 0
+	quote.DiscountMinorUnits = req.PricingEvidence.DiscountMinorUnits
 	quote.RoundingMinorUnits = 0
+	if quote.DiscountMinorUnits > quote.SubtotalMinorUnits+quote.DeliveryFeeMinorUnits+quote.ServiceFeeMinorUnits+quote.TaxMinorUnits {
+		return nil, fmt.Errorf("quote discount exceeds the pre-discount total")
+	}
 
 	quote.TotalMinorUnits = quote.SubtotalMinorUnits + quote.DeliveryFeeMinorUnits + quote.ServiceFeeMinorUnits + quote.TaxMinorUnits - quote.DiscountMinorUnits + quote.RoundingMinorUnits
 	if quote.TotalMinorUnits > MaxQuoteAmountMinorUnits {

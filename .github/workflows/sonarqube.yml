@@ -137,7 +137,17 @@ jobs:
               go test ./... -coverprofile="$raw_report"
             )
             module_name="$(cd "$module" && go list -m)"
-            sed "s#^${module_name}/#${module}/#" "$raw_report" > "$report"
+            : > "$report"
+            while IFS= read -r coverage_line; do
+              case "$coverage_line" in
+                "${module_name}/"*)
+                  printf '%s/%s\n' "$module" "${coverage_line#"${module_name}/"}" >> "$report"
+                  ;;
+                *)
+                  printf '%s\n' "$coverage_line" >> "$report"
+                  ;;
+              esac
+            done < "$raw_report"
           done
           echo 'scan_args=-Dsonar.go.coverage.reportPaths=**/.sonar/coverage.out' >> "$GITHUB_OUTPUT"
 

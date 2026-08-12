@@ -174,6 +174,7 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	read("GET /wlt/ledger/entries/{entryId}", ledger.HandleGetLedgerEntry(db))
 	read("GET /wlt/ledger/entries", ledger.HandleListLedgerEntries(db))
 	read("GET /wlt/ledger/financial-summary", ledger.HandleFinancialSummary(db))
+	read("GET /wlt/internal/outbox-readback/loyalty", HandleLoyaltyOutboxReadback(db))
 
 	mutation("PUT /wlt/payout-destinations/{actorType}/{actorId}", payout.HandleUpsertCanonicalPayoutDestination(db))
 	read("GET /wlt/payout-destinations/{actorType}/{actorId}", payout.HandleGetCanonicalPayoutDestination(db))
@@ -203,7 +204,8 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	// answered 404 and DSH silently lost the sovereign quote. It is classified
 	// as a mutation because it is a POST on the financial surface, which keeps
 	// it behind service authentication and the finance kill switch.
-	mutation("POST /wlt/internal/quotes/calculate", HandleCalculateQuote())
+	mutation("POST /wlt/internal/quotes/calculate", HandleCalculateQuote(db))
+	read("GET /wlt/internal/quotes/checkout/{checkoutIntentId}", HandleGetCheckoutQuote(db))
 
 	read("GET /wlt/commercial/store-onboarding-fee", commercial.HandleGetStoreOnboardingFeePolicy(db))
 	mutation("PUT /wlt/commercial/store-onboarding-fee", commercial.HandleUpsertStoreOnboardingFeePolicy(db))

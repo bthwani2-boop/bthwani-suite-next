@@ -670,6 +670,8 @@ type CartSnapshot struct {
 	AmountMinorUnits int64
 	Currency         string
 	SnapshotHash     string
+	CartVersion      int
+	Lines            []CheckoutSnapshotLine
 }
 
 var (

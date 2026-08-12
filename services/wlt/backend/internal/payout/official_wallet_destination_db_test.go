@@ -181,6 +181,10 @@ func cleanupDestinationContext(t *testing.T, operatorContextID, actorID string) 
 	}
 	defer db.Close()
 	for _, statement := range []string{
+		`DELETE FROM wlt_payout_four_way_reconciliations WHERE operator_context_id=$1`,
+		`DELETE FROM wlt_external_provider_statement_lines WHERE operator_context_id=$1`,
+		`DELETE FROM wlt_external_provider_statements WHERE operator_context_id=$1`,
+		`DELETE FROM wlt_external_provider_accounts WHERE operator_context_id=$1`,
 		`DELETE FROM wlt_payout_audit_events WHERE operator_context_id=$1`,
 		`DELETE FROM wlt_approved_payout_snapshots WHERE operator_context_id=$1`,
 		`DELETE FROM wlt_payout_requests WHERE operator_context_id=$1`,

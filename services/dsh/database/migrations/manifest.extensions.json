@@ -9,6 +9,13 @@
       "sha256": "b4ee961db0e7668fe3ea9e57baec7872bc0fd88e09674f3700e3ecfb06d2c9ec",
       "historicalPrefix": "981",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 241,
+      "file": "dsh-1000_wlt_outbox_unknown_result.sql",
+      "sha256": "06352807de26913413dd9ad0a8620dd44b6881a62281f001264eb0c1f739837e",
+      "historicalPrefix": "1000",
+      "state": "ACTIVE"
     }
   ]
 }

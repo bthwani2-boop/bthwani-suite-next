@@ -20,6 +20,17 @@ type GovernedCheckoutSnapshot struct {
 	SnapshotHash       string
 	ItemCount          int
 	CartVersion        int
+	Lines              []CheckoutSnapshotLine
+}
+
+// CheckoutSnapshotLine is the immutable catalog-price input that DSH submits
+// to WLT for its sovereign checkout quote. It is collected while the cart is
+// locked, so a later cart mutation cannot alter this handoff.
+type CheckoutSnapshotLine struct {
+	MasterProductID     string
+	Quantity            int
+	UnitPriceMinorUnits int64
+	Currency            string
 }
 
 // ComputeCheckoutSnapshotTx locks the authenticated active cart, verifies the
@@ -67,6 +78,7 @@ func ComputeCheckoutSnapshotTx(
 	var subtotal int64
 	currency := ""
 	itemCount := 0
+	lines := make([]CheckoutSnapshotLine, 0)
 	hasher := sha256.New()
 	hasher.Write([]byte(fmt.Sprintf("%s|%s|%s|v%d", cartID, clientID, lockedStoreID, currentVersion)))
 	for rows.Next() {
@@ -97,6 +109,7 @@ func ComputeCheckoutSnapshotTx(
 		}
 		subtotal += lineTotal
 		hasher.Write([]byte(fmt.Sprintf("|%s:%d:%d:%s", productID, quantity, unitMinorUnits, itemCurrency)))
+		lines = append(lines, CheckoutSnapshotLine{MasterProductID: productID, Quantity: quantity, UnitPriceMinorUnits: unitMinorUnits, Currency: itemCurrency})
 		itemCount++
 	}
 	if err := rows.Err(); err != nil {
@@ -111,6 +124,7 @@ func ComputeCheckoutSnapshotTx(
 		SnapshotHash:       hex.EncodeToString(hasher.Sum(nil)),
 		ItemCount:          itemCount,
 		CartVersion:        currentVersion,
+		Lines:              lines,
 	}, nil
 }
 
@@ -143,5 +157,36 @@ func ComputeCheckoutSnapshotForClientTx(
 		AmountMinorUnits: governed.SubtotalMinorUnits,
 		Currency:         governed.Currency,
 		SnapshotHash:     governed.SnapshotHash,
+		CartVersion:      governed.CartVersion,
+		Lines:            governed.Lines,
 	}, nil
+}
+
+// ComputeCheckoutSnapshotForClient is the scoped handoff helper used by
+// reconciliation retries. It locks the authenticated cart while taking the
+// exact snapshot submitted to WLT.
+func ComputeCheckoutSnapshotForClient(ctx context.Context, db *sql.DB, cartID, clientID, storeID string) (*GovernedCheckoutSnapshot, error) {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+	var version int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT version FROM dsh_carts
+		WHERE id=$1::uuid AND client_id=$2 AND store_id=$3 AND state='active'
+		FOR UPDATE`, cartID, clientID, storeID).Scan(&version); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	snapshot, err := ComputeCheckoutSnapshotTx(ctx, tx, clientID, cartID, storeID, version)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return snapshot, nil
 }

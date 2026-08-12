@@ -27,7 +27,7 @@ func TestDailyCloseTotalsComeFromTheCanonicalLedger(t *testing.T) {
 	operatorContextID := testsupport.UniqueID("ctx-close")
 	actorID := testsupport.UniqueID("captain-close")
 	businessDate := time.Now().UTC().Format("2006-01-02")
-	ctx := shared.WithOperatorContext(t.Context(), operatorContextID)
+	ctx := shared.WithDelegatedFinancePrincipal(shared.WithOperatorContext(t.Context(), operatorContextID), "finance-day-closer")
 
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM wlt_daily_finance_close WHERE operator_context_id=$1`, operatorContextID)
@@ -80,7 +80,7 @@ func TestDailyCloseTotalsComeFromTheCanonicalLedger(t *testing.T) {
 
 // TestDailyCloseBlocksOnUnverifiedExecution proves the independent-verification
 // gate can actually fire. Its previous predicate was
-// verified_by_operator_id = '', but the only write path stamped that column
+// verified_by_operator_id = ”, but the only write path stamped that column
 // with the submitter at insert time, so no row could ever match and the gate
 // was structurally inert.
 func TestDailyCloseBlocksOnUnverifiedExecution(t *testing.T) {
@@ -91,7 +91,7 @@ func TestDailyCloseBlocksOnUnverifiedExecution(t *testing.T) {
 	defer db.Close()
 
 	operatorContextID := testsupport.UniqueID("ctx-close-block")
-	ctx := shared.WithOperatorContext(t.Context(), operatorContextID)
+	ctx := shared.WithDelegatedFinancePrincipal(shared.WithOperatorContext(t.Context(), operatorContextID), "finance-day-closer")
 
 	var batchID string
 	if err := db.QueryRow(`INSERT INTO wlt_settlement_batches
@@ -107,13 +107,23 @@ func TestDailyCloseBlocksOnUnverifiedExecution(t *testing.T) {
 	})
 
 	// Evidence recorded by an executor, awaiting an independent verifier.
-	if _, err := db.Exec(`INSERT INTO wlt_manual_transfer_evidence
+	result, err := db.Exec(`INSERT INTO wlt_manual_transfer_evidence
 		(operator_context_id, batch_id, approved_snapshot_id, external_transfer_reference,
 		 amount_minor_units, currency, executed_by_operator_id)
 		SELECT $1, $2, s.id, $3, 5000, 'YER', 'finance-executor'
-		FROM wlt_approved_payout_snapshots s LIMIT 1`,
-		operatorContextID, batchID, testsupport.UniqueID("ref")); err != nil {
+		FROM wlt_approved_payout_snapshots s
+		WHERE s.operator_context_id=$1
+		LIMIT 1`,
+		operatorContextID, batchID, testsupport.UniqueID("ref"))
+	if err != nil {
 		t.Skipf("no approved payout snapshot available to attach evidence to: %v", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows != 1 {
+		t.Skip("no scoped approved payout snapshot available to attach evidence to")
 	}
 
 	// The batch row count is 1 and it has evidence, so the completeness gate
@@ -123,7 +133,7 @@ func TestDailyCloseBlocksOnUnverifiedExecution(t *testing.T) {
 		t.Fatalf("seed batch row: %v", err)
 	}
 
-	_, err := ExecuteDailyFinanceClose(ctx, db, ExecuteDailyCloseInput{
+	_, err = ExecuteDailyFinanceClose(ctx, db, ExecuteDailyCloseInput{
 		BusinessDate: time.Now().UTC().Format("2006-01-02"),
 		OperatorID:   "finance-day-closer",
 	}, "close-block-corr")

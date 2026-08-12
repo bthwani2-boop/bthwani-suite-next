@@ -37,6 +37,25 @@ paths:
               schema: { $ref: '#/components/schemas/PricingQuoteResponse' }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+  /wlt/internal/quotes/checkout/{checkoutIntentId}:
+    get:
+      operationId: getWltCanonicalCheckoutPricingQuote
+      summary: Read the immutable WLT quote bound to a checkout intent.
+      tags: [ WltPricing ]
+      security: [ { serviceBearer: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/CheckoutIntentId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+      responses:
+        '200':
+          description: Immutable authoritative checkout quote.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PricingQuoteResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
 
 components:
   schemas:
@@ -47,6 +66,12 @@ components:
       properties:
         clientId: { type: string, minLength: 1 }
         storeId: { type: string, minLength: 1 }
+        checkoutIntentId:
+          type: string
+          description: When supplied with cartSnapshotHash, causes WLT to issue exactly one immutable checkout quote.
+        cartSnapshotHash:
+          type: string
+          description: Frozen cart fingerprint. Required whenever checkoutIntentId is supplied.
         currency: { type: string, minLength: 3, maxLength: 3 }
         cartVersion: { type: integer, default: 0 }
         pricingEvidence: { $ref: '#/components/schemas/PricingEvidence' }
@@ -76,6 +101,7 @@ components:
           items: { $ref: '#/components/schemas/QuoteEvidenceLine' }
         deliveryFeeMinorUnits: { type: integer, format: int64, minimum: 0 }
         serviceFeeMinorUnits: { type: integer, format: int64, minimum: 0 }
+        discountMinorUnits: { type: integer, format: int64, minimum: 0 }
         signature: { type: string, minLength: 64, maxLength: 64 }
 
     QuoteEvidenceLine:
@@ -111,6 +137,12 @@ components:
           version
         ]
       properties:
+        id:
+          type: string
+          description: Present only for an immutable quote issued for a checkout intent.
+        cartSnapshotHash:
+          type: string
+          description: Immutable cart snapshot identity bound to an issued checkout quote.
         lines:
           type: array
           items: { $ref: '#/components/schemas/QuoteOutputLine' }
@@ -130,6 +162,17 @@ components:
         # OpenAPI 3.1 expresses an absent expiry as a union with null; the 3.0
         # `nullable` keyword is not valid here and failed contract validation.
         expiresAt: { type: [ string, "null" ], format: date-time }
+        allocation:
+          type: array
+          description: WLT-derived, conserved payment allocation for an issued checkout quote.
+          items: { $ref: '#/components/schemas/QuoteAllocationLine' }
+
+    QuoteAllocationLine:
+      type: object
+      required: [ component, amountMinorUnits ]
+      properties:
+        component: { type: string, enum: [ goods_subtotal, delivery_fee, service_fee, tax, discount, tip ] }
+        amountMinorUnits: { type: integer, format: int64 }
 
     QuoteOutputLine:
       type: object
@@ -140,3 +183,10 @@ components:
         quantity: { type: integer }
         unitPriceMinorUnits: { type: integer, format: int64 }
         totalMinorUnits: { type: integer, format: int64 }
+
+  parameters:
+    CheckoutIntentId:
+      name: checkoutIntentId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }

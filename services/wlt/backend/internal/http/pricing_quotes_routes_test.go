@@ -34,6 +34,7 @@ func pricingQuoteBody() string {
 		Lines                 []evidenceLine `json:"lines"`
 		DeliveryFeeMinorUnits int64          `json:"deliveryFeeMinorUnits"`
 		ServiceFeeMinorUnits  int64          `json:"serviceFeeMinorUnits"`
+		DiscountMinorUnits    int64          `json:"discountMinorUnits"`
 		Signature             string         `json:"signature"`
 	}
 	evidence := pricingEvidence{
@@ -41,6 +42,7 @@ func pricingQuoteBody() string {
 		Lines:                 []evidenceLine{{MasterProductID: "product-1", UnitPriceMinorUnits: 125000, Currency: "YER"}},
 		DeliveryFeeMinorUnits: 50000,
 		ServiceFeeMinorUnits:  0,
+		DiscountMinorUnits:    0,
 		Signature:             "",
 	}
 	unsigned, _ := json.Marshal(evidence)
