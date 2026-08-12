@@ -121,7 +121,7 @@ func (s *protectedStoreServer) handleListGovernedCaptainDispatchAssignments(w ht
 
 	readiness, err := s.getCaptainAggregatedReadiness(r, operatorContextID, actor.ID)
 	if err != nil {
-		writeGovernedDispatchError(w, err)
+		writeCaptainReadinessError(w, err)
 		return
 	}
 	if !readiness.Ready {
@@ -156,13 +156,13 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 		return
 	}
 	if strings.TrimSpace(actor.OperatorContextID) == "" {
-		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "captain OperatorContext context is required")
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "captain OperatorContext context is required")
 		return
 	}
 
 	readiness, err := s.getCaptainAggregatedReadiness(r, actor.OperatorContextID, actor.ID)
 	if err != nil {
-		writeGovernedDispatchError(w, err)
+		writeCaptainReadinessError(w, err)
 		return
 	}
 	if !readiness.Ready {
@@ -431,7 +431,7 @@ func (s *protectedStoreServer) handleExpireGovernedDispatchAssignments(w http.Re
 		return
 	}
 	var body struct {
-		Limit    int    `json:"limit"`
+		Limit int `json:"limit"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
