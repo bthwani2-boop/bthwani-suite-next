@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { identitySessionAuthorizesSurface } from "@bthwani/core-identity/session-policy";
 import {
   ACCESS_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
@@ -107,12 +108,10 @@ function isTokenResponse(value: unknown): value is {
   );
 }
 
-function tokenResponseHasOperatorIdentity(value: {
+function tokenResponseHasGovernedControlPanelIdentity(value: {
   identity?: unknown;
 }): boolean {
-  if (!value.identity || typeof value.identity !== "object") return false;
-  const roles = (value.identity as { roles?: unknown }).roles;
-  return Array.isArray(roles) && roles.includes("operator");
+  return identitySessionAuthorizesSurface(value.identity, "operator", "control-panel");
 }
 
 async function requestBody(
@@ -210,7 +209,7 @@ export async function proxyControlPanelRequest(
     }
 
     if (upstream.ok && isTokenResponse(parsed)) {
-      if (!tokenResponseHasOperatorIdentity(parsed)) {
+      if (!tokenResponseHasGovernedControlPanelIdentity(parsed)) {
         const response = jsonError(
           403,
           "CONTROL_PANEL_FORBIDDEN",
