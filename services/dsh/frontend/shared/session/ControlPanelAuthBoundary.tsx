@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { CpRetryButton, CpStatePanel } from "@bthwani/control-panel/components";
 import { colorRoles } from "@bthwani/ui-kit";
 import {
-  identitySessionAuthorizesSurface,
+  identitySessionIsBoundToSurface,
   useIdentitySession,
 } from "@bthwani/core-identity";
 
@@ -31,33 +31,24 @@ function loadingPanel(): ReactNode {
   );
 }
 
-function isControlPanelIdentityAuthorized(state: ReturnType<typeof useIdentitySession>["state"]): boolean {
-  return state.kind === "authenticated"
-    && identitySessionAuthorizesSurface(state.identity, "operator", "control-panel");
-}
-
 /**
- * Owns the single sign-on boundary for every /dsh/* route (except
- * /dsh/login itself, which renders outside this component). Identity outages
- * never redirect to login or clear a retained session; only proven signed-out,
- * invalid-session, or a session not bound to the operator control-panel surface
- * does so.
+ * Owns the authentication boundary for every /dsh/* route (except /dsh/login).
+ * The boundary authenticates the exact control-panel session only; business
+ * roles and permissions remain authorization concerns of the protected APIs.
  */
 export function ControlPanelAuthBoundary({ children }: { readonly children: ReactNode }) {
   const { state, retryBootstrap } = useIdentitySession();
   const router = useRouter();
   const pathname = usePathname();
+  const wrongSurface = state.kind === "authenticated"
+    && !identitySessionIsBoundToSurface(state.identity, "control-panel");
 
   useEffect(() => {
-    if (
-      state.kind === "signed_out" ||
-      state.kind === "error" ||
-      (state.kind === "authenticated" && !isControlPanelIdentityAuthorized(state))
-    ) {
+    if (state.kind === "signed_out" || state.kind === "error" || wrongSurface) {
       const returnTo = pathname && pathname.startsWith(DSH_ROUTE_PREFIX) ? pathname : DSH_DASHBOARD_ROUTE;
       router.replace(`${DSH_LOGIN_ROUTE}?returnTo=${encodeURIComponent(returnTo)}`);
     }
-  }, [state, pathname, router]);
+  }, [state.kind, wrongSurface, pathname, router]);
 
   if (state.kind === "restoring" || state.kind === "authenticating") {
     return loadingPanel();
@@ -79,11 +70,7 @@ export function ControlPanelAuthBoundary({ children }: { readonly children: Reac
     );
   }
 
-  if (
-    state.kind === "signed_out" ||
-    state.kind === "error" ||
-    (state.kind === "authenticated" && !isControlPanelIdentityAuthorized(state))
-  ) {
+  if (state.kind === "signed_out" || state.kind === "error" || wrongSurface) {
     return loadingPanel();
   }
 
