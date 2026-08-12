@@ -10,6 +10,8 @@ import {
 import {
   identityServerClient,
   isConcurrentRefreshError,
+  isIdentityServerAvailabilityError,
+  isIdentityServerInvalidSessionError,
 } from "../_lib/identity-server";
 
 export const runtime = "nodejs";
@@ -50,6 +52,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json(
         { code: "REFRESH_ALREADY_ROTATED" },
         { status: 409, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+    if (isIdentityServerAvailabilityError(error) || !isIdentityServerInvalidSessionError(error)) {
+      return NextResponse.json(
+        { code: "IDENTITY_UNAVAILABLE" },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
       );
     }
 
