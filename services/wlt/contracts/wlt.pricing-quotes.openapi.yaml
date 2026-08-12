@@ -17,7 +17,7 @@ paths:
   /wlt/internal/quotes/calculate:
     post:
       operationId: calculateWltPricingQuote
-       summary: Calculate the sovereign financial quote from verified pricing evidence.
+      summary: Calculate the sovereign financial quote from verified pricing evidence.
       tags: [ WltPricing ]
       security: [ { serviceBearer: [] } ]
       parameters:
@@ -43,7 +43,7 @@ components:
     CalculateQuoteRequest:
       type: object
       additionalProperties: false
-       required: [ clientId, storeId, currency, lines, pricingEvidence ]
+      required: [ clientId, storeId, currency, lines, pricingEvidence ]
       properties:
         clientId: { type: string, minLength: 1 }
         storeId: { type: string, minLength: 1 }
@@ -58,7 +58,7 @@ components:
     QuoteInputLine:
       type: object
       additionalProperties: false
-       required: [ masterProductId, quantity ]
+      required: [ masterProductId, quantity ]
       properties:
         masterProductId: { type: string, minLength: 1 }
         productName: { type: string }
