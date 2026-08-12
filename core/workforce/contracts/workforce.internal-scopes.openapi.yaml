@@ -1,10 +1,66 @@
 openapi: 3.1.0
 info:
-  title: Workforce Internal Scopes API
-  version: 1.1.0
+  title: Workforce Internal DSH API
+  version: 1.2.0
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/workforce
 paths:
+  /internal/captains/{actorId}/readiness:
+    get:
+      operationId: getInternalCaptainReadiness
+      summary: Read governed captain activation readiness through DSH service identity.
+      parameters:
+        - $ref: '#/components/parameters/ActorId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+      responses:
+        '200':
+          description: Governed captain activation readiness.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalActivationReadinessResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: []
+          serviceCaller: []
+  /internal/fields/{actorId}/readiness:
+    get:
+      operationId: getInternalFieldReadiness
+      summary: Read governed field activation readiness through DSH service identity.
+      parameters:
+        - $ref: '#/components/parameters/ActorId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+      responses:
+        '200':
+          description: Governed field activation readiness.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalActivationReadinessResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: []
+          serviceCaller: []
   /internal/assignments/{actorId}/scopes:
     get:
       operationId: getInternalActorScopes
@@ -141,8 +197,20 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Provider is not present for the requested Workforce kind.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
     Conflict:
       description: The requested scopes overlap or conflict with durable state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unavailable:
+      description: Workforce readiness truth cannot currently be evaluated.
       content:
         application/json:
           schema:
@@ -163,6 +231,25 @@ components:
           type: string
         message:
           type: string
+    InternalActivationReadinessResponse:
+      type: object
+      additionalProperties: false
+      required: [activationReadiness]
+      properties:
+        activationReadiness:
+          $ref: '#/components/schemas/InternalActivationReadiness'
+    InternalActivationReadiness:
+      type: object
+      additionalProperties: false
+      required: [isActive, missing]
+      properties:
+        isActive:
+          type: boolean
+          description: True only when all governed Workforce activation requirements are satisfied.
+        missing:
+          type: array
+          items:
+            type: string
     OperationalAssignmentInput:
       type: object
       additionalProperties: false
