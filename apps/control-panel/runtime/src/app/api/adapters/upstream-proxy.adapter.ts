@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import type { TokenResponse } from "@bthwani/core-identity/server";
+import { identitySessionIsBoundToSurface } from "@bthwani/core-identity/session-policy";
 import {
   ACCESS_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
@@ -12,11 +14,7 @@ import { sendAuthenticatedUpstreamRequest } from "../_kernel/upstream-http-reque
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-type OperatorTokenPair = {
-  accessToken: string;
-  refreshToken: string;
-  identity: { roles: readonly string[] };
-};
+type ControlPanelTokenPair = TokenResponse;
 
 function noStoreJson(body: unknown, status: number): NextResponse {
   return NextResponse.json(body, {
@@ -52,11 +50,11 @@ async function tryForward(
   }
 }
 
-async function rotateOperatorSession(
+async function rotateControlPanelSession(
   refreshToken: string,
-): Promise<OperatorTokenPair | null> {
+): Promise<ControlPanelTokenPair | null> {
   const rotated = await identityServerClient().refresh(refreshToken);
-  if (!rotated.identity.roles.includes("operator")) return null;
+  if (!identitySessionIsBoundToSurface(rotated.identity, "control-panel")) return null;
   return rotated;
 }
 
@@ -87,12 +85,12 @@ export async function proxyAuthenticatedUpstream(
   const store = await cookies();
   let accessToken = store.get(ACCESS_TOKEN_COOKIE)?.value;
   const refreshToken = store.get(REFRESH_TOKEN_COOKIE)?.value;
-  let rotatedCookies: OperatorTokenPair | null = null;
+  let rotatedCookies: ControlPanelTokenPair | null = null;
 
   if (!accessToken) {
     if (!refreshToken) return noStoreJson({ code: "SESSION_NOT_FOUND" }, 401);
     try {
-      rotatedCookies = await rotateOperatorSession(refreshToken);
+      rotatedCookies = await rotateControlPanelSession(refreshToken);
       if (!rotatedCookies) return expiredSessionResponse(403);
       accessToken = rotatedCookies.accessToken;
     } catch {
@@ -104,7 +102,7 @@ export async function proxyAuthenticatedUpstream(
 
   if (upstream.status === 401 && refreshToken) {
     try {
-      rotatedCookies = await rotateOperatorSession(refreshToken);
+      rotatedCookies = await rotateControlPanelSession(refreshToken);
       if (!rotatedCookies) return expiredSessionResponse(403);
       upstream = await tryForward(
         request.clone(),
