@@ -80,6 +80,7 @@ func main() {
 	mediaProvider := newMediaProvider(appCtx)
 
 	baseRouter := workforcehttp.NewRouter(db, service, repo, authClient, mediaProvider, dshServiceToken)
+	workforcehttp.RegisterInternalReadinessRoutes(baseRouter, repo, dshServiceToken)
 	workforcehttp.RegisterOperationalCoreRoutes(baseRouter, repo, authClient)
 	workforcehttp.RegisterOperationalEnforcementRoutes(baseRouter, repo, authClient, wlt)
 	workforcehttp.RegisterEmployeeGovernanceRoutes(baseRouter, repo, authClient)
