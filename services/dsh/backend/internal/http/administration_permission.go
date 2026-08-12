@@ -9,13 +9,11 @@ import (
 	"dsh-api/internal/store"
 )
 
-// requireAdministrationPermission combines Identity authentication with the
-// canonical Identity RBAC registry. Identity remains both the session and
-// the permission authority: inline session claims (identity.Permissions)
-// are stale snapshots taken at login and cannot be used to authorize a
-// governed administration action — see the identical rule enforced for
-// operator actors in requirePermission (protected_store.go). Deny-by-default:
-// if the RBAC registry is unavailable, access is denied, never granted.
+// requireAdministrationPermission combines the live Identity session with the
+// canonical Identity RBAC registry. A governed administration action is valid
+// only for an operator session issued for the control-panel surface; RBAC then
+// determines the exact action/scope. Inline session permission snapshots are
+// never an authority here. Deny-by-default if Identity or RBAC is unavailable.
 func (s *protectedStoreServer) requireAdministrationPermission(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -30,11 +28,18 @@ func (s *protectedStoreServer) requireAdministrationPermission(
 		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
 		return store.StoreActor{}, false
 	}
+	if !identity.HasRole("operator") || identity.SessionSurface != "control-panel" {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "operator control-panel session is required")
+		return store.StoreActor{}, false
+	}
 
 	actor := store.StoreActor{
 		ID:                identity.Subject,
-		Role:              "permission:" + action,
+		Role:              "operator",
 		OperatorContextID: identity.OperatorContextID,
+		SessionID:         identity.SessionID,
+		SessionSurface:    identity.SessionSurface,
+		PhoneE164:         identity.PhoneE164,
 		AuthorizedAction:  action,
 	}
 
