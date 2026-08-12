@@ -104,6 +104,9 @@ jobs:
                   & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/runtime/smoke-dsh-operator-governance-preflight.ps1
                 }
                 Invoke-Phase "runtime:full:smoke" { pnpm run runtime:full:smoke }
+                Invoke-Phase "mobile:four-app-dispatch-readiness" {
+                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/prepare-dsh-runtime-captain-dispatch.ps1
+                }
                 Invoke-Phase "mobile:four-app-integration" {
                   & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/test-dsh-multisurface-runtime-matrix-v2.ps1
                 }
