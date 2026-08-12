@@ -2,7 +2,11 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { identitySessionIsBoundToSurface } from "@bthwani/core-identity/session-policy";
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, clearSessionCookies, setSessionCookies } from "../_lib/cookies";
-import { isConcurrentRefreshError } from "../_lib/identity-server";
+import {
+  isConcurrentRefreshError,
+  isIdentityServerAvailabilityError,
+  isIdentityServerInvalidSessionError,
+} from "../_lib/identity-server";
 import { resolveSession } from "../_lib/session";
 
 export const runtime = "nodejs";
@@ -40,6 +44,12 @@ export async function GET(): Promise<NextResponse> {
       return NextResponse.json(
         { code: "REFRESH_ALREADY_ROTATED" },
         { status: 409, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+    if (isIdentityServerAvailabilityError(error) || !isIdentityServerInvalidSessionError(error)) {
+      return NextResponse.json(
+        { code: "IDENTITY_UNAVAILABLE" },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
       );
     }
 
