@@ -1,17 +1,22 @@
 package http
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
 	"identity-api/internal/identity"
 )
 
+type governedRefreshRepository interface {
+	RefreshGoverned(context.Context, string) (identity.TokenPair, error)
+}
+
 // GovernedRefreshBoundary is the canonical runtime boundary for refresh-token
 // rotation. It intercepts only POST /auth/refresh and delegates every other
 // request unchanged. Cross-instance serialization lives in Identity's
 // repository/database layer rather than process-local BFF memory.
-func GovernedRefreshBoundary(repository *identity.Repository, next http.Handler) http.Handler {
+func GovernedRefreshBoundary(repository governedRefreshRepository, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost || r.URL.Path != "/auth/refresh" {
 			next.ServeHTTP(w, r)
