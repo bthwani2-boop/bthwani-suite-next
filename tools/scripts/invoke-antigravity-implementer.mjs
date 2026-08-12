@@ -41,24 +41,25 @@ function fail(message, detail) {
 }
 
 export function parseArgs(argv) {
-  const out = { diagnosticOnly: false, allowWrite: [], forbidWrite: [], timeout: "45m" };
+  const out = { diagnosticOnly: false, allowRead: [], allowWrite: [], forbidWrite: [], timeout: "45m" };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--diagnostic-only") out.diagnosticOnly = true;
     else if (arg === "--help" || arg === "-h") out.help = true;
-    else if (["--orchestrator", "--work-unit", "--brief", "--expected-branch", "--allow-write", "--forbid-write", "--model", "--timeout"].includes(arg)) {
+    else if (["--orchestrator", "--work-unit", "--brief", "--expected-branch", "--expected-head", "--allow-read", "--allow-write", "--forbid-write", "--model", "--timeout"].includes(arg)) {
       const value = argv[++i];
       if (!value || value.startsWith("--")) fail(`Missing value for ${arg}.`);
-      if (arg === "--allow-write") out.allowWrite.push(value);
+      if (arg === "--allow-read") out.allowRead.push(value);
+      else if (arg === "--allow-write") out.allowWrite.push(value);
       else if (arg === "--forbid-write") out.forbidWrite.push(value);
-      else out[{ "--orchestrator": "orchestrator", "--work-unit": "workUnit", "--brief": "brief", "--expected-branch": "expectedBranch", "--model": "model", "--timeout": "timeout" }[arg]] = value;
+      else out[{ "--orchestrator": "orchestrator", "--work-unit": "workUnit", "--brief": "brief", "--expected-branch": "expectedBranch", "--expected-head": "expectedHead", "--model": "model", "--timeout": "timeout" }[arg]] = value;
     } else fail(`Unknown argument: ${arg}`);
   }
   return out;
 }
 
 function usage() {
-  console.log(`Usage:\n  node tools/scripts/invoke-antigravity-implementer.mjs --diagnostic-only\n  node tools/scripts/invoke-antigravity-implementer.mjs \\\n    --work-unit <id> \\\n    --brief <file> \\\n    --expected-branch <branch> \\\n    --allow-write <repo-relative-prefix> [--allow-write <prefix> ...] \\\n    [--forbid-write <repo-relative-prefix> ...] \\\n    [--model <antigravity-model>] [--timeout 45m]`);
+  console.log(`Usage:\n  node tools/scripts/invoke-antigravity-implementer.mjs --diagnostic-only\n  node tools/scripts/invoke-antigravity-implementer.mjs \\\n    --work-unit <id> \\\n    --brief <file> \\\n    --expected-branch <branch> \\\n    --expected-head <40-char-sha> \\\n    --allow-read <repo-relative-prefix> [--allow-read <prefix> ...] \\\n    --allow-write <repo-relative-prefix> [--allow-write <prefix> ...] \\\n    [--forbid-write <repo-relative-prefix> ...] \\\n    [--model <antigravity-model>] [--timeout 45m]`);
 }
 
 export function durationMs(value) {
@@ -281,7 +282,8 @@ export async function main(argv = process.argv.slice(2)) {
   if (args.help) { usage(); return 0; }
   const launcher = resolveAntigravity();
   const version = probe(launcher, ["--version"], 10_000)?.split(/\r?\n/)[0] || null;
-  const modelsOk = Boolean(probe(launcher, ["models"], 20_000));
+  const modelsOutput = probe(launcher, ["models"], 20_000);
+  const modelsOk = Boolean(modelsOutput);
   if (!launcher || !version) fail("Antigravity CLI (agy) is not installed, not on PATH, or failed its direct version probe.");
   if (!modelsOk) fail("Antigravity CLI is installed but 'agy models' failed. Authenticate the local subscription session (for example with 'agy login') and retry.");
   if (args.diagnosticOnly) {
@@ -293,21 +295,32 @@ export async function main(argv = process.argv.slice(2)) {
   if (!args.workUnit || !WORK_UNIT_RE.test(args.workUnit)) fail("A safe --work-unit id is required.");
   if (!args.brief) fail("--brief is required.");
   if (!args.expectedBranch || /[\r\n\0]/.test(args.expectedBranch)) fail("--expected-branch is required and must be a single branch name.");
+  if (!args.expectedHead || !/^[0-9a-fA-F]{40}$/.test(args.expectedHead)) fail("--expected-head is required and must be an exact 40-character commit SHA.");
+  if (!args.allowRead.length) fail("At least one --allow-read prefix is required.");
   if (!args.allowWrite.length) fail("At least one --allow-write prefix is required.");
   if (!args.model) fail("--model is required; select an available Gemini model from 'agy models'.");
   if (args.model.length > 160 || /[\r\n\0]/.test(args.model) || !/gemini/i.test(args.model)) fail("--model must be a safe Gemini model value returned by 'agy models'.");
+  const availableModels = new Set(
+    String(modelsOutput || "")
+      .split(/\r?\n/)
+      .map((line) => line.trim().split(/\s+/)[0])
+      .filter((value) => /^gemini-/i.test(value)),
+  );
+  if (!availableModels.has(args.model)) fail(`Requested Gemini model '${args.model}' is not available in the authenticated 'agy models' result.`);
   const timeoutMsValue = durationMs(args.timeout);
   const brief = readBrief(args.brief);
+  const allowedRead = args.allowRead.map((value) => normalizeRelativePrefix(value, "--allow-read"));
   const allowed = args.allowWrite.map((value) => normalizeRelativePrefix(value, "--allow-write"));
   const explicitForbidden = args.forbidWrite.map((value) => normalizeRelativePrefix(value, "--forbid-write"));
   const protectedForbidden = SELF_PROTECTED.map((value) => normalizeRelativePrefix(value, "protected path"));
   const forbidden = [...new Map([...explicitForbidden, ...protectedForbidden].map((entry) => [entry.absolute, entry])).values()];
-  for (const entry of [...allowed, ...forbidden]) ensureNoSymlinkPrefix(entry.absolute, "Declared scope");
+  for (const entry of [...allowedRead, ...allowed, ...forbidden]) ensureNoSymlinkPrefix(entry.absolute, "Declared scope");
   for (const allow of allowed) if (forbidden.some((deny) => insideOrEqual(deny.absolute, allow.absolute))) fail(`Allowed write scope is entirely inside a protected/forbidden path: ${allow.relative}`);
 
   const branchBefore = run("git", ["branch", "--show-current"]);
   const headBefore = run("git", ["rev-parse", "HEAD"]);
   if (branchBefore !== args.expectedBranch) fail(`Branch mismatch: expected '${args.expectedBranch}', found '${branchBefore}'.`);
+  if (headBefore.toLowerCase() !== args.expectedHead.toLowerCase()) fail(`HEAD mismatch: expected '${args.expectedHead}', found '${headBefore}'.`);
   const dirtyBefore = statusPaths();
   if (dirtyBefore.length) fail("Working tree must be clean before delegation.", JSON.stringify(dirtyBefore, null, 2));
   const trackedStateBefore = fingerprintPaths(statusPaths({ includeIgnored: true }), repoRoot);
@@ -338,8 +351,12 @@ export async function main(argv = process.argv.slice(2)) {
       "Implement only the brief below in the current repository.",
       "Do not commit, push, merge, release, approve, or expand scope.",
       "Do not use shell, web, browser, MCP, permissions, task management, schedules, image generation, interactive questions, or subagents; the PreToolUse hook denies non-file implementation tools.",
-      "If the required implementation cannot be completed within the declared write scope, stop and report the exact missing scope instead of changing other paths.",
+      "Every read/search operation must stay inside the declared read scope; do not scan the repository root.",
+      "If the required implementation cannot be completed within the declared read/write scope, stop and report the exact missing scope instead of changing other paths.",
       `Do not claim verification that you did not execute. ${args.orchestrator === "codex" ? "Codex" : "Claude"} will review the complete diff and run repository gates after you exit.`,
+      "",
+      "DECLARED ALLOWED READ PREFIXES:",
+      ...allowedRead.map((entry) => `- ${entry.relative}`),
       "",
       "DECLARED ALLOWED WRITE PREFIXES:",
       ...allowed.map((entry) => `- ${entry.relative}`),
@@ -359,6 +376,7 @@ export async function main(argv = process.argv.slice(2)) {
     const childEnv = {
       ...process.env,
       BTHWANI_ANTIGRAVITY_REPO_ROOT: repoRoot,
+      BTHWANI_ANTIGRAVITY_ALLOWED_READ: JSON.stringify(allowedRead.map((entry) => entry.absolute)),
       BTHWANI_ANTIGRAVITY_ALLOWED_WRITE: JSON.stringify(allowed.map((entry) => entry.absolute)),
       BTHWANI_ANTIGRAVITY_FORBIDDEN_WRITE: JSON.stringify(forbidden.map((entry) => entry.absolute)),
     };

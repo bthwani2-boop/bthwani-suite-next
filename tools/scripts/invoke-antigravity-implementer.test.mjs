@@ -6,9 +6,11 @@ import test from "node:test";
 import { durationMs, fingerprintDelta, fingerprintPaths, parseArgs } from "./invoke-antigravity-implementer.mjs";
 
 test("parses bounded invocation", () => {
-  const result = parseArgs(["--orchestrator", "codex", "--work-unit", "u1", "--brief", "b.md", "--expected-branch", "BB", "--allow-write", "services/a", "--forbid-write", "services/a/generated", "--model", "gemini-3.6-flash", "--timeout", "1h15m"]);
+  const result = parseArgs(["--orchestrator", "codex", "--work-unit", "u1", "--brief", "b.md", "--expected-branch", "BB", "--expected-head", "0123456789abcdef0123456789abcdef01234567", "--allow-read", "services", "--allow-write", "services/a", "--forbid-write", "services/a/generated", "--model", "gemini-3.6-flash", "--timeout", "1h15m"]);
   assert.equal(result.orchestrator, "codex");
   assert.equal(result.workUnit, "u1");
+  assert.equal(result.expectedHead, "0123456789abcdef0123456789abcdef01234567");
+  assert.deepEqual(result.allowRead, ["services"]);
   assert.deepEqual(result.allowWrite, ["services/a"]);
   assert.deepEqual(result.forbidWrite, ["services/a/generated"]);
   assert.equal(result.model, "gemini-3.6-flash");

@@ -22,6 +22,7 @@ function fixture() {
 function options(root) {
   return {
     repoRoot: root,
+    allowedRead: [path.join(root, "services", "orders")],
     allowedWrite: [path.join(root, "services", "orders")],
     forbiddenWrite: [path.join(root, "services", "orders", "generated")],
   };
@@ -39,6 +40,27 @@ test("allows repository view_file reads", () => {
 test("denies repository escape on reads", () => {
   const root = fixture();
   assert.equal(evaluateToolCall(call("view_file", { AbsolutePath: path.join(path.dirname(root), "secret.txt") }), options(root)).decision, "deny");
+});
+test("denies repository reads outside declared read scope", () => {
+  const root = fixture();
+  assert.equal(
+    evaluateToolCall(
+      call("view_file", { AbsolutePath: path.join(root, "services/orders-internal/a.ts") }),
+      options(root),
+    ).decision,
+    "deny",
+  );
+});
+
+test("denies unscoped repository search", () => {
+  const root = fixture();
+  assert.equal(
+    evaluateToolCall(
+      call("grep_search", { Query: "needle" }),
+      options(root),
+    ).decision,
+    "deny",
+  );
 });
 
 test("denies shell execution", () => {
@@ -108,6 +130,7 @@ test("denies .git writes", () => {
 test("hook failures return structured denial with exit code zero", () => {
   const env = { ...process.env };
   delete env.BTHWANI_ANTIGRAVITY_REPO_ROOT;
+  delete env.BTHWANI_ANTIGRAVITY_ALLOWED_READ;
   delete env.BTHWANI_ANTIGRAVITY_ALLOWED_WRITE;
   delete env.BTHWANI_ANTIGRAVITY_FORBIDDEN_WRITE;
   const result = spawnSync(process.execPath, [hookPath], { input: "{}", encoding: "utf8", env });

@@ -3,7 +3,7 @@ param(
   [ValidateSet("Verify", "Full")]
   [string]$Mode = "Verify",
 
-  [ValidateSet("graphify", "leanctx", "open-code-review")]
+  [ValidateSet("antigravity-implementer", "graphify", "leanctx", "open-code-review")]
   [string[]]$Require = @()
 )
 
@@ -29,6 +29,10 @@ try {
     if ($Mode -eq "Full") {
       foreach ($Tool in $Require) {
         switch ($Tool) {
+          "antigravity-implementer" {
+            & node tools/scripts/invoke-antigravity-implementer.mjs --diagnostic-only
+          }
+
           "graphify" {
             & (Join-Path $PSScriptRoot "invoke-graphify-toolchain.ps1") -Mode Verify
           }
