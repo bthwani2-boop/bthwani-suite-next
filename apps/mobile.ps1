@@ -8,8 +8,7 @@ param(
     [ValidateSet('Run', 'Initialize', 'Preflight', 'Build')]
     [string] $Mode,
 
-    [switch] $ClearCache,
-    [switch] $MirrorDevice
+    [switch] $ClearCache
 )
 
 $target = (Resolve-Path (Join-Path $PSScriptRoot 'mobile\mobile.ps1')).Path
