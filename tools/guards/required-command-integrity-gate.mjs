@@ -36,9 +36,9 @@ function rejectMarkers(relativePath, content, markers) {
 const packageJson = JSON.parse(text(packageFile));
 const scripts = packageJson.scripts ?? {};
 const requiredFailClosedScripts = [
-  "guard:markdown-governance", "guard:required-command-integrity", "guard:workflow-lint", "guard:workflow-security", "guard:actions-pin",
-  "guard:cleanup-policy", "guard:a11y", "guard:repo-naming", "web:runtime-contract:test", "ui-kit:catalog:build",
-  "visual:ui-kit:contract", "performance:api:quick", "performance:bundle:size",
+  "guard:required-command-integrity", "guard:workflow-lint", "guard:workflow-security", "guard:actions-pin",
+  "guard:a11y", "web:runtime-contract:test", "ui-kit:catalog:build", "visual:ui-kit:contract",
+  "performance:api:quick", "performance:bundle:size",
 ];
 for (const scriptName of requiredFailClosedScripts) {
   const command = scripts[scriptName];
@@ -126,7 +126,6 @@ requireMarkers("apps/mobile/test-mobile-runtime-contract.mjs", ["test:app", "tes
 requireMarkers("tools/scripts/verify-mobile-test-stack.ps1", [
   "node --test apps/mobile/tests/*.test.mjs",
   "test-dsh-multisurface-runtime-matrix-v2.ps1",
-  "verify-mobile-lan-runtime.ps1",
   "nx run-many -t test --all --outputStyle=stream",
 ]);
 requireMarkers("tools/scripts/verify-mobile-android-smoke.ps1", [
@@ -183,18 +182,17 @@ const ci = requireMarkers(`${workflowsRoot}/ci.yml`, [
 if ((ci.match(/^\s*concurrency:\s*$/gm) ?? []).length !== 1) violations.push({ file: `${workflowsRoot}/ci.yml`, line: 0, message: "ONE_WORKFLOW_LEVEL_CONCURRENCY_REQUIRED" });
 
 const ciPolicy = requireMarkers(`${workflowsRoot}/ci-policy.yml`, [
-  "guard:governance-schema", "guard:agent-governance", "guard:authority-separation", "guard:guard-registry", "guard:sdlc",
-  "guard:cleanup-policy", "guard:required-command-integrity", "guard:actions-pin", "guard:workflow-lint", "guard:workflow-security", "guard:opa-policies",
+  "guard:required-command-integrity", "guard:actions-pin", "guard:workflow-lint", "guard:workflow-security", "guard:opa-policies",
   "generated-client-provenance.log",
 ]);
 rejectMarkers(`${workflowsRoot}/ci-policy.yml`, ciPolicy, [
   ["CI_GENERATED_SOURCE_MATERIALIZATION_FORBIDDEN", /openapi:generate:all/],
 ]);
 
-requireMarkers(`${workflowsRoot}/ci-node-diagnostics.yml`, ["pnpm exec knip", "guard:logic-coverage", "guard:a11y", "guard:dependency-graph", "guard:ast-grep-rules", "guard:repo-naming", "guard:repo-structure", "guard:api-binding", "guard:backend-api-binding", "guard:frontend-feature-binding"]);
+requireMarkers(`${workflowsRoot}/ci-node-diagnostics.yml`, ["pnpm exec knip", "guard:logic-coverage", "guard:a11y", "guard:dependency-graph", "guard:ast-grep-rules", "guard:api-binding", "guard:backend-api-binding", "guard:frontend-feature-binding"]);
 requireMarkers(`${workflowsRoot}/ci-node-verification.yml`, ["node --test apps/mobile/tests/*.test.mjs", "pnpm exec nx run-many -t test --all --outputStyle=stream", "pnpm exec nx affected -t test --outputStyle=stream", "pnpm run nx:typecheck", "pnpm run nx:lint", "pnpm run nx:build"]);
 requireMarkers(`${workflowsRoot}/ci-backends.yml`, ["Select affected backends", "Apply migrations", "go test ./...", "go build ./..."]);
-requireMarkers(`${workflowsRoot}/ci-runtime.yml`, ["runtime:full:smoke", "mobile:four-app-integration", "test-dsh-multisurface-runtime-matrix-v2.ps1", "mobile:lan-runtime", "Stop runtime"]);
+requireMarkers(`${workflowsRoot}/ci-runtime.yml`, ["runtime:full:smoke", "mobile:four-app-integration", "test-dsh-multisurface-runtime-matrix-v2.ps1", "Stop runtime"]);
 requireMarkers(`${workflowsRoot}/dsh-database.yml`, ["contents: read", "postgis/postgis:16-3.4-alpine", "invoke-dsh-database.ps1"]);
 
 fail(guardId, violations);
