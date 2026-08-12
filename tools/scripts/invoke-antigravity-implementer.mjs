@@ -322,8 +322,26 @@ export async function main(argv = process.argv.slice(2)) {
   if (branchBefore !== args.expectedBranch) fail(`Branch mismatch: expected '${args.expectedBranch}', found '${branchBefore}'.`);
   if (headBefore.toLowerCase() !== args.expectedHead.toLowerCase()) fail(`HEAD mismatch: expected '${args.expectedHead}', found '${headBefore}'.`);
   const dirtyBefore = statusPaths();
-  if (dirtyBefore.length) fail("Working tree must be clean before delegation.", JSON.stringify(dirtyBefore, null, 2));
-  const trackedStateBefore = fingerprintPaths(statusPaths({ includeIgnored: true }), repoRoot);
+
+  const dirtyScopeConflicts = dirtyBefore.filter((rel) => {
+    const absolute = path.resolve(repoRoot, rel);
+    return (
+      allowed.some((entry) => insideOrEqual(entry.absolute, absolute)) ||
+      allowedRead.some((entry) => insideOrEqual(entry.absolute, absolute))
+    );
+  });
+
+  if (dirtyScopeConflicts.length) {
+    fail(
+      "Declared read/write scope overlaps pre-existing working-tree changes. Reconcile or narrow the work unit before delegation.",
+      JSON.stringify(dirtyScopeConflicts, null, 2),
+    );
+  }
+
+  const trackedStateBefore = fingerprintPaths(
+    statusPaths({ includeIgnored: true }),
+    repoRoot,
+  );
 
   const hooksPath = path.join(repoRoot, ".agents", "hooks.json");
   fs.mkdirSync(path.dirname(hooksPath), { recursive: true });

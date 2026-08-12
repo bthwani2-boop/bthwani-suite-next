@@ -1,4 +1,5 @@
 {
+  "$schema": "https://opencode.ai/config.json",
   "project": "bthwani-suite-next",
   "instructions": [
     "governance/GOVERNANCE.md",
