@@ -1,11 +1,8 @@
 package payout
 
-// Note: these tests exercise the per-row operator_context_id scoping guards
-// inside a single WLT deployment (WHERE operator_context_id=$1 filters and
-// RequireOperatorContextScope checks). They do not exercise or assert
-// network-level multi-tenant isolation -- the DSH service bridge binds every
-// request to one fixed deployment-owned context (see
-// internal/shared/serviceauth.go). See governance decision Q1/T4.
+// These tests exercise per-row operator_context_id scoping guards inside one
+// WLT deployment. Beneficiary payout intent never carries a destination id;
+// the current verified destination is resolved inside the trusted context.
 
 import (
 	"bytes"
@@ -25,10 +22,8 @@ import (
 )
 
 const testOfficialWalletProviderKey = "test_official_wallet"
+const testDestinationMaker = "finance-destination-maker-test"
 
-// seedOfficialWalletProvider registers the governed provider the destination
-// under test points at. Without it the upsert fails closed, which is the
-// behaviour asserted by TestDestinationUpsertRejectsUnregisteredProvider.
 func seedOfficialWalletProvider(t *testing.T, db *sql.DB, operatorContextID string) {
 	t.Helper()
 	if _, err := db.Exec(`INSERT INTO wlt_official_wallet_providers
@@ -40,12 +35,6 @@ func seedOfficialWalletProvider(t *testing.T, db *sql.DB, operatorContextID stri
 	}
 }
 
-// canonicalizePayoutTestWallet upgrades an old test fixture that populated
-// wlt_wallets directly into the same canonical opening-balance model used by
-// production. It is deliberately test-only: current financial code must never
-// infer ledger truth from the materialized projection. The historical payout
-// tests already set settled_total_minor_units to their intended fixture balance,
-// which provides a deterministic amount for this one-time test conversion.
 func canonicalizePayoutTestWallet(t *testing.T, db *sql.DB, operatorContextID, actorID string) {
 	t.Helper()
 	var settled int64
@@ -122,10 +111,12 @@ func upsertOfficialWalletDestination(t *testing.T, db *sql.DB, operatorContextID
 		"beneficiaryName":"OperatorContext Payout Test",
 		"officialWalletProviderKey":%q,
 		"destinationReference":%q,
-		"operatorId":"operator-test"
-	}`, testOfficialWalletProviderKey, reference)
+		"reason":"test finance destination provisioning",
+		"evidenceReference":"test-evidence:%s"
+	}`, testOfficialWalletProviderKey, reference, idempotencyKey)
 	req := httptest.NewRequest(http.MethodPut, "/wlt/payout-destinations/field/"+actorID, strings.NewReader(body))
-	req = req.WithContext(shared.WithOperatorContext(req.Context(), operatorContextID))
+	ctx := shared.WithOperatorContext(req.Context(), operatorContextID)
+	req = req.WithContext(shared.WithDelegatedFinancePrincipal(ctx, testDestinationMaker))
 	req.SetPathValue("actorType", "field")
 	req.SetPathValue("actorId", actorID)
 	req.Header.Set("X-Correlation-ID", correlationID)
@@ -148,13 +139,15 @@ func verifyOfficialWalletDestination(t *testing.T, db *sql.DB, operatorContextID
 	body, err := json.Marshal(map[string]any{
 		"destinationVersion": version,
 		"decision":           decision,
-		"operatorId":         operatorID,
+		"reason":             "test independent verification",
+		"evidenceReference":  "verification-evidence:" + actorID,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	req := httptest.NewRequest(http.MethodPost, "/wlt/payout-destinations/field/"+actorID+"/verify", bytes.NewReader(body))
-	req = req.WithContext(shared.WithOperatorContext(req.Context(), operatorContextID))
+	ctx := shared.WithOperatorContext(req.Context(), operatorContextID)
+	req = req.WithContext(shared.WithDelegatedFinancePrincipal(ctx, operatorID))
 	req.SetPathValue("actorType", "field")
 	req.SetPathValue("actorId", actorID)
 	req.Header.Set("X-Correlation-ID", "verify-"+operatorContextID)
@@ -163,8 +156,6 @@ func verifyOfficialWalletDestination(t *testing.T, db *sql.DB, operatorContextID
 	return res.Code
 }
 
-// executeDestinationUpsert produces the state a payout actually requires: an
-// active, verified official-wallet destination owned by the beneficiary.
 func executeDestinationUpsert(t *testing.T, db *sql.DB, operatorContextID, actorID, correlationID string) governedDestinationRef {
 	t.Helper()
 	canonicalizePayoutTestWallet(t, db, operatorContextID, actorID)
@@ -186,13 +177,13 @@ func executeDestinationUpsert(t *testing.T, db *sql.DB, operatorContextID, actor
 	return destination
 }
 
-func executePayoutCreate(t *testing.T, db *sql.DB, operatorContextID, actorID, destinationID, idempotencyKey string, amount int64) *httptest.ResponseRecorder {
+func executePayoutCreate(t *testing.T, db *sql.DB, operatorContextID, actorID, idempotencyKey string, amount int64) *httptest.ResponseRecorder {
 	t.Helper()
 	canonicalizePayoutTestWallet(t, db, operatorContextID, actorID)
 	body, err := json.Marshal(map[string]any{
 		"beneficiaryActorId":   actorID,
 		"beneficiaryActorType": "field",
-		"payoutDestinationId":  destinationID,
+		"amountMode":           payoutAmountModeSpecified,
 		"amountMinorUnits":     amount,
 		"currency":             "YER",
 		"idempotencyKey":       idempotencyKey,
@@ -208,6 +199,26 @@ func executePayoutCreate(t *testing.T, db *sql.DB, operatorContextID, actorID, d
 	return res
 }
 
+func executeFullAvailablePayoutCreate(t *testing.T, db *sql.DB, operatorContextID, actorID, idempotencyKey string) *httptest.ResponseRecorder {
+	t.Helper()
+	body, err := json.Marshal(map[string]any{
+		"beneficiaryActorId":   actorID,
+		"beneficiaryActorType": "field",
+		"amountMode":           payoutAmountModeFullAvailable,
+		"currency":             "YER",
+		"idempotencyKey":       idempotencyKey,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/wlt/payout-requests", bytes.NewReader(body))
+	req = req.WithContext(shared.WithOperatorContext(req.Context(), operatorContextID))
+	req.Header.Set("X-Correlation-ID", "payout-full-create-"+operatorContextID)
+	res := httptest.NewRecorder()
+	HandleCreateGovernedPayoutRequest(db)(res, req)
+	return res
+}
+
 func TestPayoutCreationFailsClosedWithoutOperatorContext(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/wlt/payout-requests", strings.NewReader(`{}`))
 	res := httptest.NewRecorder()
@@ -217,7 +228,7 @@ func TestPayoutCreationFailsClosedWithoutOperatorContext(t *testing.T) {
 	}
 }
 
-func TestPayoutDestinationsRequestsAndWalletHoldsAreOperatorContextLocal(t *testing.T) {
+func TestPayoutDestinationsRequestsAndReservationsAreOperatorContextLocal(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
@@ -226,69 +237,65 @@ func TestPayoutDestinationsRequestsAndWalletHoldsAreOperatorContextLocal(t *test
 	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", "OperatorContext-payout-test-key-32-bytes")
 
 	suffix := fmt.Sprint(time.Now().UnixNano())
-	OperatorContexts := []string{"OperatorContext-payout-a-" + suffix, "OperatorContext-payout-b-" + suffix}
+	operatorContexts := []string{"OperatorContext-payout-a-" + suffix, "OperatorContext-payout-b-" + suffix}
 	actorID := "field-payout-shared-" + suffix
 	idempotencyKey := "payout-shared-" + suffix
 	const initialBalance int64 = 100000
 	const amount int64 = 25000
 
 	t.Cleanup(func() {
-		_, _ = db.Exec(`DELETE FROM wlt_payout_reconciliations WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))
-		_, _ = db.Exec(`DELETE FROM wlt_payout_audit_events WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))
-		_, _ = db.Exec(`DELETE FROM wlt_approved_payout_snapshots WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))
-		_, _ = db.Exec(`DELETE FROM wlt_payout_requests WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))
-		_, _ = db.Exec(`DELETE FROM wlt_payout_destination_requests WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))
-		_, _ = db.Exec(`DELETE FROM wlt_payout_destinations WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))
-		_, _ = db.Exec(`DELETE FROM wlt_official_wallet_providers WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))
-		_, _ = db.Exec(`DELETE FROM wlt_wallets WHERE operator_context_id = ANY($1::text[]) AND actor_type='field' AND actor_id=$2`, pqPayoutTextArray(OperatorContexts), actorID)
+		_, _ = db.Exec(`DELETE FROM wlt_payout_reconciliations WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(operatorContexts))
+		_, _ = db.Exec(`DELETE FROM wlt_payout_audit_events WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(operatorContexts))
+		_, _ = db.Exec(`DELETE FROM wlt_approved_payout_snapshots WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(operatorContexts))
+		_, _ = db.Exec(`DELETE FROM wlt_payout_requests WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(operatorContexts))
+		_, _ = db.Exec(`DELETE FROM wlt_payout_destination_requests WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(operatorContexts))
+		_, _ = db.Exec(`DELETE FROM wlt_payout_destinations WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(operatorContexts))
+		_, _ = db.Exec(`DELETE FROM wlt_official_wallet_providers WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(operatorContexts))
+		_, _ = db.Exec(`DELETE FROM wlt_wallets WHERE operator_context_id = ANY($1::text[]) AND actor_type='field' AND actor_id=$2`, pqPayoutTextArray(operatorContexts), actorID)
 	})
 
-	destinations := make(map[string]governedDestinationRef, len(OperatorContexts))
-	for _, operatorContextID := range OperatorContexts {
+	destinations := make(map[string]governedDestinationRef, len(operatorContexts))
+	for _, operatorContextID := range operatorContexts {
 		seedPayoutTestSettledWallet(t, db, operatorContextID, actorID, initialBalance)
 		destinations[operatorContextID] = executeDestinationUpsert(t, db, operatorContextID, actorID, "destination-"+operatorContextID)
-		res := executePayoutCreate(t, db, operatorContextID, actorID, destinations[operatorContextID].ID, idempotencyKey, amount)
+		res := executePayoutCreate(t, db, operatorContextID, actorID, idempotencyKey, amount)
 		if res.Code != http.StatusCreated {
 			t.Fatalf("payout create for %s returned %d: %s", operatorContextID, res.Code, res.Body.String())
 		}
 	}
 
-	for _, operatorContextID := range OperatorContexts {
-		var available, held int64
-		if err := db.QueryRow(`SELECT available_balance_minor_units,held_balance_minor_units
-			FROM wlt_wallets WHERE operator_context_id=$1 AND actor_type='field' AND actor_id=$2`, operatorContextID, actorID).Scan(&available, &held); err != nil {
+	for _, operatorContextID := range operatorContexts {
+		var available, pending int64
+		if err := db.QueryRow(`SELECT available_balance_minor_units,pending_balance_minor_units
+			FROM wlt_wallets WHERE operator_context_id=$1 AND actor_type='field' AND actor_id=$2`, operatorContextID, actorID).Scan(&available, &pending); err != nil {
 			t.Fatal(err)
 		}
-		if available != initialBalance-amount || held != amount {
-			t.Fatalf("OperatorContext %s wallet available=%d held=%d", operatorContextID, available, held)
+		if available != initialBalance-amount || pending != amount {
+			t.Fatalf("OperatorContext %s wallet available=%d pending=%d", operatorContextID, available, pending)
 		}
 	}
 	var requestCount int
 	if err := db.QueryRow(`SELECT count(*) FROM wlt_payout_requests
-		WHERE operator_context_id = ANY($1::text[]) AND idempotency_key=$2`, pqPayoutTextArray(OperatorContexts), idempotencyKey).Scan(&requestCount); err != nil {
+		WHERE operator_context_id = ANY($1::text[]) AND idempotency_key=$2`, pqPayoutTextArray(operatorContexts), idempotencyKey).Scan(&requestCount); err != nil {
 		t.Fatal(err)
 	}
 	if requestCount != 2 {
 		t.Fatalf("expected two OperatorContext-local payout requests, got %d", requestCount)
 	}
 
-	beforeAvailable := int64(0)
-	beforeHeld := int64(0)
-	if err := db.QueryRow(`SELECT available_balance_minor_units,held_balance_minor_units FROM wlt_wallets
-		WHERE operator_context_id=$1 AND actor_type='field' AND actor_id=$2`, OperatorContexts[0], actorID).Scan(&beforeAvailable, &beforeHeld); err != nil {
+	// A second request in context A cannot choose or inject context B's
+	// destination. WLT must resolve A's current verified destination itself.
+	second := executePayoutCreate(t, db, operatorContexts[0], actorID, "second-local-"+suffix, 1000)
+	if second.Code != http.StatusCreated {
+		t.Fatalf("second local payout returned %d: %s", second.Code, second.Body.String())
+	}
+	secondID := decodePayoutID(t, second)
+	var boundDestination string
+	if err := db.QueryRow(`SELECT payout_destination_id FROM wlt_payout_requests WHERE operator_context_id=$1 AND id=$2`, operatorContexts[0], secondID).Scan(&boundDestination); err != nil {
 		t.Fatal(err)
 	}
-	crossOperatorContext := executePayoutCreate(t, db, OperatorContexts[0], actorID, destinations[OperatorContexts[1]].ID, "cross-OperatorContext-"+suffix, 1000)
-	if crossOperatorContext.Code != http.StatusForbidden {
-		t.Fatalf("expected cross-OperatorContext destination rejection, got %d: %s", crossOperatorContext.Code, crossOperatorContext.Body.String())
-	}
-	var afterAvailable, afterHeld int64
-	if err := db.QueryRow(`SELECT available_balance_minor_units,held_balance_minor_units FROM wlt_wallets
-		WHERE operator_context_id=$1 AND actor_type='field' AND actor_id=$2`, OperatorContexts[0], actorID).Scan(&afterAvailable, &afterHeld); err != nil {
-		t.Fatal(err)
-	}
-	if beforeAvailable != afterAvailable || beforeHeld != afterHeld {
-		t.Fatalf("cross-OperatorContext rejection mutated OperatorContext A wallet: before %d/%d after %d/%d", beforeAvailable, beforeHeld, afterAvailable, afterHeld)
+	if boundDestination != destinations[operatorContexts[0]].ID || boundDestination == destinations[operatorContexts[1]].ID {
+		t.Fatalf("WLT bound payout to wrong OperatorContext destination: got=%s", boundDestination)
 	}
 }
 

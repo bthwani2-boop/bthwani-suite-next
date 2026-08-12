@@ -14,31 +14,21 @@ import (
 	"wlt-api/internal/shared"
 )
 
-// TestConcurrentPayoutRequestsCannotOverHoldWallet proves U004-T002's core
-// eligibility invariant: two payout requests racing against the same wallet
-// cannot together hold more than the withdrawable balance. The guard is the
-// conditional UPDATE in HandleCreateGovernedPayoutRequest (it re-checks the
-// balance in the same statement that places the hold), so this test would
-// catch a regression that replaced it with a read-then-write pair.
-func TestConcurrentPayoutRequestsCannotOverHoldWallet(t *testing.T) {
+// TestConcurrentPayoutRequestsCannotOverReserveWallet proves two requests
+// racing against one wallet cannot reserve more than the eligible balance.
+func TestConcurrentPayoutRequestsCannotOverReserveWallet(t *testing.T) {
 	db := getTestDB(t)
-	if db == nil {
-		return
-	}
+	if db == nil { return }
 	defer db.Close()
 	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", "concurrency-test-key-32-bytes-long")
 
 	operatorContextID, actorID, _ := destinationTestContext(t)
 	t.Cleanup(func() { cleanupDestinationContext(t, operatorContextID, actorID) })
 	seedOfficialWalletProvider(t, db, operatorContextID)
-
 	const balance int64 = 100000
 	seedPayoutTestSettledWallet(t, db, operatorContextID, actorID, balance)
+	executeDestinationUpsert(t, db, operatorContextID, actorID, "concurrency-corr")
 
-	destination := executeDestinationUpsert(t, db, operatorContextID, actorID, "concurrency-corr")
-
-	// Two requests each ask for 70% of the balance. At most one can succeed;
-	// together they must never hold more than the wallet actually has.
 	const askPerRequest int64 = 70000
 	results := make([]int, 2)
 	var wg sync.WaitGroup
@@ -46,8 +36,8 @@ func TestConcurrentPayoutRequestsCannotOverHoldWallet(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			res := executePayoutCreate(t, db, operatorContextID, actorID, destination.ID,
-				fmt.Sprintf("concurrent-hold-%s-%d", operatorContextID, i), askPerRequest)
+			res := executePayoutCreate(t, db, operatorContextID, actorID,
+				fmt.Sprintf("concurrent-reserve-%s-%d", operatorContextID, i), askPerRequest)
 			results[i] = res.Code
 		}(i)
 	}
@@ -65,49 +55,58 @@ func TestConcurrentPayoutRequestsCannotOverHoldWallet(t *testing.T) {
 		t.Fatalf("expected exactly one of two overlapping payout requests to succeed, got %d", successCount)
 	}
 
-	var available, held int64
-	if err := db.QueryRow(`SELECT available_balance_minor_units,held_balance_minor_units FROM wlt_wallets
-		WHERE operator_context_id=$1 AND actor_type='field' AND actor_id=$2`, operatorContextID, actorID).Scan(&available, &held); err != nil {
+	var available, pending int64
+	if err := db.QueryRow(`SELECT available_balance_minor_units,pending_balance_minor_units FROM wlt_wallets
+		WHERE operator_context_id=$1 AND actor_type='field' AND actor_id=$2`, operatorContextID, actorID).Scan(&available, &pending); err != nil {
 		t.Fatal(err)
 	}
-	if held > balance || available < 0 {
-		t.Fatalf("wallet over-held: available=%d held=%d balance=%d", available, held, balance)
+	if pending > balance || available < 0 {
+		t.Fatalf("wallet over-reserved: available=%d pending=%d balance=%d", available, pending, balance)
 	}
-	if held != askPerRequest {
-		t.Fatalf("expected exactly one hold of %d, got held=%d", askPerRequest, held)
+	if pending != askPerRequest {
+		t.Fatalf("expected exactly one reservation of %d, got pending=%d", askPerRequest, pending)
 	}
 }
 
-// TestApprovedPayoutSnapshotIsImmutable proves the approved snapshot row
-// cannot be altered after creation: the schema has no update path, and this
-// test asserts that fact by attempting a direct write and reading the row
-// straight back to be sure a later regression that adds an UPDATE path would
-// fail this test alongside any application-level check.
-func TestApprovedPayoutSnapshotIsImmutable(t *testing.T) {
+func TestFullAvailablePayoutIsResolvedInsideLockedWallet(t *testing.T) {
 	db := getTestDB(t)
-	if db == nil {
-		return
-	}
+	if db == nil { return }
 	defer db.Close()
 	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", "concurrency-test-key-32-bytes-long")
 
 	operatorContextID, actorID, _ := destinationTestContext(t)
 	t.Cleanup(func() { cleanupDestinationContext(t, operatorContextID, actorID) })
-	seedOfficialWalletProvider(t, db, operatorContextID)
-
 	const balance int64 = 100000
 	seedPayoutTestSettledWallet(t, db, operatorContextID, actorID, balance)
-	destination := executeDestinationUpsert(t, db, operatorContextID, actorID, "immutable-corr")
-	res := executePayoutCreate(t, db, operatorContextID, actorID, destination.ID, "immutable-payout-"+operatorContextID, 10000)
-	if res.Code != http.StatusCreated {
-		t.Fatalf("payout create returned %d: %s", res.Code, res.Body.String())
-	}
+	executeDestinationUpsert(t, db, operatorContextID, actorID, "full-available-corr")
 
-	// Approve with a different operator than the maker (SoD: maker != checker).
-	approveRes := approvePayout(t, db, operatorContextID, payoutIDFromResponse(t, res), "finance-approver-1")
-	if approveRes.Code != http.StatusOK {
-		t.Fatalf("approve returned %d: %s", approveRes.Code, approveRes.Body.String())
+	first := executePayoutCreate(t, db, operatorContextID, actorID, "first-reservation-"+operatorContextID, 25000)
+	if first.Code != http.StatusCreated { t.Fatalf("first reservation returned %d: %s", first.Code, first.Body.String()) }
+	full := executeFullAvailablePayoutCreate(t, db, operatorContextID, actorID, "full-available-"+operatorContextID)
+	if full.Code != http.StatusCreated { t.Fatalf("FULL_AVAILABLE returned %d: %s", full.Code, full.Body.String()) }
+	var envelope struct { PayoutRequest struct { AmountMinorUnits int64 `json:"amountMinorUnits"` } `json:"payoutRequest"` }
+	if err := json.Unmarshal(full.Body.Bytes(), &envelope); err != nil { t.Fatal(err) }
+	if envelope.PayoutRequest.AmountMinorUnits != balance-25000 {
+		t.Fatalf("FULL_AVAILABLE amount=%d, want %d", envelope.PayoutRequest.AmountMinorUnits, balance-25000)
 	}
+}
+
+func TestApprovedPayoutSnapshotIsImmutable(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil { return }
+	defer db.Close()
+	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", "concurrency-test-key-32-bytes-long")
+
+	operatorContextID, actorID, _ := destinationTestContext(t)
+	t.Cleanup(func() { cleanupDestinationContext(t, operatorContextID, actorID) })
+	const balance int64 = 100000
+	seedPayoutTestSettledWallet(t, db, operatorContextID, actorID, balance)
+	executeDestinationUpsert(t, db, operatorContextID, actorID, "immutable-corr")
+	res := executePayoutCreate(t, db, operatorContextID, actorID, "immutable-payout-"+operatorContextID, 10000)
+	if res.Code != http.StatusCreated { t.Fatalf("payout create returned %d: %s", res.Code, res.Body.String()) }
+
+	approveRes := approvePayout(t, db, operatorContextID, payoutIDFromResponse(t, res), "finance-approver-1")
+	if approveRes.Code != http.StatusOK { t.Fatalf("approve returned %d: %s", approveRes.Code, approveRes.Body.String()) }
 
 	var snapshotID, snapshotHash string
 	var amount int64
@@ -115,26 +114,20 @@ func TestApprovedPayoutSnapshotIsImmutable(t *testing.T) {
 		WHERE operator_context_id=$1 AND beneficiary_actor_id=$2`, operatorContextID, actorID).Scan(&snapshotID, &snapshotHash, &amount); err != nil {
 		t.Fatalf("read approved snapshot: %v", err)
 	}
-	if amount != 10000 {
-		t.Fatalf("snapshot amount mismatch: %d", amount)
-	}
+	if amount != 10000 { t.Fatalf("snapshot amount mismatch: %d", amount) }
 
-	// The approver cannot also execute the external transfer they approved.
 	batchID := freezeBatchForSnapshot(t, db, operatorContextID, snapshotID)
 	ctx := shared.WithDelegatedFinancePrincipal(shared.WithOperatorContext(t.Context(), operatorContextID), "finance-approver-1")
 	_, err := RecordManualTransferExecution(ctx, db, batchID, RecordManualExecutionInput{
 		ApprovedSnapshotID:        snapshotID,
 		ExternalTransferReference: "sod-ref-" + snapshotID,
-		AmountMinorUnits:          amount,
-		Currency:                  "YER",
+		EvidenceReference:         "proof:sod-" + snapshotID,
 	}, "sod-corr")
 	if !errors.Is(err, ErrSeparationOfDuties) {
 		t.Fatalf("expected the approver to be barred from executing their own approval, got %v", err)
 	}
 }
 
-// freezeBatchForSnapshot puts one approved snapshot into a frozen batch, which
-// is the only state external execution may be recorded against.
 func freezeBatchForSnapshot(t *testing.T, db *sql.DB, operatorContextID, snapshotID string) string {
 	t.Helper()
 	var batchID string
@@ -162,17 +155,9 @@ func payoutIDFromResponse(t *testing.T, res *httptest.ResponseRecorder) string {
 
 func decodePayoutID(t *testing.T, res *httptest.ResponseRecorder) string {
 	t.Helper()
-	var out struct {
-		PayoutRequest struct {
-			ID string `json:"id"`
-		} `json:"payoutRequest"`
-	}
-	if err := json.Unmarshal(res.Body.Bytes(), &out); err != nil {
-		t.Fatalf("decode payout ID: %v", err)
-	}
-	if out.PayoutRequest.ID == "" {
-		t.Fatalf("payout ID not found in response: %s", res.Body.String())
-	}
+	var out struct { PayoutRequest struct { ID string `json:"id"` } `json:"payoutRequest"` }
+	if err := json.Unmarshal(res.Body.Bytes(), &out); err != nil { t.Fatalf("decode payout ID: %v", err) }
+	if out.PayoutRequest.ID == "" { t.Fatalf("payout ID not found in response: %s", res.Body.String()) }
 	return out.PayoutRequest.ID
 }
 

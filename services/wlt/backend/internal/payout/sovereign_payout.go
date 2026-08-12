@@ -62,9 +62,6 @@ func payoutAfterUpdate(ctx context.Context, tx *sql.Tx, query string, args ...an
 	return scanPayoutRequest(rows)
 }
 
-// releasePayoutReservation reverses exactly the pending-balance reservation
-// created with the payout request. It fails closed on underflow/drift rather
-// than silently repairing a financial inconsistency.
 func releasePayoutReservation(ctx context.Context, tx *sql.Tx, req *PayoutRequest) error {
 	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
@@ -72,6 +69,35 @@ func releasePayoutReservation(ctx context.Context, tx *sql.Tx, req *PayoutReques
 	}
 	result, err := tx.ExecContext(ctx, `UPDATE wlt_wallets
 		SET pending_balance_minor_units=pending_balance_minor_units-$4, updated_at=now()
+		WHERE operator_context_id=$1 AND actor_id=$2 AND actor_type=$3
+		  AND pending_balance_minor_units >= $4`,
+		operatorContextID, req.BeneficiaryActorID, req.BeneficiaryActorType, req.AmountMinorUnits)
+	if err != nil {
+		return err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return fmt.Errorf("payout reservation drift: expected one wallet reservation for %s", req.ID)
+	}
+	return nil
+}
+
+// settlePayoutReservation converts the pending payout reservation into the
+// lifecycle paid counter. The canonical balance is debited separately by the
+// double-entry posting in the same transaction; the wallet projection trigger
+// therefore commits only when both workflow and accounting truth agree.
+func settlePayoutReservation(ctx context.Context, tx *sql.Tx, req *PayoutRequest) error {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return err
+	}
+	result, err := tx.ExecContext(ctx, `UPDATE wlt_wallets
+		SET pending_balance_minor_units=pending_balance_minor_units-$4,
+		    paid_total_minor_units=paid_total_minor_units+$4,
+		    updated_at=now()
 		WHERE operator_context_id=$1 AND actor_id=$2 AND actor_type=$3
 		  AND pending_balance_minor_units >= $4`,
 		operatorContextID, req.BeneficiaryActorID, req.BeneficiaryActorType, req.AmountMinorUnits)
@@ -313,10 +339,7 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Convert the reserved claim into the canonical ledger debit in the same
-		// transaction. No instant exists at commit where the money is both held
-		// and spent, or neither held nor spent.
-		if err := releasePayoutReservation(r.Context(), tx, req); err != nil {
+		if err := settlePayoutReservation(r.Context(), tx, req); err != nil {
 			shared.SendError(w, http.StatusConflict, "PAYOUT_RESERVATION_DRIFT", err.Error())
 			return
 		}
@@ -344,7 +367,9 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to complete payout request")
 			return
 		}
-		if err := appendPayoutAudit(r.Context(), tx, "payout_request", req.ID, "payout.completed", operatorID, "operator", "", correlationID, map[string]any{"status": "completed", "reservationSettledMinorUnits": req.AmountMinorUnits, "ledgerTransactionId": ledgerTransactionID}); err != nil {
+		if err := appendPayoutAudit(r.Context(), tx, "payout_request", req.ID, "payout.completed", operatorID, "operator", "", correlationID, map[string]any{
+			"status": "completed", "reservationSettledMinorUnits": req.AmountMinorUnits, "paidCounterIncrementMinorUnits": req.AmountMinorUnits, "ledgerTransactionId": ledgerTransactionID,
+		}); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout completion")
 			return
 		}
