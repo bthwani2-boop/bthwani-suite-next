@@ -50,6 +50,7 @@
     "k6",
     "gitleaks",
     "lean-ctx",
+    "osv-scanner",
     "taskkill"
   ],
   "ignoreExportsUsedInFile": true,
