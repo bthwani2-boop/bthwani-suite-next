@@ -17,6 +17,8 @@ func TestEmployeeExactPermissionDoesNotCrossDshDomains(t *testing.T) {
 			OperatorContextID: "OperatorContext-main",
 			Roles:             []string{"employee", "workforce.supervise.employee"},
 			AuthState:         "authenticated",
+			SessionID:         "session-operations-manager-1",
+			SessionSurface:    "control-panel",
 			Permissions: []auth.Permission{
 				{Service: "dsh", Surface: "control-panel", Action: OperationsPermissionRead, Scope: "all"},
 				{Service: "dsh", Surface: "control-panel", Action: OperationsPermissionManage, Scope: "all"},
@@ -36,8 +38,11 @@ func TestEmployeeExactPermissionDoesNotCrossDshDomains(t *testing.T) {
 	if !ok {
 		t.Fatalf("operations manager exact grant was rejected with status %d", allowedResponse.Code)
 	}
-	if actor.ID != "operations-manager-1" || actor.Role != "operator" {
-		t.Fatalf("unexpected authorized actor %#v", actor)
+	if actor.ID != "operations-manager-1" || actor.Role != "employee" {
+		t.Fatalf("authorized actor role must remain truthful: %#v", actor)
+	}
+	if actor.SessionSurface != "control-panel" || actor.SessionID != "session-operations-manager-1" {
+		t.Fatalf("session binding was not preserved: %#v", actor)
 	}
 	if actor.AuthorizedAction != OperationsPermissionManage || actor.AuthorizationScope != "all" {
 		t.Fatalf("Identity permission action/scope were not preserved: %#v", actor)
@@ -73,19 +78,15 @@ func TestRegularEmployeeHasNoImplicitOperatorAuthority(t *testing.T) {
 			OperatorContextID: "OperatorContext-main",
 			Roles:             []string{"employee"},
 			AuthState:         "authenticated",
+			SessionSurface:    "control-panel",
 		})
 	})
 
 	request := httptest.NewRequest(http.MethodGet, "/dsh/operator/operations", nil)
 	request.Header.Set("Authorization", "Bearer staff-token")
 	response := httptest.NewRecorder()
-	if _, allowed := s.requirePermission(
-		response,
-		request,
-		"control-panel",
-		OperationsPermissionRead,
-	); allowed {
-		t.Fatal("regular employee received implicit operator authority")
+	if _, allowed := s.requirePermission(response, request, "control-panel", OperationsPermissionRead); allowed {
+		t.Fatal("regular employee received implicit authority")
 	}
 	if response.Code != http.StatusForbidden {
 		t.Fatalf("expected 403, got %d", response.Code)
@@ -98,7 +99,9 @@ func TestPermissionWithoutScopeFailsClosed(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(auth.Identity{
 			Subject:           "scope-less-manager",
 			OperatorContextID: "OperatorContext-main",
+			Roles:             []string{"employee"},
 			AuthState:         "authenticated",
+			SessionSurface:    "control-panel",
 			Permissions: []auth.Permission{
 				{Service: "dsh", Surface: "control-panel", Action: PartnersPermissionManage},
 			},
@@ -110,6 +113,31 @@ func TestPermissionWithoutScopeFailsClosed(t *testing.T) {
 	response := httptest.NewRecorder()
 	if _, allowed := s.requirePermission(response, request, "control-panel", PartnersPermissionManage); allowed {
 		t.Fatal("scope-less Identity permission must fail closed")
+	}
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", response.Code)
+	}
+}
+
+func TestEmployeePermissionCannotCrossSessionSurface(t *testing.T) {
+	permission := auth.Permission{Service: "dsh", Surface: "control-panel", Action: OperationsPermissionManage, Scope: "all"}
+	s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(auth.Identity{
+			Subject:           "operations-manager-1",
+			OperatorContextID: "OperatorContext-main",
+			Roles:             []string{"employee"},
+			AuthState:         "authenticated",
+			SessionSurface:    "app-client",
+			Permissions:       []auth.Permission{permission},
+		})
+	})
+
+	request := httptest.NewRequest(http.MethodPost, "/dsh/operator/operations/action", nil)
+	request.Header.Set("Authorization", "Bearer wrong-surface-token")
+	response := httptest.NewRecorder()
+	if _, allowed := s.requirePermission(response, request, "control-panel", OperationsPermissionManage); allowed {
+		t.Fatal("control-panel permission crossed from a non-control-panel session")
 	}
 	if response.Code != http.StatusForbidden {
 		t.Fatalf("expected 403, got %d", response.Code)
