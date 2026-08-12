@@ -9,6 +9,7 @@ import {
 import {
   governedIdentitySurfaceForRole,
   identitySessionAuthorizesSurface,
+  identitySessionIsBoundToSurface,
 } from "../clients/identity-session-policy.ts";
 
 const ROLE_SURFACE = Object.freeze({
@@ -53,10 +54,7 @@ test("stored session remains restorable after access identity expiry", () => {
     identity: expired,
   }));
 
-  assert.ok(
-    restored,
-    "expired access identity must not delete refresh state before refresh is attempted",
-  );
+  assert.ok(restored, "expired access identity must not delete refresh state before refresh is attempted");
   assert.equal(restored.refreshToken, "still-valid-refresh-token");
 });
 
@@ -95,6 +93,7 @@ test("surfaceAccess cannot substitute for the active sessionSurface", () => {
 
   assert.equal(identitySessionAuthorizesSurface(actor, "client", "app-client"), true);
   assert.equal(identitySessionAuthorizesSurface(actor, "partner", "app-partner"), false);
+  assert.equal(identitySessionIsBoundToSurface(actor, "app-partner"), false);
 });
 
 test("multi-role identity cannot use an app session as an operator control-panel session", () => {
@@ -104,4 +103,19 @@ test("multi-role identity cannot use an app session as an operator control-panel
 
   assert.equal(identitySessionAuthorizesSurface(actor, "client", "app-client"), true);
   assert.equal(identitySessionAuthorizesSurface(actor, "operator", "control-panel"), false);
+  assert.equal(identitySessionIsBoundToSurface(actor, "control-panel"), false);
+});
+
+test("employee control-panel authentication is surface-bound and permission authorization remains separate", () => {
+  const actor = identity(new Date(Date.now() + 60_000).toISOString(), "employee", "control-panel");
+  actor.permissions = [
+    { service: "dsh", surface: "control-panel", action: "operations.read", scope: "all" },
+  ];
+
+  assert.equal(identitySessionIsBoundToSurface(actor, "control-panel"), true);
+  assert.equal(identitySessionAuthorizesSurface(actor, "operator", "control-panel"), false);
+
+  actor.sessionSurface = "app-client";
+  actor.surfaceAccess["app-client"] = true;
+  assert.equal(identitySessionIsBoundToSurface(actor, "control-panel"), false);
 });
