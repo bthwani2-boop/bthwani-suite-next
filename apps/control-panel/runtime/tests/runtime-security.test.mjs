@@ -83,20 +83,40 @@ test("all control-panel BFF routes share one HttpOnly cookie owner", () => {
   assert.doesNotMatch(proxy, /bthwani_cp_access|bthwani_cp_refresh/);
 });
 
-test("all identity token rotation paths require control-panel operator role", () => {
+test("all identity token rotation paths require the canonical operator control-panel session invariant", () => {
   const proxy = read(bffProxyPath);
   const loginRoute = read("apps/control-panel/runtime/src/app/api/auth/login/route.ts");
   const refreshRoute = read("apps/control-panel/runtime/src/app/api/auth/refresh/route.ts");
   const sessionRoute = read("apps/control-panel/runtime/src/app/api/auth/session/route.ts");
+  const boundary = read("services/dsh/frontend/shared/session/ControlPanelAuthBoundary.tsx");
 
-  assert.match(proxy, /function tokenResponseHasOperatorIdentity/);
-  assert.match(proxy, /roles\.includes\("operator"\)/);
+  for (const source of [proxy, loginRoute, refreshRoute, sessionRoute, boundary]) {
+    assert.match(source, /identitySessionAuthorizesSurface/);
+    assert.match(source, /"operator"/);
+    assert.match(source, /"control-panel"/);
+  }
+
+  assert.match(proxy, /function tokenResponseHasGovernedControlPanelIdentity/);
   assert.match(proxy, /CONTROL_PANEL_FORBIDDEN/);
   assert.match(proxy, /clearSessionCookies\(response\)/);
-  assert.match(loginRoute, /tokens\.identity\.roles\.includes\("operator"\)/);
-  assert.match(refreshRoute, /rotated\.identity\.roles\.includes\("operator"\)/);
   assert.match(refreshRoute, /clearSessionCookies\(response\)/);
-  assert.match(sessionRoute, /resolved\.identity\.roles\.includes\("operator"\)/);
+  assert.match(sessionRoute, /clearSessionCookies\(response\)/);
+  assert.doesNotMatch(loginRoute, /roles\.includes\("operator"\)/);
+  assert.doesNotMatch(refreshRoute, /roles\.includes\("operator"\)/);
+  assert.doesNotMatch(sessionRoute, /roles\.includes\("operator"\)/);
+});
+
+test("logout clears cookies only after server revocation is confirmed or already invalid", () => {
+  const proxy = read(bffProxyPath);
+  const logoutRoute = read("apps/control-panel/runtime/src/app/api/auth/logout/route.ts");
+
+  assert.match(logoutRoute, /IDENTITY_LOGOUT_REVOCATION_UNCONFIRMED/);
+  assert.match(logoutRoute, /status === 401/);
+  assert.doesNotMatch(logoutRoute, /logout\(accessToken\)[\s\S]*?\.catch\(\(\) => undefined\)/);
+
+  assert.match(proxy, /function logoutRevocationConfirmed/);
+  assert.match(proxy, /upstream\.ok \|\| upstream\.status === 401/);
+  assert.match(proxy, /isIdentityLogout && logoutRevocationConfirmed\(upstream\)/);
 });
 
 test("dynamic BFF is limited to Identity and excludes direct WLT access", () => {
