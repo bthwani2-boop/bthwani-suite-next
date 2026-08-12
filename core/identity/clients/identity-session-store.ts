@@ -214,6 +214,13 @@ function isIdentityAvailabilityError(error: unknown): boolean {
     || typed.code === "INTERNAL_API_UNAVAILABLE";
 }
 
+function isIdentityConcurrentRefreshError(error: unknown): boolean {
+  const typed = error as Partial<IdentityClientError>;
+  return typed.kind === "http"
+    && typed.status === 409
+    && typed.code === "REFRESH_ALREADY_ROTATED";
+}
+
 function isIdentityInvalidSessionError(error: unknown): boolean {
   const typed = error as Partial<IdentityClientError>;
   if (typed.kind !== "http") return false;
@@ -287,6 +294,10 @@ async function restoreStoredSession(identityClient: IdentityClient, session: Sto
       identity: refreshed.identity,
     }, true);
   } catch (error) {
+    if (isIdentityConcurrentRefreshError(error)) {
+      setServiceUnavailable("REFRESH_ALREADY_ROTATED");
+      return;
+    }
     if (isIdentityAvailabilityError(error)) {
       setServiceUnavailable(identityErrorCode(error));
       return;
@@ -322,9 +333,9 @@ async function performIdentityBootstrap(identityClient: IdentityClient): Promise
     return;
   }
 
-  // Stored credentials are only continuity material. The UI must not become
-  // authenticated until Identity has authoritatively revalidated or refreshed
-  // this exact session after application startup.
+  // Stored credentials are continuity material only. Never expose them as an
+  // authenticated UI state until Identity has revalidated or refreshed this
+  // exact session after application startup.
   await restoreStoredSession(identityClient, saved);
 }
 
@@ -355,7 +366,17 @@ export async function refreshIdentitySession(): Promise<boolean> {
     } catch (error) {
       if (isIdentityInvalidSessionError(error)) {
         clearSession("IDENTITY_SESSION_INVALID");
+        return false;
       }
+      if (isIdentityConcurrentRefreshError(error)) {
+        setServiceUnavailable("REFRESH_ALREADY_ROTATED");
+        return false;
+      }
+      setServiceUnavailable(
+        isIdentityAvailabilityError(error)
+          ? identityErrorCode(error)
+          : "IDENTITY_UNAVAILABLE",
+      );
       return false;
     }
   })();
@@ -436,6 +457,10 @@ export async function loginIdentity(username: string, password: string): Promise
       identity: response.identity,
     }, true);
   } catch (error) {
+    if (isIdentityAvailabilityError(error)) {
+      setServiceUnavailable(identityErrorCode(error));
+      return;
+    }
     setState({ kind: "error", message: identityErrorCode(error) });
   }
 }
@@ -471,6 +496,10 @@ export async function activateIdentity(
       identity: response.identity,
     }, true);
   } catch (error) {
+    if (isIdentityAvailabilityError(error)) {
+      setServiceUnavailable(identityErrorCode(error));
+      return;
+    }
     setState({ kind: "error", message: identityErrorCode(error) });
   }
 }
@@ -494,6 +523,9 @@ export async function revokeIdentitySession(sessionId: string): Promise<void> {
       await runBeforeSessionEndHooks();
       clearSession();
       return;
+    }
+    if (revokingCurrentSession && isIdentityAvailabilityError(error)) {
+      setServiceUnavailable(identityErrorCode(error));
     }
     throw error;
   }
