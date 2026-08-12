@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"wlt-api/internal/ledger"
 	"wlt-api/internal/shared"
 )
 
@@ -244,17 +245,26 @@ func loadPolicy(ctx context.Context, tx *sql.Tx, operatorContextID string) (*pol
 
 func loadCaptainWallet(ctx context.Context, tx *sql.Tx, operatorContextID, captainID string) (*walletRecord, error) {
 	var wallet walletRecord
+	var pending, held, codReserved int64
 	err := tx.QueryRowContext(ctx, `
-		SELECT id,status,currency,available_balance_minor_units
+		SELECT id,status,currency,pending_balance_minor_units,
+		       held_balance_minor_units,cod_reserved_balance_minor_units
 		FROM wlt_wallets
 		WHERE operator_context_id=$1 AND actor_type='captain' AND actor_id=$2
 		FOR SHARE`, operatorContextID, captainID,
-	).Scan(&wallet.ID, &wallet.Status, &wallet.Currency, &wallet.AvailableBalanceMinorUnits)
+	).Scan(&wallet.ID, &wallet.Status, &wallet.Currency, &pending, &held, &codReserved)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("load WLT captain wallet: %w", err)
+	}
+	projection, err := ledger.GetWalletLedgerProjection(ctx, tx, "captain", captainID, wallet.Currency)
+	if err != nil {
+		return nil, fmt.Errorf("load canonical WLT captain wallet projection: %w", err)
+	}
+	if projection != nil {
+		wallet.AvailableBalanceMinorUnits = projection.BalanceMinorUnits - pending - held - codReserved
 	}
 	return &wallet, nil
 }

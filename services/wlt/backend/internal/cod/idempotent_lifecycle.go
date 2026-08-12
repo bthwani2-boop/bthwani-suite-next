@@ -105,32 +105,6 @@ func applyGovernedCommissionLifecycleIdempotent(
 		if commission.Status != "confirmed" {
 			return nil, ErrCommissionNotInExpectedState
 		}
-		walletEffect, walletErr := commissionHasWalletEffectTx(ctx, tx, operatorContextID, commission)
-		if walletErr != nil {
-			return nil, walletErr
-		}
-		if walletEffect {
-			result, updateErr := tx.ExecContext(ctx, `
-				UPDATE wlt_wallets
-				SET pending_balance_minor_units=pending_balance_minor_units-$1,
-				    settled_total_minor_units=settled_total_minor_units+$1,
-				    updated_at=NOW()
-				WHERE operator_context_id=$2
-				  AND actor_type=$3
-				  AND actor_id=$4
-				  AND pending_balance_minor_units>=$1`,
-				commission.AmountMinorUnits,
-				operatorContextID,
-				commission.BeneficiaryActorType,
-				commission.BeneficiaryActorID,
-			)
-			if updateErr != nil {
-				return nil, updateErr
-			}
-			if affected, _ := result.RowsAffected(); affected != 1 {
-				return nil, fmt.Errorf("commission wallet pending balance is insufficient")
-			}
-		}
 		row := tx.QueryRowContext(ctx, `
 			UPDATE wlt_commissions
 			SET status='settled', settled_at=NOW(), updated_at=NOW()
@@ -148,27 +122,6 @@ func applyGovernedCommissionLifecycleIdempotent(
 			return nil, walletErr
 		}
 		if walletEffect {
-			result, updateErr := tx.ExecContext(ctx, `
-				UPDATE wlt_wallets
-				SET pending_balance_minor_units=pending_balance_minor_units-$1,
-				    earned_total_minor_units=earned_total_minor_units-$1,
-				    updated_at=NOW()
-				WHERE operator_context_id=$2
-				  AND actor_type=$3
-				  AND actor_id=$4
-				  AND pending_balance_minor_units>=$1
-				  AND earned_total_minor_units>=$1`,
-				commission.AmountMinorUnits,
-				operatorContextID,
-				commission.BeneficiaryActorType,
-				commission.BeneficiaryActorID,
-			)
-			if updateErr != nil {
-				return nil, updateErr
-			}
-			if affected, _ := result.RowsAffected(); affected != 1 {
-				return nil, fmt.Errorf("commission wallet balance cannot be reversed")
-			}
 			lines := []ledger.LedgerLine{
 				{
 					AccountType:      "wallet",
@@ -215,26 +168,6 @@ func applyGovernedCommissionLifecycleIdempotent(
 			return nil, walletErr
 		}
 		if walletEffect {
-			result, updateErr := tx.ExecContext(ctx, `
-				UPDATE wlt_wallets
-				SET settled_total_minor_units=settled_total_minor_units-$1,
-				    updated_at=NOW()
-				WHERE operator_context_id=$2
-				  AND actor_type=$3
-				  AND actor_id=$4
-				  AND available_balance_minor_units>=$1
-				  AND settled_total_minor_units>=$1`,
-				commission.AmountMinorUnits,
-				operatorContextID,
-				commission.BeneficiaryActorType,
-				commission.BeneficiaryActorID,
-			)
-			if updateErr != nil {
-				return nil, updateErr
-			}
-			if affected, _ := result.RowsAffected(); affected != 1 {
-				return nil, fmt.Errorf("commission available balance cannot be reversed")
-			}
 			lines := []ledger.LedgerLine{
 				{
 					AccountType:      "wallet",

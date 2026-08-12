@@ -4,8 +4,8 @@ info:
   version: 1.0.0
   description: >-
     Authoritative financial pricing engine for carts and checkouts. DSH provides
-    operational inputs (items, raw delivery fee distances), and WLT returns the
-    sovereign Quote containing taxes, fees, discounts, and rounding policies.
+    item identities plus signed catalog evidence; WLT verifies the evidence and
+    returns the sovereign quote containing taxes, fees, discounts, and rounding policies.
 x-bthwani-owner: services/wlt
 x-bthwani-capability: governed-pricing
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -17,7 +17,7 @@ paths:
   /wlt/internal/quotes/calculate:
     post:
       operationId: calculateWltPricingQuote
-      summary: Calculate the sovereign financial quote from operational inputs.
+       summary: Calculate the sovereign financial quote from verified pricing evidence.
       tags: [ WltPricing ]
       security: [ { serviceBearer: [] } ]
       parameters:
@@ -43,14 +43,13 @@ components:
     CalculateQuoteRequest:
       type: object
       additionalProperties: false
-      required: [ clientId, storeId, currency, lines ]
+       required: [ clientId, storeId, currency, lines, pricingEvidence ]
       properties:
         clientId: { type: string, minLength: 1 }
         storeId: { type: string, minLength: 1 }
         currency: { type: string, minLength: 3, maxLength: 3 }
-        deliveryFeeInputMinorUnits: { type: integer, format: int64, default: 0 }
-        serviceFeeInputMinorUnits: { type: integer, format: int64, default: 0 }
         cartVersion: { type: integer, default: 0 }
+        pricingEvidence: { $ref: '#/components/schemas/PricingEvidence' }
         lines:
           type: array
           minItems: 1
@@ -59,12 +58,34 @@ components:
     QuoteInputLine:
       type: object
       additionalProperties: false
-      required: [ masterProductId, quantity, unitPriceMinorUnits ]
+       required: [ masterProductId, quantity ]
       properties:
         masterProductId: { type: string, minLength: 1 }
         productName: { type: string }
         quantity: { type: integer, minimum: 1 }
+
+    PricingEvidence:
+      type: object
+      additionalProperties: false
+      required: [ version, lines, deliveryFeeMinorUnits, serviceFeeMinorUnits, signature ]
+      properties:
+        version: { type: integer, minimum: 1 }
+        lines:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/QuoteEvidenceLine' }
+        deliveryFeeMinorUnits: { type: integer, format: int64, minimum: 0 }
+        serviceFeeMinorUnits: { type: integer, format: int64, minimum: 0 }
+        signature: { type: string, minLength: 64, maxLength: 64 }
+
+    QuoteEvidenceLine:
+      type: object
+      additionalProperties: false
+      required: [ masterProductId, unitPriceMinorUnits, currency ]
+      properties:
+        masterProductId: { type: string, minLength: 1 }
         unitPriceMinorUnits: { type: integer, format: int64, minimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
 
     PricingQuoteResponse:
       type: object

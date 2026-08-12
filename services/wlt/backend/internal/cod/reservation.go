@@ -102,6 +102,20 @@ func ReserveCodCapacity(ctx context.Context, db *sql.DB, orderID, captainID stri
 		return nil, false, err
 	}
 	defer tx.Rollback() //nolint:errcheck
+	var availableBalance int64
+	if err := tx.QueryRowContext(ctx, `
+		SELECT available_balance_minor_units
+		FROM wlt_wallets
+		WHERE operator_context_id = $1 AND actor_id = $2 AND actor_type = 'captain'
+		FOR UPDATE`, operatorContextID, captainID).Scan(&availableBalance); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, false, ErrInsufficientCodCapacity
+		}
+		return nil, false, fmt.Errorf("load captain wallet for COD reservation: %w", err)
+	}
+	if availableBalance < amountMinorUnits {
+		return nil, false, ErrInsufficientCodCapacity
+	}
 
 	created, err := scanCodReservation(tx.QueryRowContext(ctx, `
 		INSERT INTO wlt_cod_reservations
@@ -116,22 +130,6 @@ func ReserveCodCapacity(ctx context.Context, db *sql.DB, orderID, captainID stri
 	}
 
 	if err == nil {
-		// We won the insert: this is a genuinely new reservation, so debit the
-		// wallet now, in the same transaction, guarded against overcommitment.
-		result, execErr := tx.ExecContext(ctx, `
-			UPDATE wlt_wallets
-			SET cod_reserved_balance_minor_units = cod_reserved_balance_minor_units + $1,
-			    updated_at = NOW()
-			WHERE operator_context_id = $2 AND actor_id = $3 AND actor_type = 'captain'
-			  AND available_balance_minor_units >= $1`,
-			amountMinorUnits, operatorContextID, captainID,
-		)
-		if execErr != nil {
-			return nil, false, execErr
-		}
-		if affected, _ := result.RowsAffected(); affected != 1 {
-			return nil, false, ErrInsufficientCodCapacity
-		}
 		if err := tx.Commit(); err != nil {
 			return nil, false, err
 		}
@@ -214,20 +212,6 @@ func ReleaseCodReservation(ctx context.Context, db *sql.DB, orderID, reason stri
 		return nil, fmt.Errorf("release COD reservation: %w", err)
 	}
 
-	result, err := tx.ExecContext(ctx, `
-		UPDATE wlt_wallets
-		SET cod_reserved_balance_minor_units = cod_reserved_balance_minor_units - $1,
-		    updated_at = NOW()
-		WHERE operator_context_id = $2 AND actor_id = $3 AND actor_type = 'captain'
-		  AND cod_reserved_balance_minor_units >= $1`,
-		released.AmountMinorUnits, operatorContextID, released.CaptainID,
-	)
-	if err != nil {
-		return nil, err
-	}
-	if affected, _ := result.RowsAffected(); affected != 1 {
-		return nil, fmt.Errorf("release COD reservation: wallet cod_reserved_balance_minor_units is inconsistent for captain %s", released.CaptainID)
-	}
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
@@ -279,20 +263,6 @@ func finalizeCodReservationTx(ctx context.Context, tx *sql.Tx, operatorContextID
 		return nil, fmt.Errorf("finalize COD reservation: %w", err)
 	}
 
-	result, err := tx.ExecContext(ctx, `
-		UPDATE wlt_wallets
-		SET cod_reserved_balance_minor_units = cod_reserved_balance_minor_units - $1,
-		    updated_at = NOW()
-		WHERE operator_context_id = $2 AND actor_id = $3 AND actor_type = 'captain'
-		  AND cod_reserved_balance_minor_units >= $1`,
-		finalized.AmountMinorUnits, operatorContextID, finalized.CaptainID,
-	)
-	if err != nil {
-		return nil, err
-	}
-	if affected, _ := result.RowsAffected(); affected != 1 {
-		return nil, fmt.Errorf("finalize COD reservation: wallet cod_reserved_balance_minor_units is inconsistent for captain %s", finalized.CaptainID)
-	}
 	return finalized, nil
 }
 

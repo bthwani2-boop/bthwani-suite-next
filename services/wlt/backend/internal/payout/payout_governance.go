@@ -331,19 +331,6 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusConflict, "INSUFFICIENT_FUNDS", "insufficient withdrawable balance")
 			return
 		}
-		result, err := tx.ExecContext(r.Context(), `UPDATE wlt_wallets
-			SET held_balance_minor_units=held_balance_minor_units+$1,
-			    updated_at=now()
-			WHERE operator_context_id=$2 AND actor_id=$3 AND actor_type=$4 AND available_balance_minor_units>=$1 AND (settled_total_minor_units - paid_total_minor_units - held_balance_minor_units) >= $1`,
-			input.AmountMinorUnits, operatorContextID, input.BeneficiaryActorID, input.BeneficiaryActorType)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to hold payout funds")
-			return
-		}
-		if affected, _ := result.RowsAffected(); affected != 1 {
-			shared.SendError(w, http.StatusConflict, "INSUFFICIENT_FUNDS", "available balance changed before payout hold")
-			return
-		}
 		rows, err := tx.QueryContext(r.Context(), `INSERT INTO wlt_payout_requests
 			(operator_context_id,beneficiary_actor_id,beneficiary_actor_type,amount_minor_units,currency,status,
 			 idempotency_key,payload_hash,payout_destination_id,request_hash,operator_id)

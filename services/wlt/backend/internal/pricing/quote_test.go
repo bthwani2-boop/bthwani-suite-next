@@ -1,68 +1,79 @@
 package pricing
 
-import "testing"
+import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"testing"
+)
+
+const pricingTestSecret = "pricing-test-secret"
+
+func signedEvidence(lines []QuoteEvidenceLine, delivery, service int64) PricingEvidence {
+	evidence := PricingEvidence{Version: 3, Lines: lines, DeliveryFeeMinorUnits: delivery, ServiceFeeMinorUnits: service}
+	unsigned := evidence
+	unsigned.Signature = ""
+	encoded, _ := json.Marshal(unsigned)
+	mac := hmac.New(sha256.New, []byte(pricingTestSecret))
+	_, _ = mac.Write(encoded)
+	evidence.Signature = hex.EncodeToString(mac.Sum(nil))
+	return evidence
+}
 
 func validQuoteRequest() CalculateQuoteRequest {
 	return CalculateQuoteRequest{
-		ClientID:                   "client-1",
-		StoreID:                    "store-1",
-		Currency:                   "YER",
-		DeliveryFeeInputMinorUnits: 50000,
-		ServiceFeeInputMinorUnits:  1000,
-		CartVersion:                3,
+		ClientID: "client-1", StoreID: "store-1", Currency: "YER", CartVersion: 3,
 		Lines: []QuoteInputLine{
-			{MasterProductID: "product-1", ProductName: "Rice", Quantity: 2, UnitPriceMinorUnits: 125000},
-			{MasterProductID: "product-2", ProductName: "Oil", Quantity: 1, UnitPriceMinorUnits: 300000},
+			{MasterProductID: "product-1", ProductName: "Rice", Quantity: 2},
+			{MasterProductID: "product-2", ProductName: "Oil", Quantity: 1},
 		},
+		PricingEvidence: signedEvidence([]QuoteEvidenceLine{
+			{MasterProductID: "product-1", UnitPriceMinorUnits: 125000, Currency: "YER"},
+			{MasterProductID: "product-2", UnitPriceMinorUnits: 300000, Currency: "YER"},
+		}, 50000, 1000),
 	}
 }
 
 func TestCalculateQuoteSumsExactMinorUnits(t *testing.T) {
+	t.Setenv("WLT_DSH_PRICING_EVIDENCE_SECRET", pricingTestSecret)
 	quote, err := CalculateQuote(validQuoteRequest())
 	if err != nil {
 		t.Fatalf("calculate quote: %v", err)
 	}
-	if quote.SubtotalMinorUnits != 550000 {
-		t.Fatalf("expected subtotal 550000, got %d", quote.SubtotalMinorUnits)
-	}
-	if quote.TotalMinorUnits != 601000 {
-		t.Fatalf("expected total 601000, got %d", quote.TotalMinorUnits)
+	if quote.SubtotalMinorUnits != 550000 || quote.TotalMinorUnits != 601000 {
+		t.Fatalf("unexpected quote totals: %+v", quote)
 	}
 	if quote.Lines[0].TotalMinorUnits != 250000 {
-		t.Fatalf("expected first line total 250000, got %d", quote.Lines[0].TotalMinorUnits)
+		t.Fatalf("unexpected first line total: %d", quote.Lines[0].TotalMinorUnits)
 	}
 	if quote.Hash == "" || quote.ExpiresAt == nil {
 		t.Fatal("quote must carry a hash and an expiry")
 	}
 }
 
-// The hash identifies the money, so it must not move with the clock and must
-// move with any input that changes an amount.
 func TestCalculateQuoteHashIsStableForEqualInputs(t *testing.T) {
+	t.Setenv("WLT_DSH_PRICING_EVIDENCE_SECRET", pricingTestSecret)
 	first, err := CalculateQuote(validQuoteRequest())
 	if err != nil {
-		t.Fatalf("calculate first quote: %v", err)
+		t.Fatal(err)
 	}
 	second, err := CalculateQuote(validQuoteRequest())
 	if err != nil {
-		t.Fatalf("calculate second quote: %v", err)
+		t.Fatal(err)
 	}
 	if first.Hash != second.Hash {
-		t.Fatalf("equal inputs produced different hashes: %s vs %s", first.Hash, second.Hash)
+		t.Fatalf("equal inputs produced different hashes")
 	}
-
 	changed := validQuoteRequest()
 	changed.Lines[0].Quantity = 3
-	third, err := CalculateQuote(changed)
-	if err != nil {
-		t.Fatalf("calculate changed quote: %v", err)
-	}
-	if third.Hash == first.Hash {
-		t.Fatal("a different quantity must change the quote hash")
+	if third, err := CalculateQuote(changed); err != nil || third.Hash == first.Hash {
+		t.Fatal("changed quote did not change hash")
 	}
 }
 
 func TestCalculateQuoteRejectsUnpriceableInput(t *testing.T) {
+	t.Setenv("WLT_DSH_PRICING_EVIDENCE_SECRET", pricingTestSecret)
 	cases := map[string]func(*CalculateQuoteRequest){
 		"no client":          func(r *CalculateQuoteRequest) { r.ClientID = "  " },
 		"no store":           func(r *CalculateQuoteRequest) { r.StoreID = "" },
@@ -72,36 +83,45 @@ func TestCalculateQuoteRejectsUnpriceableInput(t *testing.T) {
 		"zero quantity":      func(r *CalculateQuoteRequest) { r.Lines[0].Quantity = 0 },
 		"negative quantity":  func(r *CalculateQuoteRequest) { r.Lines[0].Quantity = -2 },
 		"huge quantity":      func(r *CalculateQuoteRequest) { r.Lines[0].Quantity = MaxQuoteLineQuantity + 1 },
-		"negative price":     func(r *CalculateQuoteRequest) { r.Lines[0].UnitPriceMinorUnits = -1 },
-		"negative delivery":  func(r *CalculateQuoteRequest) { r.DeliveryFeeInputMinorUnits = -1 },
-		"negative service":   func(r *CalculateQuoteRequest) { r.ServiceFeeInputMinorUnits = -1 },
+		"negative price":     func(r *CalculateQuoteRequest) { r.PricingEvidence.Lines[0].UnitPriceMinorUnits = -1 },
+		"negative delivery":  func(r *CalculateQuoteRequest) { r.PricingEvidence.DeliveryFeeMinorUnits = -1 },
+		"negative service":   func(r *CalculateQuoteRequest) { r.PricingEvidence.ServiceFeeMinorUnits = -1 },
 		"negative version":   func(r *CalculateQuoteRequest) { r.CartVersion = -1 },
 		"no product id":      func(r *CalculateQuoteRequest) { r.Lines[0].MasterProductID = " " },
 		"unbounded price": func(r *CalculateQuoteRequest) {
-			r.Lines[0].UnitPriceMinorUnits = MaxQuoteAmountMinorUnits + 1
+			r.PricingEvidence.Lines[0].UnitPriceMinorUnits = MaxQuoteAmountMinorUnits + 1
 		},
 		"overflowing line": func(r *CalculateQuoteRequest) {
 			r.Lines[0].Quantity = MaxQuoteLineQuantity
-			r.Lines[0].UnitPriceMinorUnits = MaxQuoteAmountMinorUnits
+			r.PricingEvidence.Lines[0].UnitPriceMinorUnits = MaxQuoteAmountMinorUnits
 		},
 	}
 	for name, mutate := range cases {
 		req := validQuoteRequest()
 		mutate(&req)
 		if _, err := CalculateQuote(req); err == nil {
-			t.Fatalf("%s: expected the quote to be refused", name)
+			t.Fatalf("%s: expected refusal", name)
 		}
 	}
 }
 
-func TestCalculateQuoteAllowsFreeLine(t *testing.T) {
+func TestCalculateQuoteRejectsUnsignedEvidence(t *testing.T) {
+	t.Setenv("WLT_DSH_PRICING_EVIDENCE_SECRET", pricingTestSecret)
 	req := validQuoteRequest()
-	req.Lines = []QuoteInputLine{{MasterProductID: "gift", Quantity: 1, UnitPriceMinorUnits: 0}}
-	req.DeliveryFeeInputMinorUnits = 0
-	req.ServiceFeeInputMinorUnits = 0
+	req.PricingEvidence.Signature = "tampered"
+	if _, err := CalculateQuote(req); err == nil {
+		t.Fatal("unsigned evidence must be rejected")
+	}
+}
+
+func TestCalculateQuoteAllowsFreeLine(t *testing.T) {
+	t.Setenv("WLT_DSH_PRICING_EVIDENCE_SECRET", pricingTestSecret)
+	req := validQuoteRequest()
+	req.Lines = []QuoteInputLine{{MasterProductID: "gift", Quantity: 1}}
+	req.PricingEvidence = signedEvidence([]QuoteEvidenceLine{{MasterProductID: "gift", UnitPriceMinorUnits: 0, Currency: "YER"}}, 0, 0)
 	quote, err := CalculateQuote(req)
 	if err != nil {
-		t.Fatalf("a zero-priced line is priceable: %v", err)
+		t.Fatalf("free line rejected: %v", err)
 	}
 	if quote.TotalMinorUnits != 0 {
 		t.Fatalf("expected total 0, got %d", quote.TotalMinorUnits)

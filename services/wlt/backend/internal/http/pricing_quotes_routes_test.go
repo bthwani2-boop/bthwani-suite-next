@@ -1,6 +1,9 @@
 package http
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +14,7 @@ import (
 func pricingQuoteRequest(t *testing.T, body string) *http.Request {
 	t.Helper()
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
+	t.Setenv("WLT_DSH_PRICING_EVIDENCE_SECRET", "pricing-route-secret")
 	req := httptest.NewRequest(http.MethodPost, "/wlt/internal/quotes/calculate", strings.NewReader(body))
 	req.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	req.Header.Set("X-Service-Caller", "dsh")
@@ -19,9 +23,22 @@ func pricingQuoteRequest(t *testing.T, body string) *http.Request {
 	return req
 }
 
-const pricingQuoteBody = `{"clientId":"client-1","storeId":"store-1","currency":"YER",` +
-	`"deliveryFeeInputMinorUnits":50000,"serviceFeeInputMinorUnits":0,"cartVersion":1,` +
-	`"lines":[{"masterProductId":"product-1","productName":"Rice","quantity":2,"unitPriceMinorUnits":125000}]}`
+func pricingQuoteBody() string {
+	evidence := map[string]any{
+		"version": 1, "deliveryFeeMinorUnits": int64(50000), "serviceFeeMinorUnits": int64(0),
+		"lines": []map[string]any{{"masterProductId": "product-1", "unitPriceMinorUnits": int64(125000), "currency": "YER"}},
+	}
+	unsigned, _ := json.Marshal(evidence)
+	mac := hmac.New(sha256.New, []byte("pricing-route-secret"))
+	_, _ = mac.Write(unsigned)
+	evidence["signature"] = hex.EncodeToString(mac.Sum(nil))
+	body, _ := json.Marshal(map[string]any{
+		"clientId": "client-1", "storeId": "store-1", "currency": "YER", "cartVersion": 1,
+		"lines":           []map[string]any{{"masterProductId": "product-1", "productName": "Rice", "quantity": 2}},
+		"pricingEvidence": evidence,
+	})
+	return string(body)
+}
 
 // DSH already called this exact path for cart pricing while nothing registered
 // it, so every quote request answered 404 and checkout lost the sovereign
@@ -30,7 +47,7 @@ func TestPricingQuoteRouteIsRegisteredAndPrices(t *testing.T) {
 	router := NewRouter(nil, true, openDecisionService{})
 	rec := httptest.NewRecorder()
 
-	router.ServeHTTP(rec, pricingQuoteRequest(t, pricingQuoteBody))
+	router.ServeHTTP(rec, pricingQuoteRequest(t, pricingQuoteBody()))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
@@ -57,11 +74,11 @@ func TestPricingQuoteRouteRejectsUnpriceableRequests(t *testing.T) {
 	router := NewRouter(nil, true, openDecisionService{})
 	for name, body := range map[string]string{
 		"malformed json": `{`,
-		"unknown field":  strings.Replace(pricingQuoteBody, `"cartVersion":1`, `"totalMinorUnits":1`, 1),
-		"negative price": strings.Replace(pricingQuoteBody, `"unitPriceMinorUnits":125000`, `"unitPriceMinorUnits":-125000`, 1),
-		"zero quantity":  strings.Replace(pricingQuoteBody, `"quantity":2`, `"quantity":0`, 1),
+		"unknown field":  strings.Replace(pricingQuoteBody(), `"cartVersion":1`, `"totalMinorUnits":1`, 1),
+		"negative price": strings.Replace(pricingQuoteBody(), `"unitPriceMinorUnits":125000`, `"unitPriceMinorUnits":-125000`, 1),
+		"zero quantity":  strings.Replace(pricingQuoteBody(), `"quantity":2`, `"quantity":0`, 1),
 		"missing lines":  `{"clientId":"client-1","storeId":"store-1","currency":"YER","lines":[]}`,
-		"bad currency":   strings.Replace(pricingQuoteBody, `"currency":"YER"`, `"currency":"yer"`, 1),
+		"bad currency":   strings.Replace(pricingQuoteBody(), `"currency":"YER"`, `"currency":"yer"`, 1),
 	} {
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, pricingQuoteRequest(t, body))
@@ -74,7 +91,7 @@ func TestPricingQuoteRouteRejectsUnpriceableRequests(t *testing.T) {
 func TestPricingQuoteRouteRequiresServiceAuth(t *testing.T) {
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
 	router := NewRouter(nil, true, openDecisionService{})
-	req := httptest.NewRequest(http.MethodPost, "/wlt/internal/quotes/calculate", strings.NewReader(pricingQuoteBody))
+	req := httptest.NewRequest(http.MethodPost, "/wlt/internal/quotes/calculate", strings.NewReader(pricingQuoteBody()))
 	req.Header.Set("X-Operator-Context-ID", "pricing-quote-context")
 	rec := httptest.NewRecorder()
 

@@ -3,9 +3,13 @@ package wlt
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -19,18 +23,31 @@ type QuotePricingInputLine struct {
 	MasterProductID     string `json:"masterProductId"`
 	ProductName         string `json:"productName"`
 	Quantity            int    `json:"quantity"`
+	UnitPriceMinorUnits int64  `json:"-"`
+}
+
+type QuotePricingEvidenceLine struct {
+	MasterProductID     string `json:"masterProductId"`
 	UnitPriceMinorUnits int64  `json:"unitPriceMinorUnits"`
+	Currency            string `json:"currency"`
+}
+
+type PricingEvidence struct {
+	Version               int                        `json:"version"`
+	Lines                 []QuotePricingEvidenceLine `json:"lines"`
+	DeliveryFeeMinorUnits int64                      `json:"deliveryFeeMinorUnits"`
+	ServiceFeeMinorUnits  int64                      `json:"serviceFeeMinorUnits"`
+	Signature             string                     `json:"signature"`
 }
 
 // CalculatePricingQuoteRequest is the operational payload DSH sends to WLT.
 type CalculatePricingQuoteRequest struct {
-	ClientID                   string                  `json:"clientId"`
-	StoreID                    string                  `json:"storeId"`
-	Currency                   string                  `json:"currency"`
-	DeliveryFeeInputMinorUnits int64                   `json:"deliveryFeeInputMinorUnits"`
-	ServiceFeeInputMinorUnits  int64                   `json:"serviceFeeInputMinorUnits"`
-	CartVersion                int                     `json:"cartVersion"`
-	Lines                      []QuotePricingInputLine `json:"lines"`
+	ClientID        string                  `json:"clientId"`
+	StoreID         string                  `json:"storeId"`
+	Currency        string                  `json:"currency"`
+	CartVersion     int                     `json:"cartVersion"`
+	Lines           []QuotePricingInputLine `json:"lines"`
+	PricingEvidence PricingEvidence         `json:"pricingEvidence"`
 }
 
 // QuotePricingOutputLine is the per-product line WLT returns with its computed totals.
@@ -67,6 +84,32 @@ func (c *Client) CalculateQuote(ctx context.Context, input CalculatePricingQuote
 	if !c.Configured() {
 		return nil, fmt.Errorf("WLT pricing handoff is not configured")
 	}
+
+	secret := os.Getenv("DSH_WLT_PRICING_EVIDENCE_SECRET")
+	if secret == "" {
+		return nil, fmt.Errorf("DSH pricing evidence signer is not configured")
+	}
+	evidence := PricingEvidence{
+		Version:               input.CartVersion,
+		DeliveryFeeMinorUnits: input.PricingEvidence.DeliveryFeeMinorUnits,
+		ServiceFeeMinorUnits:  input.PricingEvidence.ServiceFeeMinorUnits,
+		Lines:                 make([]QuotePricingEvidenceLine, 0, len(input.Lines)),
+	}
+	for _, line := range input.Lines {
+		evidence.Lines = append(evidence.Lines, QuotePricingEvidenceLine{
+			MasterProductID: line.MasterProductID, UnitPriceMinorUnits: line.UnitPriceMinorUnits, Currency: input.Currency,
+		})
+	}
+	unsigned := evidence
+	unsigned.Signature = ""
+	encoded, err := json.Marshal(unsigned)
+	if err != nil {
+		return nil, fmt.Errorf("encode DSH pricing evidence: %w", err)
+	}
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = mac.Write(encoded)
+	evidence.Signature = hex.EncodeToString(mac.Sum(nil))
+	input.PricingEvidence = evidence
 
 	body, err := json.Marshal(input)
 	if err != nil {

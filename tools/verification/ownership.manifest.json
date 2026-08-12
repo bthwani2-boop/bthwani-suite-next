@@ -40,8 +40,10 @@
       "root": "services/wlt",
       "sourcePrefixes": ["services/wlt/frontend/"],
       "coverage": {
-        "strategy": "required",
-        "reason": "Current WLT tests validate boundaries and contracts but do not execute services/wlt/frontend source as LCOV evidence."
+        "strategy": "node-lcov",
+        "cwd": "services/wlt",
+        "nodeOptions": ["--experimental-loader", "./tests/ts-loader.mjs"],
+        "testRoots": ["services/wlt/tests"]
       }
     },
     "app-field": {

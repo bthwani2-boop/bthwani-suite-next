@@ -150,25 +150,6 @@ func SettleGovernedCommission(
 	if commission.Status != "confirmed" {
 		return nil, ErrCommissionNotInExpectedState
 	}
-	walletEffect, err := commissionHasWalletEffectTx(ctx, tx, operatorContextID, commission)
-	if err != nil {
-		return nil, err
-	}
-	if walletEffect {
-		result, err := tx.ExecContext(ctx, `UPDATE wlt_wallets
-			SET pending_balance_minor_units=pending_balance_minor_units-$1,
-			    settled_total_minor_units=settled_total_minor_units+$1,
-			    updated_at=NOW()
-			WHERE operator_context_id=$2 AND actor_type=$3 AND actor_id=$4
-			  AND pending_balance_minor_units>=$1`,
-			commission.AmountMinorUnits, operatorContextID, commission.BeneficiaryActorType, commission.BeneficiaryActorID)
-		if err != nil {
-			return nil, err
-		}
-		if affected, _ := result.RowsAffected(); affected != 1 {
-			return nil, fmt.Errorf("commission wallet pending balance is insufficient")
-		}
-	}
 	row := tx.QueryRowContext(ctx, `UPDATE wlt_commissions
 		SET status='settled',settled_at=NOW(),updated_at=NOW()
 		WHERE operator_context_id=$1 AND id=$2 AND status='confirmed'
@@ -219,20 +200,6 @@ func RejectGovernedCommission(
 		return nil, err
 	}
 	if walletEffect {
-		result, err := tx.ExecContext(ctx, `UPDATE wlt_wallets
-			SET pending_balance_minor_units=pending_balance_minor_units-$1,
-			    earned_total_minor_units=earned_total_minor_units-$1,
-			    updated_at=NOW()
-			WHERE operator_context_id=$2 AND actor_type=$3 AND actor_id=$4
-			  AND pending_balance_minor_units>=$1
-			  AND earned_total_minor_units>=$1`,
-			commission.AmountMinorUnits, operatorContextID, commission.BeneficiaryActorType, commission.BeneficiaryActorID)
-		if err != nil {
-			return nil, err
-		}
-		if affected, _ := result.RowsAffected(); affected != 1 {
-			return nil, fmt.Errorf("commission wallet balance cannot be reversed")
-		}
 		lines := []ledger.LedgerLine{
 			{AccountType: "wallet", ActorType: commission.BeneficiaryActorType, ActorID: commission.BeneficiaryActorID, DebitCredit: "debit", AmountMinorUnits: commission.AmountMinorUnits, Currency: commission.Currency},
 			{AccountType: "platform_commission_receivable", DebitCredit: "credit", AmountMinorUnits: commission.AmountMinorUnits, Currency: commission.Currency},
@@ -291,19 +258,6 @@ func ReverseGovernedCommission(
 		return nil, err
 	}
 	if walletEffect {
-		result, err := tx.ExecContext(ctx, `UPDATE wlt_wallets
-			SET settled_total_minor_units=settled_total_minor_units-$1,
-			    updated_at=NOW()
-			WHERE operator_context_id=$2 AND actor_type=$3 AND actor_id=$4
-			  AND available_balance_minor_units>=$1
-			  AND settled_total_minor_units>=$1`,
-			commission.AmountMinorUnits, operatorContextID, commission.BeneficiaryActorType, commission.BeneficiaryActorID)
-		if err != nil {
-			return nil, err
-		}
-		if affected, _ := result.RowsAffected(); affected != 1 {
-			return nil, fmt.Errorf("commission available balance cannot be reversed")
-		}
 		lines := []ledger.LedgerLine{
 			{AccountType: "wallet", ActorType: commission.BeneficiaryActorType, ActorID: commission.BeneficiaryActorID, DebitCredit: "debit", AmountMinorUnits: commission.AmountMinorUnits, Currency: commission.Currency},
 			{AccountType: "platform_commission_receivable", DebitCredit: "credit", AmountMinorUnits: commission.AmountMinorUnits, Currency: commission.Currency},

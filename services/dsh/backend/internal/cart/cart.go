@@ -111,13 +111,16 @@ func FetchWltQuote(ctx context.Context, db *sql.DB, wltClient interface {
 	deliveryFee := FetchDeliveryFeeMinorUnits(ctx, db, c.StoreID)
 
 	return wltClient.CalculateQuote(ctx, wlt.CalculatePricingQuoteRequest{
-		ClientID:                   c.ClientID,
-		StoreID:                    c.StoreID,
-		Currency:                   currency,
-		DeliveryFeeInputMinorUnits: deliveryFee,
-		ServiceFeeInputMinorUnits:  0,
-		CartVersion:                c.Version,
-		Lines:                      lines,
+		ClientID:    c.ClientID,
+		StoreID:     c.StoreID,
+		Currency:    currency,
+		CartVersion: c.Version,
+		Lines:       lines,
+		PricingEvidence: wlt.PricingEvidence{
+			Version:               c.Version,
+			DeliveryFeeMinorUnits: deliveryFee,
+			ServiceFeeMinorUnits:  0,
+		},
 	})
 }
 

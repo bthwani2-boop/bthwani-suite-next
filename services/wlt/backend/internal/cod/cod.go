@@ -494,20 +494,9 @@ func CreateCommission(db *sql.DB, input CreateCommissionInput) (*Commission, err
 		if _, err := wallet.EnsureWalletTx(tx, input.BeneficiaryActorType, input.BeneficiaryActorID, currency); err != nil {
 			return nil, err
 		}
-		const walletQ = `
-			UPDATE wlt_wallets
-			SET pending_balance_minor_units = pending_balance_minor_units + $1,
-				earned_total_minor_units = earned_total_minor_units + $1,
-				updated_at = NOW()
-			WHERE actor_type = $2 AND actor_id = $3`
-		if _, err := tx.Exec(walletQ, amountMinorUnits, input.BeneficiaryActorType, input.BeneficiaryActorID); err != nil {
-			return nil, fmt.Errorf("update wallet balance: %w", err)
-		}
-		// Ledger: the wallet's pending_balance column above is a fast-read
-		// projection; this posts the same event as a balanced double-entry
-		// transaction (debit platform_commission_receivable, credit the
-		// beneficiary's wallet account) so the earn is journaled, not just a
-		// direct column mutation with no audit trail.
+		// The commission row is the workflow source; the wallet projection trigger
+		// materializes its pending/earned buckets. The canonical ledger remains the
+		// economic source for the resulting wallet balance.
 		ledgerLines := []ledger.LedgerLine{
 			{AccountType: "platform_commission_receivable", DebitCredit: "debit", AmountMinorUnits: amountMinorUnits, Currency: currency},
 			{AccountType: "wallet", ActorType: input.BeneficiaryActorType, ActorID: input.BeneficiaryActorID, DebitCredit: "credit", AmountMinorUnits: amountMinorUnits, Currency: currency},
@@ -619,17 +608,6 @@ func SettleCommission(db *sql.DB, commissionID string) (*Commission, error) {
 		return nil, ErrCommissionNotInExpectedState
 	}
 
-	if _, err := tx.Exec(`
-		UPDATE wlt_wallets
-		SET pending_balance_minor_units = pending_balance_minor_units - $1,
-		    settled_total_minor_units = settled_total_minor_units + $1,
-		    updated_at = NOW()
-		WHERE actor_type = $2 AND actor_id = $3`,
-		c.AmountMinorUnits, c.BeneficiaryActorType, c.BeneficiaryActorID,
-	); err != nil {
-		return nil, fmt.Errorf("update wallet balance: %w", err)
-	}
-
 	row := tx.QueryRow(`
 		UPDATE wlt_commissions SET status = 'settled', settled_at = NOW(), updated_at = NOW()
 		WHERE id = $1 AND status = 'confirmed'
@@ -668,16 +646,6 @@ func RejectCommission(db *sql.DB, commissionID, note string) (*Commission, error
 	}
 
 	if c.SourceType == "field_visit" {
-		if _, err := tx.Exec(`
-			UPDATE wlt_wallets
-			SET pending_balance_minor_units = pending_balance_minor_units - $1,
-			    earned_total_minor_units = earned_total_minor_units - $1,
-			    updated_at = NOW()
-			WHERE actor_type = $2 AND actor_id = $3`,
-			c.AmountMinorUnits, c.BeneficiaryActorType, c.BeneficiaryActorID,
-		); err != nil {
-			return nil, fmt.Errorf("update wallet balance: %w", err)
-		}
 		ledgerLines := []ledger.LedgerLine{
 			{AccountType: "wallet", ActorType: c.BeneficiaryActorType, ActorID: c.BeneficiaryActorID, DebitCredit: "debit", AmountMinorUnits: c.AmountMinorUnits, Currency: c.Currency},
 			{AccountType: "platform_commission_receivable", DebitCredit: "credit", AmountMinorUnits: c.AmountMinorUnits, Currency: c.Currency},
@@ -723,15 +691,6 @@ func ReverseCommission(db *sql.DB, commissionID, note string) (*Commission, erro
 		return nil, ErrCommissionNotInExpectedState
 	}
 
-	if _, err := tx.Exec(`
-		UPDATE wlt_wallets
-		SET settled_total_minor_units = settled_total_minor_units - $1,
-		    updated_at = NOW()
-		WHERE actor_type = $2 AND actor_id = $3`,
-		c.AmountMinorUnits, c.BeneficiaryActorType, c.BeneficiaryActorID,
-	); err != nil {
-		return nil, fmt.Errorf("update wallet balance: %w", err)
-	}
 	ledgerLines := []ledger.LedgerLine{
 		{AccountType: "wallet", ActorType: c.BeneficiaryActorType, ActorID: c.BeneficiaryActorID, DebitCredit: "debit", AmountMinorUnits: c.AmountMinorUnits, Currency: c.Currency},
 		{AccountType: "platform_commission_receivable", DebitCredit: "credit", AmountMinorUnits: c.AmountMinorUnits, Currency: c.Currency},

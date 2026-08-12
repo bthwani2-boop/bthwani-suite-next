@@ -1,29 +1,43 @@
 package pricing
 
 import (
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 )
 
 type QuoteInputLine struct {
+	MasterProductID string `json:"masterProductId"`
+	ProductName     string `json:"productName"`
+	Quantity        int    `json:"quantity"`
+}
+
+type QuoteEvidenceLine struct {
 	MasterProductID     string `json:"masterProductId"`
-	ProductName         string `json:"productName"`
-	Quantity            int    `json:"quantity"`
 	UnitPriceMinorUnits int64  `json:"unitPriceMinorUnits"`
+	Currency            string `json:"currency"`
+}
+
+type PricingEvidence struct {
+	Version               int                 `json:"version"`
+	Lines                 []QuoteEvidenceLine `json:"lines"`
+	DeliveryFeeMinorUnits int64               `json:"deliveryFeeMinorUnits"`
+	ServiceFeeMinorUnits  int64               `json:"serviceFeeMinorUnits"`
+	Signature             string              `json:"signature"`
 }
 
 type CalculateQuoteRequest struct {
-	ClientID                   string           `json:"clientId"`
-	StoreID                    string           `json:"storeId"`
-	Currency                   string           `json:"currency"`
-	DeliveryFeeInputMinorUnits int64            `json:"deliveryFeeInputMinorUnits"`
-	ServiceFeeInputMinorUnits  int64            `json:"serviceFeeInputMinorUnits"`
-	CartVersion                int              `json:"cartVersion"`
-	Lines                      []QuoteInputLine `json:"lines"`
+	ClientID        string           `json:"clientId"`
+	StoreID         string           `json:"storeId"`
+	Currency        string           `json:"currency"`
+	CartVersion     int              `json:"cartVersion"`
+	Lines           []QuoteInputLine `json:"lines"`
+	PricingEvidence PricingEvidence  `json:"pricingEvidence"`
 }
 
 type QuoteOutputLine struct {
@@ -92,12 +106,15 @@ func validateQuoteRequest(req CalculateQuoteRequest) error {
 	if req.CartVersion < 0 {
 		return fmt.Errorf("cartVersion cannot be negative")
 	}
+	if req.PricingEvidence.Version < 1 || len(req.PricingEvidence.Lines) != len(req.Lines) {
+		return fmt.Errorf("authoritative pricing evidence is required and must cover every line")
+	}
 	for _, fee := range []struct {
 		name  string
 		value int64
 	}{
-		{"deliveryFeeInputMinorUnits", req.DeliveryFeeInputMinorUnits},
-		{"serviceFeeInputMinorUnits", req.ServiceFeeInputMinorUnits},
+		{"deliveryFeeMinorUnits", req.PricingEvidence.DeliveryFeeMinorUnits},
+		{"serviceFeeMinorUnits", req.PricingEvidence.ServiceFeeMinorUnits},
 	} {
 		if fee.value < 0 {
 			return fmt.Errorf("%s cannot be negative", fee.name)
@@ -116,12 +133,31 @@ func validateQuoteRequest(req CalculateQuoteRequest) error {
 		if line.Quantity > MaxQuoteLineQuantity {
 			return fmt.Errorf("line %d quantity exceeds %d", index, MaxQuoteLineQuantity)
 		}
-		if line.UnitPriceMinorUnits < 0 {
-			return fmt.Errorf("line %d unitPriceMinorUnits cannot be negative", index)
+		evidence := req.PricingEvidence.Lines[index]
+		if evidence.MasterProductID != line.MasterProductID || evidence.Currency != req.Currency {
+			return fmt.Errorf("line %d authoritative pricing evidence does not match the cart identity", index)
 		}
-		if line.UnitPriceMinorUnits > MaxQuoteAmountMinorUnits {
-			return fmt.Errorf("line %d unitPriceMinorUnits exceeds the maximum quotable amount", index)
+		if evidence.UnitPriceMinorUnits < 0 {
+			return fmt.Errorf("line %d authoritative unit price cannot be negative", index)
 		}
+		if evidence.UnitPriceMinorUnits > MaxQuoteAmountMinorUnits {
+			return fmt.Errorf("line %d authoritative unit price exceeds the maximum quotable amount", index)
+		}
+	}
+	secret := strings.TrimSpace(os.Getenv("WLT_DSH_PRICING_EVIDENCE_SECRET"))
+	if secret == "" {
+		return fmt.Errorf("WLT pricing evidence verifier is not configured")
+	}
+	payload := req.PricingEvidence
+	payload.Signature = ""
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("encode authoritative pricing evidence: %w", err)
+	}
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = mac.Write(encoded)
+	if !hmac.Equal([]byte(req.PricingEvidence.Signature), []byte(hex.EncodeToString(mac.Sum(nil)))) {
+		return fmt.Errorf("authoritative pricing evidence signature is invalid")
 	}
 	return nil
 }
@@ -136,12 +172,13 @@ func CalculateQuote(req CalculateQuoteRequest) (*WltPricingQuote, error) {
 		Currency:              req.Currency,
 		FundingRefs:           []string{},
 		Version:               req.CartVersion,
-		DeliveryFeeMinorUnits: req.DeliveryFeeInputMinorUnits,
-		ServiceFeeMinorUnits:  req.ServiceFeeInputMinorUnits,
+		DeliveryFeeMinorUnits: req.PricingEvidence.DeliveryFeeMinorUnits,
+		ServiceFeeMinorUnits:  req.PricingEvidence.ServiceFeeMinorUnits,
 	}
 
 	for index, line := range req.Lines {
-		lineTotal := line.UnitPriceMinorUnits * int64(line.Quantity)
+		unitPrice := req.PricingEvidence.Lines[index].UnitPriceMinorUnits
+		lineTotal := unitPrice * int64(line.Quantity)
 		if lineTotal > MaxQuoteAmountMinorUnits {
 			return nil, fmt.Errorf("line %d total exceeds the maximum quotable amount", index)
 		}
@@ -149,7 +186,7 @@ func CalculateQuote(req CalculateQuoteRequest) (*WltPricingQuote, error) {
 			MasterProductID:     line.MasterProductID,
 			ProductName:         line.ProductName,
 			Quantity:            line.Quantity,
-			UnitPriceMinorUnits: line.UnitPriceMinorUnits,
+			UnitPriceMinorUnits: unitPrice,
 			TotalMinorUnits:     lineTotal,
 		})
 		quote.SubtotalMinorUnits += lineTotal

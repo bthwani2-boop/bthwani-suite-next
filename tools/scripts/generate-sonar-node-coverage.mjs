@@ -89,7 +89,10 @@ export function loadCoverageOwnershipModel(manifestPath = path.resolve(repoRoot,
       const prepare = coverage.prepare === undefined
         ? null
         : requireOrderedCommandArray(coverage.prepare, `projects.${name}.coverage.prepare`);
-      suites[name] = { ...project, cwd, testRoots, prepare };
+      const nodeOptions = coverage.nodeOptions === undefined
+        ? []
+        : requireOrderedCommandArray(coverage.nodeOptions, `projects.${name}.coverage.nodeOptions`);
+      suites[name] = { ...project, cwd, testRoots, prepare, nodeOptions };
     }
     projects[name] = project;
     for (const prefix of sourcePrefixes) sourceAuthorities.push({ prefix, project });
@@ -457,6 +460,7 @@ function executeSuite(suiteName, reportDir) {
   const rawReport = path.join(reportDir, `${suiteName}.raw.lcov`);
   const testArgs = tests.map((file) => path.relative(testCwd, file));
   runCommand(process.execPath, [
+    ...definition.nodeOptions,
     "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON",
     "--enable-source-maps",
     "--test",

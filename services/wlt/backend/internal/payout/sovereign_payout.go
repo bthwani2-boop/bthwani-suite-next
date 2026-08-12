@@ -200,25 +200,6 @@ func HandleRejectPayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusConflict, "INVALID_STATUS", "only pending or approved payouts can be rejected")
 			return
 		}
-		operatorContextID, err := shared.RequireOperatorContext(r.Context())
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "OperatorContext_REQUIRED", err.Error())
-			return
-		}
-		result, err := tx.ExecContext(r.Context(), `
-			UPDATE wlt_wallets
-			SET held_balance_minor_units = held_balance_minor_units - $1,
-			    updated_at = now()
-			WHERE operator_context_id = $4 AND actor_id = $2 AND actor_type = $3 AND held_balance_minor_units >= $1`,
-			req.AmountMinorUnits, req.BeneficiaryActorID, req.BeneficiaryActorType, operatorContextID)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to release held payout funds")
-			return
-		}
-		if affected, _ := result.RowsAffected(); affected != 1 {
-			shared.SendError(w, http.StatusConflict, "HELD_BALANCE_MISMATCH", "held wallet balance is insufficient for payout rejection")
-			return
-		}
 		updated, err := payoutAfterUpdate(r.Context(), tx,
 			"UPDATE wlt_payout_requests SET status = 'rejected', rejected_at = now(), rejected_by_operator_id = $2, operator_id = $2 WHERE id = $1 RETURNING "+requestCols,
 			req.ID, operatorID)
@@ -300,21 +281,6 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 		}
 		if req.ApprovedByOperatorID == "" || operatorID == req.ApprovedByOperatorID || operatorID == executedBy || operatorID == verifiedBy {
 			shared.SendError(w, http.StatusForbidden, "MAKER_CHECKER_VIOLATION", "completion operator must differ from the payout approver, executor and verifier")
-			return
-		}
-		result, err := tx.ExecContext(r.Context(), `
-			UPDATE wlt_wallets
-			SET held_balance_minor_units = held_balance_minor_units - $1,
-			    paid_total_minor_units = paid_total_minor_units + $1,
-			    updated_at = now()
-			WHERE operator_context_id = $4 AND actor_id = $2 AND actor_type = $3 AND held_balance_minor_units >= $1`,
-			req.AmountMinorUnits, req.BeneficiaryActorID, req.BeneficiaryActorType, operatorContextID)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to settle held payout funds")
-			return
-		}
-		if affected, _ := result.RowsAffected(); affected != 1 {
-			shared.SendError(w, http.StatusConflict, "HELD_BALANCE_MISMATCH", "held wallet balance is insufficient for payout completion")
 			return
 		}
 		lines := []ledger.LedgerLine{
