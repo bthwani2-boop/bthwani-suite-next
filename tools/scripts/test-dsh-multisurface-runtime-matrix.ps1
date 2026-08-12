@@ -6,6 +6,17 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+$DispatchFixture = Join-Path $PSScriptRoot "prepare-dsh-runtime-captain-dispatch.ps1"
+if (-not (Test-Path -LiteralPath $DispatchFixture)) {
+  throw "Required runtime captain dispatch fixture is missing: $DispatchFixture"
+}
+Write-Host "Preparing governed captain dispatch runtime fixture"
+& pwsh -NoProfile -ExecutionPolicy Bypass -File $DispatchFixture
+if ($LASTEXITCODE -ne 0) {
+  throw "governed captain dispatch runtime fixture failed with exit code $LASTEXITCODE"
+}
+
 $Matrices = @(
   [ordered]@{
     name = "governed five-surface commerce and field journey"
