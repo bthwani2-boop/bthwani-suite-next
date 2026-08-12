@@ -31,7 +31,8 @@ func GovernedRefreshBoundary(repository governedRefreshRepository, next http.Han
 		}
 
 		pair, err := repository.RefreshGoverned(r.Context(), request.RefreshToken)
-		if errors.Is(err, identity.ErrRefreshAlreadyRotated) {
+		switch {
+		case errors.Is(err, identity.ErrRefreshAlreadyRotated):
 			sendError(
 				w,
 				http.StatusConflict,
@@ -39,9 +40,11 @@ func GovernedRefreshBoundary(repository governedRefreshRepository, next http.Han
 				"refresh token was rotated by another concurrent request",
 			)
 			return
-		}
-		if err != nil {
+		case errors.Is(err, identity.ErrInvalidRefresh):
 			sendError(w, http.StatusUnauthorized, "INVALID_REFRESH_TOKEN", "refresh token is invalid or expired")
+			return
+		case err != nil:
+			sendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "refresh service is temporarily unavailable")
 			return
 		}
 		sendJSON(w, http.StatusOK, tokenResponse(pair))
