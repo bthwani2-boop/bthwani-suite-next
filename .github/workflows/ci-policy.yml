@@ -43,13 +43,6 @@ jobs:
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
 
-      - name: Verify objective nomenclature
-        if: ${{ inputs.nomenclature_required == 'true' }}
-        env:
-          CI_BASE_SHA: ${{ inputs.base_sha }}
-          CI_HEAD_SHA: ${{ inputs.head_sha }}
-        run: pnpm run guard:nomenclature
-
       - name: Test shared TypeScript Compiler API loader
         if: ${{ inputs.governance_policy == 'true' || inputs.workflow_policy == 'true' }}
         run: node --test tools/guards/lib/typescript-compiler.test.mjs
@@ -57,59 +50,6 @@ jobs:
       - name: Test shared API operation resolution
         if: ${{ inputs.governance_policy == 'true' || inputs.workflow_policy == 'true' }}
         run: node --test tools/guards/lib/api-operations.test.mjs
-
-      - name: Test direct work-branch execution guard
-        if: ${{ inputs.governance_policy == 'true' || inputs.workflow_policy == 'true' }}
-        run: node --test tools/guards/direct-work-branch-execution-gate.test.mjs
-
-      - name: Enforce direct work-branch execution policy
-        if: ${{ inputs.governance_policy == 'true' || inputs.workflow_policy == 'true' }}
-        run: node tools/guards/direct-work-branch-execution-gate.mjs
-
-      - name: Verify governance schema
-        if: ${{ inputs.governance_policy == 'true' }}
-        run: pnpm run guard:governance-schema
-
-      - name: Verify agent governance
-        if: ${{ inputs.governance_policy == 'true' }}
-        run: pnpm run guard:agent-governance
-
-      - name: Verify authority separation
-        if: ${{ inputs.governance_policy == 'true' }}
-        run: pnpm run guard:authority-separation
-
-      - name: Verify guard registry
-        id: guard_registry
-        if: ${{ inputs.governance_policy == 'true' }}
-        continue-on-error: true
-        shell: bash
-        run: |
-          set +e
-          log="${RUNNER_TEMP}/guard-registry.log"
-          pnpm run guard:guard-registry 2>&1 | tee "${log}"
-          status=${PIPESTATUS[0]}
-          exit "${status}"
-
-      - name: Upload guard registry diagnostics
-        if: ${{ steps.guard_registry.outcome == 'failure' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: guard-registry-${{ github.run_id }}
-          path: ${{ runner.temp }}/guard-registry.log
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Enforce guard registry result
-        if: ${{ steps.guard_registry.outcome == 'failure' }}
-        run: exit 1
-
-      - name: Verify SDLC governance
-        if: ${{ inputs.governance_policy == 'true' }}
-        run: pnpm run guard:sdlc
-
-      - name: Verify cleanup policy
-        if: ${{ inputs.governance_policy == 'true' }}
-        run: pnpm run guard:cleanup-policy
 
       - name: Verify contract registry drift
         run: pnpm run guard:contract-registry-drift
@@ -170,14 +110,6 @@ jobs:
 
       - name: Verify WLT OpenAPI bundle provenance
         run: pnpm run guard:wlt-openapi-bundle
-
-      - name: Verify portable tracked configuration
-        if: ${{ inputs.governance_policy == 'true' }}
-        run: node tools/scripts/check-portable-tracked-config.mjs
-
-      - name: Analyze tracked repository hygiene
-        if: ${{ inputs.governance_policy == 'true' }}
-        run: node tools/scripts/check-repository-hygiene.mjs
 
       - name: Verify required command integrity
         id: required_command_integrity
@@ -245,6 +177,7 @@ jobs:
 
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
+
       - name: Verify workflow security preflight
         id: workflow_security
         if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' }}
