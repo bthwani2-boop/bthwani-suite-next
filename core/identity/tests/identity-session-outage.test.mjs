@@ -61,13 +61,31 @@ async function waitForState(store, expectedKind) {
 }
 
 async function freshStore(name) {
-  return import(`../clients/identity-session-store.ts?test=${encodeURIComponent(name)}-${Date.now()}`);
+  return import(`../clients/identity-session-store.ts?test=${encodeURIComponent(name)}-${Date.now()}-${Math.random()}`);
+}
+
+function memoryStorage(initial = storedSession) {
+  const values = new Map(initial === null ? [] : [["bthwani-identity-session", initial]]);
+  let removals = 0;
+  return {
+    values,
+    get removals() {
+      return removals;
+    },
+    adapter: {
+      getItem: async (key) => values.get(key) ?? null,
+      setItem: async (key, value) => values.set(key, value),
+      removeItem: async (key) => {
+        removals += 1;
+        values.delete(key);
+      },
+    },
+  };
 }
 
 test("readiness outage preserves the stored session", async () => {
   const originalFetch = globalThis.fetch;
-  const values = new Map([["bthwani-identity-session", storedSession]]);
-  let removals = 0;
+  const storage = memoryStorage();
   globalThis.fetch = async (input) => {
     const path = new URL(String(input)).pathname;
     assert.equal(path, "/identity/readiness");
@@ -76,20 +94,13 @@ test("readiness outage preserves the stored session", async () => {
 
   try {
     const store = await freshStore("outage");
-    store.configureIdentitySessionStorage({
-      getItem: async (key) => values.get(key) ?? null,
-      setItem: async (key, value) => values.set(key, value),
-      removeItem: async (key) => {
-        removals += 1;
-        values.delete(key);
-      },
-    });
+    store.configureIdentitySessionStorage(storage.adapter);
     store.configureIdentitySession("http://identity.test");
 
     const state = await waitForState(store, "service_unavailable");
     assert.equal(state.message, "IDENTITY_NOT_READY");
-    assert.equal(removals, 0);
-    assert.equal(values.get("bthwani-identity-session"), storedSession);
+    assert.equal(storage.removals, 0);
+    assert.equal(storage.values.get("bthwani-identity-session"), storedSession);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -97,8 +108,7 @@ test("readiness outage preserves the stored session", async () => {
 
 test("proven invalid session removes the stored credentials", async () => {
   const originalFetch = globalThis.fetch;
-  const values = new Map([["bthwani-identity-session", storedSession]]);
-  let removals = 0;
+  const storage = memoryStorage();
   globalThis.fetch = async (input) => {
     const path = new URL(String(input)).pathname;
     if (path === "/identity/readiness") return jsonResponse(200, runtimeStatus("HEALTHY"));
@@ -113,20 +123,106 @@ test("proven invalid session removes the stored credentials", async () => {
 
   try {
     const store = await freshStore("invalid-session");
-    store.configureIdentitySessionStorage({
-      getItem: async (key) => values.get(key) ?? null,
-      setItem: async (key, value) => values.set(key, value),
-      removeItem: async (key) => {
-        removals += 1;
-        values.delete(key);
-      },
-    });
+    store.configureIdentitySessionStorage(storage.adapter);
     store.configureIdentitySession("http://identity.test");
 
     const state = await waitForState(store, "error");
     assert.equal(state.message, "IDENTITY_SESSION_INVALID");
-    assert.equal(removals, 1);
-    assert.equal(values.has("bthwani-identity-session"), false);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(storage.removals, 1);
+    assert.equal(storage.values.has("bthwani-identity-session"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("fresh cached identity never becomes authenticated before live validation completes", async () => {
+  const originalFetch = globalThis.fetch;
+  const storage = memoryStorage();
+  let releaseSession;
+  const sessionResponse = new Promise((resolve) => {
+    releaseSession = () => resolve(jsonResponse(200, validIdentity));
+  });
+
+  globalThis.fetch = async (input) => {
+    const path = new URL(String(input)).pathname;
+    if (path === "/identity/readiness") return jsonResponse(200, runtimeStatus("HEALTHY"));
+    if (path === "/auth/session") return sessionResponse;
+    throw new Error(`unexpected Identity request ${path}`);
+  };
+
+  try {
+    const store = await freshStore("authoritative-bootstrap");
+    store.configureIdentitySessionStorage(storage.adapter);
+    store.configureIdentitySession("http://identity.test");
+
+    const restoring = await waitForState(store, "authenticating");
+    assert.equal(restoring.kind, "authenticating");
+    assert.notEqual(store.getIdentityState().kind, "authenticated");
+
+    releaseSession();
+    const authenticated = await waitForState(store, "authenticated");
+    assert.equal(authenticated.identity.sessionId, validIdentity.sessionId);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("logout outage retains credentials and reports service_unavailable for retry", async () => {
+  const originalFetch = globalThis.fetch;
+  const storage = memoryStorage();
+
+  globalThis.fetch = async (input) => {
+    const path = new URL(String(input)).pathname;
+    if (path === "/identity/readiness") return jsonResponse(200, runtimeStatus("HEALTHY"));
+    if (path === "/auth/session") return jsonResponse(200, validIdentity);
+    if (path === "/auth/logout") throw new Error("identity offline");
+    throw new Error(`unexpected Identity request ${path}`);
+  };
+
+  try {
+    const store = await freshStore("logout-outage");
+    store.configureIdentitySessionStorage(storage.adapter);
+    store.configureIdentitySession("http://identity.test");
+    await waitForState(store, "authenticated");
+
+    await store.logoutIdentity();
+    const state = await waitForState(store, "service_unavailable");
+    assert.equal(state.retainedSession, true);
+    assert.equal(storage.removals, 0);
+    assert.equal(storage.values.has("bthwani-identity-session"), true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("successful logout revokes upstream before local credentials are removed", async () => {
+  const originalFetch = globalThis.fetch;
+  const storage = memoryStorage();
+  const calls = [];
+
+  globalThis.fetch = async (input) => {
+    const path = new URL(String(input)).pathname;
+    calls.push(path);
+    if (path === "/identity/readiness") return jsonResponse(200, runtimeStatus("HEALTHY"));
+    if (path === "/auth/session") return jsonResponse(200, validIdentity);
+    if (path === "/auth/logout") return new Response(null, { status: 204 });
+    throw new Error(`unexpected Identity request ${path}`);
+  };
+
+  try {
+    const store = await freshStore("logout-success");
+    store.configureIdentitySessionStorage(storage.adapter);
+    store.configureIdentitySession("http://identity.test");
+    await waitForState(store, "authenticated");
+
+    await store.logoutIdentity();
+    await waitForState(store, "signed_out");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.ok(calls.indexOf("/auth/logout") > calls.indexOf("/auth/session"));
+    assert.equal(storage.values.has("bthwani-identity-session"), false);
+    assert.equal(storage.removals, 1);
   } finally {
     globalThis.fetch = originalFetch;
   }
