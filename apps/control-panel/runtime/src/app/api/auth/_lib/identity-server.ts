@@ -26,3 +26,26 @@ export function isConcurrentRefreshError(error: unknown): boolean {
     && typed.status === 409
     && typed.code === "REFRESH_ALREADY_ROTATED";
 }
+
+/** Infrastructure failure is not authentication failure. */
+export function isIdentityServerAvailabilityError(error: unknown): boolean {
+  const typed = error as Partial<IdentityClientError>;
+  if (typed.kind === "network") return true;
+  if (typed.kind !== "http") return false;
+  return typed.status === 502
+    || typed.status === 503
+    || typed.status === 504
+    || typed.code === "IDENTITY_NOT_READY"
+    || typed.code === "IDENTITY_UNAVAILABLE"
+    || typed.code === "BFF_UPSTREAM_UNAVAILABLE"
+    || typed.code === "BFF_UPSTREAM_NOT_CONFIGURED";
+}
+
+export function isIdentityServerInvalidSessionError(error: unknown): boolean {
+  const typed = error as Partial<IdentityClientError>;
+  return typed.kind === "http"
+    && (typed.status === 401
+      || typed.code === "UNAUTHENTICATED"
+      || typed.code === "INVALID_REFRESH_TOKEN"
+      || typed.code === "SESSION_NOT_FOUND");
+}
