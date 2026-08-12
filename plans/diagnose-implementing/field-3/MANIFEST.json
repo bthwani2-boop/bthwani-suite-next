@@ -24,7 +24,7 @@
     "name": "bthwani2-boop/bthwani-suite-next",
     "targetBranch": "BB",
     "pinnedStartSha": "bee8e9cfe1762cef39690f0b254fdf0b6855e1a9",
-    "latestObservedRemoteSha": "bee8e9cfe1762cef39690f0b254fdf0b6855e1a9"
+    "latestObservedRemoteSha": "95649d7350803e230477e9564060b1ca7bcd0bb8"
   },
   "authority": {
     "root": "governance/authority/authority-precedence.json",
