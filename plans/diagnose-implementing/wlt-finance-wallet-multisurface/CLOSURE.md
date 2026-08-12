@@ -1,9 +1,7 @@
 # Closure Status — OPEN
 
-Baseline: `BB@4e9f92436046fa1cded26e71250d5bd2db9f598f`.
+The former closure posture remains invalid: evidence targeted another branch/SHA; required units were not fully executed; and current `BB` finance work must be re-proven from the exact newest candidate after the last related write.
 
-The former closure posture is invalid: evidence targeted another branch/SHA; U004/U005 were not executed; U003 contained a failed required check; and current BB code exposes finance gaps omitted by the old map.
+Blocking classes include: canonical ledger versus legacy wallet/ledger divergence; official-wallet/manual-settlement mismatch; beneficiary-facing payout-destination mutation or selection; payout requests that trust client-selected destination/provider/beneficiary data; any client-computed `FULL_AVAILABLE` amount; any generic manual authoritative monetary override; incomplete Finance-only destination reason/evidence/version/verification/approval controls; non-canonical/non-blocking DailyFinanceClose; runtime financial decision wiring; penalty direct balance mutation/trusted-scope gap; omitted commercial/subscription/onboarding finance; omitted promotion-funding/pricing controls; dispatch-financial-eligibility integration; and same-candidate five-surface/runtime/security evidence.
 
-Blocking classes: canonical ledger versus legacy wallet/ledger divergence; official-wallet/manual-settlement mismatch; non-canonical/non-blocking DailyFinanceClose; runtime financial decision wiring; penalty direct balance mutation/trusted-scope gap; omitted commercial/subscription/onboarding finance; omitted promotion-funding/pricing controls; dispatch-financial-eligibility integration; and same-candidate five-surface/runtime/security evidence.
-
-Do not mark DONE until U004, U006, U007, U008 and U005 are complete on one newest candidate and all required checks pass. Historical results are provenance only.
+Do not mark DONE until U004, U006, U007, U008 and U005 are complete on one newest candidate and prove zero beneficiary financial-master-data mutation, automatic event/policy-derived monetary truth, transactional `FULL_AVAILABLE`/bounded `SPECIFIED` resolution, server-resolved verified destination pinning, Finance-only governed destination changes, no manual authoritative arithmetic/override, and all other required checks. Historical results are provenance only.
