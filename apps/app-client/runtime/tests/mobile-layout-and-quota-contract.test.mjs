@@ -56,3 +56,25 @@ test("mobile operational scripts live under apps/mobile", () => {
     assert.ok(entrypoint.includes("mobile\\mobile.ps1"), `${app} does not use apps/mobile/mobile.ps1`);
   }
 });
+
+test("all four mobile runtimes are independent of screen mirroring", () => {
+  const runtimeFiles = [
+    ["apps", "mobile.ps1"],
+    ["apps", "mobile", "mobile.ps1"],
+    ["apps", "mobile", "start-mobile-runtime.ps1"],
+    ["apps", "mobile", "mobile-adb.ps1"],
+    ["tools", "scripts", "start-mobile-runtime.ps1"],
+    ...apps.flatMap((app) => [
+      ["apps", app, "runtime", "start.ps1"],
+      ["apps", app, "runtime", "mobile.ps1"],
+    ]),
+  ];
+
+  for (const segments of runtimeFiles) {
+    const source = read(...segments);
+    const label = segments.join("/");
+    for (const forbidden of ["MirrorDevice", "BTHWANI_MIRROR_DEVICE", "scrcpy"]) {
+      assert.equal(source.includes(forbidden), false, `${label} must not depend on ${forbidden}`);
+    }
+  }
+});
