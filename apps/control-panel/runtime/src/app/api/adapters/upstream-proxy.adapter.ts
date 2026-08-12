@@ -9,7 +9,10 @@ import {
   isSameOriginRequest,
   setSessionCookies,
 } from "../auth/_lib/cookies";
-import { identityServerClient } from "../auth/_lib/identity-server";
+import {
+  identityServerClient,
+  isConcurrentRefreshError,
+} from "../auth/_lib/identity-server";
 import { sendAuthenticatedUpstreamRequest } from "../_kernel/upstream-http-request";
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -67,6 +70,16 @@ function expiredSessionResponse(status = 401): NextResponse {
   return response;
 }
 
+function concurrentRefreshResponse(): NextResponse {
+  return noStoreJson({ code: "REFRESH_ALREADY_ROTATED" }, 409);
+}
+
+function refreshFailureResponse(error: unknown): NextResponse {
+  return isConcurrentRefreshError(error)
+    ? concurrentRefreshResponse()
+    : expiredSessionResponse();
+}
+
 export async function proxyAuthenticatedUpstream(
   request: Request,
   path: readonly string[],
@@ -93,8 +106,8 @@ export async function proxyAuthenticatedUpstream(
       rotatedCookies = await rotateControlPanelSession(refreshToken);
       if (!rotatedCookies) return expiredSessionResponse(403);
       accessToken = rotatedCookies.accessToken;
-    } catch {
-      return expiredSessionResponse();
+    } catch (error) {
+      return refreshFailureResponse(error);
     }
   }
 
@@ -110,8 +123,8 @@ export async function proxyAuthenticatedUpstream(
         baseUrl,
         rotatedCookies.accessToken,
       );
-    } catch {
-      return expiredSessionResponse();
+    } catch (error) {
+      return refreshFailureResponse(error);
     }
   }
 
