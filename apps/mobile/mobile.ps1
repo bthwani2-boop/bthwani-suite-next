@@ -8,8 +8,7 @@ param(
     [ValidateSet('Run', 'Initialize', 'Preflight', 'Build')]
     [string] $Mode,
 
-    [switch] $ClearCache,
-    [switch] $MirrorDevice
+    [switch] $ClearCache
 )
 
 Set-StrictMode -Version Latest
@@ -47,8 +46,7 @@ if ($Mode -eq 'Run') {
     & $RuntimeScript `
         -AppKey $App `
         -MetroPort $ports[$App] `
-        -ClearCache:$ClearCache `
-        -MirrorDevice:$MirrorDevice
+        -ClearCache:$ClearCache
     exit $LASTEXITCODE
 }
 
