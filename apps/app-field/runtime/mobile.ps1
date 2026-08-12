@@ -2,13 +2,12 @@
 param(
     [ValidateSet('Run', 'Initialize', 'Preflight', 'Build')]
     [string] $Mode = 'Run',
-    [switch] $ClearCache,
-    [switch] $MirrorDevice
+    [switch] $ClearCache
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $SharedMobile = (Resolve-Path (Join-Path $PSScriptRoot '..\..\mobile\mobile.ps1')).Path
-& $SharedMobile -App 'app-field' -Mode $Mode -ClearCache:$ClearCache -MirrorDevice:$MirrorDevice
+& $SharedMobile -App 'app-field' -Mode $Mode -ClearCache:$ClearCache
 exit $LASTEXITCODE
