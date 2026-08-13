@@ -122,51 +122,58 @@ $settings = Invoke-RestMethod "http://localhost:58080/dsh/partner/stores/$smokeS
 if ($settings.store.status -ne "ready") { throw "Partner Onboarding & Store Publication store settings did not reach ready" }
 if (@($settings.store.deliveryModes).Count -lt 1) { throw "Partner Onboarding & Store Publication store settings did not persist delivery modes" }
 
-# Submission readiness requires a WLT-owned official-wallet destination. The
-# partner-owned finance route is the only governed write boundary: WLT owns the
-# provider, encrypted reference and destination version; DSH stores only the
-# durable reference and masked readiness projection.
+# Submission readiness reads a WLT-owned official-wallet destination. Partner
+# self-service is deliberately read-only: WLT owns the provider, encrypted
+# reference and destination version; DSH stores only the durable reference and
+# masked readiness projection. Destination master-data writes remain an
+# operator-only boundary and are proved unavailable below.
 $payoutHeaders = @{}
 foreach ($key in $partnerHeaders.Keys) {
   $payoutHeaders[$key] = $partnerHeaders[$key]
 }
 $payoutHeaders["X-Correlation-ID"] = "smoke-partner-payout-$([guid]::NewGuid())"
-$payoutHeaders["Idempotency-Key"] = "smoke-partner-payout-$($partnerDraft.id)-$([guid]::NewGuid())"
-$payoutBody = @{
-  beneficiaryName = "مالك فحص الشركاء"
-  officialWalletProviderKey = "bthwani_local_wallet"
-  destinationReference = "777$partnerSuffix"
-} | ConvertTo-Json
-$payoutResult = Invoke-RestMethod "http://localhost:58080/dsh/partner/me/finance/payout-destination" -Method Put -Headers $payoutHeaders -ContentType "application/json" -Body $payoutBody -TimeoutSec 10
+$payoutResult = Invoke-RestMethod "http://localhost:58080/dsh/partner/me/finance/payout-destination" -Headers $payoutHeaders -TimeoutSec 10
 $payoutDestination = $payoutResult.payoutDestination
-if ([string]::IsNullOrWhiteSpace($payoutDestination.id)) { throw "Partner Onboarding & Store Publication WLT payout destination returned no id" }
-if ([string]$payoutDestination.ownerActorId -ne [string]$partnerActor.actorId -or $payoutDestination.ownerActorType -ne "partner") { throw "Partner Onboarding & Store Publication WLT payout destination ownership mismatch" }
-if ($payoutDestination.officialWalletProviderKey -ne "bthwani_local_wallet") { throw "Partner Onboarding & Store Publication WLT provider key mismatch" }
-if ($payoutDestination.destinationMethod -ne "official_wallet") { throw "Partner Onboarding & Store Publication payout destination is not official_wallet" }
-if ([int]$payoutDestination.destinationVersion -lt 1) { throw "Partner Onboarding & Store Publication payout destination has no governed version" }
-if ($payoutDestination.destinationVerificationStatus -ne "unverified") { throw "Partner Onboarding & Store Publication new payout destination did not start unverified" }
-if ([string]::IsNullOrWhiteSpace($payoutDestination.maskedDestinationReference)) { throw "Partner Onboarding & Store Publication payout destination was not masked" }
+if ($null -ne $payoutDestination) {
+  if ([string]$payoutDestination.ownerActorId -ne [string]$partnerActor.actorId -or $payoutDestination.ownerActorType -ne "partner") { throw "Partner Onboarding & Store Publication WLT payout destination ownership mismatch" }
+  if ($payoutDestination.officialWalletProviderKey -ne "bthwani_local_wallet") { throw "Partner Onboarding & Store Publication WLT provider key mismatch" }
+  if ($payoutDestination.destinationMethod -ne "official_wallet") { throw "Partner Onboarding & Store Publication payout destination is not official_wallet" }
+  if ([int]$payoutDestination.destinationVersion -lt 1) { throw "Partner Onboarding & Store Publication payout destination has no governed version" }
+  if ([string]::IsNullOrWhiteSpace($payoutDestination.maskedDestinationReference)) { throw "Partner Onboarding & Store Publication payout destination was not masked" }
+}
+
+$mutationProbe = Invoke-WebRequest "http://localhost:58080/dsh/partner/me/finance/payout-destination" -Method Put -Headers $payoutHeaders -ContentType "application/json" -Body '{}' -TimeoutSec 10 -SkipHttpErrorCheck
+if ($mutationProbe.StatusCode -notin @(404, 405)) { throw "Partner Onboarding & Store Publication allowed a Partner payout destination mutation (HTTP $($mutationProbe.StatusCode))" }
 
 $payoutPartner = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)" -Headers $fieldHeaders -TimeoutSec 10
-if ([string]$payoutPartner.payoutDestinationId -ne [string]$payoutDestination.id) { throw "Partner Onboarding & Store Publication DSH payout projection did not bind the WLT destination" }
-if ($payoutPartner.destinationMethod -ne "official_wallet") { throw "Partner Onboarding & Store Publication DSH payout projection is not official_wallet" }
-if ([string]$payoutPartner.maskedDestinationReference -ne [string]$payoutDestination.maskedDestinationReference) { throw "Partner Onboarding & Store Publication DSH payout mask diverged from WLT" }
-if ($payoutPartner.version -le $partnerDraft.version) { throw "Partner Onboarding & Store Publication payout binding did not advance partner version" }
-$payoutProjectionVersion = [int]$payoutPartner.version
+if ($null -eq $payoutDestination) {
+  if (-not [string]::IsNullOrWhiteSpace([string]$payoutPartner.payoutDestinationId)) { throw "Partner Onboarding & Store Publication DSH payout projection exposed a destination absent from WLT" }
+} else {
+  if ([string]$payoutPartner.payoutDestinationId -ne [string]$payoutDestination.id) { throw "Partner Onboarding & Store Publication DSH payout projection did not bind the WLT destination" }
+  if ($payoutPartner.destinationMethod -ne "official_wallet") { throw "Partner Onboarding & Store Publication DSH payout projection is not official_wallet" }
+  if ([string]$payoutPartner.maskedDestinationReference -ne [string]$payoutDestination.maskedDestinationReference) { throw "Partner Onboarding & Store Publication DSH payout mask diverged from WLT" }
+}
 
-# Exact retry must replay the same WLT destination and must not cause a second
-# DSH partner-version increment.
-$payoutReplay = Invoke-RestMethod "http://localhost:58080/dsh/partner/me/finance/payout-destination" -Method Put -Headers $payoutHeaders -ContentType "application/json" -Body $payoutBody -TimeoutSec 10
-if ([string]$payoutReplay.payoutDestination.id -ne [string]$payoutDestination.id) { throw "Partner Onboarding & Store Publication payout idempotent replay created another destination" }
-$payoutPartnerReplay = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)" -Headers $fieldHeaders -TimeoutSec 10
-if ([int]$payoutPartnerReplay.version -ne $payoutProjectionVersion) { throw "Partner Onboarding & Store Publication payout replay caused DSH version churn" }
+$visitEvidencePath = Join-Path $env:TEMP ("dsh-partner-visit-" + [guid]::NewGuid().ToString("N") + ".jpg")
+[System.IO.File]::WriteAllBytes($visitEvidencePath, [System.Text.Encoding]::UTF8.GetBytes("partner visit evidence smoke payload"))
+try {
+  $visitEvidenceUpload = Invoke-RestMethod "http://localhost:58080/dsh/field/media/uploads" -Method Post -Headers $fieldHeaders -Form @{
+    partnerId = [string]$partnerDraft.id
+    storeId = $smokeStoreId
+    mediaKind = "visit_evidence"
+    file = Get-Item -LiteralPath $visitEvidencePath
+  } -TimeoutSec 20
+} finally {
+  if (Test-Path -LiteralPath $visitEvidencePath) { Remove-Item -LiteralPath $visitEvidencePath -Force }
+}
+if ([string]::IsNullOrWhiteSpace([string]$visitEvidenceUpload.mediaRef)) { throw "Partner Onboarding & Store Publication visit evidence upload did not return mediaRef" }
 
 $visitBody = @{
   storeId = $smokeStoreId
   visitNotes = "field visit for Partner Onboarding & Store Publication smoke"
   locationLatitude = 15.3229
   locationLongitude = 44.2075
-  evidenceMediaRefs = @("media_visit_smoke_front.jpg")
+  evidenceMediaRefs = @([string]$visitEvidenceUpload.mediaRef)
 } | ConvertTo-Json
 
 $visit = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/visits" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $visitBody -TimeoutSec 10

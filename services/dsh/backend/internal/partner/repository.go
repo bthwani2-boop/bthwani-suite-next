@@ -511,11 +511,11 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 	err = tx.QueryRow(`
 		INSERT INTO dsh_partner_field_visits
 			(partner_id, store_id, field_actor_id, visit_status, visit_notes, location_latitude, location_longitude, evidence_media_refs, submitted_at)
-		VALUES ($1,$2,$3,'submitted',$4,$5,$6,ARRAY[]::TEXT[],NOW())
+		VALUES ($1,$2,$3,'submitted',$4,$5,$6,$7,NOW())
 		RETURNING id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
 		          visit_notes, location_latitude, location_longitude, evidence_media_refs,
 		          version, created_at, submitted_at`,
-		input.PartnerID, storeIDSQL, input.FieldActorID, input.VisitNotes, latSQL, lonSQL,
+		input.PartnerID, storeIDSQL, input.FieldActorID, input.VisitNotes, latSQL, lonSQL, pq.Array(mediaRefs),
 	).Scan(&v.ID, &v.PartnerID, &storeIDOut, &v.FieldActorID, &v.VisitStatus,
 		&v.VisitNotes, &lat, &lon, pq.Array(&v.EvidenceMediaRefs),
 		&v.Version, &v.CreatedAt, &submittedAt)

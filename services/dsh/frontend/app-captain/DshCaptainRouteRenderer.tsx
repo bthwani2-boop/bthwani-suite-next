@@ -28,7 +28,6 @@ import {
   CaptainOrdersInboxScreen,
   CaptainPickupConfirmSheet,
 } from "./orders/DshCaptainOrdersScreen";
-import { DshCaptainMapScreen } from "./orders/DshCaptainMapScreen";
 import { DshCaptainPoDSubmissionScreen } from "./orders/DshCaptainPoDSubmissionScreen";
 import { WltCaptainFinanceScreen } from "./finance/WltCaptainFinanceScreen";
 import { DshCaptainSupportDirectoryScreen } from "./account/DshCaptainOperationsScreen";
@@ -202,7 +201,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
   const captainEntryState = inboxState === "loading" ? "loading" : inboxState === "error" ? "error" : "ready";
 
   function renderFlow(): React.ReactNode {
-    if (route === "entry") {
+    if (route === "home" || route === "entry") {
       return (
         <DshEntryScreen
           state={captainEntryState}
@@ -244,11 +243,6 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
           <Button label="فتح صندوق الطلبات" tone="secondary" fullWidth={false} onPress={onGoToInbox} />
         </Box>
       );
-    }
-
-    if (route === "map") {
-      if (!hasActiveAssignment) return <MissingAssignment onGoToInbox={onGoToInbox} />;
-      return <DshCaptainMapScreen assignmentId={activeAssignmentId} orderId={activeOrderId} captainId={captainRuntimeId} currentStageLabel={activeSummary?.currentStageLabel ?? "مهمة نشطة"} onBack={onBack} onPushLocation={onPushLocation} />;
     }
 
     if (route === "pod-submission") {

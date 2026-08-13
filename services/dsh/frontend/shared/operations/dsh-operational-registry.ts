@@ -931,7 +931,7 @@ const CAPTAIN_FLOWS: readonly DshFlowRegistryEntry[] = [
     visibleSurfaces: ['app-captain'],
     visibility: 'primary',
     routeId: 'map',
-    screenHint: 'DshCaptainMapScreen',
+    screenHint: 'OperationalCaptainExecutionScreen',
     onDemandPolicy: 'summary-only',
     allowedActions: ['متابعة المسار', 'تحديث الموقع'],
     forbiddenActions: ['تضمين payload ثقيل في state دائمًا'],

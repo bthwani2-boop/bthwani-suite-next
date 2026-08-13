@@ -199,6 +199,7 @@ func HandleGetCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		row := db.QueryRowContext(r.Context(), `SELECT `+governedDestinationReturning+`
+			, material_identity_hash
 			FROM wlt_payout_destinations
 			WHERE operator_context_id=$1 AND owner_actor_type=$2 AND owner_actor_id=$3 AND active=true
 			ORDER BY created_at DESC LIMIT 1`, operatorContextID, actorType, actorID)

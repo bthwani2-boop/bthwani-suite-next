@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, StyleSheet, Text, View } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
 import {
@@ -12,6 +12,8 @@ import {
 import { colorRoles } from "@bthwani/ui-kit";
 
 import { DshCaptainSurface } from "../../../../services/dsh/frontend/app-captain";
+import { captainNavigationTargetFromDeepLink } from "../../../../services/dsh/frontend/shared/delivery/captain-deep-link";
+import type { DshCaptainNavigationCommand } from "../../../../services/dsh/frontend/shared/delivery/captain.surface.types";
 import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
 import { useDshMobilePushRegistration } from "../../../../services/dsh/frontend/shared/notifications/use-mobile-push-registration";
 import {
@@ -118,7 +120,25 @@ function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const identity = useIdentitySession();
+  const [navigationCommand, setNavigationCommand] = useState<DshCaptainNavigationCommand>({ token: 0, target: "home" });
   useDshMobilePushRegistration(identity.state.kind, "app-captain", "bthwani-captain-next");
+
+  useEffect(() => {
+    let active = true;
+    const consumeDeepLink = (url: string) => {
+      const target = captainNavigationTargetFromDeepLink(url);
+      if (!active || !target) return;
+      setNavigationCommand({ token: Date.now(), target });
+    };
+    void Linking.getInitialURL().then((url) => {
+      if (url) consumeDeepLink(url);
+    });
+    const subscription = Linking.addEventListener("url", ({ url }) => consumeDeepLink(url));
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, []);
 
   const logout = () => {
     void identity.logout();
@@ -129,7 +149,7 @@ function AppContent() {
       <IdentitySessionGate requiredRole="captain" requiredSurface="app-captain">
         <WorkforceAccessGate expectedKind="captain" onLogout={logout}>
           <UnifiedReadinessWrapper>
-            <DshCaptainSurface command={{ token: 0, target: "home" }} />
+            <DshCaptainSurface command={navigationCommand} />
           </UnifiedReadinessWrapper>
         </WorkforceAccessGate>
       </IdentitySessionGate>

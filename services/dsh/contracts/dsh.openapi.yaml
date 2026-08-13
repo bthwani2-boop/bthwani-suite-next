@@ -108,6 +108,12 @@ paths:
     $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1courier-settings"
   /dsh/partner/stores/{storeId}/coverage-zones:
     $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1coverage-zones"
+  /dsh/partner/stores/{storeId}/team:
+    $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1team"
+  /dsh/partner/stores/{storeId}/team/invites:
+    $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1team~1invites"
+  /dsh/partner/stores/{storeId}/team/members/{memberId}/action:
+    $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1team~1members~1{memberId}~1action"
   /dsh/field/stores/{storeId}/verifications:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1stores~1{storeId}~1verifications"
   /dsh/captain/stores/{storeId}/pickup-readiness:

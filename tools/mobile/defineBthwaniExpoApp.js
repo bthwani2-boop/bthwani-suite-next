@@ -154,8 +154,11 @@ function buildPlugins(appKey, features, sentry) {
         microphonePermission: needsMicrophone ? PERMISSION_TEXT.microphone : false,
       },
     ],
-    "expo-document-picker",
   ];
+
+  if (features.includes("documentPicker") && hasRuntimeDependency(appKey, "expo-document-picker")) {
+    plugins.push("expo-document-picker");
+  }
 
   const sentryPlugin = buildSentryPlugin(sentry);
   if (sentryPlugin) plugins.push(sentryPlugin);
@@ -207,7 +210,7 @@ function buildPlugins(appKey, features, sentry) {
     ]);
   }
 
-  if (hasCamera) {
+  if (hasCamera && hasRuntimeDependency(appKey, "expo-camera")) {
     plugins.push([
       "expo-camera",
       {

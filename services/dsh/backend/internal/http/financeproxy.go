@@ -27,8 +27,8 @@ func (s *protectedStoreServer) handlePartnerFinanceSettlements(w http.ResponseWr
 	if !ok {
 		return
 	}
-	scopes, err := s.workforce.GetActorScopes(r.Context(), actor.ID, actor.OperatorContextID, "partner")
-	if err != nil || len(scopes.PartnerIDs) == 0 {
+	row, _, err := store.ResolveActorStore(r.Context(), s.db, s.workforce, actor)
+	if err != nil || row == nil || row.PartnerID == "" {
 		store.SendError(w, http.StatusForbidden, "NO_PARTNER_ASSIGNMENT", "actor has no partner assignments")
 		return
 	}
@@ -38,7 +38,7 @@ func (s *protectedStoreServer) handlePartnerFinanceSettlements(w http.ResponseWr
 			query.Set(key, v)
 		}
 	}
-	query.Set("partnerId", scopes.PartnerIDs[0])
+	query.Set("partnerId", row.PartnerID)
 	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.settlements.read", "/wlt/settlements", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
@@ -54,13 +54,13 @@ func (s *protectedStoreServer) handlePartnerFinanceSettlementSummary(w http.Resp
 	if !ok {
 		return
 	}
-	scopes, err := s.workforce.GetActorScopes(r.Context(), actor.ID, actor.OperatorContextID, "partner")
-	if err != nil || len(scopes.PartnerIDs) == 0 {
+	row, _, err := store.ResolveActorStore(r.Context(), s.db, s.workforce, actor)
+	if err != nil || row == nil || row.PartnerID == "" {
 		store.SendError(w, http.StatusForbidden, "NO_PARTNER_ASSIGNMENT", "actor has no partner assignments")
 		return
 	}
 	query := url.Values{}
-	query.Set("partnerId", scopes.PartnerIDs[0])
+	query.Set("partnerId", row.PartnerID)
 	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.settlements.read", "/wlt/settlements/summary", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")

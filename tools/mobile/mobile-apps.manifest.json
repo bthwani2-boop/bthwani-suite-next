@@ -34,7 +34,7 @@
       "androidPackage": "com.bthwani.captain.next",
       "iosBundleIdentifier": "com.bthwani.captain.next",
       "projectId": "07382a76-4dc5-460f-b4a7-7105d724bae6",
-      "features": ["router", "updates", "constants", "application", "device", "crypto", "image", "battery", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "location", "backgroundLocation", "maps", "keepAwake", "sqlite", "taskManager", "imageManipulator", "sharing", "webBrowser"]
+      "features": ["updates", "constants", "crypto", "battery", "splashScreen", "imagePicker", "secureStore", "notifications", "camera", "location", "maps"]
     },
     "app-field": {
       "name": "بثواني الميدان",

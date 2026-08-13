@@ -66,5 +66,27 @@
     "react-native-screens": "4.26.2",
     "react-native-svg": "15.15.4",
     "react-native-worklets": "0.8.3"
+  },
+  "x-bthwani-deprecations": {
+    "nativeDependencies": {
+      "expo-application": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
+      "expo-asset": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
+      "expo-audio": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
+      "expo-device": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
+      "expo-document-picker": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
+      "expo-file-system": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
+      "expo-haptics": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
+      "expo-image": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
+      "expo-image-manipulator": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
+      "expo-keep-awake": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
+      "expo-linking": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
+      "expo-local-authentication": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
+      "expo-localization": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
+      "expo-router": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
+      "expo-sharing": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
+      "expo-sqlite": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
+      "expo-video": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
+      "expo-web-browser": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" }
+    }
   }
 }
