@@ -3,7 +3,7 @@
   "service": "identity",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "identity-022_refresh_rotation_concurrency.sql",
+  "cutover": "identity-023_actor_lifecycle_suspension_audit.sql",
   "migrations": [
     {"ordinal":1,"file":"identity-001_sessions.sql","sha256":"993aec367346e43914a0b1d692c8d89b93840d06eea1bc9d952da2cf390147e9","historicalPrefix":"001","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":2,"file":"identity-002_activation_challenges.sql","sha256":"0b5bdd503a3327b547f00af71560c8eda7a1ecc7488542e4ceff0c88430145ac","historicalPrefix":"002","state":"HISTORICAL_IMMUTABLE"},
@@ -26,6 +26,7 @@
     {"ordinal":19,"file":"identity-019_session_family.sql","sha256":"a3c6fd01630356aefdff8d5923fb956a7c5fa36a477ecdcdb80b93d29de8a56c","historicalPrefix":"019","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":20,"file":"identity-020_rbac_foundation.sql","sha256":"2c610a5bed11b4c9302ff732948bf252d98568bb880f11e59c930af2031b5e8f","historicalPrefix":"020","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":21,"file":"identity-021_actor_lifecycle_status.sql","sha256":"c9b2c315845623d1874e5d07c319361ee13403b826769a94f2f03d4db70cea10","historicalPrefix":"021","state":"HISTORICAL_IMMUTABLE"},
-    {"ordinal":22,"file":"identity-022_refresh_rotation_concurrency.sql","sha256":"f7a08c031697a90d0c4f7dc717652ca59c85f05aaf8e988dfb8054709c00ea03","historicalPrefix":"022","state":"ACTIVE"}
+    {"ordinal":22,"file":"identity-022_refresh_rotation_concurrency.sql","sha256":"f7a08c031697a90d0c4f7dc717652ca59c85f05aaf8e988dfb8054709c00ea03","historicalPrefix":"022","state":"HISTORICAL_IMMUTABLE"},
+    {"ordinal":23,"file":"identity-023_actor_lifecycle_suspension_audit.sql","sha256":"b8bb72bc084101e35c837240360107bd9252a39cba97e924160bf5f6d9a4c963","historicalPrefix":"023","state":"ACTIVE"}
   ]
 }

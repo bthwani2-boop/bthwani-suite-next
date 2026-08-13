@@ -1089,14 +1089,13 @@ func (r *Repository) ReactivateActor(ctx context.Context, actorID, requestedByAc
 
 	var status ActorLifecycleStatus
 	var version int
-	var passwordHash string
 	var operatorContextID string
 	var roles pq.StringArray
 	err = tx.QueryRowContext(ctx, `
-		SELECT status, version, password_hash, operator_context_id, roles
+		SELECT status, version, operator_context_id, roles
 		FROM identity_actors
 		WHERE id = $1
-		FOR UPDATE`, actorID).Scan(&status, &version, &passwordHash, &operatorContextID, &roles)
+		FOR UPDATE`, actorID).Scan(&status, &version, &operatorContextID, &roles)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrActorNotFound
@@ -1124,10 +1123,6 @@ func (r *Repository) ReactivateActor(ctx context.Context, actorID, requestedByAc
 		}
 		return ErrActorAlreadyActive
 	}
-	if strings.TrimSpace(passwordHash) == "" {
-		return ErrInvalidActorTransition
-	}
-
 	_, err = tx.ExecContext(ctx, `UPDATE identity_actors SET status = 'ACTIVE', version = version + 1, updated_at = now() WHERE id = $1`, actorID)
 	if err != nil {
 		return err

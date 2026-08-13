@@ -62,7 +62,7 @@ func TestActorLifecycleRevokesAuthenticationAndPreservesAuditDBIntegration(t *te
 
 	insertLifecycleTestActor(t, db, lifecycleTestActor{
 		id: targetID, username: "j003.field", phone: "+967700009301",
-		operatorContextID: operatorContextID, role: "field", passwordHash: "activated-password-hash", status: ActorStatusActive, version: 1,
+		operatorContextID: operatorContextID, role: "field", passwordHash: "", status: ActorStatusActive, version: 1,
 	})
 	insertLifecycleTestActor(t, db, lifecycleTestActor{
 		id: requesterID, username: "j003.operator", phone: "+967700009302",
@@ -220,7 +220,7 @@ func TestActorLifecycleConcurrentExactReplayDBIntegration(t *testing.T) {
 	var count int
 	if err := db.QueryRow(`
 		SELECT count(*) FROM identity_actor_lifecycle_events
-		WHERE actor_id = $1 AND status = 'deactivated' AND correlation_id = 'j003-concurrent'`, targetID).Scan(&count); err != nil {
+		WHERE actor_id = $1 AND status = 'suspended' AND correlation_id = 'j003-concurrent'`, targetID).Scan(&count); err != nil {
 		t.Fatalf("count concurrent lifecycle events: %v", err)
 	}
 	if count != 1 {
