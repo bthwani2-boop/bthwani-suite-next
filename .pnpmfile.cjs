@@ -2,7 +2,7 @@
 
 const EXPO_SDK_56_FORCED = Object.freeze({
   "expo-background-task": "~56.0.23",
-  "expo-constants": "~56.0.22",
+  "expo-constants": "~56.0.23",
   "expo-linking": "~56.0.16",
   "expo-task-manager": "~56.0.23",
 });
@@ -35,7 +35,7 @@ function applyCompilerApiBridge(pkg) {
   if (pkg.peerDependenciesMeta) delete pkg.peerDependenciesMeta.typescript;
   pkg.dependencies = {
     ...pkg.dependencies,
-    typescript: "npm:@typescript/typescript6@6.0.2",
+    typescript: "npm:@typescript/typescript6@6.0.3",
   };
   return pkg;
 }

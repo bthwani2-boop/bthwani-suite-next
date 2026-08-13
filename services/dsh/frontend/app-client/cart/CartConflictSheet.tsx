@@ -24,7 +24,7 @@ export const CartConflictSheet: React.FC<CartConflictSheetProps> = ({
           <View style={styles.warningBadge}>
             <Text role="bodyStrong" style={styles.warningMark}>!</Text>
           </View>
-          <Text role="title" style={styles.title}>تضارب في السلة</Text>
+          <Text role="titleMd" style={styles.title}>تضارب في السلة</Text>
         </View>
         <Text role="body" style={styles.description}>
           تم تعديل سلتك من جهاز آخر أو أثناء انقطاع الاتصال. نمنع التعديلات المتضاربة حتى لا يتم تأكيد طلب غير صحيح.

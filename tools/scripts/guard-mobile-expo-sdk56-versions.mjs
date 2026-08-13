@@ -12,11 +12,11 @@ const appPackagePaths = [
 ];
 
 const expoSdk56Policy = Object.freeze({
-  expo: "~56.0.17",
+  expo: "~56.0.19",
   "expo-background-task": "~56.0.23",
-  "expo-constants": "~56.0.22",
+  "expo-constants": "~56.0.23",
   "expo-linking": "~56.0.16",
-  "expo-router": "~56.2.16",
+  "expo-router": "~56.2.18",
   "expo-task-manager": "~56.0.23",
   "react-native": "0.85.3",
   "react-native-maps": "1.27.2",
@@ -24,7 +24,7 @@ const expoSdk56Policy = Object.freeze({
 
 const forcedPnpmPolicy = Object.freeze({
   "expo-background-task": "~56.0.23",
-  "expo-constants": "~56.0.22",
+  "expo-constants": "~56.0.23",
   "expo-linking": "~56.0.16",
   "expo-task-manager": "~56.0.23",
 });
