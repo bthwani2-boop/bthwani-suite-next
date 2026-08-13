@@ -10,6 +10,7 @@ import type { DshFieldSurfaceProps } from '../dsh-field.routes';
 import { DshFieldRouteRenderer } from './DshFieldRouteRenderer';
 import { useIdentitySession } from '@bthwani/core-identity';
 import { useFieldPartnerOnboardingController } from '../../shared/field-onboarding';
+import type { FieldOnboardingAssignment } from '../../shared/field-assignment';
 import {
   useFieldOfflineSync,
   createFieldVisit,
@@ -28,7 +29,7 @@ function useAndroidBackHandler(onBackPress: () => boolean) {
 
 const FIELD_TAB_BAR_ITEMS: readonly TabBarItem[] = [
   { id: 'stores', label: 'الرئيسية', icon: 'home-outline', activeIcon: 'home' },
-  { id: 'finance', label: 'المالية', icon: 'cash-outline', activeIcon: 'cash' },
+  { id: 'finance', label: 'محفظتي', icon: 'cash-outline', activeIcon: 'cash' },
   { id: 'profile', label: 'حسابي', icon: 'person-outline', activeIcon: 'person' },
 ];
 
@@ -37,6 +38,14 @@ export function DshFieldSurface({ command, onExit, installationId }: DshFieldSur
   const onboardingController = useFieldPartnerOnboardingController();
   const identity = useIdentitySession();
   const insets = useSafeAreaInsets();
+  const openAssignment = React.useCallback((assignment: FieldOnboardingAssignment) => {
+    fieldSurface.actions.pushRoute({ kind: 'onboarding', assignmentPrefill: {
+      id: assignment.id,
+      storeNameHint: assignment.storeNameHint,
+      ...(assignment.phoneHint ? { phoneHint: assignment.phoneHint } : {}),
+      ...(assignment.addressHint ? { addressHint: assignment.addressHint } : {}),
+    } });
+  }, [fieldSurface.actions]);
   const offlineScope = identity.state.kind === 'authenticated' && installationId
     ? {
         actorId: identity.state.identity.subject,
@@ -161,6 +170,7 @@ export function DshFieldSurface({ command, onExit, installationId }: DshFieldSur
           actions={fieldSurface.actions}
           onboardingController={onboardingController}
           identity={identity}
+          onOpenAssignment={openAssignment}
         />
       </View>
 

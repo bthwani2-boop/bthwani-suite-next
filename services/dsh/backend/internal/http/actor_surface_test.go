@@ -46,6 +46,7 @@ func TestRequireActorRejectsSystemSurfaceForMobileRole(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
 			Subject:        "client-1",
+			OperatorContextID: "operator-context-1",
 			Roles:          []string{"client"},
 			AuthState:      "authenticated",
 			SessionID:      "system-session-1",

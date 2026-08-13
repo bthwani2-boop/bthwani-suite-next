@@ -20,6 +20,7 @@ import {
   type DshPartnerDocumentType,
   type DshUpdatePartnerRequest,
 } from "../partner";
+import { linkFieldOnboardingAssignmentDraft } from "../field-assignment";
 import {
   initialDraftState,
   validateIdentityStep,
@@ -37,7 +38,7 @@ export type FieldOnboardingController = {
   updateLocation: (lat: number, lon: number) => void;
   addEvidenceRef: (ref: string) => void;
   /** Validates identity + owner fields and creates the partner draft if it doesn't exist yet. Returns the partner id (existing or newly created), or false if blocked. */
-  ensureDraftCreated: (placeholder?: boolean) => Promise<string | false>;
+  ensureDraftCreated: (placeholder?: boolean, assignmentId?: string) => Promise<string | false>;
   /**
    * Links an already uploaded media reference to the partner document record.
    * partnerIdOverride closes the first-upload race where React state still holds
@@ -118,7 +119,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     }));
   }, []);
 
-  const ensureDraftCreated = useCallback(async (placeholder = false): Promise<string | false> => {
+  const ensureDraftCreated = useCallback(async (placeholder = false, assignmentId?: string): Promise<string | false> => {
     if (state.partnerId) return state.partnerId;
 
     const form = { ...state.form };
@@ -155,6 +156,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         createPartnerMutationContext("field-update-first-store", res.id),
       );
       const readback = assertPartnerReadback(res.id, res.version, await fieldGetPartner(res.id));
+      if (assignmentId) await linkFieldOnboardingAssignmentDraft(assignmentId, readback.id);
       setState((s) => ({
         ...s,
         partnerId: readback.id,

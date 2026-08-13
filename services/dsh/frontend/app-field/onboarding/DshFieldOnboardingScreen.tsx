@@ -100,6 +100,7 @@ function evidenceErrorMessage(error: unknown): string {
 export type DshFieldOnboardingScreenProps = {
   readonly controller?: FieldOnboardingController;
   readonly partnerId?: string;
+  readonly assignmentPrefill?: { readonly id: string; readonly storeNameHint: string; readonly phoneHint?: string; readonly addressHint?: string };
   readonly onBack?: () => void;
   readonly onOpenProducts?: (partnerId: string) => void;
 };
@@ -107,6 +108,7 @@ export type DshFieldOnboardingScreenProps = {
 export function DshFieldOnboardingScreen({
   controller: controllerProp,
   partnerId,
+  assignmentPrefill,
   onBack,
   onOpenProducts,
 }: DshFieldOnboardingScreenProps = {}) {
@@ -123,8 +125,17 @@ export function DshFieldOnboardingScreen({
   const [evidencePreviewUris, setEvidencePreviewUris] = React.useState<Record<string, string | undefined>>({});
 
   React.useEffect(() => {
-    void switchDraft(partnerId);
-  }, [partnerId, switchDraft]);
+    void switchDraft(partnerId).then(() => {
+      if (partnerId || !assignmentPrefill) return;
+      updateForm({
+        legalNameAr: assignmentPrefill.storeNameHint,
+        displayName: assignmentPrefill.storeNameHint,
+        primaryPhone: assignmentPrefill.phoneHint ?? '',
+        addressLine: assignmentPrefill.addressHint ?? '',
+        notes: `مرجع إسناد DSH: ${assignmentPrefill.id}`,
+      });
+    });
+  }, [assignmentPrefill, partnerId, switchDraft, updateForm]);
 
   const pickEvidenceFile = React.useCallback(async (
     source: EvidencePickSource,
@@ -183,7 +194,7 @@ export function DshFieldOnboardingScreen({
 
       let ownerPartnerId = state.partnerId;
       if (!ownerPartnerId) {
-        const created = await controller.ensureDraftCreated();
+        const created = await controller.ensureDraftCreated(false, assignmentPrefill?.id);
         if (!created) {
           setActiveGroup('basics_profile');
           return;
@@ -211,7 +222,7 @@ export function DshFieldOnboardingScreen({
 
   const openCatalogSetup = React.useCallback(async () => {
     if (!onOpenProducts) return;
-    const durablePartnerId = state.partnerId ?? await controller.ensureDraftCreated();
+    const durablePartnerId = state.partnerId ?? await controller.ensureDraftCreated(false, assignmentPrefill?.id);
     if (!durablePartnerId) {
       setActiveGroup('basics_profile');
       return;
@@ -264,7 +275,7 @@ export function DshFieldOnboardingScreen({
       } else if (state.partnerId) {
         void controller.save();
       } else {
-        void controller.ensureDraftCreated();
+        void controller.ensureDraftCreated(false, assignmentPrefill?.id);
       }
       return;
     }
@@ -353,7 +364,7 @@ export function DshFieldOnboardingScreen({
   }
 
   const goToNext = async () => {
-    const created = await controller.ensureDraftCreated();
+    const created = await controller.ensureDraftCreated(false, assignmentPrefill?.id);
     if (!created) {
       setActiveGroup('basics_profile');
       return;

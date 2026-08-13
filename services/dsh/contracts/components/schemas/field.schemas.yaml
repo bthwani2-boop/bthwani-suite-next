@@ -197,3 +197,59 @@ DshCreatePartnerFieldVisitRequest:
     evidenceMediaRefs:
       type: array
       items: { type: string }
+
+DshFieldOnboardingAssignment:
+  type: object
+  required: [id, operatorContextId, fieldActorId, storeNameHint, status, version, createdByActorId, createdAt, updatedAt]
+  properties:
+    id: { type: string, format: uuid }
+    operatorContextId: { type: string }
+    fieldActorId: { type: string }
+    storeNameHint: { type: string }
+    phoneHint: { type: string }
+    addressHint: { type: string }
+    locationLatitude: { type: number, minimum: -90, maximum: 90 }
+    locationLongitude: { type: number, minimum: -180, maximum: 180 }
+    status: { type: string, enum: [assigned, in_progress, draft_linked, cancelled] }
+    draftPartnerId: { type: string }
+    version: { type: integer, minimum: 1 }
+    createdByActorId: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshFieldOnboardingAssignmentListResponse:
+  type: object
+  required: [assignments]
+  properties:
+    assignments:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshFieldOnboardingAssignment" }
+
+DshCreateFieldOnboardingAssignmentRequest:
+  type: object
+  additionalProperties: false
+  required: [fieldActorId, storeNameHint]
+  properties:
+    fieldActorId: { type: string, minLength: 1 }
+    storeNameHint: { type: string, minLength: 1 }
+    phoneHint: { type: string }
+    addressHint: { type: string }
+    locationLatitude: { type: number, minimum: -90, maximum: 90 }
+    locationLongitude: { type: number, minimum: -180, maximum: 180 }
+
+DshFieldOnboardingAssignmentTransitionRequest:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+    reason: { type: string }
+
+DshReassignFieldOnboardingAssignmentRequest:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion, fieldActorId]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+    fieldActorId: { type: string, minLength: 1 }
+    reason: { type: string }

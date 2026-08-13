@@ -904,3 +904,139 @@
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "422":
         description: Invalid transition.
+
+/dsh/operator/field-onboarding-assignments:
+  get:
+    operationId: listOperatorFieldOnboardingAssignments
+    summary: List field onboarding assignments in the authenticated operator context.
+    tags: [ DshFieldOnboardingAssignment ]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Assignment list.
+        content: { application/json: { schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshFieldOnboardingAssignmentListResponse" } } }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+  post:
+    operationId: createFieldOnboardingAssignment
+    summary: Assign a minimal onboarding lead to an active field worker.
+    tags: [ DshFieldOnboardingAssignment ]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: true
+      content: { application/json: { schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreateFieldOnboardingAssignmentRequest" } } }
+    responses:
+      "201":
+        description: Assignment created.
+        content: { application/json: { schema: { type: object, required: [assignment], properties: { assignment: { $ref: "../dsh.openapi.yaml#/components/schemas/DshFieldOnboardingAssignment" } } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "503": { $ref: "../dsh.openapi.yaml#/components/responses/ServiceUnavailable" }
+
+/dsh/operator/field-onboarding-assignments/{assignmentId}/reassign:
+  post:
+    operationId: reassignFieldOnboardingAssignment
+    summary: Reassign an unopened onboarding assignment to another active field worker.
+    tags: [ DshFieldOnboardingAssignment ]
+    security: [{ bearerAuth: [] }]
+    parameters: [{ name: assignmentId, in: path, required: true, schema: { type: string, format: uuid } }]
+    requestBody:
+      required: true
+      content: { application/json: { schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshReassignFieldOnboardingAssignmentRequest" } } }
+    responses:
+      "200": { description: Assignment reassigned. }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/operator/field-onboarding-assignments/{assignmentId}/cancel:
+  post:
+    operationId: cancelFieldOnboardingAssignment
+    summary: Cancel an unopened onboarding assignment while preserving history.
+    tags: [ DshFieldOnboardingAssignment ]
+    security: [{ bearerAuth: [] }]
+    parameters: [{ name: assignmentId, in: path, required: true, schema: { type: string, format: uuid } }]
+    requestBody:
+      required: true
+      content: { application/json: { schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshFieldOnboardingAssignmentTransitionRequest" } } }
+    responses:
+      "200": { description: Assignment cancelled. }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/field/onboarding-assignments:
+  get:
+    operationId: listFieldOnboardingAssignments
+    summary: List assignments owned by the authenticated field worker.
+    tags: [ DshFieldOnboardingAssignment ]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Field assignment list.
+        content: { application/json: { schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshFieldOnboardingAssignmentListResponse" } } }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/field/onboarding-assignments/{assignmentId}:
+  get:
+    operationId: getFieldOnboardingAssignment
+    summary: Read one field-owned onboarding assignment.
+    tags: [ DshFieldOnboardingAssignment ]
+    security: [{ bearerAuth: [] }]
+    parameters: [{ name: assignmentId, in: path, required: true, schema: { type: string, format: uuid } }]
+    responses:
+      "200": { description: Assignment detail. }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/field/onboarding-assignments/{assignmentId}/open:
+  post:
+    operationId: openFieldOnboardingAssignment
+    summary: Open an assignment without creating a partner or store.
+    tags: [ DshFieldOnboardingAssignment ]
+    security: [{ bearerAuth: [] }]
+    parameters: [{ name: assignmentId, in: path, required: true, schema: { type: string, format: uuid } }]
+    requestBody:
+      required: true
+      content: { application/json: { schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshFieldOnboardingAssignmentTransitionRequest" } } }
+    responses:
+      "200": { description: Assignment opened. }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/field/onboarding-assignments/{assignmentId}/draft:
+  post:
+    operationId: convertFieldOnboardingAssignmentToDraft
+    summary: Convert an opened assignment into the canonical field onboarding draft.
+    tags: [ DshFieldOnboardingAssignment ]
+    security: [{ bearerAuth: [] }]
+    parameters: [{ name: assignmentId, in: path, required: true, schema: { type: string, format: uuid } }]
+    requestBody:
+      required: true
+      content: { application/json: { schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreatePartnerRequest" } } }
+    responses:
+      "201": { description: Draft linked to assignment. }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/field/onboarding-assignments/{assignmentId}/draft/{partnerId}:
+  post:
+    operationId: linkFieldOnboardingAssignmentDraft
+    summary: Link the canonical draft created by this field worker to its assignment.
+    tags: [ DshFieldOnboardingAssignment ]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - { name: assignmentId, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: partnerId, in: path, required: true, schema: { type: string } }
+    responses:
+      "200": { description: Assignment linked to the field-owned draft. }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }

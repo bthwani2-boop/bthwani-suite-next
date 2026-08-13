@@ -16,6 +16,11 @@ import {
   Icon,
 } from '@bthwani/ui-kit';
 import { useFieldPartnerDraftsController } from '../../shared/field-onboarding';
+import {
+  listFieldOnboardingAssignments,
+  openFieldOnboardingAssignment,
+  type FieldOnboardingAssignment,
+} from '../../shared/field-assignment';
 import { DshFieldProblemState } from '../components/DshFieldProblemNotice';
 import { ActorNotificationsPanel, useNotificationsController } from '../../shared/notifications';
 import { DshFieldPartnerCard } from '../components/DshFieldPartnerCard';
@@ -25,6 +30,7 @@ type DshFieldPartnersScreenProps = {
   readonly onOpenAccount: () => void;
   readonly onCreatePartner: () => void;
   readonly onOpenWorkQueue: () => void;
+  readonly onOpenAssignment: (assignment: FieldOnboardingAssignment) => void;
 };
 
 type FilterOptionId = 'all' | 'today' | 'ready' | 'follow-up' | 'pending';
@@ -256,6 +262,7 @@ export function DshFieldPartnersScreen({
   onOpenAccount,
   onCreatePartner,
   onOpenWorkQueue,
+  onOpenAssignment,
 }: DshFieldPartnersScreenProps) {
   const identity = useIdentitySession();
   const controller = useFieldPartnerDraftsController();
@@ -266,6 +273,31 @@ export function DshFieldPartnersScreen({
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showSearch, setShowSearch] = React.useState(false);
   const [activeFilter, setActiveFilter] = React.useState<FilterOptionId>('all');
+  const [assignments, setAssignments] = React.useState<readonly FieldOnboardingAssignment[]>([]);
+  const [assignmentError, setAssignmentError] = React.useState<string | null>(null);
+  const [openingAssignmentId, setOpeningAssignmentId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    void listFieldOnboardingAssignments()
+      .then(setAssignments)
+      .catch(() => setAssignmentError('تعذر تحميل مهام onboarding المسندة من DSH'));
+  }, []);
+
+  const openAssignment = React.useCallback(async (assignment: FieldOnboardingAssignment) => {
+    setOpeningAssignmentId(assignment.id);
+    setAssignmentError(null);
+    try {
+      const opened = assignment.status === 'assigned'
+        ? await openFieldOnboardingAssignment(assignment.id, { expectedVersion: assignment.version })
+        : assignment;
+      setAssignments((current) => current.map((item) => item.id === opened.id ? opened : item));
+      onOpenAssignment(opened);
+    } catch {
+      setAssignmentError('تعذر فتح مهمة onboarding؛ أعد تحميل القائمة ثم حاول مجددًا');
+    } finally {
+      setOpeningAssignmentId(null);
+    }
+  }, [onOpenAssignment]);
 
   // Once a partner is visible to clients, its onboarding job is done — it
   // disappears from the field agent's active list immediately.
@@ -398,6 +430,25 @@ export function DshFieldPartnersScreen({
             />
           </View>
         )}
+
+        {assignments.length > 0 ? (
+          <View style={{ paddingHorizontal: spacing[4], paddingTop: spacing[3], gap: spacing[2] }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, textAlign: 'right' }}>مهام onboarding المسندة</Text>
+            {assignments.map((assignment) => (
+              <Pressable
+                key={assignment.id}
+                onPress={() => void openAssignment(assignment)}
+                disabled={openingAssignmentId === assignment.id || assignment.status === 'cancelled'}
+                style={{ padding: spacing[3], borderRadius: radius.md, borderWidth: 1, borderColor: colorRoles.borderSubtle, backgroundColor: colorRoles.surfaceBase, opacity: openingAssignmentId === assignment.id ? 0.6 : 1 }}
+              >
+                <Text style={{ fontWeight: 'bold', textAlign: 'right' }}>{assignment.storeNameHint}</Text>
+                <Text style={{ color: colorRoles.textMuted, textAlign: 'right' }}>{assignment.phoneHint || assignment.addressHint || 'بيانات أولية قابلة للتصحيح'}</Text>
+                <Text style={{ color: colorRoles.brandAction, textAlign: 'right', marginTop: spacing[1] }}>{assignment.status === 'assigned' ? 'فتح المهمة وبدء المسودة' : assignment.status === 'in_progress' ? 'متابعة المسودة' : 'المسودة مرتبطة'}</Text>
+              </Pressable>
+            ))}
+            {assignmentError ? <Text style={{ color: colorRoles.danger, textAlign: 'right' }}>{assignmentError}</Text> : null}
+          </View>
+        ) : null}
 
         {/* Separator */}
         <View style={{ height: spacing[3] }} />

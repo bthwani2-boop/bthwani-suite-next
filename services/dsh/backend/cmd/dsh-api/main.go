@@ -84,6 +84,7 @@ func main() {
 	dshHttp.RegisterOperationalAnalyticsRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterActorNotificationRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterFieldReadinessRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterFieldOnboardingAssignmentRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPartnerFleetMembershipRoutes(router, db, identityClient, wltClient, platformClient, mediaProvider)
 	dshHttp.RegisterPartnerFleetOperatorRoutes(router, db, identityClient, wltClient, platformClient, mediaProvider)
 	dshHttp.RegisterSupportMessageDeliveryRoutes(router, db, identityClient, wltClient, mediaProvider)

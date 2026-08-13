@@ -30,6 +30,7 @@ export * from './delivery/captain.surface.types';
 
 export * from './dispatch';
 export * from './field-onboarding';
+export * from './field-assignment';
 export * from './field-readiness';
 export * from './geo';
 export * as homeDiscovery from './home-discovery';

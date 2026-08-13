@@ -16,6 +16,13 @@
       "sha256": "8abd9b38138675bff4c1283d60467dd0ce9f7cfdc84a8b7ae0d543d9ed0e1c5c",
       "historicalPrefix": "982",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 242,
+      "file": "dsh-999z_field_onboarding_assignments.sql",
+      "sha256": "d8918c42a425f31565efa32f77604c356ba9c65ef2cb5075bd059ebbe8921bf0",
+      "historicalPrefix": "999z",
+      "state": "ACTIVE"
     }
   ]
 }

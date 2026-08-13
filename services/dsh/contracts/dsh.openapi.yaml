@@ -454,6 +454,22 @@ paths:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1stores~1{storeId}~1visits"
   /dsh/field/work-queue:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1work-queue"
+  /dsh/operator/field-onboarding-assignments:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1operator~1field-onboarding-assignments"
+  /dsh/operator/field-onboarding-assignments/{assignmentId}/reassign:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1operator~1field-onboarding-assignments~1{assignmentId}~1reassign"
+  /dsh/operator/field-onboarding-assignments/{assignmentId}/cancel:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1operator~1field-onboarding-assignments~1{assignmentId}~1cancel"
+  /dsh/field/onboarding-assignments:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1onboarding-assignments"
+  /dsh/field/onboarding-assignments/{assignmentId}:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1onboarding-assignments~1{assignmentId}"
+  /dsh/field/onboarding-assignments/{assignmentId}/open:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1onboarding-assignments~1{assignmentId}~1open"
+  /dsh/field/onboarding-assignments/{assignmentId}/draft:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1onboarding-assignments~1{assignmentId}~1draft"
+  /dsh/field/onboarding-assignments/{assignmentId}/draft/{partnerId}:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1onboarding-assignments~1{assignmentId}~1draft~1{partnerId}"
   /dsh/field/visits/{visitId}/complete:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1visits~1{visitId}~1complete"
   /dsh/field/visits/{visitId}/checks:
@@ -1415,6 +1431,16 @@ components:
       $ref: "./components/schemas/common.schemas.yaml#/DshEscalationsResponse"
     DshFieldWorkQueueResponse:
       $ref: "./components/schemas/field.schemas.yaml#/DshFieldWorkQueueResponse"
+    DshFieldOnboardingAssignment:
+      $ref: "./components/schemas/field.schemas.yaml#/DshFieldOnboardingAssignment"
+    DshFieldOnboardingAssignmentListResponse:
+      $ref: "./components/schemas/field.schemas.yaml#/DshFieldOnboardingAssignmentListResponse"
+    DshCreateFieldOnboardingAssignmentRequest:
+      $ref: "./components/schemas/field.schemas.yaml#/DshCreateFieldOnboardingAssignmentRequest"
+    DshFieldOnboardingAssignmentTransitionRequest:
+      $ref: "./components/schemas/field.schemas.yaml#/DshFieldOnboardingAssignmentTransitionRequest"
+    DshReassignFieldOnboardingAssignmentRequest:
+      $ref: "./components/schemas/field.schemas.yaml#/DshReassignFieldOnboardingAssignmentRequest"
     DshCreateEscalationRequest:
       $ref: "./components/schemas/common.schemas.yaml#/DshCreateEscalationRequest"
     DshUpdateEscalationRequest:
