@@ -37,6 +37,13 @@
       "sha256": "3a1064a6686613f8a72c73ff0d749b672dd1adc693d2b38ec63a514506fb0110",
       "historicalPrefix": "999b",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 245,
+      "file": "dsh-999c_onboarding_collaboration.sql",
+    "sha256": "39dba4cbba9c40837edd43a342ea30805fc68d71d498c9cca5a13d091d114181",
+      "historicalPrefix": "999c",
+      "state": "ACTIVE"
     }
   ]
 }

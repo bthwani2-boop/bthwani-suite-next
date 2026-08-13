@@ -149,3 +149,108 @@ DshSupportAnalyticsResponse:
       items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshTicketCategoryCount" }
     period: { type: string }
     generatedAt: { type: string, format: date-time }
+
+DshOnboardingCollaborationThread:
+  type: object
+  required: [id, operatorContextId, partnerId, status, createdByActorId, version, createdAt, updatedAt]
+  properties:
+    id: { type: string, format: uuid }
+    operatorContextId: { type: string }
+    partnerId: { type: string }
+    assignmentId: { type: string, format: uuid }
+    documentId: { type: string }
+    status: { type: string, enum: [open, resolved, closed] }
+    createdByActorId: { type: string }
+    version: { type: integer, minimum: 1 }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshOnboardingCollaborationMessage:
+  type: object
+  required: [id, threadId, senderActorId, senderSurface, body, attachmentMediaRefs, clientMessageId, sequenceNumber, createdAt]
+  properties:
+    id: { type: string, format: uuid }
+    threadId: { type: string, format: uuid }
+    senderActorId: { type: string }
+    senderSurface: { type: string, enum: [app-field, control-panel] }
+    body: { type: string, minLength: 1, maxLength: 4000 }
+    attachmentMediaRefs: { type: array, items: { type: string }, maxItems: 10 }
+    clientMessageId: { type: string, minLength: 1, maxLength: 240 }
+    sequenceNumber: { type: integer, minimum: 1 }
+    createdAt: { type: string, format: date-time }
+
+DshOnboardingChangeRequest:
+  type: object
+  required: [id, threadId, targetKind, targetId, requestedByActorId, reason, status, createdAt]
+  properties:
+    id: { type: string, format: uuid }
+    threadId: { type: string, format: uuid }
+    targetKind: { type: string, enum: [draft, document, assignment] }
+    targetId: { type: string }
+    requestedByActorId: { type: string }
+    reason: { type: string, minLength: 5, maxLength: 2000 }
+    status: { type: string, enum: [open, responded, resolved, cancelled] }
+    resolvedByActorId: { type: string }
+    resolvedAt: { type: [string, 'null'], format: date-time }
+    createdAt: { type: string, format: date-time }
+
+DshOnboardingCollaborationResponse:
+  type: object
+  required: [thread, partnerVersion, messages, changeRequests, unreadCount]
+  properties:
+    thread: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOnboardingCollaborationThread" }
+    partnerVersion: { type: integer, minimum: 1 }
+    messages:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOnboardingCollaborationMessage" }
+    changeRequests:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOnboardingChangeRequest" }
+    unreadCount: { type: integer, minimum: 0 }
+
+DshOnboardingCollaborationMessageRequest:
+  type: object
+  additionalProperties: false
+  required: [body, clientMessageId]
+  properties:
+    body: { type: string, minLength: 1, maxLength: 4000 }
+    attachmentMediaRefs: { type: array, items: { type: string }, maxItems: 10, uniqueItems: true }
+    clientMessageId: { type: string, minLength: 1, maxLength: 240 }
+
+DshOnboardingChangeRequestRequest:
+  type: object
+  additionalProperties: false
+  required: [targetKind, targetId, reason, expectedVersion, toStatus]
+  properties:
+    targetKind: { type: string, enum: [draft, document, assignment] }
+    targetId: { type: string }
+    reason: { type: string, minLength: 5, maxLength: 2000 }
+    expectedVersion: { type: integer, minimum: 1 }
+    toStatus: { type: string, enum: [documents_missing, ops_rejected] }
+    idempotencyKey: { type: string }
+    correlationId: { type: string }
+
+DshOnboardingWorkloadItem:
+  type: object
+  required: [assignmentId, fieldActorId, assignmentStatus, storeNameHint, openChangeRequests, unreadCount, updatedAt]
+  properties:
+    assignmentId: { type: string, format: uuid }
+    fieldActorId: { type: string }
+    assignmentStatus: { type: string, enum: [assigned, in_progress, draft_linked, cancelled] }
+    storeNameHint: { type: string }
+    phoneHint: { type: string }
+    addressHint: { type: string }
+    partnerId: { type: string }
+    partnerStatus: { type: string }
+    partnerVersion: { type: integer, minimum: 0 }
+    openChangeRequests: { type: integer, minimum: 0 }
+    unreadCount: { type: integer, minimum: 0 }
+    updatedAt: { type: string, format: date-time }
+
+DshOnboardingWorkloadResponse:
+  type: object
+  required: [items]
+  properties:
+    items:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOnboardingWorkloadItem" }

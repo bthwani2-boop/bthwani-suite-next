@@ -5,10 +5,14 @@ import { CpBadge, CpButton, CpSelect, CpStatePanel, CpTextInput } from "@bthwani
 import { Text } from "@bthwani/ui-kit";
 import {
   cancelFieldOnboardingAssignment,
+  addOperatorOnboardingMessage,
+  createOnboardingChangeRequest,
   createFieldOnboardingAssignment,
+  getOperatorOnboardingCollaboration,
   listOperatorFieldOnboardingAssignments,
   reassignFieldOnboardingAssignment,
   type FieldOnboardingAssignment,
+  type OnboardingCollaborationView,
 } from "../../../shared/field-assignment";
 import { listFieldAgents, type FieldAgent } from "../../../shared/workforce";
 import { GoogleMapsWebCanvas } from "../../maps/GoogleMapsWebCanvas";
@@ -19,6 +23,75 @@ const STATUS_LABELS: Record<FieldOnboardingAssignment["status"], string> = {
   draft_linked: "مرتبطة بمسودة",
   cancelled: "ملغاة",
 };
+
+function CollaborationPanel({ item }: { readonly item: FieldOnboardingAssignment }) {
+  const [view, setView] = useState<OnboardingCollaborationView | null>(null);
+  const [body, setBody] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+
+  async function load() {
+    if (!item.draftPartnerId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const next = await getOperatorOnboardingCollaboration(item.draftPartnerId, item.id);
+      setView(next);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "تعذر تحميل سجل المتابعة");
+    } finally { setBusy(false); }
+  }
+
+  async function send() {
+    if (!item.draftPartnerId || !body.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await addOperatorOnboardingMessage(item.draftPartnerId, { body: body.trim(), clientMessageId: `cp-${item.id}-${Date.now()}` }, item.id);
+      setBody("");
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "تعذر إرسال الملاحظة");
+    } finally { setBusy(false); }
+  }
+
+  async function returnForChanges() {
+    if (!item.draftPartnerId || !view || !view.thread.version) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await createOnboardingChangeRequest(item.draftPartnerId, {
+        targetKind: "draft",
+        targetId: item.draftPartnerId,
+        reason: "يرجى استكمال الملاحظات المرفقة ثم إعادة الإرسال للمراجعة.",
+        expectedVersion: view.partnerVersion,
+        toStatus: "documents_missing",
+      }, item.id);
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "تعذر إعادة الملف للميداني");
+    } finally { setBusy(false); }
+  }
+
+  if (!item.draftPartnerId) return <Text role="caption" style={{ color: "var(--bthwani-control-panel-text-muted)" }}>يظهر سجل المتابعة بعد ربط المسودة بالمتجر.</Text>;
+  return (
+    <div style={{ borderTop: "1px solid var(--bthwani-control-panel-border)", paddingTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+      <CpButton disabled={busy} onClick={() => { setOpen((current) => !current); if (!open) void load(); }}>{open ? "إخفاء سجل المتابعة" : "فتح سجل المتابعة"}</CpButton>
+      {open ? <>
+        {busy && !view ? <Text role="caption">جارٍ تحميل سجل المتابعة…</Text> : null}
+        {view?.messages.map((message) => <div key={message.id} style={{ padding: 10, borderRadius: 10, background: "var(--bthwani-control-panel-surface-muted, #f7f8fa)" }}><Text role="bodySm">{message.body}</Text><Text role="caption" style={{ color: "var(--bthwani-control-panel-text-muted)" }}>{message.senderSurface === "app-field" ? "الميداني" : "المشرف"} · {new Date(message.createdAt).toLocaleString("ar-YE")}</Text></div>)}
+        {view && view.messages.length === 0 ? <Text role="caption">لا توجد ملاحظات بعد. اكتب ملاحظة مرتبطة بهذه المسودة.</Text> : null}
+        <CpTextInput value={body} onChange={setBody} placeholder="ملاحظة مرتبطة بهذه المسودة" aria-label="ملاحظة المتابعة" />
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <CpButton disabled={busy || !body.trim()} onClick={() => void send()}>إرسال الملاحظة</CpButton>
+          {view ? <CpButton variant="danger" disabled={busy} onClick={() => void returnForChanges()}>إعادة للميداني مع ملاحظات</CpButton> : null}
+        </div>
+        {error ? <Text role="caption" style={{ color: "var(--bthwani-control-panel-danger, #b42318)" }}>{error}</Text> : null}
+      </> : null}
+    </div>
+  );
+}
 
 export function FieldAssignmentWorkspace() {
   const [agents, setAgents] = useState<readonly FieldAgent[]>([]);
@@ -172,6 +245,7 @@ export function FieldAssignmentWorkspace() {
             <span aria-hidden="true">📍</span>
             <Text role="bodySm">{item.locationLatitude !== undefined && item.locationLongitude !== undefined ? `الموقع مثبت: ${item.locationLatitude.toFixed(6)}، ${item.locationLongitude.toFixed(6)}` : "لم يُثبت موقع جغرافي بعد"}</Text>
           </div>
+          <CollaborationPanel item={item} />
           {item.status !== "draft_linked" && item.status !== "cancelled" ? (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <CpSelect value={reassigningId ?? item.fieldActorId} onChange={setReassigningId} options={agentOptions.filter((option) => option.value !== "")} aria-label="إعادة إسناد الميداني" />

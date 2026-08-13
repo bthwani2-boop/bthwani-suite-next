@@ -213,6 +213,79 @@
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
+/dsh/field/partners/{partnerId}/collaboration/read:
+  post:
+    operationId: markDshFieldOnboardingCollaborationRead
+    summary: Advance the field actor read cursor for an onboarding thread.
+    tags: [DshPartnerActivation]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - { name: partnerId, in: path, required: true, schema: { type: string } }
+      - { name: threadId, in: query, required: true, schema: { type: string, format: uuid } }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [sequence]
+            properties:
+              sequence: { type: integer, minimum: 0 }
+    responses:
+      "200": { description: Read cursor advanced. }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/field/onboarding/workload:
+  get:
+    operationId: listDshFieldOnboardingWorkload
+    summary: List the authenticated field actor's onboarding workload.
+    tags: [DshPartnerActivation]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Field-scoped onboarding workload.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOnboardingWorkloadResponse" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/field/partners/{partnerId}/collaboration:
+  get:
+    operationId: getDshFieldOnboardingCollaboration
+    summary: Read the field actor's object-scoped onboarding collaboration thread.
+    tags: [DshPartnerActivation]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - { name: partnerId, in: path, required: true, schema: { type: string } }
+      - { name: assignmentId, in: query, required: false, schema: { type: string, format: uuid } }
+      - { name: documentId, in: query, required: false, schema: { type: string } }
+    responses:
+      "200":
+        description: Contextual collaboration readback.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOnboardingCollaborationResponse" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  post:
+    operationId: addDshFieldOnboardingCollaborationMessage
+    summary: Add a field response to the object-scoped onboarding thread.
+    tags: [DshPartnerActivation]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - { name: partnerId, in: path, required: true, schema: { type: string } }
+      - { name: assignmentId, in: query, required: false, schema: { type: string, format: uuid } }
+      - { name: documentId, in: query, required: false, schema: { type: string } }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOnboardingCollaborationMessageRequest" }
+    responses:
+      "201": { description: Field response created idempotently. }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
 /dsh/field/finance/wallet:
   get:
     operationId: GETDshFieldFinanceWallet

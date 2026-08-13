@@ -28,6 +28,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("GET /dsh/home-discovery", homediscovery.HandleHomeDiscovery(db, respCache))
 	mux.HandleFunc("POST /dsh/home-discovery/events", homediscovery.HandleHomeContentEvent(db))
 	protected := newProtectedStoreServer(db, identityClient, wltClient, platformClient, mediaProvider)
+	onboardingCollaborationRoutes(mux, protected)
 	mux.HandleFunc("POST /dsh/field/media/uploads", protected.enforceFieldReadinessGate(protected.handleFieldMediaUpload))
 	mux.HandleFunc("GET /dsh/media", protected.handleMediaDownload)
 	mux.HandleFunc("GET /dsh/store-context", protected.handleStoreContext)

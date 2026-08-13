@@ -456,6 +456,14 @@ paths:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1work-queue"
   /dsh/operator/field-onboarding-assignments:
     $ref: "./paths/field.paths.yaml#/~1dsh~1operator~1field-onboarding-assignments"
+  /dsh/operator/field-onboarding/workload:
+    $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1field-onboarding~1workload"
+  /dsh/operator/partners/{partnerId}/collaboration:
+    $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1partners~1{partnerId}~1collaboration"
+  /dsh/operator/partners/{partnerId}/collaboration/change-requests:
+    $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1partners~1{partnerId}~1collaboration~1change-requests"
+  /dsh/operator/partners/{partnerId}/collaboration/read:
+    $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1partners~1{partnerId}~1collaboration~1read"
   /dsh/operator/field-onboarding-assignments/{assignmentId}/reassign:
     $ref: "./paths/field.paths.yaml#/~1dsh~1operator~1field-onboarding-assignments~1{assignmentId}~1reassign"
   /dsh/operator/field-onboarding-assignments/{assignmentId}/cancel:
@@ -470,6 +478,12 @@ paths:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1onboarding-assignments~1{assignmentId}~1draft"
   /dsh/field/onboarding-assignments/{assignmentId}/draft/{partnerId}:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1onboarding-assignments~1{assignmentId}~1draft~1{partnerId}"
+  /dsh/field/onboarding/workload:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1onboarding~1workload"
+  /dsh/field/partners/{partnerId}/collaboration:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1collaboration"
+  /dsh/field/partners/{partnerId}/collaboration/read:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1collaboration~1read"
   /dsh/field/visits/{visitId}/complete:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1visits~1{visitId}~1complete"
   /dsh/field/visits/{visitId}/checks:
@@ -1499,6 +1513,22 @@ components:
       $ref: "./components/schemas/common.schemas.yaml#/DshCreateIncidentRequest"
     DshUpdateIncidentRequest:
       $ref: "./components/schemas/common.schemas.yaml#/DshUpdateIncidentRequest"
+    DshOnboardingCollaborationThread:
+      $ref: "./components/schemas/support.schemas.yaml#/DshOnboardingCollaborationThread"
+    DshOnboardingCollaborationMessage:
+      $ref: "./components/schemas/support.schemas.yaml#/DshOnboardingCollaborationMessage"
+    DshOnboardingChangeRequest:
+      $ref: "./components/schemas/support.schemas.yaml#/DshOnboardingChangeRequest"
+    DshOnboardingCollaborationResponse:
+      $ref: "./components/schemas/support.schemas.yaml#/DshOnboardingCollaborationResponse"
+    DshOnboardingCollaborationMessageRequest:
+      $ref: "./components/schemas/support.schemas.yaml#/DshOnboardingCollaborationMessageRequest"
+    DshOnboardingChangeRequestRequest:
+      $ref: "./components/schemas/support.schemas.yaml#/DshOnboardingChangeRequestRequest"
+    DshOnboardingWorkloadItem:
+      $ref: "./components/schemas/support.schemas.yaml#/DshOnboardingWorkloadItem"
+    DshOnboardingWorkloadResponse:
+      $ref: "./components/schemas/support.schemas.yaml#/DshOnboardingWorkloadResponse"
     DshPlatformKpisResponse:
       $ref: "./components/schemas/common.schemas.yaml#/DshPlatformKpisResponse"
     DshOrderStatusCount:

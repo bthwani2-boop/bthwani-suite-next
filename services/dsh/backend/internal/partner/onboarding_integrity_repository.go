@@ -141,6 +141,10 @@ func UpdatePartnerGoverned(db *sql.DB, partnerID string, input UpdatePartnerInpu
 // performs idempotent replay, optimistic concurrency, readiness checks, the
 // partner update, store-readiness propagation, and audit writes in one DB tx.
 func TransitionStatusGoverned(ctx context.Context, db *sql.DB, partnerID string, input TransitionInput, expectedVersion int) (Partner, ActivationEvent, error) {
+	return transitionStatusGoverned(ctx, db, partnerID, input, expectedVersion, nil)
+}
+
+func transitionStatusGoverned(ctx context.Context, db *sql.DB, partnerID string, input TransitionInput, expectedVersion int, onEvent func(*sql.Tx) error) (Partner, ActivationEvent, error) {
 	if expectedVersion < 1 {
 		return Partner{}, ActivationEvent{}, ErrExpectedVersionRequired
 	}
@@ -247,6 +251,11 @@ func TransitionStatusGoverned(ctx context.Context, db *sql.DB, partnerID string,
 	)
 	if err != nil {
 		return Partner{}, ActivationEvent{}, err
+	}
+	if onEvent != nil {
+		if err := onEvent(tx); err != nil {
+			return Partner{}, ActivationEvent{}, err
+		}
 	}
 
 	if readiness, ok := partnerReadinessForActivationStatus(input.ToStatus); ok {

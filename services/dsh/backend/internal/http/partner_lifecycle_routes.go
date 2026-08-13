@@ -35,6 +35,10 @@ func RegisterPartnerLifecycleRoutes(
 	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/stores", protected.withOperatorContextPartnerResource(protected.handleOperatorContextLinkPartnerStore))
 	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/field-visits", protected.withOperatorContextPartnerResource(protected.handleListPartnerFieldVisits))
 	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/audit", protected.withOperatorContextPartnerResource(protected.handleListPartnerAudit))
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/collaboration", protected.withOperatorContextPartnerResource(protected.withPermission("control-panel", PartnersPermissionRead, protected.handleGetOnboardingCollaboration)))
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/collaboration/messages", protected.withOperatorContextPartnerResource(protected.withPermission("control-panel", PartnersPermissionManage, protected.handleAddOnboardingCollaborationMessage)))
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/collaboration/change-requests", protected.withOperatorContextPartnerResource(protected.withPermission("control-panel", PartnersPermissionManage, protected.handleCreateOnboardingChangeRequest)))
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/collaboration/read", protected.withOperatorContextPartnerResource(protected.withPermission("control-panel", PartnersPermissionRead, protected.handleMarkOnboardingCollaborationRead)))
 
 	// App-field: owned drafts, store profile, documents, visits, readiness and
 	// submission. OperatorContext ownership is checked before the actor ownership check.
@@ -50,4 +54,7 @@ func RegisterPartnerLifecycleRoutes(
 	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/visits", protected.withOperatorContextPartnerResource(protected.handleGovernedFieldCreatePartnerVisit))
 	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/field-visits", protected.withOperatorContextPartnerResource(protected.handleFieldListPartnerFieldVisits))
 	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/submit", protected.withOperatorContextPartnerResource(protected.handleGovernedFieldSubmitPartnerDraft))
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/collaboration", protected.withOperatorContextPartnerResource(protected.servePartnerHandlerForCollaboration(protected.handleGetOnboardingCollaboration)))
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/collaboration/messages", protected.withOperatorContextPartnerResource(protected.servePartnerHandlerForCollaboration(protected.handleAddOnboardingCollaborationMessage)))
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/collaboration/read", protected.withOperatorContextPartnerResource(protected.servePartnerHandlerForCollaboration(protected.handleMarkOnboardingCollaborationRead)))
 }

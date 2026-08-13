@@ -19,6 +19,7 @@ import {
   borders,
   colorRoles,
   Icon,
+  TextField,
 } from '@bthwani/ui-kit';
 import { useIdentitySession } from '@bthwani/core-identity';
 import { DshFieldActivationCard } from '../components/DshFieldActivationCard';
@@ -39,6 +40,12 @@ import {
 import { resolvePartnerOnboardingFailureState } from '../../shared/partner';
 import { uploadFieldMedia } from '../../shared/media';
 import { useStoreOnboardingFeeReferenceController } from '../../shared/platform';
+import {
+  addFieldOnboardingMessage,
+  getFieldOnboardingCollaboration,
+  markFieldOnboardingRead,
+  type OnboardingCollaborationView,
+} from '../../shared/field-assignment';
 import { formatWltMoney } from '@bthwani/wlt/dsh';
 import { OnboardingBasicsSection } from '../components/OnboardingBasicsSection';
 import { OnboardingLocationSection } from '../components/OnboardingLocationSection';
@@ -123,6 +130,11 @@ export function DshFieldOnboardingScreen({
   const [evidenceLoading, setEvidenceLoading] = React.useState<Record<string, boolean>>({});
   const [evidenceErrors, setEvidenceErrors] = React.useState<Record<string, string | undefined>>({});
   const [evidencePreviewUris, setEvidencePreviewUris] = React.useState<Record<string, string | undefined>>({});
+  const [collaboration, setCollaboration] = React.useState<OnboardingCollaborationView | null>(null);
+  const [collaborationBody, setCollaborationBody] = React.useState('');
+  const [collaborationLoading, setCollaborationLoading] = React.useState(false);
+  const [collaborationSubmitting, setCollaborationSubmitting] = React.useState(false);
+  const [collaborationError, setCollaborationError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     void switchDraft(partnerId).then(() => {
@@ -139,6 +151,41 @@ export function DshFieldOnboardingScreen({
       }
     });
   }, [assignmentPrefill, partnerId, switchDraft, updateForm, updateLocation]);
+
+  const reloadCollaboration = React.useCallback(async () => {
+    if (!partnerId || !assignmentPrefill?.id) {
+      setCollaboration(null);
+      return;
+    }
+    setCollaborationLoading(true);
+    setCollaborationError(null);
+    try {
+      const next = await getFieldOnboardingCollaboration(partnerId, assignmentPrefill.id);
+      setCollaboration(next);
+      if (next.unreadCount > 0) await markFieldOnboardingRead(partnerId, next.thread.id, next.messages[next.messages.length - 1]?.sequenceNumber ?? 0);
+    } catch (cause) {
+      setCollaborationError(cause instanceof Error ? cause.message : 'تعذر تحميل سجل المتابعة');
+    } finally {
+      setCollaborationLoading(false);
+    }
+  }, [assignmentPrefill?.id, partnerId]);
+
+  React.useEffect(() => { void reloadCollaboration(); }, [reloadCollaboration]);
+
+  const sendCollaborationMessage = React.useCallback(async () => {
+    if (!partnerId || !assignmentPrefill?.id || !collaborationBody.trim()) return;
+    setCollaborationSubmitting(true);
+    setCollaborationError(null);
+    try {
+      await addFieldOnboardingMessage(partnerId, { body: collaborationBody.trim(), clientMessageId: `field-${assignmentPrefill.id}-${Date.now()}` }, assignmentPrefill.id);
+      setCollaborationBody('');
+      await reloadCollaboration();
+    } catch (cause) {
+      setCollaborationError(cause instanceof Error ? cause.message : 'تعذر إرسال الرد');
+    } finally {
+      setCollaborationSubmitting(false);
+    }
+  }, [assignmentPrefill?.id, collaborationBody, partnerId, reloadCollaboration]);
 
   const pickEvidenceFile = React.useCallback(async (
     source: EvidencePickSource,
@@ -468,6 +515,24 @@ export function DshFieldOnboardingScreen({
             <Text role="bodySm" tone="secondary" style={{ textAlign: 'right' }}>
               {formatWltMoney(feeRefState.data.amountMinorUnits, feeRefState.data.currency)} — {CHARGE_TIMING_REFERENCE_LABELS[feeRefState.data.chargeTiming] ?? feeRefState.data.chargeTiming}
             </Text>
+          </View>
+        ) : null}
+
+        {assignmentPrefill?.id && partnerId ? (
+          <View style={{ padding: spacing[3], borderRadius: radius.md, borderWidth: borders.hairline, borderColor: colorRoles.borderSubtle, backgroundColor: colorRoles.surfaceBase, gap: spacing[2] }}>
+            <Text role="bodyStrong" style={{ textAlign: 'right' }}>متابعة مرتبطة بالمسودة</Text>
+            <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>تظهر هنا ملاحظات فريق المراجعة لهذه المهمة فقط، وتبقى مرتبطة بالمسودة ولا تتحول إلى محادثة عامة.</Text>
+            {collaborationLoading ? <Text role="caption" tone="muted">جارٍ تحميل الملاحظات…</Text> : null}
+            {collaboration?.messages.map((message) => (
+              <View key={message.id} style={{ padding: spacing[2], borderRadius: radius.sm, backgroundColor: message.senderSurface === 'control-panel' ? colorRoles.brandActionSoft : colorRoles.surfaceBase, gap: spacing[1] }}>
+                <Text role="bodySm" style={{ textAlign: 'right' }}>{message.body}</Text>
+                <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>{message.senderSurface === 'control-panel' ? 'فريق المراجعة' : 'أنت'} · {new Date(message.createdAt).toLocaleString('ar-YE')}</Text>
+              </View>
+            ))}
+            {collaboration && collaboration.messages.length === 0 ? <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>لا توجد ملاحظات بعد.</Text> : null}
+            <TextField label="رد على فريق المراجعة" value={collaborationBody} onChangeText={setCollaborationBody} placeholder="اكتب ردًا مرتبطًا بهذه المسودة" multiline />
+            <Button label={collaborationSubmitting ? 'جارٍ الإرسال…' : 'إرسال الرد'} tone="primary" onPress={() => void sendCollaborationMessage()} disabled={collaborationSubmitting || collaborationBody.trim().length === 0} />
+            {collaborationError ? <Text role="caption" tone="danger" style={{ textAlign: 'right' }}>{collaborationError}</Text> : null}
           </View>
         ) : null}
 
