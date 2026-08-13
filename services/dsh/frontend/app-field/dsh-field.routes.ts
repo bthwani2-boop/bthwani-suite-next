@@ -14,7 +14,6 @@ export type DshFieldRoute =
   | 'account'
   | 'profile'
   | 'profile-completion'
-  | 'history'
   | 'finance'
   | 'escalation'
   | 'work-queue'
@@ -30,7 +29,6 @@ export type DshFieldRouteState =
   | { kind: 'account' }
   | { kind: 'profile' }
   | { kind: 'profile-completion' }
-  | { kind: 'history' }
   | { kind: 'finance' }
   | { kind: 'escalation'; storeId: string; visitId?: string }
   // Self-resolves the field actor's own open visits/escalations across stores.

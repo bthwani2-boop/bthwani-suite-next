@@ -12,7 +12,6 @@ import { DshFieldPartnerProgressScreen } from '../stores/DshFieldPartnerProgress
 import { DshFieldProfileHomeScreen } from '../account/DshFieldProfileHomeScreen';
 import { DshFieldProfileScreen } from '../account/DshFieldProfileScreen';
 import { DshFieldProfileCompletionScreen } from '../account/DshFieldProfileCompletionScreen';
-import { DshFieldStoresHistoryScreen } from '../stores/DshFieldStoresHistoryScreen';
 import { WltFieldFinanceScreen } from '../finance/WltFieldFinanceScreen';
 import { DshFieldCatalogOperationsScreen } from './DshFieldCatalogOperationsScreen';
 import type { useDshFieldSurfaceModel } from '../field.surface-model';
@@ -107,7 +106,6 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
         onBack={actions.popRoute}
         onOpenProfile={() => actions.pushRoute({ kind: 'profile' })}
         onOpenProfileCompletion={() => actions.pushRoute({ kind: 'profile-completion' })}
-        onOpenHistory={() => actions.pushRoute({ kind: 'history' })}
         onOpenFinance={() => actions.pushRoute({ kind: 'finance' })}
         onOpenVerification={() => actions.pushRoute({ kind: 'work-queue' })}
         onLogout={() => void handleLogout()}
@@ -131,10 +129,6 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
         onLogout={() => void handleLogout()}
       />
     );
-  }
-
-  if (route.kind === 'history') {
-    return <DshFieldStoresHistoryScreen onBack={actions.popRoute} />;
   }
 
   if (route.kind === 'finance') {

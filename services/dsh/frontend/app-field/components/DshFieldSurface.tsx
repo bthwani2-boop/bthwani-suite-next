@@ -28,7 +28,6 @@ function useAndroidBackHandler(onBackPress: () => boolean) {
 
 const FIELD_TAB_BAR_ITEMS: readonly TabBarItem[] = [
   { id: 'stores', label: 'الرئيسية', icon: 'home-outline', activeIcon: 'home' },
-  { id: 'history', label: 'السجل', icon: 'time-outline', activeIcon: 'time' },
   { id: 'finance', label: 'المالية', icon: 'cash-outline', activeIcon: 'cash' },
   { id: 'profile', label: 'حسابي', icon: 'person-outline', activeIcon: 'person' },
 ];
@@ -179,7 +178,6 @@ export function DshFieldSurface({ command, onExit, installationId }: DshFieldSur
             }}
             onSelect={(id: string) => {
               if (id === 'stores') fieldSurface.actions.resetToStores();
-              if (id === 'history') fieldSurface.actions.pushRoute({ kind: 'history' });
               if (id === 'finance') fieldSurface.actions.pushRoute({ kind: 'finance' });
               if (id === 'profile') fieldSurface.actions.pushRoute({ kind: 'account' });
             }}

@@ -22,7 +22,6 @@ type DshFieldProfileHomeScreenProps = {
   readonly onBack: () => void;
   readonly onOpenProfile: () => void;
   readonly onOpenProfileCompletion: () => void;
-  readonly onOpenHistory: () => void;
   readonly onOpenFinance: () => void;
   readonly onOpenVerification: () => void;
   readonly onLogout: () => void;
@@ -32,7 +31,6 @@ export function DshFieldProfileHomeScreen({
   onBack,
   onOpenProfile,
   onOpenProfileCompletion,
-  onOpenHistory,
   onOpenFinance,
   onOpenVerification,
   onLogout,
@@ -133,7 +131,6 @@ export function DshFieldProfileHomeScreen({
         <View style={styles.menu}>
           <MenuRow title="بيانات الميداني" subtitle="الهوية، منطقة التغطية، والتوفر." onPress={onOpenProfile} />
           <MenuRow title="استكمال الملف الشخصي" subtitle="جهة اتصال الطوارئ، اللغة، والموافقة على السياسة." onPress={onOpenProfileCompletion} />
-          <MenuRow title="السجل" subtitle="آخر حالة لكل متجر والتقدم المرتبط به." onPress={onOpenHistory} />
           <MenuRow title="المالية" subtitle="المحفظة والعمولات والخصومات وطلبات الصرف." onPress={onOpenFinance} />
           <MenuRow title="مهام التحقق الميداني" subtitle="الزيارات والتصعيدات المخصصة لهذا الحساب." onPress={onOpenVerification} />
         </View>
