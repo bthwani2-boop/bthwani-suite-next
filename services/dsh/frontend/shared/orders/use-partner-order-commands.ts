@@ -21,8 +21,7 @@ export type PartnerOrderCommandState =
       readonly kind: 'success';
       readonly command: PartnerOrderMutationCommand;
       readonly orderId: string;
-      readonly readback: 'fresh' | 'stale';
-      readonly message?: string;
+      readonly readback: 'fresh';
     }
   | { readonly kind: 'error'; readonly command: PartnerOrderMutationCommand; readonly orderId: string; readonly message: string };
 
@@ -33,6 +32,14 @@ function resolveErrorMessage(error: unknown): string {
   if (classified.kind === 'conflict') return classified.message ?? 'تغيرت حالة الطلب. أعد تحميل القائمة.';
   if (classified.kind === 'not_found') return 'الطلب غير موجود أو لم يعد ضمن نطاق المتجر.';
   return classified.message ?? 'تعذر تنفيذ عملية الطلب.';
+}
+
+function resolveReadbackFailureMessage(error: unknown): string {
+  const classified = classifyOrderError(error);
+  if (classified.kind === 'offline') return 'تعذر الاتصال لإعادة قراءة الحالة canonical.';
+  if (classified.kind === 'permission_denied') return 'انتهت صلاحية الجلسة أو لم تعد تملك نطاق المتجر.';
+  if (classified.kind === 'not_found') return 'لم يعد الطلب ضمن نطاق المتجر أثناء إعادة القراءة.';
+  return classified.message ?? 'تعذر إعادة قراءة الحالة canonical.';
 }
 
 /** Shared mutation/readback controller for partner order preparation and handoff. */
@@ -55,24 +62,28 @@ export function usePartnerOrderCommands(refreshOrders: () => void | Promise<void
       setState({ kind: 'error', command, orderId, message: resolveErrorMessage(error) });
       try {
         await refreshOrders();
-      } catch {
-        // Preserve the canonical mutation failure; readback failure is secondary.
+      } catch (readbackError) {
+        setState({
+          kind: 'error',
+          command,
+          orderId,
+          message: `${resolveErrorMessage(error)} ${resolveReadbackFailureMessage(readbackError)}`,
+        });
       }
       return false;
     }
 
-    setState({ kind: 'success', command, orderId, readback: 'stale' });
     try {
       await refreshOrders();
       setState({ kind: 'success', command, orderId, readback: 'fresh' });
-    } catch {
+    } catch (readbackError) {
       setState({
-        kind: 'success',
+        kind: 'error',
         command,
         orderId,
-        readback: 'stale',
-        message: 'تم تنفيذ الإجراء، لكن تعذر تحديث القائمة. أعد المحاولة من شاشة الطلبات.',
+        message: `تم إرسال الإجراء، لكن لم يمكن تأكيد الحالة من DSH. ${resolveReadbackFailureMessage(readbackError)}`,
       });
+      return false;
     }
     return true;
   }, [refreshOrders]);

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const orderPolicyUrl = new URL(
@@ -7,6 +8,14 @@ const orderPolicyUrl = new URL(
 );
 const bindingContractsUrl = new URL(
   "../../../../services/dsh/frontend/app-partner/dsh-partner-binding.contracts.ts",
+  import.meta.url,
+);
+const ordersRuntimeUrl = new URL(
+  "../../../../services/dsh/frontend/app-partner/orders/usePartnerOrdersRuntime.ts",
+  import.meta.url,
+);
+const orderCommandsUrl = new URL(
+  "../../../../services/dsh/frontend/shared/orders/use-partner-order-commands.ts",
   import.meta.url,
 );
 
@@ -27,6 +36,19 @@ test("partner preparation action preserves the backend-supported ready fallback"
   assert.equal(resolvePartnerOrderMutation("prepare", ["ready"]), "ready");
   assert.equal(resolvePartnerOrderMutation("prepare", []), null);
   assert.equal(resolvePartnerOrderMutation("unknown", ["accept", "prepare", "ready", "handoff"]), null);
+});
+
+test("partner order reads fail closed instead of retaining stale data", async () => {
+  const source = await readFile(ordersRuntimeUrl, "utf8");
+  assert.match(source, /setOrders\(\[\]\);/);
+  assert.doesNotMatch(source, /localOptimisticFinalState|setOrders\([^)]*optimistic/);
+});
+
+test("partner mutation success is emitted only after canonical readback", async () => {
+  const source = await readFile(orderCommandsUrl, "utf8");
+  assert.doesNotMatch(source, /readback:\s*['"]stale['"]/);
+  assert.doesNotMatch(source, /kind:\s*['"]success['"][\s\S]{0,180}readback:\s*['"]stale['"]/);
+  assert.match(source, /kind:\s*['"]error['"][\s\S]{0,240}لم يمكن تأكيد الحالة/);
 });
 
 test("partner route registry binds every critical operational surface", () => {

@@ -29,12 +29,14 @@ export function usePartnerOrdersRuntime(route: string) {
       setState(nextOrders.length === 0 ? 'empty' : 'ready');
     } catch (error) {
       const classified = classifyOrderError(error);
+      setOrders([]);
       setState(classified.kind === 'offline' ? 'offline' : 'error');
     }
   }, []);
 
   React.useEffect(() => {
     if (route !== 'inbox' && route !== 'bell') {
+      setOrders([]);
       setState('disabled');
       return;
     }
