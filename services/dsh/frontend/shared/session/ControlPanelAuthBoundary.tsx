@@ -40,6 +40,8 @@ export function ControlPanelAuthBoundary({ children }: { readonly children: Reac
   const { state, retryBootstrap } = useIdentitySession();
   const router = useRouter();
   const pathname = usePathname();
+  const authenticatedForControlPanel = state.kind === "authenticated"
+    && identitySessionIsBoundToSurface(state.identity, "control-panel");
   const wrongSurface = state.kind === "authenticated"
     && !identitySessionIsBoundToSurface(state.identity, "control-panel");
 
@@ -70,9 +72,17 @@ export function ControlPanelAuthBoundary({ children }: { readonly children: Reac
     );
   }
 
+  if (state.kind === "unconfigured") {
+    return loadingPanel();
+  }
+
   if (state.kind === "signed_out" || state.kind === "error" || wrongSurface) {
     return loadingPanel();
   }
 
-  return <>{children}</>;
+  if (authenticatedForControlPanel) {
+    return <>{children}</>;
+  }
+
+  return loadingPanel();
 }

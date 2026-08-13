@@ -59,29 +59,57 @@ type InstallationState =
 function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
   const workforce = useWorkforceProfile();
   const [readiness, setReadiness] = useState<ReadinessGate | null>(null);
+  const [readinessRefreshToken, setReadinessRefreshToken] = useState(0);
 
-  const fetchReadiness = async () => {
-    if (workforce.state.kind === "ready") {
-      try {
-        const gate = await fetchWorkforceReadiness(workforce.state.me.actorId);
+  useEffect(() => {
+    let active = true;
+    setReadiness(null);
+
+    if (workforce.state.kind !== "ready") {
+      return () => {
+        active = false;
+      };
+    }
+
+    const { actorId, workforceKind } = workforce.state.me;
+    void fetchWorkforceReadiness(actorId)
+      .then((gate) => {
+        if (!active) return;
+        if (gate.actorId !== actorId || gate.workforceKind !== workforceKind) {
+          setReadiness({
+            actorId,
+            workforceKind,
+            status: "BLOCKED",
+            blockerReasons: ["ELIGIBILITY_UNAVAILABLE"],
+            checkedAt: new Date().toISOString(),
+          });
+          return;
+        }
         setReadiness(gate);
-      } catch (err) {
+      })
+      .catch(() => {
+        if (!active) return;
         setReadiness({
-          actorId: workforce.state.me.actorId,
-          workforceKind: workforce.state.me.workforceKind,
+          actorId,
+          workforceKind,
           status: "BLOCKED",
           blockerReasons: ["ELIGIBILITY_UNAVAILABLE"],
           checkedAt: new Date().toISOString(),
         });
-      }
-    }
-  };
+      });
 
-  useEffect(() => {
-    fetchReadiness();
-  }, [workforce.state]);
+    return () => {
+      active = false;
+    };
+  }, [readinessRefreshToken, workforce.state]);
 
-  if (!readiness) {
+  const currentReadiness = workforce.state.kind === "ready"
+    && readiness?.actorId === workforce.state.me.actorId
+    && readiness.workforceKind === workforce.state.me.workforceKind
+    ? readiness
+    : null;
+
+  if (!currentReadiness) {
     return (
       <View style={styles.installationState}>
         <ActivityIndicator accessibilityLabel="جارٍ التحقق من الجاهزية..." />
@@ -89,11 +117,16 @@ function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (readiness.status === "BLOCKED") {
-    return <ReadinessGateScreen readiness={readiness} onRefresh={fetchReadiness} />;
+  if (currentReadiness.status === "BLOCKED") {
+    return (
+      <ReadinessGateScreen
+        readiness={currentReadiness}
+        onRefresh={() => setReadinessRefreshToken((value) => value + 1)}
+      />
+    );
   }
 
-  if (readiness.status === "ALLOWED") {
+  if (currentReadiness.status === "ALLOWED") {
     return <>{children}</>;
   }
 

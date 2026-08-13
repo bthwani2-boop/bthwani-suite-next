@@ -92,6 +92,10 @@ function tokenResponseHasGovernedControlPanelIdentity(value: { identity?: unknow
   return identitySessionIsBoundToSurface(value.identity, "control-panel");
 }
 
+function isGovernedControlPanelIdentity(identity: unknown): boolean {
+  return identitySessionIsBoundToSurface(identity, "control-panel");
+}
+
 function logoutRevocationConfirmed(upstream: Response): boolean {
   return upstream.ok || upstream.status === 401;
 }
@@ -155,6 +159,7 @@ export async function proxyControlPanelRequest(
 
   const contentType = upstream.headers.get("content-type") ?? "";
   const shouldInspectIdentityResponse = service === "identity" && contentType.includes("application/json");
+  const isIdentitySession = service === "identity" && upstreamPath === "/auth/session";
   const isIdentityLogout = service === "identity" && upstreamPath === "/auth/logout";
 
   if (shouldInspectIdentityResponse) {
@@ -164,6 +169,12 @@ export async function proxyControlPanelRequest(
       parsed = text ? JSON.parse(text) : null;
     } catch {
       parsed = null;
+    }
+
+    if (upstream.ok && isIdentitySession && !isGovernedControlPanelIdentity(parsed)) {
+      const response = jsonError(403, "CONTROL_PANEL_FORBIDDEN", "Identity session is not bound to the control panel.");
+      clearSessionCookies(response);
+      return response;
     }
 
     if (upstream.ok && isTokenResponse(parsed)) {
