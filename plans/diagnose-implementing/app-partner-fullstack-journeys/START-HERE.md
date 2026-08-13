@@ -21,7 +21,7 @@ For every finding execute:
 
 `Root Cause → Blast Radius → authoritative-owner correction → affected Partner consumers/counterparts → cleanup/remnant removal → canonical readback → negative/concurrency/unknown-result tests → regression/E2E verification`
 
-Build, lint, typecheck, unit tests, partial CI, a working screen or disappearance of one error are supporting evidence only. Do not use bypass, fallback that hides failure, weakened gate, disabled test, TODO/FIXME, local success flag or parallel truth to close a unit.
+Build, lint, typecheck, unit tests, partial CI, a working screen or disappearance of one error are supporting evidence only. Do not use bypass, fallback that hides failure, weakened gate, disabled test, unfinished-task markers, local success flag or parallel truth to close a unit.
 
 Cleanup is part of DONE: remove proven dead/duplicate/stale routes, imports, exports, types, contracts, evidence pointers, compatibility layers and misleading presentation after caller/blast-radius proof.
 
