@@ -4,17 +4,17 @@
 /dsh/client/cart:
   get:
     operationId: getDshClientCart
-    summary: Get the active cart for the authenticated client at a given store.
+    summary: Get the active cart for the authenticated client, optionally scoped to a store.
     tags: [DshCart]
     security: [{ bearerAuth: [] }]
     parameters:
       - name: storeId
         in: query
-        required: true
+        required: false
         schema: { type: string }
     responses:
       "200":
-        description: Active cart or null if no active cart for this store.
+        description: Active cart or null. When omitted, DSH returns the client's single active cart and its canonical store scope.
         content:
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCartResponse" }
@@ -22,7 +22,6 @@
           ETag:
             schema: { type: string }
             description: "Current cart version."
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
   delete:
     operationId: clearDshClientCart

@@ -247,6 +247,35 @@ func GetCart(ctx context.Context, db *sql.DB, wc wltQuoter, clientID, storeID st
 	return &c, nil
 }
 
+// GetActiveCartForClient reads the single active cart owned by the client
+// without requiring the UI to guess or persist the store scope. The partial
+// unique index on dsh_carts is the database authority for the single-cart
+// invariant; this read only exposes that canonical owner to the client.
+func GetActiveCartForClient(ctx context.Context, db *sql.DB, wc wltQuoter, clientID string) (*Cart, error) {
+	var c Cart
+	err := db.QueryRowContext(ctx,
+		`SELECT id, client_id, store_id, fulfillment_mode, state, note, version, created_at, updated_at
+		 FROM dsh_carts
+		 WHERE client_id = $1 AND state = 'active'
+		 ORDER BY updated_at DESC, id DESC
+		 LIMIT 1`,
+		clientID,
+	).Scan(&c.ID, &c.ClientID, &c.StoreID, &c.FulfillmentMode, &c.State, &c.Note, &c.Version, &c.CreatedAt, &c.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	items, err := listItems(ctx, db, c.ID)
+	if err != nil {
+		return nil, err
+	}
+	c.Items = items
+	c.Quote, _ = FetchWltQuote(ctx, db, wc, &c)
+	return &c, nil
+}
+
 func UpsertItem(ctx context.Context, db *sql.DB, storeID, cartID string, input UpsertItemInput) (*CartItem, error) {
 	if input.MasterProductID == "" || input.Quantity < 1 {
 		return nil, ErrInvalid

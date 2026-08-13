@@ -146,18 +146,21 @@ func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r
 	store.SendJSON(w, http.StatusOK, resp)
 }
 
-// GET /dsh/client/cart?storeId=xxx
+// GET /dsh/client/cart?storeId=xxx (storeId is optional when discovering the
+// one active cart owned by the authenticated client.)
 func (s *protectedStoreServer) handleGetCart(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
 	if !ok {
 		return
 	}
 	storeID := r.URL.Query().Get("storeId")
-	if storeID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId query parameter is required")
-		return
+	var current *cart.Cart
+	var err error
+	if strings.TrimSpace(storeID) == "" {
+		current, err = cart.GetActiveCartForClient(r.Context(), s.db, s.wlt, actor.ID)
+	} else {
+		current, err = cart.GetCart(r.Context(), s.db, s.wlt, actor.ID, storeID)
 	}
-	current, err := cart.GetCart(r.Context(), s.db, s.wlt, actor.ID, storeID)
 	if errors.Is(err, cart.ErrNotFound) {
 		store.SendJSON(w, http.StatusOK, map[string]any{"cart": nil})
 		return

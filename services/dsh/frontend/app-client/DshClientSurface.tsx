@@ -10,7 +10,7 @@ import {
   openClientExternalUrl,
   performClientSelectionHaptic,
 } from "../../../../apps/app-client/runtime/src/platform/client-platform-actions";
-import { brandScale, colorRoles, Icon, StateView } from "@bthwani/ui-kit";
+import { LoadingState, brandScale, colorRoles, Icon, StateView } from "@bthwani/ui-kit";
 import { HomeDiscoveryRoute } from "./home-discovery/HomeDiscoveryRoute";
 import { StoreDiscoveryRoute } from "./store/StoreDiscoveryRoute";
 import { StoreDetailRoute } from "./store/StoreDetailRoute";
@@ -41,6 +41,7 @@ import {
   useOrderTruthCollectionController,
   toOrderTruthSummary,
 } from "../shared/order-truth";
+import { fetchActiveCart } from "../shared/cart";
 
 type ClientTab = "home" | "stores" | "orders" | "special" | "wallet" | "profile" | "cart";
 type ProfileRoute =
@@ -100,6 +101,9 @@ export function DshClientSurface() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
   const [activeSupportOrderId, setActiveSupportOrderId] = useState<string | null>(null);
+  const [activeCartDiscovery, setActiveCartDiscovery] = useState<
+    "idle" | "loading" | "empty" | "error"
+  >("idle");
   const [activeSpecialRequest, setActiveSpecialRequest] = useState<SpecialRequestRoute | null>(null);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -296,6 +300,28 @@ export function DshClientSurface() {
     };
   }, [openNotificationActionUrl]);
 
+  useEffect(() => {
+    if (activeTab !== "cart" || selectedStoreId !== null) return undefined;
+    let mounted = true;
+    setActiveCartDiscovery("loading");
+    void fetchActiveCart()
+      .then((cart) => {
+        if (!mounted) return;
+        if (cart) {
+          setSelectedStoreId(cart.storeId);
+          setActiveCartDiscovery("idle");
+        } else {
+          setActiveCartDiscovery("empty");
+        }
+      })
+      .catch(() => {
+        if (mounted) setActiveCartDiscovery("error");
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [activeTab, selectedStoreId]);
+
   const isStoreDetail = activeTab === "stores" && selectedStoreId !== null;
   const nestedRoute =
     showNotifications ||
@@ -441,12 +467,27 @@ export function DshClientSurface() {
           <WltClientWalletPanel />
         ) : activeTab === "cart" ? (
           selectedStoreId === null ? (
-            <StateView
-              title="السلة غير محددة"
-              description="اختر متجرًا للوصول إلى سلته المحفوظة في DSH."
-              actionLabel="تصفح المتاجر"
-              onActionPress={() => setActiveTab("stores")}
-            />
+            activeCartDiscovery === "loading" ? (
+              <LoadingState title="جاري تحميل السلة المحفوظة…" />
+            ) : activeCartDiscovery === "error" ? (
+              <StateView
+                tone="danger"
+                title="تعذر تحميل السلة"
+                description="تعذر اكتشاف السلة المحفوظة من DSH."
+                actionLabel="إعادة المحاولة"
+                onActionPress={() => {
+                  setActiveCartDiscovery("idle");
+                  setSelectedStoreId(null);
+                }}
+              />
+            ) : (
+              <StateView
+                title="السلة فارغة"
+                description="لم توجد سلة نشطة. أضف منتجًا من كتالوج أحد المتاجر."
+                actionLabel="تصفح المتاجر"
+                onActionPress={() => setActiveTab("stores")}
+              />
+            )
           ) : (
             <ClientCheckoutRoute
               storeId={selectedStoreId}
