@@ -21,6 +21,16 @@ test("partner app composes canonical identity, rating, catalog media, and push b
   assert.match(source, /useDshMobilePushRegistration\(identity\.state\.kind, "app-partner", "bthwani-partner-next"\)/);
 });
 
+test("partner field rating keeps failures visible and confirms canonical completion readback", async () => {
+  const source = await read("services/dsh/frontend/app-partner/ratings/PartnerFieldRatingGate.tsx");
+
+  assert.match(source, /setPromptError\("تعذر تحميل حالة التقييم/);
+  assert.match(source, /const committedPrompt = await fetchPartnerFieldRatingPrompt\(\)/);
+  assert.match(source, /if \(!committedPrompt\.completed\)/);
+  assert.match(source, /accessibilityLiveRegion="polite"/);
+  assert.doesNotMatch(source, /\.catch\(\(\) => \{ if \(!cancelled\) setPrompt\(null\); \}\)/);
+});
+
 test("partner surface exposes explicit store-scope loading, empty, error, and operational navigation", async () => {
   const source = await read("services/dsh/frontend/app-partner/DshPartnerSurface.tsx");
 
