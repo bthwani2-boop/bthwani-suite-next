@@ -123,9 +123,11 @@ func ReconcilePayoutFourWay(ctx context.Context, db *sql.DB, payoutID string, in
 		operatorContextID, payoutID, snapshotID, batchID, evidenceID, input.StatementLineID, result, operatorID,
 	)
 	var reconciliation FourWayReconciliation
+	inserted := true
 	err = row.Scan(&reconciliation.ID, &reconciliation.PayoutRequestID, &reconciliation.ApprovedSnapshotID,
 		&reconciliation.SettlementBatchID, &reconciliation.ManualTransferEvidenceID, &reconciliation.StatementLineID, &reconciliation.Result)
 	if errors.Is(err, sql.ErrNoRows) {
+		inserted = false
 		if err := tx.QueryRowContext(ctx, `
 			SELECT id, payout_request_id, approved_snapshot_id, settlement_batch_id,
 			       manual_transfer_evidence_id, statement_line_id, result
@@ -143,14 +145,16 @@ func ReconcilePayoutFourWay(ctx context.Context, db *sql.DB, payoutID string, in
 		return nil, err
 	}
 
-	if err := appendPayoutAudit(ctx, tx, "payout_request", payoutID, "payout.four_way_reconciled",
-		operatorID, "operator", "", correlationID, map[string]any{
-			"reconciliationId":     reconciliation.ID,
-			"statementReference":   statementReference,
-			"statementLineId":      input.StatementLineID,
-			"reconciliationResult": reconciliation.Result,
-		}); err != nil {
-		return nil, err
+	if inserted {
+		if err := appendPayoutAudit(ctx, tx, "payout_request", payoutID, "payout.four_way_reconciled",
+			operatorID, "operator", "", correlationID, map[string]any{
+				"reconciliationId":     reconciliation.ID,
+				"statementReference":   statementReference,
+				"statementLineId":      input.StatementLineID,
+				"reconciliationResult": reconciliation.Result,
+			}); err != nil {
+			return nil, err
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, err
