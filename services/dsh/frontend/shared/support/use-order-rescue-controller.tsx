@@ -108,11 +108,12 @@ export function useOrderRescueController(authKind = "unauthenticated") {
 
   const updateCase = useCallback(async (
     rescueCase: DshGovernedOrderRescueCase,
-    input: Omit<DshUpdateGovernedOrderRescueInput, "expectedStatus">,
+    input: Omit<DshUpdateGovernedOrderRescueInput, "expectedStatus" | "expectedVersion">,
   ): Promise<boolean> => {
     const governedInput: DshUpdateGovernedOrderRescueInput = {
       ...input,
       expectedStatus: rescueCase.status,
+      expectedVersion: rescueCase.version,
     };
     const valueFingerprint = fingerprint(governedInput);
     const attempt = await getOrCreateSupportMutationAttempt({

@@ -114,7 +114,7 @@ export function useGovernedSupportIncidentController(authKind = "unauthenticated
       setActionState(incidentActionError("حدّث قائمة الحوادث قبل تغيير الحالة"));
       return false;
     }
-    const governedInput = { ...input, expectedStatus: current.status };
+    const governedInput = { ...input, expectedStatus: current.status, expectedVersion: current.version };
     const fingerprint = stableFingerprint(governedInput);
     const attempt = await getOrCreateSupportMutationAttempt({
       scope: "operator",

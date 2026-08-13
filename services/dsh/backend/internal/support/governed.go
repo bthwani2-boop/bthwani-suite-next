@@ -31,13 +31,14 @@ type GovernedMessageInput struct {
 }
 
 type OperatorTicketTransitionInput struct {
-	ActorID        string
-	TicketID       string
-	ExpectedStatus TicketStatus
-	Status         TicketStatus
-	AssignedTo     string
-	IdempotencyKey string
-	CorrelationID  string
+	ActorID         string
+	TicketID        string
+	ExpectedStatus  TicketStatus
+	ExpectedVersion int
+	Status          TicketStatus
+	AssignedTo      string
+	IdempotencyKey  string
+	CorrelationID   string
 }
 
 type TicketEvent struct {
@@ -114,14 +115,14 @@ func CreateClientTicket(db *sql.DB, input ClientCreateTicketInput) (Ticket, erro
 	input.ActorID = strings.TrimSpace(input.ActorID)
 	input.Subject = strings.TrimSpace(input.Subject)
 	input.Description = strings.TrimSpace(input.Description)
+	if input.Priority == "" {
+		input.Priority = PriorityNormal
+	}
 	idempotencyKey, correlationID, err := normalizeMutationContext(input.IdempotencyKey, input.CorrelationID)
 	if err != nil || input.ActorID == "" || len(input.Subject) < 3 || len(input.Subject) > 160 ||
 		len(input.Description) < 5 || len(input.Description) > 4000 ||
 		!validTicketCategory(input.Category) || !validTicketPriority(input.Priority) {
 		return Ticket{}, ErrInvalid
-	}
-	if input.Priority == "" {
-		input.Priority = PriorityNormal
 	}
 
 	tx, err := db.Begin()
@@ -133,14 +134,14 @@ func CreateClientTicket(db *sql.DB, input ClientCreateTicketInput) (Ticket, erro
 		return Ticket{}, err
 	}
 
-	existing, err := scanTicket(tx.QueryRow(`
-		SELECT id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		       status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at
-		FROM dsh_support_tickets
+	existing, err := scanTicket(tx.QueryRow(ticketSelect+`
 		WHERE reporter_id = $1 AND reporter_role = 'client' AND create_idempotency_key = $2`,
 		input.ActorID, idempotencyKey,
 	))
 	if err == nil {
+		if !ticketReplayMatches(existing, input.ActorID, RoleClient, input.StoreID, input.OrderID, input.Subject, input.Description, input.Category, input.Priority) {
+			return Ticket{}, ErrConflict
+		}
 		if commitErr := tx.Commit(); commitErr != nil {
 			return Ticket{}, commitErr
 		}
@@ -166,8 +167,7 @@ func CreateClientTicket(db *sql.DB, input ClientCreateTicketInput) (Ticket, erro
 			store_id, reporter_id, reporter_role, subject, description, category, priority,
 			order_id, create_idempotency_key, correlation_id
 		) VALUES ($1, $2, 'client', $3, $4, $5, $6, $7, $8, $9)
-		RETURNING id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		          status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at`,
+		RETURNING `+ticketColumns,
 		nullableStoreID, input.ActorID, input.Subject, input.Description, input.Category,
 		input.Priority, nullableOrderID, idempotencyKey, correlationID,
 	))
@@ -190,10 +190,7 @@ func ListClientTickets(db *sql.DB, actorID string, limit int) ([]Ticket, error) 
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
-	rows, err := db.Query(`
-		SELECT id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		       status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at
-		FROM dsh_support_tickets
+	rows, err := db.Query(ticketSelect+`
 		WHERE reporter_id = $1 AND reporter_role = 'client'
 		ORDER BY created_at DESC LIMIT $2`, actorID, limit)
 	if err != nil {
@@ -204,10 +201,7 @@ func ListClientTickets(db *sql.DB, actorID string, limit int) ([]Ticket, error) 
 }
 
 func GetClientTicket(db *sql.DB, actorID, ticketID string) (Ticket, error) {
-	ticket, err := scanTicket(db.QueryRow(`
-		SELECT id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		       status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at
-		FROM dsh_support_tickets
+	ticket, err := scanTicket(db.QueryRow(ticketSelect+`
 		WHERE id = $1 AND reporter_id = $2 AND reporter_role = 'client'`, ticketID, actorID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Ticket{}, ErrNotFound
@@ -260,6 +254,9 @@ func insertGovernedMessageTx(
 		input.TicketID, input.ActorID, idempotencyKey,
 	).Scan(&existing.ID, &existing.TicketID, &existing.SenderID, &existing.SenderRole, &existing.Body, &existing.IsInternal, &existing.CreatedAt)
 	if err == nil {
+		if existing.Body != input.Body || existing.SenderID != input.ActorID || existing.TicketID != input.TicketID || existing.IsInternal != input.IsInternal {
+			return Message{}, ErrConflict
+		}
 		if commitErr := tx.Commit(); commitErr != nil {
 			return Message{}, commitErr
 		}
@@ -392,15 +389,19 @@ func UpdateOperatorTicketGoverned(db *sql.DB, input OperatorTicketTransitionInpu
 	var reporterID string
 	var currentStatus TicketStatus
 	var currentAssignee string
+	var currentVersion int
 	if err = tx.QueryRow(`
-		SELECT reporter_id, status, COALESCE(assigned_to,'')
+		SELECT reporter_id, status, COALESCE(assigned_to,''), version
 		FROM dsh_support_tickets WHERE id = $1 FOR UPDATE`, input.TicketID,
-	).Scan(&reporterID, &currentStatus, &currentAssignee); errors.Is(err, sql.ErrNoRows) {
+	).Scan(&reporterID, &currentStatus, &currentAssignee, &currentVersion); errors.Is(err, sql.ErrNoRows) {
 		return Ticket{}, ErrNotFound
 	} else if err != nil {
 		return Ticket{}, err
 	}
 	if input.ExpectedStatus != "" && input.ExpectedStatus != currentStatus {
+		return Ticket{}, ErrConflict
+	}
+	if input.ExpectedVersion < 1 || input.ExpectedVersion != currentVersion {
 		return Ticket{}, ErrConflict
 	}
 	if !validStatusTransition(currentStatus, input.Status) {
@@ -434,10 +435,7 @@ func UpdateOperatorTicketGoverned(db *sql.DB, input OperatorTicketTransitionInpu
 			return Ticket{}, err
 		}
 	}
-	updated, err := scanTicket(tx.QueryRow(`
-		SELECT id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		       status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at
-		FROM dsh_support_tickets WHERE id = $1`, input.TicketID))
+	updated, err := scanTicket(tx.QueryRow(ticketSelect+` WHERE id = $1`, input.TicketID))
 	if err != nil {
 		return Ticket{}, err
 	}

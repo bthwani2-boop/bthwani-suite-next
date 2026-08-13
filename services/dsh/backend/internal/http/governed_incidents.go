@@ -130,21 +130,23 @@ func (s *protectedStoreServer) handleUpdateGovernedIncident(w http.ResponseWrite
 		return
 	}
 	var body struct {
-		ExpectedStatus string `json:"expectedStatus"`
-		Status         string `json:"status"`
-		PostmortemURL  string `json:"postmortemUrl"`
+		ExpectedStatus  string `json:"expectedStatus"`
+		ExpectedVersion int64  `json:"expectedVersion"`
+		Status          string `json:"status"`
+		PostmortemURL   string `json:"postmortemUrl"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
 	incident, err := support.UpdateGovernedIncident(s.db, support.GovernedIncidentTransitionInput{
-		ActorID:        actor.ID,
-		IncidentID:     r.PathValue("incidentId"),
-		ExpectedStatus: support.IncidentStatus(body.ExpectedStatus),
-		Status:         support.IncidentStatus(body.Status),
-		PostmortemURL:  body.PostmortemURL,
-		IdempotencyKey: idempotencyKey,
-		CorrelationID:  correlationID,
+		ActorID:         actor.ID,
+		IncidentID:      r.PathValue("incidentId"),
+		ExpectedStatus:  support.IncidentStatus(body.ExpectedStatus),
+		ExpectedVersion: body.ExpectedVersion,
+		Status:          support.IncidentStatus(body.Status),
+		PostmortemURL:   body.PostmortemURL,
+		IdempotencyKey:  idempotencyKey,
+		CorrelationID:   correlationID,
 	})
 	if err != nil {
 		sendGovernedSupportError(w, err, "failed to update governed incident")

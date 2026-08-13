@@ -2,11 +2,21 @@ package support
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 )
+
+func canonicalRescuePayload(value string) (string, error) {
+	var decoded any
+	if err := json.Unmarshal([]byte(value), &decoded); err != nil {
+		return "", err
+	}
+	encoded, err := json.Marshal(decoded)
+	return string(encoded), err
+}
 
 type OrderRescueStatus string
 type OrderRescueReason string
@@ -87,19 +97,20 @@ type CreateOrderRescueInput struct {
 }
 
 type UpdateOrderRescueInput struct {
-	ActorID        string
-	CaseID         string
-	ExpectedStatus OrderRescueStatus
-	Status         OrderRescueStatus
-	Reason         OrderRescueReason
-	Owner          OrderRescueOwner
-	NextAction     OrderRescueNextAction
-	OperatorNote   string
-	AffectedEntity string
-	AssignedTo     string
-	ResolutionNote string
-	IdempotencyKey string
-	CorrelationID  string
+	ActorID         string
+	CaseID          string
+	ExpectedStatus  OrderRescueStatus
+	ExpectedVersion int64
+	Status          OrderRescueStatus
+	Reason          OrderRescueReason
+	Owner           OrderRescueOwner
+	NextAction      OrderRescueNextAction
+	OperatorNote    string
+	AffectedEntity  string
+	AssignedTo      string
+	ResolutionNote  string
+	IdempotencyKey  string
+	CorrelationID   string
 }
 
 type OrderRescueActionStatus string
@@ -300,6 +311,10 @@ func CreateOrderRescueCase(db *sql.DB, input CreateOrderRescueInput) (OrderRescu
 	existing, err := scanOrderRescueCase(tx.QueryRow(orderRescueSelect+`
 		WHERE opened_by = $1 AND create_idempotency_key = $2`, input.ActorID, idempotencyKey))
 	if err == nil {
+		if existing.OrderID != input.OrderID || existing.TicketID != input.TicketID || existing.Reason != input.Reason ||
+			existing.Severity != input.Severity || existing.Summary != input.Summary || existing.AssignedTo != input.AssignedTo {
+			return OrderRescueCase{}, ErrConflict
+		}
 		if commitErr := tx.Commit(); commitErr != nil {
 			return OrderRescueCase{}, commitErr
 		}
@@ -458,6 +473,32 @@ func UpdateOrderRescueCase(db *sql.DB, input UpdateOrderRescueInput) (OrderRescu
 	if input.ExpectedStatus != "" && input.ExpectedStatus != current.Status {
 		return OrderRescueCase{}, ErrConflict
 	}
+	if input.ExpectedVersion < 1 {
+		return OrderRescueCase{}, ErrInvalid
+	}
+	if input.ExpectedVersion != current.Version {
+		return OrderRescueCase{}, ErrConflict
+	}
+	var replayActor, replayToStatus, replayFromStatus string
+	replayErr := tx.QueryRow(`
+		SELECT actor_id, to_status, COALESCE(from_status,'')
+		FROM dsh_order_rescue_events
+		WHERE rescue_case_id = $1::uuid AND correlation_id = $2 AND event_type <> 'created'
+		ORDER BY created_at DESC LIMIT 1`, input.CaseID, correlationID).
+		Scan(&replayActor, &replayToStatus, &replayFromStatus)
+	if replayErr == nil {
+		if replayActor != input.ActorID || replayToStatus != string(input.Status) ||
+			(input.ExpectedStatus != "" && replayFromStatus != string(input.ExpectedStatus)) ||
+			current.Reason != input.Reason || current.Owner != input.Owner || current.NextAction != input.NextAction ||
+			current.OperatorNote != input.OperatorNote || current.AffectedEntity != input.AffectedEntity ||
+			current.AssignedTo != input.AssignedTo || current.ResolutionNote != input.ResolutionNote {
+			return OrderRescueCase{}, ErrConflict
+		}
+		if err := tx.Commit(); err != nil {
+			return OrderRescueCase{}, err
+		}
+		return current, nil
+	}
 	if !validOrderRescueTransition(current.Status, input.Status) {
 		return OrderRescueCase{}, ErrConflict
 	}
@@ -476,9 +517,9 @@ func UpdateOrderRescueCase(db *sql.DB, input UpdateOrderRescueInput) (OrderRescu
 		    closed_at = CASE WHEN $2 = 'closed' THEN COALESCE(closed_at, NOW()) ELSE NULL END,
 		    version = version + 1,
 		    updated_at = NOW()
-		WHERE id = $1::uuid`,
+		WHERE id = $1::uuid AND version = $10`,
 		input.CaseID, input.Status, input.Reason, input.Owner, input.NextAction,
-		input.OperatorNote, input.AffectedEntity, input.AssignedTo, input.ResolutionNote,
+		input.OperatorNote, input.AffectedEntity, input.AssignedTo, input.ResolutionNote, input.ExpectedVersion,
 	)
 	if err != nil {
 		return OrderRescueCase{}, err
@@ -599,6 +640,11 @@ func CreateOrderRescueAction(db *sql.DB, input CreateOrderRescueActionInput) (Or
 	existing, err := scanOrderRescueAction(tx.QueryRow(orderRescueActionSelect+`
 		WHERE requested_by = $1 AND idempotency_key = $2`, input.ActorID, idempotencyKey))
 	if err == nil {
+		canonicalInput, canonicalErr := canonicalRescuePayload(input.Payload)
+		canonicalExisting, existingErr := canonicalRescuePayload(existing.Payload)
+		if canonicalErr != nil || existingErr != nil || existing.RescueCaseID != input.CaseID || existing.ActionType != input.ActionType || existing.RequestedBy != input.ActorID || canonicalInput != canonicalExisting {
+			return OrderRescueAction{}, ErrConflict
+		}
 		if commitErr := tx.Commit(); commitErr != nil {
 			return OrderRescueAction{}, commitErr
 		}
@@ -646,9 +692,10 @@ func CreateOrderRescueAction(db *sql.DB, input CreateOrderRescueActionInput) (Or
 }
 
 type ExecuteOrderRescueActionInput struct {
-	ActorID       string
-	ActionID      string
-	CorrelationID string
+	ActorID        string
+	ActionID       string
+	IdempotencyKey string
+	CorrelationID  string
 }
 
 func ExecuteOrderRescueAction(db *sql.DB, input ExecuteOrderRescueActionInput) (OrderRescueAction, error) {
@@ -656,10 +703,11 @@ func ExecuteOrderRescueAction(db *sql.DB, input ExecuteOrderRescueActionInput) (
 		return OrderRescueAction{}, ErrInvalid
 	}
 	input.ActorID = strings.TrimSpace(input.ActorID)
-	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
-	if input.ActorID == "" {
+	idempotencyKey, correlationID, err := normalizeMutationContext(input.IdempotencyKey, input.CorrelationID)
+	if err != nil || input.ActorID == "" {
 		return OrderRescueAction{}, ErrInvalid
 	}
+	input.IdempotencyKey, input.CorrelationID = idempotencyKey, correlationID
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -679,6 +727,18 @@ func ExecuteOrderRescueAction(db *sql.DB, input ExecuteOrderRescueActionInput) (
 		return OrderRescueAction{}, err
 	}
 	if action.Status != ActionPendingApproval {
+		if action.Status == ActionCompleted {
+			var result struct {
+				CorrelationID string `json:"correlationId"`
+			}
+			if err := json.Unmarshal([]byte(action.ExecutionResult), &result); err != nil || result.CorrelationID != input.CorrelationID || action.ExecutedBy == nil || *action.ExecutedBy != input.ActorID {
+				return OrderRescueAction{}, ErrConflict
+			}
+			if err := tx.Commit(); err != nil {
+				return OrderRescueAction{}, err
+			}
+			return action, nil
+		}
 		return OrderRescueAction{}, ErrConflict
 	}
 
@@ -686,6 +746,7 @@ func ExecuteOrderRescueAction(db *sql.DB, input ExecuteOrderRescueActionInput) (
 	if err != nil {
 		return OrderRescueAction{}, err
 	}
+	previousCaseStatus := caseItem.Status
 
 	if action.ActionType == RescueActionReassignCaptain {
 		// Check if custody transfer is required
@@ -699,23 +760,19 @@ func ExecuteOrderRescueAction(db *sql.DB, input ExecuteOrderRescueActionInput) (
 			// J070 rule: no reassign after pickup without custody transfer
 			return OrderRescueAction{}, fmt.Errorf("%w: custody transfer required before reassignment", ErrConflict)
 		}
-	} else if action.ActionType == RescueActionOpenWLTVisibility {
-		// Send outbox event to WLT (no local compensation amounts allowed)
-		if _, err = tx.Exec(`
-			INSERT INTO dsh_wlt_integration_outbox (operator_context_id, event_type, payload, correlation_id)
-			VALUES ($1, 'rescue_compensation_request', jsonb_build_object('orderId', $2::text, 'caseId', $3::text), $4)`,
-			"default", caseItem.OrderID, action.RescueCaseID, input.CorrelationID,
-		); err != nil {
-			// ignore outbox failure for this simplified plan if outbox table doesn't exist
-		}
 	}
 
-	_, err = tx.Exec(`UPDATE dsh_order_rescue_actions SET status = 'completed', executed_by = $2, updated_at = NOW() WHERE id = $1::uuid`, action.ID, input.ActorID)
+	_, err = tx.Exec(`UPDATE dsh_order_rescue_actions SET status = 'completed', executed_by = $2, execution_result = jsonb_build_object('mode', 'dsh_operational_reference_only', 'correlationId', $3), version = version + 1, updated_at = NOW() WHERE id = $1::uuid AND version = $4`, action.ID, input.ActorID, input.CorrelationID, action.Version)
 	if err != nil {
 		return OrderRescueAction{}, err
 	}
-	_, err = tx.Exec(`UPDATE dsh_order_rescue_cases SET status = 'resolved', updated_at = NOW() WHERE id = $1::uuid`, action.RescueCaseID)
+	_, err = tx.Exec(`UPDATE dsh_order_rescue_cases SET status = 'resolved', version = version + 1, resolved_at = COALESCE(resolved_at, NOW()), updated_at = NOW() WHERE id = $1::uuid AND version = $2`, action.RescueCaseID, caseItem.Version)
 	if err != nil {
+		return OrderRescueAction{}, err
+	}
+	caseItem.Status = RescueResolved
+	caseItem.Version++
+	if err := writeOrderRescueEventTx(tx, caseItem, input.ActorID, "resolved", previousCaseStatus, RescueResolved, input.CorrelationID); err != nil {
 		return OrderRescueAction{}, err
 	}
 
@@ -723,7 +780,5 @@ func ExecuteOrderRescueAction(db *sql.DB, input ExecuteOrderRescueActionInput) (
 		return OrderRescueAction{}, err
 	}
 
-	action.Status = ActionCompleted
-	action.ExecutedBy = &input.ActorID
-	return action, nil
+	return scanOrderRescueAction(db.QueryRow(orderRescueActionSelect+` WHERE id = $1::uuid`, action.ID))
 }

@@ -310,10 +310,15 @@ components:
       type: object
       required:
       - expectedStatus
+      - expectedVersion
       - status
       properties:
         expectedStatus:
           $ref: '#/components/schemas/IncidentStatus'
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 1
         status:
           $ref: '#/components/schemas/IncidentStatus'
         postmortemUrl:
@@ -332,6 +337,7 @@ components:
       - postmortemUrl
       - createdAt
       - updatedAt
+      - version
       properties:
         id:
           type: string
@@ -362,6 +368,10 @@ components:
         updatedAt:
           type: string
           format: date-time
+        version:
+          type: integer
+          format: int64
+          minimum: 1
     IncidentEvent:
       type: object
       required:
@@ -382,9 +392,13 @@ components:
           type: string
           enum:
           - created
+          - triaged
+          - containing_started
+          - mitigating_started
           - monitoring_started
           - reopened
           - resolved
+          - closed
           - status_changed
         fromStatus:
           oneOf:

@@ -74,6 +74,7 @@ export type DshCreateGovernedOrderRescueInput = {
 
 export type DshUpdateGovernedOrderRescueInput = {
   readonly expectedStatus: DshGovernedOrderRescueStatus;
+  readonly expectedVersion: number;
   readonly status: DshGovernedOrderRescueStatus;
   readonly reason: DshGovernedOrderRescueReason;
   readonly owner: DshGovernedOrderRescueOwner;

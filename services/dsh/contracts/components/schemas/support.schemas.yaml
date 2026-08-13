@@ -11,7 +11,7 @@ DshTicketPriority:
 
 DshSupportTicket:
   type: object
-  required: [id, storeId, reporterId, reporterRole, subject, description, category, priority, status, assignedTo, orderId, createdAt, updatedAt]
+  required: [id, storeId, reporterId, reporterRole, subject, description, category, priority, status, assignedTo, orderId, version, createdAt, updatedAt]
   properties:
     id: { type: string }
     storeId: { type: string }
@@ -22,6 +22,7 @@ DshSupportTicket:
     category: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshTicketCategory" }
     priority: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshTicketPriority" }
     status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshTicketStatus" }
+    version: { type: integer, minimum: 1 }
     assignedTo: { type: string }
     orderId: { type: string }
     resolvedAt: { type: ["string", "null"], format: date-time }
@@ -56,8 +57,9 @@ DshCreateTicketRequest:
 
 DshUpdateTicketRequest:
   type: object
-  required: [status]
+  required: [status, expectedVersion]
   properties:
+    expectedVersion: { type: integer, minimum: 1 }
     status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshTicketStatus" }
     assignedTo: { type: string }
 

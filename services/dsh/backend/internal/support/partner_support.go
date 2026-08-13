@@ -1,13 +1,10 @@
 package support
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"strings"
 	"time"
-
-	"dsh-api/internal/wlt"
 )
 
 type PartnerAggregate struct {
@@ -19,20 +16,6 @@ type PartnerAggregate struct {
 	ActiveStoresCount  int        `json:"activeStoresCount"`
 	ActiveOrdersCount  int        `json:"activeOrdersCount"`
 	ActiveTicketsCount int        `json:"activeTicketsCount"`
-}
-
-type MaskedFinancialState struct {
-	Status       string `json:"status"`
-	Reference    string `json:"reference"`
-	LastSyncAt   string `json:"lastSyncAt"`
-	IsReconciled bool   `json:"isReconciled"`
-}
-
-type PartnerFinanceAggregate struct {
-	Settlements MaskedFinancialState `json:"settlements"`
-	Payouts     MaskedFinancialState `json:"payouts"`
-	Obligations MaskedFinancialState `json:"obligations"`
-	Refunds     MaskedFinancialState `json:"refunds"`
 }
 
 func GetPartnerAggregate(db *sql.DB, partnerID string) (PartnerAggregate, error) {
@@ -57,43 +40,20 @@ func GetPartnerAggregate(db *sql.DB, partnerID string) (PartnerAggregate, error)
 	}
 
 	// 2. Fetch Active Stores
-	db.QueryRow(`SELECT count(*) FROM dsh_partner_brands WHERE partner_id = $1`, partnerID).Scan(&agg.ActiveStoresCount)
+	if err := db.QueryRow(`SELECT count(*) FROM dsh_partner_brands WHERE partner_id = $1 AND status = 'active'`, partnerID).Scan(&agg.ActiveStoresCount); err != nil {
+		return PartnerAggregate{}, err
+	}
 
 	// 3. Fetch Active Orders
 	// DSH uses operator_context_id for order isolation.
-	db.QueryRow(`SELECT count(*) FROM dsh_orders WHERE operator_context_id = $1 AND status NOT IN ('delivered', 'cancelled', 'returned')`, agg.OperatorContextID).Scan(&agg.ActiveOrdersCount)
+	if err := db.QueryRow(`SELECT count(*) FROM dsh_orders WHERE operator_context_id = $1 AND status NOT IN ('delivered', 'cancelled', 'returned')`, agg.OperatorContextID).Scan(&agg.ActiveOrdersCount); err != nil {
+		return PartnerAggregate{}, err
+	}
 
 	// 4. Fetch Active Tickets
-	db.QueryRow(`SELECT count(*) FROM dsh_support_tickets WHERE reporter_id = $1 AND reporter_role = 'partner' AND status NOT IN ('resolved', 'closed')`, partnerID).Scan(&agg.ActiveTicketsCount)
+	if err := db.QueryRow(`SELECT count(*) FROM dsh_support_tickets WHERE reporter_id = $1 AND reporter_role = 'partner' AND status NOT IN ('resolved', 'closed')`, partnerID).Scan(&agg.ActiveTicketsCount); err != nil {
+		return PartnerAggregate{}, err
+	}
 
 	return agg, nil
-}
-
-func GetMaskedPartnerFinance(ctx context.Context, wltClient *wlt.Client, operatorContextID string) (PartnerFinanceAggregate, error) {
-	return PartnerFinanceAggregate{
-		Settlements: MaskedFinancialState{
-			Status:       "active",
-			Reference:    "SETT-****-SYNCED",
-			LastSyncAt:   time.Now().UTC().Format(time.RFC3339),
-			IsReconciled: true,
-		},
-		Payouts: MaskedFinancialState{
-			Status:       "pending_batch",
-			Reference:    "PAY-****-QUEUED",
-			LastSyncAt:   time.Now().UTC().Format(time.RFC3339),
-			IsReconciled: false,
-		},
-		Obligations: MaskedFinancialState{
-			Status:       "cleared",
-			Reference:    "OBL-****-CLEARED",
-			LastSyncAt:   time.Now().UTC().Format(time.RFC3339),
-			IsReconciled: true,
-		},
-		Refunds: MaskedFinancialState{
-			Status:       "processing",
-			Reference:    "REF-****-PROC",
-			LastSyncAt:   time.Now().UTC().Format(time.RFC3339),
-			IsReconciled: false,
-		},
-	}, nil
 }

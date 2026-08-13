@@ -3,6 +3,7 @@ package support
 import (
 	"database/sql"
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -115,7 +116,19 @@ type Incident struct {
 	PostmortemURL string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+	Version       int64
 }
+
+const incidentColumns = `id, title, description, severity, status, affected_scope, raised_by,
+       COALESCE(resolved_by,''), resolved_at, COALESCE(postmortem_url,''), created_at, updated_at, version`
+
+const incidentSelect = `SELECT ` + incidentColumns + ` FROM dsh_incidents`
+
+const ticketColumns = `id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
+       status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at,
+       version, COALESCE(claimed_by,''), claimed_at, sla_breach_at, escalated_at, COALESCE(escalation_reason,'')`
+
+const ticketSelect = `SELECT ` + ticketColumns + ` FROM dsh_support_tickets`
 
 type CreateTicketInput struct {
 	StoreID      string
@@ -132,6 +145,17 @@ type UpdateTicketInput struct {
 	Status     TicketStatus
 	AssignedTo string
 	Version    int
+}
+
+func ticketReplayMatches(ticket Ticket, actorID string, role ReporterRole, storeID string, orderID string, subject string, description string, category TicketCategory, priority TicketPriority) bool {
+	return ticket.ReporterID == actorID &&
+		ticket.ReporterRole == role &&
+		ticket.Subject == subject &&
+		ticket.Description == description &&
+		ticket.Category == category &&
+		ticket.Priority == priority &&
+		(strings.TrimSpace(storeID) == "" || ticket.StoreID == strings.TrimSpace(storeID)) &&
+		(strings.TrimSpace(orderID) == "" || ticket.OrderID == strings.TrimSpace(orderID))
 }
 
 type AddMessageInput struct {
@@ -183,11 +207,7 @@ func CreateTicket(db *sql.DB, input CreateTicketInput) (Ticket, error) {
 }
 
 func GetTicket(db *sql.DB, ticketID string) (Ticket, error) {
-	row := db.QueryRow(`
-		SELECT id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		       status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at,
-		       version, COALESCE(claimed_by,''), claimed_at, sla_breach_at, escalated_at, COALESCE(escalation_reason,'')
-		FROM dsh_support_tickets WHERE id = $1`, ticketID)
+	row := db.QueryRow(ticketSelect+` WHERE id = $1`, ticketID)
 	t, err := scanTicket(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Ticket{}, ErrNotFound
@@ -196,11 +216,7 @@ func GetTicket(db *sql.DB, ticketID string) (Ticket, error) {
 }
 
 func ListReporterTickets(db *sql.DB, reporterID string, limit int) ([]Ticket, error) {
-	rows, err := db.Query(`
-		SELECT id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		       status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at,
-		       version, COALESCE(claimed_by,''), claimed_at, sla_breach_at, escalated_at, COALESCE(escalation_reason,'')
-		FROM dsh_support_tickets WHERE reporter_id = $1
+	rows, err := db.Query(ticketSelect+` WHERE reporter_id = $1
 		ORDER BY created_at DESC LIMIT $2`, reporterID, limit)
 	if err != nil {
 		return nil, err
@@ -210,10 +226,7 @@ func ListReporterTickets(db *sql.DB, reporterID string, limit int) ([]Ticket, er
 }
 
 func ListOperatorTickets(db *sql.DB, statusFilter string, limit int) ([]Ticket, error) {
-	q := `SELECT id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-	             status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at,
-	             version, COALESCE(claimed_by,''), claimed_at, sla_breach_at, escalated_at, COALESCE(escalation_reason,'')
-	      FROM dsh_support_tickets`
+	q := ticketSelect
 	var args []any
 	if statusFilter != "" {
 		q += " WHERE status = $1 ORDER BY created_at DESC LIMIT $2"
@@ -303,17 +316,14 @@ func CreateIncident(db *sql.DB, input CreateIncidentInput) (Incident, error) {
 	row := db.QueryRow(`
 		INSERT INTO dsh_incidents (title, description, severity, affected_scope, raised_by)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, title, description, severity, status, affected_scope, raised_by,
-		          COALESCE(resolved_by,''), resolved_at, COALESCE(postmortem_url,''), created_at, updated_at`,
+		RETURNING `+incidentColumns,
 		input.Title, input.Description, input.Severity, scope, input.RaisedBy,
 	)
 	return scanIncident(row)
 }
 
 func ListIncidents(db *sql.DB, statusFilter string, limit int) ([]Incident, error) {
-	q := `SELECT id, title, description, severity, status, affected_scope, raised_by,
-	             COALESCE(resolved_by,''), resolved_at, COALESCE(postmortem_url,''), created_at, updated_at
-	      FROM dsh_incidents`
+	q := incidentSelect
 	var args []any
 	if statusFilter != "" {
 		q += " WHERE status = $1 ORDER BY created_at DESC LIMIT $2"
@@ -345,8 +355,7 @@ func UpdateIncident(db *sql.DB, incidentID string, input UpdateIncidentInput) (I
 		    resolved_at = CASE WHEN $2 = 'resolved' AND resolved_at IS NULL THEN NOW() ELSE resolved_at END,
 		    updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, title, description, severity, status, affected_scope, raised_by,
-		          COALESCE(resolved_by,''), resolved_at, COALESCE(postmortem_url,''), created_at, updated_at`,
+		RETURNING `+incidentColumns,
 		incidentID, input.Status, input.ResolvedBy, input.PostmortemURL,
 	)
 	i, err := scanIncident(row)
@@ -392,7 +401,7 @@ func scanIncident(s ticketScanner) (Incident, error) {
 	var i Incident
 	err := s.Scan(
 		&i.ID, &i.Title, &i.Description, &i.Severity, &i.Status, &i.AffectedScope,
-		&i.RaisedBy, &i.ResolvedBy, &i.ResolvedAt, &i.PostmortemURL, &i.CreatedAt, &i.UpdatedAt,
+		&i.RaisedBy, &i.ResolvedBy, &i.ResolvedAt, &i.PostmortemURL, &i.CreatedAt, &i.UpdatedAt, &i.Version,
 	)
 	return i, err
 }
@@ -401,7 +410,7 @@ func scanIncidentRow(rows *sql.Rows) (Incident, error) {
 	var i Incident
 	err := rows.Scan(
 		&i.ID, &i.Title, &i.Description, &i.Severity, &i.Status, &i.AffectedScope,
-		&i.RaisedBy, &i.ResolvedBy, &i.ResolvedAt, &i.PostmortemURL, &i.CreatedAt, &i.UpdatedAt,
+		&i.RaisedBy, &i.ResolvedBy, &i.ResolvedAt, &i.PostmortemURL, &i.CreatedAt, &i.UpdatedAt, &i.Version,
 	)
 	return i, err
 }
